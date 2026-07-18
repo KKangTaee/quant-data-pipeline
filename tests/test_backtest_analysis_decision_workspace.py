@@ -15,6 +15,9 @@ from app.services.backtest_analysis_decision_workspace import (
     build_level1_strategy_catalog,
     level1_strategy_maturity,
 )
+from app.web.backtest_single_settings_workspace import (
+    build_single_strategy_settings_summary,
+)
 
 
 class _SessionState(dict):
@@ -43,6 +46,23 @@ def test_level1_catalog_groups_each_strategy_once() -> None:
 def test_risk_on_is_development_not_research() -> None:
     assert level1_strategy_maturity("Risk-On Momentum 5D") == "development"
     assert level1_strategy_maturity("GTAA") == "production"
+
+
+def test_single_settings_summary_projects_purpose_variant_and_maturity() -> None:
+    summary = build_single_strategy_settings_summary(
+        "Quality + Value",
+        "Strict Annual",
+    )
+
+    assert summary == {
+        "strategy_choice": "Quality + Value",
+        "display_name": "Quality + Value Snapshot (Strict Annual)",
+        "variant": "Strict Annual",
+        "purpose": "팩터 기반 종목 선정",
+        "maturity": "production",
+        "maturity_label": "운영 전략",
+        "description": "기업의 품질과 가치평가를 함께 비교해 보유 후보를 고릅니다.",
+    }
 
 
 def test_configuration_fingerprint_is_order_independent_and_sensitive() -> None:

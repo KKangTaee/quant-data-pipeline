@@ -1436,7 +1436,7 @@ Final response must include:
   `render_single_strategy_settings_header()`, `single_settings_section()`,
   `build_compact_ticker_summary()`.
 
-- [ ] **Step 1: Write RED tests for summary and unique selection surface**
+- [x] **Step 1: Write RED tests for summary and unique selection surface**
 
 ```python
 def test_single_settings_summary_projects_purpose_variant_and_maturity():
@@ -1466,7 +1466,7 @@ Add a React boundary assertion that Single Strategy no longer renders the separa
 `current_work` aside because the selected card state plus Python settings header own that
 summary. Portfolio Mix keeps its current-work summary.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -1478,7 +1478,7 @@ uv run --with pytest python -m pytest \
 Expected: import / source assertions fail because the shared shell does not exist and the
 duplicate selectboxes remain.
 
-- [ ] **Step 3: Implement the shared shell and compact variant selector**
+- [x] **Step 3: Implement the shared shell and compact variant selector**
 
 Create `app/web/backtest_single_settings_workspace.py` with:
 
@@ -1551,7 +1551,7 @@ In `backtest_single_strategy.py`, resolve / repair session selection as today, r
 `strategy_choice` directly from session state, call the shared header, and remove both legacy
 selectboxes. In React, render `current_work` aside only for `portfolio_mix`.
 
-- [ ] **Step 4: Run GREEN, build, and compile**
+- [x] **Step 4: Run GREEN, build, and compile**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -1567,7 +1567,7 @@ git diff --check
 
 Expected: focused tests, React build, compile, diff-check pass.
 
-- [ ] **Step 5: Commit Task 10**
+- [x] **Step 5: Commit Task 10**
 
 ```bash
 git add \

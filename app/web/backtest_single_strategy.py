@@ -12,6 +12,9 @@ from app.web.backtest_single_forms import (
     _render_risk_on_momentum_5d_form,
     _render_single_strategy_family_form,
 )
+from app.web.backtest_single_settings_workspace import (
+    render_single_strategy_settings_header,
+)
 
 
 def _last_run_matches_strategy_selection(
@@ -109,28 +112,28 @@ def render_single_strategy_workspace() -> None:
             variant_key = _single_family_variant_session_key(remapped_choice)
             if variant_key and remapped_variant in family_variant_options(remapped_choice):
                 st.session_state[variant_key] = remapped_variant
-    strategy_choice = st.selectbox(
-        "Strategy",
-        options=SINGLE_STRATEGY_OPTIONS,
-        index=SINGLE_STRATEGY_OPTIONS.index(DEFAULT_SINGLE_STRATEGY_OPTION),
-        help=(
-            "New runs start from the statement annual factor family. "
-            "Saved history can still replay legacy broad runs through Load Into Form."
-        ),
-        key="backtest_strategy_choice",
+    strategy_choice = str(
+        st.session_state.get(
+            "backtest_strategy_choice",
+            DEFAULT_SINGLE_STRATEGY_OPTION,
+        )
     )
-    selected_variant = None
+    if strategy_choice not in SINGLE_STRATEGY_OPTIONS:
+        strategy_choice = DEFAULT_SINGLE_STRATEGY_OPTION
+        st.session_state.backtest_strategy_choice = strategy_choice
+
+    selected_variant = _selected_strategy_variant(strategy_choice)
+    variant_key = None
+    variant_options: list[str] = []
     if is_family_strategy(strategy_choice):
         variant_key = _single_family_variant_session_key(strategy_choice)
         variant_options = family_variant_options(strategy_choice)
-        if variant_key and variant_options:
-            st.caption("이 카테고리 안에서 실행 variant를 선택합니다.")
-            selected_variant = st.selectbox(
-                f"{strategy_choice} Variant",
-                options=variant_options,
-                key=variant_key,
-            )
-    st.divider()
+    selected_variant = render_single_strategy_settings_header(
+        strategy_choice=strategy_choice,
+        selected_variant=selected_variant,
+        variant_key=variant_key,
+        variant_options=variant_options,
+    )
     if strategy_choice == "Equal Weight":
         _render_equal_weight_form()
     elif strategy_choice == "GTAA":

@@ -145,3 +145,12 @@
 - target 12-module `py_compile`: exit 0, output 없음
 - Browser QA screenshots와 runtime JSONL은 generated / protected artifact로
   stage하지 않는다.
+
+## 2026-07-18 6차 Task 10 RED -> GREEN
+
+- RED: `backtest_single_settings_workspace` import 부재로 collection 실패
+- GREEN focused: single settings / duplicate picker / current-work ownership `3 passed`
+- decision + boundary 전체: `56 passed, 3 warnings`
+- React production build: Vite 5.4.21, `175 modules transformed`
+- settings shell / strategy / family dispatch py_compile: 통과
+- `git diff --check`: 통과

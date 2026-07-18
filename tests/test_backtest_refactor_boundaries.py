@@ -605,6 +605,31 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("backtest_last_result_requires_rerun", body)
         self.assertNotIn("backtest_last_bundle = None", body)
 
+    def test_single_workspace_has_no_duplicate_strategy_or_variant_selectbox(
+        self,
+    ) -> None:
+        source = (PROJECT_ROOT / "app/web/backtest_single_strategy.py").read_text()
+        settings_source = (
+            PROJECT_ROOT / "app/web/backtest_single_settings_workspace.py"
+        ).read_text()
+
+        self.assertNotIn('st.selectbox(\n        "Strategy"', source)
+        self.assertNotIn('f"{strategy_choice} Variant"', source)
+        self.assertIn("render_single_strategy_settings_header(", source)
+        self.assertIn("st.segmented_control(", settings_source)
+
+    def test_single_context_keeps_current_work_summary_for_mix_only(self) -> None:
+        source = (
+            PROJECT_ROOT
+            / "app/web/components/backtest_analysis_decision_workspace/frontend/src/"
+            "BacktestAnalysisDecisionWorkspace.tsx"
+        ).read_text()
+
+        current_work = source.split(
+            '<aside className="bt1-current-work">', 1
+        )[0]
+        self.assertIn('workspace.workspace_kind === "portfolio_mix"', current_work)
+
     def test_single_strategy_forms_use_contextual_setting_labels(self) -> None:
         form_paths = [
             PROJECT_ROOT / "app/web/backtest_single_forms/equal_weight.py",

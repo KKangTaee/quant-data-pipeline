@@ -107,11 +107,13 @@ export function BacktestAnalysisDecisionWorkspace({
                 <p>현재 후보를 유지하면서 목적별 전략과 설정을 확인합니다.</p>
               </div>
             </div>
-            <aside className="bt1-current-work">
-              <span>현재 작업</span>
-              <strong>{workspace.current_work.title}</strong>
-              <small>{workspaceKindLabel(workspace.current_work.workspace_kind)}</small>
-            </aside>
+            {workspace.workspace_kind === "portfolio_mix" && (
+              <aside className="bt1-current-work">
+                <span>현재 작업</span>
+                <strong>{workspace.current_work.title}</strong>
+                <small>{workspaceKindLabel(workspace.current_work.workspace_kind)}</small>
+              </aside>
+            )}
             {workspace.workspace_kind === "single_strategy" && (
               <div className="bt1-purpose-grid">
                 {workspace.strategy_catalog.map((group) => (

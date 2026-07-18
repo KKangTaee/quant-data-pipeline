@@ -10,12 +10,7 @@ def _render_single_strategy_family_form(strategy_choice: str, selected_variant: 
         return
 
     if selected_variant not in variant_options:
-        st.caption("이 카테고리 안에서 실행 variant를 선택합니다.")
-        selected_variant = st.selectbox(
-            f"{strategy_choice} Variant",
-            options=variant_options,
-            key=variant_key,
-        )
+        selected_variant = variant_options[0]
     concrete_strategy_name = resolve_concrete_strategy_display_name(strategy_choice, selected_variant)
 
     if concrete_strategy_name == "Quality Snapshot":
