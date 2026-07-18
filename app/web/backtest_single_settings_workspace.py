@@ -324,6 +324,37 @@ def _workspace_fields(workspace: Mapping[str, object]) -> list[dict[str, object]
     return result
 
 
+def _visible_submitted_values(
+    workspace: Mapping[str, object],
+    submitted: Mapping[str, object],
+) -> dict[str, object]:
+    """Keep unknown keys rejectable while excluding inactive editor branches."""
+
+    fields = _workspace_fields(workspace)
+    declared = {str(field.get("field_id") or "") for field in fields}
+    effective = {
+        str(field.get("field_id") or ""): field.get("value") for field in fields
+    }
+    effective.update({str(key): value for key, value in submitted.items()})
+    visible_values = {
+        str(key): value
+        for key, value in submitted.items()
+        if str(key) not in declared
+    }
+    for field in fields:
+        field_id = str(field.get("field_id") or "")
+        if field_id not in submitted:
+            continue
+        visible_when = field.get("visible_when")
+        if isinstance(visible_when, Mapping) and not all(
+            effective.get(str(dependency)) == expected
+            for dependency, expected in visible_when.items()
+        ):
+            continue
+        visible_values[field_id] = submitted[field_id]
+    return visible_values
+
+
 def _prefill_values(
     workspace: Mapping[str, object],
     payload: object,
@@ -446,12 +477,13 @@ def consume_single_settings_intent(
     workspace = build_single_settings_workspace(
         current_choice,
         current_variant,
-        submitted,
+        {},
         runtime,
     )
     draft_key = str(workspace["draft_key"])
+    visible_submitted = _visible_submitted_values(workspace, submitted)
     try:
-        payload = project_single_settings_payload(workspace, submitted)
+        payload = project_single_settings_payload(workspace, visible_submitted)
     except SettingsValidationError as exc:
         _store_draft_result(draft_key, submitted, exc.errors)
         _remember_consumed_intent(intent_id)

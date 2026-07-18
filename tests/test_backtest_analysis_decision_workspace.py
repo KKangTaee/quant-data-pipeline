@@ -730,6 +730,52 @@ def test_single_settings_run_intent_validates_then_calls_handler_once() -> None:
     assert calls[0][1] == "Equal Weight"
 
 
+def test_single_settings_run_intent_ignores_hidden_editor_defaults() -> None:
+    from app.services.backtest_single_settings_workspace import (
+        build_single_settings_workspace,
+    )
+    from app.web import backtest_single_settings_workspace as settings_workspace
+
+    runtime = _equal_weight_settings_runtime()
+    workspace = build_single_settings_workspace(
+        "Equal Weight",
+        None,
+        {},
+        runtime,
+    )
+    all_editor_values = {
+        field["field_id"]: field["value"]
+        for section in workspace["sections"]
+        for field in section["fields"]
+    }
+    calls = []
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = _SessionState(
+        {
+            "backtest_strategy_choice": "Equal Weight",
+            "backtest_single_settings_consumed_intent_ids": [],
+        }
+    )
+
+    with patch.object(settings_workspace, "st", fake_streamlit):
+        result = settings_workspace.consume_single_settings_intent(
+            {
+                "action": "run_single_strategy",
+                "intent_id": "run-equal-all-editor-values",
+                "strategy_choice": "Equal Weight",
+                "variant": None,
+                "values": all_editor_values,
+            },
+            run_handler=lambda payload, strategy_name: calls.append(
+                (payload, strategy_name)
+            ),
+            runtime_options=runtime,
+        )
+
+    assert result["ok"] is True
+    assert calls[0][0]["tickers"] == ["VIG", "SCHD", "DGRO", "GLD"]
+
+
 def test_single_settings_invalid_or_mismatched_intent_never_runs() -> None:
     from app.web import backtest_single_settings_workspace as settings_workspace
 
