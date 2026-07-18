@@ -254,3 +254,19 @@ generated artifact이므로 commit하지 않는다.
   검증하고 실제 desktop/760px QA로 no-run hidden과 stale→running→fresh를 확인한다.
 - Task 26 pure truth, Task 27 read model, Task 28 dedicated React/fallback, Task 29 runtime cutover,
   Task 30 QA/docs는 서로 독립된 RED/GREEN과 한국어 commit을 가진다.
+
+## 2026-07-18 10차 Runtime Decisions And Browser Findings
+
+- Level1 technical gate는 성공한 실행, current configuration fingerprint 일치, core result identity,
+  callable Level2 handoff handler만 소유한다. 수익률이나 Level2 검증 질문은 Gate를 대신하지 않는다.
+- `run_result_id`는 실행 bundle, Run History와 handoff source에 보존하고,
+  `validation_result_id`는 성공한 Level2 validation append 뒤에만 생긴다.
+- current holdings는 마지막 valuation row의 simulated allocation, target holdings는 마지막 유효
+  signal / rebalance row의 latest available target이다. broker 계좌나 주문 제안이 아니다.
+- 실제 Equal Weight 실행 뒤 GTAA로 설정을 바꾸면 기존 결과는 `이전 설정 결과 · 참고용`으로
+  남고 Level2 CTA는 사라졌다. 새 실행 전 결과를 삭제하거나 과거 결과를 인계하지 않는다.
+- 760px에서 result iframe 내부 holdings grid가 811px까지 넓어지는 회귀를 Browser에서 찾았다.
+  root는 grid/card의 implicit min-width였고 workspace/card/grid에 `min-width: 0`, body overflow
+  boundary를 적용한 뒤 iframe `clientWidth=scrollWidth=717`을 확인했다.
+- local server가 `runOnSave=false`여서 Python process restart 전에는 old code / new build가 섞일
+  수 있었다. current source로 재시작한 뒤 fresh no-run, execution, stale, responsive QA를 다시 했다.

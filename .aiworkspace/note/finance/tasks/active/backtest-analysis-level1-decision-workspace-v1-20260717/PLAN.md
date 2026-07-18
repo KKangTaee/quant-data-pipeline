@@ -3710,7 +3710,7 @@ TypeScript 5.6, dependency-free SVG, Vite 5, pytest/unittest, in-app Browser QA.
   `build_level2_validation_questions(...)`. Existing runtime cutover is intentionally deferred to
   Task 29 so this pure-service commit cannot block current handoff before new run identities exist.
 
-- [ ] **Step 1: Write lifecycle and stage-ownership RED tests**
+- [x] **Step 1: Write lifecycle and stage-ownership RED tests**
 
 Create `tests/test_backtest_analysis_result_workspace.py` with a reusable result fixture and explicit
 state matrix:
@@ -3811,7 +3811,7 @@ def test_practical_validation_gaps_become_level2_questions_once() -> None:
     assert len({row["root_issue_id"] for row in questions}) == len(questions)
 ```
 
-- [ ] **Step 2: Run RED and witness missing service contracts**
+- [x] **Step 2: Run RED and witness missing service contracts**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -3821,7 +3821,7 @@ uv run --with pytest python -m pytest \
 Expected RED: import fails because `backtest_analysis_result_workspace.py` and its functions do not
 exist.
 
-- [ ] **Step 3: Implement the lifecycle and Level1 technical gate**
+- [x] **Step 3: Implement the lifecycle and Level1 technical gate**
 
 Create the service with the exact state contract:
 
@@ -3939,7 +3939,7 @@ def build_level1_technical_handoff_readiness(
     }
 ```
 
-- [ ] **Step 4: Implement deduplicated Level2 question projection**
+- [x] **Step 4: Implement deduplicated Level2 question projection**
 
 Use a declarative field map and root deduplication; no practical signal may affect the technical gate:
 
@@ -3995,7 +3995,7 @@ def build_level2_validation_questions(
 
 Keep one root id across all lanes and counts.
 
-- [ ] **Step 5: Run GREEN, compile, and commit**
+- [x] **Step 5: Run GREEN, compile, and commit**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -4024,7 +4024,7 @@ Expected: new lifecycle/stage tests pass; compile/diff-check exit 0.
   current/target holdings, four evidence groups, performance rows, holding-change rows and JSON-ready
   technical appendix.
 
-- [ ] **Step 1: Write holdings and result projection RED tests**
+- [x] **Step 1: Write holdings and result projection RED tests**
 
 Add tests covering direct weight, balance-derived weight, cash-only, non-rebalance latest row, missing
 holdings and partial Mix:
@@ -4126,7 +4126,7 @@ def test_user_tables_and_chart_use_stable_labels_not_raw_columns() -> None:
     assert "Total Balance" not in model["performance_rows"][0]
 ```
 
-- [ ] **Step 2: Run RED and witness missing builder**
+- [x] **Step 2: Run RED and witness missing builder**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -4135,7 +4135,7 @@ uv run --with pytest python -m pytest \
 
 Expected RED: `build_backtest_analysis_result_workspace` and holdings/chart projections are absent.
 
-- [ ] **Step 3: Implement safe scalar/list/date and display helpers**
+- [x] **Step 3: Implement safe scalar/list/date and display helpers**
 
 Add focused helpers that never expose pandas/numpy objects:
 
@@ -4174,7 +4174,7 @@ Use strict list length alignment. If ticker/weight/balance cells cannot be parse
 `unavailable_reason`; never assume equal weights except where a strategy row already provides equal
 `End Balance` / `Next Balance`.
 
-- [ ] **Step 4: Implement chart, holdings, tables, evidence groups, and top-level builder**
+- [x] **Step 4: Implement chart, holdings, tables, evidence groups, and top-level builder**
 
 The builder must return the exact shape consumed by Task 28:
 
@@ -4267,7 +4267,7 @@ Implementation requirements:
 - cap component props to 420 user rows and 100 appendix preview rows while preserving full raw data only
   in the Python compatibility path.
 
-- [ ] **Step 5: Add all-family result-column boundary matrix**
+- [x] **Step 5: Add all-family result-column boundary matrix**
 
 In `tests/test_backtest_analysis_result_workspace.py`, create a matrix over Equal Weight, GTAA/GRS, Risk Parity,
 Dual Momentum, strict factor and weighted Mix fixture shapes. For each, call the pure builder and assert:
@@ -4282,7 +4282,7 @@ self.assertEqual(len({row["root_issue_id"] for row in workspace["level2_validati
                  len(workspace["level2_validation_questions"]))
 ```
 
-- [ ] **Step 6: Run GREEN, focused service regression, compile, and commit**
+- [x] **Step 6: Run GREEN, focused service regression, compile, and commit**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -4322,7 +4322,7 @@ Expected: focused result/decision tests pass; compile/diff-check exit 0.
 - Produces: `render_backtest_analysis_result_workspace_component(...)`, availability helper,
   same-read-model fallback and `save_and_move` presentation intent only.
 
-- [ ] **Step 1: Write RED visual and ownership boundary tests**
+- [x] **Step 1: Write RED visual and ownership boundary tests**
 
 Add a focused boundary test that requires dedicated files and forbids React-side domain logic:
 
@@ -4354,7 +4354,7 @@ def test_level1_result_workspace_is_dedicated_intent_only_and_responsive(self) -
 
 Run only this test and witness RED because the dedicated component does not exist.
 
-- [ ] **Step 2: Create component wrapper, Vite project, and exact read-model types**
+- [x] **Step 2: Create component wrapper, Vite project, and exact read-model types**
 
 Use component name `backtest_analysis_result_workspace`. The Python wrapper accepts only `workspace`,
 `key`, and `on_change`; the TypeScript type mirrors Task 27 fields. Define intent as:
@@ -4372,7 +4372,7 @@ export type ResultWorkspaceIntent = {
 
 The component wrapper returns a dict only; availability depends on `frontend/build/index.html`.
 
-- [ ] **Step 3: Implement dependency-free SVG chart and single-flow result UI**
+- [x] **Step 3: Implement dependency-free SVG chart and single-flow result UI**
 
 Adapt the Final Review `DecisionBriefCharts.tsx` visual language without importing or adding a package.
 The component order must be exactly:
@@ -4403,14 +4403,14 @@ The component order must be exactly:
 Render no action board when `workspace.actions` is empty. Use local disclosure and table-page state only;
 all labels, formatted values, state, count and availability come from Python.
 
-- [ ] **Step 4: Implement same-read-model Python fallback**
+- [x] **Step 4: Implement same-read-model Python fallback**
 
 Create `render_backtest_analysis_result_workspace_fallback(workspace)`. Return `None` unless the enabled
 `save_and_move` button is clicked. Render the same order with `st.metric`, `st.line_chart` from prepared
 series, holdings/evidence cards, user-facing dataframes and one collapsed technical appendix. Do not call
 `build_next_step_readiness_evaluation()` or calculate weights/status in the fallback.
 
-- [ ] **Step 5: Add responsive and accessibility contract**
+- [x] **Step 5: Add responsive and accessibility contract**
 
 - use `color-scheme: light` and workspace-scoped text colors;
 - desktop KPI/holdings/question cards use at most two columns;
@@ -4420,7 +4420,7 @@ series, holdings/evidence cards, user-facing dataframes and one collapsed techni
 - `ResizeObserver` updates Streamlit frame height after disclosure/table changes;
 - lifecycle reference/running/error uses `role=status` or `role=alert` without removing prior content.
 
-- [ ] **Step 6: Run GREEN boundary, production build, compile, and commit**
+- [x] **Step 6: Run GREEN boundary, production build, compile, and commit**
 
 ```bash
 uv run --with pytest python -m pytest tests/test_backtest_refactor_boundaries.py -q
@@ -4464,7 +4464,7 @@ stage `node_modules/` or generated QA screenshots.
 - Produces: current session-state adapter, validated `save_and_move` intent, no-run hidden route,
   preserved stale/running/error result, new run identity and primary legacy-detail cutover.
 
-- [ ] **Step 1: Write RED route, lifecycle, identity, and intent tests**
+- [x] **Step 1: Write RED route, lifecycle, identity, and intent tests**
 
 Add tests asserting:
 
@@ -4500,7 +4500,7 @@ Add runner/page source contracts requiring `meta["run_id"]`, pending single exec
 preservation on weighted failure and removal of `_render_real_money_details_legacy` after a repository-wide
 reference assertion.
 
-- [ ] **Step 2: Build state adapter and validated intent dispatcher**
+- [x] **Step 2: Build state adapter and validated intent dispatcher**
 
 Create `build_current_backtest_analysis_result_workspace()` by adapting:
 
@@ -4525,7 +4525,7 @@ for the context surface, but expose practical gaps only as
 `evaluation["level2_validation_questions"]`; do not use
 `build_next_step_readiness_evaluation()` to decide the Level2 action.
 
-- [ ] **Step 3: Assign stable run identity before persistence**
+- [x] **Step 3: Assign stable run identity before persistence**
 
 In every successful current execution path, before storing bundle and appending history:
 
@@ -4556,7 +4556,7 @@ record/return mappings:
 Add the same top-level `run_result_id` to weighted/saved Mix prefill payloads and selection sources. The
 new field is additive and must not change current schema versions or rewrite existing JSONL rows.
 
-- [ ] **Step 4: Queue single execution so the previous result renders during rerun**
+- [x] **Step 4: Queue single execution so the previous result renders during rerun**
 
 Change the validated settings intent handler to queue normalized payload and strategy name in
 `backtest_pending_single_run` instead of executing inside the component callback. At the end of the
@@ -4580,7 +4580,7 @@ The React settings button keeps its existing local `실행 요청 중…` state.
 `is_running=True`, so the previous success stays visible with `새 설정으로 실행 중`. First execution has
 no result workspace and shows progress only. Deduplicate the queued intent id before execution.
 
-- [ ] **Step 5: Preserve weighted result on failure and cut over primary result route**
+- [x] **Step 5: Preserve weighted result on failure and cut over primary result route**
 
 - do not clear `backtest_weighted_bundle` when a new weighted build or saved replay fails;
 - mark the old result reference-only through current/result fingerprint or error state;
@@ -4589,7 +4589,7 @@ no result workspace and shows progress only. Deduplicate the queued intent id be
 - render first-run errors adjacent to settings without an empty result shell;
 - keep full raw table/meta export only inside the new technical appendix/fallback compatibility path.
 
-- [ ] **Step 6: Prove and remove the unused real-money legacy renderer**
+- [x] **Step 6: Prove and remove the unused real-money legacy renderer**
 
 Run:
 
@@ -4601,7 +4601,7 @@ Expected before removal: one definition and no caller. Add a boundary assertion 
 then remove the complete function. Do not remove helpers still referenced by history, compare or Practical
 Validation adapters.
 
-- [ ] **Step 7: Run GREEN, focused/full regression, React builds, compile, and commit**
+- [x] **Step 7: Run GREEN, focused/full regression, React builds, compile, and commit**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -4662,7 +4662,7 @@ py_compile and diff-check exit 0.
 - Produces: actual all-family evidence, desktop/760px screenshots, fresh verification, canonical docs and
   protected-file audit.
 
-- [ ] **Step 1: Run desktop Browser QA on current local app**
+- [x] **Step 1: Run desktop Browser QA on current local app**
 
 At the current Backtest route:
 
@@ -4680,7 +4680,7 @@ At the current Backtest route:
 Do not rewrite or stage the validation registry generated by QA. Capture desktop screenshot only as a local
 artifact.
 
-- [ ] **Step 2: Run 760px Browser QA**
+- [x] **Step 2: Run 760px Browser QA**
 
 Set viewport width to 760px and repeat fresh result, stale result, holdings comparison, chart tooltip,
 questions, user tables and technical appendix. Confirm:
@@ -4694,7 +4694,7 @@ questions, user tables and technical appendix. Confirm:
 
 Capture the 760px screenshot without staging it.
 
-- [ ] **Step 3: Use verification-before-completion for fresh automated checks**
+- [x] **Step 3: Use verification-before-completion for fresh automated checks**
 
 ```bash
 uv run --with pytest python -m pytest tests/test_backtest_analysis_result_workspace.py -q
@@ -4723,7 +4723,7 @@ git diff --check
 Record exact test counts, build module counts, compiler results and any repository baseline failure. Do not
 describe an existing failure as a new pass.
 
-- [ ] **Step 4: Use finance-doc-sync and audit protected paths**
+- [x] **Step 4: Use finance-doc-sync and audit protected paths**
 
 Update canonical ownership/flow docs with:
 
@@ -4751,7 +4751,7 @@ if git diff --cached --name-only | rg -q \
 fi
 ```
 
-- [ ] **Step 5: Commit Task 30**
+- [x] **Step 5: Commit Task 30**
 
 ```bash
 git commit -m "Backtest Analysis 결과 워크스페이스 QA와 문서 동기화"

@@ -1,6 +1,6 @@
 # Status
 
-Status: 10차 Result Evidence Workspace Plan Ready — Inline Execution Next
+Status: Complete — 10차 Result Evidence Workspace
 Last Updated: 2026-07-18
 
 ## Current Position
@@ -47,7 +47,7 @@ Last Updated: 2026-07-18
 - [x] 10차 corrective design 작성과 self-review
 - [x] 10차 written design 사용자 review
 - [x] 10차 implementation plan 작성과 self-review
-- [ ] 10차 RED -> GREEN implementation / Browser QA / closeout
+- [x] 10차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -144,4 +144,19 @@ Last Updated: 2026-07-18
 - written design 사용자 승인을 반영하고 Task 26~30 implementation PLAN을 작성했다.
 - plan은 truth, read model, React UI, lifecycle/fallback cutover, Browser QA/docs의 다섯
   distinct unit이며 각 unit에 RED/GREEN 명령과 한국어 commit을 지정했다.
-- 다음 단계는 현재 worktree와 세션에서 Task 26부터 `executing-plans`로 순차 실행하는 것이다.
+- Task 26~29에서 lifecycle / stage ownership, result read model, React / fallback,
+  runtime identity / stale preservation을 RED -> GREEN으로 구현했다.
+- Task 30 desktop / 760px Browser QA에서 실행 전 결과 미노출, fresh result, stale 참고용 보존,
+  Level2 CTA 차단, current/target holdings, ResizeObserver height sync와 overflow 0을 확인했다.
+
+## 10차 Completion
+
+- lifecycle / truth: `b71ef842 Backtest Analysis 결과 인계 진실 분리`
+- pure result read model: `5f6b93eb Backtest Analysis 결과 근거 읽기 모델 구현`
+- React / Python fallback: `1d438dcf Backtest Analysis 결과 워크스페이스 UI 구현`
+- runtime cutover / identity: `185f6b58 Backtest Analysis 결과 실행 흐름 전환`
+- 760px overflow correction: `20fb797d Backtest Analysis 결과 760px 오버플로 수정`
+- desktop actual Equal Weight 실행과 설정 변경 뒤 stale reference를 확인했다. GTAA 등 모든
+  strategy family의 result-column 계약은 pure matrix test로 보완했다.
+- protected registry / run history / saved JSONL, `.superpowers/`, generated screenshots는
+  closeout commit에서 제외한다.

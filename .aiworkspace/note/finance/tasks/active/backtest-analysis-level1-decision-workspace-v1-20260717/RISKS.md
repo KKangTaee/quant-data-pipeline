@@ -126,3 +126,18 @@ upgrade는 이번 UI workflow 범위를 벗어나므로 closeout의 남은 위�
 - `_render_real_money_details_legacy` 외의 detail helper는 compare/history consumer 가능성이 있으므로
   reference test 없이 broad deletion하지 않는다.
 - QA가 registry와 Run History를 append할 수 있지만 protected artifact이므로 stage/commit하지 않는다.
+
+## 10차 Result Workspace Closeout Assessment
+
+- repository-wide service contract에는 Sentiment 1, Final Review 4, liquidity copy 1,
+  Practical Validation 6의 baseline 12 failures가 남아 있다. focused Level1 result / decision /
+  boundary는 통과했고 신규 Level1 failure는 없다.
+- actual Browser execution은 Equal Weight 대표 경로를 확인했다. GTAA, GRS, Risk Parity,
+  Dual Momentum, factor variants는 all-family pure result-column matrix로 검증했지만 각 family의
+  actual Browser rerun / screenshot은 후속 manual regression gap이다.
+- frontend dependency audit moderate 1 / high 1은 production build를 막지 않는다. breaking
+  dependency upgrade는 별도 compatibility task가 필요하다.
+- CSS `:focus-visible`과 source contract는 있으나 iframe 안 실제 keyboard traversal / focus-ring은
+  수동 accessibility QA gap으로 남는다.
+- server restart 직후 console의 transient WebSocket / health 오류는 current page app error와
+  구분했다. current source 재시작 뒤 component console error는 없었다.

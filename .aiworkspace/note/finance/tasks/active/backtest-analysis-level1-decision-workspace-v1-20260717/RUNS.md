@@ -386,3 +386,47 @@
 - self-review에서 result/decision service circular import, plan-only cutover의 intermediate runtime
   regression, missing configuration fingerprint, run/history/source identity 단절을 찾아 수정했다.
 - 새 plan section의 unresolved marker와 불균형 code fence는 0이며 `git diff --check`를 통과했다.
+
+## 2026-07-18 10차 Task 26~29 RED -> GREEN
+
+- Task 26: lifecycle / stage ownership RED 뒤 pure technical gate와 deduplicated Level2 question을
+  구현했다. commit `b71ef842`.
+- Task 27: safe format, chart, current/target holdings, evidence/user table, all-family result-column
+  matrix를 구현했다. commit `5f6b93eb`.
+- Task 28: same-read-model React / Python fallback, dependency-free SVG chart, responsive / accessibility
+  source contract를 구현했다. result React build는 `176 modules transformed`. commit `1d438dcf`.
+- Task 29: validated intent adapter, queued execution, `run_result_id` persistence, stale preservation,
+  primary result route cutover와 unused legacy renderer 제거를 완료했다. commit `185f6b58`.
+- focused result / decision / boundary regression은 `87 passed, 3 warnings`였다.
+- full service contract는 `821 passed, 12 failed, 35 subtests passed, 3 warnings`였다. 12 failures는
+  Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6의 repository baseline이며
+  신규 Level1 result workspace failure는 0이다.
+
+## 2026-07-18 10차 Task 30 Browser QA
+
+- desktop actual Equal Weight: 실행 전 result iframe 0, 실행 뒤 새 result workspace와
+  current/target holdings, Level1 기술 상태, Level2 questions와 explicit CTA를 확인했다.
+- GTAA로 설정을 바꾼 뒤 이전 Equal Weight 결과는 참고용 stale로 유지되고 handoff CTA가
+  제거되는 것을 확인했다. actual GTAA 재실행은 수행하지 않았고 all-family pure matrix가 보완한다.
+- 760px 첫 QA에서 result iframe `717/811` overflow를 발견해 RED contract 뒤 수정했다.
+  commit `20fb797d`; boundary `46 passed, 3 warnings`, result React build `176 modules transformed`.
+- 수정 뒤 outer `760/760`, result iframe `717/717`, holdings grid single column `683px`였다.
+  result table만 의도한 internal scroll `666/760`을 유지한다.
+- technical appendix open 시 iframe height가 `4268 -> 4680`으로 동기화돼 ResizeObserver를 확인했다.
+- screenshots generated / unstaged:
+  `backtest-analysis-level1-result-workspace-desktop-qa.png`,
+  `backtest-analysis-level1-result-workspace-760-qa.png`.
+
+## 2026-07-18 10차 Task 30 Fresh Verification
+
+- result workspace: `10 passed, 3 warnings`.
+- Level1 decision / runtime adapter: `31 passed, 3 warnings`.
+- refactor boundary / visual contract: `46 passed, 3 warnings`.
+- focused total: `87 passed`; warning은 기존 edgar deprecation이다.
+- full service contracts: `821 passed, 12 failed, 35 subtests passed, 3 warnings`.
+  12 failures는 Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6이며
+  신규 Level1 result workspace failure는 0이다.
+- Decision React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+- Result React production build: Vite 5.4.21, `176 modules transformed`, 성공.
+- target 12-module `py_compile`: exit 0, output 없음.
+- pre-stage `git diff --check`: exit 0, output 없음.

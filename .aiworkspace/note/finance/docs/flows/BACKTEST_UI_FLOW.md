@@ -641,14 +641,19 @@ Factor Readiness는 ticker-change 후보쌍 / 신뢰도 / 기간 경계 / 다음
 
 현재 기준:
 
-- 실행 뒤 first-read 순서는 `Level1 판단 -> CAGR / MDD / Sharpe / 변동성 -> data/action 이유 -> 실제 action -> 상세 근거`다.
-- 성과가 좋아도 maturity, execution, data freshness, handler Gate가 충족되지 않으면 Level2 CTA를 만들지 않는다.
+- 실행 전에는 결과 판정, KPI, 과거 result detail을 노출하지 않는다. 실행 성공 후에만 별도 Result Workspace를 mount한다.
+- 실행 뒤 first-read 순서는 `KPI -> 전략/Benchmark chart -> 현재/목표 보유 -> Level1 기술 인계 -> Level2 검증 질문 -> 목적별 근거 -> 결과표 -> 기술 부록`이다.
+- Level1 technical gate는 성공한 실행, current configuration fingerprint, `run_result_id`, callable handoff handler만 판정한다. 성과값, Benchmark 우위, ETF 운용 가능성, 유동성, rolling/OOS, 비용 현실성은 Level2 질문이며 Level1에서 PASS로 대체하지 않는다.
+- current holdings는 마지막 valuation row의 backtest simulated allocation이고 target holdings는 마지막 유효 signal/rebalance row의 latest available target이다. broker 계좌 현황이나 주문 지시가 아니다.
+- 성과가 좋아도 maturity, execution, result identity, configuration freshness, handler Gate가 충족되지 않으면 Level2 CTA를 만들지 않는다.
 - current configuration fingerprint와 결과 fingerprint가 다르면 KPI와 기술 근거는 참고용으로 유지하되 `이전 설정 결과`로 표시하고 인계를 차단한다.
-- 기존 Data Trust, price refresh, selection history, chart / table / technical meta는 삭제하지 않고 decision surface 아래의 조건부 결과와 접힌 `상세 근거`로 유지한다.
+- rerun은 기존 fresh result를 먼저 유지하고 pending intent를 Python에서 소비한 뒤 새 bundle을 atomic하게 교체한다. 실패해도 마지막 성공 결과를 참고용으로 보존한다.
+- 기존 Data Trust, price refresh, selection history, chart / table / technical meta는 삭제하지 않고 목적별 evidence, user table, 접힌 technical appendix로 낮춘다.
 - component callback은 현재 Streamlit rerun lifecycle을 사용하고 별도 nested app rerun을 호출하지 않으므로 strategy / mode 변경 때 경고 banner를 만들지 않는다.
 - 기존 결과 해석 순서용 checkpoint / availability badge 가이드는 기본 실행 결과 화면에서 제거했다. 반복 설명이 필요하면 `Reference` help나 guide 문서에서 다룬다.
 - `Selection History`, `Dynamic Universe`, `검증 신호 · Policy Signals`는 안내 카드가 아니라 result bundle에 해당 근거가 있을 때만 열리는 조건부 결과 탭이다.
-- 이 변경은 strategy runtime, result bundle, run history, registry / saved setup, Practical Validation / Final Review 저장 정책을 바꾸지 않는다.
+- `run_result_id`는 current bundle, Run History와 handoff source를 연결하는 Level1 identity다. 성공한 Practical Validation의 `validation_result_id`와는 다르며 기존 append-only registry row를 재작성하지 않는다.
+- 이 변경은 strategy calculation, registry / saved setup, Practical Validation / Final Review 저장 정책을 바꾸지 않는다.
 
 ## Candidate Library 흐름
 

@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Current active task is [practical-validation-level2-decision-workspace-v1-20260716](./tasks/active/practical-validation-level2-decision-workspace-v1-20260716/STATUS.md). Implementation / non-visual verification complete, Browser QA pending.
+  - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~10차 implementation / Browser QA / docs sync complete.
   - Latest completed task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
   - Previous completed Institutional Portfolios task is [institutional-portfolios-watchlist-mapping-v1-20260712](./tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
   - Recent completed Final Review task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
@@ -41,6 +41,18 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-18 - Level1 결과는 기술 인계와 Level2 검증 질문을 분리한다
+
+- User request: 오래된 graph/result table/검증 신호를 개편하고 현재/목표 보유를 보여주며,
+  Level1에서 처리할 것과 Level2에서 처리할 것을 명확히 나눠 달라고 요청함.
+- Interpreted goal: 실행 전에는 결과 판정을 숨기고, 실행 후 사용자가 결과를 읽은 다음
+  재현 가능한 기술 상태와 아직 검증할 투자 질문을 혼동 없이 구분해야 한다.
+- Analysis result: Level1은 execution, configuration fingerprint, `run_result_id`, callable handoff만
+  소유한다. Benchmark, investability, liquidity, OOS, cost realism은 Level2 question이고,
+  current/target holdings는 simulated result / latest valid signal이지 실계좌나 주문이 아니다.
+- Follow-up: pure read model, React/Python fallback, queued rerun, stale reference, one-shell result와
+  desktop/760px Browser QA를 완료했다. full service의 비-Level1 baseline failures는 후속 위험으로 남겼다.
 
 ### 2026-07-16 - Practical Validation Level2는 수리와 최종 판단을 분리하는 one-shell이어야 한다
 

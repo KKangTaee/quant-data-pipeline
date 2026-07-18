@@ -38,6 +38,17 @@ Backtest > Backtest Analysis
 
 Live / Deployment Readiness는 현재 별도 화면으로 구현되지 않았다. Final Review는 향후 그 단계가 사용할 수 있도록 엄격한 `deployment_readiness_policy_snapshot`을 남기지만, 그 snapshot이 곧 live approval이나 주문 가능 상태를 뜻하지 않는다.
 
+### Level1 Result And Level2 Entry Boundary
+
+- Backtest Analysis는 실행 전 결과 판정을 표시하지 않는다. fresh result가 생기면 `run_result_id`,
+  configuration fingerprint와 callable handler로 Level2 기술 인계 가능 여부만 판정한다.
+- current holdings는 마지막 valuation row의 simulated allocation, target holdings는 마지막 유효
+  signal/rebalance row의 latest available target이다. 실제 계좌 보유와 다음 주문을 뜻하지 않는다.
+- Benchmark / comparator parity, ETF investability, liquidity, rolling / split / OOS, transaction cost
+  realism은 Level1 통과 조건을 흉내 내지 않고 Level2 validation question으로 전달한다.
+- 설정이 바뀐 old result는 참고용으로 남지만 handoff CTA가 사라진다. 새 실행 성공 뒤에만 current
+  `run_result_id`로 교체하며 기존 validation row를 재작성하지 않는다.
+
 ## Verification Checkpoints
 
 검증 기준은 제품 `Stage` 번호로 부르지 않는다.
@@ -54,7 +65,8 @@ Live / Deployment Readiness는 현재 별도 화면으로 구현되지 않았다
 
 ## Source Contract
 
-Portfolio Selection current의 기준 id는 `selection_source_id`다.
+Portfolio Selection current의 기준 id는 `selection_source_id`다. Level1 실행 자체는
+`run_result_id`, Level2 검증 결과는 `validation_result_id`를 사용하며 서로 대체하지 않는다.
 
 ```text
 PORTFOLIO_SELECTION_SOURCES
@@ -72,6 +84,8 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 ## User-Facing Rules
 
 - 사용자는 Backtest Analysis에서 후보를 만들고 Practical Validation으로 보낸다.
+- Backtest Analysis result workspace는 실행 후에만 나타난다. current/target holdings와 성과는
+  reproducible result evidence이며, Level2 검증을 통과했다는 의미나 broker 주문 지시가 아니다.
 - `Operations > Operations Overview`는 선정 후 monitoring / system health의 Operations Console 입구이며, Backtest 후보 생성 단계가 아니다. Today action queue는 검토 우선순위만 안내하고 주문 / 자동 리밸런싱을 만들지 않는다. Backtest Run History와 Candidate Library archive 화면은 현재 Operations 상단 탭에 노출하지 않는다.
 - Backtest Analysis의 Promotion Policy Signal은 1차 후보 readiness만 보며, probation / monitoring / deployment를 시작하거나 확정하지 않는다. hard blocker는 1차 source 등록을 막고, `2차 확인` review focus는 source의 `entry_gate.review_focus_rows`로 Practical Validation에 전달한다.
 - Backtest Analysis의 Data Trust Summary는 DB 가격 기준일이 최신 완료 거래일보다 오래된 경우, 현재 후보 ticker만 대상으로 OHLCV 가격 이력 업데이트 action을 제공한다. 보이는 action card와 버튼은 React custom component 안에서 통합 렌더링되며, Python은 submit event를 받아 데이터 보강만 수행한다. 결과 재계산 / source 등록 / 2차 검증 전송은 사용자가 별도로 실행한다.

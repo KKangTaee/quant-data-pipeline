@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Current active task is [practical-validation-level2-decision-workspace-v1-20260716](./tasks/active/practical-validation-level2-decision-workspace-v1-20260716/STATUS.md). Implementation and non-visual verification are complete; desktop / 760px Browser QA remains.
+  - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~10차 implementation, desktop / 760px Browser QA와 docs sync를 완료했다.
   - Latest completed task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
   - Previous completed Institutional Portfolios task is [institutional-portfolios-watchlist-mapping-v1-20260712](./tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
   - Recent completed Final Review task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md). It closes Level2 actionable gaps and records Final Review accepted-limit / Monitoring / defer terminal states.
@@ -47,6 +47,15 @@ Detailed historical logs were archived on `2026-04-13`.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### 2026-07-18 - Backtest Analysis Level1 Result Evidence Workspace
+
+- 실행 전 결과 미노출, fresh/stale/running/error lifecycle과 `run_result_id` 기반 Level1 기술 인계를 구현했다.
+- 결과를 KPI, chart, current/target holdings, Level1 handoff, Level2 validation questions,
+  evidence, user table, technical appendix의 one-shell로 개편했다.
+- actual Equal Weight desktop/760px Browser QA와 stale handoff 차단, overflow 0,
+  ResizeObserver height sync를 확인했다.
+- protected registry / run history / saved JSONL, `.superpowers/`, generated QA screenshot은 commit에서 제외했다.
 
 ### 2026-07-16 - Practical Validation Level2 Decision Workspace
 
