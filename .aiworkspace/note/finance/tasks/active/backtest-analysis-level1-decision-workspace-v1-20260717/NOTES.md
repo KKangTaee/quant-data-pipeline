@@ -281,3 +281,12 @@ generated artifact이므로 commit하지 않는다.
   표시한다. exact trading date, holiday adjustment 또는 irregular signal date는 추측하지 않는다.
 - `기술 부록`은 사용자용 `계산 및 데이터 기준`으로 바꾸고 raw column/meta는 secondary disclosure에
   보존한다. Python이 label/explanation/status를 제공하고 React/fallback은 표시만 한다.
+
+## 2026-07-18 11차 Written Design Approval And Implementation Plan
+
+- 사용자가 written design을 승인해 Task 31~34 implementation plan을 작성했다.
+- Task 31은 common chart timeline/date tick/normalized return/Benchmark identity, Task 32는
+  holdings schedule과 calculation/data basis, Task 33은 pointer-only SVG/React/fallback,
+  Task 34는 Browser QA/verification/docs closeout을 소유한다.
+- no-dollar, no-chart-dependency, no-exact-trading-date, Python-owned semantics와 protected path
+  constraints를 모든 task에 공통 적용한다.
