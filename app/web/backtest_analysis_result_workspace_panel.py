@@ -33,6 +33,8 @@ def render_backtest_analysis_result_workspace_fallback(
         f"{lifecycle.get('display_label') or '결과 상태 미확인'} · "
         f"{identity.get('period_label') or '기간 미측정'}"
     )
+    if lifecycle.get("reference_message"):
+        st.caption(str(lifecycle["reference_message"]))
     error = dict(lifecycle.get("error") or {})
     if error:
         st.warning(str(error.get("message") or "이전 실행에서 오류가 발생했습니다."))

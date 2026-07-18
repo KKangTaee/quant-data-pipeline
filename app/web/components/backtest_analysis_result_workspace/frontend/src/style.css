@@ -51,6 +51,7 @@ button { font: inherit; }
 .bt1r-lifecycle span { color: #6b8192; font-size: 12px; font-weight: 700; }
 .bt1r-lifecycle strong { font-size: 18px; }
 .bt1r-lifecycle small { color: #9b4f43; }
+.bt1r-lifecycle .bt1r-reference-message { color: #6b8192; line-height: 1.45; }
 .bt1r-lifecycle.is-stale,
 .bt1r-lifecycle.is-error_with_reference { border-color: #e8c78b; background: #fffaf0; }
 

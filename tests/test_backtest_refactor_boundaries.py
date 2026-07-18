@@ -1068,6 +1068,29 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         ):
             self.assertNotIn(legacy_renderer, render_body)
 
+    def test_single_result_route_has_no_legacy_rerun_notice_or_raw_refresh_table(self) -> None:
+        strategy = (
+            PROJECT_ROOT / "app/web/backtest_single_strategy.py"
+        ).read_text()
+        result_display = (
+            PROJECT_ROOT / "app/web/backtest_result_display.py"
+        ).read_text()
+        result_adapter = (
+            PROJECT_ROOT / "app/web/backtest_analysis_result_workspace.py"
+        ).read_text()
+        result_component = (
+            PROJECT_ROOT
+            / "app/web/components/backtest_analysis_result_workspace/frontend/src/BacktestAnalysisResultWorkspace.tsx"
+        ).read_text()
+
+        self.assertNotIn("backtest_last_result_reset_notice", strategy)
+        self.assertNotIn("_render_backtest_rerun_required_notice", result_display)
+        self.assertNotIn('"Refresh Message"', result_display)
+        self.assertIn("backtest_last_result_refresh_result", result_adapter)
+        self.assertIn('"price_refresh"', result_adapter)
+        self.assertIn("reference_reason=reference_reason", result_adapter)
+        self.assertIn("reference_message", result_component)
+
 
 if __name__ == "__main__":
     unittest.main()

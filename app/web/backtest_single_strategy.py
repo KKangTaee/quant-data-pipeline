@@ -67,10 +67,6 @@ def _mark_last_run_stale_if_strategy_selection_changed(
         st.session_state.backtest_last_error_kind = None
         st.session_state.backtest_last_result_requires_rerun = True
         st.session_state.backtest_last_result_refresh_result = None
-        st.session_state.backtest_last_result_reset_notice = (
-            "현재 선택이 이전 실행과 달라 기존 결과를 참고용으로 유지합니다. "
-            "현재 설정으로 다시 실행해야 Level2 전송이 열립니다."
-        )
     st.session_state.backtest_last_strategy_selection_signature = current_signature
 
 
@@ -222,10 +218,6 @@ def render_single_strategy_workspace() -> None:
     st.divider()
     selected_variant = selected_variant or _selected_strategy_variant(strategy_choice)
     _mark_last_run_stale_if_strategy_selection_changed(strategy_choice, selected_variant)
-    reset_notice = st.session_state.get("backtest_last_result_reset_notice")
-    if reset_notice:
-        st.info(str(reset_notice))
-        st.session_state.backtest_last_result_reset_notice = None
     pending = st.session_state.get("backtest_pending_single_run")
     _render_last_run(is_running=bool(pending))
     if isinstance(pending, dict):

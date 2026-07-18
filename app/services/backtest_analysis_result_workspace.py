@@ -28,6 +28,7 @@ def build_result_lifecycle(
     is_running: bool,
     last_error: str | None,
     last_error_kind: str | None,
+    reference_reason: str | None = None,
 ) -> dict[str, Any]:
     """Project run state without discarding the last successful result."""
 
@@ -62,6 +63,25 @@ def build_result_lifecycle(
         "stale": "이전 설정 결과 · 참고용",
         "fresh": "현재 설정 결과",
     }
+    resolved_reference_reason: str | None = None
+    if state == "error_with_reference":
+        resolved_reference_reason = "rerun_failed"
+    elif state in {"stale", "running_with_reference"}:
+        resolved_reference_reason = reference_reason or "settings_changed"
+
+    reference_messages = {
+        "settings_changed": (
+            "현재 설정으로 다시 실행하면 Level2 인계를 다시 확인할 수 있습니다."
+        ),
+        "price_refresh": (
+            "최신 가격 기준으로 다시 실행하면 성과와 Level2 인계 상태가 갱신됩니다."
+        ),
+        "rerun_failed": (
+            "재실행에 실패해 마지막 성공 결과를 참고용으로 유지합니다."
+        ),
+    }
+    if resolved_reference_reason == "price_refresh" and state == "stale":
+        display_labels[state] = "가격 갱신 전 결과 · 참고용"
     return {
         "state": state,
         "display_label": display_labels[state],
@@ -69,6 +89,11 @@ def build_result_lifecycle(
         "result_available": result_available,
         "fingerprint_matches": fingerprint_matches,
         "reference_only": reference_only or state == "running_with_reference",
+        "reference_reason": resolved_reference_reason,
+        "reference_message": reference_messages.get(
+            resolved_reference_reason,
+            "",
+        ),
         "is_running": is_running,
         "error": (
             {
@@ -1319,6 +1344,7 @@ def build_backtest_analysis_result_workspace(
     last_error_kind: str | None,
     action_handlers: Mapping[str, Callable[..., Any] | None],
     component_bundles: Sequence[Mapping[str, Any]] = (),
+    reference_reason: str | None = None,
 ) -> dict[str, Any]:
     """Build the JSON-ready Level1 result workspace for every renderer."""
 
@@ -1330,6 +1356,7 @@ def build_backtest_analysis_result_workspace(
         is_running=is_running,
         last_error=last_error,
         last_error_kind=last_error_kind,
+        reference_reason=reference_reason,
     )
     if not lifecycle["show_workspace"]:
         return {

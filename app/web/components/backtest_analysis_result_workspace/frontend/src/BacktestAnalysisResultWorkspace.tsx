@@ -31,6 +31,11 @@ function ResultHeader({ workspace }: { workspace: ResultWorkspace }) {
       <div className={`bt1r-lifecycle is-${workspace.lifecycle.state}`} role={role}>
         <span>결과 상태</span>
         <strong>{workspace.lifecycle.display_label}</strong>
+        {workspace.lifecycle.reference_message && (
+          <small className="bt1r-reference-message">
+            {workspace.lifecycle.reference_message}
+          </small>
+        )}
         {workspace.lifecycle.error && <small>{workspace.lifecycle.error.message}</small>}
       </div>
     </header>

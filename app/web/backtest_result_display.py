@@ -2151,40 +2151,6 @@ def _render_backtest_result_header(bundle: dict[str, Any], summary_df: pd.DataFr
     )
 
 
-def _render_backtest_rerun_required_notice(bundle: dict[str, Any] | None, result: dict[str, Any] | None) -> None:
-    meta = dict((bundle or {}).get("meta") or {})
-    strategy_name = str((bundle or {}).get("strategy_name") or meta.get("strategy_name") or "현재 전략")
-    rows_written = 0
-    if isinstance(result, dict):
-        try:
-            rows_written = int(result.get("rows_written") or 0)
-        except (TypeError, ValueError):
-            rows_written = 0
-    details = dict((result or {}).get("details") or {}) if isinstance(result, dict) else {}
-    plan = dict(details.get("plan") or {})
-    target_end = str(plan.get("target_end") or plan.get("collection_end") or "-")
-    collection_start = str(plan.get("collection_start") or "-")
-    ticker_count = int(plan.get("ticker_count") or len(plan.get("tickers") or []) or 0)
-    message = str((result or {}).get("message") or "Coverage 최신화가 완료되었습니다.") if isinstance(result, dict) else "Coverage 최신화가 완료되었습니다."
-    st.warning(
-        "가격 데이터가 업데이트되어 기존 백테스트 결과는 참고용으로 유지됩니다. "
-        "최신 가격 기준 성과와 Level2 진입 판단을 갱신하려면 같은 설정으로 `Run Backtest`를 다시 실행하세요."
-    )
-    notice_df = pd.DataFrame(
-        [
-            {
-                "Strategy": strategy_name,
-                "Refresh Message": message,
-                "Saved Rows": rows_written,
-                "Target End": target_end,
-                "Collection Start": collection_start,
-                "Tickers": ticker_count,
-            }
-        ]
-    )
-    st.dataframe(notice_df, use_container_width=True, hide_index=True)
-
-
 def _render_last_run(*, is_running: bool = False) -> None:
     error = st.session_state.backtest_last_error
     error_kind = st.session_state.backtest_last_error_kind
@@ -2203,10 +2169,6 @@ def _render_last_run(*, is_running: bool = False) -> None:
         if is_running:
             render_backtest_analysis_result_workspace(is_running=True)
         return
-
-    if st.session_state.get("backtest_last_result_requires_rerun"):
-        refresh_result = st.session_state.get("backtest_last_result_refresh_result")
-        _render_backtest_rerun_required_notice(bundle, refresh_result if isinstance(refresh_result, dict) else None)
 
     render_backtest_analysis_result_workspace(is_running=is_running)
 

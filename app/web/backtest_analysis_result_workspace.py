@@ -64,6 +64,14 @@ def build_current_backtest_analysis_result_workspace(
         result_requires_rerun = bool(
             st.session_state.get("backtest_last_result_requires_rerun")
         )
+        refresh_result = st.session_state.get(
+            "backtest_last_result_refresh_result"
+        )
+        reference_reason = (
+            "price_refresh"
+            if result_requires_rerun and isinstance(refresh_result, Mapping)
+            else None
+        )
         last_error = st.session_state.get("backtest_last_error")
         last_error_kind = st.session_state.get("backtest_last_error_kind")
         component_bundles: list[dict[str, Any]] = []
@@ -92,6 +100,7 @@ def build_current_backtest_analysis_result_workspace(
             st.session_state.get("backtest_compare_bundles") or []
         )
         pending = st.session_state.get("backtest_pending_weighted_run")
+        reference_reason = None
 
     action_handlers = build_backtest_analysis_action_handlers(
         workspace_kind=workspace_kind,
@@ -110,6 +119,7 @@ def build_current_backtest_analysis_result_workspace(
         last_error_kind=str(last_error_kind) if last_error_kind else None,
         action_handlers=action_handlers,
         component_bundles=component_bundles,
+        reference_reason=reference_reason,
     )
 
 

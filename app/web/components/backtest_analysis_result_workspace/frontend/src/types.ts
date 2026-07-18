@@ -67,6 +67,8 @@ export type ResultWorkspace = {
     result_available: boolean
     fingerprint_matches: boolean
     reference_only: boolean
+    reference_reason: string | null
+    reference_message: string
     is_running: boolean
     error?: { kind: string; message: string } | null
   }

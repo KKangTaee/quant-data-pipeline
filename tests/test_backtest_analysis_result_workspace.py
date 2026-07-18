@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from inspect import signature
+
 import pandas as pd
 
 from app.services.backtest_analysis_result_workspace import (
@@ -59,6 +61,52 @@ def test_no_run_is_hidden_and_previous_error_result_is_reference() -> None:
     assert failed_rerun["state"] == "error_with_reference"
     assert failed_rerun["show_workspace"] is True
     assert failed_rerun["reference_only"] is True
+
+
+def test_lifecycle_accepts_python_owned_reference_reason() -> None:
+    assert "reference_reason" in signature(build_result_lifecycle).parameters
+
+
+def test_reference_only_lifecycle_explains_settings_price_and_failure_reasons() -> None:
+    settings = build_result_lifecycle(
+        result_bundle=result_bundle(),
+        current_configuration_fingerprint="new",
+        result_configuration_fingerprint="old",
+        result_requires_rerun=True,
+        is_running=False,
+        last_error=None,
+        last_error_kind=None,
+    )
+    price = build_result_lifecycle(
+        result_bundle=result_bundle(),
+        current_configuration_fingerprint="same",
+        result_configuration_fingerprint="same",
+        result_requires_rerun=True,
+        is_running=False,
+        last_error=None,
+        last_error_kind=None,
+        reference_reason="price_refresh",
+    )
+    failed = build_result_lifecycle(
+        result_bundle=result_bundle(),
+        current_configuration_fingerprint="new",
+        result_configuration_fingerprint="old",
+        result_requires_rerun=True,
+        is_running=False,
+        last_error="provider timeout",
+        last_error_kind="data",
+    )
+
+    assert settings.get("reference_reason") == "settings_changed"
+    assert settings.get("reference_message") == (
+        "현재 설정으로 다시 실행하면 Level2 인계를 다시 확인할 수 있습니다."
+    )
+    assert price["display_label"] == "가격 갱신 전 결과 · 참고용"
+    assert price.get("reference_reason") == "price_refresh"
+    assert failed.get("reference_reason") == "rerun_failed"
+    assert failed.get("reference_message") == (
+        "재실행에 실패해 마지막 성공 결과를 참고용으로 유지합니다."
+    )
 
 
 def test_level1_gate_ignores_practical_validation_signals() -> None:

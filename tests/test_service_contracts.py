@@ -15236,15 +15236,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("price_refresh_result_requires_backtest_rerun", result_display_source)
         self.assertIn("_mark_backtest_result_requires_rerun_after_price_refresh(result)", consume_body)
         self.assertIn("backtest_last_result_requires_rerun", result_display_source)
-        self.assertIn("_render_backtest_rerun_required_notice", last_run_body)
+        self.assertNotIn("_render_backtest_rerun_required_notice", last_run_body)
         self.assertIn("backtest_last_result_refresh_result", result_display_source)
         self.assertIn("backtest_last_result_requires_rerun = False", runner_source)
         self.assertIn("backtest_last_result_requires_rerun = True", strategy_source)
-        self.assertIn("기존 결과를 참고용으로 유지합니다", strategy_source)
-        self.assertLess(
-            last_run_body.index("_render_backtest_rerun_required_notice"),
-            last_run_body.rindex("render_backtest_analysis_result_workspace"),
-        )
+        self.assertIn("render_backtest_analysis_result_workspace", last_run_body)
+        self.assertNotIn("Refresh Message", last_run_body)
 
     def test_data_trust_summary_renderer_keeps_warnings_inside_compact_panel(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
