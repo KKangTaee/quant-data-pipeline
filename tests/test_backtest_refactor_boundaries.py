@@ -544,7 +544,7 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, source)
 
-    def test_backtest_analysis_react_has_two_surfaces_and_resize_observer(
+    def test_backtest_analysis_react_has_three_surfaces_and_resize_observer(
         self,
     ) -> None:
         component = (
@@ -561,7 +561,11 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
             / "app/web/components/backtest_analysis_decision_workspace/frontend/src/style.css"
         ).read_text()
 
-        self.assertIn('surface: "context" | "decision"', index)
+        self.assertIn("surface: WorkspaceSurface", index)
+        self.assertIn('"context" | "settings" | "decision"', (
+            PROJECT_ROOT
+            / "app/web/components/backtest_analysis_decision_workspace/frontend/src/types.ts"
+        ).read_text())
         self.assertIn("data-surface={surface}", component)
         self.assertIn("ResizeObserver", index)
         self.assertIn("Streamlit.setFrameHeight", index)
@@ -786,6 +790,47 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn('"run_single_strategy"', source)
         self.assertNotIn("_render_equal_weight_form", source)
         self.assertNotIn("_render_gtaa_form", source)
+
+    def test_react_settings_surface_is_schema_driven_and_responsive(self) -> None:
+        root = (
+            PROJECT_ROOT
+            / "app/web/components/backtest_analysis_decision_workspace"
+        )
+        wrapper = (root / "component.py").read_text()
+        types = (root / "frontend/src/types.ts").read_text()
+        index = (root / "frontend/src/index.tsx").read_text()
+        component = (
+            root / "frontend/src/BacktestAnalysisDecisionWorkspace.tsx"
+        ).read_text()
+        style = (root / "frontend/src/style.css").read_text()
+
+        self.assertIn('Literal["context", "settings", "decision"]', wrapper)
+        self.assertIn('"settings"', types.split("WorkspaceSurface", 1)[1])
+        self.assertIn("export type SettingsField", types)
+        self.assertIn("export type SingleSettingsWorkspace", types)
+        self.assertIn("SingleSettingsWorkspace", index)
+        self.assertIn('surface === "settings"', component)
+        for control in (
+            'case "date"',
+            'case "number"',
+            'case "text"',
+            'case "single_select"',
+            'case "multi_select"',
+            'case "segmented"',
+            'case "toggle"',
+        ):
+            self.assertIn(control, component)
+        self.assertIn("emitSettingsIntent(", component)
+        self.assertIn('"select_strategy_variant"', component)
+        self.assertIn('"run_single_strategy"', component)
+        self.assertIn("bt1-settings-grid", style)
+        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr))", style)
+        responsive = style.split("@media (max-width: 760px)", 1)[1]
+        self.assertIn(".bt1-settings-grid", responsive)
+        self.assertIn("grid-template-columns: minmax(0, 1fr)", responsive)
+        self.assertIn("ResizeObserver", index)
+        self.assertNotIn("dangerouslySetInnerHTML", component)
+        self.assertNotIn("execute_single_backtest", component)
 
 
 if __name__ == "__main__":

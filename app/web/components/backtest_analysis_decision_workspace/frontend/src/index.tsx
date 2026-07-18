@@ -2,12 +2,16 @@ import React, { useEffect } from "react"
 import { createRoot } from "react-dom/client"
 import { Streamlit, withStreamlitConnection } from "streamlit-component-lib"
 import { BacktestAnalysisDecisionWorkspace } from "./BacktestAnalysisDecisionWorkspace"
-import { BacktestAnalysisWorkspace } from "./types"
+import {
+  BacktestAnalysisWorkspace,
+  SingleSettingsWorkspace,
+  WorkspaceSurface,
+} from "./types"
 import "./style.css"
 
 type StreamlitArgs = {
-  workspace?: BacktestAnalysisWorkspace
-  surface: "context" | "decision"
+  workspace?: BacktestAnalysisWorkspace | SingleSettingsWorkspace
+  surface: WorkspaceSurface
 }
 
 type AppProps = {

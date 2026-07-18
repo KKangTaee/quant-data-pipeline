@@ -2296,7 +2296,7 @@ git commit -m "Backtest Analysis React 설정 intent와 fallback 연결"
 - Produces: `settings` surface with local draft state, all seven field controls, errors, disclosure,
   pending lock, and responsive layout.
 
-- [ ] **Step 1: Write RED source and component-boundary tests**
+- [x] **Step 1: Write RED source and component-boundary tests**
 
 Assert `WorkspaceSurface` includes `settings`, the wrapper accepts the new surface, TS types contain
 `SettingsField` and `SingleSettingsWorkspace`, and source contains render paths for all seven
@@ -2304,7 +2304,7 @@ controls. Assert the source does not classify raw strategy status/maturity/Gate,
 runner, and does not render `dangerouslySetInnerHTML`. Assert CSS includes a two-column settings grid
 and `@media (max-width: 760px)` one-column override.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 uv run --with pytest python -m pytest tests/test_backtest_refactor_boundaries.py -q \
@@ -2313,13 +2313,13 @@ uv run --with pytest python -m pytest tests/test_backtest_refactor_boundaries.py
 
 Expected: `settings` surface/type/control assertions fail.
 
-- [ ] **Step 3: Extend wrapper/types/index with the settings read model**
+- [x] **Step 3: Extend wrapper/types/index with the settings read model**
 
 Add the schema/profile/variant/section/field/evidence/action/error interfaces exactly matching Task
 14. Keep `ResizeObserver` and `Streamlit.setFrameHeight()` in `index.tsx`; route `surface ===
 \"settings\"` to the same component with supplied data.
 
-- [ ] **Step 4: Implement local editor, profile, four sections, disclosure, and intent emission**
+- [x] **Step 4: Implement local editor, profile, four sections, disclosure, and intent emission**
 
 Initialize local values from `draft_key`; reset only when `draft_key` changes. Field edits stay in
 React state. Variant clicks immediately emit `select_strategy_variant`. Submit emits one
@@ -2327,7 +2327,7 @@ React state. Variant clicks immediately emit `select_strategy_variant`. Submit e
 while pending. Render badges as text nodes, errors at field/section position, full-width wide fields,
 and advanced/evidence rows inside `고급 설정과 기술 근거`.
 
-- [ ] **Step 5: Implement responsive CSS and run GREEN/build**
+- [x] **Step 5: Implement responsive CSS and run GREEN/build**
 
 ```bash
 uv run --with pytest python -m pytest tests/test_backtest_refactor_boundaries.py -q \
@@ -2340,7 +2340,7 @@ git diff --check
 
 Expected: focused source tests pass and Vite production build exits 0.
 
-- [ ] **Step 6: Commit Task 18**
+- [x] **Step 6: Commit Task 18**
 
 ```bash
 git add app/web/components/backtest_analysis_decision_workspace/component.py \

@@ -1,7 +1,9 @@
-import React, { useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { Streamlit } from "streamlit-component-lib"
 import {
   BacktestAnalysisWorkspace,
+  SettingsField,
+  SingleSettingsWorkspace,
   WorkspaceIntent,
   WorkspaceSurface,
 } from "./types"
@@ -29,7 +31,323 @@ function workspaceKindLabel(kind: string) {
   return kind === "portfolio_mix" ? "Portfolio Mix" : "Single Strategy"
 }
 
-export function BacktestAnalysisDecisionWorkspace({
+type SettingsValues = Record<string, unknown>
+
+function settingsIntentId(action: string) {
+  return `${action}-${Date.now()}-${Math.random()}`
+}
+
+function emitSettingsIntent(
+  action: "select_strategy_variant" | "run_single_strategy",
+  workspace: SingleSettingsWorkspace,
+  values: SettingsValues,
+  variant: string | null = workspace.variant.value,
+) {
+  Streamlit.setComponentValue({
+    action,
+    intent_id: settingsIntentId(action),
+    strategy_choice: workspace.strategy_choice,
+    variant,
+    values,
+  })
+}
+
+function settingsInitialValues(workspace: SingleSettingsWorkspace) {
+  return Object.fromEntries(
+    workspace.sections.flatMap((section) =>
+      section.fields.map((field) => [field.field_id, field.value]),
+    ),
+  )
+}
+
+function optionLabel(field: SettingsField, value: unknown) {
+  return (
+    field.options?.find((option) => option.value === value)?.label ?? String(value)
+  )
+}
+
+function optionFromString(field: SettingsField, value: string) {
+  return field.options?.find((option) => String(option.value) === value)?.value ?? value
+}
+
+function isSettingsFieldVisible(field: SettingsField, values: SettingsValues) {
+  return Object.entries(field.visible_when ?? {}).every(
+    ([dependency, expected]) => values[dependency] === expected,
+  )
+}
+
+function SettingsFieldControl({
+  field,
+  value,
+  onChange,
+  error,
+}: {
+  field: SettingsField
+  value: unknown
+  onChange: (value: unknown) => void
+  error?: string
+}) {
+  const inputId = `bt1-setting-${field.field_id}`
+  let control: React.ReactNode
+  switch (field.control) {
+    case "date":
+      control = (
+        <input
+          id={inputId}
+          type="date"
+          value={String(value ?? "")}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )
+      break
+    case "number":
+      control = (
+        <input
+          id={inputId}
+          type="number"
+          value={typeof value === "number" ? value : ""}
+          min={field.min}
+          max={field.max}
+          step={field.step ?? "any"}
+          onChange={(event) =>
+            onChange(event.target.value === "" ? null : event.target.valueAsNumber)
+          }
+        />
+      )
+      break
+    case "text":
+      control = (
+        <input
+          id={inputId}
+          type="text"
+          value={String(value ?? "")}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )
+      break
+    case "single_select":
+      control = (
+        <select
+          id={inputId}
+          value={String(value ?? "")}
+          onChange={(event) => onChange(optionFromString(field, event.target.value))}
+        >
+          {(field.options ?? []).map((option) => (
+            <option key={String(option.value)} value={String(option.value)}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      )
+      break
+    case "multi_select":
+      control = (
+        <select
+          id={inputId}
+          multiple
+          value={(Array.isArray(value) ? value : []).map(String)}
+          onChange={(event) =>
+            onChange(
+              Array.from(event.target.selectedOptions).map((option) =>
+                optionFromString(field, option.value),
+              ),
+            )
+          }
+        >
+          {(field.options ?? []).map((option) => (
+            <option key={String(option.value)} value={String(option.value)}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      )
+      break
+    case "segmented":
+      control = (
+        <div className="bt1-settings-segmented" id={inputId}>
+          {(field.options ?? []).map((option) => (
+            <button
+              type="button"
+              className={option.value === value ? "is-selected" : ""}
+              aria-pressed={option.value === value}
+              key={String(option.value)}
+              onClick={() => onChange(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )
+      break
+    case "toggle":
+      control = (
+        <button
+          id={inputId}
+          type="button"
+          className={`bt1-settings-toggle ${value === true ? "is-on" : ""}`}
+          aria-pressed={value === true}
+          onClick={() => onChange(value !== true)}
+        >
+          <span aria-hidden="true" />
+          {value === true ? "사용" : "사용 안 함"}
+        </button>
+      )
+      break
+  }
+
+  return (
+    <div
+      className={`bt1-settings-field ${field.wide ? "is-wide" : ""} ${
+        error ? "has-error" : ""
+      }`}
+    >
+      <label htmlFor={field.control === "segmented" ? undefined : inputId}>
+        {field.label}
+        {field.required && <span className="bt1-required">필수</span>}
+      </label>
+      {control}
+      {field.help && <small>{field.help}</small>}
+      {field.control === "multi_select" && Array.isArray(value) && (
+        <small className="bt1-settings-selection-summary">
+          {value.length}개 선택 · {value.slice(0, 5).map((item) => optionLabel(field, item)).join(", ")}
+        </small>
+      )}
+      {error && <p className="bt1-settings-field-error">{error}</p>}
+    </div>
+  )
+}
+
+function SingleSettingsEditor({ workspace }: { workspace: SingleSettingsWorkspace }) {
+  const initialValues = useMemo(
+    () => settingsInitialValues(workspace),
+    [workspace.draft_key],
+  )
+  const [values, setValues] = useState<SettingsValues>(initialValues)
+  const [pending, setPending] = useState(false)
+
+  useEffect(() => {
+    setValues(initialValues)
+    setPending(false)
+  }, [workspace.draft_key, initialValues])
+
+  useEffect(() => {
+    setPending(false)
+  }, [workspace.validation_errors])
+
+  const setFieldValue = (fieldId: string, nextValue: unknown) => {
+    setValues((current) => ({ ...current, [fieldId]: nextValue }))
+  }
+
+  return (
+    <main className="bt1-workspace bt1-settings-workspace" data-surface="settings">
+      <header className="bt1-settings-profile">
+        <p className="bt1-kicker">현재 설정 대상</p>
+        <h1>{workspace.profile.display_name}</h1>
+        <div className="bt1-settings-badges">
+          <span>{workspace.profile.purpose_label}</span>
+          <span>{workspace.profile.maturity_label}</span>
+        </div>
+        <p>{workspace.profile.description}</p>
+        {workspace.variant.options.length > 0 && (
+          <div className="bt1-settings-variant" aria-label="실행 기준">
+            {workspace.variant.options.map((option) => (
+              <button
+                type="button"
+                className={option.value === workspace.variant.value ? "is-selected" : ""}
+                aria-pressed={option.value === workspace.variant.value}
+                key={String(option.value)}
+                onClick={() =>
+                  emitSettingsIntent(
+                    "select_strategy_variant",
+                    workspace,
+                    values,
+                    String(option.value),
+                  )
+                }
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </header>
+
+      <div className="bt1-settings-sections">
+        {workspace.sections.map((section) => {
+          const visibleFields = section.fields.filter((field) =>
+            isSettingsFieldVisible(field, values),
+          )
+          const primaryFields = visibleFields.filter((field) => !field.advanced)
+          const advancedFields = visibleFields.filter((field) => field.advanced)
+          return (
+            <section className="bt1-settings-section" key={section.section_id}>
+              <div className="bt1-settings-section-heading">
+                <h2>{section.title}</h2>
+                <p>{section.description}</p>
+              </div>
+              <div className="bt1-settings-grid">
+                {primaryFields.map((field) => (
+                  <SettingsFieldControl
+                    field={field}
+                    value={values[field.field_id]}
+                    error={workspace.validation_errors[field.field_id]}
+                    key={field.field_id}
+                    onChange={(nextValue) => setFieldValue(field.field_id, nextValue)}
+                  />
+                ))}
+              </div>
+              {advancedFields.length > 0 && (
+                <details className="bt1-settings-disclosure">
+                  <summary>고급 설정과 기술 근거</summary>
+                  <div className="bt1-settings-grid">
+                    {advancedFields.map((field) => (
+                      <SettingsFieldControl
+                        field={field}
+                        value={values[field.field_id]}
+                        error={workspace.validation_errors[field.field_id]}
+                        key={field.field_id}
+                        onChange={(nextValue) => setFieldValue(field.field_id, nextValue)}
+                      />
+                    ))}
+                  </div>
+                </details>
+              )}
+            </section>
+          )
+        })}
+      </div>
+
+      <aside className="bt1-settings-rule-summary">
+        <div>
+          <strong>어떻게 선택하나요?</strong>
+          <span>{workspace.profile.selection_rule}</span>
+        </div>
+        <div>
+          <strong>어떻게 보유하나요?</strong>
+          <span>{workspace.profile.holding_rule}</span>
+        </div>
+        <div>
+          <strong>무엇을 주의하나요?</strong>
+          <span>{workspace.profile.risk_note}</span>
+        </div>
+      </aside>
+
+      <button
+        type="button"
+        className="bt1-action-button bt1-settings-submit"
+        disabled={pending || workspace.action.enabled !== true}
+        onClick={() => {
+          setPending(true)
+          emitSettingsIntent("run_single_strategy", workspace, values)
+        }}
+      >
+        {pending ? "실행 요청 중…" : workspace.action.label}
+      </button>
+    </main>
+  )
+}
+
+function AnalysisDecisionSurfaces({
   workspace,
   surface,
 }: {
@@ -317,5 +635,23 @@ export function BacktestAnalysisDecisionWorkspace({
         </>
       )}
     </main>
+  )
+}
+
+export function BacktestAnalysisDecisionWorkspace({
+  workspace,
+  surface,
+}: {
+  workspace: BacktestAnalysisWorkspace | SingleSettingsWorkspace
+  surface: WorkspaceSurface
+}) {
+  if (surface === "settings") {
+    return <SingleSettingsEditor workspace={workspace as SingleSettingsWorkspace} />
+  }
+  return (
+    <AnalysisDecisionSurfaces
+      workspace={workspace as BacktestAnalysisWorkspace}
+      surface={surface}
+    />
   )
 }

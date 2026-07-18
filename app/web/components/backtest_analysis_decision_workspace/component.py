@@ -26,7 +26,7 @@ def is_backtest_analysis_decision_workspace_available() -> bool:
 def render_backtest_analysis_decision_workspace(
     *,
     workspace: dict[str, Any],
-    surface: Literal["context", "decision"],
+    surface: Literal["context", "settings", "decision"],
     key: str,
     on_change: Callable[[], None] | None = None,
 ) -> dict[str, Any] | None:

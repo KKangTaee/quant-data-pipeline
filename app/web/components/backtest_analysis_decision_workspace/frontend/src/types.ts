@@ -1,4 +1,69 @@
-export type WorkspaceSurface = "context" | "decision"
+export type WorkspaceSurface = "context" | "settings" | "decision"
+
+export type SettingsOption = {
+  value: unknown
+  label: string
+}
+
+export type SettingsField = {
+  field_id: string
+  payload_key: string
+  label: string
+  control:
+    | "date"
+    | "number"
+    | "text"
+    | "single_select"
+    | "multi_select"
+    | "segmented"
+    | "toggle"
+  value: unknown
+  required: boolean
+  help: string
+  options?: SettingsOption[]
+  min?: number
+  max?: number
+  step?: number
+  advanced?: boolean
+  wide?: boolean
+  visible_when?: Record<string, unknown>
+}
+
+export type SettingsSection = {
+  section_id: string
+  title: string
+  description: string
+  fields: SettingsField[]
+  disclosures: Array<Record<string, unknown>>
+}
+
+export type SingleSettingsWorkspace = {
+  schema_version: string
+  strategy_choice: string
+  concrete_strategy_key: string
+  draft_key: string
+  profile: {
+    display_name: string
+    purpose_label: string
+    maturity_label: string
+    description: string
+    selection_rule: string
+    holding_rule: string
+    risk_note: string
+  }
+  variant: {
+    value: string | null
+    options: SettingsOption[]
+  }
+  sections: SettingsSection[]
+  evidence: {
+    universe_summary: string
+    universe_full_text: string
+    technical_rows: Array<Record<string, unknown>>
+  }
+  action: WorkspaceAction
+  validation_errors: Record<string, string>
+}
 
 export type WorkspaceAction = {
   id: string
