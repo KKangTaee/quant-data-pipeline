@@ -23,3 +23,9 @@
 - Cross-asset co-movement supports contextual attribution, not proven causality.
 - Continuous futures include roll / maturity behavior and must retain visible caveats.
 - Dedicated policy futures curves may provide longer-horizon expectations, but they are not part of this V1 source contract.
+
+## React V2 Decisions
+
+- The observed pattern polyline is never connected to a probability-zone center; this prevents a conditional distribution from looking like a single forecast path.
+- Current observation cards do not accept or render probability rows. `UNAVAILABLE` future horizons show the reason and no fabricated percentage.
+- The V1 `RecentFlowSection.tsx` and `HistoricalValidationPanel.tsx` were removed after reference count reached zero outside their own files.

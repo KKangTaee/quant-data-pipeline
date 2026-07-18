@@ -8219,121 +8219,59 @@ class OverviewAutomationContractTests(unittest.TestCase):
             {"id": "load_validation", "nonce": 102},
         )
 
-    def test_futures_macro_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
+    def test_futures_macro_react_v2_renders_market_context_reading_order(self) -> None:
         from app.web.overview.futures_macro_react_component import (
             FUTURES_MACRO_REACT_COMPONENT_NAME,
             futures_macro_react_component_available,
         )
 
         component_root = Path("app/web/streamlit_components/futures_macro_workbench")
+        source_root = component_root / "src"
         helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
         wrapper_source = Path("app/web/overview/futures_macro_react_component.py").read_text(encoding="utf-8")
-        react_source = (component_root / "src" / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
-        macro_context_path = component_root / "src" / "MacroContextSection.tsx"
-        recent_flow_path = component_root / "src" / "RecentFlowSection.tsx"
-        validation_panel_path = component_root / "src" / "HistoricalValidationPanel.tsx"
-        current_evidence_path = component_root / "src" / "CurrentEvidencePanel.tsx"
-        self.assertTrue(macro_context_path.exists())
-        self.assertTrue(recent_flow_path.exists())
-        self.assertTrue(validation_panel_path.exists())
-        self.assertTrue(current_evidence_path.exists())
-        macro_context_source = macro_context_path.read_text(encoding="utf-8")
-        recent_flow_source = recent_flow_path.read_text(encoding="utf-8")
-        validation_panel_source = validation_panel_path.read_text(encoding="utf-8")
-        current_evidence_source = current_evidence_path.read_text(encoding="utf-8")
-        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+        source = (source_root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
 
         self.assertEqual(FUTURES_MACRO_REACT_COMPONENT_NAME, "futures_macro_workbench")
-        self.assertTrue((component_root / "package.json").exists())
-        self.assertTrue((component_root / "index.html").exists())
-        self.assertTrue((component_root / "src" / "FuturesMacroWorkbench.tsx").exists())
-        self.assertTrue((component_root / "src" / "MacroContextSection.tsx").exists())
-        self.assertTrue((component_root / "src" / "RecentFlowSection.tsx").exists())
-        self.assertTrue((component_root / "src" / "HistoricalValidationPanel.tsx").exists())
-        self.assertTrue((component_root / "src" / "CurrentEvidencePanel.tsx").exists())
-        self.assertTrue((component_root / "src" / "main.tsx").exists())
         self.assertFalse(futures_macro_react_component_available(component_root / "missing-dist"))
-        self.assertIn("render_futures_macro_react_workbench", helper_source)
-        self.assertIn("build_futures_macro_react_workbench_payload", helper_source)
-        self.assertIn("_handle_futures_macro_react_event(", helper_source)
-        self.assertIn('with st.expander("원본 데이터 / 계산 추적"', helper_source)
-        self.assertNotIn('with st.expander("계산 근거 / 원본 표"', helper_source)
-        self.assertNotIn('with st.expander("근거 해석 / 원본 데이터"', helper_source)
-        self.assertIn('"title": "현재 근거와 변화 조건"', helper_source)
-        self.assertNotIn('"title": "근거 해석"', helper_source)
         self.assertIn('default={"event": None}', wrapper_source)
-        self.assertIn('payload.component === "FuturesMacroWorkbench"', react_source)
-        self.assertIn('import MacroContextSection from "./MacroContextSection"', react_source)
-        self.assertIn('import RecentFlowSection from "./RecentFlowSection"', react_source)
-        self.assertIn('import HistoricalValidationPanel from "./HistoricalValidationPanel"', react_source)
-        self.assertIn("payload.command.actions.map", react_source)
-        self.assertIn('setPendingActionId("")', react_source)
-        self.assertIn("<MacroContextSection", react_source)
-        self.assertIn("<RecentFlowSection", react_source)
-        self.assertIn("<HistoricalValidationPanel", react_source)
-        self.assertNotIn('<details className="fm-workbench__evidence"', react_source)
-        self.assertIn('className="fm-workbench__macro-section fm-workbench__section-card"', macro_context_source)
-        self.assertIn('import CurrentEvidencePanel from "./CurrentEvidencePanel"', macro_context_source)
-        self.assertIn("payload.brief", macro_context_source)
-        self.assertIn("payload.scores.map", macro_context_source)
-        self.assertIn("<CurrentEvidencePanel", macro_context_source)
-        self.assertIn("payload.evidence", macro_context_source)
-        self.assertIn("score.polarity", macro_context_source)
-        self.assertIn("fm-workbench__score-hint", macro_context_source)
-        self.assertIn('className="fm-workbench__flow-section fm-workbench__section-card"', recent_flow_source)
-        self.assertIn("flowPeriods.map", recent_flow_source)
-        self.assertIn("setSelectedFlowKey", recent_flow_source)
-        self.assertIn("evidence.sections.map", current_evidence_source)
-        self.assertIn("item.score_label", current_evidence_source)
-        self.assertIn("item.contribution_z", current_evidence_source)
-        self.assertIn("fm-workbench__evidence-meta", current_evidence_source)
-        self.assertIn('score.polarity.split(" · ")', macro_context_source)
-        self.assertIn("fm-workbench__score-hint-line", macro_context_source)
-        self.assertIn("Streamlit.setComponentValue", react_source)
-        self.assertIn("Streamlit.setFrameHeight", react_source)
-        self.assertIn("function MetricTile", validation_panel_source)
-        self.assertIn("validation.insight.evidence_bridge", validation_panel_source)
-        self.assertIn("validation.conclusion", validation_panel_source)
-        self.assertIn("validation.action", validation_panel_source)
-        self.assertIn("onAction(validation.action)", validation_panel_source)
-        self.assertIn("pendingValidation", validation_panel_source)
-        self.assertIn('className="fm-workbench__validation-card"', validation_panel_source)
-        self.assertIn('className="fm-workbench__validation-eyebrow">과거 점검', validation_panel_source)
-        self.assertIn('className="fm-workbench__validation-summary"', validation_panel_source)
-        self.assertIn('className="fm-workbench__validation-control"', validation_panel_source)
-        self.assertIn('className="fm-workbench__validation-conclusion-grid"', validation_panel_source)
-        self.assertIn('className="fm-workbench__validation-status-grid"', validation_panel_source)
-        self.assertIn('className="fm-workbench__validation-result-grid"', validation_panel_source)
-        self.assertIn("fm-workbench__validation-action", validation_panel_source)
-        self.assertIn("fm-workbench__validation-loading", validation_panel_source)
-        self.assertLess(
-            validation_panel_source.index('className="fm-workbench__validation-control"'),
-            validation_panel_source.index('className="fm-workbench__validation-status-grid"'),
+        self.assertIn("build_futures_macro_react_workbench_payload", helper_source)
+        for name in (
+            "PatternHorizonSection",
+            "PatternMapSection",
+            "PatternRibbonSection",
+            "AssetPathwaysSection",
+            "MethodDisclosure",
+        ):
+            self.assertTrue((source_root / f"{name}.tsx").exists())
+            self.assertIn(name, source)
+        self.assertLess(source.index("<MacroContextSection"), source.index("<PatternHorizonSection"))
+        self.assertLess(source.index("<PatternHorizonSection"), source.index("<PatternMapSection"))
+        self.assertLess(source.index("<PatternMapSection"), source.index("<PatternRibbonSection"))
+        self.assertLess(source.index("<PatternRibbonSection"), source.index("<AssetPathwaysSection"))
+        self.assertLess(source.index("<AssetPathwaysSection"), source.index("<MethodDisclosure"))
+        self.assertNotIn("<RecentFlowSection", source)
+        self.assertNotIn("<HistoricalValidationPanel", source)
+        self.assertIn("Streamlit.setComponentValue", source)
+        self.assertIn("Streamlit.setFrameHeight", source)
+
+    def test_futures_macro_react_v2_has_responsive_probability_and_unavailable_contract(self) -> None:
+        source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")
+        horizon = (source_root / "PatternHorizonSection.tsx").read_text(encoding="utf-8")
+        style = (source_root / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("estimate_status", horizon)
+        self.assertIn("probabilities.length", horizon)
+        self.assertIn("방향 우위 미확인", horizon)
+        self.assertIn("@media (max-width: 760px)", style)
+        self.assertIn("grid-template-columns: 1fr", style)
+
+    def test_futures_macro_react_copy_avoids_trade_and_causal_claims(self) -> None:
+        source = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in Path("app/web/streamlit_components/futures_macro_workbench/src").glob("*.tsx")
         )
-        self.assertLess(
-            validation_panel_source.index('className="fm-workbench__validation-conclusion-grid"'),
-            validation_panel_source.index('className="fm-workbench__validation-result-grid"'),
-        )
-        self.assertIn(".fm-workbench__section-card", react_style)
-        self.assertIn(".fm-workbench__macro-section", react_style)
-        self.assertIn(".fm-workbench__flow-section", react_style)
-        self.assertIn(".fm-workbench__scores", react_style)
-        self.assertIn(".fm-workbench__score-hint", react_style)
-        self.assertIn(".fm-workbench__score-hint-line", react_style)
-        self.assertIn(".fm-workbench__validation-card", react_style)
-        self.assertIn(".fm-workbench__validation-header", react_style)
-        self.assertIn(".fm-workbench__validation-control", react_style)
-        self.assertIn(".fm-workbench__validation-conclusion-grid", react_style)
-        self.assertIn(".fm-workbench__validation-status-grid", react_style)
-        self.assertIn(".fm-workbench__validation-result-grid", react_style)
-        self.assertIn(".fm-workbench__validation-action", react_style)
-        self.assertIn(".fm-workbench__validation-loading", react_style)
-        self.assertIn(".fm-workbench__flow-tabs", react_style)
-        self.assertIn(".fm-workbench__evidence", react_style)
-        react_event_body = helper_source[helper_source.index("def _handle_futures_macro_react_event") :]
-        react_event_body = react_event_body[: react_event_body.index("def _futures_symbols_with_candles")]
-        self.assertNotIn('if action_id == "load_validation"', react_event_body)
-        self.assertNotIn('st.spinner("과거 점검을 계산하는 중입니다..."', react_event_body)
+        for forbidden in ("매수", "매도", "승인", "선정", "통과", "원인 확정"):
+            self.assertNotIn(forbidden, source)
 
     def test_sentiment_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
         from app.web.overview.sentiment_react_component import (

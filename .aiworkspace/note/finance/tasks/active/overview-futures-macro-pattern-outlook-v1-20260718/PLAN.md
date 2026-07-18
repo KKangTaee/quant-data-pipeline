@@ -956,7 +956,7 @@ git commit -m "선물 매크로 패턴 전망 payload 연결"
 - Consumes: Task 5 V2 payload.
 - Produces: responsive visible order `Hero -> Horizon path -> Pattern map + Evidence -> Ribbon -> Asset pathways -> Method`.
 
-- [ ] **Step 1: Add React source contract RED tests**
+- [x] **Step 1: Add React source contract RED tests**
 
 ```python
 def test_futures_macro_react_v2_renders_market_context_reading_order(self):
@@ -991,7 +991,7 @@ def test_futures_macro_react_copy_avoids_trade_and_causal_claims(self):
         self.assertNotIn(forbidden, source)
 ```
 
-- [ ] **Step 2: Run contract tests and confirm RED**
+- [x] **Step 2: Run contract tests and confirm RED**
 
 ```bash
 .venv/bin/python -m pytest tests/test_service_contracts.py -q -k 'react_v2 or react_copy_avoids'
@@ -999,7 +999,7 @@ def test_futures_macro_react_copy_avoids_trade_and_causal_claims(self):
 
 Expected: missing component source failures.
 
-- [ ] **Step 3: Replace V1 payload types and root reading order**
+- [x] **Step 3: Replace V1 payload types and root reading order**
 
 Define V2 types in `FuturesMacroWorkbench.tsx`:
 
@@ -1085,7 +1085,7 @@ Render:
 <MethodDisclosure method={payload.method} boundaryNote={payload.boundary_note} />
 ```
 
-- [ ] **Step 4: Implement horizon and probability cards**
+- [x] **Step 4: Implement horizon and probability cards**
 
 `PatternHorizonSection.tsx` must:
 
@@ -1133,7 +1133,7 @@ export default function PatternHorizonSection({ horizons }: { horizons: HorizonC
 }
 ```
 
-- [ ] **Step 5: Implement pattern map probability zones**
+- [x] **Step 5: Implement pattern map probability zones**
 
 `PatternMapSection.tsx` renders an SVG with:
 
@@ -1154,7 +1154,7 @@ export default function PatternHorizonSection({ horizons }: { horizons: HorizonC
 
 Do not connect current point to zone centers with a forecast line. Tooltip / focus text must identify `관측 경로` versus `조건부 결과 영역`.
 
-- [ ] **Step 6: Implement ribbon, evidence, and asset pathways**
+- [x] **Step 6: Implement ribbon, evidence, and asset pathways**
 
 - Ribbon: recent 60 trading dates, regime color plus transition hatch; keyboard-focusable cells with date / regime / transition label.
 - Evidence: four groups `현재 위치`, `지속·전환`, `전망 우위`, `바뀌는 조건`.
@@ -1230,7 +1230,7 @@ export default function MethodDisclosure({ method, boundaryNote }: { method: Met
 }
 ```
 
-- [ ] **Step 7: Apply economic-cycle visual grammar and responsive CSS**
+- [x] **Step 7: Apply economic-cycle visual grammar and responsive CSS**
 
 Reuse these design tokens rather than copying the entire stylesheet:
 
@@ -1265,7 +1265,7 @@ Reuse these design tokens rather than copying the entire stylesheet:
 }
 ```
 
-- [ ] **Step 8: Build component and run contracts**
+- [x] **Step 8: Build component and run contracts**
 
 ```bash
 cd app/web/streamlit_components/futures_macro_workbench
@@ -1277,7 +1277,7 @@ git diff --check
 
 Expected: Vite build succeeds, selected tests pass, diff check is clean.
 
-- [ ] **Step 9: Confirm retired sections are not active**
+- [x] **Step 9: Confirm retired sections are not active**
 
 ```bash
 rg -n 'RecentFlowSection|HistoricalValidationPanel' app/web/streamlit_components/futures_macro_workbench/src
@@ -1285,7 +1285,7 @@ rg -n 'RecentFlowSection|HistoricalValidationPanel' app/web/streamlit_components
 
 Expected: no imports or render calls from `FuturesMacroWorkbench.tsx`. If the only matches are the old files themselves, either delete those two source files and rebuild or retain them as unreferenced compatibility files; record the choice in task `NOTES.md`.
 
-- [ ] **Step 10: Commit Task 6**
+- [x] **Step 10: Commit Task 6**
 
 ```bash
 git add app/web/streamlit_components/futures_macro_workbench/src app/web/streamlit_components/futures_macro_workbench/component_static tests/test_service_contracts.py
@@ -1438,7 +1438,7 @@ Do not stage the QA screenshot, `.playwright-mcp/`, registries, saved setups, ru
 - [x] Task 3: forward outcomes / independent similar episodes
 - [x] Task 4: chronological validation / publication gate / cache
 - [x] Task 5: default service integration / Python React payload V2
-- [ ] Task 6: Market Context-style React workbench V2 / build
+- [x] Task 6: Market Context-style React workbench V2 / build
 - [ ] Task 7: actual QA / performance gate / docs sync / closeout
 
 ## Overall Roadmap State

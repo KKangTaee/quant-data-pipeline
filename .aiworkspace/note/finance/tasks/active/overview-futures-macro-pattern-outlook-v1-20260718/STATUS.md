@@ -16,7 +16,9 @@
 - Task 4 complete: chronological publication metrics, strict 30 / 60 episode gates, unavailable-number suppression, and latest-row cache are implemented.
 - Task 5 complete: the thermometer snapshot now carries the current pattern, the tab loads the conditional outlook by default, and the V2 payload separates current observation from 5D / 20D probability estimates.
 - Legacy historical-validation loading is no longer part of the active render path; refresh and reload clear the new latest-marker cache.
-- Current stage: Task 6 Market Context-style React Workbench V2.
+- Task 6 complete: the React workbench now follows A안 from current regime through 5D / 20D outlook, observed path and probability zones, regime ribbon, asset pathways, and method disclosure.
+- The unreferenced V1 `RecentFlowSection` and `HistoricalValidationPanel` sources were removed after repository-wide reference checks.
+- Current stage: Task 7 actual data QA, performance gate, Browser QA, and durable documentation sync.
 - No DB schema, provider, registry, or saved setup has been changed.
 
 ## Roadmap State
@@ -29,4 +31,4 @@
 
 ## Next Action
 
-Task 6에서 V1 React reading order와 lazy historical-validation panel을 A안의 horizon / path / ribbon / asset pathways / method sections로 교체한다.
+Task 7에서 실제 DB snapshot의 publication status와 runtime을 측정하고, Streamlit Browser QA 및 finance durable docs sync를 수행한다.

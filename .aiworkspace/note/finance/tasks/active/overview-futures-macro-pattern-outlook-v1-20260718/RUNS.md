@@ -62,3 +62,11 @@
 - The active tab now loads the pattern outlook by default for both React and native fallback; the legacy `load_validation` action and button are absent from the active panel and event path.
 - Refresh and reload clear both the thermometer snapshot cache and the latest-marker pattern validation cache.
 - GREEN: pattern feature / validation modules plus Futures Macro service and Overview contracts passed 46 tests in 10.975s; only existing third-party and bare-Streamlit warnings appeared.
+
+## 2026-07-18 Task 6 — React Workbench V2
+
+- RED: reading-order and responsive contracts failed because the five V2 section sources did not exist.
+- Implemented A안 with a current-regime hero, separate current / 5D / 20D horizon cards, observed path plus non-connected conditional zones, evidence bridge, 60D ribbon, five asset pathways, and collapsed method disclosure.
+- Vite production build passed in 489ms and emitted a new static CSS / JS bundle.
+- GREEN: focused React source contracts passed 3 tests; combined Futures Macro feature, validation, service, and UI selection passed 48 tests in 11.605s.
+- Repository-wide reference check found the legacy Recent Flow and Historical Validation files were referenced only by themselves, so both were removed rather than retained as dead compatibility code.
