@@ -40,6 +40,7 @@ from finance.data.eia_petroleum import (
     collect_and_store_eia_weekly_petroleum,
 )
 from finance.data.institutional_13f import collect_and_store_sec_13f_dataset
+from finance.data.institutional_13f_mapping import collect_and_store_openfigi_13f_mappings
 from finance.data.macro import (
     DEFAULT_MACRO_SERIES,
     FRED_SERIES_CONFIG,
@@ -2394,6 +2395,65 @@ def run_collect_sec_13f_dataset(
                     "finance_meta.institutional_13f_refresh_status",
                 ],
             },
+        )
+
+
+def run_collect_sec_13f_identifier_mappings(
+    ciks: str | Iterable[str] | None = None,
+    *,
+    refresh_existing: bool = False,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    """Enrich stored latest 13F identifiers without provider access during UI reads."""
+    job_name = "collect_sec_13f_identifier_mappings"
+    started_at = _now_str()
+    t0 = perf_counter()
+    if ciks is None:
+        from app.services.institutional_portfolios import INSTITUTIONAL_MANAGER_WATCHLIST
+
+        selected_ciks = [str(row["cik"]) for row in INSTITUTIONAL_MANAGER_WATCHLIST]
+    else:
+        raw_ciks = [ciks] if isinstance(ciks, str) else ciks
+        selected_ciks = [str(value).strip() for value in raw_ciks if str(value).strip()]
+    selected_ciks = list(dict.fromkeys(selected_ciks))
+
+    try:
+        _emit_stage_progress(progress_callback, event="stage_start", stage="sec_13f_identifier_mapping")
+        summary = collect_and_store_openfigi_13f_mappings(
+            ciks=selected_ciks,
+            refresh_existing=refresh_existing,
+        )
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="sec_13f_identifier_mapping")
+        errors = int(summary.get("errors") or 0)
+        ambiguous = int(summary.get("ambiguous") or 0)
+        mapped = int(summary.get("mapped") or 0)
+        status = "failed" if errors and not mapped else ("partial_success" if errors or ambiguous else "success")
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=int(summary.get("rows_written") or 0),
+            symbols_requested=int(summary.get("identifiers_requested") or 0),
+            symbols_processed=mapped,
+            failed_symbols=[],
+            message="SEC 13F ticker identity enrichment completed.",
+            details=summary,
+        )
+    except Exception as exc:
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(selected_ciks),
+            symbols_processed=0,
+            failed_symbols=[],
+            message=f"SEC 13F ticker identity enrichment failed: {exc}",
+            details={"target_table": "finance_meta.institutional_13f_identifier_resolution"},
         )
 
 

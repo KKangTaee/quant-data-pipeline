@@ -41,3 +41,11 @@ No implementation code or DB writes were performed during design investigation.
 - GREEN: the mapping suite passed 11/11 and the existing Institutional Portfolios suite remained 57/57.
 - Synced only the new empty resolution table to the local DB, then verified real SQL through public loaders: Duquesne returned 70 rows with 70 unique holding keys, all six identity fields, 4 `AA` interest rows, and 5 popularity rows.
 - No provider backfill or external request was run during this task.
+
+## 2026-07-18 Task 4
+
+- RED: three action tests failed because the OpenFIGI collector job, registry/guide/dispatcher entry, and SEC 13F expander button were absent.
+- GREEN: the combined mapping/action suite passed 14/14 and the existing Institutional Portfolios suite remained 57/57.
+- Added one explicit `13F ticker 연결 보강` action inside the existing SEC 13F expander, using the existing scheduling/progress/result flow.
+- Confirmed there is no API-key input or new run/row diagnostics panel in the UI source; runtime key lookup remains environment-only.
+- All five changed app modules passed `py_compile`, and `git diff --check` passed.

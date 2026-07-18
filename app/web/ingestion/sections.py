@@ -505,6 +505,42 @@ def render_operational_section() -> Any:
             )
         _render_inline_last_completed_result("collect_sec_13f_dataset")
 
+        st.divider()
+        _render_job_brief("collect_sec_13f_identifier_mappings")
+        st.caption(
+            "이미 저장된 주요 기관의 최신 13F 보유 종목을 무료 OpenFIGI v3로 확인해 ticker 연결을 보강합니다. "
+            "후보가 하나일 때만 연결하며, Institutional Portfolios 화면을 여는 것만으로 외부 요청이 발생하지 않습니다."
+        )
+        if st.button(
+            "13F ticker 연결 보강",
+            use_container_width=True,
+            disabled=_has_running_job(),
+        ):
+            _schedule_job(
+                {
+                    "action": "collect_sec_13f_identifier_mappings",
+                    "job_name": "collect_sec_13f_identifier_mappings",
+                    "spinner_text": "Enriching stored SEC 13F ticker identities...",
+                    "params": {"refresh_existing": False},
+                    "run_metadata": _job_metadata(
+                        pipeline_type="institutional_13f_identifier_mapping",
+                        execution_mode="operational_low_frequency",
+                        symbol_source="OpenFIGI v3 / stored latest SEC 13F identifiers",
+                        symbol_count=None,
+                        execution_context=(
+                            "주요 기관 최신 13F CUSIP/CINS를 current ticker identity로 보강합니다."
+                        ),
+                        input_params={"refresh_existing": False},
+                    ),
+                }
+            )
+        if _is_running_action("collect_sec_13f_identifier_mappings"):
+            current_progress_callback = _build_progress_callback(
+                st.session_state.running_job,
+                label="SEC 13F Ticker Mapping",
+            )
+        _render_inline_last_completed_result("collect_sec_13f_identifier_mappings")
+
     with st.expander("종목 메타데이터 업데이트", expanded=False):
         _render_job_brief("metadata_refresh")
         st.caption("권장 주기: 주 1회 또는 tracked universe / profile filter가 바뀐 뒤 실행합니다.")

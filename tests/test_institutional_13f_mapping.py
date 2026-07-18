@@ -306,5 +306,78 @@ class ResolutionLoaderPrecedenceTests(unittest.TestCase):
         self.assertEqual(cusips, ["632307104", "457669307"])
 
 
+class IdentifierMappingIngestionActionTests(unittest.TestCase):
+    def test_mapping_job_reports_provider_summary_without_secret(self) -> None:
+        import app.jobs.ingestion_jobs as ingestion_jobs
+
+        original_collector = ingestion_jobs.collect_and_store_openfigi_13f_mappings
+        try:
+            ingestion_jobs.collect_and_store_openfigi_13f_mappings = lambda **kwargs: {
+                "rows_written": 68,
+                "identifiers_requested": 68,
+                "mapped": 68,
+                "ambiguous": 0,
+                "unmapped": 0,
+                "errors": 0,
+                "api_key_used": True,
+                "target_table": "finance_meta.institutional_13f_identifier_resolution",
+            }
+            result = ingestion_jobs.run_collect_sec_13f_identifier_mappings(ciks=["0001536411"])
+        finally:
+            ingestion_jobs.collect_and_store_openfigi_13f_mappings = original_collector
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 68)
+        self.assertEqual(result["symbols_requested"], 68)
+        self.assertNotIn("free-key", json.dumps(result))
+
+    def test_identifier_mapping_action_is_registered_guided_and_dispatched(self) -> None:
+        import app.web.ingestion.dispatcher as dispatcher
+        from app.web.ingestion.guides import JOB_GUIDE, PROGRESS_ENABLED_ACTIONS
+        from app.web.ingestion.registry import INGESTION_ACTION_REGISTRY, active_ingestion_actions
+
+        definition = INGESTION_ACTION_REGISTRY["collect_sec_13f_identifier_mappings"]
+        self.assertTrue(definition["active"])
+        self.assertEqual(
+            definition["target_tables"],
+            ["finance_meta.institutional_13f_identifier_resolution"],
+        )
+        self.assertIn("collect_sec_13f_identifier_mappings", active_ingestion_actions())
+        self.assertIn("collect_sec_13f_identifier_mappings", PROGRESS_ENABLED_ACTIONS)
+        self.assertIn("ticker", JOB_GUIDE["collect_sec_13f_identifier_mappings"]["title"].lower())
+
+        captured: dict[str, object] = {}
+        original_runner = dispatcher.run_collect_sec_13f_identifier_mappings
+
+        def fake_runner(**kwargs: object) -> dict[str, object]:
+            captured.update(kwargs)
+            return {"status": "success"}
+
+        callback = lambda event: None
+        try:
+            dispatcher.run_collect_sec_13f_identifier_mappings = fake_runner
+            result = dispatcher.dispatch_job(
+                {
+                    "action": "collect_sec_13f_identifier_mappings",
+                    "params": {"ciks": ["0001536411"], "refresh_existing": True},
+                },
+                progress_callback=callback,
+            )
+        finally:
+            dispatcher.run_collect_sec_13f_identifier_mappings = original_runner
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(captured["ciks"], ["0001536411"])
+        self.assertTrue(captured["refresh_existing"])
+        self.assertIs(captured["progress_callback"], callback)
+
+    def test_existing_sec_13f_expander_exposes_mapping_button_without_api_key_input(self) -> None:
+        source = Path("app/web/ingestion/sections.py").read_text(encoding="utf-8")
+        self.assertIn("13F ticker 연결 보강", source)
+        self.assertIn('"action": "collect_sec_13f_identifier_mappings"', source)
+        self.assertNotIn("OPENFIGI_API_KEY", source)
+        self.assertNotIn("OpenFIGI API Key", source)
+
+
 if __name__ == "__main__":
     unittest.main()

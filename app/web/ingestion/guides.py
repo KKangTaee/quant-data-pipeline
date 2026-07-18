@@ -196,6 +196,17 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
         ],
         "next_action": "수집 후 Workspace > Institutional Portfolios에서 manager search와 reverse lookup을 확인하세요.",
     },
+    "collect_sec_13f_identifier_mappings": {
+        "title": "SEC 13F ticker 연결 보강",
+        "purpose": "저장된 주요 기관의 최신 13F CUSIP/CINS를 OpenFIGI v3로 안전하게 ticker identity에 연결합니다.",
+        "targets": ["finance_meta.institutional_13f_identifier_resolution"],
+        "used_by": ["Workspace > Institutional Portfolios"],
+        "caveats": [
+            "OpenFIGI 후보가 둘 이상이면 ambiguous로 저장하고 ticker를 노출하지 않습니다.",
+            "API key는 선택 사항이며 UI가 아니라 OPENFIGI_API_KEY 환경변수로만 받습니다.",
+        ],
+        "next_action": "완료 후 Institutional Portfolios에서 ticker 연결 비중과 종목 상세 진입을 확인하세요.",
+    },
     "collect_computed_snapshot_lifecycle": {
         "title": "반복 관찰 lifecycle 요약",
         "purpose": "기존 current snapshot rows의 반복 관찰 window를 보수적인 partial lifecycle evidence로 요약합니다.",
@@ -316,7 +327,7 @@ LIFECYCLE_EVIDENCE_JOBS = {
     "collect_sec_company_ticker_crosscheck",
     "collect_computed_snapshot_lifecycle",
 }
-INSTITUTIONAL_13F_JOBS = {"collect_sec_13f_dataset"}
+INSTITUTIONAL_13F_JOBS = {"collect_sec_13f_dataset", "collect_sec_13f_identifier_mappings"}
 PARTIAL_LIFECYCLE_EVIDENCE_JOBS = {
     "collect_symbol_directory_snapshots",
     "collect_sec_company_ticker_crosscheck",
