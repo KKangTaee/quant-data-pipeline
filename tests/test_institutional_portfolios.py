@@ -185,6 +185,78 @@ class Sec13FDataSetParserTests(unittest.TestCase):
 
 
 class InstitutionalPortfolioReadModelTests(unittest.TestCase):
+    def test_workbench_v2_keeps_all_holdings_for_client_side_explorer(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_portfolio_model, build_institutional_workbench_payload
+
+        holdings = pd.DataFrame(
+            [
+                {
+                    "issuer_name": f"Issuer {index:04d}",
+                    "cusip": f"{index:09d}",
+                    "reported_value": 1_000 - index,
+                    "shares_or_principal_amount": 10,
+                }
+                for index in range(993)
+            ]
+        )
+        model = build_institutional_portfolio_model(
+            manager={"cik": "0001067983", "manager_name": "BERKSHIRE HATHAWAY INC"},
+            latest_filing={"period_of_report": "2026-03-31", "filing_date": "2026-05-15"},
+            latest_holdings=holdings,
+        )
+        payload = build_institutional_workbench_payload(
+            model=model,
+            managers=[],
+            selected_cik="0001067983",
+            interest_model=None,
+        )
+
+        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v2")
+        self.assertEqual(payload["holdings_explorer"]["default_page_size"], 50)
+        self.assertEqual(len(payload["holdings_explorer"]["rows"]), 993)
+        self.assertEqual(payload["coverage"]["holding_count_total"], 993)
+
+    def test_workbench_v2_suppresses_change_items_without_previous_filing(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_portfolio_model, build_institutional_workbench_payload
+
+        model = build_institutional_portfolio_model(
+            manager={"cik": "0001067983", "manager_name": "BERKSHIRE HATHAWAY INC"},
+            latest_filing={"period_of_report": "2026-03-31", "filing_date": "2026-05-15"},
+            latest_holdings=pd.DataFrame(
+                [
+                    {
+                        "issuer_name": "APPLE INC",
+                        "holding_symbol": "AAPL",
+                        "cusip": "037833100",
+                        "reported_value": 750,
+                        "shares_or_principal_amount": 10,
+                        "sector": "Technology",
+                    },
+                    {
+                        "issuer_name": "UNMAPPED HOLDING",
+                        "cusip": "999999999",
+                        "reported_value": 250,
+                        "shares_or_principal_amount": 10,
+                    },
+                ]
+            ),
+        )
+        payload = build_institutional_workbench_payload(
+            model=model,
+            managers=[],
+            selected_cik="0001067983",
+            interest_model=None,
+        )
+
+        self.assertFalse(payload["change_board"]["comparison_available"])
+        self.assertEqual(payload["change_board"]["groups"], {})
+        self.assertEqual(payload["context_summary"]["comparison_state"], "unavailable")
+        self.assertEqual(payload["coverage"]["holding_count_total"], 2)
+        self.assertEqual(payload["coverage"]["holding_count_mapped"], 1)
+        self.assertEqual(payload["coverage"]["holding_count_unmapped"], 1)
+        self.assertIn("mapped_weight_pct", payload["coverage"])
+        self.assertIn("performance_covered_weight_pct", payload["coverage"])
+
     def test_portfolio_model_builds_weights_changes_and_unmapped_sector_exposure(self) -> None:
         from app.services.institutional_portfolios import build_institutional_portfolio_model
 
@@ -811,7 +883,7 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
             },
         )
 
-        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v1")
+        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v2")
         self.assertEqual(payload["component"], "InstitutionalPortfoliosWorkbench")
         self.assertEqual(payload["mode"], "live")
         self.assertEqual(payload["hero"]["manager_name"], "BERKSHIRE HATHAWAY INC")
@@ -955,7 +1027,7 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
 
         payload = build_institutional_preview_workbench_payload(message="Local 13F DB is empty.")
 
-        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v1")
+        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v2")
         self.assertEqual(payload["mode"], "preview")
         self.assertTrue(payload["data_state"]["is_preview"])
         self.assertIn("preview", payload["data_state"]["label"].lower())

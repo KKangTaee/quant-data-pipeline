@@ -1106,6 +1106,8 @@ def _workbench_holdings_rows(holdings: list[dict[str, Any]]) -> list[dict[str, A
         {
             "issuer_name": row.get("issuer_name"),
             "symbol": row.get("holding_symbol"),
+            "symbol_source": row.get("symbol_source"),
+            "mapping_status": row.get("mapping_status") or "unmapped",
             "cusip": row.get("cusip"),
             "sector": row.get("sector") or "Unmapped",
             "industry": row.get("industry"),
@@ -1118,6 +1120,96 @@ def _workbench_holdings_rows(holdings: list[dict[str, Any]]) -> list[dict[str, A
         }
         for row in holdings
     ]
+
+
+def _build_coverage(holding_rows: list[dict[str, Any]], performance_model: dict[str, Any]) -> dict[str, Any]:
+    total = len(holding_rows)
+    mapped = [row for row in holding_rows if row.get("mapping_status") == "mapped" and row.get("symbol")]
+    ambiguous = [row for row in holding_rows if row.get("mapping_status") == "ambiguous"]
+    mapped_weight_pct = sum(_num(row.get("weight_pct")) for row in mapped)
+    performance_weight_pct = _num(performance_model.get("covered_weight_pct"))
+    return {
+        "holding_count_total": total,
+        "holding_count_mapped": len(mapped),
+        "holding_count_unmapped": total - len(mapped) - len(ambiguous),
+        "holding_count_ambiguous": len(ambiguous),
+        "mapped_weight_pct": mapped_weight_pct,
+        "mapped_weight_label": _pct_label(mapped_weight_pct),
+        "performance_covered_weight_pct": performance_weight_pct,
+        "performance_covered_weight_label": _pct_label(performance_weight_pct),
+    }
+
+
+def _build_context_summary(
+    manager_name: str,
+    holding_rows: list[dict[str, Any]],
+    coverage: dict[str, Any],
+    *,
+    comparison_available: bool,
+) -> dict[str, Any]:
+    top5_weight_pct = sum(_num(row.get("weight_pct")) for row in holding_rows[:5])
+    mapped_sectors: dict[str, float] = {}
+    for row in holding_rows:
+        sector = _text(row.get("sector"))
+        if row.get("mapping_status") != "mapped" or not sector or sector == "Unmapped":
+            continue
+        mapped_sectors[sector] = mapped_sectors.get(sector, 0.0) + _num(row.get("weight_pct"))
+    largest_sector, largest_sector_weight_pct = max(mapped_sectors.items(), key=lambda item: item[1], default=("연결된 섹터 없음", 0.0))
+    comparison_state = "available" if comparison_available else "unavailable"
+    comparison_summary = "이전 분기와 비교할 수 있습니다." if comparison_available else "비교할 이전 분기가 저장되어 있지 않습니다."
+    return {
+        "headline": manager_name,
+        "summary": (
+            f"상위 5개 보유 종목 비중은 {_pct_label(top5_weight_pct)}이고, "
+            f"가장 큰 연결 섹터는 {largest_sector}({_pct_label(largest_sector_weight_pct)})입니다. "
+            f"전체 {int(_num(coverage.get('holding_count_total'))):,}개 중 "
+            f"{int(_num(coverage.get('holding_count_mapped'))):,}개가 ticker로 연결되어 있으며, "
+            f"보고 평가액 기준 연결 비중은 {coverage.get('mapped_weight_label')}입니다. {comparison_summary}"
+        ),
+        "top5_weight_pct": top5_weight_pct,
+        "top5_weight_label": _pct_label(top5_weight_pct),
+        "largest_sector": largest_sector,
+        "largest_sector_weight_pct": largest_sector_weight_pct,
+        "largest_sector_weight_label": _pct_label(largest_sector_weight_pct),
+        "comparison_state": comparison_state,
+    }
+
+
+def _build_holdings_explorer(holding_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    sectors = sorted({_text(row.get("sector")) or "Unmapped" for row in holding_rows})
+    return {
+        "rows": holding_rows,
+        "default_page_size": 50,
+        "search_fields": ["symbol", "issuer_name", "cusip"],
+        "filters": {
+            "mapping": [
+                {"value": "all", "label": "전체"},
+                {"value": "mapped", "label": "ticker 연결됨"},
+                {"value": "unresolved", "label": "ticker 미연결 / mapping 확인 필요"},
+            ],
+            "sector": [{"value": "all", "label": "전체 섹터"}]
+            + [{"value": sector, "label": sector} for sector in sectors],
+        },
+        "sorts": [
+            {"value": "weight_desc", "label": "포트폴리오 비중 높은 순"},
+            {"value": "value_desc", "label": "보고 평가액 높은 순"},
+            {"value": "issuer_asc", "label": "발행사 이름순"},
+        ],
+        "default_sort": "weight_desc",
+    }
+
+
+def _build_security_search(interest_model: dict[str, Any] | None) -> dict[str, Any]:
+    model = dict(interest_model or {})
+    query = _text(model.get("query")) or ""
+    holder_count = int(_num(model.get("holder_count"), len(list(model.get("holders") or []))))
+    state = "results" if query and holder_count > 0 else "empty" if query else "idle"
+    return {
+        "current_query": query,
+        "state": state,
+        "submit_event_id": "security_search",
+        "submit_event": {"id": "security_search", "trigger": "explicit"},
+    }
 
 
 def build_institutional_portfolio_performance_model(
@@ -1369,6 +1461,9 @@ def build_institutional_workbench_payload(
     is_preview = mode == "preview"
     freshness = build_institutional_refresh_status_model(refresh_status)
     performance_model = dict(model.get("portfolio_performance") or {})
+    holding_rows = _workbench_holdings_rows(holdings)
+    coverage = _build_coverage(holding_rows, performance_model)
+    comparison_available = bool(previous_period_raw)
     data_state_label = "Preview sample" if is_preview else "저장된 SEC 13F 스냅샷"
     data_state_message = data_message or (
         "샘플 데이터입니다. 실제 13F 수집 후 저장 DB 기준 화면으로 바뀝니다."
@@ -1377,7 +1472,7 @@ def build_institutional_workbench_payload(
     )
 
     return {
-        "schema_version": "institutional_portfolios_workbench_v1",
+        "schema_version": "institutional_portfolios_workbench_v2",
         "component": "InstitutionalPortfoliosWorkbench",
         "mode": mode,
         "data_state": {
@@ -1415,6 +1510,13 @@ def build_institutional_workbench_payload(
             ],
             "caveat": "13F는 분기 지연 자료이며 실시간 매수/매도 신호가 아닙니다.",
         },
+        "context_summary": _build_context_summary(
+            manager_name,
+            holding_rows,
+            coverage,
+            comparison_available=comparison_available,
+        ),
+        "coverage": coverage,
         "allocation": {
             "title": "포트폴리오 비중",
             "subtitle": "보고 평가액 기준 상위 보유 종목입니다. 나머지는 Other로 묶어 표시합니다.",
@@ -1425,11 +1527,11 @@ def build_institutional_workbench_payload(
         "change_board": {
             "title": "분기 보고 변화",
             "subtitle": f"{previous_period} -> {report_period}",
-            "comparison_available": bool(previous_period_raw),
+            "comparison_available": comparison_available,
             "empty_reason": ""
-            if previous_period_raw
+            if comparison_available
             else "현재 local 13F DB에 이 기관의 이전 보고 분기가 없어 증가 / 감소 / 더 이상 보고 안 됨 비교가 아직 불가합니다.",
-            "groups": _change_groups(changes, limit=5),
+            "groups": _change_groups(changes, limit=5) if comparison_available else {},
         },
         "portfolio_performance": performance_model
         or {
@@ -1446,9 +1548,11 @@ def build_institutional_workbench_payload(
         },
         "holdings_table": {
             "columns": ["issuer_name", "symbol", "weight_label", "value_label", "sector", "cusip"],
-            "rows": _workbench_holdings_rows(holdings),
+            "rows": holding_rows,
         },
+        "holdings_explorer": _build_holdings_explorer(holding_rows),
         "interest": _interest_payload(interest_model),
+        "security_search": _build_security_search(interest_model),
         "selected_security": dict(selected_security_model or {}),
         "security_charts": dict(model.get("security_charts") or {}),
         "price_refresh_result": dict(price_refresh_result or {}),
