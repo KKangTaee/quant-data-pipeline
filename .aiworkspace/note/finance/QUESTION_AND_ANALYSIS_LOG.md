@@ -9723,3 +9723,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   각각 원인이었고 strategy runtime이나 Level2 Gate 변경은 필요하지 않았다.
 - Follow-up: Python summary/label/lifecycle 경계를 분리하고 legacy notice/table을 제거했으며
   desktop/760px presentation QA와 regression test로 current contract를 확인했다.
+
+### 2026-07-19 - Backtest 최상단은 통과 판정이 아니라 단계 책임과 이동을 설명한다
+
+- User request: 초기 Streamlit 상단을 Level1~3와 같은 React 시각 언어로 바꾸고 A안으로 개발 요청함.
+- Interpreted goal: 중복 title/설명/red pills를 제거하고 사용자가 현재 단계의 역할과 다음 화면을
+  한 번에 이해하되 Level별 Gate나 registry 상태를 page shell에서 다시 계산하지 않아야 함.
+- Analysis result: stage/route truth는 기존 Python에 있었고 문제는 presentation duplication이었다.
+  pure shell read model과 validated intent adapter면 runtime/persistence 변경 없이 해결할 수 있었다.
+- Follow-up: A안 React header/rail과 Python fallback을 적용하고 desktop/760px Level1~3 이동,
+  overflow, current context를 확인했다. baseline failure와 dependency/accessibility risk는 task에 남겼다.

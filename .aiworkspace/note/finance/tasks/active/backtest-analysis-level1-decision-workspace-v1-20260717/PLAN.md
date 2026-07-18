@@ -6735,7 +6735,7 @@ git commit -m "Backtest 상단 진입부를 React 셸로 전환"
 - Consumes: completed shell service, adapter, component and route cutover.
 - Produces: fresh verification evidence, desktop/760 screenshots and durable documentation alignment.
 
-- [ ] **Step 1: Run fresh focused and broader Python verification**
+- [x] **Step 1: Run fresh focused and broader Python verification**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
 
@@ -6743,7 +6743,7 @@ Run: `.venv/bin/python -m pytest tests/test_service_contracts.py -q`
 
 Expected: shell/boundary tests pass. Compare full service failures against the documented pre-13차 baseline of Sentiment / Final Review / liquidity copy / Practical Validation failures; no new Backtest top-shell failure is allowed.
 
-- [ ] **Step 2: Run fresh frontend, compile, and diff checks**
+- [x] **Step 2: Run fresh frontend, compile, and diff checks**
 
 Run: `npm run build`
 
@@ -6755,7 +6755,7 @@ Run: `git diff --check`
 
 Expected: build and compile succeed; diff-check has no output.
 
-- [ ] **Step 3: Run desktop Browser QA on a fresh source/build pair**
+- [x] **Step 3: Run desktop Browser QA on a fresh source/build pair**
 
 Start or restart the Streamlit Backtest app from current source/build. At desktop width around 1440px verify:
 
@@ -6769,7 +6769,7 @@ Start or restart the Streamlit Backtest app from current source/build. At deskto
 
 Save `backtest-workflow-top-shell-desktop-qa.png` as generated/untracked evidence.
 
-- [ ] **Step 4: Run 760px Browser QA**
+- [x] **Step 4: Run 760px Browser QA**
 
 At 760px viewport verify:
 
@@ -6781,14 +6781,14 @@ At 760px viewport verify:
 
 Save `backtest-workflow-top-shell-760-qa.png` as generated/untracked evidence.
 
-- [ ] **Step 5: Apply finance-doc-sync and record closeout evidence**
+- [x] **Step 5: Apply finance-doc-sync and record closeout evidence**
 
 Update canonical maps/flows with the page-level Python read model + React intent shell and remove durable references
 to the old Streamlit pills entry. Record exact test counts, build modules/assets, compile/diff results, Browser QA
 coverage, screenshot names, baseline failures and remaining accessibility/dependency risks in active task docs.
 Keep root logs to a 3~5 line milestone/handoff summary.
 
-- [ ] **Step 6: Audit protected paths and commit closeout**
+- [x] **Step 6: Audit protected paths and commit closeout**
 
 Run:
 

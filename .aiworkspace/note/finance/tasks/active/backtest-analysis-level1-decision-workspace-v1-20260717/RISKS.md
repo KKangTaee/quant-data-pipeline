@@ -170,3 +170,17 @@ upgrade는 이번 UI workflow 범위를 벗어나므로 closeout의 남은 위�
   high 1, keyboard focus-ring 수동 QA gap은 이번 표시 개선 범위 밖의 기존 위험이다.
 - modified Practical Validation registry, Run History, saved JSONL, `.superpowers/`, generated screenshots는
   closeout commit에서 제외한다.
+
+## 13차 Workflow Top Shell Closeout Assessment
+
+- repository-wide service contract 12 failures는 기존 Sentiment 1, Final Review 4, liquidity copy 1,
+  Practical Validation 6 source-contract debt다. focused top-shell/boundary 54 tests와 실제
+  Level1~3 route QA는 통과했고 신규 top-shell failure는 없다.
+- CSS `:focus-visible`, semantic button과 `aria-current` source contract는 확인했다. iframe 안 실제
+  Tab 순회와 focus ring 전체 경로는 자동 Browser QA에서 재현하지 않아 수동 accessibility gap이다.
+- frontend dependency audit moderate 1 / high 1은 Vite 8 breaking upgrade를 요구한다. current
+  production build는 통과했으며 dependency migration은 별도 compatibility 범위다.
+- 빈 legacy chart data에서 Vega `Infinite extent` warning과 component 초기 height lifecycle warning이
+  남지만 top shell console error, clipping 또는 route blocker는 없었다.
+- modified Practical Validation registry, Run History, saved JSONL, `.superpowers/`, generated screenshots는
+  closeout commit에서 제외한다.

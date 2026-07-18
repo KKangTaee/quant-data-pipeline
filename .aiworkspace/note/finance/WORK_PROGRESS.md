@@ -6400,3 +6400,12 @@ Detailed historical logs were archived on `2026-04-13`.
   wrapping UI를 적용했다. legacy reset/refresh notice와 raw refresh table은 제거했다.
 - 상세 RED/GREEN, fresh verification, Browser QA와 남은 manual stale-click gap은 active task
   `RUNS.md`, `RISKS.md`를 본다. protected JSONL·`.superpowers/`·screenshots는 commit하지 않는다.
+
+## 2026-07-19 - Backtest Workflow Top Shell Closeout
+
+- 초기 Streamlit Backtest title/caption과 red underline pills를 Python-owned Level1~3 read model,
+  current responsibility card, intent-only React stage rail로 교체했다.
+- 기존 route dispatcher와 Level 내부 Gate/persistence는 유지하고 desktop/760px stage 이동과
+  overflow 0을 확인했다. focused 54 tests와 React 175-module build가 통과했다.
+- 전체 service 12 failures는 기존 baseline이다. 상세 QA/위험은 active task `RUNS.md`와
+  `RISKS.md`를 보며 protected JSONL·`.superpowers/`·screenshots는 commit하지 않는다.

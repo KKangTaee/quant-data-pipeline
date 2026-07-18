@@ -347,3 +347,17 @@ generated artifact이므로 commit하지 않는다.
   포함한 현재 route normalization을 우회하지 않는다.
 - placeholder scan, interface/property name, desktop/760/520 responsive, fallback/accessibility,
   protected-path와 docs-sync coverage를 self-review했고 구현 전 blocker는 없다.
+
+## 2026-07-19 13차 Implementation And Runtime Decisions
+
+- page shell은 Level1~3 고정 catalog와 active responsibility만 투영한다. eligibility,
+  blocker/count, registry status는 각 Level 내부 read model의 책임으로 유지했다.
+- component intent는 `{type: "select_stage", stage_key, nonce}` 하나이며 current stage,
+  unknown stage와 consumed nonce는 Python에서 거부한다. accepted stage만 기존
+  `request_backtest_panel()`을 호출해 현재 route normalization을 우회하지 않는다.
+- `streamlit_app.py`의 오래된 Backtest title/caption과 `backtest_page.py`의 별도 후보 선정
+  heading/native pills를 제거했다. page entry는 React shell과 기존 workspace dispatcher만 조합한다.
+- Browser QA에서 desktop hero 2열/rail 3열, 760px hero 1열/rail 3열과 Level1↔Level2,
+  desktop Level1↔Level2↔Level3 이동을 확인했다. 760px shell/outer horizontal overflow는 0이다.
+- application console error는 0이었다. 기존 빈 chart data의 Vega `Infinite extent` warning과
+  component lifecycle의 `setFrameHeight before componentReady` warning은 top-shell 동작을 막지 않았다.

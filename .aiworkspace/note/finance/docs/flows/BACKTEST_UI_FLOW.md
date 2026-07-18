@@ -1,7 +1,7 @@
 # Web Backtest UI Flow
 
 Status: Active
-Last Verified: 2026-07-18
+Last Verified: 2026-07-19
 
 ## 목적
 
@@ -9,6 +9,8 @@ Last Verified: 2026-07-18
 UI form, payload 복원, candidate review, history replay, candidate replay, saved weighted portfolio replay를 수정할 때 먼저 확인한다.
 
 2026-07-18 기준으로 Backtest Analysis는 Python `backtest_analysis_decision_workspace_v1`과 `backtest_single_settings_workspace_v1`을 공통 계약으로 쓰는 Level1 one-shell이다. React는 고정 질문, Single / Portfolio Mix entry, 목적별 catalog, schema-driven 설정, 결과 판단과 intent만 렌더링하고, Python은 strategy maturity, configuration fingerprint, settings field/visibility/validation/payload, preset profile, fresh / stale, Gate, handler 존재, 실행, 저장, Level2 인계를 소유한다. Single strategy 선택은 React catalog 한 곳이 소유하고 Strict Annual / Quarterly는 설정 profile의 segmented control로만 바꾼다. 9개 전략은 모두 `핵심 실행 설정 -> 투자 대상 Universe -> 선택·보유 규칙 -> 비용·위험 기준`의 같은 React surface를 사용하며 760px에서는 단일 열이 된다. named preset을 바꾸면 Python이 strategy/variant 기본 규칙과 근거가 있는 override를 합친 complete profile을 적용하고, 검증 기간과 manual ticker draft는 보존한다. React와 fallback은 이 profile을 표시·적용할 뿐 전략별 숫자를 계산하지 않는다. legacy Quality Snapshot과 strategy-specific native form은 history/replay compatibility path에만 남고 primary 사용자 선택에는 노출하지 않는다. Portfolio Mix component 실행은 기존 Streamlit 경계를 유지한다. 별도 `Strategy Detail` panel은 active flow가 아니다.
+
+2026-07-19부터 Backtest page entry는 초기 Streamlit `Backtest` title/caption과 별도 `후보 선정 흐름` native pills 대신 `backtest_workflow_shell_v1` React shell을 사용한다. Python read model이 Level1~3 순서, active stage와 `현재 단계에서 끝낼 일`을 제공하고 React는 3단계 button rail과 `select_stage` intent만 렌더링한다. accepted intent는 기존 `request_backtest_panel()`을 거쳐 동일 dispatcher로 이동하므로 Level 내부 Gate, registry, replay, 저장 계약은 바뀌지 않는다. desktop은 hero 2열/rail 3열, 760px은 hero 1열/rail 3열, 520px 이하는 rail 1열이다.
 
 현재 전략을 바꿔도 마지막 성공 결과는 참고 근거로 보존하지만, 상단 `목적과 핵심 설정`은 현재 catalog selection만 보여주며 이전 결과의 `strategy_key`, timeframe, promotion field를 재사용하지 않는다. 설정 변경·가격 갱신·재실행 실패는 결과 header의 단일 lifecycle 안내로 구분하고, blue/yellow Streamlit reset notice와 refresh job raw table은 렌더링하지 않는다. 팩터 지표는 사용자에게 한국어 의미와 표준 약어로 표시하되 runner에는 기존 raw key 배열을 그대로 전달한다. factor option은 desktop과 760px에서 2열로 줄바꿈하고 520px 이하에서 1열로 접힌다.
 
@@ -31,6 +33,9 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_state.py` | Backtest workflow state boundary. page entry의 session state 초기화 / panel request / workflow selector callback을 감싼다 |
 | `app/web/backtest_formatters.py` | Streamlit-free Backtest formatting / manual ticker parsing helper |
 | `app/web/backtest_workflow_routes.py` | `Backtest Analysis`, `Practical Validation`, `Final Review` visible stage와 legacy panel route mapping |
+| `app/services/backtest_workflow_shell.py` | page-level 3단계 순서, current context, active normalization과 신규·비현재 `select_stage` intent truth. Level 내부 eligibility / blocker / count는 만들지 않는다 |
+| `app/web/backtest_workflow_shell.py` | current session adapter와 validated stage intent dispatcher. accepted intent만 기존 `request_backtest_panel()`로 전달한다 |
+| `app/web/backtest_workflow_shell_panel.py` / `app/web/components/backtest_workflow_shell/` | 같은 read model의 Streamlit fallback / React presentation. React는 headline, current responsibility, stage rail, keyboard / responsive / ResizeObserver만 소유한다 |
 | `app/services/backtest_strategy_catalog.py` | Streamlit-free strategy catalog owner. display name / strategy key / family variant mapping을 제공 |
 | `app/web/backtest_analysis.py` | `Backtest Analysis` stage wrapper. 고정 `context` React surface를 fragment 밖에 두고 Single / Mix work와 mutable `decision` surface만 fragment 안에서 갱신한다. Reference / research 보조 패널은 기본 render path에서 제외한다 |
 | `app/web/backtest_analysis_workspace.py` | current session을 pure read model로 adapt하고 component intent allow-list, configuration fingerprint, distinct save / handoff Python handler를 검증한다 |
@@ -65,7 +70,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_history_helpers.py` | History table row, replay payload, replay parity, Real-Money / Guardrail scope helper |
 | `app/web/backtest_candidate_library.py` | `Operations > Candidate Library` 화면 render. 저장된 current / Pre-Live 후보 inspect와 저장 contract 기반 result curve rebuild |
 | `app/runtime/backtest/read_models/candidate_library.py` | Candidate Library registry join, table row, replay payload 생성, ETF / strict annual equity 후보 replay runtime dispatch helper |
-| `app/web/backtest_page.py` | Backtest page entry, workflow navigation, panel dispatch shell. 주요 panel 본문은 `app/web/backtest_*.py` module이 담당하며, native Streamlit `pages/` auto-discovery를 피하려고 `app/web/pages/` 밖에 둔다 |
+| `app/web/backtest_page.py` | Backtest page entry, React workflow shell과 기존 panel dispatcher 조합. 초기 Streamlit title/caption/native pills는 active route가 아니며 주요 panel 본문은 `app/web/backtest_*.py` module이 담당한다. native Streamlit `pages/` auto-discovery를 피하려고 `app/web/pages/` 밖에 둔다 |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness panel, legacy product card / stepper render helper |
 | `app/web/backtest_practical_validation/components.py` | Practical Validation 전용 workbench visual shell. Command Center, section header, card grid, step rail, alert panel helper를 제공하며 검증 로직과 저장 계약은 갖지 않는다 |
 | `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation service. source/result 저장, Practical Validation / Final Review handoff contract, Provider Data Gaps row / collection plan / ingestion job orchestration, downstream surface가 읽을 수 있는 CNN / AAII market sentiment context overlay를 만든다. Final Review first-read에서는 이 overlay를 렌더링하지 않는다 |
@@ -427,7 +432,7 @@ Phase 30 third work unit status:
 - `app/runtime/backtest/stores/portfolio_proposal.py`로 proposal draft registry read / append helper도 추가했다.
 - Candidate Review는 `app/web/backtest_candidate_review.py`와 `app/web/backtest_candidate_review_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper와 cross-panel handoff call만 남아 있다.
 - 긴 route/status 문자열은 공용 화면에서는 `app/web/backtest_ui_components.py`의 wrapping card / route panel을 사용하고, Practical Validation은 `app/web/backtest_practical_validation/components.py`의 전용 workbench shell을 사용해 `st.metric` 말줄임과 기본 container 의존을 피한다.
-- Backtest shell은 `Backtest Analysis -> Practical Validation -> Final Review`를 주 workflow navigation으로 보여준다. Backtest Analysis 안에서 `Single Strategy`와 `Portfolio Mix Builder`를 선택한다. `History`는 메인 흐름에서 제외하고 `Operations > Backtest Run History` page로 연다.
+- Backtest shell은 Python-owned read model과 React intent rail로 `Backtest Analysis -> Practical Validation -> Final Review`를 주 workflow navigation으로 보여준다. `현재 단계에서 끝낼 일`은 단계 책임만 설명하며 Level 내부 Gate/count를 복제하지 않는다. Backtest Analysis 안에서 `Single Strategy`와 `Portfolio Mix Builder`를 선택한다. `History`는 메인 흐름에서 제외하고 `Operations > Backtest Run History` page로 연다.
 - Backtest Run History는 `app/web/backtest_history.py`와 `app/web/backtest_history_helpers.py`로 분리되어, `backtest.py`에는 History 화면 render / replay helper 본문이 남아 있지 않다.
 - Portfolio Proposal은 `app/web/backtest_portfolio_proposal.py`와 `app/web/backtest_portfolio_proposal_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper만 남아 있다.
 - Final Review는 `app/web/backtest_final_review/page.py`와 `app/web/backtest_final_review_helpers.py`로 분리되어, `backtest.py`에는 panel dispatch만 남아 있다.
@@ -440,7 +445,7 @@ Phase 30 third work unit status:
 - Portfolio Mix Builder는 `app/web/backtest_compare/page.py`로 분리되어, component 실행 / weighted portfolio service 호출, saved portfolio replay / load, current-candidate prefill을 page shell에서 제거했다.
 - Latest result / compare result / Real-Money detail / selection history display는 `app/web/backtest_result_display.py`가 담당한다.
 - 공용 preset, session state, 입력 컴포넌트, status label은 `app/web/backtest_common.py`가 담당한다. 이 파일은 다음 리팩토링에서 더 잘게 나눌 수 있는 transitional shared module이다.
-- 따라서 `app/web/backtest_page.py`는 Backtest page shell과 workflow navigation만 유지한다. `app/web/pages/` 아래에는 user-facing `.py` page를 두지 않아 `streamlit_app.py`의 top navigation과 Streamlit native sidebar가 충돌하지 않게 한다.
+- 따라서 `app/web/backtest_page.py`는 React workflow shell과 stage dispatch만 조합한다. shell 의미와 intent 검증은 `app/services/backtest_workflow_shell.py` / `app/web/backtest_workflow_shell.py`가 소유한다. `app/web/pages/` 아래에는 user-facing `.py` page를 두지 않아 `streamlit_app.py`의 top navigation과 Streamlit native sidebar가 충돌하지 않게 한다.
 
 ## Single Strategy 흐름
 

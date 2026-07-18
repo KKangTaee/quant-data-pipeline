@@ -43,11 +43,15 @@
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 cached market intelligence service wrapper. Market Context, Market Movers, Events, Sentiment, Data Health, IA read model service imports를 제공한다. Candidate Ops overview snapshot helpers는 V9에서 제거했고 Candidate Ops는 Overview tab이 아니다 |
 | `app/web/overview_ui_components.py` | 과거 Overview component import path 호환용 thin facade. 실제 renderer body는 `app/web/overview/components/*`에 있다 |
 | `app/web/backtest_strategy_catalog.py` | Strategy display name, strategy key, family variant 선택 매핑 |
-| `app/web/backtest_page.py` | Backtest page shell, `Backtest Analysis -> Practical Validation -> Final Review` workflow navigation, stage dispatch entry. Native Streamlit `pages/` auto-discovery를 피하려고 `app/web/pages/` 밖에 둔다 |
+| `app/web/backtest_page.py` | Backtest page shell. React workflow top shell을 먼저 조합하고 `Backtest Analysis -> Practical Validation -> Final Review` 기존 stage dispatcher를 유지한다. 초기 Streamlit title/caption/native pills는 렌더링하지 않으며, native `pages/` auto-discovery를 피하려고 `app/web/pages/` 밖에 둔다 |
 | `app/web/backtest_common.py` | Backtest 공용 preset / strategy input / real-money contract / guardrail input / strict preset basis display / Price Freshness Preflight model / legacy compatibility helper. 신규 호출은 가능한 경우 더 좁은 `backtest_state.py`, `backtest_formatters.py`, service boundary를 먼저 사용한다 |
 | `app/web/backtest_state.py` | Backtest page shell이 쓰는 workflow state boundary. 기존 `backtest_common.py`의 session state / stage request helper를 compatibility wrapper로 제공해 page entry가 common module을 직접 확장하지 않게 한다 |
 | `app/web/backtest_formatters.py` | Streamlit-free Backtest formatting / manual ticker parsing helper |
 | `app/web/backtest_workflow_routes.py` | Backtest visible stage 3개와 legacy panel route를 매핑하는 route helper |
+| `app/services/backtest_workflow_shell.py` | Streamlit-free page-level workflow shell read model. Level1~3 고정 순서, active-stage normalization, 단계별 사용자 책임과 신규·비현재 `select_stage` intent truth를 제공하며 Level 내부 Gate/count를 계산하지 않는다 |
+| `app/web/backtest_workflow_shell.py` | current session을 workflow shell read model로 바꾸고 중복/invalid/current intent를 거부한 뒤 accepted stage만 기존 `request_backtest_panel()` 경계로 전달한다 |
+| `app/web/backtest_workflow_shell_panel.py` | React build가 없을 때 같은 read model로 current context와 3단계 이동 button을 렌더링하는 Streamlit fallback |
+| `app/web/components/backtest_workflow_shell/` | Backtest page-level React/Vite presentation bundle. headline, 현재 단계에서 끝낼 일, 3단계 rail, keyboard button / `aria-current`, desktop·760·520 responsive contract와 ResizeObserver만 소유한다 |
 | `app/web/backtest_analysis.py` | `Backtest > Backtest Analysis` Level1 one-shell orchestration. React `context` surface는 work fragment 밖에 고정하고 Single / Mix form·result·`decision` surface만 fragment 안에서 갱신한다 |
 | `app/web/backtest_analysis_workspace.py` | current session을 pure Level1 read model로 변환하고 component intent allow-list, normalized configuration fingerprint, distinct `save_mix` / `save_and_move` Python handler를 검증한다. component callback은 현재 rerun을 재사용해 중첩 app rerun 경고를 만들지 않는다 |
 | `app/web/backtest_analysis_workspace_panel.py` | `backtest_analysis_decision_workspace_v1`을 소비하는 Python fallback. React가 없을 때도 같은 Single / Mix entry, decision, explicit action contract를 유지한다 |

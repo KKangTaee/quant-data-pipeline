@@ -1,6 +1,6 @@
 # Status
 
-Status: 13차 Backtest Workflow Top Shell Implementation Planned
+Status: 13차 Backtest Workflow Top Shell Closeout Verification Complete
 Last Updated: 2026-07-19
 
 ## Current Position
@@ -65,7 +65,7 @@ Last Updated: 2026-07-19
 - [x] 13차 written design 작성과 self-review
 - [x] 13차 written design 사용자 review
 - [x] 13차 implementation plan
-- [ ] 13차 RED -> GREEN implementation / Browser QA / closeout
+- [x] 13차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -240,3 +240,19 @@ Last Updated: 2026-07-19
   adapter/fallback, React shell, primary route cutover, Browser QA/docs closeout을 확정했다.
 - plan self-review에서 DESIGN의 intent property인 `type`과 Task 39~42의 Python/React contract를
   일치시켰고 Level 내부 Gate·count·persistence 확장은 남기지 않았다.
+
+## 13차 Completion
+
+- pure stage / intent truth: `168fcdf4 Backtest 상단 단계 계약 구현`
+- Python adapter / fallback: `47e11568 Backtest 상단 단계 이동 어댑터 구현`
+- React presentation shell: `ca27b114 Backtest 상단 React 워크플로 셸 구현`
+- primary route cutover: `85418e85 Backtest 상단 진입부를 React 셸로 전환`
+- 초기 Streamlit title/caption, 별도 후보 선정 설명과 red underline pills를 제거하고
+  Python-owned Level1~3 read model과 intent-only React rail로 교체했다.
+- fresh focused `54 passed`; full service `822 passed / 12 failed / 35 subtests passed`이며
+  12 failures는 기존 Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6
+  baseline과 동일하고 신규 top-shell failure는 0이다.
+- React production build는 Vite 5.4.21 `175 modules transformed`, target 6-module
+  `py_compile`과 `git diff --check`는 exit 0이다.
+- desktop / 760px에서 Level1~3 route 이동, responsive rail, overflow 0, current context와
+  ResizeObserver height를 확인했다. generated screenshot과 protected JSONL은 commit하지 않는다.

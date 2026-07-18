@@ -513,3 +513,43 @@
 - Result React production build: Vite 5.4.21, `176 modules transformed`, 성공.
 - target 10-module `py_compile`: exit 0, output 없음.
 - post-doc `git diff --check`: exit 0, output 없음.
+
+## 2026-07-19 13차 Task 39~42 RED -> GREEN
+
+- Task 39 RED: `app.services.backtest_workflow_shell` import 부재. GREEN pure truth `4 passed`.
+  commit `168fcdf4`.
+- Task 40 RED: Python adapter import 부재로 신규 adapter test 2건 실패. GREEN shell test
+  `5 passed, 3 warnings`; target compile 통과. commit `47e11568`.
+- Task 41 RED: React source 부재로 boundary 2건 실패. GREEN source boundary `2 passed`,
+  combined shell/boundary `49 passed, 3 warnings`; Vite build `175 modules transformed`.
+  commit `ca27b114`.
+- Task 42 RED: primary route에 legacy title/pills source가 남아 service contract 2건 실패.
+  GREEN targeted `12 passed, 876 deselected, 3 warnings`; target compile/diff-check 통과.
+  commit `85418e85`.
+
+## 2026-07-19 13차 Browser QA
+
+- fresh current source/build server: `http://localhost:8525/backtest`.
+- desktop 1440x1000: legacy visible title/caption/red pills 없음, hero 2열, rail 3열,
+  `aria-current=step`, Level1 -> Level2 -> Level3 -> Level1 route/workspace 일치 확인.
+- 760x1000: outer `760/760`, shell iframe `717/717`, shell `715/715`, hero 1열,
+  rail 3열 각 약 217px, label wrap와 Level1↔Level2 navigation 확인.
+- current page application console error 0. warning은 빈 legacy chart data의 Vega extent와
+  Streamlit component height lifecycle뿐이었다.
+- generated / unstaged screenshots:
+  `backtest-workflow-top-shell-desktop-qa.png`,
+  `backtest-workflow-top-shell-760-qa.png`.
+
+## 2026-07-19 13차 Fresh Completion Verification
+
+- `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
+  -> `54 passed, 3 warnings`.
+- `.venv/bin/python -m pytest tests/test_service_contracts.py -q`
+  -> `822 passed, 12 failed, 3 warnings, 35 subtests passed`.
+- 12 failures는 pre-13차와 같은 Sentiment 1, Final Review 4, liquidity copy 1,
+  Practical Validation 6 source-contract baseline이며 top-shell 신규 failure는 0이다.
+- React build: Vite 5.4.21, `175 modules transformed`; index 0.41 kB,
+  CSS 3.27 kB, JS 323.13 kB.
+- target 6-module `py_compile`: exit 0. `git diff --check`: exit 0, output 없음.
+- `npm audit --omit=dev`: moderate 1 / high 1. fix는 Vite 8 breaking upgrade를 요구해
+  이번 UI closeout에서 적용하지 않았다.

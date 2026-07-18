@@ -1,7 +1,7 @@
 # Portfolio Selection Flow
 
 Status: Active
-Last Verified: 2026-07-18
+Last Verified: 2026-07-19
 
 ## Purpose
 
@@ -20,6 +20,8 @@ Backtest > Backtest Analysis
   -> Operations > Portfolio Monitoring
 ```
 
+Backtest page 최상단은 세 단계가 공유하는 React workflow shell이다. Python이 current stage와 단계별 책임을 투영하고 React는 stage 이동 intent만 반환한다. 따라서 이 rail은 진행률이나 통과 판정이 아니라 화면 이동과 단계 소유권 안내이며, Level1/2/3의 Gate와 durable record는 각 단계가 계속 소유한다.
+
 | Step | Screen | What It Does | Durable Record |
 |---|---|---|---|
 | 1 | Backtest Analysis | 단일 전략 실행 또는 Portfolio Mix Builder로 weighted mix 후보를 만들고 검증 후보 source를 만든다 | `PORTFOLIO_SELECTION_SOURCES.jsonl` |
@@ -37,6 +39,8 @@ Backtest > Backtest Analysis
 | Operations > Portfolio Monitoring | CNN / AAII market sentiment context overlay, 사용자 dashboard portfolio 생성 / 선택 / soft delete, Final Review selected 후보 pool에서 strategy slot 추가 / 설정 적용 / 제거, 명시적 scenario update와 portfolio-level 성과 재확인, strategy별 target snapshot / next review schedule 표시, 선택한 1개 전략의 lazy detail에서 Final Review -> dashboard continuity check / read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison / optional allocation check / allocation evidence boundary, 같은 portfolio 안 전략 간 전환 비교 | sentiment 기반 monitoring signal, broker order, live approval, account / broker sync, auto rebalance |
 
 Live / Deployment Readiness는 현재 별도 화면으로 구현되지 않았다. Final Review는 향후 그 단계가 사용할 수 있도록 엄격한 `deployment_readiness_policy_snapshot`을 남기지만, 그 snapshot이 곧 live approval이나 주문 가능 상태를 뜻하지 않는다.
+
+상단 workflow shell의 `현재 단계에서 끝낼 일`은 위 ownership을 요약할 뿐 eligibility, blocker count, registry status를 계산하지 않는다. stage button intent는 기존 Python route request를 거쳐 이동하고 현재 stage 재클릭, unknown stage, 중복 nonce는 무시된다.
 
 ### Level1 Result And Level2 Entry Boundary
 
@@ -176,7 +180,7 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 
 | Area | Files |
 |---|---|
-| Backtest stage routing | `app/web/backtest_common.py`, `app/web/backtest_workflow_routes.py`, `app/web/backtest_page.py` |
+| Backtest stage routing | `app/services/backtest_workflow_shell.py`, `app/web/backtest_workflow_shell.py`, `app/web/components/backtest_workflow_shell/`, `app/web/backtest_state.py`, `app/web/backtest_workflow_routes.py`, `app/web/backtest_page.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py`, `app/web/backtest_single_*.py`, `app/web/backtest_compare/` |
 | Practical Validation | `app/web/backtest_practical_validation/`, `app/web/components/practical_validation_decision_workspace/`, `app/services/backtest_practical_validation_decision_workspace.py`, `app/services/backtest_practical_validation_explanation.py`, `app/services/backtest_practical_validation_modules.py`, `app/services/backtest_practical_validation_board_registry.py`, `app/services/backtest_selected_route_preflight.py`, `app/services/backtest_construction_risk_audit.py`, `app/services/backtest_risk_contribution_audit.py`, `app/services/backtest_component_role_weight_audit.py`, `app/services/backtest_temporal_validation.py`, `app/services/backtest_validation_efficacy.py`, `app/services/backtest_data_coverage_audit.py`, `app/services/backtest_realism_audit.py` |
 | Final Review | `app/web/backtest_final_review/`, `app/services/backtest_final_review_decision_brief.py`, `app/services/backtest_evidence_read_model.py` compatibility |
