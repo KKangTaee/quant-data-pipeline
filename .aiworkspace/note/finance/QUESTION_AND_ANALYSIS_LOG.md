@@ -9725,3 +9725,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: direct security search는 전체 Institutional Interest에서 종목 identity와 holder evidence를 찾되, 선택 기관 포지션을 0으로 위조하지 않고 별도 unavailable 상태로 보여야 함.
 - Analysis result: interest holder의 mapped identity가 DB price symbol을 소유하고, selected-manager holding은 독립적인 optional position이다. manager 0건은 검색 결과 상태일 뿐 현재 live context를 교체하는 조건이 아니다.
 - Follow-up: builder / loader / React pure helper 회귀 테스트와 actual Browser QA로 두 경계를 고정했다. verified security master 자체는 여전히 별도 data dependency다.
+
+### 2026-07-18 - 무료 OpenFIGI로 13F ticker identity를 보강한다
+
+- User request: `ticker 연결 전`이 많은 원인이 data인지 개발인지 확인한 뒤, 무료 API라면 안전한 CUSIP-ticker 연결 개발을 진행해 달라고 요청함.
+- Interpreted goal: SEC holding은 보존하면서 verified external identity source로 chart/price/sector 연결률을 높이고 복수 후보와 provider error는 계속 차단해야 함.
+- Analysis result: OpenFIGI v3는 anonymous와 free key 모두 무료다. Actual Duquesne 68 distinct CUSIP/CINS는 US Equity filter에서 모두 one-ticker result였지만 legacy name-match table에는 CUSIP-only stale/wrong 후보가 있어 source 분리가 필요하다.
+- Follow-up: provider adapter, canonical resolution, safe loader precedence, curated-manager backfill, actual DB/UI QA의 1차~4차 설계를 승인했다. Written spec review 후 TDD 계획으로 전환한다.
