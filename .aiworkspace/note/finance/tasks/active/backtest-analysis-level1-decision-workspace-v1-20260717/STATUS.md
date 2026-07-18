@@ -1,7 +1,7 @@
 # Status
 
-Status: 12차 Current Selection And Factor Presentation Complete With Manual Browser Gap
-Last Updated: 2026-07-18
+Status: 13차 Backtest Workflow Top Shell Written Design Review
+Last Updated: 2026-07-19
 
 ## Current Position
 
@@ -60,6 +60,12 @@ Last Updated: 2026-07-18
 - [x] 12차 RED -> GREEN implementation
 - [x] 12차 desktop / 760px factor presentation Browser QA
 - [x] 12차 canonical docs / active task / root handoff sync
+- [x] 13차 legacy top entry / route / state ownership audit
+- [x] 13차 A/B/C visual companion과 A안 사용자 승인
+- [x] 13차 written design 작성과 self-review
+- [ ] 13차 written design 사용자 review
+- [ ] 13차 implementation plan
+- [ ] 13차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -74,6 +80,8 @@ Last Updated: 2026-07-18
 9. Deterministic Preset Application
 10. Result Evidence And Level2 Handoff Workspace
 11. Result Interpretation And Schedule Polish
+12. Current Selection And Factor Presentation
+13. Backtest Workflow Top Shell Redesign
 
 ## Current Corrective Position
 
@@ -218,3 +226,15 @@ Last Updated: 2026-07-18
   35 subtests passed`이며 신규 Level1 failure는 0이다.
 - Decision / Result React production build는 각각 175 / 176 modules, target 10-module
   `py_compile`과 `git diff --check`는 exit 0이다.
+
+## Current 13차 Position
+
+- 사용자가 초기 Streamlit `Backtest` title/caption, 별도 `후보 선정 흐름` 설명과 빨간
+  underline pills를 Level1~3와 같은 React 시각 언어로 교체해 달라고 요청했다.
+- current `streamlit_app.py`, `backtest_page.py`, workflow route/state owner를 감사하고
+  A/B/C visual companion을 비교했다.
+- 사용자는 A안 `통합 Decision Header + 단계 레일`을 승인했다.
+- page-level shell은 현재 단계에서 끝낼 일만 안내하고 각 Level의 Gate, blocker count,
+  eligibility와 registry status를 중복 계산하지 않는다.
+- written design을 DESIGN.md에 추가했으며 사용자 확인 뒤 implementation plan과 RED 테스트로
+  진행한다.

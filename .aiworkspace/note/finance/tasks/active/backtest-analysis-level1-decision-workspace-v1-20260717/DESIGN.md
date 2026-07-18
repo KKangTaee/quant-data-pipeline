@@ -2096,3 +2096,184 @@ React는 strategy key 일치 판정, stale 원인 분류, factor key 번역, Gat
 - 신규 factor/provider/historical universe 개발
 - Level2 Practical Validation 또는 Final Review route 재설계
 - broker order, live approval, account sync, tax, auto rebalance
+
+## 13차 Backtest Workflow Top Shell Redesign
+
+### Why This Corrective Exists
+
+Level1~3의 각 workspace는 blue-gray one-shell 시각 언어와 단계별 질문을 갖게 됐지만,
+Backtest 페이지 최상단은 초기 Streamlit 구조를 그대로 유지한다.
+
+- 큰 `Backtest` 제목과 긴 설명이 실제 작업 시작점보다 먼저 공간을 차지한다.
+- 설명은 현재 3단계 계약과 맞지 않는 `Pre-Live`, `Portfolio Proposal`을 계속 언급한다.
+- `후보 선정 흐름` 제목과 별도 설명이 위의 페이지 설명을 다시 반복한다.
+- native `st.pills`의 빨간 밑줄은 Level1~3의 blue-gray visual language와 충돌한다.
+- 탭 이름만으로는 각 단계에서 사용자가 무엇을 끝내야 하는지 알기 어렵다.
+
+이 corrective는 상단의 두 legacy block을 하나의 React workflow shell로 통합한다.
+각 Level 내부의 판단 UI나 Gate를 최상단에서 다시 계산하지 않고, 현재 위치와 단계의 책임만
+명확하게 설명한다.
+
+### Approved Visual Direction
+
+사용자는 visual companion의 A안인 `통합 Decision Header + 단계 레일`을 승인했다.
+
+```text
+BACKTEST DECISION PIPELINE
+후보를 만들고 검증해 최종 투자 판단까지 이어갑니다
+각 단계에서 해야 할 일을 분리하고, 검증된 근거만 다음 판단으로 넘깁니다.
+
+현재 단계 · LEVEL 1
+후보 분석
+전략을 실행하고 비교해 실전 검증 후보를 준비합니다.
+
+[01 후보 분석] [02 실전 검증] [03 최종 검토]
+```
+
+기존 `Backtest` title / caption, `후보 선정 흐름` heading / caption, red underline pills는
+primary route에서 제거한다. 새 shell 하나가 page identity, current stage context와 stage navigation을
+함께 제공하고 바로 아래에 선택된 Level workspace가 이어진다.
+
+### Product Contract
+
+최상단의 질문은 `전체 workflow에서 지금 어디에 있고 무엇을 끝내는가?`다.
+각 Level의 판단 결과, blocker count, registry count 또는 eligibility를 다시 요약하지 않는다.
+
+| 단계 | 사용자 label | 현재 단계에서 끝낼 일 |
+|---|---|---|
+| Level1 | 후보 분석 | 전략을 실행하고 비교해 실전 검증 후보를 준비한다. |
+| Level2 | 실전 검증 | 최신 데이터로 검증하고 해결할 일과 넘길 판단을 구분한다. |
+| Level3 | 최종 검토 | 검증된 한계와 Monitoring 이관 조건을 바탕으로 최종 판단한다. |
+
+추천 보조 기능은 우측 `현재 단계` context card 하나다. 단계 번호, 사용자 label과 위의 완료 목적만
+표시한다. job, saved row, 실패 수, 후보 수 같은 운영 진단값은 표시하지 않는다.
+
+세 단계는 기존과 같이 모두 직접 이동할 수 있다. 최상단 shell은 진행 Gate가 아니며 Level2 entry
+또는 Final Review eligibility를 추론하거나 차단하지 않는다. 실제 Gate와 상태는 각 Level의 Python
+read model이 소유한다.
+
+### Read Model And Ownership
+
+새 pure service를 추가한다.
+
+```text
+app/services/backtest_workflow_shell.py
+```
+
+service는 다음 JSON-ready projection을 만든다.
+
+```text
+headline
+description
+active_stage
+active_stage_index
+active_stage_context:
+  level_label
+  title
+  responsibility
+stages[]:
+  stage_key
+  level_label
+  title
+  english_title
+  responsibility
+  is_active
+```
+
+Python ownership:
+
+- 허용된 stage key와 표시 순서
+- current stage 정규화
+- stage별 사용자 label, 책임 문장과 active state
+- React intent allow-list 검증
+- Streamlit session state와 기존 route dispatcher 갱신
+- React unavailable fallback
+
+React ownership:
+
+- hero, current-stage card와 stage rail presentation
+- stage card click intent
+- focus / hover / selected 시각 상태
+- responsive layout과 ResizeObserver height sync
+
+React는 raw session state로 stage를 새로 분류하거나 route, Gate, eligibility, completion을 계산하지
+않는다. intent는 다음 최소 계약만 사용한다.
+
+```text
+{type: "select_stage", stage_key: "Practical Validation"}
+```
+
+Python adapter는 `stage_key`가 `BACKTEST_WORKFLOW_PANEL_OPTIONS`에 있을 때만 기존
+`request_backtest_panel()` 또는 동등한 route owner를 호출한다. 잘못된 key와 중복 intent는 무시한다.
+
+### Component And Route Boundary
+
+- `app/services/backtest_workflow_shell.py`
+  - 단계 catalog, active-stage normalization과 read model 소유
+- `app/web/backtest_workflow_shell.py`
+  - session adapter, validated intent와 component/fallback mount 소유
+- `app/web/backtest_workflow_shell_panel.py`
+  - 같은 read model을 사용하는 Python fallback 소유
+- `app/web/components/backtest_workflow_shell/`
+  - React presentation과 `select_stage` intent 소유
+- `app/web/backtest_page.py`
+  - native pills selector를 새 shell renderer로 교체하고 기존 stage dispatch 유지
+- `app/web/streamlit_app.py`
+  - legacy `st.title("Backtest")`와 obsolete caption 제거
+
+기존 `BACKTEST_STAGE_ANALYSIS`, `BACKTEST_STAGE_PRACTICAL_VALIDATION`,
+`BACKTEST_STAGE_FINAL_REVIEW`, legacy route normalization과 Level workspace renderer는 바꾸지 않는다.
+이 shell은 Level1 전용 component가 아니라 세 Level이 공유하는 page-level navigation이다.
+
+### Responsive And Accessibility Contract
+
+- desktop: hero는 설명 / current-stage card 2열, stage rail은 동일 폭 3열이다.
+- 760px: hero는 1열로 줄바꿈하고 stage rail 3열을 유지하되 긴 영어 label이 clip되지 않는다.
+- 520px 이하: stage rail은 세로 1열로 전환한다.
+- component body와 stage card는 `min-width: 0`, multi-line text와 horizontal overflow 0을 만족한다.
+- stage card는 button semantic, keyboard focus, `aria-current="step"`을 제공한다.
+- selected는 색만이 아니라 border, `CURRENT` label과 `aria-current`로 구분한다.
+- content 높이는 ResizeObserver로 Streamlit iframe에 동기화한다.
+- reduced-motion 환경에서는 hover/selection transition을 제거한다.
+
+### Error And Fallback States
+
+- session의 current stage가 허용 목록에 없으면 Level1로 정규화한다.
+- active stage metadata가 누락되면 raw key를 노출하지 않고 안전한 사용자 fallback label을 쓴다.
+- component가 load되지 않으면 Python fallback이 같은 headline, current responsibility와 3단계 이동을
+  제공한다.
+- intent 처리 중 rerun이 발생해도 shell 아래의 선택 workspace만 교체하며 별도 loading dashboard나
+  빈 action board를 만들지 않는다.
+- stage navigation은 persistence를 쓰지 않으므로 registry, Run History와 saved JSONL을 수정하지 않는다.
+
+### TDD And Browser QA Contract
+
+- RED: 3개 stage가 정확히 한 번, 고정 순서로 projection된다.
+- RED: unknown current stage는 Level1로 정규화되고 active stage는 하나뿐이다.
+- RED: stage responsibility와 사용자 label은 Python projection에 존재한다.
+- RED: React source는 route / Gate / raw session 분류를 소유하지 않는다.
+- RED: invalid / duplicate intent는 기존 route handler를 호출하지 않는다.
+- RED: primary Backtest entry에는 legacy title, obsolete caption, `st.pills`가 없다.
+- GREEN 뒤 focused shell / route / boundary tests와 영향 범위 회귀를 새로 실행한다.
+- React production build, target `py_compile`, `git diff --check`를 실행한다.
+- desktop Browser QA에서 hero 2열, current Level context, 세 stage 이동과 workspace dispatch를 확인한다.
+- 760px에서 hero 1열, stage rail 3열, label wrap, iframe height와 horizontal overflow 0을 확인한다.
+- screenshots는 generated artifact로 보존하고 commit하지 않는다.
+
+### 13차 Acceptance Criteria
+
+1. 초기 Streamlit `Backtest` title/caption과 별도 `후보 선정 흐름` block이 보이지 않는다.
+2. 하나의 blue-gray React shell에서 workflow 목적, 현재 단계 책임과 3단계 이동을 이해할 수 있다.
+3. stage 이동 후 hero의 current-stage card와 아래 workspace가 같은 단계로 갱신된다.
+4. Python이 stage allow-list, current state와 route dispatch를 계속 소유한다.
+5. 최상단은 각 Level의 Gate, blocker, count 또는 투자 판단을 중복 계산하지 않는다.
+6. React unavailable fallback도 같은 단계 의미와 이동을 제공한다.
+7. desktop / 760px에서 clip과 horizontal overflow가 없고 keyboard / aria-current 계약을 만족한다.
+8. focused tests, React build, py_compile, diff-check, Browser QA와 protected-path audit를 통과한다.
+
+### 13차 Out Of Scope
+
+- Level1/2/3 내부 workflow, 판단 Gate, candidate count 또는 registry contract 변경
+- stage completion percentage, notification center, job/run/status dashboard 추가
+- legacy route 삭제 또는 Practical Validation / Final Review route 재설계
+- strategy runtime, DB schema, provider, broker, live approval 또는 auto rebalance 변경

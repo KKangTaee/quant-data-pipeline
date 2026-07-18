@@ -319,3 +319,17 @@ generated artifact이므로 commit하지 않는다.
   하나의 `reference_message`만 표시한다.
 - 기존 8505 server는 `runOnSave=false`와 `fileWatcherType none`으로 실행돼 current source를 반영하지
   않았다. 8511 fresh server로 source/build pair를 맞춰 Browser QA하고 종료했다.
+
+## 2026-07-19 13차 Top Shell Audit And Design Decisions
+
+- page entry의 `st.title("Backtest")`와 caption은 `streamlit_app.py`가 소유하고, 별도 workflow
+  heading/caption과 red underline `st.pills`는 `backtest_page.py`가 소유한다. 같은 목적을 두 번
+  설명하는 구조이며 entry caption에는 현재 product route에 없는 Pre-Live / Portfolio Proposal이 남아 있다.
+- stage key, current stage와 legacy normalization은 기존 Python route/state owner가 보존한다. 새
+  React shell은 session을 직접 읽거나 route/Gate를 계산하지 않고 validated `select_stage` intent만 보낸다.
+- 최상단 추천 기능은 operational count가 아니라 `현재 단계에서 끝낼 일` context card다. Level 내부
+  action/Gate와 중복되지 않으면서 단계 소유권을 first-read에서 설명한다.
+- desktop은 hero 2열과 stage rail 3열, 760px은 hero 1열과 rail 3열, 520px 이하는 rail 1열을 사용한다.
+  ResizeObserver, button semantic, aria-current, reduced-motion과 overflow 0을 acceptance contract로 둔다.
+- visual companion은 `.superpowers/brainstorm/31090-1784412863/`에 생성했으며 generated/protected
+  artifact이므로 stage하거나 commit하지 않는다.
