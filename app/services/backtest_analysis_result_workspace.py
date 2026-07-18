@@ -559,7 +559,59 @@ def _normalize_curve(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
+def _format_signed_percent(value: Any) -> str:
+    numeric = _optional_float(value)
+    return "-" if numeric is None else f"{numeric:+.1%}"
+
+
+def _select_date_ticks(
+    dates: Sequence[str],
+    *,
+    limit: int,
+) -> list[dict[str, str]]:
+    """Keep real timeline endpoints while limiting responsive axis labels."""
+
+    unique = list(dict.fromkeys(str(value) for value in dates if str(value)))
+    if limit <= 0:
+        return []
+    if len(unique) <= limit:
+        selected = unique
+    elif limit == 1:
+        selected = [unique[0]]
+    else:
+        last = len(unique) - 1
+        indexes = sorted(
+            {round(offset * last / (limit - 1)) for offset in range(limit)}
+        )
+        selected = [unique[index] for index in indexes]
+    return [{"date": value, "label": value} for value in selected]
+
+
+def _benchmark_identity(
+    meta: Mapping[str, Any],
+    *,
+    available: bool,
+) -> dict[str, Any]:
+    """Translate benchmark runtime metadata into a stable user contract."""
+
+    ticker = str(meta.get("benchmark_ticker") or "").strip().upper()
+    contract = str(meta.get("benchmark_contract") or "").strip()
+    label = str(meta.get("benchmark_label") or ticker or contract).strip()
+    return {
+        "available": available,
+        "label": label or "기준지수",
+        "ticker": ticker,
+        "contract_label": contract,
+        "missing_reason": (
+            ""
+            if available
+            else "동일 기간 기준지수 곡선이 없어 Level2에서 비교합니다."
+        ),
+    }
+
+
 def _chart_projection(bundle: Mapping[str, Any]) -> dict[str, Any]:
+    meta = dict(bundle.get("meta") or {})
     chart_df = _frame(bundle.get("chart_df"))
     result_df = _frame(bundle.get("result_df"))
     source = chart_df if not chart_df.empty else result_df
@@ -579,14 +631,46 @@ def _chart_projection(bundle: Mapping[str, Any]) -> dict[str, Any]:
         ("Benchmark Total Balance", "Benchmark Balance", "Total Balance"),
     )
 
-    if strategy_rows and benchmark_rows:
-        common_dates = {row["date"] for row in strategy_rows}.intersection(
-            row["date"] for row in benchmark_rows
-        )
-        strategy_rows = [row for row in strategy_rows if row["date"] in common_dates]
-        benchmark_rows = [row for row in benchmark_rows if row["date"] in common_dates]
     strategy_series = _normalize_curve(strategy_rows)
     benchmark_series = _normalize_curve(benchmark_rows)
+    timeline_dates = sorted(
+        {row["date"] for row in strategy_series}.union(
+            row["date"] for row in benchmark_series
+        )
+    )
+    strategy_by_date = {row["date"]: row for row in strategy_series}
+    benchmark_by_date = {row["date"]: row for row in benchmark_series}
+    hover_rows: list[dict[str, Any]] = []
+    for timeline_date in timeline_dates:
+        strategy = strategy_by_date.get(timeline_date)
+        benchmark = benchmark_by_date.get(timeline_date)
+        strategy_return = (
+            round(float(strategy["value"]) / 100.0 - 1.0, 6)
+            if strategy
+            else None
+        )
+        benchmark_return = (
+            round(float(benchmark["value"]) / 100.0 - 1.0, 6)
+            if benchmark
+            else None
+        )
+        hover_rows.append(
+            {
+                "date": timeline_date,
+                "strategy_value": strategy.get("value") if strategy else None,
+                "strategy_value_label": (
+                    strategy.get("value_label") if strategy else "-"
+                ),
+                "strategy_return": strategy_return,
+                "strategy_return_label": _format_signed_percent(strategy_return),
+                "benchmark_value": benchmark.get("value") if benchmark else None,
+                "benchmark_value_label": (
+                    benchmark.get("value_label") if benchmark else "-"
+                ),
+                "benchmark_return": benchmark_return,
+                "benchmark_return_label": _format_signed_percent(benchmark_return),
+            }
+        )
 
     markers: list[dict[str, Any]] = []
     if strategy_series:
@@ -617,15 +701,31 @@ def _chart_projection(bundle: Mapping[str, Any]) -> dict[str, Any]:
                 }
             )
 
+    last_strategy_return = (
+        float(strategy_series[-1]["value"]) / 100.0 - 1.0
+        if strategy_series
+        else None
+    )
+    benchmark = _benchmark_identity(meta, available=bool(benchmark_series))
     return {
+        "normalized_base": 100.0,
+        "normalized_explanation": (
+            "첫 시점을 100으로 맞췄습니다. 마지막 전략 지수 "
+            f"{strategy_series[-1]['value_label'] if strategy_series else '-'}는 누적 "
+            f"{_format_signed_percent(last_strategy_return)}를 의미합니다."
+        ),
+        "strategy_label": str(
+            bundle.get("strategy_name") or meta.get("strategy_name") or "전략"
+        ),
+        "benchmark": benchmark,
+        "timeline_dates": timeline_dates,
+        "desktop_x_ticks": _select_date_ticks(timeline_dates, limit=6),
+        "compact_x_ticks": _select_date_ticks(timeline_dates, limit=3),
+        "hover_rows": hover_rows,
         "strategy_series": strategy_series,
         "benchmark_series": benchmark_series,
         "markers": markers,
-        "benchmark_missing_reason": (
-            "동일 기간 기준지수 곡선이 없어 Level2에서 비교합니다."
-            if not benchmark_series
-            else ""
-        ),
+        "benchmark_missing_reason": benchmark["missing_reason"],
     }
 
 

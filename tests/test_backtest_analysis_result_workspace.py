@@ -267,6 +267,67 @@ def test_user_tables_and_chart_use_stable_labels_not_raw_columns() -> None:
     ]
 
 
+def test_chart_publishes_real_date_ticks_returns_and_benchmark_identity() -> None:
+    bundle = result_bundle()
+    dates = pd.date_range("2026-01-31", periods=7, freq="ME")
+    bundle["chart_df"] = pd.DataFrame(
+        {"Date": dates, "Total Balance": [100, 101, 99, 104, 108, 110, 124.9]}
+    )
+    bundle["benchmark_chart_df"] = pd.DataFrame(
+        {
+            "Date": dates,
+            "Benchmark Total Balance": [100, 100, 101, 103, 104, 106, 112],
+        }
+    )
+    bundle["meta"].update(
+        {"benchmark_ticker": "SPY", "benchmark_label": "S&P 500 (SPY)"}
+    )
+
+    chart = _build_workspace(bundle)["chart"]
+
+    assert chart["normalized_base"] == 100.0
+    assert "124.9" in chart["normalized_explanation"]
+    assert chart["benchmark"]["label"] == "S&P 500 (SPY)"
+    assert chart["timeline_dates"] == [date.date().isoformat() for date in dates]
+    assert len(chart["desktop_x_ticks"]) == 6
+    assert len(chart["compact_x_ticks"]) == 3
+    assert chart["desktop_x_ticks"][0]["date"] == "2026-01-31"
+    assert chart["desktop_x_ticks"][-1]["date"] == "2026-07-31"
+    assert chart["hover_rows"][-1]["strategy_return_label"] == "+24.9%"
+    assert chart["hover_rows"][-1]["benchmark_return_label"] == "+12.0%"
+
+
+def test_sparse_benchmark_keeps_timeline_positions_without_fake_values() -> None:
+    bundle = result_bundle()
+    bundle["chart_df"] = pd.DataFrame(
+        [
+            {"Date": "2026-01-31", "Total Balance": 100.0},
+            {"Date": "2026-02-28", "Total Balance": 105.0},
+            {"Date": "2026-03-31", "Total Balance": 110.0},
+        ]
+    )
+    bundle["benchmark_chart_df"] = pd.DataFrame(
+        [
+            {"Date": "2026-01-31", "Benchmark Total Balance": 100.0},
+            {"Date": "2026-03-31", "Benchmark Total Balance": 104.0},
+        ]
+    )
+    bundle["meta"]["benchmark_ticker"] = "SPY"
+
+    chart = _build_workspace(bundle)["chart"]
+
+    assert chart["timeline_dates"] == [
+        "2026-01-31",
+        "2026-02-28",
+        "2026-03-31",
+    ]
+    assert chart["hover_rows"][1]["benchmark_value"] is None
+    assert [row["date"] for row in chart["benchmark_series"]] == [
+        "2026-01-31",
+        "2026-03-31",
+    ]
+
+
 def test_missing_holdings_stays_unavailable_instead_of_guessing_equal_weights() -> None:
     bundle = result_bundle()
     bundle["result_df"] = pd.DataFrame(
