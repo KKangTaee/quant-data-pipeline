@@ -24,6 +24,14 @@ def _component_style_source() -> str:
     ).read_text(encoding="utf-8")
 
 
+def _css_rule(style_source: str, *selectors: str) -> str:
+    selector_pattern = r"\s*,\s*".join(re.escape(selector) for selector in selectors)
+    match = re.search(rf"(?:^|\n)\s*{selector_pattern}\s*\{{(?P<body>[^}}]*)\}}", style_source)
+    if not match:
+        raise AssertionError(f"CSS rule not found: {', '.join(selectors)}")
+    return match.group("body")
+
+
 class Sec13FDataSetParserTests(unittest.TestCase):
     def test_normalize_sec_13f_frames_preserves_filing_timing_and_holdings(self) -> None:
         from finance.data.institutional_13f import SEC_13F_SOURCE_CAVEATS, normalize_sec_13f_frames
@@ -1285,14 +1293,62 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
     def test_context_hero_basis_and_controls_share_alignment_contract(self) -> None:
         component_source = _component_source()
         style_source = _component_style_source()
+        hero_grid_rule = _css_rule(style_source, ".ip-context-hero__grid")
+        controls_rule = _css_rule(style_source, ".ip-context-controls")
+        basis_span_rule = _css_rule(
+            style_source,
+            ".ip-context-basis__snapshot",
+            ".ip-context-basis .ip-source-link",
+        )
+        shared_label_rule = _css_rule(
+            style_source,
+            ".ip-manager-search > label",
+            ".ip-context-control-label",
+        )
+        freshness_rule = _css_rule(style_source, ".ip-freshness")
+        mobile_style_source = style_source[
+            style_source.index("@media (max-width: 720px) {") : style_source.index("@media (max-width: 420px) {")
+        ]
+        mobile_freshness_rule = _css_rule(mobile_style_source, ".ip-freshness")
 
         self.assertIn('className="ip-context-basis__snapshot"', component_source)
         self.assertIn('className="ip-freshness-block"', component_source)
         self.assertIn('className="ip-context-control-label">데이터 기준</span>', component_source)
         self.assertIn("--ip-context-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);", style_source)
-        self.assertIn("grid-template-columns: var(--ip-context-columns);", style_source)
-        self.assertIn(".ip-context-basis__snapshot", style_source)
-        self.assertIn('grid-template-areas: "action period" "time time";', style_source)
+        for grid_rule in (hero_grid_rule, controls_rule):
+            self.assertIn("grid-template-columns: var(--ip-context-columns);", grid_rule)
+            self.assertIn("gap: 18px;", grid_rule)
+        self.assertIn("align-items: start;", controls_rule)
+        self.assertIn("grid-column: 1 / -1;", basis_span_rule)
+        for declaration in (
+            "display: block;",
+            "min-height: 18px;",
+            "margin-bottom: 6px;",
+            "color: #334155;",
+            "font-size: 12px;",
+            "font-weight: 800;",
+            "line-height: 18px;",
+        ):
+            self.assertIn(declaration, shared_label_rule)
+        self.assertIn('grid-template-areas: "action period" "time time";', freshness_rule)
+        self.assertIn('grid-template-areas: "action" "period" "time";', mobile_freshness_rule)
+
+        build_dir = Path("app/web/streamlit_components/institutional_portfolios_workbench/component_static")
+        index_source = (build_dir / "index.html").read_text(encoding="utf-8")
+        asset_paths = re.findall(r'(?:src|href)="\./(assets/[^"]+)"', index_source)
+        css_paths = [asset_path for asset_path in asset_paths if asset_path.endswith(".css")]
+        javascript_paths = [asset_path for asset_path in asset_paths if asset_path.endswith(".js")]
+        self.assertEqual(len(css_paths), 1)
+        self.assertEqual(len(javascript_paths), 1)
+        runtime_css = (build_dir / css_paths[0]).read_text(encoding="utf-8")
+        runtime_javascript = (build_dir / javascript_paths[0]).read_text(encoding="utf-8")
+        self.assertIn("--ip-context-columns", runtime_css)
+        self.assertIn("ip-freshness-block", runtime_css)
+        self.assertIn('grid-template-areas:"action period" "time time"', runtime_css)
+        self.assertIn("ip-freshness-block", runtime_javascript)
+        self.assertIn("데이터 기준", runtime_javascript)
+        self.assertNotIn("slice(0,80)", runtime_javascript)
+        self.assertNotIn("slice(0, 80)", runtime_javascript)
 
     def test_workbench_v2_has_complete_holdings_explorer_and_explicit_security_search(self) -> None:
         component_source = _component_source()

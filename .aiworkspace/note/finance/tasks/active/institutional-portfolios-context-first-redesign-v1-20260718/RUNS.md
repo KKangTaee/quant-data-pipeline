@@ -79,3 +79,12 @@
 - Exact `420 × 900` viewport: page `clientWidth == scrollWidth == 420px`; iframe and component document `clientWidth == scrollWidth == 378px`; hero and controls each computed one `332.415px` column; freshness action / period / time each had `clientWidth == scrollWidth == 311px`.
 - Final ignored PNG screenshot: `.playwright-mcp/institutional-portfolios-hero-layout-alignment-final.png`.
 - `git diff --check` -> PASS.
+
+## 2026-07-18 Hero Layout Contract Review Fix
+
+- Strengthened the focused regression to bind shared columns / 18px gap to both exact desktop selectors, `align-items: start` to controls, the full-width basis selectors to `grid-column: 1 / -1`, the complete shared label typography / bottom-gap declarations to both labels, and freshness grid areas to desktop and `<=720px` scopes.
+- Extended the same contract to resolve the CSS / JS paths referenced by tracked `component_static/index.html`, inspect those exact assets for layout / label markers, and reject `slice(0,80)` / `slice(0, 80)` in referenced JS.
+- Mutation RED: temporarily changed only `.ip-context-controls` from `gap: 18px` to `gap: 12px`; the focused test failed at the selector-specific `gap: 18px` assertion with the controls rule body in the failure output.
+- Restored the exact CSS with `apply_patch`; focused GREEN -> `1 passed`. Production source and tracked assets matched `HEAD` immediately after restore and again after Vite build.
+- Full checks: Python `56 passed`, `4 subtests passed`, 3 existing Edgar dependency deprecation warnings; Vitest `5 passed`; typecheck PASS; Vite build PASS with 171 modules; `git diff --check` PASS.
+- Browser QA was not rerun because no production or tracked runtime byte changed. Source / index / JS / CSS SHA-256 remained `462c858a...`, `2b31c53f...`, `62976028...`, `28998f7a...`, and `94e839cf...` respectively.
