@@ -270,7 +270,7 @@ git commit -m "선물 매크로 다중 기간 패턴 feature 추가"
   - `build_current_pattern_snapshot(feature_frame: pd.DataFrame, *, path_limit: int = 60) -> dict[str, Any]`
   - snapshot keys: `schema_version`, `status`, `as_of_date`, `regime`, `regime_label`, `transition`, `transition_label`, `summary`, `families`, `evidence`, `change_conditions`, `path`, `ribbon`, `coverage`.
 
-- [ ] **Step 1: Add RED tests for state semantics**
+- [x] **Step 1: Add RED tests for state semantics**
 
 ```python
 def test_current_pattern_labels_persistent_defensive_regime():
@@ -310,7 +310,7 @@ def test_current_pattern_returns_partial_without_forcing_missing_family():
     assert snapshot["families"]["dollar_pressure"]["status"] == "UNAVAILABLE"
 ```
 
-- [ ] **Step 2: Run the new tests and confirm RED**
+- [x] **Step 2: Run the new tests and confirm RED**
 
 Run:
 
@@ -320,7 +320,7 @@ Run:
 
 Expected: failures because `build_current_pattern_snapshot` and state labels are absent.
 
-- [ ] **Step 3: Implement deterministic current state**
+- [x] **Step 3: Implement deterministic current state**
 
 Use these exact public state keys:
 
@@ -391,7 +391,7 @@ def build_current_pattern_snapshot(feature_frame: pd.DataFrame, *, path_limit: i
 
 Implement `_transition_state()` with this precedence: unavailable → low signal → conflict → transition attempt → broadening → persisting. A transition attempt requires material 1D and 5D direction opposite to 20D; broadening requires 5D breadth ≥ 0.6 and 5D strength greater than 20D strength; persisting requires aligned material 5D / 20D.
 
-- [ ] **Step 4: Run full pattern tests and compile**
+- [x] **Step 4: Run full pattern tests and compile**
 
 ```bash
 .venv/bin/python -m pytest tests/test_futures_macro_pattern.py -q
@@ -400,7 +400,7 @@ Implement `_transition_state()` with this precedence: unavailable → low signal
 
 Expected: all tests pass and compile exits 0.
 
-- [ ] **Step 5: Commit Task 2**
+- [x] **Step 5: Commit Task 2**
 
 ```bash
 git add app/services/futures_macro_pattern.py tests/test_futures_macro_pattern.py
@@ -1434,7 +1434,7 @@ Do not stage the QA screenshot, `.playwright-mcp/`, registries, saved setups, ru
 ## Implementation Completion Checklist
 
 - [x] Task 1: point-in-time multi-window feature frame
-- [ ] Task 2: current regime / transition / path / change conditions
+- [x] Task 2: current regime / transition / path / change conditions
 - [ ] Task 3: forward outcomes / independent similar episodes
 - [ ] Task 4: chronological validation / publication gate / cache
 - [ ] Task 5: default service integration / Python React payload V2

@@ -11,7 +11,8 @@
 - Current stage: inline execution started; linked worktree and baseline environment are being verified before Task 1 RED.
 - Baseline investigation confirmed the repository-local runner is `unittest`; the implementation plan now records unittest equivalents instead of adding pytest.
 - Task 1 complete: point-in-time 1D / 5D / 20D family features reuse existing score weights and preserve trailing-only calculations.
-- Current stage: Task 2 current regime / transition semantics.
+- Task 2 complete: current regime, transition phase, 60D path / ribbon, evidence, and change conditions are separated from future probabilities.
+- Current stage: Task 3 forward outcomes and independent similar episodes.
 - No DB schema, provider, registry, or saved setup has been changed.
 
 ## Roadmap State
@@ -24,4 +25,4 @@
 
 ## Next Action
 
-Task 2의 persistence / transition attempt / conflict / low-signal state tests를 RED로 만든다.
+Task 3의 forward outcome leakage와 independent episode spacing tests를 RED로 만든다.

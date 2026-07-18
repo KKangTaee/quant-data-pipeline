@@ -33,3 +33,10 @@
 - GREEN: the same command passed 3 tests after adding trailing-only 1D / 5D / 20D family features.
 - Regression: `.venv/bin/python -m unittest tests.test_service_contracts.FuturesMacroThermometerContractTests` passed 23 tests.
 - `.venv/bin/python -m py_compile app/services/futures_macro_pattern.py` and `git diff --check` passed.
+
+## 2026-07-18 Task 2 — Current Pattern State
+
+- RED: `.venv/bin/python -m unittest tests.test_futures_macro_pattern.FuturesMacroCurrentPatternTests` failed 4 tests because the current pattern API did not exist.
+- A fixture-only pandas 3.0 dtype error was traced to assigning `pd.NA` into float columns and corrected to numeric `NaN` before evaluating production behavior.
+- GREEN: `.venv/bin/python -m unittest tests.test_futures_macro_pattern` passed 7 tests.
+- Regression: `FuturesMacroThermometerContractTests` passed 23 tests; py_compile and diff check passed.
