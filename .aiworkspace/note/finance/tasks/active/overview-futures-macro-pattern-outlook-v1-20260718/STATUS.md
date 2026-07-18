@@ -12,7 +12,8 @@
 - Baseline investigation confirmed the repository-local runner is `unittest`; the implementation plan now records unittest equivalents instead of adding pytest.
 - Task 1 complete: point-in-time 1D / 5D / 20D family features reuse existing score weights and preserve trailing-only calculations.
 - Task 2 complete: current regime, transition phase, 60D path / ribbon, evidence, and change conditions are separated from future probabilities.
-- Current stage: Task 3 forward outcomes and independent similar episodes.
+- Task 3 complete: 5D / 20D forward outcomes use as-of volatility, and similar dates are de-overlapped by trading-row episode spacing.
+- Current stage: Task 4 chronological validation, publication gates, and cache.
 - No DB schema, provider, registry, or saved setup has been changed.
 
 ## Roadmap State
@@ -25,4 +26,4 @@
 
 ## Next Action
 
-Task 3의 forward outcome leakage와 independent episode spacing tests를 RED로 만든다.
+Task 4의 sample / Brier / calibration publication gate와 chronological embargo tests를 RED로 만든다.

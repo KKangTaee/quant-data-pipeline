@@ -425,7 +425,7 @@ git commit -m "선물 매크로 현재 패턴 상태 추가"
   - `select_similar_episodes(feature_frame: pd.DataFrame, *, current_date: pd.Timestamp, horizon: int, max_episodes: int = 120) -> pd.DataFrame`
   - output columns `as_of_date`, `horizon`, `outcome_regime`, family forward z values, `similarity_distance`, `effective_episode`.
 
-- [ ] **Step 1: Write leakage, label, and episode tests**
+- [x] **Step 1: Write leakage, label, and episode tests**
 
 ```python
 def test_forward_outcomes_use_as_of_volatility_and_have_mutually_exclusive_regimes():
@@ -468,7 +468,7 @@ def test_similarity_uses_robust_train_history_scaling_not_full_sample_statistics
     pd.testing.assert_series_equal(base["as_of_date"], after["as_of_date"])
 ```
 
-- [ ] **Step 2: Run tests and confirm RED**
+- [x] **Step 2: Run tests and confirm RED**
 
 ```bash
 .venv/bin/python -m pytest tests/test_futures_macro_pattern_validation.py -q
@@ -476,7 +476,7 @@ def test_similarity_uses_robust_train_history_scaling_not_full_sample_statistics
 
 Expected: module import failure.
 
-- [ ] **Step 3: Implement forward outcome contract**
+- [x] **Step 3: Implement forward outcome contract**
 
 ```python
 OUTLOOK_HORIZONS = (5, 20)
@@ -529,7 +529,7 @@ def build_forward_outcome_frame(
 
 Use Task 1 `SCORE_DEFINITIONS` weights in `_forward_family_record()`. Do not use future-window volatility. Store family endpoint return, median path return, interquartile path range, and max adverse path for asset pathway disclosure.
 
-- [ ] **Step 4: Implement robust similarity and independent anchors**
+- [x] **Step 4: Implement robust similarity and independent anchors**
 
 ```python
 SIMILARITY_SUFFIXES = (
@@ -563,7 +563,7 @@ def select_similar_episodes(
 
 `_select_spaced_episode_anchors()` receives the original feature index, converts candidate dates to trading-row positions, skips anchors whose positional gap is smaller than `minimum_spacing`, then returns accepted rows sorted by similarity distance. Calendar-day gaps must not substitute for trading-row gaps.
 
-- [ ] **Step 5: Run focused tests and compile**
+- [x] **Step 5: Run focused tests and compile**
 
 ```bash
 .venv/bin/python -m pytest tests/test_futures_macro_pattern_validation.py -q
@@ -572,7 +572,7 @@ def select_similar_episodes(
 
 Expected: pass and compile exit 0.
 
-- [ ] **Step 6: Commit Task 3**
+- [x] **Step 6: Commit Task 3**
 
 ```bash
 git add app/services/futures_macro_pattern_validation.py tests/test_futures_macro_pattern_validation.py
@@ -1435,7 +1435,7 @@ Do not stage the QA screenshot, `.playwright-mcp/`, registries, saved setups, ru
 
 - [x] Task 1: point-in-time multi-window feature frame
 - [x] Task 2: current regime / transition / path / change conditions
-- [ ] Task 3: forward outcomes / independent similar episodes
+- [x] Task 3: forward outcomes / independent similar episodes
 - [ ] Task 4: chronological validation / publication gate / cache
 - [ ] Task 5: default service integration / Python React payload V2
 - [ ] Task 6: Market Context-style React workbench V2 / build

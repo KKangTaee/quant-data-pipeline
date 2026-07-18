@@ -40,3 +40,10 @@
 - A fixture-only pandas 3.0 dtype error was traced to assigning `pd.NA` into float columns and corrected to numeric `NaN` before evaluating production behavior.
 - GREEN: `.venv/bin/python -m unittest tests.test_futures_macro_pattern` passed 7 tests.
 - Regression: `FuturesMacroThermometerContractTests` passed 23 tests; py_compile and diff check passed.
+
+## 2026-07-18 Task 3 — Forward Outcomes And Similar Episodes
+
+- RED: `.venv/bin/python -m unittest tests.test_futures_macro_pattern_validation` failed 4 tests because the validation module did not exist.
+- First GREEN established exclusive 5D / 20D outcome labels, future-row stability, overlap exclusion, and trading-row anchor spacing.
+- A second RED showed path IQR was still a placeholder (`0.0`); the implementation now measures intermediate cumulative paths using only as-of volatility.
+- GREEN: pattern validation passed 4 tests in 4.392s; current pattern regression passed 7 tests; py_compile and diff check passed.
