@@ -1,6 +1,6 @@
 # Status
 
-Status: 13차 Backtest Workflow Top Shell Written Design Review
+Status: 13차 Backtest Workflow Top Shell Implementation Planned
 Last Updated: 2026-07-19
 
 ## Current Position
@@ -63,8 +63,8 @@ Last Updated: 2026-07-19
 - [x] 13차 legacy top entry / route / state ownership audit
 - [x] 13차 A/B/C visual companion과 A안 사용자 승인
 - [x] 13차 written design 작성과 self-review
-- [ ] 13차 written design 사용자 review
-- [ ] 13차 implementation plan
+- [x] 13차 written design 사용자 review
+- [x] 13차 implementation plan
 - [ ] 13차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
@@ -236,5 +236,7 @@ Last Updated: 2026-07-19
 - 사용자는 A안 `통합 Decision Header + 단계 레일`을 승인했다.
 - page-level shell은 현재 단계에서 끝낼 일만 안내하고 각 Level의 Gate, blocker count,
   eligibility와 registry status를 중복 계산하지 않는다.
-- written design을 DESIGN.md에 추가했으며 사용자 확인 뒤 implementation plan과 RED 테스트로
-  진행한다.
+- written design 사용자 승인을 반영하고 PLAN Task 39~43으로 pure contract, Python
+  adapter/fallback, React shell, primary route cutover, Browser QA/docs closeout을 확정했다.
+- plan self-review에서 DESIGN의 intent property인 `type`과 Task 39~42의 Python/React contract를
+  일치시켰고 Level 내부 Gate·count·persistence 확장은 남기지 않았다.

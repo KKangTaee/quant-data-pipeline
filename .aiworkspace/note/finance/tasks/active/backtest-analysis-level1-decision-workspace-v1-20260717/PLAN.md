@@ -6144,3 +6144,675 @@ git commit -m "Backtest Analysis 현재 선택과 팩터 표시 QA 동기화"
 - desktop / 760px Browser QA 범위와 screenshot absolute links;
 - registry / run history / saved / `.superpowers/` / screenshot 보호 감사;
 - 남은 위험과 다음에 이어서 볼 active task 위치.
+
+## 13차 Corrective Plan: Backtest Workflow Top Shell Redesign
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** 초기 Streamlit 제목·중복 설명·red underline pills를 제거하고, Python-owned 3단계 계약을 표시하는 A안 React workflow top shell로 교체한다.
+
+**Architecture:** 새 pure service가 Level1~3의 고정 순서, 사용자 label, 단계 책임과 active state를 JSON-ready read model로 만든다. Python adapter가 기존 route request helper를 통해 validated `select_stage` intent만 처리하고 React / Python fallback은 같은 read model을 렌더링한다. `backtest_page.py`는 shell과 기존 workspace dispatcher만 조합하며 Level 내부 Gate와 persistence는 변경하지 않는다.
+
+**Tech Stack:** Python 3.11+, Streamlit session state / components v1, React 18, TypeScript 5.6, Vite 5, `streamlit-component-lib`, unittest / pytest.
+
+### 13차 Global Constraints
+
+- current linked worktree `/Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev`와 branch `codex/backtest-dev`를 그대로 사용한다.
+- 별도 task, branch, worktree를 만들지 않는다.
+- Python이 stage catalog, active state, intent allow-list와 route request를 소유한다.
+- React는 presentation, focus/hover/selected state와 `select_stage` intent만 소유한다.
+- top shell은 Level1/2/3의 Gate, blocker/count, eligibility, registry status를 계산하지 않는다.
+- 기존 `BACKTEST_STAGE_OPTIONS`, legacy route normalization과 Level workspace renderer를 유지한다.
+- primary route에서는 legacy `st.title("Backtest")`, obsolete caption, 별도 `후보 선정 흐름`, `st.pills`와 red active CSS를 제거한다.
+- desktop hero는 2열 / rail 3열, 760px hero는 1열 / rail 3열, 520px 이하는 rail 1열이다.
+- component/fallback은 같은 read model 의미를 사용하고 keyboard button, `aria-current="step"`, reduced motion과 ResizeObserver를 지원한다.
+- `.aiworkspace/note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl`, `.aiworkspace/note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl`, `.aiworkspace/note/finance/saved/*.jsonl`, `.superpowers/`, generated screenshot / run artifact를 stage하거나 commit하지 않는다.
+
+### 13차 File Ownership Map
+
+**New files**
+
+- `app/services/backtest_workflow_shell.py`: 3단계 catalog, active-stage normalization, read model과 intent resolution.
+- `tests/test_backtest_workflow_shell.py`: pure stage / active / invalid / duplicate intent contract.
+- `app/web/backtest_workflow_shell.py`: session adapter, route request, component/fallback mount.
+- `app/web/backtest_workflow_shell_panel.py`: same-read-model Streamlit fallback.
+- `app/web/components/backtest_workflow_shell/`: Python component wrapper와 React source/build.
+
+**Narrow existing changes**
+
+- `app/web/backtest_page.py`: native pills를 shell renderer로 교체하고 기존 stage dispatch 유지.
+- `app/web/streamlit_app.py`: legacy Backtest title과 obsolete caption 제거.
+- `tests/test_backtest_refactor_boundaries.py`: React ownership / responsive / accessibility source boundary.
+- `tests/test_service_contracts.py`: primary route가 새 shell을 사용하고 legacy selector를 제거했는지 검증.
+- active task / canonical finance docs / root handoff logs: QA와 최종 상태 동기화.
+
+---
+
+### Task 39: Pure Workflow Shell Read Model And Intent Truth
+
+**Files:**
+- Create: `app/services/backtest_workflow_shell.py`
+- Create: `tests/test_backtest_workflow_shell.py`
+
+**Interfaces:**
+- Consumes: `BACKTEST_STAGE_ANALYSIS`, `BACKTEST_STAGE_PRACTICAL_VALIDATION`, `BACKTEST_STAGE_FINAL_REVIEW`, `BACKTEST_STAGE_OPTIONS`.
+- Produces: `build_backtest_workflow_shell(active_stage: str | None) -> dict[str, Any]`.
+- Produces: `resolve_backtest_workflow_shell_intent(intent: Mapping[str, Any] | None, *, active_stage: str | None, consumed_nonce: str | None) -> dict[str, Any]`.
+
+- [ ] **Step 1: Write the failing pure-contract tests**
+
+```python
+from app.services.backtest_workflow_shell import (
+    build_backtest_workflow_shell,
+    resolve_backtest_workflow_shell_intent,
+)
+from app.web.backtest_workflow_routes import (
+    BACKTEST_STAGE_ANALYSIS,
+    BACKTEST_STAGE_FINAL_REVIEW,
+    BACKTEST_STAGE_PRACTICAL_VALIDATION,
+)
+
+
+def test_workflow_shell_projects_three_stages_once_in_route_order() -> None:
+    shell = build_backtest_workflow_shell(BACKTEST_STAGE_PRACTICAL_VALIDATION)
+    assert [row["stage_key"] for row in shell["stages"]] == [
+        BACKTEST_STAGE_ANALYSIS,
+        BACKTEST_STAGE_PRACTICAL_VALIDATION,
+        BACKTEST_STAGE_FINAL_REVIEW,
+    ]
+    assert sum(bool(row["is_active"]) for row in shell["stages"]) == 1
+    assert shell["active_stage_index"] == 1
+    assert shell["active_stage_context"]["title"] == "실전 검증"
+    assert "최신 데이터" in shell["active_stage_context"]["responsibility"]
+
+
+def test_workflow_shell_normalizes_unknown_stage_to_level1() -> None:
+    shell = build_backtest_workflow_shell("unknown")
+    assert shell["active_stage"] == BACKTEST_STAGE_ANALYSIS
+    assert shell["active_stage_context"]["level_label"] == "LEVEL 1"
+
+
+def test_workflow_shell_accepts_only_new_allowed_noncurrent_intent() -> None:
+    accepted = resolve_backtest_workflow_shell_intent(
+        {
+            "type": "select_stage",
+            "stage_key": BACKTEST_STAGE_FINAL_REVIEW,
+            "nonce": "intent-1",
+        },
+        active_stage=BACKTEST_STAGE_ANALYSIS,
+        consumed_nonce=None,
+    )
+    duplicate = resolve_backtest_workflow_shell_intent(
+        {
+            "type": "select_stage",
+            "stage_key": BACKTEST_STAGE_FINAL_REVIEW,
+            "nonce": "intent-1",
+        },
+        active_stage=BACKTEST_STAGE_ANALYSIS,
+        consumed_nonce="intent-1",
+    )
+    invalid = resolve_backtest_workflow_shell_intent(
+        {"type": "select_stage", "stage_key": "unknown", "nonce": "intent-2"},
+        active_stage=BACKTEST_STAGE_ANALYSIS,
+        consumed_nonce=None,
+    )
+    current = resolve_backtest_workflow_shell_intent(
+        {
+            "type": "select_stage",
+            "stage_key": BACKTEST_STAGE_ANALYSIS,
+            "nonce": "intent-3",
+        },
+        active_stage=BACKTEST_STAGE_ANALYSIS,
+        consumed_nonce=None,
+    )
+    assert accepted == {
+        "accepted": True,
+        "stage_key": BACKTEST_STAGE_FINAL_REVIEW,
+        "nonce": "intent-1",
+    }
+    assert duplicate["accepted"] is False
+    assert invalid["accepted"] is False
+    assert current["accepted"] is False
+```
+
+- [ ] **Step 2: Run RED and confirm the missing-service failure**
+
+Run: `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py -q`
+
+Expected: FAIL during collection with `ModuleNotFoundError: No module named 'app.services.backtest_workflow_shell'`.
+
+- [ ] **Step 3: Implement the minimal Python-owned stage and intent contract**
+
+```python
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any
+
+from app.web.backtest_workflow_routes import (
+    BACKTEST_STAGE_ANALYSIS,
+    BACKTEST_STAGE_FINAL_REVIEW,
+    BACKTEST_STAGE_OPTIONS,
+    BACKTEST_STAGE_PRACTICAL_VALIDATION,
+)
+
+
+WORKFLOW_STAGE_PRESENTATION = (
+    {
+        "stage_key": BACKTEST_STAGE_ANALYSIS,
+        "level_label": "LEVEL 1",
+        "title": "후보 분석",
+        "english_title": "Backtest Analysis",
+        "responsibility": "전략을 실행하고 비교해 실전 검증 후보를 준비합니다.",
+    },
+    {
+        "stage_key": BACKTEST_STAGE_PRACTICAL_VALIDATION,
+        "level_label": "LEVEL 2",
+        "title": "실전 검증",
+        "english_title": "Practical Validation",
+        "responsibility": "최신 데이터로 검증하고 해결할 일과 넘길 판단을 구분합니다.",
+    },
+    {
+        "stage_key": BACKTEST_STAGE_FINAL_REVIEW,
+        "level_label": "LEVEL 3",
+        "title": "최종 검토",
+        "english_title": "Final Review",
+        "responsibility": "검증된 한계와 Monitoring 이관 조건을 바탕으로 최종 판단합니다.",
+    },
+)
+
+
+def _normalized_stage(active_stage: str | None) -> str:
+    candidate = str(active_stage or "")
+    return candidate if candidate in BACKTEST_STAGE_OPTIONS else BACKTEST_STAGE_ANALYSIS
+
+
+def build_backtest_workflow_shell(active_stage: str | None) -> dict[str, Any]:
+    normalized = _normalized_stage(active_stage)
+    stages = [
+        {**row, "is_active": row["stage_key"] == normalized}
+        for row in WORKFLOW_STAGE_PRESENTATION
+    ]
+    active_index = next(index for index, row in enumerate(stages) if row["is_active"])
+    return {
+        "schema_version": "backtest-workflow-shell-v1",
+        "headline": "후보를 만들고 검증해 최종 투자 판단까지 이어갑니다",
+        "description": "각 단계에서 해야 할 일을 분리하고, 검증된 근거만 다음 판단으로 넘깁니다.",
+        "active_stage": normalized,
+        "active_stage_index": active_index,
+        "active_stage_context": dict(stages[active_index]),
+        "stages": stages,
+    }
+
+
+def resolve_backtest_workflow_shell_intent(
+    intent: Mapping[str, Any] | None,
+    *,
+    active_stage: str | None,
+    consumed_nonce: str | None,
+) -> dict[str, Any]:
+    payload = dict(intent or {})
+    nonce = str(payload.get("nonce") or "")
+    stage_key = str(payload.get("stage_key") or "")
+    accepted = bool(
+        payload.get("type") == "select_stage"
+        and nonce
+        and nonce != consumed_nonce
+        and stage_key in BACKTEST_STAGE_OPTIONS
+        and stage_key != _normalized_stage(active_stage)
+    )
+    return (
+        {"accepted": True, "stage_key": stage_key, "nonce": nonce}
+        if accepted
+        else {"accepted": False}
+    )
+```
+
+- [ ] **Step 4: Run GREEN and focused route regression**
+
+Run: `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py::BacktestRefactorBoundaryTests::test_backtest_state_exports_workflow_helpers -q`
+
+Expected: all tests pass.
+
+- [ ] **Step 5: Commit the pure contract**
+
+```bash
+git add app/services/backtest_workflow_shell.py tests/test_backtest_workflow_shell.py
+git commit -m "Backtest 상단 단계 계약 구현"
+```
+
+---
+
+### Task 40: Python Adapter, Validated Route Intent, And Fallback
+
+**Files:**
+- Create: `app/web/backtest_workflow_shell.py`
+- Create: `app/web/backtest_workflow_shell_panel.py`
+- Create: `app/web/components/backtest_workflow_shell/__init__.py`
+- Create: `app/web/components/backtest_workflow_shell/component.py`
+- Modify: `tests/test_backtest_workflow_shell.py`
+
+**Interfaces:**
+- Consumes: `build_backtest_workflow_shell()`, `resolve_backtest_workflow_shell_intent()`, `request_backtest_panel()`.
+- Produces: `apply_backtest_workflow_shell_intent(intent, *, session_state, request_handler) -> bool`.
+- Produces: `render_backtest_workflow_shell() -> str`.
+- Produces: `render_backtest_workflow_shell_fallback(shell) -> dict[str, Any] | None`.
+
+- [ ] **Step 1: Add failing adapter and fallback ownership tests**
+
+```python
+def test_adapter_requests_route_once_for_new_valid_intent() -> None:
+    from app.web.backtest_workflow_shell import apply_backtest_workflow_shell_intent
+
+    requested: list[str] = []
+    session_state = {
+        "backtest_active_panel": BACKTEST_STAGE_ANALYSIS,
+        "backtest_workflow_shell_consumed_nonce": None,
+    }
+    accepted = apply_backtest_workflow_shell_intent(
+        {
+            "type": "select_stage",
+            "stage_key": BACKTEST_STAGE_PRACTICAL_VALIDATION,
+            "nonce": "route-1",
+        },
+        session_state=session_state,
+        request_handler=requested.append,
+    )
+    repeated = apply_backtest_workflow_shell_intent(
+        {
+            "type": "select_stage",
+            "stage_key": BACKTEST_STAGE_PRACTICAL_VALIDATION,
+            "nonce": "route-1",
+        },
+        session_state=session_state,
+        request_handler=requested.append,
+    )
+    assert accepted is True
+    assert repeated is False
+    assert requested == [BACKTEST_STAGE_PRACTICAL_VALIDATION]
+    assert session_state["backtest_workflow_shell_consumed_nonce"] == "route-1"
+
+
+def test_adapter_rejects_unknown_stage_without_route_request() -> None:
+    from app.web.backtest_workflow_shell import apply_backtest_workflow_shell_intent
+
+    requested: list[str] = []
+    accepted = apply_backtest_workflow_shell_intent(
+        {"type": "select_stage", "stage_key": "unknown", "nonce": "route-2"},
+        session_state={"backtest_active_panel": BACKTEST_STAGE_ANALYSIS},
+        request_handler=requested.append,
+    )
+    assert accepted is False
+    assert requested == []
+```
+
+- [ ] **Step 2: Run RED and confirm the missing-adapter failure**
+
+Run: `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py -q`
+
+Expected: existing pure tests pass and new tests fail with `ModuleNotFoundError: No module named 'app.web.backtest_workflow_shell'`.
+
+- [ ] **Step 3: Implement the adapter and same-read-model fallback**
+
+```python
+def apply_backtest_workflow_shell_intent(
+    intent: dict[str, Any] | None,
+    *,
+    session_state: MutableMapping[str, Any],
+    request_handler: Callable[[str], None],
+) -> bool:
+    resolution = resolve_backtest_workflow_shell_intent(
+        intent,
+        active_stage=str(session_state.get("backtest_active_panel") or ""),
+        consumed_nonce=str(session_state.get("backtest_workflow_shell_consumed_nonce") or "") or None,
+    )
+    if not resolution.get("accepted"):
+        return False
+    request_handler(str(resolution["stage_key"]))
+    session_state["backtest_workflow_shell_consumed_nonce"] = str(resolution["nonce"])
+    return True
+```
+
+`render_backtest_workflow_shell()`은 current session으로 read model을 만들고 component가 있으면
+`render_backtest_workflow_shell_component(..., on_change=...)`, 없으면
+`render_backtest_workflow_shell_fallback()`을 호출한다. component callback은 state key의 intent를
+`apply_backtest_workflow_shell_intent()`로 처리하고 기존 `request_backtest_panel()`만 호출한다.
+정상 렌더 경로는 normalized `active_stage`를 반환하며 accepted fallback intent는 app rerun을 요청한다.
+
+fallback은 `shell["headline"]`, `active_stage_context["responsibility"]`와 `stages`를 사용해
+container / columns / buttons를 렌더링하고 다음 intent만 반환한다.
+
+```python
+{
+    "type": "select_stage",
+    "stage_key": stage["stage_key"],
+    "nonce": uuid4().hex,
+}
+```
+
+component wrapper는 `_FRONTEND_BUILD_DIR.exists()`일 때만 v1 component를 declare하고 `shell`, `key`,
+`on_change`를 넘긴다. build가 아직 없으면 `is_backtest_workflow_shell_available()`은 `False`다.
+
+- [ ] **Step 4: Run GREEN and Python compile**
+
+Run: `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py -q`
+
+Run: `.venv/bin/python -m py_compile app/services/backtest_workflow_shell.py app/web/backtest_workflow_shell.py app/web/backtest_workflow_shell_panel.py app/web/components/backtest_workflow_shell/component.py`
+
+Expected: all tests pass and compile exits 0.
+
+- [ ] **Step 5: Commit the Python adapter/fallback**
+
+```bash
+git add tests/test_backtest_workflow_shell.py app/web/backtest_workflow_shell.py app/web/backtest_workflow_shell_panel.py app/web/components/backtest_workflow_shell/__init__.py app/web/components/backtest_workflow_shell/component.py
+git commit -m "Backtest 상단 단계 이동 어댑터 구현"
+```
+
+---
+
+### Task 41: React Decision Header And Stage Rail
+
+**Files:**
+- Create: `app/web/components/backtest_workflow_shell/frontend/index.html`
+- Create: `app/web/components/backtest_workflow_shell/frontend/package.json`
+- Create: `app/web/components/backtest_workflow_shell/frontend/package-lock.json`
+- Create: `app/web/components/backtest_workflow_shell/frontend/tsconfig.json`
+- Create: `app/web/components/backtest_workflow_shell/frontend/vite.config.ts`
+- Create: `app/web/components/backtest_workflow_shell/frontend/src/types.ts`
+- Create: `app/web/components/backtest_workflow_shell/frontend/src/BacktestWorkflowShell.tsx`
+- Create: `app/web/components/backtest_workflow_shell/frontend/src/index.tsx`
+- Create: `app/web/components/backtest_workflow_shell/frontend/src/style.css`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+
+**Interfaces:**
+- Consumes: Python `shell` projection from Task 39.
+- Produces: Streamlit component intent `{type: "select_stage", stage_key: string, nonce: string}`.
+
+- [ ] **Step 1: Add failing React source-boundary tests**
+
+```python
+def test_backtest_workflow_shell_react_is_intent_only_and_accessible(self) -> None:
+    component = (
+        PROJECT_ROOT
+        / "app/web/components/backtest_workflow_shell/frontend/src/BacktestWorkflowShell.tsx"
+    ).read_text()
+    index = (
+        PROJECT_ROOT
+        / "app/web/components/backtest_workflow_shell/frontend/src/index.tsx"
+    ).read_text()
+    self.assertIn('type: "select_stage"', component)
+    self.assertIn('aria-current={stage.is_active ? "step" : undefined}', component)
+    self.assertIn("Streamlit.setComponentValue", component)
+    self.assertNotIn("eligibility", component)
+    self.assertNotIn("blocker", component)
+    self.assertIn("ResizeObserver", index)
+    self.assertIn("Streamlit.setFrameHeight", index)
+
+
+def test_backtest_workflow_shell_react_has_responsive_visual_contract(self) -> None:
+    css = (
+        PROJECT_ROOT / "app/web/components/backtest_workflow_shell/frontend/src/style.css"
+    ).read_text()
+    self.assertIn("grid-template-columns: minmax(0, 1.65fr) minmax(240px, 0.7fr)", css)
+    self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr))", css)
+    self.assertIn("@media (max-width: 760px)", css)
+    self.assertIn("@media (max-width: 520px)", css)
+    self.assertIn("overflow-x: hidden", css)
+    self.assertIn("@media (prefers-reduced-motion: reduce)", css)
+```
+
+- [ ] **Step 2: Run RED and confirm missing frontend source**
+
+Run: `.venv/bin/python -m pytest tests/test_backtest_refactor_boundaries.py::BacktestRefactorBoundaryTests::test_backtest_workflow_shell_react_is_intent_only_and_accessible tests/test_backtest_refactor_boundaries.py::BacktestRefactorBoundaryTests::test_backtest_workflow_shell_react_has_responsive_visual_contract -q`
+
+Expected: both tests fail with `FileNotFoundError` for the new frontend source.
+
+- [ ] **Step 3: Implement the approved A visual and minimal intent component**
+
+`types.ts` defines only the Python projection:
+
+```typescript
+export type WorkflowStage = {
+  stage_key: string
+  level_label: string
+  title: string
+  english_title: string
+  responsibility: string
+  is_active: boolean
+}
+
+export type WorkflowShell = {
+  schema_version: string
+  headline: string
+  description: string
+  active_stage: string
+  active_stage_index: number
+  active_stage_context: WorkflowStage
+  stages: WorkflowStage[]
+}
+```
+
+`BacktestWorkflowShell.tsx` renders kicker / headline / description, one current-stage context card and three
+button stage cards. A non-current click emits exactly:
+
+```typescript
+Streamlit.setComponentValue({
+  type: "select_stage",
+  stage_key: stage.stage_key,
+  nonce: `${Date.now()}-${Math.random()}`,
+})
+```
+
+Each button uses `aria-current={stage.is_active ? "step" : undefined}` and disabled is not used so current
+stage remains keyboard-readable; current click returns without emitting. User copy comes only from `shell`.
+
+`index.tsx` uses `withStreamlitConnection`, observes `document.documentElement` with ResizeObserver and calls
+`Streamlit.setFrameHeight()` on mount and content changes.
+
+`style.css` follows the approved A mockup:
+
+- shell gradient `#f7fbfe -> #edf5f8`, border `#d3e2eb`, radius 24px
+- top grid `minmax(0, 1.65fr) minmax(240px, 0.7fr)`
+- current context white translucent card
+- rail `repeat(3, minmax(0, 1fr))`, current border/background/CURRENT marker
+- all cards `min-width: 0`, `overflow-wrap: anywhere`
+- 760px top grid 1 column while rail remains 3 columns
+- 520px rail becomes 1 column
+- body / root horizontal overflow hidden and reduced-motion transitions disabled
+
+Use the existing React 18 / TypeScript / Vite / streamlit-component-lib versions. Run `npm install` in the new
+frontend directory to generate `package-lock.json`; do not introduce a chart, icon or CSS dependency.
+
+- [ ] **Step 4: Run GREEN, TypeScript production build, and source tests**
+
+Run: `npm install`
+
+Working directory: `app/web/components/backtest_workflow_shell/frontend`
+
+Run: `npm run build`
+
+Working directory: `app/web/components/backtest_workflow_shell/frontend`
+
+Run: `.venv/bin/python -m pytest tests/test_backtest_refactor_boundaries.py::BacktestRefactorBoundaryTests::test_backtest_workflow_shell_react_is_intent_only_and_accessible tests/test_backtest_refactor_boundaries.py::BacktestRefactorBoundaryTests::test_backtest_workflow_shell_react_has_responsive_visual_contract -q`
+
+Expected: Vite production build succeeds and both source-boundary tests pass.
+
+- [ ] **Step 5: Commit the React shell**
+
+```bash
+git add tests/test_backtest_refactor_boundaries.py app/web/components/backtest_workflow_shell
+git commit -m "Backtest 상단 React 워크플로 셸 구현"
+```
+
+---
+
+### Task 42: Primary Route Cutover And Legacy Top Removal
+
+**Files:**
+- Modify: `app/web/backtest_page.py`
+- Modify: `app/web/streamlit_app.py`
+- Modify: `tests/test_service_contracts.py`
+
+**Interfaces:**
+- Consumes: `render_backtest_workflow_shell() -> str`.
+- Preserves: existing Level1 / Level2 / Level3 renderer dispatch and legacy request normalization.
+
+- [ ] **Step 1: Replace the old selector test with failing primary-shell tests**
+
+```python
+def test_backtest_page_uses_react_workflow_shell_without_legacy_selector(self) -> None:
+    source = Path("app/web/backtest_page.py").read_text(encoding="utf-8")
+    self.assertIn("from app.web.backtest_workflow_shell import render_backtest_workflow_shell", source)
+    self.assertIn("active_panel = render_backtest_workflow_shell()", source)
+    self.assertNotIn("st.pills(", source)
+    self.assertNotIn("stBaseButton-pillsActive", source)
+    self.assertNotIn("#ff4b4b", source)
+    self.assertNotIn("후보 선정 흐름", source)
+
+
+def test_streamlit_backtest_entry_defers_identity_to_workflow_shell(self) -> None:
+    source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")
+    body = source.split("def _render_backtest_page() -> None:", 1)[1]
+    body = body.split("\ndef ", 1)[0]
+    self.assertEqual(body.count("render_backtest_tab()"), 1)
+    self.assertNotIn('st.title("Backtest")', body)
+    self.assertNotIn("Pre-Live", body)
+    self.assertNotIn("Portfolio Proposal", body)
+```
+
+Update the Final Review wording source assertion to read `app/services/backtest_workflow_shell.py`, where the
+top-level Final Review responsibility now lives, instead of expecting the old copy in `backtest_page.py`.
+
+- [ ] **Step 2: Run RED and confirm the legacy selector/title assertions fail**
+
+Run: `.venv/bin/python -m pytest tests/test_service_contracts.py -k 'backtest_page_uses_react_workflow_shell_without_legacy_selector or streamlit_backtest_entry_defers_identity_to_workflow_shell or final_review_top_summary_is_short_and_action_focused' -q`
+
+Expected: the two new route tests fail because the old title/pills remain; the Final Review source assertion passes after its test ownership update.
+
+- [ ] **Step 3: Cut the primary route over to the new shell**
+
+In `app/web/backtest_page.py`:
+
+- remove `BACKTEST_WORKFLOW_STAGE_DISPLAY`, `_backtest_workflow_stage_label()`, `_backtest_workflow_nav_css()` and `_render_backtest_panel_selector()`
+- remove unused `activate_backtest_workflow_panel` and `BACKTEST_WORKFLOW_PANEL_OPTIONS` imports
+- import `render_backtest_workflow_shell`
+- after `init_backtest_state()`, use `active_panel = render_backtest_workflow_shell()`
+- keep the existing `if/elif` workspace dispatch unchanged
+- remove the direct-run `st.title("Backtest")`
+
+In `app/web/streamlit_app.py`, make `_render_backtest_page()` call only `render_backtest_tab()`.
+
+- [ ] **Step 4: Run GREEN and focused route/boundary regression**
+
+Run: `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py tests/test_service_contracts.py -k 'workflow_shell or backtest_page or streamlit_backtest_entry or final_review_top_summary' -q`
+
+Run: `.venv/bin/python -m py_compile app/web/backtest_page.py app/web/streamlit_app.py app/web/backtest_workflow_shell.py`
+
+Expected: selected tests pass and compile exits 0.
+
+- [ ] **Step 5: Commit the primary route cutover**
+
+```bash
+git add app/web/backtest_page.py app/web/streamlit_app.py tests/test_service_contracts.py
+git commit -m "Backtest 상단 진입부를 React 셸로 전환"
+```
+
+---
+
+### Task 43: Runtime QA, Fresh Verification, Docs, And 13차 Closeout
+
+**Files:**
+- Modify: `.aiworkspace/note/finance/docs/PROJECT_MAP.md`
+- Modify: `.aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md`
+- Modify: `.aiworkspace/note/finance/tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/{STATUS,NOTES,RUNS,RISKS}.md`
+- Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
+- Modify: `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Generate but do not stage: `backtest-workflow-top-shell-desktop-qa.png`, `backtest-workflow-top-shell-760-qa.png`
+
+**Interfaces:**
+- Consumes: completed shell service, adapter, component and route cutover.
+- Produces: fresh verification evidence, desktop/760 screenshots and durable documentation alignment.
+
+- [ ] **Step 1: Run fresh focused and broader Python verification**
+
+Run: `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
+
+Run: `.venv/bin/python -m pytest tests/test_service_contracts.py -q`
+
+Expected: shell/boundary tests pass. Compare full service failures against the documented pre-13차 baseline of Sentiment / Final Review / liquidity copy / Practical Validation failures; no new Backtest top-shell failure is allowed.
+
+- [ ] **Step 2: Run fresh frontend, compile, and diff checks**
+
+Run: `npm run build`
+
+Working directory: `app/web/components/backtest_workflow_shell/frontend`
+
+Run: `.venv/bin/python -m py_compile app/services/backtest_workflow_shell.py app/web/backtest_workflow_shell.py app/web/backtest_workflow_shell_panel.py app/web/components/backtest_workflow_shell/component.py app/web/backtest_page.py app/web/streamlit_app.py`
+
+Run: `git diff --check`
+
+Expected: build and compile succeed; diff-check has no output.
+
+- [ ] **Step 3: Run desktop Browser QA on a fresh source/build pair**
+
+Start or restart the Streamlit Backtest app from current source/build. At desktop width around 1440px verify:
+
+1. legacy `Backtest` title/caption, `후보 선정 흐름`, red underline pills are absent
+2. hero is 2 columns and stage rail is 3 columns
+3. Level1 current card and Level1 workspace agree
+4. clicking Level2 updates current card and opens Practical Validation
+5. clicking Level3 updates current card and opens Final Review
+6. returning Level1 restores Backtest Analysis without changing registry/saved data
+7. no component console error and iframe height contains the entire shell
+
+Save `backtest-workflow-top-shell-desktop-qa.png` as generated/untracked evidence.
+
+- [ ] **Step 4: Run 760px Browser QA**
+
+At 760px viewport verify:
+
+1. hero text and current-stage card are one column
+2. stage rail remains 3 columns and Korean/English labels wrap without clipping
+3. `document.documentElement.scrollWidth === document.documentElement.clientWidth`
+4. component iframe `scrollWidth === clientWidth`
+5. stage navigation and ResizeObserver height remain functional
+
+Save `backtest-workflow-top-shell-760-qa.png` as generated/untracked evidence.
+
+- [ ] **Step 5: Apply finance-doc-sync and record closeout evidence**
+
+Update canonical maps/flows with the page-level Python read model + React intent shell and remove durable references
+to the old Streamlit pills entry. Record exact test counts, build modules/assets, compile/diff results, Browser QA
+coverage, screenshot names, baseline failures and remaining accessibility/dependency risks in active task docs.
+Keep root logs to a 3~5 line milestone/handoff summary.
+
+- [ ] **Step 6: Audit protected paths and commit closeout**
+
+Run:
+
+```bash
+git status --short
+git diff --cached --name-only
+git diff --cached --check
+```
+
+Expected staged paths do not include registry JSONL, Run History, saved JSONL, `.superpowers/`, screenshots or run artifacts.
+
+Commit:
+
+```bash
+git add .aiworkspace/note/finance/docs/PROJECT_MAP.md .aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md .aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md .aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md .aiworkspace/note/finance/tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md .aiworkspace/note/finance/tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/NOTES.md .aiworkspace/note/finance/tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/RUNS.md .aiworkspace/note/finance/tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/RISKS.md .aiworkspace/note/finance/WORK_PROGRESS.md .aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md
+git commit -m "Backtest 상단 워크플로 셸 QA와 문서 동기화"
+```
+
+## 13차 Completion Report Contract
+
+- Task 39~43 완료 상태와 각 한국어 commit hash
+- fresh focused / full service test pass/fail counts와 baseline 비교
+- React production build, target py_compile, diff-check 결과
+- desktop / 760px Browser QA 범위와 generated screenshot 경로
+- legacy title/caption/pills 제거와 Level1/2/3 route dispatch 확인
+- protected registry / Run History / saved JSONL / `.superpowers/` / screenshot 미커밋 확인
+- 남은 repository baseline, dependency audit와 keyboard manual QA 위험

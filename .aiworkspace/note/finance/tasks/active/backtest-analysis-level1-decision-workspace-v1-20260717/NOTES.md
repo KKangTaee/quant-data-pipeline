@@ -333,3 +333,17 @@ generated artifact이므로 commit하지 않는다.
   ResizeObserver, button semantic, aria-current, reduced-motion과 overflow 0을 acceptance contract로 둔다.
 - visual companion은 `.superpowers/brainstorm/31090-1784412863/`에 생성했으며 generated/protected
   artifact이므로 stage하거나 commit하지 않는다.
+
+## 2026-07-19 13차 Written Design Approval And Plan Self-Review
+
+- 사용자가 A안 written design을 승인해 같은 active task와 worktree에서 inline `executing-plans`로
+  Task 39~43을 순차 실행한다.
+- Task 39 pure read model/intent, Task 40 Python adapter/fallback, Task 41 React visual,
+  Task 42 route cutover, Task 43 QA/docs는 각각 독립 RED/GREEN과 한국어 commit을 가진다.
+- DESIGN의 intent property는 `type`이므로 plan의 Python resolver, adapter test와 React emitter도
+  `{type: "select_stage", stage_key, nonce}`로 통일했다.
+- current stage 선택은 no-op이고 invalid stage와 consumed nonce는 route owner를 호출하지 않는다.
+  accepted intent만 기존 `request_backtest_panel()`을 사용하므로 Practical Validation entry reset을
+  포함한 현재 route normalization을 우회하지 않는다.
+- placeholder scan, interface/property name, desktop/760/520 responsive, fallback/accessibility,
+  protected-path와 docs-sync coverage를 self-review했고 구현 전 blocker는 없다.
