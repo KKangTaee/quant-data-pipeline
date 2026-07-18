@@ -88,3 +88,12 @@
 - Restored the exact CSS with `apply_patch`; focused GREEN -> `1 passed`. Production source and tracked assets matched `HEAD` immediately after restore and again after Vite build.
 - Full checks: Python `56 passed`, `4 subtests passed`, 3 existing Edgar dependency deprecation warnings; Vitest `5 passed`; typecheck PASS; Vite build PASS with 171 modules; `git diff --check` PASS.
 - Browser QA was not rerun because no production or tracked runtime byte changed. Source / index / JS / CSS SHA-256 remained `462c858a...`, `2b31c53f...`, `62976028...`, `28998f7a...`, and `94e839cf...` respectively.
+
+## 2026-07-18 Freshness Binding Contract Final Review
+
+- Added exact source assertions for `.ip-freshness__action { grid-area: action; }`, `.ip-freshness strong { grid-area: period; }`, and `.ip-freshness em { grid-area: time; white-space: normal; }`.
+- Referenced minified runtime CSS is now parsed by exact selector. The regression protects the shared token declaration / use, both 18px grid gaps, basis full-span, action / period / time bindings, desktop freshness areas, and `<=720px` mobile ordering.
+- Mutation RED: temporarily changed only `.ip-freshness em` from `grid-area: time` to `grid-area: auto`; focused test failed at the source selector assertion and printed the mutated rule body. Restored with `apply_patch`; focused GREEN -> `1 passed`.
+- Marked all eight steps complete in `LAYOUT_ALIGNMENT_IMPLEMENTATION_PLAN.md`; automated count confirmed `8/8` checked and no unchecked Task 1 step remains.
+- Final checks: Python `56 passed`, `4 subtests passed`, 3 existing Edgar dependency warnings; Vitest `5 passed`; typecheck PASS; Vite build PASS with 171 modules; `git diff --check` and focused source/runtime contract PASS.
+- Browser QA was not rerun because production TSX / CSS and tracked index / JS / CSS remained byte-identical after build with the previously recorded five SHA-256 values.

@@ -37,7 +37,7 @@
 - Consumes: existing `payload.hero`, `payload.freshness`, `payload.refresh_action` and `handleRefreshOpen`.
 - Produces: layout-only classes `ip-context-basis__snapshot`, `ip-freshness-block`, `ip-context-control-label`; no event or payload change.
 
-- [ ] **Step 1: Write the failing source/runtime layout contract**
+- [x] **Step 1: Write the failing source/runtime layout contract**
 
 Add to `InstitutionalPortfoliosNavigationTests`:
 
@@ -55,7 +55,7 @@ def test_context_hero_basis_and_controls_share_alignment_contract(self) -> None:
     self.assertIn('grid-template-areas: "action period" "time time";', style_source)
 ```
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
 Run:
 
@@ -65,7 +65,7 @@ uv run --with pytest pytest -q tests/test_institutional_portfolios.py::Instituti
 
 Expected: FAIL because the wrapper/classes/shared grid token do not exist.
 
-- [ ] **Step 3: Add semantic React wrappers without changing data/events**
+- [x] **Step 3: Add semantic React wrappers without changing data/events**
 
 Change the basis snapshot and freshness rendering to this structure:
 
@@ -85,7 +85,7 @@ Change the basis snapshot and freshness rendering to this structure:
 </div>
 ```
 
-- [ ] **Step 4: Implement the shared grid and internal row CSS**
+- [x] **Step 4: Implement the shared grid and internal row CSS**
 
 Use one column source and explicit grid areas:
 
@@ -135,7 +135,7 @@ Use one column source and explicit grid areas:
 
 Keep existing responsive selectors and explicitly change freshness to one-column areas at `720px` or below.
 
-- [ ] **Step 5: Run focused and full automated GREEN checks**
+- [x] **Step 5: Run focused and full automated GREEN checks**
 
 Run:
 
@@ -150,11 +150,11 @@ git diff --check
 
 Expected: Python/Vitest/typecheck/build PASS and no diff whitespace errors.
 
-- [ ] **Step 6: Verify the tracked runtime contract**
+- [x] **Step 6: Verify the tracked runtime contract**
 
 Confirm `component_static/index.html` points to the new hash and the built CSS contains `--ip-context-columns`, `ip-freshness-block`, and no `slice(0,80)` runtime path.
 
-- [ ] **Step 7: Perform desktop and 420px Browser QA**
+- [x] **Step 7: Perform desktop and 420px Browser QA**
 
 Start the local Streamlit app on a separate port and verify actual Appaloosa/Berkshire data.
 
@@ -180,7 +180,7 @@ freshness action, period, time remain readable
 
 Save one final screenshot under `.playwright-mcp/institutional-portfolios-hero-layout-alignment-final.png` and do not stage it.
 
-- [ ] **Step 8: Record verified closeout and commit**
+- [x] **Step 8: Record verified closeout and commit**
 
 Update task `RUNS.md` and `STATUS.md` with exact checks and screenshot path, then commit:
 

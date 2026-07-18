@@ -26,7 +26,7 @@ def _component_style_source() -> str:
 
 def _css_rule(style_source: str, *selectors: str) -> str:
     selector_pattern = r"\s*,\s*".join(re.escape(selector) for selector in selectors)
-    match = re.search(rf"(?:^|\n)\s*{selector_pattern}\s*\{{(?P<body>[^}}]*)\}}", style_source)
+    match = re.search(rf"(?:^|[}}\n])\s*{selector_pattern}\s*\{{(?P<body>[^}}]*)\}}", style_source)
     if not match:
         raise AssertionError(f"CSS rule not found: {', '.join(selectors)}")
     return match.group("body")
@@ -1306,6 +1306,9 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
             ".ip-context-control-label",
         )
         freshness_rule = _css_rule(style_source, ".ip-freshness")
+        freshness_action_rule = _css_rule(style_source, ".ip-freshness__action")
+        freshness_period_rule = _css_rule(style_source, ".ip-freshness strong")
+        freshness_time_rule = _css_rule(style_source, ".ip-freshness em")
         mobile_style_source = style_source[
             style_source.index("@media (max-width: 720px) {") : style_source.index("@media (max-width: 420px) {")
         ]
@@ -1331,6 +1334,10 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         ):
             self.assertIn(declaration, shared_label_rule)
         self.assertIn('grid-template-areas: "action period" "time time";', freshness_rule)
+        self.assertIn("grid-area: action;", freshness_action_rule)
+        self.assertIn("grid-area: period;", freshness_period_rule)
+        self.assertIn("grid-area: time;", freshness_time_rule)
+        self.assertIn("white-space: normal;", freshness_time_rule)
         self.assertIn('grid-template-areas: "action" "period" "time";', mobile_freshness_rule)
 
         build_dir = Path("app/web/streamlit_components/institutional_portfolios_workbench/component_static")
@@ -1342,9 +1349,37 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertEqual(len(javascript_paths), 1)
         runtime_css = (build_dir / css_paths[0]).read_text(encoding="utf-8")
         runtime_javascript = (build_dir / javascript_paths[0]).read_text(encoding="utf-8")
-        self.assertIn("--ip-context-columns", runtime_css)
+        runtime_hero_rule = _css_rule(runtime_css, ".ip-hero")
+        runtime_hero_grid_rule = _css_rule(runtime_css, ".ip-context-hero__grid")
+        runtime_controls_rule = _css_rule(runtime_css, ".ip-context-controls")
+        runtime_basis_span_rule = _css_rule(
+            runtime_css,
+            ".ip-context-basis__snapshot",
+            ".ip-context-basis .ip-source-link",
+        )
+        runtime_freshness_rule = _css_rule(runtime_css, ".ip-freshness")
+        runtime_freshness_action_rule = _css_rule(runtime_css, ".ip-freshness__action")
+        runtime_freshness_period_rule = _css_rule(runtime_css, ".ip-freshness strong")
+        runtime_freshness_time_rule = _css_rule(runtime_css, ".ip-freshness em")
+        runtime_mobile_style = runtime_css[
+            runtime_css.index("@media(max-width:720px){") : runtime_css.index("@media(max-width:420px){")
+        ]
+        runtime_mobile_freshness_rule = _css_rule(runtime_mobile_style, ".ip-freshness")
+        self.assertRegex(
+            runtime_hero_rule,
+            r"--ip-context-columns:\s*minmax\(0,\s*1\.45fr\)\s*minmax\(320px,\s*0?\.75fr\)",
+        )
+        for runtime_grid_rule in (runtime_hero_grid_rule, runtime_controls_rule):
+            self.assertIn("grid-template-columns:var(--ip-context-columns)", runtime_grid_rule)
+            self.assertIn("gap:18px", runtime_grid_rule)
+        self.assertIn("grid-column:1 / -1", runtime_basis_span_rule)
+        self.assertIn('grid-template-areas:"action period" "time time"', runtime_freshness_rule)
+        self.assertIn("grid-area:action", runtime_freshness_action_rule)
+        self.assertIn("grid-area:period", runtime_freshness_period_rule)
+        self.assertIn("grid-area:time", runtime_freshness_time_rule)
+        self.assertIn("white-space:normal", runtime_freshness_time_rule)
+        self.assertIn('grid-template-areas:"action" "period" "time"', runtime_mobile_freshness_rule)
         self.assertIn("ip-freshness-block", runtime_css)
-        self.assertIn('grid-template-areas:"action period" "time time"', runtime_css)
         self.assertIn("ip-freshness-block", runtime_javascript)
         self.assertIn("데이터 기준", runtime_javascript)
         self.assertNotIn("slice(0,80)", runtime_javascript)
