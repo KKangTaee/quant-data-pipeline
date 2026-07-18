@@ -1025,6 +1025,56 @@ def test_strict_factor_arrays_and_rejection_mode_survive_projection() -> None:
     assert payload["promotion_min_net_cagr_spread"] == -0.02
 
 
+def test_strict_factor_options_have_human_labels_and_raw_values() -> None:
+    workspace = build_single_settings_workspace(
+        "Quality + Value",
+        "Annual",
+        {},
+        runtime_options=RUNTIME_OPTIONS,
+    )
+    fields = {field["field_id"]: field for field in _fields(workspace)}
+    quality = {
+        option["value"]: option["label"]
+        for option in fields["quality_factors"]["options"]
+    }
+    value = {
+        option["value"]: option["label"]
+        for option in fields["value_factors"]["options"]
+    }
+
+    assert quality["roe"] == "자기자본이익률 (ROE)"
+    assert quality["net_margin"] == "순이익률"
+    assert quality["net_debt_to_equity"] == "순부채 대비 자기자본"
+    assert value["book_to_market"] == "장부가치 대비 시가"
+    assert value["operating_income_yield"] == "영업이익 수익률"
+    assert value["ev_ebit"] == "기업가치 대비 영업이익 (EV/EBIT)"
+    assert set(quality) == set(RUNTIME_OPTIONS["quality_factor_options"])
+    assert set(value) == set(RUNTIME_OPTIONS["value_factor_options"])
+
+
+def test_human_factor_labels_do_not_change_projected_factor_keys() -> None:
+    workspace = build_single_settings_workspace(
+        "Quality + Value",
+        "Annual",
+        {
+            "quality_factors": ["roe", "net_margin"],
+            "value_factors": ["book_to_market", "operating_income_yield"],
+        },
+        runtime_options=RUNTIME_OPTIONS,
+    )
+
+    payload = project_single_settings_payload(
+        workspace,
+        _visible_draft(workspace),
+    )
+
+    assert payload["quality_factors"] == ["roe", "net_margin"]
+    assert payload["value_factors"] == [
+        "book_to_market",
+        "operating_income_yield",
+    ]
+
+
 def test_quality_snapshot_preserves_legacy_broad_replay_contract() -> None:
     workspace = build_single_settings_workspace(
         "Quality",

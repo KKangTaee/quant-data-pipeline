@@ -1025,16 +1025,26 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
             self.assertIn(token, component)
         for token in (
             ".bt1-multi-select-compact",
-            "repeat(auto-fit, minmax(140px, 1fr))",
+            "grid-template-columns: repeat(2, minmax(0, 1fr))",
             ".bt1-multi-select-results",
             "max-height: 280px",
             "overflow-y: auto",
             ".bt1-selected-chip",
             ":focus-visible",
+            "overflow-wrap: anywhere",
         ):
             self.assertIn(token, style)
+        self.assertIn('className="bt1-multi-select-option-label"', component)
+        self.assertNotIn("repeat(auto-fit, minmax(140px, 1fr))", style)
         responsive = style.split("@media (max-width: 760px)", 1)[1]
         self.assertIn(".bt1-multi-select-compact", responsive)
+        self.assertIn("@media (max-width: 520px)", style)
+        compact_mobile = style.split("@media (max-width: 520px)", 1)[1]
+        self.assertIn(".bt1-multi-select-compact", compact_mobile)
+        self.assertIn(
+            "grid-template-columns: minmax(0, 1fr)",
+            compact_mobile,
+        )
 
     def test_primary_single_settings_route_has_no_legacy_form_dispatch(self) -> None:
         source = (PROJECT_ROOT / "app/web/backtest_single_strategy.py").read_text()

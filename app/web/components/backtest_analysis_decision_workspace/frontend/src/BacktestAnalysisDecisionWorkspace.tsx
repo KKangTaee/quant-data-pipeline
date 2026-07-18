@@ -173,7 +173,9 @@ function MultiSelectFieldControl({
                 onClick={() => toggleValue(option.value)}
               >
                 <span aria-hidden="true">{selected ? "✓" : ""}</span>
-                {option.label}
+                <span className="bt1-multi-select-option-label">
+                  {option.label}
+                </span>
               </button>
             )
           })}
@@ -238,7 +240,9 @@ function MultiSelectFieldControl({
                 onClick={() => toggleValue(option.value)}
               >
                 <span aria-hidden="true">{selected ? "✓" : ""}</span>
-                {option.label}
+                <span className="bt1-multi-select-option-label">
+                  {option.label}
+                </span>
               </button>
             )
           })}

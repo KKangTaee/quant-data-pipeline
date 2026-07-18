@@ -160,6 +160,47 @@ _VARIANT_LABELS = {
     "Snapshot": "기존 스냅샷",
 }
 
+_FACTOR_OPTION_LABELS = {
+    "roe": "자기자본이익률 (ROE)",
+    "roa": "총자산이익률 (ROA)",
+    "net_margin": "순이익률",
+    "asset_turnover": "자산회전율",
+    "current_ratio": "유동비율",
+    "cash_ratio": "현금비율",
+    "operating_margin": "영업이익률",
+    "interest_coverage": "이자보상배율",
+    "ocf_margin": "영업현금흐름률",
+    "fcf_margin": "잉여현금흐름률",
+    "net_debt_to_equity": "순부채 대비 자기자본",
+    "debt_to_assets": "총자산 대비 부채",
+    "debt_ratio": "부채비율",
+    "gross_margin": "매출총이익률",
+    "book_to_market": "장부가치 대비 시가",
+    "earnings_yield": "이익수익률",
+    "sales_yield": "매출수익률",
+    "ocf_yield": "영업현금흐름 수익률",
+    "fcf_yield": "잉여현금흐름 수익률",
+    "operating_income_yield": "영업이익 수익률",
+    "liquidation_value": "청산가치",
+    "per": "주가수익비율 (PER)",
+    "pbr": "주가순자산비율 (PBR)",
+    "psr": "주가매출비율 (PSR)",
+    "pcr": "주가현금흐름비율 (PCR)",
+    "pfcr": "주가잉여현금흐름비율 (PFCR)",
+    "ev_ebit": "기업가치 대비 영업이익 (EV/EBIT)",
+    "por": "영업이익 대비 주가 (POR)",
+}
+
+
+def factor_option_label(value: str) -> str:
+    """Return a user label while keeping the calculation key unchanged."""
+
+    normalized = str(value).strip()
+    return _FACTOR_OPTION_LABELS.get(
+        normalized,
+        normalized.replace("_", " ").title(),
+    )
+
 
 class SettingsValidationError(ValueError):
     """Raised when a submitted settings draft cannot become an execution payload."""
@@ -1132,7 +1173,7 @@ def _strict_factor_field(
             "multi_select",
             default,
             "수익성·효율성·재무 안정성을 함께 평가할 지표입니다.",
-            options=[_option(value) for value in options],
+            options=[_option(value, factor_option_label(value)) for value in options],
         )
     options = [
         str(value)
@@ -1171,7 +1212,7 @@ def _strict_factor_field(
         "multi_select",
         default,
         "가격 대비 기업가치를 비교할 지표입니다.",
-        options=[_option(value) for value in options],
+        options=[_option(value, factor_option_label(value)) for value in options],
     )
 
 
