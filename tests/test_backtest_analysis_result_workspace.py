@@ -8,6 +8,9 @@ from app.services.backtest_analysis_result_workspace import (
     build_level2_validation_questions,
     build_result_lifecycle,
 )
+from app.web.backtest_analysis_result_workspace import (
+    validate_result_workspace_intent,
+)
 
 
 def result_bundle(*, run_id: str = "run-current") -> dict:
@@ -399,3 +402,49 @@ def test_portfolio_mix_keeps_component_evidence_partial_without_guessing() -> No
         "b",
     ]
     assert model["holdings"]["target_allocation"] == []
+
+
+def test_result_intent_requires_exact_current_run_and_enabled_action() -> None:
+    workspace = {
+        "configuration_fingerprint": "fingerprint-current",
+        "identity": {"run_result_id": "run-current"},
+        "actions": {"save_and_move": {"enabled": True}},
+    }
+
+    accepted = validate_result_workspace_intent(
+        {
+            "action": "save_and_move",
+            "payload": {
+                "run_result_id": "run-current",
+                "current_configuration_fingerprint": "fingerprint-current",
+            },
+            "nonce": "n-1",
+        },
+        workspace=workspace,
+    )
+    stale = validate_result_workspace_intent(
+        {
+            "action": "save_and_move",
+            "payload": {
+                "run_result_id": "run-old",
+                "current_configuration_fingerprint": "fingerprint-current",
+            },
+            "nonce": "n-2",
+        },
+        workspace=workspace,
+    )
+    disabled = validate_result_workspace_intent(
+        {
+            "action": "save_and_move",
+            "payload": {
+                "run_result_id": "run-current",
+                "current_configuration_fingerprint": "fingerprint-current",
+            },
+            "nonce": "n-3",
+        },
+        workspace={**workspace, "actions": {}},
+    )
+
+    assert accepted["ok"] is True
+    assert stale == {"ok": False, "reason": "run_identity_mismatch"}
+    assert disabled == {"ok": False, "reason": "action_unavailable"}

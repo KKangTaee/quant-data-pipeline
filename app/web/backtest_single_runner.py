@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 from app.services.backtest_execution import execute_single_backtest
 from app.services.backtest_single_payload import normalize_single_strategy_payload
 from app.web.backtest_analysis_workspace import record_single_strategy_draft
@@ -29,6 +31,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> bool:
 
     bundle = dict(result.bundle)
     bundle["meta"] = dict(bundle.get("meta") or {})
+    bundle["meta"].setdefault("run_id", f"level1-{uuid4().hex}")
     bundle["meta"]["level1_configuration_fingerprint"] = fingerprint
     st.session_state.backtest_last_configuration_fingerprint = fingerprint
     st.session_state.backtest_last_bundle = bundle

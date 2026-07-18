@@ -168,6 +168,7 @@ def _successful_bundle() -> dict:
             {"Date": ["2026-06-30"], "Total Balance": [11200.0]}
         ),
         "meta": {
+            "run_id": "run-current",
             "strategy_key": "gtaa",
             "promotion_decision": "pass",
             "price_freshness": {"status": "ok"},
@@ -185,22 +186,17 @@ def test_workspace_orders_decision_metrics_and_technical_evidence() -> None:
         configuration=configuration,
     )
 
-    with patch(
-        "app.services.backtest_analysis_decision_workspace."
-        "build_next_step_readiness_evaluation",
-        return_value={"can_enter_practical_validation": True},
-    ):
-        workspace = build_backtest_analysis_decision_workspace(
-            workspace_kind="single_strategy",
-            selection=selection,
-            configuration=configuration,
-            result_bundle=_successful_bundle(),
-            result_configuration_fingerprint=fingerprint,
-            saved_mixes=[],
-            last_error=None,
-            last_error_kind=None,
-            action_handlers={"save_and_move": lambda: None},
-        )
+    workspace = build_backtest_analysis_decision_workspace(
+        workspace_kind="single_strategy",
+        selection=selection,
+        configuration=configuration,
+        result_bundle=_successful_bundle(),
+        result_configuration_fingerprint=fingerprint,
+        saved_mixes=[],
+        last_error=None,
+        last_error_kind=None,
+        action_handlers={"save_and_move": lambda payload: None},
+    )
 
     assert workspace["workspace_phase"] == "result"
     assert workspace["decision"]["headline"] == "Level2 검증 후보로 보낼 수 있습니다"
@@ -211,6 +207,41 @@ def test_workspace_orders_decision_metrics_and_technical_evidence() -> None:
         "volatility",
     ]
     assert workspace["details"]["technical_evidence"]["meta"]["strategy_key"] == "gtaa"
+
+
+def test_compatibility_workspace_does_not_use_practical_gaps_as_level1_gate() -> None:
+    bundle = _successful_bundle()
+    bundle["meta"].update(
+        {
+            "run_id": "run-current",
+            "benchmark_available": False,
+            "rolling_review_status": "review",
+            "liquidity_policy_status": "caution",
+        }
+    )
+    selection = {"strategy_choice": "GTAA"}
+    configuration = {"top": 3}
+    fingerprint = build_level1_configuration_fingerprint(
+        workspace_kind="single_strategy",
+        selection=selection,
+        configuration=configuration,
+    )
+
+    workspace = build_backtest_analysis_decision_workspace(
+        workspace_kind="single_strategy",
+        selection=selection,
+        configuration=configuration,
+        result_bundle=bundle,
+        result_configuration_fingerprint=fingerprint,
+        saved_mixes=[],
+        last_error=None,
+        last_error_kind=None,
+        action_handlers={"save_and_move": lambda payload: None},
+    )
+
+    assert workspace["handoff_state"] == "ready"
+    assert workspace["actions"]["save_and_move"]["enabled"] is True
+    assert workspace["evaluation"]["level2_validation_questions"]
 
 
 def test_first_read_hides_raw_path_and_error_preserves_result() -> None:

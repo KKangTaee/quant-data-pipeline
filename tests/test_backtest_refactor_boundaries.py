@@ -616,6 +616,52 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         )
         self.assertNotIn("build_next_step_readiness_evaluation", fallback)
 
+    def test_result_route_hides_before_first_run_and_removes_legacy_expander(
+        self,
+    ) -> None:
+        source = (PROJECT_ROOT / "app/web/backtest_result_display.py").read_text()
+        body = source.split("def _render_last_run", 1)[1].split("\ndef ", 1)[0]
+
+        self.assertLess(
+            body.index("if not bundle"),
+            body.index("render_backtest_analysis_result_workspace"),
+        )
+        self.assertNotIn('st.expander("상세 근거"', body)
+        self.assertNotIn("render_backtest_analysis_decision_surface", body)
+        self.assertNotIn("def _render_real_money_details_legacy", source)
+
+    def test_result_runtime_queues_single_preserves_mix_and_persists_run_identity(
+        self,
+    ) -> None:
+        single = (PROJECT_ROOT / "app/web/backtest_single_strategy.py").read_text()
+        runner = (PROJECT_ROOT / "app/web/backtest_single_runner.py").read_text()
+        compare = (PROJECT_ROOT / "app/web/backtest_compare/page.py").read_text()
+        history = (
+            PROJECT_ROOT / "app/runtime/backtest/stores/run_history.py"
+        ).read_text()
+        candidate = (
+            PROJECT_ROOT / "app/web/backtest_candidate_review_helpers.py"
+        ).read_text()
+        source = (
+            PROJECT_ROOT / "app/services/backtest_practical_validation_source.py"
+        ).read_text()
+
+        self.assertIn("backtest_pending_single_run", single)
+        self.assertIn("_render_last_run(is_running=bool(pending))", single)
+        self.assertIn('bundle["meta"].setdefault("run_id"', runner)
+        self.assertGreaterEqual(
+            compare.count('weighted_bundle["meta"].setdefault("run_id"'), 2
+        )
+        weighted_failure = compare.split(
+            'st.session_state.backtest_weighted_error = f"Weighted portfolio build failed:',
+            1,
+        )[1].split("return", 1)[0]
+        self.assertNotIn("backtest_weighted_bundle = None", weighted_failure)
+        history_record = history.split("record = {", 1)[1].split("\n    }", 1)[0]
+        self.assertIn('"run_result_id": meta.get("run_id")', history_record)
+        self.assertIn('"run_result_id": meta.get("run_id")', candidate)
+        self.assertIn('"run_result_id": draft.get("run_result_id")', source)
+
     def test_backtest_analysis_light_cards_pin_readable_text_in_dark_theme(
         self,
     ) -> None:
@@ -780,22 +826,21 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn("Head:", body)
         self.assertNotIn("Tail:", body)
 
-    def test_single_result_renders_decision_before_collapsed_evidence(self) -> None:
+    def test_single_result_uses_dedicated_workspace_without_collapsed_legacy(
+        self,
+    ) -> None:
         source = (PROJECT_ROOT / "app/web/backtest_result_display.py").read_text()
-        wrapper = source.split("def _render_last_run()", 1)[1].split(
-            "\ndef ", 1
-        )[0]
-        details = source.split("def _render_last_run_details", 1)[1].split(
+        wrapper = source.split("def _render_last_run", 1)[1].split(
             "\ndef ", 1
         )[0]
 
         self.assertLess(
-            wrapper.index("render_backtest_analysis_decision_surface"),
-            wrapper.index('st.expander("상세 근거"'),
+            wrapper.index("if not bundle"),
+            wrapper.index("render_backtest_analysis_result_workspace"),
         )
-        self.assertIn("_render_last_run_details(bundle)", wrapper)
-        self.assertNotIn("return\n", wrapper.split("backtest_last_result_requires_rerun", 1)[1])
-        self.assertNotIn("_render_practical_validation_next_action", details)
+        self.assertNotIn("render_backtest_analysis_decision_surface", wrapper)
+        self.assertNotIn('st.expander("상세 근거"', wrapper)
+        self.assertNotIn("_render_last_run_details(bundle)", wrapper)
 
     def test_portfolio_mix_workspace_uses_inner_mode_roles_and_common_decision(
         self,

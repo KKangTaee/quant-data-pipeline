@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from uuid import uuid4
 
 from app.services.backtest_analysis_decision_workspace import (
     build_level1_configuration_fingerprint,
@@ -22,6 +23,9 @@ from app.services.backtest_saved_portfolio_replay import (
 )
 from app.services.backtest_practical_validation import prepare_practical_validation_source_handoff
 from app.services.backtest_weighted_portfolio import build_weighted_portfolio_bundle
+from app.web.backtest_analysis_result_workspace import (
+    render_backtest_analysis_result_workspace,
+)
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.services.backtest_practical_validation_curve_context import (
     compact_curve_snapshot_from_bundle,
@@ -977,6 +981,7 @@ def _build_saved_mix_proposal_prefill_payload(record: dict[str, Any]) -> dict[st
 
     return {
         "source_kind": "saved_portfolio_mix",
+        "run_result_id": dict(weighted_bundle.get("meta") or {}).get("run_id"),
         "saved_portfolio_id": record.get("portfolio_id"),
         "saved_portfolio_name": record.get("name"),
         "description": record.get("description"),
@@ -1066,6 +1071,7 @@ def _build_weighted_mix_practical_validation_prefill_payload(weighted_bundle: di
 
     return {
         "source_kind": "weighted_portfolio_mix",
+        "run_result_id": meta.get("run_id"),
         "weighted_portfolio_id": weighted_id,
         "weighted_portfolio_name": weighted_name,
         "description": "현재 Portfolio Mix Builder 화면에서 생성한 비중 포트폴리오 mix",
@@ -2069,6 +2075,7 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
     )
     weighted_bundle = replay_result.weighted_bundle
     weighted_bundle["meta"] = dict(weighted_bundle.get("meta") or {})
+    weighted_bundle["meta"].setdefault("run_id", f"level1-{uuid4().hex}")
     weighted_bundle["meta"]["level1_configuration_fingerprint"] = fingerprint
     st.session_state.backtest_current_mix_configuration = mix_configuration
     st.session_state.backtest_current_mix_configuration_fingerprint = fingerprint
@@ -2211,13 +2218,12 @@ def _render_weighted_portfolio_builder() -> None:
                 "3. Mix 후보 결과 확인",
                 "생성된 weighted portfolio 결과를 먼저 확인한 뒤, 아래 1차 판단에서 Practical Validation으로 보낼 수 있는지 봅니다.",
             )
-            _render_weighted_portfolio_result(weighted_bundle)
+            render_backtest_analysis_result_workspace()
         return
 
     total_weight = sum(weights)
     if total_weight <= 0:
         st.session_state.backtest_weighted_error = "At least one strategy weight must be greater than zero."
-        st.session_state.backtest_weighted_bundle = None
         st.error(st.session_state.backtest_weighted_error)
         return
 
@@ -2246,12 +2252,12 @@ def _render_weighted_portfolio_builder() -> None:
             component_roles=component_roles,
         )
     except Exception as exc:
-        st.session_state.backtest_weighted_bundle = None
         st.session_state.backtest_weighted_error = f"Weighted portfolio build failed: {exc}"
         st.error(st.session_state.backtest_weighted_error)
         return
 
     weighted_bundle["meta"] = dict(weighted_bundle.get("meta") or {})
+    weighted_bundle["meta"].setdefault("run_id", f"level1-{uuid4().hex}")
     weighted_bundle["meta"]["level1_configuration_fingerprint"] = fingerprint
     st.session_state.backtest_weighted_bundle = weighted_bundle
     st.session_state.backtest_last_mix_configuration_fingerprint = fingerprint
@@ -2674,6 +2680,9 @@ def _render_saved_portfolio_workspace() -> None:
                 )
                 st.rerun()
             except Exception as exc:
+                st.session_state.backtest_weighted_error = (
+                    f"Saved mix run failed: {exc}"
+                )
                 st.error(f"Saved mix run failed: {exc}")
     with action_cols[1]:
         if st.button("이 Mix로 계속", key="saved_portfolio_load_into_compare", use_container_width=True):
@@ -2698,12 +2707,11 @@ def _render_saved_portfolio_workspace() -> None:
         st.divider()
         _render_saved_mix_replay_result_card()
         _render_saved_mix_validation_board(selected_record)
-        with st.expander("Weighted Portfolio Result 상세", expanded=True):
-            weighted_bundle = st.session_state.get("backtest_weighted_bundle")
-            if weighted_bundle:
-                _render_weighted_portfolio_result(weighted_bundle)
-            else:
-                st.info("Replay 결과가 아직 없습니다. `Mix 재실행 및 검증`을 다시 실행해 주세요.")
+        weighted_bundle = st.session_state.get("backtest_weighted_bundle")
+        if weighted_bundle:
+            render_backtest_analysis_result_workspace()
+        else:
+            st.info("Replay 결과가 아직 없습니다. `Mix 재실행 및 검증`을 다시 실행해 주세요.")
         bundles = st.session_state.get("backtest_compare_bundles") or []
         if bundles:
             with st.expander("구성 전략 참고 Summary", expanded=False):

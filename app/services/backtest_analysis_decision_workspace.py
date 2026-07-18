@@ -11,13 +11,13 @@ from app.services.backtest_strategy_catalog import (
     LEVEL1_STRATEGY_PURPOSE_GROUPS,
     STRATEGY_FAMILY_VARIANTS,
 )
-from app.services.backtest_handoff_readiness import (
-    build_handoff_gate_summary,
-    build_next_step_readiness_evaluation,
+from app.services.backtest_analysis_result_workspace import (
+    build_level1_technical_handoff_readiness,
+    build_level2_validation_questions,
+    build_result_lifecycle,
 )
 from app.services.backtest_portfolio_mix_readiness import (
     build_mix_role_weight_rows,
-    build_weighted_mix_candidate_readiness_evaluation,
 )
 
 
@@ -135,15 +135,29 @@ def build_level1_readiness_projection(
     action_handlers: Mapping[str, Callable[..., Any] | None],
     component_bundles: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
-    """Project existing handoff truth together with result freshness and handlers."""
+    """Keep compatibility keys while delegating handoff to technical truth."""
 
-    result_available = bool(result_bundle)
-    if not result_available:
-        freshness = "none"
-    elif current_configuration_fingerprint == result_configuration_fingerprint:
-        freshness = "current"
-    else:
-        freshness = "stale"
+    lifecycle = build_result_lifecycle(
+        result_bundle=result_bundle,
+        current_configuration_fingerprint=current_configuration_fingerprint,
+        result_configuration_fingerprint=result_configuration_fingerprint,
+        result_requires_rerun=bool(
+            result_bundle
+            and current_configuration_fingerprint
+            != result_configuration_fingerprint
+        ),
+        is_running=False,
+        last_error=None,
+        last_error_kind=None,
+    )
+    result_available = bool(lifecycle["result_available"])
+    freshness = (
+        "none"
+        if not result_available
+        else "current"
+        if lifecycle["state"] == "fresh"
+        else "stale"
+    )
 
     maturity = (
         level1_strategy_maturity(strategy_choice)
@@ -151,27 +165,23 @@ def build_level1_readiness_projection(
         else "production"
     )
     meta = dict((result_bundle or {}).get("meta") or {})
-    if workspace_kind == "portfolio_mix":
-        evaluation = build_weighted_mix_candidate_readiness_evaluation(
-            result_bundle,
-            [dict(bundle) for bundle in component_bundles],
-        )
-        can_enter = bool(evaluation.get("can_send_to_practical_validation"))
-    else:
-        evaluation = (
-            build_next_step_readiness_evaluation(meta) if result_available else {}
-        )
-        can_enter = bool(evaluation.get("can_enter_practical_validation"))
-    handoff_state = (
-        "ready"
-        if (
-            result_available
-            and freshness == "current"
-            and maturity == "production"
-            and can_enter
-        )
-        else "blocked"
+    technical = build_level1_technical_handoff_readiness(
+        workspace_kind=workspace_kind,
+        strategy_choice=strategy_choice,
+        result_bundle=result_bundle,
+        lifecycle=lifecycle,
+        action_handlers=action_handlers,
     )
+    level2_questions = build_level2_validation_questions(
+        meta=meta,
+        workspace_kind=workspace_kind,
+        component_bundles=component_bundles,
+    )
+    handoff_state = "ready" if technical["can_handoff"] else "blocked"
+    evaluation = {
+        "technical_handoff_readiness": technical,
+        "level2_validation_questions": level2_questions,
+    }
 
     actions: dict[str, dict[str, Any]] = {}
     if (
@@ -185,12 +195,17 @@ def build_level1_readiness_projection(
             "label": "Mix 저장",
             "enabled": True,
         }
-    if handoff_state == "ready" and callable(action_handlers.get("save_and_move")):
-        actions["save_and_move"] = {
-            "id": "save_and_move",
-            "label": "후보로 저장하고 Level2로 이동",
-            "enabled": True,
-        }
+    if technical.get("action"):
+        actions["save_and_move"] = dict(technical["action"])
+
+    gate_summary = {
+        "can_submit": technical["can_handoff"],
+        "action_items": [
+            str(reason.get("message") or "")
+            for reason in list(technical.get("reasons") or [])
+        ],
+        "evaluation": evaluation,
+    }
 
     return {
         "result_available": result_available,
@@ -199,13 +214,7 @@ def build_level1_readiness_projection(
         "handoff_state": handoff_state,
         "actions": actions,
         "evaluation": evaluation,
-        "gate_summary": (
-            evaluation
-            if workspace_kind == "portfolio_mix"
-            else build_handoff_gate_summary(meta)
-            if result_available
-            else {}
-        ),
+        "gate_summary": gate_summary,
     }
 
 
@@ -336,6 +345,7 @@ def build_backtest_analysis_decision_workspace(
         "saved_mixes": [_json_ready(dict(row)) for row in saved_mixes],
         "component_bundle_count": len(component_bundles),
         "decision": decision,
+        "evaluation": readiness["evaluation"],
         "error": error,
         "actions": readiness["actions"],
         "details": {"technical_evidence": {"meta": _json_ready(meta)}},

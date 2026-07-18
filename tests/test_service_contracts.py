@@ -15243,7 +15243,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("기존 결과를 참고용으로 유지합니다", strategy_source)
         self.assertLess(
             last_run_body.index("_render_backtest_rerun_required_notice"),
-            last_run_body.index("_render_last_run_details(bundle)"),
+            last_run_body.rindex("render_backtest_analysis_result_workspace"),
         )
 
     def test_data_trust_summary_renderer_keeps_warnings_inside_compact_panel(self) -> None:
@@ -15283,30 +15283,20 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("st.warning(", last_run_body)
         self.assertNotIn("이번 실행에서 같이 봐야 할 주의 사항", last_run_body)
 
-    def test_latest_backtest_run_prioritizes_decision_then_detailed_evidence(self) -> None:
+    def test_latest_backtest_run_uses_dedicated_result_workspace(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
         last_run_start = source.index("def _render_last_run")
         last_run_body = source[last_run_start:]
         last_run_body = last_run_body[: last_run_body.index("\ndef ", 1)]
-        details_start = source.index("def _render_last_run_details")
-        details_body = source[details_start:]
-        details_body = details_body[: details_body.index("\ndef ", 1)]
 
-        self.assertIn("render_backtest_analysis_decision_surface", last_run_body)
-        self.assertIn('st.expander("상세 근거"', last_run_body)
-        self.assertIn("_render_last_run_details(bundle)", last_run_body)
-        self.assertIn("_render_backtest_result_header(bundle, summary_df)", details_body)
-        self.assertNotIn("_render_summary_metrics(summary_df)", details_body)
-        self.assertIn("_render_data_trust_summary(meta)", details_body)
-        self.assertNotIn("_render_practical_validation_next_action(bundle)", details_body)
-        self.assertNotIn("Latest Backtest Run", details_body)
-
-        header_pos = details_body.index("_render_backtest_result_header(bundle, summary_df)")
-        data_trust_pos = details_body.index("_render_data_trust_summary(meta)")
-        tabs_pos = details_body.index("tabs = st.tabs(tab_labels)")
-
-        self.assertLess(header_pos, data_trust_pos)
-        self.assertLess(data_trust_pos, tabs_pos)
+        self.assertIn("render_backtest_analysis_result_workspace", last_run_body)
+        self.assertNotIn("render_backtest_analysis_decision_surface", last_run_body)
+        self.assertNotIn('st.expander("상세 근거"', last_run_body)
+        self.assertNotIn("_render_last_run_details(bundle)", last_run_body)
+        self.assertLess(
+            last_run_body.index("if not bundle"),
+            last_run_body.index("render_backtest_analysis_result_workspace"),
+        )
 
     def test_backtest_result_header_owns_integrated_kpi_band(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")

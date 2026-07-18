@@ -75,7 +75,11 @@ def _mark_last_run_stale_if_strategy_selection_changed(
 
 
 def _run_single_settings_payload(payload: dict, strategy_name: str) -> bool:
-    return _handle_backtest_run(payload, strategy_name=strategy_name)
+    st.session_state.backtest_pending_single_run = {
+        "payload": dict(payload),
+        "strategy_name": str(strategy_name),
+    }
+    return True
 
 
 def _consume_single_settings_component_change(
@@ -222,6 +226,16 @@ def render_single_strategy_workspace() -> None:
     if reset_notice:
         st.info(str(reset_notice))
         st.session_state.backtest_last_result_reset_notice = None
-    _render_last_run()
+    pending = st.session_state.get("backtest_pending_single_run")
+    _render_last_run(is_running=bool(pending))
+    if isinstance(pending, dict):
+        try:
+            _handle_backtest_run(
+                dict(pending["payload"]),
+                strategy_name=str(pending["strategy_name"]),
+            )
+        finally:
+            st.session_state.pop("backtest_pending_single_run", None)
+        st.rerun(scope="fragment")
 
 __all__ = ["render_single_strategy_workspace"]
