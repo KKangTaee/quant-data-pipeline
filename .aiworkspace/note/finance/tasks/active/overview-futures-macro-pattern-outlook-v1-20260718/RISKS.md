@@ -24,8 +24,8 @@ UI copy must say `근거`, `일치`, `압력`, or `해석` rather than confirmed
 
 ### UI Overconfidence
 
-A polished probability path can look more certain than the evidence. The first ellipse design made one median location look like the forecast and the 60-point observed polyline hid time order.
-The corrected map uses only three observed anchors and categorical dashed branches. Baseline comparison remains in the horizon cards, while estimate status, sample, edge label, and unavailable-number suppression remain visible beside the map.
+A polished probability path can look more certain than the evidence. The first ellipse design made one median location look like the forecast and the 60-point observed polyline hid time order; the intermediate fixed categorical branches also did not change geometry by horizon.
+The corrected map uses only three observed anchors, the selected horizon's historical-analog median path, and three sparse middle-50% ranges. Probability rows remain in the horizon cards, while path status, sample, provisional label, and unavailable-path suppression remain visible beside the map.
 
 ### Runtime Cost
 

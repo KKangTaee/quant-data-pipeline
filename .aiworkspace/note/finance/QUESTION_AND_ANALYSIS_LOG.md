@@ -18,7 +18,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro의 단기 거시 레이더 경계와 조건부 publication 계약을 확정했다.
+  - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro의 단기 거시 레이더 경계와 경험적 5D / 20D 조건부 경로 publication 계약을 확정했다.
   - Previous completed task is [overview-economic-cycle-asset-pathways-stages3-5-v1-20260717](./tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/STATUS.md). 채권·금리, S&P 500, WTI·구리·금의 측정 경로와 공통 관측 UI를 연결해 전체 자산경로 roadmap `5/5`를 완료했다.
   - Previous completed task is [overview-economic-cycle-multichannel-asset-interpretation-v1-20260717](./tasks/active/overview-economic-cycle-multichannel-asset-interpretation-v1-20260717/STATUS.md). 공통 판정기와 금·달러 파일럿에서 비인과적 `economic_cycle_v2` 계약을 확립했다.
   - Previous completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 가격의 1주·1개월·3개월 흐름을 경제 배경과 독립 판정하는 `3/3` 개선을 완료했다.
@@ -51,6 +51,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-18 - Futures Macro 미래 점선은 유사 episode의 경험적 중앙 경로다
+
+- User request: 5D / 20D 선택 때 그래프가 실제로 바뀌게 하고, 다음 기간을 점선으로 읽을 수 있는 미래 예측 표현을 요청함.
+- Interpreted goal: 고정 체제 분기나 임의 목표점 대신 현재와 유사했던 과거 구간의 step별 이동으로 horizon별 우세 경로와 불확실성을 보여준다.
+- Analysis result: 지도는 현재점에서 유사 episode의 표준화된 중앙 이동을 더한 5D 5점 / 20D 20점 점선과 1일·중간·말일 가운데 50% 범위를 표시한다. 확률과 경로는 별도 시간순 검증 후 더 보수적인 상태를 적용하며, 실제 두 경로는 모두 `PROVISIONAL`이다.
+- Follow-up: 이 좌표는 절대 경제상태·가격 목표·실제 미래 경로가 아니며, 세부 actual metric과 desktop/420px QA는 active task에 둔다.
 
 ### 2026-07-18 - Futures Macro 지도는 미래 한 점이 아니라 조건부 체제 분기를 보여준다
 

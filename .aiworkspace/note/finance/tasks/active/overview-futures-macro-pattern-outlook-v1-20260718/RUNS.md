@@ -134,3 +134,15 @@
 - React removed the four fixed categorical branches. It renders the selected horizon's median polyline, sparse 50% rectangles at first / midpoint / terminal, and one `유사 패턴 중앙 위치` marker.
 - Probability rows remain in the right reading; the graph badge uses the more conservative conditional-path status.
 - Corrected the detailed plan's payload-test owner from `OverviewAutomationContractTests` to `FuturesMacroThermometerContractTests` after a loader-only failure exposed the mismatch.
+
+## 2026-07-18 Empirical Path Task 4 — Actual QA, Docs, And Closeout
+
+- Fresh read-only actual snapshot as of `2026-07-17`: 5D `120 episodes / PROVISIONAL / 5 points`, terminal `(-0.562496, 0.016876)`, x bounds `[-1.095877, 0.083559]`, y bounds `[-0.339070, 0.331853]`; median error `0.905672` vs baseline `0.888603`, 50% rectangle coverage `0.307692`, 6 folds.
+- 20D: `42 episodes / PROVISIONAL / 20 points`, terminal `(-0.436401, 0.057898)`, x bounds `[-1.098152, 0.011524]`, y bounds `[-0.254529, 0.498148]`; median error `1.061827` vs baseline `0.942778`, coverage `0.304348`, 6 folds.
+- Current cache-version build measured `8.882s` uncached and `0.031s` for the same daily marker; the cached load returned the identical object.
+- Browser QA at `http://localhost:8512`: 5D rendered one six-coordinate polyline, uncertainty steps `1/3/5`, and one terminal; 20D rendered one 21-coordinate polyline, steps `1/10/20`, and one terminal. The coordinates differed, and `관측만` removed line/ranges/terminal.
+- Responsive QA at 420px measured iframe/root `377px`, `clientWidth == scrollWidth`; desktop also had no overflow. Console errors were 0.
+- Screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-empirical-path-qa.png` (generated, not staged).
+- Durable Futures Macro flow, architecture, project ownership, milestone, and decision docs now describe observed anchors plus empirical median path / middle-50% range and the `current location + standardized conditional movement` meaning.
+- Final fresh verification: pattern / path suites passed 25 tests in 8.659s; `FuturesMacroThermometerContractTests` passed 26 tests in 3.099s; four selected React/source contracts passed in 0.108s; Vite production build passed in 482ms; py_compile and `git diff --check` exited cleanly.
+- Full `OverviewAutomationContractTests` was not used as a completion gate because its previously recorded unrelated Sentiment source-string case still expects `payload.summary.metrics.map`; every Futures Macro-selected Overview contract passed separately.

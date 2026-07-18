@@ -618,7 +618,7 @@ Expected: focused contracts pass, Vite build exits 0, compile and diff check are
 - Consumes: completed service/payload/UI implementation.
 - Produces: actual evidence, responsive screenshot, durable ownership and semantic documentation.
 
-- [ ] **Step 1: Run complete focused verification**
+- [x] **Step 1: Run complete focused verification**
 
 ```bash
 .venv/bin/python -m unittest tests.test_futures_macro_pattern tests.test_futures_macro_pattern_validation
@@ -631,11 +631,11 @@ git diff --check
 
 Expected: Futures Macro suites pass. If the known unrelated Sentiment source-string contract remains, record it exactly and separately confirm every Futures Macro-selected contract passes.
 
-- [ ] **Step 2: Inspect actual snapshot**
+- [x] **Step 2: Inspect actual snapshot**
 
 Record both horizons' estimate status, path status, episode count, point count, terminal x/y and bounds, four path-validation metrics, and uncached/cached runtime. Confirm 5D has five points, 20D has twenty, values are finite, and terminals differ.
 
-- [ ] **Step 3: Browser QA**
+- [x] **Step 3: Browser QA**
 
 At desktop and 420px verify:
 
@@ -647,11 +647,11 @@ At desktop and 420px verify:
 
 Save one unstaged desktop screenshot under `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/`.
 
-- [ ] **Step 4: Synchronize docs**
+- [x] **Step 4: Synchronize docs**
 
 Record `observed anchors + historical-analog conditional median path + middle-50% range`, the `current location + standardized conditional movement` coordinate meaning, and separate conservative probability/path status. Keep root handoff entries at 3~5 lines and detailed metrics in task `RUNS.md` / `RISKS.md`.
 
-- [ ] **Step 5: Re-run fresh verification and commit**
+- [x] **Step 5: Re-run fresh verification and commit**
 
 ```bash
 .venv/bin/python -m unittest tests.test_futures_macro_pattern tests.test_futures_macro_pattern_validation
@@ -671,7 +671,7 @@ Expected: tests/build/checks pass before commit; generated screenshot and unrela
 - [x] Task 1: stepwise historical coordinate paths.
 - [x] Task 2: chronological path validation and horizon integration.
 - [x] Task 3: payload and empirical path UI.
-- [ ] Task 4: actual QA, documentation sync, and closeout.
+- [x] Task 4: actual QA, documentation sync, and closeout.
 
 ## Overall Roadmap State
 
@@ -679,4 +679,4 @@ Expected: tests/build/checks pass before commit; generated screenshot and unrela
 - 2차 detailed TDD plan: this document.
 - 3차 service / validation: complete.
 - 4차 payload / React UI: complete.
-- 5차 actual QA / docs closeout: pending.
+- 5차 actual QA / docs closeout: complete.

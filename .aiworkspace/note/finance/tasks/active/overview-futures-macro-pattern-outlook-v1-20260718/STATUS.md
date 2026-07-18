@@ -24,10 +24,10 @@
 - Browser QA at `http://localhost:8512` confirmed 3 horizon cards, map + evidence, 60D ribbon, 5 asset pathways, method disclosure, 420px single-column layout with no horizontal clipping, and 0 console errors.
 - Overall roadmap: 1차 design through 5차 actual QA / docs sync complete (`5/5`).
 - No DB schema, provider, registry, or saved setup has been changed.
-- User rejected the unreadable 60-point polyline / forecast ellipse map and approved a replacement with three observed anchors plus selectable 5D / 20D conditional probability branches.
-- Task 8 complete: the 60-point polyline and synthetic probability ellipses are removed from the active payload / component. The map now renders `20D 전 → 5D 전 → 현재` observed anchors and selectable 5D / 20D categorical probability branches.
-- Actual QA: 5D `38/5/23/34% · 120 episodes`, 20D `43/10/21/26% · 42 episodes`; both remain `PROVISIONAL / 방향 우위 미확인`. `관측만` removes all four forecast branches.
-- Desktop and 420px Browser QA passed with 3 anchors, 4 selected-horizon branches, no horizontal overflow, and zero console errors. The horizon cards remain the primary numeric probability surface.
+- User rejected the unreadable 60-point polyline / forecast ellipse map, then confirmed that the interim fixed categorical branches did not change geometry by horizon and approved empirical conditional paths.
+- The active map now renders `20D 전 → 5D 전 → 현재` observed anchors plus the selected horizon's historical-analog median path, three sparse middle-50% ranges, and one terminal marker.
+- Actual QA: 5D `38/5/23/34% · 120 episodes · 5 path points`, 20D `43/10/21/26% · 42 episodes · 20 path points`; both remain `PROVISIONAL / 방향 우위 미확인`. `관측만` removes the forecast line, ranges, and terminal.
+- Desktop and 420px Browser QA passed with distinct 5D / 20D coordinates, no horizontal overflow, and zero console errors. The horizon cards remain the primary numeric probability surface.
 
 ## Roadmap State
 
@@ -38,18 +38,16 @@
 - 5차 actual QA / docs sync: complete
 - 후속 1차 readable map implementation: complete
 - 후속 2차 actual QA / docs sync: complete
+- 경험적 경로 후속 1차 설계: complete
+- 경험적 경로 후속 2차 상세 계획: complete
+- 경험적 경로 후속 3차 service / validation: complete
+- 경험적 경로 후속 4차 payload / React UI: complete
+- 경험적 경로 후속 5차 actual QA / docs sync: complete
 
 ## Next Action
 
-전체 roadmap `5/5`와 readable-map 후속 `2/2`가 완료됐다.
+전체 roadmap `5/5`, readable-map 후속 `2/2`, empirical-path 후속 `5/5`가 완료됐다.
 
-사용자가 5D / 20D 그래프의 실제 경로 좌표가 같다는 QA 결과를 확인하고 empirical conditional path 후속을 승인했다.
-후속 설계는 과거 유사 episode의 step별 중앙 이동과 25~75% 범위를 현재 위치에 더하며,
-고정 categorical branch를 제거하고 probability card는 유지한다.
-사용자가 written spec을 승인했다.
-별도 `EMPIRICAL_PATH_PLAN.md`에 4개 TDD task와 정확한 service / payload / UI / QA 계약을 작성했다.
-Empirical path Task 1 complete: stepwise 5D / 20D coordinates, completed-origin stability, median and q25/q75 aggregation, and sub-30 suppression are implemented with RED/GREEN evidence.
-Empirical path Task 2 complete: chronological terminal error / baseline / 50% coverage metrics and conservative horizon path status are connected.
-Actual 5D and 20D paths publish 5 and 20 distinct points respectively, both `PROVISIONAL`; uncached runtime is 9.491s.
-Empirical path Task 3 complete: finite-only payload normalization, unavailable suppression, and React median path / middle-50% range / terminal UI are built.
-Current stage: Task 4 actual desktop/mobile QA, durable docs sync, and closeout.
+Actual 5D path terminal is `(-0.5625, 0.0169)` with bounds x `[-1.0959, 0.0836]`, y `[-0.3391, 0.3319]`; 20D terminal is `(-0.4364, 0.0579)` with bounds x `[-1.0982, 0.0115]`, y `[-0.2545, 0.4981]`.
+Both horizons have 6 evaluated chronological folds; their path errors trail baseline and middle-50% coverage is near 0.30, so neither is promoted above `PROVISIONAL`.
+다음 작업은 사용자가 선택하면 이 경험적 경로의 실사용 피드백이나 별도 데이터 확장 후보를 새 task로 시작한다.
