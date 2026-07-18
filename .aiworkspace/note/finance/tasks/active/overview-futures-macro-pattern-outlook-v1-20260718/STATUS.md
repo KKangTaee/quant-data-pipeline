@@ -25,7 +25,7 @@
 - Overall roadmap: 1차 design through 5차 actual QA / docs sync complete (`5/5`).
 - No DB schema, provider, registry, or saved setup has been changed.
 - User rejected the unreadable 60-point polyline / forecast ellipse map, then confirmed that the interim fixed categorical branches did not change geometry by horizon and approved empirical conditional paths.
-- The active map now renders `20D 전 → 5D 전 → 현재` observed anchors plus the selected horizon's historical-analog median path, three sparse middle-50% ranges, and one terminal marker.
+- The active map now renders `20D 전 → 5D 전 → 현재` observed anchors plus the selected horizon's historical-analog median path, one terminal middle-50% arrival range, fixed-size mid-line direction markers, and one terminal marker.
 - Actual QA: 5D `38/5/23/34% · 120 episodes · 5 path points`, 20D `43/10/21/26% · 42 episodes · 20 path points`; both remain `PROVISIONAL / 방향 우위 미확인`. `관측만` removes the forecast line, ranges, and terminal.
 - Desktop and 420px Browser QA passed with distinct 5D / 20D coordinates, no horizontal overflow, and zero console errors. The horizon cards remain the primary numeric probability surface.
 
@@ -60,4 +60,8 @@ Both horizons have 6 evaluated chronological folds; their path errors trail base
 - Approved copy: `5일 후 예상 위치` / `20일 후 예상 위치`; detailed episode and q25~q75 text leaves the graph and stays in reading / method disclosure.
 - Written design: `CONDITIONAL_PATH_READABILITY_DESIGN.md`.
 - Implementation plan: `CONDITIONAL_PATH_READABILITY_PLAN.md`.
-- Current stage: approved inline execution; linked `codex/sub-dev` worktree verified before Task 1 RED.
+- Implementation commits: `ef6d1973` terminal-only range, `3ed91a05` fixed mid-line direction markers and production bundle.
+- Actual Browser QA: observed `0/0/0/0` forecast layers; 5D step-5 box `1`, path/direction/terminal `1/1/1`; 20D step-20 box `1`, path/direction/terminal `1/1/1`. Current/terminal labels do not overlap their circles.
+- At 420px the workbench and document both measured `clientWidth == scrollWidth` (`377px`); all graph labels stayed inside the canvas and console errors were 0.
+- QA screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-single-range-qa.png` (generated, not staged).
+- Current stage: conditional-path readability roadmap complete (`5/5`).

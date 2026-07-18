@@ -26,7 +26,9 @@
 
 ## React V2 Decisions
 
-- The readable map downsamples the 60D path to `20D 전 / 5D 전 / 현재` anchors. The approved empirical follow-up removed fixed categorical endpoints: selected 5D / 20D now adds the historical-analog stepwise median standardized movement to the current coordinate, with sparse q25~q75 ranges. It remains a conditional reference path, not an absolute state, price target, or actual future path.
+- The readable map downsamples the 60D path to `20D 전 / 5D 전 / 현재` anchors. The approved empirical follow-up removed fixed categorical endpoints: selected 5D / 20D now adds the historical-analog stepwise median standardized movement to the current coordinate, with one terminal q25~q75 arrival range. It remains a conditional reference path, not an absolute state, price target, or actual future path.
+- The terminal range is an axis-aligned rectangle because x/y q25~q75 are computed separately; it is not a joint covariance ellipse or a full-path corridor.
+- Direction arrows use fixed 9 SVG units on inset mid-line segments, while current/terminal circles remain radius 10/8, so marker scale cannot hide either endpoint.
 - Current observation cards do not accept or render probability rows. `UNAVAILABLE` future horizons show the reason and no fabricated percentage.
 - The V1 `RecentFlowSection.tsx` and `HistoricalValidationPanel.tsx` were removed after reference count reached zero outside their own files.
 - The horizon probability cards remain the primary numeric forecast surface. The path map reuses the same rows, status, edge label, episode count, and status reason rather than calculating a second forecast.
@@ -40,3 +42,4 @@
 - Browser QA found desktop and 420px layouts free of horizontal clipping; the actual payload had no unavailable horizon, while source contracts cover unavailable probability suppression.
 - Empirical-path actual QA retained `PROVISIONAL` for both horizons: 5D median error `0.905672` vs baseline `0.888603`, coverage `0.307692`; 20D median error `1.061827` vs baseline `0.942778`, coverage `0.304348`; both used 6 evaluated folds.
 - The actual 5D path contains 5 forecast points and the 20D path contains 20; their terminal coordinates and SVG polylines differ. Browser QA also confirmed `관측만` removes every forecast visual and 420px has no horizontal overflow.
+- Readability QA confirmed exactly one step-5/step-20 terminal range per selected horizon, no circle/label overlap, preserved 5D `38/5/23/34%` and 20D `43/10/21/26%` probability rows, and zero browser console errors.

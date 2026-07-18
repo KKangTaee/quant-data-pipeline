@@ -146,3 +146,12 @@
 - Durable Futures Macro flow, architecture, project ownership, milestone, and decision docs now describe observed anchors plus empirical median path / middle-50% range and the `current location + standardized conditional movement` meaning.
 - Final fresh verification: pattern / path suites passed 25 tests in 8.659s; `FuturesMacroThermometerContractTests` passed 26 tests in 3.099s; four selected React/source contracts passed in 0.108s; Vite production build passed in 482ms; py_compile and `git diff --check` exited cleanly.
 - Full `OverviewAutomationContractTests` was not used as a completion gate because its previously recorded unrelated Sentiment source-string case still expects `payload.summary.metrics.map`; every Futures Macro-selected Overview contract passed separately.
+
+## 2026-07-18 Conditional Path Readability Implementation And QA
+
+- Baseline linked-worktree contract passed before implementation. Task 1 RED failed on the existing first/midpoint/terminal range selection; GREEN replaced it with the selected path terminal only and updated graph/legend/caveat copy.
+- Task 2 RED failed on the endpoint marker. GREEN added fixed 9-unit `userSpaceOnUse` observed/forecast markers on inset screen-space segments, current/terminal radii 10/8, separated leader labels, and the rebuilt production bundle.
+- Focused verification passed: pattern/path suites 25 tests, thermometer contracts 26 tests, selected React/source contracts 6 tests; Vite build, helper py_compile, and `git diff --check` passed.
+- Browser QA at `http://localhost:8512`: observed state had forecast layers `0/0/0/0`; 5D had step-5 range/path/direction/terminal `1/1/1/1`; 20D had step-20 range/path/direction/terminal `1/1/1/1`. 5D/20D probability rows and `PROVISIONAL` remained unchanged.
+- Current/terminal labels did not overlap either circle. At 420px the workbench and document both measured `clientWidth == scrollWidth` (`377px`), all graph labels remained within the canvas, and browser console errors were 0.
+- Screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-single-range-qa.png` (generated, not staged).

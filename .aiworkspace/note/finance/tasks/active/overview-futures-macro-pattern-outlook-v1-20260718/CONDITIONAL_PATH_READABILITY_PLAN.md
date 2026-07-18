@@ -42,7 +42,7 @@
 - Consumes: selected `HorizonCard.conditional_path.points` and its terminal point.
 - Produces: one `.fm-pattern-map__uncertainty` rect with the terminal step, dynamic expected-position/route/range labels.
 
-- [ ] **Step 1: Write the terminal-range RED contract**
+- [x] **Step 1: Write the terminal-range RED contract**
 
 Add a focused contract beside the existing Futures Macro pattern-map contract:
 
@@ -66,7 +66,7 @@ def test_futures_macro_pattern_map_uses_one_terminal_range_and_readable_copy(sel
 
 Update the older pattern-map contract to expect `일 후 예상 위치` instead of `유사 패턴 중앙 위치`.
 
-- [ ] **Step 2: Run the terminal-range RED test**
+- [x] **Step 2: Run the terminal-range RED test**
 
 Run:
 
@@ -77,7 +77,7 @@ Run:
 
 Expected: FAIL because the source still selects `1 / midpoint / terminal`, renders through `uncertaintySteps.map`, and uses `유사 패턴 중앙 위치`.
 
-- [ ] **Step 3: Replace three range checkpoints with the terminal point**
+- [x] **Step 3: Replace three range checkpoints with the terminal point**
 
 In `PatternMapSection.tsx`, replace midpoint/checkpoint selection with:
 
@@ -135,7 +135,7 @@ Change the right reading caveat to:
 </p>
 ```
 
-- [ ] **Step 4: Run terminal-range GREEN and core map regression**
+- [x] **Step 4: Run terminal-range GREEN and core map regression**
 
 Run:
 
@@ -147,7 +147,7 @@ Run:
 
 Expected: 2 tests pass. `git diff --check` exits 0.
 
-- [ ] **Step 5: Commit the terminal-only range unit**
+- [x] **Step 5: Commit the terminal-only range unit**
 
 ```bash
 git add tests/test_service_contracts.py \
@@ -169,7 +169,7 @@ git commit -m "선물 매크로 말일 예상 범위 단순화"
 - Consumes: observed anchor screen coordinates, current screen coordinate, terminal screen coordinate.
 - Produces: `directionSegment(start, end, options) -> ScreenSegment | undefined`, one observed and one forecast mid-line arrow, separated labels.
 
-- [ ] **Step 1: Write the fixed-marker RED contract**
+- [x] **Step 1: Write the fixed-marker RED contract**
 
 Add:
 
@@ -191,7 +191,7 @@ def test_futures_macro_pattern_map_uses_fixed_midline_direction_markers(self) ->
     self.assertIn("fm-pattern-map__direction", style)
 ```
 
-- [ ] **Step 2: Run the fixed-marker RED test**
+- [x] **Step 2: Run the fixed-marker RED test**
 
 Run:
 
@@ -202,7 +202,7 @@ Run:
 
 Expected: FAIL because the observed arrow remains an endpoint marker and no screen-space segment helper exists.
 
-- [ ] **Step 3: Add the screen-space direction helper**
+- [x] **Step 3: Add the screen-space direction helper**
 
 Add near the component helpers:
 
@@ -255,7 +255,7 @@ const forecastDirection = directionSegment(
 );
 ```
 
-- [ ] **Step 4: Replace endpoint arrow and render fixed markers**
+- [x] **Step 4: Replace endpoint arrow and render fixed markers**
 
 Replace `<defs>` with two fixed markers:
 
@@ -289,7 +289,7 @@ Remove `markerEnd` from the observed polyline and render direction segments afte
 ) : null}
 ```
 
-- [ ] **Step 5: Separate current and terminal labels**
+- [x] **Step 5: Separate current and terminal labels**
 
 Use `r={point.anchorLabel === "현재" ? 10 : 7.5}`. For the current anchor render a down-left leader and the short `현재` label; keep dates/regime in `<title>`:
 
@@ -313,7 +313,7 @@ For the terminal render `r="8"`, an up-right leader, and `expectedPositionLabel`
 </text>
 ```
 
-- [ ] **Step 6: Apply the approved CSS**
+- [x] **Step 6: Apply the approved CSS**
 
 Replace the active path styles with:
 
@@ -333,7 +333,7 @@ Replace the active path styles with:
 .fm-pattern-map__terminal-label { fill: #397da8; font-size: 12px; font-weight: 800; paint-order: stroke; stroke: #fff; stroke-width: 4px; }
 ```
 
-- [ ] **Step 7: Run GREEN, build, and commit**
+- [x] **Step 7: Run GREEN, build, and commit**
 
 Run:
 
@@ -367,7 +367,7 @@ Expected: three selected contracts pass, Vite exits 0, and the static bundle con
 - Consumes: built component and actual stored futures snapshot.
 - Produces: verified 5D / 20D/observed DOM counts, responsive screenshot, durable semantic record.
 
-- [ ] **Step 1: Run complete focused verification**
+- [x] **Step 1: Run complete focused verification**
 
 ```bash
 .venv/bin/python -m unittest tests.test_futures_macro_pattern tests.test_futures_macro_pattern_validation
@@ -386,7 +386,7 @@ git diff --check
 
 Expected: all selected Futures Macro contracts pass. Record the known unrelated Sentiment source-string failure only if the full Overview class is run and still fails.
 
-- [ ] **Step 2: Start actual app and perform Browser QA**
+- [x] **Step 2: Start actual app and perform Browser QA**
 
 Start:
 
@@ -415,7 +415,7 @@ Save one unstaged screenshot under:
 /Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-single-range-qa.png
 ```
 
-- [ ] **Step 3: Synchronize durable docs**
+- [x] **Step 3: Synchronize durable docs**
 
 Use `finance-doc-sync` and update only stale statements:
 
@@ -424,7 +424,7 @@ Use `finance-doc-sync` and update only stale statements:
 - task docs: record marker geometry, actual DOM counts, screenshot, and any remaining statistical caveat.
 - root logs: 3~5 lines describing the approved user interpretation and completion.
 
-- [ ] **Step 4: Re-run fresh verification and commit closeout**
+- [x] **Step 4: Re-run fresh verification and commit closeout**
 
 ```bash
 .venv/bin/python -m unittest tests.test_futures_macro_pattern tests.test_futures_macro_pattern_validation
@@ -449,14 +449,14 @@ Expected: verification passes before commit; screenshot and unrelated untracked 
 
 ## Completion Checklist
 
-- [ ] Task 1: terminal-only range and readable forecast copy.
-- [ ] Task 2: fixed mid-line direction markers and label geometry.
-- [ ] Task 3: actual Browser QA, docs sync, and closeout.
+- [x] Task 1: terminal-only range and readable forecast copy.
+- [x] Task 2: fixed mid-line direction markers and label geometry.
+- [x] Task 3: actual Browser QA, docs sync, and closeout.
 
 ## Roadmap State
 
 - 1차 overlap root-cause analysis: complete.
 - 2차 visual alternatives and A안 selection: complete.
 - 3차 written design: complete (`43fd5cd9`).
-- 4차 TDD implementation: pending.
-- 5차 actual QA / docs closeout: pending.
+- 4차 TDD implementation: complete (`ef6d1973`, `3ed91a05`).
+- 5차 actual QA / docs closeout: complete.
