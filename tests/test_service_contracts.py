@@ -5907,20 +5907,28 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertIn("app.web.backtest_page", imported_modules)
         self.assertNotIn("app.web.pages.backtest", imported_modules)
 
-    def test_backtest_page_uses_compact_korean_english_workflow_tabs(self) -> None:
+    def test_backtest_page_uses_react_workflow_shell_without_legacy_selector(self) -> None:
         source = Path("app/web/backtest_page.py").read_text(encoding="utf-8")
-        selector_body = source[source.index("def _render_backtest_panel_selector"):]
-        selector_body = selector_body[: selector_body.index("def render_backtest_tab")]
 
-        self.assertIn("st.pills(", selector_body)
-        self.assertIn("format_func=_backtest_workflow_stage_label", selector_body)
-        self.assertIn("후보 분석 · Backtest Analysis", source)
-        self.assertIn("실전 검증 · Practical Validation", source)
-        self.assertIn("최종 검토 · Final Review", source)
-        self.assertIn("stBaseButton-pillsActive", source)
-        self.assertIn("#ff4b4b", source)
-        self.assertNotIn("segmented_control", selector_body)
-        self.assertNotIn("st.radio(", selector_body)
+        self.assertIn(
+            "from app.web.backtest_workflow_shell import render_backtest_workflow_shell",
+            source,
+        )
+        self.assertIn("active_panel = render_backtest_workflow_shell()", source)
+        self.assertNotIn("st.pills(", source)
+        self.assertNotIn("stBaseButton-pillsActive", source)
+        self.assertNotIn("#ff4b4b", source)
+        self.assertNotIn("후보 선정 흐름", source)
+
+    def test_streamlit_backtest_entry_defers_identity_to_workflow_shell(self) -> None:
+        source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")
+        body = source.split("def _render_backtest_page() -> None:", 1)[1]
+        body = body.split("\ndef ", 1)[0]
+
+        self.assertEqual(body.count("render_backtest_tab()"), 1)
+        self.assertNotIn('st.title("Backtest")', body)
+        self.assertNotIn("Pre-Live", body)
+        self.assertNotIn("Portfolio Proposal", body)
 
     def test_backtest_page_removes_unused_guide_snapshot_and_reference_panels(self) -> None:
         page_source = Path("app/web/backtest_page.py").read_text(encoding="utf-8")
@@ -12760,10 +12768,15 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         workspace_intro = workspace_intro.split("current_rows = load_current_candidate_registry_latest()", 1)[0]
         self.assertNotIn("render_reference_contextual_help(\"final_review\")", workspace_intro)
 
-        backtest_page_source = Path("app/web/backtest_page.py").read_text(encoding="utf-8")
-        self.assertIn("Portfolio Monitoring 후보 여부", backtest_page_source)
-        self.assertNotIn("Selected Dashboard 모니터링 후보 여부", backtest_page_source)
-        self.assertNotIn("과거 실행 기록은 `Operations > Backtest Run History`", backtest_page_source)
+        workflow_shell_source = Path(
+            "app/services/backtest_workflow_shell.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("최종 판단", workflow_shell_source)
+        self.assertNotIn("Selected Dashboard 모니터링 후보 여부", workflow_shell_source)
+        self.assertNotIn(
+            "과거 실행 기록은 `Operations > Backtest Run History`",
+            workflow_shell_source,
+        )
 
         final_review_page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
         self.assertNotIn("Selected Dashboard 추적 후보", final_review_page_source)

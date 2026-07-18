@@ -6657,7 +6657,7 @@ git commit -m "Backtest 상단 React 워크플로 셸 구현"
 - Consumes: `render_backtest_workflow_shell() -> str`.
 - Preserves: existing Level1 / Level2 / Level3 renderer dispatch and legacy request normalization.
 
-- [ ] **Step 1: Replace the old selector test with failing primary-shell tests**
+- [x] **Step 1: Replace the old selector test with failing primary-shell tests**
 
 ```python
 def test_backtest_page_uses_react_workflow_shell_without_legacy_selector(self) -> None:
@@ -6683,13 +6683,13 @@ def test_streamlit_backtest_entry_defers_identity_to_workflow_shell(self) -> Non
 Update the Final Review wording source assertion to read `app/services/backtest_workflow_shell.py`, where the
 top-level Final Review responsibility now lives, instead of expecting the old copy in `backtest_page.py`.
 
-- [ ] **Step 2: Run RED and confirm the legacy selector/title assertions fail**
+- [x] **Step 2: Run RED and confirm the legacy selector/title assertions fail**
 
 Run: `.venv/bin/python -m pytest tests/test_service_contracts.py -k 'backtest_page_uses_react_workflow_shell_without_legacy_selector or streamlit_backtest_entry_defers_identity_to_workflow_shell or final_review_top_summary_is_short_and_action_focused' -q`
 
 Expected: the two new route tests fail because the old title/pills remain; the Final Review source assertion passes after its test ownership update.
 
-- [ ] **Step 3: Cut the primary route over to the new shell**
+- [x] **Step 3: Cut the primary route over to the new shell**
 
 In `app/web/backtest_page.py`:
 
@@ -6702,7 +6702,7 @@ In `app/web/backtest_page.py`:
 
 In `app/web/streamlit_app.py`, make `_render_backtest_page()` call only `render_backtest_tab()`.
 
-- [ ] **Step 4: Run GREEN and focused route/boundary regression**
+- [x] **Step 4: Run GREEN and focused route/boundary regression**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py tests/test_service_contracts.py -k 'workflow_shell or backtest_page or streamlit_backtest_entry or final_review_top_summary' -q`
 
@@ -6710,7 +6710,7 @@ Run: `.venv/bin/python -m py_compile app/web/backtest_page.py app/web/streamlit_
 
 Expected: selected tests pass and compile exits 0.
 
-- [ ] **Step 5: Commit the primary route cutover**
+- [x] **Step 5: Commit the primary route cutover**
 
 ```bash
 git add app/web/backtest_page.py app/web/streamlit_app.py tests/test_service_contracts.py
