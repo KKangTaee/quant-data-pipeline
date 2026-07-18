@@ -49,3 +49,22 @@ No implementation code or DB writes were performed during design investigation.
 - Added one explicit `13F ticker 연결 보강` action inside the existing SEC 13F expander, using the existing scheduling/progress/result flow.
 - Confirmed there is no API-key input or new run/row diagnostics panel in the UI source; runtime key lookup remains environment-only.
 - All five changed app modules passed `py_compile`, and `git diff --check` passed.
+
+## 2026-07-18 Anonymous Backfill And Real-DB Verification
+
+- Ran the curated 12-manager current-state enrichment without `OPENFIGI_API_KEY`.
+- Requested 1,244 distinct latest-accession identifiers in 10-item anonymous batches; wrote 1,244 resolution rows: 1,195 `mapped`, 49 `unmapped`, 0 `ambiguous`, 0 `error`.
+- Real loader coverage moved from Berkshire 19/29, Bridgewater 86/993, Duquesne 5/70 to Berkshire 29/29, Bridgewater 985/993, Duquesne 70/70. Mapped portfolio weights are now 99.9999%, 99.8952%, and 99.9999%, respectively.
+- Verified representative resolutions through the public loader: `632307104 -> NTRA`, `457669307 -> INSM`, `874039100 -> TSM`, and `N62509109 -> NAMS`.
+- Re-ran the same job with the default missing/error scope and confirmed idempotence: `status=success`, `symbols_requested=0`, `rows_written=0`, `details.api_key_used=false`.
+
+## 2026-07-18 Browser QA And Closeout Verification
+
+- Opened Institutional Portfolios in Streamlit and selected Duquesne Family Office.
+- Confirmed the context summary reports 70/70 ticker linkage and the full holdings list exposes mapped ticker badges for formerly unmapped examples.
+- Opened the NTRA holding detail and confirmed the stored price chart loads without a missing-symbol state.
+- Browser and embedded app widths had no horizontal overflow; browser console reported no errors.
+- Saved the generated QA screenshot as `institutional-13f-openfigi-mapping-qa.png`; it remains untracked by policy.
+- Focused suites passed: mapping/action 14/14, Institutional Portfolios 57/57, ingestion module split contracts 7/7.
+- Changed Python modules passed `py_compile`; `git diff --check` passed.
+- The broad service contract suite passed 805/806. The one failure is the pre-existing unrelated Sentiment React source contract (`OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness`); no sentiment files were changed in this task.

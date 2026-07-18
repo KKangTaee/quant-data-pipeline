@@ -97,6 +97,7 @@ external source
 | `finance/data/pit_universe.py` | Quality / Value strict family용 monthly equity universe snapshot build / UPSERT helper. DB price, statement shadow shares evidence, asset profile filter를 읽어 `equity_universe_snapshot` / `equity_universe_member`에 idempotent하게 저장한다 |
 | `finance/data/financial_statements.py` | EDGAR detailed statement filing/value/label 적재 |
 | `finance/data/institutional_13f.py` | SEC Form 13F official quarterly data set ZIP 파서 / 수집 경계. manager / filing / holding / CUSIP-symbol map row를 `finance_meta.institutional_13f_*`에 idempotent UPSERT한다 |
+| `finance/data/institutional_13f_mapping.py` | 저장된 selected-manager latest CUSIP/CINS를 OpenFIGI v3 US Equity로 batch 해석하고 current resolution을 조건부 UPSERT한다. normal UI render에서는 호출하지 않으며 anonymous 또는 optional `OPENFIGI_API_KEY`를 사용한다 |
 | `app/jobs/ingestion_jobs.py` / `app/jobs/ingestion/common.py` | Streamlit Ingestion 또는 approved action facade에서 실행되는 수집 job wrapper. `ingestion_jobs.py`는 provider / macro / lifecycle evidence / market intelligence collector 결과를 표준 `JobResult`로 변환하고, 경제 사이클 explicit vintage collection과 DB-only current materialization wrapper를 제공하며 unattended schedule에는 등록하지 않는다. selected-stock unified collector는 profile/완료-session inclusive price를 CIK 없이 실행한 뒤 SEC scope에만 identity equality를 요구한다. `common.py`는 symbol parsing, result normalization, progress event, execution profile, pipeline status helper를 소유한다 |
 | `app/services/overview/economic_cycle.py` | `economic_cycle_snapshot`과 최근 최대 60개월 replay history를 JSON-safe compact read model로 변환한다. DB의 더 긴 replay는 보존한다. 유효 확률과 publication status를 조합해 `VERIFIED/PROVISIONAL/UNAVAILABLE`를 만들며 provider fetch, fit, materialization, DB write를 하지 않는다 |
 | `app/jobs/overview_actions.py` | `Workspace > Overview`의 bounded refresh action facade. Overview UI 대신 승인된 market intelligence / futures / events / sentiment / quote-gap diagnostics job 호출과 run-history 기록을 맡는다. Market Context 개별주는 명시 `refresh_us_stock_data` action에서 profile/price를 먼저 canonical ingestion으로 보강하고, SEC statement scope가 있을 때만 selected-symbol/CIK identity를 확인한 뒤 재판정한다. partial success는 저장하고 다음 retry scope를 줄이며, missing CIK는 기존 분석을 ERROR로 덮지 않고 SEC collection gap으로만 둔다. Retained Nasdaq valuation repair facade도 보존한다. Market Movers `유니버스 기준 갱신`은 S&P 500 구성 목록, Nasdaq Symbol Directory, 또는 Top1000 / Top2000 liquidity universe materialize action으로 분기한다. 비-Daily EOD full-window 갱신 뒤에도 가격 row가 period threshold보다 짧으면 `limited_price_history` evidence를 저장하며, 다음 preflight는 현재 row 수가 부족한 동안 같은 full-window 수집을 반복 제안하지 않는다. Market Movers ticker-change repair action은 화면의 후보 alias를 `market_symbol_alias.status=active`로 저장하고, 다음 `일중 스냅샷 갱신`이 active alias를 quote lookup에 사용하게 한다. Market Context historical analog coverage gap은 같은 facade에서 기존 OHLCV collection job을 managed-safe profile로 호출해 `finance_price.nyse_price_history`를 보강한다. Market Movers SEC filing tab의 selected-symbol 재무제표 보강도 같은 facade에서 기존 Ingestion EDGAR statement refresh job으로 위임한다 |
@@ -121,7 +122,7 @@ external source
 | `finance/loaders/fundamentals.py` | broad fundamentals와 statement shadow fundamentals 조회 |
 | `finance/loaders/factors.py` | broad factors와 statement factor snapshot 조회 |
 | `finance/loaders/financial_statements.py` | statement filing metadata / values / labels / strict snapshot / timing audit 조회 |
-| `finance/loaders/institutional_13f.py` | institutional manager search, latest / previous filing, holdings, symbol / CUSIP reverse lookup, and report-period holder-count ranking read path. External fetch나 DB write를 하지 않는다 |
+| `finance/loaders/institutional_13f.py` | institutional manager search, latest / previous filing, holdings, symbol / CUSIP reverse lookup, and report-period holder-count ranking read path. OpenFIGI mapped/ambiguous current gate를 legacy CUSIP+issuer exact-name 단일 후보보다 먼저 적용하며 external fetch나 DB write를 하지 않는다 |
 | `finance/loaders/runtime_adapter.py` | runtime에서 쓰는 price strategy dict 생성 |
 
 ## 현재 중요한 구분
@@ -131,7 +132,7 @@ external source
 - Quality / Value strict family의 `PIT Monthly Snapshot Universe` 계약은 `equity_universe_snapshot` / `equity_universe_member`를 loader로 읽고, 각 rebalance date를 가장 가까운 이전 월말 snapshot membership에 매핑한다. 이는 현재 Top-N 고정보다 낫지만 official historical index membership은 아니다.
 - 가격 기반 ETF 전략은 price loader와 `BacktestEngine` warmup / slice 경로가 중심이다.
 - factor / fundamental 전략은 rebalance date 기준 snapshot payload가 핵심 계약이다.
-- Institutional 13F는 `period_of_report`와 `filing_date` / SEC acceptance timing을 구분해야 한다. 화면의 신규 / 증가 / 감소 / 전량 매도 후보는 보고된 두 분기 filing 비교이며 실시간 매수 / 매도나 trading intent가 아니다. CUSIP-symbol mapping은 best-effort 보조 mapping으로 남긴다.
+- Institutional 13F는 `period_of_report`와 `filing_date` / SEC acceptance timing을 구분해야 한다. 화면의 신규 / 증가 / 감소 / 전량 매도 후보는 보고된 두 분기 filing 비교이며 실시간 매수 / 매도나 trading intent가 아니다. Ticker enrichment는 OpenFIGI current identity와 legacy exact-name fallback을 사용하지만 historical PIT security master는 아니다.
 - Practical Validation provider connector는 UI에서 외부 provider를 직접 호출하지 않고,
   `finance/data/*` ingestion이 저장한 snapshot을 `finance/loaders/provider.py`로 읽는다.
   P2-5A부터 `Workspace > Ingestion > Practical Validation 검증 데이터 보강`에서

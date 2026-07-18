@@ -9730,5 +9730,5 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 - User request: `ticker 연결 전`이 많은 원인이 data인지 개발인지 확인한 뒤, 무료 API라면 안전한 CUSIP-ticker 연결 개발을 진행해 달라고 요청함.
 - Interpreted goal: SEC holding은 보존하면서 verified external identity source로 chart/price/sector 연결률을 높이고 복수 후보와 provider error는 계속 차단해야 함.
-- Analysis result: OpenFIGI v3는 anonymous와 free key 모두 무료다. Actual Duquesne 68 distinct CUSIP/CINS는 US Equity filter에서 모두 one-ticker result였지만 legacy name-match table에는 CUSIP-only stale/wrong 후보가 있어 source 분리가 필요하다.
-- Follow-up: provider adapter, canonical resolution, safe loader precedence, curated-manager backfill, actual DB/UI QA의 1차~4차 설계를 승인했다. Written spec review 후 TDD 계획으로 전환한다.
+- Analysis result: OpenFIGI v3는 anonymous와 free key 모두 무료다. Legacy name-match table에는 CUSIP-only stale/wrong 후보가 있어 provider current resolution을 분리하고 `mapped/ambiguous gate > legacy exact issuer-name > unresolved` 순서로 읽어야 한다.
+- Follow-up: 전체 roadmap `4/4`를 완료했다. Actual anonymous curated backfill은 1,244개 중 1,195 mapped / 49 unmapped / 0 ambiguous / 0 error이며, Berkshire 29/29, Bridgewater 985/993, Duquesne 70/70과 대표 종목 상세 Browser QA를 확인했다. Full latest-manager expansion과 historical PIT identity는 후속 승인 범위다.

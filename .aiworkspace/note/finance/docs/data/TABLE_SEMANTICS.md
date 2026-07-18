@@ -263,7 +263,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - generic company IR official parser는 아직 없다. 공식 source가 필요한 ticker는 후속 symbol-specific parser나 manual verification이 필요하다.
 - `raw_payload_json`은 UI 표시용 source of truth가 아니라 diagnostics와 후속 collector 개선을 위한 compact evidence다.
 
-## `institutional_13f_manager`, `institutional_13f_filing`, `institutional_13f_holding`, `institutional_13f_cusip_symbol_map`, `institutional_13f_manager_watchlist`, `institutional_13f_refresh_status`
+## `institutional_13f_manager`, `institutional_13f_filing`, `institutional_13f_holding`, `institutional_13f_cusip_symbol_map`, `institutional_13f_identifier_resolution`, `institutional_13f_manager_watchlist`, `institutional_13f_refresh_status`
 
 역할:
 
@@ -272,6 +272,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - `institutional_13f_filing`은 accession, report period, filing date, amendment flag, source data set, source link를 저장한다.
 - `institutional_13f_holding`은 13F information table row를 저장한다.
 - `institutional_13f_cusip_symbol_map`은 CUSIP 기반 display symbol 보조 mapping을 저장한다. 완전한 security master가 아니므로 service read model은 ambiguous mapping을 차트 / 가격 성과용 ticker로 쓰지 않는다.
+- `institutional_13f_identifier_resolution`은 `(identifier_value, source)`당 OpenFIGI v3 current 판정 하나를 저장한다. `resolution_status`는 mapped / ambiguous / unmapped, `last_attempt_status`는 success / error를 뜻하며 `symbol`, provider name, composite FIGI, compact candidates, source reference와 시각을 함께 보존한다.
 - `institutional_13f_manager_watchlist`는 Berkshire Hathaway, Pershing Square, Appaloosa, Baupost, Duquesne 같은 화면 rail seed metadata와 투자자 alias 검색 metadata를 저장할 수 있다. 저장 row가 없으면 service seed watchlist를 fallback으로 사용한다.
 - `institutional_13f_refresh_status`는 마지막 SEC dataset 수집 결과, 최신 보고분기 / filing date, row counts, stale reason을 저장한다.
 
@@ -279,6 +280,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - official SEC Form 13F quarterly data set에서 온 filing / holdings ledger다.
 - 반복 수집은 source dataset / accession / CUSIP / row identity 기준 UPSERT로 idempotent하게 동작한다.
+- OpenFIGI 보강은 selected latest-filing identifier를 중복 제거해 명시적 Ingestion action에서만 호출한다. 정상 응답은 current 판정을 교체하지만 transport/provider error UPSERT는 이전 정상 resolution fields를 유지하고 시도 오류와 시각만 갱신한다.
+- loader precedence는 OpenFIGI mapped/ambiguous gate가 먼저다. mapped는 provider ticker를 사용하고 ambiguous는 ticker를 차단한다. provider가 unmapped/error-only/no-row일 때만 grouped legacy map의 CUSIP+issuer exact-name 단일 symbol을 사용하며 CUSIP-only 후보는 승격하지 않는다.
 - 화면은 최신 filing과 직전 filing을 비교해 신규 보고, 증가, 감소, 전량 매도 후보를 만든다.
 - sector / industry exposure는 row에 있는 field 또는 CUSIP-symbol mapping / conservative asset profile name-match enrichment를 사용하며, 없으면 `Unmapped`로 표시한다.
 - refresh status는 product freshness metadata이며 full source row를 대체하지 않는다.
@@ -290,6 +293,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - amendment, confidential treatment, filer error, SEC extraction issue가 있을 수 있으므로 원문 filing / source link를 함께 확인해야 한다.
 - `period_of_report`와 `filing_date` / SEC acceptance timing을 구분해야 하며, backtest에 쓰려면 filing availability 기준 PIT 처리가 별도로 필요하다.
 - CUSIP-symbol mapping은 완전한 security master가 아니며 ticker change, share class, ADR, delisting, CUSIP reuse / change를 완전히 해결하지 않는다.
+- OpenFIGI resolution은 latest research surface를 위한 current identity이며 historical report date의 ticker를 point-in-time으로 복원하지 않는다. Backtest rebalance identity나 survivorship proof로 사용하지 않는다.
 - asset profile name-match enrichment는 issuer name이 고유하게 매칭될 때만 보수적으로 저장하는 display helper다. 충돌하거나 불명확한 회사명은 mapping하지 않는다.
 - 이 table의 reported change는 추천, 매수 / 매도 신호, Practical Validation PASS / BLOCKER, Final Review selection, monitoring signal, broker order, auto rebalance를 만들지 않는다.
 

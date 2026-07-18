@@ -47,3 +47,23 @@
 - all stored holdings: about 33,654 distinct identifiers.
 
 V1 initial backfill is curated managers. Full-universe expansion uses the same path after V1 correctness and provider pacing are verified.
+
+## Implemented Contract
+
+- `institutional_13f_identifier_resolution` is a current-state provider table separate from the legacy map.
+- Incoming provider errors preserve the previous normal resolution while updating attempt evidence.
+- Loader order is OpenFIGI mapped/ambiguous gate, grouped legacy exact issuer-name single symbol, then unresolved/service curated fallback.
+- Reverse lookup unions provider mappings before legacy rows and deduplicates CUSIPs.
+- Normal Institutional Portfolios render is DB-only; provider access occurs only through the explicit Ingestion action.
+
+## Actual Backfill And Coverage
+
+- curated managers: 12.
+- identifiers requested/written: 1,244 / 1,244.
+- result: 1,195 mapped, 49 unmapped, 0 ambiguous, 0 errors.
+- API key: not used.
+- Berkshire: 19/29 → 29/29 mapped, 98.6072% → 99.9999% mapped weight.
+- Bridgewater: 86/993 → 985/993 mapped, 21.0227% → 99.8952% mapped weight.
+- Duquesne: 5/70 → 70/70 mapped, 6.6579% → 99.9999% mapped weight.
+- representative accepted mappings: NTRA, INSM, TSM, NAMS.
+- prior unsafe legacy candidates are now owned by provider decisions: `58733R102→MELI`, `74743L100→Q`, `46137V357→RSP`.

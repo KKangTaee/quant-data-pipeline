@@ -9,12 +9,20 @@ Last Verified: 2026-07-18
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-13f-openfigi-mapping-v1-20260718/`다.
+
+- 목적: SEC 13F의 CUSIP/CINS만 있고 ticker가 없는 보유 row를 무료 OpenFIGI v3의 단일 US Equity identity로 안전하게 보강한다.
+- 완료: 전체 roadmap `4/4`. resolver, current-state persistence, provider mapped/ambiguous gate, legacy exact-name fallback, explicit Ingestion action, curated 12-manager backfill과 actual Browser QA를 닫았다.
+- actual 상태: 1,244 identifier 중 1,195 mapped, 49 unmapped, 0 ambiguous/error다. Berkshire `19→29/29`, Bridgewater `86→985/993`, Duquesne `5→70/70`이며 Duquesne mapped weight는 `6.6579%→99.9999%`다.
+- 품질 경계: normal UI render는 provider를 호출하지 않는다. API key는 선택 사항인 `OPENFIGI_API_KEY` 환경변수만 사용하며, provider 오류는 이전 정상 resolution을 지우지 않는다.
+- 잔여 dependency: current curated scope 밖의 latest-manager 약 31k identifier 확장, historical point-in-time ticker lifecycle, 49 no-match 검토는 별도 승인 범위다.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/`다.
 
 - 목적: `Workspace > Institutional Portfolios`를 Overview 시장 맥락과 같은 결론-근거-세부 흐름으로 바꾸고, silent 80-row truncation과 직접 종목 검색 부재를 해소한다.
 - 완료: 전체 roadmap `4/4`. `institutional_portfolios_workbench_v2` context hero, separated coverage, comparison gate, 50-row full holdings explorer, ticker / issuer / CUSIP 검색, mapped / unresolved security flow를 완료했다.
 - actual 상태: Berkshire `29/29`, Bridgewater `993/993`, Duquesne `70/70` total/explorer row 일치. Bridgewater 20-page 탐색과 desktop / 420px Browser QA를 확인했다.
-- 잔여 dependency: historical previous filing backfill과 verified security master / identifier mapping은 별도 승인 범위다.
+- 잔여 dependency: historical previous filing backfill은 별도 승인 범위다. Current latest-filing identifier mapping은 후속 OpenFIGI task에서 완료됐다.
 
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/`다.
 
@@ -131,6 +139,13 @@ Previous completed Nasdaq coverage task는 `.aiworkspace/note/finance/tasks/acti
 Earlier completed task는 `.aiworkspace/note/finance/tasks/active/final-review-evidence-closure-contract-v1-20260712/`다.
 
 ### Recent Completed Institutional Portfolios Track
+
+#### Institutional 13F OpenFIGI Mapping V1 — Complete (2026-07-18)
+
+- 목적: `ticker 연결 전` row의 issuer/CUSIP 원본을 보존하면서 차트·가격·sector 탐색에 쓸 current ticker identity coverage를 안전하게 높였다.
+- 주요 변경: `finance/data/institutional_13f_mapping.py`, `institutional_13f_identifier_resolution`, optional free key / anonymous batching, error-preserving UPSERT, `OpenFIGI mapped/ambiguous > legacy exact issuer-name > unresolved` loader precedence, 기존 SEC 13F expander의 `13F ticker 연결 보강` action을 추가했다.
+- actual: curated 12-manager latest scope 1,244개를 무료 anonymous로 처리해 1,195 mapped / 49 unmapped / 0 ambiguous / 0 error를 저장했다. Duquesne는 70/70 ticker 연결과 NTRA·INSM·TSM·NAMS provider source를 확인했다.
+- 이번 차수에서 하지 않은 일: all-latest-manager 31k backfill, historical PIT identity lifecycle, licensed security master, 추천 / 매수·매도 / broker action, run/job/row 진단 패널.
 
 Recent completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/`다.
 

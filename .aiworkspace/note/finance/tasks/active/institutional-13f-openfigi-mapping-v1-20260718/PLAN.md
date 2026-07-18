@@ -1,6 +1,6 @@
 # Institutional 13F OpenFIGI Mapping V1 Plan
 
-Status: Design Approved
+Status: Complete
 Started: 2026-07-18
 
 ## 이걸 하는 이유?
@@ -16,27 +16,27 @@ SEC Form 13F 보유 row는 issuer와 CUSIP/CINS를 제공하지만 거래 ticker
 - 목적: CUSIP/CINS를 무료 OpenFIGI v3에 batch 요청하고 응답을 결정적으로 분류한다.
 - 예상 파일: `finance/data/institutional_13f_mapping.py`, focused tests.
 - 완료 조건: `ID_CUSIP`/`ID_CINS`, US Equity filter, optional free API key, rate-limit/retry, mapped/ambiguous/unmapped/error 분류가 테스트된다.
-- 상태: 설계 승인. 구현 대기.
+- 상태: 완료. pure resolver 5개 계약 테스트로 identifier type, US Equity filter, batching, bounded retry, rate-reset pacing을 고정했다.
 
 ### 2차: 영속화와 안전한 source precedence
 
 - 목적: OpenFIGI 결과와 시도 상태를 idempotent하게 저장하고 legacy 이름 추정 후보가 verified result를 덮지 못하게 한다.
 - 예상 파일: `finance/data/db/schema.py`, `finance/data/institutional_13f_mapping.py`, `finance/loaders/institutional_13f.py`.
 - 완료 조건: current provider resolution과 attempt evidence가 재실행에 안전하며 loader가 `OpenFIGI mapped/ambiguous gate > legacy exact-name > unresolved` 순서로 읽는다.
-- 상태: 설계 승인. 구현 대기.
+- 상태: 완료. current resolution schema, error-preserving UPSERT, safe loader precedence와 reverse lookup을 구현했다.
 
 ### 3차: 기존 최신 포트폴리오 backfill과 수집 연결
 
 - 목적: curated manager 최신 holdings부터 무료 batch backfill하고 이후 동일 경로를 반복 실행할 수 있게 한다.
 - 예상 파일: `finance/data/institutional_13f.py`, `app/jobs/ingestion_jobs.py`, 관련 ingestion registry/guides 중 필요한 최소 범위.
 - 완료 조건: 무료 키 없이도 bounded batch가 동작하고, `OPENFIGI_API_KEY`가 있으면 더 큰 공식 한도를 사용한다. 동일 CUSIP을 중복 호출하지 않는다.
-- 상태: 설계 승인. 구현 대기.
+- 상태: 완료. 기존 SEC 13F expander의 explicit action과 curated 12-manager actual backfill 1,244개를 완료했다.
 
 ### 4차: 실제 DB/UI QA와 문서 closeout
 
 - 목적: Duquesne와 주요 manager의 mapping count/value coverage가 실제로 개선되고 기존 unresolved/ambiguous guardrail이 유지되는지 확인한다.
 - 완료 조건: focused/full tests, compile/diff check, actual DB backfill, Institutional Portfolios Browser QA 및 screenshot, durable docs alignment를 완료한다.
-- 상태: 설계 승인. 구현 대기.
+- 상태: 완료. focused regression, compile/diff, actual DB assertions, desktop Browser QA와 screenshot, durable docs를 닫았다.
 
 ## 이번 작업에서 하지 않는 일
 

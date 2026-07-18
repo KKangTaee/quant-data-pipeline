@@ -6391,9 +6391,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - manager 검색 0건은 live context를 보존하며, lowercase/mixed-case query 완료 상태와 unresolved overview 이동을 회귀 테스트로 고정했다.
 - Python 51 tests, Vitest 5 tests, strict typecheck, production build, exact base-to-head diff check와 actual Browser QA를 완료했다. 상세는 동일 active task `RUNS.md`를 본다.
 
-## 2026-07-18 - Institutional 13F OpenFIGI Mapping V1 설계
+## 2026-07-18 - Institutional 13F OpenFIGI Mapping V1 완료
 
-- OpenFIGI v3 무료 anonymous/optional free-key 경계와 current Duquesne actual 68 identifier probe를 확인했다.
-- provider current resolution을 legacy name-match table과 분리하고, US Equity 단일 identity만 loader가 우선 사용하는 1차~4차 설계를 승인했다.
-- 상세 evidence, persistence/source precedence, backfill/QA 계약은 `tasks/active/institutional-13f-openfigi-mapping-v1-20260718/`를 본다.
-- 현재 0/4차이며 written spec review 후 TDD implementation plan으로 이어진다.
+- `tasks/active/institutional-13f-openfigi-mapping-v1-20260718/`의 전체 roadmap `4/4`를 완료했다.
+- 무료 OpenFIGI v3 resolver, current resolution table, error-preserving UPSERT, safe loader precedence와 기존 SEC 13F expander의 explicit mapping action을 구현했다.
+- Actual anonymous curated backfill은 1,244개 중 1,195 mapped / 49 unmapped / 0 ambiguous / 0 error다. Berkshire 29/29, Bridgewater 985/993, Duquesne 70/70 mapping coverage와 Browser QA를 확인했다.
+- all-latest-manager 약 31k 확장, 49 no-match 검토, historical PIT identity lifecycle은 후속 승인 범위다.
