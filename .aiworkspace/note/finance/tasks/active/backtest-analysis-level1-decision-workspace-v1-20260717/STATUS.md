@@ -1,6 +1,6 @@
 # Status
 
-Status: 11차 Result Interpretation Polish Plan Ready — Execution Choice Pending
+Status: 11차 Result Interpretation And Schedule Polish Complete
 Last Updated: 2026-07-18
 
 ## Current Position
@@ -55,7 +55,7 @@ Last Updated: 2026-07-18
 - [x] 11차 written design 작성과 self-review
 - [x] 11차 written design 사용자 review
 - [x] 11차 implementation plan
-- [ ] 11차 RED -> GREEN implementation / Browser QA / closeout
+- [x] 11차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -173,9 +173,19 @@ Last Updated: 2026-07-18
 ## Current 11차 Position
 
 - 10차 결과 화면의 information hierarchy와 stage ownership은 유지한다.
-- chart는 달러 입력 없이 normalized 100과 누적 수익률 관계를 설명하고 실제 날짜, hover,
-  Benchmark identity를 추가한다.
-- holdings는 latest signal과 last rebalance를 분리하고 explicit cadence가 있을 때만 다음 예상
-  rebalance window를 표시한다.
-- raw technical appendix는 사용자용 `계산 및 데이터 기준`과 secondary 원본 disclosure로 분리한다.
-- written design review 뒤 Task 31 이후 implementation plan을 작성한다.
+- chart는 달러 입력 없이 normalized 100과 누적 수익률 관계를 설명하고 실제 날짜, pointer
+  tooltip/crosshair, 사용자용 Benchmark identity를 제공한다.
+- holdings는 현재 평가일, latest signal, last rebalance, cadence와 다음 예상 window를 분리하며
+  explicit cadence가 없으면 일정을 만들지 않는다.
+- raw technical appendix는 사용자용 `계산 기준 / 데이터 기준 / 결과 추적`과 secondary 원본
+  disclosure로 분리했다.
+- desktop / 760px에서 hover, 실제 날짜 tick, schedule layout, disclosure, overflow 0을 확인했다.
+
+## 11차 Completion
+
+- chart truth: `50565333 Backtest Analysis 차트 해석 계약 보강`
+- schedule / appendix truth: `1f15c4e3 Backtest Analysis 리밸런싱과 계산 근거 정리`
+- React / fallback UI: `e90ff8a2 Backtest Analysis 결과 상호작용 UI 보강`
+- Browser QA correction: `40032955 Backtest Analysis 차트 hover 캡처 보강`
+- fresh focused result / decision / boundary는 `92 passed`; 전체 service는 기존 baseline과 같은
+  `821 passed / 12 failed / 35 subtests passed`이며 신규 Level1 failure는 0이다.

@@ -290,3 +290,17 @@ generated artifact이므로 commit하지 않는다.
   Task 34는 Browser QA/verification/docs closeout을 소유한다.
 - no-dollar, no-chart-dependency, no-exact-trading-date, Python-owned semantics와 protected path
   constraints를 모든 task에 공통 적용한다.
+
+## 2026-07-18 11차 Implementation And Runtime Decisions
+
+- strategy와 Benchmark를 union timeline에 정렬하되 Benchmark가 없는 날짜에 값을 만들지 않는다.
+  desktop 6개 / compact 3개 실제 날짜 tick과 pointer 위치별 지수·누적수익 label은 Python이 제공한다.
+- runtime metadata의 `ticker` / `equal_weight` contract는 각각 `대표 ETF 비교` / `후보군 동일 비중
+  비교`로 번역해 내부 코드가 첫 화면에 노출되지 않게 했다.
+- holdings 일정은 현재 평가일, 최신 신호일, 마지막 리밸런싱, cadence, 다음 월말 예상으로 분리했다.
+  cadence가 없으면 `다음 일정 확인 필요`로 남기며 exact trading date를 추측하지 않는다.
+- Browser QA에서 SVG 빈 영역은 point/path 밖에서 hover를 받지 않는 것을 찾아 transparent pointer
+  capture rect를 추가했다. 실제 hover에서 crosshair와 `2021-01-29 / 전략 +72.2% / SPY +91.0%`
+  tooltip이 나타나고 차트 밖에서는 사라지는 것을 확인했다.
+- `계산 및 데이터 기준`은 계산 기준, 데이터 기준, 결과 추적 세 section을 먼저 보여주고 원본
+  field/meta는 별도 disclosure에 유지한다. keyboard disclosure와 ResizeObserver 높이 동기화를 확인했다.

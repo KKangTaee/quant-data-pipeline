@@ -9701,3 +9701,14 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up: 모든 named preset에 schema base profile을 제공하고 근거가 있는 GTAA 값만
   override했다. React/fallback이 같은 Python profile을 적용하며 actual 4개 전략군에서 reset과
   desktop/760px layout을 확인했다.
+
+### 2026-07-18 - Level1 결과는 수익률·기준·리밸런싱 시점을 같은 언어로 설명한다
+
+- User request: 결과 chart의 실제 날짜와 hover, Benchmark 이름, 현재/목표 구성의 리밸런싱
+  시점, 이해하기 어려운 기술 부록을 개선하되 달러 투자금 control은 만들지 말아 달라고 요청함.
+- Interpreted goal: normalized 수익률만으로 성과를 읽고, 평가일·신호일·리밸런싱·다음 예상과
+  계산/데이터 근거를 Level1에서 오해 없이 확인해야 함.
+- Analysis result: chart는 index/return 관계와 Benchmark contract가 빠졌고 schedule은 여러 날짜를
+  한 의미로 보였으며 raw metadata가 첫 disclosure를 차지했다.
+- Follow-up: Python-owned chart/schedule/basis와 pointer-only React/fallback을 구현하고 actual
+  Equal Weight desktop/760px hover·overflow·disclosure QA를 완료했다.

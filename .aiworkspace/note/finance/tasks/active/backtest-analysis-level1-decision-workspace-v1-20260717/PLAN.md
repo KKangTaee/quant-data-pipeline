@@ -2560,7 +2560,7 @@ git commit -m "Backtest Analysis 전체 전략 React 설정 QA와 문서 동기�
 - Consumes: `_curve_rows()`, `_normalize_curve()`, `_date_label()`, `result_bundle["meta"]`.
 - Produces: `_select_date_ticks(dates: Sequence[str], *, limit: int)`, `_benchmark_identity(meta, *, available)`, expanded `_chart_projection(bundle)` with common timeline, ticks, hover rows and Benchmark identity.
 
-- [ ] **Step 1: Write chart interpretation RED tests**
+- [x] **Step 1: Write chart interpretation RED tests**
 
 Append:
 
@@ -2612,7 +2612,7 @@ def test_sparse_benchmark_keeps_timeline_positions_without_fake_values() -> None
     ]
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -2622,7 +2622,7 @@ uv run --with pytest python -m pytest \
 
 Expected: missing `normalized_base`, `timeline_dates`, `hover_rows` or current common-date filtering 때문에 fail.
 
-- [ ] **Step 3: Implement common timeline/display helpers**
+- [x] **Step 3: Implement common timeline/display helpers**
 
 Add before `_chart_projection`:
 
@@ -2730,7 +2730,7 @@ Return:
         "hover_rows": hover_rows,
 ```
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -2754,7 +2754,7 @@ git commit -m "Backtest Analysis 차트 해석 계약 보강"
 - Consumes: sorted `result_df`, target row, `rebalance_interval/interval/rebalance_freq`, lifecycle and configuration fingerprint.
 - Produces: `_rebalance_schedule()`, `holdings.schedule`, and `technical_appendix.sections/raw`.
 
-- [ ] **Step 1: Write schedule/appendix RED tests**
+- [x] **Step 1: Write schedule/appendix RED tests**
 
 ```python
 def test_holdings_schedule_separates_signal_rebalance_and_next_window() -> None:
@@ -2817,7 +2817,7 @@ def test_calculation_and_data_basis_hides_raw_keys_from_first_layer() -> None:
     assert "unknown_provider_payload" in appendix["raw"]["meta"]
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -2828,7 +2828,7 @@ uv run --with pytest python -m pytest \
 
 Expected: `holdings.schedule`, `technical_appendix.sections/raw` missing으로 fail.
 
-- [ ] **Step 3: Implement cadence and next window**
+- [x] **Step 3: Implement cadence and next window**
 
 ```python
 def _cadence_months(meta: Mapping[str, Any]) -> int | None:
@@ -2886,7 +2886,7 @@ def _rebalance_schedule(
 
 Attach `schedule` to the primary holdings projection, including cash-only/unavailable states.
 
-- [ ] **Step 4: Implement user basis plus raw trace**
+- [x] **Step 4: Implement user basis plus raw trace**
 
 Change `_technical_appendix` to accept lifecycle/fingerprint and return:
 
@@ -2936,7 +2936,7 @@ Update builder call:
 ),
 ```
 
-- [ ] **Step 5: Run GREEN and commit**
+- [x] **Step 5: Run GREEN and commit**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -2966,7 +2966,7 @@ git commit -m "Backtest Analysis 리밸런싱과 계산 근거 정리"
 - Consumes: Task 31 chart timeline/ticks/hover/Benchmark and Task 32 schedule/appendix sections.
 - Produces: pointer-only SVG, responsive schedule strip, calculation/data basis disclosure and fallback parity.
 
-- [ ] **Step 1: Write React/fallback RED boundary contract**
+- [x] **Step 1: Write React/fallback RED boundary contract**
 
 Extend test_level1_result_workspace_is_dedicated_intent_only_and_responsive:
 
@@ -2992,7 +2992,7 @@ Extend test_level1_result_workspace_is_dedicated_intent_only_and_responsive:
         self.assertIn("next_window_label", fallback)
 ~~~
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ~~~bash
 uv run --with pytest python -m pytest \
@@ -3001,7 +3001,7 @@ uv run --with pytest python -m pytest \
 
 Expected: new types, pointer events, schedule and disclosure labels absent로 fail.
 
-- [ ] **Step 3: Expand exact TypeScript types**
+- [x] **Step 3: Expand exact TypeScript types**
 
 Add DateTick, HoverRow, BasisRow:
 
@@ -3028,7 +3028,7 @@ type BasisRow = {
 
 Expand chart with normalized_base, normalized_explanation, strategy_label, Benchmark identity, timeline_dates, both x tick arrays and hover_rows. Add holdings.schedule with valuation/signal/rebalance/cadence/next-window fields. Replace technical_appendix with three typed sections and raw row/column/meta trace.
 
-- [ ] **Step 4: Implement pointer-only SVG**
+- [x] **Step 4: Implement pointer-only SVG**
 
 Use common timeline for every series:
 
@@ -3060,7 +3060,7 @@ const hovered =
 
 Change pathFor to xForDate(point.date). Attach onPointerMove and onPointerLeave to SVG. Render actual legend labels and desktop/compact tick groups. While hovered exists, render bt1r-crosshair and bt1r-chart-tooltip using only Python-provided labels. React must not divide by 100 or infer Benchmark identity.
 
-- [ ] **Step 5: Render schedule and calculation/data basis**
+- [x] **Step 5: Render schedule and calculation/data basis**
 
 Before holdings cards:
 
@@ -3103,7 +3103,7 @@ Replace raw-first appendix:
 
 Mirror the same labels/order in Python fallback. Use one Streamlit expander and a plain raw subheading/code block; do not nest Streamlit expanders.
 
-- [ ] **Step 6: Add responsive CSS and run GREEN/build**
+- [x] **Step 6: Add responsive CSS and run GREEN/build**
 
 Add crosshair, tooltip, desktop/compact ticks, schedule strip, basis grid and raw disclosure selectors. Desktop shows desktop ticks and five schedule columns. At max-width 760px, show compact ticks, contain tooltip and make schedule/basis one column.
 
@@ -3123,7 +3123,7 @@ git diff --check
 
 Expected: focused suites/build/compile/diff-check pass.
 
-- [ ] **Step 7: Commit Task 33**
+- [x] **Step 7: Commit Task 33**
 
 ~~~bash
 git add \
@@ -3153,7 +3153,7 @@ git commit -m "Backtest Analysis 결과 상호작용 UI 보강"
 - Consumes: Task 31~33 read model and renderer.
 - Produces: actual interaction evidence, fresh verification, canonical docs and protected-path audit.
 
-- [ ] **Step 1: Run desktop Browser QA**
+- [x] **Step 1: Run desktop Browser QA**
 
 1. Run Equal Weight and confirm real X dates, normalized explanation and actual Benchmark label.
 2. Move pointer across start/middle/end; tooltip/crosshair appear only inside SVG.
@@ -3165,11 +3165,11 @@ git commit -m "Backtest Analysis 결과 상호작용 UI 보강"
 
 Capture desktop screenshot and never stage it.
 
-- [ ] **Step 2: Run 760px Browser QA**
+- [x] **Step 2: Run 760px Browser QA**
 
 Confirm compact X-axis has at most 3 dates, tooltip remains inside chart, schedule/basis cards are one column, raw/table internal scroll does not expand the page, disclosure height sync works, and outer/component horizontal overflow is 0. Capture screenshot and never stage it.
 
-- [ ] **Step 3: Run verification-before-completion**
+- [x] **Step 3: Run verification-before-completion**
 
 ~~~bash
 uv run --with pytest python -m pytest tests/test_backtest_analysis_result_workspace.py -q
@@ -3190,7 +3190,7 @@ git diff --check
 
 Record exact counts/module counts/results and baseline failures without describing them as new passes.
 
-- [ ] **Step 4: Sync finance docs and audit protected paths**
+- [x] **Step 4: Sync finance docs and audit protected paths**
 
 Document date/hover, Benchmark identity, schedule semantics, no-dollar decision and calculation/data basis. Update active task/root logs.
 
@@ -3208,7 +3208,7 @@ if git diff --cached --name-only | rg -q \
 fi
 ~~~
 
-- [ ] **Step 5: Commit Task 34**
+- [x] **Step 5: Commit Task 34**
 
 ~~~bash
 git commit -m "Backtest Analysis 결과 해석 보정 QA와 문서 동기화"

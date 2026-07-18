@@ -430,3 +430,46 @@
 - Result React production build: Vite 5.4.21, `176 modules transformed`, 성공.
 - target 12-module `py_compile`: exit 0, output 없음.
 - pre-stage `git diff --check`: exit 0, output 없음.
+
+## 2026-07-18 11차 Task 31~33 RED -> GREEN
+
+- Task 31 chart contract RED `2 failed` 뒤 union timeline, actual date ticks, normalized return,
+  Benchmark identity와 sparse observation을 구현해 result workspace `12 passed`를 확인했다.
+  commit `50565333 Backtest Analysis 차트 해석 계약 보강`.
+- Task 32 schedule/appendix RED `3 failed` 뒤 평가일·신호일·리밸런싱·cadence·next window와
+  user basis/raw trace를 구현해 result workspace `15 passed`를 확인했다.
+  commit `1f15c4e3 Backtest Analysis 리밸런싱과 계산 근거 정리`.
+- Task 33 React/fallback boundary RED 뒤 pointer SVG, responsive tick/schedule, user appendix를
+  구현했다. result+boundary `61 passed`; Result React build `176 modules transformed`.
+  commit `e90ff8a2 Backtest Analysis 결과 상호작용 UI 보강`.
+
+## 2026-07-18 11차 Task 34 Browser QA
+
+- actual read-only Equal Weight 결과로 normalized `100 -> 313.4 / +213.4%`, 실제 desktop 6 tick,
+  compact 3 tick, `S&P 500 (SPY) / 대표 ETF 비교`를 확인했다.
+- Browser에서 chart blank area hover가 빠지는 회귀와 raw `ticker` label을 찾아 RED 2건 뒤 수정했다.
+  targeted `2 passed`, result+boundary `61 passed`, Result build `176 modules transformed`.
+  commit `40032955 Backtest Analysis 차트 hover 캡처 보강`.
+- 실제 hover는 crosshair/tooltip 1개를 만들고 `2021-01-29`, Equal Weight `172.2 · +72.2%`,
+  SPY `191.0 · +91.0%`를 표시했으며 pointer가 차트 밖으로 나가면 둘 다 0으로 돌아갔다.
+- desktop은 6 tick / 5-column schedule, 760px은 3 tick / 1-column schedule, 두 viewport 모두
+  outer/component horizontal overflow 0을 확인했다.
+- appendix keyboard open 시 `계산 기준 / 데이터 기준 / 결과 추적`을 확인했고 raw disclosure는
+  secondary closed 상태를 유지했다. current QA page console error는 0이었다.
+- screenshots generated / unstaged:
+  `backtest-analysis-level1-result-interpretation-desktop-qa.png`,
+  `backtest-analysis-level1-result-interpretation-760-qa.png`.
+
+## 2026-07-18 11차 Task 34 Fresh Verification
+
+- result workspace: `15 passed, 3 warnings`.
+- Level1 decision workspace: `31 passed, 3 warnings`.
+- refactor boundary / visual contract: `46 passed, 3 warnings`.
+- focused total: `92 passed`; warning은 기존 edgar deprecation이다.
+- full service contracts: `821 passed, 12 failed, 35 subtests passed, 3 warnings`.
+  12 failures는 Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6 baseline이며
+  신규 Level1 failure는 0이다.
+- Decision React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+- Result React production build: Vite 5.4.21, `176 modules transformed`, 성공.
+- target 6-module `py_compile`: exit 0, output 없음.
+- pre-doc `git diff --check`: exit 0, output 없음.

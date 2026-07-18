@@ -6382,3 +6382,12 @@ Detailed historical logs were archived on `2026-04-13`.
   적용한다. actual GTAA/Equal Weight/GRS/Quality+Value desktop·760px QA를 완료했다.
 - focused 134 tests, React build, target py_compile, diff-check를 통과했다. 기존 service 11 failures와
   protected JSONL, `.superpowers/`, generated screenshots는 closeout 범위에서 제외한다.
+
+## 2026-07-18 - Backtest Analysis Result Interpretation Polish Closeout
+
+- Level1 normalized chart에 실제 날짜, pointer tooltip/crosshair, 사용자용 Benchmark identity를
+  추가하고 현재 평가·신호·리밸런싱·cadence·다음 예상 window를 분리했다.
+- 기술 부록은 계산 기준 / 데이터 기준 / 결과 추적을 먼저 보여주고 raw field를 secondary로 낮췄다.
+- focused 92 tests, 두 React production build, target compile, desktop/760px Browser QA를 완료했다.
+  상세 commit/QA/risk는 active task `RUNS.md`, `RISKS.md`를 본다.
+- protected JSONL, `.superpowers/`, generated screenshots는 closeout commit에서 제외한다.
