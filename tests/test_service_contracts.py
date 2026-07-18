@@ -8277,7 +8277,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('data-horizon="20D"', pattern_map)
         self.assertIn("20D 전", pattern_map)
         self.assertIn("5D 전", pattern_map)
-        self.assertIn("현재 ·", pattern_map)
+        self.assertIn('textAnchor="end">현재</text>', pattern_map)
         self.assertIn("if (path.length <= daysAgo)", pattern_map)
         self.assertIn("ConditionalPathPayload", root)
         self.assertIn("fm-pattern-map__conditional-path", pattern_map)
@@ -8305,6 +8305,22 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("일 후 도착 범위", pattern_map)
         self.assertNotIn("유사 패턴 중앙 위치", pattern_map)
         self.assertIn("실제 미래 경로를 보장하지 않습니다", pattern_map)
+
+    def test_futures_macro_pattern_map_uses_fixed_midline_direction_markers(self) -> None:
+        source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")
+        pattern_map = (source_root / "PatternMapSection.tsx").read_text(encoding="utf-8")
+        style = (source_root / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("function directionSegment", pattern_map)
+        self.assertGreaterEqual(pattern_map.count('markerUnits="userSpaceOnUse"'), 2)
+        self.assertGreaterEqual(pattern_map.count('markerWidth="9"'), 2)
+        self.assertIn('data-direction="observed"', pattern_map)
+        self.assertIn('data-direction="forecast"', pattern_map)
+        self.assertNotIn('markerEnd="url(#fm-observed-arrow)"', pattern_map)
+        self.assertIn('r={point.anchorLabel === "현재" ? 10 : 7.5}', pattern_map)
+        self.assertIn('r="8"', pattern_map)
+        self.assertIn("fm-pattern-map__leader", pattern_map)
+        self.assertIn("fm-pattern-map__direction", style)
 
     def test_futures_macro_react_copy_avoids_trade_and_causal_claims(self) -> None:
         source = "\n".join(

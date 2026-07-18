@@ -8,6 +8,8 @@ const PAD_Y = 34;
 
 type SelectedHorizon = "observed" | "5D" | "20D";
 type AnchorPoint = PatternPoint & { anchorLabel: string };
+type ScreenPoint = { x: number; y: number };
+type ScreenSegment = { x1: number; y1: number; x2: number; y2: number };
 
 function pointAt(path: PatternPoint[], daysAgo: number): PatternPoint | undefined {
   if (path.length <= daysAgo) return undefined;
@@ -26,6 +28,32 @@ function observedAnchors(path: PatternPoint[]): AnchorPoint[] {
     seen.add(point.date);
     return [{ ...point, anchorLabel }];
   });
+}
+
+/** Places a compact arrow segment between endpoints so its marker cannot cover either point. */
+function directionSegment(
+  start: ScreenPoint | undefined,
+  end: ScreenPoint | undefined,
+  { startInset, endInset, length }: { startInset: number; endInset: number; length: number },
+): ScreenSegment | undefined {
+  if (!start || !end) return undefined;
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const distance = Math.hypot(dx, dy);
+  const available = distance - startInset - endInset;
+  if (!Number.isFinite(distance) || distance <= 0 || available <= 4) return undefined;
+  const unitX = dx / distance;
+  const unitY = dy / distance;
+  const segmentLength = Math.min(length, available);
+  const centerDistance = startInset + available * 0.55;
+  const firstDistance = centerDistance - segmentLength / 2;
+  const secondDistance = centerDistance + segmentLength / 2;
+  return {
+    x1: start.x + unitX * firstDistance,
+    y1: start.y + unitY * firstDistance,
+    x2: start.x + unitX * secondDistance,
+    y2: start.y + unitY * secondDistance,
+  };
 }
 
 function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPayload; horizons: HorizonCard[] }) {
@@ -61,6 +89,20 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
   const rangeLegend = selectedDays ? `${selectedDays}일 후 도착 범위` : "도착 범위";
   const showForecast = selectedHorizon !== "observed" && Boolean(latest) && forecastPoints.length > 0;
   const pathStatus = conditionalPath?.status || "UNAVAILABLE";
+  const terminal = conditionalPath?.terminal || undefined;
+  const screenPoint = (point: { x: number; y: number } | undefined): ScreenPoint | undefined => (
+    point ? { x: sx(point.x), y: sy(point.y) } : undefined
+  );
+  const observedDirection = directionSegment(
+    screenPoint(anchors.at(-2)),
+    screenPoint(latest),
+    { startInset: 10, endInset: 14, length: 18 },
+  );
+  const forecastDirection = directionSegment(
+    screenPoint(latest),
+    screenPoint(terminal),
+    { startInset: 13, endInset: 11, length: 12 },
+  );
 
   return (
     <section className="fm-workbench__pattern-map" aria-labelledby="fm-pattern-map-title">
@@ -75,10 +117,13 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
 
       <div className="fm-pattern-map__body">
         <div className="fm-pattern-map__canvas">
-          <svg role="img" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} aria-label="세 관측 시점과 선택한 기간의 유사 패턴 조건부 중앙 경로">
+          <svg role="img" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} aria-label="세 관측 시점과 선택한 기간의 과거 유사 흐름 기반 예상 이동">
             <defs>
-              <marker id="fm-observed-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" />
+              <marker id="fm-observed-direction-arrow" markerUnits="userSpaceOnUse" viewBox="0 0 9 9" refX="8" refY="4.5" markerWidth="9" markerHeight="9" orient="auto">
+                <path d="M 0 0 L 9 4.5 L 0 9 z" />
+              </marker>
+              <marker id="fm-forecast-direction-arrow" markerUnits="userSpaceOnUse" viewBox="0 0 9 9" refX="8" refY="4.5" markerWidth="9" markerHeight="9" orient="auto">
+                <path d="M 0 0 L 9 4.5 L 0 9 z" />
               </marker>
             </defs>
             <rect className="fm-pattern-map__quadrant quadrant-defense" x={PAD_X} y={PAD_Y} width={WIDTH / 2 - PAD_X} height={HEIGHT / 2 - PAD_Y} />
@@ -112,19 +157,43 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
                 points={forecastPolyline}
               />
             ) : null}
-            {observedPoints ? <polyline className="fm-pattern-map__observed" markerEnd="url(#fm-observed-arrow)" points={observedPoints} /> : null}
-            {anchors.map((point, index) => (
+            {observedPoints ? <polyline className="fm-pattern-map__observed" points={observedPoints} /> : null}
+            {observedDirection ? (
+              <line
+                className="fm-pattern-map__direction is-observed"
+                data-direction="observed"
+                {...observedDirection}
+                markerEnd="url(#fm-observed-direction-arrow)"
+              />
+            ) : null}
+            {showForecast && forecastDirection ? (
+              <line
+                className="fm-pattern-map__direction is-forecast"
+                data-direction="forecast"
+                {...forecastDirection}
+                markerEnd="url(#fm-forecast-direction-arrow)"
+              />
+            ) : null}
+            {anchors.map((point) => (
               <g className={`fm-pattern-map__anchor ${point.anchorLabel === "현재" ? "is-current" : ""}`} key={`${point.date}-${point.anchorLabel}`}>
-                <circle cx={sx(point.x)} cy={sy(point.y)} r={point.anchorLabel === "현재" ? 10 : 7} />
-                <text x={sx(point.x)} y={sy(point.y) - (index === 1 ? 16 : 14)} textAnchor="middle">{point.anchorLabel === "현재" ? `현재 · ${point.regime_label}` : point.anchorLabel}</text>
+                <circle cx={sx(point.x)} cy={sy(point.y)} r={point.anchorLabel === "현재" ? 10 : 7.5} />
+                {point.anchorLabel === "현재" ? (
+                  <>
+                    <line className="fm-pattern-map__leader" x1={sx(point.x) - 7} y1={sy(point.y) + 7} x2={sx(point.x) - 35} y2={sy(point.y) + 30} />
+                    <text x={sx(point.x) - 40} y={sy(point.y) + 36} textAnchor="end">현재</text>
+                  </>
+                ) : (
+                  <text x={sx(point.x)} y={sy(point.y) - 14} textAnchor="middle">{point.anchorLabel}</text>
+                )}
                 <title>{point.anchorLabel} · {point.date} · {point.regime_label} · {point.transition_label}</title>
               </g>
             ))}
-            {showForecast && conditionalPath?.terminal ? (
+            {showForecast && terminal ? (
               <g className="fm-pattern-map__terminal">
-                <circle cx={sx(conditionalPath.terminal.x)} cy={sy(conditionalPath.terminal.y)} r="8" />
-                <text className="fm-pattern-map__terminal-label" x={sx(conditionalPath.terminal.x)} y={sy(conditionalPath.terminal.y) - 14} textAnchor="middle">{expectedPositionLabel}</text>
-                <title>다음 {selectedHorizon} · 독립 표본 {conditionalPath.episode_count}개 · {pathStatus}</title>
+                <circle cx={sx(terminal.x)} cy={sy(terminal.y)} r="8" />
+                <line className="fm-pattern-map__leader" x1={sx(terminal.x) + 6} y1={sy(terminal.y) - 6} x2={sx(terminal.x) + 40} y2={sy(terminal.y) - 36} />
+                <text className="fm-pattern-map__terminal-label" x={sx(terminal.x) + 46} y={sy(terminal.y) - 40} textAnchor="start">{expectedPositionLabel}</text>
+                <title>다음 {selectedHorizon} · 독립 표본 {conditionalPath?.episode_count}개 · {pathStatus}</title>
               </g>
             ) : null}
           </svg>

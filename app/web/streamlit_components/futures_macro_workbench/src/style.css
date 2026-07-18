@@ -192,15 +192,20 @@ button { font: inherit; }
 .fm-pattern-map__quadrant.quadrant-calm { fill: rgba(111, 167, 202, 0.06); }
 .fm-pattern-map__quadrant.quadrant-risk { fill: rgba(57, 164, 127, 0.07); }
 .fm-pattern-map__quadrant-label { fill: #718397; font-size: 12px; font-weight: 700; }
-.fm-pattern-map__observed { fill: none; stroke: #264f68; stroke-linecap: round; stroke-linejoin: round; stroke-width: 4; }
-#fm-observed-arrow path { fill: #264f68; }
-.fm-pattern-map__anchor circle { fill: #fff; stroke: #264f68; stroke-width: 3; }
-.fm-pattern-map__anchor.is-current circle { fill: #264f68; stroke: #fff; stroke-width: 4; }
+.fm-pattern-map__observed { fill: none; stroke: #264f68; stroke-linecap: round; stroke-linejoin: round; stroke-width: 3.4; }
+#fm-observed-direction-arrow path { fill: #264f68; }
+#fm-forecast-direction-arrow path { fill: #397da8; }
+.fm-pattern-map__direction { fill: none; stroke-width: 2.5; }
+.fm-pattern-map__direction.is-observed { stroke: #264f68; }
+.fm-pattern-map__direction.is-forecast { stroke: #397da8; }
+.fm-pattern-map__anchor circle { fill: #fff; stroke: #264f68; stroke-width: 2.6; }
+.fm-pattern-map__anchor.is-current circle { fill: #264f68; stroke: #fff; stroke-width: 3; }
 .fm-pattern-map__anchor text { fill: #40566a; font-size: 12px; font-weight: 800; paint-order: stroke; stroke: #fff; stroke-width: 4px; }
-.fm-pattern-map__uncertainty { fill: rgba(111, 167, 202, 0.14); stroke: rgba(57, 125, 168, 0.28); stroke-width: 1; }
-.fm-pattern-map__conditional-path { fill: none; stroke: #397da8; stroke-dasharray: 7 7; stroke-linecap: round; stroke-linejoin: round; stroke-width: 3; }
-.fm-pattern-map__terminal circle { fill: #e5f0f6; stroke: #397da8; stroke-width: 3; }
-.fm-pattern-map__terminal text { fill: #40566a; font-size: 11px; font-weight: 800; paint-order: stroke; stroke: #fff; stroke-width: 4px; }
+.fm-pattern-map__uncertainty { fill: rgba(111, 167, 202, 0.1); stroke: rgba(57, 125, 168, 0.62); stroke-dasharray: 5 5; stroke-width: 1.6; }
+.fm-pattern-map__conditional-path { fill: none; stroke: #397da8; stroke-dasharray: 7 7; stroke-linecap: round; stroke-linejoin: round; stroke-width: 3.2; }
+.fm-pattern-map__terminal circle { fill: #e5f0f6; stroke: #397da8; stroke-width: 2.6; }
+.fm-pattern-map__leader { stroke: #718397; stroke-width: 1.2; }
+.fm-pattern-map__terminal-label { fill: #397da8; font-size: 12px; font-weight: 800; paint-order: stroke; stroke: #fff; stroke-width: 4px; }
 .fm-pattern-map__x-label,
 .fm-pattern-map__y-label { color: var(--muted); font-size: 0.63rem; font-weight: 750; position: absolute; }
 .fm-pattern-map__x-label { bottom: 5px; right: 12px; }
