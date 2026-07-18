@@ -19,3 +19,11 @@ No implementation code or DB writes were performed during design investigation.
 - Read DB pipeline rules, data map, architecture flow, schema sync, current loader SQL, ingestion job/dispatcher/registry/section contracts, and worktree execution rules.
 - Added `IMPLEMENTATION_PLAN.md` with exact TDD boundaries for five independently verifiable implementation/closeout tasks.
 - Self-review aligned provider rate-header pacing, error-preserving UPSERT semantics, grouped legacy exact-name ambiguity, reverse lookup, actual DB assertions, and generated screenshot policy.
+
+## 2026-07-18 Execution Preflight And Task 1
+
+- Confirmed this checkout is a linked worktree on `codex/main-dev`.
+- The planned `pytest` command could not start because the existing `.venv` does not contain pytest; the repository-native direct unittest run passed all 57 pre-existing Institutional Portfolios tests.
+- RED: the new resolver suite failed with five `ModuleNotFoundError` errors before the module existed.
+- GREEN: `tests/test_institutional_13f_mapping.py` passed 5/5 after implementing identifier normalization, US Equity jobs, safe candidate classification, provider batching, bounded retry, and proactive rate-reset pacing.
+- `py_compile` and `git diff --check` passed for Task 1.
