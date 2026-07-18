@@ -46,4 +46,6 @@
 사용자가 5D / 20D 그래프의 실제 경로 좌표가 같다는 QA 결과를 확인하고 empirical conditional path 후속을 승인했다.
 후속 설계는 과거 유사 episode의 step별 중앙 이동과 25~75% 범위를 현재 위치에 더하며,
 고정 categorical branch를 제거하고 probability card는 유지한다.
-현재 단계는 written spec review이며 구현 계획과 코드는 아직 변경하지 않았다.
+사용자가 written spec을 승인했다.
+별도 `EMPIRICAL_PATH_PLAN.md`에 4개 TDD task와 정확한 service / payload / UI / QA 계약을 작성했다.
+현재 단계는 inline execution 시작 전이며 구현 코드는 아직 변경하지 않았다.

@@ -104,3 +104,6 @@
 - Inspected the service and found completed historical outcomes already retain as-of-volatility-scaled family endpoint and path statistics, while the current payload does not expose stepwise two-dimensional paths.
 - User approved replacing fixed categorical branches with historical-analog stepwise median movement and a 25~75% uncertainty area.
 - Wrote the follow-up statistical, leakage, validation, payload, UI, fallback, and acceptance contract in `DESIGN.md`; no implementation code was changed.
+- User approved the written spec and requested continuation.
+- Added `EMPIRICAL_PATH_PLAN.md` with four sequential TDD tasks: stepwise coordinates, chronological path validation, payload / React UI, and actual QA / documentation closeout.
+- Plan self-review covers the written spec requirements, exact interfaces, RED/GREEN commands, type consistency, unavailable suppression, and 5D / 20D actual-coordinate comparison.

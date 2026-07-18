@@ -1,5 +1,7 @@
 # Futures Macro Pattern Outlook V1 Implementation Plan
 
+> Empirical conditional path 후속의 승인된 상세 계획은 [`EMPIRICAL_PATH_PLAN.md`](./EMPIRICAL_PATH_PLAN.md)에 둔다. 기존 V1 / readable-map 완료 기록은 아래에서 보존한다.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** `Workspace > Overview > Futures Macro`를 오늘의 충격, 1D / 5D / 20D 패턴, 향후 5D / 20D 조건부 위험 체제를 한 흐름에서 읽는 단기 거시 레이더로 개선한다.
