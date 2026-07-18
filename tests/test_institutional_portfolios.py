@@ -12,6 +12,12 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 
+def _component_source() -> str:
+    return Path(
+        "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalPortfoliosWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+
+
 class Sec13FDataSetParserTests(unittest.TestCase):
     def test_normalize_sec_13f_frames_preserves_filing_timing_and_holdings(self) -> None:
         from finance.data.institutional_13f import SEC_13F_SOURCE_CAVEATS, normalize_sec_13f_frames
@@ -1039,6 +1045,18 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
 
 
 class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
+    def test_workbench_v2_has_complete_holdings_explorer_and_explicit_security_search(self) -> None:
+        component_source = _component_source()
+        self.assertIn('schema_version: "institutional_portfolios_workbench_v2"', component_source)
+        self.assertNotIn("rows.slice(0, 80)", component_source)
+        self.assertIn("HOLDINGS_PAGE_SIZE = 50", component_source)
+        self.assertIn('id: "security_search"', component_source)
+        self.assertIn("holdingSearch", component_source)
+        self.assertIn("mappingFilter", component_source)
+        self.assertIn("holdingSort", component_source)
+        self.assertIn("visibleHoldings", component_source)
+        self.assertIn("INSTITUTIONAL PORTFOLIO CONTEXT", component_source)
+
     def test_selected_manager_resolver_keeps_watchlist_selection_outside_search_results(self) -> None:
         from app.web.institutional_portfolios import _resolve_selected_manager
 
@@ -1107,6 +1125,32 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
 
         self.assertEqual(_consume_workbench_event(payload, None), (True, "select_manager:n-1"))
         self.assertEqual(_consume_workbench_event(payload, "select_manager:n-1"), (False, "select_manager:n-1"))
+
+    def test_holding_drilldown_and_security_search_events_update_selected_security_state(self) -> None:
+        import app.web.institutional_portfolios as page
+
+        class FakeStreamlit:
+            def __init__(self) -> None:
+                self.session_state: dict[str, object] = {}
+                self.rerun_count = 0
+
+            def rerun(self) -> None:
+                self.rerun_count += 1
+
+        original_streamlit = page.st
+        try:
+            for event_name in ["holding_drilldown", "security_search"]:
+                with self.subTest(event_name=event_name):
+                    fake_streamlit = FakeStreamlit()
+                    page.st = fake_streamlit
+                    page._handle_workbench_event({"id": event_name, "query": " AAPL ", "nonce": event_name})
+
+                    self.assertEqual(fake_streamlit.session_state["institutional_interest_query"], "AAPL")
+                    self.assertTrue(fake_streamlit.session_state["institutional_interest_query_needs_load"])
+                    self.assertEqual(fake_streamlit.session_state["institutional_price_refresh_result"], {})
+                    self.assertEqual(fake_streamlit.rerun_count, 1)
+        finally:
+            page.st = original_streamlit
 
     def test_reverse_lookup_loader_uses_filing_total_without_full_holding_groupby(self) -> None:
         source = Path("finance/loaders/institutional_13f.py").read_text(encoding="utf-8")

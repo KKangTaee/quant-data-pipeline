@@ -408,6 +408,20 @@ def _handle_workbench_event(event: dict[str, Any] | None) -> None:
             st.session_state["institutional_interest_query_needs_load"] = True
             st.session_state["institutional_price_refresh_result"] = {}
             st.rerun()
+    if event_name == "holding_drilldown":
+        query = str(payload.get("query") or "").strip()
+        if query and query != st.session_state.get("institutional_interest_query"):
+            st.session_state["institutional_interest_query"] = query
+            st.session_state["institutional_interest_query_needs_load"] = True
+            st.session_state["institutional_price_refresh_result"] = {}
+            st.rerun()
+    if event_name == "security_search":
+        query = str(payload.get("query") or "").strip()
+        if query:
+            st.session_state["institutional_interest_query"] = query
+            st.session_state["institutional_interest_query_needs_load"] = True
+            st.session_state["institutional_price_refresh_result"] = {}
+            st.rerun()
     if event_name == "open_popularity":
         st.session_state["institutional_popularity_needs_load"] = True
         st.rerun()

@@ -54,9 +54,13 @@ type SectorBar = {
 type HoldingRow = {
   issuer_name: string;
   symbol?: string | null;
+  symbol_source?: string | null;
+  mapping_status?: "mapped" | "ambiguous" | "unmapped" | string;
   cusip?: string | null;
   sector: string;
+  weight_pct: number;
   weight_label: string;
+  reported_value: number;
   value_label: string;
   drilldown_query: string;
 };
@@ -180,7 +184,7 @@ type PopularityPayload = {
 };
 
 type WorkbenchPayload = {
-  schema_version: "institutional_portfolios_workbench_v1";
+  schema_version: "institutional_portfolios_workbench_v2";
   component: "InstitutionalPortfoliosWorkbench";
   mode: "live" | "preview" | string;
   data_state: {
@@ -220,6 +224,26 @@ type WorkbenchPayload = {
     facts: Array<{ label: string; value: string }>;
     caveat: string;
   };
+  context_summary: {
+    headline: string;
+    summary: string;
+    top5_weight_pct: number;
+    top5_weight_label: string;
+    largest_sector: string;
+    largest_sector_weight_pct: number;
+    largest_sector_weight_label: string;
+    comparison_state: "available" | "unavailable" | string;
+  };
+  coverage: {
+    holding_count_total: number;
+    holding_count_mapped: number;
+    holding_count_unmapped: number;
+    holding_count_ambiguous: number;
+    mapped_weight_pct: number;
+    mapped_weight_label: string;
+    performance_covered_weight_pct: number;
+    performance_covered_weight_label: string;
+  };
   allocation: {
     title: string;
     subtitle: string;
@@ -242,6 +266,23 @@ type WorkbenchPayload = {
   };
   holdings_table: {
     rows: HoldingRow[];
+  };
+  holdings_explorer: {
+    rows: HoldingRow[];
+    default_page_size: number;
+    search_fields: string[];
+    filters: {
+      mapping: Array<{ value: string; label: string }>;
+      sector: Array<{ value: string; label: string }>;
+    };
+    sorts: Array<{ value: string; label: string }>;
+    default_sort: string;
+  };
+  security_search: {
+    current_query: string;
+    state: "idle" | "results" | "empty" | string;
+    submit_event_id: "security_search" | string;
+    submit_event: { id: "security_search" | string; trigger: "explicit" | string };
   };
   interest: {
     query: string;
@@ -272,6 +313,10 @@ type Props = ComponentProps & {
 
 type ViewName = "overview" | "holdings" | "security" | "popularity";
 type WorkspaceSection = "portfolio" | "security";
+type HoldingSort = "weight_desc" | "value_desc" | "issuer_asc";
+type MappingFilter = "all" | "mapped" | "unresolved";
+
+const HOLDINGS_PAGE_SIZE = 50;
 
 type PendingAction =
   | { kind: "manager"; cik: string; label: string }
@@ -886,6 +931,13 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [localSelectedQuery, setLocalSelectedQuery] = useState<string>("");
+  const [holdingSearch, setHoldingSearch] = useState("");
+  const [mappingFilter, setMappingFilter] = useState<MappingFilter>("all");
+  const [sectorFilter, setSectorFilter] = useState("all");
+  const [holdingSort, setHoldingSort] = useState<HoldingSort>("weight_desc");
+  const [holdingPage, setHoldingPage] = useState(1);
+  const [securitySearch, setSecuritySearch] = useState(payload?.security_search.current_query || "");
+  const [unresolvedHolding, setUnresolvedHolding] = useState<HoldingRow | null>(null);
   const managerRailRef = useRef<HTMLDivElement | null>(null);
   const managerRailScrollRef = useRef(0);
 
@@ -897,6 +949,14 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   useEffect(() => {
     syncFrameHeightSoon();
   }, [payload, activeView]);
+
+  useEffect(() => {
+    setSecuritySearch(payload?.security_search.current_query || "");
+  }, [payload?.security_search.current_query]);
+
+  useEffect(() => {
+    setHoldingPage(1);
+  }, [holdingSearch, mappingFilter, sectorFilter, holdingSort]);
 
   useEffect(() => {
     const rail = managerRailRef.current;
@@ -948,14 +1008,53 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   }, [pendingAction]);
 
   const changeGroups = useMemo(() => {
-    if (!payload) {
+    if (!payload?.change_board.comparison_available) {
       return [];
     }
-    return ["reported_new", "increased", "reduced", "no_longer_reported"].map((key) => ({
-      key,
-      ...payload.change_board.groups[key],
-    }));
+    const groups: Array<ChangeGroup & { key: string }> = [];
+    ["reported_new", "increased", "reduced", "no_longer_reported"].forEach((key) => {
+      const group = payload.change_board.groups[key];
+      if (group) {
+        groups.push({ key, ...group });
+      }
+    });
+    return groups;
   }, [payload]);
+
+  const filteredHoldings = useMemo(() => {
+    const query = holdingSearch.trim().toLocaleLowerCase();
+    return (payload?.holdings_explorer.rows || [])
+      .map((row, index) => ({ row, index }))
+      .filter(({ row }) => {
+        const mapped = row.mapping_status === "mapped" && Boolean(row.symbol);
+        const matchesQuery =
+          !query ||
+          [row.symbol, row.issuer_name, row.cusip].some((value) => String(value || "").toLocaleLowerCase().includes(query));
+        const matchesMapping =
+          mappingFilter === "all" || (mappingFilter === "mapped" ? mapped : !mapped);
+        const matchesSector = sectorFilter === "all" || row.sector === sectorFilter;
+        return matchesQuery && matchesMapping && matchesSector;
+      })
+      .sort((left, right) => {
+        let comparison = 0;
+        if (holdingSort === "issuer_asc") {
+          comparison = left.row.issuer_name.localeCompare(right.row.issuer_name, "ko");
+        } else if (holdingSort === "value_desc") {
+          comparison = Number(right.row.reported_value || 0) - Number(left.row.reported_value || 0);
+        } else {
+          comparison = Number(right.row.weight_pct || 0) - Number(left.row.weight_pct || 0);
+        }
+        return comparison || left.index - right.index;
+      })
+      .map(({ row }) => row);
+  }, [payload?.holdings_explorer.rows, holdingSearch, mappingFilter, sectorFilter, holdingSort]);
+
+  const totalHoldingPages = Math.max(1, Math.ceil(filteredHoldings.length / HOLDINGS_PAGE_SIZE));
+  const safeHoldingPage = Math.min(holdingPage, totalHoldingPages);
+  const visibleHoldings = useMemo(() => {
+    const offset = (safeHoldingPage - 1) * HOLDINGS_PAGE_SIZE;
+    return filteredHoldings.slice(offset, offset + HOLDINGS_PAGE_SIZE);
+  }, [filteredHoldings, safeHoldingPage]);
 
   const localSecurityDetail = useMemo<SelectedSecurity | undefined>(() => {
     if (!payload || payload.selected_security?.status === "ok") {
@@ -966,7 +1065,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
       return payload.selected_security;
     }
     const upper = query.toUpperCase();
-    const row = payload.holdings_table.rows.find((item) => {
+    const row = payload.holdings_explorer.rows.find((item) => {
       const symbol = String(item.symbol || "").toUpperCase();
       const cusip = String(item.cusip || "").toUpperCase();
       const issuer = String(item.issuer_name || "").toUpperCase();
@@ -1026,6 +1125,8 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
 
   const activeWorkspaceSection: WorkspaceSection =
     activeView === "overview" || activeView === "holdings" ? "portfolio" : "security";
+  const holdingsStart = filteredHoldings.length ? (safeHoldingPage - 1) * HOLDINGS_PAGE_SIZE + 1 : 0;
+  const holdingsEnd = Math.min(safeHoldingPage * HOLDINGS_PAGE_SIZE, filteredHoldings.length);
 
   const sendEvent = (event: Record<string, unknown>) => {
     Streamlit.setComponentValue({ event: { ...event, nonce: `${Date.now()}-${Math.random()}` } });
@@ -1057,6 +1158,46 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     setActiveView("security");
     sendEvent({ id: "drilldown", query });
     restoreHostScroll(position);
+  };
+
+  const handleHoldingDrilldown = (row: HoldingRow) => {
+    if (row.mapping_status !== "mapped" || !row.symbol || !row.drilldown_query) {
+      setUnresolvedHolding(row);
+      syncFrameHeightSoon();
+      return;
+    }
+    const position = hostScrollPosition();
+    setUnresolvedHolding(null);
+    setActionNotice(null);
+    setLocalSelectedQuery(row.drilldown_query);
+    setPendingAction({ kind: "interest", query: row.drilldown_query, label: `${row.symbol} 종목 상세 불러오는 중` });
+    setActiveView("security");
+    sendEvent({ id: "holding_drilldown", query: row.drilldown_query });
+    restoreHostScroll(position);
+  };
+
+  const handleAllocationDrilldown = (holding: Segment) => {
+    const key = String(holding.key || "").toUpperCase();
+    const symbol = String(holding.symbol || "").toUpperCase();
+    const row = payload.holdings_explorer.rows.find((item) => {
+      return String(item.cusip || "").toUpperCase() === key || (symbol && String(item.symbol || "").toUpperCase() === symbol);
+    });
+    if (row) {
+      handleHoldingDrilldown(row);
+    }
+  };
+
+  const submitSecuritySearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = securitySearch.trim();
+    if (!query) {
+      return;
+    }
+    setActionNotice(null);
+    setLocalSelectedQuery(query);
+    setPendingAction({ kind: "interest", query, label: `${query} 종목 상세 불러오는 중` });
+    Streamlit.setComponentValue({ id: "security_search", query, nonce: Date.now().toString() });
+    syncFrameHeightSoon();
   };
 
   const handleManagerSelect = (item: ManagerItem) => {
@@ -1104,32 +1245,6 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
           <span>{payload.hero.caveat}</span>
         </div>
 
-        <div
-          className="ip-manager-rail"
-          role="tablist"
-          aria-label="Institutional managers"
-          ref={managerRailRef}
-          onScroll={(event) => {
-            managerRailScrollRef.current = event.currentTarget.scrollLeft;
-          }}
-        >
-          {payload.manager_picker.items.map((item) => (
-            <button
-              key={item.cik || item.manager_name}
-              type="button"
-              className={`ip-manager-tab ${item.selected ? "ip-manager-tab--active" : ""} ${
-                pendingAction?.kind === "manager" && pendingAction.cik === item.cik ? "ip-manager-tab--pending" : ""
-              }`}
-              data-cik={item.cik || ""}
-              disabled={Boolean(pendingAction)}
-              onClick={() => handleManagerSelect(item)}
-            >
-              <strong>{item.manager_name}</strong>
-              <span>{item.watchlist_label ? `${item.watchlist_label} · ${item.latest_report_period}` : item.latest_report_period}</span>
-            </button>
-          ))}
-        </div>
-
         {pendingAction ? (
           <div className="ip-loading-banner" role="status" aria-live="polite">
             <span className="ip-spinner" aria-hidden="true" />
@@ -1148,56 +1263,84 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
           </div>
         ) : null}
 
-        <div className={`ip-freshness ${payload.freshness?.is_stale ? "ip-freshness--stale" : ""}`}>
-          <button type="button" className="ip-freshness__action" onClick={handleRefreshOpen}>
-            {payload.refresh_action?.label || "SEC 13F 데이터"}
-          </button>
-          <strong>{payload.freshness?.latest_report_period || "로컬 13F 데이터 없음"}</strong>
-          <em>{payload.freshness?.last_collected_at ? `수집 시각 ${payload.freshness.last_collected_at}` : "갱신 설정 사용 가능"}</em>
-        </div>
-
-        <div className="ip-hero__grid">
-          <div className="ip-hero__identity">
-            <div className="ip-hero__kicker">Institutional Portfolios</div>
-            <h2>{payload.hero.manager_name}</h2>
-            <p>{payload.data_state.message}</p>
-            <div className="ip-hero__facts">
-              {payload.hero.facts.map((fact) => (
-                <div className="ip-fact" key={`${fact.label}-${fact.value}`}>
-                  <span>{fact.label}</span>
-                  <strong>{fact.value}</strong>
-                </div>
-              ))}
+        <div className="ip-context-hero__grid">
+          <div className="ip-context-hero__copy">
+            <div className="ip-context-hero__eyebrow">INSTITUTIONAL PORTFOLIO CONTEXT</div>
+            <h2>{payload.context_summary.headline}</h2>
+            <p>{payload.context_summary.summary}</p>
+            <div className="ip-context-hero__signals">
+              <span>상위 5개 {payload.context_summary.top5_weight_label}</span>
+              <span>최대 섹터 {payload.context_summary.largest_sector} {payload.context_summary.largest_sector_weight_label}</span>
             </div>
+          </div>
+          <aside className="ip-context-basis" aria-label="보고 근거">
+            <div><span>보고 기준 분기</span><strong>{payload.hero.latest_report_period}</strong></div>
+            <div><span>제출일</span><strong>{payload.hero.latest_filing_date}</strong></div>
+            <div><span>DB snapshot</span><strong>{payload.freshness?.last_collected_at || payload.data_state.as_of_label}</strong></div>
             {payload.hero.source_ref ? (
               <a className="ip-source-link" href={payload.hero.source_ref} target="_blank" rel="noreferrer">
                 SEC 원문 열기
               </a>
             ) : null}
-          </div>
+          </aside>
+        </div>
 
-          <div className="ip-allocation-panel">
-            <div className="ip-section-head">
-              <div>
-                <h3>{payload.allocation.title}</h3>
-                <p>{payload.allocation.subtitle}</p>
-              </div>
-              <strong>{payload.allocation.total_label}</strong>
+        <div className="ip-context-controls">
+          <div
+            className="ip-manager-favorites ip-manager-rail"
+            role="tablist"
+            aria-label="Institutional managers"
+            ref={managerRailRef}
+            onScroll={(event) => {
+              managerRailScrollRef.current = event.currentTarget.scrollLeft;
+            }}
+          >
+            {payload.manager_picker.items.map((item) => (
+              <button
+                key={item.cik || item.manager_name}
+                type="button"
+                className={`ip-manager-tab ${item.selected ? "ip-manager-tab--active" : ""} ${
+                  pendingAction?.kind === "manager" && pendingAction.cik === item.cik ? "ip-manager-tab--pending" : ""
+                }`}
+                data-cik={item.cik || ""}
+                disabled={Boolean(pendingAction)}
+                onClick={() => handleManagerSelect(item)}
+              >
+                <strong>{item.watchlist_label || item.manager_name}</strong>
+                <span>{item.manager_name} · {item.latest_report_period}</span>
+              </button>
+            ))}
+          </div>
+          <div className={`ip-freshness ${payload.freshness?.is_stale ? "ip-freshness--stale" : ""}`}>
+            <button type="button" className="ip-freshness__action" onClick={handleRefreshOpen}>
+              {payload.refresh_action?.label || "SEC 13F 데이터"}
+            </button>
+            <strong>{payload.freshness?.latest_report_period || "로컬 13F 데이터 없음"}</strong>
+            <em>{payload.freshness?.last_collected_at ? `수집 시각 ${payload.freshness.last_collected_at}` : "갱신 설정 사용 가능"}</em>
+          </div>
+        </div>
+
+        <div className="ip-allocation-panel">
+          <div className="ip-section-head">
+            <div>
+              <h3>{payload.allocation.title}</h3>
+              <p>{payload.allocation.subtitle}</p>
             </div>
-            <div className="ip-allocation-layout">
-              <AllocationDonut segments={payload.allocation.segments} />
-              <div className="ip-holding-list">
-                {payload.allocation.top_holdings.slice(0, 6).map((holding) => (
-                  <button type="button" key={`${holding.key}-${holding.label}`} className="ip-holding-row" onClick={() => handleDrilldown(holding.drilldown_query)}>
-                    <span className="ip-dot" style={{ backgroundColor: holding.color }} />
-                    <span>
-                      <strong>{holding.label}</strong>
-                      <small>{holding.issuer_name}</small>
-                    </span>
-                    <em>{holding.weight_label}</em>
-                  </button>
-                ))}
-              </div>
+            <strong>{payload.allocation.total_label}</strong>
+          </div>
+          <div className="ip-allocation-layout">
+            <AllocationDonut segments={payload.allocation.segments} />
+            <div className="ip-holding-list">
+              {payload.allocation.top_holdings.slice(0, 6).map((holding) => (
+                <button type="button" key={`${holding.key}-${holding.label}`} className="ip-holding-row" onClick={() => handleAllocationDrilldown(holding)}>
+                  <span className="ip-dot" style={{ backgroundColor: holding.color }} />
+                  <span>
+                    <strong>{holding.label}</strong>
+                    <small>{holding.issuer_name}</small>
+                  </span>
+                  <em>{holding.weight_label}</em>
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -1272,17 +1415,16 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
 
       <div className="ip-view-body">
         {activeView === "overview" ? (
-          <section className="ip-grid">
-            <div className="ip-stack">
-              <PortfolioPerformancePanel performance={payload.portfolio_performance} onDrilldown={handleDrilldown} />
-              <div className="ip-panel ip-panel--changes">
-                <div className="ip-section-head">
-                  <div>
-                    <h3>{payload.change_board.title}</h3>
-                    <p>{payload.change_board.subtitle}</p>
-                  </div>
+          <section className="ip-overview-stack">
+            <div className="ip-panel ip-panel--changes">
+              <div className="ip-section-head">
+                <div>
+                  <h3>{payload.change_board.title}</h3>
+                  <p>{payload.change_board.subtitle}</p>
                 </div>
-                {!payload.change_board.comparison_available ? <div className="ip-board-note">{payload.change_board.empty_reason}</div> : null}
+              </div>
+              {!payload.change_board.comparison_available ? <div className="ip-board-note">{payload.change_board.empty_reason}</div> : null}
+              {changeGroups.length ? (
                 <div className="ip-change-grid">
                   {changeGroups.map((group) => (
                     <div className="ip-change-card" key={group.key}>
@@ -1306,53 +1448,135 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
                     </div>
                   ))}
                 </div>
+              ) : null}
+            </div>
+
+            <div className="ip-context-evidence-grid">
+              <div className="ip-panel ip-coverage-panel">
+                <div className="ip-section-head">
+                  <div>
+                    <h3>보유 종목 연결 범위</h3>
+                    <p>ticker 연결 상태와 가정 성과 계산 가능 범위를 분리해 보여줍니다.</p>
+                  </div>
+                </div>
+                <div className="ip-coverage-metrics">
+                  <div><span>전체 보유</span><strong>{payload.coverage.holding_count_total.toLocaleString()}</strong></div>
+                  <div><span>ticker 연결</span><strong>{payload.coverage.holding_count_mapped.toLocaleString()}</strong></div>
+                  <div><span>연결 평가액 비중</span><strong>{payload.coverage.mapped_weight_label}</strong></div>
+                  <div><span>성과 계산 비중</span><strong>{payload.coverage.performance_covered_weight_label}</strong></div>
+                </div>
+              </div>
+
+              <div className="ip-panel">
+                <div className="ip-section-head">
+                  <div>
+                    <h3>{payload.sector_exposure.title}</h3>
+                    <p>{payload.sector_exposure.subtitle}</p>
+                  </div>
+                </div>
+                <div className="ip-sector-bars">
+                  {payload.sector_exposure.bars.map((bar) => (
+                    <div className="ip-sector-row" key={bar.sector}>
+                      <div>
+                        <strong>{bar.sector}</strong>
+                        <span>{bar.holding_count}개 종목 · {bar.value_label}</span>
+                      </div>
+                      <div className="ip-sector-row__track">
+                        <span style={{ width: `${clampPercent(bar.bar_width_pct)}%`, backgroundColor: bar.color }} />
+                      </div>
+                      <em>{bar.weight_label}</em>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <div className="ip-panel">
-              <div className="ip-section-head">
-                <div>
-                  <h3>{payload.sector_exposure.title}</h3>
-                  <p>{payload.sector_exposure.subtitle}</p>
-                </div>
-              </div>
-              <div className="ip-sector-bars">
-                {payload.sector_exposure.bars.map((bar) => (
-                  <div className="ip-sector-row" key={bar.sector}>
-                    <div>
-                      <strong>{bar.sector}</strong>
-                      <span>{bar.holding_count}개 종목 · {bar.value_label}</span>
-                    </div>
-                    <div className="ip-sector-row__track">
-                      <span style={{ width: `${clampPercent(bar.bar_width_pct)}%`, backgroundColor: bar.color }} />
-                    </div>
-                    <em>{bar.weight_label}</em>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <PortfolioPerformancePanel performance={payload.portfolio_performance} onDrilldown={handleDrilldown} />
           </section>
         ) : null}
 
         {activeView === "holdings" ? (
-          <section className="ip-panel">
+          <section className="ip-panel ip-holdings-explorer">
             <div className="ip-section-head">
               <div>
                 <h3>전체 보유 종목</h3>
-                <p>종목을 클릭하면 종목 분석의 종목 상세 화면에서 차트와 보유 기관 리스트를 함께 보여줍니다.</p>
+                <p>전체 13F row를 검색·필터·정렬합니다. ticker 미연결 row도 원래 식별자로 남깁니다.</p>
               </div>
-              <strong>{payload.holdings_table.rows.length}</strong>
+              <strong>{holdingsStart.toLocaleString()}–{holdingsEnd.toLocaleString()} / {filteredHoldings.length.toLocaleString()}</strong>
             </div>
-            <div className="ip-table">
-              {payload.holdings_table.rows.slice(0, 80).map((row) => (
-                <button type="button" key={`${row.cusip}-${row.issuer_name}`} onClick={() => handleDrilldown(row.drilldown_query)}>
-                  <span>{row.symbol || "-"}</span>
-                  <strong>{row.issuer_name}</strong>
-                  <em>{row.weight_label}</em>
-                  <small>{row.value_label}</small>
-                  <small>{row.sector}</small>
-                </button>
-              ))}
+            <div className="ip-holdings-toolbar">
+              <label className="ip-holdings-search">
+                <span>보유 종목 검색</span>
+                <input
+                  type="search"
+                  value={holdingSearch}
+                  placeholder="ticker, 발행사, CUSIP"
+                  onChange={(event) => setHoldingSearch(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>연결 상태</span>
+                <select value={mappingFilter} onChange={(event) => setMappingFilter(event.target.value as MappingFilter)}>
+                  {payload.holdings_explorer.filters.mapping.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>섹터</span>
+                <select value={sectorFilter} onChange={(event) => setSectorFilter(event.target.value)}>
+                  {payload.holdings_explorer.filters.sector.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>정렬</span>
+                <select value={holdingSort} onChange={(event) => setHoldingSort(event.target.value as HoldingSort)}>
+                  {payload.holdings_explorer.sorts.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {unresolvedHolding ? (
+              <div className="ip-unresolved-notice" role="status">
+                <div>
+                  <strong>{unresolvedHolding.issuer_name}</strong>
+                  <span>CUSIP {unresolvedHolding.cusip || "-"} · {unresolvedHolding.sector}</span>
+                </div>
+                <p>ticker가 안전하게 연결되기 전에는 종목 차트나 가격 수집을 열지 않습니다.</p>
+                <button type="button" onClick={() => setUnresolvedHolding(null)}>닫기</button>
+              </div>
+            ) : null}
+            <div className="ip-holdings-list">
+              {visibleHoldings.length ? visibleHoldings.map((row) => {
+                const mapped = row.mapping_status === "mapped" && Boolean(row.symbol);
+                return (
+                  <button
+                    type="button"
+                    className={`ip-holding-explorer-row ${mapped ? "ip-holding-explorer-row--mapped" : "ip-holding-explorer-row--unresolved"}`}
+                    key={`${row.cusip}-${row.issuer_name}`}
+                    onClick={() => handleHoldingDrilldown(row)}
+                  >
+                    <span className="ip-holding-explorer-row__identity">
+                      <strong>{mapped ? row.symbol : row.issuer_name}</strong>
+                      <small>{mapped ? row.issuer_name : `CUSIP ${row.cusip || "-"}`}</small>
+                    </span>
+                    {!mapped ? (
+                      <span className="ip-mapping-badge">{row.mapping_status === "ambiguous" ? "mapping 확인 필요" : "ticker 연결 전"}</span>
+                    ) : null}
+                    <em>{row.weight_label}</em>
+                    <small>{row.value_label}</small>
+                    <small>{row.sector}</small>
+                  </button>
+                );
+              }) : <div className="ip-interest-empty">조건에 맞는 보유 종목이 없습니다.</div>}
+            </div>
+            <div className="ip-holdings-pagination">
+              <button type="button" disabled={safeHoldingPage <= 1} onClick={() => setHoldingPage((page) => Math.max(1, page - 1))}>이전 50개</button>
+              <span>{safeHoldingPage.toLocaleString()} / {totalHoldingPages.toLocaleString()} 페이지</span>
+              <button type="button" disabled={safeHoldingPage >= totalHoldingPages} onClick={() => setHoldingPage((page) => Math.min(totalHoldingPages, page + 1))}>다음 50개</button>
             </div>
           </section>
         ) : null}
@@ -1370,6 +1594,20 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
               </div>
               <strong>{payload.interest.holder_count}</strong>
             </div>
+            <form className="ip-security-search" onSubmit={submitSecuritySearch}>
+              <label htmlFor="ip-security-search-input">직접 종목 검색</label>
+              <div>
+                <input
+                  id="ip-security-search-input"
+                  type="search"
+                  value={securitySearch}
+                  placeholder="ticker, 발행사, CUSIP"
+                  onChange={(event) => setSecuritySearch(event.target.value)}
+                />
+                <button type="submit" disabled={!securitySearch.trim() || Boolean(pendingAction)}>검색</button>
+              </div>
+              <small>입력만으로는 조회하지 않습니다. Enter 또는 검색 버튼으로 실행합니다.</small>
+            </form>
             <SecurityDetail
               detail={localSecurityDetail}
               interest={{ ...payload.interest, query: payload.interest.query || localSelectedQuery }}
