@@ -1,6 +1,6 @@
 # Status
 
-Status: Implementation Complete / 7차 Unified React Strategy Settings
+Status: Design Review / 8차 Modifier-Free Multi-Select Controls
 Last Updated: 2026-07-18
 
 ## Current Position
@@ -30,6 +30,12 @@ Last Updated: 2026-07-18
 - [x] 7차 written design 사용자 review
 - [x] 7차 implementation plan
 - [x] 7차 RED -> GREEN implementation / Browser QA / closeout
+- [x] 8차 native multi-select root cause / option count audit
+- [x] 8차 adaptive multi-select 접근 사용자 승인
+- [x] 8차 corrective design 작성과 self-review
+- [ ] 8차 written design 사용자 review
+- [ ] 8차 implementation plan
+- [ ] 8차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -40,6 +46,7 @@ Last Updated: 2026-07-18
 5. Runtime QA / Docs / Closeout
 6. Single Strategy Settings Workspace Corrective
 7. Unified React Strategy Settings Workspace
+8. Modifier-Free Multi-Select Controls
 
 ## Current Corrective Position
 
@@ -76,3 +83,13 @@ Last Updated: 2026-07-18
   확인했다. actual Equal Weight / GTAA / Quality+Value Annual 실행과 760px 단일 열·overflow
   0을 확인했고 QA 중 발견한 compatibility variant 노출과 hidden-field 실행 회귀를 각각
   RED -> GREEN으로 수정했다.
+
+## Current 8차 Position
+
+- 사용자 실제 사용 확인에서 native `<select multiple>`가 macOS Command / Windows·Linux
+  Ctrl modifier를 요구해 기본 5개 선택도 단일 선택처럼 읽히는 interaction gap을 확인했다.
+- Python schema와 payload는 이미 배열, 중복 금지, option allow-list를 지원하므로 runtime이나
+  strategy contract가 아니라 공통 React `multi_select` renderer 문제로 범위를 고정했다.
+- 옵션 수 20개 이하는 checkbox-card grid, 21개 이상은 검색·checkbox list·selected chip을
+  쓰는 adaptive C안을 사용자 승인에 따라 DESIGN에 추가했다.
+- 작성된 설계의 사용자 review 뒤 상세 PLAN과 TDD 구현으로 넘어간다.

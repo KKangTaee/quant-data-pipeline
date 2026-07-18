@@ -982,3 +982,142 @@ parity가 확보된 뒤 active route에서 제거한다.
 - Level2 / Final Review route와 Gate 재설계
 - broker order, live approval, account sync, auto rebalance
 - protected JSONL과 generated artifact 정리 또는 rewrite
+
+## 8차 Corrective Design: Modifier-Free Multi-Select Controls
+
+### 이걸 하는 이유?
+
+7차 schema-driven React editor는 Python의 배열 값을 정확히 보존하지만
+`multi_select`를 browser-native `<select multiple>`로 렌더링한다. 이 control은 macOS에서
+추가 선택 시 Command, Windows/Linux에서 Ctrl modifier를 요구하고 선택된 option이
+스크롤 밖에 있으면 현재 상태도 보이지 않는다. 실제 Quality 화면은 기본값 5개가 이미
+선택됐는데도 한 번에 하나만 선택되는 것처럼 읽힌다. GTAA 상대강도 계산 기간과 방어
+자산도 같은 renderer를 사용하므로 공통 control을 modifier-free interaction으로 바꾼다.
+
+### Confirmed Root Cause And Scope
+
+- Python schema와 payload는 이미 `list` 타입, 중복 금지, option allow-list를 지원한다.
+- React `SettingsFieldControl`의 `case "multi_select"`만 native select와
+  `selectedOptions` event에 의존한다.
+- compact option은 Quality/Value 지표 14개 이하와 GTAA 계산 기간 4개다.
+- large option은 직접 입력 종목과 방어 자산 1,031개다.
+- 따라서 strategy별 schema나 runner를 고치는 문제가 아니라 공통 React control의
+  interaction과 presentation 문제다.
+
+### Approaches
+
+#### A. Native Multi-Select + 사용법 안내
+
+- 장점: 구현이 가장 작다.
+- 단점: modifier key 의존, 모바일 조작, 선택 상태 가시성 문제가 그대로 남는다.
+
+#### B. 모든 옵션을 펼친 Checkbox Grid
+
+- 장점: 클릭마다 독립 toggle이 되어 동작이 명확하다.
+- 단점: 1,031개 ticker field에서 화면 높이와 탐색 부담이 과도하다.
+
+#### C. Option Count 기반 Adaptive Multi-Select — Selected
+
+- option 20개 이하는 compact checkbox-card grid로 표시한다.
+- option 21개 이상은 검색 가능한 checkbox list와 selected chip shelf로 표시한다.
+- 사용자는 modifier key 없이 각 항목을 클릭해 기존 선택을 유지한 채 추가/제거한다.
+- 사용자 승인: 2026-07-18.
+
+### Interaction Contract
+
+#### Compact Mode
+
+- Quality/Value 지표와 GTAA 계산 기간을 checkbox-card grid로 렌더링한다.
+- 각 option은 `aria-pressed`와 selected style을 가지며 클릭은 해당 값만 toggle한다.
+- `전체 선택`은 supplied option 전체를 catalog 순서로 선택한다.
+- `선택 해제`는 빈 배열을 만들며 required validation은 실행 시 기존 Python error로
+  안내한다.
+- 선택 수와 앞 5개 label을 control 아래에서 항상 확인할 수 있다.
+
+#### Search Mode
+
+- 직접 입력 종목과 방어 자산은 검색 input, selected chip shelf, bounded checkbox result
+  list로 구성한다.
+- 검색은 option label/value의 case-insensitive substring match이며 domain 분류를 하지 않는다.
+- checkbox row click과 selected chip의 제거 button은 같은 toggle helper를 사용한다.
+- `검색 결과 전체 선택`은 현재 filter 결과만 catalog 순서로 추가하고 기존 선택을
+  유지한다. `선택 해제`는 전체 current selection을 비운다.
+- 검색어가 없으면 첫 100개 option만 보여주고 나머지 수를 안내해 1,031개 DOM node를
+  한 번에 만들지 않는다. 이미 선택된 값은 검색 결과 밖이어도 chip shelf에서 보인다.
+
+### State And Data Contract
+
+- control input/output은 기존과 동일한 `unknown[]` draft array다.
+- toggle은 supplied option value만 허용하고 `String(value)` identity로 비교한다.
+- 새 selection은 schema option 순서로 정규화해 fingerprint와 payload가 클릭 순서에
+  따라 달라지지 않게 한다.
+- ordinary selection edit는 React local state만 갱신하고 Streamlit rerun을 만들지 않는다.
+- submit 시 기존 `{strategy_choice, variant, values}` intent를 그대로 사용한다.
+- Python visible branch, unknown option, required, type, duplicate validation과 exact payload
+  projector는 변경하지 않는다.
+
+### Visual And Accessibility Contract
+
+- compact grid는 desktop에서 available width에 맞춰 자동 열을 만들고 760px에서 최소
+  2열까지 자연스럽게 줄바꿈한다.
+- selected/unselected는 배경색만이 아니라 border, check mark, `aria-pressed`로 구분한다.
+- search result list는 최대 높이를 두고 내부 세로 scroll만 허용하며 가로 overflow는 0이다.
+- search input, checkbox row, chip remove button은 keyboard focus와 visible focus outline을
+  가진다.
+- field label, required badge, help, validation error, selection summary의 현재 계층은
+  유지한다.
+
+### Error And Safety Contract
+
+- 0개 선택, invalid option, unknown field는 기존 Python validator가 실행 전에 차단한다.
+- search result bulk selection도 schema option 이외의 값을 만들 수 없다.
+- selection edit는 Run History, registry, saved JSONL을 쓰지 않는다.
+- 실행 실패 시 draft와 이전 성공 result를 보존하는 7차 계약을 유지한다.
+
+### Files And Ownership
+
+- Modify `app/web/components/backtest_analysis_decision_workspace/frontend/src/BacktestAnalysisDecisionWorkspace.tsx`
+  - adaptive mode, toggle/order helper, search state, selected chip과 bulk action render
+- Modify `app/web/components/backtest_analysis_decision_workspace/frontend/src/style.css`
+  - compact grid, checkbox row, chip shelf, search list, 760px/focus styles
+- Modify `tests/test_backtest_refactor_boundaries.py`
+  - native `<select multiple>` 제거, adaptive threshold/search/toggle/bulk/responsive source contract
+- Modify active task `PLAN.md`, `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+  - RED/GREEN, Browser QA, closeout evidence
+
+Python schema, settings adapter, runner, strategy runtime과 persistence contract는 이 8차에서
+변경하지 않는다.
+
+### Test And QA Contract
+
+- RED source/visual contract가 native `<select multiple>`를 거부하고 compact/search mode,
+  modifier-free toggle, catalog-order normalization, bulk action, selected chip을 요구한다.
+- React production build와 existing focused Python/settings/boundary tests를 통과한다.
+- Browser desktop QA에서 Quality 기본 5개에 두 지표를 modifier 없이 순서대로 추가하고
+  count가 6, 7로 늘어나는지 확인한다.
+- GTAA 계산 기간에서도 두 항목을 modifier 없이 독립 toggle하고 selection summary와
+  submitted draft가 배열을 유지하는지 확인한다.
+- large defensive asset field에서 검색, 단일 추가, chip 제거, 검색 결과 전체 선택과
+  bounded list를 확인한다.
+- 760px에서 compact grid, search input, chip shelf, CTA와 iframe의 horizontal overflow가
+  0인지 확인한다.
+
+### 8차 Acceptance Criteria
+
+1. 모든 `multi_select` field는 modifier key 없이 기존 선택을 유지하며 항목을 추가한다.
+2. compact field는 checkbox-card grid, large field는 search + checkbox list + chip shelf를 쓴다.
+3. Quality/Value와 GTAA에서 선택 수와 선택 항목을 항상 확인할 수 있다.
+4. large option field는 초기 1,031개 row를 전부 DOM에 만들지 않는다.
+5. React intent와 Python schema/validation/payload/runner 계약은 변경되지 않는다.
+6. required field 0개 선택과 invalid option은 실행 전에 Python에서 차단된다.
+7. desktop / 760px horizontal overflow는 0이고 keyboard/focus contract를 유지한다.
+8. focused tests, React build, target py_compile, diff-check를 통과한다.
+9. protected JSONL, `.superpowers/`, generated screenshot은 stage/commit하지 않는다.
+
+### 8차 Out Of Scope
+
+- factor 의미, weighting, score horizon 계산 변경
+- 신규 factor/ticker option 또는 preset 추가
+- Python fallback `st.multiselect` redesign
+- Portfolio Mix settings migration
+- strategy runtime, DB, ingestion, Level2/3 Gate 변경

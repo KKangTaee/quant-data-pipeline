@@ -133,3 +133,16 @@ generated artifact이므로 commit하지 않는다.
   actual execution을 재검증했다.
 - actual run은 실행 성공과 Run History append까지만 수행했다. Level2 source 등록은
   decision Gate 뒤 명시적 handoff action으로 계속 분리되어 있다.
+
+## 2026-07-18 8차 Multi-Select Design Self-Review
+
+- native `<select multiple>`의 modifier-key interaction 문제와 Python 배열 계약을 분리해
+  renderer만 교체하는 최소 변경 경계를 확인했다.
+- 실제 schema option 수는 compact 4·14개, large ticker 1,031개이므로 20개 임계값이
+  현재 전략 전체에서 checkbox-card와 검색형 목록을 안정적으로 구분한다.
+- compact 전체 선택, large 검색 결과 전체 선택, 전체 선택 해제의 서로 다른 범위를
+  명시했고 모든 결과는 schema catalog 순서로 정규화한다.
+- React intent, Python visible branch / validation / payload projector, runner와 persistence는
+  변경하지 않으며 required 0개 선택은 기존 실행 전 검증이 소유한다.
+- desktop / 760px, keyboard focus, initial DOM 상한, actual Quality / GTAA / large ticker QA를
+  acceptance에 포함했다. placeholder, 미결정 UX, 범위 충돌은 발견하지 않았다.
