@@ -328,6 +328,86 @@ def test_sparse_benchmark_keeps_timeline_positions_without_fake_values() -> None
     ]
 
 
+def test_holdings_schedule_separates_signal_rebalance_and_next_window() -> None:
+    bundle = result_bundle()
+    bundle["meta"]["rebalance_interval"] = 3
+    bundle["result_df"] = pd.DataFrame(
+        [
+            {
+                "Date": "2026-03-31",
+                "Rebalancing": True,
+                "End Ticker": ["SPY"],
+                "End Balance": [100.0],
+                "Next Ticker": ["SPY", "TLT"],
+                "Next Weight": [0.6, 0.4],
+                "Total Balance": 100.0,
+                "Cash": 0.0,
+            },
+            {
+                "Date": "2026-04-30",
+                "Rebalancing": False,
+                "End Ticker": ["SPY", "TLT"],
+                "End Balance": [61.0, 41.0],
+                "Next Ticker": ["SPY", "TLT"],
+                "Next Balance": [61.0, 41.0],
+                "Total Balance": 102.0,
+                "Cash": 0.0,
+            },
+        ]
+    )
+
+    schedule = _build_workspace(bundle)["holdings"]["schedule"]
+
+    assert schedule["valuation_as_of"] == "2026-04-30"
+    assert schedule["latest_signal_as_of"] == "2026-03-31"
+    assert schedule["last_rebalance_as_of"] == "2026-03-31"
+    assert schedule["cadence_label"] == "3개월마다"
+    assert schedule["next_window_label"] == "2026-06 월말 예상"
+    assert schedule["next_window_status"] == "estimated_window"
+
+
+def test_missing_cadence_never_invents_next_rebalance_date() -> None:
+    bundle = result_bundle()
+    bundle["result_df"]["Rebalancing"] = True
+
+    schedule = _build_workspace(bundle)["holdings"]["schedule"]
+
+    assert schedule["last_rebalance_as_of"] == "2026-06-30"
+    assert schedule["cadence_label"] == "주기 근거 없음"
+    assert schedule["next_window_label"] == "다음 일정 확인 필요"
+    assert schedule["next_window_status"] == "unknown"
+
+
+def test_calculation_and_data_basis_hides_raw_keys_from_first_layer() -> None:
+    bundle = result_bundle()
+    bundle["meta"].update(
+        {
+            "execution_mode": "db",
+            "transaction_cost_bps": 10.0,
+            "universe_name": "GTAA Universe",
+            "benchmark_ticker": "SPY",
+            "unknown_provider_payload": {"raw": True},
+        }
+    )
+
+    appendix = _build_workspace(bundle)["technical_appendix"]
+
+    assert [section["section_id"] for section in appendix["sections"]] == [
+        "calculation_basis",
+        "data_basis",
+        "result_trace",
+    ]
+    visible_labels = [
+        row["label"]
+        for section in appendix["sections"]
+        for row in section["rows"]
+    ]
+    assert "실행 방식" in visible_labels
+    assert "기준지수" in visible_labels
+    assert "unknown_provider_payload" not in visible_labels
+    assert "unknown_provider_payload" in appendix["raw"]["meta"]
+
+
 def test_missing_holdings_stays_unavailable_instead_of_guessing_equal_weights() -> None:
     bundle = result_bundle()
     bundle["result_df"] = pd.DataFrame(

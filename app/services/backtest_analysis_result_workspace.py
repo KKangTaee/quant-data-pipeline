@@ -745,6 +745,71 @@ def _row_tickers(
     return fallback if fallback and len(fallback) == len(balances) else []
 
 
+def _cadence_months(meta: Mapping[str, Any]) -> int | None:
+    """Return only an explicit month cadence; never infer one from result spacing."""
+
+    for key in ("rebalance_interval", "interval"):
+        numeric = _optional_float(meta.get(key))
+        if numeric is not None and numeric >= 1 and float(numeric).is_integer():
+            return int(numeric)
+    frequency = str(meta.get("rebalance_freq") or "").strip().lower()
+    return {
+        "monthly": 1,
+        "m": 1,
+        "quarterly": 3,
+        "q": 3,
+        "annual": 12,
+        "yearly": 12,
+        "y": 12,
+    }.get(frequency)
+
+
+def _rebalance_schedule(
+    result_df: pd.DataFrame,
+    *,
+    target_row: Mapping[str, Any] | None,
+    meta: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Separate observed valuation/signal dates from a conservative next window."""
+
+    prepared = _latest_rows(result_df)
+    valuation = (
+        _date_label(prepared.iloc[-1].get("Date")) if not prepared.empty else ""
+    )
+    signal = _date_label(dict(target_row or {}).get("Date"))
+    rebalance_rows = (
+        prepared[prepared["Rebalancing"].fillna(False).astype(bool)]
+        if "Rebalancing" in prepared.columns
+        else pd.DataFrame()
+    )
+    last_rebalance = (
+        _date_label(rebalance_rows.iloc[-1].get("Date"))
+        if not rebalance_rows.empty
+        else ""
+    )
+    months = _cadence_months(meta)
+    if months and last_rebalance:
+        next_month = pd.Timestamp(last_rebalance) + pd.DateOffset(months=months)
+        next_label = f"{next_month:%Y-%m} 월말 예상"
+        status = "estimated_window"
+        cadence = f"{months}개월마다"
+    else:
+        next_label = "다음 일정 확인 필요"
+        status = "unknown"
+        cadence = f"{months}개월마다" if months else "주기 근거 없음"
+    return {
+        "valuation_as_of": valuation,
+        "latest_signal_as_of": signal or "확인 가능한 기록 없음",
+        "last_rebalance_as_of": last_rebalance or "확인 가능한 기록 없음",
+        "cadence_label": cadence,
+        "next_window_label": next_label,
+        "next_window_status": status,
+        "explanation": (
+            "최신 신호 기준 목표이며 다음 리밸런싱 전까지 현재 구성을 유지합니다."
+        ),
+    }
+
+
 def _single_holdings_projection(bundle: Mapping[str, Any]) -> dict[str, Any]:
     result_df = _latest_rows(_frame(bundle.get("result_df")))
     meta = dict(bundle.get("meta") or {})
@@ -762,6 +827,11 @@ def _single_holdings_projection(bundle: Mapping[str, Any]) -> dict[str, Any]:
             "explanation": "결과 표에 보유 근거가 없습니다.",
             "unavailable_reason": "result_df가 비어 있습니다.",
             "evidence_status": "missing",
+            "schedule": _rebalance_schedule(
+                result_df,
+                target_row=None,
+                meta=meta,
+            ),
         }
 
     latest = dict(result_df.iloc[-1].to_dict())
@@ -863,6 +933,11 @@ def _single_holdings_projection(bundle: Mapping[str, Any]) -> dict[str, Any]:
         "explanation": explanations[status],
         "unavailable_reason": unavailable_reason,
         "evidence_status": "available" if status != "unavailable" else "missing",
+        "schedule": _rebalance_schedule(
+            result_df,
+            target_row=target_row,
+            meta=meta,
+        ),
     }
 
 
@@ -1080,21 +1155,149 @@ def _evidence_groups(bundle: Mapping[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
-def _technical_appendix(bundle: Mapping[str, Any]) -> dict[str, Any]:
+def _basis_row(
+    label: str,
+    value: Any,
+    explanation: str,
+    *,
+    status: str = "available",
+) -> dict[str, Any]:
+    value_label = (
+        str(value).strip() if value not in (None, "") else "확인 가능한 근거 없음"
+    )
+    return {
+        "label": label,
+        "value_label": value_label,
+        "explanation": explanation,
+        "status": (
+            status if value_label != "확인 가능한 근거 없음" else "missing"
+        ),
+    }
+
+
+def _technical_appendix(
+    bundle: Mapping[str, Any],
+    *,
+    lifecycle: Mapping[str, Any],
+    configuration_fingerprint: str,
+) -> dict[str, Any]:
+    """Publish user-readable calculation bases and retain raw trace secondarily."""
+
     result_df = _frame(bundle.get("result_df"))
     prepared_rows = [
         {str(key): _json_value(value) for key, value in row.items()}
         for row in result_df.head(100).to_dict(orient="records")
     ]
     meta = dict(bundle.get("meta") or {})
-    return {
+    summary = _summary_row(bundle)
+    start_date = summary.get("Start Date")
+    end_date = summary.get("End Date")
+    if not result_df.empty:
+        start_date = start_date or result_df.iloc[0].get("Date")
+        end_date = end_date or result_df.iloc[-1].get("Date")
+    period_label = (
+        f"{_date_label(start_date)} ~ {_date_label(end_date)}"
+        if start_date is not None and end_date is not None
+        else None
+    )
+    cost_bps = _optional_float(meta.get("transaction_cost_bps"))
+    price_freshness = dict(meta.get("price_freshness") or {})
+    benchmark_label = str(
+        meta.get("benchmark_label")
+        or meta.get("benchmark_ticker")
+        or meta.get("benchmark_contract")
+        or ""
+    ).strip()
+    raw = {
         "row_count": len(result_df),
         "columns": [str(column) for column in result_df.columns],
         "prepared_rows": prepared_rows,
         "preview_limited": len(result_df) > len(prepared_rows),
-        "meta_rows": [
-            {"key": str(key), "value": _json_value(value)}
+        "meta": {
+            str(key): _json_value(value)
             for key, value in sorted(meta.items(), key=lambda item: str(item[0]))
+        },
+    }
+    return {
+        "sections": [
+            {
+                "section_id": "calculation_basis",
+                "label": "계산 기준",
+                "rows": [
+                    _basis_row(
+                        "실행 방식",
+                        meta.get("execution_mode") or meta.get("runtime_mode"),
+                        "백테스트가 사용한 실행 경로입니다.",
+                    ),
+                    _basis_row(
+                        "거래비용",
+                        f"{cost_bps:.1f} bps" if cost_bps is not None else None,
+                        "결과 곡선에 반영하도록 지정한 거래비용 기준입니다.",
+                    ),
+                    _basis_row(
+                        "계산 기간",
+                        period_label,
+                        f"정렬된 결과 {len(result_df):,}행을 기준으로 계산했습니다.",
+                    ),
+                ],
+            },
+            {
+                "section_id": "data_basis",
+                "label": "데이터 기준",
+                "rows": [
+                    _basis_row(
+                        "투자 대상",
+                        meta.get("universe_name") or meta.get("universe"),
+                        "후보를 고른 Universe 또는 자산군 계약입니다.",
+                    ),
+                    _basis_row(
+                        "가격 최신성",
+                        price_freshness.get("status")
+                        or meta.get("price_freshness_status"),
+                        "실행 시점에 확인한 가격 데이터 준비 상태입니다.",
+                    ),
+                    _basis_row(
+                        "기준지수",
+                        benchmark_label,
+                        "전략 곡선과 같은 기준으로 비교하는 Benchmark입니다.",
+                    ),
+                    _basis_row(
+                        "Factor 준비",
+                        meta.get("factor_readiness_status"),
+                        "전략 계산에 필요한 Factor 데이터 준비 상태입니다.",
+                    ),
+                ],
+            },
+            {
+                "section_id": "result_trace",
+                "label": "결과 추적",
+                "rows": [
+                    _basis_row(
+                        "실행 결과 ID",
+                        meta.get("run_id"),
+                        "이 결과를 다시 찾을 때 사용하는 식별자입니다.",
+                    ),
+                    _basis_row(
+                        "설정 지문",
+                        configuration_fingerprint,
+                        "현재 화면 설정과 결과 설정이 같은지 확인하는 값입니다.",
+                    ),
+                    _basis_row(
+                        "결과 상태",
+                        lifecycle.get("display_label") or lifecycle.get("state"),
+                        "현재 설정 결과인지 참고용 이전 결과인지 나타냅니다.",
+                    ),
+                ],
+            },
+        ],
+        "raw": raw,
+        # Backward-compatible aliases are retained until every renderer consumes raw.
+        "row_count": raw["row_count"],
+        "columns": raw["columns"],
+        "prepared_rows": raw["prepared_rows"],
+        "preview_limited": raw["preview_limited"],
+        "meta_rows": [
+            {"key": key, "value": value} for key, value in raw["meta"].items()
         ],
     }
 
@@ -1180,7 +1383,11 @@ def build_backtest_analysis_result_workspace(
         "evidence_groups": _evidence_groups(bundle),
         "performance_rows": _performance_rows(bundle.get("result_df")),
         "holding_change_rows": _holding_change_rows(bundle.get("result_df")),
-        "technical_appendix": _technical_appendix(bundle),
+        "technical_appendix": _technical_appendix(
+            bundle,
+            lifecycle=lifecycle,
+            configuration_fingerprint=current_configuration_fingerprint,
+        ),
         "actions": (
             {"save_and_move": readiness["action"]}
             if readiness.get("action")
