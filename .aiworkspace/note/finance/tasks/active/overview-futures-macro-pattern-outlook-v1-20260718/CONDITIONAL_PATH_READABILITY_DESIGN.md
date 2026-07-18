@@ -163,3 +163,60 @@ UI는 기존 `conditional_path.points`의 마지막 point만 박스에 사용하
 - actual Browser QA에서 세 상태의 anchor `cx / cy`를 수집해 완전 동일성을 비교한다.
 - 5D step-5 / 20D step-20 range와 서로 다른 terminal / polyline은 계속 변경되는지 확인한다.
 - desktop과 420px overflow, label clipping, console error를 다시 확인한다.
+
+## 2026-07-18 Net Direction Follow-up
+
+### 문제와 원인
+
+현재 조건부 점선은 현재점 뒤에 5개 또는 20개의 날짜별 중앙 위치를 모두 연결한다.
+각 step의 x/y 중앙값은 유사 episode 집합에서 독립적으로 계산되므로 연결선은 하나의 실제 대표 episode가 아니고,
+중간에 방향을 여러 번 바꾸는 것처럼 보일 수 있다. 이 지그재그는 통계 입력 오류가 아니지만
+사용자가 원하는 `결국 어느 방향으로 얼마나 이동하는가`를 가린다.
+
+### 검토한 방식
+
+1. **현재 → 말일 중앙 위치의 예상 순이동 — 채택**
+   - 현재와 5D/20D terminal을 한 개의 직선 점선으로 연결한다.
+   - 기존 고정 크기 방향 marker와 terminal range를 유지해 방향과 최종 분산을 분리해 읽는다.
+   - 중간 step median은 서비스·payload·검증에 남지만 지도에서는 실제 경로처럼 연결하지 않는다.
+2. **날짜별 중앙값을 smoothing한 곡선**
+   - 시각적으로 부드럽지만 계산되지 않은 중간 형상을 새로 만들어 통계적 의미가 불명확해지므로 채택하지 않는다.
+3. **가장 대표적인 단일 과거 episode 경로**
+   - 실제 한 경로라는 장점은 있지만 한 사례를 미래 대표 경로처럼 과대해석할 위험이 있어 채택하지 않는다.
+
+### 승인된 화면 계약
+
+- 조건부 점선은 `현재 → 선택 horizon 말일 예상 중앙 위치`의 한 방향 순이동만 표시한다.
+- 점선은 1~N일의 실제 또는 중앙 일별 경로가 아니며, 중간 굴곡이나 waypoint를 표시하지 않는다.
+- terminal circle, `5일 후 예상 위치` / `20일 후 예상 위치`, fixed 9-unit direction marker는 유지한다.
+- 음영 박스는 선택 horizon 말일의 축별 q25~q75 도착 범위 하나를 유지한다.
+- legend는 `5일 예상 순이동` / `20일 예상 순이동`으로 바꾼다.
+- 우측 설명은 점선이 `시작점에서 말일 중앙 위치까지의 예상 순이동`이며 중간 일별 경로가 아님을 명시한다.
+- 공통 scale은 세 관측 anchor와 두 horizon terminal/range만으로 계산한다. 화면에서 제거한 중간 median과 q25/q75는 scale을 바꾸지 않는다.
+- `관측만 / 5D / 20D` 전환에서 세 관측 anchor 좌표는 계속 동일해야 한다.
+
+### 데이터와 범위
+
+변경하지 않는다.
+
+- stepwise median과 q25/q75 서비스 계산
+- chronological path validation, probability, episode, publication status
+- payload, cache version, DB/provider/schema
+- 현재 관측 실선과 네 체제 색상
+
+변경 파일은 `PatternMapSection.tsx`, 관련 source contract, Vite production bundle과 최소 task/doc 기록으로 제한한다.
+
+### 검증 계약
+
+- RED/GREEN source contract는 forecast shape가 현재와 terminal만 소비하고 `forecastPoints.map`으로 polyline을 만들지 않는지 확인한다.
+- 공통 scale에서 숨겨진 stepwise median이 제거되고 두 terminal range가 유지되는지 확인한다.
+- 실제 Browser QA는 5D/20D 각각 조건부 직선 1개, direction 1개, terminal 1개, 말일 range 1개를 확인한다.
+- 실제 SVG forecast의 시작점은 현재 anchor와 같고 끝점은 selected terminal과 같아야 한다.
+- `관측만`은 forecast layer 0개, 세 상태의 관측 anchor 좌표는 동일해야 한다.
+- desktop/420px overflow와 console error를 확인한다.
+
+### 완료 조건
+
+- 사용자가 점선을 한 번에 `현재에서 말일까지의 순방향`으로 읽을 수 있다.
+- 중간 step별 중앙값 연결로 생기던 지그재그가 지도에서 사라진다.
+- 최종 도착 범위와 확률·검증 상태는 그대로 유지된다.
