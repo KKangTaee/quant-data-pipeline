@@ -74,3 +74,50 @@ def test_workflow_shell_accepts_only_new_allowed_noncurrent_intent() -> None:
     assert duplicate == {"accepted": False}
     assert invalid == {"accepted": False}
     assert current == {"accepted": False}
+
+
+def test_adapter_requests_route_once_for_new_valid_intent() -> None:
+    from app.web.backtest_workflow_shell import apply_backtest_workflow_shell_intent
+
+    requested: list[str] = []
+    session_state = {
+        "backtest_active_panel": BACKTEST_STAGE_ANALYSIS,
+        "backtest_workflow_shell_consumed_nonce": None,
+    }
+    accepted = apply_backtest_workflow_shell_intent(
+        {
+            "type": "select_stage",
+            "stage_key": BACKTEST_STAGE_PRACTICAL_VALIDATION,
+            "nonce": "route-1",
+        },
+        session_state=session_state,
+        request_handler=requested.append,
+    )
+    repeated = apply_backtest_workflow_shell_intent(
+        {
+            "type": "select_stage",
+            "stage_key": BACKTEST_STAGE_PRACTICAL_VALIDATION,
+            "nonce": "route-1",
+        },
+        session_state=session_state,
+        request_handler=requested.append,
+    )
+
+    assert accepted is True
+    assert repeated is False
+    assert requested == [BACKTEST_STAGE_PRACTICAL_VALIDATION]
+    assert session_state["backtest_workflow_shell_consumed_nonce"] == "route-1"
+
+
+def test_adapter_rejects_unknown_stage_without_route_request() -> None:
+    from app.web.backtest_workflow_shell import apply_backtest_workflow_shell_intent
+
+    requested: list[str] = []
+    accepted = apply_backtest_workflow_shell_intent(
+        {"type": "select_stage", "stage_key": "unknown", "nonce": "route-2"},
+        session_state={"backtest_active_panel": BACKTEST_STAGE_ANALYSIS},
+        request_handler=requested.append,
+    )
+
+    assert accepted is False
+    assert requested == []

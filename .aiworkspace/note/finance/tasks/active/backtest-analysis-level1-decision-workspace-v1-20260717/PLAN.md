@@ -6398,7 +6398,7 @@ git commit -m "Backtest 상단 단계 계약 구현"
 - Produces: `render_backtest_workflow_shell() -> str`.
 - Produces: `render_backtest_workflow_shell_fallback(shell) -> dict[str, Any] | None`.
 
-- [ ] **Step 1: Add failing adapter and fallback ownership tests**
+- [x] **Step 1: Add failing adapter and fallback ownership tests**
 
 ```python
 def test_adapter_requests_route_once_for_new_valid_intent() -> None:
@@ -6446,13 +6446,13 @@ def test_adapter_rejects_unknown_stage_without_route_request() -> None:
     assert requested == []
 ```
 
-- [ ] **Step 2: Run RED and confirm the missing-adapter failure**
+- [x] **Step 2: Run RED and confirm the missing-adapter failure**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py -q`
 
 Expected: existing pure tests pass and new tests fail with `ModuleNotFoundError: No module named 'app.web.backtest_workflow_shell'`.
 
-- [ ] **Step 3: Implement the adapter and same-read-model fallback**
+- [x] **Step 3: Implement the adapter and same-read-model fallback**
 
 ```python
 def apply_backtest_workflow_shell_intent(
@@ -6493,7 +6493,7 @@ container / columns / buttons를 렌더링하고 다음 intent만 반환한다.
 component wrapper는 `_FRONTEND_BUILD_DIR.exists()`일 때만 v1 component를 declare하고 `shell`, `key`,
 `on_change`를 넘긴다. build가 아직 없으면 `is_backtest_workflow_shell_available()`은 `False`다.
 
-- [ ] **Step 4: Run GREEN and Python compile**
+- [x] **Step 4: Run GREEN and Python compile**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py -q`
 
@@ -6501,7 +6501,7 @@ Run: `.venv/bin/python -m py_compile app/services/backtest_workflow_shell.py app
 
 Expected: all tests pass and compile exits 0.
 
-- [ ] **Step 5: Commit the Python adapter/fallback**
+- [x] **Step 5: Commit the Python adapter/fallback**
 
 ```bash
 git add tests/test_backtest_workflow_shell.py app/web/backtest_workflow_shell.py app/web/backtest_workflow_shell_panel.py app/web/components/backtest_workflow_shell/__init__.py app/web/components/backtest_workflow_shell/component.py
