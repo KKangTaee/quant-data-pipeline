@@ -595,7 +595,7 @@ git commit -m "선물 매크로 유사 패턴 episode 전망 추가"
   - `load_overview_futures_macro_pattern_outlook(*, query_fn, symbols, years=5, cache_ttl_seconds=900) -> dict[str, Any]`
   - horizon item keys: `horizon`, `label`, `probabilities`, `baseline_probabilities`, `probability_lift`, `dominant_regime`, `episode_count`, `estimate_status`, `status_reason`, `brier_score`, `baseline_brier_score`, `calibration_error`, `closest_episodes`, `asset_pathways`.
 
-- [ ] **Step 1: Add RED tests for publication thresholds**
+- [x] **Step 1: Add RED tests for publication thresholds**
 
 ```python
 @pytest.mark.parametrize(
@@ -645,7 +645,7 @@ def test_outlook_isolates_current_pattern_when_validation_fails():
     assert snapshot["current_pattern"]["status"] in {"READY", "PARTIAL"}
 ```
 
-- [ ] **Step 2: Run tests and confirm RED**
+- [x] **Step 2: Run tests and confirm RED**
 
 ```bash
 .venv/bin/python -m pytest tests/test_futures_macro_pattern_validation.py -q -k 'publication or walk_forward or outlook'
@@ -653,7 +653,7 @@ def test_outlook_isolates_current_pattern_when_validation_fails():
 
 Expected: missing API failures.
 
-- [ ] **Step 3: Implement probability, baseline, Brier, and calibration helpers**
+- [x] **Step 3: Implement probability, baseline, Brier, and calibration helpers**
 
 ```python
 def _regime_probabilities(rows: pd.DataFrame) -> dict[str, float]:
@@ -693,7 +693,7 @@ def publication_status_for_metrics(
 
 Calibration error is the weighted absolute difference between predicted probability buckets `(0,.2],(.2,.4],...` and observed frequency. Baseline is expanding historical regime frequency available before each test date.
 
-- [ ] **Step 4: Implement chronological folds and current outlook**
+- [x] **Step 4: Implement chronological folds and current outlook**
 
 ```python
 @dataclass(frozen=True)
@@ -747,7 +747,7 @@ def build_pattern_outlook_snapshot(
 
 `_build_horizon_outlook()` joins selected anchors to same-horizon outcomes, computes probabilities / baseline / lift, uses chronological fold metrics, and returns no probability numbers when status is `UNAVAILABLE`. `edge_label` is only a directional regime label when lift confidence interval excludes zero; otherwise `방향 우위 미확인`.
 
-- [ ] **Step 5: Implement cache keyed by latest daily marker**
+- [x] **Step 5: Implement cache keyed by latest daily marker**
 
 Reuse `_latest_daily_cache_marker()` and `_load_validation_futures_rows()` semantics, but keep a separate cache dictionary. The public loader must load five calendar years, normalize candles, build Task 1 features, Task 2 current pattern, and Task 4 outlook. Cache key includes selected symbols, years, latest stored daily marker, and algorithm version.
 
@@ -760,7 +760,7 @@ def clear_futures_macro_pattern_validation_cache() -> None:
     _PATTERN_OUTLOOK_CACHE.clear()
 ```
 
-- [ ] **Step 6: Run validation tests and relevant legacy regression**
+- [x] **Step 6: Run validation tests and relevant legacy regression**
 
 ```bash
 .venv/bin/python -m pytest tests/test_futures_macro_pattern_validation.py -q
@@ -770,7 +770,7 @@ def clear_futures_macro_pattern_validation_cache() -> None:
 
 Expected: all selected tests pass.
 
-- [ ] **Step 7: Commit Task 4**
+- [x] **Step 7: Commit Task 4**
 
 ```bash
 git add app/services/futures_macro_pattern_validation.py tests/test_futures_macro_pattern_validation.py
@@ -1436,7 +1436,7 @@ Do not stage the QA screenshot, `.playwright-mcp/`, registries, saved setups, ru
 - [x] Task 1: point-in-time multi-window feature frame
 - [x] Task 2: current regime / transition / path / change conditions
 - [x] Task 3: forward outcomes / independent similar episodes
-- [ ] Task 4: chronological validation / publication gate / cache
+- [x] Task 4: chronological validation / publication gate / cache
 - [ ] Task 5: default service integration / Python React payload V2
 - [ ] Task 6: Market Context-style React workbench V2 / build
 - [ ] Task 7: actual QA / performance gate / docs sync / closeout

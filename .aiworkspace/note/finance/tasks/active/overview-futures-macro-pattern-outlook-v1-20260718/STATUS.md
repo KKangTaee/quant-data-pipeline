@@ -13,7 +13,8 @@
 - Task 1 complete: point-in-time 1D / 5D / 20D family features reuse existing score weights and preserve trailing-only calculations.
 - Task 2 complete: current regime, transition phase, 60D path / ribbon, evidence, and change conditions are separated from future probabilities.
 - Task 3 complete: 5D / 20D forward outcomes use as-of volatility, and similar dates are de-overlapped by trading-row episode spacing.
-- Current stage: Task 4 chronological validation, publication gates, and cache.
+- Task 4 complete: chronological publication metrics, strict 30 / 60 episode gates, unavailable-number suppression, and latest-row cache are implemented.
+- Current stage: Task 5 default service integration and React payload V2.
 - No DB schema, provider, registry, or saved setup has been changed.
 
 ## Roadmap State
@@ -26,4 +27,4 @@
 
 ## Next Action
 
-Task 4의 sample / Brier / calibration publication gate와 chronological embargo tests를 RED로 만든다.
+Task 5의 default outlook loading, V2 payload, unavailable probability suppression, and refresh cache clearing tests를 RED로 만든다.

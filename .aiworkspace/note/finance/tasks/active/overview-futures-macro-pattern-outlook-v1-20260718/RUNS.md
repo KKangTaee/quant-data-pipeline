@@ -47,3 +47,11 @@
 - First GREEN established exclusive 5D / 20D outcome labels, future-row stability, overlap exclusion, and trading-row anchor spacing.
 - A second RED showed path IQR was still a placeholder (`0.0`); the implementation now measures intermediate cumulative paths using only as-of volatility.
 - GREEN: pattern validation passed 4 tests in 4.392s; current pattern regression passed 7 tests; py_compile and diff check passed.
+
+## 2026-07-18 Task 4 — Publication Gate And Cache
+
+- RED: five publication tests failed on absent Brier, fold, gate, and outlook APIs.
+- The first outlook fixture produced only 26 independent 5D episodes after warm-up and spacing; the gate remained unchanged and the fixture was extended from 260 to 300 days to exercise `PROVISIONAL` behavior.
+- Publication tests passed 5 tests; the complete validation module passed 9 tests before the cache cycle.
+- Cache TDD was restarted from RED by removing the uncommitted public loader; the missing cache API failed as expected, then passed after marker-keyed loader restoration.
+- Final GREEN: validation module passed 10 tests, legacy Futures Macro contracts passed 23 tests, py_compile and diff check passed.
