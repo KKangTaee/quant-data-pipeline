@@ -1309,7 +1309,7 @@ git commit -m "선물 매크로 패턴 전망 화면 개편"
 - Consumes: complete Python + React V2 implementation.
 - Produces: measured actual publication state, latency evidence, desktop/mobile QA, durable ownership / flow docs, roadmap 5/5 closeout.
 
-- [ ] **Step 1: Run complete focused Python verification**
+- [x] **Step 1: Run complete focused Python verification**
 
 ```bash
 .venv/bin/python -m pytest tests/test_futures_macro_pattern.py tests/test_futures_macro_pattern_validation.py -q
@@ -1320,7 +1320,7 @@ git diff --check
 
 Expected: all selected tests pass, compile exits 0, diff check clean.
 
-- [ ] **Step 2: Measure actual local snapshot without mutating data**
+- [x] **Step 2: Measure actual local snapshot without mutating data**
 
 Run a read-only script:
 
@@ -1353,7 +1353,7 @@ print({
 
 Record exact output in task `RUNS.md`. Do not lower gates to turn an actual `UNAVAILABLE` / `PROVISIONAL` result into `VERIFIED`.
 
-- [ ] **Step 3: Apply runtime performance stop condition**
+- [x] **Step 3: Apply runtime performance stop condition**
 
 - If uncached actual build ≤ 5 seconds and cached reload ≤ 0.5 seconds, keep default cached computation.
 - If uncached build > 5 seconds, profile service functions and optimize vectorized calculation / cache key first.
@@ -1376,7 +1376,7 @@ def test_pattern_outlook_cache_reuses_same_marker_and_rebuilds_on_new_daily_row(
     assert third["call"] == 2
 ```
 
-- [ ] **Step 4: Run Streamlit and perform Browser QA**
+- [x] **Step 4: Run Streamlit and perform Browser QA**
 
 Start the repository’s existing Streamlit app command from the runbook/current task history. Verify:
 
@@ -1389,7 +1389,7 @@ Start the repository’s existing Streamlit app command from the runbook/current
 - console errors 0;
 - attach one desktop QA screenshot in the final response, do not stage it.
 
-- [ ] **Step 5: Update task docs with measured facts**
+- [x] **Step 5: Update task docs with measured facts**
 
 Update:
 
@@ -1398,7 +1398,7 @@ Update:
 - `RUNS.md`: exact commands, pass counts, build output, Browser QA URL / screenshot;
 - `RISKS.md`: remaining history / roll / calibration gaps only.
 
-- [ ] **Step 6: Synchronize durable finance docs**
+- [x] **Step 6: Synchronize durable finance docs**
 
 Use `finance-doc-sync` during execution and make these exact durable changes:
 
@@ -1407,7 +1407,7 @@ Use `finance-doc-sync` during execution and make these exact durable changes:
 - `PROJECT_MAP.md`: include the two new services and four React sections in Overview Futures Macro ownership.
 - root logs: 3~5 line milestone / decision / handoff only, pointing to this active task.
 
-- [ ] **Step 7: Run final verification after docs**
+- [x] **Step 7: Run final verification after docs**
 
 ```bash
 .venv/bin/python -m pytest tests/test_futures_macro_pattern.py tests/test_futures_macro_pattern_validation.py -q
@@ -1420,7 +1420,7 @@ git status --short
 
 Expected: tests pass, build succeeds, compile exits 0, diff check clean, only intended files plus pre-existing unrelated untracked paths appear.
 
-- [ ] **Step 8: Commit closeout**
+- [x] **Step 8: Commit closeout**
 
 ```bash
 git add .aiworkspace/note/finance/docs/flows/README.md .aiworkspace/note/finance/docs/architecture/README.md .aiworkspace/note/finance/docs/PROJECT_MAP.md .aiworkspace/note/finance/WORK_PROGRESS.md .aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md .aiworkspace/note/finance/tasks/active/overview-futures-macro-pattern-outlook-v1-20260718
@@ -1439,12 +1439,14 @@ Do not stage the QA screenshot, `.playwright-mcp/`, registries, saved setups, ru
 - [x] Task 4: chronological validation / publication gate / cache
 - [x] Task 5: default service integration / Python React payload V2
 - [x] Task 6: Market Context-style React workbench V2 / build
-- [ ] Task 7: actual QA / performance gate / docs sync / closeout
+- [x] Task 7: actual QA / performance gate / docs sync / closeout
 
 ## Overall Roadmap State
 
 - 1차 설계 계약: approved and committed (`c207690b`)
 - 2차 상세 구현 계획: this document
-- 3차 service / validation implementation: pending execution
+- 3차 service / validation implementation: complete
+- 4차 React Workbench V2: complete
+- 5차 actual QA / performance / docs sync: complete
 - 4차 React UI implementation: pending execution
 - 5차 actual QA / docs closeout: pending execution

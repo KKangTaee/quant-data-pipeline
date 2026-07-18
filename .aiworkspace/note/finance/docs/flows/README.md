@@ -27,15 +27,15 @@ Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation 
 
 ## Overview Futures Macro Flow
 
-`Workspace > Overview > Futures Macro`는 저장된 futures daily OHLCV를 읽어 매크로 context와 lazy historical validation을 확인하는 화면이며 provider run 진단이나 trading signal 화면이 아니다.
+`Workspace > Overview > Futures Macro`는 저장된 futures daily OHLCV를 읽어 오늘의 재가격화, 다중 기간 현재 패턴, 다음 5D / 20D 조건부 위험 체제를 한 흐름에서 확인하는 단기 매크로 레이더다. 장기 경제사이클, provider run 진단, 확정 예측, trading signal 화면이 아니다.
 
 기본 화면의 정보 소유권은 다음처럼 유지한다.
 
-- Command strip: daily macro refresh, screen reload, validation state를 보여준다.
-- Macro Context: 오늘 기준 시장 브리프, 근거 강도 / 자료 기준, score chip, 현재 score evidence를 먼저 읽는다.
-- Recent Flow: stored 1D futures rows에서 1D / 1W / 1M 흐름을 비교한다.
-- Historical Validation: 사용자가 `오늘과 비슷한 과거 흐름 확인`을 눌렀을 때만 계산한다. 결과는 표본 수, 방향성 판정, hit rule, 5D / 20D sample metrics처럼 계산된 값만 말한다.
-- Disclosure: React `현재 근거`는 `매크로 컨텍스트` 안에 두고, 하단 `원본 데이터 / 계산 추적`은 `매크로 컨텍스트 -> 최근 흐름 -> 과거 점검`의 화면 섹션별 원본 연결과 `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서로 읽는다. Provider run rows / stale candle detail은 보조 evidence로 낮춘다.
+- Current regime: 오늘 shock과 trailing 1D / 5D / 20D family feature로 현재 체제와 지속·전환 상태를 먼저 읽는다. 현재 카드는 관측이며 미래 확률이 아니다.
+- Conditional outlook: 겹치는 날짜를 독립 episode 간격으로 줄인 유사 패턴의 다음 5D / 20D 결과 분포를 기본으로 계산한다. 30개 미만은 숫자를 숨기고, 30~59개는 최대 `PROVISIONAL`, 60개 이상도 시간순 Brier / calibration gate를 충족해야 `VERIFIED`다.
+- Pattern evidence: 관측 경로와 조건부 결과 영역을 연결선 없이 분리하고, 현재 위치·지속/전환·전망 우위·바뀌는 조건, 최근 60거래일 ribbon을 이어서 읽는다.
+- Asset pathways: 주식 위험선호, 금리 부담, 달러 압력, 안전자산, 원자재·물가는 전체 시장 체제의 보조 근거이며 독립 추천으로 승격하지 않는다.
+- Disclosure: React 방법론에는 독립 표본, Brier / baseline Brier, calibration, continuous futures roll 한계를 둔다. 하단 `원본 데이터 / 계산 추적`은 원시 점수와 daily candle 검산용 appendix로 남긴다.
 
 ## Backtest Selection Flow
 

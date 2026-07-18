@@ -29,8 +29,11 @@ Baseline comparison, estimate status, sample, and unavailable states must remain
 
 ### Runtime Cost
 
-Historical multi-window replay and episode matching may be too slow for synchronous first render.
-Measure before choosing cache or materialization; do not add a DB schema by default.
+Actual multi-window replay initially took 21.791s. Vectorized as-of path statistics reduced it to 4.963s uncached and 0.031s for a same-marker cached reload, so V1 remains process-cached without a DB schema.
+
+### Calibration Gap
+
+The actual 5D Brier score is slightly worse than its unconditional baseline, while 20D has only 42 independent episodes. Both horizons correctly remain `PROVISIONAL`; improving this requires more independent history or a separately approved model/source revision, not lower gates.
 
 ## Escalation Conditions
 

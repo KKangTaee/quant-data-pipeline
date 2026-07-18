@@ -18,17 +18,21 @@
 - Legacy historical-validation loading is no longer part of the active render path; refresh and reload clear the new latest-marker cache.
 - Task 6 complete: the React workbench now follows A안 from current regime through 5D / 20D outlook, observed path and probability zones, regime ribbon, asset pathways, and method disclosure.
 - The unreferenced V1 `RecentFlowSection` and `HistoricalValidationPanel` sources were removed after repository-wide reference checks.
-- Current stage: Task 7 actual data QA, performance gate, Browser QA, and durable documentation sync.
+- Task 7 complete: actual read-only data QA, performance optimization, desktop/mobile Browser QA, final verification, and durable documentation sync are complete.
+- Actual 2026-07-17 state is `mixed / transition_attempt`; 5D has 120 independent episodes and 20D has 42, both `PROVISIONAL` with `방향 우위 미확인`.
+- Vectorized path statistics reduced the actual uncached build from 21.791s to 4.963s; same-marker cached reload is 0.031s and returns the identical object.
+- Browser QA at `http://localhost:8512` confirmed 3 horizon cards, map + evidence, 60D ribbon, 5 asset pathways, method disclosure, 420px single-column layout with no horizontal clipping, and 0 console errors.
+- Overall roadmap: 1차 design through 5차 actual QA / docs sync complete (`5/5`).
 - No DB schema, provider, registry, or saved setup has been changed.
 
 ## Roadmap State
 
 - 1차 설계 계약: approved
 - 2차 상세 구현 계획: written
-- 3차 service / validation implementation: in progress
-- 4차 React Workbench V2: pending execution
-- 5차 actual QA / docs sync: pending execution
+- 3차 service / validation implementation: complete
+- 4차 React Workbench V2: complete
+- 5차 actual QA / docs sync: complete
 
 ## Next Action
 
-Task 7에서 실제 DB snapshot의 publication status와 runtime을 측정하고, Streamlit Browser QA 및 finance durable docs sync를 수행한다.
+후속 개선은 별도 승인 범위다. 다음 후보는 더 긴 독립 episode 이력, exchange contract / roll-aware source, calibration 개선이며 현재 publication gate를 낮추지 않는다.

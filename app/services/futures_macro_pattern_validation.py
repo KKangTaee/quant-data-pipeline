@@ -128,6 +128,48 @@ def _forward_path_statistics(
     }
 
 
+def _forward_path_stat_frame(
+    *,
+    close: pd.DataFrame,
+    as_of_volatility: pd.DataFrame,
+    horizon: int,
+    definition: ScoreDefinition,
+) -> pd.DataFrame:
+    """Vectorize every as-of path while keeping volatility fixed at each origin."""
+
+    member_columns = [symbol for symbol in definition.members if symbol in close.columns]
+    if not member_columns:
+        return pd.DataFrame(
+            index=close.index,
+            columns=["median_path_z", "path_iqr_z", "max_adverse_z"],
+            dtype=float,
+        )
+    step_values: dict[int, pd.Series] = {}
+    for step in range(1, int(horizon) + 1):
+        forward_return = close[member_columns].shift(-step).divide(close[member_columns]).sub(1.0)
+        scale = as_of_volatility[member_columns].mul(step**0.5).replace(0, pd.NA)
+        scaled = forward_return.divide(scale)
+        weighted = pd.concat(
+            [
+                scaled[symbol].mul(float(definition.members[symbol])).rename(symbol)
+                for symbol in member_columns
+            ],
+            axis=1,
+        )
+        step_values[step] = weighted.mean(axis=1, skipna=True)
+    paths = pd.DataFrame(step_values, index=close.index)
+    lower = paths.quantile(0.25, axis=1)
+    upper = paths.quantile(0.75, axis=1)
+    return pd.DataFrame(
+        {
+            "median_path_z": paths.median(axis=1, skipna=True),
+            "path_iqr_z": upper.sub(lower),
+            "max_adverse_z": paths.min(axis=1, skipna=True).clip(upper=0.0),
+        },
+        index=close.index,
+    )
+
+
 def _classify_forward_regime(row: pd.Series) -> str:
     pressures = sum(
         float(row.get(f"{family}__forward_z") or 0.0) >= SIGNAL_Z_THRESHOLD
@@ -159,6 +201,16 @@ def build_forward_outcome_frame(
         return pd.DataFrame(columns=["as_of_date", "horizon", "outcome_regime"])
     returns = close.pct_change(fill_method=None)
     as_of_vol = returns.rolling(60, min_periods=60).std(ddof=0)
+    path_statistics = {
+        (horizon, SCORE_TO_FAMILY_KEY[definition.name]): _forward_path_stat_frame(
+            close=close,
+            as_of_volatility=as_of_vol,
+            horizon=horizon,
+            definition=definition,
+        )
+        for horizon in OUTLOOK_HORIZONS
+        for definition in SCORE_DEFINITIONS
+    }
     rows: list[dict[str, Any]] = []
     for horizon in OUTLOOK_HORIZONS:
         forward = close.shift(-horizon).divide(close).sub(1.0)
@@ -175,22 +227,10 @@ def build_forward_outcome_frame(
             record["outcome_regime"] = _classify_forward_regime(pd.Series(record))
             for definition in SCORE_DEFINITIONS:
                 family = SCORE_TO_FAMILY_KEY[definition.name]
-                statistics = _forward_path_statistics(
-                    close=close,
-                    as_of_volatility=as_of_vol.loc[as_of_date],
-                    as_of_date=pd.Timestamp(as_of_date),
-                    horizon=horizon,
-                    definition=definition,
-                )
-                record[f"{family}__median_path_z"] = (
-                    statistics["median_path_z"] if statistics is not None else None
-                )
-                record[f"{family}__path_iqr_z"] = (
-                    statistics["path_iqr_z"] if statistics is not None else None
-                )
-                record[f"{family}__max_adverse_z"] = (
-                    statistics["max_adverse_z"] if statistics is not None else None
-                )
+                statistics = path_statistics[(horizon, family)].loc[as_of_date]
+                record[f"{family}__median_path_z"] = statistics["median_path_z"]
+                record[f"{family}__path_iqr_z"] = statistics["path_iqr_z"]
+                record[f"{family}__max_adverse_z"] = statistics["max_adverse_z"]
             rows.append(record)
     if not rows:
         return pd.DataFrame(columns=["as_of_date", "horizon", "outcome_regime"])

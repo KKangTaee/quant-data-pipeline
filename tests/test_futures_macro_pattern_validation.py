@@ -34,6 +34,37 @@ def _outlook_fixture(*, days: int) -> dict[str, object]:
 
 
 class FuturesMacroPatternOutcomeTests(unittest.TestCase):
+    def test_vectorized_path_statistics_match_single_date_reference(self) -> None:
+        from app.services.futures_macro_pattern import _pattern_close_matrix
+        from app.services.futures_macro_pattern_validation import (
+            _forward_path_stat_frame,
+            _forward_path_statistics,
+        )
+        from app.services.futures_macro_thermometer import SCORE_DEFINITIONS
+
+        candles, features = _validation_fixture(days=180)
+        close = _pattern_close_matrix(candles, SYMBOLS)
+        volatility = close.pct_change(fill_method=None).rolling(60, min_periods=60).std(ddof=0)
+        as_of_date = features.index[-30]
+        definition = SCORE_DEFINITIONS[0]
+        reference = _forward_path_statistics(
+            close=close,
+            as_of_volatility=volatility.loc[as_of_date],
+            as_of_date=as_of_date,
+            horizon=20,
+            definition=definition,
+        )
+        vectorized = _forward_path_stat_frame(
+            close=close,
+            as_of_volatility=volatility,
+            horizon=20,
+            definition=definition,
+        ).loc[as_of_date]
+
+        self.assertIsNotNone(reference)
+        for key in ("median_path_z", "path_iqr_z", "max_adverse_z"):
+            self.assertAlmostEqual(float(vectorized[key]), float(reference[key]), places=10)
+
     def test_forward_outcomes_use_as_of_volatility_and_exclusive_regimes(self) -> None:
         from app.services.futures_macro_pattern_validation import (
             OUTCOME_REGIMES,

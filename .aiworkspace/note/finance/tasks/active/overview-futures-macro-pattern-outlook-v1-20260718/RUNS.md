@@ -70,3 +70,15 @@
 - Vite production build passed in 489ms and emitted a new static CSS / JS bundle.
 - GREEN: focused React source contracts passed 3 tests; combined Futures Macro feature, validation, service, and UI selection passed 48 tests in 11.605s.
 - Repository-wide reference check found the legacy Recent Flow and Historical Validation files were referenced only by themselves, so both were removed rather than retained as dead compatibility code.
+
+## 2026-07-18 Task 7 — Actual QA, Performance, And Docs
+
+- Focused verification before actual QA: pattern modules passed 17 tests in 8.396s; service-contract selection passed 26 tests in 2.823s; py_compile and diff check passed.
+- First read-only actual measurement: `2026-07-17`, `mixed / transition_attempt`; 5D `PROVISIONAL` / 120 episodes / Brier 0.7181676141 vs 0.7155593658, 20D `PROVISIONAL` / 42 episodes / Brier 0.6585791797 vs 0.6936063270; both `방향 우위 미확인`; uncached 21.791s.
+- cProfile recorded 269,434,679 calls and 63.239s profiler runtime; 13,722 `_forward_path_statistics` calls consumed 53.014s cumulative under profiling.
+- Added a vectorized/reference parity RED/GREEN contract and replaced repeated path objects with vectorized as-of matrices. Outcome tests passed 5 tests in 1.828s.
+- Second actual measurement: same published values, uncached 4.963s, cached 0.031s, cached object identity true. No DB materialization was added.
+- Browser QA URL: `http://localhost:8512`; desktop structure 3 horizon cards / map / evidence / ribbon / 5 pathways / method, 0 console errors. At 420px, horizon / pattern / asset grids were one column and root `clientWidth == scrollWidth` (377px).
+- Desktop screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-a-desktop.png` (generated, not staged).
+- `finance-doc-sync` aligned flow, architecture, project map, root milestone, and durable decision logs with the V2 behavior.
+- Final verification after docs: pattern modules passed 18 tests in 2.853s; selected service contracts passed 26 tests in 2.702s; Vite production build passed in 441ms; py_compile and `git diff --check` exited cleanly.

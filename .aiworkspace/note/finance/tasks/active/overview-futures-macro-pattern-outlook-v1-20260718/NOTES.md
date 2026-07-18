@@ -29,3 +29,11 @@
 - The observed pattern polyline is never connected to a probability-zone center; this prevents a conditional distribution from looking like a single forecast path.
 - Current observation cards do not accept or render probability rows. `UNAVAILABLE` future horizons show the reason and no fabricated percentage.
 - The V1 `RecentFlowSection.tsx` and `HistoricalValidationPanel.tsx` were removed after reference count reached zero outside their own files.
+
+## Actual QA Facts
+
+- Read-only snapshot as of `2026-07-17`: `mixed` regime, `transition_attempt`.
+- 5D: 120 independent episodes, Brier `0.7181676141` vs baseline `0.7155593658`, `PROVISIONAL`, direction edge not distinct.
+- 20D: 42 independent episodes, Brier `0.6585791797` vs baseline `0.6936063270`, `PROVISIONAL`, direction edge not distinct.
+- Runtime before optimization was 21.791s uncached. Profiling found 13,722 pandas-heavy path-stat calls; vectorizing the same as-of formulas reduced uncached runtime to 4.963s and cached reload to 0.031s.
+- Browser QA found desktop and 420px layouts free of horizontal clipping; the actual payload had no unavailable horizon, while source contracts cover unavailable probability suppression.

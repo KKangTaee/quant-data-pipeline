@@ -43,6 +43,7 @@ Layer ownership과 storage / surface boundary를 먼저 판정해야 하면 [SYS
 ## Current Surface Notes
 
 - `Workspace > Overview`의 current primary tabs는 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events`다. Market Context visible path는 Shiller/S&P index earnings/SEP/SPX-SPY DB evidence를 읽는 React S&P 500 valuation surface다. `Futures Monitor`와 `Sector / Industry` standalone tab은 current primary surface가 아니며, 선물/sector evidence는 Futures Macro와 Market Movers가 읽는다.
+- Futures Macro의 Streamlit-free 계산 경계는 `app/services/futures_macro_pattern.py`와 `app/services/futures_macro_pattern_validation.py`다. 전자는 stored daily candle의 point-in-time 1D / 5D / 20D feature와 현재 regime / transition을 만들고, 후자는 as-of volatility, 독립 episode spacing, chronological Brier / calibration publication gate로 5D / 20D 조건부 전망을 만든다. Streamlit helper는 DB/provider 계산을 소유하지 않고 payload 연결, refresh dispatch, native fallback만 담당한다.
 - Backtest strict Quality / Value family는 statement shadow factor path와 `PIT Monthly Snapshot Universe`를 visible contract로 사용한다. Static Managed Research / Historical Dynamic PIT는 saved payload와 old run replay compatibility path다.
 - Practical Validation은 5-flow 화면으로 읽고, Flow 3은 검증 결론, Flow 4는 카테고리별 검증 결과와 해결 guide를 소유한다. Flow 3 / Flow 4는 Final Review 전용 `REVIEW` metadata를 현재 보강해야 할 문제처럼 노출하지 않는다.
 
