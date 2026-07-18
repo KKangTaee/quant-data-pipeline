@@ -645,10 +645,56 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         for path in form_paths:
             source = path.read_text()
             self.assertNotIn('st.expander("Advanced Inputs"', source, path.name)
-            self.assertIn("전략·보유 규칙", source, path.name)
+            expected_label = (
+                "전략·보유 규칙"
+                if path.name == "strict_factor.py"
+                else "선택·보유 규칙"
+            )
+            self.assertIn(expected_label, source, path.name)
         combined = "\n".join(path.read_text() for path in form_paths)
         self.assertNotIn('st.expander("Promotion Policy Signal"', combined)
-        self.assertIn("비용·Guardrail", combined)
+        self.assertIn("비용·위험 기준", combined)
+
+    def test_tactical_single_strategy_forms_share_korean_settings_hierarchy(
+        self,
+    ) -> None:
+        form_paths = [
+            PROJECT_ROOT / "app/web/backtest_single_forms/equal_weight.py",
+            PROJECT_ROOT / "app/web/backtest_single_forms/gtaa.py",
+            PROJECT_ROOT
+            / "app/web/backtest_single_forms/global_relative_strength.py",
+            PROJECT_ROOT / "app/web/backtest_single_forms/risk_parity.py",
+            PROJECT_ROOT / "app/web/backtest_single_forms/dual_momentum.py",
+            PROJECT_ROOT / "app/web/backtest_single_forms/risk_on_momentum.py",
+        ]
+        section_labels = [
+            "핵심 실행 설정",
+            "투자 대상 Universe",
+            "선택·보유 규칙",
+            "비용·위험 기준",
+        ]
+
+        for path in form_paths:
+            source = path.read_text()
+            offsets = [source.index(label) for label in section_labels]
+            self.assertEqual(offsets, sorted(offsets), path.name)
+            self.assertIn(
+                'form_submit_button("이 설정으로 백테스트 실행"',
+                source,
+                path.name,
+            )
+            self.assertIn("single_settings_section(", source, path.name)
+
+    def test_common_universe_preview_is_compact_and_korean_first(self) -> None:
+        source = (PROJECT_ROOT / "app/web/backtest_common.py").read_text()
+        body = source.split("def _render_ticker_preview", 1)[1].split(
+            "\ndef ", 1
+        )[0]
+
+        self.assertIn("render_compact_ticker_summary(", body)
+        self.assertNotIn("Selected tickers", body)
+        self.assertNotIn("Head:", body)
+        self.assertNotIn("Tail:", body)
 
     def test_single_result_renders_decision_before_collapsed_evidence(self) -> None:
         source = (PROJECT_ROOT / "app/web/backtest_result_display.py").read_text()

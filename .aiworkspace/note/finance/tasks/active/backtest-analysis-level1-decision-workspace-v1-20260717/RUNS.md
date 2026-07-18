@@ -154,3 +154,14 @@
 - React production build: Vite 5.4.21, `175 modules transformed`
 - settings shell / strategy / family dispatch py_compile: 통과
 - `git diff --check`: 통과
+
+## 2026-07-18 6차 Task 11 RED -> GREEN
+
+- RED: 전술 전략 6종의 공통 설정 계층과 compact ticker 계약 `2 failed, 1 passed`
+- GREEN: 계층 / compact ticker focused `3 passed, 56 deselected`
+- strategy / prefill / payload 관련 회귀 `27 passed, 864 deselected`
+- decision + boundary 전체 `59 passed, 3 warnings`
+- 6개 form과 common renderer `py_compile`: 통과
+- `git diff --check`: 통과
+- widget key / payload key / handler는 유지하고 사용자 흐름만 핵심 설정 -> Universe
+  -> 선택·보유 -> 비용·위험으로 통일

@@ -1597,7 +1597,7 @@ git commit -m "Backtest Analysis 단일 전략 설정 셸 도입"
 - Produces: common five-section form hierarchy and compact universe evidence for six
   non-family strategies.
 
-- [ ] **Step 1: Write RED visual and compatibility contracts**
+- [x] **Step 1: Write RED visual and compatibility contracts**
 
 Add source contracts that require each form to use these ordered labels:
 
@@ -1627,7 +1627,7 @@ assert summary["full_text"] == "AAPL, MSFT, GOOG, AMZN, META"
 
 Keep existing payload key / prefill contract assertions green.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -1638,7 +1638,7 @@ uv run --with pytest python -m pytest \
 
 Expected: hierarchy and compact summary assertions fail; existing compatibility tests pass.
 
-- [ ] **Step 3: Implement compact universe and six form layouts**
+- [x] **Step 3: Implement compact universe and six form layouts**
 
 - Change `_render_ticker_preview()` to show `선택 종목 N개 · 대표 ...` first and keep the
   full list under `전체 종목 보기` disclosure.
@@ -1653,7 +1653,7 @@ Expected: hierarchy and compact summary assertions fail; existing compatibility 
 - Use Korean labels/help and `이 설정으로 백테스트 실행` submit copy.
 - Keep every existing widget key, payload key, validation, prefill, handler call unchanged.
 
-- [ ] **Step 4: Run GREEN and focused regressions**
+- [x] **Step 4: Run GREEN and focused regressions**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -1673,7 +1673,7 @@ git diff --check
 
 Expected: selected regressions and compilation pass without touching runtime JSONL.
 
-- [ ] **Step 5: Commit Task 11**
+- [x] **Step 5: Commit Task 11**
 
 ```bash
 git add \

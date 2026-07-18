@@ -16,6 +16,7 @@ from app.services.backtest_analysis_decision_workspace import (
     level1_strategy_maturity,
 )
 from app.web.backtest_single_settings_workspace import (
+    build_compact_ticker_summary,
     build_single_strategy_settings_summary,
 )
 
@@ -62,6 +63,19 @@ def test_single_settings_summary_projects_purpose_variant_and_maturity() -> None
         "maturity": "production",
         "maturity_label": "운영 전략",
         "description": "기업의 품질과 가치평가를 함께 비교해 보유 후보를 고릅니다.",
+    }
+
+
+def test_compact_ticker_summary_keeps_complete_evidence() -> None:
+    summary = build_compact_ticker_summary(
+        ["AAPL", "MSFT", "GOOG", "AMZN", "META"],
+        preview_count=3,
+    )
+
+    assert summary == {
+        "count": 5,
+        "headline": "선택 종목 5개 · 대표 AAPL, MSFT, GOOG",
+        "full_text": "AAPL, MSFT, GOOG, AMZN, META",
     }
 
 
