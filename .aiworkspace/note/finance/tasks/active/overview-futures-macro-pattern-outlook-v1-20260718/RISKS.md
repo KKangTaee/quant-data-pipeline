@@ -25,7 +25,7 @@ UI copy must say `근거`, `일치`, `압력`, or `해석` rather than confirmed
 ### UI Overconfidence
 
 A polished probability path can look more certain than the evidence. The first ellipse design made one median location look like the forecast and the 60-point observed polyline hid time order; the intermediate fixed categorical branches also did not change geometry by horizon.
-The corrected map uses only three observed anchors, the selected horizon's historical-analog median path, and one terminal middle-50% arrival range. Fixed-size direction markers sit on inset mid-line segments rather than endpoint circles. Probability rows remain in the horizon cards, while path status, sample, provisional label, and unavailable-path suppression remain visible beside the map.
+The corrected map uses only three observed anchors, one direct current-to-terminal expected-net-movement line, and one terminal middle-50% arrival range. Fixed-size direction markers sit on inset mid-line segments rather than endpoint circles. Probability rows remain in the horizon cards, while path status, sample, provisional label, and unavailable-path suppression remain visible beside the map.
 
 ### Runtime Cost
 
@@ -37,10 +37,10 @@ The actual 5D Brier score is slightly worse than its unconditional baseline, whi
 
 ### Conditional Path Overconfidence
 
-A median analog path can be mistaken for a precise forecast even when its regime probabilities remain provisional.
+A connected sequence of stepwise medians can be mistaken for a coherent daily forecast even when each step was aggregated independently and regime probabilities remain provisional.
 The path must inherit the more conservative of probability and path-validation status,
 show the middle 50% historical range, and disappear below 30 independent episodes.
-The UI must not label the line as an actual future path or price target.
+The UI renders only current-to-terminal expected net movement and must not label the line as an actual daily route, future path, or price target.
 
 ### Two-Dimensional Coordinate Semantics
 
@@ -50,7 +50,7 @@ Axis copy, method disclosure, and tests must preserve this distinction.
 
 ### Horizon Scale Drift
 
-If the selected or hidden forecast geometry owns the SVG scale, horizon switching can move the observed anchors and imply that history changed. The map therefore derives one common bound from both visible median paths and both terminal ranges; a source contract and actual browser coordinate-equality check guard this comparison rule.
+If the selected or hidden forecast geometry owns the SVG scale, horizon switching can move the observed anchors and imply that history changed. The map therefore derives one common bound from both terminal/ranges and excludes hidden intermediate medians; a source contract and actual browser coordinate-equality check guard this comparison rule.
 
 ## Escalation Conditions
 

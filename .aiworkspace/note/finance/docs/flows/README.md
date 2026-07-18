@@ -33,7 +33,7 @@ Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation 
 
 - Current regime: 오늘 shock과 trailing 1D / 5D / 20D family feature로 현재 체제와 지속·전환 상태를 먼저 읽는다. 현재 카드는 관측이며 미래 확률이 아니다.
 - Conditional outlook: 겹치는 날짜를 독립 episode 간격으로 줄인 유사 패턴의 다음 5D / 20D 결과 분포를 기본으로 계산한다. 30개 미만은 숫자를 숨기고, 30~59개는 최대 `PROVISIONAL`, 60개 이상도 시간순 Brier / calibration gate를 충족해야 `VERIFIED`다.
-- Pattern evidence: 최근 60개 일봉을 한 선으로 잇지 않고 `20D 전 → 5D 전 → 현재` 핵심 관측 시점만 실선으로 표시한다. `관측만 / 다음 5D / 다음 20D`를 전환하면 선택 horizon의 과거 유사 episode에서 계산한 step별 조건부 중앙 이동을 점선으로, 선택 horizon 말일의 축별 q25~q75 도착 범위 하나만 옅은 음영 박스로 표시한다. 세 관측 anchor와 5D/20D 전망은 두 median path와 두 말일 range로 계산한 하나의 공통 visible-data 좌표계를 사용하므로 horizon 전환 때 관측 위치가 움직이지 않는다. 화면에서 제거한 중간 step q25~q75는 scale을 바꾸지 않는다. 좌표는 `현재 위치 + 표준화된 조건부 이동`이며 절대 경제상태·가격 목표·실제 미래 경로가 아니다. 우측 확률 카드가 체제 확률의 primary surface이고, 경로는 별도 시간순 오차·baseline·coverage 검증 상태를 더 보수적으로 적용한다.
+- Pattern evidence: 최근 60개 일봉을 한 선으로 잇지 않고 `20D 전 → 5D 전 → 현재` 핵심 관측 시점만 실선으로 표시한다. `관측만 / 다음 5D / 다음 20D`를 전환하면 현재점에서 선택 horizon 말일의 과거 유사 episode 중앙 위치까지를 한 개의 `예상 순이동` 점선으로 직접 연결하고, 말일의 축별 q25~q75 도착 범위 하나만 옅은 음영 박스로 표시한다. 점선은 중간 일별 경로가 아니며 서비스의 stepwise median은 검증용으로 보존한다. 세 관측 anchor와 5D/20D 전망은 두 말일 terminal/range로 계산한 하나의 공통 visible-data 좌표계를 사용하므로 horizon 전환 때 관측 위치가 움직이지 않는다. 화면에서 제거한 중간 median과 q25~q75는 scale을 바꾸지 않는다. 좌표는 `현재 위치 + 표준화된 조건부 이동`이며 절대 경제상태·가격 목표·실제 미래 경로가 아니다. 우측 확률 카드가 체제 확률의 primary surface이고, 경로는 별도 시간순 오차·baseline·coverage 검증 상태를 더 보수적으로 적용한다.
 - Asset pathways: 주식 위험선호, 금리 부담, 달러 압력, 안전자산, 원자재·물가는 전체 시장 체제의 보조 근거이며 독립 추천으로 승격하지 않는다.
 - Disclosure: React 방법론에는 독립 표본, Brier / baseline Brier, calibration, continuous futures roll 한계를 둔다. 하단 `원본 데이터 / 계산 추적`은 원시 점수와 daily candle 검산용 appendix로 남긴다.
 

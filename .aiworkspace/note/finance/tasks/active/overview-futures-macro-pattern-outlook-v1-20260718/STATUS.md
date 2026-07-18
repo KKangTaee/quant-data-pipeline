@@ -25,7 +25,7 @@
 - Overall roadmap: 1차 design through 5차 actual QA / docs sync complete (`5/5`).
 - No DB schema, provider, registry, or saved setup has been changed.
 - User rejected the unreadable 60-point polyline / forecast ellipse map, then confirmed that the interim fixed categorical branches did not change geometry by horizon and approved empirical conditional paths.
-- The active map now renders `20D 전 → 5D 전 → 현재` observed anchors plus the selected horizon's historical-analog median path, one terminal middle-50% arrival range, fixed-size mid-line direction markers, and one terminal marker.
+- The active map now renders `20D 전 → 5D 전 → 현재` observed anchors plus one direct current-to-terminal expected-net-movement line, one terminal middle-50% arrival range, fixed-size mid-line direction markers, and one terminal marker. Stepwise medians remain validation data and are no longer connected as an apparent daily route.
 - Actual QA: 5D `38/5/23/34% · 120 episodes · 5 path points`, 20D `43/10/21/26% · 42 episodes · 20 path points`; both remain `PROVISIONAL / 방향 우위 미확인`. `관측만` removes the forecast line, ranges, and terminal.
 - Desktop and 420px Browser QA passed with distinct 5D / 20D coordinates, no horizontal overflow, and zero console errors. The horizon cards remain the primary numeric probability surface.
 
@@ -43,10 +43,13 @@
 - 경험적 경로 후속 3차 service / validation: complete
 - 경험적 경로 후속 4차 payload / React UI: complete
 - 경험적 경로 후속 5차 actual QA / docs sync: complete
+- 예상 순이동 후속 1차 설계: complete
+- 예상 순이동 후속 2차 TDD 구현: complete
+- 예상 순이동 후속 3차 actual QA / docs sync: complete
 
 ## Next Action
 
-전체 roadmap `5/5`, readable-map 후속 `2/2`, empirical-path 후속 `5/5`가 완료됐다.
+전체 roadmap `5/5`, readable-map 후속 `2/2`, empirical-path 후속 `5/5`, net-direction 후속 `3/3`가 완료됐다.
 
 Actual 5D path terminal is `(-0.5625, 0.0169)` with bounds x `[-1.0959, 0.0836]`, y `[-0.3391, 0.3319]`; 20D terminal is `(-0.4364, 0.0579)` with bounds x `[-1.0982, 0.0115]`, y `[-0.2545, 0.4981]`.
 Both horizons have 6 evaluated chronological folds; their path errors trail baseline and middle-50% coverage is near 0.30, so neither is promoted above `PROVISIONAL`.
@@ -69,3 +72,12 @@ Both horizons have 6 evaluated chronological folds; their path errors trail base
 - Actual Browser QA found the same three anchor coordinates in `관측만 / 5D / 20D`: `(456.8966, 175.9529)`, `(306.1657, 130.9592)`, `(193.1737, 206.1591)`. The selected forecast line, terminal, and step-5/step-20 range still change by horizon.
 - At 420px the workbench and document both measured `clientWidth == scrollWidth` (`377px`), all graph labels stayed inside the canvas, and console errors were 0. Stable-coordinate roadmap is complete (`3/3`).
 - QA screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-stable-coordinate-qa.png` (generated, not staged).
+
+## 2026-07-19 Net Direction Follow-up
+
+- User noted that the dashed forecast appeared to reverse direction repeatedly. Root cause: each step's componentwise median was calculated independently across similar episodes, so connecting all steps looked like one coherent route even though it was not one representative historical path.
+- Approved UI contract: render one direct dashed `현재 → 말일 예상 중앙 위치` line, keep the terminal range / circle / fixed direction marker, and retain stepwise service/payload statistics only for validation.
+- TDD implementation commit: `9e40341c`. The common bound now uses observed anchors and both terminal/ranges; hidden intermediate medians no longer affect scale.
+- Actual Browser QA: 5D and 20D each rendered one SVG `line`, and its start/end exactly matched the current/terminal circle centers. 5D terminal `(226.801050, 192.529943)` and 20D terminal `(256.660352, 186.525904)` differed while all three observed anchor tuples stayed identical.
+- `관측만` forecast/range/direction/terminal counts were `0/0/0/0`. Desktop and 420px had no horizontal overflow, all graph labels stayed inside the canvas, and console errors were 0.
+- QA screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-net-direction-qa.png` (generated, not staged).

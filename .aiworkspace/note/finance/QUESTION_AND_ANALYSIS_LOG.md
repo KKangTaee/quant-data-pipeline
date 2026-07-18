@@ -52,6 +52,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-19 - Futures Macro 점선은 중간 일별 경로가 아니라 말일 예상 순이동이다
+
+- User request: 조건부 점선이 한 방향이 아니라 여러 번 왔다 갔다 보여 방향성 판단이 어렵다고 지적하고 순방향 중심 표현으로 변경을 승인함.
+- Interpreted goal: 과거 유사 흐름의 계산 근거는 유지하되 그래프에서는 `결국 어느 방향으로 얼마나 이동하는가`를 먼저 읽는다.
+- Analysis result: step별 x/y 중앙값은 유사 episode 집합에서 독립적으로 계산되어 연결선 전체가 하나의 대표 경로가 아니다. UI는 현재와 선택 horizon 말일 중앙 위치를 직접 연결하고, 중간 median은 서비스 검증에만 보존하며 음영 박스는 말일 도착 범위로 유지한다.
+- Follow-up: 실제 5D/20D SVG line의 시작·끝이 현재/terminal circle과 정확히 같고 관측 anchor는 세 상태에서 고정됨을 확인했다. 확률·표본·`PROVISIONAL`·서비스 통계는 변경하지 않았다.
+
 ### 2026-07-18 - Futures Macro horizon 비교는 같은 좌표계를 사용한다
 
 - User request: 다음 5D와 20D 전환에서 현재·5D 전·20D 전 위치까지 함께 움직이는 이유가 의도된 스펙인지 확인하고, 관측 위치는 고정해 달라고 요청함.

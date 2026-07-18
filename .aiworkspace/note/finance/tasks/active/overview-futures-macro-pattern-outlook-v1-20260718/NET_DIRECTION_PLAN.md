@@ -33,7 +33,7 @@
 - Consumes: `latest: AnchorPoint | undefined`, selected `conditionalPath.terminal`, and the final `conditionalPath.points` row for the range bounds.
 - Produces: one `<line className="fm-pattern-map__conditional-path">` from current to terminal, terminal-only common scale, net-direction copy.
 
-- [ ] **Step 1: Write the failing source contract**
+- [x] **Step 1: Write the failing source contract**
 
 Add next to the existing Pattern Map contracts:
 
@@ -70,7 +70,7 @@ self.assertIn(
 )
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -79,7 +79,7 @@ self.assertIn(
 
 Expected: FAIL because the component still builds `forecastPolyline` from every step and uses `scaleForecastPoints`.
 
-- [ ] **Step 3: Implement the minimal terminal-only renderer**
+- [x] **Step 3: Implement the minimal terminal-only renderer**
 
 Remove `scaleForecastPoints` and every scale input that maps it. Keep `scaleTerminalPoints` and build the bounds as:
 
@@ -121,7 +121,7 @@ Change the right-side explanation to:
 <p>{conditionalPath?.episode_count ? `독립 표본 ${conditionalPath.episode_count}개 · ` : ""}점선은 과거 유사 흐름의 시작점에서 말일 중앙 위치까지의 예상 순이동이며, 중간 일별 경로가 아닙니다.</p>
 ```
 
-- [ ] **Step 4: Run GREEN and focused regressions**
+- [x] **Step 4: Run GREEN and focused regressions**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -136,7 +136,7 @@ git diff --check
 
 Expected: 5 contracts pass, Vite exits 0, production bundle is rebuilt.
 
-- [ ] **Step 5: Commit the implementation unit**
+- [x] **Step 5: Commit the implementation unit**
 
 ```bash
 git add tests/test_service_contracts.py \
@@ -159,7 +159,7 @@ git commit -m "선물 매크로 예상 경로를 순이동으로 단순화"
 - Consumes: built React bundle and actual stored futures snapshot.
 - Produces: exact current-to-terminal SVG equality, stable observed anchors, responsive evidence, one unstaged screenshot.
 
-- [ ] **Step 1: Run actual Browser QA**
+- [x] **Step 1: Run actual Browser QA**
 
 Run the app on port `8512` and verify:
 
@@ -182,11 +182,11 @@ Save an unstaged screenshot to:
 /Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-net-direction-qa.png
 ```
 
-- [ ] **Step 2: Synchronize the smallest durable docs**
+- [x] **Step 2: Synchronize the smallest durable docs**
 
 Record that the dashed line is terminal net movement rather than a connected daily median route. Preserve detailed coordinates and commands in task docs; keep root logs to 3~5 lines.
 
-- [ ] **Step 3: Run fresh closeout verification**
+- [x] **Step 3: Run fresh closeout verification**
 
 ```bash
 .venv/bin/python -m unittest tests.test_futures_macro_pattern tests.test_futures_macro_pattern_validation
@@ -204,7 +204,7 @@ git diff --check
 git status --short
 ```
 
-- [ ] **Step 4: Commit docs and closeout**
+- [x] **Step 4: Commit docs and closeout**
 
 Stage only the active task and smallest durable docs, then commit:
 
@@ -214,11 +214,11 @@ git commit -m "선물 매크로 예상 순이동 QA와 문서 정리"
 
 ## Completion Checklist
 
-- [ ] Task 1: terminal-only expected net direction implemented with RED/GREEN evidence.
-- [ ] Task 2: actual SVG endpoint QA, stable-anchor QA, responsive QA, docs, and closeout complete.
+- [x] Task 1: terminal-only expected net direction implemented with RED/GREEN evidence.
+- [x] Task 2: actual SVG endpoint QA, stable-anchor QA, responsive QA, docs, and closeout complete.
 
 ## Roadmap State
 
 - 1차 net-direction design: complete (`e3ca4d25`).
-- 2차 terminal-only TDD implementation: pending.
-- 3차 actual Browser QA / docs closeout: pending.
+- 2차 terminal-only TDD implementation: complete (`9e40341c`).
+- 3차 actual Browser QA / docs closeout: complete.

@@ -164,3 +164,13 @@
 - 5D used uncertainty step `5` with terminal `(226.801050, 192.529943)`; 20D used step `20` with terminal `(256.660352, 186.525904)`. Forecast polylines and terminals differed while observed anchors remained fixed.
 - At 420px the iframe, workbench, and map had no horizontal overflow (`377px == 377px`), labels stayed inside the canvas, and console errors were 0.
 - Screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-stable-coordinate-qa.png` (generated, not staged).
+
+## 2026-07-19 Net Direction Implementation And QA
+
+- Root cause: React connected every step's independently aggregated x/y median as one polyline. The data was valid for stepwise validation, but the visual suggested one coherent daily route and exposed median switching as repeated reversals.
+- RED: the new source contract failed on missing direct `x1/y1/x2/y2`, existing `forecastPolyline`, and `scaleForecastPoints`. The shared-scale contract also failed because hidden intermediate medians still owned chart bounds.
+- GREEN: `9e40341c` renders one current-to-terminal SVG `line`, changes the legend to `5일/20일 예상 순이동`, explains that it is not an intermediate daily route, and derives the common bound from anchors plus both terminal/ranges. Five selected map contracts and Vite production build passed.
+- Actual 5D: line start/current `(193.173735, 206.159142)`, line end/terminal `(226.801050, 192.529943)`, step-5 range/path/direction/terminal `1/1/1/1`.
+- Actual 20D: the same start/current, line end/terminal `(256.660352, 186.525904)`, step-20 range/path/direction/terminal `1/1/1/1`. Both lines had no polyline `points` attribute and the three anchor tuples matched 5D/20D/observed exactly.
+- `관측만` forecast/range/direction/terminal was `0/0/0/0`. Desktop root/workbench measured `1280/1109px` with equal client/scroll widths; 420px root/iframe/workbench/map measured `420/377/377/371px`, again with equal client/scroll widths. All four graph labels remained inside the canvas and console errors were 0.
+- Screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-net-direction-qa.png` (generated, not staged).
