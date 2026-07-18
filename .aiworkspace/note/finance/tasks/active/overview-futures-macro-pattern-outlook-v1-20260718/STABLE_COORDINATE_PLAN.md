@@ -31,7 +31,7 @@
 - Consumes: `horizons: HorizonCard[]`, `conditional_path.points`, `conditional_path.terminal`.
 - Produces: `scalePaths`, `scaleForecastPoints`, `scaleTerminalPoints`, and selected-horizon-independent `xBound / yBound`.
 
-- [ ] **Step 1: Write the shared-scale RED contract**
+- [x] **Step 1: Write the shared-scale RED contract**
 
 Add beside the current Pattern Map contracts:
 
@@ -54,7 +54,7 @@ def test_futures_macro_pattern_map_keeps_observed_anchors_on_one_shared_scale(se
     )
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -63,7 +63,7 @@ def test_futures_macro_pattern_map_keeps_observed_anchors_on_one_shared_scale(se
 
 Expected: FAIL because selected `forecastPoints` still owns the bound.
 
-- [ ] **Step 3: Implement the shared visible-data scale**
+- [x] **Step 3: Implement the shared visible-data scale**
 
 Immediately after selected `forecastPoints`, add:
 
@@ -96,7 +96,7 @@ const yValues = [
 ];
 ```
 
-- [ ] **Step 4: Run GREEN and focused regressions**
+- [x] **Step 4: Run GREEN and focused regressions**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -110,7 +110,7 @@ git diff --check
 
 Expected: 4 contracts pass, Vite exits 0, production bundle is rebuilt.
 
-- [ ] **Step 5: Commit the implementation unit**
+- [x] **Step 5: Commit the implementation unit**
 
 ```bash
 git add tests/test_service_contracts.py \
@@ -133,7 +133,7 @@ git commit -m "선물 매크로 관측 좌표계 고정"
 - Consumes: built React bundle and actual stored futures snapshot.
 - Produces: exact observed anchor coordinate equality across three states and one QA screenshot.
 
-- [ ] **Step 1: Run focused verification**
+- [x] **Step 1: Run focused verification**
 
 ```bash
 .venv/bin/python -m unittest tests.test_futures_macro_pattern tests.test_futures_macro_pattern_validation
@@ -148,7 +148,7 @@ npm --prefix app/web/streamlit_components/futures_macro_workbench run build
 git diff --check
 ```
 
-- [ ] **Step 2: Perform actual Browser QA**
+- [x] **Step 2: Perform actual Browser QA**
 
 Run the app on port `8512`. In the Futures Macro frame collect `cx / cy` for the three `.fm-pattern-map__anchor circle` elements after selecting `관측만`, `다음 5D`, and `다음 20D`.
 
@@ -170,11 +170,11 @@ Save an unstaged screenshot to:
 /Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-stable-coordinate-qa.png
 ```
 
-- [ ] **Step 3: Synchronize durable docs**
+- [x] **Step 3: Synchronize durable docs**
 
 Record that the chart uses one shared visible-data coordinate system and that hidden intermediate q25/q75 no longer drives scale. Keep detailed commands and measured coordinates in task docs; keep root logs to 3~5 lines.
 
-- [ ] **Step 4: Run fresh closeout verification and commit**
+- [x] **Step 4: Run fresh closeout verification and commit**
 
 Repeat the selected tests, Vite build, py_compile, screenshot existence, `git diff --check`, and `git status --short`. Stage only the active task and smallest durable doc set, then commit:
 
@@ -184,11 +184,11 @@ git commit -m "선물 매크로 관측 좌표 QA와 문서 정리"
 
 ## Completion Checklist
 
-- [ ] Task 1: shared visible-data scale implemented with RED/GREEN evidence.
-- [ ] Task 2: actual anchor equality QA, responsive QA, docs, and closeout complete.
+- [x] Task 1: shared visible-data scale implemented with RED/GREEN evidence.
+- [x] Task 2: actual anchor equality QA, responsive QA, docs, and closeout complete.
 
 ## Roadmap State
 
 - 1차 root-cause / stable-scale design: complete (`abac1da9`).
-- 2차 shared-scale TDD implementation: pending.
-- 3차 actual Browser QA / docs closeout: pending.
+- 2차 shared-scale TDD implementation: complete (`766dada9`).
+- 3차 actual Browser QA / docs closeout: complete.

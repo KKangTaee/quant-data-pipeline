@@ -48,6 +48,10 @@ The observed point uses current 5D standardized family state while the forecast 
 The published endpoint therefore means `current location + conditional analog movement`, not a re-estimated absolute economic state.
 Axis copy, method disclosure, and tests must preserve this distinction.
 
+### Horizon Scale Drift
+
+If the selected or hidden forecast geometry owns the SVG scale, horizon switching can move the observed anchors and imply that history changed. The map therefore derives one common bound from both visible median paths and both terminal ranges; a source contract and actual browser coordinate-equality check guard this comparison rule.
+
 ## Escalation Conditions
 
 - Fewer than 30 independent episodes for the selected horizon.

@@ -52,6 +52,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-18 - Futures Macro horizon 비교는 같은 좌표계를 사용한다
+
+- User request: 다음 5D와 20D 전환에서 현재·5D 전·20D 전 위치까지 함께 움직이는 이유가 의도된 스펙인지 확인하고, 관측 위치는 고정해 달라고 요청함.
+- Interpreted goal: 같은 과거 관측을 기준점으로 유지하고 선택 horizon의 조건부 경로·말일 예상 위치·도착 범위만 비교한다.
+- Analysis result: 원본 anchor 값은 같았지만 선택 horizon의 숨겨진 중간 q25/q75까지 auto-fit에 포함되어 scale이 달라졌다. 두 horizon의 보이는 median path와 말일 range만으로 공통 scale을 계산하도록 수정했다.
+- Follow-up: 실제 `관측만 / 5D / 20D`의 세 anchor SVG 좌표가 완전히 같고, 5D/20D 전망 경로와 terminal은 서로 다름을 Browser QA로 확인했다.
+
 ### 2026-07-18 - Futures Macro 범위 박스는 경로 통로가 아니라 말일 도착 분산이다
 
 - User request: 세 q25~q75 박스와 큰 화살표·원·라벨이 겹쳐 판단하기 어렵다며, 선택 기간의 범위를 한 개 음영으로 줄이고 이동 방향은 유지해 달라고 요청함.

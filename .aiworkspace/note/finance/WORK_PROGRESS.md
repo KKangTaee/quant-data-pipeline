@@ -24,7 +24,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro를 현재 1D/5D/20D 체제와 5D/20D 조건부 전망으로 개편했고, 세 관측 anchor·유사 episode 기반 중앙 경로·선택 horizon 말일의 단일 도착 범위로 정리했다.
+  - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro를 현재 1D/5D/20D 체제와 5D/20D 조건부 전망으로 개편했고, 공통 좌표계로 세 관측 anchor를 고정한 채 유사 episode 중앙 경로·선택 horizon 말일의 단일 도착 범위만 전환한다.
   - Previous completed task is [overview-economic-cycle-asset-signal-copy-v1-20260717](./tasks/active/overview-economic-cycle-asset-signal-copy-v1-20260717/STATUS.md). 자산별 미국 경기 신호·실제 가격·두 신호 관계와 5/21/63거래일 표기를 사용자 언어로 정리했다.
   - Previous completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 일봉의 1주·1개월·3개월 가격 흐름과 경제 배경의 일치·불일치를 표시한다.
   - Previous completed task is [overview-economic-cycle-asset-context-v1-20260716](./tasks/active/overview-economic-cycle-asset-context-v1-20260716/STATUS.md). 정적 시장 질문을 evidence 기반 자산별 확인 포인트로 바꾸고 우호/부담/혼재/자료 부족, 두 근거, 바뀌는 조건을 2×2 카드로 표시한다.
@@ -63,6 +63,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - 실제 2026-07-17 snapshot은 혼재 체제 / 전환 시도이며 5D 120개, 20D 42개 독립 episode 모두 `PROVISIONAL`, 방향 우위 미확인이다.
   - 후속 UI 교정에서 관측 지도는 `20D 전 → 5D 전 → 현재` 실선으로 단순화하고, 고정 체제 분기를 유사 episode의 5D·20D step별 중앙 이동 점선과 선택 horizon 말일의 단일 q25~q75 도착 범위로 교체했다.
   - 방향 표시는 endpoint를 덮지 않는 고정 9-unit mid-line marker로 바꾸고 현재/예상 위치 라벨을 leader로 분리했다. 실제 5D/20D/관측 전환, 420px overflow, console error 0을 확인했다.
+  - 5D/20D 두 median path와 말일 range로 하나의 공통 scale을 계산해 `관측만 / 5D / 20D`에서 세 관측 anchor의 SVG 좌표가 완전히 동일하고 전망 레이어만 바뀌는 것을 실제 화면에서 확인했다.
   - 경로 좌표는 `현재 위치 + 표준화된 조건부 이동`이며 probability/path 시간순 검증을 분리한다. 실제 5D 5점과 20D 20점은 서로 다른 경로이고 모두 `PROVISIONAL`이다.
   - 상세 구현·성능·QA 근거는 [active task](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md)에 있다.
 

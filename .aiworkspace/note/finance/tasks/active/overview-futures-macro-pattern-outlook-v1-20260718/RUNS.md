@@ -155,3 +155,12 @@
 - Browser QA at `http://localhost:8512`: observed state had forecast layers `0/0/0/0`; 5D had step-5 range/path/direction/terminal `1/1/1/1`; 20D had step-20 range/path/direction/terminal `1/1/1/1`. 5D/20D probability rows and `PROVISIONAL` remained unchanged.
 - Current/terminal labels did not overlap either circle. At 420px the workbench and document both measured `clientWidth == scrollWidth` (`377px`), all graph labels remained within the canvas, and browser console errors were 0.
 - Screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-single-range-qa.png` (generated, not staged).
+
+## 2026-07-18 Stable Coordinate Follow-up
+
+- Root cause: selected `forecastPoints`, including visually hidden intermediate q25/q75, owned `xBound / yBound`. The raw observed anchors were unchanged, but the 5D x-bound `1.503856` and 20D x-bound `2.003118` projected them to different SVG positions.
+- RED: the shared-scale source contract failed because `scalePaths` did not exist. GREEN: both available horizon median paths and terminal ranges now own one bound; hidden intermediate ranges are excluded. Four selected map contracts passed and Vite rebuilt the production bundle in commit `766dada9`.
+- Actual Browser QA: `관측만 / 5D / 20D` all returned anchor circles `(456.896630, 175.952879)`, `(306.165738, 130.959194)`, `(193.173735, 206.159142)`. Equality was exact.
+- 5D used uncertainty step `5` with terminal `(226.801050, 192.529943)`; 20D used step `20` with terminal `(256.660352, 186.525904)`. Forecast polylines and terminals differed while observed anchors remained fixed.
+- At 420px the iframe, workbench, and map had no horizontal overflow (`377px == 377px`), labels stayed inside the canvas, and console errors were 0.
+- Screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-stable-coordinate-qa.png` (generated, not staged).

@@ -65,4 +65,7 @@ Both horizons have 6 evaluated chronological folds; their path errors trail base
 - At 420px the workbench and document both measured `clientWidth == scrollWidth` (`377px`); all graph labels stayed inside the canvas and console errors were 0.
 - QA screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-single-range-qa.png` (generated, not staged).
 - Current stage: conditional-path readability roadmap complete (`5/5`).
-- Stable-coordinate follow-up: user approved replacing selected-horizon auto-fit with one shared 5D / 20D visible-data coordinate system; `STABLE_COORDINATE_PLAN.md` is written and inline TDD execution is starting.
+- Stable-coordinate follow-up complete: selected-horizon auto-fit was replaced with one shared 5D / 20D visible-data coordinate system in `766dada9`; hidden intermediate q25/q75 no longer stretches the scale.
+- Actual Browser QA found the same three anchor coordinates in `관측만 / 5D / 20D`: `(456.8966, 175.9529)`, `(306.1657, 130.9592)`, `(193.1737, 206.1591)`. The selected forecast line, terminal, and step-5/step-20 range still change by horizon.
+- At 420px the workbench and document both measured `clientWidth == scrollWidth` (`377px`), all graph labels stayed inside the canvas, and console errors were 0. Stable-coordinate roadmap is complete (`3/3`).
+- QA screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-stable-coordinate-qa.png` (generated, not staged).
