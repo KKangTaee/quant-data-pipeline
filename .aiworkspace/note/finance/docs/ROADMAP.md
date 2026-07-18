@@ -871,7 +871,7 @@ Latest completed task:
 
 Previous completed task:
 
-- `overview-economic-cycle-asset-signal-copy-v1-20260717` — 1차~3차 complete
+- `overview-economic-cycle-asset-pathways-stages3-5-v1-20260717` — 전체 자산경로 roadmap `5/5` complete
 
 Recent completed docs cleanup tasks:
 
