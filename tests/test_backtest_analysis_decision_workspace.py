@@ -100,6 +100,56 @@ def test_configuration_fingerprint_is_order_independent_and_sensitive() -> None:
     assert left != changed
 
 
+def test_single_context_does_not_project_previous_strategy_raw_configuration() -> None:
+    workspace = build_backtest_analysis_decision_workspace(
+        workspace_kind="single_strategy",
+        selection={"strategy_choice": "Quality + Value"},
+        configuration={
+            "strategy_key": "gtaa",
+            "timeframe": "1d",
+            "option": "month_end",
+            "promotion_min_benchmark_coverage": 0.95,
+        },
+        result_bundle=_successful_bundle(),
+        result_configuration_fingerprint="previous",
+        saved_mixes=[],
+        last_error=None,
+        last_error_kind=None,
+        action_handlers={"save_and_move": lambda payload: None},
+    )
+
+    assert workspace["current_work"]["title"] == "Quality + Value"
+    assert workspace["configuration_summary"] == {}
+
+
+def test_portfolio_mix_context_uses_user_configuration_labels() -> None:
+    workspace = build_backtest_analysis_decision_workspace(
+        workspace_kind="portfolio_mix",
+        selection={"mix_name": "Balanced Mix", "mix_mode": "new"},
+        configuration={
+            "strategy_names": ["GTAA", "Equal Weight"],
+            "weights_percent": [60.0, 40.0],
+            "component_roles": ["core", "satellite"],
+        },
+        result_bundle=None,
+        result_configuration_fingerprint=None,
+        saved_mixes=[],
+        last_error=None,
+        last_error_kind=None,
+        action_handlers={
+            "save_mix": lambda payload: None,
+            "save_and_move": lambda payload: None,
+        },
+    )
+
+    assert workspace["configuration_summary"] == {
+        "구성 전략": "GTAA, Equal Weight",
+        "목표 비중": "60%, 40%",
+        "구성 수": 2,
+    }
+    assert "strategy_names" not in workspace["configuration_summary"]
+
+
 def test_stale_result_is_preserved_and_handoff_blocked() -> None:
     projection = build_level1_readiness_projection(
         workspace_kind="single_strategy",

@@ -218,6 +218,29 @@ def build_level1_readiness_projection(
     }
 
 
+def _configuration_summary(
+    workspace_kind: str,
+    configuration: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Keep previous run payloads out of the current Single Strategy selector."""
+
+    if workspace_kind == "single_strategy":
+        return {}
+    strategy_names = [
+        str(name) for name in list(configuration.get("strategy_names") or [])
+    ]
+    weights = [
+        float(weight)
+        for weight in list(configuration.get("weights_percent") or [])
+    ]
+    return {
+        "구성 전략": ", ".join(strategy_names) or "구성 전",
+        "목표 비중": ", ".join(f"{weight:g}%" for weight in weights)
+        or "설정 전",
+        "구성 수": len(strategy_names),
+    }
+
+
 def _metric_items(summary_df: Any) -> list[dict[str, Any]]:
     if summary_df is None or getattr(summary_df, "empty", True):
         return []
@@ -341,7 +364,10 @@ def build_backtest_analysis_decision_workspace(
         },
         "current_work": current_work,
         "strategy_catalog": build_level1_strategy_catalog(),
-        "configuration_summary": _json_ready(dict(configuration)),
+        "configuration_summary": _configuration_summary(
+            workspace_kind,
+            configuration,
+        ),
         "saved_mixes": [_json_ready(dict(row)) for row in saved_mixes],
         "component_bundle_count": len(component_bundles),
         "decision": decision,
