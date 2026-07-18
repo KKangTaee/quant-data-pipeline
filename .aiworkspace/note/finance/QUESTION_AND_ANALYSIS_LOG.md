@@ -9718,3 +9718,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Audit result: current React는 전체 보유를 80개로 잘라 Bridgewater 993개 중 913개를 숨기고, primary 종목 검색이 없으며, mapping coverage와 previous-quarter 부재가 sector / chart / change 의미를 제한했다.
 - Analysis result: `institutional_portfolios_workbench_v2`가 선택 기관 context hero, full 50-row holdings explorer, ticker / issuer / CUSIP 검색, mapping / performance coverage 분리, previous-quarter change gate를 소유한다. 미매핑 row는 issuer / CUSIP을 유지하고 가격 action을 열지 않는다.
 - Follow-up: 전체 roadmap `4/4`를 완료했다. Bridgewater actual `993/993` explorer row, mapped / unresolved 종목 흐름, desktop / 420px QA를 확인했다. Historical filing backfill과 verified security master는 별도 승인 범위다.
+
+### 2026-07-18 - 직접 종목 검색은 선택 기관 보유 여부와 종목 identity를 분리한다
+
+- User request: 최종 리뷰에서 선택 기관이 보유하지 않은 mapped 종목 검색, query 대소문자 완료 상태, manager 0건 / stale state / unresolved 이동 결함을 모두 보완해 달라고 요청함.
+- Interpreted goal: direct security search는 전체 Institutional Interest에서 종목 identity와 holder evidence를 찾되, 선택 기관 포지션을 0으로 위조하지 않고 별도 unavailable 상태로 보여야 함.
+- Analysis result: interest holder의 mapped identity가 DB price symbol을 소유하고, selected-manager holding은 독립적인 optional position이다. manager 0건은 검색 결과 상태일 뿐 현재 live context를 교체하는 조건이 아니다.
+- Follow-up: builder / loader / React pure helper 회귀 테스트와 actual Browser QA로 두 경계를 고정했다. verified security master 자체는 여전히 별도 data dependency다.

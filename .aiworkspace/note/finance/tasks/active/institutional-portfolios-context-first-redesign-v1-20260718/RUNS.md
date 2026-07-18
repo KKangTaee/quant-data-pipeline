@@ -47,3 +47,14 @@
 - 미연결 `CONSTELLATION BRANDS INC` row를 선택해 `CUSIP 21036P108 · Unmapped` identity notice와 `ticker가 안전하게 연결되기 전에는 종목 차트나 가격 수집을 열지 않습니다.` 안내를 확인했다. `.ip-price-action`과 `.ip-security-detail`은 모두 `0`개였다.
 - mapping filter를 `ticker 연결됨`으로 전환하고 holdings search에 `AAPL`을 입력해 `1–1 / 1`을 확인했다. AAPL row 선택 후 종목 상세, CUSIP `037833100`, 포트폴리오 비중 `22.0%`, 보고 평가액 `57.8B`, 보유 기관 `100`, interactive chart가 노출됐다.
 - Mobile interaction screenshot: `.playwright-mcp/institutional-portfolios-context-first-v2-mobile-interaction.png` (not staged).
+
+## 2026-07-18 Final Review Fix Wave
+
+- Root-cause RED: `uv run --with pytest pytest -q tests/test_institutional_portfolios.py -k 'outside_selected_portfolio or outside_portfolio or preserves_curated_live_context_when_search_has_no_results'` -> 3 expected failures: builder returned `empty`, loader made no price call, zero-result resolver returned `None`.
+- Python GREEN: the same focused command -> `3 passed`; final required command `uv run --with pytest pytest -q tests/test_institutional_portfolios.py` -> `51 passed`, `2 subtests passed`, 3 dependency deprecation warnings.
+- Frontend RED: initial `npm test -- --reporter=verbose` failed because the new helper module was absent; after adding explicit stubs it produced 4 expected `not implemented` failures. The cleared-query case separately failed `expected false to be true`.
+- Frontend GREEN: `npm test -- --reporter=verbose` -> `5 passed`; `npm run typecheck` -> PASS; `npm run build` -> PASS, 171 modules transformed; `npm audit --json` -> 0 vulnerabilities after Vitest 4 alignment.
+- Runtime contract: tracked `component_static` bundle rebuilt; source and runtime scans found no `slice(0,80)` / `slice(0, 80)`.
+- Browser QA on port `8524`: lowercase `nvda` outside Berkshire resolved to NVIDIA / CUSIP `67066G104`, DB chart, 100 holders, unavailable selected-manager position and an enabled search action after response. `zzzz-no-manager-qa` showed an explicit 0-result state while retaining the live Berkshire hero. Bridgewater unresolved top holding activation opened `전체 보유`, `1–50 / 993`, CUSIP `78462F103`, and the no-price-action notice.
+- QA screenshot: `.playwright-mcp/institutional-portfolios-final-review-fixes.png` (generated, ignored, not staged). Browser tab finalized and port `8524` server stopped.
+- Earlier `git diff --check` records in this file were working-tree checks only. After commit `3b64f77f`, the exact requested range `git diff --check 229422290f5e33638b21932e72cd4dee8f7b7b85..HEAD` passed with no output after removing the plan EOF blank line.

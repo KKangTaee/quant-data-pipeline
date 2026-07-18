@@ -6384,3 +6384,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - `institutional_portfolios_workbench_v2` context / coverage / comparison 계약과 50-row full holdings explorer, 직접 security search, unresolved guardrail을 구현했다.
 - Actual Berkshire `29/29`, Bridgewater `993/993`, Duquesne `70/70` total/explorer row 일치와 desktop / 420px Browser QA를 확인했다.
 - Historical previous filing과 verified identifier mapping은 별도 승인 dependency다.
+
+## 2026-07-18 - Institutional Portfolios 최종 리뷰 보정
+
+- 선택 기관이 보유하지 않은 mapped 종목도 Institutional Interest identity로 해석해 저장 가격 chart와 holder list를 열고, 선택 기관 포지션은 명시적으로 unavailable 처리한다.
+- manager 검색 0건은 live context를 보존하며, lowercase/mixed-case query 완료 상태와 unresolved overview 이동을 회귀 테스트로 고정했다.
+- Python 51 tests, Vitest 5 tests, strict typecheck, production build, exact base-to-head diff check와 actual Browser QA를 완료했다. 상세는 동일 active task `RUNS.md`를 본다.
