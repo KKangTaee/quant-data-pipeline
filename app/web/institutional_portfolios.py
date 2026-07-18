@@ -306,6 +306,17 @@ def _resolve_selected_manager(
         for row in manager_rows:
             if row.get("query_match"):
                 return row
+        if selected:
+            for seed in INSTITUTIONAL_MANAGER_WATCHLIST:
+                seed_cik = _cik_text(seed.get("cik"))
+                if seed_cik == selected:
+                    return {
+                        "cik": seed_cik,
+                        "manager_name": seed.get("manager_name") or seed.get("display_name") or "Unknown manager",
+                        "latest_report_period": seed.get("latest_report_period"),
+                        "latest_filing_date": seed.get("latest_filing_date"),
+                        "source_ref": seed.get("source_ref"),
+                    }
         return manager_rows[0] if manager_rows else None
 
     if selected and selected in by_cik:
@@ -587,8 +598,8 @@ def render_institutional_portfolios_page(
         mode="live",
         refresh_status=refresh_status,
         preserve_manager_order=search_active,
+        manager_search_query=search,
     )
-    payload.setdefault("manager_picker", {})["search_query"] = search
     _render_workbench_or_fallback(payload, key="institutional_portfolios_workbench")
     if not refresh_panel_rendered:
         _render_refresh_status_panel(refresh_status)

@@ -609,6 +609,113 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertEqual(detail["price_action"]["reason_code"], "cusip_symbol_mapping_missing")
         self.assertIn("티커 매핑", detail["price_action"]["reason"])
 
+    def test_selected_security_model_resolves_mapped_interest_holder_outside_selected_portfolio(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_selected_security_model
+
+        portfolio = {
+            "summary": {"latest_report_period": "2026-03-31"},
+            "holdings": [
+                {
+                    "cusip": "037833100",
+                    "holding_symbol": "AAPL",
+                    "issuer_name": "APPLE INC",
+                    "weight_pct": 100.0,
+                    "reported_value": 1000,
+                }
+            ],
+        }
+        interest = {
+            "query": "NVDA",
+            "holder_count": 1,
+            "holders": [
+                {
+                    "manager_name": "OTHER MANAGER",
+                    "cik": "0000000001",
+                    "issuer_name": "NVIDIA CORP",
+                    "holding_symbol": "NVDA",
+                    "cusip": "67066G104",
+                    "weight_pct": 8.5,
+                    "reported_value": 250,
+                }
+            ],
+        }
+        prices = pd.DataFrame(
+            [
+                {"symbol": "NVDA", "date": "2026-03-31", "close": 100.0},
+                {"symbol": "NVDA", "date": "2026-04-01", "close": 103.0},
+            ]
+        )
+
+        detail = build_institutional_selected_security_model(
+            portfolio_model=portfolio,
+            query="nvda",
+            interest_model=interest,
+            price_history=prices,
+        )
+
+        self.assertEqual(detail["status"], "ok")
+        self.assertEqual(detail["query"], "NVDA")
+        self.assertEqual(detail["security"]["symbol"], "NVDA")
+        self.assertEqual(detail["security"]["issuer_name"], "NVIDIA CORP")
+        self.assertFalse(detail["portfolio_position"]["available"])
+        self.assertEqual(detail["portfolio_position"]["weight_label"], "-")
+        self.assertTrue(detail["charts"]["daily"]["points"])
+        self.assertEqual(detail["price_action"]["state"], "ready")
+        self.assertEqual(detail["holder_count"], 1)
+
+    def test_selected_security_loader_loads_prices_for_interest_identity_outside_portfolio(self) -> None:
+        import app.services.institutional_portfolios as service
+
+        calls: list[dict[str, object]] = []
+        original_loader = service.load_price_history
+
+        def fake_price_loader(**kwargs: object) -> pd.DataFrame:
+            calls.append(dict(kwargs))
+            return pd.DataFrame(
+                [
+                    {"symbol": "NVDA", "date": "2026-03-31", "close": 100.0},
+                    {"symbol": "NVDA", "date": "2026-04-01", "close": 103.0},
+                ]
+            )
+
+        try:
+            service.load_price_history = fake_price_loader
+            detail = service.load_institutional_selected_security_model(
+                portfolio_model={
+                    "summary": {"latest_report_period": "2026-03-31"},
+                    "holdings": [
+                        {
+                            "cusip": "037833100",
+                            "holding_symbol": "AAPL",
+                            "issuer_name": "APPLE INC",
+                            "weight_pct": 100.0,
+                            "reported_value": 1000,
+                        }
+                    ],
+                },
+                query="Nvidia Corp",
+                interest_model={
+                    "query": "NVIDIA CORP",
+                    "holder_count": 1,
+                    "holders": [
+                        {
+                            "manager_name": "OTHER MANAGER",
+                            "issuer_name": "NVIDIA CORP",
+                            "holding_symbol": "NVDA",
+                            "cusip": "67066G104",
+                        }
+                    ],
+                },
+            )
+        finally:
+            service.load_price_history = original_loader
+
+        self.assertEqual(calls, [{"symbols": ["NVDA"], "start": "2026-03-31", "timeframe": "1d"}])
+        self.assertEqual(detail["status"], "ok")
+        self.assertEqual(detail["security"]["symbol"], "NVDA")
+        self.assertFalse(detail["portfolio_position"]["available"])
+        self.assertTrue(detail["charts"]["daily"]["points"])
+
     def test_portfolio_model_marks_ambiguous_cusip_symbol_mapping_unresolved(self) -> None:
         from app.services.institutional_portfolios import build_institutional_portfolio_model
 
@@ -986,6 +1093,34 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertEqual(rail[0]["watchlist_label"], "Stanley Druckenmiller")
         self.assertTrue(rail[0]["selected"])
 
+    def test_workbench_payload_exposes_zero_result_manager_search_without_replacing_context(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_workbench_payload
+
+        payload = build_institutional_workbench_payload(
+            model={
+                "summary": {
+                    "manager_name": "BERKSHIRE HATHAWAY INC",
+                    "cik": "0001067983",
+                    "latest_report_period": "2026-03-31",
+                },
+                "holdings": [],
+                "changes": [],
+                "sector_exposure": [],
+            },
+            managers=[],
+            selected_cik="0001067983",
+            interest_model=None,
+            manager_search_query="No Such Manager",
+            preserve_manager_order=True,
+        )
+
+        self.assertEqual(payload["mode"], "live")
+        self.assertEqual(payload["hero"]["manager_name"], "BERKSHIRE HATHAWAY INC")
+        self.assertEqual(payload["manager_picker"]["search_query"], "No Such Manager")
+        self.assertEqual(payload["manager_picker"]["search_result_count"], 0)
+        self.assertEqual(payload["manager_picker"]["search_state"], "empty")
+        self.assertIn("검색 결과", payload["manager_picker"]["search_empty_message"])
+
     def test_manager_choices_search_uses_watchlist_alias_before_exact_sec_name(self) -> None:
         import app.services.institutional_portfolios as service
 
@@ -1075,6 +1210,35 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertNotIn('search = st.text_input(', render_source)
         self.assertIn('event_name == "manager_search"', page_source)
 
+    def test_workbench_review_fix_contract_connects_normalized_state_and_explicit_empty_ux(self) -> None:
+        component_source = _component_source()
+        pending_effect = component_source[
+            component_source.index('if (pendingAction.kind === "manager"') : component_source.index(
+                "}, [payload, pendingAction]);"
+            )
+        ]
+        unresolved_handler = component_source[
+            component_source.index("const handleHoldingDrilldown") : component_source.index(
+                "const handleAllocationDrilldown"
+            )
+        ]
+        manager_submit = component_source[
+            component_source.index("const submitManagerSearch") : component_source.index(
+                "const handleManagerSelect"
+            )
+        ]
+
+        self.assertIn('from "./workbenchState"', component_source)
+        self.assertIn("filterSortAndPaginateHoldings", component_source)
+        self.assertIn("queriesMatch(payload.interest.query, pendingAction.query)", pending_effect)
+        self.assertIn("ip-manager-search-empty", component_source)
+        self.assertIn("search_result_count", component_source)
+        self.assertIn("detail?.portfolio_position?.available === false", component_source)
+        self.assertIn("ip-security-position-unavailable", component_source)
+        self.assertIn('setActiveView("holdings")', unresolved_handler)
+        self.assertIn("setLocalSelectedQuery(\"\")", manager_submit)
+        self.assertIn("setSecuritySearch(\"\")", manager_submit)
+
     def test_tracked_workbench_bundle_serves_v2_runtime_contract(self) -> None:
         build_dir = Path("app/web/streamlit_components/institutional_portfolios_workbench/component_static")
         index_source = (build_dir / "index.html").read_text(encoding="utf-8")
@@ -1153,6 +1317,19 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
 
         self.assertIsNotNone(selected)
         self.assertEqual(selected["cik"], "0001536411")
+
+    def test_selected_manager_resolver_preserves_curated_live_context_when_search_has_no_results(self) -> None:
+        from app.web.institutional_portfolios import _resolve_selected_manager
+
+        selected = _resolve_selected_manager(
+            managers=[],
+            selected_cik="0001067983",
+            search_active=True,
+        )
+
+        self.assertIsNotNone(selected)
+        self.assertEqual(selected["cik"], "0001067983")
+        self.assertEqual(selected["manager_name"], "BERKSHIRE HATHAWAY INC")
 
     def test_workbench_event_consumption_skips_replayed_component_value(self) -> None:
         from app.web.institutional_portfolios import _consume_workbench_event

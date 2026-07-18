@@ -843,6 +843,14 @@ def _find_holding(holdings: list[dict[str, Any]], query: str) -> dict[str, Any] 
     return None
 
 
+def _mapped_interest_identity(interest_model: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Return a safely mapped identity from reverse-lookup results."""
+    for holder in list((interest_model or {}).get("holders") or []):
+        if _symbol(holder.get("holding_symbol")):
+            return dict(holder)
+    return None
+
+
 def build_institutional_manager_rail(
     managers: list[dict[str, Any]],
     selected_cik: str | None,
@@ -1327,7 +1335,9 @@ def build_institutional_selected_security_model(
 ) -> dict[str, Any]:
     holdings = list(portfolio_model.get("holdings") or [])
     holding = _find_holding(holdings, query)
-    if holding is None:
+    interest_identity = _mapped_interest_identity(interest_model)
+    identity = holding or interest_identity
+    if identity is None:
         return {
             "status": "empty",
             "query": str(query or "").strip(),
@@ -1336,31 +1346,46 @@ def build_institutional_selected_security_model(
             "holder_count": int((interest_model or {}).get("holder_count") or 0),
         }
 
-    symbol = _symbol(holding.get("holding_symbol"))
+    symbol = _symbol(identity.get("holding_symbol"))
     charts = _security_charts(price_history, symbol)
     report_period = _date_label((portfolio_model.get("summary") or {}).get("latest_report_period"))
     security = {
         "symbol": symbol,
-        "issuer_name": _text(holding.get("issuer_name")) or symbol or "-",
-        "cusip": _text(holding.get("cusip")),
-        "sector": _text(holding.get("sector")) or "Unmapped",
-        "industry": _text(holding.get("industry")),
-        "symbol_source": _text(holding.get("symbol_source")),
-        "mapping_status": _text(holding.get("mapping_status")) or ("mapped" if symbol else "unmapped"),
+        "issuer_name": _text(identity.get("issuer_name")) or symbol or "-",
+        "cusip": _text(identity.get("cusip")),
+        "sector": _text(identity.get("sector")),
+        "industry": _text(identity.get("industry")),
+        "symbol_source": _text(identity.get("symbol_source")) or ("institutional_interest" if interest_identity else None),
+        "mapping_status": _text(identity.get("mapping_status")) or ("mapped" if symbol else "unmapped"),
     }
     holders = list((interest_model or {}).get("holders") or [])
-    return {
-        "status": "ok",
-        "query": str(query or "").strip().upper(),
-        "security": security,
-        "portfolio_position": {
+    portfolio_position = (
+        {
+            "available": True,
             "weight_pct": round(_num(holding.get("weight_pct")), 4),
             "weight_label": _pct_label(holding.get("weight_pct")),
             "reported_value": _num(holding.get("reported_value")),
             "value_label": _money_label(holding.get("reported_value")),
             "shares_or_principal_amount": _num(holding.get("shares_or_principal_amount")),
             "shares_label": f"{_num(holding.get('shares_or_principal_amount')):,.0f}",
-        },
+        }
+        if holding is not None
+        else {
+            "available": False,
+            "weight_pct": None,
+            "weight_label": "-",
+            "reported_value": None,
+            "value_label": "-",
+            "shares_or_principal_amount": None,
+            "shares_label": "-",
+            "reason": "현재 선택한 기관의 최신 13F 포트폴리오에서는 이 종목이 보고되지 않았습니다.",
+        }
+    )
+    return {
+        "status": "ok",
+        "query": str(query or "").strip().upper(),
+        "security": security,
+        "portfolio_position": portfolio_position,
         "charts": charts,
         "price_action": _price_action_payload(symbol, charts, start_date=report_period, mapping_status=security["mapping_status"]),
         "holders": holders[:50],
@@ -1447,6 +1472,7 @@ def build_institutional_workbench_payload(
     allocation_limit: int = 10,
     row_limit: int = 12,
     preserve_manager_order: bool = False,
+    manager_search_query: str = "",
 ) -> dict[str, Any]:
     summary = dict(model.get("summary") or {})
     holdings = list(model.get("holdings") or [])
@@ -1470,6 +1496,8 @@ def build_institutional_workbench_payload(
         if is_preview
         else "SEC Form 13F 저장 snapshot 기준입니다. 최신 거래 의도가 아닙니다."
     )
+    clean_manager_search = str(manager_search_query or "").strip()
+    manager_search_result_count = len(list(managers or [])) if clean_manager_search else 0
 
     return {
         "schema_version": "institutional_portfolios_workbench_v2",
@@ -1483,6 +1511,14 @@ def build_institutional_workbench_payload(
         },
         "manager_picker": {
             "selected_cik": selected_cik,
+            "search_query": clean_manager_search,
+            "search_result_count": manager_search_result_count,
+            "search_state": "results" if manager_search_result_count else "empty" if clean_manager_search else "idle",
+            "search_empty_message": (
+                f"‘{clean_manager_search}’ 검색 결과가 없습니다. 현재 선택한 기관 맥락은 그대로 유지합니다."
+                if clean_manager_search and not manager_search_result_count
+                else ""
+            ),
             "items": _manager_picker_items(
                 list(managers or []),
                 selected_cik,
@@ -1865,7 +1901,8 @@ def load_institutional_selected_security_model(
     interest_model: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     holding = _find_holding(list(portfolio_model.get("holdings") or []), query)
-    symbol = _symbol((holding or {}).get("holding_symbol"))
+    identity = holding or _mapped_interest_identity(interest_model)
+    symbol = _symbol((identity or {}).get("holding_symbol"))
     report_period = _text((portfolio_model.get("summary") or {}).get("latest_report_period"))
     price_history = pd.DataFrame()
     if symbol and report_period:

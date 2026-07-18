@@ -1,5 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
+import {
+  filterSortAndPaginateHoldings,
+  queriesMatch,
+  type HoldingSort,
+  type MappingFilter,
+} from "./workbenchState";
 import "./style.css";
 
 type ManagerItem = {
@@ -122,9 +128,11 @@ type SelectedSecurity = {
     mapping_status?: string | null;
   };
   portfolio_position?: {
+    available?: boolean;
     weight_label: string;
     value_label: string;
     shares_label: string;
+    reason?: string;
   };
   charts?: Record<"daily" | "weekly" | "monthly", { label: string; points: ChartPoint[] }>;
   price_action?: PriceAction;
@@ -196,6 +204,9 @@ type WorkbenchPayload = {
   manager_picker: {
     selected_cik?: string | null;
     search_query?: string;
+    search_result_count?: number;
+    search_state?: "idle" | "results" | "empty" | string;
+    search_empty_message?: string;
     items: ManagerItem[];
   };
   freshness?: {
@@ -306,7 +317,7 @@ type WorkbenchPayload = {
   };
 };
 
-type Props = ComponentProps & {
+type Props = Omit<ComponentProps, "args"> & {
   args: {
     payload?: WorkbenchPayload;
   };
@@ -314,8 +325,6 @@ type Props = ComponentProps & {
 
 type ViewName = "overview" | "holdings" | "security" | "popularity";
 type WorkspaceSection = "portfolio" | "security";
-type HoldingSort = "weight_desc" | "value_desc" | "issuer_asc";
-type MappingFilter = "all" | "mapped" | "unresolved";
 
 const HOLDINGS_PAGE_SIZE = 50;
 const WORKBENCH_SCHEMA_VERSION = "institutional_portfolios_workbench_v2";
@@ -812,6 +821,11 @@ function SecurityDetail({
               <strong>{holderCount.toLocaleString()}</strong>
             </div>
           </div>
+          {detail?.portfolio_position?.available === false ? (
+            <p className="ip-security-position-unavailable">
+              {detail.portfolio_position.reason || "현재 선택한 기관 포트폴리오에서 보고되지 않은 종목입니다."}
+            </p>
+          ) : null}
         </div>
       </div>
       <div className="ip-security-chart-row">
@@ -976,6 +990,12 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   }, [payload?.manager_picker.selected_cik, payload?.hero.latest_report_period]);
 
   useEffect(() => {
+    setLocalSelectedQuery("");
+    setSecuritySearch("");
+    setActionNotice(null);
+  }, [payload?.manager_picker.selected_cik]);
+
+  useEffect(() => {
     setHoldingPage(1);
   }, [holdingSearch, mappingFilter, sectorFilter, holdingSort]);
 
@@ -994,11 +1014,11 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
       setPendingAction(null);
       setActionNotice(null);
     }
-    if (pendingAction.kind === "manager_search" && (payload.manager_picker.search_query || "") === pendingAction.query) {
+    if (pendingAction.kind === "manager_search" && queriesMatch(payload.manager_picker.search_query, pendingAction.query)) {
       setPendingAction(null);
       setActionNotice(null);
     }
-    if (pendingAction.kind === "interest" && payload.interest.query === pendingAction.query) {
+    if (pendingAction.kind === "interest" && queriesMatch(payload.interest.query, pendingAction.query)) {
       setPendingAction(null);
       setActionNotice(null);
     }
@@ -1046,40 +1066,23 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     return groups;
   }, [payload]);
 
-  const filteredHoldings = useMemo(() => {
-    const query = holdingSearch.trim().toLocaleLowerCase();
-    return (payload?.holdings_explorer.rows || [])
-      .map((row, index) => ({ row, index }))
-      .filter(({ row }) => {
-        const mapped = row.mapping_status === "mapped" && Boolean(row.symbol);
-        const matchesQuery =
-          !query ||
-          [row.symbol, row.issuer_name, row.cusip].some((value) => String(value || "").toLocaleLowerCase().includes(query));
-        const matchesMapping =
-          mappingFilter === "all" || (mappingFilter === "mapped" ? mapped : !mapped);
-        const matchesSector = sectorFilter === "all" || row.sector === sectorFilter;
-        return matchesQuery && matchesMapping && matchesSector;
-      })
-      .sort((left, right) => {
-        let comparison = 0;
-        if (holdingSort === "issuer_asc") {
-          comparison = left.row.issuer_name.localeCompare(right.row.issuer_name, "ko");
-        } else if (holdingSort === "value_desc") {
-          comparison = Number(right.row.reported_value || 0) - Number(left.row.reported_value || 0);
-        } else {
-          comparison = Number(right.row.weight_pct || 0) - Number(left.row.weight_pct || 0);
-        }
-        return comparison || left.index - right.index;
-      })
-      .map(({ row }) => row);
-  }, [payload?.holdings_explorer.rows, holdingSearch, mappingFilter, sectorFilter, holdingSort]);
-
-  const totalHoldingPages = Math.max(1, Math.ceil(filteredHoldings.length / HOLDINGS_PAGE_SIZE));
-  const safeHoldingPage = Math.min(holdingPage, totalHoldingPages);
-  const visibleHoldings = useMemo(() => {
-    const offset = (safeHoldingPage - 1) * HOLDINGS_PAGE_SIZE;
-    return filteredHoldings.slice(offset, offset + HOLDINGS_PAGE_SIZE);
-  }, [filteredHoldings, safeHoldingPage]);
+  const holdingsState = useMemo(
+    () =>
+      filterSortAndPaginateHoldings({
+        rows: payload?.holdings_explorer.rows || [],
+        search: holdingSearch,
+        mappingFilter,
+        sectorFilter,
+        sort: holdingSort,
+        page: holdingPage,
+        pageSize: HOLDINGS_PAGE_SIZE,
+      }),
+    [payload?.holdings_explorer.rows, holdingSearch, mappingFilter, sectorFilter, holdingSort, holdingPage]
+  );
+  const filteredHoldings = holdingsState.filteredRows;
+  const visibleHoldings = holdingsState.visibleRows;
+  const totalHoldingPages = holdingsState.totalPages;
+  const safeHoldingPage = holdingsState.safePage;
 
   const localSecurityDetail = useMemo<SelectedSecurity | undefined>(() => {
     if (!payload || payload.selected_security?.status === "ok") {
@@ -1150,13 +1153,13 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
 
   const activeWorkspaceSection: WorkspaceSection =
     activeView === "overview" || activeView === "holdings" ? "portfolio" : "security";
-  const holdingsStart = filteredHoldings.length ? (safeHoldingPage - 1) * HOLDINGS_PAGE_SIZE + 1 : 0;
-  const holdingsEnd = Math.min(safeHoldingPage * HOLDINGS_PAGE_SIZE, filteredHoldings.length);
+  const holdingsStart = holdingsState.start;
+  const holdingsEnd = holdingsState.end;
   const allocationOtherSegment = payload.allocation.segments.find(
     (segment) => segment.key === "other" || segment.label.toLocaleLowerCase() === "other"
   );
   const allocationOtherCountFromSegment = Number.parseInt(
-    allocationOtherSegment?.issuer_name.match(/^\d[\d,]*/)?.[0]?.replaceAll(",", "") || "",
+    allocationOtherSegment?.issuer_name.match(/^\d[\d,]*/)?.[0]?.replace(/,/g, "") || "",
     10
   );
   const allocationOtherCount = allocationOtherSegment
@@ -1200,7 +1203,10 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
 
   const handleHoldingDrilldown = (row: HoldingRow) => {
     if (row.mapping_status !== "mapped" || !row.symbol || !row.drilldown_query) {
+      const position = hostScrollPosition();
       setUnresolvedHolding(row);
+      setActiveView("holdings");
+      restoreHostScroll(position);
       syncFrameHeightSoon();
       return;
     }
@@ -1242,6 +1248,9 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     event.preventDefault();
     const query = managerSearch.trim();
     setActionNotice(null);
+    setLocalSelectedQuery("");
+    setSecuritySearch("");
+    setUnresolvedHolding(null);
     setPendingAction({
       kind: "manager_search",
       query,
@@ -1261,6 +1270,8 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     }
     setActionNotice(null);
     setLocalSelectedQuery("");
+    setSecuritySearch("");
+    setUnresolvedHolding(null);
     setPendingAction({ kind: "manager", cik: item.cik, label: `${item.manager_name} 포트폴리오 불러오는 중` });
     sendEvent({ id: "select_manager", cik: item.cik });
   };
@@ -1383,6 +1394,16 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
                 </button>
               ))}
             </div>
+            {payload.manager_picker.search_state === "empty" ? (
+              <div className="ip-manager-search-empty" role="status">
+                <strong>검색 결과가 없습니다</strong>
+                <span>{payload.manager_picker.search_empty_message}</span>
+              </div>
+            ) : payload.manager_picker.search_state === "results" ? (
+              <div className="ip-manager-search-count" role="status">
+                검색 결과 {Number(payload.manager_picker.search_result_count || 0).toLocaleString()}개
+              </div>
+            ) : null}
           </div>
           <div className={`ip-freshness ${payload.freshness?.is_stale ? "ip-freshness--stale" : ""}`}>
             <button type="button" className="ip-freshness__action" onClick={handleRefreshOpen}>
