@@ -122,3 +122,44 @@ UI는 기존 `conditional_path.points`의 마지막 point만 박스에 사용하
 - 화살표와 원이 겹치지 않고 관측·예상 이동 방향이 구분된다.
 - 사용자는 그래프에서 `현재 → 예상 위치`를 먼저 읽고 상세 통계는 우측/방법론에서 확인한다.
 - focused contracts, Vite build, Python compile/diff check, actual desktop/420px Browser QA가 통과한다.
+
+## 2026-07-18 Stable Coordinate Follow-up
+
+### 문제와 원인
+
+5D / 20D 전환 때 `20D 전 → 5D 전 → 현재`의 원본 관측 좌표는 같지만,
+선택된 conditional path의 모든 step median과 숨겨진 step별 q25/q75까지 chart bound에 다시 넣어
+화면 좌표가 달라진다. 실제 snapshot에서 x bound는 5D `1.503856`, 20D `2.003118`이고,
+현재점 화면 x는 `221.335 → 255.896`으로 이동한다. 이는 관측값 변경이 아니라 selected-horizon auto-fit 결과다.
+
+말일 range 하나만 보이는 현재 UI에서 숨겨진 중간 step range가 배율을 바꾸는 것은
+관측과 전망을 같은 좌표계에서 비교한다는 화면 목적과 맞지 않는다.
+
+### 검토한 방식
+
+1. **5D / 20D 공통 visible-data bound — 채택**
+   - 세 관측 anchor, 두 horizon의 step별 median path, 두 horizon 말일의 표시되는 q25/q75 range를 한 번 합쳐 bound를 계산한다.
+   - 5D / 20D / 관측만 전환에서 축과 관측 anchor가 고정되고, 실제 표시되는 전망 요소도 잘리지 않는다.
+2. **관측 anchor만으로 고정**
+   - 관측 비교는 가장 안정적이지만 20D 예상 경로와 말일 range가 화면 밖으로 잘릴 수 있어 채택하지 않는다.
+3. **selected-horizon auto-fit 유지 + 배율 변경 안내**
+   - 각 전망을 크게 볼 수 있지만 toggle 비교 시 관측 이동처럼 보이는 문제가 남아 채택하지 않는다.
+
+### 승인된 좌표 계약
+
+- `patternMap.path`에서 만든 `20D 전 / 5D 전 / 현재`의 SVG `cx / cy`는 `관측만 / 다음 5D / 다음 20D`에서 완전히 동일해야 한다.
+- chart bound는 selected card가 아니라 사용 가능한 5D / 20D conditional path 전체에서 한 번 계산한다.
+- bound에는 두 horizon의 실제로 보이는 step별 median `x / y`를 포함한다.
+- q25/q75는 실제로 표시하는 각 horizon 말일 terminal range만 bound에 포함한다.
+- 화면에서 제거한 중간 step q25/q75는 bound에도 포함하지 않는다.
+- selected horizon은 예상 polyline, terminal, terminal range, legend, 우측 확률만 바꾼다.
+- `UNAVAILABLE` path는 공통 bound에서 제외하고 예측 layer도 기존 계약대로 숨긴다.
+- 서비스 통계, 확률, episode, validation, payload 좌표는 변경하지 않는다.
+
+### 검증 계약
+
+- RED/GREEN source contract로 selected `forecastPoints`가 scale owner가 아닌지 확인한다.
+- 5D와 20D의 공통 scale 입력에 두 median path와 두 terminal range가 포함되는지 확인한다.
+- actual Browser QA에서 세 상태의 anchor `cx / cy`를 수집해 완전 동일성을 비교한다.
+- 5D step-5 / 20D step-20 range와 서로 다른 terminal / polyline은 계속 변경되는지 확인한다.
+- desktop과 420px overflow, label clipping, console error를 다시 확인한다.

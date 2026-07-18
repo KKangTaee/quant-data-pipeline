@@ -65,3 +65,4 @@ Both horizons have 6 evaluated chronological folds; their path errors trail base
 - At 420px the workbench and document both measured `clientWidth == scrollWidth` (`377px`); all graph labels stayed inside the canvas and console errors were 0.
 - QA screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-single-range-qa.png` (generated, not staged).
 - Current stage: conditional-path readability roadmap complete (`5/5`).
+- Stable-coordinate follow-up: user approved replacing selected-horizon auto-fit with one shared 5D / 20D visible-data coordinate system; written amendment is awaiting final spec review before the TDD implementation plan.
