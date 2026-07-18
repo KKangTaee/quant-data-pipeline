@@ -34,3 +34,10 @@ No implementation code or DB writes were performed during design investigation.
 - GREEN: the resolver/persistence suite passed 9/9 and the pre-existing Institutional Portfolios suite remained 57/57.
 - Added current-state schema keyed by `(identifier_value, source)`, latest-accession selection for explicit CIKs, default missing/error retry scope, and error-preserving UPSERT semantics.
 - `py_compile` and `git diff --check` passed for the schema and mapping module.
+
+## 2026-07-18 Task 3
+
+- RED: loader contract tests showed the holdings and reverse lookup SQL did not reference the provider resolution table and did not dedupe provider/legacy reverse matches.
+- GREEN: the mapping suite passed 11/11 and the existing Institutional Portfolios suite remained 57/57.
+- Synced only the new empty resolution table to the local DB, then verified real SQL through public loaders: Duquesne returned 70 rows with 70 unique holding keys, all six identity fields, 4 `AA` interest rows, and 5 popularity rows.
+- No provider backfill or external request was run during this task.

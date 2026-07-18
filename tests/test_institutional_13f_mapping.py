@@ -254,5 +254,57 @@ class ResolutionPersistenceTests(unittest.TestCase):
         self.assertNotIn("ir.last_attempt_status = 'error'", fake_db.sql)
 
 
+class ResolutionLoaderPrecedenceTests(unittest.TestCase):
+    def test_loader_precedence_joins_provider_gate_exact_legacy_and_asset_profile(self) -> None:
+        import finance.loaders.institutional_13f as loader
+
+        class FakeDB:
+            def __init__(self) -> None:
+                self.sql = ""
+
+            def query(self, sql: str, params: tuple[object, ...]) -> list[dict[str, object]]:
+                self.sql = sql
+                return []
+
+            def close(self) -> None:
+                return None
+
+        fake_db = FakeDB()
+        original_connect = loader._connect
+        try:
+            loader._connect = lambda *args, **kwargs: fake_db
+            loader.load_institutional_13f_holdings("0001536411-26-000001")
+        finally:
+            loader._connect = original_connect
+
+        self.assertIn("institutional_13f_identifier_resolution", fake_db.sql)
+        self.assertIn("ir.resolution_status = 'mapped'", fake_db.sql)
+        self.assertIn("ir.resolution_status = 'ambiguous'", fake_db.sql)
+        self.assertIn("lm.issuer_key = UPPER(h.issuer_name)", fake_db.sql)
+        self.assertIn("nyse_asset_profile", fake_db.sql)
+        self.assertIn("AS mapping_status", fake_db.sql)
+
+    def test_reverse_symbol_lookup_prefers_provider_and_dedupes_legacy_rows(self) -> None:
+        from finance.loaders.institutional_13f import _load_mapped_cusips_for_symbol
+
+        class FakeDB:
+            def __init__(self) -> None:
+                self.sql = ""
+
+            def query(self, sql: str, params: tuple[object, ...]) -> list[dict[str, object]]:
+                self.sql = sql
+                return [
+                    {"cusip": "632307104"},
+                    {"cusip": "632307104"},
+                    {"cusip": "457669307"},
+                ]
+
+        fake_db = FakeDB()
+        cusips = _load_mapped_cusips_for_symbol(fake_db, "NTRA")
+        self.assertIn("institutional_13f_identifier_resolution", fake_db.sql)
+        self.assertIn("resolution_status = 'mapped'", fake_db.sql)
+        self.assertEqual(cusips, ["632307104", "457669307"])
+
+
 if __name__ == "__main__":
     unittest.main()
