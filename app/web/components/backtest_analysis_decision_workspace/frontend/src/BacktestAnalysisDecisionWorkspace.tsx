@@ -70,6 +70,163 @@ function optionFromString(field: SettingsField, value: string) {
   return field.options?.find((option) => String(option.value) === value)?.value ?? value
 }
 
+const MULTI_SELECT_COMPACT_LIMIT = 20
+const MULTI_SELECT_RESULT_LIMIT = 100
+
+function optionIdentity(value: unknown) {
+  return String(value)
+}
+
+function normalizeMultiSelectValues(field: SettingsField, values: unknown[]) {
+  const selected = new Set(values.map(optionIdentity))
+  return (field.options ?? [])
+    .filter((option) => selected.has(optionIdentity(option.value)))
+    .map((option) => option.value)
+}
+
+function MultiSelectFieldControl({
+  field,
+  value,
+  onChange,
+  inputId,
+}: {
+  field: SettingsField
+  value: unknown
+  onChange: (value: unknown) => void
+  inputId: string
+}) {
+  const options = field.options ?? []
+  const selectedValues = Array.isArray(value) ? value : []
+  const selectedKeys = new Set(selectedValues.map(optionIdentity))
+  const [query, setQuery] = useState("")
+  const normalizedQuery = query.trim().toLocaleLowerCase()
+  const filteredOptions = options.filter((option) => {
+    if (!normalizedQuery) return true
+    return `${option.label} ${String(option.value)}`
+      .toLocaleLowerCase()
+      .includes(normalizedQuery)
+  })
+  const visibleOptions = filteredOptions.slice(0, MULTI_SELECT_RESULT_LIMIT)
+  const remainingCount = Math.max(0, filteredOptions.length - visibleOptions.length)
+
+  const toggleValue = (nextValue: unknown) => {
+    const key = optionIdentity(nextValue)
+    const next = selectedKeys.has(key)
+      ? selectedValues.filter((item) => optionIdentity(item) !== key)
+      : [...selectedValues, nextValue]
+    onChange(normalizeMultiSelectValues(field, next))
+  }
+  const clearSelection = () => onChange([])
+
+  if (options.length <= MULTI_SELECT_COMPACT_LIMIT) {
+    return (
+      <div
+        className="bt1-settings-multi-select"
+        id={inputId}
+        role="group"
+        aria-label={field.label}
+      >
+        <div className="bt1-multi-select-toolbar">
+          <button
+            type="button"
+            onClick={() => onChange(options.map((option) => option.value))}
+          >
+            전체 선택
+          </button>
+          <button type="button" onClick={clearSelection}>
+            선택 해제
+          </button>
+        </div>
+        <div className="bt1-multi-select-compact">
+          {options.map((option) => {
+            const selected = selectedKeys.has(optionIdentity(option.value))
+            return (
+              <button
+                type="button"
+                className={selected ? "is-selected" : ""}
+                aria-pressed={selected}
+                key={optionIdentity(option.value)}
+                onClick={() => toggleValue(option.value)}
+              >
+                <span aria-hidden="true">{selected ? "✓" : ""}</span>
+                {option.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  const addFilteredOptions = () =>
+    onChange(
+      normalizeMultiSelectValues(field, [
+        ...selectedValues,
+        ...filteredOptions.map((option) => option.value),
+      ]),
+    )
+
+  return (
+    <div className="bt1-settings-multi-select" id={inputId}>
+      <div className="bt1-multi-select-search">
+        <input
+          type="search"
+          value={query}
+          aria-label={`${field.label} 검색`}
+          placeholder="종목 또는 값을 검색"
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <div className="bt1-selected-chip-shelf" aria-label="현재 선택">
+          {selectedValues.map((item) => (
+            <button
+              type="button"
+              className="bt1-selected-chip"
+              aria-label={`${optionLabel(field, item)} 선택 해제`}
+              key={optionIdentity(item)}
+              onClick={() => toggleValue(item)}
+            >
+              {optionLabel(field, item)} <span aria-hidden="true">×</span>
+            </button>
+          ))}
+        </div>
+        <div className="bt1-multi-select-toolbar">
+          <button type="button" onClick={addFilteredOptions}>
+            검색 결과 전체 선택
+          </button>
+          <button type="button" onClick={clearSelection}>
+            선택 해제
+          </button>
+        </div>
+        <div
+          className="bt1-multi-select-results"
+          role="group"
+          aria-label={`${field.label} 옵션`}
+        >
+          {visibleOptions.map((option) => {
+            const selected = selectedKeys.has(optionIdentity(option.value))
+            return (
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={selected}
+                className={selected ? "is-selected" : ""}
+                key={optionIdentity(option.value)}
+                onClick={() => toggleValue(option.value)}
+              >
+                <span aria-hidden="true">{selected ? "✓" : ""}</span>
+                {option.label}
+              </button>
+            )
+          })}
+        </div>
+        {remainingCount > 0 && (
+          <small>검색 결과 {remainingCount}개가 더 있습니다.</small>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function isSettingsFieldVisible(field: SettingsField, values: SettingsValues) {
   return Object.entries(field.visible_when ?? {}).every(
     ([dependency, expected]) => values[dependency] === expected,
@@ -142,24 +299,12 @@ function SettingsFieldControl({
       break
     case "multi_select":
       control = (
-        <select
-          id={inputId}
-          multiple
-          value={(Array.isArray(value) ? value : []).map(String)}
-          onChange={(event) =>
-            onChange(
-              Array.from(event.target.selectedOptions).map((option) =>
-                optionFromString(field, option.value),
-              ),
-            )
-          }
-        >
-          {(field.options ?? []).map((option) => (
-            <option key={String(option.value)} value={String(option.value)}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <MultiSelectFieldControl
+          field={field}
+          value={value}
+          onChange={onChange}
+          inputId={inputId}
+        />
       )
       break
     case "segmented":
@@ -201,7 +346,13 @@ function SettingsFieldControl({
         error ? "has-error" : ""
       }`}
     >
-      <label htmlFor={field.control === "segmented" ? undefined : inputId}>
+      <label
+        htmlFor={
+          field.control === "segmented" || field.control === "multi_select"
+            ? undefined
+            : inputId
+        }
+      >
         {field.label}
         {field.required && <span className="bt1-required">필수</span>}
       </label>

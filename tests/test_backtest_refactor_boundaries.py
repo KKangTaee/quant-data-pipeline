@@ -833,6 +833,45 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn("dangerouslySetInnerHTML", component)
         self.assertNotIn("execute_single_backtest", component)
 
+    def test_react_multi_select_is_modifier_free_and_adaptive(self) -> None:
+        root = (
+            PROJECT_ROOT
+            / "app/web/components/backtest_analysis_decision_workspace"
+        )
+        component = (
+            root / "frontend/src/BacktestAnalysisDecisionWorkspace.tsx"
+        ).read_text()
+        style = (root / "frontend/src/style.css").read_text()
+
+        self.assertNotIn("event.target.selectedOptions", component)
+        self.assertNotIn("select[multiple]", style)
+        for token in (
+            "const MULTI_SELECT_COMPACT_LIMIT = 20",
+            "const MULTI_SELECT_RESULT_LIMIT = 100",
+            "function normalizeMultiSelectValues(",
+            "function MultiSelectFieldControl(",
+            'className="bt1-multi-select-compact"',
+            'className="bt1-multi-select-search"',
+            'role="checkbox"',
+            'aria-pressed={selected}',
+            "검색 결과 전체 선택",
+            "bt1-selected-chip",
+            ".slice(0, MULTI_SELECT_RESULT_LIMIT)",
+        ):
+            self.assertIn(token, component)
+        for token in (
+            ".bt1-multi-select-compact",
+            "repeat(auto-fit, minmax(140px, 1fr))",
+            ".bt1-multi-select-results",
+            "max-height: 280px",
+            "overflow-y: auto",
+            ".bt1-selected-chip",
+            ":focus-visible",
+        ):
+            self.assertIn(token, style)
+        responsive = style.split("@media (max-width: 760px)", 1)[1]
+        self.assertIn(".bt1-multi-select-compact", responsive)
+
     def test_primary_single_settings_route_has_no_legacy_form_dispatch(self) -> None:
         source = (PROJECT_ROOT / "app/web/backtest_single_strategy.py").read_text()
         render_body = source.split("def render_single_strategy_workspace", 1)[1]
