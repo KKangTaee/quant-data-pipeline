@@ -1,6 +1,6 @@
 # Status
 
-Status: Implementation Complete / 8차 Modifier-Free Multi-Select Controls
+Status: 9차 Deterministic Preset Application Design Written / Review Pending
 Last Updated: 2026-07-18
 
 ## Current Position
@@ -36,6 +36,12 @@ Last Updated: 2026-07-18
 - [x] 8차 written design 사용자 review
 - [x] 8차 implementation plan
 - [x] 8차 RED -> GREEN implementation / Browser QA / closeout
+- [x] 9차 전체 preset contract / legacy / React 회귀 audit
+- [x] 9차 Python-owned base profile + evidence override 접근 사용자 승인
+- [x] 9차 corrective design 작성과 self-review
+- [ ] 9차 written design 사용자 review
+- [ ] 9차 implementation plan
+- [ ] 9차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -47,6 +53,7 @@ Last Updated: 2026-07-18
 6. Single Strategy Settings Workspace Corrective
 7. Unified React Strategy Settings Workspace
 8. Modifier-Free Multi-Select Controls
+9. Deterministic Preset Application
 
 ## Current Corrective Position
 

@@ -173,3 +173,19 @@ generated artifact이므로 commit하지 않는다.
 - Browser runtime의 Tab key 전달은 iframe input에서 focus를 이동시키지 못해 actual focus-ring
   visual은 자동 판독하지 못했다. `:focus-visible` source contract와 production CSS build는
   통과했으며 이는 남은 수동 accessibility QA gap이다.
+
+## 2026-07-18 9차 Preset Application Audit And Design
+
+- current React editor에서 GTAA preset을 `GTAA Universe`에서
+  `GTAA SPY Low-MDD Style Top-2 ADV20`으로 바꿨을 때 preset name만 바뀌고 `top=3`,
+  `interval=1`, score horizon `1/3/6/12`가 그대로 남는 회귀를 actual Browser에서 재현했다.
+- legacy `GTAA_PRESET_PARAMETER_DEFAULTS`와 native form은 같은 preset에 `top=2`,
+  `interval=4`, score horizon `1/6`, `IEF/TLT`, `ADV20=20M`을 적용한다.
+- 다른 strategy preset 대부분은 universe-only catalog이고, Quality strict managed preset은
+  target size만 추가로 소유한다. 모든 preset에 임의 tuning을 만들면 근거 강도를 과장한다.
+- 승인된 C안은 schema defaults로 strategy / variant base profile을 만들고, legacy note 또는
+  canonical parameter map에 이미 명시된 GTAA 값만 evidence-backed override로 적용한다.
+- preset change는 preset-owned field를 base + override로 재설정하지만 date range와 manual
+  ticker draft는 보존한다. saved replay / prefill explicit values는 initial profile보다 우선한다.
+- React와 fallback은 Python read model의 patch와 feedback label만 기계적으로 사용하고
+  strategy-specific 값, validation, payload, Gate를 계산하지 않는다.

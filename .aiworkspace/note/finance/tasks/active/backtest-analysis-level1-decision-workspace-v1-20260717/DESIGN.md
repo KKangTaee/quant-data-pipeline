@@ -1121,3 +1121,185 @@ Python schema, settings adapter, runner, strategy runtime과 persistence contrac
 - Python fallback `st.multiselect` redesign
 - Portfolio Mix settings migration
 - strategy runtime, DB, ingestion, Level2/3 Gate 변경
+
+## 9차 Corrective Design: Deterministic Preset Application
+
+### 이걸 하는 이유?
+
+8차까지의 React 설정 editor는 preset 이름과 universe 종목은 정확히 연결하지만, preset을
+바꿔도 보유 수, 신호 주기, 선택 지표, 방어 규칙, 비용 기준이 이전 draft 값으로 남는다.
+특히 `GTAA SPY Low-MDD Style Top-2 ADV20`은 legacy 계약에 `top=2`, `interval=4`,
+`1M/6M`, `IEF/TLT`, `ADV20=20M`이 명시돼 있는데 current React에서는 preset 이름만
+바뀌고 기본 `top=3`, `interval=1`, `1M/3M/6M/12M`이 유지된다. 사용자는 preset을
+완결된 시작 설정으로 이해하므로, universe와 규칙이 서로 다른 후보를 실수로 실행할 수 있다.
+
+### Confirmed Audit
+
+- Equal Weight 3개, GRS 2개, Risk Parity 1개, Dual Momentum 1개 preset은 현재 universe
+  members만 정의한다.
+- GTAA 9개 preset 중 `GTAA SPY Low-MDD Style Top-2 ADV20`만
+  `GTAA_PRESET_PARAMETER_DEFAULTS`에 machine-readable override가 있다.
+- GTAA U3 / U1 / U5 / Low-MDD Top-3는 legacy 설명에 검증된 `top`, `interval`, score
+  horizon과 일부 trend / risk contract가 남아 있지만 현재 runtime option에는 전달되지 않는다.
+- Quality broad 1개와 strict managed preset은 universe members와 target size를 소유하고,
+  factor / overlay / risk 값은 strategy·variant 기본값을 사용한다.
+- Risk-On Momentum 5D의 `top1000` / `top2000` / `sp500`은 universe mode이지 named preset이
+  아니므로 이번 preset application 대상이 아니다.
+- legacy GTAA native form은 preset별 parameter defaults를 session state에 적용하지만,
+  current schema runtime context에는 preset members와 strict target size만 있고 parameter
+  profile은 없다.
+- React `setFieldValue()`는 field 하나만 갱신하며 preset change를 별도 intent나 declarative
+  patch로 해석하지 않는다.
+
+### Approaches
+
+#### A. Existing Explicit Override만 복원
+
+- 장점: 가장 작은 회귀 수정이며 이미 machine-readable인 GTAA 1개 계약만 복원한다.
+- 단점: 다른 preset은 여전히 universe만 바뀌어 사용자 기대와 화면 의미가 일치하지 않는다.
+
+#### B. React에 Strategy별 Preset 조건문 추가
+
+- 장점: 화면 반응을 빠르게 구현할 수 있다.
+- 단점: React가 전략 의미와 기본값을 소유해 Python fallback / payload / legacy와 drift한다.
+
+#### C. Python-owned Base Profile + Evidence-backed Override — Selected
+
+- 모든 named preset은 해당 strategy·variant의 공식 기본값으로 완결된 base profile을 가진다.
+- 검증된 별도 parameter evidence가 있는 preset만 base profile 위에 override를 적용한다.
+- React와 Python fallback은 Python이 제공한 field-value patch를 기계적으로 적용하며 전략별
+  숫자나 분류를 계산하지 않는다.
+- 사용자 승인: 2026-07-18.
+
+### Preset Profile Contract
+
+Python pure service는 preset별로 다음 JSON-ready model을 만든다.
+
+```text
+preset_profiles[preset_name] = {
+  application_kind: strategy_default | validated_override,
+  source_label: 사용자 설명,
+  values: {field_id: value}
+}
+```
+
+- `values`는 current workspace schema에 실제 존재하는 field만 포함한다.
+- 모든 preset은 universe `preset_name`과 preset-owned execution / selection / holding / risk
+  field를 deterministic하게 다시 설정한다.
+- `start`, `end`처럼 검증 기간 자체를 정하는 값은 preset-owned가 아니므로 보존한다.
+- `universe_mode`는 preset 선택 시 `preset`으로 유지하고 manual ticker draft는 삭제하지 않아
+  사용자가 직접 입력 모드로 돌아갈 때 기존 입력을 복구할 수 있게 한다.
+- strategy / variant base profile은 schema field default에서 만들고, 별도 override가 없는
+  universe preset도 같은 strategy 기본 규칙 전체를 적용한다.
+- override에 없는 field는 이전 draft 값을 유지하지 않고 base profile 값으로 돌아간다. 이를
+  통해 A preset에서 수정된 값이 B preset에 누출되지 않게 한다.
+
+### Evidence-backed GTAA Overrides
+
+- `GTAA Universe (U3 Commodity Candidate Base)`:
+  `top=2`, `interval=3`, score horizon `1/3/6`; 나머지는 GTAA base profile.
+- `GTAA Universe (U1 Offensive Candidate Base)`:
+  `top=2`, `interval=3`, score horizon `1/3/6/12`; 나머지는 GTAA base profile.
+- `GTAA Universe (U5 Smallcap Value Candidate Base)`:
+  `top=3`, `interval=3`, score horizon `1/3/6/12`; 나머지는 GTAA base profile.
+- `GTAA SPY Low-MDD Style Top-3`:
+  `top=3`, `interval=3`, score horizon `1/6`, `trend_filter_window=250`,
+  `risk_off_mode=cash_only`, `benchmark_ticker=SPY`; 나머지는 GTAA base profile.
+- `GTAA SPY Low-MDD Style Top-2 ADV20`:
+  existing `GTAA_PRESET_PARAMETER_DEFAULTS` 전체를 authoritative override로 사용한다.
+- 다른 GTAA preset은 근거 없는 tuning을 만들지 않고 GTAA base profile을 사용한다.
+
+문서 설명만으로 값을 추론하지 않는다. 위 값은 이미 legacy preset note 또는
+`GTAA_PRESET_PARAMETER_DEFAULTS`에 명시된 contract만 machine-readable map으로 승격한다.
+
+### State Precedence And Interaction
+
+초기 workspace build precedence는 다음 순서를 따른다.
+
+1. strategy / variant schema defaults
+2. selected preset base profile과 validated override
+3. saved replay / prefill / stored draft의 explicit values
+
+따라서 저장된 실행을 불러올 때는 당시 explicit payload가 보존되고, 사용자가 화면에서 다른
+preset을 직접 선택한 순간에만 새 preset profile이 current draft에 적용된다.
+
+- `preset_name` change: 해당 preset profile 전체를 merge한다.
+- `manual_tickers -> preset` change: 현재 선택된 preset profile을 적용한다.
+- preset 적용 후 ordinary field edit: 사용자가 자유롭게 override하며 rerun 없이 local draft에
+  남긴다.
+- 다른 preset change: 새 base + override로 preset-owned field를 다시 초기화한다.
+- 같은 preset을 유지한 ordinary rerender / validation error: 값을 다시 덮어쓰지 않는다.
+
+### UI Feedback Contract
+
+- preset field 아래에 마지막 적용 결과를 한 줄로 표시한다.
+- `strategy_default`: `전략 기본 규칙을 적용했습니다.`
+- `validated_override`: `검증된 프리셋 설정을 적용했습니다.`
+- 별도 modal이나 confirmation step은 만들지 않는다. select change 자체가 명시적 적용 행동이다.
+- 사용자가 이후 값을 수정해도 `preset_name`은 유지한다. preset은 immutable lock이 아니라
+  시작 profile이므로 custom edit를 허용한다.
+- React는 `application_kind`를 계산하지 않고 Python model의 label과 values만 사용한다.
+
+### Error And Safety Contract
+
+- Python은 preset profile의 field id가 current schema에 없거나 option / range / type 계약을
+  위반하면 workspace build test에서 실패하게 한다.
+- forged intent에 preset profile 적용을 신뢰하지 않고 submit 시 기존 Python validation과
+  payload projection을 다시 실행한다.
+- preset change 자체는 runner, Run History, registry, saved JSONL을 호출하지 않는다.
+- validation error, 실행 실패, stale result 보존은 기존 Level1 계약을 유지한다.
+
+### Files And Ownership
+
+- Modify `app/web/backtest_common.py`
+  - legacy note에 이미 명시된 GTAA evidence-backed overrides를 canonical parameter map으로 승격
+- Modify `app/services/backtest_single_settings_workspace.py`
+  - pure preset profile builder, schema-safe patch, read-model contract와 initial precedence
+- Modify `app/web/backtest_single_settings_workspace.py`
+  - canonical parameter map runtime injection과 Python fallback preset application
+- Modify `app/web/components/backtest_analysis_decision_workspace/frontend/src/types.ts`
+  - preset profile / application feedback read-model type
+- Modify `app/web/components/backtest_analysis_decision_workspace/frontend/src/BacktestAnalysisDecisionWorkspace.tsx`
+  - generic preset patch reducer, preset-mode transition, feedback render
+- Modify `app/web/components/backtest_analysis_decision_workspace/frontend/src/style.css`
+  - compact feedback copy style와 760px contract
+- Modify focused service / boundary tests and active task documents
+  - RED/GREEN, Browser QA, closeout evidence
+
+### TDD And QA Contract
+
+- RED service tests는 모든 named preset에 complete profile이 있고 current schema field만 포함하는지
+  확인한다.
+- RED GTAA tests는 U3 / U1 / U5 / Top-3 / Top-2 ADV20이 문서화된 override를 투영하고,
+  ordinary GTAA preset은 base profile로 이전 값 누출을 제거하는지 확인한다.
+- RED strict-factor tests는 preset change가 factor / overlay / risk base 값을 복원하되 start/end와
+  explicit prefill은 보존하는지 확인한다.
+- RED frontend boundary tests는 generic preset patch, manual-to-preset application,
+  `strategy_default` / `validated_override` feedback과 React-side strategy conditions 부재를 요구한다.
+- GREEN 후 focused settings / boundary / service contract tests, React production build,
+  target py_compile, `git diff --check`를 실행한다.
+- Browser desktop QA는 Equal Weight, GTAA base, GTAA U3, GTAA Top-2 ADV20, Quality + Value Annual의
+  preset change와 사용자 edit 후 재선택을 확인한다.
+- 760px QA는 feedback, settings grid, multi-select, CTA와 iframe horizontal overflow 0을 확인한다.
+
+### 9차 Acceptance Criteria
+
+1. 모든 named preset 선택은 strategy / variant base profile 전체를 deterministic하게 적용한다.
+2. evidence-backed GTAA preset은 문서화된 override를 정확히 적용한다.
+3. preset이 바뀌면 이전 preset이나 사용자 수정의 preset-owned 값이 누출되지 않는다.
+4. 검증 시작일 / 종료일과 manual ticker draft는 preset 변경으로 소실되지 않는다.
+5. 저장 replay / prefill의 explicit values는 initial preset profile보다 우선한다.
+6. preset 적용 뒤 사용자는 개별 값을 수정할 수 있고 같은 preset rerender가 이를 덮어쓰지 않는다.
+7. React는 전략별 preset 숫자, validation, payload 또는 Gate를 계산하지 않는다.
+8. Python fallback은 같은 preset profile과 적용 semantics를 사용한다.
+9. focused tests, React build, py_compile, diff-check와 desktop / 760px Browser QA를 통과한다.
+10. protected JSONL, `.superpowers/`, generated screenshot은 stage/commit하지 않는다.
+
+### 9차 Out Of Scope
+
+- 근거 없는 strategy tuning 또는 신규 preset 추가
+- factor formula, strategy algorithm, DB / ingestion / historical universe 변경
+- preset을 immutable saved setup으로 바꾸는 기능
+- Portfolio Mix preset / role / weight redesign
+- Level2 / Final Review route와 Gate 변경
+- broker order, live approval, account sync, auto rebalance
