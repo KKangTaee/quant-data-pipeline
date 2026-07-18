@@ -366,6 +366,15 @@ def build_current_single_settings_workspace(
         **stored,
     }
     workspace = build_single_settings_workspace(strategy_choice, variant, values, runtime)
+    primary_variants = {
+        _schema_variant(item) for item in family_variant_options(strategy_choice)
+    }
+    if primary_variants and isinstance(workspace.get("variant"), Mapping):
+        workspace["variant"]["options"] = [
+            option
+            for option in workspace["variant"].get("options", [])
+            if isinstance(option, Mapping) and option.get("value") in primary_variants
+        ]
     errors = st.session_state.get(_ERRORS_KEY)
     if isinstance(errors, Mapping):
         workspace["validation_errors"] = dict(errors.get(draft_key, {}))

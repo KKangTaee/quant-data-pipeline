@@ -855,3 +855,32 @@ def test_current_single_settings_workspace_projects_prefill_back_to_editor_value
     assert values["end"] == "2024-12-31"
     assert values["rebalance_interval"] == 6
     assert values["transaction_cost_bps"] == 12.0
+
+
+def test_current_quality_settings_hides_legacy_snapshot_from_primary_variant_picker() -> None:
+    from app.web import backtest_single_settings_workspace as settings_workspace
+
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = _SessionState(
+        {
+            "backtest_strategy_choice": "Quality",
+            "backtest_quality_variant": "Strict Annual",
+        }
+    )
+    with (
+        patch.object(settings_workspace, "st", fake_streamlit),
+        patch.object(
+            settings_workspace,
+            "_variant_session_key",
+            return_value="backtest_quality_variant",
+        ),
+    ):
+        workspace = settings_workspace.build_current_single_settings_workspace(
+            selected_variant="Strict Annual",
+            runtime_options={},
+        )
+
+    assert [option["value"] for option in workspace["variant"]["options"]] == [
+        "Annual",
+        "Quarterly",
+    ]
