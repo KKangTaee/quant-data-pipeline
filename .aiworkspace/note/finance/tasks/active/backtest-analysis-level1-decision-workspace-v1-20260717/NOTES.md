@@ -217,3 +217,23 @@ generated artifact이므로 commit하지 않는다.
 - GTAA Top-2는 `top=2`, `interval=4`, horizon `1/6`으로, U3는 `top=2`, `interval=3`,
   horizon `1/3/6`으로 바뀌면서 사용자가 바꾼 시작일은 유지됐다. Equal Weight, GRS,
   Quality+Value는 사용자 수정값을 각 전략 기본값으로 reset했다.
+
+## 2026-07-18 10차 Result Evidence Audit And Design
+
+- `_render_last_run()`이 bundle 존재 확인 전에 decision surface를 mount해 실행 전 Step 3가
+  노출된다. 이 surface를 단순히 숨기는 것이 아니라 no-run/fresh/stale/running/error lifecycle을
+  pure read model로 만들기로 했다.
+- current result detail은 expander·tab·metric·dataframe·chart가 한 Python renderer에 누적돼
+  같은 값이 raw decimal과 percentage로 중복되고 다음 행동보다 기술 구조가 먼저 보인다.
+- Level1 technical handoff readiness는 실행 성공, settings/result fingerprint, core result identity,
+  callable handler만 소유한다. benchmark, ETF operability, liquidity, rolling/split/OOS, cost realism은
+  Level2가 최신 데이터와 evidence로 검증할 질문이다.
+- current holdings는 broker account가 아니라 마지막 valuation row의 backtest-simulated allocation,
+  target은 마지막 valid signal/rebalance row의 latest available signal target으로 정의했다.
+- explicit weight가 없을 때는 supported `Next Balance / total` contract가 있을 때만 Python이
+  계산한다. cash-only, non-rebalance latest row, partial Mix, missing holdings는 추정 대신 명시적
+  상태로 표현한다.
+- approved single-page hierarchy는 KPI, combined strategy/benchmark chart, current/target holdings,
+  Level1 handoff와 Level2 questions, 4개 purpose evidence group, user tables, technical appendix 순서다.
+- 새 `app/services/backtest_analysis_result_workspace.py`가 모든 분류·Gate·format·weight·question을
+  소유하고 React와 Python fallback은 같은 JSON-ready read model을 표시한다.

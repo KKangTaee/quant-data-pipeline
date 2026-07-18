@@ -1,6 +1,6 @@
 # Status
 
-Status: Complete Through 9차 Deterministic Preset Application
+Status: 10차 Result Evidence Workspace Design Written — Awaiting User Review
 Last Updated: 2026-07-18
 
 ## Current Position
@@ -42,6 +42,12 @@ Last Updated: 2026-07-18
 - [x] 9차 written design 사용자 review
 - [x] 9차 implementation plan
 - [x] 9차 RED -> GREEN implementation / Browser QA / closeout
+- [x] 10차 result/detail surface와 stage ownership audit
+- [x] 10차 판단 흐름형 단일 Result Workspace 접근 사용자 승인
+- [x] 10차 corrective design 작성과 self-review
+- [ ] 10차 written design 사용자 review
+- [ ] 10차 implementation plan
+- [ ] 10차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -54,6 +60,7 @@ Last Updated: 2026-07-18
 7. Unified React Strategy Settings Workspace
 8. Modifier-Free Multi-Select Controls
 9. Deterministic Preset Application
+10. Result Evidence And Level2 Handoff Workspace
 
 ## Current Corrective Position
 
@@ -123,3 +130,15 @@ Last Updated: 2026-07-18
 - fresh focused `134 passed`, 전체 service `822 passed / 11 failed`, React 175-module build,
   target py_compile, diff-check를 확인했다. 11 failures는 기존 Sentiment 1, Final Review 4,
   Practical Validation 6 source-contract baseline과 동일하다.
+
+## Current 10차 Position
+
+- 실행 전에도 Step 3가 노출되고 실제 결과가 `상세 근거` expander 안의 탭·raw table·meta로
+  분산되는 current result surface를 감사했다.
+- Level1의 질문을 reproducible result와 callable Level2 handoff 준비 여부로 한정하고,
+  benchmark/ETF/liquidity/rolling/OOS/cost는 Level2 validation question으로 분리했다.
+- 사용자 승인에 따라 KPI → 통합 chart → backtest current/target holdings → technical handoff와
+  Level2 questions → 목적별 evidence → user tables → technical appendix의 단일 흐름을 확정했다.
+- 새 pure result workspace service와 React component, same-read-model fallback, stale/rerun atomic
+  lifecycle, desktop/760px QA 계약을 DESIGN에 기록했다.
+- 다음 단계는 written design 사용자 review이며 승인 후에만 10차 implementation PLAN을 작성한다.

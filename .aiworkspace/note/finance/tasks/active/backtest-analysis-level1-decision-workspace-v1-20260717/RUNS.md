@@ -364,3 +364,16 @@
   `index.html` 0.42 kB, CSS 11.28 kB, JS 336.60 kB.
 - target 5-module py_compile: exit 0, output 없음.
 - pre-doc `git diff --check`: exit 0, output 없음.
+
+## 2026-07-18 10차 Result Evidence Design Audit
+
+- current result renderer 규모와 pre-run Step 3 mount, legacy expander/tab/table/chart 경계를
+  source audit로 확인했다.
+- visual companion에서 result layout A/B/C, stale/rerun lifecycle, Level1/Level2 ownership,
+  holdings contract를 순차 검토하고 판단 흐름형 단일 workspace A안을 사용자 승인받았다.
+- written DESIGN에 pure read model, React/Python boundary, user table, error/empty state,
+  4차 implementation roadmap과 TDD/Browser QA acceptance를 기록했다.
+- self-review에서 Level1 `run_result_id`와 Level2 `validation_result_id`를 분리하고 rerun이
+  append-only validation record를 덮어쓰지 않도록 identity contract를 보정했다.
+- placeholder/ambiguity/code-fence/diff-check/protected-path 검사를 통과한 뒤 design docs만
+  commit한다. 이 단계에서는 product code와 protected JSONL을 변경하지 않는다.
