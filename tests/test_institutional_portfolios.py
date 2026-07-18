@@ -716,6 +716,102 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertFalse(detail["portfolio_position"]["available"])
         self.assertTrue(detail["charts"]["daily"]["points"])
 
+    def test_selected_security_model_rejects_ambiguous_interest_identities_for_issuer_query(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_selected_security_model
+
+        detail = build_institutional_selected_security_model(
+            portfolio_model={"summary": {"latest_report_period": "2026-03-31"}, "holdings": []},
+            query="Alpha",
+            interest_model={
+                "query": "ALPHA",
+                "holder_count": 2,
+                "holders": [
+                    {
+                        "manager_name": "FIRST MANAGER",
+                        "issuer_name": "ALPHA SOFTWARE INC",
+                        "holding_symbol": "MSFT",
+                        "cusip": "594918104",
+                    },
+                    {
+                        "manager_name": "SECOND MANAGER",
+                        "issuer_name": "ALPHABET INC",
+                        "holding_symbol": "GOOGL",
+                        "cusip": "02079K305",
+                    },
+                ],
+            },
+            price_history=pd.DataFrame(),
+        )
+
+        self.assertEqual(detail["status"], "ambiguous")
+        self.assertIn("정확한 ticker 또는 CUSIP", detail["empty_text"])
+        self.assertNotIn("security", detail)
+        self.assertNotIn("price_action", detail)
+        self.assertEqual(detail["holder_count"], 2)
+
+    def test_selected_security_model_exact_symbol_or_cusip_resolves_among_multiple_interest_identities(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_selected_security_model
+
+        interest_model = {
+            "holder_count": 2,
+            "holders": [
+                {
+                    "manager_name": "FIRST MANAGER",
+                    "issuer_name": "MICROSOFT CORP",
+                    "holding_symbol": "MSFT",
+                    "cusip": "594918104",
+                },
+                {
+                    "manager_name": "SECOND MANAGER",
+                    "issuer_name": "ALPHABET INC",
+                    "holding_symbol": "GOOGL",
+                    "cusip": "02079K305",
+                },
+            ],
+        }
+
+        for query, expected_symbol in [("msft", "MSFT"), ("02079K305", "GOOGL")]:
+            with self.subTest(query=query):
+                detail = build_institutional_selected_security_model(
+                    portfolio_model={"summary": {"latest_report_period": "2026-03-31"}, "holdings": []},
+                    query=query,
+                    interest_model=interest_model,
+                    price_history=pd.DataFrame(),
+                )
+                self.assertEqual(detail["status"], "ok")
+                self.assertEqual(detail["security"]["symbol"], expected_symbol)
+                self.assertFalse(detail["portfolio_position"]["available"])
+
+    def test_selected_security_loader_does_not_load_price_for_ambiguous_interest_identities(self) -> None:
+        import app.services.institutional_portfolios as service
+
+        calls: list[dict[str, object]] = []
+        original_loader = service.load_price_history
+
+        def fake_price_loader(**kwargs: object) -> pd.DataFrame:
+            calls.append(dict(kwargs))
+            return pd.DataFrame()
+
+        try:
+            service.load_price_history = fake_price_loader
+            detail = service.load_institutional_selected_security_model(
+                portfolio_model={"summary": {"latest_report_period": "2026-03-31"}, "holdings": []},
+                query="Alpha",
+                interest_model={
+                    "query": "ALPHA",
+                    "holder_count": 2,
+                    "holders": [
+                        {"issuer_name": "ALPHA SOFTWARE INC", "holding_symbol": "MSFT", "cusip": "594918104"},
+                        {"issuer_name": "ALPHABET INC", "holding_symbol": "GOOGL", "cusip": "02079K305"},
+                    ],
+                },
+            )
+        finally:
+            service.load_price_history = original_loader
+
+        self.assertEqual(calls, [])
+        self.assertEqual(detail["status"], "ambiguous")
+
     def test_portfolio_model_marks_ambiguous_cusip_symbol_mapping_unresolved(self) -> None:
         from app.services.institutional_portfolios import build_institutional_portfolio_model
 
@@ -1330,6 +1426,41 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIsNotNone(selected)
         self.assertEqual(selected["cik"], "0001067983")
         self.assertEqual(selected["manager_name"], "BERKSHIRE HATHAWAY INC")
+
+    def test_selected_manager_resolver_preserves_generic_live_context_when_search_has_no_results(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_workbench_payload
+        from app.web.institutional_portfolios import _resolve_selected_manager
+
+        selected = _resolve_selected_manager(
+            managers=[],
+            selected_cik="1234567",
+            search_active=True,
+        )
+
+        self.assertIsNotNone(selected)
+        self.assertEqual(selected["cik"], "0001234567")
+
+        payload = build_institutional_workbench_payload(
+            model={
+                "summary": {
+                    "manager_name": "GENERIC LIVE MANAGER LLC",
+                    "cik": "0001234567",
+                    "latest_report_period": "2026-03-31",
+                },
+                "holdings": [],
+                "changes": [],
+                "sector_exposure": [],
+            },
+            managers=[],
+            selected_cik=selected["cik"],
+            interest_model=None,
+            manager_search_query="No Such Manager",
+            preserve_manager_order=True,
+        )
+
+        self.assertEqual(payload["mode"], "live")
+        self.assertEqual(payload["hero"]["manager_name"], "GENERIC LIVE MANAGER LLC")
+        self.assertEqual(payload["manager_picker"]["search_state"], "empty")
 
     def test_workbench_event_consumption_skips_replayed_component_value(self) -> None:
         from app.web.institutional_portfolios import _consume_workbench_event

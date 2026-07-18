@@ -45,8 +45,8 @@ Workspace > Ingestion
 - 현재 전체 holdings array는 component payload에 계속 직렬화된다. 50-row pagination은 렌더링 DOM만 제한하므로 대형 포트폴리오에서는 payload 크기와 Streamlit rerun latency가 커질 수 있으며, 이것이 실제 병목이 되면 server-side pagination을 후속 선택지로 검토한다.
 - holdings search / mapping filter / sector filter / sort / page는 React local state이며 Streamlit rerun을 요구하지 않는다.
 - manager selection, manager search, security drilldown / explicit search, popularity load, price collection은 명시 event로 Streamlit에 전달한다.
-- manager 검색 결과가 0건이면 선택한 live manager context를 유지하고 검색어 / 0건 상태를 manager rail에 명시한다. sample preview나 임의 manager로 바꾸지 않는다.
-- explicit security search가 선택 manager의 보유 row에는 없더라도 Institutional Interest holder에서 안전한 mapped identity를 찾으면 해당 ticker의 저장 가격 chart와 holder list를 연다. 이때 selected-manager position은 `available=false`와 unavailable reason으로 표시하며 0 비중을 만들지 않는다.
+- manager 검색 결과가 0건이면 watchlist 포함 여부와 관계없이 선택한 normalized CIK의 live manager context를 유지하고 검색어 / 0건 상태를 manager rail에 명시한다. sample preview나 임의 manager로 바꾸지 않는다.
+- explicit security search가 선택 manager의 보유 row에는 없더라도 Institutional Interest holder에서 안전한 mapped identity를 찾으면 해당 ticker의 저장 가격 chart와 holder list를 연다. 안전한 identity는 검색어가 normalized ticker / CUSIP과 정확히 일치하거나, 검색 결과 전체의 `(ticker, CUSIP)` identity가 하나뿐일 때만 확정한다. 서로 다른 identity가 여러 개면 `ambiguous` 안내를 표시하고 가격을 조회하지 않는다. 선택 manager가 해당 종목을 보유하지 않으면 position은 `available=false`와 unavailable reason으로 표시하며 0 비중을 만들지 않는다.
 - 이전 comparable filing이 없으면 `comparison_available=false`, change groups는 비우고 unavailable reason만 표시한다. 현재 row를 신규 매수처럼 표현하지 않는다.
 - unresolved / ambiguous holding은 issuer와 CUSIP을 유지하되 안전한 ticker가 생길 때까지 chart / price action을 열지 않는다.
 

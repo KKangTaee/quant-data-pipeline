@@ -6,7 +6,8 @@
 - Count coverage, mapped reported-value weight, and performance coverage are separate v2 fields and UI metrics.
 - Previous-quarter absence is an explicit comparison-unavailable state; synthetic fixture covers the available branch and actual DB covers the unavailable branch.
 - A mapped security found by direct Institutional Interest search no longer depends on the selected manager holding it; selected-manager position absence is explicit and DB price / holder evidence remains available.
-- Manager search 0건 preserves the selected live portfolio context, and overview unresolved top holdings now open their CUSIP notice in the full holdings explorer.
+- Direct Institutional Interest search promotes an identity only for an exact ticker / CUSIP or one unique `(ticker, CUSIP)` pair. Multiple identities return an explicit ambiguous state without loading price data.
+- Manager search 0건 preserves any selected normalized CIK's live portfolio context, including managers outside the curated watchlist, and overview unresolved top holdings open their CUSIP notice in the full holdings explorer.
 
 ## Open Risks
 

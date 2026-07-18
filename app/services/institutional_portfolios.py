@@ -843,12 +843,45 @@ def _find_holding(holdings: list[dict[str, Any]], query: str) -> dict[str, Any] 
     return None
 
 
-def _mapped_interest_identity(interest_model: dict[str, Any] | None) -> dict[str, Any] | None:
-    """Return a safely mapped identity from reverse-lookup results."""
+def _mapped_interest_identity_candidates(interest_model: dict[str, Any] | None) -> list[dict[str, Any]]:
+    unique: dict[tuple[str, str], dict[str, Any]] = {}
     for holder in list((interest_model or {}).get("holders") or []):
-        if _symbol(holder.get("holding_symbol")):
-            return dict(holder)
+        symbol = _symbol(holder.get("holding_symbol"))
+        if not symbol:
+            continue
+        cusip = str(holder.get("cusip") or "").strip().upper()
+        unique.setdefault((symbol, cusip), dict(holder))
+    return list(unique.values())
+
+
+def _mapped_interest_identity(query: str, interest_model: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Resolve an exact or uniquely mapped reverse-lookup identity."""
+    candidates = _mapped_interest_identity_candidates(interest_model)
+    normalized_query = str(query or "").strip().upper()
+    if not normalized_query:
+        return candidates[0] if len(candidates) == 1 else None
+
+    for candidate in candidates:
+        if normalized_query == (_symbol(candidate.get("holding_symbol")) or ""):
+            return candidate
+
+    cusip_matches = [
+        candidate
+        for candidate in candidates
+        if normalized_query == str(candidate.get("cusip") or "").strip().upper()
+    ]
+    if len(cusip_matches) == 1:
+        return cusip_matches[0]
+    if len(candidates) == 1:
+        return candidates[0]
     return None
+
+
+def _interest_identity_is_ambiguous(query: str, interest_model: dict[str, Any] | None) -> bool:
+    return (
+        _mapped_interest_identity(query, interest_model) is None
+        and len(_mapped_interest_identity_candidates(interest_model)) > 1
+    )
 
 
 def build_institutional_manager_rail(
@@ -1335,9 +1368,17 @@ def build_institutional_selected_security_model(
 ) -> dict[str, Any]:
     holdings = list(portfolio_model.get("holdings") or [])
     holding = _find_holding(holdings, query)
-    interest_identity = _mapped_interest_identity(interest_model)
+    interest_identity = _mapped_interest_identity(query, interest_model)
     identity = holding or interest_identity
     if identity is None:
+        if _interest_identity_is_ambiguous(query, interest_model):
+            return {
+                "status": "ambiguous",
+                "query": str(query or "").strip(),
+                "empty_text": "여러 종목이 검색되었습니다. 정확한 ticker 또는 CUSIP으로 다시 검색하세요.",
+                "holders": list((interest_model or {}).get("holders") or []),
+                "holder_count": int((interest_model or {}).get("holder_count") or 0),
+            }
         return {
             "status": "empty",
             "query": str(query or "").strip(),
@@ -1901,7 +1942,7 @@ def load_institutional_selected_security_model(
     interest_model: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     holding = _find_holding(list(portfolio_model.get("holdings") or []), query)
-    identity = holding or _mapped_interest_identity(interest_model)
+    identity = holding or _mapped_interest_identity(query, interest_model)
     symbol = _symbol((identity or {}).get("holding_symbol"))
     report_period = _text((portfolio_model.get("summary") or {}).get("latest_report_period"))
     price_history = pd.DataFrame()

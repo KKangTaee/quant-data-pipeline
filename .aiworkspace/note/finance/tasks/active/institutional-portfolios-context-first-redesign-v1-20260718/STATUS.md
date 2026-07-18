@@ -12,6 +12,7 @@ Started: 2026-07-18
 - 2026-07-18: 4차 actual DB and Browser QA completed for Berkshire / Bridgewater / Duquesne, desktop and 420px responsive layout, mapped / unresolved security flow, and durable documentation.
 - 2026-07-18: Reviewer follow-up 420px interaction QA confirmed primary / secondary tab navigation, holdings mapping filter, issuer / CUSIP unresolved guardrail with no price action, and AAPL mapped detail / chart flow. Canonical roadmap pointer and full-row serialization latency risk were aligned without implementation code changes.
 - 2026-07-18: Final review fix wave closed direct-search identity outside the selected portfolio, normalized pending-query completion, executable React helper tests / strict typecheck, explicit zero-result manager search, stale security-state reset, and unresolved overview navigation. Actual Browser QA covered lowercase `nvda`, live-context-preserving manager search 0건, and Bridgewater unresolved top holding.
+- 2026-07-18: Final re-review hardened direct-search identity promotion to exact ticker / CUSIP or one unique `(ticker, CUSIP)` pair, blocked ambiguous price lookup, and preserved zero-result search context for any selected normalized CIK rather than watchlist managers only.
 
 ## Current Step
 

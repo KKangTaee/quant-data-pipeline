@@ -58,3 +58,11 @@
 - Browser QA on port `8524`: lowercase `nvda` outside Berkshire resolved to NVIDIA / CUSIP `67066G104`, DB chart, 100 holders, unavailable selected-manager position and an enabled search action after response. `zzzz-no-manager-qa` showed an explicit 0-result state while retaining the live Berkshire hero. Bridgewater unresolved top holding activation opened `전체 보유`, `1–50 / 993`, CUSIP `78462F103`, and the no-price-action notice.
 - QA screenshot: `.playwright-mcp/institutional-portfolios-final-review-fixes.png` (generated, ignored, not staged). Browser tab finalized and port `8524` server stopped.
 - Earlier `git diff --check` records in this file were working-tree checks only. After commit `3b64f77f`, the exact requested range `git diff --check 229422290f5e33638b21932e72cd4dee8f7b7b85..HEAD` passed with no output after removing the plan EOF blank line.
+
+## 2026-07-18 Final Re-review Hardening
+
+- Focused RED: `uv run --with pytest pytest -q tests/test_institutional_portfolios.py -k 'ambiguous_interest_identities or exact_symbol_or_cusip_resolves or generic_live_context_when_search_has_no_results'` -> 4 failures reproduced arbitrary identity promotion, ambiguous price loading, wrong exact-CUSIP resolution, and loss of a non-watchlist selected CIK; one subtest passed.
+- Focused GREEN: the same command -> `4 passed`, `51 deselected`, `2 subtests passed`, 3 dependency deprecation warnings.
+- Full Python verification: `uv run --with pytest pytest -q tests/test_institutional_portfolios.py` -> `55 passed`, `4 subtests passed`, 3 dependency deprecation warnings; `.venv/bin/python -m py_compile app/services/institutional_portfolios.py app/web/institutional_portfolios.py` -> PASS.
+- Full frontend verification: `npm test -- --reporter=verbose` -> `5 passed`; `npm run typecheck` -> PASS; `npm run build` -> PASS, 171 modules transformed; `npm audit --json` -> 0 vulnerabilities.
+- The frontend source was unchanged in this follow-up; rebuilding produced no tracked `component_static` diff. Source and tracked runtime scans still contain no `slice(0,80)` / `slice(0, 80)` limit.

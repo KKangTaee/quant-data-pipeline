@@ -317,6 +317,13 @@ def _resolve_selected_manager(
                         "latest_filing_date": seed.get("latest_filing_date"),
                         "source_ref": seed.get("source_ref"),
                     }
+            return {
+                "cik": selected,
+                "manager_name": f"Selected manager · CIK {selected}",
+                "latest_report_period": None,
+                "latest_filing_date": None,
+                "source_ref": None,
+            }
         return manager_rows[0] if manager_rows else None
 
     if selected and selected in by_cik:
