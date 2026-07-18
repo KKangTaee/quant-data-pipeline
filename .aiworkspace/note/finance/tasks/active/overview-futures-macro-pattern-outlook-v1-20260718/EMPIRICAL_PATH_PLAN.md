@@ -440,19 +440,19 @@ Expected: all pattern tests pass. Measure uncached actual snapshot time and reco
 - Consumes: horizon `conditional_path` and existing probability rows.
 - Produces: normalized `HorizonCard.conditional_path`, empirical SVG path, three uncertainty checkpoints, terminal label.
 
-- [ ] **Step 1: Write payload RED tests**
+- [x] **Step 1: Write payload RED tests**
 
 Extend `_pattern_outlook_payload_fixture()` with deterministic 5-point / 20-point conditional paths. Add assertions that normalized horizon cards preserve point counts and distinct terminals. For unavailable fixture assert empty points and `terminal is None`.
 
 Run:
 
 ```bash
-.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_v2_payload_separates_current_and_future_horizons tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_v2_payload_hides_unavailable_probabilities -v
+.venv/bin/python -m unittest tests.test_service_contracts.FuturesMacroThermometerContractTests.test_futures_macro_v2_payload_separates_current_and_future_horizons tests.test_service_contracts.FuturesMacroThermometerContractTests.test_futures_macro_v2_payload_hides_unavailable_probabilities -v
 ```
 
 Expected: `conditional_path` is absent from normalized cards.
 
-- [ ] **Step 2: Implement Python normalization**
+- [x] **Step 2: Implement Python normalization**
 
 Add `_future_conditional_path(item, status)`:
 
@@ -487,7 +487,7 @@ def _future_conditional_path(item: dict[str, Any], status: str) -> dict[str, Any
 
 Attach it as `conditional_path` in `_future_pattern_horizon()` without changing probability rows.
 
-- [ ] **Step 3: Write React source RED**
+- [x] **Step 3: Write React source RED**
 
 Update the focused source contract to require `ConditionalPathPayload`, `fm-pattern-map__conditional-path`, `fm-pattern-map__uncertainty`, `유사 패턴 중앙 위치`, and `selectedCard?.conditional_path`; reject `REGIME_TARGETS`, `function Branch`, and `fm-pattern-map__outcome-dot`.
 
@@ -499,7 +499,7 @@ Run:
 
 Expected: the old branch component fails the new contract.
 
-- [ ] **Step 4: Add TypeScript types**
+- [x] **Step 4: Add TypeScript types**
 
 ```typescript
 export type ConditionalPathPoint = {
@@ -518,7 +518,7 @@ export type ConditionalPathPayload = {
 
 Add `conditional_path?: ConditionalPathPayload` to `HorizonCard`.
 
-- [ ] **Step 5: Replace fixed branches with empirical render**
+- [x] **Step 5: Replace fixed branches with empirical render**
 
 In `PatternMapSection.tsx` remove `REGIME_TARGETS` and `Branch`. Read only the selected card's path and build bounds and SVG coordinates as follows:
 
@@ -578,7 +578,7 @@ Render three sparse 50% rectangles, the median dotted line, and terminal marker:
 
 Keep the existing probability `<dl>` in the right reading. Update legend/copy to `조건부 중앙 경로`, `가운데 50% 범위`, and `실제 미래 경로가 아닙니다`.
 
-- [ ] **Step 6: Add CSS and remove obsolete selectors**
+- [x] **Step 6: Add CSS and remove obsolete selectors**
 
 ```css
 .fm-pattern-map__uncertainty { fill: rgba(111, 167, 202, 0.14); stroke: rgba(57, 125, 168, 0.28); stroke-width: 1; }
@@ -589,10 +589,10 @@ Keep the existing probability `<dl>` in the right reading. Update legend/copy to
 
 Delete active branch/outcome and regime-specific branch selectors.
 
-- [ ] **Step 7: Run GREEN, build, and commit**
+- [x] **Step 7: Run GREEN, build, and commit**
 
 ```bash
-.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_v2_payload_separates_current_and_future_horizons tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_v2_payload_hides_unavailable_probabilities tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_pattern_map_uses_observed_anchors_and_conditional_branches -v
+.venv/bin/python -m unittest tests.test_service_contracts.FuturesMacroThermometerContractTests.test_futures_macro_v2_payload_separates_current_and_future_horizons tests.test_service_contracts.FuturesMacroThermometerContractTests.test_futures_macro_v2_payload_hides_unavailable_probabilities tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_pattern_map_uses_observed_anchors_and_conditional_branches -v
 npm --prefix app/web/streamlit_components/futures_macro_workbench run build
 .venv/bin/python -m py_compile app/web/overview/futures_macro_helpers.py
 git diff --check
@@ -670,7 +670,7 @@ Expected: tests/build/checks pass before commit; generated screenshot and unrela
 
 - [x] Task 1: stepwise historical coordinate paths.
 - [x] Task 2: chronological path validation and horizon integration.
-- [ ] Task 3: payload and empirical path UI.
+- [x] Task 3: payload and empirical path UI.
 - [ ] Task 4: actual QA, documentation sync, and closeout.
 
 ## Overall Roadmap State
@@ -678,5 +678,5 @@ Expected: tests/build/checks pass before commit; generated screenshot and unrela
 - 1차 empirical path 설계: approved and committed (`5ad4eed5`).
 - 2차 detailed TDD plan: this document.
 - 3차 service / validation: complete.
-- 4차 payload / React UI: pending.
+- 4차 payload / React UI: complete.
 - 5차 actual QA / docs closeout: pending.

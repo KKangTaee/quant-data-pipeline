@@ -8279,10 +8279,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("5D 전", pattern_map)
         self.assertIn("현재 ·", pattern_map)
         self.assertIn("if (path.length <= daysAgo)", pattern_map)
-        self.assertIn("fm-pattern-map__branch", pattern_map)
-        self.assertIn("Math.round(row.value * 100)", pattern_map)
-        self.assertIn("실제 이동 경로가 아닙니다", pattern_map)
-        self.assertNotIn("<ellipse", pattern_map)
+        self.assertIn("ConditionalPathPayload", root)
+        self.assertIn("fm-pattern-map__conditional-path", pattern_map)
+        self.assertIn("fm-pattern-map__uncertainty", pattern_map)
+        self.assertIn("유사 패턴 중앙 위치", pattern_map)
+        self.assertIn("selectedCard?.conditional_path", pattern_map)
+        self.assertIn("실제 미래 경로가 아닙니다", pattern_map)
+        self.assertNotIn("REGIME_TARGETS", pattern_map)
+        self.assertNotIn("function Branch", pattern_map)
+        self.assertNotIn("fm-pattern-map__outcome-dot", pattern_map)
         self.assertIn("stroke-dasharray", style)
 
     def test_futures_macro_react_copy_avoids_trade_and_causal_claims(self) -> None:
@@ -26142,6 +26147,18 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         }
         horizons = []
         for horizon in (5, 20):
+            conditional_points = [] if unavailable else [
+                {
+                    "step": step,
+                    "x": -0.7 + step * (0.04 if horizon == 5 else 0.015),
+                    "y": 0.4 - step * (0.03 if horizon == 5 else 0.008),
+                    "lower_x": -0.85 + step * (0.04 if horizon == 5 else 0.015),
+                    "upper_x": -0.55 + step * (0.04 if horizon == 5 else 0.015),
+                    "lower_y": 0.25 - step * (0.03 if horizon == 5 else 0.008),
+                    "upper_y": 0.55 - step * (0.03 if horizon == 5 else 0.008),
+                }
+                for step in range(1, horizon + 1)
+            ]
             horizons.append(
                 {
                     "horizon": horizon,
@@ -26163,6 +26180,19 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
                     "fold_improvement_ratio": 0.0,
                     "closest_episodes": [],
                     "asset_pathways": {},
+                    "conditional_path": {
+                        "status": "UNAVAILABLE" if unavailable else "PROVISIONAL",
+                        "episode_count": 42 if horizon == 5 else 36,
+                        "band_label": "과거 유사 패턴 가운데 50%",
+                        "points": conditional_points,
+                        "terminal": conditional_points[-1] if conditional_points else None,
+                        "validation": {
+                            "median_error": None,
+                            "baseline_median_error": None,
+                            "coverage_50": None,
+                            "evaluated_fold_count": 0,
+                        },
+                    },
                 }
             )
         return {
@@ -26197,6 +26227,14 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertNotIn("probabilities", payload["horizons"][0])
         self.assertEqual(payload["horizons"][1]["kind"], "conditional_outlook")
         self.assertEqual(payload["horizons"][1]["baseline_label"], "평소 기준 확률")
+        self.assertIn("conditional_path", payload["horizons"][1])
+        self.assertIn("conditional_path", payload["horizons"][2])
+        self.assertEqual(len(payload["horizons"][1]["conditional_path"]["points"]), 5)
+        self.assertEqual(len(payload["horizons"][2]["conditional_path"]["points"]), 20)
+        self.assertNotEqual(
+            payload["horizons"][1]["conditional_path"]["terminal"],
+            payload["horizons"][2]["conditional_path"]["terminal"],
+        )
         self.assertNotIn("zones", payload["pattern_map"])
         self.assertEqual([item["id"] for item in payload["command"]["actions"]], ["daily_refresh", "reload"])
         self.assertNotIn("validation", payload)
@@ -26214,6 +26252,9 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertEqual(five_day["estimate_status"], "UNAVAILABLE")
         self.assertEqual(five_day["probabilities"], [])
         self.assertEqual(five_day["edge_label"], "방향 우위 미확인")
+        self.assertIn("conditional_path", five_day)
+        self.assertEqual(five_day["conditional_path"]["points"], [])
+        self.assertIsNone(five_day["conditional_path"]["terminal"])
 
     def test_futures_macro_reload_clears_pattern_outlook_cache(self) -> None:
         from app.web.overview.futures_macro_helpers import _reload_futures_macro_snapshot_for_ui

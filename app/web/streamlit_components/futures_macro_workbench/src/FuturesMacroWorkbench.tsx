@@ -45,6 +45,25 @@ export type ProbabilityRow = {
   lift: number;
 };
 
+export type ConditionalPathPoint = {
+  step: number;
+  x: number;
+  y: number;
+  lower_x: number;
+  upper_x: number;
+  lower_y: number;
+  upper_y: number;
+};
+
+export type ConditionalPathPayload = {
+  status: EstimateStatus;
+  episode_count: number;
+  band_label: string;
+  points: ConditionalPathPoint[];
+  terminal?: ConditionalPathPoint | null;
+  validation?: Record<string, number | null>;
+};
+
 export type HorizonCard = {
   key: "current" | "5D" | "20D";
   label: string;
@@ -56,6 +75,7 @@ export type HorizonCard = {
   probabilities?: ProbabilityRow[];
   episode_count?: number;
   status_reason?: string;
+  conditional_path?: ConditionalPathPayload;
 };
 
 export type PatternPoint = {

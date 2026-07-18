@@ -51,4 +51,5 @@
 Empirical path Task 1 complete: stepwise 5D / 20D coordinates, completed-origin stability, median and q25/q75 aggregation, and sub-30 suppression are implemented with RED/GREEN evidence.
 Empirical path Task 2 complete: chronological terminal error / baseline / 50% coverage metrics and conservative horizon path status are connected.
 Actual 5D and 20D paths publish 5 and 20 distinct points respectively, both `PROVISIONAL`; uncached runtime is 9.491s.
-Current stage: Task 3 payload and empirical path UI.
+Empirical path Task 3 complete: finite-only payload normalization, unavailable suppression, and React median path / middle-50% range / terminal UI are built.
+Current stage: Task 4 actual desktop/mobile QA, durable docs sync, and closeout.

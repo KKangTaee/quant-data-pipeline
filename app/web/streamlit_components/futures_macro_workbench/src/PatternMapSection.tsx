@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { HorizonCard, PatternMapPayload, PatternPoint, ProbabilityRow, RegimeKey } from "./FuturesMacroWorkbench";
+import type { HorizonCard, PatternMapPayload, PatternPoint } from "./FuturesMacroWorkbench";
 
 const WIDTH = 720;
 const HEIGHT = 390;
@@ -8,13 +8,6 @@ const PAD_Y = 34;
 
 type SelectedHorizon = "observed" | "5D" | "20D";
 type AnchorPoint = PatternPoint & { anchorLabel: string };
-
-const REGIME_TARGETS: Record<RegimeKey, { x: number; y: number }> = {
-  risk_seeking: { x: 0.74, y: -0.48 },
-  defensive: { x: -0.74, y: 0.48 },
-  inflation_rate_pressure: { x: 0.28, y: 0.78 },
-  mixed: { x: 0.06, y: 0.04 },
-};
 
 function pointAt(path: PatternPoint[], daysAgo: number): PatternPoint | undefined {
   if (path.length <= daysAgo) return undefined;
@@ -35,61 +28,37 @@ function observedAnchors(path: PatternPoint[]): AnchorPoint[] {
   });
 }
 
-function Branch({
-  row,
-  latest,
-  sx,
-  sy,
-  xBound,
-  yBound,
-}: {
-  row: ProbabilityRow;
-  latest: PatternPoint;
-  sx: (value: number) => number;
-  sy: (value: number) => number;
-  xBound: number;
-  yBound: number;
-}) {
-  const target = REGIME_TARGETS[row.key];
-  const targetX = target.x * xBound;
-  const targetY = target.y * yBound;
-  const startX = sx(latest.x);
-  const startY = sy(latest.y);
-  const endX = sx(targetX);
-  const endY = sy(targetY);
-  const controlX = startX + (endX - startX) * 0.52;
-  const controlY = startY + (endY - startY) * 0.34;
-  const probability = Math.max(0, Math.min(1, row.value));
-  const percentage = Math.round(row.value * 100);
-
-  return (
-    <g className={`fm-pattern-map__outcome regime-${row.key}`}>
-      <path
-        className="fm-pattern-map__branch"
-        d={`M ${startX} ${startY} Q ${controlX} ${controlY} ${endX} ${endY}`}
-        style={{ opacity: Math.min(1, 0.38 + probability * 1.05), strokeWidth: 1.25 + probability * 5 }}
-      >
-        <title>{row.label} 조건부 분기 · {percentage}%</title>
-      </path>
-      <circle className="fm-pattern-map__outcome-dot" cx={endX} cy={endY} r={8 + probability * 16} />
-      <text className="fm-pattern-map__outcome-value" x={endX} y={endY + 4} textAnchor="middle">{percentage}</text>
-      <text className="fm-pattern-map__outcome-label" x={endX} y={endY + 34} textAnchor="middle">{row.label}</text>
-    </g>
-  );
-}
-
 function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPayload; horizons: HorizonCard[] }) {
   const [selectedHorizon, setSelectedHorizon] = useState<SelectedHorizon>("5D");
   const anchors = observedAnchors(patternMap.path);
   const latest = anchors.at(-1);
   const selectedCard = horizons.find((item) => item.key === selectedHorizon);
   const probabilities = selectedCard?.kind === "conditional_outlook" ? selectedCard.probabilities || [] : [];
-  const xBound = Math.max(1.25, ...anchors.map((point) => Math.abs(point.x) * 1.18));
-  const yBound = Math.max(1.1, ...anchors.map((point) => Math.abs(point.y) * 1.18));
+  const conditionalPath = selectedCard?.kind === "conditional_outlook" ? selectedCard?.conditional_path : undefined;
+  const forecastPoints = conditionalPath?.status !== "UNAVAILABLE" ? conditionalPath?.points || [] : [];
+  const xValues = [
+    ...anchors.map((point) => point.x),
+    ...forecastPoints.flatMap((point) => [point.x, point.lower_x, point.upper_x]),
+  ];
+  const yValues = [
+    ...anchors.map((point) => point.y),
+    ...forecastPoints.flatMap((point) => [point.y, point.lower_y, point.upper_y]),
+  ];
+  const xBound = Math.max(1.25, ...xValues.map((value) => Math.abs(value) * 1.12));
+  const yBound = Math.max(1.1, ...yValues.map((value) => Math.abs(value) * 1.12));
   const sx = (value: number) => PAD_X + ((value + xBound) / (xBound * 2)) * (WIDTH - PAD_X * 2);
   const sy = (value: number) => HEIGHT - PAD_Y - ((value + yBound) / (yBound * 2)) * (HEIGHT - PAD_Y * 2);
   const observedPoints = anchors.map((point) => `${sx(point.x)},${sy(point.y)}`).join(" ");
-  const showForecast = selectedHorizon !== "observed" && Boolean(latest) && probabilities.length > 0;
+  const forecastPolyline = latest
+    ? [`${sx(latest.x)},${sy(latest.y)}`, ...forecastPoints.map((point) => `${sx(point.x)},${sy(point.y)}`)].join(" ")
+    : "";
+  const midpointStep = forecastPoints[Math.floor((forecastPoints.length - 1) / 2)]?.step;
+  const terminalStep = forecastPoints.at(-1)?.step;
+  const uncertaintySteps = forecastPoints.filter((point) => (
+    point.step === 1 || point.step === midpointStep || point.step === terminalStep
+  ));
+  const showForecast = selectedHorizon !== "observed" && Boolean(latest) && forecastPoints.length > 0;
+  const pathStatus = conditionalPath?.status || "UNAVAILABLE";
 
   return (
     <section className="fm-workbench__pattern-map" aria-labelledby="fm-pattern-map-title">
@@ -104,7 +73,7 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
 
       <div className="fm-pattern-map__body">
         <div className="fm-pattern-map__canvas">
-          <svg role="img" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} aria-label="세 관측 시점과 선택한 기간의 조건부 체제 분기">
+          <svg role="img" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} aria-label="세 관측 시점과 선택한 기간의 유사 패턴 조건부 중앙 경로">
             <defs>
               <marker id="fm-observed-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                 <path d="M 0 0 L 10 5 L 0 10 z" />
@@ -121,9 +90,27 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
             <text className="fm-pattern-map__quadrant-label" x={PAD_X + 18} y={HEIGHT - PAD_Y - 18}>방어 · 부담 완화</text>
             <text className="fm-pattern-map__quadrant-label" x={WIDTH - PAD_X - 18} y={HEIGHT - PAD_Y - 18} textAnchor="end">위험선호 · 부담 완화</text>
 
-            {showForecast ? probabilities.map((row) => (
-              <Branch key={`${selectedHorizon}-${row.key}`} row={row} latest={latest!} sx={sx} sy={sy} xBound={xBound} yBound={yBound} />
+            {showForecast ? uncertaintySteps.map((point) => (
+              <rect
+                className="fm-pattern-map__uncertainty"
+                data-forecast-step={point.step}
+                key={`uncertainty-${selectedHorizon}-${point.step}`}
+                x={sx(point.lower_x)}
+                y={sy(point.upper_y)}
+                width={Math.max(2, sx(point.upper_x) - sx(point.lower_x))}
+                height={Math.max(2, sy(point.lower_y) - sy(point.upper_y))}
+                rx="10"
+              >
+                <title>{point.step}D 후 · {conditionalPath?.band_label}</title>
+              </rect>
             )) : null}
+            {showForecast ? (
+              <polyline
+                className="fm-pattern-map__conditional-path"
+                data-forecast-horizon={selectedHorizon}
+                points={forecastPolyline}
+              />
+            ) : null}
             {observedPoints ? <polyline className="fm-pattern-map__observed" markerEnd="url(#fm-observed-arrow)" points={observedPoints} /> : null}
             {anchors.map((point, index) => (
               <g className={`fm-pattern-map__anchor ${point.anchorLabel === "현재" ? "is-current" : ""}`} key={`${point.date}-${point.anchorLabel}`}>
@@ -132,6 +119,13 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
                 <title>{point.anchorLabel} · {point.date} · {point.regime_label} · {point.transition_label}</title>
               </g>
             ))}
+            {showForecast && conditionalPath?.terminal ? (
+              <g className="fm-pattern-map__terminal">
+                <circle cx={sx(conditionalPath.terminal.x)} cy={sy(conditionalPath.terminal.y)} r="8" />
+                <text x={sx(conditionalPath.terminal.x)} y={sy(conditionalPath.terminal.y) - 14} textAnchor="middle">유사 패턴 중앙 위치</text>
+                <title>다음 {selectedHorizon} · 독립 표본 {conditionalPath.episode_count}개 · {pathStatus}</title>
+              </g>
+            ) : null}
           </svg>
           <span className="fm-pattern-map__x-label">{patternMap.x_label} 강화 →</span>
           <span className="fm-pattern-map__y-label">{patternMap.y_label} 강화 →</span>
@@ -151,7 +145,7 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
             <>
               <div className="fm-pattern-map__reading-head">
                 <span>다음 {selectedHorizon} · 조건부 전망</span>
-                <b className={`estimate-${(selectedCard?.estimate_status || "UNAVAILABLE").toLowerCase()}`}>{selectedCard?.estimate_status || "UNAVAILABLE"}</b>
+                <b className={`estimate-${pathStatus.toLowerCase()}`}>{pathStatus}</b>
               </div>
               <strong>{selectedCard?.edge_label || "방향 우위 미확인"}</strong>
               {probabilities.length > 0 ? (
@@ -159,7 +153,8 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
                   {probabilities.map((row) => <div key={`probability-${row.key}`}><dt>{row.label}</dt><dd>{Math.round(row.value * 100)}%</dd></div>)}
                 </dl>
               ) : <div className="fm-pattern-map__unavailable">확률을 표시할 근거가 부족합니다.</div>}
-              <p>{selectedCard?.episode_count ? `독립 표본 ${selectedCard.episode_count}개 · ` : ""}점선은 가능한 체제 분기이며 실제 이동 경로가 아닙니다.</p>
+              {!showForecast ? <div className="fm-pattern-map__unavailable">조건부 경로를 표시할 독립 표본 또는 검증 근거가 부족합니다.</div> : null}
+              <p>{conditionalPath?.episode_count ? `독립 표본 ${conditionalPath.episode_count}개 · ` : ""}점선은 유사 패턴의 중앙 이동이며 실제 미래 경로가 아닙니다.</p>
               {selectedCard?.status_reason ? <small>{selectedCard.status_reason}</small> : null}
             </>
           )}
@@ -168,9 +163,10 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
 
       <div className="fm-pattern-map__legend">
         <span className="observed">관측 경로</span>
-        <span className="forecast">조건부 분기</span>
+        <span className="forecast">조건부 중앙 경로</span>
+        <span className="uncertainty">가운데 50% 범위</span>
         <span className="current">현재 위치</span>
-        <small>원 안의 숫자 = 해당 체제 확률(%)</small>
+        <small>체제별 확률은 우측에 별도 표시</small>
       </div>
     </section>
   );

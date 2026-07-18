@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from html import escape
+from math import isfinite
 from typing import Any
 
 import pandas as pd
@@ -761,6 +762,50 @@ def _current_pattern_horizon(pattern: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _future_conditional_path(item: dict[str, Any], status: str) -> dict[str, Any]:
+    """Normalize service-owned analog coordinates without fabricating fallbacks."""
+
+    raw = dict(item.get("conditional_path") or {})
+    path_status = str(raw.get("status") or "UNAVAILABLE")
+    base = {
+        "status": path_status,
+        "episode_count": int(
+            raw.get("episode_count") or item.get("episode_count") or 0
+        ),
+        "band_label": _display_text(
+            raw.get("band_label"),
+            "과거 유사 패턴 가운데 50%",
+        ),
+        "validation": dict(raw.get("validation") or {}),
+    }
+    if status == "UNAVAILABLE" or path_status == "UNAVAILABLE":
+        return {**base, "status": "UNAVAILABLE", "points": [], "terminal": None}
+    coordinate_keys = (
+        "x",
+        "y",
+        "lower_x",
+        "upper_x",
+        "lower_y",
+        "upper_y",
+    )
+    points: list[dict[str, Any]] = []
+    for raw_point in list(raw.get("points") or []):
+        point = dict(raw_point or {})
+        if point.get("step") is None or any(
+            point.get(key) is None for key in coordinate_keys
+        ):
+            continue
+        coordinates = {key: float(point[key]) for key in coordinate_keys}
+        if not all(isfinite(value) for value in coordinates.values()):
+            continue
+        points.append({"step": int(point["step"]), **coordinates})
+    return {
+        **base,
+        "points": points,
+        "terminal": points[-1] if points else None,
+    }
+
+
 def _future_pattern_horizon(item: dict[str, Any]) -> dict[str, Any]:
     status = str(item.get("estimate_status") or "UNAVAILABLE")
     raw_probabilities = dict(item.get("probabilities") or {}) if status != "UNAVAILABLE" else {}
@@ -791,6 +836,7 @@ def _future_pattern_horizon(item: dict[str, Any]) -> dict[str, Any]:
         "probabilities": probabilities,
         "episode_count": int(item.get("episode_count") or 0),
         "status_reason": _display_text(item.get("status_reason"), "검증 근거가 부족합니다."),
+        "conditional_path": _future_conditional_path(item, status),
     }
 
 

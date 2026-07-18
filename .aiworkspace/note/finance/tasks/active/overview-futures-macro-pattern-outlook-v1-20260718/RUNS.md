@@ -125,3 +125,12 @@
 - Actual uncached snapshot: 9.491s. 5D `120 episodes / PROVISIONAL / 5 points`, 20D `42 episodes / PROVISIONAL / 20 points`.
 - Actual 5D terminal `(-0.5625, 0.0169)`, 20D terminal `(-0.4364, 0.0579)`; terminals differ. Both path errors trail baseline and coverage is near 0.30, so neither path is promoted above `PROVISIONAL`.
 - Bumped cache / method algorithm version to `pattern_outlook_v2_empirical_path` through a dedicated RED/GREEN contract.
+
+## 2026-07-18 Empirical Path Task 3 — Payload And React UI
+
+- RED: payload contracts failed because normalized horizon cards had no `conditional_path`; React source contract failed on the old fixed `REGIME_TARGETS` branch renderer.
+- GREEN: two payload contracts and the empirical-map source contract passed; Vite production build completed in 459ms.
+- Python copies only finite service-owned coordinates and suppresses all points / terminal when either horizon or path status is unavailable.
+- React removed the four fixed categorical branches. It renders the selected horizon's median polyline, sparse 50% rectangles at first / midpoint / terminal, and one `유사 패턴 중앙 위치` marker.
+- Probability rows remain in the right reading; the graph badge uses the more conservative conditional-path status.
+- Corrected the detailed plan's payload-test owner from `OverviewAutomationContractTests` to `FuturesMacroThermometerContractTests` after a loader-only failure exposed the mismatch.
