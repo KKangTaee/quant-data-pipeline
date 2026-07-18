@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 
 from app.services.backtest_analysis_result_workspace import (
+    build_backtest_analysis_result_workspace,
     build_level1_technical_handoff_readiness,
     build_level2_validation_questions,
     build_result_lifecycle,
@@ -94,3 +95,307 @@ def test_practical_validation_gaps_become_level2_questions_once() -> None:
         "liquidity_realism",
     }
     assert len({row["root_issue_id"] for row in questions}) == len(questions)
+
+
+def _build_workspace(
+    bundle: dict,
+    *,
+    workspace_kind: str = "single_strategy",
+    strategy_choice: str | None = "GTAA",
+    component_bundles: tuple[dict, ...] = (),
+) -> dict:
+    return build_backtest_analysis_result_workspace(
+        workspace_kind=workspace_kind,
+        strategy_choice=strategy_choice,
+        result_bundle=bundle,
+        current_configuration_fingerprint="same",
+        result_configuration_fingerprint="same",
+        result_requires_rerun=False,
+        is_running=False,
+        last_error=None,
+        last_error_kind=None,
+        action_handlers={"save_and_move": lambda payload: None},
+        component_bundles=component_bundles,
+    )
+
+
+def test_holdings_projects_current_and_last_valid_signal_without_future_guess() -> None:
+    bundle = result_bundle()
+    bundle["result_df"] = pd.DataFrame(
+        [
+            {
+                "Date": "2026-05-31",
+                "Rebalancing": True,
+                "End Ticker": ["SPY"],
+                "End Balance": [100.0],
+                "Next Ticker": ["SPY", "TLT"],
+                "Next Weight": [0.6, 0.4],
+                "Added Ticker": ["TLT"],
+                "Removed Ticker": [],
+                "Cash": 0.0,
+                "Total Balance": 100.0,
+            },
+            {
+                "Date": "2026-06-30",
+                "Rebalancing": False,
+                "End Ticker": ["SPY", "TLT"],
+                "End Balance": [63.0, 39.0],
+                "Next Ticker": ["SPY", "TLT"],
+                "Next Balance": [63.0, 39.0],
+                "Cash": 0.0,
+                "Total Balance": 102.0,
+            },
+        ]
+    )
+
+    model = _build_workspace(bundle)
+
+    assert model["holdings"]["current_allocation"] == [
+        {"ticker": "SPY", "weight": 0.617647, "weight_label": "61.8%"},
+        {"ticker": "TLT", "weight": 0.382353, "weight_label": "38.2%"},
+    ]
+    assert model["holdings"]["target_allocation"] == [
+        {"ticker": "SPY", "weight": 0.6, "weight_label": "60.0%"},
+        {"ticker": "TLT", "weight": 0.4, "weight_label": "40.0%"},
+    ]
+    assert model["holdings"]["status"] == "hold_current_until_rebalance"
+
+
+def test_cash_only_is_not_an_empty_holding_state() -> None:
+    bundle = result_bundle()
+    bundle["result_df"] = pd.DataFrame(
+        [
+            {
+                "Date": "2026-06-30",
+                "Rebalancing": True,
+                "End Ticker": [],
+                "End Balance": [],
+                "Next Ticker": [],
+                "Next Balance": [],
+                "Cash": 100.0,
+                "Total Balance": 100.0,
+            }
+        ]
+    )
+
+    model = _build_workspace(bundle)
+
+    assert model["holdings"]["current_allocation"] == [
+        {"ticker": "현금", "weight": 1.0, "weight_label": "100.0%"}
+    ]
+    assert model["holdings"]["status"] == "cash_only"
+
+
+def test_user_tables_and_chart_use_stable_labels_not_raw_columns() -> None:
+    bundle = result_bundle()
+    bundle["summary_df"] = pd.DataFrame(
+        [
+            {
+                "Start Date": "2026-05-31",
+                "End Date": "2026-06-30",
+                "Start Balance": 100.0,
+                "End Balance": 102.0,
+                "CAGR": 0.24,
+                "Maximum Drawdown": -0.05,
+                "Sharpe Ratio": 1.2,
+                "Standard Deviation": 0.15,
+            }
+        ]
+    )
+    bundle["chart_df"] = pd.DataFrame(
+        [
+            {"Date": "2026-05-31", "Total Balance": 100.0},
+            {"Date": "2026-06-30", "Total Balance": 102.0},
+        ]
+    )
+    bundle["result_df"] = pd.DataFrame(
+        [
+            {
+                "Date": "2026-05-31",
+                "Total Balance": 100.0,
+                "Total Return": 0.0,
+                "End Ticker": [],
+                "End Balance": [],
+                "Next Ticker": ["SPY"],
+                "Next Balance": [100.0],
+                "Rebalancing": True,
+                "Cash": 0.0,
+            },
+            {
+                "Date": "2026-06-30",
+                "Total Balance": 102.0,
+                "Total Return": 0.02,
+                "End Ticker": ["SPY"],
+                "End Balance": [102.0],
+                "Next Ticker": ["SPY"],
+                "Next Balance": [102.0],
+                "Rebalancing": False,
+                "Cash": 0.0,
+            },
+        ]
+    )
+
+    model = _build_workspace(bundle)
+
+    assert [item["metric_id"] for item in model["performance_summary"]] == [
+        "period",
+        "cumulative_return",
+        "cagr",
+        "maximum_drawdown",
+        "sharpe",
+        "volatility",
+    ]
+    assert model["chart"]["strategy_series"][0]["value"] == 100.0
+    assert list(model["performance_rows"][0]) == [
+        "date",
+        "balance",
+        "period_return",
+        "drawdown",
+        "holding_count",
+        "turnover",
+        "cost",
+    ]
+    assert "Total Balance" not in model["performance_rows"][0]
+    assert [group["group_id"] for group in model["evidence_groups"]] == [
+        "performance_risk",
+        "selection_holdings",
+        "execution_realism",
+        "data_trust",
+    ]
+
+
+def test_missing_holdings_stays_unavailable_instead_of_guessing_equal_weights() -> None:
+    bundle = result_bundle()
+    bundle["result_df"] = pd.DataFrame(
+        [{"Date": "2026-06-30", "Total Balance": 100.0, "Ticker": ["SPY", "TLT"]}]
+    )
+
+    model = _build_workspace(bundle)
+
+    assert model["holdings"]["status"] == "unavailable"
+    assert model["holdings"]["current_allocation"] == []
+    assert model["holdings"]["unavailable_reason"]
+
+
+def test_result_column_boundary_matrix_keeps_each_family_visible_and_deduplicated() -> None:
+    base_rows = {
+        "equal_weight": {
+            "Date": "2026-06-30",
+            "Ticker": ["SPY", "TLT"],
+            "End Balance": [55.0, 45.0],
+            "Next Balance": [50.0, 50.0],
+            "Total Balance": 100.0,
+            "Rebalancing": True,
+            "Cash": 0.0,
+        },
+        "gtaa": {
+            "Date": "2026-06-30",
+            "End Ticker": ["SPY", "TLT"],
+            "End Balance": [60.0, 40.0],
+            "Next Ticker": ["SPY", "TLT"],
+            "Next Weight": [0.6, 0.4],
+            "Total Balance": 100.0,
+            "Rebalancing": True,
+            "Cash": 0.0,
+        },
+        "global_relative_strength": {
+            "Date": "2026-06-30",
+            "End Ticker": ["SPY"],
+            "End Balance": [100.0],
+            "Next Ticker": ["SPY"],
+            "Next Balance": [100.0],
+            "Total Balance": 100.0,
+            "Rebalancing": False,
+            "Cash": 0.0,
+        },
+        "risk_parity_trend": {
+            "Date": "2026-06-30",
+            "End Ticker": ["SPY", "IEF"],
+            "End Balance": [70.0, 30.0],
+            "Next Ticker": ["SPY", "IEF"],
+            "Next Weight": [0.7, 0.3],
+            "Total Balance": 100.0,
+            "Rebalancing": True,
+            "Cash": 0.0,
+        },
+        "dual_momentum": {
+            "Date": "2026-06-30",
+            "End Ticker": ["SPY"],
+            "End Balance": [100.0],
+            "Next Ticker": ["SPY"],
+            "Next Balance": [100.0],
+            "Total Balance": 100.0,
+            "Rebalancing": True,
+            "Cash": 0.0,
+        },
+        "quality_snapshot_strict_annual": {
+            "Date": "2026-06-30",
+            "End Ticker": ["AAPL", "MSFT"],
+            "End Balance": [50.0, 50.0],
+            "Next Ticker": ["AAPL", "MSFT"],
+            "Next Balance": [50.0, 50.0],
+            "Total Balance": 100.0,
+            "Rebalancing": True,
+            "Cash": 0.0,
+        },
+    }
+    for index, (strategy_key, row) in enumerate(base_rows.items()):
+        bundle = result_bundle(run_id=f"run-{index}")
+        bundle["meta"].update({"strategy_key": strategy_key})
+        bundle["result_df"] = pd.DataFrame([row])
+        model = _build_workspace(
+            bundle,
+            strategy_choice="Equal Weight" if strategy_key == "equal_weight" else "GTAA",
+        )
+
+        assert model["visible"] is True
+        assert model["identity"]["run_result_id"] == f"run-{index}"
+        assert model["holdings"]["status"] in {
+            "available",
+            "cash_only",
+            "hold_current_until_rebalance",
+            "partial",
+            "unavailable",
+        }
+        questions = model["level2_validation_questions"]
+        assert len({row["root_issue_id"] for row in questions}) == len(questions)
+
+
+def test_portfolio_mix_keeps_component_evidence_partial_without_guessing() -> None:
+    mix = result_bundle(run_id="mix-run")
+    mix["strategy_name"] = "Portfolio Mix"
+    first = result_bundle(run_id="component-a")
+    first["strategy_name"] = "GTAA"
+    first["meta"].update({"component_id": "a", "component_weight": 0.6})
+    first["result_df"] = pd.DataFrame(
+        [
+            {
+                "Date": "2026-06-30",
+                "End Ticker": ["SPY"],
+                "End Balance": [100.0],
+                "Next Ticker": ["SPY"],
+                "Next Weight": [1.0],
+                "Total Balance": 100.0,
+                "Rebalancing": True,
+                "Cash": 0.0,
+            }
+        ]
+    )
+    second = result_bundle(run_id="component-b")
+    second["strategy_name"] = "Risk Parity Trend"
+    second["meta"].update({"component_id": "b", "component_weight": 0.4})
+
+    model = _build_workspace(
+        mix,
+        workspace_kind="portfolio_mix",
+        strategy_choice=None,
+        component_bundles=(first, second),
+    )
+
+    assert model["holdings"]["status"] == "partial"
+    assert model["holdings"]["evidence_status"] == "partial"
+    assert [row["component_id"] for row in model["holdings"]["components"]] == [
+        "a",
+        "b",
+    ]
+    assert model["holdings"]["target_allocation"] == []
