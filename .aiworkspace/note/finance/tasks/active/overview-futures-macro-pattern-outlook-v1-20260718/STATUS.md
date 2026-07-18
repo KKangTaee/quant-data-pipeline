@@ -5,17 +5,19 @@
 - User requested a Futures Macro improvement after closing the economic-cycle / market-context work.
 - Read-only audit confirmed that today risk evidence is useful, while 1D / 1W / 1M are disconnected return views and historical validation replays only one-day state.
 - User approved the recommended boundary: overall market risk regime first, asset-family direction as supporting evidence, and 5D / 20D conditional outlook rather than long-term forecasting.
-- Current stage: 1차 design contract is written and awaiting user review.
+- User reviewed and approved the design contract.
+- Detailed TDD implementation plan is written in `PLAN.md` with seven independently reviewable tasks.
+- Current stage: waiting for the user to choose subagent-driven or inline execution.
 - No application code, DB schema, provider, registry, or saved setup has been changed.
 
 ## Roadmap State
 
-- 1차 설계 계약: in review
-- 2차 패턴 상태 V1: pending
-- 3차 조건부 전망 / 검증 V1: pending
-- 4차 React Workbench V2: pending
-- 5차 actual QA / docs sync: pending
+- 1차 설계 계약: approved
+- 2차 상세 구현 계획: written
+- 3차 service / validation implementation: pending execution
+- 4차 React Workbench V2: pending execution
+- 5차 actual QA / docs sync: pending execution
 
 ## Next Action
 
-사용자가 `PLAN.md`와 `DESIGN.md`를 검토·승인하면 `superpowers:writing-plans`로 세부 구현 계획을 작성한다.
+사용자가 실행 방식을 선택하면 승인된 `PLAN.md`를 task 단위로 실행한다.

@@ -12,3 +12,9 @@
 
 - Created the active task shell and approved design contract.
 - No code or data mutation was executed.
+
+## 2026-07-18 Implementation Planning
+
+- User approved `DESIGN.md` and requested continuation.
+- Expanded `PLAN.md` into seven TDD implementation tasks covering point-in-time features, current state, independent episodes, chronological publication gates, Python payload V2, React workbench V2, and actual QA / documentation closeout.
+- Implementation code was not changed during planning.
