@@ -189,3 +189,15 @@ generated artifact이므로 commit하지 않는다.
   ticker draft는 보존한다. saved replay / prefill explicit values는 initial profile보다 우선한다.
 - React와 fallback은 Python read model의 patch와 feedback label만 기계적으로 사용하고
   strategy-specific 값, validation, payload, Gate를 계산하지 않는다.
+
+## 2026-07-18 9차 Written Design Approval And Plan Self-Review
+
+- 사용자가 9차 written design을 승인했고 기존 선택대로 현재 worktree / 세션에서 inline
+  `executing-plans`로 Task 23~25를 순차 실행한다.
+- Task 23은 canonical GTAA evidence map, 모든 named preset family의 complete profile,
+  initial prefill precedence와 Python fallback을 하나의 Python-owned contract로 묶는다.
+- Task 24는 strategy name이나 preset 숫자가 없는 generic React reducer와 feedback만 소유한다.
+- Task 25는 Equal Weight, GTAA base/U3/Top-2, GRS, Risk Parity, Dual Momentum,
+  Quality + Value Annual과 manual-to-preset transition을 desktop / 760px에서 확인한다.
+- plan의 profile type / runtime key / helper signature / React type / test token을 교차 대조했고
+  placeholder, 근거 없는 tuning, 보호 대상 stage, Level2/3 scope 확장은 남기지 않았다.

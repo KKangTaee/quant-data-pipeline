@@ -36,6 +36,7 @@
 | 6차 Single Settings Corrective | Task 10~13 | Python-owned settings hierarchy, all-strategy form cleanup |
 | 7차 Unified React Settings | Task 14~20 | schema/intent/payload parity, React editor, route cutover, QA |
 | 8차 Modifier-Free Multi-Select | Task 21~22 | adaptive compact/search control, Browser QA, docs sync |
+| 9차 Deterministic Preset Application | Task 23~25 | Python preset profile, React/fallback application, Browser QA, docs sync |
 
 ## File Ownership Map
 
@@ -3020,6 +3021,632 @@ git commit -m "Backtest Analysis 복수 선택 QA와 문서 동기화"
 - 전체 roadmap 1~8차 완료 상태와 남은 차수;
 - 8차 design / implementation / closeout 한국어 commit 목록;
 - focused / boundary / settings / decision / service exact test counts;
+- React production build / target `py_compile` / `git diff --check` 결과;
+- desktop / 760px QA 범위와 screenshot absolute links;
+- registry / run history / saved / `.superpowers/` / screenshot 보호 감사;
+- remaining risks and next handoff location.
+
+## 9차 Corrective Plan: Deterministic Preset Application
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to execute
+> Task 23~25 inline in the current worktree. Every production change must follow a witnessed
+> RED -> GREEN cycle.
+
+**Goal:** 모든 named preset이 strategy / variant 기본 규칙을 deterministic하게 적용하고,
+검증 근거가 있는 GTAA preset만 명시적 override를 더해 universe와 선택·보유 규칙의 불일치를
+없앤다.
+
+**Architecture:** Python pure service가 schema default와 canonical override로
+`preset_profiles`를 만들고 initial prefill precedence와 generic apply helper를 소유한다. React와
+Python fallback은 profile의 `values`와 feedback만 기계적으로 적용하며 strategy별 숫자,
+validation, payload 또는 Gate를 계산하지 않는다.
+
+**Tech Stack:** Python 3.11+, Streamlit session state / fallback controls, React 18,
+TypeScript 5.6, Vite 5, pytest / unittest, in-app Browser QA.
+
+### Task 23: Python Preset Profile And Fallback TDD
+
+**Files:**
+- Modify: `app/web/backtest_common.py`
+- Modify: `app/services/backtest_single_settings_workspace.py`
+- Modify: `app/web/backtest_single_settings_workspace.py`
+- Modify: `tests/test_backtest_single_settings_workspace.py`
+- Modify: `tests/test_service_contracts.py`
+
+**Interfaces:**
+- Consumes: current schema field defaults, `GTAA_PRESETS`, legacy preset notes,
+  `GTAA_PRESET_PARAMETER_DEFAULTS`, saved replay / prefill draft values.
+- Produces: `preset_profiles` read-model property,
+  `apply_single_settings_preset(workspace, values, preset_name)`, canonical GTAA override map,
+  runtime injection and same-profile Python fallback callback.
+
+- [ ] **Step 1: Write failing canonical GTAA contract tests**
+
+Extend `BacktestPresetCatalogContractTests` in `tests/test_service_contracts.py`:
+
+```python
+def test_gtaa_evidence_backed_presets_publish_parameter_defaults(self) -> None:
+    from app.web.backtest_common import GTAA_PRESET_PARAMETER_DEFAULTS
+
+    assert GTAA_PRESET_PARAMETER_DEFAULTS[
+        "GTAA Universe (U3 Commodity Candidate Base)"
+    ] == {
+        "top": 2,
+        "interval": 3,
+        "score_lookback_months": [1, 3, 6],
+    }
+    assert GTAA_PRESET_PARAMETER_DEFAULTS[
+        "GTAA Universe (U1 Offensive Candidate Base)"
+    ] == {
+        "top": 2,
+        "interval": 3,
+        "score_lookback_months": [1, 3, 6, 12],
+    }
+    assert GTAA_PRESET_PARAMETER_DEFAULTS[
+        "GTAA Universe (U5 Smallcap Value Candidate Base)"
+    ] == {
+        "top": 3,
+        "interval": 3,
+        "score_lookback_months": [1, 3, 6, 12],
+    }
+    assert GTAA_PRESET_PARAMETER_DEFAULTS[
+        "GTAA SPY Low-MDD Style Top-3"
+    ] == {
+        "top": 3,
+        "interval": 3,
+        "score_lookback_months": [1, 6],
+        "trend_filter_window": 250,
+        "risk_off_mode": "cash_only",
+        "benchmark_ticker": "SPY",
+    }
+```
+
+Run:
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_service_contracts.py::BacktestPresetCatalogContractTests::test_gtaa_evidence_backed_presets_publish_parameter_defaults \
+  -q
+```
+
+Expected RED: missing U3 / U1 / U5 / Top-3 keys in `GTAA_PRESET_PARAMETER_DEFAULTS`.
+
+- [ ] **Step 2: Write failing pure profile and precedence tests**
+
+Add an injected runtime fixture with two GTAA presets and parameter defaults to
+`tests/test_backtest_single_settings_workspace.py`, then add:
+
+```python
+def test_every_named_preset_has_schema_safe_complete_profile() -> None:
+    runtime = deepcopy(RUNTIME_OPTIONS)
+    runtime["presets"]["GTAA"] = {
+        "GTAA Universe": ["SPY", "TLT", "GLD"],
+        "GTAA Evidence": ["QQQ", "IEF", "TLT"],
+    }
+    runtime["preset_parameter_defaults_by_strategy_key"] = {
+        "gtaa": {
+            "GTAA Evidence": {
+                "top": 2,
+                "interval": 4,
+                "score_lookback_months": [1, 6],
+                "defensive_tickers": ["IEF", "TLT"],
+            }
+        }
+    }
+    workspace = build_single_settings_workspace("GTAA", None, {}, runtime)
+    field_ids = {
+        field["field_id"]
+        for section in workspace["sections"]
+        for field in section["fields"]
+    }
+
+    assert set(workspace["preset_profiles"]) == {
+        "GTAA Universe",
+        "GTAA Evidence",
+    }
+    assert set(workspace["preset_profiles"]["GTAA Universe"]["values"]) <= field_ids
+    assert workspace["preset_profiles"]["GTAA Universe"]["application_kind"] == "strategy_default"
+    assert workspace["preset_profiles"]["GTAA Evidence"]["application_kind"] == "validated_override"
+    assert workspace["preset_profiles"]["GTAA Evidence"]["values"]["top"] == 2
+    assert workspace["preset_profiles"]["GTAA Evidence"]["values"]["interval"] == 4
+```
+
+Add a catalog-wide parametrized check so the contract is not GTAA-only:
+
+```python
+@pytest.mark.parametrize(
+    ("strategy_choice", "variant"),
+    [
+        ("Equal Weight", None),
+        ("GTAA", None),
+        ("Global Relative Strength", None),
+        ("Risk Parity Trend", None),
+        ("Dual Momentum", None),
+        ("Quality", "Annual"),
+        ("Quality", "Quarterly"),
+        ("Quality", "Snapshot"),
+        ("Value", "Annual"),
+        ("Value", "Quarterly"),
+        ("Quality + Value", "Annual"),
+        ("Quality + Value", "Quarterly"),
+    ],
+)
+def test_all_named_preset_families_publish_complete_profiles(
+    strategy_choice: str,
+    variant: str | None,
+) -> None:
+    workspace = build_single_settings_workspace(
+        strategy_choice,
+        variant,
+        {},
+        RUNTIME_OPTIONS,
+    )
+    members = workspace["runtime_context"]["preset_members"]
+
+    assert set(workspace["preset_profiles"]) == set(members)
+    assert all(profile["values"] for profile in workspace["preset_profiles"].values())
+```
+
+```python
+def test_apply_preset_resets_owned_fields_but_preserves_dates_and_manual_tickers() -> None:
+    runtime = _runtime_with_gtaa_evidence_preset()
+    workspace = build_single_settings_workspace("GTAA", None, {}, runtime)
+
+    applied = apply_single_settings_preset(
+        workspace,
+        {
+            "start": "2020-01-01",
+            "end": "2025-12-31",
+            "tickers": ["CUSTOM"],
+            "top": 9,
+            "interval": 9,
+            "score_lookback_months": [12],
+        },
+        "GTAA Evidence",
+    )
+
+    assert applied["values"]["start"] == "2020-01-01"
+    assert applied["values"]["end"] == "2025-12-31"
+    assert applied["values"]["tickers"] == ["CUSTOM"]
+    assert applied["values"]["universe_mode"] == "preset"
+    assert applied["values"]["preset_name"] == "GTAA Evidence"
+    assert applied["values"]["top"] == 2
+    assert applied["values"]["interval"] == 4
+    assert applied["values"]["score_lookback_months"] == [1, 6]
+    assert applied["application"]["application_kind"] == "validated_override"
+```
+
+```python
+def test_initial_explicit_prefill_wins_over_selected_preset_profile() -> None:
+    runtime = _runtime_with_gtaa_evidence_preset()
+    workspace = build_single_settings_workspace(
+        "GTAA",
+        None,
+        {
+            "preset_name": "GTAA Evidence",
+            "top": 5,
+            "score_lookback_months": [3, 12],
+        },
+        runtime,
+    )
+    values = _field_values(workspace)
+
+    assert values["preset_name"] == "GTAA Evidence"
+    assert values["top"] == 5
+    assert values["score_lookback_months"] == [3, 12]
+    assert values["interval"] == 4
+```
+
+Run:
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_single_settings_workspace.py::test_every_named_preset_has_schema_safe_complete_profile \
+  tests/test_backtest_single_settings_workspace.py::test_all_named_preset_families_publish_complete_profiles \
+  tests/test_backtest_single_settings_workspace.py::test_apply_preset_resets_owned_fields_but_preserves_dates_and_manual_tickers \
+  tests/test_backtest_single_settings_workspace.py::test_initial_explicit_prefill_wins_over_selected_preset_profile \
+  -q
+```
+
+Expected RED: `preset_profiles` and `apply_single_settings_preset` do not exist.
+
+- [ ] **Step 3: Implement canonical overrides and pure preset profiles**
+
+Expand `GTAA_PRESET_PARAMETER_DEFAULTS` only with values already stated by the legacy preset notes.
+In `app/services/backtest_single_settings_workspace.py`, add:
+
+```python
+_PRESET_PRESERVED_FIELD_IDS = frozenset({"start", "end", "tickers"})
+
+
+def _build_preset_profiles(
+    workspace: Mapping[str, object],
+    *,
+    concrete_strategy_key: str,
+    runtime_options: Mapping[str, object],
+) -> dict[str, dict[str, object]]:
+    fields = _all_fields(workspace)
+    default_values = {
+        str(field["field_id"]): deepcopy(field.get("value"))
+        for field in fields
+        if str(field["field_id"]) not in _PRESET_PRESERVED_FIELD_IDS
+    }
+    members = dict(dict(workspace["runtime_context"])["preset_members"])
+    all_overrides = runtime_options.get("preset_parameter_defaults_by_strategy_key")
+    strategy_overrides = (
+        dict(all_overrides.get(concrete_strategy_key, {}))
+        if isinstance(all_overrides, Mapping)
+        and isinstance(all_overrides.get(concrete_strategy_key), Mapping)
+        else {}
+    )
+    profiles: dict[str, dict[str, object]] = {}
+    for preset_name in members:
+        overrides = dict(strategy_overrides.get(preset_name, {}))
+        values = {
+            **deepcopy(default_values),
+            **deepcopy(overrides),
+            "universe_mode": "preset",
+            "preset_name": preset_name,
+        }
+        profiles[preset_name] = {
+            "application_kind": (
+                "validated_override" if overrides else "strategy_default"
+            ),
+            "source_label": (
+                "검증된 프리셋 설정을 적용했습니다."
+                if overrides
+                else "전략 기본 규칙을 적용했습니다."
+            ),
+            "values": values,
+        }
+    return profiles
+
+
+def apply_single_settings_preset(
+    workspace: Mapping[str, object],
+    values: Mapping[str, object] | None,
+    preset_name: str,
+) -> dict[str, object]:
+    profiles = workspace.get("preset_profiles")
+    profile = profiles.get(preset_name) if isinstance(profiles, Mapping) else None
+    if not isinstance(profile, Mapping):
+        raise ValueError(f"알 수 없는 preset입니다: {preset_name}")
+    updated = deepcopy(dict(values or {}))
+    updated.update(deepcopy(dict(profile.get("values") or {})))
+    return {
+        "values": updated,
+        "application": {
+            "preset_name": preset_name,
+            "application_kind": profile["application_kind"],
+            "source_label": profile["source_label"],
+        },
+    }
+```
+
+Build `preset_profiles` after `runtime_context` exists, apply the supplied `preset_name` profile before
+overlaying supplied explicit values, and export `apply_single_settings_preset`. Reject an override field
+that is not declared by the current schema and validate its type/range/option through the existing
+validator during the focused tests.
+
+- [ ] **Step 4: Inject runtime override ownership and add fallback application**
+
+Add to `build_single_settings_runtime_options()`:
+
+```python
+"preset_parameter_defaults_by_strategy_key": {
+    "gtaa": deepcopy(common.GTAA_PRESET_PARAMETER_DEFAULTS),
+},
+```
+
+Import `deepcopy` and `apply_single_settings_preset`. Refactor `render_single_settings_fallback()` from
+`st.form` to the same keyed native controls plus a final `st.button`, because Streamlit form widgets
+cannot run preset callbacks before submit. For the `preset_name` selectbox, set an `on_change` callback
+that reads the selected widget key, applies `apply_single_settings_preset()`, writes only profile values
+to the corresponding `draft_key:field_id` session keys, stores the feedback label, and lets the normal
+rerun redraw the controls. When `universe_mode` changes from manual to preset, invoke the same helper
+for the current preset. Do not invoke the runner or persistence from either callback.
+
+- [ ] **Step 5: Run GREEN and focused Python regression**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_service_contracts.py::BacktestPresetCatalogContractTests \
+  tests/test_backtest_single_settings_workspace.py \
+  -q
+.venv/bin/python -m py_compile \
+  app/services/backtest_single_settings_workspace.py \
+  app/web/backtest_single_settings_workspace.py \
+  app/web/backtest_common.py
+git diff --check
+```
+
+Expected: focused preset/settings tests pass, py_compile and diff-check exit 0.
+
+- [ ] **Step 6: Commit Task 23**
+
+```bash
+git add \
+  app/web/backtest_common.py \
+  app/services/backtest_single_settings_workspace.py \
+  app/web/backtest_single_settings_workspace.py \
+  tests/test_backtest_single_settings_workspace.py \
+  tests/test_service_contracts.py
+git diff --cached --check
+git commit -m "Backtest Analysis 프리셋 적용 계약 복원"
+```
+
+### Task 24: React Generic Preset Application TDD
+
+**Files:**
+- Modify: `app/web/components/backtest_analysis_decision_workspace/frontend/src/types.ts`
+- Modify: `app/web/components/backtest_analysis_decision_workspace/frontend/src/BacktestAnalysisDecisionWorkspace.tsx`
+- Modify: `app/web/components/backtest_analysis_decision_workspace/frontend/src/style.css`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+
+**Interfaces:**
+- Consumes: Task 23 `preset_profiles` with `application_kind`, `source_label`, `values`.
+- Produces: strategy-agnostic preset reducer, manual-to-preset application, visible feedback and
+  unchanged run intent payload.
+
+- [ ] **Step 1: Write failing React boundary contract**
+
+Add to `tests/test_backtest_refactor_boundaries.py`:
+
+```python
+def test_react_settings_applies_python_owned_preset_profiles_without_strategy_rules(self) -> None:
+    source = Path(
+        "app/web/components/backtest_analysis_decision_workspace/frontend/src/"
+        "BacktestAnalysisDecisionWorkspace.tsx"
+    ).read_text()
+    types = Path(
+        "app/web/components/backtest_analysis_decision_workspace/frontend/src/types.ts"
+    ).read_text()
+    css = Path(
+        "app/web/components/backtest_analysis_decision_workspace/frontend/src/style.css"
+    ).read_text()
+
+    self.assertIn("preset_profiles", types)
+    self.assertIn("applyPresetProfileChange", source)
+    self.assertIn('fieldId === "preset_name"', source)
+    self.assertIn('fieldId === "universe_mode" && nextValue === "preset"', source)
+    self.assertIn("profile.values", source)
+    self.assertIn("profile.source_label", source)
+    self.assertIn("bt1-preset-application", source)
+    self.assertIn(".bt1-preset-application", css)
+    self.assertNotIn('workspace.strategy_choice === "GTAA"', source)
+    self.assertNotIn("GTAA SPY Low-MDD", source)
+```
+
+Run:
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_refactor_boundaries.py::BacktestRefactorBoundaryTests::test_react_settings_applies_python_owned_preset_profiles_without_strategy_rules \
+  -q
+```
+
+Expected RED: preset profile types, reducer and feedback selectors are absent.
+
+- [ ] **Step 2: Add read-model types and generic reducer**
+
+Add to `types.ts`:
+
+```ts
+export type SettingsPresetProfile = {
+  application_kind: "strategy_default" | "validated_override"
+  source_label: string
+  values: Record<string, unknown>
+}
+```
+
+Add `preset_profiles: Record<string, SettingsPresetProfile>` to `SingleSettingsWorkspace`. In the React
+source, implement:
+
+```tsx
+type PresetApplication = {
+  preset_name: string
+  application_kind: "strategy_default" | "validated_override"
+  source_label: string
+}
+
+function applyPresetProfileChange(
+  workspace: SingleSettingsWorkspace,
+  current: SettingsValues,
+  fieldId: string,
+  nextValue: unknown,
+) {
+  const changed = { ...current, [fieldId]: nextValue }
+  const presetName =
+    fieldId === "preset_name"
+      ? String(nextValue)
+      : fieldId === "universe_mode" && nextValue === "preset"
+        ? String(changed.preset_name ?? "")
+        : ""
+  const profile = workspace.preset_profiles[presetName]
+  if (!profile) return { values: changed, application: null }
+  return {
+    values: { ...changed, ...profile.values },
+    application: {
+      preset_name: presetName,
+      application_kind: profile.application_kind,
+      source_label: profile.source_label,
+    },
+  }
+}
+```
+
+This reducer may branch only on generic schema field ids; it must not contain a strategy name or
+preset-specific value.
+
+- [ ] **Step 3: Wire local state and feedback without rerun**
+
+Add `presetApplication` state beside `values`. Replace the one-field `setFieldValue()` with the reducer,
+setting both returned values and application. Reset feedback only when `workspace.draft_key` changes.
+Pass the application message to the `preset_name` field control and render:
+
+```tsx
+{presetApplication && field.field_id === "preset_name" && (
+  <p
+    className={`bt1-preset-application is-${presetApplication.application_kind}`}
+    role="status"
+  >
+    {presetApplication.source_label}
+  </p>
+)}
+```
+
+Keep `emitSettingsIntent("run_single_strategy", ..., values)` unchanged so Python validation and payload
+projection remain authoritative.
+
+- [ ] **Step 4: Add compact feedback styling**
+
+Add:
+
+```css
+.bt1-preset-application {
+  margin: 8px 0 0;
+  padding: 9px 11px;
+  border: 1px solid #d3e0e7;
+  border-radius: 10px;
+  color: #486579;
+  background: #f5f9fb;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.bt1-preset-application.is-validated_override {
+  border-color: #9fbfcb;
+  color: #285a6f;
+  background: #edf6f8;
+}
+```
+
+At 760px keep width at 100%, allow wrapping and horizontal overflow 0.
+
+- [ ] **Step 5: Run GREEN, focused regression and React build**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_refactor_boundaries.py \
+  tests/test_backtest_single_settings_workspace.py \
+  -q
+cd app/web/components/backtest_analysis_decision_workspace/frontend
+npm run build
+cd /Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev
+git diff --check
+```
+
+Expected: boundary/settings tests pass, TypeScript/Vite production build and diff-check exit 0.
+
+- [ ] **Step 6: Commit Task 24**
+
+```bash
+git add \
+  app/web/components/backtest_analysis_decision_workspace/frontend/src/types.ts \
+  app/web/components/backtest_analysis_decision_workspace/frontend/src/BacktestAnalysisDecisionWorkspace.tsx \
+  app/web/components/backtest_analysis_decision_workspace/frontend/src/style.css \
+  tests/test_backtest_refactor_boundaries.py
+git diff --cached --check
+git commit -m "Backtest Analysis 프리셋 자동 적용 UI 연결"
+```
+
+### Task 25: Runtime QA, Finance Docs, And 9차 Closeout
+
+**Files:**
+- Modify: active task `PLAN.md`, `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
+- Modify: `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Generate, never stage: `backtest-analysis-level1-preset-desktop-qa.png`
+- Generate, never stage: `backtest-analysis-level1-preset-760-qa.png`
+
+**Interfaces:**
+- Consumes: Task 23 Python preset profile/fallback and Task 24 React reducer/feedback.
+- Produces: actual all-family preset evidence, fresh verification, canonical docs alignment,
+  protected-path audit and closeout commit.
+
+- [ ] **Step 1: Run desktop Browser QA across preset families**
+
+At `http://localhost:8505/backtest`:
+
+1. Equal Weight: change `Dividend ETFs -> Core ETFs`, confirm universe preset changes and strategy base
+   `rebalance_interval=12` / cost defaults are restored after a manual edit.
+2. GTAA base: manually edit top / interval / score horizons, switch to an ordinary GTAA universe, confirm
+   base `top=3`, `interval=1`, `1/3/6/12` and `strategy_default` feedback.
+3. GTAA U3: confirm `top=2`, `interval=3`, `1/3/6`.
+4. GTAA Top-2 ADV20: confirm `top=2`, `interval=4`, `1/6`, `MA200`, `IEF/TLT`, `ADV20=20M`,
+   `validated_override` feedback.
+5. Quality + Value Annual: edit factor / overlay values, change managed preset and confirm variant base
+   selection/holding/risk values return while start/end stay unchanged.
+6. GRS: change core -> compact preset and confirm GRS base top / interval / score / trend values are
+   restored. Risk Parity and Dual Momentum each have one named preset, so edit a base rule, move to direct
+   input and back to preset, then confirm the strategy base profile is restored.
+7. Direct input -> preset transition: confirm current selected preset applies and manual ticker draft is
+   available when returning to direct input.
+
+Do not run a backtest or trigger persistence. Capture desktop screenshot as a generated artifact only.
+
+- [ ] **Step 2: Run 760px Browser QA**
+
+Set viewport width to 760px. Repeat GTAA validated preset and Quality + Value managed preset changes.
+Confirm feedback copy wraps, settings cards remain one column, compact multi-select remains usable,
+iframe height follows content and outer/settings horizontal overflow is 0. Capture the 760px screenshot
+without staging it.
+
+- [ ] **Step 3: Use verification-before-completion for fresh automated checks**
+
+```bash
+uv run --with pytest python -m pytest tests/test_backtest_single_settings_workspace.py -q
+uv run --with pytest python -m pytest tests/test_backtest_refactor_boundaries.py -q
+uv run --with pytest python -m pytest tests/test_backtest_analysis_decision_workspace.py -q
+uv run --with pytest python -m pytest tests/test_service_contracts.py -q --tb=short
+cd app/web/components/backtest_analysis_decision_workspace/frontend && npm run build
+cd /Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev
+.venv/bin/python -m py_compile \
+  app/services/backtest_single_settings_workspace.py \
+  app/web/backtest_single_settings_workspace.py \
+  app/web/backtest_common.py \
+  app/web/backtest_single_strategy.py \
+  app/web/backtest_analysis_workspace.py \
+  app/web/components/backtest_analysis_decision_workspace/component.py
+git diff --check
+```
+
+Record exact counts and compare repository-wide service failures to the existing 11-failure baseline;
+do not hide unrelated failures.
+
+- [ ] **Step 4: Use finance-doc-sync and audit protected paths**
+
+Update canonical flow, active task/root handoff logs with preset ownership, application precedence,
+Browser QA evidence, test counts and remaining risks. Then run:
+
+```bash
+git diff --check
+git add \
+  .aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md \
+  .aiworkspace/note/finance/tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717 \
+  .aiworkspace/note/finance/WORK_PROGRESS.md \
+  .aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md
+git diff --cached --check
+if git diff --cached --name-only | rg -q \
+  'registries/|run_history/|saved/|\.superpowers/|\.png$|run_artifacts/'; then
+  exit 1
+fi
+```
+
+Expected: no registry, run history, saved JSONL, `.superpowers/`, screenshot or run artifact is staged.
+
+- [ ] **Step 5: Commit Task 25**
+
+```bash
+git commit -m "Backtest Analysis 프리셋 적용 QA와 문서 동기화"
+```
+
+## 9차 Completion Report Contract
+
+- 전체 roadmap 1~9차 완료 상태와 남은 차수;
+- 9차 design / Python contract / React UI / closeout 한국어 commit 목록;
+- focused / boundary / decision / service exact test counts;
 - React production build / target `py_compile` / `git diff --check` 결과;
 - desktop / 760px QA 범위와 screenshot absolute links;
 - registry / run history / saved / `.superpowers/` / screenshot 보호 감사;
