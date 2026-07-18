@@ -41,4 +41,9 @@
 
 ## Next Action
 
-전체 roadmap `5/5`와 readable-map 후속 `2/2`가 완료됐다. 다음 후보는 더 긴 독립 episode 이력, exchange contract / roll-aware source, calibration 개선이며 현재 publication gate를 낮추지 않는다.
+전체 roadmap `5/5`와 readable-map 후속 `2/2`가 완료됐다.
+
+사용자가 5D / 20D 그래프의 실제 경로 좌표가 같다는 QA 결과를 확인하고 empirical conditional path 후속을 승인했다.
+후속 설계는 과거 유사 episode의 step별 중앙 이동과 25~75% 범위를 현재 위치에 더하며,
+고정 categorical branch를 제거하고 probability card는 유지한다.
+현재 단계는 written spec review이며 구현 계획과 코드는 아직 변경하지 않았다.

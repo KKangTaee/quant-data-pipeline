@@ -1,6 +1,6 @@
 # Futures Macro Pattern Outlook V1 Design
 
-Status: Approved — UI Direction A
+Status: Approved — UI Direction A + Empirical Conditional Path Follow-up
 Last Updated: 2026-07-18
 
 ## 1. Design Summary
@@ -412,3 +412,131 @@ Evidence는 다음을 분리한다.
 - 기존 today evidence와 DB-backed source boundary를 보존한다.
 - 경제사이클 UI의 hierarchy와 visual grammar를 따르되 시간축과 의미는 분리된다.
 - 관련 tests, compile / build, diff check, actual desktop / mobile Browser QA가 통과한다.
+
+## 13. Empirical Conditional Path Follow-up
+
+### 13.1 Why This Follow-up Exists
+
+후속 readable map은 5D와 20D 확률을 서로 다른 선 굵기와 원 크기로 표현하지만,
+네 체제 분기의 시작점·곡선·도착점은 기간과 무관한 고정 좌표다.
+실제 화면 측정에서도 5D와 20D의 확률·표본은 바뀌었으나 네 SVG path 좌표는 모두 같았다.
+
+사용자가 기대하는 것은 범주별 가능성만이 아니라,
+현재와 유사했던 과거 패턴 뒤 시장 위치가 거래일마다 어느 방향으로 이동했는지와 그 분산이다.
+따라서 고정 체제 분기를 제거하고 historical analog의 실제 후속 이동을 집계한 조건부 중앙 경로로 교체한다.
+
+### 13.2 Selected Statistical Contract
+
+각 공개 horizon `H in {5, 20}`에 대해 기존 `select_similar_episodes()`가 선택한 독립 episode만 사용한다.
+각 episode origin에서 `step = 1..H`의 선물 종가 변화를 origin 시점까지 알려진 60D 변동성으로 표준화한다.
+
+- `delta_x(step)`: Risk-On family의 step 누적 표준화 변화
+- `delta_y(step)`: Rate Pressure, Dollar Pressure, Inflation Pressure family step 누적 표준화 변화의 평균
+- `median_delta_x/y(step)`: 선택 episode의 step별 중앙값
+- `q25_delta_x/y(step)`, `q75_delta_x/y(step)`: 선택 episode의 step별 25/75 분위수
+- `forecast_x/y(step)`: 현재 pattern map 좌표 + `median_delta_x/y(step)`
+- `forecast_terminal`: `step == H`의 예상 위치
+
+이 값은 가격 목표나 단일 확정 경로가 아니다.
+같은 다중 기간 pattern을 보였던 독립 과거 episode의 조건부 중앙 이동과 가운데 50% 범위다.
+
+### 13.3 Leakage And Independence Contract
+
+- current feature는 current date까지의 행만 사용한다.
+- 후보 episode는 current origin보다 최소 `H + 1` trading rows 이전까지만 허용한다.
+- 선택 episode 간 anchor spacing은 최소 `H` trading rows를 유지한다.
+- 각 episode의 forward path는 그 origin에서 관측 가능했던 volatility로만 표준화한다.
+- 현재 이후의 실제 행은 current forecast 계산에 사용하지 않는다.
+- walk-forward 검증에서는 각 test origin보다 앞선 completed episode만 train analog로 사용한다.
+
+### 13.4 Path Publication And Validation
+
+경로 공개 상태는 기존 horizon probability status보다 강하게 보이지 않게 한다.
+
+- independent episode `< 30`: `UNAVAILABLE`; 경로와 불확실성 영역을 모두 숨긴다.
+- independent episode `30~59`: 최대 `PROVISIONAL`.
+- independent episode `>= 60`: 시간순 검증을 통과해도 기존 horizon status가 `PROVISIONAL`이면 경로도 `PROVISIONAL`.
+- 최종 path status는 기존 horizon estimate status와 path validation status 중 더 보수적인 값이다.
+
+walk-forward path validation은 test origin별 실제 terminal delta와 train analog forecast를 비교한다.
+
+- median terminal Euclidean error
+- unconditional baseline median-path 대비 error improvement
+- empirical 50% terminal rectangle coverage
+- evaluated fold count
+
+V1 follow-up의 `VERIFIED` 조건은 기존 확률 gate를 유지하면서,
+path error가 baseline보다 작고 50% 범위 coverage가 `0.35~0.65` 안에 있으며
+평가 fold가 둘 이상일 때만 충족한다.
+조건을 충족하지 못해도 30개 이상이면 숫자와 경로는 `PROVISIONAL`로 표시할 수 있다.
+
+### 13.5 Service And Payload Boundary
+
+`app/services/futures_macro_pattern_validation.py`가 다음을 소유한다.
+
+- selected episode의 stepwise two-dimensional forward movement
+- step별 median / q25 / q75 aggregate
+- chronological terminal-path validation metrics
+- horizon별 `conditional_path` payload
+
+`conditional_path`는 다음 필드를 갖는다.
+
+```text
+status
+episode_count
+band_label = "과거 유사 패턴 가운데 50%"
+points[] = { step, x, y, lower_x, upper_x, lower_y, upper_y }
+terminal = { x, y, lower_x, upper_x, lower_y, upper_y }
+validation = { median_error, baseline_median_error, coverage_50, evaluated_fold_count }
+```
+
+`app/web/overview/futures_macro_helpers.py`는 이 값을 계산하지 않고 React용 숫자 정규화와 unavailable suppression만 수행한다.
+UI, provider, DB, registry 또는 saved artifact는 새로운 예측값을 만들지 않는다.
+
+### 13.6 Pattern Map UI Contract
+
+- `관측만`: `20D 전 -> 5D 전 -> 현재` 실선과 anchor만 표시한다.
+- `다음 5D`: 현재점에서 시작하는 5-step 조건부 중앙 점선과 50% 영역을 표시한다.
+- `다음 20D`: 현재점에서 시작하는 20-step 조건부 중앙 점선과 50% 영역을 표시한다.
+- 기존 `REGIME_TARGETS` 기반 네 categorical branch는 active render에서 제거한다.
+- 체제별 5D / 20D 확률은 우측 reading과 horizon card에 유지한다.
+- 중앙 점선과 50% 영역은 서로 다른 시각 문법을 사용하고, 실제 경로가 아니라는 설명을 유지한다.
+- terminal label에는 `유사 패턴 중앙 위치`, episode count, estimate status를 표시한다.
+- unavailable이면 합성 좌표를 만들지 않고 이유를 표시한다.
+- 5D / 20D 전환 시 path point count, terminal coordinate 또는 uncertainty range 중 적어도 하나가 실제 payload에 따라 달라져야 한다.
+
+### 13.7 Error And Fallback Behavior
+
+- 일부 step의 family coverage가 부족하면 그 step을 제거하지 않고 해당 좌표를 `None`으로 두며 UI는 연결을 끊는다.
+- 유효 step이 horizon의 절반 미만이면 해당 conditional path를 unavailable 처리한다.
+- 한 축의 분위수를 계산할 수 없으면 uncertainty band를 숨기고 median path만 provisional로 표시한다.
+- path validation 계산 실패는 기존 체제 확률과 current observation을 숨기지 않는다.
+- 좌표는 chart bound를 동적으로 확장하되 극단 outlier 한 개가 화면을 지배하지 않도록 published q25/q75와 median 범위로 bound를 계산한다.
+
+### 13.8 Test And Acceptance Contract
+
+Service tests:
+
+- deterministic stepwise `delta_x / delta_y` calculation
+- future rows appended after a completed episode do not change that episode path
+- current forecast excludes incomplete and overlapping episodes
+- pointwise median and q25/q75 aggregation
+- insufficient sample suppression
+- chronological path validation and conservative status combination
+
+Payload/UI contracts:
+
+- 5D has exactly five forecast steps and 20D has exactly twenty when fully available
+- unavailable horizon does not expose path coordinates
+- fixed `REGIME_TARGETS` branches are absent from active render
+- selected horizon reads only its own `conditional_path`
+- probability cards remain unchanged
+- desktop and 420px layouts have no horizontal overflow
+- actual 5D and 20D switch produces different rendered path coordinates
+- console errors remain zero
+
+### 13.9 Scope Boundary
+
+이번 후속은 analog-based conditional path만 추가한다.
+새 provider, DB schema, supervised ML model, asset price target, trade signal,
+broker action, exchange contract roll model 또는 publication threshold 완화는 범위 밖이다.

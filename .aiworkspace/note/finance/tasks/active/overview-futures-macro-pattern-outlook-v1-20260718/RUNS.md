@@ -95,3 +95,12 @@
 - Verification: pattern feature / validation modules passed 18 tests; selected Futures Macro React and thermometer contracts passed 30 tests; Vite build, py_compile, and diff check passed.
 - Broader `OverviewAutomationContractTests` discovery has one pre-existing unrelated Sentiment source-string failure (`payload.summary.metrics.map`); the four selected Futures Macro React contracts and all `FuturesMacroThermometerContractTests` pass.
 - Pre-commit integration review added a short-history RED/GREEN guard: 5D / 20D anchors are omitted unless that many prior rows exist, so a single current row is never mislabeled as `20D 전`.
+
+## 2026-07-18 Empirical Conditional Path Follow-up Design
+
+- Reproduced the reported 5D / 20D switch against the actual local app.
+- Confirmed horizon selection, probabilities, sample count, stroke width, and outcome radius change correctly.
+- Confirmed all four SVG branch `d` coordinates are identical because `REGIME_TARGETS` is horizon-independent.
+- Inspected the service and found completed historical outcomes already retain as-of-volatility-scaled family endpoint and path statistics, while the current payload does not expose stepwise two-dimensional paths.
+- User approved replacing fixed categorical branches with historical-analog stepwise median movement and a 25~75% uncertainty area.
+- Wrote the follow-up statistical, leakage, validation, payload, UI, fallback, and acceptance contract in `DESIGN.md`; no implementation code was changed.
