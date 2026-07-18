@@ -1929,7 +1929,7 @@ Python이 current selection, allow-list, type, range, option, visibility를 검�
   `validate_single_settings_draft(workspace, values)`, and
   `project_single_settings_payload(workspace, values)`.
 
-- [ ] **Step 1: Write RED coverage and schema-shape tests**
+- [x] **Step 1: Write RED coverage and schema-shape tests**
 
 ```python
 EXPECTED = {
@@ -1962,7 +1962,7 @@ Also assert field ids and payload keys are unique, controls are one of `date`, `
 `single_select`, `multi_select`, `segmented`, `toggle`, profile badges are plain strings, and every
 field has Korean first-read `label` and `help`.
 
-- [ ] **Step 2: Run RED and confirm the module is absent**
+- [x] **Step 2: Run RED and confirm the module is absent**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -1972,7 +1972,7 @@ uv run --with pytest python -m pytest \
 
 Expected: collection fails with `ModuleNotFoundError` for the new pure service.
 
-- [ ] **Step 3: Implement immutable schema primitives and four-section projection**
+- [x] **Step 3: Implement immutable schema primitives and four-section projection**
 
 Define typed dictionaries/dataclasses equivalent to:
 
@@ -1996,7 +1996,7 @@ Return JSON-ready copies so callers cannot mutate module-level definitions. Impl
 registry and explicit invalid strategy/variant `ValueError` messages before strategy-specific
 payload fields are added in Tasks 15~16.
 
-- [ ] **Step 4: Add RED validator tests for injection and type/range/option errors**
+- [x] **Step 4: Add RED validator tests for injection and type/range/option errors**
 
 ```python
 def test_validator_rejects_unknown_hidden_and_invalid_fields():
@@ -2012,7 +2012,7 @@ def test_validator_rejects_unknown_hidden_and_invalid_fields():
 Add a conditional field fixture and assert a submitted hidden value is rejected. Assert invalid
 date, number, toggle, text, list, required value, and duplicate multi-select option errors.
 
-- [ ] **Step 5: Implement validator and payload projector, then run GREEN**
+- [x] **Step 5: Implement validator and payload projector, then run GREEN**
 
 Validation order is identity -> unknown field -> visibility -> required -> control type -> range
 -> supplied options. `project_single_settings_payload()` must raise `SettingsValidationError`
@@ -2027,7 +2027,7 @@ git diff --check
 
 Expected: foundation tests pass with no Streamlit import in the service.
 
-- [ ] **Step 6: Commit Task 14**
+- [x] **Step 6: Commit Task 14**
 
 ```bash
 git add app/services/backtest_single_settings_workspace.py \
