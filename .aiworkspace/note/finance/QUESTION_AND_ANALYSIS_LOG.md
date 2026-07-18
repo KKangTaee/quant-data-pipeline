@@ -9677,3 +9677,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   modifier interaction이 원인이었다. option 수는 compact 4·14, large 1,031로 양극화됐다.
 - Follow-up: 20개 이하 checkbox-card, 21개 이상 search/list/chip을 공통 React renderer에
   적용하고 actual Quality·GTAA·large option desktop/760 QA를 완료했다.
+
+### 2026-07-18 - preset은 자산 목록뿐 아니라 검증 규칙의 재현 가능한 시작점이다
+
+- User request: GTAA뿐 아니라 전체 전략에서 preset을 선택하면 선택·보유·비용·위험 옵션이
+  자동으로 세팅되는지 확인하고, 그렇지 않으면 수정해 달라고 요청함.
+- Interpreted goal: preset 이름과 universe만 바뀌고 이전 사용자 tuning이 남는 상태를 없애되,
+  검증 기간과 manual ticker draft, saved replay의 명시값은 잃지 않아야 함.
+- Analysis result: React editor는 preset을 일반 select field로만 처리했고 legacy GTAA parameter
+  defaults도 일부 preset에만 있어 이름과 실제 실행 규칙이 분리돼 있었다.
+- Follow-up: 모든 named preset에 schema base profile을 제공하고 근거가 있는 GTAA 값만
+  override했다. React/fallback이 같은 Python profile을 적용하며 actual 4개 전략군에서 reset과
+  desktop/760px layout을 확인했다.

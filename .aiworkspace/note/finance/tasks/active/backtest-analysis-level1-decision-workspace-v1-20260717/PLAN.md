@@ -3060,7 +3060,7 @@ TypeScript 5.6, Vite 5, pytest / unittest, in-app Browser QA.
   `apply_single_settings_preset(workspace, values, preset_name)`, canonical GTAA override map,
   runtime injection and same-profile Python fallback callback.
 
-- [ ] **Step 1: Write failing canonical GTAA contract tests**
+- [x] **Step 1: Write failing canonical GTAA contract tests**
 
 Extend `BacktestPresetCatalogContractTests` in `tests/test_service_contracts.py`:
 
@@ -3111,7 +3111,7 @@ uv run --with pytest python -m pytest \
 
 Expected RED: missing U3 / U1 / U5 / Top-3 keys in `GTAA_PRESET_PARAMETER_DEFAULTS`.
 
-- [ ] **Step 2: Write failing pure profile and precedence tests**
+- [x] **Step 2: Write failing pure profile and precedence tests**
 
 Add an injected runtime fixture with two GTAA presets and parameter defaults to
 `tests/test_backtest_single_settings_workspace.py`, then add:
@@ -3250,7 +3250,7 @@ uv run --with pytest python -m pytest \
 
 Expected RED: `preset_profiles` and `apply_single_settings_preset` do not exist.
 
-- [ ] **Step 3: Implement canonical overrides and pure preset profiles**
+- [x] **Step 3: Implement canonical overrides and pure preset profiles**
 
 Expand `GTAA_PRESET_PARAMETER_DEFAULTS` only with values already stated by the legacy preset notes.
 In `app/services/backtest_single_settings_workspace.py`, add:
@@ -3328,7 +3328,7 @@ overlaying supplied explicit values, and export `apply_single_settings_preset`. 
 that is not declared by the current schema and validate its type/range/option through the existing
 validator during the focused tests.
 
-- [ ] **Step 4: Inject runtime override ownership and add fallback application**
+- [x] **Step 4: Inject runtime override ownership and add fallback application**
 
 Add to `build_single_settings_runtime_options()`:
 
@@ -3346,7 +3346,7 @@ to the corresponding `draft_key:field_id` session keys, stores the feedback labe
 rerun redraw the controls. When `universe_mode` changes from manual to preset, invoke the same helper
 for the current preset. Do not invoke the runner or persistence from either callback.
 
-- [ ] **Step 5: Run GREEN and focused Python regression**
+- [x] **Step 5: Run GREEN and focused Python regression**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -3362,7 +3362,7 @@ git diff --check
 
 Expected: focused preset/settings tests pass, py_compile and diff-check exit 0.
 
-- [ ] **Step 6: Commit Task 23**
+- [x] **Step 6: Commit Task 23**
 
 ```bash
 git add \
@@ -3388,7 +3388,7 @@ git commit -m "Backtest Analysis 프리셋 적용 계약 복원"
 - Produces: strategy-agnostic preset reducer, manual-to-preset application, visible feedback and
   unchanged run intent payload.
 
-- [ ] **Step 1: Write failing React boundary contract**
+- [x] **Step 1: Write failing React boundary contract**
 
 Add to `tests/test_backtest_refactor_boundaries.py`:
 
@@ -3427,7 +3427,7 @@ uv run --with pytest python -m pytest \
 
 Expected RED: preset profile types, reducer and feedback selectors are absent.
 
-- [ ] **Step 2: Add read-model types and generic reducer**
+- [x] **Step 2: Add read-model types and generic reducer**
 
 Add to `types.ts`:
 
@@ -3478,7 +3478,7 @@ function applyPresetProfileChange(
 This reducer may branch only on generic schema field ids; it must not contain a strategy name or
 preset-specific value.
 
-- [ ] **Step 3: Wire local state and feedback without rerun**
+- [x] **Step 3: Wire local state and feedback without rerun**
 
 Add `presetApplication` state beside `values`. Replace the one-field `setFieldValue()` with the reducer,
 setting both returned values and application. Reset feedback only when `workspace.draft_key` changes.
@@ -3498,7 +3498,7 @@ Pass the application message to the `preset_name` field control and render:
 Keep `emitSettingsIntent("run_single_strategy", ..., values)` unchanged so Python validation and payload
 projection remain authoritative.
 
-- [ ] **Step 4: Add compact feedback styling**
+- [x] **Step 4: Add compact feedback styling**
 
 Add:
 
@@ -3523,7 +3523,7 @@ Add:
 
 At 760px keep width at 100%, allow wrapping and horizontal overflow 0.
 
-- [ ] **Step 5: Run GREEN, focused regression and React build**
+- [x] **Step 5: Run GREEN, focused regression and React build**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -3538,7 +3538,7 @@ git diff --check
 
 Expected: boundary/settings tests pass, TypeScript/Vite production build and diff-check exit 0.
 
-- [ ] **Step 6: Commit Task 24**
+- [x] **Step 6: Commit Task 24**
 
 ```bash
 git add \
@@ -3565,7 +3565,7 @@ git commit -m "Backtest Analysis 프리셋 자동 적용 UI 연결"
 - Produces: actual all-family preset evidence, fresh verification, canonical docs alignment,
   protected-path audit and closeout commit.
 
-- [ ] **Step 1: Run desktop Browser QA across preset families**
+- [x] **Step 1: Run desktop Browser QA across preset families**
 
 At `http://localhost:8505/backtest`:
 
@@ -3586,14 +3586,14 @@ At `http://localhost:8505/backtest`:
 
 Do not run a backtest or trigger persistence. Capture desktop screenshot as a generated artifact only.
 
-- [ ] **Step 2: Run 760px Browser QA**
+- [x] **Step 2: Run 760px Browser QA**
 
 Set viewport width to 760px. Repeat GTAA validated preset and Quality + Value managed preset changes.
 Confirm feedback copy wraps, settings cards remain one column, compact multi-select remains usable,
 iframe height follows content and outer/settings horizontal overflow is 0. Capture the 760px screenshot
 without staging it.
 
-- [ ] **Step 3: Use verification-before-completion for fresh automated checks**
+- [x] **Step 3: Use verification-before-completion for fresh automated checks**
 
 ```bash
 uv run --with pytest python -m pytest tests/test_backtest_single_settings_workspace.py -q
@@ -3615,7 +3615,7 @@ git diff --check
 Record exact counts and compare repository-wide service failures to the existing 11-failure baseline;
 do not hide unrelated failures.
 
-- [ ] **Step 4: Use finance-doc-sync and audit protected paths**
+- [x] **Step 4: Use finance-doc-sync and audit protected paths**
 
 Update canonical flow, active task/root handoff logs with preset ownership, application precedence,
 Browser QA evidence, test counts and remaining risks. Then run:
@@ -3636,7 +3636,7 @@ fi
 
 Expected: no registry, run history, saved JSONL, `.superpowers/`, screenshot or run artifact is staged.
 
-- [ ] **Step 5: Commit Task 25**
+- [x] **Step 5: Commit Task 25**
 
 ```bash
 git commit -m "Backtest Analysis 프리셋 적용 QA와 문서 동기화"

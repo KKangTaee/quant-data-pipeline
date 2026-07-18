@@ -318,3 +318,49 @@
 - target 5-module `py_compile`: exit 0, output 없음.
 - pre-doc `git diff --check`: exit 0, output 없음.
 - post-doc `git diff --check`: exit 0, output 없음.
+
+## 2026-07-18 9차 Task 23 RED -> GREEN
+
+- RED: GTAA evidence parameter map, 모든 named preset complete profile, preset reset,
+  initial prefill precedence, fallback immediate apply 계약이 `16 failed`로 의도대로 실패했다.
+- GREEN: pure preset/profile focused `16 passed`; fallback source contract RED `1 failed` 뒤
+  form-free callback 구조로 `1 passed`; typed date 보존 RED `1 failed` 뒤 `1 passed`.
+- Task 23 final focused: `63 passed, 3 warnings`; target py_compile과 diff-check 통과.
+- implementation commit: `6cfab44b Backtest Analysis 프리셋 적용 계약 복원`.
+
+## 2026-07-18 9차 Task 24 RED -> GREEN
+
+- RED: React가 Python-owned profile을 소비하고 strategy rule을 포함하지 않는 boundary가
+  `1 failed`로 의도대로 실패했다.
+- GREEN: `SettingsPresetProfile`, generic `applyPresetProfile`, status feedback를 연결해
+  focused `1 passed`; full refactor boundary `43 passed, 3 warnings`.
+- React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+- implementation commit: `840f778f Backtest Analysis 프리셋 자동 적용 UI 연결`.
+
+## 2026-07-18 9차 Task 25 Browser QA
+
+- current code 전용 QA server: `http://localhost:8521/backtest`.
+- desktop GTAA: Top-2 preset은 `top=2 / interval=4 / horizon=1,6`, U3 preset은
+  `top=2 / interval=3 / horizon=1,3,6`; 사용자 시작일 `2020-01-01`은 유지됐다.
+- desktop Equal Weight: 사용자가 바꾼 interval 3 / cost 25 / QQQ가 Core ETFs 전환 뒤
+  interval 12 / cost 10 / SPY로 reset되고 `전략 기본 규칙을 적용했습니다.`가 표시됐다.
+- desktop GRS: top 9 / SHY가 compact preset 전환 뒤 top 4 / BIL로 reset됐다.
+- desktop Quality+Value Annual: top 50 / cost 30 / QQQ가 Coverage 100 전환 뒤
+  top 10 / cost 10 / SPY로 reset됐다.
+- 760px: settings main `clientWidth=717`, `scrollWidth=717`, field width `675px`, 단일 열,
+  preset status full-width를 확인했다. app console error는 0이며 Streamlit route의 기존
+  `_stcore/health` / `host-config` 404 두 건만 남았다.
+- screenshots generated / unstaged:
+  `backtest-analysis-level1-preset-auto-apply-gtaa-desktop-qa.png`,
+  `backtest-analysis-level1-preset-auto-apply-760-qa.png`.
+
+## 2026-07-18 9차 Task 25 Fresh Verification
+
+- focused preset / service / boundary / adapter: `134 passed, 3 warnings`.
+- full service contracts: `822 passed, 11 failed, 35 subtests passed, 3 warnings`.
+  11 failures는 기존 Sentiment React 1, Final Review 4, Practical Validation 6이며
+  신규 Level1 preset failure는 0이다.
+- React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+  `index.html` 0.42 kB, CSS 11.28 kB, JS 336.60 kB.
+- target 5-module py_compile: exit 0, output 없음.
+- pre-doc `git diff --check`: exit 0, output 없음.

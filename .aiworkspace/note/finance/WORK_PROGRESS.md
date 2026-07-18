@@ -6364,3 +6364,12 @@ Detailed historical logs were archived on `2026-04-13`.
 - focused 114 tests, React build, target py_compile, desktop/760px overflow QA를 완료했다.
   상세 증거와 baseline risk는 active task `RUNS.md`, `RISKS.md`를 본다.
 - protected JSONL, `.superpowers/`, generated screenshots는 closeout commit에서 제외한다.
+
+## 2026-07-18 - Backtest Analysis Deterministic Preset Application Closeout
+
+- 모든 named Single preset을 Python-owned complete profile로 만들고, 근거가 있는 GTAA
+  parameter만 override해 preset 변경 시 실행·선택·비용·위험 설정을 일관되게 reset한다.
+- date/manual ticker와 initial replay/prefill precedence는 보존하며 React/fallback은 같은 profile을
+  적용한다. actual GTAA/Equal Weight/GRS/Quality+Value desktop·760px QA를 완료했다.
+- focused 134 tests, React build, target py_compile, diff-check를 통과했다. 기존 service 11 failures와
+  protected JSONL, `.superpowers/`, generated screenshots는 closeout 범위에서 제외한다.

@@ -1,6 +1,6 @@
 # Status
 
-Status: 9차 Deterministic Preset Application Plan Written / Inline Execution Pending
+Status: Complete Through 9차 Deterministic Preset Application
 Last Updated: 2026-07-18
 
 ## Current Position
@@ -41,7 +41,7 @@ Last Updated: 2026-07-18
 - [x] 9차 corrective design 작성과 self-review
 - [x] 9차 written design 사용자 review
 - [x] 9차 implementation plan
-- [ ] 9차 RED -> GREEN implementation / Browser QA / closeout
+- [x] 9차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -108,3 +108,18 @@ Last Updated: 2026-07-18
   compact grid는 2열이다.
 - focused 114 tests, React 175-module production build와 target py_compile은 통과했다.
   service 11 failures는 pre-7차와 같은 repository baseline이며 신규 Level1 failure는 0이다.
+
+## Current 9차 Position
+
+- 모든 named preset family는 Python schema 기본값으로 complete profile을 만들고, 이미
+  근거가 있는 GTAA U1/U3/U5·Low-MDD parameter만 evidence override로 덮는다.
+- preset을 바꾸면 preset-owned 실행·선택·비용·위험 설정은 profile로 재설정되며,
+  검증 시작/종료일과 manual ticker draft는 보존된다. 초기 saved replay/prefill은 profile보다
+  우선하고 이후 사용자가 값을 다시 편집할 수 있다.
+- React와 Python fallback은 같은 `preset_profiles`를 적용한다. React에는 전략명·preset 숫자
+  하드코딩이 없고, Python fallback도 form submit 전 `on_change`에서 같은 patch를 적용한다.
+- actual Browser QA에서 GTAA Top-2/U3, Equal Weight, GRS, Quality+Value Annual의 reset과
+  적용 안내를 확인했다. 760px settings main은 `717/717`이며 field가 단일 열로 정렬된다.
+- fresh focused `134 passed`, 전체 service `822 passed / 11 failed`, React 175-module build,
+  target py_compile, diff-check를 확인했다. 11 failures는 기존 Sentiment 1, Final Review 4,
+  Practical Validation 6 source-contract baseline과 동일하다.

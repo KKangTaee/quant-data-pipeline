@@ -8,7 +8,7 @@ Last Verified: 2026-07-18
 이 문서는 Streamlit Backtest 화면의 single strategy, Portfolio Mix Builder, Practical Validation, Final Review, Operations Console, Portfolio Monitoring 흐름을 설명한다.
 UI form, payload 복원, candidate review, history replay, candidate replay, saved weighted portfolio replay를 수정할 때 먼저 확인한다.
 
-2026-07-18 기준으로 Backtest Analysis는 Python `backtest_analysis_decision_workspace_v1`과 `backtest_single_settings_workspace_v1`을 공통 계약으로 쓰는 Level1 one-shell이다. React는 고정 질문, Single / Portfolio Mix entry, 목적별 catalog, schema-driven 설정, 결과 판단과 intent만 렌더링하고, Python은 strategy maturity, configuration fingerprint, settings field/visibility/validation/payload, fresh / stale, Gate, handler 존재, 실행, 저장, Level2 인계를 소유한다. Single strategy 선택은 React catalog 한 곳이 소유하고 Strict Annual / Quarterly는 설정 profile의 segmented control로만 바꾼다. 9개 전략은 모두 `핵심 실행 설정 -> 투자 대상 Universe -> 선택·보유 규칙 -> 비용·위험 기준`의 같은 React surface를 사용하며 760px에서는 단일 열이 된다. legacy Quality Snapshot과 strategy-specific native form은 history/replay compatibility path에만 남고 primary 사용자 선택에는 노출하지 않는다. Portfolio Mix component 실행은 기존 Streamlit 경계를 유지한다. 별도 `Strategy Detail` panel은 active flow가 아니다.
+2026-07-18 기준으로 Backtest Analysis는 Python `backtest_analysis_decision_workspace_v1`과 `backtest_single_settings_workspace_v1`을 공통 계약으로 쓰는 Level1 one-shell이다. React는 고정 질문, Single / Portfolio Mix entry, 목적별 catalog, schema-driven 설정, 결과 판단과 intent만 렌더링하고, Python은 strategy maturity, configuration fingerprint, settings field/visibility/validation/payload, preset profile, fresh / stale, Gate, handler 존재, 실행, 저장, Level2 인계를 소유한다. Single strategy 선택은 React catalog 한 곳이 소유하고 Strict Annual / Quarterly는 설정 profile의 segmented control로만 바꾼다. 9개 전략은 모두 `핵심 실행 설정 -> 투자 대상 Universe -> 선택·보유 규칙 -> 비용·위험 기준`의 같은 React surface를 사용하며 760px에서는 단일 열이 된다. named preset을 바꾸면 Python이 strategy/variant 기본 규칙과 근거가 있는 override를 합친 complete profile을 적용하고, 검증 기간과 manual ticker draft는 보존한다. React와 fallback은 이 profile을 표시·적용할 뿐 전략별 숫자를 계산하지 않는다. legacy Quality Snapshot과 strategy-specific native form은 history/replay compatibility path에만 남고 primary 사용자 선택에는 노출하지 않는다. Portfolio Mix component 실행은 기존 Streamlit 경계를 유지한다. 별도 `Strategy Detail` panel은 active flow가 아니다.
 
 ## 핵심 파일
 
@@ -33,7 +33,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_analysis.py` | `Backtest Analysis` stage wrapper. 고정 `context` React surface를 fragment 밖에 두고 Single / Mix work와 mutable `decision` surface만 fragment 안에서 갱신한다. Reference / research 보조 패널은 기본 render path에서 제외한다 |
 | `app/web/backtest_analysis_workspace.py` | current session을 pure read model로 adapt하고 component intent allow-list, configuration fingerprint, distinct save / handoff Python handler를 검증한다 |
 | `app/web/components/backtest_analysis_decision_workspace/` | Level1 React one-shell. fixed question, purpose-grouped strategy catalog, schema-driven Single settings, new / saved Mix inner mode, decision-first KPI / 이유 / action, 760px layout와 ResizeObserver를 담당하며 분류 / validation / payload / Gate / persistence는 하지 않는다 |
-| `app/web/backtest_single_settings_workspace.py` | current runtime option / prefill / draft adapter, validated settings intent dispatcher, generic Python fallback. 숨은 editor 분기는 payload에서 제외하고 unknown field는 거부하며 실제 callable runner만 호출한다 |
+| `app/web/backtest_single_settings_workspace.py` | current runtime option / prefill / draft adapter, validated settings intent dispatcher, same-profile Python fallback. fallback preset callback은 profile-owned widget만 submit 전에 갱신하고 date/manual ticker state를 보존한다. 숨은 editor 분기는 payload에서 제외하고 unknown field는 거부하며 실제 callable runner만 호출한다 |
 | `app/web/backtest_single_strategy.py` | `Single Strategy` 화면 orchestration. React catalog의 strategy intent, prefill notice, family variant segmented control, 공통 summary, form dispatch, latest result 연결을 소유한다. 중복 Strategy dropdown과 별도 Strategy Detail panel은 렌더링하지 않는다 |
 | `app/web/backtest_single_forms/` | history/replay compatibility용 legacy strategy-specific renderer. current Single primary route는 이 파일들을 dispatch하지 않는다 |
 | `app/web/backtest_single_runner.py` | Single Strategy service-facing payload 표시, execution service 호출, latest bundle state 저장, run history append |
@@ -43,7 +43,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/services/backtest_compare_catalog.py` | Streamlit-free Compare runner catalog service. 전략별 default / universe resolution / runtime dispatch / runtime owner metadata attach 담당 |
 | `app/services/backtest_strategy_catalog.py` | Streamlit-free purpose group / maturity catalog. `Risk-On Momentum 5D`는 research가 아니라 development로 분류한다 |
 | `app/services/backtest_analysis_decision_workspace.py` | Streamlit-free Level1 read model. Single / Mix 공통 truth, result freshness, root reason dedup, KPI / error / action projection을 계산한다 |
-| `app/services/backtest_single_settings_workspace.py` | Streamlit-free Single settings schema / validation / exact payload projection. current primary 12개 concrete variant와 legacy replay-only Quality Snapshot을 구분한다 |
+| `app/services/backtest_single_settings_workspace.py` | Streamlit-free Single settings schema / validation / exact payload projection / deterministic preset profile. current primary 12개 concrete variant와 legacy replay-only Quality Snapshot을 구분하고, named preset마다 schema base와 evidence override를 합친 complete patch를 제공한다 |
 | `app/services/backtest_portfolio_mix_readiness.py` | Streamlit-free Portfolio Mix readiness helper. component role / weight row와 legacy role inference를 UI 밖에서 담당 |
 | `app/services/backtest_result_read_model.py` | Streamlit-free Backtest result read model helper. data trust row와 weighted component contribution view 담당 |
 | `app/services/backtest_price_refresh.py` | Backtest Data Trust / Factor Readiness의 bounded OHLCV refresh plan과 실행. active ticker-change repair가 있으면 source ticker는 보존하고 collection ticker만 resolved symbol로 바꾼다 |
@@ -465,6 +465,10 @@ Phase 30 third work unit status:
   21개 이상에서 검색·bounded checkbox list·selected chip을 사용한다. 선택 결과는 schema
   catalog 순서의 배열로 정규화하며 React local edit만으로 Streamlit rerun을 만들지 않는다.
   required·unknown option·payload·runner 판단은 기존 Python owner를 유지한다.
+- named preset 변경은 preset-owned field를 strategy/variant schema 기본값부터 다시 적용한다.
+  `GTAA_PRESET_PARAMETER_DEFAULTS`처럼 이미 근거가 있는 값만 override하며, 근거 없는 preset별
+  tuning은 만들지 않는다. 시작일·종료일·manual ticker draft는 보존하고 saved replay/prefill은
+  최초 profile보다 우선한다. React와 Python fallback은 같은 profile과 적용 안내를 사용한다.
 - selection history가 있는 전략은 latest result의 `Selection History Table` / `Interpretation Summary`에서 상세를 본다. 5A 이후 Global Relative Strength도 기존 Selection History 뷰에서 리밸런싱별 raw selected / final selected / cash-retained slot을 확인한다.
 
 ## Stage / Checkpoint 용어 기준

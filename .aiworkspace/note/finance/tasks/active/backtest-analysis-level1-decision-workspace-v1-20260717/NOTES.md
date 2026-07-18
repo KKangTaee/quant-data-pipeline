@@ -201,3 +201,19 @@ generated artifact이므로 commit하지 않는다.
   Quality + Value Annual과 manual-to-preset transition을 desktop / 760px에서 확인한다.
 - plan의 profile type / runtime key / helper signature / React type / test token을 교차 대조했고
   placeholder, 근거 없는 tuning, 보호 대상 stage, Level2/3 scope 확장은 남기지 않았다.
+
+## 2026-07-18 9차 Runtime Decisions And Browser Findings
+
+- preset profile은 date와 manual ticker를 제외한 schema field 기본값 전체를 소유한다.
+  preset 변경 시 이전 preset이나 사용자 tuning이 섞이지 않도록 base profile부터 다시 적용한다.
+- `GTAA_PRESET_PARAMETER_DEFAULTS`는 기존 legacy form에 이미 기록된 U1/U3/U5와 Low-MDD
+  설정만 확장했다. Equal Weight, GRS, Risk Parity, Dual Momentum, strict factor preset에는
+  근거 없는 전략별 숫자를 만들지 않고 strategy/variant 기본 규칙을 적용한다.
+- fallback callback은 profile이 실제로 소유한 field id만 widget state에 쓰며, Streamlit
+  `date_input`의 `date` 타입과 manual ticker state는 건드리지 않는다.
+- 8505 첫 QA에서 old Python process와 새 ignored React build가 섞여 `preset_profiles`가
+  없는 TypeError가 한 번 발생했다. `fileWatcherType none` 서버의 stale-process 문제였고,
+  current code로 새 8521 QA server를 띄운 뒤 app error 없이 같은 interaction을 검증했다.
+- GTAA Top-2는 `top=2`, `interval=4`, horizon `1/6`으로, U3는 `top=2`, `interval=3`,
+  horizon `1/3/6`으로 바뀌면서 사용자가 바꾼 시작일은 유지됐다. Equal Weight, GRS,
+  Quality+Value는 사용자 수정값을 각 전략 기본값으로 reset했다.
