@@ -64,13 +64,26 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
   const probabilities = selectedCard?.kind === "conditional_outlook" ? selectedCard.probabilities || [] : [];
   const conditionalPath = selectedCard?.kind === "conditional_outlook" ? selectedCard?.conditional_path : undefined;
   const forecastPoints = conditionalPath?.status !== "UNAVAILABLE" ? conditionalPath?.points || [] : [];
+  const scalePaths = horizons.flatMap((item) => (
+    item.kind === "conditional_outlook"
+      && item.conditional_path
+      && item.conditional_path.status !== "UNAVAILABLE"
+      ? [item.conditional_path]
+      : []
+  ));
+  const scaleForecastPoints = scalePaths.flatMap((path) => path.points || []);
+  const scaleTerminalPoints = scalePaths.flatMap((path) => (
+    path.terminal ? [path.terminal] : []
+  ));
   const xValues = [
     ...anchors.map((point) => point.x),
-    ...forecastPoints.flatMap((point) => [point.x, point.lower_x, point.upper_x]),
+    ...scaleForecastPoints.map((point) => point.x),
+    ...scaleTerminalPoints.flatMap((point) => [point.lower_x, point.upper_x]),
   ];
   const yValues = [
     ...anchors.map((point) => point.y),
-    ...forecastPoints.flatMap((point) => [point.y, point.lower_y, point.upper_y]),
+    ...scaleForecastPoints.map((point) => point.y),
+    ...scaleTerminalPoints.flatMap((point) => [point.lower_y, point.upper_y]),
   ];
   const xBound = Math.max(1.25, ...xValues.map((value) => Math.abs(value) * 1.12));
   const yBound = Math.max(1.1, ...yValues.map((value) => Math.abs(value) * 1.12));

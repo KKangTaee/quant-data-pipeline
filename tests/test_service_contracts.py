@@ -8322,6 +8322,29 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("fm-pattern-map__leader", pattern_map)
         self.assertIn("fm-pattern-map__direction", style)
 
+    def test_futures_macro_pattern_map_keeps_observed_anchors_on_one_shared_scale(self) -> None:
+        pattern_map = Path(
+            "app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("const scalePaths = horizons.flatMap", pattern_map)
+        self.assertIn("const scaleForecastPoints = scalePaths.flatMap", pattern_map)
+        self.assertIn("const scaleTerminalPoints = scalePaths.flatMap", pattern_map)
+        self.assertIn("...scaleForecastPoints.map((point) => point.x)", pattern_map)
+        self.assertIn(
+            "...scaleTerminalPoints.flatMap((point) => [point.lower_x, point.upper_x])",
+            pattern_map,
+        )
+        self.assertIn("...scaleForecastPoints.map((point) => point.y)", pattern_map)
+        self.assertIn(
+            "...scaleTerminalPoints.flatMap((point) => [point.lower_y, point.upper_y])",
+            pattern_map,
+        )
+        self.assertNotIn(
+            "...forecastPoints.flatMap((point) => [point.x, point.lower_x, point.upper_x])",
+            pattern_map,
+        )
+
     def test_futures_macro_react_copy_avoids_trade_and_causal_claims(self) -> None:
         source = "\n".join(
             path.read_text(encoding="utf-8")
