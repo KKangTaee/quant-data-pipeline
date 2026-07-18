@@ -850,6 +850,32 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn("dangerouslySetInnerHTML", component)
         self.assertNotIn("execute_single_backtest", component)
 
+    def test_react_settings_applies_python_owned_preset_profiles_without_strategy_rules(
+        self,
+    ) -> None:
+        root = (
+            PROJECT_ROOT
+            / "app/web/components/backtest_analysis_decision_workspace"
+            / "frontend/src"
+        )
+        types = (root / "types.ts").read_text()
+        component = (root / "BacktestAnalysisDecisionWorkspace.tsx").read_text()
+
+        self.assertIn("export type SettingsPresetProfile", types)
+        self.assertIn("preset_profiles: Record<string, SettingsPresetProfile>", types)
+        self.assertIn("function applyPresetProfile", component)
+        self.assertIn("workspace.preset_profiles", component)
+        self.assertIn('fieldId === "preset_name"', component)
+        self.assertIn('fieldId === "universe_mode"', component)
+        self.assertIn('role="status"', component)
+        for strategy_specific_rule in (
+            "GTAA Evidence",
+            "GTAA SPY Low-MDD Style Top-2 ADV20",
+            "score_lookback_months: [1, 6]",
+            "trend_filter_window: 250",
+        ):
+            self.assertNotIn(strategy_specific_rule, component)
+
     def test_react_multi_select_is_modifier_free_and_adaptive(self) -> None:
         root = (
             PROJECT_ROOT

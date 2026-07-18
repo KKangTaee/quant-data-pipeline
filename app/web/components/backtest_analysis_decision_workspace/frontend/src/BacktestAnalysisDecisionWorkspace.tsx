@@ -60,6 +60,30 @@ function settingsInitialValues(workspace: SingleSettingsWorkspace) {
   )
 }
 
+function applyPresetProfile(
+  workspace: SingleSettingsWorkspace,
+  current: SettingsValues,
+  fieldId: string,
+  nextValue: unknown,
+) {
+  const next = { ...current, [fieldId]: nextValue }
+  if (fieldId !== "preset_name" && fieldId !== "universe_mode") {
+    return { values: next, sourceLabel: null }
+  }
+  if (fieldId === "universe_mode" && nextValue !== "preset") {
+    return { values: next, sourceLabel: null }
+  }
+  const presetName = String(
+    fieldId === "preset_name" ? nextValue : next.preset_name ?? "",
+  )
+  const profile = workspace.preset_profiles[presetName]
+  if (!profile) return { values: next, sourceLabel: null }
+  return {
+    values: { ...next, ...profile.values },
+    sourceLabel: profile.source_label,
+  }
+}
+
 function optionLabel(field: SettingsField, value: unknown) {
   return (
     field.options?.find((option) => option.value === value)?.label ?? String(value)
@@ -238,11 +262,13 @@ function SettingsFieldControl({
   value,
   onChange,
   error,
+  applicationNotice,
 }: {
   field: SettingsField
   value: unknown
   onChange: (value: unknown) => void
   error?: string
+  applicationNotice?: string | null
 }) {
   const inputId = `bt1-setting-${field.field_id}`
   let control: React.ReactNode
@@ -363,6 +389,11 @@ function SettingsFieldControl({
           {value.length}개 선택 · {value.slice(0, 5).map((item) => optionLabel(field, item)).join(", ")}
         </small>
       )}
+      {applicationNotice && (
+        <p className="bt1-settings-application-notice" role="status">
+          {applicationNotice}
+        </p>
+      )}
       {error && <p className="bt1-settings-field-error">{error}</p>}
     </div>
   )
@@ -375,10 +406,12 @@ function SingleSettingsEditor({ workspace }: { workspace: SingleSettingsWorkspac
   )
   const [values, setValues] = useState<SettingsValues>(initialValues)
   const [pending, setPending] = useState(false)
+  const [presetApplication, setPresetApplication] = useState<string | null>(null)
 
   useEffect(() => {
     setValues(initialValues)
     setPending(false)
+    setPresetApplication(null)
   }, [workspace.draft_key, initialValues])
 
   useEffect(() => {
@@ -386,7 +419,9 @@ function SingleSettingsEditor({ workspace }: { workspace: SingleSettingsWorkspac
   }, [workspace.validation_errors])
 
   const setFieldValue = (fieldId: string, nextValue: unknown) => {
-    setValues((current) => ({ ...current, [fieldId]: nextValue }))
+    const applied = applyPresetProfile(workspace, values, fieldId, nextValue)
+    setValues(applied.values)
+    setPresetApplication(applied.sourceLabel)
   }
 
   return (
@@ -442,6 +477,9 @@ function SingleSettingsEditor({ workspace }: { workspace: SingleSettingsWorkspac
                     field={field}
                     value={values[field.field_id]}
                     error={workspace.validation_errors[field.field_id]}
+                    applicationNotice={
+                      field.field_id === "preset_name" ? presetApplication : null
+                    }
                     key={field.field_id}
                     onChange={(nextValue) => setFieldValue(field.field_id, nextValue)}
                   />
@@ -456,6 +494,11 @@ function SingleSettingsEditor({ workspace }: { workspace: SingleSettingsWorkspac
                         field={field}
                         value={values[field.field_id]}
                         error={workspace.validation_errors[field.field_id]}
+                        applicationNotice={
+                          field.field_id === "preset_name"
+                            ? presetApplication
+                            : null
+                        }
                         key={field.field_id}
                         onChange={(nextValue) => setFieldValue(field.field_id, nextValue)}
                       />

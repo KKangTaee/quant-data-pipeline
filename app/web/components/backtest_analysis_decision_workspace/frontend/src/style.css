@@ -674,6 +674,18 @@ button {
   color: #45677d !important;
 }
 
+.bt1-settings-application-notice {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid #cfe2d8;
+  border-radius: 9px;
+  color: #36654f;
+  background: #f0f8f4;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .bt1-settings-field.has-error input,
 .bt1-settings-field.has-error select {
   border-color: #d68e8e;

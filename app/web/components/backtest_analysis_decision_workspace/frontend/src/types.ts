@@ -37,6 +37,12 @@ export type SettingsSection = {
   disclosures: Array<Record<string, unknown>>
 }
 
+export type SettingsPresetProfile = {
+  application_kind: "strategy_default" | "validated_override"
+  source_label: string
+  values: Record<string, unknown>
+}
+
 export type SingleSettingsWorkspace = {
   schema_version: string
   strategy_choice: string
@@ -56,6 +62,7 @@ export type SingleSettingsWorkspace = {
     options: SettingsOption[]
   }
   sections: SettingsSection[]
+  preset_profiles: Record<string, SettingsPresetProfile>
   evidence: {
     universe_summary: string
     universe_full_text: string
