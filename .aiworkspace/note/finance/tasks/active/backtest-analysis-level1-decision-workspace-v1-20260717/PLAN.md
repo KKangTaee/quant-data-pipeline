@@ -6199,7 +6199,7 @@ git commit -m "Backtest Analysis 현재 선택과 팩터 표시 QA 동기화"
 - Produces: `build_backtest_workflow_shell(active_stage: str | None) -> dict[str, Any]`.
 - Produces: `resolve_backtest_workflow_shell_intent(intent: Mapping[str, Any] | None, *, active_stage: str | None, consumed_nonce: str | None) -> dict[str, Any]`.
 
-- [ ] **Step 1: Write the failing pure-contract tests**
+- [x] **Step 1: Write the failing pure-contract tests**
 
 ```python
 from app.services.backtest_workflow_shell import (
@@ -6275,13 +6275,13 @@ def test_workflow_shell_accepts_only_new_allowed_noncurrent_intent() -> None:
     assert current["accepted"] is False
 ```
 
-- [ ] **Step 2: Run RED and confirm the missing-service failure**
+- [x] **Step 2: Run RED and confirm the missing-service failure**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py -q`
 
 Expected: FAIL during collection with `ModuleNotFoundError: No module named 'app.services.backtest_workflow_shell'`.
 
-- [ ] **Step 3: Implement the minimal Python-owned stage and intent contract**
+- [x] **Step 3: Implement the minimal Python-owned stage and intent contract**
 
 ```python
 from __future__ import annotations
@@ -6368,13 +6368,13 @@ def resolve_backtest_workflow_shell_intent(
     )
 ```
 
-- [ ] **Step 4: Run GREEN and focused route regression**
+- [x] **Step 4: Run GREEN and focused route regression**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py::BacktestRefactorBoundaryTests::test_backtest_state_exports_workflow_helpers -q`
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit the pure contract**
+- [x] **Step 5: Commit the pure contract**
 
 ```bash
 git add app/services/backtest_workflow_shell.py tests/test_backtest_workflow_shell.py
