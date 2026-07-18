@@ -68,22 +68,11 @@ export type PatternPoint = {
   transition_label: string;
 };
 
-export type PatternZone = {
-  horizon: "5D" | "20D";
-  regime: RegimeKey;
-  center_x: number;
-  center_y: number;
-  radius_x: number;
-  radius_y: number;
-  probability: number;
-};
-
 export type PatternMapPayload = {
   title: string;
   x_label: string;
   y_label: string;
   path: PatternPoint[];
-  zones: PatternZone[];
 };
 
 export type EvidenceGroup = {
@@ -177,7 +166,7 @@ function FuturesMacroWorkbench({ args }: Props) {
       />
       <PatternHorizonSection horizons={payload.horizons} />
       <div className="fm-workbench__pattern-layout">
-        <PatternMapSection patternMap={payload.pattern_map} />
+        <PatternMapSection patternMap={payload.pattern_map} horizons={payload.horizons} />
         <CurrentEvidencePanel evidence={payload.evidence} />
       </div>
       <PatternRibbonSection ribbon={payload.ribbon} />

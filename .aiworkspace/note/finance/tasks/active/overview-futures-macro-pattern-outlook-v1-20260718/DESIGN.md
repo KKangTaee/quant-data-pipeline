@@ -325,8 +325,8 @@ V1은 기존 stored futures daily OHLCV를 읽는다.
 - y축: Macro Pressure composite
 - 실선: 실제 관측 경로
 - 현재점: current pattern
-- 미래: 단일 점선 예측 경로가 아니라 matched episode의 5D / 20D outcome을 집계한 반투명 probability zone
-- zone 중심은 outcome median, 크기는 interquartile range, opacity는 해당 regime probability를 나타냄
+- 미래: `관측만 / 다음 5D / 다음 20D` 선택에 따라 현재점에서 네 체제 범주로 뻗는 조건부 점선 분기
+- 분기의 상대 굵기와 끝 원의 숫자는 horizon probability를 나타내며, 끝점은 예측 좌표나 실제 이동 경로가 아니다. 기존 median / IQR 타원은 단일 예측 위치처럼 읽혀 후속 UX 교정에서 제거한다.
 - hover / focus: 날짜, state, 핵심 family score, estimate status
 
 Evidence는 다음을 분리한다.

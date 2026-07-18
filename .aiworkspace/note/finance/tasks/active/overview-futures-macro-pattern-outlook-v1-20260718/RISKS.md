@@ -24,8 +24,8 @@ UI copy must say `근거`, `일치`, `압력`, or `해석` rather than confirmed
 
 ### UI Overconfidence
 
-A polished probability path can look more certain than the evidence.
-Baseline comparison, estimate status, sample, and unavailable states must remain visible.
+A polished probability path can look more certain than the evidence. The first ellipse design made one median location look like the forecast and the 60-point observed polyline hid time order.
+The corrected map uses only three observed anchors and categorical dashed branches. Baseline comparison remains in the horizon cards, while estimate status, sample, edge label, and unavailable-number suppression remain visible beside the map.
 
 ### Runtime Cost
 

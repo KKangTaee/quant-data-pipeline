@@ -24,6 +24,10 @@
 - Browser QA at `http://localhost:8512` confirmed 3 horizon cards, map + evidence, 60D ribbon, 5 asset pathways, method disclosure, 420px single-column layout with no horizontal clipping, and 0 console errors.
 - Overall roadmap: 1차 design through 5차 actual QA / docs sync complete (`5/5`).
 - No DB schema, provider, registry, or saved setup has been changed.
+- User rejected the unreadable 60-point polyline / forecast ellipse map and approved a replacement with three observed anchors plus selectable 5D / 20D conditional probability branches.
+- Task 8 complete: the 60-point polyline and synthetic probability ellipses are removed from the active payload / component. The map now renders `20D 전 → 5D 전 → 현재` observed anchors and selectable 5D / 20D categorical probability branches.
+- Actual QA: 5D `38/5/23/34% · 120 episodes`, 20D `43/10/21/26% · 42 episodes`; both remain `PROVISIONAL / 방향 우위 미확인`. `관측만` removes all four forecast branches.
+- Desktop and 420px Browser QA passed with 3 anchors, 4 selected-horizon branches, no horizontal overflow, and zero console errors. The horizon cards remain the primary numeric probability surface.
 
 ## Roadmap State
 
@@ -32,7 +36,9 @@
 - 3차 service / validation implementation: complete
 - 4차 React Workbench V2: complete
 - 5차 actual QA / docs sync: complete
+- 후속 1차 readable map implementation: complete
+- 후속 2차 actual QA / docs sync: complete
 
 ## Next Action
 
-후속 개선은 별도 승인 범위다. 다음 후보는 더 긴 독립 episode 이력, exchange contract / roll-aware source, calibration 개선이며 현재 publication gate를 낮추지 않는다.
+전체 roadmap `5/5`와 readable-map 후속 `2/2`가 완료됐다. 다음 후보는 더 긴 독립 episode 이력, exchange contract / roll-aware source, calibration 개선이며 현재 publication gate를 낮추지 않는다.

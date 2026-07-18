@@ -26,9 +26,10 @@
 
 ## React V2 Decisions
 
-- The observed pattern polyline is never connected to a probability-zone center; this prevents a conditional distribution from looking like a single forecast path.
+- The readable map downsamples the 60D path to `20D 전 / 5D 전 / 현재` anchors. It does not publish a probability-zone center; selected 5D / 20D probabilities branch from the current point to categorical regime endpoints, which are explicitly not predicted coordinates or an actual future path.
 - Current observation cards do not accept or render probability rows. `UNAVAILABLE` future horizons show the reason and no fabricated percentage.
 - The V1 `RecentFlowSection.tsx` and `HistoricalValidationPanel.tsx` were removed after reference count reached zero outside their own files.
+- The horizon probability cards remain the primary numeric forecast surface. The path map reuses the same rows, status, edge label, episode count, and status reason rather than calculating a second forecast.
 
 ## Actual QA Facts
 

@@ -8265,6 +8265,26 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("@media (max-width: 760px)", style)
         self.assertIn("grid-template-columns: 1fr", style)
 
+    def test_futures_macro_pattern_map_uses_observed_anchors_and_conditional_branches(self) -> None:
+        source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")
+        root = (source_root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
+        pattern_map = (source_root / "PatternMapSection.tsx").read_text(encoding="utf-8")
+        style = (source_root / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("horizons={payload.horizons}", root)
+        self.assertIn('data-horizon="observed"', pattern_map)
+        self.assertIn('data-horizon="5D"', pattern_map)
+        self.assertIn('data-horizon="20D"', pattern_map)
+        self.assertIn("20D 전", pattern_map)
+        self.assertIn("5D 전", pattern_map)
+        self.assertIn("현재 ·", pattern_map)
+        self.assertIn("if (path.length <= daysAgo)", pattern_map)
+        self.assertIn("fm-pattern-map__branch", pattern_map)
+        self.assertIn("Math.round(row.value * 100)", pattern_map)
+        self.assertIn("실제 이동 경로가 아닙니다", pattern_map)
+        self.assertNotIn("<ellipse", pattern_map)
+        self.assertIn("stroke-dasharray", style)
+
     def test_futures_macro_react_copy_avoids_trade_and_causal_claims(self) -> None:
         source = "\n".join(
             path.read_text(encoding="utf-8")
@@ -26177,6 +26197,7 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertNotIn("probabilities", payload["horizons"][0])
         self.assertEqual(payload["horizons"][1]["kind"], "conditional_outlook")
         self.assertEqual(payload["horizons"][1]["baseline_label"], "평소 기준 확률")
+        self.assertNotIn("zones", payload["pattern_map"])
         self.assertEqual([item["id"] for item in payload["command"]["actions"]], ["daily_refresh", "reload"])
         self.assertNotIn("validation", payload)
         self.assertNotIn("load_validation", str(payload))

@@ -826,34 +826,6 @@ def _pattern_hero_payload(macro: dict[str, Any], pattern: dict[str, Any]) -> dic
     }
 
 
-def _pattern_outlook_zones(pattern_outlook: dict[str, Any]) -> list[dict[str, Any]]:
-    zones: list[dict[str, Any]] = []
-    for horizon in list(pattern_outlook.get("horizons") or []):
-        if str(horizon.get("estimate_status")) == "UNAVAILABLE":
-            continue
-        pathways = dict(horizon.get("asset_pathways") or {})
-        risk = dict(pathways.get("risk_assets") or {})
-        pressure_values = [
-            dict(pathways.get(key) or {}).get("median_forward_z")
-            for key in ("rates", "dollar", "commodities")
-        ]
-        available_pressure = [float(value) for value in pressure_values if value is not None]
-        dominant = str(horizon.get("dominant_regime") or "mixed")
-        probability = float(dict(horizon.get("probabilities") or {}).get(dominant) or 0.0)
-        zones.append(
-            {
-                "horizon": f"{int(horizon.get('horizon') or 0)}D",
-                "regime": dominant,
-                "center_x": float(risk.get("median_forward_z") or 0.0),
-                "center_y": sum(available_pressure) / len(available_pressure) if available_pressure else 0.0,
-                "radius_x": max(0.15, abs(float(risk.get("upper_quartile_z") or 0.0) - float(risk.get("lower_quartile_z") or 0.0))),
-                "radius_y": 0.35,
-                "probability": probability,
-            }
-        )
-    return zones
-
-
 def _pattern_evidence_payload(
     pattern: dict[str, Any],
     pattern_outlook: dict[str, Any],
@@ -976,7 +948,6 @@ def build_futures_macro_react_workbench_payload(
             "x_label": "위험선호",
             "y_label": "매크로 부담",
             "path": list(pattern.get("path") or []),
-            "zones": _pattern_outlook_zones(pattern_outlook),
         },
         "evidence": _pattern_evidence_payload(pattern, pattern_outlook, macro),
         "ribbon": {"title": "최근 60거래일 체제", "items": list(pattern.get("ribbon") or [])},

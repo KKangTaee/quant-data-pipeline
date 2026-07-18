@@ -52,6 +52,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-18 - Futures Macro 지도는 미래 한 점이 아니라 조건부 체제 분기를 보여준다
+
+- User request: 읽을 수 없는 최근 패턴 경로를 단순화하고, 현재점 뒤의 다음 5D / 20D 가능성을 점선으로 함께 표시해 달라고 요청함.
+- Interpreted goal: 실제 과거 이동과 확률적 미래 시나리오를 한 지도에서 비교하되, 조건부 분포를 확정 경로나 예측 좌표로 오해하지 않게 한다.
+- Analysis result: 관측은 `20D 전 / 5D 전 / 현재` 세 anchor의 실선으로 제한하고, 선택한 horizon의 네 체제 확률을 현재점에서 categorical endpoint로 뻗는 점선 분기로 표시한다. 확률·표본·PROVISIONAL·우위 미확인은 기존 horizon payload를 그대로 재사용한다.
+- Follow-up: 실제 5D `38/5/23/34% · 120개`, 20D `43/10/21/26% · 42개` 전환과 420px overflow / console QA를 active task에 기록한다.
+
 ### 2026-07-18 - Futures Macro는 장기 경제사이클이 아니라 5D / 20D 조건부 거시 레이더로 읽는다
 
 - User request: 현재 1D / 1W / 1M과 하루 기준 과거 점검을, 현재 패턴에서 향후 방향 가능성을 설명하는 Market Context형 화면으로 개선해 달라고 요청하고 UI A안을 선택함.

@@ -1431,6 +1431,79 @@ Do not stage the QA screenshot, `.playwright-mcp/`, registries, saved setups, ru
 
 ---
 
+### Task 8: Readable Observed Path And Conditional Branches
+
+**이걸 하는 이유?**
+
+기존 지도는 최근 60개 관측점을 같은 굵기의 선으로 연결해 시간 순서를 읽기 어렵고, 5D·20D 전망을 하나의 타원 중심으로 축약해 조건부 확률이 단일 예측 위치처럼 보인다. 사용자가 승인한 시안처럼 실제 관측과 미래 시나리오를 명확히 분리해야 한다.
+
+**Files:**
+
+- Modify: `tests/test_service_contracts.py`
+- Modify: `app/web/overview/futures_macro_helpers.py`
+- Modify: `app/web/streamlit_components/futures_macro_workbench/src/FuturesMacroWorkbench.tsx`
+- Modify: `app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx`
+- Modify: `app/web/streamlit_components/futures_macro_workbench/src/style.css`
+- Rebuild: `app/web/streamlit_components/futures_macro_workbench/component_static/`
+- Update: this active task's `DESIGN.md`, `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+
+**Interfaces:**
+
+- Consumes: existing `HorizonCard` probability rows, estimate status, edge label, episode count, and status reason.
+- Produces: a map with three observed anchors (`20D 전`, `5D 전`, `현재`) and an interactive `관측만 | 다음 5D | 다음 20D` conditional-branch layer.
+- Boundary: dashed branches point to regime categories and encode their probabilities; they are not predicted price coordinates or a deterministic future path.
+
+- [x] **Step 1: Write the failing UI and payload contracts**
+
+Add assertions that the map payload no longer contains synthetic `zones`, the root passes `horizons` to `PatternMapSection`, and the component exposes three horizon controls, three observed anchors, dashed regime branches, probability labels, provisional/unavailable copy, and no forecast ellipse.
+
+- [x] **Step 2: Run the focused contract tests and verify RED**
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_pattern_map_uses_observed_anchors_and_conditional_branches \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_futures_macro_v2_payload_separates_current_and_future_horizons
+```
+
+Expected: fail because the current map still consumes `zones`, renders ellipses, and does not receive horizon cards.
+
+- [x] **Step 3: Remove synthetic zone payload and implement the approved map**
+
+Keep the existing current-pattern path and horizon probability data. In React, downsample the observed path to 20D / 5D / current anchors, render the observed path as a solid arrow, and render the selected future horizon as four dashed regime branches whose labels and relative emphasis come directly from `ProbabilityRow.value`. Show status, edge label, episode count, and unavailable reason beside the map.
+
+- [x] **Step 4: Run focused tests and build GREEN**
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_pattern_map_uses_observed_anchors_and_conditional_branches \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_futures_macro_v2_payload_separates_current_and_future_horizons
+(cd app/web/streamlit_components/futures_macro_workbench && npm run build)
+```
+
+Expected: both contracts pass and Vite build exits 0.
+
+- [x] **Step 5: Perform actual desktop and 420px Browser QA**
+
+Verify all three controls, actual 5D / 20D probabilities and sample counts, no overlap or horizontal clipping, unavailable-number suppression, and zero console errors. Save one desktop screenshot as an unstaged generated artifact.
+
+- [x] **Step 6: Synchronize task and durable flow documentation**
+
+Record that the map is now `solid observed anchors + dashed conditional regime branches`, that the branch endpoints are categorical rather than predicted coordinates, and that the horizon cards remain the primary numeric forecast surface.
+
+- [x] **Step 7: Run full focused verification and commit**
+
+```bash
+.venv/bin/python -m unittest tests.test_futures_macro_pattern tests.test_futures_macro_pattern_validation
+.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests tests.test_service_contracts.FuturesMacroThermometerContractTests
+.venv/bin/python -m py_compile app/web/overview/futures_macro_helpers.py
+git diff --check
+git status --short
+```
+
+Expected: tests pass, compile exits 0, diff check is clean, and unrelated untracked paths remain untouched.
+
+---
+
 ## Implementation Completion Checklist
 
 - [x] Task 1: point-in-time multi-window feature frame
@@ -1440,6 +1513,7 @@ Do not stage the QA screenshot, `.playwright-mcp/`, registries, saved setups, ru
 - [x] Task 5: default service integration / Python React payload V2
 - [x] Task 6: Market Context-style React workbench V2 / build
 - [x] Task 7: actual QA / performance gate / docs sync / closeout
+- [x] Task 8: readable observed anchors / conditional branches / actual QA
 
 ## Overall Roadmap State
 
@@ -1448,5 +1522,5 @@ Do not stage the QA screenshot, `.playwright-mcp/`, registries, saved setups, ru
 - 3차 service / validation implementation: complete
 - 4차 React Workbench V2: complete
 - 5차 actual QA / performance / docs sync: complete
-- 4차 React UI implementation: pending execution
-- 5차 actual QA / docs closeout: pending execution
+- 후속 1차 readable map implementation: complete
+- 후속 2차 actual QA / docs closeout: complete

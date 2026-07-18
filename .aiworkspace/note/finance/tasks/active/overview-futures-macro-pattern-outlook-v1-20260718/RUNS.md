@@ -82,3 +82,16 @@
 - Desktop screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-a-desktop.png` (generated, not staged).
 - `finance-doc-sync` aligned flow, architecture, project map, root milestone, and durable decision logs with the V2 behavior.
 - Final verification after docs: pattern modules passed 18 tests in 2.853s; selected service contracts passed 26 tests in 2.702s; Vite production build passed in 441ms; py_compile and `git diff --check` exited cleanly.
+
+## 2026-07-18 Task 8 — Readable Observed Path / Conditional Branches
+
+- Root cause: `PatternMapSection.tsx` connected all 60 daily path points with one stroke, while `_pattern_outlook_zones()` collapsed each horizon into a single ellipse with a fixed y-radius. The UI therefore hid time order and made a conditional distribution look like one forecast location.
+- RED: the focused contract failed because the component still rendered `<ellipse>`, did not receive `horizons`, lacked `관측만 / 다음 5D / 다음 20D`, and the payload still contained `zones`.
+- GREEN: the two focused UI/payload contracts passed; Vite emitted the new production bundle. Python now sends the current path only, while React reuses existing horizon probability rows, status, edge label, episode count, and reason.
+- Actual Browser QA at `http://localhost:8512`: default 5D rendered three observed anchors and four branches with `38/5/23/34%`, `PROVISIONAL`, `방향 우위 미확인`, 120 episodes. 20D switched to `43/10/21/26%`, 42 episodes. `관측만` reduced branches from four to zero.
+- 420px QA: root `clientWidth == scrollWidth` (`377px`), pattern body and evidence grid each resolved to one column, console errors 0.
+- Final bundle reload: three anchors, four 5D branches, selected button state, desktop `clientWidth == scrollWidth` (`1109px`), and console errors 0.
+- QA screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-conditional-branches-qa.png` (generated, not staged).
+- Verification: pattern feature / validation modules passed 18 tests; selected Futures Macro React and thermometer contracts passed 30 tests; Vite build, py_compile, and diff check passed.
+- Broader `OverviewAutomationContractTests` discovery has one pre-existing unrelated Sentiment source-string failure (`payload.summary.metrics.map`); the four selected Futures Macro React contracts and all `FuturesMacroThermometerContractTests` pass.
+- Pre-commit integration review added a short-history RED/GREEN guard: 5D / 20D anchors are omitted unless that many prior rows exist, so a single current row is never mislabeled as `20D 전`.
