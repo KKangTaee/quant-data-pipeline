@@ -8290,6 +8290,25 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("fm-pattern-map__outcome-dot", pattern_map)
         self.assertIn("stroke-dasharray", style)
 
+    def test_futures_macro_pattern_map_names_rate_dollar_and_inflation_pressure(self) -> None:
+        from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
+
+        payload = build_futures_macro_react_workbench_payload({}, pattern_outlook={})
+        pattern_map = Path(
+            "app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertEqual(payload["pattern_map"]["y_label"], "금리·달러·물가 압력")
+        self.assertIn("방어 · 금리·달러·물가 압력 강화", pattern_map)
+        self.assertIn("위험선호 · 금리·달러·물가 압력 강화", pattern_map)
+        self.assertIn("방어 · 금리·달러·물가 압력 완화", pattern_map)
+        self.assertIn("위험선호 · 금리·달러·물가 압력 완화", pattern_map)
+        self.assertNotIn('"y_label": "매크로 부담"', Path(
+            "app/web/overview/futures_macro_helpers.py"
+        ).read_text(encoding="utf-8"))
+        self.assertNotIn(" · 부담 강화", pattern_map)
+        self.assertNotIn(" · 부담 완화", pattern_map)
+
     def test_futures_macro_pattern_map_uses_one_terminal_range_and_readable_copy(self) -> None:
         pattern_map = Path(
             "app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx"

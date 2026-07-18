@@ -1,5 +1,13 @@
 # Futures Macro Pattern Outlook V1 Notes
 
+## 2026-07-19 — Copy Semantics
+
+- `매크로 부담` was too broad because users could read it as a direct judgment about the entire economy.
+- The map's Y coordinate is specifically the mean of the available 5D standardized `rate_pressure`, `dollar_pressure`, and `inflation_pressure` family values.
+- The approved visible label is therefore `금리·달러·물가 압력`, with matching `강화 / 완화` quadrant copy.
+- Individual cards such as `금리 부담` remain unchanged because they describe one family rather than the three-family composite.
+- No service formula, data source, lookback, coordinate, or conditional-outlook behavior changed.
+
 ## Confirmed Decisions
 
 - Futures Macro is a short-horizon macro radar, not a long-horizon economic-cycle replacement.

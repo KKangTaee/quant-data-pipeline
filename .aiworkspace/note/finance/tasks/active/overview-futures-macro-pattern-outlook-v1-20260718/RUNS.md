@@ -1,5 +1,16 @@
 # Futures Macro Pattern Outlook V1 Runs
 
+## 2026-07-19 Task 9 — Precise Macro Pressure Copy
+
+- Baseline: two focused pattern-map contracts passed before implementation.
+- RED: `test_futures_macro_pattern_map_names_rate_dollar_and_inflation_pressure` failed because the payload returned `매크로 부담` instead of `금리·달러·물가 압력`.
+- GREEN: the new focused contract passed; Vite rebuilt the production component in 452ms.
+- Actual desktop QA showed all four explicit quadrant labels inside their quadrants without crossing the center axes.
+- Actual 420px QA reported component document `clientWidth == scrollWidth == 377px`; the graph canvas reported `clientWidth == scrollWidth == 329px`.
+- Browser console errors: 0.
+- Desktop screenshot: `/Users/taeho/.codex/visualizations/2026/07/19/futures-macro-pressure-copy-desktop.png` (generated, not staged).
+- Mobile screenshot: `/Users/taeho/.codex/visualizations/2026/07/19/futures-macro-pressure-copy-mobile.png` (generated, not staged).
+
 ## 2026-07-18 Analysis
 
 - Read current finance docs, Overview flow boundaries, active Futures Macro research, and prior Futures Monitor task records.

@@ -992,7 +992,7 @@ def build_futures_macro_react_workbench_payload(
         "pattern_map": {
             "title": "최근 패턴 경로",
             "x_label": "위험선호",
-            "y_label": "매크로 부담",
+            "y_label": "금리·달러·물가 압력",
             "path": list(pattern.get("path") or []),
         },
         "evidence": _pattern_evidence_payload(pattern, pattern_outlook, macro),

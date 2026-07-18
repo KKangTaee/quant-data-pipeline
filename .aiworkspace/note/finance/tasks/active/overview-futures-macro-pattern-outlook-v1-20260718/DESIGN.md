@@ -540,3 +540,18 @@ Payload/UI contracts:
 이번 후속은 analog-based conditional path만 추가한다.
 새 provider, DB schema, supervised ML model, asset price target, trade signal,
 broker action, exchange contract roll model 또는 publication threshold 완화는 범위 밖이다.
+
+## 14. Market-Price Macro Pressure Copy Follow-up
+
+### 14.1 Why
+
+그래프의 `매크로 부담`과 `부담 강화 / 완화`는 경제 전체의 악화나 개선처럼 읽힐 수 있다.
+실제 Y축은 5D 표준화 금리 부담, 달러 압력, 물가 압력의 평균이므로 화면도 이 세 구성요소를 직접 이름 붙인다.
+
+### 14.2 Approved Copy Contract
+
+- Y축 payload: `금리·달러·물가 압력`
+- 상단 사분면: `금리·달러·물가 압력 강화`
+- 하단 사분면: `금리·달러·물가 압력 완화`
+- X축 `위험선호`, 개별 점수 카드의 `금리 부담` 등 기존 의미가 정확한 문구, 좌표 산식과 전망 로직은 유지한다.
+- 긴 문구가 들어간 실제 desktop / mobile 그래프에서 잘림과 겹침이 없어야 한다.

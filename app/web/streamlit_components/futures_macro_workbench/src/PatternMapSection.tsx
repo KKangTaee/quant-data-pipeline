@@ -139,10 +139,10 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
             <rect className="fm-pattern-map__quadrant quadrant-risk" x={WIDTH / 2} y={HEIGHT / 2} width={WIDTH / 2 - PAD_X} height={HEIGHT / 2 - PAD_Y} />
             <line className="fm-pattern-map__axis" x1={sx(0)} x2={sx(0)} y1={PAD_Y} y2={HEIGHT - PAD_Y} />
             <line className="fm-pattern-map__axis" x1={PAD_X} x2={WIDTH - PAD_X} y1={sy(0)} y2={sy(0)} />
-            <text className="fm-pattern-map__quadrant-label" x={PAD_X + 18} y={PAD_Y + 24}>방어 · 부담 강화</text>
-            <text className="fm-pattern-map__quadrant-label" x={WIDTH - PAD_X - 18} y={PAD_Y + 24} textAnchor="end">위험선호 · 부담 강화</text>
-            <text className="fm-pattern-map__quadrant-label" x={PAD_X + 18} y={HEIGHT - PAD_Y - 18}>방어 · 부담 완화</text>
-            <text className="fm-pattern-map__quadrant-label" x={WIDTH - PAD_X - 18} y={HEIGHT - PAD_Y - 18} textAnchor="end">위험선호 · 부담 완화</text>
+            <text className="fm-pattern-map__quadrant-label" x={PAD_X + 18} y={PAD_Y + 24}>방어 · 금리·달러·물가 압력 강화</text>
+            <text className="fm-pattern-map__quadrant-label" x={WIDTH - PAD_X - 18} y={PAD_Y + 24} textAnchor="end">위험선호 · 금리·달러·물가 압력 강화</text>
+            <text className="fm-pattern-map__quadrant-label" x={PAD_X + 18} y={HEIGHT - PAD_Y - 18}>방어 · 금리·달러·물가 압력 완화</text>
+            <text className="fm-pattern-map__quadrant-label" x={WIDTH - PAD_X - 18} y={HEIGHT - PAD_Y - 18} textAnchor="end">위험선호 · 금리·달러·물가 압력 완화</text>
 
             {showForecast && uncertaintyStep ? (
               <rect

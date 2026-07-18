@@ -1526,3 +1526,39 @@ Expected: tests pass, compile exits 0, diff check is clean, and unrelated untrac
 - 5차 actual QA / performance / docs sync: complete
 - 후속 1차 readable map implementation: complete
 - 후속 2차 actual QA / docs closeout: complete
+
+---
+
+### Task 9: Precise Macro Pressure Copy
+
+**이걸 하는 이유?**
+
+합성 Y축을 `매크로 부담`으로 축약하면 경제 전체 판단으로 오해하기 쉽다. 산식의 세 구성요소인 금리·달러·물가를 축과 사분면에 직접 표시한다.
+
+**Files:**
+
+- Modify: `tests/test_service_contracts.py`
+- Modify: `app/web/overview/futures_macro_helpers.py`
+- Modify: `app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx`
+- Rebuild: `app/web/streamlit_components/futures_macro_workbench/component_static/`
+- Update: this active task's `DESIGN.md`, `PLAN.md`, `STATUS.md`, `NOTES.md`, `RUNS.md`
+
+- [x] **Step 1: Add a failing copy contract**
+
+Assert that the payload exposes `금리·달러·물가 압력`, the React map uses the same phrase for 강화/완화 quadrants, and the ambiguous standalone `매크로 부담` / `· 부담 강화` / `· 부담 완화` copies are absent from the active source.
+
+- [x] **Step 2: Run the focused test and verify RED**
+
+Run the new `OverviewAutomationContractTests` method and expect it to fail on the old `매크로 부담` payload.
+
+- [x] **Step 3: Apply the minimal copy change and rebuild**
+
+Change only the payload Y label and four SVG quadrant labels, then run `npm run build` so the checked-in Streamlit component matches source.
+
+- [x] **Step 4: Verify tests and actual layout**
+
+Run the focused service contract, component build, `git diff --check`, and actual desktop/mobile Browser QA. Confirm the longer quadrant labels remain legible and no calculation or coordinate payload changed.
+
+- [x] **Step 5: Close task docs and commit**
+
+Record the copy-only boundary and QA evidence without staging unrelated untracked research or generated screenshots.

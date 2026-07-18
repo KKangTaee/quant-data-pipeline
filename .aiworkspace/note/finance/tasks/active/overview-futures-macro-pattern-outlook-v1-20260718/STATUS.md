@@ -1,5 +1,14 @@
 # Futures Macro Pattern Outlook V1 Status
 
+## 2026-07-19 — Macro Pressure Copy Follow-up
+
+- User confirmed that the Y axis should name what it actually aggregates instead of using the broad `매크로 부담` shorthand.
+- The payload now labels the axis `금리·달러·물가 압력`; all four quadrants use the same explicit 강화/완화 wording.
+- This is a copy-only interpretation correction. The 5D standardized rate / dollar / inflation pressure mean, coordinates, forecast path, probability, and publication gates are unchanged.
+- TDD RED failed on the old payload label, then GREEN passed after the minimal source change; the React production bundle was rebuilt.
+- Actual desktop and 420px Browser QA confirmed no clipping or horizontal overflow and zero console errors.
+- Overall original roadmap remains complete (`5/5`); this approved follow-up is complete (`1/1`).
+
 ## 2026-07-18
 
 - User requested a Futures Macro improvement after closing the economic-cycle / market-context work.
