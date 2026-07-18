@@ -83,6 +83,7 @@ button { font: inherit; }
 .bt1r-chart-legend small { color: #7b8e9b; font-size: 11px; font-weight: 500; }
 .bt1r-chart-legend span::before { content: ""; display: inline-block; width: 18px; height: 3px; margin-right: 7px; vertical-align: middle; border-radius: 4px; background: #386f8c; }
 .bt1r-chart-legend .is-benchmark::before { background: #b8833c; }
+.bt1r-pointer-capture { fill: transparent; pointer-events: all; }
 .bt1r-grid-line { stroke: #dce7ee; stroke-width: 1; }
 .bt1r-x-tick { stroke: #92a6b4; stroke-width: 1; }
 .bt1r-x-ticks.is-compact { display: none; }

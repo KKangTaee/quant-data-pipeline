@@ -120,6 +120,13 @@ export function ResultWorkspaceChart({ chart }: { chart: ChartModel }) {
           >
             <title>전략과 기준지수의 정규화 성과 차트</title>
             <desc>전략과 기준지수를 시작 지수 100으로 비교하며 실제 날짜와 누적 수익을 포인터 위치에서 확인합니다.</desc>
+            <rect
+              className="bt1r-pointer-capture"
+              x={PADDING.left}
+              y={PADDING.top}
+              width={WIDTH - PADDING.left - PADDING.right}
+              height={HEIGHT - PADDING.top - PADDING.bottom}
+            />
             {[0, 1, 2, 3, 4].map((tick) => {
               const value = maximum - (span * tick) / 4
               const position = y(value)

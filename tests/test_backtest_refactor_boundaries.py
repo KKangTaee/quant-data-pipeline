@@ -616,6 +616,7 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         for token in (
             "onPointerMove",
             "onPointerLeave",
+            "bt1r-pointer-capture",
             "bt1r-crosshair",
             "bt1r-chart-tooltip",
         ):

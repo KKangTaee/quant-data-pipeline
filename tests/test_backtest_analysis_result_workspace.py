@@ -280,7 +280,11 @@ def test_chart_publishes_real_date_ticks_returns_and_benchmark_identity() -> Non
         }
     )
     bundle["meta"].update(
-        {"benchmark_ticker": "SPY", "benchmark_label": "S&P 500 (SPY)"}
+        {
+            "benchmark_ticker": "SPY",
+            "benchmark_label": "S&P 500 (SPY)",
+            "benchmark_contract": "ticker",
+        }
     )
 
     chart = _build_workspace(bundle)["chart"]
@@ -288,6 +292,7 @@ def test_chart_publishes_real_date_ticks_returns_and_benchmark_identity() -> Non
     assert chart["normalized_base"] == 100.0
     assert "124.9" in chart["normalized_explanation"]
     assert chart["benchmark"]["label"] == "S&P 500 (SPY)"
+    assert chart["benchmark"]["contract_label"] == "대표 ETF 비교"
     assert chart["timeline_dates"] == [date.date().isoformat() for date in dates]
     assert len(chart["desktop_x_ticks"]) == 6
     assert len(chart["compact_x_ticks"]) == 3

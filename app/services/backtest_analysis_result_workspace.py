@@ -595,7 +595,11 @@ def _benchmark_identity(
     """Translate benchmark runtime metadata into a stable user contract."""
 
     ticker = str(meta.get("benchmark_ticker") or "").strip().upper()
-    contract = str(meta.get("benchmark_contract") or "").strip()
+    raw_contract = str(meta.get("benchmark_contract") or "").strip()
+    contract = {
+        "ticker": "대표 ETF 비교",
+        "equal_weight": "후보군 동일 비중 비교",
+    }.get(raw_contract.lower(), raw_contract)
     label = str(meta.get("benchmark_label") or ticker or contract).strip()
     return {
         "available": available,
