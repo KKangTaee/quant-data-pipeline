@@ -5499,7 +5499,7 @@ git commit -m "Backtest Analysis 결과 워크스페이스 QA와 문서 동기�
 - Consumes: `build_backtest_analysis_decision_workspace(workspace_kind, selection, configuration, ...)`의 current selection과 draft configuration.
 - Produces: `_configuration_summary(workspace_kind: str, configuration: Mapping[str, Any]) -> dict[str, Any]`; Single Strategy는 빈 summary, Portfolio Mix는 사용자 label을 가진 compact summary를 반환한다.
 
-- [ ] **Step 1: Write the failing current-selection tests**
+- [x] **Step 1: Write the failing current-selection tests**
 
 Add these tests to `tests/test_backtest_analysis_decision_workspace.py`:
 
@@ -5551,7 +5551,7 @@ def test_portfolio_mix_context_uses_user_configuration_labels() -> None:
     assert "strategy_names" not in workspace["configuration_summary"]
 ```
 
-- [ ] **Step 2: Run RED and confirm the stale GTAA summary failure**
+- [x] **Step 2: Run RED and confirm the stale GTAA summary failure**
 
 Run:
 
@@ -5563,7 +5563,7 @@ uv run --with pytest python -m pytest \
 
 Expected: FAIL because Single Strategy returns the raw GTAA dictionary and Portfolio Mix uses raw snake_case keys.
 
-- [ ] **Step 3: Implement the minimal Python-owned context summary**
+- [x] **Step 3: Implement the minimal Python-owned context summary**
 
 Add this helper near `_metric_items()` in `app/services/backtest_analysis_decision_workspace.py`:
 
@@ -5600,7 +5600,7 @@ Replace the raw projection in `build_backtest_analysis_decision_workspace()`:
 
 Do not clear `backtest_current_draft_payload` or `backtest_last_bundle`; the projection boundary alone prevents the wrong GTAA summary.
 
-- [ ] **Step 4: Run GREEN and focused decision regression**
+- [x] **Step 4: Run GREEN and focused decision regression**
 
 Run:
 
@@ -5610,7 +5610,7 @@ uv run --with pytest python -m pytest tests/test_backtest_analysis_decision_work
 
 Expected: all decision workspace tests PASS and existing stale result preservation remains unchanged.
 
-- [ ] **Step 5: Commit the current-selection unit**
+- [x] **Step 5: Commit the current-selection unit**
 
 ```bash
 git add \
@@ -5633,7 +5633,7 @@ git commit -m "Backtest Analysis 현재 선택 설정 경계 수정"
 - Consumes: runtime `quality_factor_options` / `value_factor_options` raw key arrays.
 - Produces: `factor_option_label(value: str) -> str`, option objects `{value: raw_key, label: user_label}`, React `.bt1-multi-select-option-label` presentation, unchanged submitted raw arrays.
 
-- [ ] **Step 1: Write RED tests for every factor label and unchanged payload**
+- [x] **Step 1: Write RED tests for every factor label and unchanged payload**
 
 Add to `tests/test_backtest_single_settings_workspace.py`:
 
@@ -5688,7 +5688,7 @@ self.assertIn(".bt1-multi-select-compact", compact_mobile)
 self.assertIn("grid-template-columns: minmax(0, 1fr)", compact_mobile)
 ```
 
-- [ ] **Step 2: Run RED for schema and visual contract**
+- [x] **Step 2: Run RED for schema and visual contract**
 
 Run:
 
@@ -5701,7 +5701,7 @@ uv run --with pytest python -m pytest \
 
 Expected: label assertions and new CSS/component tokens FAIL while raw payload projection already remains compatible.
 
-- [ ] **Step 3: Add the complete Python factor label map**
+- [x] **Step 3: Add the complete Python factor label map**
 
 Add to `app/services/backtest_single_settings_workspace.py` near `_VARIANT_LABELS`:
 
@@ -5756,7 +5756,7 @@ options=[_option(value, factor_option_label(value)) for value in options],
 
 Export `factor_option_label` in `__all__` only if tests import it directly; otherwise keep it module-owned.
 
-- [ ] **Step 4: Render labels in an explicit wrapping element**
+- [x] **Step 4: Render labels in an explicit wrapping element**
 
 In both compact and search result buttons in `BacktestAnalysisDecisionWorkspace.tsx`, replace the direct text node:
 
@@ -5789,7 +5789,7 @@ In `style.css`, use a stable two-column layout and wrapping:
 
 Keep the outer settings section responsive grid unchanged; this only changes factor option cards.
 
-- [ ] **Step 5: Run GREEN, production build, and payload regression**
+- [x] **Step 5: Run GREEN, production build, and payload regression**
 
 Run:
 
@@ -5804,7 +5804,7 @@ cd /Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev
 
 Expected: both suites PASS and Vite production build exits 0. Build output under the tracked component build is included only when changed by the production build; `node_modules` is never staged.
 
-- [ ] **Step 6: Commit the factor presentation unit**
+- [x] **Step 6: Commit the factor presentation unit**
 
 ```bash
 git add \
@@ -5836,7 +5836,7 @@ git commit -m "Backtest Analysis 팩터 지표 표시 개선"
 - Consumes: fingerprint mismatch, `backtest_last_result_requires_rerun`, optional `backtest_last_result_refresh_result`, rerun error.
 - Produces: lifecycle `reference_reason: str | None`, `reference_message: str`, one React/fallback lifecycle strip, no `_render_backtest_rerun_required_notice()` or Streamlit reset notice.
 
-- [ ] **Step 1: Write RED lifecycle reason tests**
+- [x] **Step 1: Write RED lifecycle reason tests**
 
 Add to `tests/test_backtest_analysis_result_workspace.py`:
 
@@ -5905,7 +5905,7 @@ self.assertIn("render_backtest_analysis_result_workspace", last_run_body)
 self.assertNotIn("Refresh Message", last_run_body)
 ```
 
-- [ ] **Step 2: Run RED and verify missing reason plus legacy tokens**
+- [x] **Step 2: Run RED and verify missing reason plus legacy tokens**
 
 Run:
 
@@ -5918,7 +5918,7 @@ uv run --with pytest python -m pytest \
 
 Expected: lifecycle keys are missing and legacy notice/table assertions fail.
 
-- [ ] **Step 3: Extend the pure lifecycle contract**
+- [x] **Step 3: Extend the pure lifecycle contract**
 
 Add `reference_reason: str | None = None` to the end of `build_result_lifecycle()` and `build_backtest_analysis_result_workspace()` keyword signatures. In `build_result_lifecycle()` resolve reason/message after `state`:
 
@@ -5947,7 +5947,7 @@ Return these additive keys:
 
 Pass `reference_reason` from `build_backtest_analysis_result_workspace()` into `build_result_lifecycle()`.
 
-- [ ] **Step 4: Adapt Streamlit state without exposing refresh job rows**
+- [x] **Step 4: Adapt Streamlit state without exposing refresh job rows**
 
 In `build_current_backtest_analysis_result_workspace()` read the refresh result only to classify the lifecycle:
 
@@ -5975,7 +5975,7 @@ In `app/web/backtest_result_display.py`:
 - keep `backtest_last_result_refresh_result` and `backtest_last_result_requires_rerun` mutations because the new read model consumes them;
 - do not render the old warning or `Strategy / Refresh Message / Saved Rows / Target End / Collection Start / Tickers` DataFrame.
 
-- [ ] **Step 5: Render one lifecycle strip in React and fallback**
+- [x] **Step 5: Render one lifecycle strip in React and fallback**
 
 Extend lifecycle in `frontend/src/types.ts`:
 
@@ -5997,7 +5997,7 @@ In `ResultHeader()` render the Python message below the label:
 
 In `render_backtest_analysis_result_workspace_fallback()` append the same message to the lifecycle caption or a single `st.caption`; do not introduce a warning/table.
 
-- [ ] **Step 6: Run GREEN, React build, and focused lifecycle regression**
+- [x] **Step 6: Run GREEN, React build, and focused lifecycle regression**
 
 Run:
 
@@ -6013,7 +6013,7 @@ cd /Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev
 
 Expected: focused suites PASS, old result remains visible/stale, handoff remains blocked, React production build exits 0.
 
-- [ ] **Step 7: Commit the lifecycle cleanup unit**
+- [x] **Step 7: Commit the lifecycle cleanup unit**
 
 ```bash
 git add \
@@ -6074,7 +6074,7 @@ Set viewport width to 760px and confirm:
 
 Capture the 760px screenshot without staging it.
 
-- [ ] **Step 3: Use verification-before-completion for fresh automated checks**
+- [x] **Step 3: Use verification-before-completion for fresh automated checks**
 
 Run:
 
@@ -6104,7 +6104,7 @@ git diff --check
 
 Expected: focused tests pass; full `test_service_contracts.py` matches or improves the recorded repository baseline of 821 passed / 12 failed; both React builds, py_compile, and diff-check exit 0. Record exact fresh counts and do not describe baseline failures as new passes.
 
-- [ ] **Step 4: Apply finance-doc-sync and update active/root handoff logs**
+- [x] **Step 4: Apply finance-doc-sync and update active/root handoff logs**
 
 Document:
 
@@ -6116,7 +6116,7 @@ Document:
 
 Record detailed commands/results in `RUNS.md`, decisions in `NOTES.md`, remaining gaps in `RISKS.md`, completion in `STATUS.md`, and only 3~5 line handoffs in root logs.
 
-- [ ] **Step 5: Audit protected paths and commit closeout**
+- [x] **Step 5: Audit protected paths and commit closeout**
 
 ```bash
 git diff --check

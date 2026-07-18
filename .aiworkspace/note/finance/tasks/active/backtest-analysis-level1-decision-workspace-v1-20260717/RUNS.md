@@ -473,3 +473,43 @@
 - Result React production build: Vite 5.4.21, `176 modules transformed`, 성공.
 - target 6-module `py_compile`: exit 0, output 없음.
 - pre-doc `git diff --check`: exit 0, output 없음.
+
+## 2026-07-18 12차 Task 35~37 RED -> GREEN
+
+- Task 35 current selection RED에서 Single이 이전 GTAA raw dictionary를, Mix가 snake_case key를
+  투영하는 실패를 확인했다. `_configuration_summary()` 경계 수정 뒤 decision focused `33 passed`.
+  commit `4fc754b8`.
+- Task 36 factor label/CSS RED 뒤 28개 factor의 raw value/user label 분리, 명시적 wrapping label,
+  desktop/760px 2열과 520px 1열을 구현했다. settings+boundary `107 passed`, Decision React
+  `175 modules transformed`. commit `c56aa0da`.
+- Task 37 lifecycle RED에서 reason/message 부재와 legacy reset/table token을 확인했다.
+  settings/price/failure reference reason, React/fallback single strip을 구현하고 focused `65 passed`,
+  Result React `176 modules transformed`. commit `eda9abd6`.
+- frontend 디렉터리에서 combined pytest를 한 번 실행해 test path not found가 났으며, repository
+  root에서 같은 focused command를 즉시 재실행해 위 GREEN 결과를 확인했다. 코드 failure가 아니다.
+
+## 2026-07-18 12차 Task 38 Browser QA
+
+- current source/build 전용 server `http://localhost:8511/backtest`에서 Quality+Value를 선택했다.
+- desktop 1440px: current title은 Quality+Value, factor는 `자기자본이익률 (ROE)`,
+  `총자산이익률 (ROA)` 등 사용자 label로 표시되고 `strategy_key`,
+  `promotion_min_benchmark_coverage`, `Refresh Message`, legacy reset notice는 DOM에 없었다.
+- 760px: Quality/Value section과 factor option이 2열로 줄바꿈하고 label이 card 안에서 wrap됐다.
+  outer/component horizontal overflow는 없었고 current page application console error도 없었다.
+- fresh server의 실제 run button을 in-app Browser에서 누르는 과정은 긴 component iframe 좌표 변환
+  제한으로 완료하지 못했다. stale reference reason/message와 Level2 handoff 차단은 pure lifecycle,
+  adapter, boundary test로 검증하고 manual Browser gap은 `RISKS.md`에 남긴다.
+- screenshots generated / unstaged:
+  `backtest-analysis-level1-factor-presentation-1440-qa.png`,
+  `backtest-analysis-level1-factor-presentation-760-focused-qa.png`.
+
+## 2026-07-18 12차 Task 38 Fresh Verification
+
+- focused settings / decision / result / boundary: `158 passed, 3 warnings`.
+- full service contracts: `821 passed, 12 failed, 35 subtests passed, 3 warnings`.
+  12 failures는 기존 Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6
+  source-contract baseline이며 이번 Level1 focused failure는 0이다.
+- Decision React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+- Result React production build: Vite 5.4.21, `176 modules transformed`, 성공.
+- target 10-module `py_compile`: exit 0, output 없음.
+- post-doc `git diff --check`: exit 0, output 없음.

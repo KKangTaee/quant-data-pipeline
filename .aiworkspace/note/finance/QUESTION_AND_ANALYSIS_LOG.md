@@ -9712,3 +9712,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   한 의미로 보였으며 raw metadata가 첫 disclosure를 차지했다.
 - Follow-up: Python-owned chart/schedule/basis와 pointer-only React/fallback을 구현하고 actual
   Equal Weight desktop/760px hover·overflow·disclosure QA를 완료했다.
+
+### 2026-07-18 - 현재 선택, 이전 결과, 팩터 기술 키는 서로 다른 계약이다
+
+- User request: Quality+Value 선택 중 GTAA 설정이 보이고 reset/refresh Streamlit 안내와 raw table이
+  남으며 factor snake_case label이 잘리는 문제를 전체적으로 수정 요청함.
+- Interpreted goal: 현재 후보는 현재 선택만 설명하고 이전 성공 결과는 참고용으로 보존하며,
+  계산 key를 바꾸지 않고 일반 사용자가 factor 의미와 stale 이유를 이해해야 함.
+- Analysis result: current/result configuration 혼합, value/label 재사용, duplicate lifecycle renderer가
+  각각 원인이었고 strategy runtime이나 Level2 Gate 변경은 필요하지 않았다.
+- Follow-up: Python summary/label/lifecycle 경계를 분리하고 legacy notice/table을 제거했으며
+  desktop/760px presentation QA와 regression test로 current contract를 확인했다.

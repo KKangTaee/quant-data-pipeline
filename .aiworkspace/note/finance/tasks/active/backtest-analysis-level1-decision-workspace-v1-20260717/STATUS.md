@@ -1,6 +1,6 @@
 # Status
 
-Status: 11차 Result Interpretation And Schedule Polish Complete
+Status: 12차 Current Selection And Factor Presentation Complete With Manual Browser Gap
 Last Updated: 2026-07-18
 
 ## Current Position
@@ -56,6 +56,10 @@ Last Updated: 2026-07-18
 - [x] 11차 written design 사용자 review
 - [x] 11차 implementation plan
 - [x] 11차 RED -> GREEN implementation / Browser QA / closeout
+- [x] 12차 current selection / stale lifecycle / factor label audit
+- [x] 12차 RED -> GREEN implementation
+- [x] 12차 desktop / 760px factor presentation Browser QA
+- [x] 12차 canonical docs / active task / root handoff sync
 
 ## Approved Roadmap
 
@@ -189,3 +193,28 @@ Last Updated: 2026-07-18
 - Browser QA correction: `40032955 Backtest Analysis 차트 hover 캡처 보강`
 - fresh focused result / decision / boundary는 `92 passed`; 전체 service는 기존 baseline과 같은
   `821 passed / 12 failed / 35 subtests passed`이며 신규 Level1 failure는 0이다.
+
+## Current 12차 Position
+
+- Single current context는 현재 strategy selection만 표시하고 이전 GTAA raw configuration을
+  재사용하지 않는다. Portfolio Mix는 구성 전략·목표 비중·구성 수만 사용자 label로 요약한다.
+- factor option은 계산용 raw key와 한국어 의미·표준 약어 label을 분리했다. payload와 runner에는
+  raw array를 그대로 전달하며 desktop/760px 2열, 520px 이하 1열로 줄바꿈한다.
+- 설정 변경·가격 갱신·재실행 실패는 마지막 성공 결과를 유지한 채 결과 header의 단일 lifecycle
+  strip으로 설명한다. legacy Streamlit reset notice와 refresh result DataFrame은 제거했다.
+- fresh QA server에서 Quality+Value current context, 한국어 factor label, raw GTAA 설정·refresh table
+  미노출과 desktop/760px overflow 0을 확인했다. stale reference 실제 클릭 재현은 iframe coordinate
+  제한으로 자동화하지 못해 pure lifecycle/boundary regression으로 보완했다.
+
+## 12차 Completion
+
+- design: `1bcbec70 Backtest Analysis 현재 선택과 팩터 표시 설계`
+- plan: `bbd05732 Backtest Analysis 현재 선택과 팩터 표시 계획`
+- current selection: `4fc754b8 Backtest Analysis 현재 선택 설정 경계 수정`
+- factor presentation: `c56aa0da Backtest Analysis 팩터 지표 표시 개선`
+- reference lifecycle: `eda9abd6 Backtest Analysis 참고 결과 안내 통합`
+- closeout: `Backtest Analysis 현재 선택과 팩터 표시 QA 동기화`
+- fresh focused `158 passed`; full service는 기존 baseline과 같은 `821 passed / 12 failed /
+  35 subtests passed`이며 신규 Level1 failure는 0이다.
+- Decision / Result React production build는 각각 175 / 176 modules, target 10-module
+  `py_compile`과 `git diff --check`는 exit 0이다.

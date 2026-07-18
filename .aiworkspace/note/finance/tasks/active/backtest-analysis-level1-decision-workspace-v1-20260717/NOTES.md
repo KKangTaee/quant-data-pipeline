@@ -304,3 +304,18 @@ generated artifact이므로 commit하지 않는다.
   tooltip이 나타나고 차트 밖에서는 사라지는 것을 확인했다.
 - `계산 및 데이터 기준`은 계산 기준, 데이터 기준, 결과 추적 세 section을 먼저 보여주고 원본
   field/meta는 별도 disclosure에 유지한다. keyboard disclosure와 ResizeObserver 높이 동기화를 확인했다.
+
+## 2026-07-18 12차 Current Selection And Factor Presentation Decisions
+
+- 잘못된 GTAA 요약의 원인은 strategy catalog selection과 마지막 실행 bundle configuration을 같은
+  context summary에 투영한 것이었다. Single summary를 비우고 현재 title은 catalog selection만
+  사용하며, 과거 bundle 자체는 stale reference로 보존한다.
+- factor 계산 계약은 이미 raw key 배열을 요구하므로 option의 `value`는 유지하고 `label`만
+  Python map에서 한국어 의미와 표준 약어로 만든다. React가 snake_case를 번역하지 않는다.
+- native multi-select 개선 뒤 남은 잘림은 option grid의 auto-fit 폭과 direct text node가 원인이었다.
+  명시적 label span, `min-width: 0`, `overflow-wrap: anywhere`, 2열/1열 breakpoint로 해결했다.
+- reset blue notice, price refresh yellow notice, refresh job table은 같은 stale 상태를 세 번 설명했다.
+  Python lifecycle이 `settings_changed`, `price_refresh`, `rerun_failed`를 분류하고 React/fallback은
+  하나의 `reference_message`만 표시한다.
+- 기존 8505 server는 `runOnSave=false`와 `fileWatcherType none`으로 실행돼 current source를 반영하지
+  않았다. 8511 fresh server로 source/build pair를 맞춰 Browser QA하고 종료했다.

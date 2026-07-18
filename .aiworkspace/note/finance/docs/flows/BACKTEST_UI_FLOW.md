@@ -10,6 +10,8 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 
 2026-07-18 기준으로 Backtest Analysis는 Python `backtest_analysis_decision_workspace_v1`과 `backtest_single_settings_workspace_v1`을 공통 계약으로 쓰는 Level1 one-shell이다. React는 고정 질문, Single / Portfolio Mix entry, 목적별 catalog, schema-driven 설정, 결과 판단과 intent만 렌더링하고, Python은 strategy maturity, configuration fingerprint, settings field/visibility/validation/payload, preset profile, fresh / stale, Gate, handler 존재, 실행, 저장, Level2 인계를 소유한다. Single strategy 선택은 React catalog 한 곳이 소유하고 Strict Annual / Quarterly는 설정 profile의 segmented control로만 바꾼다. 9개 전략은 모두 `핵심 실행 설정 -> 투자 대상 Universe -> 선택·보유 규칙 -> 비용·위험 기준`의 같은 React surface를 사용하며 760px에서는 단일 열이 된다. named preset을 바꾸면 Python이 strategy/variant 기본 규칙과 근거가 있는 override를 합친 complete profile을 적용하고, 검증 기간과 manual ticker draft는 보존한다. React와 fallback은 이 profile을 표시·적용할 뿐 전략별 숫자를 계산하지 않는다. legacy Quality Snapshot과 strategy-specific native form은 history/replay compatibility path에만 남고 primary 사용자 선택에는 노출하지 않는다. Portfolio Mix component 실행은 기존 Streamlit 경계를 유지한다. 별도 `Strategy Detail` panel은 active flow가 아니다.
 
+현재 전략을 바꿔도 마지막 성공 결과는 참고 근거로 보존하지만, 상단 `목적과 핵심 설정`은 현재 catalog selection만 보여주며 이전 결과의 `strategy_key`, timeframe, promotion field를 재사용하지 않는다. 설정 변경·가격 갱신·재실행 실패는 결과 header의 단일 lifecycle 안내로 구분하고, blue/yellow Streamlit reset notice와 refresh job raw table은 렌더링하지 않는다. 팩터 지표는 사용자에게 한국어 의미와 표준 약어로 표시하되 runner에는 기존 raw key 배열을 그대로 전달한다. factor option은 desktop과 760px에서 2열로 줄바꿈하고 520px 이하에서 1열로 접힌다.
+
 ## 핵심 파일
 
 | 파일 | 역할 |

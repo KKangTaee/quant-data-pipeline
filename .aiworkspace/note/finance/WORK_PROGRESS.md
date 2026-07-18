@@ -6391,3 +6391,12 @@ Detailed historical logs were archived on `2026-04-13`.
 - focused 92 tests, 두 React production build, target compile, desktop/760px Browser QA를 완료했다.
   상세 commit/QA/risk는 active task `RUNS.md`, `RISKS.md`를 본다.
 - protected JSONL, `.superpowers/`, generated screenshots는 closeout commit에서 제외한다.
+
+## 2026-07-18 - Backtest Analysis Current Selection And Factor Presentation Closeout
+
+- 현재 strategy context와 이전 성공 result를 분리해 Quality+Value 선택 시 GTAA raw 설정이
+  나타나지 않게 하고, stale result는 단일 reference lifecycle 안내로만 보존했다.
+- factor raw key는 runner에 유지하면서 한국어 의미·표준 약어 label과 desktop/760px 2열
+  wrapping UI를 적용했다. legacy reset/refresh notice와 raw refresh table은 제거했다.
+- 상세 RED/GREEN, fresh verification, Browser QA와 남은 manual stale-click gap은 active task
+  `RUNS.md`, `RISKS.md`를 본다. protected JSONL·`.superpowers/`·screenshots는 commit하지 않는다.

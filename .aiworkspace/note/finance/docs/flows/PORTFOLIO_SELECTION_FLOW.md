@@ -1,7 +1,7 @@
 # Portfolio Selection Flow
 
 Status: Active
-Last Verified: 2026-07-16
+Last Verified: 2026-07-18
 
 ## Purpose
 
@@ -48,6 +48,11 @@ Live / Deployment Readiness는 현재 별도 화면으로 구현되지 않았다
   realism은 Level1 통과 조건을 흉내 내지 않고 Level2 validation question으로 전달한다.
 - 설정이 바뀐 old result는 참고용으로 남지만 handoff CTA가 사라진다. 새 실행 성공 뒤에만 current
   `run_result_id`로 교체하며 기존 validation row를 재작성하지 않는다.
+- current strategy context는 현재 catalog selection을 기준으로 만들고 이전 result payload의 raw
+  strategy/timeframe/promotion 설정을 요약으로 재사용하지 않는다. 참고 결과는 결과 header의
+  설정 변경·가격 갱신·재실행 실패 안내로만 구분한다.
+- 팩터 표시명은 Level1 presentation 계약이며 계산과 handoff source에는 기존 raw factor key를
+  유지한다. 사용자가 읽는 지표명과 runner payload를 분리해도 Level2 검증 계약은 바뀌지 않는다.
 
 ## Verification Checkpoints
 
