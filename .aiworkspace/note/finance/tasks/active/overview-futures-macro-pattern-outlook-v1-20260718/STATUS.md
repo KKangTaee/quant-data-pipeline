@@ -59,4 +59,5 @@ Both horizons have 6 evaluated chronological folds; their path errors trail base
 - Approved marker contract: current `r=10`, terminal `r=8`, fixed 9-unit arrows with `markerUnits=userSpaceOnUse`, arrows on mid-line direction segments rather than endpoint circles.
 - Approved copy: `5일 후 예상 위치` / `20일 후 예상 위치`; detailed episode and q25~q75 text leaves the graph and stays in reading / method disclosure.
 - Written design: `CONDITIONAL_PATH_READABILITY_DESIGN.md`.
-- Current stage: written design review before TDD implementation plan.
+- Implementation plan: `CONDITIONAL_PATH_READABILITY_PLAN.md`.
+- Current stage: approved inline execution; linked `codex/sub-dev` worktree verified before Task 1 RED.
