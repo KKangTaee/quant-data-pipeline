@@ -1728,3 +1728,195 @@ app/web/components/backtest_analysis_result_workspace/
 - Practical Validation 또는 Final Review route 자체 재설계
 - Level2 practical-validation 계산을 Level1에서 선실행하는 기능
 - raw run/job/status 중심 운영 진단 dashboard
+
+## 11차 Result Interpretation And Schedule Polish
+
+### Why This Corrective Exists
+
+10차 Result Workspace는 결과 계층과 Level1/Level2 소유권을 정리했지만 실제 Browser 사용에서
+다음 해석 공백이 남았다.
+
+- `전략과 기준의 흐름` X축에 날짜 label이 없어 기간 안의 위치를 바로 읽기 어렵다.
+- 첫 시점 100의 의미는 맞지만 `100 -> 124.9`가 누적 `+24.9%`라는 설명이 충분하지 않다.
+- SVG point의 native title은 hover 위치를 비교하기 어렵고 마우스가 떠난 뒤의 명확한 상태도 없다.
+- 범례가 `기준지수`라고만 표시되어 실제 SPY 또는 다른 comparator를 알 수 없다.
+- current/target holdings는 보이지만 마지막 신호, 실제 rebalance, cadence와 다음 예상 window가 없다.
+- `기술 부록`이 raw column과 metadata key/value를 그대로 보여 일반 사용자가 의미를 알기 어렵다.
+
+이 corrective의 목표는 새 분석 기능을 추가하는 것이 아니라 이미 계산된 결과를 시간, 비교 기준,
+운용 일정과 계산 근거의 언어로 정확하게 읽게 만드는 것이다.
+
+### Approved Decisions
+
+- architecture는 Python read model + React presentation인 B안을 유지한다.
+- 투자금 입력, 달러 환산, 고정 10,000달러 참고값은 추가하지 않는다.
+- chart는 첫 공통 시점 100의 normalized index를 유지하고 누적 수익률과의 관계를 설명한다.
+- 다음 rebalance는 근거가 있을 때만 month/quarter/year window로 보여주며 exact trading date를
+  추측하지 않는다.
+- raw metadata는 첫 disclosure에 노출하지 않고 사용자 설명과 원본 추적 정보를 분리한다.
+
+### Chart Read Model Contract
+
+Python은 React가 날짜, 수익률 또는 Benchmark 의미를 추론하지 않도록 다음 projection을 제공한다.
+
+```text
+chart: {
+  normalized_base: 100,
+  normalized_explanation,
+  strategy_label,
+  benchmark: {
+    available,
+    label,
+    ticker,
+    contract_label,
+    missing_reason,
+  },
+  strategy_series,
+  benchmark_series,
+  timeline_dates,
+  desktop_x_ticks: [{date, label}],
+  compact_x_ticks: [{date, label}],
+  hover_rows: [{
+    date,
+    strategy_value,
+    strategy_value_label,
+    strategy_return,
+    strategy_return_label,
+    benchmark_value,
+    benchmark_value_label,
+    benchmark_return,
+    benchmark_return_label,
+  }],
+  markers,
+}
+```
+
+- desktop tick은 시작/종료를 포함해 최대 6개, 760px tick은 시작/중간/종료 최대 3개다.
+- tick 날짜는 실제 chart timeline에서 고르며 존재하지 않는 날짜를 만들지 않는다.
+- strategy와 Benchmark의 SVG x좌표는 각 series index가 아니라 같은 `timeline_dates` date index를
+  사용한다. sparse Benchmark는 실제 관측 date에만 point/path segment를 만들고 날짜 위치를 당기지 않는다.
+- normalized return은 `value / 100 - 1`이고 Python이 숫자와 표시 label을 함께 제공한다.
+- legend는 `전략 · <strategy label>`과 `기준 · <benchmark label>`을 표시한다.
+- direct ticker comparator는 ticker를 표시한다. candidate equal-weight 같은 contract comparator는
+  Python이 제공한 contract label을 표시한다. 둘 다 없으면 `기준 없음`을 만들지 않고 missing reason을
+  chart 아래에 표시한다.
+
+React SVG는 pointer 위치에서 가장 가까운 `timeline_dates` / `hover_rows` 날짜 하나를 선택한다. hover 중에만 vertical
+crosshair와 floating tooltip을 렌더링하고 pointer leave에서 제거한다. tooltip은 날짜, 전략 normalized
+index / 누적 수익률, available Benchmark normalized index / 누적 수익률만 표시한다. raw balance와
+DataFrame column 이름은 표시하지 않는다. keyboard focus 사용자는 각 point의 accessible title/label을
+계속 사용할 수 있다.
+
+### Holdings Schedule Contract
+
+`holdings`에 다음 schedule projection을 추가한다.
+
+```text
+schedule: {
+  valuation_as_of,
+  latest_signal_as_of,
+  last_rebalance_as_of,
+  cadence_label,
+  next_window_label,
+  next_window_status,
+  explanation,
+}
+```
+
+Source priority는 다음과 같다.
+
+1. `valuation_as_of`: latest result row의 Date
+2. `latest_signal_as_of`: target allocation을 만든 last valid signal row의 Date
+3. `last_rebalance_as_of`: `Rebalancing=true`인 마지막 result row의 Date
+4. cadence: explicit `rebalance_interval`, `interval`, `rebalance_freq` metadata
+5. next window: last rebalance와 explicit cadence가 모두 있을 때만 계산
+
+integer month interval은 마지막 rebalance month에서 N개월 뒤를, explicit monthly/quarterly/annual은
+각각 1/3/12개월 뒤를 next window로 계산하고 exact trading day 대신 `YYYY-MM 월말 예상`으로 표시한다.
+그 외 frequency는 irregular로 취급한다. irregular,
+signal-only, missing cadence, partial Mix는 `다음 일정 확인 필요`를 표시한다. 시장 휴일이나 다음 영업일을
+추측하지 않는다.
+
+holdings 첫 줄에는 현재 평가 기준일, 최신 신호일, 마지막 리밸런싱일, 주기, 다음 예상 window를 compact
+schedule strip으로 표시한다. 목표 구성 설명은 다음 의미를 유지한다.
+
+> 최신 신호 기준 목표입니다. 다음 리밸런싱 전까지 현재 구성을 유지하며, 새 신호가 동일하면 목표
+> 구성도 유지됩니다.
+
+이 정보는 backtest simulation schedule이며 broker 주문, live rebalance 또는 account instruction이 아니다.
+
+### Calculation And Data Basis Contract
+
+visible label `기술 부록`은 `계산 및 데이터 기준`으로 바꾼다. first disclosure는 Python이 만든 사용자용
+section만 표시한다.
+
+- **계산 기준**: 실행 방식, 비용 반영, 실제 결과 기간, 결과 행 수
+- **데이터 기준**: universe, 가격 기준일/최신성, Benchmark, factor 준비 상태
+- **결과 추적**: run result id, configuration fingerprint, lifecycle 상태
+
+각 row는 `label`, `value_label`, `explanation`, `status`를 가지며 raw key를 사용자 label로 사용하지 않는다.
+알려진 metadata가 없으면 설명을 지어내지 않고 `확인 가능한 근거 없음`으로 표시한다.
+
+원본 result columns, bounded prepared rows, raw meta는 secondary `원본 필드 보기` disclosure에만 둔다.
+React는 raw value를 JSON string으로 first layer에 렌더링하지 않는다. Python fallback도 같은 section 순서와
+label을 사용한다. 원본은 개발/감사용이며 사용자 판단의 first-read가 아니다.
+
+### Component And Ownership Changes
+
+- `app/services/backtest_analysis_result_workspace.py`
+  - x tick, normalized return, Benchmark identity, hover row, schedule, appendix section 계산 소유
+- `app/web/components/backtest_analysis_result_workspace/frontend/src/types.ts`
+  - read model exact type 확장
+- `ResultWorkspaceChart.tsx`
+  - date axis, pointer-only tooltip/crosshair, actual Benchmark legend 표시
+- `BacktestAnalysisResultWorkspace.tsx`
+  - schedule strip과 `계산 및 데이터 기준` disclosure 표시
+- `style.css`
+  - tooltip, crosshair, responsive date label/schedule/appendix layout 소유
+- `app/web/backtest_analysis_result_workspace_panel.py`
+  - same-read-model fallback parity
+
+React는 Benchmark 분류, next schedule 계산, normalized return 계산, metadata meaning mapping을 소유하지
+않는다. chart pointer의 nearest-row 선택과 desktop/compact tick 선택만 presentation behavior다.
+
+### Error And Partial States
+
+- strategy curve만 있으면 날짜/hover를 그대로 제공하고 Benchmark missing reason을 표시한다.
+- sparse Benchmark는 common-date hover row에만 값이 있고 없는 날짜는 tooltip에서 `-`로 표시한다.
+- cadence가 없거나 irregular이면 next window를 만들지 않는다.
+- latest signal 또는 last rebalance가 없으면 각각 `확인 가능한 기록 없음`으로 표시한다.
+- cash-only와 holdings unavailable도 schedule evidence가 있으면 schedule strip은 유지한다.
+- stale result는 schedule, chart, appendix 전체에 기존 reference-only lifecycle을 그대로 적용한다.
+
+### TDD And Browser QA Contract
+
+- RED: desktop/compact x tick, normalized explanation/return, Benchmark ticker/contract/missing case
+- RED: hover row common-date/sparse Benchmark projection
+- RED: monthly cadence, missing cadence, irregular signal, non-rebalance latest, cash-only, partial Mix schedule
+- RED: user appendix sections, raw disclosure separation, unknown metadata omission
+- GREEN 뒤 focused result/decision/boundary tests와 full service baseline을 다시 실행한다.
+- React production build와 target `py_compile`, `git diff --check`를 실행한다.
+- desktop Browser QA에서 x dates, actual Benchmark, pointer enter/move/leave tooltip, schedule와 appendix를 확인한다.
+- 760px에서 3개 x tick, tooltip viewport containment, schedule wrap, appendix overflow 0과 ResizeObserver를 확인한다.
+- registry, run history, saved JSONL, `.superpowers/`, screenshots와 run artifacts는 stage/commit하지 않는다.
+
+### 11차 Acceptance Criteria
+
+1. chart X축은 실제 날짜를 desktop 최대 6개, 760px 최대 3개 표시한다.
+2. normalized 100과 누적 수익률 관계가 사용자 문장으로 설명된다.
+3. pointer hover 중에만 날짜/전략/Benchmark 값과 crosshair가 나타난다.
+4. legend에 실제 Benchmark ticker 또는 comparator contract label이 표시된다.
+5. holdings는 평가일, 최신 신호일, 마지막 rebalance, cadence와 next expected window를 구분한다.
+6. 근거 없는 exact rebalance date를 만들지 않는다.
+7. `계산 및 데이터 기준` first layer는 raw key/JSON 대신 한국어 의미와 설명을 표시한다.
+8. raw columns/meta는 secondary disclosure에만 남는다.
+9. React와 Python fallback이 같은 read model 의미를 표시한다.
+10. desktop/760px Browser QA, focused tests, builds, compile, diff-check와 protected-path audit를 완료한다.
+
+### 11차 Out Of Scope
+
+- 투자금 입력, 달러 환산, 고정 10,000달러 reference value
+- chart zoom/pan/range selector 또는 신규 chart dependency
+- broker holdings/order, tax, minimum lot, live/auto rebalance
+- market holiday 기반 exact next trading date provider
+- strategy algorithm, runtime calculation, DB schema 또는 Level2/Final Review route 재설계

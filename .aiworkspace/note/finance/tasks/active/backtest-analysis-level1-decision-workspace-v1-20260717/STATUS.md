@@ -1,6 +1,6 @@
 # Status
 
-Status: Complete — 10차 Result Evidence Workspace
+Status: 11차 Result Interpretation Polish Design Ready — Written Review Pending
 Last Updated: 2026-07-18
 
 ## Current Position
@@ -48,6 +48,14 @@ Last Updated: 2026-07-18
 - [x] 10차 written design 사용자 review
 - [x] 10차 implementation plan 작성과 self-review
 - [x] 10차 RED -> GREEN implementation / Browser QA / closeout
+- [x] 11차 chart / holdings / appendix current contract audit
+- [x] 11차 Python read model + React presentation 접근 승인
+- [x] 11차 normalized return only / no dollar control 결정
+- [x] 11차 screen design 사용자 승인
+- [x] 11차 written design 작성과 self-review
+- [ ] 11차 written design 사용자 review
+- [ ] 11차 implementation plan
+- [ ] 11차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -61,6 +69,7 @@ Last Updated: 2026-07-18
 8. Modifier-Free Multi-Select Controls
 9. Deterministic Preset Application
 10. Result Evidence And Level2 Handoff Workspace
+11. Result Interpretation And Schedule Polish
 
 ## Current Corrective Position
 
@@ -160,3 +169,13 @@ Last Updated: 2026-07-18
   strategy family의 result-column 계약은 pure matrix test로 보완했다.
 - protected registry / run history / saved JSONL, `.superpowers/`, generated screenshots는
   closeout commit에서 제외한다.
+
+## Current 11차 Position
+
+- 10차 결과 화면의 information hierarchy와 stage ownership은 유지한다.
+- chart는 달러 입력 없이 normalized 100과 누적 수익률 관계를 설명하고 실제 날짜, hover,
+  Benchmark identity를 추가한다.
+- holdings는 latest signal과 last rebalance를 분리하고 explicit cadence가 있을 때만 다음 예상
+  rebalance window를 표시한다.
+- raw technical appendix는 사용자용 `계산 및 데이터 기준`과 secondary 원본 disclosure로 분리한다.
+- written design review 뒤 Task 31 이후 implementation plan을 작성한다.

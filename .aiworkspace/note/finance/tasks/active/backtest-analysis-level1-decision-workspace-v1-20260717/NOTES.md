@@ -270,3 +270,14 @@ generated artifact이므로 commit하지 않는다.
   boundary를 적용한 뒤 iframe `clientWidth=scrollWidth=717`을 확인했다.
 - local server가 `runOnSave=false`여서 Python process restart 전에는 old code / new build가 섞일
   수 있었다. current source로 재시작한 뒤 fresh no-run, execution, stale, responsive QA를 다시 했다.
+
+## 2026-07-18 11차 Result Interpretation Design Decisions
+
+- 사용자는 투자금 control보다 normalized return이면 충분하다고 판단했다. `100 -> 124.9`가
+  `+24.9%`라는 관계를 명확히 설명하고 달러 환산은 범위에서 제외한다.
+- chart는 실제 날짜 x tick, pointer-only tooltip/crosshair와 Benchmark ticker/contract label을
+  표시한다. React는 normalized return이나 Benchmark 의미를 계산하지 않는다.
+- next rebalance는 last `Rebalancing=true` row와 explicit cadence가 있을 때만 month-end window로
+  표시한다. exact trading date, holiday adjustment 또는 irregular signal date는 추측하지 않는다.
+- `기술 부록`은 사용자용 `계산 및 데이터 기준`으로 바꾸고 raw column/meta는 secondary disclosure에
+  보존한다. Python이 label/explanation/status를 제공하고 React/fallback은 표시만 한다.
