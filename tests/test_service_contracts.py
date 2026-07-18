@@ -8282,13 +8282,29 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("ConditionalPathPayload", root)
         self.assertIn("fm-pattern-map__conditional-path", pattern_map)
         self.assertIn("fm-pattern-map__uncertainty", pattern_map)
-        self.assertIn("유사 패턴 중앙 위치", pattern_map)
+        self.assertIn("일 후 예상 위치", pattern_map)
         self.assertIn("selectedCard?.conditional_path", pattern_map)
-        self.assertIn("실제 미래 경로가 아닙니다", pattern_map)
+        self.assertIn("실제 미래 경로를 보장하지 않습니다", pattern_map)
         self.assertNotIn("REGIME_TARGETS", pattern_map)
         self.assertNotIn("function Branch", pattern_map)
         self.assertNotIn("fm-pattern-map__outcome-dot", pattern_map)
         self.assertIn("stroke-dasharray", style)
+
+    def test_futures_macro_pattern_map_uses_one_terminal_range_and_readable_copy(self) -> None:
+        pattern_map = Path(
+            "app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("const uncertaintyStep = forecastPoints.at(-1)", pattern_map)
+        self.assertNotIn("midpointStep", pattern_map)
+        self.assertNotIn("uncertaintySteps", pattern_map)
+        self.assertEqual(pattern_map.count('className="fm-pattern-map__uncertainty"'), 1)
+        self.assertIn("data-forecast-step={uncertaintyStep.step}", pattern_map)
+        self.assertIn("일 후 예상 위치", pattern_map)
+        self.assertIn("일 예상 이동", pattern_map)
+        self.assertIn("일 후 도착 범위", pattern_map)
+        self.assertNotIn("유사 패턴 중앙 위치", pattern_map)
+        self.assertIn("실제 미래 경로를 보장하지 않습니다", pattern_map)
 
     def test_futures_macro_react_copy_avoids_trade_and_causal_claims(self) -> None:
         source = "\n".join(

@@ -52,11 +52,13 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
   const forecastPolyline = latest
     ? [`${sx(latest.x)},${sy(latest.y)}`, ...forecastPoints.map((point) => `${sx(point.x)},${sy(point.y)}`)].join(" ")
     : "";
-  const midpointStep = forecastPoints[Math.floor((forecastPoints.length - 1) / 2)]?.step;
-  const terminalStep = forecastPoints.at(-1)?.step;
-  const uncertaintySteps = forecastPoints.filter((point) => (
-    point.step === 1 || point.step === midpointStep || point.step === terminalStep
-  ));
+  const uncertaintyStep = forecastPoints.at(-1);
+  const selectedDays = selectedHorizon === "observed"
+    ? undefined
+    : Number.parseInt(selectedHorizon, 10);
+  const expectedPositionLabel = selectedDays ? `${selectedDays}일 후 예상 위치` : "";
+  const forecastLegend = selectedDays ? `1~${selectedDays}일 예상 이동` : "예상 이동";
+  const rangeLegend = selectedDays ? `${selectedDays}일 후 도착 범위` : "도착 범위";
   const showForecast = selectedHorizon !== "observed" && Boolean(latest) && forecastPoints.length > 0;
   const pathStatus = conditionalPath?.status || "UNAVAILABLE";
 
@@ -90,20 +92,19 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
             <text className="fm-pattern-map__quadrant-label" x={PAD_X + 18} y={HEIGHT - PAD_Y - 18}>방어 · 부담 완화</text>
             <text className="fm-pattern-map__quadrant-label" x={WIDTH - PAD_X - 18} y={HEIGHT - PAD_Y - 18} textAnchor="end">위험선호 · 부담 완화</text>
 
-            {showForecast ? uncertaintySteps.map((point) => (
+            {showForecast && uncertaintyStep ? (
               <rect
                 className="fm-pattern-map__uncertainty"
-                data-forecast-step={point.step}
-                key={`uncertainty-${selectedHorizon}-${point.step}`}
-                x={sx(point.lower_x)}
-                y={sy(point.upper_y)}
-                width={Math.max(2, sx(point.upper_x) - sx(point.lower_x))}
-                height={Math.max(2, sy(point.lower_y) - sy(point.upper_y))}
+                data-forecast-step={uncertaintyStep.step}
+                x={sx(uncertaintyStep.lower_x)}
+                y={sy(uncertaintyStep.upper_y)}
+                width={Math.max(2, sx(uncertaintyStep.upper_x) - sx(uncertaintyStep.lower_x))}
+                height={Math.max(2, sy(uncertaintyStep.lower_y) - sy(uncertaintyStep.upper_y))}
                 rx="10"
               >
-                <title>{point.step}D 후 · {conditionalPath?.band_label}</title>
+                <title>{selectedDays}일 후 · {conditionalPath?.band_label}</title>
               </rect>
-            )) : null}
+            ) : null}
             {showForecast ? (
               <polyline
                 className="fm-pattern-map__conditional-path"
@@ -122,7 +123,7 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
             {showForecast && conditionalPath?.terminal ? (
               <g className="fm-pattern-map__terminal">
                 <circle cx={sx(conditionalPath.terminal.x)} cy={sy(conditionalPath.terminal.y)} r="8" />
-                <text x={sx(conditionalPath.terminal.x)} y={sy(conditionalPath.terminal.y) - 14} textAnchor="middle">유사 패턴 중앙 위치</text>
+                <text className="fm-pattern-map__terminal-label" x={sx(conditionalPath.terminal.x)} y={sy(conditionalPath.terminal.y) - 14} textAnchor="middle">{expectedPositionLabel}</text>
                 <title>다음 {selectedHorizon} · 독립 표본 {conditionalPath.episode_count}개 · {pathStatus}</title>
               </g>
             ) : null}
@@ -154,7 +155,7 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
                 </dl>
               ) : <div className="fm-pattern-map__unavailable">확률을 표시할 근거가 부족합니다.</div>}
               {!showForecast ? <div className="fm-pattern-map__unavailable">조건부 경로를 표시할 독립 표본 또는 검증 근거가 부족합니다.</div> : null}
-              <p>{conditionalPath?.episode_count ? `독립 표본 ${conditionalPath.episode_count}개 · ` : ""}점선은 유사 패턴의 중앙 이동이며 실제 미래 경로가 아닙니다.</p>
+              <p>{conditionalPath?.episode_count ? `독립 표본 ${conditionalPath.episode_count}개 · ` : ""}점선은 과거 유사 흐름 기반 예상 이동이며 실제 미래 경로를 보장하지 않습니다.</p>
               {selectedCard?.status_reason ? <small>{selectedCard.status_reason}</small> : null}
             </>
           )}
@@ -162,9 +163,9 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
       </div>
 
       <div className="fm-pattern-map__legend">
-        <span className="observed">관측 경로</span>
-        <span className="forecast">조건부 중앙 경로</span>
-        <span className="uncertainty">가운데 50% 범위</span>
+        <span className="observed">관측 이동</span>
+        <span className="forecast">{forecastLegend}</span>
+        <span className="uncertainty">{rangeLegend}</span>
         <span className="current">현재 위치</span>
         <small>체제별 확률은 우측에 별도 표시</small>
       </div>
