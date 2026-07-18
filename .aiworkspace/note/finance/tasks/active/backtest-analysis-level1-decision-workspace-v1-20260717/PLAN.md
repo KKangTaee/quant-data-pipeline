@@ -1415,3 +1415,458 @@ Final response must include:
 - desktop / 760px Browser QA 범위와 screenshot links;
 - registry, run history, saved JSONL, generated artifact, `.superpowers/`가 commit되지 않았다는 audit;
 - 남은 위험과 active task 위치.
+
+---
+
+## 6차: Single Strategy Settings Workspace Corrective
+
+### Task 10: Shared Settings Shell And Single Selection Boundary
+
+**Files:**
+- Create: `app/web/backtest_single_settings_workspace.py`
+- Modify: `app/web/backtest_single_strategy.py`
+- Modify: `app/web/components/backtest_analysis_decision_workspace/frontend/src/BacktestAnalysisDecisionWorkspace.tsx`
+- Modify: `tests/test_backtest_analysis_decision_workspace.py`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+
+**Interfaces:**
+- Consumes: `LEVEL1_STRATEGY_PURPOSE_GROUPS`, `LEVEL1_STRATEGY_MATURITY`,
+  `resolve_concrete_strategy_display_name()`, existing family variant session keys.
+- Produces: `build_single_strategy_settings_summary()`,
+  `render_single_strategy_settings_header()`, `single_settings_section()`,
+  `build_compact_ticker_summary()`.
+
+- [ ] **Step 1: Write RED tests for summary and unique selection surface**
+
+```python
+def test_single_settings_summary_projects_purpose_variant_and_maturity():
+    summary = build_single_strategy_settings_summary(
+        "Quality + Value",
+        "Strict Annual",
+    )
+    assert summary == {
+        "strategy_choice": "Quality + Value",
+        "display_name": "Quality + Value Snapshot (Strict Annual)",
+        "variant": "Strict Annual",
+        "purpose": "팩터 기반 종목 선정",
+        "maturity": "production",
+        "maturity_label": "운영 전략",
+        "description": "기업의 품질과 가치평가를 함께 비교해 보유 후보를 고릅니다.",
+    }
+
+
+def test_single_workspace_has_no_duplicate_strategy_or_variant_selectbox():
+    source = Path("app/web/backtest_single_strategy.py").read_text()
+    assert 'st.selectbox(\n        "Strategy"' not in source
+    assert 'f"{strategy_choice} Variant"' not in source
+    assert "render_single_strategy_settings_header(" in source
+```
+
+Add a React boundary assertion that Single Strategy no longer renders the separate
+`current_work` aside because the selected card state plus Python settings header own that
+summary. Portfolio Mix keeps its current-work summary.
+
+- [ ] **Step 2: Run RED**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_analysis_decision_workspace.py \
+  tests/test_backtest_refactor_boundaries.py -q \
+  -k "single_settings or duplicate_strategy or current_work"
+```
+
+Expected: import / source assertions fail because the shared shell does not exist and the
+duplicate selectboxes remain.
+
+- [ ] **Step 3: Implement the shared shell and compact variant selector**
+
+Create `app/web/backtest_single_settings_workspace.py` with:
+
+```python
+from __future__ import annotations
+
+from contextlib import contextmanager
+from typing import Iterator
+
+import streamlit as st
+
+from app.services.backtest_strategy_catalog import (
+    LEVEL1_STRATEGY_MATURITY,
+    LEVEL1_STRATEGY_PURPOSE_GROUPS,
+    resolve_concrete_strategy_display_name,
+)
+
+_STRATEGY_DESCRIPTIONS = {
+    "Quality + Value": "기업의 품질과 가치평가를 함께 비교해 보유 후보를 고릅니다.",
+    "Quality": "수익성과 재무 건전성이 상대적으로 좋은 기업을 고릅니다.",
+    "Value": "기초가치 대비 가격 부담이 낮은 기업을 고릅니다.",
+    "GTAA": "자산군의 상대강도와 추세를 비교해 공격·방어 자산을 선택합니다.",
+    "Global Relative Strength": "글로벌 자산군의 상대강도를 비교해 상위 자산을 보유합니다.",
+    "Dual Momentum": "상대·절대 모멘텀을 함께 확인해 공격·방어 자산을 선택합니다.",
+    "Risk Parity Trend": "변동성과 추세를 함께 사용해 자산별 위험 기여를 조정합니다.",
+    "Equal Weight": "선택한 자산을 같은 비중으로 보유하고 정해진 주기로 조정합니다.",
+    "Risk-On Momentum 5D": "단기 위험선호 종목을 탐색하는 개발 중 전략입니다.",
+}
+
+
+def build_single_strategy_settings_summary(
+    strategy_choice: str,
+    selected_variant: str | None,
+) -> dict[str, str | None]:
+    purpose = next(
+        (
+            group["label"]
+            for group in LEVEL1_STRATEGY_PURPOSE_GROUPS.values()
+            if strategy_choice in group["items"]
+        ),
+        "기타 전략",
+    )
+    maturity = LEVEL1_STRATEGY_MATURITY.get(strategy_choice, "development")
+    return {
+        "strategy_choice": strategy_choice,
+        "display_name": resolve_concrete_strategy_display_name(
+            strategy_choice, selected_variant
+        ),
+        "variant": selected_variant,
+        "purpose": purpose,
+        "maturity": maturity,
+        "maturity_label": "운영 전략" if maturity == "production" else "개발 중",
+        "description": _STRATEGY_DESCRIPTIONS[strategy_choice],
+    }
+
+
+@contextmanager
+def single_settings_section(title: str, description: str) -> Iterator[None]:
+    with st.container(border=True):
+        st.markdown(f"#### {title}")
+        st.caption(description)
+        yield
+```
+
+`render_single_strategy_settings_header()` renders light-theme scoped summary HTML and, only
+for family strategies, `st.segmented_control("실행 기준", ...)` using the existing variant
+session key. It returns the selected variant so dispatch and stale detection use the same value.
+
+In `backtest_single_strategy.py`, resolve / repair session selection as today, read
+`strategy_choice` directly from session state, call the shared header, and remove both legacy
+selectboxes. In React, render `current_work` aside only for `portfolio_mix`.
+
+- [ ] **Step 4: Run GREEN, build, and compile**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_analysis_decision_workspace.py \
+  tests/test_backtest_refactor_boundaries.py -q
+cd app/web/components/backtest_analysis_decision_workspace/frontend && npm run build
+cd /Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev
+.venv/bin/python -m py_compile \
+  app/web/backtest_single_settings_workspace.py \
+  app/web/backtest_single_strategy.py
+git diff --check
+```
+
+Expected: focused tests, React build, compile, diff-check pass.
+
+- [ ] **Step 5: Commit Task 10**
+
+```bash
+git add \
+  app/web/backtest_single_settings_workspace.py \
+  app/web/backtest_single_strategy.py \
+  app/web/components/backtest_analysis_decision_workspace/frontend/src/BacktestAnalysisDecisionWorkspace.tsx \
+  tests/test_backtest_analysis_decision_workspace.py \
+  tests/test_backtest_refactor_boundaries.py
+git commit -m "Backtest Analysis 단일 전략 설정 셸 도입"
+```
+
+### Task 11: Tactical And Allocation Form Hierarchy
+
+**Files:**
+- Modify: `app/web/backtest_common.py`
+- Modify: `app/web/backtest_single_forms/equal_weight.py`
+- Modify: `app/web/backtest_single_forms/gtaa.py`
+- Modify: `app/web/backtest_single_forms/global_relative_strength.py`
+- Modify: `app/web/backtest_single_forms/risk_parity.py`
+- Modify: `app/web/backtest_single_forms/dual_momentum.py`
+- Modify: `app/web/backtest_single_forms/risk_on_momentum.py`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+- Modify: `tests/test_service_contracts.py`
+
+**Interfaces:**
+- Consumes: Task 10 `single_settings_section()` and existing widget / payload keys.
+- Produces: common five-section form hierarchy and compact universe evidence for six
+  non-family strategies.
+
+- [ ] **Step 1: Write RED visual and compatibility contracts**
+
+Add source contracts that require each form to use these ordered labels:
+
+```python
+section_labels = [
+    "핵심 실행 설정",
+    "투자 대상 Universe",
+    "선택·보유 규칙",
+    "비용·위험 기준",
+]
+for path in tactical_form_paths:
+    source = path.read_text()
+    offsets = [source.index(label) for label in section_labels]
+    assert offsets == sorted(offsets), path.name
+    assert 'form_submit_button("이 설정으로 백테스트 실행"' in source
+```
+
+Add a pure compact ticker test:
+
+```python
+summary = build_compact_ticker_summary(
+    ["AAPL", "MSFT", "GOOG", "AMZN", "META"], preview_count=3
+)
+assert summary["headline"] == "선택 종목 5개 · 대표 AAPL, MSFT, GOOG"
+assert summary["full_text"] == "AAPL, MSFT, GOOG, AMZN, META"
+```
+
+Keep existing payload key / prefill contract assertions green.
+
+- [ ] **Step 2: Run RED**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_refactor_boundaries.py \
+  tests/test_service_contracts.py -q \
+  -k "single_strategy_form_hierarchy or compact_ticker or prefill"
+```
+
+Expected: hierarchy and compact summary assertions fail; existing compatibility tests pass.
+
+- [ ] **Step 3: Implement compact universe and six form layouts**
+
+- Change `_render_ticker_preview()` to show `선택 종목 N개 · 대표 ...` first and keep the
+  full list under `전체 종목 보기` disclosure.
+- Keep `Preset` / `Manual` session values but show them through Korean `format_func` labels.
+- Move primary period and main strategy controls outside the submit form into
+  `핵심 실행 설정` so they appear before Universe and can rerun only the work fragment.
+- Wrap immediate universe controls in `투자 대상 Universe`.
+- Keep strategy / overlay inputs inside a borderless form under `선택·보유 규칙` and
+  execution cost / benchmark / liquidity / guardrail under `비용·위험 기준`.
+- Replace fixed `Timeframe=1d` and `Option=month_end` selectboxes with local constants while
+  preserving identical payload values.
+- Use Korean labels/help and `이 설정으로 백테스트 실행` submit copy.
+- Keep every existing widget key, payload key, validation, prefill, handler call unchanged.
+
+- [ ] **Step 4: Run GREEN and focused regressions**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_refactor_boundaries.py \
+  tests/test_service_contracts.py -q \
+  -k "single_strategy_form_hierarchy or compact_ticker or prefill or equal_weight or gtaa or global_relative_strength or risk_parity or dual_momentum or risk_on"
+.venv/bin/python -m py_compile \
+  app/web/backtest_common.py \
+  app/web/backtest_single_forms/equal_weight.py \
+  app/web/backtest_single_forms/gtaa.py \
+  app/web/backtest_single_forms/global_relative_strength.py \
+  app/web/backtest_single_forms/risk_parity.py \
+  app/web/backtest_single_forms/dual_momentum.py \
+  app/web/backtest_single_forms/risk_on_momentum.py
+git diff --check
+```
+
+Expected: selected regressions and compilation pass without touching runtime JSONL.
+
+- [ ] **Step 5: Commit Task 11**
+
+```bash
+git add \
+  app/web/backtest_common.py \
+  app/web/backtest_single_forms/equal_weight.py \
+  app/web/backtest_single_forms/gtaa.py \
+  app/web/backtest_single_forms/global_relative_strength.py \
+  app/web/backtest_single_forms/risk_parity.py \
+  app/web/backtest_single_forms/dual_momentum.py \
+  app/web/backtest_single_forms/risk_on_momentum.py \
+  tests/test_backtest_refactor_boundaries.py \
+  tests/test_service_contracts.py
+git commit -m "Backtest Analysis 전술 전략 설정 흐름 통일"
+```
+
+### Task 12: Strict Factor Seven-Variant Settings Hierarchy
+
+**Files:**
+- Modify: `app/web/backtest_single_forms/strict_factor.py`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+- Modify: `tests/test_service_contracts.py`
+
+**Interfaces:**
+- Consumes: Task 10 sections, Task 11 compact universe and unchanged strict-factor helpers.
+- Produces: Korean-first five-section flow for Quality / Value / Quality+Value annual and
+  quarterly variants plus legacy Quality Snapshot replay path.
+
+- [ ] **Step 1: Write RED contracts for all concrete strict variants**
+
+Assert that all seven renderer bodies contain the ordered section labels, Korean submit copy,
+and no first-read raw phrases:
+
+```python
+for body in strict_variant_bodies:
+    offsets = [body.index(label) for label in section_labels]
+    assert offsets == sorted(offsets)
+    assert "이 설정으로 백테스트 실행" in body
+
+strict_source = strict_factor_path.read_text()
+for raw_copy in (
+    "Strict annual multi-factor strategy.",
+    "Hidden defaults in this first pass",
+    "Current mode:",
+    "Selected tickers (300):",
+):
+    assert raw_copy not in strict_source
+```
+
+Retain service contracts that verify annual / quarterly strategy keys, factor arrays,
+universe contract, costs, overlay, guardrail, and prefill mappings.
+
+- [ ] **Step 2: Run RED**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_refactor_boundaries.py \
+  tests/test_service_contracts.py -q \
+  -k "strict_factor_settings_hierarchy or strict_annual or strict_quarterly or prefill"
+```
+
+Expected: hierarchy / Korean-first assertions fail on the legacy strict form source.
+
+- [ ] **Step 3: Refactor the seven renderer bodies without changing payloads**
+
+For each renderer:
+
+1. replace the English heading/caption with the shared selected-strategy header ownership;
+2. render date / Top N under `핵심 실행 설정` before universe;
+3. render preset/manual, compact ticker, PIT/readiness one-line status under
+   `투자 대상 Universe`;
+4. keep complete PIT / statement / membership evidence under `Universe 근거`;
+5. group factor, overlay, weighting, rejected-slot, defensive rules under
+   `선택·보유 규칙`;
+6. group cost, benchmark, liquidity, promotion thresholds, drawdown guardrails under
+   `비용·위험 기준`;
+7. submit with Korean copy while preserving all widget keys and payload fields.
+
+Do not change `_handle_backtest_run()` calls, concrete `strategy_key`, `statement_freq`,
+`universe_contract`, factor default arrays, or prefill conversion.
+
+- [ ] **Step 4: Run GREEN, full strict regressions, and compile**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_refactor_boundaries.py \
+  tests/test_service_contracts.py -q \
+  -k "strict_factor or quality_snapshot or value_snapshot or quality_value or prefill"
+.venv/bin/python -m py_compile app/web/backtest_single_forms/strict_factor.py
+git diff --check
+```
+
+Expected: strict hierarchy and existing runtime / payload compatibility tests pass.
+
+- [ ] **Step 5: Commit Task 12**
+
+```bash
+git add \
+  app/web/backtest_single_forms/strict_factor.py \
+  tests/test_backtest_refactor_boundaries.py \
+  tests/test_service_contracts.py
+git commit -m "Backtest Analysis 팩터 전략 설정 흐름 통일"
+```
+
+### Task 13: Runtime QA, Docs, And Corrective Closeout
+
+**Files:**
+- Modify: active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`, `PLAN.md`.
+- Modify: `.aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
+- Modify: `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Generate, never stage: `backtest-analysis-level1-single-settings-desktop-qa.png`
+- Generate, never stage: `backtest-analysis-level1-single-settings-760-qa.png`
+
+**Interfaces:**
+- Consumes: Task 10~12.
+- Produces: actual runtime evidence, responsive screenshots, canonical docs, protected-path audit.
+
+- [ ] **Step 1: Run fresh verification**
+
+```bash
+uv run --with pytest python -m pytest tests/test_backtest_analysis_decision_workspace.py -q
+uv run --with pytest python -m pytest tests/test_backtest_refactor_boundaries.py -q
+uv run --with pytest python -m pytest tests/test_service_contracts.py -q --tb=short
+cd app/web/components/backtest_analysis_decision_workspace/frontend && npm run build
+cd /Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev
+.venv/bin/python -m py_compile \
+  app/web/backtest_single_settings_workspace.py \
+  app/web/backtest_single_strategy.py \
+  app/web/backtest_common.py \
+  app/web/backtest_single_forms/*.py
+git diff --check
+```
+
+Record exact counts and compare service failures to the known 11-failure baseline.
+
+- [ ] **Step 2: Run desktop Browser QA**
+
+At `http://localhost:8505/backtest`, verify Quality + Value Strict Annual first, then Equal
+Weight, GTAA, Risk Parity, Dual Momentum, GRS, and development Risk-On:
+
+1. no duplicate Strategy selectbox;
+2. family variant segmented control changes Annual / Quarterly;
+3. one selected settings summary;
+4. common section order and Korean submit copy;
+5. compact 300-ticker summary and collapsed full evidence;
+6. actual Quality + Value and Equal Weight execution;
+7. fresh -> strategy change stale preservation;
+8. no automatic Level2 handoff;
+9. development strategy remains handoff-blocked.
+
+Capture `backtest-analysis-level1-single-settings-desktop-qa.png`.
+
+- [ ] **Step 3: Run 760px Browser QA**
+
+Verify summary grid, segmented control, setting cards, disclosures, input labels, and CTA have
+zero horizontal overflow and readable one-column flow. Capture
+`backtest-analysis-level1-single-settings-760-qa.png`.
+
+- [ ] **Step 4: Synchronize docs and task evidence**
+
+Use `finance-doc-sync` to document the shared settings shell, unique selection ownership,
+variant segmented control, five-section form hierarchy, verification counts, Browser evidence,
+and remaining baseline risks.
+
+- [ ] **Step 5: Stage only closeout files and audit protection**
+
+```bash
+git diff --check
+git add \
+  .aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md \
+  .aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md \
+  .aiworkspace/note/finance/tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717 \
+  .aiworkspace/note/finance/WORK_PROGRESS.md \
+  .aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md
+git diff --cached --check
+if git diff --cached --name-only | rg -q 'registries/|run_history/|saved/|\.superpowers/|\.png$'; then
+  exit 1
+fi
+```
+
+- [ ] **Step 6: Commit corrective closeout**
+
+```bash
+git commit -m "Backtest Analysis 단일 전략 설정 QA와 문서 동기화"
+```
+
+## 6차 Completion Report Contract
+
+- 6차 Task 10~13 완료 상태;
+- corrective commit 목록;
+- focused / boundary / service counts and known baseline comparison;
+- React build / target py_compile / diff-check;
+- desktop / 760px QA scope and screenshot links;
+- protected registry / history / saved / `.superpowers/` / screenshots exclusion;
+- remaining risks and active task location.

@@ -1,6 +1,6 @@
 # Status
 
-Status: Design Review / 6차 Single Settings Corrective
+Status: Implementation Ready / 6차 Single Settings Corrective
 Last Updated: 2026-07-18
 
 ## Current Position
@@ -21,8 +21,8 @@ Last Updated: 2026-07-18
 - [x] 5차 Runtime QA / Docs / Closeout
 - [x] 6차 current settings flow / state / payload audit
 - [x] 6차 corrective design 작성과 self-review
-- [ ] 6차 사용자 design review
-- [ ] 6차 implementation plan
+- [x] 6차 사용자 design review
+- [x] 6차 implementation plan
 - [ ] 6차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
@@ -41,4 +41,5 @@ Last Updated: 2026-07-18
   Strategy / Variant picker를 유지한 implementation gap을 확인했다.
 - 13개 strategy/variant form, React intent, session state, prefill, shared runner를
   감사하고 shared Python settings shell corrective design을 추가했다.
-- user design review 뒤 PLAN을 6차 unit으로 확장하고 TDD implementation을 시작한다.
+- 승인된 design을 PLAN Task 10~13으로 확장했다. 같은 세션에서 inline
+  executing-plans와 TDD로 Task 10부터 순차 구현한다.
