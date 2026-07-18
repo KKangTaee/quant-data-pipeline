@@ -101,3 +101,18 @@ generated artifact이므로 commit하지 않는다.
   `전체 종목 보기`, 데이터 계약은 `Universe 근거`로 둔다.
 - 실제 QA 서버가 `fileWatcherType none`으로 떠 있어 최초 확인 화면은 이전 build였다.
   동일 worktree 8505 프로세스를 재시작한 뒤 새 코드 기준으로 Browser QA를 다시 했다.
+
+## 2026-07-18 7차 All-Strategy UI Audit
+
+- 6차 wrapper는 모든 전략에 적용됐지만 `single_settings_section()`이 native
+  `st.container(border=True)`이므로 React one-shell과 같은 visual component가 아니다.
+- form 파일의 native widget / form / expander 호출은 최소 167개이며 shared ETF /
+  factor helper가 추가 legacy UI와 영문 copy를 렌더링한다.
+- actual GTAA DOM에서 `Score Horizons`, `Promotion Policy Signal`, `Minimum Price`와
+  raw English prose가 재현됐다. Equal Weight도 같은 native field surface를 사용한다.
+- Quality + Value가 상대적으로 정돈되어 보인 것은 기존 strict-factor disclosure가
+  많은 first-read detail을 감췄기 때문이며 별도 React settings architecture가 아니다.
+- variant가 없는 전략은 multiline HTML 안의 빈 variant row가 Markdown block 경계를
+  만들어 maturity `<span>`을 code text로 노출한다. plain React text badge로 제거한다.
+- 7차는 6차의 full React editor out-of-scope 결정을 명시적으로 뒤집는 승인된 범위
+  확장이다. strategy runtime, DB, Level2 / Level3 Gate는 확장하지 않는다.

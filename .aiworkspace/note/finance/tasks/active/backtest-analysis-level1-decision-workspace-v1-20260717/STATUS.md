@@ -1,6 +1,6 @@
 # Status
 
-Status: Complete / 6차 Single Settings Corrective
+Status: Design Review / 7차 Unified React Strategy Settings
 Last Updated: 2026-07-18
 
 ## Current Position
@@ -24,6 +24,12 @@ Last Updated: 2026-07-18
 - [x] 6차 사용자 design review
 - [x] 6차 implementation plan
 - [x] 6차 RED -> GREEN implementation / Browser QA / closeout
+- [x] 7차 all-strategy UI / renderer / runtime boundary audit
+- [x] 7차 Schema-Driven React Settings 접근 사용자 승인
+- [x] 7차 corrective design 작성과 self-review
+- [ ] 7차 written design 사용자 review
+- [ ] 7차 implementation plan
+- [ ] 7차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -33,6 +39,7 @@ Last Updated: 2026-07-18
 4. Portfolio Mix One-Shell
 5. Runtime QA / Docs / Closeout
 6. Single Strategy Settings Workspace Corrective
+7. Unified React Strategy Settings Workspace
 
 ## Current Corrective Position
 
@@ -48,3 +55,14 @@ Last Updated: 2026-07-18
 - Task 13 Browser QA에서 실제 Equal Weight와 Quality + Value Strict Annual 실행,
   Annual / Quarterly variant, fresh -> stale 보존, development Gate, desktop / 760px
   overflow를 확인하고 canonical docs를 동기화했다.
+
+## Current 7차 Position
+
+- 사용자 재검토에서 6차가 information hierarchy만 정렬하고 native Streamlit form을
+  보존해 전략별 visual inconsistency가 남은 것을 확인했다.
+- 9개 user choice / 13개 concrete renderer, actual GTAA DOM, React/Python intent,
+  prefill / payload / runner 경계를 다시 감사했다.
+- CSS reskin과 detail-only hybrid는 목표를 충족하지 못해 Python-owned schema와
+  React settings surface를 결합한 C안을 승인했다.
+- 7차 DESIGN은 6차에서 out-of-scope였던 full React editor를 범위 안으로 옮기되
+  Python validation / payload / execution / Gate ownership을 유지한다.
