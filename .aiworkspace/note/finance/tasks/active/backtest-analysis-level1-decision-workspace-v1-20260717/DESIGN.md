@@ -1920,3 +1920,179 @@ React는 Benchmark 분류, next schedule 계산, normalized return 계산, metad
 - broker holdings/order, tax, minimum lot, live/auto rebalance
 - market holiday 기반 exact next trading date provider
 - strategy algorithm, runtime calculation, DB schema 또는 Level2/Final Review route 재설계
+
+## 12차 Current Selection And Factor Presentation Corrective
+
+### Why This Corrective Exists
+
+11차까지 Level1 설정과 결과 워크스페이스를 React one-shell로 정리했지만 실제 Browser 사용에서
+다음 세 회귀가 남았다.
+
+- 전략 또는 설정을 변경해 이전 결과가 stale이 되면 설정 화면 바로 아래에 Streamlit `st.info`,
+  `st.warning`, raw refresh job `st.dataframe`이 먼저 나타난다. 이전 결과 보존은 의도된 계약이지만
+  이 레거시 운영 표면은 사용자 결과 흐름과 충돌한다.
+- `목적과 핵심 설정`의 단일 전략 configuration summary가 현재 선택이 아니라 이전
+  `backtest_current_draft_payload`를 읽는다. Quality + Value를 선택해도 이전 GTAA의
+  `strategy_key`, `timeframe`, `option`, promotion threshold가 현재 선택의 설정처럼 보인다.
+- strict factor multi-select가 payload 원본 key를 visible label로 사용해 `net_margin`,
+  `operating_income_yield` 같은 코드 키가 노출되고 긴 항목은 desktop에서도 잘린다.
+
+이 corrective의 목표는 이전 실행 결과를 참고용으로 보존한다는 lifecycle 계약은 유지하면서
+현재 선택, 이전 실행, 사용자 표시명, 원본 기술 근거의 소유 경계를 분리하는 것이다.
+
+### Approved Decisions
+
+- B안인 Python-owned user presentation contract를 적용한다.
+- 전략 또는 설정 변경 시 이전 성공 결과는 삭제하지 않고 참고용으로 보존한다.
+- 단일 전략 context의 raw configuration summary는 제거한다. 현재 선택은 전략 catalog와 바로 아래
+  settings editor가 소유하며 이전 draft payload를 현재 설정처럼 재표시하지 않는다.
+- stale / price refresh 안내는 Result Workspace의 lifecycle 안내 하나로 통합한다. 설정과 결과 사이의
+  Streamlit 안내와 raw refresh job table은 제거한다.
+- factor payload value는 기존 원본 key를 유지하되 visible label은 `한국어 의미 + 표준 약어`를 사용한다.
+  일반적 약어가 없는 항목은 한국어 의미만 표시한다.
+- raw factor key와 refresh job detail은 first-read가 아니라 secondary technical evidence에서만 확인한다.
+
+### Current Selection Contract
+
+Single Strategy context surface는 다음만 표시한다.
+
+1. Level1 질문과 Single Strategy / Portfolio Mix 진입 선택
+2. 목적별 전략 catalog와 현재 선택 표시
+3. 바로 이어지는 현재 선택 전용 settings editor
+
+`configuration_summary`는 Single Strategy context에 렌더링하지 않는다. 현재 설정값은 settings read
+model이 소유하고, 실행된 값은 Result Workspace의 계산 및 데이터 기준이 소유한다. 따라서 아직 실행하지
+않은 current draft와 이전 run payload를 하나의 summary에서 섞지 않는다.
+
+Portfolio Mix는 component와 weight를 한눈에 확인해야 하므로 구성 요약을 유지할 수 있지만 raw key/value
+dictionary를 그대로 표시하지 않는다. Python이 만든 사용자 label/value row만 React가 표현한다.
+
+전략 catalog에서 다른 전략을 선택해도 이전 `backtest_current_draft_payload`와 성공 결과는 감사와 참고를
+위해 session에 보존할 수 있다. 단, read model은 payload의 `strategy_key`가 현재 선택의 concrete strategy와
+일치하지 않으면 current configuration으로 투영하지 않는다.
+
+### Stale Result Lifecycle Contract
+
+전략, variant 또는 설정 변경 후 이전 결과는 다음 의미로 유지한다.
+
+```text
+current settings
+  -> fingerprint mismatch
+  -> previous successful result remains visible
+  -> result lifecycle = stale / reference_only
+  -> Level2 handoff disabled
+  -> rerun success atomically replaces result
+```
+
+설정 editor와 Result Workspace 사이에 별도 Streamlit reset notice를 렌더링하지 않는다.
+`_render_backtest_rerun_required_notice()`의 warning과 DataFrame도 first-read에서 제거한다. Result Workspace는
+Python이 제공한 `result_freshness`, `reference_reason`, `reference_message`를 사용해 상단에 다음과 같은
+compact lifecycle strip 하나만 표시한다.
+
+- 설정 변경: `이전 설정 결과 · 참고용`
+- 가격 데이터 갱신: `가격 갱신 전 결과 · 참고용`
+- 재실행 실패: `이전 성공 결과 유지 · 참고용`
+
+refresh message, saved row count, target end, collection start, ticker count는 사용자 판단의 first-read가
+아니다. 값이 필요하면 `계산 및 데이터 기준 > 원본 근거`의 secondary evidence로만 남긴다. raw job/status
+dashboard를 새로 만들지 않는다.
+
+### Factor Presentation Contract
+
+Python settings schema의 option은 계산용 `value`와 사용자용 `label`을 분리한다.
+
+```text
+{
+  value: "roe",
+  label: "자기자본이익률 (ROE)"
+}
+```
+
+대표 label은 다음 원칙을 따른다.
+
+- `roe` -> `자기자본이익률 (ROE)`
+- `roa` -> `총자산이익률 (ROA)`
+- `net_margin` -> `순이익률`
+- `asset_turnover` -> `자산회전율`
+- `current_ratio` -> `유동비율`
+- `book_to_market` -> `장부가치 대비 시가`
+- `earnings_yield` -> `이익수익률`
+- `ocf_yield` -> `영업현금흐름 수익률`
+- `operating_income_yield` -> `영업이익 수익률`
+
+모든 Quality / Value option에 label을 제공한다. React의 검색은 label과 raw value를 함께 검색할 수 있지만
+버튼, 선택 요약, chip에는 label만 표시한다. submit intent에는 기존 value array를 그대로 보내 runner와
+저장 payload 계약을 바꾸지 않는다.
+
+compact factor option grid는 desktop과 760px에서 기본 2열을 사용하고 작은 mobile 폭에서 1열로
+전환한다. 각 button text는 여러 줄을 허용하고 `min-width: 0`, `overflow-wrap: anywhere`, 충분한
+line-height를 적용해 clip 또는 horizontal overflow가 없게 한다.
+
+### Component And Ownership Changes
+
+- `app/services/backtest_single_settings_workspace.py`
+  - factor value -> user label map과 option projection 소유
+- `app/services/backtest_analysis_decision_workspace.py`
+  - Single Strategy context configuration summary suppression 또는 user summary projection 소유
+- `app/services/backtest_analysis_result_workspace.py`
+  - stale/reference reason과 사용자 lifecycle message projection 소유
+- `app/web/backtest_single_strategy.py`
+  - 설정과 결과 사이 legacy reset notice 제거
+- `app/web/backtest_result_display.py`
+  - raw rerun warning/DataFrame first-read 제거, same-read-model result renderer만 호출
+- `app/web/components/backtest_analysis_decision_workspace/frontend/`
+  - Python label 표시, compact option wrap, raw configuration dictionary 부재
+- `app/web/components/backtest_analysis_result_workspace/frontend/`
+  - reference-only lifecycle strip 표시
+- Python fallback
+  - 동일 label, summary suppression, stale lifecycle 의미 유지
+
+React는 strategy key 일치 판정, stale 원인 분류, factor key 번역, Gate 또는 payload 변환을 소유하지
+않는다. Python이 value/label, lifecycle state와 user message를 제공하고 React는 presentation과 intent만
+담당한다.
+
+### Error And Partial States
+
+- current strategy와 draft payload가 다르면 current context에는 이전 payload summary를 표시하지 않는다.
+- result bundle이 없으면 stale/reference 안내도 표시하지 않는다.
+- refresh detail이 없더라도 generic `이전 설정 결과 · 참고용`을 표시할 수 있다.
+- factor option label map에 알 수 없는 extension key가 들어오면 계산 value는 보존하고 사용자 label은
+  안전한 title 형태로 fallback한다. raw snake_case를 그대로 first-read에 노출하지 않는다.
+- React component가 없으면 Python fallback도 한국어 factor label과 compact stale 안내를 사용한다.
+
+### TDD And Browser QA Contract
+
+- RED: Quality + Value 선택 중 이전 GTAA draft가 context summary에 노출되지 않는다.
+- RED: Single Strategy context에 raw `strategy_key`, `timeframe`, `option`, promotion key가 없다.
+- RED: stale result가 보존되지만 Streamlit reset notice와 refresh DataFrame을 렌더링하지 않는다.
+- RED: settings change / price refresh / rerun failure reference reason이 one lifecycle message로 투영된다.
+- RED: 모든 Quality / Value factor option은 user label과 unchanged raw value를 가진다.
+- RED: submitted factor array는 기존 raw key payload와 정확히 같다.
+- GREEN 뒤 focused settings / decision / result / boundary tests와 full service baseline을 새로 실행한다.
+- React production build, target `py_compile`, `git diff --check`를 실행한다.
+- desktop Browser QA에서 Quality + Value 선택, 이전 GTAA result 보존, raw summary/legacy table 부재,
+  factor label과 2열 wrap을 확인한다.
+- 760px에서 factor option 2열, 작은 label wrap, lifecycle strip, horizontal overflow 0과
+  ResizeObserver height를 확인한다.
+- registry, run history, saved JSONL, `.superpowers/`, screenshots와 run artifact는 stage/commit하지 않는다.
+
+### 12차 Acceptance Criteria
+
+1. 현재 선택과 이전 draft/result가 같은 설정으로 오인되지 않는다.
+2. Quality + Value 선택 화면에 이전 GTAA raw configuration summary가 보이지 않는다.
+3. stale 결과는 참고용으로 보존되지만 설정 아래 legacy Streamlit notice/table은 보이지 않는다.
+4. reference-only 상태와 재실행 필요성은 Result Workspace lifecycle strip 하나로 이해할 수 있다.
+5. factor 선택 화면은 한국어 의미와 표준 약어를 사용하고 raw snake_case를 first-read에 노출하지 않는다.
+6. factor payload value와 runner contract는 변경되지 않는다.
+7. desktop / 760px에서 긴 factor label clip과 horizontal overflow가 없다.
+8. React unavailable fallback도 동일 상태와 label 의미를 유지한다.
+9. focused/full tests, React build, py_compile, diff-check와 protected-path audit를 통과한다.
+
+### 12차 Out Of Scope
+
+- factor 계산식, ranking, weighting, universe, strategy runtime 또는 DB schema 변경
+- 이전 성공 결과 삭제 또는 run history rewrite
+- raw run/job/status 중심 운영 진단 dashboard 추가
+- 신규 factor/provider/historical universe 개발
+- Level2 Practical Validation 또는 Final Review route 재설계
+- broker order, live approval, account sync, tax, auto rebalance
