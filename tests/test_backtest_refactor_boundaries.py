@@ -571,6 +571,51 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("Streamlit.setFrameHeight", index)
         self.assertIn("@media (max-width: 760px)", style)
 
+    def test_level1_result_workspace_is_dedicated_intent_only_and_responsive(
+        self,
+    ) -> None:
+        root = (
+            PROJECT_ROOT
+            / "app/web/components/backtest_analysis_result_workspace/frontend/src"
+        )
+        source = (root / "BacktestAnalysisResultWorkspace.tsx").read_text()
+        chart = (root / "ResultWorkspaceChart.tsx").read_text()
+        types = (root / "types.ts").read_text()
+        css = (root / "style.css").read_text()
+        index = (root / "index.tsx").read_text()
+
+        for token in (
+            "performance_summary",
+            "strategy_series",
+            "current_allocation",
+            "target_allocation",
+            "technical_handoff_readiness",
+            "level2_validation_questions",
+            "evidence_groups",
+            "performance_rows",
+            "holding_change_rows",
+            "technical_appendix",
+        ):
+            self.assertIn(token, types)
+        self.assertIn('emitIntent("save_and_move"', source)
+        self.assertIn("<svg", chart)
+        self.assertIn("<title>", chart)
+        self.assertIn("<desc>", chart)
+        self.assertIn("ResizeObserver", index)
+        self.assertIn("@media (max-width: 760px)", css)
+        self.assertNotIn("benchmark_available", source)
+        self.assertNotIn("Next Balance", source)
+        self.assertNotIn("canHandoff =", source)
+        self.assertNotIn("/ total", source)
+
+        fallback = (
+            PROJECT_ROOT / "app/web/backtest_analysis_result_workspace_panel.py"
+        ).read_text()
+        self.assertIn(
+            "def render_backtest_analysis_result_workspace_fallback", fallback
+        )
+        self.assertNotIn("build_next_step_readiness_evaluation", fallback)
+
     def test_backtest_analysis_light_cards_pin_readable_text_in_dark_theme(
         self,
     ) -> None:
