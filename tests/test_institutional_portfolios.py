@@ -1057,6 +1057,42 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn("visibleHoldings", component_source)
         self.assertIn("INSTITUTIONAL PORTFOLIO CONTEXT", component_source)
 
+    def test_workbench_fix_contract_covers_manager_search_reset_coverage_other_and_mapping_badges(self) -> None:
+        component_source = _component_source()
+        page_source = Path("app/web/institutional_portfolios.py").read_text(encoding="utf-8")
+        render_source = page_source[page_source.index("def render_institutional_portfolios_page(") :]
+
+        self.assertIn("managerSearch", component_source)
+        self.assertIn('id: "manager_search"', component_source)
+        self.assertIn("submitManagerSearch", component_source)
+        self.assertIn("resetHoldingsExplorer", component_source)
+        self.assertIn("payload?.manager_picker.selected_cik", component_source)
+        self.assertIn("payload.coverage.holding_count_unmapped.toLocaleString()", component_source)
+        self.assertIn("payload.coverage.holding_count_ambiguous.toLocaleString()", component_source)
+        self.assertIn("allocationOtherCount", component_source)
+        self.assertIn("allocationOtherWeight", component_source)
+        self.assertIn('mapped ? "ticker 연결됨"', component_source)
+        self.assertNotIn('search = st.text_input(', render_source)
+        self.assertIn('event_name == "manager_search"', page_source)
+
+    def test_tracked_workbench_bundle_serves_v2_runtime_contract(self) -> None:
+        build_dir = Path("app/web/streamlit_components/institutional_portfolios_workbench/component_static")
+        index_source = (build_dir / "index.html").read_text(encoding="utf-8")
+        asset_paths = re.findall(r'(?:src|href)="\./(assets/[^"]+)"', index_source)
+
+        self.assertGreaterEqual(len(asset_paths), 2)
+        for asset_path in asset_paths:
+            self.assertTrue((build_dir / asset_path).exists(), asset_path)
+        javascript = "\n".join(
+            (build_dir / asset_path).read_text(encoding="utf-8")
+            for asset_path in asset_paths
+            if asset_path.endswith(".js")
+        )
+        self.assertIn("institutional_portfolios_workbench_v2", javascript)
+        self.assertIn("INSTITUTIONAL PORTFOLIO CONTEXT", javascript)
+        self.assertIn("manager_search", javascript)
+        self.assertNotIn("slice(0,80)", javascript)
+
     def test_selected_manager_resolver_keeps_watchlist_selection_outside_search_results(self) -> None:
         from app.web.institutional_portfolios import _resolve_selected_manager
 
@@ -1151,6 +1187,33 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
                     self.assertEqual(fake_streamlit.rerun_count, 1)
         finally:
             page.st = original_streamlit
+
+    def test_manager_search_event_updates_existing_manager_query_state_on_submit(self) -> None:
+        import app.web.institutional_portfolios as page
+
+        class FakeStreamlit:
+            def __init__(self) -> None:
+                self.session_state: dict[str, object] = {}
+                self.rerun_count = 0
+
+            def rerun(self) -> None:
+                self.rerun_count += 1
+
+        original_streamlit = page.st
+        fake_streamlit = FakeStreamlit()
+        try:
+            page.st = fake_streamlit
+            page._handle_workbench_event(
+                {"id": "manager_search", "query": " Pershing Square ", "nonce": "manager-search-1"}
+            )
+        finally:
+            page.st = original_streamlit
+
+        self.assertEqual(
+            fake_streamlit.session_state["institutional_portfolios_manager_search"],
+            "Pershing Square",
+        )
+        self.assertEqual(fake_streamlit.rerun_count, 1)
 
     def test_reverse_lookup_loader_uses_filing_total_without_full_holding_groupby(self) -> None:
         source = Path("finance/loaders/institutional_13f.py").read_text(encoding="utf-8")

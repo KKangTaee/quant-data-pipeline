@@ -195,6 +195,7 @@ type WorkbenchPayload = {
   };
   manager_picker: {
     selected_cik?: string | null;
+    search_query?: string;
     items: ManagerItem[];
   };
   freshness?: {
@@ -317,9 +318,11 @@ type HoldingSort = "weight_desc" | "value_desc" | "issuer_asc";
 type MappingFilter = "all" | "mapped" | "unresolved";
 
 const HOLDINGS_PAGE_SIZE = 50;
+const WORKBENCH_SCHEMA_VERSION = "institutional_portfolios_workbench_v2";
 
 type PendingAction =
   | { kind: "manager"; cik: string; label: string }
+  | { kind: "manager_search"; query: string; label: string }
   | { kind: "interest"; query: string; label: string }
   | { kind: "popularity"; label: string }
   | { kind: "price"; symbol: string; label: string }
@@ -936,10 +939,20 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   const [sectorFilter, setSectorFilter] = useState("all");
   const [holdingSort, setHoldingSort] = useState<HoldingSort>("weight_desc");
   const [holdingPage, setHoldingPage] = useState(1);
+  const [managerSearch, setManagerSearch] = useState(payload?.manager_picker.search_query || "");
   const [securitySearch, setSecuritySearch] = useState(payload?.security_search.current_query || "");
   const [unresolvedHolding, setUnresolvedHolding] = useState<HoldingRow | null>(null);
   const managerRailRef = useRef<HTMLDivElement | null>(null);
   const managerRailScrollRef = useRef(0);
+
+  const resetHoldingsExplorer = () => {
+    setHoldingSearch("");
+    setMappingFilter("all");
+    setSectorFilter("all");
+    setHoldingSort("weight_desc");
+    setHoldingPage(1);
+    setUnresolvedHolding(null);
+  };
 
   useEffect(() => {
     Streamlit.setComponentReady();
@@ -953,6 +966,14 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   useEffect(() => {
     setSecuritySearch(payload?.security_search.current_query || "");
   }, [payload?.security_search.current_query]);
+
+  useEffect(() => {
+    setManagerSearch(payload?.manager_picker.search_query || "");
+  }, [payload?.manager_picker.search_query]);
+
+  useEffect(() => {
+    resetHoldingsExplorer();
+  }, [payload?.manager_picker.selected_cik, payload?.hero.latest_report_period]);
 
   useEffect(() => {
     setHoldingPage(1);
@@ -970,6 +991,10 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
       return;
     }
     if (pendingAction.kind === "manager" && payload.manager_picker.selected_cik === pendingAction.cik) {
+      setPendingAction(null);
+      setActionNotice(null);
+    }
+    if (pendingAction.kind === "manager_search" && (payload.manager_picker.search_query || "") === pendingAction.query) {
       setPendingAction(null);
       setActionNotice(null);
     }
@@ -1127,6 +1152,19 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     activeView === "overview" || activeView === "holdings" ? "portfolio" : "security";
   const holdingsStart = filteredHoldings.length ? (safeHoldingPage - 1) * HOLDINGS_PAGE_SIZE + 1 : 0;
   const holdingsEnd = Math.min(safeHoldingPage * HOLDINGS_PAGE_SIZE, filteredHoldings.length);
+  const allocationOtherSegment = payload.allocation.segments.find(
+    (segment) => segment.key === "other" || segment.label.toLocaleLowerCase() === "other"
+  );
+  const allocationOtherCountFromSegment = Number.parseInt(
+    allocationOtherSegment?.issuer_name.match(/^\d[\d,]*/)?.[0]?.replaceAll(",", "") || "",
+    10
+  );
+  const allocationOtherCount = allocationOtherSegment
+    ? Number.isFinite(allocationOtherCountFromSegment)
+      ? allocationOtherCountFromSegment
+      : Math.max(0, payload.coverage.holding_count_total - payload.allocation.top_holdings.length)
+    : 0;
+  const allocationOtherWeight = allocationOtherSegment?.weight_label || "0.0%";
 
   const sendEvent = (event: Record<string, unknown>) => {
     Streamlit.setComponentValue({ event: { ...event, nonce: `${Date.now()}-${Math.random()}` } });
@@ -1200,6 +1238,19 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     syncFrameHeightSoon();
   };
 
+  const submitManagerSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = managerSearch.trim();
+    setActionNotice(null);
+    setPendingAction({
+      kind: "manager_search",
+      query,
+      label: query ? `${query} 기관 검색 중` : "기본 기관 목록 불러오는 중",
+    });
+    Streamlit.setComponentValue({ id: "manager_search", query, nonce: Date.now().toString() });
+    syncFrameHeightSoon();
+  };
+
   const handleManagerSelect = (item: ManagerItem) => {
     if (!item.cik || item.selected) {
       return;
@@ -1238,7 +1289,12 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   };
 
   return (
-    <main className="ip-workbench" data-schema-version={payload.schema_version} data-mode={payload.mode}>
+    <main
+      className="ip-workbench"
+      data-schema-version={payload.schema_version}
+      data-contract-version={WORKBENCH_SCHEMA_VERSION}
+      data-mode={payload.mode}
+    >
       <section className="ip-hero">
         <div className="ip-hero__topline">
           <span className={`ip-state ${payload.data_state.is_preview ? "ip-state--preview" : ""}`}>{payload.data_state.label}</span>
@@ -1251,6 +1307,8 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
             <strong>
               {pendingAction.kind === "manager"
                 ? "포트폴리오 불러오는 중"
+                : pendingAction.kind === "manager_search"
+                  ? "기관 검색 중"
                 : pendingAction.kind === "interest"
                   ? "종목 상세 불러오는 중"
                   : pendingAction.kind === "popularity"
@@ -1286,30 +1344,45 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
         </div>
 
         <div className="ip-context-controls">
-          <div
-            className="ip-manager-favorites ip-manager-rail"
-            role="tablist"
-            aria-label="Institutional managers"
-            ref={managerRailRef}
-            onScroll={(event) => {
-              managerRailScrollRef.current = event.currentTarget.scrollLeft;
-            }}
-          >
-            {payload.manager_picker.items.map((item) => (
-              <button
-                key={item.cik || item.manager_name}
-                type="button"
-                className={`ip-manager-tab ${item.selected ? "ip-manager-tab--active" : ""} ${
-                  pendingAction?.kind === "manager" && pendingAction.cik === item.cik ? "ip-manager-tab--pending" : ""
-                }`}
-                data-cik={item.cik || ""}
-                disabled={Boolean(pendingAction)}
-                onClick={() => handleManagerSelect(item)}
-              >
-                <strong>{item.watchlist_label || item.manager_name}</strong>
-                <span>{item.manager_name} · {item.latest_report_period}</span>
-              </button>
-            ))}
+          <div className="ip-manager-switcher">
+            <form className="ip-manager-search" onSubmit={submitManagerSearch}>
+              <label htmlFor="ip-manager-search-input">기관 / 투자 대가 검색</label>
+              <div>
+                <input
+                  id="ip-manager-search-input"
+                  type="search"
+                  value={managerSearch}
+                  placeholder="Berkshire Hathaway, Pershing Square"
+                  onChange={(event) => setManagerSearch(event.target.value)}
+                />
+                <button type="submit" disabled={Boolean(pendingAction)}>검색</button>
+              </div>
+            </form>
+            <div
+              className="ip-manager-favorites ip-manager-rail"
+              role="tablist"
+              aria-label="Institutional managers"
+              ref={managerRailRef}
+              onScroll={(event) => {
+                managerRailScrollRef.current = event.currentTarget.scrollLeft;
+              }}
+            >
+              {payload.manager_picker.items.map((item) => (
+                <button
+                  key={item.cik || item.manager_name}
+                  type="button"
+                  className={`ip-manager-tab ${item.selected ? "ip-manager-tab--active" : ""} ${
+                    pendingAction?.kind === "manager" && pendingAction.cik === item.cik ? "ip-manager-tab--pending" : ""
+                  }`}
+                  data-cik={item.cik || ""}
+                  disabled={Boolean(pendingAction)}
+                  onClick={() => handleManagerSelect(item)}
+                >
+                  <strong>{item.watchlist_label || item.manager_name}</strong>
+                  <span>{item.manager_name} · {item.latest_report_period}</span>
+                </button>
+              ))}
+            </div>
           </div>
           <div className={`ip-freshness ${payload.freshness?.is_stale ? "ip-freshness--stale" : ""}`}>
             <button type="button" className="ip-freshness__action" onClick={handleRefreshOpen}>
@@ -1341,6 +1414,12 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
                   <em>{holding.weight_label}</em>
                 </button>
               ))}
+              {allocationOtherSegment ? (
+                <div className="ip-allocation-other">
+                  <span>Other 버킷</span>
+                  <strong>{allocationOtherCount.toLocaleString()}개 · {allocationOtherWeight}</strong>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -1462,6 +1541,8 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
                 <div className="ip-coverage-metrics">
                   <div><span>전체 보유</span><strong>{payload.coverage.holding_count_total.toLocaleString()}</strong></div>
                   <div><span>ticker 연결</span><strong>{payload.coverage.holding_count_mapped.toLocaleString()}</strong></div>
+                  <div><span>ticker 미연결</span><strong>{payload.coverage.holding_count_unmapped.toLocaleString()}</strong></div>
+                  <div><span>mapping 확인 필요</span><strong>{payload.coverage.holding_count_ambiguous.toLocaleString()}</strong></div>
                   <div><span>연결 평가액 비중</span><strong>{payload.coverage.mapped_weight_label}</strong></div>
                   <div><span>성과 계산 비중</span><strong>{payload.coverage.performance_covered_weight_label}</strong></div>
                 </div>
@@ -1563,9 +1644,9 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
                       <strong>{mapped ? row.symbol : row.issuer_name}</strong>
                       <small>{mapped ? row.issuer_name : `CUSIP ${row.cusip || "-"}`}</small>
                     </span>
-                    {!mapped ? (
-                      <span className="ip-mapping-badge">{row.mapping_status === "ambiguous" ? "mapping 확인 필요" : "ticker 연결 전"}</span>
-                    ) : null}
+                    <span className={`ip-mapping-badge ${mapped ? "ip-mapping-badge--mapped" : ""}`}>
+                      {mapped ? "ticker 연결됨" : row.mapping_status === "ambiguous" ? "mapping 확인 필요" : "ticker 연결 전"}
+                    </span>
                     <em>{row.weight_label}</em>
                     <small>{row.value_label}</small>
                     <small>{row.sector}</small>
