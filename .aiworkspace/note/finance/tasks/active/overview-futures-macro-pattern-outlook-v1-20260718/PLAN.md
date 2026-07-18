@@ -10,6 +10,8 @@
 
 ## Global Constraints
 
+- User-selected UI direction is `A · 맥락→전망형`; visible order is `현재 체제 -> 1주·1개월 전망 -> 패턴 경로와 근거 -> 60일 체제 ribbon -> 자산별 경로 -> 방법론`.
+- 이 저장소의 현재 로컬 검증 표준은 `unittest`이며 `.venv`와 `pyproject.toml`에 `pytest`가 없다. 아래 pytest-style test snippets는 contract pseudocode로 읽고, executable test files와 commands는 동등한 `unittest.TestCase`, `subTest`, `assertAlmostEqual`, `python -m unittest`로 실행한다. 이 기능을 위해 pytest dependency를 추가하지 않는다.
 - 전체 시장 위험 체제가 첫 결과이며 자산 family 방향은 보조 근거다.
 - 관측 기간은 1D / 5D / 20D, 공개 전망은 5D / 20D다.
 - 다음 1D 확률은 hero 결과로 만들지 않는다.

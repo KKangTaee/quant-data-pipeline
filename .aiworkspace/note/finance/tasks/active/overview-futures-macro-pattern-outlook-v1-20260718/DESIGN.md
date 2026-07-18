@@ -1,6 +1,6 @@
 # Futures Macro Pattern Outlook V1 Design
 
-Status: Proposed
+Status: Approved — UI Direction A
 Last Updated: 2026-07-18
 
 ## 1. Design Summary
@@ -285,6 +285,22 @@ V1은 기존 stored futures daily OHLCV를 읽는다.
 ## 9. UI Design
 
 기존 경제사이클 React workbench의 visual grammar를 재사용한다.
+
+### Approved Direction A — Context To Outlook
+
+사용자는 2026-07-18 비교 와이어프레임에서 `A · 맥락→전망형`을 선택했다.
+첫 화면의 고정 reading order는 아래와 같다.
+
+1. 현재 선물 체제와 오늘 달라진 위험
+2. 현재 관측 / 다음 1주 / 다음 1개월 horizon path
+3. 최근 패턴 경로와 그 전망의 근거·반대 조건
+4. 최근 60거래일 체제 ribbon
+5. 자산 family별 현재 흐름·보조 전망·변화 조건
+6. 접힌 방법론과 historical episode 품질
+
+`분석 콕핏형`처럼 family score와 raw matrix를 첫 화면에 동시에 펼치거나,
+`데일리 브리핑형`처럼 패턴 지도와 검증 근거를 상세 영역으로 내리는 방식은 V1에서 채택하지 않는다.
+정보 밀도보다 사용자가 `현재 맥락 -> 조건부 전망 -> 확인할 조건`을 순서대로 이해하는 것을 우선한다.
 
 ### Section 1. Hero — 현재 선물 체제
 

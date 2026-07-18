@@ -18,3 +18,11 @@
 - User approved `DESIGN.md` and requested continuation.
 - Expanded `PLAN.md` into seven TDD implementation tasks covering point-in-time features, current state, independent episodes, chronological publication gates, Python payload V2, React workbench V2, and actual QA / documentation closeout.
 - Implementation code was not changed during planning.
+
+## 2026-07-18 UI Selection And Execution Start
+
+- Compared three UI wireframes; user selected `A · 맥락→전망형`.
+- Confirmed this workspace is an existing linked worktree on `codex/sub-dev`; no nested worktree was created.
+- Baseline `pytest` command stopped before collection because `.venv` has no pytest module.
+- Root-cause check confirmed `pyproject.toml` has no pytest dependency and durable finance docs identify `unittest` as the current local verification path.
+- `.venv/bin/python -m unittest tests.test_service_contracts.FuturesMacroThermometerContractTests` passed 23 tests; only existing third-party deprecation warnings appeared.

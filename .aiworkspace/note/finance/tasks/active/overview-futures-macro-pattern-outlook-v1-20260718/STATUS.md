@@ -6,18 +6,20 @@
 - Read-only audit confirmed that today risk evidence is useful, while 1D / 1W / 1M are disconnected return views and historical validation replays only one-day state.
 - User approved the recommended boundary: overall market risk regime first, asset-family direction as supporting evidence, and 5D / 20D conditional outlook rather than long-term forecasting.
 - User reviewed and approved the design contract.
+- User compared three UI wireframes and selected `A · 맥락→전망형`.
 - Detailed TDD implementation plan is written in `PLAN.md` with seven independently reviewable tasks.
-- Current stage: waiting for the user to choose subagent-driven or inline execution.
+- Current stage: inline execution started; linked worktree and baseline environment are being verified before Task 1 RED.
+- Baseline investigation confirmed the repository-local runner is `unittest`; the implementation plan now records unittest equivalents instead of adding pytest.
 - No application code, DB schema, provider, registry, or saved setup has been changed.
 
 ## Roadmap State
 
 - 1차 설계 계약: approved
 - 2차 상세 구현 계획: written
-- 3차 service / validation implementation: pending execution
+- 3차 service / validation implementation: in progress
 - 4차 React Workbench V2: pending execution
 - 5차 actual QA / docs sync: pending execution
 
 ## Next Action
 
-사용자가 실행 방식을 선택하면 승인된 `PLAN.md`를 task 단위로 실행한다.
+Task 1의 point-in-time multi-window feature test를 RED로 만든 뒤 최소 구현을 시작한다.
