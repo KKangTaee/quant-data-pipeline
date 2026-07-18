@@ -13,3 +13,9 @@
 - Confirmed `ID_CUSIP`/`ID_CINS`, US Equity filtering, and one-ticker results for the actual Duquesne sample.
 
 No implementation code or DB writes were performed during design investigation.
+
+## 2026-07-18 Implementation Planning
+
+- Read DB pipeline rules, data map, architecture flow, schema sync, current loader SQL, ingestion job/dispatcher/registry/section contracts, and worktree execution rules.
+- Added `IMPLEMENTATION_PLAN.md` with exact TDD boundaries for five independently verifiable implementation/closeout tasks.
+- Self-review aligned provider rate-header pacing, error-preserving UPSERT semantics, grouped legacy exact-name ambiguity, reverse lookup, actual DB assertions, and generated screenshot policy.
