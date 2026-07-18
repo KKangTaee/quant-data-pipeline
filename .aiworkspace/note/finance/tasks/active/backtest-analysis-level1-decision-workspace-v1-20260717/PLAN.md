@@ -6528,7 +6528,7 @@ git commit -m "Backtest 상단 단계 이동 어댑터 구현"
 - Consumes: Python `shell` projection from Task 39.
 - Produces: Streamlit component intent `{type: "select_stage", stage_key: string, nonce: string}`.
 
-- [ ] **Step 1: Add failing React source-boundary tests**
+- [x] **Step 1: Add failing React source-boundary tests**
 
 ```python
 def test_backtest_workflow_shell_react_is_intent_only_and_accessible(self) -> None:
@@ -6561,13 +6561,13 @@ def test_backtest_workflow_shell_react_has_responsive_visual_contract(self) -> N
     self.assertIn("@media (prefers-reduced-motion: reduce)", css)
 ```
 
-- [ ] **Step 2: Run RED and confirm missing frontend source**
+- [x] **Step 2: Run RED and confirm missing frontend source**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_refactor_boundaries.py::BacktestRefactorBoundaryTests::test_backtest_workflow_shell_react_is_intent_only_and_accessible tests/test_backtest_refactor_boundaries.py::BacktestRefactorBoundaryTests::test_backtest_workflow_shell_react_has_responsive_visual_contract -q`
 
 Expected: both tests fail with `FileNotFoundError` for the new frontend source.
 
-- [ ] **Step 3: Implement the approved A visual and minimal intent component**
+- [x] **Step 3: Implement the approved A visual and minimal intent component**
 
 `types.ts` defines only the Python projection:
 
@@ -6623,7 +6623,7 @@ stage remains keyboard-readable; current click returns without emitting. User co
 Use the existing React 18 / TypeScript / Vite / streamlit-component-lib versions. Run `npm install` in the new
 frontend directory to generate `package-lock.json`; do not introduce a chart, icon or CSS dependency.
 
-- [ ] **Step 4: Run GREEN, TypeScript production build, and source tests**
+- [x] **Step 4: Run GREEN, TypeScript production build, and source tests**
 
 Run: `npm install`
 
@@ -6637,7 +6637,7 @@ Run: `.venv/bin/python -m pytest tests/test_backtest_refactor_boundaries.py::Bac
 
 Expected: Vite production build succeeds and both source-boundary tests pass.
 
-- [ ] **Step 5: Commit the React shell**
+- [x] **Step 5: Commit the React shell**
 
 ```bash
 git add tests/test_backtest_refactor_boundaries.py app/web/components/backtest_workflow_shell

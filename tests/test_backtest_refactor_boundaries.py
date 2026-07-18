@@ -1091,6 +1091,41 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("reference_reason=reference_reason", result_adapter)
         self.assertIn("reference_message", result_component)
 
+    def test_backtest_workflow_shell_react_is_intent_only_and_accessible(self) -> None:
+        component = (
+            PROJECT_ROOT
+            / "app/web/components/backtest_workflow_shell/frontend/src/BacktestWorkflowShell.tsx"
+        ).read_text()
+        index = (
+            PROJECT_ROOT
+            / "app/web/components/backtest_workflow_shell/frontend/src/index.tsx"
+        ).read_text()
+
+        self.assertIn('type: "select_stage"', component)
+        self.assertIn('aria-current={stage.is_active ? "step" : undefined}', component)
+        self.assertIn("CURRENT", component)
+        self.assertIn("Streamlit.setComponentValue", component)
+        self.assertNotIn("eligibility", component)
+        self.assertNotIn("blocker", component)
+        self.assertIn("ResizeObserver", index)
+        self.assertIn("Streamlit.setFrameHeight", index)
+
+    def test_backtest_workflow_shell_react_has_responsive_visual_contract(self) -> None:
+        css = (
+            PROJECT_ROOT
+            / "app/web/components/backtest_workflow_shell/frontend/src/style.css"
+        ).read_text()
+
+        self.assertIn(
+            "grid-template-columns: minmax(0, 1.65fr) minmax(240px, 0.7fr)",
+            css,
+        )
+        self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr))", css)
+        self.assertIn("@media (max-width: 760px)", css)
+        self.assertIn("@media (max-width: 520px)", css)
+        self.assertIn("overflow-x: hidden", css)
+        self.assertIn("@media (prefers-reduced-motion: reduce)", css)
+
 
 if __name__ == "__main__":
     unittest.main()
