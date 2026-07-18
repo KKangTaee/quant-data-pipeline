@@ -18,7 +18,8 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-economic-cycle-asset-pathways-stages3-5-v1-20260717](./tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/STATUS.md). 채권·금리, S&P 500, WTI·구리·금의 측정 경로와 공통 관측 UI를 연결해 전체 자산경로 roadmap `5/5`를 완료했다.
+  - Latest completed task is [institutional-portfolios-context-first-redesign-v1-20260718](./tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md). 선택 기관 맥락, 전체 보유 탐색, 직접 종목 검색과 coverage / comparison 정확성을 전체 roadmap `4/4`로 완료했다.
+  - Previous completed task is [overview-economic-cycle-asset-pathways-stages3-5-v1-20260717](./tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/STATUS.md). 채권·금리, S&P 500, WTI·구리·금의 측정 경로와 공통 관측 UI를 연결해 전체 자산경로 roadmap `5/5`를 완료했다.
   - Previous completed task is [overview-economic-cycle-multichannel-asset-interpretation-v1-20260717](./tasks/active/overview-economic-cycle-multichannel-asset-interpretation-v1-20260717/STATUS.md). 공통 판정기와 금·달러 파일럿에서 비인과적 `economic_cycle_v2` 계약을 확립했다.
   - Previous completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 가격의 1주·1개월·3개월 흐름을 경제 배경과 독립 판정하는 `3/3` 개선을 완료했다.
   - Previous completed task is [overview-economic-cycle-asset-context-v1-20260716](./tasks/active/overview-economic-cycle-asset-context-v1-20260716/STATUS.md). 경제사이클 evidence를 자산별 우호/부담/혼재/자료 부족과 두 근거/변경 조건으로 번역하는 `2/2` 개선을 완료했다.
@@ -27,7 +28,8 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Previous completed task is [overview-market-context-turnaround-derived-quarter-provenance-v1-20260716](./tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md). Missing Q4의 guarded filing-derived 계산과 provenance 표시를 완료했다.
   - Previous completed task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL EPS loader gap과 transition/already-positive rail semantics를 보정했다.
   - Previous completed task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md). Cached selected-stock UI remains DB-only; stale repair is an explicit single action.
-  - Recent completed Institutional Portfolios task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
+  - Recent completed Institutional Portfolios task is [institutional-portfolios-context-first-redesign-v1-20260718](./tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md).
+  - Previous completed Institutional Portfolios task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
   - Previous completed Institutional Portfolios task is [institutional-portfolios-watchlist-mapping-v1-20260712](./tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
   - Recent completed Final Review task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
@@ -9713,5 +9715,6 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 - User request: Institutional Portfolios를 Overview 시장 맥락의 디자인 문법으로 바꾸고, 불편한 UX와 노출되지 않는 종목을 전체적으로 개선해 달라고 요청함.
 - Interpreted goal: 그래프는 유지하면서 선택 기관의 포트폴리오 특징을 먼저 이해하고, 모든 보유 종목과 특정 종목 상세를 누락 없이 탐색해야 함.
-- Analysis result: current React는 전체 보유를 80개로 잘라 Bridgewater 993개 중 913개를 숨기고, primary 종목 검색이 없으며, mapping coverage와 previous-quarter 부재가 sector / chart / change 의미를 제한한다.
-- Follow-up: selected-manager context-first 방향을 승인받아 active task written spec을 작성했다. 사용자 spec review 후 3차 detailed TDD implementation plan으로 전환한다.
+- Audit result: current React는 전체 보유를 80개로 잘라 Bridgewater 993개 중 913개를 숨기고, primary 종목 검색이 없으며, mapping coverage와 previous-quarter 부재가 sector / chart / change 의미를 제한했다.
+- Analysis result: `institutional_portfolios_workbench_v2`가 선택 기관 context hero, full 50-row holdings explorer, ticker / issuer / CUSIP 검색, mapping / performance coverage 분리, previous-quarter change gate를 소유한다. 미매핑 row는 issuer / CUSIP을 유지하고 가격 action을 열지 않는다.
+- Follow-up: 전체 roadmap `4/4`를 완료했다. Bridgewater actual `993/993` explorer row, mapped / unresolved 종목 흐름, desktop / 420px QA를 확인했다. Historical filing backfill과 verified security master는 별도 승인 범위다.

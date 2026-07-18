@@ -1,12 +1,16 @@
 # Institutional Portfolios Context-First Redesign V1 Risks
 
+## Closed Risks
+
+- React no longer hides rows after 80. Bridgewater actual `993` rows equal explorer `993` rows and render in fixed 50-row pages.
+- Count coverage, mapped reported-value weight, and performance coverage are separate v2 fields and UI metrics.
+- Previous-quarter absence is an explicit comparison-unavailable state; synthetic fixture covers the available branch and actual DB covers the unavailable branch.
+
 ## Open Risks
 
-- Current payload already carries the full 993 logical Bridgewater rows while React hides rows after 80. Pagination reduces DOM cost but not existing serialization cost, so implementation must measure rerun latency and avoid duplicating the row payload.
-- Mapping count coverage can be low even when mapped value coverage is high. One percentage cannot represent both states.
-- Current local DB has no previous comparable filing for the checked curated managers, so change-board visual QA needs a synthetic previous-quarter fixture unless historical quarters are separately loaded.
+- V1 still serializes the full holdings payload into the component; 50-row pagination limits rendered DOM size but does not introduce server-side pagination.
 - Current `app/services/institutional_portfolios.py`, React TSX, CSS, and focused test file are already large. Implementation should avoid unrelated refactors while keeping new pure helpers isolated.
-- Streamlit component iframe scroll preservation has had past Browser automation limitations; QA should verify user-visible flow and use DOM evidence when page capture is incomplete.
+- Streamlit component iframe interaction automation must keep the target visible; Browser QA confirmed actual event delivery after using visible DOM / pointer coordinates.
 
 ## Deferred Dependencies
 

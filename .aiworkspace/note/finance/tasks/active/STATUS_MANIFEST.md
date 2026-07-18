@@ -7,14 +7,16 @@ Last Verified: 2026-07-18
 
 Current active task:
 
-- `institutional-portfolios-context-first-redesign-v1-20260718` — 1차 audit complete; 2차 written spec review for selected-manager context-first IA, complete holdings explorer, direct security search, mapping coverage, and comparison-state correctness
+- none. New task work requires a user-approved concrete scope.
 
 Latest completed task:
 
-- `overview-market-context-economic-cycle-provisional-hybrid-v2-20260716` — 1차~5차 complete; LIMITED/READY/계산불가를 잠정 추정/검증된 추정/판단 불가로 분리하고 2×2 경로·ribbon과 actual 122 snapshot 갱신을 완료
+- `institutional-portfolios-context-first-redesign-v1-20260718` — 전체 roadmap `4/4`; v2 context / coverage / comparison contract, full 50-row holdings explorer, explicit security search, mapped / unresolved flow, actual DB and desktop / 420px Browser QA complete
 
 Previous completed task:
 
+- `overview-economic-cycle-asset-pathways-stages3-5-v1-20260717`
+- `overview-market-context-economic-cycle-provisional-hybrid-v2-20260716`
 - `overview-market-context-us-economic-cycle-v1-20260716`
 - `overview-market-context-turnaround-derived-quarter-provenance-v1-20260716`
 - `overview-market-context-turnaround-stage-semantics-fix-v1-20260716`

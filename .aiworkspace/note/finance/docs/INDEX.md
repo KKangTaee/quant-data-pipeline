@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-07-17
+Last Verified: 2026-07-18
 
 ## Purpose
 
@@ -24,7 +24,8 @@ Last Verified: 2026-07-17
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none. New task work should start only after a user-approved scope is selected.
-- Latest completed task: [Economic Cycle Asset Pathways Stages 3-5 V1 2026-07-17](../tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/STATUS.md) — 전체 자산경로 roadmap `5/5`를 완료했다. 채권·금리 구조, S&P 500 단일 대표지수, WTI·구리·금의 daily/weekly/quarterly 측정 경로를 DB-only로 연결하고 공통 관측 UI와 actual desktop/mobile QA를 닫았다.
+- Latest completed task: [Institutional Portfolios Context-First Redesign V1 2026-07-18](../tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md) — 전체 roadmap `4/4`. v2 context / coverage / comparison 계약, 50-row full holdings explorer, 직접 security search, mapped / unresolved 흐름과 actual desktop/420px QA를 완료했다.
+- Previous completed task: [Economic Cycle Asset Pathways Stages 3-5 V1 2026-07-17](../tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/STATUS.md) — 전체 자산경로 roadmap `5/5`를 완료했다. 채권·금리 구조, S&P 500 단일 대표지수, WTI·구리·금의 daily/weekly/quarterly 측정 경로를 DB-only로 연결하고 공통 관측 UI와 actual desktop/mobile QA를 닫았다.
 - Previous completed task: [Economic Cycle Multichannel Asset Interpretation V1 2026-07-17](../tasks/active/overview-economic-cycle-multichannel-asset-interpretation-v1-20260717/STATUS.md) — 1차 공통 판정기와 2차 금·달러 파일럿에서 인과·가격예측·매매 결론을 만들지 않는 `economic_cycle_v2` 계약을 확립했다.
 - Previous completed task: [Economic Cycle Asset Signal Copy V1 2026-07-17](../tasks/active/overview-economic-cycle-asset-signal-copy-v1-20260717/STATUS.md) — 자산마다 반복되던 경제 전체 국면을 제거하고 금·달러를 `미국 경기 신호 / 실제 가격 / 두 신호 관계`로 분리했다. 이 계약은 최신 다중 경로 task에서 대체됐다.
 - Earlier completed task: [Economic Cycle Gold / Dollar Price Confirmation V1 2026-07-17](../tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md) — 금과 달러를 별도 카드로 분리하고 저장 일봉 가격 확인을 최초 연결했다. 배경 일치·불일치 계약은 최신 다중 경로 task에서 대체됐다.
@@ -38,7 +39,8 @@ Last Verified: 2026-07-17
 - Previous completed task: [US Stock Valuation V1 2026-07-14](../tasks/active/overview-market-context-us-stock-valuation-v1-20260714/STATUS.md) — original 1차~5차, 2026-07-15 정확성 후속 1차~3차, 부분 이력 후속 1차~3차 complete. Nasdaq-100 user-facing selector를 searchable 미국 개별주식 상대가치 화면으로 교체했고, primary-period filing-aware TTM EPS/PER, split-year share-basis 정규화, 60m/36m Graph 1과 독립 Graph 2 readiness, DB-only 검색과 explicit selected-symbol 수집을 연결했다. 1/3/5년은 계산 가능한 월을 원래 달력 위치에 표시하고 결측 구간을 연결·보간하지 않는다. 기존 Nasdaq backend는 보존한다.
 - Previous completed task: [Nasdaq-100 Scenario History Warmup V1 2026-07-13](../tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/STATUS.md) — 1차~5차 implementation/QA complete; 60개월 rolling 계약을 유지한 최대 119개월 보강 action과 선택 기간별 정확한 부족 안내를 추가했다. Local actual QA는 66/119 READY이며 무료 원천 gap은 합성하지 않는다.
 - Previous completed task: [Nasdaq-100 60m Coverage Repair Action V1 2026-07-13](../tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md) — valuation coverage blocker용 60개월 보강과 strict rematerialization을 완료했다.
-- Recent completed Institutional Portfolios task: [Institutional Portfolios Security Detail Chart Layout V1 2026-07-12](../tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
+- Recent completed Institutional Portfolios task: [Institutional Portfolios Context-First Redesign V1 2026-07-18](../tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md).
+- Previous completed Institutional Portfolios task: [Institutional Portfolios Security Detail Chart Layout V1 2026-07-12](../tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
 - Previous completed task: [Institutional Portfolios Watchlist / Mapping V1 2026-07-12](../tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
 - Previous completed task: [Institutional Portfolios Two-Tier Tabs V1 2026-07-12](../tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/STATUS.md).
 - Previous completed task: [Institutional Portfolios Portfolio / Security IA V1 2026-07-12](../tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/STATUS.md).

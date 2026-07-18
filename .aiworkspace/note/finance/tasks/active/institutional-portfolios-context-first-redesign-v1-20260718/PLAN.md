@@ -1,6 +1,6 @@
 # Institutional Portfolios Context-First Redesign V1 Plan
 
-Status: Implementation In Progress
+Status: Completed
 Started: 2026-07-18
 
 ## 이걸 하는 이유?
@@ -36,14 +36,21 @@ Started: 2026-07-18
   - 이전 분기 없음 상태의 change board suppression.
   - 선택 기관 context hero와 section flow.
 - 완료 조건: focused TDD, React build, actual DB smoke, desktop / 420px Browser QA.
-- 상태: 현재 차수. `IMPLEMENTATION_PLAN.md` 기준 TDD 구현과 QA를 진행한다.
+- 상태: 완료. v2 payload, context-first React UI, 전체 holdings explorer, 직접 종목 검색, coverage / comparison 상태 계약과 focused 검증을 닫았다.
 
 ### 4차: 실사용 미세 조정 / 데이터 깊이 / 문서 closeout
 
 - 목적: 실제 대형 기관과 미매핑 비중이 높은 기관에서 탐색성을 보정하고, 과거 분기 backfill 필요성을 별도 승인 범위로 판정한다.
 - 예상 범위: Berkshire / Bridgewater / Duquesne actual QA, interaction density, long-list performance, durable docs alignment.
 - 완료 조건: 사용 흐름 QA, 남은 mapping / historical coverage gap 명시, 문서와 root handoff 정렬.
-- 상태: 미착수.
+- 상태: 완료. Berkshire / Bridgewater / Duquesne actual DB smoke, desktop / 420px Browser QA, durable docs alignment를 완료했다. Historical quarter backfill과 security master는 별도 승인 범위로 남긴다.
+
+## Completion State
+
+- 전체 roadmap `4/4` 완료.
+- 제품 흐름은 `선택 기관 맥락 -> 근거 / coverage -> 전체 보유 탐색 -> 종목 상세` 순서로 정렬됐다.
+- Bridgewater `993`개 row는 50개 고정 page로 모두 탐색 가능하며 service total과 explorer row 수가 일치한다.
+- 추가 데이터 깊이는 현재 UI 개편 완료 조건이 아니라 별도 dependency다.
 
 ## 이번 설계에서 하지 않는 일
 
@@ -54,8 +61,8 @@ Started: 2026-07-18
 - 운영 run / job / row 진단 panel 추가.
 - 기존 custom 가격 차트를 새 chart library로 교체.
 
-## Stop Condition
+## Completion Condition
 
-- `DESIGN.md`가 사용자 workflow, data correctness, payload/state, file ownership, validation contract를 모두 포함한다.
-- 설계 자체 검토에서 미완성 항목, 범위 모순, 숨은 데이터 절단 계약이 없다.
-- 사용자가 written spec을 승인하기 전에는 implementation plan이나 코드 변경으로 넘어가지 않는다.
+- 승인된 `DESIGN.md`의 workflow, data correctness, payload/state, responsive, validation contract가 구현됐다.
+- focused tests / compile / React build와 actual DB / desktop / 420px Browser QA를 통과했다.
+- 숨은 holdings 절단이 없고 남은 historical / mapping dependency가 명시됐다.

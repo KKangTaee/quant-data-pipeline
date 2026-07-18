@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-17
+Last Verified: 2026-07-18
 
 ## Current State After Master Merge
 
@@ -9,7 +9,14 @@ Last Verified: 2026-07-17
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/`다.
+
+- 목적: `Workspace > Institutional Portfolios`를 Overview 시장 맥락과 같은 결론-근거-세부 흐름으로 바꾸고, silent 80-row truncation과 직접 종목 검색 부재를 해소한다.
+- 완료: 전체 roadmap `4/4`. `institutional_portfolios_workbench_v2` context hero, separated coverage, comparison gate, 50-row full holdings explorer, ticker / issuer / CUSIP 검색, mapped / unresolved security flow를 완료했다.
+- actual 상태: Berkshire `29/29`, Bridgewater `993/993`, Duquesne `70/70` total/explorer row 일치. Bridgewater 20-page 탐색과 desktop / 420px Browser QA를 확인했다.
+- 잔여 dependency: historical previous filing backfill과 verified security master / identifier mapping은 별도 승인 범위다.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/`다.
 
 - 목적: 승인된 3차 채권·금리, 4차 S&P 500, 5차 WTI·구리·금 경로를 같은 측정 계약과 공통 UI로 완성한다.
 - 완료: 전체 자산경로 roadmap `5/5`를 닫았다. FRED 금리구조·기대인플레이션, EIA weekly 수급, `^GSPC`, CL/HG/GC/DX 저장 가격과 엄격한 actual EPS reader를 DB-only로 연결했다.
@@ -125,7 +132,14 @@ Earlier completed task는 `.aiworkspace/note/finance/tasks/active/final-review-e
 
 ### Recent Completed Institutional Portfolios Track
 
-Recent completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/`다.
+Recent completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/`다.
+
+- 목적: 선택 기관의 포트폴리오 맥락을 첫 화면의 주인공으로 두고 전체 13F 보유 종목과 특정 종목 상세를 누락 없이 탐색한다.
+- 주요 변경: v2 context / coverage payload, previous-quarter change gate, context-first hero, compact manager search / rail, client-side 50-row full holdings pagination / search / filter / sort, explicit security search, unresolved identity guardrail을 추가했다.
+- 검증: focused `46 passed` + 2 subtests, Python compile, Vite build, actual 3-manager DB smoke, desktop / 420px Browser QA를 통과했다.
+- 이번 차수에서 하지 않은 일: historical quarter backfill, external security master, paid provider, server-side holdings pagination, 추천 / trading semantics.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/`다.
 
 - 목적: `Workspace > Institutional Portfolios > 종목 분석 > 종목 상세`에서 차트와 보유 기관 리스트가 2-column으로 나뉘고 기본 range slider가 어색했던 종목 상세 UX를 줄였다.
 - 주요 변경: selected-security detail을 선택 종목 / 포트폴리오 내 위치 overview card, full-width stored-OHLCV chart row, 하단 scrollable holder-list row로 재배치했다. 차트는 OHLC / volume strip, volume bars, price scale, mini navigator, line/candle toggle, hover crosshair를 유지한다.
