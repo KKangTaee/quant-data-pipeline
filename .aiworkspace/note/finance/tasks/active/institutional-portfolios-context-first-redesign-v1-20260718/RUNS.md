@@ -66,3 +66,16 @@
 - Full Python verification: `uv run --with pytest pytest -q tests/test_institutional_portfolios.py` -> `55 passed`, `4 subtests passed`, 3 dependency deprecation warnings; `.venv/bin/python -m py_compile app/services/institutional_portfolios.py app/web/institutional_portfolios.py` -> PASS.
 - Full frontend verification: `npm test -- --reporter=verbose` -> `5 passed`; `npm run typecheck` -> PASS; `npm run build` -> PASS, 171 modules transformed; `npm audit --json` -> 0 vulnerabilities.
 - The frontend source was unchanged in this follow-up; rebuilding produced no tracked `component_static` diff. Source and tracked runtime scans still contain no `slice(0,80)` / `slice(0, 80)` limit.
+
+## 2026-07-18 Hero Layout Alignment Follow-Up
+
+- Focused RED: `uv run --with pytest pytest -q tests/test_institutional_portfolios.py::InstitutionalPortfoliosNavigationTests::test_context_hero_basis_and_controls_share_alignment_contract` -> expected failure because `ip-context-basis__snapshot` was absent.
+- Focused GREEN: the same command -> `1 passed`.
+- Full Python: `uv run --with pytest pytest -q tests/test_institutional_portfolios.py` -> `56 passed`, `4 subtests passed`, 3 existing Edgar dependency deprecation warnings.
+- Frontend: `npm test -- --reporter=verbose` -> `5 passed`; `npm run typecheck` -> PASS; `npm run build` -> PASS, 171 modules transformed.
+- Tracked runtime: `component_static/index.html` points to `index-DHuSgLHe.js` and `index-Dcz2GNfw.css`; built assets contain `--ip-context-columns`, `ip-freshness-block`, and no `slice(0,80)` / `slice(0, 80)` path.
+- Browser QA used actual Berkshire hero data and the actual Appaloosa manager rail entry on a separate Streamlit server at port `8526`; the server was stopped, the viewport override reset, and the QA tab finalized. Browser error / warning log was empty.
+- Desktop component width `1139px`: hero and controls both computed `703.452px 363.864px`; context copy / manager switcher left was `26.889px`; basis / freshness block was `748.338px..1112.202px`; search input / freshness panel top was `273.707px`; snapshot computed `grid-column: 1 / -1`; collected-time `clientWidth == scrollWidth == 342px`.
+- Exact `420 × 900` viewport: page `clientWidth == scrollWidth == 420px`; iframe and component document `clientWidth == scrollWidth == 378px`; hero and controls each computed one `332.415px` column; freshness action / period / time each had `clientWidth == scrollWidth == 311px`.
+- Final ignored PNG screenshot: `.playwright-mcp/institutional-portfolios-hero-layout-alignment-final.png`.
+- `git diff --check` -> PASS.

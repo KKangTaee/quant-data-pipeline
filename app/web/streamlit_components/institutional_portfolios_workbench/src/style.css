@@ -45,6 +45,7 @@ a {
 }
 
 .ip-hero {
+  --ip-context-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
   padding: 16px;
 }
 
@@ -104,17 +105,18 @@ a {
 }
 
 .ip-manager-search {
-  display: grid;
-  grid-template-columns: auto minmax(210px, 1fr);
-  gap: 8px;
-  align-items: center;
+  display: block;
 }
 
-.ip-manager-search > label {
-  color: #475569;
-  font-size: 11px;
+.ip-manager-search > label,
+.ip-context-control-label {
+  display: block;
+  min-height: 18px;
+  margin-bottom: 6px;
+  color: #334155;
+  font-size: 12px;
   font-weight: 800;
-  white-space: nowrap;
+  line-height: 18px;
 }
 
 .ip-manager-search > div {
@@ -273,7 +275,8 @@ a {
 
 .ip-freshness {
   display: grid;
-  grid-template-columns: minmax(130px, auto) minmax(90px, auto) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "action period" "time time";
   gap: 10px;
   align-items: center;
   min-height: 38px;
@@ -287,6 +290,7 @@ a {
 }
 
 .ip-freshness__action {
+  grid-area: action;
   appearance: none;
   border: 0;
   padding: 0;
@@ -309,17 +313,17 @@ a {
 }
 
 .ip-freshness strong {
+  grid-area: period;
   color: #0f172a;
   font-size: 13px;
 }
 
 .ip-freshness em {
+  grid-area: time;
   min-width: 0;
   color: #64748b;
   font-style: normal;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .ip-freshness--stale {
@@ -340,7 +344,7 @@ a {
 
 .ip-context-hero__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.75fr);
+  grid-template-columns: var(--ip-context-columns);
   gap: 18px;
   align-items: stretch;
 }
@@ -420,17 +424,25 @@ a {
   overflow-wrap: anywhere;
 }
 
+.ip-context-basis__snapshot,
 .ip-context-basis .ip-source-link {
   grid-column: 1 / -1;
+}
+
+.ip-context-basis .ip-source-link {
   margin-top: 0;
 }
 
 .ip-context-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.65fr);
-  gap: 12px;
-  align-items: center;
+  grid-template-columns: var(--ip-context-columns);
+  gap: 18px;
+  align-items: start;
   margin: 14px 0;
+}
+
+.ip-freshness-block {
+  min-width: 0;
 }
 
 .ip-context-controls .ip-freshness {
@@ -1941,6 +1953,10 @@ a {
   .ip-performance-metrics,
   .ip-popularity-list button {
     grid-template-columns: 1fr;
+  }
+
+  .ip-freshness {
+    grid-template-areas: "action" "period" "time";
   }
 
   .ip-context-basis,

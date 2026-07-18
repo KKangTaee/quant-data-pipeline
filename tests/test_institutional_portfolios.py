@@ -18,6 +18,12 @@ def _component_source() -> str:
     ).read_text(encoding="utf-8")
 
 
+def _component_style_source() -> str:
+    return Path(
+        "app/web/streamlit_components/institutional_portfolios_workbench/src/style.css"
+    ).read_text(encoding="utf-8")
+
+
 class Sec13FDataSetParserTests(unittest.TestCase):
     def test_normalize_sec_13f_frames_preserves_filing_timing_and_holdings(self) -> None:
         from finance.data.institutional_13f import SEC_13F_SOURCE_CAVEATS, normalize_sec_13f_frames
@@ -1276,6 +1282,18 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
 
 
 class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
+    def test_context_hero_basis_and_controls_share_alignment_contract(self) -> None:
+        component_source = _component_source()
+        style_source = _component_style_source()
+
+        self.assertIn('className="ip-context-basis__snapshot"', component_source)
+        self.assertIn('className="ip-freshness-block"', component_source)
+        self.assertIn('className="ip-context-control-label">데이터 기준</span>', component_source)
+        self.assertIn("--ip-context-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);", style_source)
+        self.assertIn("grid-template-columns: var(--ip-context-columns);", style_source)
+        self.assertIn(".ip-context-basis__snapshot", style_source)
+        self.assertIn('grid-template-areas: "action period" "time time";', style_source)
+
     def test_workbench_v2_has_complete_holdings_explorer_and_explicit_security_search(self) -> None:
         component_source = _component_source()
         self.assertIn('schema_version: "institutional_portfolios_workbench_v2"', component_source)

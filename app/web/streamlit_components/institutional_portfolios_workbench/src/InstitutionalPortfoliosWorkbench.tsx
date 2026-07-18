@@ -1345,7 +1345,10 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
           <aside className="ip-context-basis" aria-label="보고 근거">
             <div><span>보고 기준 분기</span><strong>{payload.hero.latest_report_period}</strong></div>
             <div><span>제출일</span><strong>{payload.hero.latest_filing_date}</strong></div>
-            <div><span>DB snapshot</span><strong>{payload.freshness?.last_collected_at || payload.data_state.as_of_label}</strong></div>
+            <div className="ip-context-basis__snapshot">
+              <span>DB snapshot</span>
+              <strong>{payload.freshness?.last_collected_at || payload.data_state.as_of_label}</strong>
+            </div>
             {payload.hero.source_ref ? (
               <a className="ip-source-link" href={payload.hero.source_ref} target="_blank" rel="noreferrer">
                 SEC 원문 열기
@@ -1405,12 +1408,15 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
               </div>
             ) : null}
           </div>
-          <div className={`ip-freshness ${payload.freshness?.is_stale ? "ip-freshness--stale" : ""}`}>
-            <button type="button" className="ip-freshness__action" onClick={handleRefreshOpen}>
-              {payload.refresh_action?.label || "SEC 13F 데이터"}
-            </button>
-            <strong>{payload.freshness?.latest_report_period || "로컬 13F 데이터 없음"}</strong>
-            <em>{payload.freshness?.last_collected_at ? `수집 시각 ${payload.freshness.last_collected_at}` : "갱신 설정 사용 가능"}</em>
+          <div className="ip-freshness-block">
+            <span className="ip-context-control-label">데이터 기준</span>
+            <div className={`ip-freshness ${payload.freshness?.is_stale ? "ip-freshness--stale" : ""}`}>
+              <button type="button" className="ip-freshness__action" onClick={handleRefreshOpen}>
+                {payload.refresh_action?.label || "SEC 13F 데이터"}
+              </button>
+              <strong>{payload.freshness?.latest_report_period || "로컬 13F 데이터 없음"}</strong>
+              <em>{payload.freshness?.last_collected_at ? `수집 시각 ${payload.freshness.last_collected_at}` : "갱신 설정 사용 가능"}</em>
+            </div>
           </div>
         </div>
 
