@@ -645,12 +645,7 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         for path in form_paths:
             source = path.read_text()
             self.assertNotIn('st.expander("Advanced Inputs"', source, path.name)
-            expected_label = (
-                "전략·보유 규칙"
-                if path.name == "strict_factor.py"
-                else "선택·보유 규칙"
-            )
-            self.assertIn(expected_label, source, path.name)
+            self.assertIn("선택·보유 규칙", source, path.name)
         combined = "\n".join(path.read_text() for path in form_paths)
         self.assertNotIn('st.expander("Promotion Policy Signal"', combined)
         self.assertIn("비용·위험 기준", combined)
@@ -684,6 +679,45 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
                 path.name,
             )
             self.assertIn("single_settings_section(", source, path.name)
+
+    def test_strict_factor_settings_hierarchy_is_korean_first(self) -> None:
+        path = PROJECT_ROOT / "app/web/backtest_single_forms/strict_factor.py"
+        source = path.read_text()
+        renderer_names = [
+            "_render_quality_snapshot_form",
+            "_render_quality_snapshot_strict_annual_form",
+            "_render_quality_snapshot_strict_quarterly_prototype_form",
+            "_render_value_snapshot_strict_quarterly_prototype_form",
+            "_render_value_snapshot_strict_annual_form",
+            "_render_quality_value_snapshot_strict_quarterly_prototype_form",
+            "_render_quality_value_snapshot_strict_annual_form",
+        ]
+        section_labels = [
+            "핵심 실행 설정",
+            "투자 대상 Universe",
+            "선택·보유 규칙",
+            "비용·위험 기준",
+        ]
+
+        for index, renderer_name in enumerate(renderer_names):
+            start = source.index(f"def {renderer_name}")
+            end = (
+                source.index(f"def {renderer_names[index + 1]}")
+                if index + 1 < len(renderer_names)
+                else source.index("__all__", start)
+            )
+            body = source[start:end]
+            offsets = [body.index(label) for label in section_labels]
+            self.assertEqual(offsets, sorted(offsets), renderer_name)
+            self.assertIn("이 설정으로 백테스트 실행", body, renderer_name)
+
+        for raw_copy in (
+            "Strict annual multi-factor strategy.",
+            "Hidden defaults in this first pass",
+            "Current mode:",
+            "Selected tickers (300):",
+        ):
+            self.assertNotIn(raw_copy, source)
 
     def test_common_universe_preview_is_compact_and_korean_first(self) -> None:
         source = (PROJECT_ROOT / "app/web/backtest_common.py").read_text()

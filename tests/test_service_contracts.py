@@ -719,7 +719,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         compare_source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
 
         self.assertIn("_render_strict_preset_status_note(preset_name, tickers)", single_source)
-        self.assertIn("format_func=strict_preset_display_label", single_source)
+        self.assertIn("strict_preset_display_label(value)", single_source)
         self.assertIn("format_func=strict_preset_display_label", compare_source)
         self.assertIn("_render_strict_preset_status_note(qss_compare_preset", compare_source)
         self.assertIn("_render_strict_preset_status_note(vss_compare_preset", compare_source)
@@ -769,7 +769,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
                 body.index("_render_strict_factor_prerun_preview("),
                 body.index("with st.form("),
             )
-            advanced_body = body.split('with st.expander("전략·보유 규칙"', 1)[1].split(
+            advanced_body = body.split('"선택·보유 규칙"', 1)[1].split(
                 "submitted = st.form_submit_button", 1
             )[0]
             self.assertNotIn("_render_strict_universe_contract_selectbox(", advanced_body)
@@ -966,29 +966,12 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         source = Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8")
 
         self.assertIn("def _strict_factor_date_input(", source)
-        for key in (
-            "qss_start",
-            "qss_end",
-            "qsqp_start",
-            "qsqp_end",
-            "vsqp_start",
-            "vsqp_end",
-            "vss_start",
-            "vss_end",
-            "qvqp_start",
-            "qvqp_end",
-            "qvss_start",
-            "qvss_end",
-        ):
-            self.assertIn(f'key="{key}"', source)
-            self.assertNotIn(
-                f'st.date_input("Start Date", value=_default_strict_factor_start_date(), key="{key}")',
-                source,
-            )
-            self.assertNotIn(
-                f'st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="{key}")',
-                source,
-            )
+        self.assertIn('key=f"{key_prefix}_start"', source)
+        self.assertIn('key=f"{key_prefix}_end"', source)
+        for key_prefix in ("qss", "qsqp", "vsqp", "vss", "qvqp", "qvss"):
+            self.assertIn(f'key_prefix="{key_prefix}"', source)
+        self.assertNotIn('st.date_input("Start Date", value=', source)
+        self.assertNotIn('st.date_input("End Date", value=', source)
 
     def test_backtest_state_init_does_not_eagerly_seed_strict_form_widget_keys(self) -> None:
         source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
@@ -1024,7 +1007,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
             self.assertNotIn("Strategy Detail", source)
             self.assertNotIn("backtest_strategy_detail", source)
             self.assertNotIn("runtime wrapper", source)
-            self.assertIn('with st.expander("전략·보유 규칙", expanded=False)', source)
+            self.assertIn("선택·보유 규칙", source)
 
     def test_portfolio_mix_builder_remains_streamlit_owned_with_strict_preset_copy(self) -> None:
         source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
@@ -6110,8 +6093,8 @@ class BoundaryContractHardeningTests(unittest.TestCase):
             ]
         )
 
-        self.assertIn("Archived legacy broad yfinance compatibility path", source)
-        self.assertIn("saved/history replay", source)
+        self.assertIn("저장된 과거 실행을 재현", source)
+        self.assertIn("저장된 과거 결과 호환", source)
         self.assertIn("Quality Snapshot (Strict Annual)", source)
 
     def test_ingestion_collection_section_selector_is_stateful_across_reruns(self) -> None:

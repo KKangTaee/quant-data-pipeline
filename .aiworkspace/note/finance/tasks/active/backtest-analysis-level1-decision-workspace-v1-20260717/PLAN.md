@@ -1701,7 +1701,7 @@ git commit -m "Backtest Analysis 전술 전략 설정 흐름 통일"
 - Produces: Korean-first five-section flow for Quality / Value / Quality+Value annual and
   quarterly variants plus legacy Quality Snapshot replay path.
 
-- [ ] **Step 1: Write RED contracts for all concrete strict variants**
+- [x] **Step 1: Write RED contracts for all concrete strict variants**
 
 Assert that all seven renderer bodies contain the ordered section labels, Korean submit copy,
 and no first-read raw phrases:
@@ -1725,7 +1725,7 @@ for raw_copy in (
 Retain service contracts that verify annual / quarterly strategy keys, factor arrays,
 universe contract, costs, overlay, guardrail, and prefill mappings.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -1736,7 +1736,7 @@ uv run --with pytest python -m pytest \
 
 Expected: hierarchy / Korean-first assertions fail on the legacy strict form source.
 
-- [ ] **Step 3: Refactor the seven renderer bodies without changing payloads**
+- [x] **Step 3: Refactor the seven renderer bodies without changing payloads**
 
 For each renderer:
 
@@ -1754,7 +1754,7 @@ For each renderer:
 Do not change `_handle_backtest_run()` calls, concrete `strategy_key`, `statement_freq`,
 `universe_contract`, factor default arrays, or prefill conversion.
 
-- [ ] **Step 4: Run GREEN, full strict regressions, and compile**
+- [x] **Step 4: Run GREEN, full strict regressions, and compile**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -1767,7 +1767,7 @@ git diff --check
 
 Expected: strict hierarchy and existing runtime / payload compatibility tests pass.
 
-- [ ] **Step 5: Commit Task 12**
+- [x] **Step 5: Commit Task 12**
 
 ```bash
 git add \

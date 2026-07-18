@@ -165,3 +165,15 @@
 - `git diff --check`: 통과
 - widget key / payload key / handler는 유지하고 사용자 흐름만 핵심 설정 -> Universe
   -> 선택·보유 -> 비용·위험으로 통일
+
+## 2026-07-18 6차 Task 12 RED -> GREEN
+
+- RED: strict factor 7개 concrete renderer에 공통 계층이 없어 hierarchy contract 실패
+- GREEN hierarchy: `1 passed, 36 deselected`
+- strict factor / Quality / Value / Quality+Value / prefill focused:
+  `14 passed, 855 deselected`
+- strict 관련 service contract 확대: `28 passed, 804 deselected`
+- refactor boundary 전체: `37 passed, 3 warnings`
+- strict factor `py_compile` / `git diff --check`: 통과
+- annual / quarterly widget key, strategy key, factor array, Universe 계약과 handler는
+  유지하고 300종목 원문·PIT·coverage 근거는 `Universe 근거`로 이동
