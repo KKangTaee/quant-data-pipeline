@@ -63,9 +63,17 @@ function AllocationCard({ title, asOf, rows }: { title: string; asOf: string; ro
 
 function HoldingsComparison({ workspace }: { workspace: ResultWorkspace }) {
   const holdings = workspace.holdings
+  const schedule = holdings.schedule
   return (
     <section className="bt1r-section">
       <SectionHeading step="3" title="현재 보유와 최신 신호 기준 목표 구성" detail="백테스트 모의 구성으로 실제 계좌나 주문이 아닙니다." />
+      <div className="bt1r-schedule-strip">
+        <div><span>현재 평가일</span><strong>{schedule.valuation_as_of || "-"}</strong></div>
+        <div><span>최신 신호일</span><strong>{schedule.latest_signal_as_of}</strong></div>
+        <div><span>마지막 리밸런싱</span><strong>{schedule.last_rebalance_as_of}</strong></div>
+        <div><span>주기</span><strong>{schedule.cadence_label}</strong></div>
+        <div><span>다음 예상</span><strong>{schedule.next_window_label}</strong></div>
+      </div>
       <div className="bt1r-holdings-grid">
         <AllocationCard title="현재 보유" asOf={holdings.as_of} rows={holdings.current_allocation} />
         <AllocationCard title="목표 구성" asOf={holdings.target_as_of} rows={holdings.target_allocation} />
@@ -146,9 +154,29 @@ function UserTables({ workspace }: { workspace: ResultWorkspace }) {
 function TechnicalAppendix({ workspace }: { workspace: ResultWorkspace }) {
   return (
     <details className="bt1r-appendix">
-      <summary>기술 부록</summary>
-      <p>원본 결과 {workspace.technical_appendix.row_count}행 · {workspace.technical_appendix.columns.join(", ")}</p>
-      <div className="bt1r-meta-grid">{workspace.technical_appendix.meta_rows.map((row) => <div key={row.key}><strong>{row.key}</strong><span>{typeof row.value === "string" ? row.value : JSON.stringify(row.value)}</span></div>)}</div>
+      <summary>계산 및 데이터 기준</summary>
+      <div className="bt1r-basis-grid">
+        {workspace.technical_appendix.sections.map((section) => (
+          <article key={section.section_id}>
+            <h3>{section.label}</h3>
+            <div>
+              {section.rows.map((row) => (
+                <div className={`is-${row.status}`} key={row.label}>
+                  <strong>{row.label}</strong>
+                  <span>{row.value_label}</span>
+                  <small>{row.explanation}</small>
+                </div>
+              ))}
+            </div>
+          </article>
+        ))}
+      </div>
+      <details className="bt1r-raw-disclosure">
+        <summary>원본 필드 보기</summary>
+        <p>원본 결과 {workspace.technical_appendix.raw.row_count}행</p>
+        <code>{workspace.technical_appendix.raw.columns.join(", ")}</code>
+        <pre>{JSON.stringify(workspace.technical_appendix.raw.meta, null, 2)}</pre>
+      </details>
     </details>
   )
 }

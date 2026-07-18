@@ -26,6 +26,30 @@ export type CurvePoint = {
   value_label: string
 }
 
+export type DateTick = {
+  date: string
+  label: string
+}
+
+export type HoverRow = {
+  date: string
+  strategy_value: number | null
+  strategy_value_label: string
+  strategy_return: number | null
+  strategy_return_label: string
+  benchmark_value: number | null
+  benchmark_value_label: string
+  benchmark_return: number | null
+  benchmark_return_label: string
+}
+
+export type BasisRow = {
+  label: string
+  value_label: string
+  explanation: string
+  status: string
+}
+
 export type AllocationRow = {
   ticker: string
   weight: number | null
@@ -57,6 +81,20 @@ export type ResultWorkspace = {
   }
   performance_summary: DisplayMetric[]
   chart: {
+    normalized_base: number
+    normalized_explanation: string
+    strategy_label: string
+    benchmark: {
+      available: boolean
+      label: string
+      ticker: string
+      contract_label: string
+      missing_reason: string
+    }
+    timeline_dates: string[]
+    desktop_x_ticks: DateTick[]
+    compact_x_ticks: DateTick[]
+    hover_rows: HoverRow[]
     strategy_series: CurvePoint[]
     benchmark_series: CurvePoint[]
     markers: Array<CurvePoint & {
@@ -79,6 +117,15 @@ export type ResultWorkspace = {
     explanation: string
     unavailable_reason: string
     evidence_status: string
+    schedule: {
+      valuation_as_of: string
+      latest_signal_as_of: string
+      last_rebalance_as_of: string
+      cadence_label: string
+      next_window_label: string
+      next_window_status: string
+      explanation: string
+    }
     components?: Array<{
       component_id: string
       label: string
@@ -128,11 +175,18 @@ export type ResultWorkspace = {
     cash: string
   }>
   technical_appendix: {
-    row_count: number
-    columns: string[]
-    prepared_rows: Array<Record<string, unknown>>
-    preview_limited: boolean
-    meta_rows: Array<{ key: string; value: unknown }>
+    sections: Array<{
+      section_id: "calculation_basis" | "data_basis" | "result_trace"
+      label: string
+      rows: BasisRow[]
+    }>
+    raw: {
+      row_count: number
+      columns: string[]
+      prepared_rows: Array<Record<string, unknown>>
+      preview_limited: boolean
+      meta: Record<string, unknown>
+    }
   }
   actions: Record<string, WorkspaceAction>
   boundaries: Record<string, boolean>

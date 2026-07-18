@@ -597,19 +597,44 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
             "technical_appendix",
         ):
             self.assertIn(token, types)
+        for token in (
+            "timeline_dates",
+            "desktop_x_ticks",
+            "compact_x_ticks",
+            "hover_rows",
+            "contract_label",
+            "next_window_label",
+            "calculation_basis",
+            "data_basis",
+            "result_trace",
+        ):
+            self.assertIn(token, types)
         self.assertIn('emitIntent("save_and_move"', source)
         self.assertIn("<svg", chart)
         self.assertIn("<title>", chart)
         self.assertIn("<desc>", chart)
+        for token in (
+            "onPointerMove",
+            "onPointerLeave",
+            "bt1r-crosshair",
+            "bt1r-chart-tooltip",
+        ):
+            self.assertIn(token, chart)
+        self.assertIn("bt1r-schedule-strip", source)
+        self.assertIn("계산 및 데이터 기준", source)
+        self.assertIn("원본 필드 보기", source)
         self.assertIn("ResizeObserver", index)
         self.assertIn("@media (max-width: 760px)", css)
         self.assertIn(".bt1r-workspace {", css)
+        self.assertIn(".bt1r-chart-tooltip", css)
+        self.assertIn(".bt1r-schedule-strip", css)
         self.assertIn("overflow-x: hidden", css)
         self.assertIn("min-width: 0", css)
         self.assertNotIn("benchmark_available", source)
         self.assertNotIn("Next Balance", source)
         self.assertNotIn("canHandoff =", source)
         self.assertNotIn("/ total", source)
+        self.assertNotIn("value / 100", chart)
 
         fallback = (
             PROJECT_ROOT / "app/web/backtest_analysis_result_workspace_panel.py"
@@ -617,6 +642,8 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn(
             "def render_backtest_analysis_result_workspace_fallback", fallback
         )
+        self.assertIn("계산 및 데이터 기준", fallback)
+        self.assertIn("next_window_label", fallback)
         self.assertNotIn("build_next_step_readiness_evaluation", fallback)
 
     def test_result_route_hides_before_first_run_and_removes_legacy_expander(

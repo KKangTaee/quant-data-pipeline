@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from uuid import uuid4
 from typing import Any
 
@@ -45,27 +46,40 @@ def render_backtest_analysis_result_workspace_fallback(
 
     st.markdown("### 2. 전략과 기준의 흐름")
     chart = dict(workspace.get("chart") or {})
-    strategy_rows = list(chart.get("strategy_series") or [])
-    benchmark_rows = list(chart.get("benchmark_series") or [])
+    strategy_label = str(chart.get("strategy_label") or "전략")
+    benchmark = dict(chart.get("benchmark") or {})
+    benchmark_label = str(benchmark.get("label") or "기준지수")
     chart_rows = [
-        {"Date": row.get("date"), "전략": row.get("value")}
-        for row in strategy_rows
+        {
+            "Date": row.get("date"),
+            strategy_label: row.get("strategy_value"),
+            benchmark_label: row.get("benchmark_value"),
+        }
+        for row in list(chart.get("hover_rows") or [])
     ]
-    if benchmark_rows:
-        benchmark_by_date = {row.get("date"): row.get("value") for row in benchmark_rows}
-        for row in chart_rows:
-            row["기준지수"] = benchmark_by_date.get(row.get("Date"))
     if chart_rows:
         chart_df = pd.DataFrame(chart_rows).set_index("Date")
         st.line_chart(chart_df)
+        st.caption(str(chart.get("normalized_explanation") or ""))
     else:
         st.info("표시 가능한 성과 곡선이 없습니다.")
-    if chart.get("benchmark_missing_reason"):
-        st.caption(str(chart["benchmark_missing_reason"]))
+    if benchmark.get("missing_reason"):
+        st.caption(str(benchmark["missing_reason"]))
 
     st.markdown("### 3. 현재 보유와 최신 신호 기준 목표 구성")
     st.caption("백테스트 모의 구성으로 실제 계좌나 주문이 아닙니다.")
     holdings = dict(workspace.get("holdings") or {})
+    schedule = dict(holdings.get("schedule") or {})
+    schedule_columns = st.columns(5)
+    schedule_specs = (
+        ("현재 평가일", schedule.get("valuation_as_of")),
+        ("최신 신호일", schedule.get("latest_signal_as_of")),
+        ("마지막 리밸런싱", schedule.get("last_rebalance_as_of")),
+        ("주기", schedule.get("cadence_label")),
+        ("다음 예상", schedule.get("next_window_label")),
+    )
+    for column, (label, value) in zip(schedule_columns, schedule_specs):
+        column.markdown(f"**{label}**  \n{value or '-'}")
     current_column, target_column = st.columns(2)
     with current_column:
         st.markdown(f"#### 현재 보유 · {holdings.get('as_of') or '기준일 없음'}")
@@ -108,14 +122,24 @@ def render_backtest_analysis_result_workspace_fallback(
         st.dataframe(pd.DataFrame(holding_rows), use_container_width=True, hide_index=True)
 
     appendix = dict(workspace.get("technical_appendix") or {})
-    with st.expander("기술 부록", expanded=False):
+    with st.expander("계산 및 데이터 기준", expanded=False):
+        for section in list(appendix.get("sections") or []):
+            st.markdown(f"#### {section.get('label') or '-'}")
+            for row in list(section.get("rows") or []):
+                st.markdown(
+                    f"**{row.get('label') or '-'}** · {row.get('value_label') or '-'}  \n"
+                    f"{row.get('explanation') or ''}"
+                )
+        raw = dict(appendix.get("raw") or {})
+        st.markdown("#### 원본 필드 보기")
         st.caption(
-            f"원본 결과 {int(appendix.get('row_count') or 0):,}행 · "
-            f"{', '.join(str(column) for column in list(appendix.get('columns') or []))}"
+            f"원본 결과 {int(raw.get('row_count') or 0):,}행 · "
+            f"{', '.join(str(column) for column in list(raw.get('columns') or []))}"
         )
-        meta_rows = list(appendix.get("meta_rows") or [])
-        if meta_rows:
-            st.dataframe(pd.DataFrame(meta_rows), use_container_width=True, hide_index=True)
+        st.code(
+            json.dumps(raw.get("meta") or {}, ensure_ascii=False, indent=2, default=str),
+            language="json",
+        )
 
     action = dict(dict(workspace.get("actions") or {}).get("save_and_move") or {})
     if action and st.button(

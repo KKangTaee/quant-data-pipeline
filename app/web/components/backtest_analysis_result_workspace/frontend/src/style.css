@@ -77,10 +77,15 @@ button { font: inherit; }
 .bt1r-chart-shell { border: 1px solid #dce7ee; border-radius: 18px; padding: 16px; overflow: hidden; background: #fbfdfe; }
 .bt1r-chart-shell svg { width: 100%; min-width: 620px; height: auto; }
 .bt1r-chart-shell { overflow-x: auto; }
+.bt1r-chart-stage { position: relative; min-width: 620px; }
 .bt1r-chart-legend { display: flex; gap: 18px; justify-content: flex-end; padding: 0 8px 8px; }
+.bt1r-chart-legend span { display: inline-flex; gap: 6px; align-items: center; color: #4e6575; font-size: 13px; font-weight: 700; }
+.bt1r-chart-legend small { color: #7b8e9b; font-size: 11px; font-weight: 500; }
 .bt1r-chart-legend span::before { content: ""; display: inline-block; width: 18px; height: 3px; margin-right: 7px; vertical-align: middle; border-radius: 4px; background: #386f8c; }
 .bt1r-chart-legend .is-benchmark::before { background: #b8833c; }
 .bt1r-grid-line { stroke: #dce7ee; stroke-width: 1; }
+.bt1r-x-tick { stroke: #92a6b4; stroke-width: 1; }
+.bt1r-x-ticks.is-compact { display: none; }
 .bt1r-axis-label { fill: #758998; font-size: 12px; }
 .bt1r-line { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .bt1r-line.is-strategy { stroke: #386f8c; }
@@ -89,6 +94,10 @@ button { font: inherit; }
 .bt1r-point.is-strategy { fill: #386f8c; }
 .bt1r-point.is-benchmark { fill: #b8833c; }
 .bt1r-point:focus { outline: none; stroke: #16202d; stroke-width: 4; }
+.bt1r-crosshair { stroke: #315f77; stroke-width: 1; stroke-dasharray: 5 4; pointer-events: none; }
+.bt1r-chart-tooltip { position: absolute; top: 10px; z-index: 3; display: grid; min-width: 210px; max-width: 280px; gap: 5px; padding: 11px 13px; border: 1px solid #bfd0db; border-radius: 12px; transform: translateX(-50%); background: rgba(255,255,255,.96); box-shadow: 0 10px 28px rgba(31,58,75,.16); pointer-events: none; }
+.bt1r-chart-tooltip strong { font-size: 13px; }
+.bt1r-chart-tooltip span { color: #526a7a; font-size: 12px; line-height: 1.35; }
 .bt1r-marker-strip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .bt1r-marker-strip span { padding: 8px 10px; border-radius: 10px; background: #edf4f7; color: #4e6575; font-size: 12px; }
 .bt1r-marker-strip strong { margin-right: 6px; }
@@ -102,6 +111,10 @@ button { font: inherit; }
 .bt1r-evidence-grid h3 { margin: 0; font-size: 18px; }
 .bt1r-allocation-card header span,
 .bt1r-question-grid article > span { color: #6b8192; font-size: 12px; }
+.bt1r-schedule-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.bt1r-schedule-strip > div { min-width: 0; padding: 12px; border: 1px solid #dce7ee; border-radius: 14px; background: #f3f8fa; }
+.bt1r-schedule-strip span { display: block; color: #6b8192; font-size: 11px; font-weight: 700; }
+.bt1r-schedule-strip strong { display: block; margin-top: 6px; overflow-wrap: anywhere; font-size: 13px; line-height: 1.35; }
 .bt1r-allocation-card ul { display: grid; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
 .bt1r-allocation-card li { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid #e3ebf0; }
 .bt1r-holdings-explanation { margin: 14px 0 0; color: #5e7485 !important; }
@@ -135,11 +148,20 @@ button { font: inherit; }
 
 .bt1r-appendix { padding: 0; overflow: hidden; }
 .bt1r-appendix summary { padding: 18px 22px; cursor: pointer; font-size: 17px; font-weight: 800; }
-.bt1r-appendix > p,
-.bt1r-meta-grid { margin: 0 22px 18px; }
-.bt1r-meta-grid { display: grid; gap: 8px; max-height: 320px; overflow: auto; }
-.bt1r-meta-grid > div { display: grid; grid-template-columns: minmax(140px,.35fr) minmax(0,1fr); gap: 12px; padding: 10px; border-radius: 10px; background: #f5f8fa; }
-.bt1r-meta-grid span { overflow-wrap: anywhere; color: #617788; }
+.bt1r-basis-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 22px 18px; }
+.bt1r-basis-grid > article { min-width: 0; padding: 16px; border: 1px solid #dce7ee; border-radius: 16px; background: #f8fbfd; }
+.bt1r-basis-grid h3 { margin: 0 0 12px; font-size: 17px; }
+.bt1r-basis-grid article > div { display: grid; gap: 10px; }
+.bt1r-basis-grid article > div > div { display: grid; gap: 4px; padding-top: 10px; border-top: 1px solid #e1eaf0; }
+.bt1r-basis-grid article > div > div:first-child { padding-top: 0; border-top: 0; }
+.bt1r-basis-grid span { overflow-wrap: anywhere; color: #315f77; font-weight: 700; }
+.bt1r-basis-grid small { color: #6b8192; line-height: 1.45; }
+.bt1r-basis-grid .is-missing span { color: #8b7246; }
+.bt1r-raw-disclosure { margin: 0 22px 20px; border: 1px solid #dce7ee; border-radius: 14px; overflow: hidden; }
+.bt1r-raw-disclosure summary { padding: 13px 15px; font-size: 14px; }
+.bt1r-raw-disclosure p { margin: 0 15px 8px; color: #617788; }
+.bt1r-raw-disclosure code { display: block; margin: 0 15px 12px; overflow-wrap: anywhere; color: #526a7a; }
+.bt1r-raw-disclosure pre { max-height: 280px; margin: 0; padding: 14px 15px; overflow: auto; border-top: 1px solid #dce7ee; background: #f4f7f9; color: #405766; font-size: 11px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bt1r-empty { padding: 16px; border: 1px solid #dce7ee; border-radius: 14px; background: #fff; color: #617788; }
 
 @media (max-width: 760px) {
@@ -148,12 +170,17 @@ button { font: inherit; }
   .bt1r-holdings-grid,
   .bt1r-question-grid,
   .bt1r-evidence-grid,
-  .bt1r-component-list { grid-template-columns: minmax(0, 1fr); }
+  .bt1r-component-list,
+  .bt1r-schedule-strip,
+  .bt1r-basis-grid { grid-template-columns: minmax(0, 1fr); }
   .bt1r-header,
   .bt1r-section { padding: 20px 16px; }
   .bt1r-section-heading h2 { font-size: 20px; }
   .bt1r-handoff > div,
   .bt1r-allocation-card header { align-items: flex-start; flex-direction: column; }
-  .bt1r-meta-grid > div { grid-template-columns: minmax(0, 1fr); }
+  .bt1r-x-ticks.is-desktop { display: none; }
+  .bt1r-x-ticks.is-compact { display: initial; }
+  .bt1r-chart-tooltip { max-width: 220px; }
   .bt1r-chart-shell svg { min-width: 560px; }
+  .bt1r-chart-stage { min-width: 560px; }
 }
