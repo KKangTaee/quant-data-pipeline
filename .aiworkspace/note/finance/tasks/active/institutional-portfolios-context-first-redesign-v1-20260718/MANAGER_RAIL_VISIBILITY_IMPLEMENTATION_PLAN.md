@@ -42,7 +42,7 @@
 - Consumes: `_component_style_source() -> str`, `_css_rule(style_source: str, *selectors: str) -> str`.
 - Produces: `test_manager_rail_shows_complete_cards_and_wraps_labels`, a source/runtime presentation regression.
 
-- [ ] **Step 1: Add the failing test after the hero alignment contract**
+- [x] **Step 1: Add the failing test after the hero alignment contract**
 
 ```python
 def test_manager_rail_shows_complete_cards_and_wraps_labels(self) -> None:
@@ -120,7 +120,7 @@ def test_manager_rail_shows_complete_cards_and_wraps_labels(self) -> None:
     self.assertIn("--ip-manager-card-width:100%", runtime_mobile_rule)
 ```
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
 Run:
 
@@ -144,7 +144,7 @@ Expected: FAIL because `.ip-manager-rail` still contains `display: flex` and the
 - Consumes: existing `.ip-manager-rail`, `.ip-manager-favorites`, `.ip-manager-tab` selectors and 8px gap.
 - Produces: exact source CSS contract protected by Task 1; React markup and events remain unchanged.
 
-- [ ] **Step 1: Replace flex sizing with the desktop complete-card grid**
+- [x] **Step 1: Replace flex sizing with the desktop complete-card grid**
 
 ```css
 .ip-manager-rail {
@@ -175,7 +175,7 @@ Expected: FAIL because `.ip-manager-rail` still contains `display: flex` and the
 }
 ```
 
-- [ ] **Step 2: Replace forced single-line clipping with natural wrapping**
+- [x] **Step 2: Replace forced single-line clipping with natural wrapping**
 
 ```css
 .ip-manager-tab strong,
@@ -188,7 +188,7 @@ Expected: FAIL because `.ip-manager-rail` still contains `display: flex` and the
 }
 ```
 
-- [ ] **Step 3: Add tablet and mobile card-width overrides**
+- [x] **Step 3: Add tablet and mobile card-width overrides**
 
 Inside `@media (max-width: 980px)`:
 
@@ -206,7 +206,7 @@ Inside `@media (max-width: 720px)`:
 }
 ```
 
-- [ ] **Step 4: Run the focused test and confirm the expected intermediate failure**
+- [x] **Step 4: Run the focused test and confirm the expected intermediate failure**
 
 Run:
 
@@ -216,7 +216,7 @@ uv run --with pytest pytest -q tests/test_institutional_portfolios.py::Instituti
 
 Expected: source assertions pass, but runtime CSS assertions still FAIL because `component_static` has not been rebuilt.
 
-- [ ] **Step 5: Build the tracked component runtime**
+- [x] **Step 5: Build the tracked component runtime**
 
 Run:
 
@@ -226,7 +226,7 @@ npm --prefix app/web/streamlit_components/institutional_portfolios_workbench run
 
 Expected: Vite exits 0, transforms the existing component modules, and writes a new hashed CSS asset plus updated `component_static/index.html`.
 
-- [ ] **Step 6: Run the focused test and verify GREEN**
+- [x] **Step 6: Run the focused test and verify GREEN**
 
 Run:
 
@@ -236,7 +236,7 @@ uv run --with pytest pytest -q tests/test_institutional_portfolios.py::Instituti
 
 Expected: `1 passed`.
 
-- [ ] **Step 7: Run frontend and complete focused regressions**
+- [x] **Step 7: Run frontend and complete focused regressions**
 
 ```bash
 npm --prefix app/web/streamlit_components/institutional_portfolios_workbench test -- --reporter=verbose
@@ -247,7 +247,7 @@ git diff --check
 
 Expected: Vitest passes, TypeScript exits 0, institutional portfolio suite passes, and `git diff --check` prints nothing.
 
-- [ ] **Step 8: Commit the CSS, regression, and tracked runtime together**
+- [x] **Step 8: Commit the CSS, regression, and tracked runtime together**
 
 ```bash
 git add tests/test_institutional_portfolios.py \
@@ -268,7 +268,7 @@ git commit -m "기관 포트폴리오 카드 레일 잘림 수정"
 - Consumes: actual Institutional Portfolios Streamlit page and the built tracked component.
 - Produces: measured evidence for 4 / 3 / 1 complete cards, wrapping, snap, selection, and no overflow.
 
-- [ ] **Step 1: Start a separate local Streamlit server on an unused port**
+- [x] **Step 1: Start a separate local Streamlit server on an unused port**
 
 First confirm port `8527` is unused. Then run:
 
@@ -282,7 +282,7 @@ First confirm port `8527` is unused. Then run:
 
 Expected: the dedicated server reports `http://localhost:8527`. If the port is already occupied, choose another explicit unused port and record it in `RUNS.md`; do not stop or reuse the existing process.
 
-- [ ] **Step 2: Measure desktop behavior**
+- [x] **Step 2: Measure desktop behavior**
 
 At a desktop viewport matching the reported screenshot:
 
@@ -292,17 +292,17 @@ At a desktop viewport matching the reported screenshot:
 - Berkshire, Pershing, and Appaloosa filer names use `white-space: normal` and have `scrollWidth <= clientWidth`;
 - the scrollbar has effective bottom spacing and no card overlaps it.
 
-- [ ] **Step 3: Measure tablet and 420px mobile behavior**
+- [x] **Step 3: Measure tablet and 420px mobile behavior**
 
 - At `721px–980px`, verify the rail equation `3 * card width + 2 * 8px == rail width` within 1px.
 - At `420px`, verify one card width equals the rail client width within 1px.
 - At both widths, page and iframe `scrollWidth == clientWidth`.
 
-- [ ] **Step 4: Verify scroll snap and manager selection**
+- [x] **Step 4: Verify scroll snap and manager selection**
 
 Scroll the rail horizontally and wait for layout settlement. Confirm `scrollLeft` aligns to `N * (card width + 8px)` within 1px, then select a newly visible manager and verify the hero CIK / manager name updates without console errors.
 
-- [ ] **Step 5: Capture final screenshot and shut down QA resources**
+- [x] **Step 5: Capture final screenshot and shut down QA resources**
 
 Save one final screenshot as `.playwright-mcp/institutional-portfolios-manager-rail-visibility-final.png`, reset viewport overrides, close/finalize the QA tab, and stop only the dedicated server started in Step 1. Do not stage the screenshot.
 
@@ -319,7 +319,7 @@ Save one final screenshot as `.playwright-mcp/institutional-portfolios-manager-r
 - Consumes: exact automated outputs and Browser QA measurements from Tasks 2–3.
 - Produces: concise durable handoff for the completed layout follow-up.
 
-- [ ] **Step 1: Record exact results**
+- [x] **Step 1: Record exact results**
 
 Append one dated manager-rail follow-up entry to `RUNS.md` containing:
 
@@ -330,11 +330,11 @@ Append one dated manager-rail follow-up entry to `RUNS.md` containing:
 - scroll snap, selection, no-overflow, console results;
 - ignored screenshot path.
 
-- [ ] **Step 2: Update status and risks without reopening unrelated scope**
+- [x] **Step 2: Update status and risks without reopening unrelated scope**
 
 Add a `STATUS.md` progress line and current-step paragraph stating the approved closeout follow-up is complete. Move the manager-rail clipping risk to closed in `RISKS.md`; keep historical filing backfill, verified security master, and full-payload serialization unchanged.
 
-- [ ] **Step 3: Run final verification from the committed implementation state**
+- [x] **Step 3: Run final verification from the committed implementation state**
 
 ```bash
 uv run --with pytest pytest -q tests/test_institutional_portfolios.py

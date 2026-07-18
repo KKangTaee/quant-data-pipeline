@@ -97,3 +97,16 @@
 - Marked all eight steps complete in `LAYOUT_ALIGNMENT_IMPLEMENTATION_PLAN.md`; automated count confirmed `8/8` checked and no unchecked Task 1 step remains.
 - Final checks: Python `56 passed`, `4 subtests passed`, 3 existing Edgar dependency warnings; Vitest `5 passed`; typecheck PASS; Vite build PASS with 171 modules; `git diff --check` and focused source/runtime contract PASS.
 - Browser QA was not rerun because production TSX / CSS and tracked index / JS / CSS remained byte-identical after build with the previously recorded five SHA-256 values.
+
+## 2026-07-18 Manager Rail Visibility Follow-Up
+
+- Root-cause RED: the new `test_manager_rail_shows_complete_cards_and_wraps_labels` failed because `.ip-manager-rail` still used `display: flex`; the first draft also exposed that the tablet media rule was absent. The test order was tightened before production edits so the direct flex failure appeared first.
+- Source CSS GREEN changed only the manager rail presentation contract: desktop `4`, tablet `3`, mobile `1` complete-card grid columns; mandatory horizontal snap; natural alias / filer-name wrapping; effective `12px` bottom margin and `10px` scrollbar spacing. React markup, manager payload, CIK events, DB, provider, and ingestion were unchanged.
+- Intermediate verification failed only on the intentionally stale tracked runtime after the source CSS passed. Vite rebuilt `component_static` with 171 modules, then the focused source/runtime test passed.
+- Automated verification: full Python `57 passed`, `4 subtests passed`, 3 existing Edgar dependency warnings; Vitest `5 passed`; TypeScript typecheck PASS; Vite build PASS; `git diff --check` PASS.
+- Actual Browser QA used dedicated Streamlit port `8527`, then stopped the server, reset the viewport, and finalized the in-app Browser tab. Browser error / warning log was empty.
+- Desktop `2048 × 1000`: component document `1877px`, rail `1190px`, four cards `291.406px` plus three `8px` gaps, fifth-card visible width `0px`; `white-space: normal`, `text-overflow: clip`, and content `scrollWidth == clientWidth` were confirmed.
+- Tablet `900 × 1000`: component document `729px`, rail `675px`, three cards `219.656px` plus two `8px` gaps, fourth-card visible width `0px`; page / component horizontal overflow was `0px`.
+- Mobile `420 × 900`: component document `377px`, rail / card `331px`, second-card visible width `0px`; page / component horizontal overflow was `0px` and long filer metadata wrapped without inner overflow.
+- Horizontal scroll settled at `299px` for a `299.406px` card step, a `0.406px` rounding error. The visible Stanley Druckenmiller card selected CIK `0001536411`, updated the hero to `Duquesne Family Office LLC`, and preserved the snapped rail position.
+- Final ignored screenshot: `.playwright-mcp/institutional-portfolios-manager-rail-visibility-final.png`.

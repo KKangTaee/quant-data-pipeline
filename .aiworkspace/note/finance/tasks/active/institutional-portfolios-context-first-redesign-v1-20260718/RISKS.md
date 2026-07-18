@@ -8,6 +8,7 @@
 - A mapped security found by direct Institutional Interest search no longer depends on the selected manager holding it; selected-manager position absence is explicit and DB price / holder evidence remains available.
 - Direct Institutional Interest search promotes an identity only for an exact ticker / CUSIP or one unique `(ticker, CUSIP)` pair. Multiple identities return an explicit ambiguous state without loading price data.
 - Manager search 0건 preserves any selected normalized CIK's live portfolio context, including managers outside the curated watchlist, and overview unresolved top holdings open their CUSIP notice in the full holdings explorer.
+- Manager rail no longer ends on a partial next card. Desktop / tablet / mobile expose exactly 4 / 3 / 1 complete cards, long filer names wrap inside equal-height cards, and native scrollbar spacing is no longer overridden by the combined favorites class.
 
 ## Open Risks
 

@@ -14,6 +14,7 @@ Started: 2026-07-18
 - 2026-07-18: Final review fix wave closed direct-search identity outside the selected portfolio, normalized pending-query completion, executable React helper tests / strict typecheck, explicit zero-result manager search, stale security-state reset, and unresolved overview navigation. Actual Browser QA covered lowercase `nvda`, live-context-preserving manager search 0건, and Bridgewater unresolved top holding.
 - 2026-07-18: Final re-review hardened direct-search identity promotion to exact ticker / CUSIP or one unique `(ticker, CUSIP)` pair, blocked ambiguous price lookup, and preserved zero-result search context for any selected normalized CIK rather than watchlist managers only.
 - 2026-07-18: Layout alignment follow-up made the context hero and controls share one column contract, expanded DB snapshot / SEC source rows across the basis card, aligned the manager-search and freshness labels, and moved collected time to a non-truncating second row. Focused TDD, full automated checks, tracked bundle verification, and actual desktop / 420px Browser measurements passed.
+- 2026-07-18: Manager rail visibility follow-up replaced the partial-card flex rail with a complete-card 4 / 3 / 1 responsive grid, removed forced manager-name ellipsis, restored effective scrollbar spacing, and preserved horizontal snap / selection behavior. Source/runtime TDD and actual desktop / tablet / 420px Browser QA passed.
 
 ## Current Step
 
@@ -22,6 +23,8 @@ Started: 2026-07-18
 Bridgewater actual payload의 `993` holding row가 explorer `993` row와 일치하고, 50-row pagination으로 `1–50 / 993`, `51–100 / 993`을 확인했다. 이전 분기가 없는 actual manager는 change groups를 표시하지 않는다.
 
 Layout follow-up은 전체 roadmap 이후의 approved closeout 보완이며 기존 payload / event / manager / refresh / chart / holdings 동작은 변경하지 않았다. Desktop hero / controls 열 경계와 search input / freshness panel 상단선은 실제 렌더링에서 일치했고, 420px page / component에는 수평 overflow가 없다.
+
+Manager rail follow-up도 같은 closeout 범위다. Desktop 4개, tablet 3개, mobile 1개의 완전한 카드만 보이며 다음 카드는 rail 경계 밖에서 시작한다. 긴 filer name은 카드 안에서 줄바꿈하고, scroll snap 후 manager 선택은 기존 CIK event를 그대로 사용한다.
 
 ## Next Action
 
