@@ -27,3 +27,5 @@
 - 420px QA에서 page `420/420`, Streamlit main `409/409`, component `377/377` client/scroll width로 가로 overflow 0을 확인했다. fresh browser tab의 console error/warning은 0건이었다.
 - 최종 focused regression은 frontend/entrypoint 11개와 sentiment service/payload 12개, 총 `23 passed`다. Vite production build와 `git diff --check`도 다시 통과했다.
 - TypeScript `tsc --noEmit`은 기존 package에 `@types/react`, `@types/react-dom`이 없어 baseline에서 실행 불가했다. dependency를 추가하지 않고 repository의 Vite production build와 Python source-contract regression을 사용했다.
+- graph 2행 요구를 CSS source-contract에 먼저 반영해 기존 desktop `repeat(2, ...)` 규칙으로 실패하는 것을 확인한 뒤 기본 history grid를 단일 column으로 수정하고 Vite production bundle을 재생성했다.
+- actual Streamlit 1440px Browser QA에서 CNN과 AAII panel이 각각 x `21px`, width `851px`로 일치하고 AAII가 CNN 아래에서 시작하는 2행 구조, line chart 2개를 확인했다. QA screenshot `overview-sentiment-history-two-rows-qa.png`는 generated artifact로 commit에서 제외한다.

@@ -8751,7 +8751,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         source_box_rule = source_box_rule[:source_box_rule.index("}")]
         self.assertNotIn("border-top", source_box_rule)
         self.assertIn(".sentiment-workbench__history-grid", style)
-        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr));", style)
+        history_grid_rule = style[style.index(".sentiment-workbench__history-grid {") :]
+        history_grid_rule = history_grid_rule[: history_grid_rule.index("}")]
+        self.assertIn("grid-template-columns: minmax(0, 1fr);", history_grid_rule)
+        self.assertNotIn("repeat(2", history_grid_rule)
         self.assertIn(".sentiment-workbench__outlook-grid", style)
         self.assertIn(".sentiment-workbench__watch-grid", style)
         self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", style)

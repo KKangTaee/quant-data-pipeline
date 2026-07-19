@@ -13,7 +13,7 @@
 - CNN·AAII source card에 각 latest/previous 기준일을 표시해 일간 CNN과 주간 AAII가 같은 기준일처럼 보이지 않게 한다.
 - 이력 그래프는 서로 다른 시점이 두 개 이상일 때만 그리며 AAII 응답의 Bullish/Neutral/Bearish 세 row를 세 개 시점으로 세지 않는다.
 - 사용자 시각 선택은 Market Context·Futures Macro와 같은 서사형 Hero, warm brown CNN, teal AAII, 기간 card 구조로 확정됐다.
-- 최종 graph 구조는 CNN 고정 panel과 AAII 전환 panel의 2개다. AAII panel 기본값은 `AAII 응답`이며 `AAII Spread`로 전환한다.
+- 최종 graph 구조는 CNN 고정 panel과 AAII 전환 panel의 2개다. 데스크톱에서도 좌우 2열로 축소하지 않고 CNN 첫 행, AAII 둘째 행의 동일한 전체 폭을 사용한다. AAII panel 기본값은 `AAII 응답`이며 `AAII Spread`로 전환한다.
 - graph curve는 사용하지 않고 실제 관측일 간격의 raw point를 직선으로 연결한다. 중간 날짜 값을 새 관측으로 생성하지 않는다.
 - source box 상단의 colored rounded rail은 기능이 없는 장식으로 판단해 제거한다. 출처 구분은 label, graph 색, badge에 남긴다.
 - 1W·1M 확률 mockup은 layout 검토용이며 production 데이터가 아니다. 검증된 estimator가 없으면 card는 `UNAVAILABLE`이고 확률을 숨긴다.
@@ -21,3 +21,4 @@
 - graph는 `polyline`과 실제 timestamp 좌표를 사용하며 CNN 최신 관측값·상태를 마지막 점에 직접 표시한다. AAII 응답은 teal 실선 / gray 파선 / berry 점선으로 구분한다.
 - 오래 실행된 Python 프로세스와 새 frontend bundle이 순간적으로 섞여도 `outlook` 누락으로 전체 component가 깨지지 않도록 1W·1M unavailable fallback을 둔다. 정상 source of truth는 계속 Python payload다.
 - Browser QA screenshot `overview-sentiment-visual-redesign-qa.png`는 generated artifact이며 commit 대상이 아니다.
+- 사용자 후속 피드백으로 graph 영역의 2열 배치를 2행으로 교정했다. CSS source-contract와 실제 1440px 화면 좌표에서 두 panel의 x·width 일치와 세로 적층을 확인했다.
