@@ -8233,17 +8233,17 @@ git commit -m "Portfolio Mix 월별 수익률 Y축 추가"
 - Generate but do not stage: `backtest-portfolio-mix-monthly-y-axis-desktop-qa.png`
 - Generate but do not stage: `backtest-portfolio-mix-monthly-y-axis-760-qa.png`
 
-- [ ] **Step 1: Run actual desktop chart QA**
+- [x] **Step 1: Run actual desktop chart QA**
 
 Open a current Portfolio Mix result. Confirm five visible percent Y labels, symmetric values, zero-line emphasis,
 bar top matching the same scale, existing first/middle/last month labels and hover tooltip values.
 
-- [ ] **Step 2: Run 760px responsive QA**
+- [x] **Step 2: Run 760px responsive QA**
 
 Confirm only three visible percent Y labels, date labels and bars remain readable, and document/component horizontal
 overflow is zero.
 
-- [ ] **Step 3: Run fresh verification and protected-path audit**
+- [x] **Step 3: Run fresh verification and protected-path audit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q
@@ -8253,7 +8253,7 @@ git diff --check
 git diff --cached --name-only
 ```
 
-- [ ] **Step 4: Sync closeout records and commit**
+- [x] **Step 4: Sync closeout records and commit**
 
 ```bash
 git commit -m "Portfolio Mix 월별 수익률 Y축 QA 정리"

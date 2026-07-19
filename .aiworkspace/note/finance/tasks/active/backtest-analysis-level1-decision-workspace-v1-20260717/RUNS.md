@@ -777,3 +777,20 @@
   `30 passed, 3 warnings in 1.56s`.
 - React production build: Vite 5.4.21, `176 modules transformed`, CSS 12.84 kB,
   JS 343.95 kB. `git diff --check` exit 0이다.
+
+## 2026-07-19 19차 Task 58 Actual Browser QA And Closeout
+
+- fresh Streamlit 8505에서 GTAA 50 / Equal Weight 50을 실제 실행했다. 기간은
+  `2016.08.31–2026.06.30`, KPI는 `9.23% / -17.84% / 0.89 / 25,417.43`이다.
+- desktop Y labels는 `+10% / +5% / 0% / -5% / -10%` 5개, guides는 4개다.
+  119개 월 막대와 `2021.07 / 0.28% / 17,832.32` hover를 확인했다.
+- 760px은 compact labels `+10% / 0% / -10%` 3개와 guides 2개만 보였다. document/body는
+  `clientWidth=scrollWidth=760`, main은 `749=749`, chart card는 `631=631`로 overflow 0이다.
+- Browser error log는 0건이다. generated evidence는
+  `backtest-portfolio-mix-monthly-y-axis-desktop-qa.png`,
+  `backtest-portfolio-mix-monthly-y-axis-760-qa.png`이며 stage하지 않는다.
+- fresh focused UI/boundary:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
+  -> `86 passed, 3 warnings in 1.71s`.
+- React production build: Vite 5.4.21, `176 modules transformed`, CSS 12.84 kB,
+  JS 343.95 kB. target service/adapter `py_compile`과 `git diff --check`는 exit 0이다.

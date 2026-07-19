@@ -10064,3 +10064,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 현재 선택을 잃지 않으면서 원하는 자산을 빠르게 찾고, 뒤 설정까지 과도한 page scroll 없이 이어서 편집해야 함.
 - Analysis result: option 12개 초과 시 선택 chip + 검색 + 240px 내부 scroll을 사용하고, 짧은 목록은 기존 grid를 유지하는 A안을 채택함.
 - Follow-up: actual TLT 검색·해제·재선택, 다른 GTAA 설정 보존과 desktop/760px no-overflow를 확인했다. 수천 option virtualization은 후속 규모 확장 시 검토한다.
+
+### 2026-07-19 - 월별 수익률은 0% 선뿐 아니라 실제 크기를 읽을 수 있는 Y축을 제공한다
+
+- User request: Portfolio Mix 월별 수익률 변화 chart에 별도 Y축이 필요한지 확인한 뒤 추가해 달라고 요청함.
+- Interpreted goal: hover를 하지 않아도 월별 상승·하락의 절댓값과 규모를 읽고, 작은 화면에서도 차트가 복잡해지지 않아야 함.
+- Analysis result: actual maximum을 포함하는 nice symmetric percent scale을 사용한다. desktop은 최대/절반/0/음의 절반/음의 최대 5개, 760px은 최대/0/음의 최대 3개 label을 보여주며 bar와 guide가 같은 maximum을 공유한다.
+- Follow-up: actual `±10%` scale, 119개 막대, hover와 no-overflow를 확인했다. manual range와 zoom/pan은 별도 필요가 생길 때 검토한다.

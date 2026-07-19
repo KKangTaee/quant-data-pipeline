@@ -6670,3 +6670,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - actual TLT 해제·재선택 중 GTAA 핵심 설정값 보존과 desktop/760px no-overflow를 확인했다.
 - fresh focused `85 passed`, React production build, py_compile을 통과했다. generated QA와 workflow JSONL은 commit하지 않는다.
 - 상세 설계·RED/GREEN·QA는 active task 18차 기록을 본다.
+
+## 2026-07-19 - Portfolio Mix 월별 수익률 Y축 추가
+
+- 월별 수익률 막대에 actual maximum을 포함하는 동적 대칭 percent Y축을 추가하고 막대와 눈금이 같은 scale을 사용하게 했다.
+- desktop 5 labels, 760px 3 labels와 실제 hover/no-overflow를 GTAA 50 / Equal Weight 50 결과에서 확인했다.
+- fresh focused `86 passed`, React production build, py_compile, diff-check를 통과했다. QA screenshot과 workflow JSONL은 commit하지 않는다.
+- 상세 설계·RED/GREEN·QA는 active task 19차 기록을 본다.
