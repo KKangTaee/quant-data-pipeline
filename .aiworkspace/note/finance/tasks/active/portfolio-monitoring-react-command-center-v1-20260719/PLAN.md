@@ -82,10 +82,10 @@ class AddMonitoringItemInput:
 - `execute_create_group`, `execute_rename_group`, `execute_add_item`, `execute_end_item`
 - `CommandResult(status, command_id, target_id, replayed, message)`
 
-- [ ] Write fake-repository tests for one default group only, unique non-empty names, rename version conflict, same command ID replay, same command ID/different fingerprint rejection, active duplicate source rejection, and active 10/10 rejection.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_commands.py -q` and confirm import/behavior failures.
-- [ ] Implement repository methods with injected `MySQLClient`, explicit `begin/commit/rollback`, parameterized SQL, soft lifecycle fields, and `monitoring_portfolio_command` lookup before mutation.
-- [ ] Implement commands as server-owned validation. The executor boundary must remain:
+- [x] Write fake-repository tests for one default group only, unique non-empty names, rename version conflict, same command ID replay, same command ID/different fingerprint rejection, active duplicate source rejection, and active 10/10 rejection.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_commands` and confirm import/behavior failures.
+- [x] Implement repository methods with injected `MySQLClient`, explicit `begin/commit/rollback`, parameterized SQL, soft lifecycle fields, and `monitoring_portfolio_command` lookup before mutation.
+- [x] Implement commands as server-owned validation. The executor boundary must remain:
 
 ```python
 def execute_add_item(
@@ -100,8 +100,8 @@ def execute_add_item(
     return _persist_add_item(repository, command, validated, entry)
 ```
 
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_commands.py -q`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/persistence.py app/services/portfolio_monitoring/commands.py`, and `git diff --check`.
-- [ ] Commit as `포트폴리오 모니터링 명령 경계 구현`.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_commands`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/persistence.py app/services/portfolio_monitoring/commands.py`, and `git diff --check`.
+- [x] Commit as `포트폴리오 모니터링 명령 경계 구현`.
 
 ### Task 3: legacy saved setup을 비파괴 dry-run/import 계약으로 연결한다
 

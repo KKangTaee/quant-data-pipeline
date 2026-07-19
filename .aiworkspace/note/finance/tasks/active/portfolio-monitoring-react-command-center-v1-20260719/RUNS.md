@@ -14,3 +14,5 @@
 | 2026-07-19 | Planned pytest command availability check | `.venv` has no pytest; task verification commands will use the repository's unittest runner without adding a dependency |
 | 2026-07-19 | 1차 Task 1 schema/domain RED | 5 expected failures: three tables and domain schema module absent |
 | 2026-07-19 | 1차 Task 1 focused verification | 6 unittest checks PASS; schema/domain compile and `git diff --check` PASS |
+| 2026-07-19 | 1차 Task 2 command/repository RED | 8 expected failures: persistence and command modules absent |
+| 2026-07-19 | 1차 Task 2 focused verification | 15 unittest checks PASS including existing Selected Dashboard regression; compile and `git diff --check` PASS |
