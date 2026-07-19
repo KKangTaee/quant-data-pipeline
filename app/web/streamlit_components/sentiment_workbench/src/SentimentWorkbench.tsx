@@ -3,6 +3,7 @@ import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-co
 import "./style.css";
 import CurrentEvidenceSection from "./CurrentEvidenceSection";
 import SentimentHero from "./SentimentHero";
+import SentimentHistorySection from "./SentimentHistorySection";
 
 type NumericValue = number | string | null | undefined;
 
@@ -89,7 +90,7 @@ export type AaiiComparison = {
   tone?: string;
 };
 
-type ChartPoint = {
+export type ChartPoint = {
   date: string;
   series: string;
   value?: NumericValue;
@@ -97,7 +98,7 @@ type ChartPoint = {
   status_label?: string;
 };
 
-type ChartPanel = {
+export type ChartPanel = {
   title: string;
   basis: string;
   unit: "score_0_100" | "percent" | "percentage_point";
@@ -107,20 +108,6 @@ type ChartPanel = {
     label: string;
   };
   series: ChartPoint[];
-};
-
-type ChartTab = "cnn" | "aaii_responses" | "aaii_spread";
-
-type ParsedChartPoint = ChartPoint & {
-  timestamp: number;
-  numericValue: number;
-};
-
-type HoveredChartPoint = {
-  date: string;
-  timestamp: number;
-  values: ParsedChartPoint[];
-  x: number;
 };
 
 export type WatchCondition = {
@@ -249,11 +236,6 @@ function componentChangeLabel(item: CnnEvidence) {
   return signedValue(item.change, "p");
 }
 
-function rangeWidth(range?: AxisRange) {
-  const percentile = numericValue(range?.percentile);
-  return `${Math.max(0, Math.min(100, percentile ?? 0))}%`;
-}
-
 function rowColumns(rows: SentimentEvidenceRows) {
   const keys: string[] = [];
   rows.forEach((row) => Object.keys(row).forEach((key) => {
@@ -287,215 +269,6 @@ function EvidenceTable({ rows, title }: { rows: SentimentEvidenceRows; title: st
   );
 }
 
-function SentimentAxisCard({ axis, kind }: { axis: SentimentAxis; kind: "cnn" | "aaii" }) {
-  const balance = axis.component_balance;
-  const responses = axis.responses;
-  return (
-    <article
-      aria-label={kind === "cnn" ? "시장 행동" : "개인투자자 설문"}
-      className="sentiment-workbench__axis-card"
-      style={{ "--metric-tone": toneColor(axis.tone) } as React.CSSProperties}
-    >
-      <header className="sentiment-workbench__axis-head">
-        <div><span>{axis.label}</span><small>{axis.source}</small></div>
-        <strong>{axis.direction_label}</strong>
-      </header>
-      <div className="sentiment-workbench__axis-primary">
-        <b>{displayValue(axis.current, kind === "aaii" ? "pp" : "")}</b>
-        <span>직전 대비 {signedValue(axis.change, kind === "aaii" ? "pp" : "p")}</span>
-      </div>
-      <small className="sentiment-workbench__axis-date">기준 {axis.latest_date || "-"} · 직전 {axis.previous_date || "-"}</small>
-      {kind === "cnn" ? (
-        <div className="sentiment-workbench__axis-breakdown">
-          <span>탐욕 <b>{balance?.greed_count ?? 0}</b></span>
-          <span>중립 <b>{balance?.neutral_count ?? 0}</b></span>
-          <span>공포 <b>{balance?.fear_count ?? 0}</b></span>
-        </div>
-      ) : (
-        <div className="sentiment-workbench__axis-breakdown">
-          <span>Bullish <b>{displayValue(responses?.bullish, "%")}</b></span>
-          <span>Neutral <b>{displayValue(responses?.neutral, "%")}</b></span>
-          <span>Bearish <b>{displayValue(responses?.bearish, "%")}</b></span>
-        </div>
-      )}
-      <div className="sentiment-workbench__axis-range">
-        <div><span>최근 저장 범위</span><strong>{axis.range?.position_label || "자료 부족"}</strong></div>
-        <div className="sentiment-workbench__axis-range-track" aria-label={`${axis.label} recent percentile`}>
-          <span style={{ width: rangeWidth(axis.range) }} />
-        </div>
-        <small>{axis.range?.sample_count ?? 0}개 관측 · percentile {displayValue(axis.range?.percentile)}</small>
-      </div>
-      <p>{axis.detail}</p>
-      {kind === "cnn" && axis.components_support ? <small className="sentiment-workbench__axis-note">{axis.components_support}</small> : null}
-    </article>
-  );
-}
-
-const chartWidth = 900;
-const chartHeight = 320;
-const chartMargin = { top: 18, right: 24, bottom: 42, left: 54 };
-const plotWidth = chartWidth - chartMargin.left - chartMargin.right;
-const plotHeight = chartHeight - chartMargin.top - chartMargin.bottom;
-const spreadGuideValues = [-10, 0, 10];
-
-function parsedChartPoints(panel: ChartPanel) {
-  return panel.series.flatMap((point) => {
-    const timestamp = Date.parse(point.date);
-    const value = numericValue(point.value);
-    if (!Number.isFinite(timestamp) || value === null) return [];
-    return [{ ...point, timestamp, numericValue: value }];
-  }).sort((left, right) => left.timestamp - right.timestamp);
-}
-
-function chartExtent(points: ParsedChartPoint[]) {
-  if (!points.length) return { min: 0, max: 1 };
-  const min = points[0].timestamp;
-  const max = points[points.length - 1].timestamp;
-  return min === max ? { min: min - 43_200_000, max: max + 43_200_000 } : { min, max };
-}
-
-function chartDomain(panel: ChartPanel, points: ParsedChartPoint[]) {
-  if (panel.unit !== "percentage_point") return { min: 0, max: 100 };
-  const maxAbs = Math.max(10, ...points.map((point) => Math.abs(point.numericValue)));
-  const rounded = Math.ceil(maxAbs / 10) * 10;
-  return { min: -rounded, max: rounded };
-}
-
-function xForTimestamp(timestamp: number, extent: { min: number; max: number }) {
-  return chartMargin.left + ((timestamp - extent.min) / (extent.max - extent.min)) * plotWidth;
-}
-
-function yForValue(value: number, domain: { min: number; max: number }) {
-  return chartMargin.top + ((domain.max - value) / (domain.max - domain.min)) * plotHeight;
-}
-
-function buildDateTicks(extent: { min: number; max: number }, maxTickCount = 6) {
-  return Array.from({ length: maxTickCount }, (_, index) => {
-    const ratio = maxTickCount === 1 ? 0 : index / (maxTickCount - 1);
-    return extent.min + (extent.max - extent.min) * ratio;
-  });
-}
-
-function formatChartDate(timestamp: number) {
-  const date = new Date(timestamp);
-  return `${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function chartSeriesColor(series: string) {
-  const normalized = series.toLowerCase();
-  if (normalized.includes("bullish")) return "#0f766e";
-  if (normalized.includes("bearish")) return "#dc2626";
-  if (normalized.includes("neutral")) return "#64748b";
-  if (normalized.includes("spread")) return "#7c3aed";
-  return "#2563eb";
-}
-
-function chartValueSuffix(panel: ChartPanel) {
-  if (panel.unit === "percent") return "%";
-  if (panel.unit === "percentage_point") return "pp";
-  return "";
-}
-
-function SentimentLineChart({ panel, chartTab }: { panel: ChartPanel; chartTab: ChartTab }) {
-  const points = parsedChartPoints(panel);
-  const extent = chartExtent(points);
-  const domain = chartDomain(panel, points);
-  const [hoveredChartPoint, setHoveredChartPoint] = useState<HoveredChartPoint | null>(null);
-  const grouped = points.reduce<Record<string, ParsedChartPoint[]>>((result, point) => {
-    (result[point.series] ||= []).push(point);
-    return result;
-  }, {});
-  const uniqueDateCount = new Set(points.map((point) => point.timestamp)).size;
-  const hasTrend = uniqueDateCount >= 2;
-  const dateTicks = buildDateTicks(extent);
-  const yTicks = panel.unit === "percentage_point"
-    ? [domain.min, domain.min / 2, 0, domain.max / 2, domain.max]
-    : [0, 25, 50, 75, 100];
-  const guides = chartTab === "aaii_spread" ? spreadGuideValues : [];
-
-  const handleChartHover = (event: React.MouseEvent<SVGSVGElement>) => {
-    if (!points.length) return;
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const viewBoxX = ((event.clientX - bounds.left) / bounds.width) * chartWidth;
-    const ratio = Math.max(0, Math.min(1, (viewBoxX - chartMargin.left) / plotWidth));
-    const targetTimestamp = extent.min + ratio * (extent.max - extent.min);
-    const timestamps = Array.from(new Set(points.map((point) => point.timestamp)));
-    const nearestTimestamp = timestamps.reduce((nearest, timestamp) => (
-      Math.abs(timestamp - targetTimestamp) < Math.abs(nearest - targetTimestamp) ? timestamp : nearest
-    ));
-    const values = points.filter((point) => point.timestamp === nearestTimestamp);
-    setHoveredChartPoint({
-      date: values[0]?.date || new Date(nearestTimestamp).toISOString(),
-      timestamp: nearestTimestamp,
-      values,
-      x: xForTimestamp(nearestTimestamp, extent),
-    });
-  };
-
-  return (
-    <div className="sentiment-workbench__line-chart">
-      <header className="sentiment-workbench__chart-title">
-        <div><strong>{panel.title}</strong><small>{panel.basis}</small></div>
-        <span>{uniqueDateCount}개 시점</span>
-      </header>
-      {hasTrend ? (
-        <div className="sentiment-workbench__line-chart-plot">
-          <svg
-            aria-label="심리 근거 그래프"
-            onMouseLeave={() => setHoveredChartPoint(null)}
-            onMouseMove={handleChartHover}
-            role="img"
-            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-          >
-            {chartTab === "cnn" ? (
-              <g aria-hidden="true">
-                <rect className="sentiment-workbench__chart-band sentiment-workbench__chart-band--fear" height={yForValue(25, domain) - yForValue(45, domain)} width={plotWidth} x={chartMargin.left} y={yForValue(45, domain)} />
-                <rect className="sentiment-workbench__chart-band sentiment-workbench__chart-band--extreme-fear" height={yForValue(0, domain) - yForValue(25, domain)} width={plotWidth} x={chartMargin.left} y={yForValue(25, domain)} />
-                <rect className="sentiment-workbench__chart-band sentiment-workbench__chart-band--greed" height={yForValue(55, domain) - yForValue(75, domain)} width={plotWidth} x={chartMargin.left} y={yForValue(75, domain)} />
-                <rect className="sentiment-workbench__chart-band sentiment-workbench__chart-band--extreme-greed" height={yForValue(75, domain) - yForValue(100, domain)} width={plotWidth} x={chartMargin.left} y={yForValue(100, domain)} />
-              </g>
-            ) : null}
-            {yTicks.map((tick) => {
-              const y = yForValue(tick, domain);
-              return <g key={`y-${tick}`}><line className="sentiment-workbench__chart-gridline" x1={chartMargin.left} x2={chartWidth - chartMargin.right} y1={y} y2={y} /><text className="sentiment-workbench__chart-y-label" textAnchor="end" x={chartMargin.left - 9} y={y + 4}>{tick}</text></g>;
-            })}
-            {guides.map((guide) => <line className={`sentiment-workbench__chart-guide${guide === 0 ? " sentiment-workbench__chart-guide--zero" : ""}`} key={`guide-${guide}`} x1={chartMargin.left} x2={chartWidth - chartMargin.right} y1={yForValue(guide, domain)} y2={yForValue(guide, domain)} />)}
-            {dateTicks.map((timestamp) => {
-              const x = xForTimestamp(timestamp, extent);
-              return <g key={`x-${timestamp}`}><line className="sentiment-workbench__chart-x-tick" x1={x} x2={x} y1={chartHeight - chartMargin.bottom} y2={chartHeight - chartMargin.bottom + 5} /><text className="sentiment-workbench__chart-x-label" textAnchor="middle" x={x} y={chartHeight - 14}>{formatChartDate(timestamp)}</text></g>;
-            })}
-            {Object.entries(grouped).map(([series, seriesPoints]) => (
-              <polyline
-                className="sentiment-workbench__chart-line"
-                fill="none"
-                key={series}
-                points={seriesPoints.map((point) => `${xForTimestamp(point.timestamp, extent)},${yForValue(point.numericValue, domain)}`).join(" ")}
-                stroke={chartSeriesColor(series)}
-              />
-            ))}
-            {hoveredChartPoint ? (
-              <g aria-hidden="true">
-                <line className="sentiment-workbench__chart-hover-guide" x1={hoveredChartPoint.x} x2={hoveredChartPoint.x} y1={chartMargin.top} y2={chartHeight - chartMargin.bottom} />
-                {hoveredChartPoint.values.map((point) => <circle className="sentiment-workbench__chart-focus-dot" cx={hoveredChartPoint.x} cy={yForValue(point.numericValue, domain)} fill={chartSeriesColor(point.series)} key={`${point.series}-${point.timestamp}`} r={5} />)}
-              </g>
-            ) : null}
-          </svg>
-          {hoveredChartPoint ? (
-            <div className="sentiment-workbench__chart-tooltip" style={{ left: `${(hoveredChartPoint.x / chartWidth) * 100}%` }}>
-              <strong>{hoveredChartPoint.date}</strong>
-              {hoveredChartPoint.values.map((point) => <span key={`${point.series}-tooltip`}><i style={{ background: chartSeriesColor(point.series) }} />{point.series}<b>{displayValue(point.numericValue, chartValueSuffix(panel))}</b></span>)}
-            </div>
-          ) : null}
-        </div>
-      ) : <p className="sentiment-workbench__empty">추이를 그리려면 서로 다른 두 시점 이상의 관측이 필요합니다.</p>}
-      <div className="sentiment-workbench__chart-legend">
-        {Object.keys(grouped).map((series) => <span key={series}><i style={{ background: chartSeriesColor(series) }} />{series}</span>)}
-        {chartTab === "aaii_spread" ? <small>기준선: -10 / 0 / +10pp · 0은 실선</small> : null}
-      </div>
-    </div>
-  );
-}
-
 function syncFrameHeightSoon() {
   Streamlit.setFrameHeight();
   window.requestAnimationFrame(() => Streamlit.setFrameHeight());
@@ -505,7 +278,6 @@ function syncFrameHeightSoon() {
 function SentimentWorkbench({ args }: Props) {
   const payload = args.payload;
   const [pendingActionLabel, setPendingActionLabel] = useState("");
-  const [chartTab, setChartTab] = useState<ChartTab>("cnn");
 
   useEffect(() => { syncFrameHeightSoon(); });
 
@@ -518,8 +290,6 @@ function SentimentWorkbench({ args }: Props) {
     setPendingActionLabel(action.label);
     Streamlit.setComponentValue({ event: { id: action.id, nonce: Date.now() } });
   };
-  const activeChart = payload.charts[chartTab];
-
   return (
     <section className="sentiment-workbench" data-action-boundary={payload.action_boundary} data-schema-version={payload.schema_version}>
       <SentimentHero payload={payload} pendingActionLabel={pendingActionLabel} onAction={emitAction} />
@@ -552,17 +322,7 @@ function SentimentWorkbench({ args }: Props) {
         </div>
       </section>
 
-      <section className="sentiment-workbench__chart-section">
-        <div className="sentiment-workbench__section-heading"><div><span>History</span><h3>그래프로 보는 근거</h3></div><small>source 단위별 분리</small></div>
-        <div className="sentiment-workbench__chart-tabs" role="tablist" aria-label="심리 그래프 보기">
-          {(["cnn", "aaii_responses", "aaii_spread"] as const).map((key) => (
-            <button aria-controls="sentiment-chart-panel" aria-selected={chartTab === key} className={chartTab === key ? "is-active" : ""} id={`sentiment-chart-tab-${key}`} key={key} onClick={() => setChartTab(key)} role="tab" type="button">
-              {key === "cnn" ? "CNN 행동" : key === "aaii_responses" ? "AAII 응답" : "AAII Spread"}
-            </button>
-          ))}
-        </div>
-        <div aria-labelledby={`sentiment-chart-tab-${chartTab}`} aria-live="polite" className="sentiment-workbench__chart-panel" id="sentiment-chart-panel" role="tabpanel"><SentimentLineChart chartTab={chartTab} panel={activeChart} /></div>
-      </section>
+      <SentimentHistorySection charts={payload.charts} />
 
       <section className="sentiment-workbench__watch-section">
         <div className="sentiment-workbench__section-heading"><div><span>Watch</span><h3>다음 확인 조건</h3></div><small>예측이 아닌 관찰 checklist</small></div>
