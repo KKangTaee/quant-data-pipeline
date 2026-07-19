@@ -6674,3 +6674,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - 화면에는 CNN 고정 graph와 `AAII 응답`/`AAII Spread` 전환 graph만 동시에 표시하고, raw observation을 실제 날짜 간격의 직선으로 연결한다.
 - source box 상단 colored rounded rail은 제거한다. 1W·1M은 검증된 estimator가 없으면 확률 없이 `UNAVAILABLE`로 표시한다.
 - 상세 설계는 `docs/superpowers/specs/2026-07-19-overview-sentiment-visual-redesign-design.md`를 본다. 구현은 spec 사용자 검토 후 계획으로 전환한다.
+
+## 2026-07-19 - Overview 심리 시각 개편 구현 완료
+
+- `overview-sentiment-cnn-aaii-v1-20260719`의 1차 visual polish를 Hero → 균형 current evidence → 동시 2 graph → 1W·1M unavailable card → 3개 watch path → disclosure 순서로 구현했다.
+- CNN은 고정 graph, AAII는 응답/Spread tab으로 전환하며 모든 관측은 실제 날짜 간격의 직선으로 연결한다. source box 상단 장식선과 검증되지 않은 확률은 표시하지 않는다.
+- desktop/420px Browser QA에서 tab click/keyboard, raw hover, overflow 0, fresh-tab console error 0을 확인했다. 다음은 로드맵 2차 장기 이력·발표 당시 값 품질 점검이다.

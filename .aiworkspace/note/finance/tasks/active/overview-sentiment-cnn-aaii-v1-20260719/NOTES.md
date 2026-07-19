@@ -17,3 +17,7 @@
 - graph curve는 사용하지 않고 실제 관측일 간격의 raw point를 직선으로 연결한다. 중간 날짜 값을 새 관측으로 생성하지 않는다.
 - source box 상단의 colored rounded rail은 기능이 없는 장식으로 판단해 제거한다. 출처 구분은 label, graph 색, badge에 남긴다.
 - 1W·1M 확률 mockup은 layout 검토용이며 production 데이터가 아니다. 검증된 estimator가 없으면 card는 `UNAVAILABLE`이고 확률을 숨긴다.
+- 승인된 화면 순서는 Hero → 균형 current evidence → CNN 고정 + AAII 전환 graph → 1W·1M card → 3개 관찰 경로 → 상세 disclosure로 구현했다.
+- graph는 `polyline`과 실제 timestamp 좌표를 사용하며 CNN 최신 관측값·상태를 마지막 점에 직접 표시한다. AAII 응답은 teal 실선 / gray 파선 / berry 점선으로 구분한다.
+- 오래 실행된 Python 프로세스와 새 frontend bundle이 순간적으로 섞여도 `outlook` 누락으로 전체 component가 깨지지 않도록 1W·1M unavailable fallback을 둔다. 정상 source of truth는 계속 Python payload다.
+- Browser QA screenshot `overview-sentiment-visual-redesign-qa.png`는 generated artifact이며 commit 대상이 아니다.

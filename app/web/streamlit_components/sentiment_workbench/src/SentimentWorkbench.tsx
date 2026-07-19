@@ -203,6 +203,39 @@ export type SentimentWorkbenchPayload = {
   action_boundary: "python_dispatch_only";
 };
 
+const fallbackOutlook: SentimentWorkbenchPayload["outlook"] = {
+  status: "UNAVAILABLE",
+  summary: "전망 계약이 아직 연결되지 않아 다음 관찰 조건을 확인합니다.",
+  horizons: [
+    {
+      key: "1W",
+      label: "1W",
+      period_label: "다음 5거래일",
+      trading_days: 5,
+      status: "UNAVAILABLE",
+      status_label: "통계적 판단 불가",
+      probabilities: [],
+      baseline: null,
+      episode_count: 0,
+      validation_evidence: [],
+      status_reason: "검증된 전망 payload가 없습니다.",
+    },
+    {
+      key: "1M",
+      label: "1M",
+      period_label: "다음 20거래일",
+      trading_days: 20,
+      status: "UNAVAILABLE",
+      status_label: "통계적 판단 불가",
+      probabilities: [],
+      baseline: null,
+      episode_count: 0,
+      validation_evidence: [],
+      status_reason: "검증된 전망 payload가 없습니다.",
+    },
+  ],
+};
+
 type Props = ComponentProps & {
   args: {
     payload?: SentimentWorkbenchPayload;
@@ -261,7 +294,7 @@ function SentimentWorkbench({ args }: Props) {
       <SentimentHero payload={payload} pendingActionLabel={pendingActionLabel} onAction={emitAction} />
       <CurrentEvidenceSection aaiiComparison={payload.evidence.aaii_comparison} axes={payload.axes} />
       <SentimentHistorySection charts={payload.charts} />
-      <SentimentOutlookSection outlook={payload.outlook} />
+      <SentimentOutlookSection outlook={payload.outlook || fallbackOutlook} />
       <WatchConditionsSection watchConditions={payload.watch_conditions} />
       <SentimentEvidenceDisclosure onToggle={syncFrameHeightSoon} payload={payload} />
     </section>

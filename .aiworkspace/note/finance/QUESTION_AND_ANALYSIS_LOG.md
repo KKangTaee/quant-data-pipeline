@@ -10085,4 +10085,4 @@ Detailed historical analysis was archived on `2026-04-13`.
 - User request: CNN graph는 고정하고 AAII 응답/Spread를 한 tab에서 전환해 화면에 두 graph만 보이게 하며, 꺾임은 곡선이 아닌 직선으로 표시하고 source box 상단 rounded rail을 제거해 달라고 요청함.
 - Interpreted goal: 출처의 균형은 유지하되 장식과 중복 panel을 줄이고 실제 관측의 전환 시점을 더 정확히 읽게 한다.
 - Analysis result: Hero → current evidence → CNN 고정 + AAII 전환 graph → 1W/1M card → 관찰 조건 → disclosure 구조를 확정했다. 출처 구분은 label·graph 색·badge가 담당한다.
-- Follow-up: visual redesign spec을 작성했다. 사용자 문서 검토 후 상세 구현 계획으로 전환하며 검증된 estimator가 없으면 전망 확률을 만들지 않는다.
+- Follow-up: visual redesign 구현과 desktop/420px QA를 완료했다. CNN 고정 + AAII 전환의 동시 2 graph, 직선 raw observation, 1W·1M unavailable card, 3개 watch path를 연결했고 검증되지 않은 확률은 만들지 않았다. 다음은 2차 장기 이력·발표 당시 값 품질 점검이다.

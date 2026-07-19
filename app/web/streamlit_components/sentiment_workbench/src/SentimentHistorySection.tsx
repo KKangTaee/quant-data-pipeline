@@ -111,6 +111,7 @@ function SentimentLineChart({ panel, mode }: { panel: ChartPanel; mode: ChartMod
     ? [domain.min, domain.min / 2, 0, domain.max / 2, domain.max]
     : [0, 25, 50, 75, 100];
   const guides = mode === "aaii_spread" ? spreadGuideValues : [];
+  const latestPoint = points.length ? points[points.length - 1] : null;
 
   const handleChartHover = (event: React.MouseEvent<SVGSVGElement>) => {
     if (!points.length) return;
@@ -136,7 +137,7 @@ function SentimentLineChart({ panel, mode }: { panel: ChartPanel; mode: ChartMod
       <header className="sentiment-workbench__chart-title">
         <div><strong>{panel.title}</strong><small>{panel.basis}</small></div>
         <div className="sentiment-workbench__chart-latest">
-          {panel.latest ? <><span>{panel.latest.label}</span><b>{displayValue(panel.latest.value, chartValueSuffix(panel))}</b><small>{panel.latest.date}</small></> : null}
+          {panel.latest ? <><span>{panel.latest.label}</span>{panel.latest.value !== undefined && panel.latest.value !== null ? <b>{displayValue(panel.latest.value, chartValueSuffix(panel))}</b> : null}<small>{panel.latest.date}</small></> : null}
         </div>
       </header>
       {hasTrend ? (
@@ -176,6 +177,12 @@ function SentimentLineChart({ panel, mode }: { panel: ChartPanel; mode: ChartMod
                 strokeDasharray={chartSeriesDash(series)}
               />
             ))}
+            {mode === "cnn" && latestPoint ? (
+              <g className="sentiment-workbench__chart-latest-point" aria-hidden="true">
+                <circle cx={xForTimestamp(latestPoint.timestamp, extent)} cy={yForValue(latestPoint.numericValue, domain)} fill={chartSeriesColor(latestPoint.series, mode)} r={4.5} />
+                <text textAnchor="end" x={xForTimestamp(latestPoint.timestamp, extent) - 7} y={yForValue(latestPoint.numericValue, domain) - 9}>{displayValue(latestPoint.numericValue)} · {latestPoint.status_label || "현재"}</text>
+              </g>
+            ) : null}
             {hoveredChartPoint ? (
               <g aria-hidden="true">
                 <line className="sentiment-workbench__chart-hover-guide" x1={hoveredChartPoint.x} x2={hoveredChartPoint.x} y1={chartMargin.top} y2={chartHeight - chartMargin.bottom} />

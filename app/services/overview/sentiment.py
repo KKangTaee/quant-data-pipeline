@@ -736,8 +736,8 @@ def _build_sentiment_watch_conditions(
             "key": "confirm",
             "label": "정렬 확인",
             "condition": (
-                f"CNN {market['direction_label']}와 AAII {survey['direction_label']}가 "
-                "같은 방향으로 모이는지 확인합니다."
+                f"CNN {market['direction_label']} 방향과 AAII {survey['direction_label']} 방향이 "
+                "같은 쪽으로 모이는지 확인합니다."
             ),
             "basis": "두 source의 다음 유효 관측",
             "tone": "positive",

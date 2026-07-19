@@ -8737,6 +8737,27 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("payload.evidence.cnn_components.map", root_source)
         self.assertNotIn("payload.watch_conditions.map", root_source)
         self.assertNotIn("<details", root_source)
+        self.assertIn("fallbackOutlook", root_source)
+        self.assertIn("payload.outlook || fallbackOutlook", root_source)
+
+    def test_sentiment_react_redesign_css_uses_balanced_surfaces_and_mobile_stack(self) -> None:
+        style = Path("app/web/streamlit_components/sentiment_workbench/src/style.css").read_text(encoding="utf-8")
+
+        self.assertIn(".sentiment-workbench__hero", style)
+        self.assertIn("linear-gradient", style)
+        self.assertIn(".sentiment-workbench__source-grid", style)
+        self.assertIn(".sentiment-workbench__source-box", style)
+        source_box_rule = style[style.index(".sentiment-workbench__source-box {") :]
+        source_box_rule = source_box_rule[:source_box_rule.index("}")]
+        self.assertNotIn("border-top", source_box_rule)
+        self.assertIn(".sentiment-workbench__history-grid", style)
+        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr));", style)
+        self.assertIn(".sentiment-workbench__outlook-grid", style)
+        self.assertIn(".sentiment-workbench__watch-grid", style)
+        self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", style)
+        self.assertIn(":focus-visible", style)
+        self.assertIn("@media (max-width: 760px)", style)
+        self.assertIn("@media (max-width: 460px)", style)
 
     def test_sentiment_react_summary_surface_prioritizes_state_and_freshness(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")
@@ -8795,7 +8816,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn(".sentiment-workbench__cross-metrics", react_style)
         self.assertNotIn(".sentiment-workbench__cross-metric", react_style)
         self.assertIn("box-sizing: border-box;", react_style)
-        self.assertIn(".sentiment-workbench__evidence-section", react_style)
+        self.assertIn(".sentiment-workbench__raw-disclosure", react_style)
         self.assertIn(".sentiment-workbench__watch-grid", react_style)
 
     def test_sentiment_react_context_surface_shows_recent_range_and_divergence(self) -> None:
@@ -8877,6 +8898,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("hoveredChartPoint", history_source)
         self.assertIn("point.status_label", history_source)
         self.assertIn("panel.latest", history_source)
+        self.assertIn("sentiment-workbench__chart-latest-point", history_source)
         self.assertIn("sentiment-workbench__chart-tooltip", history_source)
         self.assertIn("sentiment-workbench__chart-focus-dot", history_source)
         self.assertIn("sentiment-workbench__chart-y-label", history_source)

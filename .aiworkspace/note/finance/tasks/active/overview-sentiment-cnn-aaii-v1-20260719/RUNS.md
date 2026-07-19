@@ -21,3 +21,9 @@
 - graph companion은 spline 없이 polyline 직선 연결로 확인했다. source box 상단 rounded rail 제거는 최종 승인 spec에 반영했다.
 - 승인된 visual redesign spec을 서비스 전망 gate, Hero/current evidence, 두 graph panel, 기간 card/disclosure, Browser QA의 5개 구현 task로 변환했다.
 - 구현 계획 자체검토에서 spec coverage를 전부 task에 연결하고, placeholder 0건과 type/interface 명칭 일치를 확인했다. confirm/reverse/persist 3경로와 server-owned graph 상태 문구 누락을 발견해 계획에 보강했다.
+- visual implementation은 RED/GREEN 순서로 전망 publication gate, Hero/current evidence, CNN 고정 + AAII 전환 2 graph, 1W·1M unavailable card, 3개 watch path, disclosure를 나눠 구현했다.
+- production build에서 CNN·AAII 원본 관측점 직선 연결, CNN latest point label, AAII 응답/Spread tab ARIA와 좌우키 이동, graph별 독립 단위를 확인했다.
+- actual Streamlit desktop QA에서 동시에 graph 2개, 기간 card 2개, watch path 3개를 확인했다. `AAII Spread` click과 `ArrowLeft` 복귀, CNN hover `2026-04-15 / 56.2 / 탐욕` 원본 관측을 확인했다.
+- 420px QA에서 page `420/420`, Streamlit main `409/409`, component `377/377` client/scroll width로 가로 overflow 0을 확인했다. fresh browser tab의 console error/warning은 0건이었다.
+- 최종 focused regression은 frontend/entrypoint 11개와 sentiment service/payload 12개, 총 `23 passed`다. Vite production build와 `git diff --check`도 다시 통과했다.
+- TypeScript `tsc --noEmit`은 기존 package에 `@types/react`, `@types/react-dom`이 없어 baseline에서 실행 불가했다. dependency를 추가하지 않고 repository의 Vite production build와 Python source-contract regression을 사용했다.

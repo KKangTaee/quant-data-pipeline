@@ -9,3 +9,4 @@
 - 1주·1개월 전망은 별도 point-in-time feature/target 정의와 chronological out-of-sample 검증 없이는 추가하지 않는다.
 - AAII 표본과 CNN 산출 방법의 source-side 변경 가능성은 freshness / raw evidence와 후속 품질 점검에서 계속 확인한다.
 - 시각 companion의 1W·1M 확률은 production 근거로 재사용하지 않는다. estimator와 validation evidence가 없으면 UI는 반드시 `UNAVAILABLE`을 표시하고 확률 field를 렌더링하지 않는다.
+- frontend fallback은 rolling reload 시 component crash를 막는 unavailable 표시일 뿐이며 전망 evidence를 대체하지 않는다. 정상 전망 공개 여부는 Python의 validation gate가 소유한다.
