@@ -66,6 +66,14 @@ class MonitoringCommandInput:
     expected_version: int | None = None
 
 
+@dataclass(frozen=True)
+class DiagnosisSnapshotIdentity:
+    portfolio_group_id: str
+    as_of_date: date
+    config_fingerprint: str
+    policy_version: str
+
+
 def _positive_decimal(value: Any) -> Decimal | None:
     if value is None or isinstance(value, bool):
         return None

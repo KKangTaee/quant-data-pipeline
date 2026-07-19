@@ -11,6 +11,7 @@ from .persistence import MonitoringItemRecord, MonitoringRepository, PortfolioGr
 from .valuation import ItemValueLane
 from .diagnosis import DIAGNOSIS_POLICY_VERSION, DiagnosisFact, project_diagnoses
 from .macro_context import MACRO_CONTEXT_VERSION, MacroContext, MacroObservation
+from .schemas import build_request_fingerprint
 
 
 WORKSPACE_SCHEMA_VERSION = "portfolio_monitoring_workspace_v1"
@@ -408,9 +409,22 @@ def build_portfolio_monitoring_workspace(
             "warnings": ["macro context is not configured"],
         }
     )
+    method = {
+        "basis": "oldest_latest_usable_date_among_active_lanes",
+        "alignment": "as_of_step_without_interpolation",
+        "pre_start": "planned_capital_as_cash",
+        "post_end": "exit_value_as_cash",
+    }
+    config_fingerprint = build_request_fingerprint({
+        "workspace_schema": WORKSPACE_SCHEMA_VERSION,
+        "diagnosis_policy": DIAGNOSIS_POLICY_VERSION,
+        "macro_context": MACRO_CONTEXT_VERSION,
+        "method": method,
+    })
     return {
         "schema_version": WORKSPACE_SCHEMA_VERSION,
         "generated_at": timestamp.isoformat(timespec="seconds"),
+        "config_fingerprint": config_fingerprint,
         "groups": [
             _group_summary(
                 group,
@@ -439,12 +453,7 @@ def build_portfolio_monitoring_workspace(
         },
         "now_to_review": now_to_review,
         "source_health": source_health,
-        "method": {
-            "basis": "oldest_latest_usable_date_among_active_lanes",
-            "alignment": "as_of_step_without_interpolation",
-            "pre_start": "planned_capital_as_cash",
-            "post_end": "exit_value_as_cash",
-        },
+        "method": method,
         "boundaries": {
             "db_only": True,
             "provider_fetch": False,

@@ -341,6 +341,7 @@ def _fallback_monitoring_workspace(
     return {
         "schema_version": WORKSPACE_SCHEMA_VERSION,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "config_fingerprint": "0" * 64,
         "groups": [
             {
                 "portfolio_group_id": DEFAULT_PORTFOLIO_GROUP_ID,

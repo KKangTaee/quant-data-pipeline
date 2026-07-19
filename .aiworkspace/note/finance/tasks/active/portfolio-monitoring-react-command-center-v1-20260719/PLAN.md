@@ -594,12 +594,12 @@ identity = (group_id, as_of_date, workspace["config_fingerprint"], workspace["di
 repository.insert_snapshot_if_absent(identity, compact_snapshot)
 ```
 
-- [ ] Write failing schema/history tests for immutable as-of inputs, config fingerprint, policy/macro versions, source dates, observations, subsequent 21/63-session outcomes, and idempotent recapture.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_history.py -q` and confirm failure.
-- [ ] Add append/idempotent snapshot persistence without copying raw price/macro series into JSON. Store compact feature/evidence/outcome identity only.
-- [ ] Implement read APIs with publication-time fields needed to reject look-ahead rows.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_history.py -q`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/history.py`, and `git diff --check`.
-- [ ] Commit as `포트폴리오 진단 이력 저장 계약 추가`.
+- [x] Write failing schema/history tests for immutable as-of inputs, config fingerprint, policy/macro versions, source dates, observations, subsequent 21/63-session outcomes, and idempotent recapture.
+- [x] Run the repository-available `unittest` equivalent and confirm failure (`pytest` is not installed in `.venv`).
+- [x] Add append/idempotent snapshot persistence without copying raw price/macro series into JSON. Store compact feature/evidence/outcome identity only.
+- [x] Implement read APIs with publication-time fields needed to reject look-ahead rows.
+- [x] Run 16 history/read-model/schema unittests, `py_compile`, and `git diff --check`.
+- [x] Commit as `포트폴리오 진단 이력 저장 계약 추가`.
 
 ### Task 19: historical as-of replay와 probability publication gate를 구현한다
 

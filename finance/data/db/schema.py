@@ -1225,6 +1225,57 @@ PORTFOLIO_MONITORING_SCHEMAS = {
           KEY ix_monitoring_command_status (status, created_at)
         );
     """,
+    "monitoring_diagnosis_snapshot": """
+        CREATE TABLE IF NOT EXISTS monitoring_diagnosis_snapshot (
+          diagnosis_snapshot_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+          portfolio_group_id VARCHAR(64) NOT NULL,
+          as_of_date DATE NOT NULL,
+          config_fingerprint CHAR(64) NOT NULL,
+          policy_version VARCHAR(128) NOT NULL,
+          macro_version VARCHAR(128) NOT NULL,
+          publication_time DATETIME NOT NULL,
+          source_dates_json JSON NOT NULL,
+          observations_json JSON NOT NULL,
+          outcome_21 DOUBLE NULL,
+          outcome_63 DOUBLE NULL,
+          outcome_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+          outcome_measured_at DATE NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_monitoring_diagnosis_identity
+            (portfolio_group_id, as_of_date, config_fingerprint, policy_version),
+          KEY ix_monitoring_diagnosis_group_date (portfolio_group_id, as_of_date),
+          KEY ix_monitoring_diagnosis_publication (publication_time)
+        );
+    """,
+    "monitoring_risk_calibration_artifact": """
+        CREATE TABLE IF NOT EXISTS monitoring_risk_calibration_artifact (
+          calibration_artifact_id CHAR(64) PRIMARY KEY,
+          algorithm_version VARCHAR(128) NOT NULL,
+          data_fingerprint CHAR(64) NOT NULL,
+          policy_version VARCHAR(128) NOT NULL,
+          publication_status ENUM('SUPPRESSED','LIMITED','READY') NOT NULL,
+          train_end_date DATE NULL,
+          validation_start_date DATE NULL,
+          validation_end_date DATE NULL,
+          horizon_sessions INT NOT NULL,
+          event_definition VARCHAR(255) NOT NULL,
+          sample_size INT NOT NULL,
+          positive_count INT NOT NULL,
+          brier_score DOUBLE NULL,
+          baseline_brier DOUBLE NULL,
+          max_reliability_error DOUBLE NULL,
+          probability DOUBLE NULL,
+          artifact_json JSON NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_monitoring_calibration_fingerprint
+            (algorithm_version, data_fingerprint, policy_version, horizon_sessions),
+          KEY ix_monitoring_calibration_status (publication_status, created_at)
+        );
+    """,
 }
 
 

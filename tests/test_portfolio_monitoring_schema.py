@@ -30,6 +30,8 @@ class PortfolioMonitoringDatabaseSchemaTests(unittest.TestCase):
                 "monitoring_portfolio_group",
                 "monitoring_portfolio_item",
                 "monitoring_portfolio_command",
+                "monitoring_diagnosis_snapshot",
+                "monitoring_risk_calibration_artifact",
             },
         )
 
