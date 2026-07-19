@@ -396,6 +396,64 @@ def _combined_status(statuses: Sequence[str]) -> str:
     return "MIXED"
 
 
+def _join_korean_labels(labels: Sequence[str]) -> str:
+    """Join the fixed Korean factor labels into one readable subject."""
+    if not labels:
+        return ""
+    if len(labels) == 1:
+        return labels[0]
+    return f"{', '.join(labels[:-1])}과 {labels[-1]}"
+
+
+def _current_level_summary(
+    observations: Sequence[Mapping[str, object]],
+) -> str:
+    """Describe real-economy factors as levels against their own history."""
+    phrases = {
+        "STRENGTHENING": "자기 과거 기준 이상입니다",
+        "WEAKENING": "자기 과거 기준 이하입니다",
+        "NEUTRAL": "자기 과거 기준 부근입니다",
+        "UNAVAILABLE": "자료가 부족합니다",
+    }
+    clauses: list[str] = []
+    for direction in ("WEAKENING", "STRENGTHENING", "NEUTRAL", "UNAVAILABLE"):
+        labels = [
+            str(row["label"])
+            for row in observations
+            if row["direction"] == direction
+        ]
+        if labels:
+            clauses.append(f"{_join_korean_labels(labels)}은 {phrases[direction]}.")
+    return " ".join(clauses)
+
+
+def _forecast_context_summary(
+    observations: Sequence[Mapping[str, object]],
+) -> str:
+    """Translate forecast factors by whether their role supports or burdens growth."""
+    by_factor = {str(row["factor"]): row for row in observations}
+    phrase_by_factor = {
+        "financial_leading_score": {
+            "STRENGTHENING": "전망을 지원합니다",
+            "WEAKENING": "전망에 부담을 줍니다",
+            "NEUTRAL": "전망 영향이 중립적입니다",
+            "UNAVAILABLE": "자료가 부족합니다",
+        },
+        "inflation_policy_score": {
+            "STRENGTHENING": "전망에 부담을 줍니다",
+            "WEAKENING": "전망 부담을 완화합니다",
+            "NEUTRAL": "전망 영향이 중립적입니다",
+            "UNAVAILABLE": "자료가 부족합니다",
+        },
+    }
+    clauses: list[str] = []
+    for factor in ("financial_leading_score", "inflation_policy_score"):
+        row = by_factor[factor]
+        direction = str(row["direction"])
+        clauses.append(f"{row['label']}은 {phrase_by_factor[factor][direction]}.")
+    return " ".join(clauses)
+
+
 def _economic_state(
     evidence: Sequence[Mapping[str, object]],
 ) -> dict[str, object]:
@@ -431,24 +489,20 @@ def _economic_state(
             }
         )
 
-    grouped: dict[str, list[str]] = {
-        "STRENGTHENING": [],
-        "WEAKENING": [],
-        "NEUTRAL": [],
-        "UNAVAILABLE": [],
-    }
-    for row in observations:
-        grouped[str(row["direction"])].append(str(row["label"]))
-    clauses: list[str] = []
-    if grouped["WEAKENING"]:
-        clauses.append(f"{', '.join(grouped['WEAKENING'])}은 약화")
-    if grouped["STRENGTHENING"]:
-        clauses.append(f"{', '.join(grouped['STRENGTHENING'])}은 강화")
-    if grouped["NEUTRAL"]:
-        clauses.append(f"{', '.join(grouped['NEUTRAL'])}은 중립")
-    if grouped["UNAVAILABLE"]:
-        clauses.append(f"{', '.join(grouped['UNAVAILABLE'])}은 자료 부족")
-    summary = ", ".join(clauses) + " 상태입니다." if clauses else "경제 근거가 없습니다."
+    current_rows = [
+        row
+        for row in observations
+        if row["factor"] in {"activity_score", "labor_income_score"}
+    ]
+    forecast_rows = [
+        row
+        for row in observations
+        if row["factor"] in {"financial_leading_score", "inflation_policy_score"}
+    ]
+    summary = (
+        f"현재 수준: {_current_level_summary(current_rows)} "
+        f"전망 여건: {_forecast_context_summary(forecast_rows)}"
+    )
     return {"summary": summary, "observations": observations}
 
 

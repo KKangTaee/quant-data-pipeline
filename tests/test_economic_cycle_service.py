@@ -318,7 +318,11 @@ def test_market_implications_do_not_invent_reasons_when_factor_coverage_is_low()
     assert activity["direction"] == "WEAKENING"
     assert sum(row["direction"] == "UNAVAILABLE" for row in observations) == 3
     assert gold["coverage"] == "INSUFFICIENT"
-    assert "원인" not in gold["economic_state"]["summary"]
+    summary = gold["economic_state"]["summary"]
+    assert "현재 수준:" in summary
+    assert "전망 여건:" in summary
+    assert "자료가 부족합니다" in summary
+    assert "원인" not in summary
 
 
 def test_market_implications_separate_observed_state_from_asset_pathways() -> None:
@@ -339,7 +343,19 @@ def test_market_implications_separate_observed_state_from_asset_pathways() -> No
     dollar = next(row for row in implications if row["asset_group"] == "dollar")
 
     assert gold["economic_state"] == dollar["economic_state"]
-    assert "생산·소비 활동, 고용·소득은 약화" in gold["narrative"]
+    summary = gold["economic_state"]["summary"]
+    assert summary == (
+        "현재 수준: 생산·소비 활동과 고용·소득은 자기 과거 기준 이하입니다. "
+        "전망 여건: 금융·선행 여건은 전망을 지원합니다. "
+        "물가·정책 압력은 전망에 부담을 줍니다."
+    )
+    assert [row["direction"] for row in gold["economic_state"]["observations"]] == [
+        "WEAKENING",
+        "WEAKENING",
+        "STRENGTHENING",
+        "STRENGTHENING",
+    ]
+    assert summary in gold["narrative"]
     assert "가격 원인을 확정하지 않습니다" in gold["narrative"]
     assert "해외 상대금리" in dollar["narrative"]
     assert gold["price_context"]["status"] == "UNAVAILABLE"
