@@ -490,10 +490,80 @@ def _sentiment_chart_points(rows: list[dict[str, Any]], allowed_series: set[str]
             "series": _display_text(row.get("Series")),
             "value": _json_safe_value(row.get("Value")),
             "source": _display_text(row.get("Source"), ""),
+            "status_label": _display_text(row.get("State"), ""),
         }
         for row in rows
         if _display_text(row.get("Series")) in allowed_series
     ]
+
+
+def _sentiment_probability_rows(value: Any) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in list(value or []):
+        if not isinstance(item, dict):
+            continue
+        probability = _safe_float(item.get("value"))
+        if probability is None or probability < 0 or probability > 1:
+            continue
+        rows.append(
+            {
+                "key": _display_text(item.get("key") or item.get("label")),
+                "label": _display_text(item.get("label")),
+                "value": probability,
+                "baseline": _safe_float(item.get("baseline")),
+                "difference_pp": _safe_float(item.get("difference_pp")),
+            }
+        )
+    return rows
+
+
+def _sentiment_outlook_payload(value: Any) -> dict[str, Any]:
+    """Serialize forecast slots while suppressing distributions without validation evidence."""
+    source = dict(value) if isinstance(value, dict) else {}
+    source_by_key = {
+        str(item.get("key") or ""): dict(item)
+        for item in list(source.get("horizons") or [])
+        if isinstance(item, dict)
+    }
+    horizons: list[dict[str, Any]] = []
+    for key, label, period_label, trading_days in (
+        ("1W", "1주", "다음 5거래일", 5),
+        ("1M", "1개월", "다음 20거래일", 20),
+    ):
+        item = source_by_key.get(key, {})
+        status = str(item.get("status") or "UNAVAILABLE").upper()
+        if status not in {"VERIFIED", "PROVISIONAL", "UNAVAILABLE"}:
+            status = "UNAVAILABLE"
+        can_publish = status in {"VERIFIED", "PROVISIONAL"} and bool(item.get("validation_evidence"))
+        horizons.append(
+            {
+                "key": key,
+                "label": label,
+                "period_label": period_label,
+                "trading_days": trading_days,
+                "status": status if can_publish else "UNAVAILABLE",
+                "status_label": _display_text(
+                    item.get("status_label") if can_publish else "통계적 판단 불가"
+                ),
+                "dominant_path": _display_text(item.get("dominant_path"), "") if can_publish else "",
+                "probabilities": _sentiment_probability_rows(item.get("probabilities")) if can_publish else [],
+                "baseline": _json_safe_value(item.get("baseline")) if can_publish else None,
+                "episode_count": int(item.get("episode_count") or 0) if can_publish else 0,
+                "validation_evidence": list(item.get("validation_evidence") or []) if can_publish else [],
+                "status_reason": _display_text(
+                    item.get("status_reason"),
+                    "장기 이력과 point-in-time 검증이 부족해 확률을 공개하지 않습니다.",
+                ),
+            }
+        )
+    return {
+        "status": "UNAVAILABLE" if all(row["status"] == "UNAVAILABLE" for row in horizons) else "AVAILABLE",
+        "summary": _display_text(
+            source.get("summary"),
+            "현재는 확률 전망 대신 다음 CNN·AAII 관측 조건을 확인합니다.",
+        ),
+        "horizons": horizons,
+    }
 
 
 def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[str, Any]:
@@ -575,8 +645,10 @@ def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[st
             "cnn_components": _sentiment_cnn_evidence_payload(component_rows, analysis),
             "aaii_comparison": _sentiment_aaii_comparison_payload(investor_survey),
         },
+        "outlook": _sentiment_outlook_payload(analysis.get("outlook")),
         "watch_conditions": [
             {
+                "key": _display_text(item.get("key"), "persist"),
                 "label": _display_text(item.get("label")),
                 "condition": _display_text(item.get("condition"), ""),
                 "basis": _display_text(item.get("basis"), ""),
@@ -590,18 +662,37 @@ def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[st
                 "title": "CNN 시장 행동",
                 "basis": "CNN Fear & Greed 일간 관측 · 0~100",
                 "unit": "score_0_100",
+                "latest": {
+                    "date": market_behavior.get("latest_date") or "-",
+                    "value": market_behavior.get("current"),
+                    "label": market_behavior.get("direction_label") or "판정 보류",
+                },
                 "series": _sentiment_chart_points(history_rows, {"CNN Fear & Greed"}),
             },
             "aaii_responses": {
                 "title": "AAII 응답 구성",
                 "basis": "AAII Bullish / Neutral / Bearish 주간 조사 · %",
                 "unit": "percent",
+                "latest": {
+                    "date": investor_survey.get("latest_date") or "-",
+                    "value": None,
+                    "label": (
+                        f"Bullish {_format_sentiment_percent(dict(investor_survey.get('responses') or {}).get('bullish'))} · "
+                        f"Neutral {_format_sentiment_percent(dict(investor_survey.get('responses') or {}).get('neutral'))} · "
+                        f"Bearish {_format_sentiment_percent(dict(investor_survey.get('responses') or {}).get('bearish'))}"
+                    ),
+                },
                 "series": _sentiment_chart_points(history_rows, {"AAII Bullish", "AAII Neutral", "AAII Bearish"}),
             },
             "aaii_spread": {
                 "title": "AAII Bull-Bear Spread",
                 "basis": "AAII Bullish - Bearish 주간 조사 · pp",
                 "unit": "percentage_point",
+                "latest": {
+                    "date": investor_survey.get("latest_date") or "-",
+                    "value": investor_survey.get("spread"),
+                    "label": investor_survey.get("direction_label") or "판정 보류",
+                },
                 "series": _sentiment_chart_points(history_rows, {"AAII Bull-Bear Spread"}),
             },
         },

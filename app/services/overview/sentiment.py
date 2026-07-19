@@ -52,6 +52,7 @@ SENTIMENT_HISTORY_COLUMNS = [
     "Series",
     "Value",
     "Source",
+    "State",
 ]
 
 SENTIMENT_SERIES_LABELS = {
@@ -442,6 +443,17 @@ def _aaii_direction_label(direction: str) -> str:
     }.get(direction, "판정 보류")
 
 
+def _sentiment_history_state_label(series_id: Any, value: Any) -> str:
+    """Attach server-owned interpretation to historical headline and spread rows."""
+    normalized = str(series_id or "").upper()
+    numeric = _safe_float(value)
+    if normalized == "CNN_FEAR_GREED":
+        return _sentiment_score_bucket(numeric)["label_ko"] if numeric is not None else "판정 보류"
+    if normalized == "AAII_BULL_BEAR_SPREAD":
+        return _aaii_direction_label(_aaii_direction(spread=numeric))
+    return ""
+
+
 def _aaii_direction_tone(direction: str) -> str:
     if direction == "optimistic":
         return "positive"
@@ -712,29 +724,85 @@ def _build_two_axis_divergence_context(
     }
 
 
-def _build_sentiment_watch_conditions(axes: dict[str, dict[str, Any]]) -> list[dict[str, str]]:
-    cnn = axes["market_behavior"]
+def _build_sentiment_watch_conditions(
+    axes: dict[str, dict[str, Any]],
+    cross_read: dict[str, Any],
+) -> list[dict[str, str]]:
+    """Describe the three relationship paths that can change the current cross-read."""
+    market = axes["market_behavior"]
     survey = axes["investor_survey"]
-    cnn_direction = cnn.get("direction")
-    survey_direction = survey.get("direction")
-    if cnn_direction == "fear":
-        cnn_condition = "CNN Fear & Greed가 공포권을 벗어나 중립권으로 회복하는지 확인합니다."
-    elif cnn_direction == "greed":
-        cnn_condition = "CNN Fear & Greed의 탐욕 우위가 유지되는지, 과열권으로 확대되는지 확인합니다."
-    else:
-        cnn_condition = "CNN Fear & Greed가 중립권을 어느 방향으로 벗어나는지 확인합니다."
-    if survey_direction == "optimistic":
-        survey_condition = "AAII Bull-Bear Spread의 +10pp 이상 낙관 우위가 다음 조사에서도 유지되는지 확인합니다."
-    elif survey_direction == "pessimistic":
-        survey_condition = "AAII Bull-Bear Spread의 -10pp 이하 비관 우위가 다음 조사에서도 유지되는지 확인합니다."
-    elif survey_direction == "unavailable":
-        survey_condition = "AAII Bull-Bear Spread가 다시 확보될 때까지 설문 방향 판정을 보류합니다."
-    else:
-        survey_condition = "AAII Bull-Bear Spread가 ±10pp 중립 구간을 어느 방향으로 벗어나는지 확인합니다."
     return [
-        {"label": "CNN 행동 심리", "condition": cnn_condition, "basis": "일간 관측", "tone": cnn.get("tone") or "neutral"},
-        {"label": "AAII 설문 심리", "condition": survey_condition, "basis": "주간 조사", "tone": survey.get("tone") or "neutral"},
+        {
+            "key": "confirm",
+            "label": "정렬 확인",
+            "condition": (
+                f"CNN {market['direction_label']}와 AAII {survey['direction_label']}가 "
+                "같은 방향으로 모이는지 확인합니다."
+            ),
+            "basis": "두 source의 다음 유효 관측",
+            "tone": "positive",
+        },
+        {
+            "key": "reverse",
+            "label": "설문 반전",
+            "condition": (
+                f"AAII {survey['direction_label']} 우위가 ±10pp 경계를 넘어 "
+                "반대 방향으로 전환되는지 확인합니다."
+            ),
+            "basis": "AAII 주간 Bull-Bear Spread",
+            "tone": "warning",
+        },
+        {
+            "key": "persist",
+            "label": "관계 지속",
+            "condition": f"현재 `{cross_read['status']}` 관계가 다음 CNN·AAII 관측에서도 이어지는지 확인합니다.",
+            "basis": "CNN 일간 × AAII 주간",
+            "tone": str(cross_read.get("tone") or "neutral"),
+        },
     ]
+
+
+def _build_sentiment_outlook() -> dict[str, Any]:
+    """Publish horizon slots without inventing probabilities before PIT validation."""
+    status_reason = (
+        "장기 이력과 point-in-time 분리 검증을 통과한 estimator가 없어 "
+        "확률을 공개하지 않습니다."
+    )
+    horizons = [
+        {
+            "key": "1W",
+            "label": "1주",
+            "period_label": "다음 5거래일",
+            "trading_days": 5,
+            "status": "UNAVAILABLE",
+            "status_label": "통계적 판단 불가",
+            "dominant_path": None,
+            "probabilities": [],
+            "baseline": None,
+            "episode_count": 0,
+            "validation_evidence": [],
+            "status_reason": status_reason,
+        },
+        {
+            "key": "1M",
+            "label": "1개월",
+            "period_label": "다음 20거래일",
+            "trading_days": 20,
+            "status": "UNAVAILABLE",
+            "status_label": "통계적 판단 불가",
+            "dominant_path": None,
+            "probabilities": [],
+            "baseline": None,
+            "episode_count": 0,
+            "validation_evidence": [],
+            "status_reason": status_reason,
+        },
+    ]
+    return {
+        "status": "UNAVAILABLE",
+        "summary": "현재는 확률 전망 대신 다음 CNN·AAII 관측 조건을 확인합니다.",
+        "horizons": horizons,
+    }
 
 def _component_balance_direction(driver_summary: dict[str, int]) -> str:
     greed_count = int(driver_summary.get("greed_count") or 0)
@@ -838,7 +906,7 @@ def _build_market_sentiment_analysis(
     }
     cnn_score_text = "-" if cnn_score is None else f"{cnn_score:.1f}"
     aaii_spread_text = "-" if aaii_spread is None else f"{aaii_spread:+.1f}pp"
-    watch_conditions = _build_sentiment_watch_conditions(axes)
+    watch_conditions = _build_sentiment_watch_conditions(axes, cross_read)
     analysis_steps = [
         {
             "title": "현재 판단",
@@ -870,6 +938,7 @@ def _build_market_sentiment_analysis(
         "axes": axes,
         "cross_read": cross_read,
         "watch_conditions": watch_conditions,
+        "outlook": _build_sentiment_outlook(),
         "data_confidence": data_confidence,
         "driver_summary": driver_summary,
         "driver_groups": driver_groups,
@@ -990,6 +1059,10 @@ def build_market_sentiment_snapshot(
             )
             visible_history["Value"] = visible_history["value"].map(lambda value: round(float(value), 2) if _safe_float(value) is not None else None)
             visible_history["Source"] = visible_history.get("source", pd.Series(dtype=str))
+            visible_history["State"] = visible_history.apply(
+                lambda row: _sentiment_history_state_label(row.get("series_id"), row.get("value")),
+                axis=1,
+            )
             history_out = visible_history[SENTIMENT_HISTORY_COLUMNS].dropna(subset=["Date"]).sort_values(["Date", "Series"])
 
     cnn_row = _latest_sentiment_row(snapshot_frame, "CNN_FEAR_GREED")

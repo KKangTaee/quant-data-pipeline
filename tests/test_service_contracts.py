@@ -22031,6 +22031,57 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(_aaii_direction(bearish=40.0, spread=4.0), "neutral")
         self.assertEqual(_aaii_direction(bearish=32.9, spread=None), "unavailable")
 
+    def test_market_sentiment_outlook_stays_unavailable_without_validated_estimator(self) -> None:
+        from app.services.overview.sentiment import _build_market_sentiment_analysis
+
+        analysis = _build_market_sentiment_analysis(
+            coverage={
+                "cnn_score": 37.1,
+                "aaii_bullish": 44.9,
+                "aaii_neutral": 22.2,
+                "aaii_bearish": 32.9,
+                "aaii_bull_bear_spread": 12.0,
+                "source_count": 2,
+                "missing_count": 0,
+                "stale_count": 0,
+            },
+            component_rows=[],
+            history_rows=pd.DataFrame(),
+        )
+
+        self.assertEqual(analysis["outlook"]["status"], "UNAVAILABLE")
+        self.assertEqual([row["key"] for row in analysis["outlook"]["horizons"]], ["1W", "1M"])
+        for row in analysis["outlook"]["horizons"]:
+            self.assertEqual(row["status"], "UNAVAILABLE")
+            self.assertEqual(row["probabilities"], [])
+            self.assertEqual(row["episode_count"], 0)
+            self.assertIsNone(row["baseline"])
+            self.assertIn("point-in-time", row["status_reason"])
+
+    def test_market_sentiment_watch_conditions_publish_three_relationship_paths(self) -> None:
+        from app.services.overview.sentiment import _build_market_sentiment_analysis
+
+        analysis = _build_market_sentiment_analysis(
+            coverage={
+                "cnn_score": 37.1,
+                "aaii_bullish": 44.9,
+                "aaii_neutral": 22.2,
+                "aaii_bearish": 32.9,
+                "aaii_bull_bear_spread": 12.0,
+                "source_count": 2,
+                "missing_count": 0,
+                "stale_count": 0,
+            },
+            component_rows=[],
+            history_rows=pd.DataFrame(),
+        )
+
+        self.assertEqual(
+            [row["key"] for row in analysis["watch_conditions"]],
+            ["confirm", "reverse", "persist"],
+        )
+        self.assertTrue(all(row["condition"] for row in analysis["watch_conditions"]))
+
     def test_market_sentiment_two_axis_cross_read_marks_cnn_fear_aaii_optimistic_as_divergent(self) -> None:
         from app.services.overview.sentiment import _build_market_sentiment_analysis
 
@@ -22618,8 +22669,14 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(history_by_series["Market Momentum"]["change"], 10.0)
         self.assertEqual(history_by_series["Market Momentum"]["change_direction"], "up")
         self.assertEqual(history_by_series["Stock Price Breadth"]["change_direction"], "down")
+        visible_history = snapshot["history_rows"]
+        cnn_latest = visible_history[visible_history["Series"] == "CNN Fear & Greed"].iloc[-1]
+        spread_latest = visible_history[visible_history["Series"] == "AAII Bull-Bear Spread"].iloc[-1]
+        self.assertEqual(cnn_latest["State"], "중립")
+        self.assertEqual(spread_latest["State"], "비관")
 
     def test_market_sentiment_react_payload_uses_existing_snapshot_fields(self) -> None:
+        from app.services.overview.sentiment import _build_sentiment_outlook
         from app.web.overview.sentiment_helpers import build_sentiment_react_workbench_payload
 
         snapshot = {
@@ -22695,9 +22752,11 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "survey_direction": "optimistic",
                 },
                 "watch_conditions": [
-                    {"label": "CNN 행동 심리", "condition": "CNN이 중립권으로 회복하는지 확인합니다.", "basis": "일간 관측", "tone": "warning"},
-                    {"label": "AAII 설문 심리", "condition": "AAII 낙관 우위가 유지되는지 확인합니다.", "basis": "주간 조사", "tone": "positive"},
+                    {"key": "confirm", "label": "정렬 확인", "condition": "두 축이 같은 방향으로 모이는지 확인합니다.", "basis": "다음 유효 관측", "tone": "positive"},
+                    {"key": "reverse", "label": "설문 반전", "condition": "AAII 방향 반전을 확인합니다.", "basis": "AAII 주간", "tone": "warning"},
+                    {"key": "persist", "label": "관계 지속", "condition": "현재 엇갈림이 이어지는지 확인합니다.", "basis": "CNN 일간 × AAII 주간", "tone": "warning"},
                 ],
+                "outlook": _build_sentiment_outlook(),
                 "data_confidence": {
                     "status": "High",
                     "tone": "positive",
@@ -22847,7 +22906,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             "history_rows": pd.DataFrame(
                 [
                     {"Date": "2026-06-03", "Series": "CNN Fear & Greed", "Value": 41.0, "Source": "cnn_fear_greed"},
-                    {"Date": "2026-06-04", "Series": "CNN Fear & Greed", "Value": 37.1, "Source": "cnn_fear_greed"},
+                    {"Date": "2026-06-04", "Series": "CNN Fear & Greed", "Value": 37.1, "Source": "cnn_fear_greed", "State": "공포"},
                     {"Date": "2026-06-04", "Series": "AAII Bullish", "Value": 44.9, "Source": "aaii_sentiment_survey"},
                     {"Date": "2026-06-04", "Series": "AAII Neutral", "Value": 22.2, "Source": "aaii_sentiment_survey"},
                     {"Date": "2026-06-04", "Series": "AAII Bearish", "Value": 32.9, "Source": "aaii_sentiment_survey"},
@@ -22878,6 +22937,13 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(payload["charts"]["cnn"]["unit"], "score_0_100")
         self.assertEqual(payload["charts"]["aaii_responses"]["unit"], "percent")
         self.assertEqual(payload["charts"]["aaii_spread"]["unit"], "percentage_point")
+        self.assertEqual(payload["outlook"]["status"], "UNAVAILABLE")
+        self.assertEqual([row["key"] for row in payload["outlook"]["horizons"]], ["1W", "1M"])
+        for row in payload["outlook"]["horizons"]:
+            self.assertEqual(row["status"], "UNAVAILABLE")
+            self.assertEqual(row["probabilities"], [])
+            self.assertIsNone(row["baseline"])
+            self.assertEqual(row["episode_count"], 0)
         self.assertEqual({row["series"] for row in payload["charts"]["cnn"]["series"]}, {"CNN Fear & Greed"})
         self.assertEqual(
             {row["series"] for row in payload["charts"]["aaii_responses"]["series"]},
@@ -22887,8 +22953,32 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             {row["series"] for row in payload["charts"]["aaii_spread"]["series"]},
             {"AAII Bull-Bear Spread"},
         )
-        self.assertEqual(payload["watch_conditions"][0]["label"], "CNN 행동 심리")
+        self.assertEqual([row["key"] for row in payload["watch_conditions"]], ["confirm", "reverse", "persist"])
+        self.assertEqual(payload["charts"]["cnn"]["series"][-1]["status_label"], "공포")
+        self.assertEqual(payload["charts"]["cnn"]["latest"]["label"], "공포")
         self.assertEqual(payload["raw_evidence"]["sentiment_rows"][0]["Series"], "CNN Fear & Greed")
+
+    def test_market_sentiment_payload_drops_unvalidated_demo_probabilities(self) -> None:
+        from app.web.overview.sentiment_helpers import _sentiment_outlook_payload
+
+        payload = _sentiment_outlook_payload(
+            {
+                "status": "UNAVAILABLE",
+                "horizons": [
+                    {
+                        "key": "1W",
+                        "status": "UNAVAILABLE",
+                        "probabilities": [{"label": "엇갈림 유지", "value": 0.71}],
+                        "baseline": 0.44,
+                        "episode_count": 88,
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(payload["horizons"][0]["probabilities"], [])
+        self.assertIsNone(payload["horizons"][0]["baseline"])
+        self.assertEqual(payload["horizons"][0]["episode_count"], 0)
 
     def test_collection_ops_snapshot_tracks_market_sentiment_freshness(self) -> None:
         from app.services.overview.data_health import build_collection_ops_snapshot
