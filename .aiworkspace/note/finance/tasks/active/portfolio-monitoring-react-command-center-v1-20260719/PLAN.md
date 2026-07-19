@@ -499,12 +499,12 @@ return DiagnosisProjection(top_three=top_three, all_rows=ranked_rows)
 return MacroContext(status=status, as_of_dates=source_dates, publication=publication, family_scores=scores, pathways=pathways, coverage=coverage, warnings=warnings)
 ```
 
-- [ ] Write failing tests for economic cycle current/+1M/+2M extraction, Futures Macro risk-on/growth/rate/dollar/safe-haven/inflation scores, 5D/20D outlook, and gold/dollar/WTI/copper/rates/S&P pathways.
-- [ ] Test missing, stale, LIMITED, PROVISIONAL, malformed snapshot, and mismatched as-of dates. Assert loaders are read-only and no calculation/materialization function is called.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_macro_context.py -q` and confirm failure.
-- [ ] Implement adapters over `build_economic_cycle_read_model`, `load_overview_futures_macro_materialized_snapshot`, and existing Overview materialized asset context. Return source freshness and publication status explicitly.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_macro_context.py -q`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/macro_context.py`, and `git diff --check`.
-- [ ] Commit as `포트폴리오 매크로 컨텍스트 어댑터 구현`.
+- [x] Write failing tests for economic cycle current/+1M/+2M extraction, Futures Macro risk-on/growth/rate/dollar/safe-haven/inflation scores, 5D/20D outlook, and gold/dollar/WTI/copper/rates/S&P pathways.
+- [x] Test missing, stale, LIMITED, PROVISIONAL, malformed snapshot, and mismatched as-of dates. Assert loaders are read-only and no calculation/materialization function is called.
+- [x] Run the repository-available `unittest` equivalent and confirm failure (`pytest` is not installed in `.venv`).
+- [x] Implement adapters over `build_economic_cycle_read_model`, `load_overview_futures_macro_materialized_snapshot`, and existing Overview materialized asset context. Return source freshness and publication status explicitly.
+- [x] Run focused unittest, actual read-only context smoke, `py_compile`, and `git diff --check`. Actual state is LIMITED: economic cycle 2026-06-30, asset pathways 2026-07-17, compatible Futures Macro snapshot missing.
+- [x] Commit as `포트폴리오 매크로 컨텍스트 어댑터 구현`.
 
 ### Task 16: exposure-context match와 confidence/severity cap을 구현한다
 
