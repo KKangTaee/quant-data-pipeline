@@ -2868,3 +2868,64 @@ weighted bundle
 - GTAA 방어 자산 option 목록, preset 기본값, runtime validation 또는 전략 계산 변경
 - virtualized list와 외부 UI dependency 추가
 - Single Strategy 컴포넌트의 기존 compact multi-select 재설계
+
+## 19차 Portfolio Mix Monthly Return Y-Axis
+
+### 이걸 하는 이유?
+
+- 현재 월별 수익률 chart는 0% 기준선과 양·음 막대, hover 수익률만 제공한다. 사용자는 상승·하락 방향과
+  상대 크기는 읽을 수 있지만 커서를 올리지 않으면 막대가 약 3%인지 8%인지 판단할 수 없다.
+- 시간축은 시작·중간·종료 월이 표시되므로, 값 축도 같은 first-read 수준에서 최소한의 수익률 scale을
+  제공해야 chart가 독립적으로 해석된다.
+
+### 승인된 사용자 표현
+
+- Y축은 0%를 중심으로 같은 절댓값 범위를 쓰는 동적 대칭 percent 축이다.
+- desktop은 `+최댓값 / +중간 / 0% / -중간 / -최댓값` 다섯 label과 연한 horizontal guide를 표시한다.
+- 760px은 `+최댓값 / 0% / -최댓값` 세 label만 표시해 날짜 tick과 막대 영역을 침범하지 않는다.
+- 0% guide는 기존 양·음 경계선처럼 다른 guide보다 진하게 유지한다. hover/focus tooltip은 실제 월 수익률과
+  월말 평가액을 계속 표시한다.
+
+### Scale And Formatting Contract
+
+- actual `chart_rows[].return_value`의 최대 절댓값을 percent로 바꾸고 `1 / 2 / 5 × 10^n` 계열의
+  보기 좋은 half-step으로 올림한다. axis maximum은 선택한 half-step의 두 배다.
+- 예를 들어 최대 절댓값이 7.2%면 axis는 `+10% / +5% / 0% / -5% / -10%`, 3.2%면
+  `+4% / +2% / 0% / -2% / -4%`가 된다.
+- 막대 높이도 raw maximum이 아니라 이 axis maximum을 분모로 사용한다. label scale과 bar geometry가
+  어긋나지 않으며 가장 큰 막대 위아래에 자연스러운 여백이 생긴다.
+- label은 양수에 `+`, 음수에 `-`, 중앙에 `0%`를 표시한다. 1% 미만 scale만 소수점 한 자리까지 허용하고
+  그 외에는 불필요한 `.0`을 붙이지 않는다.
+- row가 없으면 기존 empty state를 유지하고 축을 만들지 않는다. 전부 0이면 `+1% / 0% / -1%`를 포함하는
+  최소 symmetric range를 사용해 NaN/Infinity나 0으로 나누기를 만들지 않는다.
+
+### Ownership And Scope
+
+- `PortfolioMixResult.tsx`의 monthly chart presentation helper가 nice scale, Y 위치와 label 배열을 계산한다.
+  이는 실제 return을 다시 계산하는 financial logic이 아니라 SVG 표시 scale이다.
+- Python evidence의 `return_value`, `return_label`, monthly resampling, KPI와 data trust는 변경하지 않는다.
+- `styles.css`는 desktop/760px label visibility, guide 색과 left alignment를 소유한다.
+- 누적 성과 chart, pointer index, tooltip data, weighted calculation, save와 Level2 handoff 계약은 변경하지 않는다.
+
+### Accessibility And Responsive Contract
+
+- SVG의 `aria-label`은 월별 수익률 chart임을 유지하고, Y축 text는 시각 scale을 제공한다. 키보드 focus와
+  좌우 방향키 tooltip 탐색은 기존 actual row 값을 그대로 읽는다.
+- Y label은 기존 `PLOT_LEFT=54` 안에 두고 plot 영역을 밀어내거나 page/component horizontal overflow를
+  만들지 않는다.
+- desktop/compact label class는 기존 date tick responsive pattern을 재사용한다.
+
+### Verification Contract
+
+- RED source contract는 nice symmetric axis helper, desktop 5-label/compact 3-label, percent formatter와
+  guide line이 없어 실패해야 한다.
+- GREEN focused Portfolio Mix UI/boundary tests와 React production build를 통과해야 한다.
+- Browser QA는 actual Mix result에서 desktop 5개와 760px 3개 Y label, 0% 강조, bar/axis scale 일치,
+  기존 date tick과 hover/focus 값, horizontal overflow 0을 확인한다.
+
+### Out Of Scope
+
+- 월별 수익률 계산, resampling, missing-month 처리 또는 weighted portfolio 결과 변경
+- 사용자가 직접 Y축 범위를 입력하는 control
+- zoom/pan/range selector, chart library 또는 신규 dependency 추가
+- 누적 성과 chart Y축 재설계
