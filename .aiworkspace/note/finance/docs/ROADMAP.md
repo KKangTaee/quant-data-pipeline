@@ -14,7 +14,14 @@ Last Verified: 2026-07-19
 - 현재 상태: 1~14차 Level1 one-shell, 설정·결과 workspace, preset, 상단 workflow shell과 stage-local title 정리를 완료했다. 15차는 승인된 Portfolio Mix React one-shell 완성 설계를 기준으로 구성 전략·역할/비중·Mix 실행/해석·저장/Level2 인계를 하나의 화면 계약으로 통합한다.
 - 이번 task에서 하지 않은 일: development 전략 runtime 완성, historical universe / delisting provider, DB schema / strategy runtime 재설계, Level2 / Level3 route 변경, live approval / broker order / auto rebalance.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-sentiment-cnn-aaii-v1-20260719/`다.
+
+- 목적: CNN 중심·중복 구조와 단위가 섞인 이력 그래프를 정리하고, CNN 시장 행동과 AAII 개인투자자 인식을 동등한 두 축으로 읽게 한다.
+- 완료: 전체 잠정 roadmap `1/4차`. 합성점수 없는 두 축, AAII spread `+10pp / -10pp` 판정, 문장형 교차 판정, source별 상세 근거, 세 단위별 그래프와 desktop/420px Browser QA를 완료했다.
+- 품질 경계: CNN 구성요소는 headline 내부 근거다. 확인 조건은 관찰 checklist이며 1W/1M 예측, validation / monitoring / trading signal을 만들지 않는다.
+- 남은 차수: 2차 장기 이력·발표 당시 값 품질, 3차 독립 데이터 후보 검토, 4차 PIT 검증 뒤 1W/1M 전망 제공 여부 결정.
+
+Recent completed task는 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/`다.
 
 - 목적: Futures Macro를 현재 1D/5D/20D 관측과 5D/20D 조건부 전망으로 재구성하고, 첫 진입의 고비용 계산을 없애면서 방법론과 계산 근거를 화면 안에서 검산 가능하게 한다.
 - 완료: 전체 roadmap `5/5`, materialized snapshot / React disclosure closeout `4/4`, 관측·전망 상태 분리와 10년 재검증 `4/4`를 완료했다. `일봉 갱신`이 10년 compact snapshot을 저장하고 Overview 첫 진입과 다시 읽기는 compatible DB snapshot만 읽는다.
@@ -828,6 +835,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 | Overview Market Context Macro Polish V17 | Complete | Macro conditioned comparison now shows the meaning of each narrowing step inside the basis bar: broad sector ETF vs SPY analog pool, current-like GLD bucket, then current-like ZN=F / ZB=F rate-pressure bucket. Reference-only T10Y3M / VIXCLS / BAA10Y backdrop now renders as Korean state badges, current value, same-state ratio bars, and compact source labels. |
 | Overview Market Context Macro Matrix V16 | Complete | Macro conditioned comparison now uses the same visual language as historical analog: a basis bar for broad -> GLD -> futures narrowing, a compact asset x `기본 / 조건 후 / 변화` matrix, collapsed verbose condition source details, and Korean-first labels for current Macro backdrop. |
 | Overview Market Context Macro Labels V15 | Complete | Macro conditioned comparison now names the visible narrowing stages as broad basis, GLD condition, and rate-pressure futures condition. It explains `81회 -> 37회 -> 6회` as broad anchors narrowed by current-like GLD and futures states, and current Macro backdrop cards include Korean descriptions plus broad-sample same-state counts. |
+| Overview Sentiment CNN·AAII Balanced V1 | 1/4차 complete | Sentiment를 합성점수 없는 `CNN 시장 행동 / AAII 개인투자자 인식` 두 축으로 재구성했다. AAII는 Bull-Bear Spread `+10pp / -10pp`로 낙관·중립·비관을 판정하고 CNN 구성요소는 headline 내부 근거로만 사용한다. 동등한 source card, 문장형 교차 판정, 중복 없는 상세 근거, CNN 0~100 일간 / AAII 응답률 주간 / AAII spread pp 주간 그래프와 관찰 checklist를 제공한다. 2차 장기 이력·발표 당시 값 품질, 3차 독립 데이터 후보, 4차 PIT 검증 후 1W/1M 전망 제공 여부는 남아 있다. |
 | Overview Sentiment React UX V1 | Complete | Sentiment now renders a React workbench when the component build is available: service-owned phase/headline/summary first, freshness-tied refresh/reload actions, CNN / AAII cross-read, recent range percentile / min-max cards, CNN headline / component / AAII divergence panel, analysis steps, driver lanes, CNN component explanations, component latest-vs-previous changes, hover-readable history line chart, component bar chart, and stored-row evidence tables. Python services still own DB reads, refresh actions, and all interpretation text; React does not create trade signals, validation gates, monitoring signals, or recommendations. |
 | Overview Market Sentiment V1 | 1차~3차 complete | CNN Fear & Greed / AAII collect into `finance_meta.macro_series_observation`. Overview Sentiment, Practical Validation, Final Review, and Portfolio Monitoring read it as context-only market backdrop. |
 | Operations Overview IA / Operations Console V2-V5 | V2 closeout complete | Operations now has a console entry, Portfolio Monitoring and System / Data Health as the only top-level Operations tabs, and disabled live trading boundary copy. Operations Overview no longer exposes archive / development-history decision tables in the operator path and now starts with Portfolio Monitoring Status plus Evidence Health before a priority/evidence ordered review queue. Closeout QA and routing diagnostic are documented in `docs/runbooks/OPERATIONS_OVERVIEW_QA.md`; Backtest Runs / Candidate Library data deletion is deferred. |

@@ -8,6 +8,13 @@
 
 **Tech Stack:** Python 3, pandas, unittest service contracts, React 18, TypeScript 5, Vite 6, Streamlit custom component, CSS, in-app Browser QA.
 
+## Execution Status (2026-07-19)
+
+- Task 1~4 구현과 task별 commit을 완료했다.
+- Task 5의 actual desktop/420px Browser QA와 첫 UI checkpoint를 완료했다. 사용자가 선택하는 추가 시각 조정은 optional follow-up이다.
+- 독립 리뷰의 Critical 0 / Important 4 / Minor 3을 확인했고 Important 4와 code Minor 2를 보완했다.
+- Task 6 closeout 문서 정렬과 final verification을 완료했다. Branch integration 선택만 남아 있다.
+
 ## Global Constraints
 
 - CNN은 `시장 행동 심리`, AAII는 `개인투자자 인식 심리`로 표현한다.

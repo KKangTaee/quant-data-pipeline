@@ -18,7 +18,8 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
   - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~14차를 완료했고 승인된 15차 Portfolio Mix React one-shell 설계의 구현 계획과 개발을 이어간다.
-  - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro의 현재 관측과 5D/20D 미래 검증 상태를 분리하고, 10년 compact materialization·DB-only 첫 진입·React 방법론/계산 추적까지 마무리했다. 현재는 관측 완료, 미래 둘은 PROVISIONAL이다.
+  - Latest completed task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `1/4차`로 CNN 시장 행동과 AAII 개인투자자 인식을 합성하지 않는 두 축, 교차 판정, source별 근거와 분리 그래프를 완료했다.
+  - Recent completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro의 현재 관측과 5D/20D 미래 검증 상태를 분리하고, 10년 compact materialization·DB-only 첫 진입·React 방법론/계산 추적까지 마무리했다. 현재는 관측 완료, 미래 둘은 PROVISIONAL이다.
   - Recent completed Institutional Portfolios task is [institutional-13f-openfigi-mapping-v1-20260718](./tasks/active/institutional-13f-openfigi-mapping-v1-20260718/STATUS.md). 무료 OpenFIGI current resolution과 curated-manager actual backfill을 전체 roadmap `4/4`로 완료했다.
   - Previous completed Institutional Portfolios task is [institutional-portfolios-context-first-redesign-v1-20260718](./tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md). 선택 기관 맥락, 전체 보유 탐색, 직접 종목 검색과 coverage / comparison 정확성을 전체 roadmap `4/4`로 완료했다.
   - Recent completed Overview / Market Context task is [overview-economic-cycle-sp500-actual-eps-registration-v1-20260718](./tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/STATUS.md). 공식 workbook 등록 제품 경로는 완료했고 실제 workbook과 발표일 입력은 외부 입력으로 남아 있다.
@@ -10071,3 +10072,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 자산별 카드가 특정 자산의 경기 상태처럼 보이지 않게 공통 미국 경제 배경임을 밝히고, 현재 실물 수준과 전망 영향을 Evidence와 동일한 의미로 표시해야 함.
 - Analysis result: Python summary를 `현재 수준 / 전망 여건`으로 분리하고 React는 기존 Evidence helper를 재사용해 `기준 이하 / 전망 지원 / 전망 부담`을 표시한다.
 - Follow-up: 후속 roadmap `3/3`, focused `38 passed`, React build와 desktop/420px QA를 완료했다. 모델·direction enum·임계값·확률·자산 경로는 유지했다.
+
+### 2026-07-19 - Overview 심리는 CNN 행동과 AAII 인식을 합성하지 않고 교차해서 읽는다
+
+- User request: CNN 중심·중복 UI와 혼합 그래프를 개선하고 CNN+AAII만으로 균형 잡힌 현재 심리, 상세 근거, 향후 확인 조건을 보여 달라고 승인함.
+- Interpreted goal: CNN 구성요소를 별도 표처럼 반복하거나 AAII를 보조 데이터로 낮추지 않고, 시장 행동과 개인투자자 설문이 같은지 엇갈리는지 빠르게 판단한 뒤 근거를 검산하게 한다.
+- Analysis result: CNN은 시장 행동, AAII는 Bull-Bear Spread 기준 투자자 인식으로 독립 판정하고 합성점수를 만들지 않는다. CNN 구성요소는 내부 근거이며 CNN 0~100, AAII 응답 %, AAII spread pp는 source/단위별 그래프로 분리한다.
+- Follow-up: 전체 잠정 roadmap `1/4차` 구현·QA와 UI 선택 checkpoint를 완료했다. 2차 장기 이력·발표 당시 값 품질, 3차 독립 데이터 후보, 4차 PIT 검증 뒤 1W/1M 전망 제공 여부는 별도 차수다.

@@ -6,3 +6,13 @@
 - 사용자와 합성점수 없는 두 축 접근, 화면·판정 설계, 서비스·테스트 경계를 순차 승인했다.
 - 승인된 명세를 TDD task와 첫 UI 선택 checkpoint가 포함된 구현 계획으로 변환했다.
 - 구현 계획 자체검토에서 축약된 함수 예시와 QA 실행 명령을 구체화했다.
+- sentiment service regression을 RED로 추가한 뒤 AAII spread 단일 판정, 두 축 교차 판정, watch condition을 구현했다.
+- `sentiment_react_workbench_v2`에 summary / axes / cross_read / freshness / evidence / charts / watch_conditions / raw_evidence 계약을 구성했다.
+- React workbench를 동등한 CNN·AAII 카드, 교차 판정, source별 상세 근거, 세 그래프 탭으로 재구성하고 production bundle을 생성했다.
+- `.venv/bin/python -m unittest` focused sentiment 15개가 통과했다. `.venv`에는 pytest가 없어 repository에서 사용 가능한 unittest runner로 검증했다.
+- React production build와 `git diff --check`를 통과했다.
+- actual Streamlit Browser QA에서 CNN 행동, AAII 응답, AAII Spread 탭을 전환하고 각 단위/범례/판정 guide를 확인했다.
+- desktop 1280px과 mobile 420px에서 document/component 가로 overflow 0, mobile source card 세로 적층, browser console error 0을 확인했다.
+- QA screenshot `overview-sentiment-cnn-aaii-v1-qa.png`는 generated artifact로 남기고 commit 대상에서 제외했다.
+- 독립 코드 리뷰에서 Critical 0, Important 4, Minor 3을 받았다. Important 4건과 code Minor 2건을 모두 보완했고 문서 미정렬 Minor는 closeout sync로 해소했다.
+- 새 regression은 AAII spread/response 결측 confidence, source별 기준일, CNN 45~55 중립 band, 단일 시점 그래프 숨김, Spread 0pp 실선, tab/panel ARIA 연결을 고정한다.

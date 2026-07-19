@@ -5,3 +5,6 @@
 - 최근 범위 percentile은 저장된 표본 내 위치이며 장기 역사 percentile이나 미래 예측으로 표현하지 않는다.
 - `+10pp / -10pp` AAII spread 경계는 제품의 deterministic 해석 규칙이며 투자 수익 예측 임계값이 아니다.
 - 1차에서 제공하는 확인 조건은 관찰 checklist이지 목표가격, 매매 신호, 확률 전망이 아니다.
+- 2차에서 발표 당시 값과 수정 이력, 장기 coverage가 충분히 축적되기 전에는 최근 percentile을 역사적 극단값처럼 해석하지 않는다.
+- 1주·1개월 전망은 별도 point-in-time feature/target 정의와 chronological out-of-sample 검증 없이는 추가하지 않는다.
+- AAII 표본과 CNN 산출 방법의 source-side 변경 가능성은 freshness / raw evidence와 후속 품질 점검에서 계속 확인한다.

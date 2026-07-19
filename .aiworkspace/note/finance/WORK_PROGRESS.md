@@ -24,7 +24,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
   - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~14차를 완료했고 승인된 15차 Portfolio Mix React one-shell 설계의 구현 계획과 개발을 이어간다.
-  - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro를 현재 1D/5D/20D 관측과 5D/20D 조건부 전망으로 개편하고, current observation과 future publication status를 분리했다. 일봉 갱신은 10년 compact snapshot을 materialize하며 첫 진입은 DB-only로 읽는다. 60D 색상 범례와 자산 카드 상태 문구도 실제 화면 QA까지 완료했다.
+  - Latest completed task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `1/4차`로 CNN 시장 행동과 AAII 개인투자자 인식을 동등한 두 축으로 재구성하고 source별 근거·세 그래프 탭·actual desktop/420px QA를 완료했다.
+  - Recent completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro를 현재 1D/5D/20D 관측과 5D/20D 조건부 전망으로 개편하고, current observation과 future publication status를 분리했다. 일봉 갱신은 10년 compact snapshot을 materialize하며 첫 진입은 DB-only로 읽는다. 60D 색상 범례와 자산 카드 상태 문구도 실제 화면 QA까지 완료했다.
   - Recent completed Institutional Portfolios task is [institutional-13f-openfigi-mapping-v1-20260718](./tasks/active/institutional-13f-openfigi-mapping-v1-20260718/STATUS.md). 무료 OpenFIGI current resolution, curated-manager backfill, actual DB / Browser QA를 전체 roadmap `4/4`로 완료했다.
   - Previous completed Institutional Portfolios task is [institutional-portfolios-context-first-redesign-v1-20260718](./tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md). 전체 roadmap `4/4`; v2 context-first IA, full holdings explorer, explicit security search, actual DB / desktop / 420px QA를 완료했다.
   - Recent completed Overview / Market Context task is [overview-economic-cycle-sp500-actual-eps-registration-v1-20260718](./tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/STATUS.md). 공식 workbook 등록 제품 경로는 완료했고 실제 workbook과 발표일 입력은 외부 입력으로 남아 있다.
@@ -6659,3 +6660,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - summary를 `현재 수준 / 전망 여건`으로 분리하고 자산 카드 배지를 Evidence와 같은 역할별 helper에 연결했다.
 - direction enum, factor 계산, ±0.15 임계값, 확률과 자산 경로 계산은 변경하지 않았다.
 - 후속 roadmap `3/3`과 desktop/420px QA 결과는 동일 active task `RUNS.md`를 본다.
+
+## 2026-07-19 - Overview 심리 CNN·AAII 균형 1차 완료
+
+- `tasks/active/overview-sentiment-cnn-aaii-v1-20260719/`에서 전체 잠정 roadmap `1/4차`를 완료했다.
+- CNN 시장 행동과 AAII 개인투자자 인식을 합성하지 않는 두 축으로 재구성하고, AAII spread `+10pp / -10pp` 판정·문장형 교차 판정·source별 상세 근거를 연결했다.
+- CNN 일간 0~100, AAII 응답률 주간, AAII spread pp 주간 그래프를 실제 날짜 간격으로 분리하고 예측 대신 다음 확인 조건을 표시한다.
+- Focused sentiment 15 tests, React build, desktop/420px Browser QA, overflow 0, console error 0을 확인했다. 독립 리뷰에서 찾은 AAII 결측 confidence, source별 기준일, CNN band 경계, 단일 시점 그래프도 보완했다. 다음은 2차 장기 이력·발표 당시 값 품질 점검이며 1W/1M 전망은 PIT 검증 전까지 보류한다.
