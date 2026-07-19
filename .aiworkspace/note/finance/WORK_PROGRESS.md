@@ -6642,3 +6642,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 공식 `QUARTERLY DATA` 다단 머리글과 normalized 호환 형식을 검증하고, actual As-Reported release vintage를 transaction으로 저장한다.
 - S&P 가치평가는 actual 4분기 current TTM, Economic Cycle은 actual 8분기 current/prior TTM YoY를 사용하며 모든 as-of read에 발표 vintage 기준을 적용했다.
 - 현재 공식 최신 파일을 직접 받지 못해 DB 실제 적재는 남아 있다. 상세는 `tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/`를 본다.
+
+## 2026-07-19 - Local Finance Web Launcher V1 설치
+
+- 개인 명령 `qweb start|stop|status|logs <worktree> <port>`를 설치하고 새 zsh PATH에 연결했다.
+- 새 worktree와 frontend merge 뒤 `app/web` build package를 fingerprint로 확인해 누락·변경분만 자동 build한다.
+- PID/command/cwd/listener가 모두 일치할 때만 TERM을 보내며 기존 수동 port는 `PORT_CONFLICT`로 보존한다.
+- Backtest `build/`와 Overview `component_static/` output을 포함한 23개 unittest, Python/zsh syntax, fresh-shell discovery, 기존 8521/8502/8506 read-only status를 확인했다. 상세는 `tasks/active/local-finance-web-launcher-v1-20260719/`와 runbook을 본다.

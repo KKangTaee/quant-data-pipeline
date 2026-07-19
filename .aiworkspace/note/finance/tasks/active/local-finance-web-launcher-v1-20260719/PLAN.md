@@ -118,7 +118,7 @@ Expected: validation tests PASS and compilation exits 0.
 
 - [ ] **Step 1: Write failing discovery and rebuild-policy tests**
 
-Temporary fixtures contain one package with `scripts.build`, one without it, and excluded generated files. Assert initial build required, matching fingerprint plus `build/` skips, source edit rebuilds, deleted output rebuilds, and mocked npm failure raises `QwebError`.
+Temporary fixtures contain one package with `scripts.build`, one without it, and excluded generated files. Assert initial build required, matching fingerprint plus `build/` skips, Overview-style `component_static/` skips, source edit rebuilds, deleted output rebuilds, and mocked npm failure raises `QwebError`.
 
 - [ ] **Step 2: Run RED**
 
@@ -155,7 +155,7 @@ subprocess.run(["npm", "run", "build"], cwd=frontend, check=True)
 fingerprint_file.write_text(source_fingerprint(frontend) + "\n")
 ```
 
-A package is current only if its fingerprint matches and `build/` or `dist/` exists. Wrap JSON/hash/subprocess errors in `QwebError` naming the package. Do not start Streamlit after a failure.
+A package is current only if its fingerprint matches and `build/`, `component_static/`, or `dist/` exists. Wrap JSON/hash/subprocess errors in `QwebError` naming the package. Do not start Streamlit after a failure.
 
 - [ ] **Step 5: Run GREEN**
 

@@ -1,7 +1,7 @@
 # Finance Runbooks
 
 Status: Active
-Last Verified: 2026-07-16
+Last Verified: 2026-07-19
 
 ## Feature Runbooks
 
@@ -9,18 +9,24 @@ Last Verified: 2026-07-16
 |---|---|
 | [EDGAR_FINANCIAL_STATEMENT_REFRESH.md](./EDGAR_FINANCIAL_STATEMENT_REFRESH.md) | EDGAR annual statement refresh, statement coverage diagnosis, shadow rebuild, SEC fair-access / pacing 확인 |
 | [INSTITUTIONAL_13F_DATASET.md](./INSTITUTIONAL_13F_DATASET.md) | SEC Form 13F official quarterly dataset ingestion, user-agent, source caveat, QA 확인 |
+| [LOCAL_FINANCE_WEB_LAUNCHER.md](./LOCAL_FINANCE_WEB_LAUNCHER.md) | worktree/port별 frontend conditional build, Streamlit background start/stop/status/log 운영 |
 | [OVERVIEW_MARKET_INTELLIGENCE.md](./OVERVIEW_MARKET_INTELLIGENCE.md) | Overview 경제 사이클 vintage/model manual refresh, Market Context / Market Movers / Futures Macro / Sentiment / Events 운영, scheduled refresh automation, FOMC / earnings estimate 수집, closeout QA |
 | [OPERATIONS_OVERVIEW_QA.md](./OPERATIONS_OVERVIEW_QA.md) | Operations Overview V2 화면 / routing / review queue / no-live boundary QA |
 
 ## Local App
 
-기존 Streamlit app은 보통 아래 방식으로 실행한다.
+개인 local launcher가 설치된 환경에서는 아래 방식으로 실행한다.
 
 ```bash
-streamlit run app/web/streamlit_app.py
+qweb start main-dev 8521
+qweb status main-dev 8521
+qweb logs main-dev 8521
+qweb stop main-dev 8521
 ```
 
-이미 실행 중인 포트가 있으면 다른 포트를 사용한다.
+launcher는 누락되거나 변경된 `app/web` frontend를 먼저 build하며, 다른 process가 사용하는 port는
+자동 종료하지 않는다. 설치, 기존 수동 process 전환과 실패 처리는
+[Local Finance Web Launcher](./LOCAL_FINANCE_WEB_LAUNCHER.md)를 본다.
 
 ## Focused Checks
 

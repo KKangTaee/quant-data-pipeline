@@ -1,11 +1,11 @@
 # Local Finance Web Launcher V1 Design
 
-Status: Design approved in conversation; awaiting written-spec review
+Status: Implemented and verified
 Date: 2026-07-19
 
 ## 이걸 하는 이유?
 
-현재 Streamlit 실행 명령은 React/Vite frontend를 빌드하지 않는다. `build/`와 `node_modules/`는
+현재 Streamlit 실행 명령은 React/Vite frontend를 빌드하지 않는다. `build/`, `component_static/`와 `node_modules/`는
 Git에 포함되지 않기 때문에 새 worktree 또는 frontend 변경을 병합한 worktree에서 바로 Streamlit만
 실행하면 일부 화면이 Python fallback으로 내려갈 수 있다. 반대로 오래 사용한 worktree는 로컬 build가
 남아 있어 같은 실행 명령으로도 정상처럼 보인다.
@@ -28,7 +28,7 @@ launcher를 제공한다. launcher는 빠른 실행보다 재현 가능한 front
 - registry, saved portfolio, run history 변경
 - production deployment, launchd 등록, 자동 browser open
 - Streamlit 또는 React 화면 코드 변경
-- `build/`, `node_modules/`, runtime log의 Git commit
+- `build/`, `component_static/`, `dist/`, `node_modules/`, runtime log의 Git commit
 
 ## 검토한 방식
 
@@ -93,7 +93,7 @@ state와 log는 local runtime artifact이며 Git에 포함하지 않는다.
 6. 아래 중 하나면 해당 package를 rebuild한다.
    - 저장된 fingerprint 없음
    - fingerprint 변경
-   - `build/`와 `dist/`가 모두 없음
+   - `build/`, `component_static/`, `dist/`가 모두 없음
 7. lockfile이 있으면 `npm ci`, 없으면 `npm install` 후 `npm run build`를 실행한다.
 8. 하나라도 실패하면 Streamlit을 시작하지 않고 실패 package를 출력한다.
 9. worktree cwd에서 `nohup .venv/bin/python -m streamlit run ...`을 실행한다.
