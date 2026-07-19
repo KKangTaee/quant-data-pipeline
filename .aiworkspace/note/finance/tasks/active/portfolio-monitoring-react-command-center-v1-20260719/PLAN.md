@@ -437,12 +437,12 @@ threshold = overrides.get(rule_id, DEFAULT_POLICIES[rule_id]) if overrides else 
 return _evaluate_rule(rule_id, measured_value, threshold)
 ```
 
-- [ ] Write failing fact tests for 21/63/126-session return, 50D/200D distance, consecutive-below-200D sessions, drawdown/MDD, volatility, 63D pairwise correlation cluster, total contribution, and downside contribution.
-- [ ] Write boundary tests for every approved watch/high threshold, including equality behavior and a Final Review stored threshold override with provenance.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_diagnosis.py -q` and confirm failure.
-- [ ] Implement pure calculation and policy catalog. Keep thresholds in Python constants/config objects, never React.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_diagnosis.py -q`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/diagnosis.py`, and `git diff --check`.
-- [ ] Commit as `포트폴리오 강점 취약점 판정 정책 구현`.
+- [x] Write failing fact tests for 21/63/126-session return, 50D/200D distance, consecutive-below-200D sessions, drawdown/MDD, volatility, 63D pairwise correlation cluster, total contribution, and downside contribution.
+- [x] Write boundary tests for every approved watch/high threshold, including equality behavior and a Final Review stored threshold override with provenance.
+- [x] Run the repository-available `unittest` equivalent and confirm failure (`pytest` is not installed in `.venv`).
+- [x] Implement pure calculation and policy catalog. Keep thresholds in Python constants/config objects, never React.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_diagnosis -v`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/diagnosis.py`, and `git diff --check`.
+- [x] Commit as `포트폴리오 강점 취약점 판정 정책 구현`.
 
 ### Task 14: diagnosis priority/dedup/confidence와 React evidence UI를 연결한다
 
