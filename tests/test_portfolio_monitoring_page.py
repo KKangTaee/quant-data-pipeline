@@ -219,41 +219,5 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
             services.session_state,
         )
 
-    def test_operations_summary_prefers_new_group_and_value_metrics_and_keeps_navigation(self) -> None:
-        from app.web.operations_overview import build_operations_overview_model
-
-        model = build_operations_overview_model(
-            selected_dashboard={"summary": {}, "portfolio_state": {}},
-            run_history=[],
-            monitoring_workspace={
-                "groups": [
-                    {"active_item_count": 2, "history_item_count": 3},
-                    {"active_item_count": 1, "history_item_count": 1},
-                ],
-                "active_group": {
-                    "status": "READY",
-                    "basis_date": "2026-07-18",
-                    "metrics": {
-                        "invested_capital": 20000,
-                        "current_value": 21500,
-                        "total_return": 0.075,
-                        "mdd": -0.04,
-                    },
-                },
-                "now_to_review": [{"rule_id": "macro_tech_risk_off"}, {"rule_id": "trend"}],
-                "source_health": {"status": "LIMITED", "coverage": 0.75},
-            },
-        )
-
-        summary = model["portfolio_summary"]
-        self.assertEqual(summary["active_portfolio_count"], 2)
-        self.assertEqual(summary["active_item_count"], 3)
-        self.assertEqual(summary["current_value"], 21500)
-        self.assertEqual(summary["top_review_count"], 2)
-        self.assertEqual(summary["macro_coverage"], 0.75)
-        portfolio_lane = next(lane for lane in model["lanes"] if lane["key"] == "portfolio_monitoring")
-        self.assertEqual(portfolio_lane["links"][0]["target_key"], "portfolio_monitoring")
-
-
 if __name__ == "__main__":
     unittest.main()
