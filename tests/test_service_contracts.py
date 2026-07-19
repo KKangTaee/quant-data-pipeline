@@ -1341,7 +1341,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         index_path = component_root / "frontend/src/index.tsx"
         style_path = component_root / "frontend/src/style.css"
         vite_config_path = component_root / "frontend/vite.config.ts"
-        build_entry_path = component_root / "frontend/build/index.html"
+        build_entry_path = component_root / "frontend/component_static/index.html"
         common_source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
 
         self.assertTrue(wrapper_path.exists())
@@ -1388,7 +1388,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         index_path = component_root / "frontend/src/index.tsx"
         style_path = component_root / "frontend/src/style.css"
         vite_config_path = component_root / "frontend/vite.config.ts"
-        build_entry_path = component_root / "frontend/build/index.html"
+        build_entry_path = component_root / "frontend/component_static/index.html"
 
         self.assertTrue(wrapper_path.exists())
         self.assertTrue(package_path.exists())
@@ -12357,7 +12357,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         wrapper_path = component_root / "component.py"
         entry_path = component_root / "frontend/src/BacktestPolicySignalBoard.tsx"
         style_path = component_root / "frontend/src/style.css"
-        build_entry_path = component_root / "frontend/build/index.html"
+        build_entry_path = component_root / "frontend/component_static/index.html"
         result_display_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
 
         self.assertTrue(wrapper_path.exists())
@@ -12411,7 +12411,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         package_path = component_root / "frontend/package.json"
         entry_path = component_root / "frontend/src/BacktestHandoffAction.tsx"
         index_path = component_root / "frontend/src/index.tsx"
-        build_entry_path = component_root / "frontend/build/index.html"
+        build_entry_path = component_root / "frontend/component_static/index.html"
 
         self.assertTrue(wrapper_path.exists())
         self.assertTrue(package_path.exists())
@@ -12456,7 +12456,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         entry_path = component_root / "frontend/src/BacktestPriceRefreshAction.tsx"
         index_path = component_root / "frontend/src/index.tsx"
         style_path = component_root / "frontend/src/style.css"
-        build_entry_path = component_root / "frontend/build/index.html"
+        build_entry_path = component_root / "frontend/component_static/index.html"
         result_display_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
 
         self.assertTrue(wrapper_path.exists())
@@ -12514,7 +12514,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         entry_path = component_root / "frontend/src/PracticalValidationFixQueue.tsx"
         index_path = component_root / "frontend/src/index.tsx"
         style_path = component_root / "frontend/src/style.css"
-        build_entry_path = component_root / "frontend/build/index.html"
+        build_entry_path = component_root / "frontend/component_static/index.html"
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
         panel_source = Path("app/web/backtest_practical_validation/workspace_panel.py").read_text(encoding="utf-8")
 
@@ -12626,7 +12626,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         entry_path = component_root / "frontend/src/FinalReviewInvestmentReport.tsx"
         index_path = component_root / "frontend/src/index.tsx"
         style_path = component_root / "frontend/src/style.css"
-        build_entry_path = component_root / "frontend/build/index.html"
+        build_entry_path = component_root / "frontend/component_static/index.html"
         page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
         practical_page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
 
@@ -29624,7 +29624,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         build_source = "".join(
             path.read_text(encoding="utf-8")
-            for path in (frontend / "build/assets").glob("*.js")
+            for path in (frontend / "component_static/assets").glob("*.js")
         )
 
         for source in (workspace_source, build_source):
