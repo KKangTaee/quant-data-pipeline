@@ -6645,3 +6645,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 공식 `QUARTERLY DATA` 다단 머리글과 normalized 호환 형식을 검증하고, actual As-Reported release vintage를 transaction으로 저장한다.
 - S&P 가치평가는 actual 4분기 current TTM, Economic Cycle은 actual 8분기 current/prior TTM YoY를 사용하며 모든 as-of read에 발표 vintage 기준을 적용했다.
 - 현재 공식 최신 파일을 직접 받지 못해 DB 실제 적재는 남아 있다. 상세는 `tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/`를 본다.
+
+## 2026-07-19 - 경제사이클 판단 근거 역할별 문구 완료
+
+- 실물 factor는 자기 과거 기준 대비 수준, 전망 factor는 경기 전망의 지원·부담으로 분리했다.
+- 각 Evidence 행에 역할별 상태 배지와 한 줄 해석을 추가했다.
+- 모델 점수·임계값·확률·payload는 변경하지 않았다.
+- focused tests, React build, desktop/420px Browser QA 결과는 `tasks/active/overview-economic-cycle-evidence-role-copy-v1-20260719/RUNS.md`를 본다.

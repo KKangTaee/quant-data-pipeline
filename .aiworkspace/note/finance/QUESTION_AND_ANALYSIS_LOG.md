@@ -10057,3 +10057,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Shiller 보간 EPS를 actual로 오인하지 않고, 사용자가 받은 공식 S&P Index Earnings XLSX를 등록해 Economic Cycle이 완료 분기 actual As-Reported를 자동으로 읽어야 함.
 - Analysis result: DB가 비어 있었고 기존 importer는 normalized status 열만 지원했으며 loader는 기준일 이후 release vintage를 막지 않았다. 공식 raw workbook은 `QUARTERLY DATA` 제목과 다단 Operating/As-Reported 머리글을 사용하므로 전용 parser, transactional UPSERT, PIT guard, 8분기 coverage UI를 연결했다.
 - Follow-up: 제품 경로와 parser 구조 검증은 완료했다. 사용자가 직접 받은 최신 공식 XLSX를 등록해 DB 8분기 coverage와 Economic Cycle 실제 TTM 활성화를 확인하는 실제 데이터 단계가 남아 있다.
+
+### 2026-07-19 - 경제사이클 판단 근거는 수준과 전망 영향을 분리한다
+
+- User request: `금리·신용·금융여건 강화`와 `물가·정책 압력 강화`가 모두 좋은 의미인지 혼동되므로 상태와 해석을 명확하게 바꿔 달라고 요청함.
+- Interpreted goal: 기존 네 근거와 모델은 유지하면서 실물의 현재 수준, 금융·선행 여건의 전망 지원, 물가·정책 압력의 전망 부담을 한눈에 구분해야 함.
+- Analysis result: 공통 `강화 / 약화`를 실물 `기준 이상/이하`, 금융·선행 `전망 지원/부담`, 물가·정책 `전망 부담/부담 완화`로 번역하고 각 행에 한 줄 해석을 추가했다.
+- Follow-up: 전체 3/3차와 desktop/420px QA를 완료했다. factor score, ±0.15 임계값, 확률과 payload는 변경하지 않았다.
