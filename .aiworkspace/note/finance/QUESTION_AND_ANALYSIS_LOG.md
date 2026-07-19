@@ -10064,3 +10064,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 기존 route는 유지하면서 group lifecycle, direct stock/ETF와 selected strategy, integer shares, group performance, deterministic diagnosis, macro risk observation을 한 React shell에서 수행해야 함.
 - Analysis result: 신규 DB/service boundary와 legacy replay adapter가 적합하며, 확률은 PIT/OOS calibration gate 통과 전 payload와 UI에서 모두 억제해야 한다.
 - Follow-up: `6차 / 21 task` red-green-commit 계획을 active task에 작성했다. 현재 `0/6차`이며 실행 방식 선택 후 1차부터 시작한다.
+
+### 2026-07-19 - Portfolio Monitoring React 전면 개편을 안전한 운영 경계로 완료한다
+
+- User request: 승인된 A안과 정수 수량 계약을 바탕으로 2번 실행 방식으로 전체 구현을 진행하도록 요청함.
+- Interpreted goal: 실제 그룹·종목 추적 workflow를 완성하되 legacy 파일과 사용자 데이터를 훼손하지 않고, 검증되지 않은 macro probability를 보여주지 않아야 함.
+- Analysis result: DB/service/React/diagnosis/macro/history/calibration의 6차를 구현했다. Production에는 five-table schema와 empty default group만 생성했고, legacy apply와 synthetic QA holdings는 격리 DB/fixture에 한정했다.
+- Follow-up: 전체 `6/6차`와 responsive QA를 완료했다. 실제 Futures Macro compatible snapshot과 장기 PIT 표본이 충분해 OOS gate가 통과하기 전까지 probability는 `SUPPRESSED`를 유지한다.

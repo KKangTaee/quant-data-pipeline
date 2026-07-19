@@ -31,6 +31,7 @@ from app.services.portfolio_monitoring.persistence import (
 )
 from app.services.portfolio_monitoring.read_model import (
     WORKSPACE_SCHEMA_VERSION,
+    build_monitoring_config_fingerprint,
     build_portfolio_monitoring_workspace,
 )
 from app.services.portfolio_monitoring.schemas import (
@@ -50,7 +51,11 @@ from app.services.portfolio_monitoring.valuation import (
     build_direct_security_value_lane,
     resolve_direct_security_entry,
 )
-from app.services.portfolio_monitoring.diagnosis import build_behavior_facts, evaluate_portfolio_rules
+from app.services.portfolio_monitoring.diagnosis import (
+    DIAGNOSIS_POLICY_VERSION,
+    build_behavior_facts,
+    evaluate_portfolio_rules,
+)
 from app.services.portfolio_monitoring.exposure import (
     ExposureBucket,
     ExposureResult,
@@ -566,7 +571,10 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
                 if selected_group is not None
                 else []
             )
-            calibration_artifact = history_repository.load_latest_calibration_artifact()
+            calibration_artifact = history_repository.load_latest_calibration_artifact(
+                config_fingerprint=build_monitoring_config_fingerprint(),
+                policy_version=DIAGNOSIS_POLICY_VERSION,
+            )
             workspace = build_portfolio_monitoring_workspace(
                 repository,
                 active_group_id=active_group_id,

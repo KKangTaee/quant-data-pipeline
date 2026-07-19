@@ -383,8 +383,18 @@ class PortfolioMonitoringCommandTests(unittest.TestCase):
         repository.ensure_schema()
 
         self.assertEqual(db.used_databases, ["finance_meta"])
-        self.assertEqual(len(db.executed), 3)
+        self.assertEqual(len(db.executed), len(persistence.PORTFOLIO_MONITORING_SCHEMAS))
         self.assertTrue(all("CREATE TABLE IF NOT EXISTS" in sql for sql, _ in db.executed))
+        self.assertTrue(
+            all(
+                table_name in sql
+                for table_name, (sql, _) in zip(
+                    persistence.PORTFOLIO_MONITORING_SCHEMAS,
+                    db.executed,
+                    strict=True,
+                )
+            )
+        )
         self.assertTrue(db.closed)
 
 

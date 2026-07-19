@@ -1273,7 +1273,7 @@ PORTFOLIO_MONITORING_SCHEMAS = {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
           UNIQUE KEY uk_monitoring_calibration_fingerprint
-            (algorithm_version, data_fingerprint, policy_version, horizon_sessions),
+            (algorithm_version, data_fingerprint, config_fingerprint, policy_version, horizon_sessions),
           KEY ix_monitoring_calibration_status (publication_status, created_at)
         );
     """,

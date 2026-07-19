@@ -32,6 +32,7 @@ Last Verified: 2026-07-18
 | `finance/swing_macro.py` | Risk-On Momentum 5D macro hard filter / ranking penalty evaluation |
 | `finance/swing_analysis.py` | Risk-On Momentum 5D comparison, sensitivity, stability, trade-cause, quality warning analysis |
 | `app/services/` | Streamlit-free application service boundary. UI에서 runtime / engine을 직접 호출하기 전에 use-case 단위 dispatch와 error normalization을 담당 |
+| `app/services/portfolio_monitoring/` | Portfolio Monitoring group/item commands, DB persistence, catalog, valuation, exposure/diagnosis, macro context, history/calibration, versioned React read model. See `docs/architecture/PORTFOLIO_MONITORING_REACT_COMMAND_CENTER.md` |
 | `app/runtime/` | Streamlit-free runtime / repository boundary. DB-backed backtest wrapper, JSONL registry / saved setup helper, selected portfolio runtime model |
 | `app/workspace_paths.py` | active worktree root와 canonical `.aiworkspace/note/finance` JSONL / docs / artifact 경로 상수 |
 | `app/web/` | Streamlit Finance Console 화면, form, session state, routing, user feedback |

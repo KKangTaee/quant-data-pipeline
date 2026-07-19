@@ -16,6 +16,23 @@ from .schemas import build_request_fingerprint
 
 WORKSPACE_SCHEMA_VERSION = "portfolio_monitoring_workspace_v1"
 ACTIVE_ITEM_STATUSES = {"active", "data_review"}
+MONITORING_VALUE_METHOD = {
+    "basis": "oldest_latest_usable_date_among_active_lanes",
+    "alignment": "as_of_step_without_interpolation",
+    "pre_start": "planned_capital_as_cash",
+    "post_end": "exit_value_as_cash",
+}
+
+
+def build_monitoring_config_fingerprint() -> str:
+    """Identify the exact policy/macro/value contract used by the workspace."""
+
+    return build_request_fingerprint({
+        "workspace_schema": WORKSPACE_SCHEMA_VERSION,
+        "diagnosis_policy": DIAGNOSIS_POLICY_VERSION,
+        "macro_context": MACRO_CONTEXT_VERSION,
+        "method": MONITORING_VALUE_METHOD,
+    })
 
 
 @dataclass(frozen=True)
@@ -454,18 +471,8 @@ def build_portfolio_monitoring_workspace(
             "warnings": ["macro context is not configured"],
         }
     )
-    method = {
-        "basis": "oldest_latest_usable_date_among_active_lanes",
-        "alignment": "as_of_step_without_interpolation",
-        "pre_start": "planned_capital_as_cash",
-        "post_end": "exit_value_as_cash",
-    }
-    config_fingerprint = build_request_fingerprint({
-        "workspace_schema": WORKSPACE_SCHEMA_VERSION,
-        "diagnosis_policy": DIAGNOSIS_POLICY_VERSION,
-        "macro_context": MACRO_CONTEXT_VERSION,
-        "method": method,
-    })
+    method = dict(MONITORING_VALUE_METHOD)
+    config_fingerprint = build_monitoring_config_fingerprint()
     risk_calibration = project_risk_calibration(
         risk_calibration_artifact,
         current_policy_version=DIAGNOSIS_POLICY_VERSION,

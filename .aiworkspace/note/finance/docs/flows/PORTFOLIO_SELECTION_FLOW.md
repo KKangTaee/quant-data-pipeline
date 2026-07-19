@@ -9,6 +9,8 @@ Last Verified: 2026-07-19
 
 파일 / helper 이름은 여전히 legacy `Selected Portfolio Dashboard`를 포함할 수 있지만, 현재 사용자-facing route와 stage 이름은 `Operations > Portfolio Monitoring`이다.
 
+현재 화면은 `portfolio_monitoring_workspace_v1` React Command Center이며, 구조와 migration 경계는 `../architecture/PORTFOLIO_MONITORING_REACT_COMMAND_CENTER.md`와 `../runbooks/PORTFOLIO_MONITORING_MIGRATION_AND_QA.md`를 따른다.
+
 예전의 긴 workflow redesign 문서는 구현 전 분석과 migration 계획이 섞여 있었다. 이 문서는 현재 제품에서 사용자가 실제로 따라야 하는 흐름만 남긴다.
 
 ## Current Flow

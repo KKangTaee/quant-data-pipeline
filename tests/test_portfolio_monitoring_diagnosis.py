@@ -200,6 +200,15 @@ class PortfolioMonitoringDiagnosisTests(unittest.TestCase):
         self.assertEqual(observation.root_id, "sector:Technology")
         self.assertNotIn("probability", vars(observation))
 
+    def test_empty_portfolio_does_not_report_exposure_coverage_gap(self) -> None:
+        diagnosis = _diagnosis()
+        exposure = ExposureResult((), 0.0, 0.0, 0.0, 0.0)
+        behavior = diagnosis.BehaviorFacts({}, {}, 0.0, 0.0, ())
+
+        rows = diagnosis.evaluate_portfolio_rules(exposure, behavior)
+
+        self.assertEqual(rows, [])
+
 
 if __name__ == "__main__":
     unittest.main()

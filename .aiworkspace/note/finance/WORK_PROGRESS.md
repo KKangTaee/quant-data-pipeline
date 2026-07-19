@@ -6694,3 +6694,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - 저장된 경제사이클 current/+1M/+2M, Futures Macro 5D/20D family, 금·달러·WTI·구리·금리·S&P 경로를 read-only compact context로 연결했다.
 - 실제 노출이 먼저 충족될 때만 tech risk-off, gold adversity, duration rate pressure, cyclical slowdown 관찰을 만들며 LIMITED/PROVISIONAL은 단독 HIGH severity를 만들지 못한다.
 - React에는 포트폴리오 의미·영향 비중·변화 조건을 먼저, coverage/freshness는 보조 근거로 표시하고 Operations에는 top review와 macro coverage만 연결했다. 전체 roadmap `5/6차`; 다음은 6차 이력·확률 gate·migration closeout이다.
+
+## 2026-07-19 - Portfolio Monitoring React 전면 개편 6차 완료
+
+- 진단 snapshot/history와 walk-forward calibration artifact를 저장하고, current fingerprint의 OOS gate가 `READY`일 때만 조건부 확률을 공개한다. Actual은 근거 부족으로 `SUPPRESSED`다.
+- 안전한 격리 DB DDL/legacy apply 검증 후 `finance_meta` five-table schema와 default group 하나를 생성했다. Legacy source는 dry-run만 하여 checksum을 보존했고 사용자 종목은 넣지 않았다.
+- 83 monitoring, 12 React, 139 linked regressions와 1440/760/420 Browser QA를 통과했다. 전체 roadmap `6/6차` 완료; 상세는 `tasks/done/portfolio-monitoring-react-command-center-v1-20260719/`를 본다.

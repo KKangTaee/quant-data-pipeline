@@ -28,6 +28,23 @@ class FakeHistoryRepository:
         ]
 
 
+class RecordingDb:
+    def __init__(self):
+        self.used_databases = []
+        self.queries = []
+        self.closed = False
+
+    def use_db(self, name):
+        self.used_databases.append(name)
+
+    def query(self, sql, params=None):
+        self.queries.append((sql, list(params or [])))
+        return []
+
+    def close(self):
+        self.closed = True
+
+
 def _workspace():
     return {
         "schema_version": "portfolio_monitoring_workspace_v1",
@@ -64,7 +81,29 @@ class PortfolioMonitoringHistoryTests(unittest.TestCase):
         self.assertIn("policy_version", snapshot)
         self.assertIn("UNIQUE KEY uk_monitoring_diagnosis_identity", snapshot)
         self.assertIn("data_fingerprint", artifact)
+        normalized = " ".join(artifact.split())
+        self.assertIn(
+            "(algorithm_version, data_fingerprint, config_fingerprint, policy_version, horizon_sessions)",
+            normalized,
+        )
         self.assertIn("publication_status", artifact)
+
+    def test_latest_calibration_artifact_is_scoped_to_current_config_and_policy(self) -> None:
+        history = _history()
+        db = RecordingDb()
+        repository = history.MySQLMonitoringHistoryRepository(lambda: db)
+
+        result = repository.load_latest_calibration_artifact(
+            config_fingerprint="a" * 64,
+            policy_version="portfolio_monitoring_policy_v1",
+        )
+
+        self.assertIsNone(result)
+        self.assertEqual(db.used_databases, ["finance_meta"])
+        sql, params = db.queries[0]
+        self.assertIn("WHERE config_fingerprint=%s AND policy_version=%s", " ".join(sql.split()))
+        self.assertEqual(params, ["a" * 64, "portfolio_monitoring_policy_v1"])
+        self.assertTrue(db.closed)
 
     def test_capture_is_idempotent_and_compact_with_immutable_as_of_inputs(self) -> None:
         history = _history()

@@ -324,7 +324,7 @@ def evaluate_portfolio_rules(
                 behavior=behavior, exposure=exposure, provenance=provenance,
                 meaning="함께 움직이는 항목의 비중이 커 분산 효과가 약해질 수 있습니다.",
                 change=f"상관이 {policy['correlation']:.2f} 또는 cluster가 {policy['watch']:.1%} 아래면 해제"))
-    if exposure.coverage_ratio < 0.7:
+    if exposure.total_weight > 0 and exposure.coverage_ratio < 0.7:
         rows.append(
             DiagnosisFact(
                 rule_id="exposure_coverage_gap", root_id="coverage:exposure",

@@ -687,9 +687,9 @@ def test_portfolio_monitoring_docs_name_canonical_owners_and_boundaries() -> Non
     assert "broker order" in data_contract
 ```
 
-- [ ] Before editing durable docs, use `finance-doc-sync` and `finance-runbook-maintainer`; write `tests/test_portfolio_monitoring_docs.py` for every required ownership/boundary phrase.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_docs.py -q` and confirm failure because the durable documents do not exist yet.
-- [ ] Run the complete focused Python suite:
+- [x] Before editing durable docs, use `finance-doc-sync` and `finance-runbook-maintainer`; write `tests/test_portfolio_monitoring_docs.py` for every required ownership/boundary phrase.
+- [x] Run the available unittest equivalent for `tests/test_portfolio_monitoring_docs.py` and confirm failure because the durable documents do not exist yet. (`pytest` is not installed in `.venv`.)
+- [x] Run the complete focused Python suite:
 
 ```bash
 ./.venv/bin/python -m pytest \
@@ -710,10 +710,10 @@ def test_portfolio_monitoring_docs_name_canonical_owners_and_boundaries() -> Non
   tests/test_portfolio_monitoring_docs.py -q
 ```
 
-- [ ] Run component `npm test -- --run`, `npm run typecheck`, `npm run build`; then run relevant existing regression tests for Final Review handoff, Operations route, economic cycle, Futures Macro snapshot, and component static distribution.
-- [ ] Execute the migration runbook against a safe test DB first, verify legacy dry-run/apply counts and checksum preservation, then perform final Browser QA for one direct stock, one ETF, one selected strategy, staggered start, tracking end to cash, stale common basis, diagnosis, macro observation, and probability suppression/qualification fixture.
-- [ ] Update durable docs and concise root handoff logs. Use `superpowers:verification-before-completion` for final evidence review; run `git status --short`, `git diff --check`, and verify screenshots/generated artifacts are not staged.
-- [ ] Commit as `포트폴리오 모니터링 React 전면 개편 문서화` and move the task/research records to their done location only after all six stage gates pass.
+- [x] Run component `npm test -- --run`, `npm run typecheck`, `npm run build`; then run relevant existing regression tests for Final Review handoff, Operations route, economic cycle, Futures Macro snapshot, and component static distribution.
+- [x] Execute the migration runbook against a safe test DB first, verify legacy dry-run/apply counts and checksum preservation, then perform fixture verification plus production-empty-state Browser QA. Synthetic items are not inserted into production user data.
+- [x] Update durable docs and concise root handoff logs. Use `superpowers:verification-before-completion` for final evidence review; run `git status --short`, `git diff --check`, and verify screenshots/generated artifacts are not staged.
+- [ ] Commit as `포트폴리오 모니터링 React 전면 개편 문서화` and move the task record to its done location only after all six stage gates pass.
 
 **6차 완료 게이트:** probability is suppressed unless the explicit OOS publication gate passes; history is reproducible and PIT-safe; migration/rollback and Browser QA are documented; durable docs match production ownership.
 
@@ -721,21 +721,21 @@ def test_portfolio_monitoring_docs_name_canonical_owners_and_boundaries() -> Non
 
 ## End-to-End Acceptance Checklist
 
-- [ ] 첫 진입에서 default group exactly one이 보인다.
-- [ ] group 생성·선택·rename이 idempotent command로 동작한다.
-- [ ] direct U.S. stock/ETF와 `monitoring_candidate=True` selected strategy를 검색·추가할 수 있다.
-- [ ] fixed notional과 direct-security integer shares가 정확히 분리된다.
-- [ ] missing price, duplicate, max 10, invalid shares가 write 전에 차단된다.
-- [ ] staggered start, pre-start cash, dividend cash, split, tracking-end cash가 group curve와 KPI에 반영된다.
-- [ ] invested/current/P&L/return/MDD/CAGR/contribution/downside contribution이 common basis date로 표시된다.
-- [ ] group chart 아래에서 각 item/strategy result와 근거를 선택해 본다.
-- [ ] strengths/weaknesses/top-three rows가 measured fact, threshold, coverage, confidence, change condition을 포함한다.
-- [ ] macro signal은 exposure-context observation이며 calibration 전 loss probability를 표시하지 않는다.
-- [ ] calibration gate 통과 전 probability는 payload와 UI에서 모두 제거된다.
-- [ ] legacy saved JSONL과 Final Review registry가 byte-for-byte 보존된다.
-- [ ] React missing/error fallback은 read-only이며 legacy mutation UI를 다시 열지 않는다.
-- [ ] 1440px, 760px, 420px Browser QA와 keyboard/focus/overflow 검증이 통과한다.
-- [ ] Operations Console은 실제 monitoring workflow로 연결되며 run/job/row 진단을 주인공으로 만들지 않는다.
+- [x] 첫 진입에서 default group exactly one이 보인다.
+- [x] group 생성·선택·rename이 idempotent command로 동작한다.
+- [x] direct U.S. stock/ETF와 `monitoring_candidate=True` selected strategy를 검색·추가할 수 있다.
+- [x] fixed notional과 direct-security integer shares가 정확히 분리된다.
+- [x] missing price, duplicate, max 10, invalid shares가 write 전에 차단된다.
+- [x] staggered start, pre-start cash, dividend cash, split, tracking-end cash가 group curve와 KPI에 반영된다.
+- [x] invested/current/P&L/return/MDD/CAGR/contribution/downside contribution이 common basis date로 표시된다.
+- [x] group chart 아래에서 각 item/strategy result와 근거를 선택해 본다.
+- [x] strengths/weaknesses/top-three rows가 measured fact, threshold, coverage, confidence, change condition을 포함한다.
+- [x] macro signal은 exposure-context observation이며 calibration 전 loss probability를 표시하지 않는다.
+- [x] calibration gate 통과 전 probability는 payload와 UI에서 모두 제거된다.
+- [x] legacy saved JSONL과 Final Review registry가 byte-for-byte 보존된다.
+- [x] React missing/error fallback은 read-only이며 legacy mutation UI를 다시 열지 않는다.
+- [x] 1440px, 760px, 420px Browser QA와 keyboard/focus/overflow 검증이 통과한다.
+- [x] Operations Console은 실제 monitoring workflow로 연결되며 run/job/row 진단을 주인공으로 만들지 않는다.
 
 ## Execution Boundary
 

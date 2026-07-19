@@ -71,13 +71,22 @@ class MySQLMonitoringHistoryRepository:
             db.close()
         return rows
 
-    def load_latest_calibration_artifact(self) -> dict[str, Any] | None:
+    def load_latest_calibration_artifact(
+        self,
+        *,
+        config_fingerprint: str,
+        policy_version: str,
+    ) -> dict[str, Any] | None:
+        """Load the latest artifact compatible with the current workspace contract."""
+
         db = self._db_factory()
         try:
             db.use_db(FINANCE_META_DB)
             rows = db.query(
                 """SELECT * FROM monitoring_risk_calibration_artifact
-                   ORDER BY created_at DESC, calibration_artifact_id DESC LIMIT 1"""
+                   WHERE config_fingerprint=%s AND policy_version=%s
+                   ORDER BY created_at DESC, calibration_artifact_id DESC LIMIT 1""",
+                [config_fingerprint, policy_version],
             )
         finally:
             db.close()

@@ -7,6 +7,13 @@ Last Verified: 2026-07-19
 
 현재 active phase는 없다.
 
+Portfolio Monitoring React Command Center V1은 전체 6차 구현과 closeout 단계다.
+
+- 목적: legacy Streamlit dashboard를 Overview/시장맥락 계열 React one-shell로 전환하고, DB-backed group/item lifecycle, 공통 가치곡선, 근거형 진단, macro risk observation과 calibration gate를 제공한다.
+- 완료 범위: direct 미국 주식·ETF, Final Review monitoring candidate, 정수 수량/fixed notional, 그룹당 active 10개, 성과·개별 lane·노출/행동 진단·macro/history UI를 구현했다.
+- 경계: provider direct fetch, live approval, broker order, account sync, auto rebalance는 없다. 조건부 확률은 현재 fingerprint의 검증 artifact가 READY일 때만 공개한다.
+- canonical docs: `docs/architecture/PORTFOLIO_MONITORING_REACT_COMMAND_CENTER.md`, `docs/data/PORTFOLIO_MONITORING_DATA_CONTRACT.md`, `docs/runbooks/PORTFOLIO_MONITORING_MIGRATION_AND_QA.md`.
+
 현재 active task는 `.aiworkspace/note/finance/tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/`다.
 
 - 목적: Backtest Analysis Level1을 `Single / Mix 선택 -> 설정과 실행 -> 결과 판단 -> 명시적 Level2 인계`의 question-first decision workspace로 재구성한다.
