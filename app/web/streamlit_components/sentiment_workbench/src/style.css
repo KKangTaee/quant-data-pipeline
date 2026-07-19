@@ -578,6 +578,172 @@ summary {
   font-size: 0.88rem;
 }
 
+.sentiment-workbench__line-chart {
+  padding: 12px;
+}
+
+.sentiment-workbench__chart-title {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.sentiment-workbench__chart-title > div {
+  display: grid;
+  gap: 2px;
+}
+
+.sentiment-workbench__chart-title strong {
+  color: #111827;
+  font-size: 0.84rem;
+  font-weight: 860;
+}
+
+.sentiment-workbench__chart-title small,
+.sentiment-workbench__chart-title > span,
+.sentiment-workbench__chart-legend small {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 690;
+  line-height: 1.35;
+}
+
+.sentiment-workbench__line-chart-plot {
+  position: relative;
+}
+
+.sentiment-workbench__line-chart svg {
+  display: block;
+  min-height: 250px;
+  overflow: visible;
+  width: 100%;
+}
+
+.sentiment-workbench__chart-band {
+  opacity: 0.06;
+}
+
+.sentiment-workbench__chart-band--fear,
+.sentiment-workbench__chart-band--extreme-fear {
+  fill: #dc2626;
+}
+
+.sentiment-workbench__chart-band--greed,
+.sentiment-workbench__chart-band--extreme-greed {
+  fill: #0f766e;
+}
+
+.sentiment-workbench__chart-band--extreme-fear,
+.sentiment-workbench__chart-band--extreme-greed {
+  opacity: 0.1;
+}
+
+.sentiment-workbench__chart-gridline {
+  stroke: #e2e8f0;
+  stroke-width: 1;
+}
+
+.sentiment-workbench__chart-guide {
+  stroke: #a78bfa;
+  stroke-dasharray: 6 5;
+  stroke-width: 1.4;
+}
+
+.sentiment-workbench__chart-y-label,
+.sentiment-workbench__chart-x-label {
+  fill: #64748b;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.sentiment-workbench__chart-x-tick {
+  stroke: #cbd5e1;
+  stroke-width: 1;
+}
+
+.sentiment-workbench__chart-line {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.sentiment-workbench__chart-hover-guide {
+  stroke: #64748b;
+  stroke-dasharray: 4 4;
+  stroke-width: 1;
+}
+
+.sentiment-workbench__chart-focus-dot {
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+
+.sentiment-workbench__chart-tooltip {
+  background: #111827;
+  border-radius: 8px;
+  color: #ffffff;
+  display: grid;
+  gap: 5px;
+  min-width: 10rem;
+  padding: 8px 9px;
+  pointer-events: none;
+  position: absolute;
+  top: 12px;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.sentiment-workbench__chart-tooltip strong {
+  font-size: 0.7rem;
+  font-weight: 840;
+}
+
+.sentiment-workbench__chart-tooltip span {
+  align-items: center;
+  color: #cbd5e1;
+  display: grid;
+  font-size: 0.66rem;
+  gap: 5px;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
+}
+
+.sentiment-workbench__chart-tooltip span i,
+.sentiment-workbench__chart-legend span i {
+  border-radius: 50%;
+  display: block;
+  height: 7px;
+  width: 7px;
+}
+
+.sentiment-workbench__chart-tooltip b {
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 860;
+}
+
+.sentiment-workbench__chart-legend {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 14px;
+  margin-top: 7px;
+}
+
+.sentiment-workbench__chart-legend span {
+  align-items: center;
+  color: #475569;
+  display: flex;
+  font-size: 0.68rem;
+  font-weight: 720;
+  gap: 5px;
+}
+
+.sentiment-workbench__chart-legend small {
+  margin-left: auto;
+}
+
 .sentiment-workbench__watch-grid {
   display: grid;
   gap: 10px;
@@ -698,6 +864,19 @@ summary {
 
   .sentiment-workbench__chart-preview-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sentiment-workbench__line-chart {
+    padding: 9px;
+  }
+
+  .sentiment-workbench__line-chart svg {
+    min-height: 210px;
+  }
+
+  .sentiment-workbench__chart-legend small {
+    margin-left: 0;
+    width: 100%;
   }
 
   .sentiment-workbench__aaii-row {
