@@ -7494,3 +7494,338 @@ git commit -m "Portfolio Mix 원셸 QA와 문서 동기화"
 - generated screenshot 절대 경로
 - protected registry/Run History/saved JSONL/`.superpowers/`/screenshot 미커밋 확인
 - legacy compatibility surface, accessibility 자동화와 남은 위험
+
+# Portfolio Mix Step 3 Result Evidence Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Portfolio Mix 실행 결과를 KPI만 보여 주는 상태에서 누적 성과, 월별 수익률, 기여도, 계산 근거를 실제 계산값과 동일한 계약으로 해석할 수 있는 Step 3 작업 공간으로 확장한다.
+
+**Architecture:** `app/services/backtest_portfolio_mix_workspace.py`가 weighted result bundle을 사용자 표시용 JSON-safe evidence로 변환하고, web adapter는 성공한 현재 결과에 이 evidence만 연결한다. React는 Python이 만든 표시값과 시계열을 SVG/HTML로 표현하고 hover·focus intent만 소유하며, 수익률 분류·포맷·benchmark 추론은 하지 않는다.
+
+**Tech Stack:** Python 3, pandas, Streamlit component bridge, React 18, TypeScript, SVG, pytest, Browser QA.
+
+## Global Constraints
+
+- 기존 weighted portfolio 계산식, 리샘플링, 저장 JSONL schema와 Level2 handoff contract는 변경하지 않는다.
+- 실제 공통 날짜와 `result_df.Total Balance` / `result_df.Total Return`만 사용하고 존재하지 않는 benchmark, 보유 종목, 월 수익률을 만들지 않는다.
+- 퍼센트·금액·역할·data trust 문구는 Python에서 완성하고 React는 raw key를 해석하지 않는다.
+- 누적 성과는 시작값 100으로 정규화하며 desktop 날짜 tick은 최대 6개, 760px은 최대 3개다.
+- 월별 수익률의 계산 불가 행은 표에 `계산값 없음`으로 보존하고 막대 차트에서는 제외한다.
+- 누적 차트와 월별 막대는 pointer hover와 keyboard focus에서 같은 tooltip 정보를 제공하고 pointer leave/blur에서 제거한다.
+- 기본 화면은 KPI, 누적 성과, 월별 수익률까지이며 기여도·월별 표·계산 및 데이터 근거는 disclosure 안에 둔다.
+- 신규 chart dependency를 추가하지 않고 기존 React/SVG/CSS만 사용한다.
+- 보호 대상 registry, Run History, saved JSONL, `.superpowers/`, QA screenshot과 run artifact는 stage/commit하지 않는다.
+
+---
+
+### Task 50: Weighted Mix Result Evidence Contract (16-1)
+
+**Files:**
+- Modify: `app/services/backtest_portfolio_mix_workspace.py`
+- Modify: `app/web/backtest_portfolio_mix_workspace.py`
+- Modify: `tests/test_backtest_portfolio_mix_workspace.py`
+- Modify: active task `PLAN.md`, `STATUS.md`, `RUNS.md`
+
+**Interfaces:**
+- Consumes: `execute_weighted_portfolio()`가 반환하는 `summary_df`, `result_df`, `chart_df`, `component_contribution_amount_df`, `component_contribution_share_df`, `component_data_trust_rows`, component role/weight metadata.
+- Produces: `build_portfolio_mix_result_evidence(weighted_bundle: Mapping[str, Any]) -> dict[str, Any]`와 `current_result["evidence"]`.
+- Evidence keys: `identity`, `kpis`, `equity_chart`, `monthly_returns`, `contribution`, `calculation_basis`, `data_trust_rows`.
+
+- [ ] **Step 1: Write the RED service contract tests**
+
+Add tests with a pandas fixture containing sparse actual dates, one unavailable monthly return and two component contribution series:
+
+```python
+def test_mix_result_evidence_projects_user_labels_charts_and_contribution():
+    evidence = build_portfolio_mix_result_evidence(_weighted_result_fixture())
+    assert evidence["kpis"][0] == {
+        "id": "annualized_return",
+        "label": "연환산 수익률",
+        "value": 0.096,
+        "value_label": "9.60%",
+    }
+    assert evidence["equity_chart"]["rows"][0]["index_value"] == 100.0
+    assert evidence["monthly_returns"]["chart_rows"][0]["month_label"] == "2026.01"
+    assert evidence["contribution"]["summary_rows"][0]["target_weight_label"] == "50.00%"
+
+
+def test_mix_result_evidence_preserves_sparse_and_unavailable_months():
+    evidence = build_portfolio_mix_result_evidence(_weighted_result_fixture())
+    assert len(evidence["equity_chart"]["desktop_ticks"]) <= 6
+    assert len(evidence["equity_chart"]["compact_ticks"]) <= 3
+    assert evidence["monthly_returns"]["table_rows"][0]["return_label"] == "계산값 없음"
+    assert all(row["available"] for row in evidence["monthly_returns"]["chart_rows"])
+```
+
+Add a web adapter test that executes a successful weighted draft and asserts `current_result["evidence"]` is present without removing `run_result_id`, fingerprint, summary or period.
+
+- [ ] **Step 2: Run RED and record the intended failure**
+
+Run:
+
+```bash
+.venv/bin/python -m pytest \
+  tests/test_backtest_portfolio_mix_workspace.py::test_mix_result_evidence_projects_user_labels_charts_and_contribution \
+  tests/test_backtest_portfolio_mix_workspace.py::test_mix_result_evidence_preserves_sparse_and_unavailable_months \
+  -q
+```
+
+Expected: collection/import failure because `build_portfolio_mix_result_evidence` does not exist.
+
+- [ ] **Step 3: Implement the pure evidence builder**
+
+Add finite-number, ISO date, percent, ratio, amount and actual-tick helpers, then expose:
+
+```python
+def build_portfolio_mix_result_evidence(
+    weighted_bundle: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Project a weighted run into user-readable, JSON-safe result evidence."""
+```
+
+The function must:
+
+- create four KPI rows: annualized return, maximum drawdown, Sharpe ratio and end balance, each with `value` and Python-computed `value_label`.
+- normalize finite `Total Balance` rows to a starting index of 100 and add date, balance, cumulative return and display labels.
+- choose tick dates from actual rows only, preserving first/last rows and limiting desktop/compact ticks to 6/3.
+- retain all dated monthly rows in `table_rows`, mark non-finite `Total Return` as unavailable, and include only finite rows in `chart_rows`.
+- translate contribution frames into ending summary rows and amount/share timeline rows using component labels, role labels and target-weight labels.
+- translate `component_data_trust_rows` into Korean user-facing labels without raw internal keys or absolute paths.
+- return only JSON-safe scalars, lists and dictionaries.
+
+Export the function in `__all__` and call it from `execute_portfolio_mix_draft()` only after the weighted build succeeds:
+
+```python
+evidence = build_portfolio_mix_result_evidence(weighted_bundle)
+current_result = {
+    **existing_current_result,
+    "evidence": evidence,
+}
+```
+
+- [ ] **Step 4: Run GREEN and focused regression**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q
+.venv/bin/python -m pytest tests/test_service_contracts.py -q -k 'portfolio_mix or weighted_portfolio'
+.venv/bin/python -m py_compile app/services/backtest_portfolio_mix_workspace.py app/web/backtest_portfolio_mix_workspace.py
+git diff --check
+```
+
+Expected: new evidence tests pass; any repository baseline failure must be shown to be unrelated before continuing.
+
+- [ ] **Step 5: Commit the implementation unit**
+
+Stage only the two Python modules, the focused test and active task records. Commit:
+
+```bash
+git commit -m "Portfolio Mix 결과 근거 계약 구현"
+```
+
+### Task 51: React Charts, Hover And Result Spacing (16-2)
+
+**Files:**
+- Create: `app/web/components/backtest_portfolio_mix_workspace/frontend/src/PortfolioMixResult.tsx`
+- Modify: `app/web/components/backtest_portfolio_mix_workspace/frontend/src/App.tsx`
+- Modify: `app/web/components/backtest_portfolio_mix_workspace/frontend/src/styles.css`
+- Modify: `tests/test_backtest_portfolio_mix_workspace.py`
+- Modify: active task `PLAN.md`, `STATUS.md`, `RUNS.md`
+
+**Interfaces:**
+- Consumes: Task 50 `current_result.evidence` without reclassifying status, percentage or data trust.
+- Produces: `PortfolioMixResult` presentation component with cumulative SVG, monthly return SVG, disclosure evidence and hover/focus tooltip state.
+
+- [ ] **Step 1: Write the RED visual contract tests**
+
+Add source/boundary assertions requiring:
+
+```python
+assert "PortfolioMixResult" in app_source
+assert "equity_chart" in result_source
+assert "monthly_returns" in result_source
+assert "onPointerMove" in result_source
+assert "onPointerLeave" in result_source
+assert "onFocus" in result_source
+assert "onBlur" in result_source
+assert "mix-result-shell" in styles_source
+assert "mix-chart-grid" in styles_source
+assert "mix-chart-tooltip" in styles_source
+```
+
+Also assert the result component contains no `* 100`, benchmark inference or raw `promotion_min_`/filesystem labels.
+
+- [ ] **Step 2: Run RED and record the intended failure**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k 'result or hover or visual_contract'
+```
+
+Expected: FAIL because `PortfolioMixResult.tsx` and chart/hover CSS contracts do not exist.
+
+- [ ] **Step 3: Implement the result presentation and hover/focus intent**
+
+Create `PortfolioMixResult.tsx` with typed evidence interfaces and focused subcomponents:
+
+```tsx
+export function PortfolioMixResult({ evidence }: { evidence: MixResultEvidence }) {
+  return (
+    <div className="mix-result-stack">
+      <ResultIdentity evidence={evidence.identity} />
+      <KpiGrid rows={evidence.kpis} />
+      <div className="mix-chart-grid">
+        <EquityChart model={evidence.equity_chart} />
+        <MonthlyReturnChart model={evidence.monthly_returns} />
+      </div>
+      <ResultEvidenceDetails evidence={evidence} />
+    </div>
+  )
+}
+```
+
+`EquityChart` must choose the nearest actual point from pointer coordinates, draw a crosshair/marker and display date, base-100 index, cumulative-return label and balance label. `MonthlyReturnChart` must display positive/negative bars around zero and show month, monthly-return label and month-end balance. Both charts must clear tooltip state on `onPointerLeave`/`onBlur`, expose the same content on keyboard `onFocus`, and use the Python labels verbatim.
+
+The disclosure must render ending component contribution, amount/share segmented timelines, monthly result table and calculation/data-trust copy. When an evidence list is empty it renders a concise unavailable message, not an empty board.
+
+Replace the summary-only result branch in `App.tsx` with:
+
+```tsx
+<div className="mix-result-shell">
+  {notice && <div className="mix-notice">{notice}</div>}
+  {currentResult?.evidence && <PortfolioMixResult evidence={currentResult.evidence} />}
+</div>
+```
+
+- [ ] **Step 4: Implement responsive spacing and chart CSS**
+
+Add these structural contracts and supporting SVG/table/tooltip styles:
+
+```css
+.mix-result-shell { display: grid; gap: 18px; margin-top: 18px; }
+.mix-result-stack { display: grid; gap: 16px; }
+.mix-current { display: grid; gap: 18px; }
+.mix-chart-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, .9fr); gap: 14px; }
+@media (max-width: 760px) { .mix-chart-grid { grid-template-columns: minmax(0, 1fr); } }
+```
+
+Use `min-width: 0`, wrapped labels, horizontally scrollable dense tables only inside disclosure, visible focus rings and tooltip placement clamped inside the chart card.
+
+- [ ] **Step 5: Run GREEN, production build and focused regression**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q
+npm run build --prefix app/web/components/backtest_portfolio_mix_workspace/frontend
+.venv/bin/python -m pytest tests/test_backtest_refactor_boundaries.py -q
+git diff --check
+```
+
+Expected: focused tests and React production build pass with no TypeScript error.
+
+- [ ] **Step 6: Commit the implementation unit**
+
+Stage only the React result component, App/CSS, focused tests and active task records. Commit:
+
+```bash
+git commit -m "Portfolio Mix 결과 차트와 호버 구현"
+```
+
+### Task 52: Runtime Browser QA, Documentation And Closeout (16-3)
+
+**Files:**
+- Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md`
+- Modify: `.aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md`
+- Modify: active task `PLAN.md`, `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+- Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
+- Modify: `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Generate but do not stage: `backtest-portfolio-mix-result-evidence-desktop-qa.png`
+- Generate but do not stage: `backtest-portfolio-mix-result-evidence-760-qa.png`
+
+**Interfaces:**
+- Consumes: Task 50 evidence contract and Task 51 presentation component.
+- Produces: verified desktop/760px runtime behavior, canonical ownership documentation and protected-path audit.
+
+- [ ] **Step 1: Execute desktop Browser QA with an actual Mix run**
+
+At approximately 1440px:
+
+1. open Backtest Analysis → Portfolio Mix.
+2. select GTAA and Equal Weight, assign roles and set 50%/50% weights.
+3. execute the Mix and confirm feedback and result boxes have visible separation.
+4. confirm KPI labels show `9.60%` style percentages, a two-decimal Sharpe and a localized end balance.
+5. confirm cumulative performance starts at 100, uses actual date labels and has no invented benchmark.
+6. hover first/middle/last cumulative points and confirm tooltip date, index, cumulative return and balance update; move the pointer out and confirm tooltip disappears.
+7. hover positive and negative monthly bars and confirm month, return and ending balance; move out and confirm tooltip disappears.
+8. open `상세 결과 근거` and verify component contribution, monthly table and calculation/data basis; confirm no raw JSON, absolute path or internal key is visible.
+9. confirm the browser console error count remains 0.
+
+Save `backtest-portfolio-mix-result-evidence-desktop-qa.png` as generated/untracked evidence.
+
+- [ ] **Step 2: Execute 760px Browser QA**
+
+At 760x1000 verify:
+
+- cumulative and monthly charts stack to one column and actual tick labels are limited to at most three.
+- cards, axis labels, tooltip, disclosure tables and contribution labels do not clip.
+- pointer hover and keyboard focus reveal equivalent tooltip content and clear on leave/blur.
+- page and component iframe satisfy `scrollWidth === clientWidth` except the explicitly scrollable table wrapper.
+- ResizeObserver keeps the component height synchronized without nested blank space or scroll trapping.
+
+Save `backtest-portfolio-mix-result-evidence-760-qa.png` as generated/untracked evidence.
+
+- [ ] **Step 3: Apply `superpowers:verification-before-completion` with fresh commands**
+
+```bash
+.venv/bin/python -m pytest \
+  tests/test_backtest_portfolio_mix_workspace.py \
+  tests/test_backtest_workflow_shell.py \
+  tests/test_backtest_refactor_boundaries.py \
+  -q
+.venv/bin/python -m pytest tests/test_service_contracts.py -q
+npm run build --prefix app/web/components/backtest_portfolio_mix_workspace/frontend
+.venv/bin/python -m py_compile \
+  app/services/backtest_portfolio_mix_workspace.py \
+  app/web/backtest_portfolio_mix_workspace.py \
+  app/web/backtest_analysis.py \
+  app/web/components/backtest_portfolio_mix_workspace/component.py
+git diff --check
+```
+
+Any new Portfolio Mix failure blocks closeout. A repository baseline failure may be reported only after a focused passing command demonstrates this implementation is not the cause.
+
+- [ ] **Step 4: Apply `finance-doc-sync`**
+
+Record durable ownership:
+
+- `BACKTEST_UI_FLOW.md`: Step 3 defaults to KPI + cumulative performance + monthly returns, with contribution/table/basis disclosure.
+- `PORTFOLIO_SELECTION_FLOW.md`: Mix result interpretation uses the current weighted run only and does not synthesize benchmark or holdings.
+- `SCRIPT_STRUCTURE_MAP.md`: the pure Mix result evidence builder owns formatting and JSON-safe projection; React owns display and hover/focus intent.
+- active task docs: exact RED/GREEN counts, build/compile output, Browser QA evidence, baseline failures and residual risks.
+- root logs: only a 3–5 line milestone, decision and handoff summary.
+
+- [ ] **Step 5: Audit protected paths and commit closeout**
+
+```bash
+git status --short
+git diff --cached --name-only
+git diff --cached --check
+```
+
+Explicitly stage only canonical docs, active task docs and root handoff logs. Staged paths must not include registry JSONL, Run History, saved JSONL, `.superpowers/`, screenshots or run artifacts.
+
+Commit:
+
+```bash
+git commit -m "Portfolio Mix 결과 해석 QA와 문서 동기화"
+```
+
+## 16차 Completion Report Contract
+
+- 16-1~16-3 전체 roadmap 완료 상태
+- distinct Korean commit hash 목록
+- RED/GREEN focused/full test counts와 baseline failure 분류
+- React production build / target py_compile / `git diff --check` 결과
+- desktop / 760px actual Mix run, hover/focus, disclosure, no-benchmark QA 범위
+- generated screenshot 절대 경로
+- protected registry/Run History/saved JSONL/`.superpowers/`/screenshot 미커밋 확인
+- sparse/unavailable month, very long history SVG density, keyboard/browser 자동화와 남은 위험
