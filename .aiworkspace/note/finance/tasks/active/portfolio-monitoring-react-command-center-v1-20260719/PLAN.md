@@ -287,12 +287,12 @@ value = component(payload=_json_safe_payload(payload), key=key, default={"event"
 return value if isinstance(value, dict) else None
 ```
 
-- [ ] Write failing Python tests for build availability, JSON-safe Decimal/date/pandas/non-finite serialization, stable component name, and missing-build `None` behavior.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_component.py -q` and confirm import failure.
-- [ ] Implement the adapter using the established Institutional Portfolios `_json_safe_payload` pattern and scaffold the Vite package with relative asset paths and `component_static` output.
-- [ ] Add TypeScript contract types mirroring the Python workspace and event envelope; run `npm install` only inside this new package to generate the lockfile.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_component.py -q`, then `cd app/web/streamlit_components/portfolio_monitoring_workbench && npm run typecheck && npm run build`; return to repo root and run `git diff --check`.
-- [ ] Commit as `포트폴리오 모니터링 React 브리지 추가` including tracked `component_static` output, excluding `node_modules`.
+- [x] Write failing Python tests for build availability, JSON-safe Decimal/date/pandas/non-finite serialization, stable component name, and missing-build `None` behavior.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_component` and confirm import failure.
+- [x] Implement the adapter using the established Institutional Portfolios `_json_safe_payload` pattern and scaffold the Vite package with relative asset paths and `component_static` output.
+- [x] Add TypeScript contract types mirroring the Python workspace and event envelope; run `npm install` only inside this new package to generate the lockfile.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_component`, then `cd app/web/streamlit_components/portfolio_monitoring_workbench && npm run typecheck && npm run build`; return to repo root and run `git diff --check`.
+- [x] Commit as `포트폴리오 모니터링 React 브리지 추가` including tracked `component_static` output, excluding `node_modules`.
 
 ### Task 9: group rail, command band, KPI, chart, item detail shell을 구현한다
 

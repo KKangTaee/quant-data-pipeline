@@ -28,3 +28,5 @@
 | 2026-07-19 | 2차 Task 6 selected-strategy verification | 5 adapter and 35 cumulative monitoring unittests PASS; all 6 actual monitoring candidates resolve READY in read-only contract smoke |
 | 2026-07-19 | 2차 Task 7 group read-model RED / numeric refinement | 6 expected missing-module failures; Decimal MDD replaced float drift at the exact `-0.1` boundary |
 | 2026-07-19 | 2차 Monitoring Service Foundation completion gate | 6 group read-model, 23 stage-focused, and 41 cumulative monitoring unittests PASS; common-basis PARTIAL/cash/history contract verified |
+| 2026-07-19 | 3차 Task 8 React bridge RED | 4 expected missing-module failures for build availability, JSON safety, stable identity, and missing-build fallback |
+| 2026-07-19 | 3차 Task 8 bridge/package verification | 4 bridge and 10 bridge+read-model unittests PASS; npm audit 0 vulnerabilities; TypeScript and Vite production build PASS |
