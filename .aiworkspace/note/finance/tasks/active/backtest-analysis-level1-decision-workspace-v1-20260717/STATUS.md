@@ -1,6 +1,6 @@
 # Status
 
-Status: 14차 Stage-Local Legacy Title Removal Written Design Awaiting Review
+Status: 14차 Stage-Local Legacy Title Removal Implementation Planned
 Last Updated: 2026-07-19
 
 ## Current Position
@@ -69,8 +69,9 @@ Last Updated: 2026-07-19
 - [x] 14차 Level1/2/3 title ownership audit
 - [x] 14차 A안 legacy stage title 제거 사용자 승인
 - [x] 14차 written design 작성과 self-review
-- [ ] 14차 written design 사용자 review
-- [ ] 14차 implementation plan / RED -> GREEN / Browser QA / closeout
+- [x] 14차 written design 사용자 review
+- [x] 14차 implementation plan
+- [ ] 14차 RED -> GREEN / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -271,4 +272,6 @@ Last Updated: 2026-07-19
   제거하는 A안을 승인했다.
 - primary reading order는 `공통 workflow shell -> active React hero -> body`로 통일한다.
 - written design은 fallback 의미, TDD source contract, desktop/760px QA와 route/Gate/persistence
-  non-goal을 명시했으며 implementation plan 전 사용자 review를 기다린다.
+  non-goal을 명시했고 사용자 승인을 받았다.
+- PLAN Task 44는 source boundary RED와 두 renderer의 minimal removal, Task 45는 desktop/760px
+  Browser QA, fresh verification, docs sync와 protected-path closeout을 소유한다.

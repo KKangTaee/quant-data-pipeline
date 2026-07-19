@@ -361,3 +361,12 @@ generated artifact이므로 commit하지 않는다.
   desktop Level1↔Level2↔Level3 이동을 확인했다. 760px shell/outer horizontal overflow는 0이다.
 - application console error는 0이었다. 기존 빈 chart data의 Vega `Infinite extent` warning과
   component lifecycle의 `setFrameHeight before componentReady` warning은 top-shell 동작을 막지 않았다.
+
+## 2026-07-19 14차 Written Design Approval And Plan Self-Review
+
+- 사용자는 공통 title 추가나 React hero 재설계 대신 Level2/3 legacy Streamlit title/caption만
+  제거하는 A안을 승인했다.
+- PLAN Task 44는 duplicate title source contract를 먼저 RED로 고정하고 두 renderer pair만 제거한다.
+  Task 45는 fresh source process의 desktop/760px Level2/3 QA와 docs closeout을 소유한다.
+- Level1, React hero, fallback body, route, Gate, replay, registry, save contract는 변경하지 않는다.
+- placeholder와 불균형 code fence는 0이고 DESIGN acceptance 6개는 Task 44/45에 모두 대응한다.

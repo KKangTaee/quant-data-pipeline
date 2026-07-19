@@ -6816,3 +6816,224 @@ git commit -m "Backtest 상단 워크플로 셸 QA와 문서 동기화"
 - legacy title/caption/pills 제거와 Level1/2/3 route dispatch 확인
 - protected registry / Run History / saved JSONL / `.superpowers/` / screenshot 미커밋 확인
 - 남은 repository baseline, dependency audit와 keyboard manual QA 위험
+
+## 14차 Corrective Plan: Stage-Local Legacy Title Removal
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Level2와 Level3의 중복 Streamlit stage title/caption을 제거해 Level1~3 모두 `공통 workflow shell -> active React hero -> body` 순서를 사용하게 한다.
+
+**Architecture:** 기존 page-level workflow shell, Level별 React workspace와 Python route/Gate owner는 유지한다. `render_practical_validation_workspace()`와 `render_final_review_workspace()`의 presentation-only title pair만 제거하고 source boundary regression과 Browser QA로 중복 제거와 fallback 의미 보존을 확인한다.
+
+**Tech Stack:** Python 3.12, Streamlit, React build artifact read-only reuse, unittest / pytest, in-app Browser QA.
+
+### 14차 Global Constraints
+
+- current worktree와 branch, active task를 그대로 사용하고 새 task/branch/worktree를 만들지 않는다.
+- Level1, page-level workflow shell과 Level React hero source는 변경하지 않는다.
+- route, Gate, replay, validation result, Final Review decision, registry와 persistence 계약을 변경하지 않는다.
+- React unavailable fallback body를 삭제하거나 static stage title을 새로 추가하지 않는다.
+- RED를 먼저 확인한 뒤 Level2/3 renderer의 중복 title/caption만 최소 제거한다.
+- `.aiworkspace/note/finance/registries/`, `.aiworkspace/note/finance/run_history/`, `.aiworkspace/note/finance/saved/`, `.superpowers/`, generated screenshot/run artifact를 stage하거나 commit하지 않는다.
+
+### 14차 File Ownership Map
+
+**Narrow product changes**
+
+- `app/web/backtest_practical_validation/page.py`: primary Level2 renderer의 legacy stage title/caption 제거.
+- `app/web/backtest_final_review/page.py`: primary Level3 renderer의 legacy stage title/caption 제거.
+- `tests/test_backtest_refactor_boundaries.py`: Level2/3 stage-local title 부재와 React hero 유지 source contract.
+
+**Closeout-only changes**
+
+- `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`: 공통 shell과 Level hero title ownership 기록.
+- active task `PLAN.md`, `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`: RED/GREEN, QA, verification 기록.
+- root handoff logs: 3~5줄 milestone / decision / follow-up만 기록.
+
+---
+
+### Task 44: Remove Duplicate Level2 And Level3 Stage Titles
+
+**Files:**
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+- Modify: `app/web/backtest_practical_validation/page.py`
+- Modify: `app/web/backtest_final_review/page.py`
+
+**Interfaces:**
+- Consumes: existing page-level `render_backtest_workflow_shell()` and Level-specific React/fallback renderers.
+- Produces: no new runtime interface; primary Level2/3 entry starts directly with the existing workspace component/fallback.
+
+- [ ] **Step 1: Write the failing title-ownership boundary test**
+
+Add this method to `BacktestRefactorBoundaryTests`:
+
+```python
+def test_level2_and_level3_primary_routes_do_not_repeat_stage_titles(self) -> None:
+    pv_source = (
+        PROJECT_ROOT / "app/web/backtest_practical_validation/page.py"
+    ).read_text(encoding="utf-8")
+    final_source = (
+        PROJECT_ROOT / "app/web/backtest_final_review/page.py"
+    ).read_text(encoding="utf-8")
+    pv_entry = pv_source.split(
+        "def render_practical_validation_workspace() -> None:", 1
+    )[1].split("sources = load_portfolio_selection_sources", 1)[0]
+    final_entry = final_source.split(
+        "def render_final_review_workspace() -> None:", 1
+    )[1].split("current_rows = load_current_candidate_registry_latest", 1)[0]
+
+    self.assertNotIn('st.markdown("### Practical Validation")', pv_entry)
+    self.assertNotIn(
+        "이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가?",
+        pv_entry,
+    )
+    self.assertNotIn('st.markdown("### Final Review")', final_entry)
+    self.assertNotIn(
+        "이 포트폴리오를 실제 투자 검토 대상으로 계속 추적할 가치가 있는가?",
+        final_entry,
+    )
+
+    pv_react = (
+        PROJECT_ROOT
+        / "app/web/components/practical_validation_decision_workspace/frontend/src/PracticalValidationDecisionWorkspace.tsx"
+    ).read_text(encoding="utf-8")
+    final_react = (
+        PROJECT_ROOT
+        / "app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx"
+    ).read_text(encoding="utf-8")
+    self.assertIn("Practical Validation Decision Workspace", pv_react)
+    self.assertIn("Final Review Decision Workspace", final_react)
+```
+
+- [ ] **Step 2: Run RED and confirm the duplicate-title failure**
+
+Run:
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_refactor_boundaries.py::BacktestRefactorBoundaryTests::test_level2_and_level3_primary_routes_do_not_repeat_stage_titles -q
+```
+
+Expected: FAIL because Level2 and Level3 entry prefixes still contain the legacy Streamlit stage title/caption.
+
+- [ ] **Step 3: Remove only the two presentation-only title pairs**
+
+In `render_practical_validation_workspace()` retain `render_pv_styles()` and start source loading immediately:
+
+```python
+def render_practical_validation_workspace() -> None:
+    render_pv_styles()
+    sources = load_portfolio_selection_sources(limit=100)
+```
+
+In `render_final_review_workspace()` start registry loading immediately:
+
+```python
+def render_final_review_workspace() -> None:
+    current_rows = load_current_candidate_registry_latest()
+```
+
+Do not change the component/fallback selection, fragments, route request, candidate selection or persistence paths.
+
+- [ ] **Step 4: Run GREEN and focused regression**
+
+Run:
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_refactor_boundaries.py::BacktestRefactorBoundaryTests::test_level2_and_level3_primary_routes_do_not_repeat_stage_titles -q
+.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q
+.venv/bin/python -m py_compile app/web/backtest_practical_validation/page.py app/web/backtest_final_review/page.py
+git diff --check
+```
+
+Expected: targeted test and focused suite pass; compile/diff-check exit 0.
+
+- [ ] **Step 5: Commit the presentation cleanup**
+
+```bash
+git add tests/test_backtest_refactor_boundaries.py app/web/backtest_practical_validation/page.py app/web/backtest_final_review/page.py
+git commit -m "Backtest 단계별 중복 타이틀 제거"
+```
+
+---
+
+### Task 45: Browser QA, Fresh Verification, Docs, And 14차 Closeout
+
+**Files:**
+- Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- Modify: active task `PLAN.md`, `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+- Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
+- Modify: `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Generate but do not stage: `backtest-stage-title-cleanup-desktop-qa.png`, `backtest-stage-title-cleanup-760-qa.png`
+
+**Interfaces:**
+- Consumes: completed title cleanup and existing source/build pair.
+- Produces: desktop/760 Browser evidence, fresh regression evidence and durable title-ownership documentation.
+
+- [ ] **Step 1: Run desktop Browser QA from a fresh app process**
+
+At approximately 1440px verify:
+
+1. Level2 top shell is followed directly by `Practical Validation Decision Workspace` hero.
+2. visible legacy `Practical Validation` title/caption above the React hero is absent.
+3. Level3 top shell is followed directly by `Final Review Decision Workspace` hero.
+4. visible legacy `Final Review` title/caption above the React hero is absent.
+5. Level1 remains unchanged and stage navigation still opens the matching workspace.
+6. application console error count is 0.
+
+Save `backtest-stage-title-cleanup-desktop-qa.png` as generated/untracked evidence.
+
+- [ ] **Step 2: Run 760px Browser QA**
+
+At 760x1000 verify Level2/3 have no duplicate title or artificial blank title gap, hero text is not clipped,
+and both outer page and active component iframe satisfy `scrollWidth === clientWidth`.
+
+Save `backtest-stage-title-cleanup-760-qa.png` as generated/untracked evidence.
+
+- [ ] **Step 3: Run fresh completion verification**
+
+Run:
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q
+.venv/bin/python -m pytest tests/test_service_contracts.py -q
+.venv/bin/python -m py_compile app/web/backtest_practical_validation/page.py app/web/backtest_final_review/page.py
+git diff --check
+```
+
+Expected: focused suite passes. Full service failures must match the documented Sentiment 1, Final Review 4,
+liquidity copy 1, Practical Validation 6 baseline; no new stage-title failure is allowed.
+
+- [ ] **Step 4: Apply finance-doc-sync and record closeout**
+
+Update `BACKTEST_UI_FLOW.md` so the durable reading order is `page workflow shell -> active Level React hero ->
+body` and stage-local Streamlit title is not an active owner. Record exact tests, Browser viewport/overflow,
+screenshots, baseline failures and remaining accessibility/dependency risks in task docs; keep root logs concise.
+
+- [ ] **Step 5: Audit protected paths and commit closeout**
+
+Run:
+
+```bash
+git status --short
+git diff --cached --name-only
+git diff --cached --check
+```
+
+Explicitly stage only the canonical flow doc, active task docs and root logs. Staged paths must not include
+registry, Run History, saved JSONL, `.superpowers/`, screenshots or run artifacts.
+
+Commit:
+
+```bash
+git commit -m "Backtest 단계별 타이틀 정리 QA와 문서 동기화"
+```
+
+## 14차 Completion Report Contract
+
+- Task 44~45 완료 상태와 한국어 commit hash
+- RED failure와 GREEN focused/full verification counts
+- target py_compile / diff-check 결과
+- desktop / 760px Level2/3 title removal, route and overflow QA
+- generated screenshot 경로
+- protected artifacts 미커밋 확인
+- baseline service failures와 남은 risk
