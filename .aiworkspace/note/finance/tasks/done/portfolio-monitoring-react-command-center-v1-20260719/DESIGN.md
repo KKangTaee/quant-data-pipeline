@@ -726,8 +726,8 @@ not staged unless explicitly requested.
 
 ## Documentation And Handoff
 
-- discovery audit: `.aiworkspace/note/finance/researches/active/2026-07-portfolio-monitoring-react-redesign/`
-- implementation task: `.aiworkspace/note/finance/tasks/active/portfolio-monitoring-react-command-center-v1-20260719/`
+- discovery audit: `.aiworkspace/note/finance/researches/done/2026-07-portfolio-monitoring-react-redesign/`
+- implementation task: `.aiworkspace/note/finance/tasks/done/portfolio-monitoring-react-command-center-v1-20260719/`
 - durable flow updates after implementation: `docs/flows/BACKTEST_UI_FLOW.md`,
   `docs/flows/PORTFOLIO_SELECTION_FLOW.md`
 - durable architecture/data updates after implementation: `docs/architecture/`, `docs/data/`

@@ -40,5 +40,5 @@ Last Updated: 2026-07-19
 ## Handoff
 
 승인된 제품·데이터·진단 설계는
-`.aiworkspace/note/finance/tasks/active/portfolio-monitoring-react-command-center-v1-20260719/DESIGN.md`
+`.aiworkspace/note/finance/tasks/done/portfolio-monitoring-react-command-center-v1-20260719/DESIGN.md`
 로 전환했다. 구현은 written spec review와 detailed implementation plan 승인 뒤 시작한다.

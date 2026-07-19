@@ -672,7 +672,7 @@ return {"publication_status": artifact.publication_status, "probability": probab
 - Create: `.aiworkspace/note/finance/docs/architecture/PORTFOLIO_MONITORING_REACT_COMMAND_CENTER.md`
 - Create: `.aiworkspace/note/finance/docs/data/PORTFOLIO_MONITORING_DATA_CONTRACT.md`
 - Create: `.aiworkspace/note/finance/docs/runbooks/PORTFOLIO_MONITORING_MIGRATION_AND_QA.md`
-- Modify: `.aiworkspace/note/finance/tasks/active/portfolio-monitoring-react-command-center-v1-20260719/{STATUS.md,RUNS.md,RISKS.md}`
+- Modify: `.aiworkspace/note/finance/tasks/done/portfolio-monitoring-react-command-center-v1-20260719/{STATUS.md,RUNS.md,RISKS.md}`
 - Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
 - Modify: `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Create: `tests/test_portfolio_monitoring_docs.py`
@@ -713,7 +713,7 @@ def test_portfolio_monitoring_docs_name_canonical_owners_and_boundaries() -> Non
 - [x] Run component `npm test -- --run`, `npm run typecheck`, `npm run build`; then run relevant existing regression tests for Final Review handoff, Operations route, economic cycle, Futures Macro snapshot, and component static distribution.
 - [x] Execute the migration runbook against a safe test DB first, verify legacy dry-run/apply counts and checksum preservation, then perform fixture verification plus production-empty-state Browser QA. Synthetic items are not inserted into production user data.
 - [x] Update durable docs and concise root handoff logs. Use `superpowers:verification-before-completion` for final evidence review; run `git status --short`, `git diff --check`, and verify screenshots/generated artifacts are not staged.
-- [ ] Commit as `포트폴리오 모니터링 React 전면 개편 문서화` and move the task record to its done location only after all six stage gates pass.
+- [x] Commit as `포트폴리오 모니터링 React 전면 개편 문서화` and move the task record to its done location only after all six stage gates pass.
 
 **6차 완료 게이트:** probability is suppressed unless the explicit OOS publication gate passes; history is reproducible and PIT-safe; migration/rollback and Browser QA are documented; durable docs match production ownership.
 
