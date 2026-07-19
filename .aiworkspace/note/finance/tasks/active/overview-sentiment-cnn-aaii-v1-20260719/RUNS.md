@@ -31,3 +31,8 @@
 - actual Streamlit 1440px Browser QA에서 CNN과 AAII panel이 각각 x `21px`, width `851px`로 일치하고 AAII가 CNN 아래에서 시작하는 2행 구조, line chart 2개를 확인했다. QA screenshot `overview-sentiment-history-two-rows-qa.png`는 generated artifact로 commit에서 제외한다.
 - CNN 마지막 관측 hover를 실제 화면에서 재현해 tooltip이 card 오른쪽을 `46px` 넘는 것을 확인했다. x 위치 기반 `start / center / end` 정렬을 추가한 뒤 우측은 card 안쪽 `38px`, 좌측은 `62px` 여유로 표시됨을 재검증했다.
 - tooltip edge-alignment source-contract를 RED/GREEN으로 추가하고 production bundle을 재생성했다. QA screenshot `overview-sentiment-tooltip-edge-qa.png`는 generated artifact로 commit에서 제외한다.
+- CNN component status badge source-contract를 RED/GREEN으로 추가하고 기존 service tone을 React badge에 연결한 뒤 production bundle을 재생성했다.
+- actual desktop QA에서 badge `7/7`, AAII badge `0`, `warning / danger / neutral`의 상이한 foreground/background/border, 점수의 동일한 중립색, page/component 가로 overflow 0을 확인했다.
+- actual 420px QA에서 CNN과 AAII가 한 열로 적층되고 모든 badge가 CNN row 안에 포함됨을 확인했다. page `420/420`, Streamlit main `409/409`, component `377/377`로 가로 overflow 0이며 console error는 0건이었다.
+- QA screenshot `overview-sentiment-cnn-status-badges-qa.png`는 generated artifact로 남기고 commit 대상에서 제외한다.
+- 최종 focused sentiment service/frontend regression은 `25 passed`이며 React production build와 `git diff --check`도 다시 통과했다.
