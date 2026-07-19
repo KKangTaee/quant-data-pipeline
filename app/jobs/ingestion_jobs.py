@@ -1129,7 +1129,7 @@ def run_collect_futures_ohlcv(
         else:
             status = "success"
             message = "Futures OHLCV collection completed."
-        return _build_result(
+        job_result = _build_result(
             job_name=job_name,
             status=status,
             started_at=started_at,
@@ -1156,6 +1156,11 @@ def run_collect_futures_ohlcv(
                 "diagnostics": result.get("diagnostics") or {},
             },
         )
+        return attach_futures_macro_materialization(
+            job_result,
+            interval=interval,
+            rows_written=rows_written,
+        )
     except Exception as exc:
         finished_at = _now_str()
         return _build_result(
@@ -1176,6 +1181,40 @@ def run_collect_futures_ohlcv(
                 "cadence_mode": cadence_mode,
             },
         )
+
+
+def attach_futures_macro_materialization(
+    result: JobResult,
+    *,
+    interval: str,
+    rows_written: int,
+    materialize_fn: Callable[[], dict[str, Any]] | None = None,
+) -> JobResult:
+    """Attach compact macro materialization only after a successful daily write."""
+
+    output = dict(result)
+    details = dict(output.get("details") or {})
+    output["details"] = details
+    if str(interval).strip().lower() != "1d" or int(rows_written or 0) <= 0:
+        return output
+    if materialize_fn is None:
+        from app.services.futures_macro_snapshot import (
+            materialize_overview_futures_macro_snapshot,
+        )
+
+        materialize_fn = materialize_overview_futures_macro_snapshot
+    try:
+        details["futures_macro_snapshot"] = dict(materialize_fn())
+    except Exception as exc:
+        details["futures_macro_snapshot"] = {
+            "status": "error",
+            "message": str(exc),
+        }
+        if str(output.get("status") or "") == "success":
+            output["status"] = "partial_success"
+        base_message = str(output.get("message") or "Futures OHLCV collection completed.")
+        output["message"] = f"{base_message} Futures Macro snapshot failed: {exc}"
+    return output
 
 
 def run_collect_fomc_calendar(
