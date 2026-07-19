@@ -4,6 +4,9 @@ import importlib
 import unittest
 from datetime import date
 
+from app.services.portfolio_monitoring.diagnosis import BehaviorFacts
+from app.services.portfolio_monitoring.exposure import ExposureBucket, ExposureResult
+
 
 def _macro_context():
     try:
@@ -136,6 +139,60 @@ class PortfolioMonitoringMacroContextTests(unittest.TestCase):
             as_of_date=date(2026, 7, 19),
         )
         self.assertEqual((cycle.calls, futures.calls, assets.calls), (1, 1, 1))
+
+    def test_exposure_context_rules_cover_tech_gold_duration_and_cyclical(self) -> None:
+        macro = _macro_context()
+        exposure = ExposureResult(
+            buckets=(
+                ExposureBucket("sector", "Technology", 0.4, "tech", "profile", "2026-07-18"),
+                ExposureBucket("asset", "gold", 0.25, "gold", "lookthrough", "2026-07-18"),
+                ExposureBucket("asset", "duration", 0.3, "bond", "targets", "2026-07-18"),
+                ExposureBucket("asset", "cyclical", 0.35, "cycle", "profile", "2026-07-18"),
+            ),
+            total_weight=1.0, covered_weight=0.95, uncovered_weight=0.05, coverage_ratio=0.95,
+        )
+        context = macro.load_portfolio_macro_context(
+            cycle_loader=lambda **kwargs: _cycle(), futures_loader=lambda: _futures(),
+            asset_context_loader=lambda **kwargs: _assets(), as_of_date=date(2026, 7, 19),
+        )
+        behavior = BehaviorFacts({}, {}, 0, 0, ("2026-07-18",))
+
+        rows = macro.evaluate_macro_observations(exposure, behavior, context)
+        by_id = {row.rule_id: row for row in rows}
+
+        self.assertEqual(set(by_id), {"macro_tech_risk_off", "macro_gold_adversity", "macro_duration_rate_pressure", "macro_cyclical_slowdown"})
+        self.assertEqual(by_id["macro_tech_risk_off"].affected_weight, 0.4)
+        self.assertIn("risk_on", by_id["macro_tech_risk_off"].matched_conditions)
+        self.assertIn("real_yield", by_id["macro_gold_adversity"].matched_conditions)
+        self.assertNotIn("probability", vars(by_id["macro_tech_risk_off"]))
+
+    def test_no_exposure_means_no_macro_alert_and_low_confidence_is_explicit(self) -> None:
+        macro = _macro_context()
+        no_trigger = ExposureResult((), 1.0, 0.6, 0.4, 0.6)
+        context = macro.load_portfolio_macro_context(
+            cycle_loader=lambda **kwargs: _cycle(), futures_loader=lambda: _futures(),
+            asset_context_loader=lambda **kwargs: _assets(), as_of_date=date(2026, 7, 19),
+        )
+        self.assertEqual(macro.evaluate_macro_observations(no_trigger, BehaviorFacts({}, {}, 0, 0, ()), context), [])
+
+        tech = ExposureResult((ExposureBucket("sector", "Technology", 0.4, "a", "profile", "2026-07-18"),), 1, 0.6, 0.4, 0.6)
+        row = macro.evaluate_macro_observations(tech, BehaviorFacts({}, {}, 0, 0, ()), context)[0]
+        self.assertEqual(row.confidence, "LOW")
+
+    def test_provisional_publication_caps_high_severity_at_medium(self) -> None:
+        macro = _macro_context()
+        exposure = ExposureResult((ExposureBucket("sector", "Technology", 0.7, "a", "profile", "2026-07-18"),), 1, 1, 0, 1)
+        context = macro.load_portfolio_macro_context(
+            cycle_loader=lambda **kwargs: _cycle(),
+            futures_loader=lambda: _futures(publication="PROVISIONAL"),
+            asset_context_loader=lambda **kwargs: _assets(),
+            as_of_date=date(2026, 7, 19),
+        )
+        row = macro.evaluate_macro_observations(exposure, BehaviorFacts({}, {}, 0, 0, ()), context)[0]
+
+        self.assertEqual(row.state, "high")
+        self.assertEqual(row.severity, "MEDIUM")
+        self.assertEqual(row.publication, "PROVISIONAL")
 
 
 if __name__ == "__main__":

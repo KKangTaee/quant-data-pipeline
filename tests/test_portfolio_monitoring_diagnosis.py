@@ -189,6 +189,17 @@ class PortfolioMonitoringDiagnosisTests(unittest.TestCase):
         self.assertEqual(len(projection.top_three), 3)
         self.assertEqual([row.rule_id for row in projection.top_three[:2]], ["row:1", "row:0"])
 
+    def test_macro_observation_can_share_portfolio_root_for_later_dedup(self) -> None:
+        macro = importlib.import_module("app.services.portfolio_monitoring.macro_context")
+        observation = macro.MacroObservation(
+            rule_id="macro_tech_risk_off", root_id="sector:Technology", state="high", severity="HIGH",
+            affected_weight=0.5, matched_conditions=("risk_on <= -20",), current_observation="risk-off",
+            source_dates=("2026-07-18",), coverage=0.95, confidence="HIGH", publication="READY",
+            change_condition="risk_on > -20", next_check="next session",
+        )
+        self.assertEqual(observation.root_id, "sector:Technology")
+        self.assertNotIn("probability", vars(observation))
+
 
 if __name__ == "__main__":
     unittest.main()

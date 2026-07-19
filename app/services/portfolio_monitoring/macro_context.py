@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from typing import Any, Callable, Mapping
 
 from app.services.futures_macro_snapshot import load_overview_futures_macro_materialized_snapshot
 from app.services.overview.economic_cycle import build_economic_cycle_read_model
+
+from .diagnosis import BehaviorFacts
+from .exposure import ExposureResult
 
 
 MACRO_CONTEXT_VERSION = "portfolio_monitoring_macro_context_v1"
@@ -32,6 +35,23 @@ class MacroContext:
     coverage: float
     warnings: tuple[str, ...]
     version: str = MACRO_CONTEXT_VERSION
+
+
+@dataclass(frozen=True)
+class MacroObservation:
+    rule_id: str
+    root_id: str
+    state: str
+    severity: str
+    affected_weight: float
+    matched_conditions: tuple[str, ...]
+    current_observation: str
+    source_dates: tuple[str, ...]
+    coverage: float
+    confidence: str
+    publication: str
+    change_condition: str
+    next_check: str
 
 
 def _invoke(loader: Callable[..., Any], **kwargs: Any) -> Any:
@@ -261,3 +281,122 @@ def load_portfolio_macro_context(
         coverage=coverage,
         warnings=tuple(dict.fromkeys(warnings)),
     )
+
+
+def _observation_confidence(coverage: float, publication: str) -> str:
+    if coverage >= 0.9 and publication == "READY":
+        return "HIGH"
+    if coverage >= 0.7 and publication in {"READY", "LIMITED", "PROVISIONAL"}:
+        return "MEDIUM"
+    return "LOW"
+
+
+def apply_macro_confidence_cap(observation: MacroObservation) -> MacroObservation:
+    """Prevent provisional context from independently publishing HIGH severity."""
+
+    if observation.publication in {"LIMITED", "PROVISIONAL"} and observation.severity == "HIGH":
+        return replace(observation, severity="MEDIUM")
+    if observation.confidence == "LOW" and observation.severity == "HIGH":
+        return replace(observation, severity="MEDIUM")
+    return observation
+
+
+def _source_dates(macro: MacroContext, behavior: BehaviorFacts) -> tuple[str, ...]:
+    return tuple(sorted(set(macro.as_of_dates.values()) | set(behavior.source_dates)))
+
+
+def _make_observation(
+    *,
+    rule_id: str,
+    root_id: str,
+    state: str,
+    weight: float,
+    conditions: tuple[str, ...],
+    current: str,
+    change: str,
+    exposure: ExposureResult,
+    behavior: BehaviorFacts,
+    macro: MacroContext,
+) -> MacroObservation:
+    coverage = min(exposure.coverage_ratio, macro.coverage)
+    confidence = _observation_confidence(coverage, macro.publication)
+    observation = MacroObservation(
+        rule_id=rule_id,
+        root_id=root_id,
+        state=state,
+        severity={"low": "LOW", "medium": "MEDIUM", "high": "HIGH"}[state],
+        affected_weight=weight,
+        matched_conditions=conditions,
+        current_observation=current,
+        source_dates=_source_dates(macro, behavior),
+        coverage=coverage,
+        confidence=confidence,
+        publication=macro.publication,
+        change_condition=change,
+        next_check="다음 저장 snapshot과 종가 기준 재확인",
+    )
+    return apply_macro_confidence_cap(observation)
+
+
+def evaluate_macro_observations(
+    exposure: ExposureResult,
+    behavior: BehaviorFacts,
+    macro: MacroContext,
+) -> list[MacroObservation]:
+    """Match material portfolio exposures with current macro observations only."""
+
+    rows: list[MacroObservation] = []
+    tech = exposure.bucket_weight("sector", "Technology")
+    risk_on = macro.family_scores.get("risk_on", {}).get("5d")
+    if tech >= 0.35 and risk_on is not None and risk_on <= -20:
+        state = "high" if tech >= 0.5 or risk_on <= -40 else "medium"
+        rows.append(_make_observation(
+            rule_id="macro_tech_risk_off", root_id="sector:Technology", state=state, weight=tech,
+            conditions=("technology_exposure", "risk_on"),
+            current=f"Technology {tech:.1%} / Futures risk-on 5D {risk_on:.1f}",
+            change="Technology exposure가 35% 아래이거나 risk-on 5D가 -20 위로 회복",
+            exposure=exposure, behavior=behavior, macro=macro,
+        ))
+
+    gold = exposure.bucket_weight("asset", "gold")
+    gold_path = macro.pathways.get("gold", {})
+    gold_return = _score(gold_path.get("return_63d"))
+    if gold_return is not None and abs(gold_return) > 1:
+        gold_return /= 100.0
+    real_yield = str(gold_path.get("real_yield") or "")
+    if gold >= 0.25 and gold_return is not None and gold_return <= -0.10 and real_yield in {"ADVERSE", "SUPPORTS_FALL"}:
+        state = "high" if gold >= 0.4 or gold_return <= -0.20 else "medium"
+        rows.append(_make_observation(
+            rule_id="macro_gold_adversity", root_id="asset:gold", state=state, weight=gold,
+            conditions=("gold_exposure", "gold_63d_weakness", "real_yield"),
+            current=f"Gold {gold:.1%} / 63D {gold_return:.1%} / real yield {real_yield}",
+            change="Gold 63D 수익률이 -10% 위 또는 real-yield adverse 경로 해제",
+            exposure=exposure, behavior=behavior, macro=macro,
+        ))
+
+    duration = exposure.bucket_weight("asset", "duration")
+    rate_pressure = macro.family_scores.get("rate_pressure", {}).get("5d")
+    if duration >= 0.25 and rate_pressure is not None and rate_pressure >= 20:
+        state = "high" if duration >= 0.5 or rate_pressure >= 40 else "medium"
+        rows.append(_make_observation(
+            rule_id="macro_duration_rate_pressure", root_id="asset:duration", state=state, weight=duration,
+            conditions=("duration_exposure", "rate_pressure"),
+            current=f"Duration {duration:.1%} / rate pressure 5D {rate_pressure:.1f}",
+            change="Duration exposure가 25% 아래이거나 rate pressure 5D가 20 아래",
+            exposure=exposure, behavior=behavior, macro=macro,
+        ))
+
+    cyclical = exposure.bucket_weight("asset", "cyclical")
+    growth = macro.family_scores.get("growth", {}).get("5d")
+    phase = str(macro.cycle.get(0, {}).get("phase") or "")
+    weakening = phase in {"slowdown", "contraction", "recession"}
+    if cyclical >= 0.35 and weakening and growth is not None and growth <= -20:
+        state = "high" if cyclical >= 0.5 or phase in {"contraction", "recession"} else "medium"
+        rows.append(_make_observation(
+            rule_id="macro_cyclical_slowdown", root_id="asset:cyclical", state=state, weight=cyclical,
+            conditions=("cyclical_exposure", "activity_weakening", "growth"),
+            current=f"Cyclical {cyclical:.1%} / phase {phase} / growth 5D {growth:.1f}",
+            change="Cyclical exposure가 35% 아래 또는 activity/growth 약화 조건 해제",
+            exposure=exposure, behavior=behavior, macro=macro,
+        ))
+    return rows

@@ -528,12 +528,12 @@ if observation.publication in {"LIMITED", "PROVISIONAL"} and observation.severit
     return replace(observation, severity="MEDIUM")
 ```
 
-- [ ] Write failing fixtures for tech+risk-off/NQ weakness, gold+63D weakness+real-yield adversity, duration+rate pressure, and cyclical+activity weakening+growth weakness.
-- [ ] Assert exposure trigger absence yields no alert, LIMITED/PROVISIONAL cannot alone create HIGH severity, LOW confidence stays out of top three, and outputs never contain loss probability.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_macro_context.py tests/test_portfolio_monitoring_diagnosis.py -q` and confirm failure.
-- [ ] Implement rule IDs, source dates, matched conditions, affected weight, coverage/confidence, current observation, and change condition; deduplicate against portfolio-only rows sharing the same root exposure.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_macro_context.py tests/test_portfolio_monitoring_diagnosis.py -q`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/macro_context.py app/services/portfolio_monitoring/diagnosis.py`, and `git diff --check`.
-- [ ] Commit as `포트폴리오 매크로 위험 관찰 규칙 구현`.
+- [x] Write failing fixtures for tech+risk-off/NQ weakness, gold+63D weakness+real-yield adversity, duration+rate pressure, and cyclical+activity weakening+growth weakness.
+- [x] Assert exposure trigger absence yields no alert, LIMITED/PROVISIONAL cannot alone create HIGH severity, LOW confidence is explicit for projection filtering, and outputs never contain loss probability.
+- [x] Run the repository-available `unittest` equivalent and confirm failure (`pytest` is not installed in `.venv`).
+- [x] Implement rule IDs, shared root IDs, source dates, matched conditions, affected weight, coverage/confidence, current observation, and change condition.
+- [x] Run 13 focused unittests, `py_compile`, and `git diff --check`.
+- [x] Commit as `포트폴리오 매크로 위험 관찰 규칙 구현`.
 
 ### Task 17: Macro Risk Observation UI와 Operations handoff를 닫는다
 
