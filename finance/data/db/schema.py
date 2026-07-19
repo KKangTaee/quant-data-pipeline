@@ -1158,6 +1158,128 @@ INSTITUTIONAL_13F_SCHEMAS = {
 }
 
 
+PORTFOLIO_MONITORING_SCHEMAS = {
+    "monitoring_portfolio_group": """
+        CREATE TABLE IF NOT EXISTS monitoring_portfolio_group (
+          portfolio_group_id VARCHAR(64) PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          is_default TINYINT(1) NOT NULL DEFAULT 0,
+          status ENUM('active','archived') NOT NULL DEFAULT 'active',
+          version BIGINT NOT NULL DEFAULT 1,
+          metadata_json JSON NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          deleted_at TIMESTAMP NULL,
+
+          KEY ix_monitoring_group_status (status, deleted_at),
+          KEY ix_monitoring_group_default (is_default, status)
+        );
+    """,
+    "monitoring_portfolio_item": """
+        CREATE TABLE IF NOT EXISTS monitoring_portfolio_item (
+          monitoring_item_id VARCHAR(64) PRIMARY KEY,
+          portfolio_group_id VARCHAR(64) NOT NULL,
+          source_type ENUM('direct_security','selected_strategy') NOT NULL,
+          source_ref VARCHAR(128) NOT NULL,
+          instrument_kind ENUM('stock','etf','strategy') NOT NULL,
+
+          requested_start_date DATE NOT NULL,
+          effective_start_date DATE NOT NULL,
+          funding_mode ENUM('fixed_notional','fixed_shares') NOT NULL,
+          input_notional DECIMAL(24,8) NULL,
+          input_shares BIGINT NULL,
+          entry_close DECIMAL(24,8) NOT NULL,
+          initial_capital DECIMAL(24,8) NOT NULL,
+
+          tracking_end_requested_date DATE NULL,
+          tracking_end_effective_date DATE NULL,
+          exit_value DECIMAL(24,8) NULL,
+          status ENUM('active','ended','data_review') NOT NULL DEFAULT 'active',
+          metadata_json JSON NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          KEY ix_monitoring_item_group_status (portfolio_group_id, status),
+          KEY ix_monitoring_item_source (source_type, source_ref),
+          KEY ix_monitoring_item_effective_start (effective_start_date),
+          KEY ix_monitoring_item_effective_end (tracking_end_effective_date)
+        );
+    """,
+    "monitoring_portfolio_command": """
+        CREATE TABLE IF NOT EXISTS monitoring_portfolio_command (
+          command_id VARCHAR(64) PRIMARY KEY,
+          command_type VARCHAR(32) NOT NULL,
+          target_id VARCHAR(128) NULL,
+          request_fingerprint CHAR(64) NOT NULL,
+          status ENUM('pending','succeeded','failed') NOT NULL DEFAULT 'pending',
+          result_ref VARCHAR(128) NULL,
+          result_json JSON NULL,
+          error_message TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          KEY ix_monitoring_command_target (target_id, created_at),
+          KEY ix_monitoring_command_status (status, created_at)
+        );
+    """,
+    "monitoring_diagnosis_snapshot": """
+        CREATE TABLE IF NOT EXISTS monitoring_diagnosis_snapshot (
+          diagnosis_snapshot_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+          portfolio_group_id VARCHAR(64) NOT NULL,
+          as_of_date DATE NOT NULL,
+          config_fingerprint CHAR(64) NOT NULL,
+          policy_version VARCHAR(128) NOT NULL,
+          macro_version VARCHAR(128) NOT NULL,
+          publication_time DATETIME NOT NULL,
+          source_dates_json JSON NOT NULL,
+          observations_json JSON NOT NULL,
+          outcome_21 DOUBLE NULL,
+          outcome_63 DOUBLE NULL,
+          outcome_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+          outcome_measured_at DATE NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_monitoring_diagnosis_identity
+            (portfolio_group_id, as_of_date, config_fingerprint, policy_version),
+          KEY ix_monitoring_diagnosis_group_date (portfolio_group_id, as_of_date),
+          KEY ix_monitoring_diagnosis_publication (publication_time)
+        );
+    """,
+    "monitoring_risk_calibration_artifact": """
+        CREATE TABLE IF NOT EXISTS monitoring_risk_calibration_artifact (
+          calibration_artifact_id CHAR(64) PRIMARY KEY,
+          algorithm_version VARCHAR(128) NOT NULL,
+          data_fingerprint CHAR(64) NOT NULL,
+          config_fingerprint CHAR(64) NOT NULL,
+          policy_version VARCHAR(128) NOT NULL,
+          publication_status ENUM('SUPPRESSED','LIMITED','READY') NOT NULL,
+          train_end_date DATE NULL,
+          validation_start_date DATE NULL,
+          validation_end_date DATE NULL,
+          horizon_sessions INT NOT NULL,
+          event_definition VARCHAR(255) NOT NULL,
+          sample_size INT NOT NULL,
+          positive_count INT NOT NULL,
+          brier_score DOUBLE NULL,
+          baseline_brier DOUBLE NULL,
+          max_reliability_error DOUBLE NULL,
+          probability DOUBLE NULL,
+          artifact_json JSON NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_monitoring_calibration_fingerprint
+            (algorithm_version, data_fingerprint, config_fingerprint, policy_version, horizon_sessions),
+          KEY ix_monitoring_calibration_status (publication_status, created_at)
+        );
+    """,
+}
+
+
 VALUATION_SCHEMAS = {
     "nasdaq100_monthly_valuation": """
         CREATE TABLE IF NOT EXISTS nasdaq100_monthly_valuation (

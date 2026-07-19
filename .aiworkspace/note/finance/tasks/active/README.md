@@ -27,12 +27,16 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| `backtest-analysis-level1-decision-workspace-v1-20260717` | 15차 planning | 1~14차 Level1 one-shell 개선을 완료했다. 사용자 승인된 Portfolio Mix React one-shell 완성 설계를 기준으로 상세 구현 계획과 RED → GREEN 개발을 이어간다. |
+| `portfolio-monitoring-chart-zoom-pan-v1-20260719` | 2/3 complete | 구현과 자동 회귀는 완료했다. 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `operations-portfolio-monitoring-only-v1-20260719` | Completed record | Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다. |
+| `backtest-analysis-level1-decision-workspace-v1-20260717` | Completed record | 1~15차 Level1 one-shell과 Portfolio Mix React one-shell 구현·QA를 완료했다. |
+| `practical-validation-audit-evidence-absorption-v1-20260719` | Completed record | raw source/replay/validation UI를 제거하고 compact provenance를 Step 1/2/4에 흡수하는 전체 roadmap `3/3`을 완료했다. |
+| `backtest-component-static-distribution-v1-20260719` | Completed record | 원래 12개와 merge 후 Portfolio Mix를 포함한 Backtest React component 13개의 canonical Git 배포 산출물을 `component_static/`으로 통일했다. |
 | `overview-futures-macro-pattern-outlook-v1-20260718` | Completed record | Futures Macro를 1D/5D/20D current regime과 5D/20D conditional outlook으로 개편하고, 5년 compact snapshot persistence, DB-only first entry, React method / calculation trace와 actual responsive QA를 완료했다. |
 | `institutional-13f-openfigi-mapping-v1-20260718` | Completed record | 무료 OpenFIGI current resolution, error-preserving UPSERT, safe loader precedence, curated-manager actual backfill과 Browser QA를 전체 roadmap `4/4`로 완료했다. |
 | `institutional-portfolios-context-first-redesign-v1-20260718` | Completed record | 선택 기관 context hero, coverage / comparison gate, full holdings explorer, explicit security search, mapped / unresolved flow와 actual responsive QA를 전체 roadmap `4/4`로 완료했다. |

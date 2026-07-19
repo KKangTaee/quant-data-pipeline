@@ -45,7 +45,7 @@ REFERENCE_CONCEPT_DICTIONARY: list[dict[str, Any]] = [
         "plain_meaning": "결과가 어떤 데이터 freshness와 coverage 조건에서 만들어졌는지 보여주는 신뢰도 신호입니다.",
         "owner_screen": "Backtest Analysis",
         "progress_implication": "warning 또는 blocked이면 Practical Validation에 넘기기 전 원인을 설명해야 합니다.",
-        "where_to_fix": "Workspace > Ingestion과 System / Data Health에서 source 상태를 확인합니다.",
+        "where_to_fix": "Workspace > Ingestion > 실행 기록 / 결과에서 source 상태와 실패 원인을 확인합니다.",
         "source": "Backtest result metadata / loader freshness checks",
         "keywords": ["freshness", "coverage", "source status", "data quality"],
     },

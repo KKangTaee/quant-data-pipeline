@@ -1,20 +1,34 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-19
+Last Verified: 2026-07-20
 
 ## Current State After Master Merge
 
 현재 active phase는 없다.
 
-현재 active task는 `.aiworkspace/note/finance/tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/`다.
+Portfolio Monitoring React Command Center V1은 전체 `6/6차` 구현과 closeout을 완료했다.
 
-- 목적: Backtest Analysis Level1을 `Single / Mix 선택 -> 설정과 실행 -> 결과 판단 -> 명시적 Level2 인계`의 question-first decision workspace로 재구성한다.
-- 설계 방향: Python이 strategy maturity, configuration fingerprint, fresh / stale, Gate, handler 검증, 저장·인계를 소유하고 React는 고정 context와 decision presentation / intent만 담당한다.
-- 현재 상태: 1~15차를 완료했다. 15차에서 Portfolio Mix를 `구성 전략과 공통 기준 -> 역할과 목표 비중 -> Mix 실행과 해석 -> 저장하고 Level2로 이동` React one-shell로 전환하고 Python-owned validation/fingerprint/runner/weighted build/save/handoff 계약을 통합했다. legacy compare form과 prototype saved row는 primary route에서 제외했다.
-- 이번 task에서 하지 않은 일: development 전략 runtime 완성, historical universe / delisting provider, DB schema / strategy runtime 재설계, Level2 / Level3 route 변경, live approval / broker order / auto rebalance.
+- 목적: legacy Streamlit dashboard를 Overview/시장맥락 계열 React one-shell로 전환하고, DB-backed group/item lifecycle, 공통 가치곡선, 근거형 진단, macro risk observation과 calibration gate를 제공한다.
+- 완료 범위: direct 미국 주식·ETF, Final Review monitoring candidate, 정수 수량/fixed notional, 그룹당 active 10개, 동일 항목의 추적 종료·종료 취소, 성과·개별 lane·노출/행동 진단·macro/history UI를 구현했다.
+- 경계: provider direct fetch, live approval, broker order, account sync, auto rebalance는 없다. 조건부 확률은 현재 fingerprint의 검증 artifact가 READY일 때만 공개한다.
+- canonical docs: `docs/architecture/PORTFOLIO_MONITORING_REACT_COMMAND_CENTER.md`, `docs/data/PORTFOLIO_MONITORING_DATA_CONTRACT.md`, `docs/runbooks/PORTFOLIO_MONITORING_MIGRATION_AND_QA.md`.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/`다.
+현재 active task는 `.aiworkspace/note/finance/tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/`다.
+
+- 목적: 선택한 direct 미국 주식·ETF의 120-row line/candle 차트에서 관심 구간을 확대하고 이동하며 읽게 한다.
+- 현재 상태: 구현과 Python/React/typecheck/build/static distribution 검증은 완료했고 전체 `2/3차`다.
+- 남은 완료 조건: 실제 desktop/900px/420px layout·wheel/drag/reset·overflow Browser QA.
+- 경계: client-side viewport만 바꾸며 Python/DB/전략/그룹 가치곡선 계약은 변경하지 않는다.
+
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/operations-portfolio-monitoring-only-v1-20260719/`다.
+
+- 목적: 사용하지 않는 Operations Overview와 System/Data Health 중복 화면을 제거하고 선정 이후 Portfolio Monitoring 업무만 남긴다.
+- 완료: 전체 `3/3차`; route/UI/test 제거와 Python/React/Browser QA를 닫았다.
+- 보존: 수집 실행 이력·로그·failure CSV는 `Workspace > Ingestion > 실행 기록 / 결과`에 유지한다.
+- 경계: Portfolio Monitoring에 개발자 진단 패널을 옮기지 않는다.
+
+Recent completed Overview task는 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/`다.
 
 - 목적: Futures Macro를 현재 1D/5D/20D 관측과 5D/20D 조건부 전망으로 재구성하고, 첫 진입의 고비용 계산을 없애면서 방법론과 계산 근거를 화면 안에서 검산 가능하게 한다.
 - 완료: 전체 roadmap `5/5`와 materialized snapshot / React disclosure closeout `4/4`를 완료했다. `일봉 갱신`이 5년 compact snapshot을 저장하고 Overview 첫 진입과 다시 읽기는 compatible DB snapshot만 읽는다.
@@ -574,7 +588,6 @@ Workspace > Ingestion
   -> Backtest > Backtest Analysis
   -> Backtest > Practical Validation
   -> Backtest > Final Review
-  -> Operations > Operations Console
   -> Operations > Portfolio Monitoring
 ```
 
@@ -785,8 +798,8 @@ Workspace > Ingestion
 - 이번 차수에서 하지 않은 일: Reference 전체 UX 재설계, URL query deep-linking, Ingestion / Overview 전체 surface 연결, DB / registry / saved JSONL rewrite, provider fetch, live approval / broker order / auto rebalance.
 - Recent previous completed task: `.aiworkspace/note/finance/tasks/active/reference-drift-guard-qa-polish-v5-20260608/`
 - 목적: Reference contextual help가 shared Glossary concept dictionary와 Reference route boundary에서 drift되지 않도록 Streamlit-free guard를 추가하고, guide path copy 표시를 정리한다.
-- Recent previous sub-dev task: `.aiworkspace/note/finance/tasks/active/operations-v2-closeout-20260608/`
-- 목적: Operations Overview V2 5차로 1차~4차 개편을 최종 QA / runbook / durable docs 기준으로 닫고, 정상 top-navigation QA path와 direct `/operations` local routing diagnostic을 분리한다.
+- Superseded Operations task: `.aiworkspace/note/finance/tasks/active/operations-v2-closeout-20260608/`
+- 당시 목적: Operations Overview V2 5차 closeout. 2026-07-19 Portfolio Monitoring-only navigation 전환으로 해당 화면과 route는 제거됐고 historical task 기록만 보존한다.
 
 Recent Backtest strategy contract work retained from `backtest-dev`:
 
@@ -803,13 +816,16 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 | Overview / Market Context | Production baseline plus recent sentiment / Why It Moved work complete | `Workspace > Overview` | Market context and investigation only; bounded refresh action allowed through facade; no trade signal, approval, order, registry rewrite |
 | Backtest Analysis | Level1 decision workspace one-shell complete | `Backtest > Backtest Analysis` | Single / Mix 실행 결과의 fresh / data / execution readiness를 판단하고 명시적으로 후보 source를 만든다. setup 저장, 실행, Level2 handoff는 distinct action이며 final investment decision / monitoring governance는 후속 단계다 |
 | Practical Validation / Final Review | Investability evidence workflow complete through P2 / P3 and first hardening cycle | `Backtest > Practical Validation`, `Backtest > Final Review` | PASS / BLOCKER / selected-route gate는 validation evidence가 소유; sentiment overlay is context-only |
-| Operations / Portfolio Monitoring | Operations Console now opens with portfolio-first status summary, evidence health strip, and priority/evidence ordered review queue, while Portfolio Monitoring remains daily-monitoring-first | `Operations > Operations Console`, `Operations > Portfolio Monitoring`, `System / Data Health` | Read-only monitoring and explicit scenario update; no live approval, broker order, account sync, auto rebalance |
+| Operations / Portfolio Monitoring | React Portfolio-first Command Center supports group/item lifecycle, group performance, deterministic diagnosis/macro context, sharp value curve, and selected direct-security line/OHLCV candle detail; it is the sole user-facing Operations page | `Operations > Portfolio Monitoring`; run/log/failure review stays in `Workspace > Ingestion > 실행 기록 / 결과` | DB-backed virtual monitoring only; no live approval, broker order, account sync, auto rebalance |
 | UI / Engine Boundary | Service/runtime boundary and lint baseline complete | `app/services`, `app/runtime`, `app/web` | UI handles render/session state; runtime / service owns engine dispatch, JSONL helpers, read models |
 
 ## Recently Merged Work
 
 | Workstream | Status | Durable Notes |
 |---|---|---|
+| Portfolio Monitoring Tracking End Reopen V1 | Complete; Browser QA policy-blocked | Ended item detail exposes `추적 종료 취소`. The idempotent `reopen_item` command preserves item identity and original start/funding/entry contract, clears end dates/exit value, and recomputes the read model as continuous tracking. Reopen rechecks active capacity 10 and duplicate source invariants. Python 112 / React 25 / typecheck/build/static distribution pass; local Browser interaction was blocked by URL policy. |
+| Portfolio Monitoring Chart Zoom / Pan V1 | Implementation complete; Browser QA pending | Selected direct stock/ETF line/candle chart owns a client-only inclusive viewport over the existing latest 120 stored daily rows. Wheel/center controls zoom to 15 sessions, horizontal drag pans with edge clamp, reset restores the full range, and mobile remains controls-only. Desktop contribution/detail is 35:65 with a 280px list minimum, and selected chart price/VOL/date axes use 11px/700 labels. Python/DB/strategy/group-chart contracts are unchanged. Automated Python 102 / React 24 / typecheck/build/static distribution pass; actual desktop/900px/420px interaction/layout/overflow QA is pending because local Browser DOM access was policy-blocked. |
+| Portfolio Monitoring Chart Clarity / OHLCV V1 | Complete | Group value curve hides static point halos and shows 5 desktop / 3 mobile actual-observation date ticks. Selected direct stock/ETF detail reads the latest 120 stored daily OHLCV rows for close line or candle/volume exploration; selected strategy remains value-only. The route stays DB-only and Operations summary adds no detail read. |
 | Backtest Analysis Level1 Decision Workspace V1 | Complete | Fixed Level1 question, purpose-grouped Single catalog, Python-owned maturity/fingerprint/Gate/handler validation, decision-first result와 stale-result preservation을 완료했다. 7차에서 9개 Single choice / 12개 primary concrete variant를 schema-driven React settings로 통일했고 8차 modifier-free multi-select, 9차 deterministic named preset, 10~12차 result/holdings/factor presentation, 13~14차 공통 workflow shell/title ownership을 정리했다. 15차는 Portfolio Mix를 별도 four-step React one-shell로 전환해 2~4 component validation, existing compare runner/weighted builder, new-schema saved setup과 distinct Level2 handoff를 Python에 통합했다. legacy native/compare form과 prototype Mix row는 compatibility-only다. Strategy runtime, provider, DB schema, Level2 / Level3 route semantics는 변경하지 않았다. |
 | Overview Legacy Dashboard Removal V17-V24 | Complete | `app/web/overview/legacy_dashboard.py` was physically removed after remaining helper ownership moved into tab-local helper modules. `app/web/overview_dashboard.py` now keeps explicit compatibility exports only, while active page / tab / helper ownership lives under `app/web/overview/`. |
 | Overview Tab Helper Extraction V11-V16 | Complete | Market Context, Events, Futures Macro, Market Movers, and Sentiment primary tab entry modules now call tab-local helper bridges instead of importing `legacy_dashboard.py` directly. |
@@ -829,7 +845,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 | Overview Market Context Macro Labels V15 | Complete | Macro conditioned comparison now names the visible narrowing stages as broad basis, GLD condition, and rate-pressure futures condition. It explains `81회 -> 37회 -> 6회` as broad anchors narrowed by current-like GLD and futures states, and current Macro backdrop cards include Korean descriptions plus broad-sample same-state counts. |
 | Overview Sentiment React UX V1 | Complete | Sentiment now renders a React workbench when the component build is available: service-owned phase/headline/summary first, freshness-tied refresh/reload actions, CNN / AAII cross-read, recent range percentile / min-max cards, CNN headline / component / AAII divergence panel, analysis steps, driver lanes, CNN component explanations, component latest-vs-previous changes, hover-readable history line chart, component bar chart, and stored-row evidence tables. Python services still own DB reads, refresh actions, and all interpretation text; React does not create trade signals, validation gates, monitoring signals, or recommendations. |
 | Overview Market Sentiment V1 | 1차~3차 complete | CNN Fear & Greed / AAII collect into `finance_meta.macro_series_observation`. Overview Sentiment, Practical Validation, Final Review, and Portfolio Monitoring read it as context-only market backdrop. |
-| Operations Overview IA / Operations Console V2-V5 | V2 closeout complete | Operations now has a console entry, Portfolio Monitoring and System / Data Health as the only top-level Operations tabs, and disabled live trading boundary copy. Operations Overview no longer exposes archive / development-history decision tables in the operator path and now starts with Portfolio Monitoring Status plus Evidence Health before a priority/evidence ordered review queue. Closeout QA and routing diagnostic are documented in `docs/runbooks/OPERATIONS_OVERVIEW_QA.md`; Backtest Runs / Candidate Library data deletion is deferred. |
+| Operations Overview IA / Operations Console V2-V5 | Superseded 2026-07-19 | Historical closeout. `operations-portfolio-monitoring-only-v1-20260719` removed the redundant Overview and unused System/Data Health pages; Operations now opens Portfolio Monitoring directly and Ingestion retains run/log/failure review. Backtest Runs / Candidate Library data/helper deletion remains out of scope. |
 | Risk Parity / Dual Momentum 5B | Complete | Risk Parity Trend now exposes volatility window, eligible universe, inverse-vol weights, cash-only reasons, guardrail cash-only state, and low-vol overweight diagnostics. Dual Momentum now retains trend-rejected top-N slots as cash proxy and exposes selected / rejected / unfilled counts, cash proxy return, concentration, and selection-change / whipsaw diagnostics. Both reuse existing Selection History and result bundle meta without adding a new panel. |
 | Global Relative Strength 5A | Complete | GRS strategy cadence now lives in strategy runtime, not duplicated period-row slicing. Cash proxy, benchmark, excluded ticker, stale price, top-N concentration, rebalance interval, and momentum window metadata flow to the result bundle and Selection History without new evidence/log/workbench panels or durable writes. |
 | Backtest Entry Cleanup Tabs V1 | Complete | Backtest entry removes the top guide expander, strategy capability helper expander, and bottom research reference board from the default render path. The 3-stage workflow selector now uses Korean-first `st.pills` text tabs with red active underline. |
@@ -898,14 +914,18 @@ Current active phase:
 
 Current active task:
 
-- `backtest-analysis-level1-decision-workspace-v1-20260717`: 1~15차 완료. Portfolio Mix actual run/save/restore/edit/rerun, fresh/stale action boundary와 desktop/760px QA까지 확인했다.
+- `portfolio-monitoring-chart-zoom-pan-v1-20260719`: 구현과 자동 회귀는 완료했고 전체 `2/3차`; 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다.
 
 Latest completed task:
 
-- `overview-futures-macro-pattern-outlook-v1-20260718` — 전체 roadmap `5/5`와 materialized snapshot / React disclosure closeout `4/4` complete
+- `operations-portfolio-monitoring-only-v1-20260719` — Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
 
 Previous completed task:
 
+- `backtest-analysis-level1-decision-workspace-v1-20260717` — 1~15차 완료. Portfolio Mix actual run/save/restore/edit/rerun, fresh/stale action boundary와 desktop/760px QA까지 확인했다.
+- `practical-validation-audit-evidence-absorption-v1-20260719` — 전체 roadmap `3/3` complete
+- `backtest-component-static-distribution-v1-20260719` — 원래 12개와 merge 후 Portfolio Mix를 포함한 Backtest React component 13개의 Git-tracked `component_static/` 배포 계약 complete
+- `overview-futures-macro-pattern-outlook-v1-20260718` — 전체 roadmap `5/5`와 materialized snapshot / React disclosure closeout `4/4` complete
 - `institutional-13f-openfigi-mapping-v1-20260718` — 전체 roadmap `4/4` complete
 - `institutional-portfolios-context-first-redesign-v1-20260718` — 전체 roadmap `4/4` complete
 - `overview-economic-cycle-sp500-actual-eps-registration-v1-20260718` — 제품 등록 경로 complete, 실제 workbook 등록은 외부 입력 대기

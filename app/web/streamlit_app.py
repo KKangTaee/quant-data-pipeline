@@ -21,8 +21,6 @@ from app.web.ingestion_console import (
     render_ingestion_page,
 )
 from app.web.institutional_portfolios import render_institutional_portfolios_page
-from app.web.operations_overview import render_operations_overview_page
-from app.web.ops_review import render_operations_dashboard
 from app.web.overview_dashboard import render_overview_dashboard
 from app.web.backtest_page import render_backtest_tab
 from app.web import reference_contextual_help as reference_contextual_help_module
@@ -36,8 +34,6 @@ from app.services.reference_glossary_catalog import (
 from app.workspace_paths import GLOSSARY_DOC_PATH, PROJECT_ROOT
 
 
-LOG_DIR = PROJECT_ROOT / "logs"
-CSV_DIR = PROJECT_ROOT / "csv"
 APP_RUNTIME_LOADED_AT = datetime.now()
 
 
@@ -180,19 +176,6 @@ def _render_backtest_page() -> None:
     render_backtest_tab()
 
 
-def _render_ops_review_page() -> None:
-    render_operations_dashboard(
-        runtime_marker=APP_RUNTIME_MARKER,
-        loaded_at=APP_RUNTIME_LOADED_AT,
-        git_sha=CURRENT_GIT_SHORT_SHA,
-        running_job=st.session_state.get("running_job"),
-        recent_results=st.session_state.get("recent_results") or [],
-        log_dir=LOG_DIR,
-        csv_dir=CSV_DIR,
-        render_runtime_snapshot=_render_runtime_build_indicator,
-    )
-
-
 def _render_selected_portfolio_dashboard_page() -> None:
     render_final_selected_portfolio_dashboard_page()
 
@@ -299,7 +282,6 @@ def main() -> None:
     )
     ingestion_page = st.Page(_render_ingestion_page, title="Ingestion", icon="🛠️", url_path="ingestion")
     backtest_page = st.Page(_render_backtest_page, title="Backtest", icon="📈", url_path="backtest")
-    ops_review_page = st.Page(_render_ops_review_page, title="System / Data Health", icon="🧾", url_path="ops-review")
 
     selected_portfolio_dashboard_page = st.Page(
         _render_selected_portfolio_dashboard_page,
@@ -315,19 +297,6 @@ def main() -> None:
             "glossary": glossary_page,
         }
     )
-    operations_overview_page = st.Page(
-        lambda: render_operations_overview_page(
-            page_targets={
-                "portfolio_monitoring": selected_portfolio_dashboard_page,
-                "system_data_health": ops_review_page,
-                "reference_guides": guides_page,
-            }
-        ),
-        title="Operations Overview",
-        icon="🧭",
-        url_path="operations",
-    )
-
     navigation = st.navigation(
         {
             "Workspace": [
@@ -337,9 +306,7 @@ def main() -> None:
                 backtest_page,
             ],
             "Operations": [
-                operations_overview_page,
                 selected_portfolio_dashboard_page,
-                ops_review_page,
             ],
             "Reference": [
                 guides_page,

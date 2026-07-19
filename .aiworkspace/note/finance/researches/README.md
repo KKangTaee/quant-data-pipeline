@@ -29,6 +29,7 @@ Last Verified: 2026-06-02
 
 | Research | Focus |
 | --- | --- |
+| `active/2026-07-portfolio-monitoring-react-redesign/` | Operations > Portfolio Monitoring을 그룹·직접 주식/ETF·Final Review 통과 전략의 통합 추적, React one-shell, 규칙 기반 강약점, 매크로 위험 신호로 전면 개편하기 위한 제품·데이터·진단 감사 |
 | `active/2026-07-final-review-decision-workspace-redesign/` | Final Review를 validation contract inspector가 아닌 질문 중심 Decision Workspace로 재정의하고, portfolio strength/weakness·Level2 경계·React-first UI 방향을 정리 |
 | `active/2026-07-us-economic-cycle-regime-forecast/` | 미국 경제의 회복·확장·둔화·침체 국면을 실시간 공식 데이터로 판단하고 1·2개월 확률 전망과 과거/현재/미래 시각화로 연결하기 위한 방법론·데이터·UX 리서치 |
 | `active/2026-07-nasdaq100-index-eps-source/` | S&P 500 가치평가 로직을 Nasdaq-100으로 확장하기 위한 index-level trailing P/E/EPS 조달 경로, GuruFocus/FactSet/LSEG/Nasdaq+SEC 비교와 source contract 권고 |

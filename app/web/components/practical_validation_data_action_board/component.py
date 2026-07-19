@@ -7,11 +7,11 @@ import streamlit.components.v1 as components
 
 
 _COMPONENT_NAME = "practical_validation_data_action_board"
-_FRONTEND_BUILD_DIR = Path(__file__).parent / "frontend" / "build"
+_FRONTEND_STATIC_DIR = Path(__file__).parent / "frontend" / "component_static"
 
 _component = (
-    components.declare_component(_COMPONENT_NAME, path=str(_FRONTEND_BUILD_DIR))
-    if _FRONTEND_BUILD_DIR.exists()
+    components.declare_component(_COMPONENT_NAME, path=str(_FRONTEND_STATIC_DIR))
+    if (_FRONTEND_STATIC_DIR / "index.html").exists()
     else None
 )
 

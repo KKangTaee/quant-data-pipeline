@@ -1,24 +1,28 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-19
+Last Verified: 2026-07-20
 
 ## Current State
 
 Current active task:
 
-- `backtest-analysis-level1-decision-workspace-v1-20260717`
+- `portfolio-monitoring-chart-zoom-pan-v1-20260719`
 
 Latest completed task:
 
-- `overview-futures-macro-pattern-outlook-v1-20260718` — 전체 roadmap `5/5`와 materialized snapshot / React disclosure closeout `4/4`; 5년 compact snapshot persistence, DB-only first entry, method / calculation trace, actual desktop / 420px Browser QA complete
+- `operations-portfolio-monitoring-only-v1-20260719` — 전체 roadmap `3/3`; Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
 
 Current active task status:
 
-- `backtest-analysis-level1-decision-workspace-v1-20260717`: 1~14차 Level1 one-shell 개선을 완료했고, 사용자 승인된 15차 Portfolio Mix React one-shell 완성 설계의 상세 구현 계획을 작성할 차례다.
+- `portfolio-monitoring-chart-zoom-pan-v1-20260719`: 구현과 자동 회귀는 완료했고 전체 `2/3차`; 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다.
 
 Previous completed task:
 
+- `backtest-analysis-level1-decision-workspace-v1-20260717` — 1~15차 complete
+- `practical-validation-audit-evidence-absorption-v1-20260719` — 전체 roadmap `3/3` complete
+- `backtest-component-static-distribution-v1-20260719` — 전체 roadmap `3/3` complete
+- `overview-futures-macro-pattern-outlook-v1-20260718` — 전체 roadmap `5/5`와 materialized snapshot / React disclosure closeout `4/4` complete
 - `institutional-13f-openfigi-mapping-v1-20260718`
 - `institutional-portfolios-context-first-redesign-v1-20260718`
 - `overview-economic-cycle-sp500-actual-eps-registration-v1-20260718` — 제품 등록 경로 complete, 실제 workbook 등록은 외부 입력 대기

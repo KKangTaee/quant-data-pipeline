@@ -26,8 +26,8 @@ class ReferenceGuidesCatalogContractTests(unittest.TestCase):
         self.assertGreaterEqual(task_keys, expected_task_keys)
 
         data_freshness = next(row for row in catalog["task_cards"] if row["key"] == "data_freshness")
-        self.assertIn("Workspace > Ingestion", data_freshness["owner_screen"])
-        self.assertIn("System / Data Health", data_freshness["owner_screen"])
+        self.assertEqual(data_freshness["owner_screen"], "Workspace > Ingestion > 실행 기록 / 결과")
+        self.assertNotIn("System / Data Health", str(catalog))
         self.assertIn("provider fetch", data_freshness["does_not_do"])
 
     def test_reference_center_has_current_journeys_and_boundaries(self) -> None:
@@ -85,7 +85,10 @@ class ReferenceGuidesCatalogContractTests(unittest.TestCase):
         data_repair = journeys["data_freshness_repair"]
         data_failures = {row["state"]: row for row in data_repair["failure_states"]}
         self.assertIn("UI가 최신 수집 결과를 못 읽음", data_failures)
-        self.assertIn("System / Data Health", data_failures["UI가 최신 수집 결과를 못 읽음"]["owner_screen"])
+        self.assertEqual(
+            data_failures["UI가 최신 수집 결과를 못 읽음"]["owner_screen"],
+            "Workspace > Ingestion > 실행 기록 / 결과",
+        )
         self.assertIn("Reference", data_failures["UI가 최신 수집 결과를 못 읽음"]["stop_condition"])
 
     def test_playbooks_include_check_steps_and_evidence_locations(self) -> None:
@@ -102,7 +105,7 @@ class ReferenceGuidesCatalogContractTests(unittest.TestCase):
         self.assertIn("ETF provider snapshot DB tables", provider_gap["evidence_locations"])
 
         archive_recovery = playbooks["archive_recovery"]
-        self.assertIn("Operations > Archive: Backtest Runs", archive_recovery["owner_screen"])
+        self.assertEqual(archive_recovery["owner_screen"], "Workspace > Ingestion > 실행 기록 / 결과")
         self.assertIn("BACKTEST_RUN_HISTORY.jsonl", archive_recovery["evidence_locations"])
 
 

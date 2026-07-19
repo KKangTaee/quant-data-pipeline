@@ -343,7 +343,7 @@ yfinance futures OHLCV
   -> app.services.futures_macro_validation.build_futures_macro_validation_snapshot()
   -> Workspace > Overview > Futures Macro
   -> Market Context source / refresh evidence
-  -> Operations > System / Data Health / Workspace > Ingestion for detailed diagnostics
+  -> Workspace > Ingestion > 실행 기록 / 결과 for detailed diagnostics
 
 finance_price.futures_ohlcv daily rows
   -> finance.loaders.futures.load_futures_ohlcv(symbols=["ZN=F", "ZB=F"], interval_code="1d", end=selected_as_of)

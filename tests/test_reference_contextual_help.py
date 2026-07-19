@@ -21,10 +21,10 @@ class ReferenceContextualHelpContractTests(unittest.TestCase):
                 "backtest_analysis",
                 "practical_validation",
                 "final_review",
-                "operations_console",
                 "portfolio_monitoring",
             },
         )
+        self.assertNotIn("operations_console", surface_keys)
 
         final_review = next(row for row in catalog if row["surface_key"] == "final_review")
         self.assertIn("Selected-route Gate", final_review["glossary_terms"])
@@ -66,7 +66,7 @@ class ReferenceContextualHelpContractTests(unittest.TestCase):
         self.assertEqual(report["invalid_links"], [])
         self.assertEqual(report["duplicate_surface_keys"], [])
         self.assertEqual(report["raw_guide_focus_markers"], [])
-        self.assertGreaterEqual(report["metrics"]["surface_count"], 5)
+        self.assertGreaterEqual(report["metrics"]["surface_count"], 4)
         self.assertGreaterEqual(report["metrics"]["glossary_term_count"], 5)
 
     def test_contextual_help_renderer_maps_internal_links_to_page_target_keys(self) -> None:
