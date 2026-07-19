@@ -555,6 +555,7 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
     def build_workspace(*, active_group_id: str | None, catalog_query: str) -> dict[str, Any]:
         source_type = str(session_state.get("portfolio_monitoring_catalog_source_type") or SourceType.DIRECT_SECURITY.value)
         requested_date = session_state.get("portfolio_monitoring_catalog_requested_start_date")
+        item_builder_state = session_state.pop("portfolio_monitoring_item_builder_state", None)
         try:
             ensure_default_group(repository)
             groups = repository.list_groups(include_deleted=False)
@@ -585,11 +586,13 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
                 diagnosis_history=history_rows,
             )
         except Exception as exc:
-            return _fallback_monitoring_workspace(
+            workspace = _fallback_monitoring_workspace(
                 catalog_query=catalog_query,
                 catalog_source_type=source_type,
                 storage_error=str(exc),
             )
+            workspace["item_builder_state"] = item_builder_state
+            return workspace
         try:
             catalog_items = search_monitoring_catalog(
                 catalog_query,
@@ -604,6 +607,7 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
             catalog_items = []
             workspace["boundaries"] = {**dict(workspace.get("boundaries") or {}), "catalog_error": str(exc)}
         workspace["catalog"] = {"query": catalog_query, "items": catalog_items}
+        workspace["item_builder_state"] = item_builder_state
         return workspace
 
     def create_group(event: dict[str, Any]) -> CommandResult:
@@ -3910,6 +3914,53 @@ def _render_portfolio_monitoring_fallback(
     )
 
 
+def _sanitize_portfolio_monitoring_item_builder_state(value: Any) -> dict[str, Any] | None:
+    """Whitelist transient React wizard state without treating it as command input."""
+
+    if not isinstance(value, dict) or value.get("drawer_open") is not True:
+        return None
+    draft = value.get("draft")
+    if not isinstance(draft, dict):
+        return None
+
+    source_type = str(draft.get("source_type") or SourceType.DIRECT_SECURITY.value)
+    if source_type not in {SourceType.DIRECT_SECURITY.value, SourceType.SELECTED_STRATEGY.value}:
+        source_type = SourceType.DIRECT_SECURITY.value
+    selected_kind = str(draft.get("selected_kind") or "") or None
+    if selected_kind not in {
+        InstrumentKind.STOCK.value,
+        InstrumentKind.ETF.value,
+        InstrumentKind.STRATEGY.value,
+        None,
+    }:
+        selected_kind = None
+    funding_mode = str(draft.get("funding_mode") or FundingMode.FIXED_NOTIONAL.value)
+    if funding_mode not in {FundingMode.FIXED_NOTIONAL.value, FundingMode.FIXED_SHARES.value}:
+        funding_mode = FundingMode.FIXED_NOTIONAL.value
+    if source_type == SourceType.SELECTED_STRATEGY.value:
+        funding_mode = FundingMode.FIXED_NOTIONAL.value
+
+    raw_step = value.get("drawer_step")
+    drawer_step = raw_step if raw_step in {1, 2, 3} else 1
+    text = lambda key, default="": str(draft.get(key) if draft.get(key) is not None else default)
+    return {
+        "drawer_open": True,
+        "drawer_step": drawer_step,
+        "catalog_query": str(value.get("catalog_query") or "").strip(),
+        "draft": {
+            "command_id": text("command_id"),
+            "source_type": source_type,
+            "selected_source_ref": text("selected_source_ref"),
+            "selected_label": text("selected_label"),
+            "selected_kind": selected_kind,
+            "requested_start_date": text("requested_start_date"),
+            "funding_mode": funding_mode,
+            "notional": text("notional", "10000"),
+            "shares": text("shares") if funding_mode == FundingMode.FIXED_SHARES.value else "",
+        },
+    }
+
+
 def _dispatch_portfolio_monitoring_event(
     event: dict[str, Any],
     services: PortfolioMonitoringPageServices | Any,
@@ -3933,6 +3984,16 @@ def _dispatch_portfolio_monitoring_event(
             services.session_state["portfolio_monitoring_catalog_requested_start_date"] = str(
                 event.get("requested_start_date")
             )
+        else:
+            services.session_state.pop(
+                "portfolio_monitoring_catalog_requested_start_date",
+                None,
+            )
+        item_builder_state = _sanitize_portfolio_monitoring_item_builder_state(
+            event.get("item_builder_state")
+        )
+        if item_builder_state is not None:
+            services.session_state["portfolio_monitoring_item_builder_state"] = item_builder_state
         return None
     if event_id in {"select_item", "open_item_detail"}:
         services.session_state["portfolio_monitoring_selected_item_id"] = str(

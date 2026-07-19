@@ -141,6 +141,7 @@ export type PortfolioMonitoringWorkspace = {
   active_group: GroupValueResult | null;
   catalog: { query: string; items: CatalogItem[] };
   commands: CommandProjection[];
+  item_builder_state?: unknown;
   diagnosis: DiagnosisProjection;
   macro_observation: MacroObservationProjection;
   now_to_review: Array<Record<string, unknown>>;

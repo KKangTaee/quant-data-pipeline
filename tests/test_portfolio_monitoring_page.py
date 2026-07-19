@@ -102,6 +102,73 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
         self.assertEqual(services.session_state["portfolio_monitoring_catalog_source_type"], "direct_security")
         self.assertFalse(any(call[0] in {"create_group", "rename_group", "add_item", "end_item"} for call in services.calls))
 
+    def test_catalog_search_whitelists_item_builder_recovery_state(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        services = self._services()
+        page._dispatch_portfolio_monitoring_event(
+            {
+                "id": "search_catalog",
+                "query": "aapl",
+                "source_type": "direct_security",
+                "item_builder_state": {
+                    "drawer_open": True,
+                    "drawer_step": 2,
+                    "catalog_query": "aapl",
+                    "draft": {
+                        "command_id": "command-search",
+                        "source_type": "direct_security",
+                        "selected_source_ref": "AAPL",
+                        "selected_label": "Apple Inc.",
+                        "selected_kind": "stock",
+                        "requested_start_date": "2026-07-01",
+                        "funding_mode": "fixed_shares",
+                        "notional": "10000",
+                        "shares": "5",
+                        "unexpected": "drop-me",
+                    },
+                    "unexpected": "drop-me",
+                },
+            },
+            services,
+        )
+
+        self.assertEqual(
+            services.session_state["portfolio_monitoring_item_builder_state"],
+            {
+                "drawer_open": True,
+                "drawer_step": 2,
+                "catalog_query": "aapl",
+                "draft": {
+                    "command_id": "command-search",
+                    "source_type": "direct_security",
+                    "selected_source_ref": "AAPL",
+                    "selected_label": "Apple Inc.",
+                    "selected_kind": "stock",
+                    "requested_start_date": "2026-07-01",
+                    "funding_mode": "fixed_shares",
+                    "notional": "10000",
+                    "shares": "5",
+                },
+            },
+        )
+
+    def test_new_catalog_search_clears_a_stale_requested_start_date(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        services = self._services()
+        services.session_state["portfolio_monitoring_catalog_requested_start_date"] = "2026-06-01"
+
+        page._dispatch_portfolio_monitoring_event(
+            {"id": "search_catalog", "query": "aapl", "source_type": "direct_security"},
+            services,
+        )
+
+        self.assertNotIn(
+            "portfolio_monitoring_catalog_requested_start_date",
+            services.session_state,
+        )
+
     def test_operations_summary_prefers_new_group_and_value_metrics_and_keeps_navigation(self) -> None:
         from app.web.operations_overview import build_operations_overview_model
 

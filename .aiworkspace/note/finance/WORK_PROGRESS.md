@@ -23,6 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
+  - Latest completed Portfolio Monitoring follow-up is [portfolio-monitoring-item-builder-ux-fix-v1-20260719](./tasks/active/portfolio-monitoring-item-builder-ux-fix-v1-20260719/STATUS.md). 등록 drawer를 560px frame/internal scroll로 제한하고 검색 rerun 상태 복구와 요청 시작일 입력 유지를 전체 roadmap `3/3`으로 완료했다.
   - Latest completed packaging task is [backtest-component-static-distribution-v1-20260719](./tasks/active/backtest-component-static-distribution-v1-20260719/STATUS.md). Backtest 계열 React component 12개의 canonical output을 Git-tracked `component_static/`으로 통일했고 clean archive와 actual Browser QA를 전체 roadmap `3/3`으로 완료했다.
   - New active design task is [portfolio-monitoring-react-command-center-v1-20260719](./tasks/done/portfolio-monitoring-react-command-center-v1-20260719/STATUS.md). Portfolio-first React Command Center, direct stock/ETF and Final Review candidate item model, staggered-start cash, deterministic diagnosis, macro calibration의 전체 roadmap `0/6차`이며 written spec review를 기다린다.
   - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~14차를 완료했고 승인된 15차 Portfolio Mix React one-shell 설계의 구현 계획과 개발을 이어간다.
@@ -63,6 +64,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### 2026-07-19 - Portfolio Monitoring Item Builder UX Fix
+
+- 종목·전략 등록 drawer의 iframe을 open 동안 560px로 제한해 footer를 첫 화면에 유지했다.
+- catalog 검색 rerun은 whitelisted 일회성 wizard state를 복구하고 날짜 input은 blur rerun 없이 즉시 React draft에 반영한다.
+- Portfolio Monitoring Python 87 tests, React 15 tests, typecheck/build/static distribution과 720px actual Browser QA를 통과했다.
+- 상세 RED/GREEN/QA 기록은 [active task](./tasks/active/portfolio-monitoring-item-builder-ux-fix-v1-20260719/STATUS.md)에 남겼다.
 
 ### 2026-07-19 - Backtest React component_static Git 배포 통일
 

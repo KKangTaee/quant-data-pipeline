@@ -14,6 +14,9 @@ import {
   buildDiagnosisSections,
   buildMacroObservationPresentation,
   buildRiskCalibrationPresentation,
+  buildCatalogSearchEvent,
+  drawerFrameHeight,
+  normalizeItemBuilderState,
 } from "./workbenchState";
 
 const groups: GroupSummary[] = [
@@ -140,6 +143,62 @@ describe("item drawer contract", () => {
     expect(drawerPresentation(420)).toBe("full_width_sheet");
     expect(drawerPresentation(760)).toBe("side_drawer");
     expect(applySourceType(draft, "direct_security").commandId).toBe("stable-command");
+  });
+
+  it("keeps the drawer footer inside a compact component frame while registration is open", () => {
+    expect(drawerFrameHeight(true)).toBe(560);
+    expect(drawerFrameHeight(false)).toBeNull();
+  });
+
+  it("restores the selected target, requested date, and review step after a server search", () => {
+    const restored = normalizeItemBuilderState({
+      drawer_open: true,
+      drawer_step: 3,
+      catalog_query: "AAPL",
+      draft: {
+        command_id: "command-recovered",
+        source_type: "direct_security",
+        selected_source_ref: "AAPL",
+        selected_label: "Apple Inc.",
+        selected_kind: "stock",
+        requested_start_date: "2026-07-01",
+        funding_mode: "fixed_shares",
+        notional: "10000",
+        shares: "5",
+      },
+    }, "fallback-command");
+
+    expect(restored?.drawerStep).toBe(3);
+    expect(restored?.catalogQuery).toBe("AAPL");
+    expect(restored?.draft.commandId).toBe("command-recovered");
+    expect(restored?.draft.requestedStartDate).toBe("2026-07-01");
+    expect(restored?.draft.shares).toBe("5");
+  });
+
+  it("includes the current wizard state in catalog search events", () => {
+    const draft = {
+      ...createItemDraft("command-search"),
+      selectedSourceRef: "AAPL",
+      selectedLabel: "Apple Inc.",
+      selectedKind: "stock" as const,
+      requestedStartDate: "2026-07-01",
+    };
+
+    expect(buildCatalogSearchEvent("apple", draft, 2)).toMatchObject({
+      id: "search_catalog",
+      query: "apple",
+      source_type: "direct_security",
+      item_builder_state: {
+        drawer_open: true,
+        drawer_step: 2,
+        catalog_query: "apple",
+        draft: {
+          command_id: "command-search",
+          selected_source_ref: "AAPL",
+          requested_start_date: "2026-07-01",
+        },
+      },
+    });
   });
 });
 

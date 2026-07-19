@@ -55,6 +55,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-19 - Portfolio Monitoring 등록 상태는 blur가 아니라 명시적 wizard 경계에서 유지한다
+
+- User request: 종목·전략 등록의 이전/다음 버튼이 너무 아래에 있고 요청 시작일을 선택할 수 없는 문제를 수정해 달라고 요청함.
+- Interpreted goal: 사용자가 화면을 크게 내리거나 날짜를 다시 입력하지 않고 등록 wizard를 끝내야 한다.
+- Analysis result: 긴 Streamlit iframe을 기준으로 한 `height: 100%` drawer와 date blur의 server rerun이 원인이었다. drawer open frame을 560px로 제한하고 catalog 검색에만 일회성 recovery state를 사용했다.
+- Follow-up: 날짜는 `onInput` 값을 즉시 local draft에 저장하고 effective start/price의 최종 검증은 기존 add command가 유지한다.
+
 ### 2026-07-19 - Backtest React도 Overview처럼 checkout 자체로 디자인을 제공한다
 
 - User request: Overview 시장맥락·매크로처럼 Backtest도 빌드 결과를 Git에 포함해 별도 alias나 npm build 없이 실행되게 해 달라고 요청함.

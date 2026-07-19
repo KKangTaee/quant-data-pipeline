@@ -5,13 +5,16 @@ import {
   applySourceType,
   availableFundingModes,
   buildAddItemPayload,
+  buildCatalogSearchEvent,
   buildCommonBasisBanner,
   buildGroupChartSeries,
   buildDiagnosisSections,
   buildMacroObservationPresentation,
   buildRiskCalibrationPresentation,
   createItemDraft,
+  drawerFrameHeight,
   formatMetric,
+  normalizeItemBuilderState,
   selectActiveGroup,
   selectItem,
   validateItemDraft,
@@ -129,16 +132,18 @@ function DiagnosisCard({ row, compact = false }: { row: DiagnosisRow; compact?: 
 
 function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   const workspace = (args?.payload ?? null) as PortfolioMonitoringWorkspace | null;
+  const initialCommandId = useMemo(() => newCommandId(), []);
+  const initialItemBuilder = normalizeItemBuilderState(workspace?.item_builder_state, initialCommandId);
   const serverGroup = useMemo(
     () => selectActiveGroup(workspace?.groups ?? [], null),
     [workspace],
   );
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(serverGroup?.portfolio_group_id ?? null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerStep, setDrawerStep] = useState<1 | 2 | 3>(1);
-  const [catalogQuery, setCatalogQuery] = useState("");
-  const [draft, setDraft] = useState<ItemDraft>(() => createItemDraft(newCommandId()));
+  const [drawerOpen, setDrawerOpen] = useState(initialItemBuilder?.drawerOpen ?? false);
+  const [drawerStep, setDrawerStep] = useState<1 | 2 | 3>(initialItemBuilder?.drawerStep ?? 1);
+  const [catalogQuery, setCatalogQuery] = useState(initialItemBuilder?.catalogQuery ?? "");
+  const [draft, setDraft] = useState<ItemDraft>(() => initialItemBuilder?.draft ?? createItemDraft(initialCommandId));
   const [localCommandState, setLocalCommandState] = useState<"idle" | "pending" | "success" | "error">("idle");
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const drawerCloseRef = useRef<HTMLButtonElement>(null);
@@ -148,8 +153,19 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   }, [serverGroup?.portfolio_group_id]);
 
   useEffect(() => {
-    Streamlit.setFrameHeight();
+    const compactHeight = drawerFrameHeight(drawerOpen);
+    if (compactHeight == null) Streamlit.setFrameHeight();
+    else Streamlit.setFrameHeight(compactHeight);
   }, [workspace, selectedGroupId, selectedItemId, drawerOpen, drawerStep]);
+
+  useEffect(() => {
+    const recovered = normalizeItemBuilderState(workspace?.item_builder_state, initialCommandId);
+    if (!recovered) return;
+    setDrawerOpen(recovered.drawerOpen);
+    setDrawerStep(recovered.drawerStep);
+    setCatalogQuery(recovered.catalogQuery);
+    setDraft(recovered.draft);
+  }, [workspace?.item_builder_state, initialCommandId]);
 
   const serverCommand = workspace?.commands.find((command) => command.command_id === draft.commandId);
   useEffect(() => {
@@ -205,7 +221,7 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   };
   const submitCatalogSearch = (event: FormEvent) => {
     event.preventDefault();
-    emit({ id: "search_catalog", query: catalogQuery, source_type: draft.sourceType });
+    emit(buildCatalogSearchEvent(catalogQuery, draft, drawerStep));
   };
   const chooseGroup = (groupId: string) => {
     setSelectedGroupId(groupId);
@@ -460,7 +476,7 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
             {drawerStep === 2 && (
               <div className="pm-drawer-body">
                 <div className="pm-selected-source"><span>선택 대상</span><strong>{draft.selectedSourceRef}</strong><small>{draft.selectedLabel}</small></div>
-                <label className="pm-field">추적 시작일<input type="date" value={draft.requestedStartDate} onChange={(event) => setDraft((current) => ({ ...current, requestedStartDate: event.target.value }))} onBlur={() => draft.requestedStartDate && emit({ id: "search_catalog", query: catalogQuery, source_type: draft.sourceType, requested_start_date: draft.requestedStartDate })} /></label>
+                <label className="pm-field">추적 시작일<input type="date" value={draft.requestedStartDate} onInput={(event) => { const requestedStartDate = event.currentTarget.value; setDraft((current) => ({ ...current, requestedStartDate })); }} /></label>
                 <fieldset className="pm-funding-field"><legend>투자 방식</legend><div>{availableFundingModes(draft.sourceType).map((mode) => <button type="button" key={mode} className={draft.fundingMode === mode ? "is-active" : ""} onClick={() => setDraft((current) => ({ ...current, fundingMode: mode }))}>{mode === "fixed_notional" ? "투자금" : "보유 수량"}<small>{mode === "fixed_notional" ? "예: $10,000" : "정수 주식만"}</small></button>)}</div></fieldset>
                 {draft.fundingMode === "fixed_notional" ? <label className="pm-field">투자금 (USD)<input type="number" min="1" step="1" value={draft.notional} onChange={(event) => setDraft((current) => ({ ...current, notional: event.target.value }))} /></label> : <label className="pm-field">주식 수량<input type="number" min="1" step="1" inputMode="numeric" value={draft.shares} onChange={(event) => setDraft((current) => ({ ...current, shares: event.target.value }))} /><small>소수점 없이 1주 이상 입력하세요.</small></label>}
                 <div className="pm-entry-note"><strong>시작 가격 확인</strong><p>요청일이 휴장일이면 이후 첫 거래일의 저장 종가를 사용합니다. 이후 가격이 없으면 등록되지 않습니다.</p></div>
@@ -491,7 +507,7 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
 
             <footer className="pm-drawer-footer">
               {drawerStep > 1 ? <button type="button" className="pm-secondary" disabled={localCommandState === "pending"} onClick={() => setDrawerStep((current) => Math.max(1, current - 1) as 1 | 2 | 3)}>이전</button> : <span />}
-              {drawerStep < 3 && <button type="button" className="pm-primary" disabled={drawerStep === 1 && !draft.selectedSourceRef} onClick={() => setDrawerStep((current) => Math.min(3, current + 1) as 1 | 2 | 3)}>다음</button>}
+              {drawerStep < 3 && <button type="button" className="pm-primary" disabled={drawerStep === 1 ? !draft.selectedSourceRef : !draft.requestedStartDate} onClick={() => setDrawerStep((current) => Math.min(3, current + 1) as 1 | 2 | 3)}>다음</button>}
               {drawerStep === 3 && localCommandState === "success" && <button type="button" className="pm-primary" onClick={closeDrawer}>완료</button>}
             </footer>
           </section>

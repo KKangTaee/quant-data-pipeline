@@ -22,6 +22,15 @@ export type DraftValidationContext = {
   selectedReadiness: string | null;
 };
 
+export type ItemBuilderState = {
+  drawerOpen: boolean;
+  drawerStep: 1 | 2 | 3;
+  catalogQuery: string;
+  draft: ItemDraft;
+};
+
+const DRAWER_FRAME_HEIGHT = 560;
+
 export function createItemDraft(commandId: string): ItemDraft {
   return {
     commandId,
@@ -93,6 +102,88 @@ export function validateItemDraft(draft: ItemDraft, context: DraftValidationCont
 
 export function drawerPresentation(viewportWidth: number) {
   return viewportWidth <= 520 ? "full_width_sheet" : "side_drawer";
+}
+
+export function drawerFrameHeight(drawerOpen: boolean): number | null {
+  return drawerOpen ? DRAWER_FRAME_HEIGHT : null;
+}
+
+function recordValue(value: unknown): Record<string, unknown> | null {
+  return value != null && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function stringValue(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+export function normalizeItemBuilderState(
+  value: unknown,
+  fallbackCommandId: string,
+): ItemBuilderState | null {
+  const state = recordValue(value);
+  const rawDraft = recordValue(state?.draft);
+  if (!state || state.drawer_open !== true || !rawDraft) return null;
+
+  const sourceType: MonitoringSourceType = rawDraft.source_type === "selected_strategy"
+    ? "selected_strategy"
+    : "direct_security";
+  const selectedKind = ["stock", "etf", "strategy"].includes(String(rawDraft.selected_kind))
+    ? rawDraft.selected_kind as MonitoringKind
+    : null;
+  const requestedFundingMode: FundingMode = rawDraft.funding_mode === "fixed_shares"
+    ? "fixed_shares"
+    : "fixed_notional";
+  const fundingMode = sourceType === "selected_strategy" ? "fixed_notional" : requestedFundingMode;
+  const rawStep = Number(state.drawer_step);
+  const drawerStep = ([1, 2, 3].includes(rawStep) ? rawStep : 1) as 1 | 2 | 3;
+
+  return {
+    drawerOpen: true,
+    drawerStep,
+    catalogQuery: stringValue(state.catalog_query),
+    draft: {
+      commandId: stringValue(rawDraft.command_id, fallbackCommandId) || fallbackCommandId,
+      sourceType,
+      selectedSourceRef: stringValue(rawDraft.selected_source_ref),
+      selectedLabel: stringValue(rawDraft.selected_label),
+      selectedKind,
+      requestedStartDate: stringValue(rawDraft.requested_start_date),
+      fundingMode,
+      notional: stringValue(rawDraft.notional, "10000"),
+      shares: fundingMode === "fixed_shares" ? stringValue(rawDraft.shares) : "",
+    },
+  };
+}
+
+export function buildCatalogSearchEvent(
+  query: string,
+  draft: ItemDraft,
+  drawerStep: 1 | 2 | 3,
+) {
+  return {
+    id: "search_catalog",
+    query,
+    source_type: draft.sourceType,
+    requested_start_date: draft.requestedStartDate || undefined,
+    item_builder_state: {
+      drawer_open: true,
+      drawer_step: drawerStep,
+      catalog_query: query,
+      draft: {
+        command_id: draft.commandId,
+        source_type: draft.sourceType,
+        selected_source_ref: draft.selectedSourceRef,
+        selected_label: draft.selectedLabel,
+        selected_kind: draft.selectedKind,
+        requested_start_date: draft.requestedStartDate,
+        funding_mode: draft.fundingMode,
+        notional: draft.notional,
+        shares: draft.shares,
+      },
+    },
+  };
 }
 
 export function buildAddItemPayload(draft: ItemDraft, portfolioGroupId: string) {

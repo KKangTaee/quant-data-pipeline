@@ -21,6 +21,19 @@ def _load_component():
 
 
 class PortfolioMonitoringComponentTests(unittest.TestCase):
+    def test_date_input_uses_immediate_input_event_without_blur_rerun(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+
+        date_input = next(
+            line for line in source.splitlines() if 'type="date"' in line
+        )
+        self.assertIn("onInput=", date_input)
+        self.assertNotIn("onBlur=", date_input)
+        self.assertIn("const requestedStartDate = event.currentTarget.value;", date_input)
+        self.assertNotIn("requestedStartDate: event.currentTarget.value", date_input)
+
     def test_build_availability_requires_index_html(self) -> None:
         component = _load_component()
         with tempfile.TemporaryDirectory() as directory:
