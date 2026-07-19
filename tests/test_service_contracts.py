@@ -8505,6 +8505,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_source = Path("app/web/overview/sentiment_helpers.py").read_text(encoding="utf-8")
         wrapper_source = Path("app/web/overview/sentiment_react_component.py").read_text(encoding="utf-8")
         react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        all_source = "\n".join(
+            path.read_text(encoding="utf-8") for path in (component_root / "src").glob("*.tsx")
+        )
         react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
 
         self.assertEqual(SENTIMENT_REACT_COMPONENT_NAME, "sentiment_workbench")
@@ -8519,10 +8522,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('default={"event": None}', wrapper_source)
         self.assertIn('payload.component === "SentimentWorkbench"', react_source)
         self.assertIn('payload.schema_version === "sentiment_react_workbench_v2"', react_source)
-        self.assertIn("payload.command.actions.map", react_source)
+        self.assertIn("payload.command.actions.map", all_source)
         self.assertIn("Streamlit.setComponentValue", react_source)
-        self.assertIn("sentiment-workbench__command", react_source)
-        self.assertIn("sentiment-workbench__fallback-note", react_source)
+        self.assertIn("sentiment-workbench__command-row", all_source)
+        self.assertIn("sentiment-workbench__actions", all_source)
         self.assertIn(".sentiment-workbench__command", react_style)
         self.assertIn("@media (max-width: 760px)", react_style)
 
@@ -8660,50 +8663,62 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn(".events-workbench__day-tooltip", react_style)
         self.assertIn(".events-workbench__density-bar", react_style)
 
+    def test_sentiment_react_visual_hierarchy_uses_hero_and_balanced_current_evidence(self) -> None:
+        source_root = Path("app/web/streamlit_components/sentiment_workbench/src")
+        root_source = (source_root / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        all_source = "\n".join(path.read_text(encoding="utf-8") for path in source_root.glob("*.tsx"))
+
+        self.assertTrue((source_root / "SentimentHero.tsx").exists())
+        self.assertTrue((source_root / "CurrentEvidenceSection.tsx").exists())
+        self.assertIn("<SentimentHero", root_source)
+        self.assertIn("<CurrentEvidenceSection", root_source)
+        self.assertLess(root_source.index("<SentimentHero"), root_source.index("<CurrentEvidenceSection"))
+        self.assertNotIn('<section className="sentiment-workbench__cross-read"', root_source)
+        self.assertEqual(all_source.count("payload.cross_read.meaning"), 1)
+        self.assertIn('kind="cnn"', all_source)
+        self.assertIn('kind="aaii"', all_source)
+        self.assertIn("axis.available", all_source)
+        self.assertIn("관측값 없음 · 판정 보류", all_source)
+
     def test_sentiment_react_summary_surface_prioritizes_state_and_freshness(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")
         react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
-        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
-
-        self.assertIn("sentiment-workbench__hero", react_source)
-        self.assertIn("sentiment-workbench__phase-pill", react_source)
-        self.assertIn("payload.summary.phase_label", react_source)
-        self.assertIn("sentiment-workbench__headline", react_source)
-        self.assertIn("payload.summary.headline", react_source)
-        self.assertIn("sentiment-workbench__summary-copy", react_source)
-        self.assertIn("payload.summary.summary", react_source)
-        self.assertIn("payload.axes.market_behavior", react_source)
-        self.assertIn("payload.axes.investor_survey", react_source)
-        self.assertIn("sentiment-workbench__axis-grid", react_source)
-        self.assertIn("sentiment-workbench__axis-card", react_source)
-        self.assertIn("sentiment-workbench__freshness-strip", react_source)
-        self.assertIn("payload.freshness.detail", react_source)
-        self.assertIn("toneColor(payload.freshness.tone)", react_source)
-        self.assertIn("axis.latest_date", react_source)
-        self.assertIn("axis.previous_date", react_source)
-        self.assertIn("sentiment-workbench__axis-date", react_source)
-        self.assertIn("payload.boundary_note", react_source)
-        self.assertLess(
-            react_source.index('className="sentiment-workbench__hero"'),
-            react_source.index('className="sentiment-workbench__fallback-note"'),
+        all_source = "\n".join(
+            path.read_text(encoding="utf-8") for path in (component_root / "src").glob("*.tsx")
         )
-        self.assertIn(".sentiment-workbench__hero", react_style)
-        self.assertIn("background: #f8fafc;", react_style)
-        self.assertIn("background: #ffffff;", react_style)
-        self.assertIn(".sentiment-workbench__axis-grid", react_style)
-        self.assertIn(".sentiment-workbench__axis-card", react_style)
-        self.assertIn(".sentiment-workbench__freshness-strip", react_style)
+
+        self.assertIn("sentiment-workbench__hero", all_source)
+        self.assertIn("payload.summary.phase_label", all_source)
+        self.assertIn("sentiment-workbench__headline", all_source)
+        self.assertIn("payload.summary.headline", all_source)
+        self.assertIn("sentiment-workbench__summary-copy", all_source)
+        self.assertIn("payload.axes.market_behavior", all_source)
+        self.assertIn("payload.axes.investor_survey", all_source)
+        self.assertIn("sentiment-workbench__hero-meta", all_source)
+        self.assertIn("sentiment-workbench__source-grid", all_source)
+        self.assertIn("sentiment-workbench__source-box", all_source)
+        self.assertIn("sentiment-workbench__source-empty", all_source)
+        self.assertIn("axis.latest_date", all_source)
+        self.assertIn("axis.previous_date", all_source)
+        self.assertIn("payload.freshness.stale_count", all_source)
+        self.assertLess(
+            react_source.index("<SentimentHero"),
+            react_source.index("<CurrentEvidenceSection"),
+        )
 
     def test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")
         react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        all_source = "\n".join(
+            path.read_text(encoding="utf-8") for path in (component_root / "src").glob("*.tsx")
+        )
         react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("시장 행동", react_source)
-        self.assertIn("개인투자자 설문", react_source)
-        self.assertIn("현재 판정", react_source)
+        self.assertIn("시장 행동", all_source)
+        self.assertIn("개인투자자 설문", all_source)
+        self.assertIn("두 축의 현재 근거", all_source)
         self.assertIn("다음 확인 조건", react_source)
-        self.assertIn("sentiment-workbench__cross-read", react_source)
+        self.assertNotIn('className="sentiment-workbench__cross-read"', all_source)
         self.assertNotIn("metricByLabel(\"CNN Fear & Greed\")", react_source)
         self.assertNotIn("metricByLabel(\"AAII Bearish\")", react_source)
         self.assertNotIn("metricByLabel(\"Bull-Bear Spread\")", react_source)
@@ -8712,14 +8727,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("payload.drivers.lanes.map", react_source)
         self.assertNotIn("payload.component_explanations.map", react_source)
         self.assertEqual(react_source.count("payload.evidence.cnn_components.map"), 1)
-        self.assertIn("payload.evidence.aaii_comparison.map", react_source)
+        self.assertIn("aaiiComparison.find", all_source)
         self.assertIn("payload.watch_conditions.map", react_source)
         self.assertIn("sentiment-workbench__evidence-section", react_source)
         self.assertLess(
             react_source.index('className="sentiment-workbench__evidence-section"'),
             react_source.index('className="sentiment-workbench__chart-section"'),
         )
-        self.assertIn(".sentiment-workbench__cross-read", react_style)
         self.assertNotIn(".sentiment-workbench__cross-metrics", react_style)
         self.assertNotIn(".sentiment-workbench__cross-metric", react_style)
         self.assertIn("box-sizing: border-box;", react_style)
@@ -8729,23 +8743,23 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_sentiment_react_context_surface_shows_recent_range_and_divergence(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")
         react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
-        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
-
-        self.assertIn("SentimentAxis", react_source)
-        self.assertIn("CrossRead", react_source)
-        self.assertIn("payload.cross_read", react_source)
-        self.assertIn("sentiment-workbench__cross-read-status", react_source)
-        self.assertIn("sentiment-workbench__cross-read-meaning", react_source)
-        self.assertIn("sentiment-workbench__axis-range", react_source)
-        self.assertIn("sentiment-workbench__axis-range-track", react_source)
-        self.assertLess(
-            react_source.index('className="sentiment-workbench__axis-grid"'),
-            react_source.index('className="sentiment-workbench__cross-read"'),
+        all_source = "\n".join(
+            path.read_text(encoding="utf-8") for path in (component_root / "src").glob("*.tsx")
         )
-        self.assertIn(".sentiment-workbench__cross-read-status", react_style)
-        self.assertIn(".sentiment-workbench__cross-read-meaning", react_style)
-        self.assertIn(".sentiment-workbench__axis-range", react_style)
-        self.assertIn(".sentiment-workbench__axis-range-track", react_style)
+
+        self.assertIn("SentimentAxis", all_source)
+        self.assertIn("CrossRead", all_source)
+        self.assertIn("payload.cross_read.status", all_source)
+        self.assertIn("payload.cross_read.meaning", all_source)
+        self.assertIn("sentiment-workbench__hero-side", all_source)
+        self.assertIn("sentiment-workbench__hero-meta", all_source)
+        self.assertIn("sentiment-workbench__source-box", all_source)
+        self.assertIn("axis.range?.sample_count", all_source)
+        self.assertIn("axis.range?.position_label", all_source)
+        self.assertLess(
+            react_source.index("<SentimentHero"),
+            react_source.index("<CurrentEvidenceSection"),
+        )
 
     def test_sentiment_react_component_history_surface_shows_recent_changes(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")

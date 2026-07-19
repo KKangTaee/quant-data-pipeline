@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 import "./style.css";
+import CurrentEvidenceSection from "./CurrentEvidenceSection";
+import SentimentHero from "./SentimentHero";
 
 type NumericValue = number | string | null | undefined;
 
-type SentimentAction = {
+export type SentimentAction = {
   id: "refresh" | "reload";
   label: string;
   kind: "primary" | "secondary";
@@ -20,7 +22,7 @@ type AxisRange = {
   detail?: string;
 };
 
-type SentimentAxis = {
+export type SentimentAxis = {
   label: string;
   source: string;
   available: boolean;
@@ -78,7 +80,7 @@ type CnnEvidence = {
   change_direction?: string;
 };
 
-type AaiiComparison = {
+export type AaiiComparison = {
   key: "bullish" | "neutral" | "bearish";
   label: string;
   current?: NumericValue;
@@ -92,12 +94,18 @@ type ChartPoint = {
   series: string;
   value?: NumericValue;
   source?: string;
+  status_label?: string;
 };
 
 type ChartPanel = {
   title: string;
   basis: string;
   unit: "score_0_100" | "percent" | "percentage_point";
+  latest?: {
+    date: string;
+    value?: NumericValue;
+    label: string;
+  };
   series: ChartPoint[];
 };
 
@@ -115,7 +123,8 @@ type HoveredChartPoint = {
   x: number;
 };
 
-type WatchCondition = {
+export type WatchCondition = {
+  key: "confirm" | "reverse" | "persist";
   label: string;
   condition: string;
   basis: string;
@@ -124,7 +133,32 @@ type WatchCondition = {
 
 type SentimentEvidenceRows = Record<string, number | string | null | undefined>[];
 
-type SentimentWorkbenchPayload = {
+export type OutlookStatus = "VERIFIED" | "PROVISIONAL" | "UNAVAILABLE";
+
+export type OutlookProbability = {
+  key?: string;
+  label: string;
+  value: number;
+  baseline?: number | null;
+  difference_pp?: number | null;
+};
+
+export type OutlookHorizon = {
+  key: "1W" | "1M";
+  label: string;
+  period_label: string;
+  trading_days: 5 | 20;
+  status: OutlookStatus;
+  status_label: string;
+  dominant_path?: string;
+  probabilities: OutlookProbability[];
+  baseline?: number | null;
+  episode_count: number;
+  validation_evidence: string[];
+  status_reason: string;
+};
+
+export type SentimentWorkbenchPayload = {
   schema_version: "sentiment_react_workbench_v2";
   component: "SentimentWorkbench";
   command: {
@@ -163,6 +197,11 @@ type SentimentWorkbenchPayload = {
     aaii_responses: ChartPanel;
     aaii_spread: ChartPanel;
   };
+  outlook: {
+    status: "AVAILABLE" | "UNAVAILABLE";
+    summary: string;
+    horizons: OutlookHorizon[];
+  };
   watch_conditions: WatchCondition[];
   raw_evidence: {
     sentiment_rows: SentimentEvidenceRows;
@@ -180,7 +219,7 @@ type Props = ComponentProps & {
   };
 };
 
-function toneColor(tone?: string) {
+export function toneColor(tone?: string) {
   const normalized = String(tone || "neutral").toLowerCase();
   if (normalized === "positive") return "#0f766e";
   if (normalized === "warning") return "#b45309";
@@ -188,7 +227,7 @@ function toneColor(tone?: string) {
   return "#64748b";
 }
 
-function displayValue(value: NumericValue, suffix = "") {
+export function displayValue(value: NumericValue, suffix = "") {
   if (value === undefined || value === null || value === "") return "-";
   if (typeof value === "number") return Number.isFinite(value) ? `${value.toFixed(1)}${suffix}` : "-";
   return `${value}${suffix}`;
@@ -200,7 +239,7 @@ function numericValue(value: NumericValue) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function signedValue(value: NumericValue, suffix = "") {
+export function signedValue(value: NumericValue, suffix = "") {
   const parsed = numericValue(value);
   if (parsed === null) return "-";
   return `${parsed > 0 ? "+" : ""}${parsed.toFixed(1)}${suffix}`;
@@ -483,44 +522,8 @@ function SentimentWorkbench({ args }: Props) {
 
   return (
     <section className="sentiment-workbench" data-action-boundary={payload.action_boundary} data-schema-version={payload.schema_version}>
-      <section className="sentiment-workbench__hero" style={{ "--sentiment-tone": toneColor(payload.summary.tone) } as React.CSSProperties}>
-        <div className="sentiment-workbench__hero-copy">
-          <div className="sentiment-workbench__phase-row">
-            <span className="sentiment-workbench__phase-pill">{payload.summary.phase_label}</span>
-            <span className="sentiment-workbench__kicker">Sentiment</span>
-          </div>
-          <h2 className="sentiment-workbench__headline">{payload.summary.headline}</h2>
-          <p className="sentiment-workbench__summary-copy">{payload.summary.summary}</p>
-          <div className="sentiment-workbench__fallback-note">{payload.boundary_note}</div>
-        </div>
-        <aside className="sentiment-workbench__command">
-          <div><strong>{payload.command.title}</strong><small>{payload.command.detail}</small></div>
-          <div className="sentiment-workbench__actions">
-            {payload.command.actions.map((action) => (
-              <button className={`sentiment-workbench__action sentiment-workbench__action--${action.kind}`} key={action.id} onClick={() => emitAction(action)} title={action.detail} type="button">{action.label}</button>
-            ))}
-          </div>
-          {pendingActionLabel ? <span className="sentiment-workbench__action-feedback">요청 전송 · {pendingActionLabel}</span> : null}
-        </aside>
-      </section>
-
-      <div className="sentiment-workbench__freshness-strip" style={{ "--metric-tone": toneColor(payload.freshness.tone) } as React.CSSProperties}>
-        <span>자료 기준 <b>{payload.freshness.latest_observation_date}</b></span>
-        <span>{payload.freshness.detail}</span>
-        <span>source {payload.freshness.source_count}</span>
-      </div>
-
-      <section className="sentiment-workbench__axis-grid">
-        <SentimentAxisCard axis={payload.axes.market_behavior} kind="cnn" />
-        <SentimentAxisCard axis={payload.axes.investor_survey} kind="aaii" />
-      </section>
-
-      <section className="sentiment-workbench__cross-read" style={{ "--metric-tone": toneColor(payload.cross_read.tone) } as React.CSSProperties}>
-        <div className="sentiment-workbench__section-heading"><div><span>Cross read</span><h3>현재 판정</h3></div><small>CNN 행동 × AAII 인식</small></div>
-        <div className="sentiment-workbench__cross-read-status"><strong>{payload.cross_read.status}</strong><span>{payload.cross_read.phase_label}</span></div>
-        <p className="sentiment-workbench__cross-read-meaning">{payload.cross_read.meaning}</p>
-        {payload.cross_read.confidence_note ? <small>{payload.cross_read.confidence_note}</small> : null}
-      </section>
+      <SentimentHero payload={payload} pendingActionLabel={pendingActionLabel} onAction={emitAction} />
+      <CurrentEvidenceSection aaiiComparison={payload.evidence.aaii_comparison} axes={payload.axes} />
 
       <section className="sentiment-workbench__evidence-section">
         <div className="sentiment-workbench__section-heading"><div><span>Evidence</span><h3>두 축의 상세 근거</h3></div><small>중복 없이 source별 한 번만 표시</small></div>
