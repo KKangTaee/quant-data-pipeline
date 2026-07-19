@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Streamlit, withStreamlitConnection, ComponentProps } from "streamlit-component-lib";
+import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 import "./style.css";
+
+type NumericValue = number | string | null | undefined;
 
 type SentimentAction = {
   id: "refresh" | "reload";
@@ -9,126 +11,107 @@ type SentimentAction = {
   detail?: string;
 };
 
-type SentimentMetric = {
-  label: string;
-  value: string;
-  detail?: string;
-  tone?: string;
-};
-
-type SentimentAnalysisStep = {
-  title: string;
-  status?: string;
-  detail?: string;
-  tone?: string;
-};
-
-type SentimentRangeContextItem = {
-  series_id?: string;
-  series: string;
-  latest_value?: number | string | null;
+type AxisRange = {
   sample_count?: number;
-  min_value?: number | string | null;
-  max_value?: number | string | null;
-  median_value?: number | string | null;
-  percentile?: number | string | null;
+  percentile?: NumericValue;
   position_label?: string;
-  tone?: string;
+  min_value?: NumericValue;
+  max_value?: NumericValue;
   detail?: string;
 };
 
-type SentimentDivergenceAxis = {
+type SentimentAxis = {
   label: string;
-  direction?: string;
-  direction_label?: string;
-  detail?: string;
-  tone?: string;
-};
-
-type SentimentDivergenceContext = {
-  status: string;
-  tone?: string;
-  headline_direction?: string;
-  component_direction?: string;
-  aaii_direction?: string;
-  summary?: string;
-  items: SentimentDivergenceAxis[];
-};
-
-type SentimentComponentHistoryItem = {
-  series_id?: string;
-  series: string;
-  label_ko?: string;
-  latest?: number | string | null;
+  source: string;
+  available: boolean;
+  direction: string;
+  direction_label: string;
+  tone: string;
+  current?: NumericValue;
+  previous?: NumericValue;
+  change?: NumericValue;
   latest_date?: string;
-  previous?: number | string | null;
   previous_date?: string;
-  change?: number | string | null;
-  change_direction?: string;
-  tone?: string;
+  range?: AxisRange;
   detail?: string;
+  component_balance?: {
+    greed_count?: number;
+    fear_count?: number;
+    neutral_count?: number;
+    direction?: string;
+  };
+  components_support?: string;
+  spread?: NumericValue;
+  responses?: {
+    bullish?: NumericValue;
+    neutral?: NumericValue;
+    bearish?: NumericValue;
+  };
 };
 
-type SentimentDriverItem = {
+type CrossRead = {
+  phase: string;
+  phase_label: string;
+  status: string;
+  tone: string;
+  headline: string;
+  meaning: string;
+  confidence_note?: string;
+  market_direction: string;
+  survey_direction: string;
+};
+
+type CnnEvidence = {
   series: string;
   label_ko: string;
-  score?: string;
+  score?: NumericValue;
   rating?: string;
-  tone?: string;
   direction?: string;
-  current_reading?: string;
-};
-
-type SentimentDriverLane = {
-  key: string;
-  label: string;
   tone?: string;
-  count: number;
-  items: SentimentDriverItem[];
-};
-
-type SentimentComponentExplanation = {
-  series: string;
-  label_ko: string;
-  score?: number | string;
-  rating_label_ko?: string;
-  tone?: string;
-  direction?: string;
   what_it_checks?: string;
   current_reading?: string;
+  latest?: NumericValue;
+  latest_date?: string;
+  previous?: NumericValue;
+  previous_date?: string;
+  change?: NumericValue;
+  change_direction?: string;
 };
 
-type SentimentHistoryPoint = {
+type AaiiComparison = {
+  key: "bullish" | "neutral" | "bearish";
+  label: string;
+  current?: NumericValue;
+  historical_average?: NumericValue;
+  difference_pp?: NumericValue;
+  tone?: string;
+};
+
+type ChartPoint = {
   date: string;
   series: string;
-  value?: number | string | null;
+  value?: NumericValue;
   source?: string;
 };
 
-type SentimentComponentChartItem = {
-  series: string;
-  score?: number | string | null;
-  rating?: string;
+type ChartPanel = {
+  title: string;
+  basis: string;
+  unit: "score_0_100" | "percent" | "percentage_point";
+  series: ChartPoint[];
+};
+
+type WatchCondition = {
+  label: string;
+  condition: string;
+  basis: string;
   tone?: string;
-  direction?: string;
-  observation_date?: string;
-  current_reading?: string;
 };
 
 type SentimentEvidenceRows = Record<string, number | string | null | undefined>[];
 
-type HoveredHistoryPoint = {
-  date: string;
-  series: string;
-  source?: string;
-  valueLabel: string;
-  x: number;
-  y: number;
-  color: string;
-};
-
 type SentimentWorkbenchPayload = {
-  schema_version: "sentiment_react_workbench_v1";
+  schema_version: "sentiment_react_workbench_v2";
   component: "SentimentWorkbench";
   command: {
     title: string;
@@ -136,12 +119,19 @@ type SentimentWorkbenchPayload = {
     actions: SentimentAction[];
   };
   summary: {
+    phase: string;
     phase_label: string;
+    status: string;
+    tone: string;
     headline: string;
     summary: string;
-    tone: string;
-    metrics: SentimentMetric[];
+    latest_observation_date: string;
   };
+  axes: {
+    market_behavior: SentimentAxis;
+    investor_survey: SentimentAxis;
+  };
+  cross_read: CrossRead;
   freshness: {
     latest_observation_date: string;
     source_count: number;
@@ -150,30 +140,18 @@ type SentimentWorkbenchPayload = {
     detail: string;
     tone: string;
   };
-  analysis_steps: SentimentAnalysisStep[];
-  drivers: {
-    lanes: SentimentDriverLane[];
-  };
-  interpretation: {
-    range_context: SentimentRangeContextItem[];
-    divergence: SentimentDivergenceContext;
-    component_history: SentimentComponentHistoryItem[];
-  };
-  component_explanations: SentimentComponentExplanation[];
-  charts: {
-    history: {
-      title: string;
-      basis: string;
-      series: SentimentHistoryPoint[];
-    };
-    components: {
-      title: string;
-      basis: string;
-      items: SentimentComponentChartItem[];
-    };
-  };
   evidence: {
-    raw_rows: SentimentEvidenceRows;
+    cnn_components: CnnEvidence[];
+    aaii_comparison: AaiiComparison[];
+  };
+  charts: {
+    cnn: ChartPanel;
+    aaii_responses: ChartPanel;
+    aaii_spread: ChartPanel;
+  };
+  watch_conditions: WatchCondition[];
+  raw_evidence: {
+    sentiment_rows: SentimentEvidenceRows;
     component_rows: SentimentEvidenceRows;
     history_rows: SentimentEvidenceRows;
     warnings: string[];
@@ -188,105 +166,64 @@ type Props = ComponentProps & {
   };
 };
 
-function toneColor(tone: string | undefined) {
+function toneColor(tone?: string) {
   const normalized = String(tone || "neutral").toLowerCase();
-  if (normalized === "positive") {
-    return "#0f766e";
-  }
-  if (normalized === "warning") {
-    return "#b45309";
-  }
-  if (normalized === "danger") {
-    return "#dc2626";
-  }
+  if (normalized === "positive") return "#0f766e";
+  if (normalized === "warning") return "#b45309";
+  if (normalized === "danger") return "#dc2626";
   return "#64748b";
 }
 
-function displayValue(value: number | string | null | undefined) {
-  if (value === undefined || value === null || value === "") {
-    return "-";
-  }
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value.toFixed(1) : "-";
-  }
-  return value;
+function displayValue(value: NumericValue, suffix = "") {
+  if (value === undefined || value === null || value === "") return "-";
+  if (typeof value === "number") return Number.isFinite(value) ? `${value.toFixed(1)}${suffix}` : "-";
+  return `${value}${suffix}`;
 }
 
-function numericValue(value: number | string | null | undefined) {
-  if (value === undefined || value === null || value === "") {
-    return null;
-  }
-  const numeric = typeof value === "number" ? value : Number.parseFloat(String(value));
-  return Number.isFinite(numeric) ? numeric : null;
+function numericValue(value: NumericValue) {
+  if (value === undefined || value === null || value === "") return null;
+  const parsed = typeof value === "number" ? value : Number.parseFloat(String(value));
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
-function rangePercentileWidth(value: number | string | null | undefined) {
-  const percentile = numericValue(value);
-  if (percentile === null) {
-    return "0%";
-  }
-  return `${Math.max(0, Math.min(100, percentile))}%`;
+function signedValue(value: NumericValue, suffix = "") {
+  const parsed = numericValue(value);
+  if (parsed === null) return "-";
+  return `${parsed > 0 ? "+" : ""}${parsed.toFixed(1)}${suffix}`;
 }
 
-function componentChangeLabel(item: SentimentComponentHistoryItem) {
-  const change = displayValue(item.change);
-  if (change === "-") {
-    return "-";
-  }
-  if (String(item.change_direction || "").toLowerCase() === "up" && !String(change).startsWith("+")) {
-    return `+${change}`;
-  }
-  return change;
+function componentChangeLabel(item: CnnEvidence) {
+  return signedValue(item.change, "p");
+}
+
+function rangeWidth(range?: AxisRange) {
+  const percentile = numericValue(range?.percentile);
+  return `${Math.max(0, Math.min(100, percentile ?? 0))}%`;
 }
 
 function rowColumns(rows: SentimentEvidenceRows) {
-  const columns: string[] = [];
-  rows.forEach((row) => {
-    Object.keys(row).forEach((key) => {
-      if (!columns.includes(key)) {
-        columns.push(key);
-      }
-    });
-  });
-  return columns.slice(0, 7);
-}
-
-function formatCell(value: number | string | null | undefined) {
-  if (value === undefined || value === null || value === "") {
-    return "-";
-  }
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "-";
-  }
-  return String(value);
+  const keys: string[] = [];
+  rows.forEach((row) => Object.keys(row).forEach((key) => {
+    if (!keys.includes(key)) keys.push(key);
+  }));
+  return keys.slice(0, 7);
 }
 
 function EvidenceTable({ rows, title }: { rows: SentimentEvidenceRows; title: string }) {
   const columns = rowColumns(rows);
   return (
     <div className="sentiment-workbench__evidence-table">
-      <div className="sentiment-workbench__evidence-table-title">
-        <span>{title}</span>
-        <strong>{rows.length}</strong>
-      </div>
+      <div className="sentiment-workbench__evidence-table-title"><span>{title}</span><strong>{rows.length}</strong></div>
       {rows.length === 0 || columns.length === 0 ? (
-        <div className="sentiment-workbench__evidence-empty">근거 row가 없습니다.</div>
+        <p className="sentiment-workbench__empty">표시할 저장 근거가 없습니다.</p>
       ) : (
         <div className="sentiment-workbench__evidence-scroll">
           <table>
-            <thead>
-              <tr>
-                {columns.map((column) => (
-                  <th key={column}>{column}</th>
-                ))}
-              </tr>
-            </thead>
+            <thead><tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr></thead>
             <tbody>
               {rows.map((row, rowIndex) => (
                 <tr key={`${title}-${rowIndex}`}>
-                  {columns.map((column) => (
-                    <td key={`${title}-${rowIndex}-${column}`}>{formatCell(row[column])}</td>
-                  ))}
+                  {columns.map((column) => <td key={`${title}-${rowIndex}-${column}`}>{displayValue(row[column])}</td>)}
                 </tr>
               ))}
             </tbody>
@@ -297,556 +234,183 @@ function EvidenceTable({ rows, title }: { rows: SentimentEvidenceRows; title: st
   );
 }
 
+function SentimentAxisCard({ axis, kind }: { axis: SentimentAxis; kind: "cnn" | "aaii" }) {
+  const balance = axis.component_balance;
+  const responses = axis.responses;
+  return (
+    <article
+      aria-label={kind === "cnn" ? "시장 행동" : "개인투자자 설문"}
+      className="sentiment-workbench__axis-card"
+      style={{ "--metric-tone": toneColor(axis.tone) } as React.CSSProperties}
+    >
+      <header className="sentiment-workbench__axis-head">
+        <div><span>{axis.label}</span><small>{axis.source}</small></div>
+        <strong>{axis.direction_label}</strong>
+      </header>
+      <div className="sentiment-workbench__axis-primary">
+        <b>{displayValue(axis.current, kind === "aaii" ? "pp" : "")}</b>
+        <span>직전 대비 {signedValue(axis.change, kind === "aaii" ? "pp" : "p")}</span>
+      </div>
+      {kind === "cnn" ? (
+        <div className="sentiment-workbench__axis-breakdown">
+          <span>탐욕 <b>{balance?.greed_count ?? 0}</b></span>
+          <span>중립 <b>{balance?.neutral_count ?? 0}</b></span>
+          <span>공포 <b>{balance?.fear_count ?? 0}</b></span>
+        </div>
+      ) : (
+        <div className="sentiment-workbench__axis-breakdown">
+          <span>Bullish <b>{displayValue(responses?.bullish, "%")}</b></span>
+          <span>Neutral <b>{displayValue(responses?.neutral, "%")}</b></span>
+          <span>Bearish <b>{displayValue(responses?.bearish, "%")}</b></span>
+        </div>
+      )}
+      <div className="sentiment-workbench__axis-range">
+        <div><span>최근 저장 범위</span><strong>{axis.range?.position_label || "자료 부족"}</strong></div>
+        <div className="sentiment-workbench__axis-range-track" aria-label={`${axis.label} recent percentile`}>
+          <span style={{ width: rangeWidth(axis.range) }} />
+        </div>
+        <small>{axis.range?.sample_count ?? 0}개 관측 · percentile {displayValue(axis.range?.percentile)}</small>
+      </div>
+      <p>{axis.detail}</p>
+      {kind === "cnn" && axis.components_support ? <small className="sentiment-workbench__axis-note">{axis.components_support}</small> : null}
+    </article>
+  );
+}
+
+function SimpleChartPreview({ panel }: { panel: ChartPanel }) {
+  const latest = panel.series.slice(-4);
+  return (
+    <div className="sentiment-workbench__chart-preview">
+      <header><div><strong>{panel.title}</strong><small>{panel.basis}</small></div><span>{panel.series.length}개</span></header>
+      {latest.length ? (
+        <div className="sentiment-workbench__chart-preview-list">
+          {latest.map((point) => <span key={`${point.series}-${point.date}`}>{point.series} <b>{displayValue(point.value)}</b></span>)}
+        </div>
+      ) : <p className="sentiment-workbench__empty">추이를 그릴 관측이 부족합니다.</p>}
+    </div>
+  );
+}
+
 function syncFrameHeightSoon() {
   Streamlit.setFrameHeight();
   window.requestAnimationFrame(() => Streamlit.setFrameHeight());
   window.setTimeout(() => Streamlit.setFrameHeight(), 160);
 }
 
-function buildHistoryDateTicks(historyDates: string[], maxTickCount = 6) {
-  if (historyDates.length <= maxTickCount) {
-    return historyDates;
-  }
-  const lastIndex = historyDates.length - 1;
-  const ticks = Array.from({ length: maxTickCount }, (_, tickIndex) => {
-    const dateIndex = Math.round((tickIndex / Math.max(1, maxTickCount - 1)) * lastIndex);
-    return historyDates[dateIndex];
-  });
-  return ticks.filter((date, index) => ticks.indexOf(date) === index);
-}
-
 function SentimentWorkbench({ args }: Props) {
   const payload = args.payload;
   const [pendingActionLabel, setPendingActionLabel] = useState("");
-  const [hoveredHistoryPoint, setHoveredHistoryPoint] = useState<HoveredHistoryPoint | null>(null);
-  const [chartTab, setChartTab] = useState<"history" | "components">("history");
+  const [chartTab, setChartTab] = useState<"cnn" | "aaii_responses" | "aaii_spread">("cnn");
 
-  useEffect(() => {
-    syncFrameHeightSoon();
-  });
+  useEffect(() => { syncFrameHeightSoon(); });
 
-  if (!payload) {
-    return null;
-  }
-
+  if (!payload) return null;
   const isWorkbenchPayload = payload.component === "SentimentWorkbench";
-  if (!isWorkbenchPayload) {
-    return null;
-  }
+  const isV2Payload = payload.schema_version === "sentiment_react_workbench_v2";
+  if (!isWorkbenchPayload || !isV2Payload) return null;
 
   const emitAction = (action: SentimentAction) => {
     setPendingActionLabel(action.label);
     Streamlit.setComponentValue({ event: { id: action.id, nonce: Date.now() } });
   };
-  const visibleAnalysisSteps = payload.analysis_steps.filter((step) => !step.title.includes("다음 확인"));
-  const divergenceContext = payload.interpretation.divergence;
-  const historyPoints = payload.charts.history.series.map((point) => ({
-    ...point,
-    numericValue: numericValue(point.value),
-  }));
-  const plottableHistory = historyPoints.filter((point) => point.numericValue !== null);
-  const historyValues = plottableHistory.map((point) => point.numericValue as number);
-  const historyMin = historyValues.length ? Math.min(...historyValues) : 0;
-  const historyMax = historyValues.length ? Math.max(...historyValues) : 1;
-  const historyDomainPadding = historyMax === historyMin ? 1 : 0;
-  const historyDomainMin = historyMin - historyDomainPadding;
-  const historyDomainMax = historyMax + historyDomainPadding;
-  const historyRange = historyDomainMax === historyDomainMin ? 1 : historyDomainMax - historyDomainMin;
-  const historyDates = Array.from(new Set(plottableHistory.map((point) => point.date))).sort();
-  const historySeriesNames = Array.from(new Set(plottableHistory.map((point) => point.series)));
-  const chartWidth = 720;
-  const chartHeight = 280;
-  const chartPaddingLeft = 64;
-  const chartPaddingRight = 28;
-  const chartPaddingTop = 22;
-  const chartPaddingBottom = 44;
-  const chartInnerWidth = chartWidth - chartPaddingLeft - chartPaddingRight;
-  const chartInnerHeight = chartHeight - chartPaddingTop - chartPaddingBottom;
-  const chartPalette = ["#0f766e", "#b45309", "#2563eb", "#7c3aed", "#dc2626"];
-  const xForDate = (date: string) => {
-    const index = Math.max(0, historyDates.indexOf(date));
-    const divisor = Math.max(1, historyDates.length - 1);
-    return chartPaddingLeft + (index / divisor) * chartInnerWidth;
-  };
-  const yForValue = (value: number) => chartPaddingTop + (1 - (value - historyDomainMin) / historyRange) * chartInnerHeight;
-  const historyTicks = [historyDomainMax, historyDomainMin + historyRange / 2, historyDomainMin].map((value) => ({
-    value,
-    label: value.toLocaleString(undefined, { maximumFractionDigits: 1 }),
-    y: yForValue(value),
-  }));
-  const historyDateTicks = buildHistoryDateTicks(historyDates);
-  const plottedHistoryPoints = plottableHistory.map((point) => {
-    const numeric = point.numericValue as number;
-    const seriesIndex = Math.max(0, historySeriesNames.indexOf(point.series));
-    return {
-      date: point.date,
-      series: point.series,
-      source: point.source,
-      valueLabel: numeric.toLocaleString(undefined, { maximumFractionDigits: 2 }),
-      x: xForDate(point.date),
-      y: yForValue(numeric),
-      color: chartPalette[seriesIndex % chartPalette.length],
-    };
-  });
-  const handleHistoryHover = (event: React.MouseEvent<SVGSVGElement>) => {
-    if (!plottedHistoryPoints.length) {
-      setHoveredHistoryPoint(null);
-      return;
-    }
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const pointerX = ((event.clientX - bounds.left) / Math.max(1, bounds.width)) * chartWidth;
-    const pointerY = ((event.clientY - bounds.top) / Math.max(1, bounds.height)) * chartHeight;
-    const nearest = plottedHistoryPoints.reduce((best, point) => {
-      const pointDistance = Math.hypot(point.x - pointerX, point.y - pointerY);
-      const bestDistance = Math.hypot(best.x - pointerX, best.y - pointerY);
-      return pointDistance < bestDistance ? point : best;
-    });
-    setHoveredHistoryPoint(nearest);
-  };
-  const firstHistoryDate = historyDates[0] || "-";
-  const lastHistoryDate = historyDates[historyDates.length - 1] || "-";
-  const tooltipLeft = hoveredHistoryPoint
-    ? `${Math.min(90, Math.max(12, (hoveredHistoryPoint.x / chartWidth) * 100))}%`
-    : "0%";
-  const tooltipTop = hoveredHistoryPoint
-    ? `${Math.min(90, Math.max(12, (hoveredHistoryPoint.y / chartHeight) * 100))}%`
-    : "0%";
+  const activeChart = payload.charts[chartTab];
 
   return (
-    <section
-      className="sentiment-workbench"
-      data-action-boundary={payload.action_boundary}
-      data-schema-version={payload.schema_version}
-      style={{ "--sentiment-tone": toneColor(payload.summary.tone) } as React.CSSProperties}
-    >
-      <div className="sentiment-workbench__hero">
+    <section className="sentiment-workbench" data-action-boundary={payload.action_boundary} data-schema-version={payload.schema_version}>
+      <section className="sentiment-workbench__hero" style={{ "--sentiment-tone": toneColor(payload.summary.tone) } as React.CSSProperties}>
         <div className="sentiment-workbench__hero-copy">
           <div className="sentiment-workbench__phase-row">
             <span className="sentiment-workbench__phase-pill">{payload.summary.phase_label}</span>
             <span className="sentiment-workbench__kicker">Sentiment</span>
           </div>
           <h2 className="sentiment-workbench__headline">{payload.summary.headline}</h2>
-          {payload.summary.summary ? (
-            <p className="sentiment-workbench__summary-copy">{payload.summary.summary}</p>
-          ) : null}
+          <p className="sentiment-workbench__summary-copy">{payload.summary.summary}</p>
           <div className="sentiment-workbench__fallback-note">{payload.boundary_note}</div>
         </div>
-
-        <aside
-          className="sentiment-workbench__freshness-panel"
-          style={{ "--sentiment-tone": toneColor(payload.freshness.tone) } as React.CSSProperties}
-        >
-          <div className="sentiment-workbench__freshness-label">자료 기준</div>
-          <strong className="sentiment-workbench__freshness-date">{payload.freshness.latest_observation_date}</strong>
-          <div className="sentiment-workbench__freshness-detail">{payload.freshness.detail}</div>
-          <div className="sentiment-workbench__freshness-counts">
-            <span>source {payload.freshness.source_count}</span>
-            <span>missing {payload.freshness.missing_count}</span>
-            <span>stale {payload.freshness.stale_count}</span>
+        <aside className="sentiment-workbench__command">
+          <div><strong>{payload.command.title}</strong><small>{payload.command.detail}</small></div>
+          <div className="sentiment-workbench__actions">
+            {payload.command.actions.map((action) => (
+              <button className={`sentiment-workbench__action sentiment-workbench__action--${action.kind}`} key={action.id} onClick={() => emitAction(action)} title={action.detail} type="button">{action.label}</button>
+            ))}
           </div>
-
-          <div className="sentiment-workbench__command">
-            <div>
-              <div className="sentiment-workbench__command-title">{payload.command.title}</div>
-              <div className="sentiment-workbench__command-detail">{payload.command.detail}</div>
-            </div>
-            <div className="sentiment-workbench__actions" aria-label="Sentiment actions">
-              {payload.command.actions.map((action) => (
-                <button
-                  className={`sentiment-workbench__action sentiment-workbench__action--${action.kind}`}
-                  key={action.id}
-                  onClick={() => emitAction(action)}
-                  title={action.detail}
-                  type="button"
-                >
-                  {action.label}
-                </button>
-              ))}
-            </div>
-            {pendingActionLabel ? (
-              <div className="sentiment-workbench__action-feedback" aria-live="polite">
-                요청 전송 · {pendingActionLabel}
-              </div>
-            ) : null}
-          </div>
+          {pendingActionLabel ? <span className="sentiment-workbench__action-feedback">요청 전송 · {pendingActionLabel}</span> : null}
         </aside>
+      </section>
+
+      <div className="sentiment-workbench__freshness-strip">
+        <span>자료 기준 <b>{payload.freshness.latest_observation_date}</b></span>
+        <span>{payload.freshness.detail}</span>
+        <span>source {payload.freshness.source_count}</span>
       </div>
 
-      <section className="sentiment-workbench__cross-read">
-        <div className="sentiment-workbench__section-heading">
-          <span>CNN / AAII 같이 보기</span>
-          <small>service analysis</small>
-        </div>
-        <div className="sentiment-workbench__range-context">
-          {payload.interpretation.range_context.map((item) => (
-            <article
-              className="sentiment-workbench__range-card"
-              key={item.series}
-              style={{ "--metric-tone": toneColor(item.tone) } as React.CSSProperties}
-            >
-              <div className="sentiment-workbench__range-card-top">
-                <span>{item.series}</span>
-                {item.position_label ? <strong>{item.position_label}</strong> : null}
-              </div>
-              <div className="sentiment-workbench__range-value">{displayValue(item.latest_value)}</div>
-              <div className="sentiment-workbench__range-track" aria-label={`${item.series} percentile`}>
-                <div
-                  className="sentiment-workbench__range-fill"
-                  style={{ width: rangePercentileWidth(item.percentile) } as React.CSSProperties}
-                />
-              </div>
-              <div className="sentiment-workbench__range-meta">
-                <span>min {displayValue(item.min_value)}</span>
-                <span>pctl {displayValue(item.percentile)}</span>
-                <span>max {displayValue(item.max_value)}</span>
-              </div>
-              {item.detail ? <p>{item.detail}</p> : null}
-            </article>
-          ))}
-        </div>
-        {divergenceContext.status || divergenceContext.summary || divergenceContext.items.length ? (
-          <div
-            className="sentiment-workbench__divergence-panel"
-            style={{ "--metric-tone": toneColor(divergenceContext.tone) } as React.CSSProperties}
-          >
-            <div className="sentiment-workbench__divergence-summary">
-              <div className="sentiment-workbench__divergence-heading">
-                <span>엇갈리는 지점</span>
-                {divergenceContext.status ? (
-                  <strong className="sentiment-workbench__divergence-status">{divergenceContext.status}</strong>
-                ) : null}
-              </div>
-              {divergenceContext.summary ? <p>{divergenceContext.summary}</p> : null}
-            </div>
-            <div className="sentiment-workbench__divergence-axes">
-              {payload.interpretation.divergence.items.map((item) => (
-                <article
-                  className="sentiment-workbench__divergence-axis"
-                  key={`${item.label}-${item.direction || ""}`}
-                  style={{ "--metric-tone": toneColor(item.tone) } as React.CSSProperties}
-                >
-                  <span>{item.label}</span>
-                  {item.direction_label ? <strong>{item.direction_label}</strong> : null}
-                  {item.detail ? <p>{item.detail}</p> : null}
-                </article>
-              ))}
-            </div>
-          </div>
-        ) : null}
-        <div className="sentiment-workbench__analysis-steps">
-          {visibleAnalysisSteps.map((step) => (
-            <article
-              className="sentiment-workbench__analysis-step"
-              key={`${step.title}-${step.status || ""}`}
-              style={{ "--metric-tone": toneColor(step.tone) } as React.CSSProperties}
-            >
-              <div className="sentiment-workbench__analysis-title">{step.title}</div>
-              {step.status ? <div className="sentiment-workbench__analysis-status">{step.status}</div> : null}
-              {step.detail ? <p>{step.detail}</p> : null}
-            </article>
-          ))}
-        </div>
+      <section className="sentiment-workbench__axis-grid">
+        <SentimentAxisCard axis={payload.axes.market_behavior} kind="cnn" />
+        <SentimentAxisCard axis={payload.axes.investor_survey} kind="aaii" />
       </section>
 
-      <section className="sentiment-workbench__driver-section">
-        <div className="sentiment-workbench__section-heading">
-          <span>무엇이 이 심리를 만들었나</span>
-          <small>CNN 구성요소 grouping</small>
-        </div>
-        <div className="sentiment-workbench__driver-lanes">
-          {payload.drivers.lanes.map((lane) => (
-            <div
-              className="sentiment-workbench__driver-lane"
-              key={lane.key}
-              style={{ "--metric-tone": toneColor(lane.tone) } as React.CSSProperties}
-            >
-              <div className="sentiment-workbench__driver-lane-header">
-                <span>{lane.label}</span>
-                <strong>{lane.count}</strong>
-              </div>
-              <div className="sentiment-workbench__driver-cards">
-                {lane.items.map((item) => (
-                  <article className="sentiment-workbench__driver-card" key={`${lane.key}-${item.series}`}>
-                    <div className="sentiment-workbench__driver-card-top">
-                      <span>{item.label_ko || item.series}</span>
-                      <strong>{displayValue(item.score)}</strong>
-                    </div>
-                    {item.rating ? <div className="sentiment-workbench__driver-rating">{item.rating}</div> : null}
-                    {item.current_reading ? <p>{item.current_reading}</p> : null}
-                  </article>
-                ))}
-                {lane.items.length === 0 ? (
-                  <div className="sentiment-workbench__driver-empty">해당 방향의 구성요소가 없습니다.</div>
-                ) : null}
-              </div>
-            </div>
-          ))}
-        </div>
+      <section className="sentiment-workbench__cross-read" style={{ "--metric-tone": toneColor(payload.cross_read.tone) } as React.CSSProperties}>
+        <div className="sentiment-workbench__section-heading"><div><span>Cross read</span><h3>현재 판정</h3></div><small>CNN 행동 × AAII 인식</small></div>
+        <div className="sentiment-workbench__cross-read-status"><strong>{payload.cross_read.status}</strong><span>{payload.cross_read.phase_label}</span></div>
+        <p className="sentiment-workbench__cross-read-meaning">{payload.cross_read.meaning}</p>
+        {payload.cross_read.confidence_note ? <small>{payload.cross_read.confidence_note}</small> : null}
       </section>
 
-      <section className="sentiment-workbench__component-section">
-        <div className="sentiment-workbench__section-heading">
-          <span>CNN 구성요소 상세</span>
-          <small>component explanations</small>
-        </div>
-        <div className="sentiment-workbench__component-list">
-          {payload.component_explanations.map((component) => (
-            <article
-              className="sentiment-workbench__component-item"
-              key={component.series}
-              style={{ "--metric-tone": toneColor(component.tone) } as React.CSSProperties}
-            >
-              <div className="sentiment-workbench__component-score">{displayValue(component.score)}</div>
-              <div className="sentiment-workbench__component-copy">
-                <div className="sentiment-workbench__component-title">
-                  <span>{component.label_ko || component.series}</span>
-                  {component.rating_label_ko ? <strong>{component.rating_label_ko}</strong> : null}
-                </div>
-                {component.what_it_checks ? <p>{component.what_it_checks}</p> : null}
-                {component.current_reading ? <small>{component.current_reading}</small> : null}
+      <section className="sentiment-workbench__evidence-section">
+        <div className="sentiment-workbench__section-heading"><div><span>Evidence</span><h3>두 축의 상세 근거</h3></div><small>중복 없이 source별 한 번만 표시</small></div>
+        <div className="sentiment-workbench__evidence-columns">
+          <article className="sentiment-workbench__cnn-evidence">
+            <header><div><strong>CNN 구성요소</strong><small>시장 행동의 내부 근거</small></div><span>{payload.evidence.cnn_components.length}</span></header>
+            {payload.evidence.cnn_components.map((item) => (
+              <div className="sentiment-workbench__cnn-evidence-row" key={item.series}>
+                <div><strong>{item.label_ko || item.series}</strong><small>{item.what_it_checks}</small></div>
+                <div><b>{displayValue(item.score)}</b><span>{item.rating}</span></div>
+                <p>{item.current_reading}</p>
+                <small className="sentiment-workbench__evidence-change">직전 대비 {componentChangeLabel(item)}</small>
               </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {payload.interpretation.component_history.length ? (
-        <section className="sentiment-workbench__component-history">
-          <div className="sentiment-workbench__section-heading">
-            <span>CNN 구성요소 변화</span>
-            <small>latest vs previous</small>
-          </div>
-          <div className="sentiment-workbench__component-history-grid">
-            {payload.interpretation.component_history.map((item) => (
-              <article
-                className="sentiment-workbench__component-history-card"
-                key={item.series}
-                style={{ "--metric-tone": toneColor(item.tone) } as React.CSSProperties}
-              >
-                <div className="sentiment-workbench__component-history-title">
-                  <span>{item.label_ko || item.series}</span>
-                  <strong>{displayValue(item.latest)}</strong>
-                </div>
-                <div className="sentiment-workbench__component-history-delta">{componentChangeLabel(item)}</div>
-                <div className="sentiment-workbench__component-history-dates">
-                  <span>{item.previous_date || "-"}</span>
-                  <span>{item.latest_date || "-"}</span>
-                </div>
-                {item.detail ? <p>{item.detail}</p> : null}
-              </article>
             ))}
-          </div>
-        </section>
-      ) : null}
+          </article>
+          <article className="sentiment-workbench__aaii-evidence">
+            <header><div><strong>AAII 장기평균 비교</strong><small>개인투자자 인식의 기준점</small></div><span>3</span></header>
+            {payload.evidence.aaii_comparison.map((item) => (
+              <div className="sentiment-workbench__aaii-row" key={item.key}>
+                <strong>{item.label}</strong>
+                <div><b>{displayValue(item.current, "%")}</b><span>장기평균 {displayValue(item.historical_average, "%")}</span></div>
+                <em>{signedValue(item.difference_pp, "pp")}</em>
+              </div>
+            ))}
+          </article>
+        </div>
+      </section>
 
       <section className="sentiment-workbench__chart-section">
-        <div className="sentiment-workbench__section-heading">
-          <span>그래프로 보는 근거</span>
-          <small>{payload.charts.history.basis}</small>
-        </div>
+        <div className="sentiment-workbench__section-heading"><div><span>History</span><h3>그래프로 보는 근거</h3></div><small>source 단위별 분리</small></div>
         <div className="sentiment-workbench__chart-tabs" role="tablist" aria-label="Sentiment evidence views">
-          <button
-            aria-selected={chartTab === "history"}
-            className={`sentiment-workbench__chart-tab ${chartTab === "history" ? "sentiment-workbench__chart-tab--active" : ""}`}
-            onClick={() => setChartTab("history")}
-            role="tab"
-            type="button"
-          >
-            그래프
-          </button>
-          <button
-            aria-selected={chartTab === "components"}
-            className={`sentiment-workbench__chart-tab ${chartTab === "components" ? "sentiment-workbench__chart-tab--active" : ""}`}
-            onClick={() => setChartTab("components")}
-            role="tab"
-            type="button"
-          >
-            CNN 구성요소
-          </button>
+          {(["cnn", "aaii_responses", "aaii_spread"] as const).map((key) => (
+            <button aria-selected={chartTab === key} className={chartTab === key ? "is-active" : ""} key={key} onClick={() => setChartTab(key)} role="tab" type="button">
+              {key === "cnn" ? "CNN 행동" : key === "aaii_responses" ? "AAII 응답" : "AAII Spread"}
+            </button>
+          ))}
         </div>
-        <div className="sentiment-workbench__chart-panel">
-          {chartTab === "history" ? (
-            <div className="sentiment-workbench__line-chart">
-              <div className="sentiment-workbench__chart-title">
-                <span>{payload.charts.history.title}</span>
-                <strong>{plottableHistory.length}</strong>
-              </div>
-              <div className="sentiment-workbench__line-chart-plot">
-                <svg
-                  aria-label={payload.charts.history.title}
-                  onMouseLeave={() => setHoveredHistoryPoint(null)}
-                  onMouseMove={handleHistoryHover}
-                  role="img"
-                  viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                >
-                  {historyTicks.map((tick) => (
-                    <g key={tick.label}>
-                      <line
-                        className="sentiment-workbench__chart-gridline"
-                        x1={chartPaddingLeft}
-                        x2={chartWidth - chartPaddingRight}
-                        y1={tick.y}
-                        y2={tick.y}
-                      />
-                      <text
-                        className="sentiment-workbench__chart-y-label"
-                        textAnchor="end"
-                        x={chartPaddingLeft - 10}
-                        y={tick.y + 3}
-                      >
-                        {tick.label}
-                      </text>
-                    </g>
-                  ))}
-                  {historyDateTicks.map((date) => (
-                    <g key={date}>
-                      <line
-                        className="sentiment-workbench__chart-x-tick"
-                        x1={xForDate(date)}
-                        x2={xForDate(date)}
-                        y1={chartHeight - chartPaddingBottom}
-                        y2={chartHeight - chartPaddingBottom + 5}
-                      />
-                      <text
-                        className="sentiment-workbench__chart-x-label"
-                        textAnchor={date === firstHistoryDate ? "start" : date === lastHistoryDate ? "end" : "middle"}
-                        x={xForDate(date)}
-                        y={chartHeight - 16}
-                      >
-                        {date}
-                      </text>
-                    </g>
-                  ))}
-                  <text className="sentiment-workbench__chart-axis-label" textAnchor="middle" x={chartWidth / 2} y={chartHeight - 2}>
-                    Date
-                  </text>
-                  <text
-                    className="sentiment-workbench__chart-axis-label"
-                    textAnchor="middle"
-                    transform={`translate(14 ${chartHeight / 2}) rotate(-90)`}
-                  >
-                    Value
-                  </text>
-                  <line className="sentiment-workbench__chart-axis" x1={chartPaddingLeft} x2={chartWidth - chartPaddingRight} y1={chartHeight - chartPaddingBottom} y2={chartHeight - chartPaddingBottom} />
-                  <line className="sentiment-workbench__chart-axis" x1={chartPaddingLeft} x2={chartPaddingLeft} y1={chartPaddingTop} y2={chartHeight - chartPaddingBottom} />
-                  {historySeriesNames.map((seriesName, seriesIndex) => {
-                    const points = plottedHistoryPoints
-                      .filter((point) => point.series === seriesName)
-                      .map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`)
-                      .join(" ");
-                    return (
-                      <polyline
-                        className="sentiment-workbench__chart-line"
-                        fill="none"
-                        key={seriesName}
-                        points={points}
-                        stroke={chartPalette[seriesIndex % chartPalette.length]}
-                      />
-                    );
-                  })}
-                  {plottedHistoryPoints.map((point) => (
-                    <circle
-                      className="sentiment-workbench__chart-point"
-                      cx={point.x}
-                      cy={point.y}
-                      fill={point.color}
-                      key={`${point.series}-${point.date}`}
-                      r="1.6"
-                    />
-                  ))}
-                  {hoveredHistoryPoint ? (
-                    <>
-                      <line
-                        className="sentiment-workbench__chart-hover-guide"
-                        x1={hoveredHistoryPoint.x}
-                        x2={hoveredHistoryPoint.x}
-                        y1={chartPaddingTop}
-                        y2={chartHeight - chartPaddingBottom}
-                      />
-                      <circle
-                        className="sentiment-workbench__chart-focus-dot"
-                        cx={hoveredHistoryPoint.x}
-                        cy={hoveredHistoryPoint.y}
-                        fill={hoveredHistoryPoint.color}
-                        r="4.2"
-                      />
-                    </>
-                  ) : null}
-                </svg>
-                {hoveredHistoryPoint ? (
-                  <div className="sentiment-workbench__chart-tooltip" style={{ left: tooltipLeft, top: tooltipTop }}>
-                    <strong>{hoveredHistoryPoint.date}</strong>
-                    <span>{hoveredHistoryPoint.series}</span>
-                    <b>{hoveredHistoryPoint.valueLabel}</b>
-                    {hoveredHistoryPoint.source ? <small>{hoveredHistoryPoint.source}</small> : null}
-                  </div>
-                ) : null}
-              </div>
-              <div className="sentiment-workbench__chart-meta">
-                <span>{firstHistoryDate}</span>
-                <span>{lastHistoryDate}</span>
-              </div>
-              <div className="sentiment-workbench__chart-legend">
-                {historySeriesNames.map((seriesName, seriesIndex) => (
-                  <span key={seriesName} style={{ "--metric-tone": chartPalette[seriesIndex % chartPalette.length] } as React.CSSProperties}>
-                    {seriesName}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="sentiment-workbench__component-bars">
-              <div className="sentiment-workbench__chart-title">
-                <span>{payload.charts.components.title}</span>
-                <strong>{payload.charts.components.items.length}</strong>
-              </div>
-              <div className="sentiment-workbench__component-bar-list">
-                {payload.charts.components.items.map((item) => {
-                  const score = numericValue(item.score);
-                  const width = `${Math.max(0, Math.min(100, score ?? 0))}%`;
-                  return (
-                    <div className="sentiment-workbench__component-bar-row" key={item.series}>
-                      <div className="sentiment-workbench__component-bar-label">
-                        <span>{item.series}</span>
-                        <strong>{displayValue(item.score ?? undefined)}</strong>
-                      </div>
-                      <div className="sentiment-workbench__component-bar-track">
-                        <div
-                          className="sentiment-workbench__component-bar-fill"
-                          style={{
-                            "--metric-tone": toneColor(item.tone),
-                            width,
-                          } as React.CSSProperties}
-                        />
-                      </div>
-                      {item.rating ? <small>{item.rating}</small> : null}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+        <div className="sentiment-workbench__chart-panel"><SimpleChartPreview panel={activeChart} /></div>
+      </section>
+
+      <section className="sentiment-workbench__watch-section">
+        <div className="sentiment-workbench__section-heading"><div><span>Watch</span><h3>다음 확인 조건</h3></div><small>예측이 아닌 관찰 checklist</small></div>
+        <div className="sentiment-workbench__watch-grid">
+          {payload.watch_conditions.map((item) => <article key={item.label}><span>{item.label}</span><p>{item.condition}</p><small>{item.basis}</small></article>)}
         </div>
       </section>
 
-      <section className="sentiment-workbench__evidence-details">
-        <div className="sentiment-workbench__section-heading">
-          <span>원본 / 상세 근거</span>
-          <small>stored rows</small>
+      <details className="sentiment-workbench__raw-disclosure">
+        <summary>원본 / 저장 근거 보기</summary>
+        {payload.raw_evidence.warnings.length ? <div className="sentiment-workbench__warnings">{payload.raw_evidence.warnings.map((warning) => <span key={warning}>{warning}</span>)}</div> : null}
+        <div className="sentiment-workbench__raw-grid">
+          <EvidenceTable rows={payload.raw_evidence.sentiment_rows} title="Sentiment rows" />
+          <EvidenceTable rows={payload.raw_evidence.component_rows} title="Component rows" />
+          <EvidenceTable rows={payload.raw_evidence.history_rows} title="History rows" />
         </div>
-        {payload.evidence.warnings.length ? (
-          <div className="sentiment-workbench__evidence-warnings">
-            {payload.evidence.warnings.map((warning) => (
-              <span key={warning}>{warning}</span>
-            ))}
-          </div>
-        ) : null}
-        <div className="sentiment-workbench__evidence-grid">
-          <EvidenceTable rows={payload.evidence.raw_rows} title="Sentiment rows" />
-          <EvidenceTable rows={payload.evidence.component_rows} title="Component rows" />
-          <EvidenceTable rows={payload.evidence.history_rows} title="History rows" />
-        </div>
-      </section>
+      </details>
     </section>
   );
 }
