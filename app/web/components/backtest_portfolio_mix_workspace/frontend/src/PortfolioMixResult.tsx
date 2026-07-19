@@ -94,9 +94,11 @@ function xForIndex(index: number, count: number) {
   return count <= 1 ? PLOT_LEFT : PLOT_LEFT + (index / (count - 1)) * plotWidth
 }
 
-function nearestIndex(clientX: number, left: number, width: number, count: number) {
+function nearestPlotIndex(clientX: number, left: number, width: number, count: number) {
   if (count <= 1 || width <= 0) return 0
-  const ratio = clamp((clientX - left) / width, 0, 1)
+  const chartX = ((clientX - left) / width) * CHART_WIDTH
+  const plotWidth = CHART_WIDTH - PLOT_LEFT - PLOT_RIGHT
+  const ratio = clamp((chartX - PLOT_LEFT) / plotWidth, 0, 1)
   return Math.round(ratio * (count - 1))
 }
 
@@ -126,7 +128,7 @@ function EquityChart({ model }: { model: MixResultEvidence["equity_chart"] }) {
   const tickX = (date: string) => xForIndex(Math.max(0, rows.findIndex((row) => row.date === date)), rows.length)
   const move = (event: React.PointerEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect()
-    setActiveIndex(nearestIndex(event.clientX, rect.left, rect.width, rows.length))
+    setActiveIndex(nearestPlotIndex(event.clientX, rect.left, rect.width, rows.length))
   }
   const clearActive = () => setActiveIndex(null)
   const shift = (offset: number) => setActiveIndex((current) => clamp((current ?? 0) + offset, 0, rows.length - 1))
@@ -181,7 +183,7 @@ function MonthlyReturnChart({ model }: { model: MixResultEvidence["monthly_retur
   const activeX = activeIndex === null ? null : xForIndex(activeIndex, rows.length)
   const move = (event: React.PointerEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect()
-    setActiveIndex(nearestIndex(event.clientX, rect.left, rect.width, rows.length))
+    setActiveIndex(nearestPlotIndex(event.clientX, rect.left, rect.width, rows.length))
   }
   const clearActive = () => setActiveIndex(null)
   const shift = (offset: number) => setActiveIndex((current) => clamp((current ?? 0) + offset, 0, rows.length - 1))

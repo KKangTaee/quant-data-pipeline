@@ -705,3 +705,15 @@
   Portfolio Mix 신규 failure는 0이다.
 - React production build: Vite 5.4.21, `176 modules transformed`, CSS 11.50 kB,
   JS 341.88 kB. target 4-module `py_compile`과 `git diff --check`는 exit 0이다.
+
+## 2026-07-19 17차 Task 53 RED -> GREEN
+
+- root-cause probe: 720 viewBox / 54 left / 24 right / rendered width 900 / 119 rows에서 첫 plot point
+  cursor는 기존 full-SVG ratio로 index `9`, plot-aware ratio로 index `0`을 선택했다.
+- RED source contract:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k 'chart_geometry or visual_contract'`
+  -> `1 failed / 2 passed / 25 deselected`, missing `nearestPlotIndex`.
+- GREEN same selector -> `3 passed / 25 deselected`; focused Portfolio Mix 전체 ->
+  `28 passed, 3 warnings in 1.72s`.
+- React production build: Vite 5.4.21, `176 modules transformed`, CSS 11.48 kB,
+  JS 341.91 kB. desktop grid는 한 열이며 760px contract와 동일하다.

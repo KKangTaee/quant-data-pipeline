@@ -365,3 +365,13 @@ Last Updated: 2026-07-19
 - fresh closeout verification은 focused UI/boundary `83 passed`, React build `176 modules transformed`,
   target `py_compile`과 `git diff --check` exit 0이다. full service는 기존 baseline 그대로
   `833 passed / 12 failed / 35 subtests passed`이며 Portfolio Mix 신규 failure는 0이다.
+
+## Current 17차 Position
+
+- 누적 성과 hover mismatch의 root cause는 pointer index가 SVG 전체 폭을 사용하지만 point는 좌우 plot
+  padding 안에만 배치된 geometry 불일치다. 119개 row에서 첫 point 커서가 기존 index 9를 선택했다.
+- `nearestPlotIndex()`가 pointer X를 viewBox X로 변환한 뒤 실제 plot width로 정규화하므로 같은 커서는
+  index 0을 선택한다. 누적/월별 chart가 같은 helper를 사용한다.
+- desktop chart grid도 한 열로 바꿔 누적 성과와 월별 수익률을 각각 전체 폭 한 행으로 표시한다.
+- Task 53 RED는 `1 failed / 2 passed`, GREEN은 `3 passed / 25 deselected`, focused 전체는
+  `28 passed, 3 warnings`; React build는 `176 modules transformed`다.

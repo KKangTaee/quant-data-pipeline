@@ -1060,3 +1060,27 @@ def test_mix_result_react_visual_contract_keeps_mobile_chart_and_table_boundarie
     assert ".mix-chart-grid { grid-template-columns: minmax(0, 1fr); }" in (
         styles_source
     )
+
+
+def test_mix_result_chart_geometry_uses_plot_bounds_and_full_width_rows():
+    root = Path(__file__).resolve().parents[1]
+    result_source = (
+        root
+        / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/PortfolioMixResult.tsx"
+    ).read_text()
+    styles_source = (
+        root
+        / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/styles.css"
+    ).read_text()
+
+    assert "function nearestPlotIndex" in result_source
+    assert "const chartX = ((clientX - left) / width) * CHART_WIDTH" in result_source
+    assert "CHART_WIDTH - PLOT_LEFT - PLOT_RIGHT" in result_source
+    assert (
+        "nearestPlotIndex(event.clientX, rect.left, rect.width, rows.length)"
+        in result_source
+    )
+    assert (
+        ".mix-chart-grid { display: grid; grid-template-columns: minmax(0, 1fr);"
+        in styles_source
+    )

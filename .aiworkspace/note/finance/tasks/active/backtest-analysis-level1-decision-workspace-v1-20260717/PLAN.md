@@ -7861,7 +7861,7 @@ git commit -m "Portfolio Mix 결과 해석 QA와 문서 동기화"
 - Consumes: pointer `clientX`, SVG `getBoundingClientRect()`, existing `PLOT_LEFT/PLOT_RIGHT/CHART_WIDTH`, row count.
 - Produces: `nearestPlotIndex(clientX, left, width, count)` and a one-column `.mix-chart-grid` at every viewport.
 
-- [ ] **Step 1: Write RED source contracts**
+- [x] **Step 1: Write RED source contracts**
 
 Require `nearestPlotIndex`, viewBox conversion, plot-width subtraction and a desktop single-column grid:
 
@@ -7872,7 +7872,7 @@ assert "nearestPlotIndex(event.clientX, rect.left, rect.width, rows.length)" in 
 assert ".mix-chart-grid { display: grid; grid-template-columns: minmax(0, 1fr);" in styles_source
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k 'chart_geometry or visual_contract'
@@ -7880,7 +7880,7 @@ assert ".mix-chart-grid { display: grid; grid-template-columns: minmax(0, 1fr);"
 
 Expected: `nearestPlotIndex`와 desktop single-column CSS가 아직 없어 FAIL.
 
-- [ ] **Step 3: Implement minimal geometry and layout correction**
+- [x] **Step 3: Implement minimal geometry and layout correction**
 
 Replace full-SVG ratio selection with:
 
@@ -7896,7 +7896,7 @@ function nearestPlotIndex(clientX: number, left: number, width: number, count: n
 
 Use it in both chart pointer handlers. Change `.mix-chart-grid` to one `minmax(0, 1fr)` column and keep the 760px rule consistent.
 
-- [ ] **Step 4: Run GREEN and build**
+- [x] **Step 4: Run GREEN and build**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q
@@ -7906,7 +7906,7 @@ git diff --check
 
 Expected: focused tests and Vite production build pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git commit -m "Portfolio Mix 차트 위치와 크기 개선"

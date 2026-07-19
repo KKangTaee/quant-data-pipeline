@@ -70,7 +70,7 @@ input, select { width: 100%; min-width: 0; min-height: 44px; padding: 0 12px; bo
 .mix-result-grid span { display: grid; gap: 5px; padding: 12px; border: 1px solid #cfe2d9; border-radius: 11px; background: #fff; }
 .mix-result-grid small { color: #688174; }
 .mix-result-grid b { font-size: 19px; }
-.mix-chart-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, .9fr); gap: 14px; min-width: 0; }
+.mix-chart-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
 .mix-chart-card { min-width: 0; padding: 16px; border: 1px solid #d4e3dc; border-radius: 14px; background: #fff; }
 .mix-chart-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .mix-chart-card h4 { margin: 0; font-size: 16px; }
