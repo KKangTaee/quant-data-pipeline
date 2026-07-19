@@ -25,3 +25,5 @@
 - 한 source 결측 상태에서도 근거 없는 종합 판정을 만들지 않는다.
 
 Authoritative spec: `docs/superpowers/specs/2026-07-19-overview-sentiment-cnn-aaii-v1-design.md`
+
+Implementation plan: `docs/superpowers/plans/2026-07-19-overview-sentiment-cnn-aaii-v1.md`
