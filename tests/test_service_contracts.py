@@ -22025,6 +22025,157 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(macro_row["Status"], "Due")
         self.assertIn("covered 1/4", macro_row["Data Freshness"])
 
+    def test_aaii_direction_uses_spread_without_bearish_gate(self) -> None:
+        from app.services.overview.sentiment import _aaii_direction
+
+        self.assertEqual(_aaii_direction(bearish=32.9, spread=12.0), "optimistic")
+        self.assertEqual(_aaii_direction(bearish=40.0, spread=10.0), "optimistic")
+        self.assertEqual(_aaii_direction(bearish=20.0, spread=-10.0), "pessimistic")
+        self.assertEqual(_aaii_direction(bearish=40.0, spread=4.0), "neutral")
+        self.assertEqual(_aaii_direction(bearish=32.9, spread=None), "unavailable")
+
+    def test_market_sentiment_two_axis_cross_read_marks_cnn_fear_aaii_optimistic_as_divergent(self) -> None:
+        from app.services.overview.sentiment import _build_market_sentiment_analysis
+
+        analysis = _build_market_sentiment_analysis(
+            coverage={
+                "cnn_score": 37.1,
+                "cnn_rating": "fear",
+                "aaii_bullish": 44.9,
+                "aaii_neutral": 22.2,
+                "aaii_bearish": 32.9,
+                "aaii_bull_bear_spread": 12.0,
+                "source_count": 2,
+                "missing_count": 0,
+                "stale_count": 0,
+            },
+            component_rows=[
+                {"Series": "Market Momentum", "Score": 64.0, "Rating": "greed"},
+                {"Series": "Stock Price Breadth", "Score": 31.0, "Rating": "fear"},
+            ],
+            history_rows=pd.DataFrame(),
+        )
+
+        self.assertIn("axes", analysis)
+        self.assertEqual(analysis["axes"]["market_behavior"]["direction"], "fear")
+        self.assertEqual(analysis["axes"]["investor_survey"]["direction"], "optimistic")
+        self.assertEqual(analysis["cross_read"]["status"], "뚜렷한 엇갈림")
+        self.assertIn("시장 행동은 공포", analysis["cross_read"]["headline"])
+        self.assertIn("개인투자자 설문은 낙관", analysis["cross_read"]["headline"])
+        self.assertNotIn("component_direction", analysis["cross_read"])
+
+    def test_market_sentiment_cross_read_matrix_handles_alignment_neutral_and_missing(self) -> None:
+        from app.services.overview.sentiment import _build_market_sentiment_analysis
+
+        cases = [
+            (65.0, 12.0, "심리 일치 · 위험선호"),
+            (37.0, -12.0, "심리 일치 · 방어 우위"),
+            (50.0, 0.0, "중립 일치"),
+            (50.0, 12.0, "부분 엇갈림"),
+            (37.0, 0.0, "부분 엇갈림"),
+            (37.0, None, "한 축만 확인 가능"),
+        ]
+        for cnn_score, spread, expected_status in cases:
+            with self.subTest(cnn_score=cnn_score, spread=spread):
+                analysis = _build_market_sentiment_analysis(
+                    coverage={
+                        "cnn_score": cnn_score,
+                        "aaii_bullish": 40.0,
+                        "aaii_neutral": 30.0,
+                        "aaii_bearish": 30.0,
+                        "aaii_bull_bear_spread": spread,
+                        "source_count": 2,
+                        "missing_count": 0,
+                        "stale_count": 0,
+                    },
+                    component_rows=[],
+                    history_rows=pd.DataFrame(),
+                )
+                self.assertEqual(analysis["cross_read"]["status"], expected_status)
+
+    def test_market_sentiment_axes_include_aaii_long_term_comparison_and_history(self) -> None:
+        from app.services.overview.sentiment import _build_market_sentiment_analysis
+
+        history_rows = pd.DataFrame(
+            [
+                {"series_id": "CNN_FEAR_GREED", "observation_date": "2026-07-10", "value": 41.0, "source": "cnn"},
+                {"series_id": "CNN_FEAR_GREED", "observation_date": "2026-07-17", "value": 37.1, "source": "cnn"},
+                {"series_id": "AAII_BULLISH", "observation_date": "2026-07-08", "value": 40.0, "source": "aaii"},
+                {"series_id": "AAII_BULLISH", "observation_date": "2026-07-15", "value": 44.9, "source": "aaii"},
+                {"series_id": "AAII_NEUTRAL", "observation_date": "2026-07-08", "value": 26.0, "source": "aaii"},
+                {"series_id": "AAII_NEUTRAL", "observation_date": "2026-07-15", "value": 22.2, "source": "aaii"},
+                {"series_id": "AAII_BEARISH", "observation_date": "2026-07-08", "value": 34.0, "source": "aaii"},
+                {"series_id": "AAII_BEARISH", "observation_date": "2026-07-15", "value": 32.9, "source": "aaii"},
+                {"series_id": "AAII_BULL_BEAR_SPREAD", "observation_date": "2026-07-08", "value": 6.0, "source": "aaii"},
+                {"series_id": "AAII_BULL_BEAR_SPREAD", "observation_date": "2026-07-15", "value": 12.0, "source": "aaii"},
+            ]
+        )
+        analysis = _build_market_sentiment_analysis(
+            coverage={
+                "cnn_score": 37.1,
+                "aaii_bullish": 44.9,
+                "aaii_neutral": 22.2,
+                "aaii_bearish": 32.9,
+                "aaii_bull_bear_spread": 12.0,
+                "source_count": 2,
+                "missing_count": 0,
+                "stale_count": 0,
+            },
+            component_rows=[],
+            history_rows=history_rows,
+        )
+
+        survey = analysis["axes"]["investor_survey"]
+        self.assertEqual(survey["long_term_comparison"]["bullish"]["difference_pp"], 6.9)
+        self.assertEqual(survey["long_term_comparison"]["neutral"]["difference_pp"], -9.3)
+        self.assertEqual(survey["long_term_comparison"]["bearish"]["difference_pp"], 2.4)
+        self.assertEqual(survey["change"], 6.0)
+        self.assertEqual(analysis["axes"]["market_behavior"]["change"], -3.9)
+
+    def test_market_sentiment_snapshot_exposes_full_aaii_responses(self) -> None:
+        from app.services.overview.sentiment import build_market_sentiment_snapshot
+
+        rows = []
+        for series_id, value, source in (
+            ("CNN_FEAR_GREED", 37.1, "cnn_fear_greed"),
+            ("AAII_BULLISH", 44.9, "aaii_sentiment_survey"),
+            ("AAII_NEUTRAL", 22.2, "aaii_sentiment_survey"),
+            ("AAII_BEARISH", 32.9, "aaii_sentiment_survey"),
+            ("AAII_BULL_BEAR_SPREAD", 12.0, "aaii_sentiment_survey"),
+        ):
+            rows.append(
+                {
+                    "series_id": series_id,
+                    "observation_date": pd.Timestamp("2026-07-15"),
+                    "source": source,
+                    "value": value,
+                    "coverage_status": "actual",
+                    "snapshot_status": "actual",
+                    "missing_fields_json": "{}",
+                    "staleness_days": 1,
+                }
+            )
+        snapshot = build_market_sentiment_snapshot(
+            snapshot_rows=pd.DataFrame(rows),
+            history_rows=pd.DataFrame(rows),
+            today=date(2026, 7, 16),
+        )
+
+        self.assertIn("aaii_bullish", snapshot["coverage"])
+        self.assertEqual(snapshot["coverage"]["aaii_bullish"], 44.9)
+        self.assertEqual(snapshot["coverage"]["aaii_neutral"], 22.2)
+        self.assertEqual(snapshot["analysis"]["axes"]["investor_survey"]["responses"]["bearish"], 32.9)
+        self.assertEqual(
+            set(snapshot["history_rows"]["Series"]),
+            {
+                "CNN Fear & Greed",
+                "AAII Bullish",
+                "AAII Neutral",
+                "AAII Bearish",
+                "AAII Bull-Bear Spread",
+            },
+        )
+
     def test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context(self) -> None:
         from app.services.overview.sentiment import build_market_sentiment_snapshot
 
@@ -22233,19 +22384,19 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Stock Price Breadth", set(snapshot["component_rows"]["Series"]))
         self.assertFalse(snapshot["history_rows"].empty)
         analysis = snapshot["analysis"]
-        self.assertEqual(analysis["phase"], "MIXED_NEUTRAL")
-        self.assertEqual(analysis["phase_label"], "혼합 중립")
-        self.assertIn("내부는 엇갈린", analysis["headline"])
+        self.assertEqual(analysis["phase"], "ALIGNED_NEUTRAL")
+        self.assertEqual(analysis["phase_label"], "행동 중립 · 설문 중립")
+        self.assertIn("모두 중립권", analysis["headline"])
         self.assertEqual(analysis["data_confidence"]["status"], "High")
         self.assertEqual(analysis["driver_summary"]["greed_count"], 3)
         self.assertEqual(analysis["driver_summary"]["fear_count"], 3)
         self.assertEqual(analysis["driver_summary"]["neutral_count"], 1)
         self.assertEqual(
             [step["title"] for step in analysis["analysis_steps"]],
-            ["지금 결론", "왜 이렇게 보나", "강한 신호", "약한 신호", "그래서 어떻게 보나", "다음 확인"],
+            ["현재 판단", "CNN 시장 행동", "AAII 투자자 인식", "다음 확인"],
         )
-        self.assertIn("중립", analysis["analysis_steps"][0]["status"])
-        self.assertIn("지수는 버티지만", analysis["analysis_steps"][4]["detail"])
+        self.assertEqual(analysis["analysis_steps"][0]["status"], "중립 일치")
+        self.assertIn("두 source의 다음 관측", analysis["analysis_steps"][3]["status"])
         explanations = analysis["component_explanations"]
         self.assertEqual(len(explanations), 7)
         momentum = next(item for item in explanations if item["series"] == "Market Momentum")
@@ -22253,7 +22404,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("지수 추세", momentum["current_reading"])
         breadth = next(item for item in explanations if item["series"] == "Stock Price Breadth")
         self.assertIn("시장 폭", breadth["current_reading"])
-        self.assertIn("Market Movers", analysis["next_checks"][0]["target"])
+        self.assertEqual(analysis["next_checks"][0]["target"], "CNN 행동 심리")
 
     def test_market_sentiment_snapshot_adds_range_divergence_and_component_history(self) -> None:
         from app.services.overview.sentiment import build_market_sentiment_snapshot
@@ -22379,22 +22530,17 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(range_by_series["AAII Bull-Bear Spread"]["position_label"], "낮은 편")
 
         divergence = analysis["divergence"]
-        self.assertEqual(divergence["status"], "뚜렷한 엇갈림")
+        self.assertEqual(divergence["status"], "부분 엇갈림")
         self.assertEqual(divergence["headline_direction"], "neutral")
         self.assertEqual(divergence["component_direction"], "mixed")
-        self.assertEqual(divergence["aaii_direction"], "fear")
-        self.assertIn("서로 다르게", divergence["summary"])
+        self.assertEqual(divergence["aaii_direction"], "pessimistic")
+        self.assertIn("한 축은 방향성", divergence["summary"])
         divergence_items = {item["label"]: item for item in divergence["items"]}
-        self.assertIn("중립", divergence_items["CNN headline"]["detail"])
-        self.assertIn("강하게 밀지", divergence_items["CNN headline"]["detail"])
-        self.assertIn("탐욕 1개와 공포 1개", divergence_items["CNN components"]["detail"])
-        self.assertIn("내부가 갈라", divergence_items["CNN components"]["detail"])
+        self.assertEqual(set(divergence_items), {"CNN market behavior", "AAII survey"})
+        self.assertIn("CNN 구성요소가 공포와 탐욕으로 갈려", divergence_items["CNN market behavior"]["detail"])
         self.assertIn("비관", divergence_items["AAII survey"]["detail"])
-        self.assertIn("42.0", divergence_items["AAII survey"]["detail"])
         self.assertIn("-12.0", divergence_items["AAII survey"]["detail"])
-        self.assertNotIn("headline score 기준", divergence_items["CNN headline"]["detail"])
-        self.assertNotIn("방향 분포입니다", divergence_items["CNN components"]["detail"])
-        self.assertNotIn("함께 본 설문 방향", divergence_items["AAII survey"]["detail"])
+        self.assertNotIn("component_direction", analysis["cross_read"])
 
         history_by_series = {item["series"]: item for item in analysis["component_history"]}
         self.assertEqual(history_by_series["Market Momentum"]["latest"], 65.0)
