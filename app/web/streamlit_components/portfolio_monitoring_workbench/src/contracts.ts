@@ -103,6 +103,27 @@ export type SourceHealth = {
   warnings: string[];
 };
 
+export type RiskCalibrationProjection = {
+  publication_status: "SUPPRESSED" | "LIMITED" | "READY" | string;
+  reasons: string[];
+  probability?: number;
+  horizon_sessions?: number;
+  event_definition?: string;
+  sample_size?: number;
+  brier_score?: number;
+  baseline_brier?: number;
+  limitations?: string[];
+};
+
+export type DiagnosisHistoryRow = {
+  as_of_date: string;
+  observation_state: string;
+  severity: string;
+  confidence: string;
+  resolved_at: string | null;
+  outcome: string | null;
+};
+
 export type DiagnosisProjection = {
   policy_version: string;
   top_three: DiagnosisRow[];
@@ -124,6 +145,8 @@ export type PortfolioMonitoringWorkspace = {
   macro_observation: MacroObservationProjection;
   now_to_review: Array<Record<string, unknown>>;
   source_health: SourceHealth;
+  risk_calibration: RiskCalibrationProjection;
+  diagnosis_history: DiagnosisHistoryRow[];
   method: Record<string, string>;
   boundaries: Record<string, boolean | string | null>;
 };

@@ -9,6 +9,7 @@ import {
   buildGroupChartSeries,
   buildDiagnosisSections,
   buildMacroObservationPresentation,
+  buildRiskCalibrationPresentation,
   createItemDraft,
   formatMetric,
   selectActiveGroup,
@@ -188,6 +189,10 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
     workspace.macro_observation ?? { version: "portfolio_monitoring_macro_context_v1", state: "low", rows: [], top_rows: [] },
     workspace.source_health ?? { status: "LIMITED", publication: "LIMITED", coverage: 0, as_of_dates: {}, warnings: ["source health unavailable"] },
   );
+  const riskPresentation = buildRiskCalibrationPresentation(
+    workspace.risk_calibration ?? { publication_status: "SUPPRESSED", reasons: ["qualified calibration artifact is not available"] },
+    workspace.diagnosis_history ?? [],
+  );
   const emit = (event: Record<string, unknown>) => {
     Streamlit.setComponentValue({ event: { ...event, nonce: `${Date.now()}-${Math.random()}` } });
   };
@@ -324,6 +329,35 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
                 {!macroPresentation.rows.length && <div className="pm-diagnosis-empty">현재 보유 노출과 동시에 맞는 매크로 위험 관찰이 없습니다.</div>}
               </div>
               {macroPresentation.staleWarning && <p className="pm-source-warning">Source 확인: {macroPresentation.staleWarning}</p>}
+            </section>
+
+            <section className="pm-panel pm-calibration-panel" aria-label="위험 검증과 진단 이력">
+              <header className="pm-section-heading">
+                <div><span>CALIBRATION & HISTORY</span><h2>위험 검증과 진단 이력</h2></div>
+                <small className={`pm-source-chip status-${riskPresentation.status.toLowerCase()}`}>{riskPresentation.status}</small>
+              </header>
+              {riskPresentation.mode === "qualified_probability" ? (
+                <div className="pm-qualified-risk">
+                  <div><span>검증된 {riskPresentation.horizonSessions}거래일 위험 event 확률</span><strong>{formatMetric(riskPresentation.probability, "percent")}</strong><small>{riskPresentation.eventDefinition}</small></div>
+                  <dl><div><dt>검증 표본</dt><dd>{riskPresentation.qualification}</dd></div><div><dt>OOS score</dt><dd>{riskPresentation.score}</dd></div></dl>
+                  {riskPresentation.limitations.map((value) => <p key={value}>{value}</p>)}
+                </div>
+              ) : (
+                <div className="pm-observation-only">
+                  <strong>현재는 관찰 신호만 제공합니다.</strong>
+                  <p>확률 공개 기준을 통과한 시간순 OOS artifact가 없어 수치를 표시하지 않습니다.</p>
+                  {riskPresentation.reasons.map((reason) => <small key={reason}>{reason}</small>)}
+                </div>
+              )}
+              <div className="pm-history-list">
+                {riskPresentation.history.map((row) => (
+                  <article key={`${row.as_of_date}-${row.severity}`}>
+                    <span>{row.as_of_date}</span><b>{row.observation_state} · {row.severity}</b>
+                    <small>{row.confidence} confidence · {row.resolved_at ? `${row.resolved_at} 해결` : "관찰 지속"} · {row.outcome ?? "결과 대기"}</small>
+                  </article>
+                ))}
+                {!riskPresentation.history.length && <p>누적된 진단 이력이 아직 없습니다.</p>}
+              </div>
             </section>
 
             <section className="pm-content-grid">

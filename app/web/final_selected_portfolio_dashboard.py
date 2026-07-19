@@ -63,6 +63,10 @@ from app.services.portfolio_monitoring.macro_context import (
     evaluate_macro_observations,
     load_portfolio_macro_context,
 )
+from app.services.portfolio_monitoring.history import (
+    MySQLMonitoringHistoryRepository,
+    load_diagnosis_history,
+)
 from app.web.portfolio_monitoring_react_component import (
     render_portfolio_monitoring_workbench,
 )
@@ -369,6 +373,8 @@ def _fallback_monitoring_workspace(
         "macro_observation": {"version": "portfolio_monitoring_macro_context_v1", "state": "low", "rows": [], "top_rows": []},
         "now_to_review": [],
         "source_health": {"status": "LIMITED", "publication": "LIMITED", "coverage": 0.0, "as_of_dates": {}, "warnings": [storage_error]},
+        "risk_calibration": {"publication_status": "SUPPRESSED", "reasons": ["qualified calibration artifact is not available"]},
+        "diagnosis_history": [],
         "method": {
             "basis": "storage migration required",
             "alignment": "not available until monitoring storage is ready",
@@ -421,6 +427,7 @@ def _catalog_with_entry_readiness(
 
 def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
     repository = MySQLMonitoringRepository(_monitoring_db_factory)
+    history_repository = MySQLMonitoringHistoryRepository(_monitoring_db_factory)
     selected_adapter = SelectedStrategyReplayAdapter()
     session_state = st.session_state
 
@@ -545,12 +552,29 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
         requested_date = session_state.get("portfolio_monitoring_catalog_requested_start_date")
         try:
             ensure_default_group(repository)
+            groups = repository.list_groups(include_deleted=False)
+            selected_group = next((group for group in groups if group.portfolio_group_id == active_group_id), None)
+            if selected_group is None:
+                selected_group = next((group for group in groups if group.is_default), groups[0] if groups else None)
+            history_rows = (
+                load_diagnosis_history(
+                    selected_group.portfolio_group_id,
+                    date.today() - timedelta(days=730),
+                    date.today(),
+                    repository=history_repository,
+                )
+                if selected_group is not None
+                else []
+            )
+            calibration_artifact = history_repository.load_latest_calibration_artifact()
             workspace = build_portfolio_monitoring_workspace(
                 repository,
                 active_group_id=active_group_id,
                 catalog_query=catalog_query,
                 lane_loader=lane_loader,
                 analysis_builder=build_analysis,
+                risk_calibration_artifact=calibration_artifact,
+                diagnosis_history=history_rows,
             )
         except Exception as exc:
             return _fallback_monitoring_workspace(

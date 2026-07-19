@@ -1254,6 +1254,7 @@ PORTFOLIO_MONITORING_SCHEMAS = {
           calibration_artifact_id CHAR(64) PRIMARY KEY,
           algorithm_version VARCHAR(128) NOT NULL,
           data_fingerprint CHAR(64) NOT NULL,
+          config_fingerprint CHAR(64) NOT NULL,
           policy_version VARCHAR(128) NOT NULL,
           publication_status ENUM('SUPPRESSED','LIMITED','READY') NOT NULL,
           train_end_date DATE NULL,

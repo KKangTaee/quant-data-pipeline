@@ -1,4 +1,4 @@
-import type { DiagnosisProjection, GroupMetrics, GroupSummary, ItemRow, MacroObservationProjection, SourceHealth } from "./contracts";
+import type { DiagnosisHistoryRow, DiagnosisProjection, GroupMetrics, GroupSummary, ItemRow, MacroObservationProjection, RiskCalibrationProjection, SourceHealth } from "./contracts";
 
 export type MonitoringSourceType = "direct_security" | "selected_strategy";
 export type MonitoringKind = "stock" | "etf" | "strategy";
@@ -179,6 +179,31 @@ export function buildMacroObservationPresentation(
     topRows: observation.top_rows.filter((row) => row.confidence !== "LOW").slice(0, 3),
     staleWarning: sourceHealth.warnings.join(" · "),
     dates: sourceHealth.as_of_dates,
+  };
+}
+
+export function buildRiskCalibrationPresentation(
+  calibration: RiskCalibrationProjection,
+  history: DiagnosisHistoryRow[],
+) {
+  if (calibration.publication_status !== "READY" || calibration.probability == null) {
+    return {
+      mode: "observation_only" as const,
+      status: calibration.publication_status,
+      reasons: calibration.reasons,
+      history,
+    };
+  }
+  return {
+    mode: "qualified_probability" as const,
+    status: calibration.publication_status,
+    probability: calibration.probability,
+    horizonSessions: calibration.horizon_sessions,
+    eventDefinition: calibration.event_definition,
+    qualification: `OOS ${calibration.sample_size ?? 0}개 · baseline 대비 Brier 검증`,
+    score: `Brier ${(calibration.brier_score ?? 0).toFixed(3)} / baseline ${(calibration.baseline_brier ?? 0).toFixed(3)}`,
+    limitations: calibration.limitations ?? [],
+    history,
   };
 }
 

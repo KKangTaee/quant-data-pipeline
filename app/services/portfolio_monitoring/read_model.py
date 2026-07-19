@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Callable, Mapping, Sequence
@@ -294,6 +294,49 @@ def _group_summary(
     }
 
 
+def project_risk_calibration(
+    artifact: Mapping[str, Any] | Any | None,
+    *,
+    current_policy_version: str,
+    current_config_fingerprint: str,
+) -> dict[str, Any]:
+    """Expose probability only for a current, explicitly READY artifact."""
+
+    raw = asdict(artifact) if is_dataclass(artifact) and not isinstance(artifact, type) else dict(artifact or {})
+    status = str(raw.get("publication_status") or raw.get("status") or "SUPPRESSED").upper()
+    reasons = [str(value) for value in raw.get("reasons") or [] if str(value)]
+    if not raw:
+        reasons.append("qualified calibration artifact is not available")
+    fingerprint_mismatch = bool(raw) and (
+        str(raw.get("policy_version") or "") != current_policy_version
+        or str(raw.get("config_fingerprint") or "") != current_config_fingerprint
+    )
+    if fingerprint_mismatch:
+        status = "SUPPRESSED"
+        reasons.append("policy/config fingerprint does not match the current workspace")
+    result: dict[str, Any] = {
+        "publication_status": status if status in {"SUPPRESSED", "LIMITED", "READY"} else "SUPPRESSED",
+        "reasons": list(dict.fromkeys(reasons)),
+    }
+    if result["publication_status"] != "READY" or raw.get("probability") is None:
+        return result
+    for key in (
+        "probability", "horizon_sessions", "event_definition", "sample_size",
+        "brier_score", "baseline_brier", "limitations",
+    ):
+        result[key] = raw.get(key)
+    return result
+
+
+def _compact_history_rows(rows: Sequence[Mapping[str, Any]] | None) -> list[dict[str, Any]]:
+    fields = ("as_of_date", "observation_state", "severity", "confidence", "resolved_at", "outcome")
+    return [
+        {key: row.get(key) for key in fields}
+        for row in rows or []
+        if isinstance(row, Mapping)
+    ]
+
+
 def build_portfolio_monitoring_workspace(
     repository: MonitoringRepository,
     *,
@@ -306,6 +349,8 @@ def build_portfolio_monitoring_workspace(
     macro_context: MacroContext | None = None,
     macro_observations: Sequence[MacroObservation] | None = None,
     analysis_builder: AnalysisBuilder | None = None,
+    risk_calibration_artifact: Mapping[str, Any] | Any | None = None,
+    diagnosis_history: Sequence[Mapping[str, Any]] | None = None,
 ) -> dict[str, object]:
     """Build the versioned, read-only projection consumed by the React workbench."""
 
@@ -421,6 +466,11 @@ def build_portfolio_monitoring_workspace(
         "macro_context": MACRO_CONTEXT_VERSION,
         "method": method,
     })
+    risk_calibration = project_risk_calibration(
+        risk_calibration_artifact,
+        current_policy_version=DIAGNOSIS_POLICY_VERSION,
+        current_config_fingerprint=config_fingerprint,
+    )
     return {
         "schema_version": WORKSPACE_SCHEMA_VERSION,
         "generated_at": timestamp.isoformat(timespec="seconds"),
@@ -453,6 +503,8 @@ def build_portfolio_monitoring_workspace(
         },
         "now_to_review": now_to_review,
         "source_health": source_health,
+        "risk_calibration": risk_calibration,
+        "diagnosis_history": _compact_history_rows(diagnosis_history),
         "method": method,
         "boundaries": {
             "db_only": True,

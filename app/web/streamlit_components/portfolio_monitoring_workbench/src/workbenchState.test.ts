@@ -13,6 +13,7 @@ import {
   selectItem,
   buildDiagnosisSections,
   buildMacroObservationPresentation,
+  buildRiskCalibrationPresentation,
 } from "./workbenchState";
 
 const groups: GroupSummary[] = [
@@ -186,5 +187,24 @@ describe("macro observation evidence contract", () => {
     expect(presentation.rows[0].change_condition).toContain("-20");
     expect(presentation.staleWarning).toContain("stale");
     expect(JSON.stringify(presentation)).not.toMatch(/확률|probability|매수|매도/);
+  });
+});
+
+describe("risk calibration disclosure contract", () => {
+  it("shows observation-only fallback unless probability is qualified", () => {
+    const fallback = buildRiskCalibrationPresentation({ publication_status: "SUPPRESSED", reasons: ["표본 250개 미만"] }, []);
+    expect(fallback.mode).toBe("observation_only");
+    expect(JSON.stringify(fallback)).not.toContain("probability");
+
+    const ready = buildRiskCalibrationPresentation({
+      publication_status: "READY", probability: 0.27, horizon_sessions: 21,
+      event_definition: "subsequent drawdown <= -10%", sample_size: 300,
+      brier_score: 0.08, baseline_brier: 0.10, limitations: ["OOS only"], reasons: [],
+    }, [{ as_of_date: "2026-07-01", observation_state: "medium", severity: "WATCH", confidence: "MEDIUM", resolved_at: "2026-07-18", outcome: "resolved" }]);
+    expect(ready.mode).toBe("qualified_probability");
+    expect(ready.qualification).toContain("300");
+    expect(ready.score).toContain("0.080");
+    expect(ready.history[0].resolved_at).toBe("2026-07-18");
+    expect(JSON.stringify(ready)).not.toMatch(/기대수익|매수|매도/);
   });
 });

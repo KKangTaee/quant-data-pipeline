@@ -202,7 +202,7 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
 
         self.assertEqual(
             set(workspace),
-            {"schema_version", "generated_at", "config_fingerprint", "groups", "active_group", "catalog", "commands", "diagnosis", "macro_observation", "now_to_review", "source_health", "method", "boundaries"},
+            {"schema_version", "generated_at", "config_fingerprint", "groups", "active_group", "catalog", "commands", "diagnosis", "macro_observation", "now_to_review", "source_health", "risk_calibration", "diagnosis_history", "method", "boundaries"},
         )
         self.assertEqual(workspace["schema_version"], "portfolio_monitoring_workspace_v1")
         self.assertTrue(workspace["groups"][0]["selected"])
@@ -212,6 +212,8 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
         self.assertEqual(len(workspace["config_fingerprint"]), 64)
         self.assertEqual(workspace["diagnosis"]["policy_version"], "portfolio_monitoring_policy_v1")
         self.assertEqual(workspace["diagnosis"]["top_three"], [])
+        self.assertEqual(workspace["risk_calibration"]["publication_status"], "SUPPRESSED")
+        self.assertNotIn("probability", workspace["risk_calibration"])
 
     def test_macro_projection_filters_low_confidence_and_exposes_source_health(self) -> None:
         read_model = _load_read_model()
@@ -243,6 +245,46 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
         self.assertEqual(workspace["source_health"]["status"], "LIMITED")
         self.assertEqual(workspace["source_health"]["coverage"], 0.75)
         self.assertNotIn("probability", str(workspace["macro_observation"]).lower())
+
+    def test_risk_calibration_projection_is_ready_only_and_fingerprint_safe(self) -> None:
+        read_model = _load_read_model()
+        base = {
+            "publication_status": "READY", "probability": 0.27, "horizon_sessions": 21,
+            "event_definition": "subsequent drawdown <= -10%", "sample_size": 300,
+            "brier_score": 0.08, "baseline_brier": 0.10, "limitations": ["OOS only"],
+            "policy_version": "portfolio_monitoring_policy_v1", "config_fingerprint": "a" * 64,
+        }
+        ready = read_model.project_risk_calibration(
+            base, current_policy_version="portfolio_monitoring_policy_v1", current_config_fingerprint="a" * 64,
+        )
+        self.assertEqual(ready["probability"], 0.27)
+        self.assertEqual(ready["sample_size"], 300)
+
+        limited = read_model.project_risk_calibration(
+            {**base, "publication_status": "LIMITED"},
+            current_policy_version="portfolio_monitoring_policy_v1", current_config_fingerprint="a" * 64,
+        )
+        self.assertNotIn("probability", limited)
+        stale = read_model.project_risk_calibration(
+            base, current_policy_version="portfolio_monitoring_policy_v2", current_config_fingerprint="b" * 64,
+        )
+        self.assertEqual(stale["publication_status"], "SUPPRESSED")
+        self.assertNotIn("probability", stale)
+        self.assertIn("fingerprint", " ".join(stale["reasons"]))
+
+    def test_workspace_projects_compact_diagnosis_history_timeline(self) -> None:
+        read_model = _load_read_model()
+        repository = FakeRepository([PortfolioGroupRecord("group-core", "Core", True)], [])
+        workspace = read_model.build_portfolio_monitoring_workspace(
+            repository,
+            diagnosis_history=[{
+                "as_of_date": "2026-07-01", "observation_state": "medium", "severity": "WATCH",
+                "confidence": "MEDIUM", "resolved_at": "2026-07-18", "outcome": "resolved",
+                "raw_series": [1, 2, 3],
+            }],
+        )
+        self.assertEqual(workspace["diagnosis_history"][0]["outcome"], "resolved")
+        self.assertNotIn("raw_series", workspace["diagnosis_history"][0])
 
 
 if __name__ == "__main__":

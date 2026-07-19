@@ -71,6 +71,46 @@ class MySQLMonitoringHistoryRepository:
             db.close()
         return rows
 
+    def load_latest_calibration_artifact(self) -> dict[str, Any] | None:
+        db = self._db_factory()
+        try:
+            db.use_db(FINANCE_META_DB)
+            rows = db.query(
+                """SELECT * FROM monitoring_risk_calibration_artifact
+                   ORDER BY created_at DESC, calibration_artifact_id DESC LIMIT 1"""
+            )
+        finally:
+            db.close()
+        if not rows:
+            return None
+        row = dict(rows[0])
+        payload = _json_object(row.pop("artifact_json", None))
+        return {**row, **(payload if isinstance(payload, dict) else {})}
+
+    def insert_calibration_artifact_if_absent(self, artifact: Mapping[str, Any]) -> None:
+        db = self._db_factory()
+        try:
+            db.use_db(FINANCE_META_DB)
+            db.execute(
+                """INSERT IGNORE INTO monitoring_risk_calibration_artifact
+                   (calibration_artifact_id, algorithm_version, data_fingerprint, config_fingerprint,
+                    policy_version, publication_status, train_end_date, validation_start_date,
+                    validation_end_date, horizon_sessions, event_definition, sample_size, positive_count,
+                    brier_score, baseline_brier, max_reliability_error, probability, artifact_json)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                [
+                    artifact["calibration_artifact_id"], artifact["algorithm_version"],
+                    artifact["data_fingerprint"], artifact["config_fingerprint"], artifact["policy_version"],
+                    artifact["publication_status"], artifact.get("train_end_date"), artifact.get("validation_start_date"),
+                    artifact.get("validation_end_date"), artifact["horizon_sessions"], artifact["event_definition"],
+                    artifact["sample_size"], artifact["positive_count"], artifact.get("brier_score"),
+                    artifact.get("baseline_brier"), artifact.get("max_reliability_error"), artifact.get("probability"),
+                    json.dumps(dict(artifact.get("artifact") or {}), ensure_ascii=False, sort_keys=True),
+                ],
+            )
+        finally:
+            db.close()
+
 
 def _date_text(value: Any) -> str:
     if isinstance(value, datetime):
@@ -188,5 +228,16 @@ def load_diagnosis_history(
             value["source_dates"] = _json_object(value.pop("source_dates_json"))
         if "observations_json" in value:
             value["observations"] = _json_object(value.pop("observations_json"))
+        observations = dict(value.get("observations") or {})
+        macro_rows = [dict(row) for row in observations.get("macro") or [] if isinstance(row, Mapping)]
+        diagnosis_rows = [dict(row) for row in observations.get("diagnosis") or [] if isinstance(row, Mapping)]
+        ranked = macro_rows + diagnosis_rows
+        severity_rank = {"HIGH": 3, "MEDIUM": 2, "WATCH": 2, "LOW": 1, "INFO": 0}
+        lead = max(ranked, key=lambda row: severity_rank.get(str(row.get("severity") or ""), 0), default={})
+        value["observation_state"] = lead.get("state") or lead.get("classification") or "none"
+        value["severity"] = lead.get("severity") or "INFO"
+        value["confidence"] = lead.get("confidence") or "LOW"
+        value["resolved_at"] = _date_text(value.get("outcome_measured_at"))[:10] or None
+        value["outcome"] = value.get("outcome_status")
         normalized.append(value)
     return normalized

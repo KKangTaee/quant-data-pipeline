@@ -654,12 +654,12 @@ probability = artifact.probability if artifact.publication_status == "READY" els
 return {"publication_status": artifact.publication_status, "probability": probability}
 ```
 
-- [ ] Write failing tests proving SUPPRESSED/LIMITED projections omit probability entirely, READY includes all qualification metadata, and stale artifacts are suppressed when policy/data fingerprints differ.
-- [ ] Write React tests for observation-only fallback, qualified probability label, sample/score/limitation disclosure, and history persistence/cooldown timeline.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_read_model.py tests/test_portfolio_monitoring_calibration.py -q` and `cd app/web/streamlit_components/portfolio_monitoring_workbench && npm test -- --run`; confirm failure in both suites.
-- [ ] Implement conditional read-model and disclosure UI; never phrase probability as expected return or buy/sell advice.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_read_model.py tests/test_portfolio_monitoring_history.py tests/test_portfolio_monitoring_calibration.py -q`, then `cd app/web/streamlit_components/portfolio_monitoring_workbench && npm test -- --run && npm run typecheck && npm run build`; return to repo root, capture the Browser QA screenshot, and run `git diff --check`.
-- [ ] Commit as `검증된 위험 확률과 진단 이력 화면 연결`.
+- [x] Write failing tests proving SUPPRESSED/LIMITED projections omit probability entirely, READY includes all qualification metadata, and stale artifacts are suppressed when policy/data fingerprints differ.
+- [x] Write React tests for observation-only fallback, qualified probability label, sample/score/limitation disclosure, and history persistence/cooldown timeline.
+- [x] Run the repository-available Python `unittest` equivalent and React Vitest; confirm failure in both suites (`pytest` is not installed in `.venv`).
+- [x] Implement conditional read-model and disclosure UI; never phrase probability as expected return or buy/sell advice.
+- [x] Run 21 focused Python tests, 12 Vitest, compile, TypeScript, Vite build, and `git diff --check`; connect latest DB artifact/history readers. Browser QA repeats after Task 21 migration.
+- [x] Commit as `검증된 위험 확률과 진단 이력 화면 연결`.
 
 ### Task 21: full regression, durable docs sync, migration/runbook closeout을 수행한다
 
