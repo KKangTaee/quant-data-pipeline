@@ -14,7 +14,8 @@
 ## Ongoing Artifact Drift Risk
 
 - frontend source만 수정하고 build를 빠뜨리면 committed JS/CSS가 stale해질 수 있다.
-- 완화책은 `tests/test_component_static_distribution.py`, `emptyOutDir: true`, source와 generated bundle의 동일 commit 원칙이다.
+- 완화책은 Git-tracked entry/asset을 검사하는 `tests/test_component_static_distribution.py`, `emptyOutDir: true`, source와 generated bundle의 동일 commit 원칙이다.
+- 현재 contract는 React source와 minified bundle의 byte 동일성을 매번 자동 재빌드하지 않는다. 이번 closeout에서는 12개 archived rebuild의 byte identity를 확인했으며, 반복 자동화는 후속 CI 과제다.
 
 ## Generated Artifacts
 

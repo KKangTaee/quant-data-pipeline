@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 
 
@@ -39,6 +40,7 @@ def test_backtest_component_packages_use_component_static_contract() -> None:
         )
 
         assert 'outDir: "component_static"' in vite_source, component_name
+        assert "emptyOutDir: true" in vite_source, component_name
         assert '/ "component_static"' in wrapper_source, component_name
         assert '/ "index.html"' in wrapper_source, component_name
         assert '/ "build"' not in wrapper_source, component_name
@@ -62,4 +64,38 @@ def test_backtest_component_static_entries_reference_existing_assets() -> None:
         for reference in references:
             assert (static_root / reference).is_file(), (
                 f"{component_name}: missing {reference}"
+            )
+
+
+def test_backtest_component_static_entries_and_assets_are_git_tracked() -> None:
+    tracked_result = subprocess.run(
+        ["git", "ls-files", "-z"],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+    )
+    tracked_paths = {
+        path
+        for path in tracked_result.stdout.decode("utf-8").split("\0")
+        if path
+    }
+
+    assert not any("/frontend/build/" in path for path in tracked_paths)
+    for component_name in BACKTEST_COMPONENT_PACKAGES:
+        static_root = COMPONENT_ROOT / component_name / "frontend/component_static"
+        entry_path = static_root / "index.html"
+        entry_relative = entry_path.relative_to(REPO_ROOT).as_posix()
+        assert entry_relative in tracked_paths, component_name
+
+        entry_source = entry_path.read_text(encoding="utf-8")
+        references = re.findall(
+            r'(?:src|href)="\./([^"?#]+)',
+            entry_source,
+        )
+        for reference in references:
+            asset_relative = (
+                (static_root / reference).relative_to(REPO_ROOT).as_posix()
+            )
+            assert asset_relative in tracked_paths, (
+                f"{component_name}: untracked {reference}"
             )

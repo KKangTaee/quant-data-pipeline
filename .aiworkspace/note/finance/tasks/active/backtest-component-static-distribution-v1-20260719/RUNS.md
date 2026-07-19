@@ -21,7 +21,8 @@
 
 5. Static distribution contract
    - Command: `uv run --with pytest python -m pytest tests/test_component_static_distribution.py -q`
-   - Result: 2 passed.
+   - Initial result: path/asset 2 passed.
+   - Review hardening: `emptyOutDir`과 entry/referenced asset Git tracking assertion을 추가해 3 passed.
 
 6. Focused service contract after build
    - Result: 14 passed, 동일 baseline 2 failed. component_static missing-entry 실패 6건은 모두 해소됐다.
@@ -33,10 +34,15 @@
 8. Clean archive
    - `git archive HEAD`를 임시 directory에 풀고 npm 없이 repository contract 실행.
    - 첫 시도는 저장소 `.venv`에 pytest가 없어 test collection 전에 종료.
-   - `uv run --no-project --with pytest`로 pytest만 제공한 재시도: 2 passed.
+   - `uv run --no-project --with pytest`로 pytest만 제공하고 Git metadata가 필요 없는 path/asset test 두 개만 실행한 재시도: 2 passed.
 
 9. Actual Browser QA
    - Port 8531에서 Streamlit을 임시 실행하고 `/backtest` 확인.
    - React workflow shell, Level1 decision workspace, settings workspace가 렌더링됨.
    - Browser console error: 0.
    - Screenshot: `backtest-component-static-distribution-qa.png`; generated artifact로 commit 제외.
+
+10. Independent review
+   - 12 tracked entries, 24 referenced assets, legacy tracked build 0, archived rebuild byte identity를 확인했다.
+   - Important finding인 Git tracking / `emptyOutDir` 자동 assertion을 보완했다.
+   - loader fallback과 multi-commit rollback 문서를 실제 동작에 맞게 수정했다.

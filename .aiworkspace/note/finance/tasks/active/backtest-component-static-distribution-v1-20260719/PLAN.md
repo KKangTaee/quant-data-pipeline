@@ -207,7 +207,7 @@ Run:
 uv run --with pytest python -m pytest tests/test_component_static_distribution.py -q
 ```
 
-Expected: `2 passed`.
+Expected: Git worktree에서 path/asset 계약과 Git tracking 계약 `3 passed`.
 
 - [x] **Step 3: 과거 build 산출물 제거 및 새 산출물 stage**
 
@@ -271,10 +271,13 @@ Expected: 12개 component의 index/assets만 첫 명령에 나오고 두 번째 
 ```bash
 archive_dir=$(mktemp -d)
 git archive HEAD | tar -x -C "$archive_dir"
-(cd "$archive_dir" && /Users/taeho/Project/quant-data-pipeline-worktrees/main-dev/.venv/bin/python -m pytest tests/test_component_static_distribution.py -q)
+(cd "$archive_dir" && uv run --no-project --with pytest python -m pytest \
+  tests/test_component_static_distribution.py::test_backtest_component_packages_use_component_static_contract \
+  tests/test_component_static_distribution.py::test_backtest_component_static_entries_reference_existing_assets \
+  -q)
 ```
 
-Expected: `2 passed`. 별도 npm build를 실행하지 않는다.
+Expected: Git metadata가 필요 없는 clean archive 계약 `2 passed`. 별도 npm build를 실행하지 않는다.
 
 - [x] **Step 3: Streamlit actual Browser QA**
 

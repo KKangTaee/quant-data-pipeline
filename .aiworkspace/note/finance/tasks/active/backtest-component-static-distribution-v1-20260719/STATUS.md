@@ -15,7 +15,7 @@ Roadmap: 3/3 complete
 ## Verification
 
 - `npm ci && npm run build`: 12/12 성공
-- `tests/test_component_static_distribution.py`: 2 passed
+- `tests/test_component_static_distribution.py`: 3 passed
 - clean `git archive HEAD`, npm build 없음: 2 passed
 - focused service contracts: 14 passed, 기존 baseline 2 failed
 - Browser QA: `/backtest` React shell/Level1 workspace 렌더, console error 0
@@ -26,6 +26,7 @@ Roadmap: 3/3 complete
 - 이번 task의 구현 잔여 작업은 없다.
 - 기존 baseline 실패 2건은 `RISKS.md`에 기록했으며 이번 packaging 변경 범위 밖이다.
 - frontend source를 수정하는 후속 작업은 해당 `component_static/` bundle도 다시 build해 같은 커밋에 포함해야 한다.
+- source와 committed bundle의 deterministic rebuild 비교 자동화는 후속 CI 보강 과제다.
 
 ## Scope Guard Preserved
 

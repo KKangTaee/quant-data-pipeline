@@ -109,13 +109,13 @@ Path(__file__).parent / "frontend" / "component_static"
 ## 오류 처리와 롤백
 
 - 특정 package 빌드가 실패하면 그 package의 산출물을 커밋하지 않고 전체 마이그레이션을 완료 처리하지 않는다.
-- `index.html` 또는 참조 asset이 없으면 loader는 React를 선언하지 않고 기존 fallback을 사용한다.
-- 문제가 있으면 단일 마이그레이션 커밋을 revert해 기존 `build/` loader 계약으로 돌아갈 수 있다.
+- `index.html`이 없으면 loader는 React를 선언하지 않고 기존 fallback을 사용한다. `index.html`은 있지만 참조 asset이 없으면 browser load error가 되므로 repository contract가 entry와 참조 asset의 존재·Git 추적을 검증한다.
+- 문제가 있으면 설계 이후 구현 commit sequence를 함께 revert해 기존 `build/` loader 계약으로 돌아갈 수 있다.
 
 ## 위험과 trade-off
 
 - 정적 JS/CSS가 Git에 들어가 저장소 크기와 frontend 변경 diff가 증가한다.
-- 소스만 수정하고 재빌드를 빠뜨리면 source/artifact drift가 생길 수 있다. 공통 contract test와 closeout build 검증으로 방지한다.
+- 소스만 수정하고 재빌드를 빠뜨리면 source/artifact drift가 생길 수 있다. 공통 contract는 path·entry·asset·Git 추적을 검증하고, closeout build가 source/bundle 일치를 확인한다. 자동 deterministic rebuild 비교는 후속 CI 보강 과제다.
 - 현재 다른 Backtest 개발이 frontend source를 바꾸고 있다면 마지막 통합 시 정적 산출물을 최신 HEAD에서 한 번 더 빌드해야 한다.
 
 ## 비범위

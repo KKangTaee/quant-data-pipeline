@@ -7,6 +7,7 @@
 - Python loader는 directory 존재가 아니라 `component_static/index.html` 존재로 availability를 판정한다.
 - 모든 Vite config에 `emptyOutDir: true`를 명시해 stale hashed asset이 남지 않게 한다.
 - React source 변경과 생성된 `component_static/` 변경은 같은 commit unit으로 취급한다.
+- repository contract는 output path, `emptyOutDir`, entry/asset 완전성, Git tracking을 검사한다. source와 minified bundle의 byte 동일성은 closeout rebuild에서 확인하며 자동 비교는 후속 CI 범위다.
 
 ## Inventory
 

@@ -68,7 +68,7 @@ Detailed historical logs were archived on `2026-04-13`.
 
 - Backtest Analysis, Practical Validation, Final Review 계열 React component 12개의 Vite output과 Python loader를 `frontend/component_static/`으로 통일했다.
 - 12개 `index.html`과 relative JS/CSS assets를 Git에 포함하고 과거 tracked `frontend/build/` 산출물을 제거했다.
-- repository contract `2 passed`, npm build 12/12, npm 없는 clean archive `2 passed`, actual Backtest React shell/Level1 Browser QA와 console error 0건을 확인했다.
+- repository contract `3 passed`, npm build 12/12, npm 없는 clean archive `2 passed`, actual Backtest React shell/Level1 Browser QA와 console error 0건을 확인했다.
 - 상세 실행과 기존 baseline 2건은 [active task](./tasks/active/backtest-component-static-distribution-v1-20260719/STATUS.md)에 남겼다.
 
 ### 2026-07-19 - Portfolio Monitoring React Command Center Design
