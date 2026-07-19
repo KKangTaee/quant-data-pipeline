@@ -456,3 +456,12 @@ generated artifact이므로 commit하지 않는다.
   `set_component_field` 배열 payload를 유지하며 Python preset/runtime/Gate를 다시 계산하지 않는다.
 - 실제 GTAA preset은 방어 자산 3개 `TLT / IEF / LQD`를 그대로 읽었고, frontend query는 Streamlit rerun 뒤에도
   component local state로 유지됐다. 다른 component 설정은 선택 intent 중 변경되지 않았다.
+
+## 2026-07-19 19차 Portfolio Mix Monthly Return Y-Axis Decisions
+
+- 월별 막대의 절댓값을 판단할 수 있도록 0% 중심의 동적 대칭 percent Y축을 추가한다. 축 maximum은
+  actual max를 포함하는 `1/2/5 × 10^n` nice scale로 올림하며 positive/negative 폭은 동일하다.
+- 축 label/guide와 bar geometry는 반드시 같은 maximum을 사용한다. raw maximum을 bar 분모로 유지하면
+  label상 maximum과 최고 막대의 위치가 어긋나므로 허용하지 않는다.
+- desktop 5 labels와 760px 3 labels는 같은 data scale의 presentation 차이일 뿐이다. Python evidence,
+  월별 계산, hover row, 저장과 Level2 handoff는 변경하지 않는다.

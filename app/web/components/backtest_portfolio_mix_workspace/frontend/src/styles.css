@@ -89,8 +89,11 @@ input, select { width: 100%; min-width: 0; min-height: 44px; padding: 0 12px; bo
 .mix-chart-svg { display: block; width: 100%; min-width: 0; height: auto; border-radius: 10px; background: linear-gradient(180deg, #fbfdfc 0%, #f5faf7 100%); touch-action: none; }
 .mix-chart-svg:focus-visible { outline: 3px solid rgba(54, 117, 154, .3); outline-offset: 2px; }
 .mix-chart-grid-line { stroke: #dfeae4; stroke-width: 1; }
+.mix-chart-y-grid-line { stroke: #e3ece7; stroke-width: 1; }
 .mix-chart-zero-line { stroke: #9fb6aa; stroke-width: 1.4; }
 .mix-chart-axis-label { fill: #71877d; font-size: 11px; }
+.mix-chart-y-axis-label { fill: #71877d; font-size: 10px; text-anchor: start; }
+.mix-chart-y-grid-line.is-compact, .mix-chart-y-axis-label.is-compact { display: none; }
 .mix-equity-line { fill: none; stroke: #2f7893; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .mix-chart-crosshair { stroke: #5b7481; stroke-width: 1; stroke-dasharray: 4 4; }
 .mix-chart-marker { fill: #fff; stroke: #2f7893; stroke-width: 3; }
@@ -146,6 +149,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
   .mix-result-identity > div:last-child { text-align: left; }
   .mix-chart-tick.is-desktop { display: none; }
   .mix-chart-tick.is-compact { display: block; }
+  .mix-chart-y-grid-line.is-desktop, .mix-chart-y-axis-label.is-desktop { display: none; }
+  .mix-chart-y-grid-line.is-compact, .mix-chart-y-axis-label.is-compact { display: block; }
   .mix-basis-grid { grid-template-columns: minmax(0, 1fr); }
   .mix-contribution-row { grid-template-columns: 70px minmax(0, 1fr); }
 }

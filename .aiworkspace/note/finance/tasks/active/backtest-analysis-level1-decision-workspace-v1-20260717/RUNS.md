@@ -767,3 +767,13 @@
   -> `85 passed, 3 warnings in 1.66s`.
 - React production build: Vite 5.4.21, `176 modules transformed`, CSS 12.47 kB,
   JS 343.06 kB. target service/adapter `py_compile`은 exit 0이다.
+
+## 2026-07-19 19차 Task 57 RED -> GREEN
+
+- RED:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k symmetric_percent_y_axis`
+  -> `1 failed / 29 deselected`, missing `niceMonthlyReturnAxis`.
+- GREEN same selector -> `1 passed / 29 deselected`; focused Portfolio Mix 전체 ->
+  `30 passed, 3 warnings in 1.56s`.
+- React production build: Vite 5.4.21, `176 modules transformed`, CSS 12.84 kB,
+  JS 343.95 kB. `git diff --check` exit 0이다.

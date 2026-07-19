@@ -106,6 +106,29 @@ function tooltipLeft(x: number) {
   return `${clamp((x / CHART_WIDTH) * HUNDRED, 12, 88)}%`
 }
 
+function niceMonthlyReturnAxis(maximumAbsolute: number) {
+  const rawPercent = Math.max(maximumAbsolute * HUNDRED, 1)
+  const roughHalfStep = rawPercent / 2
+  const magnitude = 10 ** Math.floor(Math.log10(roughHalfStep))
+  const normalized = roughHalfStep / magnitude
+  const niceNormalized = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10
+  const maximum = (niceNormalized * magnitude * 2) / HUNDRED
+
+  return {
+    maximum,
+    desktopValues: [maximum, maximum / 2, 0, -maximum / 2, -maximum],
+    compactValues: [maximum, 0, -maximum],
+  }
+}
+
+function formatAxisPercent(value: number) {
+  if (value === 0) return "0%"
+  const percent = value * HUNDRED
+  const digits = Math.abs(percent) < 1 ? 1 : 0
+  const label = percent.toFixed(digits).replace(/\.0$/, "")
+  return `${percent > 0 ? "+" : ""}${label}%`
+}
+
 function ChartEmpty({ children }: { children: React.ReactNode }) {
   return <div className="mix-chart-empty">{children}</div>
 }
@@ -178,6 +201,9 @@ function MonthlyReturnChart({ model }: { model: MixResultEvidence["monthly_retur
   const plotHeight = CHART_HEIGHT - PLOT_TOP - PLOT_BOTTOM
   const baseline = PLOT_TOP + plotHeight / 2
   const maximumAbsolute = Math.max(...rows.map((row) => Math.abs(row.return_value ?? 0)), 0.01)
+  const monthlyAxis = niceMonthlyReturnAxis(maximumAbsolute)
+  const halfPlotHeight = plotHeight / 2 - 8
+  const yForReturn = (value: number) => baseline - (value / monthlyAxis.maximum) * halfPlotHeight
   const barWidth = Math.max(2, Math.min(18, (CHART_WIDTH - PLOT_LEFT - PLOT_RIGHT) / Math.max(rows.length, 1) - 2))
   const active = activeIndex === null ? null : rows[activeIndex]
   const activeX = activeIndex === null ? null : xForIndex(activeIndex, rows.length)
@@ -211,10 +237,18 @@ function MonthlyReturnChart({ model }: { model: MixResultEvidence["monthly_retur
               if (event.key === "ArrowRight") shift(1)
             }}
           >
+            {monthlyAxis.desktopValues.map((value) => <React.Fragment key={`desktop-axis-${value}`}>
+              {value !== 0 && <line className="mix-chart-y-grid-line is-desktop" x1={PLOT_LEFT} x2={CHART_WIDTH - PLOT_RIGHT} y1={yForReturn(value)} y2={yForReturn(value)} />}
+              <text className="mix-chart-y-axis-label is-desktop" x={8} y={yForReturn(value) + 4}>{formatAxisPercent(value)}</text>
+            </React.Fragment>)}
+            {monthlyAxis.compactValues.map((value) => <React.Fragment key={`compact-axis-${value}`}>
+              {value !== 0 && <line className="mix-chart-y-grid-line is-compact" x1={PLOT_LEFT} x2={CHART_WIDTH - PLOT_RIGHT} y1={yForReturn(value)} y2={yForReturn(value)} />}
+              <text className="mix-chart-y-axis-label is-compact" x={8} y={yForReturn(value) + 4}>{formatAxisPercent(value)}</text>
+            </React.Fragment>)}
             <line className="mix-chart-zero-line" x1={PLOT_LEFT} x2={CHART_WIDTH - PLOT_RIGHT} y1={baseline} y2={baseline} />
             {rows.map((row, index) => {
               const value = row.return_value ?? 0
-              const barHeight = Math.abs(value) / maximumAbsolute * (plotHeight / 2 - 8)
+              const barHeight = Math.abs(value) / monthlyAxis.maximum * halfPlotHeight
               const x = xForIndex(index, rows.length) - barWidth / 2
               const y = value >= 0 ? baseline - barHeight : baseline
               return <rect key={row.date} className={value >= 0 ? "mix-return-bar is-positive" : "mix-return-bar is-negative"} x={x} y={y} width={barWidth} height={Math.max(1, barHeight)} rx={2} />

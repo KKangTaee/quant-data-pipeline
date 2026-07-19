@@ -401,3 +401,12 @@ Last Updated: 2026-07-19
   선택 chip wrap과 같은 240px scroll을 확인했다.
 - fresh focused UI/boundary는 `85 passed, 3 warnings`; React production build는
   `176 modules transformed`; target `py_compile`은 exit 0이다.
+
+## Current 19차 Position
+
+- 월별 수익률 차트는 실제 최대 절댓값을 `1/2/5 × 10^n` 단위로 올림한 대칭 percent range를 사용한다.
+  막대 높이와 Y축 label/guide가 같은 `monthlyAxis.maximum`을 공유한다.
+- desktop은 `최대 / 절반 / 0 / -절반 / -최대` 5개 label, 760px은 `최대 / 0 / -최대`
+  3개 label을 사용하며, 전부 0인 경우에도 최소 `±1%` range를 유지한다.
+- Task 57 RED는 `1 failed / 29 deselected`, GREEN selector는 `1 passed / 29 deselected`,
+  focused 전체는 `30 passed, 3 warnings`; React production build는 `176 modules transformed`다.

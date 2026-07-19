@@ -8123,7 +8123,7 @@ git commit -m "Portfolio Mix 방어 자산 선택 QA 정리"
 - Consumes: `monthly_returns.chart_rows[].return_value`, existing `PLOT_TOP`, `PLOT_BOTTOM`, `CHART_HEIGHT`.
 - Produces: `niceMonthlyReturnAxis(maximumAbsolute: number): { maximum: number; desktopValues: number[]; compactValues: number[] }`, `formatAxisPercent(value: number): string`.
 
-- [ ] **Step 1: Write the failing source contract**
+- [x] **Step 1: Write the failing source contract**
 
 ```python
 def test_mix_monthly_return_chart_uses_symmetric_percent_y_axis():
@@ -8143,7 +8143,7 @@ def test_mix_monthly_return_chart_uses_symmetric_percent_y_axis():
     assert ".mix-chart-y-grid-line.is-compact" in styles
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k 'symmetric_percent_y_axis'
@@ -8151,7 +8151,7 @@ def test_mix_monthly_return_chart_uses_symmetric_percent_y_axis():
 
 Expected: nice axis helper와 Y-axis SVG/CSS contract가 없어 FAIL.
 
-- [ ] **Step 3: Implement the nice symmetric scale helper**
+- [x] **Step 3: Implement the nice symmetric scale helper**
 
 ```tsx
 function niceMonthlyReturnAxis(maximumAbsolute: number) {
@@ -8176,7 +8176,7 @@ function formatAxisPercent(value: number) {
 }
 ```
 
-- [ ] **Step 4: Render axis guide/labels and use the same maximum for bars**
+- [x] **Step 4: Render axis guide/labels and use the same maximum for bars**
 
 ```tsx
 const monthlyAxis = niceMonthlyReturnAxis(maximumAbsolute)
@@ -8195,7 +8195,7 @@ const renderAxisTicks = (values: number[], mode: "desktop" | "compact") => value
 Bar height는 `Math.abs(value) / monthlyAxis.maximum * halfPlotHeight`를 사용한다. 기존 zero line, date tick,
 crosshair와 tooltip row는 유지한다.
 
-- [ ] **Step 5: Add desktop/760px CSS visibility**
+- [x] **Step 5: Add desktop/760px CSS visibility**
 
 ```css
 .mix-chart-y-grid-line { stroke: #e3ece7; stroke-width: 1; }
@@ -8208,7 +8208,7 @@ crosshair와 tooltip row는 유지한다.
 }
 ```
 
-- [ ] **Step 6: Run GREEN and production build**
+- [x] **Step 6: Run GREEN and production build**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q
@@ -8218,7 +8218,7 @@ git diff --check
 
 Expected: focused tests와 Vite production build가 통과한다.
 
-- [ ] **Step 7: Commit implementation unit**
+- [x] **Step 7: Commit implementation unit**
 
 ```bash
 git commit -m "Portfolio Mix 월별 수익률 Y축 추가"

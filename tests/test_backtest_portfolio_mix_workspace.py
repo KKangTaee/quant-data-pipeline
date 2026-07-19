@@ -1105,3 +1105,25 @@ def test_mix_long_multi_select_uses_search_selected_shelf_and_internal_scroll():
     assert ".mix-multi-select-scroll" in styles_source
     assert "max-height: 240px" in styles_source
     assert "overflow-y: auto" in styles_source
+
+
+def test_mix_monthly_return_chart_uses_symmetric_percent_y_axis():
+    root = Path(__file__).resolve().parents[1]
+    result_source = (
+        root
+        / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/PortfolioMixResult.tsx"
+    ).read_text()
+    styles_source = (
+        root
+        / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/styles.css"
+    ).read_text()
+
+    assert "function niceMonthlyReturnAxis" in result_source
+    assert "function formatAxisPercent" in result_source
+    assert "monthlyAxis.desktopValues" in result_source
+    assert "monthlyAxis.compactValues" in result_source
+    assert "Math.abs(value) / monthlyAxis.maximum" in result_source
+    assert "mix-chart-y-grid-line" in result_source
+    assert "mix-chart-y-axis-label" in result_source
+    assert ".mix-chart-y-grid-line.is-compact" in styles_source
+    assert ".mix-chart-y-axis-label.is-compact" in styles_source
