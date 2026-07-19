@@ -23,6 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
+  - Latest completed Portfolio Monitoring chart task is [portfolio-monitoring-chart-clarity-ohlcv-v1-20260719](./tasks/active/portfolio-monitoring-chart-clarity-ohlcv-v1-20260719/STATUS.md). 종합 가치곡선 선명도·5/3개 날짜 눈금과 선택 direct 종목의 DB-only line/OHLCV candle/volume을 전체 roadmap `4/4`로 완료했다.
   - Latest completed Portfolio Monitoring follow-up is [portfolio-monitoring-item-builder-ux-fix-v1-20260719](./tasks/active/portfolio-monitoring-item-builder-ux-fix-v1-20260719/STATUS.md). 등록 drawer를 560px frame/internal scroll로 제한하고 검색 rerun 상태 복구와 요청 시작일 입력 유지를 전체 roadmap `3/3`으로 완료했다.
   - Latest completed packaging task is [backtest-component-static-distribution-v1-20260719](./tasks/active/backtest-component-static-distribution-v1-20260719/STATUS.md). Backtest 계열 React component 12개의 canonical output을 Git-tracked `component_static/`으로 통일했고 clean archive와 actual Browser QA를 전체 roadmap `3/3`으로 완료했다.
   - New active design task is [portfolio-monitoring-react-command-center-v1-20260719](./tasks/done/portfolio-monitoring-react-command-center-v1-20260719/STATUS.md). Portfolio-first React Command Center, direct stock/ETF and Final Review candidate item model, staggered-start cash, deterministic diagnosis, macro calibration의 전체 roadmap `0/6차`이며 written spec review를 기다린다.
@@ -64,6 +65,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### 2026-07-19 - Portfolio Monitoring 가치곡선 선명도 / OHLCV V1
+
+- 종합 가치곡선의 정적 point halo를 제거하고 실제 관측일 기준 desktop 5개 / 420px 3개 날짜 눈금을 추가했다.
+- 선택한 direct 미국 주식·ETF는 최신 저장 일봉 120개의 close line 또는 OHLCV candle/volume을 제공하며 전략은 가치곡선만 유지한다.
+- Python 100개, React 20개, typecheck/build와 desktop·420px Browser QA를 통과했다. 전체 roadmap `4/4` 완료다.
+- 상세 설계·검증·남은 제한은 [active task](./tasks/active/portfolio-monitoring-chart-clarity-ohlcv-v1-20260719/STATUS.md)에 남겼다.
 
 ### 2026-07-19 - Portfolio Monitoring Item Builder UX Fix
 

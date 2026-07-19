@@ -10092,3 +10092,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: footer 가시성은 유지하면서 Portfolio Monitoring 본문 전체 높이를 보존하고, 검색 rerun 복원값이 사용자의 닫기 행동을 되돌리지 않아야 함.
 - Analysis result: iframe 자체를 560px로 강제한 것이 잘림 원인이며, 동일 recovery projection의 effect 재적용이 X 닫기를 덮어쓸 수 있었다. iframe auto measurement, 560px panel, one-shot recovery key로 경계를 분리했다.
 - Follow-up: 반복 recovery -> X 닫기 -> 동일 recovery 재전송 closed 유지 -> 재오픈과 전체 높이 Browser QA를 완료했다. 등록/DB 계약 후속 변경은 없다.
+
+### 2026-07-19 - 종합 가치곡선을 선명하게 하고 직접 종목은 OHLCV로도 본다
+
+- User request: 흐릿한 종합 그래프를 A안으로 개선하고 하단 날짜를 간격마다 추가한 뒤 OHLCV candle 전환도 구현해 달라고 요청함.
+- Interpreted goal: 포트폴리오 성과선의 의미는 유지하면서 시각적 후광을 제거하고, 실제 저장 OHLCV가 있는 직접 미국 주식·ETF만 정확한 candle/volume으로 탐색해야 함.
+- Analysis result: 그룹 가치곡선은 정적 point를 숨기고 5/3개 실제 관측일 눈금을 표시한다. 선택 direct 종목은 최신 DB 일봉 120개를 line/candle로 전환하며 전략은 합성 OHLCV 없이 가치곡선만 표시한다.
+- Follow-up: 전체 roadmap `4/4`와 Python 100개, React 20개, production build, desktop·420px QA를 완료했다. 기간 선택, zoom/pan, intraday와 보조지표는 별도 승인 범위다.

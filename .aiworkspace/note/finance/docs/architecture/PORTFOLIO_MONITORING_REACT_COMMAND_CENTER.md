@@ -22,11 +22,12 @@ Last Verified: 2026-07-19
 3. Context Drawer에서 미국 주식·ETF 또는 Final Review의 `monitoring_candidate=True` 전략을 고른다.
 4. 시작일과 fixed notional을 지정하거나, direct security에 한해 시작 종가 기준 정수 수량을 지정한다.
 5. 최대 10개 active item의 공통 가치곡선과 투자금·현재금액·수익률·MDD·CAGR을 확인한다.
-6. 개별 lane, 강점·취약점·데이터 부족, 매크로 관찰, 위험 검증 상태와 진단 이력을 확인한다.
+6. 직접 미국 주식·ETF는 선택 상세에서 저장 일봉의 close line 또는 OHLCV candle과 volume을 확인한다. Final Review 전략은 가치곡선만 표시하며 합성 candle을 만들지 않는다.
+7. 개별 lane, 강점·취약점·데이터 부족, 매크로 관찰, 위험 검증 상태와 진단 이력을 확인한다.
 
 ## 데이터 경계
 
-화면 render 중 provider fetch를 하지 않는다. 경로는 `Ingestion -> DB -> Loader/Adapter -> Service -> Streamlit bridge -> React`다. Final Review row는 후보 identity와 replay contract를 제공하지만 기존 append-only decision을 수정하지 않는다. legacy saved JSONL은 migration 입력으로만 읽고 재작성하지 않는다.
+화면 render 중 provider fetch를 하지 않는다. 경로는 `Ingestion -> DB -> Loader/Adapter -> Service -> Streamlit bridge -> React`다. 직접 종목 가격 상세은 `finance.loaders.price.load_price_history`의 일봉을 최신 120거래일 compact `selected_item_market_chart`로 전달하며, 불완전한 OHLC row는 제외하고 volume 결측만 허용한다. Operations Console summary는 이 상세 projection을 요청하지 않는다. Final Review row는 후보 identity와 replay contract를 제공하지만 기존 append-only decision을 수정하지 않는다. legacy saved JSONL은 migration 입력으로만 읽고 재작성하지 않는다.
 
 ## 판단 경계
 
