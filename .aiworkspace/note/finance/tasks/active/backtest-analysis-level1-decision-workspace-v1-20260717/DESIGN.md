@@ -2347,3 +2347,309 @@ Backtest Workflow Top Shell
 - Final Review read model/schema 변경
 - Level2 replay fragment, Level3 persistence 또는 route 재설계
 - 신규 공통 header component, progress/count/status dashboard 추가
+
+## 15차 Corrective Design: Portfolio Mix React One-Shell Completion
+
+### 이걸 하는 이유?
+
+Level1의 Portfolio Mix는 4차에서 new / saved 진입, 역할·비중 truth, fingerprint, 저장과 Level2
+인계 분리를 연결했지만 실제 편집·실행 surface는 `app/web/backtest_compare/page.py`의 legacy
+Streamlit form에 남아 있다. 현재 화면은 다음 세 계층으로 분절된다.
+
+```text
+Level1 React context
+  -> legacy Streamlit component / weight / saved replay workspace
+  -> Level1 React decision
+```
+
+이 때문에 Single Strategy에서 이미 해결한 preset 우선 설명, 동일한 React 설정 editor, stable context,
+사용자용 label, responsive layout이 Portfolio Mix에는 적용되지 않는다. 저장 Mix가 0건이어도 generic
+Level1 판단이 아래에 나타나고, raw JSON / 절대 저장 경로 / 영문 기술 key가 first-read에 노출된다.
+
+이번 corrective는 전략 계산 엔진을 다시 만드는 작업이 아니다. 여러 component의 설정을 기존 Single
+Strategy pure schema로 검증하고, 현재 compare runner와 weighted builder를 Python adapter에서 호출하면서
+Mix 전체를 하나의 React one-shell로 완성하는 작업이다.
+
+### Confirmed Root Cause
+
+- `app/web/backtest_analysis.py`는 Portfolio Mix에서 React context를 먼저 mount하고 legacy
+  `render_compare_portfolio_workspace()`를 fragment로 렌더링한 뒤 React decision을 다시 mount한다.
+- `app/web/backtest_compare/page.py`는 약 5,700줄이며 구성 전략, 공통 기간, 13개 concrete variant의
+  strategy-specific form, 역할·비중, saved replay, raw detail과 실행 side effect를 함께 소유한다.
+- 기존 React projection은 `saved_entry_mode`, role / weight summary와 action availability만 제공하고
+  component draft나 settings schema를 소유하지 않는다.
+- 7차 Unified React Strategy Settings의 승인 범위에서 `Portfolio Mix settings React migration`이
+  명시적으로 제외되어 Single과 Mix의 visual/runtime boundary가 갈라졌다.
+- 따라서 최근 stage-title/top-shell 변경의 회귀가 아니라 이전 4차에서 남긴 implementation gap이다.
+
+### Approved Product Direction
+
+채택안은 `A. Portfolio Mix 전체 React 전환`이다.
+
+- 구성 전략 선택, 공통 기준, 구성별 preset / 상세 설정, 역할·비중, 실행 결과, 저장 Mix 재진입과
+  최종 action을 하나의 React workspace에서 제공한다.
+- Python이 catalog, field schema, validation, component payload, weighted Gate, 실행, persistence와
+  intent 검증을 소유한다.
+- React는 presentation과 intent만 소유한다.
+- component first-read는 preset과 핵심 설정만 보여주며 `세부 설정`을 열 때 Single Strategy와 같은
+  full React editor를 표시한다.
+- Portfolio Mix에서는 기존 별도 React decision mount를 제거하고 같은 one-shell의 Step 3 / 4가
+  결과와 action을 담당한다.
+- Single Strategy primary flow는 변경하지 않는다.
+
+CSS reskin이나 settings-only hybrid는 채택하지 않는다. 두 방식은 legacy saved replay, raw detail,
+fragment reset과 React / Streamlit split ownership을 남긴다.
+
+### Approved User Flow
+
+#### Step 1. 구성 전략과 공통 기준
+
+- `새 Mix 만들기`와 `저장된 Mix 불러오기`를 같은 Step 1의 mode로 둔다.
+- 새 Mix는 최소 2개, 최대 4개 component를 지원한다.
+- 목적별 strategy catalog에서 component를 추가하며 같은 concrete strategy 중복은 허용하지 않는다.
+- 각 component card는 전략명, variant, preset, maturity, 현재 역할과 compact 설정 요약을 표시한다.
+- preset은 먼저 보이고, `세부 설정`을 열 때 해당 component의 full React settings editor가 나타난다.
+- component setting schema, preset 자동 적용과 사용자 label은 기존
+  `backtest_single_settings_workspace.py`를 재사용한다.
+- Mix component detail은 settings-only surface로 투영하며 Single 전용 실행 CTA는 포함하지 않는다.
+- start / end / timeframe / option은 Mix 공통 값으로 한 번만 편집한다. component editor는 같은 값을
+  중복 노출하지 않는다.
+- component를 제거해도 다른 component draft와 공통 설정, 이전 결과는 보존한다.
+
+저장 Mix mode는 name, component summary, 역할, 비중과 저장일을 card shelf로 표시한다.
+
+- `불러와 편집`: 저장 snapshot을 current draft로 복원한다.
+- `저장 기준으로 다시 실행`: 저장 snapshot을 복원한 뒤 current component / weighted execution을 실행한다.
+- 저장된 값을 단순 선택한 상태만으로 결과나 Level1 판단을 만들지 않는다.
+- raw JSON, 절대 파일 경로와 내부 field table은 primary / detail UI에서 제거한다.
+- 삭제가 유지될 경우 `저장 Mix 관리` disclosure의 secondary action으로만 둔다.
+
+#### Step 2. 역할과 목표 비중
+
+- component별 역할은 `핵심(Core) / 성장(Growth) / 방어(Defense) / 보조(Satellite)` 사용자 label로
+  표시하고 internal value는 기존 `core / growth / defense / satellite`를 보존한다.
+- target weight는 component row에서 편집하며 합계 100%를 명시적으로 확인한다.
+- date alignment와 common-period coverage를 사용자 문장으로 표시한다.
+- 같은 역할 집중이나 높은 단일 비중은 경고할 수 있지만 UI가 비중을 자동 수정하지 않는다.
+- 100% 미충족, 0% component, 설정 validation error가 있으면 실행 handler를 호출하지 않는다.
+
+#### Step 3. Mix 실행과 해석
+
+- 실행 전에는 generic 결과 verdict와 빈 metric / action board를 렌더링하지 않는다.
+- 실행 중에도 Step 1 / 2와 current draft를 유지한다.
+- component별 pending / running / success / error를 해당 component card에 연결한다.
+- component 하나가 실패해도 다른 draft와 이전 성공 결과는 삭제하지 않는다.
+- component 실행이 모두 성공한 뒤 기존 weighted builder로 Mix bundle을 만든다.
+- 설정이 바뀌면 이전 성공 결과는 `참고용 이전 결과`로 남고 current save / Level2 action만 차단한다.
+- current 결과는 Mix 성과, component contribution, component allocation, explicit evidence가 있을 때의
+  underlying target, Level1 readiness를 기존 result workspace contract와 같은 언어로 표시한다.
+
+#### Step 4. 저장하고 Level2 전송
+
+- current result와 normalized draft fingerprint가 일치할 때만 action을 표시한다.
+- `Mix 설정 저장`은 reusable setup만 저장한다.
+- `Level2 검증 후보로 등록`은 selection source만 생성한다.
+- 두 action은 별도 callable Python handler이며 하나의 action 실패가 다른 persistence를 rollback하지 않는다.
+- 저장 Mix를 선택하거나 draft만 복원한 상태에서는 Level2 action을 제공하지 않는다.
+- callable action이 0개이면 빈 action board를 렌더링하지 않는다.
+
+### Architecture And Ownership
+
+```text
+Backtest Analysis common entry
+  -> Portfolio Mix React one-shell
+     -> validated intent
+        -> Python Portfolio Mix web adapter
+           -> pure Portfolio Mix workspace service
+           -> existing Single settings service
+           -> existing compare runner / weighted builder
+           -> existing Run History / saved Mix / Level2 source handlers
+```
+
+#### New Pure Service
+
+`app/services/backtest_portfolio_mix_workspace.py`
+
+- Mix draft normalization과 stable component ID
+- component strategy / variant / preset projection
+- existing Single settings workspace composition
+- shared setting, role / weight, total, alignment validation
+- current draft fingerprint와 result freshness
+- saved Mix user-facing summary projection
+- execution / save / Level2 action availability
+- root issue deduplication과 user-facing error projection
+
+Pure service는 Streamlit, React, DB fetch, file write와 runner를 import하지 않는다.
+
+#### New Web Adapter
+
+`app/web/backtest_portfolio_mix_workspace.py`
+
+- session draft와 last result/error 보존
+- nonce / intent ID dedup과 action allow-list
+- component add / remove / variant / settings / role / weight / shared-setting intent 검증
+- component settings payload를 기존 compare runner override로 변환
+- current compare execution, weighted build와 Run History append
+- saved Mix write와 Level2 source handoff의 distinct handler
+- React unavailable Python fallback mount
+
+#### New React Component
+
+`app/web/components/backtest_portfolio_mix_workspace/`
+
+- approved four-step one-shell presentation
+- preset-first component cards와 on-demand detail editor
+- saved Mix shelf, allocation board, result and final actions
+- inline validation / component runtime state
+- desktop / 760px / narrow responsive layout
+- ResizeObserver height sync, keyboard focus, aria state
+
+React는 strategy grouping, concrete runner, validation, fingerprint, Gate, persistence와 retry를 계산하지 않는다.
+
+#### Existing Boundary
+
+- `app/web/backtest_analysis.py`는 Mix primary route에서 새 workspace를 한 번만 mount하며 generic Mix
+  decision surface를 중복 렌더링하지 않는다.
+- `app/services/backtest_single_settings_workspace.py`는 component별 schema / preset / validation / payload
+  source로 재사용한다. Mix 전용 field catalog를 복제하지 않는다.
+- `app/services/backtest_compare_catalog.py`, `backtest_compare_execution.py`,
+  `backtest_weighted_portfolio.py`, `backtest_portfolio_mix_readiness.py`의 계산 의미는 유지한다.
+- `app/web/backtest_compare/page.py`의 primary legacy renderer는 새 workspace cutover 후 route에서 제거한다.
+  새 flow에서 호출되지 않는 form / raw replay / presentation helper는 reference test 뒤 삭제한다.
+
+### Draft And Data Flow
+
+```text
+mix_draft:
+  draft_id
+  source_saved_portfolio_id
+  shared:
+    start
+    end
+    timeframe
+    option
+    date_policy
+  components[]:
+    component_id
+    strategy_choice
+    variant
+    settings_values
+    role
+    weight_percent
+```
+
+- component ID는 presentation key이며 strategy name을 session key로 직접 사용하지 않는다.
+- normalized fingerprint는 shared values와 ordered component identity / variant / effective settings / role /
+  weight를 포함한다.
+- 각 component는 existing Single pure builder / validator / payload projector를 통과한다.
+- Python adapter는 projected payload에서 Mix shared field를 정규화하고 concrete strategy display name과
+  compare override를 만든다.
+- 모든 component가 성공한 뒤 weighted result를 생성하고 top-level `run_result_id`와 fingerprint를
+  component / weighted / handoff contract에 유지한다.
+- 실행 성공은 Run History, Mix 저장은 saved setup, Level2 전송은 candidate source라는 기존 분리를
+  유지한다.
+
+### Legacy Prototype Data Decision
+
+기존 saved Mix와 run artifact는 prototype test 성격이 강하므로 새 구조를 복잡하게 만드는 migration /
+fallback을 구현하지 않는다.
+
+- 신규 React workspace와 신규 saved Mix는 새 schema만 쓴다.
+- legacy saved row를 새 draft로 자동 보정하거나 역할·설정을 추론해 primary flow에 승격하지 않는다.
+- old raw replay UI와 legacy-only form / helper는 새 flow reference가 없으면 제거할 수 있다.
+- 기존 protected JSONL을 구현 과정에서 rewrite / delete / stage / commit하지 않는다.
+- 실제 로컬 prototype data 초기화가 필요하면 새 flow 완료 뒤 별도 명시 작업으로 수행한다.
+- runtime QA는 legacy record가 아니라 새 UI에서 생성한 Mix로 수행한다.
+
+### Error And Lifecycle Contract
+
+- field validation error는 component detail의 해당 field에 표시하고 runner를 호출하지 않는다.
+- component execution error는 해당 card에 연결하며 다른 draft와 이전 결과를 보존한다.
+- weighted build error는 component success bundle을 보존한다.
+- save failure는 draft / result / Run History를 제거하지 않는다.
+- Level2 handoff failure는 saved Mix나 Run History를 rollback하지 않는다.
+- current draft 변경은 old result를 stale reference로 만들고 destructive reset하지 않는다.
+- 저장 Mix 0건은 empty state와 `새 Mix 만들기` intent만 표시한다.
+- development component가 있으면 실행은 허용하되 Mix 전체 Level2 action은 차단한다.
+- raw traceback, callable path, absolute save path와 internal key/value table은 사용자 surface에 표시하지 않는다.
+
+### Implementation Roadmap
+
+#### 15-1차: Mix Truth / Read Model
+
+- new pure Mix draft / workspace service
+- Single settings schema composition
+- component payload / role / weight / fingerprint / saved summary contract
+- RED -> GREEN focused tests
+- distinct Korean commit
+
+#### 15-2차: New Mix React One-Shell
+
+- new React component and Python adapter
+- component catalog, shared settings, preset-first detail editor
+- role / weight board, stable execution surface and fallback
+- React production build and focused UI tests
+- distinct Korean commit
+
+#### 15-3차: Result / Saved Mix / Level2 Integration
+
+- component execution and weighted result
+- saved Mix create / select / restore / rerun
+- result lifecycle, distinct setup save / candidate handoff
+- legacy primary renderer cutover and unreachable helper cleanup
+- RED -> GREEN persistence / boundary tests
+- distinct Korean commit
+
+#### 15-4차: Runtime QA / Docs / Closeout
+
+- actual GTAA + `Quality + Value` + Equal Weight Mix create / run / save / restore / edit / rerun
+- stale reference and component failure preservation QA
+- focused tests, React build, target py_compile, diff-check
+- desktop / 760px Browser QA and screenshot
+- canonical finance docs, active task and root handoff log sync
+- protected artifact exclusion audit and closeout commit
+
+### TDD And Browser QA Contract
+
+- RED: 2~4 component constraint, duplicate concrete strategy rejection and stable component ID.
+- RED: component schema / preset / validation is composed from the existing Single pure service.
+- RED: invalid shared / component / role / weight input never reaches the runner.
+- RED: setting changes preserve old result as stale and disable current save / handoff.
+- RED: component failure preserves other draft and previous success result.
+- RED: save Mix and Level2 handoff use distinct callable handlers.
+- RED: saved mode with 0 rows has no verdict / action board / raw path.
+- RED: React source does not classify Gate, execute runner or write persistence.
+- RED: Mix primary route no longer renders legacy Streamlit form / raw saved replay.
+- GREEN 뒤 focused service / intent / boundary / persistence tests를 새로 실행한다.
+- React production build, target `py_compile`, `git diff --check`를 수행한다.
+- desktop Browser QA에서 3-component new Mix create, detail editor, roles / weights, run, save, restore,
+  edit, rerun과 Level2 action boundary를 확인한다.
+- 760px에서 single-column wrap, detail editor, saved shelf, result, iframe height와 overflow 0을 확인한다.
+- generated screenshots, `.superpowers/`, registry, Run History와 saved JSONL은 commit하지 않는다.
+
+### 15차 Acceptance Criteria
+
+1. Portfolio Mix primary route가 하나의 React four-step workspace를 사용한다.
+2. legacy Streamlit component form, saved replay page와 generic duplicate decision mount가 primary DOM에 없다.
+3. 2~4개 component를 목적별 catalog에서 추가하고 preset 우선으로 설정할 수 있다.
+4. component detail은 기존 Single settings schema / preset / validation을 재사용한다.
+5. shared period / execution values는 한 번만 입력하고 모든 component에 Python이 적용한다.
+6. roles / weights / total / alignment가 사용자 label로 표시되고 invalid draft는 실행되지 않는다.
+7. 실행과 rerun 중 Step 1 / 2와 draft가 사라지지 않는다.
+8. 설정 변경과 component failure가 이전 결과를 삭제하지 않는다.
+9. 저장 Mix 0건에는 empty state만 있고 generic Level1 verdict가 없다.
+10. saved Mix는 같은 shell에서 새 schema draft로 restore / rerun할 수 있다.
+11. setup save, Run History와 Level2 candidate source는 서로 다른 persistence action이다.
+12. current fingerprint와 result가 일치하고 Gate가 ready일 때만 save / Level2 action이 나타난다.
+13. React는 classification, validation, runner, Gate와 persistence를 소유하지 않는다.
+14. desktop / 760px에서 visual hierarchy, ResizeObserver, keyboard / aria와 overflow 0을 만족한다.
+15. focused tests, production build, py_compile, diff-check, actual Browser QA와 protected-path audit를 통과한다.
+
+### 15차 Out Of Scope
+
+- strategy algorithm, factor formula, performance calculation 또는 DB schema 변경
+- 신규 strategy / provider / historical universe 추가
+- Level2 / Final Review route와 Gate 의미 재설계
+- legacy prototype JSONL migration, rewrite 또는 자동 deletion
+- broker order, live approval, account sync, auto rebalance
+- Single Strategy primary workflow 재설계
