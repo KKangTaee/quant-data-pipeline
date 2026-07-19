@@ -67,6 +67,25 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn(".pm-market-candle.is-up", styles)
         self.assertIn(".pm-market-candle.is-down", styles)
 
+    def test_market_chart_exposes_client_side_zoom_pan_controls(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        styles = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/style.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("zoomMarketChartViewport", source)
+        self.assertIn("panMarketChartViewport", source)
+        self.assertIn("onWheel={handleWheel}", source)
+        self.assertIn("onDoubleClick={resetViewport}", source)
+        self.assertIn('aria-label="가격 차트 확대"', source)
+        self.assertIn('aria-label="가격 차트 축소"', source)
+        self.assertIn("전체 보기", source)
+        self.assertIn('event.pointerType === "touch"', source)
+        self.assertIn(".pm-market-hit-area.is-draggable", styles)
+        self.assertIn("touch-action: pan-y;", styles)
+
     def test_portfolio_monitoring_typography_is_one_pixel_larger(self) -> None:
         styles = Path(
             "app/web/streamlit_components/portfolio_monitoring_workbench/src/style.css"

@@ -10,19 +10,23 @@ import {
   buildCommonBasisBanner,
   buildGroupChartSeries,
   buildDiagnosisSections,
+  buildFullMarketChartViewport,
   buildMacroObservationPresentation,
   buildMarketChartBounds,
   buildRiskCalibrationPresentation,
   createItemDraft,
   formatMetric,
   itemBuilderRecoveryKey,
+  MIN_MARKET_CHART_VISIBLE_ROWS,
   nearestChartPointIndex,
   nearestMarketChartRowIndex,
   normalizeItemBuilderState,
+  panMarketChartViewport,
   placeChartTooltip,
   selectActiveGroup,
   selectItem,
   validateItemDraft,
+  zoomMarketChartViewport,
 } from "./workbenchState";
 import type { ItemDraft } from "./workbenchState";
 import "./style.css";
@@ -199,15 +203,36 @@ function ValueChart({ rows, items }: { rows: Array<Record<string, string | numbe
   );
 }
 
+type MarketChartDrag = {
+  pointerId: number;
+  startClientX: number;
+  plotWidth: number;
+  startViewport: { startIndex: number; endIndex: number };
+  didDrag: boolean;
+};
+
 function MarketPriceChart({ projection }: { projection: SelectedItemMarketChart }) {
   const [mode, setMode] = useState<"line" | "candle">("line");
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const allRows = projection.rows;
+  const viewportKey = `${projection.monitoring_item_id ?? "none"}:${allRows.length}:${allRows[0]?.date ?? ""}:${allRows[allRows.length - 1]?.date ?? ""}`;
+  const [viewport, setViewport] = useState(() => buildFullMarketChartViewport(allRows.length));
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef<MarketChartDrag | null>(null);
+
   useEffect(() => {
     setMode("line");
     setActiveIndex(null);
   }, [projection.monitoring_item_id]);
 
-  if (projection.status !== "READY" || !projection.rows.length) {
+  useEffect(() => {
+    setViewport(buildFullMarketChartViewport(allRows.length));
+    setActiveIndex(null);
+    setIsDragging(false);
+    dragRef.current = null;
+  }, [viewportKey]);
+
+  if (projection.status !== "READY" || !allRows.length) {
     return (
       <div className={`pm-market-state is-${projection.status.toLowerCase()}`}>
         <strong>가격 차트를 표시할 수 없습니다.</strong>
@@ -216,7 +241,7 @@ function MarketPriceChart({ projection }: { projection: SelectedItemMarketChart 
     );
   }
 
-  const rows = projection.rows;
+  const rows = allRows.slice(viewport.startIndex, viewport.endIndex + 1);
   const bounds = buildMarketChartBounds(rows);
   if (!bounds) return <div className="pm-market-state"><strong>가격 범위를 계산할 수 없습니다.</strong></div>;
   const width = 620;
@@ -230,6 +255,10 @@ function MarketPriceChart({ projection }: { projection: SelectedItemMarketChart 
   const low = bounds.minPrice - padding;
   const high = bounds.maxPrice + padding;
   const plotWidth = width - inset.left - inset.right;
+  const visibleCount = rows.length;
+  const isFullViewport = visibleCount >= allRows.length;
+  const canZoomIn = visibleCount > Math.min(MIN_MARKET_CHART_VISIBLE_ROWS, allRows.length);
+  const rangeLabel = `${compactDate(rows[0]?.date ?? null)}–${compactDate(rows[rows.length - 1]?.date ?? null)} · ${visibleCount}거래일`;
   const x = (index: number) => inset.left + (index / Math.max(rows.length - 1, 1)) * plotWidth;
   const y = (value: number) => inset.top + ((high - value) / Math.max(high - low, 0.01)) * (priceBottom - inset.top);
   const closePath = rows.map((row, index) => `${index === 0 ? "M" : "L"}${x(index).toFixed(2)},${y(row.close).toFixed(2)}`).join(" ");
@@ -259,13 +288,85 @@ function MarketPriceChart({ projection }: { projection: SelectedItemMarketChart 
     setActiveIndex(nearestMarketChartRowIndex(rows.length, pointerX, inset.left, width - inset.right));
   };
 
+  const resetViewport = () => {
+    setViewport(buildFullMarketChartViewport(allRows.length));
+    setActiveIndex(null);
+  };
+
+  const zoomAt = (direction: "in" | "out", anchorRatio = 0.5) => {
+    setViewport((current) => zoomMarketChartViewport(current, allRows.length, anchorRatio, direction));
+    setActiveIndex(null);
+  };
+
+  const handleWheel = (event: React.WheelEvent<SVGRectElement>) => {
+    event.preventDefault();
+    const svg = event.currentTarget.ownerSVGElement;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width) return;
+    const pointerX = ((event.clientX - rect.left) / rect.width) * width;
+    const anchorRatio = (pointerX - inset.left) / plotWidth;
+    zoomAt(event.deltaY < 0 ? "in" : "out", anchorRatio);
+  };
+
+  const handlePointerDown = (event: React.PointerEvent<SVGRectElement>) => {
+    if (event.pointerType === "touch" || isFullViewport) return;
+    const svg = event.currentTarget.ownerSVGElement;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width) return;
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      plotWidth: rect.width * (plotWidth / width),
+      startViewport: viewport,
+      didDrag: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<SVGRectElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      if (!isDragging && event.pointerType !== "touch") updateActive(event);
+      return;
+    }
+    const deltaX = event.clientX - drag.startClientX;
+    if (!drag.didDrag && Math.abs(deltaX) < 4) {
+      updateActive(event);
+      return;
+    }
+    drag.didDrag = true;
+    setIsDragging(true);
+    setActiveIndex(null);
+    setViewport(panMarketChartViewport(drag.startViewport, allRows.length, deltaX, drag.plotWidth));
+  };
+
+  const finishPointerDrag = (event: React.PointerEvent<SVGRectElement>) => {
+    const drag = dragRef.current;
+    if (drag?.pointerId === event.pointerId && event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragRef.current = null;
+    setIsDragging(false);
+    if (!drag?.didDrag && event.pointerType !== "touch") updateActive(event);
+  };
+
   return (
     <section className="pm-market-chart-section" aria-label={`${projection.source_ref ?? "선택 종목"} 가격 차트`}>
       <header>
         <div><span>PRICE HISTORY · 1D</span><strong>가격 차트</strong></div>
-        <div className="pm-chart-mode-switch" role="group" aria-label="가격 차트 방식">
-          <button type="button" className={mode === "line" ? "is-active" : ""} onClick={() => setMode("line")}>라인</button>
-          <button type="button" className={mode === "candle" ? "is-active" : ""} onClick={() => setMode("candle")}>캔들</button>
+        <div className="pm-market-toolbar">
+          <span className="pm-market-range">{rangeLabel}</span>
+          <div className="pm-market-zoom-controls" role="group" aria-label="가격 차트 범위">
+            <button type="button" aria-label="가격 차트 축소" disabled={isFullViewport} onClick={() => zoomAt("out")}>−</button>
+            <button type="button" aria-label="가격 차트 확대" disabled={!canZoomIn} onClick={() => zoomAt("in")}>+</button>
+            <button type="button" disabled={isFullViewport} onClick={resetViewport}>전체 보기</button>
+          </div>
+          <div className="pm-chart-mode-switch" role="group" aria-label="가격 차트 방식">
+            <button type="button" className={mode === "line" ? "is-active" : ""} onClick={() => setMode("line")}>라인</button>
+            <button type="button" className={mode === "candle" ? "is-active" : ""} onClick={() => setMode("candle")}>캔들</button>
+          </div>
         </div>
       </header>
       <div className="pm-market-chart-shell">
@@ -298,13 +399,18 @@ function MarketPriceChart({ projection }: { projection: SelectedItemMarketChart 
           <text x={inset.left - 8} y={volumeTop + 7} textAnchor="end" className="pm-market-axis">VOL</text>
           {dateIndices.map((index, position) => <text key={index} x={x(index)} y={height - 8} textAnchor={position === 0 ? "start" : position === dateIndices.length - 1 ? "end" : "middle"} className="pm-market-date">{compactDate(rows[index].date)}</text>)}
           <rect
-            className="pm-market-hit-area"
+            className={`pm-market-hit-area ${!isFullViewport ? "is-draggable" : ""} ${isDragging ? "is-dragging" : ""}`}
             x={inset.left}
             y={inset.top}
             width={plotWidth}
             height={volumeBottom - inset.top}
             tabIndex={0}
-            onPointerMove={updateActive}
+            onWheel={handleWheel}
+            onDoubleClick={resetViewport}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={finishPointerDrag}
+            onPointerCancel={finishPointerDrag}
             onPointerLeave={() => setActiveIndex(null)}
             onFocus={() => setActiveIndex(rows.length - 1)}
             onBlur={() => setActiveIndex(null)}
