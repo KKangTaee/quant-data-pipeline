@@ -10233,3 +10233,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 새 추적 항목이나 재진입 episode를 만들지 않고, 실수로 종료한 기존 항목을 원래 시작일과 투자 계약 그대로 되돌려야 함.
 - Analysis result: `reopen_item`이 동일 item ID를 유지하면서 종료 요청일·적용일·종료금액을 비우고 `active`로 되돌린다. 활성 10개 한도와 동일 source 중복은 복구 시 다시 검증하며 과거 command audit은 보존한다.
 - Follow-up: service/repository/page/React와 durable docs를 연결했고 Python 112 / React 25 / typecheck/build/static asset 검증을 통과했다. Browser URL policy로 실제 interaction screenshot만 수행하지 못했다.
+
+### 2026-07-20 - 변동 종목은 scan-first market board와 별도 조사 흐름으로 재구성해야 한다
+
+- User request: Overview 변동 종목 탭의 수집, ranking, sector/industry 흐름, 대장주, 향후 흐름, 선택 종목 조사와 UI를 전체적으로 파악하고 진단해 달라고 요청함.
+- Interpreted goal: 기능을 더 붙이기 전에 한 화면에 혼합된 product/ops 흐름, 실제 data gap, sector 해석 가치, 재무 chart 정확성을 근거로 개편 범위를 확정한다.
+- Analysis result: current surface는 four-job mixed UI이며 stale basis, collection-gap 오분류, sector taxonomy 분할, sector mode 조사 단절, current-price/historical-EPS PER chart가 우선 문제다. Industry 140개와 group trend backend는 재사용 가능하다.
+- Follow-up: 전체 잠정 roadmap `1/5차` 감사만 완료했다. 다음은 one-shell IA/visual contract이며 sector 전망은 watch condition -> 검증된 historical conditional outlook 순으로 진행해야 한다.

@@ -6863,3 +6863,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 휴장일 종료는 요청일 이후 미래 가격을 기다리지 않고 요청일 이하 최신 저장 가치로 즉시 확정하며, 요청일·실제 적용일·종료금액을 함께 안내한다.
 - 활성 항목과 접힌 `종료 기록`을 분리하고 raw `ACTIVE`를 lifecycle label로 교체했으며, command 성공·실패를 본문 배너로 노출한다.
 - Python 47 tests, React 25 tests, typecheck/build/compile/static asset check를 통과했다. 전체 보완 `3/4차`; Browser URL policy로 실제 interaction QA와 스크린샷만 남아 있다.
+
+## 2026-07-20 - Overview Market Movers 현행 집중 감사
+
+- Market Movers의 수집·ranking·sector breadth·선택 종목 조사 전체 visible path와 DB coverage를 읽기 전용으로 감사했다.
+- stale EOD basis, typed collection gap 부재, raw 17/canonical 11 sector mismatch, sector mode handoff 단절, historical PER 의미 오류를 핵심 문제로 확정했다.
+- sector/industry trend와 sector bellwether/조건부 outlook 가능성을 구분하고 잠정 `5차` 개선 순서를 정리했다.
+- 구현은 시작하지 않았으며 상세는 `researches/active/2026-06-market-movers-redesign-v2-benchmark/CURRENT_PROJECT_AUDIT.md`를 본다.
