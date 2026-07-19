@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from copy import deepcopy
 from datetime import date
 from typing import Any, Mapping, Sequence
+
+import pandas as pd
 
 from app.services.backtest_single_settings_workspace import (
     SettingsValidationError,
@@ -70,6 +73,281 @@ def _safe_float(value: object) -> float | object:
         return float(value)
     except (TypeError, ValueError):
         return value
+
+
+def _finite_float(value: object) -> float | None:
+    try:
+        resolved = float(value)
+    except (TypeError, ValueError):
+        return None
+    return resolved if math.isfinite(resolved) else None
+
+
+def _format_percent(value: float | None) -> str:
+    return "계산값 없음" if value is None else f"{value * 100:.2f}%"
+
+
+def _format_ratio(value: float | None) -> str:
+    return "계산값 없음" if value is None else f"{value:.2f}"
+
+
+def _format_amount(value: float | None) -> str:
+    return "계산값 없음" if value is None else f"{value:,.2f}"
+
+
+def _date_parts(value: object) -> tuple[str, str, str] | None:
+    resolved = pd.to_datetime(value, errors="coerce")
+    if pd.isna(resolved):
+        return None
+    return (
+        resolved.strftime("%Y-%m-%d"),
+        resolved.strftime("%Y.%m.%d"),
+        resolved.strftime("%Y.%m"),
+    )
+
+
+def _actual_ticks(rows: Sequence[Mapping[str, Any]], maximum: int) -> list[str]:
+    dates = [str(row.get("date") or "") for row in rows if row.get("date")]
+    if len(dates) <= maximum:
+        return dates
+    indices = {
+        round(position * (len(dates) - 1) / (maximum - 1))
+        for position in range(maximum)
+    }
+    return [dates[index] for index in sorted(indices)]
+
+
+def _frame(value: object) -> pd.DataFrame:
+    return value.copy() if isinstance(value, pd.DataFrame) else pd.DataFrame()
+
+
+def _summary_row(weighted_bundle: Mapping[str, Any]) -> dict[str, Any]:
+    summary_df = _frame(weighted_bundle.get("summary_df"))
+    if summary_df.empty:
+        return {}
+    return dict(summary_df.iloc[0].to_dict())
+
+
+def _result_rows(weighted_bundle: Mapping[str, Any]) -> list[dict[str, Any]]:
+    result_df = _frame(weighted_bundle.get("result_df"))
+    required = {"Date", "Total Balance"}
+    if result_df.empty or not required.issubset(result_df.columns):
+        return []
+    prepared: list[tuple[tuple[str, str, str], float, float | None]] = []
+    for raw in result_df.to_dict("records"):
+        date_labels = _date_parts(raw.get("Date"))
+        balance = _finite_float(raw.get("Total Balance"))
+        if date_labels is None or balance is None:
+            continue
+        prepared.append(
+            (date_labels, balance, _finite_float(raw.get("Total Return")))
+        )
+    if not prepared:
+        return []
+    base_balance = prepared[0][1]
+    rows: list[dict[str, Any]] = []
+    for date_labels, balance, monthly_return in prepared:
+        index_value = (
+            balance / base_balance * 100.0 if base_balance != 0 else None
+        )
+        cumulative_return = (
+            balance / base_balance - 1.0 if base_balance != 0 else None
+        )
+        rows.append(
+            {
+                "date": date_labels[0],
+                "date_label": date_labels[1],
+                "month_label": date_labels[2],
+                "balance": balance,
+                "balance_label": _format_amount(balance),
+                "index_value": round(index_value, 8) if index_value is not None else None,
+                "index_label": _format_ratio(index_value),
+                "cumulative_return": (
+                    round(cumulative_return, 10)
+                    if cumulative_return is not None
+                    else None
+                ),
+                "cumulative_return_label": _format_percent(cumulative_return),
+                "return_value": monthly_return,
+                "return_label": _format_percent(monthly_return),
+                "available": monthly_return is not None,
+            }
+        )
+    return rows
+
+
+def _contribution_projection(
+    weighted_bundle: Mapping[str, Any],
+) -> dict[str, Any]:
+    names = [str(value) for value in list(weighted_bundle.get("component_strategy_names") or [])]
+    roles = [str(value) for value in list(weighted_bundle.get("component_roles") or [])]
+    weights = [
+        _finite_float(value)
+        for value in list(weighted_bundle.get("component_input_weights") or [])
+    ]
+    amount_df = _frame(weighted_bundle.get("component_contribution_amount_df"))
+    share_df = _frame(weighted_bundle.get("component_contribution_share_df"))
+    if not names:
+        names = [str(column) for column in amount_df.columns]
+
+    identity = {
+        name: {
+            "strategy_label": name,
+            "role_label": MIX_ROLE_LABELS.get(
+                roles[index] if index < len(roles) else "", "미지정"
+            ),
+            "target_weight": weights[index] if index < len(weights) else None,
+            "target_weight_label": _format_percent(
+                (weights[index] / 100.0)
+                if index < len(weights) and weights[index] is not None
+                else None
+            ),
+        }
+        for index, name in enumerate(names)
+    }
+
+    timeline_rows: list[dict[str, Any]] = []
+    indices = amount_df.index.union(share_df.index).sort_values()
+    for raw_date in indices:
+        date_labels = _date_parts(raw_date)
+        if date_labels is None:
+            continue
+        segments: list[dict[str, Any]] = []
+        for name in names:
+            amount = (
+                _finite_float(amount_df.at[raw_date, name])
+                if raw_date in amount_df.index and name in amount_df.columns
+                else None
+            )
+            share = (
+                _finite_float(share_df.at[raw_date, name])
+                if raw_date in share_df.index and name in share_df.columns
+                else None
+            )
+            segments.append(
+                {
+                    **identity[name],
+                    "amount": amount,
+                    "amount_label": _format_amount(amount),
+                    "share": share,
+                    "share_label": _format_percent(share),
+                }
+            )
+        timeline_rows.append(
+            {
+                "date": date_labels[0],
+                "date_label": date_labels[1],
+                "segments": segments,
+            }
+        )
+
+    ending = timeline_rows[-1]["segments"] if timeline_rows else []
+    return {
+        "summary_rows": ending,
+        "timeline_rows": timeline_rows,
+    }
+
+
+def _data_trust_projection(weighted_bundle: Mapping[str, Any]) -> list[dict[str, Any]]:
+    rows = weighted_bundle.get("component_data_trust_rows")
+    if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes)):
+        return []
+    projected: list[dict[str, Any]] = []
+    for raw in rows:
+        if not isinstance(raw, Mapping):
+            continue
+        count = raw.get("Result Rows")
+        projected.append(
+            {
+                "strategy_label": str(raw.get("Strategy") or "구성 전략"),
+                "requested_end_label": str(raw.get("Requested End") or "-"),
+                "actual_end_label": str(raw.get("Actual Result End") or "-"),
+                "result_rows_label": f"{count}개" if count not in (None, "-") else "-",
+                "price_freshness_label": str(raw.get("Price Freshness") or "-"),
+                "interpretation": str(raw.get("Interpretation") or "확인 가능한 근거가 없습니다."),
+            }
+        )
+    return projected
+
+
+def build_portfolio_mix_result_evidence(
+    weighted_bundle: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Project a weighted run into user-readable, JSON-safe result evidence."""
+
+    summary = _summary_row(weighted_bundle)
+    kpi_specs = (
+        ("annualized_return", "연환산 수익률", "CAGR", _format_percent),
+        ("maximum_drawdown", "최대 낙폭", "Maximum Drawdown", _format_percent),
+        ("sharpe_ratio", "위험 대비 수익", "Sharpe Ratio", _format_ratio),
+        ("end_balance", "최종 평가액", "End Balance", _format_amount),
+    )
+    kpis = []
+    for kpi_id, label, source_key, formatter in kpi_specs:
+        value = _finite_float(summary.get(source_key))
+        kpis.append(
+            {
+                "id": kpi_id,
+                "label": label,
+                "value": value,
+                "value_label": formatter(value),
+            }
+        )
+
+    rows = _result_rows(weighted_bundle)
+    names = [str(value) for value in list(weighted_bundle.get("component_strategy_names") or [])]
+    period_label = (
+        f"{rows[0]['date_label']}–{rows[-1]['date_label']}"
+        if rows
+        else "계산 기간 없음"
+    )
+    date_policy = str(weighted_bundle.get("date_policy") or "intersection")
+    return {
+        "identity": {
+            "title": "현재 설정으로 계산한 Mix 결과",
+            "component_summary": " · ".join(names) if names else "구성 전략 정보 없음",
+            "period_label": period_label,
+            "date_policy_label": (
+                "모든 구성 전략의 공통 기간"
+                if date_policy == "intersection"
+                else "사용 가능한 전체 기간"
+            ),
+        },
+        "kpis": kpis,
+        "equity_chart": {
+            "title": "누적 성과 흐름",
+            "description": "첫 계산 시점을 100으로 두고 Mix 평가액 변화를 비교합니다.",
+            "rows": rows,
+            "desktop_ticks": _actual_ticks(rows, 6),
+            "compact_ticks": _actual_ticks(rows, 3),
+        },
+        "monthly_returns": {
+            "title": "월별 수익률 변화",
+            "description": "0%를 기준으로 월별 상승과 하락을 확인합니다.",
+            "chart_rows": [row for row in rows if row["available"]],
+            "table_rows": rows,
+        },
+        "contribution": _contribution_projection(weighted_bundle),
+        "calculation_basis": [
+            {
+                "title": "성과 기준",
+                "description": "weighted result의 월별 평가액과 수익률을 그대로 사용합니다.",
+            },
+            {
+                "title": "날짜 정렬",
+                "description": (
+                    "모든 구성 전략에 값이 있는 공통 월만 계산했습니다."
+                    if date_policy == "intersection"
+                    else "값이 있는 구성 전략의 비중을 다시 정규화해 전체 월을 계산했습니다."
+                ),
+            },
+            {
+                "title": "기여도",
+                "description": "목표 비중을 적용한 구성 전략별 평가액과 Mix 내 비중입니다.",
+            },
+        ],
+        "data_trust_rows": _data_trust_projection(weighted_bundle),
+    }
 
 
 def _schema_variant(value: object) -> str | None:
@@ -675,6 +953,7 @@ __all__ = [
     "PORTFOLIO_MIX_WORKSPACE_SCHEMA_VERSION",
     "PortfolioMixValidationError",
     "build_portfolio_mix_fingerprint",
+    "build_portfolio_mix_result_evidence",
     "build_portfolio_mix_workspace",
     "extract_saved_portfolio_mix_draft",
     "normalize_portfolio_mix_draft",

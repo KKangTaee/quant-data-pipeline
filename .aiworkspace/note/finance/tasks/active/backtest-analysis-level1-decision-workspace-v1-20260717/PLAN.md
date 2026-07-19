@@ -7532,7 +7532,7 @@ git commit -m "Portfolio Mix 원셸 QA와 문서 동기화"
 - Produces: `build_portfolio_mix_result_evidence(weighted_bundle: Mapping[str, Any]) -> dict[str, Any]`와 `current_result["evidence"]`.
 - Evidence keys: `identity`, `kpis`, `equity_chart`, `monthly_returns`, `contribution`, `calculation_basis`, `data_trust_rows`.
 
-- [ ] **Step 1: Write the RED service contract tests**
+- [x] **Step 1: Write the RED service contract tests**
 
 Add tests with a pandas fixture containing sparse actual dates, one unavailable monthly return and two component contribution series:
 
@@ -7546,7 +7546,7 @@ def test_mix_result_evidence_projects_user_labels_charts_and_contribution():
         "value_label": "9.60%",
     }
     assert evidence["equity_chart"]["rows"][0]["index_value"] == 100.0
-    assert evidence["monthly_returns"]["chart_rows"][0]["month_label"] == "2026.01"
+    assert evidence["monthly_returns"]["chart_rows"][0]["month_label"] == "2026.02"
     assert evidence["contribution"]["summary_rows"][0]["target_weight_label"] == "50.00%"
 
 
@@ -7560,7 +7560,7 @@ def test_mix_result_evidence_preserves_sparse_and_unavailable_months():
 
 Add a web adapter test that executes a successful weighted draft and asserts `current_result["evidence"]` is present without removing `run_result_id`, fingerprint, summary or period.
 
-- [ ] **Step 2: Run RED and record the intended failure**
+- [x] **Step 2: Run RED and record the intended failure**
 
 Run:
 
@@ -7573,7 +7573,7 @@ Run:
 
 Expected: collection/import failure because `build_portfolio_mix_result_evidence` does not exist.
 
-- [ ] **Step 3: Implement the pure evidence builder**
+- [x] **Step 3: Implement the pure evidence builder**
 
 Add finite-number, ISO date, percent, ratio, amount and actual-tick helpers, then expose:
 
@@ -7604,7 +7604,7 @@ current_result = {
 }
 ```
 
-- [ ] **Step 4: Run GREEN and focused regression**
+- [x] **Step 4: Run GREEN and focused regression**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q
@@ -7615,7 +7615,7 @@ git diff --check
 
 Expected: new evidence tests pass; any repository baseline failure must be shown to be unrelated before continuing.
 
-- [ ] **Step 5: Commit the implementation unit**
+- [x] **Step 5: Commit the implementation unit**
 
 Stage only the two Python modules, the focused test and active task records. Commit:
 

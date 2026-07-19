@@ -15,6 +15,7 @@ from app.services.backtest_portfolio_mix_workspace import (
     PORTFOLIO_MIX_SAVED_SCHEMA_VERSION,
     PortfolioMixValidationError,
     build_portfolio_mix_fingerprint,
+    build_portfolio_mix_result_evidence,
     build_portfolio_mix_workspace,
     extract_saved_portfolio_mix_draft,
     normalize_portfolio_mix_draft,
@@ -387,6 +388,7 @@ def execute_portfolio_mix_draft(
         ],
         "component_roles": [str(item["role"]) for item in projections],
         "weights_percent": [float(item["weight_percent"]) for item in projections],
+        "evidence": build_portfolio_mix_result_evidence(weighted_bundle),
     }
     return {
         "ok": True,

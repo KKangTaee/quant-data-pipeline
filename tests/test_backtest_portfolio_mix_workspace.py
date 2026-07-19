@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import importlib
+import json
 from copy import deepcopy
 from datetime import date
 from types import SimpleNamespace
 
+import pandas as pd
 import pytest
 
 
@@ -119,6 +121,113 @@ def _valid_draft() -> dict[str, object]:
             },
         ],
     }
+
+
+def _weighted_result_evidence_fixture() -> dict[str, object]:
+    dates = pd.to_datetime(["2026-01-31", "2026-02-28", "2026-04-30"])
+    return {
+        "strategy_name": "Weighted Portfolio",
+        "summary_df": pd.DataFrame(
+            [
+                {
+                    "CAGR": 0.096,
+                    "Maximum Drawdown": -0.17,
+                    "Sharpe Ratio": 0.91234,
+                    "End Balance": 10200.0,
+                }
+            ]
+        ),
+        "result_df": pd.DataFrame(
+            {
+                "Date": dates,
+                "Total Balance": [10000.0, 10500.0, 10200.0],
+                "Total Return": [float("nan"), 0.05, -0.0285714286],
+            }
+        ),
+        "component_contribution_amount_df": pd.DataFrame(
+            {
+                "GTAA": [5000.0, 5355.0, 5304.0],
+                "Equal Weight": [5000.0, 5145.0, 4896.0],
+            },
+            index=dates,
+        ),
+        "component_contribution_share_df": pd.DataFrame(
+            {
+                "GTAA": [0.5, 0.51, 0.52],
+                "Equal Weight": [0.5, 0.49, 0.48],
+            },
+            index=dates,
+        ),
+        "component_strategy_names": ["GTAA", "Equal Weight"],
+        "component_roles": ["core", "defense"],
+        "component_input_weights": [50.0, 50.0],
+        "component_data_trust_rows": [
+            {
+                "Strategy": "GTAA",
+                "Requested End": "2026-04-30",
+                "Actual Result End": "2026-04-30",
+                "Result Rows": 3,
+                "Price Freshness": "OK",
+                "Interpretation": "눈에 띄는 데이터 이슈 없음",
+            }
+        ],
+        "date_policy": "intersection",
+        "meta": {
+            "run_id": "mix-run-evidence",
+            "start": "2026-01-01",
+            "end": "2026-04-30",
+            "actual_result_end": "2026-04-30",
+        },
+    }
+
+
+def test_mix_result_evidence_projects_user_labels_charts_and_contribution():
+    module = _workspace_module()
+
+    evidence = module.build_portfolio_mix_result_evidence(
+        _weighted_result_evidence_fixture()
+    )
+
+    assert evidence["kpis"][0] == {
+        "id": "annualized_return",
+        "label": "연환산 수익률",
+        "value": 0.096,
+        "value_label": "9.60%",
+    }
+    assert evidence["equity_chart"]["rows"][0]["index_value"] == 100.0
+    assert evidence["monthly_returns"]["chart_rows"][0]["month_label"] == (
+        "2026.02"
+    )
+    assert evidence["contribution"]["summary_rows"][0][
+        "target_weight_label"
+    ] == "50.00%"
+    assert evidence["contribution"]["summary_rows"][0]["role_label"] == "핵심"
+    assert evidence["data_trust_rows"][0]["strategy_label"] == "GTAA"
+    json.dumps(evidence, allow_nan=False)
+
+
+def test_mix_result_evidence_preserves_sparse_and_unavailable_months():
+    module = _workspace_module()
+
+    evidence = module.build_portfolio_mix_result_evidence(
+        _weighted_result_evidence_fixture()
+    )
+
+    assert len(evidence["equity_chart"]["desktop_ticks"]) <= 6
+    assert len(evidence["equity_chart"]["compact_ticks"]) <= 3
+    assert [row["date"] for row in evidence["equity_chart"]["rows"]] == [
+        "2026-01-31",
+        "2026-02-28",
+        "2026-04-30",
+    ]
+    assert evidence["monthly_returns"]["table_rows"][0]["return_label"] == (
+        "계산값 없음"
+    )
+    assert evidence["monthly_returns"]["table_rows"][0]["available"] is False
+    assert all(
+        row["available"]
+        for row in evidence["monthly_returns"]["chart_rows"]
+    )
 
 
 def test_normalization_keeps_stable_component_ids_and_requires_two_to_four_components():
@@ -666,6 +775,12 @@ def test_mix_runtime_runs_each_component_then_builds_one_weighted_result():
     assert weighted_calls[0]["component_roles"] == ["core", "defense"]
     assert result["current_result"]["run_result_id"] == "mix-run-current"
     assert result["current_result"]["configuration_fingerprint"]
+    assert result["current_result"]["summary"] == {}
+    assert result["current_result"]["period"] == {"start": None, "end": None}
+    assert result["current_result"]["evidence"]["identity"]["title"] == (
+        "현재 설정으로 계산한 Mix 결과"
+    )
+    assert result["current_result"]["evidence"]["equity_chart"]["rows"] == []
     assert all(
         state["status"] == "completed"
         for state in result["component_states"].values()

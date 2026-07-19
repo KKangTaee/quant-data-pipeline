@@ -333,3 +333,16 @@ Last Updated: 2026-07-19
 - desktop actual QA는 GTAA 50 / Equal Weight 50 실행·저장, saved shelf, 불러와 편집,
   GTAA 40 / Equal Weight 60 변경의 stale/reference, 재실행 KPI와 save/Level2 action 재노출을 확인했다.
   760px은 one-column cards, no clipping/overflow와 ResizeObserver height를 확인했다.
+
+## Current 16차 Position
+
+- Step 3의 KPI-only 결과는 approved Portfolio Mix 설계와 달리 누적 성과, 월별 수익률,
+  component contribution과 계산/data trust 근거를 누락한 구현 gap이었다.
+- Task 50에서 weighted bundle의 기존 `summary_df`, `result_df`, contribution frame과 data trust row를
+  사용자 표시용 JSON-safe evidence로 투영하는 pure service 계약을 추가했다.
+- 퍼센트·금액·역할·날짜 문구는 Python이 계산하며, 실제 result date만 사용한다. 첫 월 return이
+  계산 불가이면 표에는 `계산값 없음`으로 남기고 chart row에서는 제외한다.
+- web adapter는 fresh weighted result의 run identity/fingerprint/summary/period를 유지하면서
+  `current_result.evidence`를 추가한다. 저장 schema, Level2 handoff, weighted calculation은 변경하지 않았다.
+- Task 50 focused GREEN은 Portfolio Mix `25 passed`, weighted selector `5 passed / 840 deselected`,
+  target `py_compile`과 `git diff --check` exit 0이다.

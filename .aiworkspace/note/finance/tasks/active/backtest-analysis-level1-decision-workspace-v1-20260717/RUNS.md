@@ -651,3 +651,16 @@
   source-contract baseline이며 Portfolio Mix 신규 failure는 0이다.
 - React production build: Vite 5.4.21, `175 modules transformed`; CSS 6.43 kB, JS 332.51 kB.
 - target 4-module `py_compile`과 `git diff --check` -> exit 0.
+
+## 2026-07-19 16차 Task 50 RED -> GREEN
+
+- RED direct evidence contract:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py::test_mix_result_evidence_projects_user_labels_charts_and_contribution tests/test_backtest_portfolio_mix_workspace.py::test_mix_result_evidence_preserves_sparse_and_unavailable_months -q`
+  -> missing `build_portfolio_mix_result_evidence`로 `2 failed`.
+- first GREEN에서 monthly table key가 계약의 `return_label` 대신 `monthly_return_label`이어서
+  `1 passed / 1 failed`; key를 contract와 일치시킨 뒤 `2 passed`.
+- adapter RED는 `current_result.evidence` 부재로 `1 failed`; pure builder 연결 뒤 direct + adapter
+  `3 passed, 3 warnings`.
+- focused Portfolio Mix: `25 passed, 3 warnings in 1.73s`.
+- weighted Portfolio Mix service selector: `5 passed, 840 deselected in 0.28s`.
+- service/adapter `py_compile`과 `git diff --check`: exit 0, output 없음.
