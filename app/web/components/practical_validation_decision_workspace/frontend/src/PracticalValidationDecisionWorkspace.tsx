@@ -173,6 +173,39 @@ export function PracticalValidationDecisionWorkspace({
             <strong>{selectedProfile?.label || "판정 기준 미선택"}</strong>
           </div>
         </div>
+        <div className="pv2-provenance-block pv2-candidate-provenance">
+          <div>
+            <strong>검증 대상 요약</strong>
+            <p>Level 1에서 넘어온 후보의 핵심 조건만 확인합니다.</p>
+          </div>
+          <dl className="pv2-provenance-grid">
+            <div>
+              <dt>백테스트 기간</dt>
+              <dd>{workspace.candidate.provenance.period_label}</dd>
+            </div>
+            <div>
+              <dt>CAGR</dt>
+              <dd>{workspace.candidate.provenance.cagr_label}</dd>
+            </div>
+            <div>
+              <dt>MDD</dt>
+              <dd>{workspace.candidate.provenance.mdd_label}</dd>
+            </div>
+            <div>
+              <dt>구성</dt>
+              <dd>{workspace.candidate.provenance.component_count}개 전략</dd>
+            </div>
+            <div>
+              <dt>Data Trust</dt>
+              <dd>{workspace.candidate.provenance.data_trust_label}</dd>
+              <small>
+                {workspace.candidate.provenance.warning_count > 0
+                  ? `주의 ${workspace.candidate.provenance.warning_count}건`
+                  : "경고 없음"}
+              </small>
+            </div>
+          </dl>
+        </div>
         <div className="pv2-selection-section pv2-candidate-section">
           <div className="pv2-selection-control-row">
             <div className="pv2-subsection-title">
@@ -388,6 +421,42 @@ export function PracticalValidationDecisionWorkspace({
               : workspace.actions.run_replay.label}
           </button>
         </div>
+        {workspace.replay.provenance.visible && (
+          <div className="pv2-provenance-block pv2-replay-provenance">
+            <div>
+              <strong>재검증 기록</strong>
+              <p>선택한 범위가 실제로 어디까지 계산됐는지 확인합니다.</p>
+            </div>
+            <dl className="pv2-provenance-grid">
+              <div>
+                <dt>재검증 범위</dt>
+                <dd>{workspace.replay.provenance.mode_label}</dd>
+              </div>
+              <div>
+                <dt>요청 기간</dt>
+                <dd>{workspace.replay.provenance.requested_period_label}</dd>
+              </div>
+              <div>
+                <dt>실제 기간</dt>
+                <dd>{workspace.replay.provenance.actual_period_label}</dd>
+              </div>
+              <div>
+                <dt>최신 공통 가격일</dt>
+                <dd>{workspace.replay.provenance.latest_common_price_date}</dd>
+              </div>
+              <div>
+                <dt>기간 Coverage</dt>
+                <dd>{workspace.replay.provenance.coverage_status}</dd>
+                <small>종료일 차이 {workspace.replay.provenance.end_gap_days}일</small>
+              </div>
+            </dl>
+            {workspace.replay.provenance.limiting_symbols.length > 0 && (
+              <p className="pv2-provenance-warning">
+                기간 제한 종목 · {workspace.replay.provenance.limiting_symbols.join(", ")}
+              </p>
+            )}
+          </div>
+        )}
       </section>
 
       <section className={`pv2-verdict pv2-tone-${workspace.verdict.tone}`}>
@@ -673,6 +742,36 @@ export function PracticalValidationDecisionWorkspace({
             {workspace.actions.save_and_move.label}
           </button>
         </div>
+        {workspace.record.visible && (
+          <details className="pv2-record-disclosure">
+            <summary>검증 기록</summary>
+            <p>
+              저장하거나 Final Review로 이동할 때 이어지는 현재 세션의 식별 정보입니다.
+            </p>
+            <dl className="pv2-provenance-grid">
+              <div>
+                <dt>판정 프로필</dt>
+                <dd>{workspace.record.profile_label}</dd>
+              </div>
+              <div>
+                <dt>재검증 방식</dt>
+                <dd>{workspace.record.recheck_mode_label}</dd>
+              </div>
+              <div>
+                <dt>실행 시각</dt>
+                <dd>{workspace.record.attempted_at}</dd>
+              </div>
+              <div>
+                <dt>Replay ID</dt>
+                <dd>{workspace.record.replay_id}</dd>
+              </div>
+              <div>
+                <dt>Validation ID</dt>
+                <dd>{workspace.record.validation_id}</dd>
+              </div>
+            </dl>
+          </details>
+        )}
       </section>
         </>
       )}

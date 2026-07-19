@@ -115,6 +115,14 @@ export type DecisionWorkspace = {
     title: string
     source_type_label: string
     as_of: string
+    provenance: {
+      period_label: string
+      cagr_label: string
+      mdd_label: string
+      component_count: number
+      data_trust_label: string
+      warning_count: number
+    }
   }
   profile: {
     profile_id: string
@@ -150,6 +158,24 @@ export type DecisionWorkspace = {
       recommended: boolean
       selected: boolean
     }>
+    provenance: {
+      visible: boolean
+      mode_label: string
+      requested_period_label: string
+      actual_period_label: string
+      latest_common_price_date: string
+      coverage_status: string
+      end_gap_days: number
+      limiting_symbols: string[]
+    }
+  }
+  record: {
+    visible: boolean
+    profile_label: string
+    recheck_mode_label: string
+    attempted_at: string
+    replay_id: string
+    validation_id: string
   }
   verdict: { tone: Tone; label: string; headline: string; detail: string }
   summary: Record<string, number>

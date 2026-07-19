@@ -43,7 +43,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
   - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
   - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
-  - Latest completed Practical Validation UI task is [practical-validation-level2-controls-evidence-ia-v1-20260719](./tasks/active/practical-validation-level2-controls-evidence-ia-v1-20260719/STATUS.md). Profile criteria, replay range, raw audit evidence를 사용하는 단계별로 분리했다.
+  - Latest completed Practical Validation UI task is [practical-validation-audit-evidence-absorption-v1-20260719](./tasks/active/practical-validation-audit-evidence-absorption-v1-20260719/STATUS.md). Raw source/replay/validation은 저장 계약에 보존하고 사용자 provenance는 Step 1/2/4가 소유한다.
   - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
   - Latest completed docs / code-flow refresh is [post-merge-docs-flow-refresh-20260708](./tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
@@ -54,6 +54,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-19 - Level2 raw 원본은 보존 대상이지 기본 화면의 사용자 근거가 아니다
+
+- User request: 남은 `원본 데이터·감사 정보`와 후보/재검증/판정 원본 세 탭이 필요한지 재검토하고 권장안으로 개선해 달라고 요청함.
+- Interpreted goal: 재현성과 Final Review 인계 데이터는 잃지 않되, 사용자가 내부 JSON을 읽지 않고도 후보·replay·판정 기록을 확인하게 한다.
+- Analysis result: raw source/replay/validation dict는 runtime/registry contract로 보존하고 visible provenance는 실제 사용하는 Step 1/2/4가 소유하는 것이 맞다. session replay raw는 저장 전 durable audit record도 아니다.
+- Follow-up: 하단 raw tabs를 제거하고 compact provenance projection, React/fallback, actual replay와 desktop/760px QA를 전체 roadmap `3/3`으로 완료했다.
 
 ### 2026-07-19 - Level2 설정은 사용하는 단계가 소유하고 하단은 감사 근거만 소유한다
 

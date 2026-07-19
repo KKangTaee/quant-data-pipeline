@@ -997,7 +997,7 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 - visible flow는 `후보와 검증 기준 확인 -> 최신 데이터 기준 재검증 -> 결과 해석과 해결 구분 -> 저장하고 Final Review로 이동`의 4단계 one-shell이다.
 - visual one-shell은 두 mount boundary를 쓴다. 후보/검증 기준 `context`는 replay fragment 밖에 고정하고, 재검증/결과/저장 `decision`만 fragment에서 pending과 새 projection으로 교체해 최신 재검증 때 상단 선택 맥락이 사라지지 않는다.
 - Step 1 compact selection IA를 적용했다. hero는 Level2 질문으로 고정하고 현재 후보와 판정 기준은 Step 1 summary에서 확인한다. `1A` 후보 목록은 필요할 때만 펼치며, `1B`는 데스크톱 5열과 760px 2열 줄바꿈으로 빠르게 비교한다.
-- `상세 검증 근거`는 Step 3 disclosure이며 별도 Flow 5가 아니다. 2026-07-19 후속에서 profile 질문·threshold는 Step 1 `판정 기준 세부 조정`, replay 기간 선택은 Step 2 `재검증 범위`로 승격했고, 하단에는 읽기 전용 `원본 데이터·감사 정보`만 남겼다.
+- `상세 검증 근거`는 Step 3 disclosure이며 별도 Flow 5가 아니다. 2026-07-19 후속에서 profile 질문·threshold는 Step 1 `판정 기준 세부 조정`, replay 기간 선택은 Step 2 `재검증 범위`로 승격했다. 추가 후속에서는 하단 source/replay/validation raw tabs도 제거하고 source 핵심 사실은 Step 1, 실제 replay 기간 provenance는 Step 2, profile/replay/validation identity는 Step 4 `검증 기록`으로 흡수했다. raw dict와 persistence contract는 보존한다.
 - `app/services/backtest_practical_validation_decision_workspace.py`가 verified / measured caution / validated caution / resolve-now / engineering-required / Final Review handoff를 root issue 기준으로 투영한다. 사용자 설명은 별도 pure explanation service가 소유한다.
 - React는 presentation과 intent만 소유하고, Python은 applicability, finding, Gate, handler 검증, replay, save, Final Review handoff를 소유한다.
 - old Fix Queue / Data Action Board는 compatibility code로 유지하지만 active first-read에서는 렌더링하지 않는다.

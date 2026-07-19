@@ -341,6 +341,132 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
         self.assertEqual(model["replay"]["mode_label"], "저장 기간 그대로 재현")
         self.assertEqual(len(model["replay"]["mode_options"]), 2)
 
+    def test_workspace_projects_compact_candidate_provenance(self) -> None:
+        from app.services.backtest_practical_validation_decision_workspace import (
+            build_practical_validation_decision_workspace,
+        )
+
+        source = self._source()
+        source.update(
+            {
+                "summary": {"cagr": 0.1356, "mdd": -0.146},
+                "components": [
+                    {"component_id": "gtaa"},
+                    {"component_id": "grs"},
+                    {"component_id": "risk-parity"},
+                ],
+                "data_trust": {
+                    "status": "weighted_mix_snapshot",
+                    "warning_count": 1,
+                },
+                "source_snapshot": {"large_internal": [1, 2, 3]},
+                "result_curve": [{"Date": "2026-07-15"}],
+            }
+        )
+
+        model = build_practical_validation_decision_workspace(
+            source=source,
+            validation_profile={
+                "profile_id": "balanced_core",
+                "profile_label": "균형형",
+            },
+            replay_result=None,
+            validation_result=None,
+            source_options=[source],
+        )
+
+        provenance = model["candidate"]["provenance"]
+        self.assertEqual(provenance["period_label"], "2016-01-29 → 2026-07-15")
+        self.assertEqual(provenance["cagr_label"], "13.56%")
+        self.assertEqual(provenance["mdd_label"], "-14.60%")
+        self.assertEqual(provenance["component_count"], 3)
+        self.assertEqual(provenance["data_trust_label"], "주의 필요")
+        self.assertEqual(provenance["warning_count"], 1)
+        self.assertNotIn("source_snapshot", provenance)
+        self.assertNotIn("result_curve", provenance)
+
+    def test_workspace_projects_replay_provenance_and_validation_record(self) -> None:
+        from app.services.backtest_practical_validation_decision_workspace import (
+            build_practical_validation_decision_workspace,
+        )
+
+        replay = {
+            "status": "PASS",
+            "replay_id": "pv_recheck_1234",
+            "attempted_at": "2026-07-19T20:10:00+09:00",
+            "recheck_mode": "extend_to_latest",
+            "recheck_mode_label": "최신 DB 데이터까지 확장 검증",
+            "period_coverage": {
+                "status": "PASS",
+                "requested_period": {
+                    "start": "2016-01-29",
+                    "end": "2026-07-17",
+                },
+                "actual_period": {
+                    "start": "2016-01-29",
+                    "end": "2026-07-17",
+                },
+                "latest_common_price_date": "2026-07-17",
+                "end_gap_days": 0,
+                "limiting_symbols": ["TIP"],
+            },
+        }
+        validation = self._validation()
+
+        model = build_practical_validation_decision_workspace(
+            source=self._source(),
+            validation_profile={
+                "profile_id": "balanced_core",
+                "profile_label": "균형형",
+            },
+            replay_result=replay,
+            validation_result=validation,
+            source_options=[self._source()],
+        )
+
+        provenance = model["replay"]["provenance"]
+        self.assertTrue(provenance["visible"])
+        self.assertEqual(provenance["mode_label"], "최신 DB 데이터까지 확장 검증")
+        self.assertEqual(
+            provenance["requested_period_label"],
+            "2016-01-29 → 2026-07-17",
+        )
+        self.assertEqual(
+            provenance["actual_period_label"],
+            "2016-01-29 → 2026-07-17",
+        )
+        self.assertEqual(provenance["latest_common_price_date"], "2026-07-17")
+        self.assertEqual(provenance["coverage_status"], "PASS")
+        self.assertEqual(provenance["end_gap_days"], 0)
+        self.assertEqual(provenance["limiting_symbols"], ["TIP"])
+
+        record = model["record"]
+        self.assertTrue(record["visible"])
+        self.assertEqual(record["profile_label"], "균형형")
+        self.assertEqual(record["recheck_mode_label"], "최신 DB 데이터까지 확장 검증")
+        self.assertEqual(record["attempted_at"], "2026-07-19T20:10:00+09:00")
+        self.assertEqual(record["replay_id"], "pv_recheck_1234")
+        self.assertEqual(record["validation_id"], "validation-grs-current")
+
+    def test_workspace_hides_replay_provenance_and_record_before_replay(self) -> None:
+        from app.services.backtest_practical_validation_decision_workspace import (
+            build_practical_validation_decision_workspace,
+        )
+
+        model = build_practical_validation_decision_workspace(
+            source=self._source(),
+            validation_profile={
+                "profile_id": "balanced_core",
+                "profile_label": "균형형",
+            },
+            replay_result=None,
+            validation_result=None,
+            source_options=[self._source()],
+        )
+
+        self.assertFalse(model["replay"]["provenance"]["visible"])
+        self.assertFalse(model["record"]["visible"])
+
     def test_profile_answer_intent_rebuilds_decision_without_clearing_replay(
         self,
     ) -> None:

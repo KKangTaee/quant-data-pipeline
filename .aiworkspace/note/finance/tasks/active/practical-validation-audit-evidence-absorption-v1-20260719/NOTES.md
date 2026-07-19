@@ -12,3 +12,5 @@
 - latest candidate source row는 약 493KB다.
 - latest validation row는 약 833KB이며 selection source snapshot을 중복 포함한다.
 - current replay raw tab은 session object를 표시하므로 저장 전에는 durable audit record가 아니다.
+- actual replay에서 요청 `2016-08-31 → 2026-06-26`, 실제 `2016-08-31 → 2026-06-30`, 공통 가격일 `2026-06-26`, coverage PASS, 제한 종목 COMT/TIP/XLE가 compact record로 투영됐다.
+- actual Data Trust internal status `weighted_mix_snapshot`은 사용자 화면에서 `확인 완료`로 번역한다.

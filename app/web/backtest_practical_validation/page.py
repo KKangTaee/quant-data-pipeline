@@ -2749,37 +2749,6 @@ def _consume_practical_validation_next_stage_action(
     _rerun_practical_validation_workspace(scope="app")
 
 
-def _render_decision_workspace_audit_evidence(
-    *,
-    source: dict[str, Any],
-    replay_result: dict[str, Any] | None,
-    validation_result: dict[str, Any] | None,
-) -> None:
-    """Render read-only source, replay, and judgment data for audit use."""
-
-    st.caption(
-        "판정 재현이나 오류 확인이 필요할 때만 확인하세요. "
-        "이 영역에서는 설정을 바꾸거나 결과를 저장하지 않습니다."
-    )
-    source_tab, replay_tab, validation_tab = st.tabs(["후보 원본", "재검증 원본", "판정 원본"])
-    with source_tab:
-        if source:
-            _render_source_summary(source)
-            st.json(source, expanded=False)
-        else:
-            st.info("선택된 후보 원본이 없습니다.")
-    with replay_tab:
-        if replay_result:
-            st.json(replay_result, expanded=False)
-        else:
-            st.info("현재 세션 재검증 원본이 없습니다.")
-    with validation_tab:
-        if validation_result:
-            st.json(validation_result, expanded=False)
-        else:
-            st.info("현재 세션 판정 원본이 없습니다.")
-
-
 def render_practical_validation_workspace() -> None:
     render_pv_styles()
     sources = load_portfolio_selection_sources(limit=100)
@@ -2975,10 +2944,3 @@ def _render_practical_validation_decision_workspace_fragment(
         replay_result=replay_result,
         rerun_scope="fragment",
     )
-
-    with st.expander("원본 데이터·감사 정보", expanded=False):
-        _render_decision_workspace_audit_evidence(
-            source=source,
-            replay_result=replay_result,
-            validation_result=validation_result,
-        )

@@ -1,11 +1,11 @@
 # Risks
 
-## Active Risks
+## Closed Risks
 
-- replay failure payload는 actual period가 없을 수 있다. compact projection은 `-`로 안전하게 표현해야 한다.
-- long validation/replay ids와 limiting symbol list가 760px overflow를 만들 수 있다.
-- raw disclosure 제거 과정에서 source/replay/validation object의 save/handoff 전달까지 제거하지 않도록 page boundary test가 필요하다.
-- build asset hash가 변경되므로 source와 generated production asset을 같은 implementation commit에 포함한다.
+- replay failure에서 actual period가 없으면 compact projection은 `-`를 반환한다.
+- validation/replay ids와 limiting symbols는 `overflow-wrap: anywhere`와 760px 단일 열로 검증했다.
+- page boundary test로 raw renderer만 제거하고 builder/save/handoff에 source/replay/validation 전달은 보존했다.
+- source와 generated production asset은 같은 implementation commit에 포함한다.
 
 ## Out Of Scope
 

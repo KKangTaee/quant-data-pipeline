@@ -250,14 +250,12 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn("PRACTICAL_VALIDATION_RESULT_FILE", render_body)
         self.assertNotIn("validation_rows", render_body)
         self.assertNotIn('title="검증 기준 상세"', render_body)
-        self.assertIn("원본 데이터·감사 정보", render_body)
+        self.assertNotIn("원본 데이터·감사 정보", render_body)
         self.assertNotIn("고급 설정과 원본 근거", render_body)
-        audit_body = page_source.split(
-            "def _render_decision_workspace_audit_evidence", 1
-        )[1].split("\ndef ", 1)[0]
-        self.assertIn('st.tabs(["후보 원본", "재검증 원본", "판정 원본"])', audit_body)
-        self.assertNotIn("st.selectbox", audit_body)
-        self.assertNotIn("st.radio", audit_body)
+        self.assertNotIn("def _render_decision_workspace_audit_evidence", page_source)
+        self.assertNotIn('st.tabs(["후보 원본", "재검증 원본", "판정 원본"])', page_source)
+        self.assertIn("replay_result=replay_result", render_body)
+        self.assertIn("validation_result=validation_result", render_body)
         self.assertIn(
             "render_practical_validation_decision_workspace_fallback(",
             render_body,

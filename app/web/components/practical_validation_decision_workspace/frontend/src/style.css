@@ -197,6 +197,75 @@ summary:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.pv2-provenance-block,
+.pv2-record-disclosure {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--pv2-line-soft);
+  border-radius: 14px;
+  background: #fbfcfd;
+}
+
+.pv2-provenance-block > div > p,
+.pv2-record-disclosure > p {
+  margin: 5px 0 0;
+  color: var(--pv2-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.pv2-provenance-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
+.pv2-provenance-grid > div {
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: var(--pv2-wash);
+}
+
+.pv2-provenance-grid dt {
+  color: var(--pv2-muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.pv2-provenance-grid dd {
+  margin: 4px 0 0;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.pv2-provenance-grid small {
+  display: block;
+  margin-top: 3px;
+  color: var(--pv2-muted);
+  font-size: 9px;
+  overflow-wrap: anywhere;
+}
+
+.pv2-provenance-warning {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: var(--pv2-warning);
+  background: #fff6ef;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.pv2-record-disclosure > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .pv2-selection-summary small {
   color: var(--pv2-muted);
   font-size: 11px;
@@ -862,7 +931,8 @@ button:disabled {
   .pv2-selection-control-row,
   .pv2-threshold-summary,
   .pv2-profile-question-grid,
-  .pv2-recheck-mode-grid {
+  .pv2-recheck-mode-grid,
+  .pv2-provenance-grid {
     grid-template-columns: 1fr;
   }
 

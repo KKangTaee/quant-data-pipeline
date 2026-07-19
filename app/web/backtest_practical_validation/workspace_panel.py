@@ -473,6 +473,17 @@ def _render_practical_validation_context_surface_fallback(
         st.caption("판정 기준")
         st.markdown(f"**{selected_profile.get('label') or '미선택'}**")
 
+    candidate_provenance = dict(candidate.get("provenance") or {})
+    st.markdown("##### 검증 대상 요약")
+    st.caption(
+        f"기간 {candidate_provenance.get('period_label') or '-'} · "
+        f"CAGR {candidate_provenance.get('cagr_label') or '-'} · "
+        f"MDD {candidate_provenance.get('mdd_label') or '-'} · "
+        f"구성 {int(candidate_provenance.get('component_count') or 0)}개 전략 · "
+        f"Data Trust {candidate_provenance.get('data_trust_label') or '-'} "
+        f"(주의 {int(candidate_provenance.get('warning_count') or 0)}건)"
+    )
+
     with st.expander("1A. 후보 변경", expanded=False):
         if source_options:
             for option in source_options:
@@ -622,6 +633,21 @@ def render_practical_validation_decision_workspace_fallback(
         disabled=not bool(replay_action.get("enabled")),
     ):
         return _workspace_intent("run_replay", workspace=workspace)
+    replay_provenance = dict(replay.get("provenance") or {})
+    if bool(replay_provenance.get("visible")):
+        st.markdown("##### 재검증 기록")
+        st.caption(
+            f"{replay_provenance.get('mode_label') or '-'} · "
+            f"요청 {replay_provenance.get('requested_period_label') or '-'} · "
+            f"실제 {replay_provenance.get('actual_period_label') or '-'} · "
+            f"최신 공통 가격일 "
+            f"{replay_provenance.get('latest_common_price_date') or '-'} · "
+            f"Coverage {replay_provenance.get('coverage_status') or '-'} "
+            f"/ 종료일 차이 {int(replay_provenance.get('end_gap_days') or 0)}일"
+        )
+        limiting_symbols = list(replay_provenance.get("limiting_symbols") or [])
+        if limiting_symbols:
+            st.warning(f"기간 제한 종목 · {', '.join(map(str, limiting_symbols))}")
 
     st.markdown(f"### {verdict.get('headline') or '-'}")
     st.caption(str(verdict.get("detail") or ""))
@@ -794,5 +820,15 @@ def render_practical_validation_decision_workspace_fallback(
             disabled=not bool(save_and_move.get("enabled")),
         ):
             return _workspace_intent("save_and_move", workspace=workspace)
+    record = dict(workspace.get("record") or {})
+    if bool(record.get("visible")):
+        with st.expander("검증 기록", expanded=False):
+            st.caption(
+                f"판정 프로필 {record.get('profile_label') or '-'} · "
+                f"재검증 방식 {record.get('recheck_mode_label') or '-'} · "
+                f"실행 시각 {record.get('attempted_at') or '-'}"
+            )
+            st.caption(f"Replay ID · {record.get('replay_id') or '-'}")
+            st.caption(f"Validation ID · {record.get('validation_id') or '-'}")
     st.caption("이동은 최종 승인, broker order, account sync, auto rebalance가 아닙니다.")
     return None

@@ -51,7 +51,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
   - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
   - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
-  - Latest completed Practical Validation UI task is [practical-validation-level2-controls-evidence-ia-v1-20260719](./tasks/active/practical-validation-level2-controls-evidence-ia-v1-20260719/STATUS.md). 전체 roadmap `3/3`; Step 1 profile 기준, Step 2 재검증 범위, 하단 읽기 전용 감사 근거의 소유권을 확정했다.
+  - Latest completed Practical Validation UI task is [practical-validation-audit-evidence-absorption-v1-20260719](./tasks/active/practical-validation-audit-evidence-absorption-v1-20260719/STATUS.md). 전체 roadmap `3/3`; raw source/replay/validation UI를 제거하고 compact provenance를 Step 1/2/4로 흡수했다.
   - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
@@ -61,6 +61,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### 2026-07-19 - Practical Validation Audit Evidence Absorption
+
+- 후보 약 493KB, 판정 약 833KB의 raw JSON 탭을 current Level 2에서 제거하고 저장/runtime 계약은 보존했다.
+- Step 1은 기간·CAGR/MDD·구성·Data Trust, Step 2는 요청/실제 기간·공통 가격일·coverage, Step 4는 profile/replay/validation identity를 소유한다.
+- focused 96 tests와 React build를 통과했고 actual replay에서 기간 provenance, desktop/760px overflow 0, console error 0을 확인했다.
+- registry / run history / saved JSONL과 generated QA screenshot은 commit에서 제외한다.
 
 ### 2026-07-19 - Practical Validation Level2 Controls / Evidence IA
 
