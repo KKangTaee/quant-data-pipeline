@@ -296,6 +296,23 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
     assert 'title="전망 맥락"' not in source
 
 
+def test_cycle_component_evidence_role_styles_are_present() -> None:
+    source = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/style.css"
+    ).read_text()
+
+    for token in (
+        ".evidence-row-heading",
+        ".evidence-description",
+        ".evidence-tone-positive-level",
+        ".evidence-tone-weak-level",
+        ".evidence-tone-support",
+        ".evidence-tone-burden",
+        ".evidence-tone-neutral",
+    ):
+        assert token in source
+
+
 def _pathway_style_block(style: str) -> str:
     start = style.index(".pathway-group")
     end = style.index(".method-disclosure", start)
