@@ -233,6 +233,8 @@ button { outline: none; }
 .pm-text-action { justify-self: start; padding: 0; border: 0; color: #2d72ad; background: transparent; font-size: 10px; }
 .pm-detail-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .pm-end-action { padding: 5px 0; border: 0; color: #a65b50; background: transparent; cursor: pointer; font-size: 9px; font-weight: 800; }
+.pm-reopen-action { padding: 7px 11px; border: 1px solid #9ac9bd; border-radius: 9px; color: #176c5c; background: #edf8f4; cursor: pointer; font-size: 9px; font-weight: 850; }
+.pm-reopen-action:hover { border-color: #5ea997; background: #def2eb; }
 .pm-failure { margin: 0; padding: 9px; border-radius: 9px; color: #985247; background: #fcefeb; font-size: 10px; line-height: 1.5; }
 .pm-empty-list { padding: 24px 12px; color: #7d8e9a; font-size: 11px; line-height: 1.6; text-align: center; }
 

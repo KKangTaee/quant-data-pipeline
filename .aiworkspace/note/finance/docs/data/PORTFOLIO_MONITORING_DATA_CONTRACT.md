@@ -25,6 +25,7 @@ Last Verified: 2026-07-19
 - requested start 이후 첫 usable close가 effective start다. 값이 없으면 등록을 막는다.
 - direct security 원장은 raw close를 primary price로 사용한다. split은 effective units에 반영하고 cash dividend는 재투자하지 않은 누적 cash로 더한다.
 - fixed notional은 fractional virtual units를 허용하지만 integer shares 방식은 소수 주식을 허용하지 않는다.
+- `reopen_item`은 ended item의 동일 identity와 원래 start/funding/entry/initial-capital 계약을 유지하고 종료 요청일·적용일·종료금액만 `NULL`, status를 `active`로 되돌린다. 새 episode나 재진입 가격을 만들지 않으며, active 10개 한도와 동일 source 중복을 다시 검증한다. 과거 command row는 audit로 유지한다.
 
 ## 가치와 KPI
 

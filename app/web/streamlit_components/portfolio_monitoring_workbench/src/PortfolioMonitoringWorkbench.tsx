@@ -821,7 +821,10 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
                       <MarketPriceChart projection={selectedMarketChart} />
                     )}
                     <div className="pm-detail-actions">
-                      {selectedItem.status !== "ended" && <button type="button" className="pm-end-action" onClick={() => {
+                      {selectedItem.status === "ended" ? <button type="button" className="pm-reopen-action" onClick={() => {
+                        if (!window.confirm(`${selectedItem.source_ref}의 추적 종료를 취소할까요? 종료 상태와 종료금액이 취소되고 원래 시작일부터 계속 추적한 것으로 다시 계산됩니다.`)) return;
+                        emit({ id: "reopen_item", command_id: newCommandId(), monitoring_item_id: selectedItem.monitoring_item_id });
+                      }}>추적 종료 취소</button> : <button type="button" className="pm-end-action" onClick={() => {
                         if (!window.confirm(`${selectedItem.source_ref} 추적을 종료할까요? 종료 후에도 기록과 종료금액은 유지됩니다.`)) return;
                         emit({ id: "end_item", command_id: newCommandId(), monitoring_item_id: selectedItem.monitoring_item_id, requested_end_date: todayText() });
                       }}>추적 종료</button>}

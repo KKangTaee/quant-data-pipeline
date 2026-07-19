@@ -42,6 +42,7 @@ class CommandType(str, Enum):
     RENAME_GROUP = "rename_group"
     ADD_ITEM = "add_item"
     END_ITEM = "end_item"
+    REOPEN_ITEM = "reopen_item"
     IMPORT_LEGACY = "import_legacy"
 
 

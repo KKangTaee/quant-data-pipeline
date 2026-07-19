@@ -188,7 +188,8 @@ export type PortfolioMonitoringEvent =
   | { id: "select_item"; monitoring_item_id: string; nonce: string }
   | { id: "search_catalog"; query: string; source_type: "direct_security" | "selected_strategy"; nonce: string }
   | { id: "add_item"; payload: Record<string, unknown>; nonce: string }
-  | { id: "end_item"; monitoring_item_id: string; requested_end_date: string; nonce: string };
+  | { id: "end_item"; monitoring_item_id: string; requested_end_date: string; nonce: string }
+  | { id: "reopen_item"; monitoring_item_id: string; nonce: string };
 
 export type PortfolioMonitoringComponentValue = {
   event: PortfolioMonitoringEvent | null;

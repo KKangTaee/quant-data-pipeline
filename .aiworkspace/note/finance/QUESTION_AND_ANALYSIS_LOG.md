@@ -10120,3 +10120,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 과거 기록은 보존하되 종료 성공 여부와 활성/종료 구분을 즉시 이해할 수 있어야 함.
 - Analysis result: 목록 보존은 의도지만 `date >= requested_end`만 허용한 휴장일 resolver와 add-item 전용 command feedback 때문에 종료 실패가 숨겨졌다. 종료는 요청일 이하 최신 value row로 확정하고 실제 적용일·금액을 표시한다.
 - Follow-up: backend/React/자동 검증까지 `3/4차` 완료했다. Browser URL policy로 실제 종료 click·종료 기록·배너 visual QA가 남아 있다.
+
+### 2026-07-19 - 종료된 추적은 동일 항목의 종료 자체를 취소해 다시 활성화한다
+
+- User request: 추적 종료된 종목을 다시 살리는 기능을 A 방식으로 진행해 달라고 요청함.
+- Interpreted goal: 새 추적 항목이나 재진입 episode를 만들지 않고, 실수로 종료한 기존 항목을 원래 시작일과 투자 계약 그대로 되돌려야 함.
+- Analysis result: `reopen_item`이 동일 item ID를 유지하면서 종료 요청일·적용일·종료금액을 비우고 `active`로 되돌린다. 활성 10개 한도와 동일 source 중복은 복구 시 다시 검증하며 과거 command audit은 보존한다.
+- Follow-up: service/repository/page/React와 durable docs를 연결했고 Python 112 / React 25 / typecheck/build/static asset 검증을 통과했다. Browser URL policy로 실제 interaction screenshot만 수행하지 못했다.

@@ -22,6 +22,7 @@ from .commands import (
     execute_add_item,
     execute_create_group,
     execute_end_item,
+    execute_reopen_item,
     execute_rename_group,
 )
 from .catalog import (
@@ -74,6 +75,7 @@ __all__ = [
     "execute_add_item",
     "execute_create_group",
     "execute_end_item",
+    "execute_reopen_item",
     "execute_rename_group",
     "CatalogItem",
     "list_monitoring_candidates",

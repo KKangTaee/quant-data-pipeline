@@ -89,6 +89,8 @@ class MonitoringRepository(Protocol):
 
     def end_item(self, monitoring_item_id: str, resolution: Any) -> MonitoringItemRecord | None: ...
 
+    def reopen_item(self, monitoring_item_id: str) -> MonitoringItemRecord | None: ...
+
     def get_command(self, command_id: str) -> StoredCommandRecord | None: ...
 
     def insert_command(self, record: StoredCommandRecord) -> StoredCommandRecord: ...
@@ -371,6 +373,24 @@ class MySQLMonitoringRepository:
                     resolution.exit_value,
                     monitoring_item_id,
                 ],
+            )
+        return self.get_item(monitoring_item_id, for_update=True)
+
+    def reopen_item(self, monitoring_item_id: str) -> MonitoringItemRecord | None:
+        current = self.get_item(monitoring_item_id, for_update=True)
+        if current is None or current.status != "ended":
+            return None
+        with self._connection() as db:
+            db.execute(
+                """
+                UPDATE monitoring_portfolio_item
+                SET tracking_end_requested_date = NULL,
+                    tracking_end_effective_date = NULL,
+                    exit_value = NULL,
+                    status = 'active'
+                WHERE monitoring_item_id = %s AND status = 'ended'
+                """,
+                [monitoring_item_id],
             )
         return self.get_item(monitoring_item_id, for_update=True)
 

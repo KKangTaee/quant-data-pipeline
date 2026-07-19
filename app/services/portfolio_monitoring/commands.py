@@ -368,3 +368,55 @@ def execute_end_item(
         )
 
     return _execute(repository, command, fingerprint, mutate)
+
+
+def execute_reopen_item(
+    repository: MonitoringRepository,
+    command: MonitoringCommandInput,
+) -> CommandResult:
+    """Cancel a tracking end while preserving the original monitoring contract."""
+
+    _assert_command_type(command, CommandType.REOPEN_ITEM)
+    item_id = str(command.target_id or "").strip()
+    if not item_id:
+        raise CommandValidationError("monitoring_item_id is required.")
+    fingerprint = _command_fingerprint(command, {"monitoring_item_id": item_id})
+    replay = _existing_result(repository, command.command_id, fingerprint)
+    if replay is not None:
+        return replay
+    current = repository.get_item(item_id)
+    if current is None:
+        raise CommandValidationError("Monitoring item not found.")
+    if current.status != "ended":
+        raise CommandValidationError("Only an ended monitoring item can be reopened.")
+
+    def mutate() -> CommandResult:
+        locked = repository.get_item(item_id, for_update=True)
+        if locked is None or locked.status != "ended":
+            raise CommandConflictError("Monitoring item status changed before tracking end cancellation.")
+        if repository.get_group(locked.portfolio_group_id, for_update=True) is None:
+            raise CommandValidationError("Portfolio group not found.")
+        active_items = repository.list_items(
+            locked.portfolio_group_id,
+            statuses=ACTIVE_ITEM_STATUSES,
+        )
+        if any(
+            existing.source_type == locked.source_type
+            and existing.source_ref.casefold() == locked.source_ref.casefold()
+            for existing in active_items
+        ):
+            raise CommandValidationError("This source is already active in the portfolio group.")
+        if len(active_items) >= MAX_ACTIVE_ITEMS_PER_GROUP:
+            raise CommandValidationError("A portfolio group can contain a maximum of 10 active items.")
+        reopened = repository.reopen_item(item_id)
+        if reopened is None:
+            raise CommandConflictError("Monitoring item could not be reopened.")
+        return CommandResult(
+            status=CommandStatus.SUCCEEDED,
+            command_id=command.command_id,
+            target_id=item_id,
+            replayed=False,
+            message="추적 종료를 취소했습니다. 기존 시작일과 보유 계약으로 계속 추적합니다.",
+        )
+
+    return _execute(repository, command, fingerprint, mutate)

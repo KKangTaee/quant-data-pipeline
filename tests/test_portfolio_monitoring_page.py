@@ -67,6 +67,7 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
             rename_group=lambda event: calls.append(("rename_group", event)) or None,
             add_item=lambda event: calls.append(("add_item", event)) or None,
             end_item=lambda event: calls.append(("end_item", event)) or None,
+            reopen_item=lambda event: calls.append(("reopen_item", event)) or None,
         )
 
     def test_route_builds_once_mounts_once_dispatches_once_and_reruns_after_success(self) -> None:
@@ -135,7 +136,21 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
         self.assertIsNone(result)
         self.assertEqual(services.session_state["portfolio_monitoring_catalog_query"], "aapl")
         self.assertEqual(services.session_state["portfolio_monitoring_catalog_source_type"], "direct_security")
-        self.assertFalse(any(call[0] in {"create_group", "rename_group", "add_item", "end_item"} for call in services.calls))
+        self.assertFalse(any(call[0] in {"create_group", "rename_group", "add_item", "end_item", "reopen_item"} for call in services.calls))
+
+    def test_dispatches_reopen_item_command(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        services = self._services()
+        event = {
+            "id": "reopen_item",
+            "command_id": "command-reopen",
+            "monitoring_item_id": "item-ended",
+        }
+
+        page._dispatch_portfolio_monitoring_event(event, services)
+
+        self.assertIn(("reopen_item", event), services.calls)
 
     def test_catalog_search_whitelists_item_builder_recovery_state(self) -> None:
         from app.web import final_selected_portfolio_dashboard as page

@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from dataclasses import replace
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 
 def _load_modules():
@@ -89,6 +90,20 @@ class FakeRepository:
             tracking_end_effective_date=resolution.effective_end_date,
             exit_value=resolution.exit_value,
             status="ended",
+        )
+        self.items[monitoring_item_id] = updated
+        return updated
+
+    def reopen_item(self, monitoring_item_id):
+        current = self.items.get(monitoring_item_id)
+        if current is None or current.status != "ended":
+            return None
+        updated = replace(
+            current,
+            tracking_end_requested_date=None,
+            tracking_end_effective_date=None,
+            exit_value=None,
+            status="active",
         )
         self.items[monitoring_item_id] = updated
         return updated
@@ -377,6 +392,211 @@ class PortfolioMonitoringCommandTests(unittest.TestCase):
         self.assertIn("요청일 2026-07-18", ended.message)
         self.assertIn("적용일 2026-07-17", ended.message)
         self.assertIn("$10,500.00", ended.message)
+
+    def test_reopen_item_cancels_end_on_the_same_tracking_record(self) -> None:
+        commands, _, schemas = _load_modules()
+        repository = FakeRepository()
+        group = commands.ensure_default_group(repository)
+        added = commands.execute_add_item(
+            repository,
+            self._command(schemas, "cmd-add-reopenable", schemas.CommandType.ADD_ITEM),
+            self._direct_item(schemas, group_id=group.portfolio_group_id),
+            resolve_entry=lambda item: commands.EntryResolution(
+                effective_start_date=date(2026, 7, 1),
+                entry_close=Decimal("100"),
+                initial_capital=Decimal("10000"),
+            ),
+        )
+        commands.execute_end_item(
+            repository,
+            self._command(
+                schemas,
+                "cmd-end-before-reopen",
+                schemas.CommandType.END_ITEM,
+                target_id=added.target_id,
+            ),
+            resolve_end=lambda item: commands.EndResolution(
+                requested_end_date=date(2026, 7, 18),
+                effective_end_date=date(2026, 7, 17),
+                exit_value=Decimal("10500"),
+            ),
+        )
+
+        reopen_command = self._command(
+            schemas,
+            "cmd-reopen-item",
+            schemas.CommandType.REOPEN_ITEM,
+            target_id=added.target_id,
+        )
+        reopened = commands.execute_reopen_item(
+            repository,
+            reopen_command,
+        )
+        replayed = commands.execute_reopen_item(repository, reopen_command)
+
+        item = repository.items[reopened.target_id]
+        self.assertEqual(reopened.target_id, added.target_id)
+        self.assertEqual(item.status, "active")
+        self.assertIsNone(item.tracking_end_requested_date)
+        self.assertIsNone(item.tracking_end_effective_date)
+        self.assertIsNone(item.exit_value)
+        self.assertEqual(item.effective_start_date, date(2026, 7, 1))
+        self.assertEqual(item.initial_capital, Decimal("10000"))
+        self.assertEqual(len(repository.items), 1)
+        self.assertIn("추적 종료를 취소했습니다", reopened.message)
+        self.assertTrue(replayed.replayed)
+        self.assertEqual(replayed.target_id, added.target_id)
+
+    def test_reopen_item_rejects_duplicate_active_source(self) -> None:
+        commands, persistence, schemas = _load_modules()
+        repository = FakeRepository()
+        group = commands.ensure_default_group(repository)
+        ended = persistence.MonitoringItemRecord(
+            monitoring_item_id="item-ended-aapl",
+            portfolio_group_id=group.portfolio_group_id,
+            source_type="direct_security",
+            source_ref="AAPL",
+            instrument_kind="stock",
+            requested_start_date=date(2026, 6, 1),
+            effective_start_date=date(2026, 6, 1),
+            funding_mode="fixed_notional",
+            input_notional=Decimal("10000"),
+            input_shares=None,
+            entry_close=Decimal("100"),
+            initial_capital=Decimal("10000"),
+            tracking_end_requested_date=date(2026, 6, 30),
+            tracking_end_effective_date=date(2026, 6, 30),
+            exit_value=Decimal("10100"),
+            status="ended",
+        )
+        active = replace(ended, monitoring_item_id="item-active-aapl", status="active")
+        repository.items = {ended.monitoring_item_id: ended, active.monitoring_item_id: active}
+
+        with self.assertRaisesRegex(commands.CommandValidationError, "already active"):
+            commands.execute_reopen_item(
+                repository,
+                self._command(
+                    schemas,
+                    "cmd-reopen-duplicate",
+                    schemas.CommandType.REOPEN_ITEM,
+                    target_id=ended.monitoring_item_id,
+                ),
+            )
+
+    def test_reopen_item_rejects_group_with_ten_active_items(self) -> None:
+        commands, persistence, schemas = _load_modules()
+        repository = FakeRepository()
+        group = commands.ensure_default_group(repository)
+        base = persistence.MonitoringItemRecord(
+            monitoring_item_id="item-ended",
+            portfolio_group_id=group.portfolio_group_id,
+            source_type="direct_security",
+            source_ref="ENDED",
+            instrument_kind="stock",
+            requested_start_date=date(2026, 6, 1),
+            effective_start_date=date(2026, 6, 1),
+            funding_mode="fixed_notional",
+            input_notional=Decimal("10000"),
+            input_shares=None,
+            entry_close=Decimal("100"),
+            initial_capital=Decimal("10000"),
+            status="ended",
+        )
+        repository.items[base.monitoring_item_id] = base
+        for index in range(10):
+            item = replace(
+                base,
+                monitoring_item_id=f"item-active-{index}",
+                source_ref=f"SYM{index}",
+                status="active",
+            )
+            repository.items[item.monitoring_item_id] = item
+
+        with self.assertRaisesRegex(commands.CommandValidationError, "maximum of 10"):
+            commands.execute_reopen_item(
+                repository,
+                self._command(
+                    schemas,
+                    "cmd-reopen-full",
+                    schemas.CommandType.REOPEN_ITEM,
+                    target_id=base.monitoring_item_id,
+                ),
+            )
+
+    def test_reopen_item_rejects_an_item_that_is_not_ended(self) -> None:
+        commands, persistence, schemas = _load_modules()
+        repository = FakeRepository()
+        group = commands.ensure_default_group(repository)
+        active = persistence.MonitoringItemRecord(
+            monitoring_item_id="item-active",
+            portfolio_group_id=group.portfolio_group_id,
+            source_type="direct_security",
+            source_ref="AAPL",
+            instrument_kind="stock",
+            requested_start_date=date(2026, 7, 1),
+            effective_start_date=date(2026, 7, 1),
+            funding_mode="fixed_notional",
+            input_notional=Decimal("10000"),
+            input_shares=None,
+            entry_close=Decimal("100"),
+            initial_capital=Decimal("10000"),
+            status="active",
+        )
+        repository.items[active.monitoring_item_id] = active
+
+        with self.assertRaisesRegex(commands.CommandValidationError, "Only an ended"):
+            commands.execute_reopen_item(
+                repository,
+                self._command(
+                    schemas,
+                    "cmd-reopen-active",
+                    schemas.CommandType.REOPEN_ITEM,
+                    target_id=active.monitoring_item_id,
+                ),
+            )
+
+    def test_mysql_repository_reopen_item_clears_end_fields(self) -> None:
+        _, persistence, _ = _load_modules()
+        db = RecordingDb()
+        repository = persistence.MySQLMonitoringRepository(lambda: db)
+        ended = persistence.MonitoringItemRecord(
+            monitoring_item_id="item-ended",
+            portfolio_group_id="group-a",
+            source_type="direct_security",
+            source_ref="AAPL",
+            instrument_kind="stock",
+            requested_start_date=date(2026, 7, 1),
+            effective_start_date=date(2026, 7, 1),
+            funding_mode="fixed_notional",
+            input_notional=Decimal("10000"),
+            input_shares=None,
+            entry_close=Decimal("100"),
+            initial_capital=Decimal("10000"),
+            tracking_end_requested_date=date(2026, 7, 18),
+            tracking_end_effective_date=date(2026, 7, 17),
+            exit_value=Decimal("10500"),
+            status="ended",
+        )
+        reopened = replace(
+            ended,
+            tracking_end_requested_date=None,
+            tracking_end_effective_date=None,
+            exit_value=None,
+            status="active",
+        )
+
+        with patch.object(repository, "get_item", side_effect=[ended, reopened]):
+            result = repository.reopen_item(ended.monitoring_item_id)
+
+        self.assertEqual(result, reopened)
+        self.assertEqual(db.used_databases, ["finance_meta"])
+        self.assertEqual(db.executed[0][1], [ended.monitoring_item_id])
+        normalized_sql = " ".join(db.executed[0][0].split())
+        self.assertIn("tracking_end_requested_date = NULL", normalized_sql)
+        self.assertIn("tracking_end_effective_date = NULL", normalized_sql)
+        self.assertIn("exit_value = NULL", normalized_sql)
+        self.assertIn("status = 'active'", normalized_sql)
+        self.assertTrue(db.closed)
 
     def test_mysql_repository_ensure_schema_uses_finance_meta(self) -> None:
         _, persistence, _ = _load_modules()

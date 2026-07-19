@@ -162,6 +162,19 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn(".pm-command-feedback", styles)
         self.assertIn(".pm-ended-items", styles)
 
+    def test_ended_item_exposes_reopen_action_with_continuous_tracking_warning(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        styles = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/style.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("추적 종료 취소", source)
+        self.assertIn('id: "reopen_item"', source)
+        self.assertIn("원래 시작일부터 계속 추적한 것으로 다시 계산됩니다", source)
+        self.assertIn(".pm-reopen-action", styles)
+
     def test_build_availability_requires_index_html(self) -> None:
         component = _load_component()
         with tempfile.TemporaryDirectory() as directory:

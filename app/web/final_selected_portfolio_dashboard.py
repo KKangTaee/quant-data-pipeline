@@ -22,6 +22,7 @@ from app.services.portfolio_monitoring.commands import (
     execute_add_item,
     execute_create_group,
     execute_end_item,
+    execute_reopen_item,
     execute_rename_group,
 )
 from app.services.portfolio_monitoring.persistence import (
@@ -328,6 +329,7 @@ class PortfolioMonitoringPageServices:
     rename_group: Callable[[dict[str, Any]], CommandResult]
     add_item: Callable[[dict[str, Any]], CommandResult]
     end_item: Callable[[dict[str, Any]], CommandResult]
+    reopen_item: Callable[[dict[str, Any]], CommandResult]
 
 
 def _monitoring_db_factory() -> MySQLClient:
@@ -735,6 +737,17 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
             resolve_end=resolve_end,
         )
 
+    def reopen_item(event: dict[str, Any]) -> CommandResult:
+        return execute_reopen_item(
+            repository,
+            MonitoringCommandInput(
+                command_id=str(event.get("command_id") or ""),
+                command_type=CommandType.REOPEN_ITEM,
+                target_id=str(event.get("monitoring_item_id") or ""),
+                payload={},
+            ),
+        )
+
     return PortfolioMonitoringPageServices(
         session_state=session_state,
         build_workspace=build_workspace,
@@ -745,6 +758,7 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
         rename_group=rename_group,
         add_item=add_item,
         end_item=end_item,
+        reopen_item=reopen_item,
     )
 
 
@@ -4019,6 +4033,8 @@ def _dispatch_portfolio_monitoring_event(
         return services.add_item(event)
     if event_id == "end_item":
         return services.end_item(event)
+    if event_id == "reopen_item":
+        return services.reopen_item(event)
     return None
 
 

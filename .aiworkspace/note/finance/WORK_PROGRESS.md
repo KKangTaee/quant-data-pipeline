@@ -23,6 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
+  - Latest Portfolio Monitoring lifecycle follow-up is [portfolio-monitoring-tracking-end-reopen-v1-20260719](./tasks/active/portfolio-monitoring-tracking-end-reopen-v1-20260719/STATUS.md). 종료된 동일 item의 종료 필드를 취소하고 원래 시작 계약으로 재활성화하는 `reopen_item`을 추가했다. Python 112 / React 25 / typecheck/build/static asset 검증을 통과했으며 Browser interaction은 URL policy로 차단됐다.
   - Current Portfolio Monitoring follow-up is [portfolio-monitoring-chart-zoom-pan-v1-20260719](./tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md). 선택 direct 종목에 client-only wheel zoom·drag pan을 구현하고 desktop 목록/상세를 35:65로 재배분하며 축을 11px로 높였다. Python 102 / React 24 / build/static distribution을 통과했고 전체 `2/3차`; Browser policy로 desktop·900px·420px interaction/layout QA가 남아 있다.
   - Latest completed Portfolio Monitoring chart task is [portfolio-monitoring-chart-clarity-ohlcv-v1-20260719](./tasks/active/portfolio-monitoring-chart-clarity-ohlcv-v1-20260719/STATUS.md). 종합 가치곡선 선명도·5/3개 날짜 눈금과 선택 direct 종목의 DB-only line/OHLCV candle/volume을 전체 roadmap `4/4`로 완료했다.
   - Latest completed Portfolio Monitoring follow-up is [portfolio-monitoring-item-builder-ux-fix-v1-20260719](./tasks/active/portfolio-monitoring-item-builder-ux-fix-v1-20260719/STATUS.md). 등록 drawer를 560px frame/internal scroll로 제한하고 검색 rerun 상태 복구와 요청 시작일 입력 유지를 전체 roadmap `3/3`으로 완료했다.
@@ -66,6 +67,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### 2026-07-19 - Portfolio Monitoring 추적 종료 취소
+
+- 종료 기록의 동일 항목을 새 등록 없이 원래 시작 계약으로 다시 활성화하는 idempotent `reopen_item` command와 React 액션을 추가했다.
+- 종료 요청일·적용일·종료금액을 비우고 연속 추적으로 재계산하며, 활성 10개 한도와 동일 source 중복 제한을 복구 시 다시 검증한다.
+- Python 112 / React 25 / typecheck/build/static asset 검증을 통과했다. local Browser interaction은 URL policy로 차단되어 스크린샷은 남기지 못했다.
 
 ### 2026-07-19 - Portfolio Monitoring 종목 차트 Zoom / Pan V1
 
