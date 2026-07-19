@@ -68,6 +68,11 @@ Axis copy, method disclosure, and tests must preserve this distinction.
 
 If the selected or hidden forecast geometry owns the SVG scale, horizon switching can move the observed anchors and imply that history changed. The map therefore derives one common bound from both terminal/ranges and excludes hidden intermediate medians; a source contract and actual browser coordinate-equality check guard this comparison rule.
 
+### Shared-Worktree Snapshot Overwrite
+
+`finance_meta.futures_macro_snapshot` currently identifies the compact row by `snapshot_key` only. A concurrently running older worktree can therefore overwrite the compatible V4 row with an older algorithm payload even though sub-dev code and the daily data are correct.
+This follow-up restored `pattern_outlook_v4_conservative_status_10y` but did not change the DB schema or cross-worktree runtime contract. Preventing recurrence requires a separately approved versioned-key or writer-compatibility design.
+
 ## Escalation Conditions
 
 - Fewer than 30 independent episodes for the selected horizon.

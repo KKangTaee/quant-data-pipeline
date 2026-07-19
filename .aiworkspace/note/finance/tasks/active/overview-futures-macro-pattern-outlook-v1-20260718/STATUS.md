@@ -1,5 +1,14 @@
 # Futures Macro Pattern Outlook V1 Status
 
+## 2026-07-19 — 60D Legend / Status Clarity / V4 Runtime Recovery
+
+- The approved follow-up is complete: the 60-trading-day ribbon now has a visible five-color regime legend plus a striped transition legend, instead of relying on color without an on-screen key.
+- Asset cards keep `관측 완료` on the current 1D / 5D / 20D observation and label each future row `전체 전망 · PROVISIONAL`, so the future distribution no longer looks like a card-wide current-data warning.
+- The production React bundle was rebuilt and the stored ten-year daily rows were rematerialized without a provider call. The compatible DB snapshot is `pattern_outlook_v4_conservative_status_10y`, as of `2026-07-17`, materialized at `2026-07-19 13:48:06`.
+- Browser QA confirmed 60 ribbon cells, all five regime labels plus the transition key, five observed asset cards, ten future-status rows, zero console errors, and no desktop or 420px horizontal overflow. The mobile legend wraps to two rows.
+- QA screenshot: `/Users/taeho/.codex/visualizations/2026/07/19/futures-macro-ribbon-status/futures-macro-ribbon-status-qa.png` (generated, not staged).
+- No probability model, publication gate, provider, DB schema, or first-entry DB-only boundary changed. Current remains observed; 5D / 20D remain provisional for the measured validation reasons already recorded below.
+
 ## 2026-07-19 — Observation Status / Ten-Year Validation Closeout
 
 - Approved A안 roadmap `1~4` is complete: current observation status separation, asset-card current/5D/20D status separation, ten-year daily history contract, and actual ten-year backfill / re-evaluation.

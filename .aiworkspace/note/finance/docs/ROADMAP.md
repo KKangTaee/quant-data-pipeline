@@ -871,7 +871,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 | Overview Market Context Macro Dimension Audit V3C | Complete | Market Context `Macro 조건 포함 pilot` now includes `맥락 차원 상태`, showing actual hard conditions, stored FRED `T10Y3M` / `VIXCLS` / `BAA10Y` availability and bucket preview counts, plus event / sentiment annotation or deferred reasons. It remains context-only and does not add FRED / event / sentiment hard filtering. |
 | Overview Market Context Futures-Conditioned Analog V3B | Complete | Market Context `Macro 조건 포함 pilot` now keeps GLD context and adds one stored futures daily OHLCV Rate Pressure proxy condition using `ZN=F` / `ZB=F`. The condition is bounded by selected as-of / anchor date, shows used or insufficient state, and remains context-only. |
 | Overview Market Context Macro-Conditioned Analog Pilot V1 | Complete | Market Context historical analog separates the original broad analog from a `Macro 조건 포함 pilot`. 3차-A introduced GLD price proxy context and sample quality display; 3차-B extended it with the stored futures Rate Pressure proxy; 3차-C adds dimension availability / preview audit without applying FRED / events / sentiment as hard filters. |
-| Futures Market Monitoring / Futures Macro | Complete | yfinance futures 1m / daily OHLCV feeds stored-candle diagnostics. Successful daily ingestion materializes a five-year compact current macro plus 5D / 20D outlook snapshot; Overview first entry and reload are DB-only. React owns the method and compact calculation-trace disclosures. Conditional history remains point-in-time context, not a prediction guarantee. |
+| Futures Market Monitoring / Futures Macro | Complete | yfinance futures 1m / daily OHLCV feeds stored-candle diagnostics. Successful daily ingestion materializes a ten-year compact current macro plus 5D / 20D outlook snapshot; Overview first entry and reload are DB-only. React owns method / calculation-trace disclosures, a visible 60D regime legend, and separate current-observation versus future-publication status. Conditional history remains point-in-time context, not a prediction guarantee. |
 
 ## Completed Foundations
 
@@ -903,7 +903,7 @@ Current active task:
 
 Latest completed task:
 
-- `overview-futures-macro-pattern-outlook-v1-20260718` — 전체 roadmap `5/5`와 materialized snapshot / React disclosure closeout `4/4` complete
+- `overview-futures-macro-pattern-outlook-v1-20260718` — 전체 roadmap `5/5`, materialized snapshot / React disclosure `4/4`, observation / outlook separation, ten-year validation, and 60D legend / status clarity follow-up complete
 
 Previous completed task:
 

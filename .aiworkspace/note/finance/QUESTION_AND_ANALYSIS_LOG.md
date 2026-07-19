@@ -55,6 +55,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-19 - 10년 이력은 장기예측이 아니라 20D 독립 표본을 확보한다
+
+- User request: 5년 대신 10년 일봉을 유지하고, 60D 색 의미와 자산 카드의 PROVISIONAL 의미를 명확히 한 뒤 실제 화면까지 마무리해 달라고 요청함.
+- Interpreted goal: 장기 전망 범위를 늘리는 것이 아니라 겹치는 20D 표본을 줄여 검증 가능한 독립 episode를 확보하고, 현재 관측과 미래 검증 상태를 화면에서 혼동하지 않게 한다.
+- Analysis result: 10년 저장 이력은 20D 독립 표본을 42개에서 88개로 늘리지만 기존 품질 gate를 통과시키지는 못한다. 현재 관측은 완료이며 5D/20D 미래 분포는 측정된 실패 때문에 계속 PROVISIONAL이다.
+- Follow-up: 60D 체제 범례, 카드 상태 문구, production bundle과 V4 snapshot을 복구했다. 데스크톱/420px QA를 통과했으며, 공용 `snapshot_key`를 오래된 worktree가 덮어쓸 수 있는 위험은 별도 설계로 남겼다.
+
 ### 2026-07-19 - Futures Macro 현재 관측과 미래 검증은 같은 상태가 아니다
 
 - User request: 모든 카드가 `PROVISIONAL`로 보이는 이유를 확인하고, 승인한 A안과 권장 개선 순서대로 실제 상태 전환 조건을 구현해 달라고 요청함.

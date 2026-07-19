@@ -233,3 +233,13 @@
 - Actual 20D: the same start/current, line end/terminal `(256.660352, 186.525904)`, step-20 range/path/direction/terminal `1/1/1/1`. Both lines had no polyline `points` attribute and the three anchor tuples matched 5D/20D/observed exactly.
 - `관측만` forecast/range/direction/terminal was `0/0/0/0`. Desktop root/workbench measured `1280/1109px` with equal client/scroll widths; 420px root/iframe/workbench/map measured `420/377/377/371px`, again with equal client/scroll widths. All four graph labels remained inside the canvas and console errors were 0.
 - Screenshot: `/Users/taeho/.codex/visualizations/2026/07/18/019f730e-7ff9-7720-b5c6-359d96ca1a4d/futures-macro-net-direction-qa.png` (generated, not staged).
+
+## 2026-07-19 60D Legend / Status Clarity / V4 Runtime Recovery
+
+- TDD RED/GREEN added a visible `과거 → 최근` ribbon legend for 위험선호 / 방어 / 물가·금리 부담 / 혼재 and the striped 전환 시도 state. The focused source contract failed before the component change and passed afterward.
+- TDD RED/GREEN changed asset future badges to `전체 전망 · {status}` while preserving the current header's observation status. The focused source contract and payload observation/outlook separation test passed.
+- `npm run build --prefix app/web/streamlit_components/futures_macro_workbench` passed and emitted `index-Bzg4wneW.css` plus `index-CLbh4-U1.js`.
+- `materialize_overview_futures_macro_snapshot(force=True)` used already stored daily OHLCV only and produced `READY`, source marker / as-of `2026-07-17`, materialized at `2026-07-19 13:48:06`.
+- DB/service verification returned `pattern_outlook_v4_conservative_status_10y`, current hero `OBSERVED`, five asset observations `OBSERVED`, and both future horizons `PROVISIONAL`.
+- Browser QA at `http://127.0.0.1:8568`: 60 ribbon cells; six legend labels including time direction; five asset-card `관측 완료` plus ten `전체 전망 · PROVISIONAL`; zero console errors. Desktop `1440 == 1440`; mobile outer `420 == 420`, iframe `377 == 377`; mobile legend wrapped to two rows.
+- Screenshot: `/Users/taeho/.codex/visualizations/2026/07/19/futures-macro-ribbon-status/futures-macro-ribbon-status-qa.png` (generated, not staged).
