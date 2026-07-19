@@ -247,12 +247,12 @@ basis_date = min(lane.latest_usable_date for lane in active_lanes)
 current_value = sum(lane.value_at(basis_date) for lane in all_lanes)
 ```
 
-- [ ] Write failing tests for pre-start planned cash, post-end exit cash, ended items excluded from active limit but retained in history, two staggered starts, one stale active item moving the common basis date backward, and a failed lane producing explicit `PARTIAL` rather than silent exclusion.
-- [ ] Test invested capital/current value/P&L/total return, daily-curve MDD, actual-day CAGR, `<365` short-window marker, total contribution, and downside contribution.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_read_model.py -q` and confirm failures.
-- [ ] Implement alignment without interpolation. Projection top-level keys must be `schema_version`, `generated_at`, `groups`, `active_group`, `catalog`, `commands`, `method`, and `boundaries`.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_catalog.py tests/test_portfolio_monitoring_valuation.py tests/test_portfolio_monitoring_selected_strategy.py tests/test_portfolio_monitoring_read_model.py -q`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/valuation.py app/services/portfolio_monitoring/read_model.py`, and `git diff --check`.
-- [ ] Commit as `포트폴리오 공통 가치곡선과 KPI 구현`.
+- [x] Write failing tests for pre-start planned cash, post-end exit cash, ended items excluded from active limit but retained in history, two staggered starts, one stale active item moving the common basis date backward, and a failed lane producing explicit `PARTIAL` rather than silent exclusion.
+- [x] Test invested capital/current value/P&L/total return, daily-curve MDD, actual-day CAGR, `<365` short-window marker, total contribution, and downside contribution.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_read_model` and confirm failures.
+- [x] Implement alignment without interpolation. Projection top-level keys must be `schema_version`, `generated_at`, `groups`, `active_group`, `catalog`, `commands`, `method`, and `boundaries`.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_catalog tests.test_portfolio_monitoring_valuation tests.test_portfolio_monitoring_selected_strategy tests.test_portfolio_monitoring_read_model`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/valuation.py app/services/portfolio_monitoring/read_model.py`, and `git diff --check`.
+- [x] Commit as `포트폴리오 공통 가치곡선과 KPI 구현`.
 
 **2차 완료 게이트:** direct stock/ETF and selected-strategy lanes produce one versioned workspace projection; all lifecycle and metric tests pass. This stage still keeps the legacy visible UI.
 

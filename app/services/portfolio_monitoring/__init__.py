@@ -46,6 +46,13 @@ from .selected_strategy import (
     SelectedStrategyReplayAdapter,
     SelectedStrategyReplayError,
 )
+from .read_model import (
+    GroupMetrics,
+    GroupValueResult,
+    align_group_value_lanes,
+    build_portfolio_monitoring_workspace,
+    calculate_group_metrics,
+)
 
 __all__ = [
     "AddMonitoringItemInput",
@@ -84,4 +91,9 @@ __all__ = [
     "SelectedStrategyReadiness",
     "SelectedStrategyReplayAdapter",
     "SelectedStrategyReplayError",
+    "GroupMetrics",
+    "GroupValueResult",
+    "align_group_value_lanes",
+    "build_portfolio_monitoring_workspace",
+    "calculate_group_metrics",
 ]

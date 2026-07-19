@@ -26,3 +26,5 @@
 | 2026-07-19 | 2차 Task 5 direct-security valuation verification | 6 valuation and 30 cumulative monitoring unittests PASS; compile and `git diff --check` PASS |
 | 2026-07-19 | 2차 Task 6 selected-strategy adapter RED | 5 expected missing-module failures for valid replay, missing decision/contract, replay error, and share-mode rejection |
 | 2026-07-19 | 2차 Task 6 selected-strategy verification | 5 adapter and 35 cumulative monitoring unittests PASS; all 6 actual monitoring candidates resolve READY in read-only contract smoke |
+| 2026-07-19 | 2차 Task 7 group read-model RED / numeric refinement | 6 expected missing-module failures; Decimal MDD replaced float drift at the exact `-0.1` boundary |
+| 2026-07-19 | 2차 Monitoring Service Foundation completion gate | 6 group read-model, 23 stage-focused, and 41 cumulative monitoring unittests PASS; common-basis PARTIAL/cash/history contract verified |

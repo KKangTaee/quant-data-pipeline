@@ -6670,3 +6670,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - `monitoring_portfolio_group/item/command` schema, integer-share/notional domain contract, optimistic group command와 idempotent add/end lifecycle을 구현했다.
 - legacy saved setup은 source fingerprint 기반 read-only plan과 명시적 apply를 분리했다. Fixture 2회 import는 중복 없이 replay되고 실제 saved 파일은 3 groups / 2 importable / 4 blocked로 dry-run만 수행했다.
 - 전체 roadmap `1/6차` 완료. 다음은 2차 stock/ETF + Final Review catalog, valuation lane, common-basis read model이다.
+
+## 2026-07-19 - Portfolio Monitoring React 개편 2차 완료
+
+- DB-only stock/ETF와 authoritative Final Review candidate 통합 catalog, raw-close·분할·현금배당 직접 종목 원장, 선정 전략 replay adapter를 구현했다.
+- 서로 다른 시작·종료일은 투자 전/종료 후 현금으로 정렬하고, 가장 오래된 최신 active lane 기준의 공통 가치곡선과 투자금·현재가치·수익률·MDD·CAGR·기여도를 계산한다.
+- 전체 roadmap `2/6차` 완료, 누적 모니터링 계약 41개가 통과했다. 다음은 3차 React one-shell과 command event round-trip이다.
