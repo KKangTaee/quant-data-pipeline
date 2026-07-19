@@ -143,6 +143,78 @@ class PracticalValidationMarketContextVisualContractTests(unittest.TestCase):
         )
         self.assertIn("grid-column: 1 / -1;", responsive)
 
+    def test_profile_adjustment_belongs_to_step_one(self) -> None:
+        source = WORKSPACE.read_text(encoding="utf-8")
+        context = source.split('{surface === "context"', 1)[1].split(
+            '{surface === "decision"', 1
+        )[0]
+
+        self.assertIn("판정 기준 세부 조정", context)
+        self.assertIn("pv2-profile-adjustment", context)
+        self.assertIn("workspace.profile.questions.map", context)
+        self.assertIn('action: "update_profile_answer"', context)
+        self.assertLess(
+            context.index("1B. 어떤 관점으로 검증할까요?"),
+            context.index("판정 기준 세부 조정"),
+        )
+
+    def test_recheck_mode_belongs_to_step_two_before_replay_action(self) -> None:
+        source = WORKSPACE.read_text(encoding="utf-8")
+        decision = source.split('{surface === "decision"', 1)[1]
+
+        self.assertIn("재검증 범위", decision)
+        self.assertIn("pv2-recheck-mode-grid", decision)
+        self.assertIn("workspace.replay.mode_options.map", decision)
+        self.assertIn('action: "select_recheck_mode"', decision)
+        self.assertLess(
+            decision.index("재검증 범위"),
+            decision.index('className="pv2-replay"'),
+        )
+
+    def test_profile_and_recheck_controls_collapse_on_mobile(self) -> None:
+        style = STYLE.read_text(encoding="utf-8")
+        responsive = style.split("@media (max-width: 760px)", 1)[1]
+
+        self.assertIn(".pv2-profile-question-grid", style)
+        self.assertIn(".pv2-recheck-mode-grid", style)
+        self.assertIn(".pv2-profile-question-grid,", responsive)
+        self.assertIn(".pv2-recheck-mode-grid", responsive)
+        self.assertIn("grid-template-columns: 1fr;", responsive)
+
+    def test_compact_provenance_belongs_to_steps_one_two_and_four(self) -> None:
+        source = WORKSPACE.read_text(encoding="utf-8")
+        context = source.split('{surface === "context"', 1)[1].split(
+            '{surface === "decision"', 1
+        )[0]
+        decision = source.split('{surface === "decision"', 1)[1]
+
+        self.assertIn("검증 대상 요약", context)
+        self.assertIn("workspace.candidate.provenance", context)
+        self.assertIn("재검증 기록", decision)
+        self.assertIn("workspace.replay.provenance", decision)
+        self.assertIn("<summary>검증 기록</summary>", decision)
+        self.assertIn("workspace.record", decision)
+        self.assertLess(
+            context.index("검증 대상 요약"),
+            context.index("1A. 검증할 후보"),
+        )
+        self.assertLess(
+            decision.index("재검증 기록"),
+            decision.index("3. 결과 해석과 해결 구분"),
+        )
+        self.assertGreater(
+            decision.index("<summary>검증 기록</summary>"),
+            decision.index("4. 저장하고 Final Review로 이동"),
+        )
+
+    def test_compact_provenance_collapses_to_one_column_on_mobile(self) -> None:
+        style = STYLE.read_text(encoding="utf-8")
+        responsive = style.split("@media (max-width: 760px)", 1)[1]
+
+        self.assertIn(".pv2-provenance-grid", style)
+        self.assertIn(".pv2-provenance-grid", responsive)
+        self.assertIn("grid-template-columns: 1fr;", responsive)
+
 
 if __name__ == "__main__":
     unittest.main()

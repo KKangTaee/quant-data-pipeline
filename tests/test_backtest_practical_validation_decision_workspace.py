@@ -303,6 +303,259 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
             },
         }
 
+    def test_workspace_projects_profile_questions_and_recheck_mode(self) -> None:
+        from app.services.backtest_practical_validation_decision_workspace import (
+            build_practical_validation_decision_workspace,
+        )
+        from app.services.backtest_practical_validation_source import (
+            build_validation_profile,
+        )
+
+        profile = build_validation_profile(
+            "balanced_core",
+            {
+                "drawdown_tolerance": "dd_10",
+                "holding_period": "lt_3m",
+            },
+        )
+        model = build_practical_validation_decision_workspace(
+            source=self._source(),
+            validation_profile=profile,
+            replay_result=None,
+            validation_result=None,
+            source_options=[self._source()],
+            recheck_mode="stored_period",
+        )
+
+        self.assertEqual(len(model["profile"]["questions"]), 5)
+        drawdown = next(
+            row
+            for row in model["profile"]["questions"]
+            if row["question_id"] == "drawdown_tolerance"
+        )
+        self.assertEqual(drawdown["value"], "dd_10")
+        self.assertEqual(drawdown["options"][0]["value"], "dd_20")
+        self.assertEqual(model["profile"]["threshold_summary"]["mdd_review_line"], -10.0)
+        self.assertEqual(model["profile"]["threshold_summary"]["rolling_window_months"], 12)
+        self.assertEqual(model["replay"]["mode"], "stored_period")
+        self.assertEqual(model["replay"]["mode_label"], "저장 기간 그대로 재현")
+        self.assertEqual(len(model["replay"]["mode_options"]), 2)
+
+    def test_workspace_projects_compact_candidate_provenance(self) -> None:
+        from app.services.backtest_practical_validation_decision_workspace import (
+            build_practical_validation_decision_workspace,
+        )
+
+        source = self._source()
+        source.update(
+            {
+                "summary": {"cagr": 0.1356, "mdd": -0.146},
+                "components": [
+                    {"component_id": "gtaa"},
+                    {"component_id": "grs"},
+                    {"component_id": "risk-parity"},
+                ],
+                "data_trust": {
+                    "status": "weighted_mix_snapshot",
+                    "warning_count": 1,
+                },
+                "source_snapshot": {"large_internal": [1, 2, 3]},
+                "result_curve": [{"Date": "2026-07-15"}],
+            }
+        )
+
+        model = build_practical_validation_decision_workspace(
+            source=source,
+            validation_profile={
+                "profile_id": "balanced_core",
+                "profile_label": "균형형",
+            },
+            replay_result=None,
+            validation_result=None,
+            source_options=[source],
+        )
+
+        provenance = model["candidate"]["provenance"]
+        self.assertEqual(provenance["period_label"], "2016-01-29 → 2026-07-15")
+        self.assertEqual(provenance["cagr_label"], "13.56%")
+        self.assertEqual(provenance["mdd_label"], "-14.60%")
+        self.assertEqual(provenance["component_count"], 3)
+        self.assertEqual(provenance["data_trust_label"], "주의 필요")
+        self.assertEqual(provenance["warning_count"], 1)
+        self.assertNotIn("source_snapshot", provenance)
+        self.assertNotIn("result_curve", provenance)
+
+    def test_workspace_projects_replay_provenance_and_validation_record(self) -> None:
+        from app.services.backtest_practical_validation_decision_workspace import (
+            build_practical_validation_decision_workspace,
+        )
+
+        replay = {
+            "status": "PASS",
+            "replay_id": "pv_recheck_1234",
+            "attempted_at": "2026-07-19T20:10:00+09:00",
+            "recheck_mode": "extend_to_latest",
+            "recheck_mode_label": "최신 DB 데이터까지 확장 검증",
+            "period_coverage": {
+                "status": "PASS",
+                "requested_period": {
+                    "start": "2016-01-29",
+                    "end": "2026-07-17",
+                },
+                "actual_period": {
+                    "start": "2016-01-29",
+                    "end": "2026-07-17",
+                },
+                "latest_common_price_date": "2026-07-17",
+                "end_gap_days": 0,
+                "limiting_symbols": ["TIP"],
+            },
+        }
+        validation = self._validation()
+
+        model = build_practical_validation_decision_workspace(
+            source=self._source(),
+            validation_profile={
+                "profile_id": "balanced_core",
+                "profile_label": "균형형",
+            },
+            replay_result=replay,
+            validation_result=validation,
+            source_options=[self._source()],
+        )
+
+        provenance = model["replay"]["provenance"]
+        self.assertTrue(provenance["visible"])
+        self.assertEqual(provenance["mode_label"], "최신 DB 데이터까지 확장 검증")
+        self.assertEqual(
+            provenance["requested_period_label"],
+            "2016-01-29 → 2026-07-17",
+        )
+        self.assertEqual(
+            provenance["actual_period_label"],
+            "2016-01-29 → 2026-07-17",
+        )
+        self.assertEqual(provenance["latest_common_price_date"], "2026-07-17")
+        self.assertEqual(provenance["coverage_status"], "PASS")
+        self.assertEqual(provenance["end_gap_days"], 0)
+        self.assertEqual(provenance["limiting_symbols"], ["TIP"])
+
+        record = model["record"]
+        self.assertTrue(record["visible"])
+        self.assertEqual(record["profile_label"], "균형형")
+        self.assertEqual(record["recheck_mode_label"], "최신 DB 데이터까지 확장 검증")
+        self.assertEqual(record["attempted_at"], "2026-07-19T20:10:00+09:00")
+        self.assertEqual(record["replay_id"], "pv_recheck_1234")
+        self.assertEqual(record["validation_id"], "validation-grs-current")
+
+    def test_workspace_hides_replay_provenance_and_record_before_replay(self) -> None:
+        from app.services.backtest_practical_validation_decision_workspace import (
+            build_practical_validation_decision_workspace,
+        )
+
+        model = build_practical_validation_decision_workspace(
+            source=self._source(),
+            validation_profile={
+                "profile_id": "balanced_core",
+                "profile_label": "균형형",
+            },
+            replay_result=None,
+            validation_result=None,
+            source_options=[self._source()],
+        )
+
+        self.assertFalse(model["replay"]["provenance"]["visible"])
+        self.assertFalse(model["record"]["visible"])
+
+    def test_profile_answer_intent_rebuilds_decision_without_clearing_replay(
+        self,
+    ) -> None:
+        from app.web.backtest_practical_validation import page
+
+        source = self._source()
+        decision_key = "practical_validation_decision_result_source-grs-current"
+        replay_key = (
+            "practical_validation_recheck_source-grs-current_extend_to_latest"
+        )
+        fake_streamlit = SimpleNamespace(
+            session_state={
+                decision_key: {"validation_result": {"validation_id": "old"}},
+                replay_key: {"status": "PASS", "replay_id": "replay-current"},
+            },
+            rerun=MagicMock(),
+        )
+
+        with patch.object(page, "st", fake_streamlit):
+            page._consume_practical_validation_decision_workspace_intent(
+                {
+                    "action": "update_profile_answer",
+                    "intent_id": "intent-profile-answer",
+                    "selection_source_id": "source-grs-current",
+                    "validation_result_id": "",
+                    "question_id": "drawdown_tolerance",
+                    "answer": "dd_10",
+                },
+                sources=[source],
+                source=source,
+                validation_result=None,
+                replay_result=None,
+                rerun_scope="app",
+            )
+
+        self.assertEqual(
+            fake_streamlit.session_state[
+                "practical_validation_profile_answer_drawdown_tolerance"
+            ],
+            "dd_10",
+        )
+        self.assertNotIn(decision_key, fake_streamlit.session_state)
+        self.assertIn(replay_key, fake_streamlit.session_state)
+        fake_streamlit.rerun.assert_called_once_with(scope="app")
+
+    def test_recheck_mode_intent_clears_current_source_replay_and_result(
+        self,
+    ) -> None:
+        from app.web.backtest_practical_validation import page
+
+        source = self._source()
+        decision_key = "practical_validation_decision_result_source-grs-current"
+        replay_key = (
+            "practical_validation_recheck_source-grs-current_extend_to_latest"
+        )
+        fake_streamlit = SimpleNamespace(
+            session_state={
+                decision_key: {"validation_result": {"validation_id": "old"}},
+                replay_key: {"status": "PASS", "replay_id": "replay-current"},
+            },
+            rerun=MagicMock(),
+        )
+
+        with patch.object(page, "st", fake_streamlit):
+            page._consume_practical_validation_decision_workspace_intent(
+                {
+                    "action": "select_recheck_mode",
+                    "intent_id": "intent-recheck-mode",
+                    "selection_source_id": "source-grs-current",
+                    "validation_result_id": "",
+                    "recheck_mode": "stored_period",
+                },
+                sources=[source],
+                source=source,
+                validation_result=None,
+                replay_result=None,
+                rerun_scope="fragment",
+            )
+
+        self.assertEqual(
+            fake_streamlit.session_state[
+                "practical_validation_recheck_mode_source-grs-current"
+            ],
+            "stored_period",
+        )
+        self.assertNotIn(decision_key, fake_streamlit.session_state)
+        self.assertNotIn(replay_key, fake_streamlit.session_state)
+        fake_streamlit.rerun.assert_called_once_with(scope="fragment")
+
     def test_ready_with_handoff_separates_limits_and_final_decision(self) -> None:
         from app.services.backtest_practical_validation_decision_workspace import (
             build_practical_validation_decision_workspace,

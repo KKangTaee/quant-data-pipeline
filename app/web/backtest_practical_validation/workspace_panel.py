@@ -473,6 +473,17 @@ def _render_practical_validation_context_surface_fallback(
         st.caption("판정 기준")
         st.markdown(f"**{selected_profile.get('label') or '미선택'}**")
 
+    candidate_provenance = dict(candidate.get("provenance") or {})
+    st.markdown("##### 검증 대상 요약")
+    st.caption(
+        f"기간 {candidate_provenance.get('period_label') or '-'} · "
+        f"CAGR {candidate_provenance.get('cagr_label') or '-'} · "
+        f"MDD {candidate_provenance.get('mdd_label') or '-'} · "
+        f"구성 {int(candidate_provenance.get('component_count') or 0)}개 전략 · "
+        f"Data Trust {candidate_provenance.get('data_trust_label') or '-'} "
+        f"(주의 {int(candidate_provenance.get('warning_count') or 0)}건)"
+    )
+
     with st.expander("1A. 후보 변경", expanded=False):
         if source_options:
             for option in source_options:
@@ -523,6 +534,48 @@ def _render_practical_validation_context_surface_fallback(
                 workspace=workspace,
                 profile_id=profile_id,
             )
+    questions = [
+        dict(row)
+        for row in list(profile.get("questions") or [])
+        if isinstance(row, dict)
+    ]
+    with st.expander(
+        "판정 기준 세부 조정",
+        expanded=str(profile.get("profile_id") or "") == "custom",
+    ):
+        thresholds = dict(profile.get("threshold_summary") or {})
+        st.caption(
+            f"Rolling {int(thresholds.get('rolling_window_months') or 0)}개월 · "
+            f"MDD 검토선 {float(thresholds.get('mdd_review_line') or 0.0):g}% · "
+            f"편도 거래비용 {int(thresholds.get('one_way_cost_bps') or 0)} bps"
+        )
+        for question in questions:
+            question_id = str(question.get("question_id") or "")
+            options = [
+                dict(row)
+                for row in list(question.get("options") or [])
+                if isinstance(row, dict)
+            ]
+            option_values = [str(row.get("value") or "") for row in options]
+            labels = {
+                str(row.get("value") or ""): str(row.get("label") or "")
+                for row in options
+            }
+            current = str(question.get("value") or "")
+            selected = st.selectbox(
+                str(question.get("label") or question_id),
+                options=option_values,
+                format_func=lambda value, labels=labels: labels.get(value, value),
+                index=option_values.index(current) if current in option_values else 0,
+                key=f"pv2-fallback-profile-answer-{question_id}",
+            )
+            if selected != current:
+                return _workspace_intent(
+                    "update_profile_answer",
+                    workspace=workspace,
+                    question_id=question_id,
+                    answer=selected,
+                )
     return None
 
 
@@ -543,6 +596,31 @@ def render_practical_validation_decision_workspace_fallback(
     actions = dict(workspace.get("actions") or {})
 
     st.markdown("#### 2. 최신 데이터 기준 재검증")
+    mode_options = [
+        dict(row)
+        for row in list(replay.get("mode_options") or [])
+        if isinstance(row, dict)
+    ]
+    mode_values = [str(row.get("value") or "") for row in mode_options]
+    mode_labels = {
+        str(row.get("value") or ""): str(row.get("label") or "")
+        for row in mode_options
+    }
+    current_mode = str(replay.get("mode") or "")
+    selected_mode = st.radio(
+        "재검증 범위",
+        options=mode_values,
+        format_func=lambda value: mode_labels.get(value, value),
+        index=mode_values.index(current_mode) if current_mode in mode_values else 0,
+        horizontal=True,
+        key="pv2-fallback-recheck-mode",
+    )
+    if selected_mode != current_mode:
+        return _workspace_intent(
+            "select_recheck_mode",
+            workspace=workspace,
+            recheck_mode=selected_mode,
+        )
     st.caption(
         f"현재 상태: {replay.get('status') or 'NOT_RUN'} · "
         f"{replay.get('replay_id') or '아직 실행하지 않음'}"
@@ -555,6 +633,21 @@ def render_practical_validation_decision_workspace_fallback(
         disabled=not bool(replay_action.get("enabled")),
     ):
         return _workspace_intent("run_replay", workspace=workspace)
+    replay_provenance = dict(replay.get("provenance") or {})
+    if bool(replay_provenance.get("visible")):
+        st.markdown("##### 재검증 기록")
+        st.caption(
+            f"{replay_provenance.get('mode_label') or '-'} · "
+            f"요청 {replay_provenance.get('requested_period_label') or '-'} · "
+            f"실제 {replay_provenance.get('actual_period_label') or '-'} · "
+            f"최신 공통 가격일 "
+            f"{replay_provenance.get('latest_common_price_date') or '-'} · "
+            f"Coverage {replay_provenance.get('coverage_status') or '-'} "
+            f"/ 종료일 차이 {int(replay_provenance.get('end_gap_days') or 0)}일"
+        )
+        limiting_symbols = list(replay_provenance.get("limiting_symbols") or [])
+        if limiting_symbols:
+            st.warning(f"기간 제한 종목 · {', '.join(map(str, limiting_symbols))}")
 
     st.markdown(f"### {verdict.get('headline') or '-'}")
     st.caption(str(verdict.get("detail") or ""))
@@ -727,5 +820,15 @@ def render_practical_validation_decision_workspace_fallback(
             disabled=not bool(save_and_move.get("enabled")),
         ):
             return _workspace_intent("save_and_move", workspace=workspace)
+    record = dict(workspace.get("record") or {})
+    if bool(record.get("visible")):
+        with st.expander("검증 기록", expanded=False):
+            st.caption(
+                f"판정 프로필 {record.get('profile_label') or '-'} · "
+                f"재검증 방식 {record.get('recheck_mode_label') or '-'} · "
+                f"실행 시각 {record.get('attempted_at') or '-'}"
+            )
+            st.caption(f"Replay ID · {record.get('replay_id') or '-'}")
+            st.caption(f"Validation ID · {record.get('validation_id') or '-'}")
     st.caption("이동은 최종 승인, broker order, account sync, auto rebalance가 아닙니다.")
     return None

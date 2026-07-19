@@ -242,7 +242,7 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
 10. Data Health ownership
    - `Data Health`는 V22부터 `Workspace > Overview` top-level tab이 아니다.
    - Market Context의 `근거: 자료 기준 / 출처 상태`와 `필요 자료 보강`이 현재 brief에 필요한 direct source / refresh 판단을 보여준다. 이 보강은 S&P 500 movers, sentiment, event calendars만 대상으로 하며 Top1000 / Top2000 / Futures refresh는 Market Movers, Futures Macro, 또는 Ingestion 전용 화면에서 실행한다.
-   - 상세 run health, 실패 artifact, log, system snapshot은 `Operations > System / Data Health`와 `Workspace > Ingestion`에서 확인한다.
+   - 상세 run history, 실패 artifact, log는 `Workspace > Ingestion > 실행 기록 / 결과`에서 확인한다.
    - local run history와 DB freshness read model은 유지되지만, Overview 첫 화면의 시장 context 흐름을 대신하지 않는다.
    - 이 탭은 DB와 local JSONL만 읽고 외부 provider를 fetch하지 않는다.
 
@@ -393,7 +393,7 @@ PY
 - Overview Events `Latest Collection` / freshness updates after a successful collector run.
 - Overview Sentiment starts with the React `시장 심리 컨텍스트` workbench when the component build exists: phase / headline / summary, freshness, CNN Fear & Greed, AAII Bearish, Bull-Bear Spread, Data Confidence, refresh / reload actions, context-only boundary, CNN / AAII cross-read, recent range percentile / min-max, divergence axes, service-owned analysis steps, driver lanes, component explanations, CNN component latest-vs-previous changes, hover-readable history line chart, component bar chart, and stored row evidence.
 - Overview Sentiment keeps Python services as owner of DB reads, refresh actions, and interpretation text. React only displays and dispatches the existing refresh / reload events, and the fallback Streamlit detail sections remain available when the React build is missing.
-- Overview no longer renders Data Health as a primary tab. Use Market Context source / refresh evidence for current brief issues and `Operations > System / Data Health` for detailed operational diagnostics.
+- Overview no longer renders Data Health as a primary tab. Use Market Context source / refresh evidence for current brief issues and `Workspace > Ingestion > 실행 기록 / 결과` for detailed operational diagnostics.
 - Overview refresh buttons route through `app/jobs/overview_actions.py` and append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed. Market Context refresh is intentionally scoped to the current Market Context surface and does not run Top1000 / Top2000 / Futures refresh actions.
 - Overview scheduled refresh CLI can run without Streamlit and appends scheduled job results to the same local web app run history.
 

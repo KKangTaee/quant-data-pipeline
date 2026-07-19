@@ -106,3 +106,34 @@
 | Archive: Backtest Runs | Keep as archive/recovery; consider hiding behind Overview later | run reproduction, form restore, validation handoff가 있어 삭제하면 감사/복구 능력을 잃는다. |
 | Archive: Candidates | Keep as archive/recovery until legacy registry read paths are retired | legacy/current/pre-live snapshot inspection value가 남아 있다. |
 | Development roadmap/audit expanders in Operations Overview | Remove or move to Reference/docs in a future UI pass | 제품 화면에서 task closeout처럼 보이는 정보는 Operations identity를 흐린다. |
+
+## 2026-07-19 Reaudit
+
+Portfolio Monitoring React Command Center V1 완료 후 현재 코드와 실제 사용 여부를 다시 확인했다. 이 재감사는 2026-06-07의 `Operations Overview`와 `System / Data Health` 유지 권고를 대체한다.
+
+### Implemented Facts
+
+| Surface | Current implementation | Current role |
+| --- | --- | --- |
+| `Operations Overview` | `app/web/operations_overview.py`가 Portfolio Monitoring 요약, evidence health, run-history 상태, 두 화면 링크를 다시 조합한다. | 독립 작업을 완료하지 못하는 중간 landing / 중복 summary다. |
+| `Portfolio Monitoring` | DB-backed group/item lifecycle, 공통 기준 성과, contribution, item detail, diagnosis, macro/history/calibration을 React one-shell에서 소유한다. | 선정 후 추적을 실제로 수행하는 유일한 user-facing Operations surface다. |
+| `System / Data Health` | `app/web/ops_review.py`가 run history, failure CSV, logs, artifacts, runtime marker를 검사한다. | 개발자·운영자용 내부 진단 화면이다. |
+| `Workspace > Ingestion > 실행 기록 / 결과` | session result, persistent run history, recent logs, failure CSV를 이미 한 화면에서 제공한다. | 수집 실행과 실패 확인·재실행 근거를 함께 소유하는 대체 경로다. |
+
+### User Evidence
+
+- 2026-07-19 사용자 확인: 앱 안에서 failure CSV, 로그 파일, artifact 경로를 직접 검사하지 않는다.
+- 사용자는 `Operations Overview`와 `System / Data Health`가 왜 있는지 이해하기 어렵다고 명시했다.
+
+### Revised Classification And Decision
+
+| Surface | Classification | Decision | Reason |
+| --- | --- | --- | --- |
+| `Portfolio Monitoring` | User-facing product surface | Keep as the sole visible Operations page | 실제 포트폴리오 추적 업무를 끝낼 수 있고 최신 React 제품 화면을 갖췄다. |
+| `Operations Overview` | Redundant transitional surface | Remove from navigation and delete its dedicated UI/model/tests | Portfolio Monitoring과 run health를 한 번 더 요약하지만 독립 행동이나 판단을 완결하지 않는다. |
+| `System / Data Health` | Internal ops console | Remove from user navigation and delete its dedicated UI | 사용하지 않는 개발 진단이며 필요한 수집 결과 확인 기능은 Ingestion에 중복 구현돼 있다. |
+| Ingestion result/history/log/failure section | Mixed data-operations support | Preserve without a new diagnostic panel | 제거되는 System/Data Health의 대체 경로이며 기존 기능을 그대로 사용한다. |
+
+### Product Implication
+
+Operations의 제품 의미를 `Portfolio Monitoring` 하나로 좁힌다. Portfolio Monitoring에는 system run count, raw log, artifact path를 이식하지 않는다. 데이터가 없어 실제 추적을 계산할 수 없는 경우에만 해당 item/workspace 문맥에서 짧은 상태와 `Workspace > Ingestion` 이동 안내를 제공하며, 진단 수치 자체를 새 주인공으로 만들지 않는다.

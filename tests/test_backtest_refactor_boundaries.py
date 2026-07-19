@@ -250,7 +250,12 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn("PRACTICAL_VALIDATION_RESULT_FILE", render_body)
         self.assertNotIn("validation_rows", render_body)
         self.assertNotIn('title="검증 기준 상세"', render_body)
-        self.assertIn("고급 설정과 원본 근거", render_body)
+        self.assertNotIn("원본 데이터·감사 정보", render_body)
+        self.assertNotIn("고급 설정과 원본 근거", render_body)
+        self.assertNotIn("def _render_decision_workspace_audit_evidence", page_source)
+        self.assertNotIn('st.tabs(["후보 원본", "재검증 원본", "판정 원본"])', page_source)
+        self.assertIn("replay_result=replay_result", render_body)
+        self.assertIn("validation_result=validation_result", render_body)
         self.assertIn(
             "render_practical_validation_decision_workspace_fallback(",
             render_body,
@@ -377,6 +382,8 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         for action in (
             "select_source",
             "select_profile_preset",
+            "update_profile_answer",
+            "select_recheck_mode",
             "run_replay",
             "run_resolution_action",
             "save_audit_only",
@@ -760,7 +767,8 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         )[1]
 
         self.assertIn('surface="context"', render_prefix)
-        self.assertIn("render_backtest_analysis_decision_surface()", fragment)
+        self.assertIn("render_backtest_portfolio_mix_workspace()", fragment)
+        self.assertNotIn("render_backtest_analysis_decision_surface()", fragment)
         self.assertNotIn('surface="context"', fragment)
 
     def test_single_strategy_change_marks_stale_without_clearing_bundle(
@@ -916,27 +924,28 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn('st.expander("상세 근거"', wrapper)
         self.assertNotIn("_render_last_run_details(bundle)", wrapper)
 
-    def test_portfolio_mix_workspace_uses_inner_mode_roles_and_common_decision(
+    def test_portfolio_mix_workspace_uses_new_one_shell_and_cuts_legacy_primary_route(
         self,
     ) -> None:
-        source = (PROJECT_ROOT / "app/web/backtest_compare/page.py").read_text()
-        builder = source.split(
-            "def _render_weighted_portfolio_builder", 1
-        )[1].split("\ndef ", 1)[0]
+        route = (PROJECT_ROOT / "app/web/backtest_analysis.py").read_text()
+        source = (
+            PROJECT_ROOT / "app/web/backtest_portfolio_mix_workspace.py"
+        ).read_text()
         react = (
             PROJECT_ROOT
-            / "app/web/components/backtest_analysis_decision_workspace/frontend/src/BacktestAnalysisDecisionWorkspace.tsx"
+            / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/App.tsx"
         ).read_text()
+        fragment = route.split(
+            "def _render_backtest_analysis_work_fragment", 1
+        )[1]
 
-        self.assertIn("새 Mix 만들기", source)
-        self.assertIn("저장된 Mix 불러오기", source)
-        self.assertIn("mix_role_", builder)
-        self.assertNotIn(
-            "_render_weighted_portfolio_practical_validation_panel(weighted_bundle)",
-            builder,
-        )
-        self.assertIn('emitIntent("select_mix_mode"', react)
-        self.assertIn('emitIntent("save_mix"', react)
+        self.assertIn("render_backtest_portfolio_mix_workspace()", fragment)
+        self.assertNotIn("render_compare_portfolio_workspace()", fragment)
+        self.assertIn("run_current_portfolio_mix", source)
+        self.assertIn("save_current_portfolio_mix", source)
+        self.assertIn("handoff_current_portfolio_mix", source)
+        self.assertIn('emit("set_mode"', react)
+        self.assertIn('emit(action.id', react)
 
     def test_single_settings_fallback_uses_the_same_pure_schema_and_projector(
         self,
@@ -1013,6 +1022,42 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("ResizeObserver", index)
         self.assertNotIn("dangerouslySetInnerHTML", component)
         self.assertNotIn("execute_single_backtest", component)
+
+    def test_portfolio_mix_react_one_shell_is_intent_only_and_responsive(self) -> None:
+        root = PROJECT_ROOT / "app/web/components/backtest_portfolio_mix_workspace"
+        wrapper = (root / "component.py").read_text()
+        main = (root / "frontend/src/main.tsx").read_text()
+        component = (root / "frontend/src/App.tsx").read_text()
+        style = (root / "frontend/src/styles.css").read_text()
+
+        self.assertIn("render_backtest_portfolio_mix_workspace_component", wrapper)
+        self.assertIn("ResizeObserver", main)
+        for heading in (
+            "구성 전략과 공통 기준",
+            "역할과 목표 비중",
+            "Mix 실행과 해석",
+            "저장하고 Level2로 이동",
+        ):
+            self.assertIn(heading, component)
+        for control in (
+            'type="date"',
+            'type="number"',
+            'type="text"',
+            "<select",
+            'role="checkbox"',
+            "aria-pressed",
+        ):
+            self.assertIn(control, component)
+        self.assertIn("Streamlit.setComponentValue", component)
+        self.assertIn("intent_id", component)
+        self.assertIn("workspace.mode", component)
+        self.assertIn("@media (max-width: 760px)", style)
+        self.assertIn("grid-template-columns: minmax(0, 1fr)", style)
+        self.assertNotIn("run_compare_strategy", component)
+        self.assertNotIn("build_weighted_portfolio_bundle", component)
+        self.assertNotIn("save_saved_portfolio", component)
+        self.assertNotIn("configuration_fingerprint", component)
+        self.assertNotIn("dangerouslySetInnerHTML", component)
 
     def test_react_settings_applies_python_owned_preset_profiles_without_strategy_rules(
         self,

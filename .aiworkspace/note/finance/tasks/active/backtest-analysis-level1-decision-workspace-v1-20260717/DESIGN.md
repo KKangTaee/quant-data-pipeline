@@ -2653,3 +2653,279 @@ fallback을 구현하지 않는다.
 - legacy prototype JSONL migration, rewrite 또는 자동 deletion
 - broker order, live approval, account sync, auto rebalance
 - Single Strategy primary workflow 재설계
+
+## 2026-07-19 15차 후속: Portfolio Mix Step 3 Result Evidence 보강 설계
+
+### 이걸 하는 이유?
+
+actual GTAA 50% / Equal Weight 50% 실행 결과에서 Step 3은 KPI 네 개만 표시했다. 그러나 weighted
+builder는 이미 월별 `result_df`, `chart_df`, component contribution amount/share와 data trust를 계산한다.
+새 adapter가 이 bundle을 `summary`와 `period`로만 축약하고 React가 summary grid만 렌더링해 승인된
+15차 설계의 `Mix 성과 / component contribution / component allocation / explicit evidence`가 primary
+workspace에서 사라졌다. 성공 notice와 current result card도 공통 result stack 간격이 없어 서로 붙어 보인다.
+
+이 후속 범위는 새 계산을 발명하지 않고 이미 계산된 weighted result를 사용자 언어로 투영한다.
+
+### Approved Presentation: B안
+
+Step 3의 기본 화면은 다음 순서로 읽는다.
+
+1. `이 구성으로 Mix 실행` action
+2. 실행 성공 / 실패 / stale feedback
+3. current 또는 reference result identity와 실제 공통 기간
+4. 사용자 단위 KPI
+5. 누적 성과 흐름
+6. 월별 수익률 변화
+7. `구성 기여도·월별 결과·계산 근거` disclosure
+
+기본 화면은 누적 성과와 월별 수익률까지만 펼친다. component 기여도, 월별 결과 표와 계산·데이터
+근거는 하나의 secondary disclosure 안에 둬 Step 3이 legacy result tab처럼 길어지지 않게 한다.
+
+### Spacing And Formatting Contract
+
+- 실행 button과 feedback/result 묶음 사이는 18px을 둔다.
+- feedback notice와 result card, result card 내부 주요 block 사이는 각각 16px 이상을 둔다.
+- CAGR / MDD는 raw decimal `0.096`, `-0.17`이 아니라 `9.60%`, `-17.00%`로 표시한다.
+- Sharpe는 소수 둘째 자리, 평가액은 천 단위 구분을 사용한다.
+- React는 숫자 의미를 추론하지 않는다. Python read model이 raw value와 formatted label을 함께 제공한다.
+- current와 stale/reference는 같은 result evidence 구조를 쓰되 stale에는 `참고용 이전 결과` label을
+  표시하고 save / Level2 action을 계속 차단한다.
+
+### Default Charts
+
+#### 누적 성과 흐름
+
+- weighted `chart_df`의 실제 공통 날짜와 `Total Balance`를 첫 유효 시점 100 기준으로 normalize한다.
+- desktop은 최대 6개, 760px은 최대 3개의 실제 timeline date tick을 표시한다.
+- 별도 benchmark 계약이 없는 weighted Mix에 SPY나 component benchmark를 임의로 합성하지 않는다.
+- explicit Mix benchmark가 향후 저장되는 경우에만 같은 chart의 비교 series로 확장할 수 있다.
+
+#### 월별 수익률 변화
+
+- weighted `result_df`의 `Total Return`을 월별 막대로 표시한다.
+- 양수와 음수는 같은 zero axis에서 색과 방향으로 구분한다.
+- 원본에 없는 월은 chart row를 만들지 않는다. 날짜는 있지만 값이 NaN인 row는 월별 결과 표에
+  `계산값 없음`으로 보존하고 chart bar에서는 제외한다. 두 경우 모두 0으로 만들지 않는다.
+- 기본 화면은 전체 월별 series를 chart로 보여주고, 정확한 row 값은 disclosure의 월별 결과 표에 둔다.
+
+### Hover And Keyboard Contract
+
+- 누적 성과 chart는 pointer가 chart 안에 있을 때 가장 가까운 실제 날짜 row 하나를 선택한다.
+- tooltip은 `날짜 / 기준 100 지수 / 누적 수익률 / 평가액`을 보여준다.
+- 월별 수익률 chart는 bar hover에서 `월 / 월 수익률 / 월말 평가액`을 보여준다.
+- tooltip과 crosshair/highlight는 pointer leave에서 사라지며 상시 label로 chart를 덮지 않는다.
+- chart point와 monthly bar는 keyboard focus로 같은 tooltip 내용을 확인할 수 있어야 한다.
+- React는 nearest-row 선택과 tooltip 위치만 소유한다. 날짜, normalized value와 사용자 label은 Python이
+  제공하며 React가 raw dataframe column을 분류하거나 percentage 계산을 하지 않는다.
+
+### Secondary Disclosure
+
+`구성 기여도·월별 결과·계산 근거`는 세 묶음을 제공한다.
+
+1. `구성 기여도`
+   - 목표 비중, normalized input weight, 종료 시점 contribution amount/share
+   - 종료 시점 compact summary table을 먼저 표시
+   - contribution series가 있을 때 `기여 금액 / 기여 비중` segmented view로 같은 timeline chart를 표시
+2. `월별 결과`
+   - 사용자 열 `월 / 월 수익률 / 평가액`
+   - raw `Date`, `Total Return`, `Total Balance` key를 first-read label로 노출하지 않음
+3. `계산 근거`
+   - 공통 시작/종료일, 월별 관측 수, intersection date policy
+   - component strategy / role / target weight와 component data trust summary
+   - raw meta / absolute path / JSON dump는 노출하지 않음
+
+명시적 holdings / underlying target evidence가 weighted bundle에 없으면 빈 보유표를 만들지 않는다.
+component allocation과 contribution은 holdings를 대신하는 데이터로 오인하지 않도록 별도 이름을 쓴다.
+
+### Ownership And Data Flow
+
+```text
+weighted bundle
+  result_df / chart_df
+  component_contribution_amount_df
+  component_contribution_share_df
+  component_data_trust_rows
+  component roles / weights / meta
+    -> Python Portfolio Mix result projection
+       formatted KPI / actual dates / normalized curve / monthly bars
+       contribution / monthly table / calculation basis
+         -> Portfolio Mix workspace read model current/reference result
+           -> React Step 3 presentation + pointer/focus intent only
+```
+
+- `app/services/backtest_portfolio_mix_workspace.py`가 weighted bundle DataFrame을 JSON-safe result
+  evidence와 사용자 label로 투영하고 fingerprint/current-stale lifecycle을 유지한다.
+- `app/web/backtest_portfolio_mix_workspace.py`는 weighted builder 결과를 pure projection에 전달하고
+  session current/reference result를 원자적으로 교체한다.
+- `app/web/components/backtest_portfolio_mix_workspace/frontend/src/App.tsx`는 result sections와
+  pointer/focus state만 렌더링한다.
+- `styles.css`는 result stack 간격, desktop/two-chart와 760px/one-column responsive contract를 소유한다.
+- 기존 weighted calculation, run history, saved setup과 Level2 source schema는 변경하지 않는다.
+
+### Error And Empty States
+
+- 실행 전에는 KPI, chart, monthly table과 disclosure를 만들지 않는다.
+- weighted result에 chart/monthly row가 없으면 해당 block만 `계산 근거 없음`으로 낮추고 다른 KPI를
+  유지한다.
+- component/weighted 실행 실패는 이전 성공 result evidence를 reference로 보존한다.
+- 무한대와 duplicate date는 Python projection에서 제거/정렬한다. NaN 월별 row는 표에서
+  `계산값 없음`으로 보존하고 chart에서는 제외하며, sparse month를 0 또는 PASS로 만들지 않는다.
+
+### Verification Contract
+
+- RED: weighted bundle의 summary/chart/monthly/contribution/data-trust가 JSON-safe result evidence로 투영된다.
+- RED: percentage/currency/ratio label과 actual date tick이 Python에서 고정된다.
+- RED: missing/NaN/sparse data가 0으로 invent되지 않는다.
+- RED: stale reference가 full result evidence를 보존하고 save/Level2 action은 계속 차단된다.
+- RED: React source에 두 기본 chart, secondary disclosure, pointer leave와 keyboard focus tooltip이 있다.
+- RED: React가 raw dataframe key, percentage 계산, benchmark 추론을 하지 않는다.
+- GREEN: focused service/adapter/boundary test, React production build, target `py_compile`, `git diff --check`.
+- Browser QA: desktop과 760px에서 result stack 간격, formatted KPI, actual date ticks, 두 chart hover/focus,
+  disclosure, stale/reference와 horizontal overflow 0을 확인한다.
+
+### Out Of Scope
+
+- weighted portfolio 계산식, 월별 resampling 또는 component contribution 계산 변경
+- 임의 SPY benchmark, blended benchmark 또는 신규 benchmark 설정 UI
+- weighted holdings / underlying target을 근거 없이 합성
+- chart zoom/pan/range selector와 신규 chart dependency
+- saved JSONL / Run History / Level2 source schema migration
+
+## 17차 Portfolio Mix Chart Geometry And Full-Width Layout
+
+### 문제와 원인
+
+- 누적 성과 point는 `PLOT_LEFT`부터 `CHART_WIDTH - PLOT_RIGHT` 사이에 배치되지만 pointer index는
+  SVG 전체 렌더 폭을 0~100%로 정규화했다. 119개 row 예시에서 첫 plot point 위 커서는 기존 계산으로
+  index 9를 선택해 crosshair와 tooltip 데이터가 커서보다 오른쪽으로 어긋난다.
+- desktop에서 누적 성과와 월별 수익률을 1.35:0.9 두 열로 배치해 월별 막대가 전체 결과 폭의 약 40%만
+  사용한다. 119개월 막대를 읽기에는 폭과 간격이 부족하다.
+
+### 승인된 설계
+
+- 두 chart card를 desktop과 760px 모두 `누적 성과 -> 월별 수익률` 두 행, 각 전체 폭으로 배치한다.
+- pointer의 client X를 먼저 SVG viewBox X로 변환한 뒤 실제 plot 영역
+  `(chartX - PLOT_LEFT) / (CHART_WIDTH - PLOT_LEFT - PLOT_RIGHT)`으로 정규화한다.
+- crosshair와 tooltip은 선택된 실제 point의 같은 viewBox X를 사용한다. edge tooltip clamp는 card 밖
+  clipping 방지를 위해 유지한다.
+- Python evidence, weighted 계산, KPI, 저장/Level2 handoff와 chart 높이 상수는 변경하지 않는다.
+
+### 검증 계약
+
+- RED source contract는 plot-aware index helper와 single-column desktop grid 부재로 실패해야 한다.
+- GREEN focused test와 React production build를 통과해야 한다.
+- actual desktop QA에서 plot 첫/중간/마지막 커서가 같은 위치의 point/date를 선택하고 월별 chart가
+  전체 폭을 사용해야 한다. 760px overflow와 ResizeObserver height도 유지한다.
+
+## 18차 Portfolio Mix Compact Multi-Select
+
+### 이걸 하는 이유?
+
+- Portfolio Mix의 `FieldControl`은 `multi_select` 옵션 수와 관계없이 모든 버튼을 일반 grid로 펼친다.
+  GTAA 방어 자산처럼 20개가 넘는 목록은 세부 설정 높이를 대부분 차지해 다음 설정과 실행 흐름을
+  화면 밖으로 밀어낸다.
+- 선택 상태는 목록 안의 check 표시로만 확인할 수 있어 스크롤한 뒤에는 현재 선택한 자산을 한눈에
+  파악하거나 해제하기 어렵다.
+
+### 승인된 사용자 흐름
+
+1. 옵션이 적은 multi-select는 기존 button grid를 유지한다.
+2. 긴 multi-select는 상단에 `선택 N개`와 선택된 자산 chip을 항상 표시한다.
+3. chip의 `×`를 누르면 해당 자산만 즉시 해제한다.
+4. 검색창은 option label과 raw value를 대소문자 구분 없이 필터링한다.
+5. 검색 결과는 최대 높이 `240px`의 내부 스크롤 영역에서 선택한다. 목록 때문에 설정 card 자체가
+   끝없이 길어지지 않는다.
+6. 검색 결과가 없으면 빈 grid 대신 `일치하는 옵션이 없습니다.`를 표시한다.
+
+### Presentation And Intent Contract
+
+- long-list 기준은 Portfolio Mix React의 presentation constant로 둔다. Python read model과 field schema에
+  `compact` 같은 UI 전용 flag를 추가하지 않는다.
+- 선택/해제 intent는 기존 `set_component_field`와 field value array를 그대로 사용한다. Python이 preset,
+  validation, execution payload와 최종 값의 source of truth를 계속 소유한다.
+- selected chip은 현재 검색어와 무관하게 항상 보인다. 사용자가 검색을 바꿔도 선택 상태를 잃거나
+  숨기지 않는다.
+- scroll option button은 기존 `role="checkbox"`와 `aria-checked`를 유지한다. 검색 input, selected shelf,
+  option group과 empty state에 명시적 접근성 label을 제공한다.
+
+### Responsive Layout
+
+- desktop과 component 2-column card 안에서는 option을 2열로 표시한다.
+- `max-height: 240px; overflow-y: auto`는 viewport와 관계없이 유지한다.
+- 520px 이하에서는 option을 1열로 접고 chip shelf는 자연스럽게 줄바꿈한다.
+- page/component horizontal overflow는 만들지 않는다.
+
+### Verification Contract
+
+- RED source contract는 long-list threshold, selected shelf, search input, scroll results와 empty state가 없어
+  실패해야 한다.
+- GREEN focused Portfolio Mix UI/boundary tests와 React production build를 통과해야 한다.
+- Browser QA는 GTAA 방어 자산에서 selected chip 해제, 검색, 결과 선택, 240px 내부 scroll, desktop/760px
+  no-overflow와 다른 field 값 보존을 확인한다.
+
+### Out Of Scope
+
+- GTAA 방어 자산 option 목록, preset 기본값, runtime validation 또는 전략 계산 변경
+- virtualized list와 외부 UI dependency 추가
+- Single Strategy 컴포넌트의 기존 compact multi-select 재설계
+
+## 19차 Portfolio Mix Monthly Return Y-Axis
+
+### 이걸 하는 이유?
+
+- 현재 월별 수익률 chart는 0% 기준선과 양·음 막대, hover 수익률만 제공한다. 사용자는 상승·하락 방향과
+  상대 크기는 읽을 수 있지만 커서를 올리지 않으면 막대가 약 3%인지 8%인지 판단할 수 없다.
+- 시간축은 시작·중간·종료 월이 표시되므로, 값 축도 같은 first-read 수준에서 최소한의 수익률 scale을
+  제공해야 chart가 독립적으로 해석된다.
+
+### 승인된 사용자 표현
+
+- Y축은 0%를 중심으로 같은 절댓값 범위를 쓰는 동적 대칭 percent 축이다.
+- desktop은 `+최댓값 / +중간 / 0% / -중간 / -최댓값` 다섯 label과 연한 horizontal guide를 표시한다.
+- 760px은 `+최댓값 / 0% / -최댓값` 세 label만 표시해 날짜 tick과 막대 영역을 침범하지 않는다.
+- 0% guide는 기존 양·음 경계선처럼 다른 guide보다 진하게 유지한다. hover/focus tooltip은 실제 월 수익률과
+  월말 평가액을 계속 표시한다.
+
+### Scale And Formatting Contract
+
+- actual `chart_rows[].return_value`의 최대 절댓값을 percent로 바꾸고 `1 / 2 / 5 × 10^n` 계열의
+  보기 좋은 half-step으로 올림한다. axis maximum은 선택한 half-step의 두 배다.
+- 예를 들어 최대 절댓값이 7.2%면 axis는 `+10% / +5% / 0% / -5% / -10%`, 3.2%면
+  `+4% / +2% / 0% / -2% / -4%`가 된다.
+- 막대 높이도 raw maximum이 아니라 이 axis maximum을 분모로 사용한다. label scale과 bar geometry가
+  어긋나지 않으며 가장 큰 막대 위아래에 자연스러운 여백이 생긴다.
+- label은 양수에 `+`, 음수에 `-`, 중앙에 `0%`를 표시한다. 1% 미만 scale만 소수점 한 자리까지 허용하고
+  그 외에는 불필요한 `.0`을 붙이지 않는다.
+- row가 없으면 기존 empty state를 유지하고 축을 만들지 않는다. 전부 0이면 `+1% / 0% / -1%`를 포함하는
+  최소 symmetric range를 사용해 NaN/Infinity나 0으로 나누기를 만들지 않는다.
+
+### Ownership And Scope
+
+- `PortfolioMixResult.tsx`의 monthly chart presentation helper가 nice scale, Y 위치와 label 배열을 계산한다.
+  이는 실제 return을 다시 계산하는 financial logic이 아니라 SVG 표시 scale이다.
+- Python evidence의 `return_value`, `return_label`, monthly resampling, KPI와 data trust는 변경하지 않는다.
+- `styles.css`는 desktop/760px label visibility, guide 색과 left alignment를 소유한다.
+- 누적 성과 chart, pointer index, tooltip data, weighted calculation, save와 Level2 handoff 계약은 변경하지 않는다.
+
+### Accessibility And Responsive Contract
+
+- SVG의 `aria-label`은 월별 수익률 chart임을 유지하고, Y축 text는 시각 scale을 제공한다. 키보드 focus와
+  좌우 방향키 tooltip 탐색은 기존 actual row 값을 그대로 읽는다.
+- Y label은 기존 `PLOT_LEFT=54` 안에 두고 plot 영역을 밀어내거나 page/component horizontal overflow를
+  만들지 않는다.
+- desktop/compact label class는 기존 date tick responsive pattern을 재사용한다.
+
+### Verification Contract
+
+- RED source contract는 nice symmetric axis helper, desktop 5-label/compact 3-label, percent formatter와
+  guide line이 없어 실패해야 한다.
+- GREEN focused Portfolio Mix UI/boundary tests와 React production build를 통과해야 한다.
+- Browser QA는 actual Mix result에서 desktop 5개와 760px 3개 Y label, 0% 강조, bar/axis scale 일치,
+  기존 date tick과 hover/focus 값, horizontal overflow 0을 확인한다.
+
+### Out Of Scope
+
+- 월별 수익률 계산, resampling, missing-month 처리 또는 weighted portfolio 결과 변경
+- 사용자가 직접 Y축 범위를 입력하는 control
+- zoom/pan/range selector, chart library 또는 신규 dependency 추가
+- 누적 성과 chart Y축 재설계

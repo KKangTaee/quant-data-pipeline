@@ -1,6 +1,6 @@
 # Status
 
-Status: 14차 Stage-Local Legacy Title Removal Implementation Planned
+Status: Complete
 Last Updated: 2026-07-19
 
 ## Current Position
@@ -71,7 +71,13 @@ Last Updated: 2026-07-19
 - [x] 14차 written design 작성과 self-review
 - [x] 14차 written design 사용자 review
 - [x] 14차 implementation plan
-- [ ] 14차 RED -> GREEN / Browser QA / closeout
+- [x] 14차 RED -> GREEN / Browser QA / closeout
+- [x] 15차 Portfolio Mix legacy route / runtime / persistence audit
+- [x] 15차 Portfolio Mix React one-shell 사용자 승인
+- [x] 15차 written design 작성과 self-review
+- [x] 15차 written design 사용자 review
+- [x] 15차 implementation plan
+- [x] 15차 RED -> GREEN / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -89,6 +95,7 @@ Last Updated: 2026-07-19
 12. Current Selection And Factor Presentation
 13. Backtest Workflow Top Shell Redesign
 14. Stage-Local Legacy Title Removal
+15. Portfolio Mix React One-Shell Completion
 
 ## Current Corrective Position
 
@@ -292,3 +299,123 @@ Last Updated: 2026-07-19
 - generated screenshots는 `backtest-stage-title-cleanup-desktop-qa.png`,
   `backtest-stage-title-cleanup-760-qa.png`이며 protected JSONL, Run History, `.superpowers/`와 함께
   commit하지 않는다.
+
+## Current 15차 Position
+
+- Task 46에서 pure Portfolio Mix draft/read model과 focused contract test를 추가했다.
+- 2~4개 component, concrete strategy 중복, shared period, role/weight/100% 합계를 runner 이전에
+  차단하며 기존 Single settings schema/preset/payload를 component별로 재사용한다.
+- effective fingerprint는 draft/save/component UI identity를 제외하고 실제 projected payload를
+  기준으로 계산한다. stale result는 reference로 보존하고 current save/handoff는 차단한다.
+- 신규 saved shelf는 `backtest_portfolio_mix_saved_v1`만 읽으며 legacy JSONL migration은 하지 않는다.
+- Task 47에서 rerun-stable Python mode/draft adapter와 React four-step one-shell, same-read-model fallback,
+  schema-driven component editor와 760px/ResizeObserver/accessibility source contract를 구현했다.
+- Task 48에서 모든 component payload를 먼저 검증한 뒤 기존 compare runner를 순차 실행하고, 전체 성공 시에만
+  weighted bundle/current fingerprint를 원자적으로 교체하는 runtime을 연결했다. 실패한 component 상태는
+  해당 card에 남기되 이전 current result와 bundle은 보존한다.
+- saved setup은 기존 store의 `source_context` 안에 `backtest_portfolio_mix_saved_v1` draft/fingerprint/run identity를
+  저장하고 해당 schema만 shelf/restore한다. 저장과 Level2 source handoff는 별도 callable handler와 side effect다.
+- primary Mix branch는 새 `render_backtest_portfolio_mix_workspace()`만 mount하며 legacy compare form, raw saved replay,
+  generic duplicate decision surface를 더 이상 primary DOM에 렌더링하지 않는다.
+- Task 49에서 actual run/save/restore/edit/rerun, desktop/760px Browser QA, fresh verification과
+  canonical docs/root log 동기화를 완료했다.
+
+## 15차 Completion
+
+- truth/read model: `b08c8675 Portfolio Mix 진실과 읽기 모델 구현`
+- React one-shell: `97d67b5b Portfolio Mix React 원셸 UI 구현`
+- runtime/save/handoff/cutover: `f5f32949 Portfolio Mix 실행 저장 인계 통합`
+- fresh focused UI/boundary는 `79 passed, 3 warnings`, Portfolio Mix service selector는
+  `5 passed / 840 deselected`다. full service는 `833 passed / 12 failed / 35 subtests passed`이며
+  12 failures는 기존 Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6 baseline이다.
+- React production build는 Vite 5.4.21 `175 modules transformed`; target 4-module `py_compile`과
+  `git diff --check`는 exit 0이다.
+- desktop actual QA는 GTAA 50 / Equal Weight 50 실행·저장, saved shelf, 불러와 편집,
+  GTAA 40 / Equal Weight 60 변경의 stale/reference, 재실행 KPI와 save/Level2 action 재노출을 확인했다.
+  760px은 one-column cards, no clipping/overflow와 ResizeObserver height를 확인했다.
+
+## Current 16차 Position
+
+- Step 3의 KPI-only 결과는 approved Portfolio Mix 설계와 달리 누적 성과, 월별 수익률,
+  component contribution과 계산/data trust 근거를 누락한 구현 gap이었다.
+- Task 50에서 weighted bundle의 기존 `summary_df`, `result_df`, contribution frame과 data trust row를
+  사용자 표시용 JSON-safe evidence로 투영하는 pure service 계약을 추가했다.
+- 퍼센트·금액·역할·날짜 문구는 Python이 계산하며, 실제 result date만 사용한다. 첫 월 return이
+  계산 불가이면 표에는 `계산값 없음`으로 남기고 chart row에서는 제외한다.
+- web adapter는 fresh weighted result의 run identity/fingerprint/summary/period를 유지하면서
+  `current_result.evidence`를 추가한다. 저장 schema, Level2 handoff, weighted calculation은 변경하지 않았다.
+- Task 50 focused GREEN은 Portfolio Mix `25 passed`, weighted selector `5 passed / 840 deselected`,
+  target `py_compile`과 `git diff --check` exit 0이다.
+- Task 51에서 summary-only React branch를 `PortfolioMixResult`로 분리하고 누적 성과 SVG,
+  양/음 월별 수익률 SVG, KPI 표시, contribution/monthly table/calculation/data trust disclosure를 연결했다.
+- 누적 성과와 월별 수익률은 pointer hover에서 가장 가까운 실제 row만 선택하고 leave에서 제거한다.
+  chart focus와 좌우 방향키도 같은 tooltip 정보를 제공하며 blur에서 제거한다.
+- 결과 버튼→feedback→result stack은 18px, result 내부는 16px gap을 사용한다. 760px은 차트를
+  한 열로 접고 compact actual-date tick만 표시하며 dense table은 disclosure 내부에서만 횡스크롤한다.
+- Task 51 GREEN은 Mix `27 passed`, route boundary `51 passed`, React production build
+  `176 modules transformed`, `git diff --check` exit 0이다.
+- desktop actual hover에서 CUA가 다른 SVG로 이동할 때 `pointerleave`만으로는 이전 tooltip을
+  정리하지 못하는 browser 합성 차이를 확인했다. 동일 clear handler를 `mouseleave`, `pointercancel`,
+  `blur`에도 연결해 실제 커서/키보드 이탈 계약을 보강했다.
+- Task 52 actual GTAA 50 / Equal Weight 50 결과에서 누적 성과 `2021.07.31 / 167.12 /
+  67.12% / 17,832.32`, 월별 수익률 `2023.01 / 3.98% / 16,341.24` hover 값을 확인했다.
+- desktop은 KPI, 실제 날짜 기반 누적 성과, 양·음 월별 막대, 상세 근거의 기여도/월별 표/계산·데이터
+  기준과 benchmark 미생성을 확인했다. 760px은 차트 1열, compact tick 3개, outer/component overflow 0과
+  ResizeObserver 높이 동기화를 확인했다.
+- fresh closeout verification은 focused UI/boundary `83 passed`, React build `176 modules transformed`,
+  target `py_compile`과 `git diff --check` exit 0이다. full service는 기존 baseline 그대로
+  `833 passed / 12 failed / 35 subtests passed`이며 Portfolio Mix 신규 failure는 0이다.
+
+## Current 17차 Position
+
+- 누적 성과 hover mismatch의 root cause는 pointer index가 SVG 전체 폭을 사용하지만 point는 좌우 plot
+  padding 안에만 배치된 geometry 불일치다. 119개 row에서 첫 point 커서가 기존 index 9를 선택했다.
+- `nearestPlotIndex()`가 pointer X를 viewBox X로 변환한 뒤 실제 plot width로 정규화하므로 같은 커서는
+  index 0을 선택한다. 누적/월별 chart가 같은 helper를 사용한다.
+- desktop chart grid도 한 열로 바꿔 누적 성과와 월별 수익률을 각각 전체 폭 한 행으로 표시한다.
+- Task 53 RED는 `1 failed / 2 passed`, GREEN은 `3 passed / 25 deselected`, focused 전체는
+  `28 passed, 3 warnings`; React build는 `176 modules transformed`다.
+- Task 54 actual GTAA 50 / Equal Weight 50 desktop QA에서 누적 hover first/middle/last가
+  chart X `54 / 369.5593 / 696`과 `2016.08.31 / 2021.06.30 / 2026.06.30` 실제 row에 맞았다.
+- 월별 hover도 `2021.06 / -0.68% / 17,782.68`로 같은 중간 row를 선택했다. desktop chart grid는
+  `1177px` 한 열에 두 card가 각각 `1177px`, 760px은 `633px` 한 열이며 outer horizontal overflow는 0이다.
+- fresh closeout verification은 UI/boundary `84 passed, 3 warnings`, React build
+  `176 modules transformed`, target `py_compile`과 `git diff --check` exit 0이다.
+
+## Current 18차 Position
+
+- Portfolio Mix의 기존 `multi_select`는 option 수와 관계없이 모두 펼쳐 GTAA 방어 자산 20여 개가
+  component 세부 설정 높이를 독점했다. Single Strategy와 달리 compact long-list 분기가 없었다.
+- options 12개 이하는 기존 grid를 유지하고, 긴 목록은 선택 chip, case-insensitive 검색, 240px 내부
+  scroll과 empty state를 사용한다. event/payload/Python preset·runtime 계약은 변경하지 않았다.
+- Task 55 RED는 `1 failed / 28 deselected`, GREEN focused 전체는 `29 passed, 3 warnings`이며
+  React build는 `176 modules transformed`, `git diff --check` exit 0이다.
+
+## 18차 Completion
+
+- GTAA 방어 자산처럼 option이 긴 multi-select는 선택 요약, 검색, 240px 내부 scroll로 압축했고
+  12개 이하 목록은 기존 즉시 선택 grid를 유지했다.
+- desktop actual QA에서 `TLT` 검색, 선택 해제·재선택, 선택 3개 복원과 보유 수·갱신 주기·추세 기간
+  `3 / 1 / 200` 보존을 확인했다. scroll은 `clientHeight=238 / scrollHeight=25802 / overflowY=auto`였다.
+- 760px은 document/body horizontal overflow 0, option grid 2열, `clientWidth=616 / scrollWidth=616`,
+  선택 chip wrap과 같은 240px scroll을 확인했다.
+- fresh focused UI/boundary는 `85 passed, 3 warnings`; React production build는
+  `176 modules transformed`; target `py_compile`은 exit 0이다.
+
+## Current 19차 Position
+
+- 월별 수익률 차트는 실제 최대 절댓값을 `1/2/5 × 10^n` 단위로 올림한 대칭 percent range를 사용한다.
+  막대 높이와 Y축 label/guide가 같은 `monthlyAxis.maximum`을 공유한다.
+- desktop은 `최대 / 절반 / 0 / -절반 / -최대` 5개 label, 760px은 `최대 / 0 / -최대`
+  3개 label을 사용하며, 전부 0인 경우에도 최소 `±1%` range를 유지한다.
+- Task 57 RED는 `1 failed / 29 deselected`, GREEN selector는 `1 passed / 29 deselected`,
+  focused 전체는 `30 passed, 3 warnings`; React production build는 `176 modules transformed`다.
+
+## 19차 Completion
+
+- GTAA 50 / Equal Weight 50 actual 결과의 monthly maximum `7%대`를 포함하는 nice axis는
+  `±10%`가 됐다. desktop 5 labels와 4 guides, 760px 3 labels와 2 guides가 정확히 전환됐다.
+- 119개 막대와 `2021.07 / 0.28% / 17,832.32` hover를 확인했고, 760px document/body/main 및
+  component card의 horizontal overflow는 0이다. Browser error log도 0건이다.
+- fresh focused UI/boundary는 `86 passed, 3 warnings`; React production build는
+  `176 modules transformed`; target `py_compile`과 `git diff --check`는 exit 0이다.

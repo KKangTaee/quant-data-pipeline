@@ -141,17 +141,11 @@ It reads Gate-passed Practical Validation rows, shows the Decision Desk / invest
 Hold, reject, and re-review are current UI state guidance and compatibility read paths, not new official save actions.
 Final Review does not create broker orders, live approval, account sync, auto rebalance, or automatic report files.
 
-### Operations > Operations Console
-
-Operations Console is the Operations entry point.
-
-It should put only Portfolio Monitoring and System / Data Health in the user-facing Operations navigation.
-Backtest Run History and Candidate Library are no longer top-level Operations tabs; their data/helper paths are preserved until a separate archive deletion audit is approved.
-It can summarize today action queue and no-live boundary, but it does not create candidate sources or run validation gates.
-
 ### Operations > Portfolio Monitoring
 
 Portfolio Monitoring is the current user-facing route for the legacy Selected Portfolio Dashboard implementation files.
+
+It is the only user-facing page in the Operations navigation. Collection run history, logs, and failure CSV remain under `Workspace > Ingestion > 실행 기록 / 결과`; internal diagnostics are not duplicated in Portfolio Monitoring.
 
 It owns user-created monitoring portfolio setup, explicit scenario update, portfolio-level performance recheck, target snapshot display, selected strategy detail, continuity, timeline, review signals, provider evidence, open issues, optional allocation check, and Decision Dossier read-only display.
 

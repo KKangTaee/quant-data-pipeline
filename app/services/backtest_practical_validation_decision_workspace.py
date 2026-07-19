@@ -12,6 +12,12 @@ from app.services.backtest_practical_validation_explanation import (
 )
 from app.services.backtest_practical_validation_source import (
     VALIDATION_PROFILE_OPTIONS,
+    VALIDATION_PROFILE_QUESTIONS,
+)
+from app.services.backtest_practical_validation_replay import (
+    RECHECK_MODE_EXTEND_TO_LATEST,
+    RECHECK_MODE_LABELS,
+    RECHECK_MODE_STORED_PERIOD,
 )
 
 
@@ -113,6 +119,8 @@ def _source_option(row: dict[str, Any], selected_id: str) -> dict[str, Any]:
 
 def _profile_model(profile: dict[str, Any]) -> dict[str, Any]:
     current_id = str(profile.get("profile_id") or "balanced_core")
+    answers = dict(profile.get("answers") or {})
+    thresholds = dict(profile.get("thresholds") or {})
     return {
         "profile_id": current_id,
         "profile_label": str(
@@ -129,7 +137,155 @@ def _profile_model(profile: dict[str, Any]) -> dict[str, Any]:
             }
             for profile_id, config in VALIDATION_PROFILE_OPTIONS.items()
         ],
-        "advanced_control_owner": "streamlit_disclosure",
+        "questions": [
+            {
+                "question_id": question_id,
+                "label": str(question.get("label") or question_id),
+                "value": str(
+                    answers.get(question_id)
+                    or question.get("default")
+                    or ""
+                ),
+                "options": [
+                    {"value": value, "label": str(label)}
+                    for value, label in dict(
+                        question.get("options") or {}
+                    ).items()
+                ],
+            }
+            for question_id, question in VALIDATION_PROFILE_QUESTIONS.items()
+        ],
+        "threshold_summary": {
+            "rolling_window_months": int(
+                thresholds.get("rolling_window_months") or 0
+            ),
+            "mdd_review_line": float(
+                thresholds.get("mdd_review_line") or 0.0
+            ),
+            "one_way_cost_bps": int(
+                thresholds.get("one_way_cost_bps") or 0
+            ),
+        },
+        "advanced_control_owner": "decision_workspace_step1",
+    }
+
+
+def _recheck_mode_model(mode: str | None) -> dict[str, Any]:
+    current_mode = (
+        str(mode)
+        if str(mode) in RECHECK_MODE_LABELS
+        else RECHECK_MODE_EXTEND_TO_LATEST
+    )
+    descriptions = {
+        RECHECK_MODE_EXTEND_TO_LATEST: (
+            "현재 DB의 최신 데이터까지 기간을 늘려 지금도 유지되는지 확인합니다."
+        ),
+        RECHECK_MODE_STORED_PERIOD: (
+            "후보 등록 당시 기간만 사용해 과거 결과를 동일하게 재현합니다."
+        ),
+    }
+    return {
+        "mode": current_mode,
+        "mode_label": str(RECHECK_MODE_LABELS[current_mode]),
+        "mode_options": [
+            {
+                "value": value,
+                "label": str(label),
+                "description": descriptions.get(value, ""),
+                "recommended": value == RECHECK_MODE_EXTEND_TO_LATEST,
+                "selected": value == current_mode,
+            }
+            for value, label in RECHECK_MODE_LABELS.items()
+        ],
+    }
+
+
+def _period_label(period: dict[str, Any]) -> str:
+    start = str(
+        period.get("actual_start")
+        or period.get("start")
+        or ""
+    ).strip()
+    end = str(
+        period.get("actual_end")
+        or period.get("end")
+        or ""
+    ).strip()
+    if start and end:
+        return f"{start} → {end}"
+    return start or end or "-"
+
+
+def _percent_label(value: Any) -> str:
+    try:
+        return f"{float(value) * 100:.2f}%"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _candidate_provenance(source: dict[str, Any]) -> dict[str, Any]:
+    summary = dict(source.get("summary") or {})
+    components = _dict_rows(source.get("components"))
+    data_trust = dict(source.get("data_trust") or {})
+    warning_count = int(data_trust.get("warning_count") or 0)
+    trust_status = str(data_trust.get("status") or "").strip().lower()
+    caution_statuses = {"error", "blocked", "failed", "limited", "warning", "review"}
+    data_trust_label = (
+        "주의 필요"
+        if warning_count > 0 or trust_status in caution_statuses
+        else "확인 완료"
+        if trust_status
+        else "정보 없음"
+    )
+    return {
+        "period_label": _period_label(dict(source.get("period") or {})),
+        "cagr_label": _percent_label(summary.get("cagr")),
+        "mdd_label": _percent_label(summary.get("mdd")),
+        "component_count": len(components) or (1 if source else 0),
+        "data_trust_label": data_trust_label,
+        "warning_count": warning_count,
+    }
+
+
+def _replay_provenance(
+    replay_result: dict[str, Any] | None,
+    *,
+    fallback_mode_label: str,
+) -> dict[str, Any]:
+    replay = dict(replay_result or {})
+    coverage = dict(replay.get("period_coverage") or {})
+    market_dates = dict(replay.get("market_date_contract") or {})
+    requested_period = dict(
+        coverage.get("requested_period")
+        or replay.get("requested_period")
+        or {}
+    )
+    actual_period = dict(
+        coverage.get("actual_period")
+        or replay.get("actual_period")
+        or {}
+    )
+    limiting_symbols = list(
+        coverage.get("limiting_symbols")
+        or market_dates.get("limiting_symbols")
+        or []
+    )
+    return {
+        "visible": bool(replay),
+        "mode_label": str(
+            replay.get("recheck_mode_label")
+            or fallback_mode_label
+        ),
+        "requested_period_label": _period_label(requested_period),
+        "actual_period_label": _period_label(actual_period),
+        "latest_common_price_date": str(
+            coverage.get("latest_common_price_date")
+            or market_dates.get("latest_common_price_date")
+            or "-"
+        ),
+        "coverage_status": str(coverage.get("status") or replay.get("status") or "NOT_RUN"),
+        "end_gap_days": int(coverage.get("end_gap_days") or 0),
+        "limiting_symbols": [str(value) for value in limiting_symbols if value],
     }
 
 
@@ -623,6 +779,7 @@ def build_practical_validation_decision_workspace(
     replay_result: dict[str, Any] | None,
     validation_result: dict[str, Any] | None,
     source_options: list[dict[str, Any]],
+    recheck_mode: str = RECHECK_MODE_EXTEND_TO_LATEST,
 ) -> dict[str, Any]:
     """Project Level2 truth into a question-first, root-deduplicated read model."""
 
@@ -692,6 +849,9 @@ def build_practical_validation_decision_workspace(
     can_move = state in {"ready", "ready_with_handoff"} and bool(
         dict(validation.get("final_review_gate") or {}).get("can_save_and_move")
     )
+    mode_model = _recheck_mode_model(recheck_mode)
+    replay = dict(replay_result or {})
+    validation_id = str(validation.get("validation_id") or "")
     return {
         "schema_version": PRACTICAL_VALIDATION_DECISION_WORKSPACE_SCHEMA_VERSION,
         "selection_source_id": selected_source_id,
@@ -722,14 +882,36 @@ def build_practical_validation_decision_workspace(
                 or validation.get("created_at")
                 or ""
             ),
+            "provenance": _candidate_provenance(source),
         },
         "profile": _profile_model(validation_profile),
         "replay": {
+            **mode_model,
             "status": str(dict(replay_result or {}).get("status") or "NOT_RUN"),
             "replay_id": str(
                 dict(replay_result or {}).get("replay_id") or ""
             ),
             "completed": bool(replay_result),
+            "provenance": _replay_provenance(
+                replay_result,
+                fallback_mode_label=str(mode_model.get("mode_label") or ""),
+            ),
+        },
+        "record": {
+            "visible": bool(validation_id),
+            "profile_label": str(
+                validation_profile.get("profile_label")
+                or _profile_model(validation_profile).get("profile_label")
+                or "-"
+            ),
+            "recheck_mode_label": str(
+                replay.get("recheck_mode_label")
+                or mode_model.get("mode_label")
+                or "-"
+            ),
+            "attempted_at": str(replay.get("attempted_at") or "-"),
+            "replay_id": str(replay.get("replay_id") or "-"),
+            "validation_id": validation_id or "-",
         },
         "verdict": _verdict(state, summary),
         "summary": summary,

@@ -1341,7 +1341,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         index_path = component_root / "frontend/src/index.tsx"
         style_path = component_root / "frontend/src/style.css"
         vite_config_path = component_root / "frontend/vite.config.ts"
-        build_entry_path = component_root / "frontend/build/index.html"
+        build_entry_path = component_root / "frontend/component_static/index.html"
         common_source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
 
         self.assertTrue(wrapper_path.exists())
@@ -1388,7 +1388,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         index_path = component_root / "frontend/src/index.tsx"
         style_path = component_root / "frontend/src/style.css"
         vite_config_path = component_root / "frontend/vite.config.ts"
-        build_entry_path = component_root / "frontend/build/index.html"
+        build_entry_path = component_root / "frontend/component_static/index.html"
 
         self.assertTrue(wrapper_path.exists())
         self.assertTrue(package_path.exists())
@@ -10369,7 +10369,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("Sector / Industry", market_section["tabs"])
         self.assertNotIn("Data Health", market_section["tabs"])
         self.assertEqual(data_section["status"], "EXTERNAL")
-        self.assertIn("Operations > System / Data Health", data_section["owner"])
+        self.assertEqual(data_section["owner"], "Workspace > Ingestion > 실행 기록 / 결과")
+        self.assertNotIn("System / Data Health", str(model))
         self.assertEqual(data_section["tabs"], [])
         self.assertIn("Overview 최상위 탭", data_section["detail"])
         self.assertNotIn("Candidate Ops", str(model))
@@ -12533,7 +12534,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         wrapper_path = component_root / "component.py"
         entry_path = component_root / "frontend/src/BacktestPolicySignalBoard.tsx"
         style_path = component_root / "frontend/src/style.css"
-        build_entry_path = component_root / "frontend/build/index.html"
+        build_entry_path = component_root / "frontend/component_static/index.html"
         result_display_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
 
         self.assertTrue(wrapper_path.exists())
@@ -12587,7 +12588,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         package_path = component_root / "frontend/package.json"
         entry_path = component_root / "frontend/src/BacktestHandoffAction.tsx"
         index_path = component_root / "frontend/src/index.tsx"
-        build_entry_path = component_root / "frontend/build/index.html"
+        build_entry_path = component_root / "frontend/component_static/index.html"
 
         self.assertTrue(wrapper_path.exists())
         self.assertTrue(package_path.exists())
@@ -12632,7 +12633,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         entry_path = component_root / "frontend/src/BacktestPriceRefreshAction.tsx"
         index_path = component_root / "frontend/src/index.tsx"
         style_path = component_root / "frontend/src/style.css"
-        build_entry_path = component_root / "frontend/build/index.html"
+        build_entry_path = component_root / "frontend/component_static/index.html"
         result_display_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
 
         self.assertTrue(wrapper_path.exists())
@@ -12690,7 +12691,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         entry_path = component_root / "frontend/src/PracticalValidationFixQueue.tsx"
         index_path = component_root / "frontend/src/index.tsx"
         style_path = component_root / "frontend/src/style.css"
-        build_entry_path = component_root / "frontend/build/index.html"
+        build_entry_path = component_root / "frontend/component_static/index.html"
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
         panel_source = Path("app/web/backtest_practical_validation/workspace_panel.py").read_text(encoding="utf-8")
 
@@ -12802,7 +12803,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         entry_path = component_root / "frontend/src/FinalReviewInvestmentReport.tsx"
         index_path = component_root / "frontend/src/index.tsx"
         style_path = component_root / "frontend/src/style.css"
-        build_entry_path = component_root / "frontend/build/index.html"
+        build_entry_path = component_root / "frontend/component_static/index.html"
         page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
         practical_page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
 
@@ -30197,7 +30198,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         build_source = "".join(
             path.read_text(encoding="utf-8")
-            for path in (frontend / "build/assets").glob("*.js")
+            for path in (frontend / "component_static/assets").glob("*.js")
         )
 
         for source in (workspace_source, build_source):
@@ -34239,434 +34240,24 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(portfolio["virtual_capital_total"], 30000.0)
         self.assertTrue(portfolio["strategy_rows"][0]["slot_input_complete"])
 
-    def test_operations_overview_model_keeps_only_monitoring_and_health_lanes(self) -> None:
-        spec = importlib.util.find_spec("app.web.operations_overview")
-        self.assertIsNotNone(spec, "Operations Overview read model module should exist")
-
-        from app.web.operations_overview import build_operations_overview_model
-
-        model = build_operations_overview_model(
-            selected_dashboard={
-                "summary": {
-                    "final_decision_count": 4,
-                    "selected_decision_count": 2,
-                    "dashboard_row_count": 2,
-                    "status_counts": {"normal": 1, "watch": 1, "blocked": 0},
-                },
-                "portfolio_state": {
-                    "metrics": {
-                        "portfolio_count": 1,
-                        "assigned_strategy_reference_count": 2,
-                        "missing_reference_count": 0,
-                    }
-                },
-            },
-            run_history=[
-                {
-                    "job_name": "daily_market_update",
-                    "status": "failed",
-                    "started_at": "2026-06-03T09:00:00",
-                }
-            ],
-            candidate_records=[{"registry_id": "cand-1"}, {"registry_id": "cand-2"}],
-        )
-
-        self.assertEqual(model["schema_version"], "operations_overview_v2")
-        self.assertEqual(
-            [lane["key"] for lane in model["lanes"]],
-            ["portfolio_monitoring", "system_data_health"],
-        )
-        lane_by_key = {lane["key"]: lane for lane in model["lanes"]}
-        self.assertEqual(lane_by_key["portfolio_monitoring"]["priority"], "primary")
-        self.assertEqual(lane_by_key["portfolio_monitoring"]["status"], "Review Needed")
-        self.assertEqual(lane_by_key["portfolio_monitoring"]["metrics"]["selected_decision_count"], 2)
-        self.assertEqual(lane_by_key["portfolio_monitoring"]["metrics"]["watch_or_review_count"], 1)
-        self.assertEqual(lane_by_key["system_data_health"]["status"], "Attention Needed")
-        self.assertNotIn("archive_recovery", lane_by_key)
-        self.assertNotIn("reference_reports", lane_by_key)
-
-    def test_operations_overview_model_keeps_execution_boundary_disabled(self) -> None:
-        spec = importlib.util.find_spec("app.web.operations_overview")
-        self.assertIsNotNone(spec, "Operations Overview read model module should exist")
-
-        from app.web.operations_overview import build_operations_overview_model
-
-        model = build_operations_overview_model(
-            selected_dashboard={"summary": {}, "portfolio_state": {"metrics": {}}},
-            run_history=[],
-            candidate_records=[],
-        )
-
-        self.assertFalse(model["execution_boundary"]["live_approval"])
-        self.assertFalse(model["execution_boundary"]["broker_order"])
-        self.assertFalse(model["execution_boundary"]["account_sync"])
-        self.assertFalse(model["execution_boundary"]["auto_rebalance"])
-        self.assertFalse(model["execution_boundary"]["registry_write"])
-        self.assertEqual(model["lanes"][0]["target_surface"], "Operations > Portfolio Monitoring")
-
-    def test_operations_console_model_hides_cleanup_artifacts_and_keeps_action_queue(self) -> None:
-        from app.web.operations_overview import build_operations_overview_model
-
-        model = build_operations_overview_model(
-            selected_dashboard={
-                "summary": {
-                    "selected_decision_count": 3,
-                    "dashboard_row_count": 3,
-                    "status_counts": {"normal": 1, "watch": 1, "rebalance_needed": 1, "blocked": 0},
-                },
-                "portfolio_state": {
-                    "metrics": {
-                        "portfolio_count": 1,
-                        "assigned_strategy_reference_count": 3,
-                        "missing_reference_count": 0,
-                    }
-                },
-            },
-            run_history=[{"job_name": "daily_market_update", "status": "failed"}],
-            candidate_records=[{"registry_id": "cand-1"}],
-        )
-
-        self.assertEqual(model["console_version"], "operations_console_v2")
-        self.assertNotIn("stage_roadmap", model)
-        self.assertNotIn("surface_audit", model)
-
-        action_keys = {item["key"] for item in model["action_queue"]}
-        self.assertIn("review_portfolio_monitoring", action_keys)
-        self.assertIn("inspect_system_data_health", action_keys)
-        self.assertNotIn("archive_recovery_available", action_keys)
-        self.assertNotIn("place_order", action_keys)
-        for item in model["action_queue"]:
-            self.assertFalse(item["execution_boundary"]["order_instruction"])
-            self.assertFalse(item["execution_boundary"]["auto_rebalance"])
-
-    def test_operations_console_model_uses_korean_operator_facing_copy(self) -> None:
-        from app.web.operations_overview import build_operations_overview_model
-
-        model = build_operations_overview_model(
-            selected_dashboard={
-                "summary": {
-                    "selected_decision_count": 2,
-                    "dashboard_row_count": 2,
-                    "status_counts": {"normal": 2, "watch": 0, "rebalance_needed": 0, "blocked": 0},
-                },
-                "portfolio_state": {
-                    "metrics": {
-                        "portfolio_count": 1,
-                        "assigned_strategy_reference_count": 2,
-                        "missing_reference_count": 0,
-                    }
-                },
-            },
-            run_history=[],
-            candidate_records=[],
-        )
-
-        self.assertIn("일상 점검", model["action_queue"][0]["title"])
-        self.assertIn("모니터링 후보", model["action_queue"][0]["reason"])
-        self.assertIn("모니터링 후보", model["lanes"][0]["detail"])
-        self.assertEqual(len(model["lanes"]), 2)
-
-    def test_operations_review_queue_prioritizes_blockers_scenarios_reviews_and_system_health(self) -> None:
-        from app.web.operations_overview import build_operations_overview_model
-
-        model = build_operations_overview_model(
-            selected_dashboard={
-                "summary": {
-                    "selected_decision_count": 3,
-                    "dashboard_row_count": 3,
-                    "status_counts": {"normal": 1, "watch": 1, "blocked": 1},
-                },
-                "portfolio_state": {
-                    "metrics": {
-                        "portfolio_count": 1,
-                        "assigned_strategy_reference_count": 3,
-                        "missing_reference_count": 1,
-                        "incomplete_strategy_slot_count": 1,
-                    },
-                    "portfolios": [
-                        {
-                            "portfolio_id": "p1",
-                            "strategy_rows": [
-                                {
-                                    "decision_id": "decision-1",
-                                    "scenario_status": "stale",
-                                    "latest_scenario_date": "2026-05-28",
-                                    "open_review_items": [{"Group": "provider"}],
-                                },
-                                {
-                                    "decision_id": "decision-2",
-                                    "scenario_status": "current",
-                                    "latest_scenario_date": "2026-06-02",
-                                    "raw_decision": {
-                                        "open_review_items": [{"Group": "risk"}],
-                                    },
-                                },
-                                {
-                                    "decision_id": "decision-3",
-                                    "slot_input_complete": False,
-                                    "slot_blockers": ["start date required"],
-                                },
-                            ],
-                        }
-                    ],
-                },
-            },
-            run_history=[{"job_name": "daily_market_update", "status": "failed"}],
-            candidate_records=[],
-        )
-
-        self.assertEqual(model["action_queue_schema_version"], "operations_review_queue_v1")
-        queue = model["action_queue"]
-        self.assertEqual(
-            [item["key"] for item in queue],
-            [
-                "resolve_monitoring_setup_blockers",
-                "inspect_system_data_health",
-                "refresh_monitoring_scenarios",
-                "review_portfolio_monitoring",
-            ],
-        )
-        self.assertEqual([item["priority"] for item in queue], ["P0", "P0", "P1", "P2"])
-        self.assertEqual([item["evidence_key"] for item in queue], ["open_review", "system_run_health", "scenario_freshness", "open_review"])
-        self.assertEqual(queue[0]["summary_metric"], "3 blockers")
-        self.assertEqual(queue[1]["target_surface"], "Operations > System / Data Health")
-        self.assertIn("stale", queue[2]["reason"])
-        self.assertIn("open review", queue[3]["reason"].lower())
-        self.assertEqual([item["sort_rank"] for item in queue], sorted(item["sort_rank"] for item in queue))
-        for item in queue:
-            self.assertFalse(item["execution_boundary"]["registry_write"])
-            self.assertFalse(item["execution_boundary"]["order_instruction"])
-            self.assertFalse(item["execution_boundary"]["auto_rebalance"])
-
-    def test_operations_review_queue_source_renders_priority_and_evidence(self) -> None:
-        source = Path("app/web/operations_overview.py").read_text(encoding="utf-8")
-
-        self.assertIn("Priority", source)
-        self.assertIn("Evidence", source)
-        self.assertIn("summary_metric", source)
-        self.assertIn("sort_rank", source)
-        self.assertIn("operations_review_queue_v1", source)
-
-    def test_operations_overview_model_adds_portfolio_first_summary(self) -> None:
-        from app.web.operations_overview import build_operations_overview_model
-
-        model = build_operations_overview_model(
-            selected_dashboard={
-                "summary": {
-                    "selected_decision_count": 3,
-                    "dashboard_row_count": 3,
-                    "status_counts": {"normal": 1, "watch": 1, "blocked": 1},
-                },
-                "portfolio_state": {
-                    "metrics": {
-                        "portfolio_count": 2,
-                        "assigned_strategy_reference_count": 3,
-                        "missing_reference_count": 1,
-                        "incomplete_strategy_slot_count": 1,
-                    },
-                    "portfolios": [
-                        {
-                            "portfolio_id": "p1",
-                            "name": "Core Monitor",
-                            "dashboard_status": "Needs Review",
-                            "strategy_rows": [
-                                {
-                                    "decision_id": "decision-1",
-                                    "scenario_status": "stale",
-                                    "latest_scenario_date": "2026-05-28",
-                                    "open_review_items": [{"Group": "provider"}],
-                                    "slot_input_complete": True,
-                                    "raw_decision": {
-                                        "selected_components": [
-                                            {
-                                                "title": "Risk-On Momentum",
-                                                "period_end": "2026-05-29",
-                                                "selection_history": [
-                                                    {
-                                                        "date": "2026-05-29",
-                                                        "selected_tickers": ["QQQ", "SPY"],
-                                                        "target_weights": [0.55, 0.45],
-                                                    }
-                                                ],
-                                                "replay_contract": {
-                                                    "settings_snapshot": {"rebalance_interval": 1}
-                                                },
-                                            }
-                                        ],
-                                    },
-                                },
-                                {
-                                    "decision_id": "decision-2",
-                                    "scenario_status": "current",
-                                    "latest_scenario_date": "2026-06-02",
-                                    "slot_input_complete": True,
-                                    "raw_decision": {
-                                        "open_review_items": [{"Group": "risk"}],
-                                        "selected_components": [
-                                            {
-                                                "title": "Quality Value",
-                                                "period_end": "2026-06-02",
-                                                "replay_contract": {
-                                                    "settings_snapshot": {"rebalance_interval": 1}
-                                                },
-                                            }
-                                        ],
-                                    },
-                                },
-                            ],
-                        },
-                        {
-                            "portfolio_id": "p2",
-                            "name": "Satellite Monitor",
-                            "dashboard_status": "Needs Review",
-                            "strategy_rows": [
-                                {
-                                    "decision_id": "decision-3",
-                                    "slot_input_complete": False,
-                                    "slot_blockers": ["start date required"],
-                                }
-                            ],
-                        },
-                    ],
-                },
-            },
-            run_history=[],
-            candidate_records=[],
-        )
-
-        summary = model["portfolio_summary"]
-        self.assertEqual(summary["schema_version"], "operations_portfolio_summary_v1")
-        self.assertEqual(summary["status"], "Blocked")
-        self.assertEqual(summary["tone"], "danger")
-        self.assertEqual(summary["active_portfolio_count"], 2)
-        self.assertEqual(summary["assigned_strategy_count"], 3)
-        self.assertEqual(summary["stale_scenario_count"], 1)
-        self.assertEqual(summary["blocked_count"], 1)
-        self.assertEqual(summary["missing_reference_count"], 1)
-        self.assertEqual(summary["incomplete_strategy_slot_count"], 1)
-        self.assertEqual(summary["open_review_item_count"], 2)
-        self.assertEqual(summary["latest_scenario_date"], "2026-06-02")
-        self.assertEqual(summary["target_snapshot_date"], "2026-06-02")
-        self.assertEqual(summary["next_review_date"], "2026-06-30")
-        self.assertFalse(summary["execution_boundary"]["auto_rebalance"])
-
-    def test_operations_overview_model_adds_evidence_health_strip(self) -> None:
-        from app.web.operations_overview import build_operations_overview_model
-
-        selected_policy = {
-            "schema_version": "final_review_selection_gate_policy_v1",
-            "select_allowed": True,
-            "outcome": "SELECT_ALLOWED",
-            "review_required": [],
-            "blockers": [],
-        }
-        model = build_operations_overview_model(
-            selected_dashboard={
-                "summary": {
-                    "selected_decision_count": 2,
-                    "dashboard_row_count": 2,
-                    "status_counts": {"normal": 1, "watch": 1, "blocked": 0},
-                },
-                "portfolio_state": {
-                    "metrics": {
-                        "portfolio_count": 1,
-                        "assigned_strategy_reference_count": 2,
-                        "missing_reference_count": 0,
-                        "incomplete_strategy_slot_count": 0,
-                    },
-                    "portfolios": [
-                        {
-                            "portfolio_id": "p1",
-                            "strategy_rows": [
-                                {
-                                    "decision_id": "decision-1",
-                                    "scenario_status": "stale",
-                                    "latest_scenario_date": "2026-05-28",
-                                    "open_review_items": [{"Group": "provider"}],
-                                    "raw_decision": {
-                                        "investability_evidence_packet": {
-                                            "selection_gate_policy_snapshot": selected_policy,
-                                        }
-                                    },
-                                },
-                                {
-                                    "decision_id": "decision-2",
-                                    "scenario_status": "current",
-                                    "latest_scenario_date": "2026-06-02",
-                                    "raw_decision": {
-                                        "selection_gate_policy_snapshot": selected_policy,
-                                    },
-                                },
-                            ],
-                        }
-                    ],
-                },
-            },
-            run_history=[{"job_name": "daily_market_update", "status": "partial_success"}],
-            candidate_records=[],
-        )
-
-        evidence = model["evidence_health"]
-        self.assertEqual(evidence["schema_version"], "operations_evidence_health_v1")
-        self.assertEqual(evidence["overall_status"], "Review Needed")
-        self.assertEqual(evidence["overall_tone"], "warning")
-        item_by_key = {item["key"]: item for item in evidence["items"]}
-        self.assertEqual(
-            list(item_by_key),
-            ["scenario_freshness", "selected_evidence", "open_review", "system_run_health"],
-        )
-        self.assertEqual(item_by_key["scenario_freshness"]["status"], "REVIEW")
-        self.assertEqual(item_by_key["scenario_freshness"]["value"], "1 stale / 0 pending")
-        self.assertEqual(item_by_key["selected_evidence"]["status"], "PASS")
-        self.assertEqual(item_by_key["selected_evidence"]["value"], "2/2 ready")
-        self.assertEqual(item_by_key["open_review"]["status"], "REVIEW")
-        self.assertEqual(item_by_key["open_review"]["value"], "1 open")
-        self.assertEqual(item_by_key["system_run_health"]["status"], "REVIEW")
-        self.assertEqual(item_by_key["system_run_health"]["value"], "partial_success")
-        self.assertFalse(evidence["execution_boundary"]["registry_write"])
-        self.assertFalse(evidence["execution_boundary"]["auto_rebalance"])
-
-    def test_operations_overview_source_renders_evidence_health_before_queue(self) -> None:
-        source = Path("app/web/operations_overview.py").read_text(encoding="utf-8")
-
-        self.assertIn("    _render_portfolio_summary(model)", source)
-        self.assertIn("    _render_evidence_health_strip(model)", source)
-        self.assertIn("    _render_action_queue(model", source)
-        self.assertLess(source.index("    _render_portfolio_summary(model)"), source.index("    _render_evidence_health_strip(model)"))
-        self.assertLess(source.index("    _render_evidence_health_strip(model)"), source.index("    _render_action_queue(model"))
-        self.assertIn("Evidence Health", source)
-        self.assertIn("Selected Evidence", source)
-        self.assertIn("System Run Health", source)
-
-    def test_operations_overview_source_renders_portfolio_summary_before_queue(self) -> None:
-        source = Path("app/web/operations_overview.py").read_text(encoding="utf-8")
-
-        self.assertIn("    _render_portfolio_summary(model)", source)
-        self.assertIn("    _render_action_queue(model", source)
-        self.assertLess(source.index("    _render_portfolio_summary(model)"), source.index("    _render_action_queue(model"))
-        self.assertIn("Portfolio Monitoring Status", source)
-        self.assertIn("Stale Scenarios", source)
-        self.assertIn("Open Review", source)
-        self.assertIn("Next Review", source)
-
-    def test_operations_overview_source_hides_development_history_titles(self) -> None:
-        source = Path("app/web/operations_overview.py").read_text(encoding="utf-8")
-
-        self.assertNotIn("Operations restructuring roadmap", source)
-        self.assertNotIn("Operations surface decisions", source)
-        self.assertNotIn("Hidden archive", source)
-        self.assertNotIn("Archive 도구", source)
-        self.assertNotIn("과거 archive", source)
-
-    def test_operations_navigation_hides_archive_pages_from_top_level_tabs(self) -> None:
+    def test_operations_navigation_contains_only_portfolio_monitoring(self) -> None:
         source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")
         operations_block = source.split('"Operations": [', 1)[1].split("],", 1)[0]
 
-        self.assertIn("operations_overview_page", operations_block)
         self.assertIn("selected_portfolio_dashboard_page", operations_block)
-        self.assertIn("ops_review_page", operations_block)
-        self.assertNotIn("backtest_history_page", operations_block)
-        self.assertNotIn("candidate_library_page", operations_block)
+        self.assertNotIn("operations_overview_page", operations_block)
+        self.assertNotIn("ops_review_page", operations_block)
+        self.assertNotIn("app.web.operations_overview", source)
+        self.assertNotIn("app.web.ops_review", source)
+
+    def test_ingestion_records_preserve_run_log_and_failure_review(self) -> None:
+        source = Path("app/web/ingestion/page.py").read_text(encoding="utf-8")
+
+        self.assertIn("def _render_ingestion_records_section", source)
+        self.assertIn("_render_recent_results()", source)
+        self.assertIn("_render_persistent_run_history()", source)
+        self.assertIn("_render_recent_logs()", source)
+        self.assertIn("_render_failure_csv_preview()", source)
 
     def test_portfolio_monitoring_rebalance_table_uses_target_snapshot_language(self) -> None:
         from app.web.final_selected_portfolio_dashboard import _build_rebalance_table

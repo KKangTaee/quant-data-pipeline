@@ -577,3 +577,220 @@
 - `.venv/bin/python -m py_compile app/web/backtest_practical_validation/page.py app/web/backtest_final_review/page.py`
   -> exit 0, output 없음.
 - `git diff --check` -> exit 0, output 없음.
+
+## 2026-07-19 15차 Task 46 RED -> GREEN
+
+- RED: `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q`
+  -> 새 pure service import 부재로 `9 failed`.
+- first GREEN attempt -> `5 passed / 4 failed`. 네 실패 모두 Mix가 Single settings에 field가 아닌
+  `timeframe/option`을 submitted value로 넘겨 `허용되지 않은 설정`으로 차단된 동일 원인이었다.
+- 공통 runner input과 component settings submission을 분리한 뒤 focused -> `9 passed`.
+- effective fingerprint 추가 RED -> unexpected `runtime_options` argument로 `3 failed / 6 passed`.
+  component UI identity를 제외하고 effective Single payload를 hash한 뒤 focused -> `9 passed`.
+- service regression:
+  `.venv/bin/python -m pytest tests/test_service_contracts.py -q -k 'single_settings or portfolio_mix or weighted_portfolio or compare_execution'`
+  -> `5 passed, 840 deselected`.
+- `py_compile app/services/backtest_portfolio_mix_workspace.py`와 `git diff --check` -> exit 0.
+
+## 2026-07-19 15차 Task 47 RED -> GREEN
+
+- RED adapter/UI boundary:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_refactor_boundaries.py -q -k 'portfolio_mix'`
+  -> adapter/component 부재로 `7 failed, 11 passed, 48 deselected`.
+- first GREEN -> `16 passed / 2 failed`. GTAA `top`이 Single `execution` section에 있어 section 전체
+  제거로 field allow-list에서 빠졌고 text input이 dynamic type ternary라 source contract가 검출하지 못했다.
+- 공통 start/end만 제거하고 component execution field를 유지하며 text control을 명시한 뒤
+  `18 passed, 48 deselected`.
+- rerun mode ownership 추가 RED -> Python session builder와 `workspace.mode` 부재로
+  `2 failed / 17 passed`. Python-owned mode projection 뒤 focused `19 passed, 48 deselected`.
+- React production build: Vite 5.4.21, `175 modules transformed`; CSS 5.60 kB, JS 331.42 kB.
+- target service/adapter/component-wrapper `py_compile`과 `git diff --check` -> exit 0.
+- `npm install` audit는 moderate 1 / high 1을 보고했고 기존 Vite 계열과 같은 breaking-upgrade debt다.
+
+## 2026-07-19 15차 Task 48 RED -> GREEN And Cutover QA
+
+- RED runtime/cutover: focused Portfolio Mix test에서 missing runtime API/session bundle key/handler/cutover로
+  `6 failed / 16 passed`를 확인했다.
+- GREEN pure/adapter/boundary: `73 passed, 3 warnings`; visual theme regression 보강 뒤 Portfolio Mix focused는
+  `23 passed, 3 warnings`다.
+- service regression: `5 passed, 840 deselected` for portfolio mix / weighted portfolio / compare execution /
+  single settings.
+- React production build: Vite 5.4.21, `175 modules transformed`; CSS 6.43 kB, JS 332.51 kB.
+- target three-module `py_compile`과 `git diff --check`는 exit 0이다.
+- long-running 8505 server는 `runOnSave=false`여서 restart 전 legacy route를 보였다. current source/build로
+  restart한 뒤 primary DOM은 새 four-step React shell 하나만 포함했다.
+- desktop/760px에서 GTAA + Equal Weight 초기 draft, 100% allocation, 실행 전 action 미노출,
+  40/50 편집 시 90% validation과 run CTA 차단을 확인하고 50/50으로 원복했다.
+- Streamlit dark theme가 heading/button을 white로 덮는 regression을 computed style로 확인해 explicit component
+  text color contract를 추가했다. fixed H1은 `rgb(21, 32, 51)`, primary CTA는 white on `rgb(52, 95, 121)`이다.
+
+## 2026-07-19 15차 Task 49 Actual Browser QA
+
+- current source/build로 재시작한 `http://localhost:8505/backtest`에서 primary Mix DOM은 전용 React
+  iframe 하나만 포함했고 legacy Streamlit compare form, raw JSON/save path와 duplicate generic verdict는 없었다.
+- desktop actual flow: GTAA 50 / Equal Weight 50 실행 성공, KPI `0.0923 / -0.1784 / 0.8915 /
+  25,417.4301`, `Portfolio Mix QA 20260719` 저장, saved shelf 확인, `불러와 편집` 뒤 stale/reference와
+  action 차단, GTAA 40 / Equal Weight 60 rerun 성공, KPI `0.096 / -0.17 / 0.912 / 26,602.658`,
+  save/Level2 action 재노출을 확인했다.
+- Level2 CTA는 callable 노출까지만 확인하고 누르지 않았다. actual run history와 saved setup은 보호
+  artifact로 남기며 stage/commit하지 않는다.
+- desktop generated screenshots: `backtest-portfolio-mix-workspace-desktop-qa.png`,
+  `backtest-portfolio-mix-one-shell-desktop-qa.png`.
+- 760px generated screenshot: `backtest-portfolio-mix-workspace-760-qa.png`. component cards와 입력,
+  result/action이 한 열로 접히고 horizontal clipping이 없으며 ResizeObserver가 iframe height를 맞췄다.
+
+## 2026-07-19 15차 Fresh Completion Verification
+
+- `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
+  -> final fresh rerun `79 passed, 3 warnings in 1.76s`.
+- `.venv/bin/python -m pytest tests/test_service_contracts.py -q -k 'portfolio_mix or weighted_portfolio or compare_execution or single_settings'`
+  -> final fresh rerun `5 passed, 840 deselected in 0.21s`.
+- `.venv/bin/python -m pytest tests/test_service_contracts.py -q`
+  -> `833 passed, 12 failed, 3 warnings, 35 subtests passed in 24.53s`.
+- 12 failures는 기존 Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6
+  source-contract baseline이며 Portfolio Mix 신규 failure는 0이다.
+- React production build: Vite 5.4.21, `175 modules transformed`; CSS 6.43 kB, JS 332.51 kB.
+- target 4-module `py_compile`과 `git diff --check` -> exit 0.
+
+## 2026-07-19 16차 Task 50 RED -> GREEN
+
+- RED direct evidence contract:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py::test_mix_result_evidence_projects_user_labels_charts_and_contribution tests/test_backtest_portfolio_mix_workspace.py::test_mix_result_evidence_preserves_sparse_and_unavailable_months -q`
+  -> missing `build_portfolio_mix_result_evidence`로 `2 failed`.
+- first GREEN에서 monthly table key가 계약의 `return_label` 대신 `monthly_return_label`이어서
+  `1 passed / 1 failed`; key를 contract와 일치시킨 뒤 `2 passed`.
+- adapter RED는 `current_result.evidence` 부재로 `1 failed`; pure builder 연결 뒤 direct + adapter
+  `3 passed, 3 warnings`.
+- focused Portfolio Mix: `25 passed, 3 warnings in 1.73s`.
+- weighted Portfolio Mix service selector: `5 passed, 840 deselected in 0.28s`.
+- service/adapter `py_compile`과 `git diff --check`: exit 0, output 없음.
+
+## 2026-07-19 16차 Task 51 RED -> GREEN
+
+- RED visual contract:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k 'result_react_visual_contract'`
+  -> `PortfolioMixResult.tsx`와 App import/CSS contract 부재로 `2 failed / 25 deselected`.
+- GREEN visual contract -> `2 passed / 25 deselected`.
+- focused Portfolio Mix -> `27 passed, 3 warnings in 1.67s`.
+- route/boundary regression -> `51 passed, 3 warnings in 1.61s`.
+- React production build: Vite 5.4.21, `176 modules transformed`; CSS 11.50 kB,
+  JS 341.83 kB, build 성공.
+- `git diff --check`: exit 0, output 없음.
+
+## 2026-07-19 16차 Browser Hover Correction RED -> GREEN
+
+- actual desktop hover는 누적 성과 `2021.07.31 / 167.12 / 67.12% / 17,832.32`,
+  월별 수익률 `2023.01 / 3.98% / 16,341.24`를 실제 row로 표시했다.
+- 다른 SVG로 CUA pointer를 옮겼을 때 이전 tooltip이 남아 browser별 SVG leave 합성 차이를 확인했다.
+- RED source contract에 `onMouseLeave`를 추가해 `1 failed`; `pointerleave / mouseleave /
+  pointercancel / blur`가 같은 clear handler를 사용하도록 보강한 뒤 `1 passed`.
+- correction React production build: `176 modules transformed`, CSS 11.50 kB,
+  JS 341.88 kB, build 성공.
+
+## 2026-07-19 16차 Task 52 Runtime QA And Fresh Verification
+
+- desktop actual GTAA 50 / Equal Weight 50 run에서 result feedback과 shell gap `18px`, KPI,
+  누적 성과/월별 수익률, benchmark 부재와 상세 기여도·월별 표·계산/data trust를 확인했다.
+- actual hover는 누적 성과 `2021.07.31 / 167.12 / 67.12% / 17,832.32`, 월별 수익률
+  `2023.01 / 3.98% / 16,341.24`로 실제 row에 따라 갱신됐다.
+- 760x1000에서 chart grid 1열, desktop tick hidden / compact tick 3개, outer/primary/component
+  `scrollWidth === clientWidth`, disclosure와 ResizeObserver height sync를 확인했다.
+- generated evidence: `backtest-portfolio-mix-result-evidence-desktop-qa.png`,
+  `backtest-portfolio-mix-result-evidence-760-qa.png`; 두 파일은 stage하지 않는다.
+- fresh focused UI/boundary:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
+  -> `83 passed, 3 warnings in 1.64s`.
+- fresh full service -> `833 passed, 12 failed, 3 warnings, 35 subtests passed in 23.87s`.
+  기존 baseline은 Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6이며
+  Portfolio Mix 신규 failure는 0이다.
+- React production build: Vite 5.4.21, `176 modules transformed`, CSS 11.50 kB,
+  JS 341.88 kB. target 4-module `py_compile`과 `git diff --check`는 exit 0이다.
+
+## 2026-07-19 17차 Task 53 RED -> GREEN
+
+- root-cause probe: 720 viewBox / 54 left / 24 right / rendered width 900 / 119 rows에서 첫 plot point
+  cursor는 기존 full-SVG ratio로 index `9`, plot-aware ratio로 index `0`을 선택했다.
+- RED source contract:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k 'chart_geometry or visual_contract'`
+  -> `1 failed / 2 passed / 25 deselected`, missing `nearestPlotIndex`.
+- GREEN same selector -> `3 passed / 25 deselected`; focused Portfolio Mix 전체 ->
+  `28 passed, 3 warnings in 1.72s`.
+- React production build: Vite 5.4.21, `176 modules transformed`, CSS 11.48 kB,
+  JS 341.91 kB. desktop grid는 한 열이며 760px contract와 동일하다.
+
+## 2026-07-19 17차 Task 54 Actual Browser QA And Closeout
+
+- fresh Streamlit 8505에서 GTAA 50 / Equal Weight 50을 실제 실행했다. 기간은
+  `2016.08.31–2026.06.30`, KPI는 연환산 `9.23%`, 최대 낙폭 `-17.84%`, 위험 대비 수익
+  `0.89`, 최종 평가액 `25,417.43`이다.
+- 누적성과 pointer QA: first `x=54 / 2016.08.31 / 100.00`, middle
+  `x=369.559322 / 2021.06.30 / 166.66`, last `x=696 / 2026.06.30 / 238.21`로
+  plot 좌표와 실제 row가 일치했다.
+- 월별 pointer QA: middle `x=369.559322 / 2021.06 / -0.68% / 17,782.68`을 확인했다.
+  Task 52의 positive `2023.01 / 3.98%`와 이번 negative hover가 양·음 막대 tooltip 경계를 함께 고정한다.
+  desktop grid/card width는 `1177 / 1177 / 1177px`; 760px은 `633 / 633 / 633px` 한 열이고
+  document/body `scrollWidth=760`, component grid/card overflow는 없다.
+- generated evidence: `backtest-portfolio-mix-chart-geometry-desktop-qa.png`,
+  `backtest-portfolio-mix-chart-geometry-760-qa.png`, `backtest-portfolio-mix-monthly-760-qa.png`.
+  모두 generated artifact로 stage하지 않는다.
+- fresh focused UI/boundary:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
+  -> `84 passed, 3 warnings in 1.66s`.
+- React production build: Vite 5.4.21, `176 modules transformed`, CSS 11.48 kB,
+  JS 341.91 kB. target service/adapter `py_compile`과 `git diff --check`는 exit 0이다.
+
+## 2026-07-19 18차 Task 55 RED -> GREEN
+
+- linked worktree `/Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev`, branch
+  `codex/backtest-dev`를 확인했고 focused baseline은 `28 passed, 3 warnings`다.
+- RED:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k 'long_multi_select'`
+  -> `1 failed / 28 deselected`, missing `MULTI_SELECT_COMPACT_LIMIT`.
+- GREEN focused 전체 -> `29 passed, 3 warnings in 1.68s`.
+- React production build: Vite 5.4.21, `176 modules transformed`, CSS 12.47 kB,
+  JS 343.06 kB. `git diff --check` exit 0이다.
+
+## 2026-07-19 18차 Task 56 Actual Browser QA And Closeout
+
+- fresh Streamlit 8505에서 Portfolio Mix -> GTAA 세부 설정을 열었다. 방어 자산은 선택 3개
+  `TLT / IEF / LQD`, 검색 input 1개와 240px scroll group으로 표시됐다.
+- desktop scroll 측정은 `maxHeight=240px`, `overflowY=auto`, `clientHeight=238`,
+  `scrollHeight=25802`다. `TLT` 검색은 option을 1개로 필터링했고 선택 shelf는 유지됐다.
+- actual chip 해제 뒤 선택 2개, checkbox 재선택 뒤 선택 3개로 복원됐다. 그 사이 GTAA 핵심 값
+  `3 / 1 / 200`과 검색 query는 유지됐다.
+- 760x1000은 outer `bodyScrollWidth=documentScrollWidth=760`, option group
+  `clientWidth=scrollWidth=616`, 2열, 같은 240px internal scroll이었다.
+- generated evidence: `backtest-portfolio-mix-defensive-assets-desktop-qa.png`,
+  `backtest-portfolio-mix-defensive-assets-760-qa.png`; stage하지 않는다.
+- fresh focused UI/boundary:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
+  -> `85 passed, 3 warnings in 1.66s`.
+- React production build: Vite 5.4.21, `176 modules transformed`, CSS 12.47 kB,
+  JS 343.06 kB. target service/adapter `py_compile`은 exit 0이다.
+
+## 2026-07-19 19차 Task 57 RED -> GREEN
+
+- RED:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k symmetric_percent_y_axis`
+  -> `1 failed / 29 deselected`, missing `niceMonthlyReturnAxis`.
+- GREEN same selector -> `1 passed / 29 deselected`; focused Portfolio Mix 전체 ->
+  `30 passed, 3 warnings in 1.56s`.
+- React production build: Vite 5.4.21, `176 modules transformed`, CSS 12.84 kB,
+  JS 343.95 kB. `git diff --check` exit 0이다.
+
+## 2026-07-19 19차 Task 58 Actual Browser QA And Closeout
+
+- fresh Streamlit 8505에서 GTAA 50 / Equal Weight 50을 실제 실행했다. 기간은
+  `2016.08.31–2026.06.30`, KPI는 `9.23% / -17.84% / 0.89 / 25,417.43`이다.
+- desktop Y labels는 `+10% / +5% / 0% / -5% / -10%` 5개, guides는 4개다.
+  119개 월 막대와 `2021.07 / 0.28% / 17,832.32` hover를 확인했다.
+- 760px은 compact labels `+10% / 0% / -10%` 3개와 guides 2개만 보였다. document/body는
+  `clientWidth=scrollWidth=760`, main은 `749=749`, chart card는 `631=631`로 overflow 0이다.
+- Browser error log는 0건이다. generated evidence는
+  `backtest-portfolio-mix-monthly-y-axis-desktop-qa.png`,
+  `backtest-portfolio-mix-monthly-y-axis-760-qa.png`이며 stage하지 않는다.
+- fresh focused UI/boundary:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
+  -> `86 passed, 3 warnings in 1.71s`.
+- React production build: Vite 5.4.21, `176 modules transformed`, CSS 12.84 kB,
+  JS 343.95 kB. target service/adapter `py_compile`과 `git diff --check`는 exit 0이다.

@@ -34,6 +34,21 @@ export type WorkspaceIntent =
       profile_id: string
     }
   | {
+      action: "update_profile_answer"
+      intent_id: string
+      selection_source_id: string
+      validation_result_id: string
+      question_id: string
+      answer: string
+    }
+  | {
+      action: "select_recheck_mode"
+      intent_id: string
+      selection_source_id: string
+      validation_result_id: string
+      recheck_mode: string
+    }
+  | {
       action: "run_replay"
       intent_id: string
       selection_source_id: string
@@ -100,6 +115,14 @@ export type DecisionWorkspace = {
     title: string
     source_type_label: string
     as_of: string
+    provenance: {
+      period_label: string
+      cagr_label: string
+      mdd_label: string
+      component_count: number
+      data_trust_label: string
+      warning_count: number
+    }
   }
   profile: {
     profile_id: string
@@ -110,8 +133,50 @@ export type DecisionWorkspace = {
       description: string
       selected: boolean
     }>
+    questions: Array<{
+      question_id: string
+      label: string
+      value: string
+      options: Array<{ value: string; label: string }>
+    }>
+    threshold_summary: {
+      rolling_window_months: number
+      mdd_review_line: number
+      one_way_cost_bps: number
+    }
   }
-  replay: { status: string; replay_id: string; completed: boolean }
+  replay: {
+    status: string
+    replay_id: string
+    completed: boolean
+    mode: string
+    mode_label: string
+    mode_options: Array<{
+      value: string
+      label: string
+      description: string
+      recommended: boolean
+      selected: boolean
+    }>
+    provenance: {
+      visible: boolean
+      mode_label: string
+      requested_period_label: string
+      actual_period_label: string
+      latest_common_price_date: string
+      coverage_status: string
+      end_gap_days: number
+      limiting_symbols: string[]
+    }
+  }
+  record: {
+    visible: boolean
+    profile_label: string
+    recheck_mode_label: string
+    attempted_at: string
+    replay_id: string
+    validation_id: string
+  }
   verdict: { tone: Tone; label: string; headline: string; detail: string }
   summary: Record<string, number>
   verified_findings: Array<{

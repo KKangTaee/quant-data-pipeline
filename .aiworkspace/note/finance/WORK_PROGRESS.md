@@ -23,9 +23,16 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~14차를 완료했고 승인된 15차 Portfolio Mix React one-shell 설계의 구현 계획과 개발을 이어간다.
-  - Latest completed task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `1/4차` 기능·QA를 완료했고, CNN 고정 + AAII 전환의 두 graph와 장식 없는 source box를 사용하는 후속 시각 개편 spec을 사용자 검토 checkpoint에 두었다.
-  - Recent completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro를 현재 1D/5D/20D 관측과 5D/20D 조건부 전망으로 개편하고, current observation과 future publication status를 분리했다. 일봉 갱신은 10년 compact snapshot을 materialize하며 첫 진입은 DB-only로 읽는다. 60D 색상 범례와 자산 카드 상태 문구도 실제 화면 QA까지 완료했다.
+  - Current active task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `1/4차` 기능과 승인된 시각 polish·actual QA를 완료했고, 다음은 2차 장기 이력·발표 당시 값 품질 점검이다.
+  - Latest completed task is [operations-portfolio-monitoring-only-v1-20260719](./tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md). Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
+  - Parallel active follow-up is [portfolio-monitoring-chart-zoom-pan-v1-20260719](./tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md). 기능과 자동 검증은 완료했고 전체 `2/3차`; desktop·900px·420px Browser interaction/layout QA가 남아 있다.
+  - Latest Portfolio Monitoring lifecycle follow-up is [portfolio-monitoring-tracking-end-reopen-v1-20260719](./tasks/active/portfolio-monitoring-tracking-end-reopen-v1-20260719/STATUS.md). 종료된 동일 item의 종료 필드를 취소하고 원래 시작 계약으로 재활성화하는 `reopen_item`을 추가했다. Python 112 / React 25 / typecheck/build/static asset 검증을 통과했으며 Browser interaction은 URL policy로 차단됐다.
+  - Latest completed Portfolio Monitoring chart task is [portfolio-monitoring-chart-clarity-ohlcv-v1-20260719](./tasks/active/portfolio-monitoring-chart-clarity-ohlcv-v1-20260719/STATUS.md). 종합 가치곡선 선명도·5/3개 날짜 눈금과 선택 direct 종목의 DB-only line/OHLCV candle/volume을 전체 roadmap `4/4`로 완료했다.
+  - Latest completed Portfolio Monitoring follow-up is [portfolio-monitoring-item-builder-ux-fix-v1-20260719](./tasks/active/portfolio-monitoring-item-builder-ux-fix-v1-20260719/STATUS.md). 등록 drawer를 560px frame/internal scroll로 제한하고 검색 rerun 상태 복구와 요청 시작일 입력 유지를 전체 roadmap `3/3`으로 완료했다.
+  - Latest completed packaging task is [backtest-component-static-distribution-v1-20260719](./tasks/active/backtest-component-static-distribution-v1-20260719/STATUS.md). 원래 12개와 merge 후 Portfolio Mix를 포함한 Backtest 계열 React component 13개의 canonical output을 Git-tracked `component_static/`으로 통일했다.
+  - Recent completed Operations task is [portfolio-monitoring-react-command-center-v1-20260719](./tasks/done/portfolio-monitoring-react-command-center-v1-20260719/STATUS.md). Portfolio-first React Command Center, direct stock/ETF and Final Review candidate item model, staggered-start cash, deterministic diagnosis, macro calibration을 전체 `6/6차`로 완료했다.
+  - Recent completed Backtest task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~15차와 Portfolio Mix React one-shell 구현·QA를 완료했다.
+  - Recent completed Overview task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro를 현재 1D/5D/20D 관측과 5D/20D 조건부 전망으로 개편하고 current/future status를 분리했다. 일봉 갱신은 10년 compact snapshot을 materialize하며 현재는 관측 완료, 5D/20D 전망은 PROVISIONAL이다.
   - Recent completed Institutional Portfolios task is [institutional-13f-openfigi-mapping-v1-20260718](./tasks/active/institutional-13f-openfigi-mapping-v1-20260718/STATUS.md). 무료 OpenFIGI current resolution, curated-manager backfill, actual DB / Browser QA를 전체 roadmap `4/4`로 완료했다.
   - Previous completed Institutional Portfolios task is [institutional-portfolios-context-first-redesign-v1-20260718](./tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md). 전체 roadmap `4/4`; v2 context-first IA, full holdings explorer, explicit security search, actual DB / desktop / 420px QA를 완료했다.
   - Recent completed Overview / Market Context task is [overview-economic-cycle-sp500-actual-eps-registration-v1-20260718](./tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/STATUS.md). 공식 workbook 등록 제품 경로는 완료했고 실제 workbook과 발표일 입력은 외부 입력으로 남아 있다.
@@ -52,7 +59,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
   - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
   - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
-  - Current active Practical Validation UI task is [practical-validation-level2-decision-workspace-v1-20260716](./tasks/active/practical-validation-level2-decision-workspace-v1-20260716/STATUS.md).
+  - Latest completed Practical Validation UI task is [practical-validation-audit-evidence-absorption-v1-20260719](./tasks/active/practical-validation-audit-evidence-absorption-v1-20260719/STATUS.md). 전체 roadmap `3/3`; raw source/replay/validation UI를 제거하고 compact provenance를 Step 1/2/4로 흡수했다.
   - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
@@ -62,6 +69,87 @@ Detailed historical logs were archived on `2026-04-13`.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### 2026-07-20 - sub-dev master 통합 충돌 해결
+
+- 충돌한 Index / Roadmap / root logs 4개를 문서 역할과 실제 task 상태로 병합해 Overview Sentiment/Futures와 master의 Portfolio Monitoring/Backtest 이력을 모두 보존했다.
+- current는 Overview Sentiment `1/4차`, latest completed는 Operations 단일화, Portfolio Monitoring Zoom/Pan은 Browser QA 대기 병행 follow-up으로 Index / Roadmap / task manifest를 정렬했다.
+- focused pytest `187 passed / 8 subtests`, Portfolio Monitoring React `25 passed`, typecheck와 Sentiment/Portfolio Monitoring/Portfolio Mix production build, target py_compile을 확인했다. Sentiment downstream의 오래된 기대값 2건은 양쪽 revision에 동일한 pre-merge baseline이며 제품 동작을 바꾸지 않았다.
+- registry / saved / run history와 미추적 research·`.superpowers/`·QA PNG는 merge commit에서 제외한다.
+
+### 2026-07-20 - master 통합에서 Backtest와 Portfolio Monitoring 의도를 함께 보존
+
+- master의 Portfolio Monitoring/Operations 전환과 현재 브랜치의 Level1 15차·Practical Validation 근거 흡수를 공존하도록 문서 충돌을 역할별로 병합했다.
+- Backtest React 정적 배포 이동은 `component_static/`을 canonical로 유지하면서 최신 Practical Validation bundle을 보존하고, merge base 이후 추가된 Portfolio Mix까지 13번째 package로 편입한다.
+- current/latest 포인터는 실제 task 상태에 맞춰 Portfolio Monitoring Zoom/Pan `2/3차`와 Operations 단일화 완료를 가리키게 정렬했다.
+- focused Python `222 passed`, Portfolio Monitoring React `25 passed`, typecheck/build와 Backtest Mix·Portfolio Monitoring Browser QA/console 0을 확인했다. broad service/reference는 기존 baseline과 같은 `834 passed / 12 failed / 35 subtests passed`다.
+- registry, run history, saved JSONL, `.superpowers/`, generated QA artifact는 병합 commit에서 제외한다.
+
+### 2026-07-19 - Practical Validation Audit Evidence Absorption
+
+- 후보 약 493KB, 판정 약 833KB의 raw JSON 탭을 current Level 2에서 제거하고 저장/runtime 계약은 보존했다.
+- Step 1은 기간·CAGR/MDD·구성·Data Trust, Step 2는 요청/실제 기간·공통 가격일·coverage, Step 4는 profile/replay/validation identity를 소유한다.
+- focused 96 tests와 React build를 통과했고 actual replay에서 기간 provenance, desktop/760px overflow 0, console error 0을 확인했다.
+- registry / run history / saved JSONL과 generated QA screenshot은 commit에서 제외한다.
+
+### 2026-07-19 - Practical Validation Level2 Controls / Evidence IA
+
+- `고급 설정과 원본 근거`에 섞여 있던 profile 질문은 Step 1, replay 기간은 Step 2로 이동하고 하단은 읽기 전용 `원본 데이터·감사 정보`로 분리했다.
+- profile 답변은 replay를 보존한 채 판정만 다시 만들고, 기간 mode는 replay/result를 무효화하는 상태 계약을 TDD로 고정했다.
+- focused 91 tests, React 175-module build, desktop/760px interaction·overflow·console QA를 통과했다.
+- registry / run history / saved JSONL과 generated QA artifact는 변경 commit에서 제외한다.
+### 2026-07-19 - Operations를 Portfolio Monitoring 단일 화면으로 정리
+
+- 사용하지 않는 `Operations Overview`, `System / Data Health` route와 전용 UI 코드를 제거하고 Operations에는 Portfolio Monitoring만 남겼다.
+- 수집 실행 이력·로그·failure CSV는 `Workspace > Ingestion > 실행 기록 / 결과`에 보존했다.
+- Python 60 / React 25 / typecheck/build와 실제 Browser navigation·화면·console QA를 완료했다. 상세 결과는 [active task](./tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md)에 있다.
+
+### 2026-07-19 - Portfolio Monitoring 추적 종료 취소
+
+- 종료 기록의 동일 항목을 새 등록 없이 원래 시작 계약으로 다시 활성화하는 idempotent `reopen_item` command와 React 액션을 추가했다.
+- 종료 요청일·적용일·종료금액을 비우고 연속 추적으로 재계산하며, 활성 10개 한도와 동일 source 중복 제한을 복구 시 다시 검증한다.
+- Python 112 / React 25 / typecheck/build/static asset 검증을 통과했다. local Browser interaction은 URL policy로 차단되어 스크린샷은 남기지 못했다.
+
+### 2026-07-19 - Portfolio Monitoring 종목 차트 Zoom / Pan V1
+
+- 선택 direct 미국 주식·ETF의 기존 120-row line/candle 차트에 client-only viewport를 추가했다.
+- wheel cursor anchor, 최소 15-session zoom, 4px horizontal drag, edge clamp, `− / + / 전체 보기`, mobile controls-only 경계를 구현했다.
+- Python 101개, React 24개, typecheck/build를 통과했다. Browser URL policy가 local Finance Console DOM 접근을 차단해 전체 roadmap은 `2/3차`이며 interaction QA가 남아 있다.
+- 상세 RED/GREEN/QA 공백은 [active task](./tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md)에 남겼다.
+
+### 2026-07-19 - Portfolio Monitoring 선택 차트 가독성 후속
+
+- 데스크톱 종목·전략 목록과 선택 상세를 기존 약 56:44에서 35:65로 재배분하고 목록 최소 폭 280px을 유지했다.
+- 선택 가격 차트의 Y축 가격, `VOL`, X축 날짜를 9px에서 11px/700으로 높였고 React/data/SVG viewport 계약은 유지했다.
+- Python 102개, React 24개, typecheck/build/static distribution을 통과했다. Browser URL policy로 desktop/900px/420px 실제 layout·interaction QA는 여전히 남아 있다.
+
+### 2026-07-19 - Portfolio Monitoring 가치곡선 선명도 / OHLCV V1
+
+- 종합 가치곡선의 정적 point halo를 제거하고 실제 관측일 기준 desktop 5개 / 420px 3개 날짜 눈금을 추가했다.
+- 선택한 direct 미국 주식·ETF는 최신 저장 일봉 120개의 close line 또는 OHLCV candle/volume을 제공하며 전략은 가치곡선만 유지한다.
+- Python 100개, React 20개, typecheck/build와 desktop·420px Browser QA를 통과했다. 전체 roadmap `4/4` 완료다.
+- 상세 설계·검증·남은 제한은 [active task](./tasks/active/portfolio-monitoring-chart-clarity-ohlcv-v1-20260719/STATUS.md)에 남겼다.
+
+### 2026-07-19 - Portfolio Monitoring Item Builder UX Fix
+
+- 종목·전략 등록 drawer의 iframe을 open 동안 560px로 제한해 footer를 첫 화면에 유지했다.
+- catalog 검색 rerun은 whitelisted 일회성 wizard state를 복구하고 날짜 input은 blur rerun 없이 즉시 React draft에 반영한다.
+- Portfolio Monitoring Python 87 tests, React 15 tests, typecheck/build/static distribution과 720px actual Browser QA를 통과했다.
+- 상세 RED/GREEN/QA 기록은 [active task](./tasks/active/portfolio-monitoring-item-builder-ux-fix-v1-20260719/STATUS.md)에 남겼다.
+
+### 2026-07-19 - Backtest React component_static Git 배포 통일
+
+- Backtest Analysis, Practical Validation, Final Review 계열 React component 12개의 Vite output과 Python loader를 `frontend/component_static/`으로 통일했다.
+- 12개 `index.html`과 relative JS/CSS assets를 Git에 포함하고 과거 tracked `frontend/build/` 산출물을 제거했다.
+- repository contract `3 passed`, npm build 12/12, npm 없는 clean archive `2 passed`, actual Backtest React shell/Level1 Browser QA와 console error 0건을 확인했다.
+- 상세 실행과 기존 baseline 2건은 [active task](./tasks/active/backtest-component-static-distribution-v1-20260719/STATUS.md)에 남겼다.
+
+### 2026-07-19 - Portfolio Monitoring React Command Center Design
+
+- 기존 Portfolio Monitoring의 selected-candidate/replay/KPI 기반과 direct stock/ETF, lifecycle, diagnosis 공백을 감사했다.
+- Overview형 React one-shell, Portfolio-first Command Center, Context Drawer, 최대 10개, 정수 shares, start/end cash, cash dividends 계약을 승인했다.
+- 강점·약점은 deterministic layered rules로 시작하고 macro probability는 historical OOS publication gate 이후만 공개한다.
+- 상세 설계와 전체 `0/6차` handoff는 [task record](./tasks/done/portfolio-monitoring-react-command-center-v1-20260719/DESIGN.md)에 둔다.
 
 ### 2026-07-19 - master 병합 충돌 해소
 
@@ -6680,3 +6768,98 @@ Detailed historical logs were archived on `2026-04-13`.
 - `overview-sentiment-cnn-aaii-v1-20260719`의 1차 visual polish를 Hero → 균형 current evidence → 동시 2 graph → 1W·1M unavailable card → 3개 watch path → disclosure 순서로 구현했다.
 - CNN은 고정 graph, AAII는 응답/Spread tab으로 전환하며 모든 관측은 실제 날짜 간격의 직선으로 연결한다. source box 상단 장식선과 검증되지 않은 확률은 표시하지 않는다.
 - desktop/420px Browser QA에서 tab click/keyboard, raw hover, overflow 0, fresh-tab console error 0을 확인했다. 다음은 로드맵 2차 장기 이력·발표 당시 값 품질 점검이다.
+## 2026-07-19 - Backtest Analysis Portfolio Mix React One-Shell 완료
+
+- active task `backtest-analysis-level1-decision-workspace-v1-20260717`의 15차까지 완료했다.
+- Portfolio Mix를 네 단계 React shell로 전환하고 Python이 component validation, compare/weighted 실행, fingerprint, save와 Level2 handoff를 소유한다.
+- actual GTAA/Equal Weight run-save-restore-edit-rerun과 desktop/760px QA를 확인했다. legacy compare form과 prototype saved row는 primary route에서 제외했다.
+- 상세 검증과 남은 compatibility/accessibility 위험은 active task `RUNS.md`와 `RISKS.md`를 본다.
+
+## 2026-07-19 - Portfolio Mix 결과 해석과 차트 hover 완료
+
+- active task의 16-1~16-3에서 weighted result의 KPI·누적 성과·월별 수익률·component 기여도·계산/data trust를 사용자용 evidence로 연결했다.
+- React Step 3은 실제 날짜/월 row 기반 SVG와 pointer/keyboard tooltip만 렌더링하며 benchmark나 holdings를 합성하지 않는다.
+- GTAA 50 / Equal Weight 50 actual desktop·760px QA와 focused `83 passed`, React build, py_compile, diff-check를 완료했다.
+- full service의 기존 12 failures와 자동 Browser leave-event 합성 한계는 active task `RISKS.md`에 남겼다.
+
+## 2026-07-19 - Portfolio Mix 차트 위치와 판독성 보정
+
+- 누적성과 hover가 plot padding을 무시해 커서보다 뒤 row를 고르던 원인을 plot-aware index 계산으로 수정했다.
+- 누적성과와 월별 수익률을 desktop/760px 모두 각각 전체 폭 한 행으로 배치했다.
+- actual GTAA 50 / Equal Weight 50에서 누적 first/middle/last와 월별 middle hover, 760px overflow 0을 확인했다.
+- focused `84 passed`, React production build, py_compile, diff-check를 완료했으며 상세는 active task 17차 기록을 본다.
+
+## 2026-07-19 - Portfolio Mix 긴 방어 자산 선택 압축
+
+- GTAA 방어 자산처럼 긴 multi-select를 선택 chip, 검색, 240px 내부 scroll로 바꾸고 짧은 selector는 기존 grid를 유지했다.
+- actual TLT 해제·재선택 중 GTAA 핵심 설정값 보존과 desktop/760px no-overflow를 확인했다.
+- fresh focused `85 passed`, React production build, py_compile을 통과했다. generated QA와 workflow JSONL은 commit하지 않는다.
+- 상세 설계·RED/GREEN·QA는 active task 18차 기록을 본다.
+
+## 2026-07-19 - Portfolio Mix 월별 수익률 Y축 추가
+
+- 월별 수익률 막대에 actual maximum을 포함하는 동적 대칭 percent Y축을 추가하고 막대와 눈금이 같은 scale을 사용하게 했다.
+- desktop 5 labels, 760px 3 labels와 실제 hover/no-overflow를 GTAA 50 / Equal Weight 50 결과에서 확인했다.
+- fresh focused `86 passed`, React production build, py_compile, diff-check를 통과했다. QA screenshot과 workflow JSONL은 commit하지 않는다.
+- 상세 설계·RED/GREEN·QA는 active task 19차 기록을 본다.
+## 2026-07-19 - Portfolio Monitoring React 전면 개편 구현 계획
+
+- Portfolio-first Command Center, Context Drawer, direct stock/ETF와 Final Review candidate, integer shares, common-basis KPI의 written design 승인을 완료했다.
+- 전체를 contract/storage -> service -> React -> diagnosis -> macro observation -> calibration/history의 `6차 / 21 task` TDD 계획으로 구체화했다.
+- 현재 구현은 `0/6차`이며 execution mode 선택 뒤 1차 저장 계약부터 시작한다. 상세는 `tasks/done/portfolio-monitoring-react-command-center-v1-20260719/PLAN.md`를 본다.
+
+## 2026-07-19 - Portfolio Monitoring React 개편 1차 완료
+
+- `monitoring_portfolio_group/item/command` schema, integer-share/notional domain contract, optimistic group command와 idempotent add/end lifecycle을 구현했다.
+- legacy saved setup은 source fingerprint 기반 read-only plan과 명시적 apply를 분리했다. Fixture 2회 import는 중복 없이 replay되고 실제 saved 파일은 3 groups / 2 importable / 4 blocked로 dry-run만 수행했다.
+- 전체 roadmap `1/6차` 완료. 다음은 2차 stock/ETF + Final Review catalog, valuation lane, common-basis read model이다.
+
+## 2026-07-19 - Portfolio Monitoring React 개편 2차 완료
+
+- DB-only stock/ETF와 authoritative Final Review candidate 통합 catalog, raw-close·분할·현금배당 직접 종목 원장, 선정 전략 replay adapter를 구현했다.
+- 서로 다른 시작·종료일은 투자 전/종료 후 현금으로 정렬하고, 가장 오래된 최신 active lane 기준의 공통 가치곡선과 투자금·현재가치·수익률·MDD·CAGR·기여도를 계산한다.
+- 전체 roadmap `2/6차` 완료, 누적 모니터링 계약 41개가 통과했다. 다음은 3차 React one-shell과 command event round-trip이다.
+
+## 2026-07-19 - Portfolio Monitoring React 개편 3차 완료
+
+- 기존 Portfolio Monitoring 정상 화면을 Portfolio-first React one-shell로 전환하고, 그룹 rail·KPI·공통 가치곡선·항목 기여·개별 상세·3단계 Context Drawer를 구현했다.
+- 직접 종목은 투자금/정수 수량, Final Review 전략은 투자금만 허용하며 stable command id와 thin Streamlit dispatch를 연결했다. Operations 요약도 새 그룹·항목·가치 KPI를 받을 수 있다.
+- 1440/760/420 Browser QA와 51개 Python·9개 React 회귀를 통과했다. 전체 roadmap `3/6차` 완료; 실제 저장 테이블 migration과 mutation QA는 6차 closeout 경계다.
+
+## 2026-07-19 - Portfolio Monitoring React 개편 4차 완료
+
+- direct/ETF/선정 전략 노출을 source date와 provenance가 있는 normalized facts로 만들고, 모르는 비중은 추정하지 않고 coverage gap으로 유지한다.
+- 21/63/126일 수익률, 50D/200D 추세, drawdown, 변동성, 상관 cluster, 기여도에 versioned Python 정책을 적용하며 Final Review override 출처를 보존한다.
+- 같은 원인의 중복을 제거하고 HIGH/MEDIUM/LOW confidence에 따라 상위 3개·강점·취약점·데이터 부족으로 나눴다. 전체 roadmap `4/6차` 완료; 다음은 5차 persisted macro 관찰이다.
+
+## 2026-07-19 - Portfolio Monitoring React 개편 5차 완료
+
+- 저장된 경제사이클 current/+1M/+2M, Futures Macro 5D/20D family, 금·달러·WTI·구리·금리·S&P 경로를 read-only compact context로 연결했다.
+- 실제 노출이 먼저 충족될 때만 tech risk-off, gold adversity, duration rate pressure, cyclical slowdown 관찰을 만들며 LIMITED/PROVISIONAL은 단독 HIGH severity를 만들지 못한다.
+- React에는 포트폴리오 의미·영향 비중·변화 조건을 먼저, coverage/freshness는 보조 근거로 표시하고 Operations에는 top review와 macro coverage만 연결했다. 전체 roadmap `5/6차`; 다음은 6차 이력·확률 gate·migration closeout이다.
+
+## 2026-07-19 - Portfolio Monitoring React 전면 개편 6차 완료
+
+- 진단 snapshot/history와 walk-forward calibration artifact를 저장하고, current fingerprint의 OOS gate가 `READY`일 때만 조건부 확률을 공개한다. Actual은 근거 부족으로 `SUPPRESSED`다.
+- 안전한 격리 DB DDL/legacy apply 검증 후 `finance_meta` five-table schema와 default group 하나를 생성했다. Legacy source는 dry-run만 하여 checksum을 보존했고 사용자 종목은 넣지 않았다.
+- 83 monitoring, 12 React, 139 linked regressions와 1440/760/420 Browser QA를 통과했다. 전체 roadmap `6/6차` 완료; 상세는 `tasks/done/portfolio-monitoring-react-command-center-v1-20260719/`를 본다.
+
+## 2026-07-19 - Portfolio Monitoring 가치곡선 hover·글자 크기 보정 완료
+
+- 종합 가치곡선 plot 전체에서 가장 가까운 유효 관측일의 날짜·평가금액 tooltip, guide line, 강조점을 표시하고 keyboard focus도 같은 상태를 사용한다.
+- Portfolio Monitoring React 전용 stylesheet의 기존 px 기반 font-size와 component 기본 글자를 정확히 1px 높였으며 다른 탭과 계산/DB 계약은 변경하지 않았다.
+- React 17 tests, Portfolio Monitoring Python 89 tests, typecheck/build와 actual-data Browser QA를 통과했다. 전체 보정 roadmap `3/3차` 완료다.
+- 상세는 `tasks/done/portfolio-monitoring-chart-hover-font-polish-v1-20260719/`를 본다.
+
+## 2026-07-19 - Portfolio Monitoring 등록 drawer 잘림·닫기 회귀 수정
+
+- drawer open 시 iframe을 560px로 축소하던 계약을 제거하고 workbench 자연 높이는 유지한 채 drawer panel만 560px로 제한했다.
+- catalog 검색 recovery는 stable key로 한 번만 적용해 X 닫기 뒤 동일 snapshot이 팝업을 다시 열지 못하게 했다.
+- React 17 tests, Portfolio Monitoring Python 90 tests, typecheck/build와 body 1,803px / drawer 560px Browser QA를 통과했다.
+- 전체 보정 roadmap `3/3차` 완료이며 등록 command·DB·가치 계산 계약은 변경하지 않았다.
+
+## 2026-07-19 - Portfolio Monitoring 추적 종료 UX 보완
+
+- 휴장일 종료는 요청일 이후 미래 가격을 기다리지 않고 요청일 이하 최신 저장 가치로 즉시 확정하며, 요청일·실제 적용일·종료금액을 함께 안내한다.
+- 활성 항목과 접힌 `종료 기록`을 분리하고 raw `ACTIVE`를 lifecycle label로 교체했으며, command 성공·실패를 본문 배너로 노출한다.
+- Python 47 tests, React 25 tests, typecheck/build/compile/static asset check를 통과했다. 전체 보완 `3/4차`; Browser URL policy로 실제 interaction QA와 스크린샷만 남아 있다.

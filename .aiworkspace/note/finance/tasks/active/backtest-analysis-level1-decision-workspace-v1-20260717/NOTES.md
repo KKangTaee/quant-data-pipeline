@@ -384,3 +384,84 @@ generated artifact이므로 commit하지 않는다.
   `717/717`; Level3 outer/shell/report는 `760/760`, `717/717`, `717/717`이었다.
 - console error는 0이었다. 빈 legacy chart data의 Vega `Infinite extent`와 Streamlit component의
   `setFrameHeight before componentReady` warning은 기존 경고이며 title/route 동작을 막지 않았다.
+
+## 2026-07-19 15차 Portfolio Mix Truth / Read Model Decisions
+
+- legacy Mix의 핵심 gap은 전략 계산기가 아니라 구성 draft와 기존 Single settings schema 사이의
+  공통 contract 부재다. 새 pure service가 2~4개 component, concrete strategy 중복, shared period,
+  역할·비중과 100% 합계를 runner 이전에 검증한다.
+- component 설정은 기존 Single settings builder/validator/payload projector를 그대로 조합한다.
+  Mix 공통 `start/end`는 Single field에 주입하고 `timeframe/option`은 submitted field가 아니라
+  compare runner 인자로 유지한다.
+- fingerprint는 draft/save/component UI identity를 제외하고 ordered concrete strategy, effective
+  Single payload, role/weight와 shared execution contract를 hash한다. preset 기본값의 생략/명시가
+  같으면 같은 fingerprint가 되며 실제 설정 변경만 stale을 만든다.
+- 신규 saved shelf는 `backtest_portfolio_mix_saved_v1`만 읽는다. legacy prototype row를 자동
+  migration하거나 raw JSON/절대 경로를 투영하지 않는다.
+- 실행 전에는 result verdict/final action board가 없고, current fingerprint와 일치하는 결과에서만
+  save/Level2 action을 분리해 투영한다. development component가 있으면 Level2 action은 차단한다.
+
+## 2026-07-19 15차 Portfolio Mix React / Intent Decisions
+
+- 새 adapter는 `{event: {id, intent_id, payload}}`만 수신하고 Python catalog에 없는 strategy,
+  variant, component, field, role/shared key와 중복 intent를 draft 변경 전에 거부한다.
+- add/remove는 component ID로 대상만 수정하고 다른 component settings를 보존한다. preset은 React가
+  전략별 값을 만들지 않고 기존 Single `apply_single_settings_preset()` 결과를 저장한다.
+- Single `execution` section에서 Mix 공통 `start/end`만 제거하고 component 고유 `top/interval`은
+  `component_execution` section으로 유지한다. section 전체를 숨기면 GTAA 핵심 설정이 사라진다.
+- new/saved mode는 React local state가 아니라 Python session/read model이 소유한다. component rerun 뒤
+  저장 Mix shelf가 새 Mix mode로 되돌아가는 reset을 방지한다.
+- React는 구성·공통 기준, 역할·비중, 실행·해석, 저장·Level2의 네 step과 schema-driven field control,
+  760px 단일 열, ResizeObserver/aria/focus를 소유한다. runner/Gate/fingerprint/persistence는 import하지 않는다.
+- Python fallback도 같은 read model의 네 step, validation/result/action을 읽는다. full editing parity는
+  React primary route Browser QA 뒤 보완할 수 있으나 raw JSON/path는 노출하지 않는다.
+
+## 2026-07-19 15차 Portfolio Mix Runtime / Closeout Decisions
+
+- component execution은 기존 `run_compare_strategy` catalog를 재사용하되 모든 payload를 먼저
+  검증하고 순차 실행한다. 전부 성공한 경우만 weighted/current result를 교체하며 partial failure는
+  이전 성공 결과를 보존한다.
+- saved setup은 기존 store의 `source_context`에 `backtest_portfolio_mix_saved_v1` draft,
+  effective fingerprint와 run identity를 저장한다. legacy prototype row는 migration하지 않는다.
+- `불러와 편집`은 result를 invent하지 않고 stale/reference 상태를 만든다. `현재 데이터로 실행`과
+  새 Mix rerun은 같은 Python runtime을 사용하며 fresh fingerprint일 때만 save/Level2 action이 돌아온다.
+- actual Browser QA에서 GTAA/Equal Weight 50/50 실행·저장·복원 뒤 40/60으로 수정해 stale 전환과
+  rerun KPI 변경을 확인했다. Level2 CTA는 확인만 하고 registry append는 실행하지 않았다.
+
+## 2026-07-19 16차 Portfolio Mix Result Evidence Decisions
+
+- Step 3 first-read는 KPI만이 아니라 현재 weighted run의 누적 성과와 월별 수익률까지 보여준다.
+  구성 전략 기여도, 월별 결과 표와 계산/data trust는 `상세 결과 근거` disclosure에 둔다.
+- pure service가 percentage/amount/date/role/data-trust 문구와 JSON-safe row를 완성한다. React는
+  가장 가까운 실제 point/bar를 선택하는 hover/focus intent와 SVG/HTML presentation만 소유한다.
+- benchmark와 holdings는 weighted bundle에 실제 근거가 없으므로 새로 만들지 않는다. first month처럼
+  월 수익률을 계산할 수 없는 행은 표에는 `계산값 없음`으로 보존하고 차트에서는 제외한다.
+- chart 이탈은 pointer/mouse/cancel/blur가 같은 clear handler를 사용한다. CUA가 SVG 사이 이동에서
+  leave event를 합성하지 않은 경우가 있어 실제 pointer 값 갱신과 source contract를 함께 검증했다.
+
+## 2026-07-19 17차 Portfolio Mix Chart Geometry Decisions
+
+- SVG point는 `PLOT_LEFT=54`, `PLOT_RIGHT=24` 안에서 배치되므로 pointer도 전체 SVG 폭이 아니라
+  같은 plot 폭으로 정규화해야 한다. viewBox X로 변환한 뒤 plot padding을 빼야 cursor와 row가 일치한다.
+- 누적성과와 월별 수익률은 같은 `nearestPlotIndex()`를 사용해 두 차트의 hover 의미를 통일한다.
+- 두 차트는 비교용 좌우 분할보다 시간 흐름 판독이 우선이므로 desktop과 760px 모두 한 열 전체 폭으로
+  둔다. 이 변경은 evidence, weighted calculation, 저장/Level2 handoff 계약을 바꾸지 않는다.
+
+## 2026-07-19 18차 Portfolio Mix Long Multi-Select Decisions
+
+- 사용자가 승인한 A안은 긴 option 목록을 무조건 접는 대신 현재 선택 chip을 항상 보이고, 검색과
+  240px 내부 scroll로 나머지 option을 편집한다.
+- compact 기준은 12개다. 짧은 역할·기간 selector는 기존 grid를 유지해 불필요한 검색 단계를 만들지 않는다.
+- option label과 raw value를 대소문자 없이 함께 검색한다. 선택 해제와 재선택은 기존 option order와
+  `set_component_field` 배열 payload를 유지하며 Python preset/runtime/Gate를 다시 계산하지 않는다.
+- 실제 GTAA preset은 방어 자산 3개 `TLT / IEF / LQD`를 그대로 읽었고, frontend query는 Streamlit rerun 뒤에도
+  component local state로 유지됐다. 다른 component 설정은 선택 intent 중 변경되지 않았다.
+
+## 2026-07-19 19차 Portfolio Mix Monthly Return Y-Axis Decisions
+
+- 월별 막대의 절댓값을 판단할 수 있도록 0% 중심의 동적 대칭 percent Y축을 추가한다. 축 maximum은
+  actual max를 포함하는 `1/2/5 × 10^n` nice scale로 올림하며 positive/negative 폭은 동일하다.
+- 축 label/guide와 bar geometry는 반드시 같은 maximum을 사용한다. raw maximum을 bar 분모로 유지하면
+  label상 maximum과 최고 막대의 위치가 어긋나므로 허용하지 않는다.
+- desktop 5 labels와 760px 3 labels는 같은 data scale의 presentation 차이일 뿐이다. Python evidence,
+  월별 계산, hover row, 저장과 Level2 handoff는 변경하지 않는다.

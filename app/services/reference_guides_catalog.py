@@ -18,7 +18,7 @@ REFERENCE_TASK_CARDS: list[dict[str, Any]] = [
     {
         "key": "data_freshness",
         "title": "데이터 갱신 / 복구",
-        "owner_screen": "Workspace > Ingestion / Operations > System / Data Health",
+        "owner_screen": "Workspace > Ingestion > 실행 기록 / 결과",
         "summary": "가격, provider snapshot, sentiment, futures, macro 수집 상태와 실패 로그를 확인합니다.",
         "safe_action": "Ingestion 또는 Data Health가 소유한 job / artifact를 확인합니다.",
         "does_not_do": "Reference에서 provider fetch, DB write, registry write를 직접 실행하지 않습니다.",
@@ -77,7 +77,7 @@ REFERENCE_JOURNEYS: list[dict[str, Any]] = [
         "key": "data_freshness_repair",
         "title": "Data Freshness Repair",
         "when_to_use": "차트나 validation evidence가 비어 있거나 stale일 때",
-        "screens": "Workspace > Ingestion -> Operations > System / Data Health",
+        "screens": "Workspace > Ingestion > 실행 기록 / 결과",
         "records": "MySQL finance tables, failure CSV, run artifacts, WEB_APP_RUN_HISTORY.jsonl",
         "go_review_stop": "Go: latest stored row confirmed / Review: provider stale or partial / Stop: job failure or source contract missing",
         "boundary": "UI가 provider/FRED를 직접 fetch하지 않고 ingestion/job boundary를 통해 확인합니다.",
@@ -122,7 +122,7 @@ REFERENCE_JOURNEYS: list[dict[str, Any]] = [
         "key": "archive_recovery",
         "title": "Archive / Recovery",
         "when_to_use": "과거 run, candidate, failure artifact를 다시 열어 원인을 복원할 때",
-        "screens": "Operations > Archive: Backtest Runs / Archive: Candidates / System / Data Health",
+        "screens": "Workspace > Ingestion > 실행 기록 / 결과",
         "records": "BACKTEST_RUN_HISTORY.jsonl, CURRENT_CANDIDATE_REGISTRY.jsonl, PRE_LIVE_CANDIDATE_REGISTRY.jsonl, run_artifacts/",
         "go_review_stop": "Go: replay contract or artifact found / Review: compact snapshot only / Stop: missing source or generated artifact unavailable",
         "boundary": "archive는 recovery / inspection surface이며 새 selected decision이나 live operation을 만들지 않습니다.",
@@ -146,7 +146,7 @@ REFERENCE_JOURNEY_DETAILS: dict[str, dict[str, Any]] = {
                 "owner_screen": "Workspace > Overview",
                 "check": "Refresh 결과가 실제 latest row를 갱신했는지, 아니면 stale-but-visible 상태인지 구분합니다.",
                 "safe_next": "갱신 실패나 stale 원인은 Data Freshness Repair journey로 넘깁니다.",
-                "downstream": "Workspace > Ingestion / System / Data Health",
+                "downstream": "Workspace > Ingestion > 실행 기록 / 결과",
                 "stop_condition": "휴장 / 주말 / provider 지연은 UI 결함이 아니라 freshness 상태일 수 있습니다.",
             },
             {
@@ -168,7 +168,7 @@ REFERENCE_JOURNEY_DETAILS: dict[str, dict[str, Any]] = {
             },
             {
                 "state": "Overview refresh 실패",
-                "owner_screen": "Operations > System / Data Health",
+                "owner_screen": "Workspace > Ingestion > 실행 기록 / 결과",
                 "first_check": "최근 web app run health와 failure artifact",
                 "safe_next": "owner screen에서 실패 job 확인",
                 "stop_condition": "Reference에서 refresh action을 대신 실행하지 않음",
@@ -187,7 +187,7 @@ REFERENCE_JOURNEY_DETAILS: dict[str, dict[str, Any]] = {
             },
             {
                 "order": "2",
-                "owner_screen": "Operations > System / Data Health",
+                "owner_screen": "Workspace > Ingestion > 실행 기록 / 결과",
                 "check": "수집 성공 여부, failure CSV, run artifact, web app run health를 확인합니다.",
                 "safe_next": "성공했는데 UI가 못 읽으면 loader / read model 경계 문제로 분리합니다.",
                 "downstream": "owner screen 재확인",
@@ -212,7 +212,7 @@ REFERENCE_JOURNEY_DETAILS: dict[str, dict[str, Any]] = {
             },
             {
                 "state": "UI가 최신 수집 결과를 못 읽음",
-                "owner_screen": "Operations > System / Data Health",
+                "owner_screen": "Workspace > Ingestion > 실행 기록 / 결과",
                 "first_check": "job success, DB latest row, loader read path, surface cache",
                 "safe_next": "owner 화면에서 run artifact와 loader boundary를 확인",
                 "stop_condition": "Reference는 수집 성공을 대신 보장하지 않음",
@@ -422,7 +422,7 @@ REFERENCE_JOURNEY_DETAILS: dict[str, dict[str, Any]] = {
             },
             {
                 "order": "3",
-                "owner_screen": "Operations > System / Data Health",
+                "owner_screen": "Workspace > Ingestion > 실행 기록 / 결과",
                 "check": "failure CSV와 run artifact가 남아 있는지 확인합니다.",
                 "safe_next": "data freshness 원인으로 분리하거나 owner job에서 재실행합니다.",
                 "downstream": "Data Freshness Repair",
@@ -439,7 +439,7 @@ REFERENCE_JOURNEY_DETAILS: dict[str, dict[str, Any]] = {
             },
             {
                 "state": "Missing generated artifact",
-                "owner_screen": "Operations > System / Data Health",
+                "owner_screen": "Workspace > Ingestion > 실행 기록 / 결과",
                 "first_check": "run_artifacts path and failure file existence",
                 "safe_next": "가능하면 owner job 재실행",
                 "stop_condition": "Reference에서 artifact를 새로 만들지 않음",
@@ -488,7 +488,7 @@ REFERENCE_RECORDS: list[dict[str, Any]] = [
     {
         "record": "run_artifacts/",
         "kind": "generated artifact",
-        "owner": "Operations > System / Data Health",
+        "owner": "Workspace > Ingestion > 실행 기록 / 결과",
         "meaning": "job failure CSV, diagnostics, local operation evidence",
         "commit_policy": "generated/local artifact로 보통 커밋하지 않음",
     },
@@ -500,7 +500,7 @@ REFERENCE_PLAYBOOKS: list[dict[str, Any]] = [
         "key": "overview_futures_stale",
         "title": "Overview / Futures data가 stale일 때",
         "symptom": "Refresh 후에도 Futures Monitor 차트가 비어 있거나 오래된 데이터로 보입니다.",
-        "owner_screen": "Workspace > Overview / Workspace > Ingestion / Operations > System / Data Health",
+        "owner_screen": "Workspace > Overview / Workspace > Ingestion > 실행 기록 / 결과",
         "first_check": "latest stored candle time, stale badge, selected lookback window, recent run artifact를 확인합니다.",
         "safe_action": "Overview refresh 또는 Ingestion futures job을 owner screen에서 다시 실행합니다.",
         "stop_condition": "provider가 latest row를 주지 않으면 UI는 latest stored stale context만 보여줄 수 있습니다.",
@@ -509,9 +509,9 @@ REFERENCE_PLAYBOOKS: list[dict[str, Any]] = [
         "key": "ingestion_success_ui_stale",
         "title": "Ingestion은 성공했는데 UI가 갱신되지 않을 때",
         "symptom": "수집 job은 성공으로 보이지만 Overview / Backtest / Validation 화면이 예전 값을 계속 보여줍니다.",
-        "owner_screen": "Workspace > Ingestion / Operations > System / Data Health / affected UI surface",
+        "owner_screen": "Workspace > Ingestion > 실행 기록 / 결과 / affected UI surface",
         "first_check": "job success만 보지 말고 DB latest row, loader read path, 화면의 기준일 / cache 상태를 함께 봅니다.",
-        "safe_action": "affected UI surface를 다시 열고, System / Data Health에서 run artifact와 loader boundary를 확인합니다.",
+        "safe_action": "affected UI surface를 다시 열고, Ingestion의 실행 기록 / 결과에서 run artifact와 loader boundary를 확인합니다.",
         "stop_condition": "Reference에서 cache clear, DB rewrite, registry rewrite를 직접 수행하지 않습니다.",
     },
     {
@@ -554,9 +554,9 @@ REFERENCE_PLAYBOOKS: list[dict[str, Any]] = [
         "key": "archive_recovery",
         "title": "Archive에서 과거 run / candidate를 복원해야 할 때",
         "symptom": "과거 backtest run, candidate, failure artifact를 다시 열어 현재 workflow로 이어야 합니다.",
-        "owner_screen": "Operations > Archive: Backtest Runs / Operations > Archive: Candidates / Operations > System / Data Health",
+        "owner_screen": "Workspace > Ingestion > 실행 기록 / 결과",
         "first_check": "run history row, candidate replay contract, generated artifact 존재 여부를 확인합니다.",
-        "safe_action": "가능하면 owner archive 화면에서 run again / load into form / candidate replay를 사용합니다.",
+        "safe_action": "Ingestion의 실행 기록 / 결과에서 run payload와 artifact를 확인하고 필요한 수집만 다시 실행합니다.",
         "stop_condition": "archive record를 새 Final Review selected decision으로 직접 변환하지 않습니다.",
     },
 ]
@@ -580,7 +580,7 @@ REFERENCE_PLAYBOOK_DETAILS: dict[str, dict[str, Any]] = {
             {
                 "order": "3",
                 "check": "최근 futures ingestion run artifact와 provider 응답 상태를 확인합니다.",
-                "owner_screen": "Workspace > Ingestion / System / Data Health",
+                "owner_screen": "Workspace > Ingestion > 실행 기록 / 결과",
                 "pass_signal": "provider 지연 / 휴장 / 실패가 구분됨",
             },
         ],
@@ -602,7 +602,7 @@ REFERENCE_PLAYBOOK_DETAILS: dict[str, dict[str, Any]] = {
             {
                 "order": "2",
                 "check": "화면이 읽는 loader/source가 수집한 source와 같은지 확인합니다.",
-                "owner_screen": "Operations > System / Data Health",
+                "owner_screen": "Workspace > Ingestion > 실행 기록 / 결과",
                 "pass_signal": "loader read path와 source contract가 일치",
             },
             {
@@ -746,8 +746,8 @@ REFERENCE_PLAYBOOK_DETAILS: dict[str, dict[str, Any]] = {
             },
             {
                 "order": "3",
-                "check": "failure artifact가 필요한 경우 System / Data Health에서 해당 파일 존재 여부를 확인합니다.",
-                "owner_screen": "Operations > System / Data Health",
+                "check": "failure artifact가 필요한 경우 Ingestion의 실행 기록 / 결과에서 해당 파일 존재 여부를 확인합니다.",
+                "owner_screen": "Workspace > Ingestion > 실행 기록 / 결과",
                 "pass_signal": "failure CSV / run artifact가 확인됨",
             },
         ],
