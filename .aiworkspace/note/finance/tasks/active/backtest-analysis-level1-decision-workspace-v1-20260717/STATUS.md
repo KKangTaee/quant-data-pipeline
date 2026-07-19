@@ -1,6 +1,6 @@
 # Status
 
-Status: 13차 Backtest Workflow Top Shell Closeout Verification Complete
+Status: 14차 Stage-Local Legacy Title Removal Written Design Awaiting Review
 Last Updated: 2026-07-19
 
 ## Current Position
@@ -66,6 +66,11 @@ Last Updated: 2026-07-19
 - [x] 13차 written design 사용자 review
 - [x] 13차 implementation plan
 - [x] 13차 RED -> GREEN implementation / Browser QA / closeout
+- [x] 14차 Level1/2/3 title ownership audit
+- [x] 14차 A안 legacy stage title 제거 사용자 승인
+- [x] 14차 written design 작성과 self-review
+- [ ] 14차 written design 사용자 review
+- [ ] 14차 implementation plan / RED -> GREEN / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -82,6 +87,7 @@ Last Updated: 2026-07-19
 11. Result Interpretation And Schedule Polish
 12. Current Selection And Factor Presentation
 13. Backtest Workflow Top Shell Redesign
+14. Stage-Local Legacy Title Removal
 
 ## Current Corrective Position
 
@@ -256,3 +262,13 @@ Last Updated: 2026-07-19
   `py_compile`과 `git diff --check`는 exit 0이다.
 - desktop / 760px에서 Level1~3 route 이동, responsive rail, overflow 0, current context와
   ResizeObserver height를 확인했다. generated screenshot과 protected JSONL은 commit하지 않는다.
+
+## Current 14차 Position
+
+- Level1은 React hero만, Level2/3은 Streamlit stage title/caption 뒤 React hero를 다시 렌더링하는
+  title ownership 불일치를 확인했다.
+- 사용자는 별도 공통 title을 추가하거나 React hero를 재설계하지 않고 Level2/3의 legacy title pair만
+  제거하는 A안을 승인했다.
+- primary reading order는 `공통 workflow shell -> active React hero -> body`로 통일한다.
+- written design은 fallback 의미, TDD source contract, desktop/760px QA와 route/Gate/persistence
+  non-goal을 명시했으며 implementation plan 전 사용자 review를 기다린다.

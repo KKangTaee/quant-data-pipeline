@@ -2277,3 +2277,73 @@ Python adapter는 `stage_key`가 `BACKTEST_WORKFLOW_PANEL_OPTIONS`에 있을 때
 - stage completion percentage, notification center, job/run/status dashboard 추가
 - legacy route 삭제 또는 Practical Validation / Final Review route 재설계
 - strategy runtime, DB schema, provider, broker, live approval 또는 auto rebalance 변경
+
+## 14차 Corrective Design: Stage-Local Legacy Title Removal
+
+### Problem And Root Cause
+
+Level1은 page-level workflow shell 아래에서 React Decision Workspace hero가 질문과 설명을 바로
+소유한다. 반면 Level2와 Level3는 각각 `render_practical_validation_workspace()`와
+`render_final_review_workspace()`가 큰 Streamlit stage title/caption을 먼저 렌더링한 뒤, React hero가
+같은 단계 이름과 질문을 다시 보여준다. 따라서 문제는 React 디자인 부족이 아니라 stage-local title
+owner가 Level별로 다른 데서 생긴 presentation duplication이다.
+
+### Approved A Structure
+
+모든 단계의 primary reading order를 다음 하나로 통일한다.
+
+```text
+Backtest Workflow Top Shell
+  -> current stage responsibility / stage navigation
+  -> active Level React Decision Workspace hero
+  -> active Level body
+```
+
+- Level1은 이미 이 구조이므로 바꾸지 않는다.
+- Level2의 `### Practical Validation`과 바로 뒤 caption을 primary render path에서 제거한다.
+- Level3의 `### Final Review`와 바로 뒤 caption을 primary render path에서 제거한다.
+- React hero의 단계별 핵심 질문, 후보 context와 설명은 유지한다.
+- 공통 top shell은 stage identity/navigation만 소유하고 Level 내부 question/Gate를 복제하지 않는다.
+
+새 공통 title component를 추가하거나 기존 React hero를 top shell로 끌어올리지 않는다. 그런 방식은
+현재 두 계층을 다시 세 계층으로 만들거나 Level별 candidate context를 분리하므로 이 corrective 범위를
+넘는다.
+
+### Fallback And Ownership
+
+- Practical Validation Python fallback은 이미 shared read model의 `header.question/detail`을 표시하므로
+  React unavailable에서도 질문이 유지된다.
+- Final Review Python fallback은 top shell의 current-stage responsibility 뒤에 candidate selector와
+  computed verdict headline을 표시한다. static 질문을 다시 추가하지 않고 실제 판단 결과를 첫 내용으로
+  유지한다.
+- 제거 대상은 presentation-only `st.markdown` / `st.caption` 두 쌍이다. source selection, replay,
+  decision brief, handler, route, registry와 persistence는 바꾸지 않는다.
+
+### TDD And QA Contract
+
+- RED source contract는 Level2/3 primary render function에 legacy stage title/caption이 남아 있으면
+  실패해야 한다.
+- GREEN은 두 renderer에서 중복 pair만 제거하며 React/fallback body와 route dispatch는 그대로 둔다.
+- focused workflow/boundary tests, target `py_compile`, `git diff --check`를 실행한다.
+- desktop Browser QA에서 Level2와 Level3가 top shell 다음 React hero로 바로 이어지고 중복 title이
+  없는지 확인한다.
+- 760px에서 제거된 빈 간격, hero clipping과 horizontal overflow가 없는지 확인한다.
+- generated screenshots와 protected registry / Run History / saved JSONL / `.superpowers/`는 commit하지
+  않는다.
+
+### 14차 Acceptance Criteria
+
+1. Level1/2/3 모두 `공통 workflow shell -> active React hero -> body` 순서를 사용한다.
+2. Level2/3의 legacy Streamlit stage title과 설명이 primary DOM에 없다.
+3. 각 React hero의 단계별 핵심 질문과 candidate context는 유지된다.
+4. React unavailable fallback은 top shell과 기존 fallback content로 단계 의미를 잃지 않는다.
+5. route, Gate, replay, registry, save와 Final Review 판단 계약은 변경되지 않는다.
+6. desktop/760px Browser QA, focused tests, py_compile, diff-check와 protected-path audit를 통과한다.
+
+### 14차 Out Of Scope
+
+- page-level workflow shell 또는 Level React hero의 재디자인
+- Level1/2/3 question copy 재작성
+- Final Review read model/schema 변경
+- Level2 replay fragment, Level3 persistence 또는 route 재설계
+- 신규 공통 header component, progress/count/status dashboard 추가
