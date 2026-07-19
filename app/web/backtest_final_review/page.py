@@ -1104,9 +1104,6 @@ def _consume_final_review_data_enrichment_intent(
 
 
 def render_final_review_workspace() -> None:
-    st.markdown("### Final Review")
-    st.caption("이 포트폴리오를 실제 투자 검토 대상으로 계속 추적할 가치가 있는가?")
-
     current_rows = load_current_candidate_registry_latest()
     proposal_rows = load_portfolio_proposals()
     pre_live_rows = load_pre_live_candidate_registry_latest()

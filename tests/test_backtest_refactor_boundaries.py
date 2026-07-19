@@ -314,6 +314,11 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
 
     def test_practical_validation_entry_surface_removes_context_only_distractions(self) -> None:
         source = (PROJECT_ROOT / "app/web/backtest_practical_validation/page.py").read_text()
+        react_source = (
+            PROJECT_ROOT
+            / "app/web/components/practical_validation_decision_workspace/frontend/src/"
+            "PracticalValidationDecisionWorkspace.tsx"
+        ).read_text()
         render_body = source.split("def render_practical_validation_workspace", 1)[1]
 
         self.assertNotIn('render_reference_contextual_help("practical_validation")', render_body)
@@ -321,8 +326,46 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn("검증 근거를 위한 후보 통제 화면", render_body)
         self.assertIn(
             "이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가?",
-            render_body,
+            react_source,
         )
+
+    def test_level2_and_level3_primary_routes_do_not_repeat_stage_titles(self) -> None:
+        pv_source = (
+            PROJECT_ROOT / "app/web/backtest_practical_validation/page.py"
+        ).read_text(encoding="utf-8")
+        final_source = (
+            PROJECT_ROOT / "app/web/backtest_final_review/page.py"
+        ).read_text(encoding="utf-8")
+        pv_entry = pv_source.split(
+            "def render_practical_validation_workspace() -> None:", 1
+        )[1].split("sources = load_portfolio_selection_sources", 1)[0]
+        final_entry = final_source.split(
+            "def render_final_review_workspace() -> None:", 1
+        )[1].split("current_rows = load_current_candidate_registry_latest", 1)[0]
+
+        self.assertNotIn('st.markdown("### Practical Validation")', pv_entry)
+        self.assertNotIn(
+            "이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가?",
+            pv_entry,
+        )
+        self.assertNotIn('st.markdown("### Final Review")', final_entry)
+        self.assertNotIn(
+            "이 포트폴리오를 실제 투자 검토 대상으로 계속 추적할 가치가 있는가?",
+            final_entry,
+        )
+
+        pv_react = (
+            PROJECT_ROOT
+            / "app/web/components/practical_validation_decision_workspace/frontend/src/"
+            "PracticalValidationDecisionWorkspace.tsx"
+        ).read_text(encoding="utf-8")
+        final_react = (
+            PROJECT_ROOT
+            / "app/web/components/final_review_investment_report/frontend/src/"
+            "DecisionBriefWorkspace.tsx"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Practical Validation Decision Workspace", pv_react)
+        self.assertIn("Final Review Decision Workspace", final_react)
 
     def test_practical_validation_react_is_intent_only(self) -> None:
         source = (

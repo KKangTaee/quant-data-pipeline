@@ -2773,11 +2773,6 @@ def _render_decision_workspace_advanced_controls(
 
 def render_practical_validation_workspace() -> None:
     render_pv_styles()
-    st.markdown("### Practical Validation")
-    st.caption(
-        "이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가? "
-        "해결할 항목과 Final Review에서 판단할 항목을 구분해 확인합니다."
-    )
     sources = load_portfolio_selection_sources(limit=100)
     session_source = st.session_state.get("backtest_practical_validation_source")
     if st.session_state.pop("practical_validation_reset_replay_on_entry", False):
