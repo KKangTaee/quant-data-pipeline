@@ -7562,7 +7562,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertNotIn("legacy_dashboard", helper_source)
         self.assertNotIn("_legacy.", helper_source)
-        self.assertIn("load_overview_futures_macro_snapshot(", helper_source)
+        self.assertIn("load_overview_futures_macro_materialized_snapshot(", helper_source)
+        self.assertNotIn("load_overview_futures_macro_snapshot(", helper_source)
 
     def test_overview_market_movers_entrypoint_uses_tab_helper_module(self) -> None:
         source = Path("app/web/overview/market_movers.py").read_text(encoding="utf-8")
@@ -7984,8 +7985,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("legacy_dashboard", futures_helper_source)
         self.assertNotIn("_legacy.", futures_helper_source)
         self.assertIn("clear_futures_macro_pattern_validation_cache", futures_helper_source)
-        self.assertIn("load_overview_futures_macro_snapshot(include_validation=False)", panel_body)
-        self.assertIn("load_overview_futures_macro_pattern_outlook()", panel_body)
+        self.assertIn("load_overview_futures_macro_materialized_snapshot()", panel_body)
+        self.assertNotIn("load_overview_futures_macro_snapshot(include_validation=False)", panel_body)
+        self.assertNotIn("load_overview_futures_macro_pattern_outlook()", panel_body)
+        self.assertNotIn('with st.expander("원본 데이터 / 계산 추적"', panel_body)
         self.assertNotIn("_render_futures_macro_validation_controls(", panel_body)
         self.assertIn("_render_futures_pattern_outlook_fallback(", panel_body)
         self.assertIn("_render_futures_macro_refresh_controls(", panel_body)
@@ -8009,6 +8012,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("2.05, 0.62, 0.62, 1.25", controls_body)
         self.assertIn('"일봉 갱신"', controls_body)
         self.assertIn('"다시 읽기"', controls_body)
+        self.assertIn("compact snapshot을 갱신합니다", futures_helper_source)
+        self.assertIn("전망 계산 없이 저장된 snapshot을 다시 읽습니다", futures_helper_source)
+        self.assertNotIn("snapshot cache를 비운", futures_helper_source)
         self.assertIn(".ov-futures-macro-action-title", style_source)
         self.assertIn(".ov-futures-macro-action-rule", style_source)
         self.assertIn(".ov-futures-validation-action-title", style_source)
@@ -8241,6 +8247,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "PatternRibbonSection",
             "AssetPathwaysSection",
             "MethodDisclosure",
+            "CalculationTraceDisclosure",
         ):
             self.assertTrue((source_root / f"{name}.tsx").exists())
             self.assertIn(name, source)
@@ -8249,10 +8256,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertLess(source.index("<PatternMapSection"), source.index("<PatternRibbonSection"))
         self.assertLess(source.index("<PatternRibbonSection"), source.index("<AssetPathwaysSection"))
         self.assertLess(source.index("<AssetPathwaysSection"), source.index("<MethodDisclosure"))
+        self.assertLess(source.index("<MethodDisclosure"), source.index("<CalculationTraceDisclosure"))
         self.assertNotIn("<RecentFlowSection", source)
         self.assertNotIn("<HistoricalValidationPanel", source)
         self.assertIn("Streamlit.setComponentValue", source)
         self.assertIn("Streamlit.setFrameHeight", source)
+        self.assertIn("onToggle={syncFrameHeightSoon}", source)
 
     def test_futures_macro_react_v2_has_responsive_probability_and_unavailable_contract(self) -> None:
         source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")
@@ -8720,28 +8729,31 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
     def test_futures_macro_raw_tables_are_named_by_calculation_step(self) -> None:
         helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
+        source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")
+        workbench_source = (source_root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
+        method_source = (source_root / "MethodDisclosure.tsx").read_text(encoding="utf-8")
+        trace_path = source_root / "CalculationTraceDisclosure.tsx"
+        trace_source = trace_path.read_text(encoding="utf-8") if trace_path.exists() else ""
 
-        self.assertIn("_render_futures_raw_table_map(", helper_source)
-        self.assertIn('현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본', helper_source)
-        self.assertIn("CME/yfinance 일봉 세션 기준", helper_source)
-        self.assertIn("CME/yfinance 일봉 세션 기준일", helper_source)
-        self.assertIn("화면 섹션별 원본 연결", helper_source)
-        self.assertIn("매크로 컨텍스트", helper_source)
-        self.assertIn("최근 흐름", helper_source)
-        self.assertIn("이 영역은 상단 세 섹션의 판단을 검산하는 원본 데이터입니다", helper_source)
-        self.assertNotIn("과거 점검 요약은 상단 React 패널에서 확인", helper_source)
-        self.assertIn("load_overview_futures_macro_pattern_outlook()", helper_source)
-        self.assertIn("_render_futures_pattern_outlook_fallback(pattern_outlook)", helper_source)
+        payload_body = helper_source[helper_source.index("def build_futures_macro_react_workbench_payload") :]
+        payload_body = payload_body[: payload_body.index("def _futures_macro_react_event_payload")]
         panel_body = helper_source[helper_source.index("def _render_futures_macro_panel") :]
+        panel_body = panel_body[: panel_body.index("def render_futures_macro_fragment")]
+
+        self.assertIn('"calculation_trace"', payload_body)
+        self.assertIn("load_overview_futures_macro_materialized_snapshot()", panel_body)
+        self.assertNotIn("load_overview_futures_macro_pattern_outlook()", panel_body)
+        self.assertNotIn('with st.expander("원본 데이터 / 계산 추적"', panel_body)
+        self.assertIn("_render_futures_pattern_outlook_fallback(pattern_outlook)", helper_source)
         self.assertNotIn("_render_futures_macro_validation_controls(", panel_body)
-        self.assertIn('with st.expander("현재 점수 원본"', helper_source)
-        self.assertIn('with st.expander("점수 구성 기여"', helper_source)
-        self.assertIn('with st.expander("선물 일봉 변화"', helper_source)
-        self.assertIn('with st.expander("과거 시나리오 표본"', helper_source)
-        self.assertIn('with st.expander("점수-이후수익 관계"', helper_source)
-        self.assertIn('with st.expander("기준값 민감도"', helper_source)
-        self.assertNotIn('with st.expander("원본 점수 표"', helper_source)
-        self.assertNotIn('with st.expander("전체 시나리오 원본 표"', helper_source)
+        self.assertIn("CalculationTraceDisclosure", workbench_source)
+        self.assertIn("onToggle={syncFrameHeightSoon}", workbench_source)
+        self.assertIn("onToggle={onToggle}", method_source)
+        self.assertIn("원본 데이터 / 계산 추적", trace_source)
+        self.assertIn("현재 점수 원본", trace_source)
+        self.assertIn("점수 구성 기여", trace_source)
+        self.assertIn("선물 일봉 변화", trace_source)
+        self.assertIn("해석 주의점", trace_source)
 
     def test_overview_dashboard_renders_default_market_context_without_load_gate(self) -> None:
         source = Path("app/web/overview/page.py").read_text(encoding="utf-8")

@@ -1,6 +1,14 @@
 import type { MethodPayload } from "./FuturesMacroWorkbench";
 
-function MethodDisclosure({ method, boundaryNote }: { method: MethodPayload; boundaryNote: string }) {
+function MethodDisclosure({
+  method,
+  boundaryNote,
+  onToggle,
+}: {
+  method: MethodPayload;
+  boundaryNote: string;
+  onToggle: () => void;
+}) {
   const metrics = [
     ["원천", method.source],
     ["독립 표본", method.effective_episodes],
@@ -9,7 +17,7 @@ function MethodDisclosure({ method, boundaryNote }: { method: MethodPayload; bou
     ["확률 보정", method.calibration],
   ];
   return (
-    <details className="fm-workbench__method">
+    <details className="fm-workbench__method fm-workbench__disclosure" onToggle={onToggle}>
       <summary>방법론과 품질</summary>
       <div className="fm-workbench__method-grid">
         {metrics.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}

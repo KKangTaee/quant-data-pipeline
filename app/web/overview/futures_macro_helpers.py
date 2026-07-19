@@ -14,11 +14,12 @@ from app.jobs.overview_actions import (
 )
 from app.services.futures_macro_thermometer import (
     clear_overview_futures_macro_snapshot_cache,
-    load_overview_futures_macro_snapshot,
 )
 from app.services.futures_macro_pattern_validation import (
     clear_futures_macro_pattern_validation_cache,
-    load_overview_futures_macro_pattern_outlook,
+)
+from app.services.futures_macro_snapshot import (
+    load_overview_futures_macro_materialized_snapshot,
 )
 from app.services.futures_macro_validation import (
     build_current_scenario_validation_summary,
@@ -849,8 +850,8 @@ def _pattern_command_payload(macro: dict[str, Any], pattern_outlook: dict[str, A
         "title": "선물 매크로 패턴",
         "detail": f"일봉 {standardized}/{symbol_count}개 · 기준일 {latest_daily} · stored continuous futures",
         "actions": [
-            {"id": "daily_refresh", "label": "일봉 갱신", "kind": "primary", "detail": "저장된 주요 선물 5년 1D OHLCV를 다시 수집합니다."},
-            {"id": "reload", "label": "다시 읽기", "kind": "secondary", "detail": "현재 DB 기준으로 snapshot cache를 비운 뒤 다시 읽습니다."},
+            {"id": "daily_refresh", "label": "일봉 갱신", "kind": "primary", "detail": "저장된 주요 선물 5년 1D OHLCV를 다시 수집하고 compact snapshot을 갱신합니다."},
+            {"id": "reload", "label": "다시 읽기", "kind": "secondary", "detail": "provider 수집이나 전망 계산 없이 저장된 snapshot을 다시 읽습니다."},
         ],
     }
 
@@ -971,10 +972,86 @@ def _pattern_method_payload(pattern_outlook: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _compact_trace_rows(value: Any, *, limit: int = 80) -> list[dict[str, Any]]:
+    if isinstance(value, pd.DataFrame):
+        records = value.to_dict(orient="records")
+    elif isinstance(value, list):
+        records = [dict(item) for item in value if isinstance(item, dict)]
+    else:
+        records = []
+    return records[: max(1, int(limit))]
+
+
+def _calculation_trace_payload(
+    macro: dict[str, Any],
+    *,
+    snapshot_metadata: dict[str, Any] | None,
+    pattern_outlook: dict[str, Any],
+) -> dict[str, Any]:
+    coverage = dict(macro.get("coverage") or {})
+    metadata = dict(snapshot_metadata or {})
+    table_specs = (
+        ("scores", "현재 점수 원본", macro.get("scores")),
+        ("components", "점수 구성 기여", macro.get("score_components")),
+        ("symbols", "선물 일봉 변화", macro.get("symbols")),
+    )
+    tables = []
+    for key, label, value in table_specs:
+        rows = _compact_trace_rows(value)
+        columns = list(rows[0].keys()) if rows else []
+        tables.append(
+            {
+                "key": key,
+                "label": label,
+                "columns": columns,
+                "rows": rows,
+            }
+        )
+    cautions = [
+        _macro_caution_label(item)
+        for item in list(macro.get("cautions") or [])
+        if str(item).strip()
+    ]
+    cautions.extend(
+        _macro_caution_label(item)
+        for item in list(pattern_outlook.get("limitations") or [])
+        if str(item).strip()
+    )
+    return {
+        "metadata": [
+            {
+                "label": "CME/yfinance 일봉 세션 기준일",
+                "value": _snapshot_value(
+                    coverage.get("latest_daily_date") or metadata.get("as_of_date")
+                ),
+            },
+            {
+                "label": "snapshot 저장 시각",
+                "value": _snapshot_value(metadata.get("materialized_at")),
+            },
+            {
+                "label": "source marker",
+                "value": _snapshot_value(metadata.get("source_marker")),
+            },
+            {
+                "label": "daily coverage",
+                "value": _futures_daily_coverage_label(coverage),
+            },
+            {
+                "label": "저장 row",
+                "value": f"{int(coverage.get('raw_rows') or 0):,}",
+            },
+        ],
+        "tables": tables,
+        "cautions": list(dict.fromkeys(cautions)),
+    }
+
+
 def build_futures_macro_react_workbench_payload(
     macro: dict[str, Any],
     *,
     pattern_outlook: dict[str, Any],
+    snapshot_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     pattern = dict(pattern_outlook.get("current_pattern") or macro.get("pattern") or {})
     return {
@@ -999,6 +1076,11 @@ def build_futures_macro_react_workbench_payload(
         "ribbon": {"title": "최근 60거래일 체제", "items": list(pattern.get("ribbon") or [])},
         "asset_pathways": _pattern_asset_pathways(pattern, pattern_outlook),
         "method": _pattern_method_payload(pattern_outlook),
+        "calculation_trace": _calculation_trace_payload(
+            macro,
+            snapshot_metadata=snapshot_metadata,
+            pattern_outlook=pattern_outlook,
+        ),
         "action_boundary": "python_dispatch_only",
         "boundary_note": "이 화면은 빠른 시장 재가격화와 조건부 위험 체제를 설명하며 매수매도 신호가 아닙니다.",
     }
@@ -1902,7 +1984,7 @@ def _render_futures_macro_refresh_controls(*, section_detail: str) -> None:
         "일봉 갱신",
         key="overview_futures_macro_tab_daily_refresh",
         use_container_width=True,
-        help="저장된 주요 선물 5년 1D OHLCV를 다시 수집하고 매크로 snapshot cache를 비웁니다.",
+        help="저장된 주요 선물 5년 1D OHLCV를 다시 수집하고 compact snapshot을 갱신합니다.",
     ):
         with st.spinner("선물 5년 일봉을 yfinance에서 수집하는 중입니다..."):
             _refresh_futures_macro_daily_for_ui()
@@ -1911,7 +1993,7 @@ def _render_futures_macro_refresh_controls(*, section_detail: str) -> None:
         "다시 읽기",
         key="overview_futures_macro_tab_reload",
         use_container_width=True,
-        help="수집 job은 실행하지 않고 현재 DB 기준으로 매크로 snapshot cache만 비운 뒤 다시 읽습니다.",
+        help="provider 수집이나 전망 계산 없이 저장된 snapshot을 다시 읽습니다.",
     ):
         _reload_futures_macro_snapshot_for_ui()
         st.rerun()
@@ -1972,18 +2054,38 @@ def _render_futures_pattern_outlook_fallback(pattern_outlook: dict[str, Any]) ->
 
 
 def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
-    macro = load_overview_futures_macro_snapshot(include_validation=False)
-    pattern_outlook = load_overview_futures_macro_pattern_outlook()
+    _ = detail_expanded
+    materialized = load_overview_futures_macro_materialized_snapshot()
+    if str(materialized.get("status") or "") == "READY":
+        macro = dict(materialized.get("macro") or {})
+        pattern_outlook = dict(materialized.get("pattern_outlook") or {})
+        snapshot_metadata = dict(materialized.get("metadata") or {})
+    else:
+        reason = _display_text(
+            materialized.get("reason"),
+            "저장된 선물 매크로 snapshot이 없어 일봉 갱신이 필요합니다.",
+        )
+        macro = {
+            "status": "MISSING",
+            "coverage": {},
+            "warnings": [reason],
+            "summary": {"summary": reason},
+            "cautions": [reason],
+        }
+        pattern_outlook = {
+            "status": "LIMITED",
+            "horizons": [],
+            "limitations": [reason],
+        }
+        snapshot_metadata = {}
     coverage = dict(macro.get("coverage") or {})
-    scores = macro.get("scores")
-    components = macro.get("score_components")
-    symbols = macro.get("symbols")
     react_available = futures_macro_react_component_available()
 
     if react_available:
         payload = build_futures_macro_react_workbench_payload(
             macro,
             pattern_outlook=pattern_outlook,
+            snapshot_metadata=snapshot_metadata,
         )
         react_event = render_futures_macro_react_workbench(payload, key="overview_futures_macro_workbench")
         _handle_futures_macro_react_event(react_event, macro)
@@ -1996,25 +2098,11 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
         )
         _render_futures_market_brief(macro)
         _render_futures_pattern_outlook_fallback(pattern_outlook)
-    warnings = list(macro.get("warnings") or [])
-    if warnings:
-        _render_snapshot_warnings({"warnings": [_futures_warning_label(warning) for warning in warnings]})
-
-    cautions = [_macro_caution_label(item) for item in macro.get("cautions") or [] if str(item).strip()]
-    cautions.extend(_macro_caution_label(item) for item in pattern_outlook.get("limitations") or [] if str(item).strip())
-    with st.expander("원본 데이터 / 계산 추적", expanded=detail_expanded):
-        if react_available:
-            st.caption("이 영역은 상단 세 섹션의 판단을 검산하는 원본 데이터입니다. 자료 기준, 점수 계산표, 선물 일봉 변화, 과거 표본을 순서대로 확인합니다.")
-        else:
-            _render_macro_evidence_reading(list(macro.get("evidence_reading") or []))
-        _render_futures_macro_data_management(macro)
-        _render_futures_macro_raw_tables(
-            scores=scores,
-            components=components,
-            symbols=symbols,
-            validation={},
-            cautions=cautions,
-        )
+        warnings = list(macro.get("warnings") or [])
+        if warnings:
+            _render_snapshot_warnings(
+                {"warnings": [_futures_warning_label(warning) for warning in warnings]}
+            )
 
 
 def render_futures_macro_fragment(*, detail_expanded: bool) -> None:

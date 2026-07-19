@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Streamlit, withStreamlitConnection, ComponentProps } from "streamlit-component-lib";
 import AssetPathwaysSection from "./AssetPathwaysSection";
+import CalculationTraceDisclosure from "./CalculationTraceDisclosure";
 import CurrentEvidencePanel from "./CurrentEvidencePanel";
 import MacroContextSection from "./MacroContextSection";
 import MethodDisclosure from "./MethodDisclosure";
@@ -131,6 +132,19 @@ export type MethodPayload = {
   caveats: string[];
 };
 
+export type CalculationTraceValue = string | number | boolean | null;
+export type CalculationTraceTable = {
+  key: "scores" | "components" | "symbols";
+  label: string;
+  columns: string[];
+  rows: Array<Record<string, CalculationTraceValue>>;
+};
+export type CalculationTracePayload = {
+  metadata: Array<{ label: string; value: string }>;
+  tables: CalculationTraceTable[];
+  cautions: string[];
+};
+
 export type FuturesMacroWorkbenchPayload = {
   schema_version: "futures_macro_react_workbench_v2";
   component: "FuturesMacroWorkbench";
@@ -142,6 +156,7 @@ export type FuturesMacroWorkbenchPayload = {
   ribbon: RibbonPayload;
   asset_pathways: AssetPathwayPayload[];
   method: MethodPayload;
+  calculation_trace: CalculationTracePayload;
   action_boundary: "python_dispatch_only";
   boundary_note: string;
 };
@@ -191,7 +206,15 @@ function FuturesMacroWorkbench({ args }: Props) {
       </div>
       <PatternRibbonSection ribbon={payload.ribbon} />
       <AssetPathwaysSection pathways={payload.asset_pathways} />
-      <MethodDisclosure boundaryNote={payload.boundary_note} method={payload.method} />
+      <MethodDisclosure
+        boundaryNote={payload.boundary_note}
+        method={payload.method}
+        onToggle={syncFrameHeightSoon}
+      />
+      <CalculationTraceDisclosure
+        trace={payload.calculation_trace}
+        onToggle={syncFrameHeightSoon}
+      />
     </main>
   );
 }

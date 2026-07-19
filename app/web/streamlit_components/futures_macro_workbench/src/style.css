@@ -28,7 +28,8 @@ button { font: inherit; }
 .fm-workbench__evidence,
 .fm-workbench__ribbon-section,
 .fm-workbench__asset-section,
-.fm-workbench__method {
+.fm-workbench__method,
+.fm-workbench__trace {
   border: 1px solid var(--line);
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.96);
@@ -264,8 +265,10 @@ button { font: inherit; }
 .fm-workbench__asset-outlook strong { color: #40566a; }
 .fm-workbench__asset-grid article p { border-top: 1px solid #edf1f4; color: var(--muted); font-size: 0.66rem; line-height: 1.45; margin: 11px 0 0; padding-top: 10px; }
 
-.fm-workbench__method { overflow: hidden; }
-.fm-workbench__method summary { cursor: pointer; font-size: 0.82rem; font-weight: 850; padding: 15px 18px; }
+.fm-workbench__disclosure { overflow: hidden; }
+.fm-workbench__disclosure[open] { box-shadow: 0 10px 28px rgba(30, 56, 75, 0.06); }
+.fm-workbench__disclosure summary { cursor: pointer; font-size: 0.82rem; font-weight: 850; padding: 15px 18px; }
+.fm-workbench__disclosure[open] summary { border-bottom: 1px solid var(--line); }
 .fm-workbench__method-grid { border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 16px 18px 0; }
 .fm-workbench__method-grid div { background: var(--soft); border-radius: 10px; display: grid; gap: 4px; padding: 10px; }
 .fm-workbench__method-grid span { color: var(--muted); font-size: 0.64rem; }
@@ -273,9 +276,28 @@ button { font: inherit; }
 .fm-workbench__method ul { color: var(--muted); font-size: 0.72rem; line-height: 1.55; margin: 14px 18px 0; padding-left: 18px; }
 .fm-workbench__method > p { background: #f0f6f8; color: #52687a; font-size: 0.7rem; line-height: 1.5; margin: 14px 18px 18px; padding: 10px; }
 
+.fm-workbench__trace-body { display: grid; gap: 14px; padding: 16px 18px 18px; }
+.fm-workbench__trace-intro { color: var(--muted); font-size: 0.72rem; line-height: 1.55; margin: 0; }
+.fm-workbench__trace-metadata { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.fm-workbench__trace-metadata div { background: var(--soft); border-radius: 10px; display: grid; gap: 4px; min-width: 0; padding: 10px; }
+.fm-workbench__trace-metadata span { color: var(--muted); font-size: 0.62rem; }
+.fm-workbench__trace-metadata strong { font-size: 0.7rem; overflow-wrap: anywhere; }
+.fm-workbench__trace-section { border: 1px solid #e4eaef; border-radius: 12px; min-width: 0; padding: 12px; }
+.fm-workbench__trace-section header { align-items: center; display: flex; justify-content: space-between; gap: 12px; }
+.fm-workbench__trace-section h4 { font-size: 0.78rem; margin: 0; }
+.fm-workbench__trace-section header span { background: var(--soft); border-radius: 999px; color: var(--muted); font-size: 0.62rem; padding: 4px 7px; }
+.fm-workbench__trace-table-wrap { margin-top: 10px; max-width: 100%; overflow-x: auto; }
+.fm-workbench__trace-table { border-collapse: collapse; font-size: 0.66rem; min-width: max-content; width: 100%; }
+.fm-workbench__trace-table th,
+.fm-workbench__trace-table td { border-bottom: 1px solid #edf1f4; padding: 8px 9px; text-align: left; white-space: nowrap; }
+.fm-workbench__trace-table th { background: #f5f8fa; color: #52687a; font-weight: 800; position: sticky; top: 0; }
+.fm-workbench__trace-table td { color: #40566a; }
+.fm-workbench__trace-cautions { color: var(--muted); display: grid; font-size: 0.7rem; gap: 7px; line-height: 1.5; margin: 10px 0 0; padding-left: 18px; }
+
 @media (max-width: 1040px) {
   .fm-workbench__asset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fm-workbench__method-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .fm-workbench__trace-metadata { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 760px) {
@@ -288,7 +310,8 @@ button { font: inherit; }
   .fm-workbench__pattern-layout,
   .fm-pattern-map__body,
   .fm-workbench__asset-grid,
-  .fm-workbench__method-grid { grid-template-columns: 1fr; }
+  .fm-workbench__method-grid,
+  .fm-workbench__trace-metadata { grid-template-columns: 1fr; }
   .fm-workbench__evidence-groups { grid-template-columns: 1fr; }
   .fm-workbench__section-heading { align-items: start; flex-direction: column; }
   .fm-workbench__section-heading > small { text-align: left; }
