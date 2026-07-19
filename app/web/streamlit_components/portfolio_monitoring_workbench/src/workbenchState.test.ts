@@ -16,7 +16,9 @@ import {
   buildRiskCalibrationPresentation,
   buildCatalogSearchEvent,
   drawerFrameHeight,
+  nearestChartPointIndex,
   normalizeItemBuilderState,
+  placeChartTooltip,
 } from "./workbenchState";
 
 const groups: GroupSummary[] = [
@@ -93,6 +95,36 @@ describe("portfolio monitoring workbench state", () => {
     const series = buildGroupChartSeries(activeGroup.curve, ["a", "b"]);
     expect(series[0].items.b).toBeNull();
     expect(series[1].items.b).toBe(10500);
+  });
+
+  it("selects the nearest valid chart observation across the plot", () => {
+    const series = buildGroupChartSeries([
+      { date: "2026-07-01", total_value: 10000 },
+      { date: "2026-07-02", total_value: null },
+      { date: "2026-07-03", total_value: 12000 },
+    ], []);
+
+    expect(nearestChartPointIndex(series, 66, 66, 938)).toBe(0);
+    expect(nearestChartPointIndex(series, 502, 66, 938)).toBe(0);
+    expect(nearestChartPointIndex(series, 880, 66, 938)).toBe(2);
+  });
+
+  it("keeps the chart tooltip inside the visible chart bounds", () => {
+    expect(placeChartTooltip(900, 20, {
+      chartWidth: 960,
+      plotTop: 22,
+      plotBottom: 244,
+      tooltipWidth: 142,
+      tooltipHeight: 48,
+    })).toEqual({ x: 746, y: 22, side: "left" });
+
+    expect(placeChartTooltip(120, 240, {
+      chartWidth: 960,
+      plotTop: 22,
+      plotBottom: 244,
+      tooltipWidth: 142,
+      tooltipHeight: 48,
+    })).toEqual({ x: 132, y: 196, side: "right" });
   });
 
   it("labels short-window CAGR in Korean", () => {

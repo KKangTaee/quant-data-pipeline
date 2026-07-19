@@ -21,6 +21,32 @@ def _load_component():
 
 
 class PortfolioMonitoringComponentTests(unittest.TestCase):
+    def test_value_chart_exposes_visible_pointer_and_keyboard_tooltip(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('className="pm-chart-hit-area"', source)
+        self.assertIn("onPointerMove=", source)
+        self.assertIn("onFocus={() => setActiveIndex(index)}", source)
+        self.assertIn('className="pm-chart-hover-line"', source)
+        self.assertIn('className="pm-chart-tooltip"', source)
+
+    def test_portfolio_monitoring_typography_is_one_pixel_larger(self) -> None:
+        styles = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/style.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertRegex(styles, r"\.pm-workbench \{[^}]*font-size: 17px;")
+        self.assertIn(".pm-group-card strong { overflow: hidden; font-size: 14px;", styles)
+        self.assertIn(".pm-hero h1 { margin: 6px 0 0; color: var(--ink); font-size: clamp(25px, 3vw, 36px);", styles)
+        self.assertIn(".pm-section-heading h2 { margin: 4px 0 0; color: #243f53; font-size: 18px;", styles)
+        self.assertIn(".pm-axis-label, .pm-axis-date { fill: #83919c; font-size: 10px;", styles)
+        self.assertIn(".pm-diagnosis-card > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #788b98; font-size: 8px;", styles)
+        self.assertIn(".pm-catalog-search input, .pm-field input { width: 100%; height: 38px; padding: 0 10px; border: 1px solid #cfdde5; border-radius: 9px; color: #203c50; background: #fff; font-size: 12px;", styles)
+        self.assertIn("@media (max-width: 420px)", styles)
+        self.assertIn(".pm-hero h1 { font-size: 26px; }", styles)
+
     def test_date_input_uses_immediate_input_event_without_blur_rerun(self) -> None:
         source = Path(
             "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"

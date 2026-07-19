@@ -6708,3 +6708,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 진단 snapshot/history와 walk-forward calibration artifact를 저장하고, current fingerprint의 OOS gate가 `READY`일 때만 조건부 확률을 공개한다. Actual은 근거 부족으로 `SUPPRESSED`다.
 - 안전한 격리 DB DDL/legacy apply 검증 후 `finance_meta` five-table schema와 default group 하나를 생성했다. Legacy source는 dry-run만 하여 checksum을 보존했고 사용자 종목은 넣지 않았다.
 - 83 monitoring, 12 React, 139 linked regressions와 1440/760/420 Browser QA를 통과했다. 전체 roadmap `6/6차` 완료; 상세는 `tasks/done/portfolio-monitoring-react-command-center-v1-20260719/`를 본다.
+
+## 2026-07-19 - Portfolio Monitoring 가치곡선 hover·글자 크기 보정 완료
+
+- 종합 가치곡선 plot 전체에서 가장 가까운 유효 관측일의 날짜·평가금액 tooltip, guide line, 강조점을 표시하고 keyboard focus도 같은 상태를 사용한다.
+- Portfolio Monitoring React 전용 stylesheet의 기존 px 기반 font-size와 component 기본 글자를 정확히 1px 높였으며 다른 탭과 계산/DB 계약은 변경하지 않았다.
+- React 17 tests, Portfolio Monitoring Python 89 tests, typecheck/build와 actual-data Browser QA를 통과했다. 전체 보정 roadmap `3/3차` 완료다.
+- 상세는 `tasks/done/portfolio-monitoring-chart-hover-font-polish-v1-20260719/`를 본다.

@@ -10078,3 +10078,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 실제 그룹·종목 추적 workflow를 완성하되 legacy 파일과 사용자 데이터를 훼손하지 않고, 검증되지 않은 macro probability를 보여주지 않아야 함.
 - Analysis result: DB/service/React/diagnosis/macro/history/calibration의 6차를 구현했다. Production에는 five-table schema와 empty default group만 생성했고, legacy apply와 synthetic QA holdings는 격리 DB/fixture에 한정했다.
 - Follow-up: 전체 `6/6차`와 responsive QA를 완료했다. 실제 Futures Macro compatible snapshot과 장기 PIT 표본이 충분해 OOS gate가 통과하기 전까지 probability는 `SUPPRESSED`를 유지한다.
+
+### 2026-07-19 - 가치곡선은 plot-wide hover로 날짜와 평가금액을 직접 확인한다
+
+- User request: 종합 가치곡선의 마우스 hover가 없는 문제를 보완하고 Portfolio Monitoring 탭 전체 글자 크기를 1px 높여 달라고 요청함.
+- Interpreted goal: dense 시계열의 작은 점을 정확히 겨냥하지 않아도 날짜별 총 평가금액을 읽고, 기존 UI 밀도를 크게 바꾸지 않으면서 가독성을 높여야 함.
+- Analysis result: 투명 plot hit area가 pointer x좌표에서 가장 가까운 유효 관측치를 선택하고, 날짜·금액 tooltip/guide/active point를 표시한다. 기존 px 기반 font-size만 모두 +1해 spacing과 다른 탭을 보존했다.
+- Follow-up: 보정 roadmap `3/3차`, regression/build/actual-data QA를 완료했다. 데이터·진단·확률·주문 경계의 후속 변경은 없다.

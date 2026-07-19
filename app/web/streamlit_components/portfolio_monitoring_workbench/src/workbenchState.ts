@@ -238,6 +238,52 @@ export function buildGroupChartSeries(
     .sort((left, right) => left.date.localeCompare(right.date));
 }
 
+export function nearestChartPointIndex(
+  series: ChartPoint[],
+  pointerX: number,
+  plotLeft: number,
+  plotRight: number,
+): number | null {
+  if (!series.length) return null;
+  const validIndices = series
+    .map((point, index) => point.total == null ? null : index)
+    .filter((index): index is number => index != null);
+  if (!validIndices.length) return null;
+
+  const plotWidth = Math.max(plotRight - plotLeft, 1);
+  const boundedX = Math.min(Math.max(pointerX, plotLeft), plotRight);
+  const targetIndex = ((boundedX - plotLeft) / plotWidth) * Math.max(series.length - 1, 1);
+  return validIndices.reduce((nearest, index) => (
+    Math.abs(index - targetIndex) < Math.abs(nearest - targetIndex) ? index : nearest
+  ));
+}
+
+export type ChartTooltipBounds = {
+  chartWidth: number;
+  plotTop: number;
+  plotBottom: number;
+  tooltipWidth: number;
+  tooltipHeight: number;
+};
+
+export function placeChartTooltip(
+  pointX: number,
+  pointY: number,
+  bounds: ChartTooltipBounds,
+) {
+  const gap = 12;
+  const useLeft = pointX + gap + bounds.tooltipWidth > bounds.chartWidth;
+  const x = useLeft
+    ? Math.max(8, pointX - gap - bounds.tooltipWidth)
+    : pointX + gap;
+  const maximumY = Math.max(bounds.plotTop, bounds.plotBottom - bounds.tooltipHeight);
+  const y = Math.min(
+    Math.max(pointY - bounds.tooltipHeight / 2, bounds.plotTop),
+    maximumY,
+  );
+  return { x, y, side: useLeft ? "left" as const : "right" as const };
+}
+
 export function buildCommonBasisBanner(group: { status: string; basis_date: string | null }) {
   if (!group.basis_date) {
     return "공통 평가 기준일을 계산할 수 없습니다.";

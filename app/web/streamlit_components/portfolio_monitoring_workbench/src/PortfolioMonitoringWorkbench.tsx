@@ -14,7 +14,9 @@ import {
   createItemDraft,
   drawerFrameHeight,
   formatMetric,
+  nearestChartPointIndex,
   normalizeItemBuilderState,
+  placeChartTooltip,
   selectActiveGroup,
   selectItem,
   validateItemDraft,
@@ -52,6 +54,7 @@ function todayText() {
 }
 
 function ValueChart({ rows, items }: { rows: Array<Record<string, string | number | null>>; items: ItemRow[] }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const series = buildGroupChartSeries(rows, items.map((item) => item.monitoring_item_id));
   const values = series.map((point) => point.total).filter((value): value is number => value != null);
   if (series.length < 2 || values.length < 2) {
@@ -73,6 +76,30 @@ function ValueChart({ rows, items }: { rows: Array<Record<string, string | numbe
     .join(" ");
   const area = `${path} L${x(series.length - 1)},${height - inset.bottom} L${x(0)},${height - inset.bottom} Z`;
   const ticks = [0, 0.5, 1];
+  const activePoint = activeIndex == null ? null : series[activeIndex] ?? null;
+  const activeX = activeIndex == null ? null : x(activeIndex);
+  const activeY = activePoint?.total == null ? null : y(activePoint.total);
+  const tooltipWidth = 142;
+  const tooltipHeight = 48;
+  const tooltipPlacement = activeX == null || activeY == null
+    ? null
+    : placeChartTooltip(activeX, activeY, {
+      chartWidth: width,
+      plotTop: inset.top,
+      plotBottom: height - inset.bottom,
+      tooltipWidth,
+      tooltipHeight,
+    });
+
+  const updateActivePoint = (event: React.PointerEvent<SVGRectElement>) => {
+    const svg = event.currentTarget.ownerSVGElement;
+    if (!svg) return;
+    const bounds = svg.getBoundingClientRect();
+    if (!bounds.width) return;
+    const pointerX = ((event.clientX - bounds.left) / bounds.width) * width;
+    setActiveIndex(nearestChartPointIndex(series, pointerX, inset.left, width - inset.right));
+  };
+
   return (
     <div className="pm-chart-wrap">
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="포트폴리오 가치곡선">
@@ -95,11 +122,43 @@ function ValueChart({ rows, items }: { rows: Array<Record<string, string | numbe
         <path d={area} fill="url(#pmArea)" />
         <path d={path} className="pm-value-line" />
         {series.map((point, index) => point.total == null ? null : (
-          <g className="pm-chart-point" key={`${point.date}-${index}`} tabIndex={0}>
+          <g
+            className="pm-chart-point"
+            key={`${point.date}-${index}`}
+            tabIndex={0}
+            onFocus={() => setActiveIndex(index)}
+            onBlur={() => setActiveIndex(null)}
+          >
             <circle cx={x(index)} cy={y(point.total)} r={3.4} />
             <title>{`${compactDate(point.date)} · ${formatMetric(point.total, "currency")}`}</title>
           </g>
         ))}
+        <rect
+          className="pm-chart-hit-area"
+          x={inset.left}
+          y={inset.top}
+          width={width - inset.left - inset.right}
+          height={height - inset.top - inset.bottom}
+          onPointerMove={updateActivePoint}
+          onPointerLeave={() => setActiveIndex(null)}
+        />
+        {activePoint?.total != null && activeX != null && activeY != null && tooltipPlacement && (
+          <g className="pm-chart-hover" pointerEvents="none">
+            <line
+              className="pm-chart-hover-line"
+              x1={activeX}
+              y1={inset.top}
+              x2={activeX}
+              y2={height - inset.bottom}
+            />
+            <circle className="pm-chart-active-point" cx={activeX} cy={activeY} r={5.5} />
+            <g className="pm-chart-tooltip" transform={`translate(${tooltipPlacement.x} ${tooltipPlacement.y})`}>
+              <rect width={tooltipWidth} height={tooltipHeight} rx={9} />
+              <text x={12} y={18} className="pm-chart-tooltip-date">{compactDate(activePoint.date)}</text>
+              <text x={12} y={37} className="pm-chart-tooltip-value">{formatMetric(activePoint.total, "currency")}</text>
+            </g>
+          </g>
+        )}
         <text x={inset.left} y={height - 10} className="pm-axis-date">{compactDate(series[0].date)}</text>
         <text x={width - inset.right} y={height - 10} textAnchor="end" className="pm-axis-date">{compactDate(series[series.length - 1]?.date ?? null)}</text>
       </svg>
