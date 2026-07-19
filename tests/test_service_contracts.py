@@ -22555,20 +22555,79 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         snapshot = {
             "status": "OK",
             "coverage": {
-                "cnn_score": 54.7,
-                "cnn_rating": "neutral",
-                "aaii_bearish": 37.0,
-                "aaii_bull_bear_spread": -0.7,
+                "cnn_score": 37.1,
+                "cnn_rating": "fear",
+                "aaii_bullish": 44.9,
+                "aaii_neutral": 22.2,
+                "aaii_bearish": 32.9,
+                "aaii_bull_bear_spread": 12.0,
                 "source_count": 2,
                 "stale_count": 0,
                 "missing_count": 0,
             },
             "analysis": {
-                "phase": "MIXED_NEUTRAL",
-                "phase_label": "혼합 중립",
-                "tone": "neutral",
-                "headline": "중립이지만 내부는 엇갈린 시장 심리입니다.",
-                "summary": "헤드라인 점수는 중립권이지만 CNN 구성요소는 탐욕과 공포가 갈립니다.",
+                "phase": "DIVERGENT",
+                "phase_label": "행동 공포 · 설문 낙관",
+                "tone": "warning",
+                "headline": "시장 행동은 공포, 개인투자자 설문은 낙관 — 심리가 엇갈립니다.",
+                "summary": "가격 행동과 설문 인식이 반대 방향입니다.",
+                "axes": {
+                    "market_behavior": {
+                        "label": "시장 행동",
+                        "source": "CNN Fear & Greed",
+                        "available": True,
+                        "direction": "fear",
+                        "direction_label": "공포",
+                        "tone": "warning",
+                        "current": 37.1,
+                        "previous": 41.0,
+                        "change": -3.9,
+                        "latest_date": "2026-06-04",
+                        "previous_date": "2026-06-03",
+                        "range": {"percentile": 22.5, "position_label": "낮은 편", "sample_count": 40},
+                        "component_balance": {"greed_count": 1, "fear_count": 1, "neutral_count": 0, "direction": "mixed"},
+                        "components_support": "CNN 구성요소가 공포와 탐욕으로 갈려 headline 내부 확신도는 낮습니다.",
+                        "detail": "시장 행동 심리입니다.",
+                    },
+                    "investor_survey": {
+                        "label": "개인투자자 설문",
+                        "source": "AAII Sentiment Survey",
+                        "available": True,
+                        "direction": "optimistic",
+                        "direction_label": "낙관",
+                        "tone": "positive",
+                        "current": 12.0,
+                        "previous": 6.0,
+                        "change": 6.0,
+                        "latest_date": "2026-06-04",
+                        "previous_date": "2026-05-28",
+                        "spread": 12.0,
+                        "responses": {"bullish": 44.9, "neutral": 22.2, "bearish": 32.9},
+                        "long_term_comparison": {
+                            "bullish": {"current": 44.9, "historical_average": 38.0, "difference_pp": 6.9},
+                            "neutral": {"current": 22.2, "historical_average": 31.5, "difference_pp": -9.3},
+                            "bearish": {"current": 32.9, "historical_average": 30.5, "difference_pp": 2.4},
+                        },
+                        "range": {"percentile": 80.0, "position_label": "높은 편", "sample_count": 28},
+                        "detail": "Bull-Bear Spread +12.0pp 기준으로 낙관 우위입니다.",
+                    },
+                },
+                "cross_read": {
+                    "phase": "DIVERGENT",
+                    "phase_label": "행동 공포 · 설문 낙관",
+                    "status": "뚜렷한 엇갈림",
+                    "tone": "warning",
+                    "headline": "시장 행동은 공포, 개인투자자 설문은 낙관 — 심리가 엇갈립니다.",
+                    "meaning": "가격 행동과 설문 인식이 반대 방향입니다.",
+                    "summary": "가격 행동과 설문 인식이 반대 방향입니다.",
+                    "confidence_note": "CNN 구성요소가 공포와 탐욕으로 갈려 headline 내부 확신도는 낮습니다.",
+                    "market_direction": "fear",
+                    "survey_direction": "optimistic",
+                },
+                "watch_conditions": [
+                    {"label": "CNN 행동 심리", "condition": "CNN이 중립권으로 회복하는지 확인합니다.", "basis": "일간 관측", "tone": "warning"},
+                    {"label": "AAII 설문 심리", "condition": "AAII 낙관 우위가 유지되는지 확인합니다.", "basis": "주간 조사", "tone": "positive"},
+                ],
                 "data_confidence": {
                     "status": "High",
                     "tone": "positive",
@@ -22717,8 +22776,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             ),
             "history_rows": pd.DataFrame(
                 [
-                    {"Date": "2026-06-03", "Series": "CNN Fear & Greed", "Value": 54.0, "Source": "cnn_fear_greed"},
-                    {"Date": "2026-06-04", "Series": "CNN Fear & Greed", "Value": 54.7, "Source": "cnn_fear_greed"},
+                    {"Date": "2026-06-03", "Series": "CNN Fear & Greed", "Value": 41.0, "Source": "cnn_fear_greed"},
+                    {"Date": "2026-06-04", "Series": "CNN Fear & Greed", "Value": 37.1, "Source": "cnn_fear_greed"},
+                    {"Date": "2026-06-04", "Series": "AAII Bullish", "Value": 44.9, "Source": "aaii_sentiment_survey"},
+                    {"Date": "2026-06-04", "Series": "AAII Neutral", "Value": 22.2, "Source": "aaii_sentiment_survey"},
+                    {"Date": "2026-06-04", "Series": "AAII Bearish", "Value": 32.9, "Source": "aaii_sentiment_survey"},
+                    {"Date": "2026-06-04", "Series": "AAII Bull-Bear Spread", "Value": 12.0, "Source": "aaii_sentiment_survey"},
                 ]
             ),
             "warnings": [],
@@ -22726,34 +22789,36 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         payload = build_sentiment_react_workbench_payload(snapshot)
 
-        self.assertEqual(payload["schema_version"], "sentiment_react_workbench_v1")
+        self.assertEqual(payload["schema_version"], "sentiment_react_workbench_v2")
         self.assertEqual(payload["component"], "SentimentWorkbench")
         self.assertEqual(payload["action_boundary"], "python_dispatch_only")
         self.assertEqual([action["id"] for action in payload["command"]["actions"]], ["refresh", "reload"])
-        self.assertEqual(payload["summary"]["phase_label"], "혼합 중립")
-        self.assertEqual(payload["summary"]["headline"], "중립이지만 내부는 엇갈린 시장 심리입니다.")
+        self.assertEqual(payload["summary"]["phase_label"], "행동 공포 · 설문 낙관")
+        self.assertEqual(payload["summary"]["headline"], "시장 행동은 공포, 개인투자자 설문은 낙관 — 심리가 엇갈립니다.")
         self.assertIn("시장 배경", payload["boundary_note"])
-        self.assertIn(
-            {"label": "CNN Fear & Greed", "value": "54.7", "detail": "neutral", "tone": "neutral"},
-            payload["summary"]["metrics"],
-        )
         self.assertEqual(payload["freshness"]["latest_observation_date"], "2026-06-04")
         self.assertEqual(payload["freshness"]["source_count"], 2)
-        self.assertEqual(payload["analysis_steps"][0]["title"], "왜 이렇게 보나")
-        self.assertIn("AAII spread", payload["analysis_steps"][0]["status"])
-        self.assertEqual(payload["drivers"]["summary"]["greed_count"], 1)
-        self.assertEqual(payload["drivers"]["lanes"][0]["key"], "greed")
-        self.assertEqual(payload["drivers"]["lanes"][0]["items"][0]["current_reading"], "지수 추세: 지수 자체의 추세가 강합니다.")
-        self.assertEqual(payload["interpretation"]["range_context"][0]["series"], "CNN Fear & Greed")
-        self.assertEqual(payload["interpretation"]["range_context"][0]["percentile"], 62.5)
-        self.assertEqual(payload["interpretation"]["divergence"]["status"], "뚜렷한 엇갈림")
-        self.assertEqual(payload["interpretation"]["divergence"]["items"][1]["direction_label"], "공포")
-        self.assertEqual(payload["interpretation"]["component_history"][0]["series"], "Market Momentum")
-        self.assertEqual(payload["interpretation"]["component_history"][0]["change_direction"], "up")
-        self.assertEqual(payload["next_checks"][0]["target"], "Market Movers breadth")
-        self.assertEqual(payload["charts"]["history"]["series"][0]["series"], "CNN Fear & Greed")
-        self.assertEqual(payload["charts"]["components"]["items"][0]["series"], "Market Momentum")
-        self.assertEqual(payload["evidence"]["raw_rows"][0]["Series"], "CNN Fear & Greed")
+        self.assertEqual(set(payload["axes"]), {"market_behavior", "investor_survey"})
+        self.assertEqual(payload["axes"]["market_behavior"]["label"], "시장 행동")
+        self.assertEqual(payload["axes"]["investor_survey"]["label"], "개인투자자 설문")
+        self.assertEqual(payload["cross_read"]["status"], "뚜렷한 엇갈림")
+        self.assertEqual(payload["evidence"]["cnn_components"][0]["series"], "Market Momentum")
+        self.assertEqual(payload["evidence"]["cnn_components"][0]["change"], 9.8)
+        self.assertEqual(payload["evidence"]["aaii_comparison"][0]["key"], "bullish")
+        self.assertEqual(payload["charts"]["cnn"]["unit"], "score_0_100")
+        self.assertEqual(payload["charts"]["aaii_responses"]["unit"], "percent")
+        self.assertEqual(payload["charts"]["aaii_spread"]["unit"], "percentage_point")
+        self.assertEqual({row["series"] for row in payload["charts"]["cnn"]["series"]}, {"CNN Fear & Greed"})
+        self.assertEqual(
+            {row["series"] for row in payload["charts"]["aaii_responses"]["series"]},
+            {"AAII Bullish", "AAII Neutral", "AAII Bearish"},
+        )
+        self.assertEqual(
+            {row["series"] for row in payload["charts"]["aaii_spread"]["series"]},
+            {"AAII Bull-Bear Spread"},
+        )
+        self.assertEqual(payload["watch_conditions"][0]["label"], "CNN 행동 심리")
+        self.assertEqual(payload["raw_evidence"]["sentiment_rows"][0]["Series"], "CNN Fear & Greed")
 
     def test_collection_ops_snapshot_tracks_market_sentiment_freshness(self) -> None:
         from app.services.overview.data_health import build_collection_ops_snapshot

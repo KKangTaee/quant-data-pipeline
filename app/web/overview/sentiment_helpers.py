@@ -404,6 +404,98 @@ def _sentiment_component_history_payload(analysis: dict[str, Any]) -> list[dict[
     return items
 
 
+def _sentiment_axis_payload(axis: Any, *, fallback_label: str) -> dict[str, Any]:
+    source = dict(axis) if isinstance(axis, dict) else {}
+    return {
+        **source,
+        "label": _display_text(source.get("label"), fallback_label),
+        "source": _display_text(source.get("source"), "-"),
+        "available": bool(source.get("available")),
+        "direction": _display_text(source.get("direction"), "unavailable"),
+        "direction_label": _display_text(source.get("direction_label"), "판정 보류"),
+        "tone": _sentiment_tone(source.get("tone") or "neutral"),
+        "current": _json_safe_value(source.get("current")),
+        "previous": _json_safe_value(source.get("previous")),
+        "change": _json_safe_value(source.get("change")),
+        "detail": _display_text(source.get("detail"), ""),
+    }
+
+
+def _sentiment_cnn_evidence_payload(
+    component_rows: list[dict[str, Any]],
+    analysis: dict[str, Any],
+) -> list[dict[str, Any]]:
+    explanations = {
+        str(item.get("series") or ""): dict(item)
+        for item in list(analysis.get("component_explanations") or [])
+        if isinstance(item, dict)
+    }
+    changes = {
+        str(item.get("series") or ""): dict(item)
+        for item in list(analysis.get("component_history") or [])
+        if isinstance(item, dict)
+    }
+    items: list[dict[str, Any]] = []
+    for row in component_rows:
+        series = _display_text(row.get("Series"))
+        explanation = explanations.get(series, {})
+        change = changes.get(series, {})
+        items.append(
+            {
+                "series": series,
+                "label_ko": _display_text(explanation.get("label_ko") or series),
+                "score": _json_safe_value(row.get("Score")),
+                "rating": _display_text(explanation.get("rating_label_ko") or row.get("Rating")),
+                "direction": _display_text(explanation.get("direction"), "neutral"),
+                "tone": _sentiment_tone(explanation.get("tone") or row.get("Status")),
+                "what_it_checks": _display_text(explanation.get("what_it_checks"), ""),
+                "current_reading": _display_text(explanation.get("current_reading"), ""),
+                "latest": _json_safe_value(change.get("latest", row.get("Score"))),
+                "latest_date": _display_text(change.get("latest_date") or row.get("Observation Date"), ""),
+                "previous": _json_safe_value(change.get("previous")),
+                "previous_date": _display_text(change.get("previous_date"), ""),
+                "change": _json_safe_value(change.get("change")),
+                "change_direction": _display_text(change.get("change_direction"), "flat"),
+            }
+        )
+    return items
+
+
+def _sentiment_aaii_comparison_payload(axis: dict[str, Any]) -> list[dict[str, Any]]:
+    comparisons = dict(axis.get("long_term_comparison") or {})
+    labels = (("bullish", "Bullish"), ("neutral", "Neutral"), ("bearish", "Bearish"))
+    items: list[dict[str, Any]] = []
+    for key, label in labels:
+        comparison = dict(comparisons.get(key) or {})
+        difference = _json_safe_value(comparison.get("difference_pp"))
+        numeric_difference = _safe_float(difference)
+        tone = "positive" if key == "bullish" and numeric_difference is not None and numeric_difference > 0 else "warning" if key == "bearish" and numeric_difference is not None and numeric_difference > 0 else "neutral"
+        items.append(
+            {
+                "key": key,
+                "label": label,
+                "current": _json_safe_value(comparison.get("current")),
+                "historical_average": _json_safe_value(comparison.get("historical_average")),
+                "difference_pp": difference,
+                "tone": tone,
+            }
+        )
+    return items
+
+
+def _sentiment_chart_points(rows: list[dict[str, Any]], allowed_series: set[str]) -> list[dict[str, Any]]:
+    return [
+        {
+            "date": _display_text(row.get("Date")),
+            "series": _display_text(row.get("Series")),
+            "value": _json_safe_value(row.get("Value")),
+            "source": _display_text(row.get("Source"), ""),
+        }
+        for row in rows
+        if _display_text(row.get("Series")) in allowed_series
+    ]
+
+
 def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[str, Any]:
     """Adapt the service-owned sentiment snapshot into a serializable React display payload."""
     coverage = dict(snapshot.get("coverage") or {})
@@ -412,12 +504,27 @@ def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[st
     component_rows = _records_from_frame(snapshot.get("component_rows"))
     history_rows = _records_from_frame(snapshot.get("history_rows"))
     data_confidence = dict(analysis.get("data_confidence") or {})
+    axes_source = dict(analysis.get("axes") or {})
+    market_behavior = _sentiment_axis_payload(axes_source.get("market_behavior"), fallback_label="시장 행동")
+    investor_survey = _sentiment_axis_payload(axes_source.get("investor_survey"), fallback_label="개인투자자 설문")
+    cross_read_source = dict(analysis.get("cross_read") or {})
+    cross_read = {
+        "phase": _display_text(cross_read_source.get("phase") or analysis.get("phase"), "PARTIAL_DATA"),
+        "phase_label": _display_text(cross_read_source.get("phase_label") or analysis.get("phase_label"), "데이터 확인"),
+        "status": _display_text(cross_read_source.get("status"), "한 축만 확인 가능"),
+        "tone": _sentiment_tone(cross_read_source.get("tone") or analysis.get("tone")),
+        "headline": _display_text(cross_read_source.get("headline") or analysis.get("headline"), "시장 심리 해석을 확인할 수 없습니다."),
+        "meaning": _display_text(cross_read_source.get("meaning") or analysis.get("summary"), ""),
+        "confidence_note": _display_text(cross_read_source.get("confidence_note"), ""),
+        "market_direction": _display_text(cross_read_source.get("market_direction"), market_behavior["direction"]),
+        "survey_direction": _display_text(cross_read_source.get("survey_direction"), investor_survey["direction"]),
+    }
     latest_date = _latest_observation_date(rows)
     stale_count = int(coverage.get("stale_count") or 0)
     missing_count = int(coverage.get("missing_count") or 0)
     freshness_tone = "positive" if stale_count == 0 and missing_count == 0 else "warning"
     return {
-        "schema_version": "sentiment_react_workbench_v1",
+        "schema_version": "sentiment_react_workbench_v2",
         "component": "SentimentWorkbench",
         "command": {
             "title": "시장 심리 컨텍스트",
@@ -438,18 +545,24 @@ def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[st
             ],
         },
         "summary": {
-            "phase": _display_text(analysis.get("phase"), "DATA_REVIEW"),
-            "phase_label": _display_text(analysis.get("phase_label"), "데이터 확인"),
-            "tone": _sentiment_tone(analysis.get("tone") or snapshot.get("status")),
-            "headline": _display_text(analysis.get("headline"), "시장 심리 해석을 확인할 수 없습니다."),
-            "summary": _display_text(analysis.get("summary"), ""),
+            "phase": cross_read["phase"],
+            "phase_label": cross_read["phase_label"],
+            "status": cross_read["status"],
+            "tone": cross_read["tone"],
+            "headline": cross_read["headline"],
+            "summary": cross_read["meaning"],
+            "latest_observation_date": latest_date,
             "data_confidence": {
                 "status": _display_text(data_confidence.get("status"), snapshot.get("status") or "-"),
                 "detail": _display_text(data_confidence.get("detail"), ""),
                 "tone": _sentiment_tone(data_confidence.get("tone") or snapshot.get("status")),
             },
-            "metrics": _sentiment_core_metrics(coverage, analysis),
         },
+        "axes": {
+            "market_behavior": market_behavior,
+            "investor_survey": investor_survey,
+        },
+        "cross_read": cross_read,
         "freshness": {
             "latest_observation_date": latest_date,
             "source_count": int(coverage.get("source_count") or 0),
@@ -458,44 +571,42 @@ def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[st
             "tone": freshness_tone,
             "detail": f"latest {latest_date} · missing {missing_count} · stale {stale_count}",
         },
-        "analysis_steps": [
+        "evidence": {
+            "cnn_components": _sentiment_cnn_evidence_payload(component_rows, analysis),
+            "aaii_comparison": _sentiment_aaii_comparison_payload(investor_survey),
+        },
+        "watch_conditions": [
             {
-                "title": _display_text(item.get("title")),
-                "status": _display_text(item.get("status"), ""),
-                "detail": _display_text(item.get("detail"), ""),
+                "label": _display_text(item.get("label")),
+                "condition": _display_text(item.get("condition"), ""),
+                "basis": _display_text(item.get("basis"), ""),
                 "tone": _sentiment_tone(item.get("tone") or "neutral"),
             }
-            for item in list(analysis.get("analysis_steps") or [])
-            if isinstance(item, dict)
-        ],
-        "drivers": {
-            "summary": dict(analysis.get("driver_summary") or {}),
-            "lanes": _sentiment_driver_lanes(analysis),
-        },
-        "interpretation": {
-            "range_context": _sentiment_range_context_payload(analysis),
-            "divergence": _sentiment_divergence_payload(analysis),
-            "component_history": _sentiment_component_history_payload(analysis),
-        },
-        "component_explanations": [
-            dict(item) for item in list(analysis.get("component_explanations") or []) if isinstance(item, dict)
-        ],
-        "next_checks": [
-            {
-                "target": _display_text(item.get("target")),
-                "reason": _display_text(item.get("reason"), ""),
-                "watch_for": _display_text(item.get("watch_for"), ""),
-                "tone": _sentiment_tone(item.get("tone") or "neutral"),
-            }
-            for item in list(analysis.get("next_checks") or [])
+            for item in list(analysis.get("watch_conditions") or [])
             if isinstance(item, dict)
         ],
         "charts": {
-            "history": _sentiment_history_chart_payload(history_rows),
-            "components": _sentiment_component_chart_payload(component_rows, analysis),
+            "cnn": {
+                "title": "CNN 시장 행동",
+                "basis": "CNN Fear & Greed 일간 관측 · 0~100",
+                "unit": "score_0_100",
+                "series": _sentiment_chart_points(history_rows, {"CNN Fear & Greed"}),
+            },
+            "aaii_responses": {
+                "title": "AAII 응답 구성",
+                "basis": "AAII Bullish / Neutral / Bearish 주간 조사 · %",
+                "unit": "percent",
+                "series": _sentiment_chart_points(history_rows, {"AAII Bullish", "AAII Neutral", "AAII Bearish"}),
+            },
+            "aaii_spread": {
+                "title": "AAII Bull-Bear Spread",
+                "basis": "AAII Bullish - Bearish 주간 조사 · pp",
+                "unit": "percentage_point",
+                "series": _sentiment_chart_points(history_rows, {"AAII Bull-Bear Spread"}),
+            },
         },
-        "evidence": {
-            "raw_rows": rows,
+        "raw_evidence": {
+            "sentiment_rows": rows,
             "component_rows": component_rows,
             "history_rows": history_rows,
             "warnings": [str(warning) for warning in list(snapshot.get("warnings") or []) if str(warning).strip()],
