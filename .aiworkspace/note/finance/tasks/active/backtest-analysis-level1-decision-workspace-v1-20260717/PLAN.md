@@ -7745,7 +7745,7 @@ git commit -m "Portfolio Mix 결과 차트와 호버 구현"
 - Consumes: Task 50 evidence contract and Task 51 presentation component.
 - Produces: verified desktop/760px runtime behavior, canonical ownership documentation and protected-path audit.
 
-- [ ] **Step 1: Execute desktop Browser QA with an actual Mix run**
+- [x] **Step 1: Execute desktop Browser QA with an actual Mix run**
 
 At approximately 1440px:
 
@@ -7761,7 +7761,7 @@ At approximately 1440px:
 
 Save `backtest-portfolio-mix-result-evidence-desktop-qa.png` as generated/untracked evidence.
 
-- [ ] **Step 2: Execute 760px Browser QA**
+- [x] **Step 2: Execute 760px Browser QA**
 
 At 760x1000 verify:
 
@@ -7773,7 +7773,7 @@ At 760x1000 verify:
 
 Save `backtest-portfolio-mix-result-evidence-760-qa.png` as generated/untracked evidence.
 
-- [ ] **Step 3: Apply `superpowers:verification-before-completion` with fresh commands**
+- [x] **Step 3: Apply `superpowers:verification-before-completion` with fresh commands**
 
 ```bash
 .venv/bin/python -m pytest \
@@ -7793,7 +7793,7 @@ git diff --check
 
 Any new Portfolio Mix failure blocks closeout. A repository baseline failure may be reported only after a focused passing command demonstrates this implementation is not the cause.
 
-- [ ] **Step 4: Apply `finance-doc-sync`**
+- [x] **Step 4: Apply `finance-doc-sync`**
 
 Record durable ownership:
 
@@ -7803,7 +7803,7 @@ Record durable ownership:
 - active task docs: exact RED/GREEN counts, build/compile output, Browser QA evidence, baseline failures and residual risks.
 - root logs: only a 3–5 line milestone, decision and handoff summary.
 
-- [ ] **Step 5: Audit protected paths and commit closeout**
+- [x] **Step 5: Audit protected paths and commit closeout**
 
 ```bash
 git status --short

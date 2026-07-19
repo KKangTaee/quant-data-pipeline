@@ -686,3 +686,22 @@
   pointercancel / blur`가 같은 clear handler를 사용하도록 보강한 뒤 `1 passed`.
 - correction React production build: `176 modules transformed`, CSS 11.50 kB,
   JS 341.88 kB, build 성공.
+
+## 2026-07-19 16차 Task 52 Runtime QA And Fresh Verification
+
+- desktop actual GTAA 50 / Equal Weight 50 run에서 result feedback과 shell gap `18px`, KPI,
+  누적 성과/월별 수익률, benchmark 부재와 상세 기여도·월별 표·계산/data trust를 확인했다.
+- actual hover는 누적 성과 `2021.07.31 / 167.12 / 67.12% / 17,832.32`, 월별 수익률
+  `2023.01 / 3.98% / 16,341.24`로 실제 row에 따라 갱신됐다.
+- 760x1000에서 chart grid 1열, desktop tick hidden / compact tick 3개, outer/primary/component
+  `scrollWidth === clientWidth`, disclosure와 ResizeObserver height sync를 확인했다.
+- generated evidence: `backtest-portfolio-mix-result-evidence-desktop-qa.png`,
+  `backtest-portfolio-mix-result-evidence-760-qa.png`; 두 파일은 stage하지 않는다.
+- fresh focused UI/boundary:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
+  -> `83 passed, 3 warnings in 1.64s`.
+- fresh full service -> `833 passed, 12 failed, 3 warnings, 35 subtests passed in 23.87s`.
+  기존 baseline은 Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6이며
+  Portfolio Mix 신규 failure는 0이다.
+- React production build: Vite 5.4.21, `176 modules transformed`, CSS 11.50 kB,
+  JS 341.88 kB. target 4-module `py_compile`과 `git diff --check`는 exit 0이다.

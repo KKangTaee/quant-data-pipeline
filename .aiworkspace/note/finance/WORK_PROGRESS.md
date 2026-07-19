@@ -6649,3 +6649,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Portfolio Mix를 네 단계 React shell로 전환하고 Python이 component validation, compare/weighted 실행, fingerprint, save와 Level2 handoff를 소유한다.
 - actual GTAA/Equal Weight run-save-restore-edit-rerun과 desktop/760px QA를 확인했다. legacy compare form과 prototype saved row는 primary route에서 제외했다.
 - 상세 검증과 남은 compatibility/accessibility 위험은 active task `RUNS.md`와 `RISKS.md`를 본다.
+
+## 2026-07-19 - Portfolio Mix 결과 해석과 차트 hover 완료
+
+- active task의 16-1~16-3에서 weighted result의 KPI·누적 성과·월별 수익률·component 기여도·계산/data trust를 사용자용 evidence로 연결했다.
+- React Step 3은 실제 날짜/월 row 기반 SVG와 pointer/keyboard tooltip만 렌더링하며 benchmark나 holdings를 합성하지 않는다.
+- GTAA 50 / Equal Weight 50 actual desktop·760px QA와 focused `83 passed`, React build, py_compile, diff-check를 완료했다.
+- full service의 기존 12 failures와 자동 Browser leave-event 합성 한계는 active task `RISKS.md`에 남겼다.

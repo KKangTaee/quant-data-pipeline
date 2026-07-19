@@ -106,6 +106,10 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 - Backtest Analysis의 Handoff panel이 source 등록 action과 entry judgment를 소유한다. Handoff는 `1차 진입 기준`, `먼저 해결`, `다음 단계`를 보여주며 readiness score나 promotion hold review를 1차 blocker처럼 표시하지 않는다. Policy Signals owns evidence detail and does not repeat the same entry-readiness hero. React custom component owns the visible Handoff card and button, and a separate React custom component owns the `검증 기준 상세` first-stage evidence board, while Python keeps source registration write / rerun, policy classification, and persistence. `검증 기준 상세`은 `Data Trust`, `Execution Source`, `Validation Source` 중심으로 1차 기준을 묶고, 각 기준의 `?` help는 `plain_explanation` / `checked_items`로 무엇을 검증했는지 설명한다. 2차 review focus 상세 목록과 count / notice는 Backtest Analysis에서 반복하지 않고 source contract로 Practical Validation에 전달한다.
 - Backtest Analysis의 Portfolio Mix Builder는 여러 component를 비교해 하나를 고르는 화면이 아니라, weight를 정해 하나의 mix 후보를 만드는 화면이다.
 - Portfolio Mix는 `구성 전략과 공통 기준 -> 역할과 목표 비중 -> Mix 실행과 해석 -> 저장하고 Level2로 이동` 네 단계의 React one-shell이다. React는 편집과 intent만 소유하고 Python이 validation, runner, weighted build, fingerprint, saved setup과 handoff를 소유한다.
+- Mix 실행과 해석의 기본 화면은 현재 weighted run의 KPI, 시작값 100 누적 성과와 월별 수익률이다.
+  구성 전략 기여도, 월별 결과 표와 계산/data trust는 상세 근거에서 확인한다. Python이 실제 공통 날짜와
+  계산값을 표시 계약으로 만들고 React는 차트와 hover/focus만 담당하며, 원본에 없는 benchmark나 holdings를
+  비교 근거로 합성하지 않는다.
 - `Mix 설정 저장`은 `backtest_portfolio_mix_saved_v1` reusable setup을 저장하며 결과/후보 등록을 대신하지 않는다. prototype legacy saved row는 자동 이관하지 않고 shelf에서 숨긴다.
 - `Level2 검증 후보 등록`은 current fingerprint와 일치하는 fresh weighted result만 Practical Validation source로 넘기는 workflow handoff다. development component, invalid weight/role 또는 stale result가 있으면 Python이 거부한다.
 - Practical Validation은 후보가 Final Review에 충분한 검증 근거를 갖는지 보여준다.

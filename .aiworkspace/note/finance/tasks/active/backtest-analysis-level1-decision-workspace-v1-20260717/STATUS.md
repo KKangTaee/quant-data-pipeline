@@ -357,3 +357,11 @@ Last Updated: 2026-07-19
 - desktop actual hover에서 CUA가 다른 SVG로 이동할 때 `pointerleave`만으로는 이전 tooltip을
   정리하지 못하는 browser 합성 차이를 확인했다. 동일 clear handler를 `mouseleave`, `pointercancel`,
   `blur`에도 연결해 실제 커서/키보드 이탈 계약을 보강했다.
+- Task 52 actual GTAA 50 / Equal Weight 50 결과에서 누적 성과 `2021.07.31 / 167.12 /
+  67.12% / 17,832.32`, 월별 수익률 `2023.01 / 3.98% / 16,341.24` hover 값을 확인했다.
+- desktop은 KPI, 실제 날짜 기반 누적 성과, 양·음 월별 막대, 상세 근거의 기여도/월별 표/계산·데이터
+  기준과 benchmark 미생성을 확인했다. 760px은 차트 1열, compact tick 3개, outer/component overflow 0과
+  ResizeObserver 높이 동기화를 확인했다.
+- fresh closeout verification은 focused UI/boundary `83 passed`, React build `176 modules transformed`,
+  target `py_compile`과 `git diff --check` exit 0이다. full service는 기존 baseline 그대로
+  `833 passed / 12 failed / 35 subtests passed`이며 Portfolio Mix 신규 failure는 0이다.

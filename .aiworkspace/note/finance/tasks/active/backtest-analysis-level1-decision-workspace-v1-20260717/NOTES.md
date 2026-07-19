@@ -427,3 +427,14 @@ generated artifact이므로 commit하지 않는다.
   새 Mix rerun은 같은 Python runtime을 사용하며 fresh fingerprint일 때만 save/Level2 action이 돌아온다.
 - actual Browser QA에서 GTAA/Equal Weight 50/50 실행·저장·복원 뒤 40/60으로 수정해 stale 전환과
   rerun KPI 변경을 확인했다. Level2 CTA는 확인만 하고 registry append는 실행하지 않았다.
+
+## 2026-07-19 16차 Portfolio Mix Result Evidence Decisions
+
+- Step 3 first-read는 KPI만이 아니라 현재 weighted run의 누적 성과와 월별 수익률까지 보여준다.
+  구성 전략 기여도, 월별 결과 표와 계산/data trust는 `상세 결과 근거` disclosure에 둔다.
+- pure service가 percentage/amount/date/role/data-trust 문구와 JSON-safe row를 완성한다. React는
+  가장 가까운 실제 point/bar를 선택하는 hover/focus intent와 SVG/HTML presentation만 소유한다.
+- benchmark와 holdings는 weighted bundle에 실제 근거가 없으므로 새로 만들지 않는다. first month처럼
+  월 수익률을 계산할 수 없는 행은 표에는 `계산값 없음`으로 보존하고 차트에서는 제외한다.
+- chart 이탈은 pointer/mouse/cancel/blur가 같은 clear handler를 사용한다. CUA가 SVG 사이 이동에서
+  leave event를 합성하지 않은 경우가 있어 실제 pointer 값 갱신과 source contract를 함께 검증했다.

@@ -10050,3 +10050,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 여러 전략을 고르는 것부터 역할·비중, 실행 결과, reusable save와 Level2 후보 등록까지 한 shell에서 끝내되 저장과 후보 등록은 섞지 않아야 함.
 - Analysis result: `backtest_portfolio_mix_workspace_v1`이 2~4 component, Single settings reuse, effective fingerprint, fresh/stale lifecycle을 계산하고 Python adapter가 existing compare runner/weighted builder와 new-schema save/handoff를 조합한다. React는 four-step presentation/intent만 담당한다.
 - Follow-up: actual run-save-restore-edit-rerun과 desktop/760px QA를 완료했다. legacy prototype row migration, async progress streaming, fallback full-edit parity와 실제 keyboard traversal은 후속 compatibility 범위다.
+
+### 2026-07-19 - Portfolio Mix 결과는 KPI뿐 아니라 흐름과 근거를 읽을 수 있어야 한다
+
+- User request: Mix 실행 결과의 큰 간격을 조정하고 누락된 그래프·월별 수익률·기타 근거를 보강한 뒤 차트 hover를 추가해 달라고 요청함.
+- Interpreted goal: weighted 후보의 성과 흐름과 월별 변화를 현재 계산 결과로 직접 읽되, 없는 benchmark나 holdings를 만들어 내지 않아야 함.
+- Analysis result: Python pure service가 KPI, base-100 누적 성과, 월별 수익률, component 기여도와 계산/data trust를 JSON-safe 표시 계약으로 만들고 React가 차트/hover/focus만 소유한다.
+- Follow-up: GTAA 50 / Equal Weight 50 actual run에서 누적·월별 tooltip, 상세 근거, desktop/760px 반응형과 no-benchmark를 확인했다. unavailable month는 표에 보존하고 차트에서는 제외한다.
