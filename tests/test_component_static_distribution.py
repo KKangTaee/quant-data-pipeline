@@ -21,6 +21,9 @@ BACKTEST_COMPONENT_PACKAGES = (
     "practical_validation_decision_workspace",
     "practical_validation_fix_queue",
 )
+PORTFOLIO_MONITORING_STATIC_ROOT = (
+    REPO_ROOT / "app/web/streamlit_components/portfolio_monitoring_workbench/component_static"
+)
 
 
 def test_backtest_component_packages_use_component_static_contract() -> None:
@@ -99,3 +102,15 @@ def test_backtest_component_static_entries_and_assets_are_git_tracked() -> None:
             assert asset_relative in tracked_paths, (
                 f"{component_name}: untracked {reference}"
             )
+
+
+def test_portfolio_monitoring_component_static_entry_references_existing_relative_assets() -> None:
+    entry_path = PORTFOLIO_MONITORING_STATIC_ROOT / "index.html"
+    assert entry_path.is_file()
+    entry_source = entry_path.read_text(encoding="utf-8")
+    assert 'src="/assets/' not in entry_source
+    assert 'href="/assets/' not in entry_source
+    references = re.findall(r'(?:src|href)="\./([^"?#]+)', entry_source)
+    assert references
+    for reference in references:
+        assert (PORTFOLIO_MONITORING_STATIC_ROOT / reference).is_file(), reference

@@ -6676,3 +6676,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - DB-only stock/ETF와 authoritative Final Review candidate 통합 catalog, raw-close·분할·현금배당 직접 종목 원장, 선정 전략 replay adapter를 구현했다.
 - 서로 다른 시작·종료일은 투자 전/종료 후 현금으로 정렬하고, 가장 오래된 최신 active lane 기준의 공통 가치곡선과 투자금·현재가치·수익률·MDD·CAGR·기여도를 계산한다.
 - 전체 roadmap `2/6차` 완료, 누적 모니터링 계약 41개가 통과했다. 다음은 3차 React one-shell과 command event round-trip이다.
+
+## 2026-07-19 - Portfolio Monitoring React 개편 3차 완료
+
+- 기존 Portfolio Monitoring 정상 화면을 Portfolio-first React one-shell로 전환하고, 그룹 rail·KPI·공통 가치곡선·항목 기여·개별 상세·3단계 Context Drawer를 구현했다.
+- 직접 종목은 투자금/정수 수량, Final Review 전략은 투자금만 허용하며 stable command id와 thin Streamlit dispatch를 연결했다. Operations 요약도 새 그룹·항목·가치 KPI를 받을 수 있다.
+- 1440/760/420 Browser QA와 51개 Python·9개 React 회귀를 통과했다. 전체 roadmap `3/6차` 완료; 실제 저장 테이블 migration과 mutation QA는 6차 closeout 경계다.

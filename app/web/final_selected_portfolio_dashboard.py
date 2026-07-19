@@ -1,11 +1,57 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from dataclasses import asdict, dataclass
+from datetime import date, datetime, timedelta
+from decimal import Decimal
 from html import escape
-from typing import Any
+from typing import Any, Callable, MutableMapping
 
 import pandas as pd
 import streamlit as st
+
+from finance.data.db.mysql import MySQLClient
+from finance.loaders import load_price_history
+
+from app.services.portfolio_monitoring.catalog import search_monitoring_catalog
+from app.services.portfolio_monitoring.commands import (
+    CommandResult,
+    EndResolution,
+    EntryResolution,
+    ensure_default_group,
+    execute_add_item,
+    execute_create_group,
+    execute_end_item,
+    execute_rename_group,
+)
+from app.services.portfolio_monitoring.persistence import (
+    DEFAULT_PORTFOLIO_GROUP_ID,
+    DEFAULT_PORTFOLIO_GROUP_NAME,
+    MySQLMonitoringRepository,
+)
+from app.services.portfolio_monitoring.read_model import (
+    WORKSPACE_SCHEMA_VERSION,
+    build_portfolio_monitoring_workspace,
+)
+from app.services.portfolio_monitoring.schemas import (
+    AddMonitoringItemInput,
+    CommandStatus,
+    CommandType,
+    FundingMode,
+    InstrumentKind,
+    MonitoringCommandInput,
+    SourceType,
+)
+from app.services.portfolio_monitoring.selected_strategy import (
+    SelectedStrategyReplayAdapter,
+    SelectedStrategyReplayError,
+)
+from app.services.portfolio_monitoring.valuation import (
+    build_direct_security_value_lane,
+    resolve_direct_security_entry,
+)
+from app.web.portfolio_monitoring_react_component import (
+    render_portfolio_monitoring_workbench,
+)
 
 from app.services.backtest_evidence_read_model import build_decision_dossier
 from app.services.backtest_practical_validation import build_market_sentiment_context_overlay
@@ -245,6 +291,284 @@ def _format_signed_money(value: Any, *, default: str = "-") -> str:
         return default
     sign = "+" if numeric >= 0 else "-"
     return f"{sign}{abs(numeric):,.0f}"
+
+
+@dataclass
+class PortfolioMonitoringPageServices:
+    session_state: MutableMapping[str, Any]
+    build_workspace: Callable[..., dict[str, Any]]
+    render_workbench: Callable[[dict[str, Any]], dict[str, Any] | None]
+    render_fallback: Callable[[dict[str, Any], str | None], None]
+    rerun: Callable[[], None]
+    create_group: Callable[[dict[str, Any]], CommandResult]
+    rename_group: Callable[[dict[str, Any]], CommandResult]
+    add_item: Callable[[dict[str, Any]], CommandResult]
+    end_item: Callable[[dict[str, Any]], CommandResult]
+
+
+def _monitoring_db_factory() -> MySQLClient:
+    return MySQLClient("localhost", "root", "1234", 3306)
+
+
+def _fallback_monitoring_workspace(
+    *,
+    catalog_query: str,
+    catalog_source_type: str,
+    storage_error: str,
+) -> dict[str, Any]:
+    try:
+        catalog_items = search_monitoring_catalog(
+            catalog_query,
+            catalog_source_type,
+            db_factory=_monitoring_db_factory,
+        )
+    except Exception:
+        catalog_items = []
+    return {
+        "schema_version": WORKSPACE_SCHEMA_VERSION,
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "groups": [
+            {
+                "portfolio_group_id": DEFAULT_PORTFOLIO_GROUP_ID,
+                "name": DEFAULT_PORTFOLIO_GROUP_NAME,
+                "is_default": True,
+                "selected": True,
+                "status": "storage_unavailable",
+                "version": 1,
+                "active_item_count": 0,
+                "history_item_count": 0,
+            }
+        ],
+        "active_group": None,
+        "catalog": {"query": catalog_query, "items": catalog_items},
+        "commands": [],
+        "method": {
+            "basis": "storage migration required",
+            "alignment": "not available until monitoring storage is ready",
+        },
+        "boundaries": {
+            "db_only": True,
+            "provider_fetch": False,
+            "live_orders": False,
+            "auto_rebalance": False,
+            "storage_ready": False,
+            "storage_error": storage_error,
+        },
+    }
+
+
+def _catalog_with_entry_readiness(
+    items: list[Any],
+    *,
+    requested_start_date: str | None = None,
+) -> list[Any]:
+    if not requested_start_date:
+        return items
+    enriched: list[Any] = []
+    for item in items:
+        if getattr(item, "source_type", "") != SourceType.DIRECT_SECURITY.value:
+            enriched.append(item)
+            continue
+        try:
+            history = load_price_history(
+                symbols=[item.source_ref],
+                start=requested_start_date,
+                timeframe="1d",
+            )
+            entry = resolve_direct_security_entry(
+                history,
+                date.fromisoformat(requested_start_date),
+                FundingMode.FIXED_NOTIONAL,
+                Decimal("1"),
+            )
+            metadata = {
+                **dict(item.metadata or {}),
+                "effective_start_date": entry.effective_start_date.isoformat(),
+                "entry_close": str(entry.entry_close),
+            }
+            enriched.append(type(item)(**{**asdict(item), "metadata": metadata, "readiness": "READY"}))
+        except Exception:
+            enriched.append(type(item)(**{**asdict(item), "readiness": "MISSING_PRICE"}))
+    return enriched
+
+
+def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
+    repository = MySQLMonitoringRepository(_monitoring_db_factory)
+    selected_adapter = SelectedStrategyReplayAdapter()
+    session_state = st.session_state
+
+    def lane_loader(item):
+        if item.source_type == SourceType.SELECTED_STRATEGY.value:
+            return selected_adapter.build_value_lane(
+                item,
+                end_date=item.tracking_end_effective_date,
+            )
+        history = load_price_history(
+            symbols=[item.source_ref],
+            start=item.effective_start_date.isoformat(),
+            end=(item.tracking_end_effective_date.isoformat() if item.tracking_end_effective_date else None),
+            timeframe="1d",
+        )
+        return build_direct_security_value_lane(item, history)
+
+    def build_workspace(*, active_group_id: str | None, catalog_query: str) -> dict[str, Any]:
+        source_type = str(session_state.get("portfolio_monitoring_catalog_source_type") or SourceType.DIRECT_SECURITY.value)
+        requested_date = session_state.get("portfolio_monitoring_catalog_requested_start_date")
+        try:
+            ensure_default_group(repository)
+            workspace = build_portfolio_monitoring_workspace(
+                repository,
+                active_group_id=active_group_id,
+                catalog_query=catalog_query,
+                lane_loader=lane_loader,
+            )
+        except Exception as exc:
+            return _fallback_monitoring_workspace(
+                catalog_query=catalog_query,
+                catalog_source_type=source_type,
+                storage_error=str(exc),
+            )
+        try:
+            catalog_items = search_monitoring_catalog(
+                catalog_query,
+                source_type,
+                db_factory=_monitoring_db_factory,
+            )
+            catalog_items = _catalog_with_entry_readiness(
+                catalog_items,
+                requested_start_date=str(requested_date) if requested_date else None,
+            )
+        except Exception as exc:
+            catalog_items = []
+            workspace["boundaries"] = {**dict(workspace.get("boundaries") or {}), "catalog_error": str(exc)}
+        workspace["catalog"] = {"query": catalog_query, "items": catalog_items}
+        return workspace
+
+    def create_group(event: dict[str, Any]) -> CommandResult:
+        return execute_create_group(
+            repository,
+            MonitoringCommandInput(
+                command_id=str(event.get("command_id") or ""),
+                command_type=CommandType.CREATE_GROUP,
+                target_id=None,
+                payload={"name": event.get("name")},
+            ),
+        )
+
+    def rename_group(event: dict[str, Any]) -> CommandResult:
+        return execute_rename_group(
+            repository,
+            MonitoringCommandInput(
+                command_id=str(event.get("command_id") or ""),
+                command_type=CommandType.RENAME_GROUP,
+                target_id=str(event.get("portfolio_group_id") or ""),
+                payload={"name": event.get("name")},
+                expected_version=int(event.get("expected_version") or 0),
+            ),
+        )
+
+    def add_item(event: dict[str, Any]) -> CommandResult:
+        item_input = AddMonitoringItemInput(
+            portfolio_group_id=str(event.get("portfolio_group_id") or ""),
+            source_type=SourceType(str(event.get("source_type") or "")),
+            source_ref=str(event.get("source_ref") or ""),
+            instrument_kind=InstrumentKind(str(event.get("instrument_kind") or "")),
+            requested_start_date=date.fromisoformat(str(event.get("requested_start_date") or "")),
+            funding_mode=FundingMode(str(event.get("funding_mode") or "")),
+            input_notional=(Decimal(str(event["input_notional"])) if event.get("input_notional") is not None else None),
+            input_shares=(int(event["input_shares"]) if event.get("input_shares") is not None else None),
+        )
+
+        def resolve_entry(value: AddMonitoringItemInput) -> EntryResolution:
+            if value.source_type == SourceType.SELECTED_STRATEGY:
+                contract = selected_adapter.load_candidate_contract(value.source_ref)
+                if contract.readiness.status != "READY":
+                    raise SelectedStrategyReplayError(contract.readiness)
+                return EntryResolution(
+                    effective_start_date=value.requested_start_date,
+                    entry_close=Decimal("1"),
+                    initial_capital=Decimal(value.input_notional or 0),
+                    metadata={
+                        "decision_id": value.source_ref,
+                        "decision_updated_at": contract.readiness.source_dates.get("decision_updated_at"),
+                    },
+                )
+            history = load_price_history(
+                symbols=[value.source_ref],
+                start=value.requested_start_date.isoformat(),
+                timeframe="1d",
+            )
+            amount: Decimal | int = (
+                int(value.input_shares or 0)
+                if value.funding_mode == FundingMode.FIXED_SHARES
+                else Decimal(value.input_notional or 0)
+            )
+            return resolve_direct_security_entry(
+                history,
+                value.requested_start_date,
+                value.funding_mode,
+                amount,
+            )
+
+        return execute_add_item(
+            repository,
+            MonitoringCommandInput(
+                command_id=str(event.get("command_id") or ""),
+                command_type=CommandType.ADD_ITEM,
+                target_id=str(event.get("portfolio_group_id") or ""),
+                payload=dict(event),
+            ),
+            item_input,
+            resolve_entry=resolve_entry,
+        )
+
+    def end_item(event: dict[str, Any]) -> CommandResult:
+        requested_end = date.fromisoformat(str(event.get("requested_end_date") or ""))
+
+        def resolve_end(item) -> EndResolution:
+            horizon = requested_end + timedelta(days=10)
+            if item.source_type == SourceType.SELECTED_STRATEGY.value:
+                lane = selected_adapter.build_value_lane(item, end_date=horizon)
+            else:
+                history = load_price_history(
+                    symbols=[item.source_ref],
+                    start=item.effective_start_date.isoformat(),
+                    end=horizon.isoformat(),
+                    timeframe="1d",
+                )
+                lane = build_direct_security_value_lane(item, history)
+            eligible = lane.curve.loc[pd.to_datetime(lane.curve["date"]) >= pd.Timestamp(requested_end)]
+            if eligible.empty:
+                raise ValueError("No usable value is available on or after the requested end date.")
+            row = eligible.iloc[0]
+            return EndResolution(
+                requested_end_date=requested_end,
+                effective_end_date=pd.Timestamp(row["date"]).date(),
+                exit_value=Decimal(str(row["total_value"])),
+            )
+
+        return execute_end_item(
+            repository,
+            MonitoringCommandInput(
+                command_id=str(event.get("command_id") or ""),
+                command_type=CommandType.END_ITEM,
+                target_id=str(event.get("monitoring_item_id") or ""),
+                payload={"requested_end_date": requested_end.isoformat()},
+            ),
+            resolve_end=resolve_end,
+        )
+
+    return PortfolioMonitoringPageServices(
+        session_state=session_state,
+        build_workspace=build_workspace,
+        render_workbench=render_portfolio_monitoring_workbench,
+        render_fallback=_render_portfolio_monitoring_fallback,
+        rerun=st.rerun,
+        create_group=create_group,
+        rename_group=rename_group,
+        add_item=add_item,
+        end_item=end_item,
+    )
 
 
 def _session_timestamp() -> str:
@@ -3399,27 +3723,156 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
     st.info(str(alert_preview.get("next_action") or "-"))
 
 
-def render_final_selected_portfolio_dashboard_page() -> None:
+def _render_portfolio_monitoring_fallback(
+    workspace: dict[str, Any],
+    error: str | None = None,
+) -> None:
+    """Render compact recovery guidance instead of the retired legacy dashboard."""
+
     st.title("Portfolio Monitoring")
-    st.caption(
-        "Selected Portfolio Dashboard: Final Review에서 모니터링 후보로 선별된 대상을 나의 모니터링 포트폴리오에 담고, "
-        "가상 시나리오와 review signal로 모니터링 이후 상태를 확인합니다."
+    st.caption("React Command Center를 불러오지 못해 읽기 전용 요약만 표시합니다.")
+    if error:
+        st.warning(error)
+    groups = list(workspace.get("groups") or [])
+    st.metric("포트폴리오 그룹", len(groups))
+    active_group = workspace.get("active_group")
+    metrics = getattr(active_group, "metrics", None)
+    if metrics is not None:
+        columns = st.columns(3)
+        columns[0].metric("투자금", _format_money(metrics.invested_capital))
+        columns[1].metric("현재 가치", _format_money(metrics.current_value))
+        columns[2].metric("총수익률", _format_pct(metrics.total_return))
+    st.info(
+        "`portfolio_monitoring_workbench/component_static` 빌드를 복구한 뒤 새로고침하세요. "
+        "이 fallback에서는 그룹·종목 변경을 수행하지 않습니다."
     )
-    render_reference_contextual_help("portfolio_monitoring")
-    _render_market_sentiment_context_overlay()
 
-    dashboard = load_final_selected_portfolio_dashboard()
-    summary = dict(dashboard.get("summary") or {})
-    rows = list(dashboard.get("dashboard_rows") or [])
-    monitoring_portfolios = list(dashboard.get("monitoring_portfolios") or [])
 
-    _render_dashboard_portfolio_workspace(
-        dashboard_rows=rows,
-        monitoring_portfolios=monitoring_portfolios,
+def _dispatch_portfolio_monitoring_event(
+    event: dict[str, Any],
+    services: PortfolioMonitoringPageServices | Any,
+) -> CommandResult | None:
+    """Route one React event to view state or exactly one server command."""
+
+    event_id = str(event.get("id") or "").strip()
+    if event_id == "select_group":
+        services.session_state["portfolio_monitoring_active_group_id"] = str(
+            event.get("portfolio_group_id") or ""
+        )
+        return None
+    if event_id == "search_catalog":
+        services.session_state["portfolio_monitoring_catalog_query"] = str(
+            event.get("query") or ""
+        ).strip()
+        services.session_state["portfolio_monitoring_catalog_source_type"] = str(
+            event.get("source_type") or SourceType.DIRECT_SECURITY.value
+        )
+        if event.get("requested_start_date"):
+            services.session_state["portfolio_monitoring_catalog_requested_start_date"] = str(
+                event.get("requested_start_date")
+            )
+        return None
+    if event_id in {"select_item", "open_item_detail"}:
+        services.session_state["portfolio_monitoring_selected_item_id"] = str(
+            event.get("monitoring_item_id") or ""
+        )
+        return None
+    if event_id == "create_group":
+        return services.create_group(event)
+    if event_id == "rename_group":
+        return services.rename_group(event)
+    if event_id == "add_item":
+        return services.add_item(event)
+    if event_id == "end_item":
+        return services.end_item(event)
+    return None
+
+
+def _event_identity(event: dict[str, Any]) -> str:
+    return str(
+        event.get("nonce")
+        or event.get("command_id")
+        or "|".join(
+            [
+                str(event.get("id") or ""),
+                str(event.get("portfolio_group_id") or ""),
+                str(event.get("monitoring_item_id") or ""),
+                str(event.get("query") or ""),
+            ]
+        )
     )
-    with st.container(border=True):
-        st.markdown("#### Final Review Handoff / 상세 근거")
-        render_status_card_grid(_summary_cards(summary))
-        _render_final_review_handoff(list(dashboard.get("all_final_decisions") or []))
-        if not rows:
-            _render_empty_state(summary)
+
+
+def _command_projection(result: CommandResult) -> dict[str, Any]:
+    return {
+        "command_id": result.command_id,
+        "status": "success" if result.status == CommandStatus.SUCCEEDED else result.status.value,
+        "message": result.message,
+        "target_id": result.target_id,
+        "replayed": result.replayed,
+    }
+
+
+def load_portfolio_monitoring_workspace_for_operations() -> dict[str, Any]:
+    """Load the same compact workspace for the Operations landing summary."""
+
+    runtime = _default_portfolio_monitoring_services()
+    return runtime.build_workspace(
+        active_group_id=runtime.session_state.get("portfolio_monitoring_active_group_id"),
+        catalog_query="",
+    )
+
+
+def render_final_selected_portfolio_dashboard_page(
+    *,
+    services: PortfolioMonitoringPageServices | Any | None = None,
+) -> None:
+    """Render load -> React -> dispatch -> rerun with no legacy normal path."""
+
+    runtime = services or _default_portfolio_monitoring_services()
+    active_group_id = runtime.session_state.get("portfolio_monitoring_active_group_id")
+    catalog_query = str(runtime.session_state.get("portfolio_monitoring_catalog_query") or "")
+    try:
+        workspace = runtime.build_workspace(
+            active_group_id=active_group_id,
+            catalog_query=catalog_query,
+        )
+    except Exception as exc:
+        workspace = _fallback_monitoring_workspace(
+            catalog_query=catalog_query,
+            catalog_source_type=str(
+                runtime.session_state.get("portfolio_monitoring_catalog_source_type")
+                or SourceType.DIRECT_SECURITY.value
+            ),
+            storage_error=str(exc),
+        )
+    last_command = runtime.session_state.get("portfolio_monitoring_last_command")
+    workspace["commands"] = [dict(last_command)] if isinstance(last_command, dict) else []
+    component_value = runtime.render_workbench(workspace)
+    if component_value is None:
+        runtime.render_fallback(workspace, None)
+        return
+    event = component_value.get("event") if isinstance(component_value, dict) else None
+    if not isinstance(event, dict) or not event.get("id"):
+        return
+    identity = _event_identity(event)
+    if identity == runtime.session_state.get("portfolio_monitoring_last_event_identity"):
+        return
+    runtime.session_state["portfolio_monitoring_last_event_identity"] = identity
+    try:
+        result = _dispatch_portfolio_monitoring_event(event, runtime)
+    except Exception as exc:
+        command_id = str(event.get("command_id") or identity)
+        runtime.session_state["portfolio_monitoring_last_command"] = {
+            "command_id": command_id,
+            "status": "error",
+            "message": str(exc),
+            "target_id": None,
+        }
+        runtime.rerun()
+        return
+    if result is not None:
+        runtime.session_state["portfolio_monitoring_last_command"] = _command_projection(result)
+        if str(event.get("id")) == "create_group":
+            runtime.session_state["portfolio_monitoring_active_group_id"] = result.target_id
+    runtime.rerun()

@@ -307,7 +307,7 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
             </details>
           </>
         ) : (
-          <section className="pm-panel pm-empty-state"><h2>포트폴리오를 시작하세요</h2><p>기본 그룹에 미국 주식·ETF 또는 Final Review 통과 전략을 등록할 수 있습니다.</p><button ref={addButtonRef} type="button" className="pm-primary" onClick={openDrawer}>첫 종목 등록</button></section>
+          <section className="pm-panel pm-empty-state"><h2>포트폴리오를 시작하세요</h2><p>기본 그룹에 미국 주식·ETF 또는 Final Review 통과 전략을 등록할 수 있습니다.</p><button type="button" className="pm-primary" onClick={openDrawer}>첫 종목 등록</button></section>
         )}
       </section>
 
@@ -348,7 +348,7 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
             {drawerStep === 2 && (
               <div className="pm-drawer-body">
                 <div className="pm-selected-source"><span>선택 대상</span><strong>{draft.selectedSourceRef}</strong><small>{draft.selectedLabel}</small></div>
-                <label className="pm-field">추적 시작일<input type="date" value={draft.requestedStartDate} onChange={(event) => setDraft((current) => ({ ...current, requestedStartDate: event.target.value }))} /></label>
+                <label className="pm-field">추적 시작일<input type="date" value={draft.requestedStartDate} onChange={(event) => setDraft((current) => ({ ...current, requestedStartDate: event.target.value }))} onBlur={() => draft.requestedStartDate && emit({ id: "search_catalog", query: catalogQuery, source_type: draft.sourceType, requested_start_date: draft.requestedStartDate })} /></label>
                 <fieldset className="pm-funding-field"><legend>투자 방식</legend><div>{availableFundingModes(draft.sourceType).map((mode) => <button type="button" key={mode} className={draft.fundingMode === mode ? "is-active" : ""} onClick={() => setDraft((current) => ({ ...current, fundingMode: mode }))}>{mode === "fixed_notional" ? "투자금" : "보유 수량"}<small>{mode === "fixed_notional" ? "예: $10,000" : "정수 주식만"}</small></button>)}</div></fieldset>
                 {draft.fundingMode === "fixed_notional" ? <label className="pm-field">투자금 (USD)<input type="number" min="1" step="1" value={draft.notional} onChange={(event) => setDraft((current) => ({ ...current, notional: event.target.value }))} /></label> : <label className="pm-field">주식 수량<input type="number" min="1" step="1" inputMode="numeric" value={draft.shares} onChange={(event) => setDraft((current) => ({ ...current, shares: event.target.value }))} /><small>소수점 없이 1주 이상 입력하세요.</small></label>}
                 <div className="pm-entry-note"><strong>시작 가격 확인</strong><p>요청일이 휴장일이면 이후 첫 거래일의 저장 종가를 사용합니다. 이후 가격이 없으면 등록되지 않습니다.</p></div>

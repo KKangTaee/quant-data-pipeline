@@ -34,3 +34,7 @@
 | 2026-07-19 | 3차 Task 9 shell verification | 5 Vitest, TypeScript, Vite production build, and 10 Python read-model/component unittests PASS; 1440/760/420 responsive CSS contract added, Browser QA deferred to page cutover |
 | 2026-07-19 | 3차 Task 10 drawer RED | 4 expected missing-function failures covering source/funding switch, integer shares, price/duplicate/capacity blockers, and mobile sheet state |
 | 2026-07-19 | 3차 Task 10 drawer verification | 9 Vitest, TypeScript, and Vite production build PASS; stable command id, pending guard, end confirmation, keyboard close/focus return, and 420px full-width sheet implemented |
+| 2026-07-19 | 3차 Task 11 page-cutover RED | 4 expected errors for missing dispatcher/injected route contract and Operations new-workspace summary input |
+| 2026-07-19 | Actual default runtime read-only smoke | workspace v1 / 1 recovery group / AAPL catalog 6; storage is explicitly unavailable because `monitoring_portfolio_group` is not migrated |
+| 2026-07-19 | 3차 Browser QA | 1440/760/420 no horizontal overflow and 0 console warn/error; AAPL exact search, integer shares, 6 strategy candidates, strategy notional-only, and focus return PASS; screenshot `/Users/taeho/Project/quant-data-pipeline-worktrees/main-dev/portfolio-monitoring-react-command-center-420-qa.png` kept untracked |
+| 2026-07-19 | 3차 React Command Center completion gate | 51 monitoring/Operations unittests, static distribution, compile, 9 Vitest, TypeScript, Vite build, and `git diff --check` PASS; mutating actual QA remains storage-migration gated |

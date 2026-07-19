@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from calendar import monthrange
+from dataclasses import asdict, is_dataclass
 from datetime import date, datetime
 from typing import Any
 
@@ -576,6 +577,7 @@ def build_operations_overview_model(
     selected_dashboard: dict[str, Any],
     run_history: list[dict[str, Any]],
     candidate_records: list[dict[str, Any]] | None = None,
+    monitoring_workspace: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a Streamlit-free operator model for the Operations landing page."""
 
@@ -604,6 +606,32 @@ def build_operations_overview_model(
         portfolio_state=portfolio_state,
         portfolio_metrics=portfolio_metrics,
     )
+    monitoring_groups = list(dict(monitoring_workspace or {}).get("groups") or [])
+    raw_monitoring_active_group = dict(monitoring_workspace or {}).get("active_group")
+    monitoring_active_group = (
+        asdict(raw_monitoring_active_group)
+        if is_dataclass(raw_monitoring_active_group)
+        else dict(raw_monitoring_active_group or {})
+    )
+    monitoring_metrics = dict(monitoring_active_group.get("metrics") or {})
+    if monitoring_groups:
+        portfolio_count = len(monitoring_groups)
+        assigned_count = sum(_safe_int(group.get("active_item_count")) for group in monitoring_groups)
+        portfolio_summary.update(
+            {
+                "active_portfolio_count": portfolio_count,
+                "active_item_count": assigned_count,
+                "history_item_count": sum(_safe_int(group.get("history_item_count")) for group in monitoring_groups),
+                "invested_capital": monitoring_metrics.get("invested_capital"),
+                "current_value": monitoring_metrics.get("current_value"),
+                "total_return": monitoring_metrics.get("total_return"),
+                "mdd": monitoring_metrics.get("mdd"),
+                "basis_date": monitoring_active_group.get("basis_date"),
+                "status": "Review Needed" if monitoring_active_group.get("status") == "PARTIAL" else "Ready",
+                "tone": "warning" if monitoring_active_group.get("status") == "PARTIAL" else "positive",
+                "detail": "사용자 Portfolio Monitoring 그룹과 공통 기준일 가치 결과입니다.",
+            }
+        )
 
     latest_run = dict(run_history[0] if run_history else {})
     latest_status = str(latest_run.get("status") or "No runs")
@@ -620,13 +648,21 @@ def build_operations_overview_model(
             "key": "portfolio_monitoring",
             "title": "Portfolio Monitoring",
             "priority": "primary",
-            "status": _portfolio_monitoring_status(
-                dashboard_rows=dashboard_rows,
-                watch_count=watch_count,
-                blocked_count=blocked_count,
-                missing_count=missing_count,
+            "status": (
+                str(portfolio_summary.get("status") or "Ready")
+                if monitoring_groups
+                else _portfolio_monitoring_status(
+                    dashboard_rows=dashboard_rows,
+                    watch_count=watch_count,
+                    blocked_count=blocked_count,
+                    missing_count=missing_count,
+                )
             ),
-            "tone": "danger" if blocked_count or missing_count else ("warning" if watch_count or not dashboard_rows else "positive"),
+            "tone": (
+                str(portfolio_summary.get("tone") or "positive")
+                if monitoring_groups
+                else ("danger" if blocked_count or missing_count else ("warning" if watch_count or not dashboard_rows else "positive"))
+            ),
             "target_surface": "Operations > Portfolio Monitoring",
             "detail": "Final Review에서 선정된 모니터링 후보와 사용자 portfolio setup을 확인합니다.",
             "metrics": {
@@ -637,6 +673,9 @@ def build_operations_overview_model(
                 "watch_or_review_count": watch_count,
                 "blocked_count": blocked_count,
                 "missing_reference_count": missing_count,
+                "active_item_count": assigned_count if monitoring_groups else None,
+                "current_value": monitoring_metrics.get("current_value") if monitoring_groups else None,
+                "total_return": monitoring_metrics.get("total_return") if monitoring_groups else None,
             },
             "links": [{"target_key": "portfolio_monitoring", "label": "Portfolio Monitoring 열기", "icon": "📊"}],
         },
@@ -778,9 +817,14 @@ def _render_portfolio_summary(model: dict[str, Any]) -> None:
         st.caption(str(summary.get("detail") or ""))
         top_columns = st.columns(4, gap="small")
         top_columns[0].metric("Active Portfolios", _format_metric_value(summary.get("active_portfolio_count")))
-        top_columns[1].metric("Assigned Strategies", _format_metric_value(summary.get("assigned_strategy_count")))
-        top_columns[2].metric("Blocked / Missing", f"{_format_metric_value(summary.get('blocked_count'))} / {_format_metric_value(summary.get('missing_reference_count'))}")
-        top_columns[3].metric("Incomplete Slots", _format_metric_value(summary.get("incomplete_strategy_slot_count")))
+        if "active_item_count" in summary:
+            top_columns[1].metric("Active Items", _format_metric_value(summary.get("active_item_count")))
+            top_columns[2].metric("Current Value", _format_metric_value(summary.get("current_value")))
+            top_columns[3].metric("Total Return", _format_metric_value(summary.get("total_return")))
+        else:
+            top_columns[1].metric("Assigned Strategies", _format_metric_value(summary.get("assigned_strategy_count")))
+            top_columns[2].metric("Blocked / Missing", f"{_format_metric_value(summary.get('blocked_count'))} / {_format_metric_value(summary.get('missing_reference_count'))}")
+            top_columns[3].metric("Incomplete Slots", _format_metric_value(summary.get("incomplete_strategy_slot_count")))
 
         bottom_columns = st.columns(4, gap="small")
         bottom_columns[0].metric("Stale Scenarios", _format_metric_value(summary.get("stale_scenario_count")))
@@ -870,9 +914,18 @@ def render_operations_overview_page(*, page_targets: dict[str, Any] | None = Non
 
     selected_dashboard = load_final_selected_portfolio_dashboard()
     run_history = load_run_history(limit=30)
+    try:
+        from app.web.final_selected_portfolio_dashboard import (
+            load_portfolio_monitoring_workspace_for_operations,
+        )
+
+        monitoring_workspace = load_portfolio_monitoring_workspace_for_operations()
+    except Exception:
+        monitoring_workspace = None
     model = build_operations_overview_model(
         selected_dashboard=selected_dashboard,
         run_history=run_history,
+        monitoring_workspace=monitoring_workspace,
     )
     page_targets = dict(page_targets or {})
 

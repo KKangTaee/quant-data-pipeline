@@ -128,6 +128,7 @@ button { outline: none; }
 
 .pm-drawer-layer { position: fixed; z-index: 999; inset: 0; display: flex; justify-content: flex-end; padding: 14px; background: rgba(21, 38, 51, .28); backdrop-filter: blur(2px); }
 .pm-drawer { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; width: min(455px, 100%); height: 100%; overflow: hidden; border: 1px solid #d6e1e7; border-radius: 19px; background: #fff; box-shadow: -18px 0 55px rgba(20, 42, 56, .16); }
+.pm-drawer * { min-width: 0; max-width: 100%; }
 .pm-drawer-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 21px 22px 15px; }
 .pm-drawer-header span { color: #698394; font-size: 9px; font-weight: 900; letter-spacing: .1em; }
 .pm-drawer-header h2 { margin: 4px 0 0; color: #203d52; font-size: 22px; }
@@ -141,7 +142,7 @@ button { outline: none; }
 .pm-stepper span.is-active { color: #2f70a8; }
 .pm-stepper span.is-active::before { border-color: #3d86c3; color: #fff; background: #3d86c3; }
 .pm-stepper b { font-weight: 800; }
-.pm-drawer-body { display: grid; align-content: start; gap: 16px; overflow-y: auto; padding: 18px 22px; border-top: 1px solid #e5ebef; background: #fbfcfd; }
+.pm-drawer-body { display: grid; align-content: start; gap: 16px; overflow-x: hidden; overflow-y: auto; padding: 18px 22px; border-top: 1px solid #e5ebef; background: #fbfcfd; }
 .pm-source-switch, .pm-funding-field > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .pm-source-switch button, .pm-funding-field button { display: grid; gap: 4px; padding: 12px; border: 1px solid #dbe4e9; border-radius: 11px; color: #3c576a; background: #fff; cursor: pointer; font-size: 10px; font-weight: 850; text-align: left; }
 .pm-source-switch button small, .pm-funding-field button small { color: #87959f; font-size: 8px; font-weight: 500; }
@@ -155,13 +156,13 @@ button { outline: none; }
 .pm-catalog-list > button { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px; border: 1px solid #e0e7eb; border-radius: 10px; color: #365266; background: #fff; cursor: pointer; text-align: left; }
 .pm-catalog-list > button.is-selected { border-color: #66a4d2; background: #edf7fd; }
 .pm-catalog-list > button div { display: grid; min-width: 0; gap: 3px; }
-.pm-catalog-list > button strong { font-size: 11px; }
+.pm-catalog-list > button strong { font-size: 11px; overflow-wrap: anywhere; }
 .pm-catalog-list > button span { overflow: hidden; color: #7b8c98; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 .pm-catalog-list > button > small { color: #708696; font-size: 7px; white-space: nowrap; }
 .pm-catalog-list > p { margin: 0; padding: 26px 12px; border: 1px dashed #d8e2e8; border-radius: 10px; color: #87959f; background: #fff; font-size: 9px; text-align: center; }
 .pm-selected-source { display: grid; gap: 4px; padding: 13px; border: 1px solid #d8e4ea; border-radius: 11px; background: #fff; }
 .pm-selected-source span { color: #7a8d9a; font-size: 8px; }
-.pm-selected-source strong { color: #24445a; font-size: 16px; }
+.pm-selected-source strong { color: #24445a; font-size: 16px; overflow-wrap: anywhere; word-break: break-word; }
 .pm-selected-source small { color: #788a97; font-size: 9px; }
 .pm-field { display: grid; gap: 7px; }
 .pm-field small { color: #83929d; font-size: 8px; font-weight: 500; }

@@ -61,7 +61,7 @@ export type PortfolioMonitoringWorkspace = {
   catalog: { query: string; items: CatalogItem[] };
   commands: CommandProjection[];
   method: Record<string, string>;
-  boundaries: Record<string, boolean>;
+  boundaries: Record<string, boolean | string | null>;
 };
 
 export type CommandProjection = {

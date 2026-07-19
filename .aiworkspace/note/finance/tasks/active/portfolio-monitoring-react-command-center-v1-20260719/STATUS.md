@@ -1,12 +1,12 @@
 # Portfolio Monitoring React Command Center V1 Status
 
-Status: 2차 Complete / 3차 React Command Center In Progress
+Status: 3차 React Portfolio Command Center Complete / 4차 Diagnosis Next
 Last Updated: 2026-07-19
 
 ## Current Position
 
-- 전체 roadmap: `2/6차 구현 완료`
-- current milestone: 3차 Task 10 context drawer/command lifecycle complete; Task 11 page cutover next
+- 전체 roadmap: `3/6차 구현 완료`
+- current milestone: 3차 Task 11 React page cutover complete; 4차 Task 12 exposure facts next
 - written design: approved by user
 - detailed implementation plan: complete and self-reviewed
 - implementation: started in inline execution mode
@@ -25,6 +25,11 @@ Last Updated: 2026-07-19
 
 ## Next Action
 
-1. Task 11 thin Streamlit event bridge and route cutover
-2. actual command round-trip and fallback QA
-3. 1440/760/420 Browser QA and 3차 completion gate
+1. Task 12 normalized portfolio exposure facts
+2. Task 13 deterministic behavior policy
+3. Task 14 diagnosis priority/evidence React UI and 4차 gate
+
+## Deployment Boundary
+
+- actual `finance_meta.monitoring_portfolio_*` tables are not migrated yet; the route opens the React recovery state with DB catalog access and mutation commands return explicit errors.
+- the storage migration, default-group creation, rollback, and mutating Browser QA remain Task 21 closeout work; no table was created automatically in 1~3차.

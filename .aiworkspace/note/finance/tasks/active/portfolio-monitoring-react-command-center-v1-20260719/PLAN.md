@@ -376,12 +376,12 @@ if event and event.get("event"):
     _dispatch_portfolio_monitoring_event(event["event"], services)
 ```
 
-- [ ] Write failing page-source/behavior tests proving the route calls one read-model builder, mounts one React component, dispatches one server command, and reruns after a mutating success. Assert the full legacy dashboard renderer is not invoked as fallback.
-- [ ] Add static distribution tests for the new component assets and Operations summary tests using new group/item metrics while preserving page target navigation.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_component.py tests/test_portfolio_monitoring_page.py tests/test_component_static_distribution.py -q` and confirm failures.
-- [ ] Replace the page body with load -> render -> dispatch -> rerun. Keep legacy helpers callable for compatibility tests but remove them from the normal render path. Missing component shows read-only active summary and recovery instructions only.
-- [ ] Build assets, start the local app, and perform Browser QA at 1440px, 760px, and 420px for group switching, rename, direct item draft, strategy draft, and item detail. Save one screenshot path in `RUNS.md` without staging it.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_component.py tests/test_portfolio_monitoring_page.py tests/test_component_static_distribution.py -q`, then `cd app/web/streamlit_components/portfolio_monitoring_workbench && npm test -- --run && npm run typecheck && npm run build`; return to repo root, run `git diff --check`, and commit as `포트폴리오 모니터링 React 화면 전환`.
+- [x] Write failing page-source/behavior tests proving the route calls one read-model builder, mounts one React component, dispatches one server command, and reruns after a mutating success. Assert the full legacy dashboard renderer is not invoked as fallback.
+- [x] Add static distribution tests for the new component assets and Operations summary tests using new group/item metrics while preserving page target navigation.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_component tests.test_portfolio_monitoring_page` and confirm failures; run the static distribution contract directly because this environment does not include pytest.
+- [x] Replace the page body with load -> render -> dispatch -> rerun. Keep legacy helpers callable for compatibility tests but remove them from the normal render path. Missing component shows read-only active summary and recovery instructions only.
+- [x] Build assets, start the local app, and perform Browser QA at 1440px, 760px, and 420px for the available read-only storage state: direct item draft, integer shares, strategy draft, focus return, and responsive overflow. Save one screenshot path in `RUNS.md` without staging it. Group/rename/item-detail mutation QA remains gated by the explicit storage migration.
+- [x] Run the 51-test monitoring/Operations regression, static distribution contract, `npm test -- --run`, `npm run typecheck`, `npm run build`, compile, and `git diff --check`; commit as `포트폴리오 모니터링 React 화면 전환`.
 
 **3차 완료 게이트:** the visible Portfolio Monitoring product is React one-shell; create/rename/add/end events round-trip through Python; fallback is read-only; browser layouts pass. Strength/weakness and macro sections remain explicit “coming in next stage” slots, not fabricated signals.
 

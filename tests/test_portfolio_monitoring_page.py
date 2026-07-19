@@ -1,0 +1,134 @@
+from __future__ import annotations
+
+import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
+
+from app.services.portfolio_monitoring.commands import CommandResult
+from app.services.portfolio_monitoring.schemas import CommandStatus
+
+
+class PortfolioMonitoringPageTests(unittest.TestCase):
+    def _services(self, *, component_value=None):
+        calls = []
+        state = {}
+
+        def build_workspace(*, active_group_id, catalog_query):
+            calls.append(("build", active_group_id, catalog_query))
+            return {
+                "schema_version": "portfolio_monitoring_workspace_v1",
+                "generated_at": "2026-07-19T12:00:00",
+                "groups": [],
+                "active_group": None,
+                "catalog": {"query": catalog_query, "items": []},
+                "commands": [],
+                "method": {},
+                "boundaries": {},
+            }
+
+        def render(payload):
+            calls.append(("render", payload["schema_version"]))
+            return component_value
+
+        def create_group(event):
+            calls.append(("create_group", event["name"]))
+            return CommandResult(
+                status=CommandStatus.SUCCEEDED,
+                command_id=event["command_id"],
+                target_id="group-new",
+                replayed=False,
+                message="created",
+            )
+
+        return SimpleNamespace(
+            calls=calls,
+            session_state=state,
+            build_workspace=build_workspace,
+            render_workbench=render,
+            render_fallback=lambda workspace, error=None: calls.append(("fallback", error)),
+            rerun=lambda: calls.append(("rerun",)),
+            create_group=create_group,
+            rename_group=lambda event: calls.append(("rename_group", event)) or None,
+            add_item=lambda event: calls.append(("add_item", event)) or None,
+            end_item=lambda event: calls.append(("end_item", event)) or None,
+        )
+
+    def test_route_builds_once_mounts_once_dispatches_once_and_reruns_after_success(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        services = self._services(
+            component_value={
+                "event": {
+                    "id": "create_group",
+                    "command_id": "command-1",
+                    "name": "Core",
+                }
+            }
+        )
+
+        page.render_final_selected_portfolio_dashboard_page(services=services)
+
+        self.assertEqual(sum(call[0] == "build" for call in services.calls), 1)
+        self.assertEqual(sum(call[0] == "render" for call in services.calls), 1)
+        self.assertEqual(sum(call[0] == "create_group" for call in services.calls), 1)
+        self.assertEqual(sum(call[0] == "rerun" for call in services.calls), 1)
+        self.assertEqual(services.session_state["portfolio_monitoring_last_command"]["command_id"], "command-1")
+
+    def test_missing_component_uses_read_only_fallback_not_legacy_dashboard(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        services = self._services(component_value=None)
+        with patch.object(page, "_render_dashboard_portfolio_workspace", side_effect=AssertionError("legacy renderer called")):
+            page.render_final_selected_portfolio_dashboard_page(services=services)
+
+        self.assertEqual(sum(call[0] == "fallback" for call in services.calls), 1)
+        self.assertEqual(sum(call[0] == "rerun" for call in services.calls), 0)
+
+    def test_dispatch_updates_view_state_without_mutating_command(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        services = self._services()
+        result = page._dispatch_portfolio_monitoring_event(
+            {"id": "search_catalog", "query": "aapl", "source_type": "direct_security"},
+            services,
+        )
+
+        self.assertIsNone(result)
+        self.assertEqual(services.session_state["portfolio_monitoring_catalog_query"], "aapl")
+        self.assertEqual(services.session_state["portfolio_monitoring_catalog_source_type"], "direct_security")
+        self.assertFalse(any(call[0] in {"create_group", "rename_group", "add_item", "end_item"} for call in services.calls))
+
+    def test_operations_summary_prefers_new_group_and_value_metrics_and_keeps_navigation(self) -> None:
+        from app.web.operations_overview import build_operations_overview_model
+
+        model = build_operations_overview_model(
+            selected_dashboard={"summary": {}, "portfolio_state": {}},
+            run_history=[],
+            monitoring_workspace={
+                "groups": [
+                    {"active_item_count": 2, "history_item_count": 3},
+                    {"active_item_count": 1, "history_item_count": 1},
+                ],
+                "active_group": {
+                    "status": "READY",
+                    "basis_date": "2026-07-18",
+                    "metrics": {
+                        "invested_capital": 20000,
+                        "current_value": 21500,
+                        "total_return": 0.075,
+                        "mdd": -0.04,
+                    },
+                },
+            },
+        )
+
+        summary = model["portfolio_summary"]
+        self.assertEqual(summary["active_portfolio_count"], 2)
+        self.assertEqual(summary["active_item_count"], 3)
+        self.assertEqual(summary["current_value"], 21500)
+        portfolio_lane = next(lane for lane in model["lanes"] if lane["key"] == "portfolio_monitoring")
+        self.assertEqual(portfolio_lane["links"][0]["target_key"], "portfolio_monitoring")
+
+
+if __name__ == "__main__":
+    unittest.main()
