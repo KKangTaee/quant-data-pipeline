@@ -291,12 +291,30 @@ const formatMovementLevel = (value: number | null, unit?: string | null) => valu
   : `${value.toFixed(2)} ${unit || ""}`.trim();
 const formatMonth = (value?: string | null) => value ? value.slice(0, 7).replace("-", ".") : "-";
 
-const ECONOMIC_DIRECTION_LABEL: Record<EconomicState["observations"][number]["direction"], string> = {
+const ECONOMIC_TO_EVIDENCE_DIRECTION: Record<
+  Exclude<EconomicState["observations"][number]["direction"], "UNAVAILABLE">,
+  Evidence["direction"]
+> = {
   STRENGTHENING: "강화",
   WEAKENING: "약화",
   NEUTRAL: "중립",
-  UNAVAILABLE: "자료 부족",
 };
+
+function resolveEconomicStatePresentation(
+  observation: EconomicState["observations"][number],
+): Pick<EvidencePresentation, "statusLabel" | "tone"> {
+  if (observation.direction === "UNAVAILABLE") {
+    return { statusLabel: "자료 부족", tone: "neutral" };
+  }
+  const group = observation.factor === "activity_score" || observation.factor === "labor_income_score"
+    ? "real_economy"
+    : "forecast_context";
+  return resolveEvidencePresentation({
+    factor: observation.factor,
+    group,
+    direction: ECONOMIC_TO_EVIDENCE_DIRECTION[observation.direction],
+  });
+}
 
 const COVERAGE_LABEL: Record<CoverageStatus, string> = {
   SUFFICIENT: "핵심 경로 충족",
@@ -598,14 +616,20 @@ function EvidenceGroup({ title, subtitle, rows }: { title: string; subtitle: str
 function EconomicStateBlock({ state }: { state: EconomicState }) {
   return (
     <section className="economic-state-block">
-      <h5>관측된 경제 상태</h5>
+      <h5>사이클 판단의 공통 경제 배경</h5>
       <p>{state.summary}</p>
       <div className="economic-observations">
-        {state.observations.map((observation) => (
-          <span key={observation.factor} className={`economic-${observation.direction.toLowerCase()}`}>
-            {observation.label} · {ECONOMIC_DIRECTION_LABEL[observation.direction]}
-          </span>
-        ))}
+        {state.observations.map((observation) => {
+          const presentation = resolveEconomicStatePresentation(observation);
+          return (
+            <span
+              key={observation.factor}
+              className={`evidence-tone-${presentation.tone}`}
+            >
+              {observation.label} · {presentation.statusLabel}
+            </span>
+          );
+        })}
       </div>
     </section>
   );

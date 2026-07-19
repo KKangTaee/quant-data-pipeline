@@ -261,9 +261,14 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         "자기 과거 기준보다 낮아 현재 경기 위치를 낮추는 근거입니다",
         "향후 1·2개월 경기 전망을 지지하는 방향입니다",
         "향후 1·2개월 경기 전망에 부담을 주는 방향입니다",
+        "resolveEconomicStatePresentation",
+        'STRENGTHENING: "강화"',
+        'WEAKENING: "약화"',
+        'statusLabel: "자료 부족"',
+        "resolveEvidencePresentation",
         'className="market-implications"',
         "자산별 확인 포인트",
-        "관측된 경제 상태",
+        "사이클 판단의 공통 경제 배경",
         "현재 움직임",
         "함께 관찰된 경로",
         "현재 해석",
@@ -284,6 +289,8 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
     ):
         assert token in source
 
+    assert "관측된 경제 상태" not in source
+    assert "ECONOMIC_DIRECTION_LABEL[observation.direction]" not in source
     assert "강화 · 약화 · 중립" not in source
     assert "경제 국면:" not in source
     assert "바뀌는 조건" not in source
@@ -329,7 +336,7 @@ def test_economic_cycle_asset_ui_uses_observation_sections_without_left_rails() 
 
     for token in (
         'schema_version: "economic_cycle_v2"',
-        "관측된 경제 상태",
+        "사이클 판단의 공통 경제 배경",
         "현재 움직임",
         "함께 관찰된 경로",
         "현재 해석",
@@ -338,6 +345,8 @@ def test_economic_cycle_asset_ui_uses_observation_sections_without_left_rails() 
         "63거래일",
     ):
         assert token in source
+    assert "관측된 경제 상태" not in source
+    assert "ECONOMIC_DIRECTION_LABEL[observation.direction]" not in source
     assert "상승 요인이 될 수 있는 측정 경로" not in source
     observation_start = style.index(".observation-block")
     observation_style = style[observation_start : observation_start + 900]
