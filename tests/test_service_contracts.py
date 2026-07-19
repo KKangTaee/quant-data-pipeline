@@ -8678,6 +8678,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("sentiment-workbench__axis-card", react_source)
         self.assertIn("sentiment-workbench__freshness-strip", react_source)
         self.assertIn("payload.freshness.detail", react_source)
+        self.assertIn("toneColor(payload.freshness.tone)", react_source)
+        self.assertIn("axis.latest_date", react_source)
+        self.assertIn("axis.previous_date", react_source)
+        self.assertIn("sentiment-workbench__axis-date", react_source)
         self.assertIn("payload.boundary_note", react_source)
         self.assertLess(
             react_source.index('className="sentiment-workbench__hero"'),
@@ -8775,6 +8779,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("AAII 응답", react_source)
         self.assertIn("AAII Spread", react_source)
         self.assertIn("spreadGuideValues", react_source)
+        self.assertIn("uniqueDateCount", react_source)
+        self.assertIn("uniqueDateCount >= 2", react_source)
+        self.assertIn("추이를 그리려면 서로 다른 두 시점 이상의 관측이 필요합니다.", react_source)
+        self.assertIn("yForValue(45, domain)", react_source)
+        self.assertIn("yForValue(55, domain)", react_source)
+        self.assertIn('aria-controls="sentiment-chart-panel"', react_source)
+        self.assertIn('aria-labelledby={`sentiment-chart-tab-${chartTab}`}', react_source)
+        self.assertIn("sentiment-workbench__chart-guide--zero", react_source)
         self.assertNotIn("historyDates.indexOf", react_source)
         self.assertIn("sentiment-workbench__chart-section", react_source)
         self.assertIn("sentiment-workbench__line-chart", react_source)
@@ -22161,6 +22173,47 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             },
         )
 
+    def test_market_sentiment_snapshot_marks_missing_aaii_direction_and_responses_for_review(self) -> None:
+        from app.services.overview.sentiment import build_market_sentiment_snapshot
+
+        snapshot_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-07-16"),
+                    "source": "cnn_fear_greed",
+                    "value": 37.1,
+                    "coverage_status": "actual",
+                    "snapshot_status": "actual",
+                    "missing_fields_json": "{}",
+                    "staleness_days": 1,
+                },
+                {
+                    "series_id": "AAII_BEARISH",
+                    "observation_date": pd.Timestamp("2026-07-15"),
+                    "source": "aaii_sentiment_survey",
+                    "value": 32.9,
+                    "coverage_status": "actual",
+                    "snapshot_status": "actual",
+                    "missing_fields_json": "{}",
+                    "staleness_days": 2,
+                },
+            ]
+        )
+
+        snapshot = build_market_sentiment_snapshot(
+            snapshot_rows=snapshot_rows,
+            history_rows=snapshot_rows,
+            today=date(2026, 7, 17),
+        )
+
+        self.assertEqual(snapshot["status"], "REVIEW")
+        self.assertEqual(snapshot["coverage"]["missing_count"], 3)
+        self.assertEqual(snapshot["analysis"]["data_confidence"]["status"], "Review")
+        self.assertFalse(snapshot["analysis"]["axes"]["investor_survey"]["available"])
+        self.assertEqual(snapshot["analysis"]["cross_read"]["status"], "한 축만 확인 가능")
+        self.assertTrue(any("AAII Bull-Bear Spread" in warning for warning in snapshot["warnings"]))
+
     def test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context(self) -> None:
         from app.services.overview.sentiment import build_market_sentiment_snapshot
 
@@ -22192,6 +22245,38 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "category": "sentiment_survey",
                     "units": "percent",
                     "value": 37.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 2,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_BULLISH",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html",
+                    "series_name": "AAII Bullish Sentiment",
+                    "category": "sentiment_survey",
+                    "units": "percent",
+                    "value": 36.3,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 2,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_NEUTRAL",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html",
+                    "series_name": "AAII Neutral Sentiment",
+                    "category": "sentiment_survey",
+                    "units": "percent",
+                    "value": 26.7,
                     "coverage_status": "actual",
                     "missing_fields_json": "{}",
                     "collected_at": pd.Timestamp("2026-06-04 14:50:00"),

@@ -941,12 +941,13 @@ def build_market_sentiment_snapshot(
     ordered_core = ["CNN_FEAR_GREED", "AAII_BEARISH", "AAII_BULL_BEAR_SPREAD", "AAII_BULLISH", "AAII_NEUTRAL"]
     table_rows: list[dict[str, Any]] = []
     missing_core = 0
+    missing_core_labels: list[str] = []
     stale_count = 0
     for series_id in ordered_core:
         row = _latest_sentiment_row(snapshot_frame, series_id)
         if row is None:
-            if series_id in {"CNN_FEAR_GREED", "AAII_BEARISH"}:
-                missing_core += 1
+            missing_core += 1
+            missing_core_labels.append(SENTIMENT_SERIES_LABELS.get(series_id, series_id))
             continue
         status = _sentiment_status(row)
         if status != "OK":
@@ -999,7 +1000,7 @@ def build_market_sentiment_snapshot(
     aaii_spread_row = _latest_sentiment_row(snapshot_frame, "AAII_BULL_BEAR_SPREAD")
     warnings: list[str] = []
     if missing_core:
-        warnings.append("CNN Fear & Greed or AAII bearish sentiment is missing from stored observations.")
+        warnings.append(f"Required sentiment observations are missing: {', '.join(missing_core_labels)}.")
     if stale_count:
         warnings.append("One or more sentiment observations are stale or partial.")
     status = "OK" if missing_core == 0 and stale_count == 0 else "REVIEW" if table_rows else "MISSING"

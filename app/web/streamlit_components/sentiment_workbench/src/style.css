@@ -170,6 +170,7 @@ summary {
 
 .sentiment-workbench__freshness-strip {
   background: #eef2f7;
+  border-left: 3px solid var(--metric-tone, #64748b);
   border-radius: 8px;
   color: #64748b;
   gap: 8px 16px;
@@ -252,6 +253,13 @@ summary {
   color: #64748b;
   font-size: 0.76rem;
   font-weight: 760;
+}
+
+.sentiment-workbench__axis-date {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .sentiment-workbench__axis-breakdown {
@@ -649,6 +657,12 @@ summary {
   stroke: #a78bfa;
   stroke-dasharray: 6 5;
   stroke-width: 1.4;
+}
+
+.sentiment-workbench__chart-guide--zero {
+  stroke: #475569;
+  stroke-dasharray: none;
+  stroke-width: 1.8;
 }
 
 .sentiment-workbench__chart-y-label,

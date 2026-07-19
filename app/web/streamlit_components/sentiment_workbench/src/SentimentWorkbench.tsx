@@ -265,6 +265,7 @@ function SentimentAxisCard({ axis, kind }: { axis: SentimentAxis; kind: "cnn" | 
         <b>{displayValue(axis.current, kind === "aaii" ? "pp" : "")}</b>
         <span>직전 대비 {signedValue(axis.change, kind === "aaii" ? "pp" : "p")}</span>
       </div>
+      <small className="sentiment-workbench__axis-date">기준 {axis.latest_date || "-"} · 직전 {axis.previous_date || "-"}</small>
       {kind === "cnn" ? (
         <div className="sentiment-workbench__axis-breakdown">
           <span>탐욕 <b>{balance?.greed_count ?? 0}</b></span>
@@ -365,6 +366,8 @@ function SentimentLineChart({ panel, chartTab }: { panel: ChartPanel; chartTab: 
     (result[point.series] ||= []).push(point);
     return result;
   }, {});
+  const uniqueDateCount = new Set(points.map((point) => point.timestamp)).size;
+  const hasTrend = uniqueDateCount >= 2;
   const dateTicks = buildDateTicks(extent);
   const yTicks = panel.unit === "percentage_point"
     ? [domain.min, domain.min / 2, 0, domain.max / 2, domain.max]
@@ -394,9 +397,9 @@ function SentimentLineChart({ panel, chartTab }: { panel: ChartPanel; chartTab: 
     <div className="sentiment-workbench__line-chart">
       <header className="sentiment-workbench__chart-title">
         <div><strong>{panel.title}</strong><small>{panel.basis}</small></div>
-        <span>{points.length}개 관측</span>
+        <span>{uniqueDateCount}개 시점</span>
       </header>
-      {points.length ? (
+      {hasTrend ? (
         <div className="sentiment-workbench__line-chart-plot">
           <svg
             aria-label="심리 근거 그래프"
@@ -407,9 +410,9 @@ function SentimentLineChart({ panel, chartTab }: { panel: ChartPanel; chartTab: 
           >
             {chartTab === "cnn" ? (
               <g aria-hidden="true">
-                <rect className="sentiment-workbench__chart-band sentiment-workbench__chart-band--fear" height={yForValue(25, domain) - yForValue(50, domain)} width={plotWidth} x={chartMargin.left} y={yForValue(50, domain)} />
+                <rect className="sentiment-workbench__chart-band sentiment-workbench__chart-band--fear" height={yForValue(25, domain) - yForValue(45, domain)} width={plotWidth} x={chartMargin.left} y={yForValue(45, domain)} />
                 <rect className="sentiment-workbench__chart-band sentiment-workbench__chart-band--extreme-fear" height={yForValue(0, domain) - yForValue(25, domain)} width={plotWidth} x={chartMargin.left} y={yForValue(25, domain)} />
-                <rect className="sentiment-workbench__chart-band sentiment-workbench__chart-band--greed" height={yForValue(50, domain) - yForValue(75, domain)} width={plotWidth} x={chartMargin.left} y={yForValue(75, domain)} />
+                <rect className="sentiment-workbench__chart-band sentiment-workbench__chart-band--greed" height={yForValue(55, domain) - yForValue(75, domain)} width={plotWidth} x={chartMargin.left} y={yForValue(75, domain)} />
                 <rect className="sentiment-workbench__chart-band sentiment-workbench__chart-band--extreme-greed" height={yForValue(75, domain) - yForValue(100, domain)} width={plotWidth} x={chartMargin.left} y={yForValue(100, domain)} />
               </g>
             ) : null}
@@ -417,7 +420,7 @@ function SentimentLineChart({ panel, chartTab }: { panel: ChartPanel; chartTab: 
               const y = yForValue(tick, domain);
               return <g key={`y-${tick}`}><line className="sentiment-workbench__chart-gridline" x1={chartMargin.left} x2={chartWidth - chartMargin.right} y1={y} y2={y} /><text className="sentiment-workbench__chart-y-label" textAnchor="end" x={chartMargin.left - 9} y={y + 4}>{tick}</text></g>;
             })}
-            {guides.map((guide) => <line className="sentiment-workbench__chart-guide" key={`guide-${guide}`} x1={chartMargin.left} x2={chartWidth - chartMargin.right} y1={yForValue(guide, domain)} y2={yForValue(guide, domain)} />)}
+            {guides.map((guide) => <line className={`sentiment-workbench__chart-guide${guide === 0 ? " sentiment-workbench__chart-guide--zero" : ""}`} key={`guide-${guide}`} x1={chartMargin.left} x2={chartWidth - chartMargin.right} y1={yForValue(guide, domain)} y2={yForValue(guide, domain)} />)}
             {dateTicks.map((timestamp) => {
               const x = xForTimestamp(timestamp, extent);
               return <g key={`x-${timestamp}`}><line className="sentiment-workbench__chart-x-tick" x1={x} x2={x} y1={chartHeight - chartMargin.bottom} y2={chartHeight - chartMargin.bottom + 5} /><text className="sentiment-workbench__chart-x-label" textAnchor="middle" x={x} y={chartHeight - 14}>{formatChartDate(timestamp)}</text></g>;
@@ -445,10 +448,10 @@ function SentimentLineChart({ panel, chartTab }: { panel: ChartPanel; chartTab: 
             </div>
           ) : null}
         </div>
-      ) : <p className="sentiment-workbench__empty">추이를 그릴 관측이 부족합니다.</p>}
+      ) : <p className="sentiment-workbench__empty">추이를 그리려면 서로 다른 두 시점 이상의 관측이 필요합니다.</p>}
       <div className="sentiment-workbench__chart-legend">
         {Object.keys(grouped).map((series) => <span key={series}><i style={{ background: chartSeriesColor(series) }} />{series}</span>)}
-        {chartTab === "aaii_spread" ? <small>점선: -10 / 0 / +10pp 판정 기준</small> : null}
+        {chartTab === "aaii_spread" ? <small>기준선: -10 / 0 / +10pp · 0은 실선</small> : null}
       </div>
     </div>
   );
@@ -501,7 +504,7 @@ function SentimentWorkbench({ args }: Props) {
         </aside>
       </section>
 
-      <div className="sentiment-workbench__freshness-strip">
+      <div className="sentiment-workbench__freshness-strip" style={{ "--metric-tone": toneColor(payload.freshness.tone) } as React.CSSProperties}>
         <span>자료 기준 <b>{payload.freshness.latest_observation_date}</b></span>
         <span>{payload.freshness.detail}</span>
         <span>source {payload.freshness.source_count}</span>
@@ -550,12 +553,12 @@ function SentimentWorkbench({ args }: Props) {
         <div className="sentiment-workbench__section-heading"><div><span>History</span><h3>그래프로 보는 근거</h3></div><small>source 단위별 분리</small></div>
         <div className="sentiment-workbench__chart-tabs" role="tablist" aria-label="심리 그래프 보기">
           {(["cnn", "aaii_responses", "aaii_spread"] as const).map((key) => (
-            <button aria-selected={chartTab === key} className={chartTab === key ? "is-active" : ""} key={key} onClick={() => setChartTab(key)} role="tab" type="button">
+            <button aria-controls="sentiment-chart-panel" aria-selected={chartTab === key} className={chartTab === key ? "is-active" : ""} id={`sentiment-chart-tab-${key}`} key={key} onClick={() => setChartTab(key)} role="tab" type="button">
               {key === "cnn" ? "CNN 행동" : key === "aaii_responses" ? "AAII 응답" : "AAII Spread"}
             </button>
           ))}
         </div>
-        <div aria-live="polite" className="sentiment-workbench__chart-panel" role="tabpanel"><SentimentLineChart chartTab={chartTab} panel={activeChart} /></div>
+        <div aria-labelledby={`sentiment-chart-tab-${chartTab}`} aria-live="polite" className="sentiment-workbench__chart-panel" id="sentiment-chart-panel" role="tabpanel"><SentimentLineChart chartTab={chartTab} panel={activeChart} /></div>
       </section>
 
       <section className="sentiment-workbench__watch-section">
