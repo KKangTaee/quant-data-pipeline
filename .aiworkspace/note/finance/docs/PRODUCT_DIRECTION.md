@@ -1,7 +1,7 @@
 # Product Direction
 
 Status: Active
-Last Verified: 2026-07-12
+Last Verified: 2026-07-19
 
 ## Product Summary
 
@@ -23,7 +23,7 @@ Last Verified: 2026-07-12
 ## Target Experience
 
 - 사용자는 Backtest Analysis에서 전략이나 저장된 포트폴리오 mix를 후보 source로 만든다.
-- Workspace > Overview는 Market Context, Market Movers / Why It Moved, Futures Macro, Sentiment, Events로 시장 context를 보여준다. Market Context는 5년 후행 PER 상대 구간과 FOMC 거시 가정 기반 EPS/SPX 시나리오를 보여주며, 공식 적정가나 거래 신호로 표현하지 않는다. Sector evidence는 Market Movers가 소유하고 Data Health는 Operations / Ingestion 흐름으로 분리한다.
+- Workspace > Overview는 Market Context, Market Movers / Why It Moved, Futures Macro, Sentiment, Events로 시장 context를 보여준다. Market Context는 5년 후행 PER 상대 구간과 FOMC 거시 가정 기반 EPS/SPX 시나리오를 보여주며, 공식 적정가나 거래 신호로 표현하지 않는다. Sector evidence는 Market Movers가 소유하고 수집 결과·실패 확인은 Workspace > Ingestion으로 분리한다.
 - Workspace > Institutional Portfolios는 Overview Market Movers와 분리된 read-only research surface로, 투자 대가 / 기관별 delayed SEC Form 13F portfolio를 React workbench에서 포트폴리오 allocation, 상위 보유, 분기별 reported change, 섹터 노출, 종목별 보유기관 drill-down으로 탐색한다.
 - Practical Validation은 후보를 source traits, module gate, provider / macro / robustness / realism evidence로 검증한다.
 - Final Review는 selected-route gate를 통과한 후보를 최종 관찰 후보로 저장하되, live approval로 해석하지 않는다.
@@ -61,9 +61,7 @@ Last Verified: 2026-07-12
 - `Backtest > Backtest Analysis`
 - `Backtest > Practical Validation`
 - `Backtest > Final Review`
-- `Operations > Operations Console`
 - `Operations > Portfolio Monitoring`
-- `Operations > System / Data Health`
 - `Reference > Guides`
 
 현재 구현 완료로 보는 큰 흐름:
@@ -73,6 +71,6 @@ Last Verified: 2026-07-12
 - Macro / sentiment context는 DB-backed collection과 loader를 통해 읽고, 화면에서는 freshness / source / partial state를 숨기지 않는다.
 - Backtest Analysis는 기존 ETF / factor / mix 후보와 Risk-On Momentum 5D Daily Swing research lane을 포함한다. Risk-On Momentum daily signal governance는 아직 Practical Validation / Final Review / Portfolio Monitoring에 연결하지 않았다.
 - Practical Validation V2 P2 / P3, Final Review selection readiness, Operations > Portfolio Monitoring read-only monitoring / recheck 연결은 closeout 완료 상태다.
-- Operations는 Operations Console을 입구로 삼고, Portfolio Monitoring과 System / Data Health만 사용자-facing 운영 탭으로 둔다. Operations Console은 Portfolio Monitoring Status summary와 Evidence Health mini strip을 먼저 보여준 뒤 priority / evidence / metric 기반 review queue와 primary lane을 표시하며, archive / development-history decision table은 운영 화면에 노출하지 않는다. 과거 데이터 / helper code 삭제는 별도 audit 전까지 하지 않는다.
+- Operations는 Portfolio Monitoring만 사용자-facing 화면으로 둔다. 최종 선정 후보의 그룹·항목 lifecycle, 공통 기준 성과, contribution, 개별 상세와 review context를 이 화면에서 바로 확인한다. 수집 실행 결과, run history, log, failure CSV는 `Workspace > Ingestion > 실행 기록 / 결과`가 소유하며 Portfolio Monitoring에 진단 패널로 중복하지 않는다.
 
 현재 active phase는 없다. 다음 개발은 사용자가 승인한 구체적 scope를 새 task 또는 phase로 열어 진행한다.

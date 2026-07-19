@@ -24,7 +24,7 @@ def load_overview_ia_closeout_model() -> dict[str, Any]:
                 "title": "Data Repair",
                 "status": "EXTERNAL",
                 "tone": "warning",
-                "owner": "Operations > System / Data Health + Workspace > Ingestion",
+                "owner": "Workspace > Ingestion > 실행 기록 / 결과",
                 "tabs": [],
                 "detail": "Overview 최상위 탭에서는 제외하고, Market Context의 자료 기준 / 보강 흐름과 Operations / Ingestion에서 확인합니다.",
                 "next_step": "자료 보강이 필요하면 Market Context의 보강 버튼을 먼저 보고, 상세 진단은 Operations 또는 Ingestion에서 확인합니다.",
@@ -38,4 +38,3 @@ def load_overview_ia_closeout_model() -> dict[str, Any]:
 
 
 __all__ = ["load_overview_ia_closeout_model"]
-

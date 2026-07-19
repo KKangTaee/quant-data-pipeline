@@ -18,7 +18,7 @@ REFERENCE_CONTEXTUAL_HELP: list[dict[str, Any]] = [
         "guide_focus": "제품 흐름 / Backtest Analysis / Portfolio Selection Journey",
         "glossary_terms": ["Promotion Policy Signal", "Data Trust", "Saved Portfolio"],
         "next_checks": [
-            "Data Trust가 warning이면 Ingestion / System Data Health에서 source 상태를 먼저 확인합니다.",
+            "Workspace > Ingestion > 실행 기록 / 결과에서 source 상태와 실패 원인을 확인합니다.",
             "Portfolio Mix 결과는 저장 setup인지, Practical Validation source인지 구분합니다.",
             "Promotion Policy Signal은 Final Review selected decision을 대체하지 않습니다.",
         ],
@@ -71,27 +71,6 @@ REFERENCE_CONTEXTUAL_HELP: list[dict[str, Any]] = [
         "links": [
             {"label": "Guides에서 final route 확인", "target": "/guides"},
             {"label": "Glossary에서 gate 용어 확인", "target": "/glossary"},
-        ],
-    },
-    {
-        "surface_key": "operations_console",
-        "surface": "Operations > Operations Console",
-        "title": "운영 화면의 우선순위를 볼 때",
-        "summary": "Primary Operations와 Archive / Reference의 역할을 구분합니다.",
-        "guide_focus": "제품 흐름 / Archive / Recovery, 기록 경계 / run history / candidate library",
-        "glossary_terms": ["Saved Portfolio", "Portfolio Monitoring Scenario"],
-        "next_checks": [
-            "Portfolio Monitoring과 System / Data Health는 primary operations입니다.",
-            "Backtest Run History와 Candidate Library는 archive / recovery 도구입니다.",
-            "Reference는 workflow 의미와 기록 경계를 확인하는 read-only surface입니다.",
-        ],
-        "boundaries": [
-            "Operations Console은 안내와 이동 surface이며 registry rewrite, live approval, broker order를 만들지 않습니다.",
-            "Archive 도구는 복구 / 감사용이며 현재 selected decision을 자동 변경하지 않습니다.",
-        ],
-        "links": [
-            {"label": "Guides에서 operations 흐름 확인", "target": "/guides"},
-            {"label": "Glossary에서 운영 용어 확인", "target": "/glossary"},
         ],
     },
     {

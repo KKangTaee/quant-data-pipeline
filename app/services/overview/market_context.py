@@ -504,9 +504,9 @@ def build_overview_source_confidence_catalog(
         _source_confidence_item(
             item_id="data_health",
             title="Data Health",
-            surface="Operations > System / Data Health",
+            surface="Workspace > Ingestion > 실행 기록 / 결과",
             source="DB freshness summaries and local run history",
-            owner="Operations > System / Data Health and owning collection surfaces",
+            owner="Workspace > Ingestion > 실행 기록 / 결과와 owning collection surfaces",
             status=data_status,
             freshness=data_coverage.get("latest_success_at") or data_coverage.get("latest_auto_at"),
             detail=(
@@ -1041,7 +1041,7 @@ def _build_cockpit_data_card(snapshot: dict[str, Any]) -> tuple[dict[str, Any], 
             "source": "Data Health",
             "freshness": coverage.get("latest_success_at") or coverage.get("latest_auto_at") or "-",
             "freshness_label": _cockpit_freshness_label(coverage.get("latest_success_at") or coverage.get("latest_auto_at")),
-            "target_tab": "Operations > System / Data Health",
+            "target_tab": "Workspace > Ingestion > 실행 기록 / 결과",
             "badges": [
                 {"label": "정상", "value": str(coverage.get("ok_count") or 0), "tone": "positive"},
                 {"label": "확인 필요", "value": str(review_count), "tone": "warning" if review_count else "positive"},
@@ -1083,7 +1083,7 @@ def _cockpit_ops_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
         action = _data_health_collection_action_copy(area, item.get("collection_action") or item.get("next_action"))
         return {
             "id": "data_health",
-            "target_tab": "Operations > System / Data Health",
+            "target_tab": "Workspace > Ingestion > 실행 기록 / 결과",
             "title": f"{area} 확인",
             "reason": str(item.get("reason") or f"{item.get('status') or 'Review'} · {item.get('freshness') or '-'}"),
             "action": f"{area} 자료 주의점입니다. 필요하면 {target_surface}에서 {action}",
@@ -1104,7 +1104,7 @@ def _cockpit_ops_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
     row = dict(review_rows.iloc[0].dropna().to_dict())
     area = normalize_overview_data_health_area(row.get("Area") or "Data Health")
     return {
-        "target_tab": "Operations > System / Data Health",
+        "target_tab": "Workspace > Ingestion > 실행 기록 / 결과",
         "title": area,
         "reason": f"{_cockpit_status_label(row.get('Status') or 'Review')} · 자료 기준 {_cockpit_freshness_label(row.get('Data Freshness'))}",
         "action": "Data Health 자료 관리 위치와 필요한 갱신 경로를 봅니다.",

@@ -28,7 +28,7 @@ Last Verified: 2026-07-19
 
 ## 데이터 경계
 
-화면 render 중 provider fetch를 하지 않는다. 경로는 `Ingestion -> DB -> Loader/Adapter -> Service -> Streamlit bridge -> React`다. 직접 종목 가격 상세은 `finance.loaders.price.load_price_history`의 일봉을 최신 120거래일 compact `selected_item_market_chart`로 전달하며, 불완전한 OHLC row는 제외하고 volume 결측만 허용한다. 확대/이동 viewport는 React client state이며 Python rerun이나 추가 DB read를 만들지 않는다. desktop은 pointer wheel/drag, 420px mobile은 세로 scroll을 보존하는 명시적 zoom/reset controls만 제공한다. Operations Console summary는 이 상세 projection을 요청하지 않는다. Final Review row는 후보 identity와 replay contract를 제공하지만 기존 append-only decision을 수정하지 않는다. legacy saved JSONL은 migration 입력으로만 읽고 재작성하지 않는다.
+화면 render 중 provider fetch를 하지 않는다. 경로는 `Ingestion -> DB -> Loader/Adapter -> Service -> Streamlit bridge -> React`다. 직접 종목 가격 상세은 `finance.loaders.price.load_price_history`의 일봉을 최신 120거래일 compact `selected_item_market_chart`로 전달하며, 불완전한 OHLC row는 제외하고 volume 결측만 허용한다. 확대/이동 viewport는 React client state이며 Python rerun이나 추가 DB read를 만들지 않는다. desktop은 pointer wheel/drag, 420px mobile은 세로 scroll을 보존하는 명시적 zoom/reset controls만 제공한다. Final Review row는 후보 identity와 replay contract를 제공하지만 기존 append-only decision을 수정하지 않는다. legacy saved JSONL은 migration 입력으로만 읽고 재작성하지 않는다.
 
 ## 판단 경계
 
