@@ -16,3 +16,5 @@
 Authoritative spec: `docs/superpowers/specs/2026-07-19-overview-sentiment-cnn-aaii-v1-design.md`
 
 Visual redesign spec: `docs/superpowers/specs/2026-07-19-overview-sentiment-visual-redesign-design.md`
+
+CNN component status badge spec: `docs/superpowers/specs/2026-07-20-overview-sentiment-cnn-status-badges-design.md`
