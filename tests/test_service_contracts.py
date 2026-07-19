@@ -8324,6 +8324,23 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("@media (max-width: 760px)", style)
         self.assertIn("grid-template-columns: 1fr", style)
 
+    def test_futures_macro_ribbon_has_visible_regime_legend(self) -> None:
+        root = Path("app/web/streamlit_components/futures_macro_workbench/src")
+        ribbon = (root / "PatternRibbonSection.tsx").read_text(encoding="utf-8")
+        style = (root / "style.css").read_text(encoding="utf-8")
+
+        for label in ("위험선호", "방어", "물가·금리 부담", "혼재", "전환 시도"):
+            self.assertIn(label, ribbon)
+        self.assertIn("과거 → 최근", ribbon)
+        for class_name in (
+            "legend-risk_seeking",
+            "legend-defensive",
+            "legend-inflation_rate_pressure",
+            "legend-mixed",
+            "legend-transition",
+        ):
+            self.assertIn(class_name, style)
+
     def test_futures_macro_react_separates_observation_and_outlook_statuses(self) -> None:
         root = Path("app/web/streamlit_components/futures_macro_workbench/src")
         types = (root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")

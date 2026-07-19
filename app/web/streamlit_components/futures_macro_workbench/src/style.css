@@ -256,6 +256,15 @@ button { font: inherit; }
 .fm-workbench__ribbon .regime-inflation_rate_pressure { background: #e4a13a; }
 .fm-workbench__ribbon .regime-mixed { background: #8597a8; }
 .fm-workbench__ribbon [class*="transition-transition"] { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.38) 0 3px, transparent 3px 6px); }
+.fm-workbench__ribbon-legend { align-items: center; color: var(--muted); display: flex; flex-wrap: wrap; font-size: 0.66rem; gap: 8px 14px; margin-top: 10px; }
+.fm-workbench__ribbon-legend small { font-size: 0.64rem; font-weight: 800; margin-right: 2px; }
+.fm-workbench__ribbon-legend span { align-items: center; display: inline-flex; gap: 5px; white-space: nowrap; }
+.fm-workbench__ribbon-legend i { background: #a8b5bf; border-radius: 3px; display: inline-block; height: 10px; width: 18px; }
+.fm-workbench__ribbon-legend .legend-risk_seeking i { background: #54aa87; }
+.fm-workbench__ribbon-legend .legend-defensive i { background: #d66f62; }
+.fm-workbench__ribbon-legend .legend-inflation_rate_pressure i { background: #e4a13a; }
+.fm-workbench__ribbon-legend .legend-mixed i { background: #8597a8; }
+.fm-workbench__ribbon-legend .legend-transition i { background-color: #8597a8; background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.48) 0 3px, transparent 3px 6px); }
 .fm-workbench__empty { background: var(--soft); border-radius: 10px; color: var(--muted); font-size: 0.76rem; padding: 13px; }
 
 .fm-workbench__asset-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
