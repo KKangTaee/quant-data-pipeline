@@ -26383,22 +26383,42 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
 
         self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v2")
         self.assertEqual([item["key"] for item in payload["horizons"]], ["current", "5D", "20D"])
-        self.assertEqual(payload["horizons"][0]["kind"], "observation")
-        self.assertNotIn("probabilities", payload["horizons"][0])
-        self.assertEqual(payload["horizons"][1]["kind"], "conditional_outlook")
-        self.assertEqual(payload["horizons"][1]["baseline_label"], "평소 기준 확률")
-        self.assertIn("conditional_path", payload["horizons"][1])
-        self.assertIn("conditional_path", payload["horizons"][2])
-        self.assertEqual(len(payload["horizons"][1]["conditional_path"]["points"]), 5)
-        self.assertEqual(len(payload["horizons"][2]["conditional_path"]["points"]), 20)
+        current, five_day, twenty_day = payload["horizons"]
+        self.assertEqual(payload["hero"]["observation_status"], "OBSERVED")
+        self.assertEqual(current["kind"], "observation")
+        self.assertEqual(current["observation_status"], "OBSERVED")
+        self.assertNotIn("estimate_status", current)
+        self.assertNotIn("probabilities", current)
+        self.assertEqual(five_day["kind"], "conditional_outlook")
+        self.assertEqual(five_day["estimate_status"], "PROVISIONAL")
+        self.assertEqual(twenty_day["estimate_status"], "PROVISIONAL")
+        self.assertEqual(five_day["baseline_label"], "평소 기준 확률")
+        self.assertIn("conditional_path", five_day)
+        self.assertIn("conditional_path", twenty_day)
+        self.assertEqual(len(five_day["conditional_path"]["points"]), 5)
+        self.assertEqual(len(twenty_day["conditional_path"]["points"]), 20)
         self.assertNotEqual(
-            payload["horizons"][1]["conditional_path"]["terminal"],
-            payload["horizons"][2]["conditional_path"]["terminal"],
+            five_day["conditional_path"]["terminal"],
+            twenty_day["conditional_path"]["terminal"],
         )
+        for pathway in payload["asset_pathways"]:
+            self.assertEqual(pathway["observation_status"], "OBSERVED")
+            self.assertEqual(pathway["outlook"]["five_day_status"], "PROVISIONAL")
+            self.assertEqual(pathway["outlook"]["twenty_day_status"], "PROVISIONAL")
+            self.assertNotIn("estimate_status", pathway)
         self.assertNotIn("zones", payload["pattern_map"])
         self.assertEqual([item["id"] for item in payload["command"]["actions"]], ["daily_refresh", "reload"])
         self.assertNotIn("validation", payload)
         self.assertNotIn("load_validation", str(payload))
+
+    def test_futures_macro_observation_status_distinguishes_ready_partial_and_missing(self) -> None:
+        from app.web.overview.futures_macro_helpers import _pattern_observation_status
+
+        self.assertEqual(_pattern_observation_status({"status": "READY"}), "OBSERVED")
+        self.assertEqual(_pattern_observation_status({"status": "PARTIAL"}), "PARTIAL")
+        self.assertEqual(_pattern_observation_status({"status": "LIMITED"}), "PARTIAL")
+        self.assertEqual(_pattern_observation_status({"status": "UNAVAILABLE"}), "UNAVAILABLE")
+        self.assertEqual(_pattern_observation_status({}), "UNAVAILABLE")
 
     def test_futures_macro_v2_payload_hides_unavailable_probabilities(self) -> None:
         from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload

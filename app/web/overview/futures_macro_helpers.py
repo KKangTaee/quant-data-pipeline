@@ -750,6 +750,17 @@ PATTERN_ASSET_DEFINITIONS = (
 )
 
 
+def _pattern_observation_status(pattern: dict[str, Any]) -> str:
+    """Map stored current-pattern coverage to an observation-only status."""
+
+    status = str(pattern.get("status") or "UNAVAILABLE")
+    if status == "READY":
+        return "OBSERVED"
+    if status in {"PARTIAL", "LIMITED"}:
+        return "PARTIAL"
+    return "UNAVAILABLE"
+
+
 def _current_pattern_horizon(pattern: dict[str, Any]) -> dict[str, Any]:
     return {
         "key": "current",
@@ -757,7 +768,7 @@ def _current_pattern_horizon(pattern: dict[str, Any]) -> dict[str, Any]:
         "kind": "observation",
         "title": _display_text(pattern.get("regime_label"), "현재 체제 자료 부족"),
         "summary": _display_text(pattern.get("summary"), "다중 기간 패턴을 계산할 자료가 부족합니다."),
-        "estimate_status": "PROVISIONAL" if pattern.get("status") in {"READY", "PARTIAL"} else "UNAVAILABLE",
+        "observation_status": _pattern_observation_status(pattern),
         "edge_label": _display_text(pattern.get("transition_label"), "자료 부족"),
         "status_reason": "현재는 1D / 5D / 20D 관측이며 미래 확률이 아닙니다.",
     }
@@ -867,7 +878,7 @@ def _pattern_hero_payload(macro: dict[str, Any], pattern: dict[str, Any]) -> dic
         "summary": _display_text(pattern.get("summary") or summary.get("summary"), "현재 패턴을 계산할 자료가 부족합니다."),
         "today_summary": _display_text(summary.get("summary"), "오늘의 재가격화 근거가 부족합니다."),
         "as_of_date": _display_text(pattern.get("as_of_date"), "-"),
-        "estimate_status": "PROVISIONAL" if pattern.get("status") in {"READY", "PARTIAL"} else "UNAVAILABLE",
+        "observation_status": _pattern_observation_status(pattern),
         "coverage_label": f"family {coverage.get('available_family_count') or 0}/{coverage.get('required_family_count') or 6}",
         "evidence": [str(value) for value in list(evidence.get("current") or []) if str(value).strip()],
     }
@@ -933,9 +944,9 @@ def _pattern_asset_pathways(
         for item in list(pattern_outlook.get("horizons") or [])
     }
     change_conditions = list(pattern.get("change_conditions") or [])
-    status_order = {"VERIFIED": 2, "PROVISIONAL": 1, "UNAVAILABLE": 0}
-    horizon_statuses = [str(item.get("estimate_status") or "UNAVAILABLE") for item in horizon_map.values()]
-    estimate_status = min(horizon_statuses, key=lambda value: status_order.get(value, 0)) if horizon_statuses else "UNAVAILABLE"
+    five_day = dict(horizon_map.get(5) or {})
+    twenty_day = dict(horizon_map.get(20) or {})
+    observation_status = _pattern_observation_status(pattern)
     return [
         {
             "key": pathway_key,
@@ -946,11 +957,13 @@ def _pattern_asset_pathways(
                 "twenty_day": _family_state_label(dict(families.get(family_key) or {}), "twenty_day"),
             },
             "outlook": {
-                "five_day": _pathway_outlook_label(dict(horizon_map.get(5) or {}), pathway_key),
-                "twenty_day": _pathway_outlook_label(dict(horizon_map.get(20) or {}), pathway_key),
+                "five_day": _pathway_outlook_label(five_day, pathway_key),
+                "five_day_status": str(five_day.get("estimate_status") or "UNAVAILABLE"),
+                "twenty_day": _pathway_outlook_label(twenty_day, pathway_key),
+                "twenty_day_status": str(twenty_day.get("estimate_status") or "UNAVAILABLE"),
             },
             "change_condition": _display_text(change_conditions[0] if change_conditions else None, "다음 5D persistence를 확인합니다."),
-            "estimate_status": estimate_status,
+            "observation_status": observation_status,
         }
         for pathway_key, label, family_key in PATTERN_ASSET_DEFINITIONS
     ]
