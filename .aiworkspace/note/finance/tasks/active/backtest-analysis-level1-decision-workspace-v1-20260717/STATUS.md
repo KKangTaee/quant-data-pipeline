@@ -77,7 +77,7 @@ Last Updated: 2026-07-19
 - [x] 15차 written design 작성과 self-review
 - [x] 15차 written design 사용자 review
 - [x] 15차 implementation plan
-- [ ] 15차 RED -> GREEN / Browser QA / closeout
+- [x] 15차 RED -> GREEN / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -317,4 +317,19 @@ Last Updated: 2026-07-19
   저장하고 해당 schema만 shelf/restore한다. 저장과 Level2 source handoff는 별도 callable handler와 side effect다.
 - primary Mix branch는 새 `render_backtest_portfolio_mix_workspace()`만 mount하며 legacy compare form, raw saved replay,
   generic duplicate decision surface를 더 이상 primary DOM에 렌더링하지 않는다.
-- Task 49 fresh 전체 검증, canonical docs/root log 동기화와 closeout이 남았다.
+- Task 49에서 actual run/save/restore/edit/rerun, desktop/760px Browser QA, fresh verification과
+  canonical docs/root log 동기화를 완료했다.
+
+## 15차 Completion
+
+- truth/read model: `b08c8675 Portfolio Mix 진실과 읽기 모델 구현`
+- React one-shell: `97d67b5b Portfolio Mix React 원셸 UI 구현`
+- runtime/save/handoff/cutover: `f5f32949 Portfolio Mix 실행 저장 인계 통합`
+- fresh focused UI/boundary는 `79 passed, 3 warnings`, Portfolio Mix service selector는
+  `5 passed / 840 deselected`다. full service는 `833 passed / 12 failed / 35 subtests passed`이며
+  12 failures는 기존 Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6 baseline이다.
+- React production build는 Vite 5.4.21 `175 modules transformed`; target 4-module `py_compile`과
+  `git diff --check`는 exit 0이다.
+- desktop actual QA는 GTAA 50 / Equal Weight 50 실행·저장, saved shelf, 불러와 편집,
+  GTAA 40 / Equal Weight 60 변경의 stale/reference, 재실행 KPI와 save/Level2 action 재노출을 확인했다.
+  760px은 one-column cards, no clipping/overflow와 ResizeObserver height를 확인했다.

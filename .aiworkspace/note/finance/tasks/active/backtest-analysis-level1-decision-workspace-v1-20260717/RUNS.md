@@ -623,3 +623,31 @@
   40/50 편집 시 90% validation과 run CTA 차단을 확인하고 50/50으로 원복했다.
 - Streamlit dark theme가 heading/button을 white로 덮는 regression을 computed style로 확인해 explicit component
   text color contract를 추가했다. fixed H1은 `rgb(21, 32, 51)`, primary CTA는 white on `rgb(52, 95, 121)`이다.
+
+## 2026-07-19 15차 Task 49 Actual Browser QA
+
+- current source/build로 재시작한 `http://localhost:8505/backtest`에서 primary Mix DOM은 전용 React
+  iframe 하나만 포함했고 legacy Streamlit compare form, raw JSON/save path와 duplicate generic verdict는 없었다.
+- desktop actual flow: GTAA 50 / Equal Weight 50 실행 성공, KPI `0.0923 / -0.1784 / 0.8915 /
+  25,417.4301`, `Portfolio Mix QA 20260719` 저장, saved shelf 확인, `불러와 편집` 뒤 stale/reference와
+  action 차단, GTAA 40 / Equal Weight 60 rerun 성공, KPI `0.096 / -0.17 / 0.912 / 26,602.658`,
+  save/Level2 action 재노출을 확인했다.
+- Level2 CTA는 callable 노출까지만 확인하고 누르지 않았다. actual run history와 saved setup은 보호
+  artifact로 남기며 stage/commit하지 않는다.
+- desktop generated screenshots: `backtest-portfolio-mix-workspace-desktop-qa.png`,
+  `backtest-portfolio-mix-one-shell-desktop-qa.png`.
+- 760px generated screenshot: `backtest-portfolio-mix-workspace-760-qa.png`. component cards와 입력,
+  result/action이 한 열로 접히고 horizontal clipping이 없으며 ResizeObserver가 iframe height를 맞췄다.
+
+## 2026-07-19 15차 Fresh Completion Verification
+
+- `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
+  -> final fresh rerun `79 passed, 3 warnings in 1.76s`.
+- `.venv/bin/python -m pytest tests/test_service_contracts.py -q -k 'portfolio_mix or weighted_portfolio or compare_execution or single_settings'`
+  -> final fresh rerun `5 passed, 840 deselected in 0.21s`.
+- `.venv/bin/python -m pytest tests/test_service_contracts.py -q`
+  -> `833 passed, 12 failed, 3 warnings, 35 subtests passed in 24.53s`.
+- 12 failures는 기존 Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6
+  source-contract baseline이며 Portfolio Mix 신규 failure는 0이다.
+- React production build: Vite 5.4.21, `175 modules transformed`; CSS 6.43 kB, JS 332.51 kB.
+- target 4-module `py_compile`과 `git diff --check` -> exit 0.

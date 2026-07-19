@@ -11,7 +11,7 @@ Last Verified: 2026-07-19
 
 - 목적: Backtest Analysis Level1을 `Single / Mix 선택 -> 설정과 실행 -> 결과 판단 -> 명시적 Level2 인계`의 question-first decision workspace로 재구성한다.
 - 설계 방향: Python이 strategy maturity, configuration fingerprint, fresh / stale, Gate, handler 검증, 저장·인계를 소유하고 React는 고정 context와 decision presentation / intent만 담당한다.
-- 현재 상태: 1~14차 Level1 one-shell, 설정·결과 workspace, preset, 상단 workflow shell과 stage-local title 정리를 완료했다. 15차는 승인된 Portfolio Mix React one-shell 완성 설계를 기준으로 구성 전략·역할/비중·Mix 실행/해석·저장/Level2 인계를 하나의 화면 계약으로 통합한다.
+- 현재 상태: 1~15차를 완료했다. 15차에서 Portfolio Mix를 `구성 전략과 공통 기준 -> 역할과 목표 비중 -> Mix 실행과 해석 -> 저장하고 Level2로 이동` React one-shell로 전환하고 Python-owned validation/fingerprint/runner/weighted build/save/handoff 계약을 통합했다. legacy compare form과 prototype saved row는 primary route에서 제외했다.
 - 이번 task에서 하지 않은 일: development 전략 runtime 완성, historical universe / delisting provider, DB schema / strategy runtime 재설계, Level2 / Level3 route 변경, live approval / broker order / auto rebalance.
 
 Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/`다.
@@ -810,7 +810,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 
 | Workstream | Status | Durable Notes |
 |---|---|---|
-| Backtest Analysis Level1 Decision Workspace V1 | Complete | Fixed Level1 question, purpose-grouped Single catalog, new / saved Mix inner mode, Python-owned maturity / fingerprint / Gate / handler validation, two-surface React/fallback, decision-first result, stale-result preservation, distinct Mix save / Level2 handoff를 완료했다. 7차에서 9개 Single choice / 12개 primary concrete variant를 Python schema-driven React settings로 통일하고 legacy native form / Quality Snapshot을 replay compatibility로 격리했다. 8차는 modifier-free adaptive multi-select를, 9차는 모든 named preset의 deterministic base profile과 evidence-backed GTAA override를 추가했다. preset change는 owned field를 reset하되 date/manual ticker와 initial replay/prefill precedence를 보존한다. 760px one-column과 actual GTAA / Equal Weight / GRS / Quality+Value preset 전환을 확인했다. Strategy runtime, provider, DB schema, Level2 / Level3 route semantics는 변경하지 않았다. |
+| Backtest Analysis Level1 Decision Workspace V1 | Complete | Fixed Level1 question, purpose-grouped Single catalog, Python-owned maturity/fingerprint/Gate/handler validation, decision-first result와 stale-result preservation을 완료했다. 7차에서 9개 Single choice / 12개 primary concrete variant를 schema-driven React settings로 통일했고 8차 modifier-free multi-select, 9차 deterministic named preset, 10~12차 result/holdings/factor presentation, 13~14차 공통 workflow shell/title ownership을 정리했다. 15차는 Portfolio Mix를 별도 four-step React one-shell로 전환해 2~4 component validation, existing compare runner/weighted builder, new-schema saved setup과 distinct Level2 handoff를 Python에 통합했다. legacy native/compare form과 prototype Mix row는 compatibility-only다. Strategy runtime, provider, DB schema, Level2 / Level3 route semantics는 변경하지 않았다. |
 | Overview Legacy Dashboard Removal V17-V24 | Complete | `app/web/overview/legacy_dashboard.py` was physically removed after remaining helper ownership moved into tab-local helper modules. `app/web/overview_dashboard.py` now keeps explicit compatibility exports only, while active page / tab / helper ownership lives under `app/web/overview/`. |
 | Overview Tab Helper Extraction V11-V16 | Complete | Market Context, Events, Futures Macro, Market Movers, and Sentiment primary tab entry modules now call tab-local helper bridges instead of importing `legacy_dashboard.py` directly. |
 | Overview Legacy Cleanup V6-V10 | Complete | Overview navigation moved to `app/web/overview/navigation.py`, IA read-model ownership moved to `app/services/overview/ia.py`, confirmed unused standalone wrappers / Candidate Ops helpers were removed, and guard tests prevent reintroduction. |
@@ -898,7 +898,7 @@ Current active phase:
 
 Current active task:
 
-- `backtest-analysis-level1-decision-workspace-v1-20260717`: 1~14차 완료, 15차 Portfolio Mix React one-shell 상세 구현 계획 작성과 개발 예정.
+- `backtest-analysis-level1-decision-workspace-v1-20260717`: 1~15차 완료. Portfolio Mix actual run/save/restore/edit/rerun, fresh/stale action boundary와 desktop/760px QA까지 확인했다.
 
 Latest completed task:
 

@@ -6642,3 +6642,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 공식 `QUARTERLY DATA` 다단 머리글과 normalized 호환 형식을 검증하고, actual As-Reported release vintage를 transaction으로 저장한다.
 - S&P 가치평가는 actual 4분기 current TTM, Economic Cycle은 actual 8분기 current/prior TTM YoY를 사용하며 모든 as-of read에 발표 vintage 기준을 적용했다.
 - 현재 공식 최신 파일을 직접 받지 못해 DB 실제 적재는 남아 있다. 상세는 `tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/`를 본다.
+
+## 2026-07-19 - Backtest Analysis Portfolio Mix React One-Shell 완료
+
+- active task `backtest-analysis-level1-decision-workspace-v1-20260717`의 15차까지 완료했다.
+- Portfolio Mix를 네 단계 React shell로 전환하고 Python이 component validation, compare/weighted 실행, fingerprint, save와 Level2 handoff를 소유한다.
+- actual GTAA/Equal Weight run-save-restore-edit-rerun과 desktop/760px QA를 확인했다. legacy compare form과 prototype saved row는 primary route에서 제외했다.
+- 상세 검증과 남은 compatibility/accessibility 위험은 active task `RUNS.md`와 `RISKS.md`를 본다.

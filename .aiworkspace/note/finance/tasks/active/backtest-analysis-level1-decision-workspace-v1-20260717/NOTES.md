@@ -415,3 +415,15 @@ generated artifact이므로 commit하지 않는다.
   760px 단일 열, ResizeObserver/aria/focus를 소유한다. runner/Gate/fingerprint/persistence는 import하지 않는다.
 - Python fallback도 같은 read model의 네 step, validation/result/action을 읽는다. full editing parity는
   React primary route Browser QA 뒤 보완할 수 있으나 raw JSON/path는 노출하지 않는다.
+
+## 2026-07-19 15차 Portfolio Mix Runtime / Closeout Decisions
+
+- component execution은 기존 `run_compare_strategy` catalog를 재사용하되 모든 payload를 먼저
+  검증하고 순차 실행한다. 전부 성공한 경우만 weighted/current result를 교체하며 partial failure는
+  이전 성공 결과를 보존한다.
+- saved setup은 기존 store의 `source_context`에 `backtest_portfolio_mix_saved_v1` draft,
+  effective fingerprint와 run identity를 저장한다. legacy prototype row는 migration하지 않는다.
+- `불러와 편집`은 result를 invent하지 않고 stale/reference 상태를 만든다. `현재 데이터로 실행`과
+  새 Mix rerun은 같은 Python runtime을 사용하며 fresh fingerprint일 때만 save/Level2 action이 돌아온다.
+- actual Browser QA에서 GTAA/Equal Weight 50/50 실행·저장·복원 뒤 40/60으로 수정해 stale 전환과
+  rerun KPI 변경을 확인했다. Level2 CTA는 확인만 하고 registry append는 실행하지 않았다.

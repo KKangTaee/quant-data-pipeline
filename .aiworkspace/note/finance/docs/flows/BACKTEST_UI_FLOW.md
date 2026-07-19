@@ -8,7 +8,7 @@ Last Verified: 2026-07-19
 이 문서는 Streamlit Backtest 화면의 single strategy, Portfolio Mix Builder, Practical Validation, Final Review, Operations Console, Portfolio Monitoring 흐름을 설명한다.
 UI form, payload 복원, candidate review, history replay, candidate replay, saved weighted portfolio replay를 수정할 때 먼저 확인한다.
 
-2026-07-18 기준으로 Backtest Analysis는 Python `backtest_analysis_decision_workspace_v1`과 `backtest_single_settings_workspace_v1`을 공통 계약으로 쓰는 Level1 one-shell이다. React는 고정 질문, Single / Portfolio Mix entry, 목적별 catalog, schema-driven 설정, 결과 판단과 intent만 렌더링하고, Python은 strategy maturity, configuration fingerprint, settings field/visibility/validation/payload, preset profile, fresh / stale, Gate, handler 존재, 실행, 저장, Level2 인계를 소유한다. Single strategy 선택은 React catalog 한 곳이 소유하고 Strict Annual / Quarterly는 설정 profile의 segmented control로만 바꾼다. 9개 전략은 모두 `핵심 실행 설정 -> 투자 대상 Universe -> 선택·보유 규칙 -> 비용·위험 기준`의 같은 React surface를 사용하며 760px에서는 단일 열이 된다. named preset을 바꾸면 Python이 strategy/variant 기본 규칙과 근거가 있는 override를 합친 complete profile을 적용하고, 검증 기간과 manual ticker draft는 보존한다. React와 fallback은 이 profile을 표시·적용할 뿐 전략별 숫자를 계산하지 않는다. legacy Quality Snapshot과 strategy-specific native form은 history/replay compatibility path에만 남고 primary 사용자 선택에는 노출하지 않는다. Portfolio Mix component 실행은 기존 Streamlit 경계를 유지한다. 별도 `Strategy Detail` panel은 active flow가 아니다.
+2026-07-19 기준으로 Backtest Analysis는 Python `backtest_analysis_decision_workspace_v1`, `backtest_single_settings_workspace_v1`, `backtest_portfolio_mix_workspace_v1`을 공통 계약으로 쓰는 Level1 one-shell이다. React는 고정 질문, Single / Portfolio Mix entry, 목적별 catalog, schema-driven 설정, 결과 판단과 intent만 렌더링하고, Python은 strategy maturity, configuration fingerprint, settings field/visibility/validation/payload, preset profile, fresh / stale, Gate, handler 존재, 실행, 저장, Level2 인계를 소유한다. Single strategy 선택은 React catalog 한 곳이 소유하고 Strict Annual / Quarterly는 설정 profile의 segmented control로만 바꾼다. 9개 전략은 모두 `핵심 실행 설정 -> 투자 대상 Universe -> 선택·보유 규칙 -> 비용·위험 기준`의 같은 React surface를 사용하며 760px에서는 단일 열이 된다. named preset을 바꾸면 Python이 strategy/variant 기본 규칙과 근거가 있는 override를 합친 complete profile을 적용하고, 검증 기간과 manual ticker draft는 보존한다. React와 fallback은 이 profile을 표시·적용할 뿐 전략별 숫자를 계산하지 않는다. legacy Quality Snapshot과 strategy-specific native form은 history/replay compatibility path에만 남고 primary 사용자 선택에는 노출하지 않는다. Portfolio Mix도 `구성 전략과 공통 기준 -> 역할과 목표 비중 -> Mix 실행과 해석 -> 저장하고 Level2로 이동` 네 단계의 전용 React one-shell을 사용하며, 기존 Streamlit compare form은 primary Mix renderer가 아니다. 별도 `Strategy Detail` panel은 active flow가 아니다.
 
 2026-07-19부터 Backtest page entry는 초기 Streamlit `Backtest` title/caption과 별도 `후보 선정 흐름` native pills 대신 `backtest_workflow_shell_v1` React shell을 사용한다. Python read model이 Level1~3 순서, active stage와 `현재 단계에서 끝낼 일`을 제공하고 React는 3단계 button rail과 `select_stage` intent만 렌더링한다. accepted intent는 기존 `request_backtest_panel()`을 거쳐 동일 dispatcher로 이동하므로 Level 내부 Gate, registry, replay, 저장 계약은 바뀌지 않는다. desktop은 hero 2열/rail 3열, 760px은 hero 1열/rail 3열, 520px 이하는 rail 1열이다.
 
@@ -53,6 +53,9 @@ Backtest 단계의 primary reading order는 `page workflow shell -> active Level
 | `app/services/backtest_strategy_catalog.py` | Streamlit-free purpose group / maturity catalog. `Risk-On Momentum 5D`는 research가 아니라 development로 분류한다 |
 | `app/services/backtest_analysis_decision_workspace.py` | Streamlit-free Level1 read model. Single / Mix 공통 truth, result freshness, root reason dedup, KPI / error / action projection을 계산한다 |
 | `app/services/backtest_single_settings_workspace.py` | Streamlit-free Single settings schema / validation / exact payload projection / deterministic preset profile. current primary 12개 concrete variant와 legacy replay-only Quality Snapshot을 구분하고, named preset마다 schema base와 evidence override를 합친 complete patch를 제공한다 |
+| `app/services/backtest_portfolio_mix_workspace.py` | Streamlit-free Portfolio Mix draft/read model. 2~4개 component, concrete strategy 중복, 공통 기간, 역할·비중·100% 합계, effective fingerprint, fresh/stale result, new-schema saved shelf와 handler-aware action을 계산한다 |
+| `app/web/backtest_portfolio_mix_workspace.py` | Portfolio Mix Python adapter/runtime. validated intent, 기존 compare runner와 weighted builder 조합, atomic current result, saved setup 저장·복원·재실행, distinct Level2 source handoff와 same-read-model fallback을 소유한다 |
+| `app/web/components/backtest_portfolio_mix_workspace/` | Portfolio Mix React/Vite presentation bundle. 네 단계 편집/결과/saved shelf/action, desktop·760px responsive, aria/focus와 ResizeObserver만 소유하며 runner/Gate/fingerprint/persistence를 계산하지 않는다 |
 | `app/services/backtest_portfolio_mix_readiness.py` | Streamlit-free Portfolio Mix readiness helper. component role / weight row와 legacy role inference를 UI 밖에서 담당 |
 | `app/services/backtest_result_read_model.py` | Streamlit-free Backtest result read model helper. data trust row와 weighted component contribution view 담당 |
 | `app/services/backtest_price_refresh.py` | Backtest Data Trust / Factor Readiness의 bounded OHLCV refresh plan과 실행. active ticker-change repair가 있으면 source ticker는 보존하고 collection ticker만 resolved symbol로 바꾼다 |
@@ -65,8 +68,7 @@ Backtest 단계의 primary reading order는 `page workflow shell -> active Level
 | `app/services/backtest_etf_rerun_matrix.py` | Streamlit-free ETF rerun matrix workbench service. GRS / Risk Parity / Dual Momentum의 session-only rerun scenario plan을 만들고, 선택한 전략만 버튼 실행해 compact result evidence를 session state로 돌려준다. registry / saved setup / run history / validation result / current candidate promotion artifact는 쓰지 않는다 |
 | `app/services/backtest_weighted_portfolio.py` | Streamlit-free weighted portfolio builder service. component 실행 결과 bundle을 weighted portfolio result bundle로 합성 |
 | `app/services/backtest_saved_portfolio_replay.py` | Streamlit-free saved portfolio replay service. 저장된 mix의 strategy rerun / weighted bundle / replay context 조립 담당 |
-| `app/web/backtest_compare/page.py` | `Portfolio Mix Builder` 화면 orchestration, component portfolio 실행 / weighted portfolio / saved replay service 호출, saved portfolio load, mix candidate handoff. Strategy multiselect와 annual / quarterly variant controls는 Streamlit-owned이며, strict Quality / Value component settings는 공통 strict preset basis helper를 사용한다 |
-| `app/web/backtest_compare/components.py` | Portfolio Mix Builder visual shell. CSS, flow stepper, section heading, component result card render를 담당하며 compare 실행 / 저장 / handoff 로직은 포함하지 않는다 |
+| `app/web/backtest_compare/page.py` / `components.py` | legacy compare/replay compatibility surface. 기존 runner·saved replay helper는 재사용하지만 current Backtest Analysis의 primary Mix DOM은 이 Streamlit form/visual shell을 mount하지 않는다 |
 | `app/web/backtest_result_display.py` | Backtest 결과 공용 display. summary, chart, data trust, real-money detail, selection history, swing detail, compare result helper |
 | `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, selected record inspect, run again / load into form / candidate draft handoff |
 | `app/web/backtest_history_helpers.py` | History table row, replay payload, replay parity, Real-Money / Guardrail scope helper |
@@ -148,7 +150,7 @@ Level2 action은 실행 가능 여부와 실행 이력을 함께 본다. provide
 
 Backtest 주 흐름:
 
-- `Backtest Analysis`: Single Strategy 또는 Portfolio Mix Builder로 1차 후보 source를 만들고 `PORTFOLIO_SELECTION_SOURCES.jsonl`에 Clean current source로 저장한다. 기본 화면은 전략 실행, 전략 비교, 후보 생성을 먼저 보여준다. Phase 4 source migration 이후 새 Single Strategy 진입 기본값은 `Quality + Value / Strict Annual`이고, Portfolio Mix Builder 기본 비교 조합은 `Quality + Value`, `GTAA`, `Equal Weight`다. Single primary 설정은 strategy별 Streamlit form 대신 Python schema가 공급한 동일 React editor를 사용한다. React는 선택값 intent만 반환하고 Python이 current selection, family variant, visible field, type/range/option, callable runner를 확인한 뒤 기존 execution payload를 만든다. strict annual family는 `nyse_factors_statement` statement shadow factor path를 기본 재무제표 source로 읽으며, legacy broad `Quality Snapshot`은 새 사용자 선택지가 아니라 history replay / 명시적 compatibility 비교 경로로만 남긴다. Single Strategy에는 `Risk-On Momentum 5D`가 포함되며, 이 전략은 S&P 500 / Top1000 / Top2000 / manual stock universe, futures macro Mean-Z `hard_filter` / `ranking_penalty` / off, D+1 open execution, `fixed_pct` 또는 `atr_based` exit 결과를 Latest Backtest Run의 `Swing Detail` 탭과 generated backtest artifact로 보여준다. V2 Swing Detail은 comparison, sensitivity, stability, trade causes, quality warnings, trade log, scanner를 Backtest Analysis 연구 증거로 표시한다. Reference help, Strategy Evidence Inventory, Strict Annual + GTAA / Equal Weight Bridge, Risk-On Momentum 5D Governance, ETF Evidence Expansion, ETF Current Anchor Workbench, ETF Rerun Matrix Workbench는 현재 기본 Backtest Analysis 화면에서 렌더링하지 않는다. The removed Strategy Detail panel is not an active flow. 이 reference / evidence / anchor / matrix panel들은 monitoring signal, current candidate registry write, saved setup write, run history rewrite, validation result write, final decision write, monitoring log write를 만들지 않는다. Portfolio Mix Builder는 여러 component portfolio를 실행하고 weight를 정해 하나의 mix 후보로 만든다. 화면은 `Component 실행 -> Weight 구성 -> Mix 후보 판단 -> Practical Validation` 순서로 읽히며, component 실행 결과는 compact card와 `요약 / 차트 / 진단 / 상세` 탭으로 먼저 보여주고 원본 summary / criteria / meta는 접힘 상세로 낮춘다.
+- `Backtest Analysis`: Single Strategy 또는 Portfolio Mix를 실행해 fresh result를 만들고, 사용자가 명시적으로 Level2 등록 action을 선택했을 때만 `PORTFOLIO_SELECTION_SOURCES.jsonl`에 source를 저장한다. 새 Single Strategy 진입 기본값은 `Quality + Value / Strict Annual`이며 Single primary 설정은 strategy별 Streamlit form 대신 Python schema가 공급한 동일 React editor를 사용한다. React는 선택값 intent만 반환하고 Python이 current selection, family variant, visible field, type/range/option, callable runner를 확인한 뒤 기존 execution payload를 만든다. strict annual family는 `nyse_factors_statement` statement shadow factor path를 기본 재무제표 source로 읽으며, legacy broad `Quality Snapshot`은 새 사용자 선택지가 아니라 history replay / 명시적 compatibility 비교 경로로만 남긴다. Single Strategy에는 `Risk-On Momentum 5D`가 포함되며, 이 전략은 S&P 500 / Top1000 / Top2000 / manual stock universe, futures macro Mean-Z `hard_filter` / `ranking_penalty` / off, D+1 open execution, `fixed_pct` 또는 `atr_based` exit 결과를 Latest Backtest Run의 `Swing Detail` 탭과 generated backtest artifact로 보여준다. V2 Swing Detail은 comparison, sensitivity, stability, trade causes, quality warnings, trade log, scanner를 Backtest Analysis 연구 증거로 표시한다. Reference help, Strategy Evidence Inventory, Strict Annual + GTAA / Equal Weight Bridge, Risk-On Momentum 5D Governance, ETF Evidence Expansion, ETF Current Anchor Workbench, ETF Rerun Matrix Workbench는 현재 기본 Backtest Analysis 화면에서 렌더링하지 않는다. The removed Strategy Detail panel is not an active flow. 이 reference / evidence / anchor / matrix panel들은 monitoring signal, current candidate registry write, saved setup write, run history rewrite, validation result write, final decision write, monitoring log write를 만들지 않는다. Portfolio Mix는 기본 3전략 비교 form이 아니라 사용자가 2~4개 production component를 고르고 역할·비중을 정해 하나의 후보를 만드는 전용 four-step React workspace다. component별 실행 근거와 weighted result를 함께 보여주며, reusable setup 저장과 Level2 source 등록은 서로 다른 action이다.
 - `Practical Validation`: 선택된 단일 전략 후보 / Portfolio Mix 후보 source를 Final Review로 넘기기 전 2단계 실전성 근거로 구조화한다. 화면은 `후보 Source 확인 -> 검증 기준 설정 / 실전 재검증 실행 -> 검증 결론 / 다음 행동 -> 검증 기준 상세`의 4개 user-facing flow로 읽는다. Flow 1은 Backtest Analysis가 넘긴 2차 review focus와 source summary / selection history를 확인하고, Flow 2는 validation profile과 5개 답변을 고른 뒤 latest runtime replay를 사용자가 실행했을 때만 현재 세션에 표시한다. Flow 2에서 현재 세션 replay 결과가 없으면 첫 진입 화면에는 Flow 1 / Flow 2만 보이고, Flow 3 / Flow 4와 Practical Validation Result JSON은 렌더링하지 않는다. Flow 3은 `workspace_panel.py`와 `practical_validation_fix_queue` React component가 Practical Validation outcome summary, 실패 category count, category-level `통과 / 실패 / 주의`, Final Review 이동 가능 여부, `검증 결과 저장(기록용)`, `저장하고 Final Review로 이동` CTA를 단일 first-read conclusion surface로 보여준다. PV-owned REVIEW caution이 남아도 이동 차단은 아니면 CTA 상태를 `주의 포함 이동 가능`으로 표시해 노란불 통과임을 구분한다. React는 CTA click intent만 전달하고, save-only audit append / Final Review handoff / session state / rerun은 Python page + service 경계가 처리한다. Flow 4는 `visible_criteria_detail_groups` 기반 `카테고리별 검증 결과` board에서 먼저 `통과`, `보강 후 재검증 필요`, `실전 사용 어려움` main outcome summary를 보여주고, 기준별 `상태 / 통과한 기준 / 남은 문제 / 판정`을 요약한다. `READY`는 사용자-facing 통과로 읽고, `REVIEW`는 하나의 Final Review 숙제가 아니라 `pv_data_caution`, `pv_practical_caution`, `final_decision_input`, `monitoring_followup`, `final_readiness_blocker` role로 읽는다. 적용된 Practical Validation category가 REVIEW-only라도 `데이터 주의` 또는 `2단계 실용성 주의`로 Flow 4에 표시하고, Final Review / Monitoring 전용 reference는 first-read action issue가 아니라 appendix / handoff 참고로 낮춘다. `NEEDS_INPUT` / `NOT_RUN`은 보강 후 재검증 대상이고, `BLOCKED`는 현재 상태로 실전 후보 사용이 어렵다는 차단 결론이다. 각 기준 상세는 `검증한 것 / 해결해야 할 항목 / 해결 방법 / 통과 기준 / 위치`로 보여준다. Flow 4 guide는 module-level 문구만 쓰지 않고 가능하면 audit row의 non-PASS `Criteria`와 `Next Action`을 끌어와 실제 부족 항목과 실행 방법을 표시한다. `통과 기준`은 보강 뒤 무엇이 되어야 해결된 것인지 판단하는 기준이며, 위치는 `Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세`, `Flow4 > 데이터 보강 / 수집 실행`처럼 사용자가 찾을 수 있는 화면 경로로 표시한다. Flow 4는 `카테고리별 검증 결과 -> 데이터 보강 / 수집 실행 -> 상세 근거 / 원자료` 순서로 읽으며, `데이터 보강 대상` board가 `immediate_collect`, `source_map_discovery`, `connector_needed`, `no_action`을 표시 전용으로 구분하고 같은 action center 아래 Python 수집 버튼이 실행 경계를 소유한다. 수집 실행은 ETF 운용성 / 비용, holdings / exposure, source map 탐색, FRED macro 같은 외부 데이터 근거만 처리하며 백테스트 재실행, 검증 판정 변경, Final Review 판단, registry / saved JSONL rewrite는 하지 않는다. 수집 후에는 Flow 2 재검증을 다시 실행해 보강된 DB 근거를 결과에 반영한다. 단계별 소유권 inventory는 내부 read model에는 남지만 visible expander로 렌더링하지 않는다. 핵심근거, 데이터품질, 구성리스크, 검증방법론, 강건성, Raw Evidence, Selection Source JSON, Practical Validation Result JSON과 `보강 작업 상세 / 수집 원자료`는 기본 접힌 `상세 근거 / 원자료`에서만 확인한다. legacy Final Review gate technical expander와 별도 visible Flow 5 container는 렌더링하지 않는다. 기본 진입 화면은 검증 상태와 보강 action을 먼저 보여주며, contextual Reference help와 context-only 시장 심리 overlay를 렌더링하지 않는다. `검증 결과 저장(기록용)`은 audit trail만 남기며 Gate 미통과 row를 Final Review 후보로 노출하지 않는다.
 - `Final Review`: primary question은 `이 포트폴리오를 실제 투자 검토 대상으로 계속 추적할 가치가 있는가?`다. source별 latest eligible Practical Validation result를 후보로 만들고 React one-shell 안에서 후보 선택 → 결론 → 관측 최신성 → 누적 성과/Benchmark·Underwater·실행 관측 → 실제 강점/약점 → 포트폴리오 실제 성격/관리 기준 대비 압력 → structured Monitoring 변화 조건 → canonical 최종 판단/사유 → evidence disclosure 순으로 읽는다. 관측 최신성은 현재 차트 종료일, 최신 완료 시장일, source별 DB 공통일, 제한 종목을 구분한다. 자동 갱신 가능 gap이 있으면 selected route만 잠그고, 사용자의 `최신 데이터로 다시 계산` intent를 Python이 기존 가격 수집 → 동일 source replay → 새 Practical Validation append 순서로 처리한다. 기존 validation row는 재작성하지 않으며 보류/거절/재검토 기록은 유지한다. 실제 성격은 criterion 유무와 무관하게 저장된 raw observation을 보여주고, 관리 압력은 explicit review criterion이 있을 때만 이내/초과를 판정한다. criterion이 없으면 `기준 미설정`, evidence가 없으면 `분석 근거 없음`으로 구분하며 radar/임의 0~100 normalization은 사용하지 않는다. overall investment score와 기존 headline score는 current 화면에서 제거하고 evidence confidence만 disclosure의 보조 metadata로 둔다. React는 candidate / observation refresh / route / reason intent와 표현만 맡고 Python이 날짜 판정, 가격 수집, replay, validation build/save, eligibility, exact-common 계산, observation/criterion projection, dedup, save evaluation, 자동 Decision ID, row append를 소유한다. live approval, broker order, auto rebalance는 수행하지 않는다.
 - `Final Review` first-read에서는 CNN / AAII 시장심리 패널을 렌더링하지 않는다. 자세한 심리 해석은 `Workspace > Overview > Sentiment`에서 확인하며, 시장심리는 후보 우선순위, selected-route gate, Final Decision save readiness, registry write, live approval / order / auto rebalance에 영향을 주지 않는다.
@@ -444,7 +446,7 @@ Phase 30 third work unit status:
   Streamlit intent adapter/fallback을, 공통 React editor가 실제 설정 UI를 소유한다.
   `app/web/backtest_single_forms/`는 history/replay compatibility를 위해 남아 있지만 current
   primary route에서는 strategy-specific native form을 dispatch하지 않는다.
-- Portfolio Mix Builder는 `app/web/backtest_compare/page.py`로 분리되어, component 실행 / weighted portfolio service 호출, saved portfolio replay / load, current-candidate prefill을 page shell에서 제거했다.
+- Portfolio Mix의 current primary route는 `app/services/backtest_portfolio_mix_workspace.py`, `app/web/backtest_portfolio_mix_workspace.py`, `app/web/components/backtest_portfolio_mix_workspace/`가 소유한다. `app/web/backtest_compare/page.py`와 하위 모듈은 기존 runner/weighted builder와 history compatibility 구현으로 남지만 visible primary form을 렌더링하지 않는다.
 - Latest result / compare result / Real-Money detail / selection history display는 `app/web/backtest_result_display.py`가 담당한다.
 - 공용 preset, session state, 입력 컴포넌트, status label은 `app/web/backtest_common.py`가 담당한다. 이 파일은 다음 리팩토링에서 더 잘게 나눌 수 있는 transitional shared module이다.
 - 따라서 `app/web/backtest_page.py`는 React workflow shell과 stage dispatch만 조합한다. shell 의미와 intent 검증은 `app/services/backtest_workflow_shell.py` / `app/web/backtest_workflow_shell.py`가 소유한다. `app/web/pages/` 아래에는 user-facing `.py` page를 두지 않아 `streamlit_app.py`의 top navigation과 Streamlit native sidebar가 충돌하지 않게 한다.
@@ -541,26 +543,23 @@ Stage:
 
 ```text
 Portfolio Mix 선택
-  -> 새 Mix 만들기 / 저장된 Mix 불러오기 inner mode
-  -> strategy multi-select
-  -> Component Period & Shared Inputs
-  -> strategy별 box에서 variant / advanced inputs 설정
-  -> 구성 포트폴리오 실행
-  -> component별 result bundle 실행
-  -> component role / weight / total 100% 구성
-  -> weighted Mix 후보 결과와 Level1 decision
-  -> Mix setup 저장 또는 명시적 Level2 인계
+  -> 1. 구성 전략과 공통 기준
+  -> 2. 역할과 목표 비중
+  -> 3. Mix 실행과 해석
+  -> 4. 저장하고 Level2로 이동
 ```
 
 현재 UX 기준:
 
-- common date / timeframe / option은 공유 입력으로 둔다.
-- strategy-specific advanced inputs는 strategy별 box 안에서 보이게 한다.
-- variant 변경은 버튼 없이 즉시 아래 옵션이 바뀌는 방향이 선호된다.
-- component role과 weight row, legacy role-less saved record inference, Mix Gate는 pure Python service가 소유한다.
-- `Mix 저장`은 reusable setup만 저장하고 `Level2 이동`은 current candidate source를 등록한다. 두 action은 서로 호출하지 않는다.
-- 저장된 Mix first-read는 이름 / 구성 전략 / 역할 / 비중 / 갱신일을 요약하고 사용자가 선택한 setup으로 이어갈 때만 replay한다.
-- 최대 component 전략 수는 operator가 읽을 수 있는 범위로 유지한다.
+- 하나의 React shell에서 새 Mix와 저장된 Mix mode를 바꾸며 mode/draft는 Python session이 소유한다.
+- 2~4개 component만 허용하고 같은 concrete strategy 중복, 공통 기간 오류, 역할·비중 오류와 100% 미달/초과를 runner 전에 차단한다.
+- component editor는 Single settings schema/preset/payload를 재사용한다. 공통 `start/end`, `timeframe`, `option`과 component 고유 설정은 서로 다른 contract다.
+- 실행 intent가 오면 Python이 모든 component payload를 먼저 투영한 뒤 기존 compare runner를 순차 호출하고, 전부 성공했을 때만 weighted bundle과 current fingerprint를 교체한다.
+- 일부 component가 실패하면 해당 card에 오류를 남기고 이전 성공 result/bundle은 참고 근거로 보존한다.
+- 설정을 바꿔 effective fingerprint가 달라지면 이전 결과는 stale 참고 근거가 되고 저장/Level2 action은 숨긴다.
+- `Mix 설정 저장`은 reusable setup만 저장하고 `Level2 검증 후보 등록`은 current weighted result를 selection source로 등록한다. 두 action은 distinct Python handler다.
+- 저장 shelf는 `backtest_portfolio_mix_saved_v1` row만 읽는다. prototype legacy row를 자동 migration하거나 raw JSON/절대 경로로 노출하지 않는다.
+- React를 사용할 수 없으면 같은 read model의 Python fallback이 네 단계, validation, result와 가능한 action을 유지한다.
 
 Portfolio Mix Builder는 더 이상 "개별 후보를 서로 비교해서 하나를 보내는 화면"이 아니다.
 이 화면의 주 목적은 여러 component portfolio를 실행하고 weight를 정해 하나의 mix 후보를 만드는 것이다.
@@ -573,35 +572,18 @@ component별 상세 결과는 weight를 정하기 위한 근거로 남기고, Pr
 - component별 Promotion / 실행 원천 / 검증 원천 blocker와 Data Trust를 모아 mix handoff 가능 여부를 판단한다.
 - 이 평가는 saved setup 저장, Pre-Live 승인, live trading approval이 아니라 Backtest 1차 후보를 Practical Validation으로 넘길 수 있는지 보는 신호다.
 
-기준:
-
-- `Mix Result`: weighted mix result가 실제로 생성됐는지
-- `Weight Discipline`: target weight 합계가 100%이고 positive component가 2개 이상인지
-- `Component Data Trust`: component별 결과 기간, 가격 최신성, excluded / malformed ticker가 해석 가능한지
-- `Component 1차 후보 판단`: 각 component의 `Promotion != hold`, 실행 원천 blocker 없음, 검증 원천 blocker 없음인지
-
-점수 해석:
-
-- `8.0 / 10` 이상이면 `PASS`로 보고 Practical Validation으로 진행 가능하다.
-- `6.5 / 10` 이상이면 `CONDITIONAL`로 보고 조건부 진행 가능하되 Practical Validation에서 확인할 약점과 gap을 같이 남긴다.
-- 짧은 실제 종료일 불일치, warning, excluded / malformed ticker 같은 Data Trust 이슈는 score를 cap하지 않고 warning으로 표시한다.
-- GTAA처럼 `interval > 1`, `option=month_end`인 cadence 전략은 결과가 최신 공통 거래일 partial row까지 이어질 수 있다. 요청 종료일보다 결과 종료일이 이른 이유가 일부 ticker의 price freshness / coverage라면 Data Trust에서 coverage warning으로 해석하고, 단순 리밸런싱 cadence gap과는 분리한다.
-- 가격 최신성 error 또는 결과 기간이 크게 비는 Data Trust blocked 상태, component Promotion hold, 실행 / 검증 원천 blocker, weight discipline 실패는 `HOLD`로 보고 mix를 먼저 보강한다.
-
 실행:
 
-- `Mix 후보 1차 판단`이 통과 또는 조건부 통과 상태일 때만 `실전성 검증으로 보내기` 버튼으로 mix Clean current source를 만들 수 있다.
-- 이 버튼은 1차 Backtest 후보 판단을 통과한 mix를 2차 `Practical Validation` 입력 source로 넘기는 handoff다.
-- `Promotion Decision = hold`, 실행 원천 blocker, 검증 원천 blocker, weight blocker가 남아 있으면 버튼은 비활성화되고, 화면에 막는 이유를 짧게 표시한다.
-- 이 버튼은 live approval, 투자 추천, 주문 지시, 자동 리밸런싱이 아니다.
+- current fingerprint와 일치하는 weighted result가 있을 때만 save/Level2 handler가 action으로 투영된다.
+- development component가 포함되면 실행/저장은 가능해도 Level2 후보 등록은 Python에서 차단한다.
+- Level2 등록은 기존 Practical Validation source builder/handoff를 통해 한 개의 weighted Mix source를 append한다.
+- 이 action은 live approval, 투자 추천, 주문 지시, 자동 리밸런싱이 아니다.
 
 저장된 Mix replay:
 
-- `Mix 재실행 및 검증`은 저장된 weighted portfolio mix 자체와 그 구성 전략 compare를 함께 복원한다.
-- UI에서는 `저장된 Mix` 화면 안에서 `저장 Mix Replay 결과`와 `Portfolio Mix 검증 보드`를 바로 보여준다.
-- `Portfolio Mix 검증 보드`는 saved mix 자체의 replay 가능 여부, mix data trust, 구성 전략 Real-Money gate, 현재 검증 기록 여부를 분리해서 보여준다.
-- 저장 mix는 reusable setup이므로, replay 성과가 좋아도 자동으로 모니터링 후보 선정 기록이 되지 않는다. `Workflow Registry`가 `NOT RECORDED`이면 Practical Validation / Final Review 쪽 기록이 아직 없다는 뜻이다.
-- 이 경우 사용자는 `Practical Validation으로 보내기`로 mix 전체를 Clean current source로 저장한다. Saved mix는 이미 비중이 정해진 포트폴리오 조합이므로, 단일 전략 후보 handoff와 분리한다.
+- `불러와 편집`은 저장된 draft를 현재 shell에 복원하고 result를 invent하지 않는다. 기존 current result는 참고 근거로만 보존한다.
+- `현재 데이터로 실행`은 저장 draft를 복원한 뒤 같은 runner/weighted runtime을 호출한다.
+- 저장 setup은 후보 registry나 validation 결과가 아니다. 새 실행이 current fingerprint와 일치해도 사용자가 별도 Level2 action을 선택해야 source가 생긴다.
 - 개별 전략 후보 간 비교 / 벤치마킹 도구는 추후 별도 Candidate Comparison 성격의 read-only 도구로 분리할 수 있다.
 
 ## Strategy Box 보조 설명 경계
@@ -698,45 +680,26 @@ registry snapshot과 실제 재실행 결과가 같은 설정으로 복원되는
 ```text
 Backtest > Portfolio Mix Builder
   -> 새 Mix 만들기
-  -> 구성 포트폴리오 실행
-  -> component result bundles
-  -> weight 입력
-  -> optional GTAA 70 / Equal Weight 30 quick mix
-  -> make_monthly_weighted_portfolio(...)
-  -> weighted result
-  -> Mix 후보 1차 판단
-  -> Save Portfolio Mix 또는 명시적 Practical Validation handoff
+  -> component 설정 / role / weight
+  -> 이 구성으로 Mix 실행
+  -> component result bundles + weighted result
+  -> Mix 설정 저장 또는 명시적 Level2 검증 후보 등록
 
 Backtest > Portfolio Mix Builder
-  -> 저장된 Mix
-  -> Mix 재실행 및 검증 or 새 Mix 만들기에서 수정하기
-  -> Mix 재실행 및 검증은 같은 화면에서 replay result / Portfolio Mix 검증 보드 / weighted result 확인
-  -> workflow 기록이 없으면 Practical Validation으로 보내기
-  -> 새 Mix 만들기에서 수정하기는 기존 결과를 숨기고 component 실행 form을 form-first 상태로 다시 채움
+  -> 저장된 Mix 불러오기
+  -> 불러와 편집 or 현재 데이터로 실행
+  -> 편집/복원 뒤 stale reference와 current result를 구분
+  -> fresh rerun 뒤 저장 또는 명시적 Level2 등록
 ```
 
 구분:
 
-- `새 Mix 만들기`: component portfolio를 실행하고 role / weight를 입력해 하나의 mix 후보를 만든다. 개별 전략 handoff는 주 action이 아니며, mix 후보 판단만 Practical Validation handoff를 가진다. setup 저장과 handoff는 distinct handler다.
-- `저장된 Mix`: `.aiworkspace/note/finance/saved/SAVED_PORTFOLIOS.jsonl`에 저장한 reusable setup을 다시 실행하고 mix-level 검증으로 읽는다.
-- `새 Mix 만들기에서 수정하기`: 저장된 component 구성과 weight를 form에 다시 채운다. 검증 버튼이 아니라 편집 / 재구성 진입이며, 기존 stale compare / weighted 결과는 숨기고 사용자가 먼저 설정을 수정하게 한다.
-- `Mix 재실행 및 검증`: 저장 당시 context로 component 실행과 weighted portfolio를 다시 실행하고, `저장된 Mix` 화면 아래에 replay 결과와 mix 검증 보드를 바로 렌더링한다.
-
-2026-05-30 이후 Portfolio Mix workspace의 `새 Mix 만들기` / `저장된 Mix` 전환은 `st.tabs`가 아니라 상태를 가진 선택 UI로 관리한다.
-이는 saved mix replay 후에도 결과가 숨은 탭 안에 남지 않게 하기 위한 것이다.
-최근 component 실행 결과는 `새 Mix 만들기` 화면 상단의 `구성 포트폴리오 실행 결과` 박스에 먼저 표시하고,
-그 아래에 입력 form과 weighted portfolio builder를 둔다.
-다만 saved mix edit mode에서는 stale 결과를 숨기고 저장된 설정이 반영된 form을 먼저 보여준다.
-
-2026-05-07 후속 UX 정리:
-
-- saved mix replay는 더 이상 `새 Mix 만들기` 화면으로 강제 이동하지 않는다.
-- `저장된 Mix` 안에서 `Portfolio Mix 검증 보드`를 보여준다.
-- 이 보드는 `Mix Replay`, `Mix Data Trust`, `Component Real-Money`, `Workflow Registry`를 따로 판단한다.
-- mix data trust는 GTAA cadence-aligned result-date gap을 hard blocker와 분리해 `CADENCE ALIGNED` / review 성격으로 보여준다.
-- `Workflow Registry`가 `NOT RECORDED`이면 저장 mix가 성과 replay는 가능하지만 Practical Validation / Final Review registry에는 아직 기록되지 않은 상태다.
-- `NOT RECORDED` 상태의 saved mix는 `Practical Validation으로 보내기`로 보낸다. 이 경로는 legacy Candidate / Proposal을 필수로 요구하지 않고, 비중이 정해진 mix를 Clean current source로 남겨 이후 Final Review에서 읽게 하는 경로다.
-- 따라서 saved mix replay 결과와 개별 전략 handoff 판단이 한 화면에서 섞이지 않는다.
+- `새 Mix 만들기`: component portfolio를 실행하고 role / weight를 입력해 하나의 mix 후보를 만든다. setup 저장과 Level2 handoff는 distinct handler다.
+- `저장된 Mix`: `.aiworkspace/note/finance/saved/SAVED_PORTFOLIOS.jsonl`의 `backtest_portfolio_mix_saved_v1` setup만 shelf에 표시한다.
+- `불러와 편집`: draft만 복원한다. saved row 자체나 이전 결과를 current 실행 결과로 간주하지 않는다.
+- `현재 데이터로 실행`: 복원과 실행을 한 intent로 요청하지만 Python은 restore와 run을 순서대로 검증한다.
+- fresh result는 `run_result_id`와 effective fingerprint를 가진다. 설정 변경/복원 뒤 fingerprint가 달라지면 이전 결과는 reference/stale이고 action은 새 성공 실행 전까지 차단된다.
+- current primary DOM은 React shell 하나만 포함한다. raw JSON, absolute save path, legacy saved replay table, 빈 action board와 duplicate generic Level1 verdict는 렌더링하지 않는다.
 
 저장된 weighted portfolio는 live trading 승인 기록이 아니다.
 후보 조합을 다시 재현하고 검증하기 위한 operator workflow artifact다.

@@ -24,7 +24,7 @@ Backtest page 최상단은 세 단계가 공유하는 React workflow shell이다
 
 | Step | Screen | What It Does | Durable Record |
 |---|---|---|---|
-| 1 | Backtest Analysis | 단일 전략 실행 또는 Portfolio Mix Builder로 weighted mix 후보를 만들고 검증 후보 source를 만든다 | `PORTFOLIO_SELECTION_SOURCES.jsonl` |
+| 1 | Backtest Analysis | 단일 전략 또는 Portfolio Mix를 실행해 fresh result를 만들고, 사용자가 명시적으로 Level2 등록을 선택했을 때만 검증 후보 source를 만든다. Mix 설정 저장은 source 등록과 별도다 | `PORTFOLIO_SELECTION_SOURCES.jsonl`; reusable Mix setup은 `SAVED_PORTFOLIOS.jsonl` |
 | 2 | Practical Validation | 선택된 source를 source traits 기반 module gate, selected-route preflight, practical diagnostic으로 검증한다. REVIEW는 `데이터 주의`, `2단계 실용성 주의`, `최종 판단 참고`, `Monitoring 추적` role로 분리해 현재 단계에서 볼 항목과 후속 참고를 구분한다 | `PRACTICAL_VALIDATION_RESULTS.jsonl` |
 | 3 | Final Review | primary question 아래 latest eligible 후보를 고르고 one-shell Decision Workspace에서 Level2 인계의 `최종 판단 입력 / 인수한 검증 한계 / Monitoring 이관 조건`, 결론, cumulative / Benchmark, Underwater, 실행 관측, 실제 강점 / 약점, measured trait, canonical route / 판단 사유, disclosure를 순서대로 읽는다. overall / headline score는 없고 evidence confidence만 보조 metadata다. React는 candidate / route / reason intent와 SVG만 소유하며 Python이 eligibility, Level2 root dedup, 계산, save evaluation, 자동 Decision ID, append, Monitoring handoff를 소유한다. 같은 active brief의 compact snapshot을 row에 저장하고 기존 row는 재작성하지 않는다. Final Review는 live approval, broker order, auto rebalance가 아니다 | `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` |
 | 4 | Operations > Portfolio Monitoring | 기존 Selected Portfolio Dashboard route다. 화면 진입 시 CNN / AAII market sentiment context overlay와 Active Portfolio Monitoring Scenario가 먼저 보이며, active portfolio의 실행 상태, 설정 투자금, 평가 금액, 손익, 총 수익률, CAGR / MDD, 기준일, 마지막 session update, value curve, 전략별 성과, target snapshot / next review schedule을 확인한다. Portfolio가 없거나 strategy가 없거나 scenario가 아직 실행되지 않았으면 각각 생성 / 전략 추가 / 업데이트 실행 안내를 보여준다. 그 아래 나의 포트폴리오 card shelf에서 active portfolio를 바꾸고, portfolio name / description edit와 compact strategy board에서 Final Review selected 후보 slot의 start / latest-end mode / balance / memo를 관리한다. `포트폴리오 시나리오 업데이트`는 strategy board 아래에서 pending / stale strategy만 기본 실행하고, 필요 시 `전체 재실행`으로 full refresh한다. Strategy별 recheck readiness / provider / open issue / deployment evidence는 하단 상세 점검에서 사용자가 선택한 1개 전략만 연다. Sentiment context와 target snapshot은 주문 지시나 자동 리밸런싱이 아니다 | `.aiworkspace/note/finance/saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl` for dashboard portfolio setup; scenario result는 session state; 사용자가 명시적으로 저장할 때만 monitoring log |
@@ -57,6 +57,11 @@ Live / Deployment Readiness는 현재 별도 화면으로 구현되지 않았다
   설정 변경·가격 갱신·재실행 실패 안내로만 구분한다.
 - 팩터 표시명은 Level1 presentation 계약이며 계산과 handoff source에는 기존 raw factor key를
   유지한다. 사용자가 읽는 지표명과 runner payload를 분리해도 Level2 검증 계약은 바뀌지 않는다.
+- Portfolio Mix는 2~4개 component의 Single settings payload, 공통 기간, 역할·비중을 하나의
+  effective fingerprint로 묶는다. 모든 component 실행과 weighted build가 성공한 fresh result에서만
+  저장/Level2 action을 제공하고, partial failure나 설정 변경 뒤 old result는 참고 근거로만 남긴다.
+- Mix setup 저장은 재사용 가능한 draft 계약이고 selection source가 아니다. 저장된 setup을 복원해도
+  result를 만들지 않으며, current data로 다시 실행하고 명시적으로 Level2 등록해야 source chain에 들어간다.
 
 ## Verification Checkpoints
 
@@ -100,7 +105,9 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 - Backtest Analysis의 Data Trust Summary는 DB 가격 기준일이 최신 완료 거래일보다 오래된 경우, 현재 후보 ticker만 대상으로 OHLCV 가격 이력 업데이트 action을 제공한다. 보이는 action card와 버튼은 React custom component 안에서 통합 렌더링되며, Python은 submit event를 받아 데이터 보강만 수행한다. 결과 재계산 / source 등록 / 2차 검증 전송은 사용자가 별도로 실행한다.
 - Backtest Analysis의 Handoff panel이 source 등록 action과 entry judgment를 소유한다. Handoff는 `1차 진입 기준`, `먼저 해결`, `다음 단계`를 보여주며 readiness score나 promotion hold review를 1차 blocker처럼 표시하지 않는다. Policy Signals owns evidence detail and does not repeat the same entry-readiness hero. React custom component owns the visible Handoff card and button, and a separate React custom component owns the `검증 기준 상세` first-stage evidence board, while Python keeps source registration write / rerun, policy classification, and persistence. `검증 기준 상세`은 `Data Trust`, `Execution Source`, `Validation Source` 중심으로 1차 기준을 묶고, 각 기준의 `?` help는 `plain_explanation` / `checked_items`로 무엇을 검증했는지 설명한다. 2차 review focus 상세 목록과 count / notice는 Backtest Analysis에서 반복하지 않고 source contract로 Practical Validation에 전달한다.
 - Backtest Analysis의 Portfolio Mix Builder는 여러 component를 비교해 하나를 고르는 화면이 아니라, weight를 정해 하나의 mix 후보를 만드는 화면이다.
-- `검증 후보로 보내기`는 사용자 메모나 preset 저장이 아니라 1차 후보 판단을 통과한 source를 Practical Validation으로 넘기는 workflow handoff다.
+- Portfolio Mix는 `구성 전략과 공통 기준 -> 역할과 목표 비중 -> Mix 실행과 해석 -> 저장하고 Level2로 이동` 네 단계의 React one-shell이다. React는 편집과 intent만 소유하고 Python이 validation, runner, weighted build, fingerprint, saved setup과 handoff를 소유한다.
+- `Mix 설정 저장`은 `backtest_portfolio_mix_saved_v1` reusable setup을 저장하며 결과/후보 등록을 대신하지 않는다. prototype legacy saved row는 자동 이관하지 않고 shelf에서 숨긴다.
+- `Level2 검증 후보 등록`은 current fingerprint와 일치하는 fresh weighted result만 Practical Validation source로 넘기는 workflow handoff다. development component, invalid weight/role 또는 stale result가 있으면 Python이 거부한다.
 - Practical Validation은 후보가 Final Review에 충분한 검증 근거를 갖는지 보여준다.
 - Practical Validation은 source traits, validation profile, replay, closure, audit를 읽어 `practical_validation_decision_workspace_v1`으로 투영한다. 같은 root issue는 lane과 count에서 한 번만 반영한다.
 - visible flow는 `후보와 검증 기준 확인 -> 최신 데이터 기준 재검증 -> 결과 해석과 해결 구분 -> 저장하고 Final Review로 이동`의 4단계다.
@@ -181,7 +188,7 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 | Area | Files |
 |---|---|
 | Backtest stage routing | `app/services/backtest_workflow_shell.py`, `app/web/backtest_workflow_shell.py`, `app/web/components/backtest_workflow_shell/`, `app/web/backtest_state.py`, `app/web/backtest_workflow_routes.py`, `app/web/backtest_page.py` |
-| Backtest Analysis | `app/web/backtest_analysis.py`, `app/web/backtest_single_*.py`, `app/web/backtest_compare/` |
+| Backtest Analysis | `app/web/backtest_analysis.py`, `app/web/backtest_single_*.py`, `app/services/backtest_portfolio_mix_workspace.py`, `app/web/backtest_portfolio_mix_workspace.py`, `app/web/components/backtest_portfolio_mix_workspace/`; `app/web/backtest_compare/`는 legacy compatibility |
 | Practical Validation | `app/web/backtest_practical_validation/`, `app/web/components/practical_validation_decision_workspace/`, `app/services/backtest_practical_validation_decision_workspace.py`, `app/services/backtest_practical_validation_explanation.py`, `app/services/backtest_practical_validation_modules.py`, `app/services/backtest_practical_validation_board_registry.py`, `app/services/backtest_selected_route_preflight.py`, `app/services/backtest_construction_risk_audit.py`, `app/services/backtest_risk_contribution_audit.py`, `app/services/backtest_component_role_weight_audit.py`, `app/services/backtest_temporal_validation.py`, `app/services/backtest_validation_efficacy.py`, `app/services/backtest_data_coverage_audit.py`, `app/services/backtest_realism_audit.py` |
 | Final Review | `app/web/backtest_final_review/`, `app/services/backtest_final_review_decision_brief.py`, `app/services/backtest_evidence_read_model.py` compatibility |
 | Evidence closure contract | `app/services/backtest_evidence_closure.py`, `app/services/backtest_practical_validation_replay.py` |

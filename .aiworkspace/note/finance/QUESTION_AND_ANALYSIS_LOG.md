@@ -10043,3 +10043,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Shiller 보간 EPS를 actual로 오인하지 않고, 사용자가 받은 공식 S&P Index Earnings XLSX를 등록해 Economic Cycle이 완료 분기 actual As-Reported를 자동으로 읽어야 함.
 - Analysis result: DB가 비어 있었고 기존 importer는 normalized status 열만 지원했으며 loader는 기준일 이후 release vintage를 막지 않았다. 공식 raw workbook은 `QUARTERLY DATA` 제목과 다단 Operating/As-Reported 머리글을 사용하므로 전용 parser, transactional UPSERT, PIT guard, 8분기 coverage UI를 연결했다.
 - Follow-up: 제품 경로와 parser 구조 검증은 완료했다. 사용자가 직접 받은 최신 공식 XLSX를 등록해 DB 8분기 coverage와 Economic Cycle 실제 TTM 활성화를 확인하는 실제 데이터 단계가 남아 있다.
+
+### 2026-07-19 - Portfolio Mix는 비교 form이 아니라 하나의 weighted 후보 작업 공간이다
+
+- User request: 방치된 Portfolio Mix의 legacy Streamlit UI와 기능을 Level1/2/3 시각 언어와 실제 workflow에 맞게 전면 개선하고, prototype 데이터 호환에 과도하게 얽매이지 말아 달라고 요청함.
+- Interpreted goal: 여러 전략을 고르는 것부터 역할·비중, 실행 결과, reusable save와 Level2 후보 등록까지 한 shell에서 끝내되 저장과 후보 등록은 섞지 않아야 함.
+- Analysis result: `backtest_portfolio_mix_workspace_v1`이 2~4 component, Single settings reuse, effective fingerprint, fresh/stale lifecycle을 계산하고 Python adapter가 existing compare runner/weighted builder와 new-schema save/handoff를 조합한다. React는 four-step presentation/intent만 담당한다.
+- Follow-up: actual run-save-restore-edit-rerun과 desktop/760px QA를 완료했다. legacy prototype row migration, async progress streaming, fallback full-edit parity와 실제 keyboard traversal은 후속 compatibility 범위다.

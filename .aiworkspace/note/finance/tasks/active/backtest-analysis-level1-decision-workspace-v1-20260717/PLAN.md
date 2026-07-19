@@ -7419,7 +7419,7 @@ git commit -m "Portfolio Mix 실행 저장 인계 통합"
 - Modify: `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Generate but do not stage: `backtest-portfolio-mix-one-shell-desktop-qa.png`, `backtest-portfolio-mix-one-shell-760-qa.png`
 
-- [ ] **Step 1: Start a fresh app and execute desktop Browser QA**
+- [x] **Step 1: Start a fresh app and execute desktop Browser QA**
 
 At approximately 1440px:
 
@@ -7434,7 +7434,7 @@ At approximately 1440px:
 
 Save `backtest-portfolio-mix-one-shell-desktop-qa.png` as generated/untracked evidence. Any saved/run/registry rows created by QA remain protected/untracked and must not be staged.
 
-- [ ] **Step 2: Execute 760px Browser QA**
+- [x] **Step 2: Execute 760px Browser QA**
 
 At 760x1000 verify:
 
@@ -7446,7 +7446,7 @@ At 760x1000 verify:
 
 Save `backtest-portfolio-mix-one-shell-760-qa.png` as generated/untracked evidence.
 
-- [ ] **Step 3: Apply `superpowers:verification-before-completion` with fresh commands**
+- [x] **Step 3: Apply `superpowers:verification-before-completion` with fresh commands**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q
@@ -7458,7 +7458,7 @@ git diff --check
 
 The full service suite may retain only the already documented baseline failures; any new Portfolio Mix failure blocks closeout.
 
-- [ ] **Step 4: Apply `finance-doc-sync`**
+- [x] **Step 4: Apply `finance-doc-sync`**
 
 Document durable ownership:
 
@@ -7468,7 +7468,7 @@ Document durable ownership:
 - active task docs: exact RED/GREEN counts, runtime/Browser evidence, baseline failures and remaining risks.
 - root logs: only a 3~5 line milestone/decision/handoff summary.
 
-- [ ] **Step 5: Audit protected paths and commit closeout**
+- [x] **Step 5: Audit protected paths and commit closeout**
 
 ```bash
 git status --short
