@@ -1,0 +1,65 @@
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+COMPONENT_ROOT = REPO_ROOT / "app" / "web" / "components"
+BACKTEST_COMPONENT_PACKAGES = (
+    "backtest_analysis_decision_workspace",
+    "backtest_analysis_result_workspace",
+    "backtest_factor_readiness_panel",
+    "backtest_handoff_action",
+    "backtest_policy_signal_board",
+    "backtest_price_freshness_preflight",
+    "backtest_price_refresh_action",
+    "backtest_workflow_shell",
+    "final_review_investment_report",
+    "practical_validation_data_action_board",
+    "practical_validation_decision_workspace",
+    "practical_validation_fix_queue",
+)
+
+
+def test_backtest_component_packages_use_component_static_contract() -> None:
+    discovered_packages = {
+        package_path.parent.parent.name
+        for package_path in COMPONENT_ROOT.glob("*/frontend/package.json")
+    }
+    assert discovered_packages == set(BACKTEST_COMPONENT_PACKAGES)
+
+    for component_name in BACKTEST_COMPONENT_PACKAGES:
+        component_root = COMPONENT_ROOT / component_name
+        vite_source = (component_root / "frontend/vite.config.ts").read_text(
+            encoding="utf-8"
+        )
+        wrapper_source = (component_root / "component.py").read_text(
+            encoding="utf-8"
+        )
+
+        assert 'outDir: "component_static"' in vite_source, component_name
+        assert '/ "component_static"' in wrapper_source, component_name
+        assert '/ "index.html"' in wrapper_source, component_name
+        assert '/ "build"' not in wrapper_source, component_name
+
+
+def test_backtest_component_static_entries_reference_existing_assets() -> None:
+    for component_name in BACKTEST_COMPONENT_PACKAGES:
+        static_root = COMPONENT_ROOT / component_name / "frontend/component_static"
+        entry_path = static_root / "index.html"
+
+        assert entry_path.is_file(), component_name
+        entry_source = entry_path.read_text(encoding="utf-8")
+        assert 'src="/assets/' not in entry_source, component_name
+        assert 'href="/assets/' not in entry_source, component_name
+
+        references = re.findall(
+            r'(?:src|href)="\./([^"?#]+)',
+            entry_source,
+        )
+        assert references, component_name
+        for reference in references:
+            assert (static_root / reference).is_file(), (
+                f"{component_name}: missing {reference}"
+            )
