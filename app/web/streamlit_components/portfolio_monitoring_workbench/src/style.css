@@ -80,14 +80,15 @@ button { outline: none; }
 .pm-section-heading small { max-width: 240px; color: #81909b; font-size: 10px; line-height: 1.45; text-align: right; }
 .pm-chart-wrap { width: 100%; margin-top: 16px; overflow: hidden; }
 .pm-chart-wrap svg { display: block; width: 100%; min-height: 220px; }
-.pm-grid-line { stroke: #e4ebef; stroke-width: 1; stroke-dasharray: 4 5; }
+.pm-grid-line { stroke: #e2eaf0; stroke-width: 1; stroke-dasharray: 4 5; vector-effect: non-scaling-stroke; }
 .pm-axis-label, .pm-axis-date { fill: #83919c; font-size: 10px; }
-.pm-value-line { fill: none; stroke: #2f7fd0; stroke-width: 3.3; stroke-linecap: round; stroke-linejoin: round; }
-.pm-chart-point circle { fill: #fff; stroke: #2f7fd0; stroke-width: 2; opacity: .2; transition: opacity .15s, r .15s; }
+.pm-date-ticks-mobile { display: none; }
+.pm-value-line { fill: none; stroke: #176fb8; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.pm-chart-point circle { fill: #fff; stroke: #176fb8; stroke-width: 2; opacity: 0; transition: opacity .15s, r .15s; vector-effect: non-scaling-stroke; }
 .pm-chart-point:hover circle, .pm-chart-point:focus circle { r: 5px; opacity: 1; }
 .pm-chart-hit-area { fill: transparent; cursor: crosshair; touch-action: pan-y; }
-.pm-chart-hover-line { stroke: #7aa9ce; stroke-width: 1; stroke-dasharray: 3 4; }
-.pm-chart-active-point { fill: #fff; stroke: #2f7fd0; stroke-width: 3; filter: drop-shadow(0 2px 3px rgba(47, 127, 208, .28)); }
+.pm-chart-hover-line { stroke: #6d9fc6; stroke-width: 1; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
+.pm-chart-active-point { fill: #fff; stroke: #176fb8; stroke-width: 3; filter: drop-shadow(0 2px 3px rgba(47, 127, 208, .22)); vector-effect: non-scaling-stroke; }
 .pm-chart-tooltip rect { fill: #203d52; filter: drop-shadow(0 5px 10px rgba(23, 37, 54, .18)); }
 .pm-chart-tooltip-date { fill: #bcd0de; font-size: 10px; font-weight: 700; }
 .pm-chart-tooltip-value { fill: #fff; font-size: 13px; font-weight: 900; }
@@ -289,6 +290,8 @@ button:focus-visible, summary:focus-visible, .pm-chart-point:focus { box-shadow:
 }
 
 @media (max-width: 420px) {
+  .pm-date-ticks-desktop { display: none; }
+  .pm-date-ticks-mobile { display: block; }
   .pm-hero h1 { font-size: 26px; }
   .pm-hero p { font-size: 12px; }
   .pm-kpi-grid strong { font-size: 17px; }

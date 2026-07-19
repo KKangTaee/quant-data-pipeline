@@ -6,6 +6,7 @@ import {
   availableFundingModes,
   buildAddItemPayload,
   buildCatalogSearchEvent,
+  buildChartDateTicks,
   buildCommonBasisBanner,
   buildGroupChartSeries,
   buildDiagnosisSections,
@@ -76,6 +77,8 @@ function ValueChart({ rows, items }: { rows: Array<Record<string, string | numbe
     .join(" ");
   const area = `${path} L${x(series.length - 1)},${height - inset.bottom} L${x(0)},${height - inset.bottom} Z`;
   const ticks = [0, 0.5, 1];
+  const desktopDateTicks = buildChartDateTicks(series, 5);
+  const mobileDateTicks = buildChartDateTicks(series, 3);
   const activePoint = activeIndex == null ? null : series[activeIndex] ?? null;
   const activeX = activeIndex == null ? null : x(activeIndex);
   const activeY = activePoint?.total == null ? null : y(activePoint.total);
@@ -105,8 +108,8 @@ function ValueChart({ rows, items }: { rows: Array<Record<string, string | numbe
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="포트폴리오 가치곡선">
         <defs>
           <linearGradient id="pmArea" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.22" />
-            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="#3182ce" stopOpacity="0.14" />
+            <stop offset="100%" stopColor="#3182ce" stopOpacity="0.01" />
           </linearGradient>
         </defs>
         {ticks.map((tick) => {
@@ -159,8 +162,28 @@ function ValueChart({ rows, items }: { rows: Array<Record<string, string | numbe
             </g>
           </g>
         )}
-        <text x={inset.left} y={height - 10} className="pm-axis-date">{compactDate(series[0].date)}</text>
-        <text x={width - inset.right} y={height - 10} textAnchor="end" className="pm-axis-date">{compactDate(series[series.length - 1]?.date ?? null)}</text>
+        <g className="pm-date-ticks-desktop">
+          {desktopDateTicks.map((tick, position) => (
+            <text
+              key={tick.index}
+              x={x(tick.index)}
+              y={height - 10}
+              textAnchor={position === 0 ? "start" : position === desktopDateTicks.length - 1 ? "end" : "middle"}
+              className="pm-axis-date"
+            >{compactDate(tick.date)}</text>
+          ))}
+        </g>
+        <g className="pm-date-ticks-mobile">
+          {mobileDateTicks.map((tick, position) => (
+            <text
+              key={tick.index}
+              x={x(tick.index)}
+              y={height - 10}
+              textAnchor={position === 0 ? "start" : position === mobileDateTicks.length - 1 ? "end" : "middle"}
+              className="pm-axis-date"
+            >{compactDate(tick.date)}</text>
+          ))}
+        </g>
       </svg>
     </div>
   );

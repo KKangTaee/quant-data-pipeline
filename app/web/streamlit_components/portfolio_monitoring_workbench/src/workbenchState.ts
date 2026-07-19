@@ -251,6 +251,23 @@ export function buildGroupChartSeries(
     .sort((left, right) => left.date.localeCompare(right.date));
 }
 
+export type ChartDateTick = {
+  index: number;
+  date: string;
+};
+
+/** Selects evenly spaced actual observations while always retaining the range ends. */
+export function buildChartDateTicks(series: ChartPoint[], maxTicks: number): ChartDateTick[] {
+  if (!series.length || maxTicks < 1) return [];
+  const tickCount = Math.min(Math.max(Math.floor(maxTicks), 1), series.length);
+  if (tickCount === 1) return [{ index: 0, date: series[0].date }];
+
+  const indices = Array.from({ length: tickCount }, (_, position) => (
+    Math.round((position * (series.length - 1)) / (tickCount - 1))
+  ));
+  return Array.from(new Set(indices)).map((index) => ({ index, date: series[index].date }));
+}
+
 export function nearestChartPointIndex(
   series: ChartPoint[],
   pointerX: number,

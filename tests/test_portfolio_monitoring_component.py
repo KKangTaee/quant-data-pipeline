@@ -32,6 +32,22 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn('className="pm-chart-hover-line"', source)
         self.assertIn('className="pm-chart-tooltip"', source)
 
+    def test_value_chart_hides_static_point_halo_and_renders_responsive_date_ticks(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        styles = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/style.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("buildChartDateTicks(series, 5)", source)
+        self.assertIn("buildChartDateTicks(series, 3)", source)
+        self.assertIn('className="pm-date-ticks-desktop"', source)
+        self.assertIn('className="pm-date-ticks-mobile"', source)
+        self.assertRegex(styles, r"\.pm-chart-point circle \{[^}]*opacity: 0;")
+        self.assertIn("vector-effect: non-scaling-stroke;", styles)
+        self.assertIn(".pm-date-ticks-mobile { display: none; }", styles)
+
     def test_portfolio_monitoring_typography_is_one_pixel_larger(self) -> None:
         styles = Path(
             "app/web/streamlit_components/portfolio_monitoring_workbench/src/style.css"

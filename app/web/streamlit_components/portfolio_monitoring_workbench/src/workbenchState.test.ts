@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { GroupSummary, GroupValueResult } from "./contracts";
 import {
   buildCommonBasisBanner,
+  buildChartDateTicks,
   buildGroupChartSeries,
   formatMetric,
   applySourceType,
@@ -95,6 +96,20 @@ describe("portfolio monitoring workbench state", () => {
     const series = buildGroupChartSeries(activeGroup.curve, ["a", "b"]);
     expect(series[0].items.b).toBeNull();
     expect(series[1].items.b).toBe(10500);
+  });
+
+  it("builds unique date ticks from actual observations and preserves both ends", () => {
+    const series = buildGroupChartSeries(
+      Array.from({ length: 9 }, (_, index) => ({
+        date: `2026-07-${String(index + 1).padStart(2, "0")}`,
+        total_value: 10000 + index,
+      })),
+      [],
+    );
+
+    expect(buildChartDateTicks(series, 5).map((tick) => tick.index)).toEqual([0, 2, 4, 6, 8]);
+    expect(buildChartDateTicks(series, 3).map((tick) => tick.index)).toEqual([0, 4, 8]);
+    expect(buildChartDateTicks(series.slice(0, 2), 5).map((tick) => tick.index)).toEqual([0, 1]);
   });
 
   it("selects the nearest valid chart observation across the plot", () => {
