@@ -87,6 +87,24 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn(".pm-market-hit-area.is-draggable", styles)
         self.assertIn("touch-action: pan-y;", styles)
 
+    def test_selected_chart_prioritizes_detail_width_and_readable_axes(self) -> None:
+        styles = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/style.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            ".pm-content-grid { display: grid; grid-template-columns: minmax(280px, .35fr) minmax(0, .65fr);",
+            styles,
+        )
+        self.assertIn(
+            ".pm-market-axis, .pm-market-date { fill: #63798a; font-size: 11px; font-weight: 700; }",
+            styles,
+        )
+        self.assertRegex(
+            styles,
+            r"@media \(max-width: 900px\) \{[\s\S]*?\.pm-content-grid \{ grid-template-columns: 1fr; \}",
+        )
+
     def test_portfolio_monitoring_typography_is_one_pixel_larger(self) -> None:
         styles = Path(
             "app/web/streamlit_components/portfolio_monitoring_workbench/src/style.css"
