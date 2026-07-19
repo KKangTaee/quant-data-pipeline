@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 from copy import deepcopy
+from datetime import date
 
 import pytest
 
@@ -389,3 +390,220 @@ def test_current_result_exposes_distinct_callable_save_and_handoff_actions():
         "handoff_level2",
     ]
     assert all(action["enabled"] is True for action in workspace["actions"])
+
+
+def _intent(action: str, intent_id: str, **payload: object) -> dict[str, object]:
+    return {
+        "event": {
+            "id": action,
+            "intent_id": intent_id,
+            "payload": payload,
+        }
+    }
+
+
+def test_mix_adapter_builds_two_component_valid_initial_draft():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+
+    draft = adapter.build_initial_portfolio_mix_session_draft(
+        today=date(2026, 7, 19),
+    )
+
+    assert [component["strategy_choice"] for component in draft["components"]] == [
+        "GTAA",
+        "Equal Weight",
+    ]
+    assert [component["weight_percent"] for component in draft["components"]] == [
+        50.0,
+        50.0,
+    ]
+    assert draft["shared"]["end"] == "2026-07-19"
+
+
+def test_mix_adapter_updates_only_addressed_draft_regions():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    session: dict[str, object] = {
+        adapter.MIX_SESSION_KEYS["draft"]: adapter.build_initial_portfolio_mix_session_draft(
+            today=date(2026, 7, 19)
+        )
+    }
+    first_id = session[adapter.MIX_SESSION_KEYS["draft"]]["components"][0][
+        "component_id"
+    ]
+    second_before = deepcopy(
+        session[adapter.MIX_SESSION_KEYS["draft"]]["components"][1]
+    )
+
+    assert adapter.apply_portfolio_mix_intent(
+        _intent("set_shared_field", "intent-shared", field_id="start", value="2018-01-01"),
+        session_state=session,
+        runtime_options=_runtime_options(),
+    )["accepted"] is True
+    assert adapter.apply_portfolio_mix_intent(
+        _intent("set_role", "intent-role", component_id=first_id, value="growth"),
+        session_state=session,
+        runtime_options=_runtime_options(),
+    )["accepted"] is True
+    assert adapter.apply_portfolio_mix_intent(
+        _intent("set_weight", "intent-weight", component_id=first_id, value=45),
+        session_state=session,
+        runtime_options=_runtime_options(),
+    )["accepted"] is True
+    assert adapter.apply_portfolio_mix_intent(
+        _intent("set_component_field", "intent-field", component_id=first_id, field_id="top", value=2),
+        session_state=session,
+        runtime_options=_runtime_options(),
+    )["accepted"] is True
+
+    updated = session[adapter.MIX_SESSION_KEYS["draft"]]
+    assert updated["shared"]["start"] == "2018-01-01"
+    assert updated["components"][0]["role"] == "growth"
+    assert updated["components"][0]["weight_percent"] == 45.0
+    assert updated["components"][0]["settings_values"]["top"] == 2
+    assert updated["components"][1] == second_before
+
+
+def test_mix_adapter_adds_and_removes_components_without_replacing_other_drafts():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    session: dict[str, object] = {
+        adapter.MIX_SESSION_KEYS["draft"]: adapter.build_initial_portfolio_mix_session_draft(
+            today=date(2026, 7, 19)
+        )
+    }
+    original = deepcopy(session[adapter.MIX_SESSION_KEYS["draft"]]["components"])
+
+    added = adapter.apply_portfolio_mix_intent(
+        _intent(
+            "add_component",
+            "intent-add",
+            strategy_choice="Quality + Value",
+            variant="Annual",
+        ),
+        session_state=session,
+        runtime_options=_runtime_options(),
+    )
+    added_id = added["component_id"]
+
+    assert added["accepted"] is True
+    assert session[adapter.MIX_SESSION_KEYS["draft"]]["components"][:2] == original
+    assert len(session[adapter.MIX_SESSION_KEYS["draft"]]["components"]) == 3
+
+    removed = adapter.apply_portfolio_mix_intent(
+        _intent("remove_component", "intent-remove", component_id=added_id),
+        session_state=session,
+        runtime_options=_runtime_options(),
+    )
+
+    assert removed["accepted"] is True
+    assert session[adapter.MIX_SESSION_KEYS["draft"]]["components"] == original
+
+
+def test_mix_adapter_applies_python_owned_preset_profile():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    session: dict[str, object] = {
+        adapter.MIX_SESSION_KEYS["draft"]: adapter.build_initial_portfolio_mix_session_draft(
+            today=date(2026, 7, 19)
+        )
+    }
+    component_id = session[adapter.MIX_SESSION_KEYS["draft"]]["components"][0][
+        "component_id"
+    ]
+
+    result = adapter.apply_portfolio_mix_intent(
+        _intent(
+            "apply_preset",
+            "intent-preset",
+            component_id=component_id,
+            preset_name="GTAA Universe",
+        ),
+        session_state=session,
+        runtime_options=_runtime_options(),
+    )
+
+    values = session[adapter.MIX_SESSION_KEYS["draft"]]["components"][0][
+        "settings_values"
+    ]
+    assert result["accepted"] is True
+    assert values["preset_name"] == "GTAA Universe"
+    assert values["universe_mode"] == "preset"
+    assert values["top"] == 3
+
+
+def test_mix_adapter_rejects_unknown_and_duplicate_intents_without_mutation():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    session: dict[str, object] = {
+        adapter.MIX_SESSION_KEYS["draft"]: adapter.build_initial_portfolio_mix_session_draft(
+            today=date(2026, 7, 19)
+        )
+    }
+    before = deepcopy(session)
+    unknown = adapter.apply_portfolio_mix_intent(
+        _intent("execute_runner_in_react", "intent-unknown"),
+        session_state=session,
+        runtime_options=_runtime_options(),
+    )
+    accepted = adapter.apply_portfolio_mix_intent(
+        _intent("set_shared_field", "intent-once", field_id="start", value="2017-01-01"),
+        session_state=session,
+        runtime_options=_runtime_options(),
+    )
+    once = deepcopy(session)
+    duplicate = adapter.apply_portfolio_mix_intent(
+        _intent("set_shared_field", "intent-once", field_id="start", value="2019-01-01"),
+        session_state=session,
+        runtime_options=_runtime_options(),
+    )
+
+    assert unknown == {"accepted": False, "reason": "unknown_action"}
+    assert before[adapter.MIX_SESSION_KEYS["draft"]] != once[
+        adapter.MIX_SESSION_KEYS["draft"]
+    ]
+    assert accepted["accepted"] is True
+    assert duplicate == {"accepted": False, "reason": "duplicate_intent"}
+    assert session == once
+
+
+def test_mix_fallback_model_uses_same_four_step_read_model():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    module = _workspace_module()
+    workspace = module.build_portfolio_mix_workspace(
+        draft=_valid_draft(),
+        runtime_options=_runtime_options(),
+        action_capabilities={"run_mix": True},
+    )
+
+    fallback = adapter.build_portfolio_mix_fallback_model(workspace)
+
+    assert [step["id"] for step in fallback["steps"]] == [
+        "configuration",
+        "allocation",
+        "execution",
+        "handoff",
+    ]
+    assert fallback["component_cards"] == workspace["component_cards"]
+    assert fallback["execution_action"] == workspace["execution_action"]
+    assert fallback["actions"] == workspace["actions"]
+
+
+def test_mix_mode_survives_rerun_through_python_session_read_model():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    session: dict[str, object] = {
+        adapter.MIX_SESSION_KEYS["draft"]: adapter.build_initial_portfolio_mix_session_draft(
+            today=date(2026, 7, 19)
+        ),
+        adapter.MIX_SESSION_KEYS["mode"]: "new",
+    }
+
+    accepted = adapter.apply_portfolio_mix_intent(
+        _intent("set_mode", "intent-mode", value="saved"),
+        session_state=session,
+        runtime_options=_runtime_options(),
+    )
+    workspace = adapter.build_portfolio_mix_workspace_from_session(
+        session_state=session,
+        runtime_options=_runtime_options(),
+    )
+
+    assert accepted["accepted"] is True
+    assert workspace["mode"] == "saved"
+    assert adapter.build_portfolio_mix_fallback_model(workspace)["mode"] == "saved"

@@ -308,4 +308,6 @@ Last Updated: 2026-07-19
 - effective fingerprint는 draft/save/component UI identity를 제외하고 실제 projected payload를
   기준으로 계산한다. stale result는 reference로 보존하고 current save/handoff는 차단한다.
 - 신규 saved shelf는 `backtest_portfolio_mix_saved_v1`만 읽으며 legacy JSONL migration은 하지 않는다.
-- Task 47 React one-shell/intent adapter, Task 48 runtime/persistence/cutover, Task 49 Browser QA/docs가 남았다.
+- Task 47에서 rerun-stable Python mode/draft adapter와 React four-step one-shell, same-read-model fallback,
+  schema-driven component editor와 760px/ResizeObserver/accessibility source contract를 구현했다.
+- Task 48 runtime/persistence/cutover, Task 49 Browser QA/docs가 남았다.

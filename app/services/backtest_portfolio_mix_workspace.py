@@ -252,11 +252,19 @@ def _component_workspace(
     )
     payload = project_single_settings_payload(workspace, supplied)
     settings_workspace = deepcopy(workspace)
-    settings_workspace["sections"] = [
-        section
-        for section in settings_workspace.get("sections", [])
-        if str(section.get("section_id") or "") != "execution"
-    ]
+    settings_sections: list[dict[str, Any]] = []
+    for raw_section in settings_workspace.get("sections", []):
+        section = deepcopy(dict(raw_section))
+        if str(section.get("section_id") or "") == "execution":
+            section["section_id"] = "component_execution"
+            section["fields"] = [
+                field
+                for field in list(section.get("fields") or [])
+                if str(field.get("field_id") or "") not in {"start", "end"}
+            ]
+        if section.get("fields"):
+            settings_sections.append(section)
+    settings_workspace["sections"] = settings_sections
     settings_workspace.pop("action", None)
     overrides = {
         key: deepcopy(value)

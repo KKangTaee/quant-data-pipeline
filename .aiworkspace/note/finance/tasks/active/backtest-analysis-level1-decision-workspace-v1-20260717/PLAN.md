@@ -7255,7 +7255,7 @@ handoff_level2
 
 The React event contract is `{event: {id, intent_id, payload}}`. Python rejects unknown intents, duplicate intent IDs, unknown component IDs, invalid strategy/variant/field/option values and actions not advertised by the current read model.
 
-- [ ] **Step 1: Write RED adapter and UI-boundary tests**
+- [x] **Step 1: Write RED adapter and UI-boundary tests**
 
 Add tests that require:
 
@@ -7273,7 +7273,7 @@ Run RED:
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_refactor_boundaries.py -q -k 'portfolio_mix'
 ```
 
-- [ ] **Step 2: Implement Python intent adapter and fallback**
+- [x] **Step 2: Implement Python intent adapter and fallback**
 
 - Rebuild the workspace after every accepted intent from session state.
 - Use service-provided strategy/variant/preset/field options as the only allow-lists.
@@ -7281,7 +7281,7 @@ Run RED:
 - Do not wire runner/persistence actions in this task; unsupported action capabilities remain false so no empty action board appears.
 - Python fallback exposes the same four steps and editing/actions that are currently callable.
 
-- [ ] **Step 3: Implement React four-step presentation**
+- [x] **Step 3: Implement React four-step presentation**
 
 Step layout:
 
@@ -7292,7 +7292,7 @@ Step layout:
 
 Use a two-column desktop component board, one column at 760px, no horizontal overflow, keyboard-focusable buttons/disclosures and `aria-selected`, `aria-expanded`, `aria-live` where state changes.
 
-- [ ] **Step 4: Run GREEN, production build and compile**
+- [x] **Step 4: Run GREEN, production build and compile**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_refactor_boundaries.py -q -k 'portfolio_mix'
@@ -7301,7 +7301,7 @@ npm run build --prefix app/web/components/backtest_portfolio_mix_workspace/front
 git diff --check
 ```
 
-- [ ] **Step 5: Commit the implementation unit**
+- [x] **Step 5: Commit the implementation unit**
 
 Stage only adapter/component/tests/task records and commit:
 

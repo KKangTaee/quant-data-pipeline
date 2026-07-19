@@ -591,3 +591,18 @@
   `.venv/bin/python -m pytest tests/test_service_contracts.py -q -k 'single_settings or portfolio_mix or weighted_portfolio or compare_execution'`
   -> `5 passed, 840 deselected`.
 - `py_compile app/services/backtest_portfolio_mix_workspace.py`와 `git diff --check` -> exit 0.
+
+## 2026-07-19 15차 Task 47 RED -> GREEN
+
+- RED adapter/UI boundary:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_refactor_boundaries.py -q -k 'portfolio_mix'`
+  -> adapter/component 부재로 `7 failed, 11 passed, 48 deselected`.
+- first GREEN -> `16 passed / 2 failed`. GTAA `top`이 Single `execution` section에 있어 section 전체
+  제거로 field allow-list에서 빠졌고 text input이 dynamic type ternary라 source contract가 검출하지 못했다.
+- 공통 start/end만 제거하고 component execution field를 유지하며 text control을 명시한 뒤
+  `18 passed, 48 deselected`.
+- rerun mode ownership 추가 RED -> Python session builder와 `workspace.mode` 부재로
+  `2 failed / 17 passed`. Python-owned mode projection 뒤 focused `19 passed, 48 deselected`.
+- React production build: Vite 5.4.21, `175 modules transformed`; CSS 5.60 kB, JS 331.42 kB.
+- target service/adapter/component-wrapper `py_compile`과 `git diff --check` -> exit 0.
+- `npm install` audit는 moderate 1 / high 1을 보고했고 기존 Vite 계열과 같은 breaking-upgrade debt다.

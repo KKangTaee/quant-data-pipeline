@@ -1014,6 +1014,42 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn("dangerouslySetInnerHTML", component)
         self.assertNotIn("execute_single_backtest", component)
 
+    def test_portfolio_mix_react_one_shell_is_intent_only_and_responsive(self) -> None:
+        root = PROJECT_ROOT / "app/web/components/backtest_portfolio_mix_workspace"
+        wrapper = (root / "component.py").read_text()
+        main = (root / "frontend/src/main.tsx").read_text()
+        component = (root / "frontend/src/App.tsx").read_text()
+        style = (root / "frontend/src/styles.css").read_text()
+
+        self.assertIn("render_backtest_portfolio_mix_workspace_component", wrapper)
+        self.assertIn("ResizeObserver", main)
+        for heading in (
+            "구성 전략과 공통 기준",
+            "역할과 목표 비중",
+            "Mix 실행과 해석",
+            "저장하고 Level2로 이동",
+        ):
+            self.assertIn(heading, component)
+        for control in (
+            'type="date"',
+            'type="number"',
+            'type="text"',
+            "<select",
+            'role="checkbox"',
+            "aria-pressed",
+        ):
+            self.assertIn(control, component)
+        self.assertIn("Streamlit.setComponentValue", component)
+        self.assertIn("intent_id", component)
+        self.assertIn("workspace.mode", component)
+        self.assertIn("@media (max-width: 760px)", style)
+        self.assertIn("grid-template-columns: minmax(0, 1fr)", style)
+        self.assertNotIn("run_compare_strategy", component)
+        self.assertNotIn("build_weighted_portfolio_bundle", component)
+        self.assertNotIn("save_saved_portfolio", component)
+        self.assertNotIn("configuration_fingerprint", component)
+        self.assertNotIn("dangerouslySetInnerHTML", component)
+
     def test_react_settings_applies_python_owned_preset_profiles_without_strategy_rules(
         self,
     ) -> None:

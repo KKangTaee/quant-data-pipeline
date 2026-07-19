@@ -400,3 +400,18 @@ generated artifact이므로 commit하지 않는다.
   migration하거나 raw JSON/절대 경로를 투영하지 않는다.
 - 실행 전에는 result verdict/final action board가 없고, current fingerprint와 일치하는 결과에서만
   save/Level2 action을 분리해 투영한다. development component가 있으면 Level2 action은 차단한다.
+
+## 2026-07-19 15차 Portfolio Mix React / Intent Decisions
+
+- 새 adapter는 `{event: {id, intent_id, payload}}`만 수신하고 Python catalog에 없는 strategy,
+  variant, component, field, role/shared key와 중복 intent를 draft 변경 전에 거부한다.
+- add/remove는 component ID로 대상만 수정하고 다른 component settings를 보존한다. preset은 React가
+  전략별 값을 만들지 않고 기존 Single `apply_single_settings_preset()` 결과를 저장한다.
+- Single `execution` section에서 Mix 공통 `start/end`만 제거하고 component 고유 `top/interval`은
+  `component_execution` section으로 유지한다. section 전체를 숨기면 GTAA 핵심 설정이 사라진다.
+- new/saved mode는 React local state가 아니라 Python session/read model이 소유한다. component rerun 뒤
+  저장 Mix shelf가 새 Mix mode로 되돌아가는 reset을 방지한다.
+- React는 구성·공통 기준, 역할·비중, 실행·해석, 저장·Level2의 네 step과 schema-driven field control,
+  760px 단일 열, ResizeObserver/aria/focus를 소유한다. runner/Gate/fingerprint/persistence는 import하지 않는다.
+- Python fallback도 같은 read model의 네 step, validation/result/action을 읽는다. full editing parity는
+  React primary route Browser QA 뒤 보완할 수 있으나 raw JSON/path는 노출하지 않는다.
