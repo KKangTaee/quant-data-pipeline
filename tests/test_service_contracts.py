@@ -8353,8 +8353,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("observation_status", context)
         self.assertIn("OBSERVATION_LABEL", context)
         self.assertIn('item.kind === "observation"', horizons)
+        self.assertIn("OBSERVATION_LABEL[item.observation_status]", assets)
         self.assertIn("five_day_status", assets)
         self.assertIn("twenty_day_status", assets)
+        self.assertIn("전체 전망 ·", assets)
+        self.assertIn("item.outlook.five_day_status", assets)
+        self.assertIn("item.outlook.twenty_day_status", assets)
+        self.assertNotIn("<b>{item.estimate_status}</b>", assets)
         self.assertNotIn("item.estimate_status.toLowerCase()", assets)
 
     def test_futures_macro_pattern_map_uses_observed_anchors_and_conditional_branches(self) -> None:

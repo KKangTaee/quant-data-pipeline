@@ -21,12 +21,16 @@ function AssetPathwaysSection({ pathways }: { pathways: AssetPathwayPayload[] })
               <span>
                 <small>다음 5D</small>
                 <strong>{item.outlook.five_day}</strong>
-                <b className={`estimate-${item.outlook.five_day_status.toLowerCase()}`}>{item.outlook.five_day_status}</b>
+                <b className={`estimate-${item.outlook.five_day_status.toLowerCase()}`}>
+                  전체 전망 · {item.outlook.five_day_status}
+                </b>
               </span>
               <span>
                 <small>다음 20D</small>
                 <strong>{item.outlook.twenty_day}</strong>
-                <b className={`estimate-${item.outlook.twenty_day_status.toLowerCase()}`}>{item.outlook.twenty_day_status}</b>
+                <b className={`estimate-${item.outlook.twenty_day_status.toLowerCase()}`}>
+                  전체 전망 · {item.outlook.twenty_day_status}
+                </b>
               </span>
             </div>
             <p>{item.change_condition}</p>
