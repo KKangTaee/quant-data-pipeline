@@ -346,3 +346,11 @@ Last Updated: 2026-07-19
   `current_result.evidence`를 추가한다. 저장 schema, Level2 handoff, weighted calculation은 변경하지 않았다.
 - Task 50 focused GREEN은 Portfolio Mix `25 passed`, weighted selector `5 passed / 840 deselected`,
   target `py_compile`과 `git diff --check` exit 0이다.
+- Task 51에서 summary-only React branch를 `PortfolioMixResult`로 분리하고 누적 성과 SVG,
+  양/음 월별 수익률 SVG, KPI 표시, contribution/monthly table/calculation/data trust disclosure를 연결했다.
+- 누적 성과와 월별 수익률은 pointer hover에서 가장 가까운 실제 row만 선택하고 leave에서 제거한다.
+  chart focus와 좌우 방향키도 같은 tooltip 정보를 제공하며 blur에서 제거한다.
+- 결과 버튼→feedback→result stack은 18px, result 내부는 16px gap을 사용한다. 760px은 차트를
+  한 열로 접고 compact actual-date tick만 표시하며 dense table은 disclosure 내부에서만 횡스크롤한다.
+- Task 51 GREEN은 Mix `27 passed`, route boundary `51 passed`, React production build
+  `176 modules transformed`, `git diff --check` exit 0이다.

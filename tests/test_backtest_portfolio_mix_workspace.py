@@ -4,6 +4,7 @@ import importlib
 import json
 from copy import deepcopy
 from datetime import date
+from pathlib import Path
 from types import SimpleNamespace
 
 import pandas as pd
@@ -1002,3 +1003,59 @@ def test_mix_react_styles_keep_readable_text_inside_streamlit_dark_theme():
     assert ".mix-workspace button:not(.mix-primary)" in styles
     assert ".mix-primary {" in styles
     assert "color: #fff !important" in styles
+
+
+def test_mix_result_react_visual_contract_owns_charts_hover_and_disclosure():
+    root = Path(__file__).resolve().parents[1]
+    app_source = (
+        root
+        / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/App.tsx"
+    ).read_text()
+    result_path = (
+        root
+        / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/PortfolioMixResult.tsx"
+    )
+    result_source = result_path.read_text() if result_path.exists() else ""
+    styles_source = (
+        root
+        / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/styles.css"
+    ).read_text()
+
+    assert "PortfolioMixResult" in app_source
+    assert "equity_chart" in result_source
+    assert "monthly_returns" in result_source
+    assert "onPointerMove" in result_source
+    assert "onPointerLeave" in result_source
+    assert "onFocus" in result_source
+    assert "onBlur" in result_source
+    assert "상세 결과 근거" in result_source
+    assert "component_summary" in result_source
+    assert "mix-result-shell" in styles_source
+    assert "mix-result-stack" in styles_source
+    assert "mix-chart-grid" in styles_source
+    assert "mix-chart-tooltip" in styles_source
+    assert "* 100" not in result_source
+    assert "benchmark" not in result_source.lower()
+    assert "promotion_min_" not in result_source
+    assert "/Users/" not in result_source
+
+
+def test_mix_result_react_visual_contract_keeps_mobile_chart_and_table_boundaries():
+    root = Path(__file__).resolve().parents[1]
+    result_source = (
+        root
+        / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/PortfolioMixResult.tsx"
+    )
+    styles_source = (
+        root
+        / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/styles.css"
+    ).read_text()
+
+    assert result_source.exists()
+    assert "compact_ticks" in result_source.read_text()
+    assert ".mix-table-scroll" in styles_source
+    assert "overflow-x: auto" in styles_source
+    assert "@media (max-width: 760px)" in styles_source
+    assert ".mix-chart-grid { grid-template-columns: minmax(0, 1fr); }" in (
+        styles_source
+    )

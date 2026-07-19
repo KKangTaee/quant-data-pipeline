@@ -7636,7 +7636,7 @@ git commit -m "Portfolio Mix 결과 근거 계약 구현"
 - Consumes: Task 50 `current_result.evidence` without reclassifying status, percentage or data trust.
 - Produces: `PortfolioMixResult` presentation component with cumulative SVG, monthly return SVG, disclosure evidence and hover/focus tooltip state.
 
-- [ ] **Step 1: Write the RED visual contract tests**
+- [x] **Step 1: Write the RED visual contract tests**
 
 Add source/boundary assertions requiring:
 
@@ -7655,7 +7655,7 @@ assert "mix-chart-tooltip" in styles_source
 
 Also assert the result component contains no `* 100`, benchmark inference or raw `promotion_min_`/filesystem labels.
 
-- [ ] **Step 2: Run RED and record the intended failure**
+- [x] **Step 2: Run RED and record the intended failure**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k 'result or hover or visual_contract'
@@ -7663,7 +7663,7 @@ Also assert the result component contains no `* 100`, benchmark inference or raw
 
 Expected: FAIL because `PortfolioMixResult.tsx` and chart/hover CSS contracts do not exist.
 
-- [ ] **Step 3: Implement the result presentation and hover/focus intent**
+- [x] **Step 3: Implement the result presentation and hover/focus intent**
 
 Create `PortfolioMixResult.tsx` with typed evidence interfaces and focused subcomponents:
 
@@ -7696,7 +7696,7 @@ Replace the summary-only result branch in `App.tsx` with:
 </div>
 ```
 
-- [ ] **Step 4: Implement responsive spacing and chart CSS**
+- [x] **Step 4: Implement responsive spacing and chart CSS**
 
 Add these structural contracts and supporting SVG/table/tooltip styles:
 
@@ -7710,7 +7710,7 @@ Add these structural contracts and supporting SVG/table/tooltip styles:
 
 Use `min-width: 0`, wrapped labels, horizontally scrollable dense tables only inside disclosure, visible focus rings and tooltip placement clamped inside the chart card.
 
-- [ ] **Step 5: Run GREEN, production build and focused regression**
+- [x] **Step 5: Run GREEN, production build and focused regression**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q
@@ -7721,7 +7721,7 @@ git diff --check
 
 Expected: focused tests and React production build pass with no TypeScript error.
 
-- [ ] **Step 6: Commit the implementation unit**
+- [x] **Step 6: Commit the implementation unit**
 
 Stage only the React result component, App/CSS, focused tests and active task records. Commit:
 

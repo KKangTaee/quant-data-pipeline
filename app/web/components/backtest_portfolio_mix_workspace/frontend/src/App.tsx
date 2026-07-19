@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react"
 import { Streamlit } from "streamlit-component-lib"
+import { PortfolioMixResult, type MixResultEvidence } from "./PortfolioMixResult"
 
 type Option = { value: unknown; label: string }
 type Field = {
@@ -41,6 +42,7 @@ type CatalogItem = {
   variants: Array<{ value: string | null; label: string }>
 }
 type Action = { id: string; label: string; enabled: boolean }
+type CurrentResult = Record<string, unknown> & { evidence?: MixResultEvidence }
 
 export type PortfolioMixWorkspace = {
   schema_version: string
@@ -54,7 +56,7 @@ export type PortfolioMixWorkspace = {
   allocation: { total_weight_percent: number; date_policy: string }
   validation: { valid: boolean; errors: Record<string, string>; issues: Array<{ root_issue_id: string; message: string }> }
   saved_mix: { rows: Array<{ id: string; name: string; saved_at: string; component_count: number; component_summary: string }>; empty: boolean }
-  result: { status: "not_run" | "current" | "stale"; current: Record<string, unknown> | null; reference: Record<string, unknown> | null }
+  result: { status: "not_run" | "current" | "stale"; current: CurrentResult | null; reference: Record<string, unknown> | null }
   execution_action: Action | null
   actions: Action[]
   feedback?: { notice?: string; error?: { message?: string } | null }
@@ -173,11 +175,14 @@ function App({ workspace }: { workspace: PortfolioMixWorkspace }) {
       <section className="mix-step">
         <StepHeading number={3} title="Mix 실행과 해석" copy="구성 전략을 같은 조건으로 계산한 뒤 Mix 전체 결과를 확인합니다." />
         {workspace.execution_action?.enabled && <button type="button" className="mix-primary" onClick={() => emit("run_mix")}>{workspace.execution_action.label}</button>}
-        {workspace.result.status === "not_run" && <p className="mix-empty">설정을 완료한 뒤 실행하면 결과 해석이 이곳에 나타납니다.</p>}
-        {workspace.result.status === "stale" && <div className="mix-reference"><strong>참고용 이전 결과</strong><p>현재 설정과 다르므로 다시 실행해야 저장하거나 Level2로 넘길 수 있습니다.</p></div>}
-        {workspace.feedback?.error?.message && <p className="mix-error" role="alert">{workspace.feedback.error.message}</p>}
-        {workspace.feedback?.notice && <p className="mix-notice" aria-live="polite">{workspace.feedback.notice}</p>}
-        {workspace.result.status === "current" && <div className="mix-current" aria-live="polite"><strong>현재 설정으로 계산한 Mix 결과입니다.</strong><div className="mix-result-grid">{Object.entries((workspace.result.current?.summary as Record<string, unknown> | undefined) ?? {}).filter(([, value]) => value !== null && value !== undefined).map(([key, value]) => <span key={key}><small>{({ annualized_return: "연환산 수익률", maximum_drawdown: "최대 낙폭", sharpe_ratio: "위험 대비 수익", end_balance: "최종 평가액" } as Record<string, string>)[key] ?? key}</small><b>{typeof value === "number" ? value.toLocaleString(undefined, { maximumFractionDigits: 4 }) : String(value)}</b></span>)}</div></div>}
+        <div className="mix-result-shell">
+          {workspace.result.status === "not_run" && <p className="mix-empty">설정을 완료한 뒤 실행하면 결과 해석이 이곳에 나타납니다.</p>}
+          {workspace.result.status === "stale" && <div className="mix-reference"><strong>참고용 이전 결과</strong><p>현재 설정과 다르므로 다시 실행해야 저장하거나 Level2로 넘길 수 있습니다.</p></div>}
+          {workspace.feedback?.error?.message && <p className="mix-error" role="alert">{workspace.feedback.error.message}</p>}
+          {workspace.feedback?.notice && <p className="mix-notice" aria-live="polite">{workspace.feedback.notice}</p>}
+          {workspace.result.status === "current" && workspace.result.current?.evidence && <div className="mix-current" aria-live="polite"><PortfolioMixResult evidence={workspace.result.current.evidence} /></div>}
+          {workspace.result.status === "current" && !workspace.result.current?.evidence && <p className="mix-empty">현재 결과의 상세 근거를 표시할 수 없습니다. 같은 설정으로 다시 실행해 주세요.</p>}
+        </div>
       </section>
 
       <section className="mix-step">

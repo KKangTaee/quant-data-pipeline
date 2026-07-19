@@ -664,3 +664,15 @@
 - focused Portfolio Mix: `25 passed, 3 warnings in 1.73s`.
 - weighted Portfolio Mix service selector: `5 passed, 840 deselected in 0.28s`.
 - service/adapter `py_compile`과 `git diff --check`: exit 0, output 없음.
+
+## 2026-07-19 16차 Task 51 RED -> GREEN
+
+- RED visual contract:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k 'result_react_visual_contract'`
+  -> `PortfolioMixResult.tsx`와 App import/CSS contract 부재로 `2 failed / 25 deselected`.
+- GREEN visual contract -> `2 passed / 25 deselected`.
+- focused Portfolio Mix -> `27 passed, 3 warnings in 1.67s`.
+- route/boundary regression -> `51 passed, 3 warnings in 1.61s`.
+- React production build: Vite 5.4.21, `176 modules transformed`; CSS 11.50 kB,
+  JS 341.83 kB, build 성공.
+- `git diff --check`: exit 0, output 없음.
