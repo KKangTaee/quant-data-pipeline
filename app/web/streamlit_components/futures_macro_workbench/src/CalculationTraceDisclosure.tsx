@@ -32,7 +32,7 @@ function CalculationTraceDisclosure({
       <summary>원본 데이터 / 계산 추적</summary>
       <div className="fm-workbench__trace-body">
         <p className="fm-workbench__trace-intro">
-          상단 판단을 검산하는 compact snapshot입니다. 5년 전체 OHLCV가 아니라 현재 점수와 계산 근거만 표시합니다.
+          상단 판단을 검산하는 compact snapshot입니다. 10년 전체 OHLCV가 아니라 현재 점수와 계산 근거만 표시합니다.
         </p>
         <div className="fm-workbench__trace-metadata">
           {trace.metadata.map((item) => (

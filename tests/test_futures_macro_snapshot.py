@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 from datetime import date
+from unittest.mock import patch
 
 import pandas as pd
 
@@ -13,7 +14,7 @@ def _compatible_row(*, source_marker: str) -> dict[str, object]:
         "source_marker": source_marker,
         "as_of_date": "2026-07-17",
         "schema_version": "futures_macro_snapshot_v1",
-        "algorithm_version": "pattern_outlook_v2_empirical_path",
+        "algorithm_version": "pattern_outlook_v3_empirical_path_10y",
         "status": "READY",
         "snapshot_json": json.dumps(
             {
@@ -178,6 +179,29 @@ class FuturesMacroSnapshotServiceTests(unittest.TestCase):
         self.assertEqual(result["status"], "READY")
         self.assertEqual(
             result["metadata"]["source_marker"], "2026-07-17 00:00:00"
+        )
+
+    def test_default_materializer_builds_ten_year_outlook(self) -> None:
+        from app.services.futures_macro_snapshot import (
+            materialize_overview_futures_macro_snapshot,
+        )
+
+        with patch(
+            "app.services.futures_macro_snapshot.load_overview_futures_macro_pattern_outlook",
+            return_value=_minimal_outlook(),
+        ) as outlook_builder:
+            materialize_overview_futures_macro_snapshot(
+                marker_fn=lambda: "2026-07-18 00:00:00",
+                load_fn=lambda: None,
+                macro_builder=_minimal_macro,
+                write_fn=lambda row: 1,
+                now_fn=lambda: "2026-07-19 10:00:00",
+            )
+
+        outlook_builder.assert_called_once_with(
+            years=10,
+            force_refresh=True,
+            cache_ttl_seconds=0,
         )
 
 

@@ -262,8 +262,17 @@ class FuturesMacroPatternPublicationTests(unittest.TestCase):
 
         self.assertEqual(
             snapshot["method"]["algorithm_version"],
-            "pattern_outlook_v2_empirical_path",
+            "pattern_outlook_v3_empirical_path_10y",
         )
+
+    def test_publication_gate_constants_remain_unchanged_for_ten_year_history(self) -> None:
+        from app.services.futures_macro_pattern_validation import (
+            MIN_INDEPENDENT_EPISODES,
+            VERIFIED_EPISODES,
+        )
+
+        self.assertEqual(MIN_INDEPENDENT_EPISODES, 30)
+        self.assertEqual(VERIFIED_EPISODES, 60)
 
     def test_path_status_requires_error_improvement_coverage_and_two_folds(self) -> None:
         import app.services.futures_macro_pattern_validation as service

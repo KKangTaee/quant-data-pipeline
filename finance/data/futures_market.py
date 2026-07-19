@@ -21,6 +21,8 @@ DEFAULT_FUTURES_PERIOD = "1d"
 DEFAULT_FUTURES_INTERVAL = "1m"
 VALID_FUTURES_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d"}
 MIN_1D_INTRADAY_ROWS_BEFORE_FALLBACK = 120
+FUTURES_MACRO_HISTORY_YEARS = 10
+FUTURES_MACRO_DAILY_PERIOD = f"{FUTURES_MACRO_HISTORY_YEARS}y"
 
 DEFAULT_FUTURES_INSTRUMENTS: tuple[dict[str, Any], ...] = (
     {"provider_symbol": "ES=F", "display_name": "E-mini S&P 500", "futures_group": "Equity Index", "exchange": "CME", "contract_hint": "S&P 500 index futures", "sort_order": 10},

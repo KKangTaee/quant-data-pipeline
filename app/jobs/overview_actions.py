@@ -5,7 +5,10 @@ from datetime import date, datetime, timedelta
 from math import isfinite
 from typing import Any, Callable, Iterable
 
-from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
+from finance.data.futures_market import (
+    DEFAULT_CORE_FUTURES_SYMBOLS,
+    FUTURES_MACRO_DAILY_PERIOD,
+)
 from finance.data.market_intelligence import (
     build_price_history_limit_issue_rows,
     collect_and_store_market_liquidity_universe,
@@ -154,7 +157,7 @@ def run_overview_futures_ohlcv(
 def run_overview_futures_daily_ohlcv() -> JobResult:
     return run_collect_futures_ohlcv(
         symbols=list(DEFAULT_CORE_FUTURES_SYMBOLS),
-        period="5y",
+        period=FUTURES_MACRO_DAILY_PERIOD,
         interval="1d",
         cadence_mode="manual_macro_daily",
         max_symbols=len(DEFAULT_CORE_FUTURES_SYMBOLS),

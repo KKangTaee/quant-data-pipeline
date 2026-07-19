@@ -8056,6 +8056,22 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".st-key-overview_futures_macro_tab_daily_refresh button", style_source)
         self.assertIn(".st-key-overview_futures_macro_tab_reload button", style_source)
 
+    def test_overview_futures_daily_refresh_requests_ten_years(self) -> None:
+        from app.jobs import overview_actions
+        from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
+
+        with patch.object(
+            overview_actions,
+            "run_collect_futures_ohlcv",
+            return_value={"status": "success"},
+        ) as collector:
+            overview_actions.run_overview_futures_daily_ohlcv()
+
+        kwargs = collector.call_args.kwargs
+        self.assertEqual(kwargs["period"], "10y")
+        self.assertEqual(kwargs["interval"], "1d")
+        self.assertEqual(tuple(kwargs["symbols"]), DEFAULT_CORE_FUTURES_SYMBOLS)
+
     def test_futures_macro_symbol_extraction_accepts_snapshot_dataframe(self) -> None:
         import pandas as pd
 

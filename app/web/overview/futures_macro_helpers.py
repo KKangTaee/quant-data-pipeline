@@ -8,6 +8,8 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from finance.data.futures_market import FUTURES_MACRO_HISTORY_YEARS
+
 from app.jobs.overview_actions import (
     record_overview_action_result,
     run_overview_futures_daily_ohlcv,
@@ -861,7 +863,7 @@ def _pattern_command_payload(macro: dict[str, Any], pattern_outlook: dict[str, A
         "title": "선물 매크로 패턴",
         "detail": f"일봉 {standardized}/{symbol_count}개 · 기준일 {latest_daily} · stored continuous futures",
         "actions": [
-            {"id": "daily_refresh", "label": "일봉 갱신", "kind": "primary", "detail": "저장된 주요 선물 5년 1D OHLCV를 다시 수집하고 compact snapshot을 갱신합니다."},
+            {"id": "daily_refresh", "label": "일봉 갱신", "kind": "primary", "detail": f"저장된 주요 선물 {FUTURES_MACRO_HISTORY_YEARS}년 1D OHLCV를 다시 수집하고 compact snapshot을 갱신합니다."},
             {"id": "reload", "label": "다시 읽기", "kind": "secondary", "detail": "provider 수집이나 전망 계산 없이 저장된 snapshot을 다시 읽습니다."},
         ],
     }
@@ -1119,7 +1121,7 @@ def _handle_futures_macro_react_event(event: dict[str, Any] | None, macro: dict[
         return
     st.session_state[OVERVIEW_FUTURES_MACRO_REACT_EVENT_KEY] = event_key
     if action_id == "daily_refresh":
-        with st.spinner("선물 5년 일봉을 yfinance에서 수집하는 중입니다..."):
+        with st.spinner(f"선물 {FUTURES_MACRO_HISTORY_YEARS}년 일봉을 yfinance에서 수집하는 중입니다..."):
             _refresh_futures_macro_daily_for_ui()
         st.rerun()
     if action_id == "reload":
@@ -1997,9 +1999,9 @@ def _render_futures_macro_refresh_controls(*, section_detail: str) -> None:
         "일봉 갱신",
         key="overview_futures_macro_tab_daily_refresh",
         use_container_width=True,
-        help="저장된 주요 선물 5년 1D OHLCV를 다시 수집하고 compact snapshot을 갱신합니다.",
+        help=f"저장된 주요 선물 {FUTURES_MACRO_HISTORY_YEARS}년 1D OHLCV를 다시 수집하고 compact snapshot을 갱신합니다.",
     ):
-        with st.spinner("선물 5년 일봉을 yfinance에서 수집하는 중입니다..."):
+        with st.spinner(f"선물 {FUTURES_MACRO_HISTORY_YEARS}년 일봉을 yfinance에서 수집하는 중입니다..."):
             _refresh_futures_macro_daily_for_ui()
         st.rerun()
     if cols[2].button(

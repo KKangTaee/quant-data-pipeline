@@ -25,7 +25,10 @@ from app.services.futures_macro_thermometer import (
     normalize_futures_macro_daily_candles,
 )
 from app.services.futures_macro_validation import _load_validation_futures_rows
-from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
+from finance.data.futures_market import (
+    DEFAULT_CORE_FUTURES_SYMBOLS,
+    FUTURES_MACRO_HISTORY_YEARS,
+)
 
 
 OUTLOOK_HORIZONS: tuple[int, ...] = (5, 20)
@@ -49,7 +52,7 @@ SIMILARITY_SUFFIXES = (
     "breadth",
     "volatility_ratio",
 )
-PATTERN_ALGORITHM_VERSION = "pattern_outlook_v2_empirical_path"
+PATTERN_ALGORITHM_VERSION = "pattern_outlook_v3_empirical_path_10y"
 PATTERN_OUTLOOK_CACHE_TTL_SECONDS = 900
 PATTERN_OUTLOOK_LIMITATIONS = (
     "유사 episode는 조건부 빈도이며 미래 수익이나 체제를 보장하지 않습니다.",
@@ -976,7 +979,7 @@ def load_overview_futures_macro_pattern_outlook(
     *,
     query_fn: QueryFn | None = None,
     symbols: Sequence[str] | None = None,
-    years: int = 5,
+    years: int = FUTURES_MACRO_HISTORY_YEARS,
     cache_ttl_seconds: int = PATTERN_OUTLOOK_CACHE_TTL_SECONDS,
     force_refresh: bool = False,
 ) -> dict[str, Any]:

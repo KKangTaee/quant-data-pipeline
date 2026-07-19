@@ -19,7 +19,10 @@ from app.services.futures_macro_thermometer import (
     load_overview_futures_macro_snapshot,
 )
 from finance.data.futures_macro_snapshot import upsert_futures_macro_snapshot
-from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
+from finance.data.futures_market import (
+    DEFAULT_CORE_FUTURES_SYMBOLS,
+    FUTURES_MACRO_HISTORY_YEARS,
+)
 from finance.loaders.futures_macro_snapshot import (
     load_latest_futures_macro_snapshot,
 )
@@ -157,7 +160,7 @@ def materialize_overview_futures_macro_snapshot(
     )
     build_outlook = outlook_builder or (
         lambda: load_overview_futures_macro_pattern_outlook(
-            years=5,
+            years=FUTURES_MACRO_HISTORY_YEARS,
             force_refresh=True,
             cache_ttl_seconds=0,
         )
