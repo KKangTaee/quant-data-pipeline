@@ -553,3 +553,27 @@
 - target 6-module `py_compile`: exit 0. `git diff --check`: exit 0, output 없음.
 - `npm audit --omit=dev`: moderate 1 / high 1. fix는 Vite 8 breaking upgrade를 요구해
   이번 UI closeout에서 적용하지 않았다.
+
+## 2026-07-19 14차 RED -> GREEN And Browser QA
+
+- RED:
+  `.venv/bin/python -m pytest tests/test_backtest_refactor_boundaries.py::BacktestRefactorBoundaryTests::test_level2_and_level3_primary_routes_do_not_repeat_stage_titles -q`
+  -> legacy Level2 title prefix를 검출해 `1 failed`.
+- GREEN targeted -> `1 passed`; shell/boundary focused -> `55 passed, 3 warnings`.
+- target `py_compile` for Practical Validation / Final Review page -> exit 0.
+- fresh QA server `http://localhost:8526/backtest`, desktop 1440x1100와 760x1100:
+  Level2/3 legacy heading 0, React hero 1, stage route 일치, horizontal overflow 0, console error 0.
+- generated / unstaged screenshots:
+  `backtest-stage-title-cleanup-desktop-qa.png`, `backtest-stage-title-cleanup-760-qa.png`.
+
+## 2026-07-19 14차 Fresh Completion Verification
+
+- `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
+  -> `55 passed, 3 warnings in 1.61s`.
+- `.venv/bin/python -m pytest tests/test_service_contracts.py -q`
+  -> `822 passed, 12 failed, 3 warnings, 35 subtests passed in 22.75s`.
+- 12 failures는 기존 Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6 baseline이며
+  신규 stage-title failure는 0이다.
+- `.venv/bin/python -m py_compile app/web/backtest_practical_validation/page.py app/web/backtest_final_review/page.py`
+  -> exit 0, output 없음.
+- `git diff --check` -> exit 0, output 없음.

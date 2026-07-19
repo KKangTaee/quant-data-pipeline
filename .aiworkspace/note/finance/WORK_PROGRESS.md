@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~10차 implementation, desktop / 760px Browser QA와 docs sync를 완료했다.
+  - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~14차 implementation, desktop / 760px Browser QA와 docs sync를 완료했다.
   - Latest completed task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
   - Previous completed Institutional Portfolios task is [institutional-portfolios-watchlist-mapping-v1-20260712](./tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
   - Recent completed Final Review task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md). It closes Level2 actionable gaps and records Final Review accepted-limit / Monitoring / defer terminal states.
@@ -47,6 +47,15 @@ Detailed historical logs were archived on `2026-04-13`.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### 2026-07-19 - Backtest Workflow Shell And Stage Title Ownership
+
+- Level1~3 공통 진입부를 React workflow shell로 통합하고 현재 단계 책임과 이동 rail을 제공했다.
+- Level2/3의 presentation-only Streamlit title/caption을 제거해 `공통 shell -> active React hero -> body`
+  읽기 순서를 고정했다.
+- focused `55 passed`, full service `822 passed / 12 baseline failed / 35 subtests passed`, desktop/760px
+  Level2/3 route·hero 1개·overflow 0을 확인했다.
+- protected registry, Run History, `.superpowers/`, generated QA screenshot은 commit에서 제외했다.
 
 ### 2026-07-18 - Backtest Analysis Level1 Result Evidence Workspace
 

@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~10차 implementation / Browser QA / docs sync complete.
+  - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~14차 implementation / Browser QA / docs sync complete.
   - Latest completed task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
   - Previous completed Institutional Portfolios task is [institutional-portfolios-watchlist-mapping-v1-20260712](./tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
   - Recent completed Final Review task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
@@ -41,6 +41,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-19 - 단계 질문은 공통 shell 아래 active React hero가 한 번만 소유한다
+
+- User request: Practical Validation과 Final Review의 legacy stage title이 각 React workspace hero와
+  중복되므로 React 디자인으로 통일하거나 공통 정리해 달라고 요청함.
+- Interpreted goal: page 전체 흐름은 유지하면서 각 단계의 질문과 설명을 두 번 읽지 않게 해야 한다.
+- Analysis result: 공통 shell은 단계 순서와 현재 책임만 소유하고, Level별 질문은 active React hero가
+  소유하는 A안이 가장 작고 일관적이다. stage-local Streamlit title/caption은 별도 owner가 아니다.
+- Follow-up: Level2/3 legacy pair를 제거하고 source boundary, desktop/760px route·overflow QA,
+  canonical flow/task/root docs sync를 완료했다. Gate/replay/persistence는 변경하지 않았다.
 
 ### 2026-07-18 - Level1 결과는 기술 인계와 Level2 검증 질문을 분리한다
 

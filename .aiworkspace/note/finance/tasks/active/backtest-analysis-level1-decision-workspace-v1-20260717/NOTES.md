@@ -370,3 +370,17 @@ generated artifact이므로 commit하지 않는다.
   Task 45는 fresh source process의 desktop/760px Level2/3 QA와 docs closeout을 소유한다.
 - Level1, React hero, fallback body, route, Gate, replay, registry, save contract는 변경하지 않는다.
 - placeholder와 불균형 code fence는 0이고 DESIGN acceptance 6개는 Task 44/45에 모두 대응한다.
+
+## 2026-07-19 14차 Title Ownership Implementation Decisions
+
+- `render_practical_validation_workspace()`는 style 적용 뒤 source loading부터 시작하고,
+  `render_final_review_workspace()`는 candidate registry loading부터 시작한다. 두 renderer가 제거한 것은
+  stage-local `st.markdown`/`st.caption` pair뿐이다.
+- 질문 문구가 사라지지 않도록 기존 Python page source assertion은
+  `PracticalValidationDecisionWorkspace.tsx` hero owner assertion으로 이동했다. 신규 boundary test는
+  Level2/3 entry prefix의 legacy title 부재와 두 React kicker 존재를 함께 확인한다.
+- desktop/760px Browser QA에서 stage shell 다음에 React hero가 직접 이어지고 legacy heading은 0,
+  hero heading은 1이었다. 760px Level2 outer/primary/secondary width는 각각 `760/760`, `717/717`,
+  `717/717`; Level3 outer/shell/report는 `760/760`, `717/717`, `717/717`이었다.
+- console error는 0이었다. 빈 legacy chart data의 Vega `Infinite extent`와 Streamlit component의
+  `setFrameHeight before componentReady` warning은 기존 경고이며 title/route 동작을 막지 않았다.

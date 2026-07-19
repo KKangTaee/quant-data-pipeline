@@ -275,3 +275,20 @@ Last Updated: 2026-07-19
   non-goal을 명시했고 사용자 승인을 받았다.
 - PLAN Task 44는 source boundary RED와 두 renderer의 minimal removal, Task 45는 desktop/760px
   Browser QA, fresh verification, docs sync와 protected-path closeout을 소유한다.
+
+## 14차 Completion
+
+- Level2/3 renderer의 presentation-only Streamlit title/caption을 제거하고 stage 질문의 visible owner를
+  기존 React hero 하나로 통일했다. route, Gate, replay, candidate selection, save/registry 계약은
+  변경하지 않았다.
+- title ownership RED는 legacy `Practical Validation` prefix를 검출해 `1 failed`였고, GREEN targeted
+  `1 passed`, fresh shell/boundary regression은 `55 passed, 3 warnings`다. 구현 commit은
+  `b73c49e0 Backtest 단계별 중복 타이틀 제거`다.
+- full service는 기존 baseline과 같은 `822 passed / 12 failed / 35 subtests passed`다. 12 failures는
+  Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6이며 신규 title failure는 0이다.
+- fresh `http://localhost:8526/backtest`에서 desktop 1440px Level2/3 legacy heading 0, React hero 1,
+  route 일치를 확인했다. 760px outer와 active shell/Level iframe은 모두
+  `scrollWidth == clientWidth`였고 hero clipping이나 artificial title gap이 없었다.
+- generated screenshots는 `backtest-stage-title-cleanup-desktop-qa.png`,
+  `backtest-stage-title-cleanup-760-qa.png`이며 protected JSONL, Run History, `.superpowers/`와 함께
+  commit하지 않는다.

@@ -184,3 +184,17 @@ upgrade는 이번 UI workflow 범위를 벗어나므로 closeout의 남은 위�
   남지만 top shell console error, clipping 또는 route blocker는 없었다.
 - modified Practical Validation registry, Run History, saved JSONL, `.superpowers/`, generated screenshots는
   closeout commit에서 제외한다.
+
+## 14차 Stage Title Cleanup Closeout Assessment
+
+- repository-wide service contract 12 failures는 기존 Sentiment 1, Final Review 4, liquidity copy 1,
+  Practical Validation 6 source-contract debt다. focused shell/boundary 55 tests와 actual Level2/3
+  desktop/760px title ownership은 통과했고 신규 stage-title failure는 없다.
+- React 미가용 fallback은 existing Python read model/body를 유지한다. 이번 QA는 current React primary
+  route를 실제 확인했으며 component unavailable 상태의 visual screenshot은 만들지 않았다.
+- iframe 안 실제 전체 keyboard Tab 순회/focus ring은 이번 title-only 변경의 Browser 자동화 범위 밖이다.
+  semantic button과 기존 accessibility source contract는 13차와 동일하게 유지된다.
+- 빈 legacy chart data의 Vega `Infinite extent`와 component 초기 height lifecycle warning은 남아 있지만
+  console error, title gap, clipping, horizontal overflow 또는 route blocker는 없었다.
+- modified Practical Validation registry, Run History, saved JSONL, `.superpowers/`, generated screenshots는
+  closeout commit에서 제외한다.

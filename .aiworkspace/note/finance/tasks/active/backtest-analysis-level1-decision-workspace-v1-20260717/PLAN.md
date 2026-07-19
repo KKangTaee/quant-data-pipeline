@@ -6863,7 +6863,7 @@ git commit -m "Backtest 상단 워크플로 셸 QA와 문서 동기화"
 - Consumes: existing page-level `render_backtest_workflow_shell()` and Level-specific React/fallback renderers.
 - Produces: no new runtime interface; primary Level2/3 entry starts directly with the existing workspace component/fallback.
 
-- [ ] **Step 1: Write the failing title-ownership boundary test**
+- [x] **Step 1: Write the failing title-ownership boundary test**
 
 Add this method to `BacktestRefactorBoundaryTests`:
 
@@ -6905,7 +6905,7 @@ def test_level2_and_level3_primary_routes_do_not_repeat_stage_titles(self) -> No
     self.assertIn("Final Review Decision Workspace", final_react)
 ```
 
-- [ ] **Step 2: Run RED and confirm the duplicate-title failure**
+- [x] **Step 2: Run RED and confirm the duplicate-title failure**
 
 Run:
 
@@ -6915,7 +6915,7 @@ Run:
 
 Expected: FAIL because Level2 and Level3 entry prefixes still contain the legacy Streamlit stage title/caption.
 
-- [ ] **Step 3: Remove only the two presentation-only title pairs**
+- [x] **Step 3: Remove only the two presentation-only title pairs**
 
 In `render_practical_validation_workspace()` retain `render_pv_styles()` and start source loading immediately:
 
@@ -6934,7 +6934,7 @@ def render_final_review_workspace() -> None:
 
 Do not change the component/fallback selection, fragments, route request, candidate selection or persistence paths.
 
-- [ ] **Step 4: Run GREEN and focused regression**
+- [x] **Step 4: Run GREEN and focused regression**
 
 Run:
 
@@ -6947,7 +6947,7 @@ git diff --check
 
 Expected: targeted test and focused suite pass; compile/diff-check exit 0.
 
-- [ ] **Step 5: Commit the presentation cleanup**
+- [x] **Step 5: Commit the presentation cleanup**
 
 ```bash
 git add tests/test_backtest_refactor_boundaries.py app/web/backtest_practical_validation/page.py app/web/backtest_final_review/page.py
@@ -6969,7 +6969,7 @@ git commit -m "Backtest 단계별 중복 타이틀 제거"
 - Consumes: completed title cleanup and existing source/build pair.
 - Produces: desktop/760 Browser evidence, fresh regression evidence and durable title-ownership documentation.
 
-- [ ] **Step 1: Run desktop Browser QA from a fresh app process**
+- [x] **Step 1: Run desktop Browser QA from a fresh app process**
 
 At approximately 1440px verify:
 
@@ -6982,14 +6982,14 @@ At approximately 1440px verify:
 
 Save `backtest-stage-title-cleanup-desktop-qa.png` as generated/untracked evidence.
 
-- [ ] **Step 2: Run 760px Browser QA**
+- [x] **Step 2: Run 760px Browser QA**
 
 At 760x1000 verify Level2/3 have no duplicate title or artificial blank title gap, hero text is not clipped,
 and both outer page and active component iframe satisfy `scrollWidth === clientWidth`.
 
 Save `backtest-stage-title-cleanup-760-qa.png` as generated/untracked evidence.
 
-- [ ] **Step 3: Run fresh completion verification**
+- [x] **Step 3: Run fresh completion verification**
 
 Run:
 
@@ -7003,13 +7003,13 @@ git diff --check
 Expected: focused suite passes. Full service failures must match the documented Sentiment 1, Final Review 4,
 liquidity copy 1, Practical Validation 6 baseline; no new stage-title failure is allowed.
 
-- [ ] **Step 4: Apply finance-doc-sync and record closeout**
+- [x] **Step 4: Apply finance-doc-sync and record closeout**
 
 Update `BACKTEST_UI_FLOW.md` so the durable reading order is `page workflow shell -> active Level React hero ->
 body` and stage-local Streamlit title is not an active owner. Record exact tests, Browser viewport/overflow,
 screenshots, baseline failures and remaining accessibility/dependency risks in task docs; keep root logs concise.
 
-- [ ] **Step 5: Audit protected paths and commit closeout**
+- [x] **Step 5: Audit protected paths and commit closeout**
 
 Run:
 

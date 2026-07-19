@@ -12,6 +12,8 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 
 2026-07-19부터 Backtest page entry는 초기 Streamlit `Backtest` title/caption과 별도 `후보 선정 흐름` native pills 대신 `backtest_workflow_shell_v1` React shell을 사용한다. Python read model이 Level1~3 순서, active stage와 `현재 단계에서 끝낼 일`을 제공하고 React는 3단계 button rail과 `select_stage` intent만 렌더링한다. accepted intent는 기존 `request_backtest_panel()`을 거쳐 동일 dispatcher로 이동하므로 Level 내부 Gate, registry, replay, 저장 계약은 바뀌지 않는다. desktop은 hero 2열/rail 3열, 760px은 hero 1열/rail 3열, 520px 이하는 rail 1열이다.
 
+Backtest 단계의 primary reading order는 `page workflow shell -> active Level React hero -> body`다. Level2와 Level3 page renderer는 별도 Streamlit stage title/caption을 먼저 출력하지 않으며, 각각 `Practical Validation Decision Workspace`와 `Final Review Decision Workspace` hero가 stage 질문과 설명을 한 번만 소유한다. React를 사용할 수 없을 때는 기존 Python fallback body가 같은 read model을 이어서 표시한다. 이 title ownership 정리는 Level별 route, Gate, replay, candidate selection, persistence 계약을 변경하지 않는다.
+
 현재 전략을 바꿔도 마지막 성공 결과는 참고 근거로 보존하지만, 상단 `목적과 핵심 설정`은 현재 catalog selection만 보여주며 이전 결과의 `strategy_key`, timeframe, promotion field를 재사용하지 않는다. 설정 변경·가격 갱신·재실행 실패는 결과 header의 단일 lifecycle 안내로 구분하고, blue/yellow Streamlit reset notice와 refresh job raw table은 렌더링하지 않는다. 팩터 지표는 사용자에게 한국어 의미와 표준 약어로 표시하되 runner에는 기존 raw key 배열을 그대로 전달한다. factor option은 desktop과 760px에서 2열로 줄바꿈하고 520px 이하에서 1열로 접힌다.
 
 ## 핵심 파일
