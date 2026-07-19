@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-07-16
+Last Verified: 2026-07-19
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -31,6 +31,10 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-futures-macro-pattern-outlook-v1-20260718` | Completed record | Futures Macro를 1D/5D/20D current regime과 5D/20D conditional outlook으로 개편하고, 5년 compact snapshot persistence, DB-only first entry, React method / calculation trace와 actual responsive QA를 완료했다. |
+| `institutional-13f-openfigi-mapping-v1-20260718` | Completed record | 무료 OpenFIGI current resolution, error-preserving UPSERT, safe loader precedence, curated-manager actual backfill과 Browser QA를 전체 roadmap `4/4`로 완료했다. |
+| `institutional-portfolios-context-first-redesign-v1-20260718` | Completed record | 선택 기관 context hero, coverage / comparison gate, full holdings explorer, explicit security search, mapped / unresolved flow와 actual responsive QA를 전체 roadmap `4/4`로 완료했다. |
+| `overview-economic-cycle-sp500-actual-eps-registration-v1-20260718` | Completed implementation / external input pending | 공식 S&P Index Earnings workbook parser, release-vintage persistence, PIT loader와 Ingestion 등록 경로는 완료했다. 실제 workbook과 발표일 등록 전까지 actual TTM EPS는 자료 부족을 유지한다. |
 | `overview-market-context-turnaround-derived-quarter-provenance-v1-20260716` | Completed record | Explicit concept family의 확정 FY/Q1/Q2/Q3로 missing Q4를 안전하게 산출하고 per-metric/TTM provenance와 `공시 기반 산출` 표시를 추가했다. |
 | `overview-market-context-turnaround-stage-semantics-fix-v1-20260716` | Completed record | AAPL canonical `USD per share` EPS reader를 복구하고, 6개 rail에서 전환 신호·이미 양수·PER 적용 가능·흑자지만 개선폭 미달을 독립적으로 구분했다. |
 | `overview-market-context-us-stock-freshness-refresh-v1-20260715` | Completed record | 선택 종목 cached UI를 DB-only로 열고, 마지막 완료 NYSE 거래일보다 자료가 뒤처질 때만 상단 single CTA로 exact scope를 갱신한다. profile/price는 CIK 없이 실행하고 SEC statement만 identity를 요구한다. |

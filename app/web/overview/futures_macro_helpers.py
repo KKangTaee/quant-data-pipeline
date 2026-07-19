@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from html import escape
+from math import isfinite
 from typing import Any
 
 import pandas as pd
@@ -13,7 +14,12 @@ from app.jobs.overview_actions import (
 )
 from app.services.futures_macro_thermometer import (
     clear_overview_futures_macro_snapshot_cache,
-    load_overview_futures_macro_snapshot,
+)
+from app.services.futures_macro_pattern_validation import (
+    clear_futures_macro_pattern_validation_cache,
+)
+from app.services.futures_macro_snapshot import (
+    load_overview_futures_macro_materialized_snapshot,
 )
 from app.services.futures_macro_validation import (
     build_current_scenario_validation_summary,
@@ -92,7 +98,7 @@ OVERVIEW_FUTURES_MACRO_REACT_EVENT_KEY = "overview_futures_macro_react_last_even
 
 def render_futures_macro_header() -> None:
     st.markdown("### 선물 매크로")
-    st.caption("저장된 선물 일봉으로 현재 macro 상태와 과거 점검 근거를 함께 확인합니다.")
+    st.caption("저장된 선물 일봉으로 현재 패턴과 다음 1주·1개월 조건부 위험 체제를 함께 확인합니다.")
 
 
 def _store_overview_job_result(result_key: str, result: dict[str, Any]) -> None:
@@ -109,6 +115,7 @@ def _run_futures_daily_ohlcv_action() -> dict[str, Any]:
 
 def _clear_futures_macro_validation_state() -> None:
     clear_futures_macro_validation_cache()
+    clear_futures_macro_pattern_validation_cache()
     for key in (
         OVERVIEW_FUTURES_MACRO_VALIDATION_KEY,
         OVERVIEW_FUTURES_MACRO_VALIDATION_CONFIDENCE_KEY,
@@ -728,81 +735,354 @@ def _futures_macro_react_validation_visual_candidates(validation: dict[str, Any]
     ]
 
 
+PATTERN_REGIME_LABELS = {
+    "risk_seeking": "위험선호 체제",
+    "defensive": "방어적 위험 체제",
+    "inflation_rate_pressure": "물가·금리 부담 체제",
+    "mixed": "혼재 체제",
+}
+PATTERN_ASSET_DEFINITIONS = (
+    ("risk_assets", "주식 위험선호", "risk_on"),
+    ("rates", "금리 부담", "rate_pressure"),
+    ("dollar", "달러 압력", "dollar_pressure"),
+    ("safe_haven", "안전자산", "safe_haven"),
+    ("commodities", "원자재·물가", "inflation_pressure"),
+)
+
+
+def _current_pattern_horizon(pattern: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "key": "current",
+        "label": "현재 관측",
+        "kind": "observation",
+        "title": _display_text(pattern.get("regime_label"), "현재 체제 자료 부족"),
+        "summary": _display_text(pattern.get("summary"), "다중 기간 패턴을 계산할 자료가 부족합니다."),
+        "estimate_status": "PROVISIONAL" if pattern.get("status") in {"READY", "PARTIAL"} else "UNAVAILABLE",
+        "edge_label": _display_text(pattern.get("transition_label"), "자료 부족"),
+        "status_reason": "현재는 1D / 5D / 20D 관측이며 미래 확률이 아닙니다.",
+    }
+
+
+def _future_conditional_path(item: dict[str, Any], status: str) -> dict[str, Any]:
+    """Normalize service-owned analog coordinates without fabricating fallbacks."""
+
+    raw = dict(item.get("conditional_path") or {})
+    path_status = str(raw.get("status") or "UNAVAILABLE")
+    base = {
+        "status": path_status,
+        "episode_count": int(
+            raw.get("episode_count") or item.get("episode_count") or 0
+        ),
+        "band_label": _display_text(
+            raw.get("band_label"),
+            "과거 유사 패턴 가운데 50%",
+        ),
+        "validation": dict(raw.get("validation") or {}),
+    }
+    if status == "UNAVAILABLE" or path_status == "UNAVAILABLE":
+        return {**base, "status": "UNAVAILABLE", "points": [], "terminal": None}
+    coordinate_keys = (
+        "x",
+        "y",
+        "lower_x",
+        "upper_x",
+        "lower_y",
+        "upper_y",
+    )
+    points: list[dict[str, Any]] = []
+    for raw_point in list(raw.get("points") or []):
+        point = dict(raw_point or {})
+        if point.get("step") is None or any(
+            point.get(key) is None for key in coordinate_keys
+        ):
+            continue
+        coordinates = {key: float(point[key]) for key in coordinate_keys}
+        if not all(isfinite(value) for value in coordinates.values()):
+            continue
+        points.append({"step": int(point["step"]), **coordinates})
+    return {
+        **base,
+        "points": points,
+        "terminal": points[-1] if points else None,
+    }
+
+
+def _future_pattern_horizon(item: dict[str, Any]) -> dict[str, Any]:
+    status = str(item.get("estimate_status") or "UNAVAILABLE")
+    raw_probabilities = dict(item.get("probabilities") or {}) if status != "UNAVAILABLE" else {}
+    baseline = dict(item.get("baseline_probabilities") or {})
+    lift = dict(item.get("probability_lift") or {})
+    probabilities = [
+        {
+            "key": key,
+            "label": PATTERN_REGIME_LABELS[key],
+            "value": float(raw_probabilities.get(key) or 0.0),
+            "baseline": float(baseline.get(key) or 0.0),
+            "lift": float(lift.get(key) or 0.0),
+        }
+        for key in ("risk_seeking", "defensive", "inflation_rate_pressure", "mixed")
+        if key in raw_probabilities
+    ]
+    horizon = int(item.get("horizon") or 0)
+    dominant = str(item.get("dominant_regime") or "")
+    return {
+        "key": f"{horizon}D",
+        "label": _display_text(item.get("label"), "조건부 전망"),
+        "kind": "conditional_outlook",
+        "title": PATTERN_REGIME_LABELS.get(dominant, "조건부 방향 우위 미확인"),
+        "summary": _display_text(item.get("edge_label"), "방향 우위 미확인"),
+        "estimate_status": status,
+        "edge_label": _display_text(item.get("edge_label"), "방향 우위 미확인"),
+        "baseline_label": "평소 기준 확률",
+        "probabilities": probabilities,
+        "episode_count": int(item.get("episode_count") or 0),
+        "status_reason": _display_text(item.get("status_reason"), "검증 근거가 부족합니다."),
+        "conditional_path": _future_conditional_path(item, status),
+    }
+
+
+def _pattern_command_payload(macro: dict[str, Any], pattern_outlook: dict[str, Any]) -> dict[str, Any]:
+    coverage = dict(macro.get("coverage") or {})
+    standardized = int(coverage.get("standardized_count") or 0)
+    symbol_count = int(coverage.get("symbol_count") or 0)
+    latest_daily = _snapshot_value(coverage.get("latest_daily_date") or pattern_outlook.get("as_of_date"))
+    return {
+        "title": "선물 매크로 패턴",
+        "detail": f"일봉 {standardized}/{symbol_count}개 · 기준일 {latest_daily} · stored continuous futures",
+        "actions": [
+            {"id": "daily_refresh", "label": "일봉 갱신", "kind": "primary", "detail": "저장된 주요 선물 5년 1D OHLCV를 다시 수집하고 compact snapshot을 갱신합니다."},
+            {"id": "reload", "label": "다시 읽기", "kind": "secondary", "detail": "provider 수집이나 전망 계산 없이 저장된 snapshot을 다시 읽습니다."},
+        ],
+    }
+
+
+def _pattern_hero_payload(macro: dict[str, Any], pattern: dict[str, Any]) -> dict[str, Any]:
+    coverage = dict(pattern.get("coverage") or {})
+    summary = dict(macro.get("summary") or {})
+    evidence = dict(pattern.get("evidence") or {})
+    return {
+        "kicker": "현재 선물 체제",
+        "title": _display_text(pattern.get("regime_label"), "현재 체제 자료 부족"),
+        "transition_label": _display_text(pattern.get("transition_label"), "자료 부족"),
+        "summary": _display_text(pattern.get("summary") or summary.get("summary"), "현재 패턴을 계산할 자료가 부족합니다."),
+        "today_summary": _display_text(summary.get("summary"), "오늘의 재가격화 근거가 부족합니다."),
+        "as_of_date": _display_text(pattern.get("as_of_date"), "-"),
+        "estimate_status": "PROVISIONAL" if pattern.get("status") in {"READY", "PARTIAL"} else "UNAVAILABLE",
+        "coverage_label": f"family {coverage.get('available_family_count') or 0}/{coverage.get('required_family_count') or 6}",
+        "evidence": [str(value) for value in list(evidence.get("current") or []) if str(value).strip()],
+    }
+
+
+def _pattern_evidence_payload(
+    pattern: dict[str, Any],
+    pattern_outlook: dict[str, Any],
+    macro: dict[str, Any],
+) -> dict[str, Any]:
+    evidence = dict(pattern.get("evidence") or {})
+    macro_summary = dict(macro.get("summary") or {})
+    outlook_items = [
+        f"{item.get('label')}: {item.get('edge_label')} · {item.get('estimate_status')}"
+        for item in list(pattern_outlook.get("horizons") or [])
+    ]
+    current_items = list(evidence.get("current") or [])
+    current_items.extend(str(item) for item in list(macro_summary.get("evidence") or [])[:2])
+    return {
+        "title": "현재 근거와 변화 조건",
+        "groups": [
+            {"key": "current", "label": "현재 위치", "items": current_items},
+            {"key": "transition", "label": "지속·전환", "items": list(evidence.get("transition") or [])},
+            {"key": "outlook", "label": "전망 우위", "items": outlook_items},
+            {"key": "invalidate", "label": "바뀌는 조건", "items": list(pattern.get("change_conditions") or [])},
+        ],
+    }
+
+
+def _family_state_label(family: dict[str, Any], key: str) -> str:
+    value = family.get(key)
+    if value is None:
+        return "자료 부족"
+    numeric = float(value)
+    if numeric >= 0.5:
+        return "강화"
+    if numeric <= -0.5:
+        return "약화"
+    return "중립"
+
+
+def _pathway_outlook_label(horizon: dict[str, Any], pathway_key: str) -> str:
+    if str(horizon.get("estimate_status")) == "UNAVAILABLE":
+        return "검증 부족"
+    pathway = dict(dict(horizon.get("asset_pathways") or {}).get(pathway_key) or {})
+    value = pathway.get("median_forward_z")
+    if value is None:
+        return "우위 미확인"
+    if float(value) >= 0.25:
+        return "상방 우세"
+    if float(value) <= -0.25:
+        return "하방 우세"
+    return "우위 미확인"
+
+
+def _pattern_asset_pathways(
+    pattern: dict[str, Any],
+    pattern_outlook: dict[str, Any],
+) -> list[dict[str, Any]]:
+    families = dict(pattern.get("families") or {})
+    horizon_map = {
+        int(item.get("horizon") or 0): item
+        for item in list(pattern_outlook.get("horizons") or [])
+    }
+    change_conditions = list(pattern.get("change_conditions") or [])
+    status_order = {"VERIFIED": 2, "PROVISIONAL": 1, "UNAVAILABLE": 0}
+    horizon_statuses = [str(item.get("estimate_status") or "UNAVAILABLE") for item in horizon_map.values()]
+    estimate_status = min(horizon_statuses, key=lambda value: status_order.get(value, 0)) if horizon_statuses else "UNAVAILABLE"
+    return [
+        {
+            "key": pathway_key,
+            "label": label,
+            "current": {
+                "one_day": _family_state_label(dict(families.get(family_key) or {}), "one_day"),
+                "five_day": _family_state_label(dict(families.get(family_key) or {}), "five_day"),
+                "twenty_day": _family_state_label(dict(families.get(family_key) or {}), "twenty_day"),
+            },
+            "outlook": {
+                "five_day": _pathway_outlook_label(dict(horizon_map.get(5) or {}), pathway_key),
+                "twenty_day": _pathway_outlook_label(dict(horizon_map.get(20) or {}), pathway_key),
+            },
+            "change_condition": _display_text(change_conditions[0] if change_conditions else None, "다음 5D persistence를 확인합니다."),
+            "estimate_status": estimate_status,
+        }
+        for pathway_key, label, family_key in PATTERN_ASSET_DEFINITIONS
+    ]
+
+
+def _pattern_method_payload(pattern_outlook: dict[str, Any]) -> dict[str, Any]:
+    method = dict(pattern_outlook.get("method") or {})
+    effective = dict(method.get("effective_episodes") or {})
+    brier = dict(method.get("brier") or {})
+    baseline = dict(method.get("baseline_brier") or {})
+    calibration = dict(method.get("calibration") or {})
+    return {
+        "source": "stored yfinance continuous futures daily OHLCV",
+        "effective_episodes": f"5D {effective.get('5', 0)}개 · 20D {effective.get('20', 0)}개",
+        "brier": f"5D {_snapshot_value(brier.get('5'))} · 20D {_snapshot_value(brier.get('20'))}",
+        "baseline_brier": f"5D {_snapshot_value(baseline.get('5'))} · 20D {_snapshot_value(baseline.get('20'))}",
+        "calibration": f"5D {_snapshot_value(calibration.get('5'))} · 20D {_snapshot_value(calibration.get('20'))}",
+        "caveats": [str(item) for item in list(pattern_outlook.get("limitations") or [])],
+    }
+
+
+def _compact_trace_rows(value: Any, *, limit: int = 80) -> list[dict[str, Any]]:
+    if isinstance(value, pd.DataFrame):
+        records = value.to_dict(orient="records")
+    elif isinstance(value, list):
+        records = [dict(item) for item in value if isinstance(item, dict)]
+    else:
+        records = []
+    return records[: max(1, int(limit))]
+
+
+def _calculation_trace_payload(
+    macro: dict[str, Any],
+    *,
+    snapshot_metadata: dict[str, Any] | None,
+    pattern_outlook: dict[str, Any],
+) -> dict[str, Any]:
+    coverage = dict(macro.get("coverage") or {})
+    metadata = dict(snapshot_metadata or {})
+    table_specs = (
+        ("scores", "현재 점수 원본", macro.get("scores")),
+        ("components", "점수 구성 기여", macro.get("score_components")),
+        ("symbols", "선물 일봉 변화", macro.get("symbols")),
+    )
+    tables = []
+    for key, label, value in table_specs:
+        rows = _compact_trace_rows(value)
+        columns = list(rows[0].keys()) if rows else []
+        tables.append(
+            {
+                "key": key,
+                "label": label,
+                "columns": columns,
+                "rows": rows,
+            }
+        )
+    cautions = [
+        _macro_caution_label(item)
+        for item in list(macro.get("cautions") or [])
+        if str(item).strip()
+    ]
+    cautions.extend(
+        _macro_caution_label(item)
+        for item in list(pattern_outlook.get("limitations") or [])
+        if str(item).strip()
+    )
+    return {
+        "metadata": [
+            {
+                "label": "CME/yfinance 일봉 세션 기준일",
+                "value": _snapshot_value(
+                    coverage.get("latest_daily_date") or metadata.get("as_of_date")
+                ),
+            },
+            {
+                "label": "snapshot 저장 시각",
+                "value": _snapshot_value(metadata.get("materialized_at")),
+            },
+            {
+                "label": "source marker",
+                "value": _snapshot_value(metadata.get("source_marker")),
+            },
+            {
+                "label": "daily coverage",
+                "value": _futures_daily_coverage_label(coverage),
+            },
+            {
+                "label": "저장 row",
+                "value": f"{int(coverage.get('raw_rows') or 0):,}",
+            },
+        ],
+        "tables": tables,
+        "cautions": list(dict.fromkeys(cautions)),
+    }
+
+
 def build_futures_macro_react_workbench_payload(
     macro: dict[str, Any],
     *,
-    validation: dict[str, Any],
-    confidence: dict[str, Any],
-    validation_loaded_at: str,
+    pattern_outlook: dict[str, Any],
+    snapshot_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    coverage = dict(macro.get("coverage") or {})
-    summary = dict(macro.get("summary") or {})
-    confidence_label = str(confidence.get("label") or "")
-    confidence_display = MACRO_CONFIDENCE_SHORT_LABELS.get(confidence_label) or MACRO_CONFIDENCE_LABELS.get(confidence_label) or "근거 점검 대기"
-    confidence_detail = " / ".join(str(item) for item in list(confidence.get("reasons") or [])[:2] if str(item).strip())
-    validation_state = _futures_macro_react_validation_state(validation, validation_loaded_at)
-    validation_metrics = _futures_macro_react_validation_metrics(validation)
-    latest_daily = _snapshot_value(coverage.get("latest_daily_date"))
-    standardized = coverage.get("standardized_count") or 0
-    symbol_count = coverage.get("symbol_count") or 0
+    pattern = dict(pattern_outlook.get("current_pattern") or macro.get("pattern") or {})
     return {
-        "schema_version": "futures_macro_react_workbench_v1",
+        "schema_version": "futures_macro_react_workbench_v2",
         "component": "FuturesMacroWorkbench",
-        "command": {
-            "title": "매크로 컨텍스트",
-            "detail": f"일봉 {standardized}/{symbol_count}개 · 기준일 {latest_daily} · CME/yfinance 일봉 세션 기준",
-            "validation_state": validation_state,
-            "actions": [
-                {"id": "daily_refresh", "label": "일봉 갱신", "kind": "primary", "detail": "저장된 주요 선물 5년 1D OHLCV를 다시 수집합니다."},
-                {"id": "reload", "label": "다시 읽기", "kind": "secondary", "detail": "현재 DB 기준으로 snapshot cache를 비운 뒤 다시 읽습니다."},
+        "command": _pattern_command_payload(macro, pattern_outlook),
+        "hero": _pattern_hero_payload(macro, pattern),
+        "horizons": [
+            _current_pattern_horizon(pattern),
+            *[
+                _future_pattern_horizon(item)
+                for item in list(pattern_outlook.get("horizons") or [])
             ],
+        ],
+        "pattern_map": {
+            "title": "최근 패턴 경로",
+            "x_label": "위험선호",
+            "y_label": "금리·달러·물가 압력",
+            "path": list(pattern.get("path") or []),
         },
-        "brief": {
-            "kicker": "오늘 기준 시장 브리프",
-            "title": _display_text(summary.get("scenario"), "매크로 흐름 미확인"),
-            "sub_scenario": _display_text(summary.get("sub_scenario"), ""),
-            "regime_hint": _display_text(summary.get("regime_hint"), ""),
-            "summary": _display_text(summary.get("summary"), "현재 매크로 해석을 만들 자료가 부족합니다."),
-            "reason": _display_text(summary.get("mixed_reason"), ""),
-            "confidence_label": confidence_display,
-            "confidence_detail": confidence_detail or "과거 점검은 명시적으로 불러올 때 계산합니다.",
-            "evidence": [str(item) for item in list(summary.get("evidence") or []) if str(item).strip()],
-            "metrics": [
-                _react_metric("자료 기준", f"{standardized}/{symbol_count}개", detail=f"CME/yfinance 일봉 세션 기준일 {latest_daily}"),
-                _react_metric("과거 점검", validation_state["state"], detail=validation_state["detail"], tone=validation_state["tone"]),
-            ],
-        },
-        "scores": _futures_macro_react_scores(macro.get("scores")),
-        "flow": _futures_macro_react_flow(
-            dict(macro.get("weekly_context") or {}),
-            dict(macro.get("flow_context") or {}),
+        "evidence": _pattern_evidence_payload(pattern, pattern_outlook, macro),
+        "ribbon": {"title": "최근 60거래일 체제", "items": list(pattern.get("ribbon") or [])},
+        "asset_pathways": _pattern_asset_pathways(pattern, pattern_outlook),
+        "method": _pattern_method_payload(pattern_outlook),
+        "calculation_trace": _calculation_trace_payload(
+            macro,
+            snapshot_metadata=snapshot_metadata,
+            pattern_outlook=pattern_outlook,
         ),
-        "validation": {
-            "title": "과거 점검",
-            "state": validation_state["state"],
-            "detail": validation_state["detail"],
-            "insight": _futures_macro_react_validation_insight(
-                macro,
-                validation,
-                confidence_label=confidence_label,
-            ),
-            "conclusion": _futures_macro_react_validation_conclusion(macro, validation),
-            "action": {
-                "id": "load_validation",
-                "label": "오늘과 비슷한 과거 흐름 확인",
-                "kind": "secondary",
-                "detail": "현재 16개 선물 일봉 상태를 과거 날짜에도 같은 방식으로 계산해 비슷했던 상태를 확인합니다.",
-            },
-            "metrics": validation_metrics,
-            "visual_candidates": _futures_macro_react_validation_visual_candidates(validation),
-        },
-        "evidence": {
-            "title": "현재 근거",
-            "default_open": False,
-            "sections": _futures_macro_react_evidence_sections(macro),
-        },
         "action_boundary": "python_dispatch_only",
-        "boundary_note": "계산, DB 읽기, 수집 action은 Python / Overview action facade가 소유합니다. 이 화면은 매수매도 신호가 아닙니다.",
+        "boundary_note": "이 화면은 빠른 시장 재가격화와 조건부 위험 체제를 설명하며 매수매도 신호가 아닙니다.",
     }
 
 
@@ -831,9 +1111,6 @@ def _handle_futures_macro_react_event(event: dict[str, Any] | None, macro: dict[
         st.rerun()
     if action_id == "reload":
         _reload_futures_macro_snapshot_for_ui()
-        st.rerun()
-    if action_id == "load_validation":
-        _load_futures_macro_validation_for_session(macro)
         st.rerun()
 
 
@@ -1707,7 +1984,7 @@ def _render_futures_macro_refresh_controls(*, section_detail: str) -> None:
         "일봉 갱신",
         key="overview_futures_macro_tab_daily_refresh",
         use_container_width=True,
-        help="저장된 주요 선물 5년 1D OHLCV를 다시 수집하고 매크로 snapshot cache를 비웁니다.",
+        help="저장된 주요 선물 5년 1D OHLCV를 다시 수집하고 compact snapshot을 갱신합니다.",
     ):
         with st.spinner("선물 5년 일봉을 yfinance에서 수집하는 중입니다..."):
             _refresh_futures_macro_daily_for_ui()
@@ -1716,7 +1993,7 @@ def _render_futures_macro_refresh_controls(*, section_detail: str) -> None:
         "다시 읽기",
         key="overview_futures_macro_tab_reload",
         use_container_width=True,
-        help="수집 job은 실행하지 않고 현재 DB 기준으로 매크로 snapshot cache만 비운 뒤 다시 읽습니다.",
+        help="provider 수집이나 전망 계산 없이 저장된 snapshot을 다시 읽습니다.",
     ):
         _reload_futures_macro_snapshot_for_ui()
         st.rerun()
@@ -1756,28 +2033,59 @@ def _render_futures_macro_validation_controls(
         st.rerun()
 
 
+def _render_futures_pattern_outlook_fallback(pattern_outlook: dict[str, Any]) -> None:
+    pattern = dict(pattern_outlook.get("current_pattern") or {})
+    st.markdown(f"#### {_display_text(pattern.get('regime_label'), '현재 체제 자료 부족')}")
+    st.caption(
+        f"{_display_text(pattern.get('transition_label'), '자료 부족')} · "
+        f"{_display_text(pattern.get('summary'), '다중 기간 패턴을 계산할 자료가 부족합니다.')}"
+    )
+    for horizon in list(pattern_outlook.get("horizons") or []):
+        label = _display_text(horizon.get("label"), "조건부 전망")
+        status = _display_text(horizon.get("estimate_status"), "UNAVAILABLE")
+        edge = _display_text(horizon.get("edge_label"), "방향 우위 미확인")
+        st.markdown(f"**{label} · {status}** — {edge}")
+        st.caption(_display_text(horizon.get("status_reason"), "검증 근거가 부족합니다."))
+    conditions = [str(item) for item in list(pattern.get("change_conditions") or []) if str(item).strip()]
+    if conditions:
+        st.markdown("**다음 확인 조건**")
+        for condition in conditions:
+            st.caption(f"- {condition}")
+
+
 def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
-    macro = load_overview_futures_macro_snapshot(include_validation=False)
-    session_validation, session_confidence, validation_loaded_at = _futures_macro_session_validation()
-    if session_validation:
-        macro = dict(macro)
-        macro["validation"] = session_validation
-        if session_confidence:
-            macro["confidence"] = session_confidence
+    _ = detail_expanded
+    materialized = load_overview_futures_macro_materialized_snapshot()
+    if str(materialized.get("status") or "") == "READY":
+        macro = dict(materialized.get("macro") or {})
+        pattern_outlook = dict(materialized.get("pattern_outlook") or {})
+        snapshot_metadata = dict(materialized.get("metadata") or {})
+    else:
+        reason = _display_text(
+            materialized.get("reason"),
+            "저장된 선물 매크로 snapshot이 없어 일봉 갱신이 필요합니다.",
+        )
+        macro = {
+            "status": "MISSING",
+            "coverage": {},
+            "warnings": [reason],
+            "summary": {"summary": reason},
+            "cautions": [reason],
+        }
+        pattern_outlook = {
+            "status": "LIMITED",
+            "horizons": [],
+            "limitations": [reason],
+        }
+        snapshot_metadata = {}
     coverage = dict(macro.get("coverage") or {})
-    scores = macro.get("scores")
-    components = macro.get("score_components")
-    symbols = macro.get("symbols")
-    confidence = dict(macro.get("confidence") or {})
-    validation = dict(macro.get("validation") or {})
     react_available = futures_macro_react_component_available()
 
     if react_available:
         payload = build_futures_macro_react_workbench_payload(
             macro,
-            validation=validation,
-            confidence=confidence,
-            validation_loaded_at=validation_loaded_at,
+            pattern_outlook=pattern_outlook,
+            snapshot_metadata=snapshot_metadata,
         )
         react_event = render_futures_macro_react_workbench(payload, key="overview_futures_macro_workbench")
         _handle_futures_macro_react_event(react_event, macro)
@@ -1788,38 +2096,13 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
                 f" · 기준일 {_snapshot_value(coverage.get('latest_daily_date'))} · CME/yfinance 일봉 세션 기준"
             ),
         )
-        _render_futures_macro_validation_controls(
-            macro,
-            validation=validation,
-            loaded_at=validation_loaded_at,
-        )
         _render_futures_market_brief(macro)
-        _render_weekly_macro_context(dict(macro.get("weekly_context") or {}))
-        _render_macro_score_lane(scores)
-    warnings = list(macro.get("warnings") or [])
-    warnings.extend(str(item) for item in validation.get("warnings") or [])
-    if warnings:
-        _render_snapshot_warnings({"warnings": [_futures_warning_label(warning) for warning in warnings]})
-
-    cautions = [_macro_caution_label(item) for item in macro.get("cautions") or [] if str(item).strip()]
-    cautions.extend(_macro_caution_label(item) for item in validation.get("caveats") or [] if str(item).strip())
-    with st.expander("원본 데이터 / 계산 추적", expanded=detail_expanded):
-        if react_available:
-            st.caption("이 영역은 상단 세 섹션의 판단을 검산하는 원본 데이터입니다. 자료 기준, 점수 계산표, 선물 일봉 변화, 과거 표본을 순서대로 확인합니다.")
-        else:
-            _render_macro_evidence_reading(list(macro.get("evidence_reading") or []))
-        if validation and not react_available:
-            _render_macro_validation_summary(validation, confidence_label=str(confidence.get("label") or ""))
-        elif not validation and not react_available:
-            st.info("과거 점검은 아직 불러오지 않았습니다. 상단의 `과거 점검 불러오기`를 누르면 historical validation을 계산합니다.")
-        _render_futures_macro_data_management(macro)
-        _render_futures_macro_raw_tables(
-            scores=scores,
-            components=components,
-            symbols=symbols,
-            validation=validation,
-            cautions=cautions,
-        )
+        _render_futures_pattern_outlook_fallback(pattern_outlook)
+        warnings = list(macro.get("warnings") or [])
+        if warnings:
+            _render_snapshot_warnings(
+                {"warnings": [_futures_warning_label(warning) for warning in warnings]}
+            )
 
 
 def render_futures_macro_fragment(*, detail_expanded: bool) -> None:

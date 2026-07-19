@@ -227,6 +227,10 @@ const formatSignedPercent = (value: number | null) => value == null
 const formatSeriesChange = (value: number | null, unit?: string | null) => value == null
   ? "-"
   : `${value > 0 ? "+" : ""}${value.toFixed(1)}${unit === "bp" ? "bp" : "%"}`;
+const formatMovementLevel = (value: number | null, unit?: string | null) => value == null
+  ? "-"
+  : unit === "percent" ? `연 ${value.toFixed(2)}%`
+  : `${value.toFixed(2)} ${unit || ""}`.trim();
 const formatMonth = (value?: string | null) => value ? value.slice(0, 7).replace("-", ".") : "-";
 
 const ECONOMIC_DIRECTION_LABEL: Record<EconomicState["observations"][number]["direction"], string> = {
@@ -643,14 +647,16 @@ function CurrentMovementBlock({
     economic_as_of_date: economicAsOfDate,
     price_context: price,
   } as MarketImplication : null;
+  const hasRateUnit = rows.some((row) => row.level_unit === "percent" || row.level_unit === "bp");
   return (
     <section className="observation-block current-movement-block">
       <h5>현재 움직임</h5>
+      {hasRateUnit ? <p className="movement-unit-note">현재 값은 최신 저장 관측치이며, 금리 변화는 bp 기준입니다.</p> : null}
       {priceItem ? <PricePathway item={priceItem} /> : (
         <div className="movement-grid">
           {rows.length ? rows.map((row) => (
             <article className="movement-item" key={row.metric_id}>
-              <header><strong>{row.label}</strong><span>{row.current_value == null ? "-" : row.current_value.toFixed(2)} {row.level_unit || ""}</span></header>
+              <header><strong>{row.label}</strong><span>{formatMovementLevel(row.current_value, row.level_unit)}</span></header>
               <SeriesMetrics evaluation={{
                 series_id: row.metric_id,
                 as_of_date: row.as_of_date,
@@ -860,6 +866,81 @@ function RegimeRibbon({ history, horizons }: { history: HistoryPoint[]; horizons
   );
 }
 
+function MonthlySignalGuide() {
+  return (
+    <details className="cycle-usage-guide">
+      <summary>
+        <div>
+          <span>Reading guide</span>
+          <strong>월별 사이클 신호 활용법</strong>
+        </div>
+        <small>관찰 → 준비 → 조정 검토</small>
+      </summary>
+
+      <div className="cycle-guide-body">
+        <p className="cycle-guide-intro">
+          이 지도는 장기 경기판정이 아니라 월별 변화의 방향을 빠르게 읽는 조기경보입니다. 한 번의 이동보다 지속성과 근거의 범위를 함께 확인합니다.
+        </p>
+
+        <div className="cycle-guide-steps" aria-label="월별 신호 확인 순서">
+          <article>
+            <span>1 · 관찰</span>
+            <strong>한 달 신호</strong>
+            <p>일시적 충격일 수 있으므로 방향이 바뀌었는지 먼저 관찰합니다.</p>
+          </article>
+          <article>
+            <span>2 · 준비</span>
+            <strong>같은 방향이 여러 달</strong>
+            <p>변화가 이어지면 다음 국면 가능성과 대응 여력을 점검합니다.</p>
+          </article>
+          <article>
+            <span>3 · 조정 검토</span>
+            <strong>실물·금융·가격 동시 확인</strong>
+            <p>서로 다른 근거가 같은 방향을 가리킬 때 포트폴리오 조정을 검토합니다.</p>
+          </article>
+        </div>
+
+        <div className="cycle-guide-phase-grid">
+          <article className="guide-phase-recovery">
+            <span>회복 신호</span>
+            <strong>낮은 성장 레벨에서 모멘텀이 개선</strong>
+            <p>개선의 지속성과 금융여건 완화를 확인합니다. 침체에서 벗어나는 초기 신호이지 대세 상승의 확정은 아닙니다.</p>
+          </article>
+          <article className="guide-phase-expansion">
+            <span>확장 신호</span>
+            <strong>성장 레벨과 모멘텀이 함께 강함</strong>
+            <p>기업이익과 시장 참여 폭이 넓어지는지, 물가와 금리가 성장을 제약하기 시작하는지 확인합니다.</p>
+          </article>
+          <article className="guide-phase-slowdown">
+            <span>둔화 신호</span>
+            <strong>성장 레벨은 높지만 모멘텀이 약화</strong>
+            <p>정상화인지 광범위한 약화인지 구분하고, 쏠림·부채·경기민감 노출을 점검합니다.</p>
+          </article>
+          <article className="guide-phase-recession">
+            <span>침체 신호</span>
+            <strong>성장 레벨과 모멘텀이 함께 약함</strong>
+            <p>실물과 신용의 약화 범위가 넓어지는지 확인하고, 현금 수요와 감내 가능한 손실 범위를 점검합니다.</p>
+          </article>
+        </div>
+
+        <section className="cycle-guide-transitions" aria-labelledby="cycle-guide-transition-title">
+          <h4 id="cycle-guide-transition-title">국면 전환은 이렇게 읽습니다</h4>
+          <div className="cycle-guide-transition-grid">
+            <article><strong>침체 → 회복</strong><p>바닥 통과의 초기 신호로 읽고 지속성을 확인합니다.</p></article>
+            <article><strong>회복 → 확장</strong><p>기대 개선이 실제 생산·고용·이익으로 이어지는지 확인합니다.</p></article>
+            <article><strong>확장 → 둔화</strong><p>건전한 정상화인지 여러 지표의 동반 약화인지 구분합니다.</p></article>
+            <article><strong>둔화 → 침체</strong><p>약화가 일시적 충격을 넘어 넓고 오래 지속되는지 확인합니다.</p></article>
+          </div>
+        </section>
+
+        <p className="cycle-guide-boundary">
+          참고: 월별 조기경보를 해석하기 위한 안내이며 NBER의 공식 경기판정이나 개별 행동 지시가 아닙니다.
+        </p>
+      </div>
+    </details>
+  );
+}
+
 function EconomicCycleWorkbench({ args }: Props) {
   const payload = args.payload;
   const rootRef = useRef<HTMLElement>(null);
@@ -913,6 +994,8 @@ function EconomicCycleWorkbench({ args }: Props) {
           {payload.market_implications.map((item) => <MarketImplicationCard key={item.asset_group} item={item} />)}
         </div>
       </section>
+
+      <MonthlySignalGuide />
 
       <details className="method-disclosure">
         <summary>방법론과 품질</summary>

@@ -7562,7 +7562,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertNotIn("legacy_dashboard", helper_source)
         self.assertNotIn("_legacy.", helper_source)
-        self.assertIn("load_overview_futures_macro_snapshot(", helper_source)
+        self.assertIn("load_overview_futures_macro_materialized_snapshot(", helper_source)
+        self.assertNotIn("load_overview_futures_macro_snapshot(", helper_source)
 
     def test_overview_market_movers_entrypoint_uses_tab_helper_module(self) -> None:
         source = Path("app/web/overview/market_movers.py").read_text(encoding="utf-8")
@@ -7983,9 +7984,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("_legacy._render_futures_macro_refresh_controls()", tab_body)
         self.assertNotIn("legacy_dashboard", futures_helper_source)
         self.assertNotIn("_legacy.", futures_helper_source)
-        self.assertIn("OVERVIEW_FUTURES_MACRO_VALIDATION_KEY", futures_helper_source)
-        self.assertIn("load_overview_futures_macro_snapshot(include_validation=False)", panel_body)
-        self.assertIn("_render_futures_macro_validation_controls(", panel_body)
+        self.assertIn("clear_futures_macro_pattern_validation_cache", futures_helper_source)
+        self.assertIn("load_overview_futures_macro_materialized_snapshot()", panel_body)
+        self.assertNotIn("load_overview_futures_macro_snapshot(include_validation=False)", panel_body)
+        self.assertNotIn("load_overview_futures_macro_pattern_outlook()", panel_body)
+        self.assertNotIn('with st.expander("원본 데이터 / 계산 추적"', panel_body)
+        self.assertNotIn("_render_futures_macro_validation_controls(", panel_body)
+        self.assertIn("_render_futures_pattern_outlook_fallback(", panel_body)
         self.assertIn("_render_futures_macro_refresh_controls(", panel_body)
         self.assertIn("section_detail=", panel_body)
         self.assertNotIn('_render_futures_section_header(\n        "매크로 컨텍스트"', panel_body)
@@ -7995,6 +8000,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("clear_overview_futures_macro_snapshot_cache()", refresh_helper_body)
         self.assertIn("clear_futures_macro_validation_cache", futures_helper_source)
         self.assertIn("clear_futures_macro_validation_cache()", validation_clear_body)
+        self.assertIn("clear_futures_macro_pattern_validation_cache()", validation_clear_body)
         self.assertIn("overview_futures_macro_tab_daily_refresh", controls_body)
         self.assertIn("overview_futures_macro_tab_reload", controls_body)
         self.assertIn("ov-futures-macro-action-copy", controls_body)
@@ -8006,6 +8012,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("2.05, 0.62, 0.62, 1.25", controls_body)
         self.assertIn('"일봉 갱신"', controls_body)
         self.assertIn('"다시 읽기"', controls_body)
+        self.assertIn("compact snapshot을 갱신합니다", futures_helper_source)
+        self.assertIn("전망 계산 없이 저장된 snapshot을 다시 읽습니다", futures_helper_source)
+        self.assertNotIn("snapshot cache를 비운", futures_helper_source)
         self.assertIn(".ov-futures-macro-action-title", style_source)
         self.assertIn(".ov-futures-macro-action-rule", style_source)
         self.assertIn(".ov-futures-validation-action-title", style_source)
@@ -8032,7 +8041,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertEqual(symbols, ["ES=F", "NQ=F"])
 
-    def test_futures_macro_react_workbench_payload_keeps_python_action_boundary(self) -> None:
+    def _legacy_v1_futures_macro_react_workbench_payload_keeps_python_action_boundary(self) -> None:
         import pandas as pd
 
         from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
@@ -8216,120 +8225,179 @@ class OverviewAutomationContractTests(unittest.TestCase):
             {"id": "load_validation", "nonce": 102},
         )
 
-    def test_futures_macro_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
+    def test_futures_macro_react_v2_renders_market_context_reading_order(self) -> None:
         from app.web.overview.futures_macro_react_component import (
             FUTURES_MACRO_REACT_COMPONENT_NAME,
             futures_macro_react_component_available,
         )
 
         component_root = Path("app/web/streamlit_components/futures_macro_workbench")
+        source_root = component_root / "src"
         helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
         wrapper_source = Path("app/web/overview/futures_macro_react_component.py").read_text(encoding="utf-8")
-        react_source = (component_root / "src" / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
-        macro_context_path = component_root / "src" / "MacroContextSection.tsx"
-        recent_flow_path = component_root / "src" / "RecentFlowSection.tsx"
-        validation_panel_path = component_root / "src" / "HistoricalValidationPanel.tsx"
-        current_evidence_path = component_root / "src" / "CurrentEvidencePanel.tsx"
-        self.assertTrue(macro_context_path.exists())
-        self.assertTrue(recent_flow_path.exists())
-        self.assertTrue(validation_panel_path.exists())
-        self.assertTrue(current_evidence_path.exists())
-        macro_context_source = macro_context_path.read_text(encoding="utf-8")
-        recent_flow_source = recent_flow_path.read_text(encoding="utf-8")
-        validation_panel_source = validation_panel_path.read_text(encoding="utf-8")
-        current_evidence_source = current_evidence_path.read_text(encoding="utf-8")
-        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+        source = (source_root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
 
         self.assertEqual(FUTURES_MACRO_REACT_COMPONENT_NAME, "futures_macro_workbench")
-        self.assertTrue((component_root / "package.json").exists())
-        self.assertTrue((component_root / "index.html").exists())
-        self.assertTrue((component_root / "src" / "FuturesMacroWorkbench.tsx").exists())
-        self.assertTrue((component_root / "src" / "MacroContextSection.tsx").exists())
-        self.assertTrue((component_root / "src" / "RecentFlowSection.tsx").exists())
-        self.assertTrue((component_root / "src" / "HistoricalValidationPanel.tsx").exists())
-        self.assertTrue((component_root / "src" / "CurrentEvidencePanel.tsx").exists())
-        self.assertTrue((component_root / "src" / "main.tsx").exists())
         self.assertFalse(futures_macro_react_component_available(component_root / "missing-dist"))
-        self.assertIn("render_futures_macro_react_workbench", helper_source)
-        self.assertIn("build_futures_macro_react_workbench_payload", helper_source)
-        self.assertIn("_handle_futures_macro_react_event(", helper_source)
-        self.assertIn('with st.expander("원본 데이터 / 계산 추적"', helper_source)
-        self.assertNotIn('with st.expander("계산 근거 / 원본 표"', helper_source)
-        self.assertNotIn('with st.expander("근거 해석 / 원본 데이터"', helper_source)
-        self.assertIn('"title": "현재 근거"', helper_source)
-        self.assertNotIn('"title": "근거 해석"', helper_source)
         self.assertIn('default={"event": None}', wrapper_source)
-        self.assertIn('payload.component === "FuturesMacroWorkbench"', react_source)
-        self.assertIn('import MacroContextSection from "./MacroContextSection"', react_source)
-        self.assertIn('import RecentFlowSection from "./RecentFlowSection"', react_source)
-        self.assertIn('import HistoricalValidationPanel from "./HistoricalValidationPanel"', react_source)
-        self.assertIn("payload.command.actions.map", react_source)
-        self.assertIn('setPendingActionId("")', react_source)
-        self.assertIn("<MacroContextSection", react_source)
-        self.assertIn("<RecentFlowSection", react_source)
-        self.assertIn("<HistoricalValidationPanel", react_source)
-        self.assertNotIn('<details className="fm-workbench__evidence"', react_source)
-        self.assertIn('className="fm-workbench__macro-section fm-workbench__section-card"', macro_context_source)
-        self.assertIn('import CurrentEvidencePanel from "./CurrentEvidencePanel"', macro_context_source)
-        self.assertIn("payload.brief", macro_context_source)
-        self.assertIn("payload.scores.map", macro_context_source)
-        self.assertIn("<CurrentEvidencePanel", macro_context_source)
-        self.assertIn("payload.evidence", macro_context_source)
-        self.assertIn("score.polarity", macro_context_source)
-        self.assertIn("fm-workbench__score-hint", macro_context_source)
-        self.assertIn('className="fm-workbench__flow-section fm-workbench__section-card"', recent_flow_source)
-        self.assertIn("flowPeriods.map", recent_flow_source)
-        self.assertIn("setSelectedFlowKey", recent_flow_source)
-        self.assertIn("evidence.sections.map", current_evidence_source)
-        self.assertIn("item.score_label", current_evidence_source)
-        self.assertIn("item.contribution_z", current_evidence_source)
-        self.assertIn("fm-workbench__evidence-meta", current_evidence_source)
-        self.assertIn('score.polarity.split(" · ")', macro_context_source)
-        self.assertIn("fm-workbench__score-hint-line", macro_context_source)
-        self.assertIn("Streamlit.setComponentValue", react_source)
-        self.assertIn("Streamlit.setFrameHeight", react_source)
-        self.assertIn("function MetricTile", validation_panel_source)
-        self.assertIn("validation.insight.evidence_bridge", validation_panel_source)
-        self.assertIn("validation.conclusion", validation_panel_source)
-        self.assertIn("validation.action", validation_panel_source)
-        self.assertIn("onAction(validation.action)", validation_panel_source)
-        self.assertIn("pendingValidation", validation_panel_source)
-        self.assertIn('className="fm-workbench__validation-card"', validation_panel_source)
-        self.assertIn('className="fm-workbench__validation-eyebrow">과거 점검', validation_panel_source)
-        self.assertIn('className="fm-workbench__validation-summary"', validation_panel_source)
-        self.assertIn('className="fm-workbench__validation-control"', validation_panel_source)
-        self.assertIn('className="fm-workbench__validation-conclusion-grid"', validation_panel_source)
-        self.assertIn('className="fm-workbench__validation-status-grid"', validation_panel_source)
-        self.assertIn('className="fm-workbench__validation-result-grid"', validation_panel_source)
-        self.assertIn("fm-workbench__validation-action", validation_panel_source)
-        self.assertIn("fm-workbench__validation-loading", validation_panel_source)
-        self.assertLess(
-            validation_panel_source.index('className="fm-workbench__validation-control"'),
-            validation_panel_source.index('className="fm-workbench__validation-status-grid"'),
+        self.assertIn("build_futures_macro_react_workbench_payload", helper_source)
+        for name in (
+            "PatternHorizonSection",
+            "PatternMapSection",
+            "PatternRibbonSection",
+            "AssetPathwaysSection",
+            "MethodDisclosure",
+            "CalculationTraceDisclosure",
+        ):
+            self.assertTrue((source_root / f"{name}.tsx").exists())
+            self.assertIn(name, source)
+        self.assertLess(source.index("<MacroContextSection"), source.index("<PatternHorizonSection"))
+        self.assertLess(source.index("<PatternHorizonSection"), source.index("<PatternMapSection"))
+        self.assertLess(source.index("<PatternMapSection"), source.index("<PatternRibbonSection"))
+        self.assertLess(source.index("<PatternRibbonSection"), source.index("<AssetPathwaysSection"))
+        self.assertLess(source.index("<AssetPathwaysSection"), source.index("<MethodDisclosure"))
+        self.assertLess(source.index("<MethodDisclosure"), source.index("<CalculationTraceDisclosure"))
+        self.assertNotIn("<RecentFlowSection", source)
+        self.assertNotIn("<HistoricalValidationPanel", source)
+        self.assertIn("Streamlit.setComponentValue", source)
+        self.assertIn("Streamlit.setFrameHeight", source)
+        self.assertIn("onToggle={syncFrameHeightSoon}", source)
+
+    def test_futures_macro_react_v2_has_responsive_probability_and_unavailable_contract(self) -> None:
+        source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")
+        horizon = (source_root / "PatternHorizonSection.tsx").read_text(encoding="utf-8")
+        style = (source_root / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("estimate_status", horizon)
+        self.assertIn("probabilities.length", horizon)
+        self.assertIn("방향 우위 미확인", horizon)
+        self.assertIn("@media (max-width: 760px)", style)
+        self.assertIn("grid-template-columns: 1fr", style)
+
+    def test_futures_macro_pattern_map_uses_observed_anchors_and_conditional_branches(self) -> None:
+        source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")
+        root = (source_root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
+        pattern_map = (source_root / "PatternMapSection.tsx").read_text(encoding="utf-8")
+        style = (source_root / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("horizons={payload.horizons}", root)
+        self.assertIn('data-horizon="observed"', pattern_map)
+        self.assertIn('data-horizon="5D"', pattern_map)
+        self.assertIn('data-horizon="20D"', pattern_map)
+        self.assertIn("20D 전", pattern_map)
+        self.assertIn("5D 전", pattern_map)
+        self.assertIn('textAnchor="end">현재</text>', pattern_map)
+        self.assertIn("if (path.length <= daysAgo)", pattern_map)
+        self.assertIn("ConditionalPathPayload", root)
+        self.assertIn("fm-pattern-map__conditional-path", pattern_map)
+        self.assertIn("fm-pattern-map__uncertainty", pattern_map)
+        self.assertIn("일 후 예상 위치", pattern_map)
+        self.assertIn("selectedCard?.conditional_path", pattern_map)
+        self.assertIn("실제 미래 경로를 보장하지 않습니다", pattern_map)
+        self.assertNotIn("REGIME_TARGETS", pattern_map)
+        self.assertNotIn("function Branch", pattern_map)
+        self.assertNotIn("fm-pattern-map__outcome-dot", pattern_map)
+        self.assertIn("stroke-dasharray", style)
+
+    def test_futures_macro_pattern_map_names_rate_dollar_and_inflation_pressure(self) -> None:
+        from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
+
+        payload = build_futures_macro_react_workbench_payload({}, pattern_outlook={})
+        pattern_map = Path(
+            "app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertEqual(payload["pattern_map"]["y_label"], "금리·달러·물가 압력")
+        self.assertIn("방어 · 금리·달러·물가 압력 강화", pattern_map)
+        self.assertIn("위험선호 · 금리·달러·물가 압력 강화", pattern_map)
+        self.assertIn("방어 · 금리·달러·물가 압력 완화", pattern_map)
+        self.assertIn("위험선호 · 금리·달러·물가 압력 완화", pattern_map)
+        self.assertNotIn('"y_label": "매크로 부담"', Path(
+            "app/web/overview/futures_macro_helpers.py"
+        ).read_text(encoding="utf-8"))
+        self.assertNotIn(" · 부담 강화", pattern_map)
+        self.assertNotIn(" · 부담 완화", pattern_map)
+
+    def test_futures_macro_pattern_map_uses_one_terminal_range_and_readable_copy(self) -> None:
+        pattern_map = Path(
+            "app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("const uncertaintyStep = forecastPoints.at(-1)", pattern_map)
+        self.assertNotIn("midpointStep", pattern_map)
+        self.assertNotIn("uncertaintySteps", pattern_map)
+        self.assertEqual(pattern_map.count('className="fm-pattern-map__uncertainty"'), 1)
+        self.assertIn("data-forecast-step={uncertaintyStep.step}", pattern_map)
+        self.assertIn("일 후 예상 위치", pattern_map)
+        self.assertIn("일 예상 순이동", pattern_map)
+        self.assertIn("일 후 도착 범위", pattern_map)
+        self.assertNotIn("유사 패턴 중앙 위치", pattern_map)
+        self.assertIn("실제 미래 경로를 보장하지 않습니다", pattern_map)
+
+    def test_futures_macro_pattern_map_uses_fixed_midline_direction_markers(self) -> None:
+        source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")
+        pattern_map = (source_root / "PatternMapSection.tsx").read_text(encoding="utf-8")
+        style = (source_root / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("function directionSegment", pattern_map)
+        self.assertGreaterEqual(pattern_map.count('markerUnits="userSpaceOnUse"'), 2)
+        self.assertGreaterEqual(pattern_map.count('markerWidth="9"'), 2)
+        self.assertIn('data-direction="observed"', pattern_map)
+        self.assertIn('data-direction="forecast"', pattern_map)
+        self.assertNotIn('markerEnd="url(#fm-observed-arrow)"', pattern_map)
+        self.assertIn('r={point.anchorLabel === "현재" ? 10 : 7.5}', pattern_map)
+        self.assertIn('r="8"', pattern_map)
+        self.assertIn("fm-pattern-map__leader", pattern_map)
+        self.assertIn("fm-pattern-map__direction", style)
+
+    def test_futures_macro_pattern_map_renders_terminal_net_direction_without_stepwise_zigzag(self) -> None:
+        pattern_map = Path(
+            "app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('className="fm-pattern-map__conditional-path"', pattern_map)
+        self.assertIn("x1={sx(latest.x)}", pattern_map)
+        self.assertIn("y1={sy(latest.y)}", pattern_map)
+        self.assertIn("x2={sx(terminal.x)}", pattern_map)
+        self.assertIn("y2={sy(terminal.y)}", pattern_map)
+        self.assertNotIn("const forecastPolyline", pattern_map)
+        self.assertNotIn(
+            "...forecastPoints.map((point) => `${sx(point.x)},${sy(point.y)}`)",
+            pattern_map,
         )
-        self.assertLess(
-            validation_panel_source.index('className="fm-workbench__validation-conclusion-grid"'),
-            validation_panel_source.index('className="fm-workbench__validation-result-grid"'),
+        self.assertNotIn("const scaleForecastPoints", pattern_map)
+        self.assertNotIn("...scaleForecastPoints.map", pattern_map)
+        self.assertIn("일 예상 순이동", pattern_map)
+        self.assertIn("중간 일별 경로가 아닙니다", pattern_map)
+
+    def test_futures_macro_pattern_map_keeps_observed_anchors_on_one_shared_scale(self) -> None:
+        pattern_map = Path(
+            "app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("const scalePaths = horizons.flatMap", pattern_map)
+        self.assertIn("const scaleTerminalPoints = scalePaths.flatMap", pattern_map)
+        self.assertNotIn("const scaleForecastPoints", pattern_map)
+        self.assertIn(
+            "...scaleTerminalPoints.flatMap((point) => [point.x, point.lower_x, point.upper_x])",
+            pattern_map,
         )
-        self.assertIn(".fm-workbench__section-card", react_style)
-        self.assertIn(".fm-workbench__macro-section", react_style)
-        self.assertIn(".fm-workbench__flow-section", react_style)
-        self.assertIn(".fm-workbench__scores", react_style)
-        self.assertIn(".fm-workbench__score-hint", react_style)
-        self.assertIn(".fm-workbench__score-hint-line", react_style)
-        self.assertIn(".fm-workbench__validation-card", react_style)
-        self.assertIn(".fm-workbench__validation-header", react_style)
-        self.assertIn(".fm-workbench__validation-control", react_style)
-        self.assertIn(".fm-workbench__validation-conclusion-grid", react_style)
-        self.assertIn(".fm-workbench__validation-status-grid", react_style)
-        self.assertIn(".fm-workbench__validation-result-grid", react_style)
-        self.assertIn(".fm-workbench__validation-action", react_style)
-        self.assertIn(".fm-workbench__validation-loading", react_style)
-        self.assertIn(".fm-workbench__flow-tabs", react_style)
-        self.assertIn(".fm-workbench__evidence", react_style)
-        react_event_body = helper_source[helper_source.index('if action_id == "load_validation"') :]
-        react_event_body = react_event_body[: react_event_body.index("def _futures_symbols_with_candles")]
-        self.assertNotIn('st.spinner("과거 점검을 계산하는 중입니다..."', react_event_body)
+        self.assertIn(
+            "...scaleTerminalPoints.flatMap((point) => [point.y, point.lower_y, point.upper_y])",
+            pattern_map,
+        )
+        self.assertNotIn(
+            "...forecastPoints.flatMap((point) => [point.x, point.lower_x, point.upper_x])",
+            pattern_map,
+        )
+
+    def test_futures_macro_react_copy_avoids_trade_and_causal_claims(self) -> None:
+        source = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in Path("app/web/streamlit_components/futures_macro_workbench/src").glob("*.tsx")
+        )
+        for forbidden in ("매수", "매도", "승인", "선정", "통과", "원인 확정"):
+            self.assertNotIn(forbidden, source)
 
     def test_sentiment_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
         from app.web.overview.sentiment_react_component import (
@@ -8661,25 +8729,31 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
     def test_futures_macro_raw_tables_are_named_by_calculation_step(self) -> None:
         helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
+        source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")
+        workbench_source = (source_root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
+        method_source = (source_root / "MethodDisclosure.tsx").read_text(encoding="utf-8")
+        trace_path = source_root / "CalculationTraceDisclosure.tsx"
+        trace_source = trace_path.read_text(encoding="utf-8") if trace_path.exists() else ""
 
-        self.assertIn("_render_futures_raw_table_map(", helper_source)
-        self.assertIn('현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본', helper_source)
-        self.assertIn("CME/yfinance 일봉 세션 기준", helper_source)
-        self.assertIn("CME/yfinance 일봉 세션 기준일", helper_source)
-        self.assertIn("화면 섹션별 원본 연결", helper_source)
-        self.assertIn("매크로 컨텍스트", helper_source)
-        self.assertIn("최근 흐름", helper_source)
-        self.assertIn("이 영역은 상단 세 섹션의 판단을 검산하는 원본 데이터입니다", helper_source)
-        self.assertNotIn("과거 점검 요약은 상단 React 패널에서 확인", helper_source)
-        self.assertIn("if validation and not react_available:", helper_source)
-        self.assertIn('with st.expander("현재 점수 원본"', helper_source)
-        self.assertIn('with st.expander("점수 구성 기여"', helper_source)
-        self.assertIn('with st.expander("선물 일봉 변화"', helper_source)
-        self.assertIn('with st.expander("과거 시나리오 표본"', helper_source)
-        self.assertIn('with st.expander("점수-이후수익 관계"', helper_source)
-        self.assertIn('with st.expander("기준값 민감도"', helper_source)
-        self.assertNotIn('with st.expander("원본 점수 표"', helper_source)
-        self.assertNotIn('with st.expander("전체 시나리오 원본 표"', helper_source)
+        payload_body = helper_source[helper_source.index("def build_futures_macro_react_workbench_payload") :]
+        payload_body = payload_body[: payload_body.index("def _futures_macro_react_event_payload")]
+        panel_body = helper_source[helper_source.index("def _render_futures_macro_panel") :]
+        panel_body = panel_body[: panel_body.index("def render_futures_macro_fragment")]
+
+        self.assertIn('"calculation_trace"', payload_body)
+        self.assertIn("load_overview_futures_macro_materialized_snapshot()", panel_body)
+        self.assertNotIn("load_overview_futures_macro_pattern_outlook()", panel_body)
+        self.assertNotIn('with st.expander("원본 데이터 / 계산 추적"', panel_body)
+        self.assertIn("_render_futures_pattern_outlook_fallback(pattern_outlook)", helper_source)
+        self.assertNotIn("_render_futures_macro_validation_controls(", panel_body)
+        self.assertIn("CalculationTraceDisclosure", workbench_source)
+        self.assertIn("onToggle={syncFrameHeightSoon}", workbench_source)
+        self.assertIn("onToggle={onToggle}", method_source)
+        self.assertIn("원본 데이터 / 계산 추적", trace_source)
+        self.assertIn("현재 점수 원본", trace_source)
+        self.assertIn("점수 구성 기여", trace_source)
+        self.assertIn("선물 일봉 변화", trace_source)
+        self.assertIn("해석 주의점", trace_source)
 
     def test_overview_dashboard_renders_default_market_context_without_load_gate(self) -> None:
         source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
@@ -25825,7 +25899,7 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertIn("매수/매도 신호", summary["confidence_effect"])
         self.assertIn("아닙니다", summary["confidence_effect"])
 
-    def test_macro_react_validation_metrics_use_interpretable_labels(self) -> None:
+    def _legacy_v1_macro_react_validation_metrics_use_interpretable_labels(self) -> None:
         import pandas as pd
 
         from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
@@ -26135,6 +26209,184 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             macro_service.build_futures_macro_thermometer_snapshot = original_builder
             macro_service._latest_daily_cache_marker = original_marker
             macro_service.clear_overview_futures_macro_snapshot_cache()
+
+
+    def _pattern_outlook_payload_fixture(self, *, unavailable: bool = False) -> dict[str, Any]:
+        probabilities = {} if unavailable else {
+            "risk_seeking": 0.24,
+            "defensive": 0.46,
+            "inflation_rate_pressure": 0.20,
+            "mixed": 0.10,
+        }
+        baseline = {} if unavailable else {
+            "risk_seeking": 0.30,
+            "defensive": 0.35,
+            "inflation_rate_pressure": 0.20,
+            "mixed": 0.15,
+        }
+        current_pattern = {
+            "status": "READY",
+            "as_of_date": "2026-07-17",
+            "regime": "defensive",
+            "regime_label": "방어적 위험 체제",
+            "transition": "transition_attempt",
+            "transition_label": "전환 시도",
+            "summary": "방어 흐름이 우세하지만 단기 전환을 시험합니다.",
+            "coverage": {"available_family_count": 6, "required_family_count": 6},
+            "evidence": {"current": ["위험선호 약화"], "transition": ["금리 압력 완화"]},
+            "change_conditions": ["1D 반전이 5D로 유지되는지 확인합니다."],
+            "path": [
+                {
+                    "date": "2026-07-17",
+                    "x": -0.7,
+                    "y": 0.4,
+                    "regime": "defensive",
+                    "regime_label": "방어적 위험 체제",
+                    "transition": "transition_attempt",
+                    "transition_label": "전환 시도",
+                }
+            ],
+            "ribbon": [],
+            "families": {},
+        }
+        horizons = []
+        for horizon in (5, 20):
+            conditional_points = [] if unavailable else [
+                {
+                    "step": step,
+                    "x": -0.7 + step * (0.04 if horizon == 5 else 0.015),
+                    "y": 0.4 - step * (0.03 if horizon == 5 else 0.008),
+                    "lower_x": -0.85 + step * (0.04 if horizon == 5 else 0.015),
+                    "upper_x": -0.55 + step * (0.04 if horizon == 5 else 0.015),
+                    "lower_y": 0.25 - step * (0.03 if horizon == 5 else 0.008),
+                    "upper_y": 0.55 - step * (0.03 if horizon == 5 else 0.008),
+                }
+                for step in range(1, horizon + 1)
+            ]
+            horizons.append(
+                {
+                    "horizon": horizon,
+                    "label": "다음 1주" if horizon == 5 else "다음 1개월",
+                    "probabilities": probabilities,
+                    "baseline_probabilities": baseline,
+                    "probability_lift": {
+                        key: probabilities.get(key, 0.0) - baseline.get(key, 0.0)
+                        for key in probabilities
+                    },
+                    "dominant_regime": "defensive" if probabilities else None,
+                    "episode_count": 42 if horizon == 5 else 36,
+                    "estimate_status": "UNAVAILABLE" if unavailable else "PROVISIONAL",
+                    "status_reason": "표본 부족" if unavailable else "계산 가능하지만 검증 일부가 잠정입니다.",
+                    "edge_label": "방향 우위 미확인",
+                    "brier_score": None,
+                    "baseline_brier_score": None,
+                    "calibration_error": None,
+                    "fold_improvement_ratio": 0.0,
+                    "closest_episodes": [],
+                    "asset_pathways": {},
+                    "conditional_path": {
+                        "status": "UNAVAILABLE" if unavailable else "PROVISIONAL",
+                        "episode_count": 42 if horizon == 5 else 36,
+                        "band_label": "과거 유사 패턴 가운데 50%",
+                        "points": conditional_points,
+                        "terminal": conditional_points[-1] if conditional_points else None,
+                        "validation": {
+                            "median_error": None,
+                            "baseline_median_error": None,
+                            "coverage_50": None,
+                            "evaluated_fold_count": 0,
+                        },
+                    },
+                }
+            )
+        return {
+            "status": "LIMITED" if unavailable else "READY",
+            "as_of_date": "2026-07-17",
+            "current_pattern": current_pattern,
+            "horizons": horizons,
+            "method": {
+                "effective_episodes": {"5": 42, "20": 36},
+                "brier": {"5": None, "20": None},
+                "baseline_brier": {"5": None, "20": None},
+                "calibration": {"5": None, "20": None},
+            },
+            "limitations": ["continuous futures roll caveat"],
+        }
+
+    def test_futures_macro_v2_payload_separates_current_and_future_horizons(self) -> None:
+        from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
+
+        macro = {
+            "coverage": {"standardized_count": 15, "symbol_count": 16, "latest_daily_date": "2026-07-17"},
+            "summary": {"scenario": "혼재된 매크로 흐름", "summary": "오늘 금리 압력은 완화됐습니다."},
+        }
+        payload = build_futures_macro_react_workbench_payload(
+            macro,
+            pattern_outlook=self._pattern_outlook_payload_fixture(),
+        )
+
+        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v2")
+        self.assertEqual([item["key"] for item in payload["horizons"]], ["current", "5D", "20D"])
+        self.assertEqual(payload["horizons"][0]["kind"], "observation")
+        self.assertNotIn("probabilities", payload["horizons"][0])
+        self.assertEqual(payload["horizons"][1]["kind"], "conditional_outlook")
+        self.assertEqual(payload["horizons"][1]["baseline_label"], "평소 기준 확률")
+        self.assertIn("conditional_path", payload["horizons"][1])
+        self.assertIn("conditional_path", payload["horizons"][2])
+        self.assertEqual(len(payload["horizons"][1]["conditional_path"]["points"]), 5)
+        self.assertEqual(len(payload["horizons"][2]["conditional_path"]["points"]), 20)
+        self.assertNotEqual(
+            payload["horizons"][1]["conditional_path"]["terminal"],
+            payload["horizons"][2]["conditional_path"]["terminal"],
+        )
+        self.assertNotIn("zones", payload["pattern_map"])
+        self.assertEqual([item["id"] for item in payload["command"]["actions"]], ["daily_refresh", "reload"])
+        self.assertNotIn("validation", payload)
+        self.assertNotIn("load_validation", str(payload))
+
+    def test_futures_macro_v2_payload_hides_unavailable_probabilities(self) -> None:
+        from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
+
+        payload = build_futures_macro_react_workbench_payload(
+            {"coverage": {}, "summary": {}},
+            pattern_outlook=self._pattern_outlook_payload_fixture(unavailable=True),
+        )
+        five_day = payload["horizons"][1]
+
+        self.assertEqual(five_day["estimate_status"], "UNAVAILABLE")
+        self.assertEqual(five_day["probabilities"], [])
+        self.assertEqual(five_day["edge_label"], "방향 우위 미확인")
+        self.assertIn("conditional_path", five_day)
+        self.assertEqual(five_day["conditional_path"]["points"], [])
+        self.assertIsNone(five_day["conditional_path"]["terminal"])
+
+    def test_futures_macro_reload_clears_pattern_outlook_cache(self) -> None:
+        from app.web.overview.futures_macro_helpers import _reload_futures_macro_snapshot_for_ui
+
+        with patch("app.web.overview.futures_macro_helpers.clear_futures_macro_pattern_validation_cache") as clear:
+            _reload_futures_macro_snapshot_for_ui()
+
+        clear.assert_called_once_with()
+
+    def test_macro_thermometer_snapshot_attaches_current_pattern(self) -> None:
+        from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
+
+        symbols = ["ES=F", "NQ=F", "YM=F", "RTY=F", "ZN=F", "ZB=F", "GC=F", "CL=F", "NG=F", "HG=F", "6E=F", "6J=F", "6B=F", "6A=F", "6C=F"]
+        candle_rows = self._daily_rows({symbol: 0.002 for symbol in symbols})
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            return candle_rows if "FROM futures_ohlcv" in sql else []
+
+        snapshot = build_futures_macro_thermometer_snapshot(
+            symbols=symbols,
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["pattern"]["schema_version"], "futures_macro_pattern_v1")
+        self.assertIn(snapshot["pattern"]["status"], {"READY", "PARTIAL"})
+        self.assertIsInstance(snapshot["pattern_feature_frame"], pd.DataFrame)
+        self.assertFalse(snapshot["pattern_feature_frame"].empty)
 
 
 class MarketIntelligenceIngestionContractTests(unittest.TestCase):

@@ -18,7 +18,10 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [institutional-portfolios-context-first-redesign-v1-20260718](./tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md). 선택 기관 맥락, 전체 보유 탐색, 직접 종목 검색과 coverage / comparison 정확성을 전체 roadmap `4/4`로 완료했다.
+  - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro의 단기 거시 레이더와 5D/20D 조건부 경로를 확정하고, 5년 compact materialization·DB-only 첫 진입·React 방법론/계산 추적까지 마무리했다.
+  - Recent completed Institutional Portfolios task is [institutional-13f-openfigi-mapping-v1-20260718](./tasks/active/institutional-13f-openfigi-mapping-v1-20260718/STATUS.md). 무료 OpenFIGI current resolution과 curated-manager actual backfill을 전체 roadmap `4/4`로 완료했다.
+  - Previous completed Institutional Portfolios task is [institutional-portfolios-context-first-redesign-v1-20260718](./tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md). 선택 기관 맥락, 전체 보유 탐색, 직접 종목 검색과 coverage / comparison 정확성을 전체 roadmap `4/4`로 완료했다.
+  - Recent completed Overview / Market Context task is [overview-economic-cycle-sp500-actual-eps-registration-v1-20260718](./tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/STATUS.md). 공식 workbook 등록 제품 경로는 완료했고 실제 workbook과 발표일 입력은 외부 입력으로 남아 있다.
   - Previous completed task is [overview-economic-cycle-asset-pathways-stages3-5-v1-20260717](./tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/STATUS.md). 채권·금리, S&P 500, WTI·구리·금의 측정 경로와 공통 관측 UI를 연결해 전체 자산경로 roadmap `5/5`를 완료했다.
   - Previous completed task is [overview-economic-cycle-multichannel-asset-interpretation-v1-20260717](./tasks/active/overview-economic-cycle-multichannel-asset-interpretation-v1-20260717/STATUS.md). 공통 판정기와 금·달러 파일럿에서 비인과적 `economic_cycle_v2` 계약을 확립했다.
   - Previous completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 가격의 1주·1개월·3개월 흐름을 경제 배경과 독립 판정하는 `3/3` 개선을 완료했다.
@@ -28,8 +31,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Previous completed task is [overview-market-context-turnaround-derived-quarter-provenance-v1-20260716](./tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md). Missing Q4의 guarded filing-derived 계산과 provenance 표시를 완료했다.
   - Previous completed task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL EPS loader gap과 transition/already-positive rail semantics를 보정했다.
   - Previous completed task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md). Cached selected-stock UI remains DB-only; stale repair is an explicit single action.
-  - Recent completed Institutional Portfolios task is [institutional-portfolios-context-first-redesign-v1-20260718](./tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md).
-  - Previous completed Institutional Portfolios task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
+  - Previous completed Institutional Portfolios chart task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
   - Previous completed Institutional Portfolios task is [institutional-portfolios-watchlist-mapping-v1-20260712](./tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
   - Recent completed Final Review task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
@@ -52,6 +54,62 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-19 - master 병합은 Futures Macro 최신 상태와 기관·EPS 독립 작업을 함께 보존한다
+
+- User request: `codex/main-dev`에서 master 병합 중 발생한 Finance 충돌을 integration review 기준으로 해결해 달라고 요청함.
+- Interpreted goal: root handoff log의 current/latest 포인터는 하나로 정렬하되 현재 브랜치의 Institutional Portfolios/OpenFIGI 작업과 master의 Futures Macro/S&P actual EPS 작업을 버리지 않는다.
+- Analysis result: 2026-07-19 완료된 `overview-futures-macro-pattern-outlook-v1-20260718`이 최신 완료 task다. Institutional Portfolios/OpenFIGI와 S&P actual EPS 등록 경로는 서로 다른 소유 영역이므로 recent/previous 기록으로 모두 유지한다.
+- Follow-up: Index, Roadmap, task README/manifest, root logs의 active/latest 포인터를 정렬했다. 영향 범위 980 tests, 두 React production build, 420px actual Browser QA를 통과했고 양쪽 baseline에 공통인 Sentiment source-contract 1건은 별도 후속으로 남긴다. 기존 generated QA PNG와 registry/saved/run history는 병합 범위에서 제외한다.
+
+### 2026-07-19 - Futures Macro 계산은 일봉 갱신 때 저장하고 화면은 저장 결과만 읽는다
+
+- User request: 5년 이력을 써도 최초 Overview/Futures Macro 진입은 오래 걸리지 않게 하고, 잘린 방법론과 Streamlit 원본 추적을 React로 통일하는 마무리를 승인함.
+- Interpreted goal: 비싼 5D/20D replay는 명시적 일봉 갱신에만 결합하고, 일상적인 탭 진입·다시 읽기는 latest-good compact snapshot만 읽는다.
+- Analysis result: `finance_meta.futures_macro_snapshot`에 source marker/schema/algorithm version과 JSON-safe compact payload를 저장한다. 전체 5년 OHLCV는 기존 table에 남기고 UI는 lazy compute fallback을 만들지 않는다.
+- Follow-up: 실제 2026-07-17 snapshot을 10.549s에 materialize했고 fresh DB read 0.36~0.37s, browser ready reload 1.877s를 확인했다. 방법론과 계산 추적은 React disclosure로 통합했고 desktop/420px clipping·overflow QA를 통과했다.
+
+### 2026-07-19 - Futures Macro 점선은 중간 일별 경로가 아니라 말일 예상 순이동이다
+
+- User request: 조건부 점선이 한 방향이 아니라 여러 번 왔다 갔다 보여 방향성 판단이 어렵다고 지적하고 순방향 중심 표현으로 변경을 승인함.
+- Interpreted goal: 과거 유사 흐름의 계산 근거는 유지하되 그래프에서는 `결국 어느 방향으로 얼마나 이동하는가`를 먼저 읽는다.
+- Analysis result: step별 x/y 중앙값은 유사 episode 집합에서 독립적으로 계산되어 연결선 전체가 하나의 대표 경로가 아니다. UI는 현재와 선택 horizon 말일 중앙 위치를 직접 연결하고, 중간 median은 서비스 검증에만 보존하며 음영 박스는 말일 도착 범위로 유지한다.
+- Follow-up: 실제 5D/20D SVG line의 시작·끝이 현재/terminal circle과 정확히 같고 관측 anchor는 세 상태에서 고정됨을 확인했다. 확률·표본·`PROVISIONAL`·서비스 통계는 변경하지 않았다.
+
+### 2026-07-18 - Futures Macro horizon 비교는 같은 좌표계를 사용한다
+
+- User request: 다음 5D와 20D 전환에서 현재·5D 전·20D 전 위치까지 함께 움직이는 이유가 의도된 스펙인지 확인하고, 관측 위치는 고정해 달라고 요청함.
+- Interpreted goal: 같은 과거 관측을 기준점으로 유지하고 선택 horizon의 조건부 경로·말일 예상 위치·도착 범위만 비교한다.
+- Analysis result: 원본 anchor 값은 같았지만 선택 horizon의 숨겨진 중간 q25/q75까지 auto-fit에 포함되어 scale이 달라졌다. 두 horizon의 보이는 median path와 말일 range만으로 공통 scale을 계산하도록 수정했다.
+- Follow-up: 실제 `관측만 / 5D / 20D`의 세 anchor SVG 좌표가 완전히 같고, 5D/20D 전망 경로와 terminal은 서로 다름을 Browser QA로 확인했다.
+
+### 2026-07-18 - Futures Macro 범위 박스는 경로 통로가 아니라 말일 도착 분산이다
+
+- User request: 세 q25~q75 박스와 큰 화살표·원·라벨이 겹쳐 판단하기 어렵다며, 선택 기간의 범위를 한 개 음영으로 줄이고 이동 방향은 유지해 달라고 요청함.
+- Interpreted goal: 관측 이동, 과거 유사 흐름 기반 예상 이동, 선택 horizon 말일의 도착 분산을 서로 가리지 않는 레이어로 읽게 한다.
+- Analysis result: 5D는 step 5, 20D는 step 20의 축별 q25~q75 사각형 하나만 표시한다. 사각형은 공동 확률 contour나 전체 경로 corridor가 아니며, 고정 9-unit 방향 marker는 endpoint가 아닌 inset mid-line segment에 둔다.
+- Follow-up: 실제 5D/20D/관측 전환과 desktop/420px QA를 통과했으며 확률·표본·`PROVISIONAL`·검증 계산은 변경하지 않았다.
+
+### 2026-07-18 - Futures Macro 미래 점선은 유사 episode의 경험적 중앙 경로다
+
+- User request: 5D / 20D 선택 때 그래프가 실제로 바뀌게 하고, 다음 기간을 점선으로 읽을 수 있는 미래 예측 표현을 요청함.
+- Interpreted goal: 고정 체제 분기나 임의 목표점 대신 현재와 유사했던 과거 구간의 step별 이동으로 horizon별 우세 경로와 불확실성을 보여준다.
+- Analysis result: 지도는 현재점에서 유사 episode의 표준화된 중앙 이동을 더한 5D 5점 / 20D 20점 점선과 선택 horizon 말일의 가운데 50% 도착 범위 하나를 표시한다. 확률과 경로는 별도 시간순 검증 후 더 보수적인 상태를 적용하며, 실제 두 경로는 모두 `PROVISIONAL`이다.
+- Follow-up: 이 좌표는 절대 경제상태·가격 목표·실제 미래 경로가 아니며, 세부 actual metric과 desktop/420px QA는 active task에 둔다.
+
+### 2026-07-18 - Futures Macro 지도는 미래 한 점이 아니라 조건부 체제 분기를 보여준다
+
+- User request: 읽을 수 없는 최근 패턴 경로를 단순화하고, 현재점 뒤의 다음 5D / 20D 가능성을 점선으로 함께 표시해 달라고 요청함.
+- Interpreted goal: 실제 과거 이동과 확률적 미래 시나리오를 한 지도에서 비교하되, 조건부 분포를 확정 경로나 예측 좌표로 오해하지 않게 한다.
+- Analysis result: 관측은 `20D 전 / 5D 전 / 현재` 세 anchor의 실선으로 제한하고, 선택한 horizon의 네 체제 확률을 현재점에서 categorical endpoint로 뻗는 점선 분기로 표시한다. 확률·표본·PROVISIONAL·우위 미확인은 기존 horizon payload를 그대로 재사용한다.
+- Follow-up: 실제 5D `38/5/23/34% · 120개`, 20D `43/10/21/26% · 42개` 전환과 420px overflow / console QA를 active task에 기록한다.
+
+### 2026-07-18 - Futures Macro는 장기 경제사이클이 아니라 5D / 20D 조건부 거시 레이더로 읽는다
+
+- User request: 현재 1D / 1W / 1M과 하루 기준 과거 점검을, 현재 패턴에서 향후 방향 가능성을 설명하는 Market Context형 화면으로 개선해 달라고 요청하고 UI A안을 선택함.
+- Interpreted goal: 빠른 futures repricing을 1D / 5D / 20D current regime과 5D / 20D conditional distribution으로 연결하되, 장기 국면 예측이나 asset recommendation으로 과장하지 않는다.
+- Analysis result: 현재 관측과 미래 확률을 분리하고, 독립 episode 30 / 60 기준과 chronological Brier / calibration gate를 통과한 범위에서만 확률을 공개한다. 실제 2026-07-17 결과는 혼재 체제 / 전환 시도, 두 horizon 모두 `PROVISIONAL`, 방향 우위 미확인이다.
+- Follow-up: 상세 설계·actual runtime·Browser QA는 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/`를 본다.
 
 > Track: Overview / Market Context. Entries in this track are newest-first.
 
@@ -9732,3 +9790,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: SEC holding은 보존하면서 verified external identity source로 chart/price/sector 연결률을 높이고 복수 후보와 provider error는 계속 차단해야 함.
 - Analysis result: OpenFIGI v3는 anonymous와 free key 모두 무료다. Legacy name-match table에는 CUSIP-only stale/wrong 후보가 있어 provider current resolution을 분리하고 `mapped/ambiguous gate > legacy exact issuer-name > unresolved` 순서로 읽어야 한다.
 - Follow-up: 전체 roadmap `4/4`를 완료했다. Actual anonymous curated backfill은 1,244개 중 1,195 mapped / 49 unmapped / 0 ambiguous / 0 error이며, Berkshire 29/29, Bridgewater 985/993, Duquesne 70/70과 대표 종목 상세 Browser QA를 확인했다. Full latest-manager expansion과 historical PIT identity는 후속 승인 범위다.
+
+### 2026-07-18 - S&P 500 실제 EPS는 공식 workbook 등록과 release vintage로 보강한다
+
+- User request: 주식 확인 포인트의 `실제 TTM EPS`가 자료 부족인 원인을 해결하고 기존 S&P 멀티플/예상실적 EPS와 연결해 달라고 요청함.
+- Interpreted goal: Shiller 보간 EPS를 actual로 오인하지 않고, 사용자가 받은 공식 S&P Index Earnings XLSX를 등록해 Economic Cycle이 완료 분기 actual As-Reported를 자동으로 읽어야 함.
+- Analysis result: DB가 비어 있었고 기존 importer는 normalized status 열만 지원했으며 loader는 기준일 이후 release vintage를 막지 않았다. 공식 raw workbook은 `QUARTERLY DATA` 제목과 다단 Operating/As-Reported 머리글을 사용하므로 전용 parser, transactional UPSERT, PIT guard, 8분기 coverage UI를 연결했다.
+- Follow-up: 제품 경로와 parser 구조 검증은 완료했다. 사용자가 직접 받은 최신 공식 XLSX를 등록해 DB 8분기 coverage와 Economic Cycle 실제 TTM 활성화를 확인하는 실제 데이터 단계가 남아 있다.

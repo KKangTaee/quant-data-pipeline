@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-18
+Last Verified: 2026-07-19
 
 ## Current State After Master Merge
 
@@ -9,7 +9,14 @@ Last Verified: 2026-07-18
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-13f-openfigi-mapping-v1-20260718/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/`다.
+
+- 목적: Futures Macro를 현재 1D/5D/20D 관측과 5D/20D 조건부 전망으로 재구성하고, 첫 진입의 고비용 계산을 없애면서 방법론과 계산 근거를 화면 안에서 검산 가능하게 한다.
+- 완료: 전체 roadmap `5/5`와 materialized snapshot / React disclosure closeout `4/4`를 완료했다. `일봉 갱신`이 5년 compact snapshot을 저장하고 Overview 첫 진입과 다시 읽기는 compatible DB snapshot만 읽는다.
+- actual 상태: 2026-07-17 기준 5D 120개, 20D 42개 독립 episode를 사용하며 둘 다 `PROVISIONAL / 방향 우위 미확인`이다. Fresh-process DB read와 desktop/420px Browser QA를 완료했다.
+- 품질 경계: UI 진입은 provider를 호출하거나 전망을 재계산하지 않는다. 조건부 경로는 point-in-time 맥락이며 장기 국면 예측, 추천, 매매 신호가 아니다.
+
+Recent completed task는 `.aiworkspace/note/finance/tasks/active/institutional-13f-openfigi-mapping-v1-20260718/`다.
 
 - 목적: SEC 13F의 CUSIP/CINS만 있고 ticker가 없는 보유 row를 무료 OpenFIGI v3의 단일 US Equity identity로 안전하게 보강한다.
 - 완료: 전체 roadmap `4/4`. resolver, current-state persistence, provider mapped/ambiguous gate, legacy exact-name fallback, explicit Ingestion action, curated 12-manager backfill과 actual Browser QA를 닫았다.
@@ -23,6 +30,12 @@ Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional
 - 완료: 전체 roadmap `4/4`. `institutional_portfolios_workbench_v2` context hero, separated coverage, comparison gate, 50-row full holdings explorer, ticker / issuer / CUSIP 검색, mapped / unresolved security flow를 완료했다.
 - actual 상태: Berkshire `29/29`, Bridgewater `993/993`, Duquesne `70/70` total/explorer row 일치. Bridgewater 20-page 탐색과 desktop / 420px Browser QA를 확인했다.
 - 잔여 dependency: historical previous filing backfill은 별도 승인 범위다. Current latest-filing identifier mapping은 후속 OpenFIGI task에서 완료됐다.
+
+Recent completed Overview / Market Context task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/`다.
+
+- 목적: S&P 500 actual EPS 자료 부족을 공식 Index Earnings workbook 등록과 release-vintage 기반 PIT read로 해소한다.
+- 완료: 공식/normalized parser, transactional importer, coverage summary, PIT loader, Ingestion action/UI, focused regression과 Browser QA를 완료했다.
+- 외부 입력 경계: 제품 등록 경로는 완성됐지만 현재 공식 workbook과 실제 발표일을 등록하기 전까지 경제 사이클의 `실제 TTM EPS`는 `자료 부족`을 유지한다.
 
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/`다.
 
@@ -222,7 +235,7 @@ Recent completed Final Review task는 `.aiworkspace/note/finance/tasks/active/fi
 Previous completed Overview / Market Context task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-sp500-valuation-v1-20260712/`다.
 
 - 목적: 기존 Market Context brief/cockpit/sector/event visible composition을 제거하고, 현재 S&P 500의 상대 멀티플 위치와 FOMC 기반 예상 EPS/지수 시나리오를 숫자로 비교한다.
-- 주요 변경: Shiller 월별 가격·EPS, optional S&P Index Earnings actual As-Reported quarter, Federal Reserve SEP vintage, SPX/SPY EOD를 `Ingestion -> DB -> Loader -> Service -> React`로 연결했다. 그래프 1은 완결 Shiller 최근 60개월의 `-2σ/-1σ/중심/+1σ/+2σ` log(PER) anchor와 36개월 민감도를 유지하면서, EPS 미발표 최신 가격월과 current SPX EOD를 March EPS 기준 잠정 PER 점선으로 2026-07까지 연장한다. 그래프 2는 공식 actual 4분기를 우선하고 없으면 최신 Robert Shiller TTM EPS를 사용하며, 공식 SEP 21개 vintage와 120개월 Shiller warmup으로 최근 1년·3년·5년 실제 SPX/rolling 적정 SPX band를 선택해 표시한다.
+- 주요 변경: Shiller 월별 가격·EPS, Workspace Ingestion의 공식 S&P Index Earnings XLSX 등록과 release-vintage actual As-Reported quarter, Federal Reserve SEP vintage, SPX/SPY EOD를 `Ingestion -> DB -> Loader -> Service -> React`로 연결했다. 그래프 1은 완결 Shiller 최근 60개월의 `-2σ/-1σ/중심/+1σ/+2σ` log(PER) anchor와 36개월 민감도를 유지하면서, EPS 미발표 최신 가격월과 current SPX EOD를 March EPS 기준 잠정 PER 점선으로 2026-07까지 연장한다. 그래프 2는 공식 actual 4분기를 우선하고 없으면 최신 Robert Shiller TTM EPS를 사용한다. Economic Cycle은 Shiller proxy와 분리해 공식 actual 8분기가 있을 때만 current/prior TTM YoY를 계산한다. 공식 SEP 21개 vintage와 120개월 Shiller warmup으로 최근 1년·3년·5년 실제 SPX/rolling 적정 SPX band를 선택해 표시한다.
 - 경계: 월별 과거 지점은 월중 SEP를 다음 달부터 적용하고 calendar-year target을 선택한다. 이 흐름은 Shiller EPS가 strict release-vintage PIT 원본이 아니므로 `과거 시점 재구성 시나리오`이며, SEP median `real GDP + PCE`와 trailing PER band는 공식 적정가·투자 신호·애널리스트 컨센서스가 아니다.
 - QA: valuation 37 tests, Market Context 35 contracts, TypeScript, Vite build, 실제 21개 SEP vintage/1,867 Shiller rows 기반 read model, desktop/420px Browser QA를 통과했다. Graph 2 history는 12/36/60 points를 반환했고 5년 화면의 SEP marker 19개/label 7개와 current-app console error/horizontal overflow 0건을 확인했다. generated V1.4 QA screenshot은 커밋하지 않는다.
 
@@ -850,7 +863,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 | Overview Market Context Macro Dimension Audit V3C | Complete | Market Context `Macro 조건 포함 pilot` now includes `맥락 차원 상태`, showing actual hard conditions, stored FRED `T10Y3M` / `VIXCLS` / `BAA10Y` availability and bucket preview counts, plus event / sentiment annotation or deferred reasons. It remains context-only and does not add FRED / event / sentiment hard filtering. |
 | Overview Market Context Futures-Conditioned Analog V3B | Complete | Market Context `Macro 조건 포함 pilot` now keeps GLD context and adds one stored futures daily OHLCV Rate Pressure proxy condition using `ZN=F` / `ZB=F`. The condition is bounded by selected as-of / anchor date, shows used or insufficient state, and remains context-only. |
 | Overview Market Context Macro-Conditioned Analog Pilot V1 | Complete | Market Context historical analog separates the original broad analog from a `Macro 조건 포함 pilot`. 3차-A introduced GLD price proxy context and sample quality display; 3차-B extended it with the stored futures Rate Pressure proxy; 3차-C adds dimension availability / preview audit without applying FRED / events / sentiment as hard filters. |
-| Futures Market Monitoring / Futures Macro | Complete | yfinance futures 1m / daily OHLCV feeds stored-candle diagnostics and the Futures Macro current score / lazy historical validation flow. Historical validation is point-in-time read-only context, not a prediction guarantee. |
+| Futures Market Monitoring / Futures Macro | Complete | yfinance futures 1m / daily OHLCV feeds stored-candle diagnostics. Successful daily ingestion materializes a five-year compact current macro plus 5D / 20D outlook snapshot; Overview first entry and reload are DB-only. React owns the method and compact calculation-trace disclosures. Conditional history remains point-in-time context, not a prediction guarantee. |
 
 ## Completed Foundations
 
@@ -882,10 +895,13 @@ Current active task:
 
 Latest completed task:
 
-- `institutional-portfolios-context-first-redesign-v1-20260718` — 전체 roadmap `4/4` complete
+- `overview-futures-macro-pattern-outlook-v1-20260718` — 전체 roadmap `5/5`와 materialized snapshot / React disclosure closeout `4/4` complete
 
 Previous completed task:
 
+- `institutional-13f-openfigi-mapping-v1-20260718` — 전체 roadmap `4/4` complete
+- `institutional-portfolios-context-first-redesign-v1-20260718` — 전체 roadmap `4/4` complete
+- `overview-economic-cycle-sp500-actual-eps-registration-v1-20260718` — 제품 등록 경로 complete, 실제 workbook 등록은 외부 입력 대기
 - `overview-economic-cycle-asset-pathways-stages3-5-v1-20260717` — 전체 자산경로 roadmap `5/5` complete
 
 Recent completed docs cleanup tasks:

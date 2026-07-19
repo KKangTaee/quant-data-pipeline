@@ -17,6 +17,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_sec_13f_identifier_mappings,
     run_collect_sec_company_ticker_crosscheck,
     run_import_bls_macro_calendar_ics,
+    run_import_sp500_index_earnings_xlsx,
     run_collect_etf_holdings_exposure,
     run_collect_etf_operability_provider,
     run_collect_sec_form25_delistings,
@@ -235,6 +236,8 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
     if action == "import_bls_macro_calendar_ics":
         params["progress_callback"] = progress_callback
         return run_import_bls_macro_calendar_ics(**params)
+    if action == "import_sp500_index_earnings_xlsx":
+        return run_import_sp500_index_earnings_xlsx(**params)
     if action == "collect_ohlcv":
         params["progress_callback"] = progress_callback
         return run_collect_ohlcv(**params)

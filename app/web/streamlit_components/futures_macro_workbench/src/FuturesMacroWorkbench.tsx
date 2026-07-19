@@ -1,238 +1,221 @@
 import React, { useEffect, useState } from "react";
 import { Streamlit, withStreamlitConnection, ComponentProps } from "streamlit-component-lib";
-import HistoricalValidationPanel from "./HistoricalValidationPanel";
+import AssetPathwaysSection from "./AssetPathwaysSection";
+import CalculationTraceDisclosure from "./CalculationTraceDisclosure";
+import CurrentEvidencePanel from "./CurrentEvidencePanel";
 import MacroContextSection from "./MacroContextSection";
-import RecentFlowSection from "./RecentFlowSection";
+import MethodDisclosure from "./MethodDisclosure";
+import PatternHorizonSection from "./PatternHorizonSection";
+import PatternMapSection from "./PatternMapSection";
+import PatternRibbonSection from "./PatternRibbonSection";
 import "./style.css";
 
+export type EstimateStatus = "VERIFIED" | "PROVISIONAL" | "UNAVAILABLE";
+export type RegimeKey = "risk_seeking" | "defensive" | "inflation_rate_pressure" | "mixed";
+
 export type FuturesMacroAction = {
-  id: "daily_refresh" | "reload" | "load_validation";
+  id: "daily_refresh" | "reload";
   label: string;
   kind: "primary" | "secondary";
   detail?: string;
 };
 
-export type FuturesMacroMetric = {
-  label: string;
-  value: string;
-  detail?: string;
-  tone?: string;
-};
-
-export type FuturesMacroScore = {
-  label: string;
-  value: string;
-  direction: string;
-  coverage: string;
-  tone: string;
-  polarity?: string;
-  description?: string;
-};
-
-export type FuturesMacroFlowCard = {
-  label: string;
-  value: string;
+export type CommandPayload = {
+  title: string;
   detail: string;
-  meaning?: string;
-  tone: string;
+  actions: FuturesMacroAction[];
 };
 
-export type FuturesMacroFlowPeriod = {
-  key: string;
-  label: string;
+export type HeroPayload = {
+  kicker: string;
   title: string;
-  basis: string;
+  transition_label: string;
   summary: string;
-  cards: FuturesMacroFlowCard[];
+  today_summary?: string;
+  as_of_date: string;
+  estimate_status: EstimateStatus;
+  coverage_label: string;
+  evidence: string[];
 };
 
-export type FuturesMacroEvidenceItem = {
-  title: string;
-  score_label?: string;
-  symbol?: string;
-  contribution_z?: string;
-  impact_label?: string;
-  meaning: string;
-};
-
-export type FuturesMacroEvidenceSection = {
-  key: string;
+export type ProbabilityRow = {
+  key: RegimeKey;
   label: string;
-  description: string;
-  count: number;
-  empty_label: string;
-  items: FuturesMacroEvidenceItem[];
+  value: number;
+  baseline: number;
+  lift: number;
 };
 
-export type FuturesMacroValidationInsight = {
-  purpose: string;
-  basis: string;
-  current_state: FuturesMacroMetric;
-  sample: FuturesMacroMetric;
-  directionality: FuturesMacroMetric;
-  evidence_bridge: FuturesMacroMetric;
-  confidence_effect: string;
+export type ConditionalPathPoint = {
+  step: number;
+  x: number;
+  y: number;
+  lower_x: number;
+  upper_x: number;
+  lower_y: number;
+  upper_y: number;
+};
+
+export type ConditionalPathPayload = {
+  status: EstimateStatus;
+  episode_count: number;
+  band_label: string;
+  points: ConditionalPathPoint[];
+  terminal?: ConditionalPathPoint | null;
+  validation?: Record<string, number | null>;
+};
+
+export type HorizonCard = {
+  key: "current" | "5D" | "20D";
+  label: string;
+  kind: "observation" | "conditional_outlook";
+  title: string;
+  summary: string;
+  estimate_status: EstimateStatus;
+  edge_label: string;
+  probabilities?: ProbabilityRow[];
+  episode_count?: number;
+  status_reason?: string;
+  conditional_path?: ConditionalPathPayload;
+};
+
+export type PatternPoint = {
+  date: string;
+  x: number;
+  y: number;
+  regime: RegimeKey;
+  regime_label: string;
+  transition?: string;
+  transition_label: string;
+};
+
+export type PatternMapPayload = {
+  title: string;
+  x_label: string;
+  y_label: string;
+  path: PatternPoint[];
+};
+
+export type EvidenceGroup = {
+  key: "current" | "transition" | "outlook" | "invalidate";
+  label: string;
+  items: string[];
+};
+
+export type EvidencePayload = { title: string; groups: EvidenceGroup[] };
+
+export type RibbonItem = {
+  date: string;
+  regime: RegimeKey;
+  regime_label: string;
+  transition: string;
+  transition_label: string;
+};
+
+export type RibbonPayload = { title: string; items: RibbonItem[] };
+
+export type AssetPathwayPayload = {
+  key: "risk_assets" | "rates" | "dollar" | "safe_haven" | "commodities";
+  label: string;
+  current: { one_day: string; five_day: string; twenty_day: string };
+  outlook: { five_day: string; twenty_day: string };
+  change_condition: string;
+  estimate_status: EstimateStatus;
+};
+
+export type MethodPayload = {
+  source: string;
+  effective_episodes: string;
+  brier: string;
+  baseline_brier: string;
+  calibration: string;
+  caveats: string[];
+};
+
+export type CalculationTraceValue = string | number | boolean | null;
+export type CalculationTraceTable = {
+  key: "scores" | "components" | "symbols";
+  label: string;
+  columns: string[];
+  rows: Array<Record<string, CalculationTraceValue>>;
+};
+export type CalculationTracePayload = {
+  metadata: Array<{ label: string; value: string }>;
+  tables: CalculationTraceTable[];
+  cautions: string[];
 };
 
 export type FuturesMacroWorkbenchPayload = {
-  schema_version: "futures_macro_react_workbench_v1";
+  schema_version: "futures_macro_react_workbench_v2";
   component: "FuturesMacroWorkbench";
-  command: {
-    title: string;
-    detail: string;
-    validation_state: {
-      state: string;
-      detail: string;
-      tone: string;
-      loaded_at: string;
-    };
-    actions: FuturesMacroAction[];
-  };
-  brief: {
-    kicker: string;
-    title: string;
-    sub_scenario: string;
-    regime_hint: string;
-    summary: string;
-    reason: string;
-    confidence_label: string;
-    confidence_detail: string;
-    evidence: string[];
-    metrics: FuturesMacroMetric[];
-  };
-  scores: FuturesMacroScore[];
-  flow: {
-    title: string;
-    basis: string;
-    summary: string;
-    cards: FuturesMacroFlowCard[];
-    default_period?: string;
-    periods?: FuturesMacroFlowPeriod[];
-  };
-  validation: {
-    title: string;
-    state: string;
-    detail: string;
-    insight: FuturesMacroValidationInsight;
-    conclusion: FuturesMacroMetric[];
-    action: FuturesMacroAction;
-    metrics: FuturesMacroMetric[];
-  };
-  evidence: {
-    title: string;
-    default_open: boolean;
-    sections: FuturesMacroEvidenceSection[];
-  };
+  command: CommandPayload;
+  hero: HeroPayload;
+  horizons: HorizonCard[];
+  pattern_map: PatternMapPayload;
+  evidence: EvidencePayload;
+  ribbon: RibbonPayload;
+  asset_pathways: AssetPathwayPayload[];
+  method: MethodPayload;
+  calculation_trace: CalculationTracePayload;
   action_boundary: "python_dispatch_only";
   boundary_note: string;
 };
 
-type Props = ComponentProps & {
-  args: {
-    payload?: FuturesMacroWorkbenchPayload;
-  };
-};
-
-function toneColor(tone: string | undefined) {
-  const normalized = String(tone || "neutral").toLowerCase();
-  if (normalized === "positive") {
-    return "#0f766e";
-  }
-  if (normalized === "warning") {
-    return "#b45309";
-  }
-  if (normalized === "danger") {
-    return "#dc2626";
-  }
-  if (normalized === "primary") {
-    return "#2563eb";
-  }
-  return "#64748b";
-}
+type Props = ComponentProps & { args: { payload?: FuturesMacroWorkbenchPayload } };
 
 function syncFrameHeightSoon() {
   Streamlit.setFrameHeight();
   window.requestAnimationFrame(() => Streamlit.setFrameHeight());
-  window.setTimeout(() => Streamlit.setFrameHeight(), 160);
+  window.setTimeout(() => Streamlit.setFrameHeight(), 180);
 }
 
 function FuturesMacroWorkbench({ args }: Props) {
   const payload = args.payload;
-  const [pendingActionLabel, setPendingActionLabel] = useState("");
   const [pendingActionId, setPendingActionId] = useState("");
 
   useEffect(() => {
     syncFrameHeightSoon();
   });
 
-  useEffect(() => {
-    if (payload?.command.validation_state.state === "불러옴") {
-      setPendingActionId("");
-      setPendingActionLabel("");
-    }
-  }, [payload?.command.validation_state.loaded_at, payload?.command.validation_state.state]);
-
-  if (!payload) {
-    return null;
-  }
-
-  const isWorkbenchPayload = payload.component === "FuturesMacroWorkbench";
-  if (!isWorkbenchPayload) {
+  if (!payload || payload.component !== "FuturesMacroWorkbench") {
     return null;
   }
 
   const emitAction = (action: FuturesMacroAction) => {
-    setPendingActionLabel(action.label);
     setPendingActionId(action.id);
     Streamlit.setComponentValue({ event: { id: action.id, nonce: Date.now() } });
+    window.setTimeout(() => setPendingActionId(""), 900);
   };
 
   return (
-    <section
+    <main
       className="fm-workbench"
       data-action-boundary={payload.action_boundary}
       data-schema-version={payload.schema_version}
     >
-      <div className="fm-workbench__command">
-        <div className="fm-workbench__command-copy">
-          <div className="fm-workbench__kicker">Futures Macro</div>
-          <div className="fm-workbench__command-title">{payload.command.title}</div>
-          <div className="fm-workbench__command-detail">{payload.command.detail}</div>
-        </div>
-        <div className="fm-workbench__validation-pill" style={{ "--fm-tone": toneColor(payload.command.validation_state.tone) } as React.CSSProperties}>
-          <span>{payload.command.validation_state.state}</span>
-          <strong>{payload.command.validation_state.detail}</strong>
-        </div>
-        <div className="fm-workbench__actions" aria-label="Futures Macro actions">
-          {payload.command.actions.map((action) => (
-            <button
-              className={`fm-workbench__action fm-workbench__action--${action.kind}`}
-              key={action.id}
-              onClick={() => emitAction(action)}
-              title={action.detail}
-              type="button"
-            >
-              {action.label}
-            </button>
-          ))}
-          {pendingActionLabel ? (
-            <div className="fm-workbench__action-feedback" aria-live="polite">
-              요청 전송 · {pendingActionLabel}
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <MacroContextSection payload={payload} onHeightChange={syncFrameHeightSoon} toneColor={toneColor} />
-
-      <RecentFlowSection flow={payload.flow} onHeightChange={syncFrameHeightSoon} toneColor={toneColor} />
-
-      <HistoricalValidationPanel
-        pendingValidation={pendingActionId === "load_validation"}
-        validation={payload.validation}
+      <MacroContextSection
+        command={payload.command}
+        hero={payload.hero}
         onAction={emitAction}
+        pendingActionId={pendingActionId}
       />
-    </section>
+      <PatternHorizonSection horizons={payload.horizons} />
+      <div className="fm-workbench__pattern-layout">
+        <PatternMapSection patternMap={payload.pattern_map} horizons={payload.horizons} />
+        <CurrentEvidencePanel evidence={payload.evidence} />
+      </div>
+      <PatternRibbonSection ribbon={payload.ribbon} />
+      <AssetPathwaysSection pathways={payload.asset_pathways} />
+      <MethodDisclosure
+        boundaryNote={payload.boundary_note}
+        method={payload.method}
+        onToggle={syncFrameHeightSoon}
+      />
+      <CalculationTraceDisclosure
+        trace={payload.calculation_trace}
+        onToggle={syncFrameHeightSoon}
+      />
+    </main>
   );
 }
 

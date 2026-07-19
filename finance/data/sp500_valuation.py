@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import re
 from html import unescape
-from io import StringIO
+from io import BytesIO, StringIO
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 from urllib.parse import urljoin
 from urllib.request import Request, urlopen
 
@@ -20,6 +20,10 @@ SHILLER_SOURCE = "robert_shiller_irrational_exuberance"
 SHILLER_PAGE_URL = "https://shillerdata.com/"
 SHILLER_SOURCE_URL = SHILLER_PAGE_URL
 SP500_EARNINGS_SOURCE = "sp_dow_jones_index_earnings"
+SP500_INDEX_EARNINGS_URL = (
+    "https://www.spglobal.com/spdji/en/documents/additional-material/"
+    "sp-500-eps-est.xlsx"
+)
 FOMC_SEP_SOURCE = "federal_reserve_sep"
 DB_META = "finance_meta"
 
@@ -174,51 +178,175 @@ def normalize_index_earnings_frame(
     return rows
 
 
+_INDEX_EARNINGS_COLUMN_ALIASES = {
+    "period end": "period_end",
+    "period_end": "period_end",
+    "quarter end": "period_end",
+    "quarter_end": "period_end",
+    "period type": "period_type",
+    "period_type": "period_type",
+    "status": "status",
+    "value status": "status",
+    "value_status": "status",
+    "actual / estimate": "status",
+    "actual/estimate": "status",
+    "as reported eps": "as_reported_eps",
+    "as-reported eps": "as_reported_eps",
+    "as_reported_eps": "as_reported_eps",
+    "operating eps": "operating_eps",
+    "operating_eps": "operating_eps",
+}
+
+
+def _normalize_explicit_earnings_sheet(
+    frame: pd.DataFrame,
+    *,
+    source_release_date: str,
+    source_ref: str,
+    collected_at: str | None,
+) -> list[dict[str, Any]]:
+    """Normalize a sheet only when period, status, and EPS basis are explicit."""
+    renamed = {
+        column: _INDEX_EARNINGS_COLUMN_ALIASES.get(
+            re.sub(r"\s+", " ", str(column).strip().lower())
+        )
+        for column in frame.columns
+    }
+    frame = frame.rename(columns={key: value for key, value in renamed.items() if value})
+    if not {"period_end", "status"}.issubset(frame.columns) or not {
+        "as_reported_eps",
+        "operating_eps",
+    }.intersection(frame.columns):
+        raise ValueError(
+            "period, actual/estimate 상태, EPS basis 열을 명시적으로 확인할 수 없습니다."
+        )
+    return normalize_index_earnings_frame(
+        frame,
+        source_release_date=source_release_date,
+        source_ref=source_ref,
+        collected_at=collected_at,
+    )
+
+
+def _normalize_official_quarterly_data_sheet(
+    frame: pd.DataFrame,
+    *,
+    source_release_date: str,
+    source_ref: str,
+    collected_at: str | None,
+) -> list[dict[str, Any]]:
+    """Read the labeled historical EPS columns from S&P's QUARTERLY DATA sheet."""
+    heading_text = " ".join(
+        str(value).strip().upper()
+        for value in frame.iloc[:3].to_numpy().ravel()
+        if not pd.isna(value)
+    )
+    if "S&P 500 QUARTERLY DATA" not in heading_text:
+        raise ValueError("S&P 500 QUARTERLY DATA 제목을 확인할 수 없습니다.")
+
+    header_window = frame.iloc[:10]
+    signatures = {
+        column: " ".join(
+            str(value).strip().upper()
+            for value in header_window[column].tolist()
+            if not pd.isna(value)
+        )
+        for column in frame.columns
+    }
+
+    def find_column(*tokens: str) -> Any:
+        return next(
+            (
+                column
+                for column, signature in signatures.items()
+                if all(token in signature for token in tokens)
+            ),
+            None,
+        )
+
+    period_column = find_column("QUARTER", "END")
+    operating_column = find_column("OPERATING", "EARNINGS", "PER SHR")
+    as_reported_column = find_column("AS REPORTED", "EARNINGS", "PER SHR")
+    if period_column is None or operating_column is None or as_reported_column is None:
+        raise ValueError("공식 QUARTERLY DATA의 EPS 머리글을 확인할 수 없습니다.")
+
+    release_date = pd.to_datetime(source_release_date, errors="coerce")
+    records: list[dict[str, Any]] = []
+    for _, item in frame.iterrows():
+        period_end = pd.to_datetime(item.get(period_column), errors="coerce")
+        if pd.isna(period_end) or pd.isna(release_date) or period_end > release_date:
+            continue
+        records.append(
+            {
+                "period_end": period_end,
+                "period_type": "quarterly",
+                "status": "actual",
+                "operating_eps": item.get(operating_column),
+                "as_reported_eps": item.get(as_reported_column),
+            }
+        )
+    rows = normalize_index_earnings_frame(
+        pd.DataFrame(records),
+        source_release_date=source_release_date,
+        source_ref=source_ref,
+        collected_at=collected_at,
+    )
+    if not rows:
+        raise ValueError("공식 QUARTERLY DATA에서 완료된 EPS 값을 찾지 못했습니다.")
+    return rows
+
+
 def read_sp500_index_earnings_workbook(
-    workbook_path: str | Path,
+    workbook_path: str | Path | bytes | BinaryIO,
     *,
     source_release_date: str,
     source_ref: str | None = None,
     collected_at: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Read a normalized S&P index-earnings workbook supplied by the operator.
+    """Read an official or normalized S&P index-earnings workbook.
 
-    The importer intentionally requires explicit period/status columns. It does not
-    infer whether a value is actual or estimated from workbook color or position.
+    The official path validates the QUARTERLY DATA title and multi-row Operating /
+    As-Reported headings. The compatibility path requires explicit status columns.
+    Neither path uses workbook color to infer status.
     """
-    frame = pd.read_excel(workbook_path)
-    aliases = {
-        "period end": "period_end",
-        "period_end": "period_end",
-        "period type": "period_type",
-        "period_type": "period_type",
-        "status": "status",
-        "value status": "status",
-        "value_status": "status",
-        "as reported eps": "as_reported_eps",
-        "as-reported eps": "as_reported_eps",
-        "as_reported_eps": "as_reported_eps",
-        "operating eps": "operating_eps",
-        "operating_eps": "operating_eps",
-    }
-    renamed = {
-        column: aliases.get(re.sub(r"\s+", " ", str(column).strip().lower()))
-        for column in frame.columns
-    }
-    frame = frame.rename(columns={key: value for key, value in renamed.items() if value})
-    required = {"period_end", "status"}
-    if not required.issubset(frame.columns) or not {
-        "as_reported_eps",
-        "operating_eps",
-    }.intersection(frame.columns):
-        raise ValueError(
-            "S&P earnings workbook requires period_end, status, and at least one EPS column."
-        )
-    return normalize_index_earnings_frame(
-        frame,
-        source_release_date=source_release_date,
-        source_ref=source_ref or str(workbook_path),
-        collected_at=collected_at,
+    workbook_source: Any = (
+        BytesIO(workbook_path) if isinstance(workbook_path, bytes) else workbook_path
+    )
+    try:
+        excel = pd.ExcelFile(workbook_source)
+    except Exception as exc:
+        raise ValueError(f"S&P earnings XLSX 파일을 열 수 없습니다: {exc}") from exc
+
+    resolved_source_ref = source_ref or SP500_INDEX_EARNINGS_URL
+    for sheet_name in excel.sheet_names:
+        if re.sub(r"\s+", " ", str(sheet_name).strip().upper()) == "QUARTERLY DATA":
+            raw_frame = pd.read_excel(excel, sheet_name=sheet_name, header=None)
+            try:
+                rows = _normalize_official_quarterly_data_sheet(
+                    raw_frame,
+                    source_release_date=source_release_date,
+                    source_ref=resolved_source_ref,
+                    collected_at=collected_at,
+                )
+            except ValueError:
+                pass
+            else:
+                return rows
+        frame = pd.read_excel(excel, sheet_name=sheet_name)
+        try:
+            rows = _normalize_explicit_earnings_sheet(
+                frame,
+                source_release_date=source_release_date,
+                source_ref=resolved_source_ref,
+                collected_at=collected_at,
+            )
+        except ValueError:
+            continue
+        if rows:
+            return rows
+    raise ValueError(
+        "S&P workbook에서 period, actual/estimate 상태, EPS basis를 "
+        "명시적으로 확인할 수 없습니다."
     )
 
 
@@ -555,7 +683,7 @@ def collect_and_store_shiller_monthly_valuation(
 
 
 def import_and_store_sp500_index_earnings(
-    workbook_path: str | Path,
+    workbook_path: str | Path | bytes | BinaryIO,
     *,
     source_release_date: str,
     workbook_reader: Any = read_sp500_index_earnings_workbook,
@@ -573,21 +701,49 @@ def import_and_store_sp500_index_earnings(
     rows = workbook_reader(
         workbook_path,
         source_release_date=release_text,
-        source_ref=str(workbook_path),
+        source_ref=SP500_INDEX_EARNINGS_URL,
     )
+    for row in rows:
+        row["source"] = SP500_EARNINGS_SOURCE
+        row["source_ref"] = SP500_INDEX_EARNINGS_URL
     db = _open_meta_db(
         db_factory, host=host, user=user, password=password, port=port
     )
     try:
         _ensure_table(db, "sp500_index_earnings")
-        _upsert_earnings_rows(db, rows)
+        db.begin()
+        try:
+            _upsert_earnings_rows(db, rows)
+            coverage_rows = db.query(
+                """
+                SELECT COUNT(DISTINCT period_end) AS actual_quarter_count,
+                       MAX(period_end) AS latest_actual_period_end
+                FROM sp500_index_earnings
+                WHERE period_type = 'quarterly'
+                  AND earnings_basis = 'as_reported'
+                  AND value_status = 'actual'
+                  AND eps > 0
+                """
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
     finally:
         db.close()
+    coverage = coverage_rows[0] if coverage_rows else {}
+    actual_quarter_count = int(coverage.get("actual_quarter_count") or 0)
+    latest_actual_period_end = coverage.get("latest_actual_period_end")
+    if latest_actual_period_end is not None:
+        latest_actual_period_end = str(latest_actual_period_end)[:10]
     return {
         "rows_written": len(rows),
         "source": SP500_EARNINGS_SOURCE,
-        "source_ref": str(workbook_path),
+        "source_ref": SP500_INDEX_EARNINGS_URL,
         "release_date": release_text,
+        "actual_quarter_count": actual_quarter_count,
+        "latest_actual_period_end": latest_actual_period_end,
+        "remaining_quarters": max(0, 8 - actual_quarter_count),
         "warnings": [] if rows else ["명시적 상태가 있는 S&P EPS 행이 없습니다."],
     }
 

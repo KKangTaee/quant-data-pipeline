@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-18
+Last Verified: 2026-07-19
 
 ## Current State
 
@@ -11,10 +11,13 @@ Current active task:
 
 Latest completed task:
 
-- `institutional-portfolios-context-first-redesign-v1-20260718` — 전체 roadmap `4/4`; v2 context / coverage / comparison contract, full 50-row holdings explorer, explicit security search, mapped / unresolved flow, actual DB and desktop / 420px Browser QA complete
+- `overview-futures-macro-pattern-outlook-v1-20260718` — 전체 roadmap `5/5`와 materialized snapshot / React disclosure closeout `4/4`; 5년 compact snapshot persistence, DB-only first entry, method / calculation trace, actual desktop / 420px Browser QA complete
 
 Previous completed task:
 
+- `institutional-13f-openfigi-mapping-v1-20260718`
+- `institutional-portfolios-context-first-redesign-v1-20260718`
+- `overview-economic-cycle-sp500-actual-eps-registration-v1-20260718` — 제품 등록 경로 complete, 실제 workbook 등록은 외부 입력 대기
 - `overview-economic-cycle-asset-pathways-stages3-5-v1-20260717`
 - `overview-market-context-economic-cycle-provisional-hybrid-v2-20260716`
 - `overview-market-context-us-economic-cycle-v1-20260716`

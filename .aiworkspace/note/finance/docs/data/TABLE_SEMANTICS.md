@@ -297,20 +297,22 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - asset profile name-match enrichment는 issuer name이 고유하게 매칭될 때만 보수적으로 저장하는 display helper다. 충돌하거나 불명확한 회사명은 mapping하지 않는다.
 - 이 table의 reported change는 추천, 매수 / 매도 신호, Practical Validation PASS / BLOCKER, Final Review selection, monitoring signal, broker order, auto rebalance를 만들지 않는다.
 
-## `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`
+## `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`, `futures_macro_snapshot`
 
 역할:
 
-- `Workspace > Overview > Futures Macro`에서 주요 선물 daily macro context와 lazy historical validation을 만들고, 보조 stored-candle chart / diagnostics에서 1m OHLCV 상태를 read-only로 표시하기 위한 데이터 경계다.
+- `Workspace > Overview > Futures Macro`의 주요 선물 daily macro context와 5D / 20D 조건부 전망을 materialize하고, 보조 stored-candle chart / diagnostics에서 1m OHLCV 상태를 read-only로 표시하기 위한 데이터 경계다.
 - `futures_instrument`는 watchlist preset / display metadata를 저장한다.
 - `futures_ohlcv`는 provider symbol / interval / candle time 기준 OHLCV row를 저장한다. 1m row는 stored-candle chart / diagnostics에, 1d row는 Futures Macro의 현재 점수 / 해석과 point-in-time historical validation에 사용된다.
 - `futures_market_monitor_run`은 수집 run별 status, failed symbols, latest candle time, diagnostics를 저장한다.
+- `futures_macro_snapshot`은 successful 1d ingestion 뒤 계산한 compact current macro / 5D / 20D outlook을 `snapshot_key=overview_current`로 UPSERT한다. `source_marker`, `schema_version`, `algorithm_version`, `status`, `materialized_at`으로 호환성과 freshness를 확인한다.
 
 성격:
 
 - provider snapshot / price ledger 성격이다.
 - 1차 MVP source는 `yfinance`이며, exchange-grade realtime feed가 아니다.
 - UI는 정상 render 때 provider를 직접 호출하지 않고 `futures_ohlcv`와 run diagnostics를 읽는다.
+- Futures Macro 첫 진입과 `다시 읽기`는 compatible `futures_macro_snapshot`만 읽으며, 없거나 버전이 다르면 `일봉 갱신 필요`를 표시한다. 전체 5년 OHLCV를 snapshot JSON에 복제하지 않는다.
 - 반복 수집은 `(provider_symbol, interval_code, candle_time_utc, source)` 기준 UPSERT로 idempotent하게 동작한다.
 - yfinance `1d / 1m` 요청이 일부 futures symbol에서 빈 응답 또는 지나치게 희소한 응답을 줄 수 있어, collector는 해당 symbol만 `2d / 1m`으로 한 번 보강 수집한다. 희소 응답이 회복되면 초기 sparse rows를 같은 symbol의 fallback rows로 대체한 뒤 같은 `futures_ohlcv` UPSERT key로 저장하고, 초기 row 수 / 회복 symbol / 실패 symbol은 `fallback_retries` diagnostics로 남긴다.
 - 일봉 macro 해석은 `today_return / rolling_60d_volatility` 표준화 움직임과 252거래일 위치를 사용하며, 채권선물 / FX 선물은 경제적 해석 방향으로 변환해 점수화한다.
@@ -656,8 +658,10 @@ PIT / publication 계약:
 주의:
 
 - Market Context TTM actual은 최신 네 개의 distinct `quarterly + as_reported + actual` row만 합산한다.
+- Economic Cycle의 실제 EPS 경로는 서로 다른 완료 분기 8개가 있어야 current/prior TTM과 전년 대비 변화를 계산한다. 이 경로에는 Shiller proxy를 넣지 않는다.
 - `estimate` 또는 `mixed` row는 actual 부족을 채우는 fallback이 아니다.
-- importer는 workbook 색상이나 위치로 상태를 추론하지 않고 explicit status column을 요구한다.
+- Ingestion importer는 공식 `QUARTERLY DATA` 제목과 `QUARTER END`, `OPERATING EARNINGS PER SHR`, `AS REPORTED EARNINGS PER SHR` 다단 머리글을 함께 검증한다. 공식 시트에서 값이 있는 완료 분기는 actual로 읽고 빈 최신 분기는 저장하지 않는다. normalized 호환 파일은 explicit status column을 요구한다.
+- 모든 read-as-of는 `period_end`뿐 아니라 `source_release_date`도 기준일 이하인 release vintage만 사용한다. 같은 분기 여러 vintage 중 당시 알려진 최신 row를 선택한다.
 
 ## `fomc_sep_projection`
 

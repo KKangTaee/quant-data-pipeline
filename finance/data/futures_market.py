@@ -116,6 +116,12 @@ def sync_futures_market_tables(
             FUTURES_MARKET_SCHEMAS["futures_market_monitor_run"],
             DB_META,
         )
+        sync_table_schema(
+            meta_db,
+            "futures_macro_snapshot",
+            FUTURES_MARKET_SCHEMAS["futures_macro_snapshot"],
+            DB_META,
+        )
         price_db.use_db(DB_PRICE)
         sync_table_schema(
             price_db,

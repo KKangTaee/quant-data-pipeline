@@ -650,6 +650,27 @@ FUTURES_MARKET_SCHEMAS = {
           KEY ix_futures_provider_status (provider_status)
         );
     """,
+    "futures_macro_snapshot": """
+        CREATE TABLE IF NOT EXISTS futures_macro_snapshot (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          snapshot_key VARCHAR(64) NOT NULL,
+          source_marker VARCHAR(64) NOT NULL,
+          as_of_date DATE NULL,
+          schema_version VARCHAR(64) NOT NULL,
+          algorithm_version VARCHAR(128) NOT NULL,
+          status ENUM('READY','LIMITED','ERROR') NOT NULL,
+          snapshot_json LONGTEXT NOT NULL,
+          materialized_at TIMESTAMP NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_futures_macro_snapshot_key (snapshot_key),
+          KEY ix_futures_macro_snapshot_marker (source_marker),
+          KEY ix_futures_macro_snapshot_version (schema_version, algorithm_version)
+        );
+    """,
 }
 
 
