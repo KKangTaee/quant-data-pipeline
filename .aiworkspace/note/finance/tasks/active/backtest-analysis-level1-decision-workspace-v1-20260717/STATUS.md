@@ -299,3 +299,13 @@ Last Updated: 2026-07-19
 - generated screenshots는 `backtest-stage-title-cleanup-desktop-qa.png`,
   `backtest-stage-title-cleanup-760-qa.png`이며 protected JSONL, Run History, `.superpowers/`와 함께
   commit하지 않는다.
+
+## Current 15차 Position
+
+- Task 46에서 pure Portfolio Mix draft/read model과 focused contract test를 추가했다.
+- 2~4개 component, concrete strategy 중복, shared period, role/weight/100% 합계를 runner 이전에
+  차단하며 기존 Single settings schema/preset/payload를 component별로 재사용한다.
+- effective fingerprint는 draft/save/component UI identity를 제외하고 실제 projected payload를
+  기준으로 계산한다. stale result는 reference로 보존하고 current save/handoff는 차단한다.
+- 신규 saved shelf는 `backtest_portfolio_mix_saved_v1`만 읽으며 legacy JSONL migration은 하지 않는다.
+- Task 47 React one-shell/intent adapter, Task 48 runtime/persistence/cutover, Task 49 Browser QA/docs가 남았다.

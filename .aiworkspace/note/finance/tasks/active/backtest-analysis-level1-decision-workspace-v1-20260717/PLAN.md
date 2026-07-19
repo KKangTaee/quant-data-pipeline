@@ -7139,7 +7139,7 @@ Normalized draft contract:
 - saved shelf에는 `backtest_portfolio_mix_saved_v1` row만 투영하고 legacy row는 migration 없이 제외한다.
 - result fingerprint가 current fingerprint와 다르면 `last_result`/`reference_result`로만 표시하고 current save/handoff action은 제공하지 않는다.
 
-- [ ] **Step 1: Write RED truth/read-model tests**
+- [x] **Step 1: Write RED truth/read-model tests**
 
 Add tests for:
 
@@ -7159,7 +7159,7 @@ Run and confirm RED is caused by the missing service:
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q
 ```
 
-- [ ] **Step 2: Implement the pure service**
+- [x] **Step 2: Implement the pure service**
 
 Compose existing Single settings functions instead of copying catalog or field rules:
 
@@ -7177,7 +7177,7 @@ payload = project_single_settings_payload(single_workspace)
 
 Normalize dates/numbers/arrays before fingerprinting. Deduplicate issues by stable `root_issue_id`, keep user-facing Korean labels separate from raw execution keys, and return JSON-serializable values only.
 
-- [ ] **Step 3: Run GREEN and regression**
+- [x] **Step 3: Run GREEN and regression**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q
@@ -7188,7 +7188,7 @@ git diff --check
 
 Record exact counts. Any full-suite failure must be classified against the documented Sentiment/Final Review/liquidity/Practical Validation baseline; no new Portfolio Mix failure is allowed.
 
-- [ ] **Step 4: Commit the implementation unit**
+- [x] **Step 4: Commit the implementation unit**
 
 Stage only the new service/test and active task records, audit staged paths, then commit:
 

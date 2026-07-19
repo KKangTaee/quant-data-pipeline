@@ -384,3 +384,19 @@ generated artifact이므로 commit하지 않는다.
   `717/717`; Level3 outer/shell/report는 `760/760`, `717/717`, `717/717`이었다.
 - console error는 0이었다. 빈 legacy chart data의 Vega `Infinite extent`와 Streamlit component의
   `setFrameHeight before componentReady` warning은 기존 경고이며 title/route 동작을 막지 않았다.
+
+## 2026-07-19 15차 Portfolio Mix Truth / Read Model Decisions
+
+- legacy Mix의 핵심 gap은 전략 계산기가 아니라 구성 draft와 기존 Single settings schema 사이의
+  공통 contract 부재다. 새 pure service가 2~4개 component, concrete strategy 중복, shared period,
+  역할·비중과 100% 합계를 runner 이전에 검증한다.
+- component 설정은 기존 Single settings builder/validator/payload projector를 그대로 조합한다.
+  Mix 공통 `start/end`는 Single field에 주입하고 `timeframe/option`은 submitted field가 아니라
+  compare runner 인자로 유지한다.
+- fingerprint는 draft/save/component UI identity를 제외하고 ordered concrete strategy, effective
+  Single payload, role/weight와 shared execution contract를 hash한다. preset 기본값의 생략/명시가
+  같으면 같은 fingerprint가 되며 실제 설정 변경만 stale을 만든다.
+- 신규 saved shelf는 `backtest_portfolio_mix_saved_v1`만 읽는다. legacy prototype row를 자동
+  migration하거나 raw JSON/절대 경로를 투영하지 않는다.
+- 실행 전에는 result verdict/final action board가 없고, current fingerprint와 일치하는 결과에서만
+  save/Level2 action을 분리해 투영한다. development component가 있으면 Level2 action은 차단한다.

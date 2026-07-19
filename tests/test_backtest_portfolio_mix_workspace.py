@@ -1,0 +1,391 @@
+from __future__ import annotations
+
+import importlib
+from copy import deepcopy
+
+import pytest
+
+
+def _workspace_module():
+    return importlib.import_module("app.services.backtest_portfolio_mix_workspace")
+
+
+def _runtime_options() -> dict[str, object]:
+    return {
+        "presets": {
+            "Equal Weight": {"Dividend ETFs": ["VIG", "SCHD", "DGRO", "GLD"]},
+            "GTAA": {
+                "GTAA Universe": [
+                    "SPY",
+                    "IWD",
+                    "IWM",
+                    "IWN",
+                    "MTUM",
+                    "EFA",
+                    "TLT",
+                    "IEF",
+                    "LQD",
+                    "PDBC",
+                    "VNQ",
+                    "GLD",
+                ]
+            },
+            "Global Relative Strength": {"GRS Universe": ["SPY", "EFA", "TLT"]},
+            "Risk Parity Trend": {"Risk Parity Universe": ["SPY", "TLT", "GLD"]},
+            "Dual Momentum": {"Dual Momentum Universe": ["SPY", "EFA", "AGG"]},
+        },
+        "presets_by_strategy_key": {
+            "quality_value_snapshot_strict_annual": {
+                "US Base Universe 100": ["AAPL", "MSFT", "NVDA"]
+            },
+            "quality_value_snapshot_strict_quarterly_prototype": {
+                "US Base Universe 100": ["AAPL", "MSFT", "NVDA"]
+            },
+        },
+        "preset_target_sizes": {"US Base Universe 100": 100},
+        "tickers": [
+            "AAPL",
+            "MSFT",
+            "NVDA",
+            "SPY",
+            "IWD",
+            "IWM",
+            "IWN",
+            "MTUM",
+            "EFA",
+            "TLT",
+            "IEF",
+            "LQD",
+            "PDBC",
+            "VNQ",
+            "GLD",
+            "VIG",
+            "SCHD",
+            "DGRO",
+            "AGG",
+        ],
+        "benchmarks": ["SPY", "ACWI", "QQQ"],
+        "score_horizons": [1, 3, 6, 12],
+        "market_regime_benchmarks": ["SPY", "ACWI"],
+        "quality_factor_options": [
+            "roe",
+            "roa",
+            "net_margin",
+            "asset_turnover",
+            "current_ratio",
+        ],
+        "value_factor_options": [
+            "book_to_market",
+            "earnings_yield",
+            "sales_yield",
+            "ocf_yield",
+            "operating_income_yield",
+        ],
+    }
+
+
+def _valid_draft() -> dict[str, object]:
+    return {
+        "draft_id": "draft-test",
+        "source_saved_portfolio_id": None,
+        "shared": {
+            "start": "2016-01-01",
+            "end": "2026-07-19",
+            "timeframe": "1d",
+            "option": "month_end",
+            "date_policy": "intersection",
+        },
+        "components": [
+            {
+                "component_id": "component-gtaa",
+                "strategy_choice": "GTAA",
+                "variant": None,
+                "settings_values": {"preset_name": "GTAA Universe", "top": 3},
+                "role": "core",
+                "weight_percent": 50,
+            },
+            {
+                "component_id": "component-equal",
+                "strategy_choice": "Equal Weight",
+                "variant": None,
+                "settings_values": {
+                    "preset_name": "Dividend ETFs",
+                    "rebalance_interval": 12,
+                },
+                "role": "defense",
+                "weight_percent": 50,
+            },
+        ],
+    }
+
+
+def test_normalization_keeps_stable_component_ids_and_requires_two_to_four_components():
+    module = _workspace_module()
+    draft = _valid_draft()
+    draft["components"][0].pop("component_id")
+
+    normalized = module.normalize_portfolio_mix_draft(
+        draft,
+        runtime_options=_runtime_options(),
+    )
+
+    assert normalized["components"][0]["component_id"] == "component-1"
+    assert normalized["components"][1]["component_id"] == "component-equal"
+    assert module.validate_portfolio_mix_draft(normalized) == {}
+
+    one_component = deepcopy(normalized)
+    one_component["components"] = one_component["components"][:1]
+    assert module.validate_portfolio_mix_draft(one_component)["components"] == (
+        "구성 전략은 2개 이상 4개 이하로 선택해 주세요."
+    )
+
+    five_components = deepcopy(normalized)
+    five_components["components"] = five_components["components"] * 3
+    assert module.validate_portfolio_mix_draft(five_components)["components"] == (
+        "구성 전략은 2개 이상 4개 이하로 선택해 주세요."
+    )
+
+
+def test_duplicate_concrete_strategy_is_rejected_once():
+    module = _workspace_module()
+    draft = _valid_draft()
+    duplicate = deepcopy(draft["components"][0])
+    duplicate["component_id"] = "component-gtaa-copy"
+    duplicate["weight_percent"] = 10
+    draft["components"][0]["weight_percent"] = 40
+    draft["components"].append(duplicate)
+
+    workspace = module.build_portfolio_mix_workspace(
+        draft=draft,
+        runtime_options=_runtime_options(),
+    )
+
+    assert workspace["validation"]["valid"] is False
+    duplicate_issues = [
+        issue
+        for issue in workspace["validation"]["issues"]
+        if issue["root_issue_id"] == "duplicate:gtaa"
+    ]
+    assert len(duplicate_issues) == 1
+    assert workspace["validation"]["issue_count"] == len(
+        workspace["validation"]["issues"]
+    )
+
+
+def test_shared_role_and_weight_validation_blocks_invalid_draft():
+    module = _workspace_module()
+    draft = _valid_draft()
+    draft["shared"]["start"] = "2026-07-20"
+    draft["components"][0]["role"] = "unknown"
+    draft["components"][0]["weight_percent"] = 0
+    draft["components"][1]["weight_percent"] = 75
+
+    errors = module.validate_portfolio_mix_draft(
+        module.normalize_portfolio_mix_draft(
+            draft,
+            runtime_options=_runtime_options(),
+        )
+    )
+
+    assert errors["shared.period"] == "시작일은 종료일보다 빨라야 합니다."
+    assert errors["components.component-gtaa.role"] == "허용되지 않은 역할입니다."
+    assert errors["components.component-gtaa.weight_percent"] == (
+        "목표 비중은 0보다 커야 합니다."
+    )
+    assert errors["allocation.total"] == "목표 비중 합계는 100%여야 합니다."
+
+
+def test_component_projection_reuses_single_settings_schema_and_payload():
+    module = _workspace_module()
+    draft = _valid_draft()
+    draft["components"].append(
+        {
+            "component_id": "component-quality-value",
+            "strategy_choice": "Quality + Value",
+            "variant": "Strict Annual",
+            "settings_values": {
+                "preset_name": "US Base Universe 100",
+                "top": 10,
+            },
+            "role": "growth",
+            "weight_percent": 20,
+        }
+    )
+    draft["components"][0]["weight_percent"] = 40
+    draft["components"][1]["weight_percent"] = 40
+
+    projections = module.project_portfolio_mix_component_payloads(
+        draft,
+        runtime_options=_runtime_options(),
+    )
+
+    assert [item["strategy_name"] for item in projections] == [
+        "GTAA",
+        "Equal Weight",
+        "Quality + Value Snapshot (Strict Annual)",
+    ]
+    assert projections[0]["concrete_strategy_key"] == "gtaa"
+    assert projections[0]["overrides"]["top"] == 3
+    assert projections[0]["overrides"]["tickers"][0] == "SPY"
+    assert projections[1]["overrides"]["rebalance_interval"] == 12
+    assert projections[2]["concrete_strategy_key"] == (
+        "quality_value_snapshot_strict_annual"
+    )
+    assert projections[2]["overrides"]["dynamic_target_size"] == 100
+    assert all(
+        key not in projections[0]["overrides"]
+        for key in ("start", "end", "timeframe", "option", "strategy_key")
+    )
+    assert all(
+        section["section_id"] != "execution"
+        for section in projections[0]["settings_workspace"]["sections"]
+    )
+
+
+def test_fingerprint_ignores_draft_identity_but_tracks_effective_configuration():
+    module = _workspace_module()
+    first = _valid_draft()
+    same = deepcopy(first)
+    same["draft_id"] = "another-draft"
+    same["source_saved_portfolio_id"] = "saved-row-1"
+    same["components"][0]["component_id"] = "restored-component-1"
+    same["components"][1]["component_id"] = "restored-component-2"
+    first["components"][0]["settings_values"].pop("top")
+    same["components"][0]["settings_values"]["top"] = 3
+
+    assert module.build_portfolio_mix_fingerprint(
+        first,
+        runtime_options=_runtime_options(),
+    ) == module.build_portfolio_mix_fingerprint(
+        same,
+        runtime_options=_runtime_options(),
+    )
+
+    same["components"][0]["settings_values"]["top"] = 2
+    assert module.build_portfolio_mix_fingerprint(
+        first,
+        runtime_options=_runtime_options(),
+    ) != module.build_portfolio_mix_fingerprint(
+        same,
+        runtime_options=_runtime_options(),
+    )
+
+
+def test_pre_run_workspace_has_no_result_verdict_or_final_action_board():
+    module = _workspace_module()
+
+    workspace = module.build_portfolio_mix_workspace(
+        draft=_valid_draft(),
+        runtime_options=_runtime_options(),
+        action_capabilities={"run_mix": True, "save_mix": True, "handoff_level2": True},
+    )
+
+    assert workspace["result"]["status"] == "not_run"
+    assert workspace["result"]["current"] is None
+    assert workspace["result"]["reference"] is None
+    assert workspace["actions"] == []
+    assert workspace["execution_action"] == {
+        "id": "run_mix",
+        "label": "이 구성으로 Mix 실행",
+        "enabled": True,
+    }
+
+
+def test_stale_result_is_preserved_as_reference_and_disables_save_and_handoff():
+    module = _workspace_module()
+    draft = module.normalize_portfolio_mix_draft(
+        _valid_draft(),
+        runtime_options=_runtime_options(),
+    )
+    result = {
+        "run_result_id": "mix-run-1",
+        "configuration_fingerprint": module.build_portfolio_mix_fingerprint(
+            draft,
+            runtime_options=_runtime_options(),
+        ),
+        "summary": {"annualized_return": 0.12},
+    }
+    changed = deepcopy(draft)
+    changed["components"][0]["weight_percent"] = 45
+    changed["components"][1]["weight_percent"] = 55
+
+    workspace = module.build_portfolio_mix_workspace(
+        draft=changed,
+        current_result=result,
+        action_capabilities={"run_mix": True, "save_mix": True, "handoff_level2": True},
+        runtime_options=_runtime_options(),
+    )
+
+    assert workspace["result"]["status"] == "stale"
+    assert workspace["result"]["current"] is None
+    assert workspace["result"]["reference"]["run_result_id"] == "mix-run-1"
+    assert {action["id"] for action in workspace["actions"]} == set()
+    assert workspace["execution_action"]["enabled"] is True
+
+
+def test_saved_shelf_accepts_only_new_schema_without_raw_details():
+    module = _workspace_module()
+    saved_records = [
+        {
+            "schema_version": module.PORTFOLIO_MIX_SAVED_SCHEMA_VERSION,
+            "id": "saved-new",
+            "name": "균형형 Mix",
+            "saved_at": "2026-07-19T12:00:00+09:00",
+            "mix_draft": _valid_draft(),
+            "absolute_path": "/tmp/should-not-appear.jsonl",
+            "raw": {"secret": True},
+        },
+        {
+            "id": "legacy-row",
+            "name": "Legacy Mix",
+            "portfolio_context": {"strategy_names": ["GTAA", "Equal Weight"]},
+        },
+    ]
+
+    workspace = module.build_portfolio_mix_workspace(
+        draft=_valid_draft(),
+        saved_records=saved_records,
+        runtime_options=_runtime_options(),
+    )
+
+    assert workspace["saved_mix"]["empty"] is False
+    assert workspace["saved_mix"]["rows"] == [
+        {
+            "id": "saved-new",
+            "name": "균형형 Mix",
+            "saved_at": "2026-07-19T12:00:00+09:00",
+            "component_count": 2,
+            "component_summary": "GTAA 50% · Equal Weight 50%",
+        }
+    ]
+    assert "/tmp" not in repr(workspace["saved_mix"])
+    assert "secret" not in repr(workspace["saved_mix"])
+
+
+def test_current_result_exposes_distinct_callable_save_and_handoff_actions():
+    module = _workspace_module()
+    draft = module.normalize_portfolio_mix_draft(
+        _valid_draft(),
+        runtime_options=_runtime_options(),
+    )
+    result = {
+        "run_result_id": "mix-run-current",
+        "configuration_fingerprint": module.build_portfolio_mix_fingerprint(
+            draft,
+            runtime_options=_runtime_options(),
+        ),
+    }
+
+    workspace = module.build_portfolio_mix_workspace(
+        draft=draft,
+        current_result=result,
+        action_capabilities={"run_mix": True, "save_mix": True, "handoff_level2": True},
+        runtime_options=_runtime_options(),
+    )
+
+    assert workspace["result"]["status"] == "current"
+    assert [action["id"] for action in workspace["actions"]] == [
+        "save_mix",
+        "handoff_level2",
+    ]
+    assert all(action["enabled"] is True for action in workspace["actions"])

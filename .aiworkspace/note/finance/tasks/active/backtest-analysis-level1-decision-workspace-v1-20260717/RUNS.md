@@ -577,3 +577,17 @@
 - `.venv/bin/python -m py_compile app/web/backtest_practical_validation/page.py app/web/backtest_final_review/page.py`
   -> exit 0, output 없음.
 - `git diff --check` -> exit 0, output 없음.
+
+## 2026-07-19 15차 Task 46 RED -> GREEN
+
+- RED: `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q`
+  -> 새 pure service import 부재로 `9 failed`.
+- first GREEN attempt -> `5 passed / 4 failed`. 네 실패 모두 Mix가 Single settings에 field가 아닌
+  `timeframe/option`을 submitted value로 넘겨 `허용되지 않은 설정`으로 차단된 동일 원인이었다.
+- 공통 runner input과 component settings submission을 분리한 뒤 focused -> `9 passed`.
+- effective fingerprint 추가 RED -> unexpected `runtime_options` argument로 `3 failed / 6 passed`.
+  component UI identity를 제외하고 effective Single payload를 hash한 뒤 focused -> `9 passed`.
+- service regression:
+  `.venv/bin/python -m pytest tests/test_service_contracts.py -q -k 'single_settings or portfolio_mix or weighted_portfolio or compare_execution'`
+  -> `5 passed, 840 deselected`.
+- `py_compile app/services/backtest_portfolio_mix_workspace.py`와 `git diff --check` -> exit 0.
