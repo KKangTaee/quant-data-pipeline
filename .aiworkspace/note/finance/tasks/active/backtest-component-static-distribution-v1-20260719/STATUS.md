@@ -1,22 +1,33 @@
 # Backtest Component Static Distribution V1 Status
 
-Status: Implementation plan ready
+Status: Complete
 Updated: 2026-07-19
+Roadmap: 3/3 complete
 
-## Current
+## Completed
 
-- 사용자와 Backtest 전체 12개를 Overview 방식의 `component_static/`으로 통일하는 범위를 합의했다.
-- 현재 component inventory, loader 경로, Vite outDir, Git 추적 상태와 기존 service contract test의 `frontend/build/index.html` 의존을 확인했다.
-- 구현 전 written design을 확정했고 사용자가 구현 진행을 승인했다.
-- TDD, 12개 loader/Vite migration, committed static bundle, clean archive/Browser QA 순서의 구현 계획을 작성했다.
+- Backtest Analysis, Practical Validation, Final Review 계열 React frontend 12개의 Vite output을 `frontend/component_static/`으로 통일했다.
+- 12개 Python component loader가 `component_static/index.html` 존재를 availability 기준으로 사용한다.
+- 기존 tracked `frontend/build/` 산출물을 제거하고 12개 entry와 relative JS/CSS assets를 Git에 포함했다.
+- source/config와 정적 asset 완전성을 검사하는 repository contract test를 추가했다.
+- npm 없는 clean archive와 실제 Streamlit Browser QA에서 React workflow shell과 Level1 workspace를 확인했다.
 
-## Next
+## Verification
 
-- `tests/test_component_static_distribution.py`의 RED부터 시작한다.
-- 12개 loader/Vite 설정을 전환하고 전체 frontend를 다시 빌드한다.
-- clean archive와 실제 Browser QA로 별도 npm build 없는 실행을 검증한다.
+- `npm ci && npm run build`: 12/12 성공
+- `tests/test_component_static_distribution.py`: 2 passed
+- clean `git archive HEAD`, npm build 없음: 2 passed
+- focused service contracts: 14 passed, 기존 baseline 2 failed
+- Browser QA: `/backtest` React shell/Level1 workspace 렌더, console error 0
+- QA screenshot: `backtest-component-static-distribution-qa.png` generated local artifact, commit 제외
 
-## Scope Guard
+## Remaining
 
-- UI, 계산, registry, DB 동작은 변경하지 않는다.
-- qweb 또는 다른 launcher는 다시 만들지 않는다.
+- 이번 task의 구현 잔여 작업은 없다.
+- 기존 baseline 실패 2건은 `RISKS.md`에 기록했으며 이번 packaging 변경 범위 밖이다.
+- frontend source를 수정하는 후속 작업은 해당 `component_static/` bundle도 다시 build해 같은 커밋에 포함해야 한다.
+
+## Scope Guard Preserved
+
+- UI 디자인, payload, event, 계산, registry, DB 동작을 변경하지 않았다.
+- qweb 또는 다른 launcher를 다시 도입하지 않았다.

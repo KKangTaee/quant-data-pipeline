@@ -55,6 +55,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-19 - Backtest React도 Overview처럼 checkout 자체로 디자인을 제공한다
+
+- User request: Overview 시장맥락·매크로처럼 Backtest도 빌드 결과를 Git에 포함해 별도 alias나 npm build 없이 실행되게 해 달라고 요청함.
+- Interpreted goal: 임시 launcher가 아니라 Backtest 전체 React component의 정적 배포 계약을 Overview 방식으로 통일한다.
+- Analysis result: 12개 Vite output과 Python loader를 `component_static/index.html` 기준으로 전환하고 정적 assets를 Git에 포함했다. clean archive에서 npm 없이 계약 테스트가 통과했고 실제 Backtest React shell과 Level1 workspace를 확인했다.
+- Follow-up: frontend source 변경자는 같은 package를 다시 build해 `component_static/` 변경을 함께 커밋해야 한다. 기존 service contract baseline 실패 2건은 이번 변경과 무관해 그대로 남겼다.
+
 ### 2026-07-19 - Portfolio Monitoring은 그룹 성과와 근거형 위험 판단을 끝내는 React Command Center다
 
 - User request: Final Review 통과 포트폴리오와 직접 미국 주식·ETF를 그룹별로 추적하고, 성과·개별 상세·강점·약점·매크로 위험 신호를 React로 전면 개편해 달라고 요청함.

@@ -23,6 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
+  - Latest completed packaging task is [backtest-component-static-distribution-v1-20260719](./tasks/active/backtest-component-static-distribution-v1-20260719/STATUS.md). Backtest 계열 React component 12개의 canonical output을 Git-tracked `component_static/`으로 통일했고 clean archive와 actual Browser QA를 전체 roadmap `3/3`으로 완료했다.
   - New active design task is [portfolio-monitoring-react-command-center-v1-20260719](./tasks/active/portfolio-monitoring-react-command-center-v1-20260719/STATUS.md). Portfolio-first React Command Center, direct stock/ETF and Final Review candidate item model, staggered-start cash, deterministic diagnosis, macro calibration의 전체 roadmap `0/6차`이며 written spec review를 기다린다.
   - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~14차를 완료했고 승인된 15차 Portfolio Mix React one-shell 설계의 구현 계획과 개발을 이어간다.
   - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro를 현재 1D/5D/20D 체제와 5D/20D 조건부 전망으로 개편하고, 일봉 갱신 시 5년 compact snapshot을 materialize해 첫 진입은 DB-only로 읽으며 방법론·계산 추적을 React로 통합했다.
@@ -62,6 +63,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### 2026-07-19 - Backtest React component_static Git 배포 통일
+
+- Backtest Analysis, Practical Validation, Final Review 계열 React component 12개의 Vite output과 Python loader를 `frontend/component_static/`으로 통일했다.
+- 12개 `index.html`과 relative JS/CSS assets를 Git에 포함하고 과거 tracked `frontend/build/` 산출물을 제거했다.
+- repository contract `2 passed`, npm build 12/12, npm 없는 clean archive `2 passed`, actual Backtest React shell/Level1 Browser QA와 console error 0건을 확인했다.
+- 상세 실행과 기존 baseline 2건은 [active task](./tasks/active/backtest-component-static-distribution-v1-20260719/STATUS.md)에 남겼다.
 
 ### 2026-07-19 - Portfolio Monitoring React Command Center Design
 

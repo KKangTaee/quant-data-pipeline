@@ -28,7 +28,7 @@
 - Consumes: 저장소의 12개 component directory와 각 `component.py`, `frontend/vite.config.ts`.
 - Produces: config/loader 계약과 생성된 entry/assets 완전성을 검사하는 repository test 2개.
 
-- [ ] **Step 1: config/loader 계약 실패 테스트 작성**
+- [x] **Step 1: config/loader 계약 실패 테스트 작성**
 
 `BACKTEST_COMPONENT_PACKAGES`에 아래 12개 이름을 명시하고 각 package에 대해 Vite source에 `outDir: "component_static"`, wrapper source에 `/ "component_static"`과 `/ "index.html"`이 있는지 검사한다.
 
@@ -44,7 +44,7 @@ def test_backtest_component_packages_use_component_static_contract() -> None:
         assert '/ "build"' not in wrapper_source, component_name
 ```
 
-- [ ] **Step 2: RED 확인**
+- [x] **Step 2: RED 확인**
 
 Run:
 
@@ -54,7 +54,7 @@ uv run --with pytest python -m pytest tests/test_component_static_distribution.p
 
 Expected: FAIL. 첫 번째 package의 Vite outDir 또는 wrapper path가 아직 `build`라고 보고한다.
 
-- [ ] **Step 3: 생성 산출물 완전성 테스트 작성**
+- [x] **Step 3: 생성 산출물 완전성 테스트 작성**
 
 각 `component_static/index.html`을 읽고 상대 `src`/`href` asset을 추출한 뒤 실제 파일 존재를 검사한다. 절대 `/assets/` 참조도 금지한다.
 
@@ -73,7 +73,7 @@ def test_backtest_component_static_entries_reference_existing_assets() -> None:
             assert (static_root / reference).is_file(), f"{component_name}: {reference}"
 ```
 
-- [ ] **Step 4: 테스트 파일 문법 확인**
+- [x] **Step 4: 테스트 파일 문법 확인**
 
 Run:
 
@@ -83,7 +83,7 @@ Run:
 
 Expected: exit 0.
 
-- [ ] **Step 5: Task 1 커밋**
+- [x] **Step 5: Task 1 커밋**
 
 ```bash
 git add tests/test_component_static_distribution.py
@@ -114,7 +114,7 @@ git commit -m "Backtest 정적 컴포넌트 배포 계약 테스트 추가"
 - Consumes: Task 1의 `BACKTEST_COMPONENT_PACKAGES`와 새 path contract.
 - Produces: 모든 component가 `component_static/index.html`을 canonical entry로 읽는 Python/Vite source.
 
-- [ ] **Step 1: Vite 설정 변경**
+- [x] **Step 1: Vite 설정 변경**
 
 12개 설정의 build block을 아래 계약으로 통일한다.
 
@@ -125,7 +125,7 @@ build: {
 },
 ```
 
-- [ ] **Step 2: Python wrapper 변경**
+- [x] **Step 2: Python wrapper 변경**
 
 12개 wrapper가 아래 형태를 사용하게 한다. 기존 render 함수와 props는 그대로 둔다.
 
@@ -139,7 +139,7 @@ _component = (
 )
 ```
 
-- [ ] **Step 3: GREEN config/loader 계약 확인**
+- [x] **Step 3: GREEN config/loader 계약 확인**
 
 Run:
 
@@ -149,11 +149,11 @@ uv run --with pytest python -m pytest tests/test_component_static_distribution.p
 
 Expected: `1 passed`.
 
-- [ ] **Step 4: 기존 service contract fixture 경로 변경**
+- [x] **Step 4: 기존 service contract fixture 경로 변경**
 
 `tests/test_service_contracts.py`의 Backtest component build 참조를 모두 `frontend/component_static/index.html`, `frontend/component_static/assets`로 바꾼다. source/UI assertion은 변경하지 않는다.
 
-- [ ] **Step 5: Python 문법과 focused source contract 확인**
+- [x] **Step 5: Python 문법과 focused source contract 확인**
 
 Run:
 
@@ -164,7 +164,7 @@ uv run --with pytest python -m pytest tests/test_service_contracts.py -k "react_
 
 Expected: compile exit 0, selected tests all pass or only 아직 생성되지 않은 `component_static` entry 때문에 실패.
 
-- [ ] **Step 6: Task 2 source 커밋**
+- [x] **Step 6: Task 2 source 커밋**
 
 ```bash
 git add app/web/components/*/component.py app/web/components/*/frontend/vite.config.ts tests/test_service_contracts.py
@@ -185,7 +185,7 @@ git commit -m "Backtest 컴포넌트 정적 경로 통일"
 - Consumes: Task 2의 Vite `component_static` output contract.
 - Produces: Streamlit이 checkout 직후 읽을 수 있는 12개 완전한 정적 bundle.
 
-- [ ] **Step 1: 12개 package clean install/build**
+- [x] **Step 1: 12개 package clean install/build**
 
 Run:
 
@@ -199,7 +199,7 @@ done
 
 Expected: 12개 package 모두 Vite build exit 0, 각 `component_static/index.html` 생성.
 
-- [ ] **Step 2: 산출물 완전성 GREEN 확인**
+- [x] **Step 2: 산출물 완전성 GREEN 확인**
 
 Run:
 
@@ -209,7 +209,7 @@ uv run --with pytest python -m pytest tests/test_component_static_distribution.p
 
 Expected: `2 passed`.
 
-- [ ] **Step 3: 과거 build 산출물 제거 및 새 산출물 stage**
+- [x] **Step 3: 과거 build 산출물 제거 및 새 산출물 stage**
 
 ```bash
 git ls-files -z 'app/web/components/*/frontend/build/**' | xargs -0 git rm
@@ -218,7 +218,7 @@ git add app/web/components/*/frontend/component_static
 
 Expected: 기존 9개 tracked build tree 삭제, 12개 component_static tree 추가. `node_modules`는 stage되지 않는다.
 
-- [ ] **Step 4: 전체 focused regression 실행**
+- [x] **Step 4: 전체 focused regression 실행**
 
 Run:
 
@@ -230,7 +230,7 @@ git diff --cached --check
 
 Expected: selected tests all pass, diff check exit 0.
 
-- [ ] **Step 5: Task 3 산출물 커밋**
+- [x] **Step 5: Task 3 산출물 커밋**
 
 ```bash
 git add app/web/components tests/test_component_static_distribution.py tests/test_service_contracts.py
@@ -253,7 +253,7 @@ git commit -m "Backtest React 정적 산출물 Git 배포 전환"
 - Consumes: Task 3의 committed component_static bundles.
 - Produces: clean-checkout 증거, 실제 React 화면 QA, durable packaging decision.
 
-- [ ] **Step 1: Git 추적 계약 검사**
+- [x] **Step 1: Git 추적 계약 검사**
 
 Run:
 
@@ -264,7 +264,7 @@ git ls-files 'app/web/components/*/frontend/build/**'
 
 Expected: 12개 component의 index/assets만 첫 명령에 나오고 두 번째 명령은 비어 있다.
 
-- [ ] **Step 2: clean archive 검증**
+- [x] **Step 2: clean archive 검증**
 
 현재 HEAD를 임시 디렉터리에 archive하고 12개 entry/assets 완전성 테스트를 저장소 virtual environment로 실행한다.
 
@@ -276,17 +276,17 @@ git archive HEAD | tar -x -C "$archive_dir"
 
 Expected: `2 passed`. 별도 npm build를 실행하지 않는다.
 
-- [ ] **Step 3: Streamlit actual Browser QA**
+- [x] **Step 3: Streamlit actual Browser QA**
 
 충돌하지 않는 임시 port에서 Streamlit을 재시작하고 Backtest 페이지를 열어 React workflow shell과 Level1 workspace가 표시되는지 확인한다. desktop screenshot을 `backtest-component-static-distribution-qa.png`로 저장한다.
 
 Expected: fallback의 잘린 legacy header가 아니라 React shell과 workspace가 렌더링된다.
 
-- [ ] **Step 4: task와 durable docs 동기화**
+- [x] **Step 4: task와 durable docs 동기화**
 
 실행 명령/결과는 `RUNS.md`, 결정은 `NOTES.md`, 잔여 위험은 `RISKS.md`, 전체 3차 완료 상태는 `STATUS.md`에 기록한다. root logs에는 3~5줄 milestone과 “빌드 산출물을 Git으로 배포한다”는 결론만 남긴다.
 
-- [ ] **Step 5: closeout 검증과 커밋**
+- [x] **Step 5: closeout 검증과 커밋**
 
 Run:
 
