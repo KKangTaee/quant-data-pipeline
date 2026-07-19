@@ -128,6 +128,7 @@ function EquityChart({ model }: { model: MixResultEvidence["equity_chart"] }) {
     const rect = event.currentTarget.getBoundingClientRect()
     setActiveIndex(nearestIndex(event.clientX, rect.left, rect.width, rows.length))
   }
+  const clearActive = () => setActiveIndex(null)
   const shift = (offset: number) => setActiveIndex((current) => clamp((current ?? 0) + offset, 0, rows.length - 1))
 
   return (
@@ -142,9 +143,11 @@ function EquityChart({ model }: { model: MixResultEvidence["equity_chart"] }) {
             aria-label="Portfolio Mix 누적 성과 차트"
             tabIndex={0}
             onPointerMove={move}
-            onPointerLeave={() => setActiveIndex(null)}
+            onPointerLeave={clearActive}
+            onMouseLeave={clearActive}
+            onPointerCancel={clearActive}
             onFocus={() => setActiveIndex(rows.length - 1)}
-            onBlur={() => setActiveIndex(null)}
+            onBlur={clearActive}
             onKeyDown={(event) => {
               if (event.key === "ArrowLeft") shift(-1)
               if (event.key === "ArrowRight") shift(1)
@@ -180,6 +183,7 @@ function MonthlyReturnChart({ model }: { model: MixResultEvidence["monthly_retur
     const rect = event.currentTarget.getBoundingClientRect()
     setActiveIndex(nearestIndex(event.clientX, rect.left, rect.width, rows.length))
   }
+  const clearActive = () => setActiveIndex(null)
   const shift = (offset: number) => setActiveIndex((current) => clamp((current ?? 0) + offset, 0, rows.length - 1))
   const tickRows = rows.length <= 3 ? rows : [rows[0], rows[Math.floor((rows.length - 1) / 2)], rows[rows.length - 1]]
 
@@ -195,9 +199,11 @@ function MonthlyReturnChart({ model }: { model: MixResultEvidence["monthly_retur
             aria-label="Portfolio Mix 월별 수익률 차트"
             tabIndex={0}
             onPointerMove={move}
-            onPointerLeave={() => setActiveIndex(null)}
+            onPointerLeave={clearActive}
+            onMouseLeave={clearActive}
+            onPointerCancel={clearActive}
             onFocus={() => setActiveIndex(rows.length - 1)}
-            onBlur={() => setActiveIndex(null)}
+            onBlur={clearActive}
             onKeyDown={(event) => {
               if (event.key === "ArrowLeft") shift(-1)
               if (event.key === "ArrowRight") shift(1)

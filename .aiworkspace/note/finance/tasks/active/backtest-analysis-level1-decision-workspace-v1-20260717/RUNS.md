@@ -676,3 +676,13 @@
 - React production build: Vite 5.4.21, `176 modules transformed`; CSS 11.50 kB,
   JS 341.83 kB, build 성공.
 - `git diff --check`: exit 0, output 없음.
+
+## 2026-07-19 16차 Browser Hover Correction RED -> GREEN
+
+- actual desktop hover는 누적 성과 `2021.07.31 / 167.12 / 67.12% / 17,832.32`,
+  월별 수익률 `2023.01 / 3.98% / 16,341.24`를 실제 row로 표시했다.
+- 다른 SVG로 CUA pointer를 옮겼을 때 이전 tooltip이 남아 browser별 SVG leave 합성 차이를 확인했다.
+- RED source contract에 `onMouseLeave`를 추가해 `1 failed`; `pointerleave / mouseleave /
+  pointercancel / blur`가 같은 clear handler를 사용하도록 보강한 뒤 `1 passed`.
+- correction React production build: `176 modules transformed`, CSS 11.50 kB,
+  JS 341.88 kB, build 성공.

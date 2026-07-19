@@ -354,3 +354,6 @@ Last Updated: 2026-07-19
   한 열로 접고 compact actual-date tick만 표시하며 dense table은 disclosure 내부에서만 횡스크롤한다.
 - Task 51 GREEN은 Mix `27 passed`, route boundary `51 passed`, React production build
   `176 modules transformed`, `git diff --check` exit 0이다.
+- desktop actual hover에서 CUA가 다른 SVG로 이동할 때 `pointerleave`만으로는 이전 tooltip을
+  정리하지 못하는 browser 합성 차이를 확인했다. 동일 clear handler를 `mouseleave`, `pointercancel`,
+  `blur`에도 연결해 실제 커서/키보드 이탈 계약을 보강했다.

@@ -1026,6 +1026,7 @@ def test_mix_result_react_visual_contract_owns_charts_hover_and_disclosure():
     assert "monthly_returns" in result_source
     assert "onPointerMove" in result_source
     assert "onPointerLeave" in result_source
+    assert "onMouseLeave" in result_source
     assert "onFocus" in result_source
     assert "onBlur" in result_source
     assert "상세 결과 근거" in result_source
