@@ -8680,6 +8680,64 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("axis.available", all_source)
         self.assertIn("관측값 없음 · 판정 보류", all_source)
 
+    def test_sentiment_react_period_cards_watch_paths_and_detail_disclosure(self) -> None:
+        source_root = Path("app/web/streamlit_components/sentiment_workbench/src")
+        root_source = (source_root / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        outlook_path = source_root / "SentimentOutlookSection.tsx"
+        watch_path = source_root / "WatchConditionsSection.tsx"
+        disclosure_path = source_root / "SentimentEvidenceDisclosure.tsx"
+        outlook_source = outlook_path.read_text(encoding="utf-8") if outlook_path.exists() else ""
+        watch_source = watch_path.read_text(encoding="utf-8") if watch_path.exists() else ""
+        disclosure_source = disclosure_path.read_text(encoding="utf-8") if disclosure_path.exists() else ""
+
+        self.assertTrue(outlook_path.exists())
+        self.assertTrue(watch_path.exists())
+        self.assertTrue(disclosure_path.exists())
+        for component in (
+            "<SentimentHero",
+            "<CurrentEvidenceSection",
+            "<SentimentHistorySection",
+            "<SentimentOutlookSection",
+            "<WatchConditionsSection",
+            "<SentimentEvidenceDisclosure",
+        ):
+            self.assertIn(component, root_source)
+        self.assertEqual(
+            sorted(root_source.index(component) for component in (
+                "<SentimentHero",
+                "<CurrentEvidenceSection",
+                "<SentimentHistorySection",
+                "<SentimentOutlookSection",
+                "<WatchConditionsSection",
+                "<SentimentEvidenceDisclosure",
+            )),
+            [root_source.index(component) for component in (
+                "<SentimentHero",
+                "<CurrentEvidenceSection",
+                "<SentimentHistorySection",
+                "<SentimentOutlookSection",
+                "<WatchConditionsSection",
+                "<SentimentEvidenceDisclosure",
+            )],
+        )
+        self.assertIn("outlook.horizons.map", outlook_source)
+        self.assertIn('data-horizon={horizon.key}', outlook_source)
+        self.assertIn('horizon.status === "UNAVAILABLE"', outlook_source)
+        self.assertIn("검증 전 비공개", outlook_source)
+        self.assertIn("확률을 임의 생성하지 않습니다", outlook_source)
+        self.assertIn("data-watch-path={item.key}", watch_source)
+        self.assertIn("watchConditions.map", watch_source)
+        self.assertIn("정렬·반전·지속", watch_source)
+        self.assertIn("<details", disclosure_source)
+        self.assertIn("payload.evidence.cnn_components.map", disclosure_source)
+        self.assertIn("payload.evidence.aaii_comparison.map", disclosure_source)
+        self.assertIn("payload.raw_evidence.sentiment_rows", disclosure_source)
+        self.assertIn("payload.raw_evidence.component_rows", disclosure_source)
+        self.assertIn("payload.raw_evidence.history_rows", disclosure_source)
+        self.assertNotIn("payload.evidence.cnn_components.map", root_source)
+        self.assertNotIn("payload.watch_conditions.map", root_source)
+        self.assertNotIn("<details", root_source)
+
     def test_sentiment_react_summary_surface_prioritizes_state_and_freshness(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")
         react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
@@ -8717,7 +8775,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("시장 행동", all_source)
         self.assertIn("개인투자자 설문", all_source)
         self.assertIn("두 축의 현재 근거", all_source)
-        self.assertIn("다음 확인 조건", react_source)
+        self.assertIn("다음 확인 조건", all_source)
         self.assertNotIn('className="sentiment-workbench__cross-read"', all_source)
         self.assertNotIn("metricByLabel(\"CNN Fear & Greed\")", react_source)
         self.assertNotIn("metricByLabel(\"AAII Bearish\")", react_source)
@@ -8726,13 +8784,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("sentiment-workbench__cross-metric", react_source)
         self.assertNotIn("payload.drivers.lanes.map", react_source)
         self.assertNotIn("payload.component_explanations.map", react_source)
-        self.assertEqual(react_source.count("payload.evidence.cnn_components.map"), 1)
+        self.assertEqual(all_source.count("payload.evidence.cnn_components.map"), 1)
         self.assertIn("aaiiComparison.find", all_source)
-        self.assertIn("payload.watch_conditions.map", react_source)
-        self.assertIn("sentiment-workbench__evidence-section", react_source)
+        self.assertIn("watchConditions.map", all_source)
+        self.assertIn("SentimentEvidenceDisclosure", react_source)
         self.assertLess(
-            react_source.index('className="sentiment-workbench__evidence-section"'),
             react_source.index("<SentimentHistorySection"),
+            react_source.index("<SentimentEvidenceDisclosure"),
         )
         self.assertNotIn(".sentiment-workbench__cross-metrics", react_style)
         self.assertNotIn(".sentiment-workbench__cross-metric", react_style)
@@ -8764,17 +8822,20 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_sentiment_react_component_history_surface_shows_recent_changes(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")
         react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        all_source = "\n".join(
+            path.read_text(encoding="utf-8") for path in (component_root / "src").glob("*.tsx")
+        )
         react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
 
         self.assertIn("CnnEvidence", react_source)
-        self.assertEqual(react_source.count("payload.evidence.cnn_components.map"), 1)
-        self.assertIn("sentiment-workbench__cnn-evidence", react_source)
-        self.assertIn("sentiment-workbench__cnn-evidence-row", react_source)
-        self.assertIn("sentiment-workbench__evidence-change", react_source)
-        self.assertIn("componentChangeLabel", react_source)
+        self.assertEqual(all_source.count("payload.evidence.cnn_components.map"), 1)
+        self.assertIn("sentiment-workbench__cnn-evidence", all_source)
+        self.assertIn("sentiment-workbench__cnn-evidence-row", all_source)
+        self.assertIn("sentiment-workbench__evidence-change", all_source)
+        self.assertIn('signedValue(item.change, "p")', all_source)
         self.assertLess(
-            react_source.index('className="sentiment-workbench__evidence-section"'),
             react_source.index("<SentimentHistorySection"),
+            react_source.index("<SentimentEvidenceDisclosure"),
         )
         self.assertIn(".sentiment-workbench__cnn-evidence", react_style)
         self.assertIn(".sentiment-workbench__cnn-evidence-row", react_style)

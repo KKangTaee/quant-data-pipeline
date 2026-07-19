@@ -2,8 +2,11 @@ import React, { useEffect, useState } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 import "./style.css";
 import CurrentEvidenceSection from "./CurrentEvidenceSection";
+import SentimentEvidenceDisclosure from "./SentimentEvidenceDisclosure";
 import SentimentHero from "./SentimentHero";
 import SentimentHistorySection from "./SentimentHistorySection";
+import SentimentOutlookSection from "./SentimentOutlookSection";
+import WatchConditionsSection from "./WatchConditionsSection";
 
 type NumericValue = number | string | null | undefined;
 
@@ -232,43 +235,6 @@ export function signedValue(value: NumericValue, suffix = "") {
   return `${parsed > 0 ? "+" : ""}${parsed.toFixed(1)}${suffix}`;
 }
 
-function componentChangeLabel(item: CnnEvidence) {
-  return signedValue(item.change, "p");
-}
-
-function rowColumns(rows: SentimentEvidenceRows) {
-  const keys: string[] = [];
-  rows.forEach((row) => Object.keys(row).forEach((key) => {
-    if (!keys.includes(key)) keys.push(key);
-  }));
-  return keys.slice(0, 7);
-}
-
-function EvidenceTable({ rows, title }: { rows: SentimentEvidenceRows; title: string }) {
-  const columns = rowColumns(rows);
-  return (
-    <div className="sentiment-workbench__evidence-table">
-      <div className="sentiment-workbench__evidence-table-title"><span>{title}</span><strong>{rows.length}</strong></div>
-      {rows.length === 0 || columns.length === 0 ? (
-        <p className="sentiment-workbench__empty">표시할 저장 근거가 없습니다.</p>
-      ) : (
-        <div className="sentiment-workbench__evidence-scroll">
-          <table>
-            <thead><tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr></thead>
-            <tbody>
-              {rows.map((row, rowIndex) => (
-                <tr key={`${title}-${rowIndex}`}>
-                  {columns.map((column) => <td key={`${title}-${rowIndex}-${column}`}>{displayValue(row[column])}</td>)}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function syncFrameHeightSoon() {
   Streamlit.setFrameHeight();
   window.requestAnimationFrame(() => Streamlit.setFrameHeight());
@@ -294,52 +260,10 @@ function SentimentWorkbench({ args }: Props) {
     <section className="sentiment-workbench" data-action-boundary={payload.action_boundary} data-schema-version={payload.schema_version}>
       <SentimentHero payload={payload} pendingActionLabel={pendingActionLabel} onAction={emitAction} />
       <CurrentEvidenceSection aaiiComparison={payload.evidence.aaii_comparison} axes={payload.axes} />
-
-      <section className="sentiment-workbench__evidence-section">
-        <div className="sentiment-workbench__section-heading"><div><span>Evidence</span><h3>두 축의 상세 근거</h3></div><small>중복 없이 source별 한 번만 표시</small></div>
-        <div className="sentiment-workbench__evidence-columns">
-          <article className="sentiment-workbench__cnn-evidence">
-            <header><div><strong>CNN 구성요소</strong><small>시장 행동의 내부 근거</small></div><span>{payload.evidence.cnn_components.length}</span></header>
-            {payload.evidence.cnn_components.map((item) => (
-              <div className="sentiment-workbench__cnn-evidence-row" key={item.series}>
-                <div><strong>{item.label_ko || item.series}</strong><small>{item.what_it_checks}</small></div>
-                <div><b>{displayValue(item.score)}</b><span>{item.rating}</span></div>
-                <p>{item.current_reading}</p>
-                <small className="sentiment-workbench__evidence-change">직전 대비 {componentChangeLabel(item)}</small>
-              </div>
-            ))}
-          </article>
-          <article className="sentiment-workbench__aaii-evidence">
-            <header><div><strong>AAII 장기평균 비교</strong><small>개인투자자 인식의 기준점</small></div><span>3</span></header>
-            {payload.evidence.aaii_comparison.map((item) => (
-              <div className="sentiment-workbench__aaii-row" key={item.key}>
-                <strong>{item.label}</strong>
-                <div><b>{displayValue(item.current, "%")}</b><span>장기평균 {displayValue(item.historical_average, "%")}</span></div>
-                <em>{signedValue(item.difference_pp, "pp")}</em>
-              </div>
-            ))}
-          </article>
-        </div>
-      </section>
-
       <SentimentHistorySection charts={payload.charts} />
-
-      <section className="sentiment-workbench__watch-section">
-        <div className="sentiment-workbench__section-heading"><div><span>Watch</span><h3>다음 확인 조건</h3></div><small>예측이 아닌 관찰 checklist</small></div>
-        <div className="sentiment-workbench__watch-grid">
-          {payload.watch_conditions.map((item) => <article key={item.label}><span>{item.label}</span><p>{item.condition}</p><small>{item.basis}</small></article>)}
-        </div>
-      </section>
-
-      <details className="sentiment-workbench__raw-disclosure">
-        <summary>원본 / 저장 근거 보기</summary>
-        {payload.raw_evidence.warnings.length ? <div className="sentiment-workbench__warnings">{payload.raw_evidence.warnings.map((warning) => <span key={warning}>{warning}</span>)}</div> : null}
-        <div className="sentiment-workbench__raw-grid">
-          <EvidenceTable rows={payload.raw_evidence.sentiment_rows} title="Sentiment rows" />
-          <EvidenceTable rows={payload.raw_evidence.component_rows} title="Component rows" />
-          <EvidenceTable rows={payload.raw_evidence.history_rows} title="History rows" />
-        </div>
-      </details>
+      <SentimentOutlookSection outlook={payload.outlook} />
+      <WatchConditionsSection watchConditions={payload.watch_conditions} />
+      <SentimentEvidenceDisclosure onToggle={syncFrameHeightSoon} payload={payload} />
     </section>
   );
 }
