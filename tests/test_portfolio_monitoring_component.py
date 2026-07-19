@@ -79,6 +79,7 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn("panMarketChartViewport", source)
         self.assertIn("onWheel={handleWheel}", source)
         self.assertIn("onDoubleClick={resetViewport}", source)
+        self.assertIn("onLostPointerCapture={cancelPointerDrag}", source)
         self.assertIn('aria-label="가격 차트 확대"', source)
         self.assertIn('aria-label="가격 차트 축소"', source)
         self.assertIn("전체 보기", source)

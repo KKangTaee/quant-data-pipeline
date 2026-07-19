@@ -1,6 +1,6 @@
 # Portfolio Monitoring Chart Zoom / Pan V1 Design
 
-Status: User-approved; written spec review pending
+Status: Implemented; Browser interaction QA pending
 Last Updated: 2026-07-19
 
 ## 목적

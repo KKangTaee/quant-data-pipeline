@@ -10099,3 +10099,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 포트폴리오 성과선의 의미는 유지하면서 시각적 후광을 제거하고, 실제 저장 OHLCV가 있는 직접 미국 주식·ETF만 정확한 candle/volume으로 탐색해야 함.
 - Analysis result: 그룹 가치곡선은 정적 point를 숨기고 5/3개 실제 관측일 눈금을 표시한다. 선택 direct 종목은 최신 DB 일봉 120개를 line/candle로 전환하며 전략은 합성 OHLCV 없이 가치곡선만 표시한다.
 - Follow-up: 전체 roadmap `4/4`와 Python 100개, React 20개, production build, desktop·420px QA를 완료했다. 기간 선택, zoom/pan, intraday와 보조지표는 별도 승인 범위다.
+
+### 2026-07-19 - 직접 종목 가격 차트는 client-side viewport로 확대하고 이동한다
+
+- User request: 한 화면에 120일 candle/line이 빽빽하므로 마우스 커서 기준 zoom in/out과 좌우 drag 이동을 추가해 달라고 요청함.
+- Interpreted goal: 종합·전략 차트와 DB 계약은 유지하면서 선택한 미국 주식·ETF 가격 차트만 관심 구간을 선명하게 탐색해야 함.
+- Analysis result: inclusive viewport helper가 최소 15거래일까지 cursor/center anchor zoom하고, 확대 상태에서 4px horizontal drag를 row 이동으로 clamp한다. line/candle은 viewport를 공유하며 mobile은 explicit controls만 사용한다.
+- Follow-up: 구현과 Python 101 / React 24 / build는 완료했다. local Finance Console Browser DOM 접근이 policy-blocked되어 전체 `2/3차`이며 desktop/420px interaction QA가 남아 있다.

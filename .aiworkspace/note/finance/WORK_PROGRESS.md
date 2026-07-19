@@ -23,6 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
+  - Current Portfolio Monitoring follow-up is [portfolio-monitoring-chart-zoom-pan-v1-20260719](./tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md). 선택 direct 종목에 client-only wheel zoom·drag pan·explicit controls를 구현하고 Python 101 / React 24 / build를 통과했다. 전체 `2/3차`이며 Browser policy로 desktop·420px interaction QA가 남아 있다.
   - Latest completed Portfolio Monitoring chart task is [portfolio-monitoring-chart-clarity-ohlcv-v1-20260719](./tasks/active/portfolio-monitoring-chart-clarity-ohlcv-v1-20260719/STATUS.md). 종합 가치곡선 선명도·5/3개 날짜 눈금과 선택 direct 종목의 DB-only line/OHLCV candle/volume을 전체 roadmap `4/4`로 완료했다.
   - Latest completed Portfolio Monitoring follow-up is [portfolio-monitoring-item-builder-ux-fix-v1-20260719](./tasks/active/portfolio-monitoring-item-builder-ux-fix-v1-20260719/STATUS.md). 등록 drawer를 560px frame/internal scroll로 제한하고 검색 rerun 상태 복구와 요청 시작일 입력 유지를 전체 roadmap `3/3`으로 완료했다.
   - Latest completed packaging task is [backtest-component-static-distribution-v1-20260719](./tasks/active/backtest-component-static-distribution-v1-20260719/STATUS.md). Backtest 계열 React component 12개의 canonical output을 Git-tracked `component_static/`으로 통일했고 clean archive와 actual Browser QA를 전체 roadmap `3/3`으로 완료했다.
@@ -65,6 +66,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### 2026-07-19 - Portfolio Monitoring 종목 차트 Zoom / Pan V1
+
+- 선택 direct 미국 주식·ETF의 기존 120-row line/candle 차트에 client-only viewport를 추가했다.
+- wheel cursor anchor, 최소 15-session zoom, 4px horizontal drag, edge clamp, `− / + / 전체 보기`, mobile controls-only 경계를 구현했다.
+- Python 101개, React 24개, typecheck/build를 통과했다. Browser URL policy가 local Finance Console DOM 접근을 차단해 전체 roadmap은 `2/3차`이며 interaction QA가 남아 있다.
+- 상세 RED/GREEN/QA 공백은 [active task](./tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md)에 남겼다.
 
 ### 2026-07-19 - Portfolio Monitoring 가치곡선 선명도 / OHLCV V1
 

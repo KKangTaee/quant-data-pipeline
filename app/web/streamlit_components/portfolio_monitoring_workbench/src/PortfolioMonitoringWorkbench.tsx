@@ -352,6 +352,12 @@ function MarketPriceChart({ projection }: { projection: SelectedItemMarketChart 
     if (!drag?.didDrag && event.pointerType !== "touch") updateActive(event);
   };
 
+  const cancelPointerDrag = () => {
+    dragRef.current = null;
+    setIsDragging(false);
+    setActiveIndex(null);
+  };
+
   return (
     <section className="pm-market-chart-section" aria-label={`${projection.source_ref ?? "선택 종목"} 가격 차트`}>
       <header>
@@ -410,7 +416,8 @@ function MarketPriceChart({ projection }: { projection: SelectedItemMarketChart 
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={finishPointerDrag}
-            onPointerCancel={finishPointerDrag}
+            onPointerCancel={cancelPointerDrag}
+            onLostPointerCapture={cancelPointerDrag}
             onPointerLeave={() => setActiveIndex(null)}
             onFocus={() => setActiveIndex(rows.length - 1)}
             onBlur={() => setActiveIndex(null)}
