@@ -15,7 +15,7 @@ import {
   buildMacroObservationPresentation,
   buildRiskCalibrationPresentation,
   buildCatalogSearchEvent,
-  drawerFrameHeight,
+  itemBuilderRecoveryKey,
   nearestChartPointIndex,
   normalizeItemBuilderState,
   placeChartTooltip,
@@ -177,9 +177,30 @@ describe("item drawer contract", () => {
     expect(applySourceType(draft, "direct_security").commandId).toBe("stable-command");
   });
 
-  it("keeps the drawer footer inside a compact component frame while registration is open", () => {
-    expect(drawerFrameHeight(true)).toBe(560);
-    expect(drawerFrameHeight(false)).toBeNull();
+  it("identifies the same server recovery snapshot only once", () => {
+    const recovered = normalizeItemBuilderState({
+      drawer_open: true,
+      drawer_step: 1,
+      catalog_query: "equal",
+      draft: {
+        command_id: "command-recovery",
+        source_type: "selected_strategy",
+        selected_source_ref: "",
+        selected_label: "",
+        selected_kind: "strategy",
+        requested_start_date: "",
+        funding_mode: "fixed_notional",
+        notional: "10000",
+        shares: "",
+      },
+    }, "fallback-command");
+
+    expect(itemBuilderRecoveryKey(recovered)).toBe(itemBuilderRecoveryKey({
+      ...recovered!,
+      draft: { ...recovered!.draft },
+    }));
+    expect(itemBuilderRecoveryKey({ ...recovered!, catalogQuery: "risk parity" }))
+      .not.toBe(itemBuilderRecoveryKey(recovered));
   });
 
   it("restores the selected target, requested date, and review step after a server search", () => {

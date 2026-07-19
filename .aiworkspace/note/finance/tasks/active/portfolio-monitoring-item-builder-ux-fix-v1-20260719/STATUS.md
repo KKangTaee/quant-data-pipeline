@@ -7,16 +7,17 @@ Last Updated: 2026-07-19
 
 - 전체 roadmap: `3/3차 구현·회귀·Browser QA 완료`
 - current milestone: item-builder UX follow-up closeout
-- implementation: compact drawer frame, transient recovery state, immediate date input 반영
-- verification: Portfolio Monitoring Python 87 tests, React 15 tests, typecheck/build, static distribution PASS
-- Browser QA: 720px viewport에서 560px drawer frame/footer 가시성, AAPL 검색 rerun 복구, `2026-07-01` review 유지 PASS
+- implementation: natural workbench frame, 560px drawer panel, one-shot transient recovery, immediate date input 반영
+- verification: Portfolio Monitoring Python 90 tests, React 17 tests, typecheck/build, static distribution PASS
+- Browser QA: body `1,803px` / drawer `560px`, X 닫기 후 동일 recovery 재전송에도 closed 유지, 정상 재오픈 PASS
 
 ## Delivered
 
-1. 등록 drawer가 열리면 iframe을 560px로 제한하고 body만 스크롤한다.
+1. 등록 drawer가 열려도 iframe 자연 높이를 유지하고 drawer panel body만 스크롤한다.
 2. catalog search rerun 뒤 drawer step/query/draft를 일회성 recovery projection으로 복원한다.
 3. 날짜 input은 `onInput` 값을 즉시 캡처하며 blur server rerun을 발생시키지 않는다.
 4. 새 catalog 검색은 이전 requested date session 값을 제거한다.
+5. 동일 catalog recovery snapshot은 stable key로 한 번만 소비해 X 닫기를 다시 덮어쓰지 않는다.
 
 ## Remaining Boundary
 

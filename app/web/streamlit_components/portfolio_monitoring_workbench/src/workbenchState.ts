@@ -29,8 +29,6 @@ export type ItemBuilderState = {
   draft: ItemDraft;
 };
 
-const DRAWER_FRAME_HEIGHT = 560;
-
 export function createItemDraft(commandId: string): ItemDraft {
   return {
     commandId,
@@ -104,10 +102,6 @@ export function drawerPresentation(viewportWidth: number) {
   return viewportWidth <= 520 ? "full_width_sheet" : "side_drawer";
 }
 
-export function drawerFrameHeight(drawerOpen: boolean): number | null {
-  return drawerOpen ? DRAWER_FRAME_HEIGHT : null;
-}
-
 function recordValue(value: unknown): Record<string, unknown> | null {
   return value != null && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -155,6 +149,25 @@ export function normalizeItemBuilderState(
       shares: fundingMode === "fixed_shares" ? stringValue(rawDraft.shares) : "",
     },
   };
+}
+
+/** Stable identity prevents a Streamlit rerender from reapplying one recovery snapshot. */
+export function itemBuilderRecoveryKey(state: ItemBuilderState | null): string | null {
+  if (!state) return null;
+  return JSON.stringify([
+    state.drawerOpen,
+    state.drawerStep,
+    state.catalogQuery,
+    state.draft.commandId,
+    state.draft.sourceType,
+    state.draft.selectedSourceRef,
+    state.draft.selectedLabel,
+    state.draft.selectedKind,
+    state.draft.requestedStartDate,
+    state.draft.fundingMode,
+    state.draft.notional,
+    state.draft.shares,
+  ]);
 }
 
 export function buildCatalogSearchEvent(

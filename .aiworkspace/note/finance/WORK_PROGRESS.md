@@ -6715,3 +6715,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Portfolio Monitoring React 전용 stylesheet의 기존 px 기반 font-size와 component 기본 글자를 정확히 1px 높였으며 다른 탭과 계산/DB 계약은 변경하지 않았다.
 - React 17 tests, Portfolio Monitoring Python 89 tests, typecheck/build와 actual-data Browser QA를 통과했다. 전체 보정 roadmap `3/3차` 완료다.
 - 상세는 `tasks/done/portfolio-monitoring-chart-hover-font-polish-v1-20260719/`를 본다.
+
+## 2026-07-19 - Portfolio Monitoring 등록 drawer 잘림·닫기 회귀 수정
+
+- drawer open 시 iframe을 560px로 축소하던 계약을 제거하고 workbench 자연 높이는 유지한 채 drawer panel만 560px로 제한했다.
+- catalog 검색 recovery는 stable key로 한 번만 적용해 X 닫기 뒤 동일 snapshot이 팝업을 다시 열지 못하게 했다.
+- React 17 tests, Portfolio Monitoring Python 90 tests, typecheck/build와 body 1,803px / drawer 560px Browser QA를 통과했다.
+- 전체 보정 roadmap `3/3차` 완료이며 등록 command·DB·가치 계산 계약은 변경하지 않았다.

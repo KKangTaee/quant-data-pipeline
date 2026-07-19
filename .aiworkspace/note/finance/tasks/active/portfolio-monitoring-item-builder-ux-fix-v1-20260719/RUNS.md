@@ -9,3 +9,6 @@
 | 2026-07-19 | Focused GREEN | React 15 tests, Python page/component 11 tests, TypeScript typecheck, Vite build PASS |
 | 2026-07-19 | Full monitoring regression | Python Portfolio Monitoring 87 tests and static distribution contract PASS |
 | 2026-07-19 | Final Browser QA | iframe 560px, footer first-view visible, AAPL search/query survives rerun, requested date `2026-07-01` survives review; component error 0 |
+| 2026-07-19 | Regression TDD | React recovery-key test와 Python natural-frame/static contract가 기존 구현에서 의도대로 실패 후 통과 |
+| 2026-07-19 | Full regression | React 17 tests, typecheck/build, Portfolio Monitoring Python 90 tests PASS |
+| 2026-07-19 | Regression Browser QA | body 1,803px / drawer 560px; repeated recovery -> X close -> repeated same recovery stays closed -> reopen PASS |

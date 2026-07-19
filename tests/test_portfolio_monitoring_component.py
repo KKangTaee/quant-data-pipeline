@@ -60,6 +60,19 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn("const requestedStartDate = event.currentTarget.value;", date_input)
         self.assertNotIn("requestedStartDate: event.currentTarget.value", date_input)
 
+    def test_drawer_keeps_natural_component_height_and_consumes_recovery_once(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        styles = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/style.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn("drawerFrameHeight", source)
+        self.assertIn("Streamlit.setFrameHeight();", source)
+        self.assertIn("consumedRecoveryKeyRef", source)
+        self.assertIn("height: min(560px, calc(100% - 28px));", styles)
+
     def test_build_availability_requires_index_html(self) -> None:
         component = _load_component()
         with tempfile.TemporaryDirectory() as directory:

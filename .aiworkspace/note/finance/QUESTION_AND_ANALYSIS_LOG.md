@@ -10085,3 +10085,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: dense 시계열의 작은 점을 정확히 겨냥하지 않아도 날짜별 총 평가금액을 읽고, 기존 UI 밀도를 크게 바꾸지 않으면서 가독성을 높여야 함.
 - Analysis result: 투명 plot hit area가 pointer x좌표에서 가장 가까운 유효 관측치를 선택하고, 날짜·금액 tooltip/guide/active point를 표시한다. 기존 px 기반 font-size만 모두 +1해 spacing과 다른 탭을 보존했다.
 - Follow-up: 보정 roadmap `3/3차`, regression/build/actual-data QA를 완료했다. 데이터·진단·확률·주문 경계의 후속 변경은 없다.
+
+### 2026-07-19 - 등록 drawer는 전체 탭을 자르지 않고 X로 확실히 닫힌다
+
+- User request: `종목·전략 등록` X가 닫히지 않고 팝업을 열면 탭이 절반에서 잘리는 문제를 수정해 달라고 요청함.
+- Interpreted goal: footer 가시성은 유지하면서 Portfolio Monitoring 본문 전체 높이를 보존하고, 검색 rerun 복원값이 사용자의 닫기 행동을 되돌리지 않아야 함.
+- Analysis result: iframe 자체를 560px로 강제한 것이 잘림 원인이며, 동일 recovery projection의 effect 재적용이 X 닫기를 덮어쓸 수 있었다. iframe auto measurement, 560px panel, one-shot recovery key로 경계를 분리했다.
+- Follow-up: 반복 recovery -> X 닫기 -> 동일 recovery 재전송 closed 유지 -> 재오픈과 전체 높이 Browser QA를 완료했다. 등록/DB 계약 후속 변경은 없다.

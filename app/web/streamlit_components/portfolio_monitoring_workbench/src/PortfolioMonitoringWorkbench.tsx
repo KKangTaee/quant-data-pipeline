@@ -12,8 +12,8 @@ import {
   buildMacroObservationPresentation,
   buildRiskCalibrationPresentation,
   createItemDraft,
-  drawerFrameHeight,
   formatMetric,
+  itemBuilderRecoveryKey,
   nearestChartPointIndex,
   normalizeItemBuilderState,
   placeChartTooltip,
@@ -206,20 +206,21 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   const [localCommandState, setLocalCommandState] = useState<"idle" | "pending" | "success" | "error">("idle");
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const drawerCloseRef = useRef<HTMLButtonElement>(null);
+  const consumedRecoveryKeyRef = useRef<string | null>(itemBuilderRecoveryKey(initialItemBuilder));
 
   useEffect(() => {
     setSelectedGroupId(serverGroup?.portfolio_group_id ?? null);
   }, [serverGroup?.portfolio_group_id]);
 
   useEffect(() => {
-    const compactHeight = drawerFrameHeight(drawerOpen);
-    if (compactHeight == null) Streamlit.setFrameHeight();
-    else Streamlit.setFrameHeight(compactHeight);
+    Streamlit.setFrameHeight();
   }, [workspace, selectedGroupId, selectedItemId, drawerOpen, drawerStep]);
 
   useEffect(() => {
     const recovered = normalizeItemBuilderState(workspace?.item_builder_state, initialCommandId);
-    if (!recovered) return;
+    const recoveryKey = itemBuilderRecoveryKey(recovered);
+    if (!recovered || !recoveryKey || consumedRecoveryKeyRef.current === recoveryKey) return;
+    consumedRecoveryKeyRef.current = recoveryKey;
     setDrawerOpen(recovered.drawerOpen);
     setDrawerStep(recovered.drawerStep);
     setCatalogQuery(recovered.catalogQuery);
