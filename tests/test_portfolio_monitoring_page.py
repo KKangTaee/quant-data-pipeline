@@ -13,8 +13,20 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
         calls = []
         state = {}
 
-        def build_workspace(*, active_group_id, catalog_query):
-            calls.append(("build", active_group_id, catalog_query))
+        def build_workspace(
+            *,
+            active_group_id,
+            catalog_query,
+            selected_item_id=None,
+            include_selected_item_market_chart=False,
+        ):
+            calls.append((
+                "build",
+                active_group_id,
+                catalog_query,
+                selected_item_id,
+                include_selected_item_market_chart,
+            ))
             return {
                 "schema_version": "portfolio_monitoring_workspace_v1",
                 "generated_at": "2026-07-19T12:00:00",
@@ -77,6 +89,29 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
         self.assertEqual(sum(call[0] == "create_group" for call in services.calls), 1)
         self.assertEqual(sum(call[0] == "rerun" for call in services.calls), 1)
         self.assertEqual(services.session_state["portfolio_monitoring_last_command"]["command_id"], "command-1")
+
+    def test_route_requests_market_chart_for_the_session_selected_item(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        services = self._services(component_value={"event": None})
+        services.session_state["portfolio_monitoring_selected_item_id"] = "item-a"
+
+        page.render_final_selected_portfolio_dashboard_page(services=services)
+
+        build_call = next(call for call in services.calls if call[0] == "build")
+        self.assertEqual(build_call[3], "item-a")
+        self.assertTrue(build_call[4])
+
+    def test_operations_workspace_explicitly_skips_selected_item_market_chart(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        services = self._services()
+        with patch.object(page, "_default_portfolio_monitoring_services", return_value=services):
+            page.load_portfolio_monitoring_workspace_for_operations()
+
+        build_call = next(call for call in services.calls if call[0] == "build")
+        self.assertIsNone(build_call[3])
+        self.assertFalse(build_call[4])
 
     def test_missing_component_uses_read_only_fallback_not_legacy_dashboard(self) -> None:
         from app.web import final_selected_portfolio_dashboard as page

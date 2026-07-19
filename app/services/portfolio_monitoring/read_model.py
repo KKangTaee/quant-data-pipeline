@@ -11,6 +11,7 @@ from .persistence import MonitoringItemRecord, MonitoringRepository, PortfolioGr
 from .valuation import ItemValueLane
 from .diagnosis import DIAGNOSIS_POLICY_VERSION, DiagnosisFact, project_diagnoses
 from .macro_context import MACRO_CONTEXT_VERSION, MacroContext, MacroObservation
+from .market_chart import MarketChartLoader, build_selected_item_market_chart
 from .schemas import build_request_fingerprint
 
 
@@ -358,9 +359,11 @@ def build_portfolio_monitoring_workspace(
     repository: MonitoringRepository,
     *,
     active_group_id: str | None = None,
+    selected_item_id: str | None = None,
     catalog_query: str = "",
     generated_at: datetime | None = None,
     lane_loader: LaneLoader | None = None,
+    market_chart_loader: MarketChartLoader | None = None,
     diagnosis_facts: Sequence[DiagnosisFact] | None = None,
     exposure_coverage: float = 0.0,
     macro_context: MacroContext | None = None,
@@ -383,6 +386,7 @@ def build_portfolio_monitoring_workspace(
     if selected_group is None:
         selected_group = next((group for group in groups if group.is_default), groups[0] if groups else None)
     active_result: GroupValueResult | None = None
+    selected_items: list[MonitoringItemRecord] = []
     if selected_group is not None:
         selected_items = items_by_group[selected_group.portfolio_group_id]
         loader = lane_loader or getattr(repository, "load_value_lane", None)
@@ -478,7 +482,7 @@ def build_portfolio_monitoring_workspace(
         current_policy_version=DIAGNOSIS_POLICY_VERSION,
         current_config_fingerprint=config_fingerprint,
     )
-    return {
+    workspace: dict[str, object] = {
         "schema_version": WORKSPACE_SCHEMA_VERSION,
         "generated_at": timestamp.isoformat(timespec="seconds"),
         "config_fingerprint": config_fingerprint,
@@ -520,3 +524,11 @@ def build_portfolio_monitoring_workspace(
             "auto_rebalance": False,
         },
     }
+    if market_chart_loader is not None:
+        workspace["selected_item_market_chart"] = build_selected_item_market_chart(
+            selected_items,
+            selected_item_id=selected_item_id,
+            basis_date=active_result.basis_date if active_result is not None else None,
+            loader=market_chart_loader,
+        )
+    return workspace

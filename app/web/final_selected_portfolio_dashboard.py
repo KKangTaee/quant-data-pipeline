@@ -450,6 +450,16 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
         )
         return build_direct_security_value_lane(item, history)
 
+    def market_chart_loader(item, start_date: date, end_date: date) -> pd.DataFrame:
+        """Load bounded daily OHLCV from the existing DB-only price loader."""
+
+        return load_price_history(
+            symbols=[item.source_ref],
+            start=start_date.isoformat(),
+            end=end_date.isoformat(),
+            timeframe="1d",
+        )
+
     def load_asset_profile(symbol: str, kind: str) -> dict[str, Any] | None:
         db = _monitoring_db_factory()
         try:
@@ -552,7 +562,13 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
             "macro_observations": macro_observations,
         }
 
-    def build_workspace(*, active_group_id: str | None, catalog_query: str) -> dict[str, Any]:
+    def build_workspace(
+        *,
+        active_group_id: str | None,
+        catalog_query: str,
+        selected_item_id: str | None = None,
+        include_selected_item_market_chart: bool = False,
+    ) -> dict[str, Any]:
         source_type = str(session_state.get("portfolio_monitoring_catalog_source_type") or SourceType.DIRECT_SECURITY.value)
         requested_date = session_state.get("portfolio_monitoring_catalog_requested_start_date")
         item_builder_state = session_state.pop("portfolio_monitoring_item_builder_state", None)
@@ -579,8 +595,10 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
             workspace = build_portfolio_monitoring_workspace(
                 repository,
                 active_group_id=active_group_id,
+                selected_item_id=selected_item_id,
                 catalog_query=catalog_query,
                 lane_loader=lane_loader,
+                market_chart_loader=(market_chart_loader if include_selected_item_market_chart else None),
                 analysis_builder=build_analysis,
                 risk_calibration_artifact=calibration_artifact,
                 diagnosis_history=history_rows,
@@ -4043,6 +4061,8 @@ def load_portfolio_monitoring_workspace_for_operations() -> dict[str, Any]:
     return runtime.build_workspace(
         active_group_id=runtime.session_state.get("portfolio_monitoring_active_group_id"),
         catalog_query="",
+        selected_item_id=None,
+        include_selected_item_market_chart=False,
     )
 
 
@@ -4059,6 +4079,8 @@ def render_final_selected_portfolio_dashboard_page(
         workspace = runtime.build_workspace(
             active_group_id=active_group_id,
             catalog_query=catalog_query,
+            selected_item_id=runtime.session_state.get("portfolio_monitoring_selected_item_id"),
+            include_selected_item_market_chart=True,
         )
     except Exception as exc:
         workspace = _fallback_monitoring_workspace(

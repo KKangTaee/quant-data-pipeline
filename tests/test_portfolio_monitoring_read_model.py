@@ -215,6 +215,25 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
         self.assertEqual(workspace["risk_calibration"]["publication_status"], "SUPPRESSED")
         self.assertNotIn("probability", workspace["risk_calibration"])
 
+    def test_workspace_projects_selected_item_market_chart_only_when_loader_is_configured(self) -> None:
+        read_model = _load_read_model()
+        group = PortfolioGroupRecord("group-core", "Core", True)
+        active = _item("a", requested=date(2026, 7, 1), effective=date(2026, 7, 1))
+        repository = FakeRepository([group], [active])
+
+        workspace = read_model.build_portfolio_monitoring_workspace(
+            repository,
+            active_group_id="group-core",
+            selected_item_id="a",
+            lane_loader=lambda item: _lane(item, [("2026-07-01", 100), ("2026-07-02", 101)]),
+            market_chart_loader=lambda item, start, end: pd.DataFrame(
+                [{"date": end, "open": 10, "high": 11, "low": 9, "close": 10.5, "volume": 100}]
+            ),
+        )
+
+        self.assertEqual(workspace["selected_item_market_chart"]["status"], "READY")
+        self.assertEqual(workspace["selected_item_market_chart"]["monitoring_item_id"], "a")
+
     def test_macro_projection_filters_low_confidence_and_exposes_source_health(self) -> None:
         read_model = _load_read_model()
         group = PortfolioGroupRecord("group-core", "Core", True)
