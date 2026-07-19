@@ -12,6 +12,7 @@ import {
   selectActiveGroup,
   selectItem,
   buildDiagnosisSections,
+  buildMacroObservationPresentation,
 } from "./workbenchState";
 
 const groups: GroupSummary[] = [
@@ -163,5 +164,27 @@ describe("diagnosis evidence contract", () => {
     expect(sections.evidence[0].threshold).toContain("high");
     expect(sections.evidence[0].change_condition).toContain("회복");
     expect(JSON.stringify(sections)).not.toMatch(/매수|매도|목표\s*비중/);
+  });
+});
+
+describe("macro observation evidence contract", () => {
+  it("keeps meaning before source health and never creates probability copy", () => {
+    const presentation = buildMacroObservationPresentation(
+      {
+        state: "high", rows: [{
+          rule_id: "macro_tech_risk_off", root_id: "sector:Technology", state: "high", severity: "MEDIUM",
+          affected_weight: 0.5, matched_conditions: ["risk_on"], current_observation: "Technology 50% / risk-on -40",
+          source_dates: ["2026-07-18"], coverage: 0.75, confidence: "MEDIUM", publication: "PROVISIONAL",
+          change_condition: "risk-on > -20", next_check: "다음 snapshot",
+        }], top_rows: [], version: "portfolio_monitoring_macro_context_v1",
+      },
+      { status: "LIMITED", publication: "PROVISIONAL", coverage: 0.75, as_of_dates: { futures_macro: "2026-07-18" }, warnings: ["stale source"] },
+    );
+
+    expect(presentation.stateLabel).toBe("높음");
+    expect(presentation.sourceChip).toContain("LIMITED");
+    expect(presentation.rows[0].change_condition).toContain("-20");
+    expect(presentation.staleWarning).toContain("stale");
+    expect(JSON.stringify(presentation)).not.toMatch(/확률|probability|매수|매도/);
   });
 });

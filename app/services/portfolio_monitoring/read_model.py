@@ -10,6 +10,7 @@ import pandas as pd
 from .persistence import MonitoringItemRecord, MonitoringRepository, PortfolioGroupRecord
 from .valuation import ItemValueLane
 from .diagnosis import DIAGNOSIS_POLICY_VERSION, DiagnosisFact, project_diagnoses
+from .macro_context import MACRO_CONTEXT_VERSION, MacroContext, MacroObservation
 
 
 WORKSPACE_SCHEMA_VERSION = "portfolio_monitoring_workspace_v1"
@@ -271,6 +272,7 @@ def align_group_value_lanes(
 
 
 LaneLoader = Callable[[MonitoringItemRecord], ItemValueLane | BaseException]
+AnalysisBuilder = Callable[[Sequence[MonitoringItemRecord], Mapping[str, ItemValueLane | BaseException], GroupValueResult], Mapping[str, Any]]
 
 
 def _group_summary(
@@ -300,6 +302,9 @@ def build_portfolio_monitoring_workspace(
     lane_loader: LaneLoader | None = None,
     diagnosis_facts: Sequence[DiagnosisFact] | None = None,
     exposure_coverage: float = 0.0,
+    macro_context: MacroContext | None = None,
+    macro_observations: Sequence[MacroObservation] | None = None,
+    analysis_builder: AnalysisBuilder | None = None,
 ) -> dict[str, object]:
     """Build the versioned, read-only projection consumed by the React workbench."""
 
@@ -329,8 +334,80 @@ def build_portfolio_monitoring_workspace(
                 lane_values[item.monitoring_item_id] = RuntimeError("Value lane loader is not configured.")
         active_result = align_group_value_lanes(selected_items, lane_values)
 
+        if analysis_builder is not None:
+            try:
+                analysis = dict(analysis_builder(selected_items, lane_values, active_result) or {})
+                diagnosis_facts = list(analysis.get("diagnosis_facts") or diagnosis_facts or [])
+                exposure_coverage = float(analysis.get("exposure_coverage", exposure_coverage))
+                macro_context = analysis.get("macro_context") or macro_context
+                macro_observations = list(analysis.get("macro_observations") or macro_observations or [])
+            except Exception as exc:
+                macro_context = macro_context or MacroContext(
+                    status="LIMITED", as_of_dates={}, publication="LIMITED", cycle={}, family_scores={},
+                    outlooks={}, pathways={}, coverage=0.0, warnings=(f"analysis projection failed: {exc}",),
+                )
+
     timestamp = generated_at or datetime.now()
     diagnosis = project_diagnoses(list(diagnosis_facts or []), exposure_coverage)
+    observation_rows = list(macro_observations or [])
+    observation_rank = {"high": 3, "medium": 2, "low": 1}
+    severity_rank = {"HIGH": 3, "MEDIUM": 2, "WATCH": 2, "LOW": 1, "INFO": 0}
+    top_macro = sorted(
+        (row for row in observation_rows if row.confidence != "LOW"),
+        key=lambda row: (-severity_rank.get(row.severity, 0), -row.affected_weight, row.rule_id),
+    )
+    combined: dict[str, dict[str, Any]] = {}
+    for row in diagnosis.top_three:
+        combined[row.root_id] = asdict(row)
+    for row in top_macro:
+        projected = {
+            **asdict(row),
+            "classification": "macro_observation",
+            "meaning": row.current_observation,
+            "measured_fact": row.current_observation,
+            "threshold": " + ".join(row.matched_conditions),
+            "persistence": 1,
+            "contribution": None,
+            "policy_version": MACRO_CONTEXT_VERSION,
+        }
+        current = combined.get(row.root_id)
+        if current is None or (
+            severity_rank.get(row.severity, 0), row.affected_weight
+        ) > (
+            severity_rank.get(str(current.get("severity") or ""), 0),
+            float(current.get("affected_weight") or 0),
+        ):
+            combined[row.root_id] = projected
+    now_to_review = sorted(
+        combined.values(),
+        key=lambda row: (
+            -severity_rank.get(str(row.get("severity") or ""), 0),
+            -float(row.get("affected_weight") or 0),
+            str(row.get("rule_id") or ""),
+        ),
+    )[:3]
+    macro_state = max(
+        (row.state for row in observation_rows),
+        key=lambda value: observation_rank.get(value, 0),
+        default="low",
+    )
+    source_health = (
+        {
+            "status": macro_context.status,
+            "publication": macro_context.publication,
+            "coverage": macro_context.coverage,
+            "as_of_dates": dict(macro_context.as_of_dates),
+            "warnings": list(macro_context.warnings),
+        }
+        if macro_context is not None
+        else {
+            "status": "LIMITED",
+            "publication": "LIMITED",
+            "coverage": 0.0,
+            "as_of_dates": {},
+            "warnings": ["macro context is not configured"],
+        }
+    )
     return {
         "schema_version": WORKSPACE_SCHEMA_VERSION,
         "generated_at": timestamp.isoformat(timespec="seconds"),
@@ -354,6 +431,14 @@ def build_portfolio_monitoring_workspace(
             "all_rows": [asdict(row) for row in diagnosis.all_rows],
             "coverage": exposure_coverage,
         },
+        "macro_observation": {
+            "version": MACRO_CONTEXT_VERSION,
+            "state": macro_state,
+            "rows": [asdict(row) for row in observation_rows],
+            "top_rows": [asdict(row) for row in top_macro[:3]],
+        },
+        "now_to_review": now_to_review,
+        "source_health": source_health,
         "method": {
             "basis": "oldest_latest_usable_date_among_active_lanes",
             "alignment": "as_of_step_without_interpolation",

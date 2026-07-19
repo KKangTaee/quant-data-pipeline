@@ -6688,3 +6688,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - direct/ETF/선정 전략 노출을 source date와 provenance가 있는 normalized facts로 만들고, 모르는 비중은 추정하지 않고 coverage gap으로 유지한다.
 - 21/63/126일 수익률, 50D/200D 추세, drawdown, 변동성, 상관 cluster, 기여도에 versioned Python 정책을 적용하며 Final Review override 출처를 보존한다.
 - 같은 원인의 중복을 제거하고 HIGH/MEDIUM/LOW confidence에 따라 상위 3개·강점·취약점·데이터 부족으로 나눴다. 전체 roadmap `4/6차` 완료; 다음은 5차 persisted macro 관찰이다.
+
+## 2026-07-19 - Portfolio Monitoring React 개편 5차 완료
+
+- 저장된 경제사이클 current/+1M/+2M, Futures Macro 5D/20D family, 금·달러·WTI·구리·금리·S&P 경로를 read-only compact context로 연결했다.
+- 실제 노출이 먼저 충족될 때만 tech risk-off, gold adversity, duration rate pressure, cyclical slowdown 관찰을 만들며 LIMITED/PROVISIONAL은 단독 HIGH severity를 만들지 못한다.
+- React에는 포트폴리오 의미·영향 비중·변화 조건을 먼저, coverage/freshness는 보조 근거로 표시하고 Operations에는 top review와 macro coverage만 연결했다. 전체 roadmap `5/6차`; 다음은 6차 이력·확률 gate·migration closeout이다.

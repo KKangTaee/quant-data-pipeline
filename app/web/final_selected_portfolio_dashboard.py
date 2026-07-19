@@ -11,6 +11,7 @@ import streamlit as st
 
 from finance.data.db.mysql import MySQLClient
 from finance.loaders import load_price_history
+from finance.loaders.provider import load_etf_exposure_snapshot, load_etf_holdings_snapshot
 
 from app.services.portfolio_monitoring.catalog import search_monitoring_catalog
 from app.services.portfolio_monitoring.commands import (
@@ -48,6 +49,19 @@ from app.services.portfolio_monitoring.selected_strategy import (
 from app.services.portfolio_monitoring.valuation import (
     build_direct_security_value_lane,
     resolve_direct_security_entry,
+)
+from app.services.portfolio_monitoring.diagnosis import build_behavior_facts, evaluate_portfolio_rules
+from app.services.portfolio_monitoring.exposure import (
+    ExposureBucket,
+    ExposureResult,
+    aggregate_group_exposure,
+    build_direct_stock_exposure,
+    build_etf_exposure,
+    build_selected_strategy_exposure,
+)
+from app.services.portfolio_monitoring.macro_context import (
+    evaluate_macro_observations,
+    load_portfolio_macro_context,
 )
 from app.web.portfolio_monitoring_react_component import (
     render_portfolio_monitoring_workbench,
@@ -351,6 +365,9 @@ def _fallback_monitoring_workspace(
             "all_rows": [],
             "coverage": 0.0,
         },
+        "macro_observation": {"version": "portfolio_monitoring_macro_context_v1", "state": "low", "rows": [], "top_rows": []},
+        "now_to_review": [],
+        "source_health": {"status": "LIMITED", "publication": "LIMITED", "coverage": 0.0, "as_of_dates": {}, "warnings": [storage_error]},
         "method": {
             "basis": "storage migration required",
             "alignment": "not available until monitoring storage is ready",
@@ -420,6 +437,108 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
         )
         return build_direct_security_value_lane(item, history)
 
+    def load_asset_profile(symbol: str, kind: str) -> dict[str, Any] | None:
+        db = _monitoring_db_factory()
+        try:
+            db.use_db("finance_meta")
+            rows = db.query(
+                """
+                SELECT sector, industry, COALESCE(last_collected_at, updated_at, created_at) AS as_of_date
+                FROM nyse_asset_profile
+                WHERE symbol = %s AND kind = %s
+                ORDER BY COALESCE(last_collected_at, updated_at, created_at) DESC
+                LIMIT 1
+                """,
+                [symbol, kind],
+            )
+        finally:
+            db.close()
+        return dict(rows[0]) if rows else None
+
+    def build_analysis(items, lanes, group_result):
+        active_items = [item for item in items if item.status in {"active", "data_review"}]
+        current_by_item = {
+            str(row.get("monitoring_item_id")): float(row.get("current_value") or 0)
+            for row in group_result.item_rows
+        }
+        denominator = float(group_result.metrics.current_value or 0)
+        exposure_parts = []
+        for item in active_items:
+            weight = current_by_item.get(item.monitoring_item_id, float(item.initial_capital)) / denominator if denominator > 0 else 0.0
+            item_input = {
+                "monitoring_item_id": item.monitoring_item_id,
+                "source_ref": item.source_ref,
+                "portfolio_weight": weight,
+            }
+            if item.source_type == SourceType.SELECTED_STRATEGY.value:
+                contract = selected_adapter.load_candidate_contract(item.source_ref)
+                decision = dict((contract.decision_row or {}).get("raw_decision") or contract.decision_row or {})
+                targets = []
+                for component in decision.get("selected_components") or []:
+                    if not isinstance(component, dict):
+                        continue
+                    try:
+                        target_weight = float(component.get("target_weight") or 0) / 100.0
+                    except (TypeError, ValueError):
+                        continue
+                    targets.append({
+                        "symbol": component.get("strategy_key") or component.get("strategy_name"),
+                        "weight": target_weight,
+                    })
+                exposure_parts.append(build_selected_strategy_exposure(
+                    item_input,
+                    {"as_of_date": contract.readiness.source_dates.get("decision_updated_at"), "targets": targets},
+                ))
+            elif item.instrument_kind == "etf":
+                holdings = load_etf_holdings_snapshot(item.source_ref)
+                holding_rows = []
+                for row in holdings.to_dict(orient="records"):
+                    raw_weight = pd.to_numeric(row.get("weight_pct"), errors="coerce")
+                    if pd.isna(raw_weight):
+                        continue
+                    holding_rows.append({
+                        "symbol": row.get("holding_symbol"), "sector": row.get("sector"),
+                        "asset": row.get("asset_class"), "weight": float(raw_weight) / 100.0,
+                    })
+                exposure_frame = load_etf_exposure_snapshot(item.source_ref)
+                asset_weights: dict[str, float] = {}
+                sector_weights: dict[str, float] = {}
+                for row in exposure_frame.to_dict(orient="records"):
+                    target = asset_weights if str(row.get("exposure_type") or "").lower() in {"asset", "asset_class"} else sector_weights
+                    raw_weight = pd.to_numeric(row.get("weight_pct"), errors="coerce")
+                    if row.get("exposure_name") and not pd.isna(raw_weight):
+                        target[str(row["exposure_name"])] = float(raw_weight) / 100.0
+                holding_date = holdings["as_of_date"].max() if not holdings.empty else None
+                exposure_date = exposure_frame["as_of_date"].max() if not exposure_frame.empty else None
+                exposure_parts.append(build_etf_exposure(
+                    item_input,
+                    {"as_of_date": str(holding_date)[:10], "holdings": holding_rows} if holding_rows else None,
+                    {"as_of_date": str(exposure_date)[:10], "asset_weights": asset_weights, "sector_weights": sector_weights},
+                ))
+            else:
+                exposure_parts.append(build_direct_stock_exposure(
+                    item_input,
+                    load_asset_profile(item.source_ref, item.instrument_kind),
+                ))
+        tracked_weight = sum(part.total_weight for part in exposure_parts)
+        cash_weight = max(1.0 - tracked_weight, 0.0) if denominator > 0 else 0.0
+        if cash_weight:
+            exposure_parts.append(ExposureResult(
+                buckets=(ExposureBucket("asset", "cash", cash_weight, "group_cash", "group_value_curve", str(group_result.basis_date or "") or None),),
+                total_weight=cash_weight, covered_weight=cash_weight, uncovered_weight=0.0, coverage_ratio=1.0,
+            ))
+        exposure = aggregate_group_exposure(exposure_parts)
+        behavior = build_behavior_facts(group_result, lanes)
+        diagnosis_facts = evaluate_portfolio_rules(exposure, behavior)
+        macro_context = load_portfolio_macro_context(as_of_date=group_result.basis_date or date.today())
+        macro_observations = evaluate_macro_observations(exposure, behavior, macro_context)
+        return {
+            "diagnosis_facts": diagnosis_facts,
+            "exposure_coverage": exposure.coverage_ratio,
+            "macro_context": macro_context,
+            "macro_observations": macro_observations,
+        }
+
     def build_workspace(*, active_group_id: str | None, catalog_query: str) -> dict[str, Any]:
         source_type = str(session_state.get("portfolio_monitoring_catalog_source_type") or SourceType.DIRECT_SECURITY.value)
         requested_date = session_state.get("portfolio_monitoring_catalog_requested_start_date")
@@ -430,6 +549,7 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
                 active_group_id=active_group_id,
                 catalog_query=catalog_query,
                 lane_loader=lane_loader,
+                analysis_builder=build_analysis,
             )
         except Exception as exc:
             return _fallback_monitoring_workspace(

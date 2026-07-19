@@ -9,6 +9,7 @@ import pandas as pd
 
 from app.services.portfolio_monitoring.persistence import MonitoringItemRecord, PortfolioGroupRecord
 from app.services.portfolio_monitoring.valuation import CorporateActionReview, ItemValueLane
+from app.services.portfolio_monitoring.macro_context import MacroContext, MacroObservation
 
 
 def _load_read_model():
@@ -201,7 +202,7 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
 
         self.assertEqual(
             set(workspace),
-            {"schema_version", "generated_at", "groups", "active_group", "catalog", "commands", "diagnosis", "method", "boundaries"},
+            {"schema_version", "generated_at", "groups", "active_group", "catalog", "commands", "diagnosis", "macro_observation", "now_to_review", "source_health", "method", "boundaries"},
         )
         self.assertEqual(workspace["schema_version"], "portfolio_monitoring_workspace_v1")
         self.assertTrue(workspace["groups"][0]["selected"])
@@ -210,6 +211,37 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
         self.assertEqual(workspace["generated_at"], "2026-07-19T12:00:00")
         self.assertEqual(workspace["diagnosis"]["policy_version"], "portfolio_monitoring_policy_v1")
         self.assertEqual(workspace["diagnosis"]["top_three"], [])
+
+    def test_macro_projection_filters_low_confidence_and_exposes_source_health(self) -> None:
+        read_model = _load_read_model()
+        group = PortfolioGroupRecord("group-core", "Core", True)
+        repository = FakeRepository([group], [])
+        context = MacroContext(
+            status="LIMITED", as_of_dates={"economic_cycle": "2026-07-01", "futures_macro": "2026-07-18"},
+            publication="PROVISIONAL", cycle={}, family_scores={}, outlooks={}, pathways={}, coverage=0.75,
+            warnings=("source as-of date mismatch",),
+        )
+        high = MacroObservation(
+            "macro_tech_risk_off", "sector:Technology", "high", "MEDIUM", 0.5, ("risk_on",),
+            "Technology 50% / risk-on -40", ("2026-07-18",), 0.75, "MEDIUM", "PROVISIONAL",
+            "risk-on > -20", "다음 snapshot",
+        )
+        low = MacroObservation(
+            "macro_data_low", "asset:gold", "medium", "MEDIUM", 0.3, ("gold",),
+            "Gold context", ("2026-07-18",), 0.6, "LOW", "PROVISIONAL", "coverage >= 70%", "다음 snapshot",
+        )
+
+        workspace = read_model.build_portfolio_monitoring_workspace(
+            repository, generated_at=datetime(2026, 7, 19, 12), macro_context=context,
+            macro_observations=[high, low],
+        )
+
+        self.assertEqual(workspace["macro_observation"]["state"], "high")
+        self.assertEqual(len(workspace["macro_observation"]["top_rows"]), 1)
+        self.assertEqual(workspace["now_to_review"][0]["rule_id"], "macro_tech_risk_off")
+        self.assertEqual(workspace["source_health"]["status"], "LIMITED")
+        self.assertEqual(workspace["source_health"]["coverage"], 0.75)
+        self.assertNotIn("probability", str(workspace["macro_observation"]).lower())
 
 
 if __name__ == "__main__":

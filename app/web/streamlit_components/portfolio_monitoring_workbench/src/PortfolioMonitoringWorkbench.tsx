@@ -8,6 +8,7 @@ import {
   buildCommonBasisBanner,
   buildGroupChartSeries,
   buildDiagnosisSections,
+  buildMacroObservationPresentation,
   createItemDraft,
   formatMetric,
   selectActiveGroup,
@@ -183,6 +184,10 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
     top_three: [], strengths: [], weaknesses: [], data_gaps: [], all_rows: [], coverage: 0,
   };
   const diagnosisSections = buildDiagnosisSections(diagnosis);
+  const macroPresentation = buildMacroObservationPresentation(
+    workspace.macro_observation ?? { version: "portfolio_monitoring_macro_context_v1", state: "low", rows: [], top_rows: [] },
+    workspace.source_health ?? { status: "LIMITED", publication: "LIMITED", coverage: 0, as_of_dates: {}, warnings: ["source health unavailable"] },
+  );
   const emit = (event: Record<string, unknown>) => {
     Streamlit.setComponentValue({ event: { ...event, nonce: `${Date.now()}-${Math.random()}` } });
   };
@@ -291,6 +296,34 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
                 <section><h3>취약점</h3>{diagnosisSections.weaknesses.map((row) => <DiagnosisCard key={row.rule_id} row={row} />)}{!diagnosisSections.weaknesses.length && <p>현재 기준을 넘은 취약점이 없습니다.</p>}</section>
                 <section><h3>데이터 부족</h3>{diagnosisSections.dataGaps.map((row) => <DiagnosisCard key={row.rule_id} row={row} />)}{!diagnosisSections.dataGaps.length && <p>핵심 분류 근거의 coverage가 유지되고 있습니다.</p>}</section>
               </div>
+            </section>
+
+            <section className={`pm-panel pm-macro-panel state-${workspace.macro_observation?.state ?? "low"}`} aria-label="매크로 위험 관찰">
+              <header className="pm-section-heading">
+                <div><span>MACRO RISK OBSERVATION</span><h2>현재 매크로 관찰 · {macroPresentation.stateLabel}</h2></div>
+                <small className={`pm-source-chip status-${(workspace.source_health?.status ?? "LIMITED").toLowerCase()}`}>{macroPresentation.sourceChip}</small>
+              </header>
+              <p className="pm-macro-lead">보유 노출과 저장된 경제사이클·선물·자산 경로가 동시에 맞는 조건만 표시합니다.</p>
+              <div className="pm-macro-grid">
+                {macroPresentation.rows.map((row) => (
+                  <article key={row.rule_id} className={`pm-macro-card state-${row.state}`}>
+                    <header><span>{row.severity}</span><b>{row.confidence} confidence</b></header>
+                    <h3>{row.current_observation}</h3>
+                    <p>영향 비중 {formatMetric(row.affected_weight, "percent")}</p>
+                    <details>
+                      <summary>조건과 다음 확인</summary>
+                      <dl>
+                        <div><dt>맞은 조건</dt><dd>{row.matched_conditions.join(" · ")}</dd></div>
+                        <div><dt>변화 조건</dt><dd>{row.change_condition}</dd></div>
+                        <div><dt>다음 확인</dt><dd>{row.next_check}</dd></div>
+                        <div><dt>근거 날짜</dt><dd>{row.source_dates.join(", ") || "확인 필요"}</dd></div>
+                      </dl>
+                    </details>
+                  </article>
+                ))}
+                {!macroPresentation.rows.length && <div className="pm-diagnosis-empty">현재 보유 노출과 동시에 맞는 매크로 위험 관찰이 없습니다.</div>}
+              </div>
+              {macroPresentation.staleWarning && <p className="pm-source-warning">Source 확인: {macroPresentation.staleWarning}</p>}
             </section>
 
             <section className="pm-content-grid">

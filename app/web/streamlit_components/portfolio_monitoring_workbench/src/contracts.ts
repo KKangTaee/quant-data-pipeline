@@ -55,6 +55,7 @@ export type CatalogItem = {
 
 export type DiagnosisRow = {
   rule_id: string;
+  root_id?: string;
   policy_version: string;
   classification: "strength" | "weakness" | "data_gap" | string;
   severity: string;
@@ -69,6 +70,37 @@ export type DiagnosisRow = {
   meaning: string;
   change_condition: string;
   next_check: string;
+};
+
+export type MacroObservationRow = {
+  rule_id: string;
+  root_id: string;
+  state: "low" | "medium" | "high" | string;
+  severity: string;
+  affected_weight: number;
+  matched_conditions: string[];
+  current_observation: string;
+  source_dates: string[];
+  coverage: number;
+  confidence: string;
+  publication: string;
+  change_condition: string;
+  next_check: string;
+};
+
+export type MacroObservationProjection = {
+  version: string;
+  state: "low" | "medium" | "high" | string;
+  rows: MacroObservationRow[];
+  top_rows: MacroObservationRow[];
+};
+
+export type SourceHealth = {
+  status: string;
+  publication: string;
+  coverage: number;
+  as_of_dates: Record<string, string>;
+  warnings: string[];
 };
 
 export type DiagnosisProjection = {
@@ -89,6 +121,9 @@ export type PortfolioMonitoringWorkspace = {
   catalog: { query: string; items: CatalogItem[] };
   commands: CommandProjection[];
   diagnosis: DiagnosisProjection;
+  macro_observation: MacroObservationProjection;
+  now_to_review: Array<Record<string, unknown>>;
+  source_health: SourceHealth;
   method: Record<string, string>;
   boundaries: Record<string, boolean | string | null>;
 };

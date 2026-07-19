@@ -22,6 +22,10 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
                 "active_group": None,
                 "catalog": {"query": catalog_query, "items": []},
                 "commands": [],
+                "diagnosis": {"policy_version": "portfolio_monitoring_policy_v1", "top_three": [], "strengths": [], "weaknesses": [], "data_gaps": [], "all_rows": []},
+                "macro_observation": {"state": "low", "rows": [], "top_rows": []},
+                "now_to_review": [],
+                "source_health": {"status": "LIMITED", "coverage": 0.0},
                 "method": {},
                 "boundaries": {},
             }
@@ -119,6 +123,8 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
                         "mdd": -0.04,
                     },
                 },
+                "now_to_review": [{"rule_id": "macro_tech_risk_off"}, {"rule_id": "trend"}],
+                "source_health": {"status": "LIMITED", "coverage": 0.75},
             },
         )
 
@@ -126,6 +132,8 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
         self.assertEqual(summary["active_portfolio_count"], 2)
         self.assertEqual(summary["active_item_count"], 3)
         self.assertEqual(summary["current_value"], 21500)
+        self.assertEqual(summary["top_review_count"], 2)
+        self.assertEqual(summary["macro_coverage"], 0.75)
         portfolio_lane = next(lane for lane in model["lanes"] if lane["key"] == "portfolio_monitoring")
         self.assertEqual(portfolio_lane["links"][0]["target_key"], "portfolio_monitoring")
 

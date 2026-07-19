@@ -614,9 +614,12 @@ def build_operations_overview_model(
         else dict(raw_monitoring_active_group or {})
     )
     monitoring_metrics = dict(monitoring_active_group.get("metrics") or {})
+    monitoring_source_health = dict(dict(monitoring_workspace or {}).get("source_health") or {})
+    monitoring_top_review = list(dict(monitoring_workspace or {}).get("now_to_review") or [])
     if monitoring_groups:
         portfolio_count = len(monitoring_groups)
         assigned_count = sum(_safe_int(group.get("active_item_count")) for group in monitoring_groups)
+        monitoring_needs_review = monitoring_active_group.get("status") == "PARTIAL" or bool(monitoring_top_review)
         portfolio_summary.update(
             {
                 "active_portfolio_count": portfolio_count,
@@ -627,9 +630,12 @@ def build_operations_overview_model(
                 "total_return": monitoring_metrics.get("total_return"),
                 "mdd": monitoring_metrics.get("mdd"),
                 "basis_date": monitoring_active_group.get("basis_date"),
-                "status": "Review Needed" if monitoring_active_group.get("status") == "PARTIAL" else "Ready",
-                "tone": "warning" if monitoring_active_group.get("status") == "PARTIAL" else "positive",
-                "detail": "사용자 Portfolio Monitoring 그룹과 공통 기준일 가치 결과입니다.",
+                "top_review_count": len(monitoring_top_review),
+                "macro_coverage": monitoring_source_health.get("coverage"),
+                "macro_source_status": monitoring_source_health.get("status"),
+                "status": "Review Needed" if monitoring_needs_review else "Ready",
+                "tone": "warning" if monitoring_needs_review else "positive",
+                "detail": "사용자 Portfolio Monitoring 그룹의 공통 기준일 가치와 현재 확인 항목입니다.",
             }
         )
 
@@ -676,6 +682,8 @@ def build_operations_overview_model(
                 "active_item_count": assigned_count if monitoring_groups else None,
                 "current_value": monitoring_metrics.get("current_value") if monitoring_groups else None,
                 "total_return": monitoring_metrics.get("total_return") if monitoring_groups else None,
+                "top_review_count": len(monitoring_top_review) if monitoring_groups else None,
+                "macro_coverage": monitoring_source_health.get("coverage") if monitoring_groups else None,
             },
             "links": [{"target_key": "portfolio_monitoring", "label": "Portfolio Monitoring 열기", "icon": "📊"}],
         },

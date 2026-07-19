@@ -558,12 +558,12 @@ if observation.publication in {"LIMITED", "PROVISIONAL"} and observation.severit
 <MacroObservationSection observation={workspace.macro_observation} sourceHealth={workspace.source_health} />
 ```
 
-- [ ] Write failing Python/React tests for low/medium/high observation cards, READY/LIMITED source chips, change-condition disclosure, stale warning, and probability copy absence.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_page.py tests/test_portfolio_monitoring_read_model.py tests/test_portfolio_monitoring_macro_context.py -q` and `cd app/web/streamlit_components/portfolio_monitoring_workbench && npm test -- --run`; confirm failure in both suites.
-- [ ] Render the macro section below strengths/weaknesses and before item list; keep coverage/freshness visible but subordinate to portfolio meaning and next check.
-- [ ] Update Operations Overview’s Portfolio Monitoring summary to link into the active group workflow and preserve existing System/Data Health boundary.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_macro_context.py tests/test_portfolio_monitoring_diagnosis.py tests/test_portfolio_monitoring_read_model.py tests/test_portfolio_monitoring_page.py -q`, then `cd app/web/streamlit_components/portfolio_monitoring_workbench && npm test -- --run && npm run typecheck && npm run build`; return to repo root, capture desktop/mobile Browser QA, and run `git diff --check`.
-- [ ] Commit as `포트폴리오 매크로 위험 관찰 화면 연결`.
+- [x] Write failing Python/React tests for low/medium/high observation cards, READY/LIMITED source chips, change-condition disclosure, stale warning, and probability copy absence.
+- [x] Run the repository-available Python `unittest` equivalent and React Vitest; confirm failure in both suites (`pytest` is not installed in `.venv`).
+- [x] Render the macro section below strengths/weaknesses and before item list; keep coverage/freshness visible but subordinate to portfolio meaning and next check.
+- [x] Update Operations Overview’s Portfolio Monitoring summary to link into the active group workflow and preserve existing System/Data Health boundary.
+- [x] Run 68 monitoring unittests, 11 Vitest, compile, TypeScript, Vite production build, and `git diff --check`. Recovery-state 420px Browser QA remains overflow-free; populated macro card desktop/mobile QA repeats after Task 21 migration creates the default group.
+- [x] Commit as `포트폴리오 매크로 위험 관찰 화면 연결`.
 
 **5차 완료 게이트:** current macro observations are evidence-backed and confidence-capped; the UI shows no uncalibrated probability or action instruction.
 

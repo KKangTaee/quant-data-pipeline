@@ -1,4 +1,4 @@
-import type { DiagnosisProjection, GroupMetrics, GroupSummary, ItemRow } from "./contracts";
+import type { DiagnosisProjection, GroupMetrics, GroupSummary, ItemRow, MacroObservationProjection, SourceHealth } from "./contracts";
 
 export type MonitoringSourceType = "direct_security" | "selected_strategy";
 export type MonitoringKind = "stock" | "etf" | "strategy";
@@ -164,6 +164,21 @@ export function buildDiagnosisSections(diagnosis: DiagnosisProjection) {
     weaknesses: diagnosis.weaknesses,
     dataGaps: diagnosis.data_gaps,
     evidence: diagnosis.all_rows,
+  };
+}
+
+export function buildMacroObservationPresentation(
+  observation: MacroObservationProjection,
+  sourceHealth: SourceHealth,
+) {
+  const labels: Record<string, string> = { low: "낮음", medium: "중간", high: "높음" };
+  return {
+    stateLabel: labels[observation.state] ?? observation.state,
+    sourceChip: `${sourceHealth.status} · coverage ${(sourceHealth.coverage * 100).toFixed(0)}%`,
+    rows: observation.rows,
+    topRows: observation.top_rows.filter((row) => row.confidence !== "LOW").slice(0, 3),
+    staleWarning: sourceHealth.warnings.join(" · "),
+    dates: sourceHealth.as_of_dates,
   };
 }
 
