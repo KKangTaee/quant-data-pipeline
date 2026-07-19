@@ -255,6 +255,63 @@ export function PracticalValidationDecisionWorkspace({
               </button>
             ))}
           </div>
+          <details
+            className="pv2-profile-adjustment"
+            defaultOpen={workspace.profile.profile_id === "custom"}
+          >
+            <summary>판정 기준 세부 조정</summary>
+            <p>
+              선택한 관점을 유지하면서 실제 목적과 손실 허용 범위에 맞게
+              판정 기준을 조정합니다.
+            </p>
+            <div className="pv2-threshold-summary">
+              <div>
+                <span>Rolling</span>
+                <strong>
+                  {workspace.profile.threshold_summary.rolling_window_months}개월
+                </strong>
+              </div>
+              <div>
+                <span>MDD 검토선</span>
+                <strong>
+                  {workspace.profile.threshold_summary.mdd_review_line}%
+                </strong>
+              </div>
+              <div>
+                <span>편도 거래비용</span>
+                <strong>
+                  {workspace.profile.threshold_summary.one_way_cost_bps} bps
+                </strong>
+              </div>
+            </div>
+            <div className="pv2-profile-question-grid">
+              {workspace.profile.questions.map((question) => (
+                <label key={question.question_id}>
+                  <span>{question.label}</span>
+                  <select
+                    value={question.value}
+                    onChange={(event) =>
+                      emit({
+                        action: "update_profile_answer",
+                        intent_id: intentId("profile-answer"),
+                        selection_source_id:
+                          workspace.candidate.selection_source_id,
+                        validation_result_id: workspace.validation_result_id,
+                        question_id: question.question_id,
+                        answer: event.currentTarget.value,
+                      })
+                    }
+                  >
+                    {question.options.map((option) => (
+                      <option value={option.value} key={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
+          </details>
         </div>
       </section>
 
@@ -274,6 +331,39 @@ export function PracticalValidationDecisionWorkspace({
           title="현재 저장 데이터로 다시 재현하는가"
           detail="현재 세션 replay가 완료되어야 결과와 저장 경로가 열립니다."
         />
+        <div className="pv2-recheck-mode-panel">
+          <div>
+            <strong>재검증 범위</strong>
+            <p>이번 검증에서 사용할 기간을 먼저 확인하세요.</p>
+          </div>
+          <div className="pv2-recheck-mode-grid">
+            {workspace.replay.mode_options.map((option) => (
+              <button
+                type="button"
+                className={option.selected ? "is-selected" : ""}
+                aria-pressed={option.selected}
+                key={option.value}
+                onClick={() => {
+                  if (option.selected) return
+                  emit({
+                    action: "select_recheck_mode",
+                    intent_id: intentId("recheck-mode"),
+                    selection_source_id:
+                      workspace.candidate.selection_source_id,
+                    validation_result_id: workspace.validation_result_id,
+                    recheck_mode: option.value,
+                  })
+                }}
+              >
+                <span>
+                  {option.label}
+                  {option.recommended && <small>권장</small>}
+                </span>
+                <small>{option.description}</small>
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="pv2-replay">
           <div>
             <span>현재 상태</span>

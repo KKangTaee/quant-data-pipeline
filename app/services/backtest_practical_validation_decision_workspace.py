@@ -12,6 +12,12 @@ from app.services.backtest_practical_validation_explanation import (
 )
 from app.services.backtest_practical_validation_source import (
     VALIDATION_PROFILE_OPTIONS,
+    VALIDATION_PROFILE_QUESTIONS,
+)
+from app.services.backtest_practical_validation_replay import (
+    RECHECK_MODE_EXTEND_TO_LATEST,
+    RECHECK_MODE_LABELS,
+    RECHECK_MODE_STORED_PERIOD,
 )
 
 
@@ -113,6 +119,8 @@ def _source_option(row: dict[str, Any], selected_id: str) -> dict[str, Any]:
 
 def _profile_model(profile: dict[str, Any]) -> dict[str, Any]:
     current_id = str(profile.get("profile_id") or "balanced_core")
+    answers = dict(profile.get("answers") or {})
+    thresholds = dict(profile.get("thresholds") or {})
     return {
         "profile_id": current_id,
         "profile_label": str(
@@ -129,7 +137,66 @@ def _profile_model(profile: dict[str, Any]) -> dict[str, Any]:
             }
             for profile_id, config in VALIDATION_PROFILE_OPTIONS.items()
         ],
-        "advanced_control_owner": "streamlit_disclosure",
+        "questions": [
+            {
+                "question_id": question_id,
+                "label": str(question.get("label") or question_id),
+                "value": str(
+                    answers.get(question_id)
+                    or question.get("default")
+                    or ""
+                ),
+                "options": [
+                    {"value": value, "label": str(label)}
+                    for value, label in dict(
+                        question.get("options") or {}
+                    ).items()
+                ],
+            }
+            for question_id, question in VALIDATION_PROFILE_QUESTIONS.items()
+        ],
+        "threshold_summary": {
+            "rolling_window_months": int(
+                thresholds.get("rolling_window_months") or 0
+            ),
+            "mdd_review_line": float(
+                thresholds.get("mdd_review_line") or 0.0
+            ),
+            "one_way_cost_bps": int(
+                thresholds.get("one_way_cost_bps") or 0
+            ),
+        },
+        "advanced_control_owner": "decision_workspace_step1",
+    }
+
+
+def _recheck_mode_model(mode: str | None) -> dict[str, Any]:
+    current_mode = (
+        str(mode)
+        if str(mode) in RECHECK_MODE_LABELS
+        else RECHECK_MODE_EXTEND_TO_LATEST
+    )
+    descriptions = {
+        RECHECK_MODE_EXTEND_TO_LATEST: (
+            "현재 DB의 최신 데이터까지 기간을 늘려 지금도 유지되는지 확인합니다."
+        ),
+        RECHECK_MODE_STORED_PERIOD: (
+            "후보 등록 당시 기간만 사용해 과거 결과를 동일하게 재현합니다."
+        ),
+    }
+    return {
+        "mode": current_mode,
+        "mode_label": str(RECHECK_MODE_LABELS[current_mode]),
+        "mode_options": [
+            {
+                "value": value,
+                "label": str(label),
+                "description": descriptions.get(value, ""),
+                "recommended": value == RECHECK_MODE_EXTEND_TO_LATEST,
+                "selected": value == current_mode,
+            }
+            for value, label in RECHECK_MODE_LABELS.items()
+        ],
     }
 
 
@@ -623,6 +690,7 @@ def build_practical_validation_decision_workspace(
     replay_result: dict[str, Any] | None,
     validation_result: dict[str, Any] | None,
     source_options: list[dict[str, Any]],
+    recheck_mode: str = RECHECK_MODE_EXTEND_TO_LATEST,
 ) -> dict[str, Any]:
     """Project Level2 truth into a question-first, root-deduplicated read model."""
 
@@ -725,6 +793,7 @@ def build_practical_validation_decision_workspace(
         },
         "profile": _profile_model(validation_profile),
         "replay": {
+            **_recheck_mode_model(recheck_mode),
             "status": str(dict(replay_result or {}).get("status") or "NOT_RUN"),
             "replay_id": str(
                 dict(replay_result or {}).get("replay_id") or ""

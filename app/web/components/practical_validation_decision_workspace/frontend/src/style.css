@@ -38,6 +38,7 @@ button {
 }
 
 button:focus-visible,
+select:focus-visible,
 summary:focus-visible {
   outline: 3px solid rgba(40, 78, 105, .22);
   outline-offset: 2px;
@@ -252,6 +253,72 @@ summary:focus-visible {
   margin-top: 0;
 }
 
+.pv2-profile-adjustment {
+  padding: 13px 14px;
+  border: 1px solid var(--pv2-line-soft);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.pv2-profile-adjustment > summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.pv2-profile-adjustment > p,
+.pv2-recheck-mode-panel p {
+  margin: 6px 0 0;
+  color: var(--pv2-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.pv2-threshold-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pv2-threshold-summary > div {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: var(--pv2-wash);
+}
+
+.pv2-threshold-summary span,
+.pv2-profile-question-grid label > span {
+  color: var(--pv2-muted);
+  font-size: 10px;
+}
+
+.pv2-profile-question-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.pv2-profile-question-grid label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pv2-profile-question-grid select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid var(--pv2-line);
+  border-radius: 11px;
+  color: var(--pv2-ink);
+  background: #fff;
+  font: inherit;
+}
+
 .pv2-profile-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
@@ -289,6 +356,61 @@ summary:focus-visible {
   gap: 14px;
   align-items: center;
   margin-top: 14px;
+}
+
+.pv2-recheck-mode-panel {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--pv2-line-soft);
+  border-radius: 14px;
+  background: #f8fbfd;
+}
+
+.pv2-recheck-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 11px;
+}
+
+.pv2-recheck-mode-grid button {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--pv2-line);
+  border-radius: 13px;
+  color: var(--pv2-ink);
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pv2-recheck-mode-grid button.is-selected {
+  border-color: #6f91a7;
+  background: #eef5f8;
+  box-shadow: inset 0 0 0 1px #6f91a7;
+}
+
+.pv2-recheck-mode-grid button > span {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  font-weight: 800;
+}
+
+.pv2-recheck-mode-grid button > span small {
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: var(--pv2-blue);
+  background: #dfecef;
+  font-size: 9px;
+}
+
+.pv2-recheck-mode-grid button > small {
+  color: var(--pv2-muted);
+  font-size: 10px;
+  line-height: 1.45;
 }
 
 .pv2-replay-step.is-pending {
@@ -737,7 +859,10 @@ button:disabled {
   }
 
   .pv2-selection-summary,
-  .pv2-selection-control-row {
+  .pv2-selection-control-row,
+  .pv2-threshold-summary,
+  .pv2-profile-question-grid,
+  .pv2-recheck-mode-grid {
     grid-template-columns: 1fr;
   }
 

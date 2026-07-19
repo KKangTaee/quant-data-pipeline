@@ -143,6 +143,44 @@ class PracticalValidationMarketContextVisualContractTests(unittest.TestCase):
         )
         self.assertIn("grid-column: 1 / -1;", responsive)
 
+    def test_profile_adjustment_belongs_to_step_one(self) -> None:
+        source = WORKSPACE.read_text(encoding="utf-8")
+        context = source.split('{surface === "context"', 1)[1].split(
+            '{surface === "decision"', 1
+        )[0]
+
+        self.assertIn("판정 기준 세부 조정", context)
+        self.assertIn("pv2-profile-adjustment", context)
+        self.assertIn("workspace.profile.questions.map", context)
+        self.assertIn('action: "update_profile_answer"', context)
+        self.assertLess(
+            context.index("1B. 어떤 관점으로 검증할까요?"),
+            context.index("판정 기준 세부 조정"),
+        )
+
+    def test_recheck_mode_belongs_to_step_two_before_replay_action(self) -> None:
+        source = WORKSPACE.read_text(encoding="utf-8")
+        decision = source.split('{surface === "decision"', 1)[1]
+
+        self.assertIn("재검증 범위", decision)
+        self.assertIn("pv2-recheck-mode-grid", decision)
+        self.assertIn("workspace.replay.mode_options.map", decision)
+        self.assertIn('action: "select_recheck_mode"', decision)
+        self.assertLess(
+            decision.index("재검증 범위"),
+            decision.index('className="pv2-replay"'),
+        )
+
+    def test_profile_and_recheck_controls_collapse_on_mobile(self) -> None:
+        style = STYLE.read_text(encoding="utf-8")
+        responsive = style.split("@media (max-width: 760px)", 1)[1]
+
+        self.assertIn(".pv2-profile-question-grid", style)
+        self.assertIn(".pv2-recheck-mode-grid", style)
+        self.assertIn(".pv2-profile-question-grid,", responsive)
+        self.assertIn(".pv2-recheck-mode-grid", responsive)
+        self.assertIn("grid-template-columns: 1fr;", responsive)
+
 
 if __name__ == "__main__":
     unittest.main()

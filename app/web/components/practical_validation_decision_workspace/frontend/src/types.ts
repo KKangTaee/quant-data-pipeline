@@ -34,6 +34,21 @@ export type WorkspaceIntent =
       profile_id: string
     }
   | {
+      action: "update_profile_answer"
+      intent_id: string
+      selection_source_id: string
+      validation_result_id: string
+      question_id: string
+      answer: string
+    }
+  | {
+      action: "select_recheck_mode"
+      intent_id: string
+      selection_source_id: string
+      validation_result_id: string
+      recheck_mode: string
+    }
+  | {
       action: "run_replay"
       intent_id: string
       selection_source_id: string
@@ -110,8 +125,32 @@ export type DecisionWorkspace = {
       description: string
       selected: boolean
     }>
+    questions: Array<{
+      question_id: string
+      label: string
+      value: string
+      options: Array<{ value: string; label: string }>
+    }>
+    threshold_summary: {
+      rolling_window_months: number
+      mdd_review_line: number
+      one_way_cost_bps: number
+    }
   }
-  replay: { status: string; replay_id: string; completed: boolean }
+  replay: {
+    status: string
+    replay_id: string
+    completed: boolean
+    mode: string
+    mode_label: string
+    mode_options: Array<{
+      value: string
+      label: string
+      description: string
+      recommended: boolean
+      selected: boolean
+    }>
+  }
   verdict: { tone: Tone; label: string; headline: string; detail: string }
   summary: Record<string, number>
   verified_findings: Array<{

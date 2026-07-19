@@ -51,7 +51,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
   - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
   - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
-  - Current active Practical Validation UI task is [practical-validation-level2-decision-workspace-v1-20260716](./tasks/active/practical-validation-level2-decision-workspace-v1-20260716/STATUS.md).
+  - Latest completed Practical Validation UI task is [practical-validation-level2-controls-evidence-ia-v1-20260719](./tasks/active/practical-validation-level2-controls-evidence-ia-v1-20260719/STATUS.md). 전체 roadmap `3/3`; Step 1 profile 기준, Step 2 재검증 범위, 하단 읽기 전용 감사 근거의 소유권을 확정했다.
   - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
@@ -61,6 +61,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### 2026-07-19 - Practical Validation Level2 Controls / Evidence IA
+
+- `고급 설정과 원본 근거`에 섞여 있던 profile 질문은 Step 1, replay 기간은 Step 2로 이동하고 하단은 읽기 전용 `원본 데이터·감사 정보`로 분리했다.
+- profile 답변은 replay를 보존한 채 판정만 다시 만들고, 기간 mode는 replay/result를 무효화하는 상태 계약을 TDD로 고정했다.
+- focused 91 tests, React 175-module build, desktop/760px interaction·overflow·console QA를 통과했다.
+- registry / run history / saved JSONL과 generated QA artifact는 변경 commit에서 제외한다.
 
 ### 2026-07-19 - master 병합 충돌 해소
 

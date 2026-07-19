@@ -1,10 +1,10 @@
 # Risks
 
-## Active Risks
+## Closed Risks
 
-- Streamlit context surface는 fragment 밖, decision surface는 fragment 안에 있으므로 profile answer와 recheck mode의 rerun scope를 혼동하면 stale read model이 남을 수 있다. intent별 테스트와 actual Browser interaction으로 닫는다.
-- 기존 사용자 local registry/run history/saved JSONL과 다수 QA artifact가 dirty 상태다. 이번 commit에는 포함하지 않는다.
-- React build asset hash가 바뀐다. source와 build asset을 같은 commit에 포함하고 actual component load를 확인한다.
+- context/decision rerun scope는 intent test와 actual Browser interaction으로 닫았다. profile answer는 replay를 보존하고 decision만 무효화하며, recheck mode는 replay/result를 함께 무효화한다.
+- React source와 production build asset을 같은 변경 단위로 검증했고 actual component load와 console error 0을 확인했다.
+- 기존 사용자 local registry/run history/saved JSONL과 다수 QA artifact는 이번 commit에서 제외한다.
 
 ## Out Of Scope
 

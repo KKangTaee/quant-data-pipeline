@@ -797,6 +797,15 @@ def _clear_practical_validation_replay_state(source_id: str | None = None) -> No
             del st.session_state[key]
 
 
+def _clear_practical_validation_decision_result(source_id: str) -> None:
+    """Rebuild the judgment while preserving a reusable replay result."""
+
+    st.session_state.pop(
+        f"practical_validation_decision_result_{source_id}",
+        None,
+    )
+
+
 def _current_practical_validation_recheck_mode(source_id: str) -> str:
     """Return the validated replay mode used by every workspace replay intent."""
 
@@ -2507,6 +2516,44 @@ def _consume_practical_validation_decision_workspace_intent(
         _rerun_practical_validation_workspace(scope=rerun_scope)
         return
 
+    if action == "update_profile_answer":
+        question_id = str(intent.get("question_id") or "")
+        answer = str(intent.get("answer") or "")
+        question = dict(VALIDATION_PROFILE_QUESTIONS.get(question_id) or {})
+        if not question or answer not in dict(question.get("options") or {}):
+            st.session_state["backtest_practical_validation_notice"] = (
+                "지원하지 않는 판정 기준 세부 조정입니다."
+            )
+            _rerun_practical_validation_workspace(scope=rerun_scope)
+            return
+        st.session_state[
+            f"practical_validation_profile_answer_{question_id}"
+        ] = answer
+        _clear_practical_validation_decision_result(current_source_id)
+        st.session_state["backtest_practical_validation_notice"] = (
+            "판정 기준 세부 조정을 반영했습니다. 현재 replay 근거로 판정을 다시 계산합니다."
+        )
+        _rerun_practical_validation_workspace(scope=rerun_scope)
+        return
+
+    if action == "select_recheck_mode":
+        recheck_mode = str(intent.get("recheck_mode") or "")
+        if recheck_mode not in RECHECK_MODE_LABELS:
+            st.session_state["backtest_practical_validation_notice"] = (
+                "지원하지 않는 재검증 범위입니다."
+            )
+            _rerun_practical_validation_workspace(scope=rerun_scope)
+            return
+        st.session_state[
+            f"practical_validation_recheck_mode_{current_source_id}"
+        ] = recheck_mode
+        _clear_practical_validation_replay_state(current_source_id)
+        st.session_state["backtest_practical_validation_notice"] = (
+            "재검증 범위를 변경했습니다. 선택한 범위로 다시 재검증하세요."
+        )
+        _rerun_practical_validation_workspace(scope=rerun_scope)
+        return
+
     if action == "run_replay":
         mode = _current_practical_validation_recheck_mode(current_source_id)
         _execute_practical_validation_replay(source, mode=mode)
@@ -2702,73 +2749,35 @@ def _consume_practical_validation_next_stage_action(
     _rerun_practical_validation_workspace(scope="app")
 
 
-def _render_decision_workspace_advanced_controls(
+def _render_decision_workspace_audit_evidence(
     *,
     source: dict[str, Any],
     replay_result: dict[str, Any] | None,
     validation_result: dict[str, Any] | None,
 ) -> None:
-    """Keep technical controls and raw evidence secondary to the decision flow."""
+    """Render read-only source, replay, and judgment data for audit use."""
 
-    st.markdown("##### 검증 기준 세부 조정")
-    question_items = list(VALIDATION_PROFILE_QUESTIONS.items())
-    for start in range(0, len(question_items), 2):
-        columns = st.columns(2, gap="small")
-        for offset, column in enumerate(columns):
-            if start + offset >= len(question_items):
-                continue
-            question_key, question = question_items[start + offset]
-            options = list(dict(question.get("options") or {}).keys())
-            if not options:
-                continue
-            labels = dict(question.get("options") or {})
-            default_value = (
-                question.get("default")
-                if question.get("default") in options
-                else options[0]
-            )
-            state_key = (
-                f"practical_validation_profile_answer_{question_key}"
-            )
-            current_value = st.session_state.get(state_key, default_value)
-            with column:
-                st.selectbox(
-                    str(question.get("label") or question_key),
-                    options=options,
-                    format_func=lambda option, labels=labels: labels.get(
-                        option,
-                        option,
-                    ),
-                    index=(
-                        options.index(current_value)
-                        if current_value in options
-                        else 0
-                    ),
-                    key=state_key,
-                )
-
-    if source:
-        source_id = str(source.get("selection_source_id") or "source")
-        st.markdown("##### 재검증 방식")
-        st.radio(
-            "고급 재검증 방식",
-            options=list(RECHECK_MODE_LABELS.keys()),
-            format_func=lambda value: RECHECK_MODE_LABELS.get(value, value),
-            horizontal=True,
-            key=f"practical_validation_recheck_mode_{source_id}",
-        )
-        st.markdown("##### 후보 원본 근거")
-        _render_source_summary(source)
-
-    st.markdown("##### 현재 read model 원본")
-    st.json(
-        {
-            "source": source,
-            "replay_result": replay_result,
-            "validation_result": validation_result,
-        },
-        expanded=False,
+    st.caption(
+        "판정 재현이나 오류 확인이 필요할 때만 확인하세요. "
+        "이 영역에서는 설정을 바꾸거나 결과를 저장하지 않습니다."
     )
+    source_tab, replay_tab, validation_tab = st.tabs(["후보 원본", "재검증 원본", "판정 원본"])
+    with source_tab:
+        if source:
+            _render_source_summary(source)
+            st.json(source, expanded=False)
+        else:
+            st.info("선택된 후보 원본이 없습니다.")
+    with replay_tab:
+        if replay_result:
+            st.json(replay_result, expanded=False)
+        else:
+            st.info("현재 세션 재검증 원본이 없습니다.")
+    with validation_tab:
+        if validation_result:
+            st.json(validation_result, expanded=False)
+        else:
+            st.info("현재 세션 판정 원본이 없습니다.")
 
 
 def render_practical_validation_workspace() -> None:
@@ -2828,6 +2837,9 @@ def render_practical_validation_workspace() -> None:
         replay_result=None,
         validation_result=None,
         source_options=selectable_sources,
+        recheck_mode=_current_practical_validation_recheck_mode(
+            selected_source_id
+        ),
     )
     context_component_key = (
         "practical-validation-decision-workspace-context-"
@@ -2841,7 +2853,11 @@ def render_practical_validation_workspace() -> None:
             on_change=partial(
                 _consume_practical_validation_component_change,
                 component_key=context_component_key,
-                allowed_actions={"select_source", "select_profile_preset"},
+                allowed_actions={
+                    "select_source",
+                    "select_profile_preset",
+                    "update_profile_answer",
+                },
                 sources=selectable_sources,
                 source=source,
                 validation_result=None,
@@ -2918,6 +2934,7 @@ def _render_practical_validation_decision_workspace_fragment(
         replay_result=replay_result,
         validation_result=validation_result,
         source_options=selectable_sources,
+        recheck_mode=replay_mode,
     )
 
     component_key = (
@@ -2934,6 +2951,7 @@ def _render_practical_validation_decision_workspace_fragment(
                 component_key=component_key,
                 allowed_actions={
                     "run_replay",
+                    "select_recheck_mode",
                     "run_resolution_action",
                     "save_audit_only",
                     "save_and_move",
@@ -2958,8 +2976,8 @@ def _render_practical_validation_decision_workspace_fragment(
         rerun_scope="fragment",
     )
 
-    with st.expander("고급 설정과 원본 근거", expanded=False):
-        _render_decision_workspace_advanced_controls(
+    with st.expander("원본 데이터·감사 정보", expanded=False):
+        _render_decision_workspace_audit_evidence(
             source=source,
             replay_result=replay_result,
             validation_result=validation_result,

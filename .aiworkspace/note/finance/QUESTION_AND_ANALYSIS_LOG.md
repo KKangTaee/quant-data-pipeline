@@ -43,7 +43,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
   - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
   - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
-  - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
+  - Latest completed Practical Validation UI task is [practical-validation-level2-controls-evidence-ia-v1-20260719](./tasks/active/practical-validation-level2-controls-evidence-ia-v1-20260719/STATUS.md). Profile criteria, replay range, raw audit evidence를 사용하는 단계별로 분리했다.
   - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
   - Latest completed docs / code-flow refresh is [post-merge-docs-flow-refresh-20260708](./tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
@@ -54,6 +54,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-19 - Level2 설정은 사용하는 단계가 소유하고 하단은 감사 근거만 소유한다
+
+- User request: 하단 `고급 설정과 원본 근거`의 역할과 필요성을 검토하고, 개선된 Backtest/Level2에 필요한 요소라면 UI를 개선해 달라고 요청함.
+- Interpreted goal: 판정에 영향을 주는 설정을 결과 뒤에서 발견하지 않게 하고, 사용자 설명 근거와 재현용 raw evidence를 구분한다.
+- Analysis result: profile 질문은 Step 1, replay 기간은 Step 2의 실행 전 설정이다. source/replay/validation raw snapshot만 하단 읽기 전용 감사 disclosure로 남기는 것이 맞다.
+- Follow-up: 상태 무효화 계약, React/fallback UI, 세 audit tab과 desktop/760px Browser QA를 전체 roadmap `3/3`으로 완료했다. threshold 계산, provider/DB, Final Review route는 변경하지 않았다.
 
 ### 2026-07-19 - master 병합은 공용 calendar와 Backtest 공개 계약을 함께 보존한다
 

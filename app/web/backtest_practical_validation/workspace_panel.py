@@ -523,6 +523,48 @@ def _render_practical_validation_context_surface_fallback(
                 workspace=workspace,
                 profile_id=profile_id,
             )
+    questions = [
+        dict(row)
+        for row in list(profile.get("questions") or [])
+        if isinstance(row, dict)
+    ]
+    with st.expander(
+        "판정 기준 세부 조정",
+        expanded=str(profile.get("profile_id") or "") == "custom",
+    ):
+        thresholds = dict(profile.get("threshold_summary") or {})
+        st.caption(
+            f"Rolling {int(thresholds.get('rolling_window_months') or 0)}개월 · "
+            f"MDD 검토선 {float(thresholds.get('mdd_review_line') or 0.0):g}% · "
+            f"편도 거래비용 {int(thresholds.get('one_way_cost_bps') or 0)} bps"
+        )
+        for question in questions:
+            question_id = str(question.get("question_id") or "")
+            options = [
+                dict(row)
+                for row in list(question.get("options") or [])
+                if isinstance(row, dict)
+            ]
+            option_values = [str(row.get("value") or "") for row in options]
+            labels = {
+                str(row.get("value") or ""): str(row.get("label") or "")
+                for row in options
+            }
+            current = str(question.get("value") or "")
+            selected = st.selectbox(
+                str(question.get("label") or question_id),
+                options=option_values,
+                format_func=lambda value, labels=labels: labels.get(value, value),
+                index=option_values.index(current) if current in option_values else 0,
+                key=f"pv2-fallback-profile-answer-{question_id}",
+            )
+            if selected != current:
+                return _workspace_intent(
+                    "update_profile_answer",
+                    workspace=workspace,
+                    question_id=question_id,
+                    answer=selected,
+                )
     return None
 
 
@@ -543,6 +585,31 @@ def render_practical_validation_decision_workspace_fallback(
     actions = dict(workspace.get("actions") or {})
 
     st.markdown("#### 2. 최신 데이터 기준 재검증")
+    mode_options = [
+        dict(row)
+        for row in list(replay.get("mode_options") or [])
+        if isinstance(row, dict)
+    ]
+    mode_values = [str(row.get("value") or "") for row in mode_options]
+    mode_labels = {
+        str(row.get("value") or ""): str(row.get("label") or "")
+        for row in mode_options
+    }
+    current_mode = str(replay.get("mode") or "")
+    selected_mode = st.radio(
+        "재검증 범위",
+        options=mode_values,
+        format_func=lambda value: mode_labels.get(value, value),
+        index=mode_values.index(current_mode) if current_mode in mode_values else 0,
+        horizontal=True,
+        key="pv2-fallback-recheck-mode",
+    )
+    if selected_mode != current_mode:
+        return _workspace_intent(
+            "select_recheck_mode",
+            workspace=workspace,
+            recheck_mode=selected_mode,
+        )
     st.caption(
         f"현재 상태: {replay.get('status') or 'NOT_RUN'} · "
         f"{replay.get('replay_id') or '아직 실행하지 않음'}"
