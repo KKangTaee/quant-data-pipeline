@@ -42,6 +42,7 @@ class ItemValueLane:
     status: str
     curve: pd.DataFrame
     review: CorporateActionReview
+    readiness: Any | None = None
 
 
 def _decimal(value: Any) -> Decimal | None:

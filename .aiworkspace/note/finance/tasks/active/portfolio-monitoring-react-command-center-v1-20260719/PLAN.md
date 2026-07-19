@@ -218,12 +218,12 @@ normalized = replay_curve["value"] / replay_curve["value"].iloc[0]
 return ItemValueLane(curve=normalized * item.initial_capital, readiness=readiness)
 ```
 
-- [ ] Write failing adapter tests with an injected Final Review row/replay function for valid normalized curve, missing decision, missing replay contract, replay failure, and share-mode rejection.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_selected_strategy.py -q` and confirm failures.
-- [ ] Wrap the smallest reusable functions from `app/runtime/backtest/read_models/final_selected_portfolios.py`; do not move or rewrite the entire monolith in this task.
-- [ ] Scale the normalized strategy curve by fixed notional and return explicit readiness/source provenance. No monitoring-level synthetic shares.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_selected_strategy.py -q`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/selected_strategy.py app/services/portfolio_monitoring/valuation.py`, and `git diff --check`.
-- [ ] Commit as `선정 전략 모니터링 재생 어댑터 분리`.
+- [x] Write failing adapter tests with an injected Final Review row/replay function for valid normalized curve, missing decision, missing replay contract, replay failure, and share-mode rejection.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_selected_strategy` and confirm failures.
+- [x] Wrap the smallest reusable functions from `app/runtime/backtest/read_models/final_selected_portfolios.py`; do not move or rewrite the entire monolith in this task.
+- [x] Scale the normalized strategy curve by fixed notional and return explicit readiness/source provenance. No monitoring-level synthetic shares.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_selected_strategy`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/selected_strategy.py app/services/portfolio_monitoring/valuation.py`, and `git diff --check`.
+- [x] Commit as `선정 전략 모니터링 재생 어댑터 분리`.
 
 ### Task 7: staggered start/end cash와 common-basis group KPI를 계산한다
 

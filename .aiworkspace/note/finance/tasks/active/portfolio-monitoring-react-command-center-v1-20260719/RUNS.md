@@ -24,3 +24,5 @@
 | 2026-07-19 | 2차 Task 4 catalog verification | 6 catalog tests PASS; actual AAPL ranks first as stock and current authoritative Final Review candidate count is 6 |
 | 2026-07-19 | 2차 Task 5 valuation RED / boundary refinement | 6 expected missing-module failures; strict session threshold fixture was isolated from the separate end-return threshold |
 | 2026-07-19 | 2차 Task 5 direct-security valuation verification | 6 valuation and 30 cumulative monitoring unittests PASS; compile and `git diff --check` PASS |
+| 2026-07-19 | 2차 Task 6 selected-strategy adapter RED | 5 expected missing-module failures for valid replay, missing decision/contract, replay error, and share-mode rejection |
+| 2026-07-19 | 2차 Task 6 selected-strategy verification | 5 adapter and 35 cumulative monitoring unittests PASS; all 6 actual monitoring candidates resolve READY in read-only contract smoke |
