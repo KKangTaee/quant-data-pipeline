@@ -1,13 +1,13 @@
 # Operations Portfolio Monitoring Only V1 Status
 
-Status: Design Approved / Written Spec Review Pending
+Status: Design Approved / Implementation Plan Complete
 Last Updated: 2026-07-19
 
 ## Current Position
 
 - 전체 roadmap: `1/3차 완료`
 - 1차: current code/docs audit, 사용자 사용 여부 확인, 제거 설계 승인 완료
-- current milestone: written spec 자체 검토와 사용자 review
+- current milestone: detailed implementation plan 자체 검토 완료, execution 방식 선택 대기
 - implementation: 시작 전
 
 ## Approved Boundary
@@ -19,4 +19,4 @@ Last Updated: 2026-07-19
 
 ## Next Action
 
-사용자가 written spec을 확인하면 상세 구현 계획을 작성하고 2차 구현으로 전환한다.
+사용자가 execution 방식을 선택하면 `IMPLEMENTATION_PLAN.md`를 따라 2차 구현으로 전환한다.
