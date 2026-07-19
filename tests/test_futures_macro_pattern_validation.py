@@ -253,6 +253,30 @@ class FuturesMacroPatternOutcomeTests(unittest.TestCase):
 
 
 class FuturesMacroPatternPublicationTests(unittest.TestCase):
+    def test_horizon_status_uses_lower_probability_and_path_status(self) -> None:
+        from app.services.futures_macro_pattern_validation import (
+            combined_outlook_publication_status,
+        )
+
+        cases = (
+            ("VERIFIED", "VERIFIED", "VERIFIED"),
+            ("VERIFIED", "PROVISIONAL", "PROVISIONAL"),
+            ("PROVISIONAL", "VERIFIED", "PROVISIONAL"),
+            ("PROVISIONAL", "UNAVAILABLE", "UNAVAILABLE"),
+        )
+        for probability_status, path_status, expected in cases:
+            with self.subTest(
+                probability_status=probability_status,
+                path_status=path_status,
+            ):
+                self.assertEqual(
+                    combined_outlook_publication_status(
+                        probability_status,
+                        path_status,
+                    ),
+                    expected,
+                )
+
     def test_snapshot_publishes_empirical_path_algorithm_version(self) -> None:
         from app.services.futures_macro_pattern_validation import (
             build_pattern_outlook_snapshot,
@@ -262,7 +286,7 @@ class FuturesMacroPatternPublicationTests(unittest.TestCase):
 
         self.assertEqual(
             snapshot["method"]["algorithm_version"],
-            "pattern_outlook_v3_empirical_path_10y",
+            "pattern_outlook_v4_conservative_status_10y",
         )
 
     def test_publication_gate_constants_remain_unchanged_for_ten_year_history(self) -> None:

@@ -52,7 +52,7 @@ SIMILARITY_SUFFIXES = (
     "breadth",
     "volatility_ratio",
 )
-PATTERN_ALGORITHM_VERSION = "pattern_outlook_v3_empirical_path_10y"
+PATTERN_ALGORITHM_VERSION = "pattern_outlook_v4_conservative_status_10y"
 PATTERN_OUTLOOK_CACHE_TTL_SECONDS = 900
 PATTERN_OUTLOOK_LIMITATIONS = (
     "유사 episode는 조건부 빈도이며 미래 수익이나 체제를 보장하지 않습니다.",
@@ -656,6 +656,19 @@ def path_publication_status(
     return "VERIFIED" if verified else "PROVISIONAL"
 
 
+def combined_outlook_publication_status(
+    probability_status: str,
+    path_status: str,
+) -> str:
+    """Publish the conservative status when probability and path quality differ."""
+
+    status_rank = {"UNAVAILABLE": 0, "PROVISIONAL": 1, "VERIFIED": 2}
+    return min(
+        (probability_status, path_status),
+        key=lambda value: status_rank.get(value, 0),
+    )
+
+
 def _asset_pathways(rows: pd.DataFrame) -> dict[str, dict[str, float | None]]:
     family_map = {
         "risk_assets": "risk_on",
@@ -771,6 +784,7 @@ def _build_horizon_outlook(
             "probability_lift": {},
             "dominant_regime": None,
             "episode_count": episode_count,
+            "probability_status": "UNAVAILABLE",
             "estimate_status": "UNAVAILABLE",
             "status_reason": f"독립 episode {episode_count}개로 최소 30개 기준에 미달합니다.",
             "edge_label": "방향 우위 미확인",
@@ -804,7 +818,7 @@ def _build_horizon_outlook(
         outcomes=outcomes,
         horizon=horizon,
     )
-    estimate_status = publication_status_for_metrics(
+    probability_status = publication_status_for_metrics(
         episode_count=episode_count,
         brier_score=metrics["brier_score"],
         baseline_brier_score=metrics["baseline_brier_score"],
@@ -823,10 +837,9 @@ def _build_horizon_outlook(
         coverage_50=path_metrics["coverage_50"],
         evaluated_fold_count=int(path_metrics["evaluated_fold_count"] or 0),
     )
-    status_rank = {"UNAVAILABLE": 0, "PROVISIONAL": 1, "VERIFIED": 2}
-    conditional_status = min(
-        (estimate_status, path_status),
-        key=lambda value: status_rank[value],
+    estimate_status = combined_outlook_publication_status(
+        probability_status,
+        path_status,
     )
     dominant = max(probabilities, key=probabilities.get)
     edge_regime = max(lift, key=lift.get)
@@ -854,10 +867,13 @@ def _build_horizon_outlook(
         "probability_lift": lift,
         "dominant_regime": dominant,
         "episode_count": episode_count,
+        "probability_status": probability_status,
         "estimate_status": estimate_status,
         "status_reason": (
-            "시간순 검증과 확률 보정 기준을 충족했습니다."
+            "확률과 경로의 시간순 검증 기준을 모두 충족했습니다."
             if estimate_status == "VERIFIED"
+            else "확률 검증은 충족했지만 경로 검증 기준 일부가 잠정입니다."
+            if probability_status == "VERIFIED" and path_status != "VERIFIED"
             else "계산 가능하지만 표본 또는 시간순 검증 기준 일부가 잠정입니다."
         ),
         "edge_label": regime_labels[edge_regime] if edge_is_distinct else "방향 우위 미확인",
@@ -869,7 +885,7 @@ def _build_horizon_outlook(
             current_location=current_location,
             horizon=horizon,
             episode_count=episode_count,
-            status=conditional_status,
+            status=estimate_status,
             validation=path_metrics,
         ),
     }

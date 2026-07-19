@@ -14,7 +14,7 @@ def _compatible_row(*, source_marker: str) -> dict[str, object]:
         "source_marker": source_marker,
         "as_of_date": "2026-07-17",
         "schema_version": "futures_macro_snapshot_v1",
-        "algorithm_version": "pattern_outlook_v3_empirical_path_10y",
+        "algorithm_version": "pattern_outlook_v4_conservative_status_10y",
         "status": "READY",
         "snapshot_json": json.dumps(
             {
