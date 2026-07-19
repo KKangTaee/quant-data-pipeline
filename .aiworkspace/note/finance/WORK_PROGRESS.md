@@ -24,7 +24,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro를 현재 1D/5D/20D 체제와 5D/20D 조건부 전망으로 개편했고, 공통 좌표계로 세 관측 anchor를 고정한 채 현재→말일 예상 순이동·선택 horizon 말일의 단일 도착 범위만 전환한다.
+  - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro를 현재 1D/5D/20D 체제와 5D/20D 조건부 전망으로 개편하고, 일봉 갱신 시 5년 compact snapshot을 materialize해 첫 진입은 DB-only로 읽으며 방법론·계산 추적을 React로 통합했다.
   - Previous completed task is [overview-economic-cycle-asset-signal-copy-v1-20260717](./tasks/active/overview-economic-cycle-asset-signal-copy-v1-20260717/STATUS.md). 자산별 미국 경기 신호·실제 가격·두 신호 관계와 5/21/63거래일 표기를 사용자 언어로 정리했다.
   - Previous completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 일봉의 1주·1개월·3개월 가격 흐름과 경제 배경의 일치·불일치를 표시한다.
   - Previous completed task is [overview-economic-cycle-asset-context-v1-20260716](./tasks/active/overview-economic-cycle-asset-context-v1-20260716/STATUS.md). 정적 시장 질문을 evidence 기반 자산별 확인 포인트로 바꾸고 우호/부담/혼재/자료 부족, 두 근거, 바뀌는 조건을 2×2 카드로 표시한다.
@@ -59,6 +59,8 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Recent Milestones
 
 - Overview Futures Macro Pattern Outlook V1:
+  - 2026-07-19 마무리에서 `일봉 갱신 -> 5년 current + 5D/20D 계산 -> finance_meta.futures_macro_snapshot 저장 -> Overview DB-only 읽기` 계약을 구현했다. 실제 materialization 10.549s, fresh DB read 0.36~0.37s, browser ready reload 1.877s였다.
+  - Streamlit `원본 데이터 / 계산 추적` expander를 제거하고 React disclosure로 통일했다. 방법론·추적 토글 높이 동기화와 420px 표 내부 스크롤을 실제 화면에서 확인했다.
   - `today shock -> current pattern -> default 5D / 20D conditional outlook -> evidence / ribbon / asset pathways -> method` 흐름으로 개편했다.
   - 실제 2026-07-17 snapshot은 혼재 체제 / 전환 시도이며 5D 120개, 20D 42개 독립 episode 모두 `PROVISIONAL`, 방향 우위 미확인이다.
   - 후속 UI 교정에서 관측 지도는 `20D 전 → 5D 전 → 현재` 실선으로 단순화하고, 전망은 현재에서 5D·20D 말일 중앙 위치까지 직접 잇는 예상 순이동 점선과 선택 horizon 말일의 단일 q25~q75 도착 범위로 교체했다. 중간 stepwise median은 검증 데이터로만 유지한다.

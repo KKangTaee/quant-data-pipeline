@@ -1,5 +1,12 @@
 # Futures Macro Pattern Outlook V1 Risks
 
+## 2026-07-19 Materialized Snapshot Residual Risks
+
+- The first entry is intentionally latest-good and DB-only. If the stored schema/algorithm version is incompatible, the screen asks for `일봉 갱신` instead of silently rebuilding.
+- Five-year materialization is CPU-bound and measured about 10.5s on current data. It runs only after successful daily ingestion, never after 1m ingestion or display-only reload.
+- A daily collection may succeed while snapshot materialization fails; the result is `partial_success`, and operators should inspect the attached materialization result before retrying.
+- Compact trace tables are capped at 80 rows and are not a replacement for full OHLCV audit. Full candles remain in the canonical futures OHLCV table.
+
 ## Open Risks
 
 ### Independent Sample Size

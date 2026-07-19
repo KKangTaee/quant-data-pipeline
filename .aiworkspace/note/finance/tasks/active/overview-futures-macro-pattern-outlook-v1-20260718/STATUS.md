@@ -1,5 +1,15 @@
 # Futures Macro Pattern Outlook V1 Status
 
+## 2026-07-19 — Materialized Snapshot / React Disclosure Closeout
+
+- Approved closeout roadmap `4/4` is complete: five-year compact snapshot persistence, daily-ingestion materialization, DB-only first entry, and React method / calculation trace disclosure.
+- `일봉 갱신` now stores the refreshed daily futures rows and then materializes the current macro plus 5D / 20D outlook in `finance_meta.futures_macro_snapshot`.
+- Overview first entry and `다시 읽기` only read the stored compatible snapshot. They do not fetch a provider or calculate the outlook; missing or incompatible rows instruct the user to run `일봉 갱신`.
+- `방법론과 품질` now synchronizes iframe height when toggled, and `원본 데이터 / 계산 추적` is a React disclosure with compact metadata, current scores, score contributions, daily futures changes, and cautions.
+- Actual materialization as of `2026-07-17` completed in 10.549s. Fresh-process DB reads measured 0.36–0.37s and browser reload to the ready workbench measured 1.877s.
+- Desktop and 420px Browser QA passed. Both disclosures expanded without clipping; the three narrow-screen trace tables use internal horizontal scroll (`309px` client width versus `785–1,457px` content); latest QA server console errors were 0.
+- QA screenshot: `/Users/taeho/.codex/visualizations/2026/07/19/futures-macro-materialized-snapshot/futures-macro-react-disclosures.png` (generated, not staged).
+
 ## 2026-07-19 — Macro Pressure Copy Follow-up
 
 - User confirmed that the Y axis should name what it actually aggregates instead of using the broad `매크로 부담` shorthand.

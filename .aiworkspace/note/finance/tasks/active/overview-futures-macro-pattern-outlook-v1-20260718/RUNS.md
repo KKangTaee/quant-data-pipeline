@@ -1,5 +1,18 @@
 # Futures Macro Pattern Outlook V1 Runs
 
+## 2026-07-19 Tasks 10–12 — Materialized Snapshot, DB-Only Entry, React Trace
+
+- TDD persistence RED failed on the absent schema/loader; GREEN added `futures_macro_snapshot` UPSERT and DB-only loader. Persistence tests passed 2/2.
+- TDD materializer RED covered compact JSON safety, version/source-marker skip, compatibility, and 1D ingestion attachment. GREEN passed 10 snapshot tests and 26 thermometer contracts.
+- React/source RED covered old render-time loaders, absent `calculation_trace`, and the Streamlit expander. GREEN passed 40 selected snapshot/UI contracts.
+- Vite production build transformed 178 modules in 459ms; py_compile and `git diff --check` passed before the React commit.
+- Actual forced materialization returned `READY`, source marker `2026-07-17 00:00:00`, and stored at `2026-07-19 09:09:47`; wall time was 10.549s.
+- Three fresh-process materialized reads returned `READY`, two horizons, in 0.36–0.37s. Browser reload to the ready workbench took 1.877s.
+- Desktop QA measured method disclosure height `266.33px` and trace disclosure height `2,061.22px`; iframe height grew to `2,590px` / `4,603px` respectively instead of clipping.
+- At 420px, trace table wrappers were `overflow-x:auto`; client width was `309px`, scroll widths were `1,457px`, `785px`, and `1,316px`. The latest 8512 QA server had zero console errors.
+- Final focused regression passed 66 tests. Full `OverviewAutomationContractTests` ran 175 tests with only the previously recorded unrelated Sentiment source-string failure expecting `payload.summary.metrics.map`; all Futures Macro cases passed.
+- Screenshot: `/Users/taeho/.codex/visualizations/2026/07/19/futures-macro-materialized-snapshot/futures-macro-react-disclosures.png` (generated, not staged).
+
 ## 2026-07-19 Task 9 — Precise Macro Pressure Copy
 
 - Baseline: two focused pattern-map contracts passed before implementation.

@@ -1,5 +1,14 @@
 # Futures Macro Pattern Outlook V1 Notes
 
+## 2026-07-19 — Persisted Read Contract
+
+- `finance_meta.futures_macro_snapshot` is the source of truth for the Overview Futures Macro first read. Its `overview_current` row is keyed by source marker, schema version, and algorithm version.
+- The persisted payload is deliberately compact: current scores/evidence, coverage, current pattern, 5D/20D horizons, method/validation summaries, and bounded trace rows. Full five-year OHLCV remains in `finance_price.futures_ohlcv`.
+- Materialization belongs after a successful `1d` futures ingestion. `1m` ingestion does not refresh this snapshot.
+- A materialization failure makes the daily ingestion result `partial_success`; it does not erase a previous latest-good snapshot.
+- UI entry has no lazy-compute fallback. This keeps reload semantics honest and prevents an apparently harmless tab visit from repeating the expensive historical replay.
+- React owns both disclosure surfaces. Python owns the payload and action dispatch; React does not read DB/provider state or calculate macro values.
+
 ## 2026-07-19 — Copy Semantics
 
 - `매크로 부담` was too broad because users could read it as a direct judgment about the entire economy.

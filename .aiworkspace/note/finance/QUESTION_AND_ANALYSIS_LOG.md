@@ -18,7 +18,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro의 단기 거시 레이더 경계, 경험적 5D / 20D 조건부 경로, 선택 horizon 말일의 단일 도착 범위 계약을 확정했다.
+  - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro의 단기 거시 레이더와 5D/20D 조건부 경로를 확정하고, 5년 compact materialization·DB-only 첫 진입·React 방법론/계산 추적까지 마무리했다.
   - Previous completed task is [overview-economic-cycle-asset-pathways-stages3-5-v1-20260717](./tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/STATUS.md). 채권·금리, S&P 500, WTI·구리·금의 측정 경로와 공통 관측 UI를 연결해 전체 자산경로 roadmap `5/5`를 완료했다.
   - Previous completed task is [overview-economic-cycle-multichannel-asset-interpretation-v1-20260717](./tasks/active/overview-economic-cycle-multichannel-asset-interpretation-v1-20260717/STATUS.md). 공통 판정기와 금·달러 파일럿에서 비인과적 `economic_cycle_v2` 계약을 확립했다.
   - Previous completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 가격의 1주·1개월·3개월 흐름을 경제 배경과 독립 판정하는 `3/3` 개선을 완료했다.
@@ -51,6 +51,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-19 - Futures Macro 계산은 일봉 갱신 때 저장하고 화면은 저장 결과만 읽는다
+
+- User request: 5년 이력을 써도 최초 Overview/Futures Macro 진입은 오래 걸리지 않게 하고, 잘린 방법론과 Streamlit 원본 추적을 React로 통일하는 마무리를 승인함.
+- Interpreted goal: 비싼 5D/20D replay는 명시적 일봉 갱신에만 결합하고, 일상적인 탭 진입·다시 읽기는 latest-good compact snapshot만 읽는다.
+- Analysis result: `finance_meta.futures_macro_snapshot`에 source marker/schema/algorithm version과 JSON-safe compact payload를 저장한다. 전체 5년 OHLCV는 기존 table에 남기고 UI는 lazy compute fallback을 만들지 않는다.
+- Follow-up: 실제 2026-07-17 snapshot을 10.549s에 materialize했고 fresh DB read 0.36~0.37s, browser ready reload 1.877s를 확인했다. 방법론과 계산 추적은 React disclosure로 통합했고 desktop/420px clipping·overflow QA를 통과했다.
 
 ### 2026-07-19 - Futures Macro 점선은 중간 일별 경로가 아니라 말일 예상 순이동이다
 
