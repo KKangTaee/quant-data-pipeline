@@ -447,6 +447,7 @@ Phase 30 third work unit status:
   `app/web/backtest_single_forms/`는 history/replay compatibility를 위해 남아 있지만 current
   primary route에서는 strategy-specific native form을 dispatch하지 않는다.
 - Portfolio Mix의 current primary route는 `app/services/backtest_portfolio_mix_workspace.py`, `app/web/backtest_portfolio_mix_workspace.py`, `app/web/components/backtest_portfolio_mix_workspace/`가 소유한다. `app/web/backtest_compare/page.py`와 하위 모듈은 기존 runner/weighted builder와 history compatibility 구현으로 남지만 visible primary form을 렌더링하지 않는다.
+- Portfolio Mix component 상세 설정의 `multi_select`는 option 12개 이하만 즉시 grid로 펼친다. 긴 목록은 현재 선택 chip, 검색, 240px 내부 scroll로 편집하며 Python preset 값과 `set_component_field` 배열 intent 계약은 그대로 유지한다.
 - Latest result / compare result / Real-Money detail / selection history display는 `app/web/backtest_result_display.py`가 담당한다.
 - 공용 preset, session state, 입력 컴포넌트, status label은 `app/web/backtest_common.py`가 담당한다. 이 파일은 다음 리팩토링에서 더 잘게 나눌 수 있는 transitional shared module이다.
 - 따라서 `app/web/backtest_page.py`는 React workflow shell과 stage dispatch만 조합한다. shell 의미와 intent 검증은 `app/services/backtest_workflow_shell.py` / `app/web/backtest_workflow_shell.py`가 소유한다. `app/web/pages/` 아래에는 user-facing `.py` page를 두지 않아 `streamlit_app.py`의 top navigation과 Streamlit native sidebar가 충돌하지 않게 한다.

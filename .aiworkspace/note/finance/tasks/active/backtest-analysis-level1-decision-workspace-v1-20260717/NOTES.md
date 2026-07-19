@@ -446,3 +446,13 @@ generated artifact이므로 commit하지 않는다.
 - 누적성과와 월별 수익률은 같은 `nearestPlotIndex()`를 사용해 두 차트의 hover 의미를 통일한다.
 - 두 차트는 비교용 좌우 분할보다 시간 흐름 판독이 우선이므로 desktop과 760px 모두 한 열 전체 폭으로
   둔다. 이 변경은 evidence, weighted calculation, 저장/Level2 handoff 계약을 바꾸지 않는다.
+
+## 2026-07-19 18차 Portfolio Mix Long Multi-Select Decisions
+
+- 사용자가 승인한 A안은 긴 option 목록을 무조건 접는 대신 현재 선택 chip을 항상 보이고, 검색과
+  240px 내부 scroll로 나머지 option을 편집한다.
+- compact 기준은 12개다. 짧은 역할·기간 selector는 기존 grid를 유지해 불필요한 검색 단계를 만들지 않는다.
+- option label과 raw value를 대소문자 없이 함께 검색한다. 선택 해제와 재선택은 기존 option order와
+  `set_component_field` 배열 payload를 유지하며 Python preset/runtime/Gate를 다시 계산하지 않는다.
+- 실제 GTAA preset은 방어 자산 3개 `TLT / IEF / LQD`를 그대로 읽었고, frontend query는 Streamlit rerun 뒤에도
+  component local state로 유지됐다. 다른 component 설정은 선택 intent 중 변경되지 않았다.

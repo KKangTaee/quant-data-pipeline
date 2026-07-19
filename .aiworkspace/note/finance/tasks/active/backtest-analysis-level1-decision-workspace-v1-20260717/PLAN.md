@@ -8064,17 +8064,17 @@ git commit -m "Portfolio Mix 방어 자산 선택 압축"
 - Generate but do not stage: `backtest-portfolio-mix-defensive-assets-desktop-qa.png`
 - Generate but do not stage: `backtest-portfolio-mix-defensive-assets-760-qa.png`
 
-- [ ] **Step 1: Run actual desktop interaction QA**
+- [x] **Step 1: Run actual desktop interaction QA**
 
 Open Portfolio Mix GTAA details. Confirm selected shelf remains visible, search `TLT`, chip removal and result
 selection update the same field without resetting period/trend settings. Confirm scroll container height is 240px.
 
-- [ ] **Step 2: Run 760px responsive QA**
+- [x] **Step 2: Run 760px responsive QA**
 
 Confirm option list remains internally scrollable, selected chips wrap, no page/component horizontal overflow and
 following settings remain reachable without the former full-list height.
 
-- [ ] **Step 3: Apply fresh verification and protected-path audit**
+- [x] **Step 3: Apply fresh verification and protected-path audit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q
@@ -8084,7 +8084,7 @@ git diff --check
 git diff --cached --name-only
 ```
 
-- [ ] **Step 4: Sync closeout records and commit**
+- [x] **Step 4: Sync closeout records and commit**
 
 ```bash
 git commit -m "Portfolio Mix 방어 자산 선택 QA 정리"

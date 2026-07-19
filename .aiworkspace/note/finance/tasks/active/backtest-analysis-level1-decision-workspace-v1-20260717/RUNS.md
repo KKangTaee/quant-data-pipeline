@@ -749,3 +749,21 @@
 - GREEN focused 전체 -> `29 passed, 3 warnings in 1.68s`.
 - React production build: Vite 5.4.21, `176 modules transformed`, CSS 12.47 kB,
   JS 343.06 kB. `git diff --check` exit 0이다.
+
+## 2026-07-19 18차 Task 56 Actual Browser QA And Closeout
+
+- fresh Streamlit 8505에서 Portfolio Mix -> GTAA 세부 설정을 열었다. 방어 자산은 선택 3개
+  `TLT / IEF / LQD`, 검색 input 1개와 240px scroll group으로 표시됐다.
+- desktop scroll 측정은 `maxHeight=240px`, `overflowY=auto`, `clientHeight=238`,
+  `scrollHeight=25802`다. `TLT` 검색은 option을 1개로 필터링했고 선택 shelf는 유지됐다.
+- actual chip 해제 뒤 선택 2개, checkbox 재선택 뒤 선택 3개로 복원됐다. 그 사이 GTAA 핵심 값
+  `3 / 1 / 200`과 검색 query는 유지됐다.
+- 760x1000은 outer `bodyScrollWidth=documentScrollWidth=760`, option group
+  `clientWidth=scrollWidth=616`, 2열, 같은 240px internal scroll이었다.
+- generated evidence: `backtest-portfolio-mix-defensive-assets-desktop-qa.png`,
+  `backtest-portfolio-mix-defensive-assets-760-qa.png`; stage하지 않는다.
+- fresh focused UI/boundary:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
+  -> `85 passed, 3 warnings in 1.66s`.
+- React production build: Vite 5.4.21, `176 modules transformed`, CSS 12.47 kB,
+  JS 343.06 kB. target service/adapter `py_compile`은 exit 0이다.

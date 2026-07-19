@@ -390,3 +390,14 @@ Last Updated: 2026-07-19
   scroll과 empty state를 사용한다. event/payload/Python preset·runtime 계약은 변경하지 않았다.
 - Task 55 RED는 `1 failed / 28 deselected`, GREEN focused 전체는 `29 passed, 3 warnings`이며
   React build는 `176 modules transformed`, `git diff --check` exit 0이다.
+
+## 18차 Completion
+
+- GTAA 방어 자산처럼 option이 긴 multi-select는 선택 요약, 검색, 240px 내부 scroll로 압축했고
+  12개 이하 목록은 기존 즉시 선택 grid를 유지했다.
+- desktop actual QA에서 `TLT` 검색, 선택 해제·재선택, 선택 3개 복원과 보유 수·갱신 주기·추세 기간
+  `3 / 1 / 200` 보존을 확인했다. scroll은 `clientHeight=238 / scrollHeight=25802 / overflowY=auto`였다.
+- 760px은 document/body horizontal overflow 0, option grid 2열, `clientWidth=616 / scrollWidth=616`,
+  선택 chip wrap과 같은 240px scroll을 확인했다.
+- fresh focused UI/boundary는 `85 passed, 3 warnings`; React production build는
+  `176 modules transformed`; target `py_compile`은 exit 0이다.

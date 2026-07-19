@@ -6663,3 +6663,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 누적성과와 월별 수익률을 desktop/760px 모두 각각 전체 폭 한 행으로 배치했다.
 - actual GTAA 50 / Equal Weight 50에서 누적 first/middle/last와 월별 middle hover, 760px overflow 0을 확인했다.
 - focused `84 passed`, React production build, py_compile, diff-check를 완료했으며 상세는 active task 17차 기록을 본다.
+
+## 2026-07-19 - Portfolio Mix 긴 방어 자산 선택 압축
+
+- GTAA 방어 자산처럼 긴 multi-select를 선택 chip, 검색, 240px 내부 scroll로 바꾸고 짧은 selector는 기존 grid를 유지했다.
+- actual TLT 해제·재선택 중 GTAA 핵심 설정값 보존과 desktop/760px no-overflow를 확인했다.
+- fresh focused `85 passed`, React production build, py_compile을 통과했다. generated QA와 workflow JSONL은 commit하지 않는다.
+- 상세 설계·RED/GREEN·QA는 active task 18차 기록을 본다.

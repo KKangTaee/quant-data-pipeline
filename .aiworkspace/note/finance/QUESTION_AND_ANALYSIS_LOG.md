@@ -10057,3 +10057,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: weighted 후보의 성과 흐름과 월별 변화를 현재 계산 결과로 직접 읽되, 없는 benchmark나 holdings를 만들어 내지 않아야 함.
 - Analysis result: Python pure service가 KPI, base-100 누적 성과, 월별 수익률, component 기여도와 계산/data trust를 JSON-safe 표시 계약으로 만들고 React가 차트/hover/focus만 소유한다.
 - Follow-up: GTAA 50 / Equal Weight 50 actual run에서 누적·월별 tooltip, 상세 근거, desktop/760px 반응형과 no-benchmark를 확인했다. unavailable month는 표에 보존하고 차트에서는 제외한다.
+
+### 2026-07-19 - 긴 방어 자산 목록은 선택 상태를 보존한 compact editor로 다룬다
+
+- User request: GTAA 방어 자산 선택지가 세로로 너무 길어지는 문제를 scroll 또는 다른 방식으로 개선해 달라고 요청함.
+- Interpreted goal: 현재 선택을 잃지 않으면서 원하는 자산을 빠르게 찾고, 뒤 설정까지 과도한 page scroll 없이 이어서 편집해야 함.
+- Analysis result: option 12개 초과 시 선택 chip + 검색 + 240px 내부 scroll을 사용하고, 짧은 목록은 기존 grid를 유지하는 A안을 채택함.
+- Follow-up: actual TLT 검색·해제·재선택, 다른 GTAA 설정 보존과 desktop/760px no-overflow를 확인했다. 수천 option virtualization은 후속 규모 확장 시 검토한다.
