@@ -19,3 +19,5 @@
 - 시각 companion에서 Hero, 균형 source box, 기간 card, CNN 고정 + AAII tab graph 구조를 반복 비교했다.
 - Browser에서 `AAII 응답` 기본 선택과 `AAII Spread` click 전환, 동시에 두 graph panel만 표시되는 것을 확인했다.
 - graph companion은 spline 없이 polyline 직선 연결로 확인했다. source box 상단 rounded rail 제거는 최종 승인 spec에 반영했다.
+- 승인된 visual redesign spec을 서비스 전망 gate, Hero/current evidence, 두 graph panel, 기간 card/disclosure, Browser QA의 5개 구현 task로 변환했다.
+- 구현 계획 자체검토에서 spec coverage를 전부 task에 연결하고, placeholder 0건과 type/interface 명칭 일치를 확인했다. confirm/reverse/persist 3경로와 server-owned graph 상태 문구 누락을 발견해 계획에 보강했다.

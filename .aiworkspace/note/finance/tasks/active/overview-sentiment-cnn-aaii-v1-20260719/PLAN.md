@@ -38,3 +38,5 @@ Authoritative spec: `docs/superpowers/specs/2026-07-19-overview-sentiment-cnn-aa
 Visual redesign spec: `docs/superpowers/specs/2026-07-19-overview-sentiment-visual-redesign-design.md`
 
 Implementation plan: `docs/superpowers/plans/2026-07-19-overview-sentiment-cnn-aaii-v1.md`
+
+Visual redesign implementation plan: `docs/superpowers/plans/2026-07-19-overview-sentiment-visual-redesign.md`
