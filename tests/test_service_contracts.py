@@ -22525,7 +22525,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("지수 추세", momentum["current_reading"])
         breadth = next(item for item in explanations if item["series"] == "Stock Price Breadth")
         self.assertIn("시장 폭", breadth["current_reading"])
-        self.assertEqual(analysis["next_checks"][0]["target"], "CNN 행동 심리")
+        self.assertEqual(
+            [item["target"] for item in analysis["next_checks"]],
+            ["정렬 확인", "설문 반전", "관계 지속"],
+        )
 
     def test_market_sentiment_snapshot_adds_range_divergence_and_component_history(self) -> None:
         from app.services.overview.sentiment import build_market_sentiment_snapshot
