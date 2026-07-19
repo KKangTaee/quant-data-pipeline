@@ -19,7 +19,7 @@
 | 2차 | navigation·전용 코드·현재 문서 정리 | Operations에는 Portfolio Monitoring만 남고 제거된 route/import/reference가 없다. |
 | 3차 | 자동 회귀·Browser QA·문서 closeout | Ingestion 기록 기능과 Portfolio Monitoring이 정상이며 실제 navigation QA가 끝난다. |
 
-현재 위치는 `1/3차 완료`, written spec 검토 대기다.
+현재 위치는 `3/3차 완료`다. 승인된 제거 경계의 구현, 자동 회귀, 실제 Browser QA, 문서 closeout을 마쳤다.
 
 ## Scope
 

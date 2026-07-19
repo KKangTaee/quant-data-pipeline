@@ -68,6 +68,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+### 2026-07-19 - Operations를 Portfolio Monitoring 단일 화면으로 정리
+
+- 사용하지 않는 `Operations Overview`, `System / Data Health` route와 전용 UI 코드를 제거하고 Operations에는 Portfolio Monitoring만 남겼다.
+- 수집 실행 이력·로그·failure CSV는 `Workspace > Ingestion > 실행 기록 / 결과`에 보존했다.
+- Python 60 / React 25 / typecheck/build와 실제 Browser navigation·화면·console QA를 완료했다. 상세 결과는 [active task](./tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md)에 있다.
+
 ### 2026-07-19 - Portfolio Monitoring 추적 종료 취소
 
 - 종료 기록의 동일 항목을 새 등록 없이 원래 시작 계약으로 다시 활성화하는 idempotent `reopen_item` command와 React 액션을 추가했다.

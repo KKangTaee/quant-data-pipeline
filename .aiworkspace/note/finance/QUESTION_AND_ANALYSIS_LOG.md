@@ -55,6 +55,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-19 - Operations는 Portfolio Monitoring만 소유한다
+
+- User request: Operations Overview와 System / Data Health의 필요성을 검토하고 불필요하면 제거하되 필요한 기능은 남겨 달라고 요청함.
+- Interpreted goal: 사용하지 않는 진단 중심 화면을 정리하고 실제 선정 이후 업무인 포트폴리오 추적만 빠르게 시작하게 한다.
+- Analysis result: Overview는 Portfolio Monitoring의 중복 landing이고 System/Data Health의 필요한 run history·log·failure CSV는 Ingestion에 이미 있다. 두 route와 전용 UI를 제거하고 Operations를 Portfolio Monitoring 하나로 좁혔다.
+- Follow-up: 운영 근거는 `Workspace > Ingestion > 실행 기록 / 결과`에서 확인하며 Portfolio Monitoring에는 개발자 진단 패널을 추가하지 않는다.
+
 ### 2026-07-19 - Portfolio Monitoring 등록 상태는 blur가 아니라 명시적 wizard 경계에서 유지한다
 
 - User request: 종목·전략 등록의 이전/다음 버튼이 너무 아래에 있고 요청 시작일을 선택할 수 없는 문제를 수정해 달라고 요청함.

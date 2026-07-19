@@ -38,7 +38,7 @@
 - Produces: `"Operations": [selected_portfolio_dashboard_page]` with no Overview/Health imports or wrappers.
 - Preserves: `app/web/ingestion/page.py::_render_ingestion_records_section()` and its four child renderers.
 
-- [ ] **Step 1: Write the failing navigation test**
+- [x] **Step 1: Write the failing navigation test**
 
 Remove the `build_operations_overview_model` tests and replace the old navigation assertion with:
 
@@ -65,7 +65,7 @@ def test_ingestion_records_preserve_run_log_and_failure_review(self) -> None:
 
 Delete `test_operations_summary_prefers_new_group_and_value_metrics_and_keeps_navigation` from `tests/test_portfolio_monitoring_page.py`; it tests the removed landing model.
 
-- [ ] **Step 2: Run RED verification**
+- [x] **Step 2: Run RED verification**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -75,7 +75,7 @@ Delete `test_operations_summary_prefers_new_group_and_value_metrics_and_keeps_na
 
 Expected: the navigation test fails because both old pages/imports still exist; the Ingestion preservation test passes.
 
-- [ ] **Step 3: Remove the two pages and modules**
+- [x] **Step 3: Remove the two pages and modules**
 
 In `app/web/streamlit_app.py`, remove both imports, `LOG_DIR`, `CSV_DIR`, `_render_ops_review_page()`, both obsolete `st.Page` definitions, and the Overview `page_targets`. Replace the Operations block with:
 
@@ -87,7 +87,7 @@ In `app/web/streamlit_app.py`, remove both imports, `LOG_DIR`, `CSV_DIR`, `_rend
 
 Keep the existing Portfolio Monitoring page definition and `/selected-portfolio-dashboard` route unchanged. Delete the complete files `app/web/operations_overview.py` and `app/web/ops_review.py`. Do not delete job history/artifact modules or stored files.
 
-- [ ] **Step 4: Run GREEN verification**
+- [x] **Step 4: Run GREEN verification**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -100,7 +100,7 @@ git diff --check
 
 Expected: all tests pass, compile exits `0`, and diff check is clean.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 ```bash
 git add app/web/streamlit_app.py app/web/operations_overview.py app/web/ops_review.py tests/test_service_contracts.py tests/test_portfolio_monitoring_page.py
@@ -139,7 +139,7 @@ git commit -m "Operations를 포트폴리오 모니터링으로 단순화"
 - Consumes: `Workspace > Ingestion > 실행 기록 / 결과` as the only run/log/failure destination.
 - Produces: current Reference/docs with `Operations > Portfolio Monitoring` as the only Operations destination.
 
-- [ ] **Step 1: Write failing current-reference tests**
+- [x] **Step 1: Write failing current-reference tests**
 
 Use these assertions in `tests/test_reference_guides_catalog.py`:
 
@@ -170,7 +170,7 @@ self.assertEqual(data_section["owner"], "Workspace > Ingestion > 실행 기록 /
 self.assertNotIn("System / Data Health", str(model))
 ```
 
-- [ ] **Step 2: Run RED verification**
+- [x] **Step 2: Run RED verification**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -181,7 +181,7 @@ self.assertNotIn("System / Data Health", str(model))
 
 Expected: failures show the old health destination and `operations_console` key.
 
-- [ ] **Step 3: Align current service-owned destinations**
+- [x] **Step 3: Align current service-owned destinations**
 
 Delete the complete `surface_key == "operations_console"` catalog item. Replace current destinations containing `System / Data Health` with `Workspace > Ingestion > 실행 기록 / 결과` in the listed Reference/Overview services. Use this exact Data Trust copy:
 
@@ -197,11 +197,11 @@ In the hidden compatibility `app/web/backtest_candidate_library.py`, replace the
 현재 주 workflow에서는 이 화면을 primary monitoring이 아니라 archive / recovery 도구로 취급합니다.
 ```
 
-- [ ] **Step 4: Run reference GREEN verification**
+- [x] **Step 4: Run reference GREEN verification**
 
 Run the Step 2 command again. Expected: all tests pass and contextual-help drift remains `PASS`.
 
-- [ ] **Step 5: Align durable current-state documentation**
+- [x] **Step 5: Align durable current-state documentation**
 
 - Remove the two deleted script rows and current route descriptions.
 - Define Operations as Portfolio Monitoring only.
@@ -210,7 +210,7 @@ Run the Step 2 command again. Expected: all tests pass and contextual-help drift
 - Delete `docs/runbooks/OPERATIONS_OVERVIEW_QA.md` and its runbook index entries.
 - Keep only an explicitly labeled superseded/history note in ROADMAP; do not rewrite historical tasks, research, or old root-log milestones.
 
-- [ ] **Step 6: Verify references and commit Task 2**
+- [x] **Step 6: Verify references and commit Task 2**
 
 ```bash
 rg -n -S "Operations Overview|Operations Console|System / Data Health|ops-review|/operations" \
@@ -247,7 +247,7 @@ git commit -m "Operations 현재 문서와 안내 경로 정리"
 - Consumes: Task 1 page graph and Task 2 reference alignment.
 - Produces: verified `3/3차` closeout with a non-committed QA screenshot.
 
-- [ ] **Step 1: Run focused Python and React regressions**
+- [x] **Step 1: Run focused Python and React regressions**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -267,7 +267,7 @@ npm run build
 
 Expected: Python/Vitest pass and typecheck/build exit `0`.
 
-- [ ] **Step 2: Run static policy checks**
+- [x] **Step 2: Run static policy checks**
 
 ```bash
 .venv/bin/python -m py_compile app/web/streamlit_app.py app/web/ingestion/page.py app/web/final_selected_portfolio_dashboard.py
@@ -279,7 +279,7 @@ git status --short
 
 Expected: all checks pass; only scoped changes and pre-existing untracked artifacts remain.
 
-- [ ] **Step 3: Perform Browser QA**
+- [x] **Step 3: Perform Browser QA**
 
 Start Streamlit on port `8524`, then verify:
 
@@ -291,7 +291,7 @@ Start Streamlit on port `8524`, then verify:
 
 Save `/Users/taeho/Project/quant-data-pipeline-worktrees/main-dev/operations-portfolio-monitoring-only-qa.png` and do not stage it.
 
-- [ ] **Step 4: Close task docs and commit**
+- [x] **Step 4: Close task docs and commit**
 
 Record exact test counts and Browser QA result, set task status to `Complete`, roadmap to `3/3차`, and add 3–5 concise handoff lines to each root log. Run `git diff --check` and `git status --short`, then commit scoped docs as:
 
