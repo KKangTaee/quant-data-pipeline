@@ -10106,3 +10106,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 종합·전략 차트와 DB 계약은 유지하면서 선택한 미국 주식·ETF 가격 차트만 관심 구간을 선명하게 탐색해야 함.
 - Analysis result: inclusive viewport helper가 최소 15거래일까지 cursor/center anchor zoom하고, 확대 상태에서 4px horizontal drag를 row 이동으로 clamp한다. line/candle은 viewport를 공유하며 mobile은 explicit controls만 사용한다.
 - Follow-up: 구현과 Python 101 / React 24 / build는 완료했다. local Finance Console Browser DOM 접근이 policy-blocked되어 전체 `2/3차`이며 desktop/420px interaction QA가 남아 있다.
+
+### 2026-07-19 - 선택 상세 차트를 목록보다 넓게 읽는다
+
+- User request: 선택 가격 차트의 X/Y축 글자가 너무 작고 옆의 종목·전략 결과 목록이 공간을 더 차지해 차트가 작아 보이므로 개선해 달라고 요청함.
+- Interpreted goal: 데스크톱의 빠른 종목 선택 흐름은 유지하면서 실제 분석 대상인 선택 상세와 가격 차트를 우선 배치하고 축을 별도 확대 없이 읽을 수 있어야 함.
+- Analysis result: 기존 grid는 목록 56%·상세 44%, 선택 차트 SVG 축은 9px이었다. 사용자가 승인한 desktop 목록 35% / 상세 65%, 목록 최소 280px, 축 11px/700을 CSS-only로 적용하고 900px 이하 단일 열은 유지했다.
+- Follow-up: Python 102 / React 24 / typecheck/build/static distribution을 통과했다. Browser URL policy로 desktop/900px/420px 실제 layout·overflow·interaction 확인과 신규 screenshot은 남아 있다.

@@ -31,7 +31,7 @@
 - Consumes: existing `.pm-content-grid`, `.pm-market-axis`, `.pm-market-date` and `@media (max-width: 900px)` selectors
 - Produces: source/static bundle contract for `35:65`, minimum `280px` list width, 11px/700 axis labels and unchanged narrow-screen single column
 
-- [ ] **Step 1: Write the failing static component contract**
+- [x] **Step 1: Write the failing static component contract**
 
 Insert this test after `test_market_chart_exposes_client_side_zoom_pan_controls` in `tests/test_portfolio_monitoring_component.py`:
 
@@ -55,7 +55,7 @@ Insert this test after `test_market_chart_exposes_client_side_zoom_pan_controls`
         )
 ```
 
-- [ ] **Step 2: Run the focused test and confirm RED**
+- [x] **Step 2: Run the focused test and confirm RED**
 
 Run:
 
@@ -66,7 +66,7 @@ Run:
 
 Expected: FAIL because the current stylesheet still contains `1.12fr/.88fr` and 9px axis labels.
 
-- [ ] **Step 3: Apply the minimum CSS implementation**
+- [x] **Step 3: Apply the minimum CSS implementation**
 
 Replace the two existing rules in `src/style.css` with:
 
@@ -80,7 +80,7 @@ Replace the two existing rules in `src/style.css` with:
 
 Do not change `.pm-chart-tooltip`, `.pm-axis-label`, `.pm-axis-date`, SVG `width = 620`, SVG `height = 300`, or any React event handler.
 
-- [ ] **Step 4: Run focused and full source tests and confirm GREEN**
+- [x] **Step 4: Run focused and full source tests and confirm GREEN**
 
 Run:
 
@@ -91,7 +91,7 @@ Run:
 
 Expected: focused component module 12 tests PASS and full Portfolio Monitoring suite 102 tests PASS.
 
-- [ ] **Step 5: Run React regression and typecheck**
+- [x] **Step 5: Run React regression and typecheck**
 
 Run:
 
@@ -103,7 +103,7 @@ npm run typecheck
 
 Expected: Vitest 24 tests PASS and TypeScript typecheck exits 0.
 
-- [ ] **Step 6: Rebuild the production component**
+- [x] **Step 6: Rebuild the production component**
 
 Run:
 
@@ -114,7 +114,7 @@ npm run build
 
 Expected: Vite build exits 0, `component_static/index.html` references existing hashed CSS/JS assets, and no source map or QA PNG is created.
 
-- [ ] **Step 7: Verify the implementation diff and commit**
+- [x] **Step 7: Verify the implementation diff and commit**
 
 Run:
 
@@ -171,7 +171,7 @@ Save one desktop line-mode screenshot with the wider detail chart and readable a
 
 If in-app Browser security policy blocks the local URL, do not use alternate automation. Record the exact policy block in `RUNS.md` and keep Browser QA plus the 3/3 closeout status pending.
 
-- [ ] **Step 3: Synchronize task and root handoff status**
+- [x] **Step 3: Synchronize task and root handoff status**
 
 If Browser QA passes, record:
 
@@ -191,7 +191,7 @@ If Browser QA is blocked, record:
 
 Document actual test counts, viewport sizes, overflow outcome and screenshot path only when observed. Do not claim Browser QA from static tests.
 
-- [ ] **Step 4: Re-run final verification after documentation changes**
+- [x] **Step 4: Re-run final verification after documentation changes**
 
 Run:
 
@@ -208,7 +208,7 @@ git status --short
 
 Expected: Python 102 tests PASS, Vitest 24 tests PASS, typecheck/build/diff-check PASS. Git status contains only intended docs/code/build changes plus pre-existing untracked generated artifacts.
 
-- [ ] **Step 5: Stage only closeout records and commit**
+- [x] **Step 5: Stage only closeout records and commit**
 
 Run:
 
