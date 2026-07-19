@@ -2653,3 +2653,140 @@ fallback을 구현하지 않는다.
 - legacy prototype JSONL migration, rewrite 또는 자동 deletion
 - broker order, live approval, account sync, auto rebalance
 - Single Strategy primary workflow 재설계
+
+## 2026-07-19 15차 후속: Portfolio Mix Step 3 Result Evidence 보강 설계
+
+### 이걸 하는 이유?
+
+actual GTAA 50% / Equal Weight 50% 실행 결과에서 Step 3은 KPI 네 개만 표시했다. 그러나 weighted
+builder는 이미 월별 `result_df`, `chart_df`, component contribution amount/share와 data trust를 계산한다.
+새 adapter가 이 bundle을 `summary`와 `period`로만 축약하고 React가 summary grid만 렌더링해 승인된
+15차 설계의 `Mix 성과 / component contribution / component allocation / explicit evidence`가 primary
+workspace에서 사라졌다. 성공 notice와 current result card도 공통 result stack 간격이 없어 서로 붙어 보인다.
+
+이 후속 범위는 새 계산을 발명하지 않고 이미 계산된 weighted result를 사용자 언어로 투영한다.
+
+### Approved Presentation: B안
+
+Step 3의 기본 화면은 다음 순서로 읽는다.
+
+1. `이 구성으로 Mix 실행` action
+2. 실행 성공 / 실패 / stale feedback
+3. current 또는 reference result identity와 실제 공통 기간
+4. 사용자 단위 KPI
+5. 누적 성과 흐름
+6. 월별 수익률 변화
+7. `구성 기여도·월별 결과·계산 근거` disclosure
+
+기본 화면은 누적 성과와 월별 수익률까지만 펼친다. component 기여도, 월별 결과 표와 계산·데이터
+근거는 하나의 secondary disclosure 안에 둬 Step 3이 legacy result tab처럼 길어지지 않게 한다.
+
+### Spacing And Formatting Contract
+
+- 실행 button과 feedback/result 묶음 사이는 18px을 둔다.
+- feedback notice와 result card, result card 내부 주요 block 사이는 각각 16px 이상을 둔다.
+- CAGR / MDD는 raw decimal `0.096`, `-0.17`이 아니라 `9.60%`, `-17.00%`로 표시한다.
+- Sharpe는 소수 둘째 자리, 평가액은 천 단위 구분을 사용한다.
+- React는 숫자 의미를 추론하지 않는다. Python read model이 raw value와 formatted label을 함께 제공한다.
+- current와 stale/reference는 같은 result evidence 구조를 쓰되 stale에는 `참고용 이전 결과` label을
+  표시하고 save / Level2 action을 계속 차단한다.
+
+### Default Charts
+
+#### 누적 성과 흐름
+
+- weighted `chart_df`의 실제 공통 날짜와 `Total Balance`를 첫 유효 시점 100 기준으로 normalize한다.
+- desktop은 최대 6개, 760px은 최대 3개의 실제 timeline date tick을 표시한다.
+- 별도 benchmark 계약이 없는 weighted Mix에 SPY나 component benchmark를 임의로 합성하지 않는다.
+- explicit Mix benchmark가 향후 저장되는 경우에만 같은 chart의 비교 series로 확장할 수 있다.
+
+#### 월별 수익률 변화
+
+- weighted `result_df`의 `Total Return`을 월별 막대로 표시한다.
+- 양수와 음수는 같은 zero axis에서 색과 방향으로 구분한다.
+- 원본에 없는 월은 chart row를 만들지 않는다. 날짜는 있지만 값이 NaN인 row는 월별 결과 표에
+  `계산값 없음`으로 보존하고 chart bar에서는 제외한다. 두 경우 모두 0으로 만들지 않는다.
+- 기본 화면은 전체 월별 series를 chart로 보여주고, 정확한 row 값은 disclosure의 월별 결과 표에 둔다.
+
+### Hover And Keyboard Contract
+
+- 누적 성과 chart는 pointer가 chart 안에 있을 때 가장 가까운 실제 날짜 row 하나를 선택한다.
+- tooltip은 `날짜 / 기준 100 지수 / 누적 수익률 / 평가액`을 보여준다.
+- 월별 수익률 chart는 bar hover에서 `월 / 월 수익률 / 월말 평가액`을 보여준다.
+- tooltip과 crosshair/highlight는 pointer leave에서 사라지며 상시 label로 chart를 덮지 않는다.
+- chart point와 monthly bar는 keyboard focus로 같은 tooltip 내용을 확인할 수 있어야 한다.
+- React는 nearest-row 선택과 tooltip 위치만 소유한다. 날짜, normalized value와 사용자 label은 Python이
+  제공하며 React가 raw dataframe column을 분류하거나 percentage 계산을 하지 않는다.
+
+### Secondary Disclosure
+
+`구성 기여도·월별 결과·계산 근거`는 세 묶음을 제공한다.
+
+1. `구성 기여도`
+   - 목표 비중, normalized input weight, 종료 시점 contribution amount/share
+   - 종료 시점 compact summary table을 먼저 표시
+   - contribution series가 있을 때 `기여 금액 / 기여 비중` segmented view로 같은 timeline chart를 표시
+2. `월별 결과`
+   - 사용자 열 `월 / 월 수익률 / 평가액`
+   - raw `Date`, `Total Return`, `Total Balance` key를 first-read label로 노출하지 않음
+3. `계산 근거`
+   - 공통 시작/종료일, 월별 관측 수, intersection date policy
+   - component strategy / role / target weight와 component data trust summary
+   - raw meta / absolute path / JSON dump는 노출하지 않음
+
+명시적 holdings / underlying target evidence가 weighted bundle에 없으면 빈 보유표를 만들지 않는다.
+component allocation과 contribution은 holdings를 대신하는 데이터로 오인하지 않도록 별도 이름을 쓴다.
+
+### Ownership And Data Flow
+
+```text
+weighted bundle
+  result_df / chart_df
+  component_contribution_amount_df
+  component_contribution_share_df
+  component_data_trust_rows
+  component roles / weights / meta
+    -> Python Portfolio Mix result projection
+       formatted KPI / actual dates / normalized curve / monthly bars
+       contribution / monthly table / calculation basis
+         -> Portfolio Mix workspace read model current/reference result
+           -> React Step 3 presentation + pointer/focus intent only
+```
+
+- `app/services/backtest_portfolio_mix_workspace.py`가 weighted bundle DataFrame을 JSON-safe result
+  evidence와 사용자 label로 투영하고 fingerprint/current-stale lifecycle을 유지한다.
+- `app/web/backtest_portfolio_mix_workspace.py`는 weighted builder 결과를 pure projection에 전달하고
+  session current/reference result를 원자적으로 교체한다.
+- `app/web/components/backtest_portfolio_mix_workspace/frontend/src/App.tsx`는 result sections와
+  pointer/focus state만 렌더링한다.
+- `styles.css`는 result stack 간격, desktop/two-chart와 760px/one-column responsive contract를 소유한다.
+- 기존 weighted calculation, run history, saved setup과 Level2 source schema는 변경하지 않는다.
+
+### Error And Empty States
+
+- 실행 전에는 KPI, chart, monthly table과 disclosure를 만들지 않는다.
+- weighted result에 chart/monthly row가 없으면 해당 block만 `계산 근거 없음`으로 낮추고 다른 KPI를
+  유지한다.
+- component/weighted 실행 실패는 이전 성공 result evidence를 reference로 보존한다.
+- 무한대와 duplicate date는 Python projection에서 제거/정렬한다. NaN 월별 row는 표에서
+  `계산값 없음`으로 보존하고 chart에서는 제외하며, sparse month를 0 또는 PASS로 만들지 않는다.
+
+### Verification Contract
+
+- RED: weighted bundle의 summary/chart/monthly/contribution/data-trust가 JSON-safe result evidence로 투영된다.
+- RED: percentage/currency/ratio label과 actual date tick이 Python에서 고정된다.
+- RED: missing/NaN/sparse data가 0으로 invent되지 않는다.
+- RED: stale reference가 full result evidence를 보존하고 save/Level2 action은 계속 차단된다.
+- RED: React source에 두 기본 chart, secondary disclosure, pointer leave와 keyboard focus tooltip이 있다.
+- RED: React가 raw dataframe key, percentage 계산, benchmark 추론을 하지 않는다.
+- GREEN: focused service/adapter/boundary test, React production build, target `py_compile`, `git diff --check`.
+- Browser QA: desktop과 760px에서 result stack 간격, formatted KPI, actual date ticks, 두 chart hover/focus,
+  disclosure, stale/reference와 horizontal overflow 0을 확인한다.
+
+### Out Of Scope
+
+- weighted portfolio 계산식, 월별 resampling 또는 component contribution 계산 변경
+- 임의 SPY benchmark, blended benchmark 또는 신규 benchmark 설정 UI
+- weighted holdings / underlying target을 근거 없이 합성
+- chart zoom/pan/range selector와 신규 chart dependency
+- saved JSONL / Run History / Level2 source schema migration
