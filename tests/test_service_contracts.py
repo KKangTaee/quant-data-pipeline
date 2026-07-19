@@ -8937,6 +8937,22 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('.sentiment-workbench__chart-tooltip[data-alignment="end"]', react_style)
         self.assertIn("transform: translateX(-100%);", react_style)
 
+    def test_sentiment_react_cnn_component_ratings_use_tone_badges(self) -> None:
+        source_root = Path("app/web/streamlit_components/sentiment_workbench/src")
+        disclosure_source = (source_root / "SentimentEvidenceDisclosure.tsx").read_text(
+            encoding="utf-8"
+        )
+        react_style = (source_root / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn('className="sentiment-workbench__cnn-status-badge"', disclosure_source)
+        self.assertIn('data-tone={item.tone || "neutral"}', disclosure_source)
+        self.assertIn('{item.rating || "-"}', disclosure_source)
+        for tone in ("danger", "warning", "neutral", "positive"):
+            self.assertIn(
+                f'.sentiment-workbench__cnn-status-badge[data-tone="{tone}"]',
+                react_style,
+            )
+
     def test_futures_macro_raw_tables_are_named_by_calculation_step(self) -> None:
         helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
         source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")

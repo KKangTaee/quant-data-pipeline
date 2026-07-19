@@ -51,7 +51,15 @@ function SentimentEvidenceDisclosure({ payload, onToggle }: Props) {
           {payload.evidence.cnn_components.map((item) => (
             <div className="sentiment-workbench__cnn-evidence-row" key={item.series}>
               <div><strong>{item.label_ko || item.series}</strong><small>{item.what_it_checks}</small></div>
-              <div><b>{displayValue(item.score)}</b><span>{item.rating}</span></div>
+              <div>
+                <b>{displayValue(item.score)}</b>
+                <span
+                  className="sentiment-workbench__cnn-status-badge"
+                  data-tone={item.tone || "neutral"}
+                >
+                  {item.rating || "-"}
+                </span>
+              </div>
               <p>{item.current_reading}</p>
               <small className="sentiment-workbench__evidence-change">직전 대비 {signedValue(item.change, "p")}</small>
             </div>

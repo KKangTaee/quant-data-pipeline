@@ -823,6 +823,7 @@ summary:focus-visible {
 }
 
 .sentiment-workbench__cnn-evidence-row > div:nth-child(2) {
+  justify-items: end;
   text-align: right;
 }
 
@@ -845,6 +846,45 @@ summary:focus-visible {
 .sentiment-workbench__cnn-evidence-row > p,
 .sentiment-workbench__evidence-change {
   grid-column: 1 / -1;
+}
+
+.sentiment-workbench__cnn-status-badge {
+  background: #f1f4f6;
+  border: 1px solid #d5dde3;
+  border-radius: 999px;
+  color: #526176;
+  display: inline-flex;
+  font-size: 0.62rem;
+  font-weight: 850;
+  line-height: 1.2;
+  max-width: 100%;
+  padding: 3px 6px;
+  text-align: center;
+  white-space: normal;
+}
+
+.sentiment-workbench__cnn-status-badge[data-tone="danger"] {
+  background: #fff0f3;
+  border-color: #e8b9c3;
+  color: #993d54;
+}
+
+.sentiment-workbench__cnn-status-badge[data-tone="warning"] {
+  background: #fff2e5;
+  border-color: #efd1ad;
+  color: #9a5b2d;
+}
+
+.sentiment-workbench__cnn-status-badge[data-tone="neutral"] {
+  background: #f1f4f6;
+  border-color: #d5dde3;
+  color: #526176;
+}
+
+.sentiment-workbench__cnn-status-badge[data-tone="positive"] {
+  background: #e9f7f3;
+  border-color: #b9dfd5;
+  color: #0f766e;
 }
 
 .sentiment-workbench__aaii-row {
