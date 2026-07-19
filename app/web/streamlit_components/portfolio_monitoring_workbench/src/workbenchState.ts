@@ -322,6 +322,84 @@ export function nearestMarketChartRowIndex(
   return Math.min(Math.max(Math.round(target), 0), rowCount - 1);
 }
 
+export const MIN_MARKET_CHART_VISIBLE_ROWS = 15;
+
+export type MarketChartViewport = {
+  startIndex: number;
+  endIndex: number;
+};
+
+function safeMarketChartRowCount(rowCount: number) {
+  return Math.max(Math.floor(Number.isFinite(rowCount) ? rowCount : 0), 1);
+}
+
+export function buildFullMarketChartViewport(rowCount: number): MarketChartViewport {
+  const safeRowCount = safeMarketChartRowCount(rowCount);
+  return { startIndex: 0, endIndex: safeRowCount - 1 };
+}
+
+export function normalizeMarketChartViewport(
+  viewport: MarketChartViewport,
+  rowCount: number,
+  minimumVisible = MIN_MARKET_CHART_VISIBLE_ROWS,
+): MarketChartViewport {
+  const safeRowCount = safeMarketChartRowCount(rowCount);
+  const minimumCount = Math.min(
+    Math.max(Math.floor(Number.isFinite(minimumVisible) ? minimumVisible : 1), 1),
+    safeRowCount,
+  );
+  const requestedStart = Number.isFinite(viewport.startIndex) ? Math.floor(viewport.startIndex) : 0;
+  const requestedEnd = Number.isFinite(viewport.endIndex) ? Math.floor(viewport.endIndex) : requestedStart;
+  const requestedCount = Math.max(requestedEnd - requestedStart + 1, minimumCount);
+  const visibleCount = Math.min(requestedCount, safeRowCount);
+  const startIndex = Math.min(Math.max(requestedStart, 0), safeRowCount - visibleCount);
+  return { startIndex, endIndex: startIndex + visibleCount - 1 };
+}
+
+export function zoomMarketChartViewport(
+  viewport: MarketChartViewport,
+  rowCount: number,
+  anchorRatio: number,
+  direction: "in" | "out",
+  minimumVisible = MIN_MARKET_CHART_VISIBLE_ROWS,
+): MarketChartViewport {
+  const normalized = normalizeMarketChartViewport(viewport, rowCount, minimumVisible);
+  const safeRowCount = safeMarketChartRowCount(rowCount);
+  const visibleCount = normalized.endIndex - normalized.startIndex + 1;
+  const minimumCount = Math.min(
+    Math.max(Math.floor(Number.isFinite(minimumVisible) ? minimumVisible : 1), 1),
+    safeRowCount,
+  );
+  const targetCount = direction === "in"
+    ? Math.max(minimumCount, Math.round(visibleCount * 0.8))
+    : Math.min(safeRowCount, Math.round(visibleCount * 1.25));
+  if (targetCount === visibleCount) return normalized;
+  const ratio = Number.isFinite(anchorRatio) ? Math.min(Math.max(anchorRatio, 0), 1) : 0.5;
+  const anchorIndex = normalized.startIndex + ratio * Math.max(visibleCount - 1, 0);
+  const targetStart = Math.round(anchorIndex - ratio * Math.max(targetCount - 1, 0));
+  return normalizeMarketChartViewport(
+    { startIndex: targetStart, endIndex: targetStart + targetCount - 1 },
+    safeRowCount,
+    targetCount,
+  );
+}
+
+export function panMarketChartViewport(
+  viewport: MarketChartViewport,
+  rowCount: number,
+  deltaX: number,
+  plotWidth: number,
+): MarketChartViewport {
+  const normalized = normalizeMarketChartViewport(viewport, rowCount);
+  if (!Number.isFinite(deltaX) || !Number.isFinite(plotWidth) || plotWidth <= 0) return normalized;
+  const visibleCount = normalized.endIndex - normalized.startIndex + 1;
+  const rowDelta = Math.round((deltaX / plotWidth) * visibleCount);
+  return normalizeMarketChartViewport({
+    startIndex: normalized.startIndex - rowDelta,
+    endIndex: normalized.endIndex - rowDelta,
+  }, rowCount, visibleCount);
+}
+
 export type ChartTooltipBounds = {
   chartWidth: number;
   plotTop: number;

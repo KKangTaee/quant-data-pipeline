@@ -14,14 +14,18 @@ import {
   selectItem,
   buildDiagnosisSections,
   buildMacroObservationPresentation,
+  buildFullMarketChartViewport,
   buildMarketChartBounds,
   buildRiskCalibrationPresentation,
   buildCatalogSearchEvent,
   itemBuilderRecoveryKey,
   nearestChartPointIndex,
   nearestMarketChartRowIndex,
+  normalizeMarketChartViewport,
   normalizeItemBuilderState,
+  panMarketChartViewport,
   placeChartTooltip,
+  zoomMarketChartViewport,
 } from "./workbenchState";
 
 const groups: GroupSummary[] = [
@@ -166,6 +170,46 @@ describe("selected item market chart", () => {
     expect(nearestMarketChartRowIndex(rows.length, 60, 10, 110)).toBe(1);
     expect(nearestMarketChartRowIndex(rows.length, 200, 10, 110)).toBe(2);
     expect(nearestMarketChartRowIndex(0, 60, 10, 110)).toBeNull();
+  });
+
+  it("builds and normalizes an inclusive market chart viewport", () => {
+    expect(buildFullMarketChartViewport(120)).toEqual({ startIndex: 0, endIndex: 119 });
+    expect(normalizeMarketChartViewport({ startIndex: -20, endIndex: 200 }, 120)).toEqual({
+      startIndex: 0,
+      endIndex: 119,
+    });
+    expect(buildFullMarketChartViewport(0)).toEqual({ startIndex: 0, endIndex: 0 });
+  });
+
+  it("zooms around left center and right pointer anchors", () => {
+    const full = buildFullMarketChartViewport(120);
+    expect(zoomMarketChartViewport(full, 120, 0, "in")).toEqual({ startIndex: 0, endIndex: 95 });
+    expect(zoomMarketChartViewport(full, 120, 0.5, "in")).toEqual({ startIndex: 12, endIndex: 107 });
+    expect(zoomMarketChartViewport(full, 120, 1, "in")).toEqual({ startIndex: 24, endIndex: 119 });
+  });
+
+  it("clamps repeated zoom to 15 rows and back to the full range", () => {
+    let viewport = buildFullMarketChartViewport(120);
+    for (let index = 0; index < 20; index += 1) {
+      viewport = zoomMarketChartViewport(viewport, 120, 0.5, "in");
+    }
+    expect(viewport.endIndex - viewport.startIndex + 1).toBe(15);
+    for (let index = 0; index < 20; index += 1) {
+      viewport = zoomMarketChartViewport(viewport, 120, 0.5, "out");
+    }
+    expect(viewport).toEqual({ startIndex: 0, endIndex: 119 });
+  });
+
+  it("pans by visible-row distance and clamps both data edges", () => {
+    const viewport = { startIndex: 40, endIndex: 69 };
+    expect(panMarketChartViewport(viewport, 120, 100, 300)).toEqual({ startIndex: 30, endIndex: 59 });
+    expect(panMarketChartViewport(viewport, 120, -100, 300)).toEqual({ startIndex: 50, endIndex: 79 });
+    expect(panMarketChartViewport(viewport, 120, 10000, 300)).toEqual({ startIndex: 0, endIndex: 29 });
+    expect(panMarketChartViewport(viewport, 120, -10000, 300)).toEqual({ startIndex: 90, endIndex: 119 });
+    expect(panMarketChartViewport(buildFullMarketChartViewport(120), 120, 100, 300)).toEqual({
+      startIndex: 0,
+      endIndex: 119,
+    });
   });
 });
 
