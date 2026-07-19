@@ -62,6 +62,64 @@ def _grs_validation_fixture() -> dict[str, object]:
 
 
 class EvidenceClosureContractTests(unittest.TestCase):
+    def test_module_plan_marks_computed_and_missing_evidence_explicitly(self) -> None:
+        from app.services.backtest_practical_validation_modules import (
+            build_validation_module_plan,
+        )
+
+        plan = build_validation_module_plan(
+            source={
+                "source_kind": "latest_backtest_run",
+                "components": [
+                    {
+                        "strategy_key": "quality_factor",
+                        "target_weight": 100.0,
+                    }
+                ],
+            },
+            validation_profile={
+                "profile_id": "balanced_core",
+                "profile_label": "균형형",
+            },
+            checks=[],
+            diagnostics=[
+                {
+                    "domain": "stress_scenario_diagnostics",
+                    "status": "NOT_RUN",
+                },
+                {
+                    "domain": "robustness_sensitivity_overfit",
+                    "status": "NOT_RUN",
+                },
+            ],
+            validation_efficacy_rows=[
+                {
+                    "Criteria": "Walk-forward temporal validation",
+                    "Status": "REVIEW",
+                    "Current": "windows=103",
+                    "Evidence": "worst excess -4.46%",
+                }
+            ],
+            data_coverage_rows=[],
+            construction_risk_rows=[],
+            risk_contribution_rows=[],
+            component_role_weight_rows=[],
+            backtest_realism_rows=[],
+        )
+        modules = {
+            row["module_id"]: row
+            for row in plan["modules"]
+        }
+
+        self.assertEqual(
+            modules["validation_efficacy"]["evidence_state"],
+            "computed",
+        )
+        self.assertEqual(
+            modules["stress_robustness"]["evidence_state"],
+            "missing",
+        )
+
     def test_selected_decision_finalizes_limits_and_monitoring_for_same_validation(self) -> None:
         from app.services.backtest_evidence_closure import finalize_evidence_closure
 
@@ -404,11 +462,15 @@ class EvidenceClosureContractTests(unittest.TestCase):
 
     def test_final_review_react_renders_python_closure_sections_without_domain_recalculation(self) -> None:
         source = Path(
-            "app/web/components/final_review_investment_report/frontend/src/FinalReviewInvestmentReport.tsx"
+            "app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("선정 전 미해결 항목", source)
-        self.assertIn("인수한 한계와 최종 판단 항목", source)
+        self.assertIn("brief.monitoring_conditions", source)
+        self.assertIn("brief.level2_handoff", source)
+        self.assertIn("handoff.final_decisions", source)
+        self.assertIn("handoff.accepted_limits", source)
+        self.assertIn("handoff.monitoring_conditions", source)
+        self.assertIn("brief.disclosures.source_gaps", source)
         self.assertNotIn("resolutionClass ===", source)
         self.assertNotIn("fetch(", source)
         self.assertNotIn("scoreEffect =", source)
@@ -426,6 +488,113 @@ class EvidenceClosureContractTests(unittest.TestCase):
         self.assertEqual(replay_issue["period"]["requested_market_date"], "2026-07-10")
         self.assertEqual(replay_issue["period"]["actual_result_date"], "2026-05-29")
         self.assertEqual(replay_issue["period"]["end_gap_days"], 42)
+
+    def test_completed_review_replay_is_not_offered_as_the_same_action_again(
+        self,
+    ) -> None:
+        from app.services.backtest_evidence_closure import build_evidence_closure_contract
+
+        replay_issue = _issue(
+            build_evidence_closure_contract(_grs_validation_fixture()),
+            "replay_period_coverage",
+        )
+
+        self.assertEqual(replay_issue["resolution_class"], "engineering_required")
+        self.assertFalse(replay_issue["actionable_now"])
+        self.assertIsNone(replay_issue["action_id"])
+        self.assertIn("재실행으로 해결되지 않는", replay_issue["completion_criteria"])
+
+    def test_partial_month_replay_with_structured_dates_becomes_monitoring_handoff(
+        self,
+    ) -> None:
+        from app.services.backtest_evidence_closure import build_evidence_closure_contract
+
+        validation = _grs_validation_fixture()
+        period = validation["curve_evidence"]["curve_provenance"]["period_coverage"]
+        period.update(
+            {
+                "requested_market_date": "2026-07-10",
+                "latest_common_price_date": "2026-07-08",
+                "last_complete_rebalance_date": "2026-06-30",
+                "latest_valuation_date": "2026-07-08",
+                "actual_period": {
+                    "start": "2016-01-29",
+                    "end": "2026-06-30",
+                },
+                "end_gap_days": 10,
+            }
+        )
+
+        replay_issue = _issue(
+            build_evidence_closure_contract(validation),
+            "replay_period_coverage",
+        )
+
+        self.assertEqual(replay_issue["resolution_class"], "monitoring_transfer")
+        self.assertEqual(replay_issue["owner_stage"], "final_review")
+        self.assertFalse(replay_issue["actionable_now"])
+        self.assertIsNone(replay_issue["action_id"])
+        self.assertIn("2026-07-08", replay_issue["observed"])
+
+    def test_long_replay_gap_is_not_downgraded_to_partial_month_monitoring(
+        self,
+    ) -> None:
+        from app.services.backtest_evidence_closure import build_evidence_closure_contract
+
+        validation = _grs_validation_fixture()
+        period = validation["curve_evidence"]["curve_provenance"]["period_coverage"]
+        period.update(
+            {
+                "requested_market_date": "2026-12-31",
+                "latest_common_price_date": "2026-01-02",
+                "last_complete_rebalance_date": "2025-12-31",
+                "latest_valuation_date": "2026-01-02",
+                "actual_period": {
+                    "start": "2016-01-29",
+                    "end": "2025-12-31",
+                },
+                "end_gap_days": 365,
+            }
+        )
+
+        replay_issue = _issue(
+            build_evidence_closure_contract(validation),
+            "replay_period_coverage",
+        )
+
+        self.assertEqual(replay_issue["resolution_class"], "engineering_required")
+        self.assertEqual(replay_issue["owner_stage"], "development")
+        self.assertEqual(replay_issue["criticality"], "critical")
+        self.assertEqual(replay_issue["gate_effect"], "block_final_review")
+
+    def test_inconsistent_partial_month_dates_remain_engineering_required(
+        self,
+    ) -> None:
+        from app.services.backtest_evidence_closure import build_evidence_closure_contract
+
+        validation = _grs_validation_fixture()
+        period = validation["curve_evidence"]["curve_provenance"]["period_coverage"]
+        period.update(
+            {
+                "requested_market_date": "2026-08-31",
+                "latest_common_price_date": "2026-07-01",
+                "last_complete_rebalance_date": "2026-07-31",
+                "latest_valuation_date": "2026-08-01",
+                "actual_period": {
+                    "start": "2016-01-29",
+                    "end": "2026-07-01",
+                },
+                "end_gap_days": 31,
+            }
+        )
+
+        replay_issue = _issue(
+            build_evidence_closure_contract(validation),
+            "replay_period_coverage",
+        )
+
+        self.assertEqual(replay_issue["resolution_class"], "engineering_required")
+        self.assertEqual(replay_issue["gate_effect"], "block_final_review")
 
     def test_replay_and_pit_rows_become_one_root_issue(self) -> None:
         from app.services.backtest_evidence_closure import build_evidence_closure_contract

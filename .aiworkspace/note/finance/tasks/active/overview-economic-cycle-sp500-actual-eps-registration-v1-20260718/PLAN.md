@@ -16,4 +16,3 @@
 - 8개 완료 분기로 current/prior TTM과 YoY를 계산한다.
 - 기준일 이후 발표 vintage를 읽지 않는다.
 - 업로드 UI와 focused regression test가 통과한다.
-

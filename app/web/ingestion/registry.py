@@ -213,6 +213,15 @@ INGESTION_ACTION_REGISTRY: dict[str, dict[str, Any]] = {
         ],
         "progress": "stage",
     },
+    "collect_sec_13f_identifier_mappings": {
+        "section": INGESTION_COLLECTION_OPERATIONAL,
+        "mode": "operational_low_frequency",
+        "active": True,
+        "compatibility": False,
+        "write_behavior": "db_write",
+        "target_tables": ["finance_meta.institutional_13f_identifier_resolution"],
+        "progress": "stage",
+    },
     "collect_symbol_directory_snapshots": {
         "section": INGESTION_COLLECTION_OPERATIONAL,
         "mode": "operational",

@@ -77,6 +77,7 @@ from app.web.backtest_strategy_catalog import (
     strategy_key_to_display_name as catalog_strategy_key_to_display_name,
     strategy_key_to_selection,
 )
+from app.web.backtest_single_settings_workspace import render_compact_ticker_summary
 from app.web.backtest_workflow_routes import (
     BACKTEST_ANALYSIS_MODE_SINGLE,
     BACKTEST_LEGACY_PANEL_OPTIONS,
@@ -184,6 +185,29 @@ GTAA_PRESETS = {
 }
 
 GTAA_PRESET_PARAMETER_DEFAULTS = {
+    "GTAA Universe (U3 Commodity Candidate Base)": {
+        "top": 2,
+        "interval": 3,
+        "score_lookback_months": [1, 3, 6],
+    },
+    "GTAA Universe (U1 Offensive Candidate Base)": {
+        "top": 2,
+        "interval": 3,
+        "score_lookback_months": [1, 3, 6, 12],
+    },
+    "GTAA Universe (U5 Smallcap Value Candidate Base)": {
+        "top": 3,
+        "interval": 3,
+        "score_lookback_months": [1, 3, 6, 12],
+    },
+    "GTAA SPY Low-MDD Style Top-3": {
+        "top": 3,
+        "interval": 3,
+        "score_lookback_months": [1, 6],
+        "trend_filter_window": 250,
+        "risk_off_mode": "cash_only",
+        "benchmark_ticker": "SPY",
+    },
     "GTAA SPY Low-MDD Style Top-2 ADV20": {
         "top": 2,
         "interval": 4,
@@ -1020,38 +1044,21 @@ def _format_ratio(value: float) -> str:
 
 
 def _render_ticker_preview(tickers: list[str], *, preview_count: int = 12, tail_count: int = 5) -> None:
-    if not tickers:
-        st.caption("Selected tickers: `0`")
-        return
-
-    if len(tickers) <= preview_count:
-        preview = ", ".join(tickers)
-        st.caption(f"Selected tickers ({len(tickers)}): `{preview}`")
-        return
-
-    head = ", ".join(tickers[:preview_count])
-    tail = ", ".join(tickers[-tail_count:]) if tail_count > 0 else ""
-    remaining = len(tickers) - preview_count - min(tail_count, len(tickers) - preview_count)
-
-    preview = f"Head: {head}"
-    if remaining > 0:
-        preview += f" ... (+{remaining} more) "
-    if tail:
-        preview += f"| Tail: {tail}"
-
-    st.caption(f"Selected tickers ({len(tickers)}): `{preview}`")
+    del tail_count  # retained for caller compatibility
+    render_compact_ticker_summary(tickers, preview_count=preview_count)
 
 
 def _render_equal_weight_universe_inputs(
     *,
     key_prefix: str,
-    radio_label: str = "Universe Mode",
-    preset_label: str = "Preset",
-    ticker_label: str = "Tickers",
+    radio_label: str = "투자 대상 선택",
+    preset_label: str = "기본 구성",
+    ticker_label: str = "종목 직접 입력",
 ) -> tuple[str, str | None, list[str]]:
     universe_mode_label = st.radio(
         radio_label,
         options=["Preset", "Manual"],
+        format_func=lambda value: "기본 구성" if value == "Preset" else "직접 입력",
         horizontal=True,
         help="Preset은 빠른 실행용, Manual은 직접 종목을 입력하는 방식입니다.",
         key=f"{key_prefix}_universe_mode",
@@ -1072,7 +1079,7 @@ def _render_equal_weight_universe_inputs(
         manual_tickers = st.text_input(
             ticker_label,
             value="VIG,SCHD,DGRO,GLD",
-            help="Comma-separated tickers. Example: VIG,SCHD,DGRO,GLD",
+            help="쉼표로 구분합니다. 예: VIG,SCHD,DGRO,GLD",
             key=f"{key_prefix}_manual_tickers",
         )
         tickers = _parse_manual_tickers(manual_tickers)
@@ -1141,13 +1148,14 @@ def _apply_gtaa_preset_parameter_defaults(*, key_prefix: str, preset_name: str |
 def _render_gtaa_universe_inputs(
     *,
     key_prefix: str,
-    radio_label: str = "Universe Mode",
-    preset_label: str = "Preset",
-    ticker_label: str = "Tickers",
+    radio_label: str = "투자 대상 선택",
+    preset_label: str = "기본 구성",
+    ticker_label: str = "종목 직접 입력",
 ) -> tuple[str, str | None, list[str]]:
     universe_mode_label = st.radio(
         radio_label,
         options=["Preset", "Manual"],
+        format_func=lambda value: "기본 구성" if value == "Preset" else "직접 입력",
         horizontal=True,
         help="GTAA는 기본적으로 preset universe 사용을 권장합니다.",
         key=f"{key_prefix}_universe_mode",
@@ -1170,7 +1178,7 @@ def _render_gtaa_universe_inputs(
         manual_tickers = st.text_input(
             ticker_label,
             value="SPY,IWD,IWM,IWN,MTUM,EFA,TLT,IEF,LQD,PDBC,VNQ,GLD",
-            help="Comma-separated tickers. Example: SPY,IWD,IWM,IWN,MTUM,EFA,TLT,IEF,LQD,PDBC,VNQ,GLD",
+            help="쉼표로 구분합니다. 예: SPY,IWD,IWM,IWN,MTUM,EFA,TLT,IEF,LQD,PDBC,VNQ,GLD",
             key=f"{key_prefix}_manual_tickers",
         )
         tickers = _parse_manual_tickers(manual_tickers)
@@ -1191,13 +1199,14 @@ def _render_global_relative_strength_preset_note(preset_name: str | None) -> Non
 def _render_global_relative_strength_universe_inputs(
     *,
     key_prefix: str,
-    radio_label: str = "Universe Mode",
-    preset_label: str = "Preset",
-    ticker_label: str = "Tickers",
+    radio_label: str = "투자 대상 선택",
+    preset_label: str = "기본 구성",
+    ticker_label: str = "종목 직접 입력",
 ) -> tuple[str, str | None, list[str]]:
     universe_mode_label = st.radio(
         radio_label,
         options=["Preset", "Manual"],
+        format_func=lambda value: "기본 구성" if value == "Preset" else "직접 입력",
         horizontal=True,
         help="Global Relative Strength는 Phase 24 기본 ETF preset으로 시작하고, 필요하면 직접 ticker를 넣어 검증합니다.",
         key=f"{key_prefix}_universe_mode",
@@ -1219,7 +1228,7 @@ def _render_global_relative_strength_universe_inputs(
         manual_tickers = st.text_input(
             ticker_label,
             value=",".join(GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS),
-            help="Comma-separated tickers. Example: SPY,EFA,EEM,IWM,VNQ,GLD,DBC,LQD,HYG,IEF,TLT,TIP",
+            help="쉼표로 구분합니다. 예: SPY,EFA,EEM,IWM,VNQ,GLD,DBC,LQD,HYG,IEF,TLT,TIP",
             key=f"{key_prefix}_manual_tickers",
         )
         tickers = _parse_manual_tickers(manual_tickers)

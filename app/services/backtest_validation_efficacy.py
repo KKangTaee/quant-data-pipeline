@@ -19,6 +19,7 @@ VALIDATION_EFFICACY_ROUTE_LABELS = {
 
 _STATUS_RANK = {
     "PASS": 0,
+    "NOT_APPLICABLE": 0,
     "REVIEW": 1,
     "NEEDS_INPUT": 2,
     "BLOCKED": 3,
@@ -48,6 +49,8 @@ def _status(value: Any, *, default: str = "NEEDS_INPUT") -> str:
         return "BLOCKED"
     if text in {"NOT_RUN", "MISSING", "NO_DATA", "UNAVAILABLE"}:
         return "NEEDS_INPUT"
+    if text in {"NOT_APPLICABLE", "NOT APPLICABLE"}:
+        return "NOT_APPLICABLE"
     if text in {"PASS", "OK", "READY", "SUCCESS", "FRESH", "COMPLETE", "COMPLETED"}:
         return "PASS"
     if text.startswith("READY_"):
@@ -94,7 +97,7 @@ def _row(
     return {
         "Criteria": criteria,
         "Status": normalized,
-        "Ready": normalized == "PASS",
+        "Ready": normalized in {"PASS", "NOT_APPLICABLE"},
         "Current": _safe_text(current),
         "Evidence": _safe_text(evidence),
         "Next Action": next_action,
@@ -244,7 +247,11 @@ def _walkforward_temporal_row(validation: dict[str, Any]) -> dict[str, Any] | No
         current=current,
         evidence=evidence.get("summary") or detail,
         next_action=evidence.get("next_action")
-        or ("추가 조치 없음" if status == "PASS" else "walk-forward / benchmark-aligned evidence를 보강합니다."),
+        or (
+            "추가 조치 없음"
+            if status in {"PASS", "NOT_APPLICABLE"}
+            else "walk-forward / benchmark-aligned evidence를 보강합니다."
+        ),
         meaning="rolling window 기준으로 benchmark 대비 성과와 drawdown gap이 유지되는지 확인합니다.",
     )
 
@@ -279,7 +286,11 @@ def _oos_holdout_row(validation: dict[str, Any]) -> dict[str, Any] | None:
         current=current,
         evidence=evidence.get("summary") or detail,
         next_action=evidence.get("next_action")
-        or ("추가 조치 없음" if status == "PASS" else "OOS holdout / benchmark-aligned evidence를 보강합니다."),
+        or (
+            "추가 조치 없음"
+            if status in {"PASS", "NOT_APPLICABLE"}
+            else "OOS holdout / benchmark-aligned evidence를 보강합니다."
+        ),
         meaning="뒤쪽 holdout 구간에서 benchmark 대비 성과와 drawdown이 유지되는지 확인합니다.",
     )
 
@@ -314,7 +325,11 @@ def _regime_split_row(validation: dict[str, Any]) -> dict[str, Any] | None:
         current=current,
         evidence=evidence.get("summary") or detail,
         next_action=evidence.get("next_action")
-        or ("추가 조치 없음" if status == "PASS" else "macro history / regime split evidence를 보강합니다."),
+        or (
+            "추가 조치 없음"
+            if status in {"PASS", "NOT_APPLICABLE"}
+            else "macro history / regime split evidence를 보강합니다."
+        ),
         meaning="macro regime bucket별로 benchmark 대비 성과와 drawdown이 유지되는지 확인합니다.",
     )
 
@@ -322,7 +337,7 @@ def _regime_split_row(validation: dict[str, Any]) -> dict[str, Any] | None:
 def _missing_method_row(*, criteria: str, next_action: str, meaning: str) -> dict[str, Any]:
     return _row(
         criteria=criteria,
-        status="REVIEW",
+        status="NEEDS_INPUT",
         current="NOT_RUN",
         evidence="method evidence not attached",
         next_action=next_action,
@@ -545,19 +560,19 @@ def build_validation_efficacy_audit(validation: dict[str, Any]) -> dict[str, Any
         _walkforward_temporal_row(validation)
         or _missing_method_row(
             criteria="Walk-forward temporal validation",
-            next_action="walk-forward window evidence를 보강하거나 Final Review 판단 사유에 미실행 사유를 남깁니다.",
+            next_action="이 전략의 walk-forward window 검증을 구현하거나 계산한 뒤 Level2를 다시 실행합니다.",
             meaning="rolling window 기준으로 benchmark 대비 성과와 drawdown gap이 유지되는지 확인합니다.",
         ),
         _oos_holdout_row(validation)
         or _missing_method_row(
             criteria="OOS holdout validation",
-            next_action="in-sample / out-of-sample 분리 검증 evidence를 보강하거나 미실행 사유를 남깁니다.",
+            next_action="이 전략의 in-sample / out-of-sample 분리 검증을 구현하거나 계산한 뒤 Level2를 다시 실행합니다.",
             meaning="뒤쪽 holdout 구간에서 benchmark 대비 성과와 drawdown이 유지되는지 확인합니다.",
         ),
         _regime_split_row(validation)
         or _missing_method_row(
             criteria="Regime split validation",
-            next_action="macro regime bucket별 검증 evidence를 보강하거나 미실행 사유를 남깁니다.",
+            next_action="이 전략의 macro regime 분리 검증을 구현하거나 계산한 뒤 Level2를 다시 실행합니다.",
             meaning="macro regime bucket별로 benchmark 대비 성과와 drawdown이 유지되는지 확인합니다.",
         ),
     ]
@@ -567,7 +582,7 @@ def build_validation_efficacy_audit(validation: dict[str, Any]) -> dict[str, Any
         for status in _STATUS_RANK
     }
     total = len(rows)
-    ready = status_counts["PASS"]
+    ready = status_counts["PASS"] + status_counts["NOT_APPLICABLE"]
     if route == VALIDATION_EFFICACY_READY:
         conclusion = "검증 방법론 근거가 Final Review 판단에 사용할 수 있는 상태입니다."
         next_action = "Final Review에서 방법론 근거를 operator 판단과 함께 확인합니다."
@@ -592,6 +607,7 @@ def build_validation_efficacy_audit(validation: dict[str, Any]) -> dict[str, Any
             "ready_rows": ready,
             "total_rows": total,
             "pass": status_counts["PASS"],
+            "not_applicable": status_counts["NOT_APPLICABLE"],
             "review": status_counts["REVIEW"],
             "needs_input": status_counts["NEEDS_INPUT"],
             "blocked": status_counts["BLOCKED"],

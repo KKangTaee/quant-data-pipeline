@@ -44,7 +44,7 @@ external source
 | local DB bridge | ETF operability snapshot의 1차 bridge / proxy source. `nyse_price_history`, `nyse_asset_profile`에서 계산 |
 | ETF provider source map | `nyse_etf` / `nyse_asset_profile`와 issuer 공식 URL 검증을 이용해 ETF별 수집 endpoint / parser mapping을 저장 |
 | ETF issuer official pages | ETF operability actual / partial source. 초기 구현은 iShares, SSGA / SPDR, Invesco 일부 ticker |
-| ETF issuer holdings downloads / APIs | ETF holdings / exposure source. 초기 구현은 iShares CSV, SSGA XLSX, Invesco holdings / sector API |
+| ETF issuer holdings downloads / APIs | ETF holdings / exposure source. iShares CSV·SpreadsheetML workbook, SSGA XLSX, Invesco holdings / sector API, Vanguard holdings JSON을 지원한다 |
 | FRED official API / CSV download | Practical Validation market-context와 Overview 경제사이클 자산 경로 source. `VIXCLS`, `T10Y3M`, `BAA10Y`, `DGS2`, `DGS10`, `DFII10`, `T10YIE`를 기존 observation table에 저장한다 |
 | EIA official weekly petroleum XLS | Overview 경제사이클 WTI 수급 source. `WCESTUS1`, `WCRFPUS2`, `WRPUPUS2`를 주간 관측일 그대로 `macro_series_observation`에 저장하며 daily 거래일로 변환하지 않는다 |
 | FRED/ALFRED `series/vintagedates` + observations API `output_type=1` | Overview 경제 사이클 17-series long-form revision interval source. `FRED_API_KEY`가 필수이며 revised CSV fallback은 금지한다 |
@@ -74,9 +74,9 @@ external source
 | `finance/data/symbol_resolver.py` | 사용자가 Factor Readiness에서 승인한 ticker-change repair를 `nyse_symbol_lifecycle`에 `resolution_status=active` row로 UPSERT |
 | `finance/data/asset_profile.py` | asset profile 수집과 저장 |
 | `finance/data/market_intelligence.py` | Overview market intelligence 수집 / 저장 경계. S&P 500 current constituents, Nasdaq-listed Symbol Directory current snapshot read helper, Market Movers Top1000 / Top2000 최근 20거래일 평균 거래대금 universe materialize/read helper, S&P 500 / Top1000 / Top2000 / Nasdaq-listed intraday previous-close snapshot, ticker-change alias candidate / active alias persistence, missing quote gap diagnostics와 반복 issue persistence, full-window 뒤에도 짧은 EOD 이력의 compact issue evidence, FOMC calendar collector, macro release calendar collector, earnings estimate collector, earnings symbol diagnostics, Nasdaq cross-check, earnings lifecycle cleanup, market event UPSERT/read helper를 제공한다. Intraday snapshot은 Market Movers daily와 Market Context / Market Movers sector-group leadership read path가 공유한다 |
-| `finance/data/futures_market.py` | Overview futures OHLCV 수집 / 저장 경계. yfinance futures provider symbol preset, 1m / daily OHLCV UPSERT, 1d / 1m empty / sparse symbol fallback, 수집 run diagnostics를 `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`에 저장한다. Core preset은 Economic Cycle 달러 가격 확인용 `DX-Y.NYB`를 포함한다. `app/jobs/ingestion_jobs.py`는 successful 1d ingestion 뒤 `app/services/futures_macro_snapshot.py`를 호출하고 `finance/data/futures_macro_snapshot.py`가 compact snapshot을 UPSERT한다. `finance/loaders/futures_macro_snapshot.py`와 Overview UI는 compatible stored row만 읽으며 render-time provider fetch / outlook replay를 실행하지 않는다 |
+| `finance/data/futures_market.py` | Overview futures OHLCV 수집 / 저장 경계. yfinance futures provider symbol preset, 1m / daily OHLCV UPSERT, 1d / 1m empty / sparse symbol fallback, 수집 run diagnostics를 `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`에 저장한다. Core preset은 Economic Cycle 달러 가격 확인용 `DX-Y.NYB`를 포함한다. `app/services/futures_market_monitoring.py`는 stored 1m candle chart / diagnostic context를 최신 저장 candle 기준으로 읽고 stale 여부를 별도 계산한다. successful 1d ingestion 뒤 `app/services/futures_macro_snapshot.py`가 5년 current macro 및 5D/20D outlook compact snapshot을 만들고 `finance/data/futures_macro_snapshot.py`가 UPSERT한다. `finance/loaders/futures_macro_snapshot.py`와 Overview UI는 compatible stored row만 읽으며 render-time provider fetch / outlook replay를 실행하지 않는다 |
+| `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, iShares CSV·SpreadsheetML, SSGA XLSX, Invesco API, Vanguard JSON을 normalized official row로 변환해 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
 | `finance/loaders/economic_cycle_assets.py` | Economic Cycle DB-only asset reader. macro observation, `futures_ohlcv`의 `CL=F` / `HG=F` / `GC=F` / `DX-Y.NYB`, `nyse_price_history`의 `^GSPC` / SPY를 각 저장소에서 분리해 읽고 provider 호출이나 저장을 수행하지 않는다 |
-| `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
 | `finance/data/macro.py` / `finance/data/eia_petroleum.py` | FRED와 EIA macro context 수집 / 저장 경계. FRED는 API key가 있으면 API, 없으면 official CSV download를 사용하고, EIA는 official weekly XLS를 정규화해 모두 `macro_series_observation`에 저장한다 |
 | `finance/data/economic_cycle_vintages.py` | 경제 사이클 catalog를 FRED/ALFRED vintage mode로 수집·정규화하고 `(series_id, observation_date, realtime_start, source)` key로 `macro_series_vintage_observation`에 UPSERT한다. API key 부재와 missing value를 명시적으로 보존한다 |
 | `finance/data/economic_cycle_results.py` | validation artifact와 current/historical replay compact snapshot의 serialize/UPSERT 경계. 계산 가능한 LIMITED 확률과 publication reason을 함께 보존한다 |
@@ -97,6 +97,7 @@ external source
 | `finance/data/pit_universe.py` | Quality / Value strict family용 monthly equity universe snapshot build / UPSERT helper. DB price, statement shadow shares evidence, asset profile filter를 읽어 `equity_universe_snapshot` / `equity_universe_member`에 idempotent하게 저장한다 |
 | `finance/data/financial_statements.py` | EDGAR detailed statement filing/value/label 적재 |
 | `finance/data/institutional_13f.py` | SEC Form 13F official quarterly data set ZIP 파서 / 수집 경계. manager / filing / holding / CUSIP-symbol map row를 `finance_meta.institutional_13f_*`에 idempotent UPSERT한다 |
+| `finance/data/institutional_13f_mapping.py` | 저장된 selected-manager latest CUSIP/CINS를 OpenFIGI v3 US Equity로 batch 해석하고 current resolution을 조건부 UPSERT한다. normal UI render에서는 호출하지 않으며 anonymous 또는 optional `OPENFIGI_API_KEY`를 사용한다 |
 | `app/jobs/ingestion_jobs.py` / `app/jobs/ingestion/common.py` | Streamlit Ingestion 또는 approved action facade에서 실행되는 수집 job wrapper. `ingestion_jobs.py`는 provider / macro / lifecycle evidence / market intelligence collector 결과를 표준 `JobResult`로 변환하고, 경제 사이클 explicit vintage collection과 DB-only current materialization wrapper를 제공하며 unattended schedule에는 등록하지 않는다. selected-stock unified collector는 profile/완료-session inclusive price를 CIK 없이 실행한 뒤 SEC scope에만 identity equality를 요구한다. `common.py`는 symbol parsing, result normalization, progress event, execution profile, pipeline status helper를 소유한다 |
 | `app/services/overview/economic_cycle.py` | `economic_cycle_snapshot`과 최근 최대 60개월 replay history를 JSON-safe compact read model로 변환한다. DB의 더 긴 replay는 보존한다. 유효 확률과 publication status를 조합해 `VERIFIED/PROVISIONAL/UNAVAILABLE`를 만들며 provider fetch, fit, materialization, DB write를 하지 않는다 |
 | `app/jobs/overview_actions.py` | `Workspace > Overview`의 bounded refresh action facade. Overview UI 대신 승인된 market intelligence / futures / events / sentiment / quote-gap diagnostics job 호출과 run-history 기록을 맡는다. Market Context 개별주는 명시 `refresh_us_stock_data` action에서 profile/price를 먼저 canonical ingestion으로 보강하고, SEC statement scope가 있을 때만 selected-symbol/CIK identity를 확인한 뒤 재판정한다. partial success는 저장하고 다음 retry scope를 줄이며, missing CIK는 기존 분석을 ERROR로 덮지 않고 SEC collection gap으로만 둔다. Retained Nasdaq valuation repair facade도 보존한다. Market Movers `유니버스 기준 갱신`은 S&P 500 구성 목록, Nasdaq Symbol Directory, 또는 Top1000 / Top2000 liquidity universe materialize action으로 분기한다. 비-Daily EOD full-window 갱신 뒤에도 가격 row가 period threshold보다 짧으면 `limited_price_history` evidence를 저장하며, 다음 preflight는 현재 row 수가 부족한 동안 같은 full-window 수집을 반복 제안하지 않는다. Market Movers ticker-change repair action은 화면의 후보 alias를 `market_symbol_alias.status=active`로 저장하고, 다음 `일중 스냅샷 갱신`이 active alias를 quote lookup에 사용하게 한다. Market Context historical analog coverage gap은 같은 facade에서 기존 OHLCV collection job을 managed-safe profile로 호출해 `finance_price.nyse_price_history`를 보강한다. Market Movers SEC filing tab의 selected-symbol 재무제표 보강도 같은 facade에서 기존 Ingestion EDGAR statement refresh job으로 위임한다 |
@@ -121,7 +122,7 @@ external source
 | `finance/loaders/fundamentals.py` | broad fundamentals와 statement shadow fundamentals 조회 |
 | `finance/loaders/factors.py` | broad factors와 statement factor snapshot 조회 |
 | `finance/loaders/financial_statements.py` | statement filing metadata / values / labels / strict snapshot / timing audit 조회 |
-| `finance/loaders/institutional_13f.py` | institutional manager search, latest / previous filing, holdings, symbol / CUSIP reverse lookup, and report-period holder-count ranking read path. External fetch나 DB write를 하지 않는다 |
+| `finance/loaders/institutional_13f.py` | institutional manager search, latest / previous filing, holdings, symbol / CUSIP reverse lookup, and report-period holder-count ranking read path. OpenFIGI mapped/ambiguous current gate를 legacy CUSIP+issuer exact-name 단일 후보보다 먼저 적용하며 external fetch나 DB write를 하지 않는다 |
 | `finance/loaders/runtime_adapter.py` | runtime에서 쓰는 price strategy dict 생성 |
 
 ## 현재 중요한 구분
@@ -131,18 +132,21 @@ external source
 - Quality / Value strict family의 `PIT Monthly Snapshot Universe` 계약은 `equity_universe_snapshot` / `equity_universe_member`를 loader로 읽고, 각 rebalance date를 가장 가까운 이전 월말 snapshot membership에 매핑한다. 이는 현재 Top-N 고정보다 낫지만 official historical index membership은 아니다.
 - 가격 기반 ETF 전략은 price loader와 `BacktestEngine` warmup / slice 경로가 중심이다.
 - factor / fundamental 전략은 rebalance date 기준 snapshot payload가 핵심 계약이다.
-- Institutional 13F는 `period_of_report`와 `filing_date` / SEC acceptance timing을 구분해야 한다. 화면의 신규 / 증가 / 감소 / 전량 매도 후보는 보고된 두 분기 filing 비교이며 실시간 매수 / 매도나 trading intent가 아니다. CUSIP-symbol mapping은 best-effort 보조 mapping으로 남긴다.
+- Institutional 13F는 `period_of_report`와 `filing_date` / SEC acceptance timing을 구분해야 한다. 화면의 신규 / 증가 / 감소 / 전량 매도 후보는 보고된 두 분기 filing 비교이며 실시간 매수 / 매도나 trading intent가 아니다. Ticker enrichment는 OpenFIGI current identity와 legacy exact-name fallback을 사용하지만 historical PIT security master는 아니다.
 - Practical Validation provider connector는 UI에서 외부 provider를 직접 호출하지 않고,
   `finance/data/*` ingestion이 저장한 snapshot을 `finance/loaders/provider.py`로 읽는다.
   P2-5A부터 `Workspace > Ingestion > Practical Validation 검증 데이터 보강`에서
   해당 ingestion을 수동 실행할 수 있다.
-  `Provider Source Map` tab은 `nyse_etf`와 `nyse_asset_profile`을 기준으로 iShares / SSGA / Invesco 공식 endpoint 후보를 검증해
+  `Provider Source Map` tab은 `nyse_etf`와 `nyse_asset_profile`을 기준으로 iShares / SSGA / Invesco / Vanguard 공식 endpoint 후보를 검증해
   `etf_provider_source_map`에 저장한다. 이후 snapshot collector는 이 verified source map을 static map보다 먼저 사용한다.
   P2-5B부터 `app/services/backtest_practical_validation_provider_context.py`가 loader 결과를 compact provider context로 바꾸고,
   Practical Validation diagnostics가 이 context를 proxy보다 우선 사용한다.
   `etf_operability_snapshot`은 기존 DB의 price/profile 기반 bridge/proxy snapshot과
   iShares / SSGA / Invesco official page 기반 actual/partial snapshot을 source별로 함께 제공한다.
-  `etf_holdings_snapshot`은 official holdings download/API row를 저장하고,
+  `etf_holdings_snapshot`은 official holdings download/API row를 저장한다.
+  iShares workbook의 bond row처럼 ticker가 없는 경우 name / maturity / coupon뿐
+  아니라 effective/accrual date도 fallback identity에 포함해 서로 다른 채권을
+  한 holding으로 합치지 않는다.
   `etf_exposure_snapshot`은 holdings aggregate와 일부 provider aggregate sector exposure를 저장한다.
   `macro_series_observation`은 FRED market-context observation과 CNN / AAII sentiment observation을 long-form으로 저장하고,
   `finance/loaders/macro.py`가 validation 기준일 근처 FRED snapshot과 staleness를 읽으며 `finance/loaders/sentiment.py`가 Overview Sentiment latest/history를 읽는다. Economic Cycle asset path는 `finance/loaders/economic_cycle_assets.py -> finance/economic_cycle_asset_pathways.py -> finance/economic_cycle_interpretation.py -> app/services/overview/economic_cycle.py -> React` 순서로만 전달된다.

@@ -1,0 +1,579 @@
+# Runs
+
+## 2026-07-17 Design Audit
+
+- finance canonical docs와 Backtest UI ownership 문서 확인
+- current Level1 Streamlit surface와 supported strategy entry 확인
+- browser에서 current Single Strategy / Portfolio Mix 흐름 확인
+- visual companion으로 entry, single, Mix, result, advanced settings, strategy catalog,
+  saved Mix 대안 비교
+- 사용자 승인 결정을 `DESIGN.md`에 통합
+
+구현 command, test result, Browser QA 결과는 detailed PLAN 실행부터 차수별로
+추가한다.
+
+## 2026-07-17 Detailed Plan Audit
+
+- `writing-plans` 절차로 5차 / 9 Task 구현 계획 작성
+- 32개 acceptance criteria를 truth, read model, Single, Mix, closeout Task에 배치
+- 108개 Markdown code fence 균형 확인
+- placeholder / undefined fixture / 보호 파일 검사 명령 self-review 완료
+- `git diff --check`와 staged protected-path audit은 계획 commit 직전에 fresh 실행
+
+## 2026-07-18 Execution Baseline
+
+- `.venv`에는 pytest가 없어 `uv run --with pytest`로 repository 변경 없이 runner 주입
+- existing boundary + service baseline: 845 passed, 11 failed, 35 subtests passed
+- 기존 실패 범위: Sentiment React contract 1건, 이전 Practical Validation / Final Review
+  source contract 10건; Level1 소유 파일 변경 전 baseline debt로 기록
+
+## 2026-07-18 Task 1 RED -> GREEN
+
+- RED: 새 `backtest_analysis_decision_workspace` service import 부재로 collection 실패
+- GREEN: `3 passed`
+- compile: strategy catalog / decision workspace service 통과
+- `git diff --check`: 통과
+
+## 2026-07-18 Task 2 RED -> GREEN
+
+- RED: readiness projection / root dedup import 부재로 collection 실패
+- GREEN focused: `6 passed`
+- existing handoff regression: `3 passed, 829 deselected`
+- target compile / `git diff --check`: 통과
+
+## 2026-07-18 Task 3 RED -> GREEN
+
+- RED 1: complete workspace builder import 부재로 collection 실패
+- GREEN 1: decision / KPI / error projection 포함 `8 passed`
+- RED 2: date가 포함된 configuration / meta / saved Mix JSON 직렬화 실패
+- GREEN 2: JSON-ready projection 보강 후 `9 passed`
+- target compile / `git diff --check`: 통과
+
+## 2026-07-18 Task 4 RED -> GREEN
+
+- RED: Level1 React source 부재로 boundary test 2건 실패
+- React production build: Vite 5.4.21, 175 modules transformed, 성공
+- GREEN boundary: `2 passed, 24 deselected`
+- ResizeObserver / two-surface / intent-only / 760px contract 확인
+- build / node_modules는 `.gitignore` 적용, stage 제외
+
+## 2026-07-18 Task 5 RED -> GREEN
+
+- RED: adapter / fragment / stale marker / fingerprint stamp 부재 4건 실패
+- 추가 RED: failed execution이 이전 성공 bundle을 지우는 회귀 재현
+- 추가 RED: legacy `Advanced Inputs` / `Promotion Policy Signal` label 재현
+- GREEN focused + boundary: `41 passed`
+- existing single / latest run / history regression: `4 passed, 828 deselected`
+- target py_compile / import smoke / `git diff --check`: 통과
+
+## 2026-07-18 Task 6 RED -> GREEN
+
+- RED: explicit handoff handler 부재 2건과 decision-first 상세 근거 분리 부재 1건 실패
+- GREEN focused decision / boundary: `44 passed`
+- 관련 service contract: `4 passed, 828 deselected`
+- 계획 선택 회귀: `20 passed, 856 deselected`
+- React production build: Vite 5.4.21, 175 modules transformed, 성공
+- target py_compile / `git diff --check`: 통과
+- stale 결과는 삭제·숨김 없이 참고용 상세 근거로 유지하고 Level2 인계만 차단
+
+## 2026-07-18 Task 7 RED -> GREEN
+
+- RED: pure Mix role / weight, legacy role inference, Mix read-model 계약 3건 실패
+- GREEN pure contract: `3 passed`
+- Mix / saved portfolio 관련 회귀: `12 passed, 837 deselected`
+- web-owned weighted Mix Gate를 pure service로 이동하고 직접 caller를 public API로 전환
+- weighted bundle / saved replay에 component roles를 추가하되 legacy role-less record는 추론으로 호환
+- target py_compile / `git diff --check`: 통과
+
+## 2026-07-18 Task 8 RED -> GREEN
+
+- RED: distinct Mix action handlers 부재와 inner mode / role UI 부재 2건 실패
+- GREEN focused Task 8: `7 passed, 876 deselected`
+- decision + boundary 전체: `51 passed`
+- Portfolio / Mix service 회귀: `60 passed, 772 deselected`
+- React production build: Vite 5.4.21, 175 modules transformed, 성공
+- save Mix와 Level2 source handoff를 별도 Python adapter로 분리하고 mocked persistence로 상호 비호출 확인
+- 역할 / 비중 / source context fingerprint를 weighted result와 history context에 기록
+- target py_compile / `git diff --check`: 통과
+
+## 2026-07-18 Task 9 Runtime QA Findings RED -> GREEN
+
+- fresh pre-doc focused: decision workspace `20 passed`, boundary `31 passed`
+- fresh pre-doc service: `821 passed, 11 failed, 35 subtests passed`
+- 11 failures는 implementation 전 baseline과 동일한 Sentiment React 1건,
+  Practical Validation / Final Review legacy source contract 10건이다.
+- stale Level1 expectation 3건은 새 current contract로 정렬 후 focused
+  `3 passed, 829 deselected`를 확인했다.
+- Browser RED 1: GTAA component 선택 뒤 callback nested rerun warning 노출
+- GREEN 1: callback rerun suppression test 추가 후 focused + boundary `52 passed`
+- Browser RED 2: Equal Weight 새 실행 직후 `이전 설정 결과` 판정
+- GREEN 2: runner / read model selection fingerprint shape 통일 후 fresh result,
+  GTAA 변경 뒤 stale result 보존을 실제 실행으로 확인
+- Browser RED 3: Streamlit dark theme에서 밝은 Level1 card 제목 / KPI 대비 소실
+- GREEN 3: light color-scheme / scoped text token 적용, focused + boundary
+  `53 passed`, React Vite 5.4.21 `175 modules transformed`
+- target 12-module py_compile: 통과
+
+## 2026-07-18 Task 9 Browser QA
+
+- desktop 1440x1000: fixed Level1 title, Single / Mix entry, purpose catalog,
+  Risk-On development/no handoff, contextual disclosures, context-preserving run,
+  decision -> KPI -> reason -> detail, fresh -> stale preservation 확인
+- Equal Weight actual run: CAGR 0.116, MDD -0.173, Sharpe 1.002, volatility 0.117;
+  실행 직후 fresh, GTAA 선택 뒤 `이전 설정 결과`
+- Mix actual run: GTAA + Equal Weight, role Core/Core, 50/50, total 100%,
+  weighted CAGR 9.23%, Mix setup save action과 Gate-blocked handoff 분리 확인
+- 760x1000: outer 760/760, context iframe 717/717, decision iframe 717/717,
+  internal overflow 0, grids single-column, button text normal wrap, CTA 675/675,
+  ResizeObserver height desktop 1047/586 -> 760px 1442/820 확인
+- screenshots (generated, unstaged):
+  `backtest-analysis-level1-decision-workspace-desktop-qa.png`,
+  `backtest-analysis-level1-decision-workspace-760-qa.png`
+
+## 2026-07-18 Completion Verification
+
+- decision workspace focused: `21 passed, 3 warnings`
+- refactor boundary / visual contract: `32 passed, 3 warnings`
+- full service contracts: `821 passed, 11 failed, 3 warnings, 35 subtests passed`
+- service의 11 failures는 execution baseline과 동일한 Sentiment React 1건,
+  Practical Validation / Final Review legacy source contract 10건이며 Level1 신규
+  failure는 0건이다.
+- React production build: Vite 5.4.21, `175 modules transformed`, 성공
+  - `build/index.html` 0.42 kB
+  - `build/assets/index-DWUGOc0n.css` 5.74 kB
+  - `build/assets/index-DIdElWXi.js` 328.41 kB
+- target 12-module `py_compile`: exit 0, output 없음
+- Browser QA screenshots와 runtime JSONL은 generated / protected artifact로
+  stage하지 않는다.
+
+## 2026-07-18 6차 Task 10 RED -> GREEN
+
+- RED: `backtest_single_settings_workspace` import 부재로 collection 실패
+- GREEN focused: single settings / duplicate picker / current-work ownership `3 passed`
+- decision + boundary 전체: `56 passed, 3 warnings`
+- React production build: Vite 5.4.21, `175 modules transformed`
+- settings shell / strategy / family dispatch py_compile: 통과
+- `git diff --check`: 통과
+
+## 2026-07-18 6차 Task 11 RED -> GREEN
+
+- RED: 전술 전략 6종의 공통 설정 계층과 compact ticker 계약 `2 failed, 1 passed`
+- GREEN: 계층 / compact ticker focused `3 passed, 56 deselected`
+- strategy / prefill / payload 관련 회귀 `27 passed, 864 deselected`
+- decision + boundary 전체 `59 passed, 3 warnings`
+- 6개 form과 common renderer `py_compile`: 통과
+- `git diff --check`: 통과
+- widget key / payload key / handler는 유지하고 사용자 흐름만 핵심 설정 -> Universe
+  -> 선택·보유 -> 비용·위험으로 통일
+
+## 2026-07-18 6차 Task 12 RED -> GREEN
+
+- RED: strict factor 7개 concrete renderer에 공통 계층이 없어 hierarchy contract 실패
+- GREEN hierarchy: `1 passed, 36 deselected`
+- strict factor / Quality / Value / Quality+Value / prefill focused:
+  `14 passed, 855 deselected`
+- strict 관련 service contract 확대: `28 passed, 804 deselected`
+- refactor boundary 전체: `37 passed, 3 warnings`
+- strict factor `py_compile` / `git diff --check`: 통과
+- annual / quarterly widget key, strategy key, factor array, Universe 계약과 handler는
+  유지하고 300종목 원문·PIT·coverage 근거는 `Universe 근거`로 이동
+
+## 2026-07-18 6차 Task 13 Browser QA
+
+- desktop 1440x1000: 중복 Strategy dropdown 없음, Quality + Value Annual / Quarterly
+  segmented control, 단일 current settings summary, 공통 4-section order, compact
+  300-ticker summary와 collapsed full evidence를 확인했다.
+- 실제 Equal Weight 실행 완료 `2.997s`; actual KPI는 CAGR `0.116`, MDD `-0.173`,
+  Sharpe `1.002`, volatility `0.117`이다.
+- 실제 Quality + Value Snapshot (Strict Annual) 실행 완료 `22.321s`.
+- 실행 후 strategy 변경 시 result는 `이전 설정 결과`로 보존되고 자동 Level2
+  handoff는 일어나지 않았다. Risk-On은 `개발 중이므로 현재 Level2로 보낼 수 없음`을
+  유지했다.
+- GTAA, Global Relative Strength, Dual Momentum, Risk Parity 선택과 공통 summary /
+  section render를 확인했다.
+- 760x1000: outer width `760/760`, active context / decision iframe `717/717`, outer
+  horizontal overflow `0`, catalog와 settings가 one-column로 줄바꿈됨을 확인했다.
+- screenshots generated / unstaged:
+  `backtest-analysis-level1-single-settings-desktop-qa.png`,
+  `backtest-analysis-level1-single-settings-760-qa.png`.
+
+## 2026-07-18 6차 Task 13 Fresh Verification
+
+- Level1 decision workspace: `23 passed, 3 warnings`
+- refactor boundary / visual contract: `37 passed, 3 warnings`
+- full service contracts: `821 passed, 11 failed, 3 warnings, 35 subtests passed`
+- 11 failures는 기존 baseline과 동일한 Sentiment React 1건, Practical Validation /
+  Final Review legacy source contract 10건이며 이번 Level1 신규 failure는 0건이다.
+- React production build, target form py_compile, `git diff --check`: 통과.
+
+## 2026-07-18 6차 Task 13 Code Review
+
+- review range: `e2d489a9..54a66cbe`
+- Critical / Important / Minor finding: `0 / 0 / 0`, verdict `Ready to merge: Yes`
+- reviewer fresh verification: decision + boundary `60 passed`, 관련 service
+  `31 passed, 801 deselected`, diff-check / 11개 영향 Python AST parse 통과.
+- 기준/HEAD AST 비교에서 payload key/value와 `_handle_backtest_run()` 호출은 동일했다.
+  허용값이 하나였던 fixed `timeframe` / `option` widget만 계획대로 동일 payload 상수로
+  바뀐 의도적 예외다.
+- 지정 range와 closeout staging 모두 registry / run history / saved / `.superpowers/` /
+  screenshot을 제외한다.
+
+## 2026-07-18 7차 Task 14~19 RED -> GREEN
+
+- Task 14 pure schema foundation: 9개 user choice, field type/range/option/visibility,
+  validation error와 draft key를 Streamlit-free service로 만들었다.
+- Task 15 tactical/allocation: Equal Weight, GTAA, GRS, Risk Parity Trend, Dual Momentum,
+  Risk-On Momentum 5D의 exact legacy payload key/value parity를 고정했다.
+- Task 16 strict factor: Quality / Value / Quality+Value Annual·Quarterly와 replay-only
+  Quality Snapshot의 factor/universe/overlay/guardrail payload parity를 고정했다.
+- Task 17 Python adapter: current catalog option, prefill/draft, intent dedup/allow-list,
+  callable runner 확인과 same-schema fallback을 연결했다.
+- Task 18 React settings: profile, variant, 4-section schema renderer, 7 control type,
+  advanced disclosure, pending lock, ResizeObserver와 760px responsive CSS를 구현했다.
+- Task 19 primary cutover: `backtest_single_strategy.py`에서 legacy form dispatch를 제거하고
+  React settings -> validated Python intent -> existing runner 경로로 전환했다.
+- 구현 단위 commit: `9c7deb90`, `f7fbb3ca`, `b1d18fe4`, `444a50fd`, `9e04fade`,
+  `98bdfb50`.
+
+## 2026-07-18 7차 Task 20 QA Findings RED -> GREEN
+
+- Browser RED 1: current Quality picker에 replay-only `기존 스냅샷`이 노출되고 Python
+  current catalog allow-list와 불일치했다.
+- GREEN 1: primary variant options를 current `family_variant_options()`로 제한하고 focused
+  analysis tests `29 passed`; commit `3a327c60`.
+- Browser RED 2: React가 보존한 hidden direct-ticker default를 validator가 inactive field로
+  거부해 actual 실행이 기록되지 않았다.
+- GREEN 2: Python adapter가 schema dependency로 visible submitted branch만 projector에
+  전달하고 unknown key rejection은 유지했다. focused analysis tests `30 passed`; commit
+  `0e65bbb4`.
+- 새 서버 직후 QA tab의 pending 고착은 console의 WebSocket `/health` 오류로 browser
+  disconnect임을 구분했다. 안정된 서버에 reload한 뒤 같은 intent로 actual run을 완료했다.
+
+## 2026-07-18 7차 Task 20 Browser QA
+
+- desktop 1440x1000: Quality+Value, Quality, Value, GTAA, GRS, Dual Momentum,
+  Risk Parity Trend, Equal Weight, Risk-On Momentum 5D 모두 profile 1개, 공통 section 4개,
+  CTA 1개를 확인했다. Quality에는 Annual/Quarterly 2개만 노출된다.
+- actual Equal Weight: `equal_weight`, 2016-01-01~2026-07-18, 4 ticker, `2.955s`.
+- actual GTAA: `gtaa`, 2016-01-01~2026-07-18, `3.160s`.
+- actual Quality+Value Annual: `quality_value_snapshot_strict_annual`,
+  2021-07-18~2026-07-18, `22.492s`.
+- 세 실행 모두 새 Run History row와 Level1 decision projection을 만들었고 실행 자체가
+  Level2 source를 등록하지 않는 explicit handoff separation을 유지했다.
+- 760x1000: settings main `clientWidth=717`, `scrollWidth=717`, 첫 grid single column
+  `675px`, section 4개, CTA 1개, variant control wrap과 iframe height sync를 확인했다.
+- screenshots generated / unstaged:
+  `backtest-analysis-level1-react-settings-desktop-qa.png`,
+  `backtest-analysis-level1-react-settings-760-qa.png`.
+
+## 2026-07-18 7차 Task 20 Fresh Verification
+
+- pure settings service: `43 passed`.
+- Level1 decision / adapter: `30 passed, 3 warnings`.
+- refactor boundary / visual contract: `40 passed, 3 warnings`.
+- focused total: `113 passed`; warning은 기존 edgar deprecation 3건이다.
+- full service contracts: `821 passed, 11 failed, 35 subtests passed, 3 warnings`.
+  11 failures는 pre-7차 baseline과 같은 Sentiment React 1건, Final Review 4건,
+  Practical Validation 6건이며 신규 Level1 failure는 0건이다.
+- React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+  `index.html` 0.42 kB, CSS 9.29 kB, JS 333.78 kB.
+- target 5-module `py_compile`: exit 0, output 없음.
+- post-doc `git diff --check`: exit 0, output 없음.
+
+## 2026-07-18 8차 Task 21 RED -> GREEN
+
+- RED: modifier-free adaptive source contract `1 failed`; native
+  `event.target.selectedOptions`가 남아 있는 의도한 원인으로 실패했다.
+- GREEN: 새 focused contract `1 passed`.
+- full refactor boundary / visual contract: `41 passed, 3 warnings`.
+- React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+- implementation commit: `c70e722f Backtest Analysis 복수 선택 상호작용 개선`.
+
+## 2026-07-18 8차 Task 22 Browser QA
+
+- desktop 1280x720: outer `scrollWidth=clientWidth=1280`.
+- Quality + Value Strict Annual: 기본 5개에서 `fcf_margin`, `gross_margin`을 modifier 없이
+  추가해 6→7, 두 button `aria-pressed=true`, 기존 5개 유지 확인. Quality clear/select-all은
+  0/14로 바뀌고 Value 5개는 유지됐다.
+- GTAA: 6·12개월을 해제해 2개, 순서대로 다시 클릭해 3→4, 1개월 기존 선택 유지 확인.
+- GTAA defensive asset: total 1,031 options, initial 100 rows + remaining 931, `SPY` 검색 결과
+  1개, add/chip/remove와 summary 3→4→3 확인.
+- 760x900: outer `760/760`, settings main `717/717`, search `675/675`로 horizontal
+  overflow 0. compact grid `333.5px + 333.5px` 2열 확인.
+- screenshots generated / unstaged:
+  `backtest-analysis-level1-multi-select-desktop-qa.png`,
+  `backtest-analysis-level1-multi-select-760-qa.png`.
+
+## 2026-07-18 8차 Task 22 Fresh Verification
+
+- pure settings service: `43 passed`.
+- Level1 decision / adapter: `30 passed, 3 warnings`.
+- refactor boundary / visual contract: `41 passed, 3 warnings`.
+- focused total: `114 passed`; warning은 기존 edgar deprecation이다.
+- full service contracts: `821 passed, 11 failed, 35 subtests passed, 3 warnings`.
+  11 failures는 pre-7차 baseline과 같은 Sentiment React 1, Final Review 4,
+  Practical Validation 6이며 신규 Level1 failure는 0이다.
+- React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+  `index.html` 0.42 kB, CSS 11.10 kB, JS 335.97 kB.
+- target 5-module `py_compile`: exit 0, output 없음.
+- pre-doc `git diff --check`: exit 0, output 없음.
+- post-doc `git diff --check`: exit 0, output 없음.
+
+## 2026-07-18 9차 Task 23 RED -> GREEN
+
+- RED: GTAA evidence parameter map, 모든 named preset complete profile, preset reset,
+  initial prefill precedence, fallback immediate apply 계약이 `16 failed`로 의도대로 실패했다.
+- GREEN: pure preset/profile focused `16 passed`; fallback source contract RED `1 failed` 뒤
+  form-free callback 구조로 `1 passed`; typed date 보존 RED `1 failed` 뒤 `1 passed`.
+- Task 23 final focused: `63 passed, 3 warnings`; target py_compile과 diff-check 통과.
+- implementation commit: `6cfab44b Backtest Analysis 프리셋 적용 계약 복원`.
+
+## 2026-07-18 9차 Task 24 RED -> GREEN
+
+- RED: React가 Python-owned profile을 소비하고 strategy rule을 포함하지 않는 boundary가
+  `1 failed`로 의도대로 실패했다.
+- GREEN: `SettingsPresetProfile`, generic `applyPresetProfile`, status feedback를 연결해
+  focused `1 passed`; full refactor boundary `43 passed, 3 warnings`.
+- React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+- implementation commit: `840f778f Backtest Analysis 프리셋 자동 적용 UI 연결`.
+
+## 2026-07-18 9차 Task 25 Browser QA
+
+- current code 전용 QA server: `http://localhost:8521/backtest`.
+- desktop GTAA: Top-2 preset은 `top=2 / interval=4 / horizon=1,6`, U3 preset은
+  `top=2 / interval=3 / horizon=1,3,6`; 사용자 시작일 `2020-01-01`은 유지됐다.
+- desktop Equal Weight: 사용자가 바꾼 interval 3 / cost 25 / QQQ가 Core ETFs 전환 뒤
+  interval 12 / cost 10 / SPY로 reset되고 `전략 기본 규칙을 적용했습니다.`가 표시됐다.
+- desktop GRS: top 9 / SHY가 compact preset 전환 뒤 top 4 / BIL로 reset됐다.
+- desktop Quality+Value Annual: top 50 / cost 30 / QQQ가 Coverage 100 전환 뒤
+  top 10 / cost 10 / SPY로 reset됐다.
+- 760px: settings main `clientWidth=717`, `scrollWidth=717`, field width `675px`, 단일 열,
+  preset status full-width를 확인했다. app console error는 0이며 Streamlit route의 기존
+  `_stcore/health` / `host-config` 404 두 건만 남았다.
+- screenshots generated / unstaged:
+  `backtest-analysis-level1-preset-auto-apply-gtaa-desktop-qa.png`,
+  `backtest-analysis-level1-preset-auto-apply-760-qa.png`.
+
+## 2026-07-18 9차 Task 25 Fresh Verification
+
+- focused preset / service / boundary / adapter: `134 passed, 3 warnings`.
+- full service contracts: `822 passed, 11 failed, 35 subtests passed, 3 warnings`.
+  11 failures는 기존 Sentiment React 1, Final Review 4, Practical Validation 6이며
+  신규 Level1 preset failure는 0이다.
+- React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+  `index.html` 0.42 kB, CSS 11.28 kB, JS 336.60 kB.
+- target 5-module py_compile: exit 0, output 없음.
+- pre-doc `git diff --check`: exit 0, output 없음.
+
+## 2026-07-18 10차 Result Evidence Design Audit
+
+- current result renderer 규모와 pre-run Step 3 mount, legacy expander/tab/table/chart 경계를
+  source audit로 확인했다.
+- visual companion에서 result layout A/B/C, stale/rerun lifecycle, Level1/Level2 ownership,
+  holdings contract를 순차 검토하고 판단 흐름형 단일 workspace A안을 사용자 승인받았다.
+- written DESIGN에 pure read model, React/Python boundary, user table, error/empty state,
+  4차 implementation roadmap과 TDD/Browser QA acceptance를 기록했다.
+- self-review에서 Level1 `run_result_id`와 Level2 `validation_result_id`를 분리하고 rerun이
+  append-only validation record를 덮어쓰지 않도록 identity contract를 보정했다.
+- placeholder/ambiguity/code-fence/diff-check/protected-path 검사를 통과한 뒤 design docs만
+  commit한다. 이 단계에서는 product code와 protected JSONL을 변경하지 않는다.
+
+## 2026-07-18 10차 Implementation Plan
+
+- user written-spec approval 뒤 `superpowers:writing-plans`로 Task 26~30 상세 계획을 작성했다.
+- exact file/interface, RED fixture, expected failure, minimal GREEN boundary, focused/full command,
+  Korean commit을 각 distinct unit에 지정했다.
+- self-review에서 result/decision service circular import, plan-only cutover의 intermediate runtime
+  regression, missing configuration fingerprint, run/history/source identity 단절을 찾아 수정했다.
+- 새 plan section의 unresolved marker와 불균형 code fence는 0이며 `git diff --check`를 통과했다.
+
+## 2026-07-18 10차 Task 26~29 RED -> GREEN
+
+- Task 26: lifecycle / stage ownership RED 뒤 pure technical gate와 deduplicated Level2 question을
+  구현했다. commit `b71ef842`.
+- Task 27: safe format, chart, current/target holdings, evidence/user table, all-family result-column
+  matrix를 구현했다. commit `5f6b93eb`.
+- Task 28: same-read-model React / Python fallback, dependency-free SVG chart, responsive / accessibility
+  source contract를 구현했다. result React build는 `176 modules transformed`. commit `1d438dcf`.
+- Task 29: validated intent adapter, queued execution, `run_result_id` persistence, stale preservation,
+  primary result route cutover와 unused legacy renderer 제거를 완료했다. commit `185f6b58`.
+- focused result / decision / boundary regression은 `87 passed, 3 warnings`였다.
+- full service contract는 `821 passed, 12 failed, 35 subtests passed, 3 warnings`였다. 12 failures는
+  Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6의 repository baseline이며
+  신규 Level1 result workspace failure는 0이다.
+
+## 2026-07-18 10차 Task 30 Browser QA
+
+- desktop actual Equal Weight: 실행 전 result iframe 0, 실행 뒤 새 result workspace와
+  current/target holdings, Level1 기술 상태, Level2 questions와 explicit CTA를 확인했다.
+- GTAA로 설정을 바꾼 뒤 이전 Equal Weight 결과는 참고용 stale로 유지되고 handoff CTA가
+  제거되는 것을 확인했다. actual GTAA 재실행은 수행하지 않았고 all-family pure matrix가 보완한다.
+- 760px 첫 QA에서 result iframe `717/811` overflow를 발견해 RED contract 뒤 수정했다.
+  commit `20fb797d`; boundary `46 passed, 3 warnings`, result React build `176 modules transformed`.
+- 수정 뒤 outer `760/760`, result iframe `717/717`, holdings grid single column `683px`였다.
+  result table만 의도한 internal scroll `666/760`을 유지한다.
+- technical appendix open 시 iframe height가 `4268 -> 4680`으로 동기화돼 ResizeObserver를 확인했다.
+- screenshots generated / unstaged:
+  `backtest-analysis-level1-result-workspace-desktop-qa.png`,
+  `backtest-analysis-level1-result-workspace-760-qa.png`.
+
+## 2026-07-18 10차 Task 30 Fresh Verification
+
+- result workspace: `10 passed, 3 warnings`.
+- Level1 decision / runtime adapter: `31 passed, 3 warnings`.
+- refactor boundary / visual contract: `46 passed, 3 warnings`.
+- focused total: `87 passed`; warning은 기존 edgar deprecation이다.
+- full service contracts: `821 passed, 12 failed, 35 subtests passed, 3 warnings`.
+  12 failures는 Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6이며
+  신규 Level1 result workspace failure는 0이다.
+- Decision React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+- Result React production build: Vite 5.4.21, `176 modules transformed`, 성공.
+- target 12-module `py_compile`: exit 0, output 없음.
+- pre-stage `git diff --check`: exit 0, output 없음.
+
+## 2026-07-18 11차 Task 31~33 RED -> GREEN
+
+- Task 31 chart contract RED `2 failed` 뒤 union timeline, actual date ticks, normalized return,
+  Benchmark identity와 sparse observation을 구현해 result workspace `12 passed`를 확인했다.
+  commit `50565333 Backtest Analysis 차트 해석 계약 보강`.
+- Task 32 schedule/appendix RED `3 failed` 뒤 평가일·신호일·리밸런싱·cadence·next window와
+  user basis/raw trace를 구현해 result workspace `15 passed`를 확인했다.
+  commit `1f15c4e3 Backtest Analysis 리밸런싱과 계산 근거 정리`.
+- Task 33 React/fallback boundary RED 뒤 pointer SVG, responsive tick/schedule, user appendix를
+  구현했다. result+boundary `61 passed`; Result React build `176 modules transformed`.
+  commit `e90ff8a2 Backtest Analysis 결과 상호작용 UI 보강`.
+
+## 2026-07-18 11차 Task 34 Browser QA
+
+- actual read-only Equal Weight 결과로 normalized `100 -> 313.4 / +213.4%`, 실제 desktop 6 tick,
+  compact 3 tick, `S&P 500 (SPY) / 대표 ETF 비교`를 확인했다.
+- Browser에서 chart blank area hover가 빠지는 회귀와 raw `ticker` label을 찾아 RED 2건 뒤 수정했다.
+  targeted `2 passed`, result+boundary `61 passed`, Result build `176 modules transformed`.
+  commit `40032955 Backtest Analysis 차트 hover 캡처 보강`.
+- 실제 hover는 crosshair/tooltip 1개를 만들고 `2021-01-29`, Equal Weight `172.2 · +72.2%`,
+  SPY `191.0 · +91.0%`를 표시했으며 pointer가 차트 밖으로 나가면 둘 다 0으로 돌아갔다.
+- desktop은 6 tick / 5-column schedule, 760px은 3 tick / 1-column schedule, 두 viewport 모두
+  outer/component horizontal overflow 0을 확인했다.
+- appendix keyboard open 시 `계산 기준 / 데이터 기준 / 결과 추적`을 확인했고 raw disclosure는
+  secondary closed 상태를 유지했다. current QA page console error는 0이었다.
+- screenshots generated / unstaged:
+  `backtest-analysis-level1-result-interpretation-desktop-qa.png`,
+  `backtest-analysis-level1-result-interpretation-760-qa.png`.
+
+## 2026-07-18 11차 Task 34 Fresh Verification
+
+- result workspace: `15 passed, 3 warnings`.
+- Level1 decision workspace: `31 passed, 3 warnings`.
+- refactor boundary / visual contract: `46 passed, 3 warnings`.
+- focused total: `92 passed`; warning은 기존 edgar deprecation이다.
+- full service contracts: `821 passed, 12 failed, 35 subtests passed, 3 warnings`.
+  12 failures는 Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6 baseline이며
+  신규 Level1 failure는 0이다.
+- Decision React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+- Result React production build: Vite 5.4.21, `176 modules transformed`, 성공.
+- target 6-module `py_compile`: exit 0, output 없음.
+- pre-doc `git diff --check`: exit 0, output 없음.
+
+## 2026-07-18 12차 Task 35~37 RED -> GREEN
+
+- Task 35 current selection RED에서 Single이 이전 GTAA raw dictionary를, Mix가 snake_case key를
+  투영하는 실패를 확인했다. `_configuration_summary()` 경계 수정 뒤 decision focused `33 passed`.
+  commit `4fc754b8`.
+- Task 36 factor label/CSS RED 뒤 28개 factor의 raw value/user label 분리, 명시적 wrapping label,
+  desktop/760px 2열과 520px 1열을 구현했다. settings+boundary `107 passed`, Decision React
+  `175 modules transformed`. commit `c56aa0da`.
+- Task 37 lifecycle RED에서 reason/message 부재와 legacy reset/table token을 확인했다.
+  settings/price/failure reference reason, React/fallback single strip을 구현하고 focused `65 passed`,
+  Result React `176 modules transformed`. commit `eda9abd6`.
+- frontend 디렉터리에서 combined pytest를 한 번 실행해 test path not found가 났으며, repository
+  root에서 같은 focused command를 즉시 재실행해 위 GREEN 결과를 확인했다. 코드 failure가 아니다.
+
+## 2026-07-18 12차 Task 38 Browser QA
+
+- current source/build 전용 server `http://localhost:8511/backtest`에서 Quality+Value를 선택했다.
+- desktop 1440px: current title은 Quality+Value, factor는 `자기자본이익률 (ROE)`,
+  `총자산이익률 (ROA)` 등 사용자 label로 표시되고 `strategy_key`,
+  `promotion_min_benchmark_coverage`, `Refresh Message`, legacy reset notice는 DOM에 없었다.
+- 760px: Quality/Value section과 factor option이 2열로 줄바꿈하고 label이 card 안에서 wrap됐다.
+  outer/component horizontal overflow는 없었고 current page application console error도 없었다.
+- fresh server의 실제 run button을 in-app Browser에서 누르는 과정은 긴 component iframe 좌표 변환
+  제한으로 완료하지 못했다. stale reference reason/message와 Level2 handoff 차단은 pure lifecycle,
+  adapter, boundary test로 검증하고 manual Browser gap은 `RISKS.md`에 남긴다.
+- screenshots generated / unstaged:
+  `backtest-analysis-level1-factor-presentation-1440-qa.png`,
+  `backtest-analysis-level1-factor-presentation-760-focused-qa.png`.
+
+## 2026-07-18 12차 Task 38 Fresh Verification
+
+- focused settings / decision / result / boundary: `158 passed, 3 warnings`.
+- full service contracts: `821 passed, 12 failed, 35 subtests passed, 3 warnings`.
+  12 failures는 기존 Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6
+  source-contract baseline이며 이번 Level1 focused failure는 0이다.
+- Decision React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+- Result React production build: Vite 5.4.21, `176 modules transformed`, 성공.
+- target 10-module `py_compile`: exit 0, output 없음.
+- post-doc `git diff --check`: exit 0, output 없음.
+
+## 2026-07-19 13차 Task 39~42 RED -> GREEN
+
+- Task 39 RED: `app.services.backtest_workflow_shell` import 부재. GREEN pure truth `4 passed`.
+  commit `168fcdf4`.
+- Task 40 RED: Python adapter import 부재로 신규 adapter test 2건 실패. GREEN shell test
+  `5 passed, 3 warnings`; target compile 통과. commit `47e11568`.
+- Task 41 RED: React source 부재로 boundary 2건 실패. GREEN source boundary `2 passed`,
+  combined shell/boundary `49 passed, 3 warnings`; Vite build `175 modules transformed`.
+  commit `ca27b114`.
+- Task 42 RED: primary route에 legacy title/pills source가 남아 service contract 2건 실패.
+  GREEN targeted `12 passed, 876 deselected, 3 warnings`; target compile/diff-check 통과.
+  commit `85418e85`.
+
+## 2026-07-19 13차 Browser QA
+
+- fresh current source/build server: `http://localhost:8525/backtest`.
+- desktop 1440x1000: legacy visible title/caption/red pills 없음, hero 2열, rail 3열,
+  `aria-current=step`, Level1 -> Level2 -> Level3 -> Level1 route/workspace 일치 확인.
+- 760x1000: outer `760/760`, shell iframe `717/717`, shell `715/715`, hero 1열,
+  rail 3열 각 약 217px, label wrap와 Level1↔Level2 navigation 확인.
+- current page application console error 0. warning은 빈 legacy chart data의 Vega extent와
+  Streamlit component height lifecycle뿐이었다.
+- generated / unstaged screenshots:
+  `backtest-workflow-top-shell-desktop-qa.png`,
+  `backtest-workflow-top-shell-760-qa.png`.
+
+## 2026-07-19 13차 Fresh Completion Verification
+
+- `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
+  -> `54 passed, 3 warnings`.
+- `.venv/bin/python -m pytest tests/test_service_contracts.py -q`
+  -> `822 passed, 12 failed, 3 warnings, 35 subtests passed`.
+- 12 failures는 pre-13차와 같은 Sentiment 1, Final Review 4, liquidity copy 1,
+  Practical Validation 6 source-contract baseline이며 top-shell 신규 failure는 0이다.
+- React build: Vite 5.4.21, `175 modules transformed`; index 0.41 kB,
+  CSS 3.27 kB, JS 323.13 kB.
+- target 6-module `py_compile`: exit 0. `git diff --check`: exit 0, output 없음.
+- `npm audit --omit=dev`: moderate 1 / high 1. fix는 Vite 8 breaking upgrade를 요구해
+  이번 UI closeout에서 적용하지 않았다.
+
+## 2026-07-19 14차 RED -> GREEN And Browser QA
+
+- RED:
+  `.venv/bin/python -m pytest tests/test_backtest_refactor_boundaries.py::BacktestRefactorBoundaryTests::test_level2_and_level3_primary_routes_do_not_repeat_stage_titles -q`
+  -> legacy Level2 title prefix를 검출해 `1 failed`.
+- GREEN targeted -> `1 passed`; shell/boundary focused -> `55 passed, 3 warnings`.
+- target `py_compile` for Practical Validation / Final Review page -> exit 0.
+- fresh QA server `http://localhost:8526/backtest`, desktop 1440x1100와 760x1100:
+  Level2/3 legacy heading 0, React hero 1, stage route 일치, horizontal overflow 0, console error 0.
+- generated / unstaged screenshots:
+  `backtest-stage-title-cleanup-desktop-qa.png`, `backtest-stage-title-cleanup-760-qa.png`.
+
+## 2026-07-19 14차 Fresh Completion Verification
+
+- `.venv/bin/python -m pytest tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
+  -> `55 passed, 3 warnings in 1.61s`.
+- `.venv/bin/python -m pytest tests/test_service_contracts.py -q`
+  -> `822 passed, 12 failed, 3 warnings, 35 subtests passed in 22.75s`.
+- 12 failures는 기존 Sentiment 1, Final Review 4, liquidity copy 1, Practical Validation 6 baseline이며
+  신규 stage-title failure는 0이다.
+- `.venv/bin/python -m py_compile app/web/backtest_practical_validation/page.py app/web/backtest_final_review/page.py`
+  -> exit 0, output 없음.
+- `git diff --check` -> exit 0, output 없음.

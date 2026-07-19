@@ -1,15 +1,48 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-17
+Last Verified: 2026-07-19
 
 ## Current State After Master Merge
 
 현재 active phase는 없다.
 
-현재 active task는 없다.
+현재 active task는 `.aiworkspace/note/finance/tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/`다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/`다.
+- 목적: Backtest Analysis Level1을 `Single / Mix 선택 -> 설정과 실행 -> 결과 판단 -> 명시적 Level2 인계`의 question-first decision workspace로 재구성한다.
+- 설계 방향: Python이 strategy maturity, configuration fingerprint, fresh / stale, Gate, handler 검증, 저장·인계를 소유하고 React는 고정 context와 decision presentation / intent만 담당한다.
+- 현재 상태: 1~14차 Level1 one-shell, 설정·결과 workspace, preset, 상단 workflow shell과 stage-local title 정리를 완료했다. 15차는 승인된 Portfolio Mix React one-shell 완성 설계를 기준으로 구성 전략·역할/비중·Mix 실행/해석·저장/Level2 인계를 하나의 화면 계약으로 통합한다.
+- 이번 task에서 하지 않은 일: development 전략 runtime 완성, historical universe / delisting provider, DB schema / strategy runtime 재설계, Level2 / Level3 route 변경, live approval / broker order / auto rebalance.
+
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/`다.
+
+- 목적: Futures Macro를 현재 1D/5D/20D 관측과 5D/20D 조건부 전망으로 재구성하고, 첫 진입의 고비용 계산을 없애면서 방법론과 계산 근거를 화면 안에서 검산 가능하게 한다.
+- 완료: 전체 roadmap `5/5`와 materialized snapshot / React disclosure closeout `4/4`를 완료했다. `일봉 갱신`이 5년 compact snapshot을 저장하고 Overview 첫 진입과 다시 읽기는 compatible DB snapshot만 읽는다.
+- actual 상태: 2026-07-17 기준 5D 120개, 20D 42개 독립 episode를 사용하며 둘 다 `PROVISIONAL / 방향 우위 미확인`이다. Fresh-process DB read와 desktop/420px Browser QA를 완료했다.
+- 품질 경계: UI 진입은 provider를 호출하거나 전망을 재계산하지 않는다. 조건부 경로는 point-in-time 맥락이며 장기 국면 예측, 추천, 매매 신호가 아니다.
+
+Recent completed task는 `.aiworkspace/note/finance/tasks/active/institutional-13f-openfigi-mapping-v1-20260718/`다.
+
+- 목적: SEC 13F의 CUSIP/CINS만 있고 ticker가 없는 보유 row를 무료 OpenFIGI v3의 단일 US Equity identity로 안전하게 보강한다.
+- 완료: 전체 roadmap `4/4`. resolver, current-state persistence, provider mapped/ambiguous gate, legacy exact-name fallback, explicit Ingestion action, curated 12-manager backfill과 actual Browser QA를 닫았다.
+- actual 상태: 1,244 identifier 중 1,195 mapped, 49 unmapped, 0 ambiguous/error다. Berkshire `19→29/29`, Bridgewater `86→985/993`, Duquesne `5→70/70`이며 Duquesne mapped weight는 `6.6579%→99.9999%`다.
+- 품질 경계: normal UI render는 provider를 호출하지 않는다. API key는 선택 사항인 `OPENFIGI_API_KEY` 환경변수만 사용하며, provider 오류는 이전 정상 resolution을 지우지 않는다.
+- 잔여 dependency: current curated scope 밖의 latest-manager 약 31k identifier 확장, historical point-in-time ticker lifecycle, 49 no-match 검토는 별도 승인 범위다.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/`다.
+
+- 목적: `Workspace > Institutional Portfolios`를 Overview 시장 맥락과 같은 결론-근거-세부 흐름으로 바꾸고, silent 80-row truncation과 직접 종목 검색 부재를 해소한다.
+- 완료: 전체 roadmap `4/4`. `institutional_portfolios_workbench_v2` context hero, separated coverage, comparison gate, 50-row full holdings explorer, ticker / issuer / CUSIP 검색, mapped / unresolved security flow를 완료했다.
+- actual 상태: Berkshire `29/29`, Bridgewater `993/993`, Duquesne `70/70` total/explorer row 일치. Bridgewater 20-page 탐색과 desktop / 420px Browser QA를 확인했다.
+- 잔여 dependency: historical previous filing backfill은 별도 승인 범위다. Current latest-filing identifier mapping은 후속 OpenFIGI task에서 완료됐다.
+
+Recent completed Overview / Market Context task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/`다.
+
+- 목적: S&P 500 actual EPS 자료 부족을 공식 Index Earnings workbook 등록과 release-vintage 기반 PIT read로 해소한다.
+- 완료: 공식/normalized parser, transactional importer, coverage summary, PIT loader, Ingestion action/UI, focused regression과 Browser QA를 완료했다.
+- 외부 입력 경계: 제품 등록 경로는 완성됐지만 현재 공식 workbook과 실제 발표일을 등록하기 전까지 경제 사이클의 `실제 TTM EPS`는 `자료 부족`을 유지한다.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/`다.
 
 - 목적: 승인된 3차 채권·금리, 4차 S&P 500, 5차 WTI·구리·금 경로를 같은 측정 계약과 공통 UI로 완성한다.
 - 완료: 전체 자산경로 roadmap `5/5`를 닫았다. FRED 금리구조·기대인플레이션, EIA weekly 수급, `^GSPC`, CL/HG/GC/DX 저장 가격과 엄격한 actual EPS reader를 DB-only로 연결했다.
@@ -125,7 +158,21 @@ Earlier completed task는 `.aiworkspace/note/finance/tasks/active/final-review-e
 
 ### Recent Completed Institutional Portfolios Track
 
-Recent completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/`다.
+#### Institutional 13F OpenFIGI Mapping V1 — Complete (2026-07-18)
+
+- 목적: `ticker 연결 전` row의 issuer/CUSIP 원본을 보존하면서 차트·가격·sector 탐색에 쓸 current ticker identity coverage를 안전하게 높였다.
+- 주요 변경: `finance/data/institutional_13f_mapping.py`, `institutional_13f_identifier_resolution`, optional free key / anonymous batching, error-preserving UPSERT, `OpenFIGI mapped/ambiguous > legacy exact issuer-name > unresolved` loader precedence, 기존 SEC 13F expander의 `13F ticker 연결 보강` action을 추가했다.
+- actual: curated 12-manager latest scope 1,244개를 무료 anonymous로 처리해 1,195 mapped / 49 unmapped / 0 ambiguous / 0 error를 저장했다. Duquesne는 70/70 ticker 연결과 NTRA·INSM·TSM·NAMS provider source를 확인했다.
+- 이번 차수에서 하지 않은 일: all-latest-manager 31k backfill, historical PIT identity lifecycle, licensed security master, 추천 / 매수·매도 / broker action, run/job/row 진단 패널.
+
+Recent completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/`다.
+
+- 목적: 선택 기관의 포트폴리오 맥락을 첫 화면의 주인공으로 두고 전체 13F 보유 종목과 특정 종목 상세를 누락 없이 탐색한다.
+- 주요 변경: v2 context / coverage payload, previous-quarter change gate, context-first hero, compact manager search / rail, client-side 50-row full holdings pagination / search / filter / sort, explicit security search, unresolved identity guardrail을 추가했다.
+- 검증: focused `46 passed` + 2 subtests, Python compile, Vite build, actual 3-manager DB smoke, desktop / 420px Browser QA를 통과했다.
+- 이번 차수에서 하지 않은 일: historical quarter backfill, external security master, paid provider, server-side holdings pagination, 추천 / trading semantics.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/`다.
 
 - 목적: `Workspace > Institutional Portfolios > 종목 분석 > 종목 상세`에서 차트와 보유 기관 리스트가 2-column으로 나뉘고 기본 range slider가 어색했던 종목 상세 UX를 줄였다.
 - 주요 변경: selected-security detail을 선택 종목 / 포트폴리오 내 위치 overview card, full-width stored-OHLCV chart row, 하단 scrollable holder-list row로 재배치했다. 차트는 OHLC / volume strip, volume bars, price scale, mini navigator, line/candle toggle, hover crosshair를 유지한다.
@@ -188,6 +235,7 @@ Recent completed Final Review task는 `.aiworkspace/note/finance/tasks/active/fi
 
 - 목적: 해결 가능한 근거는 Practical Validation에서 닫고, 핵심 미구현은 block/defer하며, Final Review에는 수용 또는 Monitoring 이관으로 종결할 비핵심 한계만 전달한다.
 - 주요 변경: root issue dedup, Level2 actionability Gate, GRS 기간과 survivorship applicability 계약, Final Review terminal-state snapshot, measured-only score impact를 완료했다.
+- 후속 Decision Workspace 보정: 포트폴리오 실제 성격과 관리 기준 대비 압력을 분리하고 기존 radar/임의 normalization을 제거했다. 집중·낙폭·회전·비용 raw value는 criterion이 없어도 보이며, 기준 미설정과 분석 근거 없음을 구분한다.
 - QA: focused service/source contract tests, 실제 DB 확인, React build, py_compile, diff check, Browser QA를 완료했다. Dynamic historical universe용 PIT membership/delisting provider는 후속 승인 전까지 blocker로 남긴다.
 
 Previous completed Overview / Market Context task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-sp500-valuation-v1-20260712/`다.
@@ -753,7 +801,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 |---|---|---|---|
 | Data Collection / Data Trust | DB-backed ingestion baseline complete | `Workspace > Ingestion`, MySQL, loaders | UI에서 provider / FRED / external source를 직접 fetch하지 않는다. Overview bounded refresh는 `app/jobs/overview_actions.py` facade만 통과한다 |
 | Overview / Market Context | Production baseline plus recent sentiment / Why It Moved work complete | `Workspace > Overview` | Market context and investigation only; bounded refresh action allowed through facade; no trade signal, approval, order, registry rewrite |
-| Backtest Analysis | Candidate creation plus compact Korean-first stage navigation cleanup complete | `Backtest > Backtest Analysis` | 후보 source 생성 단계; final decision / monitoring governance는 후속 단계 |
+| Backtest Analysis | Level1 decision workspace one-shell complete | `Backtest > Backtest Analysis` | Single / Mix 실행 결과의 fresh / data / execution readiness를 판단하고 명시적으로 후보 source를 만든다. setup 저장, 실행, Level2 handoff는 distinct action이며 final investment decision / monitoring governance는 후속 단계다 |
 | Practical Validation / Final Review | Investability evidence workflow complete through P2 / P3 and first hardening cycle | `Backtest > Practical Validation`, `Backtest > Final Review` | PASS / BLOCKER / selected-route gate는 validation evidence가 소유; sentiment overlay is context-only |
 | Operations / Portfolio Monitoring | Operations Console now opens with portfolio-first status summary, evidence health strip, and priority/evidence ordered review queue, while Portfolio Monitoring remains daily-monitoring-first | `Operations > Operations Console`, `Operations > Portfolio Monitoring`, `System / Data Health` | Read-only monitoring and explicit scenario update; no live approval, broker order, account sync, auto rebalance |
 | UI / Engine Boundary | Service/runtime boundary and lint baseline complete | `app/services`, `app/runtime`, `app/web` | UI handles render/session state; runtime / service owns engine dispatch, JSONL helpers, read models |
@@ -762,6 +810,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 
 | Workstream | Status | Durable Notes |
 |---|---|---|
+| Backtest Analysis Level1 Decision Workspace V1 | Complete | Fixed Level1 question, purpose-grouped Single catalog, new / saved Mix inner mode, Python-owned maturity / fingerprint / Gate / handler validation, two-surface React/fallback, decision-first result, stale-result preservation, distinct Mix save / Level2 handoff를 완료했다. 7차에서 9개 Single choice / 12개 primary concrete variant를 Python schema-driven React settings로 통일하고 legacy native form / Quality Snapshot을 replay compatibility로 격리했다. 8차는 modifier-free adaptive multi-select를, 9차는 모든 named preset의 deterministic base profile과 evidence-backed GTAA override를 추가했다. preset change는 owned field를 reset하되 date/manual ticker와 initial replay/prefill precedence를 보존한다. 760px one-column과 actual GTAA / Equal Weight / GRS / Quality+Value preset 전환을 확인했다. Strategy runtime, provider, DB schema, Level2 / Level3 route semantics는 변경하지 않았다. |
 | Overview Legacy Dashboard Removal V17-V24 | Complete | `app/web/overview/legacy_dashboard.py` was physically removed after remaining helper ownership moved into tab-local helper modules. `app/web/overview_dashboard.py` now keeps explicit compatibility exports only, while active page / tab / helper ownership lives under `app/web/overview/`. |
 | Overview Tab Helper Extraction V11-V16 | Complete | Market Context, Events, Futures Macro, Market Movers, and Sentiment primary tab entry modules now call tab-local helper bridges instead of importing `legacy_dashboard.py` directly. |
 | Overview Legacy Cleanup V6-V10 | Complete | Overview navigation moved to `app/web/overview/navigation.py`, IA read-model ownership moved to `app/services/overview/ia.py`, confirmed unused standalone wrappers / Candidate Ops helpers were removed, and guard tests prevent reintroduction. |
@@ -849,15 +898,18 @@ Current active phase:
 
 Current active task:
 
-- none
+- `backtest-analysis-level1-decision-workspace-v1-20260717`: 1~14차 완료, 15차 Portfolio Mix React one-shell 상세 구현 계획 작성과 개발 예정.
 
 Latest completed task:
 
-- `overview-economic-cycle-asset-signal-copy-v1-20260717` — 1차~3차 complete
+- `overview-futures-macro-pattern-outlook-v1-20260718` — 전체 roadmap `5/5`와 materialized snapshot / React disclosure closeout `4/4` complete
 
 Previous completed task:
 
-- `overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717` — 1차~3차 complete
+- `institutional-13f-openfigi-mapping-v1-20260718` — 전체 roadmap `4/4` complete
+- `institutional-portfolios-context-first-redesign-v1-20260718` — 전체 roadmap `4/4` complete
+- `overview-economic-cycle-sp500-actual-eps-registration-v1-20260718` — 제품 등록 경로 complete, 실제 workbook 등록은 외부 입력 대기
+- `overview-economic-cycle-asset-pathways-stages3-5-v1-20260717` — 전체 자산경로 roadmap `5/5` complete
 
 Recent completed docs cleanup tasks:
 
@@ -937,4 +989,26 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 
 - 1차~4차 완료: root issue dedup, Level2 action handler Gate, GRS signal/valuation 기간 계약, static/dynamic survivorship policy, Final Review terminal-state snapshot, measured-only score impact.
 - current Final Review 후보 계약은 `unresolved_actionable=0`, `critical_engineering=0`, `missing_contract=0`을 요구한다.
+- 2026-07-16 observation freshness continuation 완료: Final Review가 stored curve end / latest completed session / source DB common date / limiting symbol을 구분하고, 자동 해결 가능한 stale 가격은 one-click price refresh → replay → 새 validation append로 갱신한다. 갱신 전에는 selected route만 차단하며 React는 intent/presentation만 소유한다.
 - 다음 승인 후보는 dynamic historical universe용 PIT membership / delisting provider이며, 도입 전에는 해당 후보를 defer/block한다.
+
+## 2026-07-16 Practical Validation Level2 Decision Workspace V1
+
+- visible flow는 `후보와 검증 기준 확인 -> 최신 데이터 기준 재검증 -> 결과 해석과 해결 구분 -> 저장하고 Final Review로 이동`의 4단계 one-shell이다.
+- visual one-shell은 두 mount boundary를 쓴다. 후보/검증 기준 `context`는 replay fragment 밖에 고정하고, 재검증/결과/저장 `decision`만 fragment에서 pending과 새 projection으로 교체해 최신 재검증 때 상단 선택 맥락이 사라지지 않는다.
+- Step 1 compact selection IA를 적용했다. hero는 Level2 질문으로 고정하고 현재 후보와 판정 기준은 Step 1 summary에서 확인한다. `1A` 후보 목록은 필요할 때만 펼치며, `1B`는 데스크톱 5열과 760px 2열 줄바꿈으로 빠르게 비교한다.
+- `상세 검증 근거`는 Step 3 disclosure이며 별도 Flow 5가 아니다. custom profile / advanced replay / raw evidence만 `고급 설정과 원본 근거`에 둔다.
+- `app/services/backtest_practical_validation_decision_workspace.py`가 verified / measured caution / validated caution / resolve-now / engineering-required / Final Review handoff를 root issue 기준으로 투영한다. 사용자 설명은 별도 pure explanation service가 소유한다.
+- React는 presentation과 intent만 소유하고, Python은 applicability, finding, Gate, handler 검증, replay, save, Final Review handoff를 소유한다.
+- old Fix Queue / Data Action Board는 compatibility code로 유지하지만 active first-read에서는 렌더링하지 않는다.
+- current eligible 계약은 unresolved actionable / critical engineering / missing contract가 모두 0인 상태다. accepted limit / final decision / monitoring transfer는 Level2 수리 목록이 아니라 Final Review handoff다.
+- 사용자 피드백 보정과 provider/handoff continuation까지 구현했다. iShares
+  SpreadsheetML과 Vanguard JSON을 기존 source-map / holdings / exposure job에
+  연결했고 COMT/EFA/IWD/IWM/IWN/LQD/TIP/VNQ latest official snapshot을
+  실제 수집했다. Final Review는 Level2 handoff를 `최종 판단 입력 / 인수한
+  검증 한계 / Monitoring 이관 조건`으로 분리한다.
+- 지정 GTAA U3/U5 + GRS 후보는 Browser replay에서 verified 27,
+  resolve-now 0, engineering blocker 0, accepted limit 1, monitoring transfer 1로
+  이동 가능 상태가 됐다. desktop / 760px Browser QA와 overflow 확인을 완료했다.
+- 구현/보정 커밋은 active task `STATUS.md`에 정리한다. historical universe PIT
+  membership / delisting provider는 별도 승인 전 범위 밖 위험으로 유지한다.

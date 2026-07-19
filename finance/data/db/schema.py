@@ -1079,6 +1079,35 @@ INSTITUTIONAL_13F_SCHEMAS = {
           KEY ix_source (source)
         );
     """,
+    "institutional_13f_identifier_resolution": """
+        CREATE TABLE IF NOT EXISTS institutional_13f_identifier_resolution (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          identifier_value CHAR(9) NOT NULL,
+          identifier_type VARCHAR(16) NOT NULL,
+          source VARCHAR(64) NOT NULL,
+          resolution_status VARCHAR(16) NOT NULL,
+          symbol VARCHAR(20) NULL,
+          provider_name VARCHAR(255) NULL,
+          figi VARCHAR(16) NULL,
+          candidate_count INT NOT NULL DEFAULT 0,
+          candidates_json JSON NULL,
+          source_ref VARCHAR(1024) NULL,
+          warning_text TEXT NULL,
+          error_text TEXT NULL,
+          last_attempt_status VARCHAR(16) NOT NULL,
+          attempted_at TIMESTAMP NULL,
+          resolved_at TIMESTAMP NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_identifier_source (identifier_value, source),
+          KEY ix_resolution_status (resolution_status),
+          KEY ix_resolution_symbol (symbol),
+          KEY ix_last_attempt_status (last_attempt_status)
+        );
+    """,
     "institutional_13f_manager_watchlist": """
         CREATE TABLE IF NOT EXISTS institutional_13f_manager_watchlist (
           cik VARCHAR(10) PRIMARY KEY,

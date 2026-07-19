@@ -203,6 +203,25 @@ def _review_unless_blocked(status: Any) -> str:
     return "REVIEW"
 
 
+def _evidence_state(
+    statuses: list[Any],
+    *,
+    applies: bool = True,
+) -> str:
+    """Describe whether a module result is computed, missing, or not applicable."""
+
+    if not applies:
+        return "not_applicable"
+    normalized = [_status(value) for value in statuses if value is not None]
+    if not normalized or any(value in BLOCKING_STATUSES for value in normalized):
+        return "missing"
+    if any(value in REVIEW_STATUSES for value in normalized):
+        return "computed"
+    if all(value in PASS_STATUSES or value == "NOT_APPLICABLE" for value in normalized):
+        return "verified"
+    return "missing"
+
+
 def _module(
     *,
     module_id: str,
@@ -435,6 +454,75 @@ def build_validation_module_plan(
         (_status(row.get("Status")) for row in backtest_realism_rows if row.get("Criteria") == "Tax / account scope"),
         "NOT_RUN",
     )
+    module_evidence_states = {
+        "source_integrity": _evidence_state(
+            [
+                check_status("Selection source"),
+                check_status("Active components"),
+                check_status("Target weight total"),
+                check_status("Data Trust"),
+                check_status("Execution boundary"),
+                check_status("Curve evidence"),
+            ]
+        ),
+        "latest_replay": _evidence_state(
+            [
+                check_status("Runtime recheck"),
+                check_status("Runtime period coverage"),
+            ]
+        ),
+        "benchmark_parity": _evidence_state([benchmark_status]),
+        "validation_efficacy": _evidence_state(
+            _row_statuses(validation_efficacy_rows)
+        ),
+        "data_coverage": _evidence_state(_row_statuses(data_coverage_rows)),
+        "construction_risk": _evidence_state(
+            _row_statuses(construction_risk_rows),
+            applies=construction_applies,
+        ),
+        "backtest_realism": _evidence_state(
+            _row_statuses(
+                backtest_realism_rows,
+                exclude={"Tax / account scope"},
+            )
+        ),
+        "stress_robustness": _evidence_state(
+            [
+                diagnostic_status("stress_scenario_diagnostics"),
+                diagnostic_status("robustness_sensitivity_overfit"),
+            ]
+        ),
+        "provider_investability": _evidence_state(
+            [
+                check_status("Provider coverage"),
+                diagnostic_status("asset_allocation_fit"),
+                diagnostic_status("concentration_overlap_exposure"),
+                diagnostic_status("operability_cost_liquidity"),
+            ],
+            applies=bool(traits.get("is_etf_like")),
+        ),
+        "leverage_inverse": _evidence_state(
+            [leverage_status],
+            applies=bool(traits.get("has_leveraged_or_inverse_symbols")),
+        ),
+        "risk_contribution": _evidence_state(
+            _row_statuses(risk_contribution_rows),
+            applies=bool(traits.get("is_weighted_mix")),
+        ),
+        "component_role_weight": _evidence_state(
+            _row_statuses(component_role_weight_rows),
+            applies=bool(traits.get("is_weighted_mix")),
+        ),
+        "macro_regime": _evidence_state(
+            [macro_status],
+            applies=bool(
+                traits.get("is_tactical")
+                or profile_id == "hedged_tactical"
+            ),
+        ),
+        "monitoring_baseline": _evidence_state([monitoring_status]),
+        "tax_account_scope": _evidence_state([tax_scope_status]),
+    }
 
     modules = [
         _module(
@@ -703,6 +791,13 @@ def build_validation_module_plan(
         )
 
     for module in modules:
+        module["evidence_state"] = module_evidence_states.get(
+            str(module.get("module_id") or ""),
+            _evidence_state(
+                [module.get("status")],
+                applies=bool(module.get("applies", True)),
+            ),
+        )
         module["gate_effect"] = _module_gate_effect(module)
         module["gate_reason"] = _module_gate_reason(module)
         module["evidence_boards"] = evidence_boards_for_module(str(module.get("module_id") or ""))

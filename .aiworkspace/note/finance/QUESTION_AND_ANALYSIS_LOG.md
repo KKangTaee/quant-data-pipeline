@@ -17,8 +17,11 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Current active task is none.
+  - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~14차를 완료했고 승인된 15차 Portfolio Mix React one-shell 설계의 구현 계획과 개발을 이어간다.
   - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro의 단기 거시 레이더와 5D/20D 조건부 경로를 확정하고, 5년 compact materialization·DB-only 첫 진입·React 방법론/계산 추적까지 마무리했다.
+  - Recent completed Institutional Portfolios task is [institutional-13f-openfigi-mapping-v1-20260718](./tasks/active/institutional-13f-openfigi-mapping-v1-20260718/STATUS.md). 무료 OpenFIGI current resolution과 curated-manager actual backfill을 전체 roadmap `4/4`로 완료했다.
+  - Previous completed Institutional Portfolios task is [institutional-portfolios-context-first-redesign-v1-20260718](./tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md). 선택 기관 맥락, 전체 보유 탐색, 직접 종목 검색과 coverage / comparison 정확성을 전체 roadmap `4/4`로 완료했다.
+  - Recent completed Overview / Market Context task is [overview-economic-cycle-sp500-actual-eps-registration-v1-20260718](./tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/STATUS.md). 공식 workbook 등록 제품 경로는 완료했고 실제 workbook과 발표일 입력은 외부 입력으로 남아 있다.
   - Previous completed task is [overview-economic-cycle-asset-pathways-stages3-5-v1-20260717](./tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/STATUS.md). 채권·금리, S&P 500, WTI·구리·금의 측정 경로와 공통 관측 UI를 연결해 전체 자산경로 roadmap `5/5`를 완료했다.
   - Previous completed task is [overview-economic-cycle-multichannel-asset-interpretation-v1-20260717](./tasks/active/overview-economic-cycle-multichannel-asset-interpretation-v1-20260717/STATUS.md). 공통 판정기와 금·달러 파일럿에서 비인과적 `economic_cycle_v2` 계약을 확립했다.
   - Previous completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 가격의 1주·1개월·3개월 흐름을 경제 배경과 독립 판정하는 `3/3` 개선을 완료했다.
@@ -28,7 +31,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Previous completed task is [overview-market-context-turnaround-derived-quarter-provenance-v1-20260716](./tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md). Missing Q4의 guarded filing-derived 계산과 provenance 표시를 완료했다.
   - Previous completed task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL EPS loader gap과 transition/already-positive rail semantics를 보정했다.
   - Previous completed task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md). Cached selected-stock UI remains DB-only; stale repair is an explicit single action.
-  - Recent completed Institutional Portfolios task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
+  - Previous completed Institutional Portfolios chart task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
   - Previous completed Institutional Portfolios task is [institutional-portfolios-watchlist-mapping-v1-20260712](./tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
   - Recent completed Final Review task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
@@ -52,6 +55,55 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-19 - master 병합은 공용 calendar와 Backtest 공개 계약을 함께 보존한다
+
+- User request: 현재 `codex/backtest-dev`의 master 병합 충돌을 `finance-integration-review`로 해결한 뒤 Portfolio Mix 작업을 계속 진행해 달라고 요청함.
+- Interpreted goal: master의 Overview·Institutional·Economic Cycle 변경과 현재 Backtest Level1 작업 중 어느 쪽도 버리지 않고 current pointer와 코드 계약을 일관되게 합친다.
+- Analysis result: 실제 코드 충돌은 NYSE calendar 추출과 기존 Backtest 공개 함수가 같은 위치를 수정해 발생했다. 계산은 `app/services/nyse_calendar.py`로 단일화하되 Final Review import compatibility wrapper는 유지하는 것이 맞다.
+- Follow-up: 9개 충돌을 해결하고 가격 최신화 집중 `19 passed`, 전체 service의 기존 baseline `12 failed`를 확인했다. 보호 JSONL·`.superpowers/`·generated artifact는 stage하지 않았다.
+
+### 2026-07-19 - 단계 질문은 공통 shell 아래 active React hero가 한 번만 소유한다
+
+- User request: Practical Validation과 Final Review의 legacy stage title이 각 React workspace hero와
+  중복되므로 React 디자인으로 통일하거나 공통 정리해 달라고 요청함.
+- Interpreted goal: page 전체 흐름은 유지하면서 각 단계의 질문과 설명을 두 번 읽지 않게 해야 한다.
+- Analysis result: 공통 shell은 단계 순서와 현재 책임만 소유하고, Level별 질문은 active React hero가
+  소유하는 A안이 가장 작고 일관적이다. stage-local Streamlit title/caption은 별도 owner가 아니다.
+- Follow-up: Level2/3 legacy pair를 제거하고 source boundary, desktop/760px route·overflow QA,
+  canonical flow/task/root docs sync를 완료했다. Gate/replay/persistence는 변경하지 않았다.
+
+### 2026-07-18 - Level1 결과는 기술 인계와 Level2 검증 질문을 분리한다
+
+- User request: 오래된 graph/result table/검증 신호를 개편하고 현재/목표 보유를 보여주며,
+  Level1에서 처리할 것과 Level2에서 처리할 것을 명확히 나눠 달라고 요청함.
+- Interpreted goal: 실행 전에는 결과 판정을 숨기고, 실행 후 사용자가 결과를 읽은 다음
+  재현 가능한 기술 상태와 아직 검증할 투자 질문을 혼동 없이 구분해야 한다.
+- Analysis result: Level1은 execution, configuration fingerprint, `run_result_id`, callable handoff만
+  소유한다. Benchmark, investability, liquidity, OOS, cost realism은 Level2 question이고,
+  current/target holdings는 simulated result / latest valid signal이지 실계좌나 주문이 아니다.
+- Follow-up: pure read model, React/Python fallback, queued rerun, stale reference, one-shell result와
+  desktop/760px Browser QA를 완료했다. full service의 비-Level1 baseline failures는 후속 위험으로 남겼다.
+
+### 2026-07-16 - Practical Validation Level2는 수리와 최종 판단을 분리하는 one-shell이어야 한다
+
+- User request: 확정된 DESIGN / PLAN 기준으로 Level2 1~4차를 TDD, Korean commit, Browser QA, docs sync 순서로 구현해 달라고 요청함.
+- Interpreted goal: 사용자가 `이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가?`에 답하면서 현재 해결할 일과 Final Review로 넘길 판단을 한 화면에서 혼동 없이 구분해야 한다.
+- Analysis result: Python이 root issue / applicability / handler / Gate / replay / persistence를 소유하고 React는 four-step presentation과 intent만 소유한다. accepted limit / final decision / monitoring transfer는 Level2 repair queue가 아니며 current eligible은 unresolved actionable / critical engineering / missing contract가 모두 0이어야 한다.
+- Follow-up: truth contract, `practical_validation_decision_workspace_v1`, one-shell React/fallback, stable validation id, focused 82 tests와 runtime projection을 구현했다. Browser JS control tool 부재로 desktop / 760px visual QA와 screenshot만 active closeout gate로 남겼다.
+
+### 2026-07-16 - Final Review Monitoring 빈칸은 관찰값이 아니라 producer 공백이다
+
+- User request: `무엇이 바뀌면 다시 판단할 것인가` 영역이 비어 있는 원인이 개발 문제인지 데이터 문제인지 분석하고 개발해 달라고 요청함.
+- Interpreted goal: Final Review가 이미 가진 포트폴리오 관찰값 중 실제 임계값이 있는 항목을 사용자에게 재검토 조건으로 보여주되, 임의 기준이나 Level2 remediation을 만들지 않아야 함.
+- Analysis result: current GRS에는 낙폭, Benchmark 상대 성과, cadence가 저장돼 있지만 consumer가 존재하지 않는 `review_trigger_details`만 읽어 조건이 0개였다. CAGR / Data Trust는 문장형 trigger만 있고 explicit threshold는 없다.
+- Follow-up: stored detail 우선 정책을 유지하면서 drawdown `-15%`, Benchmark `0%p` 조건만 Python에서 파생했다. current findings는 별도 stable id로 보존하고 CAGR / Data Trust는 disclosure에 남겼다.
+
+### 2026-07-16 - Final Review actual character와 review pressure는 서로 다른 정보다
+
+- User request: 사용자는 기존 포트폴리오 성격 지도에서 대부분이 `미측정`으로 보여 원하는 포트폴리오 성격을 알 수 없다고 지적하고 실제 성격이 노출되도록 개선을 승인함.
+- Interpreted goal: 데이터 부재와 기준 부재를 혼동하지 않고, 저장된 raw 관측값은 그대로 보여주되 관리 기준 비교는 별도 surface에서만 수행한다.
+- Analysis result: current GRS는 집중·낙폭·회전·비용 값이 존재하지만 turnover/cost criterion과 regime evidence가 없다. 따라서 radar normalization을 제거하고 `actual character`와 `within/exceeds/criterion missing/evidence missing` pressure 상태를 분리하는 것이 맞다.
+- Follow-up: Python이 character/pressure projection과 drawdown alias를 소유하고 React/fallback은 표시만 한다. regime evidence와 turnover/cost criterion producer는 별도 승인 전까지 잔여 위험으로 둔다.
 ### 2026-07-19 - Futures Macro 계산은 일봉 갱신 때 저장하고 화면은 저장 결과만 읽는다
 
 - User request: 5년 이력을 써도 최초 Overview/Futures Macro 진입은 오래 걸리지 않게 하고, 잘린 방법론과 Streamlit 원본 추적을 React로 통일하는 마무리를 승인함.
@@ -9627,6 +9679,210 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result: 독립 closure card는 기존 category criteria와 중복되고 internal metric / 영문 contract / `미정`을 노출했다. 분류와 Gate는 필요하지만 상세 presentation은 Final Review 소유가 맞다.
 - Follow-up: Flow 4 독립 카드 묶음을 제거하고 Flow 3 summary band에 accepted-limit root count와 blocker 유무만 표시했다. Python closure / Gate / registry contract는 변경하지 않았다.
 
+### 2026-07-16 - Final Review는 점수표보다 저장된 행동과 변화 조건으로 판단한다
+
+- User request: 기존 active task와 worktree에서 승인된 Decision Workspace 1~4차를 TDD, Browser QA, distinct commit, finance docs sync까지 완료한다.
+- Interpreted goal: 사용자가 후보를 바꿔가며 실제 성과/손실 경로와 measured trade-off를 읽고 canonical route와 사유를 한 화면에서 기록할 수 있어야 한다.
+- Analysis result: Python Decision Brief가 exact-common curve, underwater, measured finding/trait, structured Monitoring condition과 Gate capability를 소유하고 React는 presentation intent만 맡는 one-shell이 맞다. overall/headline score는 current 화면에서 제거한다.
+- Follow-up: 4개 구현 커밋과 210-test completion suite, 1440/760 QA, compact snapshot/legacy fallback 문서 동기화를 완료했다. protected registry에는 QA row를 쓰지 않았다.
+
+### 2026-07-16 - 승인 A안은 Market Context의 시각 언어까지 포함한다
+
+- User request: 다른 세션 구현이 웹에서 선택한 A안과 `Workspace > Overview > 시장 맥락` 스타일로 보이지 않는 이유를 확인하고 같은 방향으로 교정해 달라고 요청함.
+- Interpreted goal: 질문 중심 정보 순서만 유지하는 것이 아니라 기존 제품의 blue-gray palette, rounded surface, soft shadow, compact type hierarchy까지 Final Review에 적용해야 함.
+- Analysis result: research audit의 `색상이 아니라 projection` 문장이 구현 범위를 과도하게 좁혀 12-column·각진 green editorial report로 drift했다. Python Decision Brief와 저장 계약은 정상이라 React presentation만 교정하는 것이 맞았다.
+- Follow-up: visual contract RED/GREEN, React/CSS/chart palette 교정, 112-test regression, build, 1280/1440/760 Browser QA를 완료하고 protected registry 저장은 실행하지 않았다.
+
+### 2026-07-16 - Final Review 행동 차트는 축과 hover로 직접 읽혀야 한다
+
+- User request: section title의 영문/한글 계층, 누적 성과와 Benchmark chart hover/X·Y축, Underwater 의미, observation 빈 면과 긴 글자 잘림을 수정해 달라고 요청함.
+- Interpreted goal: Market Context visual language를 유지하면서 사용자가 날짜별 성과와 손실 깊이를 직접 읽고, 관측 근거 카드에서 정보 누락 없이 검토할 수 있어야 한다.
+- Analysis result: heading grid grouping, 축 없는 static SVG, 5열 fixed observation band가 각각 title misalignment, 값 해석 부족, 빈 면/clipping의 직접 원인이었다. Python calculation이나 Gate 문제는 아니었다.
+- Follow-up: React local hover와 실제 date/index/percent 축, Underwater 설명, 3/2/1열 wrapping grid를 적용했다. 115-test regression과 desktop/760 Browser QA를 통과했으며 save CTA와 protected registry는 건드리지 않았다.
+
+### 2026-07-16 - Final Review의 오래된 성과 관측은 Level2 회귀 없이 명시적으로 최신화한다
+
+- User request: 포트폴리오 설계 시점에 머문 누적 성과와 고점 대비 낙폭을 현재 확보 가능한 데이터까지 Final Review에서 최신화하고 싶다고 요청함.
+- Interpreted goal: Level2 검증 의미를 바꾸지 않으면서 사용자가 같은 후보를 한 번의 action으로 최신 가격까지 다시 계산하고 새 validation을 기준으로 판단해야 함.
+- Analysis result: current GRS는 curve `2026-06-26`, 최신 완료 session `2026-07-15`, DB common `2026-06-26`, limiter `BIL`이었다. replay만으로는 늘어나지 않아 기존 OHLCV 수집을 먼저 연결해야 했다.
+- Follow-up: Python one-click price refresh → replay → append-only validation orchestration, selected-route-only freshness Gate, Market Context 계열 compact strip을 구현했다. React는 intent/presentation만 맡고 실제 refresh/save UI 실행은 protected registry 때문에 QA에서 수행하지 않았다.
+
+### 2026-07-16 - Practical Validation은 module console이 아니라 Final Review 준비 질문에 답해야 한다
+
+- User request: Level3 개편 영향을 반영해 Level2 검증 flow, 접근법, UI를 다시 진단하고 Level3 스타일로 이해하기 쉽게 개편할 방향을 요청함.
+- Interpreted goal: 사용자가 어떤 후보를 어떤 기준으로 재검증했고, 지금 해결할 일과 Final Review로 넘길 한계를 한 화면에서 구분해야 함.
+- Analysis result: 현재 contract test는 정상이나 REVIEW 의미 혼합, accepted limit / final decision handoff 불완전, empty action board, module-level 중복, square Streamlit / React surface가 사용자 판단을 흐린다.
+- Follow-up: 4단계 Hybrid One-Shell, Python-owned finding/applicability/Gate/action contract, Level3 visual token, technical disclosure 구조를 DESIGN에 고정하고 상세 PLAN을 작성한다.
+
+### 2026-07-16 - Practical Validation은 후보 선택, 검증 정책, Level2 종결, Final Review 인계를 분명히 나눠야 한다
+
+- User request: 후보 목록과 검증 정책을 분리하고, 최신 재검증 때 상단이
+  리셋되지 않게 하며, raw 코드 근거를 사용자 설명으로 바꾸고 Level2에서
+  검증할 항목은 이 단계에서 종결해 달라고 요청함.
+- Interpreted goal: Level2는 확인된 주의를 자체 종결하고 실제 미검증은
+  개발 차단으로 남기며, 근거가 있는 구조적 한계/사용자 판단만 Level3에
+  전달해야 함.
+- Analysis result: full app rerun, raw audit projection, generic
+  `pv_practical_caution -> accepted_limit` fallback, measured handoff의 lane
+  누락이 직접 원인이었다.
+- Follow-up: 1A/1B UI, fragment rerun, pure explanation service, 5개 category,
+  evidence state/missing-validator Gate, handoff class 보정을 구현했다.
+  automated verification은 완료했고 Browser QA만 도구 제약으로 남았다.
+
+### 2026-07-16 - 실행한 Level2 작업은 같은 CTA로 반복 노출하지 않는다
+
+- User request: 선택 후보 반복 표기 위치와 5개 검증 관점의 빈 열을 개선하고,
+  지정 GTAA U3/U5 + GRS 후보에서 두 `지금 해결`을 실행했는데 다시 보이는
+  것이 정상인지 확인해 달라고 요청함.
+- Interpreted goal: 선택 context는 후보/정책 구분을 방해하지 않아야 하고,
+  사용자가 실행한 작업은 결과에 따라 재검증·개발 필요·Monitoring 인계 중
+  하나로 진행되어 같은 실행 CTA로 되돌아오지 않아야 한다.
+- Analysis result: provider 보강 실행 이력은 있었지만 source-map 실패와
+  미지원 parser가 다시 callable action으로 분류됐고, 완료된 partial-month
+  replay도 재실행 대상으로 남았다. 이는 정상 스펙이 아니라 lifecycle 버그다.
+- Follow-up: 후보 context를 header로 이동하고 5개 관점을 3+2로 배치했다.
+  provider -> replay cache invalidation, attempted/unsupported ->
+  engineering-required, verified monthly partial-month -> monitoring-transfer
+  계약을 적용했다. 지정 후보의 current resolve-now는 0건이다.
+
+### 2026-07-17 - 기존 수집기를 확장하고 검증된 handoff만 Final Review가 소비한다
+
+- User request: `필수 데이터 수집기 개발 필요`가 실제 수집 기능 부재인지
+  확인해 없으면 개발하고, `Final Review로 넘길 것`이 실제 다음 단계에서
+  확인되도록 승격해 달라고 요청함.
+- Interpreted goal: 새 ingestion workflow를 중복 생성하지 않고 현재 공식 source
+  gap을 닫으며, Level2 근거를 통과한 판단만 Final Review의 명시적 업무가 되어야 함.
+- Analysis result: DB schema와 수집 job은 있었고 iShares workbook / Vanguard JSON
+  adapter만 빠져 있었다. Final Review brief도 closure class를 직접 소비하지 않아
+  인계 의미가 불분명했다.
+- Follow-up: 두 provider adapter와 bond identity 보정을 기존 job에 연결하고,
+  Level2 handoff를 final decision / accepted limit / structured monitoring 세 lane으로
+  구현했다. 지정 후보는 actual replay에서 engineering blocker 0이 됐다.
+
+### 2026-07-17 - 재검증은 one-shell을 유지하고 Final Review 한계는 명시적으로 결정한다
+
+- User request: 실전 검증 버튼 뒤 전체 shell이 reset되는 현상이 정상인지 확인하고,
+  정적인 Final Review 인계 항목을 더 나은 사용자 행동으로 개선해 달라고 요청함.
+- Interpreted goal: replay 결과 영역만 갱신하고, Level2에서 근거를 확인한 한계는
+  Final Review에서 실제 인수 또는 Level2 반환 판단으로 종결해야 함.
+- Analysis result: component value rerun 뒤 Python의 두 번째 fragment rerun이 공백을
+  만들었고, accepted limit는 저장 전 acknowledgment 계약이 없어 안내로만 남았다.
+- Follow-up: callback-first replay projection, compact Level2 summary, per-root
+  accepted/return choice, Python route validation과 compact snapshot 저장을 구현했다.
+  non-visual 검증은 완료했고 Browser policy로 desktop/760px 재확인이 남았다.
+
+### 2026-07-17 - 재검증은 상단 context와 하단 decision의 mount 경계를 분리한다
+
+- User request: callback 보정 뒤에도 최신 데이터 재검증 시 화면 전체와 해당 영역이
+  사라졌다 다시 나타나는 현상이 같은지 확인하고 다시 수정해 달라고 요청함.
+- Interpreted goal: 후보/검증 기준은 재검증 동안 그대로 유지하고, 하단 replay와
+  결과만 pending 상태를 거쳐 새 projection으로 교체되어야 함.
+- Analysis result: 두 번째 명시적 rerun 제거는 불충분했다. custom component iframe
+  전체가 하나의 fragment 안에 있어 `setComponentValue()` widget rerun만으로도
+  상단까지 같은 mount boundary에 포함됐다.
+- Follow-up: 같은 read model/React bundle을 fragment 밖 `context`와 fragment 안
+  `decision` surface로 분리했다. desktop replay 중 context+pending 동시 유지,
+  760px overflow 0, console error/component-ready warning 0을 확인했다.
+
+### 2026-07-17 - 후보와 판정 기준은 고정 질문 아래의 compact Step 1에서 선택한다
+
+- User request: 후보 선택에 따라 hero 타이틀이 바뀌는 구조와 항상 펼쳐진 1A/1B의
+  큰 카드 영역을 검토하고, B안 목록형 선택기와 760px 2열 줄바꿈으로 개선 요청함.
+- Interpreted goal: Level2 질문은 고정하고 현재 작업 대상과 판정 policy를 같은
+  Step 1 안에서 구별해, 후보 변경과 기준 비교를 더 짧은 흐름으로 끝내야 함.
+- Analysis result: 이전 계약이 후보 context를 hero에 두고 3+2/모바일 1열을 강제한
+  것이 원인이며 validation read model이나 Gate 변경은 필요하지 않았다.
+- Follow-up: fixed hero, 후보/판정 summary, 기본 닫힘 후보 목록, desktop 5열과
+  760px 2열/full-span을 React와 fallback에 적용하고 Browser QA로 높이/overflow를 확인했다.
+
+### 2026-07-18 - Level1은 실행 화면이 아니라 명시적 후보 판단 workspace다
+
+- User request: Level2를 마친 뒤 Level1 UI와 기능을 Level2/3 수준으로 전반 개편하고,
+  합의한 A/B/S1/M1/R1/G1/C1/P1/T2 흐름을 이 세션에서 순차 구현해 달라고 요청함.
+- Interpreted goal: Single 전략과 weighted Mix를 같은 질문 아래에서 구성하되 실행,
+  stale 근거, setup 저장, Level2 후보 인계를 섞지 않고 사용자가 다음 행동을 이해해야 함.
+- Analysis result: 기존 기능 부족보다 Streamlit mode/form/result/handoff의 분산 ownership,
+  설정 지문 불일치와 callback rerun, dark-theme token 충돌이 실제 사용 흐름을 흐렸다.
+- Follow-up: Python-owned truth/read model/handler Gate와 two-surface React/fallback을 구현하고,
+  actual Single·Mix desktop/760 QA에서 fresh/stale, role/weight, explicit action을 확인했다.
+
+### 2026-07-18 - Single strategy 설정은 선택이 아니라 현재 후보를 구성하는 단계다
+
+- User request: Quality + Value 화면에 남은 legacy select/form 흐름이 Level2/3와 달라
+  개선되지 않은 것으로 보이므로 구조와 실행 흐름을 다시 파악해 개선해 달라고 요청함.
+- Interpreted goal: strategy를 다시 고르는 중복 UI를 없애고, 현재 후보의 universe,
+  선택·보유 규칙, 비용·위험 기준을 일반 사용자가 한 방향으로 읽고 실행해야 함.
+- Analysis result: React catalog와 Streamlit Strategy select가 선택 ownership을 중복했고,
+  13개 form의 field 순서와 raw ticker/PIT 진단 노출이 서로 달라 판단 흐름을 끊었다.
+- Follow-up: React-owned unique selection, family variant segmented control, 공통 current
+  settings summary와 4-section form hierarchy를 적용했다. actual 두 전략 실행과
+  desktop/760px QA로 payload/runtime/Level2 Gate 보존을 확인했다.
+
+### 2026-07-18 - 모든 Single strategy 설정은 같은 제품 UI와 Python 계약을 사용한다
+
+- User request: Quality+Value에만 적용된 정리 수준을 넘어서 GTAA, Equal Weight 등
+  모든 전략의 strategy-specific Streamlit UI를 Level2/3와 같은 디자인으로 통일해 달라고 요청함.
+- Interpreted goal: 전략을 바꿔도 설정 구조와 행동이 달라지지 않고, 일반 사용자가
+  Universe·선택/보유·비용/위험을 같은 순서로 이해해 기존 runner를 안전하게 실행해야 함.
+- Analysis result: 9개 선택이 13개 native renderer와 167개 이상 widget call로 분산돼
+  visual/payload drift가 났고, compatibility Snapshot과 hidden default가 primary 실행을 막을 수 있었다.
+- Follow-up: Python schema/validation/payload + React intent/editor로 primary route를 통일하고
+  replay compatibility를 격리했다. 전체 전략 매트릭스, actual 3개 실행, desktop/760 QA를 완료했다.
+
+### 2026-07-18 - 복수 선택은 modifier key가 아니라 option 규모에 맞는 control을 사용한다
+
+- User request: Quality 지표와 GTAA 선택·보유 규칙에서 한 번에 한 항목만 선택되는 것처럼
+  보이므로 여러 항목을 쉽게 선택할 수 있게 개선 요청함.
+- Interpreted goal: Python 실행 계약은 유지하면서 일반 사용자가 Command/Ctrl 없이 기존
+  선택을 보존한 채 항목을 추가·제거하고 현재 selection을 항상 확인해야 함.
+- Analysis result: schema/payload는 이미 list를 지원했고 browser-native `<select multiple>`의
+  modifier interaction이 원인이었다. option 수는 compact 4·14, large 1,031로 양극화됐다.
+- Follow-up: 20개 이하 checkbox-card, 21개 이상 search/list/chip을 공통 React renderer에
+  적용하고 actual Quality·GTAA·large option desktop/760 QA를 완료했다.
+
+### 2026-07-18 - preset은 자산 목록뿐 아니라 검증 규칙의 재현 가능한 시작점이다
+
+- User request: GTAA뿐 아니라 전체 전략에서 preset을 선택하면 선택·보유·비용·위험 옵션이
+  자동으로 세팅되는지 확인하고, 그렇지 않으면 수정해 달라고 요청함.
+- Interpreted goal: preset 이름과 universe만 바뀌고 이전 사용자 tuning이 남는 상태를 없애되,
+  검증 기간과 manual ticker draft, saved replay의 명시값은 잃지 않아야 함.
+- Analysis result: React editor는 preset을 일반 select field로만 처리했고 legacy GTAA parameter
+  defaults도 일부 preset에만 있어 이름과 실제 실행 규칙이 분리돼 있었다.
+- Follow-up: 모든 named preset에 schema base profile을 제공하고 근거가 있는 GTAA 값만
+  override했다. React/fallback이 같은 Python profile을 적용하며 actual 4개 전략군에서 reset과
+  desktop/760px layout을 확인했다.
+
+### 2026-07-18 - Level1 결과는 수익률·기준·리밸런싱 시점을 같은 언어로 설명한다
+
+- User request: 결과 chart의 실제 날짜와 hover, Benchmark 이름, 현재/목표 구성의 리밸런싱
+  시점, 이해하기 어려운 기술 부록을 개선하되 달러 투자금 control은 만들지 말아 달라고 요청함.
+- Interpreted goal: normalized 수익률만으로 성과를 읽고, 평가일·신호일·리밸런싱·다음 예상과
+  계산/데이터 근거를 Level1에서 오해 없이 확인해야 함.
+- Analysis result: chart는 index/return 관계와 Benchmark contract가 빠졌고 schedule은 여러 날짜를
+  한 의미로 보였으며 raw metadata가 첫 disclosure를 차지했다.
+- Follow-up: Python-owned chart/schedule/basis와 pointer-only React/fallback을 구현하고 actual
+  Equal Weight desktop/760px hover·overflow·disclosure QA를 완료했다.
+
+### 2026-07-18 - 현재 선택, 이전 결과, 팩터 기술 키는 서로 다른 계약이다
+
+- User request: Quality+Value 선택 중 GTAA 설정이 보이고 reset/refresh Streamlit 안내와 raw table이
+  남으며 factor snake_case label이 잘리는 문제를 전체적으로 수정 요청함.
+- Interpreted goal: 현재 후보는 현재 선택만 설명하고 이전 성공 결과는 참고용으로 보존하며,
+  계산 key를 바꾸지 않고 일반 사용자가 factor 의미와 stale 이유를 이해해야 함.
+- Analysis result: current/result configuration 혼합, value/label 재사용, duplicate lifecycle renderer가
+  각각 원인이었고 strategy runtime이나 Level2 Gate 변경은 필요하지 않았다.
+- Follow-up: Python summary/label/lifecycle 경계를 분리하고 legacy notice/table을 제거했으며
+  desktop/760px presentation QA와 regression test로 current contract를 확인했다.
+
+### 2026-07-19 - Backtest 최상단은 통과 판정이 아니라 단계 책임과 이동을 설명한다
+
+- User request: 초기 Streamlit 상단을 Level1~3와 같은 React 시각 언어로 바꾸고 A안으로 개발 요청함.
+- Interpreted goal: 중복 title/설명/red pills를 제거하고 사용자가 현재 단계의 역할과 다음 화면을
+  한 번에 이해하되 Level별 Gate나 registry 상태를 page shell에서 다시 계산하지 않아야 함.
+- Analysis result: stage/route truth는 기존 Python에 있었고 문제는 presentation duplication이었다.
+  pure shell read model과 validated intent adapter면 runtime/persistence 변경 없이 해결할 수 있었다.
+- Follow-up: A안 React header/rail과 Python fallback을 적용하고 desktop/760px Level1~3 이동,
+  overflow, current context를 확인했다. baseline failure와 dependency/accessibility risk는 task에 남겼다.
 ### 2026-07-12 - 계정·토큰 없이 Nasdaq-100 가치평가를 만들 수 있는가
 
 - User request: GuruFocus 계정·API token·유료 구독 없이 S&P와 유사한 Nasdaq 가치평가를 만들 수 있는지 검토 요청함.
@@ -9758,6 +10014,28 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 경제 factor는 관측 상태로 유지하고, 금리·실질금리·달러·위험회피·실제 가격을 독립 경로로 표시하며 미측정 요인과 데이터 한계를 공개해야 함.
 - Analysis result: 5/21/63거래일 변화, 5년 materiality, 최신성 기반 공통 evaluator와 금·달러 파일럿을 구현했다. Actual은 금 `SUFFICIENT`, 달러는 해외 상대금리 부재로 `PARTIAL`이다.
 - Follow-up: 전체 5차 중 2차까지 완료했다. 채권·금리, 주식, 원자재는 기존 방향 결론을 제거하고 `시장 경로 미연결`로 두며 별도 명세 후 3~5차로 확장한다.
+
+### 2026-07-18 - Institutional Portfolios는 선택 기관 맥락을 먼저 읽는다
+
+- User request: Institutional Portfolios를 Overview 시장 맥락의 디자인 문법으로 바꾸고, 불편한 UX와 노출되지 않는 종목을 전체적으로 개선해 달라고 요청함.
+- Interpreted goal: 그래프는 유지하면서 선택 기관의 포트폴리오 특징을 먼저 이해하고, 모든 보유 종목과 특정 종목 상세를 누락 없이 탐색해야 함.
+- Audit result: current React는 전체 보유를 80개로 잘라 Bridgewater 993개 중 913개를 숨기고, primary 종목 검색이 없으며, mapping coverage와 previous-quarter 부재가 sector / chart / change 의미를 제한했다.
+- Analysis result: `institutional_portfolios_workbench_v2`가 선택 기관 context hero, full 50-row holdings explorer, ticker / issuer / CUSIP 검색, mapping / performance coverage 분리, previous-quarter change gate를 소유한다. 미매핑 row는 issuer / CUSIP을 유지하고 가격 action을 열지 않는다.
+- Follow-up: 전체 roadmap `4/4`를 완료했다. Bridgewater actual `993/993` explorer row, mapped / unresolved 종목 흐름, desktop / 420px QA를 확인했다. Historical filing backfill과 verified security master는 별도 승인 범위다.
+
+### 2026-07-18 - 직접 종목 검색은 선택 기관 보유 여부와 종목 identity를 분리한다
+
+- User request: 최종 리뷰에서 선택 기관이 보유하지 않은 mapped 종목 검색, query 대소문자 완료 상태, manager 0건 / stale state / unresolved 이동 결함을 모두 보완해 달라고 요청함.
+- Interpreted goal: direct security search는 전체 Institutional Interest에서 종목 identity와 holder evidence를 찾되, 선택 기관 포지션을 0으로 위조하지 않고 별도 unavailable 상태로 보여야 함.
+- Analysis result: interest holder의 mapped identity가 DB price symbol을 소유하고, selected-manager holding은 독립적인 optional position이다. manager 0건은 검색 결과 상태일 뿐 현재 live context를 교체하는 조건이 아니다.
+- Follow-up: builder / loader / React pure helper 회귀 테스트와 actual Browser QA로 두 경계를 고정했다. verified security master 자체는 여전히 별도 data dependency다.
+
+### 2026-07-18 - 무료 OpenFIGI로 13F ticker identity를 보강한다
+
+- User request: `ticker 연결 전`이 많은 원인이 data인지 개발인지 확인한 뒤, 무료 API라면 안전한 CUSIP-ticker 연결 개발을 진행해 달라고 요청함.
+- Interpreted goal: SEC holding은 보존하면서 verified external identity source로 chart/price/sector 연결률을 높이고 복수 후보와 provider error는 계속 차단해야 함.
+- Analysis result: OpenFIGI v3는 anonymous와 free key 모두 무료다. Legacy name-match table에는 CUSIP-only stale/wrong 후보가 있어 provider current resolution을 분리하고 `mapped/ambiguous gate > legacy exact issuer-name > unresolved` 순서로 읽어야 한다.
+- Follow-up: 전체 roadmap `4/4`를 완료했다. Actual anonymous curated backfill은 1,244개 중 1,195 mapped / 49 unmapped / 0 ambiguous / 0 error이며, Berkshire 29/29, Bridgewater 985/993, Duquesne 70/70과 대표 종목 상세 Browser QA를 확인했다. Full latest-manager expansion과 historical PIT identity는 후속 승인 범위다.
 
 ### 2026-07-18 - S&P 500 실제 EPS는 공식 workbook 등록과 release vintage로 보강한다
 

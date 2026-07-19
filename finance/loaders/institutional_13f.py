@@ -12,6 +12,69 @@ from finance.data.db.mysql import MySQLClient
 DB_META = "finance_meta"
 
 
+_IDENTITY_SYMBOL_SQL = """
+CASE
+  WHEN ir.resolution_status = 'ambiguous' THEN NULL
+  WHEN ir.resolution_status = 'mapped' THEN ir.symbol
+  WHEN lm.symbol_count > 1 THEN NULL
+  ELSE COALESCE(h.holding_symbol, lm.symbol)
+END
+""".strip()
+
+_IDENTITY_SOURCE_SQL = """
+CASE
+  WHEN ir.resolution_status = 'ambiguous' THEN 'openfigi_v3_ambiguous'
+  WHEN ir.resolution_status = 'mapped' THEN 'openfigi_v3'
+  WHEN lm.symbol_count > 1 THEN 'legacy_mapping_ambiguous'
+  ELSE COALESCE(h.symbol_source, lm.source)
+END
+""".strip()
+
+_IDENTITY_STATUS_SQL = """
+CASE
+  WHEN ir.resolution_status = 'ambiguous' THEN 'ambiguous'
+  WHEN ir.resolution_status = 'mapped' AND ir.symbol IS NOT NULL THEN 'mapped'
+  WHEN lm.symbol_count > 1 THEN 'ambiguous'
+  WHEN COALESCE(h.holding_symbol, lm.symbol) IS NOT NULL THEN 'mapped'
+  ELSE 'unmapped'
+END
+""".strip()
+
+_IDENTITY_JOIN_SQL = f"""
+LEFT JOIN institutional_13f_identifier_resolution ir
+  ON h.cusip = ir.identifier_value
+ AND ir.source = 'openfigi_v3'
+LEFT JOIN (
+  SELECT
+    cusip,
+    UPPER(issuer_name) AS issuer_key,
+    COUNT(DISTINCT symbol) AS symbol_count,
+    CASE WHEN COUNT(DISTINCT symbol) = 1 THEN MAX(symbol) END AS symbol,
+    CASE
+      WHEN COUNT(DISTINCT symbol) = 1 THEN MAX(source)
+      ELSE 'legacy_mapping_ambiguous'
+    END AS source,
+    CASE WHEN COUNT(DISTINCT symbol) = 1 THEN MAX(sector) END AS sector,
+    CASE WHEN COUNT(DISTINCT symbol) = 1 THEN MAX(industry) END AS industry
+  FROM institutional_13f_cusip_symbol_map
+  GROUP BY cusip, UPPER(issuer_name)
+) lm
+  ON h.cusip = lm.cusip
+ AND lm.issuer_key = UPPER(h.issuer_name)
+LEFT JOIN nyse_asset_profile ap
+  ON ap.symbol = {_IDENTITY_SYMBOL_SQL}
+"""
+
+_IDENTITY_SELECT_SQL = f"""
+{_IDENTITY_SYMBOL_SQL} AS holding_symbol,
+{_IDENTITY_SOURCE_SQL} AS symbol_source,
+{_IDENTITY_STATUS_SQL} AS mapping_status,
+COALESCE(h.figi, ir.figi) AS figi,
+COALESCE(h.sector, ap.sector, lm.sector) AS sector,
+COALESCE(h.industry, ap.industry, lm.industry) AS industry
+"""
+
+
 def _empty_frame(columns: list[str]) -> pd.DataFrame:
     return pd.DataFrame(columns=columns)
 
@@ -64,30 +127,48 @@ def _dedupe_interest_rows(rows: list[dict[str, Any]], *, limit: int) -> list[dic
 def _load_mapped_cusips_for_symbol(db: MySQLClient, symbol: str, *, limit: int = 25) -> list[str]:
     rows = db.query(
         """
-        SELECT DISTINCT cusip
-        FROM institutional_13f_cusip_symbol_map
-        WHERE symbol = %s
-        ORDER BY cusip ASC
+        SELECT cusip
+        FROM (
+          SELECT identifier_value AS cusip, 0 AS source_order
+          FROM institutional_13f_identifier_resolution
+          WHERE source = 'openfigi_v3'
+            AND resolution_status = 'mapped'
+            AND symbol = %s
+          UNION ALL
+          SELECT cusip, 1 AS source_order
+          FROM institutional_13f_cusip_symbol_map
+          WHERE symbol = %s
+        ) candidates
+        ORDER BY source_order ASC, cusip ASC
         LIMIT %s
         """,
-        (symbol, int(limit)),
+        (symbol, symbol, max(int(limit) * 4, int(limit))),
     )
-    return [str(row["cusip"]) for row in rows if row.get("cusip")]
+    return list(dict.fromkeys(str(row["cusip"]) for row in rows if row.get("cusip")))[: int(limit)]
 
 
 def _load_mapped_cusips_for_issuer(db: MySQLClient, query: str, *, limit: int = 25) -> list[str]:
     like_query = f"%{query.upper()}%"
     rows = db.query(
         """
-        SELECT DISTINCT cusip
-        FROM institutional_13f_cusip_symbol_map
-        WHERE UPPER(issuer_name) LIKE %s
-        ORDER BY cusip ASC
+        SELECT cusip
+        FROM (
+          SELECT identifier_value AS cusip, 0 AS source_order
+          FROM institutional_13f_identifier_resolution
+          WHERE source = 'openfigi_v3'
+            AND resolution_status = 'mapped'
+            AND UPPER(provider_name) LIKE %s
+          UNION ALL
+          SELECT cusip, 1 AS source_order
+          FROM institutional_13f_cusip_symbol_map
+          WHERE UPPER(issuer_name) LIKE %s
+        ) candidates
+        ORDER BY source_order ASC, cusip ASC
         LIMIT %s
         """,
-        (like_query, int(limit)),
+        (like_query, like_query, max(int(limit) * 4, int(limit))),
     )
-    return [str(row["cusip"]) for row in rows if row.get("cusip")]
+    return list(dict.fromkeys(str(row["cusip"]) for row in rows if row.get("cusip")))[: int(limit)]
 
 
 def _load_interest_rows_by_cusips(db: MySQLClient, cusips: list[str], *, limit: int) -> list[dict[str, Any]]:
@@ -102,7 +183,7 @@ def _load_interest_rows_by_cusips(db: MySQLClient, cusips: list[str], *, limit: 
           f.period_of_report,
           f.filing_date,
           h.cusip,
-          COALESCE(h.holding_symbol, sm.symbol) AS holding_symbol,
+          {_IDENTITY_SELECT_SQL},
           h.issuer_name,
           h.reported_value,
           h.shares_or_principal_amount,
@@ -113,9 +194,7 @@ def _load_interest_rows_by_cusips(db: MySQLClient, cusips: list[str], *, limit: 
           ON h.accession_number = f.accession_number
         INNER JOIN institutional_13f_manager m
           ON m.latest_accession_number = f.accession_number
-        LEFT JOIN institutional_13f_cusip_symbol_map sm
-          ON h.cusip = sm.cusip
-         AND UPPER(sm.issuer_name) = UPPER(h.issuer_name)
+        {_IDENTITY_JOIN_SQL}
         WHERE h.cusip IN ({placeholders})
         ORDER BY h.reported_value DESC, m.manager_name ASC
         LIMIT %s
@@ -126,14 +205,14 @@ def _load_interest_rows_by_cusips(db: MySQLClient, cusips: list[str], *, limit: 
 
 def _load_interest_rows_by_holding_symbol(db: MySQLClient, symbol: str, *, limit: int) -> list[dict[str, Any]]:
     return db.query(
-        """
+        f"""
         SELECT
           m.manager_name,
           m.cik,
           f.period_of_report,
           f.filing_date,
           h.cusip,
-          COALESCE(h.holding_symbol, sm.symbol) AS holding_symbol,
+          {_IDENTITY_SELECT_SQL},
           h.issuer_name,
           h.reported_value,
           h.shares_or_principal_amount,
@@ -144,29 +223,26 @@ def _load_interest_rows_by_holding_symbol(db: MySQLClient, symbol: str, *, limit
           ON h.accession_number = f.accession_number
         INNER JOIN institutional_13f_manager m
           ON m.latest_accession_number = f.accession_number
-        LEFT JOIN institutional_13f_cusip_symbol_map sm
-          ON h.cusip = sm.cusip
-         AND UPPER(sm.issuer_name) = UPPER(h.issuer_name)
-        WHERE h.holding_symbol = %s
-           OR sm.symbol = %s
+        {_IDENTITY_JOIN_SQL}
+        WHERE ({_IDENTITY_SYMBOL_SQL}) = %s
         ORDER BY h.reported_value DESC, m.manager_name ASC
         LIMIT %s
         """,
-        (symbol, symbol, int(limit)),
+        (symbol, int(limit)),
     )
 
 
 def _load_interest_rows_by_issuer_text(db: MySQLClient, clean_query: str, *, limit: int) -> list[dict[str, Any]]:
     like_query = f"%{clean_query.upper()}%"
     return db.query(
-        """
+        f"""
         SELECT
           m.manager_name,
           m.cik,
           f.period_of_report,
           f.filing_date,
           h.cusip,
-          COALESCE(h.holding_symbol, sm.symbol) AS holding_symbol,
+          {_IDENTITY_SELECT_SQL},
           h.issuer_name,
           h.reported_value,
           h.shares_or_principal_amount,
@@ -177,15 +253,14 @@ def _load_interest_rows_by_issuer_text(db: MySQLClient, clean_query: str, *, lim
           ON m.latest_accession_number = f.accession_number
         INNER JOIN institutional_13f_holding h
           ON f.accession_number = h.accession_number
-        LEFT JOIN institutional_13f_cusip_symbol_map sm
-          ON h.cusip = sm.cusip
-         AND UPPER(sm.issuer_name) = UPPER(h.issuer_name)
+        {_IDENTITY_JOIN_SQL}
         WHERE UPPER(h.issuer_name) LIKE %s
-           OR UPPER(sm.issuer_name) LIKE %s
+           OR UPPER(ir.provider_name) LIKE %s
+           OR lm.issuer_key LIKE %s
         ORDER BY h.reported_value DESC, m.manager_name ASC
         LIMIT %s
         """,
-        (like_query, like_query, int(limit)),
+        (like_query, like_query, like_query, int(limit)),
     )
 
 
@@ -210,7 +285,7 @@ def _load_popularity_rows(db: MySQLClient, report_period: str, *, limit: int, fo
           h.report_period,
           h.cusip,
           SUBSTRING_INDEX(
-            GROUP_CONCAT(NULLIF(h.holding_symbol, '') ORDER BY h.reported_value DESC SEPARATOR '||'),
+            GROUP_CONCAT(NULLIF(({_IDENTITY_SYMBOL_SQL}), '') ORDER BY h.reported_value DESC SEPARATOR '||'),
             '||',
             1
           ) AS holding_symbol,
@@ -228,6 +303,7 @@ def _load_popularity_rows(db: MySQLClient, report_period: str, *, limit: int, fo
             5
           ) AS sample_managers
         FROM institutional_13f_holding h{index_clause}
+        {_IDENTITY_JOIN_SQL}
         WHERE h.report_period = %s
           AND (h.put_call IS NULL OR h.put_call = '')
         GROUP BY h.report_period, h.cusip
@@ -444,7 +520,7 @@ def load_institutional_13f_holdings(
     db = _connect(host, user, password, port)
     try:
         rows = db.query(
-            """
+            f"""
             SELECT
               h.accession_number,
               h.infotable_sk,
@@ -455,22 +531,16 @@ def load_institutional_13f_holdings(
               h.issuer_name,
               h.title_of_class,
               h.cusip,
-              h.figi,
+              {_IDENTITY_SELECT_SQL},
               h.reported_value,
               h.shares_or_principal_amount,
               h.amount_type,
               h.put_call,
               h.investment_discretion,
-              COALESCE(h.holding_symbol, m.symbol) AS holding_symbol,
-              COALESCE(h.symbol_source, m.source) AS symbol_source,
-              COALESCE(h.sector, m.sector) AS sector,
-              COALESCE(h.industry, m.industry) AS industry,
               h.source_dataset,
               h.source_ref
             FROM institutional_13f_holding h
-            LEFT JOIN institutional_13f_cusip_symbol_map m
-              ON h.cusip = m.cusip
-             AND UPPER(m.issuer_name) = UPPER(h.issuer_name)
+            {_IDENTITY_JOIN_SQL}
             WHERE h.accession_number = %s
             ORDER BY h.reported_value DESC, h.issuer_name ASC
             """,

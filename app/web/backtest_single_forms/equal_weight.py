@@ -3,39 +3,50 @@ from __future__ import annotations
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_single_runner import _handle_backtest_run
 from app.web.backtest_single_forms import _apply_single_strategy_prefill
+from app.web.backtest_single_settings_workspace import single_settings_section
 
 def _render_equal_weight_form() -> None:
-    st.markdown("### Equal Weight")
-    st.caption("선택한 ETF / 자산 universe를 동일 비중으로 보유하고 지정한 주기로 리밸런싱합니다.")
     _apply_single_strategy_prefill("equal_weight")
 
-    _universe_mode, preset_name, tickers = _render_equal_weight_universe_inputs(
-        key_prefix="eq",
-    )
-
-    with st.form("equal_weight_backtest_form", clear_on_submit=False):
+    with single_settings_section(
+        "핵심 실행 설정",
+        "검증할 기간과 동일 비중 포트폴리오의 조정 주기를 정합니다.",
+    ):
         col1, col2 = st.columns(2)
         with col1:
-            start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="eq_start")
+            start_date = st.date_input("시작일", value=date(2016, 1, 1), key="eq_start")
         with col2:
-            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="eq_end")
+            end_date = st.date_input("종료일", value=DEFAULT_BACKTEST_END_DATE, key="eq_end")
+        rebalance_interval = st.number_input(
+            "리밸런싱 간격(개월)",
+            min_value=1,
+            max_value=36,
+            value=12,
+            step=1,
+            help="1은 매월, 12는 연 1회 비중을 다시 맞춥니다.",
+            key="eq_rebalance_interval",
+        )
 
-        with st.expander("Advanced Inputs", expanded=False):
-            timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="eq_timeframe")
-            option = st.selectbox("Option", options=["month_end"], index=0, key="eq_option")
-            rebalance_interval = st.number_input(
-                "Rebalance Interval",
-                min_value=1,
-                max_value=36,
-                value=12,
-                step=1,
-                help=(
-                    "`option=month_end` 기준으로 1=매월(대략 4주), 4=4개월마다, 12=연 1회입니다. "
-                    "Equal Weight sample 기본값은 12입니다."
-                ),
-                key="eq_rebalance_interval",
-            )
-        with st.expander("Promotion Policy Signal", expanded=False):
+    with single_settings_section(
+        "투자 대상 Universe",
+        "기본 자산 구성을 사용하거나 검증할 ETF·자산을 직접 입력합니다.",
+    ):
+        _universe_mode, preset_name, tickers = _render_equal_weight_universe_inputs(
+            key_prefix="eq",
+        )
+
+    timeframe = "1d"
+    option = "month_end"
+    with st.form("equal_weight_backtest_form", clear_on_submit=False, border=False):
+        with single_settings_section(
+            "선택·보유 규칙",
+            "선택한 자산을 같은 비중으로 보유하며 위에서 정한 간격마다 조정합니다.",
+        ):
+            st.caption("일별 가격과 월말 기준으로 동일 비중을 계산합니다.")
+        with single_settings_section(
+            "비용·위험 기준",
+            "거래 비용, 비교 기준, ETF 운용 가능성 기준을 필요할 때 조정합니다.",
+        ):
             (
                 min_price_filter,
                 transaction_cost_bps,
@@ -44,7 +55,7 @@ def _render_equal_weight_form() -> None:
                 promotion_max_bid_ask_spread_pct,
             ) = _render_etf_real_money_inputs(key_prefix="eq")
 
-        submitted = st.form_submit_button("Run Equal Weight Backtest", use_container_width=True)
+        submitted = st.form_submit_button("이 설정으로 백테스트 실행", use_container_width=True)
 
     if not submitted:
         return
@@ -52,9 +63,9 @@ def _render_equal_weight_form() -> None:
     validation_errors: list[str] = []
 
     if not tickers:
-        validation_errors.append("At least one ticker is required.")
+        validation_errors.append("투자 대상 종목을 한 개 이상 선택해 주세요.")
     if start_date > end_date:
-        validation_errors.append("Start Date must be earlier than or equal to End Date.")
+        validation_errors.append("시작일은 종료일보다 늦을 수 없습니다.")
 
     if validation_errors:
         for error in validation_errors:

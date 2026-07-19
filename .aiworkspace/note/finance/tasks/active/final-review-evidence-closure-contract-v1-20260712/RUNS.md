@@ -36,3 +36,102 @@
 - Practical Validation fix queue Vite production build, target `py_compile`, `git diff --check` 통과.
 - Browser QA: current GRS replay 후 Flow 3 accepted-limit root count 5, immediate/development blocker 0, Flow 4 old closure path 없음, `· 미정` 없음, 760px document `clientWidth=760 / scrollWidth=760`, console error 0.
 - QA screenshot: `qa-practical-validation-closure-summary-760.png` generated artifact로 남기고 commit하지 않는다.
+
+## 2026-07-16 Decision Workspace 1차
+
+- 시작 기준선: closure / Final Review / boundary 95 tests 중 기존 Practical Validation source-string expectation 2개 실패. 실제 호출은 `render_practical_validation_workspace_overview(validation_result, source=source)`이며 2026-07-09 인자 추가 뒤 2026-07-05 테스트 문자열이 갱신되지 않은 drift로 확인했다.
+- RED: `tests.test_backtest_final_review_decision_brief` 8 tests가 새 service 부재로 10 errors를 내며 실패했다.
+- GREEN: 같은 module 8 tests, `OK`.
+- 1차 fresh focused regression: Decision Brief + evidence closure 26 tests, `OK`; target `py_compile`, `git diff --check`, cached diff check 통과.
+- commit: `eaa8ce6a Final Review Decision Brief 계약 도입`.
+
+## 2026-07-16 Decision Workspace 2차
+
+- RED: Decision Brief module 18 tests 중 새 behavior projection 10 tests가 unmeasured/empty projection으로 7 failures + 3 errors를 내며 실패했다.
+- GREEN: Decision Brief 18 tests, `OK`.
+- 2차 fresh focused regression: Decision Brief + evidence closure + GRS 41 tests, `OK`; target `py_compile`, `git diff --check`, cached diff check 통과.
+- GRS regression fixture: chart terminal `2026-06-30`, latest valuation `2026-06-30`, last complete rebalance `2026-05-29`, fake June rebalance 없음.
+- commit: `b920d699 Final Review 포트폴리오 행동 근거 투영`.
+
+## 2026-07-16 Decision Workspace 3차
+
+- RED: Final Review evidence read-model / boundary 86 tests에서 새 wrapper·React workspace·source contract 부재로 2 failures + 7 errors를 확인했다.
+- GREEN: Decision Brief + Final Review evidence read-model + boundary 104 tests, `OK`.
+- target `py_compile`, Vite production build(176 modules), `git diff --check`, cached diff check 통과.
+- Browser QA 1440px: section order, cumulative/benchmark, underwater, measured finding/trait, candidate switch, route 선택, reason 입력, 저장 버튼 활성화를 확인했다.
+- Browser QA 760px: candidate cards/decision controls 단일 열, candidate switch, route 선택, reason 입력, outer document와 component 모두 horizontal overflow 없음(`760/760`, `717/717`) 확인.
+- 저장 버튼은 append를 피하기 위해 클릭하지 않았고 QA screenshot `qa-final-review-decision-workspace-760.png`는 generated artifact로 남겨 commit하지 않는다.
+- commit: `3f4350d9 Final Review Decision Workspace UI 전환`.
+
+## 2026-07-16 Decision Workspace 4차
+
+- RED: persistence / downstream 142 tests에서 snapshot API와 decision row 인자 부재, legacy-only Monitoring trigger consumption으로 1 failure + 8 errors를 확인했다.
+- GREEN: 같은 142 tests, `OK`; target 4-file `py_compile`, `git diff --check` 통과.
+- 첫 completion suite: 210 tests 중 legacy compatibility export 파일만 읽는 stale closure source-string test 1개 실패. current owner `DecisionBriefWorkspace.tsx`의 Python-owned monitoring/disclosure contract로 expectation을 교정한 뒤 단일 test `OK`.
+- fresh completion suite: Decision Brief / closure / GRS / boundary / Final Review / Monitoring timeline / Practical Validation 210 tests, `OK`.
+- Vite production build: 176 modules, CSS 12.95 kB, JS 336.25 kB, `OK`; service/page/helpers/component/read model 5-target `py_compile`, `git diff --check` 통과.
+- Browser QA 1440px: current GRS 후보, section order, cumulative/benchmark, underwater, measured finding/trait, unmeasured trait axes, candidate switch, route/reason 입력, save activation 확인.
+- Browser QA 760px: outer `760/760`, component `717/717` horizontal overflow 없음; candidate switch, reason 입력, 4개 canonical route checked state를 모두 확인했다.
+- protected registry append를 피하기 위해 save CTA는 클릭하지 않았다. duplicate/stale guard, selected-only handoff, append row는 contract test로 검증했다.
+- QA screenshot: `qa-final-review-decision-workspace-760.png` generated artifact로 남기고 commit하지 않는다.
+- commit: `316e409b Final Review 판단과 Monitoring 조건 저장 통합`.
+
+## 2026-07-16 Market Context Visual Fidelity Correction
+
+- baseline: 기존 Decision Workspace focused regression 109 tests, `OK`.
+- RED: `tests.test_final_review_market_context_visual_contract` 3 tests가 question-first header, canonical token, chart palette 부재로 모두 실패했다.
+- GREEN: 같은 visual contract 3 tests, `OK`.
+- focused regression: visual contract + Decision Brief + Final Review evidence read model + boundary 112 tests, `OK`.
+- Vite production build: 176 modules, CSS 15.08 kB, JS 337.26 kB, `OK`; `git diff --check` 통과.
+- Browser QA 1280/1440: actual Market Context와 Final Review의 gradient, `#152033` text, 20px outer radius, soft shadow, 17px chart, 14px metric band가 같은 computed visual contract임을 확인했다.
+- Browser QA 760: outer/component horizontal overflow 없음, header/chart/finding 단일 열, route 2열, reason/disclosure 유지, reason 입력 시 save CTA 활성화, console error 0건을 확인했다. protected registry를 지키기 위해 save CTA는 클릭하지 않았다.
+- QA screenshot: `qa-final-review-market-context-visual-parity-760.png`를 generated artifact로 남기고 stage하지 않는다.
+- commit: `587757e9 Final Review 시장 맥락 시각 체계 적용`.
+- fresh completion verification: 같은 focused suite 112 tests `OK`, Vite 176-module build `OK`, Decision Brief service / Final Review page / component target `py_compile`, `git diff --check` 모두 통과했다.
+
+## 2026-07-16 Chart Interaction And Content Polish
+
+- heading/list RED: 새 source-contract 2개가 `.db-section-heading-copy`, 3열 observation grid와 wrap 규칙 부재로 2 failures를 냈다.
+- heading/list GREEN: visual contract 5 tests `OK`; 구현 커밋 `88fc62c7`.
+- chart RED: hover/tick/tooltip/Underwater semantics contract가 `type ChartUnit` 부재로 실패했다.
+- chart GREEN: visual contract 6 tests `OK`; focused Decision Brief / Final Review read-model / boundary suite 115 tests `OK`; Vite production build 176 modules `OK`; 구현 커밋 `54b11008`.
+- desktop Browser QA: 누적 성과 hover가 latest `2026-06-26 / 530 / 183`에서 과거 `2018-09-28 / 162 / 120`으로 갱신됐고, Underwater도 `2018-07-31 / 0.00%`로 갱신됐다. 두 crosshair와 총 3개 focus dot을 확인했다.
+- 760px Browser QA: component `717/717`로 horizontal overflow 0, chart 1열, observation 2×3, 긴 `weak_source_or_proxy_liquidity_evidence` 전체 줄바꿈, tooltip card 내부 유지, 섹션 detail이 title copy 아래로 배치됨을 확인했다.
+
+## 2026-07-16 Portfolio Character And Review Pressure Separation
+
+- Python RED: 새 4개 character/pressure contract가 `character_profile` / `review_pressure` 부재와 기존 `trait_map` 잔존으로 3 errors + 1 failure를 냈다. 0 criterion test는 기존 division path의 `ZeroDivisionError`를 재현했다.
+- Python GREEN: Decision Brief module 23 tests `OK`; 0 criterion은 명시적 contract error로 처리했다. 구현 커밋 `86170a91`.
+- UI RED: reading order, 새 presentation owner, fallback parity, responsive layout 4개 contract가 missing component/field와 old radar 의존으로 실패했다.
+- UI GREEN: focused visual / Decision Brief / Final Review read-model / boundary suite 120 tests `OK`; React production build 177 modules, target `py_compile`, `git diff --check` 통과. 구현 커밋 `bbe4449d`.
+- Browser QA current GRS: 새 Streamlit 프로세스에서 actual 5개와 pressure 5개를 확인했다. concentration `기준 초과`, drawdown `기준 이내`, turnover/cost `기준 미설정`, regime `분석 근거 없음`이며 radar/83.3 score는 없다.
+- 760px Browser QA: character/pressure가 1열로 전환됐고 character value 빈 값 0, character card clipping 0, pressure row clipping 0을 확인했다. screenshot `qa-final-review-character-pressure-760.png`는 generated artifact로 남기고 stage하지 않는다.
+- 기존 장기 실행 Streamlit 프로세스에서는 새 React bundle과 캐시된 구 Python payload가 잠시 충돌해 component error를 재현했다. 프로세스 재기동 후 새 계약으로 정상 렌더링됐고 이후 component error는 재현되지 않았다. Final Review save CTA는 클릭하지 않았다.
+- QA screenshot: `qa-final-review-chart-hover-content-polish-760.png`는 generated artifact로 남기고 stage하지 않는다. Final Review save CTA는 클릭하지 않았다.
+- fresh completion verification: focused 115 tests `OK`, Vite 176-module production build `OK`, Decision Brief service / Final Review page / component `py_compile`와 `git diff --check` 모두 통과했다. status에는 protected registry, run history와 generated artifact만 의도대로 남았다.
+
+## 2026-07-16 Monitoring Change Condition Producer
+
+- RED: current production-shaped 3-test run에서 조건 id set이 빈 배열이라 1 failure, finding 보존 / 임의 threshold 금지 2 tests는 `OK`.
+- GREEN: 같은 3 tests `OK`.
+- Decision Brief module: 26 tests, `OK`.
+- focused visual / Decision Brief / Final Review read-model / boundary suite: 123 tests, `OK`.
+- target Decision Brief service / Final Review page `py_compile`, `git diff --check` 통과.
+- read-only current runtime probe는 실제 registry loader → eligible source option → candidate context → Decision Brief projection 경로를 통과했다.
+- runtime probe 결과: eligible `True`, drawdown `-12.43% / -15.00%`, Benchmark `+347.35%p / 0.00%p`, strengths 2개와 concentration weakness 1개 유지, unstructured trigger는 CAGR / Data Trust 2개다.
+- 구현 커밋: `04a32c1d Final Review Monitoring 변화 조건 생성`.
+- Streamlit 8505 프로세스는 `--fileWatcherType none`이므로 구현 뒤 재시작했다.
+- 현재 세션에 in-app Browser 조작 도구가 노출되지 않아 desktop / 760px visual screenshot QA는 완료하지 못했다. save CTA와 protected registry는 건드리지 않았다.
+- fresh completion verification: focused 123 tests `OK`, React production build 177 modules `OK`, Decision Brief service / Final Review page / component `py_compile`, `git diff --check` 모두 통과했다.
+
+## 2026-07-16 Final Review Observation Freshness Refresh
+
+- baseline: existing Final Review focused suite 105 tests `OK`.
+- 1차 RED: freshness status 5 tests가 새 service 부재로 5 errors. GREEN과 adapter regression: 113 tests `OK`.
+- 2차 RED: orchestration 5 tests가 missing function으로 5 errors. GREEN: refresh/replay/validation service 40 tests와 existing Final Review 105 tests `OK`.
+- 3차 RED: Decision Brief / Streamlit / save guard 5 tests가 missing parameter/consumer로 5 errors. GREEN focused suite 113 tests `OK`.
+- 4차 RED/GREEN: compact freshness visual contract와 DB loader failure contract를 추가했다. completion suite는 refresh / Decision Brief / visual / Final Review read model / replay / GRS 130 tests `OK`.
+- React Vite production build: 177 modules, CSS 18.55 kB, JS 340.29 kB, `OK`.
+- target `py_compile`, `git diff --check`, read-only current GRS runtime probe `OK`.
+- current GRS probe: `price_refresh_available`, curve `2026-06-26`, latest session `2026-07-15`, DB common `2026-06-26`, limiter `BIL`, `selection_blocked=True`.
+- Browser QA는 인앱 브라우저 조작 실행 도구가 세션에 노출되지 않아 미실행이다. 실제 refresh/save는 실행하지 않았고 protected registry / run history를 stage하지 않았다.

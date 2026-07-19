@@ -23,8 +23,12 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Current active task is none.
+  - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~14차를 완료했고 승인된 15차 Portfolio Mix React one-shell 설계의 구현 계획과 개발을 이어간다.
   - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro를 현재 1D/5D/20D 체제와 5D/20D 조건부 전망으로 개편하고, 일봉 갱신 시 5년 compact snapshot을 materialize해 첫 진입은 DB-only로 읽으며 방법론·계산 추적을 React로 통합했다.
+  - Recent completed Institutional Portfolios task is [institutional-13f-openfigi-mapping-v1-20260718](./tasks/active/institutional-13f-openfigi-mapping-v1-20260718/STATUS.md). 무료 OpenFIGI current resolution, curated-manager backfill, actual DB / Browser QA를 전체 roadmap `4/4`로 완료했다.
+  - Previous completed Institutional Portfolios task is [institutional-portfolios-context-first-redesign-v1-20260718](./tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md). 전체 roadmap `4/4`; v2 context-first IA, full holdings explorer, explicit security search, actual DB / desktop / 420px QA를 완료했다.
+  - Recent completed Overview / Market Context task is [overview-economic-cycle-sp500-actual-eps-registration-v1-20260718](./tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/STATUS.md). 공식 workbook 등록 제품 경로는 완료했고 실제 workbook과 발표일 입력은 외부 입력으로 남아 있다.
+  - Previous completed task is [overview-economic-cycle-asset-pathways-stages3-5-v1-20260717](./tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/STATUS.md). 전체 자산경로 roadmap `5/5`를 완료했다.
   - Previous completed task is [overview-economic-cycle-asset-signal-copy-v1-20260717](./tasks/active/overview-economic-cycle-asset-signal-copy-v1-20260717/STATUS.md). 자산별 미국 경기 신호·실제 가격·두 신호 관계와 5/21/63거래일 표기를 사용자 언어로 정리했다.
   - Previous completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 일봉의 1주·1개월·3개월 가격 흐름과 경제 배경의 일치·불일치를 표시한다.
   - Previous completed task is [overview-economic-cycle-asset-context-v1-20260716](./tasks/active/overview-economic-cycle-asset-context-v1-20260716/STATUS.md). 정적 시장 질문을 evidence 기반 자산별 확인 포인트로 바꾸고 우호/부담/혼재/자료 부족, 두 근거, 바뀌는 조건을 2×2 카드로 표시한다.
@@ -34,7 +38,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Previous completed Overview / Market Context task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL canonical EPS reader와 six-rail transition/already-positive semantics를 1차~3차로 완료했다.
   - Previous completed Overview / Market Context task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md). Cached selected-stock UI는 DB-only로 유지하고 stale repair는 explicit single action으로 제한한다.
   - Previous completed Nasdaq task is [overview-market-context-nasdaq100-coverage-repair-action-v1-20260713](./tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md).
-  - Recent completed Institutional Portfolios task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
+  - Previous completed Institutional Portfolios task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
   - Previous completed Institutional Portfolios task is [institutional-portfolios-watchlist-mapping-v1-20260712](./tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
   - Recent completed Final Review task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md). It closes Level2 actionable gaps and records Final Review accepted-limit / Monitoring / defer terminal states.
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
@@ -47,7 +51,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
   - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
   - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
-  - Current active Practical Validation UI task is none.
+  - Current active Practical Validation UI task is [practical-validation-level2-decision-workspace-v1-20260716](./tasks/active/practical-validation-level2-decision-workspace-v1-20260716/STATUS.md).
   - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
@@ -58,6 +62,44 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+### 2026-07-19 - master 병합 충돌 해소
+
+- `finance-integration-review` 기준으로 코드 1개와 canonical/root/task 문서 8개의 충돌을 역할별로 병합했다.
+- NYSE calendar 계산은 master의 공용 service로 단일화하고 Backtest/Final Review가 쓰는 공개 wrapper 계약은 보존했다.
+- 가격 최신화 집중 검증 `19 passed`, 전체 service `837 passed / 기존 baseline 12 failed / 35 subtests passed`, py_compile과 diff-check를 확인했다.
+- registry / run history / saved JSONL, `.superpowers/`, generated QA artifact는 병합 commit에서 제외했다.
+
+### 2026-07-19 - Backtest Workflow Shell And Stage Title Ownership
+
+- Level1~3 공통 진입부를 React workflow shell로 통합하고 현재 단계 책임과 이동 rail을 제공했다.
+- Level2/3의 presentation-only Streamlit title/caption을 제거해 `공통 shell -> active React hero -> body`
+  읽기 순서를 고정했다.
+- focused `55 passed`, full service `822 passed / 12 baseline failed / 35 subtests passed`, desktop/760px
+  Level2/3 route·hero 1개·overflow 0을 확인했다.
+- protected registry, Run History, `.superpowers/`, generated QA screenshot은 commit에서 제외했다.
+
+### 2026-07-18 - Backtest Analysis Level1 Result Evidence Workspace
+
+- 실행 전 결과 미노출, fresh/stale/running/error lifecycle과 `run_result_id` 기반 Level1 기술 인계를 구현했다.
+- 결과를 KPI, chart, current/target holdings, Level1 handoff, Level2 validation questions,
+  evidence, user table, technical appendix의 one-shell로 개편했다.
+- actual Equal Weight desktop/760px Browser QA와 stale handoff 차단, overflow 0,
+  ResizeObserver height sync를 확인했다.
+- protected registry / run history / saved JSONL, `.superpowers/`, generated QA screenshot은 commit에서 제외했다.
+
+### 2026-07-16 - Practical Validation Level2 Decision Workspace
+
+- 1~3차 구현 커밋 `a2352f01`, `0e180f93`, `b661e83a`로 truth contract, pure read model, four-step React/Python one-shell을 완료했다.
+- current latest-per-source eligible GRS projection은 `ready_with_handoff`, resolve-now / engineering / missing-contract 0, accepted limit 6, final decision 1이다.
+- focused 82 tests, React 175 modules build, target py_compile, diff-check, 8505 HTTP health를 통과했다.
+- Browser JS control tool 부재로 desktop / 760px visual QA와 screenshot만 남아 있으며 protected registry / run history / saved / generated artifact는 stage하지 않았다.
+
+### 2026-07-16 - Final Review Monitoring Condition Producer
+
+- 빈 Monitoring 영역은 관찰 데이터 전체 부재가 아니라 structured trigger producer 공백으로 확인했다.
+- Python Decision Brief가 stored complete detail을 우선하고, explicit drawdown / Benchmark observation에서만 안전한 fallback condition을 만든다.
+- 구현 커밋은 `04a32c1d`; Decision Brief 26 tests와 focused 123 tests, current GRS read-only runtime projection을 확인했다.
+- CAGR / Data Trust는 threshold를 지어내지 않고 disclosure에 남겼으며 registry / run history / save CTA는 건드리지 않았다.
 - Overview Futures Macro Pattern Outlook V1:
   - 2026-07-19 마무리에서 `일봉 갱신 -> 5년 current + 5D/20D 계산 -> finance_meta.futures_macro_snapshot 저장 -> Overview DB-only 읽기` 계약을 구현했다. 실제 materialization 10.549s, fresh DB read 0.36~0.37s, browser ready reload 1.877s였다.
   - Streamlit `원본 데이터 / 계산 추적` expander를 제거하고 React disclosure로 통일했다. 방법론·추적 토글 높이 동기화와 420px 표 내부 스크롤을 실제 화면에서 확인했다.
@@ -6257,6 +6299,192 @@ Detailed historical logs were archived on `2026-04-13`.
 - 내부 closure / Gate / save / Final Review 계약은 유지했으며 구현 커밋은 `b5e1cd68`이다.
 - focused 45 tests, Vite build, py_compile, 760px current GRS Browser QA를 통과했다.
 
+## 2026-07-16 - Final Review Decision Workspace V1 Closeout
+
+- 기존 active task의 continuation 1~4차를 완료했다: pure Decision Brief, stored behavior projection, React one-shell, compact persistence / Monitoring handoff.
+- 구현 커밋은 `eaa8ce6a`, `b920d699`, `3f4350d9`, `316e409b`; 상세 RED/GREEN/QA는 task `RUNS.md`에 있다.
+- fresh completion suite 210 tests, Vite 176-module build, target compile, 1440/760 Browser QA를 통과했다.
+- protected registry / run history / saved data와 generated QA screenshot은 stage하지 않았다.
+- 다음 검토 위치는 dynamic historical universe용 PIT membership / delisting provider 승인 여부다.
+
+## 2026-07-16 - Final Review Market Context Visual Fidelity Correction
+
+- 승인 A안이 정보 구조뿐 아니라 `Workspace > Overview > 시장 맥락`의 시각 언어도 포함한다는 기준으로 drift를 교정했다.
+- React workspace에 blue-gray palette, rounded surface, soft shadow, compact type과 responsive hierarchy를 적용했고 Python/Gate/persistence는 유지했다.
+- 구현 커밋은 `587757e9`; focused 112 tests, Vite build, 1280/1440/760 Browser QA와 console error 0건을 확인했다.
+- 다음 검토 위치는 동일 active task의 `STATUS.md`, `RUNS.md`, `RISKS.md`다.
+
+## 2026-07-16 - Final Review Chart Interaction And Content Polish
+
+- 영문 eyebrow를 한글 section title 위로 정렬하고 observation strip을 3/2/1열 card grid로 바꿔 빈 면과 긴 값 clipping을 제거했다.
+- 누적 성과와 고점 대비 낙폭 chart에 실제 X/Y축, crosshair, focus dot, date/value hover를 추가하고 Underwater의 0%/음수 의미를 명시했다.
+- 구현 커밋은 `88fc62c7`, `54b11008`; focused 115 tests, 176-module build, desktop/760 Browser QA를 통과했다.
+- 상세 RED/GREEN과 잔여 위험은 active task `RUNS.md`, `RISKS.md`를 본다. protected registry와 run history는 변경하거나 stage하지 않았다.
+
+## 2026-07-16 - Final Review Portfolio Character / Review Pressure Separation
+
+- 기존 `포트폴리오 성격 지도` radar를 실제 성격 raw value와 관리 기준 대비 압력의 두 surface로 분리했다.
+- 집중/낙폭/회전/비용은 criterion 유무와 무관하게 표시하고, `기준 미설정`과 `분석 근거 없음`을 구분한다. Python이 projection/comparison을 소유한다.
+- 구현 커밋은 `86170a91`, `bbe4449d`; focused 120 tests, 177-module build, py_compile, desktop/760 Browser QA를 통과했다.
+- 다음 검토 위치는 active task `STATUS.md`, `RUNS.md`, `RISKS.md`이며 registry/run history/screenshot은 stage하지 않았다.
+
+## 2026-07-16 - Final Review Observation Freshness Refresh
+
+- Final Review에서 stored curve end / latest completed session / source DB common date / limiting symbol을 구분하고 one-click 최신화 계약을 구현했다.
+- 가격 gap은 기존 OHLCV 수집 → 동일 source replay → 새 Practical Validation append 순으로 Python이 처리하며, selected route만 freshness Gate로 잠근다.
+- 구현 커밋은 `1ac0dae1`, `f163e7a2`, `e80908b8`, `2535a9da`; focused completion 130 tests와 production build/read-only GRS probe를 통과했다.
+- Browser visual QA는 도구 부재로 남았으며 protected registry / run history는 stage하지 않았다. 상세는 active task `RUNS.md`, `RISKS.md`를 본다.
+
+## 2026-07-16 - Practical Validation Level2 Decision Workspace 설계
+
+- Level3 개편 뒤 Level2의 검증 의미, 4/5-flow drift, square multi-surface UI, closure handoff 누락을 재진단했다.
+- `후보와 기준 확인 -> 최신 재검증 -> 결과 해석과 해결 구분 -> 저장 / Final Review 이동`의 4단계 Hybrid One-Shell 설계를 채택했다.
+- 새 active task는 `.aiworkspace/note/finance/tasks/active/practical-validation-level2-decision-workspace-v1-20260716/`이며 DESIGN과 1~4차 상세 PLAN을 완료했다.
+- 다음 작업은 새 세션에서 PLAN의 1차 Validation Truth RED부터 실행하는 것이다.
+
+## 2026-07-16 - Practical Validation Level2 Decision Workspace 보정 구현
+
+- 후보/검증 관점 분리, fragment 재검증, 사용자 설명/5개 상세 category,
+  missing-validator blocker, Level2 validated caution 계약을 구현했다.
+- 최신 GRS read-only projection은 verified 22, validated caution 5,
+  resolve-now/engineering 0, Final Review handoff 2건이다.
+- focused 124 tests, React 175 modules build, target py_compile, diff-check,
+  Streamlit health/HTTP와 canonical docs sync를 완료했다.
+- desktop / 760px Browser QA와 새 screenshot은 Browser JS 제어 도구가
+  노출되는 세션에서 이어서 확인한다. 상세는 active task `RUNS.md`와
+  `RISKS.md`를 본다.
+
+## 2026-07-16 - Practical Validation 선택 배치 / 해결 재노출 보정
+
+- 선택 후보 요약을 one-shell header로 옮기고 5개 검증 관점을 데스크톱
+  3 + 가운데 정렬 2, 760px 1열로 정리했다.
+- 지정 GTAA U3/U5 + GRS 후보의 두 `지금 해결` 재노출은 정상 스펙이 아니라
+  실행 이력과 parser 지원 여부를 무시한 action lifecycle 버그로 확인했다.
+- 이미 시도했거나 자동 처리 불가능한 provider gap은 engineering blocker,
+  실제 월중 평가 계약은 Monitoring handoff로 전환했다.
+- 커밋 `6b0629be`, `bfafdc5c`, `96e15fc2`; code-review 경계를 추가 보정한 뒤
+  fresh 154 tests / 175-module build / py_compile / diff-check와 지정 후보
+  actual projection을 통과했고 Critical / Important 잔여 finding은 없다.
+  Browser QA는 control tool 부재로 남아 있다.
+
+## 2026-07-17 - Practical Validation ETF 수집 / Final Review 인계 Closeout
+
+- 기존 ETF collection job에 iShares SpreadsheetML / Vanguard JSON adapter를
+  연결하고 지정 후보 8개 ETF의 official holdings/exposure를 실제 수집했다.
+- 지정 GTAA U3/U5 + GRS 후보는 재검증 뒤 resolve-now/engineering 0,
+  save-and-move enabled가 됐고 Final Review의 Level2 handoff 3-lane을 확인했다.
+- desktop / 760px Browser QA와 overflow check를 완료했다. 상세 수집 row,
+  RED/GREEN, screenshot 경로는 active task `RUNS.md`를 본다.
+- protected registry/run history/saved data와 generated screenshot은 closeout
+  commit에서 제외한다.
+
+## 2026-07-17 - Practical Validation Atomic Revalidation / Handoff Correction
+
+- 재검증 intent를 component `on_change`에서 먼저 소비해 one-shell 이중 rerun을
+  제거하고, Level2 handoff를 compact root-dedup summary로 바꿨다.
+- Final Review accepted limit는 각 root의 계속 인수 / Level2 반환 선택이 되었고,
+  Python 검증 뒤 compact decision snapshot에 저장된다.
+- 커밋 `c038c938`, `f94b4f50`, `1003488d`, `3fe41c2a`; fresh 188 tests와
+  두 production build를 통과했다. desktop / 760px correction Browser QA는
+  local URL security policy 차단으로 active task `RISKS.md`에 남아 있다.
+
+## 2026-07-17 - Practical Validation Stable Revalidation Boundary Closeout
+
+- callback-only 보정 뒤에도 남은 whole-iframe rerun을 `context / decision` 두 mount
+  boundary로 분리했다. 후보/검증 기준은 고정되고 replay/결과만 갱신된다.
+- 커밋 `f88daf01`, `9d7b6cdc`, `6cf1db11`; fresh 134 tests, 두 React build,
+  py_compile, diff-check를 통과했다.
+- 지정 후보 desktop replay pending/결과 교체와 760px 717/717 iframe overflow 0을
+  current 8505 build에서 확인했다. 상세와 screenshot은 active task `RUNS.md`다.
+- protected registry/run history/saved JSONL과 generated screenshot은 commit하지 않는다.
+
+## 2026-07-17 - Practical Validation Step 1 Selection IA Closeout
+
+- hero를 고정 Level2 질문으로 복원하고 현재 후보/판정 기준을 Step 1 summary로 이동했다.
+- 후보는 기본 닫힘 세로 목록, 판정 기준은 데스크톱 5열·760px 2열로 정리했다.
+- 커밋 `9f3b451a`, `d3f09c53`, `092072ab`, `7b9d262f`; fresh 136 tests,
+  React build, py_compile, diff-check와 desktop/760px Browser QA를 통과했다.
+- protected registry/run history/saved JSONL, `.superpowers/`, generated screenshot은
+  commit하지 않는다. 상세 근거는 active task `RUNS.md`를 본다.
+
+## 2026-07-18 - Backtest Analysis Level1 Decision Workspace Closeout
+
+- Level1을 fixed question / purpose catalog / stable context / decision-first result의
+  Single·Mix one-shell로 개편하고 실행, setup 저장, Level2 인계를 분리했다.
+- Browser QA에서 nested rerun 경고, fresh fingerprint 불일치, dark-theme 대비를
+  추가 보정했고 desktop / 760px actual Single·Mix 흐름을 확인했다.
+- focused Level1 53 tests와 React 175-module build / target py_compile을 통과했다.
+  전체 service 11건은 기존 Sentiment / Level2·3 legacy contract debt다.
+- 상세 commit / QA / risk는 active task `RUNS.md`, `RISKS.md`를 본다. protected
+  JSONL, `.superpowers/`, generated screenshot은 closeout commit에서 제외한다.
+
+## 2026-07-18 - Backtest Analysis Level1 Single Settings Corrective
+
+- React purpose catalog를 Single strategy 선택의 유일한 owner로 두고 중복 Strategy
+  dropdown을 제거했다. Strict Annual / Quarterly는 설정 영역 segmented control로 둔다.
+- 13개 current form을 `핵심 실행 설정 -> 투자 대상 Universe -> 선택·보유 규칙 ->
+  비용·위험 기준`으로 통일하고, 전체 ticker와 데이터 계약은 disclosure로 낮췄다.
+- actual Equal Weight / Quality + Value Strict Annual 실행과 desktop / 760px Browser QA를
+  통과했다. 상세 검증과 screenshot 경로는 active task `RUNS.md`를 본다.
+- protected registry/run history/saved JSONL, `.superpowers/`, generated screenshot은
+  corrective closeout commit에서 제외한다.
+
+## 2026-07-18 - Backtest Analysis Unified React Strategy Settings Closeout
+
+- 9개 Single strategy choice / 12개 primary concrete variant를 Python-owned schema와
+  같은 React 4-section editor로 통일하고 legacy native form dispatch를 primary에서 제거했다.
+- replay-only Quality Snapshot 노출과 hidden-field 실행 거부를 Browser RED -> GREEN으로
+  보정했으며 actual Equal Weight / GTAA / Quality+Value Annual 실행을 완료했다.
+- focused 113 tests, React 175-module build, target py_compile, desktop/760px overflow QA를
+  통과했다. 전체 service 11 failures는 기존 Sentiment/Level2/3 source-contract debt다.
+- 상세 commit/QA/risk는 active task `RUNS.md`, `RISKS.md`를 본다. runtime JSONL,
+  `.superpowers/`, generated screenshots는 closeout commit에서 제외한다.
+
+## 2026-07-18 - Backtest Analysis Modifier-Free Multi-Select Closeout
+
+- 모든 React `multi_select`를 20개 이하 checkbox-card와 21개 이상 search/list/chip으로
+  교체해 Quality/Value와 GTAA에서 modifier 없이 여러 항목을 추가·제거할 수 있게 했다.
+- Python schema/validation/payload/runner는 유지하고 selection array만 catalog 순서로
+  정규화했다. actual Quality 5→6→7, GTAA 2→3→4와 1,031-option 검색을 확인했다.
+- focused 114 tests, React build, target py_compile, desktop/760px overflow QA를 완료했다.
+  상세 증거와 baseline risk는 active task `RUNS.md`, `RISKS.md`를 본다.
+- protected JSONL, `.superpowers/`, generated screenshots는 closeout commit에서 제외한다.
+
+## 2026-07-18 - Backtest Analysis Deterministic Preset Application Closeout
+
+- 모든 named Single preset을 Python-owned complete profile로 만들고, 근거가 있는 GTAA
+  parameter만 override해 preset 변경 시 실행·선택·비용·위험 설정을 일관되게 reset한다.
+- date/manual ticker와 initial replay/prefill precedence는 보존하며 React/fallback은 같은 profile을
+  적용한다. actual GTAA/Equal Weight/GRS/Quality+Value desktop·760px QA를 완료했다.
+- focused 134 tests, React build, target py_compile, diff-check를 통과했다. 기존 service 11 failures와
+  protected JSONL, `.superpowers/`, generated screenshots는 closeout 범위에서 제외한다.
+
+## 2026-07-18 - Backtest Analysis Result Interpretation Polish Closeout
+
+- Level1 normalized chart에 실제 날짜, pointer tooltip/crosshair, 사용자용 Benchmark identity를
+  추가하고 현재 평가·신호·리밸런싱·cadence·다음 예상 window를 분리했다.
+- 기술 부록은 계산 기준 / 데이터 기준 / 결과 추적을 먼저 보여주고 raw field를 secondary로 낮췄다.
+- focused 92 tests, 두 React production build, target compile, desktop/760px Browser QA를 완료했다.
+  상세 commit/QA/risk는 active task `RUNS.md`, `RISKS.md`를 본다.
+- protected JSONL, `.superpowers/`, generated screenshots는 closeout commit에서 제외한다.
+
+## 2026-07-18 - Backtest Analysis Current Selection And Factor Presentation Closeout
+
+- 현재 strategy context와 이전 성공 result를 분리해 Quality+Value 선택 시 GTAA raw 설정이
+  나타나지 않게 하고, stale result는 단일 reference lifecycle 안내로만 보존했다.
+- factor raw key는 runner에 유지하면서 한국어 의미·표준 약어 label과 desktop/760px 2열
+  wrapping UI를 적용했다. legacy reset/refresh notice와 raw refresh table은 제거했다.
+- 상세 RED/GREEN, fresh verification, Browser QA와 남은 manual stale-click gap은 active task
+  `RUNS.md`, `RISKS.md`를 본다. protected JSONL·`.superpowers/`·screenshots는 commit하지 않는다.
+
+## 2026-07-19 - Backtest Workflow Top Shell Closeout
+
+- 초기 Streamlit Backtest title/caption과 red underline pills를 Python-owned Level1~3 read model,
+  current responsibility card, intent-only React stage rail로 교체했다.
+- 기존 route dispatcher와 Level 내부 Gate/persistence는 유지하고 desktop/760px stage 이동과
+  overflow 0을 확인했다. focused 54 tests와 React 175-module build가 통과했다.
+- 전체 service 12 failures는 기존 baseline이다. 상세 QA/위험은 active task `RUNS.md`와
+  `RISKS.md`를 보며 protected JSONL·`.superpowers/`·screenshots는 commit하지 않는다.
 ## 2026-07-12 - Nasdaq-100 무계정 공개 데이터 경로 조사
 
 - SEC에서 QQQ 분기 N-PORT 22건(2020-12-31~2026-03-31)을 인증 없이 backfill할 수 있음을 확인했다.
@@ -6387,6 +6615,26 @@ Detailed historical logs were archived on `2026-04-13`.
 - T10YIE·EIA 3계열 `8,049` rows, S&P 가격 `5,026` rows, futures 4종 `10,055` rows를 actual DB에 적재했다. 실제 S&P EPS 완료 분기는 없어 해당 경로만 자료 부족으로 유지했다.
 - 공통 관측 UI, desktop 2열/mobile 1열, hover/focus 상세와 채권 내부 1열 지표 목록을 확인했다. Focused `104 passed`, TypeScript와 React production build를 통과했다.
 - 전체 자산경로 roadmap은 `5/5` 완료다. 해외 상대금리와 승인된 글로벌 구리 활동지표는 후속 범위다.
+
+## 2026-07-18 - Institutional Portfolios 맥락 우선 개편 완료
+
+- `tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/`의 전체 roadmap `4/4`를 완료했다.
+- `institutional_portfolios_workbench_v2` context / coverage / comparison 계약과 50-row full holdings explorer, 직접 security search, unresolved guardrail을 구현했다.
+- Actual Berkshire `29/29`, Bridgewater `993/993`, Duquesne `70/70` total/explorer row 일치와 desktop / 420px Browser QA를 확인했다.
+- Historical previous filing과 verified identifier mapping은 별도 승인 dependency다.
+
+## 2026-07-18 - Institutional Portfolios 최종 리뷰 보정
+
+- 선택 기관이 보유하지 않은 mapped 종목도 Institutional Interest identity로 해석해 저장 가격 chart와 holder list를 열고, 선택 기관 포지션은 명시적으로 unavailable 처리한다.
+- manager 검색 0건은 live context를 보존하며, lowercase/mixed-case query 완료 상태와 unresolved overview 이동을 회귀 테스트로 고정했다.
+- Python 51 tests, Vitest 5 tests, strict typecheck, production build, exact base-to-head diff check와 actual Browser QA를 완료했다. 상세는 동일 active task `RUNS.md`를 본다.
+
+## 2026-07-18 - Institutional 13F OpenFIGI Mapping V1 완료
+
+- `tasks/active/institutional-13f-openfigi-mapping-v1-20260718/`의 전체 roadmap `4/4`를 완료했다.
+- 무료 OpenFIGI v3 resolver, current resolution table, error-preserving UPSERT, safe loader precedence와 기존 SEC 13F expander의 explicit mapping action을 구현했다.
+- Actual anonymous curated backfill은 1,244개 중 1,195 mapped / 49 unmapped / 0 ambiguous / 0 error다. Berkshire 29/29, Bridgewater 985/993, Duquesne 70/70 mapping coverage와 Browser QA를 확인했다.
+- all-latest-manager 약 31k 확장, 49 no-match 검토, historical PIT identity lifecycle은 후속 승인 범위다.
 
 ## 2026-07-18 - S&P 500 실제 EPS 등록 경로 구현
 

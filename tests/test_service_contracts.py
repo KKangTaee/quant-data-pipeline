@@ -146,6 +146,53 @@ class BacktestPresetCatalogContractTests(unittest.TestCase):
             },
         )
 
+    def test_gtaa_evidence_backed_presets_publish_parameter_defaults(self) -> None:
+        from app.web.backtest_common import GTAA_PRESET_PARAMETER_DEFAULTS
+
+        self.assertEqual(
+            GTAA_PRESET_PARAMETER_DEFAULTS[
+                "GTAA Universe (U3 Commodity Candidate Base)"
+            ],
+            {
+                "top": 2,
+                "interval": 3,
+                "score_lookback_months": [1, 3, 6],
+            },
+        )
+        self.assertEqual(
+            GTAA_PRESET_PARAMETER_DEFAULTS[
+                "GTAA Universe (U1 Offensive Candidate Base)"
+            ],
+            {
+                "top": 2,
+                "interval": 3,
+                "score_lookback_months": [1, 3, 6, 12],
+            },
+        )
+        self.assertEqual(
+            GTAA_PRESET_PARAMETER_DEFAULTS[
+                "GTAA Universe (U5 Smallcap Value Candidate Base)"
+            ],
+            {
+                "top": 3,
+                "interval": 3,
+                "score_lookback_months": [1, 3, 6, 12],
+            },
+        )
+        self.assertEqual(
+            GTAA_PRESET_PARAMETER_DEFAULTS[
+                "GTAA SPY Low-MDD Style Top-3"
+            ],
+            {
+                "top": 3,
+                "interval": 3,
+                "score_lookback_months": [1, 6],
+                "trend_filter_window": 250,
+                "risk_off_mode": "cash_only",
+                "benchmark_ticker": "SPY",
+            },
+        )
+
 
 class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
     def test_last_run_mismatch_is_hidden_when_strategy_selection_changes(self) -> None:
@@ -736,7 +783,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         compare_source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
 
         self.assertIn("_render_strict_preset_status_note(preset_name, tickers)", single_source)
-        self.assertIn("format_func=strict_preset_display_label", single_source)
+        self.assertIn("strict_preset_display_label(value)", single_source)
         self.assertIn("format_func=strict_preset_display_label", compare_source)
         self.assertIn("_render_strict_preset_status_note(qss_compare_preset", compare_source)
         self.assertIn("_render_strict_preset_status_note(vss_compare_preset", compare_source)
@@ -786,7 +833,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
                 body.index("_render_strict_factor_prerun_preview("),
                 body.index("with st.form("),
             )
-            advanced_body = body.split('with st.expander("Advanced Inputs"', 1)[1].split(
+            advanced_body = body.split('"선택·보유 규칙"', 1)[1].split(
                 "submitted = st.form_submit_button", 1
             )[0]
             self.assertNotIn("_render_strict_universe_contract_selectbox(", advanced_body)
@@ -885,20 +932,16 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertEqual(checks_by_id["price_freshness"]["symbols"], ["ALLY"])
         self.assertNotIn("BK", checks_by_id["price_freshness"]["action"]["symbols"])
 
-    def test_backtest_result_display_renders_post_run_factor_readiness_before_handoff(self) -> None:
+    def test_backtest_result_display_keeps_factor_readiness_in_detailed_evidence(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
-        last_run_body = source.split("def _render_last_run", 1)[1].split("def ", 1)[0]
+        details_body = source.split("def _render_last_run_details", 1)[1].split("def ", 1)[0]
 
         self.assertIn("build_post_run_factor_readiness_panel_model", source)
         self.assertIn("render_backtest_factor_readiness_panel", source)
-        self.assertIn("_render_post_run_factor_readiness_panel(bundle)", last_run_body)
+        self.assertIn("_render_post_run_factor_readiness_panel(bundle)", details_body)
         self.assertLess(
-            last_run_body.index("_render_data_trust_summary(meta)"),
-            last_run_body.index("_render_post_run_factor_readiness_panel(bundle)"),
-        )
-        self.assertLess(
-            last_run_body.index("_render_post_run_factor_readiness_panel(bundle)"),
-            last_run_body.index("_render_practical_validation_next_action(bundle)"),
+            details_body.index("_render_data_trust_summary(meta)"),
+            details_body.index("_render_post_run_factor_readiness_panel(bundle)"),
         )
 
     def test_strict_factor_single_annual_forms_use_post_run_readiness_panel(self) -> None:
@@ -987,29 +1030,12 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         source = Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8")
 
         self.assertIn("def _strict_factor_date_input(", source)
-        for key in (
-            "qss_start",
-            "qss_end",
-            "qsqp_start",
-            "qsqp_end",
-            "vsqp_start",
-            "vsqp_end",
-            "vss_start",
-            "vss_end",
-            "qvqp_start",
-            "qvqp_end",
-            "qvss_start",
-            "qvss_end",
-        ):
-            self.assertIn(f'key="{key}"', source)
-            self.assertNotIn(
-                f'st.date_input("Start Date", value=_default_strict_factor_start_date(), key="{key}")',
-                source,
-            )
-            self.assertNotIn(
-                f'st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="{key}")',
-                source,
-            )
+        self.assertIn('key=f"{key_prefix}_start"', source)
+        self.assertIn('key=f"{key_prefix}_end"', source)
+        for key_prefix in ("qss", "qsqp", "vsqp", "vss", "qvqp", "qvss"):
+            self.assertIn(f'key_prefix="{key_prefix}"', source)
+        self.assertNotIn('st.date_input("Start Date", value=', source)
+        self.assertNotIn('st.date_input("End Date", value=', source)
 
     def test_backtest_state_init_does_not_eagerly_seed_strict_form_widget_keys(self) -> None:
         source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
@@ -1045,7 +1071,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
             self.assertNotIn("Strategy Detail", source)
             self.assertNotIn("backtest_strategy_detail", source)
             self.assertNotIn("runtime wrapper", source)
-            self.assertIn('with st.expander("Advanced Inputs", expanded=False)', source)
+            self.assertIn("선택·보유 규칙", source)
 
     def test_portfolio_mix_builder_remains_streamlit_owned_with_strict_preset_copy(self) -> None:
         source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
@@ -3913,9 +3939,9 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
         self.assertEqual(proxy_evidence["status"], "REVIEW")
         self.assertTrue(proxy_evidence["metrics"]["proxy_evidence"])
 
-    def test_missing_method_evidence_is_review_not_runtime_provider_gap(self) -> None:
+    def test_missing_method_evidence_is_needs_input_not_runtime_provider_gap(self) -> None:
         from app.services.backtest_validation_efficacy import (
-            VALIDATION_EFFICACY_REVIEW,
+            VALIDATION_EFFICACY_NEEDS_INPUT,
             build_validation_efficacy_audit,
         )
 
@@ -3941,7 +3967,7 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
         )
 
         rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
-        self.assertEqual(audit["route"], VALIDATION_EFFICACY_REVIEW)
+        self.assertEqual(audit["route"], VALIDATION_EFFICACY_NEEDS_INPUT)
         self.assertEqual(
             set(rows_by_criteria),
             {
@@ -3950,9 +3976,9 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
                 "Regime split validation",
             },
         )
-        self.assertEqual(rows_by_criteria["Walk-forward temporal validation"]["Status"], "REVIEW")
-        self.assertEqual(rows_by_criteria["OOS holdout validation"]["Status"], "REVIEW")
-        self.assertEqual(rows_by_criteria["Regime split validation"]["Status"], "REVIEW")
+        self.assertEqual(rows_by_criteria["Walk-forward temporal validation"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["OOS holdout validation"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["Regime split validation"]["Status"], "NEEDS_INPUT")
         self.assertNotIn("Runtime replay evidence", rows_by_criteria)
         self.assertNotIn("Provider / freshness evidence", rows_by_criteria)
         self.assertNotIn("Survivorship / universe guard", rows_by_criteria)
@@ -5898,20 +5924,28 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertIn("app.web.backtest_page", imported_modules)
         self.assertNotIn("app.web.pages.backtest", imported_modules)
 
-    def test_backtest_page_uses_compact_korean_english_workflow_tabs(self) -> None:
+    def test_backtest_page_uses_react_workflow_shell_without_legacy_selector(self) -> None:
         source = Path("app/web/backtest_page.py").read_text(encoding="utf-8")
-        selector_body = source[source.index("def _render_backtest_panel_selector"):]
-        selector_body = selector_body[: selector_body.index("def render_backtest_tab")]
 
-        self.assertIn("st.pills(", selector_body)
-        self.assertIn("format_func=_backtest_workflow_stage_label", selector_body)
-        self.assertIn("후보 분석 · Backtest Analysis", source)
-        self.assertIn("실전 검증 · Practical Validation", source)
-        self.assertIn("최종 검토 · Final Review", source)
-        self.assertIn("stBaseButton-pillsActive", source)
-        self.assertIn("#ff4b4b", source)
-        self.assertNotIn("segmented_control", selector_body)
-        self.assertNotIn("st.radio(", selector_body)
+        self.assertIn(
+            "from app.web.backtest_workflow_shell import render_backtest_workflow_shell",
+            source,
+        )
+        self.assertIn("active_panel = render_backtest_workflow_shell()", source)
+        self.assertNotIn("st.pills(", source)
+        self.assertNotIn("stBaseButton-pillsActive", source)
+        self.assertNotIn("#ff4b4b", source)
+        self.assertNotIn("후보 선정 흐름", source)
+
+    def test_streamlit_backtest_entry_defers_identity_to_workflow_shell(self) -> None:
+        source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")
+        body = source.split("def _render_backtest_page() -> None:", 1)[1]
+        body = body.split("\ndef ", 1)[0]
+
+        self.assertEqual(body.count("render_backtest_tab()"), 1)
+        self.assertNotIn('st.title("Backtest")', body)
+        self.assertNotIn("Pre-Live", body)
+        self.assertNotIn("Portfolio Proposal", body)
 
     def test_backtest_page_removes_unused_guide_snapshot_and_reference_panels(self) -> None:
         page_source = Path("app/web/backtest_page.py").read_text(encoding="utf-8")
@@ -6131,8 +6165,8 @@ class BoundaryContractHardeningTests(unittest.TestCase):
             ]
         )
 
-        self.assertIn("Archived legacy broad yfinance compatibility path", source)
-        self.assertIn("saved/history replay", source)
+        self.assertIn("저장된 과거 실행을 재현", source)
+        self.assertIn("저장된 과거 결과 호환", source)
         self.assertIn("Quality Snapshot (Strict Annual)", source)
 
     def test_ingestion_collection_section_selector_is_stateful_across_reruns(self) -> None:
@@ -12844,10 +12878,15 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         workspace_intro = workspace_intro.split("current_rows = load_current_candidate_registry_latest()", 1)[0]
         self.assertNotIn("render_reference_contextual_help(\"final_review\")", workspace_intro)
 
-        backtest_page_source = Path("app/web/backtest_page.py").read_text(encoding="utf-8")
-        self.assertIn("Portfolio Monitoring 후보 여부", backtest_page_source)
-        self.assertNotIn("Selected Dashboard 모니터링 후보 여부", backtest_page_source)
-        self.assertNotIn("과거 실행 기록은 `Operations > Backtest Run History`", backtest_page_source)
+        workflow_shell_source = Path(
+            "app/services/backtest_workflow_shell.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("최종 판단", workflow_shell_source)
+        self.assertNotIn("Selected Dashboard 모니터링 후보 여부", workflow_shell_source)
+        self.assertNotIn(
+            "과거 실행 기록은 `Operations > Backtest Run History`",
+            workflow_shell_source,
+        )
 
         final_review_page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
         self.assertNotIn("Selected Dashboard 추적 후보", final_review_page_source)
@@ -14157,6 +14196,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                     "status": "PASS",
                     "replay_id": "stale-replay",
                 },
+                "practical_validation_decision_result_source-recheck-loop": {
+                    "fingerprint": {"replay_id": "stale-replay"},
+                    "validation_result": validation,
+                },
                 "backtest_practical_validation_data_enrichment_handoff": {"validation_result": validation},
             }
             with patch.object(practical_page, "st", fake_st):
@@ -14168,6 +14211,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
             self.assertNotIn(
                 "practical_validation_recheck_source-recheck-loop_STORED_PERIOD",
+                fake_st.session_state,
+            )
+            self.assertNotIn(
+                "practical_validation_decision_result_source-recheck-loop",
                 fake_st.session_state,
             )
             self.assertEqual(
@@ -14276,6 +14323,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             )
 
         handoff_mock.assert_called_once()
+        fake_st.rerun.assert_called_once_with(scope="app")
         stable_key = "practical_validation_result:validation-new"
         self.assertEqual(fake_st.session_state["final_review_source_selected"], stable_key)
         self.assertEqual(
@@ -15298,7 +15346,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             )
         )
 
-    def test_price_refresh_hides_stale_backtest_result_until_rerun(self) -> None:
+    def test_price_refresh_preserves_stale_result_and_blocks_handoff_until_rerun(self) -> None:
         result_display_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
         runner_source = Path("app/web/backtest_single_runner.py").read_text(encoding="utf-8")
         strategy_source = Path("app/web/backtest_single_strategy.py").read_text(encoding="utf-8")
@@ -15311,14 +15359,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("price_refresh_result_requires_backtest_rerun", result_display_source)
         self.assertIn("_mark_backtest_result_requires_rerun_after_price_refresh(result)", consume_body)
         self.assertIn("backtest_last_result_requires_rerun", result_display_source)
-        self.assertIn("_render_backtest_rerun_required_notice", last_run_body)
+        self.assertNotIn("_render_backtest_rerun_required_notice", last_run_body)
         self.assertIn("backtest_last_result_refresh_result", result_display_source)
         self.assertIn("backtest_last_result_requires_rerun = False", runner_source)
-        self.assertIn("backtest_last_result_requires_rerun = False", strategy_source)
-        self.assertLess(
-            last_run_body.index("_render_backtest_rerun_required_notice"),
-            last_run_body.index("_render_backtest_result_header(bundle, summary_df)"),
-        )
+        self.assertIn("backtest_last_result_requires_rerun = True", strategy_source)
+        self.assertIn("render_backtest_analysis_result_workspace", last_run_body)
+        self.assertNotIn("Refresh Message", last_run_body)
 
     def test_data_trust_summary_renderer_keeps_warnings_inside_compact_panel(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
@@ -15357,26 +15403,20 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("st.warning(", last_run_body)
         self.assertNotIn("이번 실행에서 같이 봐야 할 주의 사항", last_run_body)
 
-    def test_latest_backtest_run_prioritizes_result_then_data_trust_then_handoff_then_tabs(self) -> None:
+    def test_latest_backtest_run_uses_dedicated_result_workspace(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
         last_run_start = source.index("def _render_last_run")
         last_run_body = source[last_run_start:]
         last_run_body = last_run_body[: last_run_body.index("\ndef ", 1)]
 
-        self.assertIn("_render_backtest_result_header(bundle, summary_df)", last_run_body)
-        self.assertNotIn("_render_summary_metrics(summary_df)", last_run_body)
-        self.assertIn("_render_data_trust_summary(meta)", last_run_body)
-        self.assertIn("_render_practical_validation_next_action(bundle)", last_run_body)
-        self.assertNotIn("Latest Backtest Run", last_run_body)
-
-        header_pos = last_run_body.index("_render_backtest_result_header(bundle, summary_df)")
-        data_trust_pos = last_run_body.index("_render_data_trust_summary(meta)")
-        tabs_pos = last_run_body.index("tabs = st.tabs(tab_labels)")
-        handoff_pos = last_run_body.index("_render_practical_validation_next_action(bundle)")
-
-        self.assertLess(header_pos, data_trust_pos)
-        self.assertLess(data_trust_pos, handoff_pos)
-        self.assertLess(handoff_pos, tabs_pos)
+        self.assertIn("render_backtest_analysis_result_workspace", last_run_body)
+        self.assertNotIn("render_backtest_analysis_decision_surface", last_run_body)
+        self.assertNotIn('st.expander("상세 근거"', last_run_body)
+        self.assertNotIn("_render_last_run_details(bundle)", last_run_body)
+        self.assertLess(
+            last_run_body.index("if not bundle"),
+            last_run_body.index("render_backtest_analysis_result_workspace"),
+        )
 
     def test_backtest_result_header_owns_integrated_kpi_band(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
@@ -15391,7 +15431,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("backtest-result-hero__chips", header_body)
 
     def test_portfolio_mix_candidate_gate_allows_ready_mix(self) -> None:
-        from app.web.backtest_compare import _build_weighted_mix_candidate_readiness_evaluation
+        from app.services.backtest_portfolio_mix_readiness import (
+            build_weighted_mix_candidate_readiness_evaluation,
+        )
 
         def _bundle(strategy_name: str) -> dict:
             return {
@@ -15435,7 +15477,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             "date_policy": "intersection",
         }
 
-        evaluation = _build_weighted_mix_candidate_readiness_evaluation(
+        from app.services.backtest_portfolio_mix_readiness import (
+            build_weighted_mix_candidate_readiness_evaluation,
+        )
+
+        evaluation = build_weighted_mix_candidate_readiness_evaluation(
             weighted_bundle,
             [_bundle("GTAA"), _bundle("Equal Weight")],
         )
@@ -15447,7 +15493,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(criteria["Component 1차 후보 판단"]["상태"], "PASS")
 
     def test_portfolio_mix_candidate_gate_blocks_hold_component(self) -> None:
-        from app.web.backtest_compare import _build_weighted_mix_candidate_readiness_evaluation
+        from app.services.backtest_portfolio_mix_readiness import (
+            build_weighted_mix_candidate_readiness_evaluation,
+        )
 
         ready_meta = {
             "end": "2025-12-31",
@@ -15488,7 +15536,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             "date_policy": "intersection",
         }
 
-        evaluation = _build_weighted_mix_candidate_readiness_evaluation(weighted_bundle, bundles)
+        evaluation = build_weighted_mix_candidate_readiness_evaluation(
+            weighted_bundle,
+            bundles,
+        )
 
         self.assertFalse(evaluation["can_send_to_practical_validation"])
         self.assertEqual(evaluation["stage_status"], "HOLD")
@@ -15497,7 +15548,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(criteria["Component 1차 후보 판단"]["상태"], "FAIL")
 
     def test_portfolio_mix_candidate_gate_blocks_non_100_weight_total(self) -> None:
-        from app.web.backtest_compare import _build_weighted_mix_candidate_readiness_evaluation
+        from app.services.backtest_portfolio_mix_readiness import (
+            build_weighted_mix_candidate_readiness_evaluation,
+        )
 
         meta = {
             "end": "2025-12-31",
@@ -15533,7 +15586,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             "date_policy": "intersection",
         }
 
-        evaluation = _build_weighted_mix_candidate_readiness_evaluation(weighted_bundle, bundles)
+        evaluation = build_weighted_mix_candidate_readiness_evaluation(
+            weighted_bundle,
+            bundles,
+        )
 
         self.assertFalse(evaluation["can_send_to_practical_validation"])
         criteria = {row["기준"]: row for row in evaluation["criteria_rows"]}
@@ -28313,13 +28369,17 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
 
         verified_rows = [
             {"symbol": "SPY", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"},
-            {"symbol": "SPY", "data_kind": "holdings", "provider": "ishares", "parser": "holdings_csv"},
+            {"symbol": "SPY", "data_kind": "holdings", "provider": "ishares", "parser": "ishares_csv"},
             {"symbol": "SPY", "data_kind": "exposure", "provider": "ishares", "parser": "provider_aggregate"},
         ]
 
         with patch.object(service, "load_etf_provider_source_map", return_value=verified_rows):
             rows = service.build_provider_gap_rows(self._validation_result())
             plan = service.build_provider_gap_collection_plan(self._validation_result())
+            gate = service.build_pre_final_enrichment_gate(
+                self._validation_result(),
+                provider_plan=plan,
+            )
 
         rows_by_symbol = {row["ETF"]: row for row in rows}
         self.assertEqual(rows_by_symbol["SPY"]["Action"], "운용성 보강, holdings/exposure 수집")
@@ -28330,6 +28390,13 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["operability_bridge"], ["SPY", "XYZ"])
         self.assertEqual(plan["holdings_exposure"], ["SPY"])
         self.assertTrue(plan["macro"])
+        self.assertTrue(gate["required"])
+        self.assertFalse(gate["engineering_required"])
+        self.assertEqual(
+            gate["items"][0]["category"],
+            "source_map_discovery",
+        )
+        self.assertEqual(gate["items"][0]["symbols"], ["XYZ"])
         self.assertEqual(
             service.provider_gap_state_key(self._validation_result()),
             "practical_validation_provider_gap_results_source-provider-gap",
@@ -28440,6 +28507,419 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
         self.assertTrue(gate["blocking"])
         self.assertEqual(gate["items"][0]["category"], "operability")
         self.assertEqual(gate["items"][0]["symbols"], ["XYZ"])
+
+    def test_supported_ishares_workbook_contract_is_collectable(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-unsupported-holdings",
+            "provider_coverage": {
+                "symbols": ["LQD"],
+                "symbol_weights": {"LQD": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["LQD"]},
+                    "exposure": {"missing_symbols": ["LQD"]},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        known_rows = [
+            {
+                "symbol": "LQD",
+                "data_kind": "holdings",
+                "provider": "ishares",
+                "parser": "ishares_workbook",
+                "source_status": "verified",
+            }
+        ]
+
+        with patch.object(
+            service,
+            "load_etf_provider_source_map",
+            return_value=known_rows,
+        ):
+            plan = service.build_provider_gap_collection_plan(validation)
+            gate = service.build_pre_final_enrichment_gate(
+                validation,
+                provider_plan=plan,
+            )
+
+        self.assertEqual(plan["holdings_exposure"], ["LQD"])
+        self.assertEqual(plan["source_map_discovery"], [])
+        self.assertEqual(plan["mapping_needed"], [])
+        self.assertTrue(gate["required"])
+        self.assertTrue(gate["blocking"])
+        self.assertFalse(gate["engineering_required"])
+        self.assertEqual(gate["items"][0]["symbols"], ["LQD"])
+
+    def test_failed_legacy_ishares_csv_uses_current_static_workbook_contract(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-failed-discovery",
+            "provider_coverage": {
+                "symbols": ["COMT"],
+                "symbol_weights": {"COMT": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["COMT"]},
+                    "exposure": {"missing_symbols": ["COMT"]},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        failed_rows = [
+            {
+                "symbol": "COMT",
+                "data_kind": "holdings",
+                "provider": "ishares",
+                "parser": "ishares_csv",
+                "source_status": "failed",
+            }
+        ]
+
+        with patch.object(
+            service,
+            "load_etf_provider_source_map",
+            side_effect=[[], failed_rows],
+        ):
+            plan = service.build_provider_gap_collection_plan(validation)
+
+        self.assertEqual(plan["source_map_discovery"], [])
+        self.assertEqual(plan["holdings_exposure"], ["COMT"])
+        self.assertEqual(plan["mapping_needed"], [])
+
+    def test_attempted_vanguard_discovery_uses_current_static_contract(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-known-provider",
+            "provider_coverage": {
+                "symbols": ["VNQ"],
+                "symbol_weights": {"VNQ": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["VNQ"]},
+                    "exposure": {"missing_symbols": ["VNQ"]},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        discovery_history = [
+            {
+                "details": {"symbols": ["VNQ"]},
+                "run_metadata": {
+                    "pipeline_type": (
+                        "practical_validation_provider_gap_collection"
+                    ),
+                    "input_params": {
+                        "selection_source_id": "source-known-provider",
+                        "provider_area": "etf_provider_source_map",
+                    },
+                },
+            }
+        ]
+
+        with (
+            patch.object(
+                service,
+                "load_etf_provider_source_map",
+                side_effect=[[], []],
+            ),
+            patch.object(
+                service,
+                "load_run_history",
+                return_value=discovery_history,
+                create=True,
+            ),
+        ):
+            plan = service.build_provider_gap_collection_plan(validation)
+
+        self.assertEqual(plan["source_map_discovery"], [])
+        self.assertEqual(plan["holdings_exposure"], ["VNQ"])
+        self.assertEqual(plan["mapping_needed"], [])
+
+    def test_failed_discovery_run_preserves_requested_symbols_for_lifecycle(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-failed-discovery-run",
+            "provider_coverage": {
+                "symbols": ["VNQ"],
+                "symbol_weights": {"VNQ": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["VNQ"]},
+                    "exposure": {"missing_symbols": ["VNQ"]},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        with patch.object(service, "append_run_history"):
+            record = service._record_provider_gap_result(
+                {"status": "FAILED", "details": {}},
+                source_id="source-failed-discovery-run",
+                area="etf_provider_source_map",
+                requested_symbols=["VNQ"],
+            )
+
+        self.assertEqual(
+            record["run_metadata"]["input_params"]["requested_symbols"],
+            ["VNQ"],
+        )
+        with (
+            patch.object(
+                service,
+                "load_etf_provider_source_map",
+                side_effect=[[], []],
+            ),
+            patch.object(
+                service,
+                "load_run_history",
+                return_value=[record],
+            ),
+        ):
+            plan = service.build_provider_gap_collection_plan(validation)
+
+        self.assertEqual(plan["source_map_discovery"], [])
+        self.assertEqual(plan["holdings_exposure"], ["VNQ"])
+        self.assertEqual(plan["mapping_needed"], [])
+
+    def test_unverified_candidate_source_contract_stays_discoverable(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-candidate-contract",
+            "provider_coverage": {
+                "symbols": ["XYZ"],
+                "symbol_weights": {"XYZ": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["XYZ"]},
+                    "exposure": {"missing_symbols": ["XYZ"]},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        candidate_rows = [
+            {
+                "symbol": "XYZ",
+                "data_kind": "holdings",
+                "provider": "ishares",
+                "parser": "ishares_csv",
+                "source_status": "candidate",
+            }
+        ]
+
+        with (
+            patch.object(
+                service,
+                "load_etf_provider_source_map",
+                side_effect=[[], candidate_rows],
+            ),
+            patch.object(
+                service,
+                "load_run_history",
+                return_value=[],
+            ),
+        ):
+            plan = service.build_provider_gap_collection_plan(validation)
+
+        self.assertEqual(plan["source_map_discovery"], ["XYZ"])
+        self.assertEqual(plan["mapping_needed"], [])
+
+    def test_unrelated_operability_contract_does_not_close_holdings_discovery(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-operability-only",
+            "provider_coverage": {
+                "symbols": ["XYZ"],
+                "symbol_weights": {"XYZ": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["XYZ"]},
+                    "exposure": {"missing_symbols": []},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        operability_rows = [
+            {
+                "symbol": "XYZ",
+                "data_kind": "operability",
+                "provider": "official",
+                "parser": "factsheet",
+                "source_status": "verified",
+            }
+        ]
+
+        with (
+            patch.object(
+                service,
+                "load_etf_provider_source_map",
+                side_effect=[[], operability_rows],
+            ),
+            patch.object(
+                service,
+                "load_run_history",
+                return_value=[],
+            ),
+        ):
+            plan = service.build_provider_gap_collection_plan(validation)
+
+        self.assertEqual(plan["source_map_discovery"], ["XYZ"])
+        self.assertEqual(plan["mapping_needed"], [])
+
+    def test_terminal_source_map_status_outranks_candidate_regardless_of_row_order(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-mixed-contract-status",
+            "provider_coverage": {
+                "symbols": ["XYZ"],
+                "symbol_weights": {"XYZ": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["XYZ"]},
+                    "exposure": {"missing_symbols": ["XYZ"]},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        candidate = {
+            "symbol": "XYZ",
+            "data_kind": "holdings",
+            "provider": "provider_a",
+            "parser": "ishares_csv",
+            "source_status": "candidate",
+        }
+        failed = {
+            "symbol": "XYZ",
+            "data_kind": "holdings",
+            "provider": "provider_b",
+            "parser": "ishares_csv",
+            "source_status": "failed",
+        }
+
+        for rows in ([candidate, failed], [failed, candidate]):
+            with self.subTest(status_order=[row["source_status"] for row in rows]):
+                with (
+                    patch.object(
+                        service,
+                        "load_etf_provider_source_map",
+                        side_effect=[[], rows],
+                    ),
+                    patch.object(
+                        service,
+                        "load_run_history",
+                        return_value=[],
+                    ),
+                ):
+                    plan = service.build_provider_gap_collection_plan(validation)
+
+                self.assertEqual(plan["source_map_discovery"], [])
+                self.assertEqual(plan["mapping_needed"], ["XYZ"])
+
+    def test_collectable_verified_holdings_contract_outranks_unsupported_row_order(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-multiple-verified-contracts",
+            "provider_coverage": {
+                "symbols": ["XYZ"],
+                "symbol_weights": {"XYZ": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["XYZ"]},
+                    "exposure": {"missing_symbols": ["XYZ"]},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        supported = {
+            "symbol": "XYZ",
+            "data_kind": "holdings",
+            "provider": "provider_a",
+            "parser": "ishares_csv",
+            "source_status": "verified",
+        }
+        unsupported = {
+            "symbol": "XYZ",
+            "data_kind": "holdings",
+            "provider": "provider_b",
+            "parser": "ishares_workbook",
+            "source_status": "verified",
+        }
+
+        for rows in ([supported, unsupported], [unsupported, supported]):
+            with self.subTest(parser_order=[row["parser"] for row in rows]):
+                with (
+                    patch.object(
+                        service,
+                        "load_etf_provider_source_map",
+                        side_effect=[rows, rows],
+                    ),
+                    patch.object(
+                        service,
+                        "load_run_history",
+                        return_value=[],
+                    ),
+                ):
+                    plan = service.build_provider_gap_collection_plan(validation)
+
+                self.assertEqual(plan["source_map_discovery"], [])
+                self.assertEqual(plan["holdings_exposure"], ["XYZ"])
+                self.assertEqual(plan["mapping_needed"], [])
 
     def test_practical_validation_result_blocks_final_review_until_collectable_gap_is_rechecked(self) -> None:
         from app.services import backtest_practical_validation as service
@@ -28817,6 +29297,388 @@ class ProviderContextProvenanceContractTests(unittest.TestCase):
 
 
 class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
+    @staticmethod
+    def _decision_brief_snapshot_fixture(
+        route: str = "SELECT_FOR_PRACTICAL_PORTFOLIO",
+    ) -> dict[str, Any]:
+        labels = {
+            "SELECT_FOR_PRACTICAL_PORTFOLIO": "계속 추적",
+            "HOLD_FOR_MORE_PAPER_TRACKING": "관찰 후 재검토",
+            "REJECT_FOR_PRACTICAL_USE": "추적 대상에서 제외",
+            "RE_REVIEW_REQUIRED": "Level2로 돌려보내기",
+        }
+        return {
+            "schema_version": "decision_brief_v1",
+            "verdict": {
+                "route": route,
+                "label": labels[route],
+                "headline": "저장된 근거에 따른 판단입니다.",
+            },
+            "evidence_confidence": {
+                "value": 75,
+                "basis": "저장된 ready check 비율",
+            },
+            "strengths": [{"observation_id": "benchmark-relative-terminal"}],
+            "weaknesses": [{"observation_id": "concentration-pressure"}],
+            "monitoring_conditions": [
+                {
+                    "observation_id": "drawdown-recovery-path",
+                    "title": "낙폭과 회복 경로 재확인",
+                    "threshold": "-20% 이하",
+                    "cadence": "월간",
+                    "re_review_action": "손실 감내 조건을 다시 검토합니다.",
+                    "evidence_refs": ["behavior_board.underwater_series"],
+                }
+            ],
+            "disclosures": {
+                "accepted_limits": [
+                    {"root_issue_id": "static-universe-limit", "title": "정적 universe 한계"}
+                ],
+                "source_gaps": ["거래비용 적용 증명이 없습니다."],
+            },
+        }
+
+    def _build_persistence_row(
+        self,
+        *,
+        decision_route: str = "SELECT_FOR_PRACTICAL_PORTFOLIO",
+        decision_brief: dict[str, Any] | None = None,
+        validation: dict[str, Any] | None = None,
+        investability_packet: dict[str, Any] | None = None,
+        operator_reason: str = "저장된 관측값을 근거로 판단함",
+        accepted_limit_acknowledgements: list[dict[str, str]] | None = None,
+    ) -> dict[str, Any]:
+        from app.web.backtest_final_review_helpers import _build_final_review_decision_row
+
+        ready_policy = {
+            "schema_version": "final_review_selection_gate_policy_v1",
+            "outcome": "select_ready",
+            "select_allowed": True,
+            "policy_rows": [],
+        }
+        packet = investability_packet or {
+            "route": "INVESTABILITY_PACKET_READY",
+            "select_ready": True,
+            "gate_policy_snapshot": ready_policy,
+            "selection_gate_policy_snapshot": ready_policy,
+        }
+        acknowledgement_kwargs = (
+            {"accepted_limit_acknowledgements": accepted_limit_acknowledgements}
+            if accepted_limit_acknowledgements is not None
+            else {}
+        )
+        return _build_final_review_decision_row(
+            source={"source_id": "source-persistence", "source_type": "practical_validation_result"},
+            validation=validation
+            or {"selection_source_id": "source-persistence", "validation_id": "validation-persistence"},
+            paper_observation={
+                "active_components": [],
+                "checks": [],
+                "review_triggers": ["legacy trigger"],
+            },
+            evidence={"route": "READY_FOR_FINAL_DECISION", "checks": [], "blockers": []},
+            investability_packet=packet,
+            decision_brief=decision_brief or self._decision_brief_snapshot_fixture(decision_route),
+            decision_id=f"decision-{decision_route.lower()}",
+            decision_route=decision_route,
+            operator_reason=operator_reason,
+            operator_constraints="constraints",
+            operator_next_action="next",
+            **acknowledgement_kwargs,
+        )
+
+    def test_final_review_refresh_intent_runs_once_and_selects_new_validation(self) -> None:
+        import app.web.backtest_final_review.page as page
+
+        fake_st = MagicMock()
+        fake_st.session_state = {}
+        fake_st.rerun.side_effect = RuntimeError("rerun")
+        refresh_runner = MagicMock(
+            return_value={
+                "status": "refreshed",
+                "message": "2026-07-15까지 다시 계산했습니다.",
+                "selection_source_id": "selection-a",
+                "new_validation_id": "validation-new",
+                "validation_saved": True,
+            }
+        )
+        intent = {
+            "action": "refresh_observation",
+            "intent_id": "refresh-once",
+            "source_id": "selection-a",
+            "validation_id": "validation-old",
+        }
+
+        with (
+            patch.object(page, "st", fake_st),
+            patch.object(
+                page,
+                "run_final_review_observation_refresh",
+                refresh_runner,
+            ),
+            self.assertRaisesRegex(RuntimeError, "rerun"),
+        ):
+            page._consume_final_review_observation_refresh_intent(
+                intent,
+                source={"source_id": "validation-old"},
+                validation={
+                    "validation_id": "validation-old",
+                    "selection_source_id": "selection-a",
+                    "selection_source_snapshot": {"selection_source_id": "selection-a"},
+                },
+                observation_freshness={
+                    "can_refresh": True,
+                    "selection_source_id": "selection-a",
+                    "validation_id": "validation-old",
+                },
+            )
+
+        refresh_runner.assert_called_once()
+        self.assertEqual(
+            fake_st.session_state["final_review_active_decision_brief_source_id"],
+            "practical_validation_result:validation-new",
+        )
+        self.assertEqual(
+            fake_st.session_state[
+                "final_review_observation_refresh_result_selection_a"
+            ]["status"],
+            "refreshed",
+        )
+
+    def test_final_review_refresh_intent_rejects_stale_identity(self) -> None:
+        import app.web.backtest_final_review.page as page
+
+        fake_st = MagicMock()
+        fake_st.session_state = {}
+        refresh_runner = MagicMock()
+
+        with (
+            patch.object(page, "st", fake_st),
+            patch.object(
+                page,
+                "run_final_review_observation_refresh",
+                refresh_runner,
+            ),
+        ):
+            page._consume_final_review_observation_refresh_intent(
+                {
+                    "action": "refresh_observation",
+                    "intent_id": "refresh-stale",
+                    "source_id": "selection-other",
+                    "validation_id": "validation-old",
+                },
+                source={"source_id": "validation-old"},
+                validation={
+                    "validation_id": "validation-old",
+                    "selection_source_id": "selection-a",
+                },
+                observation_freshness={"can_refresh": True},
+            )
+
+        refresh_runner.assert_not_called()
+        fake_st.error.assert_called_once()
+
+    def test_final_review_selected_save_guard_rechecks_observation_freshness(self) -> None:
+        from app.web.backtest_final_review_helpers import (
+            _build_final_review_save_evaluation,
+        )
+
+        result = _build_final_review_save_evaluation(
+            evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet={
+                "selection_gate_policy_snapshot": {"select_allowed": True}
+            },
+            decision_id="decision-freshness",
+            decision_route="SELECT_FOR_PRACTICAL_PORTFOLIO",
+            operator_reason="현재 관측을 확인했다.",
+            existing_decision_ids=set(),
+            observation_freshness={
+                "selection_blocked": True,
+                "status": "price_refresh_available",
+            },
+        )
+
+        self.assertFalse(result["can_save"])
+        self.assertIn("Observation freshness", result["blockers"])
+
+    def test_final_review_page_uses_decision_brief_not_legacy_investment_report(self) -> None:
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        render_body = page_source.split("def render_final_review_workspace", 1)[1]
+
+        self.assertIn("from app.services.backtest_final_review_decision_brief import", page_source)
+        self.assertIn("build_final_review_decision_brief(", render_body)
+        self.assertIn("build_final_review_candidate_selector(", render_body)
+        self.assertNotIn("build_final_review_investment_report(", render_body)
+        self.assertNotIn("render_fr_command_center(", render_body)
+        self.assertNotIn("_render_candidate_selection_panel(", render_body)
+
+    def test_final_review_page_keeps_python_candidate_and_save_intent_guards(self) -> None:
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        candidate_body = page_source.split("def _consume_final_review_candidate_intent", 1)[1]
+        candidate_body = candidate_body.split("def ", 1)[0]
+        save_body = page_source.split("def _consume_final_review_decision_intent", 1)[1]
+        save_body = save_body.split("def ", 1)[0]
+
+        self.assertIn('payload.get("action") != "select_candidate"', candidate_body)
+        self.assertIn("allowed_source_ids", candidate_body)
+        self.assertIn("final_review_active_decision_brief_source_id", candidate_body)
+        self.assertIn("st.rerun()", candidate_body)
+        self.assertNotIn("append_current_final_selection_decision", candidate_body)
+        for token in (
+            "intent_id",
+            "decision_id",
+            "operator_reason",
+            "_build_final_review_save_evaluation",
+            "append_current_final_selection_decision(final_row)",
+        ):
+            self.assertIn(token, save_body)
+
+    def test_final_review_component_accepts_decision_brief_and_candidate_selector(self) -> None:
+        component_source = Path(
+            "app/web/components/final_review_investment_report/component.py"
+        ).read_text(encoding="utf-8")
+        index_source = Path(
+            "app/web/components/final_review_investment_report/frontend/src/index.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("def render_final_review_decision_workspace", component_source)
+        self.assertIn("decision_brief=decision_brief", component_source)
+        self.assertIn("candidate_selector=candidate_selector", component_source)
+        self.assertNotIn("report=report", component_source)
+        self.assertIn("decision_brief?:", index_source)
+        self.assertIn("candidate_selector?:", index_source)
+        self.assertNotIn("decision_action?:", index_source)
+        self.assertNotIn("report?:", index_source)
+
+    def test_final_review_react_source_has_approved_reading_order(self) -> None:
+        workspace_source = Path(
+            "app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx"
+        ).read_text(encoding="utf-8")
+        render_body = workspace_source.split("export function DecisionBriefWorkspace", 1)[1]
+        positions = [
+            render_body.index(token)
+            for token in (
+                "<WorkspaceHeader",
+                "<VerdictHero",
+                "<BehaviorBoard",
+                "<StrengthWeaknessSection",
+                "<PortfolioCharacterSection",
+                "<Level2Handoff",
+                "<MonitoringConditions",
+                "<DecisionAction",
+                "<EvidenceDisclosure",
+            )
+        ]
+
+        self.assertEqual(positions, sorted(positions))
+
+        for token in (
+            "Level2에서 이어받은 판단",
+            "최종 판단 입력",
+            "인수한 검증 한계",
+            "Monitoring 이관 조건",
+        ):
+            self.assertIn(token, workspace_source)
+
+    def test_final_review_react_source_removes_scores_questions_patterns_and_level2_cards(self) -> None:
+        workspace_source = Path(
+            "app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx"
+        ).read_text(encoding="utf-8")
+
+        for forbidden in (
+            "투자 매력도",
+            "핵심 점수 구분",
+            "이 후보를 읽는 네 가지 기준",
+            "저장 전 확인 질문",
+            "Monitoring 방향 가이드",
+            "PatternGuide",
+            "Level2ReviewDisposition",
+            "WeaknessImprovement",
+        ):
+            self.assertNotIn(forbidden, workspace_source)
+
+    def test_final_review_react_does_not_own_gate_normalization_dedup_or_persistence(self) -> None:
+        paths = [
+            Path("app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx"),
+            Path("app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharts.tsx"),
+        ]
+        source = "\n".join(path.read_text(encoding="utf-8") for path in paths)
+
+        for forbidden in (
+            "select_allowed",
+            "Total Balance",
+            "runningPeak",
+            "threshold_or_comparator * 50",
+            "new Map",
+            "registry",
+            "append_current_final_selection_decision",
+        ):
+            self.assertNotIn(forbidden, source)
+
+    def test_final_review_refresh_observation_stays_intent_only_in_source_and_build(self) -> None:
+        frontend = Path(
+            "app/web/components/final_review_investment_report/frontend"
+        )
+        workspace_source = (
+            frontend / "src/DecisionBriefWorkspace.tsx"
+        ).read_text(encoding="utf-8")
+        build_source = "".join(
+            path.read_text(encoding="utf-8")
+            for path in (frontend / "build/assets").glob("*.js")
+        )
+
+        for source in (workspace_source, build_source):
+            self.assertIn("refresh_observation", source)
+            self.assertIn("최신 데이터로 다시 계산", source)
+            self.assertNotIn("run_practical_validation_actual_replay", source)
+            self.assertNotIn("run_backtest_price_refresh", source)
+            self.assertNotIn("append_practical_validation_result", source)
+        self.assertNotIn("fetch(", workspace_source)
+
+    def test_final_review_character_ui_separates_actual_values_from_review_pressure(self) -> None:
+        workspace_source = Path(
+            "app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx"
+        ).read_text(encoding="utf-8")
+        character_source = Path(
+            "app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharacter.tsx"
+        ).read_text(encoding="utf-8")
+        chart_source = Path(
+            "app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharts.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("<PortfolioCharacterSection", workspace_source)
+        for token in (
+            "포트폴리오 실제 성격",
+            "관리 기준 대비 압력",
+            "기준 미설정",
+            "분석 근거 없음",
+        ):
+            self.assertIn(token, character_source)
+        source = workspace_source + chart_source
+        self.assertNotIn("PortfolioTraitMap", source)
+        self.assertNotIn("splitMeasuredSegments", chart_source)
+
+    def test_final_review_fallback_uses_same_decision_brief_sections(self) -> None:
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        fallback_body = page_source.split("def _render_final_review_decision_brief_fallback", 1)[1]
+        fallback_body = fallback_body.split("def ", 1)[0]
+
+        for token in (
+            "verdict",
+            "behavior_board",
+            "strengths",
+            "weaknesses",
+            "character_profile",
+            "review_pressure",
+            "monitoring_conditions",
+            "decision_action",
+            "disclosures",
+        ):
+            self.assertIn(token, fallback_body)
+        for forbidden in ("scorecard", "pattern_guide", "level2_review_disposition"):
+            self.assertNotIn(forbidden, fallback_body)
+        self.assertNotIn("trait_map", fallback_body)
+
     def test_final_review_pattern_guide_contract_defines_ten_bounded_patterns(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_pattern_guide_contract
 
@@ -29964,7 +30826,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         }
         verified_rows = [
             {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"},
-            {"symbol": "LQD", "data_kind": "holdings", "provider": "ishares", "parser": "holdings_csv"},
+            {"symbol": "LQD", "data_kind": "holdings", "provider": "ishares", "parser": "ishares_csv"},
         ]
 
         with patch.object(practical_service, "load_etf_provider_source_map", return_value=verified_rows):
@@ -32375,6 +33237,111 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertFalse(row["live_approval"])
         self.assertFalse(row["order_instruction"])
 
+    def test_final_review_decision_row_stores_compact_decision_brief_snapshot(self) -> None:
+        brief = self._decision_brief_snapshot_fixture()
+
+        row = self._build_persistence_row(decision_brief=brief)
+        snapshot = row["decision_brief_snapshot"]
+
+        self.assertEqual(snapshot["schema_version"], "decision_brief_snapshot_v1")
+        self.assertEqual(snapshot["verdict"]["route"], brief["verdict"]["route"])
+        self.assertEqual(snapshot["strength_observation_ids"], ["benchmark-relative-terminal"])
+        self.assertEqual(snapshot["weakness_observation_ids"], ["concentration-pressure"])
+        self.assertEqual(snapshot["monitoring_conditions"][0]["observation_id"], "drawdown-recovery-path")
+        self.assertEqual(snapshot["accepted_limit_root_issue_ids"], ["static-universe-limit"])
+        self.assertEqual(snapshot["source_gaps"], ["거래비용 적용 증명이 없습니다."])
+
+    def test_final_review_decision_row_stores_accepted_limit_acknowledgements(
+        self,
+    ) -> None:
+        row = self._build_persistence_row(
+            accepted_limit_acknowledgements=[
+                {
+                    "root_issue_id": "static-universe-limit",
+                    "decision": "accepted",
+                }
+            ]
+        )
+
+        self.assertEqual(
+            row["decision_brief_snapshot"]["accepted_limit_acknowledgements"],
+            [
+                {
+                    "root_issue_id": "static-universe-limit",
+                    "decision": "accepted",
+                }
+            ],
+        )
+
+    def test_selected_route_still_requires_existing_gate_and_closed_evidence(self) -> None:
+        blocked_packet = {
+            "route": "INVESTABILITY_PACKET_BLOCKED",
+            "select_ready": False,
+            "selection_gate_policy_snapshot": {
+                "outcome": "blocked",
+                "select_allowed": False,
+                "policy_rows": [],
+            },
+        }
+        open_validation = {
+            "selection_source_id": "source-persistence",
+            "validation_id": "validation-open",
+            "evidence_closure": {
+                "validation_id": "validation-open",
+                "issues": [
+                    {
+                        "root_issue_id": "historical-universe-coverage",
+                        "title": "PIT membership 근거",
+                        "resolution_class": "engineering_required",
+                        "criticality": "critical",
+                        "terminal_state": "deferred",
+                    }
+                ],
+                "summary": {"critical_engineering_count": 1},
+            },
+        }
+
+        cases = {
+            "gate_blocked": self._build_persistence_row(investability_packet=blocked_packet),
+            "closure_open": self._build_persistence_row(validation=open_validation),
+        }
+        for name, row in cases.items():
+            with self.subTest(name=name):
+                self.assertFalse(row["monitoring_candidate"])
+                self.assertEqual(row["final_review_record_type"], "judgment_decision")
+
+    def test_non_select_route_records_judgment_without_monitoring_handoff(self) -> None:
+        brief = self._decision_brief_snapshot_fixture("HOLD_FOR_MORE_PAPER_TRACKING")
+
+        row = self._build_persistence_row(
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            decision_brief=brief,
+            operator_reason="추가 관찰이 필요함",
+        )
+
+        self.assertEqual(row["final_review_record_type"], "judgment_decision")
+        self.assertEqual(row["monitoring_handoff_state"], "not_requested")
+        self.assertFalse(row["monitoring_candidate"])
+        self.assertEqual(row["operator_decision"]["reason"], "추가 관찰이 필요함")
+        self.assertEqual(row["decision_brief_snapshot"]["verdict"]["route"], "HOLD_FOR_MORE_PAPER_TRACKING")
+
+    def test_existing_canonical_route_values_are_unchanged(self) -> None:
+        from app.services.backtest_evidence_read_model import FINAL_REVIEW_DECISION_LABELS
+
+        expected_routes = {
+            "SELECT_FOR_PRACTICAL_PORTFOLIO",
+            "HOLD_FOR_MORE_PAPER_TRACKING",
+            "REJECT_FOR_PRACTICAL_USE",
+            "RE_REVIEW_REQUIRED",
+        }
+
+        self.assertEqual(set(FINAL_REVIEW_DECISION_LABELS), expected_routes)
+        for route in expected_routes:
+            with self.subTest(route=route):
+                row = self._build_persistence_row(decision_route=route)
+                self.assertEqual(row["decision_route"], route)
+                self.assertEqual(row["monitoring_candidate"], route == "SELECT_FOR_PRACTICAL_PORTFOLIO")
+
 
 class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
     def _selected_row(self) -> dict:
@@ -32469,6 +33436,44 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
                 "watch_symbol_count": 0,
             },
         }
+
+    def test_monitoring_read_model_prefers_structured_brief_conditions(self) -> None:
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
+            build_final_selected_portfolio_dashboard_row,
+        )
+
+        raw = dict(self._selected_row()["raw_decision"])
+        raw["decision_brief_snapshot"] = {
+            "schema_version": "decision_brief_snapshot_v1",
+            "monitoring_conditions": [
+                {
+                    "observation_id": "drawdown-recovery-path",
+                    "title": "낙폭과 회복 경로 재확인",
+                    "threshold": "-20% 이하",
+                    "cadence": "월간",
+                    "re_review_action": "손실 감내 조건을 다시 검토합니다.",
+                }
+            ],
+        }
+
+        dashboard = build_final_selected_portfolio_dashboard_row(raw)
+
+        self.assertEqual(
+            dashboard["review_triggers"],
+            ["낙폭과 회복 경로 재확인 · 기준 -20% 이하 · 월간 · 손실 감내 조건을 다시 검토합니다."],
+        )
+
+    def test_monitoring_read_model_falls_back_for_legacy_rows(self) -> None:
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
+            build_final_selected_portfolio_dashboard_row,
+        )
+
+        raw = dict(self._selected_row()["raw_decision"])
+        raw.pop("decision_brief_snapshot", None)
+
+        dashboard = build_final_selected_portfolio_dashboard_row(raw)
+
+        self.assertEqual(dashboard["review_triggers"], ["CAGR deterioration review"])
 
     def _selected_row_with_open_issue(self) -> dict:
         row = self._selected_row()

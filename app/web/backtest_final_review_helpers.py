@@ -18,6 +18,9 @@ from app.services.backtest_evidence_closure import (
     finalize_evidence_closure,
     is_current_final_review_eligible,
 )
+from app.services.backtest_final_review_decision_brief import (
+    build_final_review_decision_brief_snapshot,
+)
 from app.services.backtest_selected_route_preflight import (
     build_practical_validation_selected_route_preflight,
 )
@@ -419,6 +422,7 @@ def _build_final_review_save_evaluation(
     decision_route: str,
     operator_reason: str,
     existing_decision_ids: set[str],
+    observation_freshness: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Check whether the final review can be recorded as one durable decision row."""
     decision_id_clean = str(decision_id or "").strip()
@@ -453,6 +457,15 @@ def _build_final_review_save_evaluation(
             "Ready": (not selected_route) or evidence.get("route") == "READY_FOR_FINAL_DECISION",
             "Current": evidence.get("route") or "-",
             "Meaning": "모니터링 후보 선정은 blocker가 없을 때만 저장합니다. non-select route는 판단 기록으로 남길 수 있습니다.",
+        },
+        {
+            "Criteria": "Observation freshness",
+            "Ready": (
+                not selected_route
+                or not bool(dict(observation_freshness or {}).get("selection_blocked"))
+            ),
+            "Current": dict(observation_freshness or {}).get("status") or "not_provided",
+            "Meaning": "계속 추적 선정은 현재 확보 가능한 관측 기간을 반영한 뒤 저장합니다.",
         },
         packet_gate,
     ]
@@ -489,11 +502,13 @@ def _build_final_review_decision_row(
     paper_observation: dict[str, Any],
     evidence: dict[str, Any],
     investability_packet: dict[str, Any] | None = None,
+    decision_brief: dict[str, Any] | None = None,
     decision_id: str,
     decision_route: str,
     operator_reason: str,
     operator_constraints: str,
     operator_next_action: str,
+    accepted_limit_acknowledgements: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Create one final review record that includes validation, observation, and decision evidence."""
     now = datetime.now().isoformat(timespec="seconds")
@@ -545,6 +560,10 @@ def _build_final_review_decision_row(
         "deployment_readiness_policy_snapshot": deployment_readiness_policy_snapshot,
         "open_review_items": open_review_items,
         "evidence_closure_snapshot": closure_snapshot,
+        "decision_brief_snapshot": build_final_review_decision_brief_snapshot(
+            dict(decision_brief or {}),
+            accepted_limit_acknowledgements=accepted_limit_acknowledgements,
+        ),
         "risk_and_validation_snapshot": {
             "validation_route": validation.get("validation_route"),
             "validation_score": validation.get("validation_score"),

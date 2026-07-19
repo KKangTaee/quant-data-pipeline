@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from datetime import datetime
+from collections.abc import Callable
 from typing import Any
 from uuid import uuid4
 
@@ -225,10 +226,17 @@ def _replay_component_symbols(source: dict[str, Any]) -> list[str]:
     return list(dict.fromkeys(symbols))
 
 
+def replay_component_symbols(source: dict[str, Any]) -> list[str]:
+    """Return the active symbols required by the existing replay contract."""
+
+    return _replay_component_symbols(source)
+
+
 def build_replay_market_date_contract(
     source: dict[str, Any],
     *,
     requested_end: Any | None = None,
+    freshness_loader: Callable[..., pd.DataFrame] | None = None,
 ) -> dict[str, Any]:
     """Separate whole-DB request date from source-specific common price coverage."""
 
@@ -243,8 +251,11 @@ def build_replay_market_date_contract(
             "limiting_symbols": [],
             "missing_symbols": [],
             "symbols": [],
+            "symbol_latest_dates": {},
+            "stale_symbols": [],
         }
-    freshness = load_price_freshness_summary(
+    selected_loader = freshness_loader or load_price_freshness_summary
+    freshness = selected_loader(
         symbols=symbols,
         end=requested_market_date,
         timeframe="1d",
@@ -263,6 +274,20 @@ def build_replay_market_date_contract(
         if pd.notna(latest_common_ts)
         else list(missing_symbols)
     )
+    symbol_latest_dates = {
+        symbol: _date_text(rows.loc[rows["symbol"] == symbol, "latest_date"].iloc[-1])
+        for symbol in symbols
+        if not rows.loc[rows["symbol"] == symbol, "latest_date"].empty
+    }
+    stale_symbols = [
+        symbol
+        for symbol in symbols
+        if symbol not in symbol_latest_dates
+        or (
+            requested_market_date
+            and symbol_latest_dates[symbol] < requested_market_date
+        )
+    ]
     return {
         "requested_market_date": requested_market_date,
         "latest_common_price_date": latest_common_price_date,
@@ -271,6 +296,8 @@ def build_replay_market_date_contract(
         "limiting_symbols": limiting_symbols,
         "missing_symbols": missing_symbols,
         "symbols": symbols,
+        "symbol_latest_dates": symbol_latest_dates,
+        "stale_symbols": stale_symbols,
     }
 
 

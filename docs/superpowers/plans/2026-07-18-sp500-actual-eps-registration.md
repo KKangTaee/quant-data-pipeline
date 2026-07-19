@@ -407,4 +407,3 @@ git commit -m "S&P 500 실제 EPS 등록 문서와 검증 정리"
 - Spec coverage: official upload, explicit parser, canonical source URL, release vintage, transactional rollback, 8-quarter gate, PIT loader, user-facing coverage, Shiller exclusion, Browser QA, durable docs are each mapped to Tasks 1–6.
 - Placeholder scan: no implementation placeholder remains; the only conditional step is the external official workbook population, which is explicitly separated from code completion and recorded as a data availability risk when absent.
 - Type consistency: the workbook type, importer result fields, action name, job wrapper signature, and loader as-of parameters match across tasks.
-

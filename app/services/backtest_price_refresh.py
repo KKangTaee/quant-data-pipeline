@@ -123,6 +123,12 @@ def _refresh_symbols_from_price_freshness(
     return coverage_tickers, "full_current_backtest_universe", False, []
 
 
+def latest_completed_nyse_session(now: datetime | None = None) -> date:
+    """Keep the Backtest public contract while delegating calendar rules centrally."""
+
+    return _latest_completed_nyse_session(now)
+
+
 def _coerce_date(value: Any) -> date | None:
     if value in (None, ""):
         return None

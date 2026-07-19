@@ -16,11 +16,22 @@ EVIDENCE_CLOSURE_SCHEMA_VERSION = "backtest_evidence_closure_v1"
 ACTION_HANDLER_CONTRACTS = {
     "run_practical_validation_replay": {
         "owner_stage": "practical_validation",
-        "handler": "app.web.backtest_practical_validation.page:_render_actual_replay_panel",
+        "handler": (
+            "app.web.backtest_practical_validation.page:"
+            "_execute_practical_validation_replay"
+        ),
+    },
+    "run_practical_validation_provider_gap_collection": {
+        "owner_stage": "practical_validation",
+        "handler": (
+            "app.web.backtest_practical_validation.page:"
+            "_execute_practical_validation_provider_gap_collection"
+        ),
     },
 }
 
 _RESOLUTION_ACTION_LABELS = {
+    "validated_caution": "Level2에서 검증 완료",
     "resolve_now": "지금 해결",
     "engineering_required": "개발 후 재검토",
     "accepted_limit": "Final Review에서 한계 인수",
@@ -54,6 +65,7 @@ _KNOWN_MODULE_ROOTS = {
     "tax_account_scope": "tax_account_scope",
     "selected_route_preflight": "selected_route_preflight",
     "pre_final_data_enrichment": "pre_final_data_enrichment",
+    "pre_final_data_contract": "pre_final_data_contract",
 }
 
 
@@ -86,6 +98,63 @@ def has_action_handler(action_id: Any) -> bool:
     """Return whether an action is backed by a registered Python handler."""
 
     return str(action_id or "").strip() in ACTION_HANDLER_CONTRACTS
+
+
+def build_structured_monitoring_condition(
+    issue: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Return a complete Monitoring handoff without filling unknown evidence."""
+
+    root_issue_id = str(issue.get("root_issue_id") or "").strip()
+    raw_condition = issue.get("monitoring_condition")
+    condition = dict(raw_condition) if isinstance(raw_condition, dict) else {}
+    required_text = (
+        "observation",
+        "threshold",
+        "cadence",
+        "re_review_action",
+    )
+    evidence_refs = [
+        str(value).strip()
+        for value in list(condition.get("evidence_refs") or [])
+        if str(value).strip()
+    ]
+    if all(str(condition.get(key) or "").strip() for key in required_text) and evidence_refs:
+        return {
+            **condition,
+            "observation_id": str(
+                condition.get("observation_id")
+                or f"monitoring:{root_issue_id}"
+            ).strip(),
+            "evidence_refs": evidence_refs,
+        }
+
+    period = dict(issue.get("period") or {})
+    if (
+        root_issue_id == "replay_period_coverage"
+        and str(issue.get("applicability") or "") == "partial_month_monitoring"
+    ):
+        requested = _date_text(period.get("requested_market_date"))
+        latest_valuation = _date_text(period.get("latest_valuation_date"))
+        last_complete = _date_text(period.get("last_complete_rebalance_date"))
+        if requested and latest_valuation and last_complete:
+            return {
+                "observation_id": "monitoring:next-complete-rebalance",
+                "observation": (
+                    f"최신 평가는 {latest_valuation}, 마지막 완결 리밸런싱은 "
+                    f"{last_complete}입니다."
+                ),
+                "threshold": f"{requested} 이후 첫 완결 리밸런싱 결과가 저장될 때",
+                "cadence": "다음 완결 리밸런싱 시점",
+                "re_review_action": (
+                    "새 완결 리밸런싱 결과로 최신 평가와 포트폴리오 판단을 "
+                    "다시 확인합니다."
+                ),
+                "evidence_refs": [
+                    "evidence_closure.replay_period_coverage.period"
+                ],
+            }
+    return None
 
 
 def normalize_evidence_issue(issue: dict[str, Any]) -> dict[str, Any]:
@@ -226,6 +295,7 @@ def _base_issue(
     gate_effect: str,
     terminal_state: str = "open",
     period: dict[str, Any] | None = None,
+    measurement: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "root_issue_id": root_issue_id,
@@ -246,6 +316,7 @@ def _base_issue(
         "monitoring_condition": None,
         "terminal_state": terminal_state,
         "period": dict(period or {}),
+        "measurement": dict(measurement or {}),
         "score_impact": 0,
     }
 
@@ -262,26 +333,119 @@ def _replay_issue(validation: dict[str, Any], modules: dict[str, dict[str, Any]]
     actual = period.get("actual_result_date") or "-"
     gap = period.get("end_gap_days")
     gap_text = f"{gap}일 gap" if gap is not None else "gap 미확인"
+    requested_date = pd.to_datetime(
+        period.get("requested_market_date"),
+        errors="coerce",
+    )
+    latest_common_date = pd.to_datetime(
+        period.get("latest_common_price_date"),
+        errors="coerce",
+    )
+    last_complete_date = pd.to_datetime(
+        period.get("last_complete_rebalance_date"),
+        errors="coerce",
+    )
+    latest_valuation_date = pd.to_datetime(
+        period.get("latest_valuation_date"),
+        errors="coerce",
+    )
+    actual_result_date = pd.to_datetime(
+        period.get("actual_result_date"),
+        errors="coerce",
+    )
+    requested_month = (
+        requested_date.to_period("M")
+        if not pd.isna(requested_date)
+        else None
+    )
+    last_complete_month = (
+        last_complete_date.to_period("M")
+        if not pd.isna(last_complete_date)
+        else None
+    )
+    latest_common_month = (
+        latest_common_date.to_period("M")
+        if not pd.isna(latest_common_date)
+        else None
+    )
+    latest_valuation_month = (
+        latest_valuation_date.to_period("M")
+        if not pd.isna(latest_valuation_date)
+        else None
+    )
+    actual_result_month = (
+        actual_result_date.to_period("M")
+        if not pd.isna(actual_result_date)
+        else None
+    )
+    partial_month_proven = (
+        not pd.isna(requested_date)
+        and not pd.isna(latest_common_date)
+        and not pd.isna(last_complete_date)
+        and not pd.isna(latest_valuation_date)
+        and not pd.isna(actual_result_date)
+        and gap is not None
+        and 0 <= gap <= 31
+        and last_complete_month == requested_month - 1
+        and latest_common_month in {last_complete_month, requested_month}
+        and latest_valuation_month == requested_month
+        and actual_result_month == last_complete_month
+        and actual_result_date == last_complete_date
+        and latest_common_date >= last_complete_date - pd.Timedelta(days=7)
+        and latest_common_date <= latest_valuation_date
+        and last_complete_date < latest_valuation_date <= requested_date
+        and last_complete_date < requested_date
+    )
     derived = []
     if replay_module:
         derived.append("latest_replay")
     if pit_row:
         derived.append("pit_price_window_coverage")
+    if partial_month_proven:
+        latest_valuation = period.get("latest_valuation_date") or "-"
+        last_complete = period.get("last_complete_rebalance_date") or "-"
+        return _base_issue(
+            root_issue_id="replay_period_coverage",
+            title="월중 최신 평가와 완결 리밸런싱 구분",
+            observed=(
+                f"요청 {requested} / 완결 리밸런싱 {last_complete} / "
+                f"최신 평가 {latest_valuation}"
+            ),
+            expected="완결 리밸런싱과 월중 valuation 근거를 분리해 저장",
+            cause="partial-month valuation after the last complete rebalance",
+            derived_checks=derived,
+            resolution_class="monitoring_transfer",
+            owner_stage="final_review",
+            actionable_now=False,
+            action_id=None,
+            completion_criteria=(
+                "Final Review에서 최신 평가일과 다음 완결 리밸런싱 확인 조건을 "
+                "Monitoring handoff로 기록합니다."
+            ),
+            applicability="partial_month_monitoring",
+            criticality="noncritical",
+            gate_effect="final_review_closure",
+            period=period,
+        )
     return _base_issue(
         root_issue_id="replay_period_coverage",
         title="최신 재검증 기간 충족 여부",
         observed=f"요청 {requested} / 실제 {actual} / {gap_text}",
-        expected="latest common price date까지 valuation evidence 확보",
-        cause="stored runtime period coverage",
+        expected="latest common price date까지 설명 가능한 runtime period contract 확보",
+        cause="completed replay still has an unexplained period gap",
         derived_checks=derived,
-        resolution_class="resolve_now",
-        owner_stage="practical_validation",
-        actionable_now=True,
-        action_id="run_practical_validation_replay",
-        completion_criteria="period coverage가 PASS이거나 partial-month monitoring transfer로 분류됨",
+        resolution_class="engineering_required",
+        owner_stage="development",
+        actionable_now=False,
+        action_id=None,
+        completion_criteria=(
+            "같은 replay 재실행으로 해결되지 않는 기간 gap 원인을 보강하고 "
+            "새 validation에서 period coverage PASS를 저장합니다."
+        ),
         applicability="required",
         criticality="critical",
         gate_effect="block_final_review",
+        terminal_state="deferred",
         period=period,
     )
 
@@ -335,6 +499,10 @@ def _generic_module_issue(module: dict[str, Any]) -> dict[str, Any] | None:
         return None
     requirement = str(module.get("requirement") or module.get("Requirement") or "").upper()
     role = str(module.get("review_role") or "")
+    evidence_state = str(module.get("evidence_state") or "missing").strip().lower()
+    explicit_resolution_class = str(
+        module.get("resolution_class") or ""
+    ).strip()
     known_root = _KNOWN_MODULE_ROOTS.get(module_id)
     if not known_root and requirement == "REQUIRED":
         return _base_issue(
@@ -356,15 +524,66 @@ def _generic_module_issue(module: dict[str, Any]) -> dict[str, Any] | None:
         )
     if not known_root:
         return None
-    if role == "monitoring_followup":
+    action_id = str(module.get("action_id") or "").strip() or None
+    if (
+        explicit_resolution_class == "accepted_limit"
+        and evidence_state in {"computed", "observed", "verified"}
+    ):
+        resolution_class = "accepted_limit"
+        owner_stage = "final_review"
+        criticality = "noncritical"
+        gate_effect = "final_review_closure"
+        terminal_state = "open"
+    elif role == "final_readiness_blocker":
+        if has_action_handler(action_id):
+            resolution_class = "resolve_now"
+            owner_stage = "practical_validation"
+            criticality = "critical"
+            gate_effect = "block_final_review"
+        else:
+            resolution_class = "engineering_required"
+            owner_stage = "development"
+            criticality = "critical"
+            gate_effect = "block_final_review"
+            action_id = None
+        terminal_state = (
+            "open"
+            if resolution_class == "resolve_now"
+            else "deferred"
+        )
+    elif role == "monitoring_followup":
         resolution_class = "monitoring_transfer"
         owner_stage = "final_review"
+        criticality = "noncritical"
+        gate_effect = "final_review_closure"
+        terminal_state = "open"
     elif role == "final_decision_input":
         resolution_class = "final_decision"
         owner_stage = "final_review"
+        criticality = "noncritical"
+        gate_effect = "final_review_closure"
+        terminal_state = "open"
+    elif role in {"pv_data_caution", "pv_practical_caution"}:
+        if evidence_state in {"computed", "observed", "verified"}:
+            resolution_class = "validated_caution"
+            owner_stage = "practical_validation"
+            criticality = "noncritical"
+            gate_effect = "level2_resolved"
+            terminal_state = "resolved"
+        else:
+            resolution_class = "engineering_required"
+            owner_stage = "development"
+            criticality = "critical"
+            gate_effect = "block_final_review"
+            action_id = None
+            terminal_state = "deferred"
     else:
-        resolution_class = "accepted_limit"
-        owner_stage = "final_review"
+        resolution_class = "engineering_required"
+        owner_stage = "development"
+        criticality = "critical"
+        gate_effect = "block_final_review"
+        action_id = None
+        terminal_state = "deferred"
     return _base_issue(
         root_issue_id=known_root,
         title=str(module.get("label") or module.get("Module") or module_id),
@@ -374,12 +593,23 @@ def _generic_module_issue(module: dict[str, Any]) -> dict[str, Any] | None:
         derived_checks=[module_id],
         resolution_class=resolution_class,
         owner_stage=owner_stage,
-        actionable_now=False,
-        action_id=None,
-        completion_criteria="Final Review route/reason or Monitoring condition records terminal state",
-        applicability="module_applies",
-        criticality="noncritical",
-        gate_effect="final_review_closure",
+        actionable_now=resolution_class == "resolve_now",
+        action_id=action_id,
+        completion_criteria=str(module.get("completion_criteria") or "").strip()
+        or (
+            "Level2 계산 / 관측 근거와 주의 판정을 저장함"
+            if resolution_class == "validated_caution"
+            else (
+                "required validator 또는 evidence adapter 구현 후 새 validation 저장"
+                if resolution_class == "engineering_required"
+                else "Final Review route/reason or Monitoring condition records terminal state"
+            )
+        ),
+        applicability=str(module.get("applicability") or "module_applies"),
+        criticality=criticality,
+        gate_effect=gate_effect,
+        terminal_state=terminal_state,
+        measurement=dict(module.get("measurement") or {}),
     )
 
 
@@ -404,6 +634,21 @@ def _merge_root_issues(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]
 
 
 def _closure_summary(issues: list[dict[str, Any]]) -> dict[str, int]:
+    resolution_counts = {
+        resolution_class: sum(
+            1
+            for issue in issues
+            if issue.get("resolution_class") == resolution_class
+        )
+        for resolution_class in (
+            "validated_caution",
+            "resolve_now",
+            "engineering_required",
+            "accepted_limit",
+            "final_decision",
+            "monitoring_transfer",
+        )
+    }
     unresolved_actionable_count = sum(
         1
         for issue in issues
@@ -424,6 +669,12 @@ def _closure_summary(issues: list[dict[str, Any]]) -> dict[str, int]:
         "unresolved_actionable_count": unresolved_actionable_count,
         "critical_engineering_count": critical_engineering_count,
         "missing_contract_count": missing_contract_count,
+        "validated_caution_count": resolution_counts["validated_caution"],
+        "resolve_now_count": resolution_counts["resolve_now"],
+        "engineering_required_count": resolution_counts["engineering_required"],
+        "accepted_limit_count": resolution_counts["accepted_limit"],
+        "final_decision_count": resolution_counts["final_decision"],
+        "monitoring_transfer_count": resolution_counts["monitoring_transfer"],
     }
 
 
@@ -571,6 +822,7 @@ __all__ = [
     "EVIDENCE_CLOSURE_SCHEMA_VERSION",
     "build_evidence_closure_contract",
     "build_latest_replay_evidence",
+    "build_structured_monitoring_condition",
     "finalize_evidence_closure",
     "has_action_handler",
     "is_current_final_review_eligible",

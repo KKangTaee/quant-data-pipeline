@@ -144,6 +144,7 @@ def append_backtest_run_history(
         "schema_version": BACKTEST_HISTORY_SCHEMA_VERSION,
         "recorded_at": recorded_at,
         "run_kind": run_kind,
+        "run_result_id": meta.get("run_id"),
         "strategy_key": meta.get("strategy_key"),
         "execution_mode": meta.get("execution_mode"),
         "data_mode": meta.get("data_mode"),

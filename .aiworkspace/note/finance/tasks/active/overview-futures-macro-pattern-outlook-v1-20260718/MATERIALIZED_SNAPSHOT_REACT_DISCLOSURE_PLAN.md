@@ -445,4 +445,3 @@ git commit -m "선물 매크로 영속 스냅샷 마무리"
 ```
 
 Expected: only intended code/docs and production component bundle are committed; untracked research, `.superpowers/`, run history, and screenshots remain uncommitted.
-

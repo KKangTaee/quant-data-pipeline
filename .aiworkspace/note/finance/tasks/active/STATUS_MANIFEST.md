@@ -1,20 +1,29 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-16
+Last Verified: 2026-07-19
 
 ## Current State
 
 Current active task:
 
-- none
+- `backtest-analysis-level1-decision-workspace-v1-20260717`
 
 Latest completed task:
 
-- `overview-market-context-economic-cycle-provisional-hybrid-v2-20260716` — 1차~5차 complete; LIMITED/READY/계산불가를 잠정 추정/검증된 추정/판단 불가로 분리하고 2×2 경로·ribbon과 actual 122 snapshot 갱신을 완료
+- `overview-futures-macro-pattern-outlook-v1-20260718` — 전체 roadmap `5/5`와 materialized snapshot / React disclosure closeout `4/4`; 5년 compact snapshot persistence, DB-only first entry, method / calculation trace, actual desktop / 420px Browser QA complete
+
+Current active task status:
+
+- `backtest-analysis-level1-decision-workspace-v1-20260717`: 1~14차 Level1 one-shell 개선을 완료했고, 사용자 승인된 15차 Portfolio Mix React one-shell 완성 설계의 상세 구현 계획을 작성할 차례다.
 
 Previous completed task:
 
+- `institutional-13f-openfigi-mapping-v1-20260718`
+- `institutional-portfolios-context-first-redesign-v1-20260718`
+- `overview-economic-cycle-sp500-actual-eps-registration-v1-20260718` — 제품 등록 경로 complete, 실제 workbook 등록은 외부 입력 대기
+- `overview-economic-cycle-asset-pathways-stages3-5-v1-20260717`
+- `overview-market-context-economic-cycle-provisional-hybrid-v2-20260716`
 - `overview-market-context-us-economic-cycle-v1-20260716`
 - `overview-market-context-turnaround-derived-quarter-provenance-v1-20260716`
 - `overview-market-context-turnaround-stage-semantics-fix-v1-20260716`

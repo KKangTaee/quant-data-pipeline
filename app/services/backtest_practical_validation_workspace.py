@@ -1804,7 +1804,14 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
         if issue.get("resolution_class") == "accepted_limit"
         and str(issue.get("root_issue_id") or "").strip()
     }
-    final_review_limit_count = len(final_review_limit_root_issue_ids)
+    closure_summary = dict(closure.get("summary") or {})
+    final_review_limit_count = int(
+        closure_summary.get("accepted_limit_count")
+        or len(final_review_limit_root_issue_ids)
+    )
+    final_review_decision_count = int(
+        closure_summary.get("final_decision_count") or 0
+    )
     modules = _dict_list(validation_row.get("validation_modules"))
     gate = dict(validation_row.get("final_review_gate") or {})
     evidence_rows_by_module = _module_evidence_row_map(validation_row)
@@ -1964,6 +1971,7 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
             "downstream_reference_group_count": len(downstream_groups),
             "handoff_summary_group_count": len(handoff_summary_groups),
             "final_review_limit_count": final_review_limit_count,
+            "final_review_decision_count": final_review_decision_count,
         },
         "gate_summary": gate_summary,
         "fix_queue": fix_queue,

@@ -1,11 +1,11 @@
-"""Final Review investment report Streamlit component wrapper."""
+"""Final Review Decision Workspace Streamlit component wrapper."""
 
 from .component import (
-    is_final_review_investment_report_available,
-    render_final_review_investment_report,
+    is_final_review_decision_workspace_available,
+    render_final_review_decision_workspace,
 )
 
 __all__ = [
-    "is_final_review_investment_report_available",
-    "render_final_review_investment_report",
+    "is_final_review_decision_workspace_available",
+    "render_final_review_decision_workspace",
 ]

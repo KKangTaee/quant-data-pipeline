@@ -339,3 +339,660 @@ role별 고정 `-6 / -4` 정책은 제거한다.
 6. static / dynamic universe가 서로 다른 survivorship policy를 사용한다.
 7. GRS replay 기간 부족이 ticker/date/root cause와 함께 설명된다.
 8. Python service boundary와 React presentation-only 경계가 유지된다.
+
+## 2026-07-16 Visual Fidelity Correction
+
+사용자가 웹에서 승인한 A안은 정보 순서만이 아니라 `Workspace > Overview > 시장 맥락`과 같은 시각 언어까지 포함한다. 현재 구현의 각진 녹색 editorial report는 승인안과 다르므로, Python Decision Brief / Gate / persistence 계약은 그대로 두고 React presentation만 교정한다.
+
+### Canonical visual references
+
+- 승인한 A안: 질문 중심 Decision Brief mockup의 둥근 workbench, compact heading, soft neutral panel, 결론 badge, 후보 summary, metric band, progressive disclosure.
+- 실행 중 기준 화면: `app/web/streamlit_components/market_context_valuation/src/style.css`와 `MarketContextValuation.tsx`.
+- Final Review 고유 정보 구조: 결론 → 행동 근거 → 실제 강점/약점 → trait map → Monitoring 변화 조건 → 최종 판단 → disclosure.
+
+### Exact visual contract
+
+- font stack: `Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
+- primary text `#152033`, secondary text `#647589`, border `#dae4ee`
+- outer rhythm: one-column `18px` gap; 12-column editorial grid를 사용하지 않는다.
+- question header: `20px` radius, blue-gray/teal light gradient, `22px 24px` desktop padding.
+- content section: `20px` radius, white background, `0 10px 30px rgba(33, 53, 72, .055)` shadow.
+- inner chart shell: `17px` radius and white-to-cool-neutral gradient.
+- metric/observation band: `14px` radius, shared border between cells.
+- headline hierarchy: page question `23px`, section heading `20px`, subsection `18px`; 기존 `52px` verdict headline을 사용하지 않는다.
+- state colors are restrained teal `#17695e`, orange `#a24d19`, blue-gray `#284e69`; 상태를 얇은 각진 top border로 표현하지 않는다.
+- responsive: `760px`에서 header/chart/finding/decision grid를 한 열로 만들고, `460px`에서 padding과 metric grid를 다시 줄인다.
+
+### Ownership and non-goals
+
+- `DecisionBriefWorkspace.tsx`는 approved question-first shell과 candidate intent 배치를 소유한다.
+- `DecisionBriefCharts.tsx`는 좌표 계산을 유지하고 chart stroke palette만 Market Context 계열로 맞춘다.
+- `style.css`가 visual token과 responsive layout을 소유한다.
+- Python projection, route mapping, Gate, evidence classification, persistence, registry는 변경하지 않는다.
+- Market Context component 자체를 공용화해 기존 Overview 화면에 회귀 위험을 만들지 않는다. 이번 교정은 Final Review가 canonical token을 소비하는 focused presentation correction이다.
+
+### Visual acceptance
+
+1. 첫 화면에서 질문과 후보 선택이 하나의 rounded gradient header로 읽힌다.
+2. verdict는 compact highlighted answer panel이며 거대한 editorial headline이 아니다.
+3. chart, metric, finding, monitoring, decision, disclosure가 Market Context의 radius/palette/shadow rhythm을 공유한다.
+4. 1440px와 760px Browser QA에서 기준 화면과 나란히 비교하고, 760px document/component horizontal overflow가 0이다.
+5. source-contract test가 canonical token, question-first hierarchy, chart palette를 고정해 같은 drift를 다시 허용하지 않는다.
+
+## 2026-07-16 Chart Interaction And Content Polish
+
+사용자가 Market Context visual fidelity 교정 결과를 확인한 뒤, 섹션 제목의 잘못된 가로 정렬, 의미가 부족한 차트 축, hover 부재, observation strip의 빈 면과 긴 값 clipping을 지적했다. 승인안 A는 기존 dependency-free SVG와 Python projection을 유지하면서 React presentation만 보강한다.
+
+### Root cause
+
+- `SectionHeading`은 eyebrow, title, detail을 flex의 세 독립 항목으로 렌더해 한글 제목이 영문 eyebrow 아래가 아니라 가운데 열에 놓인다.
+- `SvgLineChart`는 series path와 수평 grid만 그리며 pointer state, X/Y tick label, crosshair, tooltip이 없다. 아래의 start/min-max/end 문자열은 실제 축이 아니다.
+- `Underwater drawdown`은 running peak 대비 하락률이지만 제목과 화면 설명이 영문 contract에 머물러 사용자가 의미를 추론해야 한다.
+- `.db-observation-strip`은 `auto-fit minmax(180px, 1fr)`와 회색 container background를 함께 사용한다. viewport에 따라 5+1 track이 생겨 마지막 행의 미사용 면이 큰 빈칸처럼 보인다.
+- observation value와 comparator는 긴 snake-case token을 줄바꿈하는 규칙이 없어 chart shell의 `overflow: hidden` 경계에서 잘린다.
+
+### Chosen approach A
+
+- chart library를 추가하지 않고 현재 SVG를 확장한다. Market Context의 `pointerIndex`, hover rule, focus dot, inspector pattern을 Final Review에 맞게 재사용한다.
+- `SectionHeading`은 eyebrow와 한글 title을 `.db-section-heading-copy`로 묶고, detail만 오른쪽 설명으로 유지한다. 760px 이하에서는 두 묶음을 한 열로 쌓는다.
+- `SvgLineChart`는 plot margin을 명시하고 X/Y scale, 5~6개 date tick, 5개 value tick을 그린다. 누적 성과 Y축은 시작값 100의 rebased index, drawdown Y축은 `%` 단위다.
+- pointer hover는 가장 가까운 point index를 선택해 vertical crosshair, series별 focus dot, 날짜와 모든 series 값을 담은 tooltip을 표시한다. mouse leave 시 latest point로 돌아가며 keyboard/screen-reader용 chart description과 수치 표 fallback을 유지한다.
+- 누적 성과 chart subtitle은 `100은 관측 시작일의 기준값`을 설명한다.
+- Underwater 제목은 `고점 대비 낙폭 (Underwater)`으로 바꾸고 `0%는 이전 최고점 회복, 음수는 최고점 대비 하락률`을 설명한다. Python running-peak 계산은 변경하지 않는다.
+- observation strip은 desktop 3열, tablet 2열, mobile 1열로 고정한다. container의 미사용 회색 면을 없애고 각 article이 자체 border/background/radius를 가진다.
+- observation `strong`, `p`, `small`은 `overflow-wrap: anywhere`와 안전한 `word-break`를 사용해 raw evidence token과 comparator 전체를 표시한다.
+
+### Alternatives rejected
+
+- Recharts 도입은 axis/tooltip 구현을 단순화하지만 새 dependency와 bundle 증가, existing Market Context SVG와의 visual drift를 만든다.
+- axis label만 추가하는 최소안은 hover와 point-level 비교 요구를 충족하지 못한다.
+
+### Ownership and safety
+
+- 수정 owner는 `DecisionBriefWorkspace.tsx`, `DecisionBriefCharts.tsx`, `style.css`, tracked Vite build다.
+- visual source contract test가 title grouping, hover/axis/tooltip, Korean underwater semantics, observation wrapping/grid를 고정한다.
+- Python Decision Brief, exact-common alignment, running-peak drawdown, Gate, route, save, registry, Monitoring snapshot은 변경하지 않는다.
+- hover는 read-only presentation state이며 registry append나 Streamlit rerun을 만들지 않는다.
+
+### Acceptance criteria
+
+1. 모든 `SectionHeading`에서 영문 eyebrow 바로 아래에 한글 title이 놓이고 설명은 desktop 오른쪽, narrow viewport 아래에 배치된다.
+2. 누적 성과 chart는 5~6개 X date tick, 5개 rebased-index Y tick, hover 날짜와 후보/Benchmark 값을 제공한다.
+3. 고점 대비 낙폭 chart는 의미 설명, percent Y tick, hover 날짜/낙폭 값을 제공한다.
+4. observation 6개는 desktop 3×2, 760px 2×3, 460px 1×6으로 배치되고 큰 빈 회색 면이 없다.
+5. `weak_source_or_proxy_liquidity_evidence`와 `official_fresh_capacity_evidence` 같은 긴 값이 잘리지 않고 여러 줄로 표시된다.
+6. 기존 수치 표, SVG 접근성 label, chart series 계산, Python/data contract가 유지된다.
+
+## 2026-07-16 Portfolio Character Profile And Review Pressure Separation
+
+사용자가 `포트폴리오 성격 지도`에서 실제 포트폴리오 특성이 보이기를 원한다. 현재 radar는 이름과 달리 `측정값 ÷ review threshold`를 0~100 pressure로 정규화한 화면이다. 값이 저장돼 있어도 threshold가 없으면 `미측정`이 되므로, 실제 성격과 관리 기준 대비 압력을 서로 다른 contract와 UI로 분리한다.
+
+### 이걸 하는 이유?
+
+current GRS 화면에는 다음 값이 이미 존재한다.
+
+- 최대 구성 비중 `100.00%`
+- 최대 underwater 낙폭 `-12.43%`
+- 평균 회전율 `3.20%`
+- 거래비용 가정 `10.00 bps`
+
+하지만 current trait map은 집중 위험만 `83.3 / 100`으로 그리고 나머지를 `미측정`으로 표시한다. 이는 raw measurement 부재만의 문제가 아니다.
+
+- 집중 위험은 `max_weight=100`과 `max_weight_review=60`이 모두 있어 pressure를 계산한다.
+- 낙폭은 curve에서 `-12.43%`를 측정했고 profile에 `mdd_review_line=-15`가 있지만 projector가 `max_drawdown_review_pct`만 찾아 threshold를 연결하지 못한다.
+- 회전율은 `avg_turnover=0.032`가 있으나 명시적 review threshold가 없다.
+- 비용은 `transaction_cost_bps=10`과 curve 적용 증명이 있으나 `one_way_cost_bps=10`은 비용 가정 자체이지 허용 한도가 아니므로 review threshold로 재사용할 수 없다.
+- 국면 의존은 현재 structured measurement와 comparator가 없다.
+
+`미측정` 하나로 이 원인을 합치면 사용자는 값이 없는지, 기준만 없는지, 제품 adapter가 끊겼는지 구분할 수 없다. 또한 `83.3 / 100`은 투자 품질 점수처럼 보이지만 실제로는 threshold가 50 지점이 되도록 변환한 pressure 표현이다.
+
+### Considered approaches
+
+#### A. Threshold-only radar 유지
+
+- 장점: 현재 계산과 UI 변경이 작다.
+- 단점: threshold가 없는 실제 관측값을 계속 숨기며, 한 축만 있는 radar가 포트폴리오 성격을 설명하지 못한다.
+- 결정: 채택하지 않는다.
+
+#### B. Raw 값을 임의 0~100 점수로 환산
+
+- 장점: 모든 축을 radar polygon으로 그릴 수 있다.
+- 단점: %, bps, 낙폭, regime 값을 근거 없는 공통 범위로 변환해 가짜 비교와 종합점수를 만든다.
+- 결정: 채택하지 않는다.
+
+#### C. Actual Character + Review Pressure 분리
+
+- 실제 관측값은 threshold 유무와 관계없이 `포트폴리오 실제 성격`에 표시한다.
+- 명시적 review criterion이 있는 항목만 `관리 기준 대비 압력`에서 비교한다.
+- raw 값이 없을 때만 `분석 근거 없음`, 값은 있으나 criterion이 없으면 `기준 미설정`으로 표시한다.
+- 결정: 사용자 승인으로 채택한다.
+
+### Product meaning
+
+첫 영역의 질문은 `이 포트폴리오는 실제로 어떤 특성을 보였는가?`다. 두 번째 영역의 질문은 `그 특성이 저장된 관리 기준을 넘었는가?`다.
+
+`포트폴리오 실제 성격`은 좋고 나쁨을 임의로 판정하지 않는다. 측정값, 단위, 관측 의미, 기준일, source를 보여준다. `관리 기준 대비 압력`만 explicit comparator에 따라 `기준 이내 / 기준 초과 / 기준 미설정 / 분석 근거 없음`을 표시한다.
+
+### Python contract
+
+`app/services/backtest_final_review_decision_brief.py`가 기존 structured execution observation을 한 번 만들고, 같은 observation에서 두 projection을 파생한다. React는 raw validation이나 threshold key를 읽지 않는다.
+
+```text
+character_profile.items[]
+  axis_id
+  label
+  measurement_status = observed | evidence_missing
+  measured_value
+  display_value
+  unit
+  interpretation
+  evidence_refs[]
+  as_of
+
+review_pressure.items[]
+  axis_id
+  label
+  status = within_limit | exceeds_limit | criterion_missing | evidence_missing
+  measured_value
+  display_value
+  criterion_value
+  criterion_display
+  comparison
+  delta_value
+  delta_display
+  ratio_to_criterion
+  summary
+  evidence_refs[]
+  as_of
+```
+
+`aggregate_score`, role별 고정 점수, 임의 normalization은 만들지 않는다. `ratio_to_criterion`은 비교 설명을 위한 실제 비율이며 0~100 품질 점수가 아니다.
+
+`less_or_equal` risk criterion은 measurement와 criterion의 절댓값 크기로 비교한다. `delta_value = abs(measured) - abs(criterion)`이며 양수는 초과, 0 이하는 기준 이내 buffer다. 사용자 화면은 원래 부호와 단위를 보존해 concentration은 `%p`, drawdown은 signed `%`, cost는 `bps`로 설명한다. `ratio_to_criterion`은 cap하지 않는다.
+
+### Canonical measurement and criterion mapping
+
+| Axis | Measurement | Criterion | Current behavior |
+|---|---|---|---|
+| `concentration` | `metrics.max_weight` | `max_weight_review` | 실제 값과 `기준 60% 대비 +40%p 초과` 표시 |
+| `drawdown` | running-peak underwater의 minimum | `max_drawdown_review_pct` 또는 canonical alias `mdd_review_line` | signed display `-12.43%`; magnitude로 `-15% 관리선 이내 2.57%p` 비교 |
+| `turnover` | turnover evidence contract의 `avg_turnover` | `avg_turnover_review` 또는 `turnover_review` | raw `3.20%` 표시; criterion 없으면 `기준 미설정` |
+| `cost` | cost contract의 `transaction_cost_bps` | `transaction_cost_bps_review` | raw `10bps`와 curve 적용 상태 표시; `one_way_cost_bps`를 허용 기준으로 사용하지 않음 |
+| `regime_dependency` | explicit regime dispersion/dependency observation | 해당 observation의 explicit comparator | current source가 없으면 `분석 근거 없음`; prose나 가짜 0으로 채우지 않음 |
+
+threshold alias 정규화는 Python service가 소유한다. `mdd_review_line`은 명백한 drawdown review line이므로 canonical drawdown criterion으로 연결한다. contract alias 누락을 사용자에게 `기준 연결 필요`로 노출하지 않는다. 필수 alias가 다시 끊기면 source-contract test가 실패해야 한다.
+
+### UI structure
+
+기존 `포트폴리오 성격 지도` section을 다음 한 section 안의 두 계층으로 교체한다.
+
+1. `포트폴리오 실제 성격`
+   - 5개 trait row/card를 사용한다.
+   - 각 row는 한국어 label, 큰 raw value, 한 줄 의미, 기준일을 보여준다.
+   - threshold가 없어도 observed value는 항상 노출한다.
+   - 국면 의존처럼 measurement가 없을 때만 `분석 근거 없음` empty state를 사용한다.
+2. `관리 기준 대비 압력`
+   - radar polygon과 `83.3 / 100` 표현을 제거한다.
+   - 각 항목을 horizontal comparison row로 표시한다.
+   - criterion이 있으면 actual, criterion, 차이와 `기준 이내 / 초과`를 표시한다.
+   - criterion이 없으면 actual을 반복하지 않고 `기준 미설정`과 그 의미만 표시한다.
+
+desktop에서는 실제 성격과 관리 압력을 2열로 배치하고, 760px 이하에서는 실제 성격 다음에 관리 압력을 한 열로 쌓는다. `Workspace > Overview > 시장 맥락`의 blue-gray palette, rounded surface, soft shadow, compact typography를 유지한다.
+
+### User reading flow
+
+```text
+행동 차트와 관측값
+  -> 포트폴리오 실제 성격에서 raw 특성 확인
+  -> 관리 기준 대비 압력에서 초과/이내/기준 미설정 확인
+  -> 실제 강점과 약점
+  -> Monitoring 변화 조건
+  -> 최종 판단
+```
+
+성격 section은 Final Review에서 새 remediation을 수행하지 않는다. criterion이 없다는 사실은 Level2 action으로 자동 승격하지 않으며, selected-route Gate도 이 presentation만으로 변경하지 않는다.
+
+### Fallback and compatibility
+
+- Streamlit fallback도 radar text list 대신 같은 `실제 성격 / 관리 기준 대비 압력` 순서를 사용한다.
+- current `decision_brief_v1`의 `trait_map`은 current React와 fallback consumer를 함께 전환한 뒤 제거한다. stored final-decision snapshot에는 chart/trait bulk가 저장되지 않으므로 기존 JSONL row rewrite는 필요하지 않다.
+- legacy report compatibility service, score, route, closure snapshot, Monitoring snapshot은 변경하지 않는다.
+- Python observation은 한 번만 만들고 character/review projection이 같은 `axis_id`와 evidence ref를 공유해 중복 근거를 만들지 않는다.
+
+### Error and empty-state policy
+
+- measurement가 없으면 `분석 근거 없음`과 필요한 근거 종류를 표시한다.
+- measurement는 있으나 criterion이 없으면 `기준 미설정`으로 표시하며 `미측정`이라고 부르지 않는다.
+- measurement와 criterion이 있으면 comparison을 반드시 계산한다. 계산 불가능한 단위/비교 방향이면 contract error로 test에서 차단한다.
+- `mdd_review_line` alias처럼 known criterion이 연결되지 않는 상태는 사용자 empty state가 아니라 product contract regression이다.
+- UI는 provider fetch, replay, DB ingestion, threshold 저장을 실행하지 않는다.
+
+### Ownership by file
+
+| Responsibility | Owner |
+|---|---|
+| character/review projection, drawdown alias, comparison/delta | `app/services/backtest_final_review_decision_brief.py` |
+| current fallback rendering | `app/web/backtest_final_review/page.py` |
+| TypeScript payload contract | `frontend/src/decisionBriefTypes.ts` |
+| section orchestration | `frontend/src/DecisionBriefWorkspace.tsx` |
+| actual character and review pressure presentation | 새 focused owner `frontend/src/DecisionBriefCharacter.tsx`; 기존 radar code는 `DecisionBriefCharts.tsx`에서 제거 |
+| responsive visual contract | `frontend/src/style.css` |
+| Python/service/source contract tests | `tests/test_backtest_final_review_decision_brief.py`, `tests/test_service_contracts.py`, `tests/test_final_review_market_context_visual_contract.py` |
+
+### Delivery slices
+
+1. **Character contract**: RED tests, `character_profile` / `review_pressure`, drawdown threshold alias, removal of aggregate 0~100 pressure score.
+2. **Decision Workspace presentation**: radar를 actual character rows와 review comparison rows로 교체하고 fallback을 동기화한다.
+3. **QA and docs**: current GRS fixture regression, production build, desktop/760px Browser QA, durable flow/active task/root handoff sync.
+
+### Verification design
+
+- current GRS fixture에서 concentration, drawdown, turnover, cost가 `observed`이고 regime만 `evidence_missing`인 service test
+- drawdown `mdd_review_line=-15`가 `-12.43%` observation과 연결돼 `within_limit`이 되는 alias regression test
+- turnover/cost raw value는 보이지만 criterion이 없을 때 `criterion_missing`인 test
+- `one_way_cost_bps`가 cost review limit으로 오용되지 않는 test
+- aggregate score와 arbitrary normalized value가 payload/UI에 없는 contract test
+- current React가 radar/`미측정` 통합 label을 렌더하지 않고 실제 성격/관리 압력 순서를 유지하는 source contract test
+- Streamlit fallback parity test
+- Vite production build, target `py_compile`, `git diff --check`
+- Browser QA desktop/760px: raw value visibility, drawdown 기준 연결, criterion/evidence 상태 구분, no horizontal overflow, Final Review save CTA 미실행
+
+### Non-goals
+
+- 새 regime provider 또는 historical regime analytics 구현
+- turnover/cost 허용 기준을 임의 기본값으로 추가
+- raw units를 공통 0~100 성격 점수로 변환
+- overall investment score 또는 radar aggregate 재도입
+- Final Review에서 validation profile을 편집하거나 저장
+- registry / saved JSONL 기존 row rewrite
+- Gate, canonical route, broker/live approval/auto rebalance 변경
+
+### Acceptance criteria
+
+1. current GRS에서 집중도, 낙폭, 회전율, 비용의 실제 값이 criterion 유무와 관계없이 보인다.
+2. 국면 의존만 현재 structured evidence 부재로 `분석 근거 없음`을 표시한다.
+3. 낙폭 `mdd_review_line`이 canonical criterion으로 연결되고 `-12.43% / 관리선 -15% / 기준 이내`가 함께 읽힌다.
+4. 회전율과 비용은 `미측정`이 아니라 `기준 미설정`으로 구분된다.
+5. `83.3 / 100` 같은 임의 pressure score와 한 축 radar polygon이 current UI에서 제거된다.
+6. actual character와 review pressure는 같은 Python observation/evidence ref를 사용하고 React가 계산하지 않는다.
+7. Gate, route, persistence, Monitoring snapshot, protected registry는 변경되지 않는다.
+8. desktop과 760px에서 실제 성격 → 관리 압력 → 강점/약점 흐름과 가로 overflow 0을 확인한다.
+
+### Design self-review
+
+- [x] `TBD`, `TODO`, placeholder 또는 구체화되지 않은 소유 파일이 없다.
+- [x] raw character와 criterion-based pressure가 서로 다른 사용자 질문과 payload로 분리돼 있다.
+- [x] drawdown의 signed display, magnitude comparison, delta 방향이 일관된다.
+- [x] turnover/cost criterion을 임의 생성하지 않고 regime provider 도입도 범위 밖으로 고정했다.
+- [x] current React와 Streamlit fallback을 함께 전환하고 기존 JSONL row를 rewrite하지 않는다.
+- [x] Python projection owner / React presentation-only / Gate·route·persistence 불변 경계가 명확하다.
+- [x] 3개 delivery slice와 RED contract, build, desktop/760px QA 완료 조건이 연결된다.
+
+---
+
+## Monitoring Change Condition Producer Addendum — 2026-07-16
+
+### 문제와 원인
+
+current Final Review의 `무엇이 바뀌면 다시 판단할 것인가`는 React 렌더링 오류나 외부 시장 데이터 부족으로 비어 있는 것이 아니다. React는 Python의 `monitoring_conditions=[]`를 정확히 표시하고 있다.
+
+현재 Python projection은 `paper_observation.review_trigger_details`만 구조화 조건으로 허용한다. 그러나 실제 Practical Validation 저장 row와 `_build_final_review_paper_observation_snapshot()`은 문장형 `review_triggers`만 만들고 `review_trigger_details`는 생성하지 않는다. `review_trigger_details`는 test fixture에만 존재한다. 따라서 production producer가 없는 contract gap이 root cause다.
+
+current GRS에는 다음 구조화 근거가 이미 저장돼 있다.
+
+- running-peak 최대 낙폭 `-12.43%`
+- drawdown review line `mdd_review_line=-15%`
+- 후보/Benchmark exact-common 누적 성과와 상대 terminal 성과
+- 월간 관측 기간과 최신 기준일
+- paper observation review cadence
+
+### 검토한 접근
+
+1. **문장형 trigger를 그대로 표시**
+   - 장점: 구현이 작다.
+   - 단점: measurement, comparator, evidence ref가 없어 다시 해석 불가능한 안내 문구가 된다.
+2. **기존 registry row에 `review_trigger_details`를 backfill**
+   - 장점: 저장 row 자체가 완전해진다.
+   - 단점: append-only 사용자 결과를 재작성해야 하며 이번 task의 보호 경계와 충돌한다.
+3. **Final Review projection에서 저장된 구조화 관측으로 조건 파생 — 채택**
+   - 장점: registry를 건드리지 않고 current/legacy row 모두 같은 Python contract로 읽는다.
+   - 단점: explicit criterion이 없는 CAGR/Data Trust 조건은 만들 수 없다.
+
+### 채택 설계
+
+`app/services/backtest_final_review_decision_brief.py`가 behavior projection에서 이미 만든 `internal_observations`와 `behavior_board.period`를 사용해 두 종류의 monitoring condition을 파생한다.
+
+1. **Drawdown breach**
+   - source observation: `drawdown-recovery-path`
+   - 필요 조건: numeric measured value, numeric drawdown criterion, `absolute_less_or_equal`
+   - 사용자 조건: `최대 낙폭이 -15.00% 관리선을 벗어나면`
+   - cadence: paper observation cadence를 한국어 사용자 표현으로 정규화하고 없으면 behavior frequency를 사용한다.
+   - action: 손실 감내 조건과 계속 추적 thesis를 재검토한다.
+2. **Benchmark underperformance**
+   - source observation: `benchmark-relative-terminal`
+   - 필요 조건: numeric relative terminal value, numeric comparator `0`, `greater_or_equal`
+   - 사용자 조건: `동일 기간 Benchmark 상대 성과가 0.00%p 이하로 내려가면`
+   - action: Benchmark 대비 추적 가치와 route를 재검토한다.
+
+producer는 arbitrary prose parsing을 하지 않는다. `review_triggers`에 대응 문장이 없어도 structured observation과 explicit comparator가 있으면 조건을 만든다. 반대로 CAGR deterioration과 Data Trust refresh는 explicit numeric/state criterion이 없으므로 만들지 않고 disclosure의 legacy prose로만 보존한다.
+
+### 현재 관측과 미래 조건의 중복 경계
+
+현재 `실제 강점과 약점`은 “지금 무엇이 관측됐는가”를 설명하고 Monitoring condition은 “앞으로 어떤 변화에서 판단을 다시 열 것인가”를 설명한다. 의미가 다른 두 객체이므로 monitoring condition은 별도 stable id를 사용한다.
+
+- `monitoring:drawdown-breach`
+- `monitoring:benchmark-underperformance`
+
+`root_issue_id`는 설정하지 않고 source observation id를 evidence ref로 남긴다. 따라서 현재 관측 card를 Monitoring으로 이동시켜 강점/약점이 비는 회귀를 만들지 않으면서, 동일 조건이 monitoring list 안에서 중복 생성되는 것은 stable id dedup으로 막는다.
+
+### Interface
+
+```python
+def _build_monitoring_conditions(
+    *,
+    paper_observation: dict[str, Any],
+    observations: list[dict[str, Any]],
+    behavior_period: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    ...
+```
+
+우선순위는 다음과 같다.
+
+1. 완전한 stored `review_trigger_details`
+2. structured observation에서 파생한 drawdown / benchmark 조건
+3. 불완전하거나 문장형인 stored trigger는 `unstructured_monitoring_triggers` disclosure
+
+stored와 derived가 같은 semantic condition이면 canonical monitoring id로 한 번만 남긴다. 최대 4개 제한은 유지한다.
+
+### UI와 저장 경계
+
+- React와 Streamlit fallback은 현재 `monitoring_conditions` contract를 그대로 사용하므로 UI 구조 변경이 필요하지 않다.
+- Final Review save 시 기존 `decision_brief_snapshot_v1.monitoring_conditions`에 같은 5-field condition이 저장된다.
+- Final Review를 여는 것만으로 registry append나 rewrite를 하지 않는다.
+- provider fetch, replay, DB ingestion, Gate, canonical route, score는 변경하지 않는다.
+
+### Error / empty policy
+
+- drawdown criterion이나 benchmark comparator가 없으면 해당 condition만 만들지 않는다.
+- period/cadence가 없으면 빈 문자열을 허용하지 않고 condition을 만들지 않는다.
+- observed value가 없으면 prose trigger로 추측하지 않는다.
+- 완전한 condition이 하나도 없을 때만 기존 empty state를 유지한다.
+
+### Acceptance criteria
+
+1. current GRS Decision Brief에 drawdown과 Benchmark condition 2개가 생성된다.
+2. drawdown condition은 `-12.43%`, 관리선 `-15%`, 월간 cadence, underwater evidence를 보존한다.
+3. Benchmark condition은 current relative terminal 값과 `0%p` comparator, candidate/benchmark evidence를 보존한다.
+4. current strengths의 drawdown/Benchmark와 weakness의 concentration은 그대로 유지된다.
+5. CAGR/Data Trust 문장형 trigger를 임의 threshold condition으로 만들지 않는다.
+6. existing complete `review_trigger_details` fixture는 계속 우선 소비되고 중복 condition을 만들지 않는다.
+7. current GRS Browser QA에서 empty state가 사라지고 두 condition card가 보인다.
+8. registry, run history, saved JSONL과 Final Review save CTA는 변경하거나 실행하지 않는다.
+
+### Addendum self-review
+
+- [x] product contract gap과 data gap을 구분했다.
+- [x] registry rewrite 없이 current/legacy row를 지원한다.
+- [x] arbitrary prose parsing과 임의 threshold 생성을 금지했다.
+- [x] current observation과 future monitoring condition의 의미/identifier를 분리했다.
+- [x] Python owner, unchanged React consumer, persistence compatibility가 명확하다.
+- [x] testable acceptance criteria와 empty-state 조건이 모두 정의됐다.
+
+---
+
+## Final Review Observation Freshness Refresh Addendum — 2026-07-16
+
+### 이걸 하는 이유?
+
+Final Review의 누적 성과와 underwater 낙폭은 저장된 Practical Validation replay curve를 읽는다. current GRS 후보의 차트 종료일은 `2026-06-26`인데, 현재 시점의 최신 완료 NYSE session은 `2026-07-15`다. 사용자는 Final Review에서 최종 판단을 내리기 전에 현재 확보 가능한 가격까지 같은 전략을 다시 계산하고 싶지만, 기존 화면에는 최신성 상태나 갱신 action이 없다.
+
+이 문제 때문에 Level2 화면으로 이동시키는 것은 사용자 흐름에 맞지 않는다. 검증 기준이나 해결 항목을 다시 고르는 일이 아니라, 이미 Final Review에 올라온 같은 후보의 관측 기간을 최신 데이터로 갱신하는 작업이기 때문이다.
+
+### Root cause and current evidence
+
+분석 기준 current validation:
+
+- validation id: `validation_selection_rebuilt_grs_macro_top1_ma200_aef1f226_7bca4e1a`
+- stored / replay actual end: `2026-06-26`
+- requested market date: `2026-07-10`
+- latest completed NYSE session: `2026-07-15`
+- current source-specific common price date: `2026-06-26`
+- limiting symbol: `BIL`
+
+현재 DB의 component별 latest date:
+
+| Symbol | Latest stored daily price |
+|---|---|
+| BIL | `2026-06-26` |
+| GLD / IEF / TLT | `2026-07-07` |
+| QQQ / SPY | `2026-07-10` |
+
+기존 `extend_to_latest` replay는 전체 DB 최신일을 요청하더라도 source universe의 공통 가격일을 계산한다. BIL이 `2026-06-26`에 머물러 있으므로 replay만 다시 실행해서는 차트가 늘어나지 않는다. 먼저 기존 OHLCV ingestion job으로 stale component 가격을 수집하고, 그 뒤 동일 source를 replay해야 한다.
+
+### Considered approaches
+
+#### A. Level2로 이동해 가격 수집과 replay를 다시 수행
+
+- 장점: 기존 stage ownership을 그대로 유지한다.
+- 단점: 사용자가 이미 Final Review에서 보고 있는 같은 후보를 다시 찾고 Flow 2부터 실행해야 한다. 최신 관측 갱신과 미해결 검증 종결을 같은 일로 오해하게 만든다.
+- 결정: 채택하지 않는다.
+
+#### B. Final Review에 가격 수집과 replay 버튼을 각각 제공
+
+- 장점: 실행 단계를 기술적으로 구분하기 쉽다.
+- 단점: 어떤 버튼을 먼저 눌러야 하는지 사용자가 판단해야 하고, 수집 성공 후 replay 또는 validation 저장을 빠뜨릴 수 있다.
+- 결정: 채택하지 않는다.
+
+#### C. Final Review one-click observation refresh
+
+- 장점: 사용자는 `최신 데이터로 다시 계산` 한 번으로 현재 확보 가능한 공통 가격일까지 같은 후보를 갱신한다. Python이 수집 필요 여부, replay, 새 validation 저장을 순서대로 처리한다.
+- 단점: Final Review가 기존 read-only review 경계에서 제한적인 Python orchestration intent를 새로 소유한다.
+- 결정: 채택한다.
+
+### Product contract
+
+Final Review의 행동 차트 위에 compact freshness strip을 둔다.
+
+- `현재 차트 기준일`
+- `최신 완료 시장일`
+- `현재 DB 공통일`
+- `제한 종목`
+- 필요한 경우에만 `최신 데이터로 다시 계산`
+
+UI는 job row나 raw ingestion 결과를 주 화면으로 만들지 않는다. 사용자가 알아야 하는 것은 현재 차트가 최신인지, 어디까지 갱신 가능한지, 무엇이 제한하는지, 다음 행동이 무엇인지다.
+
+action 실행 결과는 다음 중 하나의 짧은 사용자 결과로 표시한다.
+
+| State | Meaning | User result |
+|---|---|---|
+| `up_to_date` | 저장 curve가 현재 source-specific common date까지 반영됨 | action 숨김, 최신 상태 표시 |
+| `replay_available` | DB 공통 가격일이 curve보다 최신이고 목표일까지 자동 수집할 가격 공백이 없음 | 수집 없이 replay / validation 저장 |
+| `price_refresh_available` | 필수 symbol 가격 수집 후 더 최신 replay 가능 | 수집 → replay → validation 저장 |
+| `partial_refresh` | 일부 가격은 갱신됐지만 provider gap 또는 공통일 제한이 남음 | 실제 도달일과 제한 symbol 표시 |
+| `blocked` | source/replay contract가 없거나 실행 불가 | 기존 차트 유지, 원인과 재검토 안내 |
+| `failed` | 수집, replay 또는 validation build/save 실패 | 기존 차트 유지, 완료된 단계와 재시도 안내 |
+
+### Python ownership
+
+새 pure-oriented service `app/services/backtest_final_review_refresh.py`가 다음을 소유한다.
+
+```python
+def build_final_review_refresh_status(
+    *,
+    source: dict[str, Any],
+    validation: dict[str, Any],
+    now: datetime | None = None,
+    freshness_loader: Callable[..., pd.DataFrame] | None = None,
+) -> dict[str, Any]:
+    ...
+
+
+def run_final_review_observation_refresh(
+    *,
+    source: dict[str, Any],
+    validation: dict[str, Any],
+    now: datetime | None = None,
+    price_refresh_runner: Callable[..., Mapping[str, Any]] | None = None,
+    replay_runner: Callable[..., dict[str, Any]] | None = None,
+    validation_builder: Callable[..., dict[str, Any]] | None = None,
+    validation_saver: Callable[[dict[str, Any]], None] | None = None,
+) -> dict[str, Any]:
+    ...
+```
+
+`build_final_review_refresh_status()`는 다음 날짜를 혼동하지 않는다.
+
+- `latest_completed_market_date`: 현재 시점에 완료된 최신 NYSE session
+- `stored_curve_end`: 현재 Decision Brief가 읽는 replay curve 종료일
+- `db_common_price_date`: source 필수 symbol의 현재 공통 DB 가격일
+- `refresh_target_date`: 최신 완료 session을 넘지 않는 수집 / replay 목표일
+- `refreshed_curve_end`: action 이후 새 replay가 실제로 만든 curve 종료일
+
+`run_final_review_observation_refresh()` 실행 순서:
+
+1. source / validation stable identity와 replay contract를 검증한다.
+2. 현재 source-specific freshness를 다시 읽는다.
+3. 목표일까지 자동 수집 가능한 stale / missing symbol이 남아 있으면, DB 공통일이 curve보다 최신이어도 기존 `run_backtest_price_refresh()`로 먼저 수집한다.
+4. 목표일까지 자동 수집할 가격 공백이 없고 DB 공통일만 curve보다 최신이면 가격 수집 없이 replay한다.
+5. 수집 후 source-specific freshness를 다시 읽고 실제 공통 가격일을 확정한다.
+6. 기존 `run_practical_validation_actual_replay(..., mode="extend_to_latest")`로 같은 source를 재실행한다.
+7. replay 결과로 `build_practical_validation_result()`를 새로 만든다. 기존 validation의 `validation_profile`을 그대로 사용한다.
+8. 새 validation이 Final Review Gate를 통과하고 replay curve가 이전보다 뒤로 가지 않았을 때만 append-only 저장한다.
+9. 성공하면 새 validation id와 actual curve end를 반환하고 Streamlit rerun이 source별 최신 저장 row를 자동 선택하게 한다.
+
+기존 validation row를 수정하거나 삭제하지 않는다.
+
+### Price refresh adapter
+
+기존 `run_backtest_price_refresh()`는 Backtest result `meta.price_freshness` 형태를 입력으로 받는다. Final Review refresh service는 current source에서 다음 adapter meta를 만든다.
+
+```text
+tickers / symbols
+start
+end = latest_completed_market_date
+actual_result_end = stored_curve_end
+price_freshness.details.common_latest_date
+price_freshness.details.stale_symbols_all
+price_freshness.details.missing_symbols_all
+price_freshness.details.classification_rows
+```
+
+stale symbol은 source 필수 symbol별 latest date가 refresh target보다 이전인 항목이다. provider/source gap 분류는 기존 price refresh service의 정책을 그대로 소비하며 Final Review에서 별도 provider 규칙을 만들지 않는다.
+
+### Validation profile and append safety
+
+- 새 validation은 current validation의 `validation_profile.profile_id`와 `answers`를 재사용한다.
+- replay 결과 없이 validation을 저장하지 않는다.
+- replay status가 `BLOCKED`이거나 portfolio curve가 비어 있으면 저장하지 않는다.
+- 새 validation의 `selection_source_id`는 current source와 같아야 한다.
+- 새 validation id는 builder가 새로 생성한다.
+- 저장 후 source별 latest-row selection이 새 row를 읽게 하며 기존 eligible row로 fallback하지 않는다.
+- UI QA에서는 protected registry에 실제 row를 append하지 않는다. orchestration save는 injectable saver와 temporary registry contract test로 검증한다.
+
+### Selection gate
+
+관측값이 안전하게 최신화 가능한데 current curve가 오래된 상태라면 `SELECT_FOR_PRACTICAL_PORTFOLIO`만 일시적으로 recordable하지 않게 한다.
+
+- `HOLD_FOR_MORE_PAPER_TRACKING`
+- `REJECT_FOR_PRACTICAL_USE`
+- `RE_REVIEW_REQUIRED`
+
+위 판단은 계속 저장 가능하다. 최신성은 “이 후보를 선택해도 되는가”의 현재 관측 근거 문제이지, 보류·탈락·재검토 기록 자체를 막을 이유가 아니기 때문이다.
+
+action 이후에도 provider gap 때문에 최신 완료 session까지 도달하지 못할 수 있다. 이때 실제 common date까지 새 validation이 정상 생성되고 기존 evidence closure Gate를 통과하면 `partial_refresh`로 표시할 수 있다. 다만 refresh 가능한 stale gap이 계속 남아 있으면 selected route는 계속 차단한다.
+
+### React and Streamlit boundary
+
+React가 새로 보내는 intent:
+
+```typescript
+type RefreshObservationIntent = {
+  action: "refresh_observation"
+  intent_id: string
+  source_id: string
+  validation_id: string
+}
+```
+
+React는 다음만 담당한다.
+
+- freshness strip 표시
+- action button과 진행 중 disabled presentation
+- Python이 반환한 compact result 표시
+- `refresh_observation` intent 전달
+
+Python은 다음을 담당한다.
+
+- 최신 완료 session 계산
+- source symbol / common date / limiting symbol 계산
+- 수집 필요 여부
+- ingestion job 실행
+- replay
+- validation build / Gate
+- append-only 저장
+- stale identity / duplicate intent guard
+
+Streamlit fallback도 같은 freshness model과 intent를 사용한다.
+
+### Error and recovery contract
+
+- action 시작 전 source id / validation id가 current confirmed candidate와 다르면 실행하지 않는다.
+- 같은 `intent_id`는 한 번만 소비한다.
+- 가격 수집이 성공하고 replay가 실패한 경우 DB row를 되돌리지 않는다. 결과는 `failed_after_price_refresh`로 남기며 재시도 시 freshness를 다시 읽고 replay부터 이어갈 수 있다.
+- validation build 또는 save 실패 시 기존 chart와 current validation을 유지한다.
+- 새 validation 저장이 성공한 뒤 rerun하면 latest-row policy로 새 chart가 보인다.
+- action 중 Final Review decision save는 UI에서 비활성화한다.
+
+### Ownership by file
+
+| Responsibility | Owner |
+|---|---|
+| freshness read model / orchestration / result contract | 새 `app/services/backtest_final_review_refresh.py` |
+| latest completed NYSE session public adapter | `app/services/backtest_price_refresh.py` |
+| replay / source-specific common date reuse | `app/services/backtest_practical_validation_replay.py` |
+| validation build / append | `app/services/backtest_practical_validation.py` |
+| intent validation / spinner / rerun / session feedback | `app/web/backtest_final_review/page.py` |
+| Decision Brief freshness projection / selected-route capability | `app/services/backtest_final_review_decision_brief.py` |
+| TypeScript intent / compact freshness UI | `app/web/components/final_review_investment_report/frontend/src/decisionBriefTypes.ts`, `DecisionBriefWorkspace.tsx`, `style.css` |
+| focused service / page / source contract tests | 새 `tests/test_backtest_final_review_refresh.py`, 기존 `tests/test_backtest_final_review_decision_brief.py`, `tests/test_service_contracts.py`, `tests/test_final_review_market_context_visual_contract.py` |
+
+### Delivery slices
+
+1. **Freshness truth and selected-route Gate**: source-specific date model, limiting symbols, `up_to_date / replay_available / price_refresh_available`, selected-route-only block.
+2. **Python one-click orchestration**: price refresh adapter, replay, validation build, append safety, partial/failure recovery.
+3. **Final Review intent and UI**: compact freshness strip, React intent, Streamlit consumer/fallback, rerun to latest validation.
+4. **QA and documentation**: focused regression, current GRS runtime probe, React build, Browser QA, durable docs / active task / root handoff sync.
+
+### Non-goals
+
+- Level2 검증 기준 편집 또는 Flow 2 UI 복제
+- 별도 refresh job dashboard나 raw ingestion result panel
+- 신규 provider, historical universe, delisting source 도입
+- registry 기존 row rewrite / delete
+- 자동 주기 갱신, background scheduler, alert notification
+- live approval, broker order, account sync, auto rebalance
+- React의 provider fetch, replay, Gate, score, persistence 계산
+
+### Acceptance criteria
+
+1. current GRS에서 `2026-06-26` curve end, `2026-07-15` target, BIL limiter가 Python freshness model과 UI에 일치한다.
+2. DB 공통일이 curve보다 최신이면 ingestion 없이 replay한다.
+3. DB 공통일이 curve와 같고 source symbol이 stale이면 price refresh 후 replay한다.
+4. 성공한 action은 같은 selection source의 새 validation row를 append하고 Final Review rerun에서 새 row를 선택한다.
+5. 실패한 action은 기존 validation / chart를 유지하며 완료 단계와 재시도 이유를 표시한다.
+6. refresh 가능한 stale 상태에서는 selected route만 차단하고 hold / reject / re-review는 유지한다.
+7. React는 `refresh_observation` intent만 보내고 Python이 source / validation identity를 재검증한다.
+8. GRS latest valuation row는 signal / rebalance row와 계속 분리돼 가짜 rebalance를 만들지 않는다.
+9. Browser QA에서 desktop / 760px freshness strip, action state, no horizontal overflow를 확인한다.
+10. protected registry, run history, generated QA artifact는 stage하거나 commit하지 않는다.
+
+### Addendum self-review
+
+- [x] current stale curve의 원인이 DB common date와 limiting symbol로 재현됐다.
+- [x] Level2 이동 없이 Final Review one-click flow를 선택한 사용자 결정을 반영했다.
+- [x] 기존 read-only boundary 예외가 explicit user intent와 Python orchestration으로 제한됐다.
+- [x] price refresh, replay, validation build, append 순서와 partial failure semantics가 정의됐다.
+- [x] selected route만 stale Gate 영향을 받고 다른 판단 route는 유지된다.
+- [x] append-only registry 보호와 Browser QA 비쓰기 경계가 명확하다.
+- [x] 함수, 소유 파일, delivery slice, acceptance criteria에 placeholder가 없다.

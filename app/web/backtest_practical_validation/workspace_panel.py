@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
+from uuid import uuid4
 
 import streamlit as st
 
@@ -375,3 +376,356 @@ def render_practical_validation_workspace_overview(validation_result: dict[str, 
         criteria_groups=criteria_groups,
     )
     return _render_next_stage_action_fallback(next_stage_action)
+
+
+def _workspace_intent(
+    action: str,
+    *,
+    workspace: dict[str, Any],
+    **extra: Any,
+) -> dict[str, Any]:
+    return {
+        "action": action,
+        "intent_id": f"{action}-{uuid4()}",
+        "selection_source_id": str(workspace.get("selection_source_id") or ""),
+        "validation_result_id": str(workspace.get("validation_result_id") or ""),
+        **extra,
+    }
+
+
+def _render_workspace_issue_lane(
+    *,
+    title: str,
+    issues: list[dict[str, Any]],
+    workspace: dict[str, Any],
+    action_enabled: bool,
+    detail: str = "",
+) -> dict[str, Any] | None:
+    if not issues:
+        return None
+    st.markdown(f"##### {title}")
+    if detail:
+        st.caption(detail)
+    for issue in issues:
+        root_issue_id = str(issue.get("root_issue_id") or "issue")
+        with st.container(border=True):
+            st.markdown(f"**{issue.get('title') or root_issue_id}**")
+            observed = str(issue.get("observed") or "").strip()
+            if observed:
+                st.caption(observed)
+            completion = str(issue.get("completion_criteria") or "").strip()
+            if completion:
+                st.caption(completion)
+            action_id = str(issue.get("action_id") or "").strip()
+            if action_enabled and issue.get("actionable_now") and action_id:
+                if st.button(
+                    str(issue.get("action_label") or "지금 해결"),
+                    key=f"pv2-fallback-resolution-{root_issue_id}",
+                    width="stretch",
+                ):
+                    return _workspace_intent(
+                        "run_resolution_action",
+                        workspace=workspace,
+                        root_issue_id=root_issue_id,
+                        action_id=action_id,
+                    )
+    return None
+
+
+def _render_practical_validation_context_surface_fallback(
+    workspace: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Render only candidate and policy selection outside the replay fragment."""
+
+    header = dict(workspace.get("header") or {})
+    candidate = dict(workspace.get("candidate") or {})
+    selector = dict(workspace.get("candidate_selector") or {})
+    profile = dict(workspace.get("profile") or {})
+    source_options = [
+        dict(row)
+        for row in list(selector.get("options") or [])
+        if isinstance(row, dict)
+    ]
+    profile_options = [
+        dict(row)
+        for row in list(profile.get("options") or [])
+        if isinstance(row, dict)
+    ]
+    selected_profile = next(
+        (row for row in profile_options if bool(row.get("selected"))),
+        {},
+    )
+
+    st.markdown(
+        f"### {header.get('question') or '이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가?'}"
+    )
+    st.caption(str(header.get("detail") or ""))
+    st.markdown("#### 1. 후보와 검증 기준")
+    summary_columns = st.columns((3, 1))
+    with summary_columns[0]:
+        st.caption("검증 대상")
+        st.markdown(f"**{candidate.get('title') or '-'}**")
+        st.caption(
+            f"{candidate.get('source_type_label') or '-'} · "
+            f"{candidate.get('as_of') or '-'}"
+        )
+    with summary_columns[1]:
+        st.caption("판정 기준")
+        st.markdown(f"**{selected_profile.get('label') or '미선택'}**")
+
+    with st.expander("1A. 후보 변경", expanded=False):
+        if source_options:
+            for option in source_options:
+                option_id = str(option.get("selection_source_id") or "")
+                if bool(option.get("selected")):
+                    with st.container(border=True):
+                        st.markdown(
+                            f"**✓ {option.get('title') or option_id or '후보'}**"
+                        )
+                        st.caption(
+                            str(option.get("source_type_label") or "검증 후보")
+                        )
+                    continue
+                if st.button(
+                    str(option.get("title") or option_id or "후보"),
+                    key=f"pv2-fallback-source-{option_id}",
+                    width="stretch",
+                    disabled=not bool(option.get("eligible", True)),
+                ):
+                    return _workspace_intent(
+                        "select_source",
+                        workspace=workspace,
+                        selection_source_id=option_id,
+                    )
+        else:
+            st.info("Backtest Analysis에서 검증할 후보를 먼저 보내세요.")
+
+    st.markdown("##### 1B. 어떤 관점으로 검증할까요?")
+    st.caption(
+        "포트폴리오 설계가 아니라 손실 허용도와 운용 목적에 맞는 판정 기준입니다."
+    )
+    for option in profile_options:
+        profile_id = str(option.get("profile_id") or "")
+        if bool(option.get("selected")):
+            with st.container(border=True):
+                st.markdown(
+                    f"**✓ {option.get('label') or profile_id}**"
+                )
+                st.caption(str(option.get("description") or "현재 판정 기준"))
+            continue
+        if st.button(
+            str(option.get("label") or profile_id),
+            key=f"pv2-fallback-profile-{profile_id}",
+            width="stretch",
+        ):
+            return _workspace_intent(
+                "select_profile_preset",
+                workspace=workspace,
+                profile_id=profile_id,
+            )
+    return None
+
+
+def render_practical_validation_decision_workspace_fallback(
+    workspace: dict[str, Any],
+    *,
+    surface: Literal["context", "decision"] = "decision",
+) -> dict[str, Any] | None:
+    """Render one Python fallback surface from the shared read model."""
+
+    if surface == "context":
+        return _render_practical_validation_context_surface_fallback(workspace)
+
+    replay = dict(workspace.get("replay") or {})
+    verdict = dict(workspace.get("verdict") or {})
+    summary = dict(workspace.get("summary") or {})
+    resolution_lanes = dict(workspace.get("resolution_lanes") or {})
+    actions = dict(workspace.get("actions") or {})
+
+    st.markdown("#### 2. 최신 데이터 기준 재검증")
+    st.caption(
+        f"현재 상태: {replay.get('status') or 'NOT_RUN'} · "
+        f"{replay.get('replay_id') or '아직 실행하지 않음'}"
+    )
+    replay_action = dict(actions.get("run_replay") or {})
+    if st.button(
+        str(replay_action.get("label") or "최신 데이터 기준 재검증"),
+        key="pv2-fallback-run-replay",
+        width="stretch",
+        disabled=not bool(replay_action.get("enabled")),
+    ):
+        return _workspace_intent("run_replay", workspace=workspace)
+
+    st.markdown(f"### {verdict.get('headline') or '-'}")
+    st.caption(str(verdict.get("detail") or ""))
+    metric_labels = (
+        ("verified_count", "검증됨"),
+        ("measured_caution_count", "측정 주의"),
+        ("validated_caution_count", "Level2 주의"),
+        ("resolve_now_count", "지금 해결"),
+        ("engineering_blocker_count", "개발 차단"),
+        ("accepted_limit_count", "인수할 한계"),
+        ("final_decision_count", "최종 판단"),
+        ("monitoring_transfer_count", "Monitoring"),
+    )
+    metric_columns = st.columns(len(metric_labels), gap="small")
+    for column, (key, label) in zip(metric_columns, metric_labels):
+        column.metric(label, int(summary.get(key) or 0))
+
+    st.markdown("#### 3. 결과 해석과 해결 구분")
+    verified = [
+        dict(row)
+        for row in list(workspace.get("verified_findings") or [])[:8]
+        if isinstance(row, dict)
+    ]
+    if verified:
+        st.markdown("##### 검증된 내용")
+        for item in verified:
+            with st.container(border=True):
+                st.markdown(
+                    f"**{item.get('display_title') or '검증 통과'}** "
+                    f"· {item.get('status_label') or '확인 완료'}"
+                )
+                st.caption(str(item.get("what_was_checked") or ""))
+                st.write(str(item.get("result_summary") or ""))
+                st.caption(str(item.get("meaning") or ""))
+
+    intent = _render_workspace_issue_lane(
+        title="주의해서 볼 결과",
+        issues=[
+            dict(row)
+            for row in list(workspace.get("measured_cautions") or [])
+            if isinstance(row, dict)
+        ],
+        workspace=workspace,
+        action_enabled=False,
+    )
+    if intent:
+        return intent
+    intent = _render_workspace_issue_lane(
+        title="지금 해야 할 일",
+        issues=[
+            dict(row)
+            for row in list(resolution_lanes.get("resolve_now") or [])
+            if isinstance(row, dict)
+        ],
+        workspace=workspace,
+        action_enabled=True,
+    )
+    if intent:
+        return intent
+    intent = _render_workspace_issue_lane(
+        title="개발 후 재검토",
+        issues=[
+            dict(row)
+            for row in list(resolution_lanes.get("engineering_required") or [])
+            if isinstance(row, dict)
+        ],
+        workspace=workspace,
+        action_enabled=False,
+    )
+    if intent:
+        return intent
+    handoff_summary = dict(workspace.get("handoff_summary") or {})
+    handoff_items = [
+        dict(row)
+        for row in list(handoff_summary.get("items") or [])
+        if isinstance(row, dict)
+    ]
+    if handoff_items:
+        st.markdown(
+            f"##### {handoff_summary.get('title') or 'Final Review 인계 준비'}"
+        )
+        st.caption(str(handoff_summary.get("detail") or ""))
+        for item in handoff_items:
+            with st.container(border=True):
+                st.caption(str(item.get("handoff_label") or "Final Review 인계"))
+                st.markdown(f"**{item.get('title') or item.get('root_issue_id')}**")
+                st.write(str(item.get("summary") or ""))
+                st.caption(str(item.get("next_stage_action") or ""))
+
+    with st.expander("상세 검증 근거", expanded=False):
+        groups = [
+            dict(row)
+            for row in list(workspace.get("category_disclosures") or [])
+            if isinstance(row, dict)
+        ]
+        if groups:
+            group_labels = {
+                str(group.get("category_id") or index): (
+                    f"{group.get('title') or '검증 범주'} · "
+                    f"{dict(group.get('summary') or {}).get('total_count') or 0}개"
+                )
+                for index, group in enumerate(groups)
+            }
+            selected_group_id = st.selectbox(
+                "상세 검증 범주",
+                options=list(group_labels),
+                format_func=lambda value: group_labels[value],
+                key="pv2-fallback-evidence-category",
+            )
+            group = next(
+                row
+                for row in groups
+                if str(row.get("category_id") or groups.index(row))
+                == selected_group_id
+            )
+            st.markdown(
+                f"**{group.get('title') or '검증 범주'}** · "
+                f"{group.get('outcome') or '근거 없음'}"
+            )
+            st.caption(str(group.get("question") or ""))
+            for explanation in [
+                dict(item)
+                for item in list(group.get("explanations") or [])
+                if isinstance(item, dict)
+            ]:
+                with st.container(border=True):
+                    st.markdown(
+                        f"**{explanation.get('display_title') or '검증 항목'}** "
+                        f"· {explanation.get('status_label') or '확인 필요'}"
+                    )
+                    st.caption(
+                        f"무엇을 확인했나 · "
+                        f"{explanation.get('what_was_checked') or '-'}"
+                    )
+                    st.write(
+                        f"확인 결과 · "
+                        f"{explanation.get('result_summary') or '-'}"
+                    )
+                    st.write(
+                        f"이 결과의 의미 · "
+                        f"{explanation.get('meaning') or '-'}"
+                    )
+                    st.info(
+                        f"다음 조치 · "
+                        f"{explanation.get('next_action') or '-'}"
+                    )
+                    with st.expander("기술 원문", expanded=False):
+                        st.json(
+                            dict(explanation.get("technical_trace") or {}),
+                            expanded=False,
+                        )
+
+    st.markdown("#### 4. 저장하고 Final Review로 이동")
+    save_only = dict(actions.get("save_audit_only") or {})
+    save_and_move = dict(actions.get("save_and_move") or {})
+    left, right = st.columns(2, gap="small")
+    with left:
+        if st.button(
+            str(save_only.get("label") or "검증 결과 저장"),
+            key="pv2-fallback-save-audit",
+            width="stretch",
+            disabled=not bool(save_only.get("enabled")),
+        ):
+            return _workspace_intent("save_audit_only", workspace=workspace)
+    with right:
+        if st.button(
+            str(save_and_move.get("label") or "저장하고 Final Review로 이동"),
+            key="pv2-fallback-save-move",
+            width="stretch",
+            disabled=not bool(save_and_move.get("enabled")),
+        ):
+            return _workspace_intent("save_and_move", workspace=workspace)
+    st.caption("이동은 최종 승인, broker order, account sync, auto rebalance가 아닙니다.")
+    return None

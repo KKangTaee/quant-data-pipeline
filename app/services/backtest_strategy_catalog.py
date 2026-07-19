@@ -78,6 +78,39 @@ SINGLE_STRATEGY_OPTIONS = PRIMARY_STATEMENT_STRATEGY_OPTIONS + NON_FAMILY_STRATE
 COMPARE_STRATEGY_OPTIONS = SINGLE_STRATEGY_OPTIONS
 DEFAULT_SINGLE_STRATEGY_OPTION = "Quality + Value"
 DEFAULT_COMPARE_STRATEGY_OPTIONS = ["Quality + Value", "GTAA", "Equal Weight"]
+LEVEL1_STRATEGY_PURPOSE_GROUPS = OrderedDict(
+    [
+        (
+            "factor_selection",
+            {
+                "label": "팩터 기반 종목 선정",
+                "items": ["Quality + Value", "Quality", "Value"],
+            },
+        ),
+        (
+            "tactical_allocation",
+            {
+                "label": "모멘텀·전술 자산배분",
+                "items": ["GTAA", "Global Relative Strength", "Dual Momentum"],
+            },
+        ),
+        (
+            "diversified_baseline",
+            {
+                "label": "분산·기본 포트폴리오",
+                "items": ["Risk Parity Trend", "Equal Weight"],
+            },
+        ),
+        (
+            "development",
+            {"label": "개발 중 전략", "items": ["Risk-On Momentum 5D"]},
+        ),
+    ]
+)
+LEVEL1_STRATEGY_MATURITY = {
+    strategy: ("development" if strategy == "Risk-On Momentum 5D" else "production")
+    for strategy in SINGLE_STRATEGY_OPTIONS
+}
 PRIMARY_STATEMENT_STRATEGY_KEYS = frozenset(
     {
         "quality_snapshot_strict_annual",
@@ -163,6 +196,8 @@ __all__ = [
     "DEFAULT_COMPARE_STRATEGY_OPTIONS",
     "DEFAULT_SINGLE_STRATEGY_OPTION",
     "LEGACY_BROAD_STRATEGY_KEYS",
+    "LEVEL1_STRATEGY_MATURITY",
+    "LEVEL1_STRATEGY_PURPOSE_GROUPS",
     "NON_FAMILY_STRATEGY_OPTIONS",
     "PRIMARY_STATEMENT_STRATEGY_KEYS",
     "PRIMARY_STATEMENT_STRATEGY_OPTIONS",

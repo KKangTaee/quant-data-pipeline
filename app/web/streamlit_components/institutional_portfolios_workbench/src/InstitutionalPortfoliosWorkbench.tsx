@@ -1,5 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
+import {
+  filterSortAndPaginateHoldings,
+  queriesMatch,
+  type HoldingSort,
+  type MappingFilter,
+} from "./workbenchState";
 import "./style.css";
 
 type ManagerItem = {
@@ -54,9 +60,13 @@ type SectorBar = {
 type HoldingRow = {
   issuer_name: string;
   symbol?: string | null;
+  symbol_source?: string | null;
+  mapping_status?: "mapped" | "ambiguous" | "unmapped" | string;
   cusip?: string | null;
   sector: string;
+  weight_pct: number;
   weight_label: string;
+  reported_value: number;
   value_label: string;
   drilldown_query: string;
 };
@@ -118,9 +128,11 @@ type SelectedSecurity = {
     mapping_status?: string | null;
   };
   portfolio_position?: {
+    available?: boolean;
     weight_label: string;
     value_label: string;
     shares_label: string;
+    reason?: string;
   };
   charts?: Record<"daily" | "weekly" | "monthly", { label: string; points: ChartPoint[] }>;
   price_action?: PriceAction;
@@ -180,7 +192,7 @@ type PopularityPayload = {
 };
 
 type WorkbenchPayload = {
-  schema_version: "institutional_portfolios_workbench_v1";
+  schema_version: "institutional_portfolios_workbench_v2";
   component: "InstitutionalPortfoliosWorkbench";
   mode: "live" | "preview" | string;
   data_state: {
@@ -191,6 +203,10 @@ type WorkbenchPayload = {
   };
   manager_picker: {
     selected_cik?: string | null;
+    search_query?: string;
+    search_result_count?: number;
+    search_state?: "idle" | "results" | "empty" | string;
+    search_empty_message?: string;
     items: ManagerItem[];
   };
   freshness?: {
@@ -220,6 +236,26 @@ type WorkbenchPayload = {
     facts: Array<{ label: string; value: string }>;
     caveat: string;
   };
+  context_summary: {
+    headline: string;
+    summary: string;
+    top5_weight_pct: number;
+    top5_weight_label: string;
+    largest_sector: string;
+    largest_sector_weight_pct: number;
+    largest_sector_weight_label: string;
+    comparison_state: "available" | "unavailable" | string;
+  };
+  coverage: {
+    holding_count_total: number;
+    holding_count_mapped: number;
+    holding_count_unmapped: number;
+    holding_count_ambiguous: number;
+    mapped_weight_pct: number;
+    mapped_weight_label: string;
+    performance_covered_weight_pct: number;
+    performance_covered_weight_label: string;
+  };
   allocation: {
     title: string;
     subtitle: string;
@@ -243,6 +279,23 @@ type WorkbenchPayload = {
   holdings_table: {
     rows: HoldingRow[];
   };
+  holdings_explorer: {
+    rows: HoldingRow[];
+    default_page_size: number;
+    search_fields: string[];
+    filters: {
+      mapping: Array<{ value: string; label: string }>;
+      sector: Array<{ value: string; label: string }>;
+    };
+    sorts: Array<{ value: string; label: string }>;
+    default_sort: string;
+  };
+  security_search: {
+    current_query: string;
+    state: "idle" | "results" | "empty" | string;
+    submit_event_id: "security_search" | string;
+    submit_event: { id: "security_search" | string; trigger: "explicit" | string };
+  };
   interest: {
     query: string;
     holder_count: number;
@@ -264,7 +317,7 @@ type WorkbenchPayload = {
   };
 };
 
-type Props = ComponentProps & {
+type Props = Omit<ComponentProps, "args"> & {
   args: {
     payload?: WorkbenchPayload;
   };
@@ -273,8 +326,12 @@ type Props = ComponentProps & {
 type ViewName = "overview" | "holdings" | "security" | "popularity";
 type WorkspaceSection = "portfolio" | "security";
 
+const HOLDINGS_PAGE_SIZE = 50;
+const WORKBENCH_SCHEMA_VERSION = "institutional_portfolios_workbench_v2";
+
 type PendingAction =
   | { kind: "manager"; cik: string; label: string }
+  | { kind: "manager_search"; query: string; label: string }
   | { kind: "interest"; query: string; label: string }
   | { kind: "popularity"; label: string }
   | { kind: "price"; symbol: string; label: string }
@@ -764,6 +821,11 @@ function SecurityDetail({
               <strong>{holderCount.toLocaleString()}</strong>
             </div>
           </div>
+          {detail?.portfolio_position?.available === false ? (
+            <p className="ip-security-position-unavailable">
+              {detail.portfolio_position.reason || "현재 선택한 기관 포트폴리오에서 보고되지 않은 종목입니다."}
+            </p>
+          ) : null}
         </div>
       </div>
       <div className="ip-security-chart-row">
@@ -886,8 +948,25 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [localSelectedQuery, setLocalSelectedQuery] = useState<string>("");
+  const [holdingSearch, setHoldingSearch] = useState("");
+  const [mappingFilter, setMappingFilter] = useState<MappingFilter>("all");
+  const [sectorFilter, setSectorFilter] = useState("all");
+  const [holdingSort, setHoldingSort] = useState<HoldingSort>("weight_desc");
+  const [holdingPage, setHoldingPage] = useState(1);
+  const [managerSearch, setManagerSearch] = useState(payload?.manager_picker.search_query || "");
+  const [securitySearch, setSecuritySearch] = useState(payload?.security_search.current_query || "");
+  const [unresolvedHolding, setUnresolvedHolding] = useState<HoldingRow | null>(null);
   const managerRailRef = useRef<HTMLDivElement | null>(null);
   const managerRailScrollRef = useRef(0);
+
+  const resetHoldingsExplorer = () => {
+    setHoldingSearch("");
+    setMappingFilter("all");
+    setSectorFilter("all");
+    setHoldingSort("weight_desc");
+    setHoldingPage(1);
+    setUnresolvedHolding(null);
+  };
 
   useEffect(() => {
     Streamlit.setComponentReady();
@@ -897,6 +976,28 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   useEffect(() => {
     syncFrameHeightSoon();
   }, [payload, activeView]);
+
+  useEffect(() => {
+    setSecuritySearch(payload?.security_search.current_query || "");
+  }, [payload?.security_search.current_query]);
+
+  useEffect(() => {
+    setManagerSearch(payload?.manager_picker.search_query || "");
+  }, [payload?.manager_picker.search_query]);
+
+  useEffect(() => {
+    resetHoldingsExplorer();
+  }, [payload?.manager_picker.selected_cik, payload?.hero.latest_report_period]);
+
+  useEffect(() => {
+    setLocalSelectedQuery("");
+    setSecuritySearch("");
+    setActionNotice(null);
+  }, [payload?.manager_picker.selected_cik]);
+
+  useEffect(() => {
+    setHoldingPage(1);
+  }, [holdingSearch, mappingFilter, sectorFilter, holdingSort]);
 
   useEffect(() => {
     const rail = managerRailRef.current;
@@ -913,7 +1014,11 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
       setPendingAction(null);
       setActionNotice(null);
     }
-    if (pendingAction.kind === "interest" && payload.interest.query === pendingAction.query) {
+    if (pendingAction.kind === "manager_search" && queriesMatch(payload.manager_picker.search_query, pendingAction.query)) {
+      setPendingAction(null);
+      setActionNotice(null);
+    }
+    if (pendingAction.kind === "interest" && queriesMatch(payload.interest.query, pendingAction.query)) {
       setPendingAction(null);
       setActionNotice(null);
     }
@@ -948,14 +1053,36 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   }, [pendingAction]);
 
   const changeGroups = useMemo(() => {
-    if (!payload) {
+    if (!payload?.change_board.comparison_available) {
       return [];
     }
-    return ["reported_new", "increased", "reduced", "no_longer_reported"].map((key) => ({
-      key,
-      ...payload.change_board.groups[key],
-    }));
+    const groups: Array<ChangeGroup & { key: string }> = [];
+    ["reported_new", "increased", "reduced", "no_longer_reported"].forEach((key) => {
+      const group = payload.change_board.groups[key];
+      if (group) {
+        groups.push({ key, ...group });
+      }
+    });
+    return groups;
   }, [payload]);
+
+  const holdingsState = useMemo(
+    () =>
+      filterSortAndPaginateHoldings({
+        rows: payload?.holdings_explorer.rows || [],
+        search: holdingSearch,
+        mappingFilter,
+        sectorFilter,
+        sort: holdingSort,
+        page: holdingPage,
+        pageSize: HOLDINGS_PAGE_SIZE,
+      }),
+    [payload?.holdings_explorer.rows, holdingSearch, mappingFilter, sectorFilter, holdingSort, holdingPage]
+  );
+  const filteredHoldings = holdingsState.filteredRows;
+  const visibleHoldings = holdingsState.visibleRows;
+  const totalHoldingPages = holdingsState.totalPages;
+  const safeHoldingPage = holdingsState.safePage;
 
   const localSecurityDetail = useMemo<SelectedSecurity | undefined>(() => {
     if (!payload || payload.selected_security?.status === "ok") {
@@ -966,7 +1093,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
       return payload.selected_security;
     }
     const upper = query.toUpperCase();
-    const row = payload.holdings_table.rows.find((item) => {
+    const row = payload.holdings_explorer.rows.find((item) => {
       const symbol = String(item.symbol || "").toUpperCase();
       const cusip = String(item.cusip || "").toUpperCase();
       const issuer = String(item.issuer_name || "").toUpperCase();
@@ -1026,6 +1153,21 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
 
   const activeWorkspaceSection: WorkspaceSection =
     activeView === "overview" || activeView === "holdings" ? "portfolio" : "security";
+  const holdingsStart = holdingsState.start;
+  const holdingsEnd = holdingsState.end;
+  const allocationOtherSegment = payload.allocation.segments.find(
+    (segment) => segment.key === "other" || segment.label.toLocaleLowerCase() === "other"
+  );
+  const allocationOtherCountFromSegment = Number.parseInt(
+    allocationOtherSegment?.issuer_name.match(/^\d[\d,]*/)?.[0]?.replace(/,/g, "") || "",
+    10
+  );
+  const allocationOtherCount = allocationOtherSegment
+    ? Number.isFinite(allocationOtherCountFromSegment)
+      ? allocationOtherCountFromSegment
+      : Math.max(0, payload.coverage.holding_count_total - payload.allocation.top_holdings.length)
+    : 0;
+  const allocationOtherWeight = allocationOtherSegment?.weight_label || "0.0%";
 
   const sendEvent = (event: Record<string, unknown>) => {
     Streamlit.setComponentValue({ event: { ...event, nonce: `${Date.now()}-${Math.random()}` } });
@@ -1059,6 +1201,65 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     restoreHostScroll(position);
   };
 
+  const handleHoldingDrilldown = (row: HoldingRow) => {
+    if (row.mapping_status !== "mapped" || !row.symbol || !row.drilldown_query) {
+      const position = hostScrollPosition();
+      setUnresolvedHolding(row);
+      setActiveView("holdings");
+      restoreHostScroll(position);
+      syncFrameHeightSoon();
+      return;
+    }
+    const position = hostScrollPosition();
+    setUnresolvedHolding(null);
+    setActionNotice(null);
+    setLocalSelectedQuery(row.drilldown_query);
+    setPendingAction({ kind: "interest", query: row.drilldown_query, label: `${row.symbol} 종목 상세 불러오는 중` });
+    setActiveView("security");
+    sendEvent({ id: "holding_drilldown", query: row.drilldown_query });
+    restoreHostScroll(position);
+  };
+
+  const handleAllocationDrilldown = (holding: Segment) => {
+    const key = String(holding.key || "").toUpperCase();
+    const symbol = String(holding.symbol || "").toUpperCase();
+    const row = payload.holdings_explorer.rows.find((item) => {
+      return String(item.cusip || "").toUpperCase() === key || (symbol && String(item.symbol || "").toUpperCase() === symbol);
+    });
+    if (row) {
+      handleHoldingDrilldown(row);
+    }
+  };
+
+  const submitSecuritySearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = securitySearch.trim();
+    if (!query) {
+      return;
+    }
+    setActionNotice(null);
+    setLocalSelectedQuery(query);
+    setPendingAction({ kind: "interest", query, label: `${query} 종목 상세 불러오는 중` });
+    Streamlit.setComponentValue({ id: "security_search", query, nonce: Date.now().toString() });
+    syncFrameHeightSoon();
+  };
+
+  const submitManagerSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = managerSearch.trim();
+    setActionNotice(null);
+    setLocalSelectedQuery("");
+    setSecuritySearch("");
+    setUnresolvedHolding(null);
+    setPendingAction({
+      kind: "manager_search",
+      query,
+      label: query ? `${query} 기관 검색 중` : "기본 기관 목록 불러오는 중",
+    });
+    Streamlit.setComponentValue({ id: "manager_search", query, nonce: Date.now().toString() });
+    syncFrameHeightSoon();
+  };
+
   const handleManagerSelect = (item: ManagerItem) => {
     if (!item.cik || item.selected) {
       return;
@@ -1069,6 +1270,8 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     }
     setActionNotice(null);
     setLocalSelectedQuery("");
+    setSecuritySearch("");
+    setUnresolvedHolding(null);
     setPendingAction({ kind: "manager", cik: item.cik, label: `${item.manager_name} 포트폴리오 불러오는 중` });
     sendEvent({ id: "select_manager", cik: item.cik });
   };
@@ -1097,37 +1300,16 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   };
 
   return (
-    <main className="ip-workbench" data-schema-version={payload.schema_version} data-mode={payload.mode}>
+    <main
+      className="ip-workbench"
+      data-schema-version={payload.schema_version}
+      data-contract-version={WORKBENCH_SCHEMA_VERSION}
+      data-mode={payload.mode}
+    >
       <section className="ip-hero">
         <div className="ip-hero__topline">
           <span className={`ip-state ${payload.data_state.is_preview ? "ip-state--preview" : ""}`}>{payload.data_state.label}</span>
           <span>{payload.hero.caveat}</span>
-        </div>
-
-        <div
-          className="ip-manager-rail"
-          role="tablist"
-          aria-label="Institutional managers"
-          ref={managerRailRef}
-          onScroll={(event) => {
-            managerRailScrollRef.current = event.currentTarget.scrollLeft;
-          }}
-        >
-          {payload.manager_picker.items.map((item) => (
-            <button
-              key={item.cik || item.manager_name}
-              type="button"
-              className={`ip-manager-tab ${item.selected ? "ip-manager-tab--active" : ""} ${
-                pendingAction?.kind === "manager" && pendingAction.cik === item.cik ? "ip-manager-tab--pending" : ""
-              }`}
-              data-cik={item.cik || ""}
-              disabled={Boolean(pendingAction)}
-              onClick={() => handleManagerSelect(item)}
-            >
-              <strong>{item.manager_name}</strong>
-              <span>{item.watchlist_label ? `${item.watchlist_label} · ${item.latest_report_period}` : item.latest_report_period}</span>
-            </button>
-          ))}
         </div>
 
         {pendingAction ? (
@@ -1136,6 +1318,8 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
             <strong>
               {pendingAction.kind === "manager"
                 ? "포트폴리오 불러오는 중"
+                : pendingAction.kind === "manager_search"
+                  ? "기관 검색 중"
                 : pendingAction.kind === "interest"
                   ? "종목 상세 불러오는 중"
                   : pendingAction.kind === "popularity"
@@ -1148,56 +1332,121 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
           </div>
         ) : null}
 
-        <div className={`ip-freshness ${payload.freshness?.is_stale ? "ip-freshness--stale" : ""}`}>
-          <button type="button" className="ip-freshness__action" onClick={handleRefreshOpen}>
-            {payload.refresh_action?.label || "SEC 13F 데이터"}
-          </button>
-          <strong>{payload.freshness?.latest_report_period || "로컬 13F 데이터 없음"}</strong>
-          <em>{payload.freshness?.last_collected_at ? `수집 시각 ${payload.freshness.last_collected_at}` : "갱신 설정 사용 가능"}</em>
-        </div>
-
-        <div className="ip-hero__grid">
-          <div className="ip-hero__identity">
-            <div className="ip-hero__kicker">Institutional Portfolios</div>
-            <h2>{payload.hero.manager_name}</h2>
-            <p>{payload.data_state.message}</p>
-            <div className="ip-hero__facts">
-              {payload.hero.facts.map((fact) => (
-                <div className="ip-fact" key={`${fact.label}-${fact.value}`}>
-                  <span>{fact.label}</span>
-                  <strong>{fact.value}</strong>
-                </div>
-              ))}
+        <div className="ip-context-hero__grid">
+          <div className="ip-context-hero__copy">
+            <div className="ip-context-hero__eyebrow">INSTITUTIONAL PORTFOLIO CONTEXT</div>
+            <h2>{payload.context_summary.headline}</h2>
+            <p>{payload.context_summary.summary}</p>
+            <div className="ip-context-hero__signals">
+              <span>상위 5개 {payload.context_summary.top5_weight_label}</span>
+              <span>최대 섹터 {payload.context_summary.largest_sector} {payload.context_summary.largest_sector_weight_label}</span>
+            </div>
+          </div>
+          <aside className="ip-context-basis" aria-label="보고 근거">
+            <div><span>보고 기준 분기</span><strong>{payload.hero.latest_report_period}</strong></div>
+            <div><span>제출일</span><strong>{payload.hero.latest_filing_date}</strong></div>
+            <div className="ip-context-basis__snapshot">
+              <span>DB snapshot</span>
+              <strong>{payload.freshness?.last_collected_at || payload.data_state.as_of_label}</strong>
             </div>
             {payload.hero.source_ref ? (
               <a className="ip-source-link" href={payload.hero.source_ref} target="_blank" rel="noreferrer">
                 SEC 원문 열기
               </a>
             ) : null}
-          </div>
+          </aside>
+        </div>
 
-          <div className="ip-allocation-panel">
-            <div className="ip-section-head">
+        <div className="ip-context-controls">
+          <div className="ip-manager-switcher">
+            <form className="ip-manager-search" onSubmit={submitManagerSearch}>
+              <label htmlFor="ip-manager-search-input">기관 / 투자 대가 검색</label>
               <div>
-                <h3>{payload.allocation.title}</h3>
-                <p>{payload.allocation.subtitle}</p>
+                <input
+                  id="ip-manager-search-input"
+                  type="search"
+                  value={managerSearch}
+                  placeholder="Berkshire Hathaway, Pershing Square"
+                  onChange={(event) => setManagerSearch(event.target.value)}
+                />
+                <button type="submit" disabled={Boolean(pendingAction)}>검색</button>
               </div>
-              <strong>{payload.allocation.total_label}</strong>
+            </form>
+            <div
+              className="ip-manager-favorites ip-manager-rail"
+              role="tablist"
+              aria-label="Institutional managers"
+              ref={managerRailRef}
+              onScroll={(event) => {
+                managerRailScrollRef.current = event.currentTarget.scrollLeft;
+              }}
+            >
+              {payload.manager_picker.items.map((item) => (
+                <button
+                  key={item.cik || item.manager_name}
+                  type="button"
+                  className={`ip-manager-tab ${item.selected ? "ip-manager-tab--active" : ""} ${
+                    pendingAction?.kind === "manager" && pendingAction.cik === item.cik ? "ip-manager-tab--pending" : ""
+                  }`}
+                  data-cik={item.cik || ""}
+                  disabled={Boolean(pendingAction)}
+                  onClick={() => handleManagerSelect(item)}
+                >
+                  <strong>{item.watchlist_label || item.manager_name}</strong>
+                  <span>{item.manager_name} · {item.latest_report_period}</span>
+                </button>
+              ))}
             </div>
-            <div className="ip-allocation-layout">
-              <AllocationDonut segments={payload.allocation.segments} />
-              <div className="ip-holding-list">
-                {payload.allocation.top_holdings.slice(0, 6).map((holding) => (
-                  <button type="button" key={`${holding.key}-${holding.label}`} className="ip-holding-row" onClick={() => handleDrilldown(holding.drilldown_query)}>
-                    <span className="ip-dot" style={{ backgroundColor: holding.color }} />
-                    <span>
-                      <strong>{holding.label}</strong>
-                      <small>{holding.issuer_name}</small>
-                    </span>
-                    <em>{holding.weight_label}</em>
-                  </button>
-                ))}
+            {payload.manager_picker.search_state === "empty" ? (
+              <div className="ip-manager-search-empty" role="status">
+                <strong>검색 결과가 없습니다</strong>
+                <span>{payload.manager_picker.search_empty_message}</span>
               </div>
+            ) : payload.manager_picker.search_state === "results" ? (
+              <div className="ip-manager-search-count" role="status">
+                검색 결과 {Number(payload.manager_picker.search_result_count || 0).toLocaleString()}개
+              </div>
+            ) : null}
+          </div>
+          <div className="ip-freshness-block">
+            <span className="ip-context-control-label">데이터 기준</span>
+            <div className={`ip-freshness ${payload.freshness?.is_stale ? "ip-freshness--stale" : ""}`}>
+              <button type="button" className="ip-freshness__action" onClick={handleRefreshOpen}>
+                {payload.refresh_action?.label || "SEC 13F 데이터"}
+              </button>
+              <strong>{payload.freshness?.latest_report_period || "로컬 13F 데이터 없음"}</strong>
+              <em>{payload.freshness?.last_collected_at ? `수집 시각 ${payload.freshness.last_collected_at}` : "갱신 설정 사용 가능"}</em>
+            </div>
+          </div>
+        </div>
+
+        <div className="ip-allocation-panel">
+          <div className="ip-section-head">
+            <div>
+              <h3>{payload.allocation.title}</h3>
+              <p>{payload.allocation.subtitle}</p>
+            </div>
+            <strong>{payload.allocation.total_label}</strong>
+          </div>
+          <div className="ip-allocation-layout">
+            <AllocationDonut segments={payload.allocation.segments} />
+            <div className="ip-holding-list">
+              {payload.allocation.top_holdings.slice(0, 6).map((holding) => (
+                <button type="button" key={`${holding.key}-${holding.label}`} className="ip-holding-row" onClick={() => handleAllocationDrilldown(holding)}>
+                  <span className="ip-dot" style={{ backgroundColor: holding.color }} />
+                  <span>
+                    <strong>{holding.label}</strong>
+                    <small>{holding.issuer_name}</small>
+                  </span>
+                  <em>{holding.weight_label}</em>
+                </button>
+              ))}
+              {allocationOtherSegment ? (
+                <div className="ip-allocation-other">
+                  <span>Other 버킷</span>
+                  <strong>{allocationOtherCount.toLocaleString()}개 · {allocationOtherWeight}</strong>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -1272,17 +1521,16 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
 
       <div className="ip-view-body">
         {activeView === "overview" ? (
-          <section className="ip-grid">
-            <div className="ip-stack">
-              <PortfolioPerformancePanel performance={payload.portfolio_performance} onDrilldown={handleDrilldown} />
-              <div className="ip-panel ip-panel--changes">
-                <div className="ip-section-head">
-                  <div>
-                    <h3>{payload.change_board.title}</h3>
-                    <p>{payload.change_board.subtitle}</p>
-                  </div>
+          <section className="ip-overview-stack">
+            <div className="ip-panel ip-panel--changes">
+              <div className="ip-section-head">
+                <div>
+                  <h3>{payload.change_board.title}</h3>
+                  <p>{payload.change_board.subtitle}</p>
                 </div>
-                {!payload.change_board.comparison_available ? <div className="ip-board-note">{payload.change_board.empty_reason}</div> : null}
+              </div>
+              {!payload.change_board.comparison_available ? <div className="ip-board-note">{payload.change_board.empty_reason}</div> : null}
+              {changeGroups.length ? (
                 <div className="ip-change-grid">
                   {changeGroups.map((group) => (
                     <div className="ip-change-card" key={group.key}>
@@ -1306,53 +1554,137 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
                     </div>
                   ))}
                 </div>
+              ) : null}
+            </div>
+
+            <div className="ip-context-evidence-grid">
+              <div className="ip-panel ip-coverage-panel">
+                <div className="ip-section-head">
+                  <div>
+                    <h3>보유 종목 연결 범위</h3>
+                    <p>ticker 연결 상태와 가정 성과 계산 가능 범위를 분리해 보여줍니다.</p>
+                  </div>
+                </div>
+                <div className="ip-coverage-metrics">
+                  <div><span>전체 보유</span><strong>{payload.coverage.holding_count_total.toLocaleString()}</strong></div>
+                  <div><span>ticker 연결</span><strong>{payload.coverage.holding_count_mapped.toLocaleString()}</strong></div>
+                  <div><span>ticker 미연결</span><strong>{payload.coverage.holding_count_unmapped.toLocaleString()}</strong></div>
+                  <div><span>mapping 확인 필요</span><strong>{payload.coverage.holding_count_ambiguous.toLocaleString()}</strong></div>
+                  <div><span>연결 평가액 비중</span><strong>{payload.coverage.mapped_weight_label}</strong></div>
+                  <div><span>성과 계산 비중</span><strong>{payload.coverage.performance_covered_weight_label}</strong></div>
+                </div>
+              </div>
+
+              <div className="ip-panel">
+                <div className="ip-section-head">
+                  <div>
+                    <h3>{payload.sector_exposure.title}</h3>
+                    <p>{payload.sector_exposure.subtitle}</p>
+                  </div>
+                </div>
+                <div className="ip-sector-bars">
+                  {payload.sector_exposure.bars.map((bar) => (
+                    <div className="ip-sector-row" key={bar.sector}>
+                      <div>
+                        <strong>{bar.sector}</strong>
+                        <span>{bar.holding_count}개 종목 · {bar.value_label}</span>
+                      </div>
+                      <div className="ip-sector-row__track">
+                        <span style={{ width: `${clampPercent(bar.bar_width_pct)}%`, backgroundColor: bar.color }} />
+                      </div>
+                      <em>{bar.weight_label}</em>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <div className="ip-panel">
-              <div className="ip-section-head">
-                <div>
-                  <h3>{payload.sector_exposure.title}</h3>
-                  <p>{payload.sector_exposure.subtitle}</p>
-                </div>
-              </div>
-              <div className="ip-sector-bars">
-                {payload.sector_exposure.bars.map((bar) => (
-                  <div className="ip-sector-row" key={bar.sector}>
-                    <div>
-                      <strong>{bar.sector}</strong>
-                      <span>{bar.holding_count}개 종목 · {bar.value_label}</span>
-                    </div>
-                    <div className="ip-sector-row__track">
-                      <span style={{ width: `${clampPercent(bar.bar_width_pct)}%`, backgroundColor: bar.color }} />
-                    </div>
-                    <em>{bar.weight_label}</em>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <PortfolioPerformancePanel performance={payload.portfolio_performance} onDrilldown={handleDrilldown} />
           </section>
         ) : null}
 
         {activeView === "holdings" ? (
-          <section className="ip-panel">
+          <section className="ip-panel ip-holdings-explorer">
             <div className="ip-section-head">
               <div>
                 <h3>전체 보유 종목</h3>
-                <p>종목을 클릭하면 종목 분석의 종목 상세 화면에서 차트와 보유 기관 리스트를 함께 보여줍니다.</p>
+                <p>전체 13F row를 검색·필터·정렬합니다. ticker 미연결 row도 원래 식별자로 남깁니다.</p>
               </div>
-              <strong>{payload.holdings_table.rows.length}</strong>
+              <strong>{holdingsStart.toLocaleString()}–{holdingsEnd.toLocaleString()} / {filteredHoldings.length.toLocaleString()}</strong>
             </div>
-            <div className="ip-table">
-              {payload.holdings_table.rows.slice(0, 80).map((row) => (
-                <button type="button" key={`${row.cusip}-${row.issuer_name}`} onClick={() => handleDrilldown(row.drilldown_query)}>
-                  <span>{row.symbol || "-"}</span>
-                  <strong>{row.issuer_name}</strong>
-                  <em>{row.weight_label}</em>
-                  <small>{row.value_label}</small>
-                  <small>{row.sector}</small>
-                </button>
-              ))}
+            <div className="ip-holdings-toolbar">
+              <label className="ip-holdings-search">
+                <span>보유 종목 검색</span>
+                <input
+                  type="search"
+                  value={holdingSearch}
+                  placeholder="ticker, 발행사, CUSIP"
+                  onChange={(event) => setHoldingSearch(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>연결 상태</span>
+                <select value={mappingFilter} onChange={(event) => setMappingFilter(event.target.value as MappingFilter)}>
+                  {payload.holdings_explorer.filters.mapping.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>섹터</span>
+                <select value={sectorFilter} onChange={(event) => setSectorFilter(event.target.value)}>
+                  {payload.holdings_explorer.filters.sector.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>정렬</span>
+                <select value={holdingSort} onChange={(event) => setHoldingSort(event.target.value as HoldingSort)}>
+                  {payload.holdings_explorer.sorts.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {unresolvedHolding ? (
+              <div className="ip-unresolved-notice" role="status">
+                <div>
+                  <strong>{unresolvedHolding.issuer_name}</strong>
+                  <span>CUSIP {unresolvedHolding.cusip || "-"} · {unresolvedHolding.sector}</span>
+                </div>
+                <p>ticker가 안전하게 연결되기 전에는 종목 차트나 가격 수집을 열지 않습니다.</p>
+                <button type="button" onClick={() => setUnresolvedHolding(null)}>닫기</button>
+              </div>
+            ) : null}
+            <div className="ip-holdings-list">
+              {visibleHoldings.length ? visibleHoldings.map((row) => {
+                const mapped = row.mapping_status === "mapped" && Boolean(row.symbol);
+                return (
+                  <button
+                    type="button"
+                    className={`ip-holding-explorer-row ${mapped ? "ip-holding-explorer-row--mapped" : "ip-holding-explorer-row--unresolved"}`}
+                    key={`${row.cusip}-${row.issuer_name}`}
+                    onClick={() => handleHoldingDrilldown(row)}
+                  >
+                    <span className="ip-holding-explorer-row__identity">
+                      <strong>{mapped ? row.symbol : row.issuer_name}</strong>
+                      <small>{mapped ? row.issuer_name : `CUSIP ${row.cusip || "-"}`}</small>
+                    </span>
+                    <span className={`ip-mapping-badge ${mapped ? "ip-mapping-badge--mapped" : ""}`}>
+                      {mapped ? "ticker 연결됨" : row.mapping_status === "ambiguous" ? "mapping 확인 필요" : "ticker 연결 전"}
+                    </span>
+                    <em>{row.weight_label}</em>
+                    <small>{row.value_label}</small>
+                    <small>{row.sector}</small>
+                  </button>
+                );
+              }) : <div className="ip-interest-empty">조건에 맞는 보유 종목이 없습니다.</div>}
+            </div>
+            <div className="ip-holdings-pagination">
+              <button type="button" disabled={safeHoldingPage <= 1} onClick={() => setHoldingPage((page) => Math.max(1, page - 1))}>이전 50개</button>
+              <span>{safeHoldingPage.toLocaleString()} / {totalHoldingPages.toLocaleString()} 페이지</span>
+              <button type="button" disabled={safeHoldingPage >= totalHoldingPages} onClick={() => setHoldingPage((page) => Math.min(totalHoldingPages, page + 1))}>다음 50개</button>
             </div>
           </section>
         ) : null}
@@ -1370,6 +1702,20 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
               </div>
               <strong>{payload.interest.holder_count}</strong>
             </div>
+            <form className="ip-security-search" onSubmit={submitSecuritySearch}>
+              <label htmlFor="ip-security-search-input">직접 종목 검색</label>
+              <div>
+                <input
+                  id="ip-security-search-input"
+                  type="search"
+                  value={securitySearch}
+                  placeholder="ticker, 발행사, CUSIP"
+                  onChange={(event) => setSecuritySearch(event.target.value)}
+                />
+                <button type="submit" disabled={!securitySearch.trim() || Boolean(pendingAction)}>검색</button>
+              </div>
+              <small>입력만으로는 조회하지 않습니다. Enter 또는 검색 버튼으로 실행합니다.</small>
+            </form>
             <SecurityDetail
               detail={localSecurityDetail}
               interest={{ ...payload.interest, query: payload.interest.query || localSelectedQuery }}

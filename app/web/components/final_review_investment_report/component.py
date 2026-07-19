@@ -16,27 +16,26 @@ _component = (
 )
 
 
-def is_final_review_investment_report_available() -> bool:
+def is_final_review_decision_workspace_available() -> bool:
     return _component is not None
 
 
-def render_final_review_investment_report(
+def render_final_review_decision_workspace(
     *,
-    report: dict[str, Any],
-    decision_action: dict[str, Any] | None = None,
+    decision_brief: dict[str, Any],
+    candidate_selector: dict[str, Any],
     key: str | None = None,
 ) -> dict[str, Any] | None:
-    """Render the optional Final Review report and return decision intent.
+    """Render one candidate-to-decision workspace and return presentation intent.
 
-    React displays the report and collects route / reason intent only. Python
-    keeps ownership of scoring, save validation, persistence, and Monitoring
-    handoff boundaries.
+    React displays Python-owned projections and emits candidate or route/reason
+    intent only. Python keeps eligibility, calculations, validation, and writes.
     """
     if _component is None:
         return None
     value = _component(
-        report=report,
-        decision_action=dict(decision_action or {}),
+        decision_brief=decision_brief,
+        candidate_selector=candidate_selector,
         key=key,
         default=None,
     )

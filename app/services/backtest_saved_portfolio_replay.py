@@ -8,6 +8,7 @@ from typing import Any
 import pandas as pd
 
 from app.services.backtest_result_read_model import build_strategy_data_trust_rows
+from app.services.backtest_portfolio_mix_readiness import infer_mix_role
 from app.services.backtest_weighted_portfolio import build_weighted_portfolio_bundle
 from app.runtime.backtest import BacktestInputError
 
@@ -21,11 +22,29 @@ class SavedPortfolioReplayResult:
     weighted_bundle: dict[str, Any]
     selected_strategies: list[str]
     weights_percent: list[float]
+    component_roles: list[str]
     date_policy: str
     replay_source_context: dict[str, Any]
     compare_history_bundle: dict[str, Any]
     compare_history_context: dict[str, Any]
     weighted_history_context: dict[str, Any]
+
+
+def resolve_saved_mix_component_roles(
+    record: dict[str, Any],
+    *,
+    strategy_names: list[str],
+) -> list[str]:
+    """Preserve saved roles or infer them for legacy reusable setups."""
+
+    portfolio_context = dict(record.get("portfolio_context") or {})
+    roles = [
+        str(role)
+        for role in list(portfolio_context.get("component_roles") or [])
+    ]
+    if len(roles) == len(strategy_names):
+        return roles
+    return [infer_mix_role(name) for name in strategy_names]
 
 
 def replay_saved_portfolio_record(
@@ -61,6 +80,10 @@ def replay_saved_portfolio_record(
     weights_percent = [float(weight) for weight in (portfolio_context.get("weights_percent") or [])]
     if len(weights_percent) != len(selected_strategies):
         raise BacktestInputError("Saved portfolio weight count does not match the saved strategy count.")
+    component_roles = resolve_saved_mix_component_roles(
+        record,
+        strategy_names=selected_strategies,
+    )
 
     date_policy = str(portfolio_context.get("date_policy") or "intersection")
     replay_source_context = {
@@ -69,6 +92,7 @@ def replay_saved_portfolio_record(
         "saved_portfolio_id": record.get("portfolio_id"),
         "selected_strategies": selected_strategies,
         "weights_percent": weights_percent,
+        "component_roles": component_roles,
         "upstream_source_context": upstream_source_context,
     }
     compact_source_context = {
@@ -85,6 +109,7 @@ def replay_saved_portfolio_record(
         portfolio_id=str(record.get("portfolio_id") or ""),
         source_kind="saved_portfolio",
         compare_source_context=replay_source_context,
+        component_roles=component_roles,
     )
 
     compare_history_bundle = {
@@ -107,6 +132,7 @@ def replay_saved_portfolio_record(
         "strategy_overrides": strategy_overrides,
         "strategy_data_trust_rows": build_strategy_data_trust_rows(bundles),
         "weights_percent": weights_percent,
+        "component_roles": component_roles,
         "date_policy": portfolio_context.get("date_policy"),
         "saved_portfolio_id": record.get("portfolio_id"),
         "saved_portfolio_name": record.get("name"),
@@ -121,6 +147,7 @@ def replay_saved_portfolio_record(
         "selected_strategies": selected_strategies,
         "date_policy": portfolio_context.get("date_policy"),
         "weights_percent": weights_percent,
+        "component_roles": component_roles,
         "component_data_trust_rows": weighted_bundle.get("component_data_trust_rows") or [],
         "saved_portfolio_id": record.get("portfolio_id"),
         "saved_portfolio_name": record.get("name"),
@@ -132,6 +159,7 @@ def replay_saved_portfolio_record(
         weighted_bundle=weighted_bundle,
         selected_strategies=selected_strategies,
         weights_percent=weights_percent,
+        component_roles=component_roles,
         date_policy=date_policy,
         replay_source_context=replay_source_context,
         compare_history_bundle=compare_history_bundle,
@@ -140,4 +168,8 @@ def replay_saved_portfolio_record(
     )
 
 
-__all__ = ["SavedPortfolioReplayResult", "replay_saved_portfolio_record"]
+__all__ = [
+    "SavedPortfolioReplayResult",
+    "replay_saved_portfolio_record",
+    "resolve_saved_mix_component_roles",
+]

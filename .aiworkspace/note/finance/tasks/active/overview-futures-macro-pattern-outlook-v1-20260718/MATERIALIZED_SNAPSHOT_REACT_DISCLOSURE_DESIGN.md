@@ -191,4 +191,3 @@ fallback도 render 중 5년 전망 계산을 실행하지 않는다.
 - snapshot이 없으면 느린 fallback 대신 명확한 갱신 안내가 나온다.
 - 방법론과 원본 추적이 같은 React disclosure 패턴으로 보이고 잘리지 않는다.
 - focused tests, Vite build, compile / diff check, actual desktop / 420px Browser QA가 통과한다.
-

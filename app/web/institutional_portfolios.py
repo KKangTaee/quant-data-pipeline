@@ -306,6 +306,24 @@ def _resolve_selected_manager(
         for row in manager_rows:
             if row.get("query_match"):
                 return row
+        if selected:
+            for seed in INSTITUTIONAL_MANAGER_WATCHLIST:
+                seed_cik = _cik_text(seed.get("cik"))
+                if seed_cik == selected:
+                    return {
+                        "cik": seed_cik,
+                        "manager_name": seed.get("manager_name") or seed.get("display_name") or "Unknown manager",
+                        "latest_report_period": seed.get("latest_report_period"),
+                        "latest_filing_date": seed.get("latest_filing_date"),
+                        "source_ref": seed.get("source_ref"),
+                    }
+            return {
+                "cik": selected,
+                "manager_name": f"Selected manager · CIK {selected}",
+                "latest_report_period": None,
+                "latest_filing_date": None,
+                "source_ref": None,
+            }
         return manager_rows[0] if manager_rows else None
 
     if selected and selected in by_cik:
@@ -391,6 +409,15 @@ def _handle_workbench_event(event: dict[str, Any] | None) -> None:
             st.session_state["institutional_13f_refresh_panel_expanded"] = True
             st.rerun()
         return
+    if event_name == "manager_search":
+        query = str(payload.get("query") or "").strip()
+        st.session_state["institutional_portfolios_manager_search"] = query
+        st.session_state["institutional_interest_query"] = ""
+        st.session_state["institutional_interest_query_needs_load"] = False
+        st.session_state["institutional_interest_model_cache"] = {}
+        st.session_state["institutional_popularity_needs_load"] = False
+        st.session_state["institutional_price_refresh_result"] = {}
+        st.rerun()
     if event_name == "select_manager":
         cik = str(payload.get("cik") or "")
         if cik and cik != st.session_state.get("institutional_portfolios_selected_cik"):
@@ -404,6 +431,20 @@ def _handle_workbench_event(event: dict[str, Any] | None) -> None:
     if event_name == "drilldown":
         query = str(payload.get("query") or "").strip()
         if query and query != st.session_state.get("institutional_interest_query"):
+            st.session_state["institutional_interest_query"] = query
+            st.session_state["institutional_interest_query_needs_load"] = True
+            st.session_state["institutional_price_refresh_result"] = {}
+            st.rerun()
+    if event_name == "holding_drilldown":
+        query = str(payload.get("query") or "").strip()
+        if query and query != st.session_state.get("institutional_interest_query"):
+            st.session_state["institutional_interest_query"] = query
+            st.session_state["institutional_interest_query_needs_load"] = True
+            st.session_state["institutional_price_refresh_result"] = {}
+            st.rerun()
+    if event_name == "security_search":
+        query = str(payload.get("query") or "").strip()
+        if query:
             st.session_state["institutional_interest_query"] = query
             st.session_state["institutional_interest_query_needs_load"] = True
             st.session_state["institutional_price_refresh_result"] = {}
@@ -470,12 +511,7 @@ def render_institutional_portfolios_page(
     elif runtime_marker or loaded_at or git_sha:
         st.caption(f"Runtime: {runtime_marker or '-'} · Loaded: {loaded_at or '-'} · Git: {git_sha or '-'}")
 
-    search = st.text_input(
-        "기관 / 투자 대가 검색",
-        value="",
-        key="institutional_portfolios_manager_search",
-        placeholder="Berkshire Hathaway, Pershing Square, BlackRock",
-    )
+    search = str(st.session_state.get("institutional_portfolios_manager_search") or "").strip()
     refresh_result = load_institutional_refresh_status()
     refresh_status = dict(refresh_result.get("model") or {})
     refresh_panel_rendered = _render_requested_refresh_status_panel(refresh_status)
@@ -484,6 +520,7 @@ def render_institutional_portfolios_page(
         payload = build_institutional_preview_workbench_payload(
             "Local 13F data is not ready yet. This preview shows the visual portfolio workflow before official SEC rows are loaded."
         )
+        payload.setdefault("manager_picker", {})["search_query"] = search
         _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_error")
         if not refresh_panel_rendered:
             _render_refresh_status_panel(refresh_status)
@@ -497,6 +534,7 @@ def render_institutional_portfolios_page(
     selected_manager = _selected_manager(managers, search_active=search_active)
     if selected_manager is None:
         payload = build_institutional_preview_workbench_payload("Local 13F DB has no manager rows yet. Preview mode is shown until data is collected.")
+        payload.setdefault("manager_picker", {})["search_query"] = search
         _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_empty")
         if not refresh_panel_rendered:
             _render_refresh_status_panel(refresh_status)
@@ -509,6 +547,7 @@ def render_institutional_portfolios_page(
         payload = build_institutional_preview_workbench_payload(
             "The selected manager portfolio is not available in the local 13F snapshot. Preview mode shows the intended visual workflow."
         )
+        payload.setdefault("manager_picker", {})["search_query"] = search
         _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_model_error")
         if not refresh_panel_rendered:
             _render_refresh_status_panel(refresh_status)
@@ -566,6 +605,7 @@ def render_institutional_portfolios_page(
         mode="live",
         refresh_status=refresh_status,
         preserve_manager_order=search_active,
+        manager_search_query=search,
     )
     _render_workbench_or_fallback(payload, key="institutional_portfolios_workbench")
     if not refresh_panel_rendered:

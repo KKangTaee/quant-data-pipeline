@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_single_runner import _handle_backtest_run
 from app.web.backtest_single_forms import _apply_single_strategy_prefill
+from app.web.backtest_single_settings_workspace import single_settings_section
 
 
 def _render_strict_factor_data_readiness_note(
@@ -12,6 +13,7 @@ def _render_strict_factor_data_readiness_note(
     mode_label: str,
     prototype: bool = False,
     combined_factor: bool = False,
+    inline: bool = False,
 ) -> None:
     freq_label = str(statement_freq).strip().lower()
     status_label = "research-only prototype" if prototype else "public candidate"
@@ -20,7 +22,7 @@ def _render_strict_factor_data_readiness_note(
         if combined_factor
         else "선택 universe의 statement shadow factor coverage가 실제 시작 가능 구간을 결정합니다."
     )
-    with st.expander("데이터 준비 기준", expanded=False):
+    def render_note() -> None:
         st.markdown(
             f"- **가격**: `Daily Market Update` 또는 OHLCV 수집이 먼저 필요합니다.\n"
             f"- **재무제표**: `Extended Statement Refresh`를 **{freq_label}** 기준으로 준비합니다.\n"
@@ -28,7 +30,13 @@ def _render_strict_factor_data_readiness_note(
             f"- **상태**: `{family_label}`은 현재 **{status_label}** 경로입니다.\n"
             f"- **주의**: {coverage_note}"
         )
-        st.caption(f"Current mode: `{mode_label}`")
+        st.caption(f"계산 계약: `{mode_label}`")
+
+    if inline:
+        render_note()
+        return
+    with st.expander("데이터 준비 기준", expanded=False):
+        render_note()
 
 
 def _strict_factor_date_input(label: str, *, default: date, key: str) -> date:
@@ -36,110 +44,178 @@ def _strict_factor_date_input(label: str, *, default: date, key: str) -> date:
     return st.date_input(label, value=value, key=key)
 
 
-def _render_quality_snapshot_form() -> None:
-    st.markdown("### Quality Snapshot")
-    st.caption(
-        "Archived legacy broad yfinance compatibility path for saved/history replay only. "
-        "For new research runs, start from `Quality Snapshot (Strict Annual)` or `Quality + Value / Strict Annual`."
-    )
-    _render_quality_family_guide("quality_broad")
-    with st.expander("Data Requirements", expanded=False):
-        st.markdown(
-            "- `Daily Market Update` 또는 OHLCV 수집으로 **가격 데이터**를 먼저 채워야 합니다.\n"
-            "- 이 archived path는 이미 존재하는 **`nyse_fundamentals` + `nyse_factors`** legacy rows가 있을 때만 재현용으로 사용합니다.\n"
-            "- 새 factor 준비나 새 재무제표 source 수집은 `EDGAR annual 재무제표 갱신`과 statement shadow path를 사용하세요.\n"
-            "- 첫 공개 버전은 **stock-oriented** 입니다. ETF 위주 유니버스는 quality factor snapshot이 비거나 의미가 약할 수 있습니다.\n"
-            "- saved/history replay compatibility 때문에 실행 함수는 남아 있지만, 새 사용자 기본 선택지에서는 제외되어 있습니다."
-        )
-        st.caption("Archived mode: `legacy_broad_yfinance` (not strict PIT, not canonical financial statement source)")
-    _apply_single_strategy_prefill("quality_snapshot")
+def _render_strict_factor_core_inputs(
+    *,
+    section_label: str,
+    key_prefix: str,
+    default_start: date,
+    top_default: int,
+    top_max: int,
+    top_help: str,
+) -> tuple[date, date, int]:
+    """Render the period and selection count before the universe decision."""
 
-    universe_mode = st.radio(
-        "Universe Mode",
-        options=["Preset", "Manual"],
-        horizontal=True,
-        help="첫 factor strategy는 stock-only quality universe를 기준으로 시작하는 편이 안전합니다.",
-        key="qs_universe_mode",
-    )
-
-    preset_name = None
-    tickers: list[str] = []
-
-    if universe_mode == "Preset":
-        preset_name = st.selectbox(
-            "Preset",
-            options=list(QUALITY_BROAD_PRESETS.keys()),
-            index=0,
-            key="qs_preset",
-        )
-        tickers = QUALITY_BROAD_PRESETS[preset_name]
-        _render_ticker_preview(tickers)
-    else:
-        manual_tickers = st.text_input(
-            "Tickers",
-            value="AAPL,MSFT,GOOG",
-            help="Comma-separated stock tickers. Example: AAPL,MSFT,GOOG",
-            key="qs_manual_tickers",
-        )
-        tickers = _parse_manual_tickers(manual_tickers)
-        _render_ticker_preview(tickers)
-
-    with st.form("quality_snapshot_backtest_form", clear_on_submit=False):
+    with single_settings_section(
+        section_label,
+        "검증 기간과 최종 보유 종목 수를 먼저 정합니다.",
+    ):
         col1, col2, col3 = st.columns(3)
         with col1:
-            start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="qs_start")
-        with col2:
-            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="qs_end")
-        with col3:
-            top_n = st.number_input(
-                "Top N",
-                min_value=1,
-                max_value=20,
-                value=2,
-                step=1,
-                help="Quality score 상위 종목 수입니다.",
-                key="qs_top_n",
+            start_date = _strict_factor_date_input(
+                "시작일",
+                default=default_start,
+                key=f"{key_prefix}_start",
             )
+        with col2:
+            end_date = _strict_factor_date_input(
+                "종료일",
+                default=DEFAULT_BACKTEST_END_DATE,
+                key=f"{key_prefix}_end",
+            )
+        with col3:
+            top_n = int(
+                st.number_input(
+                    "최종 보유 종목 수",
+                    min_value=1,
+                    max_value=top_max,
+                    value=top_default,
+                    step=1,
+                    help=top_help,
+                    key=f"{key_prefix}_top_n",
+                )
+            )
+        st.caption("월말에 후보를 다시 평가하고 기본적으로 같은 비중으로 보유합니다.")
+    return start_date, end_date, top_n
 
-        st.caption("Hidden defaults in this first pass: `monthly rebalance`, `equal-weight holding`.")
 
-        with st.expander("Advanced Inputs", expanded=False):
-            timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qs_timeframe")
-            option = st.selectbox("Option", options=["month_end"], index=0, key="qs_option")
+def _render_strict_factor_universe_inputs(
+    *,
+    section_label: str,
+    key_prefix: str,
+    presets: dict[str, list[str]],
+    default_preset: str,
+    help_text: str,
+    strict_labels: bool,
+    show_historical_caption: bool,
+    show_preset_status: bool,
+) -> tuple[str, str | None, list[str]]:
+    """Render a Korean-first preset/manual choice with compact ticker evidence."""
+
+    with single_settings_section(
+        section_label,
+        "검증할 후보군을 선택하고 상세 종목과 데이터 계약은 근거에서 확인합니다.",
+    ):
+        universe_mode = st.radio(
+            "투자 대상 선택",
+            options=["Preset", "Manual"],
+            format_func=lambda value: "목적별 기본 구성" if value == "Preset" else "종목 직접 입력",
+            horizontal=True,
+            help=help_text,
+            key=f"{key_prefix}_universe_mode",
+        )
+        preset_name: str | None = None
+        if universe_mode == "Preset":
+            preset_name = st.selectbox(
+                "기본 구성",
+                options=list(presets.keys()),
+                format_func=lambda value: (
+                    strict_preset_display_label(value) if strict_labels else value
+                ),
+                index=list(presets.keys()).index(default_preset),
+                key=f"{key_prefix}_preset",
+            )
+            tickers = list(presets[preset_name])
+            _render_ticker_preview(tickers)
+            if show_historical_caption:
+                _render_historical_universe_caption()
+            if show_preset_status:
+                _render_strict_preset_status_note(preset_name, tickers)
+        else:
+            manual_tickers = st.text_input(
+                "검증할 종목",
+                value="AAPL,MSFT,GOOG",
+                help="쉼표로 구분한 주식 티커를 입력합니다. 예: AAPL,MSFT,GOOG",
+                key=f"{key_prefix}_manual_tickers",
+            )
+            tickers = _parse_manual_tickers(manual_tickers)
+            _render_ticker_preview(tickers)
+    return universe_mode, preset_name, tickers
+
+
+def _render_quality_snapshot_form() -> None:
+    _apply_single_strategy_prefill("quality_snapshot")
+    start_date, end_date, top_n = _render_strict_factor_core_inputs(
+        section_label="핵심 실행 설정",
+        key_prefix="qs",
+        default_start=date(2016, 1, 1),
+        top_default=2,
+        top_max=20,
+        top_help="Quality 점수 상위에서 최종 보유할 종목 수입니다.",
+    )
+    universe_mode, preset_name, tickers = _render_strict_factor_universe_inputs(
+        section_label="투자 대상 Universe",
+        key_prefix="qs",
+        presets=QUALITY_BROAD_PRESETS,
+        default_preset=next(iter(QUALITY_BROAD_PRESETS)),
+        help_text="저장된 과거 실행을 재현할 stock 중심 후보군입니다.",
+        strict_labels=False,
+        show_historical_caption=False,
+        show_preset_status=False,
+    )
+    _render_quality_family_guide("quality_broad")
+    with st.expander("Universe 근거", expanded=False):
+        st.markdown(
+            "- 가격과 기존 legacy factor row가 모두 있는 종목만 재현할 수 있습니다.\n"
+            "- 신규 연구는 Strict Annual 또는 Quality + Value Strict Annual을 사용합니다.\n"
+            "- 이 경로는 저장된 과거 결과 호환을 위해서만 유지합니다."
+        )
+        st.caption("재현 계약: `legacy_broad_yfinance`")
+
+    with st.form("quality_snapshot_backtest_form", clear_on_submit=False, border=False):
+        with single_settings_section(
+            "선택·보유 규칙",
+            "Quality 지표를 합산해 월말마다 상위 후보를 같은 비중으로 선택합니다.",
+        ):
+            timeframe = st.selectbox("가격 간격", options=["1d"], index=0, key="qs_timeframe")
+            option = st.selectbox("선정 시점", options=["month_end"], index=0, key="qs_option")
             factor_freq = st.selectbox(
-                "Factor Frequency",
+                "재무 지표 주기",
                 options=["annual"],
+                format_func=lambda _: "연간",
                 index=0,
                 key="qs_factor_freq",
-                help="첫 버전은 annual quality snapshot만 지원합니다.",
             )
             quality_factors = st.multiselect(
-                "Quality Factors",
+                "Quality 지표",
                 options=["roe", "gross_margin", "operating_margin", "debt_ratio"],
                 default=["roe", "gross_margin", "operating_margin", "debt_ratio"],
                 key="qs_quality_factors",
-                help="높을수록 좋은 factor와 낮을수록 좋은 factor를 내부 score rule로 함께 처리합니다.",
+                help="수익성은 높을수록, 부채비율은 낮을수록 좋은 방향으로 표준화합니다.",
             )
             snapshot_mode = st.selectbox(
-                "Snapshot Mode",
+                "재현 방식",
                 options=["broad_research"],
+                format_func=lambda _: "저장된 broad 연구 스냅샷",
                 index=0,
                 key="qs_snapshot_mode",
-                help="첫 공개 버전은 broad-research snapshot을 사용합니다. strict PIT mode는 후속 단계로 남겨둡니다.",
             )
-
-        submitted = st.form_submit_button("Run Quality Snapshot Backtest", use_container_width=True)
+        with single_settings_section(
+            "비용·위험 기준",
+            "이 legacy 재현 경로는 저장된 기본 비용 계약을 그대로 사용합니다.",
+        ):
+            st.caption("비용과 위험 기준을 새로 조정하려면 Strict Annual 경로를 사용합니다.")
+        submitted = st.form_submit_button("이 설정으로 백테스트 실행", use_container_width=True)
 
     if not submitted:
         return
 
     validation_errors: list[str] = []
     if not tickers:
-        validation_errors.append("At least one ticker is required.")
+        validation_errors.append("투자 대상 종목을 한 개 이상 선택해 주세요.")
     if start_date > end_date:
-        validation_errors.append("Start Date must be earlier than or equal to End Date.")
+        validation_errors.append("시작일은 종료일보다 늦을 수 없습니다.")
     if not quality_factors:
-        validation_errors.append("Select at least one quality factor.")
+        validation_errors.append("Quality 지표를 한 개 이상 선택해 주세요.")
 
     if validation_errors:
         for error in validation_errors:
@@ -165,89 +241,55 @@ def _render_quality_snapshot_form() -> None:
     _handle_backtest_run(payload, strategy_name="Quality Snapshot")
 
 def _render_quality_snapshot_strict_annual_form() -> None:
-    st.markdown("### Quality Snapshot (Strict Annual)")
-    st.caption("Strict annual statement-driven quality strategy. This public candidate ranks annual statement shadow factors, then by default holds the top names equally between monthly rebalances.")
-    _render_strict_factor_data_readiness_note(
-        family_label="Quality Snapshot (Strict Annual)",
-        statement_freq="annual",
-        mode_label="strict_statement_annual + shadow_factors",
-    )
     _apply_single_strategy_prefill("quality_snapshot_strict_annual")
-
-    universe_mode = st.radio(
-        "Universe Mode",
-        options=["Preset", "Manual"],
-        horizontal=True,
-        help="Single Strategy에서는 annual statement coverage가 검증된 미국 주식 preset을 기본값으로 사용합니다.",
-        key="qss_universe_mode",
+    start_date, end_date, top_n = _render_strict_factor_core_inputs(
+        section_label="핵심 실행 설정",
+        key_prefix="qss",
+        default_start=_default_strict_factor_start_date(),
+        top_default=2,
+        top_max=20,
+        top_help="연간 Quality 점수 기준으로 최종 보유할 종목 수입니다.",
     )
-
-    preset_name = None
-    tickers: list[str] = []
-    if universe_mode == "Preset":
-        preset_name = st.selectbox(
-            "Preset",
-            options=list(QUALITY_STRICT_PRESETS.keys()),
-            format_func=strict_preset_display_label,
-            index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_SINGLE_DEFAULT_PRESET),
-            key="qss_preset",
+    universe_mode, preset_name, tickers = _render_strict_factor_universe_inputs(
+        section_label="투자 대상 Universe",
+        key_prefix="qss",
+        presets=QUALITY_STRICT_PRESETS,
+        default_preset=STRICT_ANNUAL_SINGLE_DEFAULT_PRESET,
+        help_text="연간 재무제표 coverage가 검증된 미국 주식 구성을 기본으로 사용합니다.",
+        strict_labels=True,
+        show_historical_caption=True,
+        show_preset_status=True,
+    )
+    with st.expander("Universe 근거", expanded=False):
+        _render_strict_factor_data_readiness_note(
+            family_label="Quality Snapshot (Strict Annual)",
+            statement_freq="annual",
+            mode_label="strict_statement_annual + shadow_factors",
+            inline=True,
         )
-        tickers = QUALITY_STRICT_PRESETS[preset_name]
-        _render_ticker_preview(tickers)
-        _render_historical_universe_caption()
-        _render_strict_preset_status_note(preset_name, tickers)
-    else:
-        manual_tickers = st.text_input(
-            "Tickers",
-            value="AAPL,MSFT,GOOG",
-            help="쉼표로 구분한 주식 티커를 입력합니다. 예: AAPL,MSFT,GOOG",
-            key="qss_manual_tickers",
+        universe_contract, dynamic_candidate_tickers, dynamic_target_size = _render_strict_universe_contract_setup(
+            key="qss_universe_contract",
+            tickers=tickers,
+            preset_name=preset_name,
+            statement_freq="annual",
         )
-        tickers = _parse_manual_tickers(manual_tickers)
-        _render_ticker_preview(tickers)
+        _render_strict_factor_prerun_preview(
+            tickers=tickers,
+            strategy_label="Quality Snapshot (Strict Annual)",
+            preset_name=preset_name,
+            universe_contract=universe_contract,
+            statement_freq="annual",
+        )
 
-    universe_contract, dynamic_candidate_tickers, dynamic_target_size = _render_strict_universe_contract_setup(
-        key="qss_universe_contract",
-        tickers=tickers,
-        preset_name=preset_name,
-        statement_freq="annual",
-    )
-    _render_strict_factor_prerun_preview(
-        tickers=tickers,
-        strategy_label="Quality Snapshot (Strict Annual)",
-        preset_name=preset_name,
-        universe_contract=universe_contract,
-        statement_freq="annual",
-    )
-
-    with st.form("quality_snapshot_strict_annual_backtest_form", clear_on_submit=False):
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            start_date = _strict_factor_date_input(
-                "Start Date",
-                default=_default_strict_factor_start_date(),
-                key="qss_start",
-            )
-        with col2:
-            end_date = _strict_factor_date_input("End Date", default=DEFAULT_BACKTEST_END_DATE, key="qss_end")
-        with col3:
-            top_n = st.number_input(
-                "Top N",
-                min_value=1,
-                max_value=20,
-                value=2,
-                step=1,
-                help="strict annual quality 점수 기준으로 상위 몇 개 종목을 선택할지 정합니다.",
-                key="qss_top_n",
-            )
-
-        st.caption("Hidden defaults in this first pass: `annual statement snapshots`, `monthly rebalance`, `equal-weight holding by default`.")
-
-        with st.expander("Advanced Inputs", expanded=False):
-            timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qss_timeframe")
-            option = st.selectbox("Option", options=["month_end"], index=0, key="qss_option")
+    with st.form("quality_snapshot_strict_annual_backtest_form", clear_on_submit=False, border=False):
+        with single_settings_section(
+            "선택·보유 규칙",
+            "연간 Quality 지표, 추세 필터, 비중과 방어 규칙을 정합니다.",
+        ):
+            timeframe = st.selectbox("가격 간격", options=["1d"], index=0, key="qss_timeframe")
+            option = st.selectbox("선정 시점", options=["month_end"], index=0, key="qss_option")
             rebalance_interval = st.number_input(
-                "Rebalance Interval",
+                "리밸런싱 간격(개월)",
                 min_value=1,
                 max_value=12,
                 value=1,
@@ -256,28 +298,28 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                 key="qss_rebalance_interval",
             )
             quality_factors = st.multiselect(
-                "Quality Factors",
+                "Quality 지표",
                 options=QUALITY_STRICT_FACTOR_OPTIONS,
                 default=QUALITY_STRICT_DEFAULT_FACTORS,
                 key="qss_quality_factors",
                 help="기본은 coverage-first 팩터 조합입니다. 필요하면 예전 quality factor도 다시 포함할 수 있습니다.",
             )
             _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 포트폴리오 처리 규칙은 아래 펼쳐보기로 묶었습니다.")
-            with st.expander("Overlay", expanded=False):
+            with st.expander("추세·시장 필터", expanded=False):
                 _render_strict_overlay_section_intro()
                 trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                 with trend_title_col:
-                    st.markdown("##### Trend Filter Overlay")
+                    st.markdown("##### 추세 필터")
                 with trend_help_col:
                     _render_trend_filter_help_popover()
                 trend_filter_enabled = st.checkbox(
-                    "Enable",
+                    "추세 필터 사용",
                     value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
                     key="qss_trend_filter_enabled",
                 )
                 trend_filter_window = int(
                     st.number_input(
-                        "Trend Filter Window",
+                        "추세 판단 기간",
                         min_value=20,
                         max_value=400,
                         value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
@@ -289,7 +331,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                     key_prefix="qss",
                     label_prefix="",
                 )
-            with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+            with st.expander("비중·방어 규칙", expanded=False):
                 _render_strict_portfolio_handling_contracts_intro()
                 weighting_mode = _render_strict_weighting_contract_inputs(
                     key_prefix="qss",
@@ -306,7 +348,11 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                     key_prefix="qss",
                     label_prefix="Strict Annual Quality",
                 )
-            with st.expander("Promotion Policy Signal", expanded=False):
+        with single_settings_section(
+            "비용·위험 기준",
+            "거래 비용, 비교 기준, 유동성 조건과 중단 기준을 정합니다.",
+        ):
+            with st.expander("거래 비용과 승격 기준", expanded=False):
                 (
                     benchmark_contract,
                     min_price_filter,
@@ -324,7 +370,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                 ) = _render_strict_annual_real_money_inputs(
                     key_prefix="qss",
                 )
-            with st.expander("Guardrails", expanded=False):
+            with st.expander("중단·경고 기준", expanded=False):
                 (
                     underperformance_guardrail_enabled,
                     underperformance_guardrail_window_months,
@@ -350,14 +396,14 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                     drawdown_guardrail_enabled=drawdown_guardrail_enabled,
                 )
 
-        submitted = st.form_submit_button("Run Strict Annual Quality Backtest", use_container_width=True)
+        submitted = st.form_submit_button("이 설정으로 백테스트 실행", use_container_width=True)
 
     if not submitted:
         return
 
     validation_errors: list[str] = []
     if not tickers:
-        validation_errors.append("At least one ticker is required.")
+        validation_errors.append("투자 대상 종목을 한 개 이상 선택해 주세요.")
     window_error = validate_strict_factor_backtest_window(
         start_date,
         end_date,
@@ -366,7 +412,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
     if window_error:
         validation_errors.append(window_error)
     if not quality_factors:
-        validation_errors.append("Select at least one quality factor.")
+        validation_errors.append("Quality 지표를 한 개 이상 선택해 주세요.")
 
     if validation_errors:
         for error in validation_errors:
@@ -427,93 +473,66 @@ def _render_quality_snapshot_strict_annual_form() -> None:
     _handle_backtest_run(payload, strategy_name="Quality Snapshot (Strict Annual)")
 
 def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
-    st.markdown("### Quality Snapshot (Strict Quarterly)")
-    st.caption("Strict quarterly quality strategy. This formal path ranks quarterly statement shadow factors and keeps the top names equally between monthly rebalances.")
-    _render_strict_quarterly_productionization_note(family_label="Quality Snapshot (Strict Quarterly)")
     _apply_single_strategy_prefill("quality_snapshot_strict_quarterly_prototype")
-
-    _render_strict_factor_data_readiness_note(
-        family_label="Quality Snapshot (Strict Quarterly)",
-        statement_freq="quarterly",
-        mode_label="strict_statement_quarterly + shadow_factors + post_run_readiness",
+    start_date, end_date, top_n = _render_strict_factor_core_inputs(
+        section_label="핵심 실행 설정",
+        key_prefix="qsqp",
+        default_start=_default_strict_factor_start_date(),
+        top_default=2,
+        top_max=20,
+        top_help="분기 Quality 점수 기준으로 최종 보유할 종목 수입니다.",
     )
-    with st.expander("Quarterly data readiness", expanded=False):
-        st.caption(
-            "주의: 현재 DB의 quarterly shadow coverage 상태에 따라 실제 투자 구간이 요청한 시작일보다 늦게 열릴 수 있습니다. "
-            "Factor 기반 strict 전략은 실행 비용과 coverage 안정성을 위해 한 번에 최대 5년 범위로 실행합니다."
+    universe_mode, preset_name, tickers = _render_strict_factor_universe_inputs(
+        section_label="투자 대상 Universe",
+        key_prefix="qsqp",
+        presets=QUALITY_STRICT_PRESETS,
+        default_preset=STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET,
+        help_text="분기 재무제표 검증 비용을 고려해 100종목 구성을 기본으로 사용합니다.",
+        strict_labels=True,
+        show_historical_caption=True,
+        show_preset_status=False,
+    )
+    with st.expander("Universe 근거", expanded=False):
+        _render_strict_quarterly_productionization_note(family_label="Quality Snapshot (Strict Quarterly)")
+        _render_strict_factor_data_readiness_note(
+            family_label="Quality Snapshot (Strict Quarterly)",
+            statement_freq="quarterly",
+            mode_label="strict_statement_quarterly + shadow_factors + post_run_readiness",
+            inline=True,
+        )
+        _render_strict_price_freshness_preflight(
+            tickers=tickers,
+            end_value=st.session_state.get("qsqp_end", DEFAULT_BACKTEST_END_DATE),
+            timeframe=st.session_state.get("qsqp_timeframe", "1d"),
+            strategy_label="Quality Snapshot (Strict Quarterly)",
+        )
+        _render_statement_shadow_coverage_preview(
+            tickers=tickers,
+            freq="quarterly",
+            strategy_label="Quality Snapshot (Strict Quarterly)",
+        )
+        universe_contract_label = _render_strict_universe_contract_selectbox(
+            "Universe 계약",
+            key="qsqp_universe_contract",
+            help=STRICT_UNIVERSE_CONTRACT_HELP,
+        )
+        universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
+        dynamic_candidate_tickers, dynamic_target_size = _render_strict_dynamic_universe_contract_note(
+            universe_contract=universe_contract,
+            tickers=tickers,
+            preset_name=preset_name,
+            statement_freq="quarterly",
         )
 
-    universe_mode = st.radio(
-        "Universe Mode",
-        options=["Preset", "Manual"],
-        horizontal=True,
-        help="quarterly strict first pass는 검증 비용을 낮추기 위해 `US Base Universe 100`을 기본 preset으로 둡니다.",
-        key="qsqp_universe_mode",
-    )
-
-    preset_name = None
-    tickers: list[str] = []
-    if universe_mode == "Preset":
-        preset_name = st.selectbox(
-            "Preset",
-            options=list(QUALITY_STRICT_PRESETS.keys()),
-            format_func=strict_preset_display_label,
-            index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
-            key="qsqp_preset",
-        )
-        tickers = QUALITY_STRICT_PRESETS[preset_name]
-        _render_ticker_preview(tickers)
-        _render_historical_universe_caption()
-    else:
-        manual_tickers = st.text_input(
-            "Tickers",
-            value="AAPL,MSFT,GOOG",
-            help="쉼표로 구분한 주식 티커를 입력합니다. 예: AAPL,MSFT,GOOG",
-            key="qsqp_manual_tickers",
-        )
-        tickers = _parse_manual_tickers(manual_tickers)
-        _render_ticker_preview(tickers)
-
-    _render_strict_price_freshness_preflight(
-        tickers=tickers,
-        end_value=st.session_state.get("qsqp_end", DEFAULT_BACKTEST_END_DATE),
-        timeframe=st.session_state.get("qsqp_timeframe", "1d"),
-        strategy_label="Quality Snapshot (Strict Quarterly)",
-    )
-    _render_statement_shadow_coverage_preview(
-        tickers=tickers,
-        freq="quarterly",
-        strategy_label="Quality Snapshot (Strict Quarterly)",
-    )
-
-    with st.form("quality_snapshot_strict_quarterly_prototype_backtest_form", clear_on_submit=False):
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            start_date = _strict_factor_date_input(
-                "Start Date",
-                default=_default_strict_factor_start_date(),
-                key="qsqp_start",
-            )
-        with col2:
-            end_date = _strict_factor_date_input("End Date", default=DEFAULT_BACKTEST_END_DATE, key="qsqp_end")
-        with col3:
-            top_n = st.number_input(
-                "Top N",
-                min_value=1,
-                max_value=20,
-                value=2,
-                step=1,
-                help="strict quarterly quality 점수 기준으로 상위 몇 개 종목을 선택할지 정합니다.",
-                key="qsqp_top_n",
-            )
-
-        st.caption("Defaults: `quarterly statement snapshots`, `monthly rebalance`, `equal-weight holding`.")
-
-        with st.expander("Advanced Inputs", expanded=False):
-            timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qsqp_timeframe")
-            option = st.selectbox("Option", options=["month_end"], index=0, key="qsqp_option")
+    with st.form("quality_snapshot_strict_quarterly_prototype_backtest_form", clear_on_submit=False, border=False):
+        with single_settings_section(
+            "선택·보유 규칙",
+            "분기 Quality 지표와 월말 선택·방어 규칙을 정합니다.",
+        ):
+            timeframe = st.selectbox("가격 간격", options=["1d"], index=0, key="qsqp_timeframe")
+            option = st.selectbox("선정 시점", options=["month_end"], index=0, key="qsqp_option")
             rebalance_interval = st.number_input(
-                "Rebalance Interval",
+                "리밸런싱 간격(개월)",
                 min_value=1,
                 max_value=12,
                 value=1,
@@ -521,20 +540,8 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
                 help="기본은 매월 리밸런싱(1)이며, quarterly snapshot 자체는 가장 최근 usable filing 기준으로 따라갑니다.",
                 key="qsqp_rebalance_interval",
             )
-            universe_contract_label = _render_strict_universe_contract_selectbox(
-                "Universe Contract",
-                key="qsqp_universe_contract",
-                help=STRICT_UNIVERSE_CONTRACT_HELP,
-            )
-            universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
-            dynamic_candidate_tickers, dynamic_target_size = _render_strict_dynamic_universe_contract_note(
-                universe_contract=universe_contract,
-                tickers=tickers,
-                preset_name=preset_name,
-                statement_freq="quarterly",
-            )
             quality_factors = st.multiselect(
-                "Quality Factors",
+                "Quality 지표",
                 options=QUALITY_STRICT_FACTOR_OPTIONS,
                 default=QUALITY_STRICT_DEFAULT_FACTORS,
                 key="qsqp_quality_factors",
@@ -543,21 +550,21 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
             _render_advanced_group_caption(
                 "Quarterly도 annual strict처럼 overlay와 portfolio handling contract를 같은 payload에 저장합니다."
             )
-            with st.expander("Overlay", expanded=False):
+            with st.expander("추세·시장 필터", expanded=False):
                 _render_strict_overlay_section_intro()
                 trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                 with trend_title_col:
-                    st.markdown("##### Trend Filter Overlay")
+                    st.markdown("##### 추세 필터")
                 with trend_help_col:
                     _render_trend_filter_help_popover()
                 trend_filter_enabled = st.checkbox(
-                    "Enable",
+                    "추세 필터 사용",
                     value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
                     key="qsqp_trend_filter_enabled",
                 )
                 trend_filter_window = int(
                     st.number_input(
-                        "Trend Filter Window",
+                        "추세 판단 기간",
                         min_value=20,
                         max_value=400,
                         value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
@@ -569,7 +576,7 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
                     key_prefix="qsqp",
                     label_prefix="Strict Quarterly Quality ",
                 )
-            with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+            with st.expander("비중·방어 규칙", expanded=False):
                 _render_strict_portfolio_handling_contracts_intro()
                 weighting_mode = _render_strict_weighting_contract_inputs(
                     key_prefix="qsqp",
@@ -591,14 +598,19 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
                     "실제 데이터 문제는 Run 이후 Factor Readiness에서 가격 / statement 기준으로 다시 확인합니다."
                 )
 
-        submitted = st.form_submit_button("Run Strict Quarterly Quality Backtest", use_container_width=True)
+        with single_settings_section(
+            "비용·위험 기준",
+            "분기 검증 경로는 저장된 기본 거래 비용을 사용하며 방어 규칙은 위 설정에 포함됩니다.",
+        ):
+            st.caption("실행 후 실제 coverage와 비용 영향은 결과의 Factor Readiness에서 확인합니다.")
+        submitted = st.form_submit_button("이 설정으로 백테스트 실행", use_container_width=True)
 
     if not submitted:
         return
 
     validation_errors: list[str] = []
     if not tickers:
-        validation_errors.append("At least one ticker is required.")
+        validation_errors.append("투자 대상 종목을 한 개 이상 선택해 주세요.")
     window_error = validate_strict_factor_backtest_window(
         start_date,
         end_date,
@@ -607,7 +619,7 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
     if window_error:
         validation_errors.append(window_error)
     if not quality_factors:
-        validation_errors.append("Select at least one quality factor.")
+        validation_errors.append("Quality 지표를 한 개 이상 선택해 주세요.")
 
     if validation_errors:
         for error in validation_errors:
@@ -647,94 +659,66 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
     _handle_backtest_run(payload, strategy_name="Quality Snapshot (Strict Quarterly)")
 
 def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
-    st.markdown("### Value Snapshot (Strict Quarterly)")
-    st.caption(
-        "Strict quarterly value strategy. This Phase 8 path ranks quarterly statement shadow value factors and holds the cheapest names equally between monthly rebalances."
-    )
-    _render_strict_quarterly_productionization_note(family_label="Value Snapshot (Strict Quarterly)")
-    _render_strict_factor_data_readiness_note(
-        family_label="Value Snapshot (Strict Quarterly)",
-        statement_freq="quarterly",
-        mode_label="strict_statement_quarterly + shadow_factors + post_run_readiness",
-    )
-    with st.expander("Quarterly data readiness", expanded=False):
-        st.caption(
-            "주의: 현재 DB의 quarterly shadow coverage 상태에 따라 실제 투자 구간이 요청한 시작일보다 늦게 열릴 수 있습니다. "
-            "`US Base Universe 100` 기본 preset은 검증용 anchor일 뿐이고, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦게 열릴 수 있습니다."
-        )
     _apply_single_strategy_prefill("value_snapshot_strict_quarterly_prototype")
-
-    universe_mode = st.radio(
-        "Universe Mode",
-        options=["Preset", "Manual"],
-        horizontal=True,
-        help="quarterly strict value는 검증 비용을 낮추기 위해 `US Base Universe 100`을 기본 preset으로 둡니다.",
-        key="vsqp_universe_mode",
+    start_date, end_date, top_n = _render_strict_factor_core_inputs(
+        section_label="핵심 실행 설정",
+        key_prefix="vsqp",
+        default_start=_default_strict_factor_start_date(),
+        top_default=10,
+        top_max=50,
+        top_help="분기 Value 점수 기준으로 최종 보유할 종목 수입니다.",
     )
-
-    preset_name = None
-    tickers: list[str] = []
-    if universe_mode == "Preset":
-        preset_name = st.selectbox(
-            "Preset",
-            options=list(VALUE_STRICT_PRESETS.keys()),
-            format_func=strict_preset_display_label,
-            index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
-            key="vsqp_preset",
+    universe_mode, preset_name, tickers = _render_strict_factor_universe_inputs(
+        section_label="투자 대상 Universe",
+        key_prefix="vsqp",
+        presets=VALUE_STRICT_PRESETS,
+        default_preset=STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET,
+        help_text="분기 재무제표 검증 비용을 고려해 100종목 구성을 기본으로 사용합니다.",
+        strict_labels=True,
+        show_historical_caption=True,
+        show_preset_status=False,
+    )
+    with st.expander("Universe 근거", expanded=False):
+        _render_strict_quarterly_productionization_note(family_label="Value Snapshot (Strict Quarterly)")
+        _render_strict_factor_data_readiness_note(
+            family_label="Value Snapshot (Strict Quarterly)",
+            statement_freq="quarterly",
+            mode_label="strict_statement_quarterly + shadow_factors + post_run_readiness",
+            inline=True,
         )
-        tickers = VALUE_STRICT_PRESETS[preset_name]
-        _render_ticker_preview(tickers)
-        _render_historical_universe_caption()
-    else:
-        manual_tickers = st.text_input(
-            "Tickers",
-            value="AAPL,MSFT,GOOG",
-            help="쉼표로 구분한 주식 티커를 입력합니다. 예: AAPL,MSFT,GOOG",
-            key="vsqp_manual_tickers",
+        _render_strict_price_freshness_preflight(
+            tickers=tickers,
+            end_value=st.session_state.get("vsqp_end", DEFAULT_BACKTEST_END_DATE),
+            timeframe=st.session_state.get("vsqp_timeframe", "1d"),
+            strategy_label="Value Snapshot (Strict Quarterly)",
         )
-        tickers = _parse_manual_tickers(manual_tickers)
-        _render_ticker_preview(tickers)
+        _render_statement_shadow_coverage_preview(
+            tickers=tickers,
+            freq="quarterly",
+            strategy_label="Value Snapshot (Strict Quarterly)",
+        )
+        universe_contract_label = _render_strict_universe_contract_selectbox(
+            "Universe 계약",
+            key="vsqp_universe_contract",
+            help=STRICT_UNIVERSE_CONTRACT_HELP,
+        )
+        universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
+        dynamic_candidate_tickers, dynamic_target_size = _render_strict_dynamic_universe_contract_note(
+            universe_contract=universe_contract,
+            tickers=tickers,
+            preset_name=preset_name,
+            statement_freq="quarterly",
+        )
 
-    _render_strict_price_freshness_preflight(
-        tickers=tickers,
-        end_value=st.session_state.get("vsqp_end", DEFAULT_BACKTEST_END_DATE),
-        timeframe=st.session_state.get("vsqp_timeframe", "1d"),
-        strategy_label="Value Snapshot (Strict Quarterly)",
-    )
-    _render_statement_shadow_coverage_preview(
-        tickers=tickers,
-        freq="quarterly",
-        strategy_label="Value Snapshot (Strict Quarterly)",
-    )
-
-    with st.form("value_snapshot_strict_quarterly_prototype_backtest_form", clear_on_submit=False):
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            start_date = _strict_factor_date_input(
-                "Start Date",
-                default=_default_strict_factor_start_date(),
-                key="vsqp_start",
-            )
-        with col2:
-            end_date = _strict_factor_date_input("End Date", default=DEFAULT_BACKTEST_END_DATE, key="vsqp_end")
-        with col3:
-            top_n = st.number_input(
-                "Top N",
-                min_value=1,
-                max_value=50,
-                value=10,
-                step=1,
-                help="strict quarterly value 점수 기준으로 상위 몇 개 종목을 선택할지 정합니다.",
-                key="vsqp_top_n",
-            )
-
-        st.caption("Defaults: `quarterly statement shadow factors`, `monthly rebalance`, `equal-weight holding`.")
-
-        with st.expander("Advanced Inputs", expanded=False):
-            timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="vsqp_timeframe")
-            option = st.selectbox("Option", options=["month_end"], index=0, key="vsqp_option")
+    with st.form("value_snapshot_strict_quarterly_prototype_backtest_form", clear_on_submit=False, border=False):
+        with single_settings_section(
+            "선택·보유 규칙",
+            "분기 Value 지표와 월말 선택·방어 규칙을 정합니다.",
+        ):
+            timeframe = st.selectbox("가격 간격", options=["1d"], index=0, key="vsqp_timeframe")
+            option = st.selectbox("선정 시점", options=["month_end"], index=0, key="vsqp_option")
             rebalance_interval = st.number_input(
-                "Rebalance Interval",
+                "리밸런싱 간격(개월)",
                 min_value=1,
                 max_value=12,
                 value=1,
@@ -742,20 +726,8 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
                 help="기본은 매월 리밸런싱(1)이며, quarterly snapshot 자체는 가장 최근 usable filing 기준으로 따라갑니다.",
                 key="vsqp_rebalance_interval",
             )
-            universe_contract_label = _render_strict_universe_contract_selectbox(
-                "Universe Contract",
-                key="vsqp_universe_contract",
-                help=STRICT_UNIVERSE_CONTRACT_HELP,
-            )
-            universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
-            dynamic_candidate_tickers, dynamic_target_size = _render_strict_dynamic_universe_contract_note(
-                universe_contract=universe_contract,
-                tickers=tickers,
-                preset_name=preset_name,
-                statement_freq="quarterly",
-            )
             value_factors = st.multiselect(
-                "Value Factors",
+                "Value 지표",
                 options=VALUE_STRICT_FACTOR_OPTIONS,
                 default=VALUE_STRICT_DEFAULT_FACTORS,
                 key="vsqp_value_factors",
@@ -764,21 +736,21 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
             _render_advanced_group_caption(
                 "Quarterly도 annual strict처럼 overlay와 portfolio handling contract를 같은 payload에 저장합니다."
             )
-            with st.expander("Overlay", expanded=False):
+            with st.expander("추세·시장 필터", expanded=False):
                 _render_strict_overlay_section_intro()
                 trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                 with trend_title_col:
-                    st.markdown("##### Trend Filter Overlay")
+                    st.markdown("##### 추세 필터")
                 with trend_help_col:
                     _render_trend_filter_help_popover()
                 trend_filter_enabled = st.checkbox(
-                    "Enable",
+                    "추세 필터 사용",
                     value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
                     key="vsqp_trend_filter_enabled",
                 )
                 trend_filter_window = int(
                     st.number_input(
-                        "Trend Filter Window",
+                        "추세 판단 기간",
                         min_value=20,
                         max_value=400,
                         value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
@@ -790,7 +762,7 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
                     key_prefix="vsqp",
                     label_prefix="Strict Quarterly Value ",
                 )
-            with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+            with st.expander("비중·방어 규칙", expanded=False):
                 _render_strict_portfolio_handling_contracts_intro()
                 weighting_mode = _render_strict_weighting_contract_inputs(
                     key_prefix="vsqp",
@@ -812,14 +784,19 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
                     "실제 데이터 문제는 Run 이후 Factor Readiness에서 가격 / statement 기준으로 다시 확인합니다."
                 )
 
-        submitted = st.form_submit_button("Run Strict Quarterly Value Backtest", use_container_width=True)
+        with single_settings_section(
+            "비용·위험 기준",
+            "분기 검증 경로는 저장된 기본 거래 비용을 사용하며 방어 규칙은 위 설정에 포함됩니다.",
+        ):
+            st.caption("실행 후 실제 coverage와 비용 영향은 결과의 Factor Readiness에서 확인합니다.")
+        submitted = st.form_submit_button("이 설정으로 백테스트 실행", use_container_width=True)
 
     if not submitted:
         return
 
     validation_errors: list[str] = []
     if not tickers:
-        validation_errors.append("At least one ticker is required.")
+        validation_errors.append("투자 대상 종목을 한 개 이상 선택해 주세요.")
     window_error = validate_strict_factor_backtest_window(
         start_date,
         end_date,
@@ -828,7 +805,7 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
     if window_error:
         validation_errors.append(window_error)
     if not value_factors:
-        validation_errors.append("Select at least one value factor.")
+        validation_errors.append("Value 지표를 한 개 이상 선택해 주세요.")
 
     if validation_errors:
         for error in validation_errors:
@@ -869,89 +846,55 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
     _handle_backtest_run(payload, strategy_name="Value Snapshot (Strict Quarterly)")
 
 def _render_value_snapshot_strict_annual_form() -> None:
-    st.markdown("### Value Snapshot (Strict Annual)")
-    st.caption("Strict annual statement-driven value strategy. This public candidate ranks precomputed annual statement shadow factors and by default holds the cheapest names equally between monthly rebalances.")
-    _render_strict_factor_data_readiness_note(
-        family_label="Value Snapshot (Strict Annual)",
-        statement_freq="annual",
-        mode_label="strict_statement_annual + shadow_factors",
-    )
     _apply_single_strategy_prefill("value_snapshot_strict_annual")
-
-    universe_mode = st.radio(
-        "Universe Mode",
-        options=["Preset", "Manual"],
-        horizontal=True,
-        help="strict annual value도 annual coverage가 확인된 preset을 기본값으로 사용합니다.",
-        key="vss_universe_mode",
+    start_date, end_date, top_n = _render_strict_factor_core_inputs(
+        section_label="핵심 실행 설정",
+        key_prefix="vss",
+        default_start=_default_strict_factor_start_date(),
+        top_default=10,
+        top_max=50,
+        top_help="연간 Value 점수 기준으로 최종 보유할 종목 수입니다.",
     )
-
-    preset_name = None
-    tickers: list[str] = []
-    if universe_mode == "Preset":
-        preset_name = st.selectbox(
-            "Preset",
-            options=list(VALUE_STRICT_PRESETS.keys()),
-            format_func=strict_preset_display_label,
-            index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_SINGLE_DEFAULT_PRESET),
-            key="vss_preset",
+    universe_mode, preset_name, tickers = _render_strict_factor_universe_inputs(
+        section_label="투자 대상 Universe",
+        key_prefix="vss",
+        presets=VALUE_STRICT_PRESETS,
+        default_preset=STRICT_ANNUAL_SINGLE_DEFAULT_PRESET,
+        help_text="연간 재무제표 coverage가 검증된 미국 주식 구성을 기본으로 사용합니다.",
+        strict_labels=True,
+        show_historical_caption=True,
+        show_preset_status=True,
+    )
+    with st.expander("Universe 근거", expanded=False):
+        _render_strict_factor_data_readiness_note(
+            family_label="Value Snapshot (Strict Annual)",
+            statement_freq="annual",
+            mode_label="strict_statement_annual + shadow_factors",
+            inline=True,
         )
-        tickers = VALUE_STRICT_PRESETS[preset_name]
-        _render_ticker_preview(tickers)
-        _render_historical_universe_caption()
-        _render_strict_preset_status_note(preset_name, tickers)
-    else:
-        manual_tickers = st.text_input(
-            "Tickers",
-            value="AAPL,MSFT,GOOG",
-            help="쉼표로 구분한 주식 티커를 입력합니다. 예: AAPL,MSFT,GOOG",
-            key="vss_manual_tickers",
+        universe_contract, dynamic_candidate_tickers, dynamic_target_size = _render_strict_universe_contract_setup(
+            key="vss_universe_contract",
+            tickers=tickers,
+            preset_name=preset_name,
+            statement_freq="annual",
         )
-        tickers = _parse_manual_tickers(manual_tickers)
-        _render_ticker_preview(tickers)
+        _render_strict_factor_prerun_preview(
+            tickers=tickers,
+            strategy_label="Value Snapshot (Strict Annual)",
+            preset_name=preset_name,
+            universe_contract=universe_contract,
+            statement_freq="annual",
+        )
 
-    universe_contract, dynamic_candidate_tickers, dynamic_target_size = _render_strict_universe_contract_setup(
-        key="vss_universe_contract",
-        tickers=tickers,
-        preset_name=preset_name,
-        statement_freq="annual",
-    )
-    _render_strict_factor_prerun_preview(
-        tickers=tickers,
-        strategy_label="Value Snapshot (Strict Annual)",
-        preset_name=preset_name,
-        universe_contract=universe_contract,
-        statement_freq="annual",
-    )
-
-    with st.form("value_snapshot_strict_annual_backtest_form", clear_on_submit=False):
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            start_date = _strict_factor_date_input(
-                "Start Date",
-                default=_default_strict_factor_start_date(),
-                key="vss_start",
-            )
-        with col2:
-            end_date = _strict_factor_date_input("End Date", default=DEFAULT_BACKTEST_END_DATE, key="vss_end")
-        with col3:
-            top_n = st.number_input(
-                "Top N",
-                min_value=1,
-                max_value=50,
-                value=10,
-                step=1,
-                help="strict annual value 점수 기준으로 상위 몇 개 종목을 선택할지 정합니다.",
-                key="vss_top_n",
-            )
-
-        st.caption("Hidden defaults in this first pass: `annual statement shadow factors`, `monthly rebalance`, `equal-weight holding by default`.")
-
-        with st.expander("Advanced Inputs", expanded=False):
-            timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="vss_timeframe")
-            option = st.selectbox("Option", options=["month_end"], index=0, key="vss_option")
+    with st.form("value_snapshot_strict_annual_backtest_form", clear_on_submit=False, border=False):
+        with single_settings_section(
+            "선택·보유 규칙",
+            "연간 Value 지표, 추세 필터, 비중과 방어 규칙을 정합니다.",
+        ):
+            timeframe = st.selectbox("가격 간격", options=["1d"], index=0, key="vss_timeframe")
+            option = st.selectbox("선정 시점", options=["month_end"], index=0, key="vss_option")
             rebalance_interval = st.number_input(
-                "Rebalance Interval",
+                "리밸런싱 간격(개월)",
                 min_value=1,
                 max_value=12,
                 value=1,
@@ -960,28 +903,28 @@ def _render_value_snapshot_strict_annual_form() -> None:
                 key="vss_rebalance_interval",
             )
             value_factors = st.multiselect(
-                "Value Factors",
+                "Value 지표",
                 options=VALUE_STRICT_FACTOR_OPTIONS,
                 default=VALUE_STRICT_DEFAULT_FACTORS,
                 key="vss_value_factors",
                 help="높을수록 좋은 yield / book-to-market 계열과 낮을수록 좋은 inverse multiple 계열을 함께 지원합니다.",
             )
             _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 포트폴리오 처리 규칙은 아래 펼쳐보기로 묶었습니다.")
-            with st.expander("Overlay", expanded=False):
+            with st.expander("추세·시장 필터", expanded=False):
                 _render_strict_overlay_section_intro()
                 trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                 with trend_title_col:
-                    st.markdown("##### Trend Filter Overlay")
+                    st.markdown("##### 추세 필터")
                 with trend_help_col:
                     _render_trend_filter_help_popover()
                 trend_filter_enabled = st.checkbox(
-                    "Enable",
+                    "추세 필터 사용",
                     value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
                     key="vss_trend_filter_enabled",
                 )
                 trend_filter_window = int(
                     st.number_input(
-                        "Trend Filter Window",
+                        "추세 판단 기간",
                         min_value=20,
                         max_value=400,
                         value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
@@ -993,7 +936,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
                     key_prefix="vss",
                     label_prefix="",
                 )
-            with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+            with st.expander("비중·방어 규칙", expanded=False):
                 _render_strict_portfolio_handling_contracts_intro()
                 weighting_mode = _render_strict_weighting_contract_inputs(
                     key_prefix="vss",
@@ -1010,7 +953,11 @@ def _render_value_snapshot_strict_annual_form() -> None:
                     key_prefix="vss",
                     label_prefix="Strict Annual Value",
                 )
-            with st.expander("Promotion Policy Signal", expanded=False):
+        with single_settings_section(
+            "비용·위험 기준",
+            "거래 비용, 비교 기준, 유동성 조건과 중단 기준을 정합니다.",
+        ):
+            with st.expander("거래 비용과 승격 기준", expanded=False):
                 (
                     benchmark_contract,
                     min_price_filter,
@@ -1028,7 +975,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
                 ) = _render_strict_annual_real_money_inputs(
                     key_prefix="vss",
                 )
-            with st.expander("Guardrails", expanded=False):
+            with st.expander("중단·경고 기준", expanded=False):
                 (
                     underperformance_guardrail_enabled,
                     underperformance_guardrail_window_months,
@@ -1054,14 +1001,14 @@ def _render_value_snapshot_strict_annual_form() -> None:
                     drawdown_guardrail_enabled=drawdown_guardrail_enabled,
                 )
 
-        submitted = st.form_submit_button("Run Strict Annual Value Backtest", use_container_width=True)
+        submitted = st.form_submit_button("이 설정으로 백테스트 실행", use_container_width=True)
 
     if not submitted:
         return
 
     validation_errors: list[str] = []
     if not tickers:
-        validation_errors.append("At least one ticker is required.")
+        validation_errors.append("투자 대상 종목을 한 개 이상 선택해 주세요.")
     window_error = validate_strict_factor_backtest_window(
         start_date,
         end_date,
@@ -1070,7 +1017,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
     if window_error:
         validation_errors.append(window_error)
     if not value_factors:
-        validation_errors.append("Select at least one value factor.")
+        validation_errors.append("Value 지표를 한 개 이상 선택해 주세요.")
 
     if validation_errors:
         for error in validation_errors:
@@ -1132,95 +1079,67 @@ def _render_value_snapshot_strict_annual_form() -> None:
     _handle_backtest_run(payload, strategy_name="Value Snapshot (Strict Annual)")
 
 def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
-    st.markdown("### Quality + Value Snapshot (Strict Quarterly)")
-    st.caption(
-        "Strict quarterly multi-factor strategy. This Phase 8 path blends quarterly quality and value shadow factors, then holds the combined top names equally between monthly rebalances."
-    )
-    _render_strict_quarterly_productionization_note(family_label="Quality + Value Snapshot (Strict Quarterly)")
-    _render_strict_factor_data_readiness_note(
-        family_label="Quality + Value Snapshot (Strict Quarterly)",
-        statement_freq="quarterly",
-        mode_label="strict_statement_quarterly + shadow_factors + quality_value_blend + post_run_readiness",
-        combined_factor=True,
-    )
-    with st.expander("Quarterly data readiness", expanded=False):
-        st.caption(
-            "주의: 현재 DB의 quarterly shadow coverage 상태에 따라 실제 투자 구간이 요청한 시작일보다 늦게 열릴 수 있습니다. "
-            "`US Base Universe 100` 기본 preset은 검증 anchor이고, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦게 열릴 수 있습니다."
-        )
     _apply_single_strategy_prefill("quality_value_snapshot_strict_quarterly_prototype")
-
-    universe_mode = st.radio(
-        "Universe Mode",
-        options=["Preset", "Manual"],
-        horizontal=True,
-        help="quarterly strict multi-factor는 검증 비용을 낮추기 위해 `US Base Universe 100`을 기본 preset으로 둡니다.",
-        key="qvqp_universe_mode",
+    start_date, end_date, top_n = _render_strict_factor_core_inputs(
+        section_label="핵심 실행 설정",
+        key_prefix="qvqp",
+        default_start=_default_strict_factor_start_date(),
+        top_default=10,
+        top_max=30,
+        top_help="분기 Quality + Value 종합 점수 기준으로 최종 보유할 종목 수입니다.",
     )
-
-    preset_name = None
-    tickers: list[str] = []
-    if universe_mode == "Preset":
-        preset_name = st.selectbox(
-            "Preset",
-            options=list(QUALITY_STRICT_PRESETS.keys()),
-            format_func=strict_preset_display_label,
-            index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
-            key="qvqp_preset",
+    universe_mode, preset_name, tickers = _render_strict_factor_universe_inputs(
+        section_label="투자 대상 Universe",
+        key_prefix="qvqp",
+        presets=QUALITY_STRICT_PRESETS,
+        default_preset=STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET,
+        help_text="분기 재무제표 검증 비용을 고려해 100종목 구성을 기본으로 사용합니다.",
+        strict_labels=True,
+        show_historical_caption=True,
+        show_preset_status=False,
+    )
+    with st.expander("Universe 근거", expanded=False):
+        _render_strict_quarterly_productionization_note(family_label="Quality + Value Snapshot (Strict Quarterly)")
+        _render_strict_factor_data_readiness_note(
+            family_label="Quality + Value Snapshot (Strict Quarterly)",
+            statement_freq="quarterly",
+            mode_label="strict_statement_quarterly + shadow_factors + quality_value_blend + post_run_readiness",
+            combined_factor=True,
+            inline=True,
         )
-        tickers = QUALITY_STRICT_PRESETS[preset_name]
-        _render_ticker_preview(tickers)
-        _render_historical_universe_caption()
-    else:
-        manual_tickers = st.text_input(
-            "Tickers",
-            value="AAPL,MSFT,GOOG",
-            help="쉼표로 구분한 주식 티커를 입력합니다. 예: AAPL,MSFT,GOOG",
-            key="qvqp_manual_tickers",
+        _render_strict_price_freshness_preflight(
+            tickers=tickers,
+            end_value=st.session_state.get("qvqp_end", DEFAULT_BACKTEST_END_DATE),
+            timeframe=st.session_state.get("qvqp_timeframe", "1d"),
+            strategy_label="Quality + Value Snapshot (Strict Quarterly)",
         )
-        tickers = _parse_manual_tickers(manual_tickers)
-        _render_ticker_preview(tickers)
+        _render_statement_shadow_coverage_preview(
+            tickers=tickers,
+            freq="quarterly",
+            strategy_label="Quality + Value Snapshot (Strict Quarterly)",
+        )
+        universe_contract_label = _render_strict_universe_contract_selectbox(
+            "Universe 계약",
+            key="qvqp_universe_contract",
+            help=STRICT_UNIVERSE_CONTRACT_HELP,
+        )
+        universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
+        dynamic_candidate_tickers, dynamic_target_size = _render_strict_dynamic_universe_contract_note(
+            universe_contract=universe_contract,
+            tickers=tickers,
+            preset_name=preset_name,
+            statement_freq="quarterly",
+        )
 
-    _render_strict_price_freshness_preflight(
-        tickers=tickers,
-        end_value=st.session_state.get("qvqp_end", DEFAULT_BACKTEST_END_DATE),
-        timeframe=st.session_state.get("qvqp_timeframe", "1d"),
-        strategy_label="Quality + Value Snapshot (Strict Quarterly)",
-    )
-    _render_statement_shadow_coverage_preview(
-        tickers=tickers,
-        freq="quarterly",
-        strategy_label="Quality + Value Snapshot (Strict Quarterly)",
-    )
-
-    with st.form("quality_value_snapshot_strict_quarterly_prototype_backtest_form", clear_on_submit=False):
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            start_date = _strict_factor_date_input(
-                "Start Date",
-                default=_default_strict_factor_start_date(),
-                key="qvqp_start",
-            )
-        with col2:
-            end_date = _strict_factor_date_input("End Date", default=DEFAULT_BACKTEST_END_DATE, key="qvqp_end")
-        with col3:
-            top_n = st.number_input(
-                "Top N",
-                min_value=1,
-                max_value=30,
-                value=10,
-                step=1,
-                help="strict quarterly multi-factor 종합 점수 기준으로 상위 몇 개 종목을 선택할지 정합니다.",
-                key="qvqp_top_n",
-            )
-
-        st.caption("Defaults: `quarterly statement shadow factors`, `monthly rebalance`, `equal-weight holding`.")
-
-        with st.expander("Advanced Inputs", expanded=False):
-            timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qvqp_timeframe")
-            option = st.selectbox("Option", options=["month_end"], index=0, key="qvqp_option")
+    with st.form("quality_value_snapshot_strict_quarterly_prototype_backtest_form", clear_on_submit=False, border=False):
+        with single_settings_section(
+            "선택·보유 규칙",
+            "분기 Quality + Value 지표와 월말 선택·방어 규칙을 정합니다.",
+        ):
+            timeframe = st.selectbox("가격 간격", options=["1d"], index=0, key="qvqp_timeframe")
+            option = st.selectbox("선정 시점", options=["month_end"], index=0, key="qvqp_option")
             rebalance_interval = st.number_input(
-                "Rebalance Interval",
+                "리밸런싱 간격(개월)",
                 min_value=1,
                 max_value=12,
                 value=1,
@@ -1228,26 +1147,14 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
                 help="기본은 매월 리밸런싱(1)이며, quarterly snapshot 자체는 가장 최근 usable filing 기준으로 따라갑니다.",
                 key="qvqp_rebalance_interval",
             )
-            universe_contract_label = _render_strict_universe_contract_selectbox(
-                "Universe Contract",
-                key="qvqp_universe_contract",
-                help=STRICT_UNIVERSE_CONTRACT_HELP,
-            )
-            universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
-            dynamic_candidate_tickers, dynamic_target_size = _render_strict_dynamic_universe_contract_note(
-                universe_contract=universe_contract,
-                tickers=tickers,
-                preset_name=preset_name,
-                statement_freq="quarterly",
-            )
             quality_factors = st.multiselect(
-                "Quality Factors",
+                "Quality 지표",
                 options=QUALITY_STRICT_FACTOR_OPTIONS,
                 default=QUALITY_STRICT_DEFAULT_FACTORS,
                 key="qvqp_quality_factors",
             )
             value_factors = st.multiselect(
-                "Value Factors",
+                "Value 지표",
                 options=VALUE_STRICT_FACTOR_OPTIONS,
                 default=VALUE_STRICT_DEFAULT_FACTORS,
                 key="qvqp_value_factors",
@@ -1255,21 +1162,21 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
             _render_advanced_group_caption(
                 "Quarterly도 annual strict처럼 overlay와 portfolio handling contract를 같은 payload에 저장합니다."
             )
-            with st.expander("Overlay", expanded=False):
+            with st.expander("추세·시장 필터", expanded=False):
                 _render_strict_overlay_section_intro()
                 trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                 with trend_title_col:
-                    st.markdown("##### Trend Filter Overlay")
+                    st.markdown("##### 추세 필터")
                 with trend_help_col:
                     _render_trend_filter_help_popover()
                 trend_filter_enabled = st.checkbox(
-                    "Enable",
+                    "추세 필터 사용",
                     value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
                     key="qvqp_trend_filter_enabled",
                 )
                 trend_filter_window = int(
                     st.number_input(
-                        "Trend Filter Window",
+                        "추세 판단 기간",
                         min_value=20,
                         max_value=400,
                         value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
@@ -1281,7 +1188,7 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
                     key_prefix="qvqp",
                     label_prefix="Strict Quarterly Multi-Factor ",
                 )
-            with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+            with st.expander("비중·방어 규칙", expanded=False):
                 _render_strict_portfolio_handling_contracts_intro()
                 weighting_mode = _render_strict_weighting_contract_inputs(
                     key_prefix="qvqp",
@@ -1303,14 +1210,19 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
                     "실제 데이터 문제는 Run 이후 Factor Readiness에서 가격 / statement 기준으로 다시 확인합니다."
                 )
 
-        submitted = st.form_submit_button("Run Strict Quarterly Quality + Value Backtest", use_container_width=True)
+        with single_settings_section(
+            "비용·위험 기준",
+            "분기 검증 경로는 저장된 기본 거래 비용을 사용하며 방어 규칙은 위 설정에 포함됩니다.",
+        ):
+            st.caption("실행 후 실제 coverage와 비용 영향은 결과의 Factor Readiness에서 확인합니다.")
+        submitted = st.form_submit_button("이 설정으로 백테스트 실행", use_container_width=True)
 
     if not submitted:
         return
 
     validation_errors: list[str] = []
     if not tickers:
-        validation_errors.append("At least one ticker is required.")
+        validation_errors.append("투자 대상 종목을 한 개 이상 선택해 주세요.")
     window_error = validate_strict_factor_backtest_window(
         start_date,
         end_date,
@@ -1319,9 +1231,9 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
     if window_error:
         validation_errors.append(window_error)
     if not quality_factors:
-        validation_errors.append("Select at least one quality factor.")
+        validation_errors.append("Quality 지표를 한 개 이상 선택해 주세요.")
     if not value_factors:
-        validation_errors.append("Select at least one value factor.")
+        validation_errors.append("Value 지표를 한 개 이상 선택해 주세요.")
 
     if validation_errors:
         for error in validation_errors:
@@ -1363,93 +1275,56 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
     _handle_backtest_run(payload, strategy_name="Quality + Value Snapshot (Strict Quarterly)")
 
 def _render_quality_value_snapshot_strict_annual_form() -> None:
-    st.markdown("### Quality + Value Snapshot (Strict Annual)")
-    st.caption(
-        "Strict annual multi-factor strategy. This public candidate blends coverage-first quality signals "
-        "with annual statement-driven valuation factors, then by default holds the combined top names equally between monthly rebalances."
-    )
-    _render_strict_factor_data_readiness_note(
-        family_label="Quality + Value Snapshot (Strict Annual)",
-        statement_freq="annual",
-        mode_label="strict_statement_annual + shadow_factors + quality_value_blend",
-        combined_factor=True,
-    )
     _apply_single_strategy_prefill("quality_value_snapshot_strict_annual")
-
-    universe_mode = st.radio(
-        "Universe Mode",
-        options=["Preset", "Manual"],
-        horizontal=True,
-        help="strict annual multi-factor도 annual coverage가 검증된 preset을 기본값으로 사용합니다.",
-        key="qvss_universe_mode",
+    start_date, end_date, top_n = _render_strict_factor_core_inputs(
+        section_label="핵심 실행 설정",
+        key_prefix="qvss",
+        default_start=_default_strict_factor_start_date(),
+        top_default=10,
+        top_max=30,
+        top_help="연간 Quality + Value 종합 점수 기준으로 최종 보유할 종목 수입니다.",
     )
-
-    preset_name = None
-    tickers: list[str] = []
-    if universe_mode == "Preset":
-        preset_name = st.selectbox(
-            "Preset",
-            options=list(QUALITY_STRICT_PRESETS.keys()),
-            format_func=strict_preset_display_label,
-            index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_SINGLE_DEFAULT_PRESET),
-            key="qvss_preset",
+    universe_mode, preset_name, tickers = _render_strict_factor_universe_inputs(
+        section_label="투자 대상 Universe",
+        key_prefix="qvss",
+        presets=QUALITY_STRICT_PRESETS,
+        default_preset=STRICT_ANNUAL_SINGLE_DEFAULT_PRESET,
+        help_text="연간 재무제표 coverage가 검증된 미국 주식 구성을 기본으로 사용합니다.",
+        strict_labels=True,
+        show_historical_caption=True,
+        show_preset_status=True,
+    )
+    with st.expander("Universe 근거", expanded=False):
+        _render_strict_factor_data_readiness_note(
+            family_label="Quality + Value Snapshot (Strict Annual)",
+            statement_freq="annual",
+            mode_label="strict_statement_annual + shadow_factors + quality_value_blend",
+            combined_factor=True,
+            inline=True,
         )
-        tickers = QUALITY_STRICT_PRESETS[preset_name]
-        _render_ticker_preview(tickers)
-        _render_historical_universe_caption()
-        _render_strict_preset_status_note(preset_name, tickers)
-    else:
-        manual_tickers = st.text_input(
-            "Tickers",
-            value="AAPL,MSFT,GOOG",
-            help="쉼표로 구분한 주식 티커를 입력합니다. 예: AAPL,MSFT,GOOG",
-            key="qvss_manual_tickers",
+        universe_contract, dynamic_candidate_tickers, dynamic_target_size = _render_strict_universe_contract_setup(
+            key="qvss_universe_contract",
+            tickers=tickers,
+            preset_name=preset_name,
+            statement_freq="annual",
         )
-        tickers = _parse_manual_tickers(manual_tickers)
-        _render_ticker_preview(tickers)
+        _render_strict_factor_prerun_preview(
+            tickers=tickers,
+            strategy_label="Quality + Value Snapshot (Strict Annual)",
+            preset_name=preset_name,
+            universe_contract=universe_contract,
+            statement_freq="annual",
+        )
 
-    universe_contract, dynamic_candidate_tickers, dynamic_target_size = _render_strict_universe_contract_setup(
-        key="qvss_universe_contract",
-        tickers=tickers,
-        preset_name=preset_name,
-        statement_freq="annual",
-    )
-    _render_strict_factor_prerun_preview(
-        tickers=tickers,
-        strategy_label="Quality + Value Snapshot (Strict Annual)",
-        preset_name=preset_name,
-        universe_contract=universe_contract,
-        statement_freq="annual",
-    )
-
-    with st.form("quality_value_snapshot_strict_annual_backtest_form", clear_on_submit=False):
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            start_date = _strict_factor_date_input(
-                "Start Date",
-                default=_default_strict_factor_start_date(),
-                key="qvss_start",
-            )
-        with col2:
-            end_date = _strict_factor_date_input("End Date", default=DEFAULT_BACKTEST_END_DATE, key="qvss_end")
-        with col3:
-            top_n = st.number_input(
-                "Top N",
-                min_value=1,
-                max_value=30,
-                value=10,
-                step=1,
-                help="strict annual multi-factor 종합 점수 기준으로 상위 몇 개 종목을 선택할지 정합니다.",
-                key="qvss_top_n",
-            )
-
-        st.caption("Hidden defaults in this first pass: `annual statement shadow factors`, `monthly rebalance`, `equal-weight holding by default`.")
-
-        with st.expander("Advanced Inputs", expanded=False):
-            timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qvss_timeframe")
-            option = st.selectbox("Option", options=["month_end"], index=0, key="qvss_option")
+    with st.form("quality_value_snapshot_strict_annual_backtest_form", clear_on_submit=False, border=False):
+        with single_settings_section(
+            "선택·보유 규칙",
+            "연간 Quality + Value 지표, 추세 필터, 비중과 방어 규칙을 정합니다.",
+        ):
+            timeframe = st.selectbox("가격 간격", options=["1d"], index=0, key="qvss_timeframe")
+            option = st.selectbox("선정 시점", options=["month_end"], index=0, key="qvss_option")
             rebalance_interval = st.number_input(
-                "Rebalance Interval",
+                "리밸런싱 간격(개월)",
                 min_value=1,
                 max_value=12,
                 value=1,
@@ -1458,33 +1333,33 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 key="qvss_rebalance_interval",
             )
             quality_factors = st.multiselect(
-                "Quality Factors",
+                "Quality 지표",
                 options=QUALITY_STRICT_FACTOR_OPTIONS,
                 default=QUALITY_STRICT_DEFAULT_FACTORS,
                 key="qvss_quality_factors",
             )
             value_factors = st.multiselect(
-                "Value Factors",
+                "Value 지표",
                 options=VALUE_STRICT_FACTOR_OPTIONS,
                 default=VALUE_STRICT_DEFAULT_FACTORS,
                 key="qvss_value_factors",
             )
             _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 포트폴리오 처리 규칙은 아래 펼쳐보기로 묶었습니다.")
-            with st.expander("Overlay", expanded=False):
+            with st.expander("추세·시장 필터", expanded=False):
                 _render_strict_overlay_section_intro()
                 trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                 with trend_title_col:
-                    st.markdown("##### Trend Filter Overlay")
+                    st.markdown("##### 추세 필터")
                 with trend_help_col:
                     _render_trend_filter_help_popover()
                 trend_filter_enabled = st.checkbox(
-                    "Enable",
+                    "추세 필터 사용",
                     value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
                     key="qvss_trend_filter_enabled",
                 )
                 trend_filter_window = int(
                     st.number_input(
-                        "Trend Filter Window",
+                        "추세 판단 기간",
                         min_value=20,
                         max_value=400,
                         value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
@@ -1496,7 +1371,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                     key_prefix="qvss",
                     label_prefix="",
                 )
-            with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+            with st.expander("비중·방어 규칙", expanded=False):
                 _render_strict_portfolio_handling_contracts_intro()
                 weighting_mode = _render_strict_weighting_contract_inputs(
                     key_prefix="qvss",
@@ -1513,7 +1388,11 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                     key_prefix="qvss",
                     label_prefix="Strict Annual Multi-Factor",
                 )
-            with st.expander("Promotion Policy Signal", expanded=False):
+        with single_settings_section(
+            "비용·위험 기준",
+            "거래 비용, 비교 기준, 유동성 조건과 중단 기준을 정합니다.",
+        ):
+            with st.expander("거래 비용과 승격 기준", expanded=False):
                 (
                     benchmark_contract,
                     min_price_filter,
@@ -1531,7 +1410,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 ) = _render_strict_annual_real_money_inputs(
                     key_prefix="qvss",
                 )
-            with st.expander("Guardrails", expanded=False):
+            with st.expander("중단·경고 기준", expanded=False):
                 (
                     underperformance_guardrail_enabled,
                     underperformance_guardrail_window_months,
@@ -1557,14 +1436,14 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                     drawdown_guardrail_enabled=drawdown_guardrail_enabled,
                 )
 
-        submitted = st.form_submit_button("Run Strict Annual Quality + Value Backtest", use_container_width=True)
+        submitted = st.form_submit_button("이 설정으로 백테스트 실행", use_container_width=True)
 
     if not submitted:
         return
 
     validation_errors: list[str] = []
     if not tickers:
-        validation_errors.append("At least one ticker is required.")
+        validation_errors.append("투자 대상 종목을 한 개 이상 선택해 주세요.")
     window_error = validate_strict_factor_backtest_window(
         start_date,
         end_date,
@@ -1573,9 +1452,9 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
     if window_error:
         validation_errors.append(window_error)
     if not quality_factors:
-        validation_errors.append("Select at least one quality factor.")
+        validation_errors.append("Quality 지표를 한 개 이상 선택해 주세요.")
     if not value_factors:
-        validation_errors.append("Select at least one value factor.")
+        validation_errors.append("Value 지표를 한 개 이상 선택해 주세요.")
 
     if validation_errors:
         for error in validation_errors:

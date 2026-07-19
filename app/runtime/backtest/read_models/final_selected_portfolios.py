@@ -931,6 +931,39 @@ def _evidence_blockers(row: dict[str, Any]) -> list[str]:
     return blockers
 
 
+def _monitoring_review_triggers(row: dict[str, Any]) -> list[str]:
+    """Prefer compact structured Decision Brief conditions, then legacy strings."""
+
+    raw_decision = dict(row.get("raw_decision") or row)
+    brief_snapshot = dict(raw_decision.get("decision_brief_snapshot") or {})
+    structured: list[str] = []
+    for raw_condition in list(brief_snapshot.get("monitoring_conditions") or []):
+        condition = dict(raw_condition or {})
+        title = _clean_text(condition.get("title"), "")
+        if not title:
+            continue
+        threshold = _clean_text(condition.get("threshold"), "")
+        cadence = _clean_text(condition.get("cadence"), "")
+        action = _clean_text(condition.get("re_review_action"), "")
+        parts = [title]
+        if threshold:
+            parts.append(f"기준 {threshold}")
+        if cadence:
+            parts.append(cadence)
+        if action:
+            parts.append(action)
+        structured.append(" · ".join(parts))
+    if structured:
+        return structured
+
+    paper_snapshot = dict(raw_decision.get("paper_tracking_snapshot") or {})
+    return [
+        str(trigger).strip()
+        for trigger in list(row.get("review_triggers") or paper_snapshot.get("review_triggers") or [])
+        if str(trigger).strip()
+    ]
+
+
 def _derive_operation_status(
     row: dict[str, Any],
     *,
@@ -1009,7 +1042,7 @@ def build_final_selected_portfolio_dashboard_row(row: dict[str, Any]) -> dict[st
         "robustness_score": _optional_float(robustness.get("robustness_score")),
         "paper_observation_route": _clean_text(paper_snapshot.get("route")),
         "review_cadence": _clean_text(paper_snapshot.get("review_cadence")),
-        "review_triggers": list(paper_snapshot.get("review_triggers") or []),
+        "review_triggers": _monitoring_review_triggers(row),
         "blockers": blockers,
         "baseline_start": baseline.get("baseline_start"),
         "baseline_end": baseline.get("baseline_end"),
@@ -1427,11 +1460,7 @@ def build_selected_portfolio_drift_alert_preview(
     """Translate a drift check into read-only alert and review-trigger guidance."""
     raw_decision = dict(row.get("raw_decision") or row)
     paper_snapshot = dict(raw_decision.get("paper_tracking_snapshot") or {})
-    review_triggers = [
-        str(trigger).strip()
-        for trigger in list(row.get("review_triggers") or paper_snapshot.get("review_triggers") or [])
-        if str(trigger).strip()
-    ]
+    review_triggers = _monitoring_review_triggers(row)
     drift_route = str(drift_check.get("route") or "").strip()
     drift_rows = [dict(item or {}) for item in list(drift_check.get("rows") or [])]
     drift_row_by_id = {str(item.get("component_id") or ""): item for item in drift_rows}
@@ -2108,11 +2137,7 @@ def build_selected_portfolio_continuity_check(
         or selected.get("selected_practical_portfolio") is True
         or decision_route == SELECTED_PRACTICAL_PORTFOLIO_ROUTE
     )
-    review_triggers = [
-        str(trigger).strip()
-        for trigger in list(selected.get("review_triggers") or paper_snapshot.get("review_triggers") or [])
-        if str(trigger).strip()
-    ]
+    review_triggers = _monitoring_review_triggers(selected)
     timeline_boundary = dict(timeline.get("execution_boundary") or {})
     timeline_metrics = dict(timeline.get("metrics") or {})
     timeline_source_contract = dict(timeline.get("source_contract") or {})
@@ -3939,11 +3964,12 @@ def build_selected_portfolio_open_issue_followup(row: dict[str, Any]) -> dict[st
             )
         )
 
-    review_triggers = [
-        str(trigger).strip()
-        for trigger in list(row.get("review_triggers") or dict(raw_decision.get("paper_tracking_snapshot") or {}).get("review_triggers") or [])
-        if str(trigger).strip()
-    ]
+    review_triggers = _monitoring_review_triggers(row)
+    trigger_source = (
+        "decision_brief_snapshot.monitoring_conditions"
+        if list(dict(raw_decision.get("decision_brief_snapshot") or {}).get("monitoring_conditions") or [])
+        else "paper_tracking_snapshot.review_triggers"
+    )
     for trigger in review_triggers:
         rows.append(
             _selected_open_issue_row(
@@ -3952,7 +3978,7 @@ def build_selected_portfolio_open_issue_followup(row: dict[str, Any]) -> dict[st
                 current=trigger,
                 evidence="Final Review에 저장된 monitoring trigger입니다.",
                 next_action="Performance Recheck / Review Signals에서 trigger breach 여부를 확인합니다.",
-                source="paper_tracking_snapshot.review_triggers",
+                source=trigger_source,
             )
         )
 
