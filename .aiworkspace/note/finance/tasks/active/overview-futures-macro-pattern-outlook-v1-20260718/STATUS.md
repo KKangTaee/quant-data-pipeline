@@ -31,6 +31,16 @@
 - Desktop and 420px Browser QA passed. Both disclosures expanded without clipping; the three narrow-screen trace tables use internal horizontal scroll (`309px` client width versus `785–1,457px` content); latest QA server console errors were 0.
 - QA screenshot: `/Users/taeho/.codex/visualizations/2026/07/19/futures-macro-materialized-snapshot/futures-macro-react-disclosures.png` (generated, not staged).
 
+## 2026-07-19 — Asset Outlook Layout Follow-up
+
+- Root cause: each of the five narrow asset cards repeated the horizon-level `전체 전망 · PROVISIONAL` badge in a third grid column. That column compressed the asset-specific direction into one-character Korean line wraps.
+- A안 is implemented: the shared 5D / 20D publication statuses now appear once in the section heading, while each card retains only the period and its asset-specific direction.
+- Status semantics and model outputs are unchanged. `PROVISIONAL` remains the correct combined probability/path publication state, and the pathway labels still use the existing median-forward-z thresholds (`>= +0.25` upward, `<= -0.25` downward, otherwise `우위 미확인`).
+- Current stored output is legitimately neutral for every 5D family. At 20D, risk assets are `상방 우세` (`+0.482`), while commodities, dollar, rates, and safe haven remain inside the neutral band.
+- Desktop and 420px Browser QA found one 5D badge, one 20D badge, five cards, no repeated per-card publication badge, no direction wrapping, no horizontal overflow, and zero console errors.
+- QA screenshot: `/Users/taeho/Project/quant-data-pipeline-worktrees/sub-dev/futures-macro-asset-outlook-layout-qa.png` (generated, not staged).
+- Existing overall roadmap remains complete; this approved A안 follow-up is complete (`1/1`).
+
 ## 2026-07-19 — Macro Pressure Copy Follow-up
 
 - User confirmed that the Y axis should name what it actually aggregates instead of using the broad `매크로 부담` shorthand.

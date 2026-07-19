@@ -243,3 +243,12 @@
 - DB/service verification returned `pattern_outlook_v4_conservative_status_10y`, current hero `OBSERVED`, five asset observations `OBSERVED`, and both future horizons `PROVISIONAL`.
 - Browser QA at `http://127.0.0.1:8568`: 60 ribbon cells; six legend labels including time direction; five asset-card `관측 완료` plus ten `전체 전망 · PROVISIONAL`; zero console errors. Desktop `1440 == 1440`; mobile outer `420 == 420`, iframe `377 == 377`; mobile legend wrapped to two rows.
 - Screenshot: `/Users/taeho/.codex/visualizations/2026/07/19/futures-macro-ribbon-status/futures-macro-ribbon-status-qa.png` (generated, not staged).
+
+## 2026-07-19 Asset Outlook Layout Follow-up
+
+- RED: the focused service contract failed because the section-level 5D / 20D status rail did not exist and each card still referenced `item.outlook.*_status`.
+- GREEN: `AssetPathwaysSection.tsx` now owns the two shared horizon badges; card outlook rows use a two-column `period + direction` grid and keep both values on one line. Focused contracts passed `2/2`.
+- `npm run build --prefix app/web/streamlit_components/futures_macro_workbench` passed and emitted `index-C9RTkshM.css` plus `index-Dy7vfAg9.js`.
+- Browser QA at `http://127.0.0.1:8568`: desktop and 420px each rendered two section badges, five cards, zero per-card status badges, ten unwrapped direction labels, equal client/scroll widths, and zero console errors.
+- Current pathway check: 5D z medians `commodities 0.1111 / dollar 0.0359 / rates 0.1578 / risk_assets 0.2360 / safe_haven -0.0851`, all `우위 미확인`; 20D `risk_assets 0.4820` is `상방 우세`, with the other four families inside the neutral band.
+- Screenshot: `/Users/taeho/Project/quant-data-pipeline-worktrees/sub-dev/futures-macro-asset-outlook-layout-qa.png` (generated, not staged).
