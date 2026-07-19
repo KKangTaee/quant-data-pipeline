@@ -622,13 +622,13 @@ if eligible_count < 250 or positive_count < 50 or brier > baseline_brier * 0.95:
     return PublicationDecision(status="SUPPRESSED", reasons=reasons)
 ```
 
-- [ ] Write failing tests that reject future-revised macro vintages, non-PIT exposures, overlapping train/validation horizons, and insufficient samples.
-- [ ] Add tests for time-ordered OOS split, embargo, naive unconditional baseline, Brier score, reliability buckets, confidence intervals, and reproducible algorithm/data fingerprints.
-- [ ] Define and test the publication gate: at least 250 eligible observations, at least 50 positive outcomes, OOS Brier score at least 5% better than the naive baseline, maximum reliability-bin absolute error `<= 0.10`, and no publication-integrity blocker. Otherwise status is SUPPRESSED/LIMITED.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_calibration.py -q` and confirm failure.
-- [ ] Implement the minimal deterministic calibrator and gate. Probability output is inaccessible unless status is `READY`; observation rows remain available.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_calibration.py -q`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/calibration.py`, and `git diff --check`.
-- [ ] Commit as `포트폴리오 위험 확률 검증 게이트 구현`.
+- [x] Write failing tests that reject future-revised macro vintages, non-PIT exposures, overlapping train/validation horizons, and insufficient samples.
+- [x] Add tests for time-ordered OOS split, embargo, naive unconditional baseline, Brier score, reliability buckets, confidence intervals, and reproducible algorithm/data fingerprints.
+- [x] Define and test the publication gate: at least 250 eligible observations, at least 50 positive outcomes, OOS Brier score at least 5% better than the naive baseline, maximum reliability-bin absolute error `<= 0.10`, and no publication-integrity blocker. Otherwise status is SUPPRESSED/LIMITED.
+- [x] Run the repository-available `unittest` equivalent and confirm failure (`pytest` is not installed in `.venv`).
+- [x] Implement the minimal deterministic calibrator and gate. Probability output is inaccessible unless status is `READY`; observation rows remain available.
+- [x] Run focused unittest, `py_compile`, and `git diff --check`.
+- [x] Commit as `포트폴리오 위험 확률 검증 게이트 구현`.
 
 ### Task 20: qualified probability와 diagnosis history UI를 조건부로 노출한다
 
