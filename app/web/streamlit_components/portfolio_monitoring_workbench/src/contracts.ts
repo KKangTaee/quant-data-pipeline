@@ -2,6 +2,7 @@ export type GroupSummary = {
   portfolio_group_id: string;
   name: string;
   is_default: boolean;
+  selected?: boolean;
   status: string;
   version: number;
   active_item_count: number;

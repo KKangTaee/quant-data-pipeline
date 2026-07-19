@@ -272,11 +272,17 @@ def align_group_value_lanes(
 LaneLoader = Callable[[MonitoringItemRecord], ItemValueLane | BaseException]
 
 
-def _group_summary(group: PortfolioGroupRecord, items: Sequence[MonitoringItemRecord]) -> dict[str, Any]:
+def _group_summary(
+    group: PortfolioGroupRecord,
+    items: Sequence[MonitoringItemRecord],
+    *,
+    selected: bool,
+) -> dict[str, Any]:
     return {
         "portfolio_group_id": group.portfolio_group_id,
         "name": group.name,
         "is_default": group.is_default,
+        "selected": selected,
         "status": group.status,
         "version": group.version,
         "active_item_count": sum(item.status in ACTIVE_ITEM_STATUSES for item in items),
@@ -325,7 +331,11 @@ def build_portfolio_monitoring_workspace(
         "schema_version": WORKSPACE_SCHEMA_VERSION,
         "generated_at": timestamp.isoformat(timespec="seconds"),
         "groups": [
-            _group_summary(group, items_by_group[group.portfolio_group_id])
+            _group_summary(
+                group,
+                items_by_group[group.portfolio_group_id],
+                selected=(selected_group is not None and group.portfolio_group_id == selected_group.portfolio_group_id),
+            )
             for group in groups
         ],
         "active_group": active_result,

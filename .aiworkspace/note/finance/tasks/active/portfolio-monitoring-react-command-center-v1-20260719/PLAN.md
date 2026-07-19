@@ -315,12 +315,12 @@ return value if isinstance(value, dict) else None
 <PortfolioMonitoringWorkbench workspace={payload} onEvent={Streamlit.setComponentValue} />
 ```
 
-- [ ] Write failing Vitest cases for default/selected group resolution, ended item retention, common-basis banner, chart series gaps, and Korean short-window CAGR label.
-- [ ] Run `npm test -- --run` in the component directory and confirm failures.
-- [ ] Implement Portfolio-first shell order: group rail -> command band -> KPI strip -> full-width value chart -> item/contribution list -> selected detail -> method/boundary.
-- [ ] Match Overview/Market Context color, spacing, evidence hierarchy, focus ring, and 1440/760/420 responsive layout; keep raw audit tables out of first read.
-- [ ] Run `npm test -- --run`, `npm run typecheck`, `npm run build`, and `git diff --check`.
-- [ ] Commit as `포트폴리오 모니터링 Command Center 셸 구현`.
+- [x] Write failing Vitest cases for default/selected group resolution, ended item retention, common-basis banner, chart series gaps, and Korean short-window CAGR label.
+- [x] Run `npm test -- --run` in the component directory and confirm failures.
+- [x] Implement Portfolio-first shell order: group rail -> command band -> KPI strip -> full-width value chart -> item/contribution list -> selected detail -> method/boundary.
+- [x] Match Overview/Market Context color, spacing, evidence hierarchy, focus ring, and 1440/760/420 responsive layout; keep raw audit tables out of first read.
+- [x] Run `npm test -- --run`, `npm run typecheck`, `npm run build`, and `git diff --check`.
+- [x] Commit as `포트폴리오 모니터링 Command Center 셸 구현`.
 
 ### Task 10: Context Drawer와 command lifecycle을 구현한다
 

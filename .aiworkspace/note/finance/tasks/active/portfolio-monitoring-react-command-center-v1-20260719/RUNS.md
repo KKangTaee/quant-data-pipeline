@@ -30,3 +30,5 @@
 | 2026-07-19 | 2차 Monitoring Service Foundation completion gate | 6 group read-model, 23 stage-focused, and 41 cumulative monitoring unittests PASS; common-basis PARTIAL/cash/history contract verified |
 | 2026-07-19 | 3차 Task 8 React bridge RED | 4 expected missing-module failures for build availability, JSON safety, stable identity, and missing-build fallback |
 | 2026-07-19 | 3차 Task 8 bridge/package verification | 4 bridge and 10 bridge+read-model unittests PASS; npm audit 0 vulnerabilities; TypeScript and Vite production build PASS |
+| 2026-07-19 | 3차 Task 9 command-center shell RED / gap fix | Missing state module reproduced; state tests caught JavaScript `Number(null) -> 0` chart-gap corruption before UI build |
+| 2026-07-19 | 3차 Task 9 shell verification | 5 Vitest, TypeScript, Vite production build, and 10 Python read-model/component unittests PASS; 1440/760/420 responsive CSS contract added, Browser QA deferred to page cutover |
