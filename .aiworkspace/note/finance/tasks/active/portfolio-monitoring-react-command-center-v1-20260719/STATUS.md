@@ -1,15 +1,15 @@
 # Portfolio Monitoring React Command Center V1 Status
 
-Status: Detailed Implementation Plan Complete / Execution Mode Pending
+Status: 1차 Contract And Storage Foundation In Progress
 Last Updated: 2026-07-19
 
 ## Current Position
 
 - 전체 roadmap: `0/6차 구현`
-- current milestone: product audit, visual direction, product/data/diagnosis/error design approved in conversation
+- current milestone: 1차 Task 1 DB schema and versioned domain identity
 - written design: approved by user
 - detailed implementation plan: complete and self-reviewed
-- implementation: not started
+- implementation: started in inline execution mode
 
 ## Approved Decisions
 
@@ -25,6 +25,6 @@ Last Updated: 2026-07-19
 
 ## Next Action
 
-1. execution mode 선택: subagent-driven 또는 inline
-2. 선택 후 1차 contract/storage implementation 시작
-3. 1차 gate 통과 후 2차 service foundation으로 이동
+1. Task 1 schema/domain contract red-green-commit
+2. Task 2 repository/command boundary
+3. Task 3 legacy non-destructive import and 1차 gate

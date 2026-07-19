@@ -45,10 +45,10 @@
 - `validate_add_item_input(value) -> AddMonitoringItemInput`
 - `build_request_fingerprint(payload) -> str`
 
-- [ ] Write failing schema tests asserting `monitoring_portfolio_group`, `monitoring_portfolio_item`, and `monitoring_portfolio_command`, their unique/index keys, optimistic `version`, lifecycle dates, source/funding enums, and command idempotency fields.
-- [ ] Write failing domain tests for integer-share rejection (`1.5`, `0`), selected-strategy share rejection, positive notional validation, and stable key-order-independent SHA-256 request fingerprint.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_schema.py -q` and confirm failure because the package/constant does not exist.
-- [ ] Add the three `finance_meta` CREATE TABLE contracts and minimal immutable dataclass/enum validation implementation. Use this shape as the public input boundary:
+- [x] Write failing schema tests asserting `monitoring_portfolio_group`, `monitoring_portfolio_item`, and `monitoring_portfolio_command`, their unique/index keys, optimistic `version`, lifecycle dates, source/funding enums, and command idempotency fields.
+- [x] Write failing domain tests for integer-share rejection (`1.5`, `0`), selected-strategy share rejection, positive notional validation, and stable key-order-independent SHA-256 request fingerprint.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_schema` and confirm failure because the package/constant does not exist.
+- [x] Add the three `finance_meta` CREATE TABLE contracts and minimal immutable dataclass/enum validation implementation. Use this shape as the public input boundary:
 
 ```python
 @dataclass(frozen=True)
@@ -63,8 +63,8 @@ class AddMonitoringItemInput:
     input_shares: int | None = None
 ```
 
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_schema.py -q`, `./.venv/bin/python -m py_compile finance/data/db/schema.py app/services/portfolio_monitoring/schemas.py`, and `git diff --check`.
-- [ ] Commit as `포트폴리오 모니터링 저장 계약 추가`.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_schema`, `./.venv/bin/python -m py_compile finance/data/db/schema.py app/services/portfolio_monitoring/schemas.py`, and `git diff --check`.
+- [x] Commit as `포트폴리오 모니터링 저장 계약 추가`.
 
 ### Task 2: repository transaction과 idempotent command executor를 구현한다
 
