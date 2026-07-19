@@ -760,7 +760,8 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         )[1]
 
         self.assertIn('surface="context"', render_prefix)
-        self.assertIn("render_backtest_analysis_decision_surface()", fragment)
+        self.assertIn("render_backtest_portfolio_mix_workspace()", fragment)
+        self.assertNotIn("render_backtest_analysis_decision_surface()", fragment)
         self.assertNotIn('surface="context"', fragment)
 
     def test_single_strategy_change_marks_stale_without_clearing_bundle(
@@ -916,27 +917,28 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn('st.expander("상세 근거"', wrapper)
         self.assertNotIn("_render_last_run_details(bundle)", wrapper)
 
-    def test_portfolio_mix_workspace_uses_inner_mode_roles_and_common_decision(
+    def test_portfolio_mix_workspace_uses_new_one_shell_and_cuts_legacy_primary_route(
         self,
     ) -> None:
-        source = (PROJECT_ROOT / "app/web/backtest_compare/page.py").read_text()
-        builder = source.split(
-            "def _render_weighted_portfolio_builder", 1
-        )[1].split("\ndef ", 1)[0]
+        route = (PROJECT_ROOT / "app/web/backtest_analysis.py").read_text()
+        source = (
+            PROJECT_ROOT / "app/web/backtest_portfolio_mix_workspace.py"
+        ).read_text()
         react = (
             PROJECT_ROOT
-            / "app/web/components/backtest_analysis_decision_workspace/frontend/src/BacktestAnalysisDecisionWorkspace.tsx"
+            / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/App.tsx"
         ).read_text()
+        fragment = route.split(
+            "def _render_backtest_analysis_work_fragment", 1
+        )[1]
 
-        self.assertIn("새 Mix 만들기", source)
-        self.assertIn("저장된 Mix 불러오기", source)
-        self.assertIn("mix_role_", builder)
-        self.assertNotIn(
-            "_render_weighted_portfolio_practical_validation_panel(weighted_bundle)",
-            builder,
-        )
-        self.assertIn('emitIntent("select_mix_mode"', react)
-        self.assertIn('emitIntent("save_mix"', react)
+        self.assertIn("render_backtest_portfolio_mix_workspace()", fragment)
+        self.assertNotIn("render_compare_portfolio_workspace()", fragment)
+        self.assertIn("run_current_portfolio_mix", source)
+        self.assertIn("save_current_portfolio_mix", source)
+        self.assertIn("handoff_current_portfolio_mix", source)
+        self.assertIn('emit("set_mode"', react)
+        self.assertIn('emit(action.id', react)
 
     def test_single_settings_fallback_uses_the_same_pure_schema_and_projector(
         self,

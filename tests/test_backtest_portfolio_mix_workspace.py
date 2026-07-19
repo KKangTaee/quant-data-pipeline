@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 from copy import deepcopy
 from datetime import date
+from types import SimpleNamespace
 
 import pytest
 
@@ -607,3 +608,282 @@ def test_mix_mode_survives_rerun_through_python_session_read_model():
     assert accepted["accepted"] is True
     assert workspace["mode"] == "saved"
     assert adapter.build_portfolio_mix_fallback_model(workspace)["mode"] == "saved"
+
+
+def test_mix_runtime_rejects_invalid_draft_before_any_component_runner_call():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    draft = _valid_draft()
+    draft["components"][0]["weight_percent"] = 40
+    calls: list[str] = []
+
+    result = adapter.execute_portfolio_mix_draft(
+        draft,
+        runtime_options=_runtime_options(),
+        run_component=lambda **kwargs: calls.append(kwargs["strategy_name"]),
+        weighted_builder=lambda **kwargs: {"meta": {"run_id": "should-not-run"}},
+    )
+
+    assert result["ok"] is False
+    assert result["error_kind"] == "validation"
+    assert calls == []
+
+
+def test_mix_runtime_runs_each_component_then_builds_one_weighted_result():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    runner_calls: list[dict[str, object]] = []
+    weighted_calls: list[dict[str, object]] = []
+
+    def run_component(**kwargs: object) -> dict[str, object]:
+        runner_calls.append(dict(kwargs))
+        return {
+            "strategy_name": kwargs["strategy_name"],
+            "meta": {
+                "run_id": f"run-{kwargs['strategy_name']}",
+                "start": kwargs["start"],
+                "end": kwargs["end"],
+                "timeframe": kwargs["timeframe"],
+                "option": kwargs["option"],
+            },
+        }
+
+    def weighted_builder(**kwargs: object) -> dict[str, object]:
+        weighted_calls.append(dict(kwargs))
+        return {
+            "strategy_name": "Weighted Portfolio",
+            "meta": {"run_id": "mix-run-current"},
+        }
+
+    result = adapter.execute_portfolio_mix_draft(
+        _valid_draft(),
+        runtime_options=_runtime_options(),
+        run_component=run_component,
+        weighted_builder=weighted_builder,
+    )
+
+    assert result["ok"] is True
+    assert [call["strategy_name"] for call in runner_calls] == ["GTAA", "Equal Weight"]
+    assert weighted_calls[0]["weights_percent"] == [50.0, 50.0]
+    assert weighted_calls[0]["component_roles"] == ["core", "defense"]
+    assert result["current_result"]["run_result_id"] == "mix-run-current"
+    assert result["current_result"]["configuration_fingerprint"]
+    assert all(
+        state["status"] == "completed"
+        for state in result["component_states"].values()
+    )
+
+
+def test_failed_mix_run_preserves_previous_current_result_and_bundles():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    previous_result = {
+        "run_result_id": "mix-run-previous",
+        "configuration_fingerprint": "previous-fingerprint",
+    }
+    previous_bundles = [{"strategy_name": "Previous"}]
+    previous_weighted = {"meta": {"run_id": "mix-run-previous"}}
+    session: dict[str, object] = {
+        adapter.MIX_SESSION_KEYS["draft"]: _valid_draft(),
+        adapter.MIX_SESSION_KEYS["current_result"]: deepcopy(previous_result),
+        adapter.MIX_SESSION_KEYS["component_bundles"]: deepcopy(previous_bundles),
+        adapter.MIX_SESSION_KEYS["weighted_bundle"]: deepcopy(previous_weighted),
+    }
+
+    def fail_equal_weight(**kwargs: object) -> dict[str, object]:
+        if kwargs["strategy_name"] == "Equal Weight":
+            raise RuntimeError("provider unavailable")
+        return {"strategy_name": kwargs["strategy_name"], "meta": {}}
+
+    response = adapter.run_current_portfolio_mix(
+        session_state=session,
+        runtime_options=_runtime_options(),
+        run_component=fail_equal_weight,
+        weighted_builder=lambda **kwargs: pytest.fail("weighted builder must not run"),
+        history_appender=lambda **kwargs: pytest.fail("history must not be written"),
+    )
+
+    assert response["accepted"] is False
+    assert response["reason"] == "component_execution_failed"
+    assert session[adapter.MIX_SESSION_KEYS["current_result"]] == previous_result
+    assert session[adapter.MIX_SESSION_KEYS["component_bundles"]] == previous_bundles
+    assert session[adapter.MIX_SESSION_KEYS["weighted_bundle"]] == previous_weighted
+    assert session[adapter.MIX_SESSION_KEYS["component_states"]]["component-gtaa"][
+        "status"
+    ] == "completed"
+    assert session[adapter.MIX_SESSION_KEYS["component_states"]]["component-equal"][
+        "status"
+    ] == "error"
+
+
+def test_runtime_intents_require_and_call_distinct_python_handlers_once():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    calls: list[tuple[str, dict[str, object]]] = []
+    session: dict[str, object] = {
+        adapter.MIX_SESSION_KEYS["draft"]: _valid_draft(),
+    }
+    handlers = {
+        "run_mix": lambda payload: calls.append(("run", dict(payload)))
+        or {"accepted": True},
+        "save_mix": lambda payload: calls.append(("save", dict(payload)))
+        or {"accepted": True},
+    }
+
+    run = adapter.apply_portfolio_mix_intent(
+        _intent("run_mix", "runtime-run"),
+        session_state=session,
+        runtime_options=_runtime_options(),
+        action_handlers=handlers,
+    )
+    save = adapter.apply_portfolio_mix_intent(
+        _intent("save_mix", "runtime-save", name="균형형 Mix"),
+        session_state=session,
+        runtime_options=_runtime_options(),
+        action_handlers=handlers,
+    )
+    missing = adapter.apply_portfolio_mix_intent(
+        _intent("handoff_level2", "runtime-handoff"),
+        session_state=session,
+        runtime_options=_runtime_options(),
+        action_handlers=handlers,
+    )
+
+    assert run["accepted"] is True
+    assert save["accepted"] is True
+    assert calls == [("run", {}), ("save", {"name": "균형형 Mix"})]
+    assert missing == {"accepted": False, "reason": "handler_unavailable"}
+
+
+def test_new_mix_save_restore_and_level2_handoff_use_explicit_contracts():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    module = _workspace_module()
+    draft = _valid_draft()
+    fingerprint = module.build_portfolio_mix_fingerprint(
+        draft,
+        runtime_options=_runtime_options(),
+    )
+    stored: list[dict[str, object]] = []
+    session: dict[str, object] = {
+        adapter.MIX_SESSION_KEYS["draft"]: deepcopy(draft),
+        adapter.MIX_SESSION_KEYS["current_result"]: {
+            "run_result_id": "mix-run-current",
+            "configuration_fingerprint": fingerprint,
+        },
+        adapter.MIX_SESSION_KEYS["component_bundles"]: [
+            {"strategy_name": "GTAA", "meta": {}},
+            {"strategy_name": "Equal Weight", "meta": {}},
+        ],
+        adapter.MIX_SESSION_KEYS["weighted_bundle"]: {
+            "strategy_name": "Weighted Portfolio",
+            "component_strategy_names": ["GTAA", "Equal Weight"],
+            "component_input_weights": [50.0, 50.0],
+            "component_roles": ["core", "defense"],
+            "date_policy": "intersection",
+            "meta": {"run_id": "mix-run-current"},
+        },
+    }
+
+    def save_handler(**kwargs: object) -> dict[str, object]:
+        stored.append(dict(kwargs))
+        return {
+            "portfolio_id": "saved-new",
+            "name": kwargs["name"],
+            "saved_at": "2026-07-19T12:00:00+09:00",
+            "source_context": kwargs["source_context"],
+        }
+
+    saved = adapter.save_current_portfolio_mix(
+        {"name": "균형형 Mix"},
+        session_state=session,
+        runtime_options=_runtime_options(),
+        save_handler=save_handler,
+    )
+
+    assert saved["accepted"] is True
+    assert stored[0]["source_context"]["mix_schema_version"] == (
+        module.PORTFOLIO_MIX_SAVED_SCHEMA_VERSION
+    )
+    assert stored[0]["source_context"]["mix_draft"] == module.normalize_portfolio_mix_draft(
+        draft,
+        runtime_options=_runtime_options(),
+    )
+    assert "component_bundles" not in stored[0]["source_context"]
+
+    record = {
+        "schema_version": 1,
+        "portfolio_id": "saved-new",
+        "name": "균형형 Mix",
+        "saved_at": "2026-07-19T12:00:00+09:00",
+        "source_context": stored[0]["source_context"],
+    }
+    restored = adapter.restore_saved_portfolio_mix(
+        {"saved_mix_id": "saved-new"},
+        session_state=session,
+        saved_records=[record],
+        runtime_options=_runtime_options(),
+    )
+    assert restored["accepted"] is True
+    assert session[adapter.MIX_SESSION_KEYS["current_result"]] is None
+    assert session[adapter.MIX_SESSION_KEYS["weighted_bundle"]] is None
+    assert session[adapter.MIX_SESSION_KEYS["draft"]]["source_saved_portfolio_id"] == (
+        "saved-new"
+    )
+
+    session[adapter.MIX_SESSION_KEYS["current_result"]] = {
+        "run_result_id": "mix-run-current",
+        "configuration_fingerprint": module.build_portfolio_mix_fingerprint(
+            session[adapter.MIX_SESSION_KEYS["draft"]],
+            runtime_options=_runtime_options(),
+        ),
+    }
+    session[adapter.MIX_SESSION_KEYS["component_bundles"]] = [
+        {"strategy_name": "GTAA", "meta": {}},
+        {"strategy_name": "Equal Weight", "meta": {}},
+    ]
+    session[adapter.MIX_SESSION_KEYS["weighted_bundle"]] = {
+        "meta": {"run_id": "mix-run-current"}
+    }
+    handed_off: list[dict[str, object]] = []
+    handoff = adapter.handoff_current_portfolio_mix(
+        {},
+        session_state=session,
+        runtime_options=_runtime_options(),
+        source_builder=lambda prefill: {"source_title": prefill["weighted_portfolio_name"]},
+        handoff_handler=lambda source, persist=True: handed_off.append(
+            {"source": source, "persist": persist}
+        )
+        or SimpleNamespace(
+            source_payload=source,
+            notice="Level2 전달 완료",
+            mode="Selected Source",
+            requested_panel="Practical Validation",
+        ),
+    )
+
+    assert handoff["accepted"] is True
+    assert handed_off[0]["persist"] is True
+    assert session["backtest_requested_panel"] == "Practical Validation"
+    assert session["backtest_practical_validation_notice"] == "Level2 전달 완료"
+
+
+def test_primary_mix_route_mounts_only_the_new_workspace():
+    source = (
+        __import__("pathlib").Path(__file__).resolve().parents[1]
+        / "app/web/backtest_analysis.py"
+    ).read_text()
+    fragment = source.split("def _render_backtest_analysis_work_fragment", 1)[1].split(
+        "\ndef ", 1
+    )[0]
+
+    assert "render_backtest_portfolio_mix_workspace()" in fragment
+    assert "render_compare_portfolio_workspace()" not in fragment
+    assert "render_backtest_analysis_decision_surface()" not in fragment
+
+
+def test_mix_react_styles_keep_readable_text_inside_streamlit_dark_theme():
+    styles = (
+        __import__("pathlib").Path(__file__).resolve().parents[1]
+        / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/styles.css"
+    ).read_text()
+
+    assert ".mix-workspace h1, .mix-workspace h2" in styles
+    assert ".mix-workspace button:not(.mix-primary)" in styles
+    assert ".mix-primary {" in styles
+    assert "color: #fff !important" in styles

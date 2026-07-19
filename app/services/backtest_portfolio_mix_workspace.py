@@ -444,11 +444,10 @@ def _saved_mix_projection(
     rows: list[dict[str, Any]] = []
     for raw_record in saved_records:
         record = _as_mapping(raw_record)
-        if record.get("schema_version") != PORTFOLIO_MIX_SAVED_SCHEMA_VERSION:
+        draft_source = extract_saved_portfolio_mix_draft(record)
+        if draft_source is None:
             continue
-        draft = normalize_portfolio_mix_draft(
-            record.get("mix_draft") if isinstance(record.get("mix_draft"), Mapping) else {}
-        )
+        draft = normalize_portfolio_mix_draft(draft_source)
         components = draft["components"]
         summary = " · ".join(
             f"{component['strategy_choice']} {float(component['weight_percent']):g}%"
@@ -456,14 +455,31 @@ def _saved_mix_projection(
         )
         rows.append(
             {
-                "id": str(record.get("id") or ""),
+                "id": str(record.get("portfolio_id") or record.get("id") or ""),
                 "name": str(record.get("name") or "이름 없는 Mix"),
-                "saved_at": str(record.get("saved_at") or ""),
+                "saved_at": str(record.get("updated_at") or record.get("saved_at") or ""),
                 "component_count": len(components),
                 "component_summary": summary,
             }
         )
     return {"rows": rows, "empty": not rows}
+
+
+def extract_saved_portfolio_mix_draft(
+    record: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Read only the approved new Mix schema from a persisted store record."""
+
+    source = _as_mapping(record)
+    if source.get("schema_version") == PORTFOLIO_MIX_SAVED_SCHEMA_VERSION:
+        draft = source.get("mix_draft")
+        return _as_mapping(draft) if isinstance(draft, Mapping) else None
+
+    source_context = _as_mapping(source.get("source_context"))
+    if source_context.get("mix_schema_version") != PORTFOLIO_MIX_SAVED_SCHEMA_VERSION:
+        return None
+    draft = source_context.get("mix_draft")
+    return _as_mapping(draft) if isinstance(draft, Mapping) else None
 
 
 def _validation_issues(
@@ -660,6 +676,7 @@ __all__ = [
     "PortfolioMixValidationError",
     "build_portfolio_mix_fingerprint",
     "build_portfolio_mix_workspace",
+    "extract_saved_portfolio_mix_draft",
     "normalize_portfolio_mix_draft",
     "project_portfolio_mix_component_payloads",
     "validate_portfolio_mix_draft",

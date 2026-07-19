@@ -19,13 +19,14 @@ from app.services.backtest_strategy_evidence_inventory import (
     build_strategy_evidence_inventory_summary,
 )
 from app.web.reference_contextual_help import render_reference_contextual_help
-from app.web.backtest_compare import render_compare_portfolio_workspace
+from app.web.backtest_portfolio_mix_workspace import (
+    render_backtest_portfolio_mix_workspace,
+)
 from app.web.backtest_analysis_workspace import (
     _CONTEXT_ACTIONS,
     build_current_backtest_analysis_workspace,
     consume_backtest_analysis_component_change,
     consume_backtest_analysis_intent,
-    render_backtest_analysis_decision_surface,
 )
 from app.web.backtest_analysis_workspace_panel import (
     render_backtest_analysis_workspace_fallback,
@@ -609,11 +610,8 @@ def render_backtest_analysis_workspace() -> None:
 @st.fragment
 def _render_backtest_analysis_work_fragment() -> None:
     if st.session_state.backtest_analysis_mode == BACKTEST_ANALYSIS_MODE_COMPARE:
-        render_compare_portfolio_workspace()
+        render_backtest_portfolio_mix_workspace()
     else:
         if st.session_state.backtest_analysis_mode != BACKTEST_ANALYSIS_MODE_SINGLE:
             st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_SINGLE
         render_single_strategy_workspace()
-
-    if st.session_state.backtest_analysis_mode == BACKTEST_ANALYSIS_MODE_COMPARE:
-        render_backtest_analysis_decision_surface()

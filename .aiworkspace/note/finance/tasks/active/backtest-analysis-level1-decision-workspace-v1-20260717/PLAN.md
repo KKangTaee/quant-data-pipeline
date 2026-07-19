@@ -7348,7 +7348,7 @@ def handoff_current_portfolio_mix(
 - Primary Mix route mounts only `render_backtest_portfolio_mix_workspace()` and no longer mounts `render_compare_portfolio_workspace()` or generic Mix `render_backtest_analysis_decision_surface()`.
 - Legacy page helpers are deleted only after `rg` and boundary tests prove no production/test references. Compatibility helpers may remain unmounted when deletion would expand scope.
 
-- [ ] **Step 1: Write RED runtime/persistence/cutover tests**
+- [x] **Step 1: Write RED runtime/persistence/cutover tests**
 
 Add tests for:
 
@@ -7367,18 +7367,18 @@ Run RED:
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_refactor_boundaries.py tests/test_service_contracts.py -q -k 'portfolio_mix or weighted_portfolio or compare_execution'
 ```
 
-- [ ] **Step 2: Implement atomic component and weighted execution**
+- [x] **Step 2: Implement atomic component and weighted execution**
 
 Project all component payloads first. Run components sequentially in Python, update status by stable component ID, and build the weighted bundle only after all component calls succeed. Preserve old current result as a reference until the new weighted build completes; replace current result atomically on success.
 
-- [ ] **Step 3: Implement saved setup and Level2 source actions**
+- [x] **Step 3: Implement saved setup and Level2 source actions**
 
 - Save a reusable new-schema snapshot with normalized draft, roles, weights, fingerprint and user-facing summary.
 - Restore snapshot into a fresh `draft_id` while preserving component IDs/settings.
 - Handoff only a fresh current weighted result and retain `run_result_id`/fingerprint in the selection-source context.
 - Expose action cards only when the corresponding Python handler is callable and the service Gate permits it.
 
-- [ ] **Step 4: Cut over the primary route and remove duplicate legacy mounts**
+- [x] **Step 4: Cut over the primary route and remove duplicate legacy mounts**
 
 Change the Mix branch in `app/web/backtest_analysis.py` to:
 
@@ -7390,7 +7390,7 @@ if mode == BACKTEST_ANALYSIS_MODE_COMPARE:
 
 Keep Single Strategy behavior unchanged. Confirm through source/boundary tests that legacy component form, saved replay page, raw JSON/path and generic decision mount are absent from the primary Mix DOM.
 
-- [ ] **Step 5: Run GREEN and focused regression**
+- [x] **Step 5: Run GREEN and focused regression**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_refactor_boundaries.py -q
@@ -7400,7 +7400,7 @@ npm run build --prefix app/web/components/backtest_portfolio_mix_workspace/front
 git diff --check
 ```
 
-- [ ] **Step 6: Commit the implementation unit**
+- [x] **Step 6: Commit the implementation unit**
 
 Stage only code/tests/task records and commit:
 

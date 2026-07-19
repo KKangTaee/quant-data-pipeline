@@ -310,4 +310,11 @@ Last Updated: 2026-07-19
 - 신규 saved shelf는 `backtest_portfolio_mix_saved_v1`만 읽으며 legacy JSONL migration은 하지 않는다.
 - Task 47에서 rerun-stable Python mode/draft adapter와 React four-step one-shell, same-read-model fallback,
   schema-driven component editor와 760px/ResizeObserver/accessibility source contract를 구현했다.
-- Task 48 runtime/persistence/cutover, Task 49 Browser QA/docs가 남았다.
+- Task 48에서 모든 component payload를 먼저 검증한 뒤 기존 compare runner를 순차 실행하고, 전체 성공 시에만
+  weighted bundle/current fingerprint를 원자적으로 교체하는 runtime을 연결했다. 실패한 component 상태는
+  해당 card에 남기되 이전 current result와 bundle은 보존한다.
+- saved setup은 기존 store의 `source_context` 안에 `backtest_portfolio_mix_saved_v1` draft/fingerprint/run identity를
+  저장하고 해당 schema만 shelf/restore한다. 저장과 Level2 source handoff는 별도 callable handler와 side effect다.
+- primary Mix branch는 새 `render_backtest_portfolio_mix_workspace()`만 mount하며 legacy compare form, raw saved replay,
+  generic duplicate decision surface를 더 이상 primary DOM에 렌더링하지 않는다.
+- Task 49 fresh 전체 검증, canonical docs/root log 동기화와 closeout이 남았다.

@@ -606,3 +606,20 @@
 - React production build: Vite 5.4.21, `175 modules transformed`; CSS 5.60 kB, JS 331.42 kB.
 - target service/adapter/component-wrapper `py_compile`과 `git diff --check` -> exit 0.
 - `npm install` audit는 moderate 1 / high 1을 보고했고 기존 Vite 계열과 같은 breaking-upgrade debt다.
+
+## 2026-07-19 15차 Task 48 RED -> GREEN And Cutover QA
+
+- RED runtime/cutover: focused Portfolio Mix test에서 missing runtime API/session bundle key/handler/cutover로
+  `6 failed / 16 passed`를 확인했다.
+- GREEN pure/adapter/boundary: `73 passed, 3 warnings`; visual theme regression 보강 뒤 Portfolio Mix focused는
+  `23 passed, 3 warnings`다.
+- service regression: `5 passed, 840 deselected` for portfolio mix / weighted portfolio / compare execution /
+  single settings.
+- React production build: Vite 5.4.21, `175 modules transformed`; CSS 6.43 kB, JS 332.51 kB.
+- target three-module `py_compile`과 `git diff --check`는 exit 0이다.
+- long-running 8505 server는 `runOnSave=false`여서 restart 전 legacy route를 보였다. current source/build로
+  restart한 뒤 primary DOM은 새 four-step React shell 하나만 포함했다.
+- desktop/760px에서 GTAA + Equal Weight 초기 draft, 100% allocation, 실행 전 action 미노출,
+  40/50 편집 시 90% validation과 run CTA 차단을 확인하고 50/50으로 원복했다.
+- Streamlit dark theme가 heading/button을 white로 덮는 regression을 computed style로 확인해 explicit component
+  text color contract를 추가했다. fixed H1은 `rgb(21, 32, 51)`, primary CTA는 white on `rgb(52, 95, 121)`이다.

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react"
+import React, { useMemo, useState } from "react"
 import { Streamlit } from "streamlit-component-lib"
 
 type Option = { value: unknown; label: string }
@@ -57,6 +57,7 @@ export type PortfolioMixWorkspace = {
   result: { status: "not_run" | "current" | "stale"; current: Record<string, unknown> | null; reference: Record<string, unknown> | null }
   execution_action: Action | null
   actions: Action[]
+  feedback?: { notice?: string; error?: { message?: string } | null }
 }
 
 function emit(id: string, payload: Record<string, unknown> = {}) {
@@ -138,6 +139,7 @@ function ComponentEditor({ card, workspace }: { card: ComponentCard; workspace: 
 }
 
 function App({ workspace }: { workspace: PortfolioMixWorkspace }) {
+  const [saveName, setSaveName] = useState("")
   const allItems = workspace.catalog.groups.flatMap((group) => group.items)
   const selected = new Set(workspace.component_cards.map((card) => card.strategy_choice))
   const shared = workspace.draft.shared
@@ -149,7 +151,7 @@ function App({ workspace }: { workspace: PortfolioMixWorkspace }) {
       <section className="mix-step">
         <StepHeading number={1} title="구성 전략과 공통 기준" copy="전략별 preset과 공통 실행 기간을 먼저 고정합니다." />
         <div className="mix-mode" role="group" aria-label="Mix 시작 방식"><button type="button" aria-pressed={workspace.mode === "new"} onClick={() => chooseMode("new")}>새 Mix 만들기</button><button type="button" aria-pressed={workspace.mode === "saved"} onClick={() => chooseMode("saved")}>저장된 Mix 불러오기</button></div>
-        {workspace.mode === "saved" ? <div className="mix-saved-shelf">{workspace.saved_mix.empty ? <p>저장된 Mix가 아직 없습니다. 새 Mix를 만든 뒤 저장할 수 있습니다.</p> : workspace.saved_mix.rows.map((row) => <article key={row.id}><h3>{row.name}</h3><p>{row.component_summary}</p><small>{row.saved_at}</small><button type="button" onClick={() => emit("restore_saved_mix", { saved_mix_id: row.id })}>불러와 편집</button></article>)}</div> : <>
+        {workspace.mode === "saved" ? <div className="mix-saved-shelf">{workspace.saved_mix.empty ? <p>저장된 Mix가 아직 없습니다. 새 Mix를 만든 뒤 저장할 수 있습니다.</p> : workspace.saved_mix.rows.map((row) => <article key={row.id}><h3>{row.name}</h3><p>{row.component_summary}</p><small>{row.saved_at}</small><div><button type="button" onClick={() => emit("restore_saved_mix", { saved_mix_id: row.id })}>불러와 편집</button><button type="button" onClick={() => emit("run_saved_mix", { saved_mix_id: row.id })}>현재 데이터로 실행</button></div></article>)}</div> : <>
           <div className="mix-shared-grid">
             <label>시작일<input type="date" value={String(shared.start ?? "")} onChange={(event) => emit("set_shared_field", { field_id: "start", value: event.target.value })} /></label>
             <label>종료일<input type="date" value={String(shared.end ?? "")} onChange={(event) => emit("set_shared_field", { field_id: "end", value: event.target.value })} /></label>
@@ -173,12 +175,14 @@ function App({ workspace }: { workspace: PortfolioMixWorkspace }) {
         {workspace.execution_action?.enabled && <button type="button" className="mix-primary" onClick={() => emit("run_mix")}>{workspace.execution_action.label}</button>}
         {workspace.result.status === "not_run" && <p className="mix-empty">설정을 완료한 뒤 실행하면 결과 해석이 이곳에 나타납니다.</p>}
         {workspace.result.status === "stale" && <div className="mix-reference"><strong>참고용 이전 결과</strong><p>현재 설정과 다르므로 다시 실행해야 저장하거나 Level2로 넘길 수 있습니다.</p></div>}
-        {workspace.result.status === "current" && <div className="mix-current" aria-live="polite"><strong>현재 설정으로 계산한 Mix 결과입니다.</strong></div>}
+        {workspace.feedback?.error?.message && <p className="mix-error" role="alert">{workspace.feedback.error.message}</p>}
+        {workspace.feedback?.notice && <p className="mix-notice" aria-live="polite">{workspace.feedback.notice}</p>}
+        {workspace.result.status === "current" && <div className="mix-current" aria-live="polite"><strong>현재 설정으로 계산한 Mix 결과입니다.</strong><div className="mix-result-grid">{Object.entries((workspace.result.current?.summary as Record<string, unknown> | undefined) ?? {}).filter(([, value]) => value !== null && value !== undefined).map(([key, value]) => <span key={key}><small>{({ annualized_return: "연환산 수익률", maximum_drawdown: "최대 낙폭", sharpe_ratio: "위험 대비 수익", end_balance: "최종 평가액" } as Record<string, string>)[key] ?? key}</small><b>{typeof value === "number" ? value.toLocaleString(undefined, { maximumFractionDigits: 4 }) : String(value)}</b></span>)}</div></div>}
       </section>
 
       <section className="mix-step">
         <StepHeading number={4} title="저장하고 Level2로 이동" copy="재사용할 설정 저장과 검증 후보 등록을 서로 다른 작업으로 처리합니다." />
-        {workspace.actions.length === 0 ? <p className="mix-empty">현재 설정과 일치하는 실행 결과가 준비되면 가능한 작업이 나타납니다.</p> : <div className="mix-actions">{workspace.actions.map((action) => <button type="button" className="mix-primary" key={action.id} disabled={!action.enabled} onClick={() => emit(action.id)}>{action.label}</button>)}</div>}
+        {workspace.actions.length === 0 ? <p className="mix-empty">현재 설정과 일치하는 실행 결과가 준비되면 가능한 작업이 나타납니다.</p> : <div className="mix-action-board"><label>Mix 이름<input type="text" value={saveName} placeholder="예: 균형형 코어 Mix" onChange={(event) => setSaveName(event.currentTarget.value)} /></label><div className="mix-actions">{workspace.actions.map((action) => <button type="button" className="mix-primary" key={action.id} disabled={!action.enabled} onClick={() => emit(action.id, saveName.trim() ? { name: saveName.trim() } : {})}>{action.label}</button>)}</div></div>}
       </section>
     </main>
   )
