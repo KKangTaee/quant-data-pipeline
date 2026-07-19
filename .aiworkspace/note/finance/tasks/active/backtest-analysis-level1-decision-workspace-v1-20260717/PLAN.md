@@ -7947,3 +7947,145 @@ Record exact RED/GREEN, Browser QA and residual automation gaps without changing
 ```bash
 git commit -m "Portfolio Mix 차트 사용성 QA 정리"
 ```
+
+## 18차 Portfolio Mix Compact Multi-Select Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** GTAA 방어 자산처럼 긴 Portfolio Mix multi-select를 선택 chip, 검색과 240px 내부 스크롤로 압축한다.
+
+**Architecture:** Portfolio Mix React의 UI 전용 helper가 option 수를 기준으로 기존 작은 grid와 compact
+long-list selector를 분기한다. 선택 intent는 기존 `set_component_field` array payload를 그대로 사용하고,
+Python read model·preset·validation·runtime 계산 계약은 변경하지 않는다.
+
+**Tech Stack:** React 18, TypeScript, CSS, Python pytest source/boundary contracts, Vite production build,
+Streamlit component Browser QA.
+
+### Global Constraints
+
+- 현재 worktree `backtest-dev`, branch `codex/backtest-dev`를 그대로 사용한다.
+- options가 12개 이하인 multi-select는 현재 grid를 유지한다.
+- 긴 목록은 선택 chip, case-insensitive 검색, 240px 내부 세로 scroll과 empty state를 제공한다.
+- 선택/해제는 기존 `set_component_field` event와 raw value array만 사용한다.
+- registry, Run History, saved JSONL, `.superpowers/`, generated QA screenshot은 stage/commit하지 않는다.
+
+### Task 55: Long Multi-Select RED -> GREEN (18-1)
+
+**Files:**
+- Modify: `tests/test_backtest_portfolio_mix_workspace.py`
+- Modify: `app/web/components/backtest_portfolio_mix_workspace/frontend/src/App.tsx`
+- Modify: `app/web/components/backtest_portfolio_mix_workspace/frontend/src/styles.css`
+
+**Interfaces:**
+- Consumes: `Field { field_id, label, value, options }`, existing `send(value)` callback.
+- Produces: `MultiSelectFieldControl({ field, send })` with the same `unknown[]` value payload.
+
+- [ ] **Step 1: Write the failing source contract**
+
+```python
+def test_mix_long_multi_select_uses_search_selected_shelf_and_internal_scroll():
+    assert "const MULTI_SELECT_COMPACT_LIMIT = 12" in app_source
+    assert "function MultiSelectFieldControl" in app_source
+    assert "mix-multi-selected-shelf" in app_source
+    assert 'type="search"' in app_source
+    assert "일치하는 옵션이 없습니다." in app_source
+    assert ".mix-multi-select-scroll" in styles_source
+    assert "max-height: 240px" in styles_source
+    assert "overflow-y: auto" in styles_source
+```
+
+- [ ] **Step 2: Run RED**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k 'long_multi_select'
+```
+
+Expected: long-list helper/search/shelf/scroll가 없어 FAIL.
+
+- [ ] **Step 3: Implement the minimal React helper**
+
+```tsx
+const MULTI_SELECT_COMPACT_LIMIT = 12
+
+function MultiSelectFieldControl({ field, send }: {
+  field: Field
+  send: (value: unknown) => void
+}) {
+  const [query, setQuery] = useState("")
+  const options = field.options ?? []
+  const selected = Array.isArray(field.value) ? field.value : []
+  const filtered = options.filter((option) =>
+    `${option.label} ${String(option.value)}`.toLowerCase().includes(query.trim().toLowerCase()),
+  )
+  // options <= 12: existing grid
+  // options > 12: selected shelf + search + scroll group + empty state
+}
+```
+
+`FieldControl`의 `multi_select` branch는 helper를 호출하며 기존 option order와
+`set_component_field` payload를 유지한다.
+
+- [ ] **Step 4: Add compact selector CSS**
+
+```css
+.mix-multi-select-scroll {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-height: 240px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+```
+
+Selected chips는 wrap하고, 520px 이하에서 scroll option grid를 1열로 접는다.
+
+- [ ] **Step 5: Run GREEN and production build**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q
+npm run build --prefix app/web/components/backtest_portfolio_mix_workspace/frontend
+git diff --check
+```
+
+Expected: focused tests와 Vite build가 통과한다.
+
+- [ ] **Step 6: Commit implementation unit**
+
+```bash
+git commit -m "Portfolio Mix 방어 자산 선택 압축"
+```
+
+### Task 56: Actual Browser QA And Closeout (18-2)
+
+**Files:**
+- Modify: active task `PLAN.md`, `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+- Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
+- Generate but do not stage: `backtest-portfolio-mix-defensive-assets-desktop-qa.png`
+- Generate but do not stage: `backtest-portfolio-mix-defensive-assets-760-qa.png`
+
+- [ ] **Step 1: Run actual desktop interaction QA**
+
+Open Portfolio Mix GTAA details. Confirm selected shelf remains visible, search `TLT`, chip removal and result
+selection update the same field without resetting period/trend settings. Confirm scroll container height is 240px.
+
+- [ ] **Step 2: Run 760px responsive QA**
+
+Confirm option list remains internally scrollable, selected chips wrap, no page/component horizontal overflow and
+following settings remain reachable without the former full-list height.
+
+- [ ] **Step 3: Apply fresh verification and protected-path audit**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q
+npm run build --prefix app/web/components/backtest_portfolio_mix_workspace/frontend
+.venv/bin/python -m py_compile app/services/backtest_portfolio_mix_workspace.py app/web/backtest_portfolio_mix_workspace.py
+git diff --check
+git diff --cached --name-only
+```
+
+- [ ] **Step 4: Sync closeout records and commit**
+
+```bash
+git commit -m "Portfolio Mix 방어 자산 선택 QA 정리"
+```
