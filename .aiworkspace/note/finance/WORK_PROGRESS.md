@@ -6658,3 +6658,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - 공식 `QUARTERLY DATA` 다단 머리글과 normalized 호환 형식을 검증하고, actual As-Reported release vintage를 transaction으로 저장한다.
 - S&P 가치평가는 actual 4분기 current TTM, Economic Cycle은 actual 8분기 current/prior TTM YoY를 사용하며 모든 as-of read에 발표 vintage 기준을 적용했다.
 - 현재 공식 최신 파일을 직접 받지 못해 DB 실제 적재는 남아 있다. 상세는 `tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/`를 본다.
+
+## 2026-07-19 - Portfolio Monitoring React 전면 개편 구현 계획
+
+- Portfolio-first Command Center, Context Drawer, direct stock/ETF와 Final Review candidate, integer shares, common-basis KPI의 written design 승인을 완료했다.
+- 전체를 contract/storage -> service -> React -> diagnosis -> macro observation -> calibration/history의 `6차 / 21 task` TDD 계획으로 구체화했다.
+- 현재 구현은 `0/6차`이며 execution mode 선택 뒤 1차 저장 계약부터 시작한다. 상세는 `tasks/active/portfolio-monitoring-react-command-center-v1-20260719/PLAN.md`를 본다.

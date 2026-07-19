@@ -8,3 +8,5 @@
 | 2026-07-19 | Visual companion item-builder comparison | Context Drawer A selected |
 | 2026-07-19 | `git diff --check` before written spec | PASS |
 | 2026-07-19 | Written spec placeholder/consistency/scope/ambiguity self-review | PASS after clarifying virtual-scenario recalculation, active-item limit, and corporate-action cross-check tolerance |
+| 2026-07-19 | Repository schema/component/route/loader/test convention inspection for implementation planning | New service boundary, React package pattern, legacy replay adapter, and DB-only loaders mapped |
+| 2026-07-19 | 6-stage / 21-task detailed plan coverage, placeholder, type-boundary, and `git diff --check` review | PASS; implementation remains 0/6 pending execution-mode selection |

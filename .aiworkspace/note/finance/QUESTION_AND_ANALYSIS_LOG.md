@@ -10057,3 +10057,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Shiller 보간 EPS를 actual로 오인하지 않고, 사용자가 받은 공식 S&P Index Earnings XLSX를 등록해 Economic Cycle이 완료 분기 actual As-Reported를 자동으로 읽어야 함.
 - Analysis result: DB가 비어 있었고 기존 importer는 normalized status 열만 지원했으며 loader는 기준일 이후 release vintage를 막지 않았다. 공식 raw workbook은 `QUARTERLY DATA` 제목과 다단 Operating/As-Reported 머리글을 사용하므로 전용 parser, transactional UPSERT, PIT guard, 8분기 coverage UI를 연결했다.
 - Follow-up: 제품 경로와 parser 구조 검증은 완료했다. 사용자가 직접 받은 최신 공식 XLSX를 등록해 DB 8분기 coverage와 Economic Cycle 실제 TTM 활성화를 확인하는 실제 데이터 단계가 남아 있다.
+
+### 2026-07-19 - Portfolio Monitoring은 React 기반 가상 추적·위험판단 Command Center로 개편한다
+
+- User request: 승인한 Portfolio Monitoring 전면 개편 설계를 실제 구현 계획으로 작성해 달라고 요청함.
+- Interpreted goal: 기존 route는 유지하면서 group lifecycle, direct stock/ETF와 selected strategy, integer shares, group performance, deterministic diagnosis, macro risk observation을 한 React shell에서 수행해야 함.
+- Analysis result: 신규 DB/service boundary와 legacy replay adapter가 적합하며, 확률은 PIT/OOS calibration gate 통과 전 payload와 UI에서 모두 억제해야 한다.
+- Follow-up: `6차 / 21 task` red-green-commit 계획을 active task에 작성했다. 현재 `0/6차`이며 실행 방식 선택 후 1차부터 시작한다.

@@ -1,13 +1,14 @@
 # Portfolio Monitoring React Command Center V1 Status
 
-Status: Written Design Pending User Review
+Status: Detailed Implementation Plan Complete / Execution Mode Pending
 Last Updated: 2026-07-19
 
 ## Current Position
 
 - 전체 roadmap: `0/6차 구현`
 - current milestone: product audit, visual direction, product/data/diagnosis/error design approved in conversation
-- written design: complete and self-reviewed; user review pending
+- written design: approved by user
+- detailed implementation plan: complete and self-reviewed
 - implementation: not started
 
 ## Approved Decisions
@@ -24,6 +25,6 @@ Last Updated: 2026-07-19
 
 ## Next Action
 
-1. user written spec review
-2. approval 후 detailed implementation plan 작성
-3. plan review 뒤 1차 contract/storage implementation 시작
+1. execution mode 선택: subagent-driven 또는 inline
+2. 선택 후 1차 contract/storage implementation 시작
+3. 1차 gate 통과 후 2차 service foundation으로 이동
