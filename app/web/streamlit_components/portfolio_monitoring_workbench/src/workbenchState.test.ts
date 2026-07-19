@@ -4,6 +4,11 @@ import {
   buildCommonBasisBanner,
   buildGroupChartSeries,
   formatMetric,
+  applySourceType,
+  availableFundingModes,
+  createItemDraft,
+  drawerPresentation,
+  validateItemDraft,
   selectActiveGroup,
   selectItem,
 } from "./workbenchState";
@@ -87,5 +92,50 @@ describe("portfolio monitoring workbench state", () => {
   it("labels short-window CAGR in Korean", () => {
     expect(formatMetric(activeGroup.metrics.cagr, "cagr", activeGroup.metrics)).toBe("+191.00% · 17일 연환산");
     expect(formatMetric(activeGroup.metrics.current_value, "currency", activeGroup.metrics)).toBe("$21,000");
+  });
+});
+
+describe("item drawer contract", () => {
+  it("switches direct and selected-strategy drafts without leaking share mode", () => {
+    const direct = createItemDraft("command-1");
+    expect(availableFundingModes(direct.sourceType)).toEqual(["fixed_notional", "fixed_shares"]);
+
+    const strategy = applySourceType({ ...direct, fundingMode: "fixed_shares", shares: "3" }, "selected_strategy");
+    expect(strategy.fundingMode).toBe("fixed_notional");
+    expect(strategy.shares).toBe("");
+    expect(availableFundingModes(strategy.sourceType)).toEqual(["fixed_notional"]);
+  });
+
+  it("accepts integer shares only", () => {
+    const base = {
+      ...createItemDraft("command-2"),
+      selectedSourceRef: "AAPL",
+      selectedKind: "stock" as const,
+      requestedStartDate: "2026-07-20",
+      fundingMode: "fixed_shares" as const,
+    };
+    expect(validateItemDraft({ ...base, shares: "3.5" }, { activeItems: [], capacity: 10, selectedReadiness: "READY" })).toContain("정수");
+    expect(validateItemDraft({ ...base, shares: "0" }, { activeItems: [], capacity: 10, selectedReadiness: "READY" })).toContain("1주");
+    expect(validateItemDraft({ ...base, shares: "3" }, { activeItems: [], capacity: 10, selectedReadiness: "READY" })).toBeNull();
+  });
+
+  it("disables review for missing price, duplicate source, and 10-of-10 capacity", () => {
+    const draft = {
+      ...createItemDraft("command-3"),
+      selectedSourceRef: "AAPL",
+      selectedKind: "stock" as const,
+      requestedStartDate: "2026-07-20",
+      notional: "10000",
+    };
+    expect(validateItemDraft(draft, { activeItems: [], capacity: 10, selectedReadiness: "MISSING_PRICE" })).toContain("가격");
+    expect(validateItemDraft(draft, { activeItems: [{ source_ref: "AAPL", status: "active" }], capacity: 10, selectedReadiness: "READY" })).toContain("이미");
+    expect(validateItemDraft(draft, { activeItems: Array.from({ length: 10 }, (_, index) => ({ source_ref: `S${index}`, status: "active" })), capacity: 10, selectedReadiness: "READY" })).toContain("10개");
+  });
+
+  it("uses a full-width sheet on mobile and preserves the command id", () => {
+    const draft = createItemDraft("stable-command");
+    expect(drawerPresentation(420)).toBe("full_width_sheet");
+    expect(drawerPresentation(760)).toBe("side_drawer");
+    expect(applySourceType(draft, "direct_security").commandId).toBe("stable-command");
   });
 });

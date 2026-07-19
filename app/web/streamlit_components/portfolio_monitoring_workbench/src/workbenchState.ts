@@ -1,5 +1,114 @@
 import type { GroupMetrics, GroupSummary, ItemRow } from "./contracts";
 
+export type MonitoringSourceType = "direct_security" | "selected_strategy";
+export type MonitoringKind = "stock" | "etf" | "strategy";
+export type FundingMode = "fixed_notional" | "fixed_shares";
+
+export type ItemDraft = {
+  commandId: string;
+  sourceType: MonitoringSourceType;
+  selectedSourceRef: string;
+  selectedLabel: string;
+  selectedKind: MonitoringKind | null;
+  requestedStartDate: string;
+  fundingMode: FundingMode;
+  notional: string;
+  shares: string;
+};
+
+export type DraftValidationContext = {
+  activeItems: Array<Pick<ItemRow, "source_ref" | "status">>;
+  capacity: number;
+  selectedReadiness: string | null;
+};
+
+export function createItemDraft(commandId: string): ItemDraft {
+  return {
+    commandId,
+    sourceType: "direct_security",
+    selectedSourceRef: "",
+    selectedLabel: "",
+    selectedKind: null,
+    requestedStartDate: "",
+    fundingMode: "fixed_notional",
+    notional: "10000",
+    shares: "",
+  };
+}
+
+export function applySourceType(draft: ItemDraft, sourceType: MonitoringSourceType): ItemDraft {
+  return {
+    ...draft,
+    sourceType,
+    selectedSourceRef: "",
+    selectedLabel: "",
+    selectedKind: sourceType === "selected_strategy" ? "strategy" : null,
+    fundingMode: sourceType === "selected_strategy" ? "fixed_notional" : draft.fundingMode,
+    shares: sourceType === "selected_strategy" ? "" : draft.shares,
+  };
+}
+
+export function availableFundingModes(sourceType: MonitoringSourceType): FundingMode[] {
+  return sourceType === "selected_strategy"
+    ? ["fixed_notional"]
+    : ["fixed_notional", "fixed_shares"];
+}
+
+export function validateItemDraft(draft: ItemDraft, context: DraftValidationContext): string | null {
+  const activeItems = context.activeItems.filter((item) => item.status !== "ended");
+  if (activeItems.length >= context.capacity) {
+    return `활성 항목은 최대 ${context.capacity}개까지 등록할 수 있습니다.`;
+  }
+  if (!draft.selectedSourceRef || !draft.selectedKind) {
+    return "추적할 종목 또는 전략을 선택하세요.";
+  }
+  if (activeItems.some((item) => item.source_ref.toLocaleUpperCase() === draft.selectedSourceRef.toLocaleUpperCase())) {
+    return "이미 이 포트폴리오에서 추적 중인 항목입니다.";
+  }
+  if (["MISSING_PRICE", "BLOCKED", "UNAVAILABLE"].includes(String(context.selectedReadiness || "").toLocaleUpperCase())) {
+    return "요청일 이후 사용할 수 있는 시작 가격이 없어 등록할 수 없습니다.";
+  }
+  if (!draft.requestedStartDate) {
+    return "추적 시작일을 선택하세요.";
+  }
+  if (draft.sourceType === "selected_strategy" && draft.fundingMode !== "fixed_notional") {
+    return "백테스트 전략은 투자금 방식만 지원합니다.";
+  }
+  if (draft.fundingMode === "fixed_shares") {
+    const shares = Number(draft.shares);
+    if (!Number.isInteger(shares)) {
+      return "수량은 소수점 없이 정수로 입력하세요.";
+    }
+    if (shares < 1) {
+      return "수량은 1주 이상이어야 합니다.";
+    }
+  } else {
+    const notional = Number(draft.notional);
+    if (!Number.isFinite(notional) || notional <= 0) {
+      return "투자금은 0보다 큰 금액이어야 합니다.";
+    }
+  }
+  return null;
+}
+
+export function drawerPresentation(viewportWidth: number) {
+  return viewportWidth <= 520 ? "full_width_sheet" : "side_drawer";
+}
+
+export function buildAddItemPayload(draft: ItemDraft, portfolioGroupId: string) {
+  return {
+    command_id: draft.commandId,
+    portfolio_group_id: portfolioGroupId,
+    source_type: draft.sourceType,
+    source_ref: draft.selectedSourceRef,
+    instrument_kind: draft.selectedKind,
+    requested_start_date: draft.requestedStartDate,
+    funding_mode: draft.fundingMode,
+    input_notional: draft.fundingMode === "fixed_notional" ? Number(draft.notional) : null,
+    input_shares: draft.fundingMode === "fixed_shares" ? Number(draft.shares) : null,
+  };
+}
+
 export type ChartPoint = {
   date: string;
   total: number | null;

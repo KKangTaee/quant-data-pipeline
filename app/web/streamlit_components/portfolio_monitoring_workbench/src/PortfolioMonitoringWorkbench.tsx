@@ -1,13 +1,19 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 import type { ItemRow, PortfolioMonitoringWorkspace } from "./contracts";
 import {
+  applySourceType,
+  availableFundingModes,
+  buildAddItemPayload,
   buildCommonBasisBanner,
   buildGroupChartSeries,
+  createItemDraft,
   formatMetric,
   selectActiveGroup,
   selectItem,
+  validateItemDraft,
 } from "./workbenchState";
+import type { ItemDraft } from "./workbenchState";
 import "./style.css";
 
 function compactDate(value: string | null) {
@@ -23,6 +29,20 @@ function statusLabel(status: string) {
   if (status === "data_review" || status === "PARTIAL") return "확인 필요";
   if (status === "active" || status === "READY") return "추적 중";
   return status;
+}
+
+function newCommandId() {
+  const token = typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `portfolio-monitoring-${token}`;
+}
+
+function todayText() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
 }
 
 function ValueChart({ rows, items }: { rows: Array<Record<string, string | number | null>>; items: ItemRow[] }) {
@@ -89,6 +109,13 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   );
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(serverGroup?.portfolio_group_id ?? null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerStep, setDrawerStep] = useState<1 | 2 | 3>(1);
+  const [catalogQuery, setCatalogQuery] = useState("");
+  const [draft, setDraft] = useState<ItemDraft>(() => createItemDraft(newCommandId()));
+  const [localCommandState, setLocalCommandState] = useState<"idle" | "pending" | "success" | "error">("idle");
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerCloseRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setSelectedGroupId(serverGroup?.portfolio_group_id ?? null);
@@ -96,7 +123,29 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
 
   useEffect(() => {
     Streamlit.setFrameHeight();
-  }, [workspace, selectedGroupId, selectedItemId]);
+  }, [workspace, selectedGroupId, selectedItemId, drawerOpen, drawerStep]);
+
+  const serverCommand = workspace?.commands.find((command) => command.command_id === draft.commandId);
+  useEffect(() => {
+    if (!serverCommand) return;
+    if (["success", "succeeded"].includes(serverCommand.status)) setLocalCommandState("success");
+    if (["error", "failed"].includes(serverCommand.status)) setLocalCommandState("error");
+    if (serverCommand.status === "pending") setLocalCommandState("pending");
+  }, [serverCommand?.status, serverCommand?.command_id]);
+
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+    window.setTimeout(() => addButtonRef.current?.focus(), 0);
+  };
+  useEffect(() => {
+    if (!drawerOpen) return;
+    drawerCloseRef.current?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && localCommandState !== "pending") closeDrawer();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [drawerOpen, localCommandState]);
 
   if (!workspace) {
     return <div className="pm-empty">Portfolio Monitoring workspace를 불러오지 못했습니다.</div>;
@@ -107,6 +156,17 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   const metrics = activeGroup?.metrics;
   const emit = (event: Record<string, unknown>) => {
     Streamlit.setComponentValue({ event: { ...event, nonce: `${Date.now()}-${Math.random()}` } });
+  };
+  const openDrawer = () => {
+    setDraft(createItemDraft(newCommandId()));
+    setCatalogQuery("");
+    setDrawerStep(1);
+    setLocalCommandState("idle");
+    setDrawerOpen(true);
+  };
+  const submitCatalogSearch = (event: FormEvent) => {
+    event.preventDefault();
+    emit({ id: "search_catalog", query: catalogQuery, source_type: draft.sourceType });
   };
   const chooseGroup = (groupId: string) => {
     setSelectedGroupId(groupId);
@@ -123,7 +183,10 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
       <aside className="pm-group-rail" aria-label="포트폴리오 그룹">
         <header>
           <span>PORTFOLIOS</span>
-          <button type="button" aria-label="포트폴리오 추가" onClick={() => emit({ id: "create_group", name: "새 포트폴리오" })}>+</button>
+          <button type="button" aria-label="포트폴리오 추가" onClick={() => {
+            const name = window.prompt("새 포트폴리오 이름을 입력하세요.");
+            if (name?.trim()) emit({ id: "create_group", command_id: newCommandId(), name: name.trim() });
+          }}>+</button>
         </header>
         <div className="pm-group-list">
           {workspace.groups.map((group) => (
@@ -153,8 +216,12 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
             <p>선정한 투자 후보를 하나의 공통 기준일로 추적하고, 다음 판단에 필요한 변화만 확인합니다.</p>
           </div>
           <div className="pm-command-band">
-            <button type="button" className="pm-secondary" onClick={() => selectedGroup && emit({ id: "rename_group", portfolio_group_id: selectedGroup.portfolio_group_id, expected_version: selectedGroup.version })}>이름 변경</button>
-            <button type="button" className="pm-primary" onClick={() => emit({ id: "open_item_drawer" })}>+ 종목 등록</button>
+            <button type="button" className="pm-secondary" onClick={() => {
+              if (!selectedGroup) return;
+              const name = window.prompt("변경할 포트폴리오 이름을 입력하세요.", selectedGroup.name);
+              if (name?.trim() && name.trim() !== selectedGroup.name) emit({ id: "rename_group", command_id: newCommandId(), portfolio_group_id: selectedGroup.portfolio_group_id, name: name.trim(), expected_version: selectedGroup.version });
+            }}>이름 변경</button>
+            <button ref={addButtonRef} type="button" className="pm-primary" onClick={openDrawer}>+ 종목 등록</button>
           </div>
         </header>
 
@@ -218,7 +285,13 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
                       <div><dt>기여 손익</dt><dd>{formatMetric(metrics?.contribution_by_item[selectedItem.monitoring_item_id], "currency", metrics)}</dd></div>
                     </dl>
                     {selectedItem.failure && <p className="pm-failure">{selectedItem.failure}</p>}
-                    <button type="button" className="pm-text-action" onClick={() => emit({ id: "open_item_detail", monitoring_item_id: selectedItem.monitoring_item_id })}>상세 그래프와 근거 보기 →</button>
+                    <div className="pm-detail-actions">
+                      <button type="button" className="pm-text-action" onClick={() => emit({ id: "open_item_detail", monitoring_item_id: selectedItem.monitoring_item_id })}>상세 그래프와 근거 보기 →</button>
+                      {selectedItem.status !== "ended" && <button type="button" className="pm-end-action" onClick={() => {
+                        if (!window.confirm(`${selectedItem.source_ref} 추적을 종료할까요? 종료 후에도 기록과 종료금액은 유지됩니다.`)) return;
+                        emit({ id: "end_item", command_id: newCommandId(), monitoring_item_id: selectedItem.monitoring_item_id, requested_end_date: todayText() });
+                      }}>추적 종료</button>}
+                    </div>
                   </div>
                 ) : <div className="pm-empty-list">왼쪽에서 항목을 선택하세요.</div>}
               </div>
@@ -234,9 +307,84 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
             </details>
           </>
         ) : (
-          <section className="pm-panel pm-empty-state"><h2>포트폴리오를 시작하세요</h2><p>기본 그룹에 미국 주식·ETF 또는 Final Review 통과 전략을 등록할 수 있습니다.</p><button type="button" className="pm-primary" onClick={() => emit({ id: "open_item_drawer" })}>첫 종목 등록</button></section>
+          <section className="pm-panel pm-empty-state"><h2>포트폴리오를 시작하세요</h2><p>기본 그룹에 미국 주식·ETF 또는 Final Review 통과 전략을 등록할 수 있습니다.</p><button ref={addButtonRef} type="button" className="pm-primary" onClick={openDrawer}>첫 종목 등록</button></section>
         )}
       </section>
+
+      {drawerOpen && (
+        <div className="pm-drawer-layer" role="presentation" onMouseDown={(event) => {
+          if (event.currentTarget === event.target && localCommandState !== "pending") closeDrawer();
+        }}>
+          <section className="pm-drawer" role="dialog" aria-modal="true" aria-labelledby="pm-drawer-title">
+            <header className="pm-drawer-header">
+              <div><span>ADD MONITORING ITEM</span><h2 id="pm-drawer-title">종목·전략 등록</h2></div>
+              <button ref={drawerCloseRef} type="button" aria-label="등록 창 닫기" onClick={closeDrawer} disabled={localCommandState === "pending"}>×</button>
+            </header>
+            <div className="pm-stepper" aria-label="등록 단계">
+              {[1, 2, 3].map((step) => <span key={step} data-step={step} className={drawerStep >= step ? "is-active" : ""}><b>{step === 1 ? "대상" : step === 2 ? "투자 설정" : "확인"}</b></span>)}
+            </div>
+
+            {drawerStep === 1 && (
+              <div className="pm-drawer-body">
+                <div className="pm-source-switch">
+                  <button type="button" className={draft.sourceType === "direct_security" ? "is-active" : ""} onClick={() => setDraft((current) => applySourceType(current, "direct_security"))}>미국 주식·ETF<small>DB에 저장된 상장 종목</small></button>
+                  <button type="button" className={draft.sourceType === "selected_strategy" ? "is-active" : ""} onClick={() => setDraft((current) => applySourceType(current, "selected_strategy"))}>백테스트 전략<small>Final Review 통과 후보</small></button>
+                </div>
+                <form className="pm-catalog-search" onSubmit={submitCatalogSearch}>
+                  <label htmlFor="pm-catalog-query">종목명·티커 또는 전략명</label>
+                  <div><input id="pm-catalog-query" value={catalogQuery} onChange={(event) => setCatalogQuery(event.target.value)} placeholder={draft.sourceType === "direct_security" ? "예: AAPL, Gold ETF" : "예: GTAA, Risk Parity"} /><button type="submit">검색</button></div>
+                </form>
+                <div className="pm-catalog-list">
+                  {workspace.catalog.items.filter((item) => item.source_type === draft.sourceType).map((item) => (
+                    <button type="button" key={`${item.source_type}-${item.source_ref}`} className={draft.selectedSourceRef === item.source_ref ? "is-selected" : ""} onClick={() => setDraft((current) => ({ ...current, selectedSourceRef: item.source_ref, selectedLabel: item.label, selectedKind: item.instrument_kind }))}>
+                      <div><strong>{item.source_ref}</strong><span>{item.label}</span></div><small>{item.instrument_kind.toUpperCase()} · {item.readiness}</small>
+                    </button>
+                  ))}
+                  {!workspace.catalog.items.some((item) => item.source_type === draft.sourceType) && <p>검색어를 입력해 추적 대상을 찾으세요.</p>}
+                </div>
+              </div>
+            )}
+
+            {drawerStep === 2 && (
+              <div className="pm-drawer-body">
+                <div className="pm-selected-source"><span>선택 대상</span><strong>{draft.selectedSourceRef}</strong><small>{draft.selectedLabel}</small></div>
+                <label className="pm-field">추적 시작일<input type="date" value={draft.requestedStartDate} onChange={(event) => setDraft((current) => ({ ...current, requestedStartDate: event.target.value }))} /></label>
+                <fieldset className="pm-funding-field"><legend>투자 방식</legend><div>{availableFundingModes(draft.sourceType).map((mode) => <button type="button" key={mode} className={draft.fundingMode === mode ? "is-active" : ""} onClick={() => setDraft((current) => ({ ...current, fundingMode: mode }))}>{mode === "fixed_notional" ? "투자금" : "보유 수량"}<small>{mode === "fixed_notional" ? "예: $10,000" : "정수 주식만"}</small></button>)}</div></fieldset>
+                {draft.fundingMode === "fixed_notional" ? <label className="pm-field">투자금 (USD)<input type="number" min="1" step="1" value={draft.notional} onChange={(event) => setDraft((current) => ({ ...current, notional: event.target.value }))} /></label> : <label className="pm-field">주식 수량<input type="number" min="1" step="1" inputMode="numeric" value={draft.shares} onChange={(event) => setDraft((current) => ({ ...current, shares: event.target.value }))} /><small>소수점 없이 1주 이상 입력하세요.</small></label>}
+                <div className="pm-entry-note"><strong>시작 가격 확인</strong><p>요청일이 휴장일이면 이후 첫 거래일의 저장 종가를 사용합니다. 이후 가격이 없으면 등록되지 않습니다.</p></div>
+              </div>
+            )}
+
+            {drawerStep === 3 && (() => {
+              const catalogItem = workspace.catalog.items.find((item) => item.source_type === draft.sourceType && item.source_ref === draft.selectedSourceRef);
+              const validation = validateItemDraft(draft, { activeItems: activeGroup?.item_rows ?? [], capacity: 10, selectedReadiness: catalogItem?.readiness ?? null });
+              const effectiveDate = String(catalogItem?.metadata?.effective_start_date ?? "등록 시 확정");
+              return <div className="pm-drawer-body pm-review-body">
+                <div className="pm-capacity"><span>활성 항목</span><strong>{activeGroup?.active_item_count ?? 0}/10</strong></div>
+                <dl>
+                  <div><dt>추적 대상</dt><dd>{draft.selectedSourceRef} · {draft.selectedKind}</dd></div>
+                  <div><dt>요청 시작일</dt><dd>{draft.requestedStartDate || "-"}</dd></div>
+                  <div><dt>예상 적용일</dt><dd>{effectiveDate}</dd></div>
+                  <div><dt>투자 방식</dt><dd>{draft.fundingMode === "fixed_notional" ? `${formatMetric(Number(draft.notional), "currency")} 투자` : `${draft.shares || "-"}주 (정수)`}</dd></div>
+                </dl>
+                {validation && <p className="pm-review-error">{validation}</p>}
+                {localCommandState !== "idle" && <p className={`pm-command-state is-${localCommandState}`}>{serverCommand?.message || (localCommandState === "pending" ? "등록 요청을 처리하고 있습니다." : localCommandState === "success" ? "등록이 완료됐습니다." : "등록 요청을 확인해 주세요.")}</p>}
+                <button type="button" className="pm-submit-item" disabled={Boolean(validation) || localCommandState === "pending" || localCommandState === "success"} onClick={() => {
+                  if (validation || !selectedGroup || localCommandState !== "idle" && localCommandState !== "error") return;
+                  setLocalCommandState("pending");
+                  emit({ id: "add_item", ...buildAddItemPayload(draft, selectedGroup.portfolio_group_id) });
+                }}>{localCommandState === "pending" ? "등록 중…" : localCommandState === "success" ? "등록 완료" : "이 설정으로 등록"}</button>
+              </div>;
+            })()}
+
+            <footer className="pm-drawer-footer">
+              {drawerStep > 1 ? <button type="button" className="pm-secondary" disabled={localCommandState === "pending"} onClick={() => setDrawerStep((current) => Math.max(1, current - 1) as 1 | 2 | 3)}>이전</button> : <span />}
+              {drawerStep < 3 && <button type="button" className="pm-primary" disabled={drawerStep === 1 && !draft.selectedSourceRef} onClick={() => setDrawerStep((current) => Math.min(3, current + 1) as 1 | 2 | 3)}>다음</button>}
+              {drawerStep === 3 && localCommandState === "success" && <button type="button" className="pm-primary" onClick={closeDrawer}>완료</button>}
+            </footer>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

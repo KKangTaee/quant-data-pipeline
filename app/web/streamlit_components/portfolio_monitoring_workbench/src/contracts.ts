@@ -59,9 +59,16 @@ export type PortfolioMonitoringWorkspace = {
   groups: GroupSummary[];
   active_group: GroupValueResult | null;
   catalog: { query: string; items: CatalogItem[] };
-  commands: Array<Record<string, unknown>>;
+  commands: CommandProjection[];
   method: Record<string, string>;
   boundaries: Record<string, boolean>;
+};
+
+export type CommandProjection = {
+  command_id: string;
+  status: "idle" | "pending" | "success" | "error" | "succeeded" | "failed" | string;
+  message?: string | null;
+  target_id?: string | null;
 };
 
 export type PortfolioMonitoringEvent =

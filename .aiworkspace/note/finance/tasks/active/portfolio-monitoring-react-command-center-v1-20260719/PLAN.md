@@ -344,12 +344,12 @@ return value if isinstance(value, dict) else None
 emit({ type: "add_item", command_id: draft.commandId, payload: buildAddItemPayload(draft) });
 ```
 
-- [ ] Write failing tests for direct/strategy switch, amount/share mode visibility, integer-share client validation, selected-strategy notional-only behavior, missing-price disabled review, duplicate/max-10 disabled state, and mobile full-width sheet state.
-- [ ] Run `cd app/web/streamlit_components/portfolio_monitoring_workbench && npm test -- --run` and confirm failure.
-- [ ] Implement drawer with server-projected readiness/messages, requested/effective date display, `10/10` capacity, confirmation for tracking end, keyboard close/focus return, and one emitted event per submit.
-- [ ] Ensure client command IDs remain stable across Streamlit rerun retry until a server result is received.
-- [ ] Run `npm test -- --run`, `npm run typecheck`, `npm run build`, and `git diff --check`.
-- [ ] Commit as `포트폴리오 종목 등록 드로어 구현`.
+- [x] Write failing tests for direct/strategy switch, amount/share mode visibility, integer-share client validation, selected-strategy notional-only behavior, missing-price disabled review, duplicate/max-10 disabled state, and mobile full-width sheet state.
+- [x] Run `cd app/web/streamlit_components/portfolio_monitoring_workbench && npm test -- --run` and confirm failure.
+- [x] Implement drawer with server-projected readiness/messages, requested/effective date display, `10/10` capacity, confirmation for tracking end, keyboard close/focus return, and one emitted event per submit.
+- [x] Ensure client command IDs remain stable across Streamlit rerun retry until a server result is received.
+- [x] Run `npm test -- --run`, `npm run typecheck`, `npm run build`, and `git diff --check`.
+- [x] Commit as `포트폴리오 종목 등록 드로어 구현`.
 
 ### Task 11: Streamlit page를 thin event bridge로 cut over하고 Operations summary를 맞춘다
 

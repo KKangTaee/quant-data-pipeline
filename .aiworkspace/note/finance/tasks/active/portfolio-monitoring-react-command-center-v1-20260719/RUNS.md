@@ -32,3 +32,5 @@
 | 2026-07-19 | 3차 Task 8 bridge/package verification | 4 bridge and 10 bridge+read-model unittests PASS; npm audit 0 vulnerabilities; TypeScript and Vite production build PASS |
 | 2026-07-19 | 3차 Task 9 command-center shell RED / gap fix | Missing state module reproduced; state tests caught JavaScript `Number(null) -> 0` chart-gap corruption before UI build |
 | 2026-07-19 | 3차 Task 9 shell verification | 5 Vitest, TypeScript, Vite production build, and 10 Python read-model/component unittests PASS; 1440/760/420 responsive CSS contract added, Browser QA deferred to page cutover |
+| 2026-07-19 | 3차 Task 10 drawer RED | 4 expected missing-function failures covering source/funding switch, integer shares, price/duplicate/capacity blockers, and mobile sheet state |
+| 2026-07-19 | 3차 Task 10 drawer verification | 9 Vitest, TypeScript, and Vite production build PASS; stable command id, pending guard, end confirmation, keyboard close/focus return, and 420px full-width sheet implemented |
