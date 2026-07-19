@@ -12,3 +12,8 @@
 - 독립 리뷰에서 발견한 해석 불일치를 수정했다. AAII 방향·세 응답 결측은 모두 confidence `Review`에 반영하고, CNN 차트 색대역은 서비스 판정의 `25 / 45 / 55 / 75` 경계와 맞춘다.
 - CNN·AAII source card에 각 latest/previous 기준일을 표시해 일간 CNN과 주간 AAII가 같은 기준일처럼 보이지 않게 한다.
 - 이력 그래프는 서로 다른 시점이 두 개 이상일 때만 그리며 AAII 응답의 Bullish/Neutral/Bearish 세 row를 세 개 시점으로 세지 않는다.
+- 사용자 시각 선택은 Market Context·Futures Macro와 같은 서사형 Hero, warm brown CNN, teal AAII, 기간 card 구조로 확정됐다.
+- 최종 graph 구조는 CNN 고정 panel과 AAII 전환 panel의 2개다. AAII panel 기본값은 `AAII 응답`이며 `AAII Spread`로 전환한다.
+- graph curve는 사용하지 않고 실제 관측일 간격의 raw point를 직선으로 연결한다. 중간 날짜 값을 새 관측으로 생성하지 않는다.
+- source box 상단의 colored rounded rail은 기능이 없는 장식으로 판단해 제거한다. 출처 구분은 label, graph 색, badge에 남긴다.
+- 1W·1M 확률 mockup은 layout 검토용이며 production 데이터가 아니다. 검증된 estimator가 없으면 card는 `UNAVAILABLE`이고 확률을 숨긴다.

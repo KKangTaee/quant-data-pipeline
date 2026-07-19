@@ -19,11 +19,22 @@
 - CNN, AAII 응답, AAII Spread 그래프 분리
 - focused service/payload/frontend regression과 Browser QA
 
+## 승인된 시각 개편 follow-up
+
+- Market Context·Futures Macro와 같은 서사형 Hero와 section hierarchy
+- 동일한 너비·밀도의 CNN·AAII current evidence box
+- source box 상단 colored rounded rail 제거
+- CNN graph 고정 + `AAII 응답`/`AAII Spread` 전환 graph로 동시에 두 panel만 표시
+- 원본 관측점의 실제 날짜 간격과 직선 연결, raw value hover
+- 1W·1M 기간 card UI와 검증 상태 계약. 실제 확률 산출기는 장기 이력·point-in-time 검증 이후 별도 차수
+
 ## 중단 조건
 
 - 신규 데이터, DB schema, ingestion job, 확률 예측으로 범위가 확대되면 구현을 멈추고 별도 차수로 재합의한다.
 - 한 source 결측 상태에서도 근거 없는 종합 판정을 만들지 않는다.
 
 Authoritative spec: `docs/superpowers/specs/2026-07-19-overview-sentiment-cnn-aaii-v1-design.md`
+
+Visual redesign spec: `docs/superpowers/specs/2026-07-19-overview-sentiment-visual-redesign-design.md`
 
 Implementation plan: `docs/superpowers/plans/2026-07-19-overview-sentiment-cnn-aaii-v1.md`

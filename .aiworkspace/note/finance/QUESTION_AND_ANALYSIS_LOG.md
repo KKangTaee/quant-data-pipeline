@@ -18,7 +18,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
   - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~14차를 완료했고 승인된 15차 Portfolio Mix React one-shell 설계의 구현 계획과 개발을 이어간다.
-  - Latest completed task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `1/4차`로 CNN 시장 행동과 AAII 개인투자자 인식을 합성하지 않는 두 축, 교차 판정, source별 근거와 분리 그래프를 완료했다.
+  - Latest completed task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `1/4차` 기능·QA를 완료했고, CNN 고정 + AAII 전환의 두 graph와 상단 장식선 제거를 포함한 후속 시각 개편 spec을 사용자 검토 checkpoint에 두었다.
   - Recent completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro의 현재 관측과 5D/20D 미래 검증 상태를 분리하고, 10년 compact materialization·DB-only 첫 진입·React 방법론/계산 추적까지 마무리했다. 현재는 관측 완료, 미래 둘은 PROVISIONAL이다.
   - Recent completed Institutional Portfolios task is [institutional-13f-openfigi-mapping-v1-20260718](./tasks/active/institutional-13f-openfigi-mapping-v1-20260718/STATUS.md). 무료 OpenFIGI current resolution과 curated-manager actual backfill을 전체 roadmap `4/4`로 완료했다.
   - Previous completed Institutional Portfolios task is [institutional-portfolios-context-first-redesign-v1-20260718](./tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md). 선택 기관 맥락, 전체 보유 탐색, 직접 종목 검색과 coverage / comparison 정확성을 전체 roadmap `4/4`로 완료했다.
@@ -10079,3 +10079,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: CNN 구성요소를 별도 표처럼 반복하거나 AAII를 보조 데이터로 낮추지 않고, 시장 행동과 개인투자자 설문이 같은지 엇갈리는지 빠르게 판단한 뒤 근거를 검산하게 한다.
 - Analysis result: CNN은 시장 행동, AAII는 Bull-Bear Spread 기준 투자자 인식으로 독립 판정하고 합성점수를 만들지 않는다. CNN 구성요소는 내부 근거이며 CNN 0~100, AAII 응답 %, AAII spread pp는 source/단위별 그래프로 분리한다.
 - Follow-up: 전체 잠정 roadmap `1/4차` 구현·QA와 UI 선택 checkpoint를 완료했다. 2차 장기 이력·발표 당시 값 품질, 3차 독립 데이터 후보, 4차 PIT 검증 뒤 1W/1M 전망 제공 여부는 별도 차수다.
+
+### 2026-07-19 - Overview 심리는 두 graph와 장식 없는 source box로 읽는다
+
+- User request: CNN graph는 고정하고 AAII 응답/Spread를 한 tab에서 전환해 화면에 두 graph만 보이게 하며, 꺾임은 곡선이 아닌 직선으로 표시하고 source box 상단 rounded rail을 제거해 달라고 요청함.
+- Interpreted goal: 출처의 균형은 유지하되 장식과 중복 panel을 줄이고 실제 관측의 전환 시점을 더 정확히 읽게 한다.
+- Analysis result: Hero → current evidence → CNN 고정 + AAII 전환 graph → 1W/1M card → 관찰 조건 → disclosure 구조를 확정했다. 출처 구분은 label·graph 색·badge가 담당한다.
+- Follow-up: visual redesign spec을 작성했다. 사용자 문서 검토 후 상세 구현 계획으로 전환하며 검증된 estimator가 없으면 전망 확률을 만들지 않는다.

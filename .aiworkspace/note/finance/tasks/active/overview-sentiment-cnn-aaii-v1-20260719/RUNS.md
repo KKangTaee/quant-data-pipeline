@@ -16,3 +16,6 @@
 - QA screenshot `overview-sentiment-cnn-aaii-v1-qa.png`는 generated artifact로 남기고 commit 대상에서 제외했다.
 - 독립 코드 리뷰에서 Critical 0, Important 4, Minor 3을 받았다. Important 4건과 code Minor 2건을 모두 보완했고 문서 미정렬 Minor는 closeout sync로 해소했다.
 - 새 regression은 AAII spread/response 결측 confidence, source별 기준일, CNN 45~55 중립 band, 단일 시점 그래프 숨김, Spread 0pp 실선, tab/panel ARIA 연결을 고정한다.
+- 시각 companion에서 Hero, 균형 source box, 기간 card, CNN 고정 + AAII tab graph 구조를 반복 비교했다.
+- Browser에서 `AAII 응답` 기본 선택과 `AAII Spread` click 전환, 동시에 두 graph panel만 표시되는 것을 확인했다.
+- graph companion은 spline 없이 polyline 직선 연결로 확인했다. source box 상단 rounded rail 제거는 최종 승인 spec에 반영했다.

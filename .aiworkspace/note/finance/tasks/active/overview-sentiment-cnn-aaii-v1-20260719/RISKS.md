@@ -8,3 +8,4 @@
 - 2차에서 발표 당시 값과 수정 이력, 장기 coverage가 충분히 축적되기 전에는 최근 percentile을 역사적 극단값처럼 해석하지 않는다.
 - 1주·1개월 전망은 별도 point-in-time feature/target 정의와 chronological out-of-sample 검증 없이는 추가하지 않는다.
 - AAII 표본과 CNN 산출 방법의 source-side 변경 가능성은 freshness / raw evidence와 후속 품질 점검에서 계속 확인한다.
+- 시각 companion의 1W·1M 확률은 production 근거로 재사용하지 않는다. estimator와 validation evidence가 없으면 UI는 반드시 `UNAVAILABLE`을 표시하고 확률 field를 렌더링하지 않는다.
