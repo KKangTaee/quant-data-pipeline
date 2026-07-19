@@ -8089,3 +8089,172 @@ git diff --cached --name-only
 ```bash
 git commit -m "Portfolio Mix 방어 자산 선택 QA 정리"
 ```
+
+## 19차 Portfolio Mix Monthly Return Y-Axis Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task in the current worktree. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** 월별 수익률 chart에 실제 막대 scale과 일치하는 동적 대칭 percent Y축을 추가한다.
+
+**Architecture:** `PortfolioMixResult.tsx`의 presentation helper가 actual monthly return의 최대 절댓값을 nice symmetric scale로 올림하고 desktop/compact tick model을 만든다. SVG bar와 guide가 같은 maximum을 사용하며 CSS는 760px label visibility만 소유한다. Python evidence와 weighted calculation은 변경하지 않는다.
+
+**Tech Stack:** React 18, TypeScript, dependency-free SVG, CSS media query, pytest source-contract TDD, Vite.
+
+### Global Constraints
+
+- desktop Y label은 5개, 760px은 3개다.
+- 0%를 중심으로 positive/negative range는 같은 절댓값을 사용한다.
+- axis maximum과 bar height의 분모는 반드시 같다.
+- 전부 0인 row는 최소 `±1%` range를 사용한다.
+- monthly calculation, Python evidence, hover/focus data, save/Level2 handoff는 변경하지 않는다.
+- 신규 chart dependency, range control, zoom/pan은 추가하지 않는다.
+- protected registry/run history/saved JSONL, `.superpowers/`, QA artifact는 stage하지 않는다.
+
+---
+
+### Task 57: Symmetric Percent Axis RED -> GREEN (19-1)
+
+**Files:**
+- Modify: `tests/test_backtest_portfolio_mix_workspace.py`
+- Modify: `app/web/components/backtest_portfolio_mix_workspace/frontend/src/PortfolioMixResult.tsx`
+- Modify: `app/web/components/backtest_portfolio_mix_workspace/frontend/src/styles.css`
+
+**Interfaces:**
+- Consumes: `monthly_returns.chart_rows[].return_value`, existing `PLOT_TOP`, `PLOT_BOTTOM`, `CHART_HEIGHT`.
+- Produces: `niceMonthlyReturnAxis(maximumAbsolute: number): { maximum: number; desktopValues: number[]; compactValues: number[] }`, `formatAxisPercent(value: number): string`.
+
+- [ ] **Step 1: Write the failing source contract**
+
+```python
+def test_mix_monthly_return_chart_uses_symmetric_percent_y_axis():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/PortfolioMixResult.tsx").read_text()
+    styles = (root / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/styles.css").read_text()
+
+    assert "function niceMonthlyReturnAxis" in source
+    assert "function formatAxisPercent" in source
+    assert "desktopValues" in source
+    assert "compactValues" in source
+    assert "monthlyAxis.maximum" in source
+    assert "Math.abs(value) / monthlyAxis.maximum" in source
+    assert "mix-chart-y-grid-line" in source
+    assert "mix-chart-y-axis-label" in source
+    assert ".mix-chart-y-axis-label.is-compact" in styles
+    assert ".mix-chart-y-grid-line.is-compact" in styles
+```
+
+- [ ] **Step 2: Run RED**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k 'symmetric_percent_y_axis'
+```
+
+Expected: nice axis helper와 Y-axis SVG/CSS contract가 없어 FAIL.
+
+- [ ] **Step 3: Implement the nice symmetric scale helper**
+
+```tsx
+function niceMonthlyReturnAxis(maximumAbsolute: number) {
+  const rawPercent = Math.max(maximumAbsolute * 100, 1)
+  const roughHalfStep = rawPercent / 2
+  const magnitude = 10 ** Math.floor(Math.log10(roughHalfStep))
+  const normalized = roughHalfStep / magnitude
+  const niceNormalized = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10
+  const maximum = (niceNormalized * magnitude * 2) / 100
+  return {
+    maximum,
+    desktopValues: [maximum, maximum / 2, 0, -maximum / 2, -maximum],
+    compactValues: [maximum, 0, -maximum],
+  }
+}
+
+function formatAxisPercent(value: number) {
+  if (value === 0) return "0%"
+  const percent = value * 100
+  const digits = Math.abs(percent) < 1 ? 1 : 0
+  return `${percent > 0 ? "+" : ""}${percent.toFixed(digits).replace(/\\.0$/, "")}%`
+}
+```
+
+- [ ] **Step 4: Render axis guide/labels and use the same maximum for bars**
+
+```tsx
+const monthlyAxis = niceMonthlyReturnAxis(maximumAbsolute)
+const halfPlotHeight = plotHeight / 2 - 8
+const yForReturn = (value: number) => baseline - (value / monthlyAxis.maximum) * halfPlotHeight
+
+const renderAxisTicks = (values: number[], mode: "desktop" | "compact") => values.map((value) => {
+  const y = yForReturn(value)
+  return <g key={`${mode}-${value}`}>
+    {value !== 0 && <line className={`mix-chart-y-grid-line is-${mode}`} x1={PLOT_LEFT} x2={CHART_WIDTH - PLOT_RIGHT} y1={y} y2={y} />}
+    <text className={`mix-chart-y-axis-label is-${mode}`} x={8} y={y + 4}>{formatAxisPercent(value)}</text>
+  </g>
+})
+```
+
+Bar height는 `Math.abs(value) / monthlyAxis.maximum * halfPlotHeight`를 사용한다. 기존 zero line, date tick,
+crosshair와 tooltip row는 유지한다.
+
+- [ ] **Step 5: Add desktop/760px CSS visibility**
+
+```css
+.mix-chart-y-grid-line { stroke: #e3ece7; stroke-width: 1; }
+.mix-chart-y-axis-label { fill: #71877d; font-size: 10px; text-anchor: start; }
+.mix-chart-y-axis-label.is-compact, .mix-chart-y-grid-line.is-compact { display: none; }
+
+@media (max-width: 760px) {
+  .mix-chart-y-axis-label.is-desktop, .mix-chart-y-grid-line.is-desktop { display: none; }
+  .mix-chart-y-axis-label.is-compact, .mix-chart-y-grid-line.is-compact { display: block; }
+}
+```
+
+- [ ] **Step 6: Run GREEN and production build**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q
+npm run build --prefix app/web/components/backtest_portfolio_mix_workspace/frontend
+git diff --check
+```
+
+Expected: focused tests와 Vite production build가 통과한다.
+
+- [ ] **Step 7: Commit implementation unit**
+
+```bash
+git commit -m "Portfolio Mix 월별 수익률 Y축 추가"
+```
+
+### Task 58: Actual Browser QA And Closeout (19-2)
+
+**Files:**
+- Modify: active task `PLAN.md`, `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
+- Generate but do not stage: `backtest-portfolio-mix-monthly-y-axis-desktop-qa.png`
+- Generate but do not stage: `backtest-portfolio-mix-monthly-y-axis-760-qa.png`
+
+- [ ] **Step 1: Run actual desktop chart QA**
+
+Open a current Portfolio Mix result. Confirm five visible percent Y labels, symmetric values, zero-line emphasis,
+bar top matching the same scale, existing first/middle/last month labels and hover tooltip values.
+
+- [ ] **Step 2: Run 760px responsive QA**
+
+Confirm only three visible percent Y labels, date labels and bars remain readable, and document/component horizontal
+overflow is zero.
+
+- [ ] **Step 3: Run fresh verification and protected-path audit**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q
+npm run build --prefix app/web/components/backtest_portfolio_mix_workspace/frontend
+.venv/bin/python -m py_compile app/services/backtest_portfolio_mix_workspace.py app/web/backtest_portfolio_mix_workspace.py
+git diff --check
+git diff --cached --name-only
+```
+
+- [ ] **Step 4: Sync closeout records and commit**
+
+```bash
+git commit -m "Portfolio Mix 월별 수익률 Y축 QA 정리"
+```
