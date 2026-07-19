@@ -2816,3 +2816,55 @@ weighted bundle
 - GREEN focused test와 React production build를 통과해야 한다.
 - actual desktop QA에서 plot 첫/중간/마지막 커서가 같은 위치의 point/date를 선택하고 월별 chart가
   전체 폭을 사용해야 한다. 760px overflow와 ResizeObserver height도 유지한다.
+
+## 18차 Portfolio Mix Compact Multi-Select
+
+### 이걸 하는 이유?
+
+- Portfolio Mix의 `FieldControl`은 `multi_select` 옵션 수와 관계없이 모든 버튼을 일반 grid로 펼친다.
+  GTAA 방어 자산처럼 20개가 넘는 목록은 세부 설정 높이를 대부분 차지해 다음 설정과 실행 흐름을
+  화면 밖으로 밀어낸다.
+- 선택 상태는 목록 안의 check 표시로만 확인할 수 있어 스크롤한 뒤에는 현재 선택한 자산을 한눈에
+  파악하거나 해제하기 어렵다.
+
+### 승인된 사용자 흐름
+
+1. 옵션이 적은 multi-select는 기존 button grid를 유지한다.
+2. 긴 multi-select는 상단에 `선택 N개`와 선택된 자산 chip을 항상 표시한다.
+3. chip의 `×`를 누르면 해당 자산만 즉시 해제한다.
+4. 검색창은 option label과 raw value를 대소문자 구분 없이 필터링한다.
+5. 검색 결과는 최대 높이 `240px`의 내부 스크롤 영역에서 선택한다. 목록 때문에 설정 card 자체가
+   끝없이 길어지지 않는다.
+6. 검색 결과가 없으면 빈 grid 대신 `일치하는 옵션이 없습니다.`를 표시한다.
+
+### Presentation And Intent Contract
+
+- long-list 기준은 Portfolio Mix React의 presentation constant로 둔다. Python read model과 field schema에
+  `compact` 같은 UI 전용 flag를 추가하지 않는다.
+- 선택/해제 intent는 기존 `set_component_field`와 field value array를 그대로 사용한다. Python이 preset,
+  validation, execution payload와 최종 값의 source of truth를 계속 소유한다.
+- selected chip은 현재 검색어와 무관하게 항상 보인다. 사용자가 검색을 바꿔도 선택 상태를 잃거나
+  숨기지 않는다.
+- scroll option button은 기존 `role="checkbox"`와 `aria-checked`를 유지한다. 검색 input, selected shelf,
+  option group과 empty state에 명시적 접근성 label을 제공한다.
+
+### Responsive Layout
+
+- desktop과 component 2-column card 안에서는 option을 2열로 표시한다.
+- `max-height: 240px; overflow-y: auto`는 viewport와 관계없이 유지한다.
+- 520px 이하에서는 option을 1열로 접고 chip shelf는 자연스럽게 줄바꿈한다.
+- page/component horizontal overflow는 만들지 않는다.
+
+### Verification Contract
+
+- RED source contract는 long-list threshold, selected shelf, search input, scroll results와 empty state가 없어
+  실패해야 한다.
+- GREEN focused Portfolio Mix UI/boundary tests와 React production build를 통과해야 한다.
+- Browser QA는 GTAA 방어 자산에서 selected chip 해제, 검색, 결과 선택, 240px 내부 scroll, desktop/760px
+  no-overflow와 다른 field 값 보존을 확인한다.
+
+### Out Of Scope
+
+- GTAA 방어 자산 option 목록, preset 기본값, runtime validation 또는 전략 계산 변경
+- virtualized list와 외부 UI dependency 추가
+- Single Strategy 컴포넌트의 기존 compact multi-select 재설계
