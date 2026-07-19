@@ -263,7 +263,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - generic company IR official parser는 아직 없다. 공식 source가 필요한 ticker는 후속 symbol-specific parser나 manual verification이 필요하다.
 - `raw_payload_json`은 UI 표시용 source of truth가 아니라 diagnostics와 후속 collector 개선을 위한 compact evidence다.
 
-## `institutional_13f_manager`, `institutional_13f_filing`, `institutional_13f_holding`, `institutional_13f_cusip_symbol_map`, `institutional_13f_manager_watchlist`, `institutional_13f_refresh_status`
+## `institutional_13f_manager`, `institutional_13f_filing`, `institutional_13f_holding`, `institutional_13f_cusip_symbol_map`, `institutional_13f_identifier_resolution`, `institutional_13f_manager_watchlist`, `institutional_13f_refresh_status`
 
 역할:
 
@@ -272,6 +272,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - `institutional_13f_filing`은 accession, report period, filing date, amendment flag, source data set, source link를 저장한다.
 - `institutional_13f_holding`은 13F information table row를 저장한다.
 - `institutional_13f_cusip_symbol_map`은 CUSIP 기반 display symbol 보조 mapping을 저장한다. 완전한 security master가 아니므로 service read model은 ambiguous mapping을 차트 / 가격 성과용 ticker로 쓰지 않는다.
+- `institutional_13f_identifier_resolution`은 `(identifier_value, source)`당 OpenFIGI v3 current 판정 하나를 저장한다. `resolution_status`는 mapped / ambiguous / unmapped, `last_attempt_status`는 success / error를 뜻하며 `symbol`, provider name, composite FIGI, compact candidates, source reference와 시각을 함께 보존한다.
 - `institutional_13f_manager_watchlist`는 Berkshire Hathaway, Pershing Square, Appaloosa, Baupost, Duquesne 같은 화면 rail seed metadata와 투자자 alias 검색 metadata를 저장할 수 있다. 저장 row가 없으면 service seed watchlist를 fallback으로 사용한다.
 - `institutional_13f_refresh_status`는 마지막 SEC dataset 수집 결과, 최신 보고분기 / filing date, row counts, stale reason을 저장한다.
 
@@ -279,6 +280,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - official SEC Form 13F quarterly data set에서 온 filing / holdings ledger다.
 - 반복 수집은 source dataset / accession / CUSIP / row identity 기준 UPSERT로 idempotent하게 동작한다.
+- OpenFIGI 보강은 selected latest-filing identifier를 중복 제거해 명시적 Ingestion action에서만 호출한다. 정상 응답은 current 판정을 교체하지만 transport/provider error UPSERT는 이전 정상 resolution fields를 유지하고 시도 오류와 시각만 갱신한다.
+- loader precedence는 OpenFIGI mapped/ambiguous gate가 먼저다. mapped는 provider ticker를 사용하고 ambiguous는 ticker를 차단한다. provider가 unmapped/error-only/no-row일 때만 grouped legacy map의 CUSIP+issuer exact-name 단일 symbol을 사용하며 CUSIP-only 후보는 승격하지 않는다.
 - 화면은 최신 filing과 직전 filing을 비교해 신규 보고, 증가, 감소, 전량 매도 후보를 만든다.
 - sector / industry exposure는 row에 있는 field 또는 CUSIP-symbol mapping / conservative asset profile name-match enrichment를 사용하며, 없으면 `Unmapped`로 표시한다.
 - refresh status는 product freshness metadata이며 full source row를 대체하지 않는다.
@@ -290,23 +293,26 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - amendment, confidential treatment, filer error, SEC extraction issue가 있을 수 있으므로 원문 filing / source link를 함께 확인해야 한다.
 - `period_of_report`와 `filing_date` / SEC acceptance timing을 구분해야 하며, backtest에 쓰려면 filing availability 기준 PIT 처리가 별도로 필요하다.
 - CUSIP-symbol mapping은 완전한 security master가 아니며 ticker change, share class, ADR, delisting, CUSIP reuse / change를 완전히 해결하지 않는다.
+- OpenFIGI resolution은 latest research surface를 위한 current identity이며 historical report date의 ticker를 point-in-time으로 복원하지 않는다. Backtest rebalance identity나 survivorship proof로 사용하지 않는다.
 - asset profile name-match enrichment는 issuer name이 고유하게 매칭될 때만 보수적으로 저장하는 display helper다. 충돌하거나 불명확한 회사명은 mapping하지 않는다.
 - 이 table의 reported change는 추천, 매수 / 매도 신호, Practical Validation PASS / BLOCKER, Final Review selection, monitoring signal, broker order, auto rebalance를 만들지 않는다.
 
-## `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`
+## `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`, `futures_macro_snapshot`
 
 역할:
 
-- `Workspace > Overview > Futures Macro`에서 주요 선물 daily macro context와 lazy historical validation을 만들고, 보조 stored-candle chart / diagnostics에서 1m OHLCV 상태를 read-only로 표시하기 위한 데이터 경계다.
+- `Workspace > Overview > Futures Macro`의 주요 선물 daily macro context와 5D / 20D 조건부 전망을 materialize하고, 보조 stored-candle chart / diagnostics에서 1m OHLCV 상태를 read-only로 표시하기 위한 데이터 경계다.
 - `futures_instrument`는 watchlist preset / display metadata를 저장한다.
 - `futures_ohlcv`는 provider symbol / interval / candle time 기준 OHLCV row를 저장한다. 1m row는 stored-candle chart / diagnostics에, 1d row는 Futures Macro의 현재 점수 / 해석과 point-in-time historical validation에 사용된다.
 - `futures_market_monitor_run`은 수집 run별 status, failed symbols, latest candle time, diagnostics를 저장한다.
+- `futures_macro_snapshot`은 successful 1d ingestion 뒤 계산한 compact current macro / 5D / 20D outlook을 `snapshot_key=overview_current`로 UPSERT한다. `source_marker`, `schema_version`, `algorithm_version`, `status`, `materialized_at`으로 호환성과 freshness를 확인한다.
 
 성격:
 
 - provider snapshot / price ledger 성격이다.
 - 1차 MVP source는 `yfinance`이며, exchange-grade realtime feed가 아니다.
 - UI는 정상 render 때 provider를 직접 호출하지 않고 `futures_ohlcv`와 run diagnostics를 읽는다.
+- Futures Macro 첫 진입과 `다시 읽기`는 compatible `futures_macro_snapshot`만 읽으며, 없거나 버전이 다르면 `일봉 갱신 필요`를 표시한다. 전체 5년 OHLCV를 snapshot JSON에 복제하지 않는다.
 - 반복 수집은 `(provider_symbol, interval_code, candle_time_utc, source)` 기준 UPSERT로 idempotent하게 동작한다.
 - yfinance `1d / 1m` 요청이 일부 futures symbol에서 빈 응답 또는 지나치게 희소한 응답을 줄 수 있어, collector는 해당 symbol만 `2d / 1m`으로 한 번 보강 수집한다. 희소 응답이 회복되면 초기 sparse rows를 같은 symbol의 fallback rows로 대체한 뒤 같은 `futures_ohlcv` UPSERT key로 저장하고, 초기 row 수 / 회복 symbol / 실패 symbol은 `fallback_retries` diagnostics로 남긴다.
 - 일봉 macro 해석은 `today_return / rolling_60d_volatility` 표준화 움직임과 252거래일 위치를 사용하며, 채권선물 / FX 선물은 경제적 해석 방향으로 변환해 점수화한다.
@@ -378,6 +384,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
   VNQ 최신 official snapshot은 99.45%이며 residual은 원천 coverage 특성으로 남긴다.
 - `AOR`은 현재 1차 ETF holdings만 저장한다. Aggregate Underlying 2차 look-through는 후속이다.
 - `GLD`, `IAU`는 금 현물 ETF 특성상 row-level stock holdings 대신 `commodity_gold` 100% gold row를 저장한다.
+- QQQ SEC N-PORT/N-30B-2 row는 `cusip`, `isin`, `lei`, `issuer_cik`, `filing_date`, `accession_no`, `holding_snapshot_quality`을 optional evidence로 저장한다. `annual_anchor` / `quarterly_anchor` / `current_issuer_snapshot`은 같은 정밀도의 PIT truth가 아니다.
 
 ## `etf_exposure_snapshot`
 
@@ -421,6 +428,32 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - FRED value는 observation date 기준 데이터이며, 실제 발표 / 수정 vintage point-in-time truth와는 구분해야 한다.
 - Practical Validation result JSONL에는 full series를 저장하지 않고 compact snapshot / staleness만 저장하는 방향이다.
 - Practical Validation result JSONL에는 source mode / observation range / stale series 같은 compact macro provenance만 저장한다.
+
+## `macro_series_vintage_observation`, `economic_cycle_model_artifact`, `economic_cycle_snapshot`
+
+역할:
+
+- `macro_series_vintage_observation`은 미국 경제 사이클 17개 지표의 발표 당시 값과 이후 revision interval을 raw ledger로 보존한다.
+- `economic_cycle_model_artifact`는 model version, `trained_through`, horizon별 parameter·temperature calibration·rolling-origin metric·publication gate를 보존한다.
+- `economic_cycle_snapshot`은 current 또는 historical replay가 만든 compact 네 국면 확률, evidence, source date, 제한 사유를 저장하며 Overview read model의 source-of-truth다.
+
+성격과 business key:
+
+- raw vintage key는 `(series_id, observation_date, realtime_start, source)`다. `realtime_end`와 수집 metadata는 같은 key 재수집 때 갱신되며 누락값 row도 `coverage_status=MISSING_VALUE`로 보존한다.
+- artifact key는 `(model_version, trained_through)`다. validation metadata가 완전하지 않으면 approved artifact로 승격하지 않으며 기존 latest-good row를 덮지 않는다.
+- snapshot key는 `(as_of_date, model_version, run_kind)`다. `run_kind`는 current materialization과 historical replay를 분리하고, 재실행은 같은 business key를 UPSERT한다.
+
+PIT / publication 계약:
+
+- historical origin은 `realtime_start <= origin <= realtime_end`인 version 중 최신 eligible row 하나만 읽는다. 이후 발표·수정값은 관측일이 과거여도 사용할 수 없다.
+- feature scaling은 expanding history만, calibration/validation은 rolling-origin out-of-fold만 사용한다. retrospective label은 activity/labor와 해당 origin에 eligible한 `USREC`만 사용한다.
+- 각 h0/h1/h2 horizon은 독립적으로 `READY/LIMITED`를 판정한다. 유효한 LIMITED 확률은 reason evidence와 함께 snapshot에 보존하고 UI에서 `잠정 모델 추정`으로 표시한다. READY는 `검증된 모델 추정`이며 phase support·parameter·입력이 불완전한 horizon만 numeric probabilities를 비우고 `판단 불가`로 둔다.
+- raw full series, model parameter, 121개월 replay snapshot은 DB에 남고 UI service는 최근 최대 60개월 compact history/evidence만 읽는다. UI render 중 provider fetch, fit, materialization, DB write를 실행하지 않는다.
+
+주의:
+
+- 이 경로는 FRED `series/vintagedates`와 observations API의 long-form `output_type=1`, `FRED_API_KEY`를 요구한다. provider의 요청당 2,000 vintage-date 제한은 실제 vintage date 경계로 분할하며, revised-latest CSV fallback은 historical vintage 증거가 아니므로 허용하지 않는다.
+- 국면은 data-defined macro regime이며 NBER 공식 판정, 자산 수익률 예측, 매수·매도 지시가 아니다.
 
 ## `nyse_price_history`
 
@@ -577,6 +610,50 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - 60개월 log(PER) 상대평가, 36개월 민감도, 12개월 reconstructed actual-SPX 비교에 사용한다. 표준편차 band는 신뢰구간이 아니다.
 - Market Context graph 2는 공식 actual 4분기 TTM이 없을 때 이 table의 최신 양수 `trailing_eps`를 `interpolated_ttm_proxy`로 선택한다. UI는 이를 S&P 공식 EPS나 애널리스트 컨센서스로 표시하지 않는다.
 
+## `nasdaq100_monthly_valuation`
+
+역할:
+
+- QQQ holdings weight, 구성종목 filing-aware actual diluted EPS, DB EOD를 결합한 monthly QQQ EPS/PER proxy와 coverage evidence를 저장한다.
+- `(observation_month, proxy_symbol, source)` key로 READY와 BLOCKED 월을 모두 repeat-safe UPSERT한다.
+
+주의:
+
+- `reconstructed_actual`은 weighted EPS/price coverage 95% 이상인 월만 허용한다. `blocked`는 pass가 아니며 값이 없어도 삭제하지 않는다.
+- diluted EPS는 `EarningsPerShareDiluted`, IFRS `DilutedEarningsLossPerShare`, 또는 issuer가 basic/diluted를 동일값으로 공시한 `EarningsPerShareBasicAndDiluted` actual만 허용한다. 별도 basic EPS, FY-only annual proxy, 추정 EPS는 fallback으로 사용하지 않는다.
+- QQQ proxy는 공식 Nasdaq-100 index-level P/E/EPS가 아니다. acquired/delisted EOD, ADR/foreign unit, share class가 불명확한 weight는 coverage에 포함하지 않는다.
+- 2026-07-13 coverage repair QA는 최근 60개월을 60 READY / 0 BLOCKED로 materialize했다. 이는 local stored-source 검증 결과이며 무료 원천 gap이 남는 환경에서 gate를 우회한다는 뜻이 아니다.
+
+## 미국 개별주식 read-time valuation contract
+
+역할:
+
+- V1은 새 materialization table을 만들지 않는다. 선택된 한 종목의 bounded `nyse_price_history`, `nyse_financial_statement_values`, `fomc_sep_projection` row를 읽어 월말 PIT TTM EPS/PER와 상대가치 시나리오를 계산한다.
+- quarterly/FY duration fact는 해당 filing의 primary period만 discrete-period 후보로 사용한다. `report_date == period_end`가 우선 증거이고, report date가 없는 legacy row만 최초 공시로 볼 수 있는 180일 이내 availability fallback을 허용한다.
+
+주의:
+
+- later filing의 prior-year comparative Q/FY fact는 새 quarter identity가 아니며 기존 분기나 FY-derived Q4를 덮어쓰지 않는다.
+- split이 있는 회계연도는 raw Q/FY fact를 각 관측 월말 share basis로 먼저 정규화한 뒤 `FY - Q1 - Q2 - Q3`를 계산한다. split effective date 이전 월에는 future split을 적용하지 않는다.
+- 월별 EPS를 만들거나 보간하지 않는다. `available_at <= month_end`인 최신 four discrete quarters만 carry-forward하며 positive TTM EPS와 positive month-end price에서만 PER를 계산한다.
+- Graph 1의 60개월 positive P/E readiness와 Graph 2의 최소 8개 positive-to-positive TTM EPS 성장 관측은 독립 상태다. 성장 이력 부족은 Graph 2만 BLOCKED하며 계산 가능한 Graph 1을 NOT_APPLICABLE로 낮추지 않는다.
+
+## 미국 개별주식 read-time turnaround contract
+
+역할:
+
+- 새 table을 만들지 않고 선택 종목의 bounded `nyse_financial_statement_values`, `nyse_asset_profile`, `nyse_price_history`, lifecycle identity를 읽어 quarterly operating/cash 전환, survival risk, valuation readiness를 계산한다.
+- duration fact와 instant fact는 별도 query/계산 경계다. duration은 direct Q를 우선하고 compatible same-concept/unit/fiscal-year `H1-Q1`, `9M-H1`, `FY-Q1-Q2-Q3`를 먼저 discrete quarter로 복원한다. Missing Q4만 explicit metric concept family 안에서 같은 symbol/fiscal year/unit 및 primary-period/PIT 조건의 FY/Q1/Q2/Q3를 결합할 수 있다.
+- revenue, gross profit, operating/net income, OCF, CapEx, FCF proxy, diluted EPS/share를 gap-preserving quarter timeline과 TTM으로 만든다. direct gross profit이 없으면 같은 filing/quarter/unit의 revenue-cost만 fallback으로 허용한다.
+
+주의:
+
+- later comparative fact는 primary quarter를 덮지 못하고 derived quarter의 `available_at`은 operand 중 가장 늦은 공개일이다. direct/exact Q4가 family fallback보다 우선하며 allowlist 밖 concept, 다른 unit/year/symbol, future filing은 결합하지 않는다. missing operand/quarter는 다른 기간으로 대체하거나 보간하지 않는다.
+- timeline은 metric별 `source_kind`, rule, operands와 `derived_metrics`, `ttm_derived_metrics`를 read-time payload에 포함한다. `FILING_DERIVED`는 확정 공시의 산술 결과이며 forecast/estimate가 아니다.
+- milestone은 sequential pass chain이 아니다. operating improvement, two-consecutive positive TTM OCF, earnings turn, PER handoff를 독립 evidence로 표시한다. runway, debt/interest, split-neutral dilution도 milestone과 별도 risk overlay다.
+- numeric valuation은 market cap/price/statement basis가 7일 이내로 정렬되고 USD/unit/sector/denominator 조건을 충족할 때만 허용한다. P/E handoff, P/FCF, P/OCF, EV/EBITDA, EV/Gross Profit, EV/Sales 순서를 사용하며 target price나 매매 신호가 아니다.
+- 검색·선택·분석 전환은 provider call 0회다. raw gap 수집은 SEC CIK를 확인한 selected symbol의 explicit action만 가능하다. CIK가 없으면 `BLOCKED/CIK_MISSING`으로 수집을 막되 저장 facts로 만든 READY 분석은 유지한다.
+
 ## `sp500_index_earnings`
 
 역할:
@@ -587,8 +664,10 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 주의:
 
 - Market Context TTM actual은 최신 네 개의 distinct `quarterly + as_reported + actual` row만 합산한다.
+- Economic Cycle의 실제 EPS 경로는 서로 다른 완료 분기 8개가 있어야 current/prior TTM과 전년 대비 변화를 계산한다. 이 경로에는 Shiller proxy를 넣지 않는다.
 - `estimate` 또는 `mixed` row는 actual 부족을 채우는 fallback이 아니다.
-- importer는 workbook 색상이나 위치로 상태를 추론하지 않고 explicit status column을 요구한다.
+- Ingestion importer는 공식 `QUARTERLY DATA` 제목과 `QUARTER END`, `OPERATING EARNINGS PER SHR`, `AS REPORTED EARNINGS PER SHR` 다단 머리글을 함께 검증한다. 공식 시트에서 값이 있는 완료 분기는 actual로 읽고 빈 최신 분기는 저장하지 않는다. normalized 호환 파일은 explicit status column을 요구한다.
+- 모든 read-as-of는 `period_end`뿐 아니라 `source_release_date`도 기준일 이하인 release vintage만 사용한다. 같은 분기 여러 vintage 중 당시 알려진 최신 row를 선택한다.
 
 ## `fomc_sep_projection`
 

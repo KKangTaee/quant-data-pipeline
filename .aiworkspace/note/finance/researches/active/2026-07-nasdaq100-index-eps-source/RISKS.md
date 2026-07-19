@@ -1,0 +1,39 @@
+# Risks
+
+Status: Active Risks Identified
+Last Updated: 2026-07-14
+
+| Risk | Impact | Mitigation |
+|---|---|---|
+| FY comparative fact를 true year-end로 오인 | 가짜 음수 Q4와 `NON_POSITIVE_AGGREGATE_EARNINGS` 발생 | fiscal period sequence/period-end 검증 후에만 FY-Q1-Q2-Q3 derivation, 2020 regression fixture |
+| raw close로 split 구간 weight drift | 과거 보유비중과 earnings yield 왜곡 | drift는 adjusted return, EPS identity는 raw close로 용도 분리 |
+| Tiingo free token/계정 필요 | 기존 no-account 운영 조건과 다름 | optional connector로 분리하고 사용자 승인 후 secret 설정 |
+| Tiingo internal-only license | 다중 사용자/공개 화면에서 사용권 위반 가능 | 개인 내부 사용만 허용; 공유/배포 전 별도 license 확인 |
+| recycled/successor ticker alias | 다른 issuer 가격을 잘못 결합 | name/date/CIK/CUSIP/N-PORT implied price fixture, 수동 승인 alias registry |
+| price table source provenance 부재 | Tiingo upsert가 기존 Yahoo observation을 덮을 수 있음 | source-aware raw observation 또는 missing-only additive 저장 계약 선행 |
+| feasibility upper bound와 실제 payload 차이 | 119/119를 조기 확정할 위험 | token smoke, full materialization, calibration 전에는 conditional로 표시 |
+| QQQ proxy와 공식 NDX aggregate 차이 | 공식 P/E처럼 오인 가능 | `public_filing_reconstructed_proxy` 표시, 공식 Nasdaq P/E 명칭 금지, calibration 공개 |
+| N-PORT 분기 cadence | 월별 weight가 실제 rebalance/flow를 완전히 반영하지 못함 | 분기 anchor 사이 price drift, special rebalance event 반영 |
+| CUSIP/ISIN -> ticker/CIK mapping 누락 | aggregate earnings coverage 저하 | security master와 coverage threshold, unmapped weight 표시 |
+| ADR ratio/복수 클래스 | per-share EPS가 거래 증권 단위와 불일치 | issuer-level aggregation 또는 명시적 ADR/class conversion table |
+| foreign issuer filing cadence/tag 차이 | TTM actual stale/missing | 20-F/6-K/IFRS taxonomy 별 resolver와 staleness 표시 |
+| SEC period-end와 filing availability 차이 | look-ahead 가능 | filing_date/accepted_at 기준 적용, reconstructed/PIT 구분 |
+| GuruFocus aggregate methodology 비공개 | S&P/Shiller와 P/E 의미가 다를 수 있음 | source quality 분리, quarterly EPS 교차검증, provider 문의 |
+| release-vintage 미제공 | strict PIT 해석 불가 | `과거 시점 재구성`, descriptive history로 제한 |
+| API license/retention 제한 | DB 저장/화면 표시 불가 가능성 | 구현 전 Data API Agreement 확인 |
+| Free plan Economic Data 제외(확정) | 무료라고 가정한 collector는 entitlement/결제 gate에 막힘 | 무료 source 후보에서 제외; 유료 add-on/PAYG 승인 후에만 smoke |
+| no-account public chart scraping | 약관 위반, schema 변경, 원천/방법론 불명확으로 장기 DB 신뢰성 훼손 | Trendonify/VCP는 제외하고 World PE Ratio도 사람용 교차검증으로만 제한 |
+| NDX EPS와 QQQ-unit EPS 혼용 | scenario price가 수십 배 왜곡됨 | direct P/E를 공통 multiple로 쓰고 QQQ EPS는 `QQQ price / P-E`로만 파생; indicator 5870은 NDX identity check 전용 |
+| provider별 current P/E 불일치 | 평균·표준편차와 valuation label이 source 선택에 따라 크게 변경 | source contract를 고정하고 12개월 overlap/revision diff를 승인 기준으로 사용 |
+| 무료 direct aggregate 원천 부재 | 외부 무료 API 교체만으로 60개월 gap을 닫을 수 없음 | SEC reconstruction을 유지하고 mapping/foreign issuer/corporate-action coverage를 개선 |
+| 무료 보조 API의 짧은 history·호출량 | Business Quant 등으로도 100종목 5년을 즉시 완전 대체하지 못함 | 보조 cross-check로만 사용하고 canonical raw source는 SEC EDGAR로 유지 |
+| N-PORT monthly public disclosure 지연 | 앞으로 공개될 monthly data가 현재 historical gap을 곧 해결한다고 오판 | 현행 quarterly public anchor만 사용; 2027/2028 compliance 전제 금지 |
+| 일반 membership과 API/redistribution 권한 혼동 | 내부 앱 또는 외부 공유가 약관을 벗어날 수 있음 | internal-only 범위를 문서화하고 provider 서면 확인 |
+| MacroMicro 공개 chart와 무료 CSV/API 권한 혼동 | visible monthly value만 보고 무계정 collector가 가능하다고 오판 | 공식 Help/plan contract를 적용하고 hidden modal/undocumented endpoint 호출 금지 |
+| MacroMicro forward P/E와 현재 trailing P/E 혼합 | 밴드 중심·표준편차·EPS 시나리오 의미가 바뀌어 시계열이 비일관적 | 별도 forward valuation track으로만 허용하고 기존 trailing history 결측 대체 금지 |
+| MacroMicro series `23955` 유료 entitlement 불명확 | 결제 후에도 API/download가 막히거나 파생 차트 권한이 없을 수 있음 | 구매 전 series ID, history, payload, retention, derivative/display 권한을 서면 확인 |
+| PE/EPS revision | 과거 결과가 재수집 때 바뀔 수 있음 | collected_at/source_version 저장, revision diff 기록 |
+| NDX/P-E date mismatch | derived EPS 오류 | same-date 또는 bounded prior-date join만 허용 |
+| P/E zero/null/outlier | log distribution 실패 | positive finite filter와 explicit missing quality |
+| FOMC GDP+PCE 설명력 제한 | NDX 실적 성장 과대/과소 추정 | 거시 자체 시나리오/비컨센서스 문구 유지 |
+| direct aggregate provider 비용 | 장기 운영비 증가 | 무료 SEC reconstruction 품질을 먼저 측정하고 유료 GuruFocus/enterprise upgrade는 별도 승인 |

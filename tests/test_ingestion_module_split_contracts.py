@@ -1,5 +1,6 @@
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 
 class IngestionModuleSplitContractsTest(unittest.TestCase):
@@ -54,8 +55,6 @@ class IngestionModuleSplitContractsTest(unittest.TestCase):
         self.assertIn("coverage gap", summary["attention"])
 
     def test_ingestion_dispatcher_lives_in_dedicated_module(self) -> None:
-        from unittest.mock import patch
-
         from app.web.ingestion import dispatcher
         from app.web.ingestion import page
 
@@ -79,6 +78,45 @@ class IngestionModuleSplitContractsTest(unittest.TestCase):
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["rows_written"], 0)
 
+    def test_sp500_index_earnings_upload_action_is_registered_and_dispatched(self) -> None:
+        from app.web.ingestion import dispatcher, guides, registry
+
+        definition = registry.INGESTION_ACTION_REGISTRY[
+            "import_sp500_index_earnings_xlsx"
+        ]
+        self.assertEqual(definition["mode"], "manual_official_file_import")
+        self.assertEqual(
+            definition["target_tables"],
+            ["finance_meta.sp500_index_earnings"],
+        )
+        self.assertEqual(
+            guides.JOB_GUIDE["import_sp500_index_earnings_xlsx"]["title"],
+            "S&P 500 실제 EPS 등록",
+        )
+
+        with patch(
+            "app.web.ingestion.dispatcher.run_import_sp500_index_earnings_xlsx",
+            return_value={"status": "success", "rows_written": 16},
+        ) as run_import:
+            result = dispatcher.dispatch_job(
+                {
+                    "action": "import_sp500_index_earnings_xlsx",
+                    "job_name": "import_sp500_index_earnings_xlsx",
+                    "params": {
+                        "workbook_content": b"xlsx",
+                        "source_release_date": "2026-05-15",
+                        "source_name": "sp-500-eps-est.xlsx",
+                    },
+                }
+            )
+
+        run_import.assert_called_once_with(
+            workbook_content=b"xlsx",
+            source_release_date="2026-05-15",
+            source_name="sp-500-eps-est.xlsx",
+        )
+        self.assertEqual(result["status"], "success")
+
     def test_ingestion_collection_sections_live_in_dedicated_module(self) -> None:
         from app.web.ingestion import page
         from app.web.ingestion import sections
@@ -86,6 +124,21 @@ class IngestionModuleSplitContractsTest(unittest.TestCase):
         self.assertIs(page._render_ingestion_operational_section, sections.render_operational_section)
         self.assertIs(page._render_ingestion_manual_section, sections.render_manual_section)
         self.assertIs(page._render_selected_ingestion_collection_section, sections.render_selected_section)
+
+    def test_sp500_actual_eps_upload_is_visible_in_operational_section(self) -> None:
+        source = Path("app/web/ingestion/sections.py").read_text(encoding="utf-8")
+
+        self.assertIn('"S&P 500 실제 EPS 등록"', source)
+        self.assertIn('type=["xlsx"]', source)
+        self.assertIn('"import_sp500_index_earnings_xlsx"', source)
+        self.assertIn(
+            '"https://www.spglobal.com/spdji/en/indices/equity/sp-500/"',
+            source,
+        )
+        self.assertIn(
+            "disabled=_has_running_job() or sp500_eps_file is None",
+            source,
+        )
 
     def test_ingestion_job_common_helpers_live_in_ingestion_jobs_package(self) -> None:
         from app.jobs import ingestion_jobs

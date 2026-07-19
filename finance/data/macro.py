@@ -22,7 +22,15 @@ from .db.schema import PROVIDER_SCHEMAS, sync_table_schema
 
 DB_META = "finance_meta"
 MACRO_TABLE = "macro_series_observation"
-DEFAULT_MACRO_SERIES = ("VIXCLS", "T10Y3M", "BAA10Y")
+DEFAULT_MACRO_SERIES = (
+    "VIXCLS",
+    "T10Y3M",
+    "BAA10Y",
+    "DGS2",
+    "DGS10",
+    "DFII10",
+    "T10YIE",
+)
 FRED_API_URL = "https://api.stlouisfed.org/fred/series/observations"
 FRED_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 FRED_USER_AGENT = f"Python-urllib/{sys.version_info.major}.{sys.version_info.minor}"
@@ -47,6 +55,30 @@ FRED_SERIES_CONFIG: dict[str, dict[str, Any]] = {
     "BAA10Y": {
         "series_name": "Moody's Seasoned Baa Corporate Bond Yield Relative to Yield on 10-Year Treasury",
         "category": "credit_spread",
+        "frequency": "daily",
+        "units": "percent",
+    },
+    "DGS2": {
+        "series_name": "Market Yield on U.S. Treasury Securities at 2-Year Constant Maturity",
+        "category": "treasury_yield",
+        "frequency": "daily",
+        "units": "percent",
+    },
+    "DGS10": {
+        "series_name": "Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity",
+        "category": "treasury_yield",
+        "frequency": "daily",
+        "units": "percent",
+    },
+    "DFII10": {
+        "series_name": "Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Inflation-Indexed",
+        "category": "real_yield",
+        "frequency": "daily",
+        "units": "percent",
+    },
+    "T10YIE": {
+        "series_name": "10-Year Breakeven Inflation Rate",
+        "category": "inflation_expectation",
         "frequency": "daily",
         "units": "percent",
     },
@@ -396,6 +428,32 @@ def _upsert_macro_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> None:
     db.executemany(sql, rows)
 
 
+def store_macro_observation_rows(
+    rows: Iterable[dict[str, Any]],
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> int:
+    """Idempotently store normalized macro observations in the canonical table."""
+    normalized = [dict(row) for row in rows]
+    db = MySQLClient(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        db.execute(PROVIDER_SCHEMAS["macro_series_observation"])
+        sync_table_schema(
+            db,
+            MACRO_TABLE,
+            PROVIDER_SCHEMAS["macro_series_observation"],
+            DB_META,
+        )
+        _upsert_macro_rows(db, normalized)
+    finally:
+        db.close()
+    return len(normalized)
+
+
 def collect_and_store_macro_series(
     series_ids: str | Iterable[str] | None = None,
     *,
@@ -427,14 +485,13 @@ def collect_and_store_macro_series(
         retries=int(retries),
     )
 
-    db = MySQLClient(host, user, password, port)
-    try:
-        db.use_db(DB_META)
-        db.execute(PROVIDER_SCHEMAS["macro_series_observation"])
-        sync_table_schema(db, MACRO_TABLE, PROVIDER_SCHEMAS["macro_series_observation"], DB_META)
-        _upsert_macro_rows(db, rows)
-    finally:
-        db.close()
+    store_macro_observation_rows(
+        rows,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
 
     coverage: dict[str, int] = {}
     for row in rows:

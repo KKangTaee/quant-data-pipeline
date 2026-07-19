@@ -1,7 +1,7 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-19
 
 ## Purpose
 
@@ -16,6 +16,8 @@ Last Verified: 2026-07-08
 - 저장된 선물 OHLCV와 일봉 매크로 상태를 Overview Futures Macro에서 확인하고 싶을 때
 - CNN Fear & Greed / AAII bearish sentiment context를 갱신하거나 freshness를 확인해야 할 때
 - Overview Events / Market Movers 화면이 비어 있거나 오래된 것으로 보일 때
+- Market Context의 S&P/Nasdaq valuation source와 coverage gate를 갱신할 때
+- Market Context 경제 사이클 vintage를 수집하고 학습·검증·current/10년 replay snapshot을 명시적으로 materialize할 때
 - 브라우저를 켜지 않고 scheduled refresh runner를 cron / launchd / 외부 automation으로 호출하고 싶을 때
 
 ## App Startup
@@ -31,6 +33,95 @@ http://localhost:8501
 ```
 
 이미 포트가 사용 중이면 다른 포트를 지정한다.
+
+## Economic Cycle Vintage / Model Refresh
+
+이 작업은 화면 render나 unattended Overview scheduler가 실행하지 않는다. 운영자가 `FRED_API_KEY`를 설정하고 backend에서 명시적으로 실행한 뒤, `Workspace > Overview > Market Context > 경제 사이클`은 저장된 compact snapshot만 읽는다.
+
+### 1. Prerequisite와 schema
+
+```bash
+export FRED_API_KEY='<local secret>'
+uv run python -c "from finance.data.economic_cycle_vintages import ensure_economic_cycle_vintage_schema; from finance.data.economic_cycle_results import ensure_economic_cycle_result_schemas; ensure_economic_cycle_vintage_schema(); ensure_economic_cycle_result_schemas(); print('economic-cycle schemas ready')"
+```
+
+- credential과 raw provider payload를 문서, run history, commit에 남기지 않는다.
+- 생성 대상은 `macro_series_vintage_observation`, `economic_cycle_model_artifact`, `economic_cycle_snapshot` 세 table이다.
+- `FRED_API_KEY`가 없으면 vintage collection은 `failed`여야 한다. revised FRED CSV로 대체하지 않는다.
+
+### 2. Locked 17-series vintage collection
+
+```bash
+uv run python -c "from app.jobs.ingestion_jobs import run_collect_economic_cycle_vintages; print(run_collect_economic_cycle_vintages())"
+```
+
+확인할 내용:
+
+- `source_mode=fred_output_type_1_realtime_intervals`와 series별 row/date coverage
+- large-series default는 observation page 50,000행, timeout 60초다. 현재 catalog의 full bootstrap 기대치는 17 series / 1,232,856 rows이며 ANFCI가 1,014,042 rows를 차지한다.
+- raw unique key `(series_id, observation_date, realtime_start, source)`
+- 동일 범위 재실행 뒤 business row 수가 증가하지 않는지
+- `.`/non-finite value가 0이 아니라 `coverage_status=missing` row로 남는지
+
+### 3. Train, validate, current materialization
+
+아래 날짜는 latest fully available month에 맞게 운영자가 지정한다.
+
+```bash
+uv run python -c "from finance.economic_cycle_pipeline import train_validate_economic_cycle_model, materialize_economic_cycle_snapshot; trained_through='YYYY-MM-DD'; as_of_date='YYYY-MM-DD'; result=train_validate_economic_cycle_model(trained_through=trained_through); print(result['model_version'], result['publication_status']); print(materialize_economic_cycle_snapshot(as_of_date=as_of_date, model_version=result['model_version'], artifact_row=result['artifact_row']))"
+```
+
+- h0/h1/h2별 origin count, phase support, recession episode, complete-feature ratio, Brier, log loss, ECE, persistence/historical-transition baseline, reason code를 확인한다.
+- horizon별 gate는 `READY/LIMITED` publication status를 결정한다. 완전한 artifact와 입력으로 계산 가능한 LIMITED horizon은 숫자 확률을 snapshot에 보존하고 UI에서 `잠정 모델 추정`으로 표시한다. READY는 `검증된 모델 추정`, phase support·parameter·입력이 불완전하면 `판단 불가`다.
+- validation metadata 누락이나 실행 오류가 있으면 latest approved artifact/snapshot을 ERROR row로 덮지 않는다.
+
+### 4. Ten-year month-end replay와 idempotence
+
+```bash
+uv run python -c "from finance.economic_cycle_pipeline import replay_economic_cycle_history; print(replay_economic_cycle_history(start_date='YYYY-MM-DD', end_date='YYYY-MM-DD'))"
+```
+
+- 각 origin은 직전 month-end까지 학습한 origin-specific artifact와 그 origin 당시 eligible vintage를 사용한다.
+- 같은 날짜 범위를 한 번 더 실행하고 `(as_of_date, model_version, run_kind)` business key가 중복되지 않는지 확인한다.
+- payroll series 한 origin과 recession-era 한 origin을 표본으로 골라 stored eligible `realtime_start/realtime_end`가 official FRED/ALFRED response metadata와 일치하는지 확인한다.
+
+### 5. Failure / recovery
+
+- `FRED_API_KEY` 부재: 수집을 중단하고 UI의 `NOT_MATERIALIZED` 또는 latest-good LIMITED/READY snapshot을 유지한다.
+- sparse coverage/calibration/origin/baseline 성능 미달: 해당 horizon을 `LIMITED`로 두고 계산 가능하면 잠정 추정으로 공개한다. threshold를 낮추거나 artifact status를 손으로 바꾸지 않는다.
+- missing phase support 또는 불완전 parameter/input: 해당 horizon은 `UNAVAILABLE`로 materialize하고 다른 horizon·origin 처리는 계속한다.
+- stale/vintage gap: missing series/date/revision interval을 공식 API에서 보강한 뒤 collection부터 재실행한다.
+- 화면은 run/job/row 진단 panel이 아니다. 운영 근거는 backend 결과와 DB audit에서 확인하고 사용자는 국면 확률, evidence, source date, 제한 사유를 읽는다.
+
+## Valuation Refresh
+
+Nasdaq-100 QQQ proxy job의 due/skip 계획과 강제 실행은 아래처럼 확인한다.
+
+```bash
+.venv/bin/python -m app.jobs.overview_automation --profile safe --job nasdaq100_valuation --dry-run
+.venv/bin/python -m app.jobs.overview_automation --profile safe --job nasdaq100_valuation --force --json
+```
+
+이 job은 SEC QQQ holdings, QQQ EOD, stored DB 기반 monthly materialization을 순서대로 실행한다. `success`는 파이프라인 실행 성공이지 valuation coverage 통과를 뜻하지 않는다. `finance_meta.nasdaq100_monthly_valuation.data_quality=blocked`와 `coverage_weight_pct < 95`이면 UI는 그래프 대신 coverage blocker를 표시한다.
+
+blocker가 표시되면 같은 카드의 `60개월 가치평가 자료 보강`을 누른다. 화면은 최근 60개월 historical holdings universe에서 부족한 분기 EPS와 EOD만 계획하고, canonical ingestion job으로 종목별 UPSERT한 뒤 60개월을 다시 materialize한다. 실행 중에는 같은 화면에서 단계별 진행 상태를 표시하며 완료까지 기다린다. React는 action intent만 전달하고 SEC/가격 수집, DB write, cache clear와 재계산은 Python job 경계가 맡는다.
+
+Expected result:
+
+- job result의 `details.steps`에 `SEC QQQ holdings`, `QQQ EOD`, `Nasdaq-100 monthly proxy`가 각각 남는다.
+- 동일 source/business key 재실행은 새 중복 row를 만들지 않는다.
+- 95% 미만 monthly row는 `blocked`와 error reason을 유지한다.
+- 보강 뒤 60개월 모두 95% gate를 통과하면 blocker 대신 Nasdaq-100 QQQ proxy 그래프가 표시된다.
+- `EarningsPerShareBasicAndDiluted`는 기본/희석 EPS가 동일하다고 공시한 US-GAAP actual이므로 diluted EPS fallback으로 허용한다. 별도 basic EPS나 FY-only proxy는 허용하지 않는다.
+
+Failure handling:
+
+- 한 source step이 실패하면 `partial_success`와 step message를 확인하고 latest-good DB row로 materialization/read가 가능한지 분리해 본다.
+- schema bootstrap failure는 전체 `failed`다. `finance_meta` 연결과 `schema.py` sync 결과를 먼저 확인한다.
+- `부분 완료` 뒤에도 blocker가 남으면 `남은 자료 다시 보강`으로 transient 실패만 재시도한다. 무료 원천에서 확보할 수 없는 acquired/delisted EOD, foreign/FY-only, unresolved identity는 합성하거나 95% gate를 낮추지 않는다.
+- 화면 action이 실패하면 기존 latest-good cache를 유지한다. 로그의 failed symbol과 `market_data_issue.limited_price_history` evidence를 확인한 뒤 재시도한다.
+
+Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../data/TABLE_SEMANTICS.md), [coverage repair task status](../../tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md).
 
 ## Refresh Order
 
@@ -81,20 +172,14 @@ http://localhost:8501
    - Market Context의 sector pressure map은 provider sector alias를 canonical sector로 normalize해 동일 크기 tile로 보여준다. tile 크기가 아니라 색상 / 값 / breadth를 읽는다.
 
 4. `Workspace > Overview > Futures Macro`
-   - 이 tab은 저장된 주요 선물 1D OHLCV로 macro state를 읽는 current primary surface다. `Futures Monitor` standalone tab은 current primary navigation이 아니다.
-   - 상단 command strip에서 `일봉 갱신`, `최신 데이터 다시 읽기`, `과거 점검` 상태를 확인한다.
-   - `매크로 컨텍스트`는 core 16개 선물의 저장된 1D OHLCV를 읽어 오늘 기준 시장 해석, 근거 강도, 자료 기준, score chip, 현재 score evidence를 보여준다. Futures Macro tab의 React workbench는 command strip, 현재 브리프, score chip, 1D / 1W / 1M 흐름, 과거 점검, 현재 근거 panel을 렌더링한다.
-   - Futures Macro tab 첫 진입은 `include_validation=False` snapshot으로 빠르게 렌더링한다. Historical validation은 과거 점검 카드의 `오늘과 비슷한 과거 흐름 확인`을 눌렀을 때만 계산되며, `일봉 갱신` / `다시 읽기`는 session validation state를 clear한다.
-   - Historical validation은 DB에 materialize하지 않고 Streamlit process 안에서 latest futures daily marker / proxy price marker 기준으로 캐시한다. 같은 저장 데이터 기준에서 반복해서 `오늘과 비슷한 과거 흐름 확인`을 누르면 재계산 비용을 줄이고, `일봉 갱신` / `다시 읽기`는 이 process cache도 함께 clear한다.
-   - `1D / 1W / 1M 흐름`은 저장된 1D 선물의 최근 1거래일 / 5거래일 / 20거래일 변화율로 위험선호, 금리 부담, 달러 압력, 안전자산, 원자재 / 물가 흐름을 요약한다. 이 값은 render 중 provider fetch를 실행하지 않는다.
-   - Top-level이 `혼재된 매크로 흐름`이면 subtype / regime hint / mixed reason을 함께 읽는다. `금리 부담 완화 속 성장 약세`, `달러 압력 Risk-Off 후보`, `원자재 약세 + 수요 둔화 후보`, `상충 흐름 / 전환 구간`, `저신호 / 관망` 같은 문구는 충돌 맥락을 설명하기 위한 후보 / 확인 언어이며, directional hit-rate 신호로 승격하지 않는다.
-   - React `현재 근거` panel은 `매크로 컨텍스트` 안에서 현재 macro 해석을 강화하거나 약화시키는 score evidence를 보여준다. 각 근거 item은 score label / symbol / z-score를 함께 보존해 하단 원본 데이터와 대조할 수 있다.
-   - `과거 점검` 결과는 먼저 `비슷한 상태`, `상태 빈도`, `방향성 판정`, `판정 이유`로 읽는다. 혼재 / 관망 상태는 빈도 표본이 많아도 특정 자산 상승 / 하락 hit rule이 없으면 방향성 판정을 `보류`로 표시한다. 상세 타일은 `판정`, `5거래일 표본`, `20거래일 표본`, `자산군 해석`으로 이어서 확인한다. 이 문구는 validation metrics에 있는 표본 수, 평균 수익률, 방향 일관성, target family, hit rule만 사용하며, 계산값 없는 매수/매도 추천 문구를 만들지 않는다.
-   - `원본 데이터 / 계산 추적`을 열면 화면 섹션별 원본 연결, 자료 기준, `현재 점수 원본`, `점수 구성 기여`, `선물 일봉 변화`, `과거 시나리오 표본`, `점수-이후수익 관계`, `기준값 민감도`를 확인한다. `비슷한 과거 상태`는 반복 빈도 또는 5D 방향성 적용 여부를 확인하는 read-only context이며, 매수/매도 신호가 아니다.
-   - 매크로 일봉이 비어 있거나 근거가 부족하면 `일봉 매크로 데이터 갱신`을 눌러 core 16개 `5y / 1d` backfill을 실행하거나, `Workspace > Ingestion > 선물 OHLCV 수집`에서 `Period=5y`, `Interval=1d`로 수동 실행한다.
-   - Historical Validation은 저장된 daily futures row를 point-in-time으로 재계산한 과거 일관성 평가다. 현재 시나리오의 directional sample / hit rate, score threshold sensitivity, score-forward-return relationship을 보되 예측 보장으로 해석하지 않는다. 혼재 시나리오는 억지로 risk-on / risk-off directional hit rule에 넣지 않으며 occurrence count와 hit-rate N/A로 본다.
-   - 하단 data management / chart context에서는 stored 1m candle chart와 stale state를 보조로 확인할 수 있다. 최신 candle이 오래됐으면 차트는 latest stored data를 보여주되 `오래됨`과 갱신 안내를 표시한다.
-   - `진단 / Provider 근거`는 보조 disclosure다. 최신 run status, rows, processed / requested, latest candle time은 여기서 확인한다.
+   - 이 tab은 저장된 주요 선물 1D OHLCV로 만든 compact macro snapshot을 읽는 current primary surface다. 화면 진입 중 provider fetch나 5D / 20D 전망 계산을 실행하지 않는다.
+   - `일봉 갱신`은 주요 선물 `5y / 1d`를 수집한 뒤 current macro와 5D / 20D 조건부 전망을 `finance_meta.futures_macro_snapshot`의 `overview_current` row로 materialize한다. 1m 수집은 이 snapshot을 갱신하지 않는다.
+   - `다시 읽기`는 provider 수집이나 전망 계산 없이 저장된 compatible snapshot만 다시 읽는다. snapshot이 없거나 schema/algorithm version이 맞지 않으면 `일봉 갱신 필요` 상태를 표시한다.
+   - 첫 화면은 현재 체제, 현재/다음 1주/다음 1개월, `20D 전 → 5D 전 → 현재` 관측과 선택 horizon 예상 순이동·말일 도착 범위, 근거, 60D ribbon, 자산별 확인 포인트 순으로 읽는다.
+   - 5D / 20D 확률과 예상 위치는 과거 유사 episode의 조건부 빈도·중앙 이동이며 미래 보장이나 가격 목표가 아니다. 방향 우위가 검증 gate를 넘지 못하면 `PROVISIONAL`과 `방향 우위 미확인`을 유지한다.
+   - `방법론과 품질`은 원천, 독립 표본, Brier, baseline, calibration, 제한을 보여준다. 펼침 높이는 React component가 Streamlit iframe과 동기화한다.
+   - React `원본 데이터 / 계산 추적`은 snapshot 기준일/저장 시각/source marker와 compact `현재 점수 원본`, `점수 구성 기여`, `선물 일봉 변화`, 해석 주의점을 보여준다. 전체 5년 OHLCV 원본은 이 disclosure가 아니라 `finance_price.futures_ohlcv`에 남는다.
+   - 일봉 수집 성공 뒤 materialization만 실패하면 job은 `partial_success`다. 이전 latest-good snapshot은 지우지 말고 attached materialization result를 확인한 뒤 일봉 갱신을 재시도한다.
    - Futures Macro는 시장 컨텍스트 화면이며 live approval, order, broker/account sync, auto rebalance를 만들지 않는다.
 
 5. `Workspace > Overview > Sentiment`
@@ -291,7 +376,7 @@ PY
 - Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
 - Coverage Diagnostics keeps `Reason` / `Recommended Action` and adds compact `Likely Cause`, `Evidence Summary`, `Next Check`, `Listing Evidence`, `Profile Freshness`, and `Market Data Issue` evidence. These are DB-backed hints, not legal status, trading signal, validation gate, or monitoring signal.
 - Quote gap diagnostics persist repeated issue history to `finance_meta.market_data_issue` and display occurrence count / latest evidence in Coverage Diagnostics.
-- Futures Macro Thermometer shows six standardized daily score cards, scenario summary, mixed-scenario subtype / reason when the top-level scenario is `혼재된 매크로 흐름`, Interpretation Confidence, current scenario directional sample / hit rate or mixed-scenario occurrence count, strong / weak / conflicting evidence groups, score components, symbol-level 1D / 3D / 5D / 20D / 60D returns, 60D volatility standardized move, 252D position, historical validation summary, score threshold sensitivity, false-positive rates, score-forward-return relationships, and caution copy. The `Futures Macro` tab owns explicit `일봉 매크로 갱신` and `최신 데이터 다시 읽기` controls; newly collected daily futures rows invalidate the macro snapshot cache through the latest stored 1D candle marker. Historical validation is lazy-loaded by the `오늘과 비슷한 과거 흐름 확인` button inside the `과거 점검` card instead of tab entry, and `일봉 갱신` / `다시 읽기` clears the session validation state so the next validation uses the current snapshot. Its conclusion and result tiles stay metric-backed and must not create uncomputed recommendation prose.
+- Futures Macro stores the current 1D/5D/20D score state, 5D/20D independent-episode probabilities, empirical net movement, validation metrics, and bounded calculation trace in one compatible compact snapshot after `일봉 갱신`. The React workbench reads this row without render-time replay; `다시 읽기` is storage-only. Its conclusion and path stay metric-backed, preserve provisional/unavailable gates, and must not create uncomputed recommendation prose.
 - FOMC rows have `source=federal_reserve_fomc_calendar`, `confidence=1.0`, and `Source Type=Official`.
 - Macro rows have `Type=MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`, or `MACRO_GDP`, `Source Type=Official`, and `Validation=Official`.
 - BLS `.ics` import rows keep `source=bureau_labor_statistics_release_schedule` and `raw_payload_json.import_method=official_ics_file`.

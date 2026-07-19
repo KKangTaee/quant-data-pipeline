@@ -90,6 +90,17 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
         "caveats": ["업로드한 파일의 source year 범위와 최신성을 확인해야 합니다."],
         "next_action": "Overview Events에서 BLS row가 보강됐는지 확인하세요.",
     },
+    "import_sp500_index_earnings_xlsx": {
+        "title": "S&P 500 실제 EPS 등록",
+        "purpose": "사용자가 내려받은 S&P 공식 Index Earnings XLSX의 실제 As-Reported 분기 EPS를 등록합니다.",
+        "targets": ["finance_meta.sp500_index_earnings"],
+        "used_by": ["Workspace > Overview > 시장맥락 > 경제 사이클"],
+        "caveats": [
+            "공식 workbook의 QUARTERLY DATA 제목과 Operating/As-Reported 분기 머리글을 확인할 수 있어야 합니다.",
+            "경제 사이클의 current/prior TTM 비교에는 완료 actual As-Reported 분기 8개가 필요합니다.",
+        ],
+        "next_action": "등록 결과에서 확보 분기 수와 최신 완료 분기를 확인한 뒤 경제 사이클을 다시 여세요.",
+    },
     "collect_earnings_calendar": {
         "title": "실적 발표 예상 일정 수집",
         "purpose": "bounded symbol set의 upcoming earnings estimate를 yfinance와 선택적 Nasdaq cross-check로 수집합니다.",
@@ -195,6 +206,17 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
             "CUSIP-symbol mapping은 별도 verified mapping이 없으면 partial입니다.",
         ],
         "next_action": "수집 후 Workspace > Institutional Portfolios에서 manager search와 reverse lookup을 확인하세요.",
+    },
+    "collect_sec_13f_identifier_mappings": {
+        "title": "SEC 13F ticker 연결 보강",
+        "purpose": "저장된 주요 기관의 최신 13F CUSIP/CINS를 OpenFIGI v3로 안전하게 ticker identity에 연결합니다.",
+        "targets": ["finance_meta.institutional_13f_identifier_resolution"],
+        "used_by": ["Workspace > Institutional Portfolios"],
+        "caveats": [
+            "OpenFIGI 후보가 둘 이상이면 ambiguous로 저장하고 ticker를 노출하지 않습니다.",
+            "API key는 선택 사항이며 UI가 아니라 OPENFIGI_API_KEY 환경변수로만 받습니다.",
+        ],
+        "next_action": "완료 후 Institutional Portfolios에서 ticker 연결 비중과 종목 상세 진입을 확인하세요.",
     },
     "collect_computed_snapshot_lifecycle": {
         "title": "반복 관찰 lifecycle 요약",
@@ -316,7 +338,7 @@ LIFECYCLE_EVIDENCE_JOBS = {
     "collect_sec_company_ticker_crosscheck",
     "collect_computed_snapshot_lifecycle",
 }
-INSTITUTIONAL_13F_JOBS = {"collect_sec_13f_dataset"}
+INSTITUTIONAL_13F_JOBS = {"collect_sec_13f_dataset", "collect_sec_13f_identifier_mappings"}
 PARTIAL_LIFECYCLE_EVIDENCE_JOBS = {
     "collect_symbol_directory_snapshots",
     "collect_sec_company_ticker_crosscheck",

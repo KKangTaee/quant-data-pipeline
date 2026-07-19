@@ -19,6 +19,12 @@ from finance.data.market_intelligence import (
     upsert_market_symbol_aliases,
 )
 from finance.loaders.price import load_latest_prices, load_price_freshness_summary
+from finance.loaders.us_stock_valuation import build_us_stock_valuation_collection_plan
+from finance.loaders.us_stock_turnaround import build_us_stock_turnaround_collection_plan
+
+from app.services.overview.market_context_valuation import (
+    build_market_context_valuation_read_model,
+)
 
 from app.jobs.ingestion_jobs import (
     JobResult,
@@ -29,9 +35,14 @@ from app.jobs.ingestion_jobs import (
     run_collect_market_structure_calendar,
     run_collect_market_sentiment,
     run_collect_market_intraday_snapshot,
+    run_repair_nasdaq100_valuation_coverage,
     run_collect_ohlcv,
+    run_collect_sec_company_ticker_crosscheck,
     run_collect_sp500_universe,
     run_collect_symbol_directory_snapshots,
+    run_collect_us_stock_valuation_inputs,
+    run_collect_us_stock_refresh_inputs,
+    run_collect_us_stock_turnaround_inputs,
     run_diagnose_market_quote_gaps,
     run_extended_statement_refresh,
 )
@@ -203,6 +214,438 @@ def run_overview_event_calendars_refresh_all(*, years: Iterable[int] | None = No
 
 def run_overview_sp500_universe() -> JobResult:
     return run_collect_sp500_universe()
+
+
+def run_overview_nasdaq100_valuation_repair(
+    *,
+    months: int = 60,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    """Run the approved Nasdaq valuation repair through the ingestion boundary."""
+    result = dict(
+        run_repair_nasdaq100_valuation_coverage(
+            months=months,
+            progress_callback=progress_callback,
+        )
+    )
+    result["job_name"] = "overview_nasdaq100_valuation_repair"
+    details = dict(result.get("details") or {})
+    details.update(
+        {
+            "source_job_name": "repair_nasdaq100_valuation_coverage",
+            "purpose": (
+                f"Market Context Nasdaq-100 {int(months)}-month "
+                "valuation/history repair"
+            ),
+            "requested_months": int(months),
+        }
+    )
+    result["details"] = details
+    return result
+
+
+def _selected_stock_from_market_context(model: dict[str, Any]) -> dict[str, Any]:
+    return dict(dict(model.get("instruments") or {}).get("us_stock") or {})
+
+
+def _selected_stock_refresh_result(
+    *,
+    job_name: str,
+    normalized: str,
+    started_at: datetime,
+    status: str,
+    message: str,
+    results: list[dict[str, Any]],
+    before: dict[str, Any],
+    after: dict[str, Any],
+) -> JobResult:
+    failed_symbols = list(
+        dict.fromkeys(
+            str(item).strip().upper()
+            for result in results
+            for item in (result.get("failed_symbols") or [])
+            if str(item).strip()
+        )
+    )
+    return {
+        "job_name": job_name,
+        "status": status,
+        "started_at": started_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "finished_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "duration_sec": round((datetime.now() - started_at).total_seconds(), 3),
+        "rows_written": sum(int(result.get("rows_written") or 0) for result in results),
+        "symbols_requested": 1,
+        "symbols_processed": 0 if status == "failed" else 1,
+        "failed_symbols": failed_symbols,
+        "message": message,
+        "details": {
+            "symbol": normalized,
+            "before": before,
+            "after": after,
+            "steps": results,
+        },
+    }
+
+
+def run_overview_us_stock_data_refresh(
+    symbol: str,
+    *,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    model_builder: Callable[..., dict[str, Any]] = build_market_context_valuation_read_model,
+    identity_runner: Callable[..., JobResult] = run_collect_sec_company_ticker_crosscheck,
+    collection_runner: Callable[..., JobResult] = run_collect_us_stock_refresh_inputs,
+) -> JobResult:
+    """Refresh one selected stock, preserving market writes before SEC identity."""
+    job_name = "overview_us_stock_data_refresh"
+    normalized = str(symbol or "").strip().upper()
+    started_at = datetime.now()
+    before_stock = _selected_stock_from_market_context(
+        dict(model_builder(selected_symbol=normalized))
+    )
+    before = dict(before_stock.get("data_freshness") or {})
+    action = dict(before.get("action") or {})
+    if before.get("status") == "READY":
+        return _selected_stock_refresh_result(
+            job_name=job_name,
+            normalized=normalized,
+            started_at=started_at,
+            status="success",
+            message=f"{normalized} 자료가 이미 최신 상태입니다.",
+            results=[],
+            before=before,
+            after=before,
+        )
+    if (
+        action.get("id") != "refresh_us_stock_data"
+        or str(action.get("symbol") or "").strip().upper() != normalized
+        or not action.get("enabled")
+    ):
+        return _selected_stock_refresh_result(
+            job_name=job_name,
+            normalized=normalized,
+            started_at=started_at,
+            status="failed",
+            message=str(before.get("reason") or "선택 종목의 갱신 범위를 확인할 수 없습니다."),
+            results=[],
+            before=before,
+            after=before,
+        )
+
+    scopes = set(action.get("scopes") or [])
+    results: list[dict[str, Any]] = []
+    market_scopes = scopes & {"asset_profile", "prices"}
+    if market_scopes:
+        results.append(
+            dict(
+                collection_runner(
+                    normalized,
+                    cik="",
+                    identity_cik="",
+                    price_start=(
+                        before.get("price_basis_date")
+                        or before.get("expected_price_date")
+                    ),
+                    price_end=before.get("expected_price_date"),
+                    collect_profile="asset_profile" in market_scopes,
+                    collect_prices="prices" in market_scopes,
+                    collect_statements=False,
+                    progress_callback=progress_callback,
+                )
+            )
+        )
+
+    identity_stock = before_stock
+    if "sec_identity" in scopes:
+        if progress_callback is not None:
+            progress_callback(
+                {"event": "stage", "stage": "identity", "symbol": normalized}
+            )
+        results.append(dict(identity_runner([normalized], progress_callback=None)))
+        identity_stock = _selected_stock_from_market_context(
+            dict(model_builder(selected_symbol=normalized))
+        )
+
+    identity_freshness = dict(identity_stock.get("data_freshness") or {})
+    identity_action = dict(identity_freshness.get("action") or {})
+    identity_scopes = set(identity_action.get("scopes") or [])
+    identity = dict(identity_stock.get("selection") or {})
+    cik = str(identity.get("cik") or "").strip()
+    if "sec_statements" in identity_scopes and cik:
+        results.append(
+            dict(
+                collection_runner(
+                    normalized,
+                    cik=cik,
+                    identity_cik=cik,
+                    price_start=None,
+                    price_end=None,
+                    collect_profile=False,
+                    collect_prices=False,
+                    collect_statements=True,
+                    progress_callback=progress_callback,
+                )
+            )
+        )
+
+    after_stock = _selected_stock_from_market_context(
+        dict(model_builder(selected_symbol=normalized))
+    )
+    after = dict(after_stock.get("data_freshness") or {})
+    successful_step = any(
+        str(result.get("status") or "").lower() in {"success", "partial_success"}
+        for result in results
+    )
+    if after.get("status") == "READY":
+        status = "success"
+    elif successful_step:
+        status = "partial_success"
+    else:
+        status = "failed"
+    return _selected_stock_refresh_result(
+        job_name=job_name,
+        normalized=normalized,
+        started_at=started_at,
+        status=status,
+        message=(
+            f"{normalized} 최신 자료를 반영했습니다."
+            if status == "success"
+            else f"{normalized} 수집 가능한 자료를 반영했고 남은 항목이 있습니다."
+            if status == "partial_success"
+            else f"{normalized} 최신 자료를 반영하지 못했습니다."
+        ),
+        results=results,
+        before=before,
+        after=after,
+    )
+
+
+def run_overview_us_stock_valuation_collection(
+    symbol: str,
+    *,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    plan_builder: Callable[..., dict[str, Any]] = build_us_stock_valuation_collection_plan,
+    identity_runner: Callable[..., JobResult] = run_collect_sec_company_ticker_crosscheck,
+    collection_runner: Callable[..., JobResult] = run_collect_us_stock_valuation_inputs,
+) -> JobResult:
+    """Preflight, synchronously collect, and recheck one selected stock."""
+    normalized = str(symbol or "").strip().upper()
+    before = dict(plan_builder(normalized))
+    if before.get("status") == "READY":
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return {
+            "job_name": "overview_us_stock_valuation_collection",
+            "status": "success",
+            "started_at": now,
+            "finished_at": now,
+            "duration_sec": 0.0,
+            "rows_written": 0,
+            "symbols_requested": 1,
+            "symbols_processed": 1,
+            "failed_symbols": [],
+            "message": f"{normalized} valuation inputs are already complete.",
+            "details": {"before": before, "after": before},
+        }
+    if before.get("status") != "COLLECTABLE":
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return {
+            "job_name": "overview_us_stock_valuation_collection",
+            "status": "failed",
+            "started_at": now,
+            "finished_at": now,
+            "duration_sec": 0.0,
+            "rows_written": 0,
+            "symbols_requested": 1,
+            "symbols_processed": 0,
+            "failed_symbols": [normalized],
+            "message": str(before.get("reason") or "Selected stock is not collectable."),
+            "details": {"before": before, "after": before},
+        }
+
+    active_plan = before
+    identity_result: dict[str, Any] | None = None
+    if "sec_identity" in set(before.get("scopes") or []):
+        if progress_callback is not None:
+            progress_callback(
+                {"event": "stage", "stage": "identity", "symbol": normalized}
+            )
+        identity_result = dict(
+            identity_runner([normalized], progress_callback=None)
+        )
+        active_plan = dict(plan_builder(normalized))
+        active_identity = dict(active_plan.get("identity") or {})
+        if not str(active_identity.get("cik") or "").strip():
+            return {
+                **identity_result,
+                "job_name": "overview_us_stock_valuation_collection",
+                "status": "failed",
+                "failed_symbols": [normalized],
+                "message": f"{normalized} SEC CIK identity could not be linked.",
+                "details": {
+                    "identity_step": identity_result,
+                    "before": before,
+                    "after": active_plan,
+                },
+            }
+        if active_plan.get("status") == "READY":
+            return {
+                **identity_result,
+                "job_name": "overview_us_stock_valuation_collection",
+                "status": "success",
+                "message": f"{normalized} valuation inputs are ready.",
+                "details": {
+                    "identity_step": identity_result,
+                    "before": before,
+                    "after": active_plan,
+                },
+            }
+        if active_plan.get("status") != "COLLECTABLE":
+            return {
+                **identity_result,
+                "job_name": "overview_us_stock_valuation_collection",
+                "status": "failed",
+                "failed_symbols": [normalized],
+                "message": str(
+                    active_plan.get("reason")
+                    or f"{normalized} is not collectable after SEC identity refresh."
+                ),
+                "details": {
+                    "identity_step": identity_result,
+                    "before": before,
+                    "after": active_plan,
+                },
+            }
+
+    identity = dict(active_plan.get("identity") or {})
+    scopes = set(active_plan.get("scopes") or [])
+    ranges = dict(active_plan.get("missing_ranges") or {})
+    price_range = dict(ranges.get("prices") or {})
+    collected = dict(
+        collection_runner(
+            normalized,
+            cik=str(identity.get("cik") or ""),
+            identity_cik=str(identity.get("cik") or ""),
+            price_start=price_range.get("start"),
+            price_end=price_range.get("end"),
+            collect_prices="prices" in scopes,
+            collect_statements="sec_statements" in scopes,
+            progress_callback=progress_callback,
+        )
+    )
+    after = dict(plan_builder(normalized))
+    if after.get("status") == "READY":
+        status = "success"
+    elif after.get("status") == "COLLECTABLE" and collected.get("status") != "failed":
+        status = "partial_success"
+    else:
+        status = str(collected.get("status") or "failed")
+    details = dict(collected.get("details") or {})
+    details.update(
+        {
+            "source_job_name": collected.get("job_name"),
+            "before": before,
+            "after": after,
+        }
+    )
+    if identity_result is not None:
+        details["identity_step"] = identity_result
+    return {
+        **collected,
+        "job_name": "overview_us_stock_valuation_collection",
+        "status": status,
+        "rows_written": int(collected.get("rows_written") or 0)
+        + int((identity_result or {}).get("rows_written") or 0),
+        "message": (
+            f"{normalized} valuation inputs are ready."
+            if status == "success"
+            else f"{normalized} collection finished; remaining ranges are shown."
+        ),
+        "details": details,
+    }
+
+
+def run_overview_us_stock_turnaround_collection(
+    symbol: str,
+    *,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    plan_builder: Callable[..., dict[str, Any]] = build_us_stock_turnaround_collection_plan,
+    collection_runner: Callable[..., JobResult] = run_collect_us_stock_turnaround_inputs,
+) -> JobResult:
+    """Preflight, collect, and recheck exact selected-stock turnaround scopes."""
+    normalized = str(symbol or "").strip().upper()
+    before = dict(plan_builder(normalized))
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if before.get("status") == "READY":
+        return {
+            "job_name": "overview_us_stock_turnaround_collection",
+            "status": "success",
+            "started_at": now,
+            "finished_at": now,
+            "duration_sec": 0.0,
+            "rows_written": 0,
+            "symbols_requested": 1,
+            "symbols_processed": 1,
+            "failed_symbols": [],
+            "message": f"{normalized} turnaround inputs are already complete.",
+            "details": {"before": before, "after": before},
+        }
+    if before.get("status") != "COLLECTABLE":
+        return {
+            "job_name": "overview_us_stock_turnaround_collection",
+            "status": "failed",
+            "started_at": now,
+            "finished_at": now,
+            "duration_sec": 0.0,
+            "rows_written": 0,
+            "symbols_requested": 1,
+            "symbols_processed": 0,
+            "failed_symbols": [normalized],
+            "message": str(before.get("reason") or "Selected stock is not collectable."),
+            "details": {"before": before, "after": before},
+        }
+
+    identity = dict(before.get("identity") or {})
+    scopes = set(before.get("scopes") or [])
+    ranges = dict(before.get("missing_ranges") or {})
+    price_range = dict(ranges.get("prices") or {})
+    collected = dict(
+        collection_runner(
+            normalized,
+            cik=str(identity.get("cik") or ""),
+            identity_cik=str(identity.get("cik") or ""),
+            price_start=price_range.get("start"),
+            price_end=price_range.get("end"),
+            collect_profile="asset_profile" in scopes,
+            collect_prices="prices" in scopes,
+            collect_statements="sec_statements" in scopes,
+            progress_callback=progress_callback,
+        )
+    )
+    after = dict(plan_builder(normalized))
+    if after.get("status") == "READY":
+        status = "success"
+    elif after.get("status") == "COLLECTABLE" and collected.get("status") != "failed":
+        status = "partial_success"
+    else:
+        status = str(collected.get("status") or "failed")
+    details = dict(collected.get("details") or {})
+    details.update(
+        {
+            "source_job_name": collected.get("job_name"),
+            "before": before,
+            "after": after,
+        }
+    )
+    return {
+        **collected,
+        "job_name": "overview_us_stock_turnaround_collection",
+        "status": status,
+        "message": (
+            f"{normalized} turnaround inputs are ready."
+            if status == "success"
+            else f"{normalized} collection finished; remaining scopes are shown."
+        ),
+        "details": details,
+    }
 
 
 def run_overview_nasdaq_symbol_directory() -> JobResult:

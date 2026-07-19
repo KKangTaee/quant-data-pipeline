@@ -99,6 +99,30 @@ yfinance
 
 ## Overview market intelligence 흐름
 
+### U.S. economic cycle regime forecast
+
+```text
+FRED/ALFRED vintage-dates API + observations API output_type=1 + FRED_API_KEY
+  -> finance.data.economic_cycle_vintages
+  -> finance_meta.macro_series_vintage_observation
+  -> finance.loaders.economic_cycle strict as-of selection
+  -> finance.economic_cycle_features / economic_cycle_labels
+  -> finance.economic_cycle_model / economic_cycle_validation
+  -> finance.economic_cycle_pipeline
+  -> finance_meta.economic_cycle_model_artifact
+  -> finance_meta.economic_cycle_snapshot
+  -> app.services.overview.economic_cycle
+  -> Workspace > Overview > 시장 맥락 > 경제 사이클 React workbench
+```
+
+의미:
+
+- 17개 고정 catalog는 real-time revision interval을 보존하고, 각 forecast origin은 당시 발표되어 유효한 row만 읽는다.
+- h0 label/model은 activity/labor 중심이며 h1/h2는 financial-leading/inflation-policy context를 보조 입력으로 사용할 수 있다.
+- h0/h1/h2는 각각 rolling-origin gate로 `READY/LIMITED`를 판정한다. 완전한 artifact와 입력으로 계산 가능한 LIMITED horizon은 확률·우세 국면을 snapshot에 보존하고 UI에서 `잠정 모델 추정`으로 표시한다. READY는 `검증된 모델 추정`, parameter/입력 불완전은 `판단 불가`다.
+- 수집, 학습/검증, current materialization, 10년 replay는 명시적인 backend 실행이다. Overview render는 compact snapshot/history DB row만 읽고 provider나 model job을 호출하지 않는다.
+- 기존 revised `macro_series_observation`과 달리 이 경로에는 CSV fallback이 없다. `FRED_API_KEY`가 없으면 수집을 실패시키고 latest-good snapshot 또는 `NOT_MATERIALIZED` LIMITED 상태를 유지한다.
+
 ### S&P 500 Market Context valuation
 
 ```text
@@ -106,8 +130,10 @@ Robert Shiller official page -> current ie_data.xls discovery
   -> finance.data.sp500_valuation.collect_and_store_shiller_monthly_valuation()
   -> finance_meta.sp500_monthly_valuation
 
-operator-supplied S&P Index Earnings workbook + source release date
-  -> import_and_store_sp500_index_earnings()
+Workspace > Ingestion official S&P Index Earnings XLSX + source release date
+  -> run_import_sp500_index_earnings_xlsx()
+  -> official QUARTERLY DATA title + multi-row basis header validation
+  -> import_and_store_sp500_index_earnings() transactional release-vintage UPSERT
   -> finance_meta.sp500_index_earnings
 
 Federal Reserve official SEP history + FOMC calendar latest material
@@ -121,6 +147,11 @@ finance.loaders.sp500_valuation + finance.loaders.price
   -> official actual TTM first, latest Shiller interpolated TTM fallback, all SEP vintages
   -> app.services.overview.sp500_valuation.build_sp500_valuation_read_model()
   -> React Market Context valuation component
+
+finance.loaders.sp500_valuation.load_sp500_actual_eps_history(as_of)
+  -> period_end <= as_of + source_release_date <= as_of
+  -> eight distinct actual As-Reported quarters
+  -> Economic Cycle current/prior TTM YoY asset pathway
 ```
 
 의미:
@@ -135,6 +166,76 @@ finance.loaders.sp500_valuation + finance.loaders.price
 - 모든 기간 flow는 Shiller EPS vintage 제약 때문에 strict PIT backtest가 아니라 `과거 시점 재구성 시나리오`다.
 - SPY 환산은 SPX/SPY EOD 기준일이 같을 때만 제공한다.
 - 화면은 source를 직접 fetch하지 않고 DB-backed read model만 렌더링한다.
+
+### 미국 개별주식 Market Context relative valuation
+
+```text
+current listing/profile + optional SEC lifecycle
+  -> finance.loaders.us_stock_valuation.search_us_common_stocks()
+  -> DB read-only 기업명·티커 검색
+
+selected common stock price + detailed SEC statements + FOMC SEP
+  -> finance.loaders.us_stock_valuation.load_us_stock_valuation_inputs()
+  -> finance.data.us_stock_valuation.build_monthly_pit_valuation()
+  -> app.services.overview.us_stock_valuation
+
+selected common stock duration + instant statements + profile + price
+  -> finance.loaders.us_stock_turnaround.load_us_stock_turnaround_inputs()
+  -> finance.data.us_stock_turnaround.build_turnaround_analysis()
+  -> app.services.overview.us_stock_turnaround
+
+PER + turnaround isolated composition
+  -> app.services.overview.market_context_valuation
+  -> React S&P 500 / 미국 개별주식 selector
+  -> selected stock PER 상대가치 / 전환 분석 selector
+
+COLLECTABLE React action intent
+  -> app.jobs.overview_actions.run_overview_us_stock_valuation_collection()
+     or run_overview_us_stock_turnaround_collection()
+  -> selected-symbol SEC identity 확인
+  -> exact missing profile / price / statement scope preflight
+  -> canonical synchronous ingestion
+  -> stored read model rerun
+```
+
+의미:
+
+- 검색, 선택, 화면 진입은 DB read-only이며 UI/React가 provider를 직접 호출하지 않는다.
+- 각 월말까지 공개된 최신 4개 분기 diluted EPS를 합산하고, price와 EPS를 같은 as-of split basis로 맞춘 뒤 positive TTM EPS에만 P/E를 계산한다.
+- Graph 1은 최근 60개월 positive log(P/E)와 36개월 민감도, Graph 2는 FOMC real GDP+PCE macro proxy와 최근 3년 기업 초과 TTM EPS 성장 P25/P50/P75를 결합한다.
+- 전환 분석은 direct Q와 compatible H1/9M/FY subtraction으로 discrete quarter를 복원한다. Exact concept 처리 뒤 missing Q4만 explicit equivalent-concept family의 같은 symbol/fiscal year/unit 및 primary-period/PIT 조건으로 보완하며, per-metric `REPORTED/FILING_DERIVED`와 TTM derived-input provenance를 함께 전달한다. Guard 실패는 missing slot과 끊긴 선으로 유지한다. milestone과 runway/debt/dilution risk는 서로 독립이다.
+- positive current TTM EPS와 Graph 1 READY를 모두 만족할 때만 PER를 기본 추천한다. negative P/E는 만들지 않고 전환 분석 valuation도 fresh/aligned USD input이 없으면 숫자를 숨긴다.
+- raw profile·가격·SEC gap만 `COLLECTABLE`이며 적자, 짧은 상장 이력, 검증되지 않은 ADR 단위, unsupported sector는 provider 수집으로 해결할 수 없는 분석/가치평가 상태다. SEC CIK가 없으면 기존 분석을 보존하고 collection만 `BLOCKED`다.
+- V1은 새 valuation materialization table을 만들지 않고 선택한 한 종목의 bounded stored evidence를 read-time 계산한다.
+
+### Retained Nasdaq-100 QQQ proxy valuation backend
+
+```text
+SEC QQQ N-PORT / N-30B-2
+  -> finance.data.nasdaq100_valuation.collect_and_store_qqq_sec_holdings()
+  -> finance_meta.etf_holdings_snapshot
+
+stored QQQ holdings + finance_fundamental statement values + finance_price EOD
+  -> materialize_and_store_nasdaq100_monthly()
+  -> finance_meta.nasdaq100_monthly_valuation
+  -> finance.loaders.nasdaq100_valuation
+  -> app.services.overview.nasdaq100_valuation
+
+retained bounded repair facade
+  -> app.jobs.overview_actions.run_overview_nasdaq100_valuation_repair()
+  -> diagnose missing 60m EPS / EOD targets
+  -> canonical statement / OHLCV ingestion
+  -> strict 60m rematerialization
+  -> cache clear + stored read model rerun
+```
+
+의미:
+
+- 이 data/materialization/collector 경계는 보존하지만 current Market Context user-facing selector/action path에서는 호출하지 않는다.
+- weighted coverage 95% 미만 월은 `blocked`로 저장하고 그래프·시나리오 값을 숨긴다.
+- blocker의 `60개월 가치평가 자료 보강`은 사용자가 명시적으로 눌렀을 때만 동기 실행되며, historical holdings universe에서 부족한 분기 EPS/EOD만 repeat-safe하게 보강한다.
+- 2026-07-13 local QA에서는 combined basic/diluted actual fallback 보완 후 요청 60개월이 모두 95% gate를 통과했다. source gap이 남는 다른 환경에서는 blocker와 partial result를 유지한다.
+- QQQ는 무료·무계정 거래 가능 proxy이며 공식 Nasdaq aggregate나 analyst consensus가 아니다.
 
 ```text
 Wikipedia S&P 500 constituents
@@ -363,6 +464,7 @@ CNN Fear & Greed JSON / AAII official historical HTML
 - P2-4 초기 series는 `VIXCLS`, `T10Y3M`, `BAA10Y`다.
 - API key가 있으면 FRED API를 쓰고, 없으면 official `fredgraph.csv` download를 사용한다.
 - Overview sentiment는 `CNN_FEAR_GREED`, CNN component score, `AAII_BULLISH`, `AAII_NEUTRAL`, `AAII_BEARISH`, `AAII_BULL_BEAR_SPREAD`를 같은 long-form table에 저장한다.
+- 이 section의 `macro_series_observation`은 revised-latest context table이라 FRED official CSV fallback을 허용한다. 경제 사이클 학습/replay는 별도 `macro_series_vintage_observation`을 사용하며 key가 없는 CSV fallback을 금지한다.
 - AAII official page는 backend default HTTP client가 interstitial을 받을 수 있어 browser-like document request / TLS impersonation path를 사용한다. 실패하면 값을 꾸미지 않고 job result와 Overview status에 failed / missing state를 남긴다.
 - `load_macro_snapshot()`은 기준일 이전 최신 관측값과 `staleness_days`를 함께 반환한다.
 - `load_market_sentiment_snapshot()`은 Overview Sentiment tab에서 latest CNN / AAII context를 읽고, `load_market_sentiment_history()`는 CNN Fear & Greed, AAII bearish / bull-bear spread, CNN 7개 component history를 read model에 제공한다. Overview service는 latest 값의 최근 percentile / min-max range, CNN headline / component / AAII divergence, CNN component latest-vs-previous change context를 계산한다. surface-specific overlay는 Practical Validation / Final Review / Portfolio Monitoring에서도 같은 latest context를 읽는다. 이 context는 trade signal, PASS / BLOCKER, selected-route gate, monitoring signal, live approval, order, auto rebalance가 아니다.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 import streamlit as st
@@ -505,6 +506,42 @@ def render_operational_section() -> Any:
             )
         _render_inline_last_completed_result("collect_sec_13f_dataset")
 
+        st.divider()
+        _render_job_brief("collect_sec_13f_identifier_mappings")
+        st.caption(
+            "이미 저장된 주요 기관의 최신 13F 보유 종목을 무료 OpenFIGI v3로 확인해 ticker 연결을 보강합니다. "
+            "후보가 하나일 때만 연결하며, Institutional Portfolios 화면을 여는 것만으로 외부 요청이 발생하지 않습니다."
+        )
+        if st.button(
+            "13F ticker 연결 보강",
+            use_container_width=True,
+            disabled=_has_running_job(),
+        ):
+            _schedule_job(
+                {
+                    "action": "collect_sec_13f_identifier_mappings",
+                    "job_name": "collect_sec_13f_identifier_mappings",
+                    "spinner_text": "Enriching stored SEC 13F ticker identities...",
+                    "params": {"refresh_existing": False},
+                    "run_metadata": _job_metadata(
+                        pipeline_type="institutional_13f_identifier_mapping",
+                        execution_mode="operational_low_frequency",
+                        symbol_source="OpenFIGI v3 / stored latest SEC 13F identifiers",
+                        symbol_count=None,
+                        execution_context=(
+                            "주요 기관 최신 13F CUSIP/CINS를 current ticker identity로 보강합니다."
+                        ),
+                        input_params={"refresh_existing": False},
+                    ),
+                }
+            )
+        if _is_running_action("collect_sec_13f_identifier_mappings"):
+            current_progress_callback = _build_progress_callback(
+                st.session_state.running_job,
+                label="SEC 13F Ticker Mapping",
+            )
+        _render_inline_last_completed_result("collect_sec_13f_identifier_mappings")
+
     with st.expander("종목 메타데이터 업데이트", expanded=False):
         _render_job_brief("metadata_refresh")
         st.caption("권장 주기: 주 1회 또는 tracked universe / profile filter가 바뀐 뒤 실행합니다.")
@@ -541,6 +578,66 @@ def render_operational_section() -> Any:
                 label="Metadata Refresh",
             )
         _render_inline_last_completed_result("metadata_refresh")
+
+    with st.expander("S&P 500 실제 EPS 등록", expanded=False):
+        _render_job_brief("import_sp500_index_earnings_xlsx")
+        st.write(
+            "경제 사이클의 `실제 TTM EPS`에 사용할 S&P 500 완료 분기 실적을 등록합니다. "
+            "공식 S&P 500 페이지에서 `Index Earnings` 파일을 내려받은 뒤 그대로 업로드하세요."
+        )
+        st.link_button(
+            "S&P 500 공식 페이지에서 Index Earnings 받기",
+            "https://www.spglobal.com/spdji/en/indices/equity/sp-500/",
+            use_container_width=True,
+        )
+        st.caption(
+            "앱은 공식 `QUARTERLY DATA` 시트에서 완료 값이 있는 As-Reported/Operating 분기만 반영합니다. "
+            "경제 사이클의 현재·전년 TTM 비교에는 실제 As-Reported 분기 8개가 필요합니다."
+        )
+        sp500_eps_file = st.file_uploader(
+            "S&P Index Earnings XLSX",
+            type=["xlsx"],
+            key="sp500_index_earnings_xlsx",
+            help="S&P 공식 페이지의 Documents 영역에 있는 Index Earnings XLSX를 선택합니다.",
+        )
+        sp500_eps_release_date = st.date_input(
+            "자료 발표일",
+            value=date.today(),
+            key="sp500_index_earnings_release_date",
+            help="이 파일을 확인하거나 내려받은 날짜가 아니라 S&P가 이 자료를 공개한 날짜를 입력합니다.",
+        )
+        if st.button(
+            "실제 EPS 반영",
+            use_container_width=True,
+            disabled=_has_running_job() or sp500_eps_file is None,
+        ):
+            _schedule_job(
+                {
+                    "action": "import_sp500_index_earnings_xlsx",
+                    "job_name": "import_sp500_index_earnings_xlsx",
+                    "spinner_text": "S&P 500 실제 EPS 분기를 검증하고 등록하는 중입니다...",
+                    "params": {
+                        "workbook_content": sp500_eps_file.getvalue(),
+                        "source_release_date": str(sp500_eps_release_date),
+                        "source_name": sp500_eps_file.name,
+                    },
+                    "run_metadata": _job_metadata(
+                        pipeline_type="sp500_index_earnings_registration",
+                        execution_mode="manual_official_file_import",
+                        symbol_source="S&P Dow Jones Indices official Index Earnings XLSX",
+                        symbol_count=None,
+                        execution_context=(
+                            "S&P 공식 Index Earnings workbook의 명시적 actual As-Reported 분기를 "
+                            "경제 사이클 실제 TTM EPS 입력으로 등록합니다."
+                        ),
+                        input_params={
+                            "source_release_date": str(sp500_eps_release_date),
+                            "source_name": sp500_eps_file.name,
+                        },
+                    ),
+                }
+            )
+        _render_inline_last_completed_result("import_sp500_index_earnings_xlsx")
 
     with st.expander("시장 이벤트 캘린더 수집", expanded=False):
         st.write("Overview Events 탭에서 읽을 시장 이벤트 캘린더를 공식 무료 소스에서 수집합니다.")

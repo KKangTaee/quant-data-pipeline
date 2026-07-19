@@ -650,6 +650,27 @@ FUTURES_MARKET_SCHEMAS = {
           KEY ix_futures_provider_status (provider_status)
         );
     """,
+    "futures_macro_snapshot": """
+        CREATE TABLE IF NOT EXISTS futures_macro_snapshot (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          snapshot_key VARCHAR(64) NOT NULL,
+          source_marker VARCHAR(64) NOT NULL,
+          as_of_date DATE NULL,
+          schema_version VARCHAR(64) NOT NULL,
+          algorithm_version VARCHAR(128) NOT NULL,
+          status ENUM('READY','LIMITED','ERROR') NOT NULL,
+          snapshot_json LONGTEXT NOT NULL,
+          materialized_at TIMESTAMP NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_futures_macro_snapshot_key (snapshot_key),
+          KEY ix_futures_macro_snapshot_marker (source_marker),
+          KEY ix_futures_macro_snapshot_version (schema_version, algorithm_version)
+        );
+    """,
 }
 
 
@@ -748,6 +769,14 @@ PROVIDER_SCHEMAS = {
           holding_name VARCHAR(512) NOT NULL,
           holding_type VARCHAR(128) NULL,
 
+          cusip VARCHAR(32) NULL,
+          isin VARCHAR(32) NULL,
+          lei VARCHAR(32) NULL,
+          issuer_cik VARCHAR(16) NULL,
+          filing_date DATE NULL,
+          accession_no VARCHAR(32) NULL,
+          holding_snapshot_quality ENUM('annual_anchor','quarterly_anchor','current_issuer_snapshot') NULL,
+
           weight_pct DOUBLE NULL,
           shares DOUBLE NULL,
           market_value DOUBLE NULL,
@@ -831,7 +860,92 @@ PROVIDER_SCHEMAS = {
           KEY ix_category_date (category, observation_date),
           KEY ix_coverage_status (coverage_status)
         );
+    """,
+    "macro_series_vintage_observation": """
+        CREATE TABLE IF NOT EXISTS macro_series_vintage_observation (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          series_id VARCHAR(64) NOT NULL,
+          observation_date DATE NOT NULL,
+          realtime_start DATE NOT NULL,
+          realtime_end DATE NOT NULL,
+          source VARCHAR(64) NOT NULL DEFAULT 'fred',
+          source_type ENUM('official','database_bridge','computed_proxy') NOT NULL DEFAULT 'official',
+          source_mode VARCHAR(64) NOT NULL DEFAULT 'fred_output_type_1_realtime_intervals',
+          source_ref VARCHAR(1024) NULL,
+
+          series_name VARCHAR(255) NULL,
+          factor_group VARCHAR(64) NOT NULL,
+          frequency VARCHAR(32) NULL,
+          units VARCHAR(64) NULL,
+          value DECIMAL(24,10) NULL,
+          release_lag_days INT NULL,
+
+          coverage_status ENUM('actual','partial','missing','error') NOT NULL DEFAULT 'actual',
+          missing_fields_json TEXT NULL,
+          collected_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_series_observation_realtime_source (series_id, observation_date, realtime_start, source),
+          KEY ix_series_realtime_observation (series_id, realtime_start, observation_date),
+          KEY ix_factor_observation (factor_group, observation_date),
+          KEY ix_vintage_coverage_status (coverage_status)
+        );
     """
+}
+
+
+ECONOMIC_CYCLE_SCHEMAS = {
+    "economic_cycle_model_artifact": """
+        CREATE TABLE IF NOT EXISTS economic_cycle_model_artifact (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          model_version VARCHAR(128) NOT NULL,
+          trained_through DATE NOT NULL,
+          feature_schema_version VARCHAR(128) NOT NULL,
+          parameters_json LONGTEXT NOT NULL,
+          validation_metrics_json LONGTEXT NOT NULL,
+          publication_status ENUM('READY','LIMITED','ERROR') NOT NULL,
+          publication_status_json LONGTEXT NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_cycle_model_trained (model_version, trained_through),
+          KEY ix_cycle_model_status_trained (publication_status, trained_through)
+        );
+    """,
+    "economic_cycle_snapshot": """
+        CREATE TABLE IF NOT EXISTS economic_cycle_snapshot (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          as_of_date DATE NOT NULL,
+          model_version VARCHAR(128) NOT NULL,
+          run_kind ENUM('historical_replay','current') NOT NULL,
+          training_cutoff_date DATE NOT NULL,
+          data_cutoff_date DATE NOT NULL,
+          status ENUM('READY','LIMITED','ERROR') NOT NULL,
+          current_phase ENUM('recovery','expansion','slowdown','recession') NULL,
+          expected_transition VARCHAR(128) NULL,
+          nber_recession TINYINT(1) NOT NULL DEFAULT 0,
+
+          probabilities_json LONGTEXT NOT NULL,
+          forecast_path_json LONGTEXT NOT NULL,
+          factor_contributions_json LONGTEXT NOT NULL,
+          top_evidence_json LONGTEXT NOT NULL,
+          warnings_json LONGTEXT NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_cycle_snapshot (as_of_date, model_version, run_kind),
+          KEY ix_cycle_snapshot_date_status (as_of_date, status),
+          KEY ix_cycle_snapshot_kind_date (run_kind, as_of_date)
+        );
+    """,
 }
 
 
@@ -965,6 +1079,35 @@ INSTITUTIONAL_13F_SCHEMAS = {
           KEY ix_source (source)
         );
     """,
+    "institutional_13f_identifier_resolution": """
+        CREATE TABLE IF NOT EXISTS institutional_13f_identifier_resolution (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          identifier_value CHAR(9) NOT NULL,
+          identifier_type VARCHAR(16) NOT NULL,
+          source VARCHAR(64) NOT NULL,
+          resolution_status VARCHAR(16) NOT NULL,
+          symbol VARCHAR(20) NULL,
+          provider_name VARCHAR(255) NULL,
+          figi VARCHAR(16) NULL,
+          candidate_count INT NOT NULL DEFAULT 0,
+          candidates_json JSON NULL,
+          source_ref VARCHAR(1024) NULL,
+          warning_text TEXT NULL,
+          error_text TEXT NULL,
+          last_attempt_status VARCHAR(16) NOT NULL,
+          attempted_at TIMESTAMP NULL,
+          resolved_at TIMESTAMP NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_identifier_source (identifier_value, source),
+          KEY ix_resolution_status (resolution_status),
+          KEY ix_resolution_symbol (symbol),
+          KEY ix_last_attempt_status (last_attempt_status)
+        );
+    """,
     "institutional_13f_manager_watchlist": """
         CREATE TABLE IF NOT EXISTS institutional_13f_manager_watchlist (
           cik VARCHAR(10) PRIMARY KEY,
@@ -1016,6 +1159,38 @@ INSTITUTIONAL_13F_SCHEMAS = {
 
 
 VALUATION_SCHEMAS = {
+    "nasdaq100_monthly_valuation": """
+        CREATE TABLE IF NOT EXISTS nasdaq100_monthly_valuation (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          observation_month DATE NOT NULL,
+          proxy_symbol VARCHAR(20) NOT NULL DEFAULT 'QQQ',
+          qqq_price DOUBLE NULL,
+          reconstructed_ttm_eps DOUBLE NULL,
+          trailing_pe DOUBLE NULL,
+          earnings_yield DOUBLE NULL,
+
+          coverage_weight_pct DOUBLE NOT NULL DEFAULT 0,
+          unmapped_weight_pct DOUBLE NOT NULL DEFAULT 100,
+          holding_snapshot_date DATE NULL,
+          holding_snapshot_quality ENUM('annual_anchor','quarterly_anchor','current_issuer_snapshot') NULL,
+          earnings_available_through DATE NULL,
+          price_basis_date DATE NULL,
+
+          data_quality ENUM('reconstructed_actual','partial','blocked') NOT NULL,
+          source VARCHAR(64) NOT NULL,
+          source_ref VARCHAR(1024) NULL,
+          collected_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_nasdaq100_month_proxy_source (observation_month, proxy_symbol, source),
+          KEY ix_nasdaq100_month (observation_month),
+          KEY ix_nasdaq100_quality (data_quality)
+        );
+    """,
     "sp500_monthly_valuation": """
         CREATE TABLE IF NOT EXISTS sp500_monthly_valuation (
           id BIGINT AUTO_INCREMENT PRIMARY KEY,

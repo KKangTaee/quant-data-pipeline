@@ -32,4 +32,3 @@ SEC Form 13F official dataset ZIP
 - Add refresh status as operational state for the product page.
 - Add watchlist seed contract for manager rail.
 - Keep holding deltas as a service-level derived view for this iteration unless repeated query cost requires persistence later.
-

@@ -1,10 +1,27 @@
 from __future__ import annotations
 
+from io import BytesIO
 import unittest
 from unittest.mock import Mock
 from unittest.mock import patch
 
 import pandas as pd
+
+
+def xlsx_bytes(sheets: dict[str, pd.DataFrame]) -> bytes:
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        for sheet_name, frame in sheets.items():
+            frame.to_excel(writer, sheet_name=sheet_name, index=False)
+    return buffer.getvalue()
+
+
+def raw_xlsx_bytes(sheets: dict[str, pd.DataFrame]) -> bytes:
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        for sheet_name, frame in sheets.items():
+            frame.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
+    return buffer.getvalue()
 
 
 def monthly_pe_frame(months: int, start: str = "2020-01-01") -> pd.DataFrame:
@@ -213,6 +230,128 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertEqual(rows[0]["value_status"], "actual")
         self.assertEqual(rows[0]["period_type"], "quarterly")
 
+    def test_index_earnings_reader_accepts_explicit_official_quarterly_sheet(self) -> None:
+        from finance.data.sp500_valuation import (
+            SP500_INDEX_EARNINGS_URL,
+            read_sp500_index_earnings_workbook,
+        )
+
+        workbook = xlsx_bytes(
+            {
+                "README": pd.DataFrame({"Notes": ["S&P 500 Index Earnings"]}),
+                "QUARTERLY DATA": pd.DataFrame(
+                    {
+                        "Quarter End": ["2025-12-31", "2026-03-31", "2026-06-30"],
+                        "Status": ["Actual", "Actual", "Estimate"],
+                        "As Reported EPS": [70.0, 72.0, 74.0],
+                        "Operating EPS": [71.0, 73.0, 75.0],
+                    }
+                ),
+            }
+        )
+
+        rows = read_sp500_index_earnings_workbook(
+            workbook,
+            source_release_date="2026-05-15",
+            source_ref=SP500_INDEX_EARNINGS_URL,
+        )
+
+        self.assertEqual(len(rows), 6)
+        self.assertEqual(
+            {(row["earnings_basis"], row["value_status"]) for row in rows},
+            {
+                ("as_reported", "actual"),
+                ("as_reported", "estimate"),
+                ("operating", "actual"),
+                ("operating", "estimate"),
+            },
+        )
+        self.assertTrue(
+            all(row["source_ref"] == SP500_INDEX_EARNINGS_URL for row in rows)
+        )
+
+    def test_index_earnings_reader_parses_official_quarterly_data_layout(self) -> None:
+        from finance.data.sp500_valuation import read_sp500_index_earnings_workbook
+
+        workbook = raw_xlsx_bytes(
+            {
+                "QUARTERLY DATA": pd.DataFrame(
+                    [
+                        ["S&P Dow Jones Indices", None, None],
+                        ["S&P 500 QUARTERLY DATA", None, None],
+                        [None, None, None],
+                        [None, "OPERATING", "AS REPORTED"],
+                        ["QUARTER", "EARNINGS", "EARNINGS"],
+                        ["END", "PER SHR", "PER SHR"],
+                        [pd.Timestamp("2026-03-31"), None, None],
+                        [pd.Timestamp("2025-12-31"), 70.0, 63.0],
+                        [pd.Timestamp("2025-09-30"), 68.0, 61.0],
+                    ]
+                )
+            }
+        )
+
+        rows = read_sp500_index_earnings_workbook(
+            workbook,
+            source_release_date="2026-05-15",
+        )
+
+        self.assertEqual(len(rows), 4)
+        self.assertEqual(
+            {(row["period_end"], row["earnings_basis"], row["value_status"]) for row in rows},
+            {
+                ("2025-12-31", "operating", "actual"),
+                ("2025-12-31", "as_reported", "actual"),
+                ("2025-09-30", "operating", "actual"),
+                ("2025-09-30", "as_reported", "actual"),
+            },
+        )
+
+    def test_index_earnings_reader_keeps_normalized_first_sheet_compatibility(self) -> None:
+        from finance.data.sp500_valuation import read_sp500_index_earnings_workbook
+
+        workbook = xlsx_bytes(
+            {
+                "Sheet1": pd.DataFrame(
+                    {
+                        "period_end": ["2026-03-31"],
+                        "period_type": ["quarterly"],
+                        "status": ["actual"],
+                        "as_reported_eps": [72.0],
+                    }
+                )
+            }
+        )
+
+        rows = read_sp500_index_earnings_workbook(
+            workbook,
+            source_release_date="2026-05-15",
+        )
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["value_status"], "actual")
+        self.assertEqual(rows[0]["earnings_basis"], "as_reported")
+
+    def test_index_earnings_reader_rejects_workbook_without_explicit_status(self) -> None:
+        from finance.data.sp500_valuation import read_sp500_index_earnings_workbook
+
+        workbook = xlsx_bytes(
+            {
+                "QUARTERLY DATA": pd.DataFrame(
+                    {
+                        "Quarter End": ["2026-03-31"],
+                        "As Reported EPS": [72.0],
+                    }
+                )
+            }
+        )
+
+        with self.assertRaisesRegex(ValueError, "actual/estimate 상태"):
+            read_sp500_index_earnings_workbook(
+                workbook,
+                source_release_date="2026-05-15",
+            )
+
     def test_fomc_calendar_discovery_uses_latest_accessible_projection(self) -> None:
         from finance.data.sp500_valuation import discover_latest_fomc_sep_url
 
@@ -324,6 +463,99 @@ class Sp500ValuationDataTests(unittest.TestCase):
 
         self.assertEqual(result["release_date"], "2026-05-15")
         self.assertEqual(db.executemany.call_args.args[1][0]["value_status"], "actual")
+
+    def test_index_earnings_import_reports_actual_coverage_and_commits(self) -> None:
+        from finance.data.sp500_valuation import (
+            SP500_INDEX_EARNINGS_URL,
+            import_and_store_sp500_index_earnings,
+        )
+
+        db = Mock()
+        db.query.side_effect = [
+            [{"cnt": 0}],
+            [
+                {
+                    "actual_quarter_count": 6,
+                    "latest_actual_period_end": "2026-03-31",
+                }
+            ],
+        ]
+        reader = Mock(
+            return_value=[
+                {
+                    "period_end": "2026-03-31",
+                    "period_type": "quarterly",
+                    "earnings_basis": "as_reported",
+                    "value_status": "actual",
+                    "eps": 72.0,
+                    "source": "sp_dow_jones_index_earnings",
+                    "source_ref": "uploaded-file.xlsx",
+                    "source_release_date": "2026-05-15",
+                    "collected_at": None,
+                    "error_msg": None,
+                }
+            ]
+        )
+
+        result = import_and_store_sp500_index_earnings(
+            b"xlsx",
+            source_release_date="2026-05-15",
+            workbook_reader=reader,
+            db_factory=lambda *_args, **_kwargs: db,
+        )
+
+        self.assertEqual(result["actual_quarter_count"], 6)
+        self.assertEqual(result["latest_actual_period_end"], "2026-03-31")
+        self.assertEqual(result["remaining_quarters"], 2)
+        self.assertEqual(result["source_ref"], SP500_INDEX_EARNINGS_URL)
+        self.assertEqual(
+            db.executemany.call_args.args[1][0]["source_ref"],
+            SP500_INDEX_EARNINGS_URL,
+        )
+        reader.assert_called_once_with(
+            b"xlsx",
+            source_release_date="2026-05-15",
+            source_ref=SP500_INDEX_EARNINGS_URL,
+        )
+        db.begin.assert_called_once()
+        db.commit.assert_called_once()
+        db.rollback.assert_not_called()
+
+    def test_index_earnings_import_rolls_back_failed_batch(self) -> None:
+        from finance.data.sp500_valuation import import_and_store_sp500_index_earnings
+
+        db = Mock()
+        db.query.return_value = [{"cnt": 0}]
+        db.executemany.side_effect = RuntimeError("write failed")
+        reader = Mock(
+            return_value=[
+                {
+                    "period_end": "2026-03-31",
+                    "period_type": "quarterly",
+                    "earnings_basis": "as_reported",
+                    "value_status": "actual",
+                    "eps": 72.0,
+                    "source": "sp_dow_jones_index_earnings",
+                    "source_ref": None,
+                    "source_release_date": "2026-05-15",
+                    "collected_at": None,
+                    "error_msg": None,
+                }
+            ]
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "write failed"):
+            import_and_store_sp500_index_earnings(
+                b"xlsx",
+                source_release_date="2026-05-15",
+                workbook_reader=reader,
+                db_factory=lambda *_args, **_kwargs: db,
+            )
+
+        db.begin.assert_called_once()
+        db.rollback.assert_called_once()
+        db.commit.assert_not_called()
+        db.close.assert_called_once()
 
     def test_sep_collector_discovers_latest_release_and_preserves_vintage(self) -> None:
         from finance.data.sp500_valuation import collect_and_store_fomc_sep
@@ -541,6 +773,94 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertEqual(result["ttm_eps"], 270.0)
         self.assertEqual(result["value_status"], "actual")
         self.assertEqual(result["basis"], "as_reported")
+
+    def test_ttm_loader_excludes_future_release_vintages(self) -> None:
+        from finance.loaders.sp500_valuation import load_latest_sp500_ttm_actual_eps
+
+        captured: dict[str, object] = {}
+
+        def query(sql: str, params: tuple[object, ...]) -> list[dict[str, object]]:
+            captured["sql"] = sql
+            captured["params"] = params
+            return []
+
+        load_latest_sp500_ttm_actual_eps(query_fn=query)
+
+        self.assertIn("source_release_date <= CURRENT_DATE()", captured["sql"])
+        self.assertEqual(captured["params"], ())
+
+    def test_actual_eps_history_requires_eight_distinct_completed_quarters(self) -> None:
+        from finance.loaders.sp500_valuation import load_sp500_actual_eps_history
+
+        period_ends = [
+            "2026-03-31",
+            "2025-12-31",
+            "2025-09-30",
+            "2025-06-30",
+            "2025-03-31",
+            "2024-12-31",
+            "2024-09-30",
+            "2024-06-30",
+        ]
+        rows = [
+            {
+                "period_end": period_end,
+                "eps": 72.0 - index * 2.0,
+                "source_release_date": period_end,
+            }
+            for index, period_end in enumerate(period_ends)
+        ]
+
+        result = load_sp500_actual_eps_history(
+            query_fn=lambda _sql, _params: rows
+        )
+
+        self.assertEqual(result["status"], "READY")
+        self.assertEqual(result["quarter_count"], 8)
+        self.assertAlmostEqual(
+            result["current_ttm_eps"],
+            sum(row["eps"] for row in rows[:4]),
+        )
+        self.assertAlmostEqual(
+            result["prior_ttm_eps"],
+            sum(row["eps"] for row in rows[4:8]),
+        )
+        self.assertIsNotNone(result["growth_pct"])
+
+    def test_actual_eps_history_bounds_period_and_release_vintage_by_as_of_date(self) -> None:
+        from finance.loaders.sp500_valuation import load_sp500_actual_eps_history
+
+        captured: dict[str, object] = {}
+
+        def query(sql: str, params: tuple[object, ...]) -> list[dict[str, object]]:
+            captured["sql"] = sql
+            captured["params"] = params
+            return []
+
+        load_sp500_actual_eps_history(
+            end_date="2026-03-31",
+            query_fn=query,
+        )
+
+        self.assertIn("period_end <= %s", captured["sql"])
+        self.assertIn("source_release_date <= %s", captured["sql"])
+        self.assertEqual(captured["params"], ("2026-03-31", "2026-03-31"))
+
+    def test_actual_eps_history_bounds_default_release_vintage_to_current_date(self) -> None:
+        from finance.loaders.sp500_valuation import load_sp500_actual_eps_history
+
+        captured: dict[str, object] = {}
+
+        def query(sql: str, params: tuple[object, ...]) -> list[dict[str, object]]:
+            captured["sql"] = sql
+            captured["params"] = params
+            return []
+
+        load_sp500_actual_eps_history(query_fn=query)
+
+        self.assertIn("period_end <= CURRENT_DATE()", captured["sql"])
+        self.assertIn("source_release_date <= CURRENT_DATE()", captured["sql"])
+        self.assertEqual(captured["params"], ())
 
     def test_sep_history_loader_returns_all_release_vintages(self) -> None:
         from finance.loaders.sp500_valuation import load_fomc_sep_projection_history
@@ -769,6 +1089,43 @@ class Sp500ValuationDataTests(unittest.TestCase):
             self.assertEqual(result["coverage_end"], "2026-07-01")
             self.assertEqual(result["label"], f"최근 {expected_years}년 과거 시점 재구성 시나리오")
 
+    def test_historical_scenario_explains_rolling_warmup_shortfall(self) -> None:
+        from app.services.overview.sp500_valuation import calculate_historical_index_scenario
+
+        result = calculate_historical_index_scenario(
+            monthly_pe_frame(60, start="2021-08-01"),
+            five_year_sep_history_frame(),
+            current_spx={"date": "2026-07-10", "price": 7575.0},
+            visible_months=60,
+        )
+
+        self.assertEqual(result["status"], "INSUFFICIENT_HISTORY")
+        self.assertEqual(result["observation_count"], 1)
+        self.assertEqual(
+            result["reason_code"], "INSUFFICIENT_ROLLING_PER_WARMUP"
+        )
+        self.assertEqual(result["requested_display_months"], 60)
+        self.assertEqual(result["rolling_window_months"], 60)
+        self.assertEqual(result["required_history_months"], 119)
+        self.assertEqual(result["available_history_months"], 60)
+        self.assertEqual(result["missing_history_months"], 59)
+
+    def test_historical_scenario_does_not_label_partial_visible_window_ready(self) -> None:
+        from app.services.overview.sp500_valuation import calculate_historical_index_scenario
+
+        result = calculate_historical_index_scenario(
+            monthly_pe_frame(66, start="2021-02-01"),
+            five_year_sep_history_frame(),
+            current_spx={"date": "2026-07-10", "price": 7575.0},
+            visible_months=60,
+        )
+
+        self.assertEqual(result["observation_count"], 7)
+        self.assertEqual(result["status"], "INSUFFICIENT_HISTORY")
+        self.assertEqual(
+            result["reason_code"], "INSUFFICIENT_ROLLING_PER_WARMUP"
+        )
+
     def test_read_model_exposes_one_year_reconstructed_history(self) -> None:
         from app.services.overview.sp500_valuation import build_sp500_valuation_read_model
 
@@ -905,6 +1262,37 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertTrue(
             any(step["label"] == "Federal Reserve SEP history" for step in result["details"]["steps"])
         )
+
+    def test_sp500_index_earnings_upload_job_reports_economic_cycle_readiness(self) -> None:
+        from app.jobs.ingestion_jobs import run_import_sp500_index_earnings_xlsx
+
+        with patch(
+            "app.jobs.ingestion_jobs.import_and_store_sp500_index_earnings",
+            return_value={
+                "rows_written": 16,
+                "actual_quarter_count": 8,
+                "latest_actual_period_end": "2026-03-31",
+                "remaining_quarters": 0,
+                "release_date": "2026-05-15",
+                "source_ref": "https://www.spglobal.com/spdji/en/documents/additional-material/sp-500-eps-est.xlsx",
+            },
+        ) as importer:
+            result = run_import_sp500_index_earnings_xlsx(
+                workbook_content=b"xlsx",
+                source_release_date="2026-05-15",
+                source_name="sp-500-eps-est.xlsx",
+            )
+
+        importer.assert_called_once_with(
+            b"xlsx",
+            source_release_date="2026-05-15",
+        )
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 16)
+        self.assertIn("8/8", result["message"])
+        self.assertIn("계산할 수 있습니다", result["message"])
+        self.assertEqual(result["details"]["remaining_quarters"], 0)
+        self.assertNotIn("workbook_content", result["details"])
 
     def test_overview_automation_includes_daily_sep_vintage_check(self) -> None:
         from app.jobs.overview_automation import OVERVIEW_AUTOMATION_JOB_SPECS

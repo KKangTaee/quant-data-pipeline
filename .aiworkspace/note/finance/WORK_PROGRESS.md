@@ -23,8 +23,22 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~14차 implementation, desktop / 760px Browser QA와 docs sync를 완료했다.
-  - Latest completed task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
+  - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~14차를 완료했고 승인된 15차 Portfolio Mix React one-shell 설계의 구현 계획과 개발을 이어간다.
+  - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro를 현재 1D/5D/20D 체제와 5D/20D 조건부 전망으로 개편하고, 일봉 갱신 시 5년 compact snapshot을 materialize해 첫 진입은 DB-only로 읽으며 방법론·계산 추적을 React로 통합했다.
+  - Recent completed Institutional Portfolios task is [institutional-13f-openfigi-mapping-v1-20260718](./tasks/active/institutional-13f-openfigi-mapping-v1-20260718/STATUS.md). 무료 OpenFIGI current resolution, curated-manager backfill, actual DB / Browser QA를 전체 roadmap `4/4`로 완료했다.
+  - Previous completed Institutional Portfolios task is [institutional-portfolios-context-first-redesign-v1-20260718](./tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md). 전체 roadmap `4/4`; v2 context-first IA, full holdings explorer, explicit security search, actual DB / desktop / 420px QA를 완료했다.
+  - Recent completed Overview / Market Context task is [overview-economic-cycle-sp500-actual-eps-registration-v1-20260718](./tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/STATUS.md). 공식 workbook 등록 제품 경로는 완료했고 실제 workbook과 발표일 입력은 외부 입력으로 남아 있다.
+  - Previous completed task is [overview-economic-cycle-asset-pathways-stages3-5-v1-20260717](./tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/STATUS.md). 전체 자산경로 roadmap `5/5`를 완료했다.
+  - Previous completed task is [overview-economic-cycle-asset-signal-copy-v1-20260717](./tasks/active/overview-economic-cycle-asset-signal-copy-v1-20260717/STATUS.md). 자산별 미국 경기 신호·실제 가격·두 신호 관계와 5/21/63거래일 표기를 사용자 언어로 정리했다.
+  - Previous completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 일봉의 1주·1개월·3개월 가격 흐름과 경제 배경의 일치·불일치를 표시한다.
+  - Previous completed task is [overview-economic-cycle-asset-context-v1-20260716](./tasks/active/overview-economic-cycle-asset-context-v1-20260716/STATUS.md). 정적 시장 질문을 evidence 기반 자산별 확인 포인트로 바꾸고 우호/부담/혼재/자료 부족, 두 근거, 바뀌는 조건을 2×2 카드로 표시한다.
+  - Previous completed task is [overview-market-context-economic-cycle-provisional-hybrid-v2-20260716](./tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/STATUS.md). 유효 LIMITED 확률을 잠정 추정으로 공개하고 READY/계산불가와 분리했으며, 최근 12개월 2×2 hover 경로·실제 월수 기반 최근 60개월+2개월 ribbon·actual 122 snapshot 보존을 완료했다.
+  - Previous completed task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). 17-series vintage/PIT engine과 horizon별 publication gate를 구현했다.
+  - Previous completed task is [overview-market-context-turnaround-derived-quarter-provenance-v1-20260716](./tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md). Explicit concept family의 확정 공시로 missing Q4를 안전하게 산출하고 provenance와 `공시 기반 산출` 표시를 1차~4차로 완료했다.
+  - Previous completed Overview / Market Context task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL canonical EPS reader와 six-rail transition/already-positive semantics를 1차~3차로 완료했다.
+  - Previous completed Overview / Market Context task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md). Cached selected-stock UI는 DB-only로 유지하고 stale repair는 explicit single action으로 제한한다.
+  - Previous completed Nasdaq task is [overview-market-context-nasdaq100-coverage-repair-action-v1-20260713](./tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md).
+  - Previous completed Institutional Portfolios task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
   - Previous completed Institutional Portfolios task is [institutional-portfolios-watchlist-mapping-v1-20260712](./tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
   - Recent completed Final Review task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md). It closes Level2 actionable gaps and records Final Review accepted-limit / Monitoring / defer terminal states.
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
@@ -47,6 +61,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### 2026-07-19 - master 병합 충돌 해소
+
+- `finance-integration-review` 기준으로 코드 1개와 canonical/root/task 문서 8개의 충돌을 역할별로 병합했다.
+- NYSE calendar 계산은 master의 공용 service로 단일화하고 Backtest/Final Review가 쓰는 공개 wrapper 계약은 보존했다.
+- 가격 최신화 집중 검증 `19 passed`, 전체 service `837 passed / 기존 baseline 12 failed / 35 subtests passed`, py_compile과 diff-check를 확인했다.
+- registry / run history / saved JSONL, `.superpowers/`, generated QA artifact는 병합 commit에서 제외했다.
 
 ### 2026-07-19 - Backtest Workflow Shell And Stage Title Ownership
 
@@ -79,6 +100,52 @@ Detailed historical logs were archived on `2026-04-13`.
 - Python Decision Brief가 stored complete detail을 우선하고, explicit drawdown / Benchmark observation에서만 안전한 fallback condition을 만든다.
 - 구현 커밋은 `04a32c1d`; Decision Brief 26 tests와 focused 123 tests, current GRS read-only runtime projection을 확인했다.
 - CAGR / Data Trust는 threshold를 지어내지 않고 disclosure에 남겼으며 registry / run history / save CTA는 건드리지 않았다.
+- Overview Futures Macro Pattern Outlook V1:
+  - 2026-07-19 마무리에서 `일봉 갱신 -> 5년 current + 5D/20D 계산 -> finance_meta.futures_macro_snapshot 저장 -> Overview DB-only 읽기` 계약을 구현했다. 실제 materialization 10.549s, fresh DB read 0.36~0.37s, browser ready reload 1.877s였다.
+  - Streamlit `원본 데이터 / 계산 추적` expander를 제거하고 React disclosure로 통일했다. 방법론·추적 토글 높이 동기화와 420px 표 내부 스크롤을 실제 화면에서 확인했다.
+  - `today shock -> current pattern -> default 5D / 20D conditional outlook -> evidence / ribbon / asset pathways -> method` 흐름으로 개편했다.
+  - 실제 2026-07-17 snapshot은 혼재 체제 / 전환 시도이며 5D 120개, 20D 42개 독립 episode 모두 `PROVISIONAL`, 방향 우위 미확인이다.
+  - 후속 UI 교정에서 관측 지도는 `20D 전 → 5D 전 → 현재` 실선으로 단순화하고, 전망은 현재에서 5D·20D 말일 중앙 위치까지 직접 잇는 예상 순이동 점선과 선택 horizon 말일의 단일 q25~q75 도착 범위로 교체했다. 중간 stepwise median은 검증 데이터로만 유지한다.
+  - 방향 표시는 endpoint를 덮지 않는 고정 9-unit mid-line marker로 바꾸고 현재/예상 위치 라벨을 leader로 분리했다. 실제 5D/20D/관측 전환, 420px overflow, console error 0을 확인했다.
+  - 5D/20D 두 terminal/range로 하나의 공통 scale을 계산해 `관측만 / 5D / 20D`에서 세 관측 anchor의 SVG 좌표가 완전히 동일하고 전망 레이어만 바뀌는 것을 실제 화면에서 확인했다.
+  - 경로 좌표는 `현재 위치 + 표준화된 조건부 이동`이며 probability/path 시간순 검증을 분리한다. 실제 5D 5점과 20D 20점은 서로 다른 경로이고 모두 `PROVISIONAL`이다.
+  - 상세 구현·성능·QA 근거는 [active task](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md)에 있다.
+
+### Overview / Market Context Track
+
+- Economic Cycle Asset Signal Copy V1:
+  - `경제 국면: 회복` 반복을 제거하고 금·달러는 `미국 경기 신호 / 실제 가격 / 두 신호 관계`, 나머지는 `현재 환경`으로 읽게 했다.
+  - Actual 금은 `금을 지지 / 하락 / 서로 다른 방향`, 달러는 `달러에 부담 / 상승 / 서로 다른 방향`이며 5/21/63거래일을 명시한다.
+  - Focused 35 tests, React build, actual read model, HTTP 200, desktop/420px overflow와 console error 0건을 확인했다.
+- Economic Cycle Gold / Dollar Price Confirmation V1:
+  - 금과 달러를 별도 카드로 분리하고 `GC=F` / `DX-Y.NYB` 저장 일봉의 5/21/63거래일 가격 흐름을 경제 배경과 독립 표시한다.
+  - Actual 2026-07-16은 금 `하락 확인`, 달러 `상승 확인`이며 두 카드 모두 2026-06-30 경제 배경과 불일치한다. 달러의 1주 하락도 1·3개월 상승과 함께 그대로 보인다.
+  - 33개 focused tests, futures 계약 선택 테스트, React build, compile/diff check를 통과했다. 연속선물 롤 효과와 비실시간 원천 경계는 화면과 문서에 유지한다.
+- Economic Cycle Asset Context V1:
+  - 정적 네 문장을 `자산별 확인 포인트` 2×2 카드로 교체하고 상태 → 두 근거 → 바뀌는 조건 순서로 읽게 했다.
+  - 네 canonical factor를 자산별로 번역하되 우호/부담 차이가 작으면 `혼재`, 비중립 근거가 두 개 미만이면 `자료 부족`으로 남긴다.
+  - Actual 2026-06-30은 채권·금리 혼재, 주식 부담, 금·달러 우호, 원자재 혼재다. 수익률·매매 신호와 별도 provider 수집은 추가하지 않았다.
+- Economic Cycle Provisional Hybrid V2:
+  - `잠정 모델 추정 / 검증된 모델 추정 / 판단 불가`를 유효 확률·publication status·계산 가능성으로 분리했다.
+  - 원형 clock을 2×2 국면 좌표, 최근 12개월 실선, 현재~+2M 점선, 최근 60개월+2개월 ribbon으로 교체했다. DB의 121개월 replay는 유지한다.
+  - 60개월 전환 뒤 남아 있던 121열 CSS를 실제 history 개수 기반 grid로 바꿔 ribbon이 전체 너비를 채우게 했고, Cycle Map 지점은 hover/focus 때만 날짜·우세 국면·확률·추정 상태를 표시한다.
+  - Actual 현재/+1M/+2M은 모두 회복 우세 `46.7% / 40.5% / 47.4%`의 PROVISIONAL이며 threshold와 PIT 원칙은 유지했다. desktop/420px console·overflow QA를 통과했다.
+- U.S. Economic Cycle V1:
+  - 현재·1개월 후·2개월 후의 회복/확장/둔화/침체 확률을 vintage-aware 데이터와 rolling-origin publication gate로 계산하는 17개 TDD task를 `5/5` 완료했다.
+  - raw vintage -> strict as-of feature/label/model -> approved artifact/snapshot -> DB-only service/UI 경계와 `경제 사이클 | S&P 500 | 미국 개별주식` selector를 구현했다.
+  - Actual bootstrap 뒤 h0/h1/h2는 publication gate 미통과로 `LIMITED`다. V2가 계산 결과와 검증 상태를 분리했다. 상세는 [task status](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md)를 본다.
+- Overview Market Context turnaround stage semantics V1:
+  - `USD per share` diluted EPS를 turnaround duration reader에 포함해 AAPL PER/turnaround TTM EPS를 `7.90`으로 정렬했다.
+  - backend threshold는 유지하고, 6개 rail에서 전환 `MET`, 이미 양수인 UI-local `ESTABLISHED`, 미확인을 구분했다. AAPL/RIVN actual과 desktop/420px Browser QA를 완료했다.
+  - focused 118 tests/build/compile은 통과했고, monolithic discovery는 기존과 같은 4 failures/154 Streamlit isolation errors다.
+- Nasdaq-100 적정구간 119개월 warmup V1:
+  - READY valuation의 1/3/5년 이력 부족을 SEP가 아닌 60개월 rolling warmup 문제로 설명하고, 선택 기간별 필요/현재 월 수와 별도 보강 action을 연결했다.
+  - actual repair는 172,240 rows를 저장해 READY 월을 62에서 66으로 늘렸다. acquired/delisted 및 foreign issuer 무료 원천 gap 때문에 71/95/119개월 요구에는 미달하며 합성 없이 partial 상태를 유지한다.
+  - focused/full service tests, React build, desktop/420px Browser QA 상세는 [task status](./tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/STATUS.md)를 본다.
+- Nasdaq-100 60개월 coverage repair action V1:
+  - blocker 카드에 `60개월 가치평가 자료 보강`을 추가하고 planner -> canonical EPS/EOD 수집 -> strict rematerialization을 같은 화면에서 동기 실행하도록 연결했다.
+  - SEC가 basic/diluted EPS를 동일값으로 공시한 actual concept을 보수적 fallback으로 허용해 local actual DB를 60/60 READY로 복구했다.
+  - focused tests, React build, desktop/420px Browser QA를 완료했다. 상세는 [task status](./tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md)를 본다.
 
 ### Institutional Portfolios Track
 
@@ -6418,3 +6485,160 @@ Detailed historical logs were archived on `2026-04-13`.
   overflow 0을 확인했다. focused 54 tests와 React 175-module build가 통과했다.
 - 전체 service 12 failures는 기존 baseline이다. 상세 QA/위험은 active task `RUNS.md`와
   `RISKS.md`를 보며 protected JSONL·`.superpowers/`·screenshots는 commit하지 않는다.
+## 2026-07-12 - Nasdaq-100 무계정 공개 데이터 경로 조사
+
+- SEC에서 QQQ 분기 N-PORT 22건(2020-12-31~2026-03-31)을 인증 없이 backfill할 수 있음을 확인했다.
+- no-account V1 권고를 `QQQ N-PORT + SEC actual + QQQ EOD` 공개 공시 기반 재구성으로 변경했다.
+- 공식 Nasdaq P/E가 아니라 `Nasdaq-100 (QQQ proxy)`로 표시하며, ADR/복수 클래스/foreign issuer mapping과 공개 P/E calibration을 구현 전 quality gate로 둔다.
+- 상세 근거와 구현 후보는 `.aiworkspace/note/finance/researches/active/2026-07-nasdaq100-index-eps-source/`를 본다.
+## 2026-07-13 - Nasdaq-100 QQQ Public-Filing Valuation V1
+
+- `.aiworkspace/note/finance/tasks/active/overview-market-context-nasdaq100-valuation-v1-20260712/`의 1차~5차 pipeline/service/React/automation/QA를 완료했다.
+- 실제 job은 SEC holdings 3,060행을 정규화해 3,049 unique key를 저장했고, QQQ EOD 20행과 monthly proxy 119행을 처리했다. Monthly quality는 READY 5 / BLOCKED 114다.
+- Market Context는 S&P 500 / Nasdaq-100 selector를 제공하며 Nasdaq은 최신 coverage 94.47%가 95% 기준 미달이라 값을 숨기고 blocker evidence를 표시한다.
+- 구현 커밋은 `50fe4059`, `10a973f4`, `287d359f`, `6ed08d0e`; 5차 closeout은 task `STATUS.md`와 `RUNS.md`를 본다.
+
+## 2026-07-14 - Nasdaq-100 무료 direct aggregate 원천 재검증
+
+- GuruFocus 가격표의 동적 contract를 확인해 Economic Data가 무료 core가 아니라 `+$90/month` add-on 또는 PAYG임을 확정했다.
+- 무료 대체 원천을 다시 비교했지만 60개월 direct Nasdaq-100 P/E/EPS와 자동 수집·내부 저장 권리를 함께 충족한 외부 source는 찾지 못했다.
+- 무료 production 경로는 기존 `QQQ N-PORT + SEC actual` 자체 재구성뿐이며, 상세 근거는 `researches/active/2026-07-nasdaq100-index-eps-source/`를 본다.
+
+## 2026-07-14 - MacroMicro Nasdaq-100 Forward P/E 수집 조건 검증
+
+- 월별 series `23955`는 공개되지만 forward P/E이며 현재 QQQ actual trailing P/E graph의 결측 대체 원천이 아니다.
+- 로그아웃 화면과 공식 Help를 확인해 Free/Prime/Max raw CSV 및 무계정 API 경로가 없고, CSV/API는 Business/API Essential/Custom 범위임을 확인했다.
+- exact-series entitlement와 DB retention/파생 차트 권한은 공개 정보만으로 확정되지 않아 유료 검토 시 서면 확인이 필요하다.
+- 현재 무료 V1에는 MacroMicro collector를 추가하지 않으며, 도입 시 별도 forward-valuation track으로만 검토한다.
+
+## 2026-07-14 - Nasdaq-100 대안 원천 구현 가능성 재검증
+
+- 현재 DB는 119개월 중 READY 66 / BLOCKED 53이며, 계산기 FY-to-Q4 오류 수정으로 최소 69개월까지 우선 복구 가능함을 확인했다.
+- Tiingo 무료 EOD catalog가 historical price gap 23개 중 22개 exact symbol과 `SYMC -> GEN` successor 후보를 제공하며, SEC/N-PORT가 EPS와 price anchor를 제공한다.
+- 미국 상장 누락분만 복구한 upper-bound에서도 119/119개월이 95%를 넘고 최저 96.319%여서 기능은 구현 가능 판정이다.
+- 권장 순서는 계산 정확도 -> SEC identity/actual -> optional Tiingo EOD -> 119개월 calibration -> QA이며 상세는 research bundle을 본다.
+
+## 2026-07-14 - 미국 개별주식 가치평가 V1 설계
+
+- Nasdaq-100 user-facing selector를 searchable 미국 개별주식 상대가치 화면으로 교체하는 방향을 승인했다.
+- 월말 가격 + filing-aware quarterly TTM EPS carry-forward로 monthly P/E를 만들고, Graph 2는 FOMC macro + 기업 초과 EPS 성장률을 사용한다.
+- 상세 설계와 1차~5차 roadmap은 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-valuation-v1-20260714/`에 고정했다.
+- 현재는 written spec review 단계이며 구현 코드는 변경하지 않았다.
+
+## 2026-07-14 - 미국 개별주식 가치평가 V1 구현 완료
+
+- Market Context selector를 `S&P 500 | 미국 개별주식`으로 교체하고 DB-only 검색, filing-aware monthly TTM EPS/PER, 60m/36m multiple, FOMC+기업 초과성장 상대가치 시나리오를 연결했다.
+- comparative FY false-Q4와 split-unit drift를 real-like TDD fixture로 먼저 수정했고, raw gap만 explicit synchronous collection을 허용한다.
+- AAPL/NVDA/META/TSLA actual READY와 loss/short-listing/SEC-gap/split/foreign issuer 경계를 검증했으며 S&P와 retained Nasdaq backend는 보존했다.
+- 상세 구현·QA·남은 full-suite unrelated failures는 `tasks/active/overview-market-context-us-stock-valuation-v1-20260714/STATUS.md`와 `RUNS.md`를 본다.
+
+## 2026-07-15 - 미국 개별주식 가치평가 정확성 후속 완료
+
+- comparative Q/FY fact를 primary filing period로 제한하고, split-year Q/FY를 동일한 월말 share basis로 정규화한 뒤 Q4를 파생하도록 real-like TDD로 수정했다.
+- Graph 1의 positive-P/E readiness와 Graph 2의 최소 8개 growth 관측 readiness를 분리해, 성장 이력 부족이 계산 가능한 P/E 화면을 숨기지 않게 했다.
+- AMD actual은 TTM EPS `3.05`, P/E `169.22x`, growth `10/8`로 READY이며 AAPL/MSFT/NVDA/META/TSLA, LCID, RDDT/RIVN, S&P 화면을 함께 회귀 검증했다.
+- focused 125개 통과, isolated full 1,030/1,034 통과(기존 unrelated 4건), desktop/420px Browser QA와 no-overflow/zero-console-error 확인을 완료했다. 상세는 active task `RUNS.md`를 본다.
+
+## 2026-07-15 - 미국 개별주식 PER 부분 이력 표시 완료
+
+- 1/3/5년 이력에 full-month `timeline`과 `PARTIAL` 상태를 추가해 계산 가능한 월을 원래 위치에 표시하고 결측 월의 선·band를 끊었다.
+- Actual AAPL은 3년 `36/36`, 5년 `42/60`; AMD는 3년 `33/36`, 5년 `39/60`이며 누락 원인을 화면에서 구분한다.
+- focused 129개 통과, isolated full 1,033/1,037 통과(기존 unrelated 4건), S&P 회귀와 desktop/420px Browser QA를 완료했다.
+- 현재 PER 화면 후속은 완료했다. 다음 선택 범위는 historical SEP/PIT backfill 또는 적자기업 전용 비-P/E 분석 화면이다.
+
+## 2026-07-15 - 미국 개별주식 전환 분석 V1 설계
+
+- 미국 개별주식 내부의 `PER 상대가치 | 전환 분석` selector와 selected-company V1 범위를 승인 방향으로 고정했다.
+- cumulative SEC duration fact의 filing-aware discrete-quarter resolver, operating milestone/risk overlay 분리, EV freshness gate를 authoritative design에 기록했다.
+- actual DB에서 RIVN/PLTR 16~19분기, LCID core flow 15~18분기 evidence를 read-only 확인했고 GrossProfit tag gap을 same-quarter revenue-cost fallback 대상으로 분리했다.
+- 상세는 `tasks/active/overview-market-context-us-stock-turnaround-analysis-v1-20260715/DESIGN.md`를 본다. 현재 0/5차이며 written spec review 후 TDD plan으로 이어진다.
+
+## 2026-07-15 - 미국 개별주식 전환 분석 V1 구현 완료
+
+- `PER 상대가치 | 전환 분석` 내부 selector와 filing-aware discrete-quarter 영업·현금 chart, independent milestone/risk, fresh-input valuation readiness를 1차~5차로 구현했다.
+- Actual DB에서 RIVN/LCID/PLTR는 전환 분석, AMD/AAPL은 기존 PER를 추천했고 기존 S&P/PER payload를 보존했다.
+- focused 96개 통과, isolated full 1,073/1,077 통과(기존 unrelated 4건), desktop/420px Browser QA와 overflow 0 / console error 0을 확인했다.
+- 상세 구현·actual matrix·남은 CIK/latency 경계는 `tasks/active/overview-market-context-us-stock-turnaround-analysis-v1-20260715/STATUS.md`, `RUNS.md`, `RISKS.md`를 본다.
+
+## 2026-07-15 - 미국 개별주식 최신 데이터 재계산 V1 설계
+
+- PER와 전환 분석 공통 상단에 `최신 데이터로 다시 계산` action 하나를 두는 방향을 승인 범위로 고정했다.
+- 가격은 마지막 완료 NYSE session, 시장가치는 profile/가격 7일 정렬, 재무는 실제 raw coverage gap만 최신성 판단에 사용한다.
+- Cloudflare처럼 CIK가 없어도 profile/price는 갱신하고 SEC statement만 별도 잔여 gap으로 남기는 partial-success 경계를 설계했다.
+- 상세는 `tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/DESIGN.md`, `PLAN.md`를 본다. Cached UI 우선 + 자동 freshness 판정 + 명시적 CTA를 승인했고 현재 0/3차 detailed TDD plan complete다.
+
+## 2026-07-15 - 미국 개별주식 최신 데이터 재계산 V1 완료
+
+- 공용 NYSE 완료-session freshness, CIK-independent profile/price와 SEC-only identity gate, unified `refresh_us_stock_data` event를 1차~2차로 구현했다.
+- Header와 PER/전환 selector 사이에 stale일 때만 CTA 하나를 표시하고 가격·재무·공개 기준일을 분리했다. 자동 provider 수집과 run/job/row 진단 panel은 추가하지 않았다.
+- Actual NET는 explicit action 뒤 price `2026-07-14`, profile `2026-07-15`, statement `2026-03-31`/available `2026-05-08`로 READY가 됐고 AAPL stale desktop/420px Browser QA에서 CTA 중복·overflow·console error가 모두 0이었다.
+- Focused 114개와 React build가 통과했다. 전체 discovery의 기존 unrelated assertion 4건과 Streamlit reimport isolation error 154건은 task `RUNS.md`에 구분해 기록했다.
+
+## 2026-07-16 - 전환단계 AAPL 의미 보정 설계
+
+- AAPL PER는 READY/TTM EPS `7.90`인데 turnaround EPS가 null인 원인을 `USD per share` unit allowlist 누락으로 확정했다.
+- 영업손실 축소/EPS 양전 미확인이 적자 의미로 보이는 문제를 transition과 already-positive 상태 혼동으로 분리했다.
+- 6요소 rail과 threshold는 유지하고 EPS unit, 사용자 문구, UI-local established state를 1차~3차로 보정하는 written spec을 active task에 기록했다.
+
+## 2026-07-16 - 전환분석 공시 기반 분기 산출·표시 완료
+
+- MRNA의 revenue concept rename으로 비어 있던 2023-Q4를 explicit family의 확정 FY/Q1/Q2/Q3로 안전하게 산출해 TTM 선을 복구했다.
+- Per-metric/TTM provenance와 `공시 기반 산출` marker·badge·산식을 React inspector에 추가했고 보간·forecast는 만들지 않았다.
+- Focused 112/112, isolated repository 1,103/1,107(기존 unrelated 4건), actual DB 및 desktop/420px Browser QA를 완료했다.
+- 상세 evidence와 후속 경계는 `tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/`를 본다.
+
+## 2026-07-16 - sub-dev master 통합 충돌 해결
+
+- Finance 문서 충돌 9개를 문서 역할과 시간순으로 통합해 Overview / Market Context와 Institutional Portfolios 양쪽 완료 이력을 보존했다.
+- current active task는 `none`, latest completed task는 `overview-market-context-turnaround-derived-quarter-provenance-v1-20260716`으로 Index / Roadmap / task manifest / root pointer를 정렬했다.
+- SEC 13F collector와 selected-stock freshness / turnaround data flow 설명을 함께 유지하고 중복된 짧은 경로 설명은 제거했다.
+- 기관 포트폴리오 39 tests, py_compile, React production build, Browser QA는 통과했다. Backtest/service contract 823개 중 822개가 통과했고 남은 Sentiment 1건은 병합 전 HEAD에도 존재하는 unrelated source-contract drift다.
+- 미추적 `2026-07-market-interest-free-source-benchmark/` 리서치와 QA screenshot은 병합 범위 밖 generated/local artifact로 두고 stage하지 않았다.
+
+## 2026-07-16 - Market Context 미국 경제 사이클 V1 완료
+
+- 사용자의 회복·확장·둔화·침체 프레임을 17-series FRED/ALFRED vintage, strict as-of, h0/h1/h2 rolling-origin publication gate, compact DB snapshot으로 확장했다.
+- `경제 사이클 | S&P 500 | 미국 개별주식` same-level selector와 별도 React workbench를 연결하고 desktop/420px Browser QA를 완료했다.
+- 후속 actual bootstrap으로 17-series `1,232,856`행과 121개월 replay를 적재했다. h0/h1/h2는 각각 coverage/calibration/origin/baseline gate 미통과로 `LIMITED`이며 숫자를 표시하지 않는다.
+- 전체 roadmap `5/5` 완료. 향후 숫자 publication은 더 많은 forecast-safe 증거를 확보해 horizon별 gate를 통과할 때만 가능하다.
+
+## 2026-07-17 - 경제사이클 금·달러 다중 경로 파일럿 완료
+
+- 전체 5차 중 1차 공통 시계열 판정기와 2차 금·달러 파일럿을 완료하고, 단정적 우호/부담·일치/불일치 계약을 `economic_cycle_v2` 다중 경로로 교체했다.
+- FRED 5개 경로 시계열 6,698행을 저장했다. Actual은 금 `SUFFICIENT`, 달러 `PARTIAL`이며 가격 원인·확률·매매 결론은 만들지 않는다.
+- Focused 48 tests, compile, React build, actual smoke, desktop/420px Browser QA를 통과했다. 상세는 `tasks/active/overview-economic-cycle-multichannel-asset-interpretation-v1-20260717/`를 본다.
+- 3차 채권·금리, 4차 주식, 5차 원자재는 자체 데이터 경로를 별도 승인한 뒤 이어간다.
+
+## 2026-07-17 - 경제사이클 자산 경로 3·4·5차 완료
+
+- 채권·금리는 2년·10년·10년-2년 구조와 실질금리·기대인플레이션, 주식은 `^GSPC`와 실질금리·신용·VIX·actual EPS, 원자재는 WTI·EIA 수급·구리·달러·미국 활동·금을 연결했다.
+- T10YIE·EIA 3계열 `8,049` rows, S&P 가격 `5,026` rows, futures 4종 `10,055` rows를 actual DB에 적재했다. 실제 S&P EPS 완료 분기는 없어 해당 경로만 자료 부족으로 유지했다.
+- 공통 관측 UI, desktop 2열/mobile 1열, hover/focus 상세와 채권 내부 1열 지표 목록을 확인했다. Focused `104 passed`, TypeScript와 React production build를 통과했다.
+- 전체 자산경로 roadmap은 `5/5` 완료다. 해외 상대금리와 승인된 글로벌 구리 활동지표는 후속 범위다.
+
+## 2026-07-18 - Institutional Portfolios 맥락 우선 개편 완료
+
+- `tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/`의 전체 roadmap `4/4`를 완료했다.
+- `institutional_portfolios_workbench_v2` context / coverage / comparison 계약과 50-row full holdings explorer, 직접 security search, unresolved guardrail을 구현했다.
+- Actual Berkshire `29/29`, Bridgewater `993/993`, Duquesne `70/70` total/explorer row 일치와 desktop / 420px Browser QA를 확인했다.
+- Historical previous filing과 verified identifier mapping은 별도 승인 dependency다.
+
+## 2026-07-18 - Institutional Portfolios 최종 리뷰 보정
+
+- 선택 기관이 보유하지 않은 mapped 종목도 Institutional Interest identity로 해석해 저장 가격 chart와 holder list를 열고, 선택 기관 포지션은 명시적으로 unavailable 처리한다.
+- manager 검색 0건은 live context를 보존하며, lowercase/mixed-case query 완료 상태와 unresolved overview 이동을 회귀 테스트로 고정했다.
+- Python 51 tests, Vitest 5 tests, strict typecheck, production build, exact base-to-head diff check와 actual Browser QA를 완료했다. 상세는 동일 active task `RUNS.md`를 본다.
+
+## 2026-07-18 - Institutional 13F OpenFIGI Mapping V1 완료
+
+- `tasks/active/institutional-13f-openfigi-mapping-v1-20260718/`의 전체 roadmap `4/4`를 완료했다.
+- 무료 OpenFIGI v3 resolver, current resolution table, error-preserving UPSERT, safe loader precedence와 기존 SEC 13F expander의 explicit mapping action을 구현했다.
+- Actual anonymous curated backfill은 1,244개 중 1,195 mapped / 49 unmapped / 0 ambiguous / 0 error다. Berkshire 29/29, Bridgewater 985/993, Duquesne 70/70 mapping coverage와 Browser QA를 확인했다.
+- all-latest-manager 약 31k 확장, 49 no-match 검토, historical PIT identity lifecycle은 후속 승인 범위다.
+
+## 2026-07-18 - S&P 500 실제 EPS 등록 경로 구현
+
+- Workspace Ingestion에 공식 Index Earnings XLSX와 발표일을 등록하는 사용자 흐름을 추가했다.
+- 공식 `QUARTERLY DATA` 다단 머리글과 normalized 호환 형식을 검증하고, actual As-Reported release vintage를 transaction으로 저장한다.
+- S&P 가치평가는 actual 4분기 current TTM, Economic Cycle은 actual 8분기 current/prior TTM YoY를 사용하며 모든 as-of read에 발표 vintage 기준을 적용했다.
+- 현재 공식 최신 파일을 직접 받지 못해 DB 실제 적재는 남아 있다. 상세는 `tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/`를 본다.

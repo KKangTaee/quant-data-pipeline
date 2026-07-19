@@ -12,6 +12,26 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 
+def _component_source() -> str:
+    return Path(
+        "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalPortfoliosWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+
+
+def _component_style_source() -> str:
+    return Path(
+        "app/web/streamlit_components/institutional_portfolios_workbench/src/style.css"
+    ).read_text(encoding="utf-8")
+
+
+def _css_rule(style_source: str, *selectors: str) -> str:
+    selector_pattern = r"\s*,\s*".join(re.escape(selector) for selector in selectors)
+    match = re.search(rf"(?:^|[}}\n])\s*{selector_pattern}\s*\{{(?P<body>[^}}]*)\}}", style_source)
+    if not match:
+        raise AssertionError(f"CSS rule not found: {', '.join(selectors)}")
+    return match.group("body")
+
+
 class Sec13FDataSetParserTests(unittest.TestCase):
     def test_normalize_sec_13f_frames_preserves_filing_timing_and_holdings(self) -> None:
         from finance.data.institutional_13f import SEC_13F_SOURCE_CAVEATS, normalize_sec_13f_frames
@@ -185,6 +205,78 @@ class Sec13FDataSetParserTests(unittest.TestCase):
 
 
 class InstitutionalPortfolioReadModelTests(unittest.TestCase):
+    def test_workbench_v2_keeps_all_holdings_for_client_side_explorer(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_portfolio_model, build_institutional_workbench_payload
+
+        holdings = pd.DataFrame(
+            [
+                {
+                    "issuer_name": f"Issuer {index:04d}",
+                    "cusip": f"{index:09d}",
+                    "reported_value": 1_000 - index,
+                    "shares_or_principal_amount": 10,
+                }
+                for index in range(993)
+            ]
+        )
+        model = build_institutional_portfolio_model(
+            manager={"cik": "0001067983", "manager_name": "BERKSHIRE HATHAWAY INC"},
+            latest_filing={"period_of_report": "2026-03-31", "filing_date": "2026-05-15"},
+            latest_holdings=holdings,
+        )
+        payload = build_institutional_workbench_payload(
+            model=model,
+            managers=[],
+            selected_cik="0001067983",
+            interest_model=None,
+        )
+
+        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v2")
+        self.assertEqual(payload["holdings_explorer"]["default_page_size"], 50)
+        self.assertEqual(len(payload["holdings_explorer"]["rows"]), 993)
+        self.assertEqual(payload["coverage"]["holding_count_total"], 993)
+
+    def test_workbench_v2_suppresses_change_items_without_previous_filing(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_portfolio_model, build_institutional_workbench_payload
+
+        model = build_institutional_portfolio_model(
+            manager={"cik": "0001067983", "manager_name": "BERKSHIRE HATHAWAY INC"},
+            latest_filing={"period_of_report": "2026-03-31", "filing_date": "2026-05-15"},
+            latest_holdings=pd.DataFrame(
+                [
+                    {
+                        "issuer_name": "APPLE INC",
+                        "holding_symbol": "AAPL",
+                        "cusip": "037833100",
+                        "reported_value": 750,
+                        "shares_or_principal_amount": 10,
+                        "sector": "Technology",
+                    },
+                    {
+                        "issuer_name": "UNMAPPED HOLDING",
+                        "cusip": "999999999",
+                        "reported_value": 250,
+                        "shares_or_principal_amount": 10,
+                    },
+                ]
+            ),
+        )
+        payload = build_institutional_workbench_payload(
+            model=model,
+            managers=[],
+            selected_cik="0001067983",
+            interest_model=None,
+        )
+
+        self.assertFalse(payload["change_board"]["comparison_available"])
+        self.assertEqual(payload["change_board"]["groups"], {})
+        self.assertEqual(payload["context_summary"]["comparison_state"], "unavailable")
+        self.assertEqual(payload["coverage"]["holding_count_total"], 2)
+        self.assertEqual(payload["coverage"]["holding_count_mapped"], 1)
+        self.assertEqual(payload["coverage"]["holding_count_unmapped"], 1)
+        self.assertIn("mapped_weight_pct", payload["coverage"])
+        self.assertIn("performance_covered_weight_pct", payload["coverage"])
+
     def test_portfolio_model_builds_weights_changes_and_unmapped_sector_exposure(self) -> None:
         from app.services.institutional_portfolios import build_institutional_portfolio_model
 
@@ -531,6 +623,209 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertEqual(detail["price_action"]["reason_code"], "cusip_symbol_mapping_missing")
         self.assertIn("티커 매핑", detail["price_action"]["reason"])
 
+    def test_selected_security_model_resolves_mapped_interest_holder_outside_selected_portfolio(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_selected_security_model
+
+        portfolio = {
+            "summary": {"latest_report_period": "2026-03-31"},
+            "holdings": [
+                {
+                    "cusip": "037833100",
+                    "holding_symbol": "AAPL",
+                    "issuer_name": "APPLE INC",
+                    "weight_pct": 100.0,
+                    "reported_value": 1000,
+                }
+            ],
+        }
+        interest = {
+            "query": "NVDA",
+            "holder_count": 1,
+            "holders": [
+                {
+                    "manager_name": "OTHER MANAGER",
+                    "cik": "0000000001",
+                    "issuer_name": "NVIDIA CORP",
+                    "holding_symbol": "NVDA",
+                    "cusip": "67066G104",
+                    "weight_pct": 8.5,
+                    "reported_value": 250,
+                }
+            ],
+        }
+        prices = pd.DataFrame(
+            [
+                {"symbol": "NVDA", "date": "2026-03-31", "close": 100.0},
+                {"symbol": "NVDA", "date": "2026-04-01", "close": 103.0},
+            ]
+        )
+
+        detail = build_institutional_selected_security_model(
+            portfolio_model=portfolio,
+            query="nvda",
+            interest_model=interest,
+            price_history=prices,
+        )
+
+        self.assertEqual(detail["status"], "ok")
+        self.assertEqual(detail["query"], "NVDA")
+        self.assertEqual(detail["security"]["symbol"], "NVDA")
+        self.assertEqual(detail["security"]["issuer_name"], "NVIDIA CORP")
+        self.assertFalse(detail["portfolio_position"]["available"])
+        self.assertEqual(detail["portfolio_position"]["weight_label"], "-")
+        self.assertTrue(detail["charts"]["daily"]["points"])
+        self.assertEqual(detail["price_action"]["state"], "ready")
+        self.assertEqual(detail["holder_count"], 1)
+
+    def test_selected_security_loader_loads_prices_for_interest_identity_outside_portfolio(self) -> None:
+        import app.services.institutional_portfolios as service
+
+        calls: list[dict[str, object]] = []
+        original_loader = service.load_price_history
+
+        def fake_price_loader(**kwargs: object) -> pd.DataFrame:
+            calls.append(dict(kwargs))
+            return pd.DataFrame(
+                [
+                    {"symbol": "NVDA", "date": "2026-03-31", "close": 100.0},
+                    {"symbol": "NVDA", "date": "2026-04-01", "close": 103.0},
+                ]
+            )
+
+        try:
+            service.load_price_history = fake_price_loader
+            detail = service.load_institutional_selected_security_model(
+                portfolio_model={
+                    "summary": {"latest_report_period": "2026-03-31"},
+                    "holdings": [
+                        {
+                            "cusip": "037833100",
+                            "holding_symbol": "AAPL",
+                            "issuer_name": "APPLE INC",
+                            "weight_pct": 100.0,
+                            "reported_value": 1000,
+                        }
+                    ],
+                },
+                query="Nvidia Corp",
+                interest_model={
+                    "query": "NVIDIA CORP",
+                    "holder_count": 1,
+                    "holders": [
+                        {
+                            "manager_name": "OTHER MANAGER",
+                            "issuer_name": "NVIDIA CORP",
+                            "holding_symbol": "NVDA",
+                            "cusip": "67066G104",
+                        }
+                    ],
+                },
+            )
+        finally:
+            service.load_price_history = original_loader
+
+        self.assertEqual(calls, [{"symbols": ["NVDA"], "start": "2026-03-31", "timeframe": "1d"}])
+        self.assertEqual(detail["status"], "ok")
+        self.assertEqual(detail["security"]["symbol"], "NVDA")
+        self.assertFalse(detail["portfolio_position"]["available"])
+        self.assertTrue(detail["charts"]["daily"]["points"])
+
+    def test_selected_security_model_rejects_ambiguous_interest_identities_for_issuer_query(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_selected_security_model
+
+        detail = build_institutional_selected_security_model(
+            portfolio_model={"summary": {"latest_report_period": "2026-03-31"}, "holdings": []},
+            query="Alpha",
+            interest_model={
+                "query": "ALPHA",
+                "holder_count": 2,
+                "holders": [
+                    {
+                        "manager_name": "FIRST MANAGER",
+                        "issuer_name": "ALPHA SOFTWARE INC",
+                        "holding_symbol": "MSFT",
+                        "cusip": "594918104",
+                    },
+                    {
+                        "manager_name": "SECOND MANAGER",
+                        "issuer_name": "ALPHABET INC",
+                        "holding_symbol": "GOOGL",
+                        "cusip": "02079K305",
+                    },
+                ],
+            },
+            price_history=pd.DataFrame(),
+        )
+
+        self.assertEqual(detail["status"], "ambiguous")
+        self.assertIn("정확한 ticker 또는 CUSIP", detail["empty_text"])
+        self.assertNotIn("security", detail)
+        self.assertNotIn("price_action", detail)
+        self.assertEqual(detail["holder_count"], 2)
+
+    def test_selected_security_model_exact_symbol_or_cusip_resolves_among_multiple_interest_identities(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_selected_security_model
+
+        interest_model = {
+            "holder_count": 2,
+            "holders": [
+                {
+                    "manager_name": "FIRST MANAGER",
+                    "issuer_name": "MICROSOFT CORP",
+                    "holding_symbol": "MSFT",
+                    "cusip": "594918104",
+                },
+                {
+                    "manager_name": "SECOND MANAGER",
+                    "issuer_name": "ALPHABET INC",
+                    "holding_symbol": "GOOGL",
+                    "cusip": "02079K305",
+                },
+            ],
+        }
+
+        for query, expected_symbol in [("msft", "MSFT"), ("02079K305", "GOOGL")]:
+            with self.subTest(query=query):
+                detail = build_institutional_selected_security_model(
+                    portfolio_model={"summary": {"latest_report_period": "2026-03-31"}, "holdings": []},
+                    query=query,
+                    interest_model=interest_model,
+                    price_history=pd.DataFrame(),
+                )
+                self.assertEqual(detail["status"], "ok")
+                self.assertEqual(detail["security"]["symbol"], expected_symbol)
+                self.assertFalse(detail["portfolio_position"]["available"])
+
+    def test_selected_security_loader_does_not_load_price_for_ambiguous_interest_identities(self) -> None:
+        import app.services.institutional_portfolios as service
+
+        calls: list[dict[str, object]] = []
+        original_loader = service.load_price_history
+
+        def fake_price_loader(**kwargs: object) -> pd.DataFrame:
+            calls.append(dict(kwargs))
+            return pd.DataFrame()
+
+        try:
+            service.load_price_history = fake_price_loader
+            detail = service.load_institutional_selected_security_model(
+                portfolio_model={"summary": {"latest_report_period": "2026-03-31"}, "holdings": []},
+                query="Alpha",
+                interest_model={
+                    "query": "ALPHA",
+                    "holder_count": 2,
+                    "holders": [
+                        {"issuer_name": "ALPHA SOFTWARE INC", "holding_symbol": "MSFT", "cusip": "594918104"},
+                        {"issuer_name": "ALPHABET INC", "holding_symbol": "GOOGL", "cusip": "02079K305"},
+                    ],
+                },
+            )
+        finally:
+            service.load_price_history = original_loader
+
+        self.assertEqual(calls, [])
+        self.assertEqual(detail["status"], "ambiguous")
+
     def test_portfolio_model_marks_ambiguous_cusip_symbol_mapping_unresolved(self) -> None:
         from app.services.institutional_portfolios import build_institutional_portfolio_model
 
@@ -811,7 +1106,7 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
             },
         )
 
-        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v1")
+        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v2")
         self.assertEqual(payload["component"], "InstitutionalPortfoliosWorkbench")
         self.assertEqual(payload["mode"], "live")
         self.assertEqual(payload["hero"]["manager_name"], "BERKSHIRE HATHAWAY INC")
@@ -908,6 +1203,34 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertEqual(rail[0]["watchlist_label"], "Stanley Druckenmiller")
         self.assertTrue(rail[0]["selected"])
 
+    def test_workbench_payload_exposes_zero_result_manager_search_without_replacing_context(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_workbench_payload
+
+        payload = build_institutional_workbench_payload(
+            model={
+                "summary": {
+                    "manager_name": "BERKSHIRE HATHAWAY INC",
+                    "cik": "0001067983",
+                    "latest_report_period": "2026-03-31",
+                },
+                "holdings": [],
+                "changes": [],
+                "sector_exposure": [],
+            },
+            managers=[],
+            selected_cik="0001067983",
+            interest_model=None,
+            manager_search_query="No Such Manager",
+            preserve_manager_order=True,
+        )
+
+        self.assertEqual(payload["mode"], "live")
+        self.assertEqual(payload["hero"]["manager_name"], "BERKSHIRE HATHAWAY INC")
+        self.assertEqual(payload["manager_picker"]["search_query"], "No Such Manager")
+        self.assertEqual(payload["manager_picker"]["search_result_count"], 0)
+        self.assertEqual(payload["manager_picker"]["search_state"], "empty")
+        self.assertIn("검색 결과", payload["manager_picker"]["search_empty_message"])
+
     def test_manager_choices_search_uses_watchlist_alias_before_exact_sec_name(self) -> None:
         import app.services.institutional_portfolios as service
 
@@ -955,7 +1278,7 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
 
         payload = build_institutional_preview_workbench_payload(message="Local 13F DB is empty.")
 
-        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v1")
+        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v2")
         self.assertEqual(payload["mode"], "preview")
         self.assertTrue(payload["data_state"]["is_preview"])
         self.assertIn("preview", payload["data_state"]["label"].lower())
@@ -967,6 +1290,260 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
 
 
 class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
+    def test_context_hero_basis_and_controls_share_alignment_contract(self) -> None:
+        component_source = _component_source()
+        style_source = _component_style_source()
+        hero_grid_rule = _css_rule(style_source, ".ip-context-hero__grid")
+        controls_rule = _css_rule(style_source, ".ip-context-controls")
+        basis_span_rule = _css_rule(
+            style_source,
+            ".ip-context-basis__snapshot",
+            ".ip-context-basis .ip-source-link",
+        )
+        shared_label_rule = _css_rule(
+            style_source,
+            ".ip-manager-search > label",
+            ".ip-context-control-label",
+        )
+        freshness_rule = _css_rule(style_source, ".ip-freshness")
+        freshness_action_rule = _css_rule(style_source, ".ip-freshness__action")
+        freshness_period_rule = _css_rule(style_source, ".ip-freshness strong")
+        freshness_time_rule = _css_rule(style_source, ".ip-freshness em")
+        mobile_style_source = style_source[
+            style_source.index("@media (max-width: 720px) {") : style_source.index("@media (max-width: 420px) {")
+        ]
+        mobile_freshness_rule = _css_rule(mobile_style_source, ".ip-freshness")
+
+        self.assertIn('className="ip-context-basis__snapshot"', component_source)
+        self.assertIn('className="ip-freshness-block"', component_source)
+        self.assertIn('className="ip-context-control-label">데이터 기준</span>', component_source)
+        self.assertIn("--ip-context-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);", style_source)
+        for grid_rule in (hero_grid_rule, controls_rule):
+            self.assertIn("grid-template-columns: var(--ip-context-columns);", grid_rule)
+            self.assertIn("gap: 18px;", grid_rule)
+        self.assertIn("align-items: start;", controls_rule)
+        self.assertIn("grid-column: 1 / -1;", basis_span_rule)
+        for declaration in (
+            "display: block;",
+            "min-height: 18px;",
+            "margin-bottom: 6px;",
+            "color: #334155;",
+            "font-size: 12px;",
+            "font-weight: 800;",
+            "line-height: 18px;",
+        ):
+            self.assertIn(declaration, shared_label_rule)
+        self.assertIn('grid-template-areas: "action period" "time time";', freshness_rule)
+        self.assertIn("grid-area: action;", freshness_action_rule)
+        self.assertIn("grid-area: period;", freshness_period_rule)
+        self.assertIn("grid-area: time;", freshness_time_rule)
+        self.assertIn("white-space: normal;", freshness_time_rule)
+        self.assertIn('grid-template-areas: "action" "period" "time";', mobile_freshness_rule)
+
+        build_dir = Path("app/web/streamlit_components/institutional_portfolios_workbench/component_static")
+        index_source = (build_dir / "index.html").read_text(encoding="utf-8")
+        asset_paths = re.findall(r'(?:src|href)="\./(assets/[^"]+)"', index_source)
+        css_paths = [asset_path for asset_path in asset_paths if asset_path.endswith(".css")]
+        javascript_paths = [asset_path for asset_path in asset_paths if asset_path.endswith(".js")]
+        self.assertEqual(len(css_paths), 1)
+        self.assertEqual(len(javascript_paths), 1)
+        runtime_css = (build_dir / css_paths[0]).read_text(encoding="utf-8")
+        runtime_javascript = (build_dir / javascript_paths[0]).read_text(encoding="utf-8")
+        runtime_hero_rule = _css_rule(runtime_css, ".ip-hero")
+        runtime_hero_grid_rule = _css_rule(runtime_css, ".ip-context-hero__grid")
+        runtime_controls_rule = _css_rule(runtime_css, ".ip-context-controls")
+        runtime_basis_span_rule = _css_rule(
+            runtime_css,
+            ".ip-context-basis__snapshot",
+            ".ip-context-basis .ip-source-link",
+        )
+        runtime_freshness_rule = _css_rule(runtime_css, ".ip-freshness")
+        runtime_freshness_action_rule = _css_rule(runtime_css, ".ip-freshness__action")
+        runtime_freshness_period_rule = _css_rule(runtime_css, ".ip-freshness strong")
+        runtime_freshness_time_rule = _css_rule(runtime_css, ".ip-freshness em")
+        runtime_mobile_style = runtime_css[
+            runtime_css.index("@media(max-width:720px){") : runtime_css.index("@media(max-width:420px){")
+        ]
+        runtime_mobile_freshness_rule = _css_rule(runtime_mobile_style, ".ip-freshness")
+        self.assertRegex(
+            runtime_hero_rule,
+            r"--ip-context-columns:\s*minmax\(0,\s*1\.45fr\)\s*minmax\(320px,\s*0?\.75fr\)",
+        )
+        for runtime_grid_rule in (runtime_hero_grid_rule, runtime_controls_rule):
+            self.assertIn("grid-template-columns:var(--ip-context-columns)", runtime_grid_rule)
+            self.assertIn("gap:18px", runtime_grid_rule)
+        self.assertIn("grid-column:1 / -1", runtime_basis_span_rule)
+        self.assertIn('grid-template-areas:"action period" "time time"', runtime_freshness_rule)
+        self.assertIn("grid-area:action", runtime_freshness_action_rule)
+        self.assertIn("grid-area:period", runtime_freshness_period_rule)
+        self.assertIn("grid-area:time", runtime_freshness_time_rule)
+        self.assertIn("white-space:normal", runtime_freshness_time_rule)
+        self.assertIn('grid-template-areas:"action" "period" "time"', runtime_mobile_freshness_rule)
+        self.assertIn("ip-freshness-block", runtime_css)
+        self.assertIn("ip-freshness-block", runtime_javascript)
+        self.assertIn("데이터 기준", runtime_javascript)
+        self.assertNotIn("slice(0,80)", runtime_javascript)
+        self.assertNotIn("slice(0, 80)", runtime_javascript)
+
+    def test_manager_rail_shows_complete_cards_and_wraps_labels(self) -> None:
+        style_source = _component_style_source()
+        rail_rule = _css_rule(style_source, ".ip-manager-rail")
+        favorites_rule = _css_rule(style_source, ".ip-manager-favorites")
+        compact_card_rule = _css_rule(style_source, ".ip-manager-favorites .ip-manager-tab")
+        text_rule = _css_rule(style_source, ".ip-manager-tab strong", ".ip-manager-tab span")
+        tablet_style = style_source[
+            style_source.index("@media (max-width: 980px) {") : style_source.index("@media (max-width: 720px) {")
+        ]
+        mobile_style = style_source[
+            style_source.index("@media (max-width: 720px) {") : style_source.index("@media (max-width: 420px) {")
+        ]
+        for declaration in (
+            "display: grid;",
+            "grid-auto-flow: column;",
+            "grid-auto-columns: var(--ip-manager-card-width);",
+            "align-items: stretch;",
+            "--ip-manager-card-width: calc((100% - 24px) / 4);",
+            "scroll-snap-type: x mandatory;",
+        ):
+            self.assertIn(declaration, rail_rule)
+        self.assertIn("margin: 0 0 12px;", favorites_rule)
+        self.assertIn("padding-bottom: 10px;", favorites_rule)
+        self.assertIn("min-width: 0;", compact_card_rule)
+        self.assertIn("width: 100%;", compact_card_rule)
+        self.assertIn("height: auto;", compact_card_rule)
+        self.assertIn("scroll-snap-align: start;", compact_card_rule)
+        self.assertIn("scroll-snap-stop: always;", compact_card_rule)
+        for declaration in (
+            "overflow: visible;",
+            "text-overflow: clip;",
+            "white-space: normal;",
+            "overflow-wrap: anywhere;",
+        ):
+            self.assertIn(declaration, text_rule)
+        tablet_rail_rule = _css_rule(tablet_style, ".ip-manager-rail")
+        mobile_rail_rule = _css_rule(mobile_style, ".ip-manager-rail")
+        self.assertIn("--ip-manager-card-width: calc((100% - 16px) / 3);", tablet_rail_rule)
+        self.assertIn("--ip-manager-card-width: 100%;", mobile_rail_rule)
+
+        build_dir = Path("app/web/streamlit_components/institutional_portfolios_workbench/component_static")
+        index_source = (build_dir / "index.html").read_text(encoding="utf-8")
+        css_paths = re.findall(r'href="\./(assets/[^"]+\.css)"', index_source)
+        self.assertEqual(len(css_paths), 1)
+        runtime_css = (build_dir / css_paths[0]).read_text(encoding="utf-8")
+        runtime_rail_rule = _css_rule(runtime_css, ".ip-manager-rail")
+        runtime_favorites_rule = _css_rule(runtime_css, ".ip-manager-favorites")
+        runtime_card_rule = _css_rule(runtime_css, ".ip-manager-favorites .ip-manager-tab")
+        runtime_text_rule = _css_rule(runtime_css, ".ip-manager-tab strong", ".ip-manager-tab span")
+        runtime_tablet_marker = "@media(max-width:980px){"
+        runtime_mobile_marker = "@media(max-width:720px){"
+        runtime_tablet_style = runtime_css[
+            runtime_css.index(runtime_tablet_marker) + len(runtime_tablet_marker) : runtime_css.index(
+                runtime_mobile_marker
+            )
+        ]
+        runtime_mobile_style = runtime_css[
+            runtime_css.index(runtime_mobile_marker) + len(runtime_mobile_marker) : runtime_css.index(
+                "@media(max-width:420px){"
+            )
+        ]
+        runtime_tablet_rule = _css_rule(runtime_tablet_style, ".ip-manager-rail")
+        runtime_mobile_rule = _css_rule(runtime_mobile_style, ".ip-manager-rail")
+        runtime_rail_compact = re.sub(r"\s+", "", runtime_rail_rule)
+        runtime_tablet_compact = re.sub(r"\s+", "", runtime_tablet_rule)
+        runtime_mobile_compact = re.sub(r"\s+", "", runtime_mobile_rule)
+
+        self.assertIn("display:grid", runtime_rail_rule)
+        self.assertIn("grid-auto-flow:column", runtime_rail_rule)
+        self.assertIn("grid-auto-columns:var(--ip-manager-card-width)", runtime_rail_rule)
+        self.assertIn("align-items:stretch", runtime_rail_rule)
+        self.assertIn("--ip-manager-card-width:calc((100%-24px)/4)", runtime_rail_compact)
+        self.assertIn("scroll-snap-type:x mandatory", runtime_rail_rule)
+        self.assertIn("margin:0 0 12px", runtime_favorites_rule)
+        self.assertIn("padding-bottom:10px", runtime_favorites_rule)
+        self.assertIn("scroll-snap-align:start", runtime_card_rule)
+        self.assertIn("scroll-snap-stop:always", runtime_card_rule)
+        self.assertIn("white-space:normal", runtime_text_rule)
+        self.assertIn("overflow-wrap:anywhere", runtime_text_rule)
+        self.assertIn("--ip-manager-card-width:calc((100%-16px)/3)", runtime_tablet_compact)
+        self.assertIn("--ip-manager-card-width:100%", runtime_mobile_compact)
+
+    def test_workbench_v2_has_complete_holdings_explorer_and_explicit_security_search(self) -> None:
+        component_source = _component_source()
+        self.assertIn('schema_version: "institutional_portfolios_workbench_v2"', component_source)
+        self.assertNotIn("rows.slice(0, 80)", component_source)
+        self.assertIn("HOLDINGS_PAGE_SIZE = 50", component_source)
+        self.assertIn('id: "security_search"', component_source)
+        self.assertIn("holdingSearch", component_source)
+        self.assertIn("mappingFilter", component_source)
+        self.assertIn("holdingSort", component_source)
+        self.assertIn("visibleHoldings", component_source)
+        self.assertIn("INSTITUTIONAL PORTFOLIO CONTEXT", component_source)
+
+    def test_workbench_fix_contract_covers_manager_search_reset_coverage_other_and_mapping_badges(self) -> None:
+        component_source = _component_source()
+        page_source = Path("app/web/institutional_portfolios.py").read_text(encoding="utf-8")
+        render_source = page_source[page_source.index("def render_institutional_portfolios_page(") :]
+
+        self.assertIn("managerSearch", component_source)
+        self.assertIn('id: "manager_search"', component_source)
+        self.assertIn("submitManagerSearch", component_source)
+        self.assertIn("resetHoldingsExplorer", component_source)
+        self.assertIn("payload?.manager_picker.selected_cik", component_source)
+        self.assertIn("payload.coverage.holding_count_unmapped.toLocaleString()", component_source)
+        self.assertIn("payload.coverage.holding_count_ambiguous.toLocaleString()", component_source)
+        self.assertIn("allocationOtherCount", component_source)
+        self.assertIn("allocationOtherWeight", component_source)
+        self.assertIn('mapped ? "ticker 연결됨"', component_source)
+        self.assertNotIn('search = st.text_input(', render_source)
+        self.assertIn('event_name == "manager_search"', page_source)
+
+    def test_workbench_review_fix_contract_connects_normalized_state_and_explicit_empty_ux(self) -> None:
+        component_source = _component_source()
+        pending_effect = component_source[
+            component_source.index('if (pendingAction.kind === "manager"') : component_source.index(
+                "}, [payload, pendingAction]);"
+            )
+        ]
+        unresolved_handler = component_source[
+            component_source.index("const handleHoldingDrilldown") : component_source.index(
+                "const handleAllocationDrilldown"
+            )
+        ]
+        manager_submit = component_source[
+            component_source.index("const submitManagerSearch") : component_source.index(
+                "const handleManagerSelect"
+            )
+        ]
+
+        self.assertIn('from "./workbenchState"', component_source)
+        self.assertIn("filterSortAndPaginateHoldings", component_source)
+        self.assertIn("queriesMatch(payload.interest.query, pendingAction.query)", pending_effect)
+        self.assertIn("ip-manager-search-empty", component_source)
+        self.assertIn("search_result_count", component_source)
+        self.assertIn("detail?.portfolio_position?.available === false", component_source)
+        self.assertIn("ip-security-position-unavailable", component_source)
+        self.assertIn('setActiveView("holdings")', unresolved_handler)
+        self.assertIn("setLocalSelectedQuery(\"\")", manager_submit)
+        self.assertIn("setSecuritySearch(\"\")", manager_submit)
+
+    def test_tracked_workbench_bundle_serves_v2_runtime_contract(self) -> None:
+        build_dir = Path("app/web/streamlit_components/institutional_portfolios_workbench/component_static")
+        index_source = (build_dir / "index.html").read_text(encoding="utf-8")
+        asset_paths = re.findall(r'(?:src|href)="\./(assets/[^"]+)"', index_source)
+
+        self.assertGreaterEqual(len(asset_paths), 2)
+        for asset_path in asset_paths:
+            self.assertTrue((build_dir / asset_path).exists(), asset_path)
+        javascript = "\n".join(
+            (build_dir / asset_path).read_text(encoding="utf-8")
+            for asset_path in asset_paths
+            if asset_path.endswith(".js")
+        )
+        self.assertIn("institutional_portfolios_workbench_v2", javascript)
+        self.assertIn("INSTITUTIONAL PORTFOLIO CONTEXT", javascript)
+        self.assertIn("manager_search", javascript)
+        self.assertNotIn("slice(0,80)", javascript)
+
     def test_selected_manager_resolver_keeps_watchlist_selection_outside_search_results(self) -> None:
         from app.web.institutional_portfolios import _resolve_selected_manager
 
@@ -1028,6 +1605,54 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIsNotNone(selected)
         self.assertEqual(selected["cik"], "0001536411")
 
+    def test_selected_manager_resolver_preserves_curated_live_context_when_search_has_no_results(self) -> None:
+        from app.web.institutional_portfolios import _resolve_selected_manager
+
+        selected = _resolve_selected_manager(
+            managers=[],
+            selected_cik="0001067983",
+            search_active=True,
+        )
+
+        self.assertIsNotNone(selected)
+        self.assertEqual(selected["cik"], "0001067983")
+        self.assertEqual(selected["manager_name"], "BERKSHIRE HATHAWAY INC")
+
+    def test_selected_manager_resolver_preserves_generic_live_context_when_search_has_no_results(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_workbench_payload
+        from app.web.institutional_portfolios import _resolve_selected_manager
+
+        selected = _resolve_selected_manager(
+            managers=[],
+            selected_cik="1234567",
+            search_active=True,
+        )
+
+        self.assertIsNotNone(selected)
+        self.assertEqual(selected["cik"], "0001234567")
+
+        payload = build_institutional_workbench_payload(
+            model={
+                "summary": {
+                    "manager_name": "GENERIC LIVE MANAGER LLC",
+                    "cik": "0001234567",
+                    "latest_report_period": "2026-03-31",
+                },
+                "holdings": [],
+                "changes": [],
+                "sector_exposure": [],
+            },
+            managers=[],
+            selected_cik=selected["cik"],
+            interest_model=None,
+            manager_search_query="No Such Manager",
+            preserve_manager_order=True,
+        )
+
+        self.assertEqual(payload["mode"], "live")
+        self.assertEqual(payload["hero"]["manager_name"], "GENERIC LIVE MANAGER LLC")
+        self.assertEqual(payload["manager_picker"]["search_state"], "empty")
+
     def test_workbench_event_consumption_skips_replayed_component_value(self) -> None:
         from app.web.institutional_portfolios import _consume_workbench_event
 
@@ -1035,6 +1660,59 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
 
         self.assertEqual(_consume_workbench_event(payload, None), (True, "select_manager:n-1"))
         self.assertEqual(_consume_workbench_event(payload, "select_manager:n-1"), (False, "select_manager:n-1"))
+
+    def test_holding_drilldown_and_security_search_events_update_selected_security_state(self) -> None:
+        import app.web.institutional_portfolios as page
+
+        class FakeStreamlit:
+            def __init__(self) -> None:
+                self.session_state: dict[str, object] = {}
+                self.rerun_count = 0
+
+            def rerun(self) -> None:
+                self.rerun_count += 1
+
+        original_streamlit = page.st
+        try:
+            for event_name in ["holding_drilldown", "security_search"]:
+                with self.subTest(event_name=event_name):
+                    fake_streamlit = FakeStreamlit()
+                    page.st = fake_streamlit
+                    page._handle_workbench_event({"id": event_name, "query": " AAPL ", "nonce": event_name})
+
+                    self.assertEqual(fake_streamlit.session_state["institutional_interest_query"], "AAPL")
+                    self.assertTrue(fake_streamlit.session_state["institutional_interest_query_needs_load"])
+                    self.assertEqual(fake_streamlit.session_state["institutional_price_refresh_result"], {})
+                    self.assertEqual(fake_streamlit.rerun_count, 1)
+        finally:
+            page.st = original_streamlit
+
+    def test_manager_search_event_updates_existing_manager_query_state_on_submit(self) -> None:
+        import app.web.institutional_portfolios as page
+
+        class FakeStreamlit:
+            def __init__(self) -> None:
+                self.session_state: dict[str, object] = {}
+                self.rerun_count = 0
+
+            def rerun(self) -> None:
+                self.rerun_count += 1
+
+        original_streamlit = page.st
+        fake_streamlit = FakeStreamlit()
+        try:
+            page.st = fake_streamlit
+            page._handle_workbench_event(
+                {"id": "manager_search", "query": " Pershing Square ", "nonce": "manager-search-1"}
+            )
+        finally:
+            page.st = original_streamlit
+
+        self.assertEqual(
+            fake_streamlit.session_state["institutional_portfolios_manager_search"],
+            "Pershing Square",
+        )
+        self.assertEqual(fake_streamlit.rerun_count, 1)
 
     def test_reverse_lookup_loader_uses_filing_total_without_full_holding_groupby(self) -> None:
         source = Path("finance/loaders/institutional_13f.py").read_text(encoding="utf-8")

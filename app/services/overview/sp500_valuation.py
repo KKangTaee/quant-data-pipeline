@@ -523,8 +523,31 @@ def calculate_historical_index_scenario(
             if start_month <= pd.Timestamp(value) <= (pd.Timestamp(spx_date) if not pd.isna(spx_date) else end_month + pd.offsets.MonthEnd(0))
         }
     )
+    status = (
+        "READY" if len(series) >= window_months else "INSUFFICIENT_HISTORY"
+    )
+    required_history_months = int(rolling_window) + window_months - 1
+    available_history_months = int(
+        frame.loc[
+            (frame["observation_month"] <= end_month)
+            & frame["trailing_pe"].notna()
+            & (frame["trailing_pe"] > 0),
+            "observation_month",
+        ].nunique()
+    )
+    readiness = {
+        "requested_display_months": window_months,
+        "rolling_window_months": int(rolling_window),
+        "required_history_months": required_history_months,
+        "available_history_months": available_history_months,
+        "missing_history_months": max(
+            0, required_history_months - available_history_months
+        ),
+    }
+    if status != "READY" and available_history_months < required_history_months:
+        readiness["reason_code"] = "INSUFFICIENT_ROLLING_PER_WARMUP"
     return {
-        "status": "READY" if len(series) >= 2 else "INSUFFICIENT_HISTORY",
+        "status": status,
         "window_months": window_months,
         "window_years": window_years,
         "observation_count": len(series),
@@ -536,6 +559,7 @@ def calculate_historical_index_scenario(
         "label": f"최근 {window_label} 과거 시점 재구성 시나리오",
         "methodology": "각 월에 당시 사용 가능한 최신 SEP와 60개월 rolling log(PER)를 적용",
         "limitation": "Shiller EPS는 release-vintage PIT 원본이 아니며 미발표 월은 최신 확인 TTM EPS를 유지합니다.",
+        **readiness,
     }
 
 

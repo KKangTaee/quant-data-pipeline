@@ -24,6 +24,15 @@ class MySQLClient:
             cur.execute(sql, params)
             return list(cur.fetchall())
 
+    def begin(self):
+        self.conn.begin()
+
+    def commit(self):
+        self.conn.commit()
+
+    def rollback(self):
+        self.conn.rollback()
+
     def use_db(self, db_name: str):
         self.execute(f"CREATE DATABASE IF NOT EXISTS {db_name}")
         self.execute(f"USE {db_name}")

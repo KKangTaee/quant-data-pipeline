@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from time import perf_counter
 from app.jobs.ingestion.common import (
     JobResult,
@@ -14,12 +15,13 @@ from app.jobs.ingestion.common import (
     parse_symbols,
     split_valid_invalid_symbols,
 )
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Mapping
 
 from finance.data.data import store_ohlcv_to_mysql
 from finance.data.factors import upsert_factors, upsert_statement_factors_shadow
 from finance.data.financial_statements import upsert_financial_statements
 from finance.data.fundamentals import upsert_fundamentals, upsert_statement_fundamentals_shadow
+from finance.data.economic_cycle_vintages import collect_economic_cycle_vintages
 from finance.data.asset_profile import collect_and_store_asset_profiles
 from finance.data.computed_lifecycle import collect_and_store_computed_snapshot_lifecycle
 from finance.data.etf_provider import (
@@ -33,8 +35,24 @@ from finance.data.futures_market import (
     collect_and_store_futures_ohlcv,
     normalize_futures_symbols,
 )
+from finance.data.eia_petroleum import (
+    EIA_WEEKLY_PETROLEUM_SERIES,
+    collect_and_store_eia_weekly_petroleum,
+)
 from finance.data.institutional_13f import collect_and_store_sec_13f_dataset
-from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
+from finance.data.institutional_13f_mapping import collect_and_store_openfigi_13f_mappings
+from finance.data.macro import (
+    DEFAULT_MACRO_SERIES,
+    FRED_SERIES_CONFIG,
+    collect_and_store_macro_series,
+)
+from finance.data.nasdaq100_valuation import (
+    collect_and_store_qqq_sec_holdings,
+    ensure_nasdaq100_valuation_schemas,
+    load_nasdaq100_coverage_repair_plan,
+    materialize_and_store_nasdaq100_monthly,
+)
+from finance.loaders.price import load_price_freshness_summary
 from finance.data.sentiment import collect_and_store_market_sentiment
 from finance.data.sp500_valuation import (
     collect_and_store_fomc_sep,
@@ -44,6 +62,7 @@ from finance.data.sp500_valuation import (
     import_and_store_sp500_index_earnings,
 )
 from finance.data.market_intelligence import (
+    build_price_history_limit_issue_rows,
     collect_and_store_bls_macro_calendar_ics,
     collect_and_store_earnings_calendar,
     collect_and_store_fomc_calendar,
@@ -53,10 +72,131 @@ from finance.data.market_intelligence import (
     collect_and_store_sp500_universe,
     diagnose_market_quote_gaps,
     persist_quote_gap_diagnostics,
+    upsert_market_data_issue_rows,
 )
 from finance.data.sec_company_tickers import collect_and_store_sec_company_ticker_crosscheck
 from finance.data.sec_delisting import collect_and_store_sec_form25_delistings
 from finance.data.symbol_directory import collect_and_store_symbol_directory_snapshots
+from finance.economic_cycle_pipeline import materialize_economic_cycle_snapshot
+
+
+def run_collect_economic_cycle_vintages(
+    *,
+    api_key: str | None = None,
+    collector: Callable[..., dict[str, object]] = collect_economic_cycle_vintages,
+) -> JobResult:
+    """Collect the locked FRED/ALFRED vintage catalog on explicit invocation."""
+
+    job_name = "collect_economic_cycle_vintages"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        summary = collector(api_key=api_key)
+        rows_written = int(summary.get("stored") or 0)
+        failed = _failed_item_ids(
+            summary.get("failed") or [], id_keys=("series_id",)
+        )
+        requested = int(
+            summary.get("requested_series") or summary.get("requested") or 0
+        )
+        status = _status_from_provider_summary(
+            rows_written=rows_written,
+            failed_items=failed,
+            missing_items=summary.get("missing") or [],
+        )
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=requested,
+            symbols_processed=max(requested - len(failed), 0),
+            failed_symbols=failed,
+            message=(
+                "Economic-cycle vintage collection completed."
+                if status == "success"
+                else "Economic-cycle vintage collection completed with gaps."
+            ),
+            details={
+                "source": summary.get("source") or "fred",
+                "source_mode": summary.get("source_mode")
+                or "fred_output_type_1_realtime_intervals",
+                "coverage": summary.get("coverage") or {},
+                "missing": summary.get("missing") or [],
+                "target_table": "finance_meta.macro_series_vintage_observation",
+            },
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"Economic-cycle vintage collection failed: {exc}",
+            details={
+                "source": "fred",
+                "source_mode": "fred_output_type_1_realtime_intervals",
+                "target_table": "finance_meta.macro_series_vintage_observation",
+            },
+        )
+
+
+def run_materialize_economic_cycle(
+    *,
+    as_of_date: str | None = None,
+    materializer: Callable[..., object] = materialize_economic_cycle_snapshot,
+) -> JobResult:
+    """Materialize a DB-only cycle snapshot without any provider access."""
+
+    job_name = "materialize_economic_cycle"
+    started_at = _now_str()
+    t0 = perf_counter()
+    resolved_date = as_of_date or datetime.now().date().isoformat()
+    try:
+        snapshot = materializer(as_of_date=resolved_date)
+        snapshot_status = str(getattr(snapshot, "status", "LIMITED"))
+        status = "success" if snapshot_status == "READY" else "partial_success"
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=1,
+            message=(
+                "Economic-cycle snapshot materialized."
+                if status == "success"
+                else "Economic-cycle snapshot materialized with limited horizons."
+            ),
+            details={
+                "as_of_date": resolved_date,
+                "model_version": getattr(snapshot, "model_version", None),
+                "publication_status": snapshot_status,
+                "target_table": "finance_meta.economic_cycle_snapshot",
+            },
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"Economic-cycle materialization failed: {exc}",
+            details={
+                "as_of_date": resolved_date,
+                "target_table": "finance_meta.economic_cycle_snapshot",
+            },
+        )
 
 
 def run_collect_ohlcv(
@@ -303,6 +443,133 @@ def run_collect_sp500_valuation_context(
                 "finance_meta.sp500_monthly_valuation",
                 "finance_meta.sp500_index_earnings",
                 "finance_meta.fomc_sep_projection",
+                "finance_price.nyse_price_history",
+            ],
+            "steps": steps,
+        },
+    )
+
+
+def run_import_sp500_index_earnings_xlsx(
+    *,
+    workbook_content: bytes,
+    source_release_date: str,
+    source_name: str | None = None,
+) -> JobResult:
+    """Register an operator-downloaded official S&P Index Earnings workbook."""
+    job_name = "import_sp500_index_earnings_xlsx"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        if not workbook_content:
+            raise ValueError("업로드한 XLSX 파일이 비어 있습니다.")
+        result = import_and_store_sp500_index_earnings(
+            workbook_content,
+            source_release_date=source_release_date,
+        )
+        rows_written = int(result.get("rows_written") or 0)
+        actual_quarter_count = int(result.get("actual_quarter_count") or 0)
+        remaining_quarters = int(result.get("remaining_quarters") or 0)
+        status = "success" if rows_written > 0 else "failed"
+        if rows_written <= 0:
+            message = "명시적으로 확인 가능한 S&P 500 EPS 분기를 찾지 못했습니다."
+        elif remaining_quarters == 0:
+            message = (
+                f"S&P 500 실제 EPS {actual_quarter_count}/8개 분기를 확보했습니다. "
+                "경제 사이클의 실제 TTM EPS를 계산할 수 있습니다."
+            )
+        else:
+            message = (
+                f"S&P 500 실제 EPS {actual_quarter_count}/8개 분기를 확보했습니다. "
+                f"계산까지 {remaining_quarters}개 분기가 더 필요합니다."
+            )
+        details = dict(result)
+        if source_name:
+            details["source_name"] = source_name
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            message=message,
+            details=details,
+        )
+    except Exception as exc:
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"S&P 500 실제 EPS 등록에 실패했습니다: {exc}",
+            details={
+                "source_name": source_name,
+                "source_release_date": source_release_date,
+            },
+        )
+
+
+def run_collect_nasdaq100_valuation_context() -> JobResult:
+    """Refresh official QQQ holdings and the gated Nasdaq-100 monthly proxy."""
+    job_name = "collect_nasdaq100_valuation_context"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        ensure_nasdaq100_valuation_schemas()
+    except Exception as exc:
+        return _build_result(
+            job_name=job_name, status="failed", started_at=started_at,
+            finished_at=_now_str(), duration_sec=perf_counter() - t0,
+            rows_written=0, symbols_requested=1, symbols_processed=0,
+            message=f"Nasdaq-100 valuation context refresh failed: {exc}",
+            details={"pipeline_type": "nasdaq100_valuation_context", "steps": []},
+        )
+
+    steps: list[dict[str, Any]] = []
+
+    def collect_step(label: str, collector: Callable[[], dict[str, Any]]) -> None:
+        try:
+            payload = dict(collector() or {})
+            steps.append({"label": label, "status": "success", **payload})
+        except Exception as exc:
+            steps.append(
+                {"label": label, "status": "failed", "rows_written": 0, "message": str(exc)}
+            )
+
+    collect_step("SEC QQQ holdings", collect_and_store_qqq_sec_holdings)
+    price = run_collect_ohlcv(
+        ["QQQ"], period="1mo", interval="1d", execution_profile="managed_safe"
+    )
+    steps.append(
+        {
+            "label": "QQQ EOD", "status": str(price.get("status") or "failed"),
+            "rows_written": int(price.get("rows_written") or 0),
+            "message": price.get("message"),
+        }
+    )
+    collect_step("Nasdaq-100 monthly proxy", materialize_and_store_nasdaq100_monthly)
+    succeeded = [step for step in steps if step["status"] in {"success", "partial_success"}]
+    degraded = [step for step in steps if step["status"] != "success"]
+    status = "partial_success" if degraded and succeeded else "failed" if degraded else "success"
+    rows_written = sum(int(step.get("rows_written") or 0) for step in steps)
+    return _build_result(
+        job_name=job_name, status=status, started_at=started_at,
+        finished_at=_now_str(), duration_sec=perf_counter() - t0,
+        rows_written=rows_written, symbols_requested=1,
+        symbols_processed=1 if price.get("status") == "success" else 0,
+        message=(
+            "Nasdaq-100 valuation context refresh completed."
+            if status == "success"
+            else "Nasdaq-100 valuation context refresh completed with source failures."
+        ),
+        details={
+            "pipeline_type": "nasdaq100_valuation_context",
+            "target_tables": [
+                "finance_meta.etf_holdings_snapshot",
+                "finance_meta.nasdaq100_monthly_valuation",
                 "finance_price.nyse_price_history",
             ],
             "steps": steps,
@@ -863,7 +1130,7 @@ def run_collect_futures_ohlcv(
         else:
             status = "success"
             message = "Futures OHLCV collection completed."
-        return _build_result(
+        job_result = _build_result(
             job_name=job_name,
             status=status,
             started_at=started_at,
@@ -890,6 +1157,11 @@ def run_collect_futures_ohlcv(
                 "diagnostics": result.get("diagnostics") or {},
             },
         )
+        return attach_futures_macro_materialization(
+            job_result,
+            interval=interval,
+            rows_written=rows_written,
+        )
     except Exception as exc:
         finished_at = _now_str()
         return _build_result(
@@ -910,6 +1182,40 @@ def run_collect_futures_ohlcv(
                 "cadence_mode": cadence_mode,
             },
         )
+
+
+def attach_futures_macro_materialization(
+    result: JobResult,
+    *,
+    interval: str,
+    rows_written: int,
+    materialize_fn: Callable[[], dict[str, Any]] | None = None,
+) -> JobResult:
+    """Attach compact macro materialization only after a successful daily write."""
+
+    output = dict(result)
+    details = dict(output.get("details") or {})
+    output["details"] = details
+    if str(interval).strip().lower() != "1d" or int(rows_written or 0) <= 0:
+        return output
+    if materialize_fn is None:
+        from app.services.futures_macro_snapshot import (
+            materialize_overview_futures_macro_snapshot,
+        )
+
+        materialize_fn = materialize_overview_futures_macro_snapshot
+    try:
+        details["futures_macro_snapshot"] = dict(materialize_fn())
+    except Exception as exc:
+        details["futures_macro_snapshot"] = {
+            "status": "error",
+            "message": str(exc),
+        }
+        if str(output.get("status") or "") == "success":
+            output["status"] = "partial_success"
+        base_message = str(output.get("message") or "Futures OHLCV collection completed.")
+        output["message"] = f"{base_message} Futures Macro snapshot failed: {exc}"
+    return output
 
 
 def run_collect_fomc_calendar(
@@ -1766,15 +2072,30 @@ def run_metadata_refresh(
 def run_collect_asset_profiles(
     *,
     kinds: tuple[str, ...] = ("stock", "etf"),
+    symbols: Iterable[str] | None = None,
     progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     job_name = "collect_asset_profiles"
     started_at = _now_str()
     t0 = perf_counter()
+    selected_symbols = (
+        list(
+            dict.fromkeys(
+                str(symbol or "").strip().upper()
+                for symbol in symbols
+                if str(symbol or "").strip()
+            )
+        )
+        if symbols is not None
+        else None
+    )
 
     try:
         _emit_stage_progress(progress_callback, event="stage_start", stage="asset_profiles")
-        failed_rows = collect_and_store_asset_profiles(kinds=kinds)
+        failed_rows = collect_and_store_asset_profiles(
+            kinds=kinds,
+            symbols=selected_symbols,
+        )
         _emit_stage_progress(progress_callback, event="stage_complete", stage="asset_profiles")
         finished_at = _now_str()
         failure_count = len(failed_rows)
@@ -1786,12 +2107,17 @@ def run_collect_asset_profiles(
             finished_at=finished_at,
             duration_sec=perf_counter() - t0,
             rows_written=None,
-            symbols_requested=None,
-            symbols_processed=None,
+            symbols_requested=len(selected_symbols) if selected_symbols is not None else None,
+            symbols_processed=(
+                max(0, len(selected_symbols) - failure_count)
+                if selected_symbols is not None
+                else None
+            ),
             failed_symbols=[row["symbol"] for row in failed_rows[:20] if row.get("symbol")],
             message="Asset profile collection completed." if failure_count == 0 else "Asset profile collection completed with failures.",
             details={
                 "kinds": list(kinds),
+                "symbols": selected_symbols,
                 "failure_count": failure_count,
             },
         )
@@ -1804,10 +2130,10 @@ def run_collect_asset_profiles(
             finished_at=finished_at,
             duration_sec=perf_counter() - t0,
             rows_written=0,
-            symbols_requested=None,
+            symbols_requested=len(selected_symbols) if selected_symbols is not None else None,
             symbols_processed=0,
             message=f"Asset profile collection failed: {exc}",
-            details={"kinds": list(kinds)},
+            details={"kinds": list(kinds), "symbols": selected_symbols},
         )
 
 
@@ -2170,6 +2496,65 @@ def run_collect_sec_13f_dataset(
                     "finance_meta.institutional_13f_refresh_status",
                 ],
             },
+        )
+
+
+def run_collect_sec_13f_identifier_mappings(
+    ciks: str | Iterable[str] | None = None,
+    *,
+    refresh_existing: bool = False,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    """Enrich stored latest 13F identifiers without provider access during UI reads."""
+    job_name = "collect_sec_13f_identifier_mappings"
+    started_at = _now_str()
+    t0 = perf_counter()
+    if ciks is None:
+        from app.services.institutional_portfolios import INSTITUTIONAL_MANAGER_WATCHLIST
+
+        selected_ciks = [str(row["cik"]) for row in INSTITUTIONAL_MANAGER_WATCHLIST]
+    else:
+        raw_ciks = [ciks] if isinstance(ciks, str) else ciks
+        selected_ciks = [str(value).strip() for value in raw_ciks if str(value).strip()]
+    selected_ciks = list(dict.fromkeys(selected_ciks))
+
+    try:
+        _emit_stage_progress(progress_callback, event="stage_start", stage="sec_13f_identifier_mapping")
+        summary = collect_and_store_openfigi_13f_mappings(
+            ciks=selected_ciks,
+            refresh_existing=refresh_existing,
+        )
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="sec_13f_identifier_mapping")
+        errors = int(summary.get("errors") or 0)
+        ambiguous = int(summary.get("ambiguous") or 0)
+        mapped = int(summary.get("mapped") or 0)
+        status = "failed" if errors and not mapped else ("partial_success" if errors or ambiguous else "success")
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=int(summary.get("rows_written") or 0),
+            symbols_requested=int(summary.get("identifiers_requested") or 0),
+            symbols_processed=mapped,
+            failed_symbols=[],
+            message="SEC 13F ticker identity enrichment completed.",
+            details=summary,
+        )
+    except Exception as exc:
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(selected_ciks),
+            symbols_processed=0,
+            failed_symbols=[],
+            message=f"SEC 13F ticker identity enrichment failed: {exc}",
+            details={"target_table": "finance_meta.institutional_13f_identifier_resolution"},
         )
 
 
@@ -2584,12 +2969,27 @@ def run_collect_macro_market_context(
     source_mode: str = "auto",
     progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
-    """Run the FRED market-context connector for Practical Validation macro diagnostics."""
+    """Collect supported FRED and EIA market-context series into the canonical table."""
     job_name = "collect_macro_market_context"
     started_at = _now_str()
     t0 = perf_counter()
-    effective_series = DEFAULT_MACRO_SERIES if series_ids is None or (isinstance(series_ids, str) and not series_ids.strip()) else series_ids
+    effective_series = (
+        (*DEFAULT_MACRO_SERIES, *EIA_WEEKLY_PETROLEUM_SERIES)
+        if series_ids is None
+        or (isinstance(series_ids, str) and not series_ids.strip())
+        else series_ids
+    )
     parsed, invalid_symbols = split_valid_invalid_symbols(effective_series)
+    fred_series = [series_id for series_id in parsed if series_id in FRED_SERIES_CONFIG]
+    eia_series = [
+        series_id for series_id in parsed if series_id in EIA_WEEKLY_PETROLEUM_SERIES
+    ]
+    unsupported_series = [
+        series_id
+        for series_id in parsed
+        if series_id not in FRED_SERIES_CONFIG
+        and series_id not in EIA_WEEKLY_PETROLEUM_SERIES
+    ]
 
     if not parsed:
         finished_at = _now_str()
@@ -2612,22 +3012,49 @@ def run_collect_macro_market_context(
         progress_callback({"event": "stage_start", "stage": "macro_market_context", "stage_index": 1, "total_stages": 1})
 
     try:
-        summary = collect_and_store_macro_series(
-            parsed,
-            start=start or None,
-            end=end or None,
-            provider="fred",
-            source_mode=source_mode,
-        )
+        summaries: list[dict[str, Any]] = []
+        if fred_series:
+            summaries.append(
+                collect_and_store_macro_series(
+                    fred_series,
+                    start=start or None,
+                    end=end or None,
+                    provider="fred",
+                    source_mode=source_mode,
+                )
+            )
+        if eia_series:
+            summaries.append(collect_and_store_eia_weekly_petroleum(eia_series))
         if progress_callback is not None:
             progress_callback({"event": "stage_complete", "stage": "macro_market_context", "stage_index": 1, "total_stages": 1})
-        rows_written = int(summary.get("stored") or 0)
-        missing_series = list(summary.get("missing") or [])
-        failed_series = _failed_item_ids(summary.get("failed") or [], id_keys=("series_id", "symbol"))
-        all_failed = invalid_symbols + failed_series + [series_id for series_id in missing_series if series_id not in failed_series]
+        rows_written = sum(int(summary.get("stored") or 0) for summary in summaries)
+        missing_series = [
+            str(series_id)
+            for summary in summaries
+            for series_id in (summary.get("missing") or [])
+        ]
+        failed_entries = [
+            entry
+            for summary in summaries
+            for entry in (summary.get("failed") or [])
+        ]
+        failed_series = _failed_item_ids(
+            failed_entries,
+            id_keys=("series_id", "symbol"),
+        )
+        all_failed = (
+            invalid_symbols
+            + unsupported_series
+            + failed_series
+            + [
+                series_id
+                for series_id in missing_series
+                if series_id not in failed_series
+            ]
+        )
         status = _status_from_provider_summary(
             rows_written=rows_written,
-            failed_items=failed_series + invalid_symbols,
+            failed_items=failed_series + invalid_symbols + unsupported_series,
             missing_items=missing_series,
         )
         finished_at = _now_str()
@@ -2639,7 +3066,15 @@ def run_collect_macro_market_context(
             duration_sec=perf_counter() - t0,
             rows_written=rows_written,
             symbols_requested=len(parsed),
-            symbols_processed=max(len(parsed) - len(set(missing_series + failed_series)), 0) if rows_written > 0 else 0,
+            symbols_processed=(
+                max(
+                    len(parsed)
+                    - len(set(missing_series + failed_series + unsupported_series)),
+                    0,
+                )
+                if rows_written > 0
+                else 0
+            ),
             failed_symbols=all_failed[:50],
             message=(
                 "Macro market-context snapshot completed."
@@ -2650,13 +3085,28 @@ def run_collect_macro_market_context(
             ),
             details={
                 "series_ids": parsed,
-                "start": summary.get("start") or start,
-                "end": summary.get("end") or end,
-                "source": summary.get("source") or "fred",
-                "source_mode": summary.get("source_mode") or source_mode,
-                "coverage": summary.get("coverage") or {},
+                "fred_series_ids": fred_series,
+                "eia_series_ids": eia_series,
+                "unsupported_series_ids": unsupported_series,
+                "start": start,
+                "end": end,
+                "sources": [summary.get("source") for summary in summaries],
+                "source_modes": [
+                    summary.get("source_mode") for summary in summaries
+                ],
+                "coverage": {
+                    str(status_key): sum(
+                        int((summary.get("coverage") or {}).get(status_key) or 0)
+                        for summary in summaries
+                    )
+                    for status_key in {
+                        str(key)
+                        for summary in summaries
+                        for key in (summary.get("coverage") or {})
+                    }
+                },
                 "missing": missing_series,
-                "failed": summary.get("failed") or [],
+                "failed": failed_entries,
                 "target_table": "finance_meta.macro_series_observation",
             },
         )
@@ -2677,7 +3127,7 @@ def run_collect_macro_market_context(
                 "series_ids": parsed,
                 "start": start,
                 "end": end,
-                "source": "fred",
+                "sources": ["fred", "eia"],
                 "source_mode": source_mode,
                 "target_table": "finance_meta.macro_series_observation",
             },
@@ -2848,6 +3298,762 @@ def run_collect_financial_statements(
                 "periods": periods,
                 "period": period,
             },
+        )
+
+
+def run_collect_us_stock_refresh_inputs(
+    symbol: str,
+    *,
+    cik: str = "",
+    identity_cik: str = "",
+    price_start: str | None,
+    price_end: str | None,
+    collect_profile: bool,
+    collect_prices: bool,
+    collect_statements: bool,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    profile_runner: Callable[..., JobResult] = run_collect_asset_profiles,
+    price_runner: Callable[..., JobResult] = run_collect_ohlcv,
+    statement_runner: Callable[..., JobResult] = run_collect_financial_statements,
+) -> JobResult:
+    """Collect explicit one-symbol market scopes before requiring SEC identity."""
+    job_name = "collect_us_stock_refresh_inputs"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid = split_valid_invalid_symbols([symbol])
+    if not parsed or invalid:
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=1,
+            symbols_processed=0,
+            failed_symbols=[str(symbol or "").strip().upper()],
+            message="Selected symbol validation failed before collection.",
+            details={"symbol": str(symbol or "").strip().upper()},
+        )
+    normalized_symbol = parsed[0]
+    normalized_cik = str(cik or "").strip().lstrip("0")
+    normalized_identity_cik = str(identity_cik or "").strip().lstrip("0")
+    cik_valid = bool(
+        normalized_cik and normalized_cik == normalized_identity_cik
+    )
+
+    def emit(stage: str) -> None:
+        if progress_callback is not None:
+            progress_callback(
+                {"event": "stage", "stage": stage, "symbol": normalized_symbol}
+            )
+
+    emit("preflight")
+    steps: list[dict[str, Any]] = []
+    if collect_profile:
+        emit("profile")
+        steps.append(
+            {
+                "stage": "profile",
+                **dict(
+                    profile_runner(
+                        kinds=("stock",),
+                        symbols=[normalized_symbol],
+                        progress_callback=None,
+                    )
+                ),
+            }
+        )
+    if collect_prices:
+        emit("prices")
+        if not price_start or not price_end:
+            price_result: dict[str, Any] = {
+                "status": "failed",
+                "rows_written": 0,
+                "failed_symbols": [normalized_symbol],
+                "message": "Exact price range is required.",
+            }
+        else:
+            price_result = dict(
+                price_runner(
+                    [normalized_symbol],
+                    start=str(price_start),
+                    end=str(price_end),
+                    interval="1d",
+                    execution_profile="managed_safe",
+                )
+            )
+        steps.append({"stage": "prices", **price_result})
+    remaining_scopes: list[str] = []
+    if collect_statements:
+        emit("sec")
+        if cik_valid:
+            statement_result = dict(
+                statement_runner(
+                    [normalized_symbol],
+                    freq="quarterly",
+                    periods=0,
+                    period="quarterly",
+                )
+            )
+        else:
+            remaining_scopes.append("sec_statements")
+            statement_result = {
+                "status": "failed",
+                "rows_written": 0,
+                "failed_symbols": [normalized_symbol],
+                "message": "Selected symbol/CIK identity is required for SEC statements.",
+                "reason_code": "CIK_IDENTITY_REQUIRED",
+            }
+        steps.append({"stage": "sec", **statement_result})
+    emit("complete")
+
+    statuses = [str(step.get("status") or "failed").lower() for step in steps]
+    if not steps or all(value == "success" for value in statuses):
+        status = "success"
+    elif all(value in {"failed", "error"} for value in statuses):
+        status = "failed"
+    else:
+        status = "partial_success"
+    failed_symbols = list(
+        dict.fromkeys(
+            str(item).strip().upper()
+            for step in steps
+            for item in (step.get("failed_symbols") or [])
+            if str(item).strip()
+        )
+    )
+    rows_written = sum(int(step.get("rows_written") or 0) for step in steps)
+    return _build_result(
+        job_name=job_name,
+        status=status,
+        started_at=started_at,
+        finished_at=_now_str(),
+        duration_sec=perf_counter() - t0,
+        rows_written=rows_written,
+        symbols_requested=1,
+        symbols_processed=0 if status == "failed" else 1,
+        failed_symbols=failed_symbols,
+        message=(
+            f"{normalized_symbol} refresh inputs collected synchronously."
+            if status == "success"
+            else f"{normalized_symbol} refresh completed with remaining scopes."
+        ),
+        details={
+            "symbol": normalized_symbol,
+            "cik": str(cik or ""),
+            "collect_profile": bool(collect_profile),
+            "collect_prices": bool(collect_prices),
+            "collect_statements": bool(collect_statements),
+            "price_range": {"start": price_start, "end": price_end},
+            "remaining_scopes": remaining_scopes,
+            "steps": steps,
+        },
+    )
+
+
+def run_collect_us_stock_valuation_inputs(
+    symbol: str,
+    *,
+    cik: str,
+    identity_cik: str,
+    price_start: str | None,
+    price_end: str | None,
+    collect_prices: bool,
+    collect_statements: bool,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    price_runner: Callable[..., JobResult] = run_collect_ohlcv,
+    statement_runner: Callable[..., JobResult] = run_collect_financial_statements,
+) -> JobResult:
+    """Synchronously collect only the selected symbol's approved missing scopes."""
+    job_name = "collect_us_stock_valuation_inputs"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid = split_valid_invalid_symbols([symbol])
+    normalized_cik = str(cik or "").strip().lstrip("0")
+    normalized_identity_cik = str(identity_cik or "").strip().lstrip("0")
+    if not parsed or invalid or not normalized_cik or normalized_cik != normalized_identity_cik:
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=1,
+            symbols_processed=0,
+            failed_symbols=[str(symbol or "").strip().upper()],
+            message="Selected symbol/CIK identity validation failed before collection.",
+            details={"cik": cik, "identity_cik": identity_cik},
+        )
+    normalized_symbol = parsed[0]
+
+    def emit(stage: str) -> None:
+        if progress_callback is not None:
+            progress_callback({"event": "stage", "stage": stage, "symbol": normalized_symbol})
+
+    emit("preflight")
+    steps: list[dict[str, Any]] = []
+    if collect_prices:
+        emit("prices")
+        if not price_start or not price_end:
+            price_result: dict[str, Any] = {
+                "status": "failed",
+                "rows_written": 0,
+                "failed_symbols": [normalized_symbol],
+                "message": "Exact price range is required.",
+            }
+        else:
+            provider_end = (
+                datetime.strptime(str(price_end), "%Y-%m-%d") + timedelta(days=1)
+            ).strftime("%Y-%m-%d")
+            price_result = dict(
+                price_runner(
+                    [normalized_symbol],
+                    start=str(price_start),
+                    end=provider_end,
+                    interval="1d",
+                    execution_profile="managed_safe",
+                )
+            )
+        steps.append({"stage": "prices", **price_result})
+    if collect_statements:
+        emit("sec")
+        statement_result = dict(
+            statement_runner(
+                [normalized_symbol],
+                freq="quarterly",
+                periods=0,
+                period="quarterly",
+            )
+        )
+        steps.append({"stage": "sec", **statement_result})
+    emit("complete")
+
+    statuses = [str(step.get("status") or "failed").lower() for step in steps]
+    if not steps:
+        status = "success"
+    elif all(value == "success" for value in statuses):
+        status = "success"
+    elif all(value in {"failed", "error"} for value in statuses):
+        status = "failed"
+    else:
+        status = "partial_success"
+    failures = list(
+        dict.fromkeys(
+            str(item).strip().upper()
+            for step in steps
+            for item in (step.get("failed_symbols") or [])
+            if str(item).strip()
+        )
+    )
+    rows_written = sum(int(step.get("rows_written") or 0) for step in steps)
+    return _build_result(
+        job_name=job_name,
+        status=status,
+        started_at=started_at,
+        finished_at=_now_str(),
+        duration_sec=perf_counter() - t0,
+        rows_written=rows_written,
+        symbols_requested=1,
+        symbols_processed=0 if status == "failed" else 1,
+        failed_symbols=failures,
+        message=(
+            f"{normalized_symbol} valuation inputs collected synchronously."
+            if status == "success"
+            else f"{normalized_symbol} valuation input collection completed with remaining gaps."
+        ),
+        details={
+            "symbol": normalized_symbol,
+            "cik": str(cik),
+            "collect_prices": bool(collect_prices),
+            "collect_statements": bool(collect_statements),
+            "price_range": {"start": price_start, "end": price_end},
+            "steps": steps,
+        },
+    )
+
+
+def run_collect_us_stock_turnaround_inputs(
+    symbol: str,
+    *,
+    cik: str,
+    identity_cik: str,
+    price_start: str | None,
+    price_end: str | None,
+    collect_profile: bool,
+    collect_prices: bool,
+    collect_statements: bool,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    profile_runner: Callable[..., JobResult] = run_collect_asset_profiles,
+    price_runner: Callable[..., JobResult] = run_collect_ohlcv,
+    statement_runner: Callable[..., JobResult] = run_collect_financial_statements,
+) -> JobResult:
+    """Collect only explicitly approved one-symbol turnaround input scopes."""
+    job_name = "collect_us_stock_turnaround_inputs"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid = split_valid_invalid_symbols([symbol])
+    normalized_cik = str(cik or "").strip().lstrip("0")
+    normalized_identity_cik = str(identity_cik or "").strip().lstrip("0")
+    if not parsed or invalid or not normalized_cik or normalized_cik != normalized_identity_cik:
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=1,
+            symbols_processed=0,
+            failed_symbols=[str(symbol or "").strip().upper()],
+            message="Selected symbol/CIK identity validation failed before collection.",
+            details={"cik": cik, "identity_cik": identity_cik},
+        )
+    normalized_symbol = parsed[0]
+
+    def emit(stage: str) -> None:
+        if progress_callback is not None:
+            progress_callback({"event": "stage", "stage": stage, "symbol": normalized_symbol})
+
+    emit("preflight")
+    steps: list[dict[str, Any]] = []
+    if collect_profile:
+        emit("profile")
+        profile_result = dict(
+            profile_runner(
+                kinds=("stock",),
+                symbols=[normalized_symbol],
+                progress_callback=None,
+            )
+        )
+        steps.append({"stage": "profile", **profile_result})
+    if collect_prices:
+        emit("prices")
+        if not price_start or not price_end:
+            price_result: dict[str, Any] = {
+                "status": "failed",
+                "rows_written": 0,
+                "failed_symbols": [normalized_symbol],
+                "message": "Exact price range is required.",
+            }
+        else:
+            provider_end = (
+                datetime.strptime(str(price_end), "%Y-%m-%d") + timedelta(days=1)
+            ).strftime("%Y-%m-%d")
+            price_result = dict(
+                price_runner(
+                    [normalized_symbol],
+                    start=str(price_start),
+                    end=provider_end,
+                    interval="1d",
+                    execution_profile="managed_safe",
+                )
+            )
+        steps.append({"stage": "prices", **price_result})
+    if collect_statements:
+        emit("sec")
+        statement_result = dict(
+            statement_runner(
+                [normalized_symbol],
+                freq="quarterly",
+                periods=0,
+                period="quarterly",
+            )
+        )
+        steps.append({"stage": "sec", **statement_result})
+    emit("complete")
+
+    statuses = [str(step.get("status") or "failed").lower() for step in steps]
+    if not steps or all(value == "success" for value in statuses):
+        status = "success"
+    elif all(value in {"failed", "error"} for value in statuses):
+        status = "failed"
+    else:
+        status = "partial_success"
+    failures = list(
+        dict.fromkeys(
+            str(item).strip().upper()
+            for step in steps
+            for item in (step.get("failed_symbols") or [])
+            if str(item).strip()
+        )
+    )
+    rows_written = sum(int(step.get("rows_written") or 0) for step in steps)
+    return _build_result(
+        job_name=job_name,
+        status=status,
+        started_at=started_at,
+        finished_at=_now_str(),
+        duration_sec=perf_counter() - t0,
+        rows_written=rows_written,
+        symbols_requested=1,
+        symbols_processed=0 if status == "failed" else 1,
+        failed_symbols=failures,
+        message=(
+            f"{normalized_symbol} turnaround inputs collected synchronously."
+            if status == "success"
+            else f"{normalized_symbol} turnaround collection completed with remaining gaps."
+        ),
+        details={
+            "symbol": normalized_symbol,
+            "cik": str(cik),
+            "collect_profile": bool(collect_profile),
+            "collect_prices": bool(collect_prices),
+            "collect_statements": bool(collect_statements),
+            "price_range": {"start": price_start, "end": price_end},
+            "steps": steps,
+        },
+    )
+def collect_nasdaq100_repair_inputs(
+    plan: Mapping[str, Any],
+    *,
+    batch_size: int = 20,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    statement_runner: Callable[..., JobResult] = run_collect_financial_statements,
+    price_runner: Callable[..., JobResult] = run_collect_ohlcv,
+    price_limit_persister: Callable[..., dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Collect planned EPS and EOD gaps without rolling back successful batches."""
+    targets = [dict(row) for row in plan.get("targets", []) if row.get("symbol")]
+    stages = (
+        (
+            "eps",
+            [
+                row
+                for row in targets
+                if "quarterly_diluted_eps" in set(row.get("needs") or [])
+            ],
+        ),
+        (
+            "prices",
+            [row for row in targets if "eod_price" in set(row.get("needs") or [])],
+        ),
+    )
+    resolved_batch_size = max(1, int(batch_size))
+    results: list[dict[str, Any]] = []
+    failed_symbols: list[str] = []
+    successful_price_targets: list[dict[str, Any]] = []
+
+    for stage, stage_targets in stages:
+        total = len(stage_targets)
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_start",
+                    "stage": stage,
+                    "completed": 0,
+                    "total": total,
+                    "message": f"{stage} 보강을 시작합니다.",
+                }
+            )
+        for offset in range(0, total, resolved_batch_size):
+            batch = stage_targets[offset : offset + resolved_batch_size]
+            symbols = [str(row["symbol"]).strip().upper() for row in batch]
+            try:
+                if stage == "eps":
+                    payload = dict(
+                        statement_runner(
+                            symbols,
+                            freq="quarterly",
+                            periods=0,
+                            period="quarterly",
+                        )
+                    )
+                else:
+                    inclusive_end = max(str(row["end_date"]) for row in batch)
+                    provider_end = (
+                        datetime.strptime(inclusive_end, "%Y-%m-%d") + timedelta(days=1)
+                    ).strftime("%Y-%m-%d")
+                    payload = dict(
+                        price_runner(
+                            symbols,
+                            start=min(str(row["start_date"]) for row in batch),
+                            end=provider_end,
+                            interval="1d",
+                            execution_profile="managed_safe",
+                        )
+                    )
+            except Exception as exc:
+                payload = {
+                    "status": "failed",
+                    "rows_written": 0,
+                    "failed_symbols": symbols,
+                    "message": str(exc),
+                }
+            batch_failures = [
+                str(symbol).strip().upper()
+                for symbol in payload.get("failed_symbols") or []
+                if str(symbol).strip()
+            ]
+            if str(payload.get("status") or "failed").lower() in {"failed", "error"}:
+                batch_failures = batch_failures or symbols
+            elif stage == "prices":
+                failed_set = set(batch_failures)
+                successful_price_targets.extend(
+                    row
+                    for row in batch
+                    if str(row.get("symbol") or "").strip().upper() not in failed_set
+                )
+            failed_symbols.extend(batch_failures)
+            results.append({"stage": stage, "symbols": symbols, **payload})
+            completed = min(offset + len(batch), total)
+            if progress_callback is not None:
+                progress_callback(
+                    {
+                        "event": "stage_progress",
+                        "stage": stage,
+                        "completed": completed,
+                        "total": total,
+                        "message": f"{stage} {completed}/{total}",
+                    }
+                )
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_complete",
+                    "stage": stage,
+                    "completed": total,
+                    "total": total,
+                    "message": f"{stage} 보강 단계를 마쳤습니다.",
+                }
+            )
+
+    price_limit_issues: dict[str, Any] = {"symbols": [], "rows_written": 0}
+    if successful_price_targets:
+        persist_price_limits = (
+            price_limit_persister or persist_nasdaq100_exhausted_price_targets
+        )
+        window = dict(plan.get("window") or {})
+        resolved_end = str(
+            window.get("end_month")
+            or max(str(row.get("end_date")) for row in successful_price_targets)
+        )
+        try:
+            price_limit_issues = dict(
+                persist_price_limits(
+                    successful_price_targets,
+                    months=int(window.get("months") or 60),
+                    end_month=resolved_end,
+                )
+            )
+        except Exception as exc:
+            price_limit_issues = {
+                "symbols": [],
+                "rows_written": 0,
+                "error": str(exc),
+            }
+
+    unique_failures = list(dict.fromkeys(failed_symbols))
+    statuses = {str(row.get("status") or "failed").lower() for row in results}
+    if results and statuses <= {"failed", "error"}:
+        status = "failed"
+    elif unique_failures or statuses & {"partial_success", "failed", "error"}:
+        status = "partial_success"
+    else:
+        status = "success"
+    return {
+        "status": status,
+        "rows_written": sum(int(row.get("rows_written") or 0) for row in results),
+        "failed_symbols": unique_failures,
+        "steps": results,
+        "price_limit_issues": price_limit_issues,
+    }
+
+
+def persist_nasdaq100_exhausted_price_targets(
+    attempted_targets: Iterable[Mapping[str, Any]],
+    *,
+    months: int,
+    end_month: str,
+    plan_loader: Callable[..., dict[str, Any]] = load_nasdaq100_coverage_repair_plan,
+    freshness_loader: Callable[..., Any] = load_price_freshness_summary,
+    issue_builder: Callable[..., list[dict[str, Any]]] = build_price_history_limit_issue_rows,
+    issue_writer: Callable[[list[dict[str, Any]]], int] = upsert_market_data_issue_rows,
+) -> dict[str, Any]:
+    """Persist full-window price gaps only after a successful collection attempt."""
+    attempted = {
+        str(row.get("symbol") or "").strip().upper(): dict(row)
+        for row in attempted_targets
+        if str(row.get("symbol") or "").strip()
+    }
+    if not attempted:
+        return {"symbols": [], "rows_written": 0}
+    after = plan_loader(months=months, end_month=end_month)
+    remaining = {
+        str(row.get("symbol") or "").strip().upper(): dict(row)
+        for row in after.get("targets") or []
+        if "eod_price" in set(row.get("needs") or [])
+        and str(row.get("symbol") or "").strip().upper() in attempted
+    }
+    if not remaining:
+        return {"symbols": [], "rows_written": 0}
+    symbols = sorted(remaining)
+    freshness = freshness_loader(symbols=symbols, end=end_month, timeframe="1d")
+    freshness_rows = [] if getattr(freshness, "empty", True) else freshness.to_dict("records")
+    by_symbol = {
+        str(row.get("symbol") or "").strip().upper(): row for row in freshness_rows
+    }
+
+    def date_text(value: Any) -> str:
+        if value is None:
+            return "-"
+        if hasattr(value, "strftime"):
+            return str(value.strftime("%Y-%m-%d"))
+        return str(value)[:10]
+
+    evidence = []
+    for symbol in symbols:
+        row = by_symbol.get(symbol) or {}
+        target = remaining[symbol]
+        evidence.append(
+            {
+                "symbol": symbol,
+                "period": "max",
+                "first_date": date_text(row.get("first_date")),
+                "latest_date": date_text(row.get("latest_date")),
+                "row_count": int(row.get("row_count") or 0),
+                "min_rows": max(1, int(target.get("affected_months") or 1)),
+            }
+        )
+    issue_rows = issue_builder(evidence, universe_code="NASDAQ100")
+    rows_written = int(issue_writer(issue_rows) or 0) if issue_rows else 0
+    return {"symbols": symbols, "rows_written": rows_written}
+
+
+def run_repair_nasdaq100_valuation_coverage(
+    *,
+    months: int = 60,
+    batch_size: int = 20,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    plan_loader: Callable[..., dict[str, Any]] = load_nasdaq100_coverage_repair_plan,
+    input_collector: Callable[..., dict[str, Any]] = collect_nasdaq100_repair_inputs,
+    materializer: Callable[..., dict[str, Any]] = materialize_and_store_nasdaq100_monthly,
+) -> JobResult:
+    """Repair stored inputs, rematerialize the window, and report strict readiness."""
+    job_name = "repair_nasdaq100_valuation_coverage"
+    started_at = _now_str()
+    t0 = perf_counter()
+    requested_months = max(1, int(months))
+    try:
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_start",
+                    "stage": "diagnose",
+                    "completed": 0,
+                    "total": 1,
+                    "message": f"{requested_months}개월 누락 자료를 확인합니다.",
+                }
+            )
+        before = plan_loader(months=requested_months)
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_complete",
+                    "stage": "diagnose",
+                    "completed": 1,
+                    "total": 1,
+                    "message": f"보강 대상 {len(before.get('targets') or [])}개를 확인했습니다.",
+                }
+            )
+        if before.get("targets"):
+            collection = input_collector(
+                before,
+                batch_size=batch_size,
+                progress_callback=progress_callback,
+            )
+        else:
+            collection = {
+                "status": "success",
+                "rows_written": 0,
+                "failed_symbols": [],
+                "steps": [],
+                "price_limit_issues": {"symbols": [], "rows_written": 0},
+            }
+
+        window = dict(before.get("window") or {})
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_start",
+                    "stage": "materialize",
+                    "completed": 0,
+                    "total": 1,
+                    "message": f"{requested_months}개월 가치평가를 다시 계산합니다.",
+                }
+            )
+        materialized = materializer(
+            start_month=str(window["start_month"]),
+            end_month=str(window["end_month"]),
+        )
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_complete",
+                    "stage": "materialize",
+                    "completed": 1,
+                    "total": 1,
+                    "message": f"{requested_months}개월 가치평가 재계산을 마쳤습니다.",
+                }
+            )
+        after = plan_loader(months=requested_months)
+        after_summary = dict(after.get("before") or {})
+        requested_months = int(
+            dict(after.get("window") or {}).get("months") or requested_months
+        )
+        ready_months = int(after_summary.get("ready_months") or 0)
+        status = "success" if ready_months == requested_months else "partial_success"
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_complete",
+                    "stage": "complete",
+                    "completed": ready_months,
+                    "total": requested_months,
+                    "message": f"{requested_months}개월 중 {ready_months}개월이 준비됐습니다.",
+                }
+            )
+        failed_symbols = list(collection.get("failed_symbols") or [])
+        target_count = len(before.get("targets") or [])
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=int(collection.get("rows_written") or 0)
+            + int(materialized.get("rows_written") or 0),
+            symbols_requested=target_count,
+            symbols_processed=max(0, target_count - len(failed_symbols)),
+            failed_symbols=failed_symbols,
+            message=(
+                f"Nasdaq-100 {requested_months}-month repair completed with "
+                f"{ready_months}/{requested_months} ready months."
+            ),
+            details={
+                "pipeline_type": "nasdaq100_valuation_repair",
+                "window": dict(after.get("window") or window),
+                "before": dict(before.get("before") or {}),
+                "after": after_summary,
+                "collection": collection,
+                "materialization": materialized,
+                "remaining_targets": list(after.get("targets") or []),
+                "unsupported": list(after.get("unsupported") or []),
+            },
+        )
+    except Exception as exc:
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            message=f"Nasdaq-100 60-month repair failed: {exc}",
+            details={"pipeline_type": "nasdaq100_valuation_repair"},
         )
 
 

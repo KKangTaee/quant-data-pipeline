@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-07-16
+Last Verified: 2026-07-19
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -27,12 +27,21 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| `practical-validation-level2-decision-workspace-v1-20260716` | Browser QA pending | 1~3차 구현과 사용자 피드백 보정, focused 124 tests / React build / py_compile / diff-check / latest GRS read-only projection / docs sync 완료. desktop / 760px Browser QA와 새 screenshot만 남았다. |
+| `backtest-analysis-level1-decision-workspace-v1-20260717` | 15차 planning | 1~14차 Level1 one-shell 개선을 완료했다. 사용자 승인된 Portfolio Mix React one-shell 완성 설계를 기준으로 상세 구현 계획과 RED → GREEN 개발을 이어간다. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-futures-macro-pattern-outlook-v1-20260718` | Completed record | Futures Macro를 1D/5D/20D current regime과 5D/20D conditional outlook으로 개편하고, 5년 compact snapshot persistence, DB-only first entry, React method / calculation trace와 actual responsive QA를 완료했다. |
+| `institutional-13f-openfigi-mapping-v1-20260718` | Completed record | 무료 OpenFIGI current resolution, error-preserving UPSERT, safe loader precedence, curated-manager actual backfill과 Browser QA를 전체 roadmap `4/4`로 완료했다. |
+| `institutional-portfolios-context-first-redesign-v1-20260718` | Completed record | 선택 기관 context hero, coverage / comparison gate, full holdings explorer, explicit security search, mapped / unresolved flow와 actual responsive QA를 전체 roadmap `4/4`로 완료했다. |
+| `overview-economic-cycle-sp500-actual-eps-registration-v1-20260718` | Completed implementation / external input pending | 공식 S&P Index Earnings workbook parser, release-vintage persistence, PIT loader와 Ingestion 등록 경로는 완료했다. 실제 workbook과 발표일 등록 전까지 actual TTM EPS는 자료 부족을 유지한다. |
+| `overview-market-context-turnaround-derived-quarter-provenance-v1-20260716` | Completed record | Explicit concept family의 확정 FY/Q1/Q2/Q3로 missing Q4를 안전하게 산출하고 per-metric/TTM provenance와 `공시 기반 산출` 표시를 추가했다. |
+| `overview-market-context-turnaround-stage-semantics-fix-v1-20260716` | Completed record | AAPL canonical `USD per share` EPS reader를 복구하고, 6개 rail에서 전환 신호·이미 양수·PER 적용 가능·흑자지만 개선폭 미달을 독립적으로 구분했다. |
+| `overview-market-context-us-stock-freshness-refresh-v1-20260715` | Completed record | 선택 종목 cached UI를 DB-only로 열고, 마지막 완료 NYSE 거래일보다 자료가 뒤처질 때만 상단 single CTA로 exact scope를 갱신한다. profile/price는 CIK 없이 실행하고 SEC statement만 identity를 요구한다. |
+| `overview-market-context-us-stock-turnaround-analysis-v1-20260715` | Completed record | 미국 개별주식 내부에 `PER 상대가치 | 전환 분석`을 추가하고 quarterly filing 기반 영업·현금 전환, survival risk, stage-appropriate valuation readiness를 selected-company 범위로 구현했다. |
+| `overview-market-context-us-stock-valuation-v1-20260714` | Completed record | searchable 미국 개별주 DB-only PER 상대가치, split-neutral filing-aware TTM, 부분 1/3/5년 history와 explicit selected-symbol 수집 경계를 구현했다. |
 | `institutional-portfolios-security-detail-chart-layout-v1-20260712` | Completed record | Selected-security detail now uses overview/context cards, full-width stored-OHLCV chart row with volume/navigator, and lower scrollable holder list. |
 | `institutional-portfolios-watchlist-mapping-v1-20260712` | Completed record | Expanded guru aliases and DB-backed watchlist lookup, alias-prioritized manager search, ambiguous CUSIP-symbol guardrails, and distinct selected-security price states. |
 | `institutional-portfolios-two-tier-tabs-v1-20260712` | Completed record | Workbench tabs now use primary `포트폴리오 / 종목 분석` tabs with context-specific secondary tabs. |

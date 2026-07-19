@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from html import escape
-from typing import Any
+from typing import Any, Callable
 
 import altair as alt
 import pandas as pd
@@ -12,6 +13,7 @@ from app.jobs.overview_actions import (
     record_overview_action_result,
     run_overview_market_context_refresh_all,
     run_overview_market_context_refresh_smart,
+    run_overview_us_stock_data_refresh,
 )
 from app.web.overview.session_helpers import _market_context_session_payload
 from app.web.overview_dashboard_helpers import (
@@ -33,6 +35,15 @@ from app.web.overview.components.common import (
 
 MARKET_CONTEXT_REFRESH_RESULT_KEY = "overview_market_context_refresh_all_result"
 MARKET_CONTEXT_REFRESH_REFLECTION_KEY = "overview_market_context_refresh_reflection"
+US_STOCK_SEARCH_QUERY_KEY = "overview_us_stock_valuation_search_query"
+US_STOCK_SELECTED_SYMBOL_KEY = "overview_us_stock_valuation_selected_symbol"
+US_STOCK_COLLECTION_RESULT_KEY = "overview_us_stock_valuation_collection_result"
+US_STOCK_EVENT_KEY = "overview_us_stock_valuation_last_event"
+US_STOCK_EVENT_IDS = {
+    "search_us_stock",
+    "select_us_stock",
+    "refresh_us_stock_data",
+}
 GROUP_TREND_HEATMAP_MIN_HEIGHT = 280
 GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
 
@@ -40,7 +51,16 @@ GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
 def render_market_context_header() -> None:
     """Render the compact Market Context tab heading."""
     st.markdown("### 시장 맥락")
-    st.caption("S&P 500의 최근 멀티플 위치와 FOMC 기반 예상 실적 시나리오를 함께 비교합니다.")
+    st.caption("미국 경제사이클과 S&P 500·개별주식의 시장 맥락을 나란히 확인합니다.")
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_economic_cycle_model(as_of_date: str | None = None) -> dict[str, Any]:
+    """Load the persisted DB-only economic-cycle read model."""
+    from app.services.overview.economic_cycle import build_economic_cycle_read_model
+
+    model = build_economic_cycle_read_model(as_of_date=as_of_date)
+    return json.loads(json.dumps(model, default=str))
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -51,9 +71,69 @@ def load_sp500_valuation_model() -> dict[str, Any]:
     return build_sp500_valuation_read_model()
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def load_market_context_valuation_model(
+    selected_symbol: str | None = None,
+    search_query: str | None = None,
+    default_instrument: str | None = None,
+    show_instrument_selector: bool = True,
+) -> dict[str, Any]:
+    """Load independently isolated S&P 500 and selected-stock read models."""
+    from app.services.overview.market_context_valuation import (
+        build_market_context_valuation_read_model,
+    )
+
+    model = build_market_context_valuation_read_model(
+        selected_symbol=selected_symbol,
+        search_query=search_query,
+        default_instrument=default_instrument,
+        show_instrument_selector=show_instrument_selector,
+    )
+    return json.loads(json.dumps(model, default=str))
+
+
+def _render_economic_cycle_fallback(payload: dict[str, Any]) -> None:
+    """Keep the core cycle reading available before the React build exists."""
+    headline = dict(payload.get("headline") or {})
+    if payload.get("status") == "ERROR":
+        st.warning(str(headline.get("summary") or "경제사이클 결과를 읽지 못했습니다."))
+        return
+    st.markdown(f"#### {headline.get('phase_label') or '판단 제한'}")
+    st.caption(str(headline.get("summary") or "저장된 결과가 아직 없습니다."))
+    for item in payload.get("horizons") or []:
+        label = str(item.get("label") or "-")
+        probabilities = item.get("probabilities")
+        if not isinstance(probabilities, dict):
+            st.caption(f"{label} · {item.get('reason') or '판단 제한'}")
+            continue
+        dominant = str(item.get("dominant_phase_label") or "-")
+        confidence = float(item.get("confidence") or 0.0) * 100.0
+        st.caption(f"{label} · {dominant} {confidence:.0f}%")
+
+
+def render_economic_cycle() -> None:
+    """Render the DB-only cycle workbench without emitting operational events."""
+    from app.web.overview.economic_cycle_react_component import (
+        economic_cycle_component_available,
+        render_economic_cycle_component,
+    )
+
+    try:
+        payload = load_economic_cycle_model()
+    except Exception as exc:  # pragma: no cover - UI resilience only
+        st.warning(f"경제사이클 자료를 불러오지 못했습니다: {exc}")
+        return
+    if economic_cycle_component_available():
+        render_economic_cycle_component(payload)
+        return
+    _render_economic_cycle_fallback(payload)
+
+
 def _render_market_context_valuation_fallback(payload: dict[str, Any]) -> None:
     """Keep the valuation question readable when the React build is unavailable."""
     st.info("가치평가 화면 빌드를 찾지 못해 핵심 수치만 표시합니다.")
+    instruments = dict(payload.get("instruments") or {})
+    payload = dict(instruments.get(payload.get("default_instrument") or "sp500") or payload)
     multiple = dict(payload.get("multiple_regime") or {})
     earnings = dict(payload.get("earnings_scenario") or {})
     index = dict(payload.get("index_scenario") or {})
@@ -81,20 +161,163 @@ def _render_market_context_valuation_fallback(payload: dict[str, Any]) -> None:
     st.caption("거시 지표 기반 자체 예상이며 애널리스트 컨센서스가 아닙니다.")
 
 
-def render_market_context_valuation() -> None:
-    """Render the React-first two-chart S&P 500 valuation surface."""
+def _market_context_valuation_event_payload(
+    event: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if not isinstance(event, dict):
+        return {}
+    nested = event.get("event")
+    return dict(nested) if isinstance(nested, dict) else dict(event)
+
+
+def _consume_market_context_valuation_event(
+    payload: dict[str, Any],
+    *,
+    state: Any,
+) -> bool:
+    action_id = str(payload.get("id") or payload.get("action_id") or "").strip()
+    if action_id not in US_STOCK_EVENT_IDS:
+        return False
+    nonce = payload.get("nonce") or payload.get("token") or action_id
+    event_token = f"{action_id}:{nonce}"
+    if state.get(US_STOCK_EVENT_KEY) == event_token:
+        return False
+    state[US_STOCK_EVENT_KEY] = event_token
+    return True
+
+
+def _render_us_stock_collection_progress(status: Any, update: dict[str, Any]) -> None:
+    stage_labels = {
+        "preflight": "누락 구간 확인",
+        "identity": "SEC CIK 연결",
+        "profile": "시장가치 수집",
+        "prices": "가격 수집",
+        "sec": "SEC 분기 실적 수집",
+        "complete": "완료",
+    }
+    stage = str(update.get("stage") or "")
+    message = str(update.get("message") or stage_labels.get(stage) or "자료를 보강합니다.")
+    status.write(f"{stage_labels.get(stage, stage or '진행')} · {message}")
+
+
+def _run_us_stock_refresh_for_ui(symbol: str) -> dict[str, Any]:
+    with st.status(
+        f"{symbol} 최신 자료를 확인하는 중입니다.",
+        expanded=True,
+    ) as status:
+        result = run_overview_us_stock_data_refresh(
+            symbol,
+            progress_callback=lambda update: _render_us_stock_collection_progress(
+                status, update
+            ),
+        )
+        result_status = str(result.get("status") or "failed").lower()
+        if result_status == "success":
+            status.update(
+                label=f"{symbol} 최신 자료 확인을 마쳤습니다.",
+                state="complete",
+            )
+        elif result_status == "partial_success":
+            status.update(label="수집 가능한 자료를 반영했고 남은 항목이 있습니다.", state="complete")
+        else:
+            status.update(label="최신 자료를 반영하지 못했습니다.", state="error")
+    return result
+
+
+def _handle_market_context_valuation_event(
+    event: dict[str, Any] | None,
+    *,
+    state: Any = None,
+    run_action: Callable[[str], dict[str, Any]] | None = None,
+    store_result: Callable[[dict[str, Any]], None] | None = None,
+    clear_cache: Callable[[], None] | None = None,
+    rerun: Callable[[], None] | None = None,
+) -> bool:
+    resolved_state = state if state is not None else st.session_state
+    payload = _market_context_valuation_event_payload(event)
+    action_id = str(payload.get("id") or payload.get("action_id") or "").strip()
+    if action_id not in US_STOCK_EVENT_IDS:
+        return False
+    if action_id == "refresh_us_stock_data":
+        selected = str(resolved_state.get(US_STOCK_SELECTED_SYMBOL_KEY) or "").upper()
+        event_symbol = str(payload.get("symbol") or "").strip().upper()
+        if not selected or event_symbol != selected:
+            return False
+    if not _consume_market_context_valuation_event(payload, state=resolved_state):
+        return False
+    if action_id == "search_us_stock":
+        resolved_state[US_STOCK_SEARCH_QUERY_KEY] = str(payload.get("query") or "").strip()
+        resolved_state.pop(US_STOCK_SELECTED_SYMBOL_KEY, None)
+        (rerun or st.rerun)()
+        return True
+    if action_id == "select_us_stock":
+        symbol = str(payload.get("symbol") or "").strip().upper()
+        if not symbol:
+            return False
+        resolved_state[US_STOCK_SELECTED_SYMBOL_KEY] = symbol
+        (rerun or st.rerun)()
+        return True
+
+    symbol = str(resolved_state.get(US_STOCK_SELECTED_SYMBOL_KEY) or "").upper()
+    result = (run_action or _run_us_stock_refresh_for_ui)(symbol)
+    if store_result is not None:
+        store_result(result)
+    else:
+        _store_overview_job_result(US_STOCK_COLLECTION_RESULT_KEY, result)
+    if str(result.get("status") or "").lower() != "failed":
+        (clear_cache or load_market_context_valuation_model.clear)()
+    (rerun or st.rerun)()
+    return True
+
+
+def _us_stock_collection_reflection(result: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "status": str(result.get("status") or "failed"),
+        "message": str(result.get("message") or ""),
+    }
+
+
+def render_market_context_valuation(
+    *,
+    default_instrument: str | None = None,
+    show_instrument_selector: bool = True,
+) -> None:
+    """Render the React-first valuation surface and consume explicit stock actions."""
     from app.web.overview.market_context_react_component import (
         market_context_valuation_component_available,
         render_market_context_valuation_component,
     )
 
+    selected_symbol = str(
+        st.session_state.get(US_STOCK_SELECTED_SYMBOL_KEY) or ""
+    ).strip().upper()
+    search_query = str(
+        st.session_state.get(US_STOCK_SEARCH_QUERY_KEY) or ""
+    ).strip()
     try:
-        payload = load_sp500_valuation_model()
+        payload = load_market_context_valuation_model(
+            selected_symbol or None,
+            search_query or None,
+            default_instrument,
+            show_instrument_selector,
+        )
     except Exception as exc:  # pragma: no cover - UI resilience only
-        st.warning(f"S&P 500 가치평가 자료를 불러오지 못했습니다: {exc}")
+        st.warning(f"시장 가치평가 자료를 불러오지 못했습니다: {exc}")
         return
+    payload = json.loads(json.dumps(payload, default=str))
+    collection_result = st.session_state.pop(US_STOCK_COLLECTION_RESULT_KEY, None)
+    if isinstance(collection_result, dict):
+        instruments = dict(payload.get("instruments") or {})
+        stock = dict(instruments.get("us_stock") or {})
+        stock["collection_result"] = _us_stock_collection_reflection(collection_result)
+        instruments["us_stock"] = stock
+        payload["instruments"] = instruments
     if market_context_valuation_component_available():
-        render_market_context_valuation_component(payload)
+        event = render_market_context_valuation_component(
+            payload,
+            key=f"market_context_valuation_{default_instrument or 'legacy'}",
+        )
+        _handle_market_context_valuation_event(event)
         return
     _render_market_context_valuation_fallback(payload)
 

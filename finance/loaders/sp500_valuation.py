@@ -72,6 +72,7 @@ def load_latest_sp500_ttm_actual_eps(
           AND value_status = 'actual'
           AND eps > 0
           AND period_end <= CURRENT_DATE()
+          AND source_release_date <= CURRENT_DATE()
         ORDER BY period_end DESC, source_release_date DESC
         """,
         (),
@@ -120,6 +121,104 @@ def load_latest_sp500_ttm_actual_eps(
         "quarters": quarters,
         "latest_period_end": quarters[0]["period_end"] if quarters else None,
         "latest_release_date": quarters[0]["source_release_date"] if quarters else None,
+    }
+
+
+def load_sp500_actual_eps_history(
+    *,
+    quarter_count: int = 8,
+    end_date: object = None,
+    query_fn: QueryFn | None = None,
+) -> dict[str, Any]:
+    """Return strict current/prior TTM growth from eight actual S&P quarters."""
+    limit = max(8, int(quarter_count))
+    if end_date is None:
+        end_clause = (
+            "AND period_end <= CURRENT_DATE() "
+            "AND source_release_date <= CURRENT_DATE()"
+        )
+        params: tuple[Any, ...] = ()
+    else:
+        end_clause = "AND period_end <= %s AND source_release_date <= %s"
+        as_of_date = str(end_date)[:10]
+        params = (as_of_date, as_of_date)
+    rows = _query_meta(
+        f"""
+        SELECT period_end, eps, source, source_ref, source_release_date, collected_at
+        FROM sp500_index_earnings
+        WHERE period_type = 'quarterly'
+          AND earnings_basis = 'as_reported'
+          AND value_status = 'actual'
+          AND eps > 0
+          {end_clause}
+        ORDER BY period_end DESC, source_release_date DESC
+        """,
+        params,
+        query_fn=query_fn,
+    )
+    frame = pd.DataFrame(rows)
+    if frame.empty:
+        return {
+            "status": "INSUFFICIENT_HISTORY",
+            "quarter_count": 0,
+            "current_ttm_eps": None,
+            "prior_ttm_eps": None,
+            "growth_pct": None,
+            "latest_period_end": None,
+            "latest_release_date": None,
+            "quarters": [],
+            "source_basis": "S&P official actual as-reported EPS",
+        }
+    frame["period_end"] = pd.to_datetime(frame["period_end"], errors="coerce")
+    if "source_release_date" in frame:
+        frame["source_release_date"] = pd.to_datetime(
+            frame["source_release_date"], errors="coerce"
+        )
+    else:
+        frame["source_release_date"] = pd.NaT
+    frame["eps"] = pd.to_numeric(frame["eps"], errors="coerce")
+    frame = (
+        frame.dropna(subset=["period_end", "eps"])
+        .sort_values(["period_end", "source_release_date"], ascending=False)
+        .drop_duplicates("period_end", keep="first")
+        .head(limit)
+    )
+    quarters = [
+        {
+            "period_end": row.period_end.strftime("%Y-%m-%d"),
+            "eps": float(row.eps),
+            "source_release_date": (
+                row.source_release_date.strftime("%Y-%m-%d")
+                if not pd.isna(row.source_release_date)
+                else None
+            ),
+        }
+        for row in frame.itertuples()
+    ]
+    result: dict[str, Any] = {
+        "status": "INSUFFICIENT_HISTORY",
+        "quarter_count": len(quarters),
+        "current_ttm_eps": None,
+        "prior_ttm_eps": None,
+        "growth_pct": None,
+        "latest_period_end": quarters[0]["period_end"] if quarters else None,
+        "latest_release_date": (
+            quarters[0]["source_release_date"] if quarters else None
+        ),
+        "quarters": quarters,
+        "source_basis": "S&P official actual as-reported EPS",
+    }
+    if len(quarters) < 8:
+        return result
+    current_ttm = sum(row["eps"] for row in quarters[:4])
+    prior_ttm = sum(row["eps"] for row in quarters[4:8])
+    growth = (current_ttm / prior_ttm - 1.0) * 100.0 if prior_ttm > 0 else None
+    return {
+        **result,
+        "status": "READY" if growth is not None else "INSUFFICIENT_HISTORY",
+        "current_ttm_eps": current_ttm,
+        "prior_ttm_eps": prior_ttm,
+        "growth_pct": growth,
     }
 
 

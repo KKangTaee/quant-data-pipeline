@@ -29,4 +29,3 @@
 - DB live data가 있으면 preview가 아니라 manager / filing / holdings / changes / exposure / reverse lookup을 표시한다.
 - DB가 비어 있거나 table이 없으면 preview/sample임을 명확히 표시하고 다음 행동을 안내한다.
 - focused Python tests, py_compile, React 변경 시 npm build, git diff --check, UI/engine boundary check, Browser QA screenshot을 수행한다.
-
