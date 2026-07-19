@@ -1,3 +1,4 @@
+import { OBSERVATION_LABEL } from "./FuturesMacroWorkbench";
 import type { HorizonCard, ProbabilityRow } from "./FuturesMacroWorkbench";
 
 function ProbabilityBar({ row }: { row: ProbabilityRow }) {
@@ -22,13 +23,20 @@ function PatternHorizonSection({ horizons }: { horizons: HorizonCard[] }) {
       </div>
       <div className="fm-workbench__horizon-grid">
         {horizons.map((item) => {
-          const probabilities = item.probabilities || [];
-          const hasPublishedDistribution = item.kind === "conditional_outlook" && probabilities.length > 0;
+          const isObservation = item.kind === "observation";
+          const probabilities = isObservation ? [] : item.probabilities;
+          const hasPublishedDistribution = !isObservation && probabilities.length > 0;
+          const statusClass = isObservation
+            ? `observation-${item.observation_status.toLowerCase()}`
+            : `estimate-${item.estimate_status.toLowerCase()}`;
+          const statusLabel = isObservation
+            ? OBSERVATION_LABEL[item.observation_status]
+            : item.estimate_status;
           return (
-            <article className={`fm-workbench__horizon-card estimate-${item.estimate_status.toLowerCase()}`} key={item.key}>
+            <article className={`fm-workbench__horizon-card ${statusClass}`} key={item.key}>
               <header>
                 <div><span>{item.label}</span><strong>{item.title}</strong></div>
-                <b>{item.estimate_status}</b>
+                <b>{statusLabel}</b>
               </header>
               <p>{item.summary}</p>
               {hasPublishedDistribution ? (
@@ -39,7 +47,7 @@ function PatternHorizonSection({ horizons }: { horizons: HorizonCard[] }) {
                 <div className="fm-workbench__no-edge">{item.edge_label || "방향 우위 미확인"}</div>
               )}
               <footer>
-                {item.episode_count ? <span>독립 표본 {item.episode_count}개</span> : <span>확률이 아닌 현재 관측</span>}
+                {!isObservation && item.episode_count ? <span>독립 표본 {item.episode_count}개</span> : <span>확률이 아닌 현재 관측</span>}
                 {item.status_reason ? <small>{item.status_reason}</small> : null}
               </footer>
             </article>

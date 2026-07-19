@@ -11,6 +11,12 @@ import PatternRibbonSection from "./PatternRibbonSection";
 import "./style.css";
 
 export type EstimateStatus = "VERIFIED" | "PROVISIONAL" | "UNAVAILABLE";
+export type ObservationStatus = "OBSERVED" | "PARTIAL" | "UNAVAILABLE";
+export const OBSERVATION_LABEL: Record<ObservationStatus, string> = {
+  OBSERVED: "관측 완료",
+  PARTIAL: "일부 관측",
+  UNAVAILABLE: "관측 불가",
+};
 export type RegimeKey = "risk_seeking" | "defensive" | "inflation_rate_pressure" | "mixed";
 
 export type FuturesMacroAction = {
@@ -33,7 +39,7 @@ export type HeroPayload = {
   summary: string;
   today_summary?: string;
   as_of_date: string;
-  estimate_status: EstimateStatus;
+  observation_status: ObservationStatus;
   coverage_label: string;
   evidence: string[];
 };
@@ -65,19 +71,31 @@ export type ConditionalPathPayload = {
   validation?: Record<string, number | null>;
 };
 
-export type HorizonCard = {
-  key: "current" | "5D" | "20D";
+type HorizonCardBase = {
   label: string;
-  kind: "observation" | "conditional_outlook";
   title: string;
   summary: string;
-  estimate_status: EstimateStatus;
   edge_label: string;
-  probabilities?: ProbabilityRow[];
   episode_count?: number;
   status_reason?: string;
+};
+
+export type ObservationHorizonCard = HorizonCardBase & {
+  key: "current";
+  kind: "observation";
+  observation_status: ObservationStatus;
+};
+
+export type OutlookHorizonCard = HorizonCardBase & {
+  key: "5D" | "20D";
+  kind: "conditional_outlook";
+  estimate_status: EstimateStatus;
+  probabilities: ProbabilityRow[];
+  baseline_label?: string;
   conditional_path?: ConditionalPathPayload;
 };
+
+export type HorizonCard = ObservationHorizonCard | OutlookHorizonCard;
 
 export type PatternPoint = {
   date: string;
@@ -118,9 +136,14 @@ export type AssetPathwayPayload = {
   key: "risk_assets" | "rates" | "dollar" | "safe_haven" | "commodities";
   label: string;
   current: { one_day: string; five_day: string; twenty_day: string };
-  outlook: { five_day: string; twenty_day: string };
+  outlook: {
+    five_day: string;
+    five_day_status: EstimateStatus;
+    twenty_day: string;
+    twenty_day_status: EstimateStatus;
+  };
   change_condition: string;
-  estimate_status: EstimateStatus;
+  observation_status: ObservationStatus;
 };
 
 export type MethodPayload = {

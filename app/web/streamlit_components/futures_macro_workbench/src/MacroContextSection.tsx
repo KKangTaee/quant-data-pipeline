@@ -1,3 +1,4 @@
+import { OBSERVATION_LABEL } from "./FuturesMacroWorkbench";
 import type { CommandPayload, FuturesMacroAction, HeroPayload } from "./FuturesMacroWorkbench";
 
 type Props = {
@@ -39,9 +40,9 @@ function MacroContextSection({ command, hero, pendingActionId, onAction }: Props
           {hero.today_summary ? <small className="fm-workbench__today">오늘의 재가격화 · {hero.today_summary}</small> : null}
         </div>
         <aside className="fm-workbench__hero-side">
-          <div className={`fm-workbench__status estimate-${hero.estimate_status.toLowerCase()}`}>
+          <div className={`fm-workbench__status observation-${hero.observation_status.toLowerCase()}`}>
             <span>관측 상태</span>
-            <strong>{hero.estimate_status}</strong>
+            <strong>{OBSERVATION_LABEL[hero.observation_status]}</strong>
           </div>
           <div><span>기준일</span><strong>{hero.as_of_date}</strong></div>
           <div><span>관측 범위</span><strong>{hero.coverage_label}</strong></div>

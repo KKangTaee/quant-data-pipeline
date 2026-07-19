@@ -1,3 +1,4 @@
+import { OBSERVATION_LABEL } from "./FuturesMacroWorkbench";
 import type { AssetPathwayPayload } from "./FuturesMacroWorkbench";
 
 function AssetPathwaysSection({ pathways }: { pathways: AssetPathwayPayload[] }) {
@@ -9,16 +10,24 @@ function AssetPathwaysSection({ pathways }: { pathways: AssetPathwayPayload[] })
       </div>
       <div className="fm-workbench__asset-grid">
         {pathways.map((item) => (
-          <article className={`estimate-${item.estimate_status.toLowerCase()}`} key={item.key}>
-            <header><strong>{item.label}</strong><b>{item.estimate_status}</b></header>
+          <article className={`observation-${item.observation_status.toLowerCase()}`} key={item.key}>
+            <header><strong>{item.label}</strong><b>{OBSERVATION_LABEL[item.observation_status]}</b></header>
             <div className="fm-workbench__asset-current">
               <span><small>1D</small>{item.current.one_day}</span>
               <span><small>5D</small>{item.current.five_day}</span>
               <span><small>20D</small>{item.current.twenty_day}</span>
             </div>
             <div className="fm-workbench__asset-outlook">
-              <span>다음 5D <strong>{item.outlook.five_day}</strong></span>
-              <span>다음 20D <strong>{item.outlook.twenty_day}</strong></span>
+              <span>
+                <small>다음 5D</small>
+                <strong>{item.outlook.five_day}</strong>
+                <b className={`estimate-${item.outlook.five_day_status.toLowerCase()}`}>{item.outlook.five_day_status}</b>
+              </span>
+              <span>
+                <small>다음 20D</small>
+                <strong>{item.outlook.twenty_day}</strong>
+                <b className={`estimate-${item.outlook.twenty_day_status.toLowerCase()}`}>{item.outlook.twenty_day_status}</b>
+              </span>
             </div>
             <p>{item.change_condition}</p>
           </article>

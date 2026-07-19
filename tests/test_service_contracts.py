@@ -8308,6 +8308,22 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("@media (max-width: 760px)", style)
         self.assertIn("grid-template-columns: 1fr", style)
 
+    def test_futures_macro_react_separates_observation_and_outlook_statuses(self) -> None:
+        root = Path("app/web/streamlit_components/futures_macro_workbench/src")
+        types = (root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
+        context = (root / "MacroContextSection.tsx").read_text(encoding="utf-8")
+        horizons = (root / "PatternHorizonSection.tsx").read_text(encoding="utf-8")
+        assets = (root / "AssetPathwaysSection.tsx").read_text(encoding="utf-8")
+
+        self.assertIn('type ObservationStatus = "OBSERVED" | "PARTIAL" | "UNAVAILABLE"', types)
+        self.assertIn('OBSERVED: "관측 완료"', types)
+        self.assertIn("observation_status", context)
+        self.assertIn("OBSERVATION_LABEL", context)
+        self.assertIn('item.kind === "observation"', horizons)
+        self.assertIn("five_day_status", assets)
+        self.assertIn("twenty_day_status", assets)
+        self.assertNotIn("item.estimate_status.toLowerCase()", assets)
+
     def test_futures_macro_pattern_map_uses_observed_anchors_and_conditional_branches(self) -> None:
         source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")
         root = (source_root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")

@@ -110,8 +110,8 @@ button { font: inherit; }
 .fm-workbench__hero-side span { color: var(--muted); font-size: 0.68rem; font-weight: 800; }
 .fm-workbench__hero-side strong { font-size: 0.82rem; }
 .fm-workbench__status { border-left: 4px solid var(--warning) !important; }
-.fm-workbench__status.estimate-verified { border-left-color: var(--positive) !important; }
-.fm-workbench__status.estimate-unavailable { border-left-color: var(--muted) !important; }
+.fm-workbench__status.observation-observed { border-left-color: #397da8 !important; }
+.fm-workbench__status.observation-unavailable { border-left-color: var(--muted) !important; }
 
 .fm-workbench__hero-evidence { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
 .fm-workbench__hero-evidence span {
@@ -142,6 +142,8 @@ button { font: inherit; }
 }
 .fm-workbench__horizon-card.estimate-verified { border-top-color: var(--positive); }
 .fm-workbench__horizon-card.estimate-unavailable { border-top-color: #a7b4bf; }
+.fm-workbench__horizon-card.observation-observed { border-top-color: #397da8; }
+.fm-workbench__horizon-card.observation-unavailable { border-top-color: #a7b4bf; }
 .fm-workbench__horizon-card header span { color: var(--muted); display: block; font-size: 0.7rem; font-weight: 800; }
 .fm-workbench__horizon-card header strong { display: block; font-size: 1rem; margin-top: 3px; }
 .fm-workbench__horizon-card header b,
@@ -155,6 +157,8 @@ button { font: inherit; }
 }
 .estimate-verified header b { background: #e9f7f1 !important; color: #24795d !important; }
 .estimate-unavailable header b { background: #eef2f5 !important; color: #667888 !important; }
+.observation-observed header b { background: #e8f2f8 !important; color: #2e718f !important; }
+.observation-unavailable header b { background: #eef2f5 !important; color: #667888 !important; }
 .fm-workbench__horizon-card > p { color: #4c6173; font-size: 0.82rem; line-height: 1.5; min-height: 38px; }
 .fm-workbench__probabilities { display: grid; gap: 9px; margin-top: 6px; }
 .fm-workbench__probability-row { display: grid; gap: 4px; grid-template-columns: 92px minmax(55px, 1fr) 34px; align-items: center; }
@@ -261,8 +265,12 @@ button { font: inherit; }
 .fm-workbench__asset-current span { background: var(--soft); border-radius: 8px; font-size: 0.67rem; font-weight: 800; padding: 8px 4px; text-align: center; }
 .fm-workbench__asset-current small { color: var(--muted); display: block; font-size: 0.57rem; margin-bottom: 3px; }
 .fm-workbench__asset-outlook { display: grid; gap: 5px; margin-top: 10px; }
-.fm-workbench__asset-outlook span { color: var(--muted); display: flex; font-size: 0.66rem; justify-content: space-between; }
+.fm-workbench__asset-outlook span { align-items: center; color: var(--muted); display: grid; font-size: 0.66rem; gap: 5px; grid-template-columns: auto minmax(0, 1fr) auto; }
+.fm-workbench__asset-outlook small { color: var(--muted); font-size: 0.62rem; }
 .fm-workbench__asset-outlook strong { color: #40566a; }
+.fm-workbench__asset-outlook b { background: #fff7e8; border-radius: 999px; color: #9b681a; font-size: 0.52rem; padding: 3px 5px; }
+.fm-workbench__asset-outlook b.estimate-verified { background: #e9f7f1; color: #24795d; }
+.fm-workbench__asset-outlook b.estimate-unavailable { background: #eef2f5; color: #667888; }
 .fm-workbench__asset-grid article p { border-top: 1px solid #edf1f4; color: var(--muted); font-size: 0.66rem; line-height: 1.45; margin: 11px 0 0; padding-top: 10px; }
 
 .fm-workbench__disclosure { overflow: hidden; }
