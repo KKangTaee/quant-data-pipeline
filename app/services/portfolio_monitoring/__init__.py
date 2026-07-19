@@ -30,6 +30,15 @@ from .catalog import (
     search_direct_securities,
     search_monitoring_catalog,
 )
+from .valuation import (
+    CorporateActionReview,
+    EntryPriceUnavailableError,
+    ItemValueLane,
+    ValuationInputError,
+    assess_corporate_action_consistency,
+    build_direct_security_value_lane,
+    resolve_direct_security_entry,
+)
 
 __all__ = [
     "AddMonitoringItemInput",
@@ -56,4 +65,11 @@ __all__ = [
     "list_monitoring_candidates",
     "search_direct_securities",
     "search_monitoring_catalog",
+    "CorporateActionReview",
+    "EntryPriceUnavailableError",
+    "ItemValueLane",
+    "ValuationInputError",
+    "assess_corporate_action_consistency",
+    "build_direct_security_value_lane",
+    "resolve_direct_security_entry",
 ]

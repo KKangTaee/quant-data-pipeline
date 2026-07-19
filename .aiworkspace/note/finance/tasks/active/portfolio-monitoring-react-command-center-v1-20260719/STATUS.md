@@ -6,7 +6,7 @@ Last Updated: 2026-07-19
 ## Current Position
 
 - 전체 roadmap: `1/6차 구현 완료`
-- current milestone: 2차 Task 4 combined monitoring catalog complete; Task 5 valuation next
+- current milestone: 2차 Task 5 direct-security valuation complete; Task 6 selected-strategy adapter next
 - written design: approved by user
 - detailed implementation plan: complete and self-reviewed
 - implementation: started in inline execution mode
@@ -25,6 +25,6 @@ Last Updated: 2026-07-19
 
 ## Next Action
 
-1. Task 4 combined monitoring catalog commit
-2. Task 5 direct-security valuation ledger red-green-commit
-3. Task 6 selected-strategy adapter and Task 7 group read model
+1. Task 6 selected-strategy adapter red-green-commit
+2. Task 7 staggered cash/common-basis group read model
+3. Task 8 service API boundary and 2차 completion gate

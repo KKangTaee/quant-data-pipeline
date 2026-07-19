@@ -183,18 +183,18 @@ return [CatalogItem(source_type="direct_security", source_ref=row["symbol"], ins
 total_value = effective_units * raw_close + accumulated_dividend_cash
 ```
 
-- [ ] Write failing tests for weekend/holiday later-first-session resolution, no-later-price blocker, fixed-notional fractional units, integer shares, split-adjusted effective units, cash dividends without reinvestment, and zero-price rejection.
-- [ ] Add cross-check tests for end return gap `> 0.50%p` or one-session gap `> 1.00%p` becoming `data_review`, while exactly-on-threshold remains valid.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_valuation.py -q` and confirm missing implementation failures.
-- [ ] Implement raw-close primary ledger ordered by date. Keep output columns explicit:
+- [x] Write failing tests for weekend/holiday later-first-session resolution, no-later-price blocker, fixed-notional fractional units, integer shares, split-adjusted effective units, cash dividends without reinvestment, and zero-price rejection.
+- [x] Add cross-check tests for end return gap `> 0.50%p` or one-session gap `> 1.00%p` becoming `data_review`, while exactly-on-threshold remains valid.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_valuation` and confirm missing implementation failures.
+- [x] Implement raw-close primary ledger ordered by date. Keep output columns explicit:
 
 ```python
 date, effective_units, market_value, dividend_cash, total_value,
 raw_return_index, adjusted_return_index, data_status
 ```
 
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_valuation.py -q`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/valuation.py`, and `git diff --check`.
-- [ ] Commit as `직접 종목 가치 추적 원장 구현`.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_valuation`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/valuation.py`, and `git diff --check`.
+- [x] Commit as `직접 종목 가치 추적 원장 구현`.
 
 ### Task 6: selected-strategy lane을 legacy replay adapter로 분리한다
 

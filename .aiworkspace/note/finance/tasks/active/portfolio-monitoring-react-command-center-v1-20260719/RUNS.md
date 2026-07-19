@@ -22,3 +22,5 @@
 | 2026-07-19 | 1차 Contract And Storage Foundation gate | 20 unittest checks PASS; production DB migration not run; actual legacy saved checksum remains `a2eadad5c7ea...` |
 | 2026-07-19 | 2차 Task 4 catalog RED / actual-smoke refinement | 5 missing-module failures; actual AAPL smoke exposed alphabetical ETF-first ranking and exact-ticker regression reproduced |
 | 2026-07-19 | 2차 Task 4 catalog verification | 6 catalog tests PASS; actual AAPL ranks first as stock and current authoritative Final Review candidate count is 6 |
+| 2026-07-19 | 2차 Task 5 valuation RED / boundary refinement | 6 expected missing-module failures; strict session threshold fixture was isolated from the separate end-return threshold |
+| 2026-07-19 | 2차 Task 5 direct-security valuation verification | 6 valuation and 30 cumulative monitoring unittests PASS; compile and `git diff --check` PASS |
