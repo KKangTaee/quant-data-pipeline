@@ -2790,3 +2790,29 @@ weighted bundle
 - weighted holdings / underlying target을 근거 없이 합성
 - chart zoom/pan/range selector와 신규 chart dependency
 - saved JSONL / Run History / Level2 source schema migration
+
+## 17차 Portfolio Mix Chart Geometry And Full-Width Layout
+
+### 문제와 원인
+
+- 누적 성과 point는 `PLOT_LEFT`부터 `CHART_WIDTH - PLOT_RIGHT` 사이에 배치되지만 pointer index는
+  SVG 전체 렌더 폭을 0~100%로 정규화했다. 119개 row 예시에서 첫 plot point 위 커서는 기존 계산으로
+  index 9를 선택해 crosshair와 tooltip 데이터가 커서보다 오른쪽으로 어긋난다.
+- desktop에서 누적 성과와 월별 수익률을 1.35:0.9 두 열로 배치해 월별 막대가 전체 결과 폭의 약 40%만
+  사용한다. 119개월 막대를 읽기에는 폭과 간격이 부족하다.
+
+### 승인된 설계
+
+- 두 chart card를 desktop과 760px 모두 `누적 성과 -> 월별 수익률` 두 행, 각 전체 폭으로 배치한다.
+- pointer의 client X를 먼저 SVG viewBox X로 변환한 뒤 실제 plot 영역
+  `(chartX - PLOT_LEFT) / (CHART_WIDTH - PLOT_LEFT - PLOT_RIGHT)`으로 정규화한다.
+- crosshair와 tooltip은 선택된 실제 point의 같은 viewBox X를 사용한다. edge tooltip clamp는 card 밖
+  clipping 방지를 위해 유지한다.
+- Python evidence, weighted 계산, KPI, 저장/Level2 handoff와 chart 높이 상수는 변경하지 않는다.
+
+### 검증 계약
+
+- RED source contract는 plot-aware index helper와 single-column desktop grid 부재로 실패해야 한다.
+- GREEN focused test와 React production build를 통과해야 한다.
+- actual desktop QA에서 plot 첫/중간/마지막 커서가 같은 위치의 point/date를 선택하고 월별 chart가
+  전체 폭을 사용해야 한다. 760px overflow와 ResizeObserver height도 유지한다.

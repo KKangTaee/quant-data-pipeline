@@ -7829,3 +7829,121 @@ git commit -m "Portfolio Mix 결과 해석 QA와 문서 동기화"
 - generated screenshot 절대 경로
 - protected registry/Run History/saved JSONL/`.superpowers/`/screenshot 미커밋 확인
 - sparse/unavailable month, very long history SVG density, keyboard/browser 자동화와 남은 위험
+
+# Portfolio Mix Chart Geometry And Full-Width Layout Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** 누적 성과 hover가 실제 plot point와 같은 위치를 선택하게 고치고 두 결과 chart를 각각 전체 폭 한 행으로 확장한다.
+
+**Architecture:** React의 chart geometry helper가 client X를 viewBox와 plot padding을 고려한 index로 바꾸며, chart cards는 CSS single-column grid를 사용한다. Python evidence와 weighted runtime은 변경하지 않는다.
+
+**Tech Stack:** React 18, TypeScript, SVG, CSS Grid, pytest source contract, Vite, Browser QA.
+
+## Global Constraints
+
+- `PLOT_LEFT`, `PLOT_RIGHT`, `CHART_WIDTH`의 실제 plot geometry를 한 helper에서 사용한다.
+- tooltip edge clamp, keyboard focus, actual-date evidence와 no-benchmark 계약을 유지한다.
+- chart dependency, Python result schema, saved/run-history/Level2 schema를 추가하거나 바꾸지 않는다.
+- registry, Run History, saved JSONL, `.superpowers/`, screenshots는 stage/commit하지 않는다.
+
+---
+
+### Task 53: Plot-Aware Hover And Full-Width Charts (17-1)
+
+**Files:**
+- Modify: `tests/test_backtest_portfolio_mix_workspace.py`
+- Modify: `app/web/components/backtest_portfolio_mix_workspace/frontend/src/PortfolioMixResult.tsx`
+- Modify: `app/web/components/backtest_portfolio_mix_workspace/frontend/src/styles.css`
+- Modify: active task `STATUS.md`, `RUNS.md`
+
+**Interfaces:**
+- Consumes: pointer `clientX`, SVG `getBoundingClientRect()`, existing `PLOT_LEFT/PLOT_RIGHT/CHART_WIDTH`, row count.
+- Produces: `nearestPlotIndex(clientX, left, width, count)` and a one-column `.mix-chart-grid` at every viewport.
+
+- [ ] **Step 1: Write RED source contracts**
+
+Require `nearestPlotIndex`, viewBox conversion, plot-width subtraction and a desktop single-column grid:
+
+```python
+assert "function nearestPlotIndex" in result_source
+assert "CHART_WIDTH - PLOT_LEFT - PLOT_RIGHT" in result_source
+assert "nearestPlotIndex(event.clientX, rect.left, rect.width, rows.length)" in result_source
+assert ".mix-chart-grid { display: grid; grid-template-columns: minmax(0, 1fr);" in styles_source
+```
+
+- [ ] **Step 2: Run RED**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k 'chart_geometry or visual_contract'
+```
+
+Expected: `nearestPlotIndex`와 desktop single-column CSS가 아직 없어 FAIL.
+
+- [ ] **Step 3: Implement minimal geometry and layout correction**
+
+Replace full-SVG ratio selection with:
+
+```tsx
+function nearestPlotIndex(clientX: number, left: number, width: number, count: number) {
+  if (count <= 1 || width <= 0) return 0
+  const chartX = ((clientX - left) / width) * CHART_WIDTH
+  const plotWidth = CHART_WIDTH - PLOT_LEFT - PLOT_RIGHT
+  const ratio = clamp((chartX - PLOT_LEFT) / plotWidth, 0, 1)
+  return Math.round(ratio * (count - 1))
+}
+```
+
+Use it in both chart pointer handlers. Change `.mix-chart-grid` to one `minmax(0, 1fr)` column and keep the 760px rule consistent.
+
+- [ ] **Step 4: Run GREEN and build**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q
+npm run build --prefix app/web/components/backtest_portfolio_mix_workspace/frontend
+git diff --check
+```
+
+Expected: focused tests and Vite production build pass.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git commit -m "Portfolio Mix 차트 위치와 크기 개선"
+```
+
+### Task 54: Actual Browser QA And Closeout (17-2)
+
+**Files:**
+- Modify: active task `PLAN.md`, `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+- Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
+- Generate but do not stage: `backtest-portfolio-mix-chart-geometry-desktop-qa.png`
+- Generate but do not stage: `backtest-portfolio-mix-chart-geometry-760-qa.png`
+
+- [ ] **Step 1: Run actual desktop QA**
+
+Run GTAA 50 / Equal Weight 50, confirm two full-width chart rows, hover plot first/middle/last and verify
+crosshair/date follow the cursor position. Hover positive/negative monthly bars and confirm tooltip values.
+
+- [ ] **Step 2: Run 760px QA**
+
+Confirm both charts remain one column, axis/ticks/tooltips do not clip, component/page horizontal overflow is 0,
+and ResizeObserver height remains synchronized.
+
+- [ ] **Step 3: Apply fresh verification and protected-path audit**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q
+npm run build --prefix app/web/components/backtest_portfolio_mix_workspace/frontend
+.venv/bin/python -m py_compile app/services/backtest_portfolio_mix_workspace.py app/web/backtest_portfolio_mix_workspace.py
+git diff --check
+git diff --cached --name-only
+```
+
+- [ ] **Step 4: Sync closeout records and commit**
+
+Record exact RED/GREEN, Browser QA and residual automation gaps without changing the canonical data/runtime contract.
+
+```bash
+git commit -m "Portfolio Mix 차트 사용성 QA 정리"
+```
