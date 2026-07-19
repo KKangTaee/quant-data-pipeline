@@ -6656,3 +6656,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - React Step 3은 실제 날짜/월 row 기반 SVG와 pointer/keyboard tooltip만 렌더링하며 benchmark나 holdings를 합성하지 않는다.
 - GTAA 50 / Equal Weight 50 actual desktop·760px QA와 focused `83 passed`, React build, py_compile, diff-check를 완료했다.
 - full service의 기존 12 failures와 자동 Browser leave-event 합성 한계는 active task `RISKS.md`에 남겼다.
+
+## 2026-07-19 - Portfolio Mix 차트 위치와 판독성 보정
+
+- 누적성과 hover가 plot padding을 무시해 커서보다 뒤 row를 고르던 원인을 plot-aware index 계산으로 수정했다.
+- 누적성과와 월별 수익률을 desktop/760px 모두 각각 전체 폭 한 행으로 배치했다.
+- actual GTAA 50 / Equal Weight 50에서 누적 first/middle/last와 월별 middle hover, 760px overflow 0을 확인했다.
+- focused `84 passed`, React production build, py_compile, diff-check를 완료했으며 상세는 active task 17차 기록을 본다.

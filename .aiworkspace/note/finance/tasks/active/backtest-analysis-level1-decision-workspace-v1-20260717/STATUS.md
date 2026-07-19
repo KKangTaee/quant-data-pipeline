@@ -375,3 +375,9 @@ Last Updated: 2026-07-19
 - desktop chart grid도 한 열로 바꿔 누적 성과와 월별 수익률을 각각 전체 폭 한 행으로 표시한다.
 - Task 53 RED는 `1 failed / 2 passed`, GREEN은 `3 passed / 25 deselected`, focused 전체는
   `28 passed, 3 warnings`; React build는 `176 modules transformed`다.
+- Task 54 actual GTAA 50 / Equal Weight 50 desktop QA에서 누적 hover first/middle/last가
+  chart X `54 / 369.5593 / 696`과 `2016.08.31 / 2021.06.30 / 2026.06.30` 실제 row에 맞았다.
+- 월별 hover도 `2021.06 / -0.68% / 17,782.68`로 같은 중간 row를 선택했다. desktop chart grid는
+  `1177px` 한 열에 두 card가 각각 `1177px`, 760px은 `633px` 한 열이며 outer horizontal overflow는 0이다.
+- fresh closeout verification은 UI/boundary `84 passed, 3 warnings`, React build
+  `176 modules transformed`, target `py_compile`과 `git diff --check` exit 0이다.

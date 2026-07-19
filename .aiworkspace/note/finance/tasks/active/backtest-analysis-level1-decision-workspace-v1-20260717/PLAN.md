@@ -7920,17 +7920,17 @@ git commit -m "Portfolio Mix 차트 위치와 크기 개선"
 - Generate but do not stage: `backtest-portfolio-mix-chart-geometry-desktop-qa.png`
 - Generate but do not stage: `backtest-portfolio-mix-chart-geometry-760-qa.png`
 
-- [ ] **Step 1: Run actual desktop QA**
+- [x] **Step 1: Run actual desktop QA**
 
 Run GTAA 50 / Equal Weight 50, confirm two full-width chart rows, hover plot first/middle/last and verify
 crosshair/date follow the cursor position. Hover positive/negative monthly bars and confirm tooltip values.
 
-- [ ] **Step 2: Run 760px QA**
+- [x] **Step 2: Run 760px QA**
 
 Confirm both charts remain one column, axis/ticks/tooltips do not clip, component/page horizontal overflow is 0,
 and ResizeObserver height remains synchronized.
 
-- [ ] **Step 3: Apply fresh verification and protected-path audit**
+- [x] **Step 3: Apply fresh verification and protected-path audit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q
@@ -7940,7 +7940,7 @@ git diff --check
 git diff --cached --name-only
 ```
 
-- [ ] **Step 4: Sync closeout records and commit**
+- [x] **Step 4: Sync closeout records and commit**
 
 Record exact RED/GREEN, Browser QA and residual automation gaps without changing the canonical data/runtime contract.
 

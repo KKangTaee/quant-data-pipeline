@@ -438,3 +438,11 @@ generated artifact이므로 commit하지 않는다.
   월 수익률을 계산할 수 없는 행은 표에는 `계산값 없음`으로 보존하고 차트에서는 제외한다.
 - chart 이탈은 pointer/mouse/cancel/blur가 같은 clear handler를 사용한다. CUA가 SVG 사이 이동에서
   leave event를 합성하지 않은 경우가 있어 실제 pointer 값 갱신과 source contract를 함께 검증했다.
+
+## 2026-07-19 17차 Portfolio Mix Chart Geometry Decisions
+
+- SVG point는 `PLOT_LEFT=54`, `PLOT_RIGHT=24` 안에서 배치되므로 pointer도 전체 SVG 폭이 아니라
+  같은 plot 폭으로 정규화해야 한다. viewBox X로 변환한 뒤 plot padding을 빼야 cursor와 row가 일치한다.
+- 누적성과와 월별 수익률은 같은 `nearestPlotIndex()`를 사용해 두 차트의 hover 의미를 통일한다.
+- 두 차트는 비교용 좌우 분할보다 시간 흐름 판독이 우선이므로 desktop과 760px 모두 한 열 전체 폭으로
+  둔다. 이 변경은 evidence, weighted calculation, 저장/Level2 handoff 계약을 바꾸지 않는다.

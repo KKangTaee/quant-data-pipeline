@@ -717,3 +717,24 @@
   `28 passed, 3 warnings in 1.72s`.
 - React production build: Vite 5.4.21, `176 modules transformed`, CSS 11.48 kB,
   JS 341.91 kB. desktop grid는 한 열이며 760px contract와 동일하다.
+
+## 2026-07-19 17차 Task 54 Actual Browser QA And Closeout
+
+- fresh Streamlit 8505에서 GTAA 50 / Equal Weight 50을 실제 실행했다. 기간은
+  `2016.08.31–2026.06.30`, KPI는 연환산 `9.23%`, 최대 낙폭 `-17.84%`, 위험 대비 수익
+  `0.89`, 최종 평가액 `25,417.43`이다.
+- 누적성과 pointer QA: first `x=54 / 2016.08.31 / 100.00`, middle
+  `x=369.559322 / 2021.06.30 / 166.66`, last `x=696 / 2026.06.30 / 238.21`로
+  plot 좌표와 실제 row가 일치했다.
+- 월별 pointer QA: middle `x=369.559322 / 2021.06 / -0.68% / 17,782.68`을 확인했다.
+  Task 52의 positive `2023.01 / 3.98%`와 이번 negative hover가 양·음 막대 tooltip 경계를 함께 고정한다.
+  desktop grid/card width는 `1177 / 1177 / 1177px`; 760px은 `633 / 633 / 633px` 한 열이고
+  document/body `scrollWidth=760`, component grid/card overflow는 없다.
+- generated evidence: `backtest-portfolio-mix-chart-geometry-desktop-qa.png`,
+  `backtest-portfolio-mix-chart-geometry-760-qa.png`, `backtest-portfolio-mix-monthly-760-qa.png`.
+  모두 generated artifact로 stage하지 않는다.
+- fresh focused UI/boundary:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q`
+  -> `84 passed, 3 warnings in 1.66s`.
+- React production build: Vite 5.4.21, `176 modules transformed`, CSS 11.48 kB,
+  JS 341.91 kB. target service/adapter `py_compile`과 `git diff --check`는 exit 0이다.
