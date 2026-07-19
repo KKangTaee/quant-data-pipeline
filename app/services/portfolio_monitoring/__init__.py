@@ -24,6 +24,12 @@ from .commands import (
     execute_end_item,
     execute_rename_group,
 )
+from .catalog import (
+    CatalogItem,
+    list_monitoring_candidates,
+    search_direct_securities,
+    search_monitoring_catalog,
+)
 
 __all__ = [
     "AddMonitoringItemInput",
@@ -46,4 +52,8 @@ __all__ = [
     "execute_create_group",
     "execute_end_item",
     "execute_rename_group",
+    "CatalogItem",
+    "list_monitoring_candidates",
+    "search_direct_securities",
+    "search_monitoring_catalog",
 ]

@@ -157,12 +157,12 @@ return plan if not apply else _apply_legacy_import(repository, plan, command_id)
 return [CatalogItem(source_type="direct_security", source_ref=row["symbol"], instrument_kind=row["kind"], label=row["name"], metadata={}, readiness="READY") for row in rows]
 ```
 
-- [ ] Write failing tests that union `nyse_stock` and `nyse_etf` without losing kind identity, search symbol/name case-insensitively, cap results, and exclude inactive/unknown rows when lifecycle says unavailable.
-- [ ] Write Final Review adapter tests proving only `monitoring_candidate is True` rows are exposed and `decision_id` is the authoritative `source_ref`.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_catalog.py -q` and confirm failure.
-- [ ] Implement DB-only parameterized search and a pure candidate projector; do not call providers or mutate registries.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_catalog.py -q`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/catalog.py`, and `git diff --check`.
-- [ ] Commit as `포트폴리오 모니터링 종목 카탈로그 구현`.
+- [x] Write failing tests that union `nyse_stock` and `nyse_etf` without losing kind identity, search symbol/name case-insensitively, cap results, and exclude inactive/unknown rows when lifecycle says unavailable.
+- [x] Write Final Review adapter tests proving only `monitoring_candidate is True` rows are exposed and `decision_id` is the authoritative `source_ref`.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_catalog` and confirm failure.
+- [x] Implement DB-only parameterized search and a pure candidate projector; do not call providers or mutate registries.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_catalog`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/catalog.py`, and `git diff --check`.
+- [x] Commit as `포트폴리오 모니터링 종목 카탈로그 구현`.
 
 ### Task 5: direct-security event ledger와 entry resolution을 구현한다
 

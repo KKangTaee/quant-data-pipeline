@@ -20,3 +20,5 @@
 | 2026-07-19 | 1차 Task 3 fixture/import verification | 5 unittest checks PASS; second apply replays 2 groups/2 items without duplicates and source bytes remain unchanged |
 | 2026-07-19 | Actual legacy saved setup read-only dry run | source fingerprint `a2eadad5c7ea...`; groups 3 / importable items 2 / duplicates 0 / blocked items 4; no DB apply or source rewrite |
 | 2026-07-19 | 1차 Contract And Storage Foundation gate | 20 unittest checks PASS; production DB migration not run; actual legacy saved checksum remains `a2eadad5c7ea...` |
+| 2026-07-19 | 2차 Task 4 catalog RED / actual-smoke refinement | 5 missing-module failures; actual AAPL smoke exposed alphabetical ETF-first ranking and exact-ticker regression reproduced |
+| 2026-07-19 | 2차 Task 4 catalog verification | 6 catalog tests PASS; actual AAPL ranks first as stock and current authoritative Final Review candidate count is 6 |
