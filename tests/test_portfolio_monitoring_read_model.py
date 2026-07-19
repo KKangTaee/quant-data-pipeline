@@ -201,13 +201,15 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
 
         self.assertEqual(
             set(workspace),
-            {"schema_version", "generated_at", "groups", "active_group", "catalog", "commands", "method", "boundaries"},
+            {"schema_version", "generated_at", "groups", "active_group", "catalog", "commands", "diagnosis", "method", "boundaries"},
         )
         self.assertEqual(workspace["schema_version"], "portfolio_monitoring_workspace_v1")
         self.assertTrue(workspace["groups"][0]["selected"])
         self.assertEqual(workspace["active_group"].status, "PARTIAL")
         self.assertEqual(workspace["active_group"].history_item_count, 2)
         self.assertEqual(workspace["generated_at"], "2026-07-19T12:00:00")
+        self.assertEqual(workspace["diagnosis"]["policy_version"], "portfolio_monitoring_policy_v1")
+        self.assertEqual(workspace["diagnosis"]["top_three"], [])
 
 
 if __name__ == "__main__":

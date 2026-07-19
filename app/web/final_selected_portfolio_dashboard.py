@@ -342,6 +342,15 @@ def _fallback_monitoring_workspace(
         "active_group": None,
         "catalog": {"query": catalog_query, "items": catalog_items},
         "commands": [],
+        "diagnosis": {
+            "policy_version": "portfolio_monitoring_policy_v1",
+            "top_three": [],
+            "strengths": [],
+            "weaknesses": [],
+            "data_gaps": [],
+            "all_rows": [],
+            "coverage": 0.0,
+        },
         "method": {
             "basis": "storage migration required",
             "alignment": "not available until monitoring storage is ready",

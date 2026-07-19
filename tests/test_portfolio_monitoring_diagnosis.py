@@ -147,6 +147,48 @@ class PortfolioMonitoringDiagnosisTests(unittest.TestCase):
         self.assertEqual(by_id["downside_contribution:a"].severity, "HIGH")
         self.assertEqual(by_id["recent_weakness_63d:a"].severity, "HIGH")
 
+    def test_projection_deduplicates_roots_and_separates_confidence_bands(self) -> None:
+        diagnosis = _diagnosis()
+        base = diagnosis.DiagnosisFact(
+            rule_id="trend_break_200d:a", root_id="trend:a", policy_version=diagnosis.DIAGNOSIS_POLICY_VERSION,
+            classification="weakness", severity="WATCH", persistence=5, affected_weight=0.3,
+            contribution=-10.0, measured_fact="below 200D 5 sessions", threshold="watch 5 sessions",
+            source_dates=("2026-07-18",), coverage=0.92, confidence="HIGH",
+            meaning="장기 추세 확인 필요", change_condition="200D 위 회복", next_check="다음 종가",
+        )
+        facts = [
+            base,
+            replace(base, rule_id="recent_weakness_63d:a", severity="HIGH", persistence=63),
+            replace(base, rule_id="sector_concentration:Technology", root_id="sector:Technology", affected_weight=0.55, confidence="MEDIUM", coverage=0.75),
+            replace(base, rule_id="data_gap", root_id="coverage", classification="data_gap", severity="WATCH", confidence="LOW", coverage=0.6),
+            replace(base, rule_id="diversification_strength", root_id="strength:diversification", classification="strength", severity="INFO", affected_weight=0.2),
+        ]
+
+        projection = diagnosis.project_diagnoses(facts, 0.92)
+
+        self.assertEqual([row.rule_id for row in projection.top_three], ["recent_weakness_63d:a", "sector_concentration:Technology"])
+        self.assertEqual(len([row for row in projection.all_rows if row.root_id == "trend:a"]), 1)
+        self.assertEqual(len(projection.strengths), 1)
+        self.assertEqual(len(projection.weaknesses), 2)
+        self.assertEqual(len(projection.data_gaps), 1)
+        self.assertTrue(all(row.confidence != "LOW" for row in projection.top_three))
+
+    def test_projection_limits_first_read_to_three_with_stable_priority(self) -> None:
+        diagnosis = _diagnosis()
+        rows = [
+            diagnosis.DiagnosisFact(
+                rule_id=f"row:{index}", root_id=f"root:{index}", policy_version=diagnosis.DIAGNOSIS_POLICY_VERSION,
+                classification="weakness", severity="HIGH" if index < 2 else "WATCH",
+                persistence=index + 1, affected_weight=0.1 * (index + 1), contribution=None,
+                measured_fact=str(index), threshold="test", source_dates=(), coverage=1.0,
+                confidence="HIGH", meaning="확인", change_condition="변화", next_check="다음",
+            ) for index in range(5)
+        ]
+        projection = diagnosis.project_diagnoses(rows, 1.0)
+
+        self.assertEqual(len(projection.top_three), 3)
+        self.assertEqual([row.rule_id for row in projection.top_three[:2]], ["row:1", "row:0"])
+
 
 if __name__ == "__main__":
     unittest.main()

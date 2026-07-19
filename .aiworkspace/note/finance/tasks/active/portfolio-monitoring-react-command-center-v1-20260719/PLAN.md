@@ -468,12 +468,12 @@ top_three = [row for row in ranked_rows if row.confidence != "LOW"][:3]
 return DiagnosisProjection(top_three=top_three, all_rows=ranked_rows)
 ```
 
-- [ ] Write failing tests for same-root dedup, HIGH/MEDIUM/LOW coverage bands, LOW exclusion from top three, stable priority ordering, strength/weakness/data-gap separation, and a maximum of three first-read rows.
-- [ ] Add React tests proving top-three render, full evidence disclosure, measured fact/threshold/change condition visibility, and no buy/sell or target-weight instruction text.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_diagnosis.py tests/test_portfolio_monitoring_read_model.py -q` and `cd app/web/streamlit_components/portfolio_monitoring_workbench && npm test -- --run`; confirm failure in both suites.
-- [ ] Implement message templates and read-model projection; render “지금 확인할 변화”, “강점”, “취약점”, and “데이터 부족” as distinct evidence sections.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_exposure.py tests/test_portfolio_monitoring_diagnosis.py tests/test_portfolio_monitoring_read_model.py -q`, then `cd app/web/streamlit_components/portfolio_monitoring_workbench && npm test -- --run && npm run typecheck && npm run build`; return to repo root, capture the Browser QA screenshot, and run `git diff --check`.
-- [ ] Commit as `포트폴리오 근거형 진단 화면 연결`.
+- [x] Write failing tests for same-root dedup, HIGH/MEDIUM/LOW coverage bands, LOW exclusion from top three, stable priority ordering, strength/weakness/data-gap separation, and a maximum of three first-read rows.
+- [x] Add React tests proving top-three render, full evidence disclosure, measured fact/threshold/change condition visibility, and no buy/sell or target-weight instruction text.
+- [x] Run the repository-available Python `unittest` equivalent and React Vitest; confirm failure in both suites (`pytest` is not installed in `.venv`).
+- [x] Implement message templates and read-model projection; render “지금 확인할 변화”, “강점”, “취약점”, and “데이터 부족” as distinct evidence sections.
+- [x] Run 59 monitoring unittests, 10 Vitest, TypeScript, Vite production build, compile, `git diff --check`, and 420px recovery-state Browser QA. Diagnosis visual QA repeats after Task 21 migration because the intentional pre-migration recovery workspace has no active group.
+- [x] Commit as `포트폴리오 근거형 진단 화면 연결`.
 
 **4차 완료 게이트:** exposure and behavior fixtures produce explainable strengths/weaknesses with measured facts, thresholds, coverage, confidence, and change conditions. No macro context changes severity yet.
 

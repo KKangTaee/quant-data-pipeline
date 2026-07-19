@@ -1,12 +1,13 @@
 import React, { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
-import type { ItemRow, PortfolioMonitoringWorkspace } from "./contracts";
+import type { DiagnosisRow, ItemRow, PortfolioMonitoringWorkspace } from "./contracts";
 import {
   applySourceType,
   availableFundingModes,
   buildAddItemPayload,
   buildCommonBasisBanner,
   buildGroupChartSeries,
+  buildDiagnosisSections,
   createItemDraft,
   formatMetric,
   selectActiveGroup,
@@ -101,6 +102,29 @@ function ValueChart({ rows, items }: { rows: Array<Record<string, string | numbe
   );
 }
 
+function DiagnosisCard({ row, compact = false }: { row: DiagnosisRow; compact?: boolean }) {
+  return (
+    <article className={`pm-diagnosis-card is-${row.classification} severity-${row.severity.toLowerCase()}`}>
+      <header><span>{row.severity}</span><b>{row.confidence} 근거</b></header>
+      <h3>{row.meaning}</h3>
+      <p>{row.measured_fact}</p>
+      {!compact && (
+        <details>
+          <summary>판정 근거 전체 보기</summary>
+          <dl>
+            <div><dt>측정값</dt><dd>{row.measured_fact}</dd></div>
+            <div><dt>판정 기준</dt><dd>{row.threshold}</dd></div>
+            <div><dt>영향 비중</dt><dd>{formatMetric(row.affected_weight, "percent")}</dd></div>
+            <div><dt>근거 범위</dt><dd>{formatMetric(row.coverage, "percent")} · {row.source_dates.join(", ") || "날짜 확인 필요"}</dd></div>
+            <div><dt>변화 조건</dt><dd>{row.change_condition}</dd></div>
+            <div><dt>다음 확인</dt><dd>{row.next_check}</dd></div>
+          </dl>
+        </details>
+      )}
+    </article>
+  );
+}
+
 function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   const workspace = (args?.payload ?? null) as PortfolioMonitoringWorkspace | null;
   const serverGroup = useMemo(
@@ -154,6 +178,11 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   const selectedGroup = selectActiveGroup(workspace.groups, selectedGroupId);
   const selectedItem = selectItem(activeGroup?.item_rows ?? [], selectedItemId);
   const metrics = activeGroup?.metrics;
+  const diagnosis = workspace.diagnosis ?? {
+    policy_version: "portfolio_monitoring_policy_v1",
+    top_three: [], strengths: [], weaknesses: [], data_gaps: [], all_rows: [], coverage: 0,
+  };
+  const diagnosisSections = buildDiagnosisSections(diagnosis);
   const emit = (event: Record<string, unknown>) => {
     Streamlit.setComponentValue({ event: { ...event, nonce: `${Date.now()}-${Math.random()}` } });
   };
@@ -246,6 +275,22 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
                 <small>투자 전·종료 후 자본은 현금으로 유지</small>
               </header>
               <ValueChart rows={activeGroup.curve} items={activeGroup.item_rows} />
+            </section>
+
+            <section className="pm-panel pm-diagnosis-panel" aria-label="포트폴리오 강점과 취약점">
+              <header className="pm-section-heading">
+                <div><span>PORTFOLIO DIAGNOSIS</span><h2>지금 확인할 변화</h2></div>
+                <small>{diagnosis.policy_version} · 측정값과 해제 조건 기반</small>
+              </header>
+              <div className="pm-now-grid">
+                {diagnosisSections.now.map((row) => <DiagnosisCard key={row.rule_id} row={row} compact />)}
+                {!diagnosisSections.now.length && <div className="pm-diagnosis-empty">현재 상위 확인 신호가 없습니다. 근거가 충분해지면 최대 3개만 먼저 표시합니다.</div>}
+              </div>
+              <div className="pm-diagnosis-columns">
+                <section><h3>강점</h3>{diagnosisSections.strengths.map((row) => <DiagnosisCard key={row.rule_id} row={row} />)}{!diagnosisSections.strengths.length && <p>확정된 강점 근거가 아직 없습니다.</p>}</section>
+                <section><h3>취약점</h3>{diagnosisSections.weaknesses.map((row) => <DiagnosisCard key={row.rule_id} row={row} />)}{!diagnosisSections.weaknesses.length && <p>현재 기준을 넘은 취약점이 없습니다.</p>}</section>
+                <section><h3>데이터 부족</h3>{diagnosisSections.dataGaps.map((row) => <DiagnosisCard key={row.rule_id} row={row} />)}{!diagnosisSections.dataGaps.length && <p>핵심 분류 근거의 coverage가 유지되고 있습니다.</p>}</section>
+              </div>
             </section>
 
             <section className="pm-content-grid">

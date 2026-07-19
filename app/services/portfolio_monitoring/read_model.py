@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Callable, Mapping, Sequence
@@ -9,6 +9,7 @@ import pandas as pd
 
 from .persistence import MonitoringItemRecord, MonitoringRepository, PortfolioGroupRecord
 from .valuation import ItemValueLane
+from .diagnosis import DIAGNOSIS_POLICY_VERSION, DiagnosisFact, project_diagnoses
 
 
 WORKSPACE_SCHEMA_VERSION = "portfolio_monitoring_workspace_v1"
@@ -297,6 +298,8 @@ def build_portfolio_monitoring_workspace(
     catalog_query: str = "",
     generated_at: datetime | None = None,
     lane_loader: LaneLoader | None = None,
+    diagnosis_facts: Sequence[DiagnosisFact] | None = None,
+    exposure_coverage: float = 0.0,
 ) -> dict[str, object]:
     """Build the versioned, read-only projection consumed by the React workbench."""
 
@@ -327,6 +330,7 @@ def build_portfolio_monitoring_workspace(
         active_result = align_group_value_lanes(selected_items, lane_values)
 
     timestamp = generated_at or datetime.now()
+    diagnosis = project_diagnoses(list(diagnosis_facts or []), exposure_coverage)
     return {
         "schema_version": WORKSPACE_SCHEMA_VERSION,
         "generated_at": timestamp.isoformat(timespec="seconds"),
@@ -341,6 +345,15 @@ def build_portfolio_monitoring_workspace(
         "active_group": active_result,
         "catalog": {"query": catalog_query, "items": []},
         "commands": [],
+        "diagnosis": {
+            "policy_version": DIAGNOSIS_POLICY_VERSION,
+            "top_three": [asdict(row) for row in diagnosis.top_three],
+            "strengths": [asdict(row) for row in diagnosis.strengths],
+            "weaknesses": [asdict(row) for row in diagnosis.weaknesses],
+            "data_gaps": [asdict(row) for row in diagnosis.data_gaps],
+            "all_rows": [asdict(row) for row in diagnosis.all_rows],
+            "coverage": exposure_coverage,
+        },
         "method": {
             "basis": "oldest_latest_usable_date_among_active_lanes",
             "alignment": "as_of_step_without_interpolation",

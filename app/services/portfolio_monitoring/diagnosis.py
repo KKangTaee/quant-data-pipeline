@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import sqrt
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping
 
 import pandas as pd
 
 from .exposure import ExposureResult
-from .read_model import GroupValueResult
 from .valuation import ItemValueLane
+
+if TYPE_CHECKING:
+    from .read_model import GroupValueResult
 
 
 DIAGNOSIS_POLICY_VERSION = "portfolio_monitoring_policy_v1"
@@ -66,6 +68,16 @@ class DiagnosisFact:
     change_condition: str
     next_check: str
     policy_provenance: str = "default_policy"
+
+
+@dataclass(frozen=True)
+class DiagnosisProjection:
+    policy_version: str
+    top_three: tuple[DiagnosisFact, ...]
+    strengths: tuple[DiagnosisFact, ...]
+    weaknesses: tuple[DiagnosisFact, ...]
+    data_gaps: tuple[DiagnosisFact, ...]
+    all_rows: tuple[DiagnosisFact, ...]
 
 
 def _curve(lane: ItemValueLane) -> pd.Series:
@@ -175,6 +187,48 @@ def _confidence(coverage: float) -> str:
     return "LOW"
 
 
+def project_diagnoses(facts: list[DiagnosisFact], coverage: float) -> DiagnosisProjection:
+    """Deduplicate one root cause and produce a stable, confidence-aware first read."""
+
+    severity_rank = {"HIGH": 3, "WATCH": 2, "INFO": 1}
+    confidence_rank = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
+
+    def priority(row: DiagnosisFact) -> tuple[float, ...]:
+        return (
+            float(severity_rank.get(row.severity, 0)),
+            float(row.affected_weight),
+            float(row.persistence),
+            float(confidence_rank.get(row.confidence, 0)),
+        )
+
+    deduplicated: dict[str, DiagnosisFact] = {}
+    for row in facts:
+        current = deduplicated.get(row.root_id)
+        if current is None or priority(row) > priority(current):
+            deduplicated[row.root_id] = row
+    ranked = sorted(
+        deduplicated.values(),
+        key=lambda row: (*(-value for value in priority(row)), row.rule_id),
+    )
+    strengths = tuple(row for row in ranked if row.classification == "strength")
+    data_gaps = tuple(
+        row for row in ranked if row.classification == "data_gap" or row.confidence == "LOW"
+    )
+    weaknesses = tuple(
+        row for row in ranked
+        if row.classification == "weakness" and row.confidence != "LOW"
+    )
+    top_three = tuple(weaknesses[:3])
+    return DiagnosisProjection(
+        policy_version=DIAGNOSIS_POLICY_VERSION,
+        top_three=top_three,
+        strengths=strengths,
+        weaknesses=weaknesses,
+        data_gaps=data_gaps,
+        all_rows=tuple(ranked),
+    )
+
+
 def _fact(
     *, rule_id: str, root_id: str, severity: str, persistence: int, affected_weight: float,
     contribution: float | None, measured: str, threshold: str, behavior: BehaviorFacts,
@@ -270,4 +324,30 @@ def evaluate_portfolio_rules(
                 behavior=behavior, exposure=exposure, provenance=provenance,
                 meaning="함께 움직이는 항목의 비중이 커 분산 효과가 약해질 수 있습니다.",
                 change=f"상관이 {policy['correlation']:.2f} 또는 cluster가 {policy['watch']:.1%} 아래면 해제"))
+    if exposure.coverage_ratio < 0.7:
+        rows.append(
+            DiagnosisFact(
+                rule_id="exposure_coverage_gap", root_id="coverage:exposure",
+                policy_version=DIAGNOSIS_POLICY_VERSION, classification="data_gap", severity="WATCH",
+                persistence=1, affected_weight=exposure.uncovered_weight, contribution=None,
+                measured_fact=f"exposure coverage {exposure.coverage_ratio:.1%}", threshold="MEDIUM requires 70%",
+                source_dates=behavior.source_dates, coverage=exposure.coverage_ratio, confidence="LOW",
+                meaning="분류되지 않은 노출이 있어 집중도 판정 범위가 제한됩니다.",
+                change_condition="노출 coverage가 70% 이상이면 해제", next_check="holdings/exposure snapshot 갱신 후 확인",
+            )
+        )
+    max_item_weight = max((item.weight for item in behavior.items.values()), default=0.0)
+    if behavior.items and max_item_weight < DEFAULT_POLICIES["single_item_concentration"]["watch"] and exposure.coverage_ratio >= 0.7:
+        rows.append(
+            DiagnosisFact(
+                rule_id="diversification_strength", root_id="strength:diversification",
+                policy_version=DIAGNOSIS_POLICY_VERSION, classification="strength", severity="INFO",
+                persistence=1, affected_weight=max_item_weight, contribution=None,
+                measured_fact=f"largest item weight {max_item_weight:.1%}", threshold="concentration watch 25.0%",
+                source_dates=behavior.source_dates, coverage=exposure.coverage_ratio,
+                confidence=_confidence(exposure.coverage_ratio),
+                meaning="단일 항목 비중이 집중 주의선 아래에 있습니다.",
+                change_condition="한 항목 비중이 25% 이상이면 강점 해제", next_check="구성 변경 또는 다음 평가일",
+            )
+        )
     return rows

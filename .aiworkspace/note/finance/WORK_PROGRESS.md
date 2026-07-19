@@ -6682,3 +6682,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - 기존 Portfolio Monitoring 정상 화면을 Portfolio-first React one-shell로 전환하고, 그룹 rail·KPI·공통 가치곡선·항목 기여·개별 상세·3단계 Context Drawer를 구현했다.
 - 직접 종목은 투자금/정수 수량, Final Review 전략은 투자금만 허용하며 stable command id와 thin Streamlit dispatch를 연결했다. Operations 요약도 새 그룹·항목·가치 KPI를 받을 수 있다.
 - 1440/760/420 Browser QA와 51개 Python·9개 React 회귀를 통과했다. 전체 roadmap `3/6차` 완료; 실제 저장 테이블 migration과 mutation QA는 6차 closeout 경계다.
+
+## 2026-07-19 - Portfolio Monitoring React 개편 4차 완료
+
+- direct/ETF/선정 전략 노출을 source date와 provenance가 있는 normalized facts로 만들고, 모르는 비중은 추정하지 않고 coverage gap으로 유지한다.
+- 21/63/126일 수익률, 50D/200D 추세, drawdown, 변동성, 상관 cluster, 기여도에 versioned Python 정책을 적용하며 Final Review override 출처를 보존한다.
+- 같은 원인의 중복을 제거하고 HIGH/MEDIUM/LOW confidence에 따라 상위 3개·강점·취약점·데이터 부족으로 나눴다. 전체 roadmap `4/6차` 완료; 다음은 5차 persisted macro 관찰이다.

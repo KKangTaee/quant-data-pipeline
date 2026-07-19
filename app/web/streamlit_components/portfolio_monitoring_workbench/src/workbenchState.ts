@@ -1,4 +1,4 @@
-import type { GroupMetrics, GroupSummary, ItemRow } from "./contracts";
+import type { DiagnosisProjection, GroupMetrics, GroupSummary, ItemRow } from "./contracts";
 
 export type MonitoringSourceType = "direct_security" | "selected_strategy";
 export type MonitoringKind = "stock" | "etf" | "strategy";
@@ -155,6 +155,16 @@ export function buildCommonBasisBanner(group: { status: string; basis_date: stri
     return `일부 항목은 가치 계산이 제한되어 원금을 현금으로 유지했습니다. 공통 기준일 ${group.basis_date}`;
   }
   return `모든 활성 항목을 비교할 수 있는 공통 기준일 ${group.basis_date}`;
+}
+
+export function buildDiagnosisSections(diagnosis: DiagnosisProjection) {
+  return {
+    now: diagnosis.top_three.filter((row) => row.confidence !== "LOW").slice(0, 3),
+    strengths: diagnosis.strengths,
+    weaknesses: diagnosis.weaknesses,
+    dataGaps: diagnosis.data_gaps,
+    evidence: diagnosis.all_rows,
+  };
 }
 
 function signedPercent(value: number) {

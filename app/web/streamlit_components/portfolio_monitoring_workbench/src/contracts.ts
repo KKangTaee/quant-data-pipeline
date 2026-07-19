@@ -53,6 +53,34 @@ export type CatalogItem = {
   readiness: string;
 };
 
+export type DiagnosisRow = {
+  rule_id: string;
+  policy_version: string;
+  classification: "strength" | "weakness" | "data_gap" | string;
+  severity: string;
+  persistence: number;
+  affected_weight: number;
+  contribution: number | null;
+  measured_fact: string;
+  threshold: string;
+  source_dates: string[];
+  coverage: number;
+  confidence: string;
+  meaning: string;
+  change_condition: string;
+  next_check: string;
+};
+
+export type DiagnosisProjection = {
+  policy_version: string;
+  top_three: DiagnosisRow[];
+  strengths: DiagnosisRow[];
+  weaknesses: DiagnosisRow[];
+  data_gaps: DiagnosisRow[];
+  all_rows: DiagnosisRow[];
+  coverage?: number;
+};
+
 export type PortfolioMonitoringWorkspace = {
   schema_version: "portfolio_monitoring_workspace_v1";
   generated_at: string;
@@ -60,6 +88,7 @@ export type PortfolioMonitoringWorkspace = {
   active_group: GroupValueResult | null;
   catalog: { query: string; items: CatalogItem[] };
   commands: CommandProjection[];
+  diagnosis: DiagnosisProjection;
   method: Record<string, string>;
   boundaries: Record<string, boolean | string | null>;
 };

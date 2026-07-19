@@ -11,6 +11,7 @@ import {
   validateItemDraft,
   selectActiveGroup,
   selectItem,
+  buildDiagnosisSections,
 } from "./workbenchState";
 
 const groups: GroupSummary[] = [
@@ -137,5 +138,30 @@ describe("item drawer contract", () => {
     expect(drawerPresentation(420)).toBe("full_width_sheet");
     expect(drawerPresentation(760)).toBe("side_drawer");
     expect(applySourceType(draft, "direct_security").commandId).toBe("stable-command");
+  });
+});
+
+describe("diagnosis evidence contract", () => {
+  it("keeps at most three first-read rows and preserves full evidence", () => {
+    const row = {
+      rule_id: "trend_break_200d:a", policy_version: "portfolio_monitoring_policy_v1",
+      classification: "weakness" as const, severity: "HIGH", persistence: 20,
+      affected_weight: 0.4, contribution: -120, measured_fact: "200D 아래 20거래일",
+      threshold: "high 20거래일", source_dates: ["2026-07-18"], coverage: 0.95,
+      confidence: "HIGH", meaning: "장기 추세 약화", change_condition: "200D 위 회복",
+      next_check: "다음 종가",
+    };
+    const sections = buildDiagnosisSections({
+      policy_version: "portfolio_monitoring_policy_v1",
+      top_three: [row, { ...row, rule_id: "two" }, { ...row, rule_id: "three" }, { ...row, rule_id: "four" }],
+      strengths: [{ ...row, rule_id: "strength", classification: "strength" as const }],
+      weaknesses: [row], data_gaps: [], all_rows: [row],
+    });
+
+    expect(sections.now).toHaveLength(3);
+    expect(sections.evidence[0].measured_fact).toContain("20거래일");
+    expect(sections.evidence[0].threshold).toContain("high");
+    expect(sections.evidence[0].change_condition).toContain("회복");
+    expect(JSON.stringify(sections)).not.toMatch(/매수|매도|목표\s*비중/);
   });
 });
