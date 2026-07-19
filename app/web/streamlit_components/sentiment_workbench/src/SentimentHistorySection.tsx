@@ -95,6 +95,13 @@ function chartValueSuffix(panel: ChartPanel) {
   return "";
 }
 
+function chartTooltipAlignment(x: number) {
+  const plotRatio = (x - chartMargin.left) / plotWidth;
+  if (plotRatio <= 0.2) return "start";
+  if (plotRatio >= 0.8) return "end";
+  return "center";
+}
+
 function SentimentLineChart({ panel, mode }: { panel: ChartPanel; mode: ChartMode }) {
   const points = parsedChartPoints(panel);
   const extent = chartExtent(points);
@@ -191,7 +198,7 @@ function SentimentLineChart({ panel, mode }: { panel: ChartPanel; mode: ChartMod
             ) : null}
           </svg>
           {hoveredChartPoint ? (
-            <div className="sentiment-workbench__chart-tooltip" style={{ left: `${(hoveredChartPoint.x / chartWidth) * 100}%` }}>
+            <div className="sentiment-workbench__chart-tooltip" data-alignment={chartTooltipAlignment(hoveredChartPoint.x)} style={{ left: `${(hoveredChartPoint.x / chartWidth) * 100}%` }}>
               <strong>{hoveredChartPoint.date}</strong>
               {hoveredChartPoint.values.map((point) => <span key={`${point.series}-tooltip`}><i style={{ background: chartSeriesColor(point.series, mode) }} />{point.series}<b>{displayValue(point.numericValue, chartValueSuffix(panel))}</b>{point.status_label ? <small>{point.status_label}</small> : null}</span>)}
             </div>

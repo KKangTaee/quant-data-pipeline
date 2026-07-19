@@ -29,3 +29,5 @@
 - TypeScript `tsc --noEmit`은 기존 package에 `@types/react`, `@types/react-dom`이 없어 baseline에서 실행 불가했다. dependency를 추가하지 않고 repository의 Vite production build와 Python source-contract regression을 사용했다.
 - graph 2행 요구를 CSS source-contract에 먼저 반영해 기존 desktop `repeat(2, ...)` 규칙으로 실패하는 것을 확인한 뒤 기본 history grid를 단일 column으로 수정하고 Vite production bundle을 재생성했다.
 - actual Streamlit 1440px Browser QA에서 CNN과 AAII panel이 각각 x `21px`, width `851px`로 일치하고 AAII가 CNN 아래에서 시작하는 2행 구조, line chart 2개를 확인했다. QA screenshot `overview-sentiment-history-two-rows-qa.png`는 generated artifact로 commit에서 제외한다.
+- CNN 마지막 관측 hover를 실제 화면에서 재현해 tooltip이 card 오른쪽을 `46px` 넘는 것을 확인했다. x 위치 기반 `start / center / end` 정렬을 추가한 뒤 우측은 card 안쪽 `38px`, 좌측은 `62px` 여유로 표시됨을 재검증했다.
+- tooltip edge-alignment source-contract를 RED/GREEN으로 추가하고 production bundle을 재생성했다. QA screenshot `overview-sentiment-tooltip-edge-qa.png`는 generated artifact로 commit에서 제외한다.

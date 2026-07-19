@@ -22,3 +22,4 @@
 - 오래 실행된 Python 프로세스와 새 frontend bundle이 순간적으로 섞여도 `outlook` 누락으로 전체 component가 깨지지 않도록 1W·1M unavailable fallback을 둔다. 정상 source of truth는 계속 Python payload다.
 - Browser QA screenshot `overview-sentiment-visual-redesign-qa.png`는 generated artifact이며 commit 대상이 아니다.
 - 사용자 후속 피드백으로 graph 영역의 2열 배치를 2행으로 교정했다. CSS source-contract와 실제 1440px 화면 좌표에서 두 panel의 x·width 일치와 세로 적층을 확인했다.
+- chart tooltip은 관측점 x좌표를 그대로 중앙 정렬하면 좌우 끝에서 card를 벗어난다. plot의 좌우 20% 구간에서는 각각 시작·끝 정렬로 전환하고 중앙 구간만 기존 중앙 정렬을 유지한다.
