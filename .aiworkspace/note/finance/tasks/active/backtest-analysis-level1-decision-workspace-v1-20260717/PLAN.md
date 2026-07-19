@@ -7037,3 +7037,460 @@ git commit -m "Backtest 단계별 타이틀 정리 QA와 문서 동기화"
 - generated screenshot 경로
 - protected artifacts 미커밋 확인
 - baseline service failures와 남은 risk
+
+---
+
+## 15차 Corrective Plan: Portfolio Mix React One-Shell Completion
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task. Each task must complete RED, GREEN, focused verification and its Korean commit before the next task begins.
+
+**Goal:** Portfolio Mix의 legacy Streamlit 구성·비중·saved replay·결과 surface를 하나의 Python-owned React four-step workspace로 교체하고, 현재 설정과 일치하는 실행 결과만 저장 또는 Level2로 인계한다.
+
+**Architecture:** 새 pure service가 draft normalization, Single settings composition, validation, fingerprint, stale/result/action projection을 소유한다. 새 Python web adapter가 intent allow-list, session lifecycle, existing compare runner/weighted builder, saved setup과 Level2 source handler를 소유한다. React는 pure payload를 표시하고 intent만 반환하며, primary route는 새 workspace를 한 번만 mount한다.
+
+**Tech Stack:** Python 3, Streamlit, Streamlit custom component, React 18, TypeScript, Vite, pytest, existing Backtest compare/weighted/persistence services.
+
+### Global Constraints
+
+- 현재 `codex/backtest-dev` branch와 active task를 계속 사용하며 새 task, branch, worktree를 만들지 않는다.
+- strategy/factor/performance 계산, DB schema, Level2/Final Review route와 Gate 의미는 바꾸지 않는다.
+- `app/services/backtest_single_settings_workspace.py`의 schema/preset/validation/payload projection을 component마다 재사용한다.
+- React는 catalog grouping, validation, fingerprint, runner, Gate, persistence를 계산하거나 호출하지 않는다.
+- legacy prototype row를 새 schema로 자동 migration하거나 보정하지 않는다.
+- protected registry, Run History, saved JSONL, `.superpowers/`, screenshot/run artifact는 rewrite/delete/stage/commit하지 않는다.
+- current draft가 바뀌거나 component 실행이 실패해도 마지막 성공 결과와 다른 component draft를 삭제하지 않는다.
+- callable action이 0개이면 빈 action board를 렌더링하지 않는다.
+
+### Task 46: Portfolio Mix Truth And Pure Read Model (15-1)
+
+**Files:**
+- Create: `app/services/backtest_portfolio_mix_workspace.py`
+- Create: `tests/test_backtest_portfolio_mix_workspace.py`
+- Modify: active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+
+**Interfaces:**
+
+```python
+PORTFOLIO_MIX_WORKSPACE_SCHEMA_VERSION = "backtest_portfolio_mix_workspace_v1"
+PORTFOLIO_MIX_SAVED_SCHEMA_VERSION = "backtest_portfolio_mix_saved_v1"
+
+class PortfolioMixValidationError(ValueError):
+    errors: Mapping[str, str]
+
+def normalize_portfolio_mix_draft(
+    draft: Mapping[str, Any] | None,
+    *,
+    runtime_options: Mapping[str, Any] | None = None,
+    today: date | None = None,
+) -> dict[str, Any]: ...
+
+def validate_portfolio_mix_draft(draft: Mapping[str, Any]) -> dict[str, str]: ...
+
+def project_portfolio_mix_component_payloads(
+    draft: Mapping[str, Any],
+) -> list[dict[str, Any]]: ...
+
+def build_portfolio_mix_fingerprint(draft: Mapping[str, Any]) -> str: ...
+
+def build_portfolio_mix_workspace(
+    *,
+    draft: Mapping[str, Any] | None,
+    saved_records: Sequence[Mapping[str, Any]] = (),
+    component_states: Mapping[str, Mapping[str, Any]] | None = None,
+    current_result: Mapping[str, Any] | None = None,
+    last_result: Mapping[str, Any] | None = None,
+    action_capabilities: Mapping[str, bool] | None = None,
+    runtime_options: Mapping[str, Any] | None = None,
+    today: date | None = None,
+) -> dict[str, Any]: ...
+```
+
+Normalized draft contract:
+
+```python
+{
+    "draft_id": "mix-draft-...",
+    "source_saved_portfolio_id": None,
+    "shared": {
+        "start": "2016-01-01",
+        "end": "2026-07-19",
+        "timeframe": "1d",
+        "option": "month_end",
+        "date_policy": "intersection",
+    },
+    "components": [
+        {
+            "component_id": "component-1",
+            "strategy_choice": "GTAA",
+            "variant": None,
+            "settings_values": {},
+            "role": "core",
+            "weight_percent": 50.0,
+        }
+    ],
+}
+```
+
+- component ID는 draft가 제공하면 보존하고, 누락 시 position 기반 stable default를 만든다.
+- fingerprint에는 `draft_id`와 saved row identity를 넣지 않고 shared values와 ordered effective component settings/role/weight만 canonical JSON으로 hash한다.
+- concrete execution key는 strategy choice와 strict factor variant를 함께 정규화한다. 같은 concrete key 중복은 validation error다.
+- role allow-list는 `core`, `growth`, `defense`, `satellite`; 사용자 label은 pure projection에서 제공한다.
+- component 수는 2~4, weight는 각 0 초과, 합계는 tolerance `0.01` 안에서 100이어야 한다.
+- saved shelf에는 `backtest_portfolio_mix_saved_v1` row만 투영하고 legacy row는 migration 없이 제외한다.
+- result fingerprint가 current fingerprint와 다르면 `last_result`/`reference_result`로만 표시하고 current save/handoff action은 제공하지 않는다.
+
+- [ ] **Step 1: Write RED truth/read-model tests**
+
+Add tests for:
+
+1. 2~4 component constraint and stable missing component IDs.
+2. duplicate concrete strategy/variant rejection.
+3. role/weight/shared validation and exact 100% total.
+4. Single settings preset composition and exact projected compare override for GTAA, Equal Weight and Quality + Value Strict Annual.
+5. semantically equal drafts produce one fingerprint; effective setting/role/weight change produces a different fingerprint.
+6. pre-run workspace has no verdict/result/action board.
+7. stale result remains a reference and disables current save/handoff.
+8. saved shelf accepts only the new schema and exposes no raw JSON or absolute path.
+9. root validation issue is projected and counted once.
+
+Run and confirm RED is caused by the missing service:
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q
+```
+
+- [ ] **Step 2: Implement the pure service**
+
+Compose existing Single settings functions instead of copying catalog or field rules:
+
+```python
+single_workspace = build_single_settings_workspace(
+    strategy_choice=strategy_choice,
+    variant=variant,
+    values=settings_values,
+    runtime_options=runtime_options,
+    today=today,
+)
+field_errors = validate_single_settings_draft(single_workspace)
+payload = project_single_settings_payload(single_workspace)
+```
+
+Normalize dates/numbers/arrays before fingerprinting. Deduplicate issues by stable `root_issue_id`, keep user-facing Korean labels separate from raw execution keys, and return JSON-serializable values only.
+
+- [ ] **Step 3: Run GREEN and regression**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q
+.venv/bin/python -m pytest tests/test_service_contracts.py -q -k 'single_settings or portfolio_mix or weighted_portfolio or compare_execution'
+.venv/bin/python -m py_compile app/services/backtest_portfolio_mix_workspace.py
+git diff --check
+```
+
+Record exact counts. Any full-suite failure must be classified against the documented Sentiment/Final Review/liquidity/Practical Validation baseline; no new Portfolio Mix failure is allowed.
+
+- [ ] **Step 4: Commit the implementation unit**
+
+Stage only the new service/test and active task records, audit staged paths, then commit:
+
+```bash
+git commit -m "Portfolio Mix 진실과 읽기 모델 구현"
+```
+
+### Task 47: Portfolio Mix React One-Shell And Intent Adapter (15-2)
+
+**Files:**
+- Create: `app/web/backtest_portfolio_mix_workspace.py`
+- Create: `app/web/components/backtest_portfolio_mix_workspace/__init__.py`
+- Create: `app/web/components/backtest_portfolio_mix_workspace/component.py`
+- Create: `app/web/components/backtest_portfolio_mix_workspace/frontend/package.json`
+- Create: `app/web/components/backtest_portfolio_mix_workspace/frontend/package-lock.json`
+- Create: `app/web/components/backtest_portfolio_mix_workspace/frontend/tsconfig.json`
+- Create: `app/web/components/backtest_portfolio_mix_workspace/frontend/vite.config.ts`
+- Create: `app/web/components/backtest_portfolio_mix_workspace/frontend/index.html`
+- Create: `app/web/components/backtest_portfolio_mix_workspace/frontend/src/main.tsx`
+- Create: `app/web/components/backtest_portfolio_mix_workspace/frontend/src/App.tsx`
+- Create: `app/web/components/backtest_portfolio_mix_workspace/frontend/src/styles.css`
+- Modify: `tests/test_backtest_portfolio_mix_workspace.py`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+- Modify: active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+
+**Python adapter interfaces:**
+
+```python
+MIX_SESSION_KEYS = {
+    "draft": "backtest_portfolio_mix_draft",
+    "component_states": "backtest_portfolio_mix_component_states",
+    "current_result": "backtest_portfolio_mix_current_result",
+    "last_result": "backtest_portfolio_mix_last_result",
+    "last_intent_id": "backtest_portfolio_mix_last_intent_id",
+}
+
+def build_initial_portfolio_mix_session_draft() -> dict[str, Any]: ...
+def consume_portfolio_mix_intent(intent: Mapping[str, Any]) -> None: ...
+def render_backtest_portfolio_mix_workspace_fallback(
+    workspace: Mapping[str, Any],
+) -> Mapping[str, Any] | None: ...
+def render_backtest_portfolio_mix_workspace() -> None: ...
+```
+
+Validated intent allow-list:
+
+```text
+set_mode
+add_component
+remove_component
+set_strategy
+set_variant
+apply_preset
+set_component_field
+set_shared_field
+set_role
+set_weight
+restore_saved_mix
+run_saved_mix
+run_mix
+save_mix
+handoff_level2
+```
+
+The React event contract is `{event: {id, intent_id, payload}}`. Python rejects unknown intents, duplicate intent IDs, unknown component IDs, invalid strategy/variant/field/option values and actions not advertised by the current read model.
+
+- [ ] **Step 1: Write RED adapter and UI-boundary tests**
+
+Add tests that require:
+
+1. initial session draft uses 2 valid components and a 100% default allocation.
+2. add/remove/role/weight/shared/settings intents update only the addressed draft region.
+3. duplicate/unknown/replayed intent is ignored or rejected without mutating session state.
+4. fallback consumes the same workspace read model and returns the same intent vocabulary.
+5. React source contains four approved step headings, saved/new modes, component detail, role/weight, result and final action sections.
+6. React source has no runner import, raw status classification, fingerprint/Gate calculation, persistence call, raw JSON or absolute path rendering.
+7. component wrapper and Vite build directory follow existing Backtest component conventions including ResizeObserver height sync.
+
+Run RED:
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_refactor_boundaries.py -q -k 'portfolio_mix'
+```
+
+- [ ] **Step 2: Implement Python intent adapter and fallback**
+
+- Rebuild the workspace after every accepted intent from session state.
+- Use service-provided strategy/variant/preset/field options as the only allow-lists.
+- Preserve `current_result` when editing, but move it to reference/stale presentation through fingerprint mismatch.
+- Do not wire runner/persistence actions in this task; unsupported action capabilities remain false so no empty action board appears.
+- Python fallback exposes the same four steps and editing/actions that are currently callable.
+
+- [ ] **Step 3: Implement React four-step presentation**
+
+Step layout:
+
+1. `구성 전략과 공통 기준`: new/saved mode, 2~4 component cards, shared fields, preset-first and details disclosure.
+2. `역할과 목표 비중`: role selector, percentage control, total and alignment guidance.
+3. `Mix 실행과 해석`: no pre-run verdict; component state and current/stale result only when present.
+4. `저장하고 Level2로 이동`: only service-advertised callable actions.
+
+Use a two-column desktop component board, one column at 760px, no horizontal overflow, keyboard-focusable buttons/disclosures and `aria-selected`, `aria-expanded`, `aria-live` where state changes.
+
+- [ ] **Step 4: Run GREEN, production build and compile**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_refactor_boundaries.py -q -k 'portfolio_mix'
+npm run build --prefix app/web/components/backtest_portfolio_mix_workspace/frontend
+.venv/bin/python -m py_compile app/web/backtest_portfolio_mix_workspace.py app/web/components/backtest_portfolio_mix_workspace/component.py
+git diff --check
+```
+
+- [ ] **Step 5: Commit the implementation unit**
+
+Stage only adapter/component/tests/task records and commit:
+
+```bash
+git commit -m "Portfolio Mix React 원셸 UI 구현"
+```
+
+### Task 48: Runtime, Saved Mix, Level2 Handoff And Primary Cutover (15-3)
+
+**Files:**
+- Modify: `app/web/backtest_portfolio_mix_workspace.py`
+- Modify: `app/web/backtest_analysis.py`
+- Modify: `app/web/backtest_compare/page.py` only for helpers proven unreachable after cutover
+- Modify: `app/services/backtest_portfolio_mix_workspace.py`
+- Modify: `tests/test_backtest_portfolio_mix_workspace.py`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+- Modify: `tests/test_service_contracts.py` only where the public Mix contract changes
+- Modify: active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+
+**Runtime interfaces:**
+
+```python
+def execute_current_portfolio_mix(
+    draft: Mapping[str, Any],
+    *,
+    run_component: Callable[..., Mapping[str, Any]],
+) -> dict[str, Any]: ...
+
+def save_current_portfolio_mix(
+    workspace: Mapping[str, Any],
+) -> dict[str, Any]: ...
+
+def handoff_current_portfolio_mix(
+    workspace: Mapping[str, Any],
+) -> dict[str, Any]: ...
+```
+
+- Each component payload is projected/validated before any runner call.
+- Components run through existing `backtest_compare_catalog.run_compare_strategy`; weighted result is built through `build_weighted_portfolio_bundle`.
+- Runtime stores per-component pending/running/success/error state and top-level `run_result_id` plus current fingerprint.
+- Run History append, saved setup write and Level2 candidate source write remain three distinct side effects.
+- Save writes `backtest_portfolio_mix_saved_v1`; load/restore accepts only this schema.
+- One component failure preserves successful bundles, current draft and previous successful weighted result; no partial weighted result is promoted current.
+- Primary Mix route mounts only `render_backtest_portfolio_mix_workspace()` and no longer mounts `render_compare_portfolio_workspace()` or generic Mix `render_backtest_analysis_decision_surface()`.
+- Legacy page helpers are deleted only after `rg` and boundary tests prove no production/test references. Compatibility helpers may remain unmounted when deletion would expand scope.
+
+- [ ] **Step 1: Write RED runtime/persistence/cutover tests**
+
+Add tests for:
+
+1. invalid draft never calls a component runner.
+2. GTAA + Quality + Value Strict Annual + Equal Weight produces three component bundles and one weighted bundle with current fingerprint/run identity.
+3. component failure preserves draft/previous result and reports the failing component only once.
+4. settings edit marks result stale and disables save/handoff until rerun.
+5. save and Level2 handoff are separately callable and a failure does not roll back the other state.
+6. saved restore changes the draft without inventing a result; saved rerun executes the restored snapshot.
+7. primary route source imports/mounts only the new Mix workspace and does not mount legacy form/raw replay/generic duplicate decision.
+8. protected persistence modules are called through existing public helpers; tests use temp paths/mocks, never real JSONL.
+
+Run RED:
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_refactor_boundaries.py tests/test_service_contracts.py -q -k 'portfolio_mix or weighted_portfolio or compare_execution'
+```
+
+- [ ] **Step 2: Implement atomic component and weighted execution**
+
+Project all component payloads first. Run components sequentially in Python, update status by stable component ID, and build the weighted bundle only after all component calls succeed. Preserve old current result as a reference until the new weighted build completes; replace current result atomically on success.
+
+- [ ] **Step 3: Implement saved setup and Level2 source actions**
+
+- Save a reusable new-schema snapshot with normalized draft, roles, weights, fingerprint and user-facing summary.
+- Restore snapshot into a fresh `draft_id` while preserving component IDs/settings.
+- Handoff only a fresh current weighted result and retain `run_result_id`/fingerprint in the selection-source context.
+- Expose action cards only when the corresponding Python handler is callable and the service Gate permits it.
+
+- [ ] **Step 4: Cut over the primary route and remove duplicate legacy mounts**
+
+Change the Mix branch in `app/web/backtest_analysis.py` to:
+
+```python
+if mode == BACKTEST_ANALYSIS_MODE_COMPARE:
+    render_backtest_portfolio_mix_workspace()
+    return
+```
+
+Keep Single Strategy behavior unchanged. Confirm through source/boundary tests that legacy component form, saved replay page, raw JSON/path and generic decision mount are absent from the primary Mix DOM.
+
+- [ ] **Step 5: Run GREEN and focused regression**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_refactor_boundaries.py -q
+.venv/bin/python -m pytest tests/test_service_contracts.py -q -k 'portfolio_mix or weighted_portfolio or compare_execution or single_settings'
+npm run build --prefix app/web/components/backtest_portfolio_mix_workspace/frontend
+.venv/bin/python -m py_compile app/services/backtest_portfolio_mix_workspace.py app/web/backtest_portfolio_mix_workspace.py app/web/backtest_analysis.py
+git diff --check
+```
+
+- [ ] **Step 6: Commit the implementation unit**
+
+Stage only code/tests/task records and commit:
+
+```bash
+git commit -m "Portfolio Mix 실행 저장 인계 통합"
+```
+
+### Task 49: Browser QA, Fresh Verification, Docs And 15차 Closeout (15-4)
+
+**Files:**
+- Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md`
+- Modify: `.aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md`
+- Modify: active task `PLAN.md`, `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+- Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
+- Modify: `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Generate but do not stage: `backtest-portfolio-mix-one-shell-desktop-qa.png`, `backtest-portfolio-mix-one-shell-760-qa.png`
+
+- [ ] **Step 1: Start a fresh app and execute desktop Browser QA**
+
+At approximately 1440px:
+
+1. open Portfolio Mix and confirm one React four-step workspace with no legacy Streamlit form or duplicate generic Level1 verdict.
+2. create GTAA + Quality + Value Strict Annual + Equal Weight components.
+3. edit common period, presets/details, roles and weights; verify total/validation and stable cards.
+4. execute; confirm component states, weighted result and current fingerprint lifecycle.
+5. save the Mix; restore it in the same shell; edit it and verify old result becomes reference/stale.
+6. rerun and confirm save and Level2 actions become available only for the new fresh result.
+7. confirm raw JSON, absolute save path, internal callable/status table and empty action board are absent.
+8. confirm browser console error count is 0.
+
+Save `backtest-portfolio-mix-one-shell-desktop-qa.png` as generated/untracked evidence. Any saved/run/registry rows created by QA remain protected/untracked and must not be staged.
+
+- [ ] **Step 2: Execute 760px Browser QA**
+
+At 760x1000 verify:
+
+- component cards, shared fields, role/weight board, detail editor, saved shelf, result and final actions wrap to one column.
+- expanded detail editor and result text are not clipped.
+- outer page and component iframe each satisfy `scrollWidth === clientWidth`.
+- ResizeObserver synchronizes component height without nested blank space or scroll trapping.
+- keyboard focus and disclosure/action aria state remain available.
+
+Save `backtest-portfolio-mix-one-shell-760-qa.png` as generated/untracked evidence.
+
+- [ ] **Step 3: Apply `superpowers:verification-before-completion` with fresh commands**
+
+```bash
+.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py tests/test_backtest_workflow_shell.py tests/test_backtest_refactor_boundaries.py -q
+.venv/bin/python -m pytest tests/test_service_contracts.py -q
+npm run build --prefix app/web/components/backtest_portfolio_mix_workspace/frontend
+.venv/bin/python -m py_compile app/services/backtest_portfolio_mix_workspace.py app/web/backtest_portfolio_mix_workspace.py app/web/backtest_analysis.py app/web/components/backtest_portfolio_mix_workspace/component.py
+git diff --check
+```
+
+The full service suite may retain only the already documented baseline failures; any new Portfolio Mix failure blocks closeout.
+
+- [ ] **Step 4: Apply `finance-doc-sync`**
+
+Document durable ownership:
+
+- `BACKTEST_UI_FLOW.md`: Portfolio Mix is a single React four-step Level1 workspace.
+- `PORTFOLIO_SELECTION_FLOW.md`: fresh weighted result, saved setup and Level2 candidate source are distinct contracts.
+- `SCRIPT_STRUCTURE_MAP.md`: new pure service, web adapter and component ownership; legacy compare page is not the primary Mix renderer.
+- active task docs: exact RED/GREEN counts, runtime/Browser evidence, baseline failures and remaining risks.
+- root logs: only a 3~5 line milestone/decision/handoff summary.
+
+- [ ] **Step 5: Audit protected paths and commit closeout**
+
+```bash
+git status --short
+git diff --cached --name-only
+git diff --cached --check
+```
+
+Explicitly stage only canonical docs, active task docs and root handoff logs. Staged paths must not include registries, Run History, saved JSONL, `.superpowers/`, screenshots or run artifacts.
+
+Commit:
+
+```bash
+git commit -m "Portfolio Mix 원셸 QA와 문서 동기화"
+```
+
+## 15차 Completion Report Contract
+
+- 15-1~15-4 전체 roadmap 완료 상태
+- distinct Korean commit hash 목록
+- RED/GREEN focused/full test counts와 baseline failure 분류
+- React production build / target py_compile / `git diff --check` 결과
+- desktop / 760px actual Mix create/run/save/restore/edit/rerun/Level2 boundary QA 범위
+- generated screenshot 절대 경로
+- protected registry/Run History/saved JSONL/`.superpowers/`/screenshot 미커밋 확인
+- legacy compatibility surface, accessibility 자동화와 남은 위험

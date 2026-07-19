@@ -1,6 +1,6 @@
 # Status
 
-Status: 14차 Stage-Local Legacy Title Removal Implementation Planned
+Status: 15차 Portfolio Mix React One-Shell Implementation Planned
 Last Updated: 2026-07-19
 
 ## Current Position
@@ -71,7 +71,13 @@ Last Updated: 2026-07-19
 - [x] 14차 written design 작성과 self-review
 - [x] 14차 written design 사용자 review
 - [x] 14차 implementation plan
-- [ ] 14차 RED -> GREEN / Browser QA / closeout
+- [x] 14차 RED -> GREEN / Browser QA / closeout
+- [x] 15차 Portfolio Mix legacy route / runtime / persistence audit
+- [x] 15차 Portfolio Mix React one-shell 사용자 승인
+- [x] 15차 written design 작성과 self-review
+- [x] 15차 written design 사용자 review
+- [x] 15차 implementation plan
+- [ ] 15차 RED -> GREEN / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -89,6 +95,7 @@ Last Updated: 2026-07-19
 12. Current Selection And Factor Presentation
 13. Backtest Workflow Top Shell Redesign
 14. Stage-Local Legacy Title Removal
+15. Portfolio Mix React One-Shell Completion
 
 ## Current Corrective Position
 
