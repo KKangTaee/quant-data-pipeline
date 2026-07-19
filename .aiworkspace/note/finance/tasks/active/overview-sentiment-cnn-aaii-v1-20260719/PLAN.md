@@ -40,3 +40,5 @@ Visual redesign spec: `docs/superpowers/specs/2026-07-19-overview-sentiment-visu
 Implementation plan: `docs/superpowers/plans/2026-07-19-overview-sentiment-cnn-aaii-v1.md`
 
 Visual redesign implementation plan: `docs/superpowers/plans/2026-07-19-overview-sentiment-visual-redesign.md`
+
+CNN component status badge implementation plan: `docs/superpowers/plans/2026-07-20-overview-sentiment-cnn-status-badges.md`

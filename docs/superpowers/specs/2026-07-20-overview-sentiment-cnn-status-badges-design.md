@@ -1,7 +1,7 @@
 # Overview Sentiment CNN Component Status Badges Design
 
 Date: 2026-07-20
-Status: User-approved visual direction; pending written-spec review
+Status: Approved
 
 ## Why This Change
 
@@ -63,7 +63,7 @@ No DB, ingestion, loader, refresh action, payload version, or AAII behavior chan
 - Rebuild the sentiment React production bundle.
 - Run the focused sentiment service/frontend regression suite.
 - Perform actual Browser QA with the detail disclosure open on desktop and a narrow mobile viewport.
-- Confirm at least `극단적 공포`, `공포`, `중립`, and `탐욕` are visually distinguishable, rating text remains present, AAII is unchanged, and there is no horizontal overflow.
+- Confirm every state present in the actual snapshot is visually distinguishable, rating text remains present, AAII is unchanged, and there is no horizontal overflow. The source-contract regression covers tone classes that are absent from the current snapshot, including `positive`.
 
 ## Acceptance Criteria
 
