@@ -55,6 +55,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-19 - Portfolio Monitoring은 그룹 성과와 근거형 위험 판단을 끝내는 React Command Center다
+
+- User request: Final Review 통과 포트폴리오와 직접 미국 주식·ETF를 그룹별로 추적하고, 성과·개별 상세·강점·약점·매크로 위험 신호를 React로 전면 개편해 달라고 요청함.
+- Interpreted goal: Streamlit 운영 패널을 재배치하는 것이 아니라 그룹 구성부터 현재 판단까지 한 화면에서 끝내는 선정 이후 monitoring product를 만든다.
+- Analysis result: 기존 selected filter/replay/KPI는 재사용하고, direct item lifecycle·DB persistence·common value curve·deterministic diagnosis를 새 service boundary로 만든다. 확률은 OOS calibration 전까지 공개하지 않는다.
+- Follow-up: Portfolio-first/Context Drawer A안, 최대 10개, integer shares, pre-start/post-end cash, cash dividend, common basis date를 승인했고 written design review 뒤 1~6차 implementation plan으로 전환한다.
+
 ### 2026-07-19 - master 병합은 공용 calendar와 Backtest 공개 계약을 함께 보존한다
 
 - User request: 현재 `codex/backtest-dev`의 master 병합 충돌을 `finance-integration-review`로 해결한 뒤 Portfolio Mix 작업을 계속 진행해 달라고 요청함.

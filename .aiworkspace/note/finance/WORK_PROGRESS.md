@@ -23,6 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
+  - New active design task is [portfolio-monitoring-react-command-center-v1-20260719](./tasks/active/portfolio-monitoring-react-command-center-v1-20260719/STATUS.md). Portfolio-first React Command Center, direct stock/ETF and Final Review candidate item model, staggered-start cash, deterministic diagnosis, macro calibration의 전체 roadmap `0/6차`이며 written spec review를 기다린다.
   - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~14차를 완료했고 승인된 15차 Portfolio Mix React one-shell 설계의 구현 계획과 개발을 이어간다.
   - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro를 현재 1D/5D/20D 체제와 5D/20D 조건부 전망으로 개편하고, 일봉 갱신 시 5년 compact snapshot을 materialize해 첫 진입은 DB-only로 읽으며 방법론·계산 추적을 React로 통합했다.
   - Recent completed Institutional Portfolios task is [institutional-13f-openfigi-mapping-v1-20260718](./tasks/active/institutional-13f-openfigi-mapping-v1-20260718/STATUS.md). 무료 OpenFIGI current resolution, curated-manager backfill, actual DB / Browser QA를 전체 roadmap `4/4`로 완료했다.
@@ -61,6 +62,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### 2026-07-19 - Portfolio Monitoring React Command Center Design
+
+- 기존 Portfolio Monitoring의 selected-candidate/replay/KPI 기반과 direct stock/ETF, lifecycle, diagnosis 공백을 감사했다.
+- Overview형 React one-shell, Portfolio-first Command Center, Context Drawer, 최대 10개, 정수 shares, start/end cash, cash dividends 계약을 승인했다.
+- 강점·약점은 deterministic layered rules로 시작하고 macro probability는 historical OOS publication gate 이후만 공개한다.
+- 상세 설계와 전체 `0/6차` handoff는 [active task](./tasks/active/portfolio-monitoring-react-command-center-v1-20260719/DESIGN.md)에 둔다.
 
 ### 2026-07-19 - master 병합 충돌 해소
 
