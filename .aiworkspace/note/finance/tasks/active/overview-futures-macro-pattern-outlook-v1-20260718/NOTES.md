@@ -1,9 +1,24 @@
 # Futures Macro Pattern Outlook V1 Notes
 
+## 2026-07-19 — Observation And Forecast Status Boundary
+
+- Current state and future confidence are different domains. A compatible stored current pattern is `OBSERVED`; partial current coverage is `PARTIAL`; missing current evidence is `UNAVAILABLE`.
+- Only future distributions use `VERIFIED / PROVISIONAL / UNAVAILABLE`. Asset cards keep current, 5D, and 20D statuses independently instead of applying the worst future status to the whole card.
+- Probability and conditional-path quality are separately measured. The visible horizon `estimate_status` is the conservative minimum; the raw snapshot also retains `probability_status` and path status for audit.
+- The discovered probability/path status divergence was a publication aggregation bug, not a threshold problem. `pattern_outlook_v4_conservative_status_10y` invalidates the intermediate snapshot that could show probability-only `VERIFIED` on the full horizon.
+
+## 2026-07-19 — Ten-Year History Result
+
+- One shared contract now requests 10 years for provider collection and uses a 10-year validation lookback during materialization.
+- The refresh completed for all 17 core symbols. RTY has about 9 years; the other 16 have about 10 years. No missing rows were interpolated.
+- 20D independent episodes increased from 42 to 88, so sample size is no longer its blocking gate.
+- 5D probability validation passes, but the path error and middle-50% coverage do not. 20D still misses Brier improvement, fold stability, and path coverage.
+- Both final horizons correctly remain `PROVISIONAL`; this is a valid evaluated result rather than incomplete current data.
+
 ## 2026-07-19 — Persisted Read Contract
 
 - `finance_meta.futures_macro_snapshot` is the source of truth for the Overview Futures Macro first read. Its `overview_current` row is keyed by source marker, schema version, and algorithm version.
-- The persisted payload is deliberately compact: current scores/evidence, coverage, current pattern, 5D/20D horizons, method/validation summaries, and bounded trace rows. Full five-year OHLCV remains in `finance_price.futures_ohlcv`.
+- The persisted payload is deliberately compact: current scores/evidence, coverage, current pattern, 5D/20D horizons, method/validation summaries, and bounded trace rows. Full ten-year OHLCV remains in `finance_price.futures_ohlcv`.
 - Materialization belongs after a successful `1d` futures ingestion. `1m` ingestion does not refresh this snapshot.
 - A materialization failure makes the daily ingestion result `partial_success`; it does not erase a previous latest-good snapshot.
 - UI entry has no lazy-compute fallback. This keeps reload semantics honest and prevents an apparently harmless tab visit from repeating the expensive historical replay.

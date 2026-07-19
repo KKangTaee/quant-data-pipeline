@@ -1,9 +1,18 @@
 # Futures Macro Pattern Outlook V1 Risks
 
+## 2026-07-19 Ten-Year Re-evaluation Residual Risks
+
+- Sample quantity is no longer the principal blocker: 5D has 120 independent episodes and 20D has 88.
+- 5D remaining failures are terminal path median error (`0.735945` vs baseline `0.735919`) and middle-50% coverage (`0.267692`).
+- 20D remaining failures are Brier baseline improvement (`0.719307` vs `0.718834`), chronological fold improvement ratio (`0.48`), and middle-50% coverage (`0.282828`).
+- Both horizons still have `방향 우위 미확인`; no statistically distinct edge may be claimed.
+- Any 5차 model work must target these measured failures with chronological out-of-sample comparison. Gate lowering, in-sample-only tuning, and hard-coded promotion remain prohibited.
+- RTY begins `2017-07-10`, about one year later than the other core symbols. Feature construction must continue using actual available family inputs without fabricated history.
+
 ## 2026-07-19 Materialized Snapshot Residual Risks
 
 - The first entry is intentionally latest-good and DB-only. If the stored schema/algorithm version is incompatible, the screen asks for `일봉 갱신` instead of silently rebuilding.
-- Five-year materialization is CPU-bound and measured about 10.5s on current data. It runs only after successful daily ingestion, never after 1m ingestion or display-only reload.
+- Ten-year collection plus materialization is CPU-bound; the actual provider collection job reported 10.59s and snapshot calculation completed behind the same approved daily-ingestion boundary. It never runs after 1m ingestion or display-only reload.
 - A daily collection may succeed while snapshot materialization fails; the result is `partial_success`, and operators should inspect the attached materialization result before retrying.
 - Compact trace tables are capped at 80 rows and are not a replacement for full OHLCV audit. Full candles remain in the canonical futures OHLCV table.
 
@@ -11,7 +20,7 @@
 
 ### Independent Sample Size
 
-Five years of daily rows can look large while 20D forward outcomes and adjacent pattern windows are highly overlapping.
+Ten years of daily rows can look large while 20D forward outcomes and adjacent pattern windows are highly overlapping.
 The publication gate must use effective independent episodes, not raw daily counts.
 
 ### Overfitting
@@ -40,7 +49,7 @@ Actual multi-window replay initially took 21.791s. Vectorized as-of path statist
 
 ### Calibration Gap
 
-The actual 5D Brier score is slightly worse than its unconditional baseline, while 20D has only 42 independent episodes. Both horizons correctly remain `PROVISIONAL`; improving this requires more independent history or a separately approved model/source revision, not lower gates.
+The ten-year actual 5D probability gate passes, but path error and interval coverage fail. The 20D sample reached 88, while Brier improvement, fold stability, and interval coverage fail. Both horizons correctly remain `PROVISIONAL`; improving this requires a separately approved model revision, not lower gates.
 
 ### Conditional Path Overconfidence
 

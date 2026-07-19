@@ -1,5 +1,31 @@
 # Futures Macro Pattern Outlook V1 Runs
 
+## 2026-07-19 Observation Status / Ten-Year History Upgrade
+
+## Baseline
+
+- Focused baseline passed: pattern-validation and snapshot modules `28 tests`; selected payload / React contracts `4 tests`.
+- Pre-backfill DB coverage had all 17 core symbols through `2026-07-17`, but 13 symbols began `2021-06-01`; only CL, DX, GC, and HG began `2016-07-18`.
+- Previous `pattern_outlook_v2_empirical_path` snapshot: 5D `120 episodes / PROVISIONAL`, 20D `42 episodes / PROVISIONAL`.
+- Previous 5D metrics: Brier `0.712218` vs `0.725258`, calibration `0.027630`, fold ratio `0.50`, path error `0.833499` vs `0.804409`, coverage `0.282051`, 6 folds.
+- Previous 20D metrics: Brier `0.711615` vs `0.714341`, calibration `0.065728`, fold ratio `0.50`, path error `0.816637` vs `0.849282`, coverage `0.347826`, 6 folds.
+
+## TDD And Build
+
+- Task 1 RED reproduced missing `observation_status`; GREEN passed 3 payload tests and committed `74cb1ee4`.
+- Task 2 RED reproduced the single React `EstimateStatus`; GREEN passed 3 source contracts, Vite built in 457ms, and committed `2b5d84b5`.
+- Task 3 RED reproduced `5y`, `years=5`, and the old algorithm version. GREEN passed 39 selected tests, Vite built in 460ms, and committed `0125798d`.
+- During actual evaluation, probability status was `VERIFIED` while path status was `PROVISIONAL`, but the horizon card exposed the probability status alone. Root cause was `conditional_status` being applied only inside `conditional_path` while `estimate_status` retained probability-only status.
+- Conservative status RED failed on missing `combined_outlook_publication_status`; GREEN passed 31 pattern / snapshot tests and committed `6a644f4d`. Publication thresholds were unchanged.
+
+## Actual Ten-Year Refresh And Re-evaluation
+
+- Existing `run_overview_futures_daily_ohlcv()` requested `10y / 1d`, processed `17/17`, failed `0`, UPSERTed `42,499` rows, and materialized a READY snapshot. Provider collection duration was `10.59s`.
+- Post-backfill coverage: 16 symbols begin `2016-07-18`; RTY begins `2017-07-10`. All end `2026-07-17`; row counts range from `2,276` to `2,520`.
+- Compatible snapshot: `pattern_outlook_v4_conservative_status_10y`, source marker `2026-07-17`, current pattern `READY`, family `6/6`, available symbols `17`, fresh-process DB read `0.0035s`.
+- 5D: `120 episodes`; probability `VERIFIED`, path `PROVISIONAL`, final `PROVISIONAL`. Brier `0.690140 < 0.697565` pass; calibration `0.033530` pass; fold ratio `0.68` pass; path error `0.735945 >= 0.735919` fail; coverage `0.267692` fail; 25 folds pass; edge not distinct.
+- 20D: `88 episodes`; probability `PROVISIONAL`, path `PROVISIONAL`, final `PROVISIONAL`. Brier `0.719307 >= 0.718834` fail; calibration `0.072160` pass; fold ratio `0.48` fail; path error `0.765790 < 0.782831` pass; coverage `0.282828` fail; 25 folds pass; edge not distinct.
+
 ## 2026-07-19 Tasks 10–12 — Materialized Snapshot, DB-Only Entry, React Trace
 
 - TDD persistence RED failed on the absent schema/loader; GREEN added `futures_macro_snapshot` UPSERT and DB-only loader. Persistence tests passed 2/2.
