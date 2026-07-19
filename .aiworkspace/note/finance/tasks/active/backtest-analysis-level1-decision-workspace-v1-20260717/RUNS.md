@@ -738,3 +738,14 @@
   -> `84 passed, 3 warnings in 1.66s`.
 - React production build: Vite 5.4.21, `176 modules transformed`, CSS 11.48 kB,
   JS 341.91 kB. target service/adapter `py_compile`과 `git diff --check`는 exit 0이다.
+
+## 2026-07-19 18차 Task 55 RED -> GREEN
+
+- linked worktree `/Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev`, branch
+  `codex/backtest-dev`를 확인했고 focused baseline은 `28 passed, 3 warnings`다.
+- RED:
+  `.venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k 'long_multi_select'`
+  -> `1 failed / 28 deselected`, missing `MULTI_SELECT_COMPACT_LIMIT`.
+- GREEN focused 전체 -> `29 passed, 3 warnings in 1.68s`.
+- React production build: Vite 5.4.21, `176 modules transformed`, CSS 12.47 kB,
+  JS 343.06 kB. `git diff --check` exit 0이다.

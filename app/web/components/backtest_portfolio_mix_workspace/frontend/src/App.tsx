@@ -62,6 +62,8 @@ export type PortfolioMixWorkspace = {
   feedback?: { notice?: string; error?: { message?: string } | null }
 }
 
+const MULTI_SELECT_COMPACT_LIMIT = 12
+
 function emit(id: string, payload: Record<string, unknown> = {}) {
   Streamlit.setComponentValue({
     event: { id, intent_id: `${id}-${Date.now()}-${Math.random()}`, payload },
@@ -81,6 +83,102 @@ function optionValue(field: Field, raw: string) {
   return field.options?.find((option) => String(option.value) === raw)?.value ?? raw
 }
 
+function MultiSelectFieldControl({ field, send }: {
+  field: Field
+  send: (value: unknown) => void
+}) {
+  const [query, setQuery] = useState("")
+  const options = field.options ?? []
+  const selected = Array.isArray(field.value) ? field.value : []
+  const selectedKeys = new Set(selected.map((value) => String(value)))
+  const normalizedQuery = query.trim().toLocaleLowerCase()
+  const filteredOptions = options.filter((option) =>
+    `${option.label} ${String(option.value)}`
+      .toLocaleLowerCase()
+      .includes(normalizedQuery),
+  )
+  const toggle = (nextValue: unknown) => {
+    const key = String(nextValue)
+    send(
+      selectedKeys.has(key)
+        ? selected.filter((value) => String(value) !== key)
+        : [...selected, nextValue],
+    )
+  }
+  const optionButton = (option: Option) => {
+    const active = selectedKeys.has(String(option.value))
+    return (
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={active}
+        key={String(option.value)}
+        onClick={() => toggle(option.value)}
+      >
+        <span aria-hidden="true">{active ? "✓" : ""}</span>
+        {option.label}
+      </button>
+    )
+  }
+
+  if (options.length <= MULTI_SELECT_COMPACT_LIMIT) {
+    return (
+      <div className="mix-checkbox-grid" role="group" aria-label={field.label}>
+        {options.map(optionButton)}
+      </div>
+    )
+  }
+
+  return (
+    <div className="mix-multi-select">
+      <div
+        className="mix-multi-selected-shelf"
+        aria-label={`${field.label} 현재 선택`}
+      >
+        <strong>선택 {selected.length}개</strong>
+        <div>
+          {selected.map((value) => {
+            const label = options.find(
+              (option) => String(option.value) === String(value),
+            )?.label ?? String(value)
+            return (
+              <button
+                type="button"
+                className="mix-multi-chip"
+                aria-label={`${label} 선택 해제`}
+                key={String(value)}
+                onClick={() => toggle(value)}
+              >
+                {label} <span aria-hidden="true">×</span>
+              </button>
+            )
+          })}
+          {selected.length === 0 && <span>선택된 자산 없음</span>}
+        </div>
+      </div>
+      <input
+        className="mix-multi-search"
+        type="search"
+        value={query}
+        aria-label={`${field.label} 검색`}
+        placeholder="종목 또는 자산 검색"
+        onChange={(event) => setQuery(event.currentTarget.value)}
+      />
+      <div
+        className="mix-multi-select-scroll"
+        role="group"
+        aria-label={`${field.label} 옵션`}
+      >
+        {filteredOptions.length > 0 ? (
+          filteredOptions.map(optionButton)
+        ) : (
+          <p className="mix-multi-empty">일치하는 옵션이 없습니다.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function FieldControl({ field, componentId }: { field: Field; componentId: string }) {
   const send = (value: unknown) => emit(
     field.field_id === "preset_name" ? "apply_preset" : "set_component_field",
@@ -95,11 +193,7 @@ function FieldControl({ field, componentId }: { field: Field; componentId: strin
     return <div className="mix-segmented">{(field.options ?? []).map((option) => <button type="button" key={String(option.value)} aria-pressed={option.value === field.value} onClick={() => send(option.value)}>{option.label}</button>)}</div>
   }
   if (field.control === "multi_select") {
-    const selected = Array.isArray(field.value) ? field.value : []
-    return <div className="mix-checkbox-grid" role="group" aria-label={field.label}>{(field.options ?? []).map((option) => {
-      const active = selected.some((value) => String(value) === String(option.value))
-      return <button type="button" role="checkbox" aria-checked={active} key={String(option.value)} onClick={() => send(active ? selected.filter((value) => String(value) !== String(option.value)) : [...selected, option.value])}><span aria-hidden="true">{active ? "✓" : ""}</span>{option.label}</button>
-    })}</div>
+    return <MultiSelectFieldControl field={field} send={send} />
   }
   if (field.control === "single_select") {
     return <select value={String(field.value ?? "")} onChange={(event) => send(optionValue(field, event.target.value))}>{(field.options ?? []).map((option) => <option key={String(option.value)} value={String(option.value)}>{option.label}</option>)}</select>

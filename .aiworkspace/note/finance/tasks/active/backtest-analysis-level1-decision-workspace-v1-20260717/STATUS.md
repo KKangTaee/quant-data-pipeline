@@ -381,3 +381,12 @@ Last Updated: 2026-07-19
   `1177px` 한 열에 두 card가 각각 `1177px`, 760px은 `633px` 한 열이며 outer horizontal overflow는 0이다.
 - fresh closeout verification은 UI/boundary `84 passed, 3 warnings`, React build
   `176 modules transformed`, target `py_compile`과 `git diff --check` exit 0이다.
+
+## Current 18차 Position
+
+- Portfolio Mix의 기존 `multi_select`는 option 수와 관계없이 모두 펼쳐 GTAA 방어 자산 20여 개가
+  component 세부 설정 높이를 독점했다. Single Strategy와 달리 compact long-list 분기가 없었다.
+- options 12개 이하는 기존 grid를 유지하고, 긴 목록은 선택 chip, case-insensitive 검색, 240px 내부
+  scroll과 empty state를 사용한다. event/payload/Python preset·runtime 계약은 변경하지 않았다.
+- Task 55 RED는 `1 failed / 28 deselected`, GREEN focused 전체는 `29 passed, 3 warnings`이며
+  React build는 `176 modules transformed`, `git diff --check` exit 0이다.

@@ -1084,3 +1084,24 @@ def test_mix_result_chart_geometry_uses_plot_bounds_and_full_width_rows():
         ".mix-chart-grid { display: grid; grid-template-columns: minmax(0, 1fr);"
         in styles_source
     )
+
+
+def test_mix_long_multi_select_uses_search_selected_shelf_and_internal_scroll():
+    root = Path(__file__).resolve().parents[1]
+    app_source = (
+        root
+        / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/App.tsx"
+    ).read_text()
+    styles_source = (
+        root
+        / "app/web/components/backtest_portfolio_mix_workspace/frontend/src/styles.css"
+    ).read_text()
+
+    assert "const MULTI_SELECT_COMPACT_LIMIT = 12" in app_source
+    assert "function MultiSelectFieldControl" in app_source
+    assert "mix-multi-selected-shelf" in app_source
+    assert 'type="search"' in app_source
+    assert "일치하는 옵션이 없습니다." in app_source
+    assert ".mix-multi-select-scroll" in styles_source
+    assert "max-height: 240px" in styles_source
+    assert "overflow-y: auto" in styles_source

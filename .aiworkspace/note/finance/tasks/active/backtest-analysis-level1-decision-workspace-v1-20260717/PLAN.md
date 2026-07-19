@@ -7980,7 +7980,7 @@ Streamlit component Browser QA.
 - Consumes: `Field { field_id, label, value, options }`, existing `send(value)` callback.
 - Produces: `MultiSelectFieldControl({ field, send })` with the same `unknown[]` value payload.
 
-- [ ] **Step 1: Write the failing source contract**
+- [x] **Step 1: Write the failing source contract**
 
 ```python
 def test_mix_long_multi_select_uses_search_selected_shelf_and_internal_scroll():
@@ -7994,7 +7994,7 @@ def test_mix_long_multi_select_uses_search_selected_shelf_and_internal_scroll():
     assert "overflow-y: auto" in styles_source
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q -k 'long_multi_select'
@@ -8002,7 +8002,7 @@ def test_mix_long_multi_select_uses_search_selected_shelf_and_internal_scroll():
 
 Expected: long-list helper/search/shelf/scroll가 없어 FAIL.
 
-- [ ] **Step 3: Implement the minimal React helper**
+- [x] **Step 3: Implement the minimal React helper**
 
 ```tsx
 const MULTI_SELECT_COMPACT_LIMIT = 12
@@ -8025,7 +8025,7 @@ function MultiSelectFieldControl({ field, send }: {
 `FieldControl`의 `multi_select` branch는 helper를 호출하며 기존 option order와
 `set_component_field` payload를 유지한다.
 
-- [ ] **Step 4: Add compact selector CSS**
+- [x] **Step 4: Add compact selector CSS**
 
 ```css
 .mix-multi-select-scroll {
@@ -8040,7 +8040,7 @@ function MultiSelectFieldControl({ field, send }: {
 
 Selected chips는 wrap하고, 520px 이하에서 scroll option grid를 1열로 접는다.
 
-- [ ] **Step 5: Run GREEN and production build**
+- [x] **Step 5: Run GREEN and production build**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_portfolio_mix_workspace.py -q
@@ -8050,7 +8050,7 @@ git diff --check
 
 Expected: focused tests와 Vite build가 통과한다.
 
-- [ ] **Step 6: Commit implementation unit**
+- [x] **Step 6: Commit implementation unit**
 
 ```bash
 git commit -m "Portfolio Mix 방어 자산 선택 압축"
