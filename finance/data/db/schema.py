@@ -1166,6 +1166,7 @@ PORTFOLIO_MONITORING_SCHEMAS = {
           is_default TINYINT(1) NOT NULL DEFAULT 0,
           status ENUM('active','archived') NOT NULL DEFAULT 'active',
           version BIGINT NOT NULL DEFAULT 1,
+          metadata_json JSON NULL,
 
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

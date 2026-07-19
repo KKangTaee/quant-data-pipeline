@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 from datetime import date
 from decimal import Decimal
 from typing import Any, Callable
+from collections.abc import Mapping
 from uuid import uuid4
 
 from .persistence import (
@@ -180,7 +181,11 @@ def execute_create_group(
 ) -> CommandResult:
     _assert_command_type(command, CommandType.CREATE_GROUP)
     name = _clean_name(command.payload.get("name"))
-    fingerprint = _command_fingerprint(command, {"name": name})
+    raw_metadata = command.payload.get("metadata")
+    if raw_metadata is not None and not isinstance(raw_metadata, Mapping):
+        raise CommandValidationError("Portfolio group metadata must be an object.")
+    metadata = dict(raw_metadata or {})
+    fingerprint = _command_fingerprint(command, {"name": name, "metadata": metadata})
 
     def mutate() -> CommandResult:
         if any(group.name.casefold() == name.casefold() for group in repository.list_groups()):
@@ -191,6 +196,7 @@ def execute_create_group(
                 portfolio_group_id=group_id,
                 name=name,
                 is_default=False,
+                metadata=metadata,
             )
         )
         return CommandResult(

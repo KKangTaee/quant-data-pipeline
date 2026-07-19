@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
+from pathlib import Path
 from typing import Any, Callable, ContextManager, Iterator, Protocol
 
 from finance.data.db.mysql import MySQLClient
@@ -25,6 +27,7 @@ class PortfolioGroupRecord:
     is_default: bool
     status: str = "active"
     version: int = 1
+    metadata: dict[str, Any] | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
     deleted_at: datetime | None = None
@@ -128,6 +131,7 @@ def _group_from_row(row: dict[str, Any] | None) -> PortfolioGroupRecord | None:
         is_default=bool(row.get("is_default")),
         status=str(row.get("status") or "active"),
         version=int(row.get("version") or 1),
+        metadata=_json_object(row.get("metadata_json")),
         created_at=row.get("created_at"),
         updated_at=row.get("updated_at"),
         deleted_at=row.get("deleted_at"),
@@ -264,8 +268,8 @@ class MySQLMonitoringRepository:
             db.execute(
                 """
                 INSERT INTO monitoring_portfolio_group
-                  (portfolio_group_id, name, is_default, status, version, deleted_at)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                  (portfolio_group_id, name, is_default, status, version, metadata_json, deleted_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """,
                 [
                     record.portfolio_group_id,
@@ -273,6 +277,7 @@ class MySQLMonitoringRepository:
                     int(record.is_default),
                     record.status,
                     record.version,
+                    _json_dump(record.metadata),
                     record.deleted_at,
                 ],
             )
@@ -417,3 +422,335 @@ class MySQLMonitoringRepository:
         if updated is None:
             raise RuntimeError(f"Command disappeared after update: {command_id}")
         return updated
+
+
+@dataclass(frozen=True)
+class LegacyImportIssue:
+    code: str
+    legacy_portfolio_id: str
+    legacy_slot_id: str | None
+    decision_id: str | None
+    message: str
+
+
+@dataclass(frozen=True)
+class LegacyItemPlan:
+    legacy_portfolio_id: str
+    legacy_slot_id: str
+    decision_id: str
+    requested_start_date: date
+    initial_capital: Decimal
+    memo: str
+    use_latest_end: bool
+    requested_end_date: date | None
+
+
+@dataclass(frozen=True)
+class LegacyGroupPlan:
+    legacy_portfolio_id: str
+    name: str
+    description: str
+    source_schema_version: int | None
+    items: tuple[LegacyItemPlan, ...]
+
+
+@dataclass(frozen=True)
+class LegacyImportPlan:
+    source_path: str
+    source_fingerprint: str
+    groups: tuple[LegacyGroupPlan, ...]
+    issues: tuple[LegacyImportIssue, ...]
+    group_create_count: int
+    item_create_count: int
+    duplicate_item_count: int
+    blocked_item_count: int
+
+
+@dataclass(frozen=True)
+class LegacyImportResult:
+    source_fingerprint: str
+    groups_created: int
+    groups_replayed: int
+    items_created: int
+    items_replayed: int
+    items_blocked: int
+    items_skipped: int
+    group_ids_by_legacy_id: dict[str, str]
+    issues: tuple[LegacyImportIssue, ...]
+
+
+def _legacy_date(value: Any) -> date | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return date.fromisoformat(text[:10])
+    except ValueError:
+        return None
+
+
+def _legacy_positive_decimal(value: Any) -> Decimal | None:
+    try:
+        parsed = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+    return parsed if parsed.is_finite() and parsed > 0 else None
+
+
+def _legacy_rows(source_bytes: bytes) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for line_number, raw_line in enumerate(source_bytes.decode("utf-8").splitlines(), start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid legacy portfolio JSONL at line {line_number}.") from exc
+        if not isinstance(row, dict):
+            raise ValueError(f"Legacy portfolio row {line_number} must be an object.")
+        rows.append(dict(row))
+    return rows
+
+
+def build_legacy_import_plan(
+    path: Path | str,
+    final_candidates: Sequence[dict[str, Any]],
+) -> LegacyImportPlan:
+    """Build a deterministic, read-only migration plan from the legacy saved JSONL."""
+
+    source_path = Path(path)
+    source_bytes = source_path.read_bytes()
+    source_fingerprint = hashlib.sha256(source_bytes).hexdigest()
+    candidate_ids = {
+        str(row.get("decision_id") or "").strip()
+        for row in final_candidates
+        if row.get("monitoring_candidate") is True
+        and str(row.get("decision_id") or "").strip()
+    }
+    groups: list[LegacyGroupPlan] = []
+    issues: list[LegacyImportIssue] = []
+    duplicate_count = 0
+    blocked_count = 0
+
+    for row_index, row in enumerate(_legacy_rows(source_bytes), start=1):
+        if row.get("deleted_at"):
+            continue
+        legacy_portfolio_id = str(row.get("portfolio_id") or f"legacy-row-{row_index}").strip()
+        name = str(row.get("name") or "").strip() or f"Imported Portfolio {row_index}"
+        description = str(row.get("description") or "").strip()
+        raw_slots = [dict(slot) for slot in list(row.get("strategy_slots") or []) if isinstance(slot, dict)]
+        slot_decision_ids = {
+            str(slot.get("decision_id") or "").strip()
+            for slot in raw_slots
+            if str(slot.get("decision_id") or "").strip()
+        }
+        for decision_id in list(row.get("selected_decision_ids") or []):
+            clean_decision_id = str(decision_id or "").strip()
+            if clean_decision_id and clean_decision_id not in slot_decision_ids:
+                raw_slots.append(
+                    {
+                        "slot_id": f"slot_{clean_decision_id}",
+                        "decision_id": clean_decision_id,
+                    }
+                )
+
+        items: list[LegacyItemPlan] = []
+        seen_decision_ids: set[str] = set()
+        for slot_index, slot in enumerate(raw_slots, start=1):
+            decision_id = str(slot.get("decision_id") or "").strip()
+            slot_id = str(slot.get("slot_id") or f"slot-{slot_index}").strip()
+            if decision_id in seen_decision_ids:
+                duplicate_count += 1
+                issues.append(
+                    LegacyImportIssue(
+                        code="duplicate_source",
+                        legacy_portfolio_id=legacy_portfolio_id,
+                        legacy_slot_id=slot_id,
+                        decision_id=decision_id or None,
+                        message="Duplicate selected strategy in the same legacy portfolio was skipped.",
+                    )
+                )
+                continue
+            if decision_id:
+                seen_decision_ids.add(decision_id)
+            if not decision_id or decision_id not in candidate_ids:
+                blocked_count += 1
+                issues.append(
+                    LegacyImportIssue(
+                        code="missing_monitoring_candidate",
+                        legacy_portfolio_id=legacy_portfolio_id,
+                        legacy_slot_id=slot_id,
+                        decision_id=decision_id or None,
+                        message="The Final Review monitoring candidate is missing or no longer monitorable.",
+                    )
+                )
+                continue
+            requested_start = _legacy_date(slot.get("start"))
+            initial_capital = _legacy_positive_decimal(slot.get("initial_capital"))
+            if requested_start is None or initial_capital is None:
+                blocked_count += 1
+                issues.append(
+                    LegacyImportIssue(
+                        code="invalid_legacy_slot",
+                        legacy_portfolio_id=legacy_portfolio_id,
+                        legacy_slot_id=slot_id,
+                        decision_id=decision_id,
+                        message="A valid start date and positive initial capital are required.",
+                    )
+                )
+                continue
+            items.append(
+                LegacyItemPlan(
+                    legacy_portfolio_id=legacy_portfolio_id,
+                    legacy_slot_id=slot_id,
+                    decision_id=decision_id,
+                    requested_start_date=requested_start,
+                    initial_capital=initial_capital,
+                    memo=str(slot.get("memo") or "").strip(),
+                    use_latest_end=bool(slot.get("use_latest_end", True)),
+                    requested_end_date=_legacy_date(slot.get("end")),
+                )
+            )
+        groups.append(
+            LegacyGroupPlan(
+                legacy_portfolio_id=legacy_portfolio_id,
+                name=name,
+                description=description,
+                source_schema_version=(int(row["schema_version"]) if row.get("schema_version") is not None else None),
+                items=tuple(items),
+            )
+        )
+
+    return LegacyImportPlan(
+        source_path=str(source_path),
+        source_fingerprint=source_fingerprint,
+        groups=tuple(groups),
+        issues=tuple(issues),
+        group_create_count=len(groups),
+        item_create_count=sum(len(group.items) for group in groups),
+        duplicate_item_count=duplicate_count,
+        blocked_item_count=blocked_count,
+    )
+
+
+def _legacy_command_id(base_command_id: str, *identity: str) -> str:
+    digest = hashlib.sha256(
+        "|".join([str(base_command_id), *[str(value) for value in identity]]).encode("utf-8")
+    ).hexdigest()
+    return f"legacy_{digest[:48]}"
+
+
+def import_legacy_portfolios(
+    repository: MonitoringRepository,
+    plan: LegacyImportPlan,
+    command_id: str,
+) -> LegacyImportResult:
+    """Apply a prepared legacy plan through normal idempotent monitoring commands."""
+
+    from .commands import EntryResolution, execute_add_item, execute_create_group
+    from .schemas import (
+        AddMonitoringItemInput,
+        CommandType,
+        FundingMode,
+        InstrumentKind,
+        MonitoringCommandInput,
+        SourceType,
+    )
+
+    clean_command_id = str(command_id or "").strip()
+    if not clean_command_id:
+        raise ValueError("command_id is required.")
+    groups_created = 0
+    groups_replayed = 0
+    items_created = 0
+    items_replayed = 0
+    group_ids: dict[str, str] = {}
+
+    for group in plan.groups:
+        group_metadata = {
+            "legacy_portfolio_id": group.legacy_portfolio_id,
+            "legacy_source_fingerprint": plan.source_fingerprint,
+            "legacy_source_path": plan.source_path,
+            "legacy_schema_version": group.source_schema_version,
+            "legacy_description": group.description,
+        }
+        group_result = execute_create_group(
+            repository,
+            MonitoringCommandInput(
+                command_id=_legacy_command_id(
+                    clean_command_id,
+                    plan.source_fingerprint,
+                    "group",
+                    group.legacy_portfolio_id,
+                ),
+                command_type=CommandType.CREATE_GROUP,
+                target_id=None,
+                payload={"name": group.name, "metadata": group_metadata},
+            ),
+        )
+        group_ids[group.legacy_portfolio_id] = group_result.target_id
+        if group_result.replayed:
+            groups_replayed += 1
+        else:
+            groups_created += 1
+
+        for item in group.items:
+            item_metadata = {
+                "legacy_portfolio_id": item.legacy_portfolio_id,
+                "legacy_slot_id": item.legacy_slot_id,
+                "legacy_decision_id": item.decision_id,
+                "legacy_source_fingerprint": plan.source_fingerprint,
+                "legacy_memo": item.memo,
+                "legacy_use_latest_end": item.use_latest_end,
+                "legacy_requested_end_date": (
+                    item.requested_end_date.isoformat() if item.requested_end_date else None
+                ),
+                "legacy_requires_revalidation": True,
+            }
+            item_result = execute_add_item(
+                repository,
+                MonitoringCommandInput(
+                    command_id=_legacy_command_id(
+                        clean_command_id,
+                        plan.source_fingerprint,
+                        "item",
+                        item.legacy_portfolio_id,
+                        item.legacy_slot_id,
+                    ),
+                    command_type=CommandType.ADD_ITEM,
+                    target_id=group_result.target_id,
+                    payload={},
+                ),
+                AddMonitoringItemInput(
+                    portfolio_group_id=group_result.target_id,
+                    source_type=SourceType.SELECTED_STRATEGY,
+                    source_ref=item.decision_id,
+                    instrument_kind=InstrumentKind.STRATEGY,
+                    requested_start_date=item.requested_start_date,
+                    funding_mode=FundingMode.FIXED_NOTIONAL,
+                    input_notional=item.initial_capital,
+                ),
+                resolve_entry=lambda validated, metadata=item_metadata: EntryResolution(
+                    effective_start_date=validated.requested_start_date,
+                    entry_close=Decimal("1"),
+                    initial_capital=validated.input_notional or Decimal("0"),
+                    metadata=metadata,
+                ),
+            )
+            if item_result.replayed:
+                items_replayed += 1
+            else:
+                items_created += 1
+
+    return LegacyImportResult(
+        source_fingerprint=plan.source_fingerprint,
+        groups_created=groups_created,
+        groups_replayed=groups_replayed,
+        items_created=items_created,
+        items_replayed=items_replayed,
+        items_blocked=plan.blocked_item_count,
+        items_skipped=plan.duplicate_item_count,
+        group_ids_by_legacy_id=group_ids,
+        issues=plan.issues,
+    )

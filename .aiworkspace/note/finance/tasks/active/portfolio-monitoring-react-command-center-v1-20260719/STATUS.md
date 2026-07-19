@@ -1,12 +1,12 @@
 # Portfolio Monitoring React Command Center V1 Status
 
-Status: 1차 Contract And Storage Foundation In Progress
+Status: 1차 Complete / 2차 Monitoring Service Foundation In Progress
 Last Updated: 2026-07-19
 
 ## Current Position
 
-- 전체 roadmap: `0/6차 구현`
-- current milestone: 1차 Task 2 command/repository complete; Task 3 legacy import next
+- 전체 roadmap: `1/6차 구현 완료`
+- current milestone: 2차 Task 4 combined monitoring catalog
 - written design: approved by user
 - detailed implementation plan: complete and self-reviewed
 - implementation: started in inline execution mode
@@ -25,6 +25,6 @@ Last Updated: 2026-07-19
 
 ## Next Action
 
-1. Task 2 command/repository commit
-2. Task 3 legacy non-destructive import red-green-commit
-3. 1차 gate verification 후 2차 service foundation으로 이동
+1. Task 4 combined monitoring catalog red-green-commit
+2. Task 5 direct-security valuation ledger
+3. Task 6 selected-strategy adapter and Task 7 group read model

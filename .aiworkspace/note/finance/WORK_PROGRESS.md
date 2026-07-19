@@ -6664,3 +6664,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - Portfolio-first Command Center, Context Drawer, direct stock/ETF와 Final Review candidate, integer shares, common-basis KPI의 written design 승인을 완료했다.
 - 전체를 contract/storage -> service -> React -> diagnosis -> macro observation -> calibration/history의 `6차 / 21 task` TDD 계획으로 구체화했다.
 - 현재 구현은 `0/6차`이며 execution mode 선택 뒤 1차 저장 계약부터 시작한다. 상세는 `tasks/active/portfolio-monitoring-react-command-center-v1-20260719/PLAN.md`를 본다.
+
+## 2026-07-19 - Portfolio Monitoring React 개편 1차 완료
+
+- `monitoring_portfolio_group/item/command` schema, integer-share/notional domain contract, optimistic group command와 idempotent add/end lifecycle을 구현했다.
+- legacy saved setup은 source fingerprint 기반 read-only plan과 명시적 apply를 분리했다. Fixture 2회 import는 중복 없이 replay되고 실제 saved 파일은 3 groups / 2 importable / 4 blocked로 dry-run만 수행했다.
+- 전체 roadmap `1/6차` 완료. 다음은 2차 stock/ETF + Final Review catalog, valuation lane, common-basis read model이다.

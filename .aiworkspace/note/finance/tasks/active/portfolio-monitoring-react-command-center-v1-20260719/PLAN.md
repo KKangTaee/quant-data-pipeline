@@ -124,12 +124,12 @@ plan = build_legacy_import_plan(path, final_candidates)
 return plan if not apply else _apply_legacy_import(repository, plan, command_id)
 ```
 
-- [ ] Add a fixture with two legacy groups, one valid strategy slot, one missing Final Review decision, and one duplicate source row. Test that dry-run writes nothing and reports exact create/skip/block counts.
-- [ ] Add import tests proving source file bytes are unchanged, a second import is a no-op, valid strategy slots retain start/notional provenance, and missing decisions block only their item rather than deleting the group.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_legacy_import.py -q` and confirm missing API failures.
-- [ ] Implement deterministic source hashing and an explicit `apply=False` dry-run default. Import through normal idempotent command/repository paths; never call the legacy JSONL writer.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_legacy_import.py -q`, then `git diff --check`, and record fixture/source checksum verification in task `RUNS.md`.
-- [ ] Commit as `기존 모니터링 설정 비파괴 이관 추가`.
+- [x] Add a fixture with two legacy groups, one valid strategy slot, one missing Final Review decision, and one duplicate source row. Test that dry-run writes nothing and reports exact create/skip/block counts.
+- [x] Add import tests proving source file bytes are unchanged, a second import is a no-op, valid strategy slots retain start/notional provenance, and missing decisions block only their item rather than deleting the group.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_legacy_import` and confirm missing API failures.
+- [x] Implement deterministic source hashing and an explicit read-only plan / separate apply boundary. Import through normal idempotent command/repository paths; never call the legacy JSONL writer.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_legacy_import`, then `git diff --check`, and record fixture/source checksum verification in task `RUNS.md`.
+- [x] Commit as `기존 모니터링 설정 비파괴 이관 추가`.
 
 **1차 완료 게이트:** schema/command/import tests pass; production DB migration is not run automatically; legacy file checksum is unchanged. This stage does not yet render React or calculate portfolio performance.
 

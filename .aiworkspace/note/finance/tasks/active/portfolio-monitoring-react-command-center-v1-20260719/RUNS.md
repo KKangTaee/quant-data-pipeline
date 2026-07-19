@@ -16,3 +16,7 @@
 | 2026-07-19 | 1차 Task 1 focused verification | 6 unittest checks PASS; schema/domain compile and `git diff --check` PASS |
 | 2026-07-19 | 1차 Task 2 command/repository RED | 8 expected failures: persistence and command modules absent |
 | 2026-07-19 | 1차 Task 2 focused verification | 15 unittest checks PASS including existing Selected Dashboard regression; compile and `git diff --check` PASS |
+| 2026-07-19 | 1차 Task 3 legacy import RED | Missing import APIs/group provenance reproduced; invalid `null` capital root cause isolated to uncaught `Decimal.InvalidOperation` |
+| 2026-07-19 | 1차 Task 3 fixture/import verification | 5 unittest checks PASS; second apply replays 2 groups/2 items without duplicates and source bytes remain unchanged |
+| 2026-07-19 | Actual legacy saved setup read-only dry run | source fingerprint `a2eadad5c7ea...`; groups 3 / importable items 2 / duplicates 0 / blocked items 4; no DB apply or source rewrite |
+| 2026-07-19 | 1차 Contract And Storage Foundation gate | 20 unittest checks PASS; production DB migration not run; actual legacy saved checksum remains `a2eadad5c7ea...` |
