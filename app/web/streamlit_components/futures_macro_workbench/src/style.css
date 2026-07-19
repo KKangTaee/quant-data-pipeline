@@ -270,17 +270,19 @@ button { font: inherit; }
 .fm-workbench__asset-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .fm-workbench__asset-grid article { border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
 .fm-workbench__asset-grid article > header strong { font-size: 0.8rem; }
+.fm-workbench__asset-heading-meta { align-items: end; display: grid; gap: 7px; justify-items: end; }
+.fm-workbench__asset-heading-meta > small { color: var(--muted); font-size: 0.76rem; line-height: 1.45; text-align: right; }
+.fm-workbench__asset-status-rail { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.fm-workbench__asset-status-rail b { background: #fff7e8; border-radius: 999px; color: #9b681a; font-size: 0.55rem; padding: 4px 7px; white-space: nowrap; }
+.fm-workbench__asset-status-rail b.estimate-verified { background: #e9f7f1; color: #24795d; }
+.fm-workbench__asset-status-rail b.estimate-unavailable { background: #eef2f5; color: #667888; }
 .fm-workbench__asset-current { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 13px; }
 .fm-workbench__asset-current span { background: var(--soft); border-radius: 8px; font-size: 0.67rem; font-weight: 800; padding: 8px 4px; text-align: center; }
 .fm-workbench__asset-current small { color: var(--muted); display: block; font-size: 0.57rem; margin-bottom: 3px; }
 .fm-workbench__asset-outlook { display: grid; gap: 5px; margin-top: 10px; }
-.fm-workbench__asset-outlook span { align-items: center; color: var(--muted); display: grid; font-size: 0.66rem; gap: 5px; grid-template-columns: auto minmax(0, 1fr) auto; }
-.fm-workbench__asset-outlook small { color: var(--muted); font-size: 0.62rem; }
-.fm-workbench__asset-outlook strong { color: #40566a; }
-.fm-workbench__asset-outlook b { line-height: 1.25; text-align: right; white-space: normal; }
-.fm-workbench__asset-outlook b { background: #fff7e8; border-radius: 999px; color: #9b681a; font-size: 0.52rem; padding: 3px 5px; }
-.fm-workbench__asset-outlook b.estimate-verified { background: #e9f7f1; color: #24795d; }
-.fm-workbench__asset-outlook b.estimate-unavailable { background: #eef2f5; color: #667888; }
+.fm-workbench__asset-outlook span { align-items: center; color: var(--muted); display: grid; font-size: 0.66rem; gap: 7px; grid-template-columns: auto minmax(0, 1fr); }
+.fm-workbench__asset-outlook small { color: var(--muted); font-size: 0.62rem; white-space: nowrap; }
+.fm-workbench__asset-outlook strong { color: #40566a; justify-self: end; white-space: nowrap; }
 .fm-workbench__asset-grid article p { border-top: 1px solid #edf1f4; color: var(--muted); font-size: 0.66rem; line-height: 1.45; margin: 11px 0 0; padding-top: 10px; }
 
 .fm-workbench__disclosure { overflow: hidden; }
@@ -333,6 +335,9 @@ button { font: inherit; }
   .fm-workbench__evidence-groups { grid-template-columns: 1fr; }
   .fm-workbench__section-heading { align-items: start; flex-direction: column; }
   .fm-workbench__section-heading > small { text-align: left; }
+  .fm-workbench__asset-heading-meta { align-self: stretch; justify-items: start; }
+  .fm-workbench__asset-heading-meta > small { text-align: left; }
+  .fm-workbench__asset-status-rail { justify-content: flex-start; }
   .fm-pattern-map__heading { align-items: flex-start; }
   .fm-pattern-map__reading { border-left: 0; border-top: 1px solid var(--line); padding: 14px 0 0; }
   .fm-workbench__horizon-card { min-height: 0; }
