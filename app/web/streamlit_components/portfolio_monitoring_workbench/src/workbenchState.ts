@@ -1,4 +1,4 @@
-import type { DiagnosisHistoryRow, DiagnosisProjection, GroupMetrics, GroupSummary, ItemRow, MacroObservationProjection, RiskCalibrationProjection, SourceHealth } from "./contracts";
+import type { DiagnosisHistoryRow, DiagnosisProjection, GroupMetrics, GroupSummary, ItemRow, MacroObservationProjection, MarketChartRow, RiskCalibrationProjection, SourceHealth } from "./contracts";
 
 export type MonitoringSourceType = "direct_security" | "selected_strategy";
 export type MonitoringKind = "stock" | "etf" | "strategy";
@@ -286,6 +286,40 @@ export function nearestChartPointIndex(
   return validIndices.reduce((nearest, index) => (
     Math.abs(index - targetIndex) < Math.abs(nearest - targetIndex) ? index : nearest
   ));
+}
+
+export type MarketChartBounds = {
+  minPrice: number;
+  maxPrice: number;
+  maxVolume: number;
+};
+
+export function buildMarketChartBounds(rows: MarketChartRow[]): MarketChartBounds | null {
+  if (!rows.length) return null;
+  const lows = rows.map((row) => row.low).filter(Number.isFinite);
+  const highs = rows.map((row) => row.high).filter(Number.isFinite);
+  if (!lows.length || !highs.length) return null;
+  const volumes = rows
+    .map((row) => row.volume)
+    .filter((value): value is number => value != null && Number.isFinite(value) && value >= 0);
+  return {
+    minPrice: Math.min(...lows),
+    maxPrice: Math.max(...highs),
+    maxVolume: volumes.length ? Math.max(...volumes) : 0,
+  };
+}
+
+export function nearestMarketChartRowIndex(
+  rowCount: number,
+  pointerX: number,
+  plotLeft: number,
+  plotRight: number,
+): number | null {
+  if (rowCount < 1) return null;
+  const plotWidth = Math.max(plotRight - plotLeft, 1);
+  const boundedX = Math.min(Math.max(pointerX, plotLeft), plotRight);
+  const target = ((boundedX - plotLeft) / plotWidth) * Math.max(rowCount - 1, 0);
+  return Math.min(Math.max(Math.round(target), 0), rowCount - 1);
 }
 
 export type ChartTooltipBounds = {

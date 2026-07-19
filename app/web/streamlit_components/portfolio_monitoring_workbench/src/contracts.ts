@@ -44,6 +44,27 @@ export type GroupValueResult = {
   history_item_count: number;
 };
 
+export type MarketChartRow = {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number | null;
+};
+
+export type SelectedItemMarketChart = {
+  status: "READY" | "UNSUPPORTED" | "MISSING" | "ERROR";
+  monitoring_item_id: string | null;
+  source_type: "direct_security" | "selected_strategy" | null;
+  source_ref: string | null;
+  instrument_kind: "stock" | "etf" | "strategy" | string | null;
+  timeframe: "1d";
+  max_rows: number;
+  rows: MarketChartRow[];
+  reason: string | null;
+};
+
 export type CatalogItem = {
   source_type: "direct_security" | "selected_strategy";
   source_ref: string;
@@ -139,6 +160,7 @@ export type PortfolioMonitoringWorkspace = {
   generated_at: string;
   groups: GroupSummary[];
   active_group: GroupValueResult | null;
+  selected_item_market_chart?: SelectedItemMarketChart;
   catalog: { query: string; items: CatalogItem[] };
   commands: CommandProjection[];
   item_builder_state?: unknown;

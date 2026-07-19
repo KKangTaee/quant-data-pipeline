@@ -1,6 +1,6 @@
 import React, { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
-import type { DiagnosisRow, ItemRow, PortfolioMonitoringWorkspace } from "./contracts";
+import type { DiagnosisRow, ItemRow, MarketChartRow, PortfolioMonitoringWorkspace, SelectedItemMarketChart } from "./contracts";
 import {
   applySourceType,
   availableFundingModes,
@@ -11,11 +11,13 @@ import {
   buildGroupChartSeries,
   buildDiagnosisSections,
   buildMacroObservationPresentation,
+  buildMarketChartBounds,
   buildRiskCalibrationPresentation,
   createItemDraft,
   formatMetric,
   itemBuilderRecoveryKey,
   nearestChartPointIndex,
+  nearestMarketChartRowIndex,
   normalizeItemBuilderState,
   placeChartTooltip,
   selectActiveGroup,
@@ -52,6 +54,14 @@ function todayText() {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function priceText(value: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(value);
+}
+
+function volumeText(value: number | null) {
+  return value == null ? "자료 없음" : new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value);
 }
 
 function ValueChart({ rows, items }: { rows: Array<Record<string, string | number | null>>; items: ItemRow[] }) {
@@ -189,6 +199,171 @@ function ValueChart({ rows, items }: { rows: Array<Record<string, string | numbe
   );
 }
 
+function MarketPriceChart({ projection }: { projection: SelectedItemMarketChart }) {
+  const [mode, setMode] = useState<"line" | "candle">("line");
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  useEffect(() => {
+    setMode("line");
+    setActiveIndex(null);
+  }, [projection.monitoring_item_id]);
+
+  if (projection.status !== "READY" || !projection.rows.length) {
+    return (
+      <div className={`pm-market-state is-${projection.status.toLowerCase()}`}>
+        <strong>가격 차트를 표시할 수 없습니다.</strong>
+        <span>{projection.reason || "저장된 가격 이력을 확인해 주세요."}</span>
+      </div>
+    );
+  }
+
+  const rows = projection.rows;
+  const bounds = buildMarketChartBounds(rows);
+  if (!bounds) return <div className="pm-market-state"><strong>가격 범위를 계산할 수 없습니다.</strong></div>;
+  const width = 620;
+  const height = 300;
+  const inset = { top: 20, right: 16, bottom: 28, left: 58 };
+  const priceBottom = 207;
+  const volumeTop = 222;
+  const volumeBottom = height - inset.bottom;
+  const rawRange = bounds.maxPrice - bounds.minPrice;
+  const padding = Math.max(rawRange * 0.08, bounds.maxPrice * 0.008, 0.01);
+  const low = bounds.minPrice - padding;
+  const high = bounds.maxPrice + padding;
+  const plotWidth = width - inset.left - inset.right;
+  const x = (index: number) => inset.left + (index / Math.max(rows.length - 1, 1)) * plotWidth;
+  const y = (value: number) => inset.top + ((high - value) / Math.max(high - low, 0.01)) * (priceBottom - inset.top);
+  const closePath = rows.map((row, index) => `${index === 0 ? "M" : "L"}${x(index).toFixed(2)},${y(row.close).toFixed(2)}`).join(" ");
+  const candleWidth = Math.max(1.5, Math.min(8, (plotWidth / Math.max(rows.length, 1)) * 0.66));
+  const activeRow = activeIndex == null ? null : rows[activeIndex] ?? null;
+  const activeX = activeIndex == null ? null : x(activeIndex);
+  const activeY = activeRow == null ? null : y(activeRow.close);
+  const tooltipWidth = 218;
+  const tooltipHeight = 96;
+  const tooltipPlacement = activeX == null || activeY == null
+    ? null
+    : placeChartTooltip(activeX, activeY, {
+      chartWidth: width,
+      plotTop: inset.top,
+      plotBottom: volumeBottom,
+      tooltipWidth,
+      tooltipHeight,
+    });
+  const dateIndices = Array.from(new Set([0, Math.round((rows.length - 1) / 2), rows.length - 1]));
+
+  const updateActive = (event: React.PointerEvent<SVGRectElement>) => {
+    const svg = event.currentTarget.ownerSVGElement;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width) return;
+    const pointerX = ((event.clientX - rect.left) / rect.width) * width;
+    setActiveIndex(nearestMarketChartRowIndex(rows.length, pointerX, inset.left, width - inset.right));
+  };
+
+  return (
+    <section className="pm-market-chart-section" aria-label={`${projection.source_ref ?? "선택 종목"} 가격 차트`}>
+      <header>
+        <div><span>PRICE HISTORY · 1D</span><strong>가격 차트</strong></div>
+        <div className="pm-chart-mode-switch" role="group" aria-label="가격 차트 방식">
+          <button type="button" className={mode === "line" ? "is-active" : ""} onClick={() => setMode("line")}>라인</button>
+          <button type="button" className={mode === "candle" ? "is-active" : ""} onClick={() => setMode("candle")}>캔들</button>
+        </div>
+      </header>
+      <div className="pm-market-chart-shell">
+        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${projection.source_ref ?? "선택 종목"} ${mode === "line" ? "종가 라인" : "OHLCV 캔들"}`}>
+          {[0, 0.5, 1].map((tick) => {
+            const value = high - (high - low) * tick;
+            const tickY = inset.top + (priceBottom - inset.top) * tick;
+            return <g key={tick}><line x1={inset.left} y1={tickY} x2={width - inset.right} y2={tickY} className="pm-market-grid" /><text x={inset.left - 8} y={tickY + 4} textAnchor="end" className="pm-market-axis">{priceText(value)}</text></g>;
+          })}
+          {mode === "line" ? (
+            <path d={closePath} className="pm-market-close-line" />
+          ) : rows.map((row, index) => {
+            const isUp = row.close >= row.open;
+            const bodyTop = y(Math.max(row.open, row.close));
+            const bodyHeight = Math.max(Math.abs(y(row.open) - y(row.close)), 1.4);
+            return (
+              <g key={row.date} className={`pm-market-candle ${isUp ? "is-up" : "is-down"}`}>
+                <line x1={x(index)} y1={y(row.high)} x2={x(index)} y2={y(row.low)} />
+                <rect x={x(index) - candleWidth / 2} y={bodyTop} width={candleWidth} height={bodyHeight} rx={0.6} />
+              </g>
+            );
+          })}
+          <line x1={inset.left} y1={volumeTop - 8} x2={width - inset.right} y2={volumeTop - 8} className="pm-market-volume-divider" />
+          {rows.map((row, index) => {
+            const volumeHeight = row.volume == null || bounds.maxVolume <= 0
+              ? 0
+              : ((row.volume / bounds.maxVolume) * (volumeBottom - volumeTop));
+            return <rect key={row.date} className="pm-market-volume-bar" x={x(index) - candleWidth / 2} y={volumeBottom - volumeHeight} width={candleWidth} height={volumeHeight} rx={0.6} />;
+          })}
+          <text x={inset.left - 8} y={volumeTop + 7} textAnchor="end" className="pm-market-axis">VOL</text>
+          {dateIndices.map((index, position) => <text key={index} x={x(index)} y={height - 8} textAnchor={position === 0 ? "start" : position === dateIndices.length - 1 ? "end" : "middle"} className="pm-market-date">{compactDate(rows[index].date)}</text>)}
+          <rect
+            className="pm-market-hit-area"
+            x={inset.left}
+            y={inset.top}
+            width={plotWidth}
+            height={volumeBottom - inset.top}
+            tabIndex={0}
+            onPointerMove={updateActive}
+            onPointerLeave={() => setActiveIndex(null)}
+            onFocus={() => setActiveIndex(rows.length - 1)}
+            onBlur={() => setActiveIndex(null)}
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+              event.preventDefault();
+              setActiveIndex((current) => {
+                const base = current ?? rows.length - 1;
+                return Math.min(Math.max(base + (event.key === "ArrowRight" ? 1 : -1), 0), rows.length - 1);
+              });
+            }}
+          />
+          {activeRow && activeX != null && activeY != null && tooltipPlacement && (
+            <g className="pm-market-hover" pointerEvents="none">
+              <line x1={activeX} y1={inset.top} x2={activeX} y2={volumeBottom} />
+              {mode === "line" && <circle cx={activeX} cy={activeY} r={4.5} />}
+              <g className="pm-market-tooltip" transform={`translate(${tooltipPlacement.x} ${tooltipPlacement.y})`}>
+                <rect width={tooltipWidth} height={tooltipHeight} rx={10} />
+                <text x={12} y={17} className="pm-market-tooltip-date">{compactDate(activeRow.date)}</text>
+                <text x={12} y={38}>O {priceText(activeRow.open)} · H {priceText(activeRow.high)}</text>
+                <text x={12} y={57}>L {priceText(activeRow.low)} · C {priceText(activeRow.close)}</text>
+                <text x={12} y={78}>거래량 {volumeText(activeRow.volume)}</text>
+              </g>
+            </g>
+          )}
+        </svg>
+      </div>
+    </section>
+  );
+}
+
+function StrategyValueChart({ rows, itemId }: { rows: Array<Record<string, string | number | null>>; itemId: string }) {
+  const series = buildGroupChartSeries(rows, [itemId])
+    .map((point) => ({ date: point.date, value: point.items[itemId] }))
+    .filter((point): point is { date: string; value: number } => point.value != null);
+  if (series.length < 2) return <div className="pm-market-state"><strong>전략 가치곡선 관측치가 부족합니다.</strong></div>;
+  const width = 620;
+  const height = 190;
+  const inset = { top: 18, right: 14, bottom: 26, left: 58 };
+  const values = series.map((point) => point.value);
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const padding = Math.max((maxValue - minValue) * 0.1, maxValue * 0.01, 1);
+  const x = (index: number) => inset.left + (index / Math.max(series.length - 1, 1)) * (width - inset.left - inset.right);
+  const y = (value: number) => inset.top + ((maxValue + padding - value) / Math.max(maxValue - minValue + padding * 2, 1)) * (height - inset.top - inset.bottom);
+  const path = series.map((point, index) => `${index === 0 ? "M" : "L"}${x(index).toFixed(2)},${y(point.value).toFixed(2)}`).join(" ");
+  return (
+    <section className="pm-market-chart-section is-strategy" aria-label="전략 가치곡선">
+      <header><div><span>STRATEGY VALUE</span><strong>전략 가치곡선</strong></div></header>
+      <div className="pm-market-chart-shell"><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="전략 가치곡선">
+        <path d={path} className="pm-market-close-line" />
+        <text x={inset.left} y={height - 7} className="pm-market-date">{compactDate(series[0].date)}</text>
+        <text x={width - inset.right} y={height - 7} textAnchor="end" className="pm-market-date">{compactDate(series[series.length - 1].date)}</text>
+      </svg></div>
+      <p>전략에는 OHLCV 캔들이 없습니다. 등록 원금으로 환산한 일별 전략 가치만 표시합니다.</p>
+    </section>
+  );
+}
+
 function DiagnosisCard({ row, compact = false }: { row: DiagnosisRow; compact?: boolean }) {
   return (
     <article className={`pm-diagnosis-card is-${row.classification} severity-${row.severity.toLowerCase()}`}>
@@ -220,8 +395,9 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
     () => selectActiveGroup(workspace?.groups ?? [], null),
     [workspace],
   );
+  const projectedSelectedItemId = workspace?.selected_item_market_chart?.monitoring_item_id ?? null;
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(serverGroup?.portfolio_group_id ?? null);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(projectedSelectedItemId);
   const [drawerOpen, setDrawerOpen] = useState(initialItemBuilder?.drawerOpen ?? false);
   const [drawerStep, setDrawerStep] = useState<1 | 2 | 3>(initialItemBuilder?.drawerStep ?? 1);
   const [catalogQuery, setCatalogQuery] = useState(initialItemBuilder?.catalogQuery ?? "");
@@ -234,6 +410,10 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   useEffect(() => {
     setSelectedGroupId(serverGroup?.portfolio_group_id ?? null);
   }, [serverGroup?.portfolio_group_id]);
+
+  useEffect(() => {
+    if (projectedSelectedItemId) setSelectedItemId(projectedSelectedItemId);
+  }, [projectedSelectedItemId]);
 
   useEffect(() => {
     Streamlit.setFrameHeight();
@@ -278,6 +458,7 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   const activeGroup = workspace.active_group;
   const selectedGroup = selectActiveGroup(workspace.groups, selectedGroupId);
   const selectedItem = selectItem(activeGroup?.item_rows ?? [], selectedItemId);
+  const selectedMarketChart = workspace.selected_item_market_chart;
   const metrics = activeGroup?.metrics;
   const diagnosis = workspace.diagnosis ?? {
     policy_version: "portfolio_monitoring_policy_v1",
@@ -496,8 +677,14 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
                       <div><dt>기여 손익</dt><dd>{formatMetric(metrics?.contribution_by_item[selectedItem.monitoring_item_id], "currency", metrics)}</dd></div>
                     </dl>
                     {selectedItem.failure && <p className="pm-failure">{selectedItem.failure}</p>}
+                    {selectedMarketChart?.monitoring_item_id !== selectedItem.monitoring_item_id ? (
+                      <div className="pm-market-state"><strong>선택 항목 차트를 불러오는 중입니다.</strong></div>
+                    ) : selectedMarketChart.source_type === "selected_strategy" ? (
+                      <StrategyValueChart rows={activeGroup.curve} itemId={selectedItem.monitoring_item_id} />
+                    ) : (
+                      <MarketPriceChart projection={selectedMarketChart} />
+                    )}
                     <div className="pm-detail-actions">
-                      <button type="button" className="pm-text-action" onClick={() => emit({ id: "open_item_detail", monitoring_item_id: selectedItem.monitoring_item_id })}>상세 그래프와 근거 보기 →</button>
                       {selectedItem.status !== "ended" && <button type="button" className="pm-end-action" onClick={() => {
                         if (!window.confirm(`${selectedItem.source_ref} 추적을 종료할까요? 종료 후에도 기록과 종료금액은 유지됩니다.`)) return;
                         emit({ id: "end_item", command_id: newCommandId(), monitoring_item_id: selectedItem.monitoring_item_id, requested_end_date: todayText() });

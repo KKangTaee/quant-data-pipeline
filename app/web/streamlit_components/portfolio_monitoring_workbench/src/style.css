@@ -181,6 +181,36 @@ button { outline: none; }
 .pm-detail-body dl div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 1px; border-bottom: 1px solid #edf1f3; }
 .pm-detail-body dt { color: #788a97; font-size: 10px; }
 .pm-detail-body dd { margin: 0; color: #304c60; font-size: 11px; font-weight: 850; }
+.pm-market-chart-section { display: grid; gap: 10px; min-width: 0; padding-top: 2px; }
+.pm-market-chart-section > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pm-market-chart-section > header > div:first-child { display: grid; gap: 3px; }
+.pm-market-chart-section > header span { color: #8293a0; font-size: 8px; font-weight: 900; letter-spacing: .08em; }
+.pm-market-chart-section > header strong { color: #29485d; font-size: 13px; }
+.pm-market-chart-shell { min-width: 0; overflow: hidden; border: 1px solid #dfe8ed; border-radius: 12px; background: linear-gradient(180deg, #fff 0%, #fbfdfe 100%); }
+.pm-market-chart-shell svg { display: block; width: 100%; min-height: 190px; }
+.pm-chart-mode-switch { display: inline-flex; padding: 3px; border: 1px solid #d5e1e8; border-radius: 9px; background: #f4f8fa; }
+.pm-chart-mode-switch button { min-width: 48px; padding: 6px 9px; border: 0; border-radius: 7px; color: #718592; background: transparent; cursor: pointer; font-size: 9px; font-weight: 850; }
+.pm-chart-mode-switch button:hover { color: #246fa9; background: #e9f2f8; }
+.pm-chart-mode-switch button.is-active { color: #fff; background: #2879ba; box-shadow: 0 2px 6px rgba(40, 121, 186, .22); }
+.pm-market-grid { stroke: #e6edf1; stroke-width: 1; stroke-dasharray: 3 5; vector-effect: non-scaling-stroke; }
+.pm-market-axis, .pm-market-date { fill: #83929d; font-size: 9px; }
+.pm-market-close-line { fill: none; stroke: #176fb8; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.pm-market-candle line { stroke-width: 1.3; vector-effect: non-scaling-stroke; }
+.pm-market-candle.is-up line, .pm-market-candle.is-up rect { fill: #2d9a78; stroke: #238263; }
+.pm-market-candle.is-down line, .pm-market-candle.is-down rect { fill: #d26356; stroke: #b94f43; }
+.pm-market-volume-divider { stroke: #dfe8ed; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.pm-market-volume-bar { fill: #a9c8df; opacity: .78; }
+.pm-market-hit-area { fill: transparent; cursor: crosshair; touch-action: pan-y; }
+.pm-market-hover > line { stroke: #6d9fc6; stroke-width: 1; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
+.pm-market-hover > circle { fill: #fff; stroke: #176fb8; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+.pm-market-tooltip > rect { fill: #203d52; filter: drop-shadow(0 5px 10px rgba(23, 37, 54, .18)); }
+.pm-market-tooltip text { fill: #fff; font-size: 10px; font-weight: 750; }
+.pm-market-tooltip .pm-market-tooltip-date { fill: #bcd0de; font-size: 9px; font-weight: 850; }
+.pm-market-state { display: grid; min-height: 130px; place-content: center; gap: 6px; padding: 18px; border: 1px dashed #d7e2e8; border-radius: 11px; color: #718592; background: #fafcfd; text-align: center; }
+.pm-market-state strong { color: #3d5b6f; font-size: 11px; }
+.pm-market-state span { max-width: 320px; font-size: 9px; line-height: 1.5; }
+.pm-market-state.is-error { border-color: #e7cbc4; color: #99594f; background: #fff8f6; }
+.pm-market-chart-section.is-strategy > p { margin: 0; color: #748692; font-size: 9px; line-height: 1.5; }
 .pm-text-action { justify-self: start; padding: 0; border: 0; color: #2d72ad; background: transparent; font-size: 10px; }
 .pm-detail-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .pm-end-action { padding: 5px 0; border: 0; color: #a65b50; background: transparent; cursor: pointer; font-size: 9px; font-weight: 800; }
@@ -296,6 +326,9 @@ button:focus-visible, summary:focus-visible, .pm-chart-point:focus { box-shadow:
   .pm-hero p { font-size: 12px; }
   .pm-kpi-grid strong { font-size: 17px; }
   .pm-group-card { min-width: 155px; }
+  .pm-market-chart-section > header { align-items: flex-start; }
+  .pm-chart-mode-switch button { min-width: 44px; padding-inline: 7px; }
+  .pm-market-chart-shell { margin-inline: -5px; }
   .pm-item-row { grid-template-columns: 8px minmax(0, 1fr); }
   .pm-item-value { grid-column: 2; justify-items: start; grid-auto-flow: column; gap: 8px !important; }
   .pm-drawer-layer { padding: 0; }

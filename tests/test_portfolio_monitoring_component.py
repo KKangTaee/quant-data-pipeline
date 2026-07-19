@@ -48,6 +48,25 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn("vector-effect: non-scaling-stroke;", styles)
         self.assertIn(".pm-date-ticks-mobile { display: none; }", styles)
 
+    def test_selected_detail_supports_real_price_line_candles_and_strategy_value_only(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        styles = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/style.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("function MarketPriceChart", source)
+        self.assertIn("function StrategyValueChart", source)
+        self.assertIn("가격 차트", source)
+        self.assertIn("라인", source)
+        self.assertIn("캔들", source)
+        self.assertIn("전략에는 OHLCV 캔들이 없습니다", source)
+        self.assertIn('className="pm-market-volume-bar"', source)
+        self.assertIn('className="pm-market-tooltip"', source)
+        self.assertIn(".pm-market-candle.is-up", styles)
+        self.assertIn(".pm-market-candle.is-down", styles)
+
     def test_portfolio_monitoring_typography_is_one_pixel_larger(self) -> None:
         styles = Path(
             "app/web/streamlit_components/portfolio_monitoring_workbench/src/style.css"

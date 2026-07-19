@@ -14,10 +14,12 @@ import {
   selectItem,
   buildDiagnosisSections,
   buildMacroObservationPresentation,
+  buildMarketChartBounds,
   buildRiskCalibrationPresentation,
   buildCatalogSearchEvent,
   itemBuilderRecoveryKey,
   nearestChartPointIndex,
+  nearestMarketChartRowIndex,
   normalizeItemBuilderState,
   placeChartTooltip,
 } from "./workbenchState";
@@ -145,6 +147,25 @@ describe("portfolio monitoring workbench state", () => {
   it("labels short-window CAGR in Korean", () => {
     expect(formatMetric(activeGroup.metrics.cagr, "cagr", activeGroup.metrics)).toBe("+191.00% · 17일 연환산");
     expect(formatMetric(activeGroup.metrics.current_value, "currency", activeGroup.metrics)).toBe("$21,000");
+  });
+});
+
+describe("selected item market chart", () => {
+  const rows = [
+    { date: "2026-07-16", open: 10, high: 12, low: 9, close: 11, volume: 100 },
+    { date: "2026-07-17", open: 11, high: 13, low: 10, close: 12, volume: 200 },
+    { date: "2026-07-18", open: 12, high: 12.5, low: 10.5, close: 11, volume: null },
+  ];
+
+  it("uses the full candle range and ignores missing volume", () => {
+    expect(buildMarketChartBounds(rows)).toEqual({ minPrice: 9, maxPrice: 13, maxVolume: 200 });
+  });
+
+  it("selects the nearest candle across bounded plot coordinates", () => {
+    expect(nearestMarketChartRowIndex(rows.length, 0, 10, 110)).toBe(0);
+    expect(nearestMarketChartRowIndex(rows.length, 60, 10, 110)).toBe(1);
+    expect(nearestMarketChartRowIndex(rows.length, 200, 10, 110)).toBe(2);
+    expect(nearestMarketChartRowIndex(0, 60, 10, 110)).toBeNull();
   });
 });
 
