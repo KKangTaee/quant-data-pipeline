@@ -10064,3 +10064,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 기존 네 근거와 모델은 유지하면서 실물의 현재 수준, 금융·선행 여건의 전망 지원, 물가·정책 압력의 전망 부담을 한눈에 구분해야 함.
 - Analysis result: 공통 `강화 / 약화`를 실물 `기준 이상/이하`, 금융·선행 `전망 지원/부담`, 물가·정책 `전망 부담/부담 완화`로 번역하고 각 행에 한 줄 해석을 추가했다.
 - Follow-up: 전체 3/3차와 desktop/420px QA를 완료했다. factor score, ±0.15 임계값, 확률과 payload는 변경하지 않았다.
+
+### 2026-07-19 - 자산 카드도 같은 경제 근거를 같은 의미로 읽는다
+
+- User request: Evidence는 역할별 문구로 개선됐지만 자산별 확인 포인트의 `관측된 경제 상태`에는 공통 `강화 / 약화`가 남아 있어 함께 고쳐야 하는지 질문하고 개선을 승인함.
+- Interpreted goal: 자산별 카드가 특정 자산의 경기 상태처럼 보이지 않게 공통 미국 경제 배경임을 밝히고, 현재 실물 수준과 전망 영향을 Evidence와 동일한 의미로 표시해야 함.
+- Analysis result: Python summary를 `현재 수준 / 전망 여건`으로 분리하고 React는 기존 Evidence helper를 재사용해 `기준 이하 / 전망 지원 / 전망 부담`을 표시한다.
+- Follow-up: 후속 roadmap `3/3`, focused `38 passed`, React build와 desktop/420px QA를 완료했다. 모델·direction enum·임계값·확률·자산 경로는 유지했다.

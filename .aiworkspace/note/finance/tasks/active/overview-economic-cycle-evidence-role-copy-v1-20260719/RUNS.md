@@ -10,3 +10,14 @@
   - 최신 reload 이후 console error 0
   - screenshots: `/tmp/codex-browser-qa/economic-cycle-evidence-role-copy-desktop.png`, `/tmp/codex-browser-qa/economic-cycle-evidence-role-copy-mobile.png`
 - final verification: Economic Cycle focused `38 passed`, React production build exit 0, `git diff --check` exit 0
+- asset-card follow-up baseline: Economic Cycle focused `38 passed`, React production build exit 0
+- asset-card TDD:
+  - Python summary RED `2 failed` 확인 후 targeted `2 passed`, service file `16 passed`
+  - React source contract RED `2 failed` 확인 후 targeted `2 passed`
+- asset-card focused regression: `38 passed`, React production build exit 0
+- asset-card Browser QA:
+  - desktop에서 `사이클 판단의 공통 경제 배경`, `현재 수준 / 전망 여건`, 네 역할별 배지를 확인
+  - 420px에서 outer `420/420`, component `377/377`로 horizontal overflow 0
+  - 최신 reload 이후 console error 0
+  - screenshots: `/tmp/codex-browser-qa/economic-cycle-asset-state-role-copy-desktop-detail.png`, `/tmp/codex-browser-qa/economic-cycle-asset-state-role-copy-mobile-detail.png`
+- asset-card final verification: Economic Cycle focused `38 passed`, React production build exit 0, `git diff --check` exit 0

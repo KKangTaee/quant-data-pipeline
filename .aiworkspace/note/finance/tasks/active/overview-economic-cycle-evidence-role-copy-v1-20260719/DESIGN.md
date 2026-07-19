@@ -5,5 +5,8 @@
 - 물가·정책 압력은 양수일 때 `전망 부담`, 음수일 때 `부담 완화`로 표시한다.
 - 각 행에 factor 역할과 방향을 설명하는 한 줄 해석을 추가한다.
 - factor score, ±0.15 임계값, model probability, phase와 payload는 바꾸지 않는다.
+- 자산별 확인 포인트의 반복 블록은 `사이클 판단의 공통 경제 배경`으로 명명하고, Python summary를 `현재 수준 / 전망 여건`으로 나눈다.
+- 자산 카드 배지는 별도 규칙을 복제하지 않고 기존 Evidence 역할별 표시 helper를 재사용한다.
 
 Authoritative spec: `docs/superpowers/specs/2026-07-19-economic-cycle-evidence-role-copy-design.md`
+Asset-card follow-up spec: `docs/superpowers/specs/2026-07-19-economic-cycle-asset-state-role-copy-design.md`

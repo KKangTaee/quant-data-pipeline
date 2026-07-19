@@ -6652,3 +6652,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 각 Evidence 행에 역할별 상태 배지와 한 줄 해석을 추가했다.
 - 모델 점수·임계값·확률·payload는 변경하지 않았다.
 - focused tests, React build, desktop/420px Browser QA 결과는 `tasks/active/overview-economic-cycle-evidence-role-copy-v1-20260719/RUNS.md`를 본다.
+
+## 2026-07-19 - 자산별 공통 경제 배경 문구 정합성 완료
+
+- 자산별 확인 포인트의 `관측된 경제 상태`를 `사이클 판단의 공통 경제 배경`으로 명확히 했다.
+- summary를 `현재 수준 / 전망 여건`으로 분리하고 자산 카드 배지를 Evidence와 같은 역할별 helper에 연결했다.
+- direction enum, factor 계산, ±0.15 임계값, 확률과 자산 경로 계산은 변경하지 않았다.
+- 후속 roadmap `3/3`과 desktop/420px QA 결과는 동일 active task `RUNS.md`를 본다.
