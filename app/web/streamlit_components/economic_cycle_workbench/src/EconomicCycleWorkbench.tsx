@@ -39,6 +39,13 @@ type Evidence = {
   source_basis?: string;
 };
 
+type EvidenceTone = "positive-level" | "weak-level" | "support" | "burden" | "neutral";
+type EvidencePresentation = {
+  statusLabel: string;
+  tone: EvidenceTone;
+  description: string;
+};
+
 type PathwayStatus = "SUPPORTS_RISE" | "SUPPORTS_FALL" | "MIXED" | "NEUTRAL" | "UNAVAILABLE";
 type CoverageStatus = "SUFFICIENT" | "PARTIAL" | "INSUFFICIENT";
 type PriceStatus = "RISING" | "FALLING" | "MIXED" | "NEUTRAL" | "UNAVAILABLE";
@@ -216,9 +223,60 @@ const FACTOR_LABEL: Record<string, string> = {
   labor_income_score: "고용·소득",
   activity_momentum_3m: "실물 모멘텀",
   labor_income_momentum_3m: "고용 모멘텀",
-  financial_leading_score: "금리·신용·금융여건",
+  financial_leading_score: "금융·선행 여건",
   inflation_policy_score: "물가·정책 압력",
 };
+
+function resolveEvidencePresentation(item: Evidence): EvidencePresentation {
+  const direction = item.direction;
+  if (item.factor === "activity_score" || item.factor === "labor_income_score") {
+    const subject = item.factor === "activity_score" ? "생산·소비 관련 지표" : "고용·소득 관련 지표";
+    if (direction === "강화") return {
+      statusLabel: "기준 이상",
+      tone: "positive-level",
+      description: `${subject}의 종합점수가 자기 과거 기준보다 높아 현재 경기 위치를 지지하는 근거입니다.`,
+    };
+    if (direction === "약화") return {
+      statusLabel: "기준 이하",
+      tone: "weak-level",
+      description: `${subject}의 종합점수가 자기 과거 기준보다 낮아 현재 경기 위치를 낮추는 근거입니다.`,
+    };
+    return {
+      statusLabel: "기준 부근",
+      tone: "neutral",
+      description: `${subject}의 종합점수가 자기 과거 기준 부근으로 현재 경기 위치에 중립적인 근거입니다.`,
+    };
+  }
+  if (item.factor === "financial_leading_score") {
+    if (direction === "강화") return {
+      statusLabel: "전망 지원",
+      tone: "support",
+      description: "금리차·신용스프레드·금융여건·선행지표 조합이 향후 1·2개월 경기 전망을 지지하는 방향입니다.",
+    };
+    if (direction === "약화") return {
+      statusLabel: "전망 부담",
+      tone: "burden",
+      description: "금리차·신용스프레드·금융여건·선행지표 조합이 향후 1·2개월 경기 전망을 제약하는 방향입니다.",
+    };
+  }
+  if (item.factor === "inflation_policy_score") {
+    if (direction === "강화") return {
+      statusLabel: "전망 부담",
+      tone: "burden",
+      description: "근원물가·기대인플레이션·정책금리 조합의 압력이 높아 향후 1·2개월 경기 전망에 부담을 주는 방향입니다.",
+    };
+    if (direction === "약화") return {
+      statusLabel: "부담 완화",
+      tone: "support",
+      description: "근원물가·기대인플레이션·정책금리 조합의 압력이 낮아 향후 1·2개월 경기 전망의 부담이 완화된 상태입니다.",
+    };
+  }
+  return {
+    statusLabel: "영향 중립",
+    tone: "neutral",
+    description: "현재 종합점수는 자기 과거 기준 부근으로 전망에 미치는 영향이 중립적입니다.",
+  };
+}
 
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
 const formatSignedPercent = (value: number | null) => value == null
@@ -519,12 +577,19 @@ function EvidenceGroup({ title, subtitle, rows }: { title: string; subtitle: str
     <section className="evidence-group">
       <header><div><h4>{title}</h4><p>{subtitle}</p></div><span>{rows.length}개 근거</span></header>
       <div className="evidence-list">
-        {rows.length ? rows.map((item, index) => (
-          <article key={`${item.factor}-${index}`} tabIndex={0}>
-            <div><strong>{FACTOR_LABEL[item.factor] || item.series_id || item.factor}</strong><small>{formatMonth(item.source_date)} · {item.source_basis || "PIT 기준"}</small></div>
-            <span className={`direction direction-${item.direction}`}>{item.direction}</span>
-          </article>
-        )) : <p className="empty-copy">표시할 근거가 아직 없습니다.</p>}
+        {rows.length ? rows.map((item, index) => {
+          const presentation = resolveEvidencePresentation(item);
+          return (
+            <article key={`${item.factor}-${index}`} tabIndex={0}>
+              <div className="evidence-row-heading">
+                <strong>{FACTOR_LABEL[item.factor] || item.series_id || item.factor}</strong>
+                <span className={`evidence-status evidence-tone-${presentation.tone}`}>{presentation.statusLabel}</span>
+              </div>
+              <small>{formatMonth(item.source_date)} · {item.source_basis || "PIT 기준"}</small>
+              <p className="evidence-description">{presentation.description}</p>
+            </article>
+          );
+        }) : <p className="empty-copy">표시할 근거가 아직 없습니다.</p>}
       </div>
     </section>
   );
@@ -980,7 +1045,7 @@ function EconomicCycleWorkbench({ args }: Props) {
       <div className="cycle-layout">
         <QuadrantChart payload={payload} />
         <section className="evidence-panel" aria-labelledby="evidence-title">
-          <div className="section-heading"><div><span>Evidence</span><h3 id="evidence-title">현재와 전망의 판단 근거</h3></div><small>강화 · 약화 · 중립</small></div>
+          <div className="section-heading"><div><span>Evidence</span><h3 id="evidence-title">현재와 전망의 판단 근거</h3></div><small>현재 수준과 전망 영향을 구분해 표시</small></div>
           <EvidenceGroup title="현재 위치의 근거" subtitle="현재점에 반영되는 생산·소비와 고용·소득" rows={realEvidence} />
           <EvidenceGroup title="1·2개월 전망에 추가되는 근거" subtitle="현재 근거에 더해 미래 확률을 조정하는 금융·선행 여건과 물가·정책" rows={forecastEvidence} />
         </section>

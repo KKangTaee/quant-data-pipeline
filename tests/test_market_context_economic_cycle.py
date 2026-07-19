@@ -249,6 +249,18 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         "현재점에 반영되는 생산·소비와 고용·소득",
         "1·2개월 전망에 추가되는 근거",
         "현재 근거에 더해 미래 확률을 조정하는 금융·선행 여건과 물가·정책",
+        "현재 수준과 전망 영향을 구분해 표시",
+        'financial_leading_score: "금융·선행 여건"',
+        'statusLabel: "기준 이상"',
+        'statusLabel: "기준 이하"',
+        'statusLabel: "기준 부근"',
+        'statusLabel: "전망 지원"',
+        'statusLabel: "전망 부담"',
+        'statusLabel: "부담 완화"',
+        'statusLabel: "영향 중립"',
+        "자기 과거 기준보다 낮아 현재 경기 위치를 낮추는 근거입니다",
+        "향후 1·2개월 경기 전망을 지지하는 방향입니다",
+        "향후 1·2개월 경기 전망에 부담을 주는 방향입니다",
         'className="market-implications"',
         "자산별 확인 포인트",
         "관측된 경제 상태",
@@ -272,6 +284,7 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
     ):
         assert token in source
 
+    assert "강화 · 약화 · 중립" not in source
     assert "경제 국면:" not in source
     assert "바뀌는 조건" not in source
     assert "alignment" not in source
