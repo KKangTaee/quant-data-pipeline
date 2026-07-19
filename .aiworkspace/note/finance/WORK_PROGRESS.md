@@ -6744,3 +6744,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - catalog 검색 recovery는 stable key로 한 번만 적용해 X 닫기 뒤 동일 snapshot이 팝업을 다시 열지 못하게 했다.
 - React 17 tests, Portfolio Monitoring Python 90 tests, typecheck/build와 body 1,803px / drawer 560px Browser QA를 통과했다.
 - 전체 보정 roadmap `3/3차` 완료이며 등록 command·DB·가치 계산 계약은 변경하지 않았다.
+
+## 2026-07-19 - Portfolio Monitoring 추적 종료 UX 보완
+
+- 휴장일 종료는 요청일 이후 미래 가격을 기다리지 않고 요청일 이하 최신 저장 가치로 즉시 확정하며, 요청일·실제 적용일·종료금액을 함께 안내한다.
+- 활성 항목과 접힌 `종료 기록`을 분리하고 raw `ACTIVE`를 lifecycle label로 교체했으며, command 성공·실패를 본문 배너로 노출한다.
+- Python 47 tests, React 25 tests, typecheck/build/compile/static asset check를 통과했다. 전체 보완 `3/4차`; Browser URL policy로 실제 interaction QA와 스크린샷만 남아 있다.

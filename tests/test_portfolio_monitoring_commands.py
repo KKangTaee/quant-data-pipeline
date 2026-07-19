@@ -374,6 +374,9 @@ class PortfolioMonitoringCommandTests(unittest.TestCase):
         self.assertEqual(item.status, "ended")
         self.assertEqual(item.exit_value, Decimal("10500"))
         self.assertEqual(len(repository.items), 1)
+        self.assertIn("요청일 2026-07-18", ended.message)
+        self.assertIn("적용일 2026-07-17", ended.message)
+        self.assertIn("$10,500.00", ended.message)
 
     def test_mysql_repository_ensure_schema_uses_finance_meta(self) -> None:
         _, persistence, _ = _load_modules()

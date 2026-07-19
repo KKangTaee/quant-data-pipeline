@@ -229,6 +229,19 @@ export function selectItem(items: ItemRow[], requestedId: string | null | undefi
   return requested ?? items.find((item) => item.status !== "ended") ?? items[0] ?? null;
 }
 
+export function partitionItemRows(items: ItemRow[]) {
+  return {
+    active: items.filter((item) => item.status !== "ended"),
+    ended: items.filter((item) => item.status === "ended"),
+  };
+}
+
+export function itemLifecycleLabel(item: Pick<ItemRow, "status">) {
+  if (item.status === "ended") return "종료 기록";
+  if (item.status === "data_review") return "확인 필요";
+  return "활성 추적";
+}
+
 function finiteNumber(value: unknown): number | null {
   if (value == null || value === "") {
     return null;

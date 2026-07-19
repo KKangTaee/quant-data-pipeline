@@ -146,6 +146,22 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn("consumedRecoveryKeyRef", source)
         self.assertIn("height: min(560px, calc(100% - 28px));", styles)
 
+    def test_tracking_end_feedback_and_history_are_visible_outside_the_drawer(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        styles = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/style.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('className={`pm-command-feedback is-${latestCommand.status}`}', source)
+        self.assertIn('className="pm-ended-items"', source)
+        self.assertIn("종료 기록", source)
+        self.assertIn("itemLifecycleLabel(selectedItem)", source)
+        self.assertNotIn("{selectedItem.lane_status}", source)
+        self.assertIn(".pm-command-feedback", styles)
+        self.assertIn(".pm-ended-items", styles)
+
     def test_build_availability_requires_index_html(self) -> None:
         component = _load_component()
         with tempfile.TemporaryDirectory() as directory:

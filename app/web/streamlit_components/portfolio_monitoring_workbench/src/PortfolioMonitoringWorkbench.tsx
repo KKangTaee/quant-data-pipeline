@@ -17,11 +17,13 @@ import {
   createItemDraft,
   formatMetric,
   itemBuilderRecoveryKey,
+  itemLifecycleLabel,
   MIN_MARKET_CHART_VISIBLE_ROWS,
   nearestChartPointIndex,
   nearestMarketChartRowIndex,
   normalizeItemBuilderState,
   panMarketChartViewport,
+  partitionItemRows,
   placeChartTooltip,
   selectActiveGroup,
   selectItem,
@@ -516,6 +518,7 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   const [catalogQuery, setCatalogQuery] = useState(initialItemBuilder?.catalogQuery ?? "");
   const [draft, setDraft] = useState<ItemDraft>(() => initialItemBuilder?.draft ?? createItemDraft(initialCommandId));
   const [localCommandState, setLocalCommandState] = useState<"idle" | "pending" | "success" | "error">("idle");
+  const [dismissedCommandId, setDismissedCommandId] = useState<string | null>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const drawerCloseRef = useRef<HTMLButtonElement>(null);
   const consumedRecoveryKeyRef = useRef<string | null>(itemBuilderRecoveryKey(initialItemBuilder));
@@ -571,6 +574,8 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   const activeGroup = workspace.active_group;
   const selectedGroup = selectActiveGroup(workspace.groups, selectedGroupId);
   const selectedItem = selectItem(activeGroup?.item_rows ?? [], selectedItemId);
+  const itemSections = partitionItemRows(activeGroup?.item_rows ?? []);
+  const latestCommand = workspace.commands[0];
   const selectedMarketChart = workspace.selected_item_market_chart;
   const metrics = activeGroup?.metrics;
   const diagnosis = workspace.diagnosis ?? {
@@ -608,6 +613,22 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   const chooseItem = (itemId: string) => {
     setSelectedItemId(itemId);
     emit({ id: "select_item", monitoring_item_id: itemId });
+  };
+  const renderItemRow = (item: ItemRow) => {
+    const contribution = metrics?.contribution_by_item[item.monitoring_item_id]
+      ?? (item.current_value - item.initial_capital);
+    return (
+      <button
+        type="button"
+        key={item.monitoring_item_id}
+        className={item.monitoring_item_id === selectedItem?.monitoring_item_id ? "pm-item-row is-selected" : "pm-item-row"}
+        onClick={() => chooseItem(item.monitoring_item_id)}
+      >
+        <span className={`pm-status-dot status-${item.status}`} />
+        <div><strong>{item.source_ref}</strong><small>{statusLabel(item.status)}</small></div>
+        <div className="pm-item-value"><strong>{formatMetric(item.current_value, "currency", metrics)}</strong><small className={contribution < 0 ? "negative" : "positive"}>{formatMetric(contribution, "currency", metrics)}</small></div>
+      </button>
+    );
   };
 
   return (
@@ -656,6 +677,16 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
             <button ref={addButtonRef} type="button" className="pm-primary" onClick={openDrawer}>+ 종목 등록</button>
           </div>
         </header>
+
+        {latestCommand && latestCommand.command_id !== dismissedCommandId && (
+          <div className={`pm-command-feedback is-${latestCommand.status}`} role={latestCommand.status === "error" ? "alert" : "status"}>
+            <div>
+              <strong>{latestCommand.status === "error" ? "요청을 완료하지 못했습니다" : "요청이 반영됐습니다"}</strong>
+              <span>{latestCommand.message || "처리 결과를 확인해 주세요."}</span>
+            </div>
+            <button type="button" aria-label="처리 결과 닫기" onClick={() => setDismissedCommandId(latestCommand.command_id)}>×</button>
+          </div>
+        )}
 
         {activeGroup ? (
           <>
@@ -760,30 +791,22 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
                   <small>종료 항목도 기록에 유지</small>
                 </header>
                 <div className="pm-item-list">
-                  {activeGroup.item_rows.map((item) => {
-                    const contribution = metrics?.contribution_by_item[item.monitoring_item_id] ?? (item.current_value - item.initial_capital);
-                    return (
-                      <button
-                        type="button"
-                        key={item.monitoring_item_id}
-                        className={item.monitoring_item_id === selectedItem?.monitoring_item_id ? "pm-item-row is-selected" : "pm-item-row"}
-                        onClick={() => chooseItem(item.monitoring_item_id)}
-                      >
-                        <span className={`pm-status-dot status-${item.status}`} />
-                        <div><strong>{item.source_ref}</strong><small>{statusLabel(item.status)}</small></div>
-                        <div className="pm-item-value"><strong>{formatMetric(item.current_value, "currency", metrics)}</strong><small className={contribution < 0 ? "negative" : "positive"}>{formatMetric(contribution, "currency", metrics)}</small></div>
-                      </button>
-                    );
-                  })}
-                  {!activeGroup.item_rows.length && <div className="pm-empty-list">첫 종목이나 백테스트 전략을 등록해 추적을 시작하세요.</div>}
+                  {itemSections.active.map(renderItemRow)}
+                  {!itemSections.active.length && <div className="pm-empty-list">현재 활성 추적 항목이 없습니다.</div>}
                 </div>
+                {itemSections.ended.length > 0 && (
+                  <details className="pm-ended-items" open={selectedItem?.status === "ended" || undefined}>
+                    <summary>종료 기록 <span>{itemSections.ended.length}</span></summary>
+                    <div className="pm-item-list">{itemSections.ended.map(renderItemRow)}</div>
+                  </details>
+                )}
               </div>
 
               <div className="pm-panel pm-detail-panel">
                 <header className="pm-section-heading"><div><span>SELECTED DETAIL</span><h2>개별 추적 결과</h2></div></header>
                 {selectedItem ? (
                   <div className="pm-detail-body">
-                    <div className="pm-detail-title"><div><span>{selectedItem.lane_status}</span><h3>{selectedItem.source_ref}</h3></div><b>{statusLabel(selectedItem.status)}</b></div>
+                    <div className="pm-detail-title"><div><span>{itemLifecycleLabel(selectedItem)}</span><h3>{selectedItem.source_ref}</h3></div><b>{statusLabel(selectedItem.status)}</b></div>
                     <dl>
                       <div><dt>시작 투자금</dt><dd>{formatMetric(selectedItem.initial_capital, "currency", metrics)}</dd></div>
                       <div><dt>현재 가치</dt><dd>{formatMetric(selectedItem.current_value, "currency", metrics)}</dd></div>

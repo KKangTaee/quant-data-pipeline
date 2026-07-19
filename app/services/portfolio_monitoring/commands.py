@@ -360,7 +360,11 @@ def execute_end_item(
             command_id=command.command_id,
             target_id=item_id,
             replayed=False,
-            message="Monitoring item tracking ended; value remains as cash.",
+            message=(
+                f"추적 종료 완료 · 요청일 {resolution.requested_end_date.isoformat()} · "
+                f"적용일 {resolution.effective_end_date.isoformat()} · "
+                f"종료금액 ${resolution.exit_value:,.2f}는 현금으로 유지됩니다."
+            ),
         )
 
     return _execute(repository, command, fingerprint, mutate)

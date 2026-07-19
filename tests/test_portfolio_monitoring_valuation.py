@@ -190,6 +190,55 @@ class PortfolioMonitoringDirectValuationTests(unittest.TestCase):
         self.assertEqual(lane.curve.iloc[-1]["adjusted_value"], 1200.0)
         self.assertTrue(lane.review.reasons)
 
+    def test_tracking_end_uses_latest_value_available_on_or_before_weekend_request(self) -> None:
+        valuation = _load_valuation()
+        lane = valuation.ItemValueLane(
+            monitoring_item_id="item-aapl",
+            source_ref="AAPL",
+            effective_start_date=date(2026, 7, 1),
+            latest_usable_date=date(2026, 7, 17),
+            initial_capital=Decimal("1000"),
+            status="active",
+            curve=pd.DataFrame(
+                [
+                    {"date": "2026-07-16", "total_value": 1020.0},
+                    {"date": "2026-07-17", "total_value": 1030.0},
+                ]
+            ),
+            review=valuation.CorporateActionReview(
+                "READY", Decimal("0"), Decimal("0"), ()
+            ),
+        )
+
+        resolution = valuation.resolve_tracking_end(lane, date(2026, 7, 19))
+
+        self.assertEqual(resolution.requested_end_date, date(2026, 7, 19))
+        self.assertEqual(resolution.effective_end_date, date(2026, 7, 17))
+        self.assertEqual(resolution.exit_value, Decimal("1030.0"))
+
+    def test_tracking_end_rejects_lane_without_value_on_or_before_request(self) -> None:
+        valuation = _load_valuation()
+        lane = valuation.ItemValueLane(
+            monitoring_item_id="item-aapl",
+            source_ref="AAPL",
+            effective_start_date=date(2026, 7, 6),
+            latest_usable_date=date(2026, 7, 6),
+            initial_capital=Decimal("1000"),
+            status="active",
+            curve=pd.DataFrame(
+                [{"date": "2026-07-06", "total_value": 1000.0}]
+            ),
+            review=valuation.CorporateActionReview(
+                "READY", Decimal("0"), Decimal("0"), ()
+            ),
+        )
+
+        with self.assertRaisesRegex(
+            valuation.TrackingEndValueUnavailableError,
+            "종료일 이전",
+        ):
+            valuation.resolve_tracking_end(lane, date(2026, 7, 5))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -24,7 +24,9 @@ import {
   normalizeMarketChartViewport,
   normalizeItemBuilderState,
   panMarketChartViewport,
+  partitionItemRows,
   placeChartTooltip,
+  itemLifecycleLabel,
   zoomMarketChartViewport,
 } from "./workbenchState";
 
@@ -91,6 +93,16 @@ describe("portfolio monitoring workbench state", () => {
     expect(selectItem(activeGroup.item_rows, "ended")?.source_ref).toBe("OLD");
     expect(selectItem(activeGroup.item_rows, null)?.source_ref).toBe("AAPL");
     expect(activeGroup.item_rows.map((item) => item.status)).toEqual(["active", "ended"]);
+  });
+
+  it("separates active tracking from ended history and uses lifecycle labels", () => {
+    const sections = partitionItemRows(activeGroup.item_rows);
+
+    expect(sections.active.map((item) => item.source_ref)).toEqual(["AAPL"]);
+    expect(sections.ended.map((item) => item.source_ref)).toEqual(["OLD"]);
+    expect(itemLifecycleLabel(sections.active[0])).toBe("활성 추적");
+    expect(itemLifecycleLabel(sections.ended[0])).toBe("종료 기록");
+    expect(itemLifecycleLabel({ ...sections.active[0], status: "data_review" })).toBe("확인 필요");
   });
 
   it("describes the common basis and partial state explicitly", () => {

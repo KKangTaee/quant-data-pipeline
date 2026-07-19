@@ -7,7 +7,7 @@ from typing import Any, Iterable
 
 import pandas as pd
 
-from .commands import EntryResolution
+from .commands import EndResolution, EntryResolution
 from .persistence import MonitoringItemRecord
 from .schemas import FundingMode
 
@@ -17,6 +17,10 @@ SESSION_CONTINUITY_GAP_TOLERANCE = Decimal("0.01")
 
 
 class EntryPriceUnavailableError(ValueError):
+    pass
+
+
+class TrackingEndValueUnavailableError(ValueError):
     pass
 
 
@@ -53,6 +57,42 @@ def _decimal(value: Any) -> Decimal | None:
     except (InvalidOperation, TypeError, ValueError):
         return None
     return parsed if parsed.is_finite() else None
+
+
+def resolve_tracking_end(
+    lane: ItemValueLane,
+    requested_end_date: date,
+) -> EndResolution:
+    """Freeze tracking at the latest usable value known on the requested date."""
+
+    if not isinstance(requested_end_date, date):
+        raise ValuationInputError("requested end date is required.")
+    frame = lane.curve.copy()
+    if frame.empty or "date" not in frame.columns or "total_value" not in frame.columns:
+        raise TrackingEndValueUnavailableError(
+            "요청한 종료일 이전에 사용할 수 있는 평가금액이 없습니다."
+        )
+    frame["date"] = pd.to_datetime(frame["date"], errors="coerce").dt.normalize()
+    frame["total_value"] = pd.to_numeric(frame["total_value"], errors="coerce")
+    eligible = frame.dropna(subset=["date", "total_value"])
+    eligible = eligible.loc[
+        eligible["date"] <= pd.Timestamp(requested_end_date)
+    ].sort_values("date")
+    if eligible.empty:
+        raise TrackingEndValueUnavailableError(
+            "요청한 종료일 이전에 사용할 수 있는 평가금액이 없습니다."
+        )
+    row = eligible.iloc[-1]
+    exit_value = _decimal(row["total_value"])
+    if exit_value is None or exit_value < 0:
+        raise TrackingEndValueUnavailableError(
+            "종료 평가금액을 계산할 수 없습니다."
+        )
+    return EndResolution(
+        requested_end_date=requested_end_date,
+        effective_end_date=pd.Timestamp(row["date"]).date(),
+        exit_value=exit_value,
+    )
 
 
 def _prepare_history(history: pd.DataFrame | Iterable[dict[str, Any]]) -> pd.DataFrame:

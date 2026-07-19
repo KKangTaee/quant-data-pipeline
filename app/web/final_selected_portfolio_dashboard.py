@@ -50,6 +50,7 @@ from app.services.portfolio_monitoring.selected_strategy import (
 from app.services.portfolio_monitoring.valuation import (
     build_direct_security_value_lane,
     resolve_direct_security_entry,
+    resolve_tracking_end,
 )
 from app.services.portfolio_monitoring.diagnosis import (
     DIAGNOSIS_POLICY_VERSION,
@@ -721,15 +722,7 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
                     timeframe="1d",
                 )
                 lane = build_direct_security_value_lane(item, history)
-            eligible = lane.curve.loc[pd.to_datetime(lane.curve["date"]) >= pd.Timestamp(requested_end)]
-            if eligible.empty:
-                raise ValueError("No usable value is available on or after the requested end date.")
-            row = eligible.iloc[0]
-            return EndResolution(
-                requested_end_date=requested_end,
-                effective_end_date=pd.Timestamp(row["date"]).date(),
-                exit_value=Decimal(str(row["total_value"])),
-            )
+            return resolve_tracking_end(lane, requested_end)
 
         return execute_end_item(
             repository,

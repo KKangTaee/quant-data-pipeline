@@ -10113,3 +10113,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 데스크톱의 빠른 종목 선택 흐름은 유지하면서 실제 분석 대상인 선택 상세와 가격 차트를 우선 배치하고 축을 별도 확대 없이 읽을 수 있어야 함.
 - Analysis result: 기존 grid는 목록 56%·상세 44%, 선택 차트 SVG 축은 9px이었다. 사용자가 승인한 desktop 목록 35% / 상세 65%, 목록 최소 280px, 축 11px/700을 CSS-only로 적용하고 900px 이하 단일 열은 유지했다.
 - Follow-up: Python 102 / React 24 / typecheck/build/static distribution을 통과했다. Browser URL policy로 desktop/900px/420px 실제 layout·overflow·interaction 확인과 신규 screenshot은 남아 있다.
+
+### 2026-07-19 - 추적 종료는 기록 삭제가 아니라 최신 확인 가치의 현금 고정이다
+
+- User request: 종료했는데 계속 `추적 중`이고 종목·전략 결과에도 남는 것이 의도인지 확인 후 수정해 달라고 요청함.
+- Interpreted goal: 과거 기록은 보존하되 종료 성공 여부와 활성/종료 구분을 즉시 이해할 수 있어야 함.
+- Analysis result: 목록 보존은 의도지만 `date >= requested_end`만 허용한 휴장일 resolver와 add-item 전용 command feedback 때문에 종료 실패가 숨겨졌다. 종료는 요청일 이하 최신 value row로 확정하고 실제 적용일·금액을 표시한다.
+- Follow-up: backend/React/자동 검증까지 `3/4차` 완료했다. Browser URL policy로 실제 종료 click·종료 기록·배너 visual QA가 남아 있다.
