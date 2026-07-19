@@ -17,9 +17,10 @@ Last Verified: 2026-07-19
 Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/`다.
 
 - 목적: Futures Macro를 현재 1D/5D/20D 관측과 5D/20D 조건부 전망으로 재구성하고, 첫 진입의 고비용 계산을 없애면서 방법론과 계산 근거를 화면 안에서 검산 가능하게 한다.
-- 완료: 전체 roadmap `5/5`와 materialized snapshot / React disclosure closeout `4/4`를 완료했다. `일봉 갱신`이 5년 compact snapshot을 저장하고 Overview 첫 진입과 다시 읽기는 compatible DB snapshot만 읽는다.
-- actual 상태: 2026-07-17 기준 5D 120개, 20D 42개 독립 episode를 사용하며 둘 다 `PROVISIONAL / 방향 우위 미확인`이다. Fresh-process DB read와 desktop/420px Browser QA를 완료했다.
+- 완료: 전체 roadmap `5/5`, materialized snapshot / React disclosure closeout `4/4`, 관측·전망 상태 분리와 10년 재검증 `4/4`를 완료했다. `일봉 갱신`이 10년 compact snapshot을 저장하고 Overview 첫 진입과 다시 읽기는 compatible DB snapshot만 읽는다.
+- actual 상태: 2026-07-17 기준 현재는 `관측 완료`, 5D는 120개, 20D는 88개 독립 episode를 사용한다. 미래 전망은 probability/path 중 보수적 상태를 적용해 둘 다 `PROVISIONAL / 방향 우위 미확인`이다. Desktop/420px Browser QA를 완료했다.
 - 품질 경계: UI 진입은 provider를 호출하거나 전망을 재계산하지 않는다. 조건부 경로는 point-in-time 맥락이며 장기 국면 예측, 추천, 매매 신호가 아니다.
+- 조건부 다음 차수: 5D path error/coverage와 20D Brier/fold/coverage 실패를 chronological out-of-sample 방식으로 개선하는 model revision은 별도 승인 전까지 시작하지 않는다. Gate 30/60은 유지한다.
 
 Recent completed task는 `.aiworkspace/note/finance/tasks/active/institutional-13f-openfigi-mapping-v1-20260718/`다.
 

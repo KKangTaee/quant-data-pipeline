@@ -1,8 +1,20 @@
 # Futures Macro Pattern Outlook V1 Status
 
+## 2026-07-19 — Observation Status / Ten-Year Validation Closeout
+
+- Approved A안 roadmap `1~4` is complete: current observation status separation, asset-card current/5D/20D status separation, ten-year daily history contract, and actual ten-year backfill / re-evaluation.
+- A compatible current snapshot now publishes `관측 완료 / 일부 관측 / 관측 불가`; `VERIFIED / PROVISIONAL / UNAVAILABLE` is reserved for future distributions. Current evidence is no longer downgraded because a future horizon is provisional.
+- Successful `일봉 갱신` requests `10y / 1d`, stores the daily rows, and materializes `pattern_outlook_v4_conservative_status_10y`. Overview entry and `다시 읽기` remain DB-only.
+- Actual refresh succeeded for all 17 symbols and UPSERTed 42,499 rows. Sixteen symbols begin on `2016-07-18`; RTY begins on `2017-07-10`; all end on `2026-07-17`.
+- Actual current state is `관측 완료`. 5D has 120 independent episodes and 20D has 88; both final outlooks remain `PROVISIONAL / 방향 우위 미확인` because probability and path status are now combined conservatively.
+- 5D still misses path-baseline improvement by a small margin and middle-50% coverage. 20D still misses Brier-baseline improvement, fold stability, and middle-50% coverage. Thresholds remain 30 / 60 independent episodes and were not lowered.
+- Desktop Browser QA confirmed the separated current / 5D / 20D badges, fixed observed anchors, different 5D / 20D terminals, React method / trace disclosures, and zero console errors.
+- QA screenshot: `/Users/taeho/.codex/visualizations/2026/07/19/futures-macro-observation-status/futures-macro-observation-status-qa.png` (generated, not staged).
+- Conditional 5차 model revision is not started. It may begin only with a separately approved chronological out-of-sample design targeting the measured failures above.
+
 ## 2026-07-19 — Materialized Snapshot / React Disclosure Closeout
 
-- Approved closeout roadmap `4/4` is complete: five-year compact snapshot persistence, daily-ingestion materialization, DB-only first entry, and React method / calculation trace disclosure.
+- Approved closeout roadmap `4/4` is complete: compact snapshot persistence, daily-ingestion materialization, DB-only first entry, and React method / calculation trace disclosure. The later ten-year upgrade supersedes its initial history length.
 - `일봉 갱신` now stores the refreshed daily futures rows and then materializes the current macro plus 5D / 20D outlook in `finance_meta.futures_macro_snapshot`.
 - Overview first entry and `다시 읽기` only read the stored compatible snapshot. They do not fetch a provider or calculate the outlook; missing or incompatible rows instruct the user to run `일봉 갱신`.
 - `방법론과 품질` now synchronizes iframe height when toggled, and `원본 데이터 / 계산 추적` is a React disclosure with compact metadata, current scores, score contributions, daily futures changes, and cautions.
@@ -65,14 +77,18 @@
 - 예상 순이동 후속 1차 설계: complete
 - 예상 순이동 후속 2차 TDD 구현: complete
 - 예상 순이동 후속 3차 actual QA / docs sync: complete
+- 관측/전망 상태 분리 1차 Python contract: complete
+- 관측/전망 상태 분리 2차 React UI: complete
+- 10년 검증 3차 shared ingestion/materialization contract: complete
+- 10년 검증 4차 actual backfill / re-evaluation / QA: complete
+- 조건부 5차 model-quality revision: not started
 
 ## Next Action
 
-전체 roadmap `5/5`, readable-map 후속 `2/2`, empirical-path 후속 `5/5`, net-direction 후속 `3/3`가 완료됐다.
+기존 전체 roadmap `5/5`, readable-map 후속 `2/2`, empirical-path 후속 `5/5`, net-direction 후속 `3/3`와 이번 권장 개선 `4/4`가 완료됐다.
 
-Actual 5D path terminal is `(-0.5625, 0.0169)` with bounds x `[-1.0959, 0.0836]`, y `[-0.3391, 0.3319]`; 20D terminal is `(-0.4364, 0.0579)` with bounds x `[-1.0982, 0.0115]`, y `[-0.2545, 0.4981]`.
-Both horizons have 6 evaluated chronological folds; their path errors trail baseline and middle-50% coverage is near 0.30, so neither is promoted above `PROVISIONAL`.
-다음 작업은 사용자가 선택하면 이 경험적 경로의 실사용 피드백이나 별도 데이터 확장 후보를 새 task로 시작한다.
+Ten-year actual validation has 120 independent 5D episodes and 88 independent 20D episodes. 5D probability quality passes but path error / coverage fail; 20D Brier improvement / fold stability / coverage fail. Both remain `PROVISIONAL`.
+다음 작업은 필수가 아니다. 사용자가 별도로 승인하면 `RISKS.md`의 측정 실패를 기준으로 조건부 5차 model-quality revision을 새 설계부터 시작한다.
 
 ## 2026-07-18 Conditional Path Readability Follow-up
 

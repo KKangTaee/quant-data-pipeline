@@ -312,7 +312,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - provider snapshot / price ledger 성격이다.
 - 1차 MVP source는 `yfinance`이며, exchange-grade realtime feed가 아니다.
 - UI는 정상 render 때 provider를 직접 호출하지 않고 `futures_ohlcv`와 run diagnostics를 읽는다.
-- Futures Macro 첫 진입과 `다시 읽기`는 compatible `futures_macro_snapshot`만 읽으며, 없거나 버전이 다르면 `일봉 갱신 필요`를 표시한다. 전체 5년 OHLCV를 snapshot JSON에 복제하지 않는다.
+- Futures Macro 첫 진입과 `다시 읽기`는 compatible `futures_macro_snapshot`만 읽으며, 없거나 버전이 다르면 `일봉 갱신 필요`를 표시한다. 전체 10년 OHLCV를 snapshot JSON에 복제하지 않는다.
 - 반복 수집은 `(provider_symbol, interval_code, candle_time_utc, source)` 기준 UPSERT로 idempotent하게 동작한다.
 - yfinance `1d / 1m` 요청이 일부 futures symbol에서 빈 응답 또는 지나치게 희소한 응답을 줄 수 있어, collector는 해당 symbol만 `2d / 1m`으로 한 번 보강 수집한다. 희소 응답이 회복되면 초기 sparse rows를 같은 symbol의 fallback rows로 대체한 뒤 같은 `futures_ohlcv` UPSERT key로 저장하고, 초기 row 수 / 회복 symbol / 실패 symbol은 `fallback_retries` diagnostics로 남긴다.
 - 일봉 macro 해석은 `today_return / rolling_60d_volatility` 표준화 움직임과 252거래일 위치를 사용하며, 채권선물 / FX 선물은 경제적 해석 방향으로 변환해 점수화한다.

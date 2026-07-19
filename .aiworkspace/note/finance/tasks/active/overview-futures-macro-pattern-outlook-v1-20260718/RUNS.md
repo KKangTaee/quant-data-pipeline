@@ -26,6 +26,15 @@
 - 5D: `120 episodes`; probability `VERIFIED`, path `PROVISIONAL`, final `PROVISIONAL`. Brier `0.690140 < 0.697565` pass; calibration `0.033530` pass; fold ratio `0.68` pass; path error `0.735945 >= 0.735919` fail; coverage `0.267692` fail; 25 folds pass; edge not distinct.
 - 20D: `88 episodes`; probability `PROVISIONAL`, path `PROVISIONAL`, final `PROVISIONAL`. Brier `0.719307 >= 0.718834` fail; calibration `0.072160` pass; fold ratio `0.48` fail; path error `0.765790 < 0.782831` pass; coverage `0.282828` fail; 25 folds pass; edge not distinct.
 
+## Final Browser And Regression QA
+
+- Browser QA at `http://127.0.0.1:8567` showed current hero/horizon/asset badges as `관측 완료` while both future horizons remained `PROVISIONAL`.
+- Switching 5D to 20D kept all three observed anchor coordinates identical and changed only the selected terminal / range. Method and calculation-trace disclosures opened in React without clipping.
+- Desktop and 420px top-level documents had no horizontal overflow; the browser console returned zero errors.
+- QA screenshot: `/Users/taeho/.codex/visualizations/2026/07/19/futures-macro-observation-status/futures-macro-observation-status-qa.png` (generated, not staged).
+- Fresh final regression passed 38 pattern/validation/snapshot tests, 27 complete Futures Macro service contracts, and 5 selected React/daily-refresh contracts.
+- Vite production build transformed 178 modules in 459ms. Focused `py_compile`, `git diff --check`, and durable documentation stale-reference checks passed.
+
 ## 2026-07-19 Tasks 10–12 — Materialized Snapshot, DB-Only Entry, React Trace
 
 - TDD persistence RED failed on the absent schema/loader; GREEN added `futures_macro_snapshot` UPSERT and DB-only loader. Persistence tests passed 2/2.

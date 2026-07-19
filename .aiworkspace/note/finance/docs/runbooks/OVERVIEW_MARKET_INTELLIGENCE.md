@@ -177,8 +177,9 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
    - `다시 읽기`는 provider 수집이나 전망 계산 없이 저장된 compatible snapshot만 다시 읽는다. snapshot이 없거나 schema/algorithm version이 맞지 않으면 `일봉 갱신 필요` 상태를 표시한다.
    - 첫 화면은 현재 체제, 현재/다음 1주/다음 1개월, `20D 전 → 5D 전 → 현재` 관측과 선택 horizon 예상 순이동·말일 도착 범위, 근거, 60D ribbon, 자산별 확인 포인트 순으로 읽는다.
    - 5D / 20D 확률과 예상 위치는 과거 유사 episode의 조건부 빈도·중앙 이동이며 미래 보장이나 가격 목표가 아니다. 방향 우위가 검증 gate를 넘지 못하면 `PROVISIONAL`과 `방향 우위 미확인`을 유지한다.
+   - 현재 관측은 `관측 완료 / 일부 관측 / 관측 불가`, 미래 분포는 `VERIFIED / PROVISIONAL / UNAVAILABLE`로 분리한다. 미래 전망이 잠정이어도 현재 저장 자료가 완전하면 현재 관측을 잠정으로 낮추지 않는다.
    - `방법론과 품질`은 원천, 독립 표본, Brier, baseline, calibration, 제한을 보여준다. 펼침 높이는 React component가 Streamlit iframe과 동기화한다.
-   - React `원본 데이터 / 계산 추적`은 snapshot 기준일/저장 시각/source marker와 compact `현재 점수 원본`, `점수 구성 기여`, `선물 일봉 변화`, 해석 주의점을 보여준다. 전체 5년 OHLCV 원본은 이 disclosure가 아니라 `finance_price.futures_ohlcv`에 남는다.
+   - React `원본 데이터 / 계산 추적`은 snapshot 기준일/저장 시각/source marker와 compact `현재 점수 원본`, `점수 구성 기여`, `선물 일봉 변화`, 해석 주의점을 보여준다. 전체 10년 OHLCV 원본은 이 disclosure가 아니라 `finance_price.futures_ohlcv`에 남는다.
    - 일봉 수집 성공 뒤 materialization만 실패하면 job은 `partial_success`다. 이전 latest-good snapshot은 지우지 말고 attached materialization result를 확인한 뒤 일봉 갱신을 재시도한다.
    - Futures Macro는 시장 컨텍스트 화면이며 live approval, order, broker/account sync, auto rebalance를 만들지 않는다.
 
@@ -376,7 +377,7 @@ PY
 - Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
 - Coverage Diagnostics keeps `Reason` / `Recommended Action` and adds compact `Likely Cause`, `Evidence Summary`, `Next Check`, `Listing Evidence`, `Profile Freshness`, and `Market Data Issue` evidence. These are DB-backed hints, not legal status, trading signal, validation gate, or monitoring signal.
 - Quote gap diagnostics persist repeated issue history to `finance_meta.market_data_issue` and display occurrence count / latest evidence in Coverage Diagnostics.
-- Futures Macro stores the current 1D/5D/20D score state, 5D/20D independent-episode probabilities, empirical net movement, validation metrics, and bounded calculation trace in one compatible compact snapshot after `일봉 갱신`. The React workbench reads this row without render-time replay; `다시 읽기` is storage-only. Its conclusion and path stay metric-backed, preserve provisional/unavailable gates, and must not create uncomputed recommendation prose.
+- Futures Macro requests ten years of daily candles and stores the current 1D/5D/20D score state, 5D/20D independent-episode probabilities, empirical net movement, validation metrics, and bounded calculation trace in one compatible compact snapshot after `일봉 갱신`. The React workbench reads this row without render-time replay; `다시 읽기` is storage-only. Its conclusion and path stay metric-backed, keep current observation status separate from future publication gates, and must not create uncomputed recommendation prose.
 - FOMC rows have `source=federal_reserve_fomc_calendar`, `confidence=1.0`, and `Source Type=Official`.
 - Macro rows have `Type=MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`, or `MACRO_GDP`, `Source Type=Official`, and `Validation=Official`.
 - BLS `.ics` import rows keep `source=bureau_labor_statistics_release_schedule` and `raw_payload_json.import_method=official_ics_file`.

@@ -18,7 +18,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
   - Current active task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~14차를 완료했고 승인된 15차 Portfolio Mix React one-shell 설계의 구현 계획과 개발을 이어간다.
-  - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro의 단기 거시 레이더와 5D/20D 조건부 경로를 확정하고, 5년 compact materialization·DB-only 첫 진입·React 방법론/계산 추적까지 마무리했다.
+  - Latest completed task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). Futures Macro의 현재 관측과 5D/20D 미래 검증 상태를 분리하고, 10년 compact materialization·DB-only 첫 진입·React 방법론/계산 추적까지 마무리했다. 현재는 관측 완료, 미래 둘은 PROVISIONAL이다.
   - Recent completed Institutional Portfolios task is [institutional-13f-openfigi-mapping-v1-20260718](./tasks/active/institutional-13f-openfigi-mapping-v1-20260718/STATUS.md). 무료 OpenFIGI current resolution과 curated-manager actual backfill을 전체 roadmap `4/4`로 완료했다.
   - Previous completed Institutional Portfolios task is [institutional-portfolios-context-first-redesign-v1-20260718](./tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md). 선택 기관 맥락, 전체 보유 탐색, 직접 종목 검색과 coverage / comparison 정확성을 전체 roadmap `4/4`로 완료했다.
   - Recent completed Overview / Market Context task is [overview-economic-cycle-sp500-actual-eps-registration-v1-20260718](./tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/STATUS.md). 공식 workbook 등록 제품 경로는 완료했고 실제 workbook과 발표일 입력은 외부 입력으로 남아 있다.
@@ -54,6 +54,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-19 - Futures Macro 현재 관측과 미래 검증은 같은 상태가 아니다
+
+- User request: 모든 카드가 `PROVISIONAL`로 보이는 이유를 확인하고, 승인한 A안과 권장 개선 순서대로 실제 상태 전환 조건을 구현해 달라고 요청함.
+- Interpreted goal: 이미 저장된 현재 자료의 관측 완전성과 과거 유사 흐름 기반 미래 분포의 검증 수준을 혼동하지 않고, 10년 이력으로 재평가하되 검증 gate는 낮추지 않는다.
+- Analysis result: current는 `OBSERVED/PARTIAL/UNAVAILABLE`, future는 probability/path 중 더 보수적인 `VERIFIED/PROVISIONAL/UNAVAILABLE`을 사용한다. 기존에는 probability-only VERIFIED가 final horizon에 노출될 수 있어 `pattern_outlook_v4_conservative_status_10y`로 계약을 교정했다.
+- Follow-up: 17/17 symbol의 10년 일봉 갱신과 42,499-row UPSERT를 완료했다. 현재는 `관측 완료`; 5D 120개와 20D 88개는 각각 남은 path/coverage 및 Brier/fold/coverage 실패 때문에 둘 다 `PROVISIONAL / 방향 우위 미확인`이다. 승인된 1~4차는 완료했고 조건부 5차 model revision은 별도 승인 범위다.
 
 ### 2026-07-19 - master 병합은 공용 calendar와 Backtest 공개 계약을 함께 보존한다
 
@@ -106,9 +113,9 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up: Python이 character/pressure projection과 drawdown alias를 소유하고 React/fallback은 표시만 한다. regime evidence와 turnover/cost criterion producer는 별도 승인 전까지 잔여 위험으로 둔다.
 ### 2026-07-19 - Futures Macro 계산은 일봉 갱신 때 저장하고 화면은 저장 결과만 읽는다
 
-- User request: 5년 이력을 써도 최초 Overview/Futures Macro 진입은 오래 걸리지 않게 하고, 잘린 방법론과 Streamlit 원본 추적을 React로 통일하는 마무리를 승인함.
+- User request: 장기 이력을 써도 최초 Overview/Futures Macro 진입은 오래 걸리지 않게 하고, 잘린 방법론과 Streamlit 원본 추적을 React로 통일하는 마무리를 승인함.
 - Interpreted goal: 비싼 5D/20D replay는 명시적 일봉 갱신에만 결합하고, 일상적인 탭 진입·다시 읽기는 latest-good compact snapshot만 읽는다.
-- Analysis result: `finance_meta.futures_macro_snapshot`에 source marker/schema/algorithm version과 JSON-safe compact payload를 저장한다. 전체 5년 OHLCV는 기존 table에 남기고 UI는 lazy compute fallback을 만들지 않는다.
+- Analysis result: `finance_meta.futures_macro_snapshot`에 source marker/schema/algorithm version과 JSON-safe compact payload를 저장한다. 전체 10년 OHLCV는 기존 table에 남기고 UI는 lazy compute fallback을 만들지 않는다.
 - Follow-up: 실제 2026-07-17 snapshot을 10.549s에 materialize했고 fresh DB read 0.36~0.37s, browser ready reload 1.877s를 확인했다. 방법론과 계산 추적은 React disclosure로 통합했고 desktop/420px clipping·overflow QA를 통과했다.
 
 ### 2026-07-19 - Futures Macro 점선은 중간 일별 경로가 아니라 말일 예상 순이동이다
