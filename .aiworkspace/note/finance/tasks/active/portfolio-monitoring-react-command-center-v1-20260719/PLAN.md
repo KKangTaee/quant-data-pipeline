@@ -410,12 +410,12 @@ coverage_ratio = covered_weight / total_weight if total_weight else 0.0
 return ExposureResult(buckets=buckets, coverage_ratio=coverage_ratio, uncovered_weight=uncovered_weight)
 ```
 
-- [ ] Write failing tests for direct sector/industry, ETF look-through priority, ETF top-level fallback, strategy target weights, overlapping-symbol aggregation, and weights that do not sum to 100%.
-- [ ] Assert missing look-through lowers coverage and never invents sector/asset weights.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_exposure.py -q` and confirm failure.
-- [ ] Implement source-dated facts with `covered_weight`, `uncovered_weight`, `coverage_ratio`, and provenance on every exposure bucket.
-- [ ] Run `./.venv/bin/python -m pytest tests/test_portfolio_monitoring_exposure.py -q`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/exposure.py`, and `git diff --check`.
-- [ ] Commit as `포트폴리오 노출 정규화 구현`.
+- [x] Write failing tests for direct sector/industry, ETF look-through priority, ETF top-level fallback, strategy target weights, overlapping-symbol aggregation, and weights that do not sum to 100%.
+- [x] Assert missing look-through lowers coverage and never invents sector/asset weights.
+- [x] Run the repository-available `unittest` equivalent and confirm failure (`pytest` is not installed in `.venv`).
+- [x] Implement source-dated facts with `covered_weight`, `uncovered_weight`, `coverage_ratio`, and provenance on every exposure bucket.
+- [x] Run `./.venv/bin/python -m unittest tests.test_portfolio_monitoring_exposure -v`, `./.venv/bin/python -m py_compile app/services/portfolio_monitoring/exposure.py`, and `git diff --check`.
+- [x] Commit as `포트폴리오 노출 정규화 구현`.
 
 ### Task 13: behavior facts와 versioned deterministic policy를 구현한다
 
