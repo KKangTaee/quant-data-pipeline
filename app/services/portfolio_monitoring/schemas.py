@@ -46,6 +46,23 @@ class CommandType(str, Enum):
     IMPORT_LEGACY = "import_legacy"
 
 
+class PositionEventAction(str, Enum):
+    CREATE = "create"
+    REPLACE = "replace"
+    VOID = "void"
+
+
+class PositionEffect(str, Enum):
+    INITIAL_QUANTITY_CORRECTION = "initial_quantity_correction"
+    BUY = "buy"
+    SELL = "sell"
+
+
+class ExecutionPriceSource(str, Enum):
+    DB_CLOSE_DEFAULT = "db_close_default"
+    MANUAL_OVERRIDE = "manual_override"
+
+
 @dataclass(frozen=True)
 class AddMonitoringItemInput:
     portfolio_group_id: str

@@ -30,6 +30,7 @@ class PortfolioMonitoringDatabaseSchemaTests(unittest.TestCase):
                 "monitoring_portfolio_group",
                 "monitoring_portfolio_item",
                 "monitoring_portfolio_command",
+                "monitoring_security_position_event",
                 "monitoring_diagnosis_snapshot",
                 "monitoring_risk_calibration_artifact",
             },
@@ -64,6 +65,27 @@ class PortfolioMonitoringDatabaseSchemaTests(unittest.TestCase):
         self.assertIn("status ENUM('pending','succeeded','failed')", command_sql)
         self.assertIn("result_ref VARCHAR(128) NULL", command_sql)
         self.assertIn("ix_monitoring_command_target", command_sql)
+
+        position_event_sql = portfolio_monitoring_schemas[
+            "monitoring_security_position_event"
+        ]
+        self.assertIn(
+            "CREATE TABLE IF NOT EXISTS monitoring_security_position_event",
+            position_event_sql,
+        )
+        self.assertIn("position_event_id VARCHAR(64) PRIMARY KEY", position_event_sql)
+        self.assertIn("root_event_id VARCHAR(64) NOT NULL", position_event_sql)
+        self.assertIn("event_order BIGINT NOT NULL", position_event_sql)
+        self.assertIn("reference_close DECIMAL(24,8) NULL", position_event_sql)
+        self.assertIn(
+            "execution_price_source ENUM('db_close_default','manual_override') NULL",
+            position_event_sql,
+        )
+        self.assertIn(
+            "UNIQUE KEY uk_monitoring_position_event_command (command_id)",
+            position_event_sql,
+        )
+        self.assertIn("KEY ix_monitoring_position_event_item_date", position_event_sql)
 
 
 class PortfolioMonitoringDomainSchemaTests(unittest.TestCase):
