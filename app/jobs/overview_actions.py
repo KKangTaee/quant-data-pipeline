@@ -28,6 +28,7 @@ from finance.loaders.us_stock_turnaround import build_us_stock_turnaround_collec
 from app.services.overview.market_context_valuation import (
     build_market_context_valuation_read_model,
 )
+from app.services.nyse_calendar import latest_completed_nyse_session
 
 from app.jobs.ingestion_jobs import (
     JobResult,
@@ -65,7 +66,8 @@ MARKET_MOVERS_EOD_MIN_PRICE_ROWS = {
 
 
 def _market_movers_today() -> date:
-    return datetime.now().date()
+    """Return the latest fully completed NYSE session for EOD refresh planning."""
+    return latest_completed_nyse_session()
 
 
 def record_overview_action_result(result: JobResult) -> None:

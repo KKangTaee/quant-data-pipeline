@@ -10,6 +10,13 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-21 - Market Movers 비-Daily refresh basis 수정
+
+- Weekly / Monthly EOD preflight가 랭킹 `effective_end_date`를 수집 목표일로 재사용하던 순환 문제를 제거했다.
+- 최신 완료 NYSE session과 랭킹 데이터 기준을 분리하고, 가격 이력 수동 갱신을 항상 노출한다.
+- 실제 DB preflight는 2026-07-20 목표로 Weekly 502 / Monthly 501개 보강 대상을 확인했다.
+- 상세: `tasks/active/market-movers-nondaily-refresh-basis-fix-v1-20260721/STATUS.md`.
+
 ## Active Pointers
 
 - current phase board:

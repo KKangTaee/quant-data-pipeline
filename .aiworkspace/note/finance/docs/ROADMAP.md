@@ -278,6 +278,13 @@ Market Movers chart navigation 후속 task는 `.aiworkspace/note/finance/tasks/a
 - 구현과 focused/service contract/Vite build는 완료했다. 실제 desktop/narrow hover·drag Browser QA는 localhost URL policy 차단으로 남았으며, 이 QA 공백은 전체 기능 roadmap `4/5차`와 별개다.
 - 다음: 5차 sector conditional outlook은 historical episode와 OOS publication gate를 먼저 검증한다. gate를 통과하지 못하면 확률·분포 수치를 공개하지 않으며 industry outlook은 PIT taxonomy 준비 전까지 보류한다.
 
+Market Movers 비-Daily refresh basis 후속 task는 `.aiworkspace/note/finance/tasks/active/market-movers-nondaily-refresh-basis-fix-v1-20260721/`다.
+
+- 목적: Weekly / Monthly가 coverage-qualified 랭킹 기준일을 가격 수집 목표일로 재사용해 2026-07-07에 고정되고 가격 이력 수동 갱신이 사라지던 순환 문제를 해결했다.
+- 주요 변경: 최신 완료 NYSE session을 EOD preflight/job 기본 목표일로 사용하고, React는 `최근 완료 시장일`과 `랭킹 데이터 기준`을 분리한다. 비-Daily 가격 이력 수동 갱신은 항상 노출하며 대상이 있을 때만 primary로 강조한다.
+- QA: Market Movers/NYSE 관련 114 tests, Python compile, Vite production build와 실제 DB read-only preflight에서 2026-07-20 목표·Weekly 502개·Monthly 501개 보강 대상을 확인했다. Browser actual QA는 localhost URL policy로 차단됐다.
+- 경계: coverage 임계치, 랭킹 계산, provider, DB schema, 자동 갱신 schedule은 변경하지 않았다.
+
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/`다.
 
 - 목적: Market Movers 비-Daily 상단의 긴 설명형 버튼을 간결하게 만들고, Monthly full-window 갱신 성공 뒤에도 provider 가용 이력이 짧은 종목이 같은 갱신 대상으로 반복되는 문제를 해결했다.

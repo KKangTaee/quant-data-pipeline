@@ -536,8 +536,8 @@ function MarketMoversTimingAndActions({
 }) {
   const timingItems = [
     ["현재 시각", payload.timing.current_time],
-    ["시장 기준일", payload.timing.market_date],
-    ["데이터 기준", payload.timing.data_as_of],
+    ["최근 완료 시장일", payload.timing.market_date],
+    ["랭킹 데이터 기준", payload.timing.data_as_of],
     ["마지막 수동 갱신", payload.timing.last_refreshed_at],
   ];
   return (

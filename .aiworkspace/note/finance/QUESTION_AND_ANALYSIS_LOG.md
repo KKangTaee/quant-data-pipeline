@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-21 - 비-Daily 시장일과 랭킹 기준일은 같은 날짜 계약이 아니다
+
+- User request: Weekly / Monthly의 데이터 기준일이 최신이 되지 않고 시장 기준일이 7월 7일에 머무는 문제를 수정하도록 요청함.
+- Interpreted goal: 불완전한 최신일을 랭킹에 강제 포함하지 않으면서 실제 가격 보강 경로와 날짜 의미를 복구한다.
+- Analysis result: coverage-qualified `effective_end_date`를 preflight target으로 재사용해 가격 갱신 자체가 사라지는 순환이 원인이었다. refresh target은 최신 완료 NYSE session, ranking basis는 coverage-qualified date로 분리했다.
+- Follow-up: 버그 수정 roadmap `2/2차` 완료. provider 실제 수집 후 랭킹 basis가 전진하는지는 화면 새로고침으로 확인하며 broader conditional outlook은 별도 `5차`다.
+
 ## Active Pointers
 
 - current phase board:

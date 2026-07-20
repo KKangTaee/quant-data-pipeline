@@ -17137,10 +17137,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["handler"], "run_overview_market_symbol_alias_repair")
         self.assertEqual(plan["universe_code"], "TOP1000")
 
+    @patch(
+        "app.web.overview.market_movers_helpers.latest_completed_nyse_session",
+        return_value=date(2026, 7, 7),
+    )
     @patch("app.web.overview.market_movers_helpers.st")
     def test_market_movers_react_actions_include_price_history_refresh_for_non_daily(
         self,
         mock_st: MagicMock,
+        _mock_latest_completed_session: MagicMock,
     ) -> None:
         from app.web.overview.market_movers_helpers import (
             MarketMoverControls,

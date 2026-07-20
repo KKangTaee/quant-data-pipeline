@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 from app.web.overview.market_movers_decision_ui import (
     build_market_movers_decision_shell_payload,
 )
@@ -213,6 +215,127 @@ def test_decision_timing_uses_stored_effective_market_date(monkeypatch) -> None:
     assert timing["data_as_of"] == "2026-07-17 20:00:00"
 
 
+def test_non_daily_decision_timing_separates_completed_market_date_from_ranking_basis(monkeypatch) -> None:
+    from app.web.overview import market_movers_helpers as helpers
+
+    monkeypatch.setattr(helpers.st, "session_state", {})
+    monkeypatch.setattr(
+        helpers,
+        "latest_completed_nyse_session",
+        lambda: date(2026, 7, 20),
+    )
+
+    timing = helpers._market_movers_decision_timing(
+        {
+            "date_window": {"effective_end_date": "2026-07-07"},
+            "coverage": {"effective_end_date": "2026-07-07"},
+        },
+        period="monthly",
+    )
+
+    assert timing["market_date"] == "2026-07-20 ET"
+    assert timing["data_as_of"] == "2026-07-07"
+
+
+def test_market_movers_eod_default_date_uses_latest_completed_nyse_session(monkeypatch) -> None:
+    from app.jobs import overview_actions
+
+    monkeypatch.setattr(
+        overview_actions,
+        "latest_completed_nyse_session",
+        lambda: date(2026, 7, 20),
+    )
+
+    assert overview_actions._market_movers_today() == date(2026, 7, 20)
+
+
+def test_non_daily_preflight_targets_latest_completed_market_session(monkeypatch) -> None:
+    from app.web.overview import market_movers_helpers as helpers
+
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(helpers.st, "session_state", {})
+    monkeypatch.setattr(
+        helpers,
+        "latest_completed_nyse_session",
+        lambda: date(2026, 7, 20),
+    )
+
+    def build_preflight(**kwargs):
+        calls.append(kwargs)
+        return {
+            "schema_version": "market_movers_eod_refresh_preflight_v1",
+            "status": "due",
+            "selected_symbols_count": 502,
+            "skipped_current_count": 0,
+            "as_of_date": str(kwargs["as_of_date"]),
+        }
+
+    monkeypatch.setattr(helpers, "build_market_movers_eod_refresh_preflight", build_preflight)
+    controls = helpers.MarketMoverControls(
+        coverage="SP500",
+        universe_limit=500,
+        period="weekly",
+        sector="All",
+        top_n=20,
+        mode="top_gainers",
+    )
+
+    prepared = helpers._market_movers_attach_eod_preflight(
+        {
+            "date_window": {"effective_end_date": "2026-07-07"},
+            "eod_refresh_preflight": {
+                "schema_version": "market_movers_eod_refresh_preflight_v1",
+                "status": "current",
+                "selected_symbols_count": 0,
+                "as_of_date": "2026-07-07",
+            },
+        },
+        controls=controls,
+    )
+
+    assert calls == [
+        {
+            "universe_code": "SP500",
+            "universe_limit": 500,
+            "period": "weekly",
+            "as_of_date": "2026-07-20",
+        }
+    ]
+    assert prepared["eod_refresh_preflight"]["selected_symbols_count"] == 502
+    assert helpers.st.session_state["overview_sp500_weekly_eod_history_as_of_date"] == "2026-07-20"
+
+
+def test_non_daily_price_refresh_action_remains_visible_when_preflight_is_current() -> None:
+    from app.web.overview import market_movers_helpers as helpers
+
+    controls = helpers.MarketMoverControls(
+        coverage="SP500",
+        universe_limit=500,
+        period="monthly",
+        sector="All",
+        top_n=20,
+        mode="top_gainers",
+    )
+
+    actions = helpers._market_movers_react_actions(
+        controls=controls,
+        snapshot={
+            "eod_refresh_preflight": {
+                "status": "current",
+                "selected_symbols_count": 0,
+                "skipped_current_count": 500,
+                "as_of_date": "2026-07-20",
+            }
+        },
+    )
+
+    assert actions[0] == {
+        "id": "refresh_eod_history",
+        "label": "가격 이력 수동 갱신",
+        "kind": "secondary",
+    }
+
+
 def test_manual_refresh_invalidation_clears_session_and_cached_loaders(monkeypatch) -> None:
     from types import SimpleNamespace
 
@@ -257,6 +380,8 @@ def test_decision_shell_renders_timing_actions_grouped_breadth_and_return_tones(
 
     assert "function MarketMoversTimingAndActions" in source
     assert 'className="mm-decision__timing-actions"' in source
+    assert '["최근 완료 시장일", payload.timing.market_date]' in source
+    assert '["랭킹 데이터 기준", payload.timing.data_as_of]' in source
     assert "payload.actions.map" in source
     assert 'className="mm-decision__breadth-toolbar"' in source
     assert '<span>분류</span>' in source

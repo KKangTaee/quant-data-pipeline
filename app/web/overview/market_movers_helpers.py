@@ -33,6 +33,7 @@ from app.services.overview.market_interest import (
     build_market_interest_read_model,
     fetch_yfinance_analyst_interest_metadata,
 )
+from app.services.nyse_calendar import latest_completed_nyse_session
 from app.services.overview.why_it_moved import (
     build_market_mover_metadata_not_requested_state,
     build_market_mover_metadata_status_strip,
@@ -606,17 +607,25 @@ def _effective_timestamp(coverage: dict[str, Any]) -> str:
     )
 
 
-def _market_movers_decision_timing(snapshot: dict[str, Any]) -> dict[str, str]:
+def _market_movers_decision_timing(
+    snapshot: dict[str, Any],
+    *,
+    period: str = "daily",
+) -> dict[str, str]:
     now_kst = datetime.now(ZoneInfo("Asia/Seoul"))
     market_now = now_kst.astimezone(ZoneInfo("America/New_York"))
     coverage = dict(snapshot.get("coverage") or {})
     date_window = dict(snapshot.get("date_window") or {})
-    market_date_raw = str(
-        date_window.get("effective_end_date")
-        or coverage.get("effective_end_date")
-        or coverage.get("latest_raw_date")
-        or market_now.date().isoformat()
-    )
+    normalized_period = str(period or "daily").strip().lower()
+    if normalized_period == "daily":
+        market_date_raw = str(
+            date_window.get("effective_end_date")
+            or coverage.get("effective_end_date")
+            or coverage.get("latest_raw_date")
+            or market_now.date().isoformat()
+        )
+    else:
+        market_date_raw = latest_completed_nyse_session().isoformat()
     market_date_timestamp = pd.to_datetime(market_date_raw, errors="coerce")
     market_date = (
         market_date_timestamp.date().isoformat()
@@ -806,14 +815,15 @@ def _market_movers_attach_eod_preflight(
         return snapshot
     prepared = dict(snapshot)
     preflight = dict(prepared.get("eod_refresh_preflight") or {})
-    as_of_date = str(preflight.get("as_of_date") or _market_movers_snapshot_effective_as_of_date(prepared)).strip()
-    if not preflight:
+    as_of_date = latest_completed_nyse_session().isoformat()
+    preflight_as_of = str(preflight.get("as_of_date") or "").strip()
+    if not preflight or preflight_as_of != as_of_date:
         try:
             preflight = build_market_movers_eod_refresh_preflight(
                 universe_code=controls.coverage,
                 universe_limit=controls.universe_limit,
                 period=controls.period,
-                as_of_date=as_of_date or None,
+                as_of_date=as_of_date,
             )
         except Exception as exc:  # pragma: no cover - UI resilience only
             preflight = {
@@ -845,9 +855,12 @@ def _market_movers_react_actions(*, controls: MarketMoverControls, snapshot: dic
         return actions
 
     preflight = dict(snapshot.get("eod_refresh_preflight") or {})
-    actions = []
-    if _safe_int(preflight.get("selected_symbols_count")) > 0:
-        actions.append({"id": "refresh_eod_history", "label": "가격 이력 수동 갱신", "kind": "primary"})
+    refresh_kind = (
+        "primary"
+        if _safe_int(preflight.get("selected_symbols_count")) > 0
+        else "secondary"
+    )
+    actions = [{"id": "refresh_eod_history", "label": "가격 이력 수동 갱신", "kind": refresh_kind}]
     actions.append(_market_movers_react_universe_basis_action(controls.coverage, kind="secondary"))
     actions.append({"id": "reload", "label": "화면 새로고침", "kind": "secondary"})
     return actions
@@ -1063,7 +1076,7 @@ def build_market_movers_decision_react_payload(
         selected_symbol=selected,
         action_note=_market_movers_react_action_note(controls=controls, snapshot=snapshot),
         breadth_selection={"group_by": breadth_group, "period": breadth_period},
-        timing=_market_movers_decision_timing(snapshot),
+        timing=_market_movers_decision_timing(snapshot, period=controls.period),
     )
 
 
@@ -3013,7 +3026,7 @@ def _render_market_movers_eod_refresh_bar(
     universe_count = coverage.get("universe_count") or 0
     returnable_pct = coverage.get("returnable_pct")
     preflight = dict(snapshot.get("eod_refresh_preflight") or {})
-    refresh_disabled = _safe_int(preflight.get("selected_symbols_count")) <= 0
+    refresh_due = _safe_int(preflight.get("selected_symbols_count")) > 0
 
     render_market_refresh_status_bar(
         universe_label=universe_label,
@@ -3030,7 +3043,7 @@ def _render_market_movers_eod_refresh_bar(
         key=f"overview_{universe_code.lower()}_{period}_eod_history_refresh",
         use_container_width=True,
         type="primary",
-        disabled=refresh_disabled,
+        disabled=False,
         help=(
             f"{period_label} 랭킹 산출에 필요한 저장 EOD 가격 이력을 기존 OHLCV 경로로 갱신합니다. "
             "이미 최신인 종목은 건너뛰고 누락되었거나 오래된 종목을 우선 보강합니다."
@@ -3063,7 +3076,7 @@ def _render_market_movers_eod_refresh_bar(
     ):
         _invalidate_market_movers_read_caches(coverage=universe_code)
         st.rerun()
-    if _safe_int(preflight.get("limited_history_symbols_count")) > 0 and refresh_disabled:
+    if _safe_int(preflight.get("limited_history_symbols_count")) > 0 and not refresh_due:
         control_cols[3].caption(str(preflight.get("range_reason") or "짧은 가격 이력 종목은 현재 랭킹에서 제외됩니다."))
     else:
         control_cols[3].caption(
