@@ -877,6 +877,18 @@ function financialChartWidth(pointCount: number, frequency: "quarterly" | "annua
   return Math.max(720, pointCount * pointWidth + 56);
 }
 
+function financialTooltipLeftPx(
+  coordinateX: number,
+  scrollLeft: number,
+  clientWidth: number,
+  chartWidth: number,
+) {
+  const viewportWidth = clientWidth > 0 ? clientWidth : chartWidth;
+  const minLeft = Math.min(chartWidth - 72, Math.max(72, scrollLeft + 72));
+  const maxLeft = Math.max(minLeft, Math.min(chartWidth - 72, scrollLeft + viewportWidth - 72));
+  return Math.max(minLeft, Math.min(maxLeft, coordinateX));
+}
+
 function rangeFilteredSeries(series: DecisionRow[], range: string) {
   if (!series.length || range === "1Y") return series;
   const latest = new Date(textValue(series[series.length - 1], "date"));
@@ -1031,6 +1043,7 @@ function FinancialFactorChart({ research, controls }: FinancialFactorChartProps)
   const [chartMode, setChartMode] = useState<"bar" | "line">("bar");
   const [activeFinancialIndex, setActiveFinancialIndex] = useState<number | null>(null);
   const [isFinancialDragging, setIsFinancialDragging] = useState(false);
+  const [financialViewport, setFinancialViewport] = useState({ scrollLeft: 0, clientWidth: 720 });
   const financialScrollRef = useRef<HTMLDivElement | null>(null);
   const financialSvgRef = useRef<SVGSVGElement | null>(null);
   const financialDragRef = useRef({ pointerId: -1, startX: 0, startScrollLeft: 0 });
@@ -1063,6 +1076,22 @@ function FinancialFactorChart({ research, controls }: FinancialFactorChartProps)
         }
       : financialCoordinates[resolvedFinancialIndex];
   const financialTooltipPlacement = activeFinancialCoordinate && activeFinancialCoordinate.y < 92 ? "below" : "above";
+  const financialTooltipLeft = activeFinancialCoordinate
+    ? financialTooltipLeftPx(
+        activeFinancialCoordinate.x,
+        financialViewport.scrollLeft,
+        financialViewport.clientWidth,
+        chartWidth,
+      )
+    : 0;
+  const syncFinancialViewport = (viewport: HTMLDivElement) => {
+    const nextViewport = { scrollLeft: viewport.scrollLeft, clientWidth: viewport.clientWidth };
+    setFinancialViewport((current) => (
+      current.scrollLeft === nextViewport.scrollLeft && current.clientWidth === nextViewport.clientWidth
+        ? current
+        : nextViewport
+    ));
+  };
   useEffect(() => {
     setChartMode(unit === "percent" || unit === "ratio" ? "line" : "bar");
   }, [factorId, frequency, unit]);
@@ -1070,7 +1099,10 @@ function FinancialFactorChart({ research, controls }: FinancialFactorChartProps)
     setActiveFinancialIndex(null);
     const frame = window.requestAnimationFrame(() => {
       const viewport = financialScrollRef.current;
-      if (viewport) viewport.scrollLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+      if (viewport) {
+        viewport.scrollLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+        syncFinancialViewport(viewport);
+      }
     });
     return () => window.cancelAnimationFrame(frame);
   }, [factorId, frequency, points.length, research]);
@@ -1107,6 +1139,7 @@ function FinancialFactorChart({ research, controls }: FinancialFactorChartProps)
     if (financialDragRef.current.pointerId !== event.pointerId) return;
     event.currentTarget.scrollLeft = financialDragRef.current.startScrollLeft
       - (event.clientX - financialDragRef.current.startX);
+    syncFinancialViewport(event.currentTarget);
   };
   const endFinancialDrag = (event: React.PointerEvent<HTMLDivElement>) => {
     if (financialDragRef.current.pointerId !== event.pointerId) return;
@@ -1187,6 +1220,7 @@ function FinancialFactorChart({ research, controls }: FinancialFactorChartProps)
               }}
               onPointerMove={handleFinancialPointerMove}
               onPointerUp={endFinancialDrag}
+              onScroll={(event) => syncFinancialViewport(event.currentTarget)}
               ref={financialScrollRef}
             >
               <div className="mm-decision__chart-inner" style={{ minWidth: "100%", width: `${chartWidth}px` }}>
@@ -1235,7 +1269,7 @@ function FinancialFactorChart({ research, controls }: FinancialFactorChartProps)
                       className="mm-decision__chart-tooltip"
                       data-placement={financialTooltipPlacement}
                       style={{
-                        left: `clamp(72px, ${(activeFinancialCoordinate.x / chartWidth) * 100}%, calc(100% - 72px))`,
+                        left: `${financialTooltipLeft}px`,
                         top: `${financialTooltipPlacement === "below" ? activeFinancialCoordinate.y + 12 : Math.max(8, activeFinancialCoordinate.y - 12)}px`,
                       }}
                     >
