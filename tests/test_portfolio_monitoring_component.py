@@ -132,6 +132,26 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn("@media (max-width: 420px)", styles)
         self.assertIn(".pm-hero h1 { font-size: 26px; }", styles)
 
+    def test_diagnosis_lists_are_bounded_only_on_desktop(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        styles = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/style.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('className="pm-diagnosis-list"', source)
+        self.assertIn("group.member_count", source)
+        self.assertIn("group.members.map", source)
+        self.assertRegex(
+            styles,
+            r"\.pm-diagnosis-list \{[^}]*max-height: 560px;[^}]*overflow-y: auto;[^}]*scrollbar-gutter: stable;",
+        )
+        self.assertRegex(
+            styles,
+            r"@media \(max-width: 760px\) \{[\s\S]*?\.pm-diagnosis-list \{[^}]*max-height: none;[^}]*overflow: visible;",
+        )
+
     def test_date_input_uses_immediate_input_event_without_blur_rerun(self) -> None:
         source = Path(
             "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"
