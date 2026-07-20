@@ -10247,3 +10247,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: operations status를 주인공으로 만들지 않고 ranking에서 group context와 정확한 종목 조사까지 한 흐름으로 끝낸다.
 - Analysis result: one-shell 60~65/35~40 split, complete/partial/blocked, sector/industry current flow, sector conditional outlook gate, latest-cap Top 3, independent period/factor와 single-axis 재무 chart를 승인했다.
 - Follow-up: 전체 roadmap `2/5차` 설계를 `RECOMMENDATION.md`에 확정했다. 다음은 3차 canonical taxonomy, typed gaps, bellwether, industry, financial read-model hardening 계획이다.
+
+### 2026-07-20 - 변동 종목 3차는 UI가 의미를 재해석하지 않도록 read model을 먼저 고정한다
+
+- User request: 승인한 A안을 인라인 방식으로 계속 구현하도록 요청함.
+- Interpreted goal: 4차 React UI 전에 sector/filter, 수집 상태, group flow, 대장주, 재무 factor와 PER의 의미를 하나의 안정된 payload로 만든다.
+- Analysis result: canonical 11-sector, metric별 `COMPLETE/PARTIAL/BLOCKED`, sector/industry current flow, market-cap Top 3, research snapshot v2와 JSON-safe decision payload를 구현했다. current-price historical PER는 제거했다.
+- Follow-up: 전체 roadmap `3/5차`다. 대형주 10개 PIT EPS smoke는 current PER `0/10 READY`이므로 4차에서 unavailable을 숨기지 않고, 5차 outlook은 OOS gate 전까지 공개하지 않는다.

@@ -63,6 +63,7 @@ Last Verified: 2026-07-20
 - Previous completed task: [S&P 500 Valuation V1 2026-07-12](../tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
 - Previous completed task: [Practical Validation Recheck Handoff Loop Fix V1 2026-07-12](../tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
 - Previous completed task: [Practical Validation Pre-Final Enrichment Gate V1 2026-07-12](../tasks/active/practical-validation-pre-final-enrichment-gate-v1-20260712/STATUS.md).
+- Current Market Movers redesign task: [Market Movers Read-Model Hardening V1 2026-07-20](../tasks/active/market-movers-read-model-hardening-v1-20260720/STATUS.md) — 전체 3/5차 완료; 4차 React one-shell 대기.
 - Previous completed task: [Overview Market Movers Top Actions / Monthly History V1 2026-07-11](../tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/STATUS.md).
 - Previous completed task: [Overview Market Movers Visual Grouping V1 2026-07-11](../tasks/active/overview-market-movers-visual-grouping-v1-20260711/STATUS.md).
 - Earlier completed task: [Overview Market Movers Section Title Unification V1 2026-07-11](../tasks/active/overview-market-movers-section-title-unification-v1-20260711/STATUS.md).

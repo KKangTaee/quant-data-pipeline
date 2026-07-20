@@ -6877,3 +6877,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - complete/partial/blocked 데이터 상태, sector 시총 Top 3, gated sector outlook, industry current flow 계약을 확정했다.
 - 선택 종목 재무는 보고 주기와 factor를 분리하고 one-factor/one-axis, reported diluted EPS, PIT-correct PER 원칙을 적용한다.
 - 전체 roadmap `2/5차` 완료. 상세는 `researches/active/2026-06-market-movers-redesign-v2-benchmark/RECOMMENDATION.md`, 다음은 3차 data/read-model 계획이다.
+
+## 2026-07-20 - Overview Market Movers read model 3차 완료
+
+- canonical 11-sector filter, metric별 collection readiness, sector/industry current flow, latest market-cap bellwether Top 3를 별도 계약으로 구현했다.
+- selected research는 annual/quarterly factor series와 PIT 4분기 reported diluted EPS 기반 current PER를 분리하고 current-price historical PER를 제거했다.
+- `market_movers_decision_payload_v1`, focused 16개, Market Movers 126개, SP500/Top1000/Top2000 및 industry DB smoke를 확인했다. 전체 roadmap `3/5차`; 다음은 4차 React one-shell이다.
+- 상세 검증과 diluted EPS coverage 위험은 `tasks/active/market-movers-read-model-hardening-v1-20260720/`를 본다.
