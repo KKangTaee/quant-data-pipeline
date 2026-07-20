@@ -62,6 +62,9 @@ const activeGroup = {
   ],
   metrics: {
     invested_capital: 20000,
+    gross_contributions: 20000,
+    gross_withdrawals: 0,
+    net_contributions: 20000,
     current_value: 21000,
     pnl: 1000,
     total_return: 0.05,

@@ -11,6 +11,9 @@ export type GroupSummary = {
 
 export type GroupMetrics = {
   invested_capital: number;
+  gross_contributions: number;
+  gross_withdrawals: number;
+  net_contributions: number;
   current_value: number;
   pnl: number;
   total_return: number | null;
@@ -21,6 +24,36 @@ export type GroupMetrics = {
   total_contribution: number;
   downside_contribution: number;
   contribution_by_item: Record<string, number>;
+};
+
+export type PositionEventRow = {
+  root_event_id: string;
+  current_event_id: string;
+  position_event_id: string;
+  status: "active" | "superseded" | "voided";
+  position_effect: "initial_quantity_correction" | "buy" | "sell";
+  trade_date: string;
+  event_order: number;
+  quantity: number | null;
+  execution_price: number | null;
+  reference_close: number | null;
+  execution_price_source: "db_close_default" | "manual_override" | null;
+  fee_usd: number;
+  note: string;
+  shares_after: number | null;
+};
+
+export type SelectedPositionProjection = {
+  monitoring_item_id: string | null;
+  eligible: boolean;
+  reason: string | null;
+  effective_initial_shares: number | null;
+  current_shares: number | null;
+  gross_contributions: number;
+  gross_withdrawals: number;
+  pnl: number | null;
+  total_return: number | null;
+  event_rows: PositionEventRow[];
 };
 
 export type ItemRow = {
@@ -156,10 +189,11 @@ export type DiagnosisProjection = {
 };
 
 export type PortfolioMonitoringWorkspace = {
-  schema_version: "portfolio_monitoring_workspace_v1";
+  schema_version: "portfolio_monitoring_workspace_v2";
   generated_at: string;
   groups: GroupSummary[];
   active_group: GroupValueResult | null;
+  selected_position: SelectedPositionProjection;
   selected_item_market_chart?: SelectedItemMarketChart;
   catalog: { query: string; items: CatalogItem[] };
   commands: CommandProjection[];

@@ -8,7 +8,11 @@ from decimal import Decimal
 import pandas as pd
 
 from app.services.portfolio_monitoring.persistence import MonitoringItemRecord, PortfolioGroupRecord
-from app.services.portfolio_monitoring.valuation import CorporateActionReview, ItemValueLane
+from app.services.portfolio_monitoring.valuation import (
+    CorporateActionReview,
+    ItemValueLane,
+    PositionLedgerSummary,
+)
 from app.services.portfolio_monitoring.macro_context import MacroContext, MacroObservation
 
 
@@ -28,6 +32,8 @@ def _item(
     status: str = "active",
     end: date | None = None,
     exit_value: str | None = None,
+    funding_mode: str = "fixed_notional",
+    input_shares: int | None = None,
 ) -> MonitoringItemRecord:
     return MonitoringItemRecord(
         monitoring_item_id=item_id,
@@ -37,9 +43,11 @@ def _item(
         instrument_kind="stock",
         requested_start_date=requested,
         effective_start_date=effective,
-        funding_mode="fixed_notional",
-        input_notional=Decimal(capital),
-        input_shares=None,
+        funding_mode=funding_mode,
+        input_notional=(
+            Decimal(capital) if funding_mode == "fixed_notional" else None
+        ),
+        input_shares=input_shares,
         entry_close=Decimal("10"),
         initial_capital=Decimal(capital),
         tracking_end_requested_date=end,
@@ -65,6 +73,60 @@ def _lane(item: MonitoringItemRecord, rows: list[tuple[str, float]]) -> ItemValu
     )
 
 
+def _position_lane(item: MonitoringItemRecord) -> ItemValueLane:
+    frame = pd.DataFrame(
+        {
+            "date": pd.to_datetime(
+                ["2026-07-01", "2026-07-02", "2026-07-03"]
+            ),
+            "total_value": [1000.0, 1500.0, 1200.0],
+            "external_flow": [0.0, 501.0, -299.0],
+            "cumulative_contributions": [1000.0, 1501.0, 1501.0],
+            "cumulative_withdrawals": [0.0, 0.0, 299.0],
+            "flow_adjusted_index": [1.0, 0.9992, 0.99846],
+            "data_status": [item.status] * 3,
+        }
+    )
+    return ItemValueLane(
+        monitoring_item_id=item.monitoring_item_id,
+        source_ref=item.source_ref,
+        effective_start_date=date(2026, 7, 1),
+        latest_usable_date=date(2026, 7, 3),
+        initial_capital=Decimal("1000"),
+        status=item.status,
+        curve=frame,
+        review=CorporateActionReview(
+            "NOT_AVAILABLE", None, None, ("position events",)
+        ),
+        position=PositionLedgerSummary(
+            eligible=True,
+            effective_initial_shares=Decimal("10"),
+            current_shares=Decimal("12"),
+            cumulative_contributions=Decimal("1501"),
+            cumulative_withdrawals=Decimal("299"),
+            pnl=Decimal("-2"),
+            event_rows=(
+                {
+                    "root_event_id": "buy-root",
+                    "current_event_id": "buy-v1",
+                    "position_event_id": "buy-v1",
+                    "status": "active",
+                    "position_effect": "buy",
+                    "trade_date": "2026-07-02",
+                    "event_order": 1,
+                    "quantity": 5,
+                    "execution_price": Decimal("100"),
+                    "reference_close": Decimal("100"),
+                    "execution_price_source": "db_close_default",
+                    "fee_usd": Decimal("1"),
+                    "note": "",
+                    "shares_after": Decimal("15"),
+                },
+            ),
+        ),
+    )
+
+
 class FakeRepository:
     def __init__(self, groups, items):
         self.groups = groups
@@ -81,6 +143,104 @@ class FakeRepository:
 
 
 class PortfolioMonitoringReadModelTests(unittest.TestCase):
+    def test_group_metrics_exclude_external_flows_from_return_and_profit(self) -> None:
+        read_model = _load_read_model()
+        item = _item(
+            "item-amd",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+            funding_mode="fixed_shares",
+            input_shares=10,
+        )
+
+        result = read_model.align_group_value_lanes(
+            [item], {item.monitoring_item_id: _position_lane(item)}
+        )
+
+        self.assertEqual(result.metrics.gross_contributions, Decimal("1501.0"))
+        self.assertEqual(result.metrics.gross_withdrawals, Decimal("299.0"))
+        self.assertEqual(result.metrics.net_contributions, Decimal("1202.0"))
+        self.assertEqual(result.metrics.pnl, Decimal("-2.0"))
+        self.assertNotEqual(
+            result.metrics.total_return,
+            result.metrics.pnl / result.metrics.gross_contributions,
+        )
+
+    def test_eventless_group_metrics_match_v1_values(self) -> None:
+        read_model = _load_read_model()
+        first = _item(
+            "a", requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1), capital="10000",
+        )
+        second = _item(
+            "b", requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1), capital="10000",
+        )
+
+        result = read_model.align_group_value_lanes(
+            [first, second],
+            {
+                "a": _lane(
+                    first, [("2026-07-01", 10000), ("2026-07-18", 10500)]
+                ),
+                "b": _lane(
+                    second, [("2026-07-01", 10000), ("2026-07-18", 10500)]
+                ),
+            },
+        )
+
+        self.assertEqual(result.metrics.invested_capital, Decimal("20000"))
+        self.assertEqual(result.metrics.current_value, Decimal("21000.0"))
+        self.assertEqual(result.metrics.pnl, Decimal("1000.0"))
+        self.assertEqual(result.metrics.total_return, Decimal("0.05"))
+
+    def test_workspace_projects_only_selected_eligible_position(self) -> None:
+        read_model = _load_read_model()
+        group = PortfolioGroupRecord("group-core", "Core", True)
+        stock = _item(
+            "item-amd",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+            funding_mode="fixed_shares",
+            input_shares=10,
+        )
+        strategy = MonitoringItemRecord(
+            **{
+                **_item(
+                    "item-strategy",
+                    requested=date(2026, 7, 1),
+                    effective=date(2026, 7, 1),
+                ).__dict__,
+                "source_type": "selected_strategy",
+                "instrument_kind": "strategy",
+            }
+        )
+        repository = FakeRepository([group], [stock, strategy])
+
+        workspace = read_model.build_portfolio_monitoring_workspace(
+            repository,
+            active_group_id="group-core",
+            selected_item_id="item-amd",
+            lane_loader=lambda item: (
+                _position_lane(item)
+                if item.monitoring_item_id == "item-amd"
+                else _lane(item, [("2026-07-01", 1000)])
+            ),
+        )
+
+        self.assertEqual(
+            workspace["schema_version"], "portfolio_monitoring_workspace_v2"
+        )
+        self.assertTrue(workspace["selected_position"]["eligible"])
+        self.assertEqual(
+            workspace["selected_position"]["current_shares"], Decimal("12")
+        )
+        self.assertEqual(
+            workspace["selected_position"]["event_rows"][0]["position_effect"],
+            "buy",
+        )
     def test_alignment_keeps_pre_start_and_post_end_capital_as_cash(self) -> None:
         read_model = _load_read_model()
         active = _item("a", requested=date(2026, 7, 1), effective=date(2026, 7, 2))
@@ -202,9 +362,9 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
 
         self.assertEqual(
             set(workspace),
-            {"schema_version", "generated_at", "config_fingerprint", "groups", "active_group", "catalog", "commands", "diagnosis", "macro_observation", "now_to_review", "source_health", "risk_calibration", "diagnosis_history", "method", "boundaries"},
+            {"schema_version", "generated_at", "config_fingerprint", "groups", "active_group", "selected_position", "catalog", "commands", "diagnosis", "macro_observation", "now_to_review", "source_health", "risk_calibration", "diagnosis_history", "method", "boundaries"},
         )
-        self.assertEqual(workspace["schema_version"], "portfolio_monitoring_workspace_v1")
+        self.assertEqual(workspace["schema_version"], "portfolio_monitoring_workspace_v2")
         self.assertTrue(workspace["groups"][0]["selected"])
         self.assertEqual(workspace["active_group"].status, "PARTIAL")
         self.assertEqual(workspace["active_group"].history_item_count, 2)
