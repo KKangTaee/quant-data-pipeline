@@ -6869,3 +6869,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Guides/Glossary를 상단 `Reference` 단일 Search-first React 화면으로 통합하고 curated 24-item catalog, 6개 journey, stable deep link와 current-surface contextual help를 연결했다.
 - legacy renderer/catalog는 제거했지만 내부 `docs/GLOSSARY.md`, registry, saved setup은 보존했다. Reference는 읽기 전용이며 log/run-history/진단 기능을 추가하지 않았다.
 - combined Python regression 102개와 React 15개를 통과했다. PC follow-up에서는 상세 frame의 760px 상한을 제거하고 실제 parent viewport의 사용 가능 높이 및 live resize에 맞추며 navigation 정렬·persistent footer를 유지했다. `1257×1279`, resize 후 `1257×900`, `420×844` 회귀를 확인했다. 전체 roadmap `4/4차`; 상세는 `tasks/active/reference-center-react-v1-20260720/`를 본다.
+
+## 2026-07-20 - Portfolio Monitoring 개별종목 수량·거래 원장 설계 승인
+
+- 최초 수량 정정, 추가매수, 일부매도, 거래 수정·취소를 direct U.S. stock + fixed shares에만 제공하는 설계를 승인했다.
+- actual execution price를 사용하고 DB close는 reference-only, buy는 외부 입금, partial sell은 외부 출금으로 계산한다.
+- append-only revision chain과 daily Modified Dietz 성과 계약을 확정했다. 전체 roadmap `1/3차`; 다음은 detailed implementation plan과 DB/service/UI 구현이다.
+- 상세는 `tasks/active/portfolio-monitoring-position-events-v1-20260720/`를 본다.

@@ -10247,3 +10247,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 짧은 화면에서는 footer를 항상 보이게 유지하고, 긴 화면에서는 backdrop과 drawer가 실제 사용 가능 영역을 채우며 resize에도 즉시 적응해야 함.
 - Analysis result: 이전 follow-up의 `760px` 상한이 긴 PC viewport에서 큰 흰 영역을 만든 원인이었고 의도된 제품 경계가 아니었다. parent viewport에서 navigation `80px`와 bottom gap `16px`을 뺀 높이를 상한 없이 사용하고 resize에 동기화했다.
 - Follow-up: `1257×1279`에서 frame `1183px`, live resize `1257×900`에서 `804px`, `420×844`에서 horizontal overflow 없이 footer 노출을 확인했다.
+
+### 2026-07-20 - 개별종목 보유수량은 정정과 실제 거래 이력으로 이어서 추적한다
+
+- User request: Portfolio Monitoring에서 잘못 입력한 AMD 최초 수량을 수정하고, 이후 추가매수·일부매도를 개별종목에 한해 반영해 달라고 요청함.
+- Interpreted goal: 퀀트 전략이나 주문 기능을 확장하지 않고 실제 직접종목 보유수량·현금흐름·성과를 같은 추적 항목에서 계속 관리해야 함.
+- Analysis result: current add/end/reopen 계약에는 edit/trade가 없다. direct stock fixed-shares 전용 append-only event ledger, actual execution price, buy=입금, partial sell=출금, daily Modified Dietz를 채택함.
+- Follow-up: 전체 `1/3차` 설계 승인을 완료했다. written design review 뒤 구현 계획과 2차 DB/service/UI 작업으로 이어간다.
