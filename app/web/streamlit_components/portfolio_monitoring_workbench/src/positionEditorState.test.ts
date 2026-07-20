@@ -6,6 +6,7 @@ import {
   createPositionEditorDraft,
   markManualExecutionPrice,
   normalizePositionEditorRecovery,
+  positionEditorRecoveryKey,
   validatePositionEditorDraft,
 } from "./positionEditorState";
 
@@ -86,7 +87,7 @@ describe("position editor state", () => {
   });
 
   it("preserves the DB-close source across a Streamlit rerun", () => {
-    const recovered = normalizePositionEditorRecovery({
+    const recovery = {
       open: true,
       mode: "record",
       position_effect: "buy",
@@ -98,8 +99,15 @@ describe("position editor state", () => {
       note: "",
       root_event_id: "",
       expected_event_id: "",
-    }, "recovered-1");
+    } as const;
+    const recovered = normalizePositionEditorRecovery(recovery, "recovered-1");
 
     expect(recovered?.priceMode).toBe("db_close_default");
+    expect(positionEditorRecoveryKey(recovery)).toBe(
+      positionEditorRecoveryKey({ ...recovery }),
+    );
+    expect(positionEditorRecoveryKey({ ...recovery, quantity: "3" })).not.toBe(
+      positionEditorRecoveryKey(recovery),
+    );
   });
 });

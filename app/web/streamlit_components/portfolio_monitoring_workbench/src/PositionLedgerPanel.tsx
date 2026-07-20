@@ -14,6 +14,7 @@ import {
   createPositionEditorDraft,
   markManualExecutionPrice,
   normalizePositionEditorRecovery,
+  positionEditorRecoveryKey,
   validatePositionEditorDraft,
 } from "./positionEditorState";
 import type { PositionEditorDraft } from "./positionEditorState";
@@ -71,7 +72,8 @@ export function PositionLedgerPanel({
   latestCommand,
   emit,
 }: Props) {
-  const recoveryCommandId = useMemo(commandId, [recoveryState]);
+  const recoveryKey = positionEditorRecoveryKey(recoveryState);
+  const recoveryCommandId = useMemo(commandId, [recoveryKey]);
   const recovered = normalizePositionEditorRecovery(
     recoveryState,
     recoveryCommandId,
@@ -81,7 +83,7 @@ export function PositionLedgerPanel({
   useEffect(() => {
     const next = normalizePositionEditorRecovery(recoveryState, commandId());
     if (next) setDraft(next);
-  }, [recoveryState]);
+  }, [recoveryKey]);
 
   useEffect(() => {
     if (!draft || draft.mode === "correct_initial") return;

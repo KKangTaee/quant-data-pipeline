@@ -17,6 +17,24 @@ export type PositionEditorDraft = {
   priceMode: "awaiting_close" | "db_close_default" | "manual_override";
 };
 
+export function positionEditorRecoveryKey(
+  value: PositionEditorRecoveryState | null | undefined,
+): string {
+  if (!value?.open) return "closed";
+  return [
+    value.mode,
+    value.position_effect,
+    value.trade_date,
+    value.quantity,
+    value.execution_price,
+    value.price_mode,
+    value.fee_usd,
+    value.note,
+    value.root_event_id,
+    value.expected_event_id,
+  ].join("\u001f");
+}
+
 export function createPositionEditorDraft(
   mode: PositionEditorDraft["mode"],
   positionEffect: PositionEditorDraft["positionEffect"],
