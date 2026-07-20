@@ -10477,6 +10477,72 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(plan["period_ineligible_symbols"], ["HONA"])
         self.assertEqual(plan["collection_batches"], [])
 
+    def test_market_movers_marks_new_listing_without_full_period_history(self) -> None:
+        from app.services.overview import market_movers
+
+        def query_fn(db_name, sql, params=None):
+            del db_name, params
+            if "AND `date` IN" in sql:
+                return [
+                    {
+                        "symbol": "AAA",
+                        "date": date(2026, 6, 18),
+                        "price": 100.0,
+                        "volume": 1000,
+                    },
+                    {
+                        "symbol": "AAA",
+                        "date": date(2026, 7, 20),
+                        "price": 110.0,
+                        "volume": 1100,
+                    },
+                    {
+                        "symbol": "HONA",
+                        "date": date(2026, 7, 20),
+                        "price": 120.0,
+                        "volume": 900,
+                    },
+                ]
+            if "MIN(`date`) AS first_price_date" in sql:
+                return [
+                    {
+                        "symbol": "HONA",
+                        "first_price_date": date(2026, 6, 29),
+                        "latest_price_date": date(2026, 7, 20),
+                    }
+                ]
+            if "MAX(`date`) AS latest_price_date" in sql:
+                return [{"symbol": "HONA", "latest_price_date": date(2026, 7, 20)}]
+            if "FROM nyse_symbol_lifecycle" in sql or "FROM market_data_issue" in sql:
+                return []
+            raise AssertionError(sql)
+
+        return_rows, missing_rows = market_movers._build_return_rows(
+            universe=[
+                {
+                    "symbol": "AAA",
+                    "long_name": "Alpha",
+                    "sector": "Technology",
+                    "industry": "Software",
+                },
+                {
+                    "symbol": "HONA",
+                    "long_name": "Honeywell Aerospace",
+                    "sector": "Industrials",
+                    "industry": "Aerospace & Defense",
+                },
+            ],
+            universe_code="SP500",
+            start_date="2026-06-18",
+            end_date="2026-07-20",
+            query_fn=query_fn,
+        )
+
+        self.assertEqual([row["symbol"] for row in return_rows], ["AAA"])
+        self.assertEqual(missing_rows[0]["Reason"], "selected period history unavailable")
+        self.assertEqual(missing_rows[0]["First Price Date"], "2026-06-29")
+        self.assertEqual(missing_rows[0]["Latest Price Date"], "2026-07-20")
+
     def test_overview_market_movers_refresh_action_collects_eod_history_through_ohlcv_job(self) -> None:
         from app.jobs import overview_actions
 
@@ -10889,6 +10955,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         load_universe.assert_called_once_with("TOP1000", universe_limit=1000)
         collect.assert_called_once_with(
             ["AAA", "CCC"],
+            start="2026-05-20",
+            end="2026-07-20",
             period="1y",
             interval="1d",
             execution_profile="managed_safe",
@@ -10990,6 +11058,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         load_universe.assert_called_once_with()
         collect.assert_called_once_with(
             ["AAPL", "MSFT"],
+            start="2026-07-06",
+            end="2026-07-20",
             period="3mo",
             interval="1d",
             execution_profile="managed_safe",
@@ -17216,7 +17286,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["period"], "monthly")
         self.assertEqual(plan["as_of_date"], "2026-07-07")
 
-    def test_market_movers_monthly_preflight_separates_persisted_limited_history(self) -> None:
+    def test_market_movers_monthly_preflight_only_excludes_history_starting_after_period(self) -> None:
         from app.jobs.overview_actions import build_market_movers_eod_refresh_preflight
 
         freshness = {
@@ -17256,8 +17326,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         self.assertEqual(preflight["status"], "limited")
         self.assertEqual(preflight["selected_symbols_count"], 0)
-        self.assertEqual(preflight["limited_history_symbols_count"], 2)
-        self.assertEqual(preflight["limited_history_symbols"], ["FDXF", "HONA"])
+        self.assertEqual(preflight["limited_history_symbols_count"], 1)
+        self.assertEqual(preflight["limited_history_symbols"], ["HONA"])
         self.assertIn("추가 수집 대상이 아닙니다", preflight["range_reason"])
 
     def test_market_movers_limited_history_issue_rows_keep_compact_price_evidence(self) -> None:

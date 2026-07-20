@@ -143,6 +143,7 @@ MISSING_COLUMNS = [
     "End Date",
     "Start Price",
     "End Price",
+    "First Price Date",
     "Latest Price Date",
     "Profile Status",
     "Profile Error",
@@ -937,14 +938,17 @@ def _previous_return_context(
         }
     return context
 
-def _load_latest_price_dates(*, symbols: list[str], query_fn: QueryFn) -> dict[str, str]:
+def _load_price_date_bounds(*, symbols: list[str], query_fn: QueryFn) -> dict[str, dict[str, str]]:
     if not symbols:
         return {}
     placeholders = ",".join(["%s"] * len(symbols))
     rows = query_fn(
         "finance_price",
         f"""
-        SELECT symbol, MAX(`date`) AS latest_price_date
+        SELECT
+            symbol,
+            MIN(`date`) AS first_price_date,
+            MAX(`date`) AS latest_price_date
         FROM nyse_price_history
         WHERE symbol IN ({placeholders})
           AND timeframe = %s
@@ -953,11 +957,16 @@ def _load_latest_price_dates(*, symbols: list[str], query_fn: QueryFn) -> dict[s
         """,
         list(symbols) + ["1d"],
     )
-    return {
-        str(row.get("symbol") or "").strip().upper(): _iso_date(row.get("latest_price_date")) or ""
-        for row in rows
-        if row.get("symbol")
-    }
+    bounds: dict[str, dict[str, str]] = {}
+    for row in rows:
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if not symbol:
+            continue
+        bounds[symbol] = {
+            "first_price_date": _iso_date(row.get("first_price_date")) or "",
+            "latest_price_date": _iso_date(row.get("latest_price_date")) or "",
+        }
+    return bounds
 
 def _profile_collected_at(item: dict[str, Any]) -> str | None:
     return _display_datetime(item.get("last_collected_at"))
@@ -1064,6 +1073,7 @@ def _missing_row(
     end_date: str,
     start_price: float | None,
     end_price: float | None,
+    first_price_date: str | None,
     latest_price_date: str | None,
 ) -> dict[str, Any]:
     row = {
@@ -1077,6 +1087,7 @@ def _missing_row(
         "End Date": end_date,
         "Start Price": round(float(start_price), 4) if start_price is not None else None,
         "End Price": round(float(end_price), 4) if end_price is not None else None,
+        "First Price Date": first_price_date,
         "Latest Price Date": latest_price_date,
         "Profile Status": item.get("status") or "-",
         "Profile Error": item.get("error_msg") or "-",
@@ -1386,20 +1397,32 @@ def _build_return_rows(
             }
         )
     if missing_candidates:
-        latest_dates = _load_latest_price_dates(
+        price_bounds = _load_price_date_bounds(
             symbols=[str(row["symbol"]) for row in missing_candidates],
             query_fn=query_fn,
         )
         for row in missing_candidates:
+            symbol = str(row["symbol"])
+            bounds = price_bounds.get(symbol) or {}
+            first_price_date = str(bounds.get("first_price_date") or "")
+            reason = str(row["reason"])
+            if (
+                reason == "missing start price"
+                and row.get("end_price") is not None
+                and first_price_date
+                and first_price_date > start_date
+            ):
+                reason = "selected period history unavailable"
             missing_rows.append(
                 _missing_row(
                     item=row["item"],
-                    reason=str(row["reason"]),
+                    reason=reason,
                     start_date=start_date,
                     end_date=end_date,
                     start_price=_safe_float(row.get("start_price")),
                     end_price=_safe_float(row.get("end_price")),
-                    latest_price_date=latest_dates.get(str(row["symbol"])),
+                    first_price_date=first_price_date or None,
+                    latest_price_date=str(bounds.get("latest_price_date") or "") or None,
                 )
             )
     return return_rows, _enrich_missing_rows(
@@ -3241,6 +3264,7 @@ def _build_intraday_return_payload(
                     end_date=snapshot_time,
                     start_price=None,
                     end_price=None,
+                    first_price_date=None,
                     latest_price_date=None,
                 )
             )
@@ -3259,6 +3283,7 @@ def _build_intraday_return_payload(
                     end_date=quote_time,
                     start_price=previous_close,
                     end_price=latest_price,
+                    first_price_date=None,
                     latest_price_date=_iso_date(row.get("quote_time_utc")),
                 )
             )
