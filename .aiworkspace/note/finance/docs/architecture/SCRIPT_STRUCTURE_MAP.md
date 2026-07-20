@@ -24,13 +24,13 @@
 | 스크립트 | 관리하는 기능 |
 |---|---|
 | `app/workspace_paths.py` | active worktree root 탐색과 canonical `.aiworkspace/note/finance`의 registries / saved / run_history / docs / artifact path 상수 |
-| `app/web/streamlit_app.py` | Finance Console top navigation, page entry, page-level routing, Reference Glossary render |
+| `app/web/streamlit_app.py` | Finance Console top navigation, page entry, page-level routing. Reference는 단일 `/reference` entry만 등록한다 |
 | `app/web/ingestion_console.py` + `app/web/ingestion/*` | `Workspace > Ingestion` render path. `ingestion_console.py` is a compatibility facade. `app/web/ingestion/page.py` owns the shell / session-state boundary, `registry.py` owns active vs legacy compatibility action metadata, `guides.py` owns Korean purpose-first job guide metadata, `styles.py` owns responsive CSS, `results.py` owns pure result-summary helpers, `dispatcher.py` owns UI action dispatch and read-only diagnostic job wrapping, and `sections.py` owns selected collection workbench renderers for `일상 운영 / 검증 데이터`, `수동 복구 / 진단`, `실행 기록 / 결과`. Run history/detail/log/failure artifact display remains in the records section; price / statement / PIT diagnostics still run through the shared scheduled job path and Streamlit-free diagnostic service |
-| `app/web/reference_guides.py` | `Reference > Guides`의 task-first Reference Center, journey detail, troubleshooting playbook detail, Portfolio Selection Journey, flowchart, decision gate, reference drawer render |
-| `app/web/reference_contextual_help.py` | Backtest Analysis / Final Review / Portfolio Monitoring에 붙는 read-only Reference help expander render. Practical Validation 기본 진입 path는 이 expander를 렌더링하지 않는다 |
-| `app/services/reference_guides_catalog.py` | `Reference > Guides`용 Streamlit-free guide catalog. task cards, journeys, journey steps / failure states, shared status concepts, records map, troubleshooting playbook steps / evidence locations를 제공 |
-| `app/services/reference_glossary_catalog.py` | `Reference > Guides`와 `Reference > Glossary`가 공유하는 Streamlit-free concept dictionary, markdown glossary section parser, search helper |
-| `app/services/reference_contextual_help.py` | 주요 workflow 화면이 공유하는 Streamlit-free contextual Reference help catalog, surface lookup helper, Glossary / link boundary drift report |
+| `app/services/reference_center.py` | 단일 Reference Center가 사용하는 Streamlit-free curated catalog. 6개 사용자 흐름, 상태·용어·기능 개념, 문제 해결 playbook, 검색 문자열, 관련 항목, owner 화면 destination과 drift guard를 제공한다 |
+| `app/web/reference_center.py` | `/reference` page payload, 안정적인 `?item=<reference-id>` deep link, React event와 allowlisted owner 화면 navigation intent를 처리한다 |
+| `app/web/reference_center_react_component.py` + `app/web/streamlit_components/reference_center_workbench/` | 검색 우선 Reference React workbench bridge와 UI. 검색·종류 filter·관련 항목·상세 drawer/sheet는 React local state가 소유하고 Python은 catalog와 navigation boundary를 소유한다 |
+| `app/web/reference_contextual_help.py` | Overview, Institutional Portfolios, Ingestion, Backtest Analysis, Practical Validation, Final Review, Portfolio Monitoring에 붙는 read-only Reference help expander와 exact item deep link render |
+| `app/services/reference_contextual_help.py` | 7개 주요 workflow 화면의 contextual help catalog, surface lookup helper, Reference item / target / duplicate surface drift report |
 | `app/web/overview_dashboard.py` | `Workspace > Overview`의 explicit compatibility wrapper. 현재는 기존 import path 호환을 위해 `render_overview_dashboard`만 re-export하고 active body는 `app/web/overview/page.py`로 위임한다 |
 | `app/web/overview/page.py` | `Workspace > Overview` active page shell. title, market session banner, selected-tab lazy dispatch를 관리하고 primary tab entry modules로 위임한다 |
 | `app/web/overview/navigation.py` | Overview primary navigation constants, query-param slug mapping, `st.pills` selector render, selected-tab dispatch helper |

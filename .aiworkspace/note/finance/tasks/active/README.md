@@ -27,7 +27,6 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| `reference-center-react-v1-20260720` | Implementation plan ready, 0/4 implementation | Written spec 승인과 9개 TDD task 계획을 완료했다. 실행 방식 선택 후 catalog/contract부터 시작한다. |
 | `overview-sentiment-cnn-aaii-v1-20260719` | 1/4 complete | 기능과 승인된 시각 polish·actual QA를 완료했다. 다음은 장기 이력·발표 당시 값 품질 점검이다. |
 | `portfolio-monitoring-chart-zoom-pan-v1-20260719` | Parallel follow-up, 2/3 complete | 구현과 자동 회귀는 완료했다. 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다. |
 
@@ -35,6 +34,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `reference-center-react-v1-20260720` | Completed record, 4/4 | Search-first React Reference, curated catalog/drift guard, stable contextual deep link, legacy Guides/Glossary removal과 responsive Browser QA를 완료했다. |
 | `operations-portfolio-monitoring-only-v1-20260719` | Completed record | Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다. |
 | `overview-futures-macro-pattern-outlook-v1-20260718` | Completed record | 10년 compact snapshot, 관측·전망 상태 분리, 5D 120개·20D 88개 독립 episode 재검증과 actual responsive QA를 완료했다. |
 | `backtest-analysis-level1-decision-workspace-v1-20260717` | Completed record | 1~15차 Level1 one-shell과 Portfolio Mix React one-shell 구현·QA를 완료했다. |

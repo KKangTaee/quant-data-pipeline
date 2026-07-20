@@ -1,18 +1,16 @@
 # Reference Center React V1 Risks
 
-## Open Risks
+## Open Validation Gap
 
-- Curated content can still drift unless current surface and forbidden legacy term contracts are enforced in tests.
-- Streamlit cross-page deep-link behavior may require stable page-target/session handoff instead of arbitrary URL navigation.
-- Removing both old pages before contextual links migrate could leave broken Reference entry points.
-- A client-local search index should remain small enough that initial payload and render cost stay negligible.
-- Current product copy uses mixed Korean/English terms; alias coverage must preserve findability without exposing internal vocabulary.
-- The first implementation pass may reveal owner-page placement differences for contextual help; placement must stay after each surface purpose/title and must not alter workflow behavior.
+- The repository does not have one isolated automated test that boots Streamlit multipage navigation and asserts browser history. Pure route/event tests plus actual Browser QA cover the current contract; future navigation-shell changes should repeat that Browser QA.
 
-## Mitigations
+## Ongoing Maintenance Risk
 
-- Land catalog and referential-integrity tests before UI migration.
-- Keep one migration window where old implementation remains importable but is no longer primary navigation.
-- Validate destination allowlist and every contextual help item ID.
-- Run actual desktop/900/420 Browser QA before deleting the old renderer.
-- Keep each roadmap checkpoint independently verifiable so legacy removal cannot mask a failed migration.
+- The catalog is intentionally curated rather than generated from `GLOSSARY.md`. A newly renamed product surface can drift unless its Reference item, contextual help ID, and current-surface guard are updated together.
+
+## Closed Risks
+
+- Invalid destinations are rejected before `st.switch_page`.
+- Legacy Guides/Glossary paths are removed only after the new page and contextual links passed tests.
+- Modal-open iframe height is bounded so drawer/sheet scrolling no longer depends on the full catalog document height.
+- Internal durable `GLOSSARY.md`, registries, saved setups, and generated/user artifacts were not rewritten or deleted.

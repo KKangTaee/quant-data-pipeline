@@ -28,19 +28,22 @@ OWNER_CALL_SITES = {
 
 class ReferenceContextualHelpContractTests(unittest.TestCase):
     def test_contextual_help_catalog_is_streamlit_free_and_covers_current_surfaces(self) -> None:
-        sys.modules.pop("streamlit", None)
+        loaded_streamlit = sys.modules.pop("streamlit", None)
+        try:
+            from app.services.reference_contextual_help import get_reference_contextual_help_catalog
 
-        from app.services.reference_contextual_help import get_reference_contextual_help_catalog
+            catalog = get_reference_contextual_help_catalog()
 
-        catalog = get_reference_contextual_help_catalog()
+            self.assertNotIn("streamlit", sys.modules)
+            surface_keys = {row["surface_key"] for row in catalog}
+            self.assertGreaterEqual(surface_keys, REQUIRED_CONTEXTUAL_SURFACES)
+            self.assertNotIn("operations_console", surface_keys)
 
-        self.assertNotIn("streamlit", sys.modules)
-        surface_keys = {row["surface_key"] for row in catalog}
-        self.assertGreaterEqual(surface_keys, REQUIRED_CONTEXTUAL_SURFACES)
-        self.assertNotIn("operations_console", surface_keys)
-
-        final_review = next(row for row in catalog if row["surface_key"] == "final_review")
-        self.assertIn("concept.selected_route_gate", final_review["reference_item_ids"])
+            final_review = next(row for row in catalog if row["surface_key"] == "final_review")
+            self.assertIn("concept.selected_route_gate", final_review["reference_item_ids"])
+        finally:
+            if loaded_streamlit is not None:
+                sys.modules["streamlit"] = loaded_streamlit
         self.assertIn("Practical Validation", " ".join(final_review["next_checks"]))
         self.assertIn("broker order", " ".join(final_review["boundaries"]))
 

@@ -11,15 +11,11 @@ Current active task:
 
 Latest completed task:
 
-- `operations-portfolio-monitoring-only-v1-20260719` — 전체 roadmap `3/3`; Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
+- `reference-center-react-v1-20260720` — 전체 roadmap `4/4`; Guides/Glossary를 단일 Search-first React Reference로 통합하고 stable contextual deep link, legacy removal, responsive Browser QA를 완료했다.
 
 Current active task status:
 
 - `overview-sentiment-cnn-aaii-v1-20260719`: 전체 잠정 roadmap `1/4차` 기능과 승인된 시각 polish·actual desktop/420px QA를 완료했다. 다음은 2차 장기 이력·발표 당시 값 품질 점검이다.
-
-Parallel active design task:
-
-- `reference-center-react-v1-20260720`: Search-first Hybrid A written spec 승인과 9개 TDD task 구현 계획을 완료했다. 실행 방식 선택 후 catalog/contract부터 시작하며 구현은 `0/4차`다.
 
 Parallel active follow-up:
 
@@ -27,6 +23,7 @@ Parallel active follow-up:
 
 Previous completed task:
 
+- `operations-portfolio-monitoring-only-v1-20260719` — 전체 roadmap `3/3`; Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
 - `overview-futures-macro-pattern-outlook-v1-20260718` — 전체 roadmap `5/5`, materialized snapshot / React disclosure `4/4`, observation / outlook separation, ten-year validation, and 60D legend / status clarity follow-up complete
 - `backtest-analysis-level1-decision-workspace-v1-20260717` — 1~15차 complete
 - `practical-validation-audit-evidence-absorption-v1-20260719` — 전체 roadmap `3/3` complete
@@ -79,6 +76,7 @@ Recent structure audit records:
 
 Recent Reference records:
 
+- `reference-center-react-v1-20260720`: 단일 Search-first React Reference, 24-item curated catalog/drift guard, 6개 journey, stable deep link, 7개 current surface contextual help, legacy Guides/Glossary 제거와 desktop/900px/420px QA 완료
 - `merge-review-fixes-20260608`: post-merge review fix / Reference page-link, V4 status, and catalog test assertion cleanup
 - `reference-drift-guard-qa-polish-v5-20260608`: Reference contextual help 5차 / drift guard and QA polish
 - `reference-contextual-links-v4-20260608`: Reference contextual help 4차 / workflow screen expander links

@@ -60,18 +60,21 @@ FORBIDDEN_USER_LABELS = {
 
 class ReferenceCenterCatalogContractTests(unittest.TestCase):
     def test_catalog_service_is_streamlit_free_and_builds_v1_payload(self) -> None:
-        sys.modules.pop("streamlit", None)
+        loaded_streamlit = sys.modules.pop("streamlit", None)
+        try:
+            from app.services.reference_center import build_reference_center_payload
 
-        from app.services.reference_center import build_reference_center_payload
+            payload = build_reference_center_payload()
 
-        payload = build_reference_center_payload()
-
-        self.assertNotIn("streamlit", sys.modules)
-        self.assertEqual(payload["schema_version"], "reference_center_v1")
-        self.assertEqual(payload["component"], "ReferenceCenterWorkbench")
-        self.assertEqual(set(payload["journeys"]), REQUIRED_JOURNEY_IDS)
-        self.assertIsNone(payload["initial_item_id"])
-        self.assertFalse(payload["invalid_initial_item"])
+            self.assertNotIn("streamlit", sys.modules)
+            self.assertEqual(payload["schema_version"], "reference_center_v1")
+            self.assertEqual(payload["component"], "ReferenceCenterWorkbench")
+            self.assertEqual(set(payload["journeys"]), REQUIRED_JOURNEY_IDS)
+            self.assertIsNone(payload["initial_item_id"])
+            self.assertFalse(payload["invalid_initial_item"])
+        finally:
+            if loaded_streamlit is not None:
+                sys.modules["streamlit"] = loaded_streamlit
 
     def test_catalog_has_current_journeys_concepts_and_playbooks(self) -> None:
         from app.services.reference_center import get_reference_center_items

@@ -23,8 +23,9 @@ Backtest 단계의 primary reading order는 `page workflow shell -> active Level
 | 파일 | 역할 |
 |---|---|
 | `app/web/streamlit_app.py` | top navigation과 page entry |
-| `app/web/reference_guides.py` | `Reference > Guides`의 제품형 workflow guide, portfolio flowchart, decision gates, reference drawer |
-| `app/web/reference_contextual_help.py` | 주요 workflow 화면의 read-only Reference help expander |
+| `app/services/reference_center.py` | 단일 Reference Center의 curated 사용자 흐름·상태/용어·기능 개념·문제 해결 catalog와 drift guard |
+| `app/web/reference_center.py` / `app/web/reference_center_react_component.py` / `app/web/streamlit_components/reference_center_workbench/` | 단일 `/reference` entry, stable item deep link, owner 화면 navigation intent, 검색 우선 React workbench |
+| `app/web/reference_contextual_help.py` / `app/services/reference_contextual_help.py` | 7개 주요 workflow 화면의 read-only Reference help, exact item deep link, referential-integrity drift guard |
 | `app/web/overview_dashboard.py` / `app/web/overview/*` | `Workspace > Overview`에서 Market Context, Market Movers, Futures Macro, Sentiment, Events primary tab render와 selected-tab lazy dispatch를 조정한다. Compatibility wrapper는 `overview_dashboard.py`, page shell은 `overview/page.py`, navigation은 `overview/navigation.py`, tab entrypoint는 `overview/{tab}.py`, tab-local Streamlit glue는 `overview/{tab}_helpers.py`가 소유한다. `Market Context`는 별도 load gate 없이 S&P 500 / 미국 개별주식 valuation React component를 즉시 렌더링하고 old cockpit/refresh surface를 호출하지 않는다. 개별주 검색·선택과 내부 `PER 상대가치 | 전환 분석` 전환은 DB read-only다. 새 종목은 positive Graph 1 READY PER이면 PER, 아니면 전환 분석을 추천하고 같은 종목의 사용자 선택은 local state로 보존한다. exact raw gap이 있는 selected symbol의 명시 수집 intent만 Python helper가 nonce dedup한 뒤 SEC identity를 확인해 동기 실행하고 stored payload를 다시 읽는다. 다른 primary tabs의 snapshot/refresh/evidence boundary는 각 tab helper가 소유한다. Futures Monitor와 Sector / Industry standalone tabs는 primary navigation에서 soft-removed 상태다 |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 cached market intelligence service wrapper. Candidate Ops overview snapshot helpers는 제거됐고 Candidate Ops는 Overview tab이 아니다 |
 | `app/web/overview/components/*` | Overview 전용 visual component implementation. Shared token/CSS는 `common.py`, session banner는 `layout.py`, Market Context cockpit / reading-flow / historical reference / source evidence / IA closeout은 `market_context.py`, Market Movers refresh / breadth / selected-symbol basic indicator chart components는 `market_movers.py`, Events components는 `events.py`, Data Health handoff renderer는 `data_health.py`가 소유한다 |
@@ -217,75 +218,48 @@ Operations 화면:
 - `Operations > Portfolio Monitoring`: 기존 Selected Portfolio Dashboard route다. `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 selected strategy pool로 읽고, 사용자가 만든 dashboard portfolio에 strategy slot으로 추가해 모니터링한다. Dashboard는 daily-monitoring-first로 읽힌다. 상단 Active Portfolio Monitoring Scenario가 active portfolio, 실행 상태, 설정 투자금, 평가 금액, 손익, 총 수익률, CAGR / MDD, 기준일, session update timestamp, daily badges, value curve, 전략별 성과, target snapshot을 먼저 보여준다. Portfolio가 없거나 strategy가 없거나 scenario가 아직 실행되지 않은 상태는 각각 생성 / 전략 추가 / 업데이트 실행 안내로 구분한다. Portfolio card shelf는 hero 아래 active selector이고, portfolio name / description edit, compact strategy board, `포트폴리오 시나리오 업데이트`는 그 아래 관리 영역이다. 각 slot은 start / latest-end mode / balance / memo를 저장하고, update action은 pending / stale strategy만 기본 replay하며 `전체 재실행`을 켠 경우 full refresh한다. Target snapshot은 마지막 monitoring scenario 기준 산출 목표 비중이고 Next Review Date는 수동 재계산 예정일이다. Snapshot, Final Review -> dashboard continuity check, source contract, Monitoring Signals의 Timeline / Review Signals / Open Issues / Why Selected / optional Actual Allocation / allocation evidence boundary / Decision Dossier / Audit은 사용자가 선택한 1개 strategy 상세를 열 때만 보여준다. Recheck Operations Preflight / Recheck Readiness / Symbol Freshness / Provider Evidence도 하단 상세 점검으로 낮춘다. 같은 dashboard portfolio 안 전략이 2개 이상이면 최신 scenario 결과로 전환 비교를 표시한다. Preflight / Readiness / Symbol Freshness / Provider Evidence / Continuity / Timeline / Recheck Comparison / Allocation Boundary / Dossier는 read-only이며, live approval / broker order / account sync / auto rebalance는 disabled로 둔다.
 - `Workspace > Ingestion > 실행 기록 / 결과`: 수집 실행 결과, persistent run history, recent logs, failure CSV를 확인한다. 이 internal evidence를 Portfolio Monitoring에 별도 진단 패널로 반복하지 않는다.
 
-## 현재 Reference Guide 제품 흐름
+## 현재 Reference Center 제품 흐름
 
-`Reference > Guides`는 2026-06-08 Reference Center V5 이후 제품 전체 운영 guide로 읽는다.
-첫 화면은 portfolio-selection 전용 hero가 아니라 task-first `Reference Center`다.
-이 화면은 read-only 안내 surface이며 ingestion job, provider fetch, registry write, saved setup write,
-broker order, live approval, auto rebalance를 직접 실행하지 않는다.
-Backtest Analysis와 Portfolio Monitoring은 접힌 `Reference help` expander로
-`Guides` / `Glossary` entry point와 현재 화면의 먼저 확인할 항목을 보여준다.
-Practical Validation 기본 진입 path는 검증 상태와 보강 action을 우선하기 위해 이 expander를 렌더링하지 않는다. Final Review first-read path도 후보 현황과 투자 검토서를 우선하기 위해 top contextual help를 렌더링하지 않는다. 이 contextual help도 read-only이며 validation gate, selected decision, saved setup, provider fetch를 바꾸지 않는다.
-5차부터 contextual help catalog는 shared Glossary concept dictionary term, Reference link target, surface key duplicate, raw guide focus marker drift를
-Streamlit-free report로 점검한다.
+`Reference`는 Guides와 Glossary를 나누지 않는 단일 검색 중심 React 화면이다. 사용자는 기능 이름, 상태, 용어, 막힌 상황을 같은 검색창에서 찾고 `사용 흐름 / 상태·용어 / 문제 해결` filter로 범위를 줄인다. 첫 진입에는 제품의 핵심 여정을 6개 시작점으로 보여준다.
 
 ```text
-Reference > Guides
-  -> Reference Center
-     -> 먼저 고를 작업
-     -> 현재 제품 흐름
-        -> Journey 상세 보기
-        -> 확인 순서
-        -> 자주 막히는 상태
-     -> 자주 막히는 상태 / 용어
-        -> shared concept dictionary
-        -> Glossary와 같은 operational concept search
-     -> 기록 / 저장 경계
-     -> 문제 해결 Playbook
-        -> 확인 순서
-        -> Evidence 위치
-  -> Portfolio Selection Journey
-     -> 현재 진행 상황 선택
-     -> 전체 1~4 단계 timeline
-     -> 선택한 경로 요약
-     -> Portfolio Flow
-     -> 경로별 핵심 체크포인트
-     -> Decision Gates
-     -> Reference Drawer
+Reference (`/reference`)
+  -> 검색 또는 종류 filter
+  -> 6개 사용자 흐름에서 시작
+     -> 시장 이해
+     -> 기관 보유 해석
+     -> 데이터 준비
+     -> 전략·mix 후보 생성
+     -> 실전성 검증과 최종 판단
+     -> 선정 후 모니터링
+  -> 검색 결과 선택
+  -> 상세 drawer / mobile sheet
+     -> 의미
+     -> 업무 영향
+     -> 다음 행동
+     -> 관련 항목
+     -> owner 화면으로 이동
 ```
 
-Reference Center의 주요 묶음은 아래와 같다.
+Reference catalog는 24개 curated item으로 관리한다. 구성은 6개 사용자 흐름, 14개 상태·용어·기능 개념, 4개 문제 해결 playbook이며 각 item은 안정적인 id를 가진다. `/reference?item=<reference-id>`는 해당 상세를 바로 열고, 존재하지 않는 id는 안내를 보여준 뒤 기본 Reference 화면으로 복구한다. 관련 항목 선택은 React local state에서 처리하므로 불필요한 Streamlit rerun을 만들지 않는다.
 
-| 묶음 | 내용 |
-|---|---|
-| `먼저 고를 작업` | 시장 / 데이터 상태, 데이터 갱신 / 복구, 후보 만들기, 검증 / 최종 판단, 선정 후 모니터링, 문제 해결을 task card로 고른다 |
-| `현재 제품 흐름` | Overview, Ingestion, Backtest Analysis, Practical Validation / Final Review, Portfolio Monitoring, Archive / Recovery journey를 owner screen / record / boundary로 보여주고, 선택한 journey의 확인 순서 / failure state / downstream owner를 함께 보여준다 |
-| `자주 막히는 상태 / 용어` | `NOT_RUN`, `REVIEW`, `BLOCKED`, `Data Trust`, `Provider Coverage`, `Portfolio Monitoring Scenario`를 shared concept dictionary로 검색 / 필터한다. `Reference > Glossary`도 같은 curated concept rows를 먼저 보여준 뒤 durable `GLOSSARY.md` section을 함께 검색한다 |
-| `기록 / 저장 경계` | DB / workflow registry / saved setup / run history / generated artifact를 어떤 화면이 만들고 읽는지 보여준다 |
-| `문제 해결 Playbook` | stale Overview / Futures, ingestion 성공 후 UI stale, provider snapshot missing, Practical Validation `NOT_RUN`, Final Review 후보 미노출, Portfolio Monitoring stale scenario, archive recovery를 증상별로 확인한다. 각 playbook은 check steps와 evidence location을 표시한다 |
+owner 화면 이동은 `overview`, `institutional_portfolios`, `ingestion`, `backtest_analysis`, `practical_validation`, `final_review`, `portfolio_monitoring` destination만 허용한다. React는 navigation intent만 반환하며 Python이 destination을 다시 검증하고 기존 top-level / Backtest panel routing으로 전달한다.
 
-4차 contextual help가 붙고 5차 drift guard 대상이 된 1차 화면은 아래와 같다.
+다음 7개 화면은 접힌 contextual `Reference help`에서 현재 문맥에 맞는 exact item deep link를 제공한다.
 
 | 화면 | helper key | 주요 연결 |
 |---|---|---|
-| `Backtest > Backtest Analysis` | `backtest_analysis` | Promotion Policy Signal, Data Trust, Saved Portfolio |
-| `Backtest > Practical Validation` | `practical_validation` | NOT_RUN, REVIEW, BLOCKED, Provider Coverage |
-| `Backtest > Final Review` | `final_review` | Selected-route Gate, Provider Coverage, Data Trust |
-| `Operations > Portfolio Monitoring` | `portfolio_monitoring` | Portfolio Monitoring Scenario, Saved Portfolio, Selected-route Gate |
+| `Workspace > Overview` | `overview` | 시장 이해 흐름, Market Context |
+| `Research > Institutional Portfolios` | `institutional_portfolios` | 기관 보유 해석 흐름, Provider Coverage |
+| `Workspace > Ingestion` | `ingestion` | 데이터 준비 흐름, 자료 부족 playbook |
+| `Backtest > Backtest Analysis` | `backtest_analysis` | 후보 생성 흐름, Saved Portfolio |
+| `Backtest > Practical Validation` | `practical_validation` | NOT_RUN, REVIEW, BLOCKED, NOT_RUN playbook |
+| `Backtest > Final Review` | `final_review` | Selected-route Gate, 후보 미노출 playbook |
+| `Operations > Portfolio Monitoring` | `portfolio_monitoring` | 모니터링 흐름, stale scenario playbook |
 
-Portfolio Selection Journey는 기존 guide를 보존하되 Reference Center 안의 별도 view로 낮춘다.
-사용자는 `Reference 보기`에서 `Portfolio Selection Journey`를 선택한 뒤
-단일 후보, 여러 후보 묶음, 저장된 Mix, 보류 / 재검토 중 현재 진행 상황을 고른다.
-그다음 전체 1~4 단계 timeline, 경로 요약, flowchart, checkpoint, Decision Gates, Reference Drawer를 본다.
+Reference와 contextual help는 read-only 안내 surface다. ingestion job, provider fetch, registry / saved setup / validation / final decision write, broker order, live approval, auto rebalance를 직접 실행하지 않는다. 로그·실행 결과·raw status 진단 패널도 Reference에 두지 않는다. 내부 유지보수 문서 `.aiworkspace/note/finance/docs/GLOSSARY.md`는 보존하지만 사용자-facing catalog source로 파싱하거나 별도 Glossary 탭으로 노출하지 않는다.
 
-경로별 핵심 차이는 아래와 같다.
-
-| 경로 | 핵심 차이 |
-|---|---|
-| `단일 후보 경로` | Backtest Analysis에서 current selection source를 만들고 Practical Validation / Final Review로 직접 이어진다 |
-| `여러 후보 묶음 경로` | Backtest Analysis Portfolio Mix Builder에서 component 역할과 target weight를 정한 뒤 mix source로 검증한다 |
-| `저장된 Mix 경로` | saved weighted portfolio setup은 후보 registry가 아니라 재사용 weight setup이므로 replay / mix 검증 후 Practical Validation source로 연결한다 |
-| `보류 / 재검토 경로` | hold / blocked / insufficient evidence / re-review 상태에서는 Final Review 직행이 아니라 원인 화면으로 되돌아간다 |
+catalog drift guard는 required surface coverage, item id·관련 item 참조, destination allowlist, forbidden legacy label, 검색 문자열을 점검한다. contextual-help drift guard는 7개 surface key 중복, exact item 참조와 `/reference` target 무결성을 Streamlit-free test로 검증한다.
 
 ## Portfolio Monitoring / Selected Portfolio Dashboard
 

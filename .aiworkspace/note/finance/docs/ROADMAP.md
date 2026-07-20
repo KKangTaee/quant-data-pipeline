@@ -28,7 +28,14 @@ Portfolio Monitoring React Command Center V1은 전체 `6/6차` 구현과 closeo
 - 남은 완료 조건: 실제 desktop/900px/420px layout·wheel/drag/reset·overflow Browser QA.
 - 경계: client-side viewport만 바꾸며 Python/DB/전략/그룹 가치곡선 계약은 변경하지 않는다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/operations-portfolio-monitoring-only-v1-20260719/`다.
+Latest completed Reference task는 `.aiworkspace/note/finance/tasks/active/reference-center-react-v1-20260720/`다.
+
+- 목적: 방치된 `Reference > Guides / Glossary`를 현재 제품 흐름과 용어를 함께 찾는 단일 Search-first React Reference Center로 교체한다.
+- 완료: 전체 `4/4차`; 24-item curated catalog와 drift guard, 4개 filter, 6개 journey, local detail/related navigation, stable deep link, 7개 current surface contextual help, legacy renderer 제거와 desktop/900px/420px Browser QA를 닫았다.
+- 경계: Reference는 읽기 전용이다. 내부 `docs/GLOSSARY.md`를 runtime에 자동 파싱하지 않고 provider/DB/registry/saved setup/log/run-history/validation mutation을 소유하지 않는다.
+- 유지보수: 새 product surface 또는 이름 변경 시 catalog item, contextual help ID, current-surface guard를 함께 갱신한다.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/operations-portfolio-monitoring-only-v1-20260719/`다.
 
 - 목적: 사용하지 않는 Operations Overview와 System/Data Health 중복 화면을 제거하고 선정 이후 Portfolio Monitoring 업무만 남긴다.
 - 완료: 전체 `3/3차`; route/UI/test 제거와 Python/React/Browser QA를 닫았다.
@@ -851,6 +858,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 | Overview Market Context Macro Polish V17 | Complete | Macro conditioned comparison now shows the meaning of each narrowing step inside the basis bar: broad sector ETF vs SPY analog pool, current-like GLD bucket, then current-like ZN=F / ZB=F rate-pressure bucket. Reference-only T10Y3M / VIXCLS / BAA10Y backdrop now renders as Korean state badges, current value, same-state ratio bars, and compact source labels. |
 | Overview Market Context Macro Matrix V16 | Complete | Macro conditioned comparison now uses the same visual language as historical analog: a basis bar for broad -> GLD -> futures narrowing, a compact asset x `기본 / 조건 후 / 변화` matrix, collapsed verbose condition source details, and Korean-first labels for current Macro backdrop. |
 | Overview Market Context Macro Labels V15 | Complete | Macro conditioned comparison now names the visible narrowing stages as broad basis, GLD condition, and rate-pressure futures condition. It explains `81회 -> 37회 -> 6회` as broad anchors narrowed by current-like GLD and futures states, and current Macro backdrop cards include Korean descriptions plus broad-sample same-state counts. |
+| Reference Center React V1 | Complete | Guides/Glossary를 상단 `Reference` 하나로 통합했다. Curated 24-item catalog, 6개 journey, local search/filter/detail, stable contextual deep link, allowlisted owner-surface 이동과 desktop/900px/420px QA를 완료했으며 내부 `GLOSSARY.md`와 읽기 전용 경계는 유지한다. |
 | Overview Sentiment CNN·AAII Balanced V1 | 1/4차 + visual polish complete | Sentiment를 합성점수 없는 `CNN 시장 행동 / AAII 개인투자자 인식` 두 축으로 재구성했다. Hero와 균형 current evidence 다음에 CNN 고정 / AAII 응답·Spread 전환의 동시 2 graph를 표시하고 raw 관측은 실제 날짜 간격의 직선으로 연결한다. 1W·1M card는 검증 estimator가 없어 확률을 숨긴 `UNAVAILABLE`이며 confirm/reverse/persist 관찰 경로를 제공한다. 2차 장기 이력·발표 당시 값 품질, 3차 독립 데이터 후보, 4차 PIT 검증 후 전망 제공 여부는 남아 있다. |
 | Overview Sentiment React UX V1 | Complete | Sentiment now renders a React workbench when the component build is available: service-owned phase/headline/summary first, freshness-tied refresh/reload actions, CNN / AAII cross-read, recent range percentile / min-max cards, CNN headline / component / AAII divergence panel, analysis steps, driver lanes, CNN component explanations, component latest-vs-previous changes, hover-readable history line chart, component bar chart, and stored-row evidence tables. Python services still own DB reads, refresh actions, and all interpretation text; React does not create trade signals, validation gates, monitoring signals, or recommendations. |
 | Overview Market Sentiment V1 | 1차~3차 complete | CNN Fear & Greed / AAII collect into `finance_meta.macro_series_observation`. Overview Sentiment, Practical Validation, Final Review, and Portfolio Monitoring read it as context-only market backdrop. |

@@ -23,9 +23,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Parallel Reference task is [reference-center-react-v1-20260720](./tasks/active/reference-center-react-v1-20260720/STATUS.md). Search-first Hybrid A written spec과 9개 TDD task 계획이 승인·정리됐고, 실행 방식 선택 후 catalog/contract부터 시작한다. 구현은 `0/4차`다.
+  - Latest completed Reference task is [reference-center-react-v1-20260720](./tasks/active/reference-center-react-v1-20260720/STATUS.md). 단일 Search-first React Reference, curated 24-item catalog, stable contextual deep link, legacy removal과 responsive Browser QA를 전체 `4/4차`로 완료했다.
   - Current active task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `1/4차` 기능과 승인된 시각 polish·actual QA를 완료했고, 다음은 2차 장기 이력·발표 당시 값 품질 점검이다.
-  - Latest completed task is [operations-portfolio-monitoring-only-v1-20260719](./tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md). Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
+  - Previous completed task is [operations-portfolio-monitoring-only-v1-20260719](./tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md). Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
   - Parallel active follow-up is [portfolio-monitoring-chart-zoom-pan-v1-20260719](./tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md). 기능과 자동 검증은 완료했고 전체 `2/3차`; desktop·900px·420px Browser interaction/layout QA가 남아 있다.
   - Latest Portfolio Monitoring lifecycle follow-up is [portfolio-monitoring-tracking-end-reopen-v1-20260719](./tasks/active/portfolio-monitoring-tracking-end-reopen-v1-20260719/STATUS.md). 종료된 동일 item의 종료 필드를 취소하고 원래 시작 계약으로 재활성화하는 `reopen_item`을 추가했다. Python 112 / React 25 / typecheck/build/static asset 검증을 통과했으며 Browser interaction은 URL policy로 차단됐다.
   - Latest completed Portfolio Monitoring chart task is [portfolio-monitoring-chart-clarity-ohlcv-v1-20260719](./tasks/active/portfolio-monitoring-chart-clarity-ohlcv-v1-20260719/STATUS.md). 종합 가치곡선 선명도·5/3개 날짜 눈금과 선택 direct 종목의 DB-only line/OHLCV candle/volume을 전체 roadmap `4/4`로 완료했다.
@@ -6864,3 +6864,8 @@ Detailed historical logs were archived on `2026-04-13`.
 - 휴장일 종료는 요청일 이후 미래 가격을 기다리지 않고 요청일 이하 최신 저장 가치로 즉시 확정하며, 요청일·실제 적용일·종료금액을 함께 안내한다.
 - 활성 항목과 접힌 `종료 기록`을 분리하고 raw `ACTIVE`를 lifecycle label로 교체했으며, command 성공·실패를 본문 배너로 노출한다.
 - Python 47 tests, React 25 tests, typecheck/build/compile/static asset check를 통과했다. 전체 보완 `3/4차`; Browser URL policy로 실제 interaction QA와 스크린샷만 남아 있다.
+## 2026-07-20 - Reference Center React V1 완료
+
+- Guides/Glossary를 상단 `Reference` 단일 Search-first React 화면으로 통합하고 curated 24-item catalog, 6개 journey, stable deep link와 current-surface contextual help를 연결했다.
+- legacy renderer/catalog는 제거했지만 내부 `docs/GLOSSARY.md`, registry, saved setup은 보존했다. Reference는 읽기 전용이며 log/run-history/진단 기능을 추가하지 않았다.
+- focused Python 28개, wider regression 74개, React 11개와 desktop/900px/420px Browser QA를 통과했다. 전체 roadmap `4/4차`; 상세는 `tasks/active/reference-center-react-v1-20260720/`를 본다.

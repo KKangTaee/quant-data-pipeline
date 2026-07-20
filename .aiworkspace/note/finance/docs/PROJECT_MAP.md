@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-07-19
+Last Verified: 2026-07-20
 
 ## Project Summary
 
@@ -73,8 +73,11 @@ Last Verified: 2026-07-19
 | Backtest strict preset / factor readiness / price freshness form helpers | `app/web/backtest_common.py`, `app/web/components/backtest_factor_readiness_panel/`, `app/web/components/backtest_price_freshness_preflight/`; Factor Readiness ticker-change candidate diagnostics / repair action glue 포함 |
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
-| Reference contextual help service | `app/services/reference_contextual_help.py` |
-| Reference contextual help renderer | `app/web/reference_contextual_help.py` |
+| Reference canonical catalog / drift guard | `app/services/reference_center.py`; curated 24-item user-facing catalog, stable IDs, 6개 journey, search projection, relation/destination/current-surface/legacy-label contract를 소유하며 Streamlit과 내부 `GLOSSARY.md` runtime parsing에 의존하지 않는다 |
+| Reference page / React bridge | `app/web/reference_center.py`, `app/web/reference_center_react_component.py`; `/reference?item=<id>` initial detail, invalid-link recovery, allowlisted `navigate_to_surface` intent와 JSON-safe custom-component boundary를 소유한다 |
+| Reference React workbench | `app/web/streamlit_components/reference_center_workbench/`; local search/filter/detail/related-item state, desktop drawer, 520px 이하 sheet와 production `component_static`을 소유한다. provider/DB/registry/session mutation은 하지 않는다 |
+| Reference contextual help service | `app/services/reference_contextual_help.py`; Overview, Institutional Portfolios, Ingestion, Backtest Analysis, Practical Validation, Final Review, Portfolio Monitoring을 stable Reference item ID로 연결한다 |
+| Reference contextual help renderer | `app/web/reference_contextual_help.py`; configured Reference `st.Page`와 `query_params={"item": ...}`만 사용한다 |
 | Backtest Compare visual components | `app/web/backtest_compare/components.py` |
 | Practical Validation service | `app/services/backtest_practical_validation.py`; includes Practical Validation result build wrapper, source/result registry append, provider gap collection orchestration, and reusable read-only CNN / AAII market sentiment context overlay for downstream surfaces. Final Review first-read does not render this overlay |
 | Practical Validation source/profile/selection-history service helper | `app/services/backtest_practical_validation_source.py` |

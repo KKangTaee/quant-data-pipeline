@@ -1,33 +1,31 @@
 # Reference Center React V1 Status
 
-Status: Implementation Plan Ready / Execution Choice Pending
+Status: Completed
 Date: 2026-07-20
 
 ## Progress
 
-- Existing Reference / Glossary implementation and current product surfaces re-audited.
-- User approved keeping Reference capability while removing the separate Guides / Glossary navigation split.
-- User approved excluding legacy / developer glossary terms from the app and preserving them only in internal docs.
-- Visual comparison completed; Search-first Hybrid option A selected.
-- Information architecture, component/data boundary, error handling, drift guard, and QA design approved in conversation.
-- Written spec created in `DESIGN.md` and approved by the user.
-- File-by-file TDD implementation plan created in `PLAN.md` with nine commit-sized tasks.
-- The plan fixes the execution order as catalog/contract, React workbench, navigation/contextual help, then legacy removal/docs/Browser QA.
+- Guides와 Glossary를 상단 `Reference` 단일 진입점으로 통합했다.
+- Streamlit-free 24-item curated catalog, stable item ID, destination allowlist, current-surface/legacy-label drift guard를 추가했다.
+- React Search-first Hybrid 화면에 4개 scope filter, 6개 journey, ranked search, local detail/related navigation, desktop drawer와 mobile sheet를 구현했다.
+- `/reference?item=<id>` deep link, invalid-link fallback, owner surface 이동, 7개 current surface contextual help를 연결했다.
+- legacy Guides/Glossary renderer와 catalog/test를 제거하고 내부 durable `docs/GLOSSARY.md`는 보존했다.
+- focused Python 28개를 포함한 combined Python regression 102개, React 11개, typecheck/build/compile/diff check와 actual responsive Browser QA를 통과했다.
 
 ## Roadmap State
 
-- Overall implementation roadmap: `0/4차`
-- Current completed stage: design approval, written specification, and executable TDD plan
-- Next stage: choose plan execution mode, then begin Task 1 catalog RED/GREEN cycle
+- Overall implementation roadmap: `4/4차`
+- 1차: canonical catalog / routing contract 완료
+- 2차: React search / detail workbench와 Streamlit bridge 완료
+- 3차: single navigation / contextual deep link 완료
+- 4차: legacy removal / documentation / desktop·900px·420px Browser QA 완료
 
-## Not Started
+## Completion Boundary
 
-- No product code changes
-- No Reference navigation changes
-- No catalog migration
-- No React component scaffolding
-- No legacy renderer removal
+- Reference는 읽기 전용 설명 surface이며 provider, DB, registry, saved setup, validation 판정, log/run-history UI를 소유하지 않는다.
+- 사용자-facing catalog는 내부 `GLOSSARY.md`를 runtime에 자동 파싱하지 않는다.
+- QA screenshot은 generated artifact `reference-center-react-v1-qa.png`로 남겼고 commit 대상에서 제외했다.
 
 ## Next Action
 
-Choose subagent-driven execution or inline execution, then start Task 1 without changing the approved scope.
+새 제품 surface나 사용자 용어가 추가될 때 `app/services/reference_center.py`의 curated item과 contextual help referential-integrity test를 함께 갱신한다.

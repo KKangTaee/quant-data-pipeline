@@ -850,7 +850,7 @@ Delete only the files listed above after `rg` confirms no remaining production i
 ### Step 4: Run Reference and import regression
 
 ```bash
-rg -n "reference_guides|reference_glossary_catalog|/guides|/glossary" app tests
+rg -n "reference_guides|reference_glossary_catalog|/guides|/glossary" app
 .venv/bin/python -m unittest \
   tests/test_reference_center.py \
   tests/test_reference_center_component.py \
@@ -919,7 +919,7 @@ Expected: no diff errors, all Python/React tests pass, compile/typecheck/build p
 Use an available local port and capture the exact command in `RUNS.md`:
 
 ```bash
-.venv/bin/streamlit run app/web/streamlit_app.py --server.headless true --server.port 8517
+.venv/bin/python -m streamlit run app/web/streamlit_app.py --server.headless true --server.port 8517
 ```
 
 Keep the session running only for QA, then stop it cleanly.
