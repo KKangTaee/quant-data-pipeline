@@ -172,6 +172,10 @@ export type MarketMoversDecisionWorkbenchPayload = {
     sector?: Record<string, DecisionGroupPeriod>;
     industry?: Record<string, DecisionGroupPeriod>;
   };
+  breadth_selection: {
+    group_by: "sector" | "industry";
+    period: "daily" | "weekly" | "monthly";
+  };
   selection: {
     symbol: string;
     row: DecisionRow;
@@ -620,12 +624,16 @@ function RankingBoard({ payload, activeSymbol, onSelect }: RankingBoardProps) {
 
 type BreadthContextProps = {
   payload: MarketMoversDecisionWorkbenchPayload;
+  onRequest: (groupBy: "sector" | "industry", period: "daily" | "weekly" | "monthly") => void;
 };
 
-function BreadthContext({ payload }: BreadthContextProps) {
-  const [groupMode, setGroupMode] = useState<(typeof GROUP_MODES)[number]>("sector");
-  const initialPeriod = GROUP_PERIODS.includes(payload.ranking.period as (typeof GROUP_PERIODS)[number])
-    ? payload.ranking.period as (typeof GROUP_PERIODS)[number]
+function BreadthContext({ payload, onRequest }: BreadthContextProps) {
+  const initialMode = GROUP_MODES.includes(payload.breadth_selection.group_by)
+    ? payload.breadth_selection.group_by
+    : "sector";
+  const [groupMode, setGroupMode] = useState<(typeof GROUP_MODES)[number]>(initialMode);
+  const initialPeriod = GROUP_PERIODS.includes(payload.breadth_selection.period)
+    ? payload.breadth_selection.period
     : "daily";
   const [groupPeriod, setGroupPeriod] = useState<(typeof GROUP_PERIODS)[number]>(initialPeriod);
   const periodPayload = payload.group_context[groupMode]?.[groupPeriod] || {};
@@ -646,10 +654,12 @@ function BreadthContext({ payload }: BreadthContextProps) {
   const switchMode = (mode: (typeof GROUP_MODES)[number]) => {
     setGroupMode(mode);
     setSelectedGroup("");
+    onRequest(mode, groupPeriod);
   };
   const switchPeriod = (period: (typeof GROUP_PERIODS)[number]) => {
     setGroupPeriod(period);
     setSelectedGroup("");
+    onRequest(groupMode, period);
   };
   return (
     <aside className="mm-decision__breadth">
@@ -1026,13 +1036,16 @@ function MarketMoversDecisionWorkbench({ payload, onEvent }: DecisionWorkbenchPr
     setActiveSymbol(symbol);
     onEvent({ id: "select_symbol", symbol });
   };
+  const requestBreadth = (groupBy: "sector" | "industry", period: "daily" | "weekly" | "monthly") => {
+    onEvent({ id: "request_breadth", group_by: groupBy, period });
+  };
   return (
     <main className="mm-decision" data-schema-version={payload.schema_version}>
       <MarketMoversCommandLine payload={payload} onControl={emitControl} />
       <MarketPulse payload={payload} />
       <div className="mm-decision__workbench">
         <RankingBoard activeSymbol={activeSymbol} onSelect={selectRow} payload={payload} />
-        <BreadthContext payload={payload} />
+        <BreadthContext onRequest={requestBreadth} payload={payload} />
       </div>
       {activeRow ? <QuickResearch onOpen={() => { setDetailOpen(true); syncFrameHeightSoon(); }} row={activeRow} /> : null}
       {detailOpen ? <StockResearchTabs activeSymbol={activeSymbol} payload={payload} /> : null}

@@ -171,7 +171,7 @@ def test_decision_shell_selected_symbol_and_financial_controls_are_independent()
     assert payload["selection"]["research"]["current_valuation"]["status"] == "UNAVAILABLE"
 
 
-def test_decision_workbench_loader_builds_all_group_periods_and_selected_research(monkeypatch) -> None:
+def test_decision_workbench_loader_builds_only_requested_group_period_and_reuses_it(monkeypatch) -> None:
     import pandas as pd
 
     from app.web.overview import market_movers_helpers as helpers
@@ -242,18 +242,52 @@ def test_decision_workbench_loader_builds_all_group_periods_and_selected_researc
         research_loader=fake_research_loader,
     )
 
-    assert group_calls == [
-        ("sector", "daily"),
-        ("sector", "weekly"),
-        ("sector", "monthly"),
-        ("industry", "daily"),
-        ("industry", "weekly"),
-        ("industry", "monthly"),
-    ]
-    assert research_calls == ["BBB"]
+    selected_payload = helpers.build_market_movers_decision_react_payload(
+        snapshot,
+        controls=controls,
+        selected_symbol="AAA",
+        group_snapshot_loader=fake_group_loader,
+        research_loader=fake_research_loader,
+    )
+
+    assert group_calls == [("sector", "daily")]
+    assert research_calls == ["BBB", "AAA"]
     assert payload["component"] == "MarketMoversDecisionWorkbench"
     assert payload["selection"]["symbol"] == "BBB"
-    assert set(payload["group_context"]["sector"]) == {"daily", "weekly", "monthly"}
+    assert payload["breadth_selection"] == {"group_by": "sector", "period": "daily"}
+    assert payload["group_context"]["sector"]["daily"]["status"] == "OK"
+    assert payload["group_context"]["sector"]["weekly"]["status"] == "UNAVAILABLE"
+    assert selected_payload["selection"]["symbol"] == "AAA"
+
+
+def test_decision_shell_breadth_request_updates_bounded_selection_once(monkeypatch) -> None:
+    from app.web.overview import market_movers_helpers as helpers
+
+    controls = helpers.MarketMoverControls(
+        coverage="SP500",
+        universe_limit=500,
+        period="daily",
+        sector="All",
+        top_n=20,
+        mode="top_gainers",
+    )
+    monkeypatch.setattr(helpers.st, "session_state", {})
+    rerun_calls: list[bool] = []
+    monkeypatch.setattr(helpers.st, "rerun", lambda: rerun_calls.append(True))
+    event = {
+        "event": {
+            "id": "request_breadth",
+            "group_by": "industry",
+            "period": "monthly",
+            "nonce": 202,
+        }
+    }
+
+    assert helpers._dispatch_market_movers_react_event(event, controls=controls) is True
+    assert helpers.st.session_state["overview_market_movers_breadth_group_SP500"] == "industry"
+    assert helpers.st.session_state["overview_market_movers_breadth_period_SP500"] == "monthly"
+    assert rerun_calls == [True]
+    assert helpers._dispatch_market_movers_react_event(event, controls=controls) is False
 
 
 def test_overview_research_loader_keeps_selected_stock_query_behind_cached_boundary() -> None:

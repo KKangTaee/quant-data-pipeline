@@ -118,6 +118,7 @@ def build_market_movers_decision_shell_payload(
     actions: Sequence[Mapping[str, Any]],
     selected_symbol: str | None,
     action_note: str = "",
+    breadth_selection: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the presentation-only contract for the approved decision workbench."""
 
@@ -144,6 +145,10 @@ def build_market_movers_decision_shell_payload(
         "trust": _mapping(decision_payload.get("trust")),
         "ranking": ranking,
         "group_context": _mapping(decision_payload.get("group_context")),
+        "breadth_selection": {
+            "group_by": str(_mapping(breadth_selection).get("group_by") or "sector"),
+            "period": str(_mapping(breadth_selection).get("period") or "daily"),
+        },
         "selection": {
             "symbol": selected,
             "row": selected_row,

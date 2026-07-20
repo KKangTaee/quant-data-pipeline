@@ -862,6 +862,50 @@ def build_market_movers_decision_workbench_payload(
     )
 
 
+def _market_movers_breadth_selection(*, controls: MarketMoverControls) -> tuple[str, str]:
+    group_key = f"overview_market_movers_breadth_group_{controls.coverage}"
+    period_key = f"overview_market_movers_breadth_period_{controls.coverage}"
+    group_by = str(st.session_state.get(group_key) or "sector").strip().lower()
+    if group_by not in {"sector", "industry"}:
+        group_by = "sector"
+    default_period = controls.period if controls.period in {"daily", "weekly", "monthly"} else "daily"
+    period = str(st.session_state.get(period_key) or default_period).strip().lower()
+    if period not in {"daily", "weekly", "monthly"}:
+        period = default_period
+    st.session_state[group_key] = group_by
+    st.session_state[period_key] = period
+    return group_by, period
+
+
+def _market_movers_breadth_snapshot_session_key(
+    *,
+    controls: MarketMoverControls,
+    group_by: str,
+    period: str,
+) -> str:
+    return "__".join(
+        [
+            "overview_market_movers_breadth_snapshot",
+            controls.coverage.lower(),
+            str(controls.universe_limit),
+            group_by,
+            period,
+        ]
+    )
+
+
+def _invalidate_market_movers_breadth_session_cache(*, coverage: str | None = None) -> None:
+    prefix = "overview_market_movers_breadth_snapshot__"
+    coverage_token = str(coverage or "").strip().lower()
+    for key in list(st.session_state):
+        normalized = str(key)
+        if not normalized.startswith(prefix):
+            continue
+        if coverage_token and not normalized.startswith(f"{prefix}{coverage_token}__"):
+            continue
+        st.session_state.pop(key, None)
+
+
 def build_market_movers_decision_react_payload(
     snapshot: dict[str, Any],
     *,
@@ -870,24 +914,32 @@ def build_market_movers_decision_react_payload(
     group_snapshot_loader: Callable[..., dict[str, Any]] | None = None,
     research_loader: Callable[..., dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Load the six cached group views and bind one selected stock to the React shell."""
+    """Load only the requested breadth view and bind one selected stock to the React shell."""
 
     load_group = group_snapshot_loader or load_overview_group_leadership_snapshot
     load_research = research_loader or load_overview_market_mover_research_snapshot
+    breadth_group, breadth_period = _market_movers_breadth_selection(controls=controls)
     group_snapshots: dict[str, dict[str, dict[str, Any]]] = {
         "sector": {},
         "industry": {},
     }
-    for group_by in ("sector", "industry"):
-        for period in ("daily", "weekly", "monthly"):
-            group_snapshots[group_by][period] = load_group(
-                universe_limit=controls.universe_limit,
-                universe_code=controls.coverage,
-                group_by=group_by,
-                period=period,
-                top_n=12,
-                min_group_size=5,
-            )
+    breadth_cache_key = _market_movers_breadth_snapshot_session_key(
+        controls=controls,
+        group_by=breadth_group,
+        period=breadth_period,
+    )
+    breadth_snapshot = st.session_state.get(breadth_cache_key)
+    if not isinstance(breadth_snapshot, dict):
+        breadth_snapshot = load_group(
+            universe_limit=controls.universe_limit,
+            universe_code=controls.coverage,
+            group_by=breadth_group,
+            period=breadth_period,
+            top_n=12,
+            min_group_size=5,
+        )
+        st.session_state[breadth_cache_key] = breadth_snapshot
+    group_snapshots[breadth_group][breadth_period] = breadth_snapshot
 
     selected_view = _market_mover_view_model(snapshot, controls.mode)
     rows = _market_movers_records(selected_view.get("rows"))
@@ -920,6 +972,7 @@ def build_market_movers_decision_react_payload(
         actions=_market_movers_react_actions(controls=controls, snapshot=snapshot),
         selected_symbol=selected,
         action_note=_market_movers_react_action_note(controls=controls, snapshot=snapshot),
+        breadth_selection={"group_by": breadth_group, "period": breadth_period},
     )
 
 
@@ -1012,6 +1065,8 @@ def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverCont
         return {"handler": "set_market_movers_control"}
     if action_id == "select_symbol":
         return {"handler": "set_market_movers_selected_symbol"}
+    if action_id == "request_breadth":
+        return {"handler": "set_market_movers_breadth_selection"}
     return {"handler": "noop", "action_id": action_id}
 
 
@@ -1111,6 +1166,17 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
         st.rerun()
         return True
 
+    if handler == "set_market_movers_breadth_selection":
+        payload = _market_movers_react_event_payload(event)
+        group_by = str(payload.get("group_by") or "sector").strip().lower()
+        period = str(payload.get("period") or "daily").strip().lower()
+        if group_by not in {"sector", "industry"} or period not in {"daily", "weekly", "monthly"}:
+            return False
+        st.session_state[f"overview_market_movers_breadth_group_{controls.coverage}"] = group_by
+        st.session_state[f"overview_market_movers_breadth_period_{controls.coverage}"] = period
+        st.rerun()
+        return True
+
     if handler == "set_market_movers_refresh_mode":
         payload = _market_movers_react_event_payload(event)
         requested = str(payload.get("value") or "manual")
@@ -1136,6 +1202,7 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
                 universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
             ),
         )
+        _invalidate_market_movers_breadth_session_cache(coverage=universe_code)
         st.rerun()
         return True
 
@@ -1155,6 +1222,7 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
                 as_of_date=as_of_date,
             ),
         )
+        _invalidate_market_movers_breadth_session_cache(coverage=universe_code)
         st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
         return True
@@ -1210,6 +1278,7 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
         return True
 
     if handler == "reload_market_movers":
+        _invalidate_market_movers_breadth_session_cache(coverage=universe_code)
         st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
         return True

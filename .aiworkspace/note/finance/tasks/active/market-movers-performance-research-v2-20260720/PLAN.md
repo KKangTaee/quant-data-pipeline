@@ -6,11 +6,11 @@
 
 ## Task 1 — Lazy breadth and selected research boundary
 
-- [ ] payload/service regression tests를 RED로 추가한다.
-- [ ] 현재 breadth 조합만 load하고 loaded context를 session/cache에서 재사용한다.
-- [ ] breadth request event와 symbol-only research event를 분리한다.
-- [ ] 공통 date-window cache와 적절한 TTL을 적용한다.
-- [ ] cold load/click timing을 재측정한다.
+- [x] payload/service regression tests를 RED로 추가한다.
+- [x] 현재 breadth 조합만 load하고 loaded context를 session/cache에서 재사용한다.
+- [x] breadth request event와 symbol-only research event를 분리한다.
+- [x] group/research cache TTL을 10분으로 늘리고 manual refresh에서 session breadth를 무효화한다.
+- [ ] cold load/click timing을 Browser QA에서 재측정한다.
 
 ## Task 2 — Header freshness, manual actions, breadth toolbar, return tones
 
@@ -43,4 +43,3 @@
 - [ ] independent code review의 Critical/Important issue를 처리한다.
 - [ ] task docs와 durable docs/root logs를 동기화한다.
 - [ ] 사용자 artifact를 제외하고 coherent commit을 만든다.
-

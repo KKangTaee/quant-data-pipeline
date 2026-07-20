@@ -59,7 +59,7 @@ def load_overview_market_mover_sectors(
     )
 
 
-@st.cache_data(ttl=120, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)
 def load_overview_market_mover_research_snapshot(
     *,
     mover: dict[str, Any],
@@ -70,7 +70,7 @@ def load_overview_market_mover_research_snapshot(
 
 
 # Load the DB-backed sector / industry leadership snapshot for the Overview group tab.
-@st.cache_data(ttl=120, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)
 def load_overview_group_leadership_snapshot(
     *,
     universe_limit: int = 2000,
