@@ -26,6 +26,7 @@ from app.services.overview.market_movers_read_model import (
     canonical_sector_options,
     filter_rows_by_canonical_sector,
 )
+from app.services.overview.market_movers_readiness import build_collection_readiness
 from finance.loaders.sentiment import (
     CNN_COMPONENT_SERIES,
     CORE_SENTIMENT_SERIES,
@@ -325,6 +326,34 @@ def _universe_limit_from_code(universe_code: str, fallback: int) -> int:
         return max(5000, int(fallback or 0))
     return fallback
 
+
+def _snapshot_collection_readiness(
+    *,
+    universe_count: int,
+    return_rows: Sequence[dict[str, Any]],
+    missing_rows: Sequence[dict[str, Any]],
+    date_window: dict[str, Any],
+    coverage: dict[str, Any],
+) -> dict[str, Any]:
+    stale_days = date_window.get("stale_days")
+    if stale_days is None and "INTRADAY" in str(coverage.get("price_mode") or "").upper():
+        refresh_status = str((coverage.get("refresh_state") or {}).get("status") or "").lower()
+        stale_days = 1 if refresh_status == "stale" else (0 if refresh_status else None)
+    return build_collection_readiness(
+        universe_count=universe_count,
+        returnable_count=len(return_rows),
+        volume_count=sum(1 for row in return_rows if _safe_float(row.get("volume")) is not None),
+        market_cap_count=sum(
+            1
+            for row in return_rows
+            if (_safe_float(row.get("market_cap")) or 0.0) > 0
+        ),
+        missing_rows=missing_rows,
+        basis=str(coverage.get("price_mode") or "") or None,
+        effective_end_date=date_window.get("effective_end_date") or date_window.get("end_date"),
+        stale_days=stale_days,
+    )
+
 def _empty_movers_snapshot(
     *,
     status: str,
@@ -335,7 +364,7 @@ def _empty_movers_snapshot(
     message: str,
     sector: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    snapshot = {
         "status": status,
         "period": period,
         "period_label": PERIOD_LABELS.get(period, period),
@@ -361,6 +390,14 @@ def _empty_movers_snapshot(
         "warnings": [message] if message else [],
         "message": message,
     }
+    snapshot["collection_readiness"] = _snapshot_collection_readiness(
+        universe_count=0,
+        return_rows=[],
+        missing_rows=[],
+        date_window={},
+        coverage=snapshot["coverage"],
+    )
+    return snapshot
 
 def _empty_group_snapshot(
     *,
@@ -3243,6 +3280,13 @@ def _build_intraday_movers_snapshot(
         "warnings": _coverage_warnings(coverage, date_window=date_window),
         "ticker_alias_candidates": list(payload.get("ticker_alias_candidates") or []),
     }
+    snapshot["collection_readiness"] = _snapshot_collection_readiness(
+        universe_count=len(universe),
+        return_rows=return_rows,
+        missing_rows=missing_rows,
+        date_window=date_window,
+        coverage=coverage,
+    )
     snapshot["coverage_trust"] = _serializable_coverage_trust_model(snapshot)
     return snapshot
 
@@ -3342,6 +3386,13 @@ def build_market_movers_snapshot(
                     **_universe_metadata(universe, universe_code=normalized_universe),
                 }
             )
+            snapshot["collection_readiness"] = _snapshot_collection_readiness(
+                universe_count=len(universe),
+                return_rows=[],
+                missing_rows=[],
+                date_window=date_window,
+                coverage=snapshot["coverage"],
+            )
             return snapshot
 
         previous_context = _previous_return_context(
@@ -3400,7 +3451,7 @@ def build_market_movers_snapshot(
         warnings = _coverage_warnings(coverage, date_window=date_window)
         if normalized_period == "daily" and prefer_intraday and not requested_as_of:
             warnings.insert(0, "No intraday snapshot found for the selected universe; using daily DB close data.")
-        return {
+        snapshot = {
             "status": "OK",
             "period": normalized_period,
             "period_label": PERIOD_LABELS[normalized_period],
@@ -3418,6 +3469,14 @@ def build_market_movers_snapshot(
             "coverage": coverage,
             "warnings": warnings,
         }
+        snapshot["collection_readiness"] = _snapshot_collection_readiness(
+            universe_count=len(universe),
+            return_rows=return_rows,
+            missing_rows=missing_rows,
+            date_window=date_window,
+            coverage=coverage,
+        )
+        return snapshot
     except Exception as exc:
         return _empty_movers_snapshot(
             status="ERROR",

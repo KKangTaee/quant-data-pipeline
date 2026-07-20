@@ -6,6 +6,7 @@ from app.services.overview.market_movers_read_model import (
     canonical_sector_options,
     filter_rows_by_canonical_sector,
 )
+from app.services.overview.market_movers_readiness import build_collection_readiness
 
 
 def test_canonical_sector_collapses_provider_aliases() -> None:
@@ -58,3 +59,41 @@ def test_public_sector_options_use_canonical_taxonomy() -> None:
         "Financials",
         "Technology",
     ]
+
+
+def test_partial_readiness_keeps_metric_denominators_explicit() -> None:
+    readiness = build_collection_readiness(
+        universe_count=4,
+        returnable_count=3,
+        volume_count=2,
+        market_cap_count=2,
+        missing_rows=[
+            {"symbol": "D", "reason": "missing end price", "gap_code": "MISSING_QUOTE"}
+        ],
+        basis="EOD",
+        effective_end_date="2026-07-17",
+        stale_days=0,
+    )
+
+    assert readiness["state"] == "PARTIAL"
+    assert readiness["metrics"]["return"]["valid"] == 3
+    assert readiness["metrics"]["volume"]["valid"] == 2
+    assert readiness["metrics"]["market_cap"]["excluded"] == 2
+    assert readiness["gap_summary"] == [{"code": "MISSING_QUOTE", "count": 1}]
+
+
+def test_blocked_readiness_does_not_publish_a_false_empty_ranking() -> None:
+    readiness = build_collection_readiness(
+        universe_count=0,
+        returnable_count=0,
+        volume_count=0,
+        market_cap_count=0,
+        missing_rows=[],
+        basis=None,
+        effective_end_date=None,
+        stale_days=None,
+    )
+
+    assert readiness["state"] == "BLOCKED"
+    assert readiness["primary_action"] == "UNIVERSE_SETUP"
+    assert readiness["publish_results"] is False
