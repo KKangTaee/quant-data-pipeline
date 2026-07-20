@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Streamlit, withStreamlitConnection, ComponentProps } from "streamlit-component-lib";
 import "./style.css";
 
@@ -812,6 +812,7 @@ type ChartPoint = {
   label: string;
   value: number;
   displayValue: string;
+  axisLabel?: string;
 };
 
 function chartCoordinateList(points: ChartPoint[], width = 720, height = 250) {
@@ -851,14 +852,29 @@ function financialBarGeometry(points: ChartPoint[], width = 720, height = 250) {
     const centerX = insetX + slot * (index + 0.5);
     const valueY = height - insetY - ((point.value - min) / span) * (height - insetY * 2);
     return {
+      centerX,
       x: centerX - barWidth / 2,
       y: Math.min(valueY, zeroY),
       width: barWidth,
       height: Math.max(1, Math.abs(zeroY - valueY)),
+      valueY,
       tone: returnTone(point.value),
     };
   });
   return { bars, zeroY };
+}
+
+function formatFinancialPeriodLabel(periodEnd: string, frequency: "quarterly" | "annual") {
+  const date = new Date(`${periodEnd}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return periodEnd;
+  const year = date.getFullYear();
+  if (frequency === "annual") return String(year);
+  return `${year} Q${Math.ceil((date.getMonth() + 1) / 3)}`;
+}
+
+function financialChartWidth(pointCount: number, frequency: "quarterly" | "annual") {
+  const pointWidth = frequency === "quarterly" ? 58 : 72;
+  return Math.max(720, pointCount * pointWidth + 56);
 }
 
 function rangeFilteredSeries(series: DecisionRow[], range: string) {
@@ -977,21 +993,92 @@ function FinancialFactorChart({ research, controls }: FinancialFactorChartProps)
   const factor = factors[factorId] || {};
   const unit = String(factor.unit || "number");
   const [chartMode, setChartMode] = useState<"bar" | "line">("bar");
+  const [activeFinancialIndex, setActiveFinancialIndex] = useState<number | null>(null);
+  const [isFinancialDragging, setIsFinancialDragging] = useState(false);
+  const financialScrollRef = useRef<HTMLDivElement | null>(null);
+  const financialSvgRef = useRef<SVGSVGElement | null>(null);
+  const financialDragRef = useRef({ pointerId: -1, startX: 0, startScrollLeft: 0 });
   const rawPoints = Array.isArray(factor.points) ? factor.points as DecisionRow[] : [];
   const points: ChartPoint[] = rawPoints.map((row) => {
     const value = numberValue(row, "value") || 0;
+    const periodEnd = textValue(row, "period_end");
     return {
-      label: textValue(row, "period_end"),
+      label: periodEnd,
+      axisLabel: formatFinancialPeriodLabel(periodEnd, frequency),
       value,
       displayValue: factorDisplayValue(value, unit),
     };
   });
   const activeGroup = controls.factor_groups.find((group) => group.id === groupId) || controls.factor_groups[0];
   const currentValuation = (research.current_valuation || {}) as Record<string, unknown>;
-  const barGeometry = financialBarGeometry(points);
+  const chartWidth = financialChartWidth(points.length, frequency);
+  const financialCoordinates = chartCoordinateList(points, chartWidth);
+  const barGeometry = financialBarGeometry(points, chartWidth);
+  const resolvedFinancialIndex = activeFinancialIndex === null
+    ? Math.max(0, points.length - 1)
+    : Math.min(activeFinancialIndex, points.length - 1);
+  const activeFinancialPoint = activeFinancialIndex === null ? null : points[resolvedFinancialIndex];
+  const activeFinancialCoordinate = activeFinancialIndex === null
+    ? null
+    : chartMode === "bar"
+      ? {
+          x: barGeometry.bars[resolvedFinancialIndex]?.centerX || 0,
+          y: barGeometry.bars[resolvedFinancialIndex]?.valueY || 0,
+        }
+      : financialCoordinates[resolvedFinancialIndex];
   useEffect(() => {
     setChartMode(unit === "percent" || unit === "ratio" ? "line" : "bar");
   }, [factorId, frequency, unit]);
+  useEffect(() => {
+    setActiveFinancialIndex(null);
+    const frame = window.requestAnimationFrame(() => {
+      const viewport = financialScrollRef.current;
+      if (viewport) viewport.scrollLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [factorId, frequency, points.length, research]);
+  const revealFinancialPoint = (index: number) => {
+    const viewport = financialScrollRef.current;
+    const svg = financialSvgRef.current;
+    const coordinate = financialCoordinates[index];
+    if (!viewport || !svg || !coordinate) return;
+    const renderedWidth = svg.getBoundingClientRect().width;
+    const pointX = (coordinate.x / chartWidth) * renderedWidth;
+    const nextLeft = Math.max(0, pointX - viewport.clientWidth / 2);
+    viewport.scrollTo({ left: nextLeft, behavior: "smooth" });
+  };
+  const setFinancialPointFromClientX = (clientX: number) => {
+    const svg = financialSvgRef.current;
+    if (!svg || !points.length) return;
+    const bounds = svg.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - bounds.left) / Math.max(bounds.width, 1)));
+    setActiveFinancialIndex(Math.round(ratio * Math.max(points.length - 1, 0)));
+  };
+  const beginFinancialDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    financialDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startScrollLeft: event.currentTarget.scrollLeft,
+    };
+    setIsFinancialDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setFinancialPointFromClientX(event.clientX);
+  };
+  const handleFinancialPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    setFinancialPointFromClientX(event.clientX);
+    if (financialDragRef.current.pointerId !== event.pointerId) return;
+    event.currentTarget.scrollLeft = financialDragRef.current.startScrollLeft
+      - (event.clientX - financialDragRef.current.startX);
+  };
+  const endFinancialDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (financialDragRef.current.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    financialDragRef.current.pointerId = -1;
+    setIsFinancialDragging(false);
+  };
   const chooseFrequency = (nextFrequency: "quarterly" | "annual") => {
     setFrequency(nextFrequency);
     const currentControl = controls.factor_groups.flatMap((group) => group.factors).find((item) => item.id === factorId);
@@ -1052,25 +1139,80 @@ function FinancialFactorChart({ research, controls }: FinancialFactorChartProps)
             </div>
           </div>
           {points.length ? (
-            <div className="mm-decision__svg-wrap">
-              <svg aria-label={`${String(factor.label || factorId)} 추이`} preserveAspectRatio="none" role="img" viewBox="0 0 720 250">
-                <line x1="28" x2="692" y1={chartMode === "bar" ? barGeometry.zeroY : 226} y2={chartMode === "bar" ? barGeometry.zeroY : 226} />
-                <line x1="28" x2="692" y1="24" y2="24" />
-                {chartMode === "bar" ? barGeometry.bars.map((bar, index) => (
-                  <rect
-                    className={`mm-decision__financial-bar mm-return-fill--${bar.tone}`}
-                    height={bar.height}
-                    key={`${points[index].label}-${index}`}
-                    rx="2"
-                    width={bar.width}
-                    x={bar.x}
-                    y={bar.y}
-                  />
-                )) : (
-                  <polyline fill="none" points={chartCoordinates(points)} stroke="#2f7f73" strokeLinejoin="round" strokeWidth="3" />
-                )}
-              </svg>
-              <div className="mm-decision__chart-axis"><span>{points[0]?.label}</span><span>{points[points.length - 1]?.label}</span></div>
+            <div
+              aria-label="재무 차트 가로 탐색 영역"
+              className="mm-decision__chart-scroll"
+              data-dragging={isFinancialDragging ? "true" : "false"}
+              onPointerCancel={endFinancialDrag}
+              onPointerDown={beginFinancialDrag}
+              onPointerLeave={() => {
+                if (financialDragRef.current.pointerId < 0) setActiveFinancialIndex(null);
+              }}
+              onPointerMove={handleFinancialPointerMove}
+              onPointerUp={endFinancialDrag}
+              ref={financialScrollRef}
+            >
+              <div className="mm-decision__chart-inner" style={{ minWidth: "100%", width: `${chartWidth}px` }}>
+                <div className="mm-decision__svg-wrap">
+                  <svg
+                    aria-label={`${String(factor.label || factorId)} ${frequency === "quarterly" ? "분기" : "연간"} 추이`}
+                    onBlur={() => setActiveFinancialIndex(null)}
+                    onFocus={() => setActiveFinancialIndex(Math.max(0, points.length - 1))}
+                    onKeyDown={(event) => {
+                      let nextIndex = resolvedFinancialIndex;
+                      if (event.key === "ArrowLeft") nextIndex = Math.max(0, resolvedFinancialIndex - 1);
+                      else if (event.key === "ArrowRight") nextIndex = Math.min(points.length - 1, resolvedFinancialIndex + 1);
+                      else if (event.key === "Home") nextIndex = 0;
+                      else if (event.key === "End") nextIndex = Math.max(0, points.length - 1);
+                      else return;
+                      event.preventDefault();
+                      setActiveFinancialIndex(nextIndex);
+                      revealFinancialPoint(nextIndex);
+                    }}
+                    preserveAspectRatio="none"
+                    ref={financialSvgRef}
+                    role="img"
+                    tabIndex={0}
+                    viewBox={`0 0 ${chartWidth} 250`}
+                  >
+                    <line x1="28" x2={chartWidth - 28} y1={chartMode === "bar" ? barGeometry.zeroY : 226} y2={chartMode === "bar" ? barGeometry.zeroY : 226} />
+                    <line x1="28" x2={chartWidth - 28} y1="24" y2="24" />
+                    {chartMode === "bar" ? barGeometry.bars.map((bar, index) => (
+                      <rect
+                        className={`mm-decision__financial-bar mm-return-fill--${bar.tone}${activeFinancialIndex === index ? " is-active" : ""}`}
+                        height={bar.height}
+                        key={`${points[index].label}-${index}`}
+                        rx="2"
+                        width={bar.width}
+                        x={bar.x}
+                        y={bar.y}
+                      />
+                    )) : (
+                      <polyline fill="none" points={chartCoordinates(points, chartWidth)} stroke="#2f7f73" strokeLinejoin="round" strokeWidth="3" />
+                    )}
+                    {activeFinancialCoordinate ? <line className="mm-decision__chart-guide" x1={activeFinancialCoordinate.x} x2={activeFinancialCoordinate.x} y1="24" y2="226" /> : null}
+                    {activeFinancialCoordinate && chartMode === "line" ? <circle className="mm-decision__chart-dot" cx={activeFinancialCoordinate.x} cy={activeFinancialCoordinate.y} r="5" /> : null}
+                  </svg>
+                  {activeFinancialPoint && activeFinancialCoordinate ? (
+                    <div
+                      className="mm-decision__chart-tooltip"
+                      style={{ left: `${(activeFinancialCoordinate.x / chartWidth) * 100}%`, top: `${Math.max(8, activeFinancialCoordinate.y - 12)}px` }}
+                    >
+                      <strong>{activeFinancialPoint.axisLabel}</strong>
+                      <small>{activeFinancialPoint.label}</small>
+                      <span>{activeFinancialPoint.displayValue}</span>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="mm-decision__chart-ticks" aria-hidden="true">
+                  {points.map((point, index) => (
+                    <span
+                      key={`${point.label}-tick`}
+                      style={{ left: `${((financialCoordinates[index]?.x || 0) / chartWidth) * 100}%` }}
+                    >{point.axisLabel}</span>
+                  ))}
+                </div>
+              </div>
             </div>
           ) : <div className="mm-decision__chart-empty">선택 factor의 {frequency === "quarterly" ? "분기" : "연간"} 근거가 없습니다.</div>}
         </div>

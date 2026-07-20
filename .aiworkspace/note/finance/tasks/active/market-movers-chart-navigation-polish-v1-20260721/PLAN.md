@@ -28,10 +28,11 @@ Last Updated: 2026-07-21
 
 ## Steps
 
-- [ ] 재무 차트 탐색·가격 카드 시각 계약의 실패 테스트 작성
-- [ ] 실패가 요구사항 부재 때문인지 확인
-- [ ] 재무 차트 viewport, adaptive period ticks, hover/focus, pointer drag 구현
-- [ ] 가격 요약 카드 semantic text-only style 적용
-- [ ] focused tests와 React build 실행
+- [x] 재무 차트 탐색·가격 카드 시각 계약의 실패 테스트 작성
+- [x] 실패가 요구사항 부재 때문인지 확인
+- [x] 재무 차트 viewport, adaptive period ticks, hover/focus, pointer drag 구현
+- [x] 가격 요약 카드 semantic text-only style 적용
+- [x] focused tests와 React build 실행
 - [ ] desktop/narrow Browser QA 및 스크린샷 저장
-- [ ] task/root 문서 동기화 후 관련 파일만 커밋
+- [x] task/root 문서 동기화
+- [x] 관련 파일만 커밋

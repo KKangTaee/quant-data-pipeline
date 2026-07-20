@@ -6905,3 +6905,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 현재/시장/데이터/수동 갱신 시각과 수동 action, 수익률 색상, 가격 hover, 연간 10·분기 40 재무 막대/선, DB filing 근거와 명시적 session-only 뉴스/SEC 조회를 one-shell에 연결했다.
 - 관련 research/decision 27개와 Market Movers 서비스 계약 126개, Vite build, desktop/760px/detail/console Browser QA를 통과했다. 전체 기능 roadmap은 `4/5차`; 남은 5차는 별도 OOS gate가 필요한 sector conditional outlook이다.
 - 상세는 `tasks/active/market-movers-performance-research-v2-20260720/`를 본다.
+
+## 2026-07-21 - Overview Market Movers 재무 차트 탐색 구현
+
+- 최대 40개 분기/10개 연간 재무 이력을 point-count 기반 가로 차트로 바꾸고 `YYYY Qn`/`YYYY` X축, exact 결산일·값 hover, scrollbar·pointer drag와 keyboard 이동을 추가했다.
+- 가격 YTD/최근/범위 최고·최저 readout은 배경 tint와 primary 좌측선을 제거하고 양수·음수·중립 text tone만 유지한다.
+- UI/research 29개와 Market Movers 서비스 계약 126개, Vite production build를 통과했다. Browser localhost URL policy 때문에 actual desktop/narrow interaction screenshot은 남은 QA다.
+- 구현 후속 `2/2차`, broader Market Movers 기능 roadmap은 `4/5차`다. 상세는 `tasks/active/market-movers-chart-navigation-polish-v1-20260721/`를 본다.

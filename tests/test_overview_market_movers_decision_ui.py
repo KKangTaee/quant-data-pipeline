@@ -523,6 +523,44 @@ def test_decision_research_adds_price_hover_financial_chart_modes_and_resize_syn
     assert ".mm-decision__chart-mode" in style
 
 
+def test_decision_financial_chart_exposes_period_axis_hover_and_drag_navigation() -> None:
+    from pathlib import Path
+
+    source = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+    style = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/style.css"
+    ).read_text(encoding="utf-8")
+
+    assert "function formatFinancialPeriodLabel" in source
+    assert "function financialChartWidth" in source
+    assert 'className="mm-decision__chart-scroll"' in source
+    assert 'className="mm-decision__chart-ticks"' in source
+    assert "activeFinancialPoint" in source
+    assert "beginFinancialDrag" in source
+    assert "handleFinancialPointerMove" in source
+    assert "onPointerDown={beginFinancialDrag}" in source
+    assert "onPointerMove={handleFinancialPointerMove}" in source
+    assert ".mm-decision__chart-scroll" in style
+    assert "overflow-x: auto;" in style
+    assert "cursor: grab;" in style
+    assert "touch-action: pan-y;" in style
+
+
+def test_decision_price_readout_uses_text_tone_without_tinted_boxes_or_accent_line() -> None:
+    from pathlib import Path
+
+    style = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/style.css"
+    ).read_text(encoding="utf-8")
+
+    assert ".mm-decision__chart-readout span.is-primary" not in style
+    assert ".mm-decision__chart-readout span.is-latest" not in style
+    assert ".mm-decision__chart-readout span.is-high" not in style
+    assert ".mm-decision__chart-readout span.is-low" not in style
+
+
 def test_decision_research_renders_db_filings_and_explicit_news_actions() -> None:
     from pathlib import Path
 

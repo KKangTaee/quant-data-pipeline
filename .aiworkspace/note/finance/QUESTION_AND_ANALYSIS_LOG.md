@@ -10275,3 +10275,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 자동 provider 호출이나 운영 진단 패널을 늘리지 않고 첫 진입과 종목 선택을 빠르게 하며, 저장 근거와 명시적 외부 조회를 같은 selected-symbol 조사 흐름에 둔다.
 - Analysis result: 6개 breadth eager calculation이 주 지연 원인이었다. 현재 key lazy/session reuse와 10분 cache로 actual entry를 약 46초에서 1.6초로 줄였고, 가격/재무/events 상세와 timing/action/semantic color를 one-shell에 연결했다.
 - Follow-up: 성능·조사 보완 `5/5차`와 desktop/760px/detail/console QA를 완료했다. 전체 Market Movers 기능 roadmap의 남은 `5차` conditional outlook은 historical episode와 OOS gate를 통과하기 전까지 공개하지 않는다.
+
+### 2026-07-21 - 변동 종목 재무 차트는 긴 이력을 압축하지 않고 직접 탐색한다
+
+- User request: 재무 차트에 정확한 분기/연간 X축과 hover를 추가하고, 긴 이력을 drag로 이동하며, 가격 요약 카드의 배경색과 좌측선을 제거해 텍스트 색만 구분하도록 요청함.
+- Interpreted goal: 10년 재무 자료의 기간과 값을 실제로 판독할 수 있게 만들되 새 chart dependency나 데이터 계약은 추가하지 않는다.
+- Analysis result: 고정 720 viewBox 압축이 기간 판독 문제의 원인이었다. point-count intrinsic width, horizontal scroll/pointer drag, period tick, exact period-end tooltip과 keyboard 탐색을 적용하고 readout tint CSS를 제거했다.
+- Follow-up: 구현과 자동 회귀/build는 완료했다. Browser localhost URL policy로 actual interaction QA가 남았으며 broader conditional outlook `5차`와는 별도다.

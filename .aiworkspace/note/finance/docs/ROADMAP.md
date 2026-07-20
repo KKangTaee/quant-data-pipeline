@@ -271,6 +271,11 @@ Current Market Movers redesign follow-up task는 `.aiworkspace/note/finance/task
 
 - 목적: 승인된 결정형 워크벤치에서 종목 발견, sector/industry 확산 확인, 선택 종목 조사를 한 화면과 selected state로 끝낸다.
 - 현재 상태: 전체 기능 roadmap은 `4/5차`이며, 승인된 성능·조사 보완 묶음은 `5/5차` 완료했다. 초기 6개 sector/industry 조합을 모두 계산하던 경로를 현재 선택한 조합 하나만 읽고 session에서 재사용하도록 바꿔 실제 cold entry를 약 46초에서 1.6초로 줄였다. 현재/시장/데이터/수동 갱신 시각과 기존 수동 action, 수익률 semantic color, 가격 plot-wide hover, 연간 10개·분기 40개 상한과 막대/선 전환, DB filing ledger 최대 5건 및 selected-symbol session-only 뉴스/SEC action을 one-shell에 연결했다. Desktop/760px, console, nested iframe detail click actual Browser QA까지 완료했다.
+
+Market Movers chart navigation 후속 task는 `.aiworkspace/note/finance/tasks/active/market-movers-chart-navigation-polish-v1-20260721/`다.
+
+- 재무 이력은 분기 `YYYY Qn`, 연간 `YYYY` X축과 exact period-end hover를 제공하고, 10년 분기 자료는 point-count 기반 폭·scrollbar·pointer drag로 이동한다. 가격 요약은 per-row 배경 tint와 primary 좌측선을 제거하고 수익률 text tone만 유지한다.
+- 구현과 focused/service contract/Vite build는 완료했다. 실제 desktop/narrow hover·drag Browser QA는 localhost URL policy 차단으로 남았으며, 이 QA 공백은 전체 기능 roadmap `4/5차`와 별개다.
 - 다음: 5차 sector conditional outlook은 historical episode와 OOS publication gate를 먼저 검증한다. gate를 통과하지 못하면 확률·분포 수치를 공개하지 않으며 industry outlook은 PIT taxonomy 준비 전까지 보류한다.
 
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/`다.

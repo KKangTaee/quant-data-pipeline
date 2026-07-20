@@ -819,13 +819,14 @@ body {
   opacity: 0.86;
 }
 
+.mm-decision__financial-bar.is-active {
+  opacity: 1;
+  stroke: #173b53;
+  stroke-width: 2;
+}
+
 .mm-return-fill--negative { fill: var(--mm-negative); }
 .mm-return-fill--neutral { fill: var(--mm-muted); }
-
-.mm-decision__chart-readout span.is-primary { border-left: 3px solid var(--mm-accent); }
-.mm-decision__chart-readout span.is-latest { background: #eff6ff; }
-.mm-decision__chart-readout span.is-high { background: #ecfdf5; }
-.mm-decision__chart-readout span.is-low { background: #fff1f2; }
 
 .mm-decision__svg-wrap svg {
   display: block;
@@ -846,6 +847,45 @@ body {
   padding: 3px 28px 0;
 }
 
+.mm-decision__chart-scroll {
+  cursor: grab;
+  margin-top: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-color: #b7c8d6 transparent;
+  scrollbar-width: thin;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.mm-decision__chart-scroll[data-dragging="true"] {
+  cursor: grabbing;
+}
+
+.mm-decision__chart-scroll .mm-decision__svg-wrap {
+  margin-top: 0;
+}
+
+.mm-decision__chart-inner {
+  padding-bottom: 4px;
+}
+
+.mm-decision__chart-ticks {
+  color: var(--mm-muted);
+  font-size: 0.62rem;
+  font-weight: 720;
+  height: 28px;
+  position: relative;
+}
+
+.mm-decision__chart-ticks span {
+  position: absolute;
+  top: 3px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
 .mm-decision__chart-empty {
   align-items: center;
   color: var(--mm-muted);
@@ -857,7 +897,7 @@ body {
 }
 
 .mm-decision__chart-readout {
-  background: #f8fafc;
+  background: #ffffff;
   border-left: 1px solid var(--mm-line);
   display: grid;
   gap: 1px;
@@ -865,7 +905,14 @@ body {
   padding: 14px;
 }
 
-.mm-decision__chart-readout span,
+.mm-decision__chart-readout span {
+  background: transparent;
+  border-bottom: 1px solid var(--mm-line);
+  display: flex;
+  flex-direction: column;
+  padding: 9px 10px;
+}
+
 .mm-decision__events-status span {
   background: #ffffff;
   border-bottom: 1px solid var(--mm-line);
