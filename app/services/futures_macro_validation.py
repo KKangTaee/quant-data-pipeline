@@ -74,7 +74,8 @@ def _load_validation_futures_rows(
             "finance_price",
             f"""
             SELECT provider_symbol, interval_code, candle_time_utc,
-                   open, high, low, close, volume, source, provider_status
+                   open, high, low, close, volume, source, provider_status,
+                   collected_at
             FROM futures_ohlcv
             WHERE interval_code = %s
               AND provider_symbol IN ({placeholders})

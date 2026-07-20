@@ -1,6 +1,6 @@
 # Overview Futures Macro Probabilistic State Outlook V2 Status
 
-Status: Design approved; detailed implementation plan ready
+Status: Implementation in progress — 1차 Task 1 complete
 Last Updated: 2026-07-20
 
 ## Current Progress
@@ -12,16 +12,17 @@ Last Updated: 2026-07-20
 - User approved the direction: momentum-only baseline plus PIT macro/event soft conditioning, selected only by chronological validation.
 - Written `PLAN.md` and `DESIGN.md` were explicitly approved by the user.
 - Detailed TDD tasks, exact file ownership, validation gates, and commit checkpoints are recorded in `IMPLEMENTATION_PLAN.md`.
+- Task 1 completed-session resolver is implemented with canonical duplicate collapse and pending-session evidence.
 
 ## Roadmap State
 
-- 1차 Data / Target Contract: not started
+- 1차 Data / Target Contract: in progress (Task 1 complete, Task 2 pending)
 - 2차 Momentum Baseline / Macro Hybrid Validation: not started
 - 3차 Observed Trail / Probabilistic Outlook UI / QA: not started
 - Design gate: approved 2026-07-20
-- Implementation execution: not started
+- Implementation execution: in progress
 
 ## Next Action
 
-Select the execution mode for `IMPLEMENTATION_PLAN.md`, then begin 1차 Data / Target Contract.
-No implementation code or production data has been changed yet.
+Begin Task 2 canonical state and same-state 5D/20D target TDD work.
+No production DB data has been changed.

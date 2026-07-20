@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from time import monotonic
 from typing import Any
 
@@ -14,6 +15,11 @@ from app.services.futures_macro_pattern import (
     _pattern_close_matrix,
     build_current_pattern_snapshot,
     build_pattern_feature_frame,
+)
+from app.services.futures_macro_sessions import (
+    FUTURES_DAILY_SESSION_VERSION,
+    futures_session_evaluation_token,
+    select_completed_futures_daily_rows,
 )
 from app.services.futures_macro_thermometer import (
     SCORE_DEFINITIONS,
@@ -998,6 +1004,7 @@ def load_overview_futures_macro_pattern_outlook(
     years: int = FUTURES_MACRO_HISTORY_YEARS,
     cache_ttl_seconds: int = PATTERN_OUTLOOK_CACHE_TTL_SECONDS,
     force_refresh: bool = False,
+    evaluation_time: datetime | None = None,
 ) -> dict[str, Any]:
     """Load stored daily futures and cache the outlook by latest daily marker."""
 
@@ -1008,11 +1015,13 @@ def load_overview_futures_macro_pattern_outlook(
         if str(symbol).strip()
     )
     marker = _latest_daily_cache_marker(query, selected_symbols)
+    evaluated_at = evaluation_time or datetime.now(timezone.utc)
     cache_key = (
         id(query),
         selected_symbols,
         max(1, int(years)),
         marker,
+        futures_session_evaluation_token(evaluated_at),
         PATTERN_ALGORITHM_VERSION,
     )
     now = monotonic()
@@ -1029,7 +1038,11 @@ def load_overview_futures_macro_pattern_outlook(
         symbols=selected_symbols,
         lookback_days=max(1, int(years)) * 366 + 90,
     )
-    candles = normalize_futures_macro_daily_candles(rows)
+    completed = select_completed_futures_daily_rows(
+        rows,
+        evaluation_time=evaluated_at,
+    )
+    candles = normalize_futures_macro_daily_candles(completed.rows)
     features = build_pattern_feature_frame(candles, selected_symbols=selected_symbols)
     current = build_current_pattern_snapshot(features)
     snapshot = build_pattern_outlook_snapshot(
@@ -1038,6 +1051,17 @@ def load_overview_futures_macro_pattern_outlook(
         current,
         selected_symbols=selected_symbols,
     )
+    snapshot["session"] = {
+        "resolver_version": FUTURES_DAILY_SESSION_VERSION,
+        "latest_final_session": completed.latest_final_session,
+        "pending_session": completed.pending_session,
+        "excluded_unknown_rows": completed.excluded_unknown_rows,
+        "status": (
+            "PENDING_SESSION_FINALIZATION"
+            if completed.pending_session
+            else "OBSERVED"
+        ),
+    }
     if cache_ttl_seconds > 0:
         _PATTERN_OUTLOOK_CACHE[cache_key] = (now, snapshot)
     return snapshot

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pandas as pd
@@ -253,6 +254,53 @@ class FuturesMacroPatternOutcomeTests(unittest.TestCase):
 
 
 class FuturesMacroPatternPublicationTests(unittest.TestCase):
+    def test_loader_excludes_pending_session_and_attaches_finality_evidence(self) -> None:
+        import app.services.futures_macro_pattern_validation as service
+
+        raw_rows = [
+            {
+                "provider_symbol": "ES=F",
+                "candle_time_utc": "2026-07-17 00:00:00",
+                "collected_at": "2026-07-18 00:00:00",
+                "close": 100.0,
+            },
+            {
+                "provider_symbol": "ES=F",
+                "candle_time_utc": "2026-07-19 00:00:00",
+                "collected_at": "2026-07-20 10:00:00",
+                "close": 101.0,
+            },
+        ]
+        normalized_inputs: list[list[dict[str, object]]] = []
+
+        def normalize(rows):
+            normalized_inputs.append(list(rows))
+            return pd.DataFrame()
+
+        with (
+            patch.object(service, "_latest_daily_cache_marker", return_value="2026-07-19"),
+            patch.object(service, "_load_validation_futures_rows", return_value=raw_rows),
+            patch.object(service, "normalize_futures_macro_daily_candles", side_effect=normalize),
+            patch.object(service, "build_pattern_feature_frame", return_value=pd.DataFrame()),
+            patch.object(service, "build_current_pattern_snapshot", return_value={}),
+            patch.object(service, "build_pattern_outlook_snapshot", return_value={"status": "LIMITED"}),
+        ):
+            result = service.load_overview_futures_macro_pattern_outlook(
+                query_fn=lambda *_args, **_kwargs: [],
+                symbols=("ES=F",),
+                evaluation_time=datetime(2026, 7, 20, 12, 0, tzinfo=timezone.utc),
+                cache_ttl_seconds=0,
+            )
+
+        self.assertEqual(len(normalized_inputs), 1)
+        self.assertEqual(
+            [row["candle_time_utc"] for row in normalized_inputs[0]],
+            ["2026-07-17 00:00:00"],
+        )
+        self.assertEqual(result["session"]["latest_final_session"], "2026-07-17")
+        self.assertEqual(result["session"]["pending_session"], "2026-07-20")
+        self.assertEqual(result["session"]["status"], "PENDING_SESSION_FINALIZATION")
+
     def test_horizon_status_uses_lower_probability_and_path_status(self) -> None:
         from app.services.futures_macro_pattern_validation import (
             combined_outlook_publication_status,
