@@ -1715,6 +1715,12 @@ body {
 }
 
 @media (max-width: 1180px) {
+  .mm-sector-breadth__lanes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
   .mm-decision__workbench {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1726,10 +1732,6 @@ body {
   .mm-decision__quick-facts {
     grid-column: 1 / -1;
     grid-row: 2;
-  }
-
-  .mm-sector-breadth__lanes {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

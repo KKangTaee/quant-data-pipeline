@@ -292,6 +292,12 @@ def test_decision_react_shell_owns_ranking_breadth_and_selected_research() -> No
     assert 'className="mm-decision__breadth"' in source
     assert ".mm-decision__workbench" in style
     assert "grid-template-columns: minmax(0, 1.62fr) minmax(320px, 1fr);" in style
+    desktop_responsive = style[style.index("@media (max-width: 900px)") :]
+    desktop_responsive = desktop_responsive[: desktop_responsive.index("@media (max-width: 760px)")]
+    assert ".mm-decision__workbench" in desktop_responsive
+    wide_responsive = style[style.index("@media (max-width: 1180px)") :]
+    wide_responsive = wide_responsive[: wide_responsive.index("@media (max-width: 900px)")]
+    assert ".mm-decision__workbench" not in wide_responsive
 
 
 def test_decision_research_keeps_financial_period_and_factor_controls_separate() -> None:
