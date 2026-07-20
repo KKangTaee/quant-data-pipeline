@@ -12,5 +12,5 @@
 
 - Invalid destinations are rejected before `st.switch_page`.
 - Legacy Guides/Glossary paths are removed only after the new page and contextual links passed tests.
-- Modal-open iframe height is bounded so drawer/sheet scrolling no longer depends on the full catalog document height.
+- Modal-open iframe height is parent-viewport-aware and bounded to 520~760px; it is aligned below navigation, and the persistent footer no longer depends on body scroll position.
 - Internal durable `GLOSSARY.md`, registries, saved setups, and generated/user artifacts were not rewritten or deleted.

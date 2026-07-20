@@ -16,5 +16,6 @@
 - React ownership: `app/web/streamlit_components/reference_center_workbench/`.
 - Contextual help coverage: Overview, Institutional Portfolios, Ingestion, Backtest Analysis, Practical Validation, Final Review, Portfolio Monitoring.
 - Deleted active legacy paths: `app/web/reference_guides.py`, `app/services/reference_guides_catalog.py`, `app/services/reference_glossary_catalog.py` and their legacy tests.
-- Browser QA found that an auto-height iframe made a fixed drawer as tall as the full catalog. When a lower result was involved, the drawer content could move outside the visible parent viewport. The modal-open frame is now intentionally capped at 760px and the drawer owns its scroll; closing restores automatic full-list height.
+- Initial Browser QA found that an auto-height iframe made a fixed drawer as tall as the full catalog. The first cap at 760px prevented catalog-height expansion, but a PC follow-up showed that the same fixed height ignored the actual browser height and could push the footer below a short viewport.
+- Detail open now aligns the component 80px below the Streamlit navigation, reserves a 16px bottom gap, and computes a 520~760px frame from the parent viewport. The detail header/footer stay fixed while only the body scrolls, so the destination action remains visible.
 - Final integration review caught durable documentation drift in `SCRIPT_STRUCTURE_MAP.md` and `BACKTEST_UI_FLOW.md`; both now describe the single `/reference` architecture and seven-surface contextual-help coverage instead of the deleted Guides / Glossary split.

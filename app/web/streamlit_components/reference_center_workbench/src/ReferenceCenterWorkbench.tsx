@@ -11,7 +11,53 @@ const KIND_LABELS: Record<ReferenceItem["kind"], string> = {
   playbook: "문제 해결",
 };
 
-const DETAIL_FRAME_HEIGHT = 760;
+const DETAIL_FRAME_MAX_HEIGHT = 760;
+const DETAIL_FRAME_MIN_HEIGHT = 520;
+const DETAIL_FRAME_TOP_CLEARANCE = 80;
+const DETAIL_FRAME_BOTTOM_GAP = 16;
+const DETAIL_FRAME_RESERVED_HEIGHT = 96;
+const DETAIL_FRAME_FALLBACK_HEIGHT = 640;
+
+function alignDetailFrameInParent(): void {
+  try {
+    const frame = window.frameElement as HTMLElement | null;
+    const scrollContainer = frame?.closest("section.stMain") as HTMLElement | null;
+    if (!frame || !scrollContainer) {
+      return;
+    }
+    const frameTop = frame.getBoundingClientRect().top;
+    const containerTop = scrollContainer.getBoundingClientRect().top;
+    scrollContainer.scrollTop = Math.max(
+      0,
+      Math.floor(
+        scrollContainer.scrollTop
+        + frameTop
+        - containerTop
+        - DETAIL_FRAME_TOP_CLEARANCE,
+      ),
+    );
+  } catch {
+    // Cross-origin development hosts cannot adjust the parent scroll container.
+  }
+}
+
+function getDetailFrameHeight(): number {
+  let viewportHeight = DETAIL_FRAME_FALLBACK_HEIGHT + DETAIL_FRAME_RESERVED_HEIGHT;
+  try {
+    if (Number.isFinite(window.parent.innerHeight)) {
+      viewportHeight = window.parent.innerHeight;
+    }
+  } catch {
+    // Cross-origin development hosts cannot expose the parent viewport.
+  }
+  return Math.min(
+    DETAIL_FRAME_MAX_HEIGHT,
+    Math.max(
+      DETAIL_FRAME_MIN_HEIGHT,
+      Math.floor(viewportHeight) - DETAIL_FRAME_TOP_CLEARANCE - DETAIL_FRAME_BOTTOM_GAP,
+    ),
+  );
+}
 
 function syncFrameHeightSoon(height?: number): void {
   Streamlit.setFrameHeight(height);
@@ -53,7 +99,12 @@ export function ReferenceCenterWorkbench({ args }: ComponentProps) {
   }, []);
 
   useEffect(() => {
-    syncFrameHeightSoon(selectedItemId ? DETAIL_FRAME_HEIGHT : undefined);
+    if (selectedItemId) {
+      alignDetailFrameInParent();
+      syncFrameHeightSoon(getDetailFrameHeight());
+      return;
+    }
+    syncFrameHeightSoon();
   }, [payload, query, scope, selectedItemId, results.length]);
 
   if (!payload) {
@@ -227,54 +278,58 @@ export function ReferenceCenterWorkbench({ args }: ComponentProps) {
               </span>
               <button aria-label="상세 닫기" onClick={() => setSelectedItemId(null)} type="button">×</button>
             </div>
-            <p className="reference-detail__category">{selectedItem.category}</p>
-            <h2>{selectedItem.title}</h2>
-            <p className="reference-detail__summary">{selectedItem.summary}</p>
+            <div className="reference-detail__body">
+              <p className="reference-detail__category">{selectedItem.category}</p>
+              <h2>{selectedItem.title}</h2>
+              <p className="reference-detail__summary">{selectedItem.summary}</p>
 
-            <dl className="reference-detail__facts">
-              <div>
-                <dt>뜻/목적</dt>
-                <dd>{selectedItem.meaning}</dd>
-              </div>
-              <div>
-                <dt>어디서 보이나</dt>
-                <dd>{selectedItem.related_surfaces.join(" · ")}</dd>
-              </div>
-              <div>
-                <dt>영향</dt>
-                <dd>{selectedItem.impact}</dd>
-              </div>
-              <div>
-                <dt>다음 행동</dt>
-                <dd>{selectedItem.next_action}</dd>
-              </div>
-            </dl>
-
-            {selectedItem.related_item_ids.length ? (
-              <section className="reference-related" aria-label="관련 항목">
-                <h3>관련 항목</h3>
+              <dl className="reference-detail__facts">
                 <div>
-                  {selectedItem.related_item_ids.map((itemId) => {
-                    const relatedItem = itemById.get(itemId);
-                    return relatedItem ? (
-                      <button
-                        aria-label={`관련 항목 열기: ${relatedItem.title}`}
-                        key={itemId}
-                        onClick={() => openItem(itemId)}
-                        type="button"
-                      >
-                        {relatedItem.title}
-                      </button>
-                    ) : null;
-                  })}
+                  <dt>뜻/목적</dt>
+                  <dd>{selectedItem.meaning}</dd>
                 </div>
-              </section>
-            ) : null}
+                <div>
+                  <dt>어디서 보이나</dt>
+                  <dd>{selectedItem.related_surfaces.join(" · ")}</dd>
+                </div>
+                <div>
+                  <dt>영향</dt>
+                  <dd>{selectedItem.impact}</dd>
+                </div>
+                <div>
+                  <dt>다음 행동</dt>
+                  <dd>{selectedItem.next_action}</dd>
+                </div>
+              </dl>
+
+              {selectedItem.related_item_ids.length ? (
+                <section className="reference-related" aria-label="관련 항목">
+                  <h3>관련 항목</h3>
+                  <div>
+                    {selectedItem.related_item_ids.map((itemId) => {
+                      const relatedItem = itemById.get(itemId);
+                      return relatedItem ? (
+                        <button
+                          aria-label={`관련 항목 열기: ${relatedItem.title}`}
+                          key={itemId}
+                          onClick={() => openItem(itemId)}
+                          type="button"
+                        >
+                          {relatedItem.title}
+                        </button>
+                      ) : null;
+                    })}
+                  </div>
+                </section>
+              ) : null}
+            </div>
 
             {selectedItem.destination ? (
-              <button className="reference-detail__destination" onClick={sendNavigation} type="button">
-                화면으로 이동 <span aria-hidden="true">→</span>
-              </button>
+              <footer className="reference-detail__footer">
+                <button className="reference-detail__destination" onClick={sendNavigation} type="button">
+                  화면으로 이동 <span aria-hidden="true">→</span>
+                </button>
+              </footer>
             ) : null}
           </aside>
         </div>

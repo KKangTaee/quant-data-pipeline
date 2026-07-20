@@ -6868,4 +6868,4 @@ Detailed historical logs were archived on `2026-04-13`.
 
 - Guides/Glossary를 상단 `Reference` 단일 Search-first React 화면으로 통합하고 curated 24-item catalog, 6개 journey, stable deep link와 current-surface contextual help를 연결했다.
 - legacy renderer/catalog는 제거했지만 내부 `docs/GLOSSARY.md`, registry, saved setup은 보존했다. Reference는 읽기 전용이며 log/run-history/진단 기능을 추가하지 않았다.
-- focused Python 28개, wider regression 74개, React 11개와 desktop/900px/420px Browser QA를 통과했다. 전체 roadmap `4/4차`; 상세는 `tasks/active/reference-center-react-v1-20260720/`를 본다.
+- combined Python regression 102개와 React 13개를 통과했다. PC follow-up에서는 상세 frame을 viewport 기반 520~760px로 바꾸고 navigation 아래 정렬·persistent footer를 적용해 1400×900/768 하단 잘림을 제거했으며 420px 회귀도 확인했다. 전체 roadmap `4/4차`; 상세는 `tasks/active/reference-center-react-v1-20260720/`를 본다.

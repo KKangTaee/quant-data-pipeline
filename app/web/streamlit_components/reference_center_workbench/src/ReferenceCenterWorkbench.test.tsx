@@ -95,7 +95,14 @@ function props(value?: ReferenceCenterPayload): ComponentProps {
   return { args: value ? { payload: value } : {} } as ComponentProps;
 }
 
-afterEach(cleanup);
+const defaultInnerHeight = window.innerHeight;
+const defaultFrameElement = window.frameElement;
+
+afterEach(() => {
+  cleanup();
+  Object.defineProperty(window, "innerHeight", { configurable: true, value: defaultInnerHeight });
+  Object.defineProperty(window, "frameElement", { configurable: true, value: defaultFrameElement });
+});
 
 describe("ReferenceCenterWorkbench", () => {
   beforeEach(() => {
@@ -146,10 +153,12 @@ describe("ReferenceCenterWorkbench", () => {
 
   it("opens an initial deep-link item and emits only a typed destination event", async () => {
     const user = userEvent.setup();
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 768 });
+
     render(<ReferenceCenterWorkbench {...props(payload({ initial_item_id: "status.not_run" }))} />);
 
     expect(screen.getByRole("dialog", { name: "NOT_RUN 상세" })).toBeInTheDocument();
-    expect(streamlitMocks.setFrameHeight).toHaveBeenCalledWith(760);
+    expect(streamlitMocks.setFrameHeight).toHaveBeenCalledWith(672);
     await user.click(screen.getByRole("button", { name: "화면으로 이동" }));
 
     expect(streamlitMocks.setComponentValue).toHaveBeenCalledTimes(1);
@@ -161,6 +170,29 @@ describe("ReferenceCenterWorkbench", () => {
         nonce: expect.any(String),
       }),
     });
+
+  });
+
+  it("keeps the destination action in the detail footer", () => {
+    render(<ReferenceCenterWorkbench {...props(payload({ initial_item_id: "status.not_run" }))} />);
+
+    expect(screen.getByRole("button", { name: "화면으로 이동" }).closest(".reference-detail__footer"))
+      .not.toBeNull();
+  });
+
+  it("aligns the component below the desktop navigation before opening detail", () => {
+    const scrollContainer = document.createElement("section");
+    scrollContainer.className = "stMain";
+    scrollContainer.scrollTop = 140;
+    scrollContainer.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
+    const frame = document.createElement("iframe");
+    frame.getBoundingClientRect = () => ({ top: 4 }) as DOMRect;
+    scrollContainer.append(frame);
+    Object.defineProperty(window, "frameElement", { configurable: true, value: frame });
+
+    render(<ReferenceCenterWorkbench {...props(payload({ initial_item_id: "status.not_run" }))} />);
+
+    expect(scrollContainer.scrollTop).toBe(64);
   });
 
   it("keeps search and selected detail state across a payload rerender", () => {

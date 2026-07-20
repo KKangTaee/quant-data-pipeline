@@ -71,3 +71,13 @@ Combined Reference and navigation-owner regression:
 - Independent code review found no critical product defect and confirmed focused Python, React, typecheck, and diff-check results.
 - The review found two stale canonical documents that still described deleted Guides / Glossary modules and routes.
 - `docs/architecture/SCRIPT_STRUCTURE_MAP.md` and `docs/flows/BACKTEST_UI_FLOW.md` were aligned to the curated catalog, React workbench, single `/reference` route, seven contextual surfaces, read-only boundary, and legacy-removal decision.
+
+## 2026-07-20 PC Detail Footer Follow-up
+
+- Reproduced at `1400×768`: the fixed `760px` iframe ignored the Streamlit navigation/viewport boundary, and the destination action remained below the scroll fold.
+- TDD RED: expected viewport-derived `672px` frame and persistent `.reference-detail__footer`; existing code returned `760px` and had no footer. A second RED reproduced retained parent scroll (`140`) instead of navigation-aligned scroll (`64`).
+- GREEN: frame height now uses parent viewport minus 80px navigation clearance and 16px bottom gap, bounded to 520~760px. The component aligns under navigation and separates fixed header/footer from the scrollable body.
+- React result: `2 files / 13 tests passed`; TypeScript typecheck and Vite production build passed.
+- Browser result: `1400×900` frame `top=80, bottom=840, height=760`; `1400×768` frame `top=80, bottom=752, height=672`; footer visible in both. `420×844` remained full-width with `scrollWidth == clientWidth == 377` and visible footer.
+- Browser console: no error/warning entries.
+- Screenshot: `/Users/taeho/Project/quant-data-pipeline-worktrees/main-dev/reference-center-pc-bottom-fix-qa.png` (generated, unstaged).
