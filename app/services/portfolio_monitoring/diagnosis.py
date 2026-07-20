@@ -68,6 +68,19 @@ class DiagnosisFact:
     change_condition: str
     next_check: str
     policy_provenance: str = "default_policy"
+    subject_ids: tuple[str, ...] = ()
+    primary_metric: float | None = None
+
+
+@dataclass(frozen=True)
+class DiagnosisDisplayGroup:
+    group_id: str
+    family: str
+    section: str
+    representative: DiagnosisFact
+    summary_fact: str
+    member_count: int
+    members: tuple[DiagnosisFact, ...]
 
 
 @dataclass(frozen=True)
@@ -78,6 +91,7 @@ class DiagnosisProjection:
     weaknesses: tuple[DiagnosisFact, ...]
     data_gaps: tuple[DiagnosisFact, ...]
     all_rows: tuple[DiagnosisFact, ...]
+    display_groups: tuple[DiagnosisDisplayGroup, ...]
 
 
 def _curve(lane: ItemValueLane) -> pd.Series:
@@ -187,28 +201,94 @@ def _confidence(coverage: float) -> str:
     return "LOW"
 
 
-def project_diagnoses(facts: list[DiagnosisFact], coverage: float) -> DiagnosisProjection:
-    """Deduplicate one root cause and produce a stable, confidence-aware first read."""
-
+def _diagnosis_priority(row: DiagnosisFact) -> tuple[float, ...]:
     severity_rank = {"HIGH": 3, "WATCH": 2, "INFO": 1}
     confidence_rank = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
+    return (
+        float(severity_rank.get(row.severity, 0)),
+        float(row.affected_weight),
+        float(row.persistence),
+        float(confidence_rank.get(row.confidence, 0)),
+    )
 
-    def priority(row: DiagnosisFact) -> tuple[float, ...]:
+
+def _display_family(row: DiagnosisFact) -> str:
+    return row.rule_id.split(":", 1)[0]
+
+
+def _display_group_id(row: DiagnosisFact) -> str:
+    family = _display_family(row)
+    if family in {"correlation_cluster", "current_drawdown"}:
+        return f"family:{family}"
+    return row.root_id
+
+
+def _display_summary(
+    family: str,
+    members: tuple[DiagnosisFact, ...],
+    representative: DiagnosisFact,
+) -> str:
+    values = [row.primary_metric for row in members if row.primary_metric is not None]
+    if family == "correlation_cluster" and values:
         return (
-            float(severity_rank.get(row.severity, 0)),
-            float(row.affected_weight),
-            float(row.persistence),
-            float(confidence_rank.get(row.confidence, 0)),
+            f"최대 63D correlation {max(values):.2f} / "
+            f"cluster {max(row.affected_weight for row in members):.1%}"
         )
+    if family == "current_drawdown" and values:
+        return f"최대 current drawdown {min(values):.1%}"
+    return representative.measured_fact
+
+
+def _build_display_groups(
+    rows: tuple[DiagnosisFact, ...],
+    section: str,
+) -> tuple[DiagnosisDisplayGroup, ...]:
+    buckets: dict[str, list[DiagnosisFact]] = {}
+    for row in rows:
+        buckets.setdefault(_display_group_id(row), []).append(row)
+    groups: list[DiagnosisDisplayGroup] = []
+    for group_id, group_rows in buckets.items():
+        members = tuple(
+            sorted(
+                group_rows,
+                key=lambda row: (*(-value for value in _diagnosis_priority(row)), row.rule_id),
+            )
+        )
+        representative = members[0]
+        family = _display_family(representative)
+        groups.append(
+            DiagnosisDisplayGroup(
+                group_id=group_id,
+                family=family,
+                section=section,
+                representative=representative,
+                summary_fact=_display_summary(family, members, representative),
+                member_count=len(members),
+                members=members,
+            )
+        )
+    return tuple(
+        sorted(
+            groups,
+            key=lambda group: (
+                *(-value for value in _diagnosis_priority(group.representative)),
+                group.group_id,
+            ),
+        )
+    )
+
+
+def project_diagnoses(facts: list[DiagnosisFact], coverage: float) -> DiagnosisProjection:
+    """Deduplicate roots while grouping repeated user-facing diagnosis families."""
 
     deduplicated: dict[str, DiagnosisFact] = {}
     for row in facts:
         current = deduplicated.get(row.root_id)
-        if current is None or priority(row) > priority(current):
+        if current is None or _diagnosis_priority(row) > _diagnosis_priority(current):
             deduplicated[row.root_id] = row
     ranked = sorted(
         deduplicated.values(),
-        key=lambda row: (*(-value for value in priority(row)), row.rule_id),
+        key=lambda row: (*(-value for value in _diagnosis_priority(row)), row.rule_id),
     )
     strengths = tuple(row for row in ranked if row.classification == "strength")
     data_gaps = tuple(
@@ -218,7 +298,10 @@ def project_diagnoses(facts: list[DiagnosisFact], coverage: float) -> DiagnosisP
         row for row in ranked
         if row.classification == "weakness" and row.confidence != "LOW"
     )
-    top_three = tuple(weaknesses[:3])
+    strength_groups = _build_display_groups(strengths, "strength")
+    weakness_groups = _build_display_groups(weaknesses, "weakness")
+    data_gap_groups = _build_display_groups(data_gaps, "data_gap")
+    top_three = tuple(group.representative for group in weakness_groups[:3])
     return DiagnosisProjection(
         policy_version=DIAGNOSIS_POLICY_VERSION,
         top_three=top_three,
@@ -226,6 +309,7 @@ def project_diagnoses(facts: list[DiagnosisFact], coverage: float) -> DiagnosisP
         weaknesses=weaknesses,
         data_gaps=data_gaps,
         all_rows=tuple(ranked),
+        display_groups=strength_groups + weakness_groups + data_gap_groups,
     )
 
 
@@ -233,6 +317,7 @@ def _fact(
     *, rule_id: str, root_id: str, severity: str, persistence: int, affected_weight: float,
     contribution: float | None, measured: str, threshold: str, behavior: BehaviorFacts,
     exposure: ExposureResult, provenance: str, meaning: str, change: str,
+    subject_ids: tuple[str, ...] = (), primary_metric: float | None = None,
 ) -> DiagnosisFact:
     return DiagnosisFact(
         rule_id=rule_id, root_id=root_id, policy_version=DIAGNOSIS_POLICY_VERSION,
@@ -241,6 +326,7 @@ def _fact(
         threshold=threshold, source_dates=behavior.source_dates, coverage=exposure.coverage_ratio,
         confidence=_confidence(exposure.coverage_ratio), meaning=meaning,
         change_condition=change, next_check="다음 거래일 종가 기준 재확인", policy_provenance=provenance,
+        subject_ids=subject_ids, primary_metric=primary_metric,
     )
 
 
@@ -280,7 +366,8 @@ def evaluate_portfolio_rules(
                 persistence=1, affected_weight=item.weight, contribution=item.contribution,
                 measured=f"current drawdown {drawdown:.1%}", threshold=f"watch {policy['watch']:.1%} / high {policy['high']:.1%}",
                 behavior=behavior, exposure=exposure, provenance=provenance,
-                meaning="최근 고점 대비 하락 폭이 재확인 기준을 넘었습니다.", change=f"drawdown이 {policy['watch']:.1%}보다 작아지면 해제"))
+                meaning="최근 고점 대비 하락 폭이 재확인 기준을 넘었습니다.", change=f"drawdown이 {policy['watch']:.1%}보다 작아지면 해제",
+                subject_ids=(item_id,), primary_metric=drawdown))
 
         recent = item.returns.get(63)
         policy, provenance = _policy("recent_weakness_63d", overrides)
@@ -323,7 +410,8 @@ def evaluate_portfolio_rules(
                 threshold=f"correlation {policy['correlation']:.2f} / watch {policy['watch']:.1%} / high {policy['high']:.1%}",
                 behavior=behavior, exposure=exposure, provenance=provenance,
                 meaning="함께 움직이는 항목의 비중이 커 분산 효과가 약해질 수 있습니다.",
-                change=f"상관이 {policy['correlation']:.2f} 또는 cluster가 {policy['watch']:.1%} 아래면 해제"))
+                change=f"상관이 {policy['correlation']:.2f} 또는 cluster가 {policy['watch']:.1%} 아래면 해제",
+                subject_ids=(left, right), primary_metric=correlation))
     if exposure.total_weight > 0 and exposure.coverage_ratio < 0.7:
         rows.append(
             DiagnosisFact(

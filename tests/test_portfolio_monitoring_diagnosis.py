@@ -191,6 +191,89 @@ class PortfolioMonitoringDiagnosisTests(unittest.TestCase):
         self.assertEqual(len(projection.top_three), 3)
         self.assertEqual([row.rule_id for row in projection.top_three[:2]], ["row:1", "row:0"])
 
+    def test_projection_groups_correlation_pairs_without_dropping_raw_rows(self) -> None:
+        diagnosis = _diagnosis()
+        items = {
+            item_id: diagnosis.ItemBehaviorFact(
+                item_id, weight, {21: 0, 63: 0, 126: 0},
+                {50: 0, 200: 0}, 0, 0, 0, 0.2, 0,
+            )
+            for item_id, weight in (("amd", 0.241), ("nvda", 0.241), ("msft", 0.216))
+        }
+        behavior = diagnosis.BehaviorFacts(
+            items=items,
+            pairwise_correlations={
+                ("amd", "nvda"): 0.93,
+                ("amd", "msft"): 0.98,
+                ("msft", "nvda"): 0.91,
+            },
+            total_contribution=0,
+            downside_contribution=0,
+            source_dates=("2026-07-20",),
+        )
+
+        raw = diagnosis.evaluate_portfolio_rules(
+            ExposureResult((), 1, 1, 0, 1), behavior
+        )
+        projection = diagnosis.project_diagnoses(raw, 1.0)
+        groups = [
+            group for group in getattr(projection, "display_groups", ())
+            if group.family == "correlation_cluster"
+        ]
+
+        self.assertEqual(len(groups), 1)
+        self.assertEqual(groups[0].member_count, 3)
+        self.assertEqual(
+            len([row for row in projection.weaknesses if row.rule_id.startswith("correlation_cluster:")]),
+            3,
+        )
+        self.assertEqual(
+            len([row for row in projection.all_rows if row.rule_id.startswith("correlation_cluster:")]),
+            3,
+        )
+        self.assertIn("0.98", groups[0].summary_fact)
+        self.assertEqual(
+            len([row for row in projection.top_three if row.rule_id.startswith("correlation_cluster:")]),
+            1,
+        )
+
+    def test_projection_groups_drawdown_items_for_first_read(self) -> None:
+        diagnosis = _diagnosis()
+        items = {
+            item_id: diagnosis.ItemBehaviorFact(
+                item_id, 0.2, {21: 0, 63: 0, 126: 0},
+                {50: 0, 200: 0}, 0, drawdown, drawdown, 0.2, 0,
+            )
+            for item_id, drawdown in (("amd", -0.552), ("nvda", -0.254))
+        }
+        behavior = diagnosis.BehaviorFacts(
+            items=items,
+            pairwise_correlations={},
+            total_contribution=0,
+            downside_contribution=0,
+            source_dates=("2026-07-20",),
+        )
+        exposure = ExposureResult(
+            (ExposureBucket("sector", "Technology", 0.4, "amd", "profile", "2026-07-20"),),
+            1, 1, 0, 1,
+        )
+
+        projection = diagnosis.project_diagnoses(
+            diagnosis.evaluate_portfolio_rules(exposure, behavior), 1.0
+        )
+        drawdown_groups = [
+            group for group in getattr(projection, "display_groups", ())
+            if group.family == "current_drawdown"
+        ]
+
+        self.assertEqual(len(drawdown_groups), 1)
+        self.assertEqual(drawdown_groups[0].member_count, 2)
+        self.assertIn("-55.2%", drawdown_groups[0].summary_fact)
+        self.assertEqual(
+            len({row.rule_id.split(":", 1)[0] for row in projection.top_three}),
+            len(projection.top_three),
+        )
+
     def test_macro_observation_can_share_portfolio_root_for_later_dedup(self) -> None:
         macro = importlib.import_module("app.services.portfolio_monitoring.macro_context")
         observation = macro.MacroObservation(
