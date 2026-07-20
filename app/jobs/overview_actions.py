@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from calendar import monthrange
 from collections import Counter
 from datetime import date, datetime, timedelta
 from math import isfinite
@@ -864,19 +865,13 @@ def _market_movers_positive_number(value: Any) -> bool:
 
 
 def _market_movers_quality_reasons(row: dict[str, Any], *, period: str) -> list[str]:
+    del period
     reasons: list[str] = []
     latest_date = _coerce_market_movers_date(row.get("latest_date"))
     if latest_date is not None and "close" in row and not _market_movers_positive_number(row.get("close")):
         reasons.append("bad_latest_price")
     if latest_date is not None and "volume" in row and not _market_movers_positive_number(row.get("volume")):
         reasons.append("zero_latest_volume")
-    min_rows = MARKET_MOVERS_EOD_MIN_PRICE_ROWS.get(period, 0)
-    try:
-        row_count = int(row.get("row_count") or 0)
-    except (TypeError, ValueError):
-        row_count = 0
-    if latest_date is not None and min_rows > 0 and row_count < min_rows:
-        reasons.append("insufficient_window_rows")
     return reasons
 
 
@@ -884,53 +879,34 @@ def _market_movers_format_date(value: date | None) -> str | None:
     return value.strftime("%Y-%m-%d") if value else None
 
 
-def _market_movers_eod_symbol_batches(
-    symbols: list[str],
-    starts_by_symbol: dict[str, date],
-    *,
-    end_date: date,
-    reason: str,
-) -> list[dict[str, Any]]:
-    grouped: dict[date, list[str]] = {}
-    for symbol in symbols:
-        start_date = starts_by_symbol.get(symbol)
-        if start_date is None:
-            continue
-        grouped.setdefault(start_date, []).append(symbol)
-    return [
-        {
-            "reason": reason,
-            "start_date": start_date,
-            "end_date": end_date,
-            "symbols": grouped[start_date],
-            "symbols_count": len(grouped[start_date]),
-            "driver_symbols": grouped[start_date][:5],
-        }
-        for start_date in sorted(grouped)
-    ]
+def _market_movers_shift_months(value: date, months: int) -> date:
+    """Shift a calendar date while clamping the day to the target month."""
+    month_index = value.year * 12 + value.month - 1 + months
+    target_year, target_month_index = divmod(month_index, 12)
+    target_month = target_month_index + 1
+    target_day = min(value.day, monthrange(target_year, target_month)[1])
+    return date(target_year, target_month, target_day)
 
 
-def _market_movers_eod_range_reason(
-    *,
-    earliest_batch: dict[str, Any] | None,
-    missing_symbols: list[str],
-) -> str:
-    if earliest_batch:
-        driver_symbols = ", ".join(str(symbol) for symbol in list(earliest_batch.get("driver_symbols") or [])[:3])
-        start_date = _market_movers_format_date(earliest_batch.get("start_date"))
-        if earliest_batch.get("reason") == "quality_repair":
-            return (
-                f"품질 보강 대상 중 가장 오래된 종목 {driver_symbols or '-'}의 최신 가격일 {start_date}부터 "
-                "다시 확인합니다. 같은 시작일끼리 나눠 수집합니다."
-            )
-        return (
-            f"가장 오래된 stale 종목 {driver_symbols or '-'}의 다음 거래일 {start_date}부터 보강합니다. "
-            "같은 시작일끼리 나눠 최신 stale 종목은 더 짧게 수집합니다."
-        )
-    if missing_symbols:
-        sample = ", ".join(missing_symbols[:3])
-        return f"가격 이력이 없는 종목 {sample or '-'}은 provider 기간 window 전체로 수집합니다."
-    return "선택한 기준일 기준으로 추가 수집할 가격 이력이 없습니다."
+def _market_movers_eod_period_window(*, as_of_date: date, period: str) -> dict[str, date]:
+    """Return the selected return window plus one same-length overlap window."""
+    normalized_period = str(period or "").strip().lower()
+    if normalized_period == "weekly":
+        required_start = as_of_date - timedelta(weeks=1)
+        fetch_start = required_start - timedelta(weeks=1)
+    elif normalized_period == "monthly":
+        required_start = _market_movers_shift_months(as_of_date, -1)
+        fetch_start = _market_movers_shift_months(required_start, -1)
+    elif normalized_period == "yearly":
+        required_start = _market_movers_shift_months(as_of_date, -12)
+        fetch_start = _market_movers_shift_months(required_start, -12)
+    else:
+        raise ValueError(f"Unsupported Market Movers EOD period: {period!r}")
+    return {
+        "required_start": required_start,
+        "fetch_start": fetch_start,
+        "fetch_end": as_of_date,
+    }
 
 
 def _market_movers_eod_refresh_plan(
@@ -941,82 +917,113 @@ def _market_movers_eod_refresh_plan(
     period: str,
     known_limited_symbols: set[str] | None = None,
 ) -> dict[str, Any]:
+    window = _market_movers_eod_period_window(as_of_date=as_of_date, period=period)
+    required_start = window["required_start"]
+    fetch_start = window["fetch_start"]
+    fetch_end = window["fetch_end"]
     current_symbols: list[str] = []
     stale_symbols: list[str] = []
     repair_symbols: list[str] = []
     missing_symbols: list[str] = []
-    stale_starts: list[date] = []
-    repair_starts: list[date] = []
-    stale_starts_by_symbol: dict[str, date] = {}
-    repair_starts_by_symbol: dict[str, date] = {}
     quality_reasons_by_symbol: dict[str, list[str]] = {}
     limited_history_symbols: list[str] = []
+    limited_retry_symbols: list[str] = []
+    period_ineligible_symbols: list[str] = []
     known_limited = known_limited_symbols or set()
 
     for symbol in symbols:
         row = freshness.get(symbol) or {}
+        first_date = _coerce_market_movers_date(row.get("first_date"))
         latest_date = _coerce_market_movers_date(row.get("latest_date"))
         quality_reasons = _market_movers_quality_reasons(row, period=period)
         if latest_date is None:
             missing_symbols.append(symbol)
-        elif "insufficient_window_rows" in quality_reasons:
-            quality_reasons_by_symbol[symbol] = quality_reasons
+        elif latest_date < as_of_date:
+            stale_symbols.append(symbol)
             if symbol in known_limited:
-                limited_history_symbols.append(symbol)
-            else:
-                missing_symbols.append(symbol)
+                limited_retry_symbols.append(symbol)
+            if quality_reasons:
+                quality_reasons_by_symbol[symbol] = quality_reasons
         elif quality_reasons:
             repair_symbols.append(symbol)
-            repair_starts.append(latest_date)
-            repair_starts_by_symbol[symbol] = latest_date
             quality_reasons_by_symbol[symbol] = quality_reasons
-        elif latest_date >= as_of_date:
-            current_symbols.append(symbol)
+        elif first_date is not None and first_date > required_start:
+            period_ineligible_symbols.append(symbol)
+            if symbol in known_limited:
+                limited_history_symbols.append(symbol)
         else:
-            stale_symbols.append(symbol)
-            stale_start = latest_date + timedelta(days=1)
-            stale_starts.append(stale_start)
-            stale_starts_by_symbol[symbol] = stale_start
+            current_symbols.append(symbol)
 
-    delta_start = min(stale_starts) if stale_starts else None
-    repair_start = min(repair_starts) if repair_starts else None
-    delta_end = as_of_date + timedelta(days=1)
-    delta_batches = _market_movers_eod_symbol_batches(
-        stale_symbols,
-        stale_starts_by_symbol,
-        end_date=delta_end,
-        reason="stale_delta",
+    selected_symbols = list(dict.fromkeys([*stale_symbols, *repair_symbols, *missing_symbols]))
+    collection_batches = (
+        [
+            {
+                "reason": "period_overlap_refresh",
+                "start_date": fetch_start,
+                "end_date": fetch_end,
+                "symbols": selected_symbols,
+                "symbols_count": len(selected_symbols),
+                "driver_symbols": selected_symbols[:5],
+            }
+        ]
+        if selected_symbols
+        else []
     )
-    repair_batches = _market_movers_eod_symbol_batches(
-        repair_symbols,
-        repair_starts_by_symbol,
-        end_date=delta_end,
-        reason="quality_repair",
+    delta_batches = (
+        [
+            {
+                "reason": "stale_delta",
+                "start_date": fetch_start,
+                "end_date": fetch_end,
+                "symbols": stale_symbols,
+                "symbols_count": len(stale_symbols),
+                "driver_symbols": stale_symbols[:5],
+            }
+        ]
+        if stale_symbols
+        else []
     )
-    scoped_batches = sorted([*delta_batches, *repair_batches], key=lambda batch: batch["start_date"])
-    earliest_batch = scoped_batches[0] if scoped_batches else None
-    range_start = earliest_batch.get("start_date") if earliest_batch else None
-    range_end = max((batch["end_date"] for batch in scoped_batches), default=None)
+    repair_batches = (
+        [
+            {
+                "reason": "quality_repair",
+                "start_date": fetch_start,
+                "end_date": fetch_end,
+                "symbols": repair_symbols,
+                "symbols_count": len(repair_symbols),
+                "driver_symbols": repair_symbols[:5],
+            }
+        ]
+        if repair_symbols
+        else []
+    )
     reason_counts = Counter(reason for reasons in quality_reasons_by_symbol.values() for reason in reasons)
+    range_reason = (
+        f"선택 기간 앞에 같은 길이의 overlap을 더해 {_market_movers_format_date(fetch_start)}부터 "
+        f"{_market_movers_format_date(fetch_end)}까지 {len(selected_symbols)}개 종목을 보강합니다."
+        if selected_symbols
+        else "선택한 기준일 기준으로 추가 수집할 가격 이력이 없습니다."
+    )
     return {
         "current_symbols": current_symbols,
         "stale_symbols": stale_symbols,
         "repair_symbols": repair_symbols,
         "missing_symbols": missing_symbols,
         "limited_history_symbols": limited_history_symbols,
-        "delta_start": delta_start,
-        "repair_start": repair_start,
-        "delta_end": delta_end if stale_symbols else None,
-        "repair_end": delta_end if repair_symbols else None,
+        "limited_retry_symbols": limited_retry_symbols,
+        "period_ineligible_symbols": period_ineligible_symbols,
+        "required_start": required_start,
+        "delta_start": fetch_start if stale_symbols else None,
+        "repair_start": fetch_start if repair_symbols else None,
+        "delta_end": fetch_end if stale_symbols else None,
+        "repair_end": fetch_end if repair_symbols else None,
         "delta_batches": delta_batches,
         "repair_batches": repair_batches,
-        "range_start": range_start,
-        "range_end": range_end,
-        "range_reason": _market_movers_eod_range_reason(
-            earliest_batch=earliest_batch,
-            missing_symbols=missing_symbols,
-        ),
-        "range_driver_symbols": list(earliest_batch.get("driver_symbols") or []) if earliest_batch else missing_symbols[:5],
+        "collection_batches": collection_batches,
+        "range_start": fetch_start if selected_symbols else None,
+        "range_end": fetch_end if selected_symbols else None,
+        "range_reason": range_reason,
+        "range_driver_symbols": selected_symbols[:5],
         "quality_reasons_by_symbol": quality_reasons_by_symbol,
         "quality_reason_counts": dict(reason_counts),
     }
@@ -1048,6 +1055,7 @@ def _market_movers_eod_preflight_payload(
     missing_symbols = symbols if force_full_refresh else list(plan["missing_symbols"])
     limited_history_symbols = [] if force_full_refresh else list(plan.get("limited_history_symbols") or [])
     current_symbols = [] if force_full_refresh else list(plan["current_symbols"])
+    period_ineligible_symbols = [] if force_full_refresh else list(plan.get("period_ineligible_symbols") or [])
     selected_symbols = list(dict.fromkeys([*plan["stale_symbols"], *plan["repair_symbols"], *missing_symbols]))
     status = "current" if not selected_symbols and not freshness_error else "due"
     if limited_history_symbols and not selected_symbols and not freshness_error:
@@ -1092,6 +1100,11 @@ def _market_movers_eod_preflight_payload(
         "missing_symbols_count": len(missing_symbols),
         "limited_history_symbols_count": len(limited_history_symbols),
         "limited_history_symbols": limited_history_symbols,
+        "limited_retry_symbols_count": len(plan.get("limited_retry_symbols") or []),
+        "limited_retry_symbols": list(plan.get("limited_retry_symbols") or []),
+        "period_ineligible_symbols_count": len(period_ineligible_symbols),
+        "period_ineligible_symbols": period_ineligible_symbols,
+        "required_start": _market_movers_format_date(plan.get("required_start")),
         "quality_symbols_count": len(plan["quality_reasons_by_symbol"]),
         "delta_batch_count": len(plan.get("delta_batches") or []),
         "repair_batch_count": len(plan.get("repair_batches") or []),
@@ -1103,6 +1116,9 @@ def _market_movers_eod_preflight_payload(
         "delta_batches": [_market_movers_serialize_eod_batch(batch) for batch in list(plan.get("delta_batches") or [])],
         "repair_batches": [
             _market_movers_serialize_eod_batch(batch) for batch in list(plan.get("repair_batches") or [])
+        ],
+        "collection_batches": [
+            _market_movers_serialize_eod_batch(batch) for batch in list(plan.get("collection_batches") or [])
         ],
         "freshness_error": freshness_error,
     }
@@ -1234,17 +1250,18 @@ def _persist_market_movers_limited_history_issues(
     symbols: list[str],
     as_of_date: date,
 ) -> dict[str, Any]:
-    """Persist symbols that remain short only after a full provider-window refresh."""
+    """Persist symbols whose first usable price is after the selected period boundary."""
     if not symbols:
         return {"symbols": [], "rows_written": 0}
     freshness = _load_market_movers_eod_freshness(symbols)
+    required_start = _market_movers_eod_period_window(as_of_date=as_of_date, period=period)["required_start"]
     min_rows = MARKET_MOVERS_EOD_MIN_PRICE_ROWS.get(period, 0)
     evidence: list[dict[str, Any]] = []
     for symbol in symbols:
         row = freshness.get(symbol) or {}
         latest_date = _coerce_market_movers_date(row.get("latest_date"))
-        reasons = _market_movers_quality_reasons(row, period=period)
-        if "insufficient_window_rows" not in reasons or latest_date is None or latest_date < as_of_date:
+        first_date = _coerce_market_movers_date(row.get("first_date"))
+        if latest_date is None or latest_date < as_of_date or first_date is None or first_date <= required_start:
             continue
         evidence.append(
             {
@@ -1351,37 +1368,29 @@ def run_overview_market_movers_eod_history(
         }
     else:
         collect_results: list[dict[str, Any]] = []
-        for batch in list(plan.get("delta_batches") or []):
+        collection_batches = list(plan.get("collection_batches") or [])
+        if force_full_refresh:
+            window = _market_movers_eod_period_window(
+                as_of_date=resolved_as_of_date,
+                period=normalized_period,
+            )
+            collection_batches = [
+                {
+                    "reason": "forced_period_overlap_refresh",
+                    "start_date": window["fetch_start"],
+                    "end_date": window["fetch_end"],
+                    "symbols": symbols,
+                    "symbols_count": len(symbols),
+                    "driver_symbols": symbols[:5],
+                }
+            ]
+        for batch in collection_batches:
             collect_results.append(
                 dict(
                     run_collect_ohlcv(
                         list(batch.get("symbols") or []),
                         start=batch["start_date"].strftime("%Y-%m-%d"),
                         end=batch["end_date"].strftime("%Y-%m-%d"),
-                        period=collection_period,
-                        interval="1d",
-                        execution_profile="managed_safe",
-                    )
-                )
-            )
-        for batch in list(plan.get("repair_batches") or []):
-            collect_results.append(
-                dict(
-                    run_collect_ohlcv(
-                        list(batch.get("symbols") or []),
-                        start=batch["start_date"].strftime("%Y-%m-%d"),
-                        end=batch["end_date"].strftime("%Y-%m-%d"),
-                        period=collection_period,
-                        interval="1d",
-                        execution_profile="managed_safe",
-                    )
-                )
-            )
-        if missing_symbols:
-            collect_results.append(
-                dict(
-                    run_collect_ohlcv(
-                        missing_symbols,
                         period=collection_period,
                         interval="1d",
                         execution_profile="managed_safe",
@@ -1393,13 +1402,13 @@ def run_overview_market_movers_eod_history(
     limited_history_result = _persist_market_movers_limited_history_issues(
         universe_code=normalized_universe,
         period=normalized_period,
-        symbols=selected_symbols,
+        symbols=list(dict.fromkeys([*selected_symbols, *plan.get("period_ineligible_symbols", [])])),
         as_of_date=resolved_as_of_date,
     )
 
     result["job_name"] = "overview_market_movers_eod_history"
     details = dict(result.get("details") or {})
-    refresh_strategy = "full_window_forced" if force_full_refresh else "smart_delta"
+    refresh_strategy = "full_window_forced" if force_full_refresh else "bounded_period_overlap"
     preflight_payload = _market_movers_eod_preflight_payload(
         normalized_universe=normalized_universe,
         universe_limit=universe_limit,
@@ -1429,6 +1438,9 @@ def run_overview_market_movers_eod_history(
             "repair_symbols_count": len(repair_symbols),
             "missing_symbols_count": len(missing_symbols),
             "known_limited_history_symbols_count": len(plan.get("limited_history_symbols") or []),
+            "limited_retry_symbols_count": len(plan.get("limited_retry_symbols") or []),
+            "period_ineligible_symbols_count": len(plan.get("period_ineligible_symbols") or []),
+            "period_ineligible_symbols": list(plan.get("period_ineligible_symbols") or []),
             "limited_history_symbols_count": len(limited_history_result["symbols"]),
             "limited_history_symbols": limited_history_result["symbols"],
             "limited_history_issue_rows_written": limited_history_result["rows_written"],
@@ -1442,8 +1454,8 @@ def run_overview_market_movers_eod_history(
             ),
             "insufficient_window_symbols_count": sum(
                 1
-                for reasons in plan["quality_reasons_by_symbol"].values()
-                if "insufficient_window_rows" in reasons
+                for symbol in plan.get("period_ineligible_symbols") or []
+                if symbol
             ),
             "quality_reason_counts": plan["quality_reason_counts"],
             "delta_start": plan["delta_start"].strftime("%Y-%m-%d") if plan["delta_start"] else None,
