@@ -673,6 +673,26 @@ def test_decision_financial_chart_exposes_period_axis_hover_and_drag_navigation(
     assert "touch-action: pan-y;" in style
 
 
+def test_decision_charts_show_real_date_ticks_and_keep_top_tooltips_visible() -> None:
+    from pathlib import Path
+
+    source = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+    style = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/style.css"
+    ).read_text(encoding="utf-8")
+
+    assert "function priceChartTickIndexes" in source
+    assert "function formatPriceAxisLabel" in source
+    assert 'className="mm-decision__chart-ticks mm-decision__chart-ticks--price"' in source
+    assert "formatPriceAxisLabel(point.label, range)" in source
+    assert 'data-placement={priceTooltipPlacement}' in source
+    assert 'data-placement={financialTooltipPlacement}' in source
+    assert '.mm-decision__chart-tooltip[data-placement="below"]' in style
+    assert ".mm-decision__chart-ticks--price" in style
+
+
 def test_decision_price_readout_uses_text_tone_without_tinted_boxes_or_accent_line() -> None:
     from pathlib import Path
 

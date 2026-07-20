@@ -803,6 +803,10 @@ body {
   font-weight: 800;
 }
 
+.mm-decision__chart-tooltip[data-placement="below"] {
+  transform: translate(-50%, 0);
+}
+
 .mm-decision__chart-guide {
   stroke: rgba(57, 127, 183, 0.5) !important;
   stroke-dasharray: 3 3 !important;
@@ -884,6 +888,10 @@ body {
   top: 3px;
   transform: translateX(-50%);
   white-space: nowrap;
+}
+
+.mm-decision__chart-ticks--price {
+  margin: 0 28px;
 }
 
 .mm-decision__chart-empty {

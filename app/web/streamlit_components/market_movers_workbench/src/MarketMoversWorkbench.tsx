@@ -890,6 +890,25 @@ function rangeFilteredSeries(series: DecisionRow[], range: string) {
   });
 }
 
+function priceChartTickIndexes(pointCount: number, range: string) {
+  if (pointCount <= 0) return [];
+  const targetCount = range === "1M" ? 5 : 7;
+  if (pointCount <= targetCount) return Array.from({ length: pointCount }, (_, index) => index);
+  return Array.from(
+    new Set(Array.from({ length: targetCount }, (_, index) => (
+      Math.round((index * (pointCount - 1)) / (targetCount - 1))
+    ))),
+  );
+}
+
+function formatPriceAxisLabel(dateValue: string, range: string) {
+  const date = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return dateValue;
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return range === "1M" ? `${month}-${day}` : `${date.getFullYear()}-${month}-${day}`;
+}
+
 function PriceMomentumChart({ research }: { research: Record<string, unknown> }) {
   const [range, setRange] = useState("6M");
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -908,6 +927,8 @@ function PriceMomentumChart({ research }: { research: Record<string, unknown> })
   const resolvedIndex = activeIndex === null ? Math.max(0, points.length - 1) : Math.min(activeIndex, points.length - 1);
   const activePoint = activeIndex === null ? null : points[resolvedIndex];
   const activeCoordinate = activeIndex === null ? null : coordinates[resolvedIndex];
+  const priceTooltipPlacement = activeCoordinate && activeCoordinate.y < 92 ? "below" : "above";
+  const priceTickIndexes = priceChartTickIndexes(points.length, range);
   const moveActivePoint = (event: React.PointerEvent<SVGSVGElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (event.clientX - bounds.left) / Math.max(bounds.width, 1)));
@@ -950,13 +971,28 @@ function PriceMomentumChart({ research }: { research: Record<string, unknown> })
             {activePoint && activeCoordinate ? (
               <div
                 className="mm-decision__chart-tooltip"
-                style={{ left: `${(activeCoordinate.x / 720) * 100}%`, top: `${Math.max(8, activeCoordinate.y - 12)}px` }}
+                data-placement={priceTooltipPlacement}
+                style={{
+                  left: `clamp(72px, ${(activeCoordinate.x / 720) * 100}%, calc(100% - 72px))`,
+                  top: `${priceTooltipPlacement === "below" ? activeCoordinate.y + 12 : Math.max(8, activeCoordinate.y - 12)}px`,
+                }}
               >
                 <strong>{activePoint.label}</strong>
                 <span className={`mm-return--${returnTone(activePoint.value)}`}>{activePoint.displayValue}</span>
               </div>
             ) : null}
-            <div className="mm-decision__chart-axis"><span>{points[0].label}</span><span>{latest?.label}</span></div>
+            <div className="mm-decision__chart-ticks mm-decision__chart-ticks--price" aria-hidden="true">
+              {priceTickIndexes.map((index) => {
+                const point = points[index];
+                const coordinate = coordinates[index];
+                return (
+                  <span
+                    key={`${point.label}-price-tick`}
+                    style={{ left: `clamp(42px, ${((coordinate?.x || 0) / 720) * 100}%, calc(100% - 42px))` }}
+                  >{formatPriceAxisLabel(point.label, range)}</span>
+                );
+              })}
+            </div>
           </div>
         ) : <div className="mm-decision__chart-empty">선택 범위에 표시할 저장 가격 이력이 부족합니다.</div>}
       </div>
@@ -1026,6 +1062,7 @@ function FinancialFactorChart({ research, controls }: FinancialFactorChartProps)
           y: barGeometry.bars[resolvedFinancialIndex]?.valueY || 0,
         }
       : financialCoordinates[resolvedFinancialIndex];
+  const financialTooltipPlacement = activeFinancialCoordinate && activeFinancialCoordinate.y < 92 ? "below" : "above";
   useEffect(() => {
     setChartMode(unit === "percent" || unit === "ratio" ? "line" : "bar");
   }, [factorId, frequency, unit]);
@@ -1196,7 +1233,11 @@ function FinancialFactorChart({ research, controls }: FinancialFactorChartProps)
                   {activeFinancialPoint && activeFinancialCoordinate ? (
                     <div
                       className="mm-decision__chart-tooltip"
-                      style={{ left: `${(activeFinancialCoordinate.x / chartWidth) * 100}%`, top: `${Math.max(8, activeFinancialCoordinate.y - 12)}px` }}
+                      data-placement={financialTooltipPlacement}
+                      style={{
+                        left: `clamp(72px, ${(activeFinancialCoordinate.x / chartWidth) * 100}%, calc(100% - 72px))`,
+                        top: `${financialTooltipPlacement === "below" ? activeFinancialCoordinate.y + 12 : Math.max(8, activeFinancialCoordinate.y - 12)}px`,
+                      }}
                     >
                       <strong>{activeFinancialPoint.axisLabel}</strong>
                       <small>{activeFinancialPoint.label}</small>
