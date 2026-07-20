@@ -1,7 +1,7 @@
 # DB Schema Map
 
 Status: Active
-Last Verified: 2026-07-16
+Last Verified: 2026-07-20
 
 ## 목적
 
@@ -46,6 +46,8 @@ Last Verified: 2026-07-16
 | `etf_holdings_snapshot` | ETF 내부 holdings row provider snapshot. official issuer download/API row를 저장 |
 | `etf_exposure_snapshot` | ETF holdings 또는 provider aggregate에서 만든 asset class / sector / country / currency exposure summary |
 | `macro_series_observation` | FRED macro context plus CNN Fear & Greed / AAII sentiment context series observation. VIX / yield curve / credit spread, CNN score / component score, AAII bullish / neutral / bearish / bull-bear spread를 long-form으로 저장 |
+| `market_sentiment_collection_batch` | CNN / AAII source별 수집 batch ledger. collection/source/status, app-observed UTC `observed_at`, row 수와 오류를 기록하며 한 source 실패가 다른 source transaction을 되돌리지 않게 한다 |
+| `market_sentiment_observation_snapshot` | 성공 batch에서 앱이 실제 관측한 normalized sentiment view의 immutable row snapshot. 동일 값의 반복 capture도 보존하며 legacy canonical row를 과거 PIT로 소급 생성하지 않는다 |
 | `macro_series_vintage_observation` | 경제 사이클 17개 FRED/ALFRED series의 observation별 real-time revision interval을 저장. unique key는 `(series_id, observation_date, realtime_start, source)`이고 strict as-of loader가 과거 origin 당시 값을 선택한다 |
 | `economic_cycle_model_artifact` | 경제 사이클 model version과 학습 cutoff, horizon별 parameter/calibration/rolling-origin gate 판정을 저장. unique key는 `(model_version, trained_through)`이다 |
 | `economic_cycle_snapshot` | current/historical replay별 compact 국면 확률·근거·source date·publication status를 저장. unique key는 `(as_of_date, model_version, run_kind)`이며 계산 가능한 LIMITED 확률도 잠정 추정용으로 보존하고 계산 불가 horizon만 비운다 |

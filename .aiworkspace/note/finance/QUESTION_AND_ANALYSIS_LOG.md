@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Current active task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `1/4차` 기능과 승인된 시각 polish·actual QA를 완료했고, 다음은 2차 장기 이력·발표 당시 값 품질 점검이다.
+  - Current active task is [overview-sentiment-history-pit-v2-20260720](./tasks/active/overview-sentiment-history-pit-v2-20260720/STATUS.md). 전체 잠정 roadmap `2/4차`; immutable 수집 당시 기록과 장기 그래프를 완료했고, 다음은 3차 독립 데이터 후보 검토다.
   - Latest completed task is [operations-portfolio-monitoring-only-v1-20260719](./tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md). Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
   - Parallel active follow-up is [portfolio-monitoring-chart-zoom-pan-v1-20260719](./tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md). 구현과 자동 회귀는 완료했고 전체 `2/3차`; 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다.
   - Recent completed Backtest task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~15차와 Portfolio Mix React one-shell 구현·QA를 완료했다.
@@ -57,6 +57,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - legacy archive content was absorbed into the current docs/task structure; the removed `archive/` path is not a live pointer.
 
 ## Entries
+
+### 2026-07-20 - Sentiment 과거 설명 이력과 수집 당시 기록은 다른 데이터다
+
+- User request: CNN+AAII 개선의 2차 장기 이력과 발표 당시 값 품질 작업을 구현해 달라고 요청함.
+- Interpreted goal: 현재 그래프 범위를 넓히되, 앞으로 수집되는 값을 당시 관측 증거로 보존해 추후 1W/1M 검증의 기반을 만든다.
+- Analysis result: canonical history는 설명용 latest view이고 immutable snapshot의 UTC `known_at`은 앱 관측시각이다. legacy row를 과거 PIT로 꾸미지 않고 CNN/AAII source별 transaction으로 prospective capture를 시작했다.
+- Follow-up: 전체 roadmap `2/4차` 완료. 각 source의 chronological capture가 아직 1개이므로 1W/1M은 계속 비공개하며, 3차 데이터 후보 검토와 4차 검증을 남긴다.
 
 ### 2026-07-20 - sub-dev master 통합은 현재 Overview 계약과 master의 완료 이력을 함께 보존한다
 

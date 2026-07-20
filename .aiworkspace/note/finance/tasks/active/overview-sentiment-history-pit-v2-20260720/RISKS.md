@@ -9,3 +9,6 @@
 - Loading full canonical history for charts must not change the 180-day range-context interpretation.
 - A 24-hour automation cadence does not by itself prove an exact after-close execution time; actual UTC `observed_at` is authoritative.
 - PIT history will initially be too short for credible 1W·1M validation. The UI must not convert early accumulation into unsupported probabilities.
+- First live capture is complete, but each source still has only one chronological capture. This risk is active, so 1W·1M remain `UNAVAILABLE`.
+- The 24-hour automation cadence is a collection interval, not a guaranteed after-close wall-clock schedule. For consistent daily interpretation, operate it after the US close when practical and use stored UTC `known_at` as authority.
+- Legacy canonical history remains useful for descriptive charts but must never be treated as reconstructed publication-time history in the 4차 validation dataset.

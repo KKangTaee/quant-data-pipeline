@@ -14,12 +14,12 @@ Portfolio Monitoring React Command Center V1은 전체 `6/6차` 구현과 closeo
 - 경계: provider direct fetch, live approval, broker order, account sync, auto rebalance는 없다. 조건부 확률은 현재 fingerprint의 검증 artifact가 READY일 때만 공개한다.
 - canonical docs: `docs/architecture/PORTFOLIO_MONITORING_REACT_COMMAND_CENTER.md`, `docs/data/PORTFOLIO_MONITORING_DATA_CONTRACT.md`, `docs/runbooks/PORTFOLIO_MONITORING_MIGRATION_AND_QA.md`.
 
-현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-sentiment-cnn-aaii-v1-20260719/`다.
+현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-sentiment-history-pit-v2-20260720/`다.
 
 - 목적: CNN 중심·중복 구조와 단위가 섞인 이력 그래프를 정리하고, CNN 시장 행동과 AAII 개인투자자 인식을 동등한 두 축으로 읽게 한다.
-- 완료: 전체 잠정 roadmap `1/4차`. 합성점수 없는 두 축, AAII spread `+10pp / -10pp` 판정, 문장형 교차 판정, source별 상세 근거, 세 단위별 그래프와 desktop/420px Browser QA를 완료했다.
+- 완료: 전체 잠정 roadmap `2/4차`. 1차의 균형형 CNN/AAII UI에 이어 source별 atomic latest+immutable 저장, UTC known-at 조회, 24시간 자동 수집, 전체 canonical 이력과 고정 180일 해석 분리, 공통 6M/1Y/전체 그래프와 desktop/420px Browser QA를 완료했다.
 - 품질 경계: CNN 구성요소는 headline 내부 근거다. 확인 조건은 관찰 checklist이며 1W/1M 예측, validation / monitoring / trading signal을 만들지 않는다.
-- 남은 차수: 2차 장기 이력·발표 당시 값 품질, 3차 독립 데이터 후보 검토, 4차 PIT 검증 뒤 1W/1M 전망 제공 여부 결정.
+- 남은 차수: 3차 독립 데이터 후보 검토, 4차 충분히 축적된 prospective PIT 이력의 chronological validation 뒤 1W/1M 전망 제공 여부 결정.
 
 병행 active follow-up은 `.aiworkspace/note/finance/tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/`다.
 
@@ -851,7 +851,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 | Overview Market Context Macro Polish V17 | Complete | Macro conditioned comparison now shows the meaning of each narrowing step inside the basis bar: broad sector ETF vs SPY analog pool, current-like GLD bucket, then current-like ZN=F / ZB=F rate-pressure bucket. Reference-only T10Y3M / VIXCLS / BAA10Y backdrop now renders as Korean state badges, current value, same-state ratio bars, and compact source labels. |
 | Overview Market Context Macro Matrix V16 | Complete | Macro conditioned comparison now uses the same visual language as historical analog: a basis bar for broad -> GLD -> futures narrowing, a compact asset x `기본 / 조건 후 / 변화` matrix, collapsed verbose condition source details, and Korean-first labels for current Macro backdrop. |
 | Overview Market Context Macro Labels V15 | Complete | Macro conditioned comparison now names the visible narrowing stages as broad basis, GLD condition, and rate-pressure futures condition. It explains `81회 -> 37회 -> 6회` as broad anchors narrowed by current-like GLD and futures states, and current Macro backdrop cards include Korean descriptions plus broad-sample same-state counts. |
-| Overview Sentiment CNN·AAII Balanced V1 | 1/4차 + visual polish complete | Sentiment를 합성점수 없는 `CNN 시장 행동 / AAII 개인투자자 인식` 두 축으로 재구성했다. Hero와 균형 current evidence 다음에 CNN 고정 / AAII 응답·Spread 전환의 동시 2 graph를 표시하고 raw 관측은 실제 날짜 간격의 직선으로 연결한다. 1W·1M card는 검증 estimator가 없어 확률을 숨긴 `UNAVAILABLE`이며 confirm/reverse/persist 관찰 경로를 제공한다. 2차 장기 이력·발표 당시 값 품질, 3차 독립 데이터 후보, 4차 PIT 검증 후 전망 제공 여부는 남아 있다. |
+| Overview Sentiment CNN·AAII / PIT History V2 | 2/4차 complete | Sentiment를 합성점수 없는 `CNN 시장 행동 / AAII 개인투자자 인식` 두 축으로 유지하고 source별 latest canonical + immutable 수집 당시 기록을 atomic 저장한다. 공통 6M/1Y/전체와 세로 2 graph, canonical coverage/PIT 시작일, UTC as-known read를 제공하며 현재 해석은 180일로 고정한다. 1W·1M은 prospective PIT 축적과 chronological validation 전까지 `UNAVAILABLE`; 3차 독립 데이터 후보와 4차 검증이 남아 있다. |
 | Overview Sentiment React UX V1 | Complete | Sentiment now renders a React workbench when the component build is available: service-owned phase/headline/summary first, freshness-tied refresh/reload actions, CNN / AAII cross-read, recent range percentile / min-max cards, CNN headline / component / AAII divergence panel, analysis steps, driver lanes, CNN component explanations, component latest-vs-previous changes, hover-readable history line chart, component bar chart, and stored-row evidence tables. Python services still own DB reads, refresh actions, and all interpretation text; React does not create trade signals, validation gates, monitoring signals, or recommendations. |
 | Overview Market Sentiment V1 | 1차~3차 complete | CNN Fear & Greed / AAII collect into `finance_meta.macro_series_observation`. Overview Sentiment, Practical Validation, Final Review, and Portfolio Monitoring read it as context-only market backdrop. |
 | Operations Overview IA / Operations Console V2-V5 | Superseded 2026-07-19 | Historical closeout. `operations-portfolio-monitoring-only-v1-20260719` removed the redundant Overview and unused System/Data Health pages; Operations now opens Portfolio Monitoring directly and Ingestion retains run/log/failure review. Backtest Runs / Candidate Library data/helper deletion remains out of scope. |
@@ -923,7 +923,7 @@ Current active phase:
 
 Current active task:
 
-- `overview-sentiment-cnn-aaii-v1-20260719`: 전체 잠정 roadmap `1/4차` 기능과 승인된 시각 polish·actual QA를 완료했다. 다음은 2차 장기 이력·발표 당시 값 품질 점검이다.
+- `overview-sentiment-history-pit-v2-20260720`: 전체 잠정 roadmap `2/4차`. immutable 수집 당시 기록, UTC known-at 조회, 자동 수집, 장기 그래프와 actual QA를 완료했다. 다음은 3차 독립 데이터 후보 검토다.
 
 Parallel active follow-up:
 

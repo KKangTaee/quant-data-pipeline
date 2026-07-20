@@ -1,7 +1,7 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-07-19
+Last Verified: 2026-07-20
 
 ## Purpose
 
@@ -184,15 +184,18 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
    - Futures Macro는 시장 컨텍스트 화면이며 live approval, order, broker/account sync, auto rebalance를 만들지 않는다.
 
 5. `Workspace > Overview > Sentiment`
-   - `시장 심리 갱신`을 누르면 `collect_market_sentiment` job이 CNN Fear & Greed와 AAII Sentiment Survey를 수집해 `finance_meta.macro_series_observation`에 저장한다.
+   - `시장 심리 갱신`을 누르면 `collect_market_sentiment` job이 CNN Fear & Greed와 AAII Sentiment Survey를 수집한다. 각 source는 독립 transaction으로 처리되며, 최신 조회용 `finance_meta.macro_series_observation`과 immutable 수집 당시 기록인 `market_sentiment_collection_batch` / `market_sentiment_observation_snapshot`을 함께 저장한다.
    - 같은 수집은 `Workspace > Ingestion > 시장 심리 수집`에서도 실행할 수 있으며, CNN / AAII source를 개별 checkbox로 켜고 끌 수 있다.
-   - React workbench가 available이면 첫 화면에서 service-owned phase / headline / summary, CNN Fear & Greed, AAII Bearish, Bull-Bear Spread, Data Confidence, data freshness, `시장 심리 갱신` / `화면 다시 읽기` action을 함께 확인한다. React build가 없으면 기존 Streamlit controls / overview / detail sections로 fallback한다.
-   - `CNN / AAII 같이 보기`는 `analysis_steps`, core metrics, 최근 범위 percentile / min-max, CNN headline / component / AAII divergence를 표시한다. 프론트엔드는 AAII / CNN divergence나 추천 문구를 새로 만들지 않고 `app/services/overview/sentiment.py`가 제공한 해석만 보여준다.
-   - `무엇이 이 심리를 만들었나`에서 CNN 7개 구성요소를 탐욕 / 공포 / 중립 driver lane으로 읽고, `CNN 구성요소 상세`에서 각 component가 무엇을 보는지와 현재 읽기를 확인한다. `CNN 구성요소 변화`는 latest vs previous 관측값, 날짜, 변화폭, service-owned change detail을 보여준다.
-   - `그래프로 보는 근거`는 stored CNN score / AAII bearish / bull-bear spread history line chart와 CNN component bar chart를 보여준다. History line chart는 y축 눈금과 hover tooltip으로 날짜 / 시리즈 / 값 / source를 확인한다.
+   - scheduled `market_sentiment` job과 수동 갱신은 같은 collector를 사용한다. 자동 cadence는 24시간이며 실제 수집 시각은 UTC `known_at`으로 판단한다. 일별 비교를 안정적으로 운영하려면 가능하면 미국장 종료 후 실행한다.
+   - 한 source가 실패해도 다른 source의 transaction과 최신값/PIT snapshot은 보존한다. 실패한 source는 다음 실행에서 다시 수집하고, 성공 source를 되돌리거나 두 source 값을 한 transaction으로 묶지 않는다.
+   - `known_at`은 provider 발표시각이 아니라 앱이 응답을 관측한 UTC 시각이다. 기존 canonical row를 과거 PIT row로 소급 복제하지 않으며, 화면의 `수집 당시 기록 YYYY-MM-DD부터`가 실제 prospective coverage 시작을 나타낸다.
+   - React workbench가 available이면 첫 화면에서 CNN 시장 행동과 AAII 개인투자자 설문을 동등한 두 축으로 읽는다. History는 CNN 그래프 하나와 AAII 응답/Spread 전환 그래프 하나를 세로로 표시하며 공통 `6M / 1Y / 전체` 기간을 사용한다.
+   - 그래프 coverage는 canonical 설명 이력 범위와 수집 당시 기록 시작일을 함께 표시한다. 전체 이력은 그래프 탐색에 쓰되 최근 percentile/min-max와 현재 해석은 고정 180일 window를 유지한다.
+   - 1W·1M은 충분한 chronological PIT 표본과 검증을 통과한 estimator가 없으면 `통계적 판단 불가 / 검증 전 비공개`로 둔다. 수집 row 수가 늘었다는 이유만으로 확률을 공개하지 않는다.
+   - `CNN 구성요소 상세`는 각 component가 무엇을 보는지, 최신/직전 변화와 공포·극단적 공포·중립·탐욕·극단적 탐욕 상태를 구분해 보여준다.
    - `원본 / 상세 근거`는 source, observation date, staleness, status, component rows, history rows를 하단 근거 table로 보여준다.
    - 이 화면은 시장 심리 context이며 trade signal, Practical Validation PASS, live approval, order, broker/account sync, auto rebalance로 해석하지 않는다.
-   - AAII official page가 automated backend request를 차단하면 job result와 Overview status에 failed / missing state를 남기고 값을 임의 생성하지 않는다.
+   - CNN 또는 AAII official source가 automated request를 차단하면 해당 source batch만 failed로 기록하고 값을 임의 생성하지 않는다.
 
 6. `Workspace > Ingestion > Overview Market Event Calendar > FOMC`
    - 기본은 current year와 next year를 수집한다.
@@ -391,8 +394,10 @@ PY
 - Overview Events calendar/density visuals show schedule clustering and stale/review evidence only. Today and the current week can be highlighted in the month grid, but they do not create validation gates, trade signals, monitoring signals, or automated actions.
 - Overview Events keeps existing Streamlit `Agenda`, `Calendar`, `Quality`, `Raw` tabs with Window / Source Type / Validation / Importance filters as fallback and lower evidence sections.
 - Overview Events `Latest Collection` / freshness updates after a successful collector run.
-- Overview Sentiment starts with the React `시장 심리 컨텍스트` workbench when the component build exists: phase / headline / summary, freshness, CNN Fear & Greed, AAII Bearish, Bull-Bear Spread, Data Confidence, refresh / reload actions, context-only boundary, CNN / AAII cross-read, recent range percentile / min-max, divergence axes, service-owned analysis steps, driver lanes, component explanations, CNN component latest-vs-previous changes, hover-readable history line chart, component bar chart, and stored row evidence.
+- Overview Sentiment starts with the React `시장 심리 컨텍스트` workbench when the component build exists: balanced CNN market-behavior / AAII survey evidence, source-aware state colors, shared 6M/1Y/full-history controls, one CNN graph plus an AAII response/spread switchable graph, hover-readable straight-line history, canonical coverage, and prospective collection-record start date.
 - Overview Sentiment keeps Python services as owner of DB reads, refresh actions, and interpretation text. React only displays and dispatches the existing refresh / reload events, and the fallback Streamlit detail sections remain available when the React build is missing.
+- Market Sentiment refresh stores latest canonical rows and immutable observation snapshots atomically per source. Scheduled and manual execution share this path; a failure in CNN does not roll back AAII, or vice versa.
+- Sentiment `known_at` means app-observed UTC time rather than provider publication time. Legacy canonical rows are not fabricated into PIT history, and 1W/1M remain unavailable until prospective history supports chronological validation.
 - Overview no longer renders Data Health as a primary tab. Use Market Context source / refresh evidence for current brief issues and `Workspace > Ingestion > 실행 기록 / 결과` for detailed operational diagnostics.
 - Overview refresh buttons route through `app/jobs/overview_actions.py` and append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed. Market Context refresh is intentionally scoped to the current Market Context surface and does not run Top1000 / Top2000 / Futures refresh actions.
 - Overview scheduled refresh CLI can run without Streamlit and appends scheduled job results to the same local web app run history.
@@ -413,6 +418,7 @@ PY
 | Macro Calendar shows `Due` with covered `1/4` | Only BEA GDP rows are stored; BLS CPI / PPI / Jobs rows are missing or blocked | Import the official BLS `.ics` file, retry BLS later, or treat current Macro view as GDP-only until BLS rows are available |
 | Macro collection is partial | BLS schedule page rejected automated access, but BEA or another enabled source succeeded | Inspect failed source message, then use the BLS `.ics` import fallback if CPI / PPI / Jobs rows are needed |
 | Market Sentiment collection is partial | CNN or AAII official source changed, blocked the request, or returned an interstitial | Inspect `collect_market_sentiment` job details; refresh later or use Browser check to confirm whether the official public page still shows the table |
+| Sentiment PIT 시작일이 최근이다 | Immutable capture began prospectively and legacy canonical rows were intentionally not backfilled | Use canonical history only for descriptive charts; wait for new daily captures before chronological validation |
 | Sentiment tab still shows only raw cards after deployment | Streamlit served an old imported module or cache schema | Restart the Streamlit process and clear the Overview cache via normal app reload; confirm the top `시장 심리 컨텍스트` band and `분석 체크` section are visible |
 | Market Context source evidence shows stale S&P 500 daily snapshot | Stored 5m S&P 500 snapshot is older than the intraday freshness threshold | Run Market Context `현재 이슈만 보강` or Market Movers S&P 500 refresh |
 | Operations / Ingestion shows blank latest success / issue | No Overview refresh button has written local run history yet | Use the relevant Overview refresh button or inspect Ingestion output directly |

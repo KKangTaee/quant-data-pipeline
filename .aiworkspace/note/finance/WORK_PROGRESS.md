@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Current active task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `1/4차` 기능과 승인된 시각 polish·actual QA를 완료했고, 다음은 2차 장기 이력·발표 당시 값 품질 점검이다.
+  - Current active task is [overview-sentiment-history-pit-v2-20260720](./tasks/active/overview-sentiment-history-pit-v2-20260720/STATUS.md). 전체 잠정 roadmap `2/4차`; immutable 수집 당시 기록과 장기 그래프를 완료했고, 다음은 3차 독립 데이터 후보 검토다.
   - Latest completed task is [operations-portfolio-monitoring-only-v1-20260719](./tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md). Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
   - Parallel active follow-up is [portfolio-monitoring-chart-zoom-pan-v1-20260719](./tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md). 기능과 자동 검증은 완료했고 전체 `2/3차`; desktop·900px·420px Browser interaction/layout QA가 남아 있다.
   - Latest Portfolio Monitoring lifecycle follow-up is [portfolio-monitoring-tracking-end-reopen-v1-20260719](./tasks/active/portfolio-monitoring-tracking-end-reopen-v1-20260719/STATUS.md). 종료된 동일 item의 종료 필드를 취소하고 원래 시작 계약으로 재활성화하는 `reopen_item`을 추가했다. Python 112 / React 25 / typecheck/build/static asset 검증을 통과했으며 Browser interaction은 URL policy로 차단됐다.
@@ -69,6 +69,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### 2026-07-20 - Overview Sentiment 장기 이력·PIT 축적 2차 완료
+
+- CNN/AAII source별 latest canonical과 immutable 수집 당시 기록을 한 transaction으로 저장하고, 한 source 실패가 다른 source를 되돌리지 않게 했다.
+- UTC known-at loader, 24시간 automation, full canonical history와 고정 180일 해석, 공통 6M/1Y/전체 및 세로 2 graph를 연결했다.
+- 첫 live capture 340 snapshot/canonical rows와 desktop/420px Browser QA를 확인했다. 상세는 [active task](./tasks/active/overview-sentiment-history-pit-v2-20260720/STATUS.md)를 본다.
+- 전체 roadmap은 `2/4차`; 다음은 독립 데이터 후보 검토이며 1W/1M은 chronological PIT validation 전까지 `UNAVAILABLE`이다.
 
 ### 2026-07-20 - sub-dev master 통합 충돌 해결
 

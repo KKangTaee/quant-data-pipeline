@@ -449,9 +449,13 @@ FRED API or FRED official CSV download
 
 CNN Fear & Greed JSON / AAII official historical HTML
   -> finance.data.sentiment.collect_and_store_market_sentiment()
-  -> finance_meta.macro_series_observation
+  -> source별 transaction
+     -> finance_meta.macro_series_observation (latest canonical)
+     -> finance_meta.market_sentiment_collection_batch
+     -> finance_meta.market_sentiment_observation_snapshot (immutable)
   -> finance.loaders.sentiment.load_market_sentiment_snapshot()
   -> finance.loaders.sentiment.load_market_sentiment_history()
+  -> finance.loaders.sentiment.load_market_sentiment_as_known()
   -> app.services.overview.sentiment.build_market_sentiment_snapshot()
   -> app.services.backtest_practical_validation.build_market_sentiment_context_overlay()
   -> Workspace > Overview > Sentiment / Data Health
@@ -463,11 +467,12 @@ CNN Fear & Greed JSON / AAII official historical HTML
 
 - P2-4 초기 series는 `VIXCLS`, `T10Y3M`, `BAA10Y`다.
 - API key가 있으면 FRED API를 쓰고, 없으면 official `fredgraph.csv` download를 사용한다.
-- Overview sentiment는 `CNN_FEAR_GREED`, CNN component score, `AAII_BULLISH`, `AAII_NEUTRAL`, `AAII_BEARISH`, `AAII_BULL_BEAR_SPREAD`를 같은 long-form table에 저장한다.
+- Overview sentiment는 `CNN_FEAR_GREED`, CNN component score, `AAII_BULLISH`, `AAII_NEUTRAL`, `AAII_BEARISH`, `AAII_BULL_BEAR_SPREAD`를 latest canonical table과 immutable source snapshot에 함께 저장한다.
+- manual refresh와 24-hour automation은 같은 collector를 사용한다. `known_at`은 app-observed UTC이며 provider publication timestamp가 아니다. legacy canonical rows는 PIT snapshot으로 소급 복제하지 않는다.
 - 이 section의 `macro_series_observation`은 revised-latest context table이라 FRED official CSV fallback을 허용한다. 경제 사이클 학습/replay는 별도 `macro_series_vintage_observation`을 사용하며 key가 없는 CSV fallback을 금지한다.
 - AAII official page는 backend default HTTP client가 interstitial을 받을 수 있어 browser-like document request / TLS impersonation path를 사용한다. 실패하면 값을 꾸미지 않고 job result와 Overview status에 failed / missing state를 남긴다.
 - `load_macro_snapshot()`은 기준일 이전 최신 관측값과 `staleness_days`를 함께 반환한다.
-- `load_market_sentiment_snapshot()`은 Overview Sentiment tab에서 latest CNN / AAII context를 읽고, `load_market_sentiment_history()`는 CNN Fear & Greed, AAII bearish / bull-bear spread, CNN 7개 component history를 read model에 제공한다. Overview service는 latest 값의 최근 percentile / min-max range, CNN headline / component / AAII divergence, CNN component latest-vs-previous change context를 계산한다. surface-specific overlay는 Practical Validation / Final Review / Portfolio Monitoring에서도 같은 latest context를 읽는다. 이 context는 trade signal, PASS / BLOCKER, selected-route gate, monitoring signal, live approval, order, auto rebalance가 아니다.
+- `load_market_sentiment_snapshot()`은 latest CNN / AAII context를, `load_market_sentiment_history()`는 전체 canonical chart history를, `load_market_sentiment_as_known()`은 UTC cutoff에 알려졌던 최신 immutable capture를 읽는다. Overview service의 현재 percentile / min-max 해석은 그래프 기간과 분리된 최근 180일을 유지한다. surface-specific overlay는 같은 latest context를 읽으며 trade signal, PASS / BLOCKER, selected-route gate, monitoring signal, live approval, order, auto rebalance가 아니다.
 - P2-5A부터 이 수집은 `Workspace > Ingestion > Practical Validation Provider Snapshots > Macro Context`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 5번 / 6번 진단은 FRED snapshot을 우선 읽고, 없으면 기존 market proxy를 `REVIEW` fallback으로 표시한다.
 - `data-provenance-coverage-v1`부터 macro context는 FRED source mode, observation range, collected range, stale series를 compact provenance로 제공한다.

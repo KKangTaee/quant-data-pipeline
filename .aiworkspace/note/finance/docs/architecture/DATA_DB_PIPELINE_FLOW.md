@@ -57,8 +57,8 @@ external source
 | BEA official release schedule HTML | Overview Events macro calendar source. national GDP release dates를 `MACRO_GDP` row로 저장 |
 | Yahoo / yfinance ticker calendar | Overview Events earnings primary free provider estimate source. bounded symbol set만 조회해 `market_event_calendar`에 `EARNINGS` row로 저장하고, row가 없는 ticker는 job result의 `symbol_diagnostics`에 missing / failure reason을 남긴다 |
 | yfinance futures OHLCV | Overview futures data source. 주요 선물 1m / daily OHLCV를 `futures_ohlcv`에 저장하되 exchange-grade realtime feed로 보지 않는다. 1d / 1m 요청에서 일부 futures symbol이 빈 응답이거나 지나치게 희소한 응답이면 해당 symbol만 2d / 1m으로 한 번 보강 수집하고 run diagnostics에 남긴다. 1m rows are retained for stored-candle chart / diagnostic context; successful 1d ingestion requests ten years and materializes the ten-year current macro plus 5D / 20D outlook into `finance_meta.futures_macro_snapshot`. Economic Cycle also reads stored `GC=F` / `DX-Y.NYB`. Freshness is based on stored latest candle versus current time, not hidden as missing data |
-| CNN Fear & Greed official page JSON | Overview Sentiment context source. CNN page referer와 browser-like request를 사용해 overall score / rating / component score를 `macro_series_observation`에 저장한다 |
-| AAII Sentiment Survey official historical HTML | Overview Sentiment context source. official historical table의 bullish / neutral / bearish weekly survey row와 bull-bear spread를 `macro_series_observation`에 저장한다 |
+| CNN Fear & Greed official page JSON | Overview Sentiment context source. CNN page referer와 browser-like request를 사용해 overall score / rating / component score를 canonical `macro_series_observation`과 immutable sentiment snapshot에 source transaction으로 함께 저장한다 |
+| AAII Sentiment Survey official historical HTML | Overview Sentiment context source. official historical table의 bullish / neutral / bearish weekly survey row와 bull-bear spread를 canonical `macro_series_observation`과 immutable sentiment snapshot에 source transaction으로 함께 저장한다 |
 
 ## Persistence 계층
 
@@ -90,7 +90,7 @@ external source
 | `app/services/nyse_calendar.py` | 미국 동부시간 regular/early close, 주말, NYSE 휴일을 반영한 마지막 완료 session 공용 계약. 개별주 freshness와 Backtest price refresh가 같은 기준을 사용한다 |
 | `app/services/overview/us_stock_valuation.py` / `us_stock_turnaround.py` / `us_stock_freshness.py` / `market_context_valuation.py` | 개별주 60m/36m log(PER), FOMC+기업 초과 EPS 성장 시나리오, quarterly turnaround analysis와 S&P/PER/turnaround failure isolation 경계. unified freshness는 마지막 완료 NYSE price, profile/price 7일 정렬, 실제 statement raw gap을 결합하며 repairable scope가 있을 때만 `refresh_us_stock_data`를 만든다. positive Graph 1 READY PER만 기본 추천하며, 다른 경우 전환 분석을 추천하되 기존 PER status/value를 바꾸지 않는다. 화면 진입과 내부 selector 전환은 read-only다 |
 | `app/services/overview/nasdaq100_valuation.py` | QQQ 단위 Nasdaq retained backend read model. current Market Context user-facing selector에는 연결되지 않지만 data/materialization/collector 계약은 보존한다 |
-| `finance/data/sentiment.py` | CNN Fear & Greed / AAII Sentiment Survey 수집 / 저장 경계. 별도 table을 만들지 않고 `macro_series_observation`에 sentiment series를 idempotent UPSERT한다 |
+| `finance/data/sentiment.py` / `finance/data/sentiment_store.py` | CNN Fear & Greed / AAII Sentiment Survey 수집과 source별 atomic 이중 저장 경계. `macro_series_observation`은 latest canonical UPSERT, `market_sentiment_collection_batch` / `market_sentiment_observation_snapshot`은 prospective immutable capture를 소유한다 |
 | `finance/data/data.py` | price 수집 / DB read helper |
 | `finance/data/fundamentals.py` | fundamentals와 statement fundamentals shadow 적재 |
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
@@ -115,7 +115,7 @@ external source
 | `finance/loaders/provider.py` | provider snapshot read path. ETF operability / holdings / exposure snapshot을 읽는다 |
 | `finance/loaders/macro.py` | market-context read path. macro observation range와 기준일 snapshot / staleness를 읽는다 |
 | `finance/loaders/economic_cycle.py` | `realtime_start <= as_of_date <= realtime_end`를 적용해 origin별 eligible revision 하나를 선택하고 coverage, approved artifact, compact snapshot/history를 읽는다. provider 호출과 UI import가 없다 |
-| `finance/loaders/sentiment.py` | Overview sentiment read path. `macro_series_observation`에서 CNN / AAII latest snapshot과 history를 읽는다 |
+| `finance/loaders/sentiment.py` | Overview sentiment read path. canonical latest/history와 UTC cutoff의 latest-known immutable snapshot을 읽는다. `known_at`은 provider publication time이 아니라 앱 관측 시각이다 |
 | `finance/loaders/economic_cycle_assets.py` | Overview Economic Cycle DB-only market-path reader. 기준일 뒤 observation을 제외하고 macro history, futures 4종, S&P 500/explicit SPY fallback 가격을 저장소별로 읽는다 |
 | `finance/loaders/sp500_valuation.py` | actual/as-reported 완료 분기 EPS를 엄격히 읽어 8개 분기가 있을 때만 current/prior TTM 전년 대비를 계산한다. Shiller proxy나 estimate를 actual 경로로 대체하지 않는다 |
 | `finance/economic_cycle_asset_pathways.py` | daily 5/21/63거래일, EIA weekly 최근 4주·전년 대비, spread, actual EPS 완료 분기 TTM 변화를 빈도별로 계산하고 자산별 coverage를 만드는 pure layer |
@@ -148,8 +148,8 @@ external source
   아니라 effective/accrual date도 fallback identity에 포함해 서로 다른 채권을
   한 holding으로 합치지 않는다.
   `etf_exposure_snapshot`은 holdings aggregate와 일부 provider aggregate sector exposure를 저장한다.
-  `macro_series_observation`은 FRED market-context observation과 CNN / AAII sentiment observation을 long-form으로 저장하고,
-  `finance/loaders/macro.py`가 validation 기준일 근처 FRED snapshot과 staleness를 읽으며 `finance/loaders/sentiment.py`가 Overview Sentiment latest/history를 읽는다. Economic Cycle asset path는 `finance/loaders/economic_cycle_assets.py -> finance/economic_cycle_asset_pathways.py -> finance/economic_cycle_interpretation.py -> app/services/overview/economic_cycle.py -> React` 순서로만 전달된다.
+  `macro_series_observation`은 FRED market-context observation과 CNN / AAII sentiment latest canonical observation을 long-form으로 저장한다. Sentiment collector는 source별 batch와 immutable snapshot도 함께 저장하며 legacy canonical row를 과거 snapshot으로 소급 생성하지 않는다.
+  `finance/loaders/macro.py`가 validation 기준일 근처 FRED snapshot과 staleness를 읽으며 `finance/loaders/sentiment.py`가 Overview Sentiment canonical latest/history와 as-known snapshot을 읽는다. Economic Cycle asset path는 `finance/loaders/economic_cycle_assets.py -> finance/economic_cycle_asset_pathways.py -> finance/economic_cycle_interpretation.py -> app/services/overview/economic_cycle.py -> React` 순서로만 전달된다.
   `regime-split-validation-v1`부터 Practical Validation은 같은 loader의 historical observation read path를 사용해
   VIX / yield curve / credit spread 월별 regime bucket evidence를 read-only로 계산한다.
   `data-provenance-coverage-v1`부터 Practical Validation provider context는 loader 결과를 source mix / coverage status weight / as-of range / collected range / freshness로 요약하고,

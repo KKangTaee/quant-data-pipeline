@@ -420,6 +420,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - P2-4 초기 구현은 FRED `VIXCLS`, `T10Y3M`, `BAA10Y`를 수집한다.
 - Overview Market Sentiment V1 이후 CNN score / component score와 AAII bullish / neutral / bearish / bull-bear spread도 같은 long-form table에 저장한다.
 - `series_id`, `observation_date`, `source`가 business key다.
+- Sentiment에서 이 table은 최신 canonical view다. 발표 당시 재현에는 `market_sentiment_collection_batch` / `market_sentiment_observation_snapshot`을 사용한다.
 - API key가 있으면 FRED API, 없으면 FRED official CSV download를 사용한다.
 
 주의:
@@ -428,6 +429,25 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - FRED value는 observation date 기준 데이터이며, 실제 발표 / 수정 vintage point-in-time truth와는 구분해야 한다.
 - Practical Validation result JSONL에는 full series를 저장하지 않고 compact snapshot / staleness만 저장하는 방향이다.
 - Practical Validation result JSONL에는 source mode / observation range / stale series 같은 compact macro provenance만 저장한다.
+
+## `market_sentiment_collection_batch`, `market_sentiment_observation_snapshot`
+
+역할:
+
+- CNN / AAII 수집을 source별 batch로 감사하고, 그때 앱이 관측한 normalized 전체 view를 immutable하게 보존한다.
+- canonical latest table과 같은 transaction에서 저장해 한 source 안의 현재값과 수집 당시 기록이 어긋나지 않게 한다.
+
+성격:
+
+- `collection_batch`는 source, status, UTC `observed_at`, row count, error를 가진 실행 ledger다.
+- `observation_snapshot`은 batch에 귀속된 series/date/value/status/source row다. 값이 이전 capture와 같아도 새 관측 증거로 보존한다.
+- CNN과 AAII는 서로 다른 transaction이다. 한 source 실패는 다른 source의 성공 snapshot을 되돌리지 않는다.
+
+주의:
+
+- `known_at`은 provider publication timestamp가 아니라 이 앱이 응답을 관측한 UTC 시각이다.
+- legacy canonical row를 과거 snapshot으로 backfill하지 않는다. 따라서 PIT coverage 시작일 이전 canonical 이력은 설명용 그래프에는 쓸 수 있지만 chronological validation에는 쓰지 않는다.
+- 충분한 prospective capture와 out-of-sample 검증 전에는 1W / 1M 확률을 만들지 않는다.
 
 ## `macro_series_vintage_observation`, `economic_cycle_model_artifact`, `economic_cycle_snapshot`
 
