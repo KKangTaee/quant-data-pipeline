@@ -11,10 +11,12 @@ const KIND_LABELS: Record<ReferenceItem["kind"], string> = {
   playbook: "문제 해결",
 };
 
-function syncFrameHeightSoon(): void {
-  Streamlit.setFrameHeight();
-  window.requestAnimationFrame(() => Streamlit.setFrameHeight());
-  window.setTimeout(() => Streamlit.setFrameHeight(), 160);
+const DETAIL_FRAME_HEIGHT = 760;
+
+function syncFrameHeightSoon(height?: number): void {
+  Streamlit.setFrameHeight(height);
+  window.requestAnimationFrame(() => Streamlit.setFrameHeight(height));
+  window.setTimeout(() => Streamlit.setFrameHeight(height), 160);
 }
 
 function payloadFromProps(args: ComponentProps["args"]): ReferenceCenterPayload | null {
@@ -51,7 +53,7 @@ export function ReferenceCenterWorkbench({ args }: ComponentProps) {
   }, []);
 
   useEffect(() => {
-    syncFrameHeightSoon();
+    syncFrameHeightSoon(selectedItemId ? DETAIL_FRAME_HEIGHT : undefined);
   }, [payload, query, scope, selectedItemId, results.length]);
 
   if (!payload) {
@@ -85,7 +87,7 @@ export function ReferenceCenterWorkbench({ args }: ComponentProps) {
   const showJourneys = !query.trim() && (scope === "all" || scope === "journey");
 
   return (
-    <main className="reference-center">
+    <main className={`reference-center${selectedItem ? " reference-center--detail-open" : ""}`}>
       <header className="reference-center__header">
         <p className="reference-center__eyebrow">REFERENCE CENTER</p>
         <h1>제품 흐름과 용어를 한곳에서 찾으세요</h1>

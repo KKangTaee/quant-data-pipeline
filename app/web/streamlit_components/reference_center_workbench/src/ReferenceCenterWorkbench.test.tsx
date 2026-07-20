@@ -149,6 +149,7 @@ describe("ReferenceCenterWorkbench", () => {
     render(<ReferenceCenterWorkbench {...props(payload({ initial_item_id: "status.not_run" }))} />);
 
     expect(screen.getByRole("dialog", { name: "NOT_RUN 상세" })).toBeInTheDocument();
+    expect(streamlitMocks.setFrameHeight).toHaveBeenCalledWith(760);
     await user.click(screen.getByRole("button", { name: "화면으로 이동" }));
 
     expect(streamlitMocks.setComponentValue).toHaveBeenCalledTimes(1);
