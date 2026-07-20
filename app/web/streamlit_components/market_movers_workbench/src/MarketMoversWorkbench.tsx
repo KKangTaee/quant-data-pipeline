@@ -704,6 +704,196 @@ function QuickResearch({ row, onOpen }: QuickResearchProps) {
   );
 }
 
+type ChartPoint = {
+  label: string;
+  value: number;
+  displayValue: string;
+};
+
+function chartCoordinates(points: ChartPoint[], width = 720, height = 250) {
+  if (!points.length) return "";
+  const values = points.map((point) => point.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || Math.max(Math.abs(max), 1);
+  const insetX = 28;
+  const insetY = 24;
+  return points.map((point, index) => {
+    const x = insetX + (index / Math.max(points.length - 1, 1)) * (width - insetX * 2);
+    const y = height - insetY - ((point.value - min) / span) * (height - insetY * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+}
+
+function rangeFilteredSeries(series: DecisionRow[], range: string) {
+  if (!series.length || range === "1Y") return series;
+  const latest = new Date(textValue(series[series.length - 1], "date"));
+  if (Number.isNaN(latest.getTime())) return series;
+  const months = { "1M": 1, "3M": 3, "6M": 6 }[range as "1M" | "3M" | "6M"] || 12;
+  const cutoff = new Date(latest);
+  cutoff.setMonth(cutoff.getMonth() - months);
+  return series.filter((point) => {
+    const pointDate = new Date(textValue(point, "date"));
+    return !Number.isNaN(pointDate.getTime()) && pointDate >= cutoff;
+  });
+}
+
+function PriceMomentumChart({ research }: { research: Record<string, unknown> }) {
+  const [range, setRange] = useState("6M");
+  const ytd = (research.ytd_return || {}) as Record<string, unknown>;
+  const rawSeries = Array.isArray(ytd.series) ? ytd.series as DecisionRow[] : [];
+  const filtered = rangeFilteredSeries(rawSeries, range);
+  const points: ChartPoint[] = filtered.map((row) => ({
+    label: textValue(row, "date"),
+    value: numberValue(row, "normalized_return_pct") || 0,
+    displayValue: `${formatSignedPercent(row.normalized_return_pct)} · $${Number(row.price).toFixed(2)}`,
+  }));
+  const latest = points[points.length - 1];
+  const lowest = points.length ? points.reduce((left, right) => left.value < right.value ? left : right) : null;
+  const highest = points.length ? points.reduce((left, right) => left.value > right.value ? left : right) : null;
+  return (
+    <div className="mm-decision__chart-layout">
+      <div className="mm-decision__chart-panel">
+        <div className="mm-decision__chart-toolbar">
+          <div><strong>조정주가 흐름</strong><small>선택 기간 시작=0%</small></div>
+          <div className="mm-decision__range-controls">
+            {["1M", "3M", "6M", "1Y"].map((item) => (
+              <button className={range === item ? "is-active" : ""} key={item} onClick={() => setRange(item)} type="button">{item}</button>
+            ))}
+          </div>
+        </div>
+        {points.length >= 2 ? (
+          <div className="mm-decision__svg-wrap">
+            <svg aria-label={`${range} 조정주가 정규화 흐름`} preserveAspectRatio="none" role="img" viewBox="0 0 720 250">
+              <line x1="28" x2="692" y1="226" y2="226" />
+              <line x1="28" x2="692" y1="24" y2="24" />
+              <polyline fill="none" points={chartCoordinates(points)} stroke="#2563eb" strokeLinejoin="round" strokeWidth="3" />
+            </svg>
+            <div className="mm-decision__chart-axis"><span>{points[0].label}</span><span>{latest?.label}</span></div>
+          </div>
+        ) : <div className="mm-decision__chart-empty">선택 범위에 표시할 저장 가격 이력이 부족합니다.</div>}
+      </div>
+      <aside className="mm-decision__chart-readout">
+        <span><small>YTD 수익률</small><strong>{formatSignedPercent(ytd.return_pct)}</strong></span>
+        <span><small>최근 값</small><strong>{latest?.displayValue || "-"}</strong></span>
+        <span><small>범위 최고</small><strong>{highest ? formatSignedPercent(highest.value) : "-"}</strong></span>
+        <span><small>범위 최저</small><strong>{lowest ? formatSignedPercent(lowest.value) : "-"}</strong></span>
+        <p>{String(ytd.basis || "DB daily adjusted close")}</p>
+      </aside>
+    </div>
+  );
+}
+
+function factorDisplayValue(value: number, unit: string) {
+  if (unit === "percent") return `${value.toFixed(2)}%`;
+  if (unit === "ratio") return `${value.toFixed(2)}x`;
+  if (unit === "currency_per_share") return `$${value.toFixed(2)}`;
+  return formatCompact(value);
+}
+
+type FinancialFactorChartProps = {
+  research: Record<string, unknown>;
+  controls: MarketMoversDecisionWorkbenchPayload["selection"]["financial_controls"];
+};
+
+function FinancialFactorChart({ research, controls }: FinancialFactorChartProps) {
+  const [frequency, setFrequency] = useState<"quarterly" | "annual">(controls.default_frequency);
+  const [factorId, setFactorId] = useState(controls.default_factor || "");
+  const firstGroup = controls.factor_groups.find((group) => group.factors.some((factor) => factor.id === factorId));
+  const [groupId, setGroupId] = useState(firstGroup?.id || controls.factor_groups[0]?.id || "income");
+  const frequencySeries = ((research.financial_factor_series || {}) as Record<string, unknown>)[frequency] as Record<string, unknown> | undefined;
+  const factors = (frequencySeries?.factors || {}) as Record<string, Record<string, unknown>>;
+  const factor = factors[factorId] || {};
+  const unit = String(factor.unit || "number");
+  const rawPoints = Array.isArray(factor.points) ? factor.points as DecisionRow[] : [];
+  const points: ChartPoint[] = rawPoints.map((row) => {
+    const value = numberValue(row, "value") || 0;
+    return {
+      label: textValue(row, "period_end"),
+      value,
+      displayValue: factorDisplayValue(value, unit),
+    };
+  });
+  const activeGroup = controls.factor_groups.find((group) => group.id === groupId) || controls.factor_groups[0];
+  const currentValuation = (research.current_valuation || {}) as Record<string, unknown>;
+  const chooseFrequency = (nextFrequency: "quarterly" | "annual") => {
+    setFrequency(nextFrequency);
+    const currentControl = controls.factor_groups.flatMap((group) => group.factors).find((item) => item.id === factorId);
+    if (!currentControl?.available_by_frequency[nextFrequency]) {
+      const fallback = controls.factor_groups.flatMap((group) => group.factors).find((item) => item.available_by_frequency[nextFrequency]);
+      if (fallback) {
+        setFactorId(fallback.id);
+        const fallbackGroup = controls.factor_groups.find((group) => group.factors.some((item) => item.id === fallback.id));
+        if (fallbackGroup) setGroupId(fallbackGroup.id);
+      }
+    }
+  };
+  return (
+    <div className="mm-decision__financial">
+      <div className="mm-decision__financial-control-row">
+        <div>
+          <span>보고 주기</span>
+          <div className="mm-decision__financial-frequency">
+            {controls.frequencies.map((item) => (
+              <button className={frequency === item.id ? "is-active" : ""} key={item.id} onClick={() => chooseFrequency(item.id)} type="button">{item.label}</button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <span>재무 영역</span>
+          <div className="mm-decision__financial-groups">
+            {controls.factor_groups.map((group) => (
+              <button className={groupId === group.id ? "is-active" : ""} key={group.id} onClick={() => setGroupId(group.id)} type="button">{group.label}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="mm-decision__financial-factor-row">
+        <span>재무 Factor</span>
+        <div className="mm-decision__financial-factors">
+          {(activeGroup?.factors || []).map((factorControl) => {
+            const available = Boolean(factorControl.available_by_frequency[frequency]);
+            return (
+              <button
+                className={factorId === factorControl.id ? "is-active" : ""}
+                disabled={!available}
+                key={factorControl.id}
+                onClick={() => setFactorId(factorControl.id)}
+                title={available ? `${factorControl.label} 표시` : `${frequency === "quarterly" ? "분기" : "연간"} 근거 없음`}
+                type="button"
+              >{factorControl.label}</button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="mm-decision__chart-layout">
+        <div className="mm-decision__chart-panel">
+          <div className="mm-decision__chart-toolbar">
+            <div><strong>{String(factor.label || "재무 factor")}</strong><small>{frequency === "quarterly" ? "분기" : "연간"} · 단일 factor</small></div>
+          </div>
+          {points.length ? (
+            <div className="mm-decision__svg-wrap">
+              <svg aria-label={`${String(factor.label || factorId)} 추이`} preserveAspectRatio="none" role="img" viewBox="0 0 720 250">
+                <line x1="28" x2="692" y1="226" y2="226" />
+                <line x1="28" x2="692" y1="24" y2="24" />
+                <polyline fill="none" points={chartCoordinates(points)} stroke="#0f766e" strokeLinejoin="round" strokeWidth="3" />
+              </svg>
+              <div className="mm-decision__chart-axis"><span>{points[0]?.label}</span><span>{points[points.length - 1]?.label}</span></div>
+            </div>
+          ) : <div className="mm-decision__chart-empty">선택 factor의 {frequency === "quarterly" ? "분기" : "연간"} 근거가 없습니다.</div>}
+        </div>
+        <aside className="mm-decision__chart-readout">
+          <span><small>최근 값</small><strong>{points[points.length - 1]?.displayValue || "-"}</strong></span>
+          <span><small>기간 수</small><strong>{points.length}</strong></span>
+          <span><small>제외 기간</small><strong>{Number(factor.excluded_count || 0)}</strong></span>
+          <span><small>현재 PER</small><strong>{currentValuation.status === "OK" ? `${Number(currentValuation.current_per).toFixed(2)}x` : "계산 불가"}</strong></span>
+          {currentValuation.status !== "OK" ? <p>보고된 희석 EPS 네 분기가 모두 있어야 current PER를 표시합니다.</p> : null}
+        </aside>
+      </div>
+    </div>
+  );
+}
+
 type StockResearchTabsProps = {
   payload: MarketMoversDecisionWorkbenchPayload;
   activeSymbol: string;
@@ -729,11 +919,18 @@ function StockResearchTabs({ payload, activeSymbol }: StockResearchTabsProps) {
       {!research ? (
         <div className="mm-decision__research-loading">선택 종목의 저장 근거를 불러오는 중입니다.</div>
       ) : tab === "price" ? (
-        <div className="mm-decision__research-placeholder">저장된 가격 이력과 모멘텀 차트를 표시합니다.</div>
+        <PriceMomentumChart research={research} />
       ) : tab === "financial" ? (
-        <div className="mm-decision__research-placeholder">보고 주기와 재무 factor를 분리해 표시합니다.</div>
+        <FinancialFactorChart controls={payload.selection.financial_controls} research={research} />
       ) : (
-        <div className="mm-decision__research-placeholder">저장된 뉴스·공시 근거와 필요한 수집 action을 표시합니다.</div>
+        <div className="mm-decision__events-panel">
+          <strong>뉴스·공시 근거</strong>
+          <p>현재 저장된 재무제표 반영 상태와 선택 종목의 뉴스·SEC 조사 action을 같은 symbol에 연결합니다.</p>
+          <div className="mm-decision__events-status">
+            <span><small>재무제표 상태</small><strong>{String(((research.financial_statement_collection || {}) as Record<string, unknown>).status || "UNKNOWN")}</strong></span>
+            <span><small>기준일</small><strong>{String(research.as_of_date || "-")}</strong></span>
+          </div>
+        </div>
       )}
     </section>
   );

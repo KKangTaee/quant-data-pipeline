@@ -377,6 +377,17 @@ def _market_mover_ytd_snapshot(
     latest = work.iloc[-1]
     start_price = float(first[price_column])
     latest_price = float(latest[price_column])
+    series = [
+        {
+            "date": _iso_date_label(item[date_column]),
+            "price": float(item[price_column]),
+            "normalized_return_pct": round(
+                ((float(item[price_column]) / start_price) - 1.0) * 100.0,
+                6,
+            ),
+        }
+        for _, item in work.iterrows()
+    ]
     return {
         "status": "OK",
         "return_pct": ((latest_price / start_price) - 1.0) * 100.0,
@@ -384,6 +395,7 @@ def _market_mover_ytd_snapshot(
         "end_date": _iso_date_label(latest[date_column]),
         "start_price": start_price,
         "latest_price": latest_price,
+        "series": series,
         "basis": "DB daily adjusted close",
     }
 

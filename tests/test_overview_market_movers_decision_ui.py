@@ -292,3 +292,28 @@ def test_decision_react_shell_owns_ranking_breadth_and_selected_research() -> No
     assert 'className="mm-decision__breadth"' in source
     assert ".mm-decision__workbench" in style
     assert "grid-template-columns: minmax(0, 1.62fr) minmax(320px, 1fr);" in style
+
+
+def test_decision_research_keeps_financial_period_and_factor_controls_separate() -> None:
+    from pathlib import Path
+
+    source = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+    style = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/style.css"
+    ).read_text(encoding="utf-8")
+
+    assert "function PriceMomentumChart" in source
+    assert "function FinancialFactorChart" in source
+    assert 'className="mm-decision__financial-frequency"' in source
+    assert 'className="mm-decision__financial-groups"' in source
+    assert 'className="mm-decision__financial-factors"' in source
+    assert "available_by_frequency" in source
+    assert "disabled={!available}" in source
+    assert 'className="mm-decision__chart-layout"' in source
+    assert "normalized_return_pct" in source
+    assert "<polyline" in source
+    assert ".mm-decision__chart-layout" in style
+    assert "grid-template-columns: minmax(0, 7fr) minmax(220px, 3fr);" in style
+    assert "@media (max-width: 760px)" in style

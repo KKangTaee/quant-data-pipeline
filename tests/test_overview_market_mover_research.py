@@ -182,3 +182,7 @@ def test_research_snapshot_exposes_v2_factors_without_historical_per() -> None:
     assert model["current_valuation"]["ttm_diluted_eps"] == 2.6
     assert round(model["current_valuation"]["current_per"], 2) == 46.15
     assert all("per" not in row for row in model["financial_trends"]["annual"])
+    assert model["ytd_return"]["series"] == [
+        {"date": "2026-01-02", "price": 100.0, "normalized_return_pct": 0.0},
+        {"date": "2026-06-30", "price": 120.0, "normalized_return_pct": 20.0},
+    ]
