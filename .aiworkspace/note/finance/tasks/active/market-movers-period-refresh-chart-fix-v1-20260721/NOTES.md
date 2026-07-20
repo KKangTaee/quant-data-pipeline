@@ -20,3 +20,10 @@
 
 - bounded window는 provider payload 기간을 줄였지만 503개 symbol fetch 자체는 유지되어 실제 주간 보강에 138.11초가 걸렸다.
 - 수집 후 주간 coverage 503/503, 랭킹 기준일 2026-07-20, 다음 preflight는 503개 전부 current skip 상태였다.
+
+## Selected-Range Readout Follow-up
+
+- 기존 React range control은 YTD 기준 `normalized_return_pct`를 날짜로만 잘라 우측 `YTD 수익률`과 범위 값의 기준이 선택 기간과 달랐다.
+- 서버의 YTD 조회 시작일도 1월 1일이라 rolling 1Y를 구성할 원시 가격이 없었다.
+- 기존 `return_pct`와 `series`는 YTD 호환 계약으로 유지하고, 최근 1년 raw adjusted close를 `price_series`로 분리했다.
+- React helper가 raw price를 선택 구간 첫 거래일 기준으로 재계산하며, 기존 cached payload에서는 `series`의 price를 fallback으로 사용한다.

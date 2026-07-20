@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "test": "node --test src/priceMomentum.test.ts",
     "build": "vite build --outDir component_static"
   },
   "dependencies": {

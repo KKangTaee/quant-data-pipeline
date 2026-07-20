@@ -620,7 +620,8 @@ def test_decision_research_keeps_financial_period_and_factor_controls_separate()
     assert "available_by_frequency" in source
     assert "disabled={!available}" in source
     assert 'className="mm-decision__chart-layout"' in source
-    assert "normalized_return_pct" in source
+    assert "buildPriceMomentumRange" in source
+    assert "priceMomentumRangeLabel" in source
     assert "<polyline" in source
     assert ".mm-decision__chart-layout" in style
     assert "grid-template-columns: minmax(0, 7fr) minmax(220px, 3fr);" in style

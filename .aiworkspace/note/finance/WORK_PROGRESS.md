@@ -6926,3 +6926,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 신규 상장 종목은 선택 기간 시작 뒤 첫 가격일이면 명시적으로 제외하며, 가격 실제 날짜 X축과 가격·재무 고점 tooltip 잘림 방지를 적용했다.
 - 실제 Weekly S&P 500은 503/503개·5,533행·실패 0건으로 2026-07-20까지 갱신됐고 UI 수동 action의 current skip/timestamp도 확인했다.
 - task roadmap `3/3차` 완료, broader 기능 roadmap `4/5차`; 상세는 `tasks/active/market-movers-period-refresh-chart-fix-v1-20260721/`를 본다.
+
+## 2026-07-21 - Overview Market Movers 선택 기간 수익률 보정 완료
+
+- 가격·모멘텀 1M·3M·6M·1Y를 YTD 고정값이 아니라 각 선택 구간 첫 거래일=0%로 재기준화하고 우측 수익률·최근 값·범위 최고·최저를 함께 갱신하도록 수정했다.
+- 기존 YTD 계약은 유지하면서 최근 1년 raw 조정주가 `price_series`를 추가했고, 월말 cutoff overflow도 calendar-safe clamp로 막았다.
+- React 3개, linked UI/research 35개, Market Movers service 131개와 production build를 통과했고 actual GPN 화면에서 네 기간이 서로 다른 값으로 전환됨을 확인했다.
+- 이 후속 보정은 기존 task `3/3차`에 포함되며 broader 기능 roadmap은 `4/5차`; 남은 5차 sector conditional outlook은 OOS gate 이후 별도 범위다.

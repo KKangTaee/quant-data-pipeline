@@ -18411,7 +18411,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         def fake_price_history_loader(**kwargs: object) -> pd.DataFrame:
             self.assertEqual(kwargs["symbols"], "AAA")
-            self.assertEqual(kwargs["start"], "2026-01-01")
+            self.assertEqual(kwargs["start"], "2025-06-30")
             self.assertEqual(kwargs["end"], "2026-06-30")
             return pd.DataFrame(
                 [

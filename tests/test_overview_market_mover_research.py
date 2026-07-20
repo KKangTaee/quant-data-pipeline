@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from app.services.overview.market_mover_research import (
     build_current_ttm_valuation,
@@ -185,6 +186,37 @@ def test_research_snapshot_exposes_v2_factors_without_historical_per() -> None:
     assert model["ytd_return"]["series"] == [
         {"date": "2026-01-02", "price": 100.0, "normalized_return_pct": 0.0},
         {"date": "2026-06-30", "price": 120.0, "normalized_return_pct": 20.0},
+    ]
+
+
+def test_price_snapshot_keeps_rolling_year_prices_without_changing_ytd_metrics() -> None:
+    from app.services.overview.why_it_moved import _market_mover_ytd_snapshot
+
+    loader_call: dict[str, object] = {}
+
+    def price_loader(**kwargs: object) -> pd.DataFrame:
+        loader_call.update(kwargs)
+        return pd.DataFrame(
+            [
+                {"date": "2025-06-30", "adj_close": 80.0},
+                {"date": "2026-01-02", "adj_close": 100.0},
+                {"date": "2026-06-30", "adj_close": 120.0},
+            ]
+        )
+
+    snapshot = _market_mover_ytd_snapshot(
+        "AAA",
+        as_of_date="2026-06-30",
+        price_history_loader=price_loader,
+    )
+
+    assert loader_call["start"] == "2025-06-30"
+    assert snapshot["return_pct"] == pytest.approx(20.0)
+    assert snapshot["start_date"] == "2026-01-02"
+    assert snapshot["price_series"] == [
+        {"date": "2025-06-30", "price": 80.0},
+        {"date": "2026-01-02", "price": 100.0},
+        {"date": "2026-06-30", "price": 120.0},
     ]
 
 

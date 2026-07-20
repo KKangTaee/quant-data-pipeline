@@ -344,9 +344,16 @@ def _market_mover_ytd_snapshot(
     as_of_date: str,
     price_history_loader: Callable[..., pd.DataFrame],
 ) -> dict[str, Any]:
-    year_start = f"{pd.Timestamp(as_of_date).year}-01-01"
+    as_of_timestamp = pd.Timestamp(as_of_date).normalize()
+    year_start = f"{as_of_timestamp.year}-01-01"
+    rolling_year_start = (as_of_timestamp - pd.DateOffset(years=1)).date().isoformat()
     try:
-        frame = price_history_loader(symbols=symbol, start=year_start, end=as_of_date, timeframe="1d")
+        frame = price_history_loader(
+            symbols=symbol,
+            start=rolling_year_start,
+            end=as_of_date,
+            timeframe="1d",
+        )
     except Exception as exc:
         return {"status": "UNAVAILABLE", "reason": f"가격 이력 조회 실패: {exc}", "start_date": year_start}
     if not isinstance(frame, pd.DataFrame) or frame.empty:
@@ -366,15 +373,20 @@ def _market_mover_ytd_snapshot(
     work[price_column] = pd.to_numeric(work[price_column], errors="coerce")
     work = work.dropna(subset=[date_column, price_column]).sort_values(date_column)
     work = work[work[price_column] > 0]
-    if len(work.index) < 2:
+    work = work[
+        (work[date_column] >= pd.Timestamp(rolling_year_start))
+        & (work[date_column] <= as_of_timestamp)
+    ]
+    ytd_work = work[work[date_column] >= pd.Timestamp(year_start)]
+    if len(ytd_work.index) < 2:
         return {
             "status": "UNAVAILABLE",
             "reason": "YTD 계산에 필요한 시작/현재 가격이 부족합니다.",
             "start_date": year_start,
         }
 
-    first = work.iloc[0]
-    latest = work.iloc[-1]
+    first = ytd_work.iloc[0]
+    latest = ytd_work.iloc[-1]
     start_price = float(first[price_column])
     latest_price = float(latest[price_column])
     series = [
@@ -386,6 +398,13 @@ def _market_mover_ytd_snapshot(
                 6,
             ),
         }
+        for _, item in ytd_work.iterrows()
+    ]
+    price_series = [
+        {
+            "date": _iso_date_label(item[date_column]),
+            "price": float(item[price_column]),
+        }
         for _, item in work.iterrows()
     ]
     return {
@@ -396,6 +415,7 @@ def _market_mover_ytd_snapshot(
         "start_price": start_price,
         "latest_price": latest_price,
         "series": series,
+        "price_series": price_series,
         "basis": "DB daily adjusted close",
     }
 

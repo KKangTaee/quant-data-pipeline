@@ -1,5 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Streamlit, withStreamlitConnection, ComponentProps } from "streamlit-component-lib";
+import {
+  buildPriceMomentumRange,
+  priceMomentumRangeLabel,
+  PriceMomentumRange,
+} from "./priceMomentum";
 import "./style.css";
 
 export type MarketMoverAction = {
@@ -889,19 +894,6 @@ function financialTooltipLeftPx(
   return Math.max(minLeft, Math.min(maxLeft, coordinateX));
 }
 
-function rangeFilteredSeries(series: DecisionRow[], range: string) {
-  if (!series.length || range === "1Y") return series;
-  const latest = new Date(textValue(series[series.length - 1], "date"));
-  if (Number.isNaN(latest.getTime())) return series;
-  const months = { "1M": 1, "3M": 3, "6M": 6 }[range as "1M" | "3M" | "6M"] || 12;
-  const cutoff = new Date(latest);
-  cutoff.setMonth(cutoff.getMonth() - months);
-  return series.filter((point) => {
-    const pointDate = new Date(textValue(point, "date"));
-    return !Number.isNaN(pointDate.getTime()) && pointDate >= cutoff;
-  });
-}
-
 function priceChartTickIndexes(pointCount: number, range: string) {
   if (pointCount <= 0) return [];
   const targetCount = range === "1M" ? 5 : 7;
@@ -922,15 +914,17 @@ function formatPriceAxisLabel(dateValue: string, range: string) {
 }
 
 function PriceMomentumChart({ research }: { research: Record<string, unknown> }) {
-  const [range, setRange] = useState("6M");
+  const [range, setRange] = useState<PriceMomentumRange>("6M");
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const ytd = (research.ytd_return || {}) as Record<string, unknown>;
-  const rawSeries = Array.isArray(ytd.series) ? ytd.series as DecisionRow[] : [];
-  const filtered = rangeFilteredSeries(rawSeries, range);
-  const points: ChartPoint[] = filtered.map((row) => ({
-    label: textValue(row, "date"),
-    value: numberValue(row, "normalized_return_pct") || 0,
-    displayValue: `${formatSignedPercent(row.normalized_return_pct)} · $${Number(row.price).toFixed(2)}`,
+  const rawSeries = Array.isArray(ytd.price_series)
+    ? ytd.price_series as DecisionRow[]
+    : Array.isArray(ytd.series) ? ytd.series as DecisionRow[] : [];
+  const rangeSeries = buildPriceMomentumRange(rawSeries, range);
+  const points: ChartPoint[] = rangeSeries.map((row) => ({
+    label: row.date,
+    value: row.returnPct,
+    displayValue: `${formatSignedPercent(row.returnPct)} · $${row.price.toFixed(2)}`,
   }));
   const latest = points[points.length - 1];
   const lowest = points.length ? points.reduce((left, right) => left.value < right.value ? left : right) : null;
@@ -953,7 +947,7 @@ function PriceMomentumChart({ research }: { research: Record<string, unknown> })
           <div><strong>조정주가 흐름</strong><small>선택 기간 시작=0%</small></div>
           <div className="mm-decision__range-controls">
             {["1M", "3M", "6M", "1Y"].map((item) => (
-              <button className={range === item ? "is-active" : ""} key={item} onClick={() => setRange(item)} type="button">{item}</button>
+              <button className={range === item ? "is-active" : ""} key={item} onClick={() => setRange(item as PriceMomentumRange)} type="button">{item}</button>
             ))}
           </div>
         </div>
@@ -1009,7 +1003,7 @@ function PriceMomentumChart({ research }: { research: Record<string, unknown> })
         ) : <div className="mm-decision__chart-empty">선택 범위에 표시할 저장 가격 이력이 부족합니다.</div>}
       </div>
       <aside className="mm-decision__chart-readout">
-        <span className="is-primary"><small>YTD 수익률</small><strong className={`mm-return--${returnTone(ytd.return_pct)}`}>{formatSignedPercent(ytd.return_pct)}</strong></span>
+        <span className="is-primary"><small>{priceMomentumRangeLabel(range)}</small><strong className={`mm-return--${returnTone(latest?.value)}`}>{latest ? formatSignedPercent(latest.value) : "-"}</strong></span>
         <span className="is-latest"><small>최근 값</small><strong className={`mm-return--${returnTone(latest?.value)}`}>{latest?.displayValue || "-"}</strong></span>
         <span className="is-high"><small>범위 최고</small><strong className={`mm-return--${returnTone(highest?.value)}`}>{highest ? formatSignedPercent(highest.value) : "-"}</strong></span>
         <span className="is-low"><small>범위 최저</small><strong className={`mm-return--${returnTone(lowest?.value)}`}>{lowest ? formatSignedPercent(lowest.value) : "-"}</strong></span>

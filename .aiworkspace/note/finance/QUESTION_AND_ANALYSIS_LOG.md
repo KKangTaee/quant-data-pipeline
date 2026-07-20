@@ -10296,3 +10296,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 랭킹 기준일을 수집 목표일로 재사용하지 않고 필요한 기간만 보강하며, 전체 기간이 없는 종목을 왜곡된 수익률로 섞지 않고 차트 기간/값을 직접 판독하게 해야 함.
 - Analysis result: Weekly 1주+1주, Monthly 1개월+1개월 bounded overlap과 first-price-date eligibility를 적용했다. 실제 S&P 500 Weekly는 503개 전부 성공해 랭킹 기준일이 2026-07-20으로 이동했고, 가격/재무 X축과 고점 tooltip도 actual browser에서 확인했다.
 - Follow-up: task `3/3차` 완료. full-universe provider 요청은 실제 138.11초가 걸릴 수 있으며, broader sector conditional outlook은 OOS gate가 준비될 때만 별도 5차로 진행한다.
+
+### 2026-07-21 - 가격 모멘텀 우측 지표는 선택한 기간과 같은 기준을 사용한다
+
+- User request: 1M·3M·6M을 눌러도 우측 수익률 값이 1년 또는 YTD로 고정된 것처럼 보이는 문제를 확인하고 수정해 달라고 요청함.
+- Interpreted goal: 차트와 요약 지표가 모두 현재 선택한 기간의 동일한 시작점·종료점·범위를 사용해야 함.
+- Analysis result: 기존 UI는 YTD 정규화 series를 날짜로만 잘랐고 첫 지표도 `YTD 수익률`에 고정됐다. 최근 1년 raw adjusted close를 받아 각 범위 첫 거래일=0%로 재계산하도록 수정했다.
+- Follow-up: GPN actual 화면에서 1M `+26.55%`, 3M `+13.53%`, 6M `+15.75%`, 1Y `+9.83%`와 각 범위 최고·최저 전환을 확인했다. broader roadmap은 `4/5차` 유지다.
