@@ -25,9 +25,12 @@ import pandas as pd
 from finance.loaders.sentiment import (
     CNN_COMPONENT_SERIES,
     CORE_SENTIMENT_SERIES,
+    load_market_sentiment_capture_summary,
     load_market_sentiment_history,
     load_market_sentiment_snapshot,
 )
+
+SENTIMENT_ANALYSIS_WINDOW_DAYS = 180
 
 SENTIMENT_COLUMNS = [
     "Series",
@@ -360,6 +363,37 @@ def _sentiment_history_observations(frame: pd.DataFrame | None, series_ids: Sequ
     rows["value"] = pd.to_numeric(rows.get("value"), errors="coerce")
     rows["source"] = rows.get("source", pd.Series(dtype=str))
     return rows.dropna(subset=["observation_date", "value"]).sort_values(["series_id", "observation_date"])
+
+
+def _recent_sentiment_history(history: pd.DataFrame, *, today: date) -> pd.DataFrame:
+    """Keep the established 180-calendar-day frame for current interpretation."""
+    if history.empty or "observation_date" not in history:
+        return history.copy()
+    cutoff = pd.Timestamp(today) - pd.Timedelta(days=SENTIMENT_ANALYSIS_WINDOW_DAYS)
+    dates = pd.to_datetime(history["observation_date"], errors="coerce")
+    return history[dates >= cutoff].copy()
+
+
+def _history_source_coverage(
+    history: pd.DataFrame,
+    *,
+    series_id: str,
+    source: str,
+    capture_summary: dict[str, Any],
+) -> dict[str, Any]:
+    """Separate canonical chart coverage from immutable capture coverage."""
+    rows = _sentiment_history_observations(history, (series_id,))
+    rows = rows[rows["source"].astype(str) == source]
+    dates = pd.to_datetime(rows["observation_date"], errors="coerce").dropna()
+    capture = dict(capture_summary.get(source) or {})
+    return {
+        "canonical_start": dates.min().strftime("%Y-%m-%d") if not dates.empty else None,
+        "canonical_end": dates.max().strftime("%Y-%m-%d") if not dates.empty else None,
+        "observation_count": int(dates.nunique()),
+        "pit_start_at": capture.get("pit_start_at"),
+        "latest_capture_at": capture.get("latest_capture_at"),
+        "capture_count": int(capture.get("capture_count") or 0),
+    }
 
 def _round_metric(value: float | None) -> float | None:
     return None if value is None else round(float(value), 2)
@@ -962,12 +996,11 @@ def build_market_sentiment_snapshot(
     *,
     snapshot_rows: pd.DataFrame | None = None,
     history_rows: pd.DataFrame | None = None,
+    capture_summary: dict[str, dict[str, Any]] | None = None,
     today: date | None = None,
-    max_history_days: int = 180,
 ) -> dict[str, Any]:
     """Build the Overview sentiment read model from stored CNN / AAII observations."""
     today_value = today or date.today()
-    start_date = (pd.Timestamp(today_value) - pd.Timedelta(days=max_history_days)).strftime("%Y-%m-%d")
     end_date = pd.Timestamp(today_value).strftime("%Y-%m-%d")
     try:
         snapshot_frame = (
@@ -987,9 +1020,15 @@ def build_market_sentiment_snapshot(
                     "AAII_BULL_BEAR_SPREAD",
                     *CNN_COMPONENT_SERIES,
                 ),
-                start=start_date,
                 end=end_date,
             )
+        )
+        capture_summary_value = (
+            dict(capture_summary)
+            if capture_summary is not None
+            else {}
+            if isinstance(snapshot_rows, pd.DataFrame) and isinstance(history_rows, pd.DataFrame)
+            else load_market_sentiment_capture_summary()
         )
     except Exception as exc:
         return _empty_sentiment_snapshot(status="ERROR", message=f"Market sentiment snapshot failed: {exc}")
@@ -1088,16 +1127,32 @@ def build_market_sentiment_snapshot(
         "stale_count": stale_count,
         "missing_count": missing_core,
     }
+    analysis_history_frame = _recent_sentiment_history(history_frame, today=today_value)
     return {
         "status": status,
         "rows": pd.DataFrame(table_rows, columns=SENTIMENT_COLUMNS),
         "component_rows": pd.DataFrame(component_rows, columns=SENTIMENT_COMPONENT_COLUMNS),
         "history_rows": history_out,
+        "history_coverage": {
+            "cnn": _history_source_coverage(
+                history_frame,
+                series_id="CNN_FEAR_GREED",
+                source="cnn_fear_greed",
+                capture_summary=capture_summary_value,
+            ),
+            "aaii": _history_source_coverage(
+                history_frame,
+                series_id="AAII_BULL_BEAR_SPREAD",
+                source="aaii_sentiment_survey",
+                capture_summary=capture_summary_value,
+            ),
+            "cnn_components_note": "수집 시작 이후 현재값을 축적 중",
+        },
         "coverage": coverage,
         "analysis": _build_market_sentiment_analysis(
             coverage=coverage,
             component_rows=component_rows,
-            history_rows=history_frame,
+            history_rows=analysis_history_frame,
         ),
         "warnings": warnings,
     }

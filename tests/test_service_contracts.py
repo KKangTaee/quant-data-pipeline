@@ -22671,6 +22671,79 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             ["정렬 확인", "설문 반전", "관계 지속"],
         )
 
+    def test_market_sentiment_keeps_full_chart_history_but_interprets_recent_180_days(self) -> None:
+        from app.services.overview.sentiment import build_market_sentiment_snapshot
+
+        snapshot_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-07-17"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "CNN Fear & Greed",
+                    "category": "sentiment_index",
+                    "units": "score_0_100",
+                    "value": 37.1,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "fear"}),
+                    "collected_at": pd.Timestamp("2026-07-20 01:00:00"),
+                    "staleness_days": 3,
+                    "snapshot_status": "actual",
+                }
+            ]
+        )
+        history_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2025-06-04"),
+                    "source": "cnn_fear_greed",
+                    "value": 62.0,
+                },
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-07-16"),
+                    "source": "cnn_fear_greed",
+                    "value": 41.0,
+                },
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-07-17"),
+                    "source": "cnn_fear_greed",
+                    "value": 37.1,
+                },
+            ]
+        )
+        snapshot = build_market_sentiment_snapshot(
+            snapshot_rows=snapshot_rows,
+            history_rows=history_rows,
+            capture_summary={
+                "cnn_fear_greed": {
+                    "pit_start_at": "2026-07-20 01:00:00",
+                    "latest_capture_at": "2026-07-20 01:00:00",
+                    "capture_count": 1,
+                }
+            },
+            today=date(2026, 7, 20),
+        )
+        self.assertEqual(len(snapshot["history_rows"]), 3)
+        cnn_range = next(
+            row
+            for row in snapshot["analysis"]["range_context"]
+            if row["series"] == "CNN Fear & Greed"
+        )
+        self.assertEqual(cnn_range["sample_count"], 2)
+        self.assertEqual(
+            snapshot["history_coverage"]["cnn"]["canonical_start"],
+            "2025-06-04",
+        )
+        self.assertEqual(
+            snapshot["history_coverage"]["cnn"]["pit_start_at"],
+            "2026-07-20 01:00:00",
+        )
+
     def test_market_sentiment_snapshot_adds_range_divergence_and_component_history(self) -> None:
         from app.services.overview.sentiment import build_market_sentiment_snapshot
 
@@ -22835,6 +22908,25 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 "source_count": 2,
                 "stale_count": 0,
                 "missing_count": 0,
+            },
+            "history_coverage": {
+                "cnn": {
+                    "canonical_start": "2025-06-04",
+                    "canonical_end": "2026-06-04",
+                    "observation_count": 250,
+                    "pit_start_at": "2026-07-20 01:00:00",
+                    "latest_capture_at": "2026-07-20 01:00:00",
+                    "capture_count": 1,
+                },
+                "aaii": {
+                    "canonical_start": "2026-01-07",
+                    "canonical_end": "2026-06-04",
+                    "observation_count": 22,
+                    "pit_start_at": "2026-07-20 01:05:00",
+                    "latest_capture_at": "2026-07-20 01:05:00",
+                    "capture_count": 1,
+                },
+                "cnn_components_note": "수집 시작 이후 현재값을 축적 중",
             },
             "analysis": {
                 "phase": "DIVERGENT",
@@ -23049,6 +23141,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             ),
             "history_rows": pd.DataFrame(
                 [
+                    {"Date": "2025-06-04", "Series": "CNN Fear & Greed", "Value": 62.0, "Source": "cnn_fear_greed"},
                     {"Date": "2026-06-03", "Series": "CNN Fear & Greed", "Value": 41.0, "Source": "cnn_fear_greed"},
                     {"Date": "2026-06-04", "Series": "CNN Fear & Greed", "Value": 37.1, "Source": "cnn_fear_greed", "State": "공포"},
                     {"Date": "2026-06-04", "Series": "AAII Bullish", "Value": 44.9, "Source": "aaii_sentiment_survey"},
@@ -23081,6 +23174,11 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(payload["charts"]["cnn"]["unit"], "score_0_100")
         self.assertEqual(payload["charts"]["aaii_responses"]["unit"], "percent")
         self.assertEqual(payload["charts"]["aaii_spread"]["unit"], "percentage_point")
+        self.assertEqual(payload["history_coverage"]["periods"], ["6M", "1Y", "ALL"])
+        self.assertEqual(payload["history_coverage"]["default_period"], "6M")
+        self.assertEqual(payload["history_coverage"]["cnn"]["canonical_start"], "2025-06-04")
+        self.assertEqual(payload["history_coverage"]["cnn"]["pit_start_at"], "2026-07-20 01:00:00")
+        self.assertEqual(payload["charts"]["cnn"]["series"][0]["date"], "2025-06-04")
         self.assertEqual(payload["outlook"]["status"], "UNAVAILABLE")
         self.assertEqual([row["key"] for row in payload["outlook"]["horizons"]], ["1W", "1M"])
         for row in payload["outlook"]["horizons"]:

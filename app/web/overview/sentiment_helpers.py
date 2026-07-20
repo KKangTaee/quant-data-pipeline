@@ -573,6 +573,7 @@ def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[st
     rows = _records_from_frame(snapshot.get("rows"))
     component_rows = _records_from_frame(snapshot.get("component_rows"))
     history_rows = _records_from_frame(snapshot.get("history_rows"))
+    coverage_source = dict(snapshot.get("history_coverage") or {})
     data_confidence = dict(analysis.get("data_confidence") or {})
     axes_source = dict(analysis.get("axes") or {})
     market_behavior = _sentiment_axis_payload(axes_source.get("market_behavior"), fallback_label="시장 행동")
@@ -593,6 +594,18 @@ def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[st
     stale_count = int(coverage.get("stale_count") or 0)
     missing_count = int(coverage.get("missing_count") or 0)
     freshness_tone = "positive" if stale_count == 0 and missing_count == 0 else "warning"
+
+    def history_coverage_payload(key: str) -> dict[str, Any]:
+        source = dict(coverage_source.get(key) or {})
+        return {
+            "canonical_start": _display_text(source.get("canonical_start"), ""),
+            "canonical_end": _display_text(source.get("canonical_end"), ""),
+            "observation_count": int(source.get("observation_count") or 0),
+            "pit_start_at": _display_text(source.get("pit_start_at"), ""),
+            "latest_capture_at": _display_text(source.get("latest_capture_at"), ""),
+            "capture_count": int(source.get("capture_count") or 0),
+        }
+
     return {
         "schema_version": "sentiment_react_workbench_v2",
         "component": "SentimentWorkbench",
@@ -640,6 +653,16 @@ def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[st
             "missing_count": missing_count,
             "tone": freshness_tone,
             "detail": f"latest {latest_date} · missing {missing_count} · stale {stale_count}",
+        },
+        "history_coverage": {
+            "default_period": "6M",
+            "periods": ["6M", "1Y", "ALL"],
+            "cnn": history_coverage_payload("cnn"),
+            "aaii": history_coverage_payload("aaii"),
+            "cnn_components_note": _display_text(
+                coverage_source.get("cnn_components_note"),
+                "수집 시작 이후 현재값을 축적 중",
+            ),
         },
         "evidence": {
             "cnn_components": _sentiment_cnn_evidence_payload(component_rows, analysis),
