@@ -170,6 +170,28 @@ class SentimentAaiiWorkbookTests(unittest.TestCase):
         self.assertEqual({row["observation_date"] for row in rows}, {"2026-07-09"})
         self.assertEqual(len(rows), 4)
 
+    def test_workbook_frame_accepts_official_split_header_date_column(self) -> None:
+        from finance.data.sentiment import parse_aaii_sentiment_frame
+
+        frame = pd.DataFrame(
+            {
+                "Date": [pd.Timestamp("2026-07-16")],
+                "Bullish": [0.449074],
+                "Neutral": [0.222222],
+                "Bearish": [0.328704],
+            }
+        )
+
+        rows = parse_aaii_sentiment_frame(
+            frame,
+            collected_at="2026-07-20 09:00:00",
+            source_mode="xls",
+            source_ref="xls",
+        )
+
+        self.assertEqual(len(rows), 4)
+        self.assertEqual({row["observation_date"] for row in rows}, {"2026-07-16"})
+
     def test_daily_fetch_keeps_latest_26_complete_weeks(self) -> None:
         from finance.data import sentiment
 

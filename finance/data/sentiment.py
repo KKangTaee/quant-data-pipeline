@@ -257,10 +257,17 @@ def parse_aaii_sentiment_frame(
     source_ref: str,
 ) -> list[dict[str, Any]]:
     """Normalize complete official AAII weekly rows without inventing missing responses."""
-    required = ["Reported Date", "Bullish", "Neutral", "Bearish"]
-    if not set(required).issubset(frame.columns):
-        raise RuntimeError(f"AAII workbook is missing required columns: {required}")
-    normalized = frame[required].copy()
+    date_column = "Reported Date" if "Reported Date" in frame.columns else "Date"
+    response_columns = ["Bullish", "Neutral", "Bearish"]
+    if date_column not in frame.columns or not set(response_columns).issubset(frame.columns):
+        raise RuntimeError(
+            "AAII workbook is missing required columns: "
+            "Reported Date/Date, Bullish, Neutral, Bearish"
+        )
+    normalized = frame[[date_column, *response_columns]].copy().rename(
+        columns={date_column: "Reported Date"}
+    )
+    required = ["Reported Date", *response_columns]
     normalized["Reported Date"] = pd.to_datetime(
         normalized["Reported Date"],
         errors="coerce",
