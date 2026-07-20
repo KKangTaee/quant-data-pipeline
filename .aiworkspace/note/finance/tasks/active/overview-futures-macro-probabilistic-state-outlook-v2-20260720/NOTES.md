@@ -35,3 +35,5 @@
 - Do not change the Economic Cycle publication model.
 - Do not show a hybrid adjustment just because macro data is available.
 - Do not tune thresholds after reading the final actual outcome without recording a new candidate trial/version.
+- Canonical observed trail defaults to 30 completed sessions while the separate regime ribbon retains up to 60 sessions.
+- V1 compatibility helpers now derive coordinate paths and terminal regimes from same-state transitions; forward cumulative return z is no longer the visible terminal-state target.

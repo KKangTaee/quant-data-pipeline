@@ -1,6 +1,6 @@
 # Overview Futures Macro Probabilistic State Outlook V2 Status
 
-Status: Implementation in progress — 1차 Task 1 complete
+Status: Implementation in progress — 1차 complete
 Last Updated: 2026-07-20
 
 ## Current Progress
@@ -13,10 +13,11 @@ Last Updated: 2026-07-20
 - Written `PLAN.md` and `DESIGN.md` were explicitly approved by the user.
 - Detailed TDD tasks, exact file ownership, validation gates, and commit checkpoints are recorded in `IMPLEMENTATION_PLAN.md`.
 - Task 1 completed-session resolver is implemented with canonical duplicate collapse and pending-session evidence.
+- Task 2 canonical state builder and same-state 5D/20D target are implemented.
 
 ## Roadmap State
 
-- 1차 Data / Target Contract: in progress (Task 1 complete, Task 2 pending)
+- 1차 Data / Target Contract: complete
 - 2차 Momentum Baseline / Macro Hybrid Validation: not started
 - 3차 Observed Trail / Probabilistic Outlook UI / QA: not started
 - Design gate: approved 2026-07-20
@@ -24,5 +25,5 @@ Last Updated: 2026-07-20
 
 ## Next Action
 
-Begin Task 2 canonical state and same-state 5D/20D target TDD work.
+Begin 2차 Task 3 PIT macro and official event context TDD work.
 No production DB data has been changed.

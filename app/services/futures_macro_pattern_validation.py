@@ -15,6 +15,7 @@ from app.services.futures_macro_pattern import (
     _pattern_close_matrix,
     build_current_pattern_snapshot,
     build_pattern_feature_frame,
+    build_pattern_state_frame,
 )
 from app.services.futures_macro_sessions import (
     FUTURES_DAILY_SESSION_VERSION,
@@ -66,6 +67,66 @@ PATTERN_OUTLOOK_LIMITATIONS = (
     "표본이 겹치지 않도록 거래일 간격을 두므로 원시 날짜 수보다 유효 표본이 적습니다.",
 )
 _PATTERN_OUTLOOK_CACHE: dict[tuple[Any, ...], tuple[float, dict[str, Any]]] = {}
+
+
+def build_same_state_target_frame(
+    feature_frame: pd.DataFrame,
+    *,
+    horizons: Sequence[int] = OUTLOOK_HORIZONS,
+) -> pd.DataFrame:
+    """Pair every origin with the canonical state observed h sessions later."""
+
+    family_columns = [
+        f"terminal_{family}__5d_z"
+        for family in PATTERN_FAMILY_KEYS
+    ]
+    columns = [
+        "origin_date",
+        "terminal_date",
+        "horizon",
+        "origin_x",
+        "origin_y",
+        "terminal_x",
+        "terminal_y",
+        "delta_x",
+        "delta_y",
+        "terminal_regime",
+        "terminal_transition",
+        *family_columns,
+    ]
+    states = build_pattern_state_frame(feature_frame)
+    if states.empty:
+        return pd.DataFrame(columns=columns)
+    rows: list[dict[str, Any]] = []
+    for horizon_value in horizons:
+        horizon = max(1, int(horizon_value))
+        for position in range(0, max(0, len(states) - horizon)):
+            origin = states.iloc[position]
+            terminal = states.iloc[position + horizon]
+            record: dict[str, Any] = {
+                "origin_date": pd.Timestamp(states.index[position]),
+                "terminal_date": pd.Timestamp(states.index[position + horizon]),
+                "horizon": horizon,
+                "origin_x": float(origin["x"]),
+                "origin_y": float(origin["y"]),
+                "terminal_x": float(terminal["x"]),
+                "terminal_y": float(terminal["y"]),
+                "delta_x": float(terminal["x"] - origin["x"]),
+                "delta_y": float(terminal["y"] - origin["y"]),
+                "terminal_regime": str(terminal["regime"]),
+                "terminal_transition": str(terminal["transition"]),
+            }
+            for family in PATTERN_FAMILY_KEYS:
+                value = terminal.get(f"{family}__5d_z")
+                record[f"terminal_{family}__5d_z"] = (
+                    float(value) if pd.notna(value) else None
+                )
+            rows.append(record)
+    return (
+        pd.DataFrame(rows, columns=columns)
+        .sort_values(["origin_date", "horizon"])
+        .reset_index(drop=True)
+    )
 
 
 def _family_forward_values(
@@ -202,51 +263,26 @@ def build_forward_coordinate_frame(
     *,
     selected_symbols: Sequence[str],
 ) -> pd.DataFrame:
-    """Build point-in-time two-dimensional paths for every completed origin."""
+    """Build actual same-state displacement paths for every completed origin."""
 
+    del candles, selected_symbols
     columns = ["as_of_date", "horizon", "step", "delta_x", "delta_y"]
-    close = _pattern_close_matrix(candles, selected_symbols)
-    if close.empty or feature_frame.empty:
+    states = build_pattern_state_frame(feature_frame)
+    if states.empty:
         return pd.DataFrame(columns=columns)
-    returns = close.pct_change(fill_method=None)
-    volatility = returns.rolling(60, min_periods=60).std(ddof=0)
-    definitions = {
-        SCORE_TO_FAMILY_KEY[definition.name]: definition
-        for definition in SCORE_DEFINITIONS
-    }
-    origins = feature_frame.index.intersection(close.index)
     rows: list[dict[str, Any]] = []
     for horizon in OUTLOOK_HORIZONS:
-        frames = {
-            family: _forward_family_step_frame(
-                close=close,
-                as_of_volatility=volatility,
-                horizon=horizon,
-                definition=definition,
-            )
-            for family, definition in definitions.items()
-        }
-        for origin in origins:
+        for position in range(0, max(0, len(states) - horizon)):
+            origin = states.iloc[position]
             for step in range(1, horizon + 1):
-                pressure = pd.Series(
-                    [
-                        frames[family].at[origin, step]
-                        for family in (
-                            "rate_pressure",
-                            "dollar_pressure",
-                            "inflation_pressure",
-                        )
-                    ],
-                    dtype=float,
-                ).dropna()
-                risk_on = frames["risk_on"].at[origin, step]
+                terminal = states.iloc[position + step]
                 rows.append(
                     {
-                        "as_of_date": pd.Timestamp(origin),
+                        "as_of_date": pd.Timestamp(states.index[position]),
                         "horizon": horizon,
                         "step": step,
-                        "delta_x": float(risk_on) if pd.notna(risk_on) else None,
-                        "delta_y": float(pressure.mean()) if not pressure.empty else None,
+                        "delta_x": float(terminal["x"] - origin["x"]),
+                        "delta_y": float(terminal["y"] - origin["y"]),
                     }
                 )
     return (
@@ -280,46 +316,58 @@ def build_forward_outcome_frame(
     *,
     selected_symbols: Sequence[str],
 ) -> pd.DataFrame:
-    """Attach forward regimes using only volatility known on each feature date."""
+    """Attach terminal regimes and family moves from the same state function."""
 
-    close = _pattern_close_matrix(candles, selected_symbols)
-    if close.empty or feature_frame.empty:
-        return pd.DataFrame(columns=["as_of_date", "horizon", "outcome_regime"])
-    returns = close.pct_change(fill_method=None)
-    as_of_vol = returns.rolling(60, min_periods=60).std(ddof=0)
-    path_statistics = {
-        (horizon, SCORE_TO_FAMILY_KEY[definition.name]): _forward_path_stat_frame(
-            close=close,
-            as_of_volatility=as_of_vol,
-            horizon=horizon,
-            definition=definition,
+    del candles, selected_symbols
+    states = build_pattern_state_frame(feature_frame)
+    targets = build_same_state_target_frame(feature_frame)
+    if states.empty or targets.empty:
+        return pd.DataFrame(
+            columns=["as_of_date", "terminal_date", "horizon", "outcome_regime"]
         )
-        for horizon in OUTLOOK_HORIZONS
-        for definition in SCORE_DEFINITIONS
-    }
+    positions = {pd.Timestamp(value): index for index, value in enumerate(states.index)}
     rows: list[dict[str, Any]] = []
-    for horizon in OUTLOOK_HORIZONS:
-        forward = close.shift(-horizon).divide(close).sub(1.0)
-        scaled = forward.divide(as_of_vol.mul(horizon**0.5).replace(0, pd.NA))
-        for as_of_date in feature_frame.index.intersection(scaled.index):
-            scaled_returns = scaled.loc[as_of_date]
-            record = _forward_family_record(
-                as_of_date=pd.Timestamp(as_of_date),
-                horizon=horizon,
-                scaled_symbol_returns=scaled_returns,
-            )
-            if record is None:
+    for _, target in targets.iterrows():
+        origin_date = pd.Timestamp(target["origin_date"])
+        position = positions[origin_date]
+        horizon = int(target["horizon"])
+        record: dict[str, Any] = {
+            "as_of_date": origin_date,
+            "terminal_date": pd.Timestamp(target["terminal_date"]),
+            "horizon": horizon,
+            "outcome_regime": str(target["terminal_regime"]),
+            "terminal_x": float(target["terminal_x"]),
+            "terminal_y": float(target["terminal_y"]),
+            "delta_x": float(target["delta_x"]),
+            "delta_y": float(target["delta_y"]),
+        }
+        for family in PATTERN_FAMILY_KEYS:
+            column = f"{family}__5d_z"
+            origin_value = states.iloc[position].get(column)
+            terminal_value = states.iloc[position + horizon].get(column)
+            if pd.isna(origin_value) or pd.isna(terminal_value):
+                record[f"{family}__forward_z"] = None
+                record[f"{family}__median_path_z"] = None
+                record[f"{family}__path_iqr_z"] = None
+                record[f"{family}__max_adverse_z"] = None
                 continue
-            record["outcome_regime"] = _classify_forward_regime(pd.Series(record))
-            for definition in SCORE_DEFINITIONS:
-                family = SCORE_TO_FAMILY_KEY[definition.name]
-                statistics = path_statistics[(horizon, family)].loc[as_of_date]
-                record[f"{family}__median_path_z"] = statistics["median_path_z"]
-                record[f"{family}__path_iqr_z"] = statistics["path_iqr_z"]
-                record[f"{family}__max_adverse_z"] = statistics["max_adverse_z"]
-            rows.append(record)
-    if not rows:
-        return pd.DataFrame(columns=["as_of_date", "horizon", "outcome_regime"])
+            path = pd.to_numeric(
+                states.iloc[position + 1 : position + horizon + 1][column],
+                errors="coerce",
+            ).sub(float(origin_value)).dropna()
+            record[f"{family}__forward_z"] = float(terminal_value - origin_value)
+            record[f"{family}__median_path_z"] = (
+                float(path.median()) if not path.empty else None
+            )
+            record[f"{family}__path_iqr_z"] = (
+                float(path.quantile(0.75) - path.quantile(0.25))
+                if not path.empty
+                else None
+            )
+            record[f"{family}__max_adverse_z"] = (
+                float(min(0.0, path.min())) if not path.empty else None
+            )
+        rows.append(record)
     return pd.DataFrame(rows).sort_values(["as_of_date", "horizon"]).reset_index(drop=True)
 
 

@@ -13,6 +13,9 @@ from app.services.futures_macro_thermometer import (
 
 
 PATTERN_WINDOWS: tuple[int, ...] = (1, 5, 20)
+PATTERN_STATE_SCHEMA_VERSION = "futures_macro_state_v2"
+OBSERVED_TRAIL_SESSIONS = 30
+PATTERN_RIBBON_SESSIONS = 60
 PATTERN_FAMILY_KEYS: tuple[str, ...] = (
     "risk_on",
     "growth",
@@ -381,32 +384,72 @@ def _index_date(value: Any) -> str:
     return pd.Timestamp(value).date().isoformat()
 
 
+def state_from_feature_row(
+    state_date: object,
+    row: pd.Series,
+) -> dict[str, Any]:
+    """Build the canonical coordinate, regime, and transition for one session."""
+
+    state = classify_pattern_state(row)
+    five = _family_values(row, "5d_z")
+    x = five.get("risk_on")
+    pressure_values = {
+        family: five[family]
+        for family in ("rate_pressure", "dollar_pressure", "inflation_pressure")
+        if family in five
+    }
+    y = _mean_available(
+        pressure_values,
+        ("rate_pressure", "dollar_pressure", "inflation_pressure"),
+    )
+    return {
+        "date": _index_date(state_date),
+        "x": float(x) if x is not None else 0.0,
+        "y": float(y) if y is not None else 0.0,
+        "regime": state["regime"],
+        "regime_label": REGIME_LABELS[state["regime"]],
+        "transition": state["transition"],
+        "transition_label": TRANSITION_LABELS[state["transition"]],
+    }
+
+
+def build_pattern_state_frame(feature_frame: pd.DataFrame) -> pd.DataFrame:
+    """Return one canonical state row per completed feature session."""
+
+    columns = [
+        "date",
+        "x",
+        "y",
+        "regime",
+        "regime_label",
+        "transition",
+        "transition_label",
+        *[f"{family}__5d_z" for family in PATTERN_FAMILY_KEYS],
+    ]
+    if feature_frame.empty:
+        return pd.DataFrame(columns=columns).rename_axis("Date")
+    records: list[dict[str, Any]] = []
+    dates: list[pd.Timestamp] = []
+    for current_date, row in feature_frame.sort_index().iterrows():
+        record = state_from_feature_row(current_date, row)
+        for family in PATTERN_FAMILY_KEYS:
+            record[f"{family}__5d_z"] = _number(row.get(f"{family}__5d_z"))
+        records.append(record)
+        dates.append(pd.Timestamp(current_date))
+    return pd.DataFrame(records, index=pd.DatetimeIndex(dates, name="Date"), columns=columns)
+
+
 def _pattern_path(feature_frame: pd.DataFrame) -> list[dict[str, Any]]:
-    path: list[dict[str, Any]] = []
-    for current_date, row in feature_frame.iterrows():
-        state = classify_pattern_state(row)
-        five = _family_values(row, "5d_z")
-        path.append(
-            {
-                "date": _index_date(current_date),
-                "x": five.get("risk_on", 0.0),
-                "y": _mean_available(
-                    five,
-                    ("rate_pressure", "dollar_pressure", "inflation_pressure"),
-                )
-                or 0.0,
-                "regime": state["regime"],
-                "regime_label": REGIME_LABELS[state["regime"]],
-                "transition": state["transition"],
-                "transition_label": TRANSITION_LABELS[state["transition"]],
-            }
-        )
-    return path
+    return [
+        state_from_feature_row(current_date, row)
+        for current_date, row in feature_frame.iterrows()
+    ]
 
 
 def _empty_pattern_snapshot(reason: str) -> dict[str, Any]:
     return {
         "schema_version": "futures_macro_pattern_v1",
+        "state_schema_version": PATTERN_STATE_SCHEMA_VERSION,
         "status": "UNAVAILABLE",
         "as_of_date": None,
         "regime": "mixed",
@@ -426,7 +469,8 @@ def _empty_pattern_snapshot(reason: str) -> dict[str, Any]:
 def build_current_pattern_snapshot(
     feature_frame: pd.DataFrame,
     *,
-    path_limit: int = 60,
+    path_limit: int = OBSERVED_TRAIL_SESSIONS,
+    ribbon_limit: int = PATTERN_RIBBON_SESSIONS,
 ) -> dict[str, Any]:
     """Summarize the latest regime, transition, path, and confirmation conditions."""
 
@@ -440,8 +484,10 @@ def build_current_pattern_snapshot(
         for family in PATTERN_FAMILY_KEYS
     }
     path = _pattern_path(ordered.tail(path_limit))
+    ribbon_path = _pattern_path(ordered.tail(ribbon_limit))
     return {
         "schema_version": "futures_macro_pattern_v1",
+        "state_schema_version": PATTERN_STATE_SCHEMA_VERSION,
         "status": _pattern_status(families),
         "as_of_date": _index_date(ordered.index[-1]),
         **state,
@@ -460,7 +506,7 @@ def build_current_pattern_snapshot(
                 "transition": item["transition"],
                 "transition_label": item["transition_label"],
             }
-            for item in path
+            for item in ribbon_path
         ],
         "coverage": {
             "available_family_count": sum(item["status"] == "READY" for item in families.values()),

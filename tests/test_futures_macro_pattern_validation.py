@@ -35,6 +35,94 @@ def _outlook_fixture(*, days: int) -> dict[str, object]:
 
 
 class FuturesMacroPatternOutcomeTests(unittest.TestCase):
+    def test_same_state_target_uses_the_canonical_future_session_state(self) -> None:
+        from app.services.futures_macro_pattern import (
+            build_pattern_state_frame,
+        )
+        from app.services.futures_macro_pattern_validation import (
+            build_same_state_target_frame,
+        )
+
+        _, features = _validation_fixture(days=180)
+        states = build_pattern_state_frame(features)
+        targets = build_same_state_target_frame(features)
+        origin = states.index[-26]
+        row = targets[
+            (targets["origin_date"] == origin) & (targets["horizon"] == 5)
+        ].iloc[0]
+        terminal = states.iloc[states.index.get_loc(origin) + 5]
+
+        self.assertEqual(row["terminal_date"], terminal.name)
+        self.assertAlmostEqual(row["terminal_x"], terminal["x"])
+        self.assertAlmostEqual(row["terminal_y"], terminal["y"])
+        self.assertAlmostEqual(row["delta_x"], row["terminal_x"] - row["origin_x"])
+        self.assertAlmostEqual(row["delta_y"], row["terminal_y"] - row["origin_y"])
+        self.assertEqual(row["terminal_regime"], terminal["regime"])
+
+    def test_same_state_target_is_stable_when_future_rows_are_appended(self) -> None:
+        from app.services.futures_macro_pattern_validation import (
+            build_same_state_target_frame,
+        )
+
+        _, before_features = _validation_fixture(days=160)
+        _, after_features = _validation_fixture(days=180)
+        before = build_same_state_target_frame(before_features)
+        after = build_same_state_target_frame(after_features)
+        key = before.iloc[-25][["origin_date", "horizon"]].tolist()
+        left = before[
+            (before["origin_date"] == key[0]) & (before["horizon"] == key[1])
+        ].reset_index(drop=True)
+        right = after[
+            (after["origin_date"] == key[0]) & (after["horizon"] == key[1])
+        ].reset_index(drop=True)
+
+        pd.testing.assert_frame_equal(left, right)
+
+    def test_coordinate_terminal_matches_same_state_target_delta(self) -> None:
+        from app.services.futures_macro_pattern_validation import (
+            build_forward_coordinate_frame,
+            build_same_state_target_frame,
+        )
+
+        candles, features = _validation_fixture(days=180)
+        targets = build_same_state_target_frame(features)
+        coordinates = build_forward_coordinate_frame(
+            candles,
+            features,
+            selected_symbols=SYMBOLS,
+        )
+        target = targets[targets["horizon"] == 20].iloc[-1]
+        terminal = coordinates[
+            (coordinates["as_of_date"] == target["origin_date"])
+            & (coordinates["horizon"] == 20)
+            & (coordinates["step"] == 20)
+        ].iloc[0]
+
+        self.assertAlmostEqual(terminal["delta_x"], target["delta_x"])
+        self.assertAlmostEqual(terminal["delta_y"], target["delta_y"])
+
+    def test_outcome_regime_is_the_same_state_terminal_regime(self) -> None:
+        from app.services.futures_macro_pattern_validation import (
+            build_forward_outcome_frame,
+            build_same_state_target_frame,
+        )
+
+        candles, features = _validation_fixture(days=180)
+        targets = build_same_state_target_frame(features)
+        outcomes = build_forward_outcome_frame(
+            candles,
+            features,
+            selected_symbols=SYMBOLS,
+        )
+        target = targets[targets["horizon"] == 5].iloc[-1]
+        outcome = outcomes[
+            (outcomes["as_of_date"] == target["origin_date"])
+            & (outcomes["horizon"] == 5)
+        ].iloc[0]
+
+        self.assertEqual(outcome["outcome_regime"], target["terminal_regime"])
+        self.assertEqual(outcome["terminal_date"], target["terminal_date"])
+
     def test_conditional_path_uses_step_medians_and_middle_fifty_percent(self) -> None:
         import app.services.futures_macro_pattern_validation as service
 

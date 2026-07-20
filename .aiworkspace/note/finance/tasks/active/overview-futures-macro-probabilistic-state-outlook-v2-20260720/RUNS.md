@@ -64,3 +64,12 @@ No code, DB row, registry, or saved setup was modified by this analysis.
 - Regression: 28 tests in `tests.test_futures_macro_sessions` and `tests.test_futures_macro_pattern_validation` passed.
 - `git diff --check`: pass.
 - Current state now excludes in-progress canonical sessions and reports pending-session evidence.
+
+## 2026-07-20 — Task 2 Canonical State And Same-State Target
+
+- RED: canonical state/target imports were missing; old terminal delta differed from the same-state target.
+- GREEN: observed path, terminal regime, and terminal displacement now reuse `S(t)`.
+- Regression: 52 Futures Macro pattern/session/snapshot tests passed.
+- Actual DB replay at 2026-07-20 12:00 UTC kept current at 2026-07-17 and marked 2026-07-20 pending.
+- Actual DB replay after the 18:15 ET cutoff moved current to 2026-07-20; common states through 2026-07-17 had maximum x/y difference `0.0`.
+- No production DB row was written.

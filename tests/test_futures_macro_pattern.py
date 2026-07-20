@@ -146,6 +146,37 @@ class FuturesMacroPatternFeatureTests(unittest.TestCase):
 
 
 class FuturesMacroCurrentPatternTests(unittest.TestCase):
+    def test_current_path_reuses_the_canonical_state_function(self) -> None:
+        from app.services.futures_macro_pattern import (
+            build_current_pattern_snapshot,
+            state_from_feature_row,
+        )
+
+        frame = _feature_frame(
+            risk_on=(-0.4, -0.7, -0.2),
+            rate_pressure=(0.3, 0.5, 0.6),
+        )
+        snapshot = build_current_pattern_snapshot(frame)
+        direct = state_from_feature_row(frame.index[-1], frame.iloc[-1])
+
+        self.assertEqual(snapshot["path"][-1], direct)
+        self.assertEqual(snapshot["state_schema_version"], "futures_macro_state_v2")
+
+    def test_current_pattern_defaults_to_thirty_observed_sessions(self) -> None:
+        from app.services.futures_macro_pattern import (
+            build_current_pattern_snapshot,
+            build_pattern_feature_frame,
+        )
+
+        features = build_pattern_feature_frame(
+            _pattern_candles(days=120),
+            selected_symbols=SYMBOLS,
+        )
+        snapshot = build_current_pattern_snapshot(features)
+
+        self.assertEqual(len(snapshot["path"]), 30)
+        self.assertEqual(len(snapshot["ribbon"]), min(60, len(features)))
+
     def test_current_pattern_labels_persistent_defensive_regime(self) -> None:
         from app.services.futures_macro_pattern import build_current_pattern_snapshot
 
