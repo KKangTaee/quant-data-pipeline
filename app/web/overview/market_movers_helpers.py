@@ -34,6 +34,7 @@ from app.services.overview.market_interest import (
     fetch_yfinance_analyst_interest_metadata,
 )
 from app.services.overview.why_it_moved import (
+    build_market_mover_metadata_not_requested_state,
     build_market_mover_metadata_status_strip,
     build_market_mover_research_snapshot,
     build_market_mover_why_it_moved_read_model,
@@ -922,6 +923,41 @@ def _invalidate_market_movers_breadth_session_cache(*, coverage: str | None = No
         st.session_state.pop(key, None)
 
 
+def _market_movers_decision_evidence_session_key(*, coverage: str, symbol: str) -> str:
+    return "__".join(
+        [
+            "overview_market_movers_decision_evidence",
+            str(coverage or "unknown").strip().lower(),
+            str(symbol or "unknown").strip().lower(),
+        ]
+    )
+
+
+def _market_movers_decision_event_evidence(
+    *,
+    coverage: str,
+    symbol: str,
+    research: dict[str, Any] | None,
+) -> dict[str, Any]:
+    metadata = st.session_state.get(
+        _market_movers_decision_evidence_session_key(coverage=coverage, symbol=symbol)
+    )
+    if not isinstance(metadata, dict):
+        metadata = build_market_mover_metadata_not_requested_state(symbol)
+    filing_evidence = dict(dict(research or {}).get("filing_evidence") or {})
+    return {
+        "status": str(metadata.get("status") or "NOT_REQUESTED"),
+        "fetched_at_utc": metadata.get("fetched_at_utc"),
+        "messages": [str(item) for item in list(metadata.get("messages") or [])],
+        "db_filings": list(filing_evidence.get("rows") or []),
+        "db_filing_status": str(filing_evidence.get("status") or "EMPTY"),
+        "db_filing_source": filing_evidence.get("source"),
+        "news": _market_movers_react_table_records(metadata.get("news")),
+        "korean_news": _market_movers_react_table_records(metadata.get("korean_news")),
+        "sec_filings": _market_movers_react_table_records(metadata.get("sec_filings")),
+    }
+
+
 def build_market_movers_decision_react_payload(
     snapshot: dict[str, Any],
     *,
@@ -968,8 +1004,15 @@ def build_market_movers_decision_react_payload(
         ),
         rows[0] if rows else None,
     )
-    selected_research = load_research(mover=selected_row) if selected_row else None
     selected = str((selected_row or {}).get("Symbol") or "").strip().upper() or None
+    selected_research = load_research(mover=selected_row) if selected_row else None
+    if selected and isinstance(selected_research, dict):
+        selected_research = dict(selected_research)
+        selected_research["event_evidence"] = _market_movers_decision_event_evidence(
+            coverage=controls.coverage,
+            symbol=selected,
+            research=selected_research,
+        )
     decision_payload = build_market_movers_decision_payload(
         market_snapshot=snapshot,
         sector_snapshots=group_snapshots["sector"],
@@ -1084,6 +1127,8 @@ def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverCont
         return {"handler": "set_market_movers_selected_symbol"}
     if action_id == "request_breadth":
         return {"handler": "set_market_movers_breadth_selection"}
+    if action_id in {"fetch_news_evidence", "fetch_sec_evidence"}:
+        return {"handler": action_id}
     return {"handler": "noop", "action_id": action_id}
 
 
@@ -1174,6 +1219,29 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
 
     universe_code = str(plan.get("universe_code") or controls.coverage)
     universe_label = MARKET_COVERAGE_LABELS.get(universe_code, universe_code)
+    if handler in {"fetch_news_evidence", "fetch_sec_evidence"}:
+        payload = _market_movers_react_event_payload(event)
+        symbol = str(payload.get("symbol") or "").strip().upper()
+        if not symbol:
+            return False
+        metadata_key = _market_movers_decision_evidence_session_key(
+            coverage=controls.coverage,
+            symbol=symbol,
+        )
+        existing = st.session_state.get(metadata_key)
+        if handler == "fetch_news_evidence":
+            update = fetch_market_mover_news_metadata(
+                symbol,
+                name=str(payload.get("name") or "").strip() or None,
+                max_news=5,
+                max_korean_news=5,
+            )
+        else:
+            update = fetch_market_mover_sec_metadata(symbol, max_filings=5)
+        st.session_state[metadata_key] = _merge_market_mover_metadata_for_investigation(existing, update)
+        st.rerun()
+        return True
+
     if handler == "set_market_movers_selected_symbol":
         payload = _market_movers_react_event_payload(event)
         symbol = str(payload.get("symbol") or payload.get("value") or "").strip().upper()
@@ -1252,6 +1320,7 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
             detail="S&P 500 구성 종목 목록을 갱신합니다.",
             run_job=run_overview_sp500_universe,
         )
+        _invalidate_market_movers_breadth_session_cache(coverage=universe_code)
         st.rerun()
         return True
 
@@ -1262,6 +1331,7 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
             detail="Nasdaq Symbol Directory current snapshot을 lifecycle evidence table에 저장합니다.",
             run_job=run_overview_nasdaq_symbol_directory,
         )
+        _invalidate_market_movers_breadth_session_cache(coverage=universe_code)
         st.rerun()
         return True
 
@@ -1276,6 +1346,7 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
                 universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
             ),
         )
+        _invalidate_market_movers_breadth_session_cache(coverage=universe_code)
         st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
         return True
@@ -1292,6 +1363,7 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
                 candidates=candidates,
             ),
         )
+        _invalidate_market_movers_breadth_session_cache(coverage=universe_code)
         st.rerun()
         return True
 

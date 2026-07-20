@@ -474,6 +474,62 @@ def test_decision_research_adds_price_hover_financial_chart_modes_and_resize_syn
     assert ".mm-decision__chart-mode" in style
 
 
+def test_decision_research_renders_db_filings_and_explicit_news_actions() -> None:
+    from pathlib import Path
+
+    source = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert "event_evidence" in source
+    assert "저장 공시 근거" in source
+    assert "뉴스 근거 조회" in source
+    assert 'id: "fetch_news_evidence"' in source
+    assert 'id: "fetch_sec_evidence"' in source
+
+
+def test_decision_shell_news_evidence_action_is_selected_symbol_scoped(monkeypatch) -> None:
+    import pandas as pd
+
+    from app.web.overview import market_movers_helpers as helpers
+
+    controls = helpers.MarketMoverControls(
+        coverage="SP500",
+        universe_limit=500,
+        period="daily",
+        sector="All",
+        top_n=20,
+        mode="top_gainers",
+    )
+    monkeypatch.setattr(helpers.st, "session_state", {})
+    monkeypatch.setattr(helpers.st, "rerun", lambda: None)
+    monkeypatch.setattr(
+        helpers,
+        "fetch_market_mover_news_metadata",
+        lambda symbol, **_: {
+            "status": "OK",
+            "symbol": symbol,
+            "news": pd.DataFrame([{"Title": "AAA update", "Source": "Example", "Published At": "2026-07-20", "URL": "https://example.com/a"}]),
+            "korean_news": pd.DataFrame(),
+            "sec_filings": pd.DataFrame(),
+            "messages": [],
+        },
+    )
+    event = {
+        "event": {
+            "id": "fetch_news_evidence",
+            "symbol": "AAA",
+            "name": "AAA Corp",
+            "nonce": 303,
+        }
+    }
+
+    assert helpers._dispatch_market_movers_react_event(event, controls=controls) is True
+    key = helpers._market_movers_decision_evidence_session_key(coverage="SP500", symbol="AAA")
+    assert helpers.st.session_state[key]["symbol"] == "AAA"
+    assert len(helpers.st.session_state[key]["news"]) == 1
+
+
 def test_decision_research_uses_report_family_tabs_and_responsive_focus_contract() -> None:
     from pathlib import Path
 

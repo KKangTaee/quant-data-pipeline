@@ -30,10 +30,10 @@
 
 ## Task 4 — News and SEC evidence
 
-- [ ] selected evidence payload/action tests를 RED로 추가한다.
-- [ ] DB filing ledger를 compact SEC evidence로 변환한다.
-- [ ] existing manual news metadata session/action을 one-shell에 연결한다.
-- [ ] empty/loading/source boundary를 UI에 표시한다.
+- [x] selected evidence payload/action tests를 RED로 추가한다.
+- [x] DB filing ledger를 compact SEC evidence로 변환한다.
+- [x] existing manual news metadata session/action을 one-shell에 연결한다.
+- [x] empty/loading/source boundary를 UI에 표시한다.
 
 ## Task 5 — Verification, Browser QA, docs, review
 

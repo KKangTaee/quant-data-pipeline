@@ -238,3 +238,49 @@ def test_research_snapshot_keeps_up_to_ten_years_of_financial_history() -> None:
     assert len(model["financial_trends"]["quarterly"]) == 40
     assert len(model["financial_factor_series"]["annual"]["factors"]["revenue"]["points"]) == 10
     assert len(model["financial_factor_series"]["quarterly"]["factors"]["revenue"]["points"]) == 40
+
+
+def test_research_snapshot_exposes_compact_db_filing_evidence() -> None:
+    from app.services.overview.why_it_moved import build_market_mover_research_snapshot
+
+    filings = pd.DataFrame(
+        [
+            {
+                "symbol": "AAA",
+                "accession_no": f"000-aaa-{index}",
+                "form_type": form_type,
+                "filing_date": filing_date,
+                "accepted_at": f"{filing_date} 12:00:00",
+                "available_at": f"{filing_date} 12:00:00",
+                "report_date": report_date,
+            }
+            for index, (form_type, filing_date, report_date) in enumerate(
+                [
+                    ("10-Q", "2026-05-01", "2026-03-31"),
+                    ("10-K", "2026-02-20", "2025-12-31"),
+                    ("10-Q", "2025-11-01", "2025-09-30"),
+                ]
+            )
+        ]
+    )
+
+    model = build_market_mover_research_snapshot(
+        mover={"Symbol": "AAA", "Market Cap": 5_500_000_000},
+        as_of_date="2026-06-30",
+        price_history_loader=lambda **_: pd.DataFrame(
+            [
+                {"date": "2026-01-02", "adj_close": 100.0},
+                {"date": "2026-06-30", "adj_close": 120.0},
+            ]
+        ),
+        statement_fundamentals_loader=lambda **_: pd.DataFrame(),
+        fundamental_snapshot_loader=lambda **_: pd.DataFrame(),
+        statement_filings_loader=lambda **_: filings,
+        quarterly_eps_loader=lambda **_: {"series": {"timeline": []}},
+    )
+
+    evidence = model["filing_evidence"]
+    assert evidence["source"] == "finance_fundamental.nyse_financial_statement_filings"
+    assert [row["form_type"] for row in evidence["rows"]] == ["10-Q", "10-K", "10-Q"]
+    assert evidence["rows"][0]["report_date"] == "2026-03-31"
+    assert evidence["rows"][0]["url"].startswith("https://www.sec.gov/edgar/browse/")

@@ -16,3 +16,7 @@
 - Task 3 RED: 10년 financial history와 hover/chart-mode/resize source contract `2 failed` 확인.
 - Task 3 GREEN: research + decision UI tests `21 passed`.
 - Task 3 Vite production build `170 modules transformed`.
+- Task 4 RED: DB filing evidence, explicit news/SEC action, selected-symbol session 테스트 `3 failed` 확인.
+- Task 4 GREEN: focused tests `3 passed`; research + decision UI tests `24 passed`.
+- Task 4 Vite production build `170 modules transformed`.
+- DB filing ledger는 한 번만 조회해 collection status와 compact evidence가 함께 재사용하도록 구성.

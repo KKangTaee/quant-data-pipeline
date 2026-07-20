@@ -1033,6 +1033,78 @@ def _build_financial_statement_collection_status(
     }
 
 
+def _build_statement_filing_evidence(
+    *,
+    symbol: str,
+    as_of_date: str,
+    statement_filings_loader: Callable[..., pd.DataFrame],
+    max_items: int = 5,
+) -> dict[str, Any]:
+    """Expose a compact, point-in-time-safe filing ledger for research evidence."""
+
+    source = "finance_fundamental.nyse_financial_statement_filings"
+    try:
+        filings = statement_filings_loader(
+            symbols=symbol,
+            forms=["10-K", "10-K/A", "10-Q", "10-Q/A"],
+            end=as_of_date,
+        )
+    except Exception as exc:
+        return {
+            "status": "ERROR",
+            "source": source,
+            "rows": [],
+            "message": f"저장 공시 ledger 조회 실패: {exc}",
+        }
+
+    if not isinstance(filings, pd.DataFrame) or filings.empty:
+        return {
+            "status": "EMPTY",
+            "source": source,
+            "rows": [],
+            "message": "기준일 이전에 저장된 10-K / 10-Q 공시가 없습니다.",
+        }
+
+    work = filings.copy()
+    for column in ("report_date", "filing_date", "accepted_at", "available_at"):
+        if column in work.columns:
+            work[column] = pd.to_datetime(work[column], errors="coerce")
+    as_of_eod = pd.Timestamp(as_of_date).normalize() + pd.Timedelta(days=1)
+    if "available_at" in work.columns:
+        available_before_cutoff = work["available_at"].notna() & (work["available_at"] < as_of_eod)
+        if "filing_date" in work.columns:
+            filing_before_cutoff = work["available_at"].isna() & (
+                work["filing_date"].isna() | (work["filing_date"] < as_of_eod)
+            )
+            work = work[available_before_cutoff | filing_before_cutoff].copy()
+        else:
+            work = work[available_before_cutoff | work["available_at"].isna()].copy()
+    elif "filing_date" in work.columns:
+        work = work[work["filing_date"].isna() | (work["filing_date"] < as_of_eod)].copy()
+    sort_columns = [
+        column
+        for column in ("available_at", "filing_date", "report_date", "accession_no")
+        if column in work.columns
+    ]
+    if sort_columns:
+        work = work.sort_values(sort_columns, ascending=False, na_position="last")
+
+    browse_url = (
+        "https://www.sec.gov/edgar/browse/"
+        f"?CIK={quote_plus(symbol)}&owner=exclude&action=getcompany"
+    )
+    rows: list[dict[str, Any]] = []
+    for raw in work.head(max(1, int(max_items))).to_dict(orient="records"):
+        filing = _statement_filing_payload(raw) or {}
+        rows.append({**filing, "url": browse_url})
+    return {
+        "status": "OK" if rows else "EMPTY",
+        "source": source,
+        "rows": rows,
+        "message": None if rows else "기준일 이전에 저장된 10-K / 10-Q 공시가 없습니다.",
+    }
+
+
 def build_market_mover_research_snapshot(
     *,
     mover: dict[str, Any],
@@ -1076,6 +1148,12 @@ def build_market_mover_research_snapshot(
                 "tone": "neutral",
                 "items": [],
                 "missing_filings": [],
+            },
+            "filing_evidence": {
+                "status": "EMPTY",
+                "source": "finance_fundamental.nyse_financial_statement_filings",
+                "rows": [],
+                "message": "선택 symbol이 없습니다.",
             },
             "boundary_note": "Context-only fundamentals snapshot; no trading signal or recommendation is produced.",
         }
@@ -1157,12 +1235,33 @@ def build_market_mover_research_snapshot(
         latest_price=latest_price,
         latest_price_date=_iso_date_label(ytd_return.get("end_date")),
     )
+    filing_ledger_loaded = False
+    filing_ledger: pd.DataFrame | None = None
+    filing_ledger_error: Exception | None = None
+
+    def cached_filings_loader(**kwargs: Any) -> pd.DataFrame:
+        nonlocal filing_ledger_loaded, filing_ledger, filing_ledger_error
+        if not filing_ledger_loaded:
+            filing_ledger_loaded = True
+            try:
+                filing_ledger = filings_loader(**kwargs)
+            except Exception as exc:
+                filing_ledger_error = exc
+        if filing_ledger_error is not None:
+            raise filing_ledger_error
+        return filing_ledger if isinstance(filing_ledger, pd.DataFrame) else pd.DataFrame()
+
     collection_status = _build_financial_statement_collection_status(
         symbol=symbol,
         as_of_date=effective_as_of,
         annual_financials=annual_financials,
         quarterly_financials=quarterly_financials,
-        statement_filings_loader=filings_loader,
+        statement_filings_loader=cached_filings_loader,
+    )
+    filing_evidence = _build_statement_filing_evidence(
+        symbol=symbol,
+        as_of_date=effective_as_of,
+        statement_filings_loader=cached_filings_loader,
     )
     return {
         "schema_version": "market_mover_research_snapshot_v2",
@@ -1181,6 +1280,7 @@ def build_market_mover_research_snapshot(
         },
         "current_valuation": current_valuation,
         "financial_statement_collection": collection_status,
+        "filing_evidence": filing_evidence,
         "boundary_note": "Context-only fundamentals snapshot; no trading signal or recommendation is produced.",
     }
 

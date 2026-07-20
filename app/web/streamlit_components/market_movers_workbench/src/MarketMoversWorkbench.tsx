@@ -1089,11 +1089,19 @@ function FinancialFactorChart({ research, controls }: FinancialFactorChartProps)
 type StockResearchTabsProps = {
   payload: MarketMoversDecisionWorkbenchPayload;
   activeSymbol: string;
+  onEvent: (event: Record<string, unknown>) => void;
 };
 
-function StockResearchTabs({ payload, activeSymbol }: StockResearchTabsProps) {
+function StockResearchTabs({ payload, activeSymbol, onEvent }: StockResearchTabsProps) {
   const [tab, setTab] = useState<"price" | "financial" | "events">("price");
   const research = payload.selection.symbol === activeSymbol ? payload.selection.research : null;
+  const eventEvidence = ((research?.event_evidence || {}) as Record<string, unknown>);
+  const dbFilings = Array.isArray(eventEvidence.db_filings) ? eventEvidence.db_filings as DecisionRow[] : [];
+  const newsEvidence = [
+    ...(Array.isArray(eventEvidence.news) ? eventEvidence.news as DecisionRow[] : []),
+    ...(Array.isArray(eventEvidence.korean_news) ? eventEvidence.korean_news as DecisionRow[] : []),
+  ];
+  const secEvidence = Array.isArray(eventEvidence.sec_filings) ? eventEvidence.sec_filings as DecisionRow[] : [];
   const researchTabs = [
     ["price", "가격·모멘텀"],
     ["financial", "재무"],
@@ -1149,11 +1157,53 @@ function StockResearchTabs({ payload, activeSymbol }: StockResearchTabsProps) {
       <div aria-labelledby="mm-decision-tab-events" hidden={tab !== "events"} id="mm-decision-panel-events" role="tabpanel">
         {research ? (
           <div className="mm-decision__events-panel">
-            <strong>뉴스·공시 근거</strong>
-            <p>현재 저장된 재무제표 반영 상태와 선택 종목의 뉴스·SEC 조사 action을 같은 symbol에 연결합니다.</p>
+            <div className="mm-decision__events-head">
+              <div>
+                <strong>뉴스·공시 근거</strong>
+                <p>DB에 저장된 공시는 즉시 표시하고, 외부 뉴스와 최신 SEC 메타데이터는 요청할 때만 조회합니다.</p>
+              </div>
+              <div className="mm-decision__evidence-actions">
+                <button onClick={() => onEvent({ id: "fetch_news_evidence", symbol: activeSymbol, name: textValue(payload.selection.row, "Name", "name") })} type="button">뉴스 근거 조회</button>
+                <button onClick={() => onEvent({ id: "fetch_sec_evidence", symbol: activeSymbol })} type="button">SEC 최신 조회</button>
+              </div>
+            </div>
             <div className="mm-decision__events-status">
-              <span><small>재무제표 상태</small><strong>{String(((research.financial_statement_collection || {}) as Record<string, unknown>).status || "UNKNOWN")}</strong></span>
+              <span><small>저장 재무제표</small><strong>{String(((research.financial_statement_collection || {}) as Record<string, unknown>).status || "UNKNOWN")}</strong></span>
+              <span><small>외부 근거</small><strong>{String(eventEvidence.status || "NOT_REQUESTED")}</strong></span>
               <span><small>기준일</small><strong>{String(research.as_of_date || "-")}</strong></span>
+              <span><small>조회 시각</small><strong>{String(eventEvidence.fetched_at_utc || "세션 미조회")}</strong></span>
+            </div>
+            <div className="mm-decision__evidence-section">
+              <div className="mm-decision__evidence-title"><strong>저장 공시 근거</strong><small>DB · 최대 5건</small></div>
+              {dbFilings.length ? dbFilings.map((row, index) => (
+                <a className="mm-decision__evidence-card" href={textValue(row, "url", "URL")} key={`${textValue(row, "accession_no")}-${index}`} rel="noreferrer" target="_blank">
+                  <span>{textValue(row, "form_type") || "공시"}</span>
+                  <strong>{textValue(row, "report_date") || "보고기간 미상"}</strong>
+                  <small>공시 {textValue(row, "filing_date", "available_at") || "-"} · {textValue(row, "accession_no") || "accession 미상"}</small>
+                </a>
+              )) : <div className="mm-decision__evidence-empty">기준일 이전에 저장된 10-K / 10-Q 공시가 없습니다.</div>}
+            </div>
+            <div className="mm-decision__evidence-grid">
+              <div className="mm-decision__evidence-section">
+                <div className="mm-decision__evidence-title"><strong>뉴스 근거</strong><small>세션 전용 · 최대 10건</small></div>
+                {newsEvidence.length ? newsEvidence.map((row, index) => (
+                  <a className="mm-decision__evidence-card" href={textValue(row, "URL", "url")} key={`${textValue(row, "Title", "title")}-${index}`} rel="noreferrer" target="_blank">
+                    <span>{textValue(row, "Source", "source") || "뉴스"}</span>
+                    <strong>{textValue(row, "Title", "title") || "제목 없음"}</strong>
+                    <small>{textValue(row, "Published At", "published_at") || "게시 시각 미상"}</small>
+                  </a>
+                )) : <div className="mm-decision__evidence-empty">‘뉴스 근거 조회’를 누르면 선택 종목의 근거 링크를 이 세션에만 표시합니다.</div>}
+              </div>
+              <div className="mm-decision__evidence-section">
+                <div className="mm-decision__evidence-title"><strong>SEC 최신 메타데이터</strong><small>세션 전용 · 최대 5건</small></div>
+                {secEvidence.length ? secEvidence.map((row, index) => (
+                  <a className="mm-decision__evidence-card" href={textValue(row, "URL", "url")} key={`${textValue(row, "Form", "form_type")}-${index}`} rel="noreferrer" target="_blank">
+                    <span>{textValue(row, "Form", "form_type") || "SEC"}</span>
+                    <strong>{textValue(row, "Title", "title") || "SEC filing"}</strong>
+                    <small>{textValue(row, "Filing Date", "filing_date") || "공시일 미상"}</small>
+                  </a>
+                )) : <div className="mm-decision__evidence-empty">‘SEC 최신 조회’를 누르면 최신 filing 메타데이터를 추가합니다.</div>}
+              </div>
             </div>
           </div>
         ) : <div className="mm-decision__research-loading">선택 종목의 저장 근거를 불러오는 중입니다.</div>}
@@ -1196,7 +1246,7 @@ function MarketMoversDecisionWorkbench({ payload, onEvent }: DecisionWorkbenchPr
         <BreadthContext onRequest={requestBreadth} payload={payload} />
       </div>
       {activeRow ? <QuickResearch onOpen={() => { setDetailOpen(true); syncFrameHeightSoon(); }} row={activeRow} /> : null}
-      {detailOpen ? <StockResearchTabs activeSymbol={activeSymbol} payload={payload} /> : null}
+      {detailOpen ? <StockResearchTabs activeSymbol={activeSymbol} onEvent={onEvent} payload={payload} /> : null}
       <footer className="mm-decision__boundary">현재 흐름과 저장 근거를 연결한 조사 화면이며, 매매 추천이나 미래 수익률 예측이 아닙니다.</footer>
     </main>
   );
