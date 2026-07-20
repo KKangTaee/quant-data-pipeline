@@ -1,6 +1,6 @@
 # Market Movers React One-Shell V1 Plan
 
-Status: Approved For Inline Implementation
+Status: Complete
 Last Updated: 2026-07-20
 
 ## 이걸 하는 이유?
@@ -43,40 +43,40 @@ Last Updated: 2026-07-20
 
 ### Task 1 — Decision shell payload and selected-state bridge
 
-- [ ] failing tests: wrapper schema, control groups, default selected symbol, group snapshots, financial availability
-- [ ] `app/web/overview/market_movers_decision_ui.py`에 pure presentation adapter 구현
-- [ ] `app/web/overview_dashboard_helpers.py`에 cached group/research loader 추가
-- [ ] `app/web/overview/market_movers_helpers.py`에 all-period group snapshot, selected symbol, one-shell event bridge 구현
-- [ ] focused tests와 commit
+- [x] failing tests: wrapper schema, control groups, default selected symbol, group snapshots, financial availability
+- [x] `app/web/overview/market_movers_decision_ui.py`에 pure presentation adapter 구현
+- [x] `app/web/overview_dashboard_helpers.py`에 cached group/research loader 추가
+- [x] `app/web/overview/market_movers_helpers.py`에 all-period group snapshot, selected symbol, one-shell event bridge 구현
+- [x] focused tests와 commit
 
 ### Task 2 — One-shell React structure
 
-- [ ] source contract tests에 command/ranking/breadth/quick research/detail 구조 추가
-- [ ] `MarketMoversDecisionWorkbench` type과 component 구현
-- [ ] legacy component variants는 compatibility branch로 보존
-- [ ] ranking/group/detail local interaction과 Streamlit event emit 구현
-- [ ] TypeScript build와 commit
+- [x] source contract tests에 command/ranking/breadth/quick research/detail 구조 추가
+- [x] `MarketMoversDecisionWorkbench` type과 component 구현
+- [x] legacy component variants는 compatibility branch로 보존
+- [x] ranking/group/detail local interaction과 Streamlit event emit 구현
+- [x] TypeScript build와 commit
 
 ### Task 3 — Financial and price chart presentation
 
-- [ ] factor report period와 factor group 독립성 test 추가
-- [ ] one-factor-at-a-time financial SVG chart와 unavailable button 구현
-- [ ] YTD stored price evidence를 이용한 range-filtered price chart 구현
-- [ ] chart/readout 70/30 desktop, mobile stack CSS 구현
-- [ ] build/test와 commit
+- [x] factor report period와 factor group 독립성 test 추가
+- [x] one-factor-at-a-time financial SVG chart와 unavailable button 구현
+- [x] YTD stored price evidence를 이용한 range-filtered price chart 구현
+- [x] chart/readout 70/30 desktop, mobile stack CSS 구현
+- [x] build/test와 commit
 
 ### Task 4 — Page integration and fallback removal
 
-- [ ] React available 경로가 legacy snapshot panel을 중복 렌더링하지 않는 test 추가
-- [ ] `render_market_movers_snapshot`을 decision shell 우선으로 전환
-- [ ] selected symbol/action event를 Python session state와 연결
-- [ ] React unavailable 경로는 기존 Streamlit renderer를 그대로 유지
-- [ ] focused regression과 commit
+- [x] React available 경로가 legacy snapshot panel을 중복 렌더링하지 않는 test 추가
+- [x] `render_market_movers_snapshot`을 decision shell 우선으로 전환
+- [x] selected symbol/action event를 Python session state와 연결
+- [x] React unavailable 경로는 기존 Streamlit renderer를 그대로 유지
+- [x] focused regression과 commit
 
 ### Task 5 — Browser QA and closeout
 
-- [ ] production component build와 Python compile/pytest 실행
-- [ ] 실제 DB smoke로 SP500/Top1000/Top2000 payload 확인
-- [ ] desktop/420px interaction, chart balance, overflow Browser QA
-- [ ] task docs/root handoff/docs roadmap 동기화
-- [ ] generated QA 이미지를 제외하고 commit
+- [x] production component build와 Python compile/pytest 실행
+- [x] 실제 DB smoke로 SP500/Top1000/Top2000 payload 확인
+- [x] desktop/420px interaction, chart balance, overflow Browser QA
+- [x] task docs/root handoff/docs roadmap 동기화
+- [x] generated QA 이미지를 제외하고 commit

@@ -10254,3 +10254,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 4차 React UI 전에 sector/filter, 수집 상태, group flow, 대장주, 재무 factor와 PER의 의미를 하나의 안정된 payload로 만든다.
 - Analysis result: canonical 11-sector, metric별 `COMPLETE/PARTIAL/BLOCKED`, sector/industry current flow, market-cap Top 3, research snapshot v2와 JSON-safe decision payload를 구현했다. current-price historical PER는 제거했다.
 - Follow-up: 전체 roadmap `3/5차`다. 대형주 10개 PIT EPS smoke는 current PER `0/10 READY`이므로 4차에서 unavailable을 숨기지 않고, 5차 outlook은 OOS gate 전까지 공개하지 않는다.
+
+### 2026-07-20 - 변동 종목 4차는 ranking·확산·조사를 하나의 React selected state로 연결한다
+
+- User request: 확정한 A안과 재무 제어 그룹 구조를 인라인 방식으로 계속 구현하도록 요청함.
+- Interpreted goal: 사용자가 랭킹에서 종목을 고른 뒤 별도 Streamlit 블록을 찾아다니지 않고, 같은 화면에서 sector/industry 확산과 종목 근거를 이어서 판단하게 한다.
+- Analysis result: React-first 62/38 workbench가 ranking과 breadth를 연결하고, selected quick research 아래에 가격·재무·뉴스·공시 상세를 둔다. 보고 주기·재무 영역·factor는 독립 local state이며 bounded symbol/command만 Python으로 보낸다.
+- Follow-up: 전체 roadmap `4/5차`와 actual desktop/420px QA를 완료했다. 5차 sector conditional outlook은 historical episode와 OOS publication gate를 통과하지 못하면 수치를 계속 숨긴다.

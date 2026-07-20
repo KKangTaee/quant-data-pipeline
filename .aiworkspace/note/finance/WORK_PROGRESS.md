@@ -6884,3 +6884,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - selected research는 annual/quarterly factor series와 PIT 4분기 reported diluted EPS 기반 current PER를 분리하고 current-price historical PER를 제거했다.
 - `market_movers_decision_payload_v1`, focused 16개, Market Movers 126개, SP500/Top1000/Top2000 및 industry DB smoke를 확인했다. 전체 roadmap `3/5차`; 다음은 4차 React one-shell이다.
 - 상세 검증과 diluted EPS coverage 위험은 `tasks/active/market-movers-read-model-hardening-v1-20260720/`를 본다.
+
+## 2026-07-20 - Overview Market Movers React one-shell 4차 완료
+
+- ranking, sector/industry 일·주·월 current flow, 시총 Top 3, quick research와 가격·재무·뉴스·공시 상세를 `MarketMoversDecisionWorkbench` 한 화면으로 통합했다.
+- 랭킹 선택은 selected research에 연결되고 재무는 `보고 주기 / 재무 영역 / Factor`를 독립 제어한다. React unavailable일 때만 기존 Streamlit surface를 fallback으로 유지한다.
+- focused `24 passed`, Market Movers contracts `126 passed`, production build, SP500/Top1000/Top2000 actual payload와 desktop/693px/353px Browser QA를 확인했다.
+- 전체 roadmap `4/5차`; 다음은 OOS publication gate가 선행되는 sector conditional outlook다. 상세는 `tasks/active/market-movers-react-one-shell-v1-20260720/`를 본다.

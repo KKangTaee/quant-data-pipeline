@@ -1,6 +1,6 @@
 # Market Movers Approved Redesign Recommendation
 
-Status: Phase 3 Read Model Complete; Phase 4 React Shell Ready
+Status: Phase 4 React One-Shell Complete; Phase 5 Outlook Pending
 Decision Date: 2026-07-20
 Last Updated: 2026-07-20
 
@@ -349,11 +349,11 @@ React는 계산 source of truth가 아니다. ranking, group state, financial fa
 | --- | --- | --- | --- |
 | 1차 | 현행 감사와 correctness contract | stale, taxonomy, PER, handoff 문제 확정 | 완료 |
 | 2차 | IA와 visual / interaction contract | A안, data state, outlook, stock research, architecture 승인 | 완료 |
-| 3차 | data / read-model hardening | canonical filter, typed gaps, Top 3, industry, financial contract test | 미착수 |
-| 4차 | one-shell React implementation | ranking / breadth / research 통합과 responsive QA | 미착수 |
+| 3차 | data / read-model hardening | canonical filter, typed gaps, Top 3, industry, financial contract test | 완료 |
+| 4차 | one-shell React implementation | ranking / breadth / research 통합과 responsive QA | 완료 |
 | 5차 | sector conditional outlook와 closeout QA | OOS gate, publication suppression, full Browser QA | 미착수 |
 
-다음 implementation plan은 3차만 상세화한다. 4차와 5차는 3차 payload contract와 검증 결과를 확인한 뒤 별도 계획으로 진행한다.
+3차 read model과 4차 React one-shell은 완료했다. 5차는 historical sector episode와 OOS publication gate를 먼저 설계·검증하고, gate를 통과하지 못하면 조건부 수치를 계속 숨기는 별도 범위다.
 
 ## Risks And Mitigations
 
