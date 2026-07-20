@@ -31,6 +31,7 @@ import {
   zoomMarketChartViewport,
 } from "./workbenchState";
 import type { ItemDraft } from "./workbenchState";
+import { PositionLedgerPanel } from "./PositionLedgerPanel";
 import "./style.css";
 
 function compactDate(value: string | null) {
@@ -696,7 +697,7 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
             </div>
 
             <section className="pm-kpi-grid" aria-label="포트폴리오 핵심 지표">
-              <article><span>투자금</span><strong>{formatMetric(metrics?.invested_capital, "currency", metrics)}</strong><small>등록 원금 합계</small></article>
+              <article><span>누적 입금</span><strong>{formatMetric(metrics?.gross_contributions ?? metrics?.invested_capital, "currency", metrics)}</strong><small>최초 투자금 + 추가매수</small></article>
               <article><span>현재 가치</span><strong>{formatMetric(metrics?.current_value, "currency", metrics)}</strong><small>{compactDate(activeGroup.basis_date)} 기준</small></article>
               <article className={(metrics?.pnl ?? 0) < 0 ? "is-negative" : "is-positive"}><span>손익</span><strong>{formatMetric(metrics?.pnl, "currency", metrics)}</strong><small>{formatMetric(metrics?.total_return, "percent", metrics)}</small></article>
               <article><span>최대 낙폭</span><strong>{formatMetric(metrics?.mdd, "percent", metrics)}</strong><small>일별 가치곡선</small></article>
@@ -813,6 +814,16 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
                       <div><dt>기여 손익</dt><dd>{formatMetric(metrics?.contribution_by_item[selectedItem.monitoring_item_id], "currency", metrics)}</dd></div>
                     </dl>
                     {selectedItem.failure && <p className="pm-failure">{selectedItem.failure}</p>}
+                    {workspace.selected_position.monitoring_item_id === selectedItem.monitoring_item_id && (
+                      <PositionLedgerPanel
+                        position={workspace.selected_position}
+                        currentValue={selectedItem.current_value}
+                        closeProjection={workspace.position_trade_close ?? null}
+                        recoveryState={workspace.position_editor_state}
+                        latestCommand={latestCommand ?? null}
+                        emit={emit}
+                      />
+                    )}
                     {selectedMarketChart?.monitoring_item_id !== selectedItem.monitoring_item_id ? (
                       <div className="pm-market-state"><strong>선택 항목 차트를 불러오는 중입니다.</strong></div>
                     ) : selectedMarketChart.source_type === "selected_strategy" ? (

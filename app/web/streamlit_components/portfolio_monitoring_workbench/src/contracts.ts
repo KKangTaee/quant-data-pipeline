@@ -56,6 +56,28 @@ export type SelectedPositionProjection = {
   event_rows: PositionEventRow[];
 };
 
+export type PositionTradeCloseProjection = {
+  status: "IDLE" | "READY" | "MISSING" | string;
+  monitoring_item_id: string | null;
+  trade_date: string | null;
+  reference_close: number | null;
+  reason: string | null;
+};
+
+export type PositionEditorRecoveryState = {
+  open: true;
+  mode: "record" | "replace" | "correction";
+  position_effect: "buy" | "sell";
+  trade_date: string;
+  quantity: string;
+  execution_price: string;
+  price_mode: "awaiting_close" | "db_close_default" | "manual_override";
+  fee_usd: string;
+  note: string;
+  root_event_id: string;
+  expected_event_id: string;
+};
+
 export type ItemRow = {
   monitoring_item_id: string;
   source_ref: string;
@@ -194,6 +216,8 @@ export type PortfolioMonitoringWorkspace = {
   groups: GroupSummary[];
   active_group: GroupValueResult | null;
   selected_position: SelectedPositionProjection;
+  position_trade_close?: PositionTradeCloseProjection;
+  position_editor_state?: PositionEditorRecoveryState | null;
   selected_item_market_chart?: SelectedItemMarketChart;
   catalog: { query: string; items: CatalogItem[] };
   commands: CommandProjection[];
@@ -223,7 +247,12 @@ export type PortfolioMonitoringEvent =
   | { id: "search_catalog"; query: string; source_type: "direct_security" | "selected_strategy"; nonce: string }
   | { id: "add_item"; payload: Record<string, unknown>; nonce: string }
   | { id: "end_item"; monitoring_item_id: string; requested_end_date: string; nonce: string }
-  | { id: "reopen_item"; monitoring_item_id: string; nonce: string };
+  | { id: "reopen_item"; monitoring_item_id: string; nonce: string }
+  | { id: "lookup_position_trade_close"; monitoring_item_id: string; trade_date: string; position_editor_state: PositionEditorRecoveryState; nonce: string }
+  | { id: "correct_initial_quantity"; command_id: string; monitoring_item_id: string; quantity: number; note: string; nonce: string }
+  | { id: "record_position_trade"; command_id: string; monitoring_item_id: string; position_effect: "buy" | "sell"; trade_date: string; quantity: number; execution_price: number; fee_usd: number; note: string; nonce: string }
+  | { id: "replace_position_trade"; command_id: string; monitoring_item_id: string; root_event_id: string; expected_event_id: string; position_effect: "buy" | "sell"; trade_date: string; quantity: number; execution_price: number; fee_usd: number; note: string; nonce: string }
+  | { id: "void_position_trade"; command_id: string; monitoring_item_id: string; root_event_id: string; expected_event_id: string; nonce: string };
 
 export type PortfolioMonitoringComponentValue = {
   event: PortfolioMonitoringEvent | null;

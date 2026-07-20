@@ -21,6 +21,18 @@ def _load_component():
 
 
 class PortfolioMonitoringComponentTests(unittest.TestCase):
+    def test_selected_stock_exposes_position_actions_and_ledger_without_strategy_controls(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PositionLedgerPanel.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("현재 보유수량", source)
+        self.assertIn("최초 수량 정정", source)
+        self.assertIn("매수·매도 기록", source)
+        self.assertIn("거래 내역", source)
+        self.assertIn('id: "lookup_position_trade_close"', source)
+        self.assertIn("종가 기본값", source)
+        self.assertIn("수동 체결가", source)
     def test_value_chart_exposes_visible_pointer_and_keyboard_tooltip(self) -> None:
         source = Path(
             "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"

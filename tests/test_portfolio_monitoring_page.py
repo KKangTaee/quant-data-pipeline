@@ -260,6 +260,7 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
                 "position_effect": "buy",
                 "quantity": "5",
                 "execution_price": "",
+                "price_mode": "awaiting_close",
                 "fee_usd": "0",
                 "note": "",
                 "unexpected": "drop",
@@ -281,6 +282,12 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
         self.assertNotIn(
             "unexpected",
             services.session_state["portfolio_monitoring_position_editor_state"],
+        )
+        self.assertEqual(
+            services.session_state[
+                "portfolio_monitoring_position_editor_state"
+            ]["price_mode"],
+            "awaiting_close",
         )
 
     def test_exact_close_projection_never_shifts_to_next_market_day(self) -> None:

@@ -45,6 +45,7 @@ from app.services.portfolio_monitoring.schemas import (
     AddMonitoringItemInput,
     CommandStatus,
     CommandType,
+    ExecutionPriceSource,
     FundingMode,
     InitialQuantityCorrectionInput,
     InstrumentKind,
@@ -4204,6 +4205,13 @@ def _sanitize_position_editor_state(value: Any) -> dict[str, Any] | None:
     effect = str(value.get("position_effect") or "buy")
     if effect not in {PositionEffect.BUY.value, PositionEffect.SELL.value}:
         effect = PositionEffect.BUY.value
+    price_mode = str(value.get("price_mode") or "awaiting_close")
+    if price_mode not in {
+        "awaiting_close",
+        ExecutionPriceSource.DB_CLOSE_DEFAULT.value,
+        ExecutionPriceSource.MANUAL_OVERRIDE.value,
+    }:
+        price_mode = "awaiting_close"
     text = lambda key, default="": str(
         value.get(key) if value.get(key) is not None else default
     )
@@ -4214,6 +4222,7 @@ def _sanitize_position_editor_state(value: Any) -> dict[str, Any] | None:
         "trade_date": text("trade_date"),
         "quantity": text("quantity"),
         "execution_price": text("execution_price"),
+        "price_mode": price_mode,
         "fee_usd": text("fee_usd", "0"),
         "note": text("note"),
         "root_event_id": text("root_event_id"),
