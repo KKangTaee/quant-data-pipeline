@@ -198,6 +198,53 @@ def test_decision_shell_exposes_distinct_timing_and_manual_actions() -> None:
     assert [action["id"] for action in payload["actions"]] == ["refresh_intraday", "refresh_universe"]
 
 
+def test_decision_timing_uses_stored_effective_market_date(monkeypatch) -> None:
+    from app.web.overview import market_movers_helpers as helpers
+
+    monkeypatch.setattr(helpers.st, "session_state", {})
+    timing = helpers._market_movers_decision_timing(
+        {
+            "date_window": {"effective_end_date": "2026-07-17 13:40:00"},
+            "coverage": {"snapshot_time_utc": "2026-07-17 20:00:00"},
+        }
+    )
+
+    assert timing["market_date"] == "2026-07-17 ET"
+    assert timing["data_as_of"] == "2026-07-17 20:00:00"
+
+
+def test_manual_refresh_invalidation_clears_session_and_cached_loaders(monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    from app.web.overview import market_movers_helpers as helpers
+
+    cleared: list[str] = []
+    monkeypatch.setattr(
+        helpers.st,
+        "session_state",
+        {
+            "overview_market_movers_breadth_snapshot__sp500__500__sector__daily": {"status": "OLD"},
+            "overview_market_movers_breadth_snapshot__top1000__1000__sector__daily": {"status": "KEEP"},
+        },
+    )
+    monkeypatch.setattr(
+        helpers,
+        "load_overview_group_leadership_snapshot",
+        SimpleNamespace(clear=lambda: cleared.append("group")),
+    )
+    monkeypatch.setattr(
+        helpers,
+        "load_overview_market_mover_research_snapshot",
+        SimpleNamespace(clear=lambda: cleared.append("research")),
+    )
+
+    helpers._invalidate_market_movers_read_caches(coverage="SP500")
+
+    assert cleared == ["group", "research"]
+    assert "overview_market_movers_breadth_snapshot__sp500__500__sector__daily" not in helpers.st.session_state
+    assert "overview_market_movers_breadth_snapshot__top1000__1000__sector__daily" in helpers.st.session_state
+
+
 def test_decision_shell_renders_timing_actions_grouped_breadth_and_return_tones() -> None:
     from pathlib import Path
 
@@ -216,6 +263,8 @@ def test_decision_shell_renders_timing_actions_grouped_breadth_and_return_tones(
     assert '<span>기간</span>' in source
     assert "function returnTone" in source
     assert "mm-return--${returnTone" in source
+    assert 'returnTone(numberValue(activeGroup, "equal_weight_return_pct"))' in source
+    assert 'returnTone(numberValue(activeGroup, "market_cap_weighted_return_pct"))' in source
     assert ".mm-return--positive" in style
     assert ".mm-return--negative" in style
     assert ".mm-return--neutral" in style
@@ -482,10 +531,38 @@ def test_decision_research_renders_db_filings_and_explicit_news_actions() -> Non
     ).read_text(encoding="utf-8")
 
     assert "event_evidence" in source
+    assert "db_filing_status" in source
+    assert "db_filing_message" in source
     assert "저장 공시 근거" in source
     assert "뉴스 근거 조회" in source
     assert 'id: "fetch_news_evidence"' in source
     assert 'id: "fetch_sec_evidence"' in source
+
+
+def test_screen_reload_does_not_claim_a_manual_data_refresh(monkeypatch) -> None:
+    from app.web.overview import market_movers_helpers as helpers
+
+    controls = helpers.MarketMoverControls(
+        coverage="SP500",
+        universe_limit=500,
+        period="daily",
+        sector="All",
+        top_n=20,
+        mode="top_gainers",
+    )
+    monkeypatch.setattr(
+        helpers.st,
+        "session_state",
+        {"overview_market_movers_reloaded_at": "2026-07-20 23:37:00 KST"},
+    )
+    monkeypatch.setattr(helpers.st, "rerun", lambda: None)
+    monkeypatch.setattr(helpers, "_invalidate_market_movers_read_caches", lambda **_: None)
+
+    assert helpers._dispatch_market_movers_react_event(
+        {"event": {"id": "reload", "nonce": 404}},
+        controls=controls,
+    ) is True
+    assert helpers.st.session_state["overview_market_movers_reloaded_at"] == "2026-07-20 23:37:00 KST"
 
 
 def test_decision_shell_news_evidence_action_is_selected_symbol_scoped(monkeypatch) -> None:

@@ -766,8 +766,8 @@ function BreadthContext({ payload, onRequest }: BreadthContextProps) {
             </div>
             <div className="mm-decision__group-facts">
               <span><small>상승 참여</small><strong>{formatSignedPercent(numberValue(activeGroup, "positive_symbol_share_pct"))}</strong></span>
-              <span><small>동일가중</small><strong>{formatSignedPercent(numberValue(activeGroup, "equal_weight_return_pct"))}</strong></span>
-              <span><small>시총가중</small><strong>{formatSignedPercent(numberValue(activeGroup, "market_cap_weighted_return_pct"))}</strong></span>
+              <span><small>동일가중</small><strong className={`mm-return--${returnTone(numberValue(activeGroup, "equal_weight_return_pct"))}`}>{formatSignedPercent(numberValue(activeGroup, "equal_weight_return_pct"))}</strong></span>
+              <span><small>시총가중</small><strong className={`mm-return--${returnTone(numberValue(activeGroup, "market_cap_weighted_return_pct"))}`}>{formatSignedPercent(numberValue(activeGroup, "market_cap_weighted_return_pct"))}</strong></span>
             </div>
           </div>
           <div className="mm-decision__bellwethers">
@@ -1096,6 +1096,9 @@ function StockResearchTabs({ payload, activeSymbol, onEvent }: StockResearchTabs
   const [tab, setTab] = useState<"price" | "financial" | "events">("price");
   const research = payload.selection.symbol === activeSymbol ? payload.selection.research : null;
   const eventEvidence = ((research?.event_evidence || {}) as Record<string, unknown>);
+  const dbFilingStatus = String(eventEvidence.db_filing_status || "EMPTY");
+  const dbFilingSource = String(eventEvidence.db_filing_source || "저장 공시 ledger");
+  const dbFilingMessage = String(eventEvidence.db_filing_message || "");
   const dbFilings = Array.isArray(eventEvidence.db_filings) ? eventEvidence.db_filings as DecisionRow[] : [];
   const newsEvidence = [
     ...(Array.isArray(eventEvidence.news) ? eventEvidence.news as DecisionRow[] : []),
@@ -1174,14 +1177,15 @@ function StockResearchTabs({ payload, activeSymbol, onEvent }: StockResearchTabs
               <span><small>조회 시각</small><strong>{String(eventEvidence.fetched_at_utc || "세션 미조회")}</strong></span>
             </div>
             <div className="mm-decision__evidence-section">
-              <div className="mm-decision__evidence-title"><strong>저장 공시 근거</strong><small>DB · 최대 5건</small></div>
+              <div className="mm-decision__evidence-title"><strong>저장 공시 근거</strong><small>{dbFilingStatus} · 최대 5건</small></div>
+              <div className={`mm-decision__evidence-message mm-decision__evidence-message--${dbFilingStatus.toLowerCase()}`}><strong>{dbFilingSource}</strong>{dbFilingMessage ? <span>{dbFilingMessage}</span> : null}</div>
               {dbFilings.length ? dbFilings.map((row, index) => (
                 <a className="mm-decision__evidence-card" href={textValue(row, "url", "URL")} key={`${textValue(row, "accession_no")}-${index}`} rel="noreferrer" target="_blank">
                   <span>{textValue(row, "form_type") || "공시"}</span>
                   <strong>{textValue(row, "report_date") || "보고기간 미상"}</strong>
                   <small>공시 {textValue(row, "filing_date", "available_at") || "-"} · {textValue(row, "accession_no") || "accession 미상"}</small>
                 </a>
-              )) : <div className="mm-decision__evidence-empty">기준일 이전에 저장된 10-K / 10-Q 공시가 없습니다.</div>}
+              )) : <div className="mm-decision__evidence-empty">{dbFilingStatus === "ERROR" ? (dbFilingMessage || "저장 공시 ledger를 조회하지 못했습니다.") : "기준일 이전에 저장된 10-K / 10-Q 공시가 없습니다."}</div>}
             </div>
             <div className="mm-decision__evidence-grid">
               <div className="mm-decision__evidence-section">

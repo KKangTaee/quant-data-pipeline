@@ -1,17 +1,18 @@
 # Status
 
-Status: In Progress
+Status: Complete
 Last Updated: 2026-07-20
 
 ## Current Step
 
-Task 4 selected news/SEC evidence를 완료하고 Task 5 통합 검증·Browser QA·문서 동기화를 진행한다.
+Task 5 자동/Browser 검증, independent review follow-up, durable docs 동기화를 완료했다.
 
 ## Progress
 
 - 전체 5차 중 설계 확정 완료
-- 구현 `4/5차`
+- 승인된 성능·조사 보완 구현 `5/5차` 완료
+- broader Market Movers 기능 roadmap `4/5차` 유지
 
 ## Next
 
-관련 서비스 계약과 전체 decision UI를 검증하고 실제 cold entry/interaction을 Browser QA한다.
+별도 승인 시 sector conditional outlook의 historical episode/OOS publication gate를 전체 roadmap 5차로 진행한다.

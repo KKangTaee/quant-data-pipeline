@@ -6898,3 +6898,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - hero/trust, command band, market pulse, ranking/breadth decision cards, quick research와 report-family tabs를 한 시각 체계로 정리하고 재무 `보고 주기 / 영역 / Factor` 분리를 유지했다.
 - UI 11개, Market Movers 126개, static scaffold 1개, production build와 desktop actual Browser QA를 통과했다. visual implementation `3/3차`, 전체 기능 roadmap `4/5차`이며 좁은 폭·console·nested iframe 상세 click actual QA는 automation 한계로 남겼다.
 - 다음은 별도 승인 범위인 sector conditional outlook이며 OOS publication gate 전에는 확률·분포 수치를 숨긴다. 상세는 `tasks/active/market-movers-hybrid-visual-system-v1-20260720/`를 본다.
+
+## 2026-07-20 - Overview Market Movers 성능·조사 보완 완료
+
+- 진입 시 sector/industry 6개 조합을 모두 계산하던 경로를 현재 breadth key 하나의 lazy/session reuse로 바꾸고, selected Top Rank 조사만 교체하도록 해 actual cold entry를 약 46초에서 1.6초로 줄였다.
+- 현재/시장/데이터/수동 갱신 시각과 수동 action, 수익률 색상, 가격 hover, 연간 10·분기 40 재무 막대/선, DB filing 근거와 명시적 session-only 뉴스/SEC 조회를 one-shell에 연결했다.
+- 관련 research/decision 27개와 Market Movers 서비스 계약 126개, Vite build, desktop/760px/detail/console Browser QA를 통과했다. 전체 기능 roadmap은 `4/5차`; 남은 5차는 별도 OOS gate가 필요한 sector conditional outlook이다.
+- 상세는 `tasks/active/market-movers-performance-research-v2-20260720/`를 본다.

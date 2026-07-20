@@ -610,9 +610,22 @@ def _market_movers_decision_timing(snapshot: dict[str, Any]) -> dict[str, str]:
     now_kst = datetime.now(ZoneInfo("Asia/Seoul"))
     market_now = now_kst.astimezone(ZoneInfo("America/New_York"))
     coverage = dict(snapshot.get("coverage") or {})
+    date_window = dict(snapshot.get("date_window") or {})
+    market_date_raw = str(
+        date_window.get("effective_end_date")
+        or coverage.get("effective_end_date")
+        or coverage.get("latest_raw_date")
+        or market_now.date().isoformat()
+    )
+    market_date_timestamp = pd.to_datetime(market_date_raw, errors="coerce")
+    market_date = (
+        market_date_timestamp.date().isoformat()
+        if pd.notna(market_date_timestamp)
+        else market_date_raw
+    )
     return {
         "current_time": now_kst.strftime("%Y-%m-%d %H:%M KST"),
-        "market_date": market_now.strftime("%Y-%m-%d ET"),
+        "market_date": f"{market_date} ET",
         "data_as_of": _effective_timestamp(coverage),
         "last_refreshed_at": str(
             st.session_state.get("overview_market_movers_reloaded_at")
@@ -923,6 +936,23 @@ def _invalidate_market_movers_breadth_session_cache(*, coverage: str | None = No
         st.session_state.pop(key, None)
 
 
+def _invalidate_market_movers_read_caches(*, coverage: str | None = None) -> None:
+    """Drop both session projections and cached DB read models after explicit refresh."""
+
+    _invalidate_market_movers_breadth_session_cache(coverage=coverage)
+    for loader in (
+        load_overview_group_leadership_snapshot,
+        load_overview_market_mover_research_snapshot,
+    ):
+        clear = getattr(loader, "clear", None)
+        if callable(clear):
+            clear()
+
+
+def _market_movers_manual_refresh_timestamp() -> str:
+    return datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S KST")
+
+
 def _market_movers_decision_evidence_session_key(*, coverage: str, symbol: str) -> str:
     return "__".join(
         [
@@ -952,6 +982,7 @@ def _market_movers_decision_event_evidence(
         "db_filings": list(filing_evidence.get("rows") or []),
         "db_filing_status": str(filing_evidence.get("status") or "EMPTY"),
         "db_filing_source": filing_evidence.get("source"),
+        "db_filing_message": filing_evidence.get("message"),
         "news": _market_movers_react_table_records(metadata.get("news")),
         "korean_news": _market_movers_react_table_records(metadata.get("korean_news")),
         "sec_filings": _market_movers_react_table_records(metadata.get("sec_filings")),
@@ -1287,8 +1318,8 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
                 universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
             ),
         )
-        _invalidate_market_movers_breadth_session_cache(coverage=universe_code)
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S KST")
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
         return True
 
@@ -1308,8 +1339,8 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
                 as_of_date=as_of_date,
             ),
         )
-        _invalidate_market_movers_breadth_session_cache(coverage=universe_code)
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
         return True
 
@@ -1320,7 +1351,8 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
             detail="S&P 500 구성 종목 목록을 갱신합니다.",
             run_job=run_overview_sp500_universe,
         )
-        _invalidate_market_movers_breadth_session_cache(coverage=universe_code)
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
         return True
 
@@ -1331,7 +1363,8 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
             detail="Nasdaq Symbol Directory current snapshot을 lifecycle evidence table에 저장합니다.",
             run_job=run_overview_nasdaq_symbol_directory,
         )
-        _invalidate_market_movers_breadth_session_cache(coverage=universe_code)
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
         return True
 
@@ -1346,8 +1379,8 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
                 universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
             ),
         )
-        _invalidate_market_movers_breadth_session_cache(coverage=universe_code)
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
         return True
 
@@ -1363,13 +1396,13 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
                 candidates=candidates,
             ),
         )
-        _invalidate_market_movers_breadth_session_cache(coverage=universe_code)
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
         return True
 
     if handler == "reload_market_movers":
-        _invalidate_market_movers_breadth_session_cache(coverage=universe_code)
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _invalidate_market_movers_read_caches(coverage=universe_code)
         st.rerun()
         return True
 
@@ -2838,6 +2871,8 @@ def _render_market_movers_universe_action(container: Any, *, universe_code: str)
                 detail="S&P 500 구성 종목 목록을 갱신합니다.",
                 run_job=run_overview_sp500_universe,
             )
+            _invalidate_market_movers_read_caches(coverage=universe_code)
+            st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
             st.rerun()
         return
     if universe_code == "NASDAQ":
@@ -2853,6 +2888,8 @@ def _render_market_movers_universe_action(container: Any, *, universe_code: str)
                 detail="Nasdaq Symbol Directory current snapshot을 lifecycle evidence table에 저장합니다.",
                 run_job=run_overview_nasdaq_symbol_directory,
             )
+            _invalidate_market_movers_read_caches(coverage=universe_code)
+            st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
             st.rerun()
         return
     if container.button(
@@ -2874,7 +2911,8 @@ def _render_market_movers_universe_action(container: Any, *, universe_code: str)
                 universe_limit=_universe_limit(universe_code),
             ),
         )
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
 
 
@@ -2924,6 +2962,8 @@ def _render_market_movers_daily_refresh_bar(
                 universe_limit=universe_limit,
             ),
         )
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
     _render_market_movers_universe_action(control_cols[2], universe_code=universe_code)
     if control_cols[3].button(
@@ -2931,7 +2971,7 @@ def _render_market_movers_daily_refresh_bar(
         key=f"overview_{universe_code.lower()}_market_movers_reload",
         use_container_width=True,
     ):
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _invalidate_market_movers_read_caches(coverage=universe_code)
         st.rerun()
 
     if selected_mode == "auto" and auto_supported:
@@ -3012,7 +3052,8 @@ def _render_market_movers_eod_refresh_bar(
                 or None,
             ),
         )
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
     _render_market_movers_universe_action(control_cols[1], universe_code=universe_code)
     if control_cols[2].button(
@@ -3020,7 +3061,7 @@ def _render_market_movers_eod_refresh_bar(
         key=f"overview_{universe_code.lower()}_{period}_market_movers_reload",
         use_container_width=True,
     ):
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _invalidate_market_movers_read_caches(coverage=universe_code)
         st.rerun()
     if _safe_int(preflight.get("limited_history_symbols_count")) > 0 and refresh_disabled:
         control_cols[3].caption(str(preflight.get("range_reason") or "짧은 가격 이력 종목은 현재 랭킹에서 제외됩니다."))

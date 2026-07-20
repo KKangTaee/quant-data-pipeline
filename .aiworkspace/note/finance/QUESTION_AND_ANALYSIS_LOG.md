@@ -10268,3 +10268,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: prototype처럼 보이는 흰색 admin sheet와 경쟁 accent를 제거하고, 첫 화면의 scan flow와 상세 조사의 report hierarchy를 같은 제품군처럼 읽히게 한다.
 - Analysis result: blue-gray integrated surface, hero/trust/command/pulse, 62/38 ranking-breadth cards, quick research, report-family tabs와 독립 재무 control groups를 적용했다. payload/event/DB 계약은 바꾸지 않았다.
 - Follow-up: visual implementation `3/3차`, 전체 기능 roadmap `4/5차`다. desktop actual QA는 완료했고 좁은 폭·console·nested iframe 상세 click actual QA는 automation 한계로 남겼다. sector conditional outlook은 historical/OOS gate가 준비될 때 별도 5차로 진행한다.
+
+### 2026-07-20 - 변동 종목 지연과 상세 조사 보완을 한 범위로 완료한다
+
+- User request: 진입/랭킹 클릭 장시간 로딩, breadth 제어 구분, 가격 hover, 10년 재무, 뉴스·공시, 현재·갱신 시각, 수동 갱신, 수익률 색상 개선을 이전 권장안까지 포함해 구현하도록 요청함.
+- Interpreted goal: 자동 provider 호출이나 운영 진단 패널을 늘리지 않고 첫 진입과 종목 선택을 빠르게 하며, 저장 근거와 명시적 외부 조회를 같은 selected-symbol 조사 흐름에 둔다.
+- Analysis result: 6개 breadth eager calculation이 주 지연 원인이었다. 현재 key lazy/session reuse와 10분 cache로 actual entry를 약 46초에서 1.6초로 줄였고, 가격/재무/events 상세와 timing/action/semantic color를 one-shell에 연결했다.
+- Follow-up: 성능·조사 보완 `5/5차`와 desktop/760px/detail/console QA를 완료했다. 전체 Market Movers 기능 roadmap의 남은 `5차` conditional outlook은 historical episode와 OOS gate를 통과하기 전까지 공개하지 않는다.

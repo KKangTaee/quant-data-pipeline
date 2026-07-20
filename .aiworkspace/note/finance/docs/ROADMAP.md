@@ -267,10 +267,10 @@ Previous completed Overview / Market Context task는 `.aiworkspace/note/finance/
 - 경계: 월별 과거 지점은 월중 SEP를 다음 달부터 적용하고 calendar-year target을 선택한다. 이 흐름은 Shiller EPS가 strict release-vintage PIT 원본이 아니므로 `과거 시점 재구성 시나리오`이며, SEP median `real GDP + PCE`와 trailing PER band는 공식 적정가·투자 신호·애널리스트 컨센서스가 아니다.
 - QA: valuation 37 tests, Market Context 35 contracts, TypeScript, Vite build, 실제 21개 SEP vintage/1,867 Shiller rows 기반 read model, desktop/420px Browser QA를 통과했다. Graph 2 history는 12/36/60 points를 반환했고 5년 화면의 SEP marker 19개/label 7개와 current-app console error/horizontal overflow 0건을 확인했다. generated V1.4 QA screenshot은 커밋하지 않는다.
 
-Current Market Movers redesign task는 `.aiworkspace/note/finance/tasks/active/market-movers-hybrid-visual-system-v1-20260720/`다.
+Current Market Movers redesign follow-up task는 `.aiworkspace/note/finance/tasks/active/market-movers-performance-research-v2-20260720/`다.
 
 - 목적: 승인된 결정형 워크벤치에서 종목 발견, sector/industry 확산 확인, 선택 종목 조사를 한 화면과 selected state로 끝낸다.
-- 현재 상태: 전체 `4/5차`, visual implementation `3/3차` 완료. 3차 canonical read model 위에 React-first ranking/breadth 62/38 workbench, bellwether Top 3, quick research, 가격·재무·뉴스·공시 상세와 bounded selected-symbol handoff를 연결했다. Market Context/Futures Macro 계열의 integrated blue-gray surface, hero/trust/command/pulse hierarchy, unified decision cards와 report-family tabs를 적용했다. 재무는 보고 주기·영역·factor를 분리하고 단일 factor/axis와 70/30 chart/readout을 사용한다. Desktop actual Browser QA는 완료했지만 narrow/console/detail-click actual QA는 partial이다.
+- 현재 상태: 전체 기능 roadmap은 `4/5차`이며, 승인된 성능·조사 보완 묶음은 `5/5차` 완료했다. 초기 6개 sector/industry 조합을 모두 계산하던 경로를 현재 선택한 조합 하나만 읽고 session에서 재사용하도록 바꿔 실제 cold entry를 약 46초에서 1.6초로 줄였다. 현재/시장/데이터/수동 갱신 시각과 기존 수동 action, 수익률 semantic color, 가격 plot-wide hover, 연간 10개·분기 40개 상한과 막대/선 전환, DB filing ledger 최대 5건 및 selected-symbol session-only 뉴스/SEC action을 one-shell에 연결했다. Desktop/760px, console, nested iframe detail click actual Browser QA까지 완료했다.
 - 다음: 5차 sector conditional outlook은 historical episode와 OOS publication gate를 먼저 검증한다. gate를 통과하지 못하면 확률·분포 수치를 공개하지 않으며 industry outlook은 PIT taxonomy 준비 전까지 보류한다.
 
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/`다.

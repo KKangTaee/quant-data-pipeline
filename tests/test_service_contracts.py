@@ -17047,7 +17047,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(payload["controls"]["coverage"], "SP500")
         self.assertEqual(payload["controls"]["period"], "daily")
         self.assertEqual(payload["actions"][0]["id"], "refresh_intraday")
-        self.assertEqual(payload["actions"][0]["label"], "일중 스냅샷 갱신")
+        self.assertEqual(payload["actions"][0]["label"], "일중 스냅샷 수동 갱신")
         self.assertIn({"id": "reload", "label": "화면 새로고침", "kind": "secondary"}, payload["actions"])
 
         plan = market_movers_react_action_plan("refresh_intraday", controls=controls)
@@ -17185,7 +17185,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("refresh_liquidity_universe", action_ids)
         self.assertIn("유니버스 기준 갱신", action_labels)
         self.assertEqual(action_ids[0], "refresh_eod_history")
-        self.assertIn("가격 이력 갱신", action_labels)
+        self.assertIn("가격 이력 수동 갱신", action_labels)
         self.assertEqual(payload["summary"]["trust_state"], "계산 가능 · 이력 보강 필요")
         self.assertEqual(payload["summary"]["tone"], "warning")
         self.assertEqual(payload["summary"]["action_label"], "가격 이력 확인")

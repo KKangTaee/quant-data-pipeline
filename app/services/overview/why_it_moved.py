@@ -1070,6 +1070,8 @@ def _build_statement_filing_evidence(
         if column in work.columns:
             work[column] = pd.to_datetime(work[column], errors="coerce")
     as_of_eod = pd.Timestamp(as_of_date).normalize() + pd.Timedelta(days=1)
+    if "report_date" in work.columns:
+        work = work[work["report_date"].notna() & (work["report_date"] < as_of_eod)].copy()
     if "available_at" in work.columns:
         available_before_cutoff = work["available_at"].notna() & (work["available_at"] < as_of_eod)
         if "filing_date" in work.columns:

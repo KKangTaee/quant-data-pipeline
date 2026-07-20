@@ -1032,6 +1032,20 @@ body {
   padding: 10px 6px;
 }
 
+.mm-decision__evidence-message {
+  align-items: baseline;
+  color: var(--mm-muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.64rem;
+  gap: 5px;
+  padding: 0 2px 4px;
+}
+
+.mm-decision__evidence-message--error {
+  color: var(--mm-negative);
+}
+
 .mm-decision__empty {
   color: var(--mm-muted);
   font-size: 0.78rem;

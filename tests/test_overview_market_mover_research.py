@@ -263,6 +263,25 @@ def test_research_snapshot_exposes_compact_db_filing_evidence() -> None:
             )
         ]
     )
+    filings = pd.concat(
+        [
+            filings,
+            pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "accession_no": "000-aaa-future",
+                        "form_type": "10-Q",
+                        "filing_date": None,
+                        "accepted_at": None,
+                        "available_at": None,
+                        "report_date": "2026-09-30",
+                    }
+                ]
+            ),
+        ],
+        ignore_index=True,
+    )
 
     model = build_market_mover_research_snapshot(
         mover={"Symbol": "AAA", "Market Cap": 5_500_000_000},
