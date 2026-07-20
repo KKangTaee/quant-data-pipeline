@@ -10233,3 +10233,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 새 추적 항목이나 재진입 episode를 만들지 않고, 실수로 종료한 기존 항목을 원래 시작일과 투자 계약 그대로 되돌려야 함.
 - Analysis result: `reopen_item`이 동일 item ID를 유지하면서 종료 요청일·적용일·종료금액을 비우고 `active`로 되돌린다. 활성 10개 한도와 동일 source 중복은 복구 시 다시 검증하며 과거 command audit은 보존한다.
 - Follow-up: service/repository/page/React와 durable docs를 연결했고 Python 112 / React 25 / typecheck/build/static asset 검증을 통과했다. Browser URL policy로 실제 interaction screenshot만 수행하지 못했다.
+
+### 2026-07-20 - Sentiment 장기 이력은 최신 화면과 수집 당시 기록을 분리한다
+
+- User request: CNN·AAII만으로 개선을 이어가되 과거 데이터가 실제로 축적되는지 확인하고 2차를 진행하도록 요청함.
+- Interpreted goal: 현재 화면의 쉬운 최신 조회는 유지하면서, 향후 1W·1M 검증에 미래 정보가 섞이지 않도록 지금부터 실제 수집 당시 값을 보존해야 함.
+- Analysis result: 화면은 최근 180일로 제한되지만 canonical observation date는 더 길게 누적된다. 다만 동일 날짜의 값과 `collected_at`은 UPSERT로 덮어써져 과거 known-state를 재현할 수 없다.
+- Follow-up: canonical latest + immutable normalized capture의 이중 저장, 일 1회 automation, UTC `known_at` loader, 공통 `6M / 1Y / 전체`와 compact coverage evidence를 승인했다. 예측은 PIT 검증 전 계속 차단한다.
