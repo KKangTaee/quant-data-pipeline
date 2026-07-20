@@ -606,6 +606,19 @@ def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[st
             "capture_count": int(source.get("capture_count") or 0),
         }
 
+    common_source = dict(coverage_source.get("common") or {})
+    common_history_coverage = {
+        "canonical_start": _display_text(
+            common_source.get("canonical_start"),
+            "",
+        ),
+        "canonical_end": _display_text(
+            common_source.get("canonical_end"),
+            "",
+        ),
+        "available": bool(common_source.get("available")),
+    }
+
     return {
         "schema_version": "sentiment_react_workbench_v2",
         "component": "SentimentWorkbench",
@@ -657,6 +670,7 @@ def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[st
         "history_coverage": {
             "default_period": "6M",
             "periods": ["6M", "1Y", "ALL"],
+            "common": common_history_coverage,
             "cnn": history_coverage_payload("cnn"),
             "aaii": history_coverage_payload("aaii"),
             "cnn_components_note": _display_text(

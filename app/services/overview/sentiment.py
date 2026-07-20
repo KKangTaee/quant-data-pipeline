@@ -395,6 +395,41 @@ def _history_source_coverage(
         "capture_count": int(capture.get("capture_count") or 0),
     }
 
+
+def _common_history_coverage(
+    cnn: dict[str, Any],
+    aaii: dict[str, Any],
+) -> dict[str, Any]:
+    """Return only the canonical date range where both sentiment sources exist."""
+    starts = [
+        pd.to_datetime(item.get("canonical_start"), errors="coerce")
+        for item in (cnn, aaii)
+    ]
+    ends = [
+        pd.to_datetime(item.get("canonical_end"), errors="coerce")
+        for item in (cnn, aaii)
+    ]
+    if any(pd.isna(value) for value in [*starts, *ends]):
+        return {
+            "canonical_start": None,
+            "canonical_end": None,
+            "available": False,
+        }
+    common_start = max(starts)
+    common_end = min(ends)
+    if common_start > common_end:
+        return {
+            "canonical_start": None,
+            "canonical_end": None,
+            "available": False,
+        }
+    return {
+        "canonical_start": common_start.strftime("%Y-%m-%d"),
+        "canonical_end": common_end.strftime("%Y-%m-%d"),
+        "available": True,
+    }
+
+
 def _round_metric(value: float | None) -> float | None:
     return None if value is None else round(float(value), 2)
 
@@ -1128,24 +1163,30 @@ def build_market_sentiment_snapshot(
         "missing_count": missing_core,
     }
     analysis_history_frame = _recent_sentiment_history(history_frame, today=today_value)
+    cnn_history_coverage = _history_source_coverage(
+        history_frame,
+        series_id="CNN_FEAR_GREED",
+        source="cnn_fear_greed",
+        capture_summary=capture_summary_value,
+    )
+    aaii_history_coverage = _history_source_coverage(
+        history_frame,
+        series_id="AAII_BULL_BEAR_SPREAD",
+        source="aaii_sentiment_survey",
+        capture_summary=capture_summary_value,
+    )
     return {
         "status": status,
         "rows": pd.DataFrame(table_rows, columns=SENTIMENT_COLUMNS),
         "component_rows": pd.DataFrame(component_rows, columns=SENTIMENT_COMPONENT_COLUMNS),
         "history_rows": history_out,
         "history_coverage": {
-            "cnn": _history_source_coverage(
-                history_frame,
-                series_id="CNN_FEAR_GREED",
-                source="cnn_fear_greed",
-                capture_summary=capture_summary_value,
+            "common": _common_history_coverage(
+                cnn_history_coverage,
+                aaii_history_coverage,
             ),
-            "aaii": _history_source_coverage(
-                history_frame,
-                series_id="AAII_BULL_BEAR_SPREAD",
-                source="aaii_sentiment_survey",
-                capture_summary=capture_summary_value,
-            ),
+            "cnn": cnn_history_coverage,
+            "aaii": aaii_history_coverage,
             "cnn_components_note": "수집 시작 이후 현재값을 축적 중",
         },
         "coverage": coverage,

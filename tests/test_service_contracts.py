@@ -22733,6 +22733,18 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "source": "cnn_fear_greed",
                     "value": 37.1,
                 },
+                {
+                    "series_id": "AAII_BULL_BEAR_SPREAD",
+                    "observation_date": pd.Timestamp("1987-07-24"),
+                    "source": "aaii_sentiment_survey",
+                    "value": 0.0,
+                },
+                {
+                    "series_id": "AAII_BULL_BEAR_SPREAD",
+                    "observation_date": pd.Timestamp("2026-07-16"),
+                    "source": "aaii_sentiment_survey",
+                    "value": 12.0,
+                },
             ]
         )
         snapshot = build_market_sentiment_snapshot(
@@ -22747,7 +22759,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             },
             today=date(2026, 7, 20),
         )
-        self.assertEqual(len(snapshot["history_rows"]), 3)
+        self.assertEqual(len(snapshot["history_rows"]), 5)
         cnn_range = next(
             row
             for row in snapshot["analysis"]["range_context"]
@@ -22761,6 +22773,36 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(
             snapshot["history_coverage"]["cnn"]["pit_start_at"],
             "2026-07-20 01:00:00",
+        )
+        self.assertEqual(
+            snapshot["history_coverage"]["common"],
+            {
+                "canonical_start": "2025-06-04",
+                "canonical_end": "2026-07-16",
+                "available": True,
+            },
+        )
+
+    def test_sentiment_common_history_coverage_uses_only_source_intersection(self) -> None:
+        from app.services.overview.sentiment import _common_history_coverage
+
+        self.assertEqual(
+            _common_history_coverage(
+                {"canonical_start": "2025-06-04", "canonical_end": "2026-07-20"},
+                {"canonical_start": "1987-07-24", "canonical_end": "2026-07-16"},
+            ),
+            {
+                "canonical_start": "2025-06-04",
+                "canonical_end": "2026-07-16",
+                "available": True,
+            },
+        )
+        self.assertEqual(
+            _common_history_coverage(
+                {"canonical_start": "2026-08-01", "canonical_end": "2026-08-02"},
+                {"canonical_start": "2026-07-01", "canonical_end": "2026-07-16"},
+            ),
+            {"canonical_start": None, "canonical_end": None, "available": False},
         )
 
     def test_market_sentiment_snapshot_adds_range_divergence_and_component_history(self) -> None:
@@ -22929,6 +22971,11 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 "missing_count": 0,
             },
             "history_coverage": {
+                "common": {
+                    "canonical_start": "2025-06-04",
+                    "canonical_end": "2026-06-04",
+                    "available": True,
+                },
                 "cnn": {
                     "canonical_start": "2025-06-04",
                     "canonical_end": "2026-06-04",
@@ -22938,7 +22985,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "capture_count": 1,
                 },
                 "aaii": {
-                    "canonical_start": "2026-01-07",
+                    "canonical_start": "1987-07-24",
                     "canonical_end": "2026-06-04",
                     "observation_count": 22,
                     "pit_start_at": "2026-07-20 01:05:00",
@@ -23195,6 +23242,14 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(payload["charts"]["aaii_spread"]["unit"], "percentage_point")
         self.assertEqual(payload["history_coverage"]["periods"], ["6M", "1Y", "ALL"])
         self.assertEqual(payload["history_coverage"]["default_period"], "6M")
+        self.assertEqual(
+            payload["history_coverage"]["common"],
+            {
+                "canonical_start": "2025-06-04",
+                "canonical_end": "2026-06-04",
+                "available": True,
+            },
+        )
         self.assertEqual(payload["history_coverage"]["cnn"]["canonical_start"], "2025-06-04")
         self.assertEqual(payload["history_coverage"]["cnn"]["pit_start_at"], "2026-07-20 01:00:00")
         self.assertEqual(payload["charts"]["cnn"]["series"][0]["date"], "2025-06-04")
