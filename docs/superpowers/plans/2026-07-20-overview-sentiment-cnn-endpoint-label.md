@@ -28,7 +28,7 @@
 - Consumes: the existing `latestPoint` and `sentiment-workbench__chart-latest-point` group.
 - Produces: the same endpoint group with a circle only.
 
-- [ ] **Step 1: Write the failing React source contract**
+- [x] **Step 1: Write the failing React source contract**
 
 Add these assertions to `test_sentiment_history_uses_one_shared_aligned_domain_for_both_panels`:
 
@@ -38,7 +38,7 @@ self.assertIn("<circle cx={xForTimestamp(latestPoint.timestamp", history)
 self.assertNotIn("{displayValue(latestPoint.numericValue)} ·", history)
 ```
 
-- [ ] **Step 2: Run the focused contract and confirm RED**
+- [x] **Step 2: Run the focused contract and confirm RED**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -47,7 +47,7 @@ self.assertNotIn("{displayValue(latestPoint.numericValue)} ·", history)
 
 Expected: one failure because the inline value expression still exists.
 
-- [ ] **Step 3: Remove only the SVG text element**
+- [x] **Step 3: Remove only the SVG text element**
 
 Keep:
 
@@ -57,7 +57,7 @@ Keep:
 </g>
 ```
 
-- [ ] **Step 4: Run GREEN verification and production build**
+- [x] **Step 4: Run GREEN verification and production build**
 
 ```bash
 .venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests
@@ -67,7 +67,6 @@ git diff --check
 
 Expected: `184` tests pass, Vite build succeeds, and diff check is clean.
 
-- [ ] **Step 5: Record and commit the follow-up**
+- [x] **Step 5: Record and commit the follow-up**
 
 Append the RED/GREEN/build result to the active task `RUNS.md`, stage only the source contract, component source/static build, plan, and task note, then commit with a Korean message.
-

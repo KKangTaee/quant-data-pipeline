@@ -26,3 +26,5 @@
 - The rebuilt chart keeps one x-domain but does not fill the AAII tail: CNN can show `2026-07-20 / 37.1`, while AAII remains at its actual `2026-07-16` observation.
 - A fresh DB-backed service/payload read returned aligned coverage `2025-06-04~2026-07-20`, CNN latest `2026-07-20 / 37.06 / 공포`, AAII response latest `2026-07-16`, and AAII spread latest `2026-07-16 / 12.04 / 낙관`.
 - Browser QA was retried after starting the local Streamlit server on port `49190`, but Browser Use again blocked localhost navigation by URL policy. The existing tab was kept for user manual reload; no alternate browser surface or policy workaround was used.
+- User screenshot review found the always-visible CNN endpoint `37.1 · 공포` text covering the recent line. The duplicated SVG text was removed while retaining the endpoint circle, chart-header latest state/value/date, and hover tooltip.
+- Endpoint-label RED failed on the existing `displayValue(latestPoint.numericValue)` expression as expected. GREEN passed the focused contract, all `184` Overview Automation/React contracts, Vite production build, and `git diff --check`.

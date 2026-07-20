@@ -294,7 +294,6 @@ function SentimentLineChart({ panel, mode, extent }: {
             {mode === "cnn" && latestPoint ? (
               <g className="sentiment-workbench__chart-latest-point" aria-hidden="true">
                 <circle cx={xForTimestamp(latestPoint.timestamp, chartTimeExtent)} cy={yForValue(latestPoint.numericValue, domain)} fill={chartSeriesColor(latestPoint.series, mode)} r={4.5} />
-                <text textAnchor="end" x={xForTimestamp(latestPoint.timestamp, chartTimeExtent) - 7} y={yForValue(latestPoint.numericValue, domain) - 9}>{displayValue(latestPoint.numericValue)} · {latestPoint.status_label || "현재"}</text>
               </g>
             ) : null}
             {hoveredChartPoint ? (
