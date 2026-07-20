@@ -153,5 +153,132 @@ class SentimentPitPersistenceTests(unittest.TestCase):
         self.assertEqual(db.events, ["batch"])
 
 
+class SentimentPitCollectorTests(unittest.TestCase):
+    def test_cnn_failure_does_not_block_aaii(self) -> None:
+        from finance.data import sentiment
+
+        aaii = {
+            **sentiment_row(44.9),
+            "series_id": "AAII_BULLISH",
+            "source": "aaii_sentiment_survey",
+        }
+        persisted: list[str] = []
+        failures: list[str] = []
+        db = MagicMock()
+        with (
+            patch.object(
+                sentiment,
+                "fetch_cnn_fear_greed_rows",
+                side_effect=RuntimeError("CNN blocked"),
+            ),
+            patch.object(sentiment, "fetch_aaii_sentiment_rows", return_value=[aaii]),
+            patch.object(sentiment, "MySQLClient", return_value=db),
+            patch.object(sentiment, "ensure_market_sentiment_schema"),
+            patch.object(
+                sentiment,
+                "persist_market_sentiment_source_capture",
+                side_effect=lambda _db, **kw: persisted.append(kw["source"])
+                or {
+                    "batch_id": kw["batch_id"],
+                    "status": kw["status"],
+                    "snapshot_rows_written": 1,
+                    "canonical_rows_written": 1,
+                },
+            ),
+            patch.object(
+                sentiment,
+                "record_market_sentiment_source_failure",
+                side_effect=lambda _db, **kw: failures.append(kw["source"]),
+            ),
+        ):
+            with self.assertLogs(sentiment.LOGGER.name, level="WARNING"):
+                result = sentiment.collect_and_store_market_sentiment()
+        self.assertEqual(persisted, ["aaii_sentiment_survey"])
+        self.assertEqual(failures, ["cnn_fear_greed"])
+        self.assertEqual(result["stored"], 1)
+        self.assertIn("cnn_fear_greed", result["batch_ids"])
+
+    def test_success_uses_distinct_batches_and_source_observed_times(self) -> None:
+        from finance.data import sentiment
+
+        cnn = sentiment_row(37.1)
+        aaii = {
+            **sentiment_row(44.9),
+            "series_id": "AAII_BULLISH",
+            "source": "aaii_sentiment_survey",
+            "collected_at": "2026-07-20 01:05:00",
+        }
+        captures: list[dict] = []
+        db = MagicMock()
+        with (
+            patch.object(sentiment, "fetch_cnn_fear_greed_rows", return_value=[cnn]),
+            patch.object(sentiment, "fetch_aaii_sentiment_rows", return_value=[aaii]),
+            patch.object(sentiment, "MySQLClient", return_value=db),
+            patch.object(sentiment, "ensure_market_sentiment_schema"),
+            patch.object(
+                sentiment,
+                "persist_market_sentiment_source_capture",
+                side_effect=lambda _db, **kw: captures.append(kw)
+                or {
+                    "batch_id": kw["batch_id"],
+                    "status": kw["status"],
+                    "snapshot_rows_written": 1,
+                    "canonical_rows_written": 1,
+                },
+            ),
+        ):
+            result = sentiment.collect_and_store_market_sentiment()
+        self.assertEqual(len({row["batch_id"] for row in captures}), 2)
+        self.assertEqual(
+            [row["observed_at"] for row in captures],
+            [cnn["collected_at"], aaii["collected_at"]],
+        )
+        self.assertEqual(result["snapshot_rows_stored"], 2)
+        self.assertEqual(result["stored"], 2)
+        self.assertEqual(set(result["batch_ids"]), {"cnn_fear_greed", "aaii_sentiment_survey"})
+
+    def test_failure_recording_error_still_allows_next_source(self) -> None:
+        from finance.data import sentiment
+
+        aaii = {
+            **sentiment_row(44.9),
+            "series_id": "AAII_BULLISH",
+            "source": "aaii_sentiment_survey",
+        }
+        persisted: list[str] = []
+        db = MagicMock()
+        with (
+            patch.object(
+                sentiment,
+                "fetch_cnn_fear_greed_rows",
+                side_effect=RuntimeError("CNN blocked"),
+            ),
+            patch.object(sentiment, "fetch_aaii_sentiment_rows", return_value=[aaii]),
+            patch.object(sentiment, "MySQLClient", return_value=db),
+            patch.object(sentiment, "ensure_market_sentiment_schema"),
+            patch.object(
+                sentiment,
+                "persist_market_sentiment_source_capture",
+                side_effect=lambda _db, **kw: persisted.append(kw["source"])
+                or {
+                    "batch_id": kw["batch_id"],
+                    "status": kw["status"],
+                    "snapshot_rows_written": 1,
+                    "canonical_rows_written": 1,
+                },
+            ),
+            patch.object(
+                sentiment,
+                "record_market_sentiment_source_failure",
+                side_effect=RuntimeError("failure batch blocked"),
+            ),
+        ):
+            with self.assertLogs(sentiment.LOGGER.name, level="WARNING"):
+                result = sentiment.collect_and_store_market_sentiment()
+        self.assertEqual(persisted, ["aaii_sentiment_survey"])
+        self.assertEqual(result["stored"], 1)
+        self.assertNotIn("cnn_fear_greed", result["batch_ids"])
+
+
 if __name__ == "__main__":
     unittest.main()

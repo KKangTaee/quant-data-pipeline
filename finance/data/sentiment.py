@@ -9,12 +9,21 @@ from datetime import date, datetime, timezone
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from uuid import uuid4
 
 from bs4 import BeautifulSoup
 import pandas as pd
 
 from .db.mysql import MySQLClient
-from .macro import DB_META, MACRO_TABLE, ensure_macro_series_schema
+from .sentiment_store import (
+    DB_META,
+    MACRO_TABLE,
+    MARKET_SENTIMENT_BATCH_TABLE,
+    MARKET_SENTIMENT_SNAPSHOT_TABLE,
+    ensure_market_sentiment_schema,
+    persist_market_sentiment_source_capture,
+    record_market_sentiment_source_failure,
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -44,6 +53,10 @@ AAII_SERIES: dict[str, tuple[str, str, str]] = {
     "neutral": ("AAII_NEUTRAL", "AAII Neutral Sentiment", "percent"),
     "bearish": ("AAII_BEARISH", "AAII Bearish Sentiment", "percent"),
     "spread": ("AAII_BULL_BEAR_SPREAD", "AAII Bull-Bear Spread", "percentage_point"),
+}
+EXPECTED_SENTIMENT_SERIES = {
+    "cnn_fear_greed": {"CNN_FEAR_GREED", *[value[0] for value in CNN_COMPONENTS.values()]},
+    "aaii_sentiment_survey": {value[0] for value in AAII_SERIES.values()},
 }
 
 
@@ -404,35 +417,31 @@ def fetch_aaii_sentiment_rows(
     return rows
 
 
-def _upsert_sentiment_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> None:
-    if not rows:
-        return
-    sql = f"""
-    INSERT INTO {MACRO_TABLE} (
-      series_id, observation_date, source, source_type, source_mode, source_ref,
-      series_name, category, frequency, units, value, release_lag_days,
-      coverage_status, missing_fields_json, collected_at, error_msg
-    ) VALUES (
-      %(series_id)s, %(observation_date)s, %(source)s, %(source_type)s, %(source_mode)s, %(source_ref)s,
-      %(series_name)s, %(category)s, %(frequency)s, %(units)s, %(value)s, %(release_lag_days)s,
-      %(coverage_status)s, %(missing_fields_json)s, %(collected_at)s, %(error_msg)s
-    )
-    ON DUPLICATE KEY UPDATE
-      source_type = VALUES(source_type),
-      source_mode = VALUES(source_mode),
-      source_ref = VALUES(source_ref),
-      series_name = VALUES(series_name),
-      category = VALUES(category),
-      frequency = VALUES(frequency),
-      units = VALUES(units),
-      value = VALUES(value),
-      release_lag_days = VALUES(release_lag_days),
-      coverage_status = VALUES(coverage_status),
-      missing_fields_json = VALUES(missing_fields_json),
-      collected_at = VALUES(collected_at),
-      error_msg = VALUES(error_msg)
-    """
-    db.executemany(sql, rows)
+def _source_coverage(source: str, rows: list[dict[str, Any]]) -> tuple[str, dict[str, Any]]:
+    expected = EXPECTED_SENTIMENT_SERIES[source]
+    observed = {str(row.get("series_id") or "").upper() for row in rows}
+    missing = sorted(expected - observed)
+    return ("partial" if missing else "success"), {
+        "expected": len(expected),
+        "observed": len(expected & observed),
+        "missing_series": missing,
+    }
+
+
+def _source_observed_at(rows: list[dict[str, Any]]) -> str:
+    values = {str(row.get("collected_at") or "") for row in rows}
+    if len(values) != 1 or "" in values:
+        raise RuntimeError("One source response must have one collected_at")
+    return values.pop()
+
+
+def _record_source_failure_safely(db: MySQLClient, **values: Any) -> bool:
+    try:
+        record_market_sentiment_source_failure(db, **values)
+    except Exception:
+        LOGGER.exception("Failed to record sentiment source failure: %s", values.get("source"))
+        return False
+    return True
 
 
 def collect_and_store_market_sentiment(
@@ -446,52 +455,119 @@ def collect_and_store_market_sentiment(
     password: str = "1234",
     port: int = 3306,
 ) -> dict[str, Any]:
-    """Collect market sentiment context and UPSERT it into macro_series_observation."""
-    source_fetchers: list[tuple[str, Callable[[], list[dict[str, Any]]]]] = []
+    """Collect CNN and AAII into source-isolated immutable and canonical stores."""
+    source_fetchers: list[tuple[str, str, Callable[[], list[dict[str, Any]]]]] = []
     if include_cnn:
-        source_fetchers.append(("cnn_fear_greed", lambda: fetch_cnn_fear_greed_rows(timeout=timeout, retries=retries)))
+        source_fetchers.append(
+            (
+                "cnn_fear_greed",
+                CNN_FEAR_GREED_PAGE,
+                lambda: fetch_cnn_fear_greed_rows(timeout=timeout, retries=retries),
+            )
+        )
     if include_aaii:
-        source_fetchers.append(("aaii_sentiment_survey", lambda: fetch_aaii_sentiment_rows(timeout=timeout, retries=retries)))
+        source_fetchers.append(
+            (
+                "aaii_sentiment_survey",
+                AAII_SENTIMENT_URL,
+                lambda: fetch_aaii_sentiment_rows(timeout=timeout, retries=retries),
+            )
+        )
 
-    rows: list[dict[str, Any]] = []
+    collection_id = str(uuid4())
     failed: list[dict[str, str]] = []
     missing: list[str] = []
     source_row_counts: dict[str, int] = {}
-    for source, fetch_rows in source_fetchers:
-        try:
-            source_rows = fetch_rows()
-            if source_rows:
-                rows.extend(source_rows)
-                source_row_counts[source] = len(source_rows)
-            else:
-                missing.append(source)
-                source_row_counts[source] = 0
-        except Exception as exc:
-            failed.append({"source": source, "reason": str(exc)[:500]})
-            source_row_counts[source] = 0
-            LOGGER.warning("Market sentiment fetch failed for %s: %s", source, exc)
+    batch_ids: dict[str, str] = {}
+    snapshot_rows_stored = 0
+    canonical_rows_stored = 0
+    stored_rows: list[dict[str, Any]] = []
 
-    ensure_macro_series_schema(host=host, user=user, password=password, port=port)
     db = MySQLClient(host, user, password, port)
     try:
-        db.use_db(DB_META)
-        _upsert_sentiment_rows(db, rows)
+        ensure_market_sentiment_schema(db)
+        for source, source_ref, fetch_rows in source_fetchers:
+            batch_id = str(uuid4())
+            requested_at = _utc_now_string()
+            try:
+                source_rows = fetch_rows()
+                source_row_counts[source] = len(source_rows)
+                if not source_rows:
+                    missing.append(source)
+                    if _record_source_failure_safely(
+                        db,
+                        collection_id=collection_id,
+                        batch_id=batch_id,
+                        source=source,
+                        source_ref=source_ref,
+                        requested_at=requested_at,
+                        completed_at=_utc_now_string(),
+                        status="missing",
+                        error_msg="Source returned no normalized observations",
+                    ):
+                        batch_ids[source] = batch_id
+                    continue
+
+                status, source_coverage = _source_coverage(source, source_rows)
+                saved = persist_market_sentiment_source_capture(
+                    db,
+                    collection_id=collection_id,
+                    batch_id=batch_id,
+                    source=source,
+                    source_ref=source_ref,
+                    requested_at=requested_at,
+                    observed_at=_source_observed_at(source_rows),
+                    completed_at=_utc_now_string(),
+                    status=status,
+                    coverage=source_coverage,
+                    rows=source_rows,
+                )
+                batch_ids[source] = batch_id
+                snapshot_rows_stored += int(saved["snapshot_rows_written"])
+                canonical_rows_stored += int(saved["canonical_rows_written"])
+                stored_rows.extend(source_rows)
+            except Exception as exc:
+                reason = str(exc)[:500]
+                failed.append({"source": source, "reason": reason})
+                source_row_counts[source] = 0
+                LOGGER.warning("Market sentiment fetch/store failed for %s: %s", source, exc)
+                if _record_source_failure_safely(
+                    db,
+                    collection_id=collection_id,
+                    batch_id=batch_id,
+                    source=source,
+                    source_ref=source_ref,
+                    requested_at=requested_at,
+                    completed_at=_utc_now_string(),
+                    status="error",
+                    error_msg=reason,
+                ):
+                    batch_ids[source] = batch_id
     finally:
         db.close()
 
     coverage: dict[str, int] = {}
-    for row in rows:
+    for row in stored_rows:
         status = str(row.get("coverage_status") or "missing")
         coverage[status] = coverage.get(status, 0) + 1
 
     return {
         "requested": len(source_fetchers),
-        "stored": len(rows),
+        "stored": canonical_rows_stored,
         "updated": None,
         "missing": missing,
         "failed": failed,
         "coverage": coverage,
-        "sources": [source for source, _ in source_fetchers],
+        "sources": [source for source, _, _ in source_fetchers],
         "source_row_counts": source_row_counts,
+        "collection_id": collection_id,
+        "batch_ids": batch_ids,
+        "snapshot_rows_stored": snapshot_rows_stored,
+        "canonical_rows_stored": canonical_rows_stored,
         "target_table": f"{DB_META}.{MACRO_TABLE}",
+        "target_tables": [
+            f"{DB_META}.{MACRO_TABLE}",
+            f"{DB_META}.{MARKET_SENTIMENT_BATCH_TABLE}",
+            f"{DB_META}.{MARKET_SENTIMENT_SNAPSHOT_TABLE}",
+        ],
     }
