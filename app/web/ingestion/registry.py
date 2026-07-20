@@ -69,7 +69,11 @@ INGESTION_ACTION_REGISTRY: dict[str, dict[str, Any]] = {
         "active": True,
         "compatibility": False,
         "write_behavior": "db_write",
-        "target_tables": ["finance_meta.macro_series_observation"],
+        "target_tables": [
+            "finance_meta.macro_series_observation",
+            "finance_meta.market_sentiment_collection_batch",
+            "finance_meta.market_sentiment_observation_snapshot",
+        ],
         "progress": "stage",
     },
     "extended_statement_refresh": {

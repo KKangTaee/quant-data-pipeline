@@ -15,6 +15,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_earnings_calendar,
     run_collect_fomc_calendar,
     run_collect_macro_calendar,
+    run_collect_market_sentiment,
     run_collect_market_intraday_snapshot,
     run_collect_nasdaq100_valuation_context,
     run_collect_sp500_valuation_context,
@@ -90,6 +91,10 @@ def _run_sp500_universe(_: datetime) -> JobResult:
 
 def _run_nasdaq_symbol_directory(_: datetime) -> JobResult:
     return run_collect_symbol_directory_snapshots(sources=("nasdaqlisted",))
+
+
+def _run_market_sentiment(_: datetime) -> JobResult:
+    return run_collect_market_sentiment()
 
 
 def _run_intraday_snapshot(
@@ -174,6 +179,16 @@ OVERVIEW_AUTOMATION_JOB_SPECS: tuple[ScheduledJobSpec, ...] = (
         market_hours_only=True,
         runner=_run_intraday_snapshot("SP500", 500, fallback_to_yfinance=True),
         description="Collect S&P 500 quote-fast daily movers snapshot during US market hours.",
+    ),
+    ScheduledJobSpec(
+        job_id="market_sentiment",
+        job_name="collect_market_sentiment",
+        label="CNN / AAII Sentiment",
+        cadence_minutes=24 * 60,
+        profiles=("safe", "standard", "broad", "browser_safe"),
+        market_hours_only=False,
+        runner=_run_market_sentiment,
+        description="Capture daily CNN and AAII source views for Overview Sentiment.",
     ),
     ScheduledJobSpec(
         job_id="top1000_intraday",

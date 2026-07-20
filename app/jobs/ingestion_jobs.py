@@ -3188,7 +3188,14 @@ def run_collect_market_sentiment(
                 "coverage": summary.get("coverage") or {},
                 "failed": summary.get("failed") or [],
                 "missing": missing_sources,
-                "target_tables": ["finance_meta.macro_series_observation"],
+                "collection_id": summary.get("collection_id"),
+                "batch_ids": summary.get("batch_ids") or {},
+                "snapshot_rows_stored": int(summary.get("snapshot_rows_stored") or 0),
+                "canonical_rows_stored": int(
+                    summary.get("canonical_rows_stored") or rows_written
+                ),
+                "target_tables": summary.get("target_tables")
+                or ["finance_meta.macro_series_observation"],
             },
         )
     except Exception as exc:

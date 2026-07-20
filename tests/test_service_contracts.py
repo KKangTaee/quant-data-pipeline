@@ -11057,6 +11057,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("nasdaq_symbol_directory", job_ids)
         self.assertIn("nasdaq_intraday", job_ids)
+        self.assertIn("market_sentiment", job_ids)
         directory_row = next(row for row in plan if row["job_id"] == "nasdaq_symbol_directory")
         intraday_row = next(row for row in plan if row["job_id"] == "nasdaq_intraday")
         self.assertFalse(directory_row["market_hours_only"])
@@ -11827,7 +11828,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
             ["2026-07-30"],
         )
 
-    def test_browser_safe_profile_only_selects_sp500_intraday_snapshot(self) -> None:
+    def test_browser_safe_profile_includes_intraday_and_daily_sentiment(self) -> None:
         from app.jobs.overview_automation import VALID_PROFILES, build_overview_automation_plan
 
         self.assertIn("browser_safe", VALID_PROFILES)
@@ -11838,10 +11839,16 @@ class OverviewAutomationContractTests(unittest.TestCase):
             now=datetime(2026, 5, 29, 15, 0, tzinfo=timezone.utc),
         )
 
-        self.assertEqual([row["job_id"] for row in plan], ["sp500_intraday"])
+        self.assertEqual(
+            [row["job_id"] for row in plan],
+            ["sp500_intraday", "market_sentiment"],
+        )
         self.assertTrue(plan[0]["should_run"])
         self.assertEqual(plan[0]["cadence_minutes"], 5)
         self.assertTrue(plan[0]["market_hours_only"])
+        sentiment = next(row for row in plan if row["job_id"] == "market_sentiment")
+        self.assertEqual(sentiment["cadence_minutes"], 24 * 60)
+        self.assertFalse(sentiment["market_hours_only"])
 
     def test_intraday_plan_skips_outside_market_hours_unless_allowed(self) -> None:
         from app.jobs.overview_automation import ScheduledJobSpec, build_overview_automation_plan
@@ -27133,10 +27140,22 @@ class MarketIntelligenceIngestionContractTests(unittest.TestCase):
             return_value={
                 "requested": 2,
                 "stored": 260,
+                "collection_id": "00000000-0000-0000-0000-000000000001",
+                "batch_ids": {
+                    "cnn_fear_greed": "batch-cnn",
+                    "aaii_sentiment_survey": "batch-aaii",
+                },
+                "snapshot_rows_stored": 260,
+                "canonical_rows_stored": 260,
                 "coverage": {"actual": 260},
                 "sources": ["cnn_fear_greed", "aaii_sentiment_survey"],
                 "missing": [],
                 "failed": [],
+                "target_tables": [
+                    "finance_meta.macro_series_observation",
+                    "finance_meta.market_sentiment_collection_batch",
+                    "finance_meta.market_sentiment_observation_snapshot",
+                ],
             },
         ):
             result = jobs.run_collect_market_sentiment()
@@ -27145,7 +27164,16 @@ class MarketIntelligenceIngestionContractTests(unittest.TestCase):
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["rows_written"], 260)
         self.assertEqual(result["symbols_processed"], 2)
-        self.assertEqual(result["details"]["target_tables"], ["finance_meta.macro_series_observation"])
+        self.assertEqual(
+            result["details"]["target_tables"],
+            [
+                "finance_meta.macro_series_observation",
+                "finance_meta.market_sentiment_collection_batch",
+                "finance_meta.market_sentiment_observation_snapshot",
+            ],
+        )
+        self.assertEqual(result["details"]["snapshot_rows_stored"], 260)
+        self.assertEqual(len(result["details"]["batch_ids"]), 2)
 
     def test_sp500_snapshot_uses_fast_quote_rows_without_yfinance_download(self) -> None:
         from finance.data import market_intelligence as mi
