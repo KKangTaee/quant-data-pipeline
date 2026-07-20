@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from datetime import date, timedelta
 import unittest
 from unittest.mock import MagicMock, patch
+
+import pandas as pd
 
 
 class FakeSchemaDb:
@@ -86,6 +89,117 @@ def sentiment_row(value: float) -> dict:
         "collected_at": "2026-07-20 01:00:00",
         "error_msg": None,
     }
+
+
+class SentimentAaiiWorkbookTests(unittest.TestCase):
+    def test_workbook_frame_normalizes_four_series_per_complete_week(self) -> None:
+        from finance.data.sentiment import parse_aaii_sentiment_frame
+
+        frame = pd.DataFrame(
+            {
+                "Reported Date": [pd.Timestamp("1987-07-24"), pd.Timestamp("2026-07-16")],
+                "Bullish": [0.35, 0.449074],
+                "Neutral": [0.30, 0.222222],
+                "Bearish": [0.35, 0.328704],
+            }
+        )
+
+        rows = parse_aaii_sentiment_frame(
+            frame,
+            collected_at="2026-07-20 09:00:00",
+            source_mode="xls",
+            source_ref="https://www.aaii.com/files/surveys/sentiment.xls",
+        )
+
+        self.assertEqual(len(rows), 8)
+        latest = {
+            row["series_id"]: row
+            for row in rows
+            if row["observation_date"] == "2026-07-16"
+        }
+        self.assertAlmostEqual(latest["AAII_BULLISH"]["value"], 44.9074, places=4)
+        self.assertAlmostEqual(latest["AAII_BULL_BEAR_SPREAD"]["value"], 12.037, places=3)
+        self.assertIn(
+            '"reported_date": "2026-07-16"',
+            latest["AAII_BULLISH"]["missing_fields_json"],
+        )
+
+    def test_workbook_frame_skips_incomplete_week(self) -> None:
+        from finance.data.sentiment import parse_aaii_sentiment_frame
+
+        frame = pd.DataFrame(
+            {
+                "Reported Date": [pd.Timestamp("2026-07-09"), pd.Timestamp("2026-07-16")],
+                "Bullish": [0.40, 0.44],
+                "Neutral": [0.25, None],
+                "Bearish": [0.35, 0.33],
+            }
+        )
+
+        rows = parse_aaii_sentiment_frame(
+            frame,
+            collected_at="2026-07-20 09:00:00",
+            source_mode="xls",
+            source_ref="xls",
+        )
+
+        self.assertEqual({row["observation_date"] for row in rows}, {"2026-07-09"})
+        self.assertEqual(len(rows), 4)
+
+    def test_daily_fetch_keeps_latest_26_complete_weeks(self) -> None:
+        from finance.data import sentiment
+
+        rows = []
+        for offset in range(30):
+            observed = date(2026, 1, 1) + timedelta(days=7 * offset)
+            for series_id in (
+                "AAII_BULLISH",
+                "AAII_NEUTRAL",
+                "AAII_BEARISH",
+                "AAII_BULL_BEAR_SPREAD",
+            ):
+                rows.append(
+                    {"series_id": series_id, "observation_date": observed.isoformat()}
+                )
+        with patch.object(
+            sentiment,
+            "fetch_aaii_sentiment_history_rows",
+            return_value=rows,
+        ):
+            recent = sentiment.fetch_aaii_sentiment_rows()
+
+        self.assertEqual(len(recent), 104)
+        self.assertEqual(
+            min(row["observation_date"] for row in recent),
+            "2026-01-29",
+        )
+
+    def test_daily_fetch_falls_back_to_html_and_anchors_wednesday_on_thursday(self) -> None:
+        from finance.data import sentiment
+
+        html = b"""
+        <table>
+          <tr><th>Reported Date</th><th>Bullish</th><th>Neutral</th><th>Bearish</th></tr>
+          <tr><td>Jul 15</td><td>44.9%</td><td>22.2%</td><td>32.9%</td></tr>
+        </table>
+        """
+        with (
+            patch.object(
+                sentiment,
+                "fetch_aaii_sentiment_history_rows",
+                side_effect=RuntimeError("blocked"),
+            ),
+            patch.object(sentiment, "_fetch_bytes", return_value=html),
+        ):
+            rows = sentiment.fetch_aaii_sentiment_rows(today=date(2026, 7, 20))
+
+        self.assertEqual({row["observation_date"] for row in rows}, {"2026-07-16"})
+        self.assertTrue(
+            all(
+                '"reported_date_raw": "Jul 15"' in row["missing_fields_json"]
+                for row in rows
+            )
+        )
 
 
 class SentimentPitPersistenceTests(unittest.TestCase):

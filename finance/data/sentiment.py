@@ -5,7 +5,8 @@ import logging
 import re
 import time
 from collections.abc import Callable
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
+from io import BytesIO
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -31,6 +32,8 @@ LOGGER = logging.getLogger(__name__)
 CNN_FEAR_GREED_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
 CNN_FEAR_GREED_PAGE = "https://www.cnn.com/markets/fear-and-greed"
 AAII_SENTIMENT_URL = "https://www.aaii.com/sentimentsurvey/sent_results"
+AAII_SENTIMENT_HISTORY_URL = "https://www.aaii.com/files/surveys/sentiment.xls"
+AAII_DAILY_CAPTURE_WEEKS = 26
 DEFAULT_TIMEOUT = 20
 DEFAULT_RETRIES = 2
 DEFAULT_USER_AGENT = (
@@ -245,6 +248,79 @@ def _aaii_report_date(value: str, *, current_year: int, last_month: int | None) 
         return None, current_year, last_month
 
 
+def parse_aaii_sentiment_frame(
+    frame: pd.DataFrame,
+    *,
+    collected_at: str,
+    source_mode: str,
+    source_ref: str,
+) -> list[dict[str, Any]]:
+    """Normalize complete official AAII weekly rows without inventing missing responses."""
+    required = ["Reported Date", "Bullish", "Neutral", "Bearish"]
+    if not set(required).issubset(frame.columns):
+        raise RuntimeError(f"AAII workbook is missing required columns: {required}")
+    normalized = frame[required].copy()
+    normalized["Reported Date"] = pd.to_datetime(
+        normalized["Reported Date"],
+        errors="coerce",
+    )
+    for column in required[1:]:
+        normalized[column] = pd.to_numeric(normalized[column], errors="coerce")
+    normalized = normalized.dropna(subset=required).sort_values("Reported Date")
+
+    rows: list[dict[str, Any]] = []
+    for item in normalized.to_dict("records"):
+        observation_date = pd.Timestamp(item["Reported Date"]).strftime("%Y-%m-%d")
+        bullish = round(float(item["Bullish"]) * 100.0, 4)
+        neutral = round(float(item["Neutral"]) * 100.0, 4)
+        bearish = round(float(item["Bearish"]) * 100.0, 4)
+        values = {
+            "bullish": bullish,
+            "neutral": neutral,
+            "bearish": bearish,
+            "spread": round(bullish - bearish, 4),
+        }
+        metadata = {
+            "reported_date": observation_date,
+            "bullish_fraction": float(item["Bullish"]),
+            "neutral_fraction": float(item["Neutral"]),
+            "bearish_fraction": float(item["Bearish"]),
+        }
+        for key, value in values.items():
+            series_id, series_name, units = AAII_SERIES[key]
+            rows.append(
+                _sentiment_row(
+                    series_id,
+                    observation_date=observation_date,
+                    source="aaii_sentiment_survey",
+                    source_mode=source_mode,
+                    source_ref=source_ref,
+                    series_name=series_name,
+                    category="sentiment_survey",
+                    units=units,
+                    value=value,
+                    collected_at=collected_at,
+                    metadata=metadata,
+                )
+            )
+    return rows
+
+
+def parse_aaii_sentiment_rows_from_workbook(
+    data: bytes,
+    *,
+    collected_at: str | None = None,
+) -> list[dict[str, Any]]:
+    """Read the official AAII SENTIMENT sheet and normalize complete weekly observations."""
+    frame = pd.read_excel(BytesIO(data), sheet_name="SENTIMENT", header=3)
+    return parse_aaii_sentiment_frame(
+        frame,
+        collected_at=collected_at or _utc_now_string(),
+        source_mode="xls",
+        source_ref=AAII_SENTIMENT_HISTORY_URL,
+    )
+
+
 def parse_aaii_sentiment_rows_from_html(
     html: str | bytes,
     *,
@@ -273,11 +349,15 @@ def parse_aaii_sentiment_rows_from_html(
         cells = [cell.get_text(" ", strip=True) for cell in tr.find_all(["td", "th"])]
         if len(cells) < 4:
             continue
-        observation_date, current_year, last_month = _aaii_report_date(
-            cells[0],
+        raw_report_date = cells[0]
+        parsed_date, current_year, last_month = _aaii_report_date(
+            raw_report_date,
             current_year=current_year,
             last_month=last_month,
         )
+        observation_date = (
+            date.fromisoformat(parsed_date) + timedelta(days=1)
+        ).isoformat() if parsed_date else None
         bullish = _optional_float(cells[1])
         neutral = _optional_float(cells[2])
         bearish = _optional_float(cells[3])
@@ -289,7 +369,13 @@ def parse_aaii_sentiment_rows_from_html(
             "bearish": bearish,
             "spread": round(bullish - bearish, 4),
         }
-        metadata = {"bullish": bullish, "neutral": neutral, "bearish": bearish, "reported_date": cells[0]}
+        metadata = {
+            "bullish": bullish,
+            "neutral": neutral,
+            "bearish": bearish,
+            "reported_date_raw": raw_report_date,
+            "normalized_report_date": observation_date,
+        }
         for key, value in values.items():
             series_id, series_name, units = AAII_SERIES[key]
             rows.append(
@@ -383,6 +469,48 @@ def fetch_cnn_fear_greed_rows(
     return parse_cnn_fear_greed_graphdata(payload)
 
 
+def fetch_aaii_sentiment_history_rows(
+    *,
+    timeout: int = DEFAULT_TIMEOUT,
+    retries: int = DEFAULT_RETRIES,
+    fetcher: Callable[[Request, int], bytes] | None = None,
+) -> list[dict[str, Any]]:
+    data = _fetch_bytes(
+        AAII_SENTIMENT_HISTORY_URL,
+        headers={
+            "User-Agent": DEFAULT_USER_AGENT,
+            "Accept": "application/vnd.ms-excel,application/octet-stream,*/*",
+            "Referer": AAII_SENTIMENT_URL,
+        },
+        timeout=timeout,
+        retries=retries,
+        fetcher=fetcher,
+    )
+    rows = parse_aaii_sentiment_rows_from_workbook(data)
+    if not rows:
+        raise RuntimeError("AAII official workbook contained no complete observations")
+    return rows
+
+
+def _latest_aaii_weeks(
+    rows: list[dict[str, Any]],
+    count: int,
+) -> list[dict[str, Any]]:
+    dates = sorted(
+        {
+            str(row.get("observation_date") or "")
+            for row in rows
+            if row.get("observation_date")
+        }
+    )
+    allowed = set(dates[-max(int(count), 1):])
+    return [
+        row
+        for row in rows
+        if str(row.get("observation_date") or "") in allowed
+    ]
+
+
 def fetch_aaii_sentiment_rows(
     *,
     timeout: int = DEFAULT_TIMEOUT,
@@ -390,18 +518,26 @@ def fetch_aaii_sentiment_rows(
     today: date | None = None,
     fetcher: Callable[[Request, int], bytes] | None = None,
 ) -> list[dict[str, Any]]:
+    try:
+        history = fetch_aaii_sentiment_history_rows(
+            timeout=timeout,
+            retries=retries,
+            fetcher=fetcher,
+        )
+        return _latest_aaii_weeks(history, AAII_DAILY_CAPTURE_WEEKS)
+    except Exception as workbook_error:
+        LOGGER.warning(
+            "AAII workbook fetch failed; using official HTML fallback: %s",
+            workbook_error,
+        )
+
     data = _fetch_bytes(
         AAII_SENTIMENT_URL,
         headers={
             "User-Agent": DEFAULT_USER_AGENT,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
             "Referer": "https://www.aaii.com/sentimentsurvey",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "same-origin",
-            "Sec-Fetch-User": "?1",
-            "Upgrade-Insecure-Requests": "1",
         },
         timeout=timeout,
         retries=retries,
@@ -410,11 +546,11 @@ def fetch_aaii_sentiment_rows(
     )
     rows = parse_aaii_sentiment_rows_from_html(data, today=today)
     if not rows:
-        text = data.decode("utf-8", errors="replace") if isinstance(data, bytes) else str(data)
+        text = data.decode("utf-8", errors="replace")
         if "Pardon Our Interruption" in text:
             raise RuntimeError("AAII official page returned an anti-bot interstitial")
         raise RuntimeError("AAII official sentiment table was not found in the response")
-    return rows
+    return _latest_aaii_weeks(rows, AAII_DAILY_CAPTURE_WEEKS)
 
 
 def _source_coverage(source: str, rows: list[dict[str, Any]]) -> tuple[str, dict[str, Any]]:
