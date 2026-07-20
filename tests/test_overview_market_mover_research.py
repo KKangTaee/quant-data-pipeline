@@ -1,0 +1,184 @@
+from __future__ import annotations
+
+import pandas as pd
+
+from app.services.overview.market_mover_research import (
+    build_current_ttm_valuation,
+    build_financial_factor_series,
+)
+
+
+def _reported_eps_row(year: int, quarter: int, eps: float | None) -> dict[str, object]:
+    return {
+        "fiscal_year": year,
+        "fiscal_quarter": quarter,
+        "period_end": f"{year}-{quarter * 3:02d}-28",
+        "diluted_eps": eps,
+        "metric_provenance": (
+            {"diluted_eps": {"source_kind": "REPORTED"}}
+            if eps is not None
+            else {}
+        ),
+    }
+
+
+def test_financial_factor_series_separates_period_and_factor() -> None:
+    rows = [
+        {
+            "period_end": "2024-12-31",
+            "total_revenue": 80.0,
+            "operating_income": 8.0,
+            "net_income": 6.0,
+            "current_assets": 60.0,
+            "current_liabilities": 30.0,
+            "total_liabilities": 70.0,
+            "shareholders_equity": 50.0,
+        },
+        {
+            "period_end": "2025-12-31",
+            "total_revenue": 100.0,
+            "operating_income": 15.0,
+            "net_income": 10.0,
+            "current_assets": 80.0,
+            "current_liabilities": 40.0,
+            "total_liabilities": 90.0,
+            "shareholders_equity": 60.0,
+        },
+    ]
+
+    series = build_financial_factor_series(rows, freq="annual")
+
+    operating_margin = series["factors"]["operating_margin"]["points"][-1]
+    assert series["freq"] == "annual"
+    assert operating_margin["value"] == 15.0
+    assert series["factors"]["current_ratio"]["points"][-1]["value"] == 2.0
+    assert series["factors"]["debt_ratio"]["points"][-1]["value"] == 150.0
+    assert round(series["factors"]["roe"]["points"][-1]["value"], 2) == 18.18
+
+
+def test_current_ttm_per_requires_four_consecutive_reported_quarters() -> None:
+    rows = [
+        _reported_eps_row(2025, 1, 1.0),
+        _reported_eps_row(2025, 2, 1.2),
+        _reported_eps_row(2025, 3, 1.3),
+        _reported_eps_row(2025, 4, 1.5),
+    ]
+
+    value = build_current_ttm_valuation(
+        rows,
+        latest_price=100.0,
+        latest_price_date="2026-01-02",
+    )
+
+    assert value["status"] == "OK"
+    assert value["ttm_diluted_eps"] == 5.0
+    assert value["current_per"] == 20.0
+
+
+def test_current_ttm_per_is_unavailable_when_one_quarter_is_missing() -> None:
+    rows = [
+        _reported_eps_row(2025, 1, 1.0),
+        _reported_eps_row(2025, 2, None),
+        _reported_eps_row(2025, 3, 1.3),
+        _reported_eps_row(2025, 4, 1.5),
+    ]
+
+    value = build_current_ttm_valuation(
+        rows,
+        latest_price=100.0,
+        latest_price_date="2026-01-02",
+    )
+
+    assert value["status"] == "UNAVAILABLE"
+    assert value["reason_code"] == "INCOMPLETE_REPORTED_DILUTED_EPS"
+    assert value["current_per"] is None
+
+
+def test_diluted_eps_factor_excludes_filing_derived_quarters() -> None:
+    rows = [
+        _reported_eps_row(2025, 1, 1.0),
+        {
+            **_reported_eps_row(2025, 2, 1.2),
+            "metric_provenance": {
+                "diluted_eps": {"source_kind": "FILING_DERIVED"}
+            },
+        },
+    ]
+
+    series = build_financial_factor_series(rows, freq="quarterly")
+
+    assert series["factors"]["diluted_eps"]["available_count"] == 1
+    assert series["factors"]["diluted_eps"]["excluded_count"] == 1
+
+
+def test_research_snapshot_exposes_v2_factors_without_historical_per() -> None:
+    from app.services.overview.why_it_moved import build_market_mover_research_snapshot
+
+    annual_rows = pd.DataFrame(
+        [
+            {
+                "period_end": "2024-12-31",
+                "available_at": "2025-02-20",
+                "form_type": "10-K",
+                "total_revenue": 80.0,
+                "operating_income": 8.0,
+                "net_income": 6.0,
+                "shareholders_equity": 50.0,
+            },
+            {
+                "period_end": "2025-12-31",
+                "available_at": "2026-02-20",
+                "form_type": "10-K",
+                "total_revenue": 100.0,
+                "operating_income": 15.0,
+                "net_income": 10.0,
+                "shareholders_equity": 60.0,
+            },
+        ]
+    )
+    quarterly_rows = pd.DataFrame(
+        [
+            {
+                "period_end": "2026-03-31",
+                "available_at": "2026-05-01",
+                "form_type": "10-Q",
+                "total_revenue": 30.0,
+                "operating_income": 5.0,
+                "net_income": 3.0,
+                "shareholders_equity": 62.0,
+            }
+        ]
+    )
+
+    def statement_loader(**kwargs: object) -> pd.DataFrame:
+        return annual_rows if kwargs["freq"] == "annual" else quarterly_rows
+
+    model = build_market_mover_research_snapshot(
+        mover={"Symbol": "AAA", "Market Cap": 5_500_000_000},
+        as_of_date="2026-06-30",
+        price_history_loader=lambda **_: pd.DataFrame(
+            [
+                {"date": "2026-01-02", "adj_close": 100.0},
+                {"date": "2026-06-30", "adj_close": 120.0},
+            ]
+        ),
+        statement_fundamentals_loader=statement_loader,
+        fundamental_snapshot_loader=lambda **_: pd.DataFrame(),
+        statement_filings_loader=lambda **_: pd.DataFrame(),
+        quarterly_eps_loader=lambda **_: {
+            "series": {
+                "timeline": [
+                    _reported_eps_row(2025, 3, 0.5),
+                    _reported_eps_row(2025, 4, 0.6),
+                    _reported_eps_row(2026, 1, 0.7),
+                    _reported_eps_row(2026, 2, 0.8),
+                ]
+            }
+        },
+    )
+
+    assert model["schema_version"] == "market_mover_research_snapshot_v2"
+    assert model["financial_factor_series"]["annual"]["freq"] == "annual"
+    assert model["current_valuation"]["ttm_diluted_eps"] == 2.6
+    assert round(model["current_valuation"]["current_per"], 2) == 46.15
+    assert all("per" not in row for row in model["financial_trends"]["annual"])

@@ -22,6 +22,10 @@ from xml.etree import ElementTree
 
 import pandas as pd
 
+from app.services.overview.market_mover_research import (
+    build_current_ttm_valuation,
+    build_financial_factor_series,
+)
 from finance.loaders.financial_statements import load_statement_filings
 from finance.loaders.fundamentals import load_fundamental_snapshot, load_statement_fundamentals_shadow
 from finance.loaders.financial_source_contract import (
@@ -29,6 +33,7 @@ from finance.loaders.financial_source_contract import (
     SEC_EDGAR_STATEMENT_SHADOW_SOURCE,
 )
 from finance.loaders.price import load_price_history
+from finance.loaders.us_stock_turnaround import load_us_stock_turnaround_inputs
 from finance.loaders.sentiment import (
     CNN_COMPONENT_SERIES,
     CORE_SENTIMENT_SERIES,
@@ -440,21 +445,29 @@ def _financial_snapshot_from_row(
     fallback_reason: str | None = None,
 ) -> dict[str, Any]:
     net_income = _coerce_optional_float(row.get("net_income"))
+    total_revenue = _coerce_optional_float(row.get("total_revenue"))
+    operating_income = _coerce_optional_float(row.get("operating_income"))
     shares = _coerce_optional_float(row.get("shares_outstanding"))
-    eps = (net_income / shares) if net_income is not None and shares and shares > 0 else None
-    per = (latest_price / eps) if latest_price is not None and eps and eps > 0 else None
     current_assets = _coerce_optional_float(row.get("current_assets"))
     current_liabilities = _coerce_optional_float(row.get("current_liabilities"))
+    total_liabilities = _coerce_optional_float(row.get("total_liabilities"))
+    shareholders_equity = _coerce_optional_float(row.get("shareholders_equity"))
     current_ratio = _coerce_optional_float(row.get("current_ratio"))
     if current_ratio is None and current_assets is not None and current_liabilities and current_liabilities > 0:
         current_ratio = current_assets / current_liabilities
     free_cash_flow = _coerce_optional_float(row.get("free_cash_flow"))
-    if net_income is None and eps is None and per is None and current_ratio is None and free_cash_flow is None:
+    if (
+        net_income is None
+        and total_revenue is None
+        and operating_income is None
+        and current_ratio is None
+        and free_cash_flow is None
+    ):
         return {
             "status": "UNAVAILABLE",
             "freq": freq,
             "period_end": _iso_date_label(row.get("period_end")),
-            "reason": "net_income / shares_outstanding / current_assets / current_liabilities / free_cash_flow 필드가 부족합니다.",
+            "reason": "revenue / income / balance-sheet / cash-flow factor 필드가 부족합니다.",
             "fallback_used": bool(fallback_used),
             "fallback_reason": fallback_reason,
             **source_payload,
@@ -463,12 +476,14 @@ def _financial_snapshot_from_row(
         "status": "OK",
         "freq": freq,
         "period_end": _iso_date_label(row.get("period_end")),
+        "total_revenue": total_revenue,
+        "operating_income": operating_income,
         "net_income": net_income,
         "shares_outstanding": shares,
-        "eps": eps,
-        "per": per,
         "current_assets": current_assets,
         "current_liabilities": current_liabilities,
+        "total_liabilities": total_liabilities,
+        "shareholders_equity": shareholders_equity,
         "current_ratio": current_ratio,
         "free_cash_flow": free_cash_flow,
         "basis": f"latest {freq} DB fundamental snapshot",
@@ -1014,6 +1029,7 @@ def build_market_mover_research_snapshot(
     statement_fundamentals_loader: Callable[..., pd.DataFrame] | None = None,
     fundamental_snapshot_loader: Callable[..., pd.DataFrame] | None = None,
     statement_filings_loader: Callable[..., pd.DataFrame] | None = None,
+    quarterly_eps_loader: Callable[..., dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build DB-backed context-only fundamentals for a selected Market Movers row."""
 
@@ -1022,7 +1038,7 @@ def build_market_mover_research_snapshot(
     effective_as_of = _research_as_of_date(as_of_date)
     if not symbol:
         return {
-            "schema_version": "market_mover_research_snapshot_v1",
+            "schema_version": "market_mover_research_snapshot_v2",
             "status": "NO_SYMBOL",
             "symbol": None,
             "as_of_date": effective_as_of,
@@ -1032,6 +1048,15 @@ def build_market_mover_research_snapshot(
             "annual_financials": {"status": "UNAVAILABLE", "freq": "annual", "reason": "선택 symbol이 없습니다."},
             "quarterly_financials": {"status": "UNAVAILABLE", "freq": "quarterly", "reason": "선택 symbol이 없습니다."},
             "financial_trends": {"annual": [], "quarterly": []},
+            "financial_factor_series": {
+                "annual": build_financial_factor_series([], freq="annual"),
+                "quarterly": build_financial_factor_series([], freq="quarterly"),
+            },
+            "current_valuation": build_current_ttm_valuation(
+                [],
+                latest_price=None,
+                latest_price_date=None,
+            ),
             "financial_statement_collection": {
                 "status": "UNKNOWN",
                 "headline": "재무제표 수집 상태 확인 불가",
@@ -1100,6 +1125,26 @@ def build_market_mover_research_snapshot(
         annual_trends = [annual_financials]
     if not quarterly_trends and str(quarterly_financials.get("status") or "").upper() == "OK":
         quarterly_trends = [quarterly_financials]
+    annual_factor_series = build_financial_factor_series(annual_trends, freq="annual")
+    quarterly_factor_series = build_financial_factor_series(quarterly_trends, freq="quarterly")
+    eps_loader = quarterly_eps_loader or load_us_stock_turnaround_inputs
+    try:
+        eps_inputs = eps_loader(symbol=symbol, as_of_date=effective_as_of)
+        quarterly_eps_rows = list(
+            dict(eps_inputs.get("series") or {}).get("timeline") or []
+        )
+    except Exception:
+        quarterly_eps_rows = []
+    reported_eps_series = build_financial_factor_series(
+        quarterly_eps_rows,
+        freq="quarterly",
+    )["factors"]["diluted_eps"]
+    quarterly_factor_series["factors"]["diluted_eps"] = reported_eps_series
+    current_valuation = build_current_ttm_valuation(
+        quarterly_eps_rows,
+        latest_price=latest_price,
+        latest_price_date=_iso_date_label(ytd_return.get("end_date")),
+    )
     collection_status = _build_financial_statement_collection_status(
         symbol=symbol,
         as_of_date=effective_as_of,
@@ -1108,7 +1153,7 @@ def build_market_mover_research_snapshot(
         statement_filings_loader=filings_loader,
     )
     return {
-        "schema_version": "market_mover_research_snapshot_v1",
+        "schema_version": "market_mover_research_snapshot_v2",
         "status": "READY",
         "symbol": symbol,
         "as_of_date": effective_as_of,
@@ -1118,6 +1163,11 @@ def build_market_mover_research_snapshot(
         "annual_financials": annual_financials,
         "quarterly_financials": quarterly_financials,
         "financial_trends": {"annual": annual_trends, "quarterly": quarterly_trends},
+        "financial_factor_series": {
+            "annual": annual_factor_series,
+            "quarterly": quarterly_factor_series,
+        },
+        "current_valuation": current_valuation,
         "financial_statement_collection": collection_status,
         "boundary_note": "Context-only fundamentals snapshot; no trading signal or recommendation is produced.",
     }

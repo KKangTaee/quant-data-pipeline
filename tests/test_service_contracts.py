@@ -18368,14 +18368,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             fundamental_snapshot_loader=fake_fundamental_snapshot_loader,
         )
 
-        self.assertEqual(model["schema_version"], "market_mover_research_snapshot_v1")
+        self.assertEqual(model["schema_version"], "market_mover_research_snapshot_v2")
         self.assertEqual(model["current_market_cap"]["value"], 5_500_000_000)
         self.assertEqual(model["market_cap_change"]["status"], "UNAVAILABLE")
         self.assertAlmostEqual(model["ytd_return"]["return_pct"], 25.0)
         self.assertEqual(model["ytd_return"]["start_date"], "2026-01-02")
         self.assertEqual(model["ytd_return"]["end_date"], "2026-06-30")
-        self.assertAlmostEqual(model["annual_financials"]["eps"], 3.0)
-        self.assertAlmostEqual(model["annual_financials"]["per"], 41.666666666666664)
+        self.assertNotIn("eps", model["annual_financials"])
+        self.assertNotIn("per", model["annual_financials"])
+        self.assertEqual(model["current_valuation"]["status"], "UNAVAILABLE")
         self.assertEqual(model["annual_financials"]["net_income"], 1_200_000_000)
         self.assertEqual(model["annual_financials"]["financial_source"], "legacy_broad_yfinance")
         self.assertEqual(model["annual_financials"]["financial_source_mode"], "legacy_broad_summary")
@@ -18460,7 +18461,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["annual_financials"]["form_type"], "10-K")
         self.assertEqual(model["annual_financials"]["accession_no"], "000-aaa-10k")
         self.assertFalse(model["annual_financials"]["fallback_used"])
-        self.assertAlmostEqual(model["annual_financials"]["eps"], 2.0)
+        self.assertNotIn("eps", model["annual_financials"])
+        self.assertNotIn("per", model["annual_financials"])
         self.assertEqual(legacy_calls, [])
         self.assertEqual(model["quarterly_financials"]["status"], "UNAVAILABLE")
         self.assertEqual(model["quarterly_financials"]["form_type"], "10-K")
@@ -18557,7 +18559,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         trends = model["financial_trends"]
         self.assertEqual([row["period_end"] for row in trends["annual"]], ["2024-12-31", "2025-12-31"])
         self.assertEqual([row["period_end"] for row in trends["quarterly"]], ["2025-12-31", "2026-03-31"])
-        self.assertAlmostEqual(trends["annual"][-1]["per"], 50.0)
+        self.assertNotIn("per", trends["annual"][-1])
+        self.assertNotIn("eps", trends["annual"][-1])
+        self.assertAlmostEqual(
+            model["financial_factor_series"]["annual"]["factors"]["current_ratio"]["points"][-1]["value"],
+            1.8,
+        )
         self.assertAlmostEqual(trends["annual"][-1]["current_ratio"], 1.8)
         self.assertEqual(trends["quarterly"][-1]["form_type"], "10-Q")
 
