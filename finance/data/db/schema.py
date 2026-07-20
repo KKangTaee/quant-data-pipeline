@@ -657,8 +657,10 @@ FUTURES_MARKET_SCHEMAS = {
           snapshot_key VARCHAR(64) NOT NULL,
           source_marker VARCHAR(64) NOT NULL,
           as_of_date DATE NULL,
+          input_fingerprint CHAR(64) NOT NULL DEFAULT '',
           schema_version VARCHAR(64) NOT NULL,
           algorithm_version VARCHAR(128) NOT NULL,
+          session_status VARCHAR(32) NOT NULL DEFAULT 'LEGACY',
           status ENUM('READY','LIMITED','ERROR') NOT NULL,
           snapshot_json LONGTEXT NOT NULL,
           materialized_at TIMESTAMP NOT NULL,
@@ -669,6 +671,26 @@ FUTURES_MARKET_SCHEMAS = {
           UNIQUE KEY uk_futures_macro_snapshot_key (snapshot_key),
           KEY ix_futures_macro_snapshot_marker (source_marker),
           KEY ix_futures_macro_snapshot_version (schema_version, algorithm_version)
+        );
+    """,
+    "futures_macro_forecast_history": """
+        CREATE TABLE IF NOT EXISTS futures_macro_forecast_history (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+          forecast_identity CHAR(64) NOT NULL,
+          as_of_date DATE NOT NULL,
+          source_marker VARCHAR(64) NOT NULL,
+          input_fingerprint CHAR(64) NOT NULL,
+          schema_version VARCHAR(64) NOT NULL,
+          feature_schema_version VARCHAR(64) NOT NULL,
+          algorithm_version VARCHAR(128) NOT NULL,
+          selected_models_json LONGTEXT NOT NULL,
+          status_json LONGTEXT NOT NULL,
+          forecast_json LONGTEXT NOT NULL,
+          known_at TIMESTAMP NOT NULL,
+          materialized_at TIMESTAMP NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE KEY uk_futures_macro_forecast_identity (forecast_identity),
+          KEY ix_futures_macro_forecast_as_of (as_of_date, algorithm_version)
         );
     """,
 }

@@ -40,3 +40,5 @@
 - Inner candidate comparison requires shared chronological evaluation coverage. A hybrid with only a short recent macro history cannot beat M1 by being scored on fewer/easier dates.
 - B0/B1 can win inner selection. In that case `selected_candidate` remains `None`, the raw `selected_configuration` records the baseline, and sufficient outer evidence resolves to `NO_EDGE` rather than inventing a model edge.
 - Missing cycle/event tables degrade M2 to unavailable context while preserving the DB-only M1 path; provider fetching was not added to the UI or model service.
+- Snapshot compatibility is now based on the completed-input fingerprint, not the raw maximum provider marker. A pending provider row can move the raw marker without invalidating or replacing the latest-good final snapshot.
+- Immutable history and current are written in one transaction. `materialized_at` does not participate in identity, so retries remain idempotent.

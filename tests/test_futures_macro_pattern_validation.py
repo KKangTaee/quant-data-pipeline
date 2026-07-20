@@ -482,6 +482,8 @@ class FuturesMacroPatternPublicationTests(unittest.TestCase):
         self.assertEqual(result["session"]["latest_final_session"], "2026-07-17")
         self.assertEqual(result["session"]["pending_session"], "2026-07-20")
         self.assertEqual(result["session"]["status"], "PENDING_SESSION_FINALIZATION")
+        self.assertEqual(len(result["input_fingerprint"]), 64)
+        self.assertEqual(result["input_evidence"]["final_daily_row_count"], 1)
 
     def test_horizon_status_uses_lower_probability_and_path_status(self) -> None:
         from app.services.futures_macro_pattern_validation import (

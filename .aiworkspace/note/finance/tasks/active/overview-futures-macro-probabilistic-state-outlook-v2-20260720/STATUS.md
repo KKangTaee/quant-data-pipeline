@@ -1,6 +1,6 @@
 # Overview Futures Macro Probabilistic State Outlook V2 Status
 
-Status: Implementation in progress — 1차/2차 complete, 3차 not started
+Status: Implementation in progress — 1차/2차 complete, 3차 Task 6 complete
 Last Updated: 2026-07-20
 
 ## Current Progress
@@ -19,16 +19,18 @@ Last Updated: 2026-07-20
 - Task 5 nested rolling-origin selection, B0/B1/M1/M2 comparison, separate publication gates, and weighted joint terminal regions are implemented.
 - V2 horizon snapshot now uses the same future state `S(t+h)` as the observed map and no longer publishes the sparse median path as its forecast primitive.
 - M2 candidates must cover the same inner evaluation origins as M1/baselines; partial macro history cannot win on an easier subset.
+- Task 6 adds deterministic final-input fingerprints, immutable forecast identities/history, and atomic latest-good current advancement.
+- Pending sessions reuse the prior current snapshot; older final as-of rows cannot replace a newer current row.
 
 ## Roadmap State
 
 - 1차 Data / Target Contract: complete
 - 2차 Momentum Baseline / Macro Hybrid Validation: complete (Tasks 3-5)
-- 3차 Observed Trail / Probabilistic Outlook UI / QA: not started
+- 3차 Observed Trail / Probabilistic Outlook UI / QA: in progress (Task 6 complete; Tasks 7-9 remain)
 - Design gate: approved 2026-07-20
 - Implementation execution: in progress
 
 ## Next Action
 
-Start 3차 Task 6 with immutable forecast history and final-session materialization.
+Continue 3차 Task 7 with the V3 UI bridge and publication suppression contract.
 No production DB data has been changed.

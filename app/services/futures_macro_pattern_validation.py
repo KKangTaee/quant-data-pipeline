@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import hashlib
+import json
 import math
 from time import monotonic
 from typing import Any
@@ -14,6 +16,7 @@ from app.services.futures_macro_context import build_futures_macro_context_frame
 from app.services.futures_macro_pattern import (
     PATTERN_FEATURE_COLUMNS,
     PATTERN_FAMILY_KEYS,
+    PATTERN_STATE_SCHEMA_VERSION,
     SCORE_TO_FAMILY_KEY,
     _pattern_close_matrix,
     build_current_pattern_snapshot,
@@ -85,6 +88,54 @@ PATTERN_OUTLOOK_LIMITATIONS = (
     "표본이 겹치지 않도록 거래일 간격을 두므로 원시 날짜 수보다 유효 표본이 적습니다.",
 )
 _PATTERN_OUTLOOK_CACHE: dict[tuple[Any, ...], tuple[float, dict[str, Any]]] = {}
+
+
+def _input_fingerprint(
+    *,
+    final_rows: Sequence[dict[str, object]],
+    cycle_rows: Sequence[dict[str, object]],
+    event_rows: Sequence[dict[str, object]],
+) -> str:
+    daily_fields = (
+        "provider_symbol", "candle_time_utc", "source",
+        "open", "high", "low", "close", "adj_close", "volume",
+    )
+    cycle_fields = (
+        "as_of_date", "data_cutoff_date", "run_kind", "model_version",
+    )
+    event_fields = ("event_key", "event_date", "event_type", "collected_at")
+
+    def records(rows: Sequence[dict[str, object]], fields: Sequence[str]) -> list[dict[str, Any]]:
+        projected = [
+            {
+                field: (
+                    value.isoformat() if hasattr(value, "isoformat") else value
+                )
+                for field in fields
+                if (value := dict(row).get(field)) is not None
+            }
+            for row in rows
+        ]
+        return sorted(
+            projected,
+            key=lambda row: json.dumps(row, sort_keys=True, default=str),
+        )
+
+    evidence = {
+        "daily_rows": records(final_rows, daily_fields),
+        "cycle_replays": records(cycle_rows, cycle_fields),
+        "event_keys": records(event_rows, event_fields),
+        "resolver_version": FUTURES_DAILY_SESSION_VERSION,
+        "feature_schema_version": PATTERN_STATE_SCHEMA_VERSION,
+    }
+    encoded = json.dumps(
+        evidence,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def build_same_state_target_frame(
@@ -1855,6 +1906,8 @@ def load_overview_futures_macro_pattern_outlook(
     candles = normalize_futures_macro_daily_candles(completed.rows)
     features = build_pattern_feature_frame(candles, selected_symbols=selected_symbols)
     current = build_current_pattern_snapshot(features)
+    cycle_rows: list[dict[str, object]] = []
+    event_rows: list[dict[str, object]] = []
     if features.empty:
         context = pd.DataFrame(index=features.index)
     else:
@@ -1900,6 +1953,18 @@ def load_overview_futures_macro_pattern_outlook(
             if completed.pending_session
             else "OBSERVED"
         ),
+    }
+    snapshot["input_fingerprint"] = _input_fingerprint(
+        final_rows=completed.rows,
+        cycle_rows=cycle_rows,
+        event_rows=event_rows,
+    )
+    snapshot["input_evidence"] = {
+        "resolver_version": FUTURES_DAILY_SESSION_VERSION,
+        "feature_schema_version": PATTERN_STATE_SCHEMA_VERSION,
+        "final_daily_row_count": len(completed.rows),
+        "cycle_replay_count": len(cycle_rows),
+        "eligible_event_count": len(event_rows),
     }
     if cache_ttl_seconds > 0:
         _PATTERN_OUTLOOK_CACHE[cache_key] = (now, snapshot)

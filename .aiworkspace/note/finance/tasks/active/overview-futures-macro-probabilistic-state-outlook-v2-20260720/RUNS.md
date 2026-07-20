@@ -107,3 +107,14 @@ No code, DB row, registry, or saved setup was modified by this analysis.
 - Full 2차 regression: 56 tests passed across pattern, completed-session, PIT context, outlook model, and pattern validation suites.
 - Additional 1,000-day synthetic smoke produced chronological evaluations for both horizons; the baseline won, so the implementation did not force an M1/M2 edge.
 - `py_compile` and `git diff --check`: pass. No production DB row was written.
+
+## 2026-07-20 — Task 6 Immutable History And Latest-Good Current
+
+- RED: current schema lacked input/session identity, history schema/bundle writer did not exist, pending rows overwrote current, and deterministic fingerprint import failed.
+- GREEN: `futures_macro_snapshot_v2` stores `input_fingerprint` and `session_status`; `futures_macro_forecast_history` stores one immutable row per forecast identity.
+- Final input fingerprint covers canonical final OHLCV rows, cycle replay identities, eligible official event keys, resolver version, and state schema version.
+- `forecast_identity = sha256(as_of|input_fingerprint|schema_version|algorithm_version)` and excludes materialization time.
+- Bundle persistence begins one explicit transaction, performs idempotent history insert, conditionally advances final non-older current, commits both, and rolls both back on error.
+- Pending session test confirms latest-good current reuse without a write.
+- Snapshot/pattern regression: 43 tests passed. Futures Macro service contracts: 23 passed, 833 deselected.
+- Updated modules passed `py_compile`; `git diff --check` passed. No production schema or data was mutated in this task run.

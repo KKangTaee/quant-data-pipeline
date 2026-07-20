@@ -13,12 +13,14 @@ def _compatible_row(*, source_marker: str) -> dict[str, object]:
         "snapshot_key": "overview_current",
         "source_marker": source_marker,
         "as_of_date": "2026-07-17",
-        "schema_version": "futures_macro_snapshot_v1",
-        "algorithm_version": "pattern_outlook_v4_conservative_status_10y",
+        "schema_version": "futures_macro_snapshot_v2",
+        "algorithm_version": "pattern_outlook_v5_same_state_nested_hybrid",
+        "input_fingerprint": "a" * 64,
+        "session_status": "FINAL",
         "status": "READY",
         "snapshot_json": json.dumps(
             {
-                "schema_version": "futures_macro_snapshot_v1",
+                "schema_version": "futures_macro_snapshot_v2",
                 "source_marker": source_marker,
                 "materialized_at": "2026-07-19 10:00:00",
                 "macro": {"coverage": {"latest_daily_date": "2026-07-17"}},
@@ -44,9 +46,12 @@ def _minimal_macro() -> dict[str, object]:
 
 def _minimal_outlook() -> dict[str, object]:
     return {
-        "schema_version": "futures_macro_pattern_outlook_v1",
+        "schema_version": "futures_macro_pattern_outlook_v2",
         "status": "READY",
         "as_of_date": "2026-07-18",
+        "input_fingerprint": "b" * 64,
+        "session": {"status": "OBSERVED", "latest_final_session": "2026-07-18"},
+        "method": {"selected_candidates": {"5": "M1_MOMENTUM", "20": None}},
         "horizons": [],
     }
 
@@ -61,7 +66,105 @@ class FuturesMacroSnapshotPersistenceTests(unittest.TestCase):
         self.assertIn("schema_version", schema)
         self.assertIn("algorithm_version", schema)
         self.assertIn("snapshot_json LONGTEXT", schema)
+        self.assertIn("input_fingerprint CHAR(64)", schema)
+        self.assertIn("session_status VARCHAR(32)", schema)
         self.assertIn("UNIQUE KEY uk_futures_macro_snapshot_key", schema)
+
+        history = FUTURES_MARKET_SCHEMAS["futures_macro_forecast_history"]
+        self.assertIn("forecast_identity CHAR(64)", history)
+        self.assertIn("selected_models_json LONGTEXT", history)
+        self.assertIn("UNIQUE KEY uk_futures_macro_forecast_identity", history)
+
+    def test_input_fingerprint_is_deterministic_for_canonical_evidence(self) -> None:
+        from app.services.futures_macro_snapshot import (
+            compute_futures_macro_input_fingerprint,
+        )
+
+        left = {
+            "resolver_version": "v1",
+            "daily_rows": [
+                {"symbol": "NQ=F", "close": 2.0},
+                {"symbol": "ES=F", "close": 1.0},
+            ],
+            "event_keys": ["cpi", "fomc"],
+        }
+        right = {
+            "event_keys": ["fomc", "cpi"],
+            "daily_rows": [
+                {"close": 1.0, "symbol": "ES=F"},
+                {"close": 2.0, "symbol": "NQ=F"},
+            ],
+            "resolver_version": "v1",
+        }
+
+        self.assertEqual(
+            compute_futures_macro_input_fingerprint(left),
+            compute_futures_macro_input_fingerprint(right),
+        )
+
+    def test_bundle_persistence_is_idempotent_and_transactional(self) -> None:
+        from finance.data.futures_macro_snapshot import (
+            persist_futures_macro_snapshot_bundle,
+        )
+
+        class Connection:
+            def __init__(self, fail_on: int | None = None):
+                self.calls: list[str] = []
+                self.fail_on = fail_on
+
+            def begin(self): self.calls.append("begin")
+            def commit(self): self.calls.append("commit")
+            def rollback(self): self.calls.append("rollback")
+            def executemany(self, sql, rows):
+                self.calls.append(sql)
+                if self.fail_on == len([item for item in self.calls if "INSERT" in item]):
+                    raise RuntimeError("write failed")
+
+        current = {
+            "snapshot_key": "overview_current",
+            "source_marker": "2026-07-18",
+            "as_of_date": "2026-07-18",
+            "input_fingerprint": "a" * 64,
+            "schema_version": "futures_macro_snapshot_v2",
+            "algorithm_version": "algo",
+            "session_status": "FINAL",
+            "status": "READY",
+            "snapshot_json": "{}",
+            "materialized_at": "2026-07-20 10:00:00",
+        }
+        history = {
+            "forecast_identity": "b" * 64,
+            "as_of_date": "2026-07-18",
+            "source_marker": "2026-07-18",
+            "input_fingerprint": "a" * 64,
+            "schema_version": "futures_macro_snapshot_v2",
+            "feature_schema_version": "state_v2",
+            "algorithm_version": "algo",
+            "selected_models_json": "{}",
+            "status_json": "{}",
+            "forecast_json": "{}",
+            "known_at": "2026-07-20 10:00:00",
+            "materialized_at": "2026-07-20 10:00:00",
+        }
+        connection = Connection()
+
+        result = persist_futures_macro_snapshot_bundle(
+            current,
+            history,
+            connection=connection,
+        )
+
+        self.assertEqual(result, {"history_rows": 1, "current_rows": 1})
+        self.assertEqual(connection.calls[0], "begin")
+        self.assertEqual(connection.calls[-1], "commit")
+        sql = "\n".join(connection.calls)
+        self.assertIn("ON DUPLICATE KEY UPDATE forecast_identity = forecast_identity", sql)
+        self.assertIn("VALUES(as_of_date) >= as_of_date", sql)
+
+        failing = Connection(fail_on=2)
+        with self.assertRaisesRegex(RuntimeError, "write failed"):
+            persist_futures_macro_snapshot_bundle(current, history, connection=failing)
+        self.assertEqual(failing.calls[-1], "rollback")
 
     def test_loader_returns_latest_row_without_calculation(self) -> None:
         from finance.loaders.futures_macro_snapshot import (
@@ -84,6 +187,26 @@ class FuturesMacroSnapshotPersistenceTests(unittest.TestCase):
         self.assertIsNotNone(row)
         self.assertEqual(row["snapshot_key"], "overview_current")
         self.assertEqual(captured["db_name"], "finance_meta")
+        self.assertNotIn("futures_ohlcv", str(captured["sql"]))
+
+    def test_history_loader_reads_immutable_rows_without_calculation(self) -> None:
+        from finance.loaders.futures_macro_snapshot import (
+            load_futures_macro_forecast_history,
+        )
+
+        captured: dict[str, object] = {}
+
+        def query(db_name, sql, params):
+            captured.update(db_name=db_name, sql=sql, params=params)
+            return [{"forecast_identity": "f" * 64, "as_of_date": "2026-07-18"}]
+
+        rows = load_futures_macro_forecast_history(
+            as_of_date="2026-07-18",
+            query_fn=query,
+        )
+
+        self.assertEqual(rows[0]["forecast_identity"], "f" * 64)
+        self.assertIn("futures_macro_forecast_history", str(captured["sql"]))
         self.assertNotIn("futures_ohlcv", str(captured["sql"]))
 
 
@@ -125,24 +248,49 @@ class FuturesMacroSnapshotServiceTests(unittest.TestCase):
         self.assertIsNone(payload["macro"]["scores"][0]["Value"])
         json.dumps(payload, ensure_ascii=False, allow_nan=False)
 
-    def test_same_marker_and_versions_reuse_existing_snapshot(self) -> None:
+    def test_same_input_fingerprint_reuses_existing_snapshot_even_if_raw_marker_moves(self) -> None:
         from app.services.futures_macro_snapshot import (
             materialize_overview_futures_macro_snapshot,
         )
 
         result = materialize_overview_futures_macro_snapshot(
-            marker_fn=lambda: "2026-07-17 00:00:00",
+            marker_fn=lambda: "2026-07-20 00:00:00",
             load_fn=lambda: _compatible_row(
                 source_marker="2026-07-17 00:00:00"
             ),
-            macro_builder=lambda: self.fail("macro calculation must be skipped"),
-            outlook_builder=lambda: self.fail(
-                "outlook calculation must be skipped"
-            ),
+            macro_builder=_minimal_macro,
+            outlook_builder=lambda: {
+                **_minimal_outlook(),
+                "input_fingerprint": "a" * 64,
+                "as_of_date": "2026-07-17",
+            },
             write_fn=lambda row: self.fail("write must be skipped"),
         )
 
         self.assertEqual(result["status"], "reused")
+
+    def test_pending_session_reuses_latest_good_current(self) -> None:
+        from app.services.futures_macro_snapshot import (
+            materialize_overview_futures_macro_snapshot,
+        )
+
+        result = materialize_overview_futures_macro_snapshot(
+            marker_fn=lambda: "2026-07-20 00:00:00",
+            load_fn=lambda: _compatible_row(source_marker="2026-07-17 00:00:00"),
+            macro_builder=_minimal_macro,
+            outlook_builder=lambda: {
+                **_minimal_outlook(),
+                "session": {
+                    "status": "PENDING_SESSION_FINALIZATION",
+                    "latest_final_session": "2026-07-17",
+                    "pending_session": "2026-07-20",
+                },
+            },
+            write_fn=lambda *_args: self.fail("pending snapshot must not overwrite current"),
+        )
+
+        self.assertEqual(result["status"], "reused_pending")
+        self.assertEqual(result["as_of_date"], "2026-07-17")
 
     def test_new_marker_calculates_and_writes_once(self) -> None:
         from app.services.futures_macro_snapshot import (
@@ -157,13 +305,16 @@ class FuturesMacroSnapshotServiceTests(unittest.TestCase):
             ),
             macro_builder=_minimal_macro,
             outlook_builder=_minimal_outlook,
-            write_fn=lambda row: written.append(row) or 1,
+            write_fn=lambda current, history: written.append(
+                {"current": current, "history": history}
+            ) or 1,
             now_fn=lambda: "2026-07-19 10:00:00",
         )
 
         self.assertEqual(result["status"], "materialized")
         self.assertEqual(len(written), 1)
-        self.assertEqual(written[0]["source_marker"], "2026-07-18 00:00:00")
+        self.assertEqual(written[0]["current"]["source_marker"], "2026-07-18 00:00:00")
+        self.assertEqual(len(written[0]["history"]["forecast_identity"]), 64)
 
     def test_compatible_materialized_snapshot_loads_without_builders(self) -> None:
         from app.services.futures_macro_snapshot import (
@@ -194,7 +345,7 @@ class FuturesMacroSnapshotServiceTests(unittest.TestCase):
                 marker_fn=lambda: "2026-07-18 00:00:00",
                 load_fn=lambda: None,
                 macro_builder=_minimal_macro,
-                write_fn=lambda row: 1,
+                write_fn=lambda current, history: 1,
                 now_fn=lambda: "2026-07-19 10:00:00",
             )
 
