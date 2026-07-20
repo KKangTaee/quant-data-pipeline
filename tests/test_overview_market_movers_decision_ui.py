@@ -292,11 +292,11 @@ def test_decision_react_shell_owns_ranking_breadth_and_selected_research() -> No
     assert 'className="mm-decision__breadth"' in source
     assert ".mm-decision__workbench" in style
     assert "grid-template-columns: minmax(0, 1.62fr) minmax(320px, 1fr);" in style
-    desktop_responsive = style[style.index("@media (max-width: 900px)") :]
+    desktop_responsive = style[style.index("@media (max-width: 899px)") :]
     desktop_responsive = desktop_responsive[: desktop_responsive.index("@media (max-width: 760px)")]
     assert ".mm-decision__workbench" in desktop_responsive
     wide_responsive = style[style.index("@media (max-width: 1180px)") :]
-    wide_responsive = wide_responsive[: wide_responsive.index("@media (max-width: 900px)")]
+    wide_responsive = wide_responsive[: wide_responsive.index("@media (max-width: 899px)")]
     assert ".mm-decision__workbench" not in wide_responsive
 
 
@@ -383,12 +383,19 @@ def test_decision_research_uses_report_family_tabs_and_responsive_focus_contract
     assert "aria-selected={tab === id}" in source
     assert 'aria-controls={`mm-decision-panel-${id}`}' in source
     assert 'id={`mm-decision-tab-${id}`}' in source
+    assert "tabIndex={tab === id ? 0 : -1}" in source
+    assert 'event.key === "ArrowRight"' in source
+    assert 'event.key === "ArrowLeft"' in source
+    assert 'id="mm-decision-panel-price"' in source
+    assert 'id="mm-decision-panel-financial"' in source
+    assert 'id="mm-decision-panel-events"' in source
+    assert 'hidden={tab !== "financial"}' in source
     assert "border-bottom: 2px solid transparent;" in decision_style
     assert "border-bottom-color: var(--mm-accent);" in decision_style
     assert ".mm-decision button:focus-visible" in decision_style
     assert ".mm-decision select:focus-visible" in decision_style
     assert "outline: 2px solid rgba(57, 127, 183, 0.35);" in decision_style
-    assert "@media (max-width: 900px)" in style
+    assert "@media (max-width: 899px)" in style
     assert "@media (max-width: 600px)" in style
     assert "grid-template-columns: minmax(0, 7fr) minmax(220px, 3fr);" in decision_style
     assert "payload.ranking.empty_reason" in source

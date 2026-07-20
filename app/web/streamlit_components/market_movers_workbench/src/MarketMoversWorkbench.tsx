@@ -937,37 +937,60 @@ type StockResearchTabsProps = {
 function StockResearchTabs({ payload, activeSymbol }: StockResearchTabsProps) {
   const [tab, setTab] = useState<"price" | "financial" | "events">("price");
   const research = payload.selection.symbol === activeSymbol ? payload.selection.research : null;
+  const researchTabs = [
+    ["price", "가격·모멘텀"],
+    ["financial", "재무"],
+    ["events", "뉴스·공시"],
+  ] as const;
+  const moveResearchTab = (event: React.KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
+    let nextIndex = currentIndex;
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % researchTabs.length;
+    else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + researchTabs.length) % researchTabs.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = researchTabs.length - 1;
+    else return;
+
+    event.preventDefault();
+    const nextTab = researchTabs[nextIndex][0];
+    const ownerDocument = event.currentTarget.ownerDocument;
+    setTab(nextTab);
+    ownerDocument.defaultView?.requestAnimationFrame(() => {
+      ownerDocument.getElementById(`mm-decision-tab-${nextTab}`)?.focus();
+    });
+  };
   return (
     <section className="mm-decision__research">
       <div className="mm-decision__research-head">
         <div><span>DEEP RESEARCH</span><h3>{activeSymbol} 상세 조사</h3></div>
         <div className="mm-decision__tabs" role="tablist">
-          {([
-            ["price", "가격·모멘텀"],
-            ["financial", "재무"],
-            ["events", "뉴스·공시"],
-          ] as const).map(([id, label]) => (
+          {researchTabs.map(([id, label], index) => (
             <button
               aria-controls={`mm-decision-panel-${id}`}
               aria-selected={tab === id}
               className={tab === id ? "is-active" : ""}
               id={`mm-decision-tab-${id}`}
               key={id}
+              onKeyDown={(event) => moveResearchTab(event, index)}
               onClick={() => setTab(id)}
               role="tab"
+              tabIndex={tab === id ? 0 : -1}
               type="button"
             >{label}</button>
           ))}
         </div>
       </div>
-      <div aria-labelledby={`mm-decision-tab-${tab}`} id={`mm-decision-panel-${tab}`} role="tabpanel">
-        {!research ? (
+      <div aria-labelledby="mm-decision-tab-price" hidden={tab !== "price"} id="mm-decision-panel-price" role="tabpanel">
+        {research ? <PriceMomentumChart research={research} /> : (
           <div className="mm-decision__research-loading">선택 종목의 저장 근거를 불러오는 중입니다.</div>
-        ) : tab === "price" ? (
-          <PriceMomentumChart research={research} />
-        ) : tab === "financial" ? (
-          <FinancialFactorChart controls={payload.selection.financial_controls} research={research} />
-        ) : (
+        )}
+      </div>
+      <div aria-labelledby="mm-decision-tab-financial" hidden={tab !== "financial"} id="mm-decision-panel-financial" role="tabpanel">
+        {research ? <FinancialFactorChart controls={payload.selection.financial_controls} research={research} /> : (
+          <div className="mm-decision__research-loading">선택 종목의 저장 근거를 불러오는 중입니다.</div>
+        )}
+      </div>
+      <div aria-labelledby="mm-decision-tab-events" hidden={tab !== "events"} id="mm-decision-panel-events" role="tabpanel">
+        {research ? (
           <div className="mm-decision__events-panel">
             <strong>뉴스·공시 근거</strong>
             <p>현재 저장된 재무제표 반영 상태와 선택 종목의 뉴스·SEC 조사 action을 같은 symbol에 연결합니다.</p>
@@ -976,7 +999,7 @@ function StockResearchTabs({ payload, activeSymbol }: StockResearchTabsProps) {
               <span><small>기준일</small><strong>{String(research.as_of_date || "-")}</strong></span>
             </div>
           </div>
-        )}
+        ) : <div className="mm-decision__research-loading">선택 종목의 저장 근거를 불러오는 중입니다.</div>}
       </div>
     </section>
   );

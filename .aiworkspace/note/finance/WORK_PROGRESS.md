@@ -6891,3 +6891,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 랭킹 선택은 selected research에 연결되고 재무는 `보고 주기 / 재무 영역 / Factor`를 독립 제어한다. React unavailable일 때만 기존 Streamlit surface를 fallback으로 유지한다.
 - focused `24 passed`, Market Movers contracts `126 passed`, production build, SP500/Top1000/Top2000 actual payload와 desktop/693px/353px Browser QA를 확인했다.
 - 전체 roadmap `4/5차`; 다음은 OOS publication gate가 선행되는 sector conditional outlook다. 상세는 `tasks/active/market-movers-react-one-shell-v1-20260720/`를 본다.
+
+## 2026-07-20 - Overview Market Movers 혼합형 A visual system 완료
+
+- 기존 one-shell의 data/event 계약을 유지하면서 Market Context/Futures Macro 계열의 integrated blue-gray surface와 editorial hierarchy를 적용했다.
+- hero/trust, command band, market pulse, ranking/breadth decision cards, quick research와 report-family tabs를 한 시각 체계로 정리하고 재무 `보고 주기 / 영역 / Factor` 분리를 유지했다.
+- UI 11개, Market Movers 126개, static scaffold 1개, production build와 desktop actual Browser QA를 통과했다. visual implementation `3/3차`, 전체 기능 roadmap `4/5차`이며 좁은 폭·console·nested iframe 상세 click actual QA는 automation 한계로 남겼다.
+- 다음은 별도 승인 범위인 sector conditional outlook이며 OOS publication gate 전에는 확률·분포 수치를 숨긴다. 상세는 `tasks/active/market-movers-hybrid-visual-system-v1-20260720/`를 본다.

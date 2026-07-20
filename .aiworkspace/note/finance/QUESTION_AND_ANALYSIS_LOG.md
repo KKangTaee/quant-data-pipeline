@@ -10261,3 +10261,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 사용자가 랭킹에서 종목을 고른 뒤 별도 Streamlit 블록을 찾아다니지 않고, 같은 화면에서 sector/industry 확산과 종목 근거를 이어서 판단하게 한다.
 - Analysis result: React-first 62/38 workbench가 ranking과 breadth를 연결하고, selected quick research 아래에 가격·재무·뉴스·공시 상세를 둔다. 보고 주기·재무 영역·factor는 독립 local state이며 bounded symbol/command만 Python으로 보낸다.
 - Follow-up: 전체 roadmap `4/5차`와 actual desktop/420px QA를 완료했다. 5차 sector conditional outlook은 historical episode와 OOS publication gate를 통과하지 못하면 수치를 계속 숨긴다.
+
+### 2026-07-20 - 변동 종목 혼합형 A안은 통합 리포트 visual system으로 확정한다
+
+- User request: 기존 one-shell 기능은 유지하면서 시장맥락·선물매크로와 통일성 있는 혼합형 A안 UI로 계속 진행하도록 요청함.
+- Interpreted goal: prototype처럼 보이는 흰색 admin sheet와 경쟁 accent를 제거하고, 첫 화면의 scan flow와 상세 조사의 report hierarchy를 같은 제품군처럼 읽히게 한다.
+- Analysis result: blue-gray integrated surface, hero/trust/command/pulse, 62/38 ranking-breadth cards, quick research, report-family tabs와 독립 재무 control groups를 적용했다. payload/event/DB 계약은 바꾸지 않았다.
+- Follow-up: visual implementation `3/3차`, 전체 기능 roadmap `4/5차`다. desktop actual QA는 완료했고 좁은 폭·console·nested iframe 상세 click actual QA는 automation 한계로 남겼다. sector conditional outlook은 historical/OOS gate가 준비될 때 별도 5차로 진행한다.

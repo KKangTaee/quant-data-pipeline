@@ -40,7 +40,7 @@
 - Consumes: `MarketMoversDecisionWorkbenchPayload.command_line`, `.trust`; `onControl(control, value)`.
 - Produces: `.mm-decision__surface-header`, `.mm-decision__command-band`; 기존 control event path는 유지한다.
 
-- [ ] **Step 1: Write the failing visual-foundation source contract**
+- [x] **Step 1: Write the failing visual-foundation source contract**
 
 ```python
 def test_decision_shell_uses_approved_hybrid_visual_foundation() -> None:
@@ -65,7 +65,7 @@ def test_decision_shell_uses_approved_hybrid_visual_foundation() -> None:
     assert "border-top: 4px solid" not in decision_style
 ```
 
-- [ ] **Step 2: Run the new test and verify RED**
+- [x] **Step 2: Run the new test and verify RED**
 
 ```bash
 .venv/bin/python -m pytest tests/test_overview_market_movers_decision_ui.py::test_decision_shell_uses_approved_hybrid_visual_foundation -q
@@ -73,7 +73,7 @@ def test_decision_shell_uses_approved_hybrid_visual_foundation() -> None:
 
 Expected: FAIL because the classes, `h1`, approved tokens, radius and gradient are absent.
 
-- [ ] **Step 3: Implement the approved hero and command-band DOM**
+- [x] **Step 3: Implement the approved hero and command-band DOM**
 
 `MarketMoversCommandLine`의 기존 `select` mapping을 보존하고 다음 hierarchy로 감싼다.
 
@@ -104,7 +104,7 @@ Expected: FAIL because the classes, `h1`, approved tokens, radius and gradient a
 </header>
 ```
 
-- [ ] **Step 4: Implement the approved foundation CSS**
+- [x] **Step 4: Implement the approved foundation CSS**
 
 ```css
 .mm-decision {
@@ -136,7 +136,7 @@ Expected: FAIL because the classes, `h1`, approved tokens, radius and gradient a
 .mm-decision__control select { background-color: transparent; border-color: transparent; border-radius: 8px; color: var(--mm-ink); }
 ```
 
-- [ ] **Step 5: Run focused tests and verify GREEN**
+- [x] **Step 5: Run focused tests and verify GREEN**
 
 ```bash
 .venv/bin/python -m pytest \
@@ -146,7 +146,7 @@ Expected: FAIL because the classes, `h1`, approved tokens, radius and gradient a
 
 Expected: `2 passed`.
 
-- [ ] **Step 6: Commit Task 1**
+- [x] **Step 6: Commit Task 1**
 
 ```bash
 git add tests/test_overview_market_movers_decision_ui.py app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx app/web/streamlit_components/market_movers_workbench/src/style.css
@@ -166,7 +166,7 @@ git commit -m "변동 종목 통합 리포트 surface를 적용"
 - Consumes: `payload.ranking`, `payload.group_context.sector[period].flow`, `payload.trust.state`.
 - Produces: `MarketPulse({ payload })`, `.mm-decision__pulse`, unified ranking/breadth cards.
 
-- [ ] **Step 1: Write the failing pulse/card contract**
+- [x] **Step 1: Write the failing pulse/card contract**
 
 ```python
 def test_decision_shell_connects_market_pulse_to_unified_decision_cards() -> None:
@@ -187,7 +187,7 @@ def test_decision_shell_connects_market_pulse_to_unified_decision_cards() -> Non
     assert 'id: "select_symbol"' in source
 ```
 
-- [ ] **Step 2: Run the new test and verify RED**
+- [x] **Step 2: Run the new test and verify RED**
 
 ```bash
 .venv/bin/python -m pytest tests/test_overview_market_movers_decision_ui.py::test_decision_shell_connects_market_pulse_to_unified_decision_cards -q
@@ -195,7 +195,7 @@ def test_decision_shell_connects_market_pulse_to_unified_decision_cards() -> Non
 
 Expected: FAIL because pulse DOM/CSS is absent and purple remains.
 
-- [ ] **Step 3: Add the payload-derived MarketPulse component**
+- [x] **Step 3: Add the payload-derived MarketPulse component**
 
 ```tsx
 const PERIOD_LABELS: Record<string, string> = { daily: "일간", weekly: "주간", monthly: "월간" };
@@ -220,7 +220,7 @@ function MarketPulse({ payload }: { payload: MarketMoversDecisionWorkbenchPayloa
 
 `MarketMoversDecisionWorkbench`에서 command line 다음에 `<MarketPulse payload={payload} />`를 렌더한다.
 
-- [ ] **Step 4: Unify ranking and breadth card styling**
+- [x] **Step 4: Unify ranking and breadth card styling**
 
 ```css
 .mm-decision__pulse { background: var(--mm-line); border: 1px solid var(--mm-line); border-radius: 13px; display: grid; gap: 1px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 14px; overflow: hidden; }
@@ -236,7 +236,7 @@ function MarketPulse({ payload }: { payload: MarketMoversDecisionWorkbenchPayloa
 
 ranking row의 inline semantic colors를 `#b9554c`와 `#19765f`로 교체하고 selection rail은 `var(--mm-accent)`로 분리한다.
 
-- [ ] **Step 5: Run pulse/card interaction tests**
+- [x] **Step 5: Run pulse/card interaction tests**
 
 ```bash
 .venv/bin/python -m pytest \
@@ -247,7 +247,7 @@ ranking row의 inline semantic colors를 `#b9554c`와 `#19765f`로 교체하고 
 
 Expected: `3 passed`.
 
-- [ ] **Step 6: Commit Task 2**
+- [x] **Step 6: Commit Task 2**
 
 ```bash
 git add tests/test_overview_market_movers_decision_ui.py app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx app/web/streamlit_components/market_movers_workbench/src/style.css
@@ -267,7 +267,7 @@ git commit -m "변동 종목 시장 pulse와 결정 카드를 통일"
 - Consumes: existing `QuickResearch`, `StockResearchTabs`, `FinancialFactorChart` props and local state.
 - Produces: active-blue-underline research tabs, stable 70/30 chart, focus-visible and 900/600 responsive contracts.
 
-- [ ] **Step 1: Write the failing research/responsive/accessibility contract**
+- [x] **Step 1: Write the failing research/responsive/accessibility contract**
 
 ```python
 def test_decision_research_uses_report_family_tabs_and_responsive_focus_contract() -> None:
@@ -293,7 +293,7 @@ def test_decision_research_uses_report_family_tabs_and_responsive_focus_contract
     assert "mm-decision__trust--${trustState.toLowerCase()}" in source
 ```
 
-- [ ] **Step 2: Run the new test and verify RED**
+- [x] **Step 2: Run the new test and verify RED**
 
 ```bash
 .venv/bin/python -m pytest tests/test_overview_market_movers_decision_ui.py::test_decision_research_uses_report_family_tabs_and_responsive_focus_contract -q
@@ -301,7 +301,7 @@ def test_decision_research_uses_report_family_tabs_and_responsive_focus_contract
 
 Expected: FAIL because tab ARIA linkage, underline pattern, focus-visible and 600px breakpoint are absent.
 
-- [ ] **Step 3: Add tab selection and panel linkage semantics**
+- [x] **Step 3: Add tab selection and panel linkage semantics**
 
 ```tsx
 <button
@@ -335,7 +335,7 @@ Expected: FAIL because tab ARIA linkage, underline pattern, focus-visible and 60
 </div>
 ```
 
-- [ ] **Step 4: Apply selected-evidence card, underline tab and focus CSS**
+- [x] **Step 4: Apply selected-evidence card, underline tab and focus CSS**
 
 ```css
 .mm-decision__quick, .mm-decision__research { background: rgba(255, 255, 255, 0.88); border: 1px solid var(--mm-card-line); border-radius: 16px; box-shadow: 0 10px 28px rgba(33, 53, 72, 0.04); overflow: hidden; }
@@ -348,7 +348,7 @@ Expected: FAIL because tab ARIA linkage, underline pattern, focus-visible and 60
 .mm-decision__chart-layout { grid-template-columns: minmax(0, 7fr) minmax(220px, 3fr); min-height: 320px; }
 ```
 
-- [ ] **Step 5: Implement the exact responsive hierarchy**
+- [x] **Step 5: Implement the exact responsive hierarchy**
 
 ```css
 @media (max-width: 900px) {
@@ -371,7 +371,7 @@ Expected: FAIL because tab ARIA linkage, underline pattern, focus-visible and 60
 
 기존 760px decision rules는 새 900/600 hierarchy와 충돌하지 않도록 제거하고 legacy `.mm-workbench` rules만 남긴다.
 
-- [ ] **Step 6: Run research and regression tests**
+- [x] **Step 6: Run research and regression tests**
 
 ```bash
 .venv/bin/python -m pytest \
@@ -382,7 +382,7 @@ Expected: FAIL because tab ARIA linkage, underline pattern, focus-visible and 60
 
 Expected: `3 passed`.
 
-- [ ] **Step 7: Commit Task 3**
+- [x] **Step 7: Commit Task 3**
 
 ```bash
 git add tests/test_overview_market_movers_decision_ui.py app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx app/web/streamlit_components/market_movers_workbench/src/style.css
@@ -406,7 +406,7 @@ git commit -m "변동 종목 조사 surface와 반응형 구조를 정리"
 - Consumes: source implementation from Tasks 1–3.
 - Produces: canonical component build, actual QA evidence, durable docs state; no new runtime API.
 
-- [ ] **Step 1: Build the canonical production component**
+- [x] **Step 1: Build the canonical production component**
 
 From `app/web/streamlit_components/market_movers_workbench` run:
 
@@ -416,7 +416,7 @@ npm run build
 
 Expected: Vite exits 0 and writes `component_static/index.html` plus hashed CSS/JS assets.
 
-- [ ] **Step 2: Run focused Market Movers regression**
+- [x] **Step 2: Run focused Market Movers regression**
 
 ```bash
 .venv/bin/python -m pytest tests/test_overview_market_movers_decision_ui.py -q
@@ -425,7 +425,7 @@ Expected: Vite exits 0 and writes `component_static/index.html` plus hashed CSS/
 
 Expected: the decision UI file reports `11 passed`; the service subset reports `126 passed`. Unrelated Practical Validation/Final Review/Sentiment tests are not selected.
 
-- [ ] **Step 3: Verify compiled static entry and repository hygiene**
+- [x] **Step 3: Verify compiled static entry and repository hygiene**
 
 ```bash
 .venv/bin/python -m pytest tests/test_service_contracts.py::OverviewMarketIntelligenceServiceContractTests::test_market_movers_react_component_scaffold_keeps_streamlit_fallback -q
@@ -459,7 +459,7 @@ At actual desktop width, `693px`, `420px`, and `353px`, evaluate:
 
 Expected: `overflowFree === true` at every width. Desktop retains approximately 62/38; below 900px the decision grid stacks.
 
-- [ ] **Step 5: Capture one local QA screenshot**
+- [x] **Step 5: Capture one local QA screenshot**
 
 Save the final desktop screenshot to:
 
@@ -469,7 +469,7 @@ Save the final desktop screenshot to:
 
 Do not stage it.
 
-- [ ] **Step 6: Update closeout documents with exact evidence**
+- [x] **Step 6: Update closeout documents with exact evidence**
 
 `STATUS.md` must contain:
 
@@ -483,7 +483,7 @@ Status: Complete
 
 `RUNS.md`에는 actual pass counts, Vite transformed module count, QA widths/overflow values and console error count를 기록한다. Root logs에는 3–5줄 milestone만 추가한다. `docs/INDEX.md`, `ROADMAP.md`, `PROJECT_MAP.md`에는 hybrid integrated report surface라는 durable current-state만 반영한다.
 
-- [ ] **Step 7: Verify docs and stage only intended files**
+- [x] **Step 7: Verify docs and stage only intended files**
 
 ```bash
 task_dir='.aiworkspace/note/finance/tasks/active/market-movers-hybrid-visual-system-v1-20260720'
@@ -497,7 +497,7 @@ Expected: roadmap positions are present and diff check exits 0.
 git add app/web/streamlit_components/market_movers_workbench/component_static .aiworkspace/note/finance/tasks/active/market-movers-hybrid-visual-system-v1-20260720 .aiworkspace/note/finance/WORK_PROGRESS.md .aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md .aiworkspace/note/finance/docs/INDEX.md .aiworkspace/note/finance/docs/ROADMAP.md .aiworkspace/note/finance/docs/PROJECT_MAP.md
 ```
 
-- [ ] **Step 8: Commit Task 4**
+- [x] **Step 8: Commit Task 4**
 
 ```bash
 git commit -m "변동 종목 혼합형 UI를 검증하고 마감"
@@ -505,12 +505,12 @@ git commit -m "변동 종목 혼합형 UI를 검증하고 마감"
 
 ## Final Verification Checklist
 
-- [ ] three new source contracts pass
-- [ ] complete `tests/test_overview_market_movers_decision_ui.py` passes
-- [ ] Market Movers service subset passes
-- [ ] Vite production build exits 0 and canonical assets are tracked
+- [x] three new source contracts pass
+- [x] complete `tests/test_overview_market_movers_decision_ui.py` passes
+- [x] Market Movers service subset passes
+- [x] Vite production build exits 0 and canonical assets are tracked
 - [ ] desktop/693px/420px/353px actual Browser QA has no horizontal overflow
 - [ ] actual interactions and financial grouping remain functional
 - [ ] Browser console error count is 0
-- [ ] screenshot and pre-existing user artifacts remain unstaged
-- [ ] visual task is `3/3차`, overall Market Movers remains `4/5차`
+- [x] screenshot and pre-existing user artifacts remain unstaged
+- [x] visual task is `3/3차`, overall Market Movers remains `4/5차`
