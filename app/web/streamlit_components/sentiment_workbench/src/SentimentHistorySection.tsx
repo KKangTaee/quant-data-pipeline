@@ -115,22 +115,22 @@ function subtractUtcMonths(timestamp: number, months: number) {
   return value.getTime();
 }
 
-export function buildCommonPeriodExtent(
+export function buildAlignedPeriodExtent(
   coverage: HistoryCoverage,
   period: HistoryPeriod,
 ): TimeExtent | null {
-  if (!coverage.common.available) return null;
-  const commonStart = Date.parse(coverage.common.canonical_start);
-  const commonEnd = Date.parse(coverage.common.canonical_end);
+  if (!coverage.aligned.available) return null;
+  const alignedStart = Date.parse(coverage.aligned.canonical_start);
+  const alignedEnd = Date.parse(coverage.aligned.canonical_end);
   if (
-    !Number.isFinite(commonStart)
-    || !Number.isFinite(commonEnd)
-    || commonStart > commonEnd
+    !Number.isFinite(alignedStart)
+    || !Number.isFinite(alignedEnd)
+    || alignedStart > alignedEnd
   ) return null;
   const requestedStart = period === "ALL"
-    ? commonStart
-    : subtractUtcMonths(commonEnd, period === "6M" ? 6 : 12);
-  return { min: Math.max(commonStart, requestedStart), max: commonEnd };
+    ? alignedStart
+    : subtractUtcMonths(alignedEnd, period === "6M" ? 6 : 12);
+  return { min: Math.max(alignedStart, requestedStart), max: alignedEnd };
 }
 
 function pointWithinExtent(point: ChartPoint, extent: TimeExtent) {
@@ -161,7 +161,7 @@ function latestWithinExtent(
   return {
     date: point.date,
     value: point.value,
-    label: point.status_label || "공통 구간 최신",
+    label: point.status_label || "선택 구간 최신",
   };
 }
 
@@ -193,7 +193,7 @@ function coverageLine(label: string, source: SourceHistoryCoverage) {
 }
 
 function comparisonRangeLabel(extent: TimeExtent | null) {
-  if (!extent) return "공통 이력 없음";
+  if (!extent) return "정렬 이력 없음";
   const start = new Date(extent.min).toISOString().slice(0, 10);
   const end = new Date(extent.max).toISOString().slice(0, 10);
   return `${start}~${end}`;
@@ -311,7 +311,7 @@ function SentimentLineChart({ panel, mode, extent }: {
             </div>
           ) : null}
         </div>
-      ) : <p className="sentiment-workbench__empty">공통 기간에 서로 다른 두 시점 이상의 관측이 필요합니다.</p>}
+      ) : <p className="sentiment-workbench__empty">정렬 기간에 서로 다른 두 시점 이상의 관측이 필요합니다.</p>}
       <div className="sentiment-workbench__chart-legend">
         {Object.keys(grouped).map((series) => <span key={series}><i style={{ background: chartSeriesColor(series, mode) }} />{series}</span>)}
         {mode === "aaii_spread" ? <small>기준선: -10 / 0 / +10pp · 0은 실선</small> : null}
@@ -334,7 +334,7 @@ function SentimentHistorySection({ charts, coverage }: Props) {
   const [period, setPeriod] = useState<HistoryPeriod>(coverage.default_period);
   const tabs: AaiiHistoryTab[] = ["responses", "spread"];
   const periods: HistoryPeriod[] = ["6M", "1Y", "ALL"];
-  const selectedExtent = buildCommonPeriodExtent(coverage, period);
+  const selectedExtent = buildAlignedPeriodExtent(coverage, period);
   const visibleCharts = {
     cnn: filterChartPanel(charts.cnn, selectedExtent),
     aaii_responses: filterChartPanel(charts.aaii_responses, selectedExtent),
@@ -369,12 +369,12 @@ function SentimentHistorySection({ charts, coverage }: Props) {
                 onClick={() => setPeriod(key)}
                 type="button"
               >
-                {key === "ALL" ? "공통 전체" : key}
+                {key === "ALL" ? "전체" : key}
               </button>
             ))}
           </div>
           <div className="sentiment-workbench__history-coverage">
-            <strong>비교 구간 · {comparisonRangeLabel(selectedExtent)}</strong>
+            <strong>정렬 구간 · {comparisonRangeLabel(selectedExtent)}</strong>
             <span>{coverageLine("CNN 보유 이력", coverage.cnn)}</span>
             <span>{coverageLine("AAII 보유 이력", coverage.aaii)}</span>
             <small>{coverage.cnn_components_note}</small>

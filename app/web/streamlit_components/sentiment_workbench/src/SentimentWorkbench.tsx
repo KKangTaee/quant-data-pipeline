@@ -120,7 +120,7 @@ export type TimeExtent = {
   max: number;
 };
 
-export type CommonHistoryCoverage = {
+export type AlignedHistoryCoverage = {
   canonical_start: string;
   canonical_end: string;
   available: boolean;
@@ -138,7 +138,7 @@ export type SourceHistoryCoverage = {
 export type HistoryCoverage = {
   default_period: HistoryPeriod;
   periods: HistoryPeriod[];
-  common: CommonHistoryCoverage;
+  aligned: AlignedHistoryCoverage;
   cnn: SourceHistoryCoverage;
   aaii: SourceHistoryCoverage;
   cnn_components_note: string;
@@ -271,7 +271,7 @@ const fallbackOutlook: SentimentWorkbenchPayload["outlook"] = {
 const fallbackHistoryCoverage: HistoryCoverage = {
   default_period: "6M",
   periods: ["6M", "1Y", "ALL"],
-  common: {
+  aligned: {
     canonical_start: "",
     canonical_end: "",
     available: false,

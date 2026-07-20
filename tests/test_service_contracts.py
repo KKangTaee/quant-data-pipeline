@@ -8865,19 +8865,21 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".sentiment-workbench__cnn-evidence-row", react_style)
         self.assertIn(".sentiment-workbench__evidence-change", react_style)
 
-    def test_sentiment_history_uses_one_shared_intersection_domain_for_both_panels(self) -> None:
+    def test_sentiment_history_uses_one_shared_aligned_domain_for_both_panels(self) -> None:
         root = Path("app/web/streamlit_components/sentiment_workbench/src")
         types = (root / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
         history = (root / "SentimentHistorySection.tsx").read_text(encoding="utf-8")
         style = (root / "style.css").read_text(encoding="utf-8")
 
         self.assertIn("export type TimeExtent", types)
-        self.assertIn("common: CommonHistoryCoverage", types)
+        self.assertIn("aligned: AlignedHistoryCoverage", types)
+        self.assertNotIn("CommonHistoryCoverage", types)
         self.assertIn('useState<HistoryPeriod>(coverage.default_period)', history)
         self.assertIn('const periods: HistoryPeriod[] = ["6M", "1Y", "ALL"]', history)
-        self.assertIn("export function buildCommonPeriodExtent", history)
+        self.assertIn("export function buildAlignedPeriodExtent", history)
+        self.assertNotIn("buildCommonPeriodExtent", history)
         self.assertIn(
-            "const selectedExtent = buildCommonPeriodExtent(coverage, period)",
+            "const selectedExtent = buildAlignedPeriodExtent(coverage, period)",
             history,
         )
         for key in ("cnn", "aaii_responses", "aaii_spread"):
@@ -8886,8 +8888,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 history,
             )
         self.assertEqual(history.count("extent={selectedExtent}"), 2)
-        self.assertIn('key === "ALL" ? "공통 전체" : key', history)
-        self.assertIn("비교 구간", history)
+        self.assertIn('key === "ALL" ? "전체" : key', history)
+        self.assertNotIn("공통 전체", history)
+        self.assertIn("정렬 구간", history)
         self.assertNotIn("anchorTimestamp", history)
         self.assertIn('aria-pressed={period === key}', history)
         self.assertIn("sentiment-workbench__history-periods", style)
@@ -8913,7 +8916,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("spreadGuideValues", history_source)
         self.assertIn("uniqueDateCount", history_source)
         self.assertIn("uniqueDateCount >= 2", history_source)
-        self.assertIn("공통 기간에 서로 다른 두 시점 이상의 관측이 필요합니다.", history_source)
+        self.assertIn("정렬 기간에 서로 다른 두 시점 이상의 관측이 필요합니다.", history_source)
         self.assertIn("yForValue(45, domain)", history_source)
         self.assertIn("yForValue(55, domain)", history_source)
         self.assertIn('aria-controls="sentiment-aaii-chart-panel"', history_source)
@@ -22706,7 +22709,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             [
                 {
                     "series_id": "CNN_FEAR_GREED",
-                    "observation_date": pd.Timestamp("2026-07-17"),
+                    "observation_date": pd.Timestamp("2026-07-20"),
                     "source": "cnn_fear_greed",
                     "source_type": "official",
                     "source_mode": "json",
@@ -22738,7 +22741,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 },
                 {
                     "series_id": "CNN_FEAR_GREED",
-                    "observation_date": pd.Timestamp("2026-07-17"),
+                    "observation_date": pd.Timestamp("2026-07-20"),
                     "source": "cnn_fear_greed",
                     "value": 37.1,
                 },
@@ -22784,30 +22787,30 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             "2026-07-20 01:00:00",
         )
         self.assertEqual(
-            snapshot["history_coverage"]["common"],
+            snapshot["history_coverage"]["aligned"],
             {
                 "canonical_start": "2025-06-04",
-                "canonical_end": "2026-07-16",
+                "canonical_end": "2026-07-20",
                 "available": True,
             },
         )
 
-    def test_sentiment_common_history_coverage_uses_only_source_intersection(self) -> None:
-        from app.services.overview.sentiment import _common_history_coverage
+    def test_sentiment_aligned_history_coverage_uses_shared_start_and_latest_end(self) -> None:
+        from app.services.overview.sentiment import _aligned_history_coverage
 
         self.assertEqual(
-            _common_history_coverage(
+            _aligned_history_coverage(
                 {"canonical_start": "2025-06-04", "canonical_end": "2026-07-20"},
                 {"canonical_start": "1987-07-24", "canonical_end": "2026-07-16"},
             ),
             {
                 "canonical_start": "2025-06-04",
-                "canonical_end": "2026-07-16",
+                "canonical_end": "2026-07-20",
                 "available": True,
             },
         )
         self.assertEqual(
-            _common_history_coverage(
+            _aligned_history_coverage(
                 {"canonical_start": "2026-08-01", "canonical_end": "2026-08-02"},
                 {"canonical_start": "2026-07-01", "canonical_end": "2026-07-16"},
             ),
@@ -22980,14 +22983,14 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 "missing_count": 0,
             },
             "history_coverage": {
-                "common": {
+                "aligned": {
                     "canonical_start": "2025-06-04",
-                    "canonical_end": "2026-06-04",
+                    "canonical_end": "2026-07-20",
                     "available": True,
                 },
                 "cnn": {
                     "canonical_start": "2025-06-04",
-                    "canonical_end": "2026-06-04",
+                    "canonical_end": "2026-07-20",
                     "observation_count": 250,
                     "pit_start_at": "2026-07-20 01:00:00",
                     "latest_capture_at": "2026-07-20 01:00:00",
@@ -22995,7 +22998,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 },
                 "aaii": {
                     "canonical_start": "1987-07-24",
-                    "canonical_end": "2026-06-04",
+                    "canonical_end": "2026-07-16",
                     "observation_count": 22,
                     "pit_start_at": "2026-07-20 01:05:00",
                     "latest_capture_at": "2026-07-20 01:05:00",
@@ -23252,10 +23255,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(payload["history_coverage"]["periods"], ["6M", "1Y", "ALL"])
         self.assertEqual(payload["history_coverage"]["default_period"], "6M")
         self.assertEqual(
-            payload["history_coverage"]["common"],
+            payload["history_coverage"]["aligned"],
             {
                 "canonical_start": "2025-06-04",
-                "canonical_end": "2026-06-04",
+                "canonical_end": "2026-07-20",
                 "available": True,
             },
         )

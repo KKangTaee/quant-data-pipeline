@@ -396,11 +396,11 @@ def _history_source_coverage(
     }
 
 
-def _common_history_coverage(
+def _aligned_history_coverage(
     cnn: dict[str, Any],
     aaii: dict[str, Any],
 ) -> dict[str, Any]:
-    """Return only the canonical date range where both sentiment sources exist."""
+    """Align both sources at a shared start while retaining the latest source end."""
     starts = [
         pd.to_datetime(item.get("canonical_start"), errors="coerce")
         for item in (cnn, aaii)
@@ -415,17 +415,17 @@ def _common_history_coverage(
             "canonical_end": None,
             "available": False,
         }
-    common_start = max(starts)
-    common_end = min(ends)
-    if common_start > common_end:
+    aligned_start = max(starts)
+    overlap_end = min(ends)
+    if aligned_start > overlap_end:
         return {
             "canonical_start": None,
             "canonical_end": None,
             "available": False,
         }
     return {
-        "canonical_start": common_start.strftime("%Y-%m-%d"),
-        "canonical_end": common_end.strftime("%Y-%m-%d"),
+        "canonical_start": aligned_start.strftime("%Y-%m-%d"),
+        "canonical_end": max(ends).strftime("%Y-%m-%d"),
         "available": True,
     }
 
@@ -1181,7 +1181,7 @@ def build_market_sentiment_snapshot(
         "component_rows": pd.DataFrame(component_rows, columns=SENTIMENT_COMPONENT_COLUMNS),
         "history_rows": history_out,
         "history_coverage": {
-            "common": _common_history_coverage(
+            "aligned": _aligned_history_coverage(
                 cnn_history_coverage,
                 aaii_history_coverage,
             ),
