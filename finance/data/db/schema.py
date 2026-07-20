@@ -861,6 +861,58 @@ PROVIDER_SCHEMAS = {
           KEY ix_coverage_status (coverage_status)
         );
     """,
+    "market_sentiment_collection_batch": """
+        CREATE TABLE IF NOT EXISTS market_sentiment_collection_batch (
+          batch_id CHAR(36) PRIMARY KEY,
+          collection_id CHAR(36) NOT NULL,
+          source VARCHAR(64) NOT NULL,
+          source_ref VARCHAR(1024) NULL,
+          schema_version VARCHAR(64) NOT NULL,
+          status ENUM('success','partial','missing','error') NOT NULL,
+          requested_at DATETIME(6) NOT NULL,
+          observed_at DATETIME(6) NULL,
+          completed_at DATETIME(6) NOT NULL,
+          observation_start DATE NULL,
+          observation_end DATE NULL,
+          row_count INT NOT NULL DEFAULT 0,
+          coverage_json JSON NULL,
+          error_msg TEXT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          KEY ix_sentiment_batch_collection (collection_id),
+          KEY ix_sentiment_batch_source_observed (source, observed_at),
+          KEY ix_sentiment_batch_status_completed (status, completed_at)
+        );
+    """,
+    "market_sentiment_observation_snapshot": """
+        CREATE TABLE IF NOT EXISTS market_sentiment_observation_snapshot (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+          batch_id CHAR(36) NOT NULL,
+          collection_id CHAR(36) NOT NULL,
+          series_id VARCHAR(64) NOT NULL,
+          observation_date DATE NOT NULL,
+          source VARCHAR(64) NOT NULL,
+          source_type ENUM('official','database_bridge','computed_proxy') NOT NULL DEFAULT 'official',
+          source_mode VARCHAR(32) NULL,
+          source_ref VARCHAR(1024) NULL,
+          series_name VARCHAR(255) NULL,
+          category VARCHAR(64) NOT NULL,
+          frequency VARCHAR(32) NULL,
+          units VARCHAR(64) NULL,
+          value DOUBLE NULL,
+          release_lag_days INT NULL,
+          coverage_status ENUM('actual','partial','bridge','proxy','missing','error') NOT NULL DEFAULT 'actual',
+          missing_fields_json JSON NULL,
+          observed_at DATETIME(6) NOT NULL,
+          error_msg TEXT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE KEY uk_sentiment_snapshot_batch_series_date_source
+            (batch_id, series_id, observation_date, source),
+          KEY ix_sentiment_snapshot_batch (batch_id),
+          KEY ix_sentiment_snapshot_as_known (series_id, source, observed_at, observation_date),
+          KEY ix_sentiment_snapshot_collection (collection_id)
+        );
+    """,
     "macro_series_vintage_observation": """
         CREATE TABLE IF NOT EXISTS macro_series_vintage_observation (
           id BIGINT AUTO_INCREMENT PRIMARY KEY,
