@@ -6877,3 +6877,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - canonical latest history와 immutable 수집 당시 기록을 분리하고, UTC `known_at` cutoff로 당시 관측값을 재현하는 이중 저장 설계를 승인했다.
 - 전체 roadmap은 `1/4차` 완료, `2차`의 `2-1 감사 / 2-2 설계` 완료 상태다. 다음은 active task의 TDD 구현 계획과 `2-3` schema·ingestion·loader·automation 구현이다.
 - 상세는 `tasks/active/overview-sentiment-history-pit-v2-20260720/`와 승인 spec을 본다.
+
+## 2026-07-20 - Overview Sentiment 공통기간 보정 완료
+
+- AAII official workbook canonical history를 `1987-07-24~2026-07-16`, 네 series 각 2,032주로 보강했으며 immutable PIT start는 2026-07-20 실제 capture 그대로 유지했다.
+- CNN `2025-06-04~2026-07-20`과 AAII의 교집합 `2025-06-04~2026-07-16`만 6M / 1Y / 공통 전체의 shared x-domain으로 표시한다.
+- 전체 roadmap은 `2/4차`; 3차 독립 데이터/예측 검토는 사용자 요청대로 보류한다. Browser URL policy로 최신 desktop/420 interaction QA만 수동 확인이 남았다.

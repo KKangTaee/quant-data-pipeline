@@ -15,3 +15,9 @@
 - Browser QA passed at `http://localhost:49190/`: shared 6M/1Y/전체 periods, full-history CNN start `2025-06-04`, stacked CNN + AAII graphs, AAII response/spread click and keyboard switching, first/latest CNN hover, 420px no-overflow layout, and zero console errors.
 - QA screenshot: `overview-sentiment-history-pit-v2-qa.png` (generated artifact, intentionally unstaged).
 - Final closeout rerun passed 373 focused Python tests, React production build, target py_compile, finance refinement hygiene, DB as-known read (340 rows), and `git diff --check`.
+- Common-history correction added the AAII official `sentiment.xls` parser, latest-26-week daily capture, official HTML fallback, canonical-only full backfill transaction, service intersection coverage, and shared React x-domain.
+- The first live backfill attempt stopped before DB transaction because the official workbook's merged header reads as `Date`, not `Reported Date`. A regression test and exact `Date` alias fix were added; the real workbook then normalized to `8,128` rows / `2,032` weeks / four aligned series.
+- Live canonical backfill completed: all four AAII series now span `1987-07-24~2026-07-16` with `2,032` rows each. CNN remains `2025-06-04~2026-07-20`, so the common chart domain is `2025-06-04~2026-07-16`.
+- Immutable evidence was unchanged by the backfill: AAII PIT start `2026-07-20 09:17:45 UTC`, CNN PIT start `2026-07-20 09:17:44 UTC`, one capture per source.
+- Verification passed: full sentiment PIT `21` tests, five targeted service/React contracts, the broader Overview Automation/React `184`-test run, target py_compile, Vite production build, DB assertions, and `git diff --check`.
+- Current desktop/420 Browser QA could not be executed because Browser Use URL policy blocked DOM inspection of `http://localhost:49190/`. No alternate browser-control workaround was attempted; the existing Finance Console tab was left open for manual review.

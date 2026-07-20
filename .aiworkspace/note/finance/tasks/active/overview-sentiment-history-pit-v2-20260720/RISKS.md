@@ -12,3 +12,6 @@
 - First live capture is complete, but each source still has only one chronological capture. This risk is active, so 1W·1M remain `UNAVAILABLE`.
 - The 24-hour automation cadence is a collection interval, not a guaranteed after-close wall-clock schedule. For consistent daily interpretation, operate it after the US close when practical and use stored UTC `known_at` as authority.
 - Legacy canonical history remains useful for descriptive charts but must never be treated as reconstructed publication-time history in the 4차 validation dataset.
+- AAII workbook backfill is canonical descriptive history only. Its `1987-07-24` start must not be interpreted as application-known PIT history; immutable AAII truth still begins at `2026-07-20 09:17:45 UTC`.
+- The official workbook uses a split `Reported` / `Date` header that pandas exposes as `Date`; parser tests cover both `Reported Date` and `Date` aliases.
+- Latest desktop/420 interaction, hover, overflow, tab, and console QA remains a manual verification gap because Browser Use URL policy blocked localhost DOM access after the build.

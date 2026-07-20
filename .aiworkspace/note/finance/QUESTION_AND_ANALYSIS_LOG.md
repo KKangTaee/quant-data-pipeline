@@ -10247,3 +10247,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 현재 화면의 쉬운 최신 조회는 유지하면서, 향후 1W·1M 검증에 미래 정보가 섞이지 않도록 지금부터 실제 수집 당시 값을 보존해야 함.
 - Analysis result: 화면은 최근 180일로 제한되지만 canonical observation date는 더 길게 누적된다. 다만 동일 날짜의 값과 `collected_at`은 UPSERT로 덮어써져 과거 known-state를 재현할 수 없다.
 - Follow-up: canonical latest + immutable normalized capture의 이중 저장, 일 1회 automation, UTC `known_at` loader, 공통 `6M / 1Y / 전체`와 compact coverage evidence를 승인했다. 예측은 PIT 검증 전 계속 차단한다.
+
+### 2026-07-20 - CNN·AAII 그래프는 둘 다 존재하는 기간만 비교한다
+
+- User request: CNN이 이전 값을 더 구하지 못하면 CNN과 AAII 기간의 교집합만 노출하고, 3차는 시작하지 않은 채 공통기간 정렬을 진행하도록 요청함.
+- Interpreted goal: source별 보유 이력은 보존하되 두 그래프가 서로 다른 기간을 같은 비교처럼 보이게 하지 않아야 함.
+- Analysis result: AAII official workbook을 canonical history로 보강하고 common start=`max(start)`, common end=`min(end)`를 6M / 1Y / 공통 전체의 단일 x-domain으로 적용했다. 실제 common range는 `2025-06-04~2026-07-16`이다.
+- Follow-up: 전체 `2/4차` 완료, immutable AAII PIT는 2026-07-20부터만 유효하며 1W/1M은 `UNAVAILABLE`이다. Browser URL policy로 최신 interaction QA는 수동 확인이 남았다.

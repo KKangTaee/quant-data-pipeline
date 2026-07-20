@@ -421,6 +421,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - Overview Market Sentiment V1 이후 CNN score / component score와 AAII bullish / neutral / bearish / bull-bear spread도 같은 long-form table에 저장한다.
 - `series_id`, `observation_date`, `source`가 business key다.
 - Sentiment에서 이 table은 최신 canonical view다. 발표 당시 재현에는 `market_sentiment_collection_batch` / `market_sentiment_observation_snapshot`을 사용한다.
+- AAII official workbook full backfill은 이 canonical table만 보강한다. Workbook 최신일 이하의 네 AAII series를 같은 날짜 집합으로 교체하고 이후 prospective row는 보존하며, historical canonical row를 immutable snapshot으로 복제하지 않는다.
 - API key가 있으면 FRED API, 없으면 FRED official CSV download를 사용한다.
 
 주의:
