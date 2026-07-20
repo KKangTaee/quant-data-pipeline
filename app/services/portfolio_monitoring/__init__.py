@@ -12,6 +12,17 @@ from .schemas import (
     build_request_fingerprint,
     validate_add_item_input,
 )
+from .position_events import (
+    EffectivePositionEvent,
+    PositionAuditRow,
+    PositionEventIntegrityError,
+    PositionEventProjection,
+    PositionEventValidationError,
+    PositionQuantitySnapshot,
+    assert_position_item_eligible,
+    project_position_events,
+    validate_position_sequence,
+)
 from .commands import (
     CommandConflictError,
     CommandResult,
@@ -66,6 +77,15 @@ __all__ = [
     "SourceType",
     "build_request_fingerprint",
     "validate_add_item_input",
+    "EffectivePositionEvent",
+    "PositionAuditRow",
+    "PositionEventIntegrityError",
+    "PositionEventProjection",
+    "PositionEventValidationError",
+    "PositionQuantitySnapshot",
+    "assert_position_item_eligible",
+    "project_position_events",
+    "validate_position_sequence",
     "CommandConflictError",
     "CommandResult",
     "CommandValidationError",

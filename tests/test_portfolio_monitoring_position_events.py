@@ -5,6 +5,65 @@ from datetime import date, datetime
 from decimal import Decimal
 
 
+def _stock_item(**changes):
+    from app.services.portfolio_monitoring.persistence import MonitoringItemRecord
+
+    values = {
+        "monitoring_item_id": "item-amd",
+        "portfolio_group_id": "group-core",
+        "source_type": "direct_security",
+        "source_ref": "AMD",
+        "instrument_kind": "stock",
+        "requested_start_date": date(2026, 7, 1),
+        "effective_start_date": date(2026, 7, 1),
+        "funding_mode": "fixed_shares",
+        "input_notional": None,
+        "input_shares": 30,
+        "entry_close": Decimal("100"),
+        "initial_capital": Decimal("3000"),
+    }
+    values.update(changes)
+    return MonitoringItemRecord(**values)
+
+
+def _event(
+    event_id: str,
+    root_id: str,
+    supersedes_id: str | None,
+    order: int,
+    action: str,
+    effect: str,
+    trade_date: date,
+    quantity: int | None,
+    execution_price: str | None,
+):
+    from app.services.portfolio_monitoring.persistence import PositionEventRecord
+
+    return PositionEventRecord(
+        position_event_id=event_id,
+        root_event_id=root_id,
+        supersedes_event_id=supersedes_id,
+        monitoring_item_id="item-amd",
+        event_order=order,
+        event_action=action,
+        position_effect=effect,
+        trade_date=trade_date,
+        quantity=quantity,
+        execution_price=(
+            Decimal(execution_price) if execution_price is not None else None
+        ),
+        reference_close=(
+            Decimal(execution_price) if execution_price is not None else None
+        ),
+        execution_price_source=(
+            "db_close_default" if execution_price is not None else None
+        ),
+        fee_usd=Decimal("0"),
+        note="",
+        command_id=f"command-{event_id}",
+    )
+
+
 class PortfolioMonitoringPositionEventPersistenceTests(unittest.TestCase):
     def test_domain_enums_define_append_only_event_vocabulary(self) -> None:
         from app.services.portfolio_monitoring import schemas
@@ -65,6 +124,124 @@ class PortfolioMonitoringPositionEventPersistenceTests(unittest.TestCase):
         self.assertEqual(record.reference_close, Decimal("144.80"))
         self.assertEqual(record.fee_usd, Decimal("1.10"))
         self.assertEqual(record.created_at, created_at)
+
+
+class PortfolioMonitoringPositionEventProjectionTests(unittest.TestCase):
+    def test_projection_uses_terminal_revision_without_reordering_the_root(self) -> None:
+        from app.services.portfolio_monitoring.position_events import (
+            project_position_events,
+        )
+
+        records = [
+            _event(
+                "buy-v1", "buy-root", None, 1, "create", "buy",
+                date(2026, 7, 10), 5, "100",
+            ),
+            _event(
+                "sell-v1", "sell-root", None, 2, "create", "sell",
+                date(2026, 7, 10), 3, "110",
+            ),
+            _event(
+                "buy-v2", "buy-root", "buy-v1", 1, "replace", "buy",
+                date(2026, 7, 10), 7, "99",
+            ),
+        ]
+
+        projection = project_position_events(_stock_item(), records)
+
+        self.assertEqual(projection.effective_initial_shares, 30)
+        self.assertEqual(
+            [row.root_event_id for row in projection.trades],
+            ["buy-root", "sell-root"],
+        )
+        self.assertEqual([row.quantity for row in projection.trades], [7, 3])
+
+    def test_void_removes_business_effect_but_retains_audit_row(self) -> None:
+        from app.services.portfolio_monitoring.position_events import (
+            project_position_events,
+        )
+
+        projection = project_position_events(
+            _stock_item(),
+            [
+                _event(
+                    "buy-v1", "buy-root", None, 1, "create", "buy",
+                    date(2026, 7, 10), 5, "100",
+                ),
+                _event(
+                    "buy-void", "buy-root", "buy-v1", 1, "void", "buy",
+                    date(2026, 7, 10), None, None,
+                ),
+            ],
+        )
+
+        self.assertEqual(projection.trades, ())
+        self.assertEqual(projection.audit_rows[-1].status, "voided")
+
+    def test_projection_applies_single_initial_quantity_correction(self) -> None:
+        from app.services.portfolio_monitoring.position_events import (
+            project_position_events,
+        )
+
+        projection = project_position_events(
+            _stock_item(),
+            [
+                _event(
+                    "correction-v1", "correction-root", None, 1, "create",
+                    "initial_quantity_correction", date(2026, 7, 1), 40, None,
+                )
+            ],
+        )
+
+        self.assertEqual(projection.effective_initial_shares, 40)
+        self.assertEqual(projection.initial_correction.quantity, 40)
+
+    def test_sequence_applies_each_split_before_same_day_sell(self) -> None:
+        from app.services.portfolio_monitoring.position_events import (
+            project_position_events,
+            validate_position_sequence,
+        )
+
+        projection = project_position_events(
+            _stock_item(),
+            [
+                _event(
+                    "sell-v1", "sell-root", None, 1, "create", "sell",
+                    date(2026, 7, 15), 50, "110",
+                )
+            ],
+        )
+        snapshots = validate_position_sequence(
+            _stock_item(),
+            projection,
+            split_factors={date(2026, 7, 15): Decimal("2")},
+        )
+
+        self.assertEqual(snapshots[-1].shares_before, Decimal("60"))
+        self.assertEqual(snapshots[-1].shares_after, Decimal("10"))
+
+    def test_sequence_rejects_full_sell_and_non_stock_targets(self) -> None:
+        from app.services.portfolio_monitoring.position_events import (
+            PositionEventValidationError,
+            assert_position_item_eligible,
+            project_position_events,
+            validate_position_sequence,
+        )
+
+        projection = project_position_events(
+            _stock_item(),
+            [
+                _event(
+                    "sell-v1", "sell-root", None, 1, "create", "sell",
+                    date(2026, 7, 10), 30, "110",
+                )
+            ],
+        )
+        with self.assertRaisesRegex(PositionEventValidationError, "최소 1주"):
+            validate_position_sequence(_stock_item(), projection, split_factors={})
+
+        with self.assertRaisesRegex(PositionEventValidationError, "개별주식"):
+            assert_position_item_eligible(_stock_item(instrument_kind="etf"))
 
 
 if __name__ == "__main__":
