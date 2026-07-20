@@ -182,5 +182,100 @@ class ReferenceCenterCatalogContractTests(unittest.TestCase):
         self.assertIn('title="Glossary"', source)
 
 
+class ReferenceCenterNavigationContractTests(unittest.TestCase):
+    def test_navigation_event_accepts_only_known_item_and_destination(self) -> None:
+        from app.web.reference_center import normalize_reference_event
+
+        self.assertIsNone(normalize_reference_event(None))
+        self.assertIsNone(
+            normalize_reference_event(
+                {"event": {"id": "search", "destination": "overview", "item_id": "feature.market_context"}}
+            )
+        )
+        self.assertIsNone(
+            normalize_reference_event(
+                {
+                    "event": {
+                        "id": "navigate_to_surface",
+                        "destination": "raw_registry",
+                        "item_id": "feature.market_context",
+                    }
+                }
+            )
+        )
+        self.assertIsNone(
+            normalize_reference_event(
+                {
+                    "event": {
+                        "id": "navigate_to_surface",
+                        "destination": "overview",
+                        "item_id": "unknown",
+                    }
+                }
+            )
+        )
+
+        self.assertEqual(
+            normalize_reference_event(
+                {
+                    "event": {
+                        "id": "navigate_to_surface",
+                        "destination": "final_review",
+                        "item_id": "journey.validation_decision",
+                        "nonce": "n-1",
+                    }
+                }
+            ),
+            {
+                "id": "navigate_to_surface",
+                "destination": "final_review",
+                "item_id": "journey.validation_decision",
+                "nonce": "n-1",
+            },
+        )
+
+    def test_navigation_resolution_maps_backtest_panels_and_top_level_pages(self) -> None:
+        from app.web.reference_center import resolve_reference_navigation
+
+        self.assertEqual(
+            resolve_reference_navigation("backtest_analysis"),
+            {"page_target_key": "backtest", "panel": "Backtest Analysis"},
+        )
+        self.assertEqual(
+            resolve_reference_navigation("practical_validation"),
+            {"page_target_key": "backtest", "panel": "Practical Validation"},
+        )
+        self.assertEqual(
+            resolve_reference_navigation("final_review"),
+            {"page_target_key": "backtest", "panel": "Final Review"},
+        )
+        self.assertEqual(
+            resolve_reference_navigation("portfolio_monitoring"),
+            {"page_target_key": "portfolio_monitoring", "panel": ""},
+        )
+        self.assertEqual(
+            resolve_reference_navigation("institutional_portfolios"),
+            {"page_target_key": "institutional_portfolios", "panel": ""},
+        )
+        self.assertIsNone(resolve_reference_navigation("raw_registry"))
+
+    def test_page_target_configuration_keeps_only_allowed_keys(self) -> None:
+        from app.web import reference_center
+
+        reference_center.configure_reference_center_page_targets(
+            {
+                "overview": "overview-page",
+                "backtest": "backtest-page",
+                "raw_registry": "unsafe-page",
+                "portfolio_monitoring": None,
+            }
+        )
+
+        self.assertEqual(
+            reference_center._REFERENCE_PAGE_TARGETS,
+            {"overview": "overview-page", "backtest": "backtest-page"},
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
