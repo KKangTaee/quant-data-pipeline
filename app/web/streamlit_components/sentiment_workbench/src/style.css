@@ -405,6 +405,17 @@ summary:focus-visible {
   text-align: right;
 }
 
+.sentiment-workbench__history-coverage strong,
+.sentiment-workbench__history-coverage span,
+.sentiment-workbench__history-coverage small {
+  overflow-wrap: anywhere;
+}
+
+.sentiment-workbench__history-coverage strong {
+  color: #172033;
+  font-weight: 750;
+}
+
 .sentiment-workbench__history-coverage small {
   color: #8a97a8;
   font-size: inherit;

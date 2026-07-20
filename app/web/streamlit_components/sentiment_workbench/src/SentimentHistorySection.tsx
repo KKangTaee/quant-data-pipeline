@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { displayValue } from "./SentimentWorkbench";
 import type {
   ChartPanel,
@@ -6,6 +6,7 @@ import type {
   HistoryCoverage,
   HistoryPeriod,
   SourceHistoryCoverage,
+  TimeExtent,
 } from "./SentimentWorkbench";
 
 type AaiiHistoryTab = "responses" | "spread";
@@ -43,13 +44,6 @@ function parsedChartPoints(panel: ChartPanel) {
     if (!Number.isFinite(timestamp) || value === null) return [];
     return [{ ...point, timestamp, numericValue: value }];
   }).sort((left, right) => left.timestamp - right.timestamp);
-}
-
-function chartExtent(points: ParsedChartPoint[]) {
-  if (!points.length) return { min: 0, max: 1 };
-  const min = points[0].timestamp;
-  const max = points[points.length - 1].timestamp;
-  return min === max ? { min: min - 43_200_000, max: max + 43_200_000 } : { min, max };
 }
 
 function chartDomain(panel: ChartPanel, points: ParsedChartPoint[]) {
@@ -108,26 +102,79 @@ function chartTooltipAlignment(x: number) {
   return "center";
 }
 
-function periodStart(period: HistoryPeriod, anchor: number) {
-  if (period === "ALL") return Number.NEGATIVE_INFINITY;
-  const start = new Date(anchor);
-  start.setUTCHours(0, 0, 0, 0);
-  start.setUTCMonth(start.getUTCMonth() - (period === "6M" ? 6 : 12));
-  return start.getTime();
+function subtractUtcMonths(timestamp: number, months: number) {
+  const value = new Date(timestamp);
+  const day = value.getUTCDate();
+  value.setUTCHours(0, 0, 0, 0);
+  value.setUTCDate(1);
+  value.setUTCMonth(value.getUTCMonth() - months);
+  const lastDay = new Date(
+    Date.UTC(value.getUTCFullYear(), value.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  value.setUTCDate(Math.min(day, lastDay));
+  return value.getTime();
+}
+
+export function buildCommonPeriodExtent(
+  coverage: HistoryCoverage,
+  period: HistoryPeriod,
+): TimeExtent | null {
+  if (!coverage.common.available) return null;
+  const commonStart = Date.parse(coverage.common.canonical_start);
+  const commonEnd = Date.parse(coverage.common.canonical_end);
+  if (
+    !Number.isFinite(commonStart)
+    || !Number.isFinite(commonEnd)
+    || commonStart > commonEnd
+  ) return null;
+  const requestedStart = period === "ALL"
+    ? commonStart
+    : subtractUtcMonths(commonEnd, period === "6M" ? 6 : 12);
+  return { min: Math.max(commonStart, requestedStart), max: commonEnd };
+}
+
+function pointWithinExtent(point: ChartPoint, extent: TimeExtent) {
+  const timestamp = Date.parse(point.date);
+  return Number.isFinite(timestamp)
+    && timestamp >= extent.min
+    && timestamp <= extent.max;
+}
+
+function latestWithinExtent(
+  panel: ChartPanel,
+  series: ChartPoint[],
+  extent: TimeExtent,
+) {
+  const timestamp = Date.parse(panel.latest?.date || "");
+  if (
+    Number.isFinite(timestamp)
+    && timestamp >= extent.min
+    && timestamp <= extent.max
+  ) return panel.latest;
+  if (new Set(series.map((point) => point.series)).size !== 1 || !series.length) {
+    return undefined;
+  }
+  const sorted = [...series].sort(
+    (left, right) => Date.parse(left.date) - Date.parse(right.date),
+  );
+  const point = sorted[sorted.length - 1];
+  return {
+    date: point.date,
+    value: point.value,
+    label: point.status_label || "공통 구간 최신",
+  };
 }
 
 export function filterChartPanel(
   panel: ChartPanel,
-  period: HistoryPeriod,
-  anchor: number,
+  extent: TimeExtent | null,
 ): ChartPanel {
-  const cutoff = periodStart(period, anchor);
+  if (!extent) return { ...panel, latest: undefined, series: [] };
+  const series = panel.series.filter((point) => pointWithinExtent(point, extent));
   return {
     ...panel,
-    series: panel.series.filter((point) => {
-      const timestamp = Date.parse(point.date);
-      return Number.isFinite(timestamp) && timestamp >= cutoff && timestamp <= anchor;
-    }),
+    latest: latestWithinExtent(panel, series, extent),
+    series,
   };
 }
 
@@ -145,18 +192,32 @@ function coverageLine(label: string, source: SourceHistoryCoverage) {
   return `${label} · ${range} · ${source.observation_count}개 · ${pit}`;
 }
 
-function SentimentLineChart({ panel, mode }: { panel: ChartPanel; mode: ChartMode }) {
+function comparisonRangeLabel(extent: TimeExtent | null) {
+  if (!extent) return "공통 이력 없음";
+  const start = new Date(extent.min).toISOString().slice(0, 10);
+  const end = new Date(extent.max).toISOString().slice(0, 10);
+  return `${start}~${end}`;
+}
+
+function SentimentLineChart({ panel, mode, extent }: {
+  panel: ChartPanel;
+  mode: ChartMode;
+  extent: TimeExtent | null;
+}) {
   const points = parsedChartPoints(panel);
-  const extent = chartExtent(points);
+  const chartTimeExtent = extent || { min: 0, max: 1 };
   const domain = chartDomain(panel, points);
   const [hoveredChartPoint, setHoveredChartPoint] = useState<HoveredChartPoint | null>(null);
+  useEffect(() => {
+    setHoveredChartPoint(null);
+  }, [extent?.min, extent?.max, mode]);
   const grouped = points.reduce<Record<string, ParsedChartPoint[]>>((result, point) => {
     (result[point.series] ||= []).push(point);
     return result;
   }, {});
   const uniqueDateCount = new Set(points.map((point) => point.timestamp)).size;
   const hasTrend = uniqueDateCount >= 2;
-  const dateTicks = buildDateTicks(extent);
+  const dateTicks = buildDateTicks(chartTimeExtent);
   const yTicks = panel.unit === "percentage_point"
     ? [domain.min, domain.min / 2, 0, domain.max / 2, domain.max]
     : [0, 25, 50, 75, 100];
@@ -168,7 +229,8 @@ function SentimentLineChart({ panel, mode }: { panel: ChartPanel; mode: ChartMod
     const bounds = event.currentTarget.getBoundingClientRect();
     const viewBoxX = ((event.clientX - bounds.left) / bounds.width) * chartWidth;
     const ratio = Math.max(0, Math.min(1, (viewBoxX - chartMargin.left) / plotWidth));
-    const targetTimestamp = extent.min + ratio * (extent.max - extent.min);
+    const targetTimestamp = chartTimeExtent.min
+      + ratio * (chartTimeExtent.max - chartTimeExtent.min);
     const timestamps = Array.from(new Set(points.map((point) => point.timestamp)));
     const nearestTimestamp = timestamps.reduce((nearest, timestamp) => (
       Math.abs(timestamp - targetTimestamp) < Math.abs(nearest - targetTimestamp) ? timestamp : nearest
@@ -178,7 +240,7 @@ function SentimentLineChart({ panel, mode }: { panel: ChartPanel; mode: ChartMod
       date: values[0]?.date || new Date(nearestTimestamp).toISOString(),
       timestamp: nearestTimestamp,
       values,
-      x: xForTimestamp(nearestTimestamp, extent),
+      x: xForTimestamp(nearestTimestamp, chartTimeExtent),
     });
   };
 
@@ -190,7 +252,9 @@ function SentimentLineChart({ panel, mode }: { panel: ChartPanel; mode: ChartMod
           {panel.latest ? <><span>{panel.latest.label}</span>{panel.latest.value !== undefined && panel.latest.value !== null ? <b>{displayValue(panel.latest.value, chartValueSuffix(panel))}</b> : null}<small>{panel.latest.date}</small></> : null}
         </div>
       </header>
-      {hasTrend ? (
+      {!extent ? (
+        <p className="sentiment-workbench__empty">CNN과 AAII가 함께 존재하는 비교 기간이 없습니다.</p>
+      ) : hasTrend ? (
         <div className="sentiment-workbench__line-chart-plot">
           <svg
             aria-label="심리 근거 그래프"
@@ -214,7 +278,7 @@ function SentimentLineChart({ panel, mode }: { panel: ChartPanel; mode: ChartMod
             })}
             {guides.map((guide) => <line className={`sentiment-workbench__chart-guide${guide === 0 ? " sentiment-workbench__chart-guide--zero" : ""}`} key={`guide-${guide}`} x1={chartMargin.left} x2={chartWidth - chartMargin.right} y1={yForValue(guide, domain)} y2={yForValue(guide, domain)} />)}
             {dateTicks.map((timestamp) => {
-              const x = xForTimestamp(timestamp, extent);
+              const x = xForTimestamp(timestamp, chartTimeExtent);
               return <g key={`x-${timestamp}`}><line className="sentiment-workbench__chart-x-tick" x1={x} x2={x} y1={chartHeight - chartMargin.bottom} y2={chartHeight - chartMargin.bottom + 5} /><text className="sentiment-workbench__chart-x-label" textAnchor="middle" x={x} y={chartHeight - 14}>{formatChartDate(timestamp)}</text></g>;
             })}
             {Object.entries(grouped).map(([series, seriesPoints]) => (
@@ -222,15 +286,15 @@ function SentimentLineChart({ panel, mode }: { panel: ChartPanel; mode: ChartMod
                 className="sentiment-workbench__chart-line"
                 fill="none"
                 key={series}
-                points={seriesPoints.map((point) => `${xForTimestamp(point.timestamp, extent)},${yForValue(point.numericValue, domain)}`).join(" ")}
+                points={seriesPoints.map((point) => `${xForTimestamp(point.timestamp, chartTimeExtent)},${yForValue(point.numericValue, domain)}`).join(" ")}
                 stroke={chartSeriesColor(series, mode)}
                 strokeDasharray={chartSeriesDash(series)}
               />
             ))}
             {mode === "cnn" && latestPoint ? (
               <g className="sentiment-workbench__chart-latest-point" aria-hidden="true">
-                <circle cx={xForTimestamp(latestPoint.timestamp, extent)} cy={yForValue(latestPoint.numericValue, domain)} fill={chartSeriesColor(latestPoint.series, mode)} r={4.5} />
-                <text textAnchor="end" x={xForTimestamp(latestPoint.timestamp, extent) - 7} y={yForValue(latestPoint.numericValue, domain) - 9}>{displayValue(latestPoint.numericValue)} · {latestPoint.status_label || "현재"}</text>
+                <circle cx={xForTimestamp(latestPoint.timestamp, chartTimeExtent)} cy={yForValue(latestPoint.numericValue, domain)} fill={chartSeriesColor(latestPoint.series, mode)} r={4.5} />
+                <text textAnchor="end" x={xForTimestamp(latestPoint.timestamp, chartTimeExtent) - 7} y={yForValue(latestPoint.numericValue, domain) - 9}>{displayValue(latestPoint.numericValue)} · {latestPoint.status_label || "현재"}</text>
               </g>
             ) : null}
             {hoveredChartPoint ? (
@@ -247,7 +311,7 @@ function SentimentLineChart({ panel, mode }: { panel: ChartPanel; mode: ChartMod
             </div>
           ) : null}
         </div>
-      ) : <p className="sentiment-workbench__empty">추이를 그리려면 서로 다른 두 시점 이상의 관측이 필요합니다.</p>}
+      ) : <p className="sentiment-workbench__empty">공통 기간에 서로 다른 두 시점 이상의 관측이 필요합니다.</p>}
       <div className="sentiment-workbench__chart-legend">
         {Object.keys(grouped).map((series) => <span key={series}><i style={{ background: chartSeriesColor(series, mode) }} />{series}</span>)}
         {mode === "aaii_spread" ? <small>기준선: -10 / 0 / +10pp · 0은 실선</small> : null}
@@ -270,18 +334,11 @@ function SentimentHistorySection({ charts, coverage }: Props) {
   const [period, setPeriod] = useState<HistoryPeriod>(coverage.default_period);
   const tabs: AaiiHistoryTab[] = ["responses", "spread"];
   const periods: HistoryPeriod[] = ["6M", "1Y", "ALL"];
-  const observedTimestamps = [
-    ...charts.cnn.series,
-    ...charts.aaii_responses.series,
-    ...charts.aaii_spread.series,
-  ].map((point) => Date.parse(point.date)).filter(Number.isFinite);
-  const anchorTimestamp = observedTimestamps.length
-    ? Math.max(...observedTimestamps)
-    : Date.now();
+  const selectedExtent = buildCommonPeriodExtent(coverage, period);
   const visibleCharts = {
-    cnn: filterChartPanel(charts.cnn, period, anchorTimestamp),
-    aaii_responses: filterChartPanel(charts.aaii_responses, period, anchorTimestamp),
-    aaii_spread: filterChartPanel(charts.aaii_spread, period, anchorTimestamp),
+    cnn: filterChartPanel(charts.cnn, selectedExtent),
+    aaii_responses: filterChartPanel(charts.aaii_responses, selectedExtent),
+    aaii_spread: filterChartPanel(charts.aaii_spread, selectedExtent),
   };
   const handleAaiiTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
@@ -312,20 +369,21 @@ function SentimentHistorySection({ charts, coverage }: Props) {
                 onClick={() => setPeriod(key)}
                 type="button"
               >
-                {key === "ALL" ? "전체" : key}
+                {key === "ALL" ? "공통 전체" : key}
               </button>
             ))}
           </div>
           <div className="sentiment-workbench__history-coverage">
-            <span>{coverageLine("CNN", coverage.cnn)}</span>
-            <span>{coverageLine("AAII", coverage.aaii)}</span>
+            <strong>비교 구간 · {comparisonRangeLabel(selectedExtent)}</strong>
+            <span>{coverageLine("CNN 보유 이력", coverage.cnn)}</span>
+            <span>{coverageLine("AAII 보유 이력", coverage.aaii)}</span>
             <small>{coverage.cnn_components_note}</small>
           </div>
         </div>
       </div>
       <div className="sentiment-workbench__history-grid">
         <div aria-label="CNN 시장 행동 그래프">
-          <SentimentLineChart mode="cnn" panel={visibleCharts.cnn} />
+          <SentimentLineChart extent={selectedExtent} mode="cnn" panel={visibleCharts.cnn} />
         </div>
         <div className="sentiment-workbench__aaii-history">
           <div className="sentiment-workbench__chart-tabs" role="tablist" aria-label="AAII 그래프 보기">
@@ -347,7 +405,7 @@ function SentimentHistorySection({ charts, coverage }: Props) {
             ))}
           </div>
           <div aria-labelledby={`sentiment-aaii-chart-tab-${aaiiTab}`} id="sentiment-aaii-chart-panel" role="tabpanel">
-            <SentimentLineChart mode={activeAaiiMode} panel={activeAaiiChart} />
+            <SentimentLineChart extent={selectedExtent} mode={activeAaiiMode} panel={activeAaiiChart} />
           </div>
         </div>
       </div>

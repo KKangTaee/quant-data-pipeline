@@ -8865,21 +8865,30 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".sentiment-workbench__cnn-evidence-row", react_style)
         self.assertIn(".sentiment-workbench__evidence-change", react_style)
 
-    def test_sentiment_history_uses_one_shared_period_for_both_panels(self) -> None:
+    def test_sentiment_history_uses_one_shared_intersection_domain_for_both_panels(self) -> None:
         root = Path("app/web/streamlit_components/sentiment_workbench/src")
         types = (root / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
         history = (root / "SentimentHistorySection.tsx").read_text(encoding="utf-8")
         style = (root / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn('export type HistoryPeriod = "6M" | "1Y" | "ALL"', types)
-        self.assertIn("history_coverage: HistoryCoverage", types)
+        self.assertIn("export type TimeExtent", types)
+        self.assertIn("common: CommonHistoryCoverage", types)
         self.assertIn('useState<HistoryPeriod>(coverage.default_period)', history)
         self.assertIn('const periods: HistoryPeriod[] = ["6M", "1Y", "ALL"]', history)
+        self.assertIn("export function buildCommonPeriodExtent", history)
+        self.assertIn(
+            "const selectedExtent = buildCommonPeriodExtent(coverage, period)",
+            history,
+        )
         for key in ("cnn", "aaii_responses", "aaii_spread"):
             self.assertIn(
-                f"filterChartPanel(charts.{key}, period, anchorTimestamp)",
+                f"filterChartPanel(charts.{key}, selectedExtent)",
                 history,
             )
+        self.assertEqual(history.count("extent={selectedExtent}"), 2)
+        self.assertIn('key === "ALL" ? "공통 전체" : key', history)
+        self.assertIn("비교 구간", history)
+        self.assertNotIn("anchorTimestamp", history)
         self.assertIn('aria-pressed={period === key}', history)
         self.assertIn("sentiment-workbench__history-periods", style)
         self.assertIn("sentiment-workbench__history-coverage", style)
@@ -8904,7 +8913,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("spreadGuideValues", history_source)
         self.assertIn("uniqueDateCount", history_source)
         self.assertIn("uniqueDateCount >= 2", history_source)
-        self.assertIn("추이를 그리려면 서로 다른 두 시점 이상의 관측이 필요합니다.", history_source)
+        self.assertIn("공통 기간에 서로 다른 두 시점 이상의 관측이 필요합니다.", history_source)
         self.assertIn("yForValue(45, domain)", history_source)
         self.assertIn("yForValue(55, domain)", history_source)
         self.assertIn('aria-controls="sentiment-aaii-chart-panel"', history_source)

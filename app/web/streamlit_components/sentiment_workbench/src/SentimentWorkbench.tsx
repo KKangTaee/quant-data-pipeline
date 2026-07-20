@@ -115,6 +115,17 @@ export type ChartPanel = {
 
 export type HistoryPeriod = "6M" | "1Y" | "ALL";
 
+export type TimeExtent = {
+  min: number;
+  max: number;
+};
+
+export type CommonHistoryCoverage = {
+  canonical_start: string;
+  canonical_end: string;
+  available: boolean;
+};
+
 export type SourceHistoryCoverage = {
   canonical_start: string;
   canonical_end: string;
@@ -127,6 +138,7 @@ export type SourceHistoryCoverage = {
 export type HistoryCoverage = {
   default_period: HistoryPeriod;
   periods: HistoryPeriod[];
+  common: CommonHistoryCoverage;
   cnn: SourceHistoryCoverage;
   aaii: SourceHistoryCoverage;
   cnn_components_note: string;
@@ -259,6 +271,11 @@ const fallbackOutlook: SentimentWorkbenchPayload["outlook"] = {
 const fallbackHistoryCoverage: HistoryCoverage = {
   default_period: "6M",
   periods: ["6M", "1Y", "ALL"],
+  common: {
+    canonical_start: "",
+    canonical_end: "",
+    available: false,
+  },
   cnn: {
     canonical_start: "",
     canonical_end: "",
