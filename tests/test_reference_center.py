@@ -177,10 +177,27 @@ class ReferenceCenterCatalogContractTests(unittest.TestCase):
             self.assertEqual(report[issue_key], [], issue_key)
         self.assertEqual(report["metrics"]["journey_count"], 6)
 
-    def test_streamlit_shell_migration_contract_is_deferred_until_task_6(self) -> None:
+    def test_streamlit_shell_has_one_reference_page_and_no_split_navigation(self) -> None:
         source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")
-        self.assertIn('title="Guides"', source)
-        self.assertIn('title="Glossary"', source)
+        reference_page_source = Path("app/web/reference_center.py").read_text(encoding="utf-8")
+
+        self.assertIn('title="Reference"', source)
+        self.assertIn('url_path="reference"', source)
+        self.assertNotIn('title="Guides"', source)
+        self.assertNotIn('url_path="guides"', source)
+        self.assertNotIn('title="Glossary"', source)
+        self.assertNotIn('url_path="glossary"', source)
+        self.assertNotIn("render_reference_guides_page", source)
+        self.assertNotIn("load_glossary_sections_from_markdown", source)
+        self.assertNotIn("_render_runtime_build_indicator", reference_page_source)
+        for page_target_key in (
+            '"overview": overview_page',
+            '"institutional_portfolios": institutional_portfolios_page',
+            '"ingestion": ingestion_page',
+            '"backtest": backtest_page',
+            '"portfolio_monitoring": selected_portfolio_dashboard_page',
+        ):
+            self.assertIn(page_target_key, source)
 
 
 class ReferenceCenterNavigationContractTests(unittest.TestCase):

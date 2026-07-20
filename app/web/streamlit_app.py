@@ -5,7 +5,6 @@ from datetime import datetime
 from pathlib import Path
 import subprocess
 
-import pandas as pd
 import streamlit as st
 
 # Ensure the project root is importable when Streamlit executes this file directly.
@@ -24,14 +23,11 @@ from app.web.institutional_portfolios import render_institutional_portfolios_pag
 from app.web.overview_dashboard import render_overview_dashboard
 from app.web.backtest_page import render_backtest_tab
 from app.web import reference_contextual_help as reference_contextual_help_module
-from app.web.reference_guides import render_reference_guides_page
-from app.services.reference_glossary_catalog import (
-    get_reference_concept_dictionary,
-    load_glossary_sections_from_markdown,
-    search_glossary_sections,
-    search_reference_concepts,
+from app.web.reference_center import (
+    configure_reference_center_page_targets,
+    render_reference_center_page,
 )
-from app.workspace_paths import GLOSSARY_DOC_PATH, PROJECT_ROOT
+from app.workspace_paths import PROJECT_ROOT
 
 
 APP_RUNTIME_LOADED_AT = datetime.now()
@@ -88,34 +84,6 @@ def _install_copy_shortcut_guard() -> None:
         """,
         unsafe_allow_javascript=True,
     )
-
-
-@st.cache_data(show_spinner=False)
-def _load_glossary_sections() -> tuple[list[dict[str, str]], list[dict[str, str]]]:
-    return load_glossary_sections_from_markdown(GLOSSARY_DOC_PATH)
-
-
-@st.cache_data(show_spinner=False)
-def _load_reference_concepts() -> list[dict[str, object]]:
-    return get_reference_concept_dictionary()
-
-
-def _format_concept_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
-    formatted: list[dict[str, object]] = []
-    for row in rows:
-        formatted.append(
-            {
-                "term": row.get("term", ""),
-                "category": row.get("category", ""),
-                "plain_meaning": row.get("plain_meaning", ""),
-                "owner_screen": row.get("owner_screen", ""),
-                "progress_implication": row.get("progress_implication", ""),
-                "where_to_fix": row.get("where_to_fix", ""),
-                "source": row.get("source", ""),
-                "keywords": ", ".join(str(item) for item in row.get("keywords", []) or []),
-            }
-        )
-    return formatted
 
 
 def _render_running_banner() -> None:
@@ -180,88 +148,6 @@ def _render_selected_portfolio_dashboard_page() -> None:
     render_final_selected_portfolio_dashboard_page()
 
 
-def _render_guides_page() -> None:
-    render_reference_guides_page(
-        runtime_marker=APP_RUNTIME_MARKER,
-        loaded_at=APP_RUNTIME_LOADED_AT,
-        git_sha=CURRENT_GIT_SHORT_SHA,
-        render_runtime_snapshot=_render_runtime_build_indicator,
-    )
-
-
-def _render_glossary_page() -> None:
-    st.title("Glossary")
-    st.caption("현재 퀀트 프로그램에서 쓰는 용어와 상태 의미를 검색하고 다시 확인하는 reference 페이지입니다.")
-    _render_runtime_build_indicator()
-
-    meta_sections, term_sections = _load_glossary_sections()
-    concept_rows = _load_reference_concepts()
-    if not term_sections and not meta_sections and not concept_rows:
-        st.error("Glossary 문서와 concept dictionary를 읽지 못했습니다. 문서 경로와 service catalog를 먼저 확인해 주세요.")
-        st.code(str(GLOSSARY_DOC_PATH), language="text")
-        return
-
-    with st.container(border=True):
-        st.markdown("### 용어 검색")
-        st.caption("용어 제목만 검색할 수도 있고, 본문까지 같이 검색해서 관련 설명을 더 넓게 찾을 수도 있습니다.")
-        query = st.text_input(
-            "검색어",
-            value="",
-            key="reference_glossary_query",
-            placeholder="예: promotion, shortlist, liquidity, universe",
-        )
-        search_body = st.checkbox(
-            "본문까지 함께 검색",
-            value=True,
-            key="reference_glossary_search_body",
-        )
-
-        matched_concepts = search_reference_concepts(concept_rows, query)
-        matched_sections = search_glossary_sections(term_sections, query, search_body=search_body)
-        metric_cols = st.columns(4)
-        metric_cols[0].metric("핵심 운영 용어", len(concept_rows))
-        metric_cols[1].metric("문서 용어 수", len(term_sections))
-        metric_cols[2].metric("Concept 결과", len(matched_concepts))
-        metric_cols[3].metric("문서 결과", len(matched_sections))
-        st.caption("source: shared concept dictionary + `.aiworkspace/note/finance/docs/GLOSSARY.md`")
-
-    if meta_sections:
-        with st.expander("이 reference를 어떻게 읽으면 되나", expanded=False):
-            for section in meta_sections:
-                with st.container(border=True):
-                    st.markdown(f"#### {section['title']}")
-                    st.markdown(section["body"])
-
-    if query.strip() and not matched_concepts and not matched_sections:
-        st.warning("검색 결과가 없습니다. 검색어를 조금 줄이거나 영어/한글 핵심 단어만 넣어 다시 확인해 주세요.")
-        st.caption("예: `promotion`, `guardrail`, `유동성`, `benchmark`, `PIT`")
-        return
-
-    st.markdown("### 핵심 운영 용어")
-    st.caption("Guides의 상태 / 용어 lookup과 같은 curated concept dictionary입니다.")
-    if matched_concepts:
-        st.dataframe(pd.DataFrame(_format_concept_rows(matched_concepts)), width="stretch", hide_index=True)
-    else:
-        st.info("핵심 운영 용어 결과가 없습니다. 아래 문서 용어 검색 결과를 확인하세요.")
-
-    st.markdown("### 문서 용어 목록")
-    if not query.strip():
-        st.caption("검색어가 없어서 전체 용어를 보여주고 있습니다.")
-    elif len(matched_sections) <= 5:
-        st.caption("검색 결과가 적어서 관련 용어를 바로 펼쳐 보여줍니다.")
-    else:
-        st.caption("검색 결과가 많아서 제목 순서대로 정리했습니다. 필요한 항목만 펼쳐서 보시면 됩니다.")
-
-    preview_titles = ", ".join(section["title"] for section in matched_sections[:8])
-    if preview_titles:
-        st.caption(f"빠른 훑어보기: {preview_titles}")
-
-    auto_expand = bool(query.strip() and len(matched_sections) <= 5)
-    for section in matched_sections:
-        with st.expander(section["title"], expanded=auto_expand):
-            st.markdown(section["body"])
-
-
 def main() -> None:
     st.set_page_config(
         page_title="Finance Console",
@@ -289,12 +175,24 @@ def main() -> None:
         icon="📊",
         url_path="selected-portfolio-dashboard",
     )
-    guides_page = st.Page(_render_guides_page, title="Guides", icon="📚", url_path="guides")
-    glossary_page = st.Page(_render_glossary_page, title="Glossary", icon="📖", url_path="glossary")
+    reference_page = st.Page(
+        render_reference_center_page,
+        title="Reference",
+        icon="📚",
+        url_path="reference",
+    )
+    configure_reference_center_page_targets(
+        {
+            "overview": overview_page,
+            "institutional_portfolios": institutional_portfolios_page,
+            "ingestion": ingestion_page,
+            "backtest": backtest_page,
+            "portfolio_monitoring": selected_portfolio_dashboard_page,
+        }
+    )
     _configure_reference_contextual_help_page_targets(
         {
-            "guides": guides_page,
-            "glossary": glossary_page,
+            "reference": reference_page,
         }
     )
     navigation = st.navigation(
@@ -309,8 +207,7 @@ def main() -> None:
                 selected_portfolio_dashboard_page,
             ],
             "Reference": [
-                guides_page,
-                glossary_page,
+                reference_page,
             ],
         },
         position="top",
