@@ -61,14 +61,21 @@ class PositionEventProjection:
 def assert_position_item_eligible(item: MonitoringItemRecord) -> None:
     """Restrict position commands to active direct stocks held by share count."""
 
+    _assert_position_item_shape(item)
+    if item.status not in {"active", "data_review"}:
+        raise PositionEventValidationError(
+            "활성 개별주식의 보유 수량 방식에서만 사용할 수 있습니다."
+        )
+
+
+def _assert_position_item_shape(item: MonitoringItemRecord) -> None:
     if not (
         item.source_type == "direct_security"
         and item.instrument_kind == "stock"
         and item.funding_mode == "fixed_shares"
-        and item.status in {"active", "data_review"}
     ):
         raise PositionEventValidationError(
-            "활성 개별주식의 보유 수량 방식에서만 사용할 수 있습니다."
+            "개별주식의 보유 수량 방식에서만 사용할 수 있습니다."
         )
 
 
@@ -185,7 +192,7 @@ def project_position_events(
 ) -> PositionEventProjection:
     """Resolve terminal revisions while retaining their immutable audit history."""
 
-    assert_position_item_eligible(item)
+    _assert_position_item_shape(item)
     if any(record.monitoring_item_id != item.monitoring_item_id for record in records):
         raise PositionEventIntegrityError("Position events must belong to the projected item.")
     terminal_by_root = _terminal_revisions(records)
@@ -234,7 +241,7 @@ def validate_position_sequence(
 ) -> tuple[PositionQuantitySnapshot, ...]:
     """Apply splits before same-date trades and prohibit a full or oversell."""
 
-    assert_position_item_eligible(item)
+    _assert_position_item_shape(item)
     shares = Decimal(projection.effective_initial_shares or 0)
     if shares < 1:
         raise PositionEventValidationError("최초 보유수량은 최소 1주여야 합니다.")

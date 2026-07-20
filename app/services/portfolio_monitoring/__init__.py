@@ -61,9 +61,11 @@ from .valuation import (
     CorporateActionReview,
     EntryPriceUnavailableError,
     ItemValueLane,
+    PositionLedgerSummary,
     ValuationInputError,
     assess_corporate_action_consistency,
     build_direct_security_value_lane,
+    modified_dietz_return,
     resolve_direct_security_entry,
 )
 from .selected_strategy import (
@@ -134,9 +136,11 @@ __all__ = [
     "CorporateActionReview",
     "EntryPriceUnavailableError",
     "ItemValueLane",
+    "PositionLedgerSummary",
     "ValuationInputError",
     "assess_corporate_action_consistency",
     "build_direct_security_value_lane",
+    "modified_dietz_return",
     "resolve_direct_security_entry",
     "SelectedStrategyContract",
     "SelectedStrategyInputError",

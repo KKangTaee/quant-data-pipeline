@@ -8,6 +8,7 @@ from decimal import Decimal
 import pandas as pd
 
 from app.services.portfolio_monitoring.persistence import MonitoringItemRecord
+from app.services.portfolio_monitoring.persistence import PositionEventRecord
 
 
 def _load_valuation():
@@ -30,6 +31,7 @@ class PortfolioMonitoringDirectValuationTests(unittest.TestCase):
         input_shares=10,
         entry_close=Decimal("100"),
         initial_capital=Decimal("1000"),
+        effective_start_date=date(2026, 7, 1),
     ):
         return MonitoringItemRecord(
             monitoring_item_id="item-aapl",
@@ -37,13 +39,196 @@ class PortfolioMonitoringDirectValuationTests(unittest.TestCase):
             source_type="direct_security",
             source_ref="AAPL",
             instrument_kind="stock",
-            requested_start_date=date(2026, 7, 1),
-            effective_start_date=date(2026, 7, 1),
+            requested_start_date=effective_start_date,
+            effective_start_date=effective_start_date,
             funding_mode=funding_mode,
             input_notional=input_notional,
             input_shares=input_shares,
             entry_close=entry_close,
             initial_capital=initial_capital,
+        )
+
+    def _event(
+        self,
+        *,
+        event_id,
+        root_id,
+        order,
+        effect,
+        day,
+        quantity,
+        price=None,
+        fee="0",
+    ):
+        return PositionEventRecord(
+            position_event_id=event_id,
+            root_event_id=root_id,
+            supersedes_event_id=None,
+            monitoring_item_id="item-aapl",
+            event_order=order,
+            event_action="create",
+            position_effect=effect,
+            trade_date=date.fromisoformat(day),
+            quantity=quantity,
+            execution_price=Decimal(price) if price is not None else None,
+            reference_close=Decimal(price) if price is not None else None,
+            execution_price_source=(
+                "db_close_default" if price is not None else None
+            ),
+            fee_usd=Decimal(fee),
+            note="",
+            command_id=f"command-{event_id}",
+        )
+
+    def test_no_event_lane_is_identical_for_implicit_and_explicit_empty_ledger(self) -> None:
+        valuation = _load_valuation()
+        item = self._item(
+            input_shares=30,
+            entry_close=Decimal("100"),
+            initial_capital=Decimal("3000"),
+        )
+        frame = _history(
+            [
+                {"date": "2026-07-01", "close": 100, "adj_close": 100},
+                {"date": "2026-07-02", "close": 110, "adj_close": 110},
+            ]
+        )
+
+        implicit = valuation.build_direct_security_value_lane(item, frame)
+        explicit = valuation.build_direct_security_value_lane(
+            item, frame, position_events=[]
+        )
+
+        pd.testing.assert_frame_equal(implicit.curve, explicit.curve)
+        self.assertEqual(implicit.initial_capital, explicit.initial_capital)
+
+    def test_initial_quantity_correction_recomputes_from_original_entry_close(self) -> None:
+        valuation = _load_valuation()
+        item = self._item(
+            input_shares=30,
+            entry_close=Decimal("100"),
+            initial_capital=Decimal("3000"),
+        )
+        frame = _history(
+            [
+                {"date": "2026-07-01", "close": 100, "adj_close": 100},
+                {"date": "2026-07-02", "close": 110, "adj_close": 110},
+            ]
+        )
+
+        lane = valuation.build_direct_security_value_lane(
+            item,
+            frame,
+            position_events=[
+                self._event(
+                    event_id="correct-v1",
+                    root_id="correct-root",
+                    order=1,
+                    effect="initial_quantity_correction",
+                    day="2026-07-01",
+                    quantity=20,
+                )
+            ],
+        )
+
+        self.assertEqual(lane.initial_capital, Decimal("2000"))
+        self.assertEqual(lane.position.current_shares, Decimal("20"))
+        self.assertEqual(
+            Decimal(str(lane.curve.iloc[-1]["total_value"])),
+            Decimal("2200.0"),
+        )
+
+    def test_buy_and_partial_sell_adjust_cashflow_without_counting_flows_as_profit(self) -> None:
+        valuation = _load_valuation()
+        item = self._item()
+        frame = _history(
+            [
+                {"date": "2026-07-01", "close": 100, "adj_close": 100},
+                {"date": "2026-07-02", "close": 100, "adj_close": 100},
+                {"date": "2026-07-03", "close": 100, "adj_close": 100},
+            ]
+        )
+
+        lane = valuation.build_direct_security_value_lane(
+            item,
+            frame,
+            position_events=[
+                self._event(
+                    event_id="buy-v1", root_id="buy-root", order=1,
+                    effect="buy", day="2026-07-02", quantity=5,
+                    price="100", fee="1",
+                ),
+                self._event(
+                    event_id="sell-v1", root_id="sell-root", order=2,
+                    effect="sell", day="2026-07-03", quantity=3,
+                    price="100", fee="1",
+                ),
+            ],
+        )
+
+        self.assertEqual(lane.position.current_shares, Decimal("12"))
+        self.assertEqual(
+            lane.position.cumulative_contributions, Decimal("1501")
+        )
+        self.assertEqual(
+            lane.position.cumulative_withdrawals, Decimal("299")
+        )
+        self.assertEqual(lane.position.pnl, Decimal("-2"))
+        self.assertLess(
+            Decimal(str(lane.curve.iloc[-1]["flow_adjusted_index"])),
+            Decimal("1"),
+        )
+
+    def test_daily_modified_dietz_uses_half_day_flow_weight(self) -> None:
+        valuation = _load_valuation()
+
+        result = valuation.modified_dietz_return(
+            begin_value=Decimal("3000"),
+            end_value=Decimal("4100"),
+            net_external_flow=Decimal("1000"),
+        )
+
+        self.assertEqual(
+            result.quantize(Decimal("0.000001")), Decimal("0.028571")
+        )
+
+    def test_split_precedes_same_day_trade_and_dividend_uses_post_trade_units(self) -> None:
+        valuation = _load_valuation()
+        item = self._item(
+            input_shares=30,
+            entry_close=Decimal("50"),
+            initial_capital=Decimal("1500"),
+            effective_start_date=date(2026, 7, 14),
+        )
+        frame = _history(
+            [
+                {
+                    "date": "2026-07-14", "close": 50, "adj_close": 25,
+                    "stock_splits": 0, "dividends": 0,
+                },
+                {
+                    "date": "2026-07-15", "close": 25, "adj_close": 25,
+                    "stock_splits": 2, "dividends": 1,
+                },
+            ]
+        )
+
+        lane = valuation.build_direct_security_value_lane(
+            item,
+            frame,
+            position_events=[
+                self._event(
+                    event_id="sell-v1", root_id="sell-root", order=1,
+                    effect="sell", day="2026-07-15", quantity=50,
+                    price="25",
+                )
+            ],
+        )
+
+        self.assertEqual(lane.position.current_shares, Decimal("10"))
+        self.assertEqual(
+            Decimal(str(lane.curve.iloc[-1]["dividend_cash"])),
+            Decimal("10.0"),
         )
 
     def test_weekend_start_resolves_to_later_first_usable_session(self) -> None:
