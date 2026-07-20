@@ -23,6 +23,7 @@ from app.web.institutional_portfolios_react_component import (
     institutional_portfolios_react_component_available,
     render_institutional_portfolios_workbench,
 )
+from app.web.reference_contextual_help import render_reference_contextual_help
 from finance.data.institutional_13f import DEFAULT_SEC_13F_DATASET_LABEL, DEFAULT_SEC_13F_DATASET_URL
 
 
@@ -504,6 +505,7 @@ def render_institutional_portfolios_page(
         "저장된 SEC Form 13F 기준으로 기관 / 투자 대가의 포트폴리오, 분기 보고 변화, 보유 기관 역조회를 탐색합니다. "
         "이 화면은 읽기 전용 리서치 화면이며 Market Movers와 분리되어 있습니다."
     )
+    render_reference_contextual_help("institutional_portfolios", expanded=False)
 
     if render_runtime_snapshot is not None:
         with st.expander("Runtime / Build", expanded=False):

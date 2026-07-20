@@ -9,6 +9,8 @@ from typing import Any, Callable, MutableMapping
 import pandas as pd
 import streamlit as st
 
+from app.web.reference_contextual_help import render_reference_contextual_help
+
 from finance.data.db.mysql import MySQLClient
 from finance.loaders import load_price_history
 from finance.loaders.provider import load_etf_exposure_snapshot, load_etf_holdings_snapshot
@@ -4081,6 +4083,7 @@ def render_final_selected_portfolio_dashboard_page(
 ) -> None:
     """Render load -> React -> dispatch -> rerun with no legacy normal path."""
 
+    render_reference_contextual_help("portfolio_monitoring", expanded=False)
     runtime = services or _default_portfolio_monitoring_services()
     active_group_id = runtime.session_state.get("portfolio_monitoring_active_group_id")
     catalog_query = str(runtime.session_state.get("portfolio_monitoring_catalog_query") or "")
