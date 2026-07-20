@@ -369,6 +369,35 @@ def test_decision_research_keeps_financial_period_and_factor_controls_separate()
     assert "@media (max-width: 760px)" in style
 
 
+def test_decision_research_uses_report_family_tabs_and_responsive_focus_contract() -> None:
+    from pathlib import Path
+
+    source = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+    style = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/style.css"
+    ).read_text(encoding="utf-8")
+    decision_style = style[: style.index(".mm-workbench {")]
+
+    assert "aria-selected={tab === id}" in source
+    assert 'aria-controls={`mm-decision-panel-${id}`}' in source
+    assert 'id={`mm-decision-tab-${id}`}' in source
+    assert "border-bottom: 2px solid transparent;" in decision_style
+    assert "border-bottom-color: var(--mm-accent);" in decision_style
+    assert ".mm-decision button:focus-visible" in decision_style
+    assert ".mm-decision select:focus-visible" in decision_style
+    assert "outline: 2px solid rgba(57, 127, 183, 0.35);" in decision_style
+    assert "@media (max-width: 900px)" in style
+    assert "@media (max-width: 600px)" in style
+    assert "grid-template-columns: minmax(0, 7fr) minmax(220px, 3fr);" in decision_style
+    assert "payload.ranking.empty_reason" in source
+    assert 'className="mm-decision__empty"' in source
+    assert "mm-decision__trust--${trustState.toLowerCase()}" in source
+    assert "#2563eb" not in source
+    assert "#0f766e" not in decision_style
+
+
 def test_market_movers_page_uses_decision_shell_without_legacy_duplicate() -> None:
     from pathlib import Path
 

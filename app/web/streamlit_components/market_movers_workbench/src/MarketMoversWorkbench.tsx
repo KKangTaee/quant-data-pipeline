@@ -802,7 +802,7 @@ function PriceMomentumChart({ research }: { research: Record<string, unknown> })
             <svg aria-label={`${range} 조정주가 정규화 흐름`} preserveAspectRatio="none" role="img" viewBox="0 0 720 250">
               <line x1="28" x2="692" y1="226" y2="226" />
               <line x1="28" x2="692" y1="24" y2="24" />
-              <polyline fill="none" points={chartCoordinates(points)} stroke="#2563eb" strokeLinejoin="round" strokeWidth="3" />
+              <polyline fill="none" points={chartCoordinates(points)} stroke="#397fb7" strokeLinejoin="round" strokeWidth="3" />
             </svg>
             <div className="mm-decision__chart-axis"><span>{points[0].label}</span><span>{latest?.label}</span></div>
           </div>
@@ -911,7 +911,7 @@ function FinancialFactorChart({ research, controls }: FinancialFactorChartProps)
               <svg aria-label={`${String(factor.label || factorId)} 추이`} preserveAspectRatio="none" role="img" viewBox="0 0 720 250">
                 <line x1="28" x2="692" y1="226" y2="226" />
                 <line x1="28" x2="692" y1="24" y2="24" />
-                <polyline fill="none" points={chartCoordinates(points)} stroke="#0f766e" strokeLinejoin="round" strokeWidth="3" />
+              <polyline fill="none" points={chartCoordinates(points)} stroke="#2f7f73" strokeLinejoin="round" strokeWidth="3" />
               </svg>
               <div className="mm-decision__chart-axis"><span>{points[0]?.label}</span><span>{points[points.length - 1]?.label}</span></div>
             </div>
@@ -947,26 +947,37 @@ function StockResearchTabs({ payload, activeSymbol }: StockResearchTabsProps) {
             ["financial", "재무"],
             ["events", "뉴스·공시"],
           ] as const).map(([id, label]) => (
-            <button className={tab === id ? "is-active" : ""} key={id} onClick={() => setTab(id)} role="tab" type="button">{label}</button>
+            <button
+              aria-controls={`mm-decision-panel-${id}`}
+              aria-selected={tab === id}
+              className={tab === id ? "is-active" : ""}
+              id={`mm-decision-tab-${id}`}
+              key={id}
+              onClick={() => setTab(id)}
+              role="tab"
+              type="button"
+            >{label}</button>
           ))}
         </div>
       </div>
-      {!research ? (
-        <div className="mm-decision__research-loading">선택 종목의 저장 근거를 불러오는 중입니다.</div>
-      ) : tab === "price" ? (
-        <PriceMomentumChart research={research} />
-      ) : tab === "financial" ? (
-        <FinancialFactorChart controls={payload.selection.financial_controls} research={research} />
-      ) : (
-        <div className="mm-decision__events-panel">
-          <strong>뉴스·공시 근거</strong>
-          <p>현재 저장된 재무제표 반영 상태와 선택 종목의 뉴스·SEC 조사 action을 같은 symbol에 연결합니다.</p>
-          <div className="mm-decision__events-status">
-            <span><small>재무제표 상태</small><strong>{String(((research.financial_statement_collection || {}) as Record<string, unknown>).status || "UNKNOWN")}</strong></span>
-            <span><small>기준일</small><strong>{String(research.as_of_date || "-")}</strong></span>
+      <div aria-labelledby={`mm-decision-tab-${tab}`} id={`mm-decision-panel-${tab}`} role="tabpanel">
+        {!research ? (
+          <div className="mm-decision__research-loading">선택 종목의 저장 근거를 불러오는 중입니다.</div>
+        ) : tab === "price" ? (
+          <PriceMomentumChart research={research} />
+        ) : tab === "financial" ? (
+          <FinancialFactorChart controls={payload.selection.financial_controls} research={research} />
+        ) : (
+          <div className="mm-decision__events-panel">
+            <strong>뉴스·공시 근거</strong>
+            <p>현재 저장된 재무제표 반영 상태와 선택 종목의 뉴스·SEC 조사 action을 같은 symbol에 연결합니다.</p>
+            <div className="mm-decision__events-status">
+              <span><small>재무제표 상태</small><strong>{String(((research.financial_statement_collection || {}) as Record<string, unknown>).status || "UNKNOWN")}</strong></span>
+              <span><small>기준일</small><strong>{String(research.as_of_date || "-")}</strong></span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </section>
   );
 }
