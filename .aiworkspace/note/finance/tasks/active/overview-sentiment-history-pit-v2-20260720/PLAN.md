@@ -49,3 +49,5 @@ Overview Sentiment의 현재 CNN·AAII 해석은 사용할 수 있지만, 같은
 Authoritative spec: `docs/superpowers/specs/2026-07-20-overview-sentiment-history-pit-v2-design.md`
 
 Executable TDD plan: `docs/superpowers/plans/2026-07-20-overview-sentiment-history-pit-v2.md`
+
+Latest-value follow-up plan: `docs/superpowers/plans/2026-07-20-overview-sentiment-aligned-latest-end.md`
