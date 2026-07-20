@@ -10289,3 +10289,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 10년 재무 자료의 기간과 값을 실제로 판독할 수 있게 만들되 새 chart dependency나 데이터 계약은 추가하지 않는다.
 - Analysis result: 고정 720 viewBox 압축이 기간 판독 문제의 원인이었다. point-count intrinsic width, horizontal scroll/pointer drag, period tick, exact period-end tooltip과 keyboard 탐색을 적용하고 readout tint CSS를 제거했다.
 - Follow-up: 구현과 자동 회귀/build는 완료했다. Browser localhost URL policy로 actual interaction QA가 남았으며 broader conditional outlook `5차`와는 별도다.
+
+### 2026-07-21 - 변동 종목 비-Daily는 선택 기간 overlap으로 최신일까지 보강한다
+
+- User request: Weekly/Monthly가 2026-07-07에 머무는 문제를 수정하고, 신규 상장 종목 정책과 차트 잘림·X축·hover를 승인한 방식으로 구현해 달라고 요청함.
+- Interpreted goal: 랭킹 기준일을 수집 목표일로 재사용하지 않고 필요한 기간만 보강하며, 전체 기간이 없는 종목을 왜곡된 수익률로 섞지 않고 차트 기간/값을 직접 판독하게 해야 함.
+- Analysis result: Weekly 1주+1주, Monthly 1개월+1개월 bounded overlap과 first-price-date eligibility를 적용했다. 실제 S&P 500 Weekly는 503개 전부 성공해 랭킹 기준일이 2026-07-20으로 이동했고, 가격/재무 X축과 고점 tooltip도 actual browser에서 확인했다.
+- Follow-up: task `3/3차` 완료. full-universe provider 요청은 실제 138.11초가 걸릴 수 있으며, broader sector conditional outlook은 OOS gate가 준비될 때만 별도 5차로 진행한다.

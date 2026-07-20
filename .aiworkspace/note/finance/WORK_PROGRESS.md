@@ -6919,3 +6919,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 가격 YTD/최근/범위 최고·최저 readout은 배경 tint와 primary 좌측선을 제거하고 양수·음수·중립 text tone만 유지한다.
 - UI/research 29개와 Market Movers 서비스 계약 126개, Vite production build를 통과했다. Browser localhost URL policy 때문에 actual desktop/narrow interaction screenshot은 남은 QA다.
 - 구현 후속 `2/2차`, broader Market Movers 기능 roadmap은 `4/5차`다. 상세는 `tasks/active/market-movers-chart-navigation-polish-v1-20260721/`를 본다.
+
+## 2026-07-21 - Overview Market Movers 기간 갱신·차트 보정 완료
+
+- Weekly 1주+1주 overlap과 Monthly 1개월+1개월 overlap으로 최신 완료 시장일까지 bounded refresh하고 stale limited-history 종목도 재시도하도록 수정했다.
+- 신규 상장 종목은 선택 기간 시작 뒤 첫 가격일이면 명시적으로 제외하며, 가격 실제 날짜 X축과 가격·재무 고점 tooltip 잘림 방지를 적용했다.
+- 실제 Weekly S&P 500은 503/503개·5,533행·실패 0건으로 2026-07-20까지 갱신됐고 UI 수동 action의 current skip/timestamp도 확인했다.
+- task roadmap `3/3차` 완료, broader 기능 roadmap `4/5차`; 상세는 `tasks/active/market-movers-period-refresh-chart-fix-v1-20260721/`를 본다.

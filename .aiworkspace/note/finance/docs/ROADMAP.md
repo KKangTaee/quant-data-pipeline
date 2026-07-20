@@ -285,6 +285,12 @@ Market Movers 비-Daily refresh basis 후속 task는 `.aiworkspace/note/finance/
 - QA: Market Movers/NYSE 관련 114 tests, Python compile, Vite production build와 실제 DB read-only preflight에서 2026-07-20 목표·Weekly 502개·Monthly 501개 보강 대상을 확인했다. Browser actual QA는 localhost URL policy로 차단됐다.
 - 경계: coverage 임계치, 랭킹 계산, provider, DB schema, 자동 갱신 schedule은 변경하지 않았다.
 
+Latest Market Movers 기간 갱신·차트 보정 task는 `.aiworkspace/note/finance/tasks/active/market-movers-period-refresh-chart-fix-v1-20260721/`다.
+
+- Weekly는 1주+1주 overlap, Monthly는 1개월+1개월 overlap으로 최신 완료 시장일까지 bounded refresh하며 stale limited-history symbol도 재시도한다.
+- 선택 기간 시작 뒤 상장된 종목은 `selected period history unavailable`로 그 기간 랭킹에서 제외하고, 가격 차트 실제 날짜 X축과 가격·재무 고점 tooltip 아래 배치를 추가했다.
+- 실제 S&P 500 Weekly는 503/503개, 5,533행, 실패 0건으로 2026-07-20까지 갱신됐고 후속 수동 action은 503개 current skip으로 종료됐다. 전체 기능 roadmap은 `4/5차`; 다음은 별도 OOS-gated sector conditional outlook이다.
+
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/`다.
 
 - 목적: Market Movers 비-Daily 상단의 긴 설명형 버튼을 간결하게 만들고, Monthly full-window 갱신 성공 뒤에도 provider 가용 이력이 짧은 종목이 같은 갱신 대상으로 반복되는 문제를 해결했다.

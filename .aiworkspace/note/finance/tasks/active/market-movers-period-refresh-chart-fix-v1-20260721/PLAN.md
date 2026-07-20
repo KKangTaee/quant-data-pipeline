@@ -8,6 +8,8 @@
 
 **Tech Stack:** Python 3.12, pandas, Streamlit, MySQL, yfinance ingestion facade, React 18, TypeScript, Vite, pytest
 
+**Implementation Status:** Complete on 2026-07-21. Task-level roadmap `3/3차` completed; detailed evidence is in `STATUS.md` and `RUNS.md`. The broader Market Movers roadmap remains `4/5차` because conditional sector outlook is a separate OOS-gated scope.
+
 ## Global Constraints
 
 - 최신 완료 시장일은 `latest_completed_nyse_session()`을 기준으로 한다.
