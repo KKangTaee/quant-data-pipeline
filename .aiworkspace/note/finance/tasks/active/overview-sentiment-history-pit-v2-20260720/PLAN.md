@@ -47,3 +47,5 @@ Overview Sentiment의 현재 CNN·AAII 해석은 사용할 수 있지만, 같은
 - focused tests, build, diff check, desktop/420px Browser QA를 통과한다.
 
 Authoritative spec: `docs/superpowers/specs/2026-07-20-overview-sentiment-history-pit-v2-design.md`
+
+Executable TDD plan: `docs/superpowers/plans/2026-07-20-overview-sentiment-history-pit-v2.md`
