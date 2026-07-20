@@ -490,11 +490,11 @@ function MarketMoversCommandLine({ payload, onControl }: CommandLineProps) {
   const denominator = Number.isFinite(valid) && Number.isFinite(total) ? `${valid.toLocaleString()} / ${total.toLocaleString()}` : "-";
   return (
     <header className="mm-decision__command">
-      <div className="mm-decision__hero">
-        <div>
+      <div className="mm-decision__surface-header">
+        <div className="mm-decision__hero-copy">
           <div className="mm-decision__eyebrow">MARKET MOVERS</div>
-          <h2>움직임을 찾고, 확산을 확인하고, 종목을 조사합니다</h2>
-          <p>랭킹과 시장 맥락을 같은 선택 상태로 연결한 결정형 워크벤치입니다.</p>
+          <h1>변동 종목</h1>
+          <p>무엇이 움직였는지 찾고, 시장 확산을 확인한 뒤, 선택 종목의 저장 근거를 조사합니다.</p>
         </div>
         <div className={`mm-decision__trust mm-decision__trust--${trustState.toLowerCase()}`}>
           <span>자료 상태</span>
@@ -502,22 +502,24 @@ function MarketMoversCommandLine({ payload, onControl }: CommandLineProps) {
           <small>랭킹 가능 {denominator}</small>
         </div>
       </div>
-      <div className="mm-decision__controls" aria-label="변동 종목 탐색 조건">
-        {payload.command_line.controls.map((control) => (
-          <label className="mm-decision__control" key={control.id}>
-            <span>{control.label}</span>
-            <select
-              disabled={control.disabled}
-              onChange={(event) => onControl(control, event.target.value)}
-              value={control.value}
-            >
-              {control.options.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-        ))}
-      </div>
+      <section className="mm-decision__command-band" aria-label="변동 종목 탐색 조건">
+        <div className="mm-decision__controls">
+          {payload.command_line.controls.map((control) => (
+            <label className="mm-decision__control" key={control.id}>
+              <span>{control.label}</span>
+              <select
+                disabled={control.disabled}
+                onChange={(event) => onControl(control, event.target.value)}
+                value={control.value}
+              >
+                {control.options.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+      </section>
     </header>
   );
 }

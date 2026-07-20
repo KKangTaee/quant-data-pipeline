@@ -300,6 +300,28 @@ def test_decision_react_shell_owns_ranking_breadth_and_selected_research() -> No
     assert ".mm-decision__workbench" not in wide_responsive
 
 
+def test_decision_shell_uses_approved_hybrid_visual_foundation() -> None:
+    from pathlib import Path
+
+    source = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+    style = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/style.css"
+    ).read_text(encoding="utf-8")
+    decision_style = style[: style.index(".mm-workbench {")]
+
+    assert 'className="mm-decision__surface-header"' in source
+    assert "<h1>변동 종목</h1>" in source
+    assert 'className="mm-decision__command-band"' in source
+    assert "--mm-accent: #397fb7;" in decision_style
+    assert "--mm-trust: #2f7f73;" in decision_style
+    assert "border-radius: 20px;" in decision_style
+    assert "border: 1px solid #d8e4ea;" in decision_style
+    assert "linear-gradient(145deg, #f8fbfd 0%, #f2f7f9 62%, #eef5f7 100%)" in decision_style
+    assert "border-top: 4px solid" not in decision_style
+
+
 def test_decision_research_keeps_financial_period_and_factor_controls_separate() -> None:
     from pathlib import Path
 
