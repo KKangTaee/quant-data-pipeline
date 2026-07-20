@@ -238,9 +238,55 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
             workspace["selected_position"]["current_shares"], Decimal("12")
         )
         self.assertEqual(
+            workspace["selected_position"]["as_of_date"], "2026-07-03"
+        )
+        self.assertEqual(
+            workspace["selected_position"]["current_value"], Decimal("1200.0")
+        )
+        self.assertEqual(
             workspace["selected_position"]["event_rows"][0]["position_effect"],
             "buy",
         )
+
+    def test_selected_position_uses_its_own_latest_date_when_group_basis_is_older(self) -> None:
+        read_model = _load_read_model()
+        group = PortfolioGroupRecord("group-core", "Core", True)
+        stock = _item(
+            "item-amd",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+            funding_mode="fixed_shares",
+            input_shares=10,
+        )
+        stale = _item(
+            "item-stale",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+        )
+        repository = FakeRepository([group], [stock, stale])
+
+        workspace = read_model.build_portfolio_monitoring_workspace(
+            repository,
+            active_group_id="group-core",
+            selected_item_id="item-amd",
+            lane_loader=lambda item: (
+                _position_lane(item)
+                if item.monitoring_item_id == "item-amd"
+                else _lane(item, [("2026-07-01", 1000), ("2026-07-02", 1010)])
+            ),
+        )
+
+        self.assertEqual(workspace["active_group"].basis_date, date(2026, 7, 2))
+        self.assertEqual(workspace["selected_position"]["as_of_date"], "2026-07-03")
+        self.assertEqual(
+            workspace["selected_position"]["current_value"], Decimal("1200.0")
+        )
+        self.assertEqual(
+            workspace["selected_position"]["current_shares"], Decimal("12")
+        )
+
     def test_alignment_keeps_pre_start_and_post_end_capital_as_cash(self) -> None:
         read_model = _load_read_model()
         active = _item("a", requested=date(2026, 7, 1), effective=date(2026, 7, 2))

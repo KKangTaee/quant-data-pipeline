@@ -10253,4 +10253,4 @@ Detailed historical analysis was archived on `2026-04-13`.
 - User request: Portfolio Monitoring에서 잘못 입력한 AMD 최초 수량을 수정하고, 이후 추가매수·일부매도를 개별종목에 한해 반영해 달라고 요청함.
 - Interpreted goal: 퀀트 전략이나 주문 기능을 확장하지 않고 실제 직접종목 보유수량·현금흐름·성과를 같은 추적 항목에서 계속 관리해야 함.
 - Analysis result: current add/end/reopen 계약에는 edit/trade가 없다. direct stock fixed-shares 전용 append-only event ledger, DB close default + actual price override, buy=입금, partial sell=출금, daily Modified Dietz를 채택함.
-- Follow-up: 전체 `3/3차`를 완료했다. exact-date DB close default/manual override, append-only replace/void, buy contribution/sell withdrawal, partial-sell 최소 1주를 구현했고 Python 137 / React 29와 actual/isolated Browser QA를 통과했다. 전량매도는 tracking end, ETF·전략·fixed notional·backtest는 기존 경계를 유지한다.
+- Follow-up: 전체 `3/3차`를 완료했다. exact-date DB close default/manual override, append-only replace/void, buy contribution/sell withdrawal, partial-sell 최소 1주를 구현했다. 최종 리뷰에서 거래 수정 false block과 선택 종목/그룹 기준일 혼합을 보정했고 Python 138 / React 30과 actual/isolated Browser QA를 통과했다. 전량매도는 tracking end, ETF·전략·fixed notional·backtest는 기존 경계를 유지한다.

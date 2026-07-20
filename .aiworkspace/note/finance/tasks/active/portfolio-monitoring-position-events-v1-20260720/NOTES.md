@@ -26,8 +26,11 @@
 - valuation lane은 추가매수 `수량 × 체결가 + 수수료`를 입금, 일부매도 `수량 × 체결가 - 수수료`를 출금으로 반영하며 매도 순대금이 0 이하인 입력을 거부한다.
 - workspace schema는 `portfolio_monitoring_workspace_v2`다. group KPI는 gross contribution/withdrawal과 `current + withdrawal - contribution` 손익을 표시한다.
 - React `보유내역`은 eligible item에서만 action을 보이고 거래 원장의 superseded/voided row를 감사 이력으로 유지한다.
+- 거래 수정 중인 일부매도는 현재 수량만으로 화면에서 차단하지 않는다. 원거래가 이미 현재 수량에 반영됐으므로 서버가 수정 시점부터 후속 이력을 전체 재생해 최소 1주 규칙을 판정한다.
+- 선택 종목 보유내역의 수량·현금흐름·평가금액은 그 종목의 `latest_usable_date` 기준으로 묶고 날짜를 표시한다. 그룹 합산 지표의 공통 기준일은 별도 계약이다.
 
 ## QA Finding
 
 - Browser QA 첫 실행에서 Streamlit rerun이 내용은 같지만 identity가 다른 editor recovery object를 전달할 때 `awaiting_close` 상태가 다시 적용돼 DB 종가 기본값이 지워지는 문제를 재현했다.
 - recovery payload 전체 필드로 만든 stable key가 바뀔 때만 복구하도록 수정했다. 이후 `$164` 자동 입력·`종가 기본값`, manual price 변경·`수동 체결가`를 실제 브라우저에서 확인했다.
+- 최종 코드 리뷰에서 거래 수정의 화면 선검증과 선택 종목/그룹 기준일 혼합을 발견했다. replacement sell은 서버 전체 이력 검증으로 일원화하고 선택 종목 summary에 자체 기준일·평가금액을 추가했다.

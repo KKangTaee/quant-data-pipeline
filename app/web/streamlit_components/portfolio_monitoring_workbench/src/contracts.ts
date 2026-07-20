@@ -47,6 +47,8 @@ export type SelectedPositionProjection = {
   monitoring_item_id: string | null;
   eligible: boolean;
   reason: string | null;
+  as_of_date: string | null;
+  current_value: number | null;
   effective_initial_shares: number | null;
   current_shares: number | null;
   gross_contributions: number;

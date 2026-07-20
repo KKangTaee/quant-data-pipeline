@@ -6881,5 +6881,5 @@ Detailed historical logs were archived on `2026-04-13`.
 
 - direct-stock fixed-shares에 최초 수량 정정, 추가매수·일부매도, append-only 거래 수정·취소와 exact-date DB 종가 기본값/수동 체결가를 연결했다.
 - buy=외부 입금, partial sell=외부 출금과 daily Modified Dietz `0.5` 계약으로 item/group 성과를 재계산하며 ETF·전략·fixed notional·backtest는 변경하지 않았다.
-- 운영 schema는 기존 group/item/command `1/2/5`건과 JSONL checksum을 보존한 채 빈 event table만 추가했다. Python 137 / React 29 / typecheck/build와 actual/isolated desktop·900·420 Browser QA를 통과했다.
+- 운영 schema는 기존 group/item/command `1/2/5`건과 JSONL checksum을 보존한 채 빈 event table만 추가했다. 최종 리뷰에서 거래 수정 false block과 선택 종목/그룹 기준일 혼합을 보정했고, Python 138 / React 30 / typecheck/build와 actual/isolated desktop·900·420 Browser QA를 통과했다.
 - 전체 roadmap `3/3차` 완료. 상세는 `tasks/active/portfolio-monitoring-position-events-v1-20260720/`를 본다.

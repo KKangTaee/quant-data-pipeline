@@ -133,7 +133,11 @@ export function validatePositionEditorDraft(
   if (!Number.isFinite(fee) || fee < 0) return "수수료는 0 이상이어야 합니다.";
   if (draft.positionEffect === "sell") {
     if (quantity * price - fee <= 0) return "매도 후 순출금액이 0보다 커야 합니다.";
-    if (context.currentShares != null && quantity >= context.currentShares) {
+    if (
+      draft.mode === "record"
+      && context.currentShares != null
+      && quantity >= context.currentShares
+    ) {
       return "일부매도 후 최소 1주를 유지해야 합니다. 전량매도는 추적 종료를 이용해 주세요.";
     }
   }

@@ -511,6 +511,8 @@ def _project_selected_position(
         "monitoring_item_id": selected_item_id,
         "eligible": False,
         "reason": "개별주식 종목을 선택해 주세요.",
+        "as_of_date": None,
+        "current_value": None,
         "effective_initial_shares": None,
         "current_shares": None,
         "gross_contributions": Decimal("0"),
@@ -545,6 +547,11 @@ def _project_selected_position(
         value = frame.iloc[-1]["flow_adjusted_index"]
         if pd.notna(value):
             total_return = _money(value) - Decimal("1")
+    latest_value = None
+    if "total_value" in frame and not frame.empty:
+        value = frame.iloc[-1]["total_value"]
+        if pd.notna(value):
+            latest_value = _money(value)
     return {
         "monitoring_item_id": selected.monitoring_item_id,
         "eligible": command_eligible,
@@ -553,6 +560,8 @@ def _project_selected_position(
             if command_eligible
             else "추적 종료를 취소한 뒤 거래를 기록할 수 있습니다."
         ),
+        "as_of_date": lane.latest_usable_date.isoformat(),
+        "current_value": latest_value,
         "effective_initial_shares": lane.position.effective_initial_shares,
         "current_shares": lane.position.current_shares,
         "gross_contributions": lane.position.cumulative_contributions,

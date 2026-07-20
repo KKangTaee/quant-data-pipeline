@@ -17,3 +17,7 @@
 - 2026-07-20: 종가 기본값 rerun reset을 Browser QA에서 발견하고 stable recovery key로 수정했다. 수정 뒤 `$164` auto-fill, default/manual provenance와 저장 활성화를 재검증했다.
 - 2026-07-20: responsive QA는 component client/scroll width가 900px viewport에서 `704/704`, 420px viewport에서 `377/377`로 horizontal overflow 0이었다. 420px dialog는 iframe width 377을 채우고 action/fields를 유지했다.
 - 2026-07-20: QA screenshot은 `/Users/taeho/Project/quant-data-pipeline-worktrees/main-dev/portfolio-monitoring-position-events-v1-qa.png`에 생성했고 stage하지 않았다.
+- 2026-07-20: 최종 코드 리뷰에서 replacement sell을 이미 반영된 현재 수량과 비교하는 false block, 선택 종목 최신 수량과 그룹 공통 기준일 평가금액을 섞는 문제를 확인했다.
+- 2026-07-20: replacement sell 화면 선검증을 서버 전체 이력 replay로 넘기고, selected position에 자체 `as_of_date/current_value`를 투영해 패널 전체 기준을 통일했다. 해당 회귀 테스트를 Python/React에 추가했다.
+- 2026-07-20: 리뷰 보정 후 전체 Portfolio Monitoring `138 tests OK`, React `30 tests passed`, typecheck/build/py_compile/diff check를 통과했다. isolated Browser QA에서 `$4,920.00` 평가금액과 `2026-07-17 종목 기준`이 한 패널에 표시되고 console error 0임을 확인했다.
+- 2026-07-20: 리뷰 보정 screenshot은 `/Users/taeho/Project/quant-data-pipeline-worktrees/main-dev/portfolio-monitoring-position-events-review-fix.png`에 생성했고 stage하지 않았다.

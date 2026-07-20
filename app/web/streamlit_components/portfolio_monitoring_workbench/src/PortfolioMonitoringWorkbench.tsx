@@ -817,7 +817,6 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
                     {workspace.selected_position.monitoring_item_id === selectedItem.monitoring_item_id && (
                       <PositionLedgerPanel
                         position={workspace.selected_position}
-                        currentValue={selectedItem.current_value}
                         closeProjection={workspace.position_trade_close ?? null}
                         recoveryState={workspace.position_editor_state}
                         latestCommand={latestCommand ?? null}

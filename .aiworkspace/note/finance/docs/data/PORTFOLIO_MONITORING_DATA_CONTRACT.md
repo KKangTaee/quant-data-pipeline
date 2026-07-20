@@ -40,6 +40,8 @@ Last Verified: 2026-07-20
 
 그룹 KPI는 active item이 모두 평가 가능한 latest common basis date만 사용한다. 서로 다른 날짜의 최신 값을 합치지 않는다. 그룹 가치곡선은 item별 cashflow-neutral unit index를 누적 입금 기준으로 합성하고, 손익은 `현재 가치 + 누적 출금 - 누적 입금`으로 계산한다. 관측기간이 짧으면 CAGR을 과도하게 연율화하지 않고 short-window 상태를 표시한다.
 
+선택한 개별종목의 `보유내역` summary는 그룹 합산값이 아니라 해당 lane의 `latest_usable_date`와 그 날짜의 `current_value`를 사용한다. 현재 수량, 누적 입금·출금, 손익, 수익률과 평가금액은 같은 종목 기준일로 묶고 UI가 그 날짜를 표시한다.
+
 ## Point-in-time과 진단
 
 profile, ETF holdings/exposure, price, economic-cycle, futures macro snapshot은 화면 시점에 DB에서 읽은 source date와 coverage를 보존한다. 미래 공시나 사후 수정값을 과거 snapshot에 섞지 않는 point-in-time 원칙을 따른다.

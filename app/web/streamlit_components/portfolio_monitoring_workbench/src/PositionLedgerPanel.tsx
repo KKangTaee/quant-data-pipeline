@@ -21,7 +21,6 @@ import type { PositionEditorDraft } from "./positionEditorState";
 
 type Props = {
   position: SelectedPositionProjection;
-  currentValue: number | null;
   closeProjection: PositionTradeCloseProjection | null;
   recoveryState: PositionEditorRecoveryState | null | undefined;
   latestCommand: CommandProjection | null;
@@ -66,7 +65,6 @@ function statusLabel(status: PositionEventRow["status"]) {
 
 export function PositionLedgerPanel({
   position,
-  currentValue,
   closeProjection,
   recoveryState,
   latestCommand,
@@ -102,7 +100,8 @@ export function PositionLedgerPanel({
   const validation = draft
     ? validatePositionEditorDraft(draft, { currentShares })
     : null;
-  const sellAfter = draft?.positionEffect === "sell"
+  const sellAfter = draft?.mode === "record"
+    && draft.positionEffect === "sell"
     && Number.isInteger(Number(draft.quantity))
     && currentShares != null
     ? currentShares - Number(draft.quantity)
@@ -180,7 +179,7 @@ export function PositionLedgerPanel({
         <article><span>현재 보유수량</span><strong>{position.current_shares ?? "-"}주</strong><small>최초 {position.effective_initial_shares ?? "-"}주</small></article>
         <article><span>누적 입금</span><strong>{money(position.gross_contributions)}</strong><small>최초 투자금 + 추가매수</small></article>
         <article><span>누적 출금</span><strong>{money(position.gross_withdrawals)}</strong><small>일부매도 순대금</small></article>
-        <article><span>현재 평가금액</span><strong>{money(currentValue)}</strong><small>남은 주식 + 배당 현금</small></article>
+        <article><span>현재 평가금액</span><strong>{money(position.current_value)}</strong><small>{position.as_of_date ? `${position.as_of_date} 종목 기준` : "남은 주식 + 배당 현금"}</small></article>
         <article className={(position.pnl ?? 0) < 0 ? "is-negative" : "is-positive"}><span>현금흐름 조정 손익</span><strong>{money(position.pnl)}</strong><small>{percent(position.total_return)}</small></article>
       </div>
 
@@ -239,7 +238,8 @@ export function PositionLedgerPanel({
               )}
               {draft.mode !== "correct_initial" && <label>수수료 (USD)<input type="number" min="0" step="any" value={draft.feeUsd} onChange={(event) => setDraft({ ...draft, feeUsd: event.target.value })} /></label>}
               <label>메모<textarea maxLength={500} value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} /></label>
-              {draft.positionEffect === "sell" && draft.mode !== "correct_initial" && <div className="pm-position-preview"><span>매도 전 {currentShares ?? "-"}주</span><strong>매도 후 {sellAfter ?? "-"}주</strong></div>}
+              {draft.positionEffect === "sell" && draft.mode === "record" && <div className="pm-position-preview"><span>매도 전 {currentShares ?? "-"}주</span><strong>매도 후 {sellAfter ?? "-"}주</strong></div>}
+              {draft.positionEffect === "sell" && draft.mode === "replace" && <p className="pm-position-note">수정 저장 시 이 거래 시점부터 전체 거래 이력을 다시 검증합니다.</p>}
               {draft.mode === "correct_initial" && <p className="pm-position-note">기존 시작일과 시작 종가는 유지하고 최초 수량부터 전체 이력을 다시 계산합니다.</p>}
               {validation && <p className="pm-position-error">{validation}</p>}
             </div>

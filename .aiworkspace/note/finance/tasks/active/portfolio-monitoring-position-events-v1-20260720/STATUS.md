@@ -17,7 +17,7 @@ Updated: 2026-07-20
 - exact-date DB close 자동 입력과 manual override provenance를 page/React rerun 경계까지 연결했다.
 - buy=외부 입금, partial sell=외부 출금, daily Modified Dietz `0.5` 현금흐름 가중치와 group flow-neutral aggregation을 구현했다.
 - 운영 `finance_meta`에는 새 table만 additive 적용했고 기존 group/item/command `1/2/5`건과 registry/saved checksum을 보존했다. 새 event row는 Browser QA 전후 `0`건이다.
-- Python 137, React 29, typecheck/build/py_compile/diff check와 actual read-only route, isolated desktop/900/420 Browser QA를 통과했다.
+- Python 138, React 30, typecheck/build/py_compile/diff check와 actual read-only route, isolated desktop/900/420 Browser QA를 통과했다.
 
 ## Boundaries
 

@@ -60,6 +60,23 @@ describe("position editor state", () => {
     });
   });
 
+  it("defers replacement sell inventory validation to the full server replay", () => {
+    const replacement = {
+      ...createPositionEditorDraft("replace", "sell", "replace-sell-1"),
+      rootEventId: "sell-root",
+      expectedEventId: "sell-v1",
+      tradeDate: "2026-07-17",
+      quantity: "5",
+      executionPrice: "159.25",
+      feeUsd: "1",
+      priceMode: "manual_override" as const,
+    };
+
+    expect(
+      validatePositionEditorDraft(replacement, { currentShares: 5 }),
+    ).toBeNull();
+  });
+
   it("builds correction and replace command identities", () => {
     const correction = {
       ...createPositionEditorDraft("correct_initial", "buy", "correct-1"),
