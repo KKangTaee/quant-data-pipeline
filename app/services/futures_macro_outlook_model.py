@@ -53,6 +53,52 @@ CANDIDATES = (
     OutlookCandidate("M2B_BALANCED", 0.50, 0.50),
     OutlookCandidate("M2C_MACRO_SENSITIVE", 1.00, 0.50),
 )
+_CANDIDATE_COMPLEXITY = {
+    "B0_UNCONDITIONAL": 0,
+    "B1_PERSISTENCE": 1,
+    "M1_MOMENTUM": 2,
+    "M2A_LIGHT": 3,
+    "M2B_BALANCED": 4,
+    "M2C_MACRO_SENSITIVE": 5,
+}
+
+
+def select_candidate_from_inner_evaluations(
+    evaluations: pd.DataFrame,
+) -> dict[str, str | float | int] | None:
+    """Choose the lowest inner Brier candidate with deterministic simplicity ties."""
+
+    required = {"candidate", "temperature", "brier_loss"}
+    if evaluations.empty or not required.issubset(evaluations.columns):
+        return None
+    usable = evaluations.loc[:, list(required)].copy()
+    usable["brier_loss"] = pd.to_numeric(usable["brier_loss"], errors="coerce")
+    usable["temperature"] = pd.to_numeric(usable["temperature"], errors="coerce")
+    usable = usable.dropna(subset=["candidate", "brier_loss"])
+    if usable.empty:
+        return None
+    grouped = (
+        usable.groupby(["candidate", "temperature"], dropna=False)["brier_loss"]
+        .agg(["mean", "count"])
+        .reset_index()
+    )
+    shared_evaluation_count = int(grouped["count"].max())
+    grouped = grouped[grouped["count"] == shared_evaluation_count].copy()
+    grouped["complexity"] = grouped["candidate"].map(
+        lambda value: _CANDIDATE_COMPLEXITY.get(str(value), 999)
+    )
+    grouped["temperature_order"] = grouped["temperature"].fillna(0.0)
+    winner = grouped.sort_values(
+        ["mean", "complexity", "temperature_order"],
+        kind="stable",
+    ).iloc[0]
+    temperature = winner["temperature"]
+    return {
+        "candidate": str(winner["candidate"]),
+        "temperature": float(temperature) if pd.notna(temperature) else 0.0,
+        "mean_brier": float(winner["mean"]),
+        "evaluation_count": int(winner["count"]),
+    }
 
 
 def _pressure_mean(feature_frame: pd.DataFrame, suffix: str) -> pd.Series:

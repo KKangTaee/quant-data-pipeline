@@ -95,3 +95,15 @@ No code, DB row, registry, or saved setup was modified by this analysis.
 - GREEN: 3 new publication tests passed for `VERIFIED` / `PROVISIONAL` / `NO_EDGE`, coordinate-vector independence, and weighted 50%/80% ellipses.
 - Pattern validation + outlook model regression: 33 tests passed; `git diff --check` passed.
 - Remaining Task 5 work is the nested chronological candidate selector and V2 horizon snapshot integration; Task 5 is not marked complete.
+
+## 2026-07-20 — Task 5 Nested Selection And V2 Snapshot Completion
+
+- RED: M1 winner, M2 incremental winner, deterministic simplicity tie, and incomplete shared-fold coverage selection tests failed before the selector existed.
+- GREEN: candidate selection now compares B0/B1 and the fixed M1/M2 × temperature grid on past-only inner evaluations; incomplete M2 evaluation coverage is excluded.
+- Outer validation uses 756-session minimum training, 63-session tests, horizon purge/sampling, and evaluates only the inner-selected configuration.
+- Probability and coordinate improvements use deterministic 2,000-sample moving-block bootstrap lower bounds (`seed=20260720`, block=horizon).
+- Current output is `futures_macro_pattern_outlook_v2` / `pattern_outlook_v5_same_state_nested_hybrid` with separate probability, coordinate, and vector statuses.
+- The old sparse conditional path is absent from V2 horizon output; weighted 50%/80% joint terminal ellipses are retained as raw model evidence.
+- Full 2차 regression: 56 tests passed across pattern, completed-session, PIT context, outlook model, and pattern validation suites.
+- Additional 1,000-day synthetic smoke produced chronological evaluations for both horizons; the baseline won, so the implementation did not force an M1/M2 edge.
+- `py_compile` and `git diff --check`: pass. No production DB row was written.

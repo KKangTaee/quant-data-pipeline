@@ -37,3 +37,6 @@
 - Do not tune thresholds after reading the final actual outcome without recording a new candidate trial/version.
 - Canonical observed trail defaults to 30 completed sessions while the separate regime ribbon retains up to 60 sessions.
 - V1 compatibility helpers now derive coordinate paths and terminal regimes from same-state transitions; forward cumulative return z is no longer the visible terminal-state target.
+- Inner candidate comparison requires shared chronological evaluation coverage. A hybrid with only a short recent macro history cannot beat M1 by being scored on fewer/easier dates.
+- B0/B1 can win inner selection. In that case `selected_candidate` remains `None`, the raw `selected_configuration` records the baseline, and sufficient outer evidence resolves to `NO_EDGE` rather than inventing a model edge.
+- Missing cycle/event tables degrade M2 to unavailable context while preserving the DB-only M1 path; provider fetching was not added to the UI or model service.

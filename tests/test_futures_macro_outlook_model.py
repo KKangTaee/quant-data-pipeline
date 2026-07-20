@@ -38,6 +38,82 @@ def _context_fixture(index: pd.Index) -> pd.DataFrame:
 
 
 class MomentumPredictorTests(unittest.TestCase):
+    def test_inner_selection_chooses_momentum_when_it_has_lower_brier(self) -> None:
+        from app.services.futures_macro_outlook_model import (
+            select_candidate_from_inner_evaluations,
+        )
+
+        selected = select_candidate_from_inner_evaluations(
+            pd.DataFrame(
+                [
+                    {"candidate": "M1_MOMENTUM", "temperature": 1.0, "brier_loss": 0.31},
+                    {"candidate": "M1_MOMENTUM", "temperature": 1.0, "brier_loss": 0.29},
+                    {"candidate": "M2B_BALANCED", "temperature": 1.0, "brier_loss": 0.38},
+                    {"candidate": "M2B_BALANCED", "temperature": 1.0, "brier_loss": 0.34},
+                ]
+            )
+        )
+
+        self.assertEqual(selected["candidate"], "M1_MOMENTUM")
+        self.assertEqual(selected["temperature"], 1.0)
+
+    def test_inner_selection_allows_hybrid_only_when_it_wins(self) -> None:
+        from app.services.futures_macro_outlook_model import (
+            select_candidate_from_inner_evaluations,
+        )
+
+        selected = select_candidate_from_inner_evaluations(
+            pd.DataFrame(
+                [
+                    {"candidate": "M1_MOMENTUM", "temperature": 0.5, "brier_loss": 0.42},
+                    {"candidate": "M2A_LIGHT", "temperature": 0.5, "brier_loss": 0.33},
+                    {"candidate": "M2B_BALANCED", "temperature": 0.5, "brier_loss": 0.35},
+                ]
+            )
+        )
+
+        self.assertEqual(selected["candidate"], "M2A_LIGHT")
+
+    def test_inner_selection_tie_prefers_simpler_candidate_then_lower_temperature(self) -> None:
+        from app.services.futures_macro_outlook_model import (
+            select_candidate_from_inner_evaluations,
+        )
+
+        selected = select_candidate_from_inner_evaluations(
+            pd.DataFrame(
+                [
+                    {"candidate": "M2C_MACRO_SENSITIVE", "temperature": 0.5, "brier_loss": 0.30},
+                    {"candidate": "M1_MOMENTUM", "temperature": 2.0, "brier_loss": 0.30},
+                    {"candidate": "M1_MOMENTUM", "temperature": 0.5, "brier_loss": 0.30},
+                ]
+            )
+        )
+
+        self.assertEqual(selected, {
+            "candidate": "M1_MOMENTUM",
+            "temperature": 0.5,
+            "mean_brier": 0.30,
+            "evaluation_count": 1,
+        })
+
+    def test_inner_selection_rejects_candidate_without_shared_fold_coverage(self) -> None:
+        from app.services.futures_macro_outlook_model import (
+            select_candidate_from_inner_evaluations,
+        )
+
+        selected = select_candidate_from_inner_evaluations(
+            pd.DataFrame(
+                [
+                    {"candidate": "M1_MOMENTUM", "temperature": 1.0, "brier_loss": 0.30},
+                    {"candidate": "M1_MOMENTUM", "temperature": 1.0, "brier_loss": 0.32},
+                    {"candidate": "M2B_BALANCED", "temperature": 1.0, "brier_loss": 0.01},
+                ]
+            )
+        )
+
+        self.assertEqual(selected["candidate"], "M1_MOMENTUM")
+
+
     def test_projection_uses_the_fixed_sixteen_predictors(self) -> None:
         from app.services.futures_macro_outlook_model import (
             MOMENTUM_PREDICTOR_COLUMNS,

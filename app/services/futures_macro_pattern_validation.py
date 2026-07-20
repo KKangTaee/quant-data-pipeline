@@ -10,6 +10,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from app.services.futures_macro_context import build_futures_macro_context_frame
 from app.services.futures_macro_pattern import (
     PATTERN_FEATURE_COLUMNS,
     PATTERN_FAMILY_KEYS,
@@ -18,6 +19,13 @@ from app.services.futures_macro_pattern import (
     build_current_pattern_snapshot,
     build_pattern_feature_frame,
     build_pattern_state_frame,
+)
+from app.services.futures_macro_outlook_model import (
+    CANDIDATES,
+    TEMPERATURE_GRID,
+    build_momentum_predictor_frame,
+    rank_weighted_analog_episodes,
+    select_candidate_from_inner_evaluations,
 )
 from app.services.futures_macro_sessions import (
     FUTURES_DAILY_SESSION_VERSION,
@@ -38,6 +46,8 @@ from finance.data.futures_market import (
     DEFAULT_CORE_FUTURES_SYMBOLS,
     FUTURES_MACRO_HISTORY_YEARS,
 )
+from finance.loaders.economic_cycle import load_cycle_history
+from finance.loaders.market_events import load_official_macro_event_history
 
 
 OUTLOOK_HORIZONS: tuple[int, ...] = (5, 20)
@@ -61,7 +71,13 @@ SIMILARITY_SUFFIXES = (
     "breadth",
     "volatility_ratio",
 )
-PATTERN_ALGORITHM_VERSION = "pattern_outlook_v4_conservative_status_10y"
+PATTERN_ALGORITHM_VERSION = "pattern_outlook_v5_same_state_nested_hybrid"
+PATTERN_OUTLOOK_SCHEMA_VERSION = "futures_macro_pattern_outlook_v2"
+NESTED_OUTER_MINIMUM_TRAIN = 756
+NESTED_INNER_MINIMUM_TRAIN = 504
+NESTED_TEST_SIZE = 63
+BOOTSTRAP_SAMPLES = 2_000
+BOOTSTRAP_SEED = 20260720
 PATTERN_OUTLOOK_CACHE_TTL_SECONDS = 900
 PATTERN_OUTLOOK_LIMITATIONS = (
     "유사 episode는 조건부 빈도이며 미래 수익이나 체제를 보장하지 않습니다.",
@@ -652,6 +668,585 @@ def build_weighted_terminal_regions(rows: pd.DataFrame) -> list[dict[str, float]
     return regions
 
 
+def _weighted_regime_probabilities(rows: pd.DataFrame) -> dict[str, float]:
+    if rows.empty or not {"outcome_regime", "weight"}.issubset(rows.columns):
+        return {}
+    usable = rows.loc[:, ["outcome_regime", "weight"]].copy()
+    usable["weight"] = pd.to_numeric(usable["weight"], errors="coerce")
+    usable = usable.dropna(subset=["outcome_regime", "weight"])
+    usable = usable[usable["weight"] > 0]
+    total = float(usable["weight"].sum())
+    if total <= 0:
+        return {}
+    return {
+        regime: float(usable.loc[usable["outcome_regime"] == regime, "weight"].sum()) / total
+        for regime in OUTCOME_REGIMES
+    }
+
+
+def _weighted_quantile(values: pd.Series, weights: pd.Series, quantile: float) -> float | None:
+    numeric = pd.DataFrame({"value": values, "weight": weights}).apply(
+        pd.to_numeric,
+        errors="coerce",
+    ).dropna()
+    numeric = numeric[numeric["weight"] > 0].sort_values("value")
+    if numeric.empty:
+        return None
+    cumulative = numeric["weight"].cumsum().div(float(numeric["weight"].sum()))
+    position = int(np.searchsorted(cumulative.to_numpy(dtype=float), quantile, side="left"))
+    return float(numeric.iloc[min(position, len(numeric) - 1)]["value"])
+
+
+def _single_brier_loss(actual: str, probabilities: dict[str, float]) -> float:
+    return float(
+        sum(
+            (float(probabilities.get(regime, 0.0)) - float(actual == regime)) ** 2
+            for regime in OUTCOME_REGIMES
+        )
+    )
+
+
+def _mean_log_loss(
+    actual: Sequence[str],
+    probabilities: Sequence[dict[str, float]],
+) -> float | None:
+    if not actual or len(actual) != len(probabilities):
+        return None
+    losses = [
+        -math.log(max(1e-12, float(forecast.get(observed, 0.0))))
+        for observed, forecast in zip(actual, probabilities)
+    ]
+    return float(sum(losses) / len(losses))
+
+
+def _moving_block_bootstrap_lower(
+    improvements: Sequence[float],
+    *,
+    block_size: int,
+) -> float | None:
+    values = np.asarray(list(improvements), dtype=float)
+    values = values[np.isfinite(values)]
+    if values.size < 2:
+        return None
+    block = max(1, min(int(block_size), int(values.size)))
+    starts = np.arange(max(1, values.size - block + 1))
+    generator = np.random.default_rng(BOOTSTRAP_SEED)
+    sample_means = np.empty(BOOTSTRAP_SAMPLES, dtype=float)
+    for sample_index in range(BOOTSTRAP_SAMPLES):
+        sampled: list[float] = []
+        while len(sampled) < values.size:
+            start = int(generator.choice(starts))
+            sampled.extend(values[start : start + block].tolist())
+        sample_means[sample_index] = float(np.mean(sampled[: values.size]))
+    return float(np.quantile(sample_means, 0.05))
+
+
+def _region_area(region: dict[str, float] | None) -> float | None:
+    if not region:
+        return None
+    return float(
+        math.pi
+        * max(0.0, float(region.get("radius_major", 0.0)))
+        * max(0.0, float(region.get("radius_minor", 0.0)))
+    )
+
+
+def _region_contains(region: dict[str, float] | None, x: float, y: float) -> bool | None:
+    if not region:
+        return None
+    major = float(region.get("radius_major", 0.0))
+    minor = float(region.get("radius_minor", 0.0))
+    if major <= 1e-12 or minor <= 1e-12:
+        return None
+    theta = math.radians(float(region.get("rotation_deg", 0.0)))
+    dx = float(x) - float(region.get("center_x", 0.0))
+    dy = float(y) - float(region.get("center_y", 0.0))
+    rotated_major = math.cos(theta) * dx + math.sin(theta) * dy
+    rotated_minor = -math.sin(theta) * dx + math.cos(theta) * dy
+    return (rotated_major / major) ** 2 + (rotated_minor / minor) ** 2 <= 1.0
+
+
+def _candidate_configurations() -> tuple[tuple[str, float], ...]:
+    return (
+        ("B0_UNCONDITIONAL", 0.0),
+        ("B1_PERSISTENCE", 0.0),
+        *tuple(
+            (candidate.key, float(temperature))
+            for candidate in CANDIDATES
+            for temperature in TEMPERATURE_GRID
+        ),
+    )
+
+
+def _forecast_for_configuration(
+    *,
+    configuration: tuple[str, float],
+    origin_date: pd.Timestamp,
+    horizon: int,
+    momentum_frame: pd.DataFrame,
+    context_frame: pd.DataFrame,
+    states: pd.DataFrame,
+    outcomes: pd.DataFrame,
+) -> dict[str, Any] | None:
+    key, temperature = configuration
+    current_date = pd.Timestamp(origin_date)
+    if current_date not in states.index:
+        return None
+    known = outcomes[
+        (outcomes["horizon"] == int(horizon))
+        & (pd.to_datetime(outcomes["terminal_date"]) <= current_date)
+    ].copy()
+    if key == "B0_UNCONDITIONAL":
+        selected = known.copy()
+        selected["weight"] = 1.0
+    elif key == "B1_PERSISTENCE":
+        state = states.loc[current_date]
+        selected = pd.DataFrame(
+            [
+                {
+                    "as_of_date": current_date,
+                    "outcome_regime": str(state["regime"]),
+                    "terminal_x": float(state["x"]),
+                    "terminal_y": float(state["y"]),
+                    "delta_x": 0.0,
+                    "delta_y": 0.0,
+                    "weight": 1.0,
+                }
+            ]
+        )
+    else:
+        candidate = next((item for item in CANDIDATES if item.key == key), None)
+        if candidate is None:
+            return None
+        analogs = rank_weighted_analog_episodes(
+            momentum_frame,
+            context_frame,
+            current_date=current_date,
+            horizon=horizon,
+            candidate=candidate,
+            temperature=temperature,
+        )
+        if analogs.empty:
+            return None
+        selected = analogs.merge(known, on="as_of_date", how="inner")
+    probabilities = _weighted_regime_probabilities(selected)
+    if selected.empty or not probabilities:
+        return None
+    regions = build_weighted_terminal_regions(selected)
+    weight = pd.to_numeric(selected["weight"], errors="coerce").fillna(0.0)
+    total_weight = float(weight.sum())
+    if total_weight <= 0:
+        return None
+    center_x = float(np.average(pd.to_numeric(selected["terminal_x"]), weights=weight))
+    center_y = float(np.average(pd.to_numeric(selected["terminal_y"]), weights=weight))
+    return {
+        "candidate": key,
+        "temperature": float(temperature),
+        "probabilities": probabilities,
+        "rows": selected,
+        "regions": regions,
+        "center_x": center_x,
+        "center_y": center_y,
+    }
+
+
+def _eligible_inner_origins(
+    outcomes: pd.DataFrame,
+    *,
+    states: pd.DataFrame,
+    horizon: int,
+    cutoff: pd.Timestamp,
+) -> list[pd.Timestamp]:
+    horizon_rows = outcomes[
+        (outcomes["horizon"] == int(horizon))
+        & (pd.to_datetime(outcomes["terminal_date"]) <= pd.Timestamp(cutoff))
+    ].copy()
+    if horizon_rows.empty:
+        return []
+    positions = {pd.Timestamp(value): index for index, value in enumerate(states.index)}
+    horizon_rows["position"] = horizon_rows["as_of_date"].map(
+        lambda value: positions.get(pd.Timestamp(value), -1)
+    )
+    horizon_rows = horizon_rows[
+        horizon_rows["position"] >= NESTED_INNER_MINIMUM_TRAIN + int(horizon)
+    ].sort_values("as_of_date")
+    return [
+        pd.Timestamp(value)
+        for value in horizon_rows.iloc[:: max(1, int(horizon))]["as_of_date"]
+    ]
+
+
+def _select_configuration_at_cutoff(
+    *,
+    cutoff: pd.Timestamp,
+    horizon: int,
+    momentum_frame: pd.DataFrame,
+    context_frame: pd.DataFrame,
+    states: pd.DataFrame,
+    outcomes: pd.DataFrame,
+    forecast_cache: dict[tuple[pd.Timestamp, str, float], dict[str, Any] | None],
+) -> dict[str, str | float | int] | None:
+    actual_by_date = {
+        pd.Timestamp(row["as_of_date"]): str(row["outcome_regime"])
+        for _, row in outcomes[
+            (outcomes["horizon"] == int(horizon))
+            & (pd.to_datetime(outcomes["terminal_date"]) <= pd.Timestamp(cutoff))
+        ].iterrows()
+    }
+    evaluations: list[dict[str, Any]] = []
+    for origin in _eligible_inner_origins(
+        outcomes,
+        states=states,
+        horizon=horizon,
+        cutoff=cutoff,
+    ):
+        actual = actual_by_date.get(origin)
+        if actual is None:
+            continue
+        for configuration in _candidate_configurations():
+            cache_key = (origin, configuration[0], configuration[1])
+            if cache_key not in forecast_cache:
+                forecast_cache[cache_key] = _forecast_for_configuration(
+                    configuration=configuration,
+                    origin_date=origin,
+                    horizon=horizon,
+                    momentum_frame=momentum_frame,
+                    context_frame=context_frame,
+                    states=states,
+                    outcomes=outcomes,
+                )
+            forecast = forecast_cache[cache_key]
+            if forecast is None:
+                continue
+            evaluations.append(
+                {
+                    "candidate": configuration[0],
+                    "temperature": configuration[1],
+                    "brier_loss": _single_brier_loss(actual, forecast["probabilities"]),
+                }
+            )
+    return select_candidate_from_inner_evaluations(pd.DataFrame(evaluations))
+
+
+def _closest_weighted_episodes(rows: pd.DataFrame) -> list[dict[str, Any]]:
+    if rows.empty or "as_of_date" not in rows.columns:
+        return []
+    ordered = rows.sort_values("weight", ascending=False).head(5)
+    return [
+        {
+            "date": pd.Timestamp(row["as_of_date"]).date().isoformat(),
+            "weight": round(float(row.get("weight") or 0.0), 6),
+            "outcome_regime": str(row.get("outcome_regime") or "mixed"),
+        }
+        for _, row in ordered.iterrows()
+    ]
+
+
+def _build_nested_horizon_outlook(
+    *,
+    horizon: int,
+    feature_frame: pd.DataFrame,
+    context_frame: pd.DataFrame,
+    outcomes: pd.DataFrame,
+    current_date: pd.Timestamp,
+) -> dict[str, Any]:
+    states = build_pattern_state_frame(feature_frame)
+    momentum = build_momentum_predictor_frame(
+        feature_frame,
+        selected_symbol_count=int(
+            pd.to_numeric(feature_frame.get("available_symbol_count"), errors="coerce").max()
+            if "available_symbol_count" in feature_frame
+            else 1
+        ),
+    )
+    cache: dict[tuple[pd.Timestamp, str, float], dict[str, Any] | None] = {}
+    actual_all: list[str] = []
+    forecast_all: list[dict[str, float]] = []
+    b0_all: list[dict[str, float]] = []
+    b1_all: list[dict[str, float]] = []
+    selected_errors: list[float] = []
+    b0_errors: list[float] = []
+    b1_errors: list[float] = []
+    coverage_50: list[float] = []
+    coverage_80: list[float] = []
+    area_80: list[float] = []
+    baseline_area_80: list[float] = []
+    improved_folds = 0
+    evaluated_folds = 0
+    selection_counts: dict[str, int] = {}
+    horizon_rows = outcomes[outcomes["horizon"] == int(horizon)].copy()
+    for fold in build_walk_forward_folds(feature_frame, horizon=horizon):
+        selected_config = _select_configuration_at_cutoff(
+            cutoff=fold.train_end,
+            horizon=horizon,
+            momentum_frame=momentum,
+            context_frame=context_frame,
+            states=states,
+            outcomes=outcomes,
+            forecast_cache=cache,
+        )
+        if selected_config is None:
+            continue
+        configuration = (
+            str(selected_config["candidate"]),
+            float(selected_config["temperature"]),
+        )
+        selection_counts[configuration[0]] = selection_counts.get(configuration[0], 0) + 1
+        test = horizon_rows[
+            (horizon_rows["as_of_date"] >= fold.test_start)
+            & (horizon_rows["as_of_date"] <= fold.test_end)
+        ].iloc[:: max(1, int(horizon))]
+        fold_model_losses: list[float] = []
+        fold_baseline_losses: list[float] = []
+        for _, actual_row in test.iterrows():
+            origin = pd.Timestamp(actual_row["as_of_date"])
+            actual = str(actual_row["outcome_regime"])
+            forecasts: dict[str, dict[str, Any] | None] = {}
+            for name, temperature in (
+                configuration,
+                ("B0_UNCONDITIONAL", 0.0),
+                ("B1_PERSISTENCE", 0.0),
+            ):
+                key = (origin, name, temperature)
+                if key not in cache:
+                    cache[key] = _forecast_for_configuration(
+                        configuration=(name, temperature),
+                        origin_date=origin,
+                        horizon=horizon,
+                        momentum_frame=momentum,
+                        context_frame=context_frame,
+                        states=states,
+                        outcomes=outcomes,
+                    )
+                forecasts[name] = cache[key]
+            model = forecasts.get(configuration[0])
+            b0 = forecasts.get("B0_UNCONDITIONAL")
+            b1 = forecasts.get("B1_PERSISTENCE")
+            if model is None or b0 is None or b1 is None:
+                continue
+            actual_all.append(actual)
+            forecast_all.append(model["probabilities"])
+            b0_all.append(b0["probabilities"])
+            b1_all.append(b1["probabilities"])
+            model_loss = _single_brier_loss(actual, model["probabilities"])
+            baseline_loss = min(
+                _single_brier_loss(actual, b0["probabilities"]),
+                _single_brier_loss(actual, b1["probabilities"]),
+            )
+            fold_model_losses.append(model_loss)
+            fold_baseline_losses.append(baseline_loss)
+            actual_x = float(actual_row["terminal_x"])
+            actual_y = float(actual_row["terminal_y"])
+            selected_errors.append(
+                _euclidean_error(actual_x, actual_y, model["center_x"], model["center_y"])
+            )
+            b0_errors.append(_euclidean_error(actual_x, actual_y, b0["center_x"], b0["center_y"]))
+            b1_errors.append(_euclidean_error(actual_x, actual_y, b1["center_x"], b1["center_y"]))
+            regions = {float(item["mass"]): item for item in model["regions"]}
+            baseline_regions = {float(item["mass"]): item for item in b0["regions"]}
+            inside_50 = _region_contains(regions.get(0.5), actual_x, actual_y)
+            inside_80 = _region_contains(regions.get(0.8), actual_x, actual_y)
+            if inside_50 is not None:
+                coverage_50.append(float(inside_50))
+            if inside_80 is not None:
+                coverage_80.append(float(inside_80))
+            selected_area = _region_area(regions.get(0.8))
+            unconditional_area = _region_area(baseline_regions.get(0.8))
+            if selected_area is not None:
+                area_80.append(selected_area)
+            if unconditional_area is not None:
+                baseline_area_80.append(unconditional_area)
+        if fold_model_losses:
+            evaluated_folds += 1
+            improved_folds += float(np.mean(fold_model_losses)) < float(np.mean(fold_baseline_losses))
+
+    selected_now = _select_configuration_at_cutoff(
+        cutoff=current_date,
+        horizon=horizon,
+        momentum_frame=momentum,
+        context_frame=context_frame,
+        states=states,
+        outcomes=outcomes,
+        forecast_cache=cache,
+    )
+    if selected_now is None:
+        selected_now = {
+            "candidate": "M1_MOMENTUM",
+            "temperature": 1.0,
+            "mean_brier": float("nan"),
+            "evaluation_count": 0,
+        }
+    current_configuration = (
+        str(selected_now["candidate"]),
+        float(selected_now["temperature"]),
+    )
+    current_forecast = _forecast_for_configuration(
+        configuration=current_configuration,
+        origin_date=current_date,
+        horizon=horizon,
+        momentum_frame=momentum,
+        context_frame=context_frame,
+        states=states,
+        outcomes=outcomes,
+    )
+    m1_evidence = _forecast_for_configuration(
+        configuration=("M1_MOMENTUM", current_configuration[1] or 1.0),
+        origin_date=current_date,
+        horizon=horizon,
+        momentum_frame=momentum,
+        context_frame=context_frame,
+        states=states,
+        outcomes=outcomes,
+    )
+    episode_count = int(len(m1_evidence["rows"])) if m1_evidence else 0
+    probabilities = current_forecast["probabilities"] if current_forecast else {}
+    brier = multiclass_brier_score(actual_all, forecast_all)
+    b0_brier = multiclass_brier_score(actual_all, b0_all)
+    b1_brier = multiclass_brier_score(actual_all, b1_all)
+    log_loss = _mean_log_loss(actual_all, forecast_all)
+    b0_log = _mean_log_loss(actual_all, b0_all)
+    b1_log = _mean_log_loss(actual_all, b1_all)
+    model_losses = [
+        _single_brier_loss(actual, forecast)
+        for actual, forecast in zip(actual_all, forecast_all)
+    ]
+    b0_losses = [_single_brier_loss(actual, forecast) for actual, forecast in zip(actual_all, b0_all)]
+    b1_losses = [_single_brier_loss(actual, forecast) for actual, forecast in zip(actual_all, b1_all)]
+    baseline_losses = [min(left, right) for left, right in zip(b0_losses, b1_losses)]
+    probability_bootstrap = _moving_block_bootstrap_lower(
+        [baseline - model for baseline, model in zip(baseline_losses, model_losses)],
+        block_size=horizon,
+    )
+    probability_status = probability_publication_status_v2(
+        episode_count=episode_count,
+        evaluation_count=len(actual_all),
+        brier_score=brier,
+        baseline_brier_scores=(b0_brier, b1_brier),
+        log_loss=log_loss,
+        baseline_log_losses=(b0_log, b1_log),
+        calibration_error=_calibration_error(actual_all, forecast_all),
+        fold_improvement_ratio=float(improved_folds / evaluated_folds) if evaluated_folds else 0.0,
+        bootstrap_improvement_lower=probability_bootstrap,
+    )
+    median_error = float(pd.Series(selected_errors).median()) if selected_errors else None
+    b0_median = float(pd.Series(b0_errors).median()) if b0_errors else None
+    b1_median = float(pd.Series(b1_errors).median()) if b1_errors else None
+    coordinate_bootstrap = _moving_block_bootstrap_lower(
+        [min(left, right) - model for left, right, model in zip(b0_errors, b1_errors, selected_errors)],
+        block_size=horizon,
+    )
+    coordinate_status = coordinate_publication_status_v2(
+        episode_count=episode_count,
+        evaluation_count=len(selected_errors),
+        median_error=median_error,
+        baseline_median_errors=(b0_median, b1_median),
+        coverage_50=float(np.mean(coverage_50)) if coverage_50 else None,
+        coverage_80=float(np.mean(coverage_80)) if coverage_80 else None,
+        region_area_80=float(np.mean(area_80)) if area_80 else None,
+        baseline_region_area_80=float(np.mean(baseline_area_80)) if baseline_area_80 else None,
+        evaluated_fold_count=evaluated_folds,
+        bootstrap_improvement_lower=coordinate_bootstrap,
+    )
+    current_rows = current_forecast["rows"] if current_forecast else pd.DataFrame()
+    weights = current_rows.get("weight", pd.Series(dtype=float))
+    lower_dx = _weighted_quantile(current_rows.get("delta_x", pd.Series(dtype=float)), weights, 0.10)
+    upper_dx = _weighted_quantile(current_rows.get("delta_x", pd.Series(dtype=float)), weights, 0.90)
+    lower_dy = _weighted_quantile(current_rows.get("delta_y", pd.Series(dtype=float)), weights, 0.10)
+    upper_dy = _weighted_quantile(current_rows.get("delta_y", pd.Series(dtype=float)), weights, 0.90)
+    median_dx = _weighted_quantile(current_rows.get("delta_x", pd.Series(dtype=float)), weights, 0.50)
+    median_dy = _weighted_quantile(current_rows.get("delta_y", pd.Series(dtype=float)), weights, 0.50)
+    vector_status = vector_publication_status_v2(
+        coordinate_status=coordinate_status,
+        lower_dx=lower_dx,
+        upper_dx=upper_dx,
+        lower_dy=lower_dy,
+        upper_dy=upper_dy,
+        median_dx=median_dx,
+        median_dy=median_dy,
+    )
+    baseline_now = _forecast_for_configuration(
+        configuration=("B0_UNCONDITIONAL", 0.0),
+        origin_date=current_date,
+        horizon=horizon,
+        momentum_frame=momentum,
+        context_frame=context_frame,
+        states=states,
+        outcomes=outcomes,
+    )
+    baseline_probabilities = baseline_now["probabilities"] if baseline_now else {}
+    lift = {
+        regime: float(probabilities.get(regime, 0.0) - baseline_probabilities.get(regime, 0.0))
+        for regime in OUTCOME_REGIMES
+    }
+    candidate_key = current_configuration[0]
+    macro_used = candidate_key.startswith("M2")
+    regions = current_forecast["regions"] if current_forecast else []
+    return {
+        "horizon": int(horizon),
+        "label": "다음 1주" if horizon == 5 else "다음 1개월",
+        "selected_candidate": candidate_key if candidate_key.startswith("M") else None,
+        "selected_configuration": candidate_key,
+        "selected_temperature": current_configuration[1],
+        "probability_status": probability_status,
+        "coordinate_status": coordinate_status,
+        "vector_status": vector_status,
+        "estimate_status": probability_status,
+        "status_reason": (
+            "시간순 검증에서 baseline 대비 예측 우위가 확인되지 않았습니다."
+            if probability_status == "NO_EDGE"
+            else "시간순 검증과 공개 기준을 통과했습니다."
+            if probability_status == "VERIFIED"
+            else "계산은 가능하지만 공개 검증 기준을 아직 모두 충족하지 못했습니다."
+            if probability_status == "PROVISIONAL"
+            else "독립 표본 또는 시간순 평가가 부족합니다."
+        ),
+        "probabilities": probabilities,
+        "baseline_probabilities": baseline_probabilities,
+        "probability_lift": lift,
+        "dominant_regime": max(probabilities, key=probabilities.get) if probabilities else None,
+        "episode_count": episode_count,
+        "evaluation_count": len(actual_all),
+        "terminal_regions": regions,
+        "direction_vector": {
+            "median_dx": median_dx,
+            "median_dy": median_dy,
+            "lower_dx": lower_dx,
+            "upper_dx": upper_dx,
+            "lower_dy": lower_dy,
+            "upper_dy": upper_dy,
+        },
+        "macro_adjustment": {
+            "used": macro_used,
+            "candidate": candidate_key if macro_used else None,
+            "reason": (
+                "PIT macro/event context가 inner Brier에서 momentum-only보다 개선되어 선택되었습니다."
+                if macro_used
+                else "macro/event context가 추가 OOS 개선을 만들지 않아 momentum/baseline 선택을 유지했습니다."
+            ),
+        },
+        "closest_episodes": _closest_weighted_episodes(current_rows),
+        "asset_pathways": _asset_pathways(current_rows),
+        "brier_score": brier,
+        "baseline_brier_scores": {"B0_UNCONDITIONAL": b0_brier, "B1_PERSISTENCE": b1_brier},
+        "log_loss": log_loss,
+        "baseline_log_losses": {"B0_UNCONDITIONAL": b0_log, "B1_PERSISTENCE": b1_log},
+        "calibration_error": _calibration_error(actual_all, forecast_all),
+        "fold_improvement_ratio": float(improved_folds / evaluated_folds) if evaluated_folds else 0.0,
+        "selection_counts": selection_counts,
+        "probability_bootstrap_improvement_lower": probability_bootstrap,
+        "coordinate_validation": {
+            "median_error": median_error,
+            "baseline_median_errors": {"B0_UNCONDITIONAL": b0_median, "B1_PERSISTENCE": b1_median},
+            "coverage_50": float(np.mean(coverage_50)) if coverage_50 else None,
+            "coverage_80": float(np.mean(coverage_80)) if coverage_80 else None,
+            "region_area_80": float(np.mean(area_80)) if area_80 else None,
+            "baseline_region_area_80": float(np.mean(baseline_area_80)) if baseline_area_80 else None,
+            "evaluated_fold_count": evaluated_folds,
+            "bootstrap_improvement_lower": coordinate_bootstrap,
+        },
+    }
+
+
 @dataclass(frozen=True)
 class WalkForwardFold:
     train_start: pd.Timestamp
@@ -666,8 +1261,8 @@ def build_walk_forward_folds(
     horizon: int,
 ) -> list[WalkForwardFold]:
     dates = pd.DatetimeIndex(feature_frame.index).sort_values()
-    minimum_train = max(252 * 3, int(horizon) * 6)
-    test_size = 63
+    minimum_train = max(NESTED_OUTER_MINIMUM_TRAIN, int(horizon) * 6)
+    test_size = NESTED_TEST_SIZE
     folds: list[WalkForwardFold] = []
     cursor = minimum_train + int(horizon)
     while cursor + test_size <= len(dates):
@@ -876,8 +1471,14 @@ def _asset_pathways(rows: pd.DataFrame) -> dict[str, dict[str, float | None]]:
     }
     pathways: dict[str, dict[str, float | None]] = {}
     for key, family in family_map.items():
-        endpoint = pd.to_numeric(rows.get(f"{family}__forward_z"), errors="coerce").dropna()
-        adverse = pd.to_numeric(rows.get(f"{family}__max_adverse_z"), errors="coerce").dropna()
+        endpoint = pd.to_numeric(
+            rows.get(f"{family}__forward_z", pd.Series(dtype=float)),
+            errors="coerce",
+        ).dropna()
+        adverse = pd.to_numeric(
+            rows.get(f"{family}__max_adverse_z", pd.Series(dtype=float)),
+            errors="coerce",
+        ).dropna()
         pathways[key] = {
             "median_forward_z": float(endpoint.median()) if not endpoint.empty else None,
             "lower_quartile_z": float(endpoint.quantile(0.25)) if not endpoint.empty else None,
@@ -1094,8 +1695,9 @@ def build_pattern_outlook_snapshot(
     current_pattern: dict[str, Any],
     *,
     selected_symbols: Sequence[str],
+    context_frame: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
-    """Build current context plus publishable conditional 5D/20D outlooks."""
+    """Build nested same-state 5D/20D distributions and independent gates."""
 
     if feature_frame.empty:
         horizons = [
@@ -1107,28 +1709,34 @@ def build_pattern_outlook_snapshot(
                 "probability_lift": {},
                 "dominant_regime": None,
                 "episode_count": 0,
+                "evaluation_count": 0,
+                "selected_candidate": None,
+                "selected_configuration": None,
+                "selected_temperature": None,
+                "probability_status": "UNAVAILABLE",
+                "coordinate_status": "UNAVAILABLE",
+                "vector_status": "UNAVAILABLE",
                 "estimate_status": "UNAVAILABLE",
                 "status_reason": "패턴 feature 이력이 부족합니다.",
                 "edge_label": "방향 우위 미확인",
                 "brier_score": None,
-                "baseline_brier_score": None,
+                "baseline_brier_scores": {},
+                "log_loss": None,
+                "baseline_log_losses": {},
                 "calibration_error": None,
                 "fold_improvement_ratio": 0.0,
+                "selection_counts": {},
+                "probability_bootstrap_improvement_lower": None,
                 "closest_episodes": [],
                 "asset_pathways": {},
-                "conditional_path": {
-                    "status": "UNAVAILABLE",
-                    "episode_count": 0,
-                    "band_label": "과거 유사 패턴 가운데 50%",
-                    "points": [],
-                    "terminal": None,
-                    "validation": {
-                        "median_error": None,
-                        "baseline_median_error": None,
-                        "coverage_50": None,
-                        "evaluated_fold_count": 0,
-                    },
+                "terminal_regions": [],
+                "direction_vector": None,
+                "macro_adjustment": {
+                    "used": False,
+                    "candidate": None,
+                    "reason": "forecast input이 없습니다.",
                 },
+                "coordinate_validation": {},
             }
             for horizon in OUTLOOK_HORIZONS
         ]
@@ -1138,27 +1746,24 @@ def build_pattern_outlook_snapshot(
             feature_frame,
             selected_symbols=selected_symbols,
         )
-        coordinates = build_forward_coordinate_frame(
-            candles,
-            feature_frame,
-            selected_symbols=selected_symbols,
-        )
         current_date = pd.Timestamp(feature_frame.index[-1])
-        path_rows = list(current_pattern.get("path") or [])
-        current_location = dict(path_rows[-1]) if path_rows else {"x": 0.0, "y": 0.0}
+        aligned_context = (
+            context_frame.reindex(feature_frame.index)
+            if context_frame is not None
+            else pd.DataFrame(index=feature_frame.index)
+        )
         horizons = [
-            _build_horizon_outlook(
+            _build_nested_horizon_outlook(
                 horizon=horizon,
                 feature_frame=feature_frame,
+                context_frame=aligned_context,
                 outcomes=outcomes,
-                coordinates=coordinates,
                 current_date=current_date,
-                current_location=current_location,
             )
             for horizon in OUTLOOK_HORIZONS
         ]
     return {
-        "schema_version": "futures_macro_pattern_outlook_v1",
+        "schema_version": PATTERN_OUTLOOK_SCHEMA_VERSION,
         "status": (
             "READY"
             if any(item["estimate_status"] != "UNAVAILABLE" for item in horizons)
@@ -1173,11 +1778,25 @@ def build_pattern_outlook_snapshot(
             "verified_episodes": VERIFIED_EPISODES,
             "effective_episodes": {str(item["horizon"]): item["episode_count"] for item in horizons},
             "brier": {str(item["horizon"]): item["brier_score"] for item in horizons},
-            "baseline_brier": {str(item["horizon"]): item["baseline_brier_score"] for item in horizons},
+            "baseline_brier": {str(item["horizon"]): item["baseline_brier_scores"] for item in horizons},
             "calibration": {str(item["horizon"]): item["calibration_error"] for item in horizons},
-            "path_validation": {
-                str(item["horizon"]): dict(item["conditional_path"]["validation"])
+            "coordinate_validation": {
+                str(item["horizon"]): dict(item["coordinate_validation"])
                 for item in horizons
+            },
+            "selected_candidates": {
+                str(item["horizon"]): item["selected_candidate"] for item in horizons
+            },
+            "selected_configurations": {
+                str(item["horizon"]): item["selected_configuration"] for item in horizons
+            },
+            "nested_validation": {
+                "outer_minimum_train": NESTED_OUTER_MINIMUM_TRAIN,
+                "inner_minimum_train": NESTED_INNER_MINIMUM_TRAIN,
+                "test_size": NESTED_TEST_SIZE,
+                "purge": "horizon",
+                "bootstrap_samples": BOOTSTRAP_SAMPLES,
+                "bootstrap_seed": BOOTSTRAP_SEED,
             },
         },
         "limitations": list(PATTERN_OUTLOOK_LIMITATIONS),
@@ -1236,11 +1855,40 @@ def load_overview_futures_macro_pattern_outlook(
     candles = normalize_futures_macro_daily_candles(completed.rows)
     features = build_pattern_feature_frame(candles, selected_symbols=selected_symbols)
     current = build_current_pattern_snapshot(features)
+    if features.empty:
+        context = pd.DataFrame(index=features.index)
+    else:
+        first_date = pd.Timestamp(features.index[0]).date()
+        current_date = pd.Timestamp(features.index[-1]).date()
+        try:
+            cycle_rows = load_cycle_history(
+                start_date=first_date,
+                end_date=current_date,
+                known_at_date=current_date,
+                query_fn=query,
+            )
+        except Exception:
+            cycle_rows = []
+        try:
+            event_rows = load_official_macro_event_history(
+                start_date=first_date,
+                end_date=current_date + pd.Timedelta(days=35),
+                known_at=evaluated_at,
+                query_fn=query,
+            )
+        except Exception:
+            event_rows = []
+        context = build_futures_macro_context_frame(
+            pd.DatetimeIndex(features.index),
+            cycle_rows=cycle_rows,
+            event_rows=event_rows,
+        )
     snapshot = build_pattern_outlook_snapshot(
         candles,
         features,
         current,
         selected_symbols=selected_symbols,
+        context_frame=context,
     )
     snapshot["session"] = {
         "resolver_version": FUTURES_DAILY_SESSION_VERSION,

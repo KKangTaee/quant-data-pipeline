@@ -1,6 +1,6 @@
 # Overview Futures Macro Probabilistic State Outlook V2 Status
 
-Status: Implementation in progress — 1차 complete, 2차 Task 5 in progress
+Status: Implementation in progress — 1차/2차 complete, 3차 not started
 Last Updated: 2026-07-20
 
 ## Current Progress
@@ -16,17 +16,19 @@ Last Updated: 2026-07-20
 - Task 2 canonical state builder and same-state 5D/20D target are implemented.
 - Task 3 DB-only Economic Cycle replay and official event known-at context is implemented.
 - Task 4 fixed 16-feature momentum projection and weighted M1/M2 analog ranking are implemented.
-- Task 5 probability/coordinate/vector publication gates and weighted joint terminal regions are implemented; nested candidate selection integration remains.
+- Task 5 nested rolling-origin selection, B0/B1/M1/M2 comparison, separate publication gates, and weighted joint terminal regions are implemented.
+- V2 horizon snapshot now uses the same future state `S(t+h)` as the observed map and no longer publishes the sparse median path as its forecast primitive.
+- M2 candidates must cover the same inner evaluation origins as M1/baselines; partial macro history cannot win on an easier subset.
 
 ## Roadmap State
 
 - 1차 Data / Target Contract: complete
-- 2차 Momentum Baseline / Macro Hybrid Validation: in progress (Tasks 3-4 complete; Task 5 gate primitives complete)
+- 2차 Momentum Baseline / Macro Hybrid Validation: complete (Tasks 3-5)
 - 3차 Observed Trail / Probabilistic Outlook UI / QA: not started
 - Design gate: approved 2026-07-20
 - Implementation execution: in progress
 
 ## Next Action
 
-Continue Task 5 by connecting nested rolling-origin candidate selection and metrics to the V2 horizon snapshot.
+Start 3차 Task 6 with immutable forecast history and final-session materialization.
 No production DB data has been changed.

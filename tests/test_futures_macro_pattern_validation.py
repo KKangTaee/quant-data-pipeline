@@ -507,17 +507,24 @@ class FuturesMacroPatternPublicationTests(unittest.TestCase):
                     expected,
                 )
 
-    def test_snapshot_publishes_empirical_path_algorithm_version(self) -> None:
+    def test_snapshot_publishes_same_state_nested_v2_contract(self) -> None:
         from app.services.futures_macro_pattern_validation import (
             build_pattern_outlook_snapshot,
         )
 
         snapshot = build_pattern_outlook_snapshot(**_outlook_fixture(days=100))
 
+        self.assertEqual(snapshot["schema_version"], "futures_macro_pattern_outlook_v2")
         self.assertEqual(
             snapshot["method"]["algorithm_version"],
-            "pattern_outlook_v4_conservative_status_10y",
+            "pattern_outlook_v5_same_state_nested_hybrid",
         )
+        for horizon in snapshot["horizons"]:
+            self.assertIn("selected_candidate", horizon)
+            self.assertIn("probability_status", horizon)
+            self.assertIn("coordinate_status", horizon)
+            self.assertIn("vector_status", horizon)
+            self.assertIn("terminal_regions", horizon)
 
     def test_publication_gate_constants_remain_unchanged_for_ten_year_history(self) -> None:
         from app.services.futures_macro_pattern_validation import (
@@ -552,24 +559,30 @@ class FuturesMacroPatternPublicationTests(unittest.TestCase):
                     expected,
                 )
 
-    def test_outlook_attaches_distinct_horizon_conditional_paths(self) -> None:
+    def test_outlook_replaces_sparse_conditional_paths_with_terminal_regions(self) -> None:
         from app.services.futures_macro_pattern_validation import (
             build_pattern_outlook_snapshot,
         )
 
         snapshot = build_pattern_outlook_snapshot(**_outlook_fixture(days=900))
         self.assertTrue(
-            all("conditional_path" in item for item in snapshot["horizons"])
+            all("conditional_path" not in item for item in snapshot["horizons"])
         )
-        paths = {
-            item["horizon"]: item["conditional_path"]
+        horizons = {
+            item["horizon"]: item
             for item in snapshot["horizons"]
         }
 
-        self.assertEqual(len(paths[5]["points"]), 5)
-        self.assertEqual(len(paths[20]["points"]), 20)
-        self.assertNotEqual(paths[5]["terminal"], paths[20]["terminal"])
-        self.assertIn(paths[5]["status"], {"VERIFIED", "PROVISIONAL"})
+        self.assertIn(horizons[5]["coordinate_status"], {
+            "VERIFIED", "PROVISIONAL", "NO_EDGE", "UNAVAILABLE"
+        })
+        self.assertIn(horizons[20]["coordinate_status"], {
+            "VERIFIED", "PROVISIONAL", "NO_EDGE", "UNAVAILABLE"
+        })
+        for horizon in horizons.values():
+            self.assertTrue(all(set(region) == {
+                "mass", "center_x", "center_y", "radius_major", "radius_minor", "rotation_deg"
+            } for region in horizon["terminal_regions"]))
 
     def test_publication_status_requires_sample_brier_and_calibration(self) -> None:
         from app.services.futures_macro_pattern_validation import publication_status_for_metrics
@@ -623,7 +636,7 @@ class FuturesMacroPatternPublicationTests(unittest.TestCase):
                 20,
             )
 
-    def test_outlook_reports_baseline_lift_and_no_edge_when_not_distinct(self) -> None:
+    def test_outlook_reports_baseline_lift_and_separate_publication_status(self) -> None:
         from app.services.futures_macro_pattern_validation import build_pattern_outlook_snapshot
 
         snapshot = build_pattern_outlook_snapshot(**_outlook_fixture(days=300))
@@ -631,7 +644,12 @@ class FuturesMacroPatternPublicationTests(unittest.TestCase):
 
         self.assertAlmostEqual(sum(horizon["probabilities"].values()), 1.0, places=8)
         self.assertEqual(set(horizon["probability_lift"]), set(horizon["baseline_probabilities"]))
-        self.assertEqual(horizon["edge_label"], "방향 우위 미확인")
+        self.assertIn(horizon["probability_status"], {
+            "VERIFIED", "PROVISIONAL", "NO_EDGE", "UNAVAILABLE"
+        })
+        self.assertIn(horizon["coordinate_status"], {
+            "VERIFIED", "PROVISIONAL", "NO_EDGE", "UNAVAILABLE"
+        })
 
     def test_outlook_keeps_current_pattern_when_validation_is_unavailable(self) -> None:
         from app.services.futures_macro_pattern_validation import build_pattern_outlook_snapshot

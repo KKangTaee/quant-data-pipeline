@@ -23,6 +23,7 @@ V2 requires reduced, interpretable candidates and trial-count logging.
 
 Economic Cycle has release-aware official history, but daily alignment and coverage may differ by series.
 Missing macro context must make the hybrid unavailable rather than silently backfill revised values.
+The implemented shared-fold rule prevents partial-coverage M2 candidates from winning against fully evaluated M1/B0/B1, but actual production coverage still needs Task 9 evidence.
 
 ### R5. Event schedule versus event surprise
 
