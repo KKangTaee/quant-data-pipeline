@@ -51,3 +51,5 @@ Authoritative spec: `docs/superpowers/specs/2026-07-20-overview-sentiment-histor
 Executable TDD plan: `docs/superpowers/plans/2026-07-20-overview-sentiment-history-pit-v2.md`
 
 Latest-value follow-up plan: `docs/superpowers/plans/2026-07-20-overview-sentiment-aligned-latest-end.md`
+
+CNN endpoint-label follow-up plan: `docs/superpowers/plans/2026-07-20-overview-sentiment-cnn-endpoint-label.md`
