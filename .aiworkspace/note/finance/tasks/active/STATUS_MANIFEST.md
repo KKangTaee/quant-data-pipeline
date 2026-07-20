@@ -19,7 +19,7 @@ Current active task status:
 
 Parallel active design task:
 
-- `reference-center-react-v1-20260720`: Search-first Hybrid A, 단일 Reference navigation, curated user catalog, React/Python 경계와 QA 설계를 승인받았고 written spec review가 남아 있다. 구현은 `0/4차`다.
+- `reference-center-react-v1-20260720`: Search-first Hybrid A written spec 승인과 9개 TDD task 구현 계획을 완료했다. 실행 방식 선택 후 catalog/contract부터 시작하며 구현은 `0/4차`다.
 
 Parallel active follow-up:
 

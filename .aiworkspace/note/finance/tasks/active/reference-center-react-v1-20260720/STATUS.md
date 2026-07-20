@@ -1,6 +1,6 @@
 # Reference Center React V1 Status
 
-Status: Written Spec Review Pending
+Status: Implementation Plan Ready / Execution Choice Pending
 Date: 2026-07-20
 
 ## Progress
@@ -10,13 +10,15 @@ Date: 2026-07-20
 - User approved excluding legacy / developer glossary terms from the app and preserving them only in internal docs.
 - Visual comparison completed; Search-first Hybrid option A selected.
 - Information architecture, component/data boundary, error handling, drift guard, and QA design approved in conversation.
-- Written spec created in `DESIGN.md` for final user review.
+- Written spec created in `DESIGN.md` and approved by the user.
+- File-by-file TDD implementation plan created in `PLAN.md` with nine commit-sized tasks.
+- The plan fixes the execution order as catalog/contract, React workbench, navigation/contextual help, then legacy removal/docs/Browser QA.
 
 ## Roadmap State
 
 - Overall implementation roadmap: `0/4차`
-- Current completed stage: design approval and written specification
-- Next stage: user reviews written spec, then detailed implementation plan is created
+- Current completed stage: design approval, written specification, and executable TDD plan
+- Next stage: choose plan execution mode, then begin Task 1 catalog RED/GREEN cycle
 
 ## Not Started
 
@@ -28,4 +30,4 @@ Date: 2026-07-20
 
 ## Next Action
 
-After user approval of `DESIGN.md`, invoke `superpowers:writing-plans` and write the TDD implementation plan.
+Choose subagent-driven execution or inline execution, then start Task 1 without changing the approved scope.

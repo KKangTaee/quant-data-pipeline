@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Reference decision: [reference-center-react-v1-20260720](./tasks/active/reference-center-react-v1-20260720/DESIGN.md). Guide와 Glossary를 단일 Search-first Hybrid React Reference로 통합하고 legacy·개발자 용어와 로그 surface를 사용자 UI에서 제외한다. Written spec review 후 구현 계획으로 전환한다.
+  - Reference decision: [reference-center-react-v1-20260720](./tasks/active/reference-center-react-v1-20260720/DESIGN.md). Guide와 Glossary를 단일 Search-first Hybrid React Reference로 통합하고 legacy·개발자 용어와 로그 surface를 사용자 UI에서 제외한다. Written spec과 9개 TDD task 계획이 준비됐으며 다음은 실행 방식 선택이다.
   - Current active task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `1/4차` 기능과 승인된 시각 polish·actual QA를 완료했고, 다음은 2차 장기 이력·발표 당시 값 품질 점검이다.
   - Latest completed task is [operations-portfolio-monitoring-only-v1-20260719](./tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md). Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
   - Parallel active follow-up is [portfolio-monitoring-chart-zoom-pan-v1-20260719](./tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md). 구현과 자동 회귀는 완료했고 전체 `2/3차`; 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다.

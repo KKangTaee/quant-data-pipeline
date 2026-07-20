@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Parallel Reference design task is [reference-center-react-v1-20260720](./tasks/active/reference-center-react-v1-20260720/STATUS.md). Search-first Hybrid A와 단일 Reference navigation 설계가 승인됐고 written spec review가 남아 있다. 구현은 `0/4차`다.
+  - Parallel Reference task is [reference-center-react-v1-20260720](./tasks/active/reference-center-react-v1-20260720/STATUS.md). Search-first Hybrid A written spec과 9개 TDD task 계획이 승인·정리됐고, 실행 방식 선택 후 catalog/contract부터 시작한다. 구현은 `0/4차`다.
   - Current active task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `1/4차` 기능과 승인된 시각 polish·actual QA를 완료했고, 다음은 2차 장기 이력·발표 당시 값 품질 점검이다.
   - Latest completed task is [operations-portfolio-monitoring-only-v1-20260719](./tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md). Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
   - Parallel active follow-up is [portfolio-monitoring-chart-zoom-pan-v1-20260719](./tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md). 기능과 자동 검증은 완료했고 전체 `2/3차`; desktop·900px·420px Browser interaction/layout QA가 남아 있다.
