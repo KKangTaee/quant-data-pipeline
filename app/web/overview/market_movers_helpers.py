@@ -42,7 +42,12 @@ from app.services.overview.why_it_moved import (
 )
 from app.web.overview.session_helpers import _snapshot_value
 from app.web.overview.market_movers_payloads import build_market_movers_decision_payload
+from app.web.overview.market_movers_decision_ui import (
+    build_market_movers_decision_shell_payload,
+)
 from app.web.overview_dashboard_helpers import (
+    load_overview_group_leadership_snapshot,
+    load_overview_market_mover_research_snapshot,
     load_overview_market_mover_sectors,
     load_overview_market_movers_snapshot,
 )
@@ -854,6 +859,67 @@ def build_market_movers_decision_workbench_payload(
         sector_snapshots=sector_snapshots,
         industry_snapshots=industry_snapshots,
         selected_research=selected_research,
+    )
+
+
+def build_market_movers_decision_react_payload(
+    snapshot: dict[str, Any],
+    *,
+    controls: MarketMoverControls,
+    selected_symbol: str | None,
+    group_snapshot_loader: Callable[..., dict[str, Any]] | None = None,
+    research_loader: Callable[..., dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Load the six cached group views and bind one selected stock to the React shell."""
+
+    load_group = group_snapshot_loader or load_overview_group_leadership_snapshot
+    load_research = research_loader or load_overview_market_mover_research_snapshot
+    group_snapshots: dict[str, dict[str, dict[str, Any]]] = {
+        "sector": {},
+        "industry": {},
+    }
+    for group_by in ("sector", "industry"):
+        for period in ("daily", "weekly", "monthly"):
+            group_snapshots[group_by][period] = load_group(
+                universe_limit=controls.universe_limit,
+                universe_code=controls.coverage,
+                group_by=group_by,
+                period=period,
+                top_n=12,
+                min_group_size=5,
+            )
+
+    selected_view = _market_mover_view_model(snapshot, controls.mode)
+    rows = _market_movers_records(selected_view.get("rows"))
+    requested_symbol = str(selected_symbol or "").strip().upper()
+    selected_row = next(
+        (
+            row
+            for row in rows
+            if str(row.get("Symbol") or row.get("symbol") or "").strip().upper() == requested_symbol
+        ),
+        rows[0] if rows else None,
+    )
+    selected_research = load_research(mover=selected_row) if selected_row else None
+    selected = str((selected_row or {}).get("Symbol") or "").strip().upper() or None
+    decision_payload = build_market_movers_decision_payload(
+        market_snapshot=snapshot,
+        sector_snapshots=group_snapshots["sector"],
+        industry_snapshots=group_snapshots["industry"],
+        selected_research=selected_research,
+    )
+    return build_market_movers_decision_shell_payload(
+        decision_payload=decision_payload,
+        command={
+            "coverage": controls.coverage,
+            "period": controls.period,
+            "ranking_mode": controls.mode,
+            "top_n": controls.top_n,
+        },
+        command_controls=_market_movers_react_filter_controls_config(controls)["items"],
+        actions=_market_movers_react_actions(controls=controls, snapshot=snapshot),
+        selected_symbol=selected,
+        action_note=_market_movers_react_action_note(controls=controls, snapshot=snapshot),
     )
 
 

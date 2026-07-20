@@ -1,0 +1,267 @@
+from __future__ import annotations
+
+from app.web.overview.market_movers_decision_ui import (
+    build_market_movers_decision_shell_payload,
+)
+
+
+def _decision_payload() -> dict[str, object]:
+    return {
+        "schema_version": "market_movers_decision_payload_v1",
+        "trust": {
+            "state": "PARTIAL",
+            "publish_results": True,
+            "metrics": {
+                "return": {"valid": 498, "total": 503, "excluded": 5},
+            },
+            "primary_action": "QUOTE_REFRESH",
+        },
+        "ranking": {
+            "period": "daily",
+            "ranking_mode": "top_gainers",
+            "rows": [],
+            "views": {
+                "top_gainers": {
+                    "label": "상승",
+                    "kind": "symbol",
+                    "rows": [
+                        {
+                            "Rank": 1,
+                            "Symbol": "AAA",
+                            "Name": "AAA Corp",
+                            "Return %": 7.5,
+                            "Sector": "Technology",
+                            "Industry": "Software",
+                            "Market Cap": 100_000_000_000,
+                        },
+                        {
+                            "Rank": 2,
+                            "Symbol": "BBB",
+                            "Name": "BBB Corp",
+                            "Return %": 5.0,
+                            "Sector": "Industrials",
+                            "Industry": "Machinery",
+                            "Market Cap": 50_000_000_000,
+                        },
+                    ],
+                }
+            },
+        },
+        "group_context": {
+            "sector": {"daily": {"flow": [], "bellwethers": []}},
+            "industry": {"daily": {"flow": [], "bellwethers": []}},
+        },
+        "selected_research": {
+            "schema_version": "market_mover_research_snapshot_v2",
+            "status": "OK",
+            "symbol": "BBB",
+            "ytd_return": {"status": "OK", "return_pct": 18.2, "series": []},
+            "financial_factor_series": {
+                "quarterly": {
+                    "factor_groups": {
+                        "income": ["revenue", "operating_income", "net_income", "diluted_eps"],
+                        "profitability": ["operating_margin", "net_margin", "roe"],
+                        "stability": ["current_ratio", "debt_ratio"],
+                    },
+                    "factors": {
+                        "revenue": {
+                            "label": "매출",
+                            "group": "income",
+                            "unit": "currency",
+                            "points": [{"period_end": "2026-03-31", "value": 10.0}],
+                            "available_count": 1,
+                            "excluded_count": 0,
+                        },
+                        "operating_income": {
+                            "label": "영업이익",
+                            "group": "income",
+                            "unit": "currency",
+                            "points": [],
+                            "available_count": 0,
+                            "excluded_count": 1,
+                        },
+                    },
+                },
+                "annual": {
+                    "factor_groups": {},
+                    "factors": {
+                        "revenue": {
+                            "label": "매출",
+                            "group": "income",
+                            "unit": "currency",
+                            "points": [{"period_end": "2025-12-31", "value": 35.0}],
+                            "available_count": 1,
+                            "excluded_count": 0,
+                        }
+                    },
+                },
+            },
+            "current_valuation": {
+                "status": "UNAVAILABLE",
+                "reason_code": "INCOMPLETE_REPORTED_DILUTED_EPS",
+            },
+        },
+    }
+
+
+def test_decision_shell_keeps_ranking_controls_compact_and_defaults_selection() -> None:
+    payload = build_market_movers_decision_shell_payload(
+        decision_payload=_decision_payload(),
+        command={
+            "coverage": "SP500",
+            "period": "daily",
+            "ranking_mode": "top_gainers",
+            "top_n": 20,
+        },
+        command_controls=[
+            {"id": "coverage", "label": "Coverage", "value": "SP500", "options": []},
+            {"id": "period", "label": "기간", "value": "daily", "options": []},
+            {"id": "sector", "label": "섹터", "value": "All", "options": []},
+            {"id": "top_n", "label": "표시", "value": "20", "options": []},
+            {"id": "mode", "label": "랭킹", "value": "top_gainers", "options": []},
+        ],
+        actions=[],
+        selected_symbol=None,
+    )
+
+    assert payload["schema_version"] == "market_movers_decision_workbench_v1"
+    assert payload["component"] == "MarketMoversDecisionWorkbench"
+    assert [item["id"] for item in payload["command_line"]["controls"]] == [
+        "coverage",
+        "period",
+        "mode",
+        "top_n",
+    ]
+    assert payload["selection"]["symbol"] == "AAA"
+    assert payload["selection"]["row"]["Name"] == "AAA Corp"
+    assert payload["trust"]["state"] == "PARTIAL"
+
+
+def test_decision_shell_selected_symbol_and_financial_controls_are_independent() -> None:
+    payload = build_market_movers_decision_shell_payload(
+        decision_payload=_decision_payload(),
+        command={
+            "coverage": "SP500",
+            "period": "daily",
+            "ranking_mode": "top_gainers",
+            "top_n": 20,
+        },
+        command_controls=[],
+        actions=[],
+        selected_symbol="BBB",
+    )
+
+    assert payload["selection"]["symbol"] == "BBB"
+    controls = payload["selection"]["financial_controls"]
+    assert controls["frequencies"] == [
+        {"id": "quarterly", "label": "분기"},
+        {"id": "annual", "label": "연간"},
+    ]
+    assert [group["id"] for group in controls["factor_groups"]] == [
+        "income",
+        "profitability",
+        "stability",
+    ]
+    revenue = controls["factor_groups"][0]["factors"][0]
+    operating_income = controls["factor_groups"][0]["factors"][1]
+    assert revenue["available_by_frequency"] == {"quarterly": True, "annual": True}
+    assert operating_income["available_by_frequency"] == {"quarterly": False, "annual": False}
+    assert controls["default_frequency"] == "quarterly"
+    assert controls["default_factor"] == "revenue"
+    assert payload["selection"]["research"]["current_valuation"]["status"] == "UNAVAILABLE"
+
+
+def test_decision_workbench_loader_builds_all_group_periods_and_selected_research(monkeypatch) -> None:
+    import pandas as pd
+
+    from app.web.overview import market_movers_helpers as helpers
+
+    controls = helpers.MarketMoverControls(
+        coverage="SP500",
+        universe_limit=500,
+        period="daily",
+        sector="All",
+        top_n=20,
+        mode="top_gainers",
+    )
+    snapshot = {
+        "period": "daily",
+        "rows": pd.DataFrame(
+            [
+                {"Rank": 1, "Symbol": "AAA", "Name": "AAA Corp", "Return %": 5.0},
+                {"Rank": 2, "Symbol": "BBB", "Name": "BBB Corp", "Return %": 4.0},
+            ]
+        ),
+        "mover_views": {
+            "top_gainers": {
+                "label": "상승",
+                "kind": "symbol",
+                "rows": pd.DataFrame(
+                    [
+                        {"Rank": 1, "Symbol": "AAA", "Name": "AAA Corp", "Return %": 5.0},
+                        {"Rank": 2, "Symbol": "BBB", "Name": "BBB Corp", "Return %": 4.0},
+                    ]
+                ),
+            }
+        },
+        "collection_readiness": {"state": "COMPLETE", "publish_results": True},
+        "coverage": {"refresh_state": {"label": "Fresh"}},
+    }
+    group_calls: list[tuple[str, str]] = []
+
+    def fake_group_loader(**kwargs: object) -> dict[str, object]:
+        group_by = str(kwargs["group_by"])
+        period = str(kwargs["period"])
+        group_calls.append((group_by, period))
+        return {
+            "status": "OK",
+            "group_by": group_by,
+            "group_flow": [],
+            "market_cap_bellwether_rows": [],
+            "rows": [],
+        }
+
+    research_calls: list[str] = []
+
+    def fake_research_loader(*, mover: dict[str, object], **_: object) -> dict[str, object]:
+        symbol = str(mover["Symbol"])
+        research_calls.append(symbol)
+        return {
+            "schema_version": "market_mover_research_snapshot_v2",
+            "status": "OK",
+            "symbol": symbol,
+            "financial_factor_series": {},
+        }
+
+    monkeypatch.setattr(helpers.st, "session_state", {"overview_market_movers_refresh_mode": "manual"})
+    payload = helpers.build_market_movers_decision_react_payload(
+        snapshot,
+        controls=controls,
+        selected_symbol="BBB",
+        group_snapshot_loader=fake_group_loader,
+        research_loader=fake_research_loader,
+    )
+
+    assert group_calls == [
+        ("sector", "daily"),
+        ("sector", "weekly"),
+        ("sector", "monthly"),
+        ("industry", "daily"),
+        ("industry", "weekly"),
+        ("industry", "monthly"),
+    ]
+    assert research_calls == ["BBB"]
+    assert payload["component"] == "MarketMoversDecisionWorkbench"
+    assert payload["selection"]["symbol"] == "BBB"
+    assert set(payload["group_context"]["sector"]) == {"daily", "weekly", "monthly"}
+
+
+def test_overview_research_loader_keeps_selected_stock_query_behind_cached_boundary() -> None:
+    from app.web.overview_dashboard_helpers import (
+        load_overview_market_mover_research_snapshot,
+    )
+
+    result = load_overview_market_mover_research_snapshot(mover={})
+
+    assert result["schema_version"] == "market_mover_research_snapshot_v2"
+    assert result["status"] == "NO_SYMBOL"
