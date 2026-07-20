@@ -24,6 +24,7 @@ from .sentiment_store import (
     ensure_market_sentiment_schema,
     persist_market_sentiment_source_capture,
     record_market_sentiment_source_failure,
+    replace_aaii_canonical_history,
 )
 
 
@@ -562,6 +563,25 @@ def _source_coverage(source: str, rows: list[dict[str, Any]]) -> tuple[str, dict
         "observed": len(expected & observed),
         "missing_series": missing,
     }
+
+
+def backfill_aaii_sentiment_history(
+    *,
+    timeout: int = DEFAULT_TIMEOUT,
+    retries: int = DEFAULT_RETRIES,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any]:
+    """Backfill canonical AAII history while preserving the true PIT capture boundary."""
+    rows = fetch_aaii_sentiment_history_rows(timeout=timeout, retries=retries)
+    db = MySQLClient(host, user, password, port)
+    try:
+        ensure_market_sentiment_schema(db)
+        return replace_aaii_canonical_history(db, rows)
+    finally:
+        db.close()
 
 
 def _source_observed_at(rows: list[dict[str, Any]]) -> str:

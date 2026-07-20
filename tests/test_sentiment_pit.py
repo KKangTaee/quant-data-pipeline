@@ -62,10 +62,15 @@ class FakeTransactionDb(FakeSchemaDb):
         del rows
         if self.fail_snapshot and "observation_snapshot" in sql:
             raise RuntimeError("snapshot write failed")
+        if getattr(self, "fail_canonical", False) and "macro_series_observation" in sql:
+            raise RuntimeError("canonical write failed")
         self.events.append("snapshot" if "observation_snapshot" in sql else "canonical")
 
     def execute(self, sql: str, params=None) -> None:
-        del sql
+        if "DELETE FROM macro_series_observation" in sql:
+            self.events.append("delete")
+            self.deleted_params = dict(params or {})
+            return
         if params is not None:
             self.events.append("batch")
 
@@ -89,6 +94,25 @@ def sentiment_row(value: float) -> dict:
         "collected_at": "2026-07-20 01:00:00",
         "error_msg": None,
     }
+
+
+def aaii_week_rows(observation_date: str) -> list[dict]:
+    values = {
+        "AAII_BULLISH": 44.9,
+        "AAII_NEUTRAL": 22.2,
+        "AAII_BEARISH": 32.9,
+        "AAII_BULL_BEAR_SPREAD": 12.0,
+    }
+    return [
+        {
+            **sentiment_row(value),
+            "series_id": series_id,
+            "observation_date": observation_date,
+            "source": "aaii_sentiment_survey",
+            "source_mode": "xls",
+        }
+        for series_id, value in values.items()
+    ]
 
 
 class SentimentAaiiWorkbookTests(unittest.TestCase):
@@ -200,6 +224,69 @@ class SentimentAaiiWorkbookTests(unittest.TestCase):
                 for row in rows
             )
         )
+
+
+class SentimentAaiiBackfillTests(unittest.TestCase):
+    def test_canonical_backfill_deletes_only_through_workbook_latest_then_upserts(self) -> None:
+        from finance.data.sentiment_store import replace_aaii_canonical_history
+
+        db = FakeTransactionDb()
+        result = replace_aaii_canonical_history(
+            db,
+            aaii_week_rows("1987-07-24") + aaii_week_rows("2026-07-16"),
+        )
+
+        self.assertEqual(db.events, ["begin", "delete", "canonical", "commit"])
+        self.assertEqual(db.deleted_params["latest_date"], "2026-07-16")
+        self.assertEqual(result["week_count"], 2)
+        self.assertEqual(result["canonical_rows_written"], 8)
+
+    def test_canonical_backfill_rejects_misaligned_series_before_transaction(self) -> None:
+        from finance.data.sentiment_store import replace_aaii_canonical_history
+
+        db = FakeTransactionDb()
+        with self.assertRaisesRegex(RuntimeError, "aligned dates"):
+            replace_aaii_canonical_history(
+                db,
+                aaii_week_rows("2026-07-16")[:-1],
+            )
+        self.assertEqual(db.events, [])
+
+    def test_canonical_backfill_rolls_back_when_upsert_fails(self) -> None:
+        from finance.data.sentiment_store import replace_aaii_canonical_history
+
+        db = FakeTransactionDb()
+        db.fail_canonical = True
+        with self.assertRaisesRegex(RuntimeError, "canonical write failed"):
+            replace_aaii_canonical_history(db, aaii_week_rows("2026-07-16"))
+        self.assertEqual(db.events, ["begin", "delete", "rollback"])
+
+    def test_backfill_fetches_before_db_and_never_writes_snapshot(self) -> None:
+        from finance.data import sentiment
+
+        rows = aaii_week_rows("2026-07-16")
+        db = MagicMock()
+        with (
+            patch.object(
+                sentiment,
+                "fetch_aaii_sentiment_history_rows",
+                return_value=rows,
+            ) as fetch,
+            patch.object(sentiment, "MySQLClient", return_value=db),
+            patch.object(sentiment, "ensure_market_sentiment_schema") as ensure,
+            patch.object(
+                sentiment,
+                "replace_aaii_canonical_history",
+                return_value={"canonical_rows_written": 4},
+            ) as replace,
+        ):
+            result = sentiment.backfill_aaii_sentiment_history()
+
+        fetch.assert_called_once()
+        ensure.assert_called_once_with(db)
+        replace.assert_called_once_with(db, rows)
+        db.close.assert_called_once_with()
+        self.assertNotIn("snapshot_rows_written", result)
 
 
 class SentimentPitPersistenceTests(unittest.TestCase):

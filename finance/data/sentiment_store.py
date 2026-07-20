@@ -18,6 +18,12 @@ MARKET_SENTIMENT_TARGET_TABLES = (
 )
 SENTIMENT_CAPTURE_SCHEMA_VERSION = "market_sentiment_capture_v1"
 CaptureStatus = Literal["success", "partial", "missing", "error"]
+AAII_CANONICAL_SERIES = {
+    "AAII_BULLISH",
+    "AAII_NEUTRAL",
+    "AAII_BEARISH",
+    "AAII_BULL_BEAR_SPREAD",
+}
 
 
 def ensure_market_sentiment_schema(db: MySQLClient) -> None:
@@ -138,6 +144,62 @@ def _upsert_canonical_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> None:
         """,
         rows,
     )
+
+
+def replace_aaii_canonical_history(
+    db: MySQLClient,
+    rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Replace official AAII canonical history without manufacturing PIT snapshots."""
+    normalized = deduplicate_sentiment_rows(rows)
+    dates_by_series: dict[str, set[str]] = {
+        series_id: set() for series_id in AAII_CANONICAL_SERIES
+    }
+    for row in normalized:
+        series_id = str(row.get("series_id") or "").upper()
+        if (
+            row.get("source") != "aaii_sentiment_survey"
+            or series_id not in AAII_CANONICAL_SERIES
+        ):
+            raise RuntimeError(
+                "AAII canonical backfill contains an unexpected source or series"
+            )
+        dates_by_series[series_id].add(str(row.get("observation_date") or ""))
+    date_sets = list(dates_by_series.values())
+    if not date_sets[0] or any(item != date_sets[0] for item in date_sets[1:]):
+        raise RuntimeError(
+            "AAII canonical backfill requires four series with aligned dates"
+        )
+
+    dates = sorted(date_sets[0])
+    db.begin()
+    try:
+        db.execute(
+            f"""
+            DELETE FROM {MACRO_TABLE}
+            WHERE source = %(source)s
+              AND series_id IN (
+                'AAII_BULLISH', 'AAII_NEUTRAL', 'AAII_BEARISH',
+                'AAII_BULL_BEAR_SPREAD'
+              )
+              AND observation_date <= %(latest_date)s
+            """,
+            {
+                "source": "aaii_sentiment_survey",
+                "latest_date": dates[-1],
+            },
+        )
+        _upsert_canonical_rows(db, normalized)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return {
+        "canonical_rows_written": len(normalized),
+        "observation_start": dates[0],
+        "observation_end": dates[-1],
+        "week_count": len(dates),
+    }
 
 
 def persist_market_sentiment_source_capture(
