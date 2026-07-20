@@ -28,10 +28,10 @@ function PatternHorizonSection({ horizons }: { horizons: HorizonCard[] }) {
           const hasPublishedDistribution = !isObservation && probabilities.length > 0;
           const statusClass = isObservation
             ? `observation-${item.observation_status.toLowerCase()}`
-            : `estimate-${item.estimate_status.toLowerCase()}`;
+            : `estimate-${item.probability_status.toLowerCase()}`;
           const statusLabel = isObservation
             ? OBSERVATION_LABEL[item.observation_status]
-            : item.estimate_status;
+            : item.probability_status;
           return (
             <article className={`fm-workbench__horizon-card ${statusClass}`} key={item.key}>
               <header>
@@ -44,10 +44,19 @@ function PatternHorizonSection({ horizons }: { horizons: HorizonCard[] }) {
                   {probabilities.map((row) => <ProbabilityBar key={row.key} row={row} />)}
                 </div>
               ) : (
-                <div className="fm-workbench__no-edge">{item.edge_label || "방향 우위 미확인"}</div>
+                <div className="fm-workbench__no-edge">
+                  {!isObservation && item.probability_status === "NO_EDGE"
+                    ? "baseline 대비 예측 우위 없음"
+                    : item.edge_label || "방향 우위 미확인"}
+                </div>
               )}
               <footer>
                 {!isObservation && item.episode_count ? <span>독립 표본 {item.episode_count}개</span> : <span>확률이 아닌 현재 관측</span>}
+                {!isObservation ? (
+                  <span>
+                    후보 {item.selected_candidate || "선택 없음"} · macro {item.macro_adjustment?.used ? "조건 반영" : "미반영"}
+                  </span>
+                ) : null}
                 {item.status_reason ? <small>{item.status_reason}</small> : null}
               </footer>
             </article>

@@ -10,7 +10,8 @@ import PatternMapSection from "./PatternMapSection";
 import PatternRibbonSection from "./PatternRibbonSection";
 import "./style.css";
 
-export type EstimateStatus = "VERIFIED" | "PROVISIONAL" | "UNAVAILABLE";
+export type PublicationStatus = "VERIFIED" | "PROVISIONAL" | "NO_EDGE" | "UNAVAILABLE";
+export type EstimateStatus = PublicationStatus;
 export type ObservationStatus = "OBSERVED" | "PARTIAL" | "UNAVAILABLE";
 export const OBSERVATION_LABEL: Record<ObservationStatus, string> = {
   OBSERVED: "관측 완료",
@@ -52,23 +53,22 @@ export type ProbabilityRow = {
   lift: number;
 };
 
-export type ConditionalPathPoint = {
-  step: number;
-  x: number;
-  y: number;
-  lower_x: number;
-  upper_x: number;
-  lower_y: number;
-  upper_y: number;
+export type TerminalRegion = {
+  mass: number;
+  center_x: number;
+  center_y: number;
+  radius_major: number;
+  radius_minor: number;
+  rotation_deg: number;
 };
 
-export type ConditionalPathPayload = {
-  status: EstimateStatus;
-  episode_count: number;
-  band_label: string;
-  points: ConditionalPathPoint[];
-  terminal?: ConditionalPathPoint | null;
-  validation?: Record<string, number | null>;
+export type DirectionVector = {
+  median_dx: number;
+  median_dy: number;
+  lower_dx: number;
+  upper_dx: number;
+  lower_dy: number;
+  upper_dy: number;
 };
 
 type HorizonCardBase = {
@@ -89,10 +89,16 @@ export type ObservationHorizonCard = HorizonCardBase & {
 export type OutlookHorizonCard = HorizonCardBase & {
   key: "5D" | "20D";
   kind: "conditional_outlook";
-  estimate_status: EstimateStatus;
+  probability_status: PublicationStatus;
+  coordinate_status: PublicationStatus;
+  vector_status: PublicationStatus;
   probabilities: ProbabilityRow[];
+  disclosure_probabilities: ProbabilityRow[];
   baseline_label?: string;
-  conditional_path?: ConditionalPathPayload;
+  selected_candidate?: string | null;
+  terminal_regions: TerminalRegion[];
+  direction_vector?: DirectionVector | null;
+  macro_adjustment: { used: boolean; candidate?: string | null; reason: string };
 };
 
 export type HorizonCard = ObservationHorizonCard | OutlookHorizonCard;
@@ -111,6 +117,7 @@ export type PatternMapPayload = {
   title: string;
   x_label: string;
   y_label: string;
+  domain: { x: [number, number]; y: [number, number] };
   path: PatternPoint[];
 };
 
@@ -169,12 +176,17 @@ export type CalculationTracePayload = {
 };
 
 export type FuturesMacroWorkbenchPayload = {
-  schema_version: "futures_macro_react_workbench_v2";
+  schema_version: "futures_macro_react_workbench_v3";
   component: "FuturesMacroWorkbench";
   command: CommandPayload;
   hero: HeroPayload;
   horizons: HorizonCard[];
   pattern_map: PatternMapPayload;
+  session_evidence: {
+    latest_final_session?: string | null;
+    pending_session?: string | null;
+    status?: string | null;
+  };
   evidence: EvidencePayload;
   ribbon: RibbonPayload;
   asset_pathways: AssetPathwayPayload[];
@@ -231,6 +243,7 @@ function FuturesMacroWorkbench({ args }: Props) {
       <AssetPathwaysSection pathways={payload.asset_pathways} />
       <MethodDisclosure
         boundaryNote={payload.boundary_note}
+        horizons={payload.horizons}
         method={payload.method}
         onToggle={syncFrameHeightSoon}
       />

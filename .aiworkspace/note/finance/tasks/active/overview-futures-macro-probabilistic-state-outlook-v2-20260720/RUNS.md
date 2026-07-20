@@ -127,3 +127,14 @@ No code, DB row, registry, or saved setup was modified by this analysis.
 - Observed trail is limited to the latest 30 final sessions and carries fixed semantic domain `[-2.5,+2.5]` on both axes.
 - Session evidence carries only latest final, pending session, and finality status; no run/job diagnostic panel was added.
 - Futures Macro service-contract regression: 24 passed, 833 deselected; `git diff --check` passed.
+
+## 2026-07-20 — Task 8 React Observed Trail And Gated Regions
+
+- RED: React source still depended on dynamic `xBound/yBound`, three-anchor observed polyline, sparse conditional path, independent rectangle uncertainty, and one combined estimate status.
+- GREEN: both axes use fixed `[-2.5,+2.5]`; the latest 30 completed states render as age-weighted daily segments and points.
+- 20D/5D/current markers include exact dates; out-of-domain raw points use clipped boundary triangles while raw coordinates remain in SVG titles.
+- Coordinate `VERIFIED` renders joint 80% then 50% covariance ellipses inside a plot clip path. Vector `VERIFIED` alone renders the compact direction arrow.
+- Probability cards distinguish `VERIFIED`, `PROVISIONAL`, `NO_EDGE`, and `UNAVAILABLE`; provisional numeric distributions render only in Method disclosure.
+- Old conditional forecast line and rectangle source contracts were removed.
+- `npm run build`: TypeScript/Vite pass. Updated tracked `component_static` bundle because the Streamlit wrapper serves it directly.
+- Futures Macro service-contract regression: 24 passed, 833 deselected.

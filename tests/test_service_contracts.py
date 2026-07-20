@@ -8313,14 +8313,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("Streamlit.setFrameHeight", source)
         self.assertIn("onToggle={syncFrameHeightSoon}", source)
 
-    def test_futures_macro_react_v2_has_responsive_probability_and_unavailable_contract(self) -> None:
+    def test_futures_macro_react_v3_has_separate_probability_status_contract(self) -> None:
         source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")
         horizon = (source_root / "PatternHorizonSection.tsx").read_text(encoding="utf-8")
         style = (source_root / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("estimate_status", horizon)
+        self.assertIn("probability_status", horizon)
+        self.assertIn("NO_EDGE", horizon)
         self.assertIn("probabilities.length", horizon)
-        self.assertIn("방향 우위 미확인", horizon)
+        self.assertIn("baseline 대비 예측 우위 없음", horizon)
         self.assertIn("@media (max-width: 760px)", style)
         self.assertIn("grid-template-columns: 1fr", style)
 
@@ -8370,7 +8371,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("<b>{item.estimate_status}</b>", assets)
         self.assertNotIn("item.estimate_status.toLowerCase()", assets)
 
-    def test_futures_macro_pattern_map_uses_observed_anchors_and_conditional_branches(self) -> None:
+    def test_futures_macro_pattern_map_uses_full_observed_trail_and_gated_regions(self) -> None:
         source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")
         root = (source_root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
         pattern_map = (source_root / "PatternMapSection.tsx").read_text(encoding="utf-8")
@@ -8382,14 +8383,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('data-horizon="20D"', pattern_map)
         self.assertIn("20D 전", pattern_map)
         self.assertIn("5D 전", pattern_map)
-        self.assertIn('textAnchor="end">현재</text>', pattern_map)
+        self.assertIn("point.date", pattern_map)
         self.assertIn("if (path.length <= daysAgo)", pattern_map)
-        self.assertIn("ConditionalPathPayload", root)
-        self.assertIn("fm-pattern-map__conditional-path", pattern_map)
-        self.assertIn("fm-pattern-map__uncertainty", pattern_map)
-        self.assertIn("일 후 예상 위치", pattern_map)
-        self.assertIn("selectedCard?.conditional_path", pattern_map)
-        self.assertIn("실제 미래 경로를 보장하지 않습니다", pattern_map)
+        self.assertIn("TerminalRegion", root)
+        self.assertIn("fm-pattern-map__terminal-region", pattern_map)
+        self.assertIn("terminal_regions", pattern_map)
+        self.assertIn("direction_vector", pattern_map)
+        self.assertIn("검증된 도착 분포", pattern_map)
+        self.assertNotIn("fm-pattern-map__conditional-path", pattern_map)
+        self.assertNotIn("selectedCard?.conditional_path", pattern_map)
         self.assertNotIn("REGIME_TARGETS", pattern_map)
         self.assertNotIn("function Branch", pattern_map)
         self.assertNotIn("fm-pattern-map__outcome-dot", pattern_map)
@@ -8414,78 +8416,53 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn(" · 부담 강화", pattern_map)
         self.assertNotIn(" · 부담 완화", pattern_map)
 
-    def test_futures_macro_pattern_map_uses_one_terminal_range_and_readable_copy(self) -> None:
+    def test_futures_macro_pattern_map_renders_joint_eighty_then_fifty_regions(self) -> None:
         pattern_map = Path(
             "app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("const uncertaintyStep = forecastPoints.at(-1)", pattern_map)
-        self.assertNotIn("midpointStep", pattern_map)
-        self.assertNotIn("uncertaintySteps", pattern_map)
-        self.assertEqual(pattern_map.count('className="fm-pattern-map__uncertainty"'), 1)
-        self.assertIn("data-forecast-step={uncertaintyStep.step}", pattern_map)
-        self.assertIn("일 후 예상 위치", pattern_map)
-        self.assertIn("일 예상 순이동", pattern_map)
-        self.assertIn("일 후 도착 범위", pattern_map)
-        self.assertNotIn("유사 패턴 중앙 위치", pattern_map)
-        self.assertIn("실제 미래 경로를 보장하지 않습니다", pattern_map)
+        self.assertIn("sortedRegions", pattern_map)
+        self.assertIn("region.mass === 0.8", pattern_map)
+        self.assertIn("rotate(${region.rotation_deg}", pattern_map)
+        self.assertIn("fm-pattern-map__terminal-region", pattern_map)
+        self.assertIn("joint 80%", pattern_map)
+        self.assertIn("joint 50%", pattern_map)
 
-    def test_futures_macro_pattern_map_uses_fixed_midline_direction_markers(self) -> None:
+    def test_futures_macro_pattern_map_uses_verified_direction_vector_only(self) -> None:
         source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")
         pattern_map = (source_root / "PatternMapSection.tsx").read_text(encoding="utf-8")
         style = (source_root / "style.css").read_text(encoding="utf-8")
 
         self.assertIn("function directionSegment", pattern_map)
-        self.assertGreaterEqual(pattern_map.count('markerUnits="userSpaceOnUse"'), 2)
-        self.assertGreaterEqual(pattern_map.count('markerWidth="9"'), 2)
-        self.assertIn('data-direction="observed"', pattern_map)
+        self.assertGreaterEqual(pattern_map.count('markerUnits="userSpaceOnUse"'), 1)
+        self.assertGreaterEqual(pattern_map.count('markerWidth="9"'), 1)
         self.assertIn('data-direction="forecast"', pattern_map)
-        self.assertNotIn('markerEnd="url(#fm-observed-arrow)"', pattern_map)
-        self.assertIn('r={point.anchorLabel === "현재" ? 10 : 7.5}', pattern_map)
-        self.assertIn('r="8"', pattern_map)
+        self.assertIn('selectedCard?.vector_status === "VERIFIED"', pattern_map)
+        self.assertIn("selectedCard.direction_vector", pattern_map)
         self.assertIn("fm-pattern-map__leader", pattern_map)
         self.assertIn("fm-pattern-map__direction", style)
 
-    def test_futures_macro_pattern_map_renders_terminal_net_direction_without_stepwise_zigzag(self) -> None:
+    def test_futures_macro_pattern_map_has_no_sparse_forecast_line(self) -> None:
         pattern_map = Path(
             "app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx"
         ).read_text(encoding="utf-8")
 
-        self.assertIn('className="fm-pattern-map__conditional-path"', pattern_map)
-        self.assertIn("x1={sx(latest.x)}", pattern_map)
-        self.assertIn("y1={sy(latest.y)}", pattern_map)
-        self.assertIn("x2={sx(terminal.x)}", pattern_map)
-        self.assertIn("y2={sy(terminal.y)}", pattern_map)
-        self.assertNotIn("const forecastPolyline", pattern_map)
-        self.assertNotIn(
-            "...forecastPoints.map((point) => `${sx(point.x)},${sy(point.y)}`)",
-            pattern_map,
-        )
-        self.assertNotIn("const scaleForecastPoints", pattern_map)
-        self.assertNotIn("...scaleForecastPoints.map", pattern_map)
-        self.assertIn("일 예상 순이동", pattern_map)
-        self.assertIn("중간 일별 경로가 아닙니다", pattern_map)
+        self.assertNotIn('className="fm-pattern-map__conditional-path"', pattern_map)
+        self.assertNotIn("forecastPoints", pattern_map)
+        self.assertNotIn("conditional_path", pattern_map)
+        self.assertIn("확률적 도착 범위", pattern_map)
 
-    def test_futures_macro_pattern_map_keeps_observed_anchors_on_one_shared_scale(self) -> None:
+    def test_futures_macro_pattern_map_uses_fixed_semantic_domain_and_clipped_outliers(self) -> None:
         pattern_map = Path(
             "app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("const scalePaths = horizons.flatMap", pattern_map)
-        self.assertIn("const scaleTerminalPoints = scalePaths.flatMap", pattern_map)
-        self.assertNotIn("const scaleForecastPoints", pattern_map)
-        self.assertIn(
-            "...scaleTerminalPoints.flatMap((point) => [point.x, point.lower_x, point.upper_x])",
-            pattern_map,
-        )
-        self.assertIn(
-            "...scaleTerminalPoints.flatMap((point) => [point.y, point.lower_y, point.upper_y])",
-            pattern_map,
-        )
-        self.assertNotIn(
-            "...forecastPoints.flatMap((point) => [point.x, point.lower_x, point.upper_x])",
-            pattern_map,
-        )
+        self.assertIn("const DOMAIN_MIN = -2.5", pattern_map)
+        self.assertIn("const DOMAIN_MAX = 2.5", pattern_map)
+        self.assertIn("clipValue", pattern_map)
+        self.assertIn("is-clipped", pattern_map)
+        self.assertNotIn("xBound", pattern_map)
+        self.assertNotIn("yBound", pattern_map)
 
     def test_futures_macro_react_copy_avoids_trade_and_causal_claims(self) -> None:
         source = "\n".join(

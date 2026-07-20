@@ -1,6 +1,6 @@
 # Overview Futures Macro Probabilistic State Outlook V2 Status
 
-Status: Implementation in progress — 1차/2차 complete, 3차 Tasks 6-7 complete
+Status: Implementation in progress — 1차/2차 complete, 3차 Tasks 6-8 complete
 Last Updated: 2026-07-20
 
 ## Current Progress
@@ -22,16 +22,17 @@ Last Updated: 2026-07-20
 - Task 6 adds deterministic final-input fingerprints, immutable forecast identities/history, and atomic latest-good current advancement.
 - Pending sessions reuse the prior current snapshot; older final as-of rows cannot replace a newer current row.
 - Task 7 V3 Python bridge now enforces separate probability/coordinate/vector publication suppression without recalculating the model.
+- Task 8 React surface now renders the full completed-session trail on a fixed domain and only verified ellipse/vector forecast geometry.
 
 ## Roadmap State
 
 - 1차 Data / Target Contract: complete
 - 2차 Momentum Baseline / Macro Hybrid Validation: complete (Tasks 3-5)
-- 3차 Observed Trail / Probabilistic Outlook UI / QA: in progress (Tasks 6-7 complete; Tasks 8-9 remain)
+- 3차 Observed Trail / Probabilistic Outlook UI / QA: in progress (Tasks 6-8 complete; Task 9 remains)
 - Design gate: approved 2026-07-20
 - Implementation execution: in progress
 
 ## Next Action
 
-Continue 3차 Task 8 with React fixed-domain observed trail and gated ellipse/vector rendering.
+Continue 3차 Task 9 with fixed-cutoff integration, actual materialization, Browser QA, and durable documentation sync.
 No production DB data has been changed.

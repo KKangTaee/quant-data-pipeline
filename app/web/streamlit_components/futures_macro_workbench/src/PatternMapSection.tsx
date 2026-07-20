@@ -1,10 +1,17 @@
 import { useState } from "react";
-import type { HorizonCard, PatternMapPayload, PatternPoint } from "./FuturesMacroWorkbench";
+import type {
+  HorizonCard,
+  OutlookHorizonCard,
+  PatternMapPayload,
+  PatternPoint,
+} from "./FuturesMacroWorkbench";
 
 const WIDTH = 720;
 const HEIGHT = 390;
 const PAD_X = 64;
 const PAD_Y = 34;
+const DOMAIN_MIN = -2.5;
+const DOMAIN_MAX = 2.5;
 
 type SelectedHorizon = "observed" | "5D" | "20D";
 type AnchorPoint = PatternPoint & { anchorLabel: string };
@@ -30,7 +37,14 @@ function observedAnchors(path: PatternPoint[]): AnchorPoint[] {
   });
 }
 
-/** Places a compact arrow segment between endpoints so its marker cannot cover either point. */
+function clipValue(value: number): number {
+  return Math.max(DOMAIN_MIN, Math.min(DOMAIN_MAX, value));
+}
+
+function isClipped(point: { x: number; y: number }): boolean {
+  return point.x < DOMAIN_MIN || point.x > DOMAIN_MAX || point.y < DOMAIN_MIN || point.y > DOMAIN_MAX;
+}
+
 function directionSegment(
   start: ScreenPoint | undefined,
   end: ScreenPoint | undefined,
@@ -45,76 +59,45 @@ function directionSegment(
   const unitX = dx / distance;
   const unitY = dy / distance;
   const segmentLength = Math.min(length, available);
-  const centerDistance = startInset + available * 0.55;
-  const firstDistance = centerDistance - segmentLength / 2;
-  const secondDistance = centerDistance + segmentLength / 2;
   return {
-    x1: start.x + unitX * firstDistance,
-    y1: start.y + unitY * firstDistance,
-    x2: start.x + unitX * secondDistance,
-    y2: start.y + unitY * secondDistance,
+    x1: start.x + unitX * startInset,
+    y1: start.y + unitY * startInset,
+    x2: start.x + unitX * (startInset + segmentLength),
+    y2: start.y + unitY * (startInset + segmentLength),
   };
 }
 
 function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPayload; horizons: HorizonCard[] }) {
   const [selectedHorizon, setSelectedHorizon] = useState<SelectedHorizon>("5D");
-  const anchors = observedAnchors(patternMap.path);
-  const latest = anchors.at(-1);
-  const selectedCard = horizons.find((item) => item.key === selectedHorizon);
-  const probabilities = selectedCard?.kind === "conditional_outlook" ? selectedCard.probabilities || [] : [];
-  const conditionalPath = selectedCard?.kind === "conditional_outlook" ? selectedCard?.conditional_path : undefined;
-  const forecastPoints = conditionalPath?.status !== "UNAVAILABLE" ? conditionalPath?.points || [] : [];
-  const scalePaths = horizons.flatMap((item) => (
-    item.kind === "conditional_outlook"
-      && item.conditional_path
-      && item.conditional_path.status !== "UNAVAILABLE"
-      ? [item.conditional_path]
-      : []
-  ));
-  const scaleTerminalPoints = scalePaths.flatMap((path) => (
-    path.terminal ? [path.terminal] : []
-  ));
-  const xValues = [
-    ...anchors.map((point) => point.x),
-    ...scaleTerminalPoints.flatMap((point) => [point.x, point.lower_x, point.upper_x]),
-  ];
-  const yValues = [
-    ...anchors.map((point) => point.y),
-    ...scaleTerminalPoints.flatMap((point) => [point.y, point.lower_y, point.upper_y]),
-  ];
-  const xBound = Math.max(1.25, ...xValues.map((value) => Math.abs(value) * 1.12));
-  const yBound = Math.max(1.1, ...yValues.map((value) => Math.abs(value) * 1.12));
-  const sx = (value: number) => PAD_X + ((value + xBound) / (xBound * 2)) * (WIDTH - PAD_X * 2);
-  const sy = (value: number) => HEIGHT - PAD_Y - ((value + yBound) / (yBound * 2)) * (HEIGHT - PAD_Y * 2);
-  const observedPoints = anchors.map((point) => `${sx(point.x)},${sy(point.y)}`).join(" ");
-  const uncertaintyStep = forecastPoints.at(-1);
-  const selectedDays = selectedHorizon === "observed"
-    ? undefined
-    : Number.parseInt(selectedHorizon, 10);
-  const expectedPositionLabel = selectedDays ? `${selectedDays}일 후 예상 위치` : "";
-  const forecastLegend = selectedDays ? `${selectedDays}일 예상 순이동` : "예상 순이동";
-  const rangeLegend = selectedDays ? `${selectedDays}일 후 도착 범위` : "도착 범위";
-  const showForecast = selectedHorizon !== "observed" && Boolean(latest) && forecastPoints.length > 0;
-  const pathStatus = conditionalPath?.status || "UNAVAILABLE";
-  const terminal = conditionalPath?.terminal || undefined;
-  const screenPoint = (point: { x: number; y: number } | undefined): ScreenPoint | undefined => (
-    point ? { x: sx(point.x), y: sy(point.y) } : undefined
-  );
-  const observedDirection = directionSegment(
-    screenPoint(anchors.at(-2)),
-    screenPoint(latest),
-    { startInset: 10, endInset: 14, length: 18 },
-  );
+  const trail = patternMap.path.slice(-30);
+  const anchors = observedAnchors(trail);
+  const latest = trail.at(-1);
+  const selected = horizons.find((item) => item.key === selectedHorizon);
+  const selectedCard: OutlookHorizonCard | undefined = selected?.kind === "conditional_outlook" ? selected : undefined;
+  const probabilities = selectedCard?.probabilities || [];
+  const sortedRegions = [...(selectedCard?.terminal_regions || [])].sort((left, right) => right.mass - left.mass);
+  const directionVector = selectedCard?.vector_status === "VERIFIED"
+    ? selectedCard.direction_vector
+    : undefined;
+  const xScale = (WIDTH - PAD_X * 2) / (DOMAIN_MAX - DOMAIN_MIN);
+  const yScale = (HEIGHT - PAD_Y * 2) / (DOMAIN_MAX - DOMAIN_MIN);
+  const sx = (value: number) => PAD_X + (clipValue(value) - DOMAIN_MIN) * xScale;
+  const sy = (value: number) => HEIGHT - PAD_Y - (clipValue(value) - DOMAIN_MIN) * yScale;
+  const vectorTerminal = latest && directionVector
+    ? { x: latest.x + directionVector.median_dx, y: latest.y + directionVector.median_dy }
+    : undefined;
   const forecastDirection = directionSegment(
-    screenPoint(latest),
-    screenPoint(terminal),
-    { startInset: 13, endInset: 11, length: 12 },
+    latest ? { x: sx(latest.x), y: sy(latest.y) } : undefined,
+    vectorTerminal ? { x: sx(vectorTerminal.x), y: sy(vectorTerminal.y) } : undefined,
+    { startInset: 13, endInset: 8, length: 52 },
   );
+  const coordinateStatus = selectedCard?.coordinate_status || "UNAVAILABLE";
+  const probabilityStatus = selectedCard?.probability_status || "UNAVAILABLE";
 
   return (
     <section className="fm-workbench__pattern-map" aria-labelledby="fm-pattern-map-title">
       <div className="fm-workbench__section-heading fm-pattern-map__heading">
-        <div><span>Observed + conditional outlook</span><h3 id="fm-pattern-map-title">최근 시장 위치와 조건부 다음 경로</h3></div>
+        <div><span>Observed + probabilistic outlook</span><h3 id="fm-pattern-map-title">최근 시장 위치와 조건부 다음 경로</h3></div>
         <div className="fm-pattern-map__controls" aria-label="전망 기간 선택">
           <button type="button" data-horizon="observed" aria-pressed={selectedHorizon === "observed"} onClick={() => setSelectedHorizon("observed")}>관측만</button>
           <button type="button" data-horizon="5D" aria-pressed={selectedHorizon === "5D"} onClick={() => setSelectedHorizon("5D")}>다음 5D</button>
@@ -124,11 +107,11 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
 
       <div className="fm-pattern-map__body">
         <div className="fm-pattern-map__canvas">
-          <svg role="img" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} aria-label="세 관측 시점과 선택한 기간의 과거 유사 흐름 기반 예상 이동">
+          <svg role="img" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} aria-label="최근 30개 완료 세션의 실제 이동과 검증된 확률적 도착 범위">
             <defs>
-              <marker id="fm-observed-direction-arrow" markerUnits="userSpaceOnUse" viewBox="0 0 9 9" refX="8" refY="4.5" markerWidth="9" markerHeight="9" orient="auto">
-                <path d="M 0 0 L 9 4.5 L 0 9 z" />
-              </marker>
+              <clipPath id="fm-pattern-domain-clip">
+                <rect x={PAD_X} y={PAD_Y} width={WIDTH - PAD_X * 2} height={HEIGHT - PAD_Y * 2} />
+              </clipPath>
               <marker id="fm-forecast-direction-arrow" markerUnits="userSpaceOnUse" viewBox="0 0 9 9" refX="8" refY="4.5" markerWidth="9" markerHeight="9" orient="auto">
                 <path d="M 0 0 L 9 4.5 L 0 9 z" />
               </marker>
@@ -144,68 +127,74 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
             <text className="fm-pattern-map__quadrant-label" x={PAD_X + 18} y={HEIGHT - PAD_Y - 18}>방어 · 금리·달러·물가 압력 완화</text>
             <text className="fm-pattern-map__quadrant-label" x={WIDTH - PAD_X - 18} y={HEIGHT - PAD_Y - 18} textAnchor="end">위험선호 · 금리·달러·물가 압력 완화</text>
 
-            {showForecast && uncertaintyStep ? (
-              <rect
-                className="fm-pattern-map__uncertainty"
-                data-forecast-step={uncertaintyStep.step}
-                x={sx(uncertaintyStep.lower_x)}
-                y={sy(uncertaintyStep.upper_y)}
-                width={Math.max(2, sx(uncertaintyStep.upper_x) - sx(uncertaintyStep.lower_x))}
-                height={Math.max(2, sy(uncertaintyStep.lower_y) - sy(uncertaintyStep.upper_y))}
-                rx="10"
+            {selectedHorizon !== "observed" ? sortedRegions.map((region) => (
+              <ellipse
+                className={`fm-pattern-map__terminal-region mass-${Math.round(region.mass * 100)}`}
+                data-region-mass={region.mass}
+                key={`region-${selectedHorizon}-${region.mass}`}
+                cx={sx(region.center_x)}
+                cy={sy(region.center_y)}
+                clipPath="url(#fm-pattern-domain-clip)"
+                rx={Math.max(1, region.radius_major * xScale)}
+                ry={Math.max(1, region.radius_minor * yScale)}
+                transform={`rotate(${region.rotation_deg} ${sx(region.center_x)} ${sy(region.center_y)})`}
               >
-                <title>{selectedDays}일 후 · {conditionalPath?.band_label}</title>
-              </rect>
-            ) : null}
-            {showForecast && latest && terminal ? (
-              <line
-                className="fm-pattern-map__conditional-path"
-                data-forecast-horizon={selectedHorizon}
-                x1={sx(latest.x)}
-                y1={sy(latest.y)}
-                x2={sx(terminal.x)}
-                y2={sy(terminal.y)}
-              />
-            ) : null}
-            {observedPoints ? <polyline className="fm-pattern-map__observed" points={observedPoints} /> : null}
-            {observedDirection ? (
-              <line
-                className="fm-pattern-map__direction is-observed"
-                data-direction="observed"
-                {...observedDirection}
-                markerEnd="url(#fm-observed-direction-arrow)"
-              />
-            ) : null}
-            {showForecast && forecastDirection ? (
+                <title>{selectedHorizon} 검증된 도착 분포 · joint {region.mass === 0.8 ? "80%" : "50%"}</title>
+              </ellipse>
+            )) : null}
+
+            {trail.slice(1).map((point, index) => {
+              const prior = trail[index];
+              const opacity = 0.18 + 0.72 * ((index + 1) / Math.max(1, trail.length - 1));
+              return (
+                <line
+                  className="fm-pattern-map__observed-segment"
+                  key={`trail-${prior.date}-${point.date}`}
+                  x1={sx(prior.x)}
+                  y1={sy(prior.y)}
+                  x2={sx(point.x)}
+                  y2={sy(point.y)}
+                  style={{ opacity }}
+                >
+                  <title>{prior.date} → {point.date}</title>
+                </line>
+              );
+            })}
+
+            {forecastDirection ? (
               <line
                 className="fm-pattern-map__direction is-forecast"
                 data-direction="forecast"
                 {...forecastDirection}
                 markerEnd="url(#fm-forecast-direction-arrow)"
-              />
+              >
+                <title>{selectedHorizon} 검증 방향 vector</title>
+              </line>
             ) : null}
+
+            {trail.map((point, index) => {
+              const clipped = isClipped(point);
+              const opacity = 0.24 + 0.66 * ((index + 1) / Math.max(1, trail.length));
+              return (
+                <g className={`fm-pattern-map__trail-point ${clipped ? "is-clipped" : ""}`} key={`point-${point.date}`} style={{ opacity }}>
+                  {clipped ? (
+                    <polygon points={`${sx(point.x)},${sy(point.y) - 5} ${sx(point.x) - 5},${sy(point.y) + 5} ${sx(point.x) + 5},${sy(point.y) + 5}`} />
+                  ) : (
+                    <circle cx={sx(point.x)} cy={sy(point.y)} r={index === trail.length - 1 ? 5 : 2.5} />
+                  )}
+                  <title>{point.date} · raw ({point.x.toFixed(3)}, {point.y.toFixed(3)}) · {point.regime_label}</title>
+                </g>
+              );
+            })}
+
             {anchors.map((point) => (
-              <g className={`fm-pattern-map__anchor ${point.anchorLabel === "현재" ? "is-current" : ""}`} key={`${point.date}-${point.anchorLabel}`}>
-                <circle cx={sx(point.x)} cy={sy(point.y)} r={point.anchorLabel === "현재" ? 10 : 7.5} />
-                {point.anchorLabel === "현재" ? (
-                  <>
-                    <line className="fm-pattern-map__leader" x1={sx(point.x) - 7} y1={sy(point.y) + 7} x2={sx(point.x) - 35} y2={sy(point.y) + 30} />
-                    <text x={sx(point.x) - 40} y={sy(point.y) + 36} textAnchor="end">현재</text>
-                  </>
-                ) : (
-                  <text x={sx(point.x)} y={sy(point.y) - 14} textAnchor="middle">{point.anchorLabel}</text>
-                )}
-                <title>{point.anchorLabel} · {point.date} · {point.regime_label} · {point.transition_label}</title>
+              <g className={`fm-pattern-map__anchor ${point.anchorLabel === "현재" ? "is-current" : ""} ${isClipped(point) ? "is-clipped" : ""}`} key={`anchor-${point.date}-${point.anchorLabel}`}>
+                <circle cx={sx(point.x)} cy={sy(point.y)} r={point.anchorLabel === "현재" ? 9 : 6.5} />
+                <line className="fm-pattern-map__leader" x1={sx(point.x)} y1={sy(point.y) - 7} x2={sx(point.x)} y2={sy(point.y) - 19} />
+                <text x={sx(point.x)} y={sy(point.y) - 23} textAnchor="middle">{point.anchorLabel} · {point.date}</text>
+                <title>{point.anchorLabel} · {point.date} · raw ({point.x.toFixed(3)}, {point.y.toFixed(3)}) · {point.regime_label}</title>
               </g>
             ))}
-            {showForecast && terminal ? (
-              <g className="fm-pattern-map__terminal">
-                <circle cx={sx(terminal.x)} cy={sy(terminal.y)} r="8" />
-                <line className="fm-pattern-map__leader" x1={sx(terminal.x) + 6} y1={sy(terminal.y) - 6} x2={sx(terminal.x) + 40} y2={sy(terminal.y) - 36} />
-                <text className="fm-pattern-map__terminal-label" x={sx(terminal.x) + 46} y={sy(terminal.y) - 40} textAnchor="start">{expectedPositionLabel}</text>
-                <title>다음 {selectedHorizon} · 독립 표본 {conditionalPath?.episode_count}개 · {pathStatus}</title>
-              </g>
-            ) : null}
           </svg>
           <span className="fm-pattern-map__x-label">{patternMap.x_label} 강화 →</span>
           <span className="fm-pattern-map__y-label">{patternMap.y_label} 강화 →</span>
@@ -214,27 +203,31 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
         <aside className="fm-pattern-map__reading" aria-live="polite">
           {selectedHorizon === "observed" ? (
             <>
-              <span>현재 관측</span>
-              <strong>20D 전 → 5D 전 → 현재의 실제 이동</strong>
+              <span>완료 세션 관측</span>
+              <strong>최근 {trail.length}개 final session의 실제 일별 이동</strong>
               <dl>
-                {anchors.map((point) => <div key={`reading-${point.date}`}><dt>{point.anchorLabel}</dt><dd>{point.regime_label}</dd></div>)}
+                {anchors.map((point) => <div key={`reading-${point.date}`}><dt>{point.anchorLabel} · {point.date}</dt><dd>{point.regime_label}</dd></div>)}
               </dl>
-              <p>실선과 핵심 시점만 표시하며 미래 확률은 포함하지 않습니다.</p>
+              <p>20D·5D·현재는 보조 표식이며, 실선은 사이의 모든 일별 관측을 포함합니다.</p>
             </>
           ) : (
             <>
               <div className="fm-pattern-map__reading-head">
                 <span>다음 {selectedHorizon} · 조건부 전망</span>
-                <b className={`estimate-${pathStatus.toLowerCase()}`}>{pathStatus}</b>
+                <b className={`estimate-${probabilityStatus.toLowerCase()}`}>{probabilityStatus}</b>
               </div>
               <strong>{selectedCard?.edge_label || "방향 우위 미확인"}</strong>
               {probabilities.length > 0 ? (
                 <dl>
                   {probabilities.map((row) => <div key={`probability-${row.key}`}><dt>{row.label}</dt><dd>{Math.round(row.value * 100)}%</dd></div>)}
                 </dl>
-              ) : <div className="fm-pattern-map__unavailable">확률을 표시할 근거가 부족합니다.</div>}
-              {!showForecast ? <div className="fm-pattern-map__unavailable">조건부 경로를 표시할 독립 표본 또는 검증 근거가 부족합니다.</div> : null}
-              <p>{conditionalPath?.episode_count ? `독립 표본 ${conditionalPath.episode_count}개 · ` : ""}점선은 과거 유사 흐름의 시작점에서 말일 중앙 위치까지의 예상 순이동이며, 중간 일별 경로가 아닙니다. 실제 미래 경로를 보장하지 않습니다.</p>
+              ) : <div className="fm-pattern-map__unavailable">{probabilityStatus === "NO_EDGE" ? "baseline 대비 예측 우위 없음" : "검증 중 · 확정 우위 없음"}</div>}
+              {sortedRegions.length > 0 ? (
+                <p>ellipse는 검증된 확률적 도착 범위(joint 80% / joint 50%)이며 실제 이동 경로가 아닙니다.</p>
+              ) : (
+                <div className="fm-pattern-map__unavailable">좌표 상태 {coordinateStatus} · 검증된 도착 분포를 표시하지 않습니다.</div>
+              )}
+              <p>후보 {selectedCard?.selected_candidate || "선택 없음"} · macro {selectedCard?.macro_adjustment?.used ? "조건 반영" : "미반영"} · 독립 표본 {selectedCard?.episode_count || 0}개</p>
               {selectedCard?.status_reason ? <small>{selectedCard.status_reason}</small> : null}
             </>
           )}
@@ -242,11 +235,12 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
       </div>
 
       <div className="fm-pattern-map__legend">
-        <span className="observed">관측 이동</span>
-        <span className="forecast">{forecastLegend}</span>
-        <span className="uncertainty">{rangeLegend}</span>
+        <span className="observed">실제 일별 관측 trail</span>
+        <span className="region-80">검증된 joint 80%</span>
+        <span className="region-50">검증된 joint 50%</span>
+        <span className="forecast">검증된 방향 vector</span>
         <span className="current">현재 위치</span>
-        <small>체제별 확률은 우측에 별도 표시</small>
+        <small>고정 축 -2.5 ~ +2.5 · 경계 삼각형은 범위 밖 raw 값</small>
       </div>
     </section>
   );

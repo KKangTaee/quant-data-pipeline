@@ -43,3 +43,5 @@
 - Snapshot compatibility is now based on the completed-input fingerprint, not the raw maximum provider marker. A pending provider row can move the raw marker without invalidating or replacing the latest-good final snapshot.
 - Immutable history and current are written in one transaction. `materialized_at` does not participate in identity, so retries remain idempotent.
 - The Python bridge is the publication enforcement boundary: provisional numbers remain available only under `disclosure_probabilities`, while `NO_EDGE` carries no conditional numeric distribution or geometry to the React first surface.
+- Fixed semantic axes make adjacent snapshots visually comparable. Outliers no longer rescale the entire map; their boundary marker and raw tooltip preserve the evidence.
+- The observed trail and terminal distribution are different primitives: the former is an actual dated sequence, while the latter is a joint future-state region with no implied day-by-day route.

@@ -141,6 +141,8 @@ button { font: inherit; }
   padding: 16px;
 }
 .fm-workbench__horizon-card.estimate-verified { border-top-color: var(--positive); }
+.fm-workbench__horizon-card.estimate-provisional { border-top-color: #d09a3d; }
+.fm-workbench__horizon-card.estimate-no_edge { border-top-color: #7b8995; }
 .fm-workbench__horizon-card.estimate-unavailable { border-top-color: #a7b4bf; }
 .fm-workbench__horizon-card.observation-observed { border-top-color: #397da8; }
 .fm-workbench__horizon-card.observation-unavailable { border-top-color: #a7b4bf; }
@@ -197,8 +199,7 @@ button { font: inherit; }
 .fm-pattern-map__quadrant.quadrant-calm { fill: rgba(111, 167, 202, 0.06); }
 .fm-pattern-map__quadrant.quadrant-risk { fill: rgba(57, 164, 127, 0.07); }
 .fm-pattern-map__quadrant-label { fill: #718397; font-size: 12px; font-weight: 700; }
-.fm-pattern-map__observed { fill: none; stroke: #264f68; stroke-linecap: round; stroke-linejoin: round; stroke-width: 3.4; }
-#fm-observed-direction-arrow path { fill: #264f68; }
+.fm-pattern-map__observed-segment { stroke: #264f68; stroke-linecap: round; stroke-width: 2.6; }
 #fm-forecast-direction-arrow path { fill: #397da8; }
 .fm-pattern-map__direction { fill: none; stroke-width: 2.5; }
 .fm-pattern-map__direction.is-observed { stroke: #264f68; }
@@ -206,9 +207,13 @@ button { font: inherit; }
 .fm-pattern-map__anchor circle { fill: #fff; stroke: #264f68; stroke-width: 2.6; }
 .fm-pattern-map__anchor.is-current circle { fill: #264f68; stroke: #fff; stroke-width: 3; }
 .fm-pattern-map__anchor text { fill: #40566a; font-size: 12px; font-weight: 800; paint-order: stroke; stroke: #fff; stroke-width: 4px; }
-.fm-pattern-map__uncertainty { fill: rgba(111, 167, 202, 0.1); stroke: rgba(57, 125, 168, 0.62); stroke-dasharray: 5 5; stroke-width: 1.6; }
-.fm-pattern-map__conditional-path { fill: none; stroke: #397da8; stroke-dasharray: 7 7; stroke-linecap: round; stroke-linejoin: round; stroke-width: 3.2; }
-.fm-pattern-map__terminal circle { fill: #e5f0f6; stroke: #397da8; stroke-width: 2.6; }
+.fm-pattern-map__trail-point circle { fill: #264f68; stroke: #fff; stroke-width: 1; }
+.fm-pattern-map__trail-point polygon { fill: #a75b4e; stroke: #fff; stroke-width: 1; }
+.fm-pattern-map__trail-point.is-clipped,
+.fm-pattern-map__anchor.is-clipped { filter: drop-shadow(0 0 2px rgba(167, 91, 78, 0.45)); }
+.fm-pattern-map__terminal-region { stroke-width: 1.6; }
+.fm-pattern-map__terminal-region.mass-80 { fill: rgba(111, 167, 202, 0.13); stroke: rgba(57, 125, 168, 0.55); }
+.fm-pattern-map__terminal-region.mass-50 { fill: rgba(57, 125, 168, 0.2); stroke: rgba(38, 79, 104, 0.72); }
 .fm-pattern-map__leader { stroke: #718397; stroke-width: 1.2; }
 .fm-pattern-map__terminal-label { fill: #397da8; font-size: 12px; font-weight: 800; paint-order: stroke; stroke: #fff; stroke-width: 4px; }
 .fm-pattern-map__x-label,
@@ -222,6 +227,7 @@ button { font: inherit; }
 .fm-pattern-map__reading-head { align-items: center; display: flex; gap: 8px; justify-content: space-between; }
 .fm-pattern-map__reading-head b { background: #fff7e8; border-radius: 999px; color: #9b681a; font-size: 0.6rem; padding: 5px 7px; }
 .fm-pattern-map__reading-head b.estimate-verified { background: #e9f7f1; color: #24795d; }
+.fm-pattern-map__reading-head b.estimate-no_edge { background: #eef2f5; color: #52687a; }
 .fm-pattern-map__reading-head b.estimate-unavailable { background: #eef2f5; color: #667888; }
 .fm-pattern-map__reading dl { margin: 0; }
 .fm-pattern-map__reading dl div { align-items: baseline; border-bottom: 1px solid #edf1f4; display: flex; gap: 10px; justify-content: space-between; padding: 9px 0; }
@@ -236,8 +242,15 @@ button { font: inherit; }
 .fm-pattern-map__legend span::before { border-radius: 999px; content: ""; display: inline-block; height: 7px; margin-right: 5px; width: 18px; }
 .fm-pattern-map__legend .observed::before { background: #264f68; height: 3px; }
 .fm-pattern-map__legend .forecast::before { background: transparent; border-top: 2px dashed #6fa7ca; border-radius: 0; height: 0; }
-.fm-pattern-map__legend .uncertainty::before { background: rgba(111, 167, 202, 0.2); border: 1px solid rgba(57, 125, 168, 0.3); }
+.fm-pattern-map__legend .region-80::before { background: rgba(111, 167, 202, 0.16); border: 1px solid rgba(57, 125, 168, 0.5); }
+.fm-pattern-map__legend .region-50::before { background: rgba(57, 125, 168, 0.24); border: 1px solid rgba(38, 79, 104, 0.65); }
 .fm-pattern-map__legend .current::before { background: #264f68; height: 8px; width: 8px; }
+
+.fm-workbench__provisional-disclosure { background: #fff9ed; border: 1px solid #f0dfbb; border-radius: 10px; display: grid; gap: 8px; margin-top: 12px; padding: 12px; }
+.fm-workbench__provisional-disclosure > strong { color: #815f22; font-size: 0.75rem; }
+.fm-workbench__provisional-disclosure > div { display: grid; gap: 3px; }
+.fm-workbench__provisional-disclosure span { color: #52687a; font-size: 0.7rem; font-weight: 800; }
+.fm-workbench__provisional-disclosure small { color: var(--muted); font-size: 0.66rem; line-height: 1.45; }
 
 .fm-workbench__evidence-groups { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .fm-workbench__evidence-groups article { background: var(--soft); border: 1px solid #e4eaef; border-radius: 12px; padding: 13px; }
