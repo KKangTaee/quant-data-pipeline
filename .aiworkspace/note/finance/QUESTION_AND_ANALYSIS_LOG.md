@@ -10261,3 +10261,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 두 graph의 시간 비교 기준은 유지하되 AAII의 느린 주간 발표 때문에 더 최신인 CNN 관측을 숨기지 않아야 한다.
 - Analysis result: aligned start=`max(starts)`, shared axis end=`max(ends)`로 변경한다. 두 source가 실제로 겹치는지는 `max(starts) <= min(ends)`로 확인하며, 각 선은 자기 마지막 관측 이후 값을 채우거나 보간하지 않는다.
 - Follow-up: payload를 `history_coverage.aligned`로 명확히 바꾸고 `6M / 1Y / 전체`, `정렬 구간` 문구를 적용했다. 전체 roadmap은 `2/4차`로 유지하고 3차는 시작하지 않았다.
+
+### 2026-07-20 - Futures Macro는 momentum baseline과 macro soft condition을 같은 future state로 검증한다
+
+- User request: 7/19·7/20 pattern map 차이를 설명하고, 과거·현재로 향후 5D/20D 이동 패턴을 확률적으로 추정하되 momentum만으로 충분한지 검토해 진행하도록 요청함.
+- Interpreted goal: 항상 미래 선을 만드는 것이 아니라 completed current state, 실제 일별 trail, same-state future distribution을 보고 macro가 incremental edge를 만들 때만 조정해야 함.
+- Analysis result: anchor 차이는 rolling row shift이며 historical PIT rewrite는 없었다. 기존 forecast terminal은 `S(t+h)`가 아니라 현재 5D state에 forward cumulative-return delta를 더한 좌표다. V2는 unconditional/persistence/momentum/hybrid를 같은 rolling-origin에서 비교한다.
+- Follow-up: 전체 `3차` written design을 active task에 작성했다. 현재 `0/3차`, 사용자 spec 검토 전이며 baseline 미개선 horizon은 `NO_EDGE`, macro PIT 미달은 momentum-only 평가로 남긴다.

@@ -6889,3 +6889,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 사용자 검토에서 교집합 종료가 CNN 최신 `2026-07-20 / 37.1`을 숨기고 `2026-07-16 / 41.2`에서 그래프를 자르는 문제를 확인했다.
 - 두 source가 겹치는지 확인한 뒤 시작은 늦은 start로 정렬하고 공통 x축 종료는 최신 source end까지 확장했다. CNN은 7월 20일까지, AAII는 실제 최신 7월 16일에서 끝나며 보간하지 않는다.
 - focused 4 contracts, sentiment PIT 21 tests, py_compile, React production build와 diff check를 통과했다. 전체 roadmap은 계속 `2/4차`이고 3차는 시작하지 않았다.
+
+## 2026-07-20 - Futures Macro same-state 확률 전망 V2 설계
+
+- 7/17·7/20 fixed-cutoff를 재현해 anchor 이동은 rolling row shift이며 동일 과거 날짜 PIT feature 차이는 0임을 확인했다.
+- 관측 5D state와 `현재 + forward cumulative return` 전망점의 의미가 다른 것을 V2 핵심 수정 대상으로 확정했다.
+- momentum-only와 PIT macro/event soft conditioning을 동일 rolling-origin에서 비교하고 baseline 미개선은 `NO_EDGE`로 두는 3차 written design을 작성했다.
+- 현재는 `0/3차`, written spec 사용자 검토 전이며 구현 코드는 변경하지 않았다. 상세는 `tasks/active/overview-futures-macro-probabilistic-state-outlook-v2-20260720/`를 본다.
