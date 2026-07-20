@@ -58,6 +58,8 @@ V1은 화면에서 실제 반복이 확인된 상관 집중과 현재 낙폭만 
 - member count
 - member `DiagnosisFact` rows
 
+문자열인 `meaning`이나 `measured_fact`를 다시 파싱하지 않도록 `DiagnosisFact`에는 additive `subject_ids`와 `primary_metric`을 둔다. V1에서 correlation row는 두 item id와 correlation 값을, drawdown row는 한 item id와 drawdown 값을 채운다. 기존 row 생성자와 저장 payload는 default empty/`None`으로 호환된다. display group은 이 구조화 값을 사용해 최대 correlation, 가장 큰 drawdown과 member subject를 만든다.
+
 대표 row는 현재 diagnosis priority와 같은 순서인 severity, affected weight, persistence, confidence로 결정한다. 그룹 순서도 대표 row priority를 사용한다. `top_three`는 raw row 세 개가 아니라 서로 다른 display group의 대표 세 개를 사용한다.
 
 원본 `weaknesses`, `all_rows`, history snapshot은 보존한다. workspace에 additive `diagnosis.display_groups`를 제공한다. confidence가 낮은 weakness는 기존 계약처럼 `data_gap` section group으로 분류한다. legacy payload에는 React가 기존 strengths/weaknesses/data_gaps row를 해당 section의 one-member group으로 변환하는 compatibility fallback을 둔다.
