@@ -351,6 +351,65 @@ summary:focus-visible {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.sentiment-workbench__history-toolbar {
+  align-items: flex-start;
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+}
+
+.sentiment-workbench__history-toolbar > div:first-child > small {
+  color: #8794a5;
+  font-size: 0.7rem;
+  font-weight: 710;
+}
+
+.sentiment-workbench__history-tools {
+  align-items: flex-end;
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.sentiment-workbench__history-periods {
+  background: #e9eef2;
+  border-radius: 9px;
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+}
+
+.sentiment-workbench__history-periods button {
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: #66768a;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 6px 10px;
+}
+
+.sentiment-workbench__history-periods button[aria-pressed="true"] {
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(23 32 51 / 12%);
+  color: #172033;
+}
+
+.sentiment-workbench__history-coverage {
+  color: #718096;
+  display: grid;
+  font-size: 0.64rem;
+  font-weight: 680;
+  gap: 2px;
+  text-align: right;
+}
+
+.sentiment-workbench__history-coverage small {
+  color: #8a97a8;
+  font-size: inherit;
+}
+
 .sentiment-workbench__history-grid > div {
   min-width: 0;
 }
@@ -1002,6 +1061,18 @@ summary:focus-visible {
   .sentiment-workbench__chart-legend small {
     margin-left: 0;
     width: 100%;
+  }
+
+  .sentiment-workbench__history-toolbar {
+    display: grid;
+  }
+
+  .sentiment-workbench__history-tools {
+    justify-items: start;
+  }
+
+  .sentiment-workbench__history-coverage {
+    text-align: left;
   }
 }
 

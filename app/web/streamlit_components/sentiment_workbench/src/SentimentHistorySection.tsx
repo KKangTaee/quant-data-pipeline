@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import { displayValue } from "./SentimentWorkbench";
-import type { ChartPanel, ChartPoint } from "./SentimentWorkbench";
+import type {
+  ChartPanel,
+  ChartPoint,
+  HistoryCoverage,
+  HistoryPeriod,
+  SourceHistoryCoverage,
+} from "./SentimentWorkbench";
 
 type AaiiHistoryTab = "responses" | "spread";
 type ChartMode = "cnn" | "aaii_responses" | "aaii_spread";
@@ -100,6 +106,43 @@ function chartTooltipAlignment(x: number) {
   if (plotRatio <= 0.2) return "start";
   if (plotRatio >= 0.8) return "end";
   return "center";
+}
+
+function periodStart(period: HistoryPeriod, anchor: number) {
+  if (period === "ALL") return Number.NEGATIVE_INFINITY;
+  const start = new Date(anchor);
+  start.setUTCHours(0, 0, 0, 0);
+  start.setUTCMonth(start.getUTCMonth() - (period === "6M" ? 6 : 12));
+  return start.getTime();
+}
+
+export function filterChartPanel(
+  panel: ChartPanel,
+  period: HistoryPeriod,
+  anchor: number,
+): ChartPanel {
+  const cutoff = periodStart(period, anchor);
+  return {
+    ...panel,
+    series: panel.series.filter((point) => {
+      const timestamp = Date.parse(point.date);
+      return Number.isFinite(timestamp) && timestamp >= cutoff && timestamp <= anchor;
+    }),
+  };
+}
+
+function coverageDate(value: string) {
+  return value ? value.slice(0, 10) : "-";
+}
+
+function coverageLine(label: string, source: SourceHistoryCoverage) {
+  const range = source.canonical_start && source.canonical_end
+    ? `${source.canonical_start}~${source.canonical_end}`
+    : "이력 없음";
+  const pit = source.pit_start_at
+    ? `수집 당시 기록 ${coverageDate(source.pit_start_at)}부터`
+    : "수집 당시 기록 축적 시작 전";
+  return `${label} · ${range} · ${source.observation_count}개 · ${pit}`;
 }
 
 function SentimentLineChart({ panel, mode }: { panel: ChartPanel; mode: ChartMode }) {
@@ -219,11 +262,27 @@ type Props = {
     aaii_responses: ChartPanel;
     aaii_spread: ChartPanel;
   };
+  coverage: HistoryCoverage;
 };
 
-function SentimentHistorySection({ charts }: Props) {
+function SentimentHistorySection({ charts, coverage }: Props) {
   const [aaiiTab, setAaiiTab] = useState<AaiiHistoryTab>("responses");
+  const [period, setPeriod] = useState<HistoryPeriod>(coverage.default_period);
   const tabs: AaiiHistoryTab[] = ["responses", "spread"];
+  const periods: HistoryPeriod[] = ["6M", "1Y", "ALL"];
+  const observedTimestamps = [
+    ...charts.cnn.series,
+    ...charts.aaii_responses.series,
+    ...charts.aaii_spread.series,
+  ].map((point) => Date.parse(point.date)).filter(Number.isFinite);
+  const anchorTimestamp = observedTimestamps.length
+    ? Math.max(...observedTimestamps)
+    : Date.now();
+  const visibleCharts = {
+    cnn: filterChartPanel(charts.cnn, period, anchorTimestamp),
+    aaii_responses: filterChartPanel(charts.aaii_responses, period, anchorTimestamp),
+    aaii_spread: filterChartPanel(charts.aaii_spread, period, anchorTimestamp),
+  };
   const handleAaiiTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
     event.preventDefault();
@@ -231,15 +290,42 @@ function SentimentHistorySection({ charts }: Props) {
     const nextIndex = (tabs.indexOf(aaiiTab) + offset + tabs.length) % tabs.length;
     setAaiiTab(tabs[nextIndex]);
   };
-  const activeAaiiChart = aaiiTab === "responses" ? charts.aaii_responses : charts.aaii_spread;
+  const activeAaiiChart = aaiiTab === "responses"
+    ? visibleCharts.aaii_responses
+    : visibleCharts.aaii_spread;
   const activeAaiiMode = aaiiTab === "responses" ? "aaii_responses" : "aaii_spread";
 
   return (
     <section className="sentiment-workbench__chart-section" aria-labelledby="sentiment-history-title">
-      <div className="sentiment-workbench__section-heading"><div><span>History</span><h3 id="sentiment-history-title">두 소스의 변화 경로</h3></div><small>곡선 보정 없이 관측점을 직선으로 연결</small></div>
+      <div className="sentiment-workbench__section-heading sentiment-workbench__history-toolbar">
+        <div>
+          <span>History</span>
+          <h3 id="sentiment-history-title">두 소스의 변화 경로</h3>
+          <small>곡선 보정 없이 관측점을 직선으로 연결</small>
+        </div>
+        <div className="sentiment-workbench__history-tools">
+          <div className="sentiment-workbench__history-periods" aria-label="그래프 기간">
+            {periods.map((key) => (
+              <button
+                aria-pressed={period === key}
+                key={key}
+                onClick={() => setPeriod(key)}
+                type="button"
+              >
+                {key === "ALL" ? "전체" : key}
+              </button>
+            ))}
+          </div>
+          <div className="sentiment-workbench__history-coverage">
+            <span>{coverageLine("CNN", coverage.cnn)}</span>
+            <span>{coverageLine("AAII", coverage.aaii)}</span>
+            <small>{coverage.cnn_components_note}</small>
+          </div>
+        </div>
+      </div>
       <div className="sentiment-workbench__history-grid">
         <div aria-label="CNN 시장 행동 그래프">
-          <SentimentLineChart mode="cnn" panel={charts.cnn} />
+          <SentimentLineChart mode="cnn" panel={visibleCharts.cnn} />
         </div>
         <div className="sentiment-workbench__aaii-history">
           <div className="sentiment-workbench__chart-tabs" role="tablist" aria-label="AAII 그래프 보기">

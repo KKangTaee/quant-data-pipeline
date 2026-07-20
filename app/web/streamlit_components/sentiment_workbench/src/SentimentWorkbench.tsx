@@ -113,6 +113,25 @@ export type ChartPanel = {
   series: ChartPoint[];
 };
 
+export type HistoryPeriod = "6M" | "1Y" | "ALL";
+
+export type SourceHistoryCoverage = {
+  canonical_start: string;
+  canonical_end: string;
+  observation_count: number;
+  pit_start_at: string;
+  latest_capture_at: string;
+  capture_count: number;
+};
+
+export type HistoryCoverage = {
+  default_period: HistoryPeriod;
+  periods: HistoryPeriod[];
+  cnn: SourceHistoryCoverage;
+  aaii: SourceHistoryCoverage;
+  cnn_components_note: string;
+};
+
 export type WatchCondition = {
   key: "confirm" | "reverse" | "persist";
   label: string;
@@ -187,6 +206,7 @@ export type SentimentWorkbenchPayload = {
     aaii_responses: ChartPanel;
     aaii_spread: ChartPanel;
   };
+  history_coverage: HistoryCoverage;
   outlook: {
     status: "AVAILABLE" | "UNAVAILABLE";
     summary: string;
@@ -234,6 +254,28 @@ const fallbackOutlook: SentimentWorkbenchPayload["outlook"] = {
       status_reason: "검증된 전망 payload가 없습니다.",
     },
   ],
+};
+
+const fallbackHistoryCoverage: HistoryCoverage = {
+  default_period: "6M",
+  periods: ["6M", "1Y", "ALL"],
+  cnn: {
+    canonical_start: "",
+    canonical_end: "",
+    observation_count: 0,
+    pit_start_at: "",
+    latest_capture_at: "",
+    capture_count: 0,
+  },
+  aaii: {
+    canonical_start: "",
+    canonical_end: "",
+    observation_count: 0,
+    pit_start_at: "",
+    latest_capture_at: "",
+    capture_count: 0,
+  },
+  cnn_components_note: "수집 시작 이후 현재값을 축적 중",
 };
 
 type Props = ComponentProps & {
@@ -293,7 +335,10 @@ function SentimentWorkbench({ args }: Props) {
     <section className="sentiment-workbench" data-action-boundary={payload.action_boundary} data-schema-version={payload.schema_version}>
       <SentimentHero payload={payload} pendingActionLabel={pendingActionLabel} onAction={emitAction} />
       <CurrentEvidenceSection aaiiComparison={payload.evidence.aaii_comparison} axes={payload.axes} />
-      <SentimentHistorySection charts={payload.charts} />
+      <SentimentHistorySection
+        charts={payload.charts}
+        coverage={payload.history_coverage || fallbackHistoryCoverage}
+      />
       <SentimentOutlookSection outlook={payload.outlook || fallbackOutlook} />
       <WatchConditionsSection watchConditions={payload.watch_conditions} />
       <SentimentEvidenceDisclosure onToggle={syncFrameHeightSoon} payload={payload} />

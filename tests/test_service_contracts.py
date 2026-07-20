@@ -8865,6 +8865,25 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".sentiment-workbench__cnn-evidence-row", react_style)
         self.assertIn(".sentiment-workbench__evidence-change", react_style)
 
+    def test_sentiment_history_uses_one_shared_period_for_both_panels(self) -> None:
+        root = Path("app/web/streamlit_components/sentiment_workbench/src")
+        types = (root / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        history = (root / "SentimentHistorySection.tsx").read_text(encoding="utf-8")
+        style = (root / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn('export type HistoryPeriod = "6M" | "1Y" | "ALL"', types)
+        self.assertIn("history_coverage: HistoryCoverage", types)
+        self.assertIn('useState<HistoryPeriod>(coverage.default_period)', history)
+        self.assertIn('const periods: HistoryPeriod[] = ["6M", "1Y", "ALL"]', history)
+        for key in ("cnn", "aaii_responses", "aaii_spread"):
+            self.assertIn(
+                f"filterChartPanel(charts.{key}, period, anchorTimestamp)",
+                history,
+            )
+        self.assertIn('aria-pressed={period === key}', history)
+        self.assertIn("sentiment-workbench__history-periods", style)
+        self.assertIn("sentiment-workbench__history-coverage", style)
+
     def test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")
         entry_source = Path("app/web/overview/sentiment.py").read_text(encoding="utf-8")
