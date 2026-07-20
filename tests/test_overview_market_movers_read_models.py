@@ -12,6 +12,7 @@ from app.services.overview.market_movers_group_flow import (
     build_market_cap_bellwethers,
     normalize_industry,
 )
+from app.web.overview.market_movers_payloads import build_market_movers_decision_payload
 
 
 def test_canonical_sector_collapses_provider_aliases() -> None:
@@ -181,3 +182,49 @@ def test_industry_normalization_uses_stable_display_keys() -> None:
     assert normalize_industry("  software   - infrastructure ") == "Software—Infrastructure"
     assert normalize_industry("SEMICONDUCTORS") == "Semiconductors"
     assert normalize_industry(None) == "Unknown"
+
+
+def test_decision_payload_is_json_safe_and_keeps_contracts_separate() -> None:
+    import json
+
+    payload = build_market_movers_decision_payload(
+        market_snapshot={
+            "period": "daily",
+            "collection_readiness": {"state": "PARTIAL", "publish_results": True},
+            "rows": [{"Symbol": "AAPL", "Return %": 2.1}],
+        },
+        sector_snapshots={
+            "daily": {"group_flow": [], "market_cap_bellwether_rows": []}
+        },
+        industry_snapshots={
+            "daily": {"group_flow": [], "market_cap_bellwether_rows": []}
+        },
+        selected_research=None,
+    )
+
+    assert payload["schema_version"] == "market_movers_decision_payload_v1"
+    assert payload["trust"]["state"] == "PARTIAL"
+    assert payload["group_context"]["sector"]["daily"]["bellwethers"] == []
+    assert (
+        payload["group_context"]["sector"]["daily"].get("conditional_outlook")
+        is None
+    )
+    json.dumps(payload)
+
+
+def test_market_movers_helper_exposes_decision_payload_facade() -> None:
+    from app.web.overview.market_movers_helpers import (
+        build_market_movers_decision_workbench_payload,
+    )
+
+    payload = build_market_movers_decision_workbench_payload(
+        market_snapshot={
+            "collection_readiness": {"state": "COMPLETE", "publish_results": True},
+            "rows": [],
+        },
+        sector_snapshots={},
+        industry_snapshots={},
+        selected_research=None,
+    )
+
+    assert payload["schema_version"] == "market_movers_decision_payload_v1"

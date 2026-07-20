@@ -41,6 +41,7 @@ from app.services.overview.why_it_moved import (
     merge_market_mover_metadata,
 )
 from app.web.overview.session_helpers import _snapshot_value
+from app.web.overview.market_movers_payloads import build_market_movers_decision_payload
 from app.web.overview_dashboard_helpers import (
     load_overview_market_mover_sectors,
     load_overview_market_movers_snapshot,
@@ -837,6 +838,23 @@ def _market_movers_react_universe_basis_action(coverage: str, *, kind: str) -> d
     if normalized == "NASDAQ":
         return {"id": "refresh_nasdaq_directory", "label": "유니버스 기준 갱신", "kind": kind}
     return {"id": "refresh_liquidity_universe", "label": "유니버스 기준 갱신", "kind": kind}
+
+
+def build_market_movers_decision_workbench_payload(
+    *,
+    market_snapshot: dict[str, Any],
+    sector_snapshots: dict[str, dict[str, Any]],
+    industry_snapshots: dict[str, dict[str, Any]],
+    selected_research: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Expose the phase-4 decision payload without changing the current renderer."""
+
+    return build_market_movers_decision_payload(
+        market_snapshot=market_snapshot,
+        sector_snapshots=sector_snapshots,
+        industry_snapshots=industry_snapshots,
+        selected_research=selected_research,
+    )
 
 
 def build_market_movers_react_workbench_payload(
