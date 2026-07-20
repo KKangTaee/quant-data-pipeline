@@ -25,18 +25,21 @@ class FakeRepository:
         self.groups = {}
         self.items = {}
         self.commands = {}
+        self.position_events = []
         self.transaction_count = 0
         self.rollback_count = 0
         self.fail_item_insert = False
 
     @contextmanager
     def transaction(self):
-        snapshot = copy.deepcopy((self.groups, self.items, self.commands))
+        snapshot = copy.deepcopy(
+            (self.groups, self.items, self.commands, self.position_events)
+        )
         self.transaction_count += 1
         try:
             yield self
         except Exception:
-            self.groups, self.items, self.commands = snapshot
+            self.groups, self.items, self.commands, self.position_events = snapshot
             self.rollback_count += 1
             raise
 
@@ -108,6 +111,35 @@ class FakeRepository:
         self.items[monitoring_item_id] = updated
         return updated
 
+    def list_position_events(self, monitoring_item_id, *, for_update=False):
+        return [
+            row
+            for row in self.position_events
+            if row.monitoring_item_id == monitoring_item_id
+        ]
+
+    def get_position_event(self, position_event_id, *, for_update=False):
+        return next(
+            (
+                row
+                for row in self.position_events
+                if row.position_event_id == position_event_id
+            ),
+            None,
+        )
+
+    def next_position_event_order(self, monitoring_item_id):
+        orders = [
+            row.event_order
+            for row in self.position_events
+            if row.monitoring_item_id == monitoring_item_id
+        ]
+        return max(orders, default=0) + 1
+
+    def insert_position_event(self, record):
+        self.position_events.append(record)
+        return record
+
     def get_command(self, command_id):
         return self.commands.get(command_id)
 
@@ -164,6 +196,286 @@ class PortfolioMonitoringCommandTests(unittest.TestCase):
             funding_mode=schemas.FundingMode.FIXED_NOTIONAL,
             input_notional=Decimal("10000"),
         )
+
+    def _stored_direct_item(self, persistence, *, shares=30):
+        return persistence.MonitoringItemRecord(
+            monitoring_item_id="item-amd",
+            portfolio_group_id="group-core",
+            source_type="direct_security",
+            source_ref="AMD",
+            instrument_kind="stock",
+            requested_start_date=date(2026, 7, 1),
+            effective_start_date=date(2026, 7, 1),
+            funding_mode="fixed_shares",
+            input_notional=None,
+            input_shares=shares,
+            entry_close=Decimal("100"),
+            initial_capital=Decimal(shares * 100),
+        )
+
+    def _position_event(
+        self,
+        persistence,
+        *,
+        event_id,
+        root_id,
+        supersedes=None,
+        order=1,
+        action="create",
+        effect="buy",
+        quantity=5,
+        trade_date=date(2026, 7, 10),
+        price=Decimal("100"),
+    ):
+        return persistence.PositionEventRecord(
+            position_event_id=event_id,
+            root_event_id=root_id,
+            supersedes_event_id=supersedes,
+            monitoring_item_id="item-amd",
+            event_order=order,
+            event_action=action,
+            position_effect=effect,
+            trade_date=trade_date,
+            quantity=quantity,
+            execution_price=price,
+            reference_close=price,
+            execution_price_source="db_close_default",
+            fee_usd=Decimal("0"),
+            note="",
+            command_id=f"command-{event_id}",
+        )
+
+    def test_record_trade_uses_close_default_and_replays_same_command(self) -> None:
+        commands, persistence, schemas = _load_modules()
+        repository = FakeRepository()
+        item = self._stored_direct_item(persistence)
+        repository.items[item.monitoring_item_id] = item
+        value = schemas.PositionTradeInput(
+            monitoring_item_id=item.monitoring_item_id,
+            position_effect=schemas.PositionEffect.BUY,
+            trade_date=date(2026, 7, 10),
+            quantity=5,
+            execution_price=Decimal("160"),
+            fee_usd=Decimal("0"),
+            note="추가매수",
+        )
+        command = self._command(
+            schemas,
+            "trade-1",
+            schemas.CommandType.RECORD_POSITION_TRADE,
+            target_id=item.monitoring_item_id,
+            payload={"trade_date": "2026-07-10", "quantity": 5},
+        )
+
+        first = commands.execute_record_position_trade(
+            repository,
+            command,
+            value,
+            resolve_reference_close=lambda current, day: Decimal("160"),
+            validate_candidate=lambda current, records: None,
+        )
+        replay = commands.execute_record_position_trade(
+            repository,
+            command,
+            value,
+            resolve_reference_close=lambda current, day: Decimal("160"),
+            validate_candidate=lambda current, records: None,
+        )
+
+        self.assertFalse(first.replayed)
+        self.assertTrue(replay.replayed)
+        self.assertEqual(len(repository.position_events), 1)
+        self.assertEqual(
+            repository.position_events[0].execution_price_source,
+            "db_close_default",
+        )
+
+    def test_manual_price_is_preserved_with_reference_close(self) -> None:
+        commands, persistence, schemas = _load_modules()
+        repository = FakeRepository()
+        item = self._stored_direct_item(persistence)
+        repository.items[item.monitoring_item_id] = item
+
+        commands.execute_record_position_trade(
+            repository,
+            self._command(
+                schemas,
+                "trade-manual",
+                schemas.CommandType.RECORD_POSITION_TRADE,
+                target_id=item.monitoring_item_id,
+            ),
+            schemas.PositionTradeInput(
+                monitoring_item_id=item.monitoring_item_id,
+                position_effect=schemas.PositionEffect.BUY,
+                trade_date=date(2026, 7, 10),
+                quantity=5,
+                execution_price=Decimal("159.25"),
+            ),
+            resolve_reference_close=lambda current, day: Decimal("160"),
+            validate_candidate=lambda current, records: None,
+        )
+
+        row = repository.position_events[0]
+        self.assertEqual(row.execution_price, Decimal("159.25"))
+        self.assertEqual(row.reference_close, Decimal("160"))
+        self.assertEqual(row.execution_price_source, "manual_override")
+
+    def test_replace_rejects_stale_terminal_revision(self) -> None:
+        commands, persistence, schemas = _load_modules()
+        repository = FakeRepository()
+        item = self._stored_direct_item(persistence)
+        repository.items[item.monitoring_item_id] = item
+        repository.position_events = [
+            self._position_event(
+                persistence, event_id="buy-v1", root_id="buy-root"
+            ),
+            self._position_event(
+                persistence,
+                event_id="buy-v2",
+                root_id="buy-root",
+                supersedes="buy-v1",
+                action="replace",
+                quantity=6,
+            ),
+        ]
+
+        with self.assertRaisesRegex(commands.CommandConflictError, "최신 거래 기록"):
+            commands.execute_replace_position_trade(
+                repository,
+                self._command(
+                    schemas,
+                    "replace-stale",
+                    schemas.CommandType.REPLACE_POSITION_TRADE,
+                    target_id=item.monitoring_item_id,
+                ),
+                schemas.ReplacePositionTradeInput(
+                    monitoring_item_id=item.monitoring_item_id,
+                    root_event_id="buy-root",
+                    expected_event_id="buy-v1",
+                    position_effect=schemas.PositionEffect.BUY,
+                    trade_date=date(2026, 7, 10),
+                    quantity=7,
+                    execution_price=Decimal("100"),
+                ),
+                resolve_reference_close=lambda current, day: Decimal("100"),
+                validate_candidate=lambda current, records: None,
+            )
+        self.assertEqual(len(repository.position_events), 2)
+
+    def test_initial_correction_rolls_back_when_later_sell_becomes_invalid(self) -> None:
+        commands, persistence, schemas = _load_modules()
+        from app.services.portfolio_monitoring.position_events import (
+            project_position_events,
+            validate_position_sequence,
+        )
+
+        repository = FakeRepository()
+        item = self._stored_direct_item(persistence, shares=30)
+        repository.items[item.monitoring_item_id] = item
+        repository.position_events = [
+            self._position_event(
+                persistence,
+                event_id="sell-v1",
+                root_id="sell-root",
+                effect="sell",
+                quantity=25,
+            )
+        ]
+
+        def validate_candidate(current, records):
+            projection = project_position_events(current, records)
+            validate_position_sequence(current, projection, split_factors={})
+
+        with self.assertRaisesRegex(ValueError, "최소 1주"):
+            commands.execute_correct_initial_quantity(
+                repository,
+                self._command(
+                    schemas,
+                    "correct-invalid",
+                    schemas.CommandType.CORRECT_INITIAL_QUANTITY,
+                    target_id=item.monitoring_item_id,
+                ),
+                schemas.InitialQuantityCorrectionInput(
+                    item.monitoring_item_id, 20, "입력 오류 수정"
+                ),
+                validate_candidate=validate_candidate,
+            )
+        self.assertEqual(len(repository.position_events), 1)
+        self.assertNotIn("correct-invalid", repository.commands)
+
+    def test_replace_and_void_append_revisions_without_changing_root_order(self) -> None:
+        commands, persistence, schemas = _load_modules()
+        repository = FakeRepository()
+        item = self._stored_direct_item(persistence)
+        repository.items[item.monitoring_item_id] = item
+        original = self._position_event(
+            persistence,
+            event_id="buy-v1",
+            root_id="buy-root",
+            order=4,
+        )
+        repository.position_events = [original]
+
+        replaced = commands.execute_replace_position_trade(
+            repository,
+            self._command(
+                schemas,
+                "replace-buy",
+                schemas.CommandType.REPLACE_POSITION_TRADE,
+                target_id=item.monitoring_item_id,
+            ),
+            schemas.ReplacePositionTradeInput(
+                monitoring_item_id=item.monitoring_item_id,
+                root_event_id="buy-root",
+                expected_event_id="buy-v1",
+                position_effect=schemas.PositionEffect.BUY,
+                trade_date=date(2026, 7, 11),
+                quantity=7,
+                execution_price=Decimal("101"),
+            ),
+            resolve_reference_close=lambda current, day: Decimal("102"),
+            validate_candidate=lambda current, records: None,
+        )
+        replacement = repository.position_events[-1]
+        self.assertEqual(replaced.target_id, "buy-root")
+        self.assertEqual(replacement.event_order, 4)
+        self.assertEqual(replacement.supersedes_event_id, "buy-v1")
+        self.assertEqual(replacement.execution_price_source, "manual_override")
+
+        commands.execute_void_position_trade(
+            repository,
+            self._command(
+                schemas,
+                "void-buy",
+                schemas.CommandType.VOID_POSITION_TRADE,
+                target_id=item.monitoring_item_id,
+            ),
+            schemas.VoidPositionTradeInput(
+                monitoring_item_id=item.monitoring_item_id,
+                root_event_id="buy-root",
+                expected_event_id=replacement.position_event_id,
+            ),
+            validate_candidate=lambda current, records: None,
+        )
+        voided = repository.position_events[-1]
+        self.assertEqual(voided.event_action, "void")
+        self.assertEqual(voided.event_order, 4)
+        self.assertIsNone(voided.execution_price)
+        self.assertIsNone(voided.reference_close)
+
+    def test_trade_input_rejects_nonpositive_net_sell_proceeds(self) -> None:
+        _, _, schemas = _load_modules()
+        value = schemas.PositionTradeInput(
+            monitoring_item_id="item-amd",
+            position_effect=schemas.PositionEffect.SELL,
+            trade_date=date(2026, 7, 10),
+            quantity=1,
+            execution_price=Decimal("10"),
+            fee_usd=Decimal("10"),
+        )
+
+        with self.assertRaisesRegex(ValueError, "withdrawal must be positive"):
+            schemas.validate_position_trade_input(value)
 
     def test_default_group_is_created_exactly_once(self) -> None:
         commands, _, _ = _load_modules()

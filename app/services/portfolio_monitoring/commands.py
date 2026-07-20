@@ -13,20 +13,38 @@ from .persistence import (
     MonitoringItemRecord,
     MonitoringRepository,
     PortfolioGroupRecord,
+    PositionEventRecord,
     StoredCommandRecord,
 )
+from .position_events import assert_position_item_eligible
 from .schemas import (
     AddMonitoringItemInput,
     CommandStatus,
     CommandType,
+    ExecutionPriceSource,
+    InitialQuantityCorrectionInput,
     MonitoringCommandInput,
+    PositionEffect,
+    PositionEventAction,
+    PositionTradeInput,
+    ReplacePositionTradeInput,
+    VoidPositionTradeInput,
     build_request_fingerprint,
     validate_add_item_input,
+    validate_initial_quantity_correction_input,
+    validate_position_trade_input,
+    validate_replace_position_trade_input,
+    validate_void_position_trade_input,
 )
 
 
 ACTIVE_ITEM_STATUSES = {"active", "data_review"}
 MAX_ACTIVE_ITEMS_PER_GROUP = 10
+ReferenceCloseResolver = Callable[[MonitoringItemRecord, date], Decimal]
+CandidateValidator = Callable[
+    [MonitoringItemRecord, list[PositionEventRecord]],
+    None,
+]
 
 
 class CommandValidationError(ValueError):
@@ -420,3 +438,294 @@ def execute_reopen_item(
         )
 
     return _execute(repository, command, fingerprint, mutate)
+
+
+def _assert_position_command_target(
+    command: MonitoringCommandInput,
+    monitoring_item_id: str,
+) -> None:
+    target_id = str(command.target_id or "").strip()
+    if not target_id or target_id != monitoring_item_id:
+        raise CommandValidationError(
+            "Command target must match the monitoring item id."
+        )
+
+
+def _terminal_revision(
+    records: list[PositionEventRecord],
+    root_event_id: str,
+) -> PositionEventRecord:
+    chain = [row for row in records if row.root_event_id == root_event_id]
+    if not chain:
+        raise CommandValidationError("거래 기록을 찾을 수 없습니다.")
+    superseded_ids = {
+        str(row.supersedes_event_id)
+        for row in chain
+        if row.supersedes_event_id is not None
+    }
+    terminals = [row for row in chain if row.position_event_id not in superseded_ids]
+    if len(terminals) != 1:
+        raise CommandConflictError("거래 revision 체인이 일관되지 않습니다.")
+    return terminals[0]
+
+
+def _validated_reference_close(
+    resolver: ReferenceCloseResolver,
+    item: MonitoringItemRecord,
+    trade_date: date,
+) -> Decimal:
+    try:
+        reference_close = Decimal(str(resolver(item, trade_date)))
+    except Exception as exc:
+        raise CommandValidationError(
+            "선택한 거래일의 DB 종가를 확인할 수 없습니다."
+        ) from exc
+    if not reference_close.is_finite() or reference_close <= 0:
+        raise CommandValidationError(
+            "선택한 거래일의 DB 종가를 확인할 수 없습니다."
+        )
+    return reference_close
+
+
+def _append_position_revision(
+    repository: MonitoringRepository,
+    command: MonitoringCommandInput,
+    *,
+    fingerprint: str,
+    event_action: PositionEventAction,
+    position_effect: PositionEffect,
+    trade_date: date,
+    quantity: int | None,
+    execution_price: Decimal | None,
+    fee_usd: Decimal,
+    note: str,
+    root_event_id: str | None,
+    expected_event_id: str | None,
+    resolve_reference_close: ReferenceCloseResolver | None,
+    validate_candidate: CandidateValidator,
+) -> CommandResult:
+    """Append one immutable revision after locking and validating the full chain."""
+
+    def mutate() -> CommandResult:
+        item_id = str(command.target_id or "").strip()
+        item = repository.get_item(item_id, for_update=True)
+        if item is None:
+            raise CommandValidationError("Monitoring item not found.")
+        assert_position_item_eligible(item)
+        if trade_date < item.effective_start_date:
+            raise CommandValidationError("거래일은 추적 시작일보다 빠를 수 없습니다.")
+        current = repository.list_position_events(
+            item.monitoring_item_id,
+            for_update=True,
+        )
+
+        if event_action == PositionEventAction.CREATE:
+            if root_event_id is not None or expected_event_id is not None:
+                raise CommandValidationError("New event cannot supersede a revision.")
+            order = repository.next_position_event_order(item.monitoring_item_id)
+            root_id = f"position_root_{uuid4().hex[:16]}"
+            supersedes = None
+        else:
+            if not root_event_id or not expected_event_id:
+                raise CommandValidationError(
+                    "root and expected position event ids are required."
+                )
+            terminal = _terminal_revision(current, root_event_id)
+            if terminal.position_event_id != expected_event_id:
+                raise CommandConflictError(
+                    "최신 거래 기록이 변경되었습니다. 화면을 새로고침해 주세요."
+                )
+            if terminal.event_action == PositionEventAction.VOID.value:
+                raise CommandConflictError("이미 취소된 거래 기록입니다.")
+            if terminal.position_effect != position_effect.value:
+                raise CommandValidationError("거래 유형은 수정할 수 없습니다.")
+            order = terminal.event_order
+            root_id = terminal.root_event_id
+            supersedes = terminal.position_event_id
+
+        reference_close = None
+        price_source = None
+        if (
+            event_action != PositionEventAction.VOID
+            and position_effect in {PositionEffect.BUY, PositionEffect.SELL}
+        ):
+            if resolve_reference_close is None or execution_price is None:
+                raise CommandValidationError("거래 체결가와 DB 종가가 필요합니다.")
+            reference_close = _validated_reference_close(
+                resolve_reference_close,
+                item,
+                trade_date,
+            )
+            price_source = (
+                ExecutionPriceSource.DB_CLOSE_DEFAULT.value
+                if execution_price == reference_close
+                else ExecutionPriceSource.MANUAL_OVERRIDE.value
+            )
+
+        candidate = PositionEventRecord(
+            position_event_id=f"position_event_{uuid4().hex[:16]}",
+            root_event_id=root_id,
+            supersedes_event_id=supersedes,
+            monitoring_item_id=item.monitoring_item_id,
+            event_order=order,
+            event_action=event_action.value,
+            position_effect=position_effect.value,
+            trade_date=trade_date,
+            quantity=quantity,
+            execution_price=execution_price,
+            reference_close=reference_close,
+            execution_price_source=price_source,
+            fee_usd=fee_usd,
+            note=note,
+            command_id=command.command_id,
+        )
+        validate_candidate(item, [*current, candidate])
+        repository.insert_position_event(candidate)
+        return CommandResult(
+            status=CommandStatus.SUCCEEDED,
+            command_id=command.command_id,
+            target_id=root_id,
+            replayed=False,
+            message="보유내역을 저장했습니다.",
+        )
+
+    return _execute(repository, command, fingerprint, mutate)
+
+
+def execute_record_position_trade(
+    repository: MonitoringRepository,
+    command: MonitoringCommandInput,
+    value: PositionTradeInput,
+    *,
+    resolve_reference_close: ReferenceCloseResolver,
+    validate_candidate: CandidateValidator,
+) -> CommandResult:
+    _assert_command_type(command, CommandType.RECORD_POSITION_TRADE)
+    validated = validate_position_trade_input(value)
+    _assert_position_command_target(command, validated.monitoring_item_id)
+    return _append_position_revision(
+        repository,
+        command,
+        fingerprint=_command_fingerprint(command, asdict(validated)),
+        event_action=PositionEventAction.CREATE,
+        position_effect=validated.position_effect,
+        trade_date=validated.trade_date,
+        quantity=validated.quantity,
+        execution_price=validated.execution_price,
+        fee_usd=validated.fee_usd,
+        note=validated.note,
+        root_event_id=None,
+        expected_event_id=None,
+        resolve_reference_close=resolve_reference_close,
+        validate_candidate=validate_candidate,
+    )
+
+
+def execute_replace_position_trade(
+    repository: MonitoringRepository,
+    command: MonitoringCommandInput,
+    value: ReplacePositionTradeInput,
+    *,
+    resolve_reference_close: ReferenceCloseResolver,
+    validate_candidate: CandidateValidator,
+) -> CommandResult:
+    _assert_command_type(command, CommandType.REPLACE_POSITION_TRADE)
+    validated = validate_replace_position_trade_input(value)
+    _assert_position_command_target(command, validated.monitoring_item_id)
+    return _append_position_revision(
+        repository,
+        command,
+        fingerprint=_command_fingerprint(command, asdict(validated)),
+        event_action=PositionEventAction.REPLACE,
+        position_effect=validated.position_effect,
+        trade_date=validated.trade_date,
+        quantity=validated.quantity,
+        execution_price=validated.execution_price,
+        fee_usd=validated.fee_usd,
+        note=validated.note,
+        root_event_id=validated.root_event_id,
+        expected_event_id=validated.expected_event_id,
+        resolve_reference_close=resolve_reference_close,
+        validate_candidate=validate_candidate,
+    )
+
+
+def execute_void_position_trade(
+    repository: MonitoringRepository,
+    command: MonitoringCommandInput,
+    value: VoidPositionTradeInput,
+    *,
+    validate_candidate: CandidateValidator,
+) -> CommandResult:
+    _assert_command_type(command, CommandType.VOID_POSITION_TRADE)
+    validated = validate_void_position_trade_input(value)
+    _assert_position_command_target(command, validated.monitoring_item_id)
+    current = repository.get_position_event(validated.expected_event_id)
+    if current is None or current.root_event_id != validated.root_event_id:
+        raise CommandValidationError("거래 기록을 찾을 수 없습니다.")
+    if current.position_effect not in {PositionEffect.BUY.value, PositionEffect.SELL.value}:
+        raise CommandValidationError("매수·매도 거래만 취소할 수 있습니다.")
+    return _append_position_revision(
+        repository,
+        command,
+        fingerprint=_command_fingerprint(command, asdict(validated)),
+        event_action=PositionEventAction.VOID,
+        position_effect=PositionEffect(current.position_effect),
+        trade_date=current.trade_date,
+        quantity=None,
+        execution_price=None,
+        fee_usd=Decimal("0"),
+        note=current.note,
+        root_event_id=validated.root_event_id,
+        expected_event_id=validated.expected_event_id,
+        resolve_reference_close=None,
+        validate_candidate=validate_candidate,
+    )
+
+
+def execute_correct_initial_quantity(
+    repository: MonitoringRepository,
+    command: MonitoringCommandInput,
+    value: InitialQuantityCorrectionInput,
+    *,
+    validate_candidate: CandidateValidator,
+) -> CommandResult:
+    _assert_command_type(command, CommandType.CORRECT_INITIAL_QUANTITY)
+    validated = validate_initial_quantity_correction_input(value)
+    _assert_position_command_target(command, validated.monitoring_item_id)
+    item = repository.get_item(validated.monitoring_item_id)
+    if item is None:
+        raise CommandValidationError("Monitoring item not found.")
+    current = repository.list_position_events(validated.monitoring_item_id)
+    correction_roots = {
+        row.root_event_id
+        for row in current
+        if row.position_effect == PositionEffect.INITIAL_QUANTITY_CORRECTION.value
+    }
+    if len(correction_roots) > 1:
+        raise CommandConflictError("최초 수량 정정 이력이 일관되지 않습니다.")
+    if correction_roots:
+        root_id = next(iter(correction_roots))
+        terminal = _terminal_revision(current, root_id)
+        action = PositionEventAction.REPLACE
+        expected_event_id = terminal.position_event_id
+    else:
+        root_id = None
+        action = PositionEventAction.CREATE
+        expected_event_id = None
+    return _append_position_revision(
+        repository,
+        command,
+        fingerprint=_command_fingerprint(command, asdict(validated)),
+        event_action=action,
+        position_effect=PositionEffect.INITIAL_QUANTITY_CORRECTION,
+        trade_date=item.effective_start_date,
+        quantity=validated.quantity,
+        execution_price=None,
+        fee_usd=Decimal("0"),
+        note=validated.note,
+        root_event_id=root_id,
+        expected_event_id=expected_event_id,
+        resolve_reference_close=None,
+        validate_candidate=validate_candidate,
+    )

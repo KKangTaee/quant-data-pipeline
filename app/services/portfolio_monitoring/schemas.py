@@ -43,6 +43,10 @@ class CommandType(str, Enum):
     ADD_ITEM = "add_item"
     END_ITEM = "end_item"
     REOPEN_ITEM = "reopen_item"
+    CORRECT_INITIAL_QUANTITY = "correct_initial_quantity"
+    RECORD_POSITION_TRADE = "record_position_trade"
+    REPLACE_POSITION_TRADE = "replace_position_trade"
+    VOID_POSITION_TRADE = "void_position_trade"
     IMPORT_LEGACY = "import_legacy"
 
 
@@ -85,6 +89,44 @@ class MonitoringCommandInput:
 
 
 @dataclass(frozen=True)
+class PositionTradeInput:
+    monitoring_item_id: str
+    position_effect: PositionEffect
+    trade_date: date
+    quantity: int
+    execution_price: Decimal
+    fee_usd: Decimal = Decimal("0")
+    note: str = ""
+
+
+@dataclass(frozen=True)
+class InitialQuantityCorrectionInput:
+    monitoring_item_id: str
+    quantity: int
+    note: str = ""
+
+
+@dataclass(frozen=True)
+class ReplacePositionTradeInput:
+    monitoring_item_id: str
+    root_event_id: str
+    expected_event_id: str
+    position_effect: PositionEffect
+    trade_date: date
+    quantity: int
+    execution_price: Decimal
+    fee_usd: Decimal = Decimal("0")
+    note: str = ""
+
+
+@dataclass(frozen=True)
+class VoidPositionTradeInput:
+    monitoring_item_id: str
+    root_event_id: str
+    expected_event_id: str
+
+
+@dataclass(frozen=True)
 class DiagnosisSnapshotIdentity:
     portfolio_group_id: str
     as_of_date: date
@@ -100,6 +142,131 @@ def _positive_decimal(value: Any) -> Decimal | None:
     except (InvalidOperation, TypeError, ValueError):
         return None
     return decimal_value if decimal_value.is_finite() and decimal_value > 0 else None
+
+
+def _nonnegative_decimal(value: Any) -> Decimal | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        decimal_value = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+    return decimal_value if decimal_value.is_finite() and decimal_value >= 0 else None
+
+
+def _validated_position_note(value: Any) -> str:
+    note = str(value or "").strip()
+    if len(note) > 500:
+        raise ValueError("note must contain at most 500 characters.")
+    return note
+
+
+def _validated_item_id(value: Any) -> str:
+    item_id = str(value or "").strip()
+    if not item_id:
+        raise ValueError("monitoring item id is required.")
+    return item_id
+
+
+def _validated_quantity(value: Any) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError("quantity must be an integer of at least 1.")
+    return value
+
+
+def validate_position_trade_input(value: PositionTradeInput) -> PositionTradeInput:
+    """Normalize a buy/sell request without trusting client price provenance."""
+
+    if not isinstance(value, PositionTradeInput):
+        raise TypeError("PositionTradeInput is required.")
+    item_id = _validated_item_id(value.monitoring_item_id)
+    if value.position_effect not in {PositionEffect.BUY, PositionEffect.SELL}:
+        raise ValueError("position trade must be buy or sell.")
+    if not isinstance(value.trade_date, date):
+        raise ValueError("trade date is required.")
+    quantity = _validated_quantity(value.quantity)
+    price = _positive_decimal(value.execution_price)
+    if price is None:
+        raise ValueError("execution price must be positive.")
+    fee = _nonnegative_decimal(value.fee_usd)
+    if fee is None:
+        raise ValueError("fee must be nonnegative.")
+    if (
+        value.position_effect == PositionEffect.SELL
+        and Decimal(quantity) * price - fee <= 0
+    ):
+        raise ValueError("sell withdrawal must be positive after fees.")
+    return replace(
+        value,
+        monitoring_item_id=item_id,
+        quantity=quantity,
+        execution_price=price,
+        fee_usd=fee,
+        note=_validated_position_note(value.note),
+    )
+
+
+def validate_initial_quantity_correction_input(
+    value: InitialQuantityCorrectionInput,
+) -> InitialQuantityCorrectionInput:
+    if not isinstance(value, InitialQuantityCorrectionInput):
+        raise TypeError("InitialQuantityCorrectionInput is required.")
+    return replace(
+        value,
+        monitoring_item_id=_validated_item_id(value.monitoring_item_id),
+        quantity=_validated_quantity(value.quantity),
+        note=_validated_position_note(value.note),
+    )
+
+
+def validate_replace_position_trade_input(
+    value: ReplacePositionTradeInput,
+) -> ReplacePositionTradeInput:
+    if not isinstance(value, ReplacePositionTradeInput):
+        raise TypeError("ReplacePositionTradeInput is required.")
+    root_event_id = str(value.root_event_id or "").strip()
+    expected_event_id = str(value.expected_event_id or "").strip()
+    if not root_event_id or not expected_event_id:
+        raise ValueError("root and expected position event ids are required.")
+    trade = validate_position_trade_input(
+        PositionTradeInput(
+            monitoring_item_id=value.monitoring_item_id,
+            position_effect=value.position_effect,
+            trade_date=value.trade_date,
+            quantity=value.quantity,
+            execution_price=value.execution_price,
+            fee_usd=value.fee_usd,
+            note=value.note,
+        )
+    )
+    return ReplacePositionTradeInput(
+        monitoring_item_id=trade.monitoring_item_id,
+        root_event_id=root_event_id,
+        expected_event_id=expected_event_id,
+        position_effect=trade.position_effect,
+        trade_date=trade.trade_date,
+        quantity=trade.quantity,
+        execution_price=trade.execution_price,
+        fee_usd=trade.fee_usd,
+        note=trade.note,
+    )
+
+
+def validate_void_position_trade_input(
+    value: VoidPositionTradeInput,
+) -> VoidPositionTradeInput:
+    if not isinstance(value, VoidPositionTradeInput):
+        raise TypeError("VoidPositionTradeInput is required.")
+    root_event_id = str(value.root_event_id or "").strip()
+    expected_event_id = str(value.expected_event_id or "").strip()
+    if not root_event_id or not expected_event_id:
+        raise ValueError("root and expected position event ids are required.")
+    return replace(
+        value,
+        monitoring_item_id=_validated_item_id(value.monitoring_item_id),
+        root_event_id=root_event_id,
+        expected_event_id=expected_event_id,
+    )
 
 
 def validate_add_item_input(value: AddMonitoringItemInput) -> AddMonitoringItemInput:
