@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 
 REQUIRED_JOURNEY_IDS = {
@@ -275,6 +276,79 @@ class ReferenceCenterNavigationContractTests(unittest.TestCase):
             reference_center._REFERENCE_PAGE_TARGETS,
             {"overview": "overview-page", "backtest": "backtest-page"},
         )
+
+    def test_missing_react_build_renders_compact_error_without_legacy_fallback(self) -> None:
+        from app.web import reference_center
+
+        fake_st = MagicMock()
+        fake_st.query_params.get.return_value = None
+        with (
+            patch.object(reference_center, "st", fake_st),
+            patch.object(reference_center, "reference_center_react_component_available", return_value=False),
+            patch.object(reference_center, "render_reference_center_workbench") as render_workbench,
+        ):
+            reference_center.render_reference_center_page()
+
+        fake_st.error.assert_called_once_with(
+            "Reference 화면을 불러오지 못했습니다. 배포된 React build를 확인해 주세요."
+        )
+        fake_st.caption.assert_called_once()
+        render_workbench.assert_not_called()
+
+    def test_page_shell_builds_deep_link_payload_and_routes_backtest_intent(self) -> None:
+        from app.web import reference_center
+
+        fake_st = MagicMock()
+        fake_st.query_params.get.return_value = "status.not_run"
+        reference_center.configure_reference_center_page_targets({"backtest": "backtest-page"})
+        event_value = {
+            "event": {
+                "id": "navigate_to_surface",
+                "destination": "practical_validation",
+                "item_id": "status.not_run",
+                "nonce": "n-2",
+            }
+        }
+
+        with (
+            patch.object(reference_center, "st", fake_st),
+            patch.object(reference_center, "reference_center_react_component_available", return_value=True),
+            patch.object(reference_center, "render_reference_center_workbench", return_value=event_value) as render_workbench,
+            patch.object(reference_center, "request_backtest_panel") as request_panel,
+        ):
+            reference_center.render_reference_center_page()
+
+        payload = render_workbench.call_args.args[0]
+        self.assertEqual(payload["initial_item_id"], "status.not_run")
+        request_panel.assert_called_once_with("Practical Validation")
+        fake_st.switch_page.assert_called_once_with("backtest-page")
+
+    def test_invalid_deep_link_and_destination_stay_on_reference(self) -> None:
+        from app.web import reference_center
+
+        fake_st = MagicMock()
+        fake_st.query_params.get.return_value = "removed-item"
+        reference_center.configure_reference_center_page_targets({"overview": "overview-page"})
+        invalid_event = {
+            "event": {
+                "id": "navigate_to_surface",
+                "destination": "raw_registry",
+                "item_id": "feature.market_context",
+                "nonce": "n-3",
+            }
+        }
+
+        with (
+            patch.object(reference_center, "st", fake_st),
+            patch.object(reference_center, "reference_center_react_component_available", return_value=True),
+            patch.object(reference_center, "render_reference_center_workbench", return_value=invalid_event),
+        ):
+            reference_center.render_reference_center_page()
+
+        warning_copy = " ".join(str(call.args[0]) for call in fake_st.warning.call_args_list)
+        self.assertIn("변경되었거나 삭제", warning_copy)
+        self.assertIn("이동 요청", warning_copy)
+        fake_st.switch_page.assert_not_called()
 
 
 if __name__ == "__main__":
