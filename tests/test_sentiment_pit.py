@@ -280,5 +280,87 @@ class SentimentPitCollectorTests(unittest.TestCase):
         self.assertNotIn("cnn_fear_greed", result["batch_ids"])
 
 
+class SentimentPitLoaderTests(unittest.TestCase):
+    def test_as_known_uses_cutoff_and_default_observation_end(self) -> None:
+        from finance.loaders.sentiment import load_market_sentiment_as_known
+
+        captured = {}
+
+        def query(database, sql, params):
+            captured.update(database=database, sql=sql, params=params)
+            return [
+                {
+                    **sentiment_row(37.1),
+                    "id": 1,
+                    "batch_id": "b",
+                    "collection_id": "c",
+                    "observed_at": "2026-07-20 01:00:00",
+                }
+            ]
+
+        frame = load_market_sentiment_as_known(
+            known_at="2026-07-20T01:30:00Z",
+            series_ids=["CNN_FEAR_GREED"],
+            query_fn=query,
+        )
+        self.assertIn("ROW_NUMBER() OVER", captured["sql"])
+        self.assertIn("observed_at <= %s", captured["sql"])
+        self.assertIn("observation_date <= %s", captured["sql"])
+        self.assertIn("ORDER BY observed_at DESC, id DESC", captured["sql"])
+        self.assertIn("2026-07-20", tuple(str(value) for value in captured["params"]))
+        self.assertEqual(frame.iloc[0]["value"], 37.1)
+
+    def test_as_known_before_first_capture_returns_typed_empty_frame(self) -> None:
+        from finance.loaders.sentiment import PIT_COLUMNS, load_market_sentiment_as_known
+
+        frame = load_market_sentiment_as_known(
+            known_at="2026-07-19T23:00:00Z",
+            query_fn=lambda *_: [],
+        )
+        self.assertTrue(frame.empty)
+        self.assertEqual(list(frame.columns), PIT_COLUMNS)
+
+    def test_as_known_defensively_excludes_revision_after_cutoff(self) -> None:
+        from finance.loaders.sentiment import load_market_sentiment_as_known
+
+        rows = [
+            {
+                **sentiment_row(37.0),
+                "id": 1,
+                "batch_id": "early",
+                "collection_id": "c1",
+                "observed_at": "2026-07-20 00:30:00",
+            },
+            {
+                **sentiment_row(42.0),
+                "id": 2,
+                "batch_id": "late",
+                "collection_id": "c2",
+                "observed_at": "2026-07-20 02:00:00",
+            },
+        ]
+        frame = load_market_sentiment_as_known(
+            known_at="2026-07-20T01:00:00Z",
+            query_fn=lambda *_: rows,
+        )
+        self.assertEqual(frame["batch_id"].tolist(), ["early"])
+        self.assertEqual(frame["value"].tolist(), [37.0])
+
+    def test_capture_summary_groups_sources(self) -> None:
+        from finance.loaders.sentiment import load_market_sentiment_capture_summary
+
+        summary = load_market_sentiment_capture_summary(
+            query_fn=lambda *_: [
+                {
+                    "source": "cnn_fear_greed",
+                    "pit_start_at": "2026-07-20 01:00:00",
+                    "latest_capture_at": "2026-07-21 01:00:00",
+                    "capture_count": 2,
+                }
+            ]
+        )
+        self.assertEqual(summary["cnn_fear_greed"]["capture_count"], 2)
+
+
 if __name__ == "__main__":
     unittest.main()
