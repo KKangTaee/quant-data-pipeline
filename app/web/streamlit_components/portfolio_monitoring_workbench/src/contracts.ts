@@ -148,7 +148,21 @@ export type DiagnosisRow = {
   meaning: string;
   change_condition: string;
   next_check: string;
+  subject_ids?: string[];
+  primary_metric?: number | null;
 };
+
+export type DiagnosisDisplayGroup = {
+  group_id: string;
+  family: string;
+  section: "strength" | "weakness" | "data_gap";
+  representative: DiagnosisRow;
+  summary_fact: string;
+  member_count: number;
+  members: DiagnosisRow[];
+};
+
+export type DiagnosisDisplayGroupView = DiagnosisRow & DiagnosisDisplayGroup;
 
 export type MacroObservationRow = {
   rule_id: string;
@@ -209,6 +223,7 @@ export type DiagnosisProjection = {
   weaknesses: DiagnosisRow[];
   data_gaps: DiagnosisRow[];
   all_rows: DiagnosisRow[];
+  display_groups?: DiagnosisDisplayGroup[];
   coverage?: number;
 };
 

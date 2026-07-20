@@ -1,4 +1,4 @@
-import type { DiagnosisHistoryRow, DiagnosisProjection, GroupMetrics, GroupSummary, ItemRow, MacroObservationProjection, MarketChartRow, RiskCalibrationProjection, SourceHealth } from "./contracts";
+import type { DiagnosisDisplayGroup, DiagnosisDisplayGroupView, DiagnosisHistoryRow, DiagnosisProjection, DiagnosisRow, GroupMetrics, GroupSummary, ItemRow, MacroObservationProjection, MarketChartRow, RiskCalibrationProjection, SourceHealth } from "./contracts";
 
 export type MonitoringSourceType = "direct_security" | "selected_strategy";
 export type MonitoringKind = "stock" | "etf" | "strategy";
@@ -450,11 +450,41 @@ export function buildCommonBasisBanner(group: { status: string; basis_date: stri
 }
 
 export function buildDiagnosisSections(diagnosis: DiagnosisProjection) {
+  const view = (group: DiagnosisDisplayGroup): DiagnosisDisplayGroupView => ({
+    ...group.representative,
+    ...group,
+  });
+  const legacy = (
+    row: DiagnosisRow,
+    section: DiagnosisDisplayGroup["section"],
+  ): DiagnosisDisplayGroupView => ({
+    ...row,
+    group_id: row.root_id ?? row.rule_id,
+    family: row.rule_id.split(":", 1)[0],
+    section,
+    representative: row,
+    summary_fact: row.measured_fact,
+    member_count: 1,
+    members: [row],
+  });
+  const serverGroups = diagnosis.display_groups;
+  const legacyPayload = serverGroups === undefined;
+  const groups = serverGroups === undefined
+    ? [
+      ...diagnosis.strengths.map((row) => legacy(row, "strength")),
+      ...diagnosis.weaknesses.map((row) => legacy(row, "weakness")),
+      ...diagnosis.data_gaps.map((row) => legacy(row, "data_gap")),
+    ]
+    : serverGroups.map(view);
+  const weaknesses = groups.filter((group) => group.section === "weakness");
   return {
-    now: diagnosis.top_three.filter((row) => row.confidence !== "LOW").slice(0, 3),
-    strengths: diagnosis.strengths,
-    weaknesses: diagnosis.weaknesses,
-    dataGaps: diagnosis.data_gaps,
+    now: (legacyPayload
+      ? diagnosis.top_three.map((row) => legacy(row, "weakness"))
+      : weaknesses
+    ).filter((group) => group.confidence !== "LOW").slice(0, 3),
+    strengths: groups.filter((group) => group.section === "strength"),
+    weaknesses,
+    dataGaps: groups.filter((group) => group.section === "data_gap"),
     evidence: diagnosis.all_rows,
   };
 }

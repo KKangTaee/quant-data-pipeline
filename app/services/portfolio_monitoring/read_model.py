@@ -726,6 +726,7 @@ def build_portfolio_monitoring_workspace(
             "weaknesses": [asdict(row) for row in diagnosis.weaknesses],
             "data_gaps": [asdict(row) for row in diagnosis.data_gaps],
             "all_rows": [asdict(row) for row in diagnosis.all_rows],
+            "display_groups": [asdict(group) for group in diagnosis.display_groups],
             "coverage": exposure_coverage,
         },
         "macro_observation": {

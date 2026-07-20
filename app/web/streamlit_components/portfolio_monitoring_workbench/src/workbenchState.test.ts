@@ -373,6 +373,44 @@ describe("diagnosis evidence contract", () => {
     expect(sections.evidence[0].change_condition).toContain("회복");
     expect(JSON.stringify(sections)).not.toMatch(/매수|매도|목표\s*비중/);
   });
+
+  it("uses server display groups and wraps legacy rows as one-member groups", () => {
+    const row = {
+      rule_id: "correlation_cluster:amd:nvda", root_id: "correlation:amd:nvda",
+      policy_version: "portfolio_monitoring_policy_v1",
+      classification: "weakness" as const, severity: "WATCH", persistence: 63,
+      affected_weight: 0.48, contribution: null,
+      measured_fact: "63D correlation 0.93 / cluster 48.0%",
+      threshold: "correlation 0.80", source_dates: ["2026-07-20"], coverage: 1,
+      confidence: "HIGH", meaning: "함께 움직이는 항목의 비중이 큽니다.",
+      change_condition: "상관이 기준 아래면 해제", next_check: "다음 종가",
+      subject_ids: ["amd", "nvda"], primary_metric: 0.93,
+    };
+    const members = [
+      row,
+      { ...row, rule_id: "correlation_cluster:amd:msft", root_id: "correlation:amd:msft" },
+      { ...row, rule_id: "correlation_cluster:msft:nvda", root_id: "correlation:msft:nvda" },
+    ];
+    const grouped = buildDiagnosisSections({
+      policy_version: "portfolio_monitoring_policy_v1",
+      top_three: [row], strengths: [], weaknesses: members, data_gaps: [], all_rows: members,
+      display_groups: [{
+        group_id: "family:correlation_cluster", family: "correlation_cluster",
+        section: "weakness", representative: row,
+        summary_fact: "최대 63D correlation 0.98 / cluster 48.0%",
+        member_count: 3, members,
+      }],
+    });
+    const legacy = buildDiagnosisSections({
+      policy_version: "portfolio_monitoring_policy_v1",
+      top_three: [row], strengths: [], weaknesses: [row], data_gaps: [], all_rows: [row],
+    });
+
+    expect(grouped.weaknesses).toHaveLength(1);
+    expect(grouped.weaknesses[0].member_count).toBe(3);
+    expect(legacy.weaknesses[0].member_count).toBe(1);
+    expect(legacy.weaknesses[0].section).toBe("weakness");
+  });
 });
 
 describe("macro observation evidence contract", () => {

@@ -421,6 +421,53 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
         self.assertEqual(workspace["risk_calibration"]["publication_status"], "SUPPRESSED")
         self.assertNotIn("probability", workspace["risk_calibration"])
 
+    def test_workspace_serializes_diagnosis_display_groups(self) -> None:
+        read_model = _load_read_model()
+        group = PortfolioGroupRecord("group-core", "Core", True)
+        repository = FakeRepository([group], [])
+        facts = [
+            read_model.DiagnosisFact(
+                rule_id=f"correlation_cluster:{left}:{right}",
+                root_id=f"correlation:{left}:{right}",
+                policy_version="portfolio_monitoring_policy_v1",
+                classification="weakness",
+                severity="WATCH",
+                persistence=63,
+                affected_weight=weight,
+                contribution=None,
+                measured_fact=f"63D correlation {correlation:.2f} / cluster {weight:.1%}",
+                threshold="correlation 0.80 / watch 40.0% / high 60.0%",
+                source_dates=("2026-07-20",),
+                coverage=1.0,
+                confidence="HIGH",
+                meaning="함께 움직이는 항목의 비중이 커 분산 효과가 약해질 수 있습니다.",
+                change_condition="상관 또는 cluster가 기준 아래면 해제",
+                next_check="다음 거래일 종가 기준 재확인",
+                subject_ids=(left, right),
+                primary_metric=correlation,
+            )
+            for left, right, correlation, weight in (
+                ("amd", "nvda", 0.93, 0.482),
+                ("amd", "msft", 0.98, 0.457),
+                ("msft", "nvda", 0.91, 0.439),
+            )
+        ]
+
+        workspace = read_model.build_portfolio_monitoring_workspace(
+            repository,
+            active_group_id="group-core",
+            diagnosis_facts=facts,
+            exposure_coverage=1.0,
+        )
+
+        groups = [
+            row for row in workspace["diagnosis"].get("display_groups", [])
+            if row["family"] == "correlation_cluster"
+        ]
+        self.assertEqual(len(groups), 1)
+        self.assertEqual(groups[0]["member_count"], 3)
+        self.assertEqual(len(workspace["diagnosis"]["all_rows"]), 3)
+
     def test_workspace_projects_selected_item_market_chart_only_when_loader_is_configured(self) -> None:
         read_model = _load_read_model()
         group = PortfolioGroupRecord("group-core", "Core", True)
