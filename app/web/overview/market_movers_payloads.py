@@ -37,7 +37,7 @@ def _json_safe(value: Any) -> Any:
         try:
             return _json_safe(item_method())
         except (TypeError, ValueError):
-            pass
+            return str(value)
     return value
 
 
