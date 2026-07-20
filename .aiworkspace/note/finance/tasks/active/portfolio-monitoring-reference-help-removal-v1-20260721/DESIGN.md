@@ -1,6 +1,6 @@
 # Portfolio Monitoring Reference Help Removal V1 Design
 
-Status: User-approved direction; written-spec review pending
+Status: User-approved written spec; implementation plan ready
 Date: 2026-07-21
 
 ## Problem
@@ -105,4 +105,3 @@ durable flow/project map에서 Portfolio Monitoring을 contextual help 소유 �
 - `.aiworkspace/note/finance/docs/PROJECT_MAP.md`
 - `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
 - active task docs와 root handoff logs
-
