@@ -16,7 +16,7 @@ Last Updated: 2026-07-20
 - relevant existing contracts: `tests/test_service_contracts.py -k market_mover` → `126 passed`.
 - sector/group expanded contracts: `tests/test_service_contracts.py -k "market_mover or group_leadership"` → `129 passed` during Task 3.
 - target `py_compile` → exit 0.
-- full `tests/test_service_contracts.py` → `839 passed, 13 failed, 41 subtests passed`. 13 failures are existing out-of-scope Backtest Practical Validation / Final Review and Market Sentiment expectations; Market Movers focused suite has no failure.
+- full `tests/test_service_contracts.py` → `839 passed, 13 failed, 41 subtests passed`. 13 failures are 이번 변경에서 수정하지 않은 Backtest Practical Validation / Final Review와 Market Sentiment 경로다. 시작 시 full-suite baseline은 실행하지 않았으므로 선행 존재 여부는 단정하지 않는다. Market Movers focused suite에는 실패가 없다.
 
 ## Real DB Read-Only Smoke
 
