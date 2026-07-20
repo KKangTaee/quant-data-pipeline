@@ -265,3 +265,30 @@ def test_overview_research_loader_keeps_selected_stock_query_behind_cached_bound
 
     assert result["schema_version"] == "market_mover_research_snapshot_v2"
     assert result["status"] == "NO_SYMBOL"
+
+
+def test_decision_react_shell_owns_ranking_breadth_and_selected_research() -> None:
+    from pathlib import Path
+
+    source = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+    style = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/style.css"
+    ).read_text(encoding="utf-8")
+
+    assert "MarketMoversDecisionWorkbenchPayload" in source
+    assert "function MarketMoversCommandLine" in source
+    assert "function RankingBoard" in source
+    assert "function BreadthContext" in source
+    assert "function QuickResearch" in source
+    assert "function StockResearchTabs" in source
+    assert 'payload.component === "MarketMoversDecisionWorkbench"' in source
+    assert 'id: "select_symbol"' in source
+    assert '["sector", "industry"]' in source
+    assert '["daily", "weekly", "monthly"]' in source
+    assert 'className="mm-decision__workbench"' in source
+    assert 'className="mm-decision__ranking"' in source
+    assert 'className="mm-decision__breadth"' in source
+    assert ".mm-decision__workbench" in style
+    assert "grid-template-columns: minmax(0, 1.62fr) minmax(320px, 1fr);" in style
