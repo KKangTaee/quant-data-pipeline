@@ -180,6 +180,25 @@ describe("ReferenceCenterWorkbench", () => {
       .not.toBeNull();
   });
 
+  it("fills a tall desktop viewport without capping the detail frame", () => {
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 1280 });
+
+    render(<ReferenceCenterWorkbench {...props(payload({ initial_item_id: "status.not_run" }))} />);
+
+    expect(streamlitMocks.setFrameHeight).toHaveBeenCalledWith(1184);
+  });
+
+  it("resizes an open detail frame with the browser viewport", () => {
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 900 });
+    render(<ReferenceCenterWorkbench {...props(payload({ initial_item_id: "status.not_run" }))} />);
+    streamlitMocks.setFrameHeight.mockClear();
+
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 1200 });
+    fireEvent(window, new Event("resize"));
+
+    expect(streamlitMocks.setFrameHeight).toHaveBeenCalledWith(1104);
+  });
+
   it("aligns the component below the desktop navigation before opening detail", () => {
     const scrollContainer = document.createElement("section");
     scrollContainer.className = "stMain";

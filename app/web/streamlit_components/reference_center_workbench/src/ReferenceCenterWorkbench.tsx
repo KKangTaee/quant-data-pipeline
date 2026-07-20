@@ -11,8 +11,6 @@ const KIND_LABELS: Record<ReferenceItem["kind"], string> = {
   playbook: "문제 해결",
 };
 
-const DETAIL_FRAME_MAX_HEIGHT = 760;
-const DETAIL_FRAME_MIN_HEIGHT = 520;
 const DETAIL_FRAME_TOP_CLEARANCE = 80;
 const DETAIL_FRAME_BOTTOM_GAP = 16;
 const DETAIL_FRAME_RESERVED_HEIGHT = 96;
@@ -50,12 +48,9 @@ function getDetailFrameHeight(): number {
   } catch {
     // Cross-origin development hosts cannot expose the parent viewport.
   }
-  return Math.min(
-    DETAIL_FRAME_MAX_HEIGHT,
-    Math.max(
-      DETAIL_FRAME_MIN_HEIGHT,
-      Math.floor(viewportHeight) - DETAIL_FRAME_TOP_CLEARANCE - DETAIL_FRAME_BOTTOM_GAP,
-    ),
+  return Math.max(
+    1,
+    Math.floor(viewportHeight) - DETAIL_FRAME_TOP_CLEARANCE - DETAIL_FRAME_BOTTOM_GAP,
   );
 }
 
@@ -99,12 +94,32 @@ export function ReferenceCenterWorkbench({ args }: ComponentProps) {
   }, []);
 
   useEffect(() => {
-    if (selectedItemId) {
-      alignDetailFrameInParent();
-      syncFrameHeightSoon(getDetailFrameHeight());
+    if (!selectedItemId) {
       return;
     }
-    syncFrameHeightSoon();
+
+    const syncDetailFrame = () => {
+      alignDetailFrameInParent();
+      syncFrameHeightSoon(getDetailFrameHeight());
+    };
+    syncDetailFrame();
+
+    let resizeTarget: Window = window;
+    try {
+      resizeTarget = window.parent;
+      resizeTarget.addEventListener("resize", syncDetailFrame);
+    } catch {
+      resizeTarget = window;
+      resizeTarget.addEventListener("resize", syncDetailFrame);
+    }
+
+    return () => resizeTarget.removeEventListener("resize", syncDetailFrame);
+  }, [selectedItemId]);
+
+  useEffect(() => {
+    if (!selectedItemId) {
+      syncFrameHeightSoon();
+    }
   }, [payload, query, scope, selectedItemId, results.length]);
 
   if (!payload) {

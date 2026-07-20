@@ -10240,3 +10240,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 오래된 두 페이지를 보존하는 것이 아니라 현재 제품 흐름과 용어를 검색·journey·문맥 도움말로 빠르게 이해하는 읽기 전용 Reference를 만든다.
 - Analysis result: Guides/Glossary 분리는 제거하고 curated 24-item catalog, 6개 journey, local React detail, stable owner-surface deep link로 통합했다. 내부 glossary는 durable docs로만 보존한다.
 - Follow-up: 전체 `4/4차`와 responsive QA를 완료했다. 새 surface/name이 생기면 catalog, contextual help ID, drift guard를 함께 갱신한다.
+
+### 2026-07-20 - Reference 상세는 임의 상한 없이 실제 viewport를 채운다
+
+- User request: PC 브라우저에서 Reference 상세 아래가 여전히 크게 비어 보이는 것이 의도된 사양인지 검토하고 수정하도록 요청함.
+- Interpreted goal: 짧은 화면에서는 footer를 항상 보이게 유지하고, 긴 화면에서는 backdrop과 drawer가 실제 사용 가능 영역을 채우며 resize에도 즉시 적응해야 함.
+- Analysis result: 이전 follow-up의 `760px` 상한이 긴 PC viewport에서 큰 흰 영역을 만든 원인이었고 의도된 제품 경계가 아니었다. parent viewport에서 navigation `80px`와 bottom gap `16px`을 뺀 높이를 상한 없이 사용하고 resize에 동기화했다.
+- Follow-up: `1257×1279`에서 frame `1183px`, live resize `1257×900`에서 `804px`, `420×844`에서 horizontal overflow 없이 footer 노출을 확인했다.
