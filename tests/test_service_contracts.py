@@ -27031,7 +27031,16 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             macro_service.clear_overview_futures_macro_snapshot_cache()
 
 
-    def _pattern_outlook_payload_fixture(self, *, unavailable: bool = False) -> dict[str, Any]:
+    def _pattern_outlook_payload_fixture(
+        self,
+        *,
+        probability_status: str = "PROVISIONAL",
+        coordinate_status: str = "PROVISIONAL",
+        vector_status: str = "PROVISIONAL",
+        unavailable: bool = False,
+    ) -> dict[str, Any]:
+        if unavailable:
+            probability_status = coordinate_status = vector_status = "UNAVAILABLE"
         probabilities = {} if unavailable else {
             "risk_seeking": 0.24,
             "defensive": 0.46,
@@ -27057,32 +27066,21 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             "change_conditions": ["1D 반전이 5D로 유지되는지 확인합니다."],
             "path": [
                 {
-                    "date": "2026-07-17",
-                    "x": -0.7,
-                    "y": 0.4,
+                    "date": f"2026-07-{day:02d}",
+                    "x": -0.7 + day * 0.01,
+                    "y": 0.4 - day * 0.01,
                     "regime": "defensive",
                     "regime_label": "방어적 위험 체제",
                     "transition": "transition_attempt",
                     "transition_label": "전환 시도",
                 }
+                for day in range(1, 18)
             ],
             "ribbon": [],
             "families": {},
         }
         horizons = []
         for horizon in (5, 20):
-            conditional_points = [] if unavailable else [
-                {
-                    "step": step,
-                    "x": -0.7 + step * (0.04 if horizon == 5 else 0.015),
-                    "y": 0.4 - step * (0.03 if horizon == 5 else 0.008),
-                    "lower_x": -0.85 + step * (0.04 if horizon == 5 else 0.015),
-                    "upper_x": -0.55 + step * (0.04 if horizon == 5 else 0.015),
-                    "lower_y": 0.25 - step * (0.03 if horizon == 5 else 0.008),
-                    "upper_y": 0.55 - step * (0.03 if horizon == 5 else 0.008),
-                }
-                for step in range(1, horizon + 1)
-            ]
             horizons.append(
                 {
                     "horizon": horizon,
@@ -27095,7 +27093,10 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
                     },
                     "dominant_regime": "defensive" if probabilities else None,
                     "episode_count": 42 if horizon == 5 else 36,
-                    "estimate_status": "UNAVAILABLE" if unavailable else "PROVISIONAL",
+                    "selected_candidate": None if probability_status == "NO_EDGE" else "M1_MOMENTUM",
+                    "probability_status": probability_status,
+                    "coordinate_status": coordinate_status,
+                    "vector_status": vector_status,
                     "status_reason": "표본 부족" if unavailable else "계산 가능하지만 검증 일부가 잠정입니다.",
                     "edge_label": "방향 우위 미확인",
                     "brier_score": None,
@@ -27104,18 +27105,29 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
                     "fold_improvement_ratio": 0.0,
                     "closest_episodes": [],
                     "asset_pathways": {},
-                    "conditional_path": {
-                        "status": "UNAVAILABLE" if unavailable else "PROVISIONAL",
-                        "episode_count": 42 if horizon == 5 else 36,
-                        "band_label": "과거 유사 패턴 가운데 50%",
-                        "points": conditional_points,
-                        "terminal": conditional_points[-1] if conditional_points else None,
-                        "validation": {
-                            "median_error": None,
-                            "baseline_median_error": None,
-                            "coverage_50": None,
-                            "evaluated_fold_count": 0,
-                        },
+                    "terminal_regions": [] if unavailable else [
+                        {
+                            "mass": mass,
+                            "center_x": -0.3,
+                            "center_y": 0.1,
+                            "radius_major": 0.8 if mass == 0.8 else 0.5,
+                            "radius_minor": 0.5 if mass == 0.8 else 0.3,
+                            "rotation_deg": 15.0,
+                        }
+                        for mass in (0.8, 0.5)
+                    ],
+                    "direction_vector": {
+                        "median_dx": 0.4,
+                        "median_dy": -0.3,
+                        "lower_dx": 0.1,
+                        "upper_dx": 0.7,
+                        "lower_dy": -0.6,
+                        "upper_dy": -0.1,
+                    },
+                    "macro_adjustment": {
+                        "used": False,
+                        "candidate": None,
+                        "reason": "M1 retained",
                     },
                 }
             )
@@ -27130,10 +27142,15 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
                 "baseline_brier": {"5": None, "20": None},
                 "calibration": {"5": None, "20": None},
             },
+            "session": {
+                "latest_final_session": "2026-07-17",
+                "pending_session": "2026-07-20",
+                "status": "PENDING_SESSION_FINALIZATION",
+            },
             "limitations": ["continuous futures roll caveat"],
         }
 
-    def test_futures_macro_v2_payload_separates_current_and_future_horizons(self) -> None:
+    def test_futures_macro_v3_payload_separates_current_and_future_horizons(self) -> None:
         from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
 
         macro = {
@@ -27145,7 +27162,7 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             pattern_outlook=self._pattern_outlook_payload_fixture(),
         )
 
-        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v2")
+        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v3")
         self.assertEqual([item["key"] for item in payload["horizons"]], ["current", "5D", "20D"])
         current, five_day, twenty_day = payload["horizons"]
         self.assertEqual(payload["hero"]["observation_status"], "OBSERVED")
@@ -27154,23 +27171,23 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertNotIn("estimate_status", current)
         self.assertNotIn("probabilities", current)
         self.assertEqual(five_day["kind"], "conditional_outlook")
-        self.assertEqual(five_day["estimate_status"], "PROVISIONAL")
-        self.assertEqual(twenty_day["estimate_status"], "PROVISIONAL")
+        self.assertEqual(five_day["probability_status"], "PROVISIONAL")
+        self.assertEqual(twenty_day["probability_status"], "PROVISIONAL")
         self.assertEqual(five_day["baseline_label"], "평소 기준 확률")
-        self.assertIn("conditional_path", five_day)
-        self.assertIn("conditional_path", twenty_day)
-        self.assertEqual(len(five_day["conditional_path"]["points"]), 5)
-        self.assertEqual(len(twenty_day["conditional_path"]["points"]), 20)
-        self.assertNotEqual(
-            five_day["conditional_path"]["terminal"],
-            twenty_day["conditional_path"]["terminal"],
-        )
+        self.assertEqual(five_day["probabilities"], [])
+        self.assertTrue(five_day["disclosure_probabilities"])
+        self.assertNotIn("conditional_path", five_day)
+        self.assertEqual(five_day["terminal_regions"], [])
+        self.assertIsNone(five_day["direction_vector"])
         for pathway in payload["asset_pathways"]:
             self.assertEqual(pathway["observation_status"], "OBSERVED")
             self.assertEqual(pathway["outlook"]["five_day_status"], "PROVISIONAL")
             self.assertEqual(pathway["outlook"]["twenty_day_status"], "PROVISIONAL")
             self.assertNotIn("estimate_status", pathway)
         self.assertNotIn("zones", payload["pattern_map"])
+        self.assertEqual(payload["pattern_map"]["domain"], {"x": [-2.5, 2.5], "y": [-2.5, 2.5]})
+        self.assertEqual(len(payload["pattern_map"]["path"]), 17)
+        self.assertEqual(payload["session_evidence"]["pending_session"], "2026-07-20")
         self.assertEqual([item["id"] for item in payload["command"]["actions"]], ["daily_refresh", "reload"])
         self.assertNotIn("validation", payload)
         self.assertNotIn("load_validation", str(payload))
@@ -27184,7 +27201,7 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertEqual(_pattern_observation_status({"status": "UNAVAILABLE"}), "UNAVAILABLE")
         self.assertEqual(_pattern_observation_status({}), "UNAVAILABLE")
 
-    def test_futures_macro_v2_payload_hides_unavailable_probabilities(self) -> None:
+    def test_futures_macro_v3_payload_hides_unavailable_probabilities(self) -> None:
         from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
 
         payload = build_futures_macro_react_workbench_payload(
@@ -27193,12 +27210,41 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         )
         five_day = payload["horizons"][1]
 
-        self.assertEqual(five_day["estimate_status"], "UNAVAILABLE")
+        self.assertEqual(five_day["probability_status"], "UNAVAILABLE")
         self.assertEqual(five_day["probabilities"], [])
+        self.assertEqual(five_day["disclosure_probabilities"], [])
         self.assertEqual(five_day["edge_label"], "방향 우위 미확인")
-        self.assertIn("conditional_path", five_day)
-        self.assertEqual(five_day["conditional_path"]["points"], [])
-        self.assertIsNone(five_day["conditional_path"]["terminal"])
+        self.assertEqual(five_day["terminal_regions"], [])
+        self.assertIsNone(five_day["direction_vector"])
+
+    def test_futures_macro_v3_verified_and_no_edge_suppression_contract(self) -> None:
+        from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
+
+        verified = build_futures_macro_react_workbench_payload(
+            {"coverage": {}, "summary": {}},
+            pattern_outlook=self._pattern_outlook_payload_fixture(
+                probability_status="VERIFIED",
+                coordinate_status="VERIFIED",
+                vector_status="VERIFIED",
+            ),
+        )["horizons"][1]
+        no_edge = build_futures_macro_react_workbench_payload(
+            {"coverage": {}, "summary": {}},
+            pattern_outlook=self._pattern_outlook_payload_fixture(
+                probability_status="NO_EDGE",
+                coordinate_status="NO_EDGE",
+                vector_status="NO_EDGE",
+            ),
+        )["horizons"][1]
+
+        self.assertTrue(verified["probabilities"])
+        self.assertEqual(verified["disclosure_probabilities"], [])
+        self.assertEqual([item["mass"] for item in verified["terminal_regions"]], [0.8, 0.5])
+        self.assertIsNotNone(verified["direction_vector"])
+        self.assertEqual(no_edge["probabilities"], [])
+        self.assertEqual(no_edge["disclosure_probabilities"], [])
+        self.assertEqual(no_edge["terminal_regions"], [])
+        self.assertIsNone(no_edge["direction_vector"])
 
     def test_futures_macro_reload_clears_pattern_outlook_cache(self) -> None:
         from app.web.overview.futures_macro_helpers import _reload_futures_macro_snapshot_for_ui

@@ -776,56 +776,11 @@ def _current_pattern_horizon(pattern: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _future_conditional_path(item: dict[str, Any], status: str) -> dict[str, Any]:
-    """Normalize service-owned analog coordinates without fabricating fallbacks."""
-
-    raw = dict(item.get("conditional_path") or {})
-    path_status = str(raw.get("status") or "UNAVAILABLE")
-    base = {
-        "status": path_status,
-        "episode_count": int(
-            raw.get("episode_count") or item.get("episode_count") or 0
-        ),
-        "band_label": _display_text(
-            raw.get("band_label"),
-            "과거 유사 패턴 가운데 50%",
-        ),
-        "validation": dict(raw.get("validation") or {}),
-    }
-    if status == "UNAVAILABLE" or path_status == "UNAVAILABLE":
-        return {**base, "status": "UNAVAILABLE", "points": [], "terminal": None}
-    coordinate_keys = (
-        "x",
-        "y",
-        "lower_x",
-        "upper_x",
-        "lower_y",
-        "upper_y",
-    )
-    points: list[dict[str, Any]] = []
-    for raw_point in list(raw.get("points") or []):
-        point = dict(raw_point or {})
-        if point.get("step") is None or any(
-            point.get(key) is None for key in coordinate_keys
-        ):
-            continue
-        coordinates = {key: float(point[key]) for key in coordinate_keys}
-        if not all(isfinite(value) for value in coordinates.values()):
-            continue
-        points.append({"step": int(point["step"]), **coordinates})
-    return {
-        **base,
-        "points": points,
-        "terminal": points[-1] if points else None,
-    }
-
-
-def _future_pattern_horizon(item: dict[str, Any]) -> dict[str, Any]:
-    status = str(item.get("estimate_status") or "UNAVAILABLE")
-    raw_probabilities = dict(item.get("probabilities") or {}) if status != "UNAVAILABLE" else {}
+def _probability_rows(item: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_probabilities = dict(item.get("probabilities") or {})
     baseline = dict(item.get("baseline_probabilities") or {})
     lift = dict(item.get("probability_lift") or {})
-    probabilities = [
+    return [
         {
             "key": key,
             "label": PATTERN_REGIME_LABELS[key],
@@ -836,21 +791,74 @@ def _future_pattern_horizon(item: dict[str, Any]) -> dict[str, Any]:
         for key in ("risk_seeking", "defensive", "inflation_rate_pressure", "mixed")
         if key in raw_probabilities
     ]
+
+
+def _verified_terminal_regions(item: dict[str, Any], status: str) -> list[dict[str, float]]:
+    if status != "VERIFIED":
+        return []
+    fields = (
+        "mass", "center_x", "center_y", "radius_major", "radius_minor", "rotation_deg"
+    )
+    regions: list[dict[str, float]] = []
+    for value in list(item.get("terminal_regions") or []):
+        raw = dict(value or {})
+        if any(raw.get(field) is None for field in fields):
+            continue
+        region = {field: float(raw[field]) for field in fields}
+        if all(isfinite(number) for number in region.values()):
+            regions.append(region)
+    return sorted(regions, key=lambda region: region["mass"], reverse=True)
+
+
+def _verified_direction_vector(item: dict[str, Any], status: str) -> dict[str, float] | None:
+    if status != "VERIFIED":
+        return None
+    raw = dict(item.get("direction_vector") or {})
+    fields = ("median_dx", "median_dy", "lower_dx", "upper_dx", "lower_dy", "upper_dy")
+    if any(raw.get(field) is None for field in fields):
+        return None
+    vector = {field: float(raw[field]) for field in fields}
+    return vector if all(isfinite(value) for value in vector.values()) else None
+
+
+def _future_pattern_horizon(item: dict[str, Any]) -> dict[str, Any]:
+    probability_status = str(item.get("probability_status") or "UNAVAILABLE")
+    coordinate_status = str(item.get("coordinate_status") or "UNAVAILABLE")
+    vector_status = str(item.get("vector_status") or "UNAVAILABLE")
+    disclosure = _probability_rows(item)
+    probabilities = disclosure if probability_status == "VERIFIED" else []
+    disclosure_probabilities = disclosure if probability_status == "PROVISIONAL" else []
     horizon = int(item.get("horizon") or 0)
     dominant = str(item.get("dominant_regime") or "")
+    if probability_status == "VERIFIED":
+        title = PATTERN_REGIME_LABELS.get(dominant, "조건부 방향 우위 미확인")
+        edge_label = _display_text(item.get("edge_label"), "검증된 확률 우위")
+    elif probability_status == "NO_EDGE":
+        title = edge_label = "baseline 대비 예측 우위 없음"
+    elif probability_status == "PROVISIONAL":
+        title = edge_label = "검증 중 · 확정 우위 없음"
+    else:
+        title = "조건부 방향 우위 미확인"
+        edge_label = "방향 우위 미확인"
     return {
         "key": f"{horizon}D",
         "label": _display_text(item.get("label"), "조건부 전망"),
         "kind": "conditional_outlook",
-        "title": PATTERN_REGIME_LABELS.get(dominant, "조건부 방향 우위 미확인"),
-        "summary": _display_text(item.get("edge_label"), "방향 우위 미확인"),
-        "estimate_status": status,
-        "edge_label": _display_text(item.get("edge_label"), "방향 우위 미확인"),
+        "title": title,
+        "summary": edge_label,
+        "probability_status": probability_status,
+        "coordinate_status": coordinate_status,
+        "vector_status": vector_status,
+        "edge_label": edge_label,
         "baseline_label": "평소 기준 확률",
         "probabilities": probabilities,
+        "disclosure_probabilities": disclosure_probabilities,
         "episode_count": int(item.get("episode_count") or 0),
         "status_reason": _display_text(item.get("status_reason"), "검증 근거가 부족합니다."),
-        "conditional_path": _future_conditional_path(item, status),
+        "selected_candidate": item.get("selected_candidate"),
+        "terminal_regions": _verified_terminal_regions(item, coordinate_status),
+        "direction_vector": _verified_direction_vector(item, vector_status),
+        "macro_adjustment": dict(item.get("macro_adjustment") or {}),
     }
 
 
@@ -894,7 +902,7 @@ def _pattern_evidence_payload(
     evidence = dict(pattern.get("evidence") or {})
     macro_summary = dict(macro.get("summary") or {})
     outlook_items = [
-        f"{item.get('label')}: {item.get('edge_label')} · {item.get('estimate_status')}"
+        f"{item.get('label')}: {item.get('status_reason')} · {item.get('probability_status')}"
         for item in list(pattern_outlook.get("horizons") or [])
     ]
     current_items = list(evidence.get("current") or [])
@@ -923,8 +931,13 @@ def _family_state_label(family: dict[str, Any], key: str) -> str:
 
 
 def _pathway_outlook_label(horizon: dict[str, Any], pathway_key: str) -> str:
-    if str(horizon.get("estimate_status")) == "UNAVAILABLE":
+    status = str(horizon.get("probability_status") or "UNAVAILABLE")
+    if status == "UNAVAILABLE":
         return "검증 부족"
+    if status == "NO_EDGE":
+        return "예측 우위 없음"
+    if status != "VERIFIED":
+        return "검증 중"
     pathway = dict(dict(horizon.get("asset_pathways") or {}).get(pathway_key) or {})
     value = pathway.get("median_forward_z")
     if value is None:
@@ -960,9 +973,9 @@ def _pattern_asset_pathways(
             },
             "outlook": {
                 "five_day": _pathway_outlook_label(five_day, pathway_key),
-                "five_day_status": str(five_day.get("estimate_status") or "UNAVAILABLE"),
+                "five_day_status": str(five_day.get("probability_status") or "UNAVAILABLE"),
                 "twenty_day": _pathway_outlook_label(twenty_day, pathway_key),
-                "twenty_day_status": str(twenty_day.get("estimate_status") or "UNAVAILABLE"),
+                "twenty_day_status": str(twenty_day.get("probability_status") or "UNAVAILABLE"),
             },
             "change_condition": _display_text(change_conditions[0] if change_conditions else None, "다음 5D persistence를 확인합니다."),
             "observation_status": observation_status,
@@ -1069,8 +1082,9 @@ def build_futures_macro_react_workbench_payload(
     snapshot_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     pattern = dict(pattern_outlook.get("current_pattern") or macro.get("pattern") or {})
+    session = dict(pattern_outlook.get("session") or {})
     return {
-        "schema_version": "futures_macro_react_workbench_v2",
+        "schema_version": "futures_macro_react_workbench_v3",
         "component": "FuturesMacroWorkbench",
         "command": _pattern_command_payload(macro, pattern_outlook),
         "hero": _pattern_hero_payload(macro, pattern),
@@ -1085,7 +1099,13 @@ def build_futures_macro_react_workbench_payload(
             "title": "최근 패턴 경로",
             "x_label": "위험선호",
             "y_label": "금리·달러·물가 압력",
-            "path": list(pattern.get("path") or []),
+            "domain": {"x": [-2.5, 2.5], "y": [-2.5, 2.5]},
+            "path": list(pattern.get("path") or [])[-30:],
+        },
+        "session_evidence": {
+            "latest_final_session": session.get("latest_final_session"),
+            "pending_session": session.get("pending_session"),
+            "status": session.get("status"),
         },
         "evidence": _pattern_evidence_payload(pattern, pattern_outlook, macro),
         "ribbon": {"title": "최근 60거래일 체제", "items": list(pattern.get("ribbon") or [])},

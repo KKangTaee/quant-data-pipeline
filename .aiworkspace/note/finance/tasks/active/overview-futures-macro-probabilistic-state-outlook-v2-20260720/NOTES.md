@@ -42,3 +42,4 @@
 - Missing cycle/event tables degrade M2 to unavailable context while preserving the DB-only M1 path; provider fetching was not added to the UI or model service.
 - Snapshot compatibility is now based on the completed-input fingerprint, not the raw maximum provider marker. A pending provider row can move the raw marker without invalidating or replacing the latest-good final snapshot.
 - Immutable history and current are written in one transaction. `materialized_at` does not participate in identity, so retries remain idempotent.
+- The Python bridge is the publication enforcement boundary: provisional numbers remain available only under `disclosure_probabilities`, while `NO_EDGE` carries no conditional numeric distribution or geometry to the React first surface.

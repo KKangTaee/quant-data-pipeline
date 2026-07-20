@@ -118,3 +118,12 @@ No code, DB row, registry, or saved setup was modified by this analysis.
 - Pending session test confirms latest-good current reuse without a write.
 - Snapshot/pattern regression: 43 tests passed. Futures Macro service contracts: 23 passed, 833 deselected.
 - Updated modules passed `py_compile`; `git diff --check` passed. No production schema or data was mutated in this task run.
+
+## 2026-07-20 — Task 7 V3 Publication Bridge
+
+- RED: V2 payload lacked independent publication statuses and still exposed sparse conditional-path coordinates.
+- GREEN: `futures_macro_react_workbench_v3` emits selected candidate, three statuses, verified primary probabilities, provisional disclosure-only probabilities, verified terminal ellipses, and verified direction vector.
+- `NO_EDGE` and `UNAVAILABLE` suppress primary/disclosure conditional numbers and all forecast geometry.
+- Observed trail is limited to the latest 30 final sessions and carries fixed semantic domain `[-2.5,+2.5]` on both axes.
+- Session evidence carries only latest final, pending session, and finality status; no run/job diagnostic panel was added.
+- Futures Macro service-contract regression: 24 passed, 833 deselected; `git diff --check` passed.
