@@ -317,3 +317,43 @@ def test_decision_research_keeps_financial_period_and_factor_controls_separate()
     assert ".mm-decision__chart-layout" in style
     assert "grid-template-columns: minmax(0, 7fr) minmax(220px, 3fr);" in style
     assert "@media (max-width: 760px)" in style
+
+
+def test_market_movers_page_uses_decision_shell_without_legacy_duplicate() -> None:
+    from pathlib import Path
+
+    source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+    render_body = source[source.index("def render_market_movers_snapshot") :]
+
+    assert "if market_movers_react_component_available():" in render_body
+    assert "_render_market_movers_decision_shell(" in render_body
+    decision_branch = render_body[
+        render_body.index("if market_movers_react_component_available():") :
+        render_body.index("react_event = _render_market_movers_react_summary")
+    ]
+    assert "_render_market_movers_snapshot_panel(" not in decision_branch
+    assert "return" in decision_branch
+    assert "_render_market_movers_snapshot_panel(" in render_body
+
+
+def test_decision_shell_selection_event_updates_symbol_once(monkeypatch) -> None:
+    from app.web.overview import market_movers_helpers as helpers
+
+    controls = helpers.MarketMoverControls(
+        coverage="SP500",
+        universe_limit=500,
+        period="daily",
+        sector="All",
+        top_n=20,
+        mode="top_gainers",
+    )
+    monkeypatch.setattr(helpers.st, "session_state", {})
+    rerun_calls: list[bool] = []
+    monkeypatch.setattr(helpers.st, "rerun", lambda: rerun_calls.append(True))
+    event = {"event": {"id": "select_symbol", "symbol": "bbb", "nonce": 101}}
+
+    assert helpers._dispatch_market_movers_react_event(event, controls=controls) is True
+    assert helpers.st.session_state["overview_market_movers_selected_symbol_SP500"] == "BBB"
+    assert rerun_calls == [True]
+    assert helpers._dispatch_market_movers_react_event(event, controls=controls) is False
+    assert rerun_calls == [True]

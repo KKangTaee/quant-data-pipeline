@@ -17897,10 +17897,18 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("if react_event is None:", render_body)
         self.assertIn("_render_market_movers_refresh_bar(", render_body)
         self.assertIn("_render_market_movers_react_refresh_companion(", render_body)
+        decision_branch = render_body[
+            render_body.index("if market_movers_react_component_available():") :
+            render_body.index("react_event = _render_market_movers_react_summary")
+        ]
+        self.assertIn("_render_market_movers_decision_shell(", decision_branch)
+        self.assertIn("_render_market_movers_react_refresh_companion(", decision_branch)
+        self.assertIn("return", decision_branch)
+        legacy_branch = render_body[render_body.index("react_event = _render_market_movers_react_summary") :]
         self.assertLess(render_body.index("if react_event is None:"), render_body.index("_render_market_movers_refresh_bar("))
         self.assertLess(
-            render_body.index("_render_market_movers_refresh_bar("),
-            render_body.index("_render_market_movers_react_refresh_companion("),
+            legacy_branch.index("_render_market_movers_refresh_bar("),
+            legacy_branch.index("_render_market_movers_react_refresh_companion("),
         )
 
     def test_market_movers_polish_phase3_compacts_refresh_actions(self) -> None:

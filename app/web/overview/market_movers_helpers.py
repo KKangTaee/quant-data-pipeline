@@ -1010,6 +1010,8 @@ def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverCont
         return {"handler": "set_market_movers_refresh_mode"}
     if action_id == "set_control":
         return {"handler": "set_market_movers_control"}
+    if action_id == "select_symbol":
+        return {"handler": "set_market_movers_selected_symbol"}
     return {"handler": "noop", "action_id": action_id}
 
 
@@ -1100,6 +1102,15 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
 
     universe_code = str(plan.get("universe_code") or controls.coverage)
     universe_label = MARKET_COVERAGE_LABELS.get(universe_code, universe_code)
+    if handler == "set_market_movers_selected_symbol":
+        payload = _market_movers_react_event_payload(event)
+        symbol = str(payload.get("symbol") or payload.get("value") or "").strip().upper()
+        if not symbol:
+            return False
+        st.session_state[f"overview_market_movers_selected_symbol_{controls.coverage}"] = symbol
+        st.rerun()
+        return True
+
     if handler == "set_market_movers_refresh_mode":
         payload = _market_movers_react_event_payload(event)
         requested = str(payload.get("value") or "manual")
@@ -1223,6 +1234,26 @@ def _render_market_movers_react_summary(
     if event is None:
         render_market_movers_unified_summary(payload["summary"])
     return event
+
+
+def _render_market_movers_decision_shell(
+    snapshot: dict[str, Any],
+    *,
+    controls: MarketMoverControls,
+) -> dict[str, Any] | None:
+    selected_key = f"overview_market_movers_selected_symbol_{controls.coverage}"
+    payload = build_market_movers_decision_react_payload(
+        snapshot,
+        controls=controls,
+        selected_symbol=st.session_state.get(selected_key),
+    )
+    selected_symbol = str(dict(payload.get("selection") or {}).get("symbol") or "").strip().upper()
+    if selected_symbol:
+        st.session_state[selected_key] = selected_symbol
+    return render_market_movers_react_workbench(
+        payload,
+        key=f"overview_{controls.coverage.lower()}_market_movers_decision_workbench",
+    )
 
 
 def build_market_movers_empty_state_model(
@@ -4588,6 +4619,15 @@ def render_market_movers_snapshot(controls: MarketMoverControls) -> None:
         sector=controls.sector,
     )
     snapshot = _market_movers_attach_eod_preflight(snapshot, controls=controls)
+    if market_movers_react_component_available():
+        decision_event = _render_market_movers_decision_shell(
+            snapshot,
+            controls=controls,
+        )
+        _dispatch_market_movers_react_event(decision_event, controls=controls)
+        _render_market_movers_react_refresh_companion(snapshot, controls=controls)
+        return
+
     react_event = _render_market_movers_react_summary(snapshot, controls=controls)
     _dispatch_market_movers_react_event(react_event, controls=controls)
     if react_event is None:
