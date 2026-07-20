@@ -6870,3 +6870,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - stale EOD basis, typed collection gap 부재, raw 17/canonical 11 sector mismatch, sector mode handoff 단절, historical PER 의미 오류를 핵심 문제로 확정했다.
 - sector/industry trend와 sector bellwether/조건부 outlook 가능성을 구분하고 잠정 `5차` 개선 순서를 정리했다.
 - 구현은 시작하지 않았으며 상세는 `researches/active/2026-06-market-movers-redesign-v2-benchmark/CURRENT_PROJECT_AUDIT.md`를 본다.
+
+## 2026-07-20 - Overview Market Movers 개편 설계 승인
+
+- 첫 화면을 `종목 발견 -> sector/industry 확산 확인 -> 선택 종목 조사`로 연결하는 A안 one-shell을 승인했다.
+- complete/partial/blocked 데이터 상태, sector 시총 Top 3, gated sector outlook, industry current flow 계약을 확정했다.
+- 선택 종목 재무는 보고 주기와 factor를 분리하고 one-factor/one-axis, reported diluted EPS, PIT-correct PER 원칙을 적용한다.
+- 전체 roadmap `2/5차` 완료. 상세는 `researches/active/2026-06-market-movers-redesign-v2-benchmark/RECOMMENDATION.md`, 다음은 3차 data/read-model 계획이다.

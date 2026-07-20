@@ -10240,3 +10240,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 기능을 더 붙이기 전에 한 화면에 혼합된 product/ops 흐름, 실제 data gap, sector 해석 가치, 재무 chart 정확성을 근거로 개편 범위를 확정한다.
 - Analysis result: current surface는 four-job mixed UI이며 stale basis, collection-gap 오분류, sector taxonomy 분할, sector mode 조사 단절, current-price/historical-EPS PER chart가 우선 문제다. Industry 140개와 group trend backend는 재사용 가능하다.
 - Follow-up: 전체 잠정 roadmap `1/5차` 감사만 완료했다. 다음은 one-shell IA/visual contract이며 sector 전망은 watch condition -> 검증된 historical conditional outlook 순으로 진행해야 한다.
+
+### 2026-07-20 - 변동 종목 A안은 ranking과 확산·조사를 한 selected state로 연결한다
+
+- User request: 종목 발견과 시장 확산 확인을 첫 화면의 핵심 과업으로 선택하고 A안 UI, 수집 누락, sector outlook, 선택 종목·재무 chart 구조를 확정하도록 요청함.
+- Interpreted goal: operations status를 주인공으로 만들지 않고 ranking에서 group context와 정확한 종목 조사까지 한 흐름으로 끝낸다.
+- Analysis result: one-shell 60~65/35~40 split, complete/partial/blocked, sector/industry current flow, sector conditional outlook gate, latest-cap Top 3, independent period/factor와 single-axis 재무 chart를 승인했다.
+- Follow-up: 전체 roadmap `2/5차` 설계를 `RECOMMENDATION.md`에 확정했다. 다음은 3차 canonical taxonomy, typed gaps, bellwether, industry, financial read-model hardening 계획이다.
