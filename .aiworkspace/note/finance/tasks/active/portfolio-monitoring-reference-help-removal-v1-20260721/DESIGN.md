@@ -1,6 +1,6 @@
 # Portfolio Monitoring Reference Help Removal V1 Design
 
-Status: User-approved written spec; implementation plan ready
+Status: Implemented and verified (`2/2차` complete)
 Date: 2026-07-21
 
 ## Problem

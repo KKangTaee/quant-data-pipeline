@@ -27,6 +27,12 @@ Portfolio Monitoring Diagnosis Grouping / Scroll V1도 전체 `3/3차`를 완료
 - 호환 경계: workspace는 additive `diagnosis.display_groups`를 제공하며 legacy payload는 React에서 one-member group으로 읽는다. raw `weaknesses`·`all_rows`·history identity, threshold, severity, confidence, DB/registry/saved 계약은 변경하지 않았다.
 - 화면/QA: 760px 초과에서 각 진단 목록은 최대 560px와 내부 스크롤을 사용하고, 760px 이하에서는 자연 높이와 page scroll을 사용한다. Python 142, React 31, typecheck/build와 desktop 1269px·mobile 377px fixture Browser QA를 통과했다.
 
+Portfolio Monitoring Reference Help Removal V1도 전체 `2/2차`를 완료했다.
+
+- 완료 범위: Portfolio Monitoring의 중복 contextual panel, 전용 catalog row, 중복 renderer import를 제거해 React Command Center부터 바로 시작한다.
+- 정보 소유권: `journey.monitoring`, `concept.monitoring_scenario`, `playbook.monitoring_scenario_stale`와 `portfolio_monitoring` destination은 canonical Reference Center에 그대로 보존한다.
+- QA: Python Reference 29개·Portfolio Monitoring 142개, Reference React 15개·Portfolio Monitoring React 31개와 양쪽 typecheck/build를 통과했다. actual desktop/420px에서 panel 미노출, Command Center 노출, overflow 0, console error 0과 세 stable deep link를 확인했다.
+
 현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-sentiment-cnn-aaii-v1-20260719/`다.
 
 - 목적: CNN 중심·중복 구조와 단위가 섞인 이력 그래프를 정리하고, CNN 시장 행동과 AAII 개인투자자 인식을 동등한 두 축으로 읽게 한다.
@@ -44,7 +50,7 @@ Portfolio Monitoring Diagnosis Grouping / Scroll V1도 전체 `3/3차`를 완료
 Latest completed Reference task는 `.aiworkspace/note/finance/tasks/active/reference-center-react-v1-20260720/`다.
 
 - 목적: 방치된 `Reference > Guides / Glossary`를 현재 제품 흐름과 용어를 함께 찾는 단일 Search-first React Reference Center로 교체한다.
-- 완료: 전체 `4/4차`; 24-item curated catalog와 drift guard, 4개 filter, 6개 journey, local detail/related navigation, stable deep link, 7개 current surface contextual help, legacy renderer 제거와 desktop/900px/420px Browser QA를 닫았다.
+- 완료: 전체 `4/4차`; 24-item curated catalog와 drift guard, 4개 filter, 6개 journey, local detail/related navigation, stable deep link, legacy renderer 제거와 desktop/900px/420px Browser QA를 닫았다. 최초 7개 current surface contextual help 중 Portfolio Monitoring 전용 panel은 후속 task에서 제거되어 current 계약은 Final Review까지 6개다.
 - 경계: Reference는 읽기 전용이다. 내부 `docs/GLOSSARY.md`를 runtime에 자동 파싱하지 않고 provider/DB/registry/saved setup/log/run-history/validation mutation을 소유하지 않는다.
 - 유지보수: 새 product surface 또는 이름 변경 시 catalog item, contextual help ID, current-surface guard를 함께 갱신한다.
 

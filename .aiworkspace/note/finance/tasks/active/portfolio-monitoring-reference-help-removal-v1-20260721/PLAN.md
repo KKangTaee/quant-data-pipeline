@@ -31,7 +31,7 @@
 - Preserves: `get_reference_item(item_id: str) -> dict[str, Any] | None`
 - Produces: `get_reference_contextual_help("portfolio_monitoring") is None` and a Portfolio Monitoring page source without `render_reference_contextual_help`
 
-- [ ] **Step 1: Write the failing ownership test**
+- [x] **Step 1: Write the failing ownership test**
 
 In `tests/test_reference_contextual_help.py`, remove `portfolio_monitoring` from `REQUIRED_CONTEXTUAL_SURFACES` and `OWNER_CALL_SITES`. Replace the Portfolio Monitoring defensive-copy test with a remaining surface and add this focused contract:
 
@@ -81,7 +81,7 @@ Change the drift assertion from the old surface count to the exact current contr
         self.assertGreaterEqual(report["metrics"]["reference_item_count"], 6)
 ```
 
-- [ ] **Step 2: Run the focused RED test**
+- [x] **Step 2: Run the focused RED test**
 
 Run:
 
@@ -92,7 +92,7 @@ Run:
 
 Expected: FAIL because the contextual catalog still returns the Portfolio Monitoring row and the page still imports/calls the renderer.
 
-- [ ] **Step 3: Remove the Portfolio Monitoring contextual catalog row**
+- [x] **Step 3: Remove the Portfolio Monitoring contextual catalog row**
 
 Delete only the dictionary at current lines 154-181 whose identity begins as follows from `REFERENCE_CONTEXTUAL_HELP`:
 
@@ -111,7 +111,7 @@ from app.services.reference_contextual_help import REFERENCE_CONTEXTUAL_HELP
 assert REFERENCE_CONTEXTUAL_HELP[-1]["surface_key"] == "final_review"
 ```
 
-- [ ] **Step 4: Remove both duplicate imports and the page call**
+- [x] **Step 4: Remove both duplicate imports and the page call**
 
 Delete both occurrences of:
 
@@ -137,7 +137,7 @@ def render_final_selected_portfolio_dashboard_page(
     runtime = services or _default_portfolio_monitoring_services()
 ```
 
-- [ ] **Step 5: Run GREEN contract and page regression**
+- [x] **Step 5: Run GREEN contract and page regression**
 
 ```bash
 .venv/bin/python -m unittest tests.test_reference_contextual_help -v
@@ -151,7 +151,7 @@ git diff --check
 
 Expected: contextual-help tests report the exact six-surface contract; Reference Center and Portfolio Monitoring page tests pass; compile and diff check exit 0.
 
-- [ ] **Step 6: Review the scoped diff**
+- [x] **Step 6: Review the scoped diff**
 
 ```bash
 git diff -- \
@@ -162,7 +162,7 @@ git diff -- \
 
 Confirm all of the following: no Portfolio Monitoring contextual row/import/call remains; canonical Reference Center code was not edited; the other six contextual surfaces are unchanged.
 
-- [ ] **Step 7: Commit Task 1**
+- [x] **Step 7: Commit Task 1**
 
 ```bash
 git add \
@@ -179,6 +179,7 @@ git commit -m "개선: 포트폴리오 모니터링 도움말 패널 제거"
 **Files:**
 - Modify: `.aiworkspace/note/finance/docs/PROJECT_MAP.md:79-80,133`
 - Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md:28,248-258`
+- Modify: `.aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md`
 - Modify: `.aiworkspace/note/finance/docs/INDEX.md`
 - Modify: `.aiworkspace/note/finance/docs/ROADMAP.md`
 - Modify: `.aiworkspace/note/finance/tasks/active/portfolio-monitoring-reference-help-removal-v1-20260721/{DESIGN,PLAN,STATUS,NOTES,RUNS,RISKS}.md`
@@ -191,7 +192,7 @@ git commit -m "개선: 포트폴리오 모니터링 도움말 패널 제거"
 - Verifies: canonical Reference monitoring items and `portfolio_monitoring` destination remain reachable
 - Produces: durable current-state docs and task closeout without generated artifact commits
 
-- [ ] **Step 1: Run the full proportional automation suite**
+- [x] **Step 1: Run the full proportional automation suite**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -218,7 +219,7 @@ git diff --check
 
 Expected: all Python/React tests pass, both components typecheck/build, compile and diff check exit 0. Record exact counts in `RUNS.md`.
 
-- [ ] **Step 2: Start the actual app for Browser QA**
+- [x] **Step 2: Start the actual app for Browser QA**
 
 Use an available local port and record it:
 
@@ -230,7 +231,7 @@ Use an available local port and record it:
 
 Keep the session alive only for QA and stop it cleanly afterward.
 
-- [ ] **Step 3: Verify Portfolio Monitoring first-read at desktop and mobile**
+- [x] **Step 3: Verify Portfolio Monitoring first-read at desktop and mobile**
 
 Using the in-app Browser and visible navigation:
 
@@ -250,7 +251,7 @@ documentElement.scrollWidth <= documentElement.clientWidth
 console error count == 0
 ```
 
-- [ ] **Step 4: Verify canonical Reference preservation**
+- [x] **Step 4: Verify canonical Reference preservation**
 
 Navigate to the Reference page and verify these exact stable deep links or equivalent visible search results:
 
@@ -262,7 +263,7 @@ Navigate to the Reference page and verify these exact stable deep links or equiv
 
 For each item, verify its title opens and its owner action still targets Portfolio Monitoring. Do not mutate portfolio, registry, saved setup, or Reference data during QA.
 
-- [ ] **Step 5: Synchronize durable docs and task state**
+- [x] **Step 5: Synchronize durable docs and task state**
 
 Apply these exact current-state changes:
 
@@ -280,7 +281,7 @@ Apply these exact current-state changes:
 
 Update active task docs with 1차/2차 completion, exact test counts, desktop/mobile Browser assertions, canonical Reference preservation, and unverified gaps. Add one concise milestone to `WORK_PROGRESS.md`, one durable decision to `QUESTION_AND_ANALYSIS_LOG.md`, and a latest completed task pointer to `docs/INDEX.md`/`docs/ROADMAP.md`.
 
-- [ ] **Step 6: Run final hygiene and commit Task 2**
+- [x] **Step 6: Run final hygiene and commit Task 2**
 
 ```bash
 .venv/bin/python -m unittest tests.test_reference_contextual_help -q

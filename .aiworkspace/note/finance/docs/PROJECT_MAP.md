@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-07-20
+Last Verified: 2026-07-21
 
 ## Project Summary
 
@@ -76,7 +76,7 @@ Last Verified: 2026-07-20
 | Reference canonical catalog / drift guard | `app/services/reference_center.py`; curated 24-item user-facing catalog, stable IDs, 6개 journey, search projection, relation/destination/current-surface/legacy-label contract를 소유하며 Streamlit과 내부 `GLOSSARY.md` runtime parsing에 의존하지 않는다 |
 | Reference page / React bridge | `app/web/reference_center.py`, `app/web/reference_center_react_component.py`; `/reference?item=<id>` initial detail, invalid-link recovery, allowlisted `navigate_to_surface` intent와 JSON-safe custom-component boundary를 소유한다 |
 | Reference React workbench | `app/web/streamlit_components/reference_center_workbench/`; local search/filter/detail/related-item state, desktop drawer, 520px 이하 sheet와 production `component_static`을 소유한다. provider/DB/registry/session mutation은 하지 않는다 |
-| Reference contextual help service | `app/services/reference_contextual_help.py`; Overview, Institutional Portfolios, Ingestion, Backtest Analysis, Practical Validation, Final Review, Portfolio Monitoring을 stable Reference item ID로 연결한다 |
+| Reference contextual help service | `app/services/reference_contextual_help.py`; Overview, Institutional Portfolios, Ingestion, Backtest Analysis, Practical Validation, Final Review의 6개 surface를 stable Reference item ID로 연결한다 |
 | Reference contextual help renderer | `app/web/reference_contextual_help.py`; configured Reference `st.Page`와 `query_params={"item": ...}`만 사용한다 |
 | Backtest Compare visual components | `app/web/backtest_compare/components.py` |
 | Practical Validation service | `app/services/backtest_practical_validation.py`; includes Practical Validation result build wrapper, source/result registry append, provider gap collection orchestration, and reusable read-only CNN / AAII market sentiment context overlay for downstream surfaces. Final Review first-read does not render this overlay |
@@ -130,7 +130,7 @@ Last Verified: 2026-07-20
 | Final Review | `app/web/backtest_final_review/page.py`; primary question, latest eligible candidate context, Python Decision Brief projection, React candidate / observation refresh / route / reason intent 소비, 자동 Decision ID, authoritative save evaluation / append와 Monitoring handoff를 소유한다. observation refresh는 가격 수집·replay·새 validation 저장을 Python에서 실행하고 성공한 validation을 다시 선택한다. current 화면은 별도 Decision Desk / confirmed-report gate / Review Queue / standalone Decision Cockpit / Evidence Appendix / Saved Decisions ledger를 렌더링하지 않는다 |
 | Final Review UI components | `app/web/backtest_final_review/components.py` |
 | Final Review Decision Workspace React component | `app/web/components/final_review_investment_report/`; compatibility directory 이름을 유지하지만 current renderer는 후보 선택 → 결론 → 관측 최신성 → 행동 근거 → 실제 강점/약점 → 실제 성격/관리 압력 → Monitoring 변화 조건 → 최종 판단 → disclosure의 one-shell이다. overall / headline score는 표시하지 않고 evidence confidence만 disclosure metadata로 표시한다. React는 candidate / observation refresh / route / reason intent와 SVG 좌표만 소유하며 날짜 판정, 가격 수집, replay, Gate, normalization, dedup, save evaluation, 자동 ID, row append를 소유하지 않는다 |
-| Operations > Portfolio Monitoring | `app/web/final_selected_portfolio_dashboard.py`; legacy filename을 유지하는 React Command Center route. Python read/command bridge, exact-date DB close lookup, position editor rerun recovery와 DB-only selected-item OHLCV callback을 소유하며 contextual Reference help entry point를 포함 |
+| Operations > Portfolio Monitoring | `app/web/final_selected_portfolio_dashboard.py`; legacy filename을 유지하는 React Command Center route. Python read/command bridge, exact-date DB close lookup, position editor rerun recovery와 DB-only selected-item OHLCV callback을 소유한다. 모니터링 흐름·scenario·stale 안내의 canonical 소유자는 `/reference`다 |
 | Ingestion jobs | `app/jobs/ingestion_jobs.py` |
 | Overview scheduled refresh automation | `app/jobs/overview_automation.py` |
 | DB schema | `finance/data/db/schema.py` |

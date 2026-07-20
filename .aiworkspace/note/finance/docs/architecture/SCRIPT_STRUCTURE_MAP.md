@@ -29,8 +29,8 @@
 | `app/services/reference_center.py` | 단일 Reference Center가 사용하는 Streamlit-free curated catalog. 6개 사용자 흐름, 상태·용어·기능 개념, 문제 해결 playbook, 검색 문자열, 관련 항목, owner 화면 destination과 drift guard를 제공한다 |
 | `app/web/reference_center.py` | `/reference` page payload, 안정적인 `?item=<reference-id>` deep link, React event와 allowlisted owner 화면 navigation intent를 처리한다 |
 | `app/web/reference_center_react_component.py` + `app/web/streamlit_components/reference_center_workbench/` | 검색 우선 Reference React workbench bridge와 UI. 검색·종류 filter·관련 항목·상세 drawer/sheet는 React local state가 소유하고 Python은 catalog와 navigation boundary를 소유한다 |
-| `app/web/reference_contextual_help.py` | Overview, Institutional Portfolios, Ingestion, Backtest Analysis, Practical Validation, Final Review, Portfolio Monitoring에 붙는 read-only Reference help expander와 exact item deep link render |
-| `app/services/reference_contextual_help.py` | 7개 주요 workflow 화면의 contextual help catalog, surface lookup helper, Reference item / target / duplicate surface drift report |
+| `app/web/reference_contextual_help.py` | Overview, Institutional Portfolios, Ingestion, Backtest Analysis, Practical Validation, Final Review에 붙는 read-only Reference help expander와 exact item deep link render |
+| `app/services/reference_contextual_help.py` | Overview부터 Final Review까지 6개 주요 workflow 화면의 contextual help catalog, surface lookup helper, Reference item / target / duplicate surface drift report |
 | `app/web/overview_dashboard.py` | `Workspace > Overview`의 explicit compatibility wrapper. 현재는 기존 import path 호환을 위해 `render_overview_dashboard`만 re-export하고 active body는 `app/web/overview/page.py`로 위임한다 |
 | `app/web/overview/page.py` | `Workspace > Overview` active page shell. title, market session banner, selected-tab lazy dispatch를 관리하고 primary tab entry modules로 위임한다 |
 | `app/web/overview/navigation.py` | Overview primary navigation constants, query-param slug mapping, `st.pills` selector render, selected-tab dispatch helper |

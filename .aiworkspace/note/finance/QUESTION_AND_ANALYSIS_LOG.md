@@ -17,6 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
+  - Latest completed Portfolio Monitoring UX decision: [portfolio-monitoring-reference-help-removal-v1-20260721](./tasks/active/portfolio-monitoring-reference-help-removal-v1-20260721/STATUS.md). 기본 업무 화면의 중복 contextual panel은 제거하고 모니터링 도움말 source-of-truth는 canonical Reference Center로 단일화했다.
   - Latest completed Reference decision: [reference-center-react-v1-20260720](./tasks/active/reference-center-react-v1-20260720/STATUS.md). Guide와 Glossary를 단일 Search-first React Reference로 통합하고 legacy·개발자 용어와 로그 surface를 제외한 채 전체 `4/4차` 구현·responsive QA를 완료했다.
   - Current active task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `1/4차` 기능과 승인된 시각 polish·actual QA를 완료했고, 다음은 2차 장기 이력·발표 당시 값 품질 점검이다.
   - Previous completed task is [operations-portfolio-monitoring-only-v1-20260719](./tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md). Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
@@ -58,6 +59,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - legacy archive content was absorbed into the current docs/task structure; the removed `archive/` path is not a live pointer.
 
 ## Entries
+
+### 2026-07-21 - Portfolio Monitoring은 업무를 바로 시작하고 도움말은 Reference Center가 소유한다
+
+- User request: Portfolio Monitoring 시작부의 큰 Reference help 영역이 불필요해 보여 제거하거나 필요한 곳에 합쳐 달라고 요청함.
+- Interpreted goal: 실제 포트폴리오 확인보다 앞서는 중복 안내를 없애되 모니터링 흐름·scenario·stale 해결 정보는 잃지 않는다.
+- Analysis result: 세 안내가 이미 canonical Reference item과 stable deep link로 존재하므로 Portfolio Monitoring의 contextual panel·전용 row만 제거하고 `/reference`와 `portfolio_monitoring` owner destination을 유지하는 A안이 적합하다.
+- Follow-up: 전체 `2/2차` 구현·자동 회귀·desktop/420px actual QA를 완료했고 contextual help current surface는 Final Review까지 6개로 정렬했다.
 
 ### 2026-07-20 - sub-dev master 통합은 현재 Overview 계약과 master의 완료 이력을 함께 보존한다
 

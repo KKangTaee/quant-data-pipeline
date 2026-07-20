@@ -23,6 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
+  - Latest completed Portfolio Monitoring UX task is [portfolio-monitoring-reference-help-removal-v1-20260721](./tasks/active/portfolio-monitoring-reference-help-removal-v1-20260721/STATUS.md). 중복 contextual panel을 제거하고 canonical Reference 3개 항목을 보존한 채 전체 `2/2차` actual QA를 완료했다.
   - Latest completed Reference task is [reference-center-react-v1-20260720](./tasks/active/reference-center-react-v1-20260720/STATUS.md). 단일 Search-first React Reference, curated 24-item catalog, stable contextual deep link, legacy removal과 responsive Browser QA를 전체 `4/4차`로 완료했다.
   - Current active task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `1/4차` 기능과 승인된 시각 polish·actual QA를 완료했고, 다음은 2차 장기 이력·발표 당시 값 품질 점검이다.
   - Previous completed task is [operations-portfolio-monitoring-only-v1-20260719](./tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md). Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
@@ -70,6 +71,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### 2026-07-21 - Portfolio Monitoring Reference help 소유권 단일화
+
+- Command Center 앞의 중복 `Reference help · Portfolio Monitoring` panel과 전용 catalog row를 제거했다.
+- 모니터링 journey·scenario·stale playbook과 owner destination은 `/reference`에 보존하고 contextual help current surface는 Final Review까지 6개로 정렬했다.
+- Python 29+142, React 15+31, typecheck/build와 desktop/420px actual QA에서 panel 미노출, overflow 0, console error 0, stable deep link 3개를 확인했다.
+- 전체 roadmap `2/2차`를 완료했으며 QA screenshot은 generated artifact로 commit에서 제외한다.
 
 ### 2026-07-20 - sub-dev master 통합 충돌 해결
 

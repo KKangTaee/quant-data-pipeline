@@ -1,10 +1,11 @@
 # Portfolio Monitoring Reference Help Removal V1 Status
 
-Status: Implementation plan ready
+Status: Complete (`2/2차`)
 
-- 화면과 source를 대조해 Portfolio Monitoring contextual panel의 소유 call을 확인했다.
-- 패널 내용이 Reference Center의 모니터링 journey, scenario concept, stale playbook에 이미 존재함을 확인했다.
-- 사용자가 A안인 패널·전용 설정 제거와 canonical Reference 유지 방향을 승인했다.
-- 사용자가 written `DESIGN.md`를 승인했다.
-- 1차 contextual entry 제거와 2차 Browser QA/docs closeout의 상세 TDD 계획을 작성하고 self-review했다.
-- 다음 action은 사용자가 선택한 execution mode로 Task 1부터 실행하는 것이다.
+- 1차: Portfolio Monitoring의 contextual renderer 호출·중복 import·전용 catalog row를 TDD로 제거했다.
+- 자동 계약은 `get_reference_contextual_help("portfolio_monitoring") is None`과 canonical Reference 3개 item·owner destination 보존을 함께 검증한다.
+- 2차: Python 29+142, React 15+31, 양쪽 typecheck/build와 target py_compile을 통과했다.
+- actual desktop/420px에서 help panel 미노출, Command Center 노출, horizontal overflow 0, console error 0을 확인했다.
+- `/reference?item=journey.monitoring`, `concept.monitoring_scenario`, `playbook.monitoring_scenario_stale` 상세와 Portfolio Monitoring destination을 확인했다.
+- durable docs와 root handoff log를 current 6-surface contextual-help 계약으로 정렬했다.
+- 범위 밖의 다른 contextual-help surface와 Portfolio Monitoring 데이터·command·DB 계약은 변경하지 않았다.
