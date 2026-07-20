@@ -10254,3 +10254,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 퀀트 전략이나 주문 기능을 확장하지 않고 실제 직접종목 보유수량·현금흐름·성과를 같은 추적 항목에서 계속 관리해야 함.
 - Analysis result: current add/end/reopen 계약에는 edit/trade가 없다. direct stock fixed-shares 전용 append-only event ledger, DB close default + actual price override, buy=입금, partial sell=출금, daily Modified Dietz를 채택함.
 - Follow-up: 전체 `3/3차`를 완료했다. exact-date DB close default/manual override, append-only replace/void, buy contribution/sell withdrawal, partial-sell 최소 1주를 구현했다. 최종 리뷰에서 거래 수정 false block과 선택 종목/그룹 기준일 혼합을 보정했고 Python 138 / React 30과 actual/isolated Browser QA를 통과했다. 전량매도는 tracking end, ETF·전략·fixed notional·backtest는 기존 경계를 유지한다.
+
+### 2026-07-21 - 진단 반복은 원시 근거를 지우지 않고 의미 가족으로 묶는다
+
+- User request: Portfolio Monitoring 취약점이 많아질 때 스크롤로 대응하고, `함께 움직이는 항목의 비중이 커...` 같은 문구 반복이 의도된 사양인지 확인 후 개선해 달라고 요청함.
+- Interpreted goal: 서로 다른 종목쌍·종목의 유효한 판정 근거는 유지하되 첫 화면에서는 같은 의미의 경고를 반복 카드로 읽지 않게 하고, 긴 목록이 이후 업무 영역을 계속 밀어내지 않아야 함.
+- Analysis result: root dedup은 정상이나 React가 subject identity를 숨겨 구현이 원래 중복 방지 의도에서 drift했다. Python display group을 additive로 두고 상관 집중·현재 낙폭만 가족별 요약하며 raw facts/history는 유지하는 방식을 채택했다.
+- Follow-up: 전체 `3/3차`를 완료했다. desktop 560px 내부 스크롤과 mobile 자연 스크롤, legacy fallback, 종목·종목쌍 상세를 구현했고 Python 142 / React 31과 fixture Browser QA를 통과했다. threshold/severity/DB/Backtest 정책은 변경하지 않았다.

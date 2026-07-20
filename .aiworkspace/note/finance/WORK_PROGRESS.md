@@ -6883,3 +6883,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - buy=외부 입금, partial sell=외부 출금과 daily Modified Dietz `0.5` 계약으로 item/group 성과를 재계산하며 ETF·전략·fixed notional·backtest는 변경하지 않았다.
 - 운영 schema는 기존 group/item/command `1/2/5`건과 JSONL checksum을 보존한 채 빈 event table만 추가했다. 최종 리뷰에서 거래 수정 false block과 선택 종목/그룹 기준일 혼합을 보정했고, Python 138 / React 30 / typecheck/build와 actual/isolated desktop·900·420 Browser QA를 통과했다.
 - 전체 roadmap `3/3차` 완료. 상세는 `tasks/active/portfolio-monitoring-position-events-v1-20260720/`를 본다.
+
+## 2026-07-21 - Portfolio Monitoring 진단 그룹화·스크롤 완료
+
+- 상관 집중과 현재 낙폭의 서로 다른 원시 판정을 의미 가족별 한 카드로 표시하고, 종목·종목쌍별 근거는 disclosure와 raw `all_rows`/history에 보존했다.
+- desktop 진단 열은 560px 이후 내부 스크롤, 760px 이하 mobile은 자연 page scroll을 사용한다. Python 142 / React 31 / typecheck/build와 desktop/mobile Browser QA를 통과했다.
+- 전체 roadmap `3/3차` 완료. 상세는 `tasks/active/portfolio-monitoring-diagnosis-grouping-scroll-v1-20260721/`를 본다.

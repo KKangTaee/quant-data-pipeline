@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-20
+Last Verified: 2026-07-21
 
 ## Current State After Master Merge
 
@@ -20,6 +20,12 @@ Portfolio Monitoring Position Events V1도 전체 `3/3차`를 완료했다.
 - 성과 계약: 추가매수는 외부 입금, 일부매도 순대금은 외부 출금이며 daily Modified Dietz `0.5` 현금흐름 가중치와 flow-neutral group curve를 사용한다.
 - 경계: ETF, selected strategy, fixed notional, full sell, tax lot/FIFO, broker/account sync, quant backtest 변경은 없다. 전량매도는 기존 tracking end를 사용한다.
 - QA: additive 운영 table 적용 전후 기존 group/item/command `1/2/5`건을 보존하고 새 event table은 `0`건에서 시작했다. Python 137, React 29, typecheck/build, actual read-only route, isolated desktop/900/420 interaction QA를 통과했다.
+
+Portfolio Monitoring Diagnosis Grouping / Scroll V1도 전체 `3/3차`를 완료했다.
+
+- 완료 범위: `correlation_cluster`와 `current_drawdown`의 반복 판정을 의미 가족별 한 카드로 요약하고, 종목·종목쌍별 측정값과 기준은 disclosure에 모두 보존했다. 상위 확인 신호도 서로 다른 display group 기준으로 선택한다.
+- 호환 경계: workspace는 additive `diagnosis.display_groups`를 제공하며 legacy payload는 React에서 one-member group으로 읽는다. raw `weaknesses`·`all_rows`·history identity, threshold, severity, confidence, DB/registry/saved 계약은 변경하지 않았다.
+- 화면/QA: 760px 초과에서 각 진단 목록은 최대 560px와 내부 스크롤을 사용하고, 760px 이하에서는 자연 높이와 page scroll을 사용한다. Python 142, React 31, typecheck/build와 desktop 1269px·mobile 377px fixture Browser QA를 통과했다.
 
 현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-sentiment-cnn-aaii-v1-20260719/`다.
 

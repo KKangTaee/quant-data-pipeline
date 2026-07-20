@@ -1,7 +1,7 @@
 # Portfolio Monitoring React Command Center
 
 Status: Active
-Last Verified: 2026-07-20
+Last Verified: 2026-07-21
 
 ## 목적
 
@@ -25,7 +25,7 @@ Last Verified: 2026-07-20
 6. 선택 항목이 direct 미국 주식의 fixed-shares 방식이면 `보유내역`에서 최초 수량을 정정하거나 추가매수·일부매도를 기록한다. 거래일의 정확한 DB 종가가 기본 체결가이며 실제 체결가로 수정할 수 있다. 거래 revision 수정·취소도 감사 이력을 남긴다. 이 영역의 수량·현금흐름·평가금액은 선택 종목 자체의 최신 평가일을 함께 표시하며, 여러 종목을 합산하는 상단 그룹 공통 기준일과 섞지 않는다.
 7. 직접 미국 주식·ETF는 선택 상세에서 저장 일봉의 close line 또는 OHLCV candle과 volume을 확인한다. 최대 120개 row 안에서 wheel 또는 버튼으로 최소 15거래일까지 확대하고, 확대 상태에서는 수평 drag로 기간을 이동하거나 `전체 보기`로 복귀한다. Final Review 전략은 가치곡선만 표시하며 합성 candle을 만들지 않는다.
 8. 종료된 항목은 접힌 종료 기록에서 선택한다. `추적 종료 취소`는 새 항목을 만들지 않고 동일 item의 종료일·종료금액을 비워 원래 시작일부터 연속 추적으로 다시 투영한다. 복구 시에도 active 10개 한도와 동일 source 중복 제한을 재검증한다.
-9. 개별 lane, 강점·취약점·데이터 부족, 매크로 관찰, 위험 검증 상태와 진단 이력을 확인한다.
+9. 개별 lane, 강점·취약점·데이터 부족, 매크로 관찰, 위험 검증 상태와 진단 이력을 확인한다. 상관 집중과 현재 낙폭처럼 같은 의미가 반복되는 판정은 의미 가족별 한 카드로 먼저 읽고, 펼친 상세에서 종목·종목쌍별 원시 근거를 모두 확인한다. 강점·취약점·데이터 부족 목록은 760px 초과 화면에서 560px 이후 내부 스크롤하며, 760px 이하에서는 중첩 스크롤 없이 페이지 흐름으로 펼쳐진다.
 
 ## 데이터 경계
 
@@ -33,7 +33,7 @@ Last Verified: 2026-07-20
 
 ## 판단 경계
 
-진단은 versioned deterministic rule의 측정값·임계값·기준일·coverage·바뀌는 조건을 표시한다. 매크로는 함께 관찰할 위험 맥락이며 원인이나 방향을 단정하지 않는다. 검증된 calibration artifact가 `READY`이고 현재 config fingerprint와 맞을 때만 조건부 확률을 공개한다. 그 외에는 `SUPPRESSED` 또는 관찰 전용으로 남긴다.
+진단은 versioned deterministic rule의 측정값·임계값·기준일·coverage·바뀌는 조건을 표시한다. Python projection의 `display_groups`는 현재 `correlation_cluster`와 `current_drawdown`만 표시용으로 묶고, `weaknesses`·`all_rows`·history snapshot은 판정 사실 단위를 보존한다. React는 additive group contract를 표현하며 legacy payload는 one-member group으로 읽는다. 매크로는 함께 관찰할 위험 맥락이며 원인이나 방향을 단정하지 않는다. 검증된 calibration artifact가 `READY`이고 현재 config fingerprint와 맞을 때만 조건부 확률을 공개한다. 그 외에는 `SUPPRESSED` 또는 관찰 전용으로 남긴다.
 
 추가매수는 외부 입금, 일부매도 순대금은 외부 출금으로 성과를 조정한다. 일부매도 후 최소 1주를 남기며 전량매도는 tracking end가 소유한다. 이 화면은 tax lot/FIFO, group cash account, live approval, broker order, broker/account sync, auto rebalance를 만들지 않는다.
 

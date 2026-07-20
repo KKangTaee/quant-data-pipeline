@@ -1,6 +1,6 @@
 # Portfolio Monitoring Diagnosis Grouping / Scroll V1 Design
 
-Status: User-approved direction; written-spec review pending
+Status: Implemented and verified
 Date: 2026-07-21
 
 ## Problem

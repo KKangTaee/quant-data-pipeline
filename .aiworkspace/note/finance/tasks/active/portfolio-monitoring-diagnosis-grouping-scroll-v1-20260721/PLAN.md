@@ -31,7 +31,7 @@
 - Adds: `DiagnosisFact.subject_ids: tuple[str, ...] = ()`
 - Adds: `DiagnosisFact.primary_metric: float | None = None`
 
-- [ ] **Step 1: Write failing correlation grouping test**
+- [x] **Step 1: Write failing correlation grouping test**
 
 Construct three correlation facts with `subject_ids`, `primary_metric`, and different affected weights. Assert one correlation display group, three members, three preserved raw weaknesses/all_rows, max `0.98` in `summary_fact`, and only one correlation representative in `top_three`.
 
@@ -44,11 +44,11 @@ self.assertEqual(len(projection.all_rows), 3)
 self.assertIn("0.98", groups[0].summary_fact)
 ```
 
-- [ ] **Step 2: Write failing drawdown grouping test**
+- [x] **Step 2: Write failing drawdown grouping test**
 
 Construct two `current_drawdown` facts and one unrelated weakness. Assert one drawdown group with two members, the most negative drawdown in `summary_fact`, and distinct families in `top_three`.
 
-- [ ] **Step 3: Run RED tests**
+- [x] **Step 3: Run RED tests**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -58,7 +58,7 @@ Construct two `current_drawdown` facts and one unrelated weakness. Assert one dr
 
 Expected: FAIL because fact metadata and `display_groups` do not exist.
 
-- [ ] **Step 4: Implement compatible metadata and group projection**
+- [x] **Step 4: Implement compatible metadata and group projection**
 
 Add default fields to `DiagnosisFact` and this dataclass:
 
@@ -76,11 +76,11 @@ class DiagnosisDisplayGroup:
 
 Add helpers `_display_family()`, `_display_group_key()`, `_display_summary()`, `_build_display_groups()`. Only correlation/drawdown collapse by family. Use current severity/affected-weight/persistence/confidence priority for representative and group order. Correlation summary uses maximum `primary_metric` and affected weight; drawdown summary uses minimum `primary_metric`. Build groups after current strength/weakness/data-gap separation and derive `top_three` from weakness group representatives. Keep `all_rows` unchanged.
 
-- [ ] **Step 5: Populate structured metadata**
+- [x] **Step 5: Populate structured metadata**
 
 Extend `_fact()` with optional metadata. Pass `(item_id,)` and `drawdown` for current drawdown; `(left, right)` and `correlation` for correlation cluster. Other rules retain defaults.
 
-- [ ] **Step 6: Run GREEN diagnosis tests**
+- [x] **Step 6: Run GREEN diagnosis tests**
 
 ```bash
 .venv/bin/python -m unittest tests.test_portfolio_monitoring_diagnosis -v
@@ -88,7 +88,7 @@ Extend `_fact()` with optional metadata. Pass `(item_id,)` and `drawdown` for cu
 
 Expected: all diagnosis tests PASS.
 
-- [ ] **Step 7: Commit Task 1**
+- [x] **Step 7: Commit Task 1**
 
 ```bash
 git add app/services/portfolio_monitoring/diagnosis.py tests/test_portfolio_monitoring_diagnosis.py
@@ -110,11 +110,11 @@ git commit -m "기능: 포트폴리오 진단 표시 그룹 추가"
 - Consumes: `DiagnosisProjection.display_groups`
 - Produces: workspace `diagnosis.display_groups`, TypeScript `DiagnosisDisplayGroup`, grouped `buildDiagnosisSections()`
 
-- [ ] **Step 1: Write failing serialization test**
+- [x] **Step 1: Write failing serialization test**
 
 Build a workspace with three correlation facts and assert one serialized correlation group with `member_count == 3`, while `all_rows` remains three rows.
 
-- [ ] **Step 2: Write failing grouped/legacy Vitest**
+- [x] **Step 2: Write failing grouped/legacy Vitest**
 
 Assert a server group remains one weakness group. Omit `display_groups` in a legacy fixture and assert each old row becomes a one-member group in its original section.
 
@@ -123,7 +123,7 @@ expect(buildDiagnosisSections(grouped).weaknesses).toHaveLength(1);
 expect(buildDiagnosisSections(legacy).weaknesses[0].member_count).toBe(1);
 ```
 
-- [ ] **Step 3: Run RED contract tests**
+- [x] **Step 3: Run RED contract tests**
 
 ```bash
 .venv/bin/python -m unittest tests.test_portfolio_monitoring_read_model.PortfolioMonitoringReadModelTests.test_workspace_serializes_diagnosis_display_groups -v
@@ -133,7 +133,7 @@ npm test -- --run src/workbenchState.test.ts
 
 Expected: Python and Vitest FAIL for missing group contract.
 
-- [ ] **Step 4: Serialize and type additive groups**
+- [x] **Step 4: Serialize and type additive groups**
 
 Serialize `[asdict(group) for group in diagnosis.display_groups]`. Add optional `subject_ids`/`primary_metric` to `DiagnosisRow` and define:
 
@@ -151,11 +151,11 @@ export type DiagnosisDisplayGroup = {
 
 Make `DiagnosisProjection.display_groups` optional for legacy payloads.
 
-- [ ] **Step 5: Normalize sections with legacy fallback**
+- [x] **Step 5: Normalize sections with legacy fallback**
 
 Add `legacyDiagnosisGroup(row, section)`. Use server groups when present; otherwise wrap strengths/weaknesses/data_gaps. `now` is the first three non-low weakness groups. Preserve `evidence: diagnosis.all_rows`.
 
-- [ ] **Step 6: Run GREEN contract tests**
+- [x] **Step 6: Run GREEN contract tests**
 
 ```bash
 .venv/bin/python -m unittest tests.test_portfolio_monitoring_read_model -v
@@ -165,7 +165,7 @@ npm run typecheck
 
 Expected: all commands PASS.
 
-- [ ] **Step 7: Commit Task 2**
+- [x] **Step 7: Commit Task 2**
 
 ```bash
 git add app/services/portfolio_monitoring/read_model.py tests/test_portfolio_monitoring_read_model.py \
@@ -189,11 +189,11 @@ git commit -m "기능: 진단 그룹 workspace 계약 연결"
 - Consumes: group arrays and `activeGroup.item_rows` label map
 - Produces: accessible group cards and desktop-only bounded lists
 
-- [ ] **Step 1: Write failing CSS/source contract test**
+- [x] **Step 1: Write failing CSS/source contract test**
 
 Assert `.pm-diagnosis-list`, `max-height: 560px`, `overflow-y: auto`, `scrollbar-gutter: stable`, and mobile reset `max-height: none; overflow: visible` exist.
 
-- [ ] **Step 2: Run RED component test**
+- [x] **Step 2: Run RED component test**
 
 ```bash
 .venv/bin/python -m unittest tests.test_portfolio_monitoring_component.PortfolioMonitoringComponentTests.test_diagnosis_lists_are_bounded_only_on_desktop -v
@@ -201,15 +201,15 @@ Assert `.pm-diagnosis-list`, `max-height: 560px`, `overflow-y: auto`, `scrollbar
 
 Expected: FAIL because the wrapper/CSS contract does not exist.
 
-- [ ] **Step 3: Implement group-aware presentation**
+- [x] **Step 3: Implement group-aware presentation**
 
 Add `diagnosisSubject(row, labels)` and `diagnosisHeadline(group)`. Multiple correlation members use `함께 움직이는 조합 N개가 확인되었습니다.`; multiple drawdown members use `낙폭 재확인 종목 N개가 확인되었습니다.`; one-member groups keep representative meaning. `DiagnosisGroupCard` shows representative severity/confidence, headline, summary, subject label, and all member evidence inside one disclosure.
 
-- [ ] **Step 4: Add counts and scroll wrappers**
+- [x] **Step 4: Add counts and scroll wrappers**
 
 Each section uses a heading with display group count and a focusable `.pm-diagnosis-list` with an accessible label. Build `monitoring_item_id -> source_ref` from `activeGroup.item_rows`; missing ids display `추적 항목`.
 
-- [ ] **Step 5: Add desktop/mobile CSS**
+- [x] **Step 5: Add desktop/mobile CSS**
 
 ```css
 .pm-diagnosis-list {
@@ -225,7 +225,7 @@ Each section uses a heading with display group count and a focusable `.pm-diagno
 
 Under `@media (max-width: 760px)` reset with `max-height: none; overflow: visible; padding-right: 0; scrollbar-gutter: auto`.
 
-- [ ] **Step 6: Run GREEN UI checks and build**
+- [x] **Step 6: Run GREEN UI checks and build**
 
 ```bash
 .venv/bin/python -m unittest tests.test_portfolio_monitoring_component -v
@@ -237,7 +237,7 @@ npm run build
 
 Expected: all tests/typecheck/build PASS and canonical hashed asset updates.
 
-- [ ] **Step 7: Commit Task 3**
+- [x] **Step 7: Commit Task 3**
 
 ```bash
 git add tests/test_portfolio_monitoring_component.py \
@@ -260,7 +260,7 @@ git commit -m "개선: 포트폴리오 진단 그룹과 스크롤 화면 적용"
 **Interfaces:**
 - Verifies unchanged raw policy facts and grouped desktop/mobile UX
 
-- [ ] **Step 1: Run full automation**
+- [x] **Step 1: Run full automation**
 
 ```bash
 .venv/bin/python -m unittest discover -s tests -p 'test_portfolio_monitoring_*.py' -q
@@ -275,15 +275,15 @@ npm run build
 
 Expected: tests PASS and build/compile exit 0.
 
-- [ ] **Step 2: Run isolated Browser QA**
+- [x] **Step 2: Run isolated Browser QA**
 
 Use a temporary Streamlit fixture, not production writes. Desktop verifies three correlation members become one group, two drawdowns become one group, disclosure retains subjects/values, diagnosis list `scrollHeight > clientHeight`, `clientHeight <= 560`, keyboard focus works, and console errors are zero. At 420px verify one-column layout, `overflowY=visible`, `maxHeight=none`, page scroll, and zero horizontal overflow. Save `portfolio-monitoring-diagnosis-grouping-scroll-qa.png` but do not stage it.
 
-- [ ] **Step 3: Synchronize docs**
+- [x] **Step 3: Synchronize docs**
 
 Record raw fact preservation, family-grouped display, desktop 560px boundary, mobile page scroll, exact test counts, and Browser QA evidence. Any unverified gap stays in `RISKS.md`.
 
-- [ ] **Step 4: Run final hygiene**
+- [x] **Step 4: Run final hygiene**
 
 ```bash
 .venv/bin/python -m unittest tests.test_portfolio_monitoring_docs -q
@@ -293,7 +293,7 @@ git status --short
 
 Expected: docs tests PASS, diff clean, only intended files plus pre-existing untracked artifacts.
 
-- [ ] **Step 5: Commit Task 4**
+- [x] **Step 5: Commit Task 4**
 
 ```bash
 git add .aiworkspace/note/finance/docs/architecture/PORTFOLIO_MONITORING_REACT_COMMAND_CENTER.md \

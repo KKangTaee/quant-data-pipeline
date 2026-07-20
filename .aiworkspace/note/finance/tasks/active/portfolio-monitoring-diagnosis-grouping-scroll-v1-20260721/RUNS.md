@@ -5,3 +5,7 @@
 - 2026-07-21: diagnosis projection, React renderer, CSS, original design/task history를 확인했다.
 - 2026-07-21: 사용자가 written design을 승인했다.
 - 2026-07-21: Python grouping, workspace compatibility, React/CSS, Browser QA/docs closeout의 4-task TDD implementation plan을 작성하고 spec coverage·placeholder·type consistency를 self-review했다.
+- 2026-07-21: correlation/drawdown grouping과 workspace legacy fallback을 RED→GREEN으로 구현했다.
+- 2026-07-21: React group card, member evidence, section count, desktop 560px scroll/mobile reset source-contract test를 RED→GREEN으로 구현하고 Vite static build를 갱신했다.
+- 2026-07-21: Portfolio Monitoring Python 142 tests, React 31 tests, typecheck, production build, py_compile을 통과했다.
+- 2026-07-21: 격리 Streamlit fixture Browser QA에서 desktop `560/1024px auto`, mobile `1024px visible`, 가로 overflow 0, console error 0을 확인했다. screenshot은 generated artifact로 stage하지 않았다.
