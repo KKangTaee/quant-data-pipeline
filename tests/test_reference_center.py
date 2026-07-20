@@ -199,6 +199,26 @@ class ReferenceCenterCatalogContractTests(unittest.TestCase):
         ):
             self.assertIn(page_target_key, source)
 
+    def test_active_python_tree_has_no_legacy_reference_symbols(self) -> None:
+        legacy_symbols = {
+            "reference_guides",
+            "reference_guides_catalog",
+            "reference_glossary_catalog",
+            "render_reference_guides_page",
+            "load_glossary_sections_from_markdown",
+            "search_glossary_sections",
+        }
+        matches: list[str] = []
+        for path in Path("app").rglob("*.py"):
+            if "__pycache__" in path.parts:
+                continue
+            source = path.read_text(encoding="utf-8")
+            for symbol in legacy_symbols:
+                if symbol in source:
+                    matches.append(f"{path}:{symbol}")
+
+        self.assertEqual(matches, [])
+
 
 class ReferenceCenterNavigationContractTests(unittest.TestCase):
     def test_navigation_event_accepts_only_known_item_and_destination(self) -> None:
