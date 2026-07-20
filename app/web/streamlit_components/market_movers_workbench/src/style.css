@@ -156,23 +156,52 @@ body {
 
 .mm-decision__workbench {
   display: grid;
-  gap: 12px;
+  gap: 14px;
   grid-template-columns: minmax(0, 1.62fr) minmax(320px, 1fr);
   margin-top: 14px;
 }
 
+.mm-decision__pulse {
+  background: var(--mm-line);
+  border: 1px solid var(--mm-line);
+  border-radius: 13px;
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 14px;
+  overflow: hidden;
+}
+
+.mm-decision__pulse-item {
+  background: rgba(255, 255, 255, 0.78);
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 12px 14px;
+}
+
+.mm-decision__pulse-item small,
+.mm-decision__pulse-item span {
+  color: var(--mm-muted);
+  font-size: 0.68rem;
+}
+
+.mm-decision__pulse-item strong {
+  color: var(--mm-ink);
+  font-size: 0.88rem;
+}
+
 .mm-decision__ranking,
 .mm-decision__breadth {
-  border: 1px solid var(--mm-line);
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--mm-card-line);
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(33, 53, 72, 0.04);
   min-width: 0;
-}
-
-.mm-decision__ranking {
-  border-top: 3px solid #2563eb;
+  overflow: hidden;
 }
 
 .mm-decision__breadth {
-  border-top: 3px solid #7c3aed;
   padding-bottom: 12px;
 }
 
@@ -219,7 +248,7 @@ body {
 }
 
 .mm-decision__rank-row.is-selected {
-  box-shadow: inset 3px 0 var(--mm-row-tone);
+  box-shadow: inset 3px 0 var(--mm-accent);
 }
 
 .mm-decision__rank-number {
@@ -351,8 +380,8 @@ body {
 }
 
 .mm-decision__flow-list > button.is-selected {
-  background: #f5f3ff;
-  box-shadow: inset 3px 0 #7c3aed;
+  background: color-mix(in srgb, var(--mm-accent) 8%, #ffffff);
+  box-shadow: inset 3px 0 var(--mm-accent);
 }
 
 .mm-decision__flow-list span {
@@ -384,7 +413,7 @@ body {
 }
 
 .mm-decision__flow-track i {
-  background: #7c3aed;
+  background: var(--mm-accent);
   border-radius: inherit;
   display: block;
   height: 100%;
@@ -400,7 +429,7 @@ body {
 }
 
 .mm-decision__group-detail > div:first-child > span {
-  color: #7c3aed;
+  color: var(--mm-accent);
   font-size: 0.68rem;
   font-weight: 850;
 }

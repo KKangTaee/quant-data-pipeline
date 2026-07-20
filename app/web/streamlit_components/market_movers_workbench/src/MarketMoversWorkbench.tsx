@@ -476,6 +476,39 @@ function rankingMetric(row: DecisionRow, mode: string) {
   return { label: "수익률", value: formatSignedPercent(row["Return %"]) };
 }
 
+const PERIOD_LABELS: Record<string, string> = {
+  daily: "일간",
+  weekly: "주간",
+  monthly: "월간",
+};
+
+function MarketPulse({ payload }: { payload: MarketMoversDecisionWorkbenchPayload }) {
+  const period = payload.ranking.period;
+  const leadingSector = (payload.group_context.sector?.[period]?.flow || [])[0];
+  const items = [
+    { label: "관측 기준", value: `${PERIOD_LABELS[period] || period} · ${payload.ranking.label}` },
+    { label: "표시 종목", value: `${payload.ranking.rows.length.toLocaleString()}개` },
+    leadingSector ? {
+      label: "선도 섹터",
+      value: textValue(leadingSector, "group", "Group"),
+      detail: formatSignedPercent(numberValue(leadingSector, "relative_strength_pp")),
+    } : null,
+    { label: "자료 상태", value: String(payload.trust.state || "UNKNOWN") },
+  ].filter(Boolean) as Array<{ label: string; value: string; detail?: string }>;
+
+  return (
+    <section className="mm-decision__pulse" aria-label="현재 시장 관측 요약">
+      {items.map((item) => (
+        <div className="mm-decision__pulse-item" key={item.label}>
+          <small>{item.label}</small>
+          <strong>{item.value}</strong>
+          {item.detail ? <span>{item.detail}</span> : null}
+        </div>
+      ))}
+    </section>
+  );
+}
+
 type CommandLineProps = {
   payload: MarketMoversDecisionWorkbenchPayload;
   onControl: (control: MarketMoverFilterControl, value: string) => void;
@@ -554,7 +587,7 @@ function RankingBoard({ payload, activeSymbol, onSelect }: RankingBoardProps) {
                 key={`${symbol}-${index}`}
                 onClick={() => onSelect(row)}
                 role="option"
-                style={{ "--mm-row-tone": returnPct !== null && returnPct < 0 ? "#dc2626" : "#0f766e" } as React.CSSProperties}
+                style={{ "--mm-row-tone": returnPct !== null && returnPct < 0 ? "#b9554c" : "#19765f" } as React.CSSProperties}
                 type="button"
               >
                 <strong className="mm-decision__rank-number">{textValue(row, "Rank", "rank")}</strong>
@@ -962,6 +995,7 @@ function MarketMoversDecisionWorkbench({ payload, onEvent }: DecisionWorkbenchPr
   return (
     <main className="mm-decision" data-schema-version={payload.schema_version}>
       <MarketMoversCommandLine payload={payload} onControl={emitControl} />
+      <MarketPulse payload={payload} />
       <div className="mm-decision__workbench">
         <RankingBoard activeSymbol={activeSymbol} onSelect={selectRow} payload={payload} />
         <BreadthContext payload={payload} />

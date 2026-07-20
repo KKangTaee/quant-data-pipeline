@@ -322,6 +322,28 @@ def test_decision_shell_uses_approved_hybrid_visual_foundation() -> None:
     assert "border-top: 4px solid" not in decision_style
 
 
+def test_decision_shell_connects_market_pulse_to_unified_decision_cards() -> None:
+    from pathlib import Path
+
+    source = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+    style = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/style.css"
+    ).read_text(encoding="utf-8")
+    decision_style = style[: style.index(".mm-workbench {")]
+
+    assert "function MarketPulse" in source
+    assert '<section className="mm-decision__pulse"' in source
+    assert "<MarketPulse payload={payload} />" in source
+    assert 'className="mm-decision__pulse-item"' in source
+    assert "border-radius: 16px;" in decision_style
+    assert "grid-template-columns: minmax(0, 1.62fr) minmax(320px, 1fr);" in decision_style
+    assert "#7c3aed" not in decision_style
+    assert 'id: "set_control"' in source
+    assert 'id: "select_symbol"' in source
+
+
 def test_decision_research_keeps_financial_period_and_factor_controls_separate() -> None:
     from pathlib import Path
 
