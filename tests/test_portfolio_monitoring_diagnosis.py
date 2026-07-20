@@ -63,7 +63,9 @@ def _group(items, lanes) -> GroupValueResult:
         curve[f"item:{item.monitoring_item_id}"] = lanes[item.monitoring_item_id].curve["total_value"]
     curve["total_value"] = curve.filter(like="item:").sum(axis=1)
     metrics = GroupMetrics(
-        invested_capital=Decimal("1000"), current_value=Decimal(str(curve.iloc[-1]["total_value"])),
+        invested_capital=Decimal("1000"), gross_contributions=Decimal("1000"),
+        gross_withdrawals=Decimal("0"), net_contributions=Decimal("1000"),
+        current_value=Decimal(str(curve.iloc[-1]["total_value"])),
         pnl=Decimal("0"), total_return=Decimal("0"), mdd=Decimal("-0.12"), cagr=None,
         observation_days=300, short_window=True, total_contribution=Decimal("25"),
         downside_contribution=Decimal("-40"), contribution_by_item={"a": Decimal("-30"), "b": Decimal("55")},
