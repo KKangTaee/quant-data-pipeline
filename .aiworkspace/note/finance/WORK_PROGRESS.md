@@ -6873,6 +6873,6 @@ Detailed historical logs were archived on `2026-04-13`.
 ## 2026-07-20 - Portfolio Monitoring 개별종목 수량·거래 원장 설계 승인
 
 - 최초 수량 정정, 추가매수, 일부매도, 거래 수정·취소를 direct U.S. stock + fixed shares에만 제공하는 설계를 승인했다.
-- actual execution price를 사용하고 DB close는 reference-only, buy는 외부 입금, partial sell은 외부 출금으로 계산한다.
+- 거래일 DB close를 execution price 기본값으로 자동 입력하고 사용자가 actual price로 override할 수 있으며, buy는 외부 입금, partial sell은 외부 출금으로 계산한다.
 - append-only revision chain과 daily Modified Dietz 성과 계약을 확정했다. 전체 roadmap `1/3차`; 다음은 detailed implementation plan과 DB/service/UI 구현이다.
 - 상세는 `tasks/active/portfolio-monitoring-position-events-v1-20260720/`를 본다.

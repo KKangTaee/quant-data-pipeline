@@ -2,7 +2,8 @@
 
 ## Confirmed Decisions
 
-- 실제 체결 단가는 사용자가 입력하고 해당일 DB 종가는 참고값으로만 표시한다.
+- 거래일 DB 종가를 execution price 기본값으로 자동 입력하고 사용자가 실제 체결가로 수정할 수 있다.
+- 저장 시 입력 당시 reference close와 `db_close_default` / `manual_override` 구분을 함께 보존한다.
 - 추가매수는 외부 입금, 일부매도는 외부 출금이다.
 - 매도대금은 group 내부 cash로 유지하지 않는다.
 - 원본과 정정 근거를 보존하는 append-only event revision chain을 사용한다.

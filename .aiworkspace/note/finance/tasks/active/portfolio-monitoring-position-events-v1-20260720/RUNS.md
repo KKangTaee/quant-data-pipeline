@@ -5,3 +5,4 @@
 - 2026-07-20: current implementation에 post-registration quantity edit와 buy/sell ledger가 없고 add/end/reopen만 있음을 확인했다.
 - 2026-07-20: 사용자와 3차 roadmap, append-only event ledger, actual execution price, external-flow semantics, direct-stock-only UX와 검증 기준을 승인했다.
 - 2026-07-20: design self-review에서 same-day revision order를 root-stable `event_order`로 고정하고, split-first 순서, sell net proceeds, daily Modified Dietz `0.5` flow timing과 invalid denominator 처리를 명시했다. Placeholder와 scope contradiction은 남기지 않았다.
+- 2026-07-20: written design review를 반영해 execution price 빈 입력 계약을 DB exact-date close 자동 입력으로 바꿨다. 사용자는 override할 수 있고 거래일 변경 시 새 close로 reset하며 reference close와 source provenance를 저장한다.

@@ -6,7 +6,7 @@
 - 같은 날 여러 거래는 root에 고정된 `event_order`를 지켜야 하며 replace/void 후 전체 후속 이벤트 재검증이 필요하다.
 - split day와 transaction day가 겹칠 때 승인된 split-first 순서를 테스트로 고정해야 한다.
 - 거래 시각을 입력하지 않으므로 daily Modified Dietz는 모든 같은 날 flow에 고정 `0.5` 가중치를 사용한다. UI와 문서에서 이를 actual intraday return으로 표현하면 안 된다.
-- actual execution price와 DB close 차이는 정상 입력일 수 있으므로 자동 보정하지 않고 reference로만 표시해야 한다.
+- 사용자가 DB close 기본값을 actual execution price로 수정한 차이는 정상 입력일 수 있으므로 저장 시 자동 보정하지 않고 `manual_override` provenance를 유지해야 한다.
 - 초기 수량 정정으로 최초 자본이 바뀌면 group contribution과 historical KPI가 의도대로 전 구간 재계산되어야 한다.
 
 ## Boundaries
