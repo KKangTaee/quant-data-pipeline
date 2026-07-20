@@ -20875,6 +20875,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["trend_window_label"], "Last 12M")
         self.assertFalse(snapshot["trend_rows"].empty)
         self.assertFalse(snapshot["ticker_leader_rows"].empty)
+        self.assertEqual(snapshot["group_flow_schema_version"], "market_movers_group_flow_v1")
+        self.assertTrue(snapshot["group_flow"])
+        technology_bellwethers = snapshot["market_cap_bellwether_rows"][
+            snapshot["market_cap_bellwether_rows"]["Group"] == "Technology"
+        ].sort_values("Rank")
+        self.assertEqual(technology_bellwethers["Symbol"].tolist(), ["BBB", "AAA"])
         self.assertEqual(snapshot["coverage"]["returnable_count"], 3)
         first_row = snapshot["rows"].iloc[0]
         self.assertEqual(first_row["Group"], "Technology")
@@ -20924,7 +20930,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["coverage"]["coverage_basis"], "Current S&P 500 constituents")
         self.assertFalse(snapshot["rows"].empty)
         self.assertFalse(snapshot["trend_rows"].empty)
-        self.assertIn("Healthcare", set(snapshot["trend_rows"]["Group"]))
+        self.assertIn("Health Care", set(snapshot["trend_rows"]["Group"]))
 
     def test_overview_breadth_heatmap_summary_scores_participation_and_concentration(self) -> None:
         from app.services.overview.market_movers import build_overview_breadth_heatmap_summary

@@ -7,6 +7,11 @@ from app.services.overview.market_movers_read_model import (
     filter_rows_by_canonical_sector,
 )
 from app.services.overview.market_movers_readiness import build_collection_readiness
+from app.services.overview.market_movers_group_flow import (
+    build_group_flow_state,
+    build_market_cap_bellwethers,
+    normalize_industry,
+)
 
 
 def test_canonical_sector_collapses_provider_aliases() -> None:
@@ -97,3 +102,82 @@ def test_blocked_readiness_does_not_publish_a_false_empty_ranking() -> None:
     assert readiness["state"] == "BLOCKED"
     assert readiness["primary_action"] == "UNIVERSE_SETUP"
     assert readiness["publish_results"] is False
+
+
+def test_market_cap_bellwethers_are_not_return_leaders() -> None:
+    rows = [
+        {
+            "symbol": "BIG",
+            "sector": "Technology",
+            "return_pct": 1.0,
+            "market_cap": 900,
+            "asset_kind": "stock",
+        },
+        {
+            "symbol": "MID",
+            "sector": "Technology",
+            "return_pct": 2.0,
+            "market_cap": 500,
+            "asset_kind": "stock",
+        },
+        {
+            "symbol": "SMALL",
+            "sector": "Technology",
+            "return_pct": 12.0,
+            "market_cap": 100,
+            "asset_kind": "stock",
+        },
+        {
+            "symbol": "ETF",
+            "sector": "Technology",
+            "return_pct": 3.0,
+            "market_cap": 2_000,
+            "asset_kind": "etf",
+        },
+    ]
+
+    result = build_market_cap_bellwethers(rows, group_by="sector", top_n=3)
+
+    assert [row["symbol"] for row in result["Technology"]["rows"]] == [
+        "BIG",
+        "MID",
+        "SMALL",
+    ]
+    assert result["Technology"]["rows"][0]["rank"] == 1
+
+
+def test_group_flow_labels_narrow_cap_led_rally() -> None:
+    current = [
+        {
+            "group": "Technology",
+            "symbols": 20,
+            "positive_symbol_share": 35.0,
+            "equal_weight_return": -0.2,
+            "market_cap_weighted_return": 1.1,
+        }
+    ]
+    previous = [
+        {
+            "Group": "Technology",
+            "Positive Symbol Share %": 45.0,
+            "Equal Weight Return %": 0.1,
+            "Market Cap Weighted Return %": 0.4,
+        }
+    ]
+
+    flow = build_group_flow_state(
+        current_rows=current,
+        previous_rows=previous,
+        market_return_pct=0.5,
+        group_by="sector",
+    )
+
+    assert flow[0]["state"] == "NARROW_CAP_LED"
+    assert flow[0]["relative_strength_pp"] == 0.6
+    assert flow[0]["breadth_change_pp"] == -10.0
+
+
+def test_industry_normalization_uses_stable_display_keys() -> None:
+    assert normalize_industry("  software   - infrastructure ") == "Software—Infrastructure"
+    assert normalize_industry("SEMICONDUCTORS") == "Semiconductors"
+    assert normalize_industry(None) == "Unknown"

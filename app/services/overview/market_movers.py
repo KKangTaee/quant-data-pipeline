@@ -23,8 +23,14 @@ from xml.etree import ElementTree
 import pandas as pd
 
 from app.services.overview.market_movers_read_model import (
+    canonical_sector,
     canonical_sector_options,
     filter_rows_by_canonical_sector,
+)
+from app.services.overview.market_movers_group_flow import (
+    build_group_flow_state,
+    build_market_cap_bellwethers,
+    normalize_industry,
 )
 from app.services.overview.market_movers_readiness import build_collection_readiness
 from finance.loaders.sentiment import (
@@ -192,6 +198,17 @@ GROUP_TICKER_LEADER_COLUMNS = [
     "End Date",
     "Previous Start Date",
     "Previous End Date",
+]
+
+GROUP_MARKET_CAP_BELLWETHER_COLUMNS = [
+    "Group",
+    "Group Type",
+    "Rank",
+    "Symbol",
+    "Name",
+    "Market Cap",
+    "Return %",
+    "Relative To Group pp",
 ]
 
 SECTOR_BREADTH_TABLE_COLUMNS = [
@@ -422,6 +439,11 @@ def _empty_group_snapshot(
         "rows": pd.DataFrame(columns=GROUP_COLUMNS),
         "trend_rows": pd.DataFrame(columns=GROUP_TREND_COLUMNS),
         "ticker_leader_rows": pd.DataFrame(columns=GROUP_TICKER_LEADER_COLUMNS),
+        "group_flow_schema_version": "market_movers_group_flow_v1",
+        "group_flow": [],
+        "market_cap_bellwether_rows": pd.DataFrame(
+            columns=GROUP_MARKET_CAP_BELLWETHER_COLUMNS
+        ),
         "missing_rows": pd.DataFrame(columns=MISSING_COLUMNS),
         "date_window": {},
         "coverage": {
@@ -662,6 +684,8 @@ def _load_universe(
                 COALESCE(p.sector, m.sector) AS sector,
                 COALESCE(p.industry, m.industry) AS industry,
                 p.market_cap,
+                p.kind AS asset_kind,
+                p.quote_type,
                 p.exchange AS profile_exchange,
                 p.status,
                 p.error_msg,
@@ -694,6 +718,8 @@ def _load_universe(
                 p.sector,
                 p.industry,
                 p.market_cap,
+                p.kind AS asset_kind,
+                p.quote_type,
                 p.exchange AS profile_exchange,
                 p.status,
                 p.error_msg,
@@ -753,6 +779,8 @@ def _load_universe(
                 COALESCE(p.sector, m.sector) AS sector,
                 COALESCE(p.industry, m.industry) AS industry,
                 COALESCE(p.market_cap, m.market_cap) AS market_cap,
+                p.kind AS asset_kind,
+                p.quote_type,
                 p.exchange AS profile_exchange,
                 p.status,
                 p.error_msg,
@@ -1341,6 +1369,8 @@ def _build_return_rows(
                 "sector": item.get("sector") or "Unknown",
                 "industry": item.get("industry") or "Unknown",
                 "market_cap": _safe_float(item.get("market_cap")) or 0.0,
+                "asset_kind": item.get("asset_kind"),
+                "quote_type": item.get("quote_type"),
                 "start_price": start_price,
                 "end_price": end_price,
                 "return_pct": return_pct,
@@ -1399,6 +1429,8 @@ def _build_return_rows_from_price_map(
                 "sector": item.get("sector") or "Unknown",
                 "industry": item.get("industry") or "Unknown",
                 "market_cap": _safe_float(item.get("market_cap")) or 0.0,
+                "asset_kind": item.get("asset_kind"),
+                "quote_type": item.get("quote_type"),
                 "start_price": start_price,
                 "end_price": end_price,
                 "return_pct": (float(end_price) / float(start_price) - 1.0) * 100.0,
@@ -1419,7 +1451,11 @@ def _group_leadership_rows(
 ) -> list[dict[str, Any]]:
     grouped: dict[str, list[dict[str, Any]]] = {}
     for row in return_rows:
-        group_name = str(row.get(group_by) or "Unknown").strip() or "Unknown"
+        group_name = (
+            normalize_industry(row.get(group_by))
+            if group_by == "industry"
+            else str(row.get(group_by) or "Unknown").strip() or "Unknown"
+        )
         grouped.setdefault(group_name, []).append(row)
 
     group_rows: list[dict[str, Any]] = []
@@ -1586,7 +1622,11 @@ def _group_ticker_leader_rows_frame(
     normalized_groups = {str(group).strip() for group in positive_groups if str(group).strip()}
     grouped: dict[str, list[dict[str, Any]]] = {}
     for row in return_rows:
-        group_name = str(row.get(group_by) or "Unknown").strip() or "Unknown"
+        group_name = (
+            normalize_industry(row.get(group_by))
+            if group_by == "industry"
+            else str(row.get(group_by) or "Unknown").strip() or "Unknown"
+        )
         if group_name not in normalized_groups:
             continue
         return_pct = _safe_float(row.get("return_pct"))
@@ -1640,6 +1680,97 @@ def _group_ticker_leader_rows_frame(
             )
 
     return pd.DataFrame(leader_rows, columns=GROUP_TICKER_LEADER_COLUMNS)
+
+
+def _market_return_pct(return_rows: Sequence[dict[str, Any]]) -> float | None:
+    if not return_rows:
+        return None
+    weighted_rows = [
+        row for row in return_rows if (_safe_float(row.get("market_cap")) or 0.0) > 0
+    ]
+    denominator = sum(float(_safe_float(row.get("market_cap")) or 0.0) for row in weighted_rows)
+    if denominator > 0:
+        return sum(
+            float(_safe_float(row.get("market_cap")) or 0.0)
+            * float(_safe_float(row.get("return_pct")) or 0.0)
+            for row in weighted_rows
+        ) / denominator
+    return sum(float(_safe_float(row.get("return_pct")) or 0.0) for row in return_rows) / len(return_rows)
+
+
+def _previous_group_flow_rows(
+    trend_rows: pd.DataFrame,
+    *,
+    groups: set[str],
+    current_end_date: str,
+) -> list[dict[str, Any]]:
+    if not isinstance(trend_rows, pd.DataFrame) or trend_rows.empty:
+        return []
+    output: list[dict[str, Any]] = []
+    for group in sorted(groups):
+        rows = trend_rows[trend_rows["Group"] == group].copy()
+        if rows.empty:
+            continue
+        rows = rows[rows["Date"].astype(str) != str(current_end_date)]
+        if rows.empty:
+            continue
+        rows = rows.sort_values(["Date", "End Date"])
+        output.append(dict(rows.iloc[-1]))
+    return output
+
+
+def _group_flow_payload(
+    *,
+    return_rows: list[dict[str, Any]],
+    ranked_rows: list[dict[str, Any]],
+    trend_rows: pd.DataFrame,
+    group_by: str,
+    current_end_date: str,
+) -> tuple[list[dict[str, Any]], pd.DataFrame]:
+    groups = {str(row.get("group") or "Unknown") for row in ranked_rows}
+    previous_rows = _previous_group_flow_rows(
+        trend_rows,
+        groups=groups,
+        current_end_date=current_end_date,
+    )
+    flow_rows = build_group_flow_state(
+        current_rows=ranked_rows,
+        previous_rows=previous_rows,
+        market_return_pct=_market_return_pct(return_rows),
+        group_by=group_by,
+    )
+    bellwethers = build_market_cap_bellwethers(
+        return_rows,
+        group_by=group_by,
+        top_n=3,
+    )
+    flat_rows: list[dict[str, Any]] = []
+    for group in sorted(groups):
+        group_payload = bellwethers.get(group) or {}
+        for row in group_payload.get("rows") or []:
+            flat_rows.append(
+                {
+                    "Group": group,
+                    "Group Type": group_by.title(),
+                    "Rank": row.get("rank"),
+                    "Symbol": row.get("symbol"),
+                    "Name": row.get("name"),
+                    "Market Cap": row.get("market_cap"),
+                    "Return %": row.get("return_pct"),
+                    "Relative To Group pp": row.get("relative_to_group_pp"),
+                }
+            )
+        for flow_row in flow_rows:
+            if flow_row.get("group") != group:
+                continue
+            flow_row["bellwether_count"] = len(group_payload.get("rows") or [])
+            flow_row["market_cap_valid_count"] = int(
+                group_payload.get("market_cap_valid_count") or 0
+            )
+            flow_row["market_cap_excluded_count"] = int(
+                group_payload.get("market_cap_excluded_count") or 0
+            )
+    return flow_rows, pd.DataFrame(flat_rows, columns=GROUP_MARKET_CAP_BELLWETHER_COLUMNS)
 
 def _coverage(
     *,
@@ -3141,6 +3272,8 @@ def _build_intraday_return_payload(
                 "sector": item.get("sector") or "Unknown",
                 "industry": item.get("industry") or "Unknown",
                 "market_cap": _safe_float(item.get("market_cap")) or 0.0,
+                "asset_kind": item.get("asset_kind"),
+                "quote_type": item.get("quote_type"),
                 "start_price": previous_close,
                 "end_price": latest_price,
                 "return_pct": return_pct,
@@ -3527,7 +3660,11 @@ def _build_intraday_group_leadership_snapshot(
     )
     ranked = _rank_group_rows(group_rows, top_n=top_n)
     top_groups = {str(row["group"]) for row in ranked}
-    requested_trend_groups = {str(group).strip() for group in (trend_groups or []) if str(group).strip()}
+    requested_trend_groups = {
+        canonical_sector(group) if group_by == "sector" else normalize_industry(group)
+        for group in (trend_groups or [])
+        if str(group).strip()
+    }
     trend_group_set = top_groups | requested_trend_groups
     positive_groups = {
         str(row["group"])
@@ -3571,6 +3708,13 @@ def _build_intraday_group_leadership_snapshot(
         positive_groups=positive_groups,
         group_by=group_by,
     )
+    group_flow, market_cap_bellwether_rows = _group_flow_payload(
+        return_rows=return_rows,
+        ranked_rows=ranked,
+        trend_rows=trend_rows,
+        group_by=group_by,
+        current_end_date=str(date_window["end_date"]),
+    )
     coverage = dict(payload["coverage"])
     warnings = _coverage_warnings(coverage, date_window=date_window)
     warnings.extend(trend_warnings)
@@ -3587,6 +3731,9 @@ def _build_intraday_group_leadership_snapshot(
         "rows": _group_rows_frame(ranked),
         "trend_rows": trend_rows,
         "ticker_leader_rows": ticker_leader_rows,
+        "group_flow_schema_version": "market_movers_group_flow_v1",
+        "group_flow": group_flow,
+        "market_cap_bellwether_rows": market_cap_bellwether_rows,
         "missing_rows": pd.DataFrame(missing_rows, columns=MISSING_COLUMNS),
         "date_window": date_window,
         "coverage": coverage,
@@ -3703,7 +3850,13 @@ def build_group_leadership_snapshot(
         )
         ranked = _rank_group_rows(group_rows, top_n=normalized_top_n)
         top_groups = {str(row["group"]) for row in ranked}
-        requested_trend_groups = {str(group).strip() for group in (trend_groups or []) if str(group).strip()}
+        requested_trend_groups = {
+            canonical_sector(group)
+            if normalized_group == "sector"
+            else normalize_industry(group)
+            for group in (trend_groups or [])
+            if str(group).strip()
+        }
         trend_group_set = top_groups | requested_trend_groups
         positive_groups = {
             str(row["group"])
@@ -3722,6 +3875,13 @@ def build_group_leadership_snapshot(
             return_rows=return_rows,
             positive_groups=positive_groups,
             group_by=normalized_group,
+        )
+        group_flow, market_cap_bellwether_rows = _group_flow_payload(
+            return_rows=return_rows,
+            ranked_rows=ranked,
+            trend_rows=trend_rows,
+            group_by=normalized_group,
+            current_end_date=str(date_window["end_date"]),
         )
         coverage = _coverage(
             universe_count=len(universe),
@@ -3751,6 +3911,9 @@ def build_group_leadership_snapshot(
             "rows": _group_rows_frame(ranked),
             "trend_rows": trend_rows,
             "ticker_leader_rows": ticker_leader_rows,
+            "group_flow_schema_version": "market_movers_group_flow_v1",
+            "group_flow": group_flow,
+            "market_cap_bellwether_rows": market_cap_bellwether_rows,
             "missing_rows": pd.DataFrame(missing_rows, columns=MISSING_COLUMNS),
             "date_window": date_window,
             "coverage": coverage,
