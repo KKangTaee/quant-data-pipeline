@@ -1,6 +1,6 @@
 # Overview Futures Macro Probabilistic State Outlook V2 Plan
 
-Status: Written design review pending
+Status: Design approved; implementation plan ready
 Started: 2026-07-20
 
 ## 이걸 하는 이유?
@@ -84,5 +84,6 @@ V2는 예측 위치를 반드시 만드는 작업이 아니다.
 
 ## Approval Gate
 
-이 문서는 대화에서 승인된 방향을 written spec으로 옮긴 초안이다.
-사용자가 `DESIGN.md`를 검토·승인하기 전에는 implementation plan과 코드 변경을 시작하지 않는다.
+- 2026-07-20: 사용자가 written design을 명시적으로 승인했다.
+- 상세 TDD 실행 계획은 `IMPLEMENTATION_PLAN.md`에 보존한다.
+- 실행 방식을 선택한 뒤 1차 Data / Target Contract부터 시작한다.

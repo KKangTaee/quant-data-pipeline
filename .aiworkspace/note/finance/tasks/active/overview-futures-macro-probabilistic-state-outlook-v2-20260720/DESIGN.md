@@ -1,6 +1,6 @@
 # Overview Futures Macro Probabilistic State Outlook V2 Design
 
-Status: Written design review pending
+Status: Approved
 Last Updated: 2026-07-20
 
 ## 1. User Intent
@@ -445,7 +445,7 @@ Exact new module/table names are finalized in the implementation plan after writ
 
 ## 13. Approval Checklist
 
-The user should confirm the following before implementation planning:
+2026-07-20 user-approved contract:
 
 - completed-session state may intentionally lag the live futures monitor
 - 5D and 20D can select different models or both return `NO_EDGE`

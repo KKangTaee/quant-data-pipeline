@@ -10267,4 +10267,4 @@ Detailed historical analysis was archived on `2026-04-13`.
 - User request: 7/19·7/20 pattern map 차이를 설명하고, 과거·현재로 향후 5D/20D 이동 패턴을 확률적으로 추정하되 momentum만으로 충분한지 검토해 진행하도록 요청함.
 - Interpreted goal: 항상 미래 선을 만드는 것이 아니라 completed current state, 실제 일별 trail, same-state future distribution을 보고 macro가 incremental edge를 만들 때만 조정해야 함.
 - Analysis result: anchor 차이는 rolling row shift이며 historical PIT rewrite는 없었다. 기존 forecast terminal은 `S(t+h)`가 아니라 현재 5D state에 forward cumulative-return delta를 더한 좌표다. V2는 unconditional/persistence/momentum/hybrid를 같은 rolling-origin에서 비교한다.
-- Follow-up: 전체 `3차` written design을 active task에 작성했다. 현재 `0/3차`, 사용자 spec 검토 전이며 baseline 미개선 horizon은 `NO_EDGE`, macro PIT 미달은 momentum-only 평가로 남긴다.
+- Follow-up: 사용자가 written design을 승인했다. 3-stage/9-task TDD plan이 completed-session, same-state target, nested gate, forecast identity, UI suppression, Browser QA까지 확정했으며 구현은 아직 `0/3차`다.

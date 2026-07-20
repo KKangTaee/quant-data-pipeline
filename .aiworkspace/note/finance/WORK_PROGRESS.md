@@ -6895,4 +6895,5 @@ Detailed historical logs were archived on `2026-04-13`.
 - 7/17·7/20 fixed-cutoff를 재현해 anchor 이동은 rolling row shift이며 동일 과거 날짜 PIT feature 차이는 0임을 확인했다.
 - 관측 5D state와 `현재 + forward cumulative return` 전망점의 의미가 다른 것을 V2 핵심 수정 대상으로 확정했다.
 - momentum-only와 PIT macro/event soft conditioning을 동일 rolling-origin에서 비교하고 baseline 미개선은 `NO_EDGE`로 두는 3차 written design을 작성했다.
-- 현재는 `0/3차`, written spec 사용자 검토 전이며 구현 코드는 변경하지 않았다. 상세는 `tasks/active/overview-futures-macro-probabilistic-state-outlook-v2-20260720/`를 본다.
+- 2026-07-20 written design을 사용자가 승인했고 3-stage/9-task TDD 실행 계획을 `IMPLEMENTATION_PLAN.md`에 확정했다.
+- 현재는 `0/3차`, 구현 실행 전이다. 다음은 실행 방식을 선택하고 1차 completed-session / same-state target을 시작하는 것이다.
