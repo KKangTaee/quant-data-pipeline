@@ -22,11 +22,11 @@
 
 ## Task 3 — Price hover and 10-year financial chart
 
-- [ ] financial limit/hover/chart-mode regression tests를 RED로 추가한다.
-- [ ] annual 10 / quarterly 40 limit을 적용한다.
-- [ ] pointer/focus hover guide, dot, tooltip을 구현한다.
-- [ ] factor-specific default와 bar/line toggle을 구현한다.
-- [ ] ResizeObserver frame-height sync를 적용한다.
+- [x] financial limit/hover/chart-mode regression tests를 RED로 추가한다.
+- [x] annual 10 / quarterly 40 limit을 적용한다.
+- [x] pointer/focus hover guide, dot, tooltip을 구현한다.
+- [x] factor-specific default와 bar/line toggle을 구현한다.
+- [x] ResizeObserver frame-height sync를 적용한다.
 
 ## Task 4 — News and SEC evidence
 

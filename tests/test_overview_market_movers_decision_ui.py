@@ -453,6 +453,27 @@ def test_decision_research_keeps_financial_period_and_factor_controls_separate()
     assert "@media (max-width: 760px)" in style
 
 
+def test_decision_research_adds_price_hover_financial_chart_modes_and_resize_sync() -> None:
+    from pathlib import Path
+
+    source = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+    style = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/style.css"
+    ).read_text(encoding="utf-8")
+
+    assert "onPointerMove" in source
+    assert "activePoint" in source
+    assert 'className="mm-decision__chart-tooltip"' in source
+    assert 'className="mm-decision__chart-mode"' in source
+    assert 'chartMode === "bar"' in source
+    assert "<rect" in source
+    assert "new ResizeObserver" in source
+    assert ".mm-decision__chart-tooltip" in style
+    assert ".mm-decision__chart-mode" in style
+
+
 def test_decision_research_uses_report_family_tabs_and_responsive_focus_contract() -> None:
     from pathlib import Path
 

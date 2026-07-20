@@ -730,6 +730,7 @@ body {
 }
 
 .mm-decision__range-controls,
+.mm-decision__chart-mode,
 .mm-decision__financial-frequency,
 .mm-decision__financial-groups,
 .mm-decision__financial-factors {
@@ -739,6 +740,7 @@ body {
 }
 
 .mm-decision__range-controls button,
+.mm-decision__chart-mode button,
 .mm-decision__financial-frequency button,
 .mm-decision__financial-groups button,
 .mm-decision__financial-factors button {
@@ -755,6 +757,7 @@ body {
 }
 
 .mm-decision__range-controls button.is-active,
+.mm-decision__chart-mode button.is-active,
 .mm-decision__financial-frequency button.is-active,
 .mm-decision__financial-groups button.is-active,
 .mm-decision__financial-factors button.is-active {
@@ -777,6 +780,52 @@ body {
   min-height: 250px;
   position: relative;
 }
+
+.mm-decision__chart-tooltip {
+  background: rgba(32, 60, 80, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 9px;
+  box-shadow: 0 8px 20px rgba(32, 60, 80, 0.18);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.68rem;
+  gap: 2px;
+  min-width: 126px;
+  padding: 7px 9px;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, -100%);
+  z-index: 3;
+}
+
+.mm-decision__chart-tooltip span {
+  font-weight: 800;
+}
+
+.mm-decision__chart-guide {
+  stroke: rgba(57, 127, 183, 0.5) !important;
+  stroke-dasharray: 3 3 !important;
+}
+
+.mm-decision__chart-dot {
+  fill: #ffffff;
+  stroke: var(--mm-accent);
+  stroke-width: 3;
+}
+
+.mm-decision__financial-bar {
+  fill: var(--mm-trust);
+  opacity: 0.86;
+}
+
+.mm-return-fill--negative { fill: var(--mm-negative); }
+.mm-return-fill--neutral { fill: var(--mm-muted); }
+
+.mm-decision__chart-readout span.is-primary { border-left: 3px solid var(--mm-accent); }
+.mm-decision__chart-readout span.is-latest { background: #eff6ff; }
+.mm-decision__chart-readout span.is-high { background: #ecfdf5; }
+.mm-decision__chart-readout span.is-low { background: #fff1f2; }
 
 .mm-decision__svg-wrap svg {
   display: block;

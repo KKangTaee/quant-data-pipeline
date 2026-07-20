@@ -43,8 +43,8 @@ from finance.loaders.sentiment import (
 
 PERIOD_LABELS = {"daily": "Daily", "weekly": "Weekly", "monthly": "Monthly", "yearly": "Yearly"}
 
-FINANCIAL_TREND_ANNUAL_LIMIT = 8
-FINANCIAL_TREND_QUARTERLY_LIMIT = 32
+FINANCIAL_TREND_ANNUAL_LIMIT = 10
+FINANCIAL_TREND_QUARTERLY_LIMIT = 40
 
 UNIVERSE_LABELS = {
     "SP500": "S&P 500",

@@ -186,3 +186,55 @@ def test_research_snapshot_exposes_v2_factors_without_historical_per() -> None:
         {"date": "2026-01-02", "price": 100.0, "normalized_return_pct": 0.0},
         {"date": "2026-06-30", "price": 120.0, "normalized_return_pct": 20.0},
     ]
+
+
+def test_research_snapshot_keeps_up_to_ten_years_of_financial_history() -> None:
+    from app.services.overview.why_it_moved import build_market_mover_research_snapshot
+
+    annual_rows = pd.DataFrame(
+        [
+            {
+                "period_end": f"{year}-12-31",
+                "available_at": f"{year + 1}-02-20",
+                "form_type": "10-K",
+                "total_revenue": float(year),
+                "operating_income": float(year) / 10,
+                "net_income": float(year) / 20,
+            }
+            for year in range(2014, 2026)
+        ]
+    )
+    quarter_ends = pd.date_range("2015-03-31", periods=44, freq="QE")
+    quarterly_rows = pd.DataFrame(
+        [
+            {
+                "period_end": period,
+                "available_at": period + pd.Timedelta(days=40),
+                "form_type": "10-Q",
+                "total_revenue": float(index + 1),
+                "operating_income": float(index + 1) / 10,
+                "net_income": float(index + 1) / 20,
+            }
+            for index, period in enumerate(quarter_ends)
+        ]
+    )
+
+    model = build_market_mover_research_snapshot(
+        mover={"Symbol": "AAA", "Market Cap": 5_500_000_000},
+        as_of_date="2026-06-30",
+        price_history_loader=lambda **_: pd.DataFrame(
+            [
+                {"date": "2026-01-02", "adj_close": 100.0},
+                {"date": "2026-06-30", "adj_close": 120.0},
+            ]
+        ),
+        statement_fundamentals_loader=lambda **kwargs: annual_rows if kwargs["freq"] == "annual" else quarterly_rows,
+        fundamental_snapshot_loader=lambda **_: pd.DataFrame(),
+        statement_filings_loader=lambda **_: pd.DataFrame(),
+        quarterly_eps_loader=lambda **_: {"series": {"timeline": []}},
+    )
+
+    assert len(model["financial_trends"]["annual"]) == 10
+    assert len(model["financial_trends"]["quarterly"]) == 40
+    assert len(model["financial_factor_series"]["annual"]["factors"]["revenue"]["points"]) == 10
+    assert len(model["financial_factor_series"]["quarterly"]["factors"]["revenue"]["points"]) == 40

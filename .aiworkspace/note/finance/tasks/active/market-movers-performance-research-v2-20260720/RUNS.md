@@ -13,3 +13,6 @@
 - Task 2 RED: timing/action payload와 grouped breadth/return tone source contract `2 failed` 확인.
 - Task 2 GREEN: focused tests `2 passed`; 전체 decision UI tests `14 passed`.
 - Task 2 Vite production build `170 modules transformed`.
+- Task 3 RED: 10년 financial history와 hover/chart-mode/resize source contract `2 failed` 확인.
+- Task 3 GREEN: research + decision UI tests `21 passed`.
+- Task 3 Vite production build `170 modules transformed`.

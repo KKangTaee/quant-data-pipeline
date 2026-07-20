@@ -814,8 +814,8 @@ type ChartPoint = {
   displayValue: string;
 };
 
-function chartCoordinates(points: ChartPoint[], width = 720, height = 250) {
-  if (!points.length) return "";
+function chartCoordinateList(points: ChartPoint[], width = 720, height = 250) {
+  if (!points.length) return [];
   const values = points.map((point) => point.value);
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -825,8 +825,40 @@ function chartCoordinates(points: ChartPoint[], width = 720, height = 250) {
   return points.map((point, index) => {
     const x = insetX + (index / Math.max(points.length - 1, 1)) * (width - insetX * 2);
     const y = height - insetY - ((point.value - min) / span) * (height - insetY * 2);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
+    return { x, y };
+  });
+}
+
+function chartCoordinates(points: ChartPoint[], width = 720, height = 250) {
+  return chartCoordinateList(points, width, height)
+    .map(({ x, y }) => `${x.toFixed(1)},${y.toFixed(1)}`)
+    .join(" ");
+}
+
+function financialBarGeometry(points: ChartPoint[], width = 720, height = 250) {
+  if (!points.length) return { bars: [], zeroY: height - 24 };
+  const values = points.map((point) => point.value);
+  const min = Math.min(0, ...values);
+  const max = Math.max(0, ...values);
+  const span = max - min || 1;
+  const insetX = 28;
+  const insetY = 24;
+  const usableWidth = width - insetX * 2;
+  const zeroY = height - insetY - ((0 - min) / span) * (height - insetY * 2);
+  const slot = usableWidth / Math.max(points.length, 1);
+  const barWidth = Math.max(3, Math.min(22, slot * 0.68));
+  const bars = points.map((point, index) => {
+    const centerX = insetX + slot * (index + 0.5);
+    const valueY = height - insetY - ((point.value - min) / span) * (height - insetY * 2);
+    return {
+      x: centerX - barWidth / 2,
+      y: Math.min(valueY, zeroY),
+      width: barWidth,
+      height: Math.max(1, Math.abs(zeroY - valueY)),
+      tone: returnTone(point.value),
+    };
+  });
+  return { bars, zeroY };
 }
 
 function rangeFilteredSeries(series: DecisionRow[], range: string) {
@@ -844,6 +876,7 @@ function rangeFilteredSeries(series: DecisionRow[], range: string) {
 
 function PriceMomentumChart({ research }: { research: Record<string, unknown> }) {
   const [range, setRange] = useState("6M");
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const ytd = (research.ytd_return || {}) as Record<string, unknown>;
   const rawSeries = Array.isArray(ytd.series) ? ytd.series as DecisionRow[] : [];
   const filtered = rangeFilteredSeries(rawSeries, range);
@@ -855,6 +888,15 @@ function PriceMomentumChart({ research }: { research: Record<string, unknown> })
   const latest = points[points.length - 1];
   const lowest = points.length ? points.reduce((left, right) => left.value < right.value ? left : right) : null;
   const highest = points.length ? points.reduce((left, right) => left.value > right.value ? left : right) : null;
+  const coordinates = chartCoordinateList(points);
+  const resolvedIndex = activeIndex === null ? Math.max(0, points.length - 1) : Math.min(activeIndex, points.length - 1);
+  const activePoint = activeIndex === null ? null : points[resolvedIndex];
+  const activeCoordinate = activeIndex === null ? null : coordinates[resolvedIndex];
+  const moveActivePoint = (event: React.PointerEvent<SVGSVGElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (event.clientX - bounds.left) / Math.max(bounds.width, 1)));
+    setActiveIndex(Math.round(ratio * Math.max(points.length - 1, 0)));
+  };
   return (
     <div className="mm-decision__chart-layout">
       <div className="mm-decision__chart-panel">
@@ -868,20 +910,45 @@ function PriceMomentumChart({ research }: { research: Record<string, unknown> })
         </div>
         {points.length >= 2 ? (
           <div className="mm-decision__svg-wrap">
-            <svg aria-label={`${range} 조정주가 정규화 흐름`} preserveAspectRatio="none" role="img" viewBox="0 0 720 250">
+            <svg
+              aria-label={`${range} 조정주가 정규화 흐름`}
+              onBlur={() => setActiveIndex(null)}
+              onFocus={() => setActiveIndex(Math.max(0, points.length - 1))}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowLeft") setActiveIndex(Math.max(0, resolvedIndex - 1));
+                if (event.key === "ArrowRight") setActiveIndex(Math.min(points.length - 1, resolvedIndex + 1));
+              }}
+              onPointerLeave={() => setActiveIndex(null)}
+              onPointerMove={moveActivePoint}
+              preserveAspectRatio="none"
+              role="img"
+              tabIndex={0}
+              viewBox="0 0 720 250"
+            >
               <line x1="28" x2="692" y1="226" y2="226" />
               <line x1="28" x2="692" y1="24" y2="24" />
               <polyline fill="none" points={chartCoordinates(points)} stroke="#397fb7" strokeLinejoin="round" strokeWidth="3" />
+              {activeCoordinate ? <line className="mm-decision__chart-guide" x1={activeCoordinate.x} x2={activeCoordinate.x} y1="24" y2="226" /> : null}
+              {activeCoordinate ? <circle className="mm-decision__chart-dot" cx={activeCoordinate.x} cy={activeCoordinate.y} r="5" /> : null}
             </svg>
+            {activePoint && activeCoordinate ? (
+              <div
+                className="mm-decision__chart-tooltip"
+                style={{ left: `${(activeCoordinate.x / 720) * 100}%`, top: `${Math.max(8, activeCoordinate.y - 12)}px` }}
+              >
+                <strong>{activePoint.label}</strong>
+                <span className={`mm-return--${returnTone(activePoint.value)}`}>{activePoint.displayValue}</span>
+              </div>
+            ) : null}
             <div className="mm-decision__chart-axis"><span>{points[0].label}</span><span>{latest?.label}</span></div>
           </div>
         ) : <div className="mm-decision__chart-empty">선택 범위에 표시할 저장 가격 이력이 부족합니다.</div>}
       </div>
       <aside className="mm-decision__chart-readout">
-        <span><small>YTD 수익률</small><strong>{formatSignedPercent(ytd.return_pct)}</strong></span>
-        <span><small>최근 값</small><strong>{latest?.displayValue || "-"}</strong></span>
-        <span><small>범위 최고</small><strong>{highest ? formatSignedPercent(highest.value) : "-"}</strong></span>
-        <span><small>범위 최저</small><strong>{lowest ? formatSignedPercent(lowest.value) : "-"}</strong></span>
+        <span className="is-primary"><small>YTD 수익률</small><strong className={`mm-return--${returnTone(ytd.return_pct)}`}>{formatSignedPercent(ytd.return_pct)}</strong></span>
+        <span className="is-latest"><small>최근 값</small><strong className={`mm-return--${returnTone(latest?.value)}`}>{latest?.displayValue || "-"}</strong></span>
+        <span className="is-high"><small>범위 최고</small><strong className={`mm-return--${returnTone(highest?.value)}`}>{highest ? formatSignedPercent(highest.value) : "-"}</strong></span>
+        <span className="is-low"><small>범위 최저</small><strong className={`mm-return--${returnTone(lowest?.value)}`}>{lowest ? formatSignedPercent(lowest.value) : "-"}</strong></span>
         <p>{String(ytd.basis || "DB daily adjusted close")}</p>
       </aside>
     </div>
@@ -909,6 +976,7 @@ function FinancialFactorChart({ research, controls }: FinancialFactorChartProps)
   const factors = (frequencySeries?.factors || {}) as Record<string, Record<string, unknown>>;
   const factor = factors[factorId] || {};
   const unit = String(factor.unit || "number");
+  const [chartMode, setChartMode] = useState<"bar" | "line">("bar");
   const rawPoints = Array.isArray(factor.points) ? factor.points as DecisionRow[] : [];
   const points: ChartPoint[] = rawPoints.map((row) => {
     const value = numberValue(row, "value") || 0;
@@ -920,6 +988,10 @@ function FinancialFactorChart({ research, controls }: FinancialFactorChartProps)
   });
   const activeGroup = controls.factor_groups.find((group) => group.id === groupId) || controls.factor_groups[0];
   const currentValuation = (research.current_valuation || {}) as Record<string, unknown>;
+  const barGeometry = financialBarGeometry(points);
+  useEffect(() => {
+    setChartMode(unit === "percent" || unit === "ratio" ? "line" : "bar");
+  }, [factorId, frequency, unit]);
   const chooseFrequency = (nextFrequency: "quarterly" | "annual") => {
     setFrequency(nextFrequency);
     const currentControl = controls.factor_groups.flatMap((group) => group.factors).find((item) => item.id === factorId);
@@ -974,13 +1046,29 @@ function FinancialFactorChart({ research, controls }: FinancialFactorChartProps)
         <div className="mm-decision__chart-panel">
           <div className="mm-decision__chart-toolbar">
             <div><strong>{String(factor.label || "재무 factor")}</strong><small>{frequency === "quarterly" ? "분기" : "연간"} · 단일 factor</small></div>
+            <div className="mm-decision__chart-mode" aria-label="재무 차트 표현">
+              <button className={chartMode === "bar" ? "is-active" : ""} onClick={() => setChartMode("bar")} type="button">막대</button>
+              <button className={chartMode === "line" ? "is-active" : ""} onClick={() => setChartMode("line")} type="button">선</button>
+            </div>
           </div>
           {points.length ? (
             <div className="mm-decision__svg-wrap">
               <svg aria-label={`${String(factor.label || factorId)} 추이`} preserveAspectRatio="none" role="img" viewBox="0 0 720 250">
-                <line x1="28" x2="692" y1="226" y2="226" />
+                <line x1="28" x2="692" y1={chartMode === "bar" ? barGeometry.zeroY : 226} y2={chartMode === "bar" ? barGeometry.zeroY : 226} />
                 <line x1="28" x2="692" y1="24" y2="24" />
-              <polyline fill="none" points={chartCoordinates(points)} stroke="#2f7f73" strokeLinejoin="round" strokeWidth="3" />
+                {chartMode === "bar" ? barGeometry.bars.map((bar, index) => (
+                  <rect
+                    className={`mm-decision__financial-bar mm-return-fill--${bar.tone}`}
+                    height={bar.height}
+                    key={`${points[index].label}-${index}`}
+                    rx="2"
+                    width={bar.width}
+                    x={bar.x}
+                    y={bar.y}
+                  />
+                )) : (
+                  <polyline fill="none" points={chartCoordinates(points)} stroke="#2f7f73" strokeLinejoin="round" strokeWidth="3" />
+                )}
               </svg>
               <div className="mm-decision__chart-axis"><span>{points[0]?.label}</span><span>{points[points.length - 1]?.label}</span></div>
             </div>
@@ -1118,8 +1206,20 @@ function MarketMoversWorkbench({ args }: Props) {
   const payload = args.payload;
 
   useEffect(() => {
-    syncFrameHeightSoon();
-  });
+    let lastHeight = 0;
+    const syncObservedHeight = () => {
+      const nextHeight = Math.ceil(document.body.scrollHeight);
+      if (nextHeight > 0 && nextHeight !== lastHeight) {
+        lastHeight = nextHeight;
+        Streamlit.setFrameHeight(nextHeight);
+      }
+    };
+    const observer = new ResizeObserver(syncObservedHeight);
+    observer.observe(document.documentElement);
+    observer.observe(document.body);
+    syncObservedHeight();
+    return () => observer.disconnect();
+  }, [payload]);
 
   if (!payload) {
     return null;
