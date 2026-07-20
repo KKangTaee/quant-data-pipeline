@@ -12,7 +12,6 @@ REQUIRED_CONTEXTUAL_SURFACES = {
     "backtest_analysis",
     "practical_validation",
     "final_review",
-    "portfolio_monitoring",
 }
 
 OWNER_CALL_SITES = {
@@ -22,7 +21,6 @@ OWNER_CALL_SITES = {
     "backtest_analysis": Path("app/web/backtest_analysis.py"),
     "practical_validation": Path("app/web/backtest_practical_validation/page.py"),
     "final_review": Path("app/web/backtest_final_review/page.py"),
-    "portfolio_monitoring": Path("app/web/final_selected_portfolio_dashboard.py"),
 }
 
 
@@ -68,16 +66,35 @@ class ReferenceContextualHelpContractTests(unittest.TestCase):
     def test_contextual_help_lookup_returns_defensive_copy(self) -> None:
         from app.services.reference_contextual_help import get_reference_contextual_help
 
-        help_item = get_reference_contextual_help("portfolio_monitoring")
+        help_item = get_reference_contextual_help("final_review")
         self.assertIsNotNone(help_item)
         assert help_item is not None
-        self.assertEqual(help_item["surface"], "Portfolio Monitoring")
-        self.assertIn("concept.monitoring_scenario", help_item["reference_item_ids"])
+        self.assertEqual(help_item["surface"], "Final Review")
+        self.assertIn("concept.selected_route_gate", help_item["reference_item_ids"])
 
         help_item["reference_item_ids"].append("mutated")
-        fresh_item = get_reference_contextual_help("portfolio_monitoring")
+        fresh_item = get_reference_contextual_help("final_review")
         assert fresh_item is not None
         self.assertNotIn("mutated", fresh_item["reference_item_ids"])
+
+    def test_portfolio_monitoring_help_is_owned_only_by_reference_center(self) -> None:
+        from app.services.reference_center import get_reference_item
+        from app.services.reference_contextual_help import get_reference_contextual_help
+
+        self.assertIsNone(get_reference_contextual_help("portfolio_monitoring"))
+        for item_id in (
+            "journey.monitoring",
+            "concept.monitoring_scenario",
+            "playbook.monitoring_scenario_stale",
+        ):
+            with self.subTest(item_id=item_id):
+                item = get_reference_item(item_id)
+                self.assertIsNotNone(item)
+                assert item is not None
+                self.assertEqual(item["destination"], "portfolio_monitoring")
+
+        page_source = Path("app/web/final_selected_portfolio_dashboard.py").read_text(encoding="utf-8")
+        self.assertNotIn("render_reference_contextual_help", page_source)
 
     def test_unknown_contextual_help_key_returns_none(self) -> None:
         from app.services.reference_contextual_help import get_reference_contextual_help
@@ -93,8 +110,8 @@ class ReferenceContextualHelpContractTests(unittest.TestCase):
         self.assertEqual(report["missing_reference_item_ids"], [])
         self.assertEqual(report["invalid_links"], [])
         self.assertEqual(report["duplicate_surface_keys"], [])
-        self.assertGreaterEqual(report["metrics"]["surface_count"], 7)
-        self.assertGreaterEqual(report["metrics"]["reference_item_count"], 7)
+        self.assertEqual(report["metrics"]["surface_count"], len(REQUIRED_CONTEXTUAL_SURFACES))
+        self.assertGreaterEqual(report["metrics"]["reference_item_count"], 6)
 
     def test_contextual_help_renderer_uses_one_page_target_and_item_query_param(self) -> None:
         source = Path("app/web/reference_contextual_help.py").read_text(encoding="utf-8")

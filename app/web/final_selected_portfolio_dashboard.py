@@ -9,8 +9,6 @@ from typing import Any, Callable, MutableMapping
 import pandas as pd
 import streamlit as st
 
-from app.web.reference_contextual_help import render_reference_contextual_help
-
 from finance.data.db.mysql import MySQLClient
 from finance.loaders import load_price_history
 from finance.loaders.provider import load_etf_exposure_snapshot, load_etf_holdings_snapshot
@@ -93,7 +91,6 @@ from app.web.portfolio_monitoring_react_component import (
 from app.services.backtest_evidence_read_model import build_decision_dossier
 from app.services.backtest_practical_validation import build_market_sentiment_context_overlay
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
-from app.web.reference_contextual_help import render_reference_contextual_help
 from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_dashboard_handoff_checklist_table,
     build_selected_dashboard_handoff_table,
@@ -4351,7 +4348,6 @@ def render_final_selected_portfolio_dashboard_page(
 ) -> None:
     """Render load -> React -> dispatch -> rerun with no legacy normal path."""
 
-    render_reference_contextual_help("portfolio_monitoring", expanded=False)
     runtime = services or _default_portfolio_monitoring_services()
     active_group_id = runtime.session_state.get("portfolio_monitoring_active_group_id")
     catalog_query = str(runtime.session_state.get("portfolio_monitoring_catalog_query") or "")

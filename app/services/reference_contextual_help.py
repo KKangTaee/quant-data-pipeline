@@ -151,34 +151,6 @@ REFERENCE_CONTEXTUAL_HELP: list[dict[str, Any]] = [
             },
         ],
     },
-    {
-        "surface_key": "portfolio_monitoring",
-        "surface": "Portfolio Monitoring",
-        "title": "모니터링 시나리오가 stale이거나 비어 있을 때",
-        "summary": "Final Review selected row, portfolio setup, scenario replay 결과의 차이를 확인합니다.",
-        "reference_item_ids": [
-            "journey.monitoring",
-            "concept.monitoring_scenario",
-            "playbook.monitoring_scenario_stale",
-        ],
-        "next_checks": [
-            "Final Review에서 저장된 selected decision row가 있는지 확인합니다.",
-            "전략 slot signature, start/latest mode, balance가 바뀌면 scenario update가 필요합니다.",
-            "시나리오는 사후 관찰 근거이며 새 최종 판단이나 주문 지시가 아닙니다.",
-        ],
-        "boundaries": [
-            "Portfolio Monitoring은 관찰 surface이며 live approval, broker order, auto rebalance를 만들지 않습니다.",
-            "사용자 portfolio setup은 validation 또는 approval record가 아닙니다.",
-        ],
-        "links": [
-            {"label": "모니터링 흐름", "target": "/reference", "item_id": "journey.monitoring"},
-            {
-                "label": "stale 시나리오 해결",
-                "target": "/reference",
-                "item_id": "playbook.monitoring_scenario_stale",
-            },
-        ],
-    },
 ]
 
 
