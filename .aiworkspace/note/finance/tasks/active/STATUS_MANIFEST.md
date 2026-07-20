@@ -17,6 +17,10 @@ Current active task status:
 
 - `overview-sentiment-cnn-aaii-v1-20260719`: 전체 잠정 roadmap `1/4차` 기능과 승인된 시각 polish·actual desktop/420px QA를 완료했다. 다음은 2차 장기 이력·발표 당시 값 품질 점검이다.
 
+Parallel active design task:
+
+- `reference-center-react-v1-20260720`: Search-first Hybrid A, 단일 Reference navigation, curated user catalog, React/Python 경계와 QA 설계를 승인받았고 written spec review가 남아 있다. 구현은 `0/4차`다.
+
 Parallel active follow-up:
 
 - `portfolio-monitoring-chart-zoom-pan-v1-20260719`: 구현과 자동 회귀는 완료했고 전체 `2/3차`; 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다.

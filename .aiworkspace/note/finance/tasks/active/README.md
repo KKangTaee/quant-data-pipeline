@@ -27,6 +27,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `reference-center-react-v1-20260720` | Written spec review pending, 0/4 implementation | Search-first Hybrid A와 단일 Reference navigation 설계를 승인받았다. 사용자 문서 검토 후 구현 계획을 작성한다. |
 | `overview-sentiment-cnn-aaii-v1-20260719` | 1/4 complete | 기능과 승인된 시각 polish·actual QA를 완료했다. 다음은 장기 이력·발표 당시 값 품질 점검이다. |
 | `portfolio-monitoring-chart-zoom-pan-v1-20260719` | Parallel follow-up, 2/3 complete | 구현과 자동 회귀는 완료했다. 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다. |
 
