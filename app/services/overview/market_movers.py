@@ -22,6 +22,10 @@ from xml.etree import ElementTree
 
 import pandas as pd
 
+from app.services.overview.market_movers_read_model import (
+    canonical_sector_options,
+    filter_rows_by_canonical_sector,
+)
 from finance.loaders.sentiment import (
     CNN_COMPONENT_SERIES,
     CORE_SENTIMENT_SERIES,
@@ -602,10 +606,7 @@ def resolve_group_trend_market_dates(
     }
 
 def _filter_sector(rows: list[dict[str, Any]], sector: str | None) -> list[dict[str, Any]]:
-    normalized = str(sector or "All").strip()
-    if not normalized or normalized == "All":
-        return rows
-    return [row for row in rows if str(row.get("sector") or "Unknown") == normalized]
+    return filter_rows_by_canonical_sector(rows, sector)
 
 def _load_universe(
     *,
@@ -763,8 +764,7 @@ def load_market_mover_sector_options(
         rows = _load_universe(universe_code=normalized, universe_limit=limit, query_fn=query)
     except Exception:
         return []
-    sectors = sorted({str(row.get("sector") or "Unknown") for row in rows})
-    return sectors
+    return canonical_sector_options(rows)
 
 def _load_prices_for_dates(
     *,

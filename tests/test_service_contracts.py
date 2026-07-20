@@ -16732,7 +16732,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(views["unusual_volume"]["status"], "OK")
         self.assertEqual(views["unusual_volume"]["rows"].iloc[0]["Symbol"], "AAA")
         self.assertEqual(views["unusual_volume"]["rows"].iloc[0]["Relative Volume"], 5.0)
-        self.assertEqual(views["sector_leaders"]["rows"].iloc[0]["Group"], "Healthcare")
+        self.assertEqual(views["sector_leaders"]["rows"].iloc[0]["Group"], "Health Care")
         self.assertIn("context-only", views["top_gainers"]["boundary_note"].lower())
 
     def test_market_movers_snapshot_adds_full_sector_breadth_context(self) -> None:
