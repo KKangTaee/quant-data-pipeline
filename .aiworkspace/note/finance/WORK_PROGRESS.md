@@ -6876,3 +6876,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 거래일 DB close를 execution price 기본값으로 자동 입력하고 사용자가 actual price로 override할 수 있으며, buy는 외부 입금, partial sell은 외부 출금으로 계산한다.
 - append-only revision chain과 daily Modified Dietz 성과 계약을 확정하고 8개 TDD task / 4 checkpoint 구현 계획으로 구체화했다. 전체 roadmap `1/3차`; 실행 방식 확정 후 additive schema RED부터 시작한다.
 - 상세는 `tasks/active/portfolio-monitoring-position-events-v1-20260720/`를 본다.
+
+## 2026-07-20 - Portfolio Monitoring 개별종목 수량·거래 원장 완료
+
+- direct-stock fixed-shares에 최초 수량 정정, 추가매수·일부매도, append-only 거래 수정·취소와 exact-date DB 종가 기본값/수동 체결가를 연결했다.
+- buy=외부 입금, partial sell=외부 출금과 daily Modified Dietz `0.5` 계약으로 item/group 성과를 재계산하며 ETF·전략·fixed notional·backtest는 변경하지 않았다.
+- 운영 schema는 기존 group/item/command `1/2/5`건과 JSONL checksum을 보존한 채 빈 event table만 추가했다. Python 137 / React 29 / typecheck/build와 actual/isolated desktop·900·420 Browser QA를 통과했다.
+- 전체 roadmap `3/3차` 완료. 상세는 `tasks/active/portfolio-monitoring-position-events-v1-20260720/`를 본다.

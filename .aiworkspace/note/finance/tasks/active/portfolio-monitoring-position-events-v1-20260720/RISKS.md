@@ -1,6 +1,6 @@
 # Portfolio Monitoring Position Events V1 Risks
 
-## Open Implementation Risks
+## Closed Implementation Risks
 
 - transaction-aware item unit index와 group-level flow-neutral aggregation이 기존 no-event KPI를 바꾸지 않도록 별도 regression fixture가 필요하다.
 - 같은 날 여러 거래는 root에 고정된 `event_order`를 지켜야 하며 replace/void 후 전체 후속 이벤트 재검증이 필요하다.
@@ -8,6 +8,14 @@
 - 거래 시각을 입력하지 않으므로 daily Modified Dietz는 모든 같은 날 flow에 고정 `0.5` 가중치를 사용한다. UI와 문서에서 이를 actual intraday return으로 표현하면 안 된다.
 - 사용자가 DB close 기본값을 actual execution price로 수정한 차이는 정상 입력일 수 있으므로 저장 시 자동 보정하지 않고 `manual_override` provenance를 유지해야 한다.
 - 초기 수량 정정으로 최초 자본이 바뀌면 group contribution과 historical KPI가 의도대로 전 구간 재계산되어야 한다.
+
+위 항목은 position-event/command/valuation/read-model 자동 테스트와 isolated Browser QA로 고정했다. 기존 무거래 fixture parity도 회귀 테스트에 포함했다.
+
+## Residual Product Boundaries
+
+- 거래 시각을 받지 않기 때문에 same-day Modified Dietz `0.5`는 근사이며 actual intraday return이 아니다.
+- exact-date DB close가 없는 휴장일에는 다른 거래일 가격으로 이동하지 않고 사용자가 유효 거래일을 선택해야 한다.
+- tax lot/FIFO, realized/unrealized cost basis, full sell trade event, group cash와 broker reconciliation은 별도 제품 설계가 필요하다.
 
 ## Boundaries
 

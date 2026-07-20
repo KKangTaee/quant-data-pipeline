@@ -1,7 +1,7 @@
 # Portfolio Monitoring Migration And QA
 
 Status: Active
-Last Verified: 2026-07-19
+Last Verified: 2026-07-20
 
 ## 언제 쓰는가
 
@@ -21,14 +21,15 @@ git diff --check
 
 ## 2. 격리 schema 검증
 
-먼저 `finance_meta_portfolio_monitoring_qa_YYYYMMDD` 같은 별도 QA database에 `PORTFOLIO_MONITORING_SCHEMAS`의 다섯 DDL을 적용한다. table/index/enum/JSON column을 확인한 뒤 동일 DDL을 다시 실행해 idempotency를 확인한다. QA database는 실제 사용자 group/item을 포함하지 않는다.
+먼저 `finance_meta_portfolio_monitoring_qa_YYYYMMDD` 같은 별도 QA database에 `PORTFOLIO_MONITORING_SCHEMAS`의 여섯 DDL을 적용한다. table/index/enum/JSON column을 확인한 뒤 동일 DDL을 다시 실행해 idempotency를 확인한다. QA database는 실제 사용자 group/item을 포함하지 않는다.
 
 ## 3. 운영 schema 적용
 
 1. 운영 `finance_meta`의 table 목록을 다시 기록한다.
-2. `MySQLMonitoringRepository.ensure_schema()`로 `CREATE TABLE IF NOT EXISTS` 다섯 개만 적용한다.
+2. `MySQLMonitoringRepository.ensure_schema()`로 `CREATE TABLE IF NOT EXISTS` 여섯 개만 적용한다. 적용 전후 `monitoring_portfolio_group`, `monitoring_portfolio_item`, `monitoring_portfolio_command` row count가 같아야 한다.
 3. table/index/column을 read-only로 검증한다.
    - `uk_monitoring_calibration_fingerprint` 순서는 `algorithm_version, data_fingerprint, config_fingerprint, policy_version, horizon_sessions`여야 한다.
+   - 신규 배포 직후 `monitoring_security_position_event` row count는 0이어야 한다. 사용자 거래 interaction QA는 운영 DB가 아니라 격리 fixture에서 수행한다.
 4. `ensure_default_group(repository)`를 두 번 호출하고 active default group이 정확히 하나인지 확인한다.
 
 `ensure_schema`와 default group 생성은 column drop, table rename, 기존 row update를 하지 않는다. 실패 시 더 진행하지 않고 error와 적용된 table 목록을 기록한다.
@@ -52,11 +53,15 @@ git diff --check
 - Context Drawer에 direct stock/ETF와 selected strategy가 분리되고 수량 방식은 정수만 받는다.
 - 빈 그룹은 데이터 부족 경고를 만들지 않고 종목 추가 행동을 안내한다.
 - 종목 fixture 검증에서는 invested/current/return/MDD/CAGR, 공통 curve, 개별 lane이 일치한다.
+- direct-stock fixed-shares fixture에서는 현재/최초 수량, 누적 입금·출금, 수량 정정, 추가매수·일부매도, 거래 수정·취소가 보인다. 거래일 exact DB close 기본값과 manual override label, partial sell 최소 1주 validation을 확인한다.
+- ETF, selected strategy와 fixed-notional item에는 position trade action이 없어야 한다.
 - `지금 확인할 변화`, `강점`, `취약점`, `데이터 부족`, `현재 매크로 관찰`, `위험 검증과 진단 이력`을 확인한다.
 - calibration이 현재 fingerprint의 `READY`가 아니면 확률이 숨겨지고 관찰 전용 설명이 보인다.
 - horizontal overflow와 Streamlit component error가 없어야 한다.
 
 Browser QA screenshot은 task RUNS에 절대경로를 남기되 generated artifact로 보고 unstaged 상태를 유지한다.
+
+거래 interaction QA는 temporary Streamlit harness에서 수행한다. harness는 production MySQL과 registry/saved JSONL을 읽거나 쓰지 않고 `portfolio_monitoring_workspace_v2` fixture와 component event만 주고받는다.
 
 ## 7. Closeout
 
