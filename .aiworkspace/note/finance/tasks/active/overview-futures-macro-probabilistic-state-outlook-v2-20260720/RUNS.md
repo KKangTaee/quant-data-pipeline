@@ -81,3 +81,10 @@ No code, DB row, registry, or saved setup was modified by this analysis.
 - Economic Cycle result regression: 5 pytest tests passed through `PYTHONPATH=. uv run --with pytest`.
 - New modules and the modified cycle loader passed `py_compile`; `git diff --check` passed.
 - No provider call, DB write, or Economic Cycle publication change was added.
+
+## 2026-07-20 — Task 4 Reduced Momentum And Weighted Analogs
+
+- RED: fixed predictor and weighted episode module did not exist.
+- GREEN: 5 model tests passed for exact 16-feature projection, purge/spacing, future-row immunity, temperature weighting, and M2 missing-context degradation.
+- Context + model regression: 9 tests passed; new module passed `py_compile` and `git diff --check`.
+- M1 remains available without macro context; M2 returns an explicit unavailable reason instead of filling missing macro values.
