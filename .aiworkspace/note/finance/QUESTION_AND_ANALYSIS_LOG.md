@@ -10254,3 +10254,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: source별 보유 이력은 보존하되 두 그래프가 서로 다른 기간을 같은 비교처럼 보이게 하지 않아야 함.
 - Analysis result: AAII official workbook을 canonical history로 보강하고 common start=`max(start)`, common end=`min(end)`를 6M / 1Y / 공통 전체의 단일 x-domain으로 적용했다. 실제 common range는 `2025-06-04~2026-07-16`이다.
 - Follow-up: 전체 `2/4차` 완료, immutable AAII PIT는 2026-07-20부터만 유효하며 1W/1M은 `UNAVAILABLE`이다. Browser URL policy로 최신 interaction QA는 수동 확인이 남았다.
+
+### 2026-07-20 - CNN·AAII 그래프는 시작점만 맞추고 각 source 최신값을 보존한다
+
+- User request: 현재 CNN 카드는 `2026-07-20 / 37.1`인데 교집합 그래프가 `2026-07-16 / 41.2`에서 끝나므로, 시작점만 맞추고 마지막은 최신 정보로 보여 달라고 요청함.
+- Interpreted goal: 두 graph의 시간 비교 기준은 유지하되 AAII의 느린 주간 발표 때문에 더 최신인 CNN 관측을 숨기지 않아야 한다.
+- Analysis result: aligned start=`max(starts)`, shared axis end=`max(ends)`로 변경한다. 두 source가 실제로 겹치는지는 `max(starts) <= min(ends)`로 확인하며, 각 선은 자기 마지막 관측 이후 값을 채우거나 보간하지 않는다.
+- Follow-up: payload를 `history_coverage.aligned`로 명확히 바꾸고 `6M / 1Y / 전체`, `정렬 구간` 문구를 적용했다. 전체 roadmap은 `2/4차`로 유지하고 3차는 시작하지 않았다.

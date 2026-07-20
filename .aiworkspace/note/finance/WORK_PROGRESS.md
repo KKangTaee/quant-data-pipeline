@@ -6883,3 +6883,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - AAII official workbook canonical history를 `1987-07-24~2026-07-16`, 네 series 각 2,032주로 보강했으며 immutable PIT start는 2026-07-20 실제 capture 그대로 유지했다.
 - CNN `2025-06-04~2026-07-20`과 AAII의 교집합 `2025-06-04~2026-07-16`만 6M / 1Y / 공통 전체의 shared x-domain으로 표시한다.
 - 전체 roadmap은 `2/4차`; 3차 독립 데이터/예측 검토는 사용자 요청대로 보류한다. Browser URL policy로 최신 desktop/420 interaction QA만 수동 확인이 남았다.
+
+## 2026-07-20 - Overview Sentiment 시작점 정렬·최신값 노출 보정
+
+- 사용자 검토에서 교집합 종료가 CNN 최신 `2026-07-20 / 37.1`을 숨기고 `2026-07-16 / 41.2`에서 그래프를 자르는 문제를 확인했다.
+- 두 source가 겹치는지 확인한 뒤 시작은 늦은 start로 정렬하고 공통 x축 종료는 최신 source end까지 확장했다. CNN은 7월 20일까지, AAII는 실제 최신 7월 16일에서 끝나며 보간하지 않는다.
+- focused 4 contracts, sentiment PIT 21 tests, py_compile, React production build와 diff check를 통과했다. 전체 roadmap은 계속 `2/4차`이고 3차는 시작하지 않았다.

@@ -31,11 +31,11 @@
 - Consumes: source coverage objects with `canonical_start` and `canonical_end`.
 - Produces: `history_coverage.aligned = {canonical_start, canonical_end, available}`.
 
-- [ ] **Step 1: Write failing service, payload, and React contract tests**
+- [x] **Step 1: Write failing service, payload, and React contract tests**
 
 Expect `aligned.canonical_start == "2025-06-04"`, `aligned.canonical_end == "2026-07-20"`, both chart panels to use `buildAlignedPeriodExtent`, and the visible copy to use `전체` and `정렬 구간`.
 
-- [ ] **Step 2: Run the focused tests and confirm expected failures**
+- [x] **Step 2: Run the focused tests and confirm expected failures**
 
 Run:
 
@@ -49,11 +49,11 @@ Run:
 
 Expected: failures referencing the old `common` contract and intersection end date.
 
-- [ ] **Step 3: Implement the minimal aligned coverage change**
+- [x] **Step 3: Implement the minimal aligned coverage change**
 
 Use the later start, verify it is not after the earlier end, and then use the later end. Rename the payload and TypeScript types from `common` to `aligned`; keep point filtering unchanged so each line naturally stops at its own latest date.
 
-- [ ] **Step 4: Re-run focused tests and the component build**
+- [x] **Step 4: Re-run focused tests and the component build**
 
 Run the four focused tests above, then:
 
@@ -63,7 +63,7 @@ npm run build --prefix app/web/streamlit_components/sentiment_workbench
 
 Expected: all tests pass and Vite completes without TypeScript errors.
 
-- [ ] **Step 5: Commit the implementation**
+- [x] **Step 5: Commit the implementation**
 
 Stage only the focused source and test files and commit with a Korean message describing start alignment and latest-value exposure.
 
@@ -76,14 +76,14 @@ Stage only the focused source and test files and commit with a Korean message de
 - Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
 - Modify: `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 
-- [ ] **Step 1: Record the superseding range rule**
+- [x] **Step 1: Record the superseding range rule**
 
 State that start dates align, the shared axis reaches the latest source date, and each line stops at its own observation end without interpolation.
 
-- [ ] **Step 2: Run final verification**
+- [x] **Step 2: Run final verification**
 
 Run focused contracts, component build, `git diff --check`, and inspect `git status --short` so unrelated untracked artifacts remain unstaged.
 
-- [ ] **Step 3: Commit documentation**
+- [x] **Step 3: Commit documentation**
 
 Stage only the documentation files changed by this follow-up and commit with a Korean closeout message.
