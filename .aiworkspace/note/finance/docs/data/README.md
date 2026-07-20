@@ -59,6 +59,8 @@ Last Verified: 2026-07-20
 | `futures_instrument` | Overview futures watchlist preset / display metadata for yfinance pilot futures symbols |
 | `futures_ohlcv` | Overview futures 1m / daily OHLCV candle ledger for selected futures symbols. 1m rows support stored-candle chart / diagnostics; daily rows feed Futures Macro current scores and point-in-time historical validation. Economic Cycle은 저장된 `GC=F` / `DX-Y.NYB` daily row만 읽어 금·달러의 5/21/63거래일 가격 확인을 표시한다 |
 | `futures_market_monitor_run` | Futures OHLCV collection run diagnostics, latest candle, failed symbols, and provider status |
+| `futures_macro_snapshot` | completed-session input fingerprint와 algorithm/schema version으로 호환성을 판정하는 Overview Futures Macro latest-good current snapshot |
+| `futures_macro_forecast_history` | `as_of_date + input_fingerprint + schema/algorithm version` forecast identity별 immutable 5D/20D outlook ledger |
 | `etf_provider_source_map` | ETF별 issuer endpoint / parser mapping cache |
 | `etf_operability_snapshot` | ETF 비용, 규모, 유동성, spread, NAV 관련 snapshot |
 | `etf_holdings_snapshot` | ETF holdings row snapshot. QQQ SEC rows는 CUSIP/ISIN/LEI/CIK, filing/accession, anchor quality를 함께 보존한다. |

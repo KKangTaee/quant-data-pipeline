@@ -1,12 +1,12 @@
 # Overview Futures Macro Probabilistic State Outlook V2 Risks
 
-## Open Risks
+## Residual Risks
 
 ### R1. Provider daily finality
 
 yfinance daily rows do not expose an authoritative settlement/final flag.
 Raw UTC dates include session-boundary behavior that can produce Sunday/calendar rows.
-Implementation must prove a safe canonical-session resolver before replacing the current snapshot.
+The implemented cutoff resolver excludes incomplete sessions and exposes pending evidence. Provider-native settlement flags remain unavailable, so exchange-specific calendar refinement is a future data-quality option.
 
 ### R2. Continuous futures roll artifacts
 
@@ -23,7 +23,7 @@ V2 requires reduced, interpretable candidates and trial-count logging.
 
 Economic Cycle has release-aware official history, but daily alignment and coverage may differ by series.
 Missing macro context must make the hybrid unavailable rather than silently backfill revised values.
-The implemented shared-fold rule prevents partial-coverage M2 candidates from winning against fully evaluated M1/B0/B1, but actual production coverage still needs Task 9 evidence.
+The implemented shared-fold rule prevents partial-coverage M2 candidates from winning against fully evaluated M1/B0/B1. Actual Task 9 evidence selected no 20D hybrid and published no macro-conditioned edge.
 
 ### R5. Event schedule versus event surprise
 
@@ -32,8 +32,7 @@ Event density can widen uncertainty; it cannot infer the surprise direction.
 
 ### R6. Small incremental edge
 
-Current 5D Brier improvement is small and coordinate coverage is poor.
-The honest V2 result may be probability-only or `NO_EDGE` for one or both horizons.
+Actual V2 resolves both horizons to `NO_EDGE`. This is the expected safe behavior and must not be changed by relaxing gates against the observed final result.
 
 ### R7. Forecast history growth
 
@@ -42,5 +41,4 @@ Full OHLCV, analog path rows, or provider responses must remain in DB source tab
 
 ## Blocked Items
 
-- None for written design review.
-- Implementation is intentionally gated on user approval of `DESIGN.md`.
+- None. Roll-aware data and broader macro PIT coverage are optional new tasks, not blockers for V2.

@@ -6897,3 +6897,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - momentum-only와 PIT macro/event soft conditioning을 동일 rolling-origin에서 비교하고 baseline 미개선은 `NO_EDGE`로 두는 3차 written design을 작성했다.
 - 2026-07-20 written design을 사용자가 승인했고 3-stage/9-task TDD 실행 계획을 `IMPLEMENTATION_PLAN.md`에 확정했다.
 - 현재는 `0/3차`, 구현 실행 전이다. 다음은 실행 방식을 선택하고 1차 completed-session / same-state target을 시작하는 것이다.
+
+## 2026-07-20 - Futures Macro same-state 확률 전망 V2 완료
+
+- 완료 세션 resolver, canonical same-state target, baseline/M1/M2 nested rolling-origin 비교, 독립 probability/coordinate/vector gate와 immutable forecast history를 구현했다.
+- 실제 raw 2026-07-20은 완료 전으로 제외하고 current를 2026-07-17 V2로 전환했다. 5D/20D는 모두 `NO_EDGE`라 숫자·ellipse·vector를 공개하지 않는다.
+- React는 고정 축의 최근 30개 실제 일별 trail, 날짜가 있는 20D/5D/현재 anchor, pending-session 안내를 표시하며 desktop/420px Browser QA를 통과했다.
+- 전체 roadmap `3/3차`, implementation `9/9 task` 완료. 후속은 roll-aware source나 PIT macro coverage를 새 version으로 검토할 때만 시작한다.

@@ -8325,6 +8325,16 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("@media (max-width: 760px)", style)
         self.assertIn("grid-template-columns: 1fr", style)
 
+    def test_futures_macro_react_v3_discloses_pending_session_without_moving_current(self) -> None:
+        source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")
+        root = (source_root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
+        context = (source_root / "MacroContextSection.tsx").read_text(encoding="utf-8")
+
+        self.assertIn("sessionEvidence={payload.session_evidence}", root)
+        self.assertIn("PENDING_SESSION_FINALIZATION", context)
+        self.assertIn("완료 전이라 현재 위치와 전망에서 제외", context)
+        self.assertIn("마지막 완료 세션", context)
+
     def test_futures_macro_ribbon_has_visible_regime_legend(self) -> None:
         root = Path("app/web/streamlit_components/futures_macro_workbench/src")
         ribbon = (root / "PatternRibbonSection.tsx").read_text(encoding="utf-8")
@@ -8396,6 +8406,17 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("function Branch", pattern_map)
         self.assertNotIn("fm-pattern-map__outcome-dot", pattern_map)
         self.assertIn("stroke-dasharray", style)
+
+    def test_futures_macro_pattern_map_separates_dated_anchor_labels(self) -> None:
+        pattern_map = Path(
+            "app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("function anchorLabelLayout", pattern_map)
+        self.assertIn('anchorLabel === "20D 전"', pattern_map)
+        self.assertIn('anchorLabel === "5D 전"', pattern_map)
+        self.assertIn("labelLayout.dx", pattern_map)
+        self.assertIn("labelLayout.textAnchor", pattern_map)
 
     def test_futures_macro_pattern_map_names_rate_dollar_and_inflation_pressure(self) -> None:
         from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload

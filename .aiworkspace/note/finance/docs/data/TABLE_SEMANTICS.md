@@ -297,7 +297,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - asset profile name-match enrichment는 issuer name이 고유하게 매칭될 때만 보수적으로 저장하는 display helper다. 충돌하거나 불명확한 회사명은 mapping하지 않는다.
 - 이 table의 reported change는 추천, 매수 / 매도 신호, Practical Validation PASS / BLOCKER, Final Review selection, monitoring signal, broker order, auto rebalance를 만들지 않는다.
 
-## `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`, `futures_macro_snapshot`
+## `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`, `futures_macro_snapshot`, `futures_macro_forecast_history`
 
 역할:
 
@@ -305,20 +305,23 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - `futures_instrument`는 watchlist preset / display metadata를 저장한다.
 - `futures_ohlcv`는 provider symbol / interval / candle time 기준 OHLCV row를 저장한다. 1m row는 stored-candle chart / diagnostics에, 1d row는 Futures Macro의 현재 점수 / 해석과 point-in-time historical validation에 사용된다.
 - `futures_market_monitor_run`은 수집 run별 status, failed symbols, latest candle time, diagnostics를 저장한다.
-- `futures_macro_snapshot`은 successful 1d ingestion 뒤 계산한 compact current macro / 5D / 20D outlook을 `snapshot_key=overview_current`로 UPSERT한다. `source_marker`, `schema_version`, `algorithm_version`, `status`, `materialized_at`으로 호환성과 freshness를 확인한다.
+- `futures_macro_snapshot`은 successful 1d ingestion 뒤 마지막 완료 세션으로 계산한 compact current macro / 5D / 20D outlook을 `snapshot_key=overview_current`로 유지한다. `input_fingerprint`, `schema_version`, `algorithm_version`, `session_status`로 호환성을 판단하며 미완료/과거 V2 row는 latest-good current를 덮지 못한다. 레거시 current는 첫 V2 전환 때만 완료 세션 row로 교체할 수 있다.
+- `futures_macro_forecast_history`는 `sha256(as_of_date|input_fingerprint|schema_version|algorithm_version)` identity별 전망을 immutable하게 보존한다. current와 history는 한 transaction에서 append/advance되고 재시도는 같은 identity로 idempotent하다.
 
 성격:
 
 - provider snapshot / price ledger 성격이다.
 - 1차 MVP source는 `yfinance`이며, exchange-grade realtime feed가 아니다.
 - UI는 정상 render 때 provider를 직접 호출하지 않고 `futures_ohlcv`와 run diagnostics를 읽는다.
-- Futures Macro 첫 진입과 `다시 읽기`는 compatible `futures_macro_snapshot`만 읽으며, 없거나 버전이 다르면 `일봉 갱신 필요`를 표시한다. 전체 10년 OHLCV를 snapshot JSON에 복제하지 않는다.
+- Futures Macro 첫 진입과 `다시 읽기`는 compatible `futures_macro_snapshot`만 읽으며, 없거나 버전이 다르면 `일봉 갱신 필요`를 표시한다. 원자료 최신일이 아직 완료 전이면 화면은 마지막 완료 세션 기준일과 제외 사유를 함께 표시한다. 전체 10년 OHLCV를 snapshot/history JSON에 복제하지 않는다.
 - 반복 수집은 `(provider_symbol, interval_code, candle_time_utc, source)` 기준 UPSERT로 idempotent하게 동작한다.
 - yfinance `1d / 1m` 요청이 일부 futures symbol에서 빈 응답 또는 지나치게 희소한 응답을 줄 수 있어, collector는 해당 symbol만 `2d / 1m`으로 한 번 보강 수집한다. 희소 응답이 회복되면 초기 sparse rows를 같은 symbol의 fallback rows로 대체한 뒤 같은 `futures_ohlcv` UPSERT key로 저장하고, 초기 row 수 / 회복 symbol / 실패 symbol은 `fallback_retries` diagnostics로 남긴다.
 - 일봉 macro 해석은 `today_return / rolling_60d_volatility` 표준화 움직임과 252거래일 위치를 사용하며, 채권선물 / FX 선물은 경제적 해석 방향으로 변환해 점수화한다.
 - Historical validation은 저장된 daily futures row를 날짜별로 `date <= validation_date` 조건에서 재계산하고, 1D / 5D / 20D forward return과 비교해 과거 일관성, directional sample size, hit rate, false-positive rate, threshold sensitivity, score-forward-return relationship을 요약한다. `Max Adverse`는 해당 forward window의 endpoint가 아니라 window 안의 adverse path move 기준이다.
 - Mixed scenario는 risk-on / risk-off 방향으로 강제 분류하지 않는다. 이 경우 현재 scenario history는 occurrence count를 보여주고 directional hit rate는 N/A로 표시한다.
 - 비교 target은 futures row가 있으면 futures 자체를 우선 사용하고, 부족하면 `nyse_price_history`의 ETF proxy(`SPY`, `QQQ`, `IWM`, `TLT`, `GLD`, `UUP`)를 labeled fallback으로만 사용한다.
+- V2 조건부 전망은 현재와 미래에 같은 canonical state `S(t)` / `S(t+h)`를 사용한다. B0/B1 baseline, M1 momentum, M2 PIT macro/event soft condition을 같은 chronological fold에서 비교하며 macro coverage가 짧은 후보는 더 쉬운 일부 구간만으로 선택될 수 없다.
+- probability, joint coordinate ellipse, direction vector는 별도 out-of-sample gate다. `PROVISIONAL`은 방법론 disclosure에만 남고 `NO_EDGE`/`UNAVAILABLE`은 첫 화면의 조건부 숫자와 forecast geometry를 비운다.
 
 주의:
 

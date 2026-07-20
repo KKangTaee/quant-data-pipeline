@@ -31,6 +31,18 @@ def _compatible_row(*, source_marker: str) -> dict[str, object]:
     }
 
 
+def _compatible_pending_row(*, source_marker: str) -> dict[str, object]:
+    row = _compatible_row(source_marker=source_marker)
+    payload = json.loads(str(row["snapshot_json"]))
+    payload["pattern_outlook"]["session"] = {
+        "status": "PENDING_SESSION_FINALIZATION",
+        "latest_final_session": "2026-07-17",
+        "pending_session": "2026-07-20",
+    }
+    row["snapshot_json"] = json.dumps(payload)
+    return row
+
+
 def _minimal_macro() -> dict[str, object]:
     return {
         "status": "OK",
@@ -160,6 +172,7 @@ class FuturesMacroSnapshotPersistenceTests(unittest.TestCase):
         sql = "\n".join(connection.calls)
         self.assertIn("ON DUPLICATE KEY UPDATE forecast_identity = forecast_identity", sql)
         self.assertIn("VALUES(as_of_date) >= as_of_date", sql)
+        self.assertIn("session_status = 'LEGACY'", sql)
 
         failing = Connection(fail_on=2)
         with self.assertRaisesRegex(RuntimeError, "write failed"):
@@ -188,6 +201,26 @@ class FuturesMacroSnapshotPersistenceTests(unittest.TestCase):
         self.assertEqual(row["snapshot_key"], "overview_current")
         self.assertEqual(captured["db_name"], "finance_meta")
         self.assertNotIn("futures_ohlcv", str(captured["sql"]))
+
+    def test_loader_falls_back_to_legacy_columns_before_schema_migration(self) -> None:
+        from finance.loaders.futures_macro_snapshot import (
+            load_latest_futures_macro_snapshot,
+        )
+
+        calls: list[str] = []
+
+        def query(_db_name, sql, _params):
+            calls.append(sql)
+            if "input_fingerprint" in sql:
+                raise RuntimeError("Unknown column 'input_fingerprint' in 'field list'")
+            return [{"snapshot_key": "overview_current", "schema_version": "legacy"}]
+
+        row = load_latest_futures_macro_snapshot(query_fn=query)
+
+        self.assertEqual(row["schema_version"], "legacy")
+        self.assertEqual(row["input_fingerprint"], "")
+        self.assertEqual(row["session_status"], "LEGACY")
+        self.assertEqual(len(calls), 2)
 
     def test_history_loader_reads_immutable_rows_without_calculation(self) -> None:
         from finance.loaders.futures_macro_snapshot import (
@@ -276,10 +309,12 @@ class FuturesMacroSnapshotServiceTests(unittest.TestCase):
 
         result = materialize_overview_futures_macro_snapshot(
             marker_fn=lambda: "2026-07-20 00:00:00",
-            load_fn=lambda: _compatible_row(source_marker="2026-07-17 00:00:00"),
+            load_fn=lambda: _compatible_pending_row(source_marker="2026-07-17 00:00:00"),
             macro_builder=_minimal_macro,
             outlook_builder=lambda: {
                 **_minimal_outlook(),
+                "input_fingerprint": "a" * 64,
+                "as_of_date": "2026-07-17",
                 "session": {
                     "status": "PENDING_SESSION_FINALIZATION",
                     "latest_final_session": "2026-07-17",
@@ -291,6 +326,112 @@ class FuturesMacroSnapshotServiceTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "reused_pending")
         self.assertEqual(result["as_of_date"], "2026-07-17")
+
+    def test_pending_session_refreshes_stored_evidence_when_forecast_input_is_same(self) -> None:
+        from app.services.futures_macro_snapshot import (
+            materialize_overview_futures_macro_snapshot,
+        )
+
+        written: list[dict[str, object]] = []
+        result = materialize_overview_futures_macro_snapshot(
+            marker_fn=lambda: "2026-07-20 00:00:00",
+            load_fn=lambda: _compatible_row(source_marker="2026-07-17 00:00:00"),
+            macro_builder=_minimal_macro,
+            outlook_builder=lambda: {
+                **_minimal_outlook(),
+                "input_fingerprint": "a" * 64,
+                "as_of_date": "2026-07-17",
+                "session": {
+                    "status": "PENDING_SESSION_FINALIZATION",
+                    "latest_final_session": "2026-07-17",
+                    "pending_session": "2026-07-20",
+                },
+            },
+            write_fn=lambda current, history: written.append(
+                {"current": current, "history": history}
+            ),
+            now_fn=lambda: "2026-07-20 14:00:00",
+        )
+
+        self.assertEqual(result["status"], "materialized_pending_evidence")
+        self.assertEqual(len(written), 1)
+        payload = json.loads(str(written[0]["current"]["snapshot_json"]))
+        self.assertEqual(
+            payload["pattern_outlook"]["session"]["pending_session"],
+            "2026-07-20",
+        )
+
+    def test_pending_session_materializes_newly_completed_base_when_fingerprint_moves(self) -> None:
+        from app.services.futures_macro_snapshot import (
+            materialize_overview_futures_macro_snapshot,
+        )
+
+        written: list[dict[str, object]] = []
+        result = materialize_overview_futures_macro_snapshot(
+            marker_fn=lambda: "2026-07-21 00:00:00",
+            load_fn=lambda: _compatible_row(source_marker="2026-07-20 00:00:00"),
+            macro_builder=lambda: {
+                **_minimal_macro(),
+                "coverage": {"latest_daily_date": "2026-07-20"},
+            },
+            outlook_builder=lambda: {
+                **_minimal_outlook(),
+                "as_of_date": "2026-07-20",
+                "input_fingerprint": "b" * 64,
+                "session": {
+                    "status": "PENDING_SESSION_FINALIZATION",
+                    "latest_final_session": "2026-07-20",
+                    "pending_session": "2026-07-21",
+                },
+            },
+            write_fn=lambda current, history: written.append(
+                {"current": current, "history": history}
+            ),
+            now_fn=lambda: "2026-07-21 14:00:00",
+        )
+
+        self.assertEqual(result["status"], "materialized_pending_base")
+        self.assertEqual(result["as_of_date"], "2026-07-20")
+        self.assertEqual(len(written), 1)
+
+    def test_pending_session_replaces_incompatible_legacy_with_completed_base(self) -> None:
+        from app.services.futures_macro_snapshot import (
+            materialize_overview_futures_macro_snapshot,
+        )
+
+        written: list[dict[str, object]] = []
+        result = materialize_overview_futures_macro_snapshot(
+            marker_fn=lambda: "2026-07-20 00:00:00",
+            load_fn=lambda: {
+                **_compatible_row(source_marker="2026-07-20 00:00:00"),
+                "as_of_date": "2026-07-20",
+                "schema_version": "futures_macro_snapshot_v1",
+                "algorithm_version": "pattern_outlook_v4",
+                "session_status": "LEGACY",
+            },
+            macro_builder=lambda: {
+                **_minimal_macro(),
+                "coverage": {"latest_daily_date": "2026-07-17"},
+            },
+            outlook_builder=lambda: {
+                **_minimal_outlook(),
+                "as_of_date": "2026-07-17",
+                "session": {
+                    "status": "PENDING_SESSION_FINALIZATION",
+                    "latest_final_session": "2026-07-17",
+                    "pending_session": "2026-07-20",
+                },
+            },
+            write_fn=lambda current, history: written.append(
+                {"current": current, "history": history}
+            ),
+            now_fn=lambda: "2026-07-20 14:00:00",
+        )
+
+        self.assertEqual(result["status"], "materialized_pending_base")
+        self.assertEqual(result["as_of_date"], "2026-07-17")
+        self.assertEqual(len(written), 1)
+        self.assertEqual(written[0]["current"]["session_status"], "FINAL")
 
     def test_new_marker_calculates_and_writes_once(self) -> None:
         from app.services.futures_macro_snapshot import (
@@ -353,6 +494,7 @@ class FuturesMacroSnapshotServiceTests(unittest.TestCase):
             years=10,
             force_refresh=True,
             cache_ttl_seconds=0,
+            evaluation_time=unittest.mock.ANY,
         )
 
 

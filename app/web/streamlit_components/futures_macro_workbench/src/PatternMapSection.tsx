@@ -17,6 +17,11 @@ type SelectedHorizon = "observed" | "5D" | "20D";
 type AnchorPoint = PatternPoint & { anchorLabel: string };
 type ScreenPoint = { x: number; y: number };
 type ScreenSegment = { x1: number; y1: number; x2: number; y2: number };
+type AnchorLabelLayout = {
+  dx: number;
+  dy: number;
+  textAnchor: "start" | "middle" | "end";
+};
 
 function pointAt(path: PatternPoint[], daysAgo: number): PatternPoint | undefined {
   if (path.length <= daysAgo) return undefined;
@@ -35,6 +40,12 @@ function observedAnchors(path: PatternPoint[]): AnchorPoint[] {
     seen.add(point.date);
     return [{ ...point, anchorLabel }];
   });
+}
+
+function anchorLabelLayout(anchorLabel: string): AnchorLabelLayout {
+  if (anchorLabel === "20D 전") return { dx: 12, dy: -28, textAnchor: "start" };
+  if (anchorLabel === "5D 전") return { dx: -12, dy: -28, textAnchor: "end" };
+  return { dx: -12, dy: -16, textAnchor: "end" };
 }
 
 function clipValue(value: number): number {
@@ -187,14 +198,29 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
               );
             })}
 
-            {anchors.map((point) => (
-              <g className={`fm-pattern-map__anchor ${point.anchorLabel === "현재" ? "is-current" : ""} ${isClipped(point) ? "is-clipped" : ""}`} key={`anchor-${point.date}-${point.anchorLabel}`}>
-                <circle cx={sx(point.x)} cy={sy(point.y)} r={point.anchorLabel === "현재" ? 9 : 6.5} />
-                <line className="fm-pattern-map__leader" x1={sx(point.x)} y1={sy(point.y) - 7} x2={sx(point.x)} y2={sy(point.y) - 19} />
-                <text x={sx(point.x)} y={sy(point.y) - 23} textAnchor="middle">{point.anchorLabel} · {point.date}</text>
-                <title>{point.anchorLabel} · {point.date} · raw ({point.x.toFixed(3)}, {point.y.toFixed(3)}) · {point.regime_label}</title>
-              </g>
-            ))}
+            {anchors.map((point) => {
+              const labelLayout = anchorLabelLayout(point.anchorLabel);
+              return (
+                <g className={`fm-pattern-map__anchor ${point.anchorLabel === "현재" ? "is-current" : ""} ${isClipped(point) ? "is-clipped" : ""}`} key={`anchor-${point.date}-${point.anchorLabel}`}>
+                  <circle cx={sx(point.x)} cy={sy(point.y)} r={point.anchorLabel === "현재" ? 9 : 6.5} />
+                  <line
+                    className="fm-pattern-map__leader"
+                    x1={sx(point.x)}
+                    y1={sy(point.y) - 7}
+                    x2={sx(point.x) + labelLayout.dx * 0.72}
+                    y2={sy(point.y) + labelLayout.dy + 5}
+                  />
+                  <text
+                    x={sx(point.x) + labelLayout.dx}
+                    y={sy(point.y) + labelLayout.dy}
+                    textAnchor={labelLayout.textAnchor}
+                  >
+                    {point.anchorLabel} · {point.date}
+                  </text>
+                  <title>{point.anchorLabel} · {point.date} · raw ({point.x.toFixed(3)}, {point.y.toFixed(3)}) · {point.regime_label}</title>
+                </g>
+              );
+            })}
           </svg>
           <span className="fm-pattern-map__x-label">{patternMap.x_label} 강화 →</span>
           <span className="fm-pattern-map__y-label">{patternMap.y_label} 강화 →</span>

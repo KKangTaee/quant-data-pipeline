@@ -35,13 +35,13 @@ Latest completed task는 `.aiworkspace/note/finance/tasks/active/operations-port
 - 보존: 수집 실행 이력·로그·failure CSV는 `Workspace > Ingestion > 실행 기록 / 결과`에 유지한다.
 - 경계: Portfolio Monitoring에 개발자 진단 패널을 옮기지 않는다.
 
-Recent completed Overview task는 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/`다.
+Latest completed Overview Futures Macro task는 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-probabilistic-state-outlook-v2-20260720/`다.
 
-- 목적: Futures Macro를 현재 1D/5D/20D 관측과 5D/20D 조건부 전망으로 재구성하고, 첫 진입의 고비용 계산을 없애면서 방법론과 계산 근거를 화면 안에서 검산 가능하게 한다.
-- 완료: 전체 roadmap `5/5`, materialized snapshot / React disclosure closeout `4/4`, 관측·전망 상태 분리와 10년 재검증 `4/4`를 완료했다. `일봉 갱신`이 10년 compact snapshot을 저장하고 Overview 첫 진입과 다시 읽기는 compatible DB snapshot만 읽는다.
-- actual 상태: 2026-07-17 기준 현재는 `관측 완료`, 5D는 120개, 20D는 88개 독립 episode를 사용한다. 미래 전망은 probability/path 중 보수적 상태를 적용해 둘 다 `PROVISIONAL / 방향 우위 미확인`이다. Desktop/420px Browser QA를 완료했다.
-- 품질 경계: UI 진입은 provider를 호출하거나 전망을 재계산하지 않는다. 조건부 경로는 point-in-time 맥락이며 장기 국면 예측, 추천, 매매 신호가 아니다.
-- 조건부 다음 차수: 5D path error/coverage와 20D Brier/fold/coverage 실패를 chronological out-of-sample 방식으로 개선하는 model revision은 별도 승인 전까지 시작하지 않는다. Gate 30/60은 유지한다.
+- 목적: 날짜가 바뀔 때 세 점 연결이 전혀 다른 흐름처럼 보이는 문제를 없애고, 완료 세션의 실제 일별 이동과 같은 상태 함수의 5D/20D 조건부 미래 분포를 분리한다.
+- 완료: 전체 `3/3차`, TDD 구현 `9/9 task`를 완료했다. completed-session resolver, same-state target, momentum/PIT macro-event 후보의 nested rolling-origin 비교, 독립 publication gate, immutable history/current snapshot, V3 React 화면과 desktop/420px Browser QA를 닫았다.
+- actual 상태: 2026-07-20 원자료는 완료 전이라 제외하고 화면/current은 마지막 완료 세션 `2026-07-17` 기준이다. 5D 후보는 `M1_MOMENTUM`, 20D는 baseline이 선택됐지만 둘 다 out-of-sample gate를 넘지 못해 probability/coordinate/vector가 `NO_EDGE`이며 예측 숫자·ellipse·vector를 표시하지 않는다.
+- 품질 경계: `NO_EDGE`는 정상 결과다. macro/event는 momentum보다 동일 fold에서 증분 가치가 있을 때만 채택하며, UI 진입은 provider를 호출하거나 전망을 재계산하지 않는다. 이 결과는 추천·매매 신호·미래 경로 보장이 아니다.
+- 후속 후보: roll-aware/back-adjusted source 확장과 PIT macro coverage 증가는 별도 데이터 과제다. gate를 실제 결과에 맞춰 완화하지 않는다.
 
 Recent completed task는 `.aiworkspace/note/finance/tasks/active/institutional-13f-openfigi-mapping-v1-20260718/`다.
 
@@ -895,7 +895,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 | Overview Market Context Macro Dimension Audit V3C | Complete | Market Context `Macro 조건 포함 pilot` now includes `맥락 차원 상태`, showing actual hard conditions, stored FRED `T10Y3M` / `VIXCLS` / `BAA10Y` availability and bucket preview counts, plus event / sentiment annotation or deferred reasons. It remains context-only and does not add FRED / event / sentiment hard filtering. |
 | Overview Market Context Futures-Conditioned Analog V3B | Complete | Market Context `Macro 조건 포함 pilot` now keeps GLD context and adds one stored futures daily OHLCV Rate Pressure proxy condition using `ZN=F` / `ZB=F`. The condition is bounded by selected as-of / anchor date, shows used or insufficient state, and remains context-only. |
 | Overview Market Context Macro-Conditioned Analog Pilot V1 | Complete | Market Context historical analog separates the original broad analog from a `Macro 조건 포함 pilot`. 3차-A introduced GLD price proxy context and sample quality display; 3차-B extended it with the stored futures Rate Pressure proxy; 3차-C adds dimension availability / preview audit without applying FRED / events / sentiment as hard filters. |
-| Futures Market Monitoring / Futures Macro | Complete | yfinance futures 1m / daily OHLCV feeds stored-candle diagnostics. Successful daily ingestion materializes a ten-year compact current macro plus 5D / 20D outlook snapshot; Overview first entry and reload are DB-only. React owns method / calculation-trace disclosures, a visible 60D regime legend, and separate current-observation versus future-publication status. Conditional history remains point-in-time context, not a prediction guarantee. |
+| Futures Market Monitoring / Futures Macro | Complete | yfinance futures 1m / daily OHLCV feeds stored-candle diagnostics. Daily materialization excludes incomplete sessions, compares baseline/momentum/PIT macro-event candidates with nested chronological validation, and stores an immutable forecast identity plus latest-good current. React shows a fixed-domain 30-session observed trail; only independently VERIFIED probability/ellipse/vector outputs are published, while actual 2026-07-17 5D/20D results are NO_EDGE. Overview first entry/reload remain DB-only. |
 
 ## Completed Foundations
 

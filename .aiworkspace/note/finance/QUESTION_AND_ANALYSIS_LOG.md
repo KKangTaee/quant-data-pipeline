@@ -10268,3 +10268,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 항상 미래 선을 만드는 것이 아니라 completed current state, 실제 일별 trail, same-state future distribution을 보고 macro가 incremental edge를 만들 때만 조정해야 함.
 - Analysis result: anchor 차이는 rolling row shift이며 historical PIT rewrite는 없었다. 기존 forecast terminal은 `S(t+h)`가 아니라 현재 5D state에 forward cumulative-return delta를 더한 좌표다. V2는 unconditional/persistence/momentum/hybrid를 같은 rolling-origin에서 비교한다.
 - Follow-up: 사용자가 written design을 승인했다. 3-stage/9-task TDD plan이 completed-session, same-state target, nested gate, forecast identity, UI suppression, Browser QA까지 확정했으며 구현은 아직 `0/3차`다.
+
+### 2026-07-20 - Futures Macro는 예측 우위가 없으면 경로를 만들지 않는다
+
+- User request: 승인된 1번 실행 방식으로 다음 개발을 계속 진행해 달라고 요청함.
+- Interpreted goal: 날짜 이동에 흔들리는 세 점 연결을 실제 일별 관측으로 바꾸고, momentum과 macro를 검증하되 원하는 미래 모양을 억지로 만들지 않아야 함.
+- Analysis result: completed-session과 same-state 계약을 고정하고 baseline/M1/M2를 동일 chronological fold에서 비교했다. 실제 5D/20D는 모두 publication gate 미통과로 `NO_EDGE`이며, 이는 성공적인 평가 결과다.
+- Follow-up: DB current/history V2 전환, 30-session trail, pending-session 안내, forecast geometry suppression, desktop/420px QA까지 전체 `3/3차`를 완료했다. 새 데이터 후보 없이는 gate나 결과를 임의 조정하지 않는다.

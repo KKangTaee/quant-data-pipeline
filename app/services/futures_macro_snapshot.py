@@ -181,6 +181,25 @@ def _compatible_row(
     )
 
 
+def _stored_session_evidence_matches(
+    row: dict[str, Any] | None,
+    session: dict[str, Any],
+) -> bool:
+    """Check whether latest-good current already discloses this pending session."""
+
+    if not isinstance(row, dict):
+        return False
+    try:
+        payload = json.loads(str(row.get("snapshot_json") or ""))
+        stored = dict(dict(payload.get("pattern_outlook") or {}).get("session") or {})
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return False
+    return all(
+        str(stored.get(key) or "") == str(session.get(key) or "")
+        for key in ("status", "latest_final_session", "pending_session")
+    )
+
+
 def _current_source_marker() -> str | None:
     return _latest_daily_cache_marker(_default_query, DEFAULT_CORE_FUTURES_SYMBOLS)
 
@@ -194,6 +213,7 @@ def materialize_overview_futures_macro_snapshot(
     outlook_builder: Callable[[], dict[str, Any]] | None = None,
     write_fn: Callable[[dict[str, object], dict[str, object]], object] | None = None,
     now_fn: Callable[[], str] | None = None,
+    evaluation_time: datetime | None = None,
 ) -> dict[str, Any]:
     """Calculate once per compatible daily marker and persist the compact result."""
 
@@ -206,11 +226,13 @@ def materialize_overview_futures_macro_snapshot(
         )
     )
     existing = read()
+    evaluated_at = evaluation_time or datetime.now(timezone.utc)
     build_macro = macro_builder or (
         lambda: load_overview_futures_macro_snapshot(
             include_validation=False,
             force_refresh=True,
             cache_ttl_seconds=0,
+            evaluation_time=evaluated_at,
         )
     )
     build_outlook = outlook_builder or (
@@ -218,6 +240,7 @@ def materialize_overview_futures_macro_snapshot(
             years=FUTURES_MACRO_HISTORY_YEARS,
             force_refresh=True,
             cache_ttl_seconds=0,
+            evaluation_time=evaluated_at,
         )
     )
     materialized_at = (
@@ -227,20 +250,7 @@ def materialize_overview_futures_macro_snapshot(
     macro = build_macro()
     pattern_outlook = build_outlook()
     session = dict(pattern_outlook.get("session") or {})
-    if str(session.get("status") or "") == "PENDING_SESSION_FINALIZATION":
-        return {
-            "status": "reused_pending" if _compatible_row(existing) else "pending",
-            "source_marker": str(marker),
-            "as_of_date": (
-                existing.get("as_of_date")
-                if isinstance(existing, dict)
-                else session.get("latest_final_session")
-            ),
-            "pending_session": session.get("pending_session"),
-            "materialized_at": (
-                existing.get("materialized_at") if isinstance(existing, dict) else None
-            ),
-        }
+    pending_session = str(session.get("status") or "") == "PENDING_SESSION_FINALIZATION"
     input_fingerprint = str(pattern_outlook.get("input_fingerprint") or "")
     if len(input_fingerprint) != 64:
         input_fingerprint = compute_futures_macro_input_fingerprint(
@@ -251,7 +261,30 @@ def materialize_overview_futures_macro_snapshot(
                 "pattern_outlook": pattern_outlook,
             }
         )
-    if not force and _compatible_row(existing, input_fingerprint=input_fingerprint):
+    compatible_input = _compatible_row(
+        existing,
+        input_fingerprint=input_fingerprint,
+    )
+    if (
+        pending_session
+        and compatible_input
+        and _stored_session_evidence_matches(existing, session)
+    ):
+        return {
+            "status": "reused_pending",
+            "source_marker": str(marker),
+            "as_of_date": (
+                existing.get("as_of_date")
+                if isinstance(existing, dict)
+                else session.get("latest_final_session")
+            ),
+            "pending_session": session.get("pending_session"),
+            "materialized_at": (
+                existing.get("materialized_at") if isinstance(existing, dict) else None
+            ),
+            "input_fingerprint": input_fingerprint,
+        }
+    if not pending_session and not force and compatible_input:
         return {
             "status": "reused",
             "source_marker": str(marker),
@@ -333,8 +366,15 @@ def materialize_overview_futures_macro_snapshot(
         "materialized_at": materialized_at,
     }
     (write_fn or persist_futures_macro_snapshot_bundle)(row, history_row)
+    materialization_status = "materialized"
+    if pending_session:
+        materialization_status = (
+            "materialized_pending_evidence"
+            if compatible_input
+            else "materialized_pending_base"
+        )
     return {
-        "status": "materialized",
+        "status": materialization_status,
         "source_marker": str(marker),
         "as_of_date": as_of_date,
         "materialized_at": materialized_at,

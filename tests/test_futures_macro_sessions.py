@@ -2,9 +2,38 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime, timezone
+from unittest.mock import patch
 
 
 class FuturesDailySessionResolverTests(unittest.TestCase):
+    def test_thermometer_cache_and_builder_share_one_default_evaluation_time(self) -> None:
+        from app.services.futures_macro_thermometer import (
+            load_overview_futures_macro_snapshot,
+        )
+
+        evaluated_at = datetime(2026, 7, 20, 22, 14, 59, tzinfo=timezone.utc)
+        with (
+            patch(
+                "app.services.futures_macro_thermometer.datetime"
+            ) as datetime_mock,
+            patch(
+                "app.services.futures_macro_thermometer._latest_daily_cache_marker",
+                return_value="2026-07-20 00:00:00",
+            ),
+            patch(
+                "app.services.futures_macro_thermometer.build_futures_macro_thermometer_snapshot",
+                return_value={"status": "OK"},
+            ) as builder,
+        ):
+            datetime_mock.now.return_value = evaluated_at
+            result = load_overview_futures_macro_snapshot(
+                force_refresh=True,
+                cache_ttl_seconds=0,
+            )
+
+        self.assertEqual(result["status"], "OK")
+        self.assertEqual(builder.call_args.kwargs["evaluation_time"], evaluated_at)
+
     def test_evaluation_cache_token_changes_at_new_york_final_cutoff(self) -> None:
         from app.services.futures_macro_sessions import (
             futures_session_evaluation_token,

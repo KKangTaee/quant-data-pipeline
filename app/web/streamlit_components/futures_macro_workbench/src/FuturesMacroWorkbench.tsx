@@ -121,6 +121,12 @@ export type PatternMapPayload = {
   path: PatternPoint[];
 };
 
+export type SessionEvidence = {
+  latest_final_session?: string | null;
+  pending_session?: string | null;
+  status?: string | null;
+};
+
 export type EvidenceGroup = {
   key: "current" | "transition" | "outlook" | "invalidate";
   label: string;
@@ -182,11 +188,7 @@ export type FuturesMacroWorkbenchPayload = {
   hero: HeroPayload;
   horizons: HorizonCard[];
   pattern_map: PatternMapPayload;
-  session_evidence: {
-    latest_final_session?: string | null;
-    pending_session?: string | null;
-    status?: string | null;
-  };
+  session_evidence: SessionEvidence;
   evidence: EvidencePayload;
   ribbon: RibbonPayload;
   asset_pathways: AssetPathwayPayload[];
@@ -233,6 +235,7 @@ function FuturesMacroWorkbench({ args }: Props) {
         hero={payload.hero}
         onAction={emitAction}
         pendingActionId={pendingActionId}
+        sessionEvidence={payload.session_evidence}
       />
       <PatternHorizonSection horizons={payload.horizons} />
       <div className="fm-workbench__pattern-layout">

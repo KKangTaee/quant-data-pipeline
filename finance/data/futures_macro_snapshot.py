@@ -102,15 +102,15 @@ def persist_futures_macro_snapshot_bundle(
         FROM DUAL
         WHERE %(session_status)s = 'FINAL'
         ON DUPLICATE KEY UPDATE
-          source_marker = IF(VALUES(as_of_date) >= as_of_date, VALUES(source_marker), source_marker),
-          as_of_date = IF(VALUES(as_of_date) >= as_of_date, VALUES(as_of_date), as_of_date),
-          input_fingerprint = IF(VALUES(as_of_date) >= as_of_date, VALUES(input_fingerprint), input_fingerprint),
-          schema_version = IF(VALUES(as_of_date) >= as_of_date, VALUES(schema_version), schema_version),
-          algorithm_version = IF(VALUES(as_of_date) >= as_of_date, VALUES(algorithm_version), algorithm_version),
-          session_status = IF(VALUES(as_of_date) >= as_of_date, VALUES(session_status), session_status),
-          status = IF(VALUES(as_of_date) >= as_of_date, VALUES(status), status),
-          snapshot_json = IF(VALUES(as_of_date) >= as_of_date, VALUES(snapshot_json), snapshot_json),
-          materialized_at = IF(VALUES(as_of_date) >= as_of_date, VALUES(materialized_at), materialized_at)
+          source_marker = IF(session_status = 'LEGACY' OR VALUES(as_of_date) >= as_of_date, VALUES(source_marker), source_marker),
+          as_of_date = IF(session_status = 'LEGACY' OR VALUES(as_of_date) >= as_of_date, VALUES(as_of_date), as_of_date),
+          input_fingerprint = IF(session_status = 'LEGACY' OR VALUES(as_of_date) >= as_of_date, VALUES(input_fingerprint), input_fingerprint),
+          schema_version = IF(session_status = 'LEGACY' OR VALUES(as_of_date) >= as_of_date, VALUES(schema_version), schema_version),
+          algorithm_version = IF(session_status = 'LEGACY' OR VALUES(as_of_date) >= as_of_date, VALUES(algorithm_version), algorithm_version),
+          session_status = IF(session_status = 'LEGACY' OR VALUES(as_of_date) >= as_of_date, VALUES(session_status), session_status),
+          status = IF(session_status = 'LEGACY' OR VALUES(as_of_date) >= as_of_date, VALUES(status), status),
+          snapshot_json = IF(session_status = 'LEGACY' OR VALUES(as_of_date) >= as_of_date, VALUES(snapshot_json), snapshot_json),
+          materialized_at = IF(session_status = 'LEGACY' OR VALUES(as_of_date) >= as_of_date, VALUES(materialized_at), materialized_at)
         """
         db.executemany(current_sql, [current_row])
         db.commit()

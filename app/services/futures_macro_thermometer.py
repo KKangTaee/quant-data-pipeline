@@ -2,12 +2,16 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from datetime import UTC, date
+from datetime import UTC, date, datetime, timezone
 from time import monotonic
 from typing import Any
 
 import pandas as pd
 
+from app.services.futures_macro_sessions import (
+    futures_session_evaluation_token,
+    select_completed_futures_daily_rows,
+)
 from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS, DEFAULT_FUTURES_INSTRUMENTS
 
 
@@ -307,7 +311,8 @@ def _load_daily_rows(
             "finance_price",
             f"""
             SELECT provider_symbol, interval_code, candle_time_utc,
-                   open, high, low, close, volume, source, provider_status
+                   open, high, low, close, volume, source, provider_status,
+                   collected_at
             FROM futures_ohlcv
             WHERE interval_code = %s
               AND provider_symbol IN ({placeholders})
@@ -1291,11 +1296,17 @@ def build_futures_macro_thermometer_snapshot(
     lookback_days: int = DEFAULT_LOOKBACK_DAYS,
     query_fn: QueryFn | None = None,
     include_validation: bool = False,
+    evaluation_time: datetime | None = None,
 ) -> dict[str, Any]:
     query = query_fn or _default_query
     selected_symbols = [str(symbol).strip().upper() for symbol in (symbols or DEFAULT_CORE_FUTURES_SYMBOLS) if str(symbol).strip()]
     instruments = _instrument_rows(query)
     daily_rows = _load_daily_rows(query, symbols=selected_symbols, lookback_days=lookback_days)
+    completed = select_completed_futures_daily_rows(
+        daily_rows,
+        evaluation_time=evaluation_time or datetime.now(timezone.utc),
+    )
+    daily_rows = completed.rows
     candles = _candle_frame(daily_rows)
     snapshot = build_macro_thermometer_read_model(
         candles=candles,
@@ -1303,6 +1314,15 @@ def build_futures_macro_thermometer_snapshot(
         selected_symbols=selected_symbols,
         daily_rows=daily_rows,
     )
+    snapshot["session"] = {
+        "latest_final_session": completed.latest_final_session,
+        "pending_session": completed.pending_session,
+        "status": (
+            "PENDING_SESSION_FINALIZATION"
+            if completed.pending_session
+            else "OBSERVED"
+        ),
+    }
     if include_validation:
         try:
             from app.services.futures_macro_validation import (
@@ -1345,6 +1365,8 @@ def load_overview_futures_macro_snapshot(**kwargs: Any) -> dict[str, Any]:
     cache_ttl_seconds = int(kwargs.pop("cache_ttl_seconds", OVERVIEW_MACRO_SNAPSHOT_CACHE_TTL_SECONDS))
     kwargs.setdefault("include_validation", True)
     kwargs.setdefault("lookback_days", 365 * 5 + 90)
+    evaluated_at = kwargs.get("evaluation_time") or datetime.now(timezone.utc)
+    kwargs["evaluation_time"] = evaluated_at
     if kwargs.get("query_fn") is not None:
         return build_futures_macro_thermometer_snapshot(**kwargs)
 
@@ -1358,6 +1380,7 @@ def load_overview_futures_macro_snapshot(**kwargs: Any) -> dict[str, Any]:
         int(kwargs.get("lookback_days") or 0),
         bool(kwargs.get("include_validation")),
         _latest_daily_cache_marker(_default_query, selected_symbols),
+        futures_session_evaluation_token(evaluated_at),
     )
     now = monotonic()
     cached = _OVERVIEW_MACRO_SNAPSHOT_CACHE.get(cache_key)

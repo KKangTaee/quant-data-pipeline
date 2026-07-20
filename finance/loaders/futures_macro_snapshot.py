@@ -45,21 +45,45 @@ def load_latest_futures_macro_snapshot(
 ) -> dict[str, Any] | None:
     """Return one persisted row without loading futures candles or calculating."""
 
-    rows = _query(
-        DB_META,
-        f"""
-        SELECT snapshot_key, source_marker, as_of_date, schema_version,
-               input_fingerprint, algorithm_version, session_status,
-               status, snapshot_json, materialized_at,
-               created_at, updated_at
-        FROM {SNAPSHOT_TABLE}
-        WHERE snapshot_key = %s
-        ORDER BY updated_at DESC
-        LIMIT 1
-        """,
-        (str(snapshot_key),),
-        query_fn=query_fn,
-    )
+    try:
+        rows = _query(
+            DB_META,
+            f"""
+            SELECT snapshot_key, source_marker, as_of_date, schema_version,
+                   input_fingerprint, algorithm_version, session_status,
+                   status, snapshot_json, materialized_at,
+                   created_at, updated_at
+            FROM {SNAPSHOT_TABLE}
+            WHERE snapshot_key = %s
+            ORDER BY updated_at DESC
+            LIMIT 1
+            """,
+            (str(snapshot_key),),
+            query_fn=query_fn,
+        )
+    except Exception as exc:
+        message = str(exc).lower()
+        if "unknown column" not in message or not any(
+            column in message for column in ("input_fingerprint", "session_status")
+        ):
+            raise
+        rows = _query(
+            DB_META,
+            f"""
+            SELECT snapshot_key, source_marker, as_of_date, schema_version,
+                   algorithm_version, status, snapshot_json, materialized_at,
+                   created_at, updated_at
+            FROM {SNAPSHOT_TABLE}
+            WHERE snapshot_key = %s
+            ORDER BY updated_at DESC
+            LIMIT 1
+            """,
+            (str(snapshot_key),),
+            query_fn=query_fn,
+        )
+        for row in rows:
+            row.setdefault("input_fingerprint", "")
+            row.setdefault("session_status", "LEGACY")
     return dict(rows[0]) if rows else None
 
 

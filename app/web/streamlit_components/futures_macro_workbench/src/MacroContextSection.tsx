@@ -1,14 +1,24 @@
 import { OBSERVATION_LABEL } from "./FuturesMacroWorkbench";
-import type { CommandPayload, FuturesMacroAction, HeroPayload } from "./FuturesMacroWorkbench";
+import type {
+  CommandPayload,
+  FuturesMacroAction,
+  HeroPayload,
+  SessionEvidence,
+} from "./FuturesMacroWorkbench";
 
 type Props = {
   command: CommandPayload;
   hero: HeroPayload;
+  sessionEvidence: SessionEvidence;
   pendingActionId: string;
   onAction: (action: FuturesMacroAction) => void;
 };
 
-function MacroContextSection({ command, hero, pendingActionId, onAction }: Props) {
+function MacroContextSection({ command, hero, sessionEvidence, pendingActionId, onAction }: Props) {
+  const hasPendingSession =
+    sessionEvidence.status === "PENDING_SESSION_FINALIZATION" &&
+    Boolean(sessionEvidence.pending_session);
+
   return (
     <section className="fm-workbench__hero" aria-labelledby="fm-hero-title">
       <div className="fm-workbench__command-row">
@@ -48,6 +58,12 @@ function MacroContextSection({ command, hero, pendingActionId, onAction }: Props
           <div><span>관측 범위</span><strong>{hero.coverage_label}</strong></div>
         </aside>
       </div>
+      {hasPendingSession ? (
+        <aside className="fm-workbench__session-notice" role="status">
+          <strong>{sessionEvidence.pending_session} 데이터는 완료 전이라 현재 위치와 전망에서 제외했습니다.</strong>
+          <span>화면은 마지막 완료 세션 {sessionEvidence.latest_final_session || hero.as_of_date} 기준입니다.</span>
+        </aside>
+      ) : null}
       {hero.evidence.length > 0 ? (
         <div className="fm-workbench__hero-evidence">
           {hero.evidence.slice(0, 3).map((item) => <span key={item}>{item}</span>)}

@@ -339,8 +339,12 @@ yfinance futures OHLCV
   -> finance_price.futures_ohlcv
   -> finance_meta.futures_market_monitor_run
   -> app.services.futures_market_monitoring.build_futures_monitor_snapshot()
+  -> app.services.futures_macro_sessions.select_completed_futures_daily_rows()
   -> app.services.futures_macro_thermometer.build_futures_macro_thermometer_snapshot()
-  -> app.services.futures_macro_validation.build_futures_macro_validation_snapshot()
+  -> app.services.futures_macro_pattern_validation.load_overview_futures_macro_pattern_outlook()
+  -> app.services.futures_macro_snapshot.materialize_overview_futures_macro_snapshot()
+  -> finance_meta.futures_macro_forecast_history (immutable append)
+  -> finance_meta.futures_macro_snapshot (latest-good current)
   -> Workspace > Overview > Futures Macro
   -> Market Context source / refresh evidence
   -> Workspace > Ingestion > 실행 기록 / 결과 for detailed diagnostics
@@ -359,6 +363,8 @@ finance_price.futures_ohlcv daily rows
 - yfinance가 `period=1d`, `interval=1m`에서 일부 futures symbol을 빈 응답 또는 지나치게 희소한 응답으로 돌려주면 collector는 해당 symbol만 `period=2d`, `interval=1m`으로 한 번 보강 수집한다. 성공 / 실패, 초기 row 수, 회복 symbol은 `futures_market_monitor_run.diagnostics_json.fallback_retries`에 남긴다.
 - `futures_market_monitor_run`과 Overview local run history가 Data Health의 latest success / failed symbols / stale 판단에 사용된다.
 - Macro Thermometer historical validation은 `futures_ohlcv` 1d row를 point-in-time으로 재계산하고, target futures가 부족할 때만 `nyse_price_history` ETF proxy를 labeled fallback으로 읽는다.
+- daily resolver는 provider raw marker와 완료 세션 기준일을 분리한다. 미완료 session은 evidence로 남기되 current state/forecast input에서는 제외하고, 마지막 완료 세션의 동일 fingerprint 결과를 재사용한다.
+- same-state V2는 30개 완료 세션의 실제 일별 trail과 5D/20D 미래 분포를 분리한다. UI는 고정 `[-2.5,+2.5]` 축에서 실제 trail을 표시하고, 독립 gate를 통과한 ellipse/vector만 추가한다.
 - Market Context 3차-B의 Macro 조건 포함 pilot은 저장된 `ZN=F` / `ZB=F` daily rows만 읽어 Rate Pressure futures proxy bucket을 계산한다. selected as-of 이후 row와 anchor 이후 futures 움직임은 조건 계산에 쓰지 않는다.
 
 주의:

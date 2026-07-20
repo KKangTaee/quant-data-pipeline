@@ -138,3 +138,29 @@ No code, DB row, registry, or saved setup was modified by this analysis.
 - Old conditional forecast line and rectangle source contracts were removed.
 - `npm run build`: TypeScript/Vite pass. Updated tracked `component_static` bundle because the Streamlit wrapper serves it directly.
 - Futures Macro service-contract regression: 24 passed, 833 deselected.
+
+## 2026-07-20 — Task 9 Actual Migration And Responsive QA
+
+- Added fixed-cutoff integration coverage for Sunday/Monday pending-session handling, immutable prior state, deterministic forecast identity, exact 30-date V3 trail, and non-verified geometry suppression.
+- Added a legacy loader fallback for the pre-V2 current table and a one-time legacy replacement condition while retaining the non-older guard for V2 current rows.
+- Captured one evaluation timestamp for both macro and outlook builders so cutoff-boundary calculations cannot disagree.
+- Actual materialization migrated `futures_macro_snapshot.input_fingerprint` / `session_status`, created the immutable history table, and returned `materialized_pending_base`.
+
+```text
+raw source marker: 2026-07-20
+latest final / current as-of: 2026-07-17
+schema: futures_macro_snapshot_v2
+algorithm: pattern_outlook_v5_same_state_nested_hybrid
+forecast identity: 71a61fb809ff16578c71839456b9fdf2567904d4eb91668bcb97162f9924eb7c
+5D: selected M1_MOMENTUM, probability/coordinate/vector NO_EDGE
+20D: selected baseline, probability/coordinate/vector NO_EDGE
+```
+
+- React adds an explicit `2026-07-20 데이터는 완료 전` notice and keeps the visible basis at `2026-07-17`.
+- Browser QA passed at desktop and 420px. A visual pass found overlapping 5D/20D labels; directional label layouts were added and rechecked.
+- Final verification after review fixes: 66 core Futures Macro tests and 26 service contracts passed; 833 unrelated service contracts were deselected.
+- Python compile, React/Vite production build, `git diff --check`, and actual DB readback passed. Readback confirmed V2/FINAL as-of 2026-07-17, pending 2026-07-20, one immutable history row, and all 5D/20D publication gates `NO_EDGE`.
+- Final boundary review added the next-day transition regression: a pending raw session reuses current only when the completed-input fingerprint matches. If the prior session has newly finalized, its changed fingerprint materializes a new completed base even while the newest raw session remains pending.
+- Independent code review found that same-fingerprint reuse also needed to compare stored pending evidence. The materializer now writes `materialized_pending_evidence` once when an OBSERVED current first acquires a pending successor, then reuses it only after the stored session evidence matches.
+- The same review found a cutoff clock split in the thermometer cache wrapper. One captured `evaluation_time` is now inserted into builder kwargs, including the injected-query path, so cache identity and row filtering share the exact instant.
+- Generated QA screenshot remains untracked at `futures-macro-probabilistic-outlook-v2-qa.jpg`.

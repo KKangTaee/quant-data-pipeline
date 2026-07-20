@@ -1,6 +1,6 @@
 # Overview Futures Macro Probabilistic State Outlook V2 Status
 
-Status: Implementation in progress — 1차/2차 complete, 3차 Tasks 6-8 complete
+Status: Complete — 3/3 stages, 9/9 tasks
 Last Updated: 2026-07-20
 
 ## Current Progress
@@ -23,16 +23,19 @@ Last Updated: 2026-07-20
 - Pending sessions reuse the prior current snapshot; older final as-of rows cannot replace a newer current row.
 - Task 7 V3 Python bridge now enforces separate probability/coordinate/vector publication suppression without recalculating the model.
 - Task 8 React surface now renders the full completed-session trail on a fixed domain and only verified ellipse/vector forecast geometry.
+- Task 9 fixed-cutoff integration, legacy schema transition, actual DB materialization, responsive Browser QA, and durable documentation sync are complete.
+- Actual V2 current is final `2026-07-17`; raw `2026-07-20` is disclosed as pending and excluded from current/forecast inputs.
+- Actual 5D/20D publication status is `NO_EDGE` for probability, coordinate, and vector. No conditional numbers or forecast geometry are forced onto the first surface.
+- Desktop and 420px QA confirmed full daily trail, fixed axes, separated dated anchors, pending-session notice, and NO_EDGE suppression.
 
 ## Roadmap State
 
 - 1차 Data / Target Contract: complete
 - 2차 Momentum Baseline / Macro Hybrid Validation: complete (Tasks 3-5)
-- 3차 Observed Trail / Probabilistic Outlook UI / QA: in progress (Tasks 6-8 complete; Task 9 remains)
+- 3차 Observed Trail / Probabilistic Outlook UI / QA: complete
 - Design gate: approved 2026-07-20
-- Implementation execution: in progress
+- Implementation execution: complete
 
 ## Next Action
 
-Continue 3차 Task 9 with fixed-cutoff integration, actual materialization, Browser QA, and durable documentation sync.
-No production DB data has been changed.
+No implementation step remains in the approved roadmap. Optional future work is limited to new data/model candidates such as roll-aware prices or wider PIT macro coverage; these require a new version and may not relax the current gate in place.

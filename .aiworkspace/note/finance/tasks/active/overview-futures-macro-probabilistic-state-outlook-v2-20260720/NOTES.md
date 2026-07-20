@@ -45,3 +45,6 @@
 - The Python bridge is the publication enforcement boundary: provisional numbers remain available only under `disclosure_probabilities`, while `NO_EDGE` carries no conditional numeric distribution or geometry to the React first surface.
 - Fixed semantic axes make adjacent snapshots visually comparable. Outliers no longer rescale the entire map; their boundary marker and raw tooltip preserve the evidence.
 - The observed trail and terminal distribution are different primitives: the former is an actual dated sequence, while the latter is a joint future-state region with no implied day-by-day route.
+- Actual production-like evidence confirms the design is not forcing the requested shape: M1 can be the 5D inner candidate while all outer publication gates still resolve to `NO_EDGE`.
+- A raw latest date and a final prediction basis are different fields. On 2026-07-20 the raw marker moved, but the canonical current remained 2026-07-17 until cutoff; the UI now states this explicitly.
+- Legacy current rows may carry an as-of date derived from incomplete input. Only the one-time `session_status=LEGACY` transition may replace that row with an older completed-session V2 basis; subsequent V2 current rows retain the non-older rule.
