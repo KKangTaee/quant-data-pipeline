@@ -342,6 +342,100 @@ class FuturesMacroPatternOutcomeTests(unittest.TestCase):
 
 
 class FuturesMacroPatternPublicationTests(unittest.TestCase):
+    def test_v2_probability_gate_distinguishes_verified_provisional_and_no_edge(self) -> None:
+        from app.services.futures_macro_pattern_validation import (
+            probability_publication_status_v2,
+        )
+
+        verified = probability_publication_status_v2(
+            episode_count=80,
+            evaluation_count=80,
+            brier_score=0.55,
+            baseline_brier_scores=(0.62, 0.60),
+            log_loss=0.90,
+            baseline_log_losses=(1.02, 1.00),
+            calibration_error=0.08,
+            fold_improvement_ratio=0.75,
+            bootstrap_improvement_lower=0.01,
+        )
+        no_edge = probability_publication_status_v2(
+            episode_count=80,
+            evaluation_count=80,
+            brier_score=0.63,
+            baseline_brier_scores=(0.62, 0.60),
+            log_loss=1.02,
+            baseline_log_losses=(1.02, 1.00),
+            calibration_error=0.08,
+            fold_improvement_ratio=0.75,
+            bootstrap_improvement_lower=-0.01,
+        )
+        provisional = probability_publication_status_v2(
+            episode_count=45,
+            evaluation_count=45,
+            brier_score=0.55,
+            baseline_brier_scores=(0.62, 0.60),
+            log_loss=0.90,
+            baseline_log_losses=(1.02, 1.00),
+            calibration_error=0.08,
+            fold_improvement_ratio=0.75,
+            bootstrap_improvement_lower=0.01,
+        )
+
+        self.assertEqual(verified, "VERIFIED")
+        self.assertEqual(no_edge, "NO_EDGE")
+        self.assertEqual(provisional, "PROVISIONAL")
+
+    def test_v2_coordinate_and_vector_gates_are_independent(self) -> None:
+        from app.services.futures_macro_pattern_validation import (
+            coordinate_publication_status_v2,
+            vector_publication_status_v2,
+        )
+
+        coordinate = coordinate_publication_status_v2(
+            episode_count=80,
+            evaluation_count=80,
+            median_error=0.50,
+            baseline_median_errors=(0.70, 0.65, 0.60),
+            coverage_50=0.50,
+            coverage_80=0.80,
+            region_area_80=1.2,
+            baseline_region_area_80=1.5,
+            evaluated_fold_count=4,
+            bootstrap_improvement_lower=0.02,
+        )
+        vector = vector_publication_status_v2(
+            coordinate_status=coordinate,
+            lower_dx=-0.2,
+            upper_dx=0.3,
+            lower_dy=-0.1,
+            upper_dy=0.2,
+            median_dx=0.4,
+            median_dy=0.0,
+        )
+
+        self.assertEqual(coordinate, "VERIFIED")
+        self.assertEqual(vector, "PROVISIONAL")
+
+    def test_weighted_terminal_regions_return_joint_fifty_and_eighty_percent_ellipses(self) -> None:
+        from app.services.futures_macro_pattern_validation import (
+            build_weighted_terminal_regions,
+        )
+
+        rows = pd.DataFrame(
+            {
+                "terminal_x": [-1.0, -0.5, 0.0, 0.5, 1.0],
+                "terminal_y": [-0.6, -0.2, 0.0, 0.4, 0.8],
+                "weight": [1.0, 2.0, 3.0, 2.0, 1.0],
+            }
+        )
+        regions = build_weighted_terminal_regions(rows)
+
+        self.assertEqual([item["mass"] for item in regions], [0.8, 0.5])
+        self.assertTrue(all(item["radius_major"] >= item["radius_minor"] >= 0 for item in regions))
+        self.assertTrue(all(set(item) == {
+            "mass", "center_x", "center_y", "radius_major", "radius_minor", "rotation_deg"
+        } for item in regions))
+
     def test_loader_excludes_pending_session_and_attaches_finality_evidence(self) -> None:
         import app.services.futures_macro_pattern_validation as service
 

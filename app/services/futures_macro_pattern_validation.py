@@ -3,9 +3,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import math
 from time import monotonic
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from app.services.futures_macro_pattern import (
@@ -507,6 +509,147 @@ def publication_status_for_metrics(
     calibrated = calibration_error is not None and calibration_error <= 0.10
     stable = fold_improvement_ratio >= 0.60
     return "VERIFIED" if improved and calibrated and stable else "PROVISIONAL"
+
+
+def probability_publication_status_v2(
+    *,
+    episode_count: int,
+    evaluation_count: int,
+    brier_score: float | None,
+    baseline_brier_scores: Sequence[float | None],
+    log_loss: float | None,
+    baseline_log_losses: Sequence[float | None],
+    calibration_error: float | None,
+    fold_improvement_ratio: float,
+    bootstrap_improvement_lower: float | None,
+) -> str:
+    """Apply the approved probability gate without tuning to actual results."""
+
+    if episode_count < MIN_INDEPENDENT_EPISODES or evaluation_count <= 0:
+        return "UNAVAILABLE"
+    valid_brier = [float(value) for value in baseline_brier_scores if value is not None]
+    valid_log = [float(value) for value in baseline_log_losses if value is not None]
+    if brier_score is None or not valid_brier:
+        return "PROVISIONAL"
+    if evaluation_count >= VERIFIED_EPISODES and float(brier_score) >= min(valid_brier):
+        return "NO_EDGE"
+    verified = (
+        episode_count >= VERIFIED_EPISODES
+        and evaluation_count >= VERIFIED_EPISODES
+        and all(float(brier_score) < value for value in valid_brier)
+        and log_loss is not None
+        and bool(valid_log)
+        and all(float(log_loss) < value for value in valid_log)
+        and calibration_error is not None
+        and float(calibration_error) <= 0.10
+        and float(fold_improvement_ratio) >= 0.60
+        and bootstrap_improvement_lower is not None
+        and float(bootstrap_improvement_lower) > 0.0
+    )
+    return "VERIFIED" if verified else "PROVISIONAL"
+
+
+def coordinate_publication_status_v2(
+    *,
+    episode_count: int,
+    evaluation_count: int,
+    median_error: float | None,
+    baseline_median_errors: Sequence[float | None],
+    coverage_50: float | None,
+    coverage_80: float | None,
+    region_area_80: float | None,
+    baseline_region_area_80: float | None,
+    evaluated_fold_count: int,
+    bootstrap_improvement_lower: float | None,
+) -> str:
+    """Apply the independent terminal-coordinate publication gate."""
+
+    if episode_count < MIN_INDEPENDENT_EPISODES or evaluation_count <= 0:
+        return "UNAVAILABLE"
+    baselines = [float(value) for value in baseline_median_errors if value is not None]
+    if median_error is None or not baselines:
+        return "PROVISIONAL"
+    if evaluation_count >= VERIFIED_EPISODES and float(median_error) >= min(baselines):
+        return "NO_EDGE"
+    verified = (
+        episode_count >= VERIFIED_EPISODES
+        and evaluation_count >= VERIFIED_EPISODES
+        and all(float(median_error) < value for value in baselines)
+        and coverage_50 is not None
+        and 0.40 <= float(coverage_50) <= 0.60
+        and coverage_80 is not None
+        and 0.70 <= float(coverage_80) <= 0.90
+        and region_area_80 is not None
+        and baseline_region_area_80 is not None
+        and float(region_area_80) < float(baseline_region_area_80)
+        and int(evaluated_fold_count) >= 3
+        and bootstrap_improvement_lower is not None
+        and float(bootstrap_improvement_lower) > 0.0
+    )
+    return "VERIFIED" if verified else "PROVISIONAL"
+
+
+def vector_publication_status_v2(
+    *,
+    coordinate_status: str,
+    lower_dx: float | None,
+    upper_dx: float | None,
+    lower_dy: float | None,
+    upper_dy: float | None,
+    median_dx: float | None,
+    median_dy: float | None,
+) -> str:
+    """Allow a direction vector only when uncertainty excludes zero."""
+
+    if coordinate_status != "VERIFIED":
+        return str(coordinate_status)
+    values = (lower_dx, upper_dx, lower_dy, upper_dy, median_dx, median_dy)
+    if any(value is None for value in values):
+        return "PROVISIONAL"
+    x_excludes = float(lower_dx) > 0.0 or float(upper_dx) < 0.0
+    y_excludes = float(lower_dy) > 0.0 or float(upper_dy) < 0.0
+    displacement = (float(median_dx) ** 2 + float(median_dy) ** 2) ** 0.5
+    return "VERIFIED" if (x_excludes or y_excludes) and displacement >= 0.35 else "PROVISIONAL"
+
+
+def build_weighted_terminal_regions(rows: pd.DataFrame) -> list[dict[str, float]]:
+    """Approximate joint 80%/50% terminal regions with weighted covariance ellipses."""
+
+    required = {"terminal_x", "terminal_y", "weight"}
+    if rows.empty or not required.issubset(rows.columns):
+        return []
+    values = rows.loc[:, ["terminal_x", "terminal_y", "weight"]].apply(
+        pd.to_numeric,
+        errors="coerce",
+    ).dropna()
+    values = values[values["weight"] > 0]
+    if len(values) < 2:
+        return []
+    weights = values["weight"].to_numpy(dtype=float)
+    coordinates = values[["terminal_x", "terminal_y"]].to_numpy(dtype=float)
+    weights = weights / weights.sum()
+    center = np.average(coordinates, axis=0, weights=weights)
+    centered = coordinates - center
+    covariance = (centered * weights[:, None]).T @ centered
+    eigenvalues, eigenvectors = np.linalg.eigh(covariance)
+    order = np.argsort(eigenvalues)[::-1]
+    eigenvalues = np.maximum(eigenvalues[order], 0.0)
+    eigenvectors = eigenvectors[:, order]
+    angle = math.degrees(math.atan2(eigenvectors[1, 0], eigenvectors[0, 0]))
+    regions: list[dict[str, float]] = []
+    for mass in (0.8, 0.5):
+        scale = math.sqrt(-2.0 * math.log(1.0 - mass))
+        regions.append(
+            {
+                "mass": mass,
+                "center_x": float(center[0]),
+                "center_y": float(center[1]),
+                "radius_major": float(scale * math.sqrt(eigenvalues[0])),
+                "radius_minor": float(scale * math.sqrt(eigenvalues[1])),
+                "rotation_deg": float(angle),
+            }
+        )
+    return regions
 
 
 @dataclass(frozen=True)

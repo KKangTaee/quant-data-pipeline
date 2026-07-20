@@ -88,3 +88,10 @@ No code, DB row, registry, or saved setup was modified by this analysis.
 - GREEN: 5 model tests passed for exact 16-feature projection, purge/spacing, future-row immunity, temperature weighting, and M2 missing-context degradation.
 - Context + model regression: 9 tests passed; new module passed `py_compile` and `git diff --check`.
 - M1 remains available without macro context; M2 returns an explicit unavailable reason instead of filling missing macro values.
+
+## 2026-07-20 — Task 5 Publication Gate Slice
+
+- RED: V2 probability, coordinate, vector, and joint-region functions did not exist.
+- GREEN: 3 new publication tests passed for `VERIFIED` / `PROVISIONAL` / `NO_EDGE`, coordinate-vector independence, and weighted 50%/80% ellipses.
+- Pattern validation + outlook model regression: 33 tests passed; `git diff --check` passed.
+- Remaining Task 5 work is the nested chronological candidate selector and V2 horizon snapshot integration; Task 5 is not marked complete.
