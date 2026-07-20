@@ -159,6 +159,12 @@ export type MarketMoversDecisionWorkbenchPayload = {
     controls: MarketMoverFilterControl[];
   };
   trust: Record<string, unknown>;
+  timing: {
+    current_time: string;
+    market_date: string;
+    data_as_of: string;
+    last_refreshed_at: string;
+  };
   ranking: {
     period: string;
     ranking_mode: string;
@@ -456,6 +462,14 @@ function formatSignedPercent(value: unknown) {
   return Number.isFinite(numeric) ? `${numeric >= 0 ? "+" : ""}${numeric.toFixed(2)}%` : "-";
 }
 
+function returnTone(value: unknown) {
+  const numeric = typeof value === "string"
+    ? Number(value.replace(/[,%+]/g, "").trim())
+    : Number(value);
+  if (!Number.isFinite(numeric) || numeric === 0) return "neutral";
+  return numeric > 0 ? "positive" : "negative";
+}
+
 function formatCompact(value: unknown) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
@@ -506,9 +520,45 @@ function MarketPulse({ payload }: { payload: MarketMoversDecisionWorkbenchPayloa
         <div className="mm-decision__pulse-item" key={item.label}>
           <small>{item.label}</small>
           <strong>{item.value}</strong>
-          {item.detail ? <span>{item.detail}</span> : null}
+          {item.detail ? <span className={`mm-return--${returnTone(item.detail)}`}>{item.detail}</span> : null}
         </div>
       ))}
+    </section>
+  );
+}
+
+function MarketMoversTimingAndActions({
+  payload,
+  onEvent,
+}: {
+  payload: MarketMoversDecisionWorkbenchPayload;
+  onEvent: (event: Record<string, unknown>) => void;
+}) {
+  const timingItems = [
+    ["현재 시각", payload.timing.current_time],
+    ["시장 기준일", payload.timing.market_date],
+    ["데이터 기준", payload.timing.data_as_of],
+    ["마지막 수동 갱신", payload.timing.last_refreshed_at],
+  ];
+  return (
+    <section className="mm-decision__timing-actions" aria-label="변동 종목 데이터 시각과 수동 갱신">
+      <div className="mm-decision__timing-grid">
+        {timingItems.map(([label, value]) => (
+          <span key={label}><small>{label}</small><strong>{value}</strong></span>
+        ))}
+      </div>
+      <div className="mm-decision__action-row">
+        {payload.actions.map((action) => (
+          <button
+            className={`mm-decision__action mm-decision__action--${action.kind}`}
+            disabled={action.kind === "disabled"}
+            key={action.id}
+            onClick={() => onEvent({ id: action.id })}
+            type="button"
+          >{action.label}</button>
+        ))}
+      </div>
+      {payload.action_note ? <p>{payload.action_note}</p> : null}
     </section>
   );
 }
@@ -607,7 +657,7 @@ function RankingBoard({ payload, activeSymbol, onSelect }: RankingBoardProps) {
                   <strong>{formatCompact(row["Volume"] ?? row["Current Volume"])}</strong>
                   <small>거래량</small>
                 </span>
-                <span className="mm-decision__rank-metric">
+                <span className={`mm-decision__rank-metric mm-return--${returnTone(returnPct)}`}>
                   <small>{metric.label}</small>
                   <strong>{metric.value}</strong>
                 </span>
@@ -669,19 +719,28 @@ function BreadthContext({ payload, onRequest }: BreadthContextProps) {
           <h3>시장 확산 맥락</h3>
         </div>
       </div>
-      <div className="mm-decision__segmented" aria-label="그룹 기준">
-        {["sector", "industry"].map((mode) => (
-          <button className={groupMode === mode ? "is-active" : ""} key={mode} onClick={() => switchMode(mode as (typeof GROUP_MODES)[number])} type="button">
-            {mode === "sector" ? "섹터" : "산업"}
-          </button>
-        ))}
-      </div>
-      <div className="mm-decision__periods" aria-label="확산 기간">
-        {["daily", "weekly", "monthly"].map((period) => (
-          <button className={groupPeriod === period ? "is-active" : ""} key={period} onClick={() => switchPeriod(period as (typeof GROUP_PERIODS)[number])} type="button">
-            {{ daily: "일", weekly: "주", monthly: "월" }[period]}
-          </button>
-        ))}
+      <div className="mm-decision__breadth-toolbar">
+        <div className="mm-decision__breadth-control-group">
+          <span>분류</span>
+          <div className="mm-decision__segmented" aria-label="그룹 기준">
+            {["sector", "industry"].map((mode) => (
+              <button className={groupMode === mode ? "is-active" : ""} key={mode} onClick={() => switchMode(mode as (typeof GROUP_MODES)[number])} type="button">
+                {mode === "sector" ? "섹터" : "산업"}
+              </button>
+            ))}
+          </div>
+        </div>
+        <i aria-hidden="true" />
+        <div className="mm-decision__breadth-control-group">
+          <span>기간</span>
+          <div className="mm-decision__periods" aria-label="확산 기간">
+            {["daily", "weekly", "monthly"].map((period) => (
+              <button className={groupPeriod === period ? "is-active" : ""} key={period} onClick={() => switchPeriod(period as (typeof GROUP_PERIODS)[number])} type="button">
+                {{ daily: "일", weekly: "주", monthly: "월" }[period]}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
       {flows.length ? (
         <>
@@ -694,7 +753,7 @@ function BreadthContext({ payload, onRequest }: BreadthContextProps) {
                 <button className={group === activeGroupName ? "is-selected" : ""} key={group} onClick={() => setSelectedGroup(group)} type="button">
                   <span><strong>{group}</strong><small>{stateLabels[textValue(row, "state")] || textValue(row, "state")}</small></span>
                   <span className="mm-decision__flow-track"><i style={{ width: `${clampPercent(breadth)}%` }} /></span>
-                  <span><strong>{formatSignedPercent(relative)}</strong><small>시장 대비</small></span>
+                  <span><strong className={`mm-return--${returnTone(relative)}`}>{formatSignedPercent(relative)}</strong><small>시장 대비</small></span>
                 </button>
               );
             })}
@@ -716,7 +775,7 @@ function BreadthContext({ payload, onRequest }: BreadthContextProps) {
             {bellwethers.length ? bellwethers.slice(0, 3).map((row) => (
               <div key={`${activeGroupName}-${textValue(row, "Symbol")}`}>
                 <span><strong>#{textValue(row, "Rank")}</strong><b>{textValue(row, "Symbol")}</b><small>{textValue(row, "Name")}</small></span>
-                <span><strong>{formatSignedPercent(row["Return %"])}</strong><small>시총 {formatCompact(row["Market Cap"])}</small></span>
+                <span><strong className={`mm-return--${returnTone(row["Return %"])}`}>{formatSignedPercent(row["Return %"])}</strong><small>시총 {formatCompact(row["Market Cap"])}</small></span>
               </div>
             )) : <div className="mm-decision__empty">시총 근거가 충분한 대장주가 없습니다.</div>}
           </div>
@@ -740,7 +799,7 @@ function QuickResearch({ row, onOpen }: QuickResearchProps) {
         <small>{textValue(row, "Sector")} · {textValue(row, "Industry")}</small>
       </div>
       <div className="mm-decision__quick-facts">
-        <span><small>선택 기간 수익률</small><strong>{formatSignedPercent(row["Return %"])}</strong></span>
+        <span><small>선택 기간 수익률</small><strong className={`mm-return--${returnTone(row["Return %"])}`}>{formatSignedPercent(row["Return %"])}</strong></span>
         <span><small>상대 거래량</small><strong>{numberValue(row, "Relative Volume") !== null ? `${numberValue(row, "Relative Volume")?.toFixed(2)}x` : "-"}</strong></span>
         <span><small>시가총액</small><strong>{formatCompact(row["Market Cap"])}</strong></span>
       </div>
@@ -1042,6 +1101,7 @@ function MarketMoversDecisionWorkbench({ payload, onEvent }: DecisionWorkbenchPr
   return (
     <main className="mm-decision" data-schema-version={payload.schema_version}>
       <MarketMoversCommandLine payload={payload} onControl={emitControl} />
+      <MarketMoversTimingAndActions onEvent={onEvent} payload={payload} />
       <MarketPulse payload={payload} />
       <div className="mm-decision__workbench">
         <RankingBoard activeSymbol={activeSymbol} onSelect={selectRow} payload={payload} />

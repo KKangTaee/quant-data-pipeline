@@ -119,6 +119,7 @@ def build_market_movers_decision_shell_payload(
     selected_symbol: str | None,
     action_note: str = "",
     breadth_selection: Mapping[str, Any] | None = None,
+    timing: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the presentation-only contract for the approved decision workbench."""
 
@@ -143,6 +144,12 @@ def build_market_movers_decision_shell_payload(
             "controls": controls,
         },
         "trust": _mapping(decision_payload.get("trust")),
+        "timing": {
+            "current_time": str(_mapping(timing).get("current_time") or "-"),
+            "market_date": str(_mapping(timing).get("market_date") or "-"),
+            "data_as_of": str(_mapping(timing).get("data_as_of") or "-"),
+            "last_refreshed_at": str(_mapping(timing).get("last_refreshed_at") or "수동 갱신 기록 없음"),
+        },
         "ranking": ranking,
         "group_context": _mapping(decision_payload.get("group_context")),
         "breadth_selection": {

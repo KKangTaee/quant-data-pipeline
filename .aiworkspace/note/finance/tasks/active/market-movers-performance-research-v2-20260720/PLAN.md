@@ -14,11 +14,11 @@
 
 ## Task 2 — Header freshness, manual actions, breadth toolbar, return tones
 
-- [ ] payload/React source contract를 RED로 추가한다.
-- [ ] 네 timestamp 의미와 existing manual action을 decision shell에 렌더링한다.
-- [ ] breadth controls를 labeled single toolbar로 변경한다.
-- [ ] positive/negative/neutral return tone helper를 적용한다.
-- [ ] React focused tests/build를 실행한다.
+- [x] payload/React source contract를 RED로 추가한다.
+- [x] 네 timestamp 의미와 existing manual action을 decision shell에 렌더링한다.
+- [x] breadth controls를 labeled single toolbar로 변경한다.
+- [x] positive/negative/neutral return tone helper를 적용한다.
+- [x] React focused tests/build를 실행한다.
 
 ## Task 3 — Price hover and 10-year financial chart
 

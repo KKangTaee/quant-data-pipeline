@@ -10,3 +10,6 @@
 - Task 1 RED: lazy breadth/reuse와 request event 테스트 `2 failed` 확인.
 - Task 1 GREEN: focused event tests `3 passed`; 전체 decision UI tests `12 passed`.
 - Python compile 통과; Vite production build `170 modules transformed`.
+- Task 2 RED: timing/action payload와 grouped breadth/return tone source contract `2 failed` 확인.
+- Task 2 GREEN: focused tests `2 passed`; 전체 decision UI tests `14 passed`.
+- Task 2 Vite production build `170 modules transformed`.

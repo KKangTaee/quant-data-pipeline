@@ -6,6 +6,7 @@ from html import escape
 import re
 from time import perf_counter
 from typing import Any, Callable
+from zoneinfo import ZoneInfo
 
 import altair as alt
 import pandas as pd
@@ -604,6 +605,21 @@ def _effective_timestamp(coverage: dict[str, Any]) -> str:
     )
 
 
+def _market_movers_decision_timing(snapshot: dict[str, Any]) -> dict[str, str]:
+    now_kst = datetime.now(ZoneInfo("Asia/Seoul"))
+    market_now = now_kst.astimezone(ZoneInfo("America/New_York"))
+    coverage = dict(snapshot.get("coverage") or {})
+    return {
+        "current_time": now_kst.strftime("%Y-%m-%d %H:%M KST"),
+        "market_date": market_now.strftime("%Y-%m-%d ET"),
+        "data_as_of": _effective_timestamp(coverage),
+        "last_refreshed_at": str(
+            st.session_state.get("overview_market_movers_reloaded_at")
+            or "수동 갱신 기록 없음"
+        ),
+    }
+
+
 def _command_strip_tone(snapshot: dict[str, Any], coverage: dict[str, Any]) -> str:
     status = str(snapshot.get("status") or "").strip().upper()
     refresh_status = str(dict(coverage.get("refresh_state") or {}).get("status") or "").strip().lower()
@@ -806,7 +822,7 @@ def _market_movers_attach_eod_preflight(
 def _market_movers_react_actions(*, controls: MarketMoverControls, snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     if controls.period == "daily":
         actions: list[dict[str, Any]] = [
-            {"id": "refresh_intraday", "label": "일중 스냅샷 갱신", "kind": "primary"},
+            {"id": "refresh_intraday", "label": "일중 스냅샷 수동 갱신", "kind": "primary"},
         ]
         if snapshot.get("ticker_alias_candidates"):
             actions.append({"id": "apply_ticker_alias_repair", "label": "티커 변경 복구 적용", "kind": "secondary"})
@@ -817,7 +833,7 @@ def _market_movers_react_actions(*, controls: MarketMoverControls, snapshot: dic
     preflight = dict(snapshot.get("eod_refresh_preflight") or {})
     actions = []
     if _safe_int(preflight.get("selected_symbols_count")) > 0:
-        actions.append({"id": "refresh_eod_history", "label": "가격 이력 갱신", "kind": "primary"})
+        actions.append({"id": "refresh_eod_history", "label": "가격 이력 수동 갱신", "kind": "primary"})
     actions.append(_market_movers_react_universe_basis_action(controls.coverage, kind="secondary"))
     actions.append({"id": "reload", "label": "화면 새로고침", "kind": "secondary"})
     return actions
@@ -973,6 +989,7 @@ def build_market_movers_decision_react_payload(
         selected_symbol=selected,
         action_note=_market_movers_react_action_note(controls=controls, snapshot=snapshot),
         breadth_selection={"group_by": breadth_group, "period": breadth_period},
+        timing=_market_movers_decision_timing(snapshot),
     )
 
 
@@ -1203,6 +1220,7 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
             ),
         )
         _invalidate_market_movers_breadth_session_cache(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S KST")
         st.rerun()
         return True
 

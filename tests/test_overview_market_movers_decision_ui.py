@@ -171,6 +171,56 @@ def test_decision_shell_selected_symbol_and_financial_controls_are_independent()
     assert payload["selection"]["research"]["current_valuation"]["status"] == "UNAVAILABLE"
 
 
+def test_decision_shell_exposes_distinct_timing_and_manual_actions() -> None:
+    payload = build_market_movers_decision_shell_payload(
+        decision_payload=_decision_payload(),
+        command={"coverage": "SP500", "period": "daily", "ranking_mode": "top_gainers", "top_n": 20},
+        command_controls=[],
+        actions=[
+            {"id": "refresh_intraday", "label": "일중 스냅샷 수동 갱신", "kind": "primary"},
+            {"id": "refresh_universe", "label": "유니버스 기준 갱신", "kind": "secondary"},
+        ],
+        selected_symbol="AAA",
+        timing={
+            "current_time": "2026-07-20 23:40 KST",
+            "market_date": "2026-07-20 ET",
+            "data_as_of": "2026-07-20 13:35 UTC",
+            "last_refreshed_at": "2026-07-20 23:37 KST",
+        },
+    )
+
+    assert payload["timing"] == {
+        "current_time": "2026-07-20 23:40 KST",
+        "market_date": "2026-07-20 ET",
+        "data_as_of": "2026-07-20 13:35 UTC",
+        "last_refreshed_at": "2026-07-20 23:37 KST",
+    }
+    assert [action["id"] for action in payload["actions"]] == ["refresh_intraday", "refresh_universe"]
+
+
+def test_decision_shell_renders_timing_actions_grouped_breadth_and_return_tones() -> None:
+    from pathlib import Path
+
+    source = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+    style = Path(
+        "app/web/streamlit_components/market_movers_workbench/src/style.css"
+    ).read_text(encoding="utf-8")
+
+    assert "function MarketMoversTimingAndActions" in source
+    assert 'className="mm-decision__timing-actions"' in source
+    assert "payload.actions.map" in source
+    assert 'className="mm-decision__breadth-toolbar"' in source
+    assert '<span>분류</span>' in source
+    assert '<span>기간</span>' in source
+    assert "function returnTone" in source
+    assert "mm-return--${returnTone" in source
+    assert ".mm-return--positive" in style
+    assert ".mm-return--negative" in style
+    assert ".mm-return--neutral" in style
+
+
 def test_decision_workbench_loader_builds_only_requested_group_period_and_reuses_it(monkeypatch) -> None:
     import pandas as pd
 
