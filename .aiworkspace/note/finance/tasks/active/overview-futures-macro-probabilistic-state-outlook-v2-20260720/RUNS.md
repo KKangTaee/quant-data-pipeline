@@ -73,3 +73,11 @@ No code, DB row, registry, or saved setup was modified by this analysis.
 - Actual DB replay at 2026-07-20 12:00 UTC kept current at 2026-07-17 and marked 2026-07-20 pending.
 - Actual DB replay after the 18:15 ET cutoff moved current to 2026-07-20; common states through 2026-07-17 had maximum x/y difference `0.0`.
 - No production DB row was written.
+
+## 2026-07-20 — Task 3 PIT Macro And Event Context
+
+- RED: `futures_macro_context` and DB-only market-event loader did not exist; cycle history lacked a known-at boundary.
+- GREEN: 4 context tests passed, including later-collected event exclusion and no pre-first-snapshot fill.
+- Economic Cycle result regression: 5 pytest tests passed through `PYTHONPATH=. uv run --with pytest`.
+- New modules and the modified cycle loader passed `py_compile`; `git diff --check` passed.
+- No provider call, DB write, or Economic Cycle publication change was added.

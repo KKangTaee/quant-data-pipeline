@@ -367,6 +367,7 @@ def load_cycle_history(
     *,
     start_date: str | date,
     end_date: str | date,
+    known_at_date: str | date | None = None,
     query_fn: QueryFn | None = None,
 ) -> list[dict[str, object]]:
     """Load bounded month-end replay snapshots in chronological order."""
@@ -375,22 +376,47 @@ def load_cycle_history(
     end = _date_value(end_date, field="end_date")
     if start > end:
         raise ValueError("start_date must be earlier than or equal to end_date")
-    sql = """
+    known_at = (
+        _date_value(known_at_date, field="known_at_date")
+        if known_at_date is not None
+        else None
+    )
+    where = [
+        "run_kind = 'historical_replay'",
+        "as_of_date >= %s",
+        "as_of_date <= %s",
+    ]
+    params: list[object] = [start.isoformat(), end.isoformat()]
+    if known_at is not None:
+        where.append("as_of_date <= %s")
+        params.append(known_at.isoformat())
+    sql = f"""
     SELECT *
     FROM economic_cycle_snapshot
-    WHERE run_kind = 'historical_replay'
-      AND as_of_date >= %s
-      AND as_of_date <= %s
+    WHERE {' AND '.join(where)}
     ORDER BY as_of_date ASC
     """
     rows = _query(
-        DB_META, sql, (start.isoformat(), end.isoformat()), query_fn=query_fn
+        DB_META, sql, tuple(params), query_fn=query_fn
     )
     eligible: list[dict[str, object]] = []
     for raw in rows:
         row = dict(raw)
+        if str(row.get("run_kind") or "historical_replay") != "historical_replay":
+            continue
         observed = _date_value(row.get("as_of_date"), field="as_of_date")
-        if start <= observed <= end:
-            row["as_of_date"] = observed.isoformat()
-            eligible.append(row)
+        if not (start <= observed <= end):
+            continue
+        if known_at is not None:
+            if row.get("data_cutoff_date") in (None, ""):
+                continue
+            data_cutoff = _date_value(
+                row.get("data_cutoff_date"),
+                field="data_cutoff_date",
+            )
+            if not (data_cutoff <= observed <= known_at):
+                continue
+            row["data_cutoff_date"] = data_cutoff.isoformat()
+        row["as_of_date"] = observed.isoformat()
+        eligible.append(row)
     return sorted(eligible, key=lambda row: str(row["as_of_date"]))

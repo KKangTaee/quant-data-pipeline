@@ -1,6 +1,6 @@
 # Overview Futures Macro Probabilistic State Outlook V2 Status
 
-Status: Implementation in progress — 1차 complete
+Status: Implementation in progress — 1차 complete, 2차 Task 3 complete
 Last Updated: 2026-07-20
 
 ## Current Progress
@@ -14,16 +14,17 @@ Last Updated: 2026-07-20
 - Detailed TDD tasks, exact file ownership, validation gates, and commit checkpoints are recorded in `IMPLEMENTATION_PLAN.md`.
 - Task 1 completed-session resolver is implemented with canonical duplicate collapse and pending-session evidence.
 - Task 2 canonical state builder and same-state 5D/20D target are implemented.
+- Task 3 DB-only Economic Cycle replay and official event known-at context is implemented.
 
 ## Roadmap State
 
 - 1차 Data / Target Contract: complete
-- 2차 Momentum Baseline / Macro Hybrid Validation: not started
+- 2차 Momentum Baseline / Macro Hybrid Validation: in progress (Task 3 complete)
 - 3차 Observed Trail / Probabilistic Outlook UI / QA: not started
 - Design gate: approved 2026-07-20
 - Implementation execution: in progress
 
 ## Next Action
 
-Begin 2차 Task 3 PIT macro and official event context TDD work.
+Begin 2차 Task 4 reduced momentum predictors and weighted analog candidate TDD work.
 No production DB data has been changed.

@@ -99,6 +99,37 @@ def test_model_artifact_and_snapshot_serializers_round_trip_vocabularies() -> No
     assert module.deserialize_cycle_snapshot(payload) == snapshot
 
 
+def test_cycle_history_known_at_excludes_later_or_unsafe_replay_rows() -> None:
+    from finance.loaders.economic_cycle import load_cycle_history
+
+    rows = [
+        {
+            "as_of_date": "2026-06-30",
+            "data_cutoff_date": "2026-06-30",
+            "run_kind": "historical_replay",
+        },
+        {
+            "as_of_date": "2026-07-31",
+            "data_cutoff_date": "2026-07-31",
+            "run_kind": "historical_replay",
+        },
+        {
+            "as_of_date": "2026-06-15",
+            "data_cutoff_date": "2026-06-20",
+            "run_kind": "historical_replay",
+        },
+    ]
+
+    loaded = load_cycle_history(
+        start_date="2026-06-01",
+        end_date="2026-07-31",
+        known_at_date="2026-07-20",
+        query_fn=lambda *_args: rows,
+    )
+
+    assert [row["as_of_date"] for row in loaded] == ["2026-06-30"]
+
+
 def test_result_upserts_reuse_artifact_and_snapshot_business_keys() -> None:
     module = _load_module()
 
