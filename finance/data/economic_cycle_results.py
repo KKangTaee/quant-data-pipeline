@@ -16,6 +16,33 @@ from .db.schema import ECONOMIC_CYCLE_SCHEMAS, sync_table_schema
 DB_META = "finance_meta"
 ARTIFACT_TABLE = "economic_cycle_model_artifact"
 SNAPSHOT_TABLE = "economic_cycle_snapshot"
+SNAPSHOT_RUN_KIND_ENUM = (
+    "ENUM('historical_replay','current','intramonth_nowcast')"
+)
+
+
+def _sync_snapshot_run_kind_enum(db: Any) -> None:
+    """Extend the existing enum in place; generic schema sync only adds columns."""
+
+    rows = db.query(
+        """
+        SELECT COLUMN_TYPE
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = %s
+          AND TABLE_NAME = %s
+          AND COLUMN_NAME = 'run_kind'
+        """,
+        (DB_META, SNAPSHOT_TABLE),
+    )
+    if not rows:
+        return
+    column_type = str(rows[0].get("COLUMN_TYPE") or "").lower()
+    if "intramonth_nowcast" in column_type:
+        return
+    db.execute(
+        f"ALTER TABLE {SNAPSHOT_TABLE} "
+        f"MODIFY COLUMN run_kind {SNAPSHOT_RUN_KIND_ENUM} NOT NULL"
+    )
 
 
 @dataclass(frozen=True)
@@ -142,6 +169,7 @@ def ensure_economic_cycle_result_schemas(
         for table_name, schema in ECONOMIC_CYCLE_SCHEMAS.items():
             db.execute(schema)
             sync_table_schema(db, table_name, schema, DB_META)
+        _sync_snapshot_run_kind_enum(db)
     finally:
         if owns_connection:
             db.close()
@@ -199,6 +227,7 @@ def upsert_cycle_snapshots(
             schema = ECONOMIC_CYCLE_SCHEMAS[SNAPSHOT_TABLE]
             db.execute(schema)
             sync_table_schema(db, SNAPSHOT_TABLE, schema, DB_META)
+            _sync_snapshot_run_kind_enum(db)
         normalized_rows = []
         for row in rows:
             normalized = dict(row)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 import importlib.util
 from datetime import date
+from unittest.mock import patch
 
 import pandas as pd
 
@@ -239,6 +240,34 @@ def test_cycle_snapshot_loader_accepts_intramonth_run_kind() -> None:
     assert loaded is not None
     assert loaded["as_of_date"] == "2026-07-21"
     assert loaded["run_kind"] == "intramonth_nowcast"
+
+
+def test_result_schema_sync_extends_existing_snapshot_run_kind_enum() -> None:
+    module = _load_module()
+
+    class Connection:
+        def __init__(self) -> None:
+            self.executed: list[str] = []
+
+        def use_db(self, _database: str) -> None:
+            return None
+
+        def execute(self, sql: str, *_args) -> None:
+            self.executed.append(sql)
+
+        def query(self, sql: str, *_args):
+            if "information_schema.COLUMNS" in sql and "COLUMN_NAME = 'run_kind'" in sql:
+                return [{"COLUMN_TYPE": "enum('historical_replay','current')"}]
+            return []
+
+    connection = Connection()
+    with patch.object(module, "sync_table_schema"):
+        module.ensure_economic_cycle_result_schemas(connection=connection)
+
+    alter = next(
+        sql for sql in connection.executed if "MODIFY COLUMN run_kind" in sql
+    )
+    assert "'intramonth_nowcast'" in alter
 
 
 def test_result_loaders_choose_approved_artifact_and_bounded_sorted_history() -> None:
