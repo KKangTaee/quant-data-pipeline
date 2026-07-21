@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-20
+Last Verified: 2026-07-22
 
 ## Current State
 
@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `reference-center-react-v1-20260720` — 전체 roadmap `4/4`; Guides/Glossary를 단일 Search-first React Reference로 통합하고 stable contextual deep link, legacy removal, responsive Browser QA를 완료했다.
+- `portfolio-monitoring-initial-setting-correction-v1-20260721` — 전체 roadmap `4/4`; direct-stock fixed-shares의 최초 요청 시작일과 수량을 append-only initial contract revision으로 함께 정정하고 새 시장일·종가·최초 투자금부터 성과를 다시 계산한다.
 
 Current active task status:
 
@@ -20,9 +20,13 @@ Current active task status:
 Parallel active follow-up:
 
 - `portfolio-monitoring-chart-zoom-pan-v1-20260719`: 구현과 자동 회귀는 완료했고 전체 `2/3차`; 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다.
+- `market-movers-chart-navigation-polish-v1-20260721`: 구현과 자동 회귀·production build는 완료했고, localhost URL policy로 실제 hover/drag Browser QA가 남아 있다. broader Market Movers roadmap은 `4/5차`다.
 
 Previous completed task:
 
+- `portfolio-monitoring-reference-help-removal-v1-20260721` — 전체 roadmap `2/2`; 중복 contextual help를 제거하고 모니터링 도움말 소유권을 canonical Reference Center로 단일화했다.
+- `market-movers-period-refresh-chart-fix-v1-20260721` — 전체 roadmap `3/3`; bounded Weekly/Monthly refresh, 신규 상장 기간 eligibility, 날짜축·tooltip·선택 기간 수익률을 완료했다.
+- `reference-center-react-v1-20260720` — 전체 roadmap `4/4`; Guides/Glossary를 단일 Search-first React Reference로 통합하고 stable contextual deep link, legacy removal, responsive Browser QA를 완료했다.
 - `operations-portfolio-monitoring-only-v1-20260719` — 전체 roadmap `3/3`; Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
 - `overview-futures-macro-pattern-outlook-v1-20260718` — 전체 roadmap `5/5`, materialized snapshot / React disclosure `4/4`, observation / outlook separation, ten-year validation, and 60D legend / status clarity follow-up complete
 - `backtest-analysis-level1-decision-workspace-v1-20260717` — 1~15차 complete

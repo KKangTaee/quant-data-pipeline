@@ -300,6 +300,30 @@ Previous completed Overview / Market Context task는 `.aiworkspace/note/finance/
 - 경계: 월별 과거 지점은 월중 SEP를 다음 달부터 적용하고 calendar-year target을 선택한다. 이 흐름은 Shiller EPS가 strict release-vintage PIT 원본이 아니므로 `과거 시점 재구성 시나리오`이며, SEP median `real GDP + PCE`와 trailing PER band는 공식 적정가·투자 신호·애널리스트 컨센서스가 아니다.
 - QA: valuation 37 tests, Market Context 35 contracts, TypeScript, Vite build, 실제 21개 SEP vintage/1,867 Shiller rows 기반 read model, desktop/420px Browser QA를 통과했다. Graph 2 history는 12/36/60 points를 반환했고 5년 화면의 SEP marker 19개/label 7개와 current-app console error/horizontal overflow 0건을 확인했다. generated V1.4 QA screenshot은 커밋하지 않는다.
 
+Current Market Movers redesign follow-up task는 `.aiworkspace/note/finance/tasks/active/market-movers-performance-research-v2-20260720/`다.
+
+- 목적: 승인된 결정형 워크벤치에서 종목 발견, sector/industry 확산 확인, 선택 종목 조사를 한 화면과 selected state로 끝낸다.
+- 현재 상태: 전체 기능 roadmap은 `4/5차`이며, 승인된 성능·조사 보완 묶음은 `5/5차` 완료했다. 초기 6개 sector/industry 조합을 모두 계산하던 경로를 현재 선택한 조합 하나만 읽고 session에서 재사용하도록 바꿔 실제 cold entry를 약 46초에서 1.6초로 줄였다. 현재/시장/데이터/수동 갱신 시각과 기존 수동 action, 수익률 semantic color, 가격 plot-wide hover, 연간 10개·분기 40개 상한과 막대/선 전환, DB filing ledger 최대 5건 및 selected-symbol session-only 뉴스/SEC action을 one-shell에 연결했다. Desktop/760px, console, nested iframe detail click actual Browser QA까지 완료했다.
+
+Market Movers chart navigation 후속 task는 `.aiworkspace/note/finance/tasks/active/market-movers-chart-navigation-polish-v1-20260721/`다.
+
+- 재무 이력은 분기 `YYYY Qn`, 연간 `YYYY` X축과 exact period-end hover를 제공하고, 10년 분기 자료는 point-count 기반 폭·scrollbar·pointer drag로 이동한다. 가격 요약은 per-row 배경 tint와 primary 좌측선을 제거하고 수익률 text tone만 유지한다.
+- 구현과 focused/service contract/Vite build는 완료했다. 실제 desktop/narrow hover·drag Browser QA는 localhost URL policy 차단으로 남았으며, 이 QA 공백은 전체 기능 roadmap `4/5차`와 별개다.
+- 다음: 5차 sector conditional outlook은 historical episode와 OOS publication gate를 먼저 검증한다. gate를 통과하지 못하면 확률·분포 수치를 공개하지 않으며 industry outlook은 PIT taxonomy 준비 전까지 보류한다.
+
+Market Movers 비-Daily refresh basis 후속 task는 `.aiworkspace/note/finance/tasks/active/market-movers-nondaily-refresh-basis-fix-v1-20260721/`다.
+
+- 목적: Weekly / Monthly가 coverage-qualified 랭킹 기준일을 가격 수집 목표일로 재사용해 2026-07-07에 고정되고 가격 이력 수동 갱신이 사라지던 순환 문제를 해결했다.
+- 주요 변경: 최신 완료 NYSE session을 EOD preflight/job 기본 목표일로 사용하고, React는 `최근 완료 시장일`과 `랭킹 데이터 기준`을 분리한다. 비-Daily 가격 이력 수동 갱신은 항상 노출하며 대상이 있을 때만 primary로 강조한다.
+- QA: Market Movers/NYSE 관련 114 tests, Python compile, Vite production build와 실제 DB read-only preflight에서 2026-07-20 목표·Weekly 502개·Monthly 501개 보강 대상을 확인했다. Browser actual QA는 localhost URL policy로 차단됐다.
+- 경계: coverage 임계치, 랭킹 계산, provider, DB schema, 자동 갱신 schedule은 변경하지 않았다.
+
+Latest Market Movers 기간 갱신·차트 보정 task는 `.aiworkspace/note/finance/tasks/active/market-movers-period-refresh-chart-fix-v1-20260721/`다.
+
+- Weekly는 1주+1주 overlap, Monthly는 1개월+1개월 overlap으로 최신 완료 시장일까지 bounded refresh하며 stale limited-history symbol도 재시도한다.
+- 선택 기간 시작 뒤 상장된 종목은 `selected period history unavailable`로 그 기간 랭킹에서 제외하고, 가격 차트 실제 날짜 X축과 가격·재무 고점 tooltip 아래 배치를 추가했다.
+- 실제 S&P 500 Weekly는 503/503개, 5,533행, 실패 0건으로 2026-07-20까지 갱신됐고 후속 수동 action은 503개 current skip으로 종료됐다. 전체 기능 roadmap은 `4/5차`; 다음은 별도 OOS-gated sector conditional outlook이다.
+
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/`다.
 
 - 목적: Market Movers 비-Daily 상단의 긴 설명형 버튼을 간결하게 만들고, Monthly full-window 갱신 성공 뒤에도 provider 가용 이력이 짧은 종목이 같은 갱신 대상으로 반복되는 문제를 해결했다.

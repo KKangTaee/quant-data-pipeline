@@ -10,6 +10,19 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-22 - main-dev master 통합 충돌 해결
+
+- `master`의 Market Movers read model·React one-shell·기간 갱신/차트 후속과 현재 브랜치의 Reference Center·Portfolio Monitoring 완료 기록을 모두 보존했다.
+- 충돌 난 root handoff log 2개는 날짜와 제품 영역 기준으로 재구성했고, current task는 Overview Sentiment, latest completed task는 Portfolio Monitoring 최초 설정 정정으로 문서 포인터를 맞췄다.
+- Market Movers Python 신규 tests `46 passed`, service contracts `131 passed`, React `3 passed`와 Market Movers/Sentiment production build를 확인했다. 날짜 의존 테스트 2개는 clock을 고정했고, broad 진단의 나머지 13 failures는 merge 전부터 존재하며 이번 merge가 해당 Backtest/Sentiment 소스를 변경하지 않았다. run history와 기존 QA PNG는 stage하지 않았다.
+
+### 2026-07-21 - Market Movers 비-Daily refresh basis 수정
+
+- Weekly / Monthly EOD preflight가 랭킹 `effective_end_date`를 수집 목표일로 재사용하던 순환 문제를 제거했다.
+- 최신 완료 NYSE session과 랭킹 데이터 기준을 분리하고, 가격 이력 수동 갱신을 항상 노출한다.
+- 실제 DB preflight는 2026-07-20 목표로 Weekly 502 / Monthly 501개 보강 대상을 확인했다.
+- 상세: `tasks/active/market-movers-nondaily-refresh-basis-fix-v1-20260721/STATUS.md`.
+
 ## Active Pointers
 
 - current phase board:
@@ -6899,6 +6912,69 @@ Detailed historical logs were archived on `2026-04-13`.
 - buy=외부 입금, partial sell=외부 출금과 daily Modified Dietz `0.5` 계약으로 item/group 성과를 재계산하며 ETF·전략·fixed notional·backtest는 변경하지 않았다.
 - 운영 schema는 기존 group/item/command `1/2/5`건과 JSONL checksum을 보존한 채 빈 event table만 추가했다. 최종 리뷰에서 거래 수정 false block과 선택 종목/그룹 기준일 혼합을 보정했고, Python 138 / React 30 / typecheck/build와 actual/isolated desktop·900·420 Browser QA를 통과했다.
 - 전체 roadmap `3/3차` 완료. 상세는 `tasks/active/portfolio-monitoring-position-events-v1-20260720/`를 본다.
+
+## 2026-07-20 - Overview Market Movers 현행 집중 감사
+
+- Market Movers의 수집·ranking·sector breadth·선택 종목 조사 전체 visible path와 DB coverage를 읽기 전용으로 감사했다.
+- stale EOD basis, typed collection gap 부재, raw 17/canonical 11 sector mismatch, sector mode handoff 단절, historical PER 의미 오류를 핵심 문제로 확정했다.
+- sector/industry trend와 sector bellwether/조건부 outlook 가능성을 구분하고 잠정 `5차` 개선 순서를 정리했다.
+- 구현은 시작하지 않았으며 상세는 `researches/active/2026-06-market-movers-redesign-v2-benchmark/CURRENT_PROJECT_AUDIT.md`를 본다.
+
+## 2026-07-20 - Overview Market Movers 개편 설계 승인
+
+- 첫 화면을 `종목 발견 -> sector/industry 확산 확인 -> 선택 종목 조사`로 연결하는 A안 one-shell을 승인했다.
+- complete/partial/blocked 데이터 상태, sector 시총 Top 3, gated sector outlook, industry current flow 계약을 확정했다.
+- 선택 종목 재무는 보고 주기와 factor를 분리하고 one-factor/one-axis, reported diluted EPS, PIT-correct PER 원칙을 적용한다.
+- 전체 roadmap `2/5차` 완료. 상세는 `researches/active/2026-06-market-movers-redesign-v2-benchmark/RECOMMENDATION.md`, 다음은 3차 data/read-model 계획이다.
+
+## 2026-07-20 - Overview Market Movers read model 3차 완료
+
+- canonical 11-sector filter, metric별 collection readiness, sector/industry current flow, latest market-cap bellwether Top 3를 별도 계약으로 구현했다.
+- selected research는 annual/quarterly factor series와 PIT 4분기 reported diluted EPS 기반 current PER를 분리하고 current-price historical PER를 제거했다.
+- `market_movers_decision_payload_v1`, focused 16개, Market Movers 126개, SP500/Top1000/Top2000 및 industry DB smoke를 확인했다. 전체 roadmap `3/5차`; 다음은 4차 React one-shell이다.
+- 상세 검증과 diluted EPS coverage 위험은 `tasks/active/market-movers-read-model-hardening-v1-20260720/`를 본다.
+
+## 2026-07-20 - Overview Market Movers React one-shell 4차 완료
+
+- ranking, sector/industry 일·주·월 current flow, 시총 Top 3, quick research와 가격·재무·뉴스·공시 상세를 `MarketMoversDecisionWorkbench` 한 화면으로 통합했다.
+- 랭킹 선택은 selected research에 연결되고 재무는 `보고 주기 / 재무 영역 / Factor`를 독립 제어한다. React unavailable일 때만 기존 Streamlit surface를 fallback으로 유지한다.
+- focused `24 passed`, Market Movers contracts `126 passed`, production build, SP500/Top1000/Top2000 actual payload와 desktop/693px/353px Browser QA를 확인했다.
+- 전체 roadmap `4/5차`; 다음은 OOS publication gate가 선행되는 sector conditional outlook다. 상세는 `tasks/active/market-movers-react-one-shell-v1-20260720/`를 본다.
+
+## 2026-07-20 - Overview Market Movers 혼합형 A visual system 완료
+
+- 기존 one-shell의 data/event 계약을 유지하면서 Market Context/Futures Macro 계열의 integrated blue-gray surface와 editorial hierarchy를 적용했다.
+- hero/trust, command band, market pulse, ranking/breadth decision cards, quick research와 report-family tabs를 한 시각 체계로 정리하고 재무 `보고 주기 / 영역 / Factor` 분리를 유지했다.
+- UI 11개, Market Movers 126개, static scaffold 1개, production build와 desktop actual Browser QA를 통과했다. visual implementation `3/3차`, 전체 기능 roadmap `4/5차`이며 좁은 폭·console·nested iframe 상세 click actual QA는 automation 한계로 남겼다.
+- 다음은 별도 승인 범위인 sector conditional outlook이며 OOS publication gate 전에는 확률·분포 수치를 숨긴다. 상세는 `tasks/active/market-movers-hybrid-visual-system-v1-20260720/`를 본다.
+
+## 2026-07-20 - Overview Market Movers 성능·조사 보완 완료
+
+- 진입 시 sector/industry 6개 조합을 모두 계산하던 경로를 현재 breadth key 하나의 lazy/session reuse로 바꾸고, selected Top Rank 조사만 교체하도록 해 actual cold entry를 약 46초에서 1.6초로 줄였다.
+- 현재/시장/데이터/수동 갱신 시각과 수동 action, 수익률 색상, 가격 hover, 연간 10·분기 40 재무 막대/선, DB filing 근거와 명시적 session-only 뉴스/SEC 조회를 one-shell에 연결했다.
+- 관련 research/decision 27개와 Market Movers 서비스 계약 126개, Vite build, desktop/760px/detail/console Browser QA를 통과했다. 전체 기능 roadmap은 `4/5차`; 남은 5차는 별도 OOS gate가 필요한 sector conditional outlook이다.
+- 상세는 `tasks/active/market-movers-performance-research-v2-20260720/`를 본다.
+
+## 2026-07-21 - Overview Market Movers 재무 차트 탐색 구현
+
+- 최대 40개 분기/10개 연간 재무 이력을 point-count 기반 가로 차트로 바꾸고 `YYYY Qn`/`YYYY` X축, exact 결산일·값 hover, scrollbar·pointer drag와 keyboard 이동을 추가했다.
+- 가격 YTD/최근/범위 최고·최저 readout은 배경 tint와 primary 좌측선을 제거하고 양수·음수·중립 text tone만 유지한다.
+- UI/research 29개와 Market Movers 서비스 계약 126개, Vite production build를 통과했다. Browser localhost URL policy 때문에 actual desktop/narrow interaction screenshot은 남은 QA다.
+- 구현 후속 `2/2차`, broader Market Movers 기능 roadmap은 `4/5차`다. 상세는 `tasks/active/market-movers-chart-navigation-polish-v1-20260721/`를 본다.
+
+## 2026-07-21 - Overview Market Movers 기간 갱신·차트 보정 완료
+
+- Weekly 1주+1주 overlap과 Monthly 1개월+1개월 overlap으로 최신 완료 시장일까지 bounded refresh하고 stale limited-history 종목도 재시도하도록 수정했다.
+- 신규 상장 종목은 선택 기간 시작 뒤 첫 가격일이면 명시적으로 제외하며, 가격 실제 날짜 X축과 가격·재무 고점 tooltip 잘림 방지를 적용했다.
+- 실제 Weekly S&P 500은 503/503개·5,533행·실패 0건으로 2026-07-20까지 갱신됐고 UI 수동 action의 current skip/timestamp도 확인했다.
+- task roadmap `3/3차` 완료, broader 기능 roadmap `4/5차`; 상세는 `tasks/active/market-movers-period-refresh-chart-fix-v1-20260721/`를 본다.
+
+## 2026-07-21 - Overview Market Movers 선택 기간 수익률 보정 완료
+
+- 가격·모멘텀 1M·3M·6M·1Y를 YTD 고정값이 아니라 각 선택 구간 첫 거래일=0%로 재기준화하고 우측 수익률·최근 값·범위 최고·최저를 함께 갱신하도록 수정했다.
+- 기존 YTD 계약은 유지하면서 최근 1년 raw 조정주가 `price_series`를 추가했고, 월말 cutoff overflow도 calendar-safe clamp로 막았다.
+- React 3개, linked UI/research 35개, Market Movers service 131개와 production build를 통과했고 actual GPN 화면에서 네 기간이 서로 다른 값으로 전환됨을 확인했다.
+- 이 후속 보정은 기존 task `3/3차`에 포함되며 broader 기능 roadmap은 `4/5차`; 남은 5차 sector conditional outlook은 OOS gate 이후 별도 범위다.
 
 ## 2026-07-21 - Portfolio Monitoring 진단 그룹화·스크롤 완료
 

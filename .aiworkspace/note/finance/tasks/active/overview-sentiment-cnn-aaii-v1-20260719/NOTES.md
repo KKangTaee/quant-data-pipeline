@@ -23,3 +23,5 @@
 - Browser QA screenshot `overview-sentiment-visual-redesign-qa.png`는 generated artifact이며 commit 대상이 아니다.
 - 사용자 후속 피드백으로 graph 영역의 2열 배치를 2행으로 교정했다. CSS source-contract와 실제 1440px 화면 좌표에서 두 panel의 x·width 일치와 세로 적층을 확인했다.
 - chart tooltip은 관측점 x좌표를 그대로 중앙 정렬하면 좌우 끝에서 card를 벗어난다. plot의 좌우 20% 구간에서는 각각 시작·끝 정렬로 전환하고 중앙 구간만 기존 중앙 정렬을 유지한다.
+- CNN 구성요소 평점은 기존 서비스 `tone`을 compact badge로 표시한다. React에서 score threshold를 재계산하지 않으며 숫자 점수는 중립 전경색, 상태 문구는 berry/amber/slate/teal 보조색과 함께 유지한다.
+- actual snapshot에는 `warning / danger / neutral`이 있어 공포·극단적 공포·중립을 실화면에서 구분했다. 현재 snapshot에 없는 `positive`까지 포함한 네 tone selector는 source-contract regression으로 고정한다.

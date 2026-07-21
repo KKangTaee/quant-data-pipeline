@@ -23,6 +23,7 @@ from app.services.overview.market_movers import (
     build_overview_breadth_heatmap_summary,
     load_market_mover_sector_options,
 )
+from app.services.overview.why_it_moved import build_market_mover_research_snapshot
 from app.services.overview.sentiment import build_market_sentiment_snapshot
 from app.services.overview_market_context_analog import build_historical_analog_snapshot
 from app.services.futures_macro_thermometer import load_overview_futures_macro_snapshot
@@ -58,8 +59,18 @@ def load_overview_market_mover_sectors(
     )
 
 
+@st.cache_data(ttl=600, show_spinner=False)
+def load_overview_market_mover_research_snapshot(
+    *,
+    mover: dict[str, Any],
+) -> dict[str, Any]:
+    """Cache the bounded DB-only research snapshot for one selected ranking row."""
+
+    return build_market_mover_research_snapshot(mover=dict(mover or {}))
+
+
 # Load the DB-backed sector / industry leadership snapshot for the Overview group tab.
-@st.cache_data(ttl=120, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)
 def load_overview_group_leadership_snapshot(
     *,
     universe_limit: int = 2000,

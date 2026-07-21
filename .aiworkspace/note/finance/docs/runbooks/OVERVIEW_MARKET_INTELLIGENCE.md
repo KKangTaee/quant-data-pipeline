@@ -1,7 +1,7 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-07-19
+Last Verified: 2026-07-21
 
 ## Purpose
 
@@ -140,7 +140,12 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
    - `유니버스 기준 갱신`은 선택 coverage의 membership 기준을 다시 저장한다. `SP500`은 S&P 500 구성 목록, `NASDAQ`은 Nasdaq Symbol Directory current snapshot, `TOP1000` / `TOP2000`은 최근 20거래일 평균 거래대금 ranking membership을 갱신한다.
    - Coverage에서 `Nasdaq-listed current snapshot`을 선택했는데 universe가 비어 있으면 `유니버스 기준 갱신` 또는 Ingestion의 Nasdaq Symbol Directory 수집을 먼저 실행한다.
    - Top1000 / Top2000에서 universe 수가 1000 / 2000보다 작으면 listing source 후보 수, 최신 EOD 가격 row coverage, provider price 누락을 순서대로 확인한다. 최신 거래일 price row가 없는 ticker는 ranking 가능한 후보에서 제외된다.
-   - Weekly / Monthly / Yearly 결과는 저장된 EOD 가격 기준이다. Market Movers 기본 화면에서는 별도 `가격 이력 갱신` 버튼을 노출하지 않고, 먼저 `유니버스 기준 갱신`과 `화면 새로고침`으로 membership 기준과 stored DB state를 명확히 분리한다.
+   - Weekly / Monthly / Yearly 결과는 저장된 EOD 가격 기준이다. 상단의 `최근 완료 시장일`은 가격 보강 목표일이고, `랭킹 데이터 기준`은 선택 universe의 coverage 임계치를 충족해 실제 순위 계산에 사용한 날짜다. 최신일 coverage가 부족하면 두 날짜가 다를 수 있다.
+   - 비-Daily의 `가격 이력 수동 갱신`은 항상 노출한다. 보강 대상이 있으면 주 action, 이미 최신이면 보조 action으로 표시하며 최신 완료 NYSE 거래일까지의 누락/오래된 EOD 이력만 기존 OHLCV 경로로 보강한다.
+   - Weekly는 선택 기간 1주에 1주 overlap을 더해 `as_of-2주`부터 수집하고, Monthly는 calendar-safe 1개월 선택 기간에 1개월 overlap을 더해 `as_of-2개월`부터 수집한다. provider `end` 보정은 OHLCV adapter가 한 번만 소유한다.
+   - stale limited-history 종목은 같은 bounded window로 다시 시도한다. 수집 후에도 첫 저장 가격일이 선택 기간 시작보다 늦으면 해당 종목은 `selected period history unavailable` 근거로 그 기간 랭킹에서만 제외하며 상장 이후 수익률을 전체 기간 수익률로 합성하지 않는다.
+   - 2026-07-21 실제 S&P 500 Weekly 검증은 503개/5,533행/실패 0건으로 138.11초가 걸렸다. 수집 범위가 짧아져도 full-universe provider 요청 수는 그대로이므로 실행 중 1~3분 대기는 정상 범위일 수 있다.
+   - `유니버스 기준 갱신`은 membership 또는 Top 유동성 기준만 다시 저장하고 가격 이력을 보강하지 않는다. 가격 날짜가 뒤처졌다면 `가격 이력 수동 갱신`을 먼저 실행한 뒤 `화면 새로고침`으로 coverage와 랭킹 기준일을 다시 확인한다.
    - `자동 갱신`은 현재 선택한 daily coverage 하나만 확인한다. S&P 500은 `browser_safe` / `sp500_intraday`, Top1000은 `intraday` / `top1000_intraday`, Top2000은 `intraday` / `top2000_intraday` job filter를 사용한다.
    - CLI / scheduler dry-run에서는 Nasdaq-listed snapshot도 `standard` profile plan에 표시되며, 단일 job 확인은 `--profile intraday --job nasdaq_intraday --dry-run`으로 한다. 실제 자동 실행은 미국 장중 guard와 cadence를 따른다.
    - 자동 cadence는 S&P 500 5분, Top1000 15분, Top2000 30분 기준이며 Overview가 열려 있는 브라우저 세션에서만 heartbeat가 돈다.
@@ -360,6 +365,10 @@ PY
 - Market Movers displays `Return Rank`, `Volume Rank`, and `Sector Pulse` chart tabs.
 - Market Movers builds a separate `volume_rows` ranking. Daily ranks the latest stored snapshot / EOD day by dollar volume with raw volume beside it; weekly / monthly / yearly rank average daily dollar volume and expose average / total volume metrics in the Volume table.
 - Market Movers return rows include `Volume`, `Dollar Volume`, `Previous Return %`, and `Momentum Delta pp`; positive return bars use sector colors and negative bars use the danger red.
+- Current React one-shell loads only the selected sector/industry and daily/weekly/monthly breadth key. Switching the breadth toolbar requests that key; selecting another Top Rank symbol reuses the loaded breadth and refreshes only selected research.
+- The one-shell shows current KST, market ET date, stored data basis, last manual refresh, and the existing bounded manual refresh actions. Positive, negative, and neutral return values use distinct semantic text colors.
+- Price research uses plot-wide pointer/keyboard hover with date, normalized return, and adjusted close. Financial research separates report frequency from factor choice, exposes up to 10 annual or 40 quarterly observations, and supports bar/line display.
+- Events research immediately displays up to five DB-backed 10-K/10-Q filing-ledger rows. News/Korean-news and latest SEC metadata are fetched only from the explicit selected-symbol buttons and remain session-only; the UI does not fetch article or filing bodies or infer a catalyst.
 - Market Movers `Why It Moved` renders a ticker selector sourced from Return Rank and Volume Rank rows, then shows a movement summary header with selected ticker identity, rank / coverage / period context, return / previous return / momentum delta, volume, and dollar volume. The visible labels are Korean except the main `Why It Moved` title and source/product names.
 - Market Movers `Why It Moved` shows a metadata status strip before the fetch button: `조회 상태`, 뉴스 rows / failure, 한국어 뉴스 rows / failure, SEC rows / failure, `조회 시각`, and `세션 전용` storage boundary. `PARTIAL` / `부분 완료` is warning-level evidence, not a complete lookup.
 - Market Movers `Why It Moved` uses `조사 단서` sections for `뉴스 메타데이터`, `한국어 뉴스`, `SEC 공시`, and collapsed `외부 검색`. The `한국어 뉴스` lane is powered by keyless Google News KR RSS and displays metadata/snippet only; no Naver API key, article scraping, or article body storage is required. Yahoo Finance, Google News, SEC company search, IR / earnings, Google News KR, and Naver News stay as collapsed external rows with clickable `열기` URLs instead of primary action buttons.
