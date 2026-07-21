@@ -29,6 +29,37 @@ type HistoryPoint = {
   nber_recession: boolean;
 };
 
+type IntramonthFactorDelta = {
+  factor: string;
+  baseline: number;
+  current: number;
+  delta: number;
+};
+
+type IntramonthSourceCoverage = {
+  requested_series?: number | null;
+  available_series?: number | null;
+  series?: {
+    series_id?: string | null;
+    status?: string | null;
+    latest_observation_date?: string | null;
+    staleness_days?: number | null;
+  }[];
+};
+
+type IntramonthSnapshot = {
+  baseline_as_of_date: string;
+  as_of_date: string;
+  estimate_status: "PROVISIONAL";
+  estimate_label: string;
+  model_version?: string | null;
+  current_horizon: Horizon;
+  probability_deltas: Probabilities;
+  factor_deltas: IntramonthFactorDelta[];
+  source_collected_at?: string | null;
+  source_coverage: IntramonthSourceCoverage;
+};
+
 type Evidence = {
   factor: string;
   series_id?: string | null;
@@ -169,6 +200,7 @@ type CyclePayload = {
   status: "READY" | "LIMITED" | "ERROR";
   as_of_date?: string | null;
   model_version?: string | null;
+  intramonth?: IntramonthSnapshot | null;
   headline?: {
     phase?: Phase | null;
     phase_label?: string;
@@ -279,6 +311,8 @@ function resolveEvidencePresentation(item: Evidence): EvidencePresentation {
 }
 
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
+const formatSignedPoint = (value: number) => `${value > 0 ? "+" : ""}${(value * 100).toFixed(1)}%p`;
+const formatSignedScore = (value: number) => `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
 const formatSignedPercent = (value: number | null) => value == null
   ? "-"
   : `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
@@ -473,6 +507,79 @@ function HorizonCard({ horizon }: { horizon: Horizon }) {
   );
 }
 
+function IntramonthFlow({
+  intramonth,
+  monthly,
+}: {
+  intramonth: IntramonthSnapshot;
+  monthly?: Horizon;
+}) {
+  const current = intramonth.current_horizon;
+  const latestSourceDate = (intramonth.source_coverage.series || [])
+    .map((item) => item.latest_observation_date || "")
+    .filter(Boolean)
+    .sort()
+    .at(-1) || null;
+  const coverage = intramonth.source_coverage;
+  const coverageLabel = coverage.requested_series != null
+    ? `${coverage.available_series ?? 0}/${coverage.requested_series}개 원천`
+    : "원천 범위 확인 중";
+  const phaseDeltaEntries = PHASE_ORDER.map((phase) => ({
+    phase,
+    delta: intramonth.probability_deltas[phase],
+  }));
+  return (
+    <section className="intramonth-flow-panel" aria-labelledby="intramonth-flow-title">
+      <div className="section-heading">
+        <div><span>Intramonth flow</span><h3 id="intramonth-flow-title">월말 이후 경제사이클 흐름</h3></div>
+        <small>과거 월말은 유지하고 새로 공개된 정보만 별도 비교</small>
+      </div>
+      <div className="intramonth-flow-grid">
+        <article className="intramonth-endpoint baseline-endpoint" tabIndex={0}>
+          <span>월말 추정</span>
+          <strong>{intramonth.baseline_as_of_date}</strong>
+          <b>{monthly?.dominant_phase ? `${PHASE_LABEL[monthly.dominant_phase]} 우세` : "판단 불가"}</b>
+          <small>{monthly?.confidence != null ? formatPercent(monthly.confidence) : "-"}</small>
+        </article>
+
+        <div className="intramonth-change" aria-label="월말 대비 월중 변화">
+          <div className="intramonth-change-arrow" aria-hidden="true"><i /><span>월말 대비 변화</span><i /></div>
+          <div className="intramonth-probability-deltas">
+            {phaseDeltaEntries.map(({ phase, delta }) => (
+              <span className={delta > 0 ? "delta-up" : delta < 0 ? "delta-down" : "delta-flat"} key={phase}>
+                {PHASE_LABEL[phase]} <strong>{formatSignedPoint(delta)}</strong>
+              </span>
+            ))}
+          </div>
+          <div className="intramonth-factor-deltas">
+            {intramonth.factor_deltas.map((item) => (
+              <span key={item.factor}>
+                {FACTOR_LABEL[item.factor] || item.factor}
+                <strong className={item.delta > 0 ? "delta-up" : item.delta < 0 ? "delta-down" : "delta-flat"}>
+                  {formatSignedScore(item.delta)}
+                </strong>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <article className="intramonth-endpoint current-endpoint" tabIndex={0}>
+          <span>현재 입수정보 기반 잠정 계산</span>
+          <strong>{intramonth.as_of_date}</strong>
+          <b>{current.dominant_phase ? `${PHASE_LABEL[current.dominant_phase]} 우세` : "판단 불가"}</b>
+          <small>{current.confidence != null ? formatPercent(current.confidence) : "-"}</small>
+        </article>
+      </div>
+      <div className="intramonth-source-line">
+        <span>계산 기준일 <strong>{intramonth.as_of_date}</strong></span>
+        <span>마지막 수집 <strong>{intramonth.source_collected_at || "-"}</strong></span>
+        <span>주요 원천 최신일 <strong>{latestSourceDate || "-"}</strong></span>
+        <span>입수 범위 <strong>{coverageLabel}</strong></span>
+      </div>
+    </section>
+  );
+}
+
 function QuadrantChart({ payload }: { payload: CyclePayload }) {
   const recent = payload.history.slice(-12);
   const observedSegments = splitPointSegments(
@@ -507,12 +614,17 @@ function QuadrantChart({ payload }: { payload: CyclePayload }) {
   const current = forecastSlots[0]?.probabilities ? forecastSlots[0] : null;
   const currentProbabilities = current?.probabilities;
   const currentPoint = currentProbabilities ? probabilityCoordinate(currentProbabilities) : null;
+  const intramonthHorizon = payload.intramonth?.current_horizon;
+  const intramonthProbabilities = intramonthHorizon?.probabilities;
+  const intramonthPoint = intramonthProbabilities
+    ? probabilityCoordinate(intramonthProbabilities)
+    : null;
 
   return (
     <section className="cycle-map-panel" aria-labelledby="cycle-map-title">
       <div className="section-heading">
         <div><span>Cycle map</span><h3 id="cycle-map-title">레벨과 모멘텀으로 읽는 순환 위치</h3></div>
-        <small>실선은 최근 12개월 · 점선은 현재부터 +2개월</small>
+        <small>실선은 최근 12개월 · 주황 점선은 +2개월 · 보라 점선은 월중</small>
       </div>
       <div className="cycle-map-body">
         <svg className="cycle-quadrant" viewBox="0 0 360 320" role="group" aria-label="회복 확장 둔화 침체 2×2 경제사이클 경로">
@@ -541,7 +653,19 @@ function QuadrantChart({ payload }: { payload: CyclePayload }) {
               ? <polyline className="forecast-path" points={pointList(segment)} key={`forecast-segment-${index}`} />
               : null
           ))}
+          {currentPoint && intramonthPoint ? (
+            <line
+              className="intramonth-bridge-path"
+              x1={currentPoint.x}
+              y1={currentPoint.y}
+              x2={intramonthPoint.x}
+              y2={intramonthPoint.y}
+            />
+          ) : null}
           {currentPoint ? <circle className={`current-cycle-dot ${current && resolveEstimateStatus(current) === "PROVISIONAL" ? "is-provisional" : ""}`} cx={currentPoint.x} cy={currentPoint.y} r="8" /> : null}
+          {intramonthPoint ? (
+            <circle className="intramonth-cycle-dot" cx={intramonthPoint.x} cy={intramonthPoint.y} r="6.5" />
+          ) : null}
           {forecastHorizons.filter((item) => item.horizon_months > 0).map((item) => {
             const point = probabilityCoordinate(item.probabilities);
             const estimateStatus = resolveEstimateStatus(item);
@@ -578,10 +702,29 @@ function QuadrantChart({ payload }: { payload: CyclePayload }) {
               />
             );
           })}
+          {intramonthPoint && intramonthProbabilities && intramonthHorizon ? (
+            <CyclePointTooltip
+              point={intramonthPoint}
+              label={cyclePointLabel(
+                payload.intramonth?.as_of_date || "월중",
+                intramonthHorizon.dominant_phase || dominantProbabilityPhase(intramonthProbabilities),
+                intramonthHorizon.confidence
+                  ?? intramonthProbabilities[
+                    intramonthHorizon.dominant_phase || dominantProbabilityPhase(intramonthProbabilities)
+                  ],
+                "PROVISIONAL",
+              )}
+              title={`${payload.intramonth?.as_of_date || "월중"} · ${PHASE_LABEL[
+                intramonthHorizon.dominant_phase || dominantProbabilityPhase(intramonthProbabilities)
+              ]} 우세`}
+              detail="현재 입수정보 기반 잠정 계산"
+            />
+          ) : null}
         </svg>
         <div className="cycle-map-legend">
           <span><i className="legend-observed" />과거 관측 경로</span>
           <span><i className="legend-forecast" />미래 모델 경로</span>
+          {payload.intramonth ? <span><i className="legend-intramonth" />월말→월중 잠정 흐름</span> : null}
           <span><i className="legend-provisional" />잠정 추정</span>
         </div>
         <p>확률이 오른쪽일수록 성장 레벨이 높고, 위쪽일수록 모멘텀이 강합니다. 경계에 가까울수록 두 국면이 경합합니다.</p>
@@ -1065,6 +1208,8 @@ function EconomicCycleWorkbench({ args }: Props) {
         <div className="section-heading"><div><span>Probability path</span><h3 id="horizon-title">현재와 앞으로 1·2개월</h3></div><small>각 카드의 네 국면 합계는 100%</small></div>
         <div className="horizon-grid">{payload.horizons.map((horizon) => <HorizonCard key={horizon.horizon_months} horizon={horizon} />)}</div>
       </section>
+
+      {payload.intramonth ? <IntramonthFlow intramonth={payload.intramonth} monthly={current} /> : null}
 
       <div className="cycle-layout">
         <QuadrantChart payload={payload} />

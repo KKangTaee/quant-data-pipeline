@@ -293,6 +293,32 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
     ):
         assert token in source
 
+
+def test_cycle_component_renders_intramonth_flow_without_touching_ribbon() -> None:
+    source = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"
+    ).read_text()
+    css = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/style.css"
+    ).read_text()
+
+    for token in (
+        "type IntramonthSnapshot",
+        "function IntramonthFlow",
+        "현재 입수정보 기반 잠정 계산",
+        'className="intramonth-bridge-path"',
+        'className="intramonth-cycle-dot"',
+        "payload.intramonth",
+        "legend-intramonth",
+    ):
+        assert token in source
+    assert "history.concat(payload.intramonth" not in source
+    assert ".intramonth-flow-grid" in css
+    assert ".intramonth-bridge-path" in css
+    assert ".legend-intramonth" in css
+    assert "@media (max-width: 760px)" in css
+    assert "@media (max-width: 420px)" in css
+
     assert "관측된 경제 상태" not in source
     assert "ECONOMIC_DIRECTION_LABEL[observation.direction]" not in source
     assert "강화 · 약화 · 중립" not in source

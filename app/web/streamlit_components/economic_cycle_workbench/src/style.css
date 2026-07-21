@@ -53,6 +53,7 @@ button, input, summary { font: inherit; }
 .hero-status { padding: 6px 9px; border-radius: 999px; font-size: 10px; }
 
 .horizon-section,
+.intramonth-flow-panel,
 .cycle-map-panel,
 .evidence-panel,
 .market-implications,
@@ -114,6 +115,30 @@ button, input, summary { font: inherit; }
 .validation-note { margin-top: 11px !important; padding-top: 9px; border-top: 1px solid #eadfca; color: #826737; font-size: 9px; line-height: 1.45; }
 .unavailable-copy { min-height: 61px; padding: 12px; border-radius: 10px; color: #735e43; background: rgba(255, 248, 234, .86); font-size: 11px; line-height: 1.55; }
 
+.intramonth-flow-grid { display: grid; grid-template-columns: minmax(150px, .7fr) minmax(300px, 1.6fr) minmax(170px, .8fr); align-items: stretch; gap: 12px; margin-top: 18px; }
+.intramonth-endpoint { display: grid; min-width: 0; align-content: center; gap: 5px; padding: 16px; border: 1px solid #dfe7ed; border-radius: 15px; background: #f8fafb; outline: none; }
+.intramonth-endpoint:focus-visible { border-color: #6e5da8; box-shadow: 0 0 0 3px rgba(110, 93, 168, .14); }
+.intramonth-endpoint > span { color: #6f8190; font-size: 9px; font-weight: 900; }
+.intramonth-endpoint > strong { color: #29475c; font-size: 15px; }
+.intramonth-endpoint > b { color: #36566b; font-size: 12px; }
+.intramonth-endpoint > small { color: #748594; font-size: 10px; }
+.current-endpoint { border-color: #d8cdef; background: linear-gradient(145deg, #fbf9ff, #f7f5fc); }
+.current-endpoint > span { color: #6e5da8; }
+.intramonth-change { display: grid; min-width: 0; align-content: center; gap: 10px; padding: 12px 14px; border: 1px dashed #d8dfe5; border-radius: 15px; background: #fcfdfd; }
+.intramonth-change-arrow { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; color: #718493; font-size: 9px; font-weight: 900; text-align: center; }
+.intramonth-change-arrow i { height: 1px; background: #bcc9d2; }
+.intramonth-probability-deltas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+.intramonth-probability-deltas > span { display: grid; justify-items: center; gap: 3px; min-width: 0; padding: 7px 4px; border-radius: 9px; color: #71818e; background: #f1f5f7; font-size: 8px; }
+.intramonth-probability-deltas strong { font-size: 9px; white-space: nowrap; }
+.intramonth-factor-deltas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.intramonth-factor-deltas > span { display: flex; min-width: 0; justify-content: space-between; gap: 6px; padding: 7px 8px; border: 1px solid #e5eaed; border-radius: 8px; color: #627786; background: #fff; font-size: 8px; }
+.intramonth-factor-deltas > span > strong { flex: 0 0 auto; }
+.delta-up { color: #1d6d5d; }
+.delta-down { color: #a55749; }
+.delta-flat { color: #687985; }
+.intramonth-source-line { display: flex; flex-wrap: wrap; gap: 7px 15px; margin-top: 12px; padding-top: 11px; border-top: 1px solid #e6ecef; color: #7a8995; font-size: 8px; }
+.intramonth-source-line strong { color: #506a7c; font-weight: 850; }
+
 .cycle-layout { display: grid; grid-template-columns: minmax(360px, .92fr) minmax(0, 1.08fr); align-items: stretch; gap: 16px; }
 .cycle-map-panel,
 .evidence-panel { min-width: 0; }
@@ -131,8 +156,10 @@ button, input, summary { font: inherit; }
 .observed-path { fill: none; stroke: #368bd9; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; opacity: .82; }
 .observed-dot { fill: #85b8e8; stroke: #fff; stroke-width: 1.5; }
 .forecast-path { fill: none; stroke: #efa31f; stroke-width: 3; stroke-dasharray: 7 7; stroke-linecap: round; stroke-linejoin: round; }
+.intramonth-bridge-path { stroke: #7863b1; stroke-width: 3; stroke-dasharray: 3 6; stroke-linecap: round; }
 .current-cycle-dot { fill: #1c78ca; stroke: #fff; stroke-width: 4; filter: drop-shadow(0 2px 3px rgba(20, 72, 110, .24)); }
 .current-cycle-dot.is-provisional { fill: #efa31f; }
+.intramonth-cycle-dot { fill: #7863b1; stroke: #fff; stroke-width: 3; filter: drop-shadow(0 2px 3px rgba(76, 57, 130, .24)); }
 .forecast-point circle { fill: #fff; stroke: #efa31f; stroke-width: 3; }
 .forecast-point text { fill: #8b641f; font-size: 9px; font-weight: 900; }
 .forecast-point.estimate-verified circle { stroke: #23856b; }
@@ -151,6 +178,7 @@ button, input, summary { font: inherit; }
 .cycle-map-legend i { display: inline-block; width: 18px; height: 4px; border-radius: 999px; }
 .legend-observed { background: #368bd9; }
 .legend-forecast { background: repeating-linear-gradient(90deg, #efa31f 0, #efa31f 5px, transparent 5px, transparent 8px); }
+.legend-intramonth { background: repeating-linear-gradient(90deg, #7863b1 0, #7863b1 3px, transparent 3px, transparent 7px); }
 .legend-provisional { height: 8px !important; border: 1px solid #d5b56d; background: repeating-linear-gradient(135deg, transparent 0, transparent 2px, #e4bf70 2px, #e4bf70 3px); }
 .cycle-map-body > p { max-width: 500px; margin-top: 10px; color: #728291; font-size: 10px; line-height: 1.55; text-align: center; }
 
@@ -331,11 +359,13 @@ button, input, summary { font: inherit; }
   .cycle-hero { display: grid; padding: 22px; }
   .hero-basis { min-width: 0; justify-items: start; text-align: left; }
   .horizon-grid,
+  .intramonth-flow-grid,
   .cycle-layout,
   .implication-grid { grid-template-columns: 1fr; }
   .implication-card:last-child:nth-child(odd) { grid-column: auto; }
   .cycle-layout { align-items: start; }
   .movement-grid { grid-template-columns: 1fr; }
+  .intramonth-change-arrow { grid-template-columns: 1fr auto 1fr; }
   .pathway-hover-details { display: none; }
   .pathway-details { display: block; margin-top: 7px; color: #687b89; font-size: 8px; }
   .pathway-details summary { cursor: pointer; font-weight: 850; }
@@ -353,6 +383,7 @@ button, input, summary { font: inherit; }
   .cycle-workbench { gap: 14px; padding-inline: 0; }
   .cycle-hero,
   .horizon-section,
+  .intramonth-flow-panel,
   .cycle-map-panel,
   .evidence-panel,
   .market-implications,
@@ -366,6 +397,10 @@ button, input, summary { font: inherit; }
   .evidence-description { overflow-wrap: anywhere; }
   .horizon-grid { grid-template-columns: 1fr; gap: 9px; margin-top: 14px; }
   .horizon-card { padding: 15px; }
+  .intramonth-flow-grid { grid-template-columns: 1fr; }
+  .intramonth-probability-deltas,
+  .intramonth-factor-deltas { grid-template-columns: 1fr 1fr; }
+  .intramonth-source-line { display: grid; gap: 5px; }
   .cycle-layout { grid-template-columns: 1fr; gap: 12px; }
   .cycle-quadrant { width: 100%; max-width: 340px; }
   .implication-grid,
