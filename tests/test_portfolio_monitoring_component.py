@@ -213,6 +213,28 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn(".pm-command-feedback", styles)
         self.assertIn(".pm-ended-items", styles)
 
+    def test_common_basis_banner_exposes_selected_group_price_refresh_action(self) -> None:
+        component_root = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src"
+        )
+        source = (component_root / "PortfolioMonitoringWorkbench.tsx").read_text(
+            encoding="utf-8"
+        )
+        contracts = (component_root / "contracts.ts").read_text(encoding="utf-8")
+        styles = (component_root / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("workspace.price_refresh", source)
+        self.assertIn("보유 종목 가격 최신화", source)
+        self.assertIn('id: "refresh_group_prices"', source)
+        self.assertIn("portfolio_group_id: selectedGroup.portfolio_group_id", source)
+        self.assertIn("PriceRefreshProjection", contracts)
+        self.assertIn('id: "refresh_group_prices"', contracts)
+        self.assertIn(".pm-basis-action", styles)
+        self.assertRegex(
+            styles,
+            r"@media \(max-width: 760px\) \{[\s\S]*?\.pm-basis-banner \{[^}]*flex-direction: column;",
+        )
+
     def test_ended_item_exposes_reopen_action_with_continuous_tracking_warning(self) -> None:
         source = Path(
             "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"

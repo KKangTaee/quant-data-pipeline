@@ -282,7 +282,7 @@ Backtest > Final Review
 |---|---|
 | `app/runtime/backtest/read_models/final_selected_portfolios.py` | Final Review final decision row를 읽고 selected dashboard row / status summary / 사용자 monitoring portfolio saved state / strategy slot / continuity check / selected component performance recheck operations preflight / readiness / symbol freshness / selected provider evidence / performance recheck / recheck comparison / current weight 또는 value / holding input 기반 drift check / drift alert preview / allocation drift evidence boundary / monitoring timeline으로 변환 |
 | `app/services/backtest_evidence_read_model.py` | Final Review final decision row의 status / evidence checks / decision dossier를 Streamlit-free read model로 변환 |
-| `app/web/final_selected_portfolio_dashboard.py` | Operations dashboard 화면 render, CNN / AAII market sentiment context overlay, Active Portfolio Monitoring Scenario hero / state-specific empty 안내 / daily badges / value curve / strategy performance / rebalance target, 나의 포트폴리오 fixed-height card shelf 생성 / 선택 / collapsed management soft delete, portfolio name / description edit, Final Review selected strategy pool에서 slot 추가 / compact strategy board / 설정 적용 / 제거, strategy-board 아래 pending-stale update, 선택한 1개 strategy의 Snapshot / Monitoring Scenario / 하단 readiness + symbol freshness + provider evidence detail, Continuity check, Monitoring Timeline / Review Signals / Open Issues / Why Selected / optional Actual Allocation / allocation evidence boundary / optional preflight / Decision Dossier / Audit / 전환 비교 표시 |
+| `app/web/final_selected_portfolio_dashboard.py` | Operations dashboard 화면 render, CNN / AAII market sentiment context overlay, Active Portfolio Monitoring Scenario hero / state-specific empty 안내 / daily badges / value curve / strategy performance / rebalance target, 선택 그룹 direct stock·ETF 가격 최신성 및 명시적 refresh action, 나의 포트폴리오 fixed-height card shelf 생성 / 선택 / collapsed management soft delete, portfolio name / description edit, Final Review selected strategy pool에서 slot 추가 / compact strategy board / 설정 적용 / 제거, strategy-board 아래 pending-stale update, 선택한 1개 strategy의 Snapshot / Monitoring Scenario / 하단 readiness + symbol freshness + provider evidence detail, Continuity check, Monitoring Timeline / Review Signals / Open Issues / Why Selected / optional Actual Allocation / allocation evidence boundary / optional preflight / Decision Dossier / Audit / 전환 비교 표시 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | dashboard portfolio table, selected strategy pool table, selected strategy comparison table, component table, timeline table, recheck preflight table, recheck readiness table, symbol freshness table, provider evidence table, recheck comparison table, value / holding input table, drift table, alert preview table, allocation boundary table, filter helper |
 | `app/web/streamlit_app.py` | Operations navigation에 `Portfolio Monitoring`만 등록 |
 
@@ -313,6 +313,11 @@ Backtest > Final Review
   - end를 latest로 두면 DB 최신 시장일을 기준으로 실행
   - portfolio value, total return, CAGR, MDD, benchmark spread, component contribution, strongest / weakest periods 표시
   - 새 registry row를 저장하지 않음
+- direct-security price refresh:
+  - 선택 그룹의 `active` / `data_review` stock·ETF만 대상으로 하고 selected strategy와 종료 항목은 제외
+  - 최근 완료 NYSE 거래일보다 오래된 종목이 있으면 공통 기준일 배너에 종목별 최신일과 `보유 종목 가격 최신화` action을 표시
+  - 명시 클릭에서 기존 daily OHLCV ingestion job을 실행하고, 수집 후 DB freshness를 재검증한 다음 같은 DB 가격으로 공통 기준일과 종합 가치곡선을 다시 계산
+  - unresolved symbol은 partial/failed feedback과 배너에 계속 남기며 상세 job 결과는 `Workspace > Ingestion > 실행 기록 / 결과`가 소유
 - recheck comparison:
   - 최신 Performance Recheck result를 Final Review baseline과 비교
   - CAGR delta, MDD delta, benchmark spread, component coverage, period coverage를 `PASS / WATCH / BREACHED / NEEDS_INPUT`으로 분류
@@ -335,6 +340,7 @@ first-pass status:
 - Recheck Operations Preflight는 현재 decision row, Current Candidate Registry fallback, DB latest market date, price freshness metadata를 읽는 사전 점검이며 데이터 수집이나 저장을 실행하지 않는다.
 - Recheck Readiness는 현재 decision row, embedded replay contract, Current Candidate Registry fallback, DB latest market date를 읽는 사전 점검이며 데이터 수집이나 저장을 실행하지 않는다.
 - Symbol Freshness는 price DB metadata를 읽는 사전 점검이며 OHLCV 수집이나 저장을 실행하지 않는다.
+- 공통 기준일 배너의 `보유 종목 가격 최신화`는 위 read-only Symbol Freshness와 별개의 사용자 명시 action이며, 선택 그룹 direct stock·ETF에 한해서만 기존 ingestion job을 실행한다.
 - Provider Evidence는 기존 provider snapshot DB를 읽는 사전 점검이며 provider 수집, JSONL 저장, monitoring log 자동 저장을 실행하지 않는다.
 - Performance Recheck는 latest result 확인 도구이며 live approval이나 수익 보장 표현이 아니다.
 - current value 기반 Actual Allocation을 기본 입력으로 두고, current weight 직접 입력과 shares x price 입력 기반 drift check는 advanced 입력으로 둔다.

@@ -1,4 +1,4 @@
-import type { DiagnosisDisplayGroup, DiagnosisDisplayGroupView, DiagnosisHistoryRow, DiagnosisProjection, DiagnosisRow, GroupMetrics, GroupSummary, ItemRow, MacroObservationProjection, MarketChartRow, RiskCalibrationProjection, SourceHealth } from "./contracts";
+import type { DiagnosisDisplayGroup, DiagnosisDisplayGroupView, DiagnosisHistoryRow, DiagnosisProjection, DiagnosisRow, GroupMetrics, GroupSummary, ItemRow, MacroObservationProjection, MarketChartRow, PriceRefreshProjection, RiskCalibrationProjection, SourceHealth } from "./contracts";
 
 export type MonitoringSourceType = "direct_security" | "selected_strategy";
 export type MonitoringKind = "stock" | "etf" | "strategy";
@@ -447,6 +447,26 @@ export function buildCommonBasisBanner(group: { status: string; basis_date: stri
     return `일부 항목은 가치 계산이 제한되어 원금을 현금으로 유지했습니다. 공통 기준일 ${group.basis_date}`;
   }
   return `모든 활성 항목을 비교할 수 있는 공통 기준일 ${group.basis_date}`;
+}
+
+function compactRefreshDate(value: string | null) {
+  if (!value) return "자료 없음";
+  const parts = value.split("-");
+  if (parts.length !== 3) return value;
+  return `${Number(parts[1])}/${Number(parts[2])}`;
+}
+
+export function buildPriceRefreshSummary(refresh: PriceRefreshProjection) {
+  if (refresh.status === "up_to_date") {
+    return `최근 완료 거래일 ${compactRefreshDate(refresh.target_date)} 기준 최신 상태입니다.`;
+  }
+  if (!refresh.eligible) {
+    return refresh.message;
+  }
+  const unresolved = refresh.rows
+    .filter((row) => row.status === "stale" || row.status === "missing")
+    .map((row) => `${row.symbol} ${compactRefreshDate(row.latest_date)}`);
+  return `${unresolved.join(" · ")} · 목표 ${compactRefreshDate(refresh.target_date)}`;
 }
 
 export function buildDiagnosisSections(diagnosis: DiagnosisProjection) {

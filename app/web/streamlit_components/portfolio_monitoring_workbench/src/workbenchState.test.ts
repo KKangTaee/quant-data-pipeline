@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { GroupSummary, GroupValueResult } from "./contracts";
+import type { GroupSummary, GroupValueResult, PriceRefreshProjection } from "./contracts";
 import {
   buildCommonBasisBanner,
+  buildPriceRefreshSummary,
   buildChartDateTicks,
   buildGroupChartSeries,
   formatMetric,
@@ -111,6 +112,33 @@ describe("portfolio monitoring workbench state", () => {
   it("describes the common basis and partial state explicitly", () => {
     expect(buildCommonBasisBanner(activeGroup)).toContain("2026-07-18");
     expect(buildCommonBasisBanner({ ...activeGroup, status: "PARTIAL" })).toContain("일부 항목");
+  });
+
+  it("summarizes stale portfolio symbols without showing raw job diagnostics", () => {
+    const refresh = {
+      status: "refresh_available",
+      eligible: true,
+      target_date: "2026-07-21",
+      current_common_latest: "2026-07-16",
+      symbols: ["AMD", "QQQ", "SOXX"],
+      stale_symbols: ["QQQ", "SOXX"],
+      missing_symbols: [],
+      excluded_strategy_count: 0,
+      collection_start: "2026-07-09",
+      collection_end: "2026-07-21",
+      button_label: "보유 종목 가격 최신화",
+      rows: [
+        { symbol: "AMD", latest_date: "2026-07-20", status: "stale" },
+        { symbol: "QQQ", latest_date: "2026-07-17", status: "stale" },
+        { symbol: "SOXX", latest_date: "2026-07-16", status: "stale" },
+      ],
+      message: "3개 종목을 최신화할 수 있습니다.",
+    } satisfies PriceRefreshProjection;
+
+    expect(buildPriceRefreshSummary(refresh)).toContain("AMD 7/20");
+    expect(buildPriceRefreshSummary(refresh)).toContain("SOXX 7/16");
+    expect(buildPriceRefreshSummary(refresh)).toContain("목표 7/21");
+    expect(buildPriceRefreshSummary({ ...refresh, status: "up_to_date", eligible: false })).toContain("최신 상태");
   });
 
   it("preserves chart gaps instead of converting missing item values to zero", () => {

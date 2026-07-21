@@ -13,6 +13,7 @@ import {
   buildFullMarketChartViewport,
   buildMacroObservationPresentation,
   buildMarketChartBounds,
+  buildPriceRefreshSummary,
   buildRiskCalibrationPresentation,
   createItemDraft,
   formatMetric,
@@ -624,6 +625,7 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   const latestCommand = workspace.commands[0];
   const selectedMarketChart = workspace.selected_item_market_chart;
   const metrics = activeGroup?.metrics;
+  const priceRefresh = workspace.price_refresh;
   const diagnosis = workspace.diagnosis ?? {
     policy_version: "portfolio_monitoring_policy_v1",
     top_three: [], strengths: [], weaknesses: [], data_gaps: [], all_rows: [], coverage: 0,
@@ -730,7 +732,7 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
         {latestCommand && latestCommand.command_id !== dismissedCommandId && (
           <div className={`pm-command-feedback is-${latestCommand.status}`} role={latestCommand.status === "error" ? "alert" : "status"}>
             <div>
-              <strong>{latestCommand.status === "error" ? "요청을 완료하지 못했습니다" : "요청이 반영됐습니다"}</strong>
+              <strong>{latestCommand.status === "error" ? "요청을 완료하지 못했습니다" : latestCommand.status === "warning" ? "일부 종목을 확인해 주세요" : "요청이 반영됐습니다"}</strong>
               <span>{latestCommand.message || "처리 결과를 확인해 주세요."}</span>
             </div>
             <button type="button" aria-label="처리 결과 닫기" onClick={() => setDismissedCommandId(latestCommand.command_id)}>×</button>
@@ -739,9 +741,21 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
 
         {activeGroup ? (
           <>
-            <div className={`pm-basis-banner ${activeGroup.status === "PARTIAL" ? "is-partial" : ""}`}>
-              <span>{activeGroup.status === "PARTIAL" ? "확인 필요" : "공통 기준"}</span>
-              <strong>{buildCommonBasisBanner(activeGroup)}</strong>
+            <div className={`pm-basis-banner ${activeGroup.status === "PARTIAL" ? "is-partial" : ""} ${priceRefresh?.eligible ? "is-stale" : ""}`}>
+              <div className="pm-basis-copy">
+                <span>{activeGroup.status === "PARTIAL" ? "확인 필요" : "공통 기준"}</span>
+                <div>
+                  <strong>{buildCommonBasisBanner(activeGroup)}</strong>
+                  {priceRefresh && <small>{buildPriceRefreshSummary(priceRefresh)}</small>}
+                </div>
+              </div>
+              {priceRefresh?.eligible && selectedGroup && (
+                <button type="button" className="pm-basis-action" onClick={() => emit({
+                  id: "refresh_group_prices",
+                  command_id: newCommandId(),
+                  portfolio_group_id: selectedGroup.portfolio_group_id,
+                })}>{priceRefresh.button_label || "보유 종목 가격 최신화"}</button>
+              )}
             </div>
 
             <section className="pm-kpi-grid" aria-label="포트폴리오 핵심 지표">

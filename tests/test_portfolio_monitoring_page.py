@@ -100,6 +100,15 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
             void_position_trade=lambda event: calls.append(
                 ("void_position_trade", event)
             ) or None,
+            refresh_group_prices=lambda event: calls.append(
+                ("refresh_group_prices", event)
+            )
+            or {
+                "command_id": event.get("command_id"),
+                "status": "success",
+                "message": "prices refreshed",
+                "target_id": event.get("portfolio_group_id"),
+            },
         )
 
     def test_route_builds_once_mounts_once_dispatches_once_and_reruns_after_success(self) -> None:
@@ -183,6 +192,80 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
         page._dispatch_portfolio_monitoring_event(event, services)
 
         self.assertIn(("reopen_item", event), services.calls)
+
+    def test_dispatches_group_price_refresh_once(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        services = self._services()
+        event = {
+            "id": "refresh_group_prices",
+            "command_id": "command-refresh",
+            "portfolio_group_id": "group-core",
+        }
+
+        result = page._dispatch_portfolio_monitoring_event(event, services)
+
+        self.assertIn(("refresh_group_prices", event), services.calls)
+        self.assertEqual(result["status"], "success")
+
+    def test_route_preserves_partial_refresh_as_warning_feedback(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        services = self._services(
+            component_value={
+                "event": {
+                    "id": "refresh_group_prices",
+                    "command_id": "command-refresh-warning",
+                    "portfolio_group_id": "group-core",
+                }
+            }
+        )
+        services.refresh_group_prices = lambda event: {
+            "command_id": event["command_id"],
+            "status": "warning",
+            "message": "QQQ 종목이 아직 이전 날짜입니다.",
+            "target_id": event["portfolio_group_id"],
+        }
+
+        page.render_final_selected_portfolio_dashboard_page(services=services)
+
+        self.assertEqual(
+            services.session_state["portfolio_monitoring_last_command"]["status"],
+            "warning",
+        )
+        self.assertEqual(sum(call[0] == "rerun" for call in services.calls), 1)
+
+    def test_refresh_bridge_runs_selected_group_and_appends_ingestion_history(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        items = [SimpleNamespace(source_ref="AMD")]
+        repository = SimpleNamespace(
+            get_group=lambda group_id: SimpleNamespace(portfolio_group_id=group_id),
+            list_items=lambda group_id: items,
+        )
+        calls = []
+
+        result = page._execute_portfolio_price_refresh(
+            {
+                "command_id": "command-refresh",
+                "portfolio_group_id": "group-core",
+            },
+            repository=repository,
+            refresh_runner=lambda received: calls.append(("run", received))
+            or {
+                "status": "partial_success",
+                "rows_written": 2,
+                "failed_symbols": ["QQQ"],
+                "message": "QQQ remains stale",
+            },
+            history_writer=lambda job_result: calls.append(("history", job_result)),
+        )
+
+        self.assertEqual(calls[0], ("run", items))
+        self.assertEqual(calls[1][0], "history")
+        self.assertEqual(result["command_id"], "command-refresh")
+        self.assertEqual(result["status"], "warning")
+        self.assertEqual(result["target_id"], "group-core")
 
     def test_catalog_search_whitelists_item_builder_recovery_state(self) -> None:
         from app.web import final_selected_portfolio_dashboard as page

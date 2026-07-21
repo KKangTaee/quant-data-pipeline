@@ -82,6 +82,10 @@ from .read_model import (
     build_portfolio_monitoring_workspace,
     calculate_group_metrics,
 )
+from .price_refresh import (
+    build_portfolio_price_refresh_plan,
+    run_portfolio_price_refresh,
+)
 
 __all__ = [
     "AddMonitoringItemInput",
@@ -152,4 +156,6 @@ __all__ = [
     "align_group_value_lanes",
     "build_portfolio_monitoring_workspace",
     "calculate_group_metrics",
+    "build_portfolio_price_refresh_plan",
+    "run_portfolio_price_refresh",
 ]

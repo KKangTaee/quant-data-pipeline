@@ -10,6 +10,13 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-22 - Portfolio Monitoring 보유 종목 가격 최신화 완료
+
+- 선택 그룹의 활성 direct stock·ETF를 최근 완료 NYSE 거래일까지 명시적으로 갱신하고, 수집 후 DB freshness를 재검증해 공통 기준일과 종합 가치곡선을 다시 계산한다.
+- actual AMD/RKLB/TEM/QQQ/SOXX 수집 후 공통 기준일이 2026-07-16에서 2026-07-21로 이동했고 완료 action이 사라졌다.
+- Python 168, React 33, typecheck/build와 Browser QA를 통과했다. selected strategy는 대상 밖이며 상세 결과는 Ingestion history가 소유한다.
+- 상세: `tasks/active/portfolio-monitoring-price-refresh-v1-20260722/STATUS.md`.
+
 ### 2026-07-22 - sub-dev master 병합 충돌 해결
 
 - master의 Market Movers·Portfolio Monitoring·Reference Center와 현재 브랜치의 Economic Cycle·Futures Macro V2·Sentiment PIT 완료 이력을 함께 보존해 문서 충돌 5개를 해소했다.
