@@ -290,6 +290,11 @@ def validate_position_sequence(
     snapshots: list[PositionQuantitySnapshot] = []
     applied_split_dates: set[date] = set()
     for trade in projection.trades:
+        if trade.trade_date < projection.initial_contract.effective_start_date:
+            raise PositionEventValidationError(
+                f"{trade.trade_date.isoformat()} 거래가 새 추적 시작일보다 빠릅니다. "
+                "해당 거래를 먼저 수정하거나 취소해 주세요."
+            )
         for split_date in sorted(split_factors):
             if split_date in applied_split_dates or split_date > trade.trade_date:
                 continue

@@ -46,6 +46,10 @@ class PositionLedgerSummary:
     cumulative_withdrawals: Decimal
     pnl: Decimal | None
     event_rows: tuple[dict[str, Any], ...]
+    requested_start_date: date | None = None
+    effective_start_date: date | None = None
+    entry_close: Decimal | None = None
+    initial_capital: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -260,13 +264,6 @@ def build_direct_security_value_lane(
         raise ValuationInputError("A direct stock or ETF item is required.")
     if item.entry_close <= 0 or item.initial_capital <= 0:
         raise ValuationInputError("positive entry close and initial capital are required.")
-    frame = _prepare_history(history)
-    frame = frame.loc[frame["date"] >= pd.Timestamp(item.effective_start_date)].copy()
-    if frame.empty or frame.iloc[0]["date"].date() != item.effective_start_date:
-        raise EntryPriceUnavailableError(
-            f"No usable close exists on effective start {item.effective_start_date.isoformat()}."
-        )
-
     event_records = tuple(position_events)
     position_eligible = (
         item.source_type == "direct_security"
@@ -282,12 +279,28 @@ def build_direct_security_value_lane(
         if position_eligible
         else None
     )
+    initial_contract = projection.initial_contract if projection is not None else None
+    effective_start_date = (
+        initial_contract.effective_start_date
+        if initial_contract is not None
+        else item.effective_start_date
+    )
+    frame = _prepare_history(history)
+    frame = frame.loc[
+        frame["date"] >= pd.Timestamp(effective_start_date)
+    ].copy()
+    if frame.empty or frame.iloc[0]["date"].date() != effective_start_date:
+        raise EntryPriceUnavailableError(
+            f"No usable close exists on effective start {effective_start_date.isoformat()}."
+        )
     if projection is not None:
-        units = Decimal(projection.effective_initial_shares or 0)
+        units = Decimal(projection.initial_contract.initial_shares)
     else:
         units = _initial_units(item)
     initial_capital = (
-        units * item.entry_close if event_records else item.initial_capital
+        initial_contract.initial_capital
+        if initial_contract is not None
+        else item.initial_capital
     )
     if initial_capital <= 0:
         raise ValuationInputError("effective initial capital must be positive.")
@@ -502,11 +515,15 @@ def build_direct_security_value_lane(
             + cumulative_withdrawals
             - cumulative_contributions,
             event_rows=tuple(event_rows),
+            requested_start_date=projection.initial_contract.requested_start_date,
+            effective_start_date=projection.initial_contract.effective_start_date,
+            entry_close=projection.initial_contract.entry_close,
+            initial_capital=projection.initial_contract.initial_capital,
         )
     return ItemValueLane(
         monitoring_item_id=item.monitoring_item_id,
         source_ref=item.source_ref,
-        effective_start_date=item.effective_start_date,
+        effective_start_date=effective_start_date,
         latest_usable_date=curve.iloc[-1]["date"].date(),
         initial_capital=initial_capital,
         status=lane_status,

@@ -59,6 +59,9 @@ class PortfolioMonitoringDirectValuationTests(unittest.TestCase):
         quantity,
         price=None,
         fee="0",
+        requested_start_date=None,
+        effective_start_date=None,
+        reference_close=None,
     ):
         return PositionEventRecord(
             position_event_id=event_id,
@@ -71,13 +74,19 @@ class PortfolioMonitoringDirectValuationTests(unittest.TestCase):
             trade_date=date.fromisoformat(day),
             quantity=quantity,
             execution_price=Decimal(price) if price is not None else None,
-            reference_close=Decimal(price) if price is not None else None,
+            reference_close=(
+                Decimal(reference_close)
+                if reference_close is not None
+                else (Decimal(price) if price is not None else None)
+            ),
             execution_price_source=(
                 "db_close_default" if price is not None else None
             ),
             fee_usd=Decimal(fee),
             note="",
             command_id=f"command-{event_id}",
+            requested_start_date=requested_start_date,
+            effective_start_date=effective_start_date,
         )
 
     def test_no_event_lane_is_identical_for_implicit_and_explicit_empty_ledger(self) -> None:
@@ -137,6 +146,48 @@ class PortfolioMonitoringDirectValuationTests(unittest.TestCase):
             Decimal(str(lane.curve.iloc[-1]["total_value"])),
             Decimal("2200.0"),
         )
+
+    def test_initial_setting_correction_restarts_lane_from_resolved_contract(self) -> None:
+        valuation = _load_valuation()
+        item = self._item(
+            input_shares=30,
+            entry_close=Decimal("100"),
+            initial_capital=Decimal("3000"),
+            effective_start_date=date(2026, 7, 1),
+        )
+        frame = _history(
+            [
+                {"date": "2026-06-29", "close": 95, "adj_close": 95},
+                {"date": "2026-06-30", "close": 97, "adj_close": 97},
+                {"date": "2026-07-01", "close": 100, "adj_close": 100},
+            ]
+        )
+
+        lane = valuation.build_direct_security_value_lane(
+            item,
+            frame,
+            position_events=[
+                self._event(
+                    event_id="correct-v1",
+                    root_id="correct-root",
+                    order=1,
+                    effect="initial_quantity_correction",
+                    day="2026-06-29",
+                    quantity=40,
+                    requested_start_date=date(2026, 6, 28),
+                    effective_start_date=date(2026, 6, 29),
+                    reference_close="95",
+                )
+            ],
+        )
+
+        self.assertEqual(lane.effective_start_date, date(2026, 6, 29))
+        self.assertEqual(lane.initial_capital, Decimal("3800"))
+        self.assertEqual(lane.curve.iloc[0]["date"].date(), date(2026, 6, 29))
+        self.assertEqual(lane.position.requested_start_date, date(2026, 6, 28))
+        self.assertEqual(lane.position.effective_start_date, date(2026, 6, 29))
+        self.assertEqual(lane.position.entry_close, Decimal("95"))
+        self.assertEqual(lane.position.initial_capital, Decimal("3800"))
 
     def test_buy_and_partial_sell_adjust_cashflow_without_counting_flows_as_profit(self) -> None:
         valuation = _load_valuation()

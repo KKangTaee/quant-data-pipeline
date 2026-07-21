@@ -264,6 +264,26 @@ def _cashflow_at(
     return contributions, withdrawals, external_flow
 
 
+def _requested_start(
+    item: MonitoringItemRecord,
+    lane: ItemValueLane | None,
+) -> date:
+    if (
+        lane is not None
+        and lane.position is not None
+        and lane.position.requested_start_date is not None
+    ):
+        return lane.position.requested_start_date
+    return item.requested_start_date
+
+
+def _effective_start(
+    item: MonitoringItemRecord,
+    lane: ItemValueLane | None,
+) -> date:
+    return lane.effective_start_date if lane is not None else item.effective_start_date
+
+
 def align_group_value_lanes(
     items: Sequence[MonitoringItemRecord],
     lanes: Mapping[str, ItemValueLane | BaseException],
@@ -307,7 +327,16 @@ def align_group_value_lanes(
             if item.tracking_end_effective_date is not None
         )
         basis_date = max(fallback_dates) if fallback_dates else (
-            max((item.requested_start_date for item in ordered_items), default=None)
+            max(
+                (
+                    _requested_start(
+                        item,
+                        valid_lanes.get(item.monitoring_item_id),
+                    )
+                    for item in ordered_items
+                ),
+                default=None,
+            )
         )
 
     if basis_date is None or not ordered_items:
@@ -322,15 +351,20 @@ def align_group_value_lanes(
             history_item_count=len(ordered_items),
         )
 
-    start_date = min(item.requested_start_date for item in ordered_items)
+    start_date = min(
+        _requested_start(item, valid_lanes.get(item.monitoring_item_id))
+        for item in ordered_items
+    )
     timeline = {start_date, basis_date}
     for item in ordered_items:
-        timeline.add(item.requested_start_date)
-        if item.effective_start_date <= basis_date:
-            timeline.add(item.effective_start_date)
+        lane = valid_lanes.get(item.monitoring_item_id)
+        requested_start = _requested_start(item, lane)
+        effective_start = _effective_start(item, lane)
+        timeline.add(requested_start)
+        if effective_start <= basis_date:
+            timeline.add(effective_start)
         if item.tracking_end_effective_date and item.tracking_end_effective_date <= basis_date:
             timeline.add(item.tracking_end_effective_date)
-        lane = valid_lanes.get(item.monitoring_item_id)
         if lane is not None:
             frame = _normalized_lane_curve(lane)
             timeline.update(
@@ -513,6 +547,10 @@ def _project_selected_position(
         "reason": "개별주식 종목을 선택해 주세요.",
         "as_of_date": None,
         "current_value": None,
+        "requested_start_date": None,
+        "effective_start_date": None,
+        "entry_close": None,
+        "initial_capital": None,
         "effective_initial_shares": None,
         "current_shares": None,
         "gross_contributions": Decimal("0"),
@@ -562,6 +600,16 @@ def _project_selected_position(
         ),
         "as_of_date": lane.latest_usable_date.isoformat(),
         "current_value": latest_value,
+        "requested_start_date": (
+            lane.position.requested_start_date or selected.requested_start_date
+        ).isoformat(),
+        "effective_start_date": (
+            lane.position.effective_start_date or lane.effective_start_date
+        ).isoformat(),
+        "entry_close": lane.position.entry_close or selected.entry_close,
+        "initial_capital": (
+            lane.position.initial_capital or lane.initial_capital
+        ),
         "effective_initial_shares": lane.position.effective_initial_shares,
         "current_shares": lane.position.current_shares,
         "gross_contributions": lane.position.cumulative_contributions,

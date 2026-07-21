@@ -123,6 +123,10 @@ def _position_lane(item: MonitoringItemRecord) -> ItemValueLane:
                     "shares_after": Decimal("15"),
                 },
             ),
+            requested_start_date=date(2026, 7, 1),
+            effective_start_date=date(2026, 7, 1),
+            entry_close=Decimal("100"),
+            initial_capital=Decimal("1000"),
         ),
     )
 
@@ -195,6 +199,73 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
         self.assertEqual(result.metrics.pnl, Decimal("1000.0"))
         self.assertEqual(result.metrics.total_return, Decimal("0.05"))
 
+    def test_group_timeline_uses_the_corrected_initial_contract(self) -> None:
+        read_model = _load_read_model()
+        corrected = _item(
+            "corrected",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="3000",
+            funding_mode="fixed_shares",
+            input_shares=30,
+        )
+        later = _item(
+            "later",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+        )
+        corrected_curve = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2026-06-29", "2026-07-01"]),
+                "total_value": [3800.0, 4000.0],
+                "external_flow": [0.0, 0.0],
+                "cumulative_contributions": [3800.0, 3800.0],
+                "cumulative_withdrawals": [0.0, 0.0],
+                "flow_adjusted_index": [1.0, 4000 / 3800],
+                "data_status": ["active", "active"],
+            }
+        )
+        corrected_lane = ItemValueLane(
+            monitoring_item_id=corrected.monitoring_item_id,
+            source_ref=corrected.source_ref,
+            effective_start_date=date(2026, 6, 29),
+            latest_usable_date=date(2026, 7, 1),
+            initial_capital=Decimal("3800"),
+            status="active",
+            curve=corrected_curve,
+            review=CorporateActionReview(
+                "NOT_AVAILABLE", None, None, ("position events",)
+            ),
+            position=PositionLedgerSummary(
+                eligible=True,
+                effective_initial_shares=Decimal("40"),
+                current_shares=Decimal("40"),
+                cumulative_contributions=Decimal("3800"),
+                cumulative_withdrawals=Decimal("0"),
+                pnl=Decimal("200"),
+                event_rows=(),
+                requested_start_date=date(2026, 6, 28),
+                effective_start_date=date(2026, 6, 29),
+                entry_close=Decimal("95"),
+                initial_capital=Decimal("3800"),
+            ),
+        )
+
+        result = read_model.align_group_value_lanes(
+            [corrected, later],
+            {
+                corrected.monitoring_item_id: corrected_lane,
+                later.monitoring_item_id: _lane(
+                    later, [("2026-07-01", 1000.0)]
+                ),
+            },
+        )
+
+        self.assertEqual(result.curve.iloc[0]["date"].date(), date(2026, 6, 28))
+        self.assertEqual(result.curve.iloc[0]["total_value"], 4800.0)
+        self.assertEqual(result.metrics.invested_capital, Decimal("4800.0"))
+
     def test_workspace_projects_only_selected_eligible_position(self) -> None:
         read_model = _load_read_model()
         group = PortfolioGroupRecord("group-core", "Core", True)
@@ -242,6 +313,20 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
         )
         self.assertEqual(
             workspace["selected_position"]["current_value"], Decimal("1200.0")
+        )
+        self.assertEqual(
+            workspace["selected_position"]["requested_start_date"],
+            "2026-07-01",
+        )
+        self.assertEqual(
+            workspace["selected_position"]["effective_start_date"],
+            "2026-07-01",
+        )
+        self.assertEqual(
+            workspace["selected_position"]["entry_close"], Decimal("100")
+        )
+        self.assertEqual(
+            workspace["selected_position"]["initial_capital"], Decimal("1000")
         )
         self.assertEqual(
             workspace["selected_position"]["event_rows"][0]["position_effect"],

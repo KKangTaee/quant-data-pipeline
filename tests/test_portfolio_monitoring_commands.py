@@ -409,6 +409,150 @@ class PortfolioMonitoringCommandTests(unittest.TestCase):
         self.assertEqual(len(repository.position_events), 1)
         self.assertNotIn("correct-invalid", repository.commands)
 
+    def test_initial_correction_resolves_and_stores_the_new_start_contract(self) -> None:
+        commands, persistence, schemas = _load_modules()
+        from app.services.portfolio_monitoring.position_events import (
+            project_position_events,
+            validate_position_sequence,
+        )
+
+        repository = FakeRepository()
+        item = self._stored_direct_item(persistence, shares=30)
+        repository.items[item.monitoring_item_id] = item
+
+        def resolve_initial(current, requested, quantity):
+            self.assertEqual(current, item)
+            self.assertEqual(requested, date(2026, 6, 28))
+            self.assertEqual(quantity, 40)
+            return commands.EntryResolution(
+                effective_start_date=date(2026, 6, 29),
+                entry_close=Decimal("95"),
+                initial_capital=Decimal("3800"),
+            )
+
+        def validate_candidate(current, records):
+            projection = project_position_events(current, records)
+            validate_position_sequence(current, projection, split_factors={})
+
+        commands.execute_correct_initial_quantity(
+            repository,
+            self._command(
+                schemas,
+                "correct-start",
+                schemas.CommandType.CORRECT_INITIAL_QUANTITY,
+                target_id=item.monitoring_item_id,
+            ),
+            schemas.InitialQuantityCorrectionInput(
+                monitoring_item_id=item.monitoring_item_id,
+                quantity=40,
+                note="최초 설정 수정",
+                requested_start_date=date(2026, 6, 28),
+            ),
+            resolve_initial_entry=resolve_initial,
+            validate_candidate=validate_candidate,
+        )
+
+        saved = repository.position_events[-1]
+        self.assertEqual(saved.requested_start_date, date(2026, 6, 28))
+        self.assertEqual(saved.effective_start_date, date(2026, 6, 29))
+        self.assertEqual(saved.trade_date, date(2026, 6, 29))
+        self.assertEqual(saved.reference_close, Decimal("95"))
+        self.assertEqual(saved.quantity, 40)
+
+    def test_initial_correction_replaces_one_root_and_fingerprints_the_date(self) -> None:
+        commands, persistence, schemas = _load_modules()
+        repository = FakeRepository()
+        item = self._stored_direct_item(persistence, shares=30)
+        repository.items[item.monitoring_item_id] = item
+
+        def resolve_initial(current, requested, quantity):
+            return commands.EntryResolution(
+                effective_start_date=requested,
+                entry_close=Decimal("100"),
+                initial_capital=Decimal(quantity * 100),
+            )
+
+        def correction(command_id, requested, quantity):
+            return commands.execute_correct_initial_quantity(
+                repository,
+                self._command(
+                    schemas,
+                    command_id,
+                    schemas.CommandType.CORRECT_INITIAL_QUANTITY,
+                    target_id=item.monitoring_item_id,
+                ),
+                schemas.InitialQuantityCorrectionInput(
+                    monitoring_item_id=item.monitoring_item_id,
+                    quantity=quantity,
+                    requested_start_date=requested,
+                ),
+                resolve_initial_entry=resolve_initial,
+                validate_candidate=lambda current, records: None,
+            )
+
+        correction("correct-v1", date(2026, 7, 2), 35)
+        correction("correct-v2", date(2026, 7, 3), 40)
+
+        first, second = repository.position_events
+        self.assertEqual(second.root_event_id, first.root_event_id)
+        self.assertEqual(second.event_order, first.event_order)
+        self.assertEqual(second.supersedes_event_id, first.position_event_id)
+
+        with self.assertRaisesRegex(commands.CommandConflictError, "different request"):
+            correction("correct-v2", date(2026, 7, 4), 40)
+
+    def test_initial_correction_rejects_a_trade_before_the_new_effective_start(self) -> None:
+        commands, persistence, schemas = _load_modules()
+        from app.services.portfolio_monitoring.position_events import (
+            project_position_events,
+            validate_position_sequence,
+        )
+
+        repository = FakeRepository()
+        item = self._stored_direct_item(persistence, shares=30)
+        repository.items[item.monitoring_item_id] = item
+        repository.position_events = [
+            self._position_event(
+                persistence,
+                event_id="buy-v1",
+                root_id="buy-root",
+                effect="buy",
+                quantity=5,
+                trade_date=date(2026, 7, 9),
+            )
+        ]
+
+        def validate_candidate(current, records):
+            projection = project_position_events(current, records)
+            validate_position_sequence(current, projection, split_factors={})
+
+        with self.assertRaisesRegex(ValueError, "새 추적 시작일"):
+            commands.execute_correct_initial_quantity(
+                repository,
+                self._command(
+                    schemas,
+                    "correct-too-late",
+                    schemas.CommandType.CORRECT_INITIAL_QUANTITY,
+                    target_id=item.monitoring_item_id,
+                ),
+                schemas.InitialQuantityCorrectionInput(
+                    monitoring_item_id=item.monitoring_item_id,
+                    quantity=30,
+                    requested_start_date=date(2026, 7, 10),
+                ),
+                resolve_initial_entry=lambda current, requested, quantity: (
+                    commands.EntryResolution(
+                        effective_start_date=date(2026, 7, 10),
+                        entry_close=Decimal("100"),
+                        initial_capital=Decimal("3000"),
+                    )
+                ),
+                validate_candidate=validate_candidate,
+            )
+
+        self.assertEqual(len(repository.position_events), 1)
+        self.assertNotIn("correct-too-late", repository.commands)
+
     def test_replace_and_void_append_revisions_without_changing_root_order(self) -> None:
         commands, persistence, schemas = _load_modules()
         repository = FakeRepository()

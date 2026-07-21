@@ -41,6 +41,10 @@ from .schemas import (
 ACTIVE_ITEM_STATUSES = {"active", "data_review"}
 MAX_ACTIVE_ITEMS_PER_GROUP = 10
 ReferenceCloseResolver = Callable[[MonitoringItemRecord, date], Decimal]
+InitialEntryResolver = Callable[
+    [MonitoringItemRecord, date, int],
+    "EntryResolution",
+]
 CandidateValidator = Callable[
     [MonitoringItemRecord, list[PositionEventRecord]],
     None,
@@ -503,6 +507,8 @@ def _append_position_revision(
     expected_event_id: str | None,
     resolve_reference_close: ReferenceCloseResolver | None,
     validate_candidate: CandidateValidator,
+    requested_start_date: date | None = None,
+    resolve_initial_entry: InitialEntryResolver | None = None,
 ) -> CommandResult:
     """Append one immutable revision after locking and validating the full chain."""
 
@@ -512,7 +518,10 @@ def _append_position_revision(
         if item is None:
             raise CommandValidationError("Monitoring item not found.")
         assert_position_item_eligible(item)
-        if trade_date < item.effective_start_date:
+        if (
+            position_effect in {PositionEffect.BUY, PositionEffect.SELL}
+            and trade_date < item.effective_start_date
+        ):
             raise CommandValidationError("거래일은 추적 시작일보다 빠를 수 없습니다.")
         current = repository.list_position_events(
             item.monitoring_item_id,
@@ -543,9 +552,49 @@ def _append_position_revision(
             root_id = terminal.root_event_id
             supersedes = terminal.position_event_id
 
+        event_trade_date = trade_date
+        event_requested_start_date = None
+        event_effective_start_date = None
         reference_close = None
         price_source = None
-        if (
+        if position_effect == PositionEffect.INITIAL_QUANTITY_CORRECTION:
+            if quantity is None:
+                raise CommandValidationError("최초 수량이 필요합니다.")
+            requested = requested_start_date or item.requested_start_date
+            if resolve_initial_entry is None:
+                if requested != item.requested_start_date:
+                    raise CommandValidationError(
+                        "새 추적 시작일의 DB 종가를 확인할 수 없습니다."
+                    )
+                resolution = EntryResolution(
+                    effective_start_date=item.effective_start_date,
+                    entry_close=item.entry_close,
+                    initial_capital=Decimal(quantity) * item.entry_close,
+                )
+            else:
+                try:
+                    resolution = resolve_initial_entry(item, requested, quantity)
+                except Exception as exc:
+                    raise CommandValidationError(
+                        "새 추적 시작일의 DB 종가를 확인할 수 없습니다."
+                    ) from exc
+            entry_close = Decimal(str(resolution.entry_close))
+            initial_capital = Decimal(str(resolution.initial_capital))
+            if (
+                not isinstance(resolution.effective_start_date, date)
+                or resolution.effective_start_date < requested
+                or not entry_close.is_finite()
+                or entry_close <= 0
+                or initial_capital != Decimal(quantity) * entry_close
+            ):
+                raise CommandValidationError(
+                    "새 추적 시작일의 DB 종가를 확인할 수 없습니다."
+                )
+            event_trade_date = resolution.effective_start_date
+            event_requested_start_date = requested
+            event_effective_start_date = resolution.effective_start_date
+            reference_close = entry_close
+        elif (
             event_action != PositionEventAction.VOID
             and position_effect in {PositionEffect.BUY, PositionEffect.SELL}
         ):
@@ -570,7 +619,7 @@ def _append_position_revision(
             event_order=order,
             event_action=event_action.value,
             position_effect=position_effect.value,
-            trade_date=trade_date,
+            trade_date=event_trade_date,
             quantity=quantity,
             execution_price=execution_price,
             reference_close=reference_close,
@@ -578,6 +627,8 @@ def _append_position_revision(
             fee_usd=fee_usd,
             note=note,
             command_id=command.command_id,
+            requested_start_date=event_requested_start_date,
+            effective_start_date=event_effective_start_date,
         )
         validate_candidate(item, [*current, candidate])
         repository.insert_position_event(candidate)
@@ -689,6 +740,7 @@ def execute_correct_initial_quantity(
     value: InitialQuantityCorrectionInput,
     *,
     validate_candidate: CandidateValidator,
+    resolve_initial_entry: InitialEntryResolver | None = None,
 ) -> CommandResult:
     _assert_command_type(command, CommandType.CORRECT_INITIAL_QUANTITY)
     validated = validate_initial_quantity_correction_input(value)
@@ -728,4 +780,6 @@ def execute_correct_initial_quantity(
         expected_event_id=expected_event_id,
         resolve_reference_close=None,
         validate_candidate=validate_candidate,
+        requested_start_date=validated.requested_start_date,
+        resolve_initial_entry=resolve_initial_entry,
     )
