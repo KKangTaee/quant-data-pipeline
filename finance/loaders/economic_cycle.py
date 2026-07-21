@@ -12,6 +12,7 @@ from finance.economic_cycle_catalog import get_economic_cycle_catalog
 
 QueryFn = Callable[[str, str, tuple[Any, ...]], list[dict[str, Any]]]
 DB_META = "finance_meta"
+SNAPSHOT_RUN_KINDS = {"current", "historical_replay", "intramonth_nowcast"}
 
 
 def _date_value(value: object, *, field: str) -> date:
@@ -319,6 +320,53 @@ def load_latest_approved_cycle_artifact(
     return selected
 
 
+def load_cycle_model_artifact(
+    model_version: str,
+    *,
+    trained_through: str | date | None = None,
+    query_fn: QueryFn | None = None,
+) -> dict[str, object] | None:
+    """Load one exact persisted artifact without changing its publication state."""
+
+    resolved_version = str(model_version or "").strip()
+    if not resolved_version:
+        raise ValueError("model_version is required")
+    where = ["model_version = %s"]
+    params: list[object] = [resolved_version]
+    resolved_training = None
+    if trained_through is not None:
+        resolved_training = _date_value(trained_through, field="trained_through")
+        where.append("trained_through = %s")
+        params.append(resolved_training.isoformat())
+    sql = f"""
+    SELECT *
+    FROM economic_cycle_model_artifact
+    WHERE {' AND '.join(where)}
+    ORDER BY trained_through DESC, updated_at DESC
+    LIMIT 1
+    """
+    rows = _query(DB_META, sql, tuple(params), query_fn=query_fn)
+    eligible: list[dict[str, object]] = []
+    for raw in rows:
+        row = dict(raw)
+        if str(row.get("model_version")) != resolved_version:
+            continue
+        row_training = _date_value(row.get("trained_through"), field="trained_through")
+        if resolved_training is not None and row_training != resolved_training:
+            continue
+        row["trained_through"] = row_training.isoformat()
+        eligible.append(row)
+    if not eligible:
+        return None
+    return max(
+        eligible,
+        key=lambda row: (
+            str(row["trained_through"]),
+            _updated_sort_value(row.get("updated_at")),
+        ),
+    )
+
+
 def load_cycle_snapshot(
     *,
     as_of_date: str | date | None = None,
@@ -329,7 +377,7 @@ def load_cycle_snapshot(
     """Load one compact persisted snapshot without calculating or fetching."""
 
     resolved_kind = str(run_kind)
-    if resolved_kind not in {"current", "historical_replay"}:
+    if resolved_kind not in SNAPSHOT_RUN_KINDS:
         raise ValueError(f"Unsupported run_kind: {run_kind}")
     cutoff = _date_value(as_of_date or date.today(), field="as_of_date")
     where = ["run_kind = %s", "as_of_date <= %s"]

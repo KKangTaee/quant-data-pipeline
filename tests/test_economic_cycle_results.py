@@ -58,6 +58,10 @@ def test_economic_cycle_result_schemas_lock_business_keys_and_indexes() -> None:
     )
     assert "KEY ix_cycle_snapshot_date_status (as_of_date, status)" in snapshot_sql
     assert "nber_recession" in snapshot_sql
+    assert "'intramonth_nowcast'" in snapshot_sql
+    assert "baseline_as_of_date DATE NULL" in snapshot_sql
+    assert "source_collected_at DATETIME NULL" in snapshot_sql
+    assert "source_coverage_json LONGTEXT NULL" in snapshot_sql
 
 
 def test_model_artifact_and_snapshot_serializers_round_trip_vocabularies() -> None:
@@ -184,6 +188,57 @@ def test_result_upserts_reuse_artifact_and_snapshot_business_keys() -> None:
     assert len(connection.artifacts) == 1
     assert len(connection.snapshots) == 1
     assert all("ON DUPLICATE KEY UPDATE" in sql for sql in connection.sql)
+    stored_snapshot = next(iter(connection.snapshots.values()))
+    assert stored_snapshot["baseline_as_of_date"] is None
+    assert stored_snapshot["source_collected_at"] is None
+    assert stored_snapshot["source_coverage_json"] is None
+
+
+def test_exact_artifact_loader_accepts_limited_artifact() -> None:
+    loader = importlib.import_module("finance.loaders.economic_cycle")
+    captured: list[tuple[str, str, tuple[object, ...]]] = []
+
+    def query(database: str, sql: str, params: tuple[object, ...]):
+        captured.append((database, sql, params))
+        return [
+            {
+                "model_version": "cycle-limited",
+                "trained_through": "2026-05-31",
+                "publication_status": "LIMITED",
+            }
+        ]
+
+    artifact = loader.load_cycle_model_artifact(
+        "cycle-limited",
+        trained_through="2026-05-31",
+        query_fn=query,
+    )
+
+    assert artifact is not None
+    assert artifact["model_version"] == "cycle-limited"
+    assert artifact["publication_status"] == "LIMITED"
+    assert "publication_status = 'READY'" not in captured[0][1]
+    assert captured[0][2] == ("cycle-limited", "2026-05-31")
+
+
+def test_cycle_snapshot_loader_accepts_intramonth_run_kind() -> None:
+    loader = importlib.import_module("finance.loaders.economic_cycle")
+
+    loaded = loader.load_cycle_snapshot(
+        as_of_date="2026-07-21",
+        run_kind="intramonth_nowcast",
+        query_fn=lambda *_args: [
+            {
+                "as_of_date": "2026-07-21",
+                "run_kind": "intramonth_nowcast",
+                "model_version": "cycle-limited",
+            }
+        ],
+    )
+
+    assert loaded is not None
+    assert loaded["as_of_date"] == "2026-07-21"
+    assert loaded["run_kind"] == "intramonth_nowcast"
 
 
 def test_result_loaders_choose_approved_artifact_and_bounded_sorted_history() -> None:

@@ -998,9 +998,12 @@ ECONOMIC_CYCLE_SCHEMAS = {
 
           as_of_date DATE NOT NULL,
           model_version VARCHAR(128) NOT NULL,
-          run_kind ENUM('historical_replay','current') NOT NULL,
+          run_kind ENUM('historical_replay','current','intramonth_nowcast') NOT NULL,
           training_cutoff_date DATE NOT NULL,
           data_cutoff_date DATE NOT NULL,
+          baseline_as_of_date DATE NULL,
+          source_collected_at DATETIME NULL,
+          source_coverage_json LONGTEXT NULL,
           status ENUM('READY','LIMITED','ERROR') NOT NULL,
           current_phase ENUM('recovery','expansion','slowdown','recession') NULL,
           expected_transition VARCHAR(128) NULL,

@@ -199,21 +199,34 @@ def upsert_cycle_snapshots(
             schema = ECONOMIC_CYCLE_SCHEMAS[SNAPSHOT_TABLE]
             db.execute(schema)
             sync_table_schema(db, SNAPSHOT_TABLE, schema, DB_META)
+        normalized_rows = []
+        for row in rows:
+            normalized = dict(row)
+            normalized.setdefault("baseline_as_of_date", None)
+            normalized.setdefault("source_collected_at", None)
+            normalized.setdefault("source_coverage_json", None)
+            normalized_rows.append(normalized)
         sql = f"""
         INSERT INTO {SNAPSHOT_TABLE} (
           as_of_date, model_version, run_kind, training_cutoff_date,
-          data_cutoff_date, status, current_phase, expected_transition,
+          data_cutoff_date, baseline_as_of_date, source_collected_at,
+          source_coverage_json, status, current_phase, expected_transition,
           nber_recession, probabilities_json, forecast_path_json,
           factor_contributions_json, top_evidence_json, warnings_json
         ) VALUES (
           %(as_of_date)s, %(model_version)s, %(run_kind)s, %(training_cutoff_date)s,
-          %(data_cutoff_date)s, %(status)s, %(current_phase)s, %(expected_transition)s,
+          %(data_cutoff_date)s, %(baseline_as_of_date)s, %(source_collected_at)s,
+          %(source_coverage_json)s, %(status)s, %(current_phase)s, %(expected_transition)s,
           %(nber_recession)s, %(probabilities_json)s, %(forecast_path_json)s,
           %(factor_contributions_json)s, %(top_evidence_json)s, %(warnings_json)s
         )
         ON DUPLICATE KEY UPDATE
           training_cutoff_date = VALUES(training_cutoff_date),
-          data_cutoff_date = VALUES(data_cutoff_date), status = VALUES(status),
+          data_cutoff_date = VALUES(data_cutoff_date),
+          baseline_as_of_date = VALUES(baseline_as_of_date),
+          source_collected_at = VALUES(source_collected_at),
+          source_coverage_json = VALUES(source_coverage_json),
+          status = VALUES(status),
           current_phase = VALUES(current_phase),
           expected_transition = VALUES(expected_transition),
           nber_recession = VALUES(nber_recession),
@@ -223,8 +236,8 @@ def upsert_cycle_snapshots(
           top_evidence_json = VALUES(top_evidence_json),
           warnings_json = VALUES(warnings_json)
         """
-        db.executemany(sql, rows)
-        return len(rows)
+        db.executemany(sql, normalized_rows)
+        return len(normalized_rows)
     finally:
         if owns_connection:
             db.close()
