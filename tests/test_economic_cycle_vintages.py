@@ -810,6 +810,31 @@ def test_as_of_loader_query_is_parameterized_and_bounded() -> None:
     )
 
 
+def test_series_coverage_exposes_latest_collection_time_without_raw_rows() -> None:
+    module = _load_vintage_loader_module()
+    fixture = [
+        {
+            **_revision_fixture()[0],
+            "realtime_end": "9999-12-31",
+            "collected_at": "2026-07-16 09:00:00",
+        },
+        {
+            **_revision_fixture()[0],
+            "series_id": "INDPRO",
+            "realtime_end": "9999-12-31",
+            "collected_at": "2026-07-16 10:02:56",
+        },
+    ]
+
+    coverage = module.load_economic_cycle_series_coverage(
+        as_of_date="2026-07-21",
+        query_fn=lambda *_args: fixture,
+    )
+
+    assert coverage["source_collected_at"] == "2026-07-16 10:02:56"
+    assert "raw_rows" not in coverage
+
+
 def test_history_loader_returns_all_intervals_that_can_affect_requested_origins() -> None:
     module = _load_vintage_loader_module()
     captured: dict[str, object] = {}

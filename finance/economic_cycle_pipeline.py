@@ -41,6 +41,9 @@ from finance.economic_cycle_validation import (
     run_rolling_origin_validation,
 )
 from finance.loaders.economic_cycle import (
+    load_cycle_model_artifact,
+    load_cycle_snapshot,
+    load_economic_cycle_series_coverage,
     load_economic_cycle_vintage_history,
     load_economic_cycle_vintages,
     load_latest_approved_cycle_artifact,
@@ -141,11 +144,21 @@ class EconomicCyclePipelineLoader:
             ].reset_index(drop=True).copy()
         return self.prime_panel(cutoff)
 
-    def prime_panel(self, cutoff: str | date) -> pd.DataFrame:
+    def prime_panel(
+        self,
+        cutoff: str | date,
+        *,
+        extra_origins: Sequence[str | date] = (),
+    ) -> pd.DataFrame:
         """Build one bounded PIT panel and reuse safe prefixes during replay."""
 
         resolved_cutoff = _as_date(cutoff, field="cutoff")
-        origins = month_end_origins(self.history_start, resolved_cutoff)
+        origins = list(month_end_origins(self.history_start, resolved_cutoff))
+        for origin in extra_origins:
+            resolved_origin = _as_date(origin, field="extra_origin")
+            if resolved_origin <= resolved_cutoff and resolved_origin not in origins:
+                origins.append(resolved_origin)
+        origins.sort()
         rows = load_economic_cycle_vintage_history(
             [item.series_id for item in get_economic_cycle_catalog()],
             start_date=self.history_start,
@@ -187,6 +200,8 @@ class EconomicCyclePipelineLoader:
         as_of_date: str | date,
         model_version: str | None = None,
     ) -> dict[str, object] | None:
+        if model_version is not None:
+            return load_cycle_model_artifact(str(model_version))
         row = load_latest_approved_cycle_artifact(as_of_date=as_of_date)
         if row is None:
             return None
@@ -195,6 +210,19 @@ class EconomicCyclePipelineLoader:
         ):
             return None
         return row
+
+    def load_snapshot(
+        self,
+        *,
+        as_of_date: str | date,
+        run_kind: str = "current",
+    ) -> dict[str, object] | None:
+        return load_cycle_snapshot(as_of_date=as_of_date, run_kind=run_kind)
+
+    def load_source_coverage(self, as_of_date: str | date) -> dict[str, object]:
+        return load_economic_cycle_series_coverage(
+            as_of_date=_as_date(as_of_date, field="as_of_date")
+        )
 
 
 class EconomicCyclePipelineWriter:
@@ -439,6 +467,9 @@ def _snapshot_row(
     artifact_row: Mapping[str, object],
     run_kind: str,
     feature_row: Mapping[str, object],
+    baseline_as_of_date: str | date | None = None,
+    source_collected_at: object | None = None,
+    source_coverage: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     horizon_zero = next(
         (item for item in snapshot.horizons if item.horizon_months == 0), None
@@ -449,6 +480,15 @@ def _snapshot_row(
         "run_kind": run_kind,
         "training_cutoff_date": str(artifact_row.get("trained_through")),
         "data_cutoff_date": snapshot.as_of_date.isoformat(),
+        "baseline_as_of_date": (
+            _as_date(baseline_as_of_date, field="baseline_as_of_date").isoformat()
+            if baseline_as_of_date is not None
+            else None
+        ),
+        "source_collected_at": source_collected_at,
+        "source_coverage_json": (
+            _canonical_json(source_coverage) if source_coverage is not None else None
+        ),
         "status": snapshot.status,
         "current_phase": horizon_zero.dominant_phase if horizon_zero else None,
         "expected_transition": snapshot.expected_transition,
@@ -474,10 +514,14 @@ def materialize_economic_cycle_snapshot(
     writer: object | None = None,
     artifact_row: Mapping[str, object] | None = None,
     preloaded_vintage_rows: Sequence[Mapping[str, object]] | None = None,
+    baseline_as_of_date: str | date | None = None,
+    source_collected_at: object | None = None,
+    source_coverage: Mapping[str, object] | None = None,
+    require_h0: bool = False,
 ) -> CycleSnapshot:
     """Materialize estimates while preserving each horizon's validation state."""
 
-    if run_kind not in {"current", "historical_replay"}:
+    if run_kind not in {"current", "historical_replay", "intramonth_nowcast"}:
         raise ValueError(f"Unsupported run_kind: {run_kind}")
     origin = _as_date(as_of_date, field="as_of_date")
     resolved_loader = loader or EconomicCyclePipelineLoader()
@@ -494,7 +538,7 @@ def materialize_economic_cycle_snapshot(
         )
     )
     if not selected_row:
-        raise LookupError(f"No approved economic-cycle artifact for {origin}")
+        raise LookupError(f"No persisted economic-cycle artifact for {origin}")
     resolved_model_version = str(selected_row["model_version"])
     artifacts = _decode_artifact_bundle(selected_row)
     statuses = json.loads(str(selected_row.get("publication_status_json") or "{}"))
@@ -628,17 +672,133 @@ def materialize_economic_cycle_snapshot(
         warnings=tuple(warnings),
         expected_transition=expected_transition,
     )
+    if require_h0 and snapshot.horizons[0].probabilities is None:
+        raise LookupError(f"No usable intramonth h0 estimate for {origin}")
     row = _snapshot_row(
         snapshot,
         artifact_row=selected_row,
         run_kind=run_kind,
         feature_row=feature_row,
+        baseline_as_of_date=baseline_as_of_date,
+        source_collected_at=source_collected_at,
+        source_coverage=source_coverage,
     )
     if callable(resolved_writer) and not hasattr(resolved_writer, "upsert_snapshot"):
         resolved_writer(row)
     else:
         getattr(resolved_writer, "upsert_snapshot")(row)
     return snapshot
+
+
+def materialize_economic_cycle_intramonth_snapshot(
+    *,
+    as_of_date: str | date,
+    baseline_snapshot: Mapping[str, object] | None = None,
+    loader: object | None = None,
+    writer: object | None = None,
+    source_coverage: Mapping[str, object] | None = None,
+) -> CycleSnapshot:
+    """Append one provisional date-specific estimate from the latest closed month."""
+
+    origin = _as_date(as_of_date, field="as_of_date")
+    closed_month_end = (pd.Timestamp(origin) - pd.offsets.MonthEnd(1)).date()
+    resolved_loader = loader or EconomicCyclePipelineLoader()
+    resolved_writer = writer or EconomicCyclePipelineWriter()
+    baseline = (
+        dict(baseline_snapshot)
+        if baseline_snapshot is not None
+        else getattr(resolved_loader, "load_snapshot")(
+            as_of_date=closed_month_end,
+            run_kind="current",
+        )
+    )
+    if not baseline:
+        raise LookupError(f"No closed-month baseline for {closed_month_end}")
+    baseline_date = _as_date(baseline.get("as_of_date"), field="baseline_as_of_date")
+    if baseline_date != closed_month_end:
+        raise LookupError(f"No exact closed-month baseline for {closed_month_end}")
+    model_version = str(baseline.get("model_version") or "").strip()
+    if not model_version:
+        raise LookupError(
+            f"Closed-month baseline has no model version: {closed_month_end}"
+        )
+
+    if hasattr(resolved_loader, "prime_panel"):
+        getattr(resolved_loader, "prime_panel")(
+            origin,
+            extra_origins=(origin,),
+        )
+    coverage = (
+        dict(source_coverage)
+        if source_coverage is not None
+        else dict(getattr(resolved_loader, "load_source_coverage")(origin))
+    )
+    return materialize_economic_cycle_snapshot(
+        as_of_date=origin,
+        model_version=model_version,
+        run_kind="intramonth_nowcast",
+        loader=resolved_loader,
+        writer=resolved_writer,
+        baseline_as_of_date=baseline_date,
+        source_collected_at=coverage.get("source_collected_at"),
+        source_coverage=coverage,
+        require_h0=True,
+    )
+
+
+def rollover_closed_economic_cycle_month(
+    *,
+    as_of_date: str | date,
+    loader: object | None = None,
+    writer: object | None = None,
+    snapshot_loader: Callable[..., Mapping[str, object] | None] = load_cycle_snapshot,
+    trainer: Callable[..., dict[str, object]] = train_validate_economic_cycle_model,
+    materializer: Callable[..., object] = materialize_economic_cycle_snapshot,
+) -> dict[str, object]:
+    """Append the latest fully closed month when its canonical row is absent."""
+
+    origin = _as_date(as_of_date, field="as_of_date")
+    closed_month_end = (pd.Timestamp(origin) - pd.offsets.MonthEnd(1)).date()
+    existing = snapshot_loader(
+        as_of_date=closed_month_end,
+        run_kind="current",
+    )
+    if (
+        existing
+        and _as_date(existing.get("as_of_date"), field="as_of_date")
+        == closed_month_end
+    ):
+        return {
+            "status": "current",
+            "as_of_date": closed_month_end.isoformat(),
+            "rows_written": 0,
+        }
+
+    resolved_loader = loader or EconomicCyclePipelineLoader()
+    resolved_writer = writer or EconomicCyclePipelineWriter()
+    if hasattr(resolved_loader, "prime_panel"):
+        getattr(resolved_loader, "prime_panel")(closed_month_end)
+    training_cutoff = (
+        pd.Timestamp(closed_month_end) - pd.offsets.MonthEnd(1)
+    ).date()
+    training = trainer(
+        trained_through=training_cutoff,
+        loader=resolved_loader,
+        writer=resolved_writer,
+    )
+    materializer(
+        as_of_date=closed_month_end,
+        model_version=str(training["model_version"]),
+        run_kind="current",
+        loader=resolved_loader,
+        writer=resolved_writer,
+        artifact_row=training["artifact_row"],
+    )
+    return {
+        "status": "created",
+        "as_of_date": closed_month_end.isoformat(),
+        "rows_written": 1,
+    }
 
 
 def replay_economic_cycle_history(

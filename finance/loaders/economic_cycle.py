@@ -174,7 +174,7 @@ def load_economic_cycle_vintage_history(
     sql = f"""
     SELECT
       series_id, observation_date, realtime_start, realtime_end,
-      source, value, coverage_status, updated_at
+      source, value, coverage_status, collected_at, updated_at
     FROM macro_series_vintage_observation
     WHERE series_id IN ({placeholders})
       AND observation_date >= %s
@@ -275,10 +275,16 @@ def load_economic_cycle_series_coverage(
                 "staleness_days": (as_of - observation).days,
             }
         )
+    collected_values = [
+        _updated_sort_value(row.get("collected_at"))
+        for row in rows
+        if row.get("collected_at") not in (None, "")
+    ]
     return {
         "as_of_date": as_of.isoformat(),
         "requested_series": len(series_ids),
         "available_series": len(latest),
+        "source_collected_at": max(collected_values) if collected_values else None,
         "series": items,
     }
 

@@ -372,6 +372,227 @@ def test_default_loader_builds_and_reuses_one_bulk_pit_panel() -> None:
     ]
 
 
+def test_default_loader_adds_only_explicit_partial_origin() -> None:
+    module = _load_module()
+    loader = module.EconomicCyclePipelineLoader(history_start=date(2020, 1, 31))
+    source_rows = [
+        {
+            "series_id": "PAYEMS",
+            "observation_date": "2020-01-01",
+            "realtime_start": "2020-01-15",
+            "realtime_end": "9999-12-31",
+            "value": 100.0,
+            "source": "fred",
+        }
+    ]
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            module,
+            "load_economic_cycle_vintage_history",
+            lambda *_args, **_kwargs: source_rows,
+        )
+        panel = loader.prime_panel(
+            date(2020, 3, 15),
+            extra_origins=[date(2020, 3, 15)],
+        )
+
+    assert panel["forecast_origin"].dt.date.tolist() == [
+        date(2020, 1, 31),
+        date(2020, 2, 29),
+        date(2020, 3, 15),
+    ]
+
+
+def test_default_loader_uses_exact_artifact_and_compact_source_coverage() -> None:
+    module = _load_module()
+    loader = module.EconomicCyclePipelineLoader()
+    calls: list[tuple[str, object]] = []
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            module,
+            "load_cycle_model_artifact",
+            lambda version: calls.append(("artifact", version))
+            or {"model_version": version, "publication_status": "LIMITED"},
+        )
+        monkeypatch.setattr(
+            module,
+            "load_economic_cycle_series_coverage",
+            lambda *, as_of_date: calls.append(("coverage", as_of_date))
+            or {"as_of_date": str(as_of_date), "available_series": 17},
+        )
+        artifact = loader.load_artifact(
+            as_of_date="2026-07-21",
+            model_version="cycle-limited",
+        )
+        coverage = loader.load_source_coverage("2026-07-21")
+
+    assert artifact == {
+        "model_version": "cycle-limited",
+        "publication_status": "LIMITED",
+    }
+    assert coverage["available_series"] == 17
+    assert calls == [
+        ("artifact", "cycle-limited"),
+        ("coverage", date(2026, 7, 21)),
+    ]
+
+
+def test_intramonth_materialization_writes_separate_row_and_preserves_baseline() -> None:
+    module = _load_module()
+    panel, labels = _panel()
+    writer = Writer()
+    training = module.train_validate_economic_cycle_model(
+        trained_through="2002-06-30",
+        loader=TrainingLoader(panel, labels),
+        writer=writer,
+        validator=lambda *_args, **_kwargs: ValidationReport(
+            horizons={horizon: _horizon_validation() for horizon in (0, 1, 2)},
+            predictions=(),
+        ),
+    )
+    monthly_key = ("2002-07-31", training["model_version"], "current")
+    writer.snapshots[monthly_key] = {"immutable": True}
+
+    class Loader:
+        def __init__(self) -> None:
+            self.primed: list[tuple[date, tuple[date, ...]]] = []
+            self.artifact_calls: list[dict[str, object]] = []
+
+        def prime_panel(self, cutoff, *, extra_origins=()):
+            self.primed.append((cutoff, tuple(extra_origins)))
+            return panel
+
+        def load_artifact(self, **kwargs):
+            self.artifact_calls.append(kwargs)
+            return training["artifact_row"]
+
+        def load_prediction_data(self, _as_of_date):
+            return panel.iloc[-1].to_dict()
+
+    loader = Loader()
+    snapshot = module.materialize_economic_cycle_intramonth_snapshot(
+        as_of_date="2002-08-15",
+        baseline_snapshot={
+            "as_of_date": "2002-07-31",
+            "model_version": training["model_version"],
+            "training_cutoff_date": "2002-06-30",
+        },
+        loader=loader,
+        writer=writer,
+        source_coverage={
+            "source_collected_at": "2002-08-15 10:00:00",
+            "available_series": 17,
+            "series": [],
+        },
+    )
+
+    intramonth_key = ("2002-08-15", training["model_version"], "intramonth_nowcast")
+    row = writer.snapshots[intramonth_key]
+    assert snapshot.horizons[0].probabilities is not None
+    assert writer.snapshots[monthly_key] == {"immutable": True}
+    assert row["baseline_as_of_date"] == "2002-07-31"
+    assert row["source_collected_at"] == "2002-08-15 10:00:00"
+    assert json.loads(row["source_coverage_json"])["available_series"] == 17
+    assert loader.primed == [(date(2002, 8, 15), (date(2002, 8, 15),))]
+    assert loader.artifact_calls[0]["model_version"] == training["model_version"]
+
+
+def test_intramonth_unusable_h0_does_not_write() -> None:
+    module = _load_module()
+    writer = Writer()
+
+    class Loader:
+        def prime_panel(self, *_args, **_kwargs):
+            return pd.DataFrame()
+
+        def load_artifact(self, **_kwargs):
+            return {
+                "model_version": "unusable-v1",
+                "trained_through": "2002-06-30",
+                "parameters_json": '{"horizons":{}}',
+                "publication_status_json": "{}",
+            }
+
+        def load_prediction_data(self, _as_of_date):
+            return {"activity_score": 0.0}
+
+    with pytest.raises(LookupError, match="intramonth h0"):
+        module.materialize_economic_cycle_intramonth_snapshot(
+            as_of_date="2002-08-15",
+            baseline_snapshot={
+                "as_of_date": "2002-07-31",
+                "model_version": "unusable-v1",
+            },
+            loader=Loader(),
+            writer=writer,
+            source_coverage={"series": []},
+        )
+
+    assert writer.snapshots == {}
+
+
+def test_closed_month_rollover_appends_once_and_never_rolls_open_month() -> None:
+    module = _load_module()
+    existing: dict[str, dict[str, object]] = {}
+    trained: list[str] = []
+    materialized: list[dict[str, object]] = []
+
+    def snapshot_loader(*, as_of_date, **_kwargs):
+        return existing.get(str(as_of_date))
+
+    def trainer(*, trained_through, **_kwargs):
+        trained.append(str(trained_through))
+        return {
+            "model_version": "rollover-v1",
+            "artifact_row": {
+                "model_version": "rollover-v1",
+                "trained_through": str(trained_through),
+            },
+        }
+
+    def materializer(**kwargs):
+        materialized.append(kwargs)
+        closed = str(kwargs["as_of_date"])
+        existing[closed] = {"as_of_date": closed, "run_kind": "current"}
+        return type("Snapshot", (), {"status": "LIMITED"})()
+
+    first = module.rollover_closed_economic_cycle_month(
+        as_of_date="2026-08-03",
+        loader=object(),
+        writer=object(),
+        snapshot_loader=snapshot_loader,
+        trainer=trainer,
+        materializer=materializer,
+    )
+    retry = module.rollover_closed_economic_cycle_month(
+        as_of_date="2026-08-03",
+        loader=object(),
+        writer=object(),
+        snapshot_loader=snapshot_loader,
+        trainer=trainer,
+        materializer=materializer,
+    )
+    month_end = module.rollover_closed_economic_cycle_month(
+        as_of_date="2026-07-31",
+        loader=object(),
+        writer=object(),
+        snapshot_loader=lambda **_kwargs: {
+            "as_of_date": "2026-06-30",
+            "run_kind": "current",
+        },
+        trainer=trainer,
+        materializer=materializer,
+    )
+
+    assert first == {"status": "created", "as_of_date": "2026-07-31", "rows_written": 1}
+    assert retry == {"status": "current", "as_of_date": "2026-07-31", "rows_written": 0}
+    assert month_end == {"status": "current", "as_of_date": "2026-06-30", "rows_written": 0}
+    assert trained == ["2026-06-30"]
+    assert materialized[0]["as_of_date"] == date(2026, 7, 31)
+
+
 def test_economic_cycle_jobs_delegate_without_registering_a_schedule() -> None:
     jobs = importlib.import_module("app.jobs.ingestion_jobs")
     collected: list[dict[str, object]] = []
