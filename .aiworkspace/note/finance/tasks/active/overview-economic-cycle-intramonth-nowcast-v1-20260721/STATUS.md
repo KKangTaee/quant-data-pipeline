@@ -1,6 +1,6 @@
 # Overview Economic Cycle Intramonth Nowcast V1 Status
 
-Status: Design approved — implementation pending
+Status: Implementation plan complete — execution pending
 Last Updated: 2026-07-21
 
 | Stage | State |
@@ -15,4 +15,4 @@ Last Updated: 2026-07-21
 
 - 과거 월말 데이터 불변과 날짜별 별도 월중 저장을 사용자와 확정했다.
 - 자동 갱신은 매 평일 한 번, 실패 시 last-good 유지로 확정했다.
-- 전체 roadmap 현재 구현 진척은 `0/4차`; 다음은 상세 implementation plan 승인이다.
+- 전체 roadmap 현재 구현 진척은 `0/4차`; 상세 implementation plan을 완료했고 다음은 1차 TDD 실행이다.

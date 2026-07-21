@@ -30,4 +30,4 @@ Last Updated: 2026-07-21
 ## Authoritative Documents
 
 - Design: `docs/superpowers/specs/2026-07-21-economic-cycle-intramonth-nowcast-design.md`
-- Implementation plan: design review 승인 후 작성
+- Implementation plan: `docs/superpowers/plans/2026-07-21-economic-cycle-intramonth-nowcast.md`

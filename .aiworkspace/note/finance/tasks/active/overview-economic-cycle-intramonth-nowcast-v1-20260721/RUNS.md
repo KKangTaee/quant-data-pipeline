@@ -8,3 +8,4 @@ Last Updated: 2026-07-21
 - Confirmed the UI reads persisted compact rows and the current full vintage collector is not incremental.
 - Design approved: immutable month-end rows, separate daily intramonth rows, weekday automation, last-good failure policy.
 - Spec self-review fixed path naming, clarified closed-month rollover, and scoped immutability checks to pre-existing month-end dates; placeholder and ambiguity scans are clean.
+- Wrote the eight-task TDD implementation plan covering persistence, incremental collection, partial-origin materialization, weekday automation, service, React, actual DB verification, Browser QA, and docs closeout.
