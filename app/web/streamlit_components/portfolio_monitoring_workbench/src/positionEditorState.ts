@@ -118,14 +118,23 @@ export function changeTradeDate(
 
 export function validatePositionEditorDraft(
   draft: PositionEditorDraft,
-  context: { currentShares: number | null },
+  context: {
+    currentShares: number | null;
+    initialEntryReady?: boolean;
+  },
 ): string | null {
   const quantity = Number(draft.quantity);
   if (!Number.isInteger(quantity) || quantity < 1) {
     return "수량은 1주 이상의 정수여야 합니다.";
   }
   if (draft.note.length > 500) return "메모는 500자 이하여야 합니다.";
-  if (draft.mode === "correct_initial") return null;
+  if (draft.mode === "correct_initial") {
+    if (!draft.tradeDate) return "새 추적 시작일을 선택해 주세요.";
+    if (!context.initialEntryReady) {
+      return "새 적용일과 종가를 확인해 주세요.";
+    }
+    return null;
+  }
   if (!draft.tradeDate) return "거래일을 선택해 주세요.";
   const price = Number(draft.executionPrice);
   if (!Number.isFinite(price) || price <= 0) return "체결가는 0보다 커야 합니다.";
@@ -156,6 +165,7 @@ export function buildPositionCommandEvent(
       id: "correct_initial_quantity",
       command_id: draft.commandId,
       monitoring_item_id: monitoringItemId,
+      requested_start_date: draft.tradeDate,
       quantity: Number(draft.quantity),
       note: draft.note,
     };

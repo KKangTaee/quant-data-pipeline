@@ -866,6 +866,7 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
                       <PositionLedgerPanel
                         position={workspace.selected_position}
                         closeProjection={workspace.position_trade_close ?? null}
+                        initialProjection={workspace.initial_position_entry ?? null}
                         recoveryState={workspace.position_editor_state}
                         latestCommand={latestCommand ?? null}
                         emit={emit}

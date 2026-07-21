@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import unittest
 from datetime import date
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import pandas as pd
 
 from app.services.portfolio_monitoring.commands import CommandResult
+from app.services.portfolio_monitoring.persistence import (
+    MonitoringItemRecord,
+    PositionEventRecord,
+)
 from app.services.portfolio_monitoring.schemas import CommandStatus
 
 
@@ -300,6 +305,118 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
                 page._load_exact_position_trade_close(
                     item, date(2026, 7, 17)
                 )
+
+    def test_initial_entry_lookup_resolves_requested_to_effective_market_date(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        frame = pd.DataFrame(
+            [
+                {"date": "2026-06-29", "close": 95},
+                {"date": "2026-06-30", "close": 97},
+            ]
+        )
+        item = SimpleNamespace(source_ref="AMD")
+        with patch.object(page, "load_price_history", return_value=frame):
+            result = page._resolve_initial_position_entry(
+                item,
+                date(2026, 6, 28),
+                40,
+            )
+
+        self.assertEqual(result.effective_start_date, date(2026, 6, 29))
+        self.assertEqual(result.entry_close, Decimal("95"))
+        self.assertEqual(result.initial_capital, Decimal("3800"))
+
+    def test_initial_entry_lookup_preserves_correction_editor_state(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        services = self._services()
+        page._dispatch_portfolio_monitoring_event(
+            {
+                "id": "lookup_initial_position_entry",
+                "monitoring_item_id": "item-amd",
+                "requested_start_date": "2026-06-28",
+                "quantity": 40,
+                "position_editor_state": {
+                    "open": True,
+                    "mode": "correction",
+                    "position_effect": "buy",
+                    "trade_date": "2026-06-28",
+                    "quantity": "40",
+                    "execution_price": "",
+                    "price_mode": "awaiting_close",
+                    "fee_usd": "0",
+                    "note": "최초 설정 수정",
+                    "root_event_id": "",
+                    "expected_event_id": "",
+                    "unexpected": "drop",
+                },
+            },
+            services,
+        )
+
+        self.assertEqual(
+            services.session_state[
+                "portfolio_monitoring_initial_requested_start_date"
+            ],
+            "2026-06-28",
+        )
+        self.assertEqual(
+            services.session_state["portfolio_monitoring_initial_quantity"],
+            40,
+        )
+        recovered = services.session_state[
+            "portfolio_monitoring_position_editor_state"
+        ]
+        self.assertEqual(recovered["mode"], "correction")
+        self.assertEqual(recovered["trade_date"], "2026-06-28")
+        self.assertNotIn("unexpected", recovered)
+
+    def test_corrected_contract_controls_position_history_start(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        item = MonitoringItemRecord(
+            monitoring_item_id="item-amd",
+            portfolio_group_id="group-core",
+            source_type="direct_security",
+            source_ref="AMD",
+            instrument_kind="stock",
+            requested_start_date=date(2026, 7, 1),
+            effective_start_date=date(2026, 7, 1),
+            funding_mode="fixed_shares",
+            input_notional=None,
+            input_shares=30,
+            entry_close=Decimal("100"),
+            initial_capital=Decimal("3000"),
+        )
+        correction = PositionEventRecord(
+            position_event_id="correct-v1",
+            root_event_id="correct-root",
+            supersedes_event_id=None,
+            monitoring_item_id=item.monitoring_item_id,
+            event_order=1,
+            event_action="create",
+            position_effect="initial_quantity_correction",
+            trade_date=date(2026, 6, 29),
+            quantity=40,
+            execution_price=None,
+            reference_close=Decimal("95"),
+            execution_price_source=None,
+            fee_usd=Decimal("0"),
+            note="",
+            command_id="correct-command",
+            requested_start_date=date(2026, 6, 28),
+            effective_start_date=date(2026, 6, 29),
+        )
+
+        self.assertEqual(
+            page._effective_position_history_start(item, [correction]),
+            date(2026, 6, 29),
+        )
+        self.assertEqual(
+            page._effective_position_history_start(item, []),
+            date(2026, 7, 1),
+        )
 
     def test_dispatches_all_position_commands_once(self) -> None:
         from app.web import final_selected_portfolio_dashboard as page

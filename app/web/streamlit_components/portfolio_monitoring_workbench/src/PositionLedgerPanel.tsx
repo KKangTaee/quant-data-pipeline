@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type {
   CommandProjection,
+  InitialPositionEntryProjection,
   PositionEditorRecoveryState,
   PositionEventRow,
   PositionTradeCloseProjection,
@@ -22,6 +23,7 @@ import type { PositionEditorDraft } from "./positionEditorState";
 type Props = {
   position: SelectedPositionProjection;
   closeProjection: PositionTradeCloseProjection | null;
+  initialProjection: InitialPositionEntryProjection | null;
   recoveryState: PositionEditorRecoveryState | null | undefined;
   latestCommand: CommandProjection | null;
   emit: (event: Record<string, unknown>) => void;
@@ -54,7 +56,7 @@ function percent(value: number | null) {
 function effectLabel(effect: PositionEventRow["position_effect"]) {
   if (effect === "buy") return "추가매수";
   if (effect === "sell") return "일부매도";
-  return "최초 수량 정정";
+  return "최초 설정 정정";
 }
 
 function statusLabel(status: PositionEventRow["status"]) {
@@ -66,6 +68,7 @@ function statusLabel(status: PositionEventRow["status"]) {
 export function PositionLedgerPanel({
   position,
   closeProjection,
+  initialProjection,
   recoveryState,
   latestCommand,
   emit,
@@ -97,8 +100,17 @@ export function PositionLedgerPanel({
   if (!position.monitoring_item_id) return null;
   const itemId = position.monitoring_item_id;
   const currentShares = position.current_shares;
+  const correctionQuantity = Number(draft?.quantity);
+  const initialEntryReady = draft?.mode === "correct_initial"
+    && initialProjection?.status === "READY"
+    && initialProjection.monitoring_item_id === itemId
+    && initialProjection.requested_start_date === draft.tradeDate
+    && initialProjection.quantity === correctionQuantity;
   const validation = draft
-    ? validatePositionEditorDraft(draft, { currentShares })
+    ? validatePositionEditorDraft(draft, {
+      currentShares,
+      initialEntryReady,
+    })
     : null;
   const sellAfter = draft?.mode === "record"
     && draft.positionEffect === "sell"
@@ -107,12 +119,25 @@ export function PositionLedgerPanel({
     ? currentShares - Number(draft.quantity)
     : null;
 
+  const requestInitialEntry = (next: PositionEditorDraft) => {
+    setDraft(next);
+    const quantity = Number(next.quantity);
+    if (!next.tradeDate || !Number.isInteger(quantity) || quantity < 1) return;
+    emit({
+      id: "lookup_initial_position_entry",
+      monitoring_item_id: itemId,
+      requested_start_date: next.tradeDate,
+      quantity,
+      position_editor_state: buildPositionEditorRecovery(next),
+    });
+  };
   const openCorrection = () => {
     const next = createPositionEditorDraft(
       "correct_initial", "buy", commandId(),
     );
-    setDraft({
+    requestInitialEntry({
       ...next,
+      tradeDate: position.requested_start_date ?? "",
       quantity: String(position.effective_initial_shares ?? ""),
     });
   };
@@ -169,7 +194,7 @@ export function PositionLedgerPanel({
         <div><span>POSITION LEDGER</span><h3>보유내역</h3></div>
         {position.eligible && (
           <div className="pm-position-actions">
-            <button type="button" onClick={openCorrection}>최초 수량 정정</button>
+            <button type="button" onClick={openCorrection}>최초 설정 정정</button>
             <button type="button" className="is-primary" onClick={() => openTrade()}>매수·매도 기록</button>
           </div>
         )}
@@ -218,7 +243,7 @@ export function PositionLedgerPanel({
         }}>
           <form className="pm-position-editor" role="dialog" aria-modal="true" aria-labelledby="pm-position-editor-title" onSubmit={submit}>
             <header>
-              <div><span>POSITION UPDATE</span><h3 id="pm-position-editor-title">{draft.mode === "correct_initial" ? "최초 수량 정정" : draft.mode === "replace" ? "거래 수정" : "매수·매도 기록"}</h3></div>
+              <div><span>POSITION UPDATE</span><h3 id="pm-position-editor-title">{draft.mode === "correct_initial" ? "최초 설정 정정" : draft.mode === "replace" ? "거래 수정" : "매수·매도 기록"}</h3></div>
               <button type="button" aria-label="보유내역 입력 닫기" onClick={() => setDraft(null)}>×</button>
             </header>
             <div className="pm-position-editor-body">
@@ -229,8 +254,16 @@ export function PositionLedgerPanel({
                   <button type="button" className={draft.positionEffect === "sell" ? "is-active" : ""} disabled={draft.mode === "replace"} onClick={() => setDraft({ ...draft, positionEffect: "sell" })}>일부매도</button>
                 </fieldset>
               )}
-              {draft.mode !== "correct_initial" && <label>거래일<input type="date" value={draft.tradeDate} onChange={(event) => requestClose(changeTradeDate(draft, event.target.value))} /></label>}
-              <label>{draft.mode === "correct_initial" ? "새 최초 수량" : "거래 수량"}<input type="number" min="1" step="1" inputMode="numeric" value={draft.quantity} onChange={(event) => setDraft({ ...draft, quantity: event.target.value })} /></label>
+              {draft.mode === "correct_initial" ? (
+                <label>새 추적 시작일<input type="date" value={draft.tradeDate} onChange={(event) => requestInitialEntry(changeTradeDate(draft, event.target.value))} /></label>
+              ) : (
+                <label>거래일<input type="date" value={draft.tradeDate} onChange={(event) => requestClose(changeTradeDate(draft, event.target.value))} /></label>
+              )}
+              <label>{draft.mode === "correct_initial" ? "새 최초 수량" : "거래 수량"}<input type="number" min="1" step="1" inputMode="numeric" value={draft.quantity} onChange={(event) => {
+                const next = { ...draft, quantity: event.target.value };
+                if (draft.mode === "correct_initial") requestInitialEntry(next);
+                else setDraft(next);
+              }} /></label>
               {draft.mode !== "correct_initial" && (
                 <label>체결가 (USD)<input type="number" min="0.00000001" step="any" value={draft.executionPrice} onChange={(event) => setDraft(markManualExecutionPrice(draft, event.target.value))} />
                   <small>{draft.priceMode === "db_close_default" ? "종가 기본값 · 필요하면 실제 체결가로 수정하세요." : draft.priceMode === "manual_override" ? "수동 체결가 · 비교 기준 종가도 함께 저장됩니다." : closeProjection?.status === "MISSING" ? closeProjection.reason : "거래일을 선택하면 저장된 종가를 불러옵니다."}</small>
@@ -240,7 +273,26 @@ export function PositionLedgerPanel({
               <label>메모<textarea maxLength={500} value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} /></label>
               {draft.positionEffect === "sell" && draft.mode === "record" && <div className="pm-position-preview"><span>매도 전 {currentShares ?? "-"}주</span><strong>매도 후 {sellAfter ?? "-"}주</strong></div>}
               {draft.positionEffect === "sell" && draft.mode === "replace" && <p className="pm-position-note">수정 저장 시 이 거래 시점부터 전체 거래 이력을 다시 검증합니다.</p>}
-              {draft.mode === "correct_initial" && <p className="pm-position-note">기존 시작일과 시작 종가는 유지하고 최초 수량부터 전체 이력을 다시 계산합니다.</p>}
+              {draft.mode === "correct_initial" && (
+                <div className="pm-initial-comparison">
+                  <article>
+                    <strong>변경 전</strong>
+                    <span>요청일 <b>{position.requested_start_date ?? "-"}</b></span>
+                    <span>적용일 <b>{position.effective_start_date ?? "-"}</b></span>
+                    <span>시작 종가 <b>{money(position.entry_close ?? null)}</b></span>
+                    <span>최초 투자금 <b>{money(position.initial_capital ?? null)}</b></span>
+                  </article>
+                  <article>
+                    <strong>변경 후</strong>
+                    <span>요청일 <b>{draft.tradeDate || "-"}</b></span>
+                    <span>적용일 <b>{initialEntryReady ? initialProjection?.effective_start_date : "-"}</b></span>
+                    <span>시작 종가 <b>{money(initialEntryReady ? initialProjection?.entry_close ?? null : null)}</b></span>
+                    <span>최초 투자금 <b>{money(initialEntryReady ? initialProjection?.initial_capital ?? null : null)}</b></span>
+                  </article>
+                </div>
+              )}
+              {draft.mode === "correct_initial" && initialProjection?.status === "MISSING" && <p className="pm-position-error">{initialProjection.reason}</p>}
+              {draft.mode === "correct_initial" && <p className="pm-position-note">새 적용일부터 전체 거래 이력과 성과를 다시 계산합니다.</p>}
               {validation && <p className="pm-position-error">{validation}</p>}
             </div>
             <footer><button type="button" onClick={() => setDraft(null)}>취소</button><button type="submit" className="is-primary" disabled={Boolean(validation)}>저장</button></footer>

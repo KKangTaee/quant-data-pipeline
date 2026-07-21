@@ -80,10 +80,12 @@ describe("position editor state", () => {
   it("builds correction and replace command identities", () => {
     const correction = {
       ...createPositionEditorDraft("correct_initial", "buy", "correct-1"),
+      tradeDate: "2026-06-28",
       quantity: "42",
     };
     expect(buildPositionCommandEvent(correction, "item-amd")).toMatchObject({
       id: "correct_initial_quantity",
+      requested_start_date: "2026-06-28",
       quantity: 42,
     });
 
@@ -101,6 +103,27 @@ describe("position editor state", () => {
       root_event_id: "buy-root",
       expected_event_id: "buy-v1",
     });
+  });
+
+  it("requires a matching initial-entry preview before correction save", () => {
+    const correction = {
+      ...createPositionEditorDraft("correct_initial", "buy", "correct-2"),
+      tradeDate: "2026-06-28",
+      quantity: "40",
+    };
+
+    expect(
+      validatePositionEditorDraft(correction, {
+        currentShares: 40,
+        initialEntryReady: false,
+      }),
+    ).toContain("적용일과 종가");
+    expect(
+      validatePositionEditorDraft(correction, {
+        currentShares: 40,
+        initialEntryReady: true,
+      }),
+    ).toBeNull();
   });
 
   it("preserves the DB-close source across a Streamlit rerun", () => {

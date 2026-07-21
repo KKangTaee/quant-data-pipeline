@@ -49,6 +49,10 @@ export type SelectedPositionProjection = {
   reason: string | null;
   as_of_date: string | null;
   current_value: number | null;
+  requested_start_date?: string | null;
+  effective_start_date?: string | null;
+  entry_close?: number | null;
+  initial_capital?: number | null;
   effective_initial_shares: number | null;
   current_shares: number | null;
   gross_contributions: number;
@@ -63,6 +67,17 @@ export type PositionTradeCloseProjection = {
   monitoring_item_id: string | null;
   trade_date: string | null;
   reference_close: number | null;
+  reason: string | null;
+};
+
+export type InitialPositionEntryProjection = {
+  status: "IDLE" | "READY" | "MISSING" | string;
+  monitoring_item_id: string | null;
+  requested_start_date: string | null;
+  effective_start_date: string | null;
+  quantity: number | null;
+  entry_close: number | null;
+  initial_capital: number | null;
   reason: string | null;
 };
 
@@ -234,6 +249,7 @@ export type PortfolioMonitoringWorkspace = {
   active_group: GroupValueResult | null;
   selected_position: SelectedPositionProjection;
   position_trade_close?: PositionTradeCloseProjection;
+  initial_position_entry?: InitialPositionEntryProjection;
   position_editor_state?: PositionEditorRecoveryState | null;
   selected_item_market_chart?: SelectedItemMarketChart;
   catalog: { query: string; items: CatalogItem[] };
@@ -266,7 +282,8 @@ export type PortfolioMonitoringEvent =
   | { id: "end_item"; monitoring_item_id: string; requested_end_date: string; nonce: string }
   | { id: "reopen_item"; monitoring_item_id: string; nonce: string }
   | { id: "lookup_position_trade_close"; monitoring_item_id: string; trade_date: string; position_editor_state: PositionEditorRecoveryState; nonce: string }
-  | { id: "correct_initial_quantity"; command_id: string; monitoring_item_id: string; quantity: number; note: string; nonce: string }
+  | { id: "lookup_initial_position_entry"; monitoring_item_id: string; requested_start_date: string; quantity: number; position_editor_state: PositionEditorRecoveryState; nonce: string }
+  | { id: "correct_initial_quantity"; command_id: string; monitoring_item_id: string; requested_start_date: string; quantity: number; note: string; nonce: string }
   | { id: "record_position_trade"; command_id: string; monitoring_item_id: string; position_effect: "buy" | "sell"; trade_date: string; quantity: number; execution_price: number; fee_usd: number; note: string; nonce: string }
   | { id: "replace_position_trade"; command_id: string; monitoring_item_id: string; root_event_id: string; expected_event_id: string; position_effect: "buy" | "sell"; trade_date: string; quantity: number; execution_price: number; fee_usd: number; note: string; nonce: string }
   | { id: "void_position_trade"; command_id: string; monitoring_item_id: string; root_event_id: string; expected_event_id: string; nonce: string };

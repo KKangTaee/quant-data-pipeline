@@ -27,12 +27,31 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn("현재 보유수량", source)
-        self.assertIn("최초 수량 정정", source)
+        self.assertIn("최초 설정 정정", source)
         self.assertIn("매수·매도 기록", source)
         self.assertIn("거래 내역", source)
         self.assertIn('id: "lookup_position_trade_close"', source)
         self.assertIn("종가 기본값", source)
         self.assertIn("수동 체결가", source)
+
+    def test_initial_setting_correction_exposes_date_lookup_and_comparison(self) -> None:
+        component_root = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src"
+        )
+        source = (component_root / "PositionLedgerPanel.tsx").read_text(
+            encoding="utf-8"
+        )
+        contracts = (component_root / "contracts.ts").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("최초 설정 정정", source)
+        self.assertIn("새 추적 시작일", source)
+        self.assertIn("lookup_initial_position_entry", source)
+        self.assertIn("변경 전", source)
+        self.assertIn("변경 후", source)
+        self.assertIn("requested_start_date", contracts)
+        self.assertIn("initial_position_entry", contracts)
     def test_value_chart_exposes_visible_pointer_and_keyboard_tooltip(self) -> None:
         source = Path(
             "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"
