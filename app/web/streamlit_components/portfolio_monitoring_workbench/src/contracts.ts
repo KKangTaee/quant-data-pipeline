@@ -137,6 +137,28 @@ export type SelectedItemMarketChart = {
   reason: string | null;
 };
 
+export type PriceRefreshRow = {
+  symbol: string;
+  latest_date: string | null;
+  status: "current" | "stale" | "missing" | string;
+};
+
+export type PriceRefreshProjection = {
+  status: "refresh_available" | "up_to_date" | "unavailable" | string;
+  eligible: boolean;
+  target_date: string | null;
+  current_common_latest: string | null;
+  symbols: string[];
+  stale_symbols: string[];
+  missing_symbols: string[];
+  excluded_strategy_count: number;
+  collection_start: string | null;
+  collection_end: string | null;
+  button_label: string;
+  rows: PriceRefreshRow[];
+  message: string;
+};
+
 export type CatalogItem = {
   source_type: "direct_security" | "selected_strategy";
   source_ref: string;
@@ -252,6 +274,7 @@ export type PortfolioMonitoringWorkspace = {
   initial_position_entry?: InitialPositionEntryProjection;
   position_editor_state?: PositionEditorRecoveryState | null;
   selected_item_market_chart?: SelectedItemMarketChart;
+  price_refresh: PriceRefreshProjection;
   catalog: { query: string; items: CatalogItem[] };
   commands: CommandProjection[];
   item_builder_state?: unknown;
@@ -281,6 +304,7 @@ export type PortfolioMonitoringEvent =
   | { id: "add_item"; payload: Record<string, unknown>; nonce: string }
   | { id: "end_item"; monitoring_item_id: string; requested_end_date: string; nonce: string }
   | { id: "reopen_item"; monitoring_item_id: string; nonce: string }
+  | { id: "refresh_group_prices"; command_id: string; portfolio_group_id: string; nonce: string }
   | { id: "lookup_position_trade_close"; monitoring_item_id: string; trade_date: string; position_editor_state: PositionEditorRecoveryState; nonce: string }
   | { id: "lookup_initial_position_entry"; monitoring_item_id: string; requested_start_date: string; quantity: number; position_editor_state: PositionEditorRecoveryState; nonce: string }
   | { id: "correct_initial_quantity"; command_id: string; monitoring_item_id: string; requested_start_date: string; quantity: number; note: string; nonce: string }

@@ -9,6 +9,7 @@ from typing import Any, Callable, MutableMapping
 import pandas as pd
 import streamlit as st
 
+from app.jobs.run_history import append_run_history
 from finance.data.db.mysql import MySQLClient
 from finance.loaders import load_price_history
 from finance.loaders.provider import load_etf_exposure_snapshot, load_etf_holdings_snapshot
@@ -36,6 +37,10 @@ from app.services.portfolio_monitoring.persistence import (
 )
 from app.services.portfolio_monitoring.position_events import (
     project_position_events,
+)
+from app.services.portfolio_monitoring.price_refresh import (
+    build_portfolio_price_refresh_plan,
+    run_portfolio_price_refresh,
 )
 from app.services.portfolio_monitoring.read_model import (
     WORKSPACE_SCHEMA_VERSION,
@@ -346,6 +351,7 @@ class PortfolioMonitoringPageServices:
     record_position_trade: Callable[[dict[str, Any]], CommandResult]
     replace_position_trade: Callable[[dict[str, Any]], CommandResult]
     void_position_trade: Callable[[dict[str, Any]], CommandResult]
+    refresh_group_prices: Callable[[dict[str, Any]], dict[str, Any]]
 
 
 def _monitoring_db_factory() -> MySQLClient:
@@ -397,6 +403,21 @@ def _fallback_monitoring_workspace(
         },
         "catalog": {"query": catalog_query, "items": catalog_items},
         "commands": [],
+        "price_refresh": {
+            "status": "unavailable",
+            "eligible": False,
+            "target_date": None,
+            "current_common_latest": None,
+            "symbols": [],
+            "stale_symbols": [],
+            "missing_symbols": [],
+            "excluded_strategy_count": 0,
+            "collection_start": None,
+            "collection_end": None,
+            "button_label": "보유 종목 가격 최신화",
+            "rows": [],
+            "message": "포트폴리오 저장소를 사용할 수 없어 가격 최신성을 확인할 수 없습니다.",
+        },
         "diagnosis": {
             "policy_version": "portfolio_monitoring_policy_v1",
             "top_three": [],
@@ -524,6 +545,44 @@ def _effective_position_history_start(
             events,
         ).initial_contract.effective_start_date
     return item.effective_start_date
+
+
+def _execute_portfolio_price_refresh(
+    event: dict[str, Any],
+    *,
+    repository: Any,
+    refresh_runner: Callable[[list[Any]], dict[str, Any]] = run_portfolio_price_refresh,
+    history_writer: Callable[[dict[str, Any]], None] = append_run_history,
+) -> dict[str, Any]:
+    """Run one selected group's explicit price refresh and project compact feedback."""
+
+    command_id = str(event.get("command_id") or "").strip()
+    group_id = str(event.get("portfolio_group_id") or "").strip()
+    if not command_id or not group_id:
+        raise ValueError("가격 최신화 요청 정보가 올바르지 않습니다.")
+    if repository.get_group(group_id) is None:
+        raise ValueError("선택한 포트폴리오를 찾을 수 없습니다.")
+    items = repository.list_items(group_id)
+    job_result = dict(refresh_runner(items))
+    history_warning = ""
+    try:
+        history_writer(job_result)
+    except Exception as exc:
+        history_warning = f" 실행 이력 저장은 실패했습니다: {exc}"
+
+    job_status = str(job_result.get("status") or "failed").strip().lower()
+    status_map = {
+        "success": "success",
+        "partial_success": "warning",
+        "skipped": "success",
+        "failed": "error",
+    }
+    return {
+        "command_id": command_id,
+        "status": status_map.get(job_status, "error"),
+        "message": f"{job_result.get('message') or '가격 최신화 결과를 확인해 주세요.'}{history_warning}",
+        "target_id": group_id,
+    }
 
 
 def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
@@ -720,6 +779,14 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
                 analysis_builder=build_analysis,
                 risk_calibration_artifact=calibration_artifact,
                 diagnosis_history=history_rows,
+            )
+            selected_items = (
+                repository.list_items(selected_group.portfolio_group_id)
+                if selected_group is not None
+                else []
+            )
+            workspace["price_refresh"] = build_portfolio_price_refresh_plan(
+                selected_items
             )
         except Exception as exc:
             workspace = _fallback_monitoring_workspace(
@@ -1057,6 +1124,12 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
             validate_candidate=validate_position_candidate,
         )
 
+    def refresh_group_prices(event: dict[str, Any]) -> dict[str, Any]:
+        return _execute_portfolio_price_refresh(
+            event,
+            repository=repository,
+        )
+
     return PortfolioMonitoringPageServices(
         session_state=session_state,
         build_workspace=build_workspace,
@@ -1072,6 +1145,7 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
         record_position_trade=record_position_trade,
         replace_position_trade=replace_position_trade,
         void_position_trade=void_position_trade,
+        refresh_group_prices=refresh_group_prices,
     )
 
 
@@ -4417,6 +4491,8 @@ def _dispatch_portfolio_monitoring_event(
         return services.end_item(event)
     if event_id == "reopen_item":
         return services.reopen_item(event)
+    if event_id == "refresh_group_prices":
+        return services.refresh_group_prices(event)
     position_commands = {
         "correct_initial_quantity": services.correct_initial_quantity,
         "record_position_trade": services.record_position_trade,
@@ -4446,7 +4522,15 @@ def _event_identity(event: dict[str, Any]) -> str:
     )
 
 
-def _command_projection(result: CommandResult) -> dict[str, Any]:
+def _command_projection(result: CommandResult | dict[str, Any]) -> dict[str, Any]:
+    if isinstance(result, dict):
+        return {
+            "command_id": str(result.get("command_id") or ""),
+            "status": str(result.get("status") or "error"),
+            "message": result.get("message"),
+            "target_id": result.get("target_id"),
+            "replayed": bool(result.get("replayed", False)),
+        }
     return {
         "command_id": result.command_id,
         "status": "success" if result.status == CommandStatus.SUCCEEDED else result.status.value,

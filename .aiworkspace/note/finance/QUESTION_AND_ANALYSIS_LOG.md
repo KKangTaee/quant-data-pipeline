@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-22 - Portfolio Monitoring 가격 최신화는 선택 그룹 direct security만 명시적으로 수집한다
+
+- User request: 종합 가치곡선 기준일이 구성 종목별 일봉 최신일 차이로 7/16에 머무는 문제를 검토하고, 선택 포트폴리오 종목 데이터를 최신화하는 버튼을 구현하도록 요청함.
+- Interpreted goal: 공통 기준일을 임의로 당기지 않고 현재 그룹의 실제 보유 종목 데이터를 최근 완료 시장일까지 보강한 뒤 같은 DB 가격으로 성과를 다시 계산한다.
+- Analysis result: active/data_review stock·ETF만 대상으로 기존 OHLCV ingestion을 재사용하고, 수집 후 freshness 재검증을 통과해야 완료로 판정한다. selected strategy와 종료 항목은 1차 범위에서 제외한다.
+- Follow-up: 실제 다섯 종목을 2026-07-21까지 갱신해 공통 기준일 7/16→7/21과 가치곡선 재계산을 확인했다. 상세 job 결과는 Ingestion history에서 확인한다.
+
 ### 2026-07-22 - sub-dev master 병합은 최신 포인터와 양쪽 제품 계약을 함께 보존한다
 
 - User request: `codex/sub-dev`에서 진행 중인 master 병합 충돌을 `finance-integration-review`로 해결해 달라고 요청함.
