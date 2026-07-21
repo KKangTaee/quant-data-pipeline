@@ -29,6 +29,8 @@ class EffectivePositionEvent:
     execution_price_source: str | None
     fee_usd: Decimal
     note: str
+    requested_start_date: date | None = None
+    effective_start_date: date | None = None
 
 
 @dataclass(frozen=True)
@@ -49,9 +51,21 @@ class PositionQuantitySnapshot:
 
 
 @dataclass(frozen=True)
+class InitialPositionContract:
+    """Terminal initial settings used to replay an individual position."""
+
+    requested_start_date: date
+    effective_start_date: date
+    entry_close: Decimal
+    initial_shares: int
+    initial_capital: Decimal
+
+
+@dataclass(frozen=True)
 class PositionEventProjection:
     eligible: bool
     eligibility_reason: str | None
+    initial_contract: InitialPositionContract
     effective_initial_shares: int | None
     initial_correction: EffectivePositionEvent | None
     trades: tuple[EffectivePositionEvent, ...]
@@ -149,6 +163,8 @@ def _effective_event(record: PositionEventRecord) -> EffectivePositionEvent:
         execution_price_source=record.execution_price_source,
         fee_usd=record.fee_usd,
         note=record.note,
+        requested_start_date=record.requested_start_date,
+        effective_start_date=record.effective_start_date,
     )
 
 
@@ -208,9 +224,34 @@ def project_position_events(
         raise PositionEventIntegrityError(
             "Only one initial quantity correction root is allowed."
         )
-    initial_shares = corrections[0].quantity if corrections else item.input_shares
+    correction = corrections[0] if corrections else None
+    initial_shares = correction.quantity if correction else item.input_shares
     if initial_shares is None or initial_shares < 1:
         raise PositionEventIntegrityError("The effective initial quantity must be positive.")
+    requested_start_date = (
+        correction.requested_start_date
+        if correction is not None and correction.requested_start_date is not None
+        else item.requested_start_date
+    )
+    effective_start_date = (
+        correction.effective_start_date
+        if correction is not None and correction.effective_start_date is not None
+        else item.effective_start_date
+    )
+    entry_close = (
+        correction.reference_close
+        if correction is not None and correction.reference_close is not None
+        else item.entry_close
+    )
+    if effective_start_date < requested_start_date or entry_close <= 0:
+        raise PositionEventIntegrityError("The effective initial contract is invalid.")
+    initial_contract = InitialPositionContract(
+        requested_start_date=requested_start_date,
+        effective_start_date=effective_start_date,
+        entry_close=entry_close,
+        initial_shares=initial_shares,
+        initial_capital=Decimal(initial_shares) * entry_close,
+    )
     trades = tuple(
         _effective_event(row)
         for row in sorted(
@@ -225,9 +266,10 @@ def project_position_events(
     return PositionEventProjection(
         eligible=True,
         eligibility_reason=None,
+        initial_contract=initial_contract,
         effective_initial_shares=initial_shares,
         initial_correction=(
-            _effective_event(corrections[0]) if corrections else None
+            _effective_event(correction) if correction is not None else None
         ),
         trades=trades,
         audit_rows=_audit_rows(records, terminal_by_root),

@@ -90,6 +90,8 @@ class PositionEventRecord:
     note: str
     command_id: str
     created_at: datetime | None = None
+    requested_start_date: date | None = None
+    effective_start_date: date | None = None
 
 
 class MonitoringRepository(Protocol):
@@ -247,6 +249,8 @@ def _position_event_from_row(
         event_action=str(row.get("event_action") or ""),
         position_effect=str(row.get("position_effect") or ""),
         trade_date=row["trade_date"],
+        requested_start_date=row.get("requested_start_date"),
+        effective_start_date=row.get("effective_start_date"),
         quantity=(int(row["quantity"]) if row.get("quantity") is not None else None),
         execution_price=_optional_decimal(row.get("execution_price")),
         reference_close=_optional_decimal(row.get("reference_close")),
@@ -260,6 +264,33 @@ def _position_event_from_row(
         command_id=str(row.get("command_id") or ""),
         created_at=row.get("created_at"),
     )
+
+
+_POSITION_EVENT_OPTIONAL_COLUMNS = {
+    "requested_start_date": "DATE NULL",
+    "effective_start_date": "DATE NULL",
+}
+
+
+def _ensure_position_event_optional_columns(db: MySQLClient) -> None:
+    """Add initial-correction date columns without rewriting stored events."""
+
+    rows = db.query(
+        """
+        SELECT COLUMN_NAME
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
+        """,
+        [FINANCE_META_DB, "monitoring_security_position_event"],
+    )
+    existing = {str(row.get("COLUMN_NAME") or "").casefold() for row in rows}
+    for name, definition in _POSITION_EVENT_OPTIONAL_COLUMNS.items():
+        if name.casefold() in existing:
+            continue
+        db.execute(
+            f"ALTER TABLE `monitoring_security_position_event` "
+            f"ADD COLUMN `{name}` {definition}"
+        )
 
 
 class MySQLMonitoringRepository:
@@ -304,6 +335,7 @@ class MySQLMonitoringRepository:
         with self._connection() as db:
             for create_sql in PORTFOLIO_MONITORING_SCHEMAS.values():
                 db.execute(create_sql)
+            _ensure_position_event_optional_columns(db)
 
     def get_or_create_default_group(self) -> PortfolioGroupRecord:
         if self._active_db is not None:
@@ -526,9 +558,10 @@ class MySQLMonitoringRepository:
                 INSERT INTO monitoring_security_position_event (
                   position_event_id, root_event_id, supersedes_event_id,
                   monitoring_item_id, event_order, event_action, position_effect,
-                  trade_date, quantity, execution_price, reference_close,
+                  trade_date, requested_start_date, effective_start_date,
+                  quantity, execution_price, reference_close,
                   execution_price_source, fee_usd, note, command_id
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 [
                     record.position_event_id,
@@ -539,6 +572,8 @@ class MySQLMonitoringRepository:
                     record.event_action,
                     record.position_effect,
                     record.trade_date,
+                    record.requested_start_date,
+                    record.effective_start_date,
                     record.quantity,
                     record.execution_price,
                     record.reference_close,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import replace
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -107,6 +108,8 @@ class PortfolioMonitoringPositionEventPersistenceTests(unittest.TestCase):
                 "event_action": "create",
                 "position_effect": "buy",
                 "trade_date": date(2026, 7, 17),
+                "requested_start_date": date(2026, 7, 16),
+                "effective_start_date": date(2026, 7, 17),
                 "quantity": 5,
                 "execution_price": "145.25",
                 "reference_close": Decimal("144.80"),
@@ -123,6 +126,8 @@ class PortfolioMonitoringPositionEventPersistenceTests(unittest.TestCase):
         self.assertEqual(record.execution_price, Decimal("145.25"))
         self.assertEqual(record.reference_close, Decimal("144.80"))
         self.assertEqual(record.fee_usd, Decimal("1.10"))
+        self.assertEqual(record.requested_start_date, date(2026, 7, 16))
+        self.assertEqual(record.effective_start_date, date(2026, 7, 17))
         self.assertEqual(record.created_at, created_at)
 
 
@@ -195,6 +200,75 @@ class PortfolioMonitoringPositionEventProjectionTests(unittest.TestCase):
 
         self.assertEqual(projection.effective_initial_shares, 40)
         self.assertEqual(projection.initial_correction.quantity, 40)
+
+    def test_projection_uses_corrected_date_close_and_quantity(self) -> None:
+        from app.services.portfolio_monitoring.position_events import (
+            project_position_events,
+        )
+
+        item = _stock_item(input_shares=30)
+        correction = replace(
+            _event(
+                "correct-v1",
+                "correct-root",
+                None,
+                1,
+                "create",
+                "initial_quantity_correction",
+                date(2026, 6, 29),
+                40,
+                None,
+            ),
+            requested_start_date=date(2026, 6, 28),
+            effective_start_date=date(2026, 6, 29),
+            reference_close=Decimal("95"),
+        )
+
+        projection = project_position_events(item, [correction])
+
+        self.assertEqual(
+            projection.initial_contract.requested_start_date,
+            date(2026, 6, 28),
+        )
+        self.assertEqual(
+            projection.initial_contract.effective_start_date,
+            date(2026, 6, 29),
+        )
+        self.assertEqual(projection.initial_contract.entry_close, Decimal("95"))
+        self.assertEqual(projection.initial_contract.initial_shares, 40)
+        self.assertEqual(projection.initial_contract.initial_capital, Decimal("3800"))
+
+    def test_legacy_quantity_correction_falls_back_to_item_start_contract(self) -> None:
+        from app.services.portfolio_monitoring.position_events import (
+            project_position_events,
+        )
+
+        item = _stock_item(input_shares=30)
+        legacy = _event(
+            "correct-v1",
+            "correct-root",
+            None,
+            1,
+            "create",
+            "initial_quantity_correction",
+            date(2026, 7, 1),
+            20,
+            None,
+        )
+
+        projection = project_position_events(item, [legacy])
+
+        self.assertEqual(
+            projection.initial_contract.requested_start_date,
+            item.requested_start_date,
+        )
+        self.assertEqual(
+            projection.initial_contract.effective_start_date,
+            item.effective_start_date,
+        )
+        self.assertEqual(projection.initial_contract.entry_close, item.entry_close)
+        self.assertEqual(projection.initial_contract.initial_shares, 20)
+        self.assertEqual(projection.initial_contract.initial_capital, Decimal("2000"))
 
     def test_sequence_applies_each_split_before_same_day_sell(self) -> None:
         from app.services.portfolio_monitoring.position_events import (

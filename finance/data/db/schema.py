@@ -1217,6 +1217,8 @@ PORTFOLIO_MONITORING_SCHEMAS = {
           event_action ENUM('create','replace','void') NOT NULL,
           position_effect ENUM('initial_quantity_correction','buy','sell') NOT NULL,
           trade_date DATE NOT NULL,
+          requested_start_date DATE NULL,
+          effective_start_date DATE NULL,
           quantity BIGINT NULL,
           execution_price DECIMAL(24,8) NULL,
           reference_close DECIMAL(24,8) NULL,

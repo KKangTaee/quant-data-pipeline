@@ -20,6 +20,28 @@ def _load_database_schemas():
     return module.PORTFOLIO_MONITORING_SCHEMAS
 
 
+class _SchemaUpgradeDb:
+    def __init__(self) -> None:
+        self.columns = {"position_event_id", "trade_date", "quantity"}
+        self.executed: list[tuple[str, object]] = []
+
+    def use_db(self, name):
+        self.database = name
+
+    def query(self, sql, params=None):
+        return [{"COLUMN_NAME": name} for name in sorted(self.columns)]
+
+    def execute(self, sql, params=None):
+        normalized = " ".join(str(sql).split())
+        self.executed.append((normalized, params))
+        for column in ("requested_start_date", "effective_start_date"):
+            if f"ADD COLUMN `{column}`" in normalized:
+                self.columns.add(column)
+
+    def close(self):
+        return None
+
+
 class PortfolioMonitoringDatabaseSchemaTests(unittest.TestCase):
     def test_schema_defines_group_item_and_command_tables(self) -> None:
         portfolio_monitoring_schemas = _load_database_schemas()
@@ -76,6 +98,8 @@ class PortfolioMonitoringDatabaseSchemaTests(unittest.TestCase):
         self.assertIn("position_event_id VARCHAR(64) PRIMARY KEY", position_event_sql)
         self.assertIn("root_event_id VARCHAR(64) NOT NULL", position_event_sql)
         self.assertIn("event_order BIGINT NOT NULL", position_event_sql)
+        self.assertIn("requested_start_date DATE NULL", position_event_sql)
+        self.assertIn("effective_start_date DATE NULL", position_event_sql)
         self.assertIn("reference_close DECIMAL(24,8) NULL", position_event_sql)
         self.assertIn(
             "execution_price_source ENUM('db_close_default','manual_override') NULL",
@@ -86,6 +110,28 @@ class PortfolioMonitoringDatabaseSchemaTests(unittest.TestCase):
             position_event_sql,
         )
         self.assertIn("KEY ix_monitoring_position_event_item_date", position_event_sql)
+
+    def test_event_optional_date_upgrade_is_idempotent(self) -> None:
+        from app.services.portfolio_monitoring.persistence import (
+            MySQLMonitoringRepository,
+        )
+
+        db = _SchemaUpgradeDb()
+        repository = MySQLMonitoringRepository(lambda: db)
+
+        repository.ensure_schema()
+        repository.ensure_schema()
+
+        alters = [sql for sql, _ in db.executed if sql.startswith("ALTER TABLE")]
+        self.assertEqual(
+            alters,
+            [
+                "ALTER TABLE `monitoring_security_position_event` "
+                "ADD COLUMN `requested_start_date` DATE NULL",
+                "ALTER TABLE `monitoring_security_position_event` "
+                "ADD COLUMN `effective_start_date` DATE NULL",
+            ],
+        )
 
 
 class PortfolioMonitoringDomainSchemaTests(unittest.TestCase):
@@ -198,6 +244,32 @@ class PortfolioMonitoringDomainSchemaTests(unittest.TestCase):
             fingerprint,
             schemas.build_request_fingerprint({**first, "source_ref": "MSFT"}),
         )
+
+    def test_initial_correction_accepts_a_requested_start_date(self) -> None:
+        schemas = _load_schema_module()
+
+        value = schemas.validate_initial_quantity_correction_input(
+            schemas.InitialQuantityCorrectionInput(
+                monitoring_item_id="item-amd",
+                quantity=42,
+                requested_start_date=date(2026, 7, 4),
+                note="최초 입력 수정",
+            )
+        )
+
+        self.assertEqual(value.requested_start_date, date(2026, 7, 4))
+
+    def test_initial_correction_rejects_a_non_date_requested_start(self) -> None:
+        schemas = _load_schema_module()
+
+        with self.assertRaisesRegex(ValueError, "requested start date"):
+            schemas.validate_initial_quantity_correction_input(
+                schemas.InitialQuantityCorrectionInput(
+                    monitoring_item_id="item-amd",
+                    quantity=42,
+                    requested_start_date="2026-07-04",
+                )
+            )
 
 
 if __name__ == "__main__":

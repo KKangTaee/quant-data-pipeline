@@ -104,6 +104,7 @@ class InitialQuantityCorrectionInput:
     monitoring_item_id: str
     quantity: int
     note: str = ""
+    requested_start_date: date | None = None
 
 
 @dataclass(frozen=True)
@@ -211,6 +212,10 @@ def validate_initial_quantity_correction_input(
 ) -> InitialQuantityCorrectionInput:
     if not isinstance(value, InitialQuantityCorrectionInput):
         raise TypeError("InitialQuantityCorrectionInput is required.")
+    if value.requested_start_date is not None and not isinstance(
+        value.requested_start_date, date
+    ):
+        raise ValueError("requested start date must be a date.")
     return replace(
         value,
         monitoring_item_id=_validated_item_id(value.monitoring_item_id),

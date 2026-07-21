@@ -172,6 +172,12 @@ class RecordingDb:
     def execute(self, sql, params=None):
         self.executed.append((sql, params))
 
+    def query(self, sql, params=None):
+        return [
+            {"COLUMN_NAME": "requested_start_date"},
+            {"COLUMN_NAME": "effective_start_date"},
+        ]
+
     def close(self):
         self.closed = True
 
