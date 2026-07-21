@@ -9,3 +9,8 @@ Last Updated: 2026-07-21
 - Design approved: immutable month-end rows, separate daily intramonth rows, weekday automation, last-good failure policy.
 - Spec self-review fixed path naming, clarified closed-month rollover, and scoped immutability checks to pre-existing month-end dates; placeholder and ambiguity scans are clean.
 - Wrote the eight-task TDD implementation plan covering persistence, incremental collection, partial-origin materialization, weekday automation, service, React, actual DB verification, Browser QA, and docs closeout.
+- Captured the pre-change monthly invariant for all `current` / `historical_replay` rows through 2026-06-30: 122 rows, SHA-256 `4713c9b4a3228342625c9a6886eeabc7b7232b5da112bc1e6a50f074f24eb4b8`.
+- Synced only the economic-cycle result schema: added three nullable provenance columns and extended `run_kind` with `intramonth_nowcast`; no historical backfill was performed.
+- Materialized 2026-07-21 from stored vintages: baseline 2026-06-30, model `economic-cycle-v1-59ba078b22ba`, `LIMITED`, recovery 52.6843%, recession 29.0467%, source collected 2026-07-16 10:02:56, coverage 17/17.
+- Repeated the same-day materializer: exactly one intramonth business key remained. Monthly invariant stayed at 122 rows with the identical SHA-256.
+- `FRED_API_KEY` was absent in the runtime environment, so the external incremental collector was not invoked; the successfully materialized last-good row remains available.

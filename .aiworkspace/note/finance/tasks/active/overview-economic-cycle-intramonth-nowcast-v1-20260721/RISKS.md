@@ -14,5 +14,6 @@ Last Updated: 2026-07-21
 
 ## Remaining Validation
 
-- 과거 월말 row count/checksum 불변성 검증
+- `FRED_API_KEY`가 있는 운영 환경에서 실제 incremental overlap 수집 1회를 실행하고 provider 결과를 확인해야 한다.
+- desktop / 420px Browser QA와 console / overflow 검증이 남아 있다.
 - historical pseudo-intramonth stability validation은 V1의 표시 승격 조건이 아니라 후속 research다.
