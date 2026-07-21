@@ -196,6 +196,32 @@ def test_fetch_fred_vintages_paginates_and_preserves_versions() -> None:
     ]
 
 
+def test_fetch_vintage_dates_honors_incremental_realtime_start() -> None:
+    module = _load_vintage_module()
+    session = _PagedSession()
+
+    dates = module.fetch_fred_vintage_dates(
+        "PAYEMS",
+        api_key="x" * 32,
+        session=session,
+        realtime_start="2026-06-01",
+    )
+
+    assert dates == ["2020-02-01", "2020-04-01", "2020-05-01"]
+    assert session.params[0]["realtime_start"] == "2026-06-01"
+
+
+def test_realtime_windows_keep_explicit_incremental_lower_bound() -> None:
+    module = _load_vintage_module()
+
+    windows = module.build_realtime_windows(
+        ["2026-06-01", "2026-07-03", "2026-07-15"],
+        lower_bound="2026-07-03",
+    )
+
+    assert windows == [("2026-07-03", "9999-12-31")]
+
+
 def test_fetch_fred_vintages_splits_more_than_2000_vintage_dates() -> None:
     module = _load_vintage_module()
     first = date(2018, 1, 1)
@@ -418,6 +444,69 @@ def test_collect_vintages_reuses_one_owned_database_connection() -> None:
     assert connection.closed is True
     client.assert_called_once_with("localhost", "root", "1234", 3306)
     sync_schema.assert_called_once()
+
+
+def test_latest_vintage_realtime_starts_reads_grouped_maximum() -> None:
+    module = _load_vintage_module()
+    captured: dict[str, object] = {}
+
+    class Connection:
+        def query(self, sql: str, params: tuple[object, ...]):
+            captured.update(sql=sql, params=params)
+            return [
+                {"series_id": "PAYEMS", "latest_realtime_start": "2026-07-03"},
+                {"series_id": "INDPRO", "latest_realtime_start": date(2026, 7, 15)},
+            ]
+
+    loaded = module.load_latest_vintage_realtime_starts(
+        ["PAYEMS", "INDPRO"],
+        connection=Connection(),
+    )
+
+    assert loaded == {"PAYEMS": "2026-07-03", "INDPRO": "2026-07-15"}
+    assert "MAX(realtime_start)" in str(captured["sql"])
+    assert tuple(captured["params"]) == ("PAYEMS", "INDPRO")
+
+
+def test_incremental_collection_overlaps_each_series_latest_vintage() -> None:
+    module = _load_vintage_module()
+    recorded: list[dict[str, object]] = []
+    stored: list[dict[str, object]] = []
+    fixture_page = [
+        {
+            "date": "2026-06-01",
+            "realtime_start": "2026-07-03",
+            "realtime_end": "9999-12-31",
+            "value": "159000",
+        }
+    ]
+
+    def page_iter(_series_id: str, **kwargs):
+        recorded.append(dict(kwargs))
+        yield fixture_page
+
+    def writer(rows: list[dict[str, object]], **_kwargs) -> int:
+        stored.extend(rows)
+        return len(rows)
+
+    summary = module.collect_incremental_economic_cycle_vintages(
+        series_ids=["PAYEMS"],
+        api_key="x" * 32,
+        connection=object(),
+        realtime_start_loader=lambda *_args, **_kwargs: {
+            "PAYEMS": "2026-07-03"
+        },
+        page_iter=page_iter,
+        writer=writer,
+    )
+
+    assert summary["collection_mode"] == "incremental_overlap"
+    assert summary["overlap_starts"] == {"PAYEMS": "2026-07-03"}
+    assert summary["failed"] == []
+    assert summary["missing"] == []
+    assert summary["stored"] == 1
+    assert recorded[0]["realtime_start"] == "2026-07-03"
+    assert stored[0]["series_id"] == "PAYEMS"
 
 
 def test_upsert_uses_larger_safe_statement_for_mysql_connection() -> None:

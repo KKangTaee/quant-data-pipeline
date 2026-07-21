@@ -173,6 +173,7 @@ def fetch_fred_vintage_dates(
     *,
     api_key: str,
     session: Any = None,
+    realtime_start: str = EARLIEST_REALTIME_DATE,
     timeout: int = DEFAULT_TIMEOUT,
     retries: int = DEFAULT_RETRIES,
 ) -> list[str]:
@@ -180,6 +181,10 @@ def fetch_fred_vintage_dates(
 
     normalized_series = str(series_id or "").strip().upper()
     normalized_key = str(api_key or "").strip()
+    resolved_realtime_start = _date_text(
+        realtime_start,
+        field="realtime_start",
+    )
     if not normalized_series:
         raise EconomicCycleVintageError("series_id is required")
     if not normalized_key:
@@ -193,7 +198,7 @@ def fetch_fred_vintage_dates(
             "api_key": normalized_key,
             "file_type": "json",
             "sort_order": "asc",
-            "realtime_start": EARLIEST_REALTIME_DATE,
+            "realtime_start": resolved_realtime_start,
             "realtime_end": OPEN_ENDED_REALTIME_DATE,
             "limit": MAX_VINTAGE_DATE_PAGE_SIZE,
             "offset": offset,
@@ -220,19 +225,29 @@ def fetch_fred_vintage_dates(
     return sorted(set(vintage_dates))
 
 
-def build_realtime_windows(vintage_dates: Iterable[str]) -> list[tuple[str, str]]:
+def build_realtime_windows(
+    vintage_dates: Iterable[str],
+    *,
+    lower_bound: str = EARLIEST_REALTIME_DATE,
+) -> list[tuple[str, str]]:
     """Split an ALFRED request without exceeding its 2,000-vintage-date limit."""
 
+    resolved_lower_bound = _date_text(lower_bound, field="lower_bound")
     normalized_dates = sorted(
-        {_date_text(item, field="vintage date") for item in vintage_dates}
+        {
+            normalized
+            for item in vintage_dates
+            if (normalized := _date_text(item, field="vintage date"))
+            >= resolved_lower_bound
+        }
     )
     if not normalized_dates:
-        return [(EARLIEST_REALTIME_DATE, OPEN_ENDED_REALTIME_DATE)]
+        return [(resolved_lower_bound, OPEN_ENDED_REALTIME_DATE)]
 
     windows: list[tuple[str, str]] = []
     for index in range(0, len(normalized_dates), MAX_VINTAGE_DATES_PER_REQUEST):
         realtime_start = (
-            EARLIEST_REALTIME_DATE if index == 0 else normalized_dates[index]
+            resolved_lower_bound if index == 0 else normalized_dates[index]
         )
         next_index = index + MAX_VINTAGE_DATES_PER_REQUEST
         realtime_end = (
@@ -252,6 +267,7 @@ def iter_fred_vintage_pages(
     *,
     api_key: str,
     session: Any = None,
+    realtime_start: str = EARLIEST_REALTIME_DATE,
     page_size: int = DEFAULT_OBSERVATION_PAGE_SIZE,
     timeout: int = DEFAULT_TIMEOUT,
     retries: int = DEFAULT_RETRIES,
@@ -260,6 +276,10 @@ def iter_fred_vintage_pages(
 
     normalized_series = str(series_id or "").strip().upper()
     normalized_key = str(api_key or "").strip()
+    resolved_realtime_start = _date_text(
+        realtime_start,
+        field="realtime_start",
+    )
     if not normalized_series:
         raise EconomicCycleVintageError("series_id is required")
     if not normalized_key:
@@ -269,11 +289,15 @@ def iter_fred_vintage_pages(
         normalized_series,
         api_key=normalized_key,
         session=session,
+        realtime_start=resolved_realtime_start,
         timeout=int(timeout),
         retries=int(retries),
     )
     limit = max(1, min(int(page_size), 100_000))
-    for realtime_start, realtime_end in build_realtime_windows(vintage_dates):
+    for window_start, realtime_end in build_realtime_windows(
+        vintage_dates,
+        lower_bound=resolved_realtime_start,
+    ):
         offset = 0
         while True:
             params: dict[str, object] = {
@@ -282,7 +306,7 @@ def iter_fred_vintage_pages(
                 "file_type": "json",
                 "output_type": 1,
                 "sort_order": "asc",
-                "realtime_start": realtime_start,
+                "realtime_start": window_start,
                 "realtime_end": realtime_end,
                 "limit": limit,
                 "offset": offset,
@@ -482,6 +506,44 @@ def upsert_economic_cycle_vintages(
             db.close()
 
 
+def load_latest_vintage_realtime_starts(
+    series_ids: Iterable[str],
+    *,
+    connection: Any = None,
+) -> dict[str, str]:
+    """Read the latest stored vintage boundary for each requested series."""
+
+    requested = tuple(
+        dict.fromkeys(str(item or "").strip().upper() for item in series_ids)
+    )
+    if not requested or any(not item for item in requested):
+        raise EconomicCycleVintageError("At least one non-empty series_id is required")
+    placeholders = ",".join(["%s"] * len(requested))
+    sql = f"""
+    SELECT series_id, MAX(realtime_start) AS latest_realtime_start
+    FROM {VINTAGE_TABLE}
+    WHERE series_id IN ({placeholders})
+    GROUP BY series_id
+    """
+    owns_connection = connection is None
+    db = connection or MySQLClient("localhost", "root", "1234", 3306)
+    try:
+        if owns_connection:
+            db.use_db(DB_META)
+        rows = db.query(sql, requested)
+    finally:
+        if owns_connection:
+            db.close()
+    return {
+        str(row["series_id"]).strip().upper(): _date_text(
+            row["latest_realtime_start"],
+            field="latest_realtime_start",
+        )
+        for row in rows
+        if row.get("series_id") and row.get("latest_realtime_start")
+    }
+
+
 def collect_economic_cycle_vintages(
     *,
     series_ids: Iterable[str] | None = None,
@@ -565,4 +627,100 @@ def collect_economic_cycle_vintages(
         "coverage": coverage,
         "source": "fred",
         "source_mode": FRED_SOURCE_MODE,
+    }
+
+
+def collect_incremental_economic_cycle_vintages(
+    *,
+    series_ids: Iterable[str] | None = None,
+    api_key: str | None = None,
+    connection: Any = None,
+    session: Any = None,
+    page_size: int = DEFAULT_OBSERVATION_PAGE_SIZE,
+    timeout: int = DEFAULT_TIMEOUT,
+    retries: int = DEFAULT_RETRIES,
+    realtime_start_loader: Any = load_latest_vintage_realtime_starts,
+    page_iter: Any = iter_fred_vintage_pages,
+    writer: Any = upsert_economic_cycle_vintages,
+) -> dict[str, object]:
+    """Collect each series from its latest stored vintage boundary, inclusively."""
+
+    resolved_key = str(api_key or os.environ.get("FRED_API_KEY") or "").strip()
+    if not resolved_key:
+        raise EconomicCycleVintageError(
+            "FRED_API_KEY is required; revised CSV cannot substitute for vintages"
+        )
+    catalog = {item.series_id: item for item in get_economic_cycle_catalog()}
+    requested = (
+        list(catalog)
+        if series_ids is None
+        else list(dict.fromkeys(str(item).strip().upper() for item in series_ids))
+    )
+    unsupported = [series_id for series_id in requested if series_id not in catalog]
+    if unsupported:
+        raise EconomicCycleVintageError(
+            f"Unsupported economic-cycle series: {', '.join(unsupported)}"
+        )
+
+    collected_at = datetime.now(timezone.utc)
+    failed: list[dict[str, str]] = []
+    coverage: dict[str, int] = {}
+    found: set[str] = set()
+    stored = 0
+    owns_connection = connection is None
+    db = connection or MySQLClient("localhost", "root", "1234", 3306)
+    overlap_starts: dict[str, str] = {}
+    try:
+        if owns_connection:
+            db.use_db(DB_META)
+            schema = PROVIDER_SCHEMAS[VINTAGE_TABLE]
+            db.execute(schema)
+            sync_table_schema(db, VINTAGE_TABLE, schema, DB_META)
+        latest_starts = realtime_start_loader(requested, connection=db)
+        overlap_starts = {
+            series_id: latest_starts.get(series_id, EARLIEST_REALTIME_DATE)
+            for series_id in requested
+        }
+        for series_id in requested:
+            try:
+                for payload_rows in page_iter(
+                    series_id,
+                    api_key=resolved_key,
+                    session=session,
+                    realtime_start=overlap_starts[series_id],
+                    page_size=int(page_size),
+                    timeout=int(timeout),
+                    retries=int(retries),
+                ):
+                    normalized_rows = normalize_fred_vintage_rows(
+                        catalog[series_id],
+                        payload_rows,
+                        collected_at=collected_at,
+                    )
+                    stored += writer(normalized_rows, connection=db)
+                    for row in normalized_rows:
+                        status = str(row["coverage_status"])
+                        coverage[status] = coverage.get(status, 0) + 1
+                        found.add(str(row["series_id"]))
+            except Exception as exc:
+                LOGGER.warning(
+                    "Incremental economic-cycle vintage fetch failed for %s: %s",
+                    series_id,
+                    exc,
+                )
+                failed.append({"series_id": series_id, "reason": str(exc)[:500]})
+    finally:
+        if owns_connection:
+            db.close()
+
+    return {
+        "requested": len(requested),
+        "stored": stored,
+        "missing": sorted(set(requested) - found),
+        "failed": failed,
+        "coverage": coverage,
+        "source": "fred",
+        "source_mode": FRED_SOURCE_MODE,
+        "collection_mode": "incremental_overlap",
+        "overlap_starts": overlap_starts,
     }
