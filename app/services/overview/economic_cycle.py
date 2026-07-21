@@ -37,6 +37,12 @@ ESTIMATE_LABELS = {
     "PROVISIONAL": "잠정 모델 추정",
     "UNAVAILABLE": "판단 불가",
 }
+INTRAMONTH_FACTORS = (
+    "activity_score",
+    "labor_income_score",
+    "financial_leading_score",
+    "inflation_policy_score",
+)
 
 
 def _json_value(value: object, fallback: object) -> object:
@@ -97,6 +103,7 @@ def _empty_model(
         "status": status,
         "as_of_date": str(as_of_date or "") or None,
         "model_version": None,
+        "intramonth": None,
         "headline": {
             "phase": None,
             "phase_label": "판단 제한",
@@ -225,6 +232,124 @@ def _evidence(snapshot: Mapping[str, object]) -> list[dict[str, object]]:
     return normalized[:10]
 
 
+def _factor_values(snapshot: Mapping[str, object]) -> dict[str, float]:
+    raw_rows = _json_value(snapshot.get("top_evidence_json"), [])
+    values: dict[str, float] = {}
+    for raw in raw_rows if isinstance(raw_rows, (list, tuple)) else []:
+        if not isinstance(raw, Mapping):
+            continue
+        factor = str(raw.get("factor") or "")
+        if factor not in INTRAMONTH_FACTORS:
+            continue
+        try:
+            value = float(raw.get("value"))
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(value):
+            values[factor] = value
+    return values
+
+
+def _compact_source_coverage(value: object) -> dict[str, object]:
+    raw = _json_value(value, {})
+    if not isinstance(raw, Mapping):
+        return {"requested_series": None, "available_series": None, "series": []}
+    series = []
+    raw_series = raw.get("series")
+    if isinstance(raw_series, (list, tuple)):
+        for item in raw_series[:25]:
+            if not isinstance(item, Mapping):
+                continue
+            series.append(
+                {
+                    "series_id": str(item.get("series_id") or "") or None,
+                    "status": str(item.get("status") or "") or None,
+                    "latest_observation_date": str(
+                        item.get("latest_observation_date") or ""
+                    )[:10]
+                    or None,
+                    "staleness_days": item.get("staleness_days"),
+                }
+            )
+    return {
+        "requested_series": raw.get("requested_series"),
+        "available_series": raw.get("available_series"),
+        "series": series,
+    }
+
+
+def _intramonth_projection(
+    monthly: Mapping[str, object],
+    monthly_horizons: Sequence[Mapping[str, object]],
+    intramonth: Mapping[str, object] | None,
+) -> dict[str, object] | None:
+    if not intramonth:
+        return None
+    try:
+        monthly_date = pd.Timestamp(monthly.get("as_of_date")).date()
+        baseline_date = pd.Timestamp(intramonth.get("baseline_as_of_date")).date()
+        intramonth_date = pd.Timestamp(intramonth.get("as_of_date")).date()
+    except (TypeError, ValueError):
+        return None
+    if baseline_date != monthly_date or intramonth_date <= monthly_date:
+        return None
+    if str(intramonth.get("model_version") or "") != str(
+        monthly.get("model_version") or ""
+    ):
+        return None
+
+    monthly_h0 = next(
+        (item for item in monthly_horizons if item.get("horizon_months") == 0),
+        None,
+    )
+    nowcast_h0 = _horizons(intramonth)[0]
+    monthly_probabilities = (monthly_h0 or {}).get("probabilities")
+    nowcast_probabilities = nowcast_h0.get("probabilities")
+    if not isinstance(monthly_probabilities, Mapping) or not isinstance(
+        nowcast_probabilities, Mapping
+    ):
+        return None
+
+    baseline_factors = _factor_values(monthly)
+    current_factors = _factor_values(intramonth)
+    factor_deltas = [
+        {
+            "factor": factor,
+            "baseline": baseline_factors[factor],
+            "current": current_factors[factor],
+            "delta": current_factors[factor] - baseline_factors[factor],
+        }
+        for factor in INTRAMONTH_FACTORS
+        if factor in baseline_factors and factor in current_factors
+    ]
+    provisional_h0 = dict(nowcast_h0)
+    provisional_h0.update(
+        {
+            "estimate_status": "PROVISIONAL",
+            "estimate_label": ESTIMATE_LABELS["PROVISIONAL"],
+        }
+    )
+    return {
+        "baseline_as_of_date": baseline_date.isoformat(),
+        "as_of_date": intramonth_date.isoformat(),
+        "estimate_status": "PROVISIONAL",
+        "estimate_label": "현재 입수정보 기반 잠정 계산",
+        "model_version": str(intramonth.get("model_version") or "") or None,
+        "current_horizon": provisional_h0,
+        "probability_deltas": {
+            phase: float(nowcast_probabilities[phase])
+            - float(monthly_probabilities[phase])
+            for phase in PHASES
+        },
+        "factor_deltas": factor_deltas,
+        "source_collected_at": str(intramonth.get("source_collected_at") or "")
+        or None,
+        "source_coverage": _compact_source_coverage(
+            intramonth.get("source_coverage_json")
+        ),
+    }
+
+
 def _sources(
     snapshot: Mapping[str, object], evidence: Sequence[Mapping[str, object]]
 ) -> list[dict[str, object]]:
@@ -256,6 +381,7 @@ def build_economic_cycle_read_model(
     *,
     as_of_date: str | date | None = None,
     snapshot_loader: Callable[..., Mapping[str, object] | None] | None = None,
+    intramonth_loader: Callable[..., Mapping[str, object] | None] | None = None,
     history_loader: Callable[..., Sequence[Mapping[str, object]]] | None = None,
     market_series_loader: Callable[..., Sequence[Mapping[str, object]]] | None = None,
     asset_price_loader: Callable[..., Sequence[Mapping[str, object]]] | None = None,
@@ -293,6 +419,27 @@ def build_economic_cycle_read_model(
     horizons = _horizons(resolved_snapshot)
     history = _history(history_rows)
     evidence = _evidence(resolved_snapshot)
+    load_intramonth = (
+        intramonth_loader
+        if intramonth_loader is not None
+        else load_cycle_snapshot
+        if snapshot_loader is None
+        else None
+    )
+    intramonth_row: Mapping[str, object] | None = None
+    if load_intramonth is not None:
+        try:
+            intramonth_row = load_intramonth(
+                as_of_date=as_of_date,
+                run_kind="intramonth_nowcast",
+            )
+        except Exception:
+            intramonth_row = None
+    intramonth = _intramonth_projection(
+        resolved_snapshot,
+        horizons,
+        intramonth_row,
+    )
 
     market_reference = pd.Timestamp(
         price_reference_date or as_of_date or date.today()
@@ -364,6 +511,7 @@ def build_economic_cycle_read_model(
         "status": "READY" if status == "READY" else "LIMITED",
         "as_of_date": snapshot_date or None,
         "model_version": str(resolved_snapshot.get("model_version") or "") or None,
+        "intramonth": intramonth,
         "headline": {
             "phase": current_phase,
             "phase_label": PHASE_LABELS.get(str(current_phase), "판단 제한"),

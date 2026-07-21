@@ -107,6 +107,7 @@ def test_ready_read_model_maps_horizons_evidence_sources_and_separate_history() 
         "status",
         "as_of_date",
         "model_version",
+        "intramonth",
         "headline",
         "horizons",
         "cycle_clock",
@@ -141,6 +142,130 @@ def test_ready_read_model_maps_horizons_evidence_sources_and_separate_history() 
         for item in model["history"]
     )
     json.dumps(model, allow_nan=False)
+
+
+def _intramonth_snapshot() -> dict[str, object]:
+    probabilities = {
+        "recovery": 0.16,
+        "expansion": 0.64,
+        "slowdown": 0.10,
+        "recession": 0.10,
+    }
+    horizons = [
+        {
+            "horizon_months": 0,
+            "probabilities": probabilities,
+            "dominant_phase": "expansion",
+            "confidence": 0.64,
+            "publication_status": "READY",
+            "reason": None,
+        }
+    ]
+    return {
+        "as_of_date": "2026-07-21",
+        "baseline_as_of_date": "2026-06-30",
+        "model_version": "cycle-v1",
+        "status": "READY",
+        "forecast_path_json": json.dumps(horizons),
+        "top_evidence_json": json.dumps(
+            [
+                {"factor": "activity_score", "value": -0.80},
+                {"factor": "labor_income_score", "value": -0.29},
+                {"factor": "financial_leading_score", "value": 0.28},
+                {"factor": "inflation_policy_score", "value": 0.74},
+            ]
+        ),
+        "source_collected_at": "2026-07-16 10:02:56",
+        "source_coverage_json": json.dumps(
+            {
+                "requested_series": 17,
+                "available_series": 17,
+                "series": [
+                    {
+                        "series_id": "PAYEMS",
+                        "status": "ACTUAL",
+                        "latest_observation_date": "2026-06-01",
+                    }
+                ],
+            }
+        ),
+    }
+
+
+def test_service_pairs_latest_intramonth_with_exact_monthly_baseline() -> None:
+    service = _load_service()
+    monthly = _ready_snapshot()
+    monthly["top_evidence_json"] = json.dumps(
+        [
+            {"factor": "activity_score", "value": -0.82},
+            {"factor": "labor_income_score", "value": -0.44},
+            {"factor": "financial_leading_score", "value": 0.22},
+            {"factor": "inflation_policy_score", "value": 0.79},
+        ]
+    )
+
+    model = service.build_economic_cycle_read_model(
+        as_of_date="2026-07-21",
+        snapshot_loader=lambda **_kwargs: monthly,
+        intramonth_loader=lambda **_kwargs: _intramonth_snapshot(),
+        history_loader=lambda **_kwargs: _history_rows(12),
+    )
+
+    bridge = model["intramonth"]
+    assert bridge["baseline_as_of_date"] == "2026-06-30"
+    assert bridge["as_of_date"] == "2026-07-21"
+    assert bridge["estimate_status"] == "PROVISIONAL"
+    assert bridge["current_horizon"]["estimate_status"] == "PROVISIONAL"
+    assert bridge["probability_deltas"]["recovery"] == pytest.approx(0.06)
+    factor = next(
+        item for item in bridge["factor_deltas"] if item["factor"] == "labor_income_score"
+    )
+    assert factor["delta"] == pytest.approx(0.15)
+    assert bridge["source_collected_at"] == "2026-07-16 10:02:56"
+    assert bridge["source_coverage"]["available_series"] == 17
+    assert len(model["history"]) == 12
+    assert all(item["date"] != "2026-07-21" for item in model["history"])
+
+
+@pytest.mark.parametrize(
+    "mutator",
+    [
+        lambda row: row.update(baseline_as_of_date="2026-05-31"),
+        lambda row: row.update(model_version="different-model"),
+        lambda row: row.update(forecast_path_json='[{"horizon_months":0,"probabilities":null}]'),
+        lambda row: row.update(as_of_date="2026-06-30"),
+    ],
+)
+def test_service_hides_unpaired_or_malformed_intramonth_rows(mutator) -> None:
+    service = _load_service()
+    nowcast = _intramonth_snapshot()
+    mutator(nowcast)
+
+    model = service.build_economic_cycle_read_model(
+        as_of_date="2026-07-21",
+        snapshot_loader=lambda **_kwargs: _ready_snapshot(),
+        intramonth_loader=lambda **_kwargs: nowcast,
+        history_loader=lambda **_kwargs: [],
+    )
+
+    assert model["intramonth"] is None
+
+
+def test_service_isolates_intramonth_loader_error() -> None:
+    service = _load_service()
+
+    def broken_loader(**_kwargs):
+        raise RuntimeError("nowcast table unavailable")
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: _ready_snapshot(),
+        intramonth_loader=broken_loader,
+        history_loader=lambda **_kwargs: [],
+    )
+
+    assert model["status"] == "READY"
+    assert model["intramonth"] is None
+    assert "nowcast table unavailable" not in json.dumps(model, ensure_ascii=False)
 
 
 def test_limited_horizon_exposes_provisional_probabilities_with_validation_reason() -> (

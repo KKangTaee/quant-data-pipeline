@@ -156,11 +156,15 @@ def test_cycle_bridge_is_db_only_and_has_no_action_event() -> None:
     bridge_source = Path(
         "app/web/overview/economic_cycle_react_component.py"
     ).read_text()
+    service_source = Path("app/services/overview/economic_cycle.py").read_text()
 
     assert "build_economic_cycle_read_model" in helper_source
     assert "run_collect_economic_cycle" not in helper_source
     assert "run_materialize_economic_cycle" not in helper_source
-    assert "finance.data.economic_cycle_vintages" not in helper_source + bridge_source
+    combined_source = helper_source + bridge_source + service_source
+    assert "finance.data.economic_cycle_vintages" not in combined_source
+    assert "run_economic_cycle_intramonth_refresh" not in combined_source
+    assert "materialize_economic_cycle_intramonth_snapshot" not in combined_source
     assert "event" not in bridge_source.lower()
 
 
