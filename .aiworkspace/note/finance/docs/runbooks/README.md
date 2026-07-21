@@ -1,7 +1,7 @@
 # Finance Runbooks
 
 Status: Active
-Last Verified: 2026-07-20
+Last Verified: 2026-07-21
 
 ## Feature Runbooks
 
@@ -10,7 +10,7 @@ Last Verified: 2026-07-20
 | [EDGAR_FINANCIAL_STATEMENT_REFRESH.md](./EDGAR_FINANCIAL_STATEMENT_REFRESH.md) | EDGAR annual statement refresh, statement coverage diagnosis, shadow rebuild, SEC fair-access / pacing 확인 |
 | [INSTITUTIONAL_13F_DATASET.md](./INSTITUTIONAL_13F_DATASET.md) | SEC Form 13F official quarterly dataset ingestion, user-agent, source caveat, QA 확인 |
 | [OVERVIEW_MARKET_INTELLIGENCE.md](./OVERVIEW_MARKET_INTELLIGENCE.md) | Overview 경제 사이클 vintage/model manual refresh, Market Context / Market Movers / Futures Macro / Sentiment / Events 운영, scheduled refresh automation, FOMC / earnings estimate 수집, closeout QA |
-| [PORTFOLIO_MONITORING_MIGRATION_AND_QA.md](./PORTFOLIO_MONITORING_MIGRATION_AND_QA.md) | Portfolio Monitoring schema/default group/position event empty migration/legacy dry-run/rollback/React responsive·거래 interaction QA |
+| [PORTFOLIO_MONITORING_MIGRATION_AND_QA.md](./PORTFOLIO_MONITORING_MIGRATION_AND_QA.md) | Portfolio Monitoring schema/default group/position event optional-date migration/legacy dry-run/rollback/React responsive·최초 설정·거래 interaction QA |
 
 ## Local App
 

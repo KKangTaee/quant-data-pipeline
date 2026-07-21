@@ -5,3 +5,7 @@
 - 최초 등록은 requested date와 effective market date를 분리하므로 정정도 같은 날짜 의미를 유지해야 한다.
 - group curve는 item의 requested/effective start를 직접 참조하는 구간이 있어 projected initial contract로 함께 전환해야 한다.
 - legacy initial correction row와 command/effect identity는 호환 경계로 유지한다.
+- 유효 초기 계약을 history loader보다 먼저 투영해야 원본 item보다 이른 시작일 정정도 DB 가격 범위에 포함된다.
+- 초기 설정 정정 resolver는 item/event chain lock 안에서 다시 실행해 preview와 저장 사이 가격·거래 상태 변화를 검증한다.
+- UI save readiness는 item id, requested date, quantity가 모두 최신 `READY` projection과 일치할 때만 성립한다. 수량 변경도 새 initial-capital preview 조회를 요구한다.
+- 실제 QA DB에는 기존 event가 0건이었고 optional column만 추가됐다. 사용자 item row와 JSONL은 수정하지 않았다.

@@ -23,6 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
+  - Latest completed Portfolio Monitoring position follow-up is [portfolio-monitoring-initial-setting-correction-v1-20260721](./tasks/active/portfolio-monitoring-initial-setting-correction-v1-20260721/STATUS.md). 최초 요청 시작일·수량을 append-only로 함께 정정하고 새 적용 시장일·종가부터 개별/그룹 성과를 재계산하는 전체 `4/4차`를 완료했다.
   - Latest completed Portfolio Monitoring UX task is [portfolio-monitoring-reference-help-removal-v1-20260721](./tasks/active/portfolio-monitoring-reference-help-removal-v1-20260721/STATUS.md). 중복 contextual panel을 제거하고 canonical Reference 3개 항목을 보존한 채 전체 `2/2차` actual QA를 완료했다.
   - Latest completed Reference task is [reference-center-react-v1-20260720](./tasks/active/reference-center-react-v1-20260720/STATUS.md). 단일 Search-first React Reference, curated 24-item catalog, stable contextual deep link, legacy removal과 responsive Browser QA를 전체 `4/4차`로 완료했다.
   - Current active task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `1/4차` 기능과 승인된 시각 polish·actual QA를 완료했고, 다음은 2차 장기 이력·발표 당시 값 품질 점검이다.
@@ -71,6 +72,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### 2026-07-21 - Portfolio Monitoring 최초 시작일·수량 정정
+
+- `보유내역 > 최초 설정 정정`에서 요청 시작일과 최초 수량을 함께 바꾸고 요청일 이후 첫 DB 시장일·종가·최초 투자금을 비교하도록 구현했다.
+- append-only revision과 legacy identity를 유지하면서 corrected initial contract로 개별 lane과 그룹 timeline을 재계산하고 선행 거래/invalid sell을 rollback한다.
+- actual schema에 nullable date 2개를 idempotent하게 추가하고 기존 row `1/5/8/0`과 registry/saved checksum을 보존했다. Python 156, React 32, typecheck/build와 route/420px/console QA를 완료했다.
+- 전체 roadmap `4/4차` 완료. 상세 구현·QA·잔여 Browser interaction gap은 task `STATUS.md`, `RUNS.md`, `RISKS.md`를 본다.
 
 ### 2026-07-21 - Portfolio Monitoring Reference help 소유권 단일화
 

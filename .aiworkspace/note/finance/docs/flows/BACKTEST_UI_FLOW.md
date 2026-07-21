@@ -268,6 +268,8 @@ catalog drift guard는 required surface coverage, item id·관련 item 참조, d
 Backtest workflow는 Final Review에서 끝나고,
 모니터링 후보 선정 후 확인은 Operations 화면에서 한다.
 
+direct 미국 주식의 fixed-shares 항목은 `개별 추적 결과 > 보유내역`에서 최초 요청 시작일과 수량을 `최초 설정 정정`으로 함께 바꿀 수 있다. 요청일 이후 첫 저장 시장일과 종가를 Python이 다시 결정하고, 변경 전/후 초기 계약을 확인한 뒤 append-only revision으로 저장한다. 새 초기 계약은 개별 lane과 그룹 성과에 함께 적용되며 ETF, fixed notional, selected strategy와 quant backtest에는 이 정정을 제공하지 않는다.
+
 ```text
 Backtest > Final Review
   -> FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl

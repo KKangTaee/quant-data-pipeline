@@ -1,6 +1,6 @@
 # Portfolio Monitoring Initial Setting Correction V1 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** `개별 추적 결과 > 보유내역`에서 최초 요청 시작일과 최초 수량을 함께 append-only로 정정하고, 새 적용 시장일·종가부터 개별/그룹 성과를 일관되게 다시 계산한다.
 
@@ -86,7 +86,7 @@ export type InitialPositionEntryProjection = {
 - Consumes: existing `MonitoringItemRecord`, `PositionEventRecord`, append-only root/revision chain.
 - Produces: `InitialPositionContract`, `PositionEventProjection.initial_contract`, optional event requested/effective dates, legacy fallback.
 
-- [ ] **Step 1: Write schema/input RED tests**
+- [x] **Step 1: Write schema/input RED tests**
 
 Add these assertions to `tests/test_portfolio_monitoring_schema.py`:
 
@@ -117,7 +117,7 @@ ALTER TABLE `monitoring_security_position_event` ADD COLUMN `requested_start_dat
 ALTER TABLE `monitoring_security_position_event` ADD COLUMN `effective_start_date` DATE NULL
 ```
 
-- [ ] **Step 2: Write effective-initial-contract RED tests**
+- [x] **Step 2: Write effective-initial-contract RED tests**
 
 In `tests/test_portfolio_monitoring_position_events.py`, add:
 
@@ -159,7 +159,7 @@ def test_legacy_quantity_correction_falls_back_to_item_start_contract() -> None:
     self.assertEqual(projection.initial_contract.initial_capital, Decimal("2000"))
 ```
 
-- [ ] **Step 3: Run RED and verify the missing contracts**
+- [x] **Step 3: Run RED and verify the missing contracts**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -169,7 +169,7 @@ def test_legacy_quantity_correction_falls_back_to_item_start_contract() -> None:
 
 Expected: FAIL because `InitialQuantityCorrectionInput` and `PositionEventRecord` do not accept the dates, DDL lacks both columns, and `PositionEventProjection` has no `initial_contract`.
 
-- [ ] **Step 4: Implement schema, parser and idempotent upgrade**
+- [x] **Step 4: Implement schema, parser and idempotent upgrade**
 
 Add to the event DDL immediately after `trade_date`:
 
@@ -218,7 +218,7 @@ def _ensure_position_event_optional_columns(db: Any) -> None:
 
 Call it at the end of `MySQLMonitoringRepository.ensure_schema()`. Do not catch and suppress the ALTER failure.
 
-- [ ] **Step 5: Implement initial input and projection**
+- [x] **Step 5: Implement initial input and projection**
 
 Extend the input compatibly:
 
@@ -287,7 +287,7 @@ initial_contract = InitialPositionContract(
 )
 ```
 
-- [ ] **Step 6: Run GREEN and full Task 1 regression**
+- [x] **Step 6: Run GREEN and full Task 1 regression**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -303,7 +303,7 @@ git diff --check
 
 Expected: all focused tests pass; legacy event fixtures remain constructible; compile and diff check exit 0.
 
-- [ ] **Step 7: Review and commit Task 1**
+- [x] **Step 7: Review and commit Task 1**
 
 ```bash
 git add \
@@ -333,7 +333,7 @@ git commit -m "기능: 포트폴리오 최초 설정 정정 계약 확장"
 - Consumes: Task 1 `InitialPositionContract` and optional event dates.
 - Produces: `InitialEntryResolver`, correction revision resolution, corrected `ItemValueLane`, selected-position initial fields, group timeline alignment.
 
-- [ ] **Step 1: Write command RED tests**
+- [x] **Step 1: Write command RED tests**
 
 Add tests that use a resolver returning Monday for a Sunday request:
 
@@ -365,7 +365,7 @@ Add separate tests for:
 - corrected effective start `2026-07-10` is rejected when an active buy exists on `2026-07-09`;
 - corrected quantity is rejected when a later sell leaves fewer than one share.
 
-- [ ] **Step 2: Write valuation/read-model RED tests**
+- [x] **Step 2: Write valuation/read-model RED tests**
 
 Add a lane test with an original item start of `2026-07-01`, corrected request/effective dates `2026-06-28/29`, entry close `95`, 40 shares and history beginning on `2026-06-29`. Assert:
 
@@ -379,7 +379,7 @@ self.assertEqual(lane.position.entry_close, Decimal("95"))
 
 Add a group test with this corrected lane and a second item starting `2026-07-01`. Assert the first group curve date is `2026-06-28`, the corrected capital is held as pre-market cash until `2026-06-29`, and group invested capital/current P&L use `3800`, not the original item capital.
 
-- [ ] **Step 3: Run RED**
+- [x] **Step 3: Run RED**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -390,7 +390,7 @@ Add a group test with this corrected lane and a second item starting `2026-07-01
 
 Expected: FAIL because correction has no resolver, lane still filters on the item start/close, and group timeline still reads item dates.
 
-- [ ] **Step 4: Implement server-owned correction resolution**
+- [x] **Step 4: Implement server-owned correction resolution**
 
 Add:
 
@@ -428,7 +428,7 @@ else:
 
 Only buy/sell uses the old `trade_date < item.effective_start_date` gate. The candidate event receives both initial dates. `execute_correct_initial_quantity()` passes `validated.requested_start_date` and the resolver, and the fingerprint remains `asdict(validated)`.
 
-- [ ] **Step 5: Validate trades against the projected start**
+- [x] **Step 5: Validate trades against the projected start**
 
 Before applying splits in `validate_position_sequence()` add:
 
@@ -443,7 +443,7 @@ for trade in projection.trades:
 
 Keep split and sell validation unchanged after this gate.
 
-- [ ] **Step 6: Use the corrected contract in valuation**
+- [x] **Step 6: Use the corrected contract in valuation**
 
 Resolve projection before filtering the frame. Use:
 
@@ -471,7 +471,7 @@ initial_capital = (
 
 Extend `PositionLedgerSummary` with `requested_start_date`, `effective_start_date`, `entry_close`, `initial_capital`, and return the corrected `effective_start_date` from `ItemValueLane`.
 
-- [ ] **Step 7: Align group and selected-position projections**
+- [x] **Step 7: Align group and selected-position projections**
 
 Add read-model helpers:
 
@@ -495,7 +495,7 @@ Use them in `align_group_value_lanes()` for `start_date`, each timeline start an
 "initial_capital": lane.position.initial_capital,
 ```
 
-- [ ] **Step 8: Run GREEN and regression**
+- [x] **Step 8: Run GREEN and regression**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -513,7 +513,7 @@ git diff --check
 
 Expected: all Task 2 and Task 1 regressions pass; legacy no-event and quantity-only correction tests remain green.
 
-- [ ] **Step 9: Review and commit Task 2**
+- [x] **Step 9: Review and commit Task 2**
 
 ```bash
 git add \
@@ -546,7 +546,7 @@ git commit -m "기능: 정정 시작일 기준 포트폴리오 성과 재계산"
 - Consumes: Task 2 corrected selected-position fields and `execute_correct_initial_quantity(..., resolve_initial_entry=...)`.
 - Produces: `lookup_initial_position_entry` intent, `initial_position_entry` projection, recovery-safe date editor and final correction command payload.
 
-- [ ] **Step 1: Write page RED tests**
+- [x] **Step 1: Write page RED tests**
 
 Add tests for a Sunday request resolving to Monday without provider fetch:
 
@@ -568,7 +568,7 @@ def test_initial_entry_lookup_resolves_requested_to_effective_market_date(self) 
 
 Add dispatch/recovery tests asserting `lookup_initial_position_entry` stores selected item, requested date and whitelisted correction state, while `correct_initial_quantity` forwards `requested_start_date` to the service exactly once.
 
-- [ ] **Step 2: Write React state RED tests**
+- [x] **Step 2: Write React state RED tests**
 
 Extend `positionEditorState.test.ts`:
 
@@ -593,7 +593,7 @@ it("builds a date-aware initial-setting correction", () => {
 
 Add cases for missing date, unresolved/mismatched resolution, and recovery-key change when the correction date changes.
 
-- [ ] **Step 3: Write the existing component source-contract RED test**
+- [x] **Step 3: Write the existing component source-contract RED test**
 
 Extend `tests/test_portfolio_monitoring_component.py` instead of introducing a DOM test dependency that the component package does not currently carry:
 
@@ -618,7 +618,7 @@ def test_initial_setting_correction_exposes_date_lookup_and_comparison(self) -> 
 
 The reducer test from Step 2 owns the final command payload. The actual click/rerender/preview interaction is verified in Task 4 Browser QA, where a DOM and Streamlit rerun loop are available.
 
-- [ ] **Step 4: Run RED**
+- [x] **Step 4: Run RED**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -630,7 +630,7 @@ npm --prefix app/web/streamlit_components/portfolio_monitoring_workbench \
 
 Expected: FAIL because lookup/projection fields, date-aware correction payload and UI do not exist.
 
-- [ ] **Step 5: Implement DB-only initial entry resolution and lane loading**
+- [x] **Step 5: Implement DB-only initial entry resolution and lane loading**
 
 Add:
 
@@ -670,7 +670,7 @@ value = InitialQuantityCorrectionInput(
 
 Pass `resolve_initial_entry=_resolve_initial_position_entry` to the command.
 
-- [ ] **Step 6: Implement initial-entry projection and dispatch**
+- [x] **Step 6: Implement initial-entry projection and dispatch**
 
 Add separate workspace state rather than overloading trade-close price semantics:
 
@@ -704,7 +704,7 @@ if event_id == "lookup_initial_position_entry":
     return None
 ```
 
-- [ ] **Step 7: Implement TypeScript contracts and editor state**
+- [x] **Step 7: Implement TypeScript contracts and editor state**
 
 Add `InitialPositionEntryProjection`, the four selected-position initial fields, workspace `initial_position_entry`, and event contracts:
 
@@ -729,7 +729,7 @@ Add `InitialPositionEntryProjection`, the four selected-position initial fields,
 
 For correction mode, require `draft.tradeDate`, include it as `requested_start_date`, and include `initialEntryReady` in validation context. `buildPositionEditorRecovery()` continues using `trade_date` as the transient correction requested date, preserving the existing recovery schema.
 
-- [ ] **Step 8: Implement `최초 설정 정정` form and preview**
+- [x] **Step 8: Implement `최초 설정 정정` form and preview**
 
 Change the action/title and prefill:
 
@@ -758,7 +758,7 @@ For correction date changes emit `lookup_initial_position_entry`; leave buy/sell
 
 The preview must show two columns with these exact labels: `변경 전`, `변경 후`, `요청일`, `적용일`, `시작 종가`, `최초 투자금`. Disable save unless the READY projection belongs to the selected item and requested date. Use the note `새 적용일부터 전체 거래 이력과 성과를 다시 계산합니다.`
 
-- [ ] **Step 9: Run GREEN, typecheck and build**
+- [x] **Step 9: Run GREEN, typecheck and build**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -773,7 +773,7 @@ git diff --check
 
 Expected: Python page/component contracts and all React tests pass; typecheck/build and compile exit 0.
 
-- [ ] **Step 10: Review and commit Task 3**
+- [x] **Step 10: Review and commit Task 3**
 
 ```bash
 git add \
@@ -806,7 +806,7 @@ git commit -m "개선: 개별종목 최초 시작일과 수량 정정 지원"
 - Verifies: Tasks 1-3 full behavior, schema upgrade, no user-data rewrite, responsive correction flow.
 - Produces: deployed current-state contract, QA evidence, docs/task closeout.
 
-- [ ] **Step 1: Run full Portfolio Monitoring automation**
+- [x] **Step 1: Run full Portfolio Monitoring automation**
 
 ```bash
 .venv/bin/python -m unittest discover -s tests -p 'test_portfolio_monitoring_*.py' -q
@@ -822,7 +822,7 @@ git diff --check
 
 Record exact Python/React counts in `RUNS.md`.
 
-- [ ] **Step 2: Verify and apply the additive schema upgrade**
+- [x] **Step 2: Verify and apply the additive schema upgrade**
 
 Before mutation, read and record the event table row count and current column list. Run `MySQLMonitoringRepository.ensure_schema()` once, then repeat it. Verify:
 
@@ -834,7 +834,7 @@ Before mutation, read and record the event table row count and current column li
 
 If DB configuration is unavailable, do not claim migration completion; record the exact gap in `RISKS.md` and keep automated fake-DB idempotency evidence.
 
-- [ ] **Step 3: Run actual and isolated Browser QA**
+- [x] **Step 3: Run actual and isolated Browser QA**
 
 Use the in-app Browser according to the repository rule.
 
@@ -856,7 +856,7 @@ Use the isolated component/Streamlit harness for a mutation interaction:
 
 Save one screenshot as `portfolio-monitoring-initial-setting-correction-qa.png`; do not stage it. Reset the temporary viewport and close QA tabs after verification.
 
-- [ ] **Step 4: Synchronize durable docs**
+- [x] **Step 4: Synchronize durable docs**
 
 Update the smallest current-state set:
 
@@ -867,7 +867,7 @@ Update the smallest current-state set:
 - task docs: exact RED/GREEN runs, migration status, Browser assertions, residual gaps;
 - root logs: 3-5 line milestone and durable decision.
 
-- [ ] **Step 5: Run final fresh verification**
+- [x] **Step 5: Run final fresh verification**
 
 ```bash
 .venv/bin/python -m unittest discover -s tests -p 'test_portfolio_monitoring_*.py' -q
@@ -882,7 +882,7 @@ git status --short
 
 Expected: all tests/builds pass; only intended code/docs/static assets are tracked; QA PNG and pre-existing local artifacts remain untracked.
 
-- [ ] **Step 6: Commit closeout**
+- [x] **Step 6: Commit closeout**
 
 ```bash
 git add \

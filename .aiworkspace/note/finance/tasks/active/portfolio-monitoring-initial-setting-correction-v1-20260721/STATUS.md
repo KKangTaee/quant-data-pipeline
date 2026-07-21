@@ -1,11 +1,11 @@
 # Portfolio Monitoring Initial Setting Correction V1 Status
 
-Status: Detailed implementation plan ready
+Status: Complete — roadmap 4/4
 
-- 사용자가 `개별 추적 결과 > 최초 수량 정정`에서 최초 추적 시작일도 변경할 수 있어야 한다고 요청했다.
-- 현재 추가매수·일부매도 거래일은 수정 가능하지만 initial correction은 시작일·시작 종가를 의도적으로 고정함을 확인했다.
-- 사용자가 append-only 초기 계약 정정 확장 권장안을 승인했다.
-- written design은 기존 command/event identity를 호환 유지하면서 requested/effective date와 entry close를 revision에 보존하는 방향이다.
-- 사용자가 written `DESIGN.md`를 승인했다.
-- schema/projection, command/valuation, Streamlit/React, migration/QA/docs의 4-task TDD implementation plan을 작성했다.
-- 다음 action은 사용자가 선택한 execution mode로 Task 1부터 실행하는 것이다.
+- `개별 추적 결과 > 보유내역` action을 `최초 설정 정정`으로 바꾸고 새 추적 시작일과 새 최초 수량을 한 dialog에서 입력하도록 구현했다.
+- 요청일 이후 첫 DB 시장일·종가와 최초 투자금을 변경 전/후로 확인하며, Python command가 같은 resolution과 이후 거래 유효성을 transaction 안에서 다시 검증한다.
+- correction revision의 requested/effective date, entry close, initial shares/capital을 유효 초기 계약으로 투영해 개별 lane과 그룹 timeline을 함께 다시 계산한다.
+- 기존 `correct_initial_quantity` / `initial_quantity_correction`, legacy null-date fallback, 추가매수·일부매도, split-first, event order, Modified Dietz `0.5` 계약을 유지했다.
+- 운영 schema의 nullable date column 2개를 idempotent하게 추가했고 기존 group/item/command/event row `1/5/8/0`과 registry/saved checksum을 보존했다.
+- Python 156개, React 32개, typecheck/build와 actual route·420px overflow·console QA를 완료했다. Browser 저장 interaction은 QA iframe selection round-trip 제약으로 자동화 command/component 회귀가 소유한다.
+- ETF, fixed notional, selected strategy, quant backtest, full sell, tax lot, broker/account sync는 범위 밖이다.

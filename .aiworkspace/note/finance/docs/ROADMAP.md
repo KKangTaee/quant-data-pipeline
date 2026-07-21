@@ -21,6 +21,13 @@ Portfolio Monitoring Position Events V1도 전체 `3/3차`를 완료했다.
 - 경계: ETF, selected strategy, fixed notional, full sell, tax lot/FIFO, broker/account sync, quant backtest 변경은 없다. 전량매도는 기존 tracking end를 사용한다.
 - QA: additive 운영 table 적용 전후 기존 group/item/command `1/2/5`건을 보존하고 새 event table은 `0`건에서 시작했다. Python 137, React 29, typecheck/build, actual read-only route, isolated desktop/900/420 interaction QA를 통과했다.
 
+Portfolio Monitoring Initial Setting Correction V1도 전체 `4/4차`를 완료했다.
+
+- 완료 범위: `개별 추적 결과 > 보유내역`의 `최초 설정 정정`에서 direct U.S. stock + fixed shares의 최초 요청 시작일과 수량을 함께 수정한다. 요청일 이후 첫 DB 시장일·종가와 최초 투자금을 비교 확인하고 append-only revision으로 저장한다.
+- 재계산 계약: correction terminal revision이 유효 requested/effective start, entry close, initial shares/capital을 투영한다. 개별 lane과 그룹 timeline은 같은 초기 계약을 사용하며, 새 시작일 이전 거래나 새 수량으로 무효가 되는 매도는 transaction 전체를 거부한다.
+- 호환/경계: 기존 `correct_initial_quantity` / `initial_quantity_correction` identity와 legacy null-date fallback을 유지한다. ETF, fixed notional, selected strategy, quant backtest, registry/saved JSONL은 변경하지 않는다.
+- QA: 운영 schema에 nullable date column 2개를 한 번만 추가했고 group/item/command/event row `1/5/8/0`과 registry/saved checksum을 보존했다. Portfolio Monitoring Python 156, React 32, typecheck/build와 actual route/420px overflow/console QA를 통과했다. 브라우저 저장 interaction은 QA iframe의 selection event가 서버 session으로 전달되지 않아 자동화 command/component 회귀로 대체했다.
+
 Portfolio Monitoring Diagnosis Grouping / Scroll V1도 전체 `3/3차`를 완료했다.
 
 - 완료 범위: `correlation_cluster`와 `current_drawdown`의 반복 판정을 의미 가족별 한 카드로 요약하고, 종목·종목쌍별 측정값과 기준은 disclosure에 모두 보존했다. 상위 확인 신호도 서로 다른 display group 기준으로 선택한다.
@@ -858,6 +865,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 | Workstream | Status | Durable Notes |
 |---|---|---|
 | Portfolio Monitoring Position Events V1 | Complete | Direct-stock fixed-shares detail supports initial quantity correction, additional buy, partial sell, immutable replace/void revisions, exact-date DB-close default/manual override provenance and cashflow-aware performance. Full sell stays in tracking end; ETF/strategy/fixed-notional/backtest remain unchanged. |
+| Portfolio Monitoring Initial Setting Correction V1 | Complete | `최초 설정 정정` extends the append-only initial correction with requested/effective start dates and DB entry close. Individual/group valuation replays from the corrected initial contract; legacy rows fall back to the item start contract. |
 | Portfolio Monitoring Tracking End Reopen V1 | Complete; Browser QA policy-blocked | Ended item detail exposes `추적 종료 취소`. The idempotent `reopen_item` command preserves item identity and original start/funding/entry contract, clears end dates/exit value, and recomputes the read model as continuous tracking. Reopen rechecks active capacity 10 and duplicate source invariants. Python 112 / React 25 / typecheck/build/static distribution pass; local Browser interaction was blocked by URL policy. |
 | Portfolio Monitoring Chart Zoom / Pan V1 | Implementation complete; Browser QA pending | Selected direct stock/ETF line/candle chart owns a client-only inclusive viewport over the existing latest 120 stored daily rows. Wheel/center controls zoom to 15 sessions, horizontal drag pans with edge clamp, reset restores the full range, and mobile remains controls-only. Desktop contribution/detail is 35:65 with a 280px list minimum, and selected chart price/VOL/date axes use 11px/700 labels. Python/DB/strategy/group-chart contracts are unchanged. Automated Python 102 / React 24 / typecheck/build/static distribution pass; actual desktop/900px/420px interaction/layout/overflow QA is pending because local Browser DOM access was policy-blocked. |
 | Portfolio Monitoring Chart Clarity / OHLCV V1 | Complete | Group value curve hides static point halos and shows 5 desktop / 3 mobile actual-observation date ticks. Selected direct stock/ETF detail reads the latest 120 stored daily OHLCV rows for close line or candle/volume exploration; selected strategy remains value-only. The route stays DB-only and Operations summary adds no detail read. |

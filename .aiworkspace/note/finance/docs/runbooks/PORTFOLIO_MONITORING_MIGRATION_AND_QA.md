@@ -1,7 +1,7 @@
 # Portfolio Monitoring Migration And QA
 
 Status: Active
-Last Verified: 2026-07-20
+Last Verified: 2026-07-21
 
 ## 언제 쓰는가
 
@@ -26,10 +26,11 @@ git diff --check
 ## 3. 운영 schema 적용
 
 1. 운영 `finance_meta`의 table 목록을 다시 기록한다.
-2. `MySQLMonitoringRepository.ensure_schema()`로 `CREATE TABLE IF NOT EXISTS` 여섯 개만 적용한다. 적용 전후 `monitoring_portfolio_group`, `monitoring_portfolio_item`, `monitoring_portfolio_command` row count가 같아야 한다.
+2. `MySQLMonitoringRepository.ensure_schema()`로 `CREATE TABLE IF NOT EXISTS` 여섯 개와 position-event optional column upgrade를 적용한다. 기존 table에는 `requested_start_date DATE NULL`, `effective_start_date DATE NULL`만 누락 시 각각 한 번 추가한다. 적용 전후 `monitoring_portfolio_group`, `monitoring_portfolio_item`, `monitoring_portfolio_command`, `monitoring_security_position_event` row count가 같아야 한다.
 3. table/index/column을 read-only로 검증한다.
    - `uk_monitoring_calibration_fingerprint` 순서는 `algorithm_version, data_fingerprint, config_fingerprint, policy_version, horizon_sessions`여야 한다.
-   - 신규 배포 직후 `monitoring_security_position_event` row count는 0이어야 한다. 사용자 거래 interaction QA는 운영 DB가 아니라 격리 fixture에서 수행한다.
+   - 두 optional date column이 nullable `DATE`인지 확인하고 `ensure_schema()`를 다시 호출했을 때 추가 `ALTER`가 없는지 확인한다.
+   - 신규 배포 직후 event row가 없는 환경에서는 `monitoring_security_position_event` row count가 0으로 유지되어야 한다. 사용자 거래 interaction QA는 운영 DB가 아니라 격리 fixture에서 수행한다.
 4. `ensure_default_group(repository)`를 두 번 호출하고 active default group이 정확히 하나인지 확인한다.
 
 `ensure_schema`와 default group 생성은 column drop, table rename, 기존 row update를 하지 않는다. 실패 시 더 진행하지 않고 error와 적용된 table 목록을 기록한다.
@@ -53,7 +54,8 @@ git diff --check
 - Context Drawer에 direct stock/ETF와 selected strategy가 분리되고 수량 방식은 정수만 받는다.
 - 빈 그룹은 데이터 부족 경고를 만들지 않고 종목 추가 행동을 안내한다.
 - 종목 fixture 검증에서는 invested/current/return/MDD/CAGR, 공통 curve, 개별 lane이 일치한다.
-- direct-stock fixed-shares fixture에서는 현재/최초 수량, 누적 입금·출금, 수량 정정, 추가매수·일부매도, 거래 수정·취소가 보인다. 거래일 exact DB close 기본값과 manual override label, partial sell 최소 1주 validation을 확인한다.
+- direct-stock fixed-shares fixture에서는 현재/최초 수량, 누적 입금·출금, `최초 설정 정정`, 추가매수·일부매도, 거래 수정·취소가 보인다. 정정 창의 새 추적 시작일·새 최초 수량과 요청일/적용일/시작 종가/최초 투자금 변경 전·후를 확인한다. 주말 요청일은 다음 stored market date로 적용되고 저장 뒤 같은 종목을 유지한 채 개별/그룹 결과가 갱신되어야 한다.
+- 거래일 exact DB close 기본값과 manual override label, partial sell 최소 1주 validation을 확인한다. 정정 적용일보다 이른 기존 거래와 새 최초 수량을 초과하는 매도는 저장이 차단되어야 한다.
 - ETF, selected strategy와 fixed-notional item에는 position trade action이 없어야 한다.
 - `지금 확인할 변화`, `강점`, `취약점`, `데이터 부족`, `현재 매크로 관찰`, `위험 검증과 진단 이력`을 확인한다.
 - calibration이 현재 fingerprint의 `READY`가 아니면 확률이 숨겨지고 관찰 전용 설명이 보인다.

@@ -17,6 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
+  - Latest completed Portfolio Monitoring position decision: [portfolio-monitoring-initial-setting-correction-v1-20260721](./tasks/active/portfolio-monitoring-initial-setting-correction-v1-20260721/STATUS.md). 기존 item overwrite 대신 append-only initial contract revision으로 최초 요청 시작일·수량·적용 종가를 함께 정정한다.
   - Latest completed Portfolio Monitoring UX decision: [portfolio-monitoring-reference-help-removal-v1-20260721](./tasks/active/portfolio-monitoring-reference-help-removal-v1-20260721/STATUS.md). 기본 업무 화면의 중복 contextual panel은 제거하고 모니터링 도움말 source-of-truth는 canonical Reference Center로 단일화했다.
   - Latest completed Reference decision: [reference-center-react-v1-20260720](./tasks/active/reference-center-react-v1-20260720/STATUS.md). Guide와 Glossary를 단일 Search-first React Reference로 통합하고 legacy·개발자 용어와 로그 surface를 제외한 채 전체 `4/4차` 구현·responsive QA를 완료했다.
   - Current active task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `1/4차` 기능과 승인된 시각 polish·actual QA를 완료했고, 다음은 2차 장기 이력·발표 당시 값 품질 점검이다.
@@ -59,6 +60,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - legacy archive content was absorbed into the current docs/task structure; the removed `archive/` path is not a live pointer.
 
 ## Entries
+
+### 2026-07-21 - 최초 날짜 수정은 item overwrite가 아니라 초기 계약 revision이다
+
+- User request: 개별 추적 결과의 기존 최초 수량 정정에서 최초 추적 날짜도 수정할 수 있게 해 달라고 요청함.
+- Interpreted goal: 잘못 입력한 시작일과 수량을 같은 종목 이력을 끊지 않고 바로잡으며 새 시작 종가·최초 투자금·성과를 일관되게 다시 계산한다.
+- Analysis result: 원본 item 직접 수정 대신 기존 append-only correction chain에 optional requested/effective date와 entry close를 보존하고 terminal revision이 유효 초기 계약을 투영하는 방식이 감사 이력·legacy 호환·거래 무결성에 맞다.
+- Follow-up: 전체 `4/4차` 구현·schema migration·자동 회귀를 완료했다. actual Browser의 iframe selection round-trip 제약 때문에 저장 click만 일반 브라우저 확인 항목으로 남겼다.
 
 ### 2026-07-21 - Portfolio Monitoring은 업무를 바로 시작하고 도움말은 Reference Center가 소유한다
 

@@ -1,6 +1,6 @@
 # Portfolio Monitoring Initial Setting Correction V1 Design
 
-Status: User-approved design; written spec pending review
+Status: Implemented and verified
 Date: 2026-07-21
 
 ## 이걸 하는 이유?

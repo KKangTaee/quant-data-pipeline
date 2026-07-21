@@ -1,7 +1,7 @@
 # Portfolio Monitoring Data Contract
 
 Status: Active
-Last Verified: 2026-07-20
+Last Verified: 2026-07-21
 
 ## 저장소
 
@@ -11,7 +11,7 @@ Last Verified: 2026-07-20
 |---|---|
 | `monitoring_portfolio_group` | 사용자 그룹, default identity, name, optimistic version, soft lifecycle |
 | `monitoring_portfolio_item` | direct security/selected strategy, 시작·종료, funding, entry, initial capital |
-| `monitoring_security_position_event` | direct stock fixed-shares의 최초 수량 정정과 추가매수·일부매도 append-only revision 원장 |
+| `monitoring_security_position_event` | direct stock fixed-shares의 최초 시작일·수량 정정과 추가매수·일부매도 append-only revision 원장 |
 | `monitoring_portfolio_command` | idempotency fingerprint와 command result |
 | `monitoring_diagnosis_snapshot` | point-in-time 진단·매크로 관찰과 이후 21/63 session outcome |
 | `monitoring_risk_calibration_artifact` | walk-forward calibration 결과와 publication gate |
@@ -27,10 +27,13 @@ Last Verified: 2026-07-20
 - direct security 원장은 raw close를 primary price로 사용한다. split은 effective units에 반영하고 cash dividend는 재투자하지 않은 누적 cash로 더한다.
 - fixed notional은 fractional virtual units를 허용하지만 integer shares 방식은 소수 주식을 허용하지 않는다.
 - `reopen_item`은 ended item의 동일 identity와 원래 start/funding/entry/initial-capital 계약을 유지하고 종료 요청일·적용일·종료금액만 `NULL`, status를 `active`로 되돌린다. 새 episode나 재진입 가격을 만들지 않으며, active 10개 한도와 동일 source 중복을 다시 검증한다. 과거 command row는 audit로 유지한다.
-- 최초 수량 정정과 거래 원장은 `direct_security + stock + fixed_shares` item에만 적용한다. ETF, selected strategy, fixed notional은 기존 계약을 유지한다.
+- 최초 설정 정정과 거래 원장은 `direct_security + stock + fixed_shares` item에만 적용한다. ETF, selected strategy, fixed notional은 기존 계약을 유지한다.
+- 최초 설정 정정은 원본 item을 갱신하지 않고 `initial_quantity_correction` revision에 optional `requested_start_date`, `effective_start_date`, 적용일 `reference_close`, 새 최초 수량을 함께 보존한다. legacy row처럼 두 날짜가 `NULL`이면 원본 item의 시작 계약으로 fallback한다.
+- 사용자가 고른 요청일 이후 첫 저장 시장일과 종가가 새 유효 시작 계약이다. Python resolver가 DB에서만 이를 결정하며, 유효 계약은 `requested/effective start`, `entry close`, `initial shares`, `initial capital = shares × close`를 하나로 투영한다.
 - `create -> replace/void` revision은 payload를 덮어쓰거나 삭제하지 않는다. 같은 root는 최초 `event_order`를 유지하고 terminal revision만 계산에 반영하며 전체 chain은 감사 이력으로 표시한다.
 - 거래일은 정확히 일치하는 저장 일봉 종가만 기본 체결가로 사용한다. 이후 거래일로 이동하지 않으며, 사용자가 값을 바꾸면 입력 당시 `reference_close`와 `manual_override` provenance를 함께 저장한다.
 - 같은 날 계산 순서는 split 적용 후 `trade_date, event_order` 거래 적용이다. 일부매도 후 최소 1주를 유지하고 전량매도는 기존 tracking-end flow를 사용한다.
+- 최초 설정을 정정하면 개별 lane과 그룹 timeline은 새 유효 시작일·종가·최초 투자금부터 다시 계산한다. 새 적용일보다 이른 유효 buy/sell이 남거나 새 최초 수량으로 이후 sell이 무효가 되면 command 전체를 rollback한다. 기존 `correct_initial_quantity` command와 `initial_quantity_correction` effect 이름은 저장 호환을 위해 유지한다.
 
 ## 가치와 KPI
 
