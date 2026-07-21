@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-07-20
+Last Verified: 2026-07-22
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -27,13 +27,20 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| `overview-sentiment-cnn-aaii-v1-20260719` | 1/4 complete | 기능과 승인된 시각 polish·actual QA를 완료했다. 다음은 장기 이력·발표 당시 값 품질 점검이다. |
+| `overview-sentiment-cnn-aaii-v1-20260719` | 2/4 complete | 1차 균형형 UI와 2차 PIT 이중 저장·known-at 조회·장기 그래프를 완료했다. 다음은 독립 데이터 후보 검토다. |
 | `portfolio-monitoring-chart-zoom-pan-v1-20260719` | Parallel follow-up, 2/3 complete | 구현과 자동 회귀는 완료했다. 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다. |
+| `market-movers-chart-navigation-polish-v1-20260721` | Parallel follow-up, implementation complete | 재무 날짜축·exact hover·가로 drag와 가격 readout tone 구현·자동 회귀는 완료했다. 실제 Browser interaction QA가 남아 있다. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `portfolio-monitoring-initial-setting-correction-v1-20260721` | Latest completed record, 4/4 | 최초 요청 시작일과 수량을 append-only revision으로 함께 정정하고 새 DB 시장일·종가·최초 투자금부터 성과를 다시 계산한다. |
+| `overview-economic-cycle-intramonth-nowcast-v1-20260721` | Completed record, 4/4 | 월말 canonical history를 보존하면서 날짜별 intramonth nowcast와 평일 fail-closed 증분 갱신을 완료했다. |
+| `overview-futures-macro-probabilistic-state-outlook-v2-20260720` | Completed record, 3/3 | completed-session same-state target과 nested rolling-origin gate를 완료했고 actual 5D/20D는 `NO_EDGE`로 비공개다. |
+| `portfolio-monitoring-reference-help-removal-v1-20260721` | Completed record, 2/2 | 중복 contextual help를 제거하고 canonical Reference Center의 journey·scenario·stale 안내를 보존했다. |
+| `market-movers-period-refresh-chart-fix-v1-20260721` | Completed record, 3/3 | Weekly/Monthly bounded refresh, 신규 상장 기간 eligibility, 날짜축·tooltip과 선택 기간별 수익률을 완료했다. |
+| `reference-center-react-v1-20260720` | Completed record, 4/4 | Search-first React Reference, curated catalog/drift guard, stable contextual deep link, legacy Guides/Glossary removal과 responsive Browser QA를 완료했다. |
 | `operations-portfolio-monitoring-only-v1-20260719` | Completed record | Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다. |
 | `overview-futures-macro-pattern-outlook-v1-20260718` | Completed record | 10년 compact snapshot, 관측·전망 상태 분리, 5D 120개·20D 88개 독립 episode 재검증과 actual responsive QA를 완료했다. |
 | `backtest-analysis-level1-decision-workspace-v1-20260717` | Completed record | 1~15차 Level1 one-shell과 Portfolio Mix React one-shell 구현·QA를 완료했다. |

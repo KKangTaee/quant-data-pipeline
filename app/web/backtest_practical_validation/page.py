@@ -8,6 +8,8 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from app.web.reference_contextual_help import render_reference_contextual_help
+
 from app.services.backtest_practical_validation import (
     VALIDATION_PROFILE_OPTIONS,
     VALIDATION_PROFILE_QUESTIONS,
@@ -2751,6 +2753,7 @@ def _consume_practical_validation_next_stage_action(
 
 def render_practical_validation_workspace() -> None:
     render_pv_styles()
+    render_reference_contextual_help("practical_validation", expanded=False)
     sources = load_portfolio_selection_sources(limit=100)
     session_source = st.session_state.get("backtest_practical_validation_source")
     if st.session_state.pop("practical_validation_reset_replay_on_entry", False):

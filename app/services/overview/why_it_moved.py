@@ -22,6 +22,10 @@ from xml.etree import ElementTree
 
 import pandas as pd
 
+from app.services.overview.market_mover_research import (
+    build_current_ttm_valuation,
+    build_financial_factor_series,
+)
 from finance.loaders.financial_statements import load_statement_filings
 from finance.loaders.fundamentals import load_fundamental_snapshot, load_statement_fundamentals_shadow
 from finance.loaders.financial_source_contract import (
@@ -29,6 +33,7 @@ from finance.loaders.financial_source_contract import (
     SEC_EDGAR_STATEMENT_SHADOW_SOURCE,
 )
 from finance.loaders.price import load_price_history
+from finance.loaders.us_stock_turnaround import load_us_stock_turnaround_inputs
 from finance.loaders.sentiment import (
     CNN_COMPONENT_SERIES,
     CORE_SENTIMENT_SERIES,
@@ -38,8 +43,8 @@ from finance.loaders.sentiment import (
 
 PERIOD_LABELS = {"daily": "Daily", "weekly": "Weekly", "monthly": "Monthly", "yearly": "Yearly"}
 
-FINANCIAL_TREND_ANNUAL_LIMIT = 8
-FINANCIAL_TREND_QUARTERLY_LIMIT = 32
+FINANCIAL_TREND_ANNUAL_LIMIT = 10
+FINANCIAL_TREND_QUARTERLY_LIMIT = 40
 
 UNIVERSE_LABELS = {
     "SP500": "S&P 500",
@@ -339,9 +344,16 @@ def _market_mover_ytd_snapshot(
     as_of_date: str,
     price_history_loader: Callable[..., pd.DataFrame],
 ) -> dict[str, Any]:
-    year_start = f"{pd.Timestamp(as_of_date).year}-01-01"
+    as_of_timestamp = pd.Timestamp(as_of_date).normalize()
+    year_start = f"{as_of_timestamp.year}-01-01"
+    rolling_year_start = (as_of_timestamp - pd.DateOffset(years=1)).date().isoformat()
     try:
-        frame = price_history_loader(symbols=symbol, start=year_start, end=as_of_date, timeframe="1d")
+        frame = price_history_loader(
+            symbols=symbol,
+            start=rolling_year_start,
+            end=as_of_date,
+            timeframe="1d",
+        )
     except Exception as exc:
         return {"status": "UNAVAILABLE", "reason": f"가격 이력 조회 실패: {exc}", "start_date": year_start}
     if not isinstance(frame, pd.DataFrame) or frame.empty:
@@ -361,17 +373,40 @@ def _market_mover_ytd_snapshot(
     work[price_column] = pd.to_numeric(work[price_column], errors="coerce")
     work = work.dropna(subset=[date_column, price_column]).sort_values(date_column)
     work = work[work[price_column] > 0]
-    if len(work.index) < 2:
+    work = work[
+        (work[date_column] >= pd.Timestamp(rolling_year_start))
+        & (work[date_column] <= as_of_timestamp)
+    ]
+    ytd_work = work[work[date_column] >= pd.Timestamp(year_start)]
+    if len(ytd_work.index) < 2:
         return {
             "status": "UNAVAILABLE",
             "reason": "YTD 계산에 필요한 시작/현재 가격이 부족합니다.",
             "start_date": year_start,
         }
 
-    first = work.iloc[0]
-    latest = work.iloc[-1]
+    first = ytd_work.iloc[0]
+    latest = ytd_work.iloc[-1]
     start_price = float(first[price_column])
     latest_price = float(latest[price_column])
+    series = [
+        {
+            "date": _iso_date_label(item[date_column]),
+            "price": float(item[price_column]),
+            "normalized_return_pct": round(
+                ((float(item[price_column]) / start_price) - 1.0) * 100.0,
+                6,
+            ),
+        }
+        for _, item in ytd_work.iterrows()
+    ]
+    price_series = [
+        {
+            "date": _iso_date_label(item[date_column]),
+            "price": float(item[price_column]),
+        }
+        for _, item in work.iterrows()
+    ]
     return {
         "status": "OK",
         "return_pct": ((latest_price / start_price) - 1.0) * 100.0,
@@ -379,6 +414,8 @@ def _market_mover_ytd_snapshot(
         "end_date": _iso_date_label(latest[date_column]),
         "start_price": start_price,
         "latest_price": latest_price,
+        "series": series,
+        "price_series": price_series,
         "basis": "DB daily adjusted close",
     }
 
@@ -440,21 +477,29 @@ def _financial_snapshot_from_row(
     fallback_reason: str | None = None,
 ) -> dict[str, Any]:
     net_income = _coerce_optional_float(row.get("net_income"))
+    total_revenue = _coerce_optional_float(row.get("total_revenue"))
+    operating_income = _coerce_optional_float(row.get("operating_income"))
     shares = _coerce_optional_float(row.get("shares_outstanding"))
-    eps = (net_income / shares) if net_income is not None and shares and shares > 0 else None
-    per = (latest_price / eps) if latest_price is not None and eps and eps > 0 else None
     current_assets = _coerce_optional_float(row.get("current_assets"))
     current_liabilities = _coerce_optional_float(row.get("current_liabilities"))
+    total_liabilities = _coerce_optional_float(row.get("total_liabilities"))
+    shareholders_equity = _coerce_optional_float(row.get("shareholders_equity"))
     current_ratio = _coerce_optional_float(row.get("current_ratio"))
     if current_ratio is None and current_assets is not None and current_liabilities and current_liabilities > 0:
         current_ratio = current_assets / current_liabilities
     free_cash_flow = _coerce_optional_float(row.get("free_cash_flow"))
-    if net_income is None and eps is None and per is None and current_ratio is None and free_cash_flow is None:
+    if (
+        net_income is None
+        and total_revenue is None
+        and operating_income is None
+        and current_ratio is None
+        and free_cash_flow is None
+    ):
         return {
             "status": "UNAVAILABLE",
             "freq": freq,
             "period_end": _iso_date_label(row.get("period_end")),
-            "reason": "net_income / shares_outstanding / current_assets / current_liabilities / free_cash_flow 필드가 부족합니다.",
+            "reason": "revenue / income / balance-sheet / cash-flow factor 필드가 부족합니다.",
             "fallback_used": bool(fallback_used),
             "fallback_reason": fallback_reason,
             **source_payload,
@@ -463,12 +508,14 @@ def _financial_snapshot_from_row(
         "status": "OK",
         "freq": freq,
         "period_end": _iso_date_label(row.get("period_end")),
+        "total_revenue": total_revenue,
+        "operating_income": operating_income,
         "net_income": net_income,
         "shares_outstanding": shares,
-        "eps": eps,
-        "per": per,
         "current_assets": current_assets,
         "current_liabilities": current_liabilities,
+        "total_liabilities": total_liabilities,
+        "shareholders_equity": shareholders_equity,
         "current_ratio": current_ratio,
         "free_cash_flow": free_cash_flow,
         "basis": f"latest {freq} DB fundamental snapshot",
@@ -1006,6 +1053,80 @@ def _build_financial_statement_collection_status(
     }
 
 
+def _build_statement_filing_evidence(
+    *,
+    symbol: str,
+    as_of_date: str,
+    statement_filings_loader: Callable[..., pd.DataFrame],
+    max_items: int = 5,
+) -> dict[str, Any]:
+    """Expose a compact, point-in-time-safe filing ledger for research evidence."""
+
+    source = "finance_fundamental.nyse_financial_statement_filings"
+    try:
+        filings = statement_filings_loader(
+            symbols=symbol,
+            forms=["10-K", "10-K/A", "10-Q", "10-Q/A"],
+            end=as_of_date,
+        )
+    except Exception as exc:
+        return {
+            "status": "ERROR",
+            "source": source,
+            "rows": [],
+            "message": f"저장 공시 ledger 조회 실패: {exc}",
+        }
+
+    if not isinstance(filings, pd.DataFrame) or filings.empty:
+        return {
+            "status": "EMPTY",
+            "source": source,
+            "rows": [],
+            "message": "기준일 이전에 저장된 10-K / 10-Q 공시가 없습니다.",
+        }
+
+    work = filings.copy()
+    for column in ("report_date", "filing_date", "accepted_at", "available_at"):
+        if column in work.columns:
+            work[column] = pd.to_datetime(work[column], errors="coerce")
+    as_of_eod = pd.Timestamp(as_of_date).normalize() + pd.Timedelta(days=1)
+    if "report_date" in work.columns:
+        work = work[work["report_date"].notna() & (work["report_date"] < as_of_eod)].copy()
+    if "available_at" in work.columns:
+        available_before_cutoff = work["available_at"].notna() & (work["available_at"] < as_of_eod)
+        if "filing_date" in work.columns:
+            filing_before_cutoff = work["available_at"].isna() & (
+                work["filing_date"].isna() | (work["filing_date"] < as_of_eod)
+            )
+            work = work[available_before_cutoff | filing_before_cutoff].copy()
+        else:
+            work = work[available_before_cutoff | work["available_at"].isna()].copy()
+    elif "filing_date" in work.columns:
+        work = work[work["filing_date"].isna() | (work["filing_date"] < as_of_eod)].copy()
+    sort_columns = [
+        column
+        for column in ("available_at", "filing_date", "report_date", "accession_no")
+        if column in work.columns
+    ]
+    if sort_columns:
+        work = work.sort_values(sort_columns, ascending=False, na_position="last")
+
+    browse_url = (
+        "https://www.sec.gov/edgar/browse/"
+        f"?CIK={quote_plus(symbol)}&owner=exclude&action=getcompany"
+    )
+    rows: list[dict[str, Any]] = []
+    for raw in work.head(max(1, int(max_items))).to_dict(orient="records"):
+        filing = _statement_filing_payload(raw) or {}
+        rows.append({**filing, "url": browse_url})
+    return {
+        "status": "OK" if rows else "EMPTY",
+        "source": source,
+        "rows": rows,
+        "message": None if rows else "기준일 이전에 저장된 10-K / 10-Q 공시가 없습니다.",
+    }
+
+
 def build_market_mover_research_snapshot(
     *,
     mover: dict[str, Any],
@@ -1014,6 +1135,7 @@ def build_market_mover_research_snapshot(
     statement_fundamentals_loader: Callable[..., pd.DataFrame] | None = None,
     fundamental_snapshot_loader: Callable[..., pd.DataFrame] | None = None,
     statement_filings_loader: Callable[..., pd.DataFrame] | None = None,
+    quarterly_eps_loader: Callable[..., dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build DB-backed context-only fundamentals for a selected Market Movers row."""
 
@@ -1022,7 +1144,7 @@ def build_market_mover_research_snapshot(
     effective_as_of = _research_as_of_date(as_of_date)
     if not symbol:
         return {
-            "schema_version": "market_mover_research_snapshot_v1",
+            "schema_version": "market_mover_research_snapshot_v2",
             "status": "NO_SYMBOL",
             "symbol": None,
             "as_of_date": effective_as_of,
@@ -1032,6 +1154,15 @@ def build_market_mover_research_snapshot(
             "annual_financials": {"status": "UNAVAILABLE", "freq": "annual", "reason": "선택 symbol이 없습니다."},
             "quarterly_financials": {"status": "UNAVAILABLE", "freq": "quarterly", "reason": "선택 symbol이 없습니다."},
             "financial_trends": {"annual": [], "quarterly": []},
+            "financial_factor_series": {
+                "annual": build_financial_factor_series([], freq="annual"),
+                "quarterly": build_financial_factor_series([], freq="quarterly"),
+            },
+            "current_valuation": build_current_ttm_valuation(
+                [],
+                latest_price=None,
+                latest_price_date=None,
+            ),
             "financial_statement_collection": {
                 "status": "UNKNOWN",
                 "headline": "재무제표 수집 상태 확인 불가",
@@ -1039,6 +1170,12 @@ def build_market_mover_research_snapshot(
                 "tone": "neutral",
                 "items": [],
                 "missing_filings": [],
+            },
+            "filing_evidence": {
+                "status": "EMPTY",
+                "source": "finance_fundamental.nyse_financial_statement_filings",
+                "rows": [],
+                "message": "선택 symbol이 없습니다.",
             },
             "boundary_note": "Context-only fundamentals snapshot; no trading signal or recommendation is produced.",
         }
@@ -1100,15 +1237,56 @@ def build_market_mover_research_snapshot(
         annual_trends = [annual_financials]
     if not quarterly_trends and str(quarterly_financials.get("status") or "").upper() == "OK":
         quarterly_trends = [quarterly_financials]
+    annual_factor_series = build_financial_factor_series(annual_trends, freq="annual")
+    quarterly_factor_series = build_financial_factor_series(quarterly_trends, freq="quarterly")
+    eps_loader = quarterly_eps_loader or load_us_stock_turnaround_inputs
+    try:
+        eps_inputs = eps_loader(symbol=symbol, as_of_date=effective_as_of)
+        quarterly_eps_rows = list(
+            dict(eps_inputs.get("series") or {}).get("timeline") or []
+        )
+    except Exception:
+        quarterly_eps_rows = []
+    reported_eps_series = build_financial_factor_series(
+        quarterly_eps_rows,
+        freq="quarterly",
+    )["factors"]["diluted_eps"]
+    quarterly_factor_series["factors"]["diluted_eps"] = reported_eps_series
+    current_valuation = build_current_ttm_valuation(
+        quarterly_eps_rows,
+        latest_price=latest_price,
+        latest_price_date=_iso_date_label(ytd_return.get("end_date")),
+    )
+    filing_ledger_loaded = False
+    filing_ledger: pd.DataFrame | None = None
+    filing_ledger_error: Exception | None = None
+
+    def cached_filings_loader(**kwargs: Any) -> pd.DataFrame:
+        nonlocal filing_ledger_loaded, filing_ledger, filing_ledger_error
+        if not filing_ledger_loaded:
+            filing_ledger_loaded = True
+            try:
+                filing_ledger = filings_loader(**kwargs)
+            except Exception as exc:
+                filing_ledger_error = exc
+        if filing_ledger_error is not None:
+            raise filing_ledger_error
+        return filing_ledger if isinstance(filing_ledger, pd.DataFrame) else pd.DataFrame()
+
     collection_status = _build_financial_statement_collection_status(
         symbol=symbol,
         as_of_date=effective_as_of,
         annual_financials=annual_financials,
         quarterly_financials=quarterly_financials,
-        statement_filings_loader=filings_loader,
+        statement_filings_loader=cached_filings_loader,
+    )
+    filing_evidence = _build_statement_filing_evidence(
+        symbol=symbol,
+        as_of_date=effective_as_of,
+        statement_filings_loader=cached_filings_loader,
     )
     return {
-        "schema_version": "market_mover_research_snapshot_v1",
+        "schema_version": "market_mover_research_snapshot_v2",
         "status": "READY",
         "symbol": symbol,
         "as_of_date": effective_as_of,
@@ -1118,7 +1296,13 @@ def build_market_mover_research_snapshot(
         "annual_financials": annual_financials,
         "quarterly_financials": quarterly_financials,
         "financial_trends": {"annual": annual_trends, "quarterly": quarterly_trends},
+        "financial_factor_series": {
+            "annual": annual_factor_series,
+            "quarterly": quarterly_factor_series,
+        },
+        "current_valuation": current_valuation,
         "financial_statement_collection": collection_status,
+        "filing_evidence": filing_evidence,
         "boundary_note": "Context-only fundamentals snapshot; no trading signal or recommendation is produced.",
     }
 

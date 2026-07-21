@@ -10458,6 +10458,139 @@ class OverviewAutomationContractTests(unittest.TestCase):
             fallback_to_yfinance=False,
         )
 
+    def test_market_movers_weekly_refresh_uses_one_week_overlap(self) -> None:
+        from app.jobs import overview_actions
+
+        window = overview_actions._market_movers_eod_period_window(
+            as_of_date=date(2026, 7, 20),
+            period="weekly",
+        )
+
+        self.assertEqual(window["required_start"], date(2026, 7, 13))
+        self.assertEqual(window["fetch_start"], date(2026, 7, 6))
+        self.assertEqual(window["fetch_end"], date(2026, 7, 20))
+
+    def test_market_movers_monthly_refresh_uses_one_month_overlap(self) -> None:
+        from app.jobs import overview_actions
+
+        window = overview_actions._market_movers_eod_period_window(
+            as_of_date=date(2026, 7, 20),
+            period="monthly",
+        )
+
+        self.assertEqual(window["required_start"], date(2026, 6, 20))
+        self.assertEqual(window["fetch_start"], date(2026, 5, 20))
+        self.assertEqual(window["fetch_end"], date(2026, 7, 20))
+
+    def test_market_movers_limited_symbol_retries_when_latest_price_is_stale(self) -> None:
+        from app.jobs import overview_actions
+
+        plan = overview_actions._market_movers_eod_refresh_plan(
+            ["HONA"],
+            {
+                "HONA": {
+                    "first_date": date(2026, 6, 29),
+                    "latest_date": date(2026, 7, 10),
+                    "close": 100.0,
+                    "volume": 1000,
+                }
+            },
+            as_of_date=date(2026, 7, 20),
+            period="weekly",
+            known_limited_symbols={"HONA"},
+        )
+
+        self.assertEqual(plan["limited_retry_symbols"], ["HONA"])
+        self.assertEqual(plan["range_start"], date(2026, 7, 6))
+        self.assertEqual(plan["range_end"], date(2026, 7, 20))
+
+    def test_market_movers_current_new_listing_is_period_ineligible(self) -> None:
+        from app.jobs import overview_actions
+
+        plan = overview_actions._market_movers_eod_refresh_plan(
+            ["HONA"],
+            {
+                "HONA": {
+                    "first_date": date(2026, 6, 29),
+                    "latest_date": date(2026, 7, 20),
+                    "close": 100.0,
+                    "volume": 1000,
+                }
+            },
+            as_of_date=date(2026, 7, 20),
+            period="monthly",
+            known_limited_symbols={"HONA"},
+        )
+
+        self.assertEqual(plan["period_ineligible_symbols"], ["HONA"])
+        self.assertEqual(plan["collection_batches"], [])
+
+    def test_market_movers_marks_new_listing_without_full_period_history(self) -> None:
+        from app.services.overview import market_movers
+
+        def query_fn(db_name, sql, params=None):
+            del db_name, params
+            if "AND `date` IN" in sql:
+                return [
+                    {
+                        "symbol": "AAA",
+                        "date": date(2026, 6, 18),
+                        "price": 100.0,
+                        "volume": 1000,
+                    },
+                    {
+                        "symbol": "AAA",
+                        "date": date(2026, 7, 20),
+                        "price": 110.0,
+                        "volume": 1100,
+                    },
+                    {
+                        "symbol": "HONA",
+                        "date": date(2026, 7, 20),
+                        "price": 120.0,
+                        "volume": 900,
+                    },
+                ]
+            if "MIN(`date`) AS first_price_date" in sql:
+                return [
+                    {
+                        "symbol": "HONA",
+                        "first_price_date": date(2026, 6, 29),
+                        "latest_price_date": date(2026, 7, 20),
+                    }
+                ]
+            if "MAX(`date`) AS latest_price_date" in sql:
+                return [{"symbol": "HONA", "latest_price_date": date(2026, 7, 20)}]
+            if "FROM nyse_symbol_lifecycle" in sql or "FROM market_data_issue" in sql:
+                return []
+            raise AssertionError(sql)
+
+        return_rows, missing_rows = market_movers._build_return_rows(
+            universe=[
+                {
+                    "symbol": "AAA",
+                    "long_name": "Alpha",
+                    "sector": "Technology",
+                    "industry": "Software",
+                },
+                {
+                    "symbol": "HONA",
+                    "long_name": "Honeywell Aerospace",
+                    "sector": "Industrials",
+                    "industry": "Aerospace & Defense",
+                },
+            ],
+            universe_code="SP500",
+            start_date="2026-06-18",
+            end_date="2026-07-20",
+            query_fn=query_fn,
+        )
+
+        self.assertEqual([row["symbol"] for row in return_rows], ["AAA"])
+        self.assertEqual(missing_rows[0]["Reason"], "selected period history unavailable")
+        self.assertEqual(missing_rows[0]["First Price Date"], "2026-06-29")
+        self.assertEqual(missing_rows[0]["Latest Price Date"], "2026-07-20")
+
     def test_overview_market_movers_refresh_action_collects_eod_history_through_ohlcv_job(self) -> None:
         from app.jobs import overview_actions
 
@@ -10476,6 +10609,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "_load_market_movers_eod_freshness",
                 return_value={},
                 create=True,
+            ),
+            patch.object(
+                overview_actions,
+                "_market_movers_today",
+                return_value=date(2026, 7, 20),
             ),
             patch.object(
                 overview_actions,
@@ -10503,6 +10641,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         load_universe.assert_called_once_with("SP500")
         collect.assert_called_once_with(
             ["AAA", "BBB"],
+            start="2024-07-20",
+            end="2026-07-20",
             period="3y",
             interval="1d",
             execution_profile="managed_safe",
@@ -10530,26 +10670,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
             patch.object(
                 overview_actions,
                 "run_collect_ohlcv",
-                side_effect=[
-                    {
-                        "job_name": "collect_ohlcv",
-                        "status": "success",
-                        "rows_written": 2,
-                        "symbols_requested": 1,
-                        "symbols_processed": 1,
-                        "failed_symbols": [],
-                        "message": "Delta completed.",
-                    },
-                    {
-                        "job_name": "collect_ohlcv",
-                        "status": "success",
-                        "rows_written": 63,
-                        "symbols_requested": 1,
-                        "symbols_processed": 1,
-                        "failed_symbols": [],
-                        "message": "Full window completed.",
-                    },
-                ],
+                return_value={
+                    "job_name": "collect_ohlcv",
+                    "status": "success",
+                    "rows_written": 65,
+                    "symbols_requested": 2,
+                    "symbols_processed": 2,
+                    "failed_symbols": [],
+                    "message": "Bounded overlap completed.",
+                },
             ) as collect,
         ):
             result = overview_actions.run_overview_market_movers_eod_history(
@@ -10561,31 +10690,21 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(result["job_name"], "overview_market_movers_eod_history")
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["rows_written"], 65)
-        self.assertEqual(result["details"]["refresh_strategy"], "smart_delta")
+        self.assertEqual(result["details"]["refresh_strategy"], "bounded_period_overlap")
         self.assertEqual(result["details"]["symbols_requested"], 3)
         self.assertEqual(result["details"]["symbols_selected"], 2)
         self.assertEqual(result["details"]["symbols_skipped_current"], 1)
         self.assertEqual(result["details"]["delta_symbols_count"], 1)
         self.assertEqual(result["details"]["missing_symbols_count"], 1)
-        self.assertEqual(result["details"]["delta_start"], "2026-07-04")
-        self.assertEqual(result["details"]["delta_end"], "2026-07-08")
-        collect.assert_has_calls(
-            [
-                call(
-                    ["BBB"],
-                    start="2026-07-04",
-                    end="2026-07-08",
-                    period="3mo",
-                    interval="1d",
-                    execution_profile="managed_safe",
-                ),
-                call(
-                    ["CCC"],
-                    period="3mo",
-                    interval="1d",
-                    execution_profile="managed_safe",
-                ),
-            ]
+        self.assertEqual(result["details"]["delta_start"], "2026-06-23")
+        self.assertEqual(result["details"]["delta_end"], "2026-07-07")
+        collect.assert_called_once_with(
+            ["BBB", "CCC"],
+            start="2026-06-23",
+            end="2026-07-07",
+            period="3mo",
+            interval="1d",
+            execution_profile="managed_safe",
         )
 
     def test_overview_market_movers_eod_history_accepts_effective_as_of_date_to_skip_current_symbols(
@@ -10647,26 +10766,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
             patch.object(
                 overview_actions,
                 "run_collect_ohlcv",
-                side_effect=[
-                    {
-                        "job_name": "collect_ohlcv",
-                        "status": "success",
-                        "rows_written": 110,
-                        "symbols_requested": 1,
-                        "symbols_processed": 1,
-                        "failed_symbols": [],
-                        "message": "Old delta completed.",
-                    },
-                    {
-                        "job_name": "collect_ohlcv",
-                        "status": "success",
-                        "rows_written": 4,
-                        "symbols_requested": 2,
-                        "symbols_processed": 2,
-                        "failed_symbols": [],
-                        "message": "Recent delta completed.",
-                    },
-                ],
+                return_value={
+                    "job_name": "collect_ohlcv",
+                    "status": "success",
+                    "rows_written": 114,
+                    "symbols_requested": 3,
+                    "symbols_processed": 3,
+                    "failed_symbols": [],
+                    "message": "Bounded overlap completed.",
+                },
             ) as collect,
         ):
             result = overview_actions.run_overview_market_movers_eod_history(
@@ -10678,29 +10786,17 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertEqual(result["rows_written"], 114)
         self.assertEqual(result["details"]["delta_symbols_count"], 3)
-        self.assertEqual(result["details"]["delta_batch_count"], 2)
-        self.assertEqual(result["details"]["range_start"], "2026-01-31")
-        self.assertEqual(result["details"]["range_end"], "2026-07-08")
+        self.assertEqual(result["details"]["delta_batch_count"], 1)
+        self.assertEqual(result["details"]["range_start"], "2026-06-23")
+        self.assertEqual(result["details"]["range_end"], "2026-07-07")
         self.assertIn("OLD", result["details"]["range_driver_symbols"])
-        collect.assert_has_calls(
-            [
-                call(
-                    ["OLD"],
-                    start="2026-01-31",
-                    end="2026-07-08",
-                    period="3mo",
-                    interval="1d",
-                    execution_profile="managed_safe",
-                ),
-                call(
-                    ["AAA", "BBB"],
-                    start="2026-07-07",
-                    end="2026-07-08",
-                    period="3mo",
-                    interval="1d",
-                    execution_profile="managed_safe",
-                ),
-            ]
+        collect.assert_called_once_with(
+            ["OLD", "AAA", "BBB"],
+            start="2026-06-23",
+            end="2026-07-07",
+            period="3mo",
+            interval="1d",
+            execution_profile="managed_safe",
         )
 
     def test_market_movers_eod_refresh_preflight_explains_collection_scope(self) -> None:
@@ -10733,10 +10829,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(preflight["status"], "due")
         self.assertEqual(preflight["selected_symbols_count"], 1)
         self.assertEqual(preflight["skipped_current_count"], 1)
-        self.assertEqual(preflight["range_start"], "2026-01-31")
-        self.assertEqual(preflight["range_end"], "2026-07-08")
+        self.assertEqual(preflight["range_start"], "2026-06-23")
+        self.assertEqual(preflight["range_end"], "2026-07-07")
         self.assertIn("OLD", preflight["range_driver_symbols"])
-        self.assertIn("가장 오래된 stale", preflight["range_reason"])
+        self.assertIn("overlap", preflight["range_reason"])
 
     def test_overview_market_movers_eod_history_repairs_bad_or_partial_current_symbols(self) -> None:
         from app.jobs import overview_actions
@@ -10791,26 +10887,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
             patch.object(
                 overview_actions,
                 "run_collect_ohlcv",
-                side_effect=[
-                    {
-                        "job_name": "collect_ohlcv",
-                        "status": "success",
-                        "rows_written": 2,
-                        "symbols_requested": 2,
-                        "symbols_processed": 2,
-                        "failed_symbols": [],
-                        "message": "Quality repair completed.",
-                    },
-                    {
-                        "job_name": "collect_ohlcv",
-                        "status": "success",
-                        "rows_written": 63,
-                        "symbols_requested": 1,
-                        "symbols_processed": 1,
-                        "failed_symbols": [],
-                        "message": "Full window completed.",
-                    },
-                ],
+                return_value={
+                    "job_name": "collect_ohlcv",
+                    "status": "success",
+                    "rows_written": 2,
+                    "symbols_requested": 2,
+                    "symbols_processed": 2,
+                    "failed_symbols": [],
+                    "message": "Quality repair completed.",
+                },
             ) as collect,
         ):
             result = overview_actions.run_overview_market_movers_eod_history(
@@ -10820,33 +10905,23 @@ class OverviewAutomationContractTests(unittest.TestCase):
             )
 
         self.assertEqual(result["status"], "success")
-        self.assertEqual(result["rows_written"], 65)
-        self.assertEqual(result["details"]["symbols_selected"], 3)
-        self.assertEqual(result["details"]["symbols_skipped_current"], 1)
-        self.assertEqual(result["details"]["quality_symbols_count"], 3)
+        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual(result["details"]["symbols_selected"], 2)
+        self.assertEqual(result["details"]["symbols_skipped_current"], 2)
+        self.assertEqual(result["details"]["quality_symbols_count"], 2)
         self.assertEqual(result["details"]["bad_latest_symbols_count"], 2)
-        self.assertEqual(result["details"]["insufficient_window_symbols_count"], 1)
+        self.assertEqual(result["details"]["insufficient_window_symbols_count"], 0)
         self.assertEqual(
             result["details"]["quality_reason_counts"],
-            {"bad_latest_price": 1, "zero_latest_volume": 1, "insufficient_window_rows": 1},
+            {"bad_latest_price": 1, "zero_latest_volume": 1},
         )
-        collect.assert_has_calls(
-            [
-                call(
-                    ["BAD", "ZERO"],
-                    start="2026-07-07",
-                    end="2026-07-08",
-                    period="3mo",
-                    interval="1d",
-                    execution_profile="managed_safe",
-                ),
-                call(
-                    ["THIN"],
-                    period="3mo",
-                    interval="1d",
-                    execution_profile="managed_safe",
-                ),
-            ]
+        collect.assert_called_once_with(
+            ["BAD", "ZERO"],
+            start="2026-06-23",
+            end="2026-07-07",
+            period="3mo",
+            interval="1d",
+            execution_profile="managed_safe",
         )
 
     def test_market_movers_eod_freshness_merges_latest_price_quality_fields(self) -> None:
@@ -10902,6 +10977,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         with (
             patch.object(
                 overview_actions,
+                "_market_movers_today",
+                return_value=date(2026, 7, 20),
+            ),
+            patch.object(
+                overview_actions,
                 "load_market_liquidity_universe_members",
                 return_value=[{"symbol": "AAA"}, {"symbol": "CCC"}],
             ) as load_universe,
@@ -10928,6 +11008,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         load_universe.assert_called_once_with("TOP1000", universe_limit=1000)
         collect.assert_called_once_with(
             ["AAA", "CCC"],
+            start="2026-05-20",
+            end="2026-07-20",
             period="1y",
             interval="1d",
             execution_profile="managed_safe",
@@ -11003,6 +11085,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         with (
             patch.object(
                 overview_actions,
+                "_market_movers_today",
+                return_value=date(2026, 7, 20),
+            ),
+            patch.object(
+                overview_actions,
                 "load_nasdaq_symbol_directory_universe_members",
                 return_value=[{"symbol": "AAPL"}, {"symbol": "MSFT"}, {"symbol": "AAPL"}],
             ) as load_universe,
@@ -11029,6 +11116,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         load_universe.assert_called_once_with()
         collect.assert_called_once_with(
             ["AAPL", "MSFT"],
+            start="2026-07-06",
+            end="2026-07-20",
             period="3mo",
             interval="1d",
             execution_profile="managed_safe",
@@ -16410,6 +16499,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["coverage"]["universe_count"], 4)
         self.assertEqual(snapshot["coverage"]["returnable_count"], 3)
         self.assertEqual(snapshot["coverage"]["missing_count"], 1)
+        self.assertEqual(snapshot["collection_readiness"]["state"], "PARTIAL")
+        self.assertEqual(snapshot["collection_readiness"]["metrics"]["return"]["valid"], 3)
+        self.assertEqual(snapshot["collection_readiness"]["metrics"]["return"]["total"], 4)
+        self.assertTrue(snapshot["collection_readiness"]["publish_results"])
         self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 30.0)
         self.assertIn("Latest raw price date is sparse", snapshot["warnings"][0])
@@ -16838,7 +16931,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(views["unusual_volume"]["status"], "OK")
         self.assertEqual(views["unusual_volume"]["rows"].iloc[0]["Symbol"], "AAA")
         self.assertEqual(views["unusual_volume"]["rows"].iloc[0]["Relative Volume"], 5.0)
-        self.assertEqual(views["sector_leaders"]["rows"].iloc[0]["Group"], "Healthcare")
+        self.assertEqual(views["sector_leaders"]["rows"].iloc[0]["Group"], "Health Care")
         self.assertIn("context-only", views["top_gainers"]["boundary_note"].lower())
 
     def test_market_movers_snapshot_adds_full_sector_breadth_context(self) -> None:
@@ -17149,7 +17242,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(payload["controls"]["coverage"], "SP500")
         self.assertEqual(payload["controls"]["period"], "daily")
         self.assertEqual(payload["actions"][0]["id"], "refresh_intraday")
-        self.assertEqual(payload["actions"][0]["label"], "일중 스냅샷 갱신")
+        self.assertEqual(payload["actions"][0]["label"], "일중 스냅샷 수동 갱신")
         self.assertIn({"id": "reload", "label": "화면 새로고침", "kind": "secondary"}, payload["actions"])
 
         plan = market_movers_react_action_plan("refresh_intraday", controls=controls)
@@ -17239,10 +17332,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["handler"], "run_overview_market_symbol_alias_repair")
         self.assertEqual(plan["universe_code"], "TOP1000")
 
+    @patch(
+        "app.web.overview.market_movers_helpers.latest_completed_nyse_session",
+        return_value=date(2026, 7, 7),
+    )
     @patch("app.web.overview.market_movers_helpers.st")
     def test_market_movers_react_actions_include_price_history_refresh_for_non_daily(
         self,
         mock_st: MagicMock,
+        _mock_latest_completed_session: MagicMock,
     ) -> None:
         from app.web.overview.market_movers_helpers import (
             MarketMoverControls,
@@ -17287,7 +17385,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("refresh_liquidity_universe", action_ids)
         self.assertIn("유니버스 기준 갱신", action_labels)
         self.assertEqual(action_ids[0], "refresh_eod_history")
-        self.assertIn("가격 이력 갱신", action_labels)
+        self.assertIn("가격 이력 수동 갱신", action_labels)
         self.assertEqual(payload["summary"]["trust_state"], "계산 가능 · 이력 보강 필요")
         self.assertEqual(payload["summary"]["tone"], "warning")
         self.assertEqual(payload["summary"]["action_label"], "가격 이력 확인")
@@ -17304,7 +17402,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["period"], "monthly")
         self.assertEqual(plan["as_of_date"], "2026-07-07")
 
-    def test_market_movers_monthly_preflight_separates_persisted_limited_history(self) -> None:
+    def test_market_movers_monthly_preflight_only_excludes_history_starting_after_period(self) -> None:
         from app.jobs.overview_actions import build_market_movers_eod_refresh_preflight
 
         freshness = {
@@ -17344,8 +17442,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         self.assertEqual(preflight["status"], "limited")
         self.assertEqual(preflight["selected_symbols_count"], 0)
-        self.assertEqual(preflight["limited_history_symbols_count"], 2)
-        self.assertEqual(preflight["limited_history_symbols"], ["FDXF", "HONA"])
+        self.assertEqual(preflight["limited_history_symbols_count"], 1)
+        self.assertEqual(preflight["limited_history_symbols"], ["HONA"])
         self.assertIn("추가 수집 대상이 아닙니다", preflight["range_reason"])
 
     def test_market_movers_limited_history_issue_rows_keep_compact_price_evidence(self) -> None:
@@ -17999,10 +18097,18 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("if react_event is None:", render_body)
         self.assertIn("_render_market_movers_refresh_bar(", render_body)
         self.assertIn("_render_market_movers_react_refresh_companion(", render_body)
+        decision_branch = render_body[
+            render_body.index("if market_movers_react_component_available():") :
+            render_body.index("react_event = _render_market_movers_react_summary")
+        ]
+        self.assertIn("_render_market_movers_decision_shell(", decision_branch)
+        self.assertIn("_render_market_movers_react_refresh_companion(", decision_branch)
+        self.assertIn("return", decision_branch)
+        legacy_branch = render_body[render_body.index("react_event = _render_market_movers_react_summary") :]
         self.assertLess(render_body.index("if react_event is None:"), render_body.index("_render_market_movers_refresh_bar("))
         self.assertLess(
-            render_body.index("_render_market_movers_refresh_bar("),
-            render_body.index("_render_market_movers_react_refresh_companion("),
+            legacy_branch.index("_render_market_movers_refresh_bar("),
+            legacy_branch.index("_render_market_movers_react_refresh_companion("),
         )
 
     def test_market_movers_polish_phase3_compacts_refresh_actions(self) -> None:
@@ -18421,7 +18527,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         def fake_price_history_loader(**kwargs: object) -> pd.DataFrame:
             self.assertEqual(kwargs["symbols"], "AAA")
-            self.assertEqual(kwargs["start"], "2026-01-01")
+            self.assertEqual(kwargs["start"], "2025-06-30")
             self.assertEqual(kwargs["end"], "2026-06-30")
             return pd.DataFrame(
                 [
@@ -18470,14 +18576,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             fundamental_snapshot_loader=fake_fundamental_snapshot_loader,
         )
 
-        self.assertEqual(model["schema_version"], "market_mover_research_snapshot_v1")
+        self.assertEqual(model["schema_version"], "market_mover_research_snapshot_v2")
         self.assertEqual(model["current_market_cap"]["value"], 5_500_000_000)
         self.assertEqual(model["market_cap_change"]["status"], "UNAVAILABLE")
         self.assertAlmostEqual(model["ytd_return"]["return_pct"], 25.0)
         self.assertEqual(model["ytd_return"]["start_date"], "2026-01-02")
         self.assertEqual(model["ytd_return"]["end_date"], "2026-06-30")
-        self.assertAlmostEqual(model["annual_financials"]["eps"], 3.0)
-        self.assertAlmostEqual(model["annual_financials"]["per"], 41.666666666666664)
+        self.assertNotIn("eps", model["annual_financials"])
+        self.assertNotIn("per", model["annual_financials"])
+        self.assertEqual(model["current_valuation"]["status"], "UNAVAILABLE")
         self.assertEqual(model["annual_financials"]["net_income"], 1_200_000_000)
         self.assertEqual(model["annual_financials"]["financial_source"], "legacy_broad_yfinance")
         self.assertEqual(model["annual_financials"]["financial_source_mode"], "legacy_broad_summary")
@@ -18562,7 +18669,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["annual_financials"]["form_type"], "10-K")
         self.assertEqual(model["annual_financials"]["accession_no"], "000-aaa-10k")
         self.assertFalse(model["annual_financials"]["fallback_used"])
-        self.assertAlmostEqual(model["annual_financials"]["eps"], 2.0)
+        self.assertNotIn("eps", model["annual_financials"])
+        self.assertNotIn("per", model["annual_financials"])
         self.assertEqual(legacy_calls, [])
         self.assertEqual(model["quarterly_financials"]["status"], "UNAVAILABLE")
         self.assertEqual(model["quarterly_financials"]["form_type"], "10-K")
@@ -18659,7 +18767,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         trends = model["financial_trends"]
         self.assertEqual([row["period_end"] for row in trends["annual"]], ["2024-12-31", "2025-12-31"])
         self.assertEqual([row["period_end"] for row in trends["quarterly"]], ["2025-12-31", "2026-03-31"])
-        self.assertAlmostEqual(trends["annual"][-1]["per"], 50.0)
+        self.assertNotIn("per", trends["annual"][-1])
+        self.assertNotIn("eps", trends["annual"][-1])
+        self.assertAlmostEqual(
+            model["financial_factor_series"]["annual"]["factors"]["current_ratio"]["points"][-1]["value"],
+            1.8,
+        )
         self.assertAlmostEqual(trends["annual"][-1]["current_ratio"], 1.8)
         self.assertEqual(trends["quarterly"][-1]["form_type"], "10-Q")
 
@@ -20977,6 +21090,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["trend_window_label"], "Last 12M")
         self.assertFalse(snapshot["trend_rows"].empty)
         self.assertFalse(snapshot["ticker_leader_rows"].empty)
+        self.assertEqual(snapshot["group_flow_schema_version"], "market_movers_group_flow_v1")
+        self.assertTrue(snapshot["group_flow"])
+        technology_bellwethers = snapshot["market_cap_bellwether_rows"][
+            snapshot["market_cap_bellwether_rows"]["Group"] == "Technology"
+        ].sort_values("Rank")
+        self.assertEqual(technology_bellwethers["Symbol"].tolist(), ["BBB", "AAA"])
         self.assertEqual(snapshot["coverage"]["returnable_count"], 3)
         first_row = snapshot["rows"].iloc[0]
         self.assertEqual(first_row["Group"], "Technology")
@@ -21026,7 +21145,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["coverage"]["coverage_basis"], "Current S&P 500 constituents")
         self.assertFalse(snapshot["rows"].empty)
         self.assertFalse(snapshot["trend_rows"].empty)
-        self.assertIn("Healthcare", set(snapshot["trend_rows"]["Group"]))
+        self.assertIn("Health Care", set(snapshot["trend_rows"]["Group"]))
 
     def test_overview_breadth_heatmap_summary_scores_participation_and_concentration(self) -> None:
         from app.services.overview.market_movers import build_overview_breadth_heatmap_summary

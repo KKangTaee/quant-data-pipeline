@@ -16,7 +16,7 @@ class PortfolioMonitoringDocsTests(unittest.TestCase):
     def test_architecture_names_route_owners_and_product_boundaries(self) -> None:
         text = self._read(DOCS / "architecture" / "PORTFOLIO_MONITORING_REACT_COMMAND_CENTER.md")
         for phrase in (
-            "portfolio_monitoring_workspace_v1",
+            "portfolio_monitoring_workspace_v2",
             "app/web/final_selected_portfolio_dashboard.py",
             "app/services/portfolio_monitoring/",
             "PortfolioMonitoringWorkbench.tsx",
@@ -34,6 +34,7 @@ class PortfolioMonitoringDocsTests(unittest.TestCase):
             "monitoring_portfolio_group",
             "monitoring_portfolio_item",
             "monitoring_portfolio_command",
+            "monitoring_security_position_event",
             "monitoring_diagnosis_snapshot",
             "monitoring_risk_calibration_artifact",
             "integer shares",

@@ -70,6 +70,30 @@ class StoredCommandRecord:
     updated_at: datetime | None = None
 
 
+@dataclass(frozen=True)
+class PositionEventRecord:
+    """Immutable revision in an individual-stock position event chain."""
+
+    position_event_id: str
+    root_event_id: str
+    supersedes_event_id: str | None
+    monitoring_item_id: str
+    event_order: int
+    event_action: str
+    position_effect: str
+    trade_date: date
+    quantity: int | None
+    execution_price: Decimal | None
+    reference_close: Decimal | None
+    execution_price_source: str | None
+    fee_usd: Decimal
+    note: str
+    command_id: str
+    created_at: datetime | None = None
+    requested_start_date: date | None = None
+    effective_start_date: date | None = None
+
+
 class MonitoringRepository(Protocol):
     def transaction(self) -> ContextManager["MonitoringRepository"]: ...
 
@@ -90,6 +114,24 @@ class MonitoringRepository(Protocol):
     def end_item(self, monitoring_item_id: str, resolution: Any) -> MonitoringItemRecord | None: ...
 
     def reopen_item(self, monitoring_item_id: str) -> MonitoringItemRecord | None: ...
+
+    def list_position_events(
+        self,
+        monitoring_item_id: str,
+        *,
+        for_update: bool = False,
+    ) -> list[PositionEventRecord]: ...
+
+    def get_position_event(
+        self,
+        position_event_id: str,
+        *,
+        for_update: bool = False,
+    ) -> PositionEventRecord | None: ...
+
+    def next_position_event_order(self, monitoring_item_id: str) -> int: ...
+
+    def insert_position_event(self, record: PositionEventRecord) -> PositionEventRecord: ...
 
     def get_command(self, command_id: str) -> StoredCommandRecord | None: ...
 
@@ -183,6 +225,74 @@ def _command_from_row(row: dict[str, Any] | None) -> StoredCommandRecord | None:
     )
 
 
+def _optional_decimal(value: Any) -> Decimal | None:
+    if value is None:
+        return None
+    return Decimal(str(value))
+
+
+def _position_event_from_row(
+    row: dict[str, Any] | None,
+) -> PositionEventRecord | None:
+    if not row:
+        return None
+    return PositionEventRecord(
+        position_event_id=str(row.get("position_event_id") or ""),
+        root_event_id=str(row.get("root_event_id") or ""),
+        supersedes_event_id=(
+            str(row["supersedes_event_id"])
+            if row.get("supersedes_event_id") is not None
+            else None
+        ),
+        monitoring_item_id=str(row.get("monitoring_item_id") or ""),
+        event_order=int(row.get("event_order") or 0),
+        event_action=str(row.get("event_action") or ""),
+        position_effect=str(row.get("position_effect") or ""),
+        trade_date=row["trade_date"],
+        requested_start_date=row.get("requested_start_date"),
+        effective_start_date=row.get("effective_start_date"),
+        quantity=(int(row["quantity"]) if row.get("quantity") is not None else None),
+        execution_price=_optional_decimal(row.get("execution_price")),
+        reference_close=_optional_decimal(row.get("reference_close")),
+        execution_price_source=(
+            str(row["execution_price_source"])
+            if row.get("execution_price_source") is not None
+            else None
+        ),
+        fee_usd=Decimal(str(row.get("fee_usd") or 0)),
+        note=str(row.get("note") or ""),
+        command_id=str(row.get("command_id") or ""),
+        created_at=row.get("created_at"),
+    )
+
+
+_POSITION_EVENT_OPTIONAL_COLUMNS = {
+    "requested_start_date": "DATE NULL",
+    "effective_start_date": "DATE NULL",
+}
+
+
+def _ensure_position_event_optional_columns(db: MySQLClient) -> None:
+    """Add initial-correction date columns without rewriting stored events."""
+
+    rows = db.query(
+        """
+        SELECT COLUMN_NAME
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
+        """,
+        [FINANCE_META_DB, "monitoring_security_position_event"],
+    )
+    existing = {str(row.get("COLUMN_NAME") or "").casefold() for row in rows}
+    for name, definition in _POSITION_EVENT_OPTIONAL_COLUMNS.items():
+        if name.casefold() in existing:
+            continue
+        db.execute(
+            f"ALTER TABLE `monitoring_security_position_event` "
+            f"ADD COLUMN `{name}` {definition}"
+        )
+
+
 class MySQLMonitoringRepository:
     """MySQL-backed monitoring lifecycle repository with explicit transaction reuse."""
 
@@ -225,6 +335,7 @@ class MySQLMonitoringRepository:
         with self._connection() as db:
             for create_sql in PORTFOLIO_MONITORING_SCHEMAS.values():
                 db.execute(create_sql)
+            _ensure_position_event_optional_columns(db)
 
     def get_or_create_default_group(self) -> PortfolioGroupRecord:
         if self._active_db is not None:
@@ -393,6 +504,86 @@ class MySQLMonitoringRepository:
                 [monitoring_item_id],
             )
         return self.get_item(monitoring_item_id, for_update=True)
+
+    def list_position_events(
+        self,
+        monitoring_item_id: str,
+        *,
+        for_update: bool = False,
+    ) -> list[PositionEventRecord]:
+        suffix = " FOR UPDATE" if for_update else ""
+        with self._connection() as db:
+            rows = db.query(
+                "SELECT * FROM monitoring_security_position_event "
+                "WHERE monitoring_item_id = %s "
+                f"ORDER BY trade_date, event_order, created_at, position_event_id{suffix}",
+                [monitoring_item_id],
+            )
+        return [
+            record
+            for row in rows
+            if (record := _position_event_from_row(row)) is not None
+        ]
+
+    def get_position_event(
+        self,
+        position_event_id: str,
+        *,
+        for_update: bool = False,
+    ) -> PositionEventRecord | None:
+        suffix = " FOR UPDATE" if for_update else ""
+        with self._connection() as db:
+            rows = db.query(
+                "SELECT * FROM monitoring_security_position_event "
+                f"WHERE position_event_id = %s{suffix}",
+                [position_event_id],
+            )
+        return _position_event_from_row(rows[0] if rows else None)
+
+    def next_position_event_order(self, monitoring_item_id: str) -> int:
+        # The command layer locks the owning monitoring item before allocating.
+        with self._connection() as db:
+            rows = db.query(
+                "SELECT COALESCE(MAX(event_order), 0) AS max_order "
+                "FROM monitoring_security_position_event "
+                "WHERE monitoring_item_id = %s",
+                [monitoring_item_id],
+            )
+        return int(rows[0]["max_order"] or 0) + 1
+
+    def insert_position_event(self, record: PositionEventRecord) -> PositionEventRecord:
+        with self._connection() as db:
+            db.execute(
+                """
+                INSERT INTO monitoring_security_position_event (
+                  position_event_id, root_event_id, supersedes_event_id,
+                  monitoring_item_id, event_order, event_action, position_effect,
+                  trade_date, requested_start_date, effective_start_date,
+                  quantity, execution_price, reference_close,
+                  execution_price_source, fee_usd, note, command_id
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                [
+                    record.position_event_id,
+                    record.root_event_id,
+                    record.supersedes_event_id,
+                    record.monitoring_item_id,
+                    record.event_order,
+                    record.event_action,
+                    record.position_effect,
+                    record.trade_date,
+                    record.requested_start_date,
+                    record.effective_start_date,
+                    record.quantity,
+                    record.execution_price,
+                    record.reference_close,
+                    record.execution_price_source,
+                    record.fee_usd,
+                    record.note,
+                    record.command_id,
+                ],
+            )
+        return record
 
     def get_command(self, command_id: str) -> StoredCommandRecord | None:
         with self._connection() as db:

@@ -10,6 +10,27 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-22 - sub-dev master 병합은 최신 포인터와 양쪽 제품 계약을 함께 보존한다
+
+- User request: `codex/sub-dev`에서 진행 중인 master 병합 충돌을 `finance-integration-review`로 해결해 달라고 요청함.
+- Interpreted goal: master의 Market Movers·Portfolio Monitoring·Reference Center와 현재 브랜치의 Economic Cycle·Futures Macro V2·Sentiment PIT를 잃지 않고 검증 가능한 merge 상태로 만든다.
+- Analysis result: 충돌은 finance 문서 지도 5개뿐이며, canonical current slot은 `STATUS_MANIFEST`와 task status 기준 Sentiment `2/4차`, latest completed slot은 Portfolio Monitoring 최초 설정 정정이 소유한다. 양쪽 나머지 기록은 recent/parallel/completed로 보존했다.
+- Follow-up: focused Python·React·Browser QA와 conflict/staged artifact 검사를 통과했다. broad suite의 비범위 contract drift와 미추적 research/QA 산출물은 merge 범위에서 분리한다.
+
+### 2026-07-22 - main-dev master 통합은 양쪽 제품 이력과 최신 task 포인터를 함께 보존한다
+
+- User request: `codex/main-dev`에서 진행 중인 master 병합 충돌을 `finance-integration-review`로 해결해 달라고 요청함.
+- Interpreted goal: 현재 브랜치의 Reference/Portfolio Monitoring 기록과 master의 Overview Market Movers 구현·검증 이력을 잃지 않고 coherent merge 상태로 만든다.
+- Analysis result: 실제 충돌은 append형 root handoff log 2개였다. 양쪽 기록은 서로 다른 제품 완료 이력이므로 모두 보존하고 날짜순으로 정렬하며, stale manifest/latest pointer는 실제 task status와 INDEX에 맞춰 갱신하는 것이 적합하다.
+- Follow-up: Market Movers Python `46 + 131 passed`, React `3 passed`, 양쪽 production build를 확인했다. 현재일에 따라 깨지던 Market Movers 테스트 2개는 clock을 고정했고, broad suite의 나머지 13 failures는 merge 전부터 존재한 Backtest/Sentiment baseline으로 분리했다. generated QA PNG와 run-history JSONL은 merge 대상에서 제외한다.
+
+### 2026-07-21 - 비-Daily 시장일과 랭킹 기준일은 같은 날짜 계약이 아니다
+
+- User request: Weekly / Monthly의 데이터 기준일이 최신이 되지 않고 시장 기준일이 7월 7일에 머무는 문제를 수정하도록 요청함.
+- Interpreted goal: 불완전한 최신일을 랭킹에 강제 포함하지 않으면서 실제 가격 보강 경로와 날짜 의미를 복구한다.
+- Analysis result: coverage-qualified `effective_end_date`를 preflight target으로 재사용해 가격 갱신 자체가 사라지는 순환이 원인이었다. refresh target은 최신 완료 NYSE session, ranking basis는 coverage-qualified date로 분리했다.
+- Follow-up: 버그 수정 roadmap `2/2차` 완료. provider 실제 수집 후 랭킹 basis가 전진하는지는 화면 새로고침으로 확인하며 broader conditional outlook은 별도 `5차`다.
+
 ## Active Pointers
 
 - current phase board:
@@ -17,8 +38,12 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Current active task is [overview-sentiment-history-pit-v2-20260720](./tasks/active/overview-sentiment-history-pit-v2-20260720/STATUS.md). 전체 잠정 roadmap `2/4차`; immutable 수집 당시 기록과 장기 그래프를 완료했고, 다음은 3차 독립 데이터 후보 검토다.
-  - Latest completed task is [operations-portfolio-monitoring-only-v1-20260719](./tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md). Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
+  - Latest completed Portfolio Monitoring position decision: [portfolio-monitoring-initial-setting-correction-v1-20260721](./tasks/active/portfolio-monitoring-initial-setting-correction-v1-20260721/STATUS.md). 기존 item overwrite 대신 append-only initial contract revision으로 최초 요청 시작일·수량·적용 종가를 함께 정정한다.
+  - Latest completed Portfolio Monitoring UX decision: [portfolio-monitoring-reference-help-removal-v1-20260721](./tasks/active/portfolio-monitoring-reference-help-removal-v1-20260721/STATUS.md). 기본 업무 화면의 중복 contextual panel은 제거하고 모니터링 도움말 source-of-truth는 canonical Reference Center로 단일화했다.
+  - Latest completed Reference decision: [reference-center-react-v1-20260720](./tasks/active/reference-center-react-v1-20260720/STATUS.md). Guide와 Glossary를 단일 Search-first React Reference로 통합하고 legacy·개발자 용어와 로그 surface를 제외한 채 전체 `4/4차` 구현·responsive QA를 완료했다.
+  - Current active task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `2/4차`; 1차 균형형 UI와 2차 PIT 이중 저장·known-at 조회·장기 그래프를 완료했고, 다음은 3차 독립 데이터 후보 검토다.
+  - The completed stage-2 implementation record is [overview-sentiment-history-pit-v2-20260720](./tasks/active/overview-sentiment-history-pit-v2-20260720/STATUS.md).
+  - Previous completed task is [operations-portfolio-monitoring-only-v1-20260719](./tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md). Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
   - Parallel active follow-up is [portfolio-monitoring-chart-zoom-pan-v1-20260719](./tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md). 구현과 자동 회귀는 완료했고 전체 `2/3차`; 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다.
   - Recent completed Backtest task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~15차와 Portfolio Mix React one-shell 구현·QA를 완료했다.
   - Recent completed Overview task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). 현재 관측과 미래 검증 상태를 분리하고, 10년 compact materialization·DB-only 첫 진입·React 방법론/계산 추적까지 마무리했다. 현재는 관측 완료, 미래 둘은 PROVISIONAL이다.
@@ -57,6 +82,20 @@ Detailed historical analysis was archived on `2026-04-13`.
   - legacy archive content was absorbed into the current docs/task structure; the removed `archive/` path is not a live pointer.
 
 ## Entries
+
+### 2026-07-21 - 최초 날짜 수정은 item overwrite가 아니라 초기 계약 revision이다
+
+- User request: 개별 추적 결과의 기존 최초 수량 정정에서 최초 추적 날짜도 수정할 수 있게 해 달라고 요청함.
+- Interpreted goal: 잘못 입력한 시작일과 수량을 같은 종목 이력을 끊지 않고 바로잡으며 새 시작 종가·최초 투자금·성과를 일관되게 다시 계산한다.
+- Analysis result: 원본 item 직접 수정 대신 기존 append-only correction chain에 optional requested/effective date와 entry close를 보존하고 terminal revision이 유효 초기 계약을 투영하는 방식이 감사 이력·legacy 호환·거래 무결성에 맞다.
+- Follow-up: 전체 `4/4차` 구현·schema migration·자동 회귀를 완료했다. actual Browser의 iframe selection round-trip 제약 때문에 저장 click만 일반 브라우저 확인 항목으로 남겼다.
+
+### 2026-07-21 - Portfolio Monitoring은 업무를 바로 시작하고 도움말은 Reference Center가 소유한다
+
+- User request: Portfolio Monitoring 시작부의 큰 Reference help 영역이 불필요해 보여 제거하거나 필요한 곳에 합쳐 달라고 요청함.
+- Interpreted goal: 실제 포트폴리오 확인보다 앞서는 중복 안내를 없애되 모니터링 흐름·scenario·stale 해결 정보는 잃지 않는다.
+- Analysis result: 세 안내가 이미 canonical Reference item과 stable deep link로 존재하므로 Portfolio Monitoring의 contextual panel·전용 row만 제거하고 `/reference`와 `portfolio_monitoring` owner destination을 유지하는 A안이 적합하다.
+- Follow-up: 전체 `2/2차` 구현·자동 회귀·desktop/420px actual QA를 완료했고 contextual help current surface는 Final Review까지 6개로 정렬했다.
 
 ### 2026-07-20 - Sentiment 과거 설명 이력과 수집 당시 기록은 다른 데이터다
 
@@ -10240,7 +10279,6 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 새 추적 항목이나 재진입 episode를 만들지 않고, 실수로 종료한 기존 항목을 원래 시작일과 투자 계약 그대로 되돌려야 함.
 - Analysis result: `reopen_item`이 동일 item ID를 유지하면서 종료 요청일·적용일·종료금액을 비우고 `active`로 되돌린다. 활성 10개 한도와 동일 source 중복은 복구 시 다시 검증하며 과거 command audit은 보존한다.
 - Follow-up: service/repository/page/React와 durable docs를 연결했고 Python 112 / React 25 / typecheck/build/static asset 검증을 통과했다. Browser URL policy로 실제 interaction screenshot만 수행하지 못했다.
-
 ### 2026-07-20 - Sentiment 장기 이력은 최신 화면과 수집 당시 기록을 분리한다
 
 - User request: CNN·AAII만으로 개선을 이어가되 과거 데이터가 실제로 축적되는지 확인하고 2차를 진행하도록 요청함.
@@ -10282,3 +10320,94 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 월말 canonical model snapshot과 현재 입수정보 기반 월중 잠정 계산을 분리하고, 사용자가 두 시점의 변화와 자료 기준을 바로 이해해야 함.
 - Analysis result: 날짜별 `intramonth_nowcast` row, exact 직전 월말 baseline, overlap 증분 수집과 fail-closed 평일 job이 월말 history 불변성과 최신성을 함께 만족한다. 월중 값은 보간하거나 monthly ribbon에 합치지 않는다.
 - Follow-up: 전체 `4/4차`를 완료했고 2026-06-30 월말 SHA-256 불변과 2026-07-21 월중 actual/UI를 검증했다. 외부 수집은 `FRED_API_KEY`가 있는 운영 환경의 첫 scheduled run에서 확인한다.
+
+### 2026-07-20 - 방치된 Guides/Glossary를 단일 Reference Center로 되살린다
+
+- User request: 기존 Reference의 Guides와 Glossary를 유지·개선할지 제거할지 진단하고, 선택한 A안을 실제 React 개편으로 진행하도록 요청함.
+- Interpreted goal: 오래된 두 페이지를 보존하는 것이 아니라 현재 제품 흐름과 용어를 검색·journey·문맥 도움말로 빠르게 이해하는 읽기 전용 Reference를 만든다.
+- Analysis result: Guides/Glossary 분리는 제거하고 curated 24-item catalog, 6개 journey, local React detail, stable owner-surface deep link로 통합했다. 내부 glossary는 durable docs로만 보존한다.
+- Follow-up: 전체 `4/4차`와 responsive QA를 완료했다. 새 surface/name이 생기면 catalog, contextual help ID, drift guard를 함께 갱신한다.
+
+### 2026-07-20 - Reference 상세는 임의 상한 없이 실제 viewport를 채운다
+
+- User request: PC 브라우저에서 Reference 상세 아래가 여전히 크게 비어 보이는 것이 의도된 사양인지 검토하고 수정하도록 요청함.
+- Interpreted goal: 짧은 화면에서는 footer를 항상 보이게 유지하고, 긴 화면에서는 backdrop과 drawer가 실제 사용 가능 영역을 채우며 resize에도 즉시 적응해야 함.
+- Analysis result: 이전 follow-up의 `760px` 상한이 긴 PC viewport에서 큰 흰 영역을 만든 원인이었고 의도된 제품 경계가 아니었다. parent viewport에서 navigation `80px`와 bottom gap `16px`을 뺀 높이를 상한 없이 사용하고 resize에 동기화했다.
+- Follow-up: `1257×1279`에서 frame `1183px`, live resize `1257×900`에서 `804px`, `420×844`에서 horizontal overflow 없이 footer 노출을 확인했다.
+
+### 2026-07-20 - 개별종목 보유수량은 정정과 실제 거래 이력으로 이어서 추적한다
+
+- User request: Portfolio Monitoring에서 잘못 입력한 AMD 최초 수량을 수정하고, 이후 추가매수·일부매도를 개별종목에 한해 반영해 달라고 요청함.
+- Interpreted goal: 퀀트 전략이나 주문 기능을 확장하지 않고 실제 직접종목 보유수량·현금흐름·성과를 같은 추적 항목에서 계속 관리해야 함.
+- Analysis result: current add/end/reopen 계약에는 edit/trade가 없다. direct stock fixed-shares 전용 append-only event ledger, DB close default + actual price override, buy=입금, partial sell=출금, daily Modified Dietz를 채택함.
+- Follow-up: 전체 `3/3차`를 완료했다. exact-date DB close default/manual override, append-only replace/void, buy contribution/sell withdrawal, partial-sell 최소 1주를 구현했다. 최종 리뷰에서 거래 수정 false block과 선택 종목/그룹 기준일 혼합을 보정했고 Python 138 / React 30과 actual/isolated Browser QA를 통과했다. 전량매도는 tracking end, ETF·전략·fixed notional·backtest는 기존 경계를 유지한다.
+
+### 2026-07-20 - 변동 종목은 scan-first market board와 별도 조사 흐름으로 재구성해야 한다
+
+- User request: Overview 변동 종목 탭의 수집, ranking, sector/industry 흐름, 대장주, 향후 흐름, 선택 종목 조사와 UI를 전체적으로 파악하고 진단해 달라고 요청함.
+- Interpreted goal: 기능을 더 붙이기 전에 한 화면에 혼합된 product/ops 흐름, 실제 data gap, sector 해석 가치, 재무 chart 정확성을 근거로 개편 범위를 확정한다.
+- Analysis result: current surface는 four-job mixed UI이며 stale basis, collection-gap 오분류, sector taxonomy 분할, sector mode 조사 단절, current-price/historical-EPS PER chart가 우선 문제다. Industry 140개와 group trend backend는 재사용 가능하다.
+- Follow-up: 전체 잠정 roadmap `1/5차` 감사만 완료했다. 다음은 one-shell IA/visual contract이며 sector 전망은 watch condition -> 검증된 historical conditional outlook 순으로 진행해야 한다.
+
+### 2026-07-20 - 변동 종목 A안은 ranking과 확산·조사를 한 selected state로 연결한다
+
+- User request: 종목 발견과 시장 확산 확인을 첫 화면의 핵심 과업으로 선택하고 A안 UI, 수집 누락, sector outlook, 선택 종목·재무 chart 구조를 확정하도록 요청함.
+- Interpreted goal: operations status를 주인공으로 만들지 않고 ranking에서 group context와 정확한 종목 조사까지 한 흐름으로 끝낸다.
+- Analysis result: one-shell 60~65/35~40 split, complete/partial/blocked, sector/industry current flow, sector conditional outlook gate, latest-cap Top 3, independent period/factor와 single-axis 재무 chart를 승인했다.
+- Follow-up: 전체 roadmap `2/5차` 설계를 `RECOMMENDATION.md`에 확정했다. 다음은 3차 canonical taxonomy, typed gaps, bellwether, industry, financial read-model hardening 계획이다.
+
+### 2026-07-20 - 변동 종목 3차는 UI가 의미를 재해석하지 않도록 read model을 먼저 고정한다
+
+- User request: 승인한 A안을 인라인 방식으로 계속 구현하도록 요청함.
+- Interpreted goal: 4차 React UI 전에 sector/filter, 수집 상태, group flow, 대장주, 재무 factor와 PER의 의미를 하나의 안정된 payload로 만든다.
+- Analysis result: canonical 11-sector, metric별 `COMPLETE/PARTIAL/BLOCKED`, sector/industry current flow, market-cap Top 3, research snapshot v2와 JSON-safe decision payload를 구현했다. current-price historical PER는 제거했다.
+- Follow-up: 전체 roadmap `3/5차`다. 대형주 10개 PIT EPS smoke는 current PER `0/10 READY`이므로 4차에서 unavailable을 숨기지 않고, 5차 outlook은 OOS gate 전까지 공개하지 않는다.
+
+### 2026-07-20 - 변동 종목 4차는 ranking·확산·조사를 하나의 React selected state로 연결한다
+
+- User request: 확정한 A안과 재무 제어 그룹 구조를 인라인 방식으로 계속 구현하도록 요청함.
+- Interpreted goal: 사용자가 랭킹에서 종목을 고른 뒤 별도 Streamlit 블록을 찾아다니지 않고, 같은 화면에서 sector/industry 확산과 종목 근거를 이어서 판단하게 한다.
+- Analysis result: React-first 62/38 workbench가 ranking과 breadth를 연결하고, selected quick research 아래에 가격·재무·뉴스·공시 상세를 둔다. 보고 주기·재무 영역·factor는 독립 local state이며 bounded symbol/command만 Python으로 보낸다.
+- Follow-up: 전체 roadmap `4/5차`와 actual desktop/420px QA를 완료했다. 5차 sector conditional outlook은 historical episode와 OOS publication gate를 통과하지 못하면 수치를 계속 숨긴다.
+
+### 2026-07-20 - 변동 종목 혼합형 A안은 통합 리포트 visual system으로 확정한다
+
+- User request: 기존 one-shell 기능은 유지하면서 시장맥락·선물매크로와 통일성 있는 혼합형 A안 UI로 계속 진행하도록 요청함.
+- Interpreted goal: prototype처럼 보이는 흰색 admin sheet와 경쟁 accent를 제거하고, 첫 화면의 scan flow와 상세 조사의 report hierarchy를 같은 제품군처럼 읽히게 한다.
+- Analysis result: blue-gray integrated surface, hero/trust/command/pulse, 62/38 ranking-breadth cards, quick research, report-family tabs와 독립 재무 control groups를 적용했다. payload/event/DB 계약은 바꾸지 않았다.
+- Follow-up: visual implementation `3/3차`, 전체 기능 roadmap `4/5차`다. desktop actual QA는 완료했고 좁은 폭·console·nested iframe 상세 click actual QA는 automation 한계로 남겼다. sector conditional outlook은 historical/OOS gate가 준비될 때 별도 5차로 진행한다.
+
+### 2026-07-20 - 변동 종목 지연과 상세 조사 보완을 한 범위로 완료한다
+
+- User request: 진입/랭킹 클릭 장시간 로딩, breadth 제어 구분, 가격 hover, 10년 재무, 뉴스·공시, 현재·갱신 시각, 수동 갱신, 수익률 색상 개선을 이전 권장안까지 포함해 구현하도록 요청함.
+- Interpreted goal: 자동 provider 호출이나 운영 진단 패널을 늘리지 않고 첫 진입과 종목 선택을 빠르게 하며, 저장 근거와 명시적 외부 조회를 같은 selected-symbol 조사 흐름에 둔다.
+- Analysis result: 6개 breadth eager calculation이 주 지연 원인이었다. 현재 key lazy/session reuse와 10분 cache로 actual entry를 약 46초에서 1.6초로 줄였고, 가격/재무/events 상세와 timing/action/semantic color를 one-shell에 연결했다.
+- Follow-up: 성능·조사 보완 `5/5차`와 desktop/760px/detail/console QA를 완료했다. 전체 Market Movers 기능 roadmap의 남은 `5차` conditional outlook은 historical episode와 OOS gate를 통과하기 전까지 공개하지 않는다.
+
+### 2026-07-21 - 변동 종목 재무 차트는 긴 이력을 압축하지 않고 직접 탐색한다
+
+- User request: 재무 차트에 정확한 분기/연간 X축과 hover를 추가하고, 긴 이력을 drag로 이동하며, 가격 요약 카드의 배경색과 좌측선을 제거해 텍스트 색만 구분하도록 요청함.
+- Interpreted goal: 10년 재무 자료의 기간과 값을 실제로 판독할 수 있게 만들되 새 chart dependency나 데이터 계약은 추가하지 않는다.
+- Analysis result: 고정 720 viewBox 압축이 기간 판독 문제의 원인이었다. point-count intrinsic width, horizontal scroll/pointer drag, period tick, exact period-end tooltip과 keyboard 탐색을 적용하고 readout tint CSS를 제거했다.
+- Follow-up: 구현과 자동 회귀/build는 완료했다. Browser localhost URL policy로 actual interaction QA가 남았으며 broader conditional outlook `5차`와는 별도다.
+
+### 2026-07-21 - 변동 종목 비-Daily는 선택 기간 overlap으로 최신일까지 보강한다
+
+- User request: Weekly/Monthly가 2026-07-07에 머무는 문제를 수정하고, 신규 상장 종목 정책과 차트 잘림·X축·hover를 승인한 방식으로 구현해 달라고 요청함.
+- Interpreted goal: 랭킹 기준일을 수집 목표일로 재사용하지 않고 필요한 기간만 보강하며, 전체 기간이 없는 종목을 왜곡된 수익률로 섞지 않고 차트 기간/값을 직접 판독하게 해야 함.
+- Analysis result: Weekly 1주+1주, Monthly 1개월+1개월 bounded overlap과 first-price-date eligibility를 적용했다. 실제 S&P 500 Weekly는 503개 전부 성공해 랭킹 기준일이 2026-07-20으로 이동했고, 가격/재무 X축과 고점 tooltip도 actual browser에서 확인했다.
+- Follow-up: task `3/3차` 완료. full-universe provider 요청은 실제 138.11초가 걸릴 수 있으며, broader sector conditional outlook은 OOS gate가 준비될 때만 별도 5차로 진행한다.
+
+### 2026-07-21 - 가격 모멘텀 우측 지표는 선택한 기간과 같은 기준을 사용한다
+
+- User request: 1M·3M·6M을 눌러도 우측 수익률 값이 1년 또는 YTD로 고정된 것처럼 보이는 문제를 확인하고 수정해 달라고 요청함.
+- Interpreted goal: 차트와 요약 지표가 모두 현재 선택한 기간의 동일한 시작점·종료점·범위를 사용해야 함.
+- Analysis result: 기존 UI는 YTD 정규화 series를 날짜로만 잘랐고 첫 지표도 `YTD 수익률`에 고정됐다. 최근 1년 raw adjusted close를 받아 각 범위 첫 거래일=0%로 재계산하도록 수정했다.
+- Follow-up: GPN actual 화면에서 1M `+26.55%`, 3M `+13.53%`, 6M `+15.75%`, 1Y `+9.83%`와 각 범위 최고·최저 전환을 확인했다. broader roadmap은 `4/5차` 유지다.
+
+### 2026-07-21 - 진단 반복은 원시 근거를 지우지 않고 의미 가족으로 묶는다
+
+- User request: Portfolio Monitoring 취약점이 많아질 때 스크롤로 대응하고, `함께 움직이는 항목의 비중이 커...` 같은 문구 반복이 의도된 사양인지 확인 후 개선해 달라고 요청함.
+- Interpreted goal: 서로 다른 종목쌍·종목의 유효한 판정 근거는 유지하되 첫 화면에서는 같은 의미의 경고를 반복 카드로 읽지 않게 하고, 긴 목록이 이후 업무 영역을 계속 밀어내지 않아야 함.
+- Analysis result: root dedup은 정상이나 React가 subject identity를 숨겨 구현이 원래 중복 방지 의도에서 drift했다. Python display group을 additive로 두고 상관 집중·현재 낙폭만 가족별 요약하며 raw facts/history는 유지하는 방식을 채택했다.
+- Follow-up: 전체 `3/3차`를 완료했다. desktop 560px 내부 스크롤과 mobile 자연 스크롤, legacy fallback, 종목·종목쌍 상세를 구현했고 Python 142 / React 31과 fixture Browser QA를 통과했다. threshold/severity/DB/Backtest 정책은 변경하지 않았다.

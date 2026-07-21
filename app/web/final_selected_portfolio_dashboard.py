@@ -20,15 +20,22 @@ from app.services.portfolio_monitoring.commands import (
     EntryResolution,
     ensure_default_group,
     execute_add_item,
+    execute_correct_initial_quantity,
     execute_create_group,
     execute_end_item,
+    execute_record_position_trade,
     execute_reopen_item,
+    execute_replace_position_trade,
     execute_rename_group,
+    execute_void_position_trade,
 )
 from app.services.portfolio_monitoring.persistence import (
     DEFAULT_PORTFOLIO_GROUP_ID,
     DEFAULT_PORTFOLIO_GROUP_NAME,
     MySQLMonitoringRepository,
+)
+from app.services.portfolio_monitoring.position_events import (
+    project_position_events,
 )
 from app.services.portfolio_monitoring.read_model import (
     WORKSPACE_SCHEMA_VERSION,
@@ -39,10 +46,16 @@ from app.services.portfolio_monitoring.schemas import (
     AddMonitoringItemInput,
     CommandStatus,
     CommandType,
+    ExecutionPriceSource,
     FundingMode,
+    InitialQuantityCorrectionInput,
     InstrumentKind,
     MonitoringCommandInput,
+    PositionEffect,
+    PositionTradeInput,
+    ReplacePositionTradeInput,
     SourceType,
+    VoidPositionTradeInput,
 )
 from app.services.portfolio_monitoring.selected_strategy import (
     SelectedStrategyReplayAdapter,
@@ -81,7 +94,6 @@ from app.web.portfolio_monitoring_react_component import (
 from app.services.backtest_evidence_read_model import build_decision_dossier
 from app.services.backtest_practical_validation import build_market_sentiment_context_overlay
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
-from app.web.reference_contextual_help import render_reference_contextual_help
 from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_dashboard_handoff_checklist_table,
     build_selected_dashboard_handoff_table,
@@ -330,6 +342,10 @@ class PortfolioMonitoringPageServices:
     add_item: Callable[[dict[str, Any]], CommandResult]
     end_item: Callable[[dict[str, Any]], CommandResult]
     reopen_item: Callable[[dict[str, Any]], CommandResult]
+    correct_initial_quantity: Callable[[dict[str, Any]], CommandResult]
+    record_position_trade: Callable[[dict[str, Any]], CommandResult]
+    replace_position_trade: Callable[[dict[str, Any]], CommandResult]
+    void_position_trade: Callable[[dict[str, Any]], CommandResult]
 
 
 def _monitoring_db_factory() -> MySQLClient:
@@ -367,6 +383,18 @@ def _fallback_monitoring_workspace(
             }
         ],
         "active_group": None,
+        "selected_position": {
+            "monitoring_item_id": None,
+            "eligible": False,
+            "reason": "포트폴리오 저장소를 사용할 수 없습니다.",
+            "effective_initial_shares": None,
+            "current_shares": None,
+            "gross_contributions": Decimal("0"),
+            "gross_withdrawals": Decimal("0"),
+            "pnl": None,
+            "total_return": None,
+            "event_rows": [],
+        },
         "catalog": {"query": catalog_query, "items": catalog_items},
         "commands": [],
         "diagnosis": {
@@ -433,6 +461,71 @@ def _catalog_with_entry_readiness(
     return enriched
 
 
+def _load_exact_position_trade_close(item: Any, trade_date: date) -> Decimal:
+    """Read only the exact stored daily close; never shift to another session."""
+
+    frame = load_price_history(
+        symbols=[item.source_ref],
+        start=trade_date.isoformat(),
+        end=trade_date.isoformat(),
+        timeframe="1d",
+    )
+    if frame is None or frame.empty or "date" not in frame or "close" not in frame:
+        raise ValueError("해당 거래일의 저장 종가가 없습니다.")
+    normalized = frame.copy()
+    normalized["date"] = pd.to_datetime(
+        normalized["date"], errors="coerce"
+    ).dt.date
+    rows = normalized.loc[normalized["date"] == trade_date]
+    if rows.empty:
+        raise ValueError("해당 거래일의 저장 종가가 없습니다.")
+    try:
+        close = Decimal(str(rows.iloc[-1]["close"]))
+    except Exception as exc:
+        raise ValueError("해당 거래일의 저장 종가가 없습니다.") from exc
+    if not close.is_finite() or close <= 0:
+        raise ValueError("해당 거래일의 저장 종가가 없습니다.")
+    return close
+
+
+def _resolve_initial_position_entry(
+    item: Any,
+    requested_start_date: date,
+    quantity: int,
+) -> EntryResolution:
+    """Resolve the first stored market date and close for corrected settings."""
+
+    history = load_price_history(
+        symbols=[item.source_ref],
+        start=requested_start_date.isoformat(),
+        timeframe="1d",
+    )
+    return resolve_direct_security_entry(
+        history,
+        requested_start_date,
+        FundingMode.FIXED_SHARES,
+        quantity,
+    )
+
+
+def _effective_position_history_start(
+    item: Any,
+    events: list[Any] | tuple[Any, ...],
+) -> date:
+    """Use the terminal corrected contract wherever position history is loaded."""
+
+    if (
+        item.source_type == SourceType.DIRECT_SECURITY.value
+        and item.instrument_kind == InstrumentKind.STOCK.value
+        and item.funding_mode == FundingMode.FIXED_SHARES.value
+    ):
+        return project_position_events(
+            item,
+            events,
+        ).initial_contract.effective_start_date
+    return item.effective_start_date
+
+
 def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
     repository = MySQLMonitoringRepository(_monitoring_db_factory)
     history_repository = MySQLMonitoringHistoryRepository(_monitoring_db_factory)
@@ -445,13 +538,19 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
                 item,
                 end_date=item.tracking_end_effective_date,
             )
+        events = repository.list_position_events(item.monitoring_item_id)
+        effective_start_date = _effective_position_history_start(item, events)
         history = load_price_history(
             symbols=[item.source_ref],
-            start=item.effective_start_date.isoformat(),
+            start=effective_start_date.isoformat(),
             end=(item.tracking_end_effective_date.isoformat() if item.tracking_end_effective_date else None),
             timeframe="1d",
         )
-        return build_direct_security_value_lane(item, history)
+        return build_direct_security_value_lane(
+            item,
+            history,
+            position_events=events,
+        )
 
     def market_chart_loader(item, start_date: date, end_date: date) -> pd.DataFrame:
         """Load bounded daily OHLCV from the existing DB-only price loader."""
@@ -575,6 +674,22 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
         source_type = str(session_state.get("portfolio_monitoring_catalog_source_type") or SourceType.DIRECT_SECURITY.value)
         requested_date = session_state.get("portfolio_monitoring_catalog_requested_start_date")
         item_builder_state = session_state.pop("portfolio_monitoring_item_builder_state", None)
+        position_editor_state = session_state.pop(
+            "portfolio_monitoring_position_editor_state",
+            None,
+        )
+        trade_date_text = session_state.pop(
+            "portfolio_monitoring_trade_date",
+            None,
+        )
+        initial_requested_date_text = session_state.pop(
+            "portfolio_monitoring_initial_requested_start_date",
+            None,
+        )
+        initial_quantity = session_state.pop(
+            "portfolio_monitoring_initial_quantity",
+            None,
+        )
         try:
             ensure_default_group(repository)
             groups = repository.list_groups(include_deleted=False)
@@ -613,6 +728,7 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
                 storage_error=str(exc),
             )
             workspace["item_builder_state"] = item_builder_state
+            workspace["position_editor_state"] = position_editor_state
             return workspace
         try:
             catalog_items = search_monitoring_catalog(
@@ -629,6 +745,83 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
             workspace["boundaries"] = {**dict(workspace.get("boundaries") or {}), "catalog_error": str(exc)}
         workspace["catalog"] = {"query": catalog_query, "items": catalog_items}
         workspace["item_builder_state"] = item_builder_state
+        workspace["position_editor_state"] = position_editor_state
+        workspace["position_trade_close"] = {
+            "status": "IDLE",
+            "monitoring_item_id": selected_item_id,
+            "trade_date": trade_date_text,
+            "reference_close": None,
+            "reason": None,
+        }
+        workspace["initial_position_entry"] = {
+            "status": "IDLE",
+            "monitoring_item_id": selected_item_id,
+            "requested_start_date": initial_requested_date_text,
+            "effective_start_date": None,
+            "quantity": initial_quantity,
+            "entry_close": None,
+            "initial_capital": None,
+            "reason": None,
+        }
+        if trade_date_text:
+            try:
+                lookup_date = date.fromisoformat(str(trade_date_text))
+                selected_item = repository.get_item(str(selected_item_id or ""))
+                if selected_item is None:
+                    raise ValueError("선택한 종목을 찾을 수 없습니다.")
+                close = _load_exact_position_trade_close(selected_item, lookup_date)
+                workspace["position_trade_close"] = {
+                    "status": "READY",
+                    "monitoring_item_id": selected_item.monitoring_item_id,
+                    "trade_date": lookup_date.isoformat(),
+                    "reference_close": close,
+                    "reason": None,
+                }
+            except Exception as exc:
+                workspace["position_trade_close"] = {
+                    "status": "MISSING",
+                    "monitoring_item_id": selected_item_id,
+                    "trade_date": str(trade_date_text),
+                    "reference_close": None,
+                    "reason": str(exc),
+                }
+        if initial_requested_date_text and initial_quantity is not None:
+            try:
+                lookup_date = date.fromisoformat(
+                    str(initial_requested_date_text)
+                )
+                lookup_quantity = int(initial_quantity)
+                selected_item = repository.get_item(str(selected_item_id or ""))
+                if selected_item is None:
+                    raise ValueError("선택한 종목을 찾을 수 없습니다.")
+                resolution = _resolve_initial_position_entry(
+                    selected_item,
+                    lookup_date,
+                    lookup_quantity,
+                )
+                workspace["initial_position_entry"] = {
+                    "status": "READY",
+                    "monitoring_item_id": selected_item.monitoring_item_id,
+                    "requested_start_date": lookup_date.isoformat(),
+                    "effective_start_date": (
+                        resolution.effective_start_date.isoformat()
+                    ),
+                    "quantity": lookup_quantity,
+                    "entry_close": resolution.entry_close,
+                    "initial_capital": resolution.initial_capital,
+                    "reason": None,
+                }
+            except Exception as exc:
+                workspace["initial_position_entry"] = {
+                    "status": "MISSING",
+                    "monitoring_item_id": selected_item_id,
+                    "requested_start_date": str(initial_requested_date_text),
+                    "effective_start_date": None,
+                    "quantity": initial_quantity,
+                    "entry_close": None,
+                    "initial_capital": None,
+                    "reason": str(exc),
+                }
         return workspace
 
     def create_group(event: dict[str, Any]) -> CommandResult:
@@ -717,13 +910,24 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
             if item.source_type == SourceType.SELECTED_STRATEGY.value:
                 lane = selected_adapter.build_value_lane(item, end_date=horizon)
             else:
+                events = repository.list_position_events(
+                    item.monitoring_item_id
+                )
+                effective_start_date = _effective_position_history_start(
+                    item,
+                    events,
+                )
                 history = load_price_history(
                     symbols=[item.source_ref],
-                    start=item.effective_start_date.isoformat(),
+                    start=effective_start_date.isoformat(),
                     end=horizon.isoformat(),
                     timeframe="1d",
                 )
-                lane = build_direct_security_value_lane(item, history)
+                lane = build_direct_security_value_lane(
+                    item,
+                    history,
+                    position_events=events,
+                )
             return resolve_tracking_end(lane, requested_end)
 
         return execute_end_item(
@@ -748,6 +952,111 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
             ),
         )
 
+    def validate_position_candidate(item, records) -> None:
+        effective_start_date = _effective_position_history_start(item, records)
+        history = load_price_history(
+            symbols=[item.source_ref],
+            start=effective_start_date.isoformat(),
+            timeframe="1d",
+        )
+        build_direct_security_value_lane(
+            item,
+            history,
+            position_events=records,
+        )
+
+    def correct_initial_quantity(event: dict[str, Any]) -> CommandResult:
+        item_id = str(event.get("monitoring_item_id") or "")
+        value = InitialQuantityCorrectionInput(
+            monitoring_item_id=item_id,
+            quantity=int(event.get("quantity") or 0),
+            note=str(event.get("note") or ""),
+            requested_start_date=date.fromisoformat(
+                str(event.get("requested_start_date") or "")
+            ),
+        )
+        return execute_correct_initial_quantity(
+            repository,
+            MonitoringCommandInput(
+                command_id=str(event.get("command_id") or ""),
+                command_type=CommandType.CORRECT_INITIAL_QUANTITY,
+                target_id=item_id,
+                payload=asdict(value),
+            ),
+            value,
+            validate_candidate=validate_position_candidate,
+            resolve_initial_entry=_resolve_initial_position_entry,
+        )
+
+    def record_position_trade(event: dict[str, Any]) -> CommandResult:
+        item_id = str(event.get("monitoring_item_id") or "")
+        value = PositionTradeInput(
+            monitoring_item_id=item_id,
+            position_effect=PositionEffect(str(event.get("position_effect") or "")),
+            trade_date=date.fromisoformat(str(event.get("trade_date") or "")),
+            quantity=int(event.get("quantity") or 0),
+            execution_price=Decimal(str(event.get("execution_price") or "0")),
+            fee_usd=Decimal(str(event.get("fee_usd") or "0")),
+            note=str(event.get("note") or ""),
+        )
+        return execute_record_position_trade(
+            repository,
+            MonitoringCommandInput(
+                command_id=str(event.get("command_id") or ""),
+                command_type=CommandType.RECORD_POSITION_TRADE,
+                target_id=item_id,
+                payload=asdict(value),
+            ),
+            value,
+            resolve_reference_close=_load_exact_position_trade_close,
+            validate_candidate=validate_position_candidate,
+        )
+
+    def replace_position_trade(event: dict[str, Any]) -> CommandResult:
+        item_id = str(event.get("monitoring_item_id") or "")
+        value = ReplacePositionTradeInput(
+            monitoring_item_id=item_id,
+            root_event_id=str(event.get("root_event_id") or ""),
+            expected_event_id=str(event.get("expected_event_id") or ""),
+            position_effect=PositionEffect(str(event.get("position_effect") or "")),
+            trade_date=date.fromisoformat(str(event.get("trade_date") or "")),
+            quantity=int(event.get("quantity") or 0),
+            execution_price=Decimal(str(event.get("execution_price") or "0")),
+            fee_usd=Decimal(str(event.get("fee_usd") or "0")),
+            note=str(event.get("note") or ""),
+        )
+        return execute_replace_position_trade(
+            repository,
+            MonitoringCommandInput(
+                command_id=str(event.get("command_id") or ""),
+                command_type=CommandType.REPLACE_POSITION_TRADE,
+                target_id=item_id,
+                payload=asdict(value),
+            ),
+            value,
+            resolve_reference_close=_load_exact_position_trade_close,
+            validate_candidate=validate_position_candidate,
+        )
+
+    def void_position_trade(event: dict[str, Any]) -> CommandResult:
+        item_id = str(event.get("monitoring_item_id") or "")
+        value = VoidPositionTradeInput(
+            monitoring_item_id=item_id,
+            root_event_id=str(event.get("root_event_id") or ""),
+            expected_event_id=str(event.get("expected_event_id") or ""),
+        )
+        return execute_void_position_trade(
+            repository,
+            MonitoringCommandInput(
+                command_id=str(event.get("command_id") or ""),
+                command_type=CommandType.VOID_POSITION_TRADE,
+                target_id=item_id,
+                payload=asdict(value),
+            ),
+            value,
+            validate_candidate=validate_position_candidate,
+        )
+
     return PortfolioMonitoringPageServices(
         session_state=session_state,
         build_workspace=build_workspace,
@@ -759,6 +1068,10 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
         add_item=add_item,
         end_item=end_item,
         reopen_item=reopen_item,
+        correct_initial_quantity=correct_initial_quantity,
+        record_position_trade=record_position_trade,
+        replace_position_trade=replace_position_trade,
+        void_position_trade=void_position_trade,
     )
 
 
@@ -3986,6 +4299,42 @@ def _sanitize_portfolio_monitoring_item_builder_state(value: Any) -> dict[str, A
     }
 
 
+def _sanitize_position_editor_state(value: Any) -> dict[str, Any] | None:
+    """Keep only the one-shot editor fields required after a DB-close lookup."""
+
+    if not isinstance(value, dict) or value.get("open") is not True:
+        return None
+    mode = str(value.get("mode") or "record")
+    if mode not in {"record", "replace", "correction"}:
+        mode = "record"
+    effect = str(value.get("position_effect") or "buy")
+    if effect not in {PositionEffect.BUY.value, PositionEffect.SELL.value}:
+        effect = PositionEffect.BUY.value
+    price_mode = str(value.get("price_mode") or "awaiting_close")
+    if price_mode not in {
+        "awaiting_close",
+        ExecutionPriceSource.DB_CLOSE_DEFAULT.value,
+        ExecutionPriceSource.MANUAL_OVERRIDE.value,
+    }:
+        price_mode = "awaiting_close"
+    text = lambda key, default="": str(
+        value.get(key) if value.get(key) is not None else default
+    )
+    return {
+        "open": True,
+        "mode": mode,
+        "position_effect": effect,
+        "trade_date": text("trade_date"),
+        "quantity": text("quantity"),
+        "execution_price": text("execution_price"),
+        "price_mode": price_mode,
+        "fee_usd": text("fee_usd", "0"),
+        "note": text("note"),
+        "root_event_id": text("root_event_id"),
+        "expected_event_id": text("expected_event_id"),
+    }
+
+
 def _dispatch_portfolio_monitoring_event(
     event: dict[str, Any],
     services: PortfolioMonitoringPageServices | Any,
@@ -4025,6 +4374,39 @@ def _dispatch_portfolio_monitoring_event(
             event.get("monitoring_item_id") or ""
         )
         return None
+    if event_id == "lookup_position_trade_close":
+        services.session_state["portfolio_monitoring_selected_item_id"] = str(
+            event.get("monitoring_item_id") or ""
+        )
+        services.session_state["portfolio_monitoring_trade_date"] = str(
+            event.get("trade_date") or ""
+        )
+        editor_state = _sanitize_position_editor_state(
+            event.get("position_editor_state")
+        )
+        if editor_state is not None:
+            services.session_state[
+                "portfolio_monitoring_position_editor_state"
+            ] = editor_state
+        return None
+    if event_id == "lookup_initial_position_entry":
+        services.session_state["portfolio_monitoring_selected_item_id"] = str(
+            event.get("monitoring_item_id") or ""
+        )
+        services.session_state[
+            "portfolio_monitoring_initial_requested_start_date"
+        ] = str(event.get("requested_start_date") or "")
+        services.session_state["portfolio_monitoring_initial_quantity"] = int(
+            event.get("quantity") or 0
+        )
+        editor_state = _sanitize_position_editor_state(
+            event.get("position_editor_state")
+        )
+        if editor_state is not None:
+            services.session_state[
+                "portfolio_monitoring_position_editor_state"
+            ] = editor_state
+        return None
     if event_id == "create_group":
         return services.create_group(event)
     if event_id == "rename_group":
@@ -4035,6 +4417,17 @@ def _dispatch_portfolio_monitoring_event(
         return services.end_item(event)
     if event_id == "reopen_item":
         return services.reopen_item(event)
+    position_commands = {
+        "correct_initial_quantity": services.correct_initial_quantity,
+        "record_position_trade": services.record_position_trade,
+        "replace_position_trade": services.replace_position_trade,
+        "void_position_trade": services.void_position_trade,
+    }
+    if event_id in position_commands:
+        services.session_state["portfolio_monitoring_selected_item_id"] = str(
+            event.get("monitoring_item_id") or ""
+        )
+        return position_commands[event_id](event)
     return None
 
 

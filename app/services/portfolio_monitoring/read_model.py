@@ -8,20 +8,21 @@ from typing import Any, Callable, Mapping, Sequence
 import pandas as pd
 
 from .persistence import MonitoringItemRecord, MonitoringRepository, PortfolioGroupRecord
-from .valuation import ItemValueLane
+from .valuation import ItemValueLane, modified_dietz_return
 from .diagnosis import DIAGNOSIS_POLICY_VERSION, DiagnosisFact, project_diagnoses
 from .macro_context import MACRO_CONTEXT_VERSION, MacroContext, MacroObservation
 from .market_chart import MarketChartLoader, build_selected_item_market_chart
 from .schemas import build_request_fingerprint
 
 
-WORKSPACE_SCHEMA_VERSION = "portfolio_monitoring_workspace_v1"
+WORKSPACE_SCHEMA_VERSION = "portfolio_monitoring_workspace_v2"
 ACTIVE_ITEM_STATUSES = {"active", "data_review"}
 MONITORING_VALUE_METHOD = {
     "basis": "oldest_latest_usable_date_among_active_lanes",
     "alignment": "as_of_step_without_interpolation",
     "pre_start": "planned_capital_as_cash",
     "post_end": "exit_value_as_cash",
+    "cashflow_return": "daily_modified_dietz_weight_0_5",
 }
 
 
@@ -39,6 +40,9 @@ def build_monitoring_config_fingerprint() -> str:
 @dataclass(frozen=True)
 class GroupMetrics:
     invested_capital: Decimal
+    gross_contributions: Decimal
+    gross_withdrawals: Decimal
+    net_contributions: Decimal
     current_value: Decimal
     pnl: Decimal
     total_return: Decimal | None
@@ -70,6 +74,9 @@ def _money(value: Any) -> Decimal:
 def _empty_metrics(invested_capital: Decimal = Decimal("0")) -> GroupMetrics:
     return GroupMetrics(
         invested_capital=invested_capital,
+        gross_contributions=invested_capital,
+        gross_withdrawals=Decimal("0"),
+        net_contributions=invested_capital,
         current_value=invested_capital,
         pnl=Decimal("0"),
         total_return=Decimal("0") if invested_capital > 0 else None,
@@ -87,6 +94,8 @@ def calculate_group_metrics(
     group_curve: pd.DataFrame,
     invested_capital: Decimal,
     basis_date: date,
+    *,
+    contribution_by_item: Mapping[str, Decimal] | None = None,
 ) -> GroupMetrics:
     """Calculate common-basis metrics from the daily group value curve."""
 
@@ -96,6 +105,13 @@ def calculate_group_metrics(
     frame = group_curve.copy()
     frame["date"] = pd.to_datetime(frame["date"], errors="coerce").dt.normalize()
     frame["total_value"] = pd.to_numeric(frame["total_value"], errors="coerce")
+    for column in (
+        "gross_contributions",
+        "gross_withdrawals",
+        "unit_value",
+    ):
+        if column in frame:
+            frame[column] = pd.to_numeric(frame[column], errors="coerce")
     frame = frame.dropna(subset=["date", "total_value"])
     frame = frame.loc[frame["date"] <= pd.Timestamp(basis_date)].sort_values("date")
     frame = frame.drop_duplicates(subset=["date"], keep="last").reset_index(drop=True)
@@ -103,38 +119,62 @@ def calculate_group_metrics(
         return _empty_metrics(capital)
 
     current_value = _money(frame.iloc[-1]["total_value"])
-    pnl = current_value - capital
-    total_return = pnl / capital if capital > 0 else None
-    value_decimals = [_money(value) for value in frame["total_value"]]
-    running_peak = value_decimals[0]
+    gross_contributions = (
+        _money(frame.iloc[-1]["gross_contributions"])
+        if "gross_contributions" in frame
+        and pd.notna(frame.iloc[-1]["gross_contributions"])
+        else capital
+    )
+    gross_withdrawals = (
+        _money(frame.iloc[-1]["gross_withdrawals"])
+        if "gross_withdrawals" in frame
+        and pd.notna(frame.iloc[-1]["gross_withdrawals"])
+        else Decimal("0")
+    )
+    net_contributions = gross_contributions - gross_withdrawals
+    pnl = current_value + gross_withdrawals - gross_contributions
+    if "unit_value" in frame and frame["unit_value"].notna().all():
+        performance_values = [_money(value) for value in frame["unit_value"]]
+        total_return = performance_values[-1] - Decimal("1")
+    else:
+        performance_values = [_money(value) for value in frame["total_value"]]
+        total_return = pnl / gross_contributions if gross_contributions > 0 else None
+    running_peak = performance_values[0]
     drawdowns: list[Decimal] = []
-    for value in value_decimals:
+    for value in performance_values:
         running_peak = max(running_peak, value)
         drawdowns.append(value / running_peak - Decimal("1"))
     mdd = min(drawdowns)
     start_date = frame.iloc[0]["date"].date()
     observation_days = max((basis_date - start_date).days, 0)
-    start_value = _money(frame.iloc[0]["total_value"])
-    if observation_days > 0 and start_value > 0 and current_value > 0:
-        cagr = (current_value / start_value) ** (Decimal("365") / Decimal(observation_days)) - Decimal("1")
+    start_value = performance_values[0]
+    end_value = performance_values[-1]
+    if observation_days > 0 and start_value > 0 and end_value > 0:
+        cagr = (end_value / start_value) ** (
+            Decimal("365") / Decimal(observation_days)
+        ) - Decimal("1")
     else:
         cagr = None
 
-    contributions: dict[str, Decimal] = {}
-    for column in frame.columns:
-        if not str(column).startswith("item:"):
-            continue
-        item_id = str(column).split(":", 1)[1]
-        start = _money(frame.iloc[0][column])
-        current = _money(frame.iloc[-1][column])
-        contributions[item_id] = current - start
+    contributions = dict(contribution_by_item or {})
+    if not contributions:
+        for column in frame.columns:
+            if not str(column).startswith("item:"):
+                continue
+            item_id = str(column).split(":", 1)[1]
+            start = _money(frame.iloc[0][column])
+            current = _money(frame.iloc[-1][column])
+            contributions[item_id] = current - start
     total_contribution = sum(contributions.values(), Decimal("0"))
     downside_contribution = sum(
         (value for value in contributions.values() if value < 0),
         Decimal("0"),
     )
     return GroupMetrics(
-        invested_capital=capital,
+        invested_capital=gross_contributions,
+        gross_contributions=gross_contributions,
+        gross_withdrawals=gross_withdrawals,
+        net_contributions=net_contributions,
         current_value=current_value,
         pnl=pnl,
         total_return=total_return,
@@ -154,6 +194,14 @@ def _normalized_lane_curve(lane: ItemValueLane) -> pd.DataFrame:
         return pd.DataFrame(columns=["date", "total_value"])
     frame["date"] = pd.to_datetime(frame["date"], errors="coerce").dt.normalize()
     frame["total_value"] = pd.to_numeric(frame["total_value"], errors="coerce")
+    for column in (
+        "external_flow",
+        "cumulative_contributions",
+        "cumulative_withdrawals",
+        "flow_adjusted_index",
+    ):
+        if column in frame:
+            frame[column] = pd.to_numeric(frame[column], errors="coerce")
     frame = frame.dropna(subset=["date", "total_value"])
     return frame.sort_values("date").drop_duplicates(subset=["date"], keep="last")
 
@@ -170,13 +218,70 @@ def _value_at(
         and item.exit_value is not None
     ):
         return item.exit_value
+    planned_capital = lane.initial_capital if lane is not None else item.initial_capital
     if lane is None or on_date < lane.effective_start_date:
-        return item.initial_capital
+        return planned_capital
     frame = _normalized_lane_curve(lane)
     eligible = frame.loc[frame["date"] <= pd.Timestamp(on_date)]
     if eligible.empty:
-        return item.initial_capital
+        return planned_capital
     return _money(eligible.iloc[-1]["total_value"])
+
+
+def _cashflow_at(
+    item: MonitoringItemRecord,
+    lane: ItemValueLane | None,
+    on_date: date,
+) -> tuple[Decimal, Decimal, Decimal]:
+    initial = lane.initial_capital if lane is not None else item.initial_capital
+    if lane is None or on_date < lane.effective_start_date:
+        return initial, Decimal("0"), Decimal("0")
+    frame = _normalized_lane_curve(lane)
+    eligible = frame.loc[frame["date"] <= pd.Timestamp(on_date)]
+    if eligible.empty:
+        return initial, Decimal("0"), Decimal("0")
+    latest = eligible.iloc[-1]
+    contributions = (
+        _money(latest["cumulative_contributions"])
+        if "cumulative_contributions" in eligible
+        and pd.notna(latest["cumulative_contributions"])
+        else initial
+    )
+    withdrawals = (
+        _money(latest["cumulative_withdrawals"])
+        if "cumulative_withdrawals" in eligible
+        and pd.notna(latest["cumulative_withdrawals"])
+        else Decimal("0")
+    )
+    exact = frame.loc[frame["date"] == pd.Timestamp(on_date)]
+    external_flow = (
+        _money(exact.iloc[-1]["external_flow"])
+        if not exact.empty
+        and "external_flow" in exact
+        and pd.notna(exact.iloc[-1]["external_flow"])
+        else Decimal("0")
+    )
+    return contributions, withdrawals, external_flow
+
+
+def _requested_start(
+    item: MonitoringItemRecord,
+    lane: ItemValueLane | None,
+) -> date:
+    if (
+        lane is not None
+        and lane.position is not None
+        and lane.position.requested_start_date is not None
+    ):
+        return lane.position.requested_start_date
+    return item.requested_start_date
+
+
+def _effective_start(
+    item: MonitoringItemRecord,
+    lane: ItemValueLane | None,
+) -> date:
+    return lane.effective_start_date if lane is not None else item.effective_start_date
 
 
 def align_group_value_lanes(
@@ -186,7 +291,6 @@ def align_group_value_lanes(
     """Align item lanes on one conservative common basis without interpolation."""
 
     ordered_items = list(items)
-    invested_capital = sum((item.initial_capital for item in ordered_items), Decimal("0"))
     failures: dict[str, str] = {}
     valid_lanes: dict[str, ItemValueLane] = {}
     for item in ordered_items:
@@ -197,6 +301,15 @@ def align_group_value_lanes(
             failures[item.monitoring_item_id] = (
                 str(value) if isinstance(value, BaseException) else "Value lane is unavailable."
             )
+    invested_capital = sum(
+        (
+            valid_lanes[item.monitoring_item_id].initial_capital
+            if item.monitoring_item_id in valid_lanes
+            else item.initial_capital
+            for item in ordered_items
+        ),
+        Decimal("0"),
+    )
 
     active_items = [item for item in ordered_items if item.status in ACTIVE_ITEM_STATUSES]
     active_lane_dates = [
@@ -214,7 +327,16 @@ def align_group_value_lanes(
             if item.tracking_end_effective_date is not None
         )
         basis_date = max(fallback_dates) if fallback_dates else (
-            max((item.requested_start_date for item in ordered_items), default=None)
+            max(
+                (
+                    _requested_start(
+                        item,
+                        valid_lanes.get(item.monitoring_item_id),
+                    )
+                    for item in ordered_items
+                ),
+                default=None,
+            )
         )
 
     if basis_date is None or not ordered_items:
@@ -229,15 +351,20 @@ def align_group_value_lanes(
             history_item_count=len(ordered_items),
         )
 
-    start_date = min(item.requested_start_date for item in ordered_items)
+    start_date = min(
+        _requested_start(item, valid_lanes.get(item.monitoring_item_id))
+        for item in ordered_items
+    )
     timeline = {start_date, basis_date}
     for item in ordered_items:
-        timeline.add(item.requested_start_date)
-        if item.effective_start_date <= basis_date:
-            timeline.add(item.effective_start_date)
+        lane = valid_lanes.get(item.monitoring_item_id)
+        requested_start = _requested_start(item, lane)
+        effective_start = _effective_start(item, lane)
+        timeline.add(requested_start)
+        if effective_start <= basis_date:
+            timeline.add(effective_start)
         if item.tracking_end_effective_date and item.tracking_end_effective_date <= basis_date:
             timeline.add(item.tracking_end_effective_date)
-        lane = valid_lanes.get(item.monitoring_item_id)
         if lane is not None:
             frame = _normalized_lane_curve(lane)
             timeline.update(
@@ -247,17 +374,63 @@ def align_group_value_lanes(
             )
 
     rows: list[dict[str, Any]] = []
+    group_unit_value: Decimal | None = Decimal("1")
+    previous_total = invested_capital
     for on_date in sorted(value for value in timeline if start_date <= value <= basis_date):
         row: dict[str, Any] = {"date": pd.Timestamp(on_date)}
         total = Decimal("0")
+        gross_contributions = Decimal("0")
+        gross_withdrawals = Decimal("0")
+        external_flow = Decimal("0")
         for item in ordered_items:
-            value = _value_at(item, valid_lanes.get(item.monitoring_item_id), on_date)
+            lane = valid_lanes.get(item.monitoring_item_id)
+            value = _value_at(item, lane, on_date)
+            contributions, withdrawals, item_flow = _cashflow_at(
+                item,
+                lane,
+                on_date,
+            )
             row[f"item:{item.monitoring_item_id}"] = float(value)
             total += value
+            gross_contributions += contributions
+            gross_withdrawals += withdrawals
+            external_flow += item_flow
         row["total_value"] = float(total)
+        row["external_flow"] = float(external_flow)
+        row["gross_contributions"] = float(gross_contributions)
+        row["gross_withdrawals"] = float(gross_withdrawals)
+        daily_return = modified_dietz_return(
+            previous_total,
+            total,
+            external_flow,
+        )
+        if daily_return is None or group_unit_value is None:
+            group_unit_value = None
+        else:
+            group_unit_value *= Decimal("1") + daily_return
+        row["daily_flow_adjusted_return"] = (
+            float(daily_return) if daily_return is not None else None
+        )
+        row["unit_value"] = (
+            float(group_unit_value) if group_unit_value is not None else None
+        )
         rows.append(row)
+        previous_total = total
     curve = pd.DataFrame(rows)
-    metrics = calculate_group_metrics(curve, invested_capital, basis_date)
+    contribution_by_item: dict[str, Decimal] = {}
+    for item in ordered_items:
+        lane = valid_lanes.get(item.monitoring_item_id)
+        current = _value_at(item, lane, basis_date)
+        contributions, withdrawals, _ = _cashflow_at(item, lane, basis_date)
+        contribution_by_item[item.monitoring_item_id] = (
+            current + withdrawals - contributions
+        )
+    metrics = calculate_group_metrics(
+        curve,
+        invested_capital,
+        basis_date,
+        contribution_by_item=contribution_by_item,
+    )
     item_rows = tuple(
         {
             "monitoring_item_id": item.monitoring_item_id,
@@ -268,7 +441,11 @@ def align_group_value_lanes(
                 if item.monitoring_item_id in valid_lanes
                 else "failed"
             ),
-            "initial_capital": item.initial_capital,
+            "initial_capital": (
+                valid_lanes[item.monitoring_item_id].initial_capital
+                if item.monitoring_item_id in valid_lanes
+                else item.initial_capital
+            ),
             "current_value": _value_at(
                 item,
                 valid_lanes.get(item.monitoring_item_id),
@@ -355,6 +532,94 @@ def _compact_history_rows(rows: Sequence[Mapping[str, Any]] | None) -> list[dict
     ]
 
 
+def _project_selected_position(
+    items: Sequence[MonitoringItemRecord],
+    lanes: Mapping[str, ItemValueLane | BaseException],
+    selected_item_id: str | None,
+) -> dict[str, Any]:
+    selected = next(
+        (item for item in items if item.monitoring_item_id == selected_item_id),
+        None,
+    )
+    empty = {
+        "monitoring_item_id": selected_item_id,
+        "eligible": False,
+        "reason": "개별주식 종목을 선택해 주세요.",
+        "as_of_date": None,
+        "current_value": None,
+        "requested_start_date": None,
+        "effective_start_date": None,
+        "entry_close": None,
+        "initial_capital": None,
+        "effective_initial_shares": None,
+        "current_shares": None,
+        "gross_contributions": Decimal("0"),
+        "gross_withdrawals": Decimal("0"),
+        "pnl": None,
+        "total_return": None,
+        "event_rows": [],
+    }
+    if selected is None:
+        return empty
+    if not (
+        selected.source_type == "direct_security"
+        and selected.instrument_kind == "stock"
+        and selected.funding_mode == "fixed_shares"
+    ):
+        return {
+            **empty,
+            "monitoring_item_id": selected.monitoring_item_id,
+            "reason": "개별주식의 보유 수량 방식에서만 거래를 기록할 수 있습니다.",
+        }
+    lane = lanes.get(selected.monitoring_item_id)
+    if not isinstance(lane, ItemValueLane) or lane.position is None:
+        return {
+            **empty,
+            "monitoring_item_id": selected.monitoring_item_id,
+            "reason": "보유내역 가치곡선을 계산할 수 없습니다.",
+        }
+    command_eligible = selected.status in ACTIVE_ITEM_STATUSES
+    total_return = None
+    frame = _normalized_lane_curve(lane)
+    if "flow_adjusted_index" in frame and not frame.empty:
+        value = frame.iloc[-1]["flow_adjusted_index"]
+        if pd.notna(value):
+            total_return = _money(value) - Decimal("1")
+    latest_value = None
+    if "total_value" in frame and not frame.empty:
+        value = frame.iloc[-1]["total_value"]
+        if pd.notna(value):
+            latest_value = _money(value)
+    return {
+        "monitoring_item_id": selected.monitoring_item_id,
+        "eligible": command_eligible,
+        "reason": (
+            None
+            if command_eligible
+            else "추적 종료를 취소한 뒤 거래를 기록할 수 있습니다."
+        ),
+        "as_of_date": lane.latest_usable_date.isoformat(),
+        "current_value": latest_value,
+        "requested_start_date": (
+            lane.position.requested_start_date or selected.requested_start_date
+        ).isoformat(),
+        "effective_start_date": (
+            lane.position.effective_start_date or lane.effective_start_date
+        ).isoformat(),
+        "entry_close": lane.position.entry_close or selected.entry_close,
+        "initial_capital": (
+            lane.position.initial_capital or lane.initial_capital
+        ),
+        "effective_initial_shares": lane.position.effective_initial_shares,
+        "current_shares": lane.position.current_shares,
+        "gross_contributions": lane.position.cumulative_contributions,
+        "gross_withdrawals": lane.position.cumulative_withdrawals,
+        "pnl": lane.position.pnl,
+        "total_return": total_return,
+        "event_rows": list(lane.position.event_rows),
+    }
+
+
 def build_portfolio_monitoring_workspace(
     repository: MonitoringRepository,
     *,
@@ -387,10 +652,10 @@ def build_portfolio_monitoring_workspace(
         selected_group = next((group for group in groups if group.is_default), groups[0] if groups else None)
     active_result: GroupValueResult | None = None
     selected_items: list[MonitoringItemRecord] = []
+    lane_values: dict[str, ItemValueLane | BaseException] = {}
     if selected_group is not None:
         selected_items = items_by_group[selected_group.portfolio_group_id]
         loader = lane_loader or getattr(repository, "load_value_lane", None)
-        lane_values: dict[str, ItemValueLane | BaseException] = {}
         for item in selected_items:
             if callable(loader):
                 try:
@@ -495,6 +760,11 @@ def build_portfolio_monitoring_workspace(
             for group in groups
         ],
         "active_group": active_result,
+        "selected_position": _project_selected_position(
+            selected_items,
+            lane_values,
+            selected_item_id,
+        ),
         "catalog": {"query": catalog_query, "items": []},
         "commands": [],
         "diagnosis": {
@@ -504,6 +774,7 @@ def build_portfolio_monitoring_workspace(
             "weaknesses": [asdict(row) for row in diagnosis.weaknesses],
             "data_gaps": [asdict(row) for row in diagnosis.data_gaps],
             "all_rows": [asdict(row) for row in diagnosis.all_rows],
+            "display_groups": [asdict(group) for group in diagnosis.display_groups],
             "coverage": exposure_coverage,
         },
         "macro_observation": {

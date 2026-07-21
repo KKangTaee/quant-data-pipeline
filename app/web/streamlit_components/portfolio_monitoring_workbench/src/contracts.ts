@@ -11,6 +11,9 @@ export type GroupSummary = {
 
 export type GroupMetrics = {
   invested_capital: number;
+  gross_contributions: number;
+  gross_withdrawals: number;
+  net_contributions: number;
   current_value: number;
   pnl: number;
   total_return: number | null;
@@ -21,6 +24,75 @@ export type GroupMetrics = {
   total_contribution: number;
   downside_contribution: number;
   contribution_by_item: Record<string, number>;
+};
+
+export type PositionEventRow = {
+  root_event_id: string;
+  current_event_id: string;
+  position_event_id: string;
+  status: "active" | "superseded" | "voided";
+  position_effect: "initial_quantity_correction" | "buy" | "sell";
+  trade_date: string;
+  event_order: number;
+  quantity: number | null;
+  execution_price: number | null;
+  reference_close: number | null;
+  execution_price_source: "db_close_default" | "manual_override" | null;
+  fee_usd: number;
+  note: string;
+  shares_after: number | null;
+};
+
+export type SelectedPositionProjection = {
+  monitoring_item_id: string | null;
+  eligible: boolean;
+  reason: string | null;
+  as_of_date: string | null;
+  current_value: number | null;
+  requested_start_date?: string | null;
+  effective_start_date?: string | null;
+  entry_close?: number | null;
+  initial_capital?: number | null;
+  effective_initial_shares: number | null;
+  current_shares: number | null;
+  gross_contributions: number;
+  gross_withdrawals: number;
+  pnl: number | null;
+  total_return: number | null;
+  event_rows: PositionEventRow[];
+};
+
+export type PositionTradeCloseProjection = {
+  status: "IDLE" | "READY" | "MISSING" | string;
+  monitoring_item_id: string | null;
+  trade_date: string | null;
+  reference_close: number | null;
+  reason: string | null;
+};
+
+export type InitialPositionEntryProjection = {
+  status: "IDLE" | "READY" | "MISSING" | string;
+  monitoring_item_id: string | null;
+  requested_start_date: string | null;
+  effective_start_date: string | null;
+  quantity: number | null;
+  entry_close: number | null;
+  initial_capital: number | null;
+  reason: string | null;
+};
+
+export type PositionEditorRecoveryState = {
+  open: true;
+  mode: "record" | "replace" | "correction";
+  position_effect: "buy" | "sell";
+  trade_date: string;
+  quantity: string;
+  execution_price: string;
+  price_mode: "awaiting_close" | "db_close_default" | "manual_override";
+  fee_usd: string;
+  note: string;
+  root_event_id: string;
+  expected_event_id: string;
 };
 
 export type ItemRow = {
@@ -91,7 +163,21 @@ export type DiagnosisRow = {
   meaning: string;
   change_condition: string;
   next_check: string;
+  subject_ids?: string[];
+  primary_metric?: number | null;
 };
+
+export type DiagnosisDisplayGroup = {
+  group_id: string;
+  family: string;
+  section: "strength" | "weakness" | "data_gap";
+  representative: DiagnosisRow;
+  summary_fact: string;
+  member_count: number;
+  members: DiagnosisRow[];
+};
+
+export type DiagnosisDisplayGroupView = DiagnosisRow & DiagnosisDisplayGroup;
 
 export type MacroObservationRow = {
   rule_id: string;
@@ -152,14 +238,19 @@ export type DiagnosisProjection = {
   weaknesses: DiagnosisRow[];
   data_gaps: DiagnosisRow[];
   all_rows: DiagnosisRow[];
+  display_groups?: DiagnosisDisplayGroup[];
   coverage?: number;
 };
 
 export type PortfolioMonitoringWorkspace = {
-  schema_version: "portfolio_monitoring_workspace_v1";
+  schema_version: "portfolio_monitoring_workspace_v2";
   generated_at: string;
   groups: GroupSummary[];
   active_group: GroupValueResult | null;
+  selected_position: SelectedPositionProjection;
+  position_trade_close?: PositionTradeCloseProjection;
+  initial_position_entry?: InitialPositionEntryProjection;
+  position_editor_state?: PositionEditorRecoveryState | null;
   selected_item_market_chart?: SelectedItemMarketChart;
   catalog: { query: string; items: CatalogItem[] };
   commands: CommandProjection[];
@@ -189,7 +280,13 @@ export type PortfolioMonitoringEvent =
   | { id: "search_catalog"; query: string; source_type: "direct_security" | "selected_strategy"; nonce: string }
   | { id: "add_item"; payload: Record<string, unknown>; nonce: string }
   | { id: "end_item"; monitoring_item_id: string; requested_end_date: string; nonce: string }
-  | { id: "reopen_item"; monitoring_item_id: string; nonce: string };
+  | { id: "reopen_item"; monitoring_item_id: string; nonce: string }
+  | { id: "lookup_position_trade_close"; monitoring_item_id: string; trade_date: string; position_editor_state: PositionEditorRecoveryState; nonce: string }
+  | { id: "lookup_initial_position_entry"; monitoring_item_id: string; requested_start_date: string; quantity: number; position_editor_state: PositionEditorRecoveryState; nonce: string }
+  | { id: "correct_initial_quantity"; command_id: string; monitoring_item_id: string; requested_start_date: string; quantity: number; note: string; nonce: string }
+  | { id: "record_position_trade"; command_id: string; monitoring_item_id: string; position_effect: "buy" | "sell"; trade_date: string; quantity: number; execution_price: number; fee_usd: number; note: string; nonce: string }
+  | { id: "replace_position_trade"; command_id: string; monitoring_item_id: string; root_event_id: string; expected_event_id: string; position_effect: "buy" | "sell"; trade_date: string; quantity: number; execution_price: number; fee_usd: number; note: string; nonce: string }
+  | { id: "void_position_trade"; command_id: string; monitoring_item_id: string; root_event_id: string; expected_event_id: string; nonce: string };
 
 export type PortfolioMonitoringComponentValue = {
   event: PortfolioMonitoringEvent | null;

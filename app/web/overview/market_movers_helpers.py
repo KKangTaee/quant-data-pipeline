@@ -6,6 +6,7 @@ from html import escape
 import re
 from time import perf_counter
 from typing import Any, Callable
+from zoneinfo import ZoneInfo
 
 import altair as alt
 import pandas as pd
@@ -32,7 +33,9 @@ from app.services.overview.market_interest import (
     build_market_interest_read_model,
     fetch_yfinance_analyst_interest_metadata,
 )
+from app.services.nyse_calendar import latest_completed_nyse_session
 from app.services.overview.why_it_moved import (
+    build_market_mover_metadata_not_requested_state,
     build_market_mover_metadata_status_strip,
     build_market_mover_research_snapshot,
     build_market_mover_why_it_moved_read_model,
@@ -41,7 +44,13 @@ from app.services.overview.why_it_moved import (
     merge_market_mover_metadata,
 )
 from app.web.overview.session_helpers import _snapshot_value
+from app.web.overview.market_movers_payloads import build_market_movers_decision_payload
+from app.web.overview.market_movers_decision_ui import (
+    build_market_movers_decision_shell_payload,
+)
 from app.web.overview_dashboard_helpers import (
+    load_overview_group_leadership_snapshot,
+    load_overview_market_mover_research_snapshot,
     load_overview_market_mover_sectors,
     load_overview_market_movers_snapshot,
 )
@@ -598,6 +607,42 @@ def _effective_timestamp(coverage: dict[str, Any]) -> str:
     )
 
 
+def _market_movers_decision_timing(
+    snapshot: dict[str, Any],
+    *,
+    period: str = "daily",
+) -> dict[str, str]:
+    now_kst = datetime.now(ZoneInfo("Asia/Seoul"))
+    market_now = now_kst.astimezone(ZoneInfo("America/New_York"))
+    coverage = dict(snapshot.get("coverage") or {})
+    date_window = dict(snapshot.get("date_window") or {})
+    normalized_period = str(period or "daily").strip().lower()
+    if normalized_period == "daily":
+        market_date_raw = str(
+            date_window.get("effective_end_date")
+            or coverage.get("effective_end_date")
+            or coverage.get("latest_raw_date")
+            or market_now.date().isoformat()
+        )
+    else:
+        market_date_raw = latest_completed_nyse_session().isoformat()
+    market_date_timestamp = pd.to_datetime(market_date_raw, errors="coerce")
+    market_date = (
+        market_date_timestamp.date().isoformat()
+        if pd.notna(market_date_timestamp)
+        else market_date_raw
+    )
+    return {
+        "current_time": now_kst.strftime("%Y-%m-%d %H:%M KST"),
+        "market_date": f"{market_date} ET",
+        "data_as_of": _effective_timestamp(coverage),
+        "last_refreshed_at": str(
+            st.session_state.get("overview_market_movers_reloaded_at")
+            or "수동 갱신 기록 없음"
+        ),
+    }
+
+
 def _command_strip_tone(snapshot: dict[str, Any], coverage: dict[str, Any]) -> str:
     status = str(snapshot.get("status") or "").strip().upper()
     refresh_status = str(dict(coverage.get("refresh_state") or {}).get("status") or "").strip().lower()
@@ -770,14 +815,15 @@ def _market_movers_attach_eod_preflight(
         return snapshot
     prepared = dict(snapshot)
     preflight = dict(prepared.get("eod_refresh_preflight") or {})
-    as_of_date = str(preflight.get("as_of_date") or _market_movers_snapshot_effective_as_of_date(prepared)).strip()
-    if not preflight:
+    as_of_date = latest_completed_nyse_session().isoformat()
+    preflight_as_of = str(preflight.get("as_of_date") or "").strip()
+    if not preflight or preflight_as_of != as_of_date:
         try:
             preflight = build_market_movers_eod_refresh_preflight(
                 universe_code=controls.coverage,
                 universe_limit=controls.universe_limit,
                 period=controls.period,
-                as_of_date=as_of_date or None,
+                as_of_date=as_of_date,
             )
         except Exception as exc:  # pragma: no cover - UI resilience only
             preflight = {
@@ -800,7 +846,7 @@ def _market_movers_attach_eod_preflight(
 def _market_movers_react_actions(*, controls: MarketMoverControls, snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     if controls.period == "daily":
         actions: list[dict[str, Any]] = [
-            {"id": "refresh_intraday", "label": "일중 스냅샷 갱신", "kind": "primary"},
+            {"id": "refresh_intraday", "label": "일중 스냅샷 수동 갱신", "kind": "primary"},
         ]
         if snapshot.get("ticker_alias_candidates"):
             actions.append({"id": "apply_ticker_alias_repair", "label": "티커 변경 복구 적용", "kind": "secondary"})
@@ -809,9 +855,12 @@ def _market_movers_react_actions(*, controls: MarketMoverControls, snapshot: dic
         return actions
 
     preflight = dict(snapshot.get("eod_refresh_preflight") or {})
-    actions = []
-    if _safe_int(preflight.get("selected_symbols_count")) > 0:
-        actions.append({"id": "refresh_eod_history", "label": "가격 이력 갱신", "kind": "primary"})
+    refresh_kind = (
+        "primary"
+        if _safe_int(preflight.get("selected_symbols_count")) > 0
+        else "secondary"
+    )
+    actions = [{"id": "refresh_eod_history", "label": "가격 이력 수동 갱신", "kind": refresh_kind}]
     actions.append(_market_movers_react_universe_basis_action(controls.coverage, kind="secondary"))
     actions.append({"id": "reload", "label": "화면 새로고침", "kind": "secondary"})
     return actions
@@ -837,6 +886,198 @@ def _market_movers_react_universe_basis_action(coverage: str, *, kind: str) -> d
     if normalized == "NASDAQ":
         return {"id": "refresh_nasdaq_directory", "label": "유니버스 기준 갱신", "kind": kind}
     return {"id": "refresh_liquidity_universe", "label": "유니버스 기준 갱신", "kind": kind}
+
+
+def build_market_movers_decision_workbench_payload(
+    *,
+    market_snapshot: dict[str, Any],
+    sector_snapshots: dict[str, dict[str, Any]],
+    industry_snapshots: dict[str, dict[str, Any]],
+    selected_research: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Expose the phase-4 decision payload without changing the current renderer."""
+
+    return build_market_movers_decision_payload(
+        market_snapshot=market_snapshot,
+        sector_snapshots=sector_snapshots,
+        industry_snapshots=industry_snapshots,
+        selected_research=selected_research,
+    )
+
+
+def _market_movers_breadth_selection(*, controls: MarketMoverControls) -> tuple[str, str]:
+    group_key = f"overview_market_movers_breadth_group_{controls.coverage}"
+    period_key = f"overview_market_movers_breadth_period_{controls.coverage}"
+    group_by = str(st.session_state.get(group_key) or "sector").strip().lower()
+    if group_by not in {"sector", "industry"}:
+        group_by = "sector"
+    default_period = controls.period if controls.period in {"daily", "weekly", "monthly"} else "daily"
+    period = str(st.session_state.get(period_key) or default_period).strip().lower()
+    if period not in {"daily", "weekly", "monthly"}:
+        period = default_period
+    st.session_state[group_key] = group_by
+    st.session_state[period_key] = period
+    return group_by, period
+
+
+def _market_movers_breadth_snapshot_session_key(
+    *,
+    controls: MarketMoverControls,
+    group_by: str,
+    period: str,
+) -> str:
+    return "__".join(
+        [
+            "overview_market_movers_breadth_snapshot",
+            controls.coverage.lower(),
+            str(controls.universe_limit),
+            group_by,
+            period,
+        ]
+    )
+
+
+def _invalidate_market_movers_breadth_session_cache(*, coverage: str | None = None) -> None:
+    prefix = "overview_market_movers_breadth_snapshot__"
+    coverage_token = str(coverage or "").strip().lower()
+    for key in list(st.session_state):
+        normalized = str(key)
+        if not normalized.startswith(prefix):
+            continue
+        if coverage_token and not normalized.startswith(f"{prefix}{coverage_token}__"):
+            continue
+        st.session_state.pop(key, None)
+
+
+def _invalidate_market_movers_read_caches(*, coverage: str | None = None) -> None:
+    """Drop both session projections and cached DB read models after explicit refresh."""
+
+    _invalidate_market_movers_breadth_session_cache(coverage=coverage)
+    for loader in (
+        load_overview_group_leadership_snapshot,
+        load_overview_market_mover_research_snapshot,
+    ):
+        clear = getattr(loader, "clear", None)
+        if callable(clear):
+            clear()
+
+
+def _market_movers_manual_refresh_timestamp() -> str:
+    return datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S KST")
+
+
+def _market_movers_decision_evidence_session_key(*, coverage: str, symbol: str) -> str:
+    return "__".join(
+        [
+            "overview_market_movers_decision_evidence",
+            str(coverage or "unknown").strip().lower(),
+            str(symbol or "unknown").strip().lower(),
+        ]
+    )
+
+
+def _market_movers_decision_event_evidence(
+    *,
+    coverage: str,
+    symbol: str,
+    research: dict[str, Any] | None,
+) -> dict[str, Any]:
+    metadata = st.session_state.get(
+        _market_movers_decision_evidence_session_key(coverage=coverage, symbol=symbol)
+    )
+    if not isinstance(metadata, dict):
+        metadata = build_market_mover_metadata_not_requested_state(symbol)
+    filing_evidence = dict(dict(research or {}).get("filing_evidence") or {})
+    return {
+        "status": str(metadata.get("status") or "NOT_REQUESTED"),
+        "fetched_at_utc": metadata.get("fetched_at_utc"),
+        "messages": [str(item) for item in list(metadata.get("messages") or [])],
+        "db_filings": list(filing_evidence.get("rows") or []),
+        "db_filing_status": str(filing_evidence.get("status") or "EMPTY"),
+        "db_filing_source": filing_evidence.get("source"),
+        "db_filing_message": filing_evidence.get("message"),
+        "news": _market_movers_react_table_records(metadata.get("news")),
+        "korean_news": _market_movers_react_table_records(metadata.get("korean_news")),
+        "sec_filings": _market_movers_react_table_records(metadata.get("sec_filings")),
+    }
+
+
+def build_market_movers_decision_react_payload(
+    snapshot: dict[str, Any],
+    *,
+    controls: MarketMoverControls,
+    selected_symbol: str | None,
+    group_snapshot_loader: Callable[..., dict[str, Any]] | None = None,
+    research_loader: Callable[..., dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Load only the requested breadth view and bind one selected stock to the React shell."""
+
+    load_group = group_snapshot_loader or load_overview_group_leadership_snapshot
+    load_research = research_loader or load_overview_market_mover_research_snapshot
+    breadth_group, breadth_period = _market_movers_breadth_selection(controls=controls)
+    group_snapshots: dict[str, dict[str, dict[str, Any]]] = {
+        "sector": {},
+        "industry": {},
+    }
+    breadth_cache_key = _market_movers_breadth_snapshot_session_key(
+        controls=controls,
+        group_by=breadth_group,
+        period=breadth_period,
+    )
+    breadth_snapshot = st.session_state.get(breadth_cache_key)
+    if not isinstance(breadth_snapshot, dict):
+        breadth_snapshot = load_group(
+            universe_limit=controls.universe_limit,
+            universe_code=controls.coverage,
+            group_by=breadth_group,
+            period=breadth_period,
+            top_n=12,
+            min_group_size=5,
+        )
+        st.session_state[breadth_cache_key] = breadth_snapshot
+    group_snapshots[breadth_group][breadth_period] = breadth_snapshot
+
+    selected_view = _market_mover_view_model(snapshot, controls.mode)
+    rows = _market_movers_records(selected_view.get("rows"))
+    requested_symbol = str(selected_symbol or "").strip().upper()
+    selected_row = next(
+        (
+            row
+            for row in rows
+            if str(row.get("Symbol") or row.get("symbol") or "").strip().upper() == requested_symbol
+        ),
+        rows[0] if rows else None,
+    )
+    selected = str((selected_row or {}).get("Symbol") or "").strip().upper() or None
+    selected_research = load_research(mover=selected_row) if selected_row else None
+    if selected and isinstance(selected_research, dict):
+        selected_research = dict(selected_research)
+        selected_research["event_evidence"] = _market_movers_decision_event_evidence(
+            coverage=controls.coverage,
+            symbol=selected,
+            research=selected_research,
+        )
+    decision_payload = build_market_movers_decision_payload(
+        market_snapshot=snapshot,
+        sector_snapshots=group_snapshots["sector"],
+        industry_snapshots=group_snapshots["industry"],
+        selected_research=selected_research,
+    )
+    return build_market_movers_decision_shell_payload(
+        decision_payload=decision_payload,
+        command={
+            "coverage": controls.coverage,
+            "period": controls.period,
+            "ranking_mode": controls.mode,
+            "top_n": controls.top_n,
+        },
+        command_controls=_market_movers_react_filter_controls_config(controls)["items"],
+        actions=_market_movers_react_actions(controls=controls, snapshot=snapshot),
+        selected_symbol=selected,
+        action_note=_market_movers_react_action_note(controls=controls, snapshot=snapshot),
+        breadth_selection={"group_by": breadth_group, "period": breadth_period},
+        timing=_market_movers_decision_timing(snapshot, period=controls.period),
+    )
 
 
 def build_market_movers_react_workbench_payload(
@@ -926,6 +1167,12 @@ def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverCont
         return {"handler": "set_market_movers_refresh_mode"}
     if action_id == "set_control":
         return {"handler": "set_market_movers_control"}
+    if action_id == "select_symbol":
+        return {"handler": "set_market_movers_selected_symbol"}
+    if action_id == "request_breadth":
+        return {"handler": "set_market_movers_breadth_selection"}
+    if action_id in {"fetch_news_evidence", "fetch_sec_evidence"}:
+        return {"handler": action_id}
     return {"handler": "noop", "action_id": action_id}
 
 
@@ -1016,6 +1263,49 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
 
     universe_code = str(plan.get("universe_code") or controls.coverage)
     universe_label = MARKET_COVERAGE_LABELS.get(universe_code, universe_code)
+    if handler in {"fetch_news_evidence", "fetch_sec_evidence"}:
+        payload = _market_movers_react_event_payload(event)
+        symbol = str(payload.get("symbol") or "").strip().upper()
+        if not symbol:
+            return False
+        metadata_key = _market_movers_decision_evidence_session_key(
+            coverage=controls.coverage,
+            symbol=symbol,
+        )
+        existing = st.session_state.get(metadata_key)
+        if handler == "fetch_news_evidence":
+            update = fetch_market_mover_news_metadata(
+                symbol,
+                name=str(payload.get("name") or "").strip() or None,
+                max_news=5,
+                max_korean_news=5,
+            )
+        else:
+            update = fetch_market_mover_sec_metadata(symbol, max_filings=5)
+        st.session_state[metadata_key] = _merge_market_mover_metadata_for_investigation(existing, update)
+        st.rerun()
+        return True
+
+    if handler == "set_market_movers_selected_symbol":
+        payload = _market_movers_react_event_payload(event)
+        symbol = str(payload.get("symbol") or payload.get("value") or "").strip().upper()
+        if not symbol:
+            return False
+        st.session_state[f"overview_market_movers_selected_symbol_{controls.coverage}"] = symbol
+        st.rerun()
+        return True
+
+    if handler == "set_market_movers_breadth_selection":
+        payload = _market_movers_react_event_payload(event)
+        group_by = str(payload.get("group_by") or "sector").strip().lower()
+        period = str(payload.get("period") or "daily").strip().lower()
+        if group_by not in {"sector", "industry"} or period not in {"daily", "weekly", "monthly"}:
+            return False
+        st.session_state[f"overview_market_movers_breadth_group_{controls.coverage}"] = group_by
+        st.session_state[f"overview_market_movers_breadth_period_{controls.coverage}"] = period
+        st.rerun()
+        return True
+
     if handler == "set_market_movers_refresh_mode":
         payload = _market_movers_react_event_payload(event)
         requested = str(payload.get("value") or "manual")
@@ -1041,6 +1331,8 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
                 universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
             ),
         )
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
         return True
 
@@ -1060,7 +1352,8 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
                 as_of_date=as_of_date,
             ),
         )
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
         return True
 
@@ -1071,6 +1364,8 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
             detail="S&P 500 구성 종목 목록을 갱신합니다.",
             run_job=run_overview_sp500_universe,
         )
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
         return True
 
@@ -1081,6 +1376,8 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
             detail="Nasdaq Symbol Directory current snapshot을 lifecycle evidence table에 저장합니다.",
             run_job=run_overview_nasdaq_symbol_directory,
         )
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
         return True
 
@@ -1095,7 +1392,8 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
                 universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
             ),
         )
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
         return True
 
@@ -1111,11 +1409,13 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
                 candidates=candidates,
             ),
         )
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
         return True
 
     if handler == "reload_market_movers":
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _invalidate_market_movers_read_caches(coverage=universe_code)
         st.rerun()
         return True
 
@@ -1139,6 +1439,26 @@ def _render_market_movers_react_summary(
     if event is None:
         render_market_movers_unified_summary(payload["summary"])
     return event
+
+
+def _render_market_movers_decision_shell(
+    snapshot: dict[str, Any],
+    *,
+    controls: MarketMoverControls,
+) -> dict[str, Any] | None:
+    selected_key = f"overview_market_movers_selected_symbol_{controls.coverage}"
+    payload = build_market_movers_decision_react_payload(
+        snapshot,
+        controls=controls,
+        selected_symbol=st.session_state.get(selected_key),
+    )
+    selected_symbol = str(dict(payload.get("selection") or {}).get("symbol") or "").strip().upper()
+    if selected_symbol:
+        st.session_state[selected_key] = selected_symbol
+    return render_market_movers_react_workbench(
+        payload,
+        key=f"overview_{controls.coverage.lower()}_market_movers_decision_workbench",
+    )
 
 
 def build_market_movers_empty_state_model(
@@ -2564,6 +2884,8 @@ def _render_market_movers_universe_action(container: Any, *, universe_code: str)
                 detail="S&P 500 구성 종목 목록을 갱신합니다.",
                 run_job=run_overview_sp500_universe,
             )
+            _invalidate_market_movers_read_caches(coverage=universe_code)
+            st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
             st.rerun()
         return
     if universe_code == "NASDAQ":
@@ -2579,6 +2901,8 @@ def _render_market_movers_universe_action(container: Any, *, universe_code: str)
                 detail="Nasdaq Symbol Directory current snapshot을 lifecycle evidence table에 저장합니다.",
                 run_job=run_overview_nasdaq_symbol_directory,
             )
+            _invalidate_market_movers_read_caches(coverage=universe_code)
+            st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
             st.rerun()
         return
     if container.button(
@@ -2600,7 +2924,8 @@ def _render_market_movers_universe_action(container: Any, *, universe_code: str)
                 universe_limit=_universe_limit(universe_code),
             ),
         )
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
 
 
@@ -2650,6 +2975,8 @@ def _render_market_movers_daily_refresh_bar(
                 universe_limit=universe_limit,
             ),
         )
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
     _render_market_movers_universe_action(control_cols[2], universe_code=universe_code)
     if control_cols[3].button(
@@ -2657,7 +2984,7 @@ def _render_market_movers_daily_refresh_bar(
         key=f"overview_{universe_code.lower()}_market_movers_reload",
         use_container_width=True,
     ):
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _invalidate_market_movers_read_caches(coverage=universe_code)
         st.rerun()
 
     if selected_mode == "auto" and auto_supported:
@@ -2699,7 +3026,7 @@ def _render_market_movers_eod_refresh_bar(
     universe_count = coverage.get("universe_count") or 0
     returnable_pct = coverage.get("returnable_pct")
     preflight = dict(snapshot.get("eod_refresh_preflight") or {})
-    refresh_disabled = _safe_int(preflight.get("selected_symbols_count")) <= 0
+    refresh_due = _safe_int(preflight.get("selected_symbols_count")) > 0
 
     render_market_refresh_status_bar(
         universe_label=universe_label,
@@ -2716,7 +3043,7 @@ def _render_market_movers_eod_refresh_bar(
         key=f"overview_{universe_code.lower()}_{period}_eod_history_refresh",
         use_container_width=True,
         type="primary",
-        disabled=refresh_disabled,
+        disabled=False,
         help=(
             f"{period_label} 랭킹 산출에 필요한 저장 EOD 가격 이력을 기존 OHLCV 경로로 갱신합니다. "
             "이미 최신인 종목은 건너뛰고 누락되었거나 오래된 종목을 우선 보강합니다."
@@ -2738,7 +3065,8 @@ def _render_market_movers_eod_refresh_bar(
                 or None,
             ),
         )
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _invalidate_market_movers_read_caches(coverage=universe_code)
+        st.session_state["overview_market_movers_reloaded_at"] = _market_movers_manual_refresh_timestamp()
         st.rerun()
     _render_market_movers_universe_action(control_cols[1], universe_code=universe_code)
     if control_cols[2].button(
@@ -2746,9 +3074,9 @@ def _render_market_movers_eod_refresh_bar(
         key=f"overview_{universe_code.lower()}_{period}_market_movers_reload",
         use_container_width=True,
     ):
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _invalidate_market_movers_read_caches(coverage=universe_code)
         st.rerun()
-    if _safe_int(preflight.get("limited_history_symbols_count")) > 0 and refresh_disabled:
+    if _safe_int(preflight.get("limited_history_symbols_count")) > 0 and not refresh_due:
         control_cols[3].caption(str(preflight.get("range_reason") or "짧은 가격 이력 종목은 현재 랭킹에서 제외됩니다."))
     else:
         control_cols[3].caption(
@@ -4504,6 +4832,15 @@ def render_market_movers_snapshot(controls: MarketMoverControls) -> None:
         sector=controls.sector,
     )
     snapshot = _market_movers_attach_eod_preflight(snapshot, controls=controls)
+    if market_movers_react_component_available():
+        decision_event = _render_market_movers_decision_shell(
+            snapshot,
+            controls=controls,
+        )
+        _dispatch_market_movers_react_event(decision_event, controls=controls)
+        _render_market_movers_react_refresh_companion(snapshot, controls=controls)
+        return
+
     react_event = _render_market_movers_react_summary(snapshot, controls=controls)
     _dispatch_market_movers_react_event(react_event, controls=controls)
     if react_event is None:

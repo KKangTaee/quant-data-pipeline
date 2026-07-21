@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-20
+Last Verified: 2026-07-22
 
 ## Current State
 
@@ -11,18 +11,25 @@ Current active task:
 
 Latest completed task:
 
-- `operations-portfolio-monitoring-only-v1-20260719` — 전체 roadmap `3/3`; Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
+- `portfolio-monitoring-initial-setting-correction-v1-20260721` — 전체 roadmap `4/4`; direct-stock fixed-shares의 최초 요청 시작일과 수량을 append-only initial contract revision으로 함께 정정하고 새 시장일·종가·최초 투자금부터 성과를 다시 계산한다.
 
 Current active task status:
 
-- `overview-sentiment-cnn-aaii-v1-20260719`: 전체 잠정 roadmap `1/4차` 기능과 승인된 시각 polish·actual desktop/420px QA를 완료했다. 다음은 2차 장기 이력·발표 당시 값 품질 점검이다.
+- `overview-sentiment-cnn-aaii-v1-20260719`: 전체 잠정 roadmap `2/4차`. 1차 균형형 UI와 2차 PIT 이중 저장·known-at 조회·장기 그래프를 완료했다. 다음은 3차 독립 데이터 후보 검토다.
 
 Parallel active follow-up:
 
 - `portfolio-monitoring-chart-zoom-pan-v1-20260719`: 구현과 자동 회귀는 완료했고 전체 `2/3차`; 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다.
+- `market-movers-chart-navigation-polish-v1-20260721`: 구현과 자동 회귀·production build는 완료했고, localhost URL policy로 실제 hover/drag Browser QA가 남아 있다. broader Market Movers roadmap은 `4/5차`다.
 
 Previous completed task:
 
+- `overview-economic-cycle-intramonth-nowcast-v1-20260721` — 전체 roadmap `4/4`; 월말 canonical history를 보존하면서 날짜별 intramonth nowcast와 평일 fail-closed 증분 갱신을 완료했다.
+- `overview-futures-macro-probabilistic-state-outlook-v2-20260720` — 전체 roadmap `3/3`; completed-session same-state target, nested rolling-origin 비교와 독립 publication gate를 완료했고 actual 5D/20D는 `NO_EDGE`다.
+- `portfolio-monitoring-reference-help-removal-v1-20260721` — 전체 roadmap `2/2`; 중복 contextual help를 제거하고 모니터링 도움말 소유권을 canonical Reference Center로 단일화했다.
+- `market-movers-period-refresh-chart-fix-v1-20260721` — 전체 roadmap `3/3`; bounded Weekly/Monthly refresh, 신규 상장 기간 eligibility, 날짜축·tooltip·선택 기간 수익률을 완료했다.
+- `reference-center-react-v1-20260720` — 전체 roadmap `4/4`; Guides/Glossary를 단일 Search-first React Reference로 통합하고 stable contextual deep link, legacy removal, responsive Browser QA를 완료했다.
+- `operations-portfolio-monitoring-only-v1-20260719` — 전체 roadmap `3/3`; Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
 - `overview-futures-macro-pattern-outlook-v1-20260718` — 전체 roadmap `5/5`, materialized snapshot / React disclosure `4/4`, observation / outlook separation, ten-year validation, and 60D legend / status clarity follow-up complete
 - `backtest-analysis-level1-decision-workspace-v1-20260717` — 1~15차 complete
 - `practical-validation-audit-evidence-absorption-v1-20260719` — 전체 roadmap `3/3` complete
@@ -75,6 +82,7 @@ Recent structure audit records:
 
 Recent Reference records:
 
+- `reference-center-react-v1-20260720`: 단일 Search-first React Reference, 24-item curated catalog/drift guard, 6개 journey, stable deep link, 7개 current surface contextual help, legacy Guides/Glossary 제거와 desktop/900px/420px QA 완료
 - `merge-review-fixes-20260608`: post-merge review fix / Reference page-link, V4 status, and catalog test assertion cleanup
 - `reference-drift-guard-qa-polish-v5-20260608`: Reference contextual help 5차 / drift guard and QA polish
 - `reference-contextual-links-v4-20260608`: Reference contextual help 4차 / workflow screen expander links

@@ -4,10 +4,8 @@ import streamlit as st
 
 from app.services.reference_contextual_help import get_reference_contextual_help
 
-REFERENCE_PAGE_TARGET_KEYS = {
-    "/guides": "guides",
-    "/glossary": "glossary",
-}
+
+REFERENCE_PAGE_TARGET_KEYS = {"/reference": "reference"}
 _REFERENCE_PAGE_TARGETS: dict[str, object] = {}
 
 
@@ -30,15 +28,22 @@ def configure_reference_contextual_help_page_targets(page_targets: dict[str, obj
     )
 
 
-def _render_reference_link(label: str, target: str, page_targets: dict[str, object]) -> None:
+def _render_reference_link(
+    label: str,
+    target: str,
+    item_id: str,
+    page_targets: dict[str, object],
+) -> None:
     target_key = _reference_page_target_key(target)
     page_target = page_targets.get(target_key or "")
     if page_target is not None:
-        st.page_link(page_target, label=label)
+        st.page_link(
+            page_target,
+            label=label,
+            query_params={"item": item_id},
+        )
         return
-
-    fallback_label = target_key.title() if target_key else "Reference"
-    st.caption(f"{label}: Reference > {fallback_label}")
+    st.caption(f"{label}: Reference에서 `{item_id}`를 검색하세요.")
 
 
 def render_reference_contextual_help(surface_key: str, *, expanded: bool = False) -> None:
@@ -47,25 +52,19 @@ def render_reference_contextual_help(surface_key: str, *, expanded: bool = False
         return
 
     page_targets = dict(_REFERENCE_PAGE_TARGETS)
-    with st.expander(f"Reference help - {item.get('surface')}", expanded=expanded):
+    with st.expander(f"Reference help · {item.get('surface')}", expanded=expanded):
         st.caption(str(item.get("summary") or ""))
-        cols = st.columns([0.34, 0.33, 0.33], gap="small")
-        with cols[0]:
-            st.markdown("**Guide focus**")
-            st.caption(str(item.get("guide_focus") or "-"))
-        with cols[1]:
-            st.markdown("**Glossary terms**")
-            terms = [f"`{term}`" for term in list(item.get("glossary_terms") or [])]
-            st.caption(", ".join(terms) if terms else "-")
-        with cols[2]:
-            st.markdown("**Reference links**")
-            links = list(item.get("links") or [])
-            if not links:
-                st.caption("-")
+
+        links = list(item.get("links") or [])
+        if links:
+            st.markdown("**관련 Reference**")
             for link in links:
-                label = str(link.get("label") or "Reference")
-                target = str(link.get("target") or "/guides")
-                _render_reference_link(label, target, page_targets)
+                _render_reference_link(
+                    str(link.get("label") or "Reference"),
+                    str(link.get("target") or "/reference"),
+                    str(link.get("item_id") or ""),
+                    page_targets,
+                )
 
         next_checks = _markdown_list(list(item.get("next_checks") or []))
         if next_checks:

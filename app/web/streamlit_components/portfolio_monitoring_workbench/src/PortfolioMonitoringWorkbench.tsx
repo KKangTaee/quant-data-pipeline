@@ -1,6 +1,6 @@
 import React, { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
-import type { DiagnosisRow, ItemRow, MarketChartRow, PortfolioMonitoringWorkspace, SelectedItemMarketChart } from "./contracts";
+import type { DiagnosisDisplayGroupView, DiagnosisRow, ItemRow, MarketChartRow, PortfolioMonitoringWorkspace, SelectedItemMarketChart } from "./contracts";
 import {
   applySourceType,
   availableFundingModes,
@@ -31,6 +31,7 @@ import {
   zoomMarketChartViewport,
 } from "./workbenchState";
 import type { ItemDraft } from "./workbenchState";
+import { PositionLedgerPanel } from "./PositionLedgerPanel";
 import "./style.css";
 
 function compactDate(value: string | null) {
@@ -479,26 +480,71 @@ function StrategyValueChart({ rows, itemId }: { rows: Array<Record<string, strin
   );
 }
 
-function DiagnosisCard({ row, compact = false }: { row: DiagnosisRow; compact?: boolean }) {
+function diagnosisSubject(row: DiagnosisRow, itemLabels: Record<string, string>) {
+  const subjects = (row.subject_ids ?? []).map((itemId) => itemLabels[itemId] ?? "추적 항목");
+  return subjects.join(row.rule_id.startsWith("correlation_cluster") ? " ↔ " : " · ");
+}
+
+function diagnosisGroupHeadline(group: DiagnosisDisplayGroupView) {
+  if (group.member_count <= 1) return group.meaning;
+  if (group.family === "correlation_cluster") return `함께 움직이는 조합 ${group.member_count}개`;
+  if (group.family === "current_drawdown") return `낙폭 재확인 종목 ${group.member_count}개`;
+  return `${group.meaning} · ${group.member_count}건`;
+}
+
+function DiagnosisCard({ group, itemLabels, compact = false }: {
+  group: DiagnosisDisplayGroupView;
+  itemLabels: Record<string, string>;
+  compact?: boolean;
+}) {
+  const representativeSubject = diagnosisSubject(group.representative, itemLabels);
   return (
-    <article className={`pm-diagnosis-card is-${row.classification} severity-${row.severity.toLowerCase()}`}>
-      <header><span>{row.severity}</span><b>{row.confidence} 근거</b></header>
-      <h3>{row.meaning}</h3>
-      <p>{row.measured_fact}</p>
+    <article className={`pm-diagnosis-card is-${group.classification} severity-${group.severity.toLowerCase()}`}>
+      <header><span>{group.severity}</span><b>{group.confidence} 근거</b></header>
+      <h3>{diagnosisGroupHeadline(group)}</h3>
+      {group.member_count === 1 && representativeSubject && <small className="pm-diagnosis-subject">{representativeSubject}</small>}
+      <p>{group.summary_fact}</p>
       {!compact && (
         <details>
-          <summary>판정 근거 전체 보기</summary>
-          <dl>
-            <div><dt>측정값</dt><dd>{row.measured_fact}</dd></div>
-            <div><dt>판정 기준</dt><dd>{row.threshold}</dd></div>
-            <div><dt>영향 비중</dt><dd>{formatMetric(row.affected_weight, "percent")}</dd></div>
-            <div><dt>근거 범위</dt><dd>{formatMetric(row.coverage, "percent")} · {row.source_dates.join(", ") || "날짜 확인 필요"}</dd></div>
-            <div><dt>변화 조건</dt><dd>{row.change_condition}</dd></div>
-            <div><dt>다음 확인</dt><dd>{row.next_check}</dd></div>
-          </dl>
+          <summary>판정 근거 전체 보기{group.member_count > 1 ? ` · ${group.member_count}건` : ""}</summary>
+          <div className="pm-diagnosis-member-list">
+            {group.members.map((member) => {
+              const subject = diagnosisSubject(member, itemLabels);
+              return (
+                <section key={member.rule_id} className="pm-diagnosis-member">
+                  {subject && <h4>{subject}</h4>}
+                  <dl>
+                    <div><dt>측정값</dt><dd>{member.measured_fact}</dd></div>
+                    <div><dt>판정 기준</dt><dd>{member.threshold}</dd></div>
+                    <div><dt>영향 비중</dt><dd>{formatMetric(member.affected_weight, "percent")}</dd></div>
+                    <div><dt>근거 범위</dt><dd>{formatMetric(member.coverage, "percent")} · {member.source_dates.join(", ") || "날짜 확인 필요"}</dd></div>
+                    <div><dt>변화 조건</dt><dd>{member.change_condition}</dd></div>
+                    <div><dt>다음 확인</dt><dd>{member.next_check}</dd></div>
+                  </dl>
+                </section>
+              );
+            })}
+          </div>
         </details>
       )}
     </article>
+  );
+}
+
+function DiagnosisColumn({ title, groups, emptyMessage, itemLabels }: {
+  title: string;
+  groups: DiagnosisDisplayGroupView[];
+  emptyMessage: string;
+  itemLabels: Record<string, string>;
+}) {
+  return (
+    <section>
+      <header className="pm-diagnosis-column-heading"><h3>{title}</h3><span>{groups.length}개</span></header>
+      <div className="pm-diagnosis-list" tabIndex={groups.length ? 0 : undefined} aria-label={`${title} 진단 목록`}>
+        {groups.map((group) => <DiagnosisCard key={group.group_id} group={group} itemLabels={itemLabels} />)}
+        {!groups.length && <p>{emptyMessage}</p>}
+      </div>
+    </section>
   );
 }
 
@@ -583,6 +629,9 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
     top_three: [], strengths: [], weaknesses: [], data_gaps: [], all_rows: [], coverage: 0,
   };
   const diagnosisSections = buildDiagnosisSections(diagnosis);
+  const diagnosisItemLabels = Object.fromEntries(
+    (activeGroup?.item_rows ?? []).map((item) => [item.monitoring_item_id, item.source_ref]),
+  );
   const macroPresentation = buildMacroObservationPresentation(
     workspace.macro_observation ?? { version: "portfolio_monitoring_macro_context_v1", state: "low", rows: [], top_rows: [] },
     workspace.source_health ?? { status: "LIMITED", publication: "LIMITED", coverage: 0, as_of_dates: {}, warnings: ["source health unavailable"] },
@@ -696,7 +745,7 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
             </div>
 
             <section className="pm-kpi-grid" aria-label="포트폴리오 핵심 지표">
-              <article><span>투자금</span><strong>{formatMetric(metrics?.invested_capital, "currency", metrics)}</strong><small>등록 원금 합계</small></article>
+              <article><span>누적 입금</span><strong>{formatMetric(metrics?.gross_contributions ?? metrics?.invested_capital, "currency", metrics)}</strong><small>최초 투자금 + 추가매수</small></article>
               <article><span>현재 가치</span><strong>{formatMetric(metrics?.current_value, "currency", metrics)}</strong><small>{compactDate(activeGroup.basis_date)} 기준</small></article>
               <article className={(metrics?.pnl ?? 0) < 0 ? "is-negative" : "is-positive"}><span>손익</span><strong>{formatMetric(metrics?.pnl, "currency", metrics)}</strong><small>{formatMetric(metrics?.total_return, "percent", metrics)}</small></article>
               <article><span>최대 낙폭</span><strong>{formatMetric(metrics?.mdd, "percent", metrics)}</strong><small>일별 가치곡선</small></article>
@@ -717,13 +766,13 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
                 <small>{diagnosis.policy_version} · 측정값과 해제 조건 기반</small>
               </header>
               <div className="pm-now-grid">
-                {diagnosisSections.now.map((row) => <DiagnosisCard key={row.rule_id} row={row} compact />)}
+                {diagnosisSections.now.map((group) => <DiagnosisCard key={group.group_id} group={group} itemLabels={diagnosisItemLabels} compact />)}
                 {!diagnosisSections.now.length && <div className="pm-diagnosis-empty">현재 상위 확인 신호가 없습니다. 근거가 충분해지면 최대 3개만 먼저 표시합니다.</div>}
               </div>
               <div className="pm-diagnosis-columns">
-                <section><h3>강점</h3>{diagnosisSections.strengths.map((row) => <DiagnosisCard key={row.rule_id} row={row} />)}{!diagnosisSections.strengths.length && <p>확정된 강점 근거가 아직 없습니다.</p>}</section>
-                <section><h3>취약점</h3>{diagnosisSections.weaknesses.map((row) => <DiagnosisCard key={row.rule_id} row={row} />)}{!diagnosisSections.weaknesses.length && <p>현재 기준을 넘은 취약점이 없습니다.</p>}</section>
-                <section><h3>데이터 부족</h3>{diagnosisSections.dataGaps.map((row) => <DiagnosisCard key={row.rule_id} row={row} />)}{!diagnosisSections.dataGaps.length && <p>핵심 분류 근거의 coverage가 유지되고 있습니다.</p>}</section>
+                <DiagnosisColumn title="강점" groups={diagnosisSections.strengths} emptyMessage="확정된 강점 근거가 아직 없습니다." itemLabels={diagnosisItemLabels} />
+                <DiagnosisColumn title="취약점" groups={diagnosisSections.weaknesses} emptyMessage="현재 기준을 넘은 취약점이 없습니다." itemLabels={diagnosisItemLabels} />
+                <DiagnosisColumn title="데이터 부족" groups={diagnosisSections.dataGaps} emptyMessage="핵심 분류 근거의 coverage가 유지되고 있습니다." itemLabels={diagnosisItemLabels} />
               </div>
             </section>
 
@@ -813,6 +862,16 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
                       <div><dt>기여 손익</dt><dd>{formatMetric(metrics?.contribution_by_item[selectedItem.monitoring_item_id], "currency", metrics)}</dd></div>
                     </dl>
                     {selectedItem.failure && <p className="pm-failure">{selectedItem.failure}</p>}
+                    {workspace.selected_position.monitoring_item_id === selectedItem.monitoring_item_id && (
+                      <PositionLedgerPanel
+                        position={workspace.selected_position}
+                        closeProjection={workspace.position_trade_close ?? null}
+                        initialProjection={workspace.initial_position_entry ?? null}
+                        recoveryState={workspace.position_editor_state}
+                        latestCommand={latestCommand ?? null}
+                        emit={emit}
+                      />
+                    )}
                     {selectedMarketChart?.monitoring_item_id !== selectedItem.monitoring_item_id ? (
                       <div className="pm-market-state"><strong>선택 항목 차트를 불러오는 중입니다.</strong></div>
                     ) : selectedMarketChart.source_type === "selected_strategy" ? (

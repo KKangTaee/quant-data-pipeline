@@ -5,79 +5,130 @@ import unittest
 from pathlib import Path
 
 
+REQUIRED_CONTEXTUAL_SURFACES = {
+    "overview",
+    "institutional_portfolios",
+    "ingestion",
+    "backtest_analysis",
+    "practical_validation",
+    "final_review",
+}
+
+OWNER_CALL_SITES = {
+    "overview": Path("app/web/overview/page.py"),
+    "institutional_portfolios": Path("app/web/institutional_portfolios.py"),
+    "ingestion": Path("app/web/ingestion/page.py"),
+    "backtest_analysis": Path("app/web/backtest_analysis.py"),
+    "practical_validation": Path("app/web/backtest_practical_validation/page.py"),
+    "final_review": Path("app/web/backtest_final_review/page.py"),
+}
+
+
 class ReferenceContextualHelpContractTests(unittest.TestCase):
-    def test_contextual_help_catalog_is_streamlit_free_and_covers_primary_surfaces(self) -> None:
-        sys.modules.pop("streamlit", None)
+    def test_contextual_help_catalog_is_streamlit_free_and_covers_current_surfaces(self) -> None:
+        loaded_streamlit = sys.modules.pop("streamlit", None)
+        try:
+            from app.services.reference_contextual_help import get_reference_contextual_help_catalog
 
-        from app.services.reference_contextual_help import get_reference_contextual_help_catalog
+            catalog = get_reference_contextual_help_catalog()
 
-        catalog = get_reference_contextual_help_catalog()
+            self.assertNotIn("streamlit", sys.modules)
+            surface_keys = {row["surface_key"] for row in catalog}
+            self.assertGreaterEqual(surface_keys, REQUIRED_CONTEXTUAL_SURFACES)
+            self.assertNotIn("operations_console", surface_keys)
 
-        self.assertNotIn("streamlit", sys.modules)
-        surface_keys = {row["surface_key"] for row in catalog}
-        self.assertGreaterEqual(
-            surface_keys,
-            {
-                "backtest_analysis",
-                "practical_validation",
-                "final_review",
-                "portfolio_monitoring",
-            },
-        )
-        self.assertNotIn("operations_console", surface_keys)
-
-        final_review = next(row for row in catalog if row["surface_key"] == "final_review")
-        self.assertIn("Selected-route Gate", final_review["glossary_terms"])
+            final_review = next(row for row in catalog if row["surface_key"] == "final_review")
+            self.assertIn("concept.selected_route_gate", final_review["reference_item_ids"])
+        finally:
+            if loaded_streamlit is not None:
+                sys.modules["streamlit"] = loaded_streamlit
         self.assertIn("Practical Validation", " ".join(final_review["next_checks"]))
         self.assertIn("broker order", " ".join(final_review["boundaries"]))
 
-    def test_contextual_help_lookup_returns_copy_and_reference_only_links(self) -> None:
+    def test_contextual_links_use_single_reference_target_and_existing_item_ids(self) -> None:
+        from app.services.reference_center import get_reference_center_items
+        from app.services.reference_contextual_help import get_reference_contextual_help_catalog
+
+        item_ids = {item["id"] for item in get_reference_center_items()}
+        for help_item in get_reference_contextual_help_catalog():
+            with self.subTest(surface_key=help_item["surface_key"]):
+                self.assertGreaterEqual(len(help_item["links"]), 1)
+                self.assertEqual(
+                    {link["target"] for link in help_item["links"]},
+                    {"/reference"},
+                )
+                self.assertEqual(
+                    {link["item_id"] for link in help_item["links"]} - item_ids,
+                    set(),
+                )
+                self.assertEqual(set(help_item["reference_item_ids"]) - item_ids, set())
+
+    def test_contextual_help_lookup_returns_defensive_copy(self) -> None:
         from app.services.reference_contextual_help import get_reference_contextual_help
 
-        help_item = get_reference_contextual_help("portfolio_monitoring")
+        help_item = get_reference_contextual_help("final_review")
         self.assertIsNotNone(help_item)
         assert help_item is not None
-        self.assertEqual(help_item["surface"], "Operations > Portfolio Monitoring")
+        self.assertEqual(help_item["surface"], "Final Review")
+        self.assertIn("concept.selected_route_gate", help_item["reference_item_ids"])
 
-        links = help_item["links"]
-        self.assertGreaterEqual(len(links), 2)
-        self.assertEqual({link["target"] for link in links}, {"/guides", "/glossary"})
-        self.assertIn("Portfolio Monitoring Scenario", help_item["glossary_terms"])
-
-        help_item["glossary_terms"].append("mutated")
-        fresh_item = get_reference_contextual_help("portfolio_monitoring")
+        help_item["reference_item_ids"].append("mutated")
+        fresh_item = get_reference_contextual_help("final_review")
         assert fresh_item is not None
-        self.assertNotIn("mutated", fresh_item["glossary_terms"])
+        self.assertNotIn("mutated", fresh_item["reference_item_ids"])
+
+    def test_portfolio_monitoring_help_is_owned_only_by_reference_center(self) -> None:
+        from app.services.reference_center import get_reference_item
+        from app.services.reference_contextual_help import get_reference_contextual_help
+
+        self.assertIsNone(get_reference_contextual_help("portfolio_monitoring"))
+        for item_id in (
+            "journey.monitoring",
+            "concept.monitoring_scenario",
+            "playbook.monitoring_scenario_stale",
+        ):
+            with self.subTest(item_id=item_id):
+                item = get_reference_item(item_id)
+                self.assertIsNotNone(item)
+                assert item is not None
+                self.assertEqual(item["destination"], "portfolio_monitoring")
+
+        page_source = Path("app/web/final_selected_portfolio_dashboard.py").read_text(encoding="utf-8")
+        self.assertNotIn("render_reference_contextual_help", page_source)
 
     def test_unknown_contextual_help_key_returns_none(self) -> None:
         from app.services.reference_contextual_help import get_reference_contextual_help
 
         self.assertIsNone(get_reference_contextual_help("unknown_surface"))
 
-    def test_contextual_help_drift_report_matches_glossary_terms_and_links(self) -> None:
-        from app.services.reference_contextual_help import (
-            build_reference_contextual_help_drift_report,
-        )
+    def test_contextual_help_drift_report_matches_reference_items_and_links(self) -> None:
+        from app.services.reference_contextual_help import build_reference_contextual_help_drift_report
 
         report = build_reference_contextual_help_drift_report()
 
         self.assertEqual(report["status"], "PASS")
-        self.assertEqual(report["missing_glossary_terms"], [])
+        self.assertEqual(report["missing_reference_item_ids"], [])
         self.assertEqual(report["invalid_links"], [])
         self.assertEqual(report["duplicate_surface_keys"], [])
-        self.assertEqual(report["raw_guide_focus_markers"], [])
-        self.assertGreaterEqual(report["metrics"]["surface_count"], 4)
-        self.assertGreaterEqual(report["metrics"]["glossary_term_count"], 5)
+        self.assertEqual(report["metrics"]["surface_count"], len(REQUIRED_CONTEXTUAL_SURFACES))
+        self.assertGreaterEqual(report["metrics"]["reference_item_count"], 6)
 
-    def test_contextual_help_renderer_maps_internal_links_to_page_target_keys(self) -> None:
+    def test_contextual_help_renderer_uses_one_page_target_and_item_query_param(self) -> None:
         source = Path("app/web/reference_contextual_help.py").read_text(encoding="utf-8")
 
-        self.assertIn('"/guides": "guides"', source)
-        self.assertIn('"/glossary": "glossary"', source)
+        self.assertIn('"/reference": "reference"', source)
         self.assertIn("st.page_link", source)
-        self.assertNotIn("]({target})", source)
+        self.assertIn('query_params={"item": item_id}', source)
+        self.assertNotIn('"/guides"', source)
+        self.assertNotIn('"/glossary"', source)
 
-    def test_streamlit_shell_does_not_import_contextual_help_config_symbol_directly(self) -> None:
+    def test_all_current_owner_surfaces_render_contextual_help(self) -> None:
+        for surface_key, path in OWNER_CALL_SITES.items():
+            with self.subTest(surface_key=surface_key):
+                source = path.read_text(encoding="utf-8")
+                self.assertIn(f'render_reference_contextual_help("{surface_key}"', source)
+
+    def test_streamlit_shell_keeps_contextual_config_behind_module_boundary(self) -> None:
         source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")
 
         self.assertNotIn(
@@ -89,6 +140,7 @@ class ReferenceContextualHelpContractTests(unittest.TestCase):
             'getattr(reference_contextual_help_module, "configure_reference_contextual_help_page_targets"',
             source,
         )
+        self.assertIn('"reference": reference_page', source)
 
 
 if __name__ == "__main__":

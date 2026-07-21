@@ -22,6 +22,17 @@ from xml.etree import ElementTree
 
 import pandas as pd
 
+from app.services.overview.market_movers_read_model import (
+    canonical_sector,
+    canonical_sector_options,
+    filter_rows_by_canonical_sector,
+)
+from app.services.overview.market_movers_group_flow import (
+    build_group_flow_state,
+    build_market_cap_bellwethers,
+    normalize_industry,
+)
+from app.services.overview.market_movers_readiness import build_collection_readiness
 from finance.loaders.sentiment import (
     CNN_COMPONENT_SERIES,
     CORE_SENTIMENT_SERIES,
@@ -132,6 +143,7 @@ MISSING_COLUMNS = [
     "End Date",
     "Start Price",
     "End Price",
+    "First Price Date",
     "Latest Price Date",
     "Profile Status",
     "Profile Error",
@@ -187,6 +199,17 @@ GROUP_TICKER_LEADER_COLUMNS = [
     "End Date",
     "Previous Start Date",
     "Previous End Date",
+]
+
+GROUP_MARKET_CAP_BELLWETHER_COLUMNS = [
+    "Group",
+    "Group Type",
+    "Rank",
+    "Symbol",
+    "Name",
+    "Market Cap",
+    "Return %",
+    "Relative To Group pp",
 ]
 
 SECTOR_BREADTH_TABLE_COLUMNS = [
@@ -321,6 +344,34 @@ def _universe_limit_from_code(universe_code: str, fallback: int) -> int:
         return max(5000, int(fallback or 0))
     return fallback
 
+
+def _snapshot_collection_readiness(
+    *,
+    universe_count: int,
+    return_rows: Sequence[dict[str, Any]],
+    missing_rows: Sequence[dict[str, Any]],
+    date_window: dict[str, Any],
+    coverage: dict[str, Any],
+) -> dict[str, Any]:
+    stale_days = date_window.get("stale_days")
+    if stale_days is None and "INTRADAY" in str(coverage.get("price_mode") or "").upper():
+        refresh_status = str((coverage.get("refresh_state") or {}).get("status") or "").lower()
+        stale_days = 1 if refresh_status == "stale" else (0 if refresh_status else None)
+    return build_collection_readiness(
+        universe_count=universe_count,
+        returnable_count=len(return_rows),
+        volume_count=sum(1 for row in return_rows if _safe_float(row.get("volume")) is not None),
+        market_cap_count=sum(
+            1
+            for row in return_rows
+            if (_safe_float(row.get("market_cap")) or 0.0) > 0
+        ),
+        missing_rows=missing_rows,
+        basis=str(coverage.get("price_mode") or "") or None,
+        effective_end_date=date_window.get("effective_end_date") or date_window.get("end_date"),
+        stale_days=stale_days,
+    )
+
 def _empty_movers_snapshot(
     *,
     status: str,
@@ -331,7 +382,7 @@ def _empty_movers_snapshot(
     message: str,
     sector: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    snapshot = {
         "status": status,
         "period": period,
         "period_label": PERIOD_LABELS.get(period, period),
@@ -357,6 +408,14 @@ def _empty_movers_snapshot(
         "warnings": [message] if message else [],
         "message": message,
     }
+    snapshot["collection_readiness"] = _snapshot_collection_readiness(
+        universe_count=0,
+        return_rows=[],
+        missing_rows=[],
+        date_window={},
+        coverage=snapshot["coverage"],
+    )
+    return snapshot
 
 def _empty_group_snapshot(
     *,
@@ -381,6 +440,11 @@ def _empty_group_snapshot(
         "rows": pd.DataFrame(columns=GROUP_COLUMNS),
         "trend_rows": pd.DataFrame(columns=GROUP_TREND_COLUMNS),
         "ticker_leader_rows": pd.DataFrame(columns=GROUP_TICKER_LEADER_COLUMNS),
+        "group_flow_schema_version": "market_movers_group_flow_v1",
+        "group_flow": [],
+        "market_cap_bellwether_rows": pd.DataFrame(
+            columns=GROUP_MARKET_CAP_BELLWETHER_COLUMNS
+        ),
         "missing_rows": pd.DataFrame(columns=MISSING_COLUMNS),
         "date_window": {},
         "coverage": {
@@ -602,10 +666,7 @@ def resolve_group_trend_market_dates(
     }
 
 def _filter_sector(rows: list[dict[str, Any]], sector: str | None) -> list[dict[str, Any]]:
-    normalized = str(sector or "All").strip()
-    if not normalized or normalized == "All":
-        return rows
-    return [row for row in rows if str(row.get("sector") or "Unknown") == normalized]
+    return filter_rows_by_canonical_sector(rows, sector)
 
 def _load_universe(
     *,
@@ -624,6 +685,8 @@ def _load_universe(
                 COALESCE(p.sector, m.sector) AS sector,
                 COALESCE(p.industry, m.industry) AS industry,
                 p.market_cap,
+                p.kind AS asset_kind,
+                p.quote_type,
                 p.exchange AS profile_exchange,
                 p.status,
                 p.error_msg,
@@ -656,6 +719,8 @@ def _load_universe(
                 p.sector,
                 p.industry,
                 p.market_cap,
+                p.kind AS asset_kind,
+                p.quote_type,
                 p.exchange AS profile_exchange,
                 p.status,
                 p.error_msg,
@@ -715,6 +780,8 @@ def _load_universe(
                 COALESCE(p.sector, m.sector) AS sector,
                 COALESCE(p.industry, m.industry) AS industry,
                 COALESCE(p.market_cap, m.market_cap) AS market_cap,
+                p.kind AS asset_kind,
+                p.quote_type,
                 p.exchange AS profile_exchange,
                 p.status,
                 p.error_msg,
@@ -763,8 +830,7 @@ def load_market_mover_sector_options(
         rows = _load_universe(universe_code=normalized, universe_limit=limit, query_fn=query)
     except Exception:
         return []
-    sectors = sorted({str(row.get("sector") or "Unknown") for row in rows})
-    return sectors
+    return canonical_sector_options(rows)
 
 def _load_prices_for_dates(
     *,
@@ -872,14 +938,17 @@ def _previous_return_context(
         }
     return context
 
-def _load_latest_price_dates(*, symbols: list[str], query_fn: QueryFn) -> dict[str, str]:
+def _load_price_date_bounds(*, symbols: list[str], query_fn: QueryFn) -> dict[str, dict[str, str]]:
     if not symbols:
         return {}
     placeholders = ",".join(["%s"] * len(symbols))
     rows = query_fn(
         "finance_price",
         f"""
-        SELECT symbol, MAX(`date`) AS latest_price_date
+        SELECT
+            symbol,
+            MIN(`date`) AS first_price_date,
+            MAX(`date`) AS latest_price_date
         FROM nyse_price_history
         WHERE symbol IN ({placeholders})
           AND timeframe = %s
@@ -888,11 +957,16 @@ def _load_latest_price_dates(*, symbols: list[str], query_fn: QueryFn) -> dict[s
         """,
         list(symbols) + ["1d"],
     )
-    return {
-        str(row.get("symbol") or "").strip().upper(): _iso_date(row.get("latest_price_date")) or ""
-        for row in rows
-        if row.get("symbol")
-    }
+    bounds: dict[str, dict[str, str]] = {}
+    for row in rows:
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if not symbol:
+            continue
+        bounds[symbol] = {
+            "first_price_date": _iso_date(row.get("first_price_date")) or "",
+            "latest_price_date": _iso_date(row.get("latest_price_date")) or "",
+        }
+    return bounds
 
 def _profile_collected_at(item: dict[str, Any]) -> str | None:
     return _display_datetime(item.get("last_collected_at"))
@@ -999,6 +1073,7 @@ def _missing_row(
     end_date: str,
     start_price: float | None,
     end_price: float | None,
+    first_price_date: str | None,
     latest_price_date: str | None,
 ) -> dict[str, Any]:
     row = {
@@ -1012,6 +1087,7 @@ def _missing_row(
         "End Date": end_date,
         "Start Price": round(float(start_price), 4) if start_price is not None else None,
         "End Price": round(float(end_price), 4) if end_price is not None else None,
+        "First Price Date": first_price_date,
         "Latest Price Date": latest_price_date,
         "Profile Status": item.get("status") or "-",
         "Profile Error": item.get("error_msg") or "-",
@@ -1304,6 +1380,8 @@ def _build_return_rows(
                 "sector": item.get("sector") or "Unknown",
                 "industry": item.get("industry") or "Unknown",
                 "market_cap": _safe_float(item.get("market_cap")) or 0.0,
+                "asset_kind": item.get("asset_kind"),
+                "quote_type": item.get("quote_type"),
                 "start_price": start_price,
                 "end_price": end_price,
                 "return_pct": return_pct,
@@ -1319,20 +1397,32 @@ def _build_return_rows(
             }
         )
     if missing_candidates:
-        latest_dates = _load_latest_price_dates(
+        price_bounds = _load_price_date_bounds(
             symbols=[str(row["symbol"]) for row in missing_candidates],
             query_fn=query_fn,
         )
         for row in missing_candidates:
+            symbol = str(row["symbol"])
+            bounds = price_bounds.get(symbol) or {}
+            first_price_date = str(bounds.get("first_price_date") or "")
+            reason = str(row["reason"])
+            if (
+                reason == "missing start price"
+                and row.get("end_price") is not None
+                and first_price_date
+                and first_price_date > start_date
+            ):
+                reason = "selected period history unavailable"
             missing_rows.append(
                 _missing_row(
                     item=row["item"],
-                    reason=str(row["reason"]),
+                    reason=reason,
                     start_date=start_date,
                     end_date=end_date,
                     start_price=_safe_float(row.get("start_price")),
                     end_price=_safe_float(row.get("end_price")),
-                    latest_price_date=latest_dates.get(str(row["symbol"])),
+                    first_price_date=first_price_date or None,
+                    latest_price_date=str(bounds.get("latest_price_date") or "") or None,
                 )
             )
     return return_rows, _enrich_missing_rows(
@@ -1362,6 +1452,8 @@ def _build_return_rows_from_price_map(
                 "sector": item.get("sector") or "Unknown",
                 "industry": item.get("industry") or "Unknown",
                 "market_cap": _safe_float(item.get("market_cap")) or 0.0,
+                "asset_kind": item.get("asset_kind"),
+                "quote_type": item.get("quote_type"),
                 "start_price": start_price,
                 "end_price": end_price,
                 "return_pct": (float(end_price) / float(start_price) - 1.0) * 100.0,
@@ -1382,7 +1474,11 @@ def _group_leadership_rows(
 ) -> list[dict[str, Any]]:
     grouped: dict[str, list[dict[str, Any]]] = {}
     for row in return_rows:
-        group_name = str(row.get(group_by) or "Unknown").strip() or "Unknown"
+        group_name = (
+            normalize_industry(row.get(group_by))
+            if group_by == "industry"
+            else str(row.get(group_by) or "Unknown").strip() or "Unknown"
+        )
         grouped.setdefault(group_name, []).append(row)
 
     group_rows: list[dict[str, Any]] = []
@@ -1549,7 +1645,11 @@ def _group_ticker_leader_rows_frame(
     normalized_groups = {str(group).strip() for group in positive_groups if str(group).strip()}
     grouped: dict[str, list[dict[str, Any]]] = {}
     for row in return_rows:
-        group_name = str(row.get(group_by) or "Unknown").strip() or "Unknown"
+        group_name = (
+            normalize_industry(row.get(group_by))
+            if group_by == "industry"
+            else str(row.get(group_by) or "Unknown").strip() or "Unknown"
+        )
         if group_name not in normalized_groups:
             continue
         return_pct = _safe_float(row.get("return_pct"))
@@ -1603,6 +1703,97 @@ def _group_ticker_leader_rows_frame(
             )
 
     return pd.DataFrame(leader_rows, columns=GROUP_TICKER_LEADER_COLUMNS)
+
+
+def _market_return_pct(return_rows: Sequence[dict[str, Any]]) -> float | None:
+    if not return_rows:
+        return None
+    weighted_rows = [
+        row for row in return_rows if (_safe_float(row.get("market_cap")) or 0.0) > 0
+    ]
+    denominator = sum(float(_safe_float(row.get("market_cap")) or 0.0) for row in weighted_rows)
+    if denominator > 0:
+        return sum(
+            float(_safe_float(row.get("market_cap")) or 0.0)
+            * float(_safe_float(row.get("return_pct")) or 0.0)
+            for row in weighted_rows
+        ) / denominator
+    return sum(float(_safe_float(row.get("return_pct")) or 0.0) for row in return_rows) / len(return_rows)
+
+
+def _previous_group_flow_rows(
+    trend_rows: pd.DataFrame,
+    *,
+    groups: set[str],
+    current_end_date: str,
+) -> list[dict[str, Any]]:
+    if not isinstance(trend_rows, pd.DataFrame) or trend_rows.empty:
+        return []
+    output: list[dict[str, Any]] = []
+    for group in sorted(groups):
+        rows = trend_rows[trend_rows["Group"] == group].copy()
+        if rows.empty:
+            continue
+        rows = rows[rows["Date"].astype(str) != str(current_end_date)]
+        if rows.empty:
+            continue
+        rows = rows.sort_values(["Date", "End Date"])
+        output.append(dict(rows.iloc[-1]))
+    return output
+
+
+def _group_flow_payload(
+    *,
+    return_rows: list[dict[str, Any]],
+    ranked_rows: list[dict[str, Any]],
+    trend_rows: pd.DataFrame,
+    group_by: str,
+    current_end_date: str,
+) -> tuple[list[dict[str, Any]], pd.DataFrame]:
+    groups = {str(row.get("group") or "Unknown") for row in ranked_rows}
+    previous_rows = _previous_group_flow_rows(
+        trend_rows,
+        groups=groups,
+        current_end_date=current_end_date,
+    )
+    flow_rows = build_group_flow_state(
+        current_rows=ranked_rows,
+        previous_rows=previous_rows,
+        market_return_pct=_market_return_pct(return_rows),
+        group_by=group_by,
+    )
+    bellwethers = build_market_cap_bellwethers(
+        return_rows,
+        group_by=group_by,
+        top_n=3,
+    )
+    flat_rows: list[dict[str, Any]] = []
+    for group in sorted(groups):
+        group_payload = bellwethers.get(group) or {}
+        for row in group_payload.get("rows") or []:
+            flat_rows.append(
+                {
+                    "Group": group,
+                    "Group Type": group_by.title(),
+                    "Rank": row.get("rank"),
+                    "Symbol": row.get("symbol"),
+                    "Name": row.get("name"),
+                    "Market Cap": row.get("market_cap"),
+                    "Return %": row.get("return_pct"),
+                    "Relative To Group pp": row.get("relative_to_group_pp"),
+                }
+            )
+        for flow_row in flow_rows:
+            if flow_row.get("group") != group:
+                continue
+            flow_row["bellwether_count"] = len(group_payload.get("rows") or [])
+            flow_row["market_cap_valid_count"] = int(
+                group_payload.get("market_cap_valid_count") or 0
+            )
+            flow_row["market_cap_excluded_count"] = int(
+                group_payload.get("market_cap_excluded_count") or 0
+            )
+    return flow_rows, pd.DataFrame(flat_rows, columns=GROUP_MARKET_CAP_BELLWETHER_COLUMNS)
 
 def _coverage(
     *,
@@ -3073,6 +3264,7 @@ def _build_intraday_return_payload(
                     end_date=snapshot_time,
                     start_price=None,
                     end_price=None,
+                    first_price_date=None,
                     latest_price_date=None,
                 )
             )
@@ -3091,6 +3283,7 @@ def _build_intraday_return_payload(
                     end_date=quote_time,
                     start_price=previous_close,
                     end_price=latest_price,
+                    first_price_date=None,
                     latest_price_date=_iso_date(row.get("quote_time_utc")),
                 )
             )
@@ -3104,6 +3297,8 @@ def _build_intraday_return_payload(
                 "sector": item.get("sector") or "Unknown",
                 "industry": item.get("industry") or "Unknown",
                 "market_cap": _safe_float(item.get("market_cap")) or 0.0,
+                "asset_kind": item.get("asset_kind"),
+                "quote_type": item.get("quote_type"),
                 "start_price": previous_close,
                 "end_price": latest_price,
                 "return_pct": return_pct,
@@ -3243,6 +3438,13 @@ def _build_intraday_movers_snapshot(
         "warnings": _coverage_warnings(coverage, date_window=date_window),
         "ticker_alias_candidates": list(payload.get("ticker_alias_candidates") or []),
     }
+    snapshot["collection_readiness"] = _snapshot_collection_readiness(
+        universe_count=len(universe),
+        return_rows=return_rows,
+        missing_rows=missing_rows,
+        date_window=date_window,
+        coverage=coverage,
+    )
     snapshot["coverage_trust"] = _serializable_coverage_trust_model(snapshot)
     return snapshot
 
@@ -3342,6 +3544,13 @@ def build_market_movers_snapshot(
                     **_universe_metadata(universe, universe_code=normalized_universe),
                 }
             )
+            snapshot["collection_readiness"] = _snapshot_collection_readiness(
+                universe_count=len(universe),
+                return_rows=[],
+                missing_rows=[],
+                date_window=date_window,
+                coverage=snapshot["coverage"],
+            )
             return snapshot
 
         previous_context = _previous_return_context(
@@ -3400,7 +3609,7 @@ def build_market_movers_snapshot(
         warnings = _coverage_warnings(coverage, date_window=date_window)
         if normalized_period == "daily" and prefer_intraday and not requested_as_of:
             warnings.insert(0, "No intraday snapshot found for the selected universe; using daily DB close data.")
-        return {
+        snapshot = {
             "status": "OK",
             "period": normalized_period,
             "period_label": PERIOD_LABELS[normalized_period],
@@ -3418,6 +3627,14 @@ def build_market_movers_snapshot(
             "coverage": coverage,
             "warnings": warnings,
         }
+        snapshot["collection_readiness"] = _snapshot_collection_readiness(
+            universe_count=len(universe),
+            return_rows=return_rows,
+            missing_rows=missing_rows,
+            date_window=date_window,
+            coverage=coverage,
+        )
+        return snapshot
     except Exception as exc:
         return _empty_movers_snapshot(
             status="ERROR",
@@ -3468,7 +3685,11 @@ def _build_intraday_group_leadership_snapshot(
     )
     ranked = _rank_group_rows(group_rows, top_n=top_n)
     top_groups = {str(row["group"]) for row in ranked}
-    requested_trend_groups = {str(group).strip() for group in (trend_groups or []) if str(group).strip()}
+    requested_trend_groups = {
+        canonical_sector(group) if group_by == "sector" else normalize_industry(group)
+        for group in (trend_groups or [])
+        if str(group).strip()
+    }
     trend_group_set = top_groups | requested_trend_groups
     positive_groups = {
         str(row["group"])
@@ -3512,6 +3733,13 @@ def _build_intraday_group_leadership_snapshot(
         positive_groups=positive_groups,
         group_by=group_by,
     )
+    group_flow, market_cap_bellwether_rows = _group_flow_payload(
+        return_rows=return_rows,
+        ranked_rows=ranked,
+        trend_rows=trend_rows,
+        group_by=group_by,
+        current_end_date=str(date_window["end_date"]),
+    )
     coverage = dict(payload["coverage"])
     warnings = _coverage_warnings(coverage, date_window=date_window)
     warnings.extend(trend_warnings)
@@ -3528,6 +3756,9 @@ def _build_intraday_group_leadership_snapshot(
         "rows": _group_rows_frame(ranked),
         "trend_rows": trend_rows,
         "ticker_leader_rows": ticker_leader_rows,
+        "group_flow_schema_version": "market_movers_group_flow_v1",
+        "group_flow": group_flow,
+        "market_cap_bellwether_rows": market_cap_bellwether_rows,
         "missing_rows": pd.DataFrame(missing_rows, columns=MISSING_COLUMNS),
         "date_window": date_window,
         "coverage": coverage,
@@ -3644,7 +3875,13 @@ def build_group_leadership_snapshot(
         )
         ranked = _rank_group_rows(group_rows, top_n=normalized_top_n)
         top_groups = {str(row["group"]) for row in ranked}
-        requested_trend_groups = {str(group).strip() for group in (trend_groups or []) if str(group).strip()}
+        requested_trend_groups = {
+            canonical_sector(group)
+            if normalized_group == "sector"
+            else normalize_industry(group)
+            for group in (trend_groups or [])
+            if str(group).strip()
+        }
         trend_group_set = top_groups | requested_trend_groups
         positive_groups = {
             str(row["group"])
@@ -3663,6 +3900,13 @@ def build_group_leadership_snapshot(
             return_rows=return_rows,
             positive_groups=positive_groups,
             group_by=normalized_group,
+        )
+        group_flow, market_cap_bellwether_rows = _group_flow_payload(
+            return_rows=return_rows,
+            ranked_rows=ranked,
+            trend_rows=trend_rows,
+            group_by=normalized_group,
+            current_end_date=str(date_window["end_date"]),
         )
         coverage = _coverage(
             universe_count=len(universe),
@@ -3692,6 +3936,9 @@ def build_group_leadership_snapshot(
             "rows": _group_rows_frame(ranked),
             "trend_rows": trend_rows,
             "ticker_leader_rows": ticker_leader_rows,
+            "group_flow_schema_version": "market_movers_group_flow_v1",
+            "group_flow": group_flow,
+            "market_cap_bellwether_rows": market_cap_bellwether_rows,
             "missing_rows": pd.DataFrame(missing_rows, columns=MISSING_COLUMNS),
             "date_window": date_window,
             "coverage": coverage,

@@ -1,6 +1,76 @@
 # Current Project Audit
 
-## Snapshot
+Status: Re-audited
+Last Updated: 2026-07-20
+
+## 2026-07-20 Re-audit Summary
+
+### Implemented Facts
+
+- 2026-06-08 V1~V5 작업으로 `Reference > Guides`는 이미 task-first `Reference Center`로 한 차례 개편됐다.
+- 현재 catalog는 task card 6개, journey 7개, troubleshooting playbook 7개, record row 6개,
+  shared operational concept 9개를 제공한다.
+- `Reference > Glossary`는 shared concept 9개와
+  `.aiworkspace/note/finance/docs/GLOSSARY.md`의 markdown section 168개를 함께 검색한다.
+- Guide/Glossary는 모두 Streamlit native render다. Reference 전용 React component는 없다.
+- 관련 구현 크기는 `app/web/reference_guides.py` 1,328줄,
+  `app/services/reference_guides_catalog.py` 782줄,
+  `app/services/reference_glossary_catalog.py` 196줄,
+  `.aiworkspace/note/finance/docs/GLOSSARY.md` 3,101줄이다.
+- focused catalog/contextual-help test 14개는 통과한다.
+
+### Current Drift
+
+- current user-facing surface인 `Workspace > Institutional Portfolios`가 Guides catalog에 한 번도 등장하지 않는다.
+- current Overview 이름인 `Futures Macro`, 신규 `Economic Cycle`도 catalog에 등장하지 않는다.
+- 반대로 current primary surface가 아닌 `Futures Monitor`, `Macro Thermometer`,
+  제거된 Archive screen 경로는 catalog에 남아 있다.
+- Glossary에는 `Candidate Review`, `Portfolio Proposal`, `Pre-Live`, `Selected Portfolio Dashboard`,
+  `Main Worktree`, `Sub Worktree`, `Phase`, `Task`, `Fixture` 같은 legacy 또는 개발 운영 용어가
+  사용자-facing 용어와 같은 레벨로 노출된다. 보수적인 title filter로도 이런 항목이 최소 19개다.
+- V5 drift guard는 shared contextual-help key/link 정합성만 검사한다.
+  전체 Guides copy와 `GLOSSARY.md` section의 current product freshness는 검증하지 않는다.
+
+### Current UX Diagnosis
+
+- Guides 첫 화면은 task-first 구조지만 hero, runtime/build chip, read-only 경계 설명,
+  6개 장문 card가 먼저 이어져 실제 답에 도달하기 전 읽을 양이 많다.
+- desktop card는 `owner screen`, 영어 내부 용어, safe action, boundary를 작은 글씨로 압축해
+  사용자가 “무엇을 누르면 되는가”보다 시스템 ownership을 먼저 해석하게 한다.
+- mobile은 card가 한 열로 길게 쌓여 검색이나 원하는 항목으로의 빠른 점프보다 스크롤 의존도가 높다.
+- Glossary는 첫 viewport의 큰 `Runtime / Build` panel 뒤에 검색이 나온다.
+  사용자 도움말보다 개발 프로세스 진단이 먼저 보이는 구조다.
+- 검색어가 없으면 168개 section을 모두 expander로 렌더링한다.
+  이 구조는 발견성과 우선순위가 낮고, 최신/legacy/internal 구분도 제공하지 않는다.
+- Guide와 Glossary 검색이 분리돼 있어 사용자는 문제 해결과 용어 해석을 오가야 한다.
+
+### Product Decision
+
+Reference capability는 유지해야 한다. 현재 제품은 Overview, Institutional Portfolios,
+Backtest, Practical Validation, Final Review, Portfolio Monitoring에 걸쳐
+상태/근거/경계 해석 비용이 크므로 도움말 자체를 제거하면 화면별 설명 중복이 다시 늘어난다.
+
+다만 `Guides`와 `Glossary`를 현재 두 개의 독립 navigation page로 유지하는 것은 권장하지 않는다.
+두 화면을 하나의 React `Reference Center`로 통합하고, Guide와 Glossary는 내부 view/filter로 낮추는 방향이 적절하다.
+
+권장 정보 구조:
+
+1. `Reference` 단일 navigation entry
+2. unified search: 작업, 화면, 상태, 용어를 한 검색창에서 찾음
+3. task journeys: 시장 이해, 기관 포트폴리오 탐색, 데이터 준비, 후보 생성, 검증/판단, 모니터링
+4. term/status detail: 사용자-facing current term만 기본 노출
+5. contextual help: 각 화면의 정확한 상태에서 관련 Reference detail로 이동
+6. legacy/internal glossary: UI 기본 노출에서 제외하고 durable docs에만 보존
+
+제외 범위:
+
+- 별도 log 관리 tab
+- Reference 안에서의 ingestion/job 실행
+- runtime/build panel의 first-read 노출
+- raw registry/run history/failure artifact browser
+- broker order, live approval, auto rebalance
+
+## Initial Snapshot (2026-06-07)
 
 `Reference > Guides`는 현재 `Portfolio Selection Guide` 성격이 강하다.
 사용자가 단일 후보, 여러 후보 묶음, 저장된 Mix, 보류 / 재검토 중 현재 상황을 고르고

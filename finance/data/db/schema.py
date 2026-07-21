@@ -1284,6 +1284,34 @@ PORTFOLIO_MONITORING_SCHEMAS = {
           KEY ix_monitoring_item_effective_end (tracking_end_effective_date)
         );
     """,
+    "monitoring_security_position_event": """
+        CREATE TABLE IF NOT EXISTS monitoring_security_position_event (
+          position_event_id VARCHAR(64) PRIMARY KEY,
+          root_event_id VARCHAR(64) NOT NULL,
+          supersedes_event_id VARCHAR(64) NULL,
+          monitoring_item_id VARCHAR(64) NOT NULL,
+          event_order BIGINT NOT NULL,
+          event_action ENUM('create','replace','void') NOT NULL,
+          position_effect ENUM('initial_quantity_correction','buy','sell') NOT NULL,
+          trade_date DATE NOT NULL,
+          requested_start_date DATE NULL,
+          effective_start_date DATE NULL,
+          quantity BIGINT NULL,
+          execution_price DECIMAL(24,8) NULL,
+          reference_close DECIMAL(24,8) NULL,
+          execution_price_source ENUM('db_close_default','manual_override') NULL,
+          fee_usd DECIMAL(24,8) NOT NULL DEFAULT 0,
+          note VARCHAR(500) NOT NULL DEFAULT '',
+          command_id VARCHAR(64) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_monitoring_position_event_command (command_id),
+          KEY ix_monitoring_position_event_item_date
+            (monitoring_item_id, trade_date, event_order),
+          KEY ix_monitoring_position_event_root (root_event_id, created_at),
+          KEY ix_monitoring_position_event_supersedes (supersedes_event_id)
+        );
+    """,
     "monitoring_portfolio_command": """
         CREATE TABLE IF NOT EXISTS monitoring_portfolio_command (
           command_id VARCHAR(64) PRIMARY KEY,

@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-21
+Last Verified: 2026-07-22
 
 ## Current State After Master Merge
 
@@ -14,7 +14,33 @@ Portfolio Monitoring React Command Center V1은 전체 `6/6차` 구현과 closeo
 - 경계: provider direct fetch, live approval, broker order, account sync, auto rebalance는 없다. 조건부 확률은 현재 fingerprint의 검증 artifact가 READY일 때만 공개한다.
 - canonical docs: `docs/architecture/PORTFOLIO_MONITORING_REACT_COMMAND_CENTER.md`, `docs/data/PORTFOLIO_MONITORING_DATA_CONTRACT.md`, `docs/runbooks/PORTFOLIO_MONITORING_MIGRATION_AND_QA.md`.
 
-현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-sentiment-history-pit-v2-20260720/`다.
+Portfolio Monitoring Position Events V1도 전체 `3/3차`를 완료했다.
+
+- 완료 범위: direct U.S. stock + fixed shares에 최초 수량 정정, 추가매수, 일부매도, revision 수정·취소를 추가했다. exact-date DB 종가를 기본 체결가로 쓰고 actual price override provenance를 보존한다.
+- 성과 계약: 추가매수는 외부 입금, 일부매도 순대금은 외부 출금이며 daily Modified Dietz `0.5` 현금흐름 가중치와 flow-neutral group curve를 사용한다.
+- 경계: ETF, selected strategy, fixed notional, full sell, tax lot/FIFO, broker/account sync, quant backtest 변경은 없다. 전량매도는 기존 tracking end를 사용한다.
+- QA: additive 운영 table 적용 전후 기존 group/item/command `1/2/5`건을 보존하고 새 event table은 `0`건에서 시작했다. Python 137, React 29, typecheck/build, actual read-only route, isolated desktop/900/420 interaction QA를 통과했다.
+
+Portfolio Monitoring Initial Setting Correction V1도 전체 `4/4차`를 완료했다.
+
+- 완료 범위: `개별 추적 결과 > 보유내역`의 `최초 설정 정정`에서 direct U.S. stock + fixed shares의 최초 요청 시작일과 수량을 함께 수정한다. 요청일 이후 첫 DB 시장일·종가와 최초 투자금을 비교 확인하고 append-only revision으로 저장한다.
+- 재계산 계약: correction terminal revision이 유효 requested/effective start, entry close, initial shares/capital을 투영한다. 개별 lane과 그룹 timeline은 같은 초기 계약을 사용하며, 새 시작일 이전 거래나 새 수량으로 무효가 되는 매도는 transaction 전체를 거부한다.
+- 호환/경계: 기존 `correct_initial_quantity` / `initial_quantity_correction` identity와 legacy null-date fallback을 유지한다. ETF, fixed notional, selected strategy, quant backtest, registry/saved JSONL은 변경하지 않는다.
+- QA: 운영 schema에 nullable date column 2개를 한 번만 추가했고 group/item/command/event row `1/5/8/0`과 registry/saved checksum을 보존했다. Portfolio Monitoring Python 156, React 32, typecheck/build와 actual route/420px overflow/console QA를 통과했다. 브라우저 저장 interaction은 QA iframe의 selection event가 서버 session으로 전달되지 않아 자동화 command/component 회귀로 대체했다.
+
+Portfolio Monitoring Diagnosis Grouping / Scroll V1도 전체 `3/3차`를 완료했다.
+
+- 완료 범위: `correlation_cluster`와 `current_drawdown`의 반복 판정을 의미 가족별 한 카드로 요약하고, 종목·종목쌍별 측정값과 기준은 disclosure에 모두 보존했다. 상위 확인 신호도 서로 다른 display group 기준으로 선택한다.
+- 호환 경계: workspace는 additive `diagnosis.display_groups`를 제공하며 legacy payload는 React에서 one-member group으로 읽는다. raw `weaknesses`·`all_rows`·history identity, threshold, severity, confidence, DB/registry/saved 계약은 변경하지 않았다.
+- 화면/QA: 760px 초과에서 각 진단 목록은 최대 560px와 내부 스크롤을 사용하고, 760px 이하에서는 자연 높이와 page scroll을 사용한다. Python 142, React 31, typecheck/build와 desktop 1269px·mobile 377px fixture Browser QA를 통과했다.
+
+Portfolio Monitoring Reference Help Removal V1도 전체 `2/2차`를 완료했다.
+
+- 완료 범위: Portfolio Monitoring의 중복 contextual panel, 전용 catalog row, 중복 renderer import를 제거해 React Command Center부터 바로 시작한다.
+- 정보 소유권: `journey.monitoring`, `concept.monitoring_scenario`, `playbook.monitoring_scenario_stale`와 `portfolio_monitoring` destination은 canonical Reference Center에 그대로 보존한다.
+- QA: Python Reference 29개·Portfolio Monitoring 142개, Reference React 15개·Portfolio Monitoring React 31개와 양쪽 typecheck/build를 통과했다. actual desktop/420px에서 panel 미노출, Command Center 노출, overflow 0, console error 0과 세 stable deep link를 확인했다.
+
+현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-sentiment-cnn-aaii-v1-20260719/`다. 2차 PIT 구현 기록은 `.aiworkspace/note/finance/tasks/active/overview-sentiment-history-pit-v2-20260720/`에 보존한다.
 
 - 목적: CNN 중심·중복 구조와 단위가 섞인 이력 그래프를 정리하고, CNN 시장 행동과 AAII 개인투자자 인식을 동등한 두 축으로 읽게 한다.
 - 완료: 전체 잠정 roadmap `2/4차`. 1차의 균형형 CNN/AAII UI에 이어 source별 atomic latest+immutable 저장, UTC known-at 조회, 24시간 자동 수집, 전체 canonical 이력과 고정 180일 해석 분리, 공통 6M/1Y/전체 그래프와 desktop/420px Browser QA를 완료했다.
@@ -28,7 +54,14 @@ Portfolio Monitoring React Command Center V1은 전체 `6/6차` 구현과 closeo
 - 남은 완료 조건: 실제 desktop/900px/420px layout·wheel/drag/reset·overflow Browser QA.
 - 경계: client-side viewport만 바꾸며 Python/DB/전략/그룹 가치곡선 계약은 변경하지 않는다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/operations-portfolio-monitoring-only-v1-20260719/`다.
+Latest completed Reference task는 `.aiworkspace/note/finance/tasks/active/reference-center-react-v1-20260720/`다.
+
+- 목적: 방치된 `Reference > Guides / Glossary`를 현재 제품 흐름과 용어를 함께 찾는 단일 Search-first React Reference Center로 교체한다.
+- 완료: 전체 `4/4차`; 24-item curated catalog와 drift guard, 4개 filter, 6개 journey, local detail/related navigation, stable deep link, legacy renderer 제거와 desktop/900px/420px Browser QA를 닫았다. 최초 7개 current surface contextual help 중 Portfolio Monitoring 전용 panel은 후속 task에서 제거되어 current 계약은 Final Review까지 6개다.
+- 경계: Reference는 읽기 전용이다. 내부 `docs/GLOSSARY.md`를 runtime에 자동 파싱하지 않고 provider/DB/registry/saved setup/log/run-history/validation mutation을 소유하지 않는다.
+- 유지보수: 새 product surface 또는 이름 변경 시 catalog item, contextual help ID, current-surface guard를 함께 갱신한다.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/operations-portfolio-monitoring-only-v1-20260719/`다.
 
 - 목적: 사용하지 않는 Operations Overview와 System/Data Health 중복 화면을 제거하고 선정 이후 Portfolio Monitoring 업무만 남긴다.
 - 완료: 전체 `3/3차`; route/UI/test 제거와 Python/React/Browser QA를 닫았다.
@@ -274,6 +307,30 @@ Previous completed Overview / Market Context task는 `.aiworkspace/note/finance/
 - 주요 변경: Shiller 월별 가격·EPS, Workspace Ingestion의 공식 S&P Index Earnings XLSX 등록과 release-vintage actual As-Reported quarter, Federal Reserve SEP vintage, SPX/SPY EOD를 `Ingestion -> DB -> Loader -> Service -> React`로 연결했다. 그래프 1은 완결 Shiller 최근 60개월의 `-2σ/-1σ/중심/+1σ/+2σ` log(PER) anchor와 36개월 민감도를 유지하면서, EPS 미발표 최신 가격월과 current SPX EOD를 March EPS 기준 잠정 PER 점선으로 2026-07까지 연장한다. 그래프 2는 공식 actual 4분기를 우선하고 없으면 최신 Robert Shiller TTM EPS를 사용한다. Economic Cycle은 Shiller proxy와 분리해 공식 actual 8분기가 있을 때만 current/prior TTM YoY를 계산한다. 공식 SEP 21개 vintage와 120개월 Shiller warmup으로 최근 1년·3년·5년 실제 SPX/rolling 적정 SPX band를 선택해 표시한다.
 - 경계: 월별 과거 지점은 월중 SEP를 다음 달부터 적용하고 calendar-year target을 선택한다. 이 흐름은 Shiller EPS가 strict release-vintage PIT 원본이 아니므로 `과거 시점 재구성 시나리오`이며, SEP median `real GDP + PCE`와 trailing PER band는 공식 적정가·투자 신호·애널리스트 컨센서스가 아니다.
 - QA: valuation 37 tests, Market Context 35 contracts, TypeScript, Vite build, 실제 21개 SEP vintage/1,867 Shiller rows 기반 read model, desktop/420px Browser QA를 통과했다. Graph 2 history는 12/36/60 points를 반환했고 5년 화면의 SEP marker 19개/label 7개와 current-app console error/horizontal overflow 0건을 확인했다. generated V1.4 QA screenshot은 커밋하지 않는다.
+
+Current Market Movers redesign follow-up task는 `.aiworkspace/note/finance/tasks/active/market-movers-performance-research-v2-20260720/`다.
+
+- 목적: 승인된 결정형 워크벤치에서 종목 발견, sector/industry 확산 확인, 선택 종목 조사를 한 화면과 selected state로 끝낸다.
+- 현재 상태: 전체 기능 roadmap은 `4/5차`이며, 승인된 성능·조사 보완 묶음은 `5/5차` 완료했다. 초기 6개 sector/industry 조합을 모두 계산하던 경로를 현재 선택한 조합 하나만 읽고 session에서 재사용하도록 바꿔 실제 cold entry를 약 46초에서 1.6초로 줄였다. 현재/시장/데이터/수동 갱신 시각과 기존 수동 action, 수익률 semantic color, 가격 plot-wide hover, 연간 10개·분기 40개 상한과 막대/선 전환, DB filing ledger 최대 5건 및 selected-symbol session-only 뉴스/SEC action을 one-shell에 연결했다. Desktop/760px, console, nested iframe detail click actual Browser QA까지 완료했다.
+
+Market Movers chart navigation 후속 task는 `.aiworkspace/note/finance/tasks/active/market-movers-chart-navigation-polish-v1-20260721/`다.
+
+- 재무 이력은 분기 `YYYY Qn`, 연간 `YYYY` X축과 exact period-end hover를 제공하고, 10년 분기 자료는 point-count 기반 폭·scrollbar·pointer drag로 이동한다. 가격 요약은 per-row 배경 tint와 primary 좌측선을 제거하고 수익률 text tone만 유지한다.
+- 구현과 focused/service contract/Vite build는 완료했다. 실제 desktop/narrow hover·drag Browser QA는 localhost URL policy 차단으로 남았으며, 이 QA 공백은 전체 기능 roadmap `4/5차`와 별개다.
+- 다음: 5차 sector conditional outlook은 historical episode와 OOS publication gate를 먼저 검증한다. gate를 통과하지 못하면 확률·분포 수치를 공개하지 않으며 industry outlook은 PIT taxonomy 준비 전까지 보류한다.
+
+Market Movers 비-Daily refresh basis 후속 task는 `.aiworkspace/note/finance/tasks/active/market-movers-nondaily-refresh-basis-fix-v1-20260721/`다.
+
+- 목적: Weekly / Monthly가 coverage-qualified 랭킹 기준일을 가격 수집 목표일로 재사용해 2026-07-07에 고정되고 가격 이력 수동 갱신이 사라지던 순환 문제를 해결했다.
+- 주요 변경: 최신 완료 NYSE session을 EOD preflight/job 기본 목표일로 사용하고, React는 `최근 완료 시장일`과 `랭킹 데이터 기준`을 분리한다. 비-Daily 가격 이력 수동 갱신은 항상 노출하며 대상이 있을 때만 primary로 강조한다.
+- QA: Market Movers/NYSE 관련 114 tests, Python compile, Vite production build와 실제 DB read-only preflight에서 2026-07-20 목표·Weekly 502개·Monthly 501개 보강 대상을 확인했다. Browser actual QA는 localhost URL policy로 차단됐다.
+- 경계: coverage 임계치, 랭킹 계산, provider, DB schema, 자동 갱신 schedule은 변경하지 않았다.
+
+Latest Market Movers 기간 갱신·차트 보정 task는 `.aiworkspace/note/finance/tasks/active/market-movers-period-refresh-chart-fix-v1-20260721/`다.
+
+- Weekly는 1주+1주 overlap, Monthly는 1개월+1개월 overlap으로 최신 완료 시장일까지 bounded refresh하며 stale limited-history symbol도 재시도한다.
+- 선택 기간 시작 뒤 상장된 종목은 `selected period history unavailable`로 그 기간 랭킹에서 제외하고, 가격 차트 실제 날짜 X축과 가격·재무 고점 tooltip 아래 배치를 추가했다.
+- 실제 S&P 500 Weekly는 503/503개, 5,533행, 실패 0건으로 2026-07-20까지 갱신됐고 후속 수동 action은 503개 current skip으로 종료됐다. 전체 기능 roadmap은 `4/5차`; 다음은 별도 OOS-gated sector conditional outlook이다.
 
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/`다.
 
@@ -839,6 +896,8 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 
 | Workstream | Status | Durable Notes |
 |---|---|---|
+| Portfolio Monitoring Position Events V1 | Complete | Direct-stock fixed-shares detail supports initial quantity correction, additional buy, partial sell, immutable replace/void revisions, exact-date DB-close default/manual override provenance and cashflow-aware performance. Full sell stays in tracking end; ETF/strategy/fixed-notional/backtest remain unchanged. |
+| Portfolio Monitoring Initial Setting Correction V1 | Complete | `최초 설정 정정` extends the append-only initial correction with requested/effective start dates and DB entry close. Individual/group valuation replays from the corrected initial contract; legacy rows fall back to the item start contract. |
 | Portfolio Monitoring Tracking End Reopen V1 | Complete; Browser QA policy-blocked | Ended item detail exposes `추적 종료 취소`. The idempotent `reopen_item` command preserves item identity and original start/funding/entry contract, clears end dates/exit value, and recomputes the read model as continuous tracking. Reopen rechecks active capacity 10 and duplicate source invariants. Python 112 / React 25 / typecheck/build/static distribution pass; local Browser interaction was blocked by URL policy. |
 | Portfolio Monitoring Chart Zoom / Pan V1 | Implementation complete; Browser QA pending | Selected direct stock/ETF line/candle chart owns a client-only inclusive viewport over the existing latest 120 stored daily rows. Wheel/center controls zoom to 15 sessions, horizontal drag pans with edge clamp, reset restores the full range, and mobile remains controls-only. Desktop contribution/detail is 35:65 with a 280px list minimum, and selected chart price/VOL/date axes use 11px/700 labels. Python/DB/strategy/group-chart contracts are unchanged. Automated Python 102 / React 24 / typecheck/build/static distribution pass; actual desktop/900px/420px interaction/layout/overflow QA is pending because local Browser DOM access was policy-blocked. |
 | Portfolio Monitoring Chart Clarity / OHLCV V1 | Complete | Group value curve hides static point halos and shows 5 desktop / 3 mobile actual-observation date ticks. Selected direct stock/ETF detail reads the latest 120 stored daily OHLCV rows for close line or candle/volume exploration; selected strategy remains value-only. The route stays DB-only and Operations summary adds no detail read. |
@@ -859,6 +918,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 | Overview Market Context Macro Polish V17 | Complete | Macro conditioned comparison now shows the meaning of each narrowing step inside the basis bar: broad sector ETF vs SPY analog pool, current-like GLD bucket, then current-like ZN=F / ZB=F rate-pressure bucket. Reference-only T10Y3M / VIXCLS / BAA10Y backdrop now renders as Korean state badges, current value, same-state ratio bars, and compact source labels. |
 | Overview Market Context Macro Matrix V16 | Complete | Macro conditioned comparison now uses the same visual language as historical analog: a basis bar for broad -> GLD -> futures narrowing, a compact asset x `기본 / 조건 후 / 변화` matrix, collapsed verbose condition source details, and Korean-first labels for current Macro backdrop. |
 | Overview Market Context Macro Labels V15 | Complete | Macro conditioned comparison now names the visible narrowing stages as broad basis, GLD condition, and rate-pressure futures condition. It explains `81회 -> 37회 -> 6회` as broad anchors narrowed by current-like GLD and futures states, and current Macro backdrop cards include Korean descriptions plus broad-sample same-state counts. |
+| Reference Center React V1 | Complete | Guides/Glossary를 상단 `Reference` 하나로 통합했다. Curated 24-item catalog, 6개 journey, local search/filter/detail, stable contextual deep link, allowlisted owner-surface 이동과 desktop/900px/420px QA를 완료했으며 내부 `GLOSSARY.md`와 읽기 전용 경계는 유지한다. |
 | Overview Sentiment CNN·AAII / PIT History V2 | 2/4차 complete | Sentiment를 합성점수 없는 `CNN 시장 행동 / AAII 개인투자자 인식` 두 축으로 유지하고 source별 latest canonical + immutable 수집 당시 기록을 atomic 저장한다. 6M/1Y/전체는 시작점만 정렬하고 x축은 최신 source 날짜까지 열어 두며 각 선은 자기 마지막 관측에서 끝난다. 세로 2 graph, canonical coverage/PIT 시작일, UTC as-known read를 제공하며 현재 해석은 180일로 고정한다. 1W·1M은 prospective PIT 축적과 chronological validation 전까지 `UNAVAILABLE`; 3차 독립 데이터 후보와 4차 검증이 남아 있다. |
 | Overview Sentiment React UX V1 | Complete | Sentiment now renders a React workbench when the component build is available: service-owned phase/headline/summary first, freshness-tied refresh/reload actions, CNN / AAII cross-read, recent range percentile / min-max cards, CNN headline / component / AAII divergence panel, analysis steps, driver lanes, CNN component explanations, component latest-vs-previous changes, hover-readable history line chart, component bar chart, and stored-row evidence tables. Python services still own DB reads, refresh actions, and all interpretation text; React does not create trade signals, validation gates, monitoring signals, or recommendations. |
 | Overview Market Sentiment V1 | 1차~3차 complete | CNN Fear & Greed / AAII collect into `finance_meta.macro_series_observation`. Overview Sentiment, Practical Validation, Final Review, and Portfolio Monitoring read it as context-only market backdrop. |
@@ -931,7 +991,8 @@ Current active phase:
 
 Current active task:
 
-- `overview-sentiment-history-pit-v2-20260720`: 전체 잠정 roadmap `2/4차`. immutable 수집 당시 기록, UTC known-at 조회, 자동 수집, 장기 그래프와 actual QA를 완료했다. 다음은 3차 독립 데이터 후보 검토다.
+- `overview-sentiment-cnn-aaii-v1-20260719`: 전체 잠정 roadmap `2/4차`. 1차 균형형 UI와 2차 PIT 이중 저장·known-at 조회·장기 그래프를 완료했다. 다음은 3차 독립 데이터 후보 검토다.
+- 2차 구현 상세는 retained record `overview-sentiment-history-pit-v2-20260720`에서 확인한다.
 
 Parallel active follow-up:
 
@@ -939,10 +1000,13 @@ Parallel active follow-up:
 
 Latest completed task:
 
-- `operations-portfolio-monitoring-only-v1-20260719` — Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
+- `portfolio-monitoring-initial-setting-correction-v1-20260721` — 최초 요청 시작일·수량을 append-only initial contract revision으로 함께 정정하고 새 시장일·종가·최초 투자금부터 성과를 다시 계산하는 전체 `4/4차`를 완료했다.
 
 Previous completed task:
 
+- `overview-economic-cycle-intramonth-nowcast-v1-20260721` — 월말 canonical history를 보존하면서 날짜별 intramonth nowcast와 평일 fail-closed 증분 갱신을 전체 `4/4차`로 완료했다.
+- `overview-futures-macro-probabilistic-state-outlook-v2-20260720` — completed-session same-state target과 nested rolling-origin gate를 전체 `3/3차`로 완료했고 actual 5D/20D는 `NO_EDGE`로 비공개다.
+- `operations-portfolio-monitoring-only-v1-20260719` — Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
 - `overview-futures-macro-pattern-outlook-v1-20260718` — 전체 roadmap `5/5`, materialized snapshot / React disclosure `4/4`, observation / outlook separation, ten-year validation, and 60D legend / status clarity follow-up complete
 - `backtest-analysis-level1-decision-workspace-v1-20260717` — 1~15차 완료. Portfolio Mix actual run/save/restore/edit/rerun, fresh/stale action boundary와 desktop/760px QA까지 확인했다.
 - `practical-validation-audit-evidence-absorption-v1-20260719` — 전체 roadmap `3/3` complete

@@ -7,6 +7,8 @@ from uuid import uuid4
 import pandas as pd
 import streamlit as st
 
+from app.web.reference_contextual_help import render_reference_contextual_help
+
 from app.services.backtest_evidence_read_model import (
     SELECT_FOR_PRACTICAL_PORTFOLIO,
     build_final_review_candidate_board,
@@ -1104,6 +1106,7 @@ def _consume_final_review_data_enrichment_intent(
 
 
 def render_final_review_workspace() -> None:
+    render_reference_contextual_help("final_review", expanded=False)
     current_rows = load_current_candidate_registry_latest()
     proposal_rows = load_portfolio_proposals()
     pre_live_rows = load_pre_live_candidate_registry_latest()
