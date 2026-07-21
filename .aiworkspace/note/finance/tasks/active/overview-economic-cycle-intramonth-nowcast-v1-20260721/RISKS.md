@@ -15,5 +15,5 @@ Last Updated: 2026-07-21
 ## Remaining Validation
 
 - `FRED_API_KEY`가 있는 운영 환경에서 실제 incremental overlap 수집 1회를 실행하고 provider 결과를 확인해야 한다.
-- desktop / 420px Browser QA와 console / overflow 검증이 남아 있다.
 - historical pseudo-intramonth stability validation은 V1의 표시 승격 조건이 아니라 후속 research다.
+- repository-wide UI/engine boundary helper는 이번 변경과 무관한 기존 Backtest service→web import 1건 때문에 fail한다. 경제사이클 변경 파일의 직접 boundary scan은 clean이며 기존 위반 수정은 별도 Backtest scope다.

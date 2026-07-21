@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-07-20
+Last Verified: 2026-07-21
 
 ## Purpose
 
@@ -32,6 +32,7 @@ Last Verified: 2026-07-20
 - Recent completed Operations task: [Portfolio Monitoring React Command Center V1 2026-07-19](../tasks/done/portfolio-monitoring-react-command-center-v1-20260719/STATUS.md) — 전체 `6/6차`. DB-backed group/item, direct stock/ETF와 selected strategy, common-basis KPI, diagnosis/macro/history/calibration React one-shell과 production schema/default group migration을 완료했다.
 - Latest Portfolio Monitoring lifecycle follow-up: [Portfolio Monitoring Tracking End Reopen V1 2026-07-19](../tasks/active/portfolio-monitoring-tracking-end-reopen-v1-20260719/STATUS.md) — 동일 종료 항목의 종료일·종료금액을 취소하고 원래 시작 계약으로 연속 추적하는 `reopen_item`을 구현했다. 활성 10개와 동일 source 중복 제한을 재검증하며 자동 회귀는 완료했고 Browser interaction은 URL policy로 차단됐다.
 - Recent completed Overview task: [Futures Macro Pattern Outlook V1 2026-07-18](../tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md) — 전체 roadmap, materialized snapshot / React disclosure, 관측·전망 상태 분리, 10년 재검증과 60D 색상 범례를 완료했다. 일봉 갱신이 10년 compact snapshot을 저장하고 Overview 첫 진입은 DB-only로 읽는다. 현재는 관측 완료, 5D/20D 전망은 PROVISIONAL이다.
+- Recent completed Overview / Market Context task: [Economic Cycle Intramonth Nowcast V1 2026-07-21](../tasks/active/overview-economic-cycle-intramonth-nowcast-v1-20260721/STATUS.md) — 과거 월말 snapshot은 그대로 보존하면서 평일 증분 vintage 수집과 날짜별 `intramonth_nowcast` 잠정치를 별도 저장·표시한다. 2026-07-21 actual row와 2026-06-30 월말 불변성, desktop/420px Browser QA를 확인했다.
 - Recent completed Institutional Portfolios task: [Institutional 13F OpenFIGI Mapping V1 2026-07-18](../tasks/active/institutional-13f-openfigi-mapping-v1-20260718/STATUS.md) — 전체 roadmap `4/4`. 무료 OpenFIGI v3 current resolution, error-preserving UPSERT, safe loader precedence, curated 12-manager backfill과 actual Browser QA를 완료했다.
 - Recent completed Overview / Market Context task: [S&P 500 Actual EPS Registration V1 2026-07-18](../tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/STATUS.md) — 공식 workbook 등록 제품 경로와 PIT loader 검증은 완료했고, 현재 공식 workbook과 발표일 입력은 외부 입력으로 남아 있다.
 - Previous completed task: [Economic Cycle Asset Pathways Stages 3-5 V1 2026-07-17](../tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/STATUS.md) — 전체 자산경로 roadmap `5/5`를 완료했다. 채권·금리 구조, S&P 500 단일 대표지수, WTI·구리·금의 daily/weekly/quarterly 측정 경로를 DB-only로 연결하고 공통 관측 UI와 actual desktop/mobile QA를 닫았다.

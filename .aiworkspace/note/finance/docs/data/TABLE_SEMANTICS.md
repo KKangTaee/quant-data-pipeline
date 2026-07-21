@@ -459,7 +459,9 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - `macro_series_vintage_observation`은 미국 경제 사이클 17개 지표의 발표 당시 값과 이후 revision interval을 raw ledger로 보존한다.
 - `economic_cycle_model_artifact`는 model version, `trained_through`, horizon별 parameter·temperature calibration·rolling-origin metric·publication gate를 보존한다.
-- `economic_cycle_snapshot`은 current 또는 historical replay가 만든 compact 네 국면 확률, evidence, source date, 제한 사유를 저장하며 Overview read model의 source-of-truth다.
+- `economic_cycle_snapshot`은 `current`, `historical_replay`, `intramonth_nowcast`가 만든 compact 네 국면 확률, evidence, source date, 제한 사유를 저장하며 Overview read model의 source-of-truth다.
+- 월말 `current/historical_replay` row는 canonical history다. 월중은 날짜별 별도 `run_kind=intramonth_nowcast` row로 저장하고 `baseline_as_of_date`, `source_coverage_json`, `source_collected_at`으로 비교 기준과 입수 범위를 명시한다. 이 nullable provenance column 추가는 기존 월말 row의 payload나 business key를 재작성하지 않는다.
+- 같은 날짜·model version·run kind 재실행은 UPSERT로 1행을 유지하지만 과거 월말 row는 rollover 대상이 아니다. 새 달 첫 평일에는 누락된 직전 월말만 `current`로 append할 수 있다.
 
 성격과 business key:
 

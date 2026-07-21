@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-20
+Last Verified: 2026-07-21
 
 ## Current State After Master Merge
 
@@ -42,6 +42,14 @@ Latest completed Overview Futures Macro task는 `.aiworkspace/note/finance/tasks
 - actual 상태: 2026-07-20 원자료는 완료 전이라 제외하고 화면/current은 마지막 완료 세션 `2026-07-17` 기준이다. 5D 후보는 `M1_MOMENTUM`, 20D는 baseline이 선택됐지만 둘 다 out-of-sample gate를 넘지 못해 probability/coordinate/vector가 `NO_EDGE`이며 예측 숫자·ellipse·vector를 표시하지 않는다.
 - 품질 경계: `NO_EDGE`는 정상 결과다. macro/event는 momentum보다 동일 fold에서 증분 가치가 있을 때만 채택하며, UI 진입은 provider를 호출하거나 전망을 재계산하지 않는다. 이 결과는 추천·매매 신호·미래 경로 보장이 아니다.
 - 후속 후보: roll-aware/back-adjusted source 확장과 PIT macro coverage 증가는 별도 데이터 과제다. gate를 실제 결과에 맞춰 완화하지 않는다.
+
+Latest completed Overview / Market Context Economic Cycle task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-intramonth-nowcast-v1-20260721/`다.
+
+- 목적: 최신 화면 날짜가 2026-07-21인데 경제사이클이 2026-06-30 월말에서 멈춰 보이던 문제를, 월말 이력을 훼손하지 않는 별도 월중 잠정 계산으로 해소한다.
+- 완료: 전체 `4/4차`. 17-series overlap 증분 수집, 평일 자동 갱신, 누락 직전 월말 append-only rollover, 날짜별 `intramonth_nowcast` 저장, exact 월말 baseline 비교 read model과 React 월말→월중 흐름을 연결했다.
+- actual 상태: 2026-06-30 월말 회복 46.7%와 2026-07-21 월중 회복 52.7%를 분리해 표시한다. 월말 `current/historical_replay` 122행의 SHA-256은 실행 전후 동일했고 같은 날 재실행은 월중 business key 1행만 유지했다.
+- 품질 경계: 월말과 월중 모두 모델 추정이며 현재 LIMITED 결과는 잠정이다. 월중 값은 monthly ribbon/history에 섞지 않고, 보간하지 않으며, 전체 source refresh가 성공하지 않으면 snapshot을 쓰지 않고 last-good를 유지한다.
+- 남은 운영 확인: 이 환경에는 `FRED_API_KEY`가 없어 실제 외부 incremental collection은 실행하지 않았다. credential이 있는 운영 환경에서 첫 scheduled run의 17-series overlap 결과를 확인한다.
 
 Recent completed task는 `.aiworkspace/note/finance/tasks/active/institutional-13f-openfigi-mapping-v1-20260718/`다.
 

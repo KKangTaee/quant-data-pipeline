@@ -1,7 +1,7 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-07-20
+Last Verified: 2026-07-21
 
 ## Purpose
 
@@ -36,7 +36,7 @@ http://localhost:8501
 
 ## Economic Cycle Vintage / Model Refresh
 
-이 작업은 화면 render나 unattended Overview scheduler가 실행하지 않는다. 운영자가 `FRED_API_KEY`를 설정하고 backend에서 명시적으로 실행한 뒤, `Workspace > Overview > Market Context > 경제 사이클`은 저장된 compact snapshot만 읽는다.
+화면 render는 provider를 호출하지 않고 저장된 compact snapshot만 읽는다. full bootstrap·재학습·10년 replay는 운영자가 명시적으로 실행하고, 이후 월중 nowcast는 `FRED_API_KEY`가 있는 unattended Overview scheduler의 평일 1회 job으로 증분 갱신한다.
 
 ### 1. Prerequisite와 schema
 
@@ -63,7 +63,20 @@ uv run python -c "from app.jobs.ingestion_jobs import run_collect_economic_cycle
 - 동일 범위 재실행 뒤 business row 수가 증가하지 않는지
 - `.`/non-finite value가 0이 아니라 `coverage_status=missing` row로 남는지
 
-### 3. Train, validate, current materialization
+### 3. Weekday intramonth refresh
+
+```bash
+uv run python -m app.jobs.overview_automation --profile safe --job economic_cycle_intramonth --dry-run
+uv run python -m app.jobs.overview_automation --profile safe --job economic_cycle_intramonth --force --json
+```
+
+- 이 job은 `safe/standard/broad` profile에만 있고 `browser_safe`에는 없다. 평일 24시간 cadence로 평가한다.
+- series별 마지막 stored `realtime_start` 앞의 overlap window부터 official vintage를 다시 읽어 open revision interval을 놓치지 않는다.
+- 17개 source 중 하나라도 실패하면 그날 `intramonth_nowcast`를 쓰지 않고 이전 last-good를 유지한다.
+- 새 달 첫 실행은 누락된 직전 월말 `current` row만 append하고 기존 월말 row를 수정하지 않는다.
+- 같은 날짜 재실행은 `(as_of_date, model_version, run_kind)` business key 1행을 유지한다.
+
+### 4. Train, validate, current materialization
 
 아래 날짜는 latest fully available month에 맞게 운영자가 지정한다.
 
@@ -75,7 +88,7 @@ uv run python -c "from finance.economic_cycle_pipeline import train_validate_eco
 - horizon별 gate는 `READY/LIMITED` publication status를 결정한다. 완전한 artifact와 입력으로 계산 가능한 LIMITED horizon은 숫자 확률을 snapshot에 보존하고 UI에서 `잠정 모델 추정`으로 표시한다. READY는 `검증된 모델 추정`, phase support·parameter·입력이 불완전하면 `판단 불가`다.
 - validation metadata 누락이나 실행 오류가 있으면 latest approved artifact/snapshot을 ERROR row로 덮지 않는다.
 
-### 4. Ten-year month-end replay와 idempotence
+### 5. Ten-year month-end replay와 idempotence
 
 ```bash
 uv run python -c "from finance.economic_cycle_pipeline import replay_economic_cycle_history; print(replay_economic_cycle_history(start_date='YYYY-MM-DD', end_date='YYYY-MM-DD'))"
@@ -85,9 +98,10 @@ uv run python -c "from finance.economic_cycle_pipeline import replay_economic_cy
 - 같은 날짜 범위를 한 번 더 실행하고 `(as_of_date, model_version, run_kind)` business key가 중복되지 않는지 확인한다.
 - payroll series 한 origin과 recession-era 한 origin을 표본으로 골라 stored eligible `realtime_start/realtime_end`가 official FRED/ALFRED response metadata와 일치하는지 확인한다.
 
-### 5. Failure / recovery
+### 6. Failure / recovery
 
 - `FRED_API_KEY` 부재: 수집을 중단하고 UI의 `NOT_MATERIALIZED` 또는 latest-good LIMITED/READY snapshot을 유지한다.
+- 월중 refresh 일부 series 실패: closed-month rollover와 당일 snapshot write를 진행하지 않고 last-good intramonth row를 유지한다.
 - sparse coverage/calibration/origin/baseline 성능 미달: 해당 horizon을 `LIMITED`로 두고 계산 가능하면 잠정 추정으로 공개한다. threshold를 낮추거나 artifact status를 손으로 바꾸지 않는다.
 - missing phase support 또는 불완전 parameter/input: 해당 horizon은 `UNAVAILABLE`로 materialize하고 다른 horizon·origin 처리는 계속한다.
 - stale/vintage gap: missing series/date/revision interval을 공식 API에서 보강한 뒤 collection부터 재실행한다.

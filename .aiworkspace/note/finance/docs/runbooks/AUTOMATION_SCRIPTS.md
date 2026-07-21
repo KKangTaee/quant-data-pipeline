@@ -15,9 +15,10 @@
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py` | current candidate registry list / show / validate / append |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | pre-live candidate registry template / draft-from-current / list / show / validate / append |
 | `app/jobs/overview_automation.py` | 브라우저 없이 Overview Market Intelligence 수집 job을 cadence / market-hours / lock 기준으로 실행하는 run-once CLI |
+| `app/jobs/economic_cycle_refresh.py::run_economic_cycle_intramonth_refresh` | 평일 17-series overlap 증분 수집 → 누락 직전 월말 append-only rollover → 당일 intramonth materialization을 fail-closed로 실행. 일부 source 실패나 credential 부재 시 snapshot을 쓰지 않고 last-good 유지 |
 | `app/jobs/ingestion_jobs.py::run_collect_economic_cycle_vintages` | 승인된 17-series FRED/ALFRED vintage catalog를 명시적으로 수집하는 `JobResult` wrapper. `FRED_API_KEY` 필수 |
 | `app/jobs/ingestion_jobs.py::run_materialize_economic_cycle` | provider 호출 없이 approved artifact와 stored vintages로 current compact snapshot을 만드는 명시적 `JobResult` wrapper |
-| `finance/economic_cycle_pipeline.py` | 경제 사이클 train/validate, current materialization, origin-specific month-end replay 함수. CLI scheduler가 아니라 runbook 기반 backend entry |
+| `finance/economic_cycle_pipeline.py` | 경제 사이클 train/validate, current materialization, origin-specific month-end replay, exact-artifact intramonth materialization, closed-month rollover 함수. scheduler 등록은 `app/jobs/overview_automation.py`가 소유 |
 
 ## Phase bundle bootstrap
 

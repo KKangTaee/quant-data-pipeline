@@ -14,3 +14,6 @@ Last Updated: 2026-07-21
 - Materialized 2026-07-21 from stored vintages: baseline 2026-06-30, model `economic-cycle-v1-59ba078b22ba`, `LIMITED`, recovery 52.6843%, recession 29.0467%, source collected 2026-07-16 10:02:56, coverage 17/17.
 - Repeated the same-day materializer: exactly one intramonth business key remained. Monthly invariant stayed at 122 rows with the identical SHA-256.
 - `FRED_API_KEY` was absent in the runtime environment, so the external incremental collector was not invoked; the successfully materialized last-good row remains available.
+- Browser QA at `http://localhost:8501`: monthly baseline 2026-06-30 and provisional 2026-07-21 are both visible; intramonth bridge/dot counts are 1/1; intramonth elements inside the monthly ribbon are 0; desktop and 420px component horizontal overflow are both 0; browser error logs are empty.
+- Saved generated QA evidence as `overview-economic-cycle-intramonth-v1-qa.png`; it is intentionally untracked.
+- Final repository-wide UI/engine boundary helper reported the pre-existing `app/services/backtest_workflow_shell.py:6 -> app.web.backtest_workflow_routes` violation. Git blame traces it to commit `168fcdf4` on 2026-07-19; this task did not modify that file, and a direct scan of all changed economic-cycle service/job/pipeline files found no `app.web`, `streamlit`, or `st.*` dependency.

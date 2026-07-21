@@ -10275,3 +10275,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 날짜 이동에 흔들리는 세 점 연결을 실제 일별 관측으로 바꾸고, momentum과 macro를 검증하되 원하는 미래 모양을 억지로 만들지 않아야 함.
 - Analysis result: completed-session과 same-state 계약을 고정하고 baseline/M1/M2를 동일 chronological fold에서 비교했다. 실제 5D/20D는 모두 publication gate 미통과로 `NO_EDGE`이며, 이는 성공적인 평가 결과다.
 - Follow-up: DB current/history V2 전환, 30-session trail, pending-session 안내, forecast geometry suppression, desktop/420px QA까지 전체 `3/3차`를 완료했다. 새 데이터 후보 없이는 gate나 결과를 임의 조정하지 않는다.
+
+### 2026-07-21 - 월말 이력은 유지하고 월중 경제사이클 흐름을 별도로 보여준다
+
+- User request: 6/30 월말 기준 경제사이클을 과거 데이터 훼손 없이 현재 7/21 흐름까지 보여 달라고 요청함.
+- Interpreted goal: 월말 canonical model snapshot과 현재 입수정보 기반 월중 잠정 계산을 분리하고, 사용자가 두 시점의 변화와 자료 기준을 바로 이해해야 함.
+- Analysis result: 날짜별 `intramonth_nowcast` row, exact 직전 월말 baseline, overlap 증분 수집과 fail-closed 평일 job이 월말 history 불변성과 최신성을 함께 만족한다. 월중 값은 보간하거나 monthly ribbon에 합치지 않는다.
+- Follow-up: 전체 `4/4차`를 완료했고 2026-06-30 월말 SHA-256 불변과 2026-07-21 월중 actual/UI를 검증했다. 외부 수집은 `FRED_API_KEY`가 있는 운영 환경의 첫 scheduled run에서 확인한다.

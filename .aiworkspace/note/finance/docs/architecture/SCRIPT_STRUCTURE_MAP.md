@@ -129,7 +129,7 @@
 | `app/services/backtest_evidence_read_model.py` | Streamlit-free evidence read model service. investability packet / gate policy / decision guide / saved review / decision dossier와 legacy candidate board / scorecard / investment report compatibility payload를 유지한다. current Decision Workspace projection owner는 아니다 |
 | `app/services/backtest_final_review_decision_brief.py` | Streamlit-free current Final Review projection owner. stored curve → exact-common behavior, measured-only observation / finding / trait, structured Monitoring condition, canonical route capability와 Level2 `final_decision / accepted_limit / monitoring_transfer` root-dedup handoff를 `decision_brief_v1`으로 만들고 chart bulk를 제외한 `decision_brief_snapshot_v1`을 제공한다 |
 | `app/services/backtest_final_review_policy.py` | Streamlit-free Final Review selected-route policy boundary. investability evidence packet을 selected-route preflight contract로 변환한다 |
-| `app/services/overview/*` | Overview UI-facing domain service implementation modules. `economic_cycle.py` owns compact DB snapshot/history and stable LIMITED/ERROR contract, `market_context.py` owns retained cockpit / source confidence composition, `market_movers.py` owns movers / group leadership / breadth / date windows, `events.py` owns market event calendar / macro week lane, `sentiment.py` owns CNN / AAII sentiment, `data_health.py` owns collection ops / ingestion handoff, `why_it_moved.py` owns catalyst links / compact metadata, and `ia.py` owns the closeout guide |
+| `app/services/overview/*` | Overview UI-facing domain service implementation modules. `economic_cycle.py` owns compact DB month-end snapshot/history, exact-baseline intramonth comparison, and stable LIMITED/ERROR contract, `market_context.py` owns retained cockpit / source confidence composition, `market_movers.py` owns movers / group leadership / breadth / date windows, `events.py` owns market event calendar / macro week lane, `sentiment.py` owns CNN / AAII sentiment, `data_health.py` owns collection ops / ingestion handoff, `why_it_moved.py` owns catalyst links / compact metadata, and `ia.py` owns the closeout guide |
 | `app/services/overview_market_intelligence.py` | 삭제됨. Overview service 구현과 내부 import는 `app/services/overview/*` domain modules를 직접 사용한다 |
 
 ## App / Runtime
@@ -158,7 +158,8 @@
 |---|---|
 | `app/jobs/ingestion_jobs.py` + `app/jobs/ingestion/common.py` | `Workspace > Ingestion`과 승인된 action facade에서 사용하는 수집 / refresh job wrapper. `ingestion_jobs.py` wraps OHLCV, legacy fundamentals compatibility, EDGAR statement refresh, asset profile, Practical Validation provider snapshot, SEC Form 25 delisting evidence, S&P 500 universe / intraday snapshot, S&P 500 valuation context, quote gap diagnostics, FOMC / macro / earnings calendar jobs as standard `JobResult`; 경제 사이클은 explicit vintage collection과 DB-only current materialization entry를 제공하되 scheduler/UI 진단 panel에는 등록하지 않는다. `app/jobs/ingestion/common.py` owns symbol parsing, normalized result creation, progress event helpers, execution profile resolution, and pipeline status helpers |
 | `app/jobs/overview_actions.py` | `Workspace > Overview`의 bounded refresh action facade. Overview UI 대신 market intraday snapshot, futures OHLCV, events, sentiment, quote-gap diagnostics, browser-session auto refresh, run-history append 호출을 모은다. Market Context refresh bundle은 S&P 500 movers, sentiment, event calendars만 소유하며 Top1000 / Top2000 / Futures refresh는 전용 Market Movers / Futures Macro / Ingestion 흐름에 둔다 |
-| `app/jobs/overview_automation.py` | Overview market intelligence run-once automation orchestrator. `standard`, `safe`, `events`, `browser_safe` profile의 cadence, US market-hours guard, lock, run history metadata를 처리 |
+| `app/jobs/economic_cycle_refresh.py` | 경제사이클 평일 fail-closed refresh. 17-series overlap 증분 수집이 모두 성공한 뒤 누락 직전 월말 append-only rollover와 당일 `intramonth_nowcast` materialization을 실행하며 실패 시 last-good를 유지한다 |
+| `app/jobs/overview_automation.py` | Overview market intelligence run-once automation orchestrator. `standard`, `safe`, `events`, `browser_safe` profile의 cadence, weekday / US market-hours guard, lock, run history metadata를 처리한다. 경제사이클 월중 job은 `safe/standard/broad`에만 등록하고 `browser_safe`에서는 실행하지 않는다 |
 
 ## Finance Core
 
@@ -175,7 +176,7 @@
 | `finance/display.py` | CLI / notebook 성격의 display helper |
 | `finance/visualize.py` | 백테스트 결과 시각화 helper |
 | `finance/economic_cycle_catalog.py` / `economic_cycle_features.py` / `economic_cycle_labels.py` | 17-series 역할/변환 계약, leakage-safe 월별 factor, activity/labor+eligible USREC retrospective label |
-| `finance/economic_cycle_model.py` / `economic_cycle_validation.py` / `economic_cycle_pipeline.py` / `economic_cycle_interpretation.py` | horizon별 확률 모델·transition prior·temperature calibration·rolling-origin publication gate·artifact/snapshot orchestration·시장 맥락 해석. Pipeline은 계산 가능한 LIMITED artifact를 잠정 확률로 materialize하되 validation status를 변경하지 않는다 |
+| `finance/economic_cycle_model.py` / `economic_cycle_validation.py` / `economic_cycle_pipeline.py` / `economic_cycle_interpretation.py` | horizon별 확률 모델·transition prior·temperature calibration·rolling-origin publication gate·artifact/snapshot orchestration·시장 맥락 해석. Pipeline은 계산 가능한 LIMITED artifact를 잠정 확률로 materialize하되 validation status를 변경하지 않으며, exact artifact 기반 월중 partial-origin materialization과 closed-month append-only rollover를 제공한다 |
 
 ## Finance Loaders
 
@@ -207,7 +208,7 @@
 | `finance/data/market_intelligence.py` | S&P 500 current constituent parsing / 저장, S&P 500 / Top1000 / Top2000 intraday previous-close snapshot 수집 / 저장, quote gap diagnostics / issue persistence, Fed 공식 FOMC calendar parsing / 저장, BLS / BEA macro calendar 수집 및 BLS `.ics` import, yfinance earnings estimate 수집, Nasdaq earnings cross-check, earnings lifecycle cleanup, Overview market event calendar persistence helper |
 | `finance/data/etf_provider.py` | ETF provider source map discovery, ETF operability / holdings / exposure snapshot schema sync, 기존 price/profile DB 기반 bridge/proxy 수집, iShares / SSGA / Invesco official row normalize, commodity gold exposure row 생성, holdings canonical refresh, exposure aggregation, UPSERT 저장 |
 | `finance/data/macro.py` | FRED macro context series 수집. VIX / yield curve / credit spread series를 `macro_series_observation`에 UPSERT 저장 |
-| `finance/data/economic_cycle_vintages.py` / `finance/data/economic_cycle_results.py` | 경제 사이클 raw vintage 수집·revision UPSERT와 model artifact/current·replay compact snapshot persistence |
+| `finance/data/economic_cycle_vintages.py` / `finance/data/economic_cycle_results.py` | 경제 사이클 raw vintage full/overlap 증분 수집·revision UPSERT와 model artifact/current·replay·intramonth compact snapshot persistence |
 | `finance/data/sp500_valuation.py` / `finance/loaders/sp500_valuation.py` | Shiller monthly valuation(price-only 최신 월 포함), optional S&P index earnings release vintage, Federal Reserve SEP latest/calendar-discovered history vintage 수집·UPSERT와 DB read. loader는 5년 display+60개월 rolling warmup용 120개월 rows, 최신 actual As-Reported 네 분기 TTM 또는 Shiller interpolated TTM EPS, 1/3/5년 reconstruction용 전체 SEP vintage를 제공한다 |
 | `finance/data/fundamentals.py` | Fundamentals 수집 |
 | `finance/data/financial_statements.py` | Financial statement 수집 |

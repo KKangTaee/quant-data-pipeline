@@ -6904,3 +6904,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 실제 raw 2026-07-20은 완료 전으로 제외하고 current를 2026-07-17 V2로 전환했다. 5D/20D는 모두 `NO_EDGE`라 숫자·ellipse·vector를 공개하지 않는다.
 - React는 고정 축의 최근 30개 실제 일별 trail, 날짜가 있는 20D/5D/현재 anchor, pending-session 안내를 표시하며 desktop/420px Browser QA를 통과했다.
 - 전체 roadmap `3/3차`, implementation `9/9 task` 완료. 후속은 roll-aware source나 PIT macro coverage를 새 version으로 검토할 때만 시작한다.
+
+## 2026-07-21 - Overview 경제사이클 월중 nowcast 완료
+
+- 기존 월말 122행을 보존한 채 날짜별 `intramonth_nowcast`, exact 월말 baseline 비교, source provenance를 별도 저장·조회하도록 구현했다.
+- 평일 overlap 증분 수집, 누락 직전 월말 append-only rollover, fail-closed last-good 자동화와 Overview 월말→월중 흐름을 연결했다.
+- 2026-07-21 actual row, 월말 SHA-256 불변, idempotence, desktop/420px Browser QA를 확인해 전체 roadmap `4/4차`를 완료했다.
+- 운영 후속은 credential이 있는 환경의 첫 external incremental scheduled run 확인이며 상세는 `tasks/active/overview-economic-cycle-intramonth-nowcast-v1-20260721/`를 본다.
