@@ -22,6 +22,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_sp500_universe,
     run_collect_symbol_directory_snapshots,
 )
+from app.jobs.economic_cycle_refresh import run_economic_cycle_intramonth_refresh
 from app.jobs.run_history import append_run_history, load_run_history
 from app.workspace_paths import RUN_ARTIFACT_DIR
 
@@ -41,6 +42,7 @@ class ScheduledJobSpec:
     market_hours_only: bool
     runner: Callable[[datetime], JobResult]
     description: str
+    weekdays_only: bool = False
 
 
 def _now_str(value: datetime | None = None) -> str:
@@ -95,6 +97,10 @@ def _run_nasdaq_symbol_directory(_: datetime) -> JobResult:
 
 def _run_market_sentiment(_: datetime) -> JobResult:
     return run_collect_market_sentiment()
+
+
+def _run_economic_cycle_intramonth(value: datetime) -> JobResult:
+    return run_economic_cycle_intramonth_refresh(as_of_date=value.date())
 
 
 def _run_intraday_snapshot(
@@ -169,6 +175,20 @@ OVERVIEW_AUTOMATION_JOB_SPECS: tuple[ScheduledJobSpec, ...] = (
         market_hours_only=False,
         runner=_run_nasdaq_symbol_directory,
         description="Refresh Nasdaq-listed current Symbol Directory snapshot for Overview coverage.",
+    ),
+    ScheduledJobSpec(
+        job_id="economic_cycle_intramonth",
+        job_name="refresh_economic_cycle_intramonth",
+        label="Economic Cycle Intramonth Nowcast",
+        cadence_minutes=24 * 60,
+        profiles=("safe", "standard", "broad"),
+        market_hours_only=False,
+        runner=_run_economic_cycle_intramonth,
+        description=(
+            "Incrementally refresh official vintages and append the current-date "
+            "economic-cycle nowcast without changing prior month-end rows."
+        ),
+        weekdays_only=True,
     ),
     ScheduledJobSpec(
         job_id="sp500_intraday",
@@ -333,9 +353,14 @@ def build_overview_automation_plan(
         )
         due_by_cadence = latest_finished is None or now_local >= (next_due_at or now_local)
         market_blocked = spec.market_hours_only and not market_is_open and not allow_outside_market_hours
-        should_run = bool(force or (due_by_cadence and not market_blocked))
+        weekday_blocked = spec.weekdays_only and now_local.weekday() >= 5
+        should_run = bool(
+            force or (due_by_cadence and not market_blocked and not weekday_blocked)
+        )
         if force:
             reason = "forced"
+        elif weekday_blocked:
+            reason = "outside weekday schedule"
         elif market_blocked:
             reason = "outside US market hours"
         elif due_by_cadence:
@@ -350,6 +375,7 @@ def build_overview_automation_plan(
                 "label": spec.label,
                 "cadence_minutes": spec.cadence_minutes,
                 "market_hours_only": spec.market_hours_only,
+                "weekdays_only": spec.weekdays_only,
                 "last_finished_at": (latest or {}).get("finished_at"),
                 "next_due_at": _now_str(next_due_at) if next_due_at else None,
                 "should_run": should_run,
@@ -434,6 +460,7 @@ def _with_automation_metadata(
             "automation_job_id": spec.job_id,
             "cadence_minutes": spec.cadence_minutes,
             "market_hours_only": spec.market_hours_only,
+            "weekdays_only": spec.weekdays_only,
         }
     )
     metadata.update(

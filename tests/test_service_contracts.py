@@ -11882,6 +11882,57 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(sentiment["cadence_minutes"], 24 * 60)
         self.assertFalse(sentiment["market_hours_only"])
 
+    def test_economic_cycle_intramonth_runs_weekdays_outside_browser_profile(self) -> None:
+        from app.jobs.overview_automation import build_overview_automation_plan
+
+        for profile in ("safe", "standard", "broad"):
+            weekday_plan = build_overview_automation_plan(
+                profile=profile,
+                history_rows=[],
+                now=datetime(2026, 7, 21, 10, 0),
+            )
+            row = next(
+                item
+                for item in weekday_plan
+                if item["job_id"] == "economic_cycle_intramonth"
+            )
+            self.assertTrue(row["should_run"])
+            self.assertTrue(row["weekdays_only"])
+            self.assertEqual(row["cadence_minutes"], 24 * 60)
+
+        browser_plan = build_overview_automation_plan(
+            profile="browser_safe",
+            history_rows=[],
+            now=datetime(2026, 7, 21, 10, 0),
+        )
+        self.assertNotIn(
+            "economic_cycle_intramonth",
+            [row["job_id"] for row in browser_plan],
+        )
+
+    def test_economic_cycle_intramonth_weekend_guard_allows_force(self) -> None:
+        from app.jobs.overview_automation import build_overview_automation_plan
+
+        weekend = datetime(2026, 7, 25, 10, 0)
+        plan = build_overview_automation_plan(
+            profile="safe",
+            job_ids=["economic_cycle_intramonth"],
+            history_rows=[],
+            now=weekend,
+        )
+        self.assertFalse(plan[0]["should_run"])
+        self.assertEqual(plan[0]["reason"], "outside weekday schedule")
+
+        forced = build_overview_automation_plan(
+            profile="safe",
+            job_ids=["economic_cycle_intramonth"],
+            history_rows=[],
+            now=weekend,
+            force=True,
+        )
+        self.assertTrue(forced[0]["should_run"])
+        self.assertEqual(forced[0]["reason"], "forced")
+
     def test_intraday_plan_skips_outside_market_hours_unless_allowed(self) -> None:
         from app.jobs.overview_automation import ScheduledJobSpec, build_overview_automation_plan
 
