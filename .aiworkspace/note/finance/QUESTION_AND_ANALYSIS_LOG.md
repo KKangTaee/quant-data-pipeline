@@ -14,8 +14,8 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 - User request: Today의 단순 `누적 기여` chip을 종목 자체 성과와 포트폴리오에 미친 금액 효과를 구분하는 compact card로 개선하도록 요청함.
 - Interpreted goal: Today의 빠른 scan과 상위 2·하위 2 범위는 유지하면서 각 종목의 현금흐름 조정 누적 수익률과 signed contribution을 오해 없이 읽게 한다.
-- Analysis result: item lane의 마지막 유효 `flow_adjusted_index - 1`이 종목 성과의 canonical source이며, `contribution_value`와 return/tone을 독립 계약으로 투영해야 한다. 단순 current/initial 비율은 매수·매도 현금흐름을 성과로 오인한다.
-- Follow-up: 전체 `4/4차` 구현·fresh regression·1280/760/420 actual QA를 완료했다. 전체 종목 목록, Portfolio Monitoring UI, DB/ingestion/provider/write 경계는 변경하지 않았다.
+- Analysis result: 사용자가 exact portfolio-basis-date 방식을 선택했다. Today item return은 공통 `basis_date`의 정확한 `flow_adjusted_index - 1`만 사용하고 그 날짜가 null/missing이면 `None`이다. selected-position은 자체 `latest_usable_date` exact row를 유지하며 단순 current/initial 비율과 이전·이후 관측 fallback은 금지한다.
+- Follow-up: 최종 리뷰 보정과 signed contribution `+$…` / `-$…`를 포함해 전체 `4/4차` fresh regression·1280/760/420 actual QA를 다시 완료했다. 전체 종목 목록, Portfolio Monitoring UI, DB/ingestion/provider/write 경계는 변경하지 않았다.
 
 ### 2026-07-22 - 최초 진입은 Today가 소유하고 상세 화면은 목적별로 보존한다
 

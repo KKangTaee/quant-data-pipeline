@@ -13,8 +13,8 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-07-22 - Today 종목별 성과 기여 카드 완료
 
 - 대표 포트폴리오의 기여 상위 2·하위 2를 `종목 누적 수익률`과 `포트폴리오 누적 기여`가 분리된 카드로 바꿨다.
-- 종목 수익률은 현금흐름 조정 item lane index를 사용하고 Today/React/fallback 계약만 additive하게 확장했다.
-- fresh Python 64(+2 subtests), React 5, typecheck/build와 root `/` 1280·760·420 actual QA를 통과했으며 overflow/clipping/console error는 0건이다.
+- 종목 수익률은 공통 포트폴리오 `basis_date`의 exact 현금흐름 조정 item lane index만 사용하고, selected-position은 자체 `latest_usable_date` exact-row 의미를 보존했다.
+- 최종 리뷰 보정 후 fresh Python 66(+2 subtests), React 6, typecheck/build와 root `/` 1280·760·420 actual QA를 통과했으며 signed contribution, overflow/clipping/console error 0을 확인했다.
 - 전체 roadmap `4/4차` 완료. 상세: `tasks/active/today-contributor-performance-cards-v1-20260722/STATUS.md`.
 
 ### 2026-07-22 - Today 기본 진입과 목적형 navigation 완료

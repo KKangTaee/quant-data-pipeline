@@ -4,11 +4,14 @@
 
 - Today는 활성 종목 전체가 아니라 기여 상위 2개·하위 2개를 유지한다.
 - `종목 누적 수익률`과 `포트폴리오 누적 기여`를 한 카드 안에서 다른 label로 표시한다.
-- 종목 수익률은 lane의 flow-adjusted index를 사용하며 단순 평가액/최초 투자금 비율을 사용하지 않는다.
+- Today 종목 수익률은 포트폴리오 공통 `basis_date`와 정확히 같은 lane row의 flow-adjusted index만 사용하며 단순 평가액/최초 투자금 비율을 사용하지 않는다.
+- 기준일 이후 관측, 기준일보다 오래된 non-null 관측, null/missing 기준일은 return으로 재사용하지 않고 `None`으로 남긴다.
+- selected-position은 별도 계약으로 `lane.latest_usable_date`의 exact row만 평가한다. valid latest는 `flow_adjusted_index - 1`, trailing-null/missing latest는 `None`이다.
 - 기존 Portfolio Monitoring 사용자 화면과 계산식은 변경하지 않는다.
 - canonical contributor row는 `symbol`, `contribution_value`, `total_return`, `tone`이다. `value`는 Python compatibility alias이며 React의 표시·정렬 source가 아니다.
 - `tone`은 contribution 부호, return tone은 `total_return` 부호를 각각 사용한다. 두 부호가 같다고 가정하지 않는다.
 - `flow_adjusted_index`는 추가매수·일부매도 같은 외부 현금흐름을 단위가치에서 제거하므로 종목 성과를 나타낼 수 있다. `current_value / initial_capital - 1`은 현금흐름을 성과로 오인하므로 fallback으로 사용하지 않는다.
+- contribution 금액은 React와 fallback 모두 양수 `+$…`, 음수 `-$…`로 표시하며 포트폴리오 평가액의 일반 currency formatter는 바꾸지 않는다.
 
 ## Current Actual Example
 
@@ -17,7 +20,7 @@
 - TEM contribution `-$401`
 - SOXX contribution `-$282`
 
-위 금액은 수익률이 아니라 contribution이다. 실제 종목 return은 각 lane의 마지막 유효 flow-adjusted index에서 투영되며 2026-07-22 Browser QA에서 각각 AMD `+357.97%`, RKLB `+166.56%`, TEM `-21.46%`, SOXX `-7.84%`로 분리 표시됐다.
+위 금액은 수익률이 아니라 contribution이다. 실제 종목 return은 공통 기준일 `2026-07-21`의 각 lane exact flow-adjusted index에서 투영되며 2026-07-22 Browser QA에서 각각 AMD `+357.97%`, RKLB `+166.56%`, TEM `-21.46%`, SOXX `-7.84%`로 분리 표시됐다.
 
 ## Final Boundary
 

@@ -4,7 +4,7 @@
 
 **Goal:** Today 대표 포트폴리오의 기여 상위 2개·하위 2개 종목을 현금흐름 조정 누적 수익률과 포트폴리오 누적 기여금이 분리된 compact card로 표시한다.
 
-**Architecture:** Portfolio Monitoring read model이 각 item lane의 마지막 유효 `flow_adjusted_index - 1`을 additive `total_return`으로 제공하고, Today service가 이를 contribution과 결합해 JSON-safe contributor row로 투영한다. React primary UI와 Python read-only fallback은 같은 정보 계층과 responsive 규칙을 사용하되 기존 Portfolio Monitoring 화면, DB, ingestion, 그룹 곡선 계산은 변경하지 않는다.
+**Architecture:** Portfolio Monitoring read model이 exact `as_of_date`의 `flow_adjusted_index - 1`만 additive `total_return`으로 제공한다. Group item row는 공통 `basis_date`, selected-position은 자체 `latest_usable_date`를 전달하고 null/missing exact row는 `None`으로 남긴다. Today service가 이를 contribution과 결합해 JSON-safe contributor row로 투영하며 React primary UI와 Python read-only fallback은 같은 정보 계층, signed contribution과 responsive 규칙을 사용한다. 기존 Portfolio Monitoring 화면, DB, ingestion, 그룹 곡선 계산은 변경하지 않는다.
 
 **Tech Stack:** Python 3, pandas, `Decimal`, Streamlit, React 18, TypeScript, CSS, unittest/pytest, Vitest, Vite
 
@@ -12,10 +12,11 @@
 
 - contributor selection은 양수 기여 상위 2개와 음수 기여 하위 2개, 최대 4개를 유지한다.
 - 섹션 제목은 `종목별 성과 기여`, 보조 문구는 `기여 상위 2 · 하위 2`로 한다.
-- 종목 수익률은 마지막 유효 `flow_adjusted_index - 1`이며 `(current_value / initial_capital) - 1`로 fallback하지 않는다.
+- 종목 수익률은 정확한 consumer 기준일의 `flow_adjusted_index - 1`이며 이전·이후 값 또는 `(current_value / initial_capital) - 1`로 fallback하지 않는다.
 - contributor row는 `symbol`, `contribution_value`, `total_return`, `tone`을 제공하고 기존 `value`는 한 차례 호환 alias로 유지한다.
 - sorting과 `tone`은 `contribution_value` 기준이며 수익률 색상은 `total_return` 부호로 독립 계산한다.
 - 수익률이 없으면 `수익률 자료 부족`을 표시하되 기여금은 계속 표시한다.
+- contribution은 양수 `+$…`, 음수 `-$…`로 표시하고 일반 포트폴리오 평가액 formatter는 유지한다.
 - footer copy는 `종목 수익률은 입출금 영향을 조정한 누적 성과 · 기준 YYYY-MM-DD`로 한다.
 - card surface는 neutral이며 좌측 상태선과 강한 상태 배경을 사용하지 않는다.
 - desktop/760px에서는 contributor 내부 2열, 460px 이하에서는 1열로 표시한다.
@@ -28,12 +29,14 @@
 
 ## File Map
 
-- `app/services/portfolio_monitoring/read_model.py`: item lane의 현금흐름 조정 누적 수익률을 계산해 `GroupValueResult.item_rows`에 제공한다.
-- `tests/test_portfolio_monitoring_read_model.py`: flow-adjusted return과 missing index 계약을 고정한다.
+- `app/services/portfolio_monitoring/read_model.py`: exact as-of item lane의 현금흐름 조정 누적 수익률을 계산해 `GroupValueResult.item_rows`와 selected-position에 제공한다.
+- `tests/test_portfolio_monitoring_read_model.py`: group basis-date future/trailing-null과 selected-position exact-latest 계약을 고정한다.
 - `app/services/today.py`: item return과 contribution을 결합하고 상위·하위 selection을 수행한다.
 - `tests/test_today_home.py`: Today contributor JSON contract와 Python fallback markup을 검증한다.
 - `app/web/streamlit_components/today_workbench/src/types.ts`: React contributor row의 명시적 TypeScript 계약을 정의한다.
 - `app/web/streamlit_components/today_workbench/src/TodayWorkbench.tsx`: contributor card 구조, label, 독립 tone, missing return state를 렌더링한다.
+- `app/web/streamlit_components/today_workbench/src/presentation.ts`: contribution 전용 `+$…` / `-$…` formatter를 소유한다.
+- `app/web/streamlit_components/today_workbench/src/presentation.test.ts`: signed contribution formatter를 단위 검증한다.
 - `app/web/streamlit_components/today_workbench/src/style.css`: neutral card grid와 760/460px responsive rules를 정의한다.
 - `app/web/today_page.py`: React unavailable 시 같은 두 단위를 보여주는 escaped read-only fallback을 렌더링한다.
 - `.aiworkspace/note/finance/tasks/active/today-contributor-performance-cards-v1-20260722/*.md`: 실행 결과, 검증, 위험과 완료 상태를 기록한다.
@@ -49,14 +52,14 @@
 
 **Interfaces:**
 - Consumes: `ItemValueLane.curve: pandas.DataFrame`, `_normalized_lane_curve(lane)`, `flow_adjusted_index`
-- Produces: `_lane_total_return(lane: ItemValueLane | None) -> Decimal | None`; item row field `total_return: Decimal | None`
+- Produces: `_lane_total_return(lane: ItemValueLane | None, as_of_date: date) -> Decimal | None`; item row field `total_return: Decimal | None`
 
-- [ ] **Step 1: Write failing tests for a flow-adjusted return and a missing index**
+- [ ] **Step 1: Write failing tests for exact basis-date and selected-position latest returns**
 
 Add these tests to `PortfolioMonitoringReadModelTests`:
 
 ```python
-def test_item_rows_expose_last_valid_flow_adjusted_total_return(self) -> None:
+def test_item_rows_require_valid_flow_adjusted_index_on_group_basis_date(self) -> None:
     read_model = _load_read_model()
     item = _item(
         "item-amd",
@@ -73,10 +76,7 @@ def test_item_rows_expose_last_valid_flow_adjusted_total_return(self) -> None:
         [item], {item.monitoring_item_id: lane}
     )
 
-    self.assertEqual(
-        result.item_rows[0]["total_return"],
-        Decimal("-0.0008"),
-    )
+    self.assertIsNone(result.item_rows[0]["total_return"])
 
 def test_item_rows_do_not_fabricate_total_return_without_flow_adjusted_index(self) -> None:
     read_model = _load_read_model()
@@ -98,55 +98,64 @@ def test_item_rows_do_not_fabricate_total_return_without_flow_adjusted_index(sel
     self.assertIsNone(result.item_rows[0]["total_return"])
 ```
 
-The first test intentionally blanks the final index to prove that the implementation chooses the last valid index rather than only the last row. The expected value is `0.9992 - 1`.
+The first test intentionally blanks the exact group basis-date index and expects `None`. Add `test_item_rows_do_not_use_observation_after_group_basis_date` to prove a future lane observation is excluded, a valid-latest selected-position assertion expecting `Decimal("-0.00154")`, and `test_selected_position_requires_valid_index_on_its_latest_usable_date` expecting `None` for a trailing-null latest row.
 
-- [ ] **Step 2: Run the two focused tests and confirm RED**
+- [ ] **Step 2: Run the focused exact-date tests and confirm RED**
 
 Run:
 
 ```bash
 .venv/bin/python -m pytest \
-  tests/test_portfolio_monitoring_read_model.py::PortfolioMonitoringReadModelTests::test_item_rows_expose_last_valid_flow_adjusted_total_return \
+  tests/test_portfolio_monitoring_read_model.py::PortfolioMonitoringReadModelTests::test_item_rows_require_valid_flow_adjusted_index_on_group_basis_date \
+  tests/test_portfolio_monitoring_read_model.py::PortfolioMonitoringReadModelTests::test_item_rows_do_not_use_observation_after_group_basis_date \
+  tests/test_portfolio_monitoring_read_model.py::PortfolioMonitoringReadModelTests::test_selected_position_requires_valid_index_on_its_latest_usable_date \
   tests/test_portfolio_monitoring_read_model.py::PortfolioMonitoringReadModelTests::test_item_rows_do_not_fabricate_total_return_without_flow_adjusted_index \
   -q
 ```
 
-Expected: both tests fail because `item_rows[0]` has no `total_return` field.
+Expected for the final-review correction: exact-null/future/trailing-null assertions fail because the prior helper reuses an older or newer non-null value.
 
 - [ ] **Step 3: Add the minimal lane return helper**
 
 Add next to `_normalized_lane_curve` in `app/services/portfolio_monitoring/read_model.py`:
 
 ```python
-def _lane_total_return(lane: ItemValueLane | None) -> Decimal | None:
-    """Return the last valid cash-flow-adjusted item return."""
+def _lane_total_return(
+    lane: ItemValueLane | None,
+    as_of_date: date,
+) -> Decimal | None:
+    """Return the cash-flow-adjusted item return observed on one exact date."""
 
     if lane is None:
         return None
     frame = _normalized_lane_curve(lane)
     if frame.empty or "flow_adjusted_index" not in frame:
         return None
-    values = frame["flow_adjusted_index"].dropna()
-    if values.empty:
+    exact = frame.loc[frame["date"] == pd.Timestamp(as_of_date)]
+    if exact.empty:
         return None
-    return _money(values.iloc[-1]) - Decimal("1")
+    value = exact.iloc[-1]["flow_adjusted_index"]
+    if pd.isna(value):
+        return None
+    return _money(value) - Decimal("1")
 ```
 
 Add the field inside the item row comprehension:
 
 ```python
 "total_return": _lane_total_return(
-    valid_lanes.get(item.monitoring_item_id)
+    valid_lanes.get(item.monitoring_item_id),
+    basis_date,
 ),
 ```
 
 Replace `_project_selected_position`'s duplicated last-row return block with:
 
 ```python
-total_return = _lane_total_return(lane)
+total_return = _lane_total_return(lane, lane.latest_usable_date)
 ```
 
-This replacement preserves the selected-position contract while making both consumers use the same last-valid rule.
+This preserves the selected-position latest-date contract while making both consumers use one exact-date helper with different owning dates.
 
 - [ ] **Step 4: Run focused and read-model regressions**
 
@@ -326,11 +335,11 @@ git commit -m "기능: Today 종목 성과 기여 계약 확장"
 - Modify: `app/web/streamlit_components/today_workbench/src/style.css`
 - Modify: `app/web/today_page.py`
 - Test: `tests/test_today_home.py`
-- Generated by build: `app/web/streamlit_components/today_workbench/build/**`
+- Generated by build: `app/web/streamlit_components/today_workbench/component_static/**`
 
 **Interfaces:**
 - Consumes: Task 2 contributor row and `portfolio.basis_date`
-- Produces: two-column neutral contributor card grid, independent return/contribution tones, missing-return copy, responsive fallback parity
+- Produces: two-column neutral contributor card grid, independent return/contribution tones, `+$…` / `-$…`, missing-return copy, responsive fallback parity
 
 - [ ] **Step 1: Update the fallback fixture to the explicit contract**
 
@@ -358,7 +367,7 @@ self.assertIn("기여 상위 2 · 하위 2", html)
 self.assertIn("종목 누적 수익률", html)
 self.assertIn("+42.00%", html)
 self.assertIn("포트폴리오 누적 기여", html)
-self.assertIn("$240", html)
+self.assertIn("+$240", html)
 self.assertIn("입출금 영향을 조정한 누적 성과", html)
 ```
 
@@ -382,7 +391,14 @@ def test_today_fallback_labels_missing_item_return_without_hiding_contribution(s
                     "value": 11915.0,
                     "total_return": None,
                     "tone": "positive",
-                }
+                },
+                {
+                    "symbol": "TEM",
+                    "contribution_value": -401.0,
+                    "value": -401.0,
+                    "total_return": None,
+                    "tone": "negative",
+                },
             ],
             "review_items": [],
         },
@@ -391,7 +407,8 @@ def test_today_fallback_labels_missing_item_return_without_hiding_contribution(s
     html = module.build_today_html(model)
 
     self.assertIn("수익률 자료 부족", html)
-    self.assertIn("$11,915", html)
+    self.assertIn("+$11,915", html)
+    self.assertIn("-$401", html)
 ```
 
 Extend the source contract test with:
@@ -410,6 +427,7 @@ types_source = Path(
 self.assertIn("종목별 성과 기여", react_source)
 self.assertIn("기여 상위 2 · 하위 2", react_source)
 self.assertIn("수익률 자료 부족", react_source)
+self.assertIn("signedMoneyText(row.contribution_value)", react_source)
 self.assertIn("contribution_value", types_source)
 self.assertIn("total_return", types_source)
 self.assertIn(".today-contributor-grid", css_source)
@@ -422,9 +440,9 @@ Run:
 
 ```bash
 .venv/bin/python -m pytest \
-  tests/test_today_home.py::TodayHomeReadModelTests::test_today_html_preserves_b_layout_order_and_escapes_market_copy \
-  tests/test_today_home.py::TodayHomeReadModelTests::test_today_fallback_labels_missing_item_return_without_hiding_contribution \
-  tests/test_today_home.py::TodayHomeReadModelTests::test_today_page_reuses_overview_visual_tokens_and_read_only_loaders \
+  tests/test_today_home.py::TodayHomePageContractTests::test_today_html_preserves_b_layout_order_and_escapes_market_copy \
+  tests/test_today_home.py::TodayHomePageContractTests::test_today_fallback_labels_missing_item_return_without_hiding_contribution \
+  tests/test_today_home.py::TodayHomePageContractTests::test_today_page_reuses_overview_visual_tokens_and_read_only_loaders \
   -q
 ```
 
@@ -444,9 +462,27 @@ contributors: Array<{
 }>;
 ```
 
+Add the formatter unit assertion in `src/presentation.test.ts`, then export the implementation from `src/presentation.ts`:
+
+```typescript
+expect(signedMoneyText?.(11915)).toBe("+$11,915");
+expect(signedMoneyText?.(-401)).toBe("-$401");
+
+export function signedMoneyText(value: number | null): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  const magnitude = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(Math.abs(value));
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+  return `${sign}${magnitude}`;
+}
+```
+
 - [ ] **Step 5: Render React contributor cards with independent tones**
 
-In `TodayWorkbench.tsx`, derive the return tone inside the map and replace the chip section with:
+In `TodayWorkbench.tsx`, import `signedMoneyText`, derive the return tone inside the map and replace the chip section with:
 
 ```tsx
 <section className="today-contributor-section">
@@ -478,7 +514,7 @@ In `TodayWorkbench.tsx`, derive the return tone inside the map and replace the c
             <footer>
               <span>포트폴리오 누적 기여</span>
               <strong className={contributionTone}>
-                {moneyText(row.contribution_value)}
+                {signedMoneyText(row.contribution_value)}
               </strong>
             </footer>
           </article>
@@ -580,6 +616,14 @@ Do not collapse the inner contributor grid at 760px; only the outer `.today-port
 In `app/web/today_page.py`, replace the contributor chip builder with card markup using `contribution_value` first and the temporary `value` alias only as a fallback:
 
 ```python
+def _signed_money(value: Any) -> str:
+    try:
+        numeric = float(value)
+        sign = "+" if numeric > 0 else "-" if numeric < 0 else ""
+        return f"{sign}${abs(numeric):,.0f}"
+    except (TypeError, ValueError):
+        return "—"
+
 contributor_cards: list[str] = []
 for row in contributors:
     contribution = row.get("contribution_value", row.get("value"))
@@ -597,7 +641,7 @@ for row in contributors:
         f'{return_html}'
         '<div class="today-contributor-footer">'
         '<span>포트폴리오 누적 기여</span>'
-        f'<strong class="{_value_tone(contribution)}">{escape(_money(contribution))}</strong>'
+        f'<strong class="{_value_tone(contribution)}">{escape(_signed_money(contribution))}</strong>'
         '</div>'
         '</article>'
     )
