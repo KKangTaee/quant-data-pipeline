@@ -11,3 +11,4 @@
 
 - 아직 production code를 변경하지 않았다.
 - implementation verification은 spec 승인과 TDD plan 이후 기록한다.
+- 2026-07-22: written spec 사용자 승인 후 `IMPLEMENTATION_PLAN.md`에 service RED/GREEN, React pure presentation, component build, Streamlit event integration, actual Browser QA 순서의 실행 계획을 작성했다.

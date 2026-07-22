@@ -1,7 +1,7 @@
 # Today Home React Workbench V2 Status
 
-Status: Design Review
-Roadmap: 1/4 in progress
+Status: Implementation Plan Ready
+Roadmap: 1/4 complete
 Last Updated: 2026-07-22
 
 ## Completed
@@ -16,9 +16,10 @@ Last Updated: 2026-07-22
 
 ## Current
 
-- Written spec 사용자 검토 대기.
+- Written spec 승인 완료.
+- TDD implementation plan 작성 완료, execution 방식 선택 대기.
 
 ## Next
 
-- spec 승인 후 `writing-plans`로 상세 구현 계획을 작성한다.
-- 이후 TDD로 2/4차 React component와 payload contract 구현을 시작한다.
+- execution 방식 확정 후 Task 1 Today V2 evidence / portfolio contract RED test부터 시작한다.
+- 이후 2/4차 React component와 payload contract를 구현한다.
