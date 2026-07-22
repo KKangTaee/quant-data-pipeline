@@ -26,8 +26,10 @@ Last Updated: 2026-07-23
 - Task 5 DB-backed live valuation을 구현했다.
 - direct stock·ETF는 보유 수량과 EOD retained cash를 보존해 live value를 계산하고, selected strategy는 EOD value를 유지한다.
 - fresh/partial/all-failed coverage, EOD close basis-date 조회, Modified Dietz 장중 수익률을 41개 회귀로 확인했다.
+- Task 6 `today_home_v4`의 allowlisted `portfolio.live` 계약을 추가했다.
+- Today heartbeat가 DB snapshot과 workspace EOD close만 읽어 live overlay를 연결하며 historical curve/metrics는 바꾸지 않는다.
 
 ## Next
 
-- 3/4차 Task 6 `portfolio.live` 계약과 Task 7 React overlay를 연결한다.
+- 3/4차 Task 7 React metrics와 dashed live point를 연결한다.
 - 기존 AAII baseline 오류 2개는 사용자 승인에 따라 이번 Today scope와 분리한다.

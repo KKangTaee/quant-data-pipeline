@@ -137,7 +137,7 @@ class TodayHomeReadModelTests(unittest.TestCase):
             generated_at=datetime(2026, 7, 22, 9, 0),
         )
 
-        self.assertEqual(model["schema_version"], "today_home_v3")
+        self.assertEqual(model["schema_version"], "today_home_v4")
         self.assertEqual(model["header"]["source_ready_count"], 5)
         self.assertEqual(
             model["header"]["as_of_date"],
@@ -356,7 +356,7 @@ class TodayHomeReadModelTests(unittest.TestCase):
         model = self._builder()(**inputs)
 
         portfolio = model["portfolio"]
-        self.assertEqual(model["schema_version"], "today_home_v3")
+        self.assertEqual(model["schema_version"], "today_home_v4")
         self.assertAlmostEqual(
             portfolio["metrics"]["latest_observation_return"],
             0.06,
@@ -408,7 +408,7 @@ class TodayHomeReadModelTests(unittest.TestCase):
             generated_at=datetime(2026, 7, 22, 13, 0, tzinfo=timezone.utc),
         )
 
-        self.assertEqual(model["schema_version"], "today_home_v3")
+        self.assertEqual(model["schema_version"], "today_home_v4")
         self.assertEqual(model["header"]["source_count"], 5)
         self.assertEqual(model["header"]["source_ready_count"], 5)
         self.assertEqual(
@@ -435,6 +435,58 @@ class TodayHomeReadModelTests(unittest.TestCase):
             "공식 조기폐장 일정 자료 부족",
             model["market_session"]["warnings"],
         )
+
+    def test_today_read_model_keeps_eod_curve_and_adds_live_overlay(self) -> None:
+        inputs = self._complete_inputs()
+        expected_curve = list(inputs["portfolio"]["active_group"]["curve"])
+        overlay = {
+            "status": "LIVE_READY",
+            "as_of_utc": "2026-07-22T14:00:00+00:00",
+            "trade_date": "2026-07-22",
+            "coverage": {"fresh": 2, "expected": 2},
+            "metrics": {
+                "current_value": 1250.0,
+                "latest_observation_return": 0.04,
+                "return_from_date": "2026-07-21",
+                "return_to_date": "2026-07-22",
+                "total_return": 0.248,
+            },
+            "contributors": [],
+            "curve_point": {
+                "date": "2026-07-22T14:00:00+00:00",
+                "timestamp_utc": "2026-07-22T14:00:00+00:00",
+                "kind": "intraday",
+                "unit_value": 1.248,
+                "total_value": 1250.0,
+                "cumulative_return": 0.248,
+            },
+            "fallback_symbols": [],
+            "provider_diagnostics": {"must_not": "leak"},
+        }
+
+        model = self._builder()(**inputs, portfolio_live=overlay)
+
+        self.assertEqual(model["schema_version"], "today_home_v4")
+        self.assertFalse(model["portfolio"]["curve_metadata"]["intraday"])
+        self.assertEqual(
+            [row["date"] for row in model["portfolio"]["curve"]],
+            [row["date"] for row in expected_curve],
+        )
+        self.assertEqual(model["portfolio"]["live"]["status"], "LIVE_READY")
+        self.assertEqual(
+            model["portfolio"]["live"]["curve_point"]["kind"],
+            "intraday",
+        )
+        self.assertNotIn("provider_diagnostics", model["portfolio"]["live"])
+
+    def test_today_read_model_uses_explicit_inactive_live_contract(self) -> None:
+        model = self._builder()(**self._complete_inputs(), portfolio_live=None)
+
+        self.assertEqual(model["schema_version"], "today_home_v4")
+        self.assertEqual(model["portfolio"]["live"]["status"], "INACTIVE")
+        self.assertEqual(model["portfolio"]["live"]["label"], "확정 종가")
+        self.assertIsNone(model["portfolio"]["live"]["metrics"])
+        self.assertIsNone(model["portfolio"]["live"]["curve_point"])
 
 
 class TodayMarketSessionTests(unittest.TestCase):

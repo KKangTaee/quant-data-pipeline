@@ -14,9 +14,15 @@ from app.services.futures_macro_snapshot import (
 from app.services.overview.events import build_market_events_snapshot
 from app.services.portfolio_monitoring.intraday_refresh import (
     build_intraday_refresh_scope,
+    build_live_portfolio_overlay,
+    load_latest_portfolio_quotes,
+    load_workspace_eod_closes,
     resolve_regular_session_state,
 )
-from app.services.today import build_today_read_model
+from app.services.today import (
+    build_today_read_model,
+    project_today_portfolio_live,
+)
 from app.web.final_selected_portfolio_dashboard import (
     TodayPortfolioRuntimeContext,
     load_default_portfolio_monitoring_context_for_today,
@@ -118,6 +124,7 @@ def load_today_read_model(
     *,
     generated_at: datetime | None = None,
     portfolio_workspace: Any | None = None,
+    portfolio_live: Any | None = None,
 ) -> dict[str, object]:
     """Load existing persisted sources and compose one read-only Today model."""
 
@@ -149,6 +156,7 @@ def load_today_read_model(
             lambda: load_today_market_calendar(generated_at=timestamp),
             label="미국 증시 일정",
         ),
+        portfolio_live=portfolio_live,
         generated_at=timestamp,
     )
 
@@ -868,6 +876,22 @@ def _render_today_dynamic_body(
                 session=session,
                 now=timestamp,
             )
+            if session.collection_allowed:
+                quotes = load_latest_portfolio_quotes(scope, now=timestamp)
+                eod_closes = load_workspace_eod_closes(
+                    workspace=context.workspace,
+                    scope=scope,
+                )
+                overlay = build_live_portfolio_overlay(
+                    workspace=context.workspace,
+                    scope=scope,
+                    quotes=quotes,
+                    eod_closes=eod_closes,
+                    now=timestamp,
+                )
+                model["portfolio"]["live"] = project_today_portfolio_live(
+                    overlay
+                )
         except Exception:
             pass  # EOD Today remains available when live refresh is unavailable.
 

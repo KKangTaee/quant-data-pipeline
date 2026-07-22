@@ -706,7 +706,7 @@ git commit -m "기능: Today 장중 포트폴리오 평가 계산 추가"
 - Produces: `build_today_read_model(*, economic_cycle: Any, sp500: Any, futures_macro: Any, sentiment: Any, events: Any, portfolio: Any, market_calendar: Any = None, portfolio_live: Mapping[str, Any] | None = None, generated_at: datetime | None = None) -> dict[str, object]` and `portfolio.live` in `today_home_v4`.
 - Historical `portfolio.metrics`, `curve`, `curve_metadata`, and `contributors` remain unchanged EOD values.
 
-- [ ] **Step 1: Write failing schema separation tests**
+- [x] **Step 1: Write failing schema separation tests**
 
 ```python
 def _build_model(portfolio_live):
@@ -738,7 +738,7 @@ def test_today_read_model_uses_explicit_inactive_live_contract(self):
 
 Add partial and `EOD_WAITING` projections with Korean copy but no provider error stack/raw payload.
 
-- [ ] **Step 2: Run read-model tests and confirm RED**
+- [x] **Step 2: Run read-model tests and confirm RED**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -748,7 +748,7 @@ Add partial and `EOD_WAITING` projections with Korean copy but no provider error
 
 Expected: schema remains v3 and `portfolio.live` is absent.
 
-- [ ] **Step 3: Add the live projection without mutating historical fields**
+- [x] **Step 3: Add the live projection without mutating historical fields**
 
 Use this normalized shape for every portfolio state, including EMPTY/UNAVAILABLE:
 
@@ -769,7 +769,7 @@ def _inactive_live_portfolio():
 
 Set `TODAY_SCHEMA_VERSION = "today_home_v4"`. Normalize only approved fields from the service overlay; never copy arbitrary provider diagnostics into the UI payload. Extend the Task 4 fragment after `coordinator.tick` to call `load_latest_portfolio_quotes(scope=scope, now=generated_at)` and `load_workspace_eod_closes(workspace=context.workspace, scope=scope)`, pass both results to `build_live_portfolio_overlay(workspace=context.workspace, scope=scope, quotes=quotes, eod_closes=eod_closes, now=generated_at)`, and rebuild the Today model with `portfolio_live=overlay`. Thus the first render remains EOD-only when no durable quote exists, and every displayed live value comes from DB.
 
-- [ ] **Step 4: Run Today read-model tests**
+- [x] **Step 4: Run Today read-model tests**
 
 ```bash
 .venv/bin/python -m unittest tests.test_today_home.TodayHomeReadModelTests -v
@@ -777,7 +777,7 @@ Set `TODAY_SCHEMA_VERSION = "today_home_v4"`. Normalize only approved fields fro
 
 Expected: EOD regressions plus READY/PARTIAL/INACTIVE live contracts pass.
 
-- [ ] **Step 5: Commit Task 6**
+- [x] **Step 5: Commit Task 6**
 
 ```bash
 git add app/services/today.py app/web/today_page.py tests/test_today_home.py

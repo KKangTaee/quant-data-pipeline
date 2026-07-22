@@ -50,3 +50,9 @@
 - RED: live overlay와 EOD close loader 부재로 focused 테스트 5개가 import error로 실패하는 것을 확인했다.
 - GREEN: fixed-notional, fixed-shares retained cash, selected-strategy EOD 유지, partial/all-failed, Modified Dietz flow, basis-date EOD close 테스트 5개 통과.
 - 회귀: intraday service, 기존 valuation, position-event ledger를 합친 41개 테스트 통과.
+
+## 2026-07-23 Task 6 — Today Live Read Model
+
+- RED: `portfolio_live` 인자와 `portfolio.live` 계약 부재로 focused 테스트 2개가 실패하는 것을 확인했다.
+- GREEN: `today_home_v4`, READY/INACTIVE allowlist, EOD curve 불변, provider diagnostics 비노출 테스트 통과.
+- 회귀: Today read-model/page/coordinator/session/navigation 49개 테스트 통과.

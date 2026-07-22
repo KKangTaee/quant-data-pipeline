@@ -8,7 +8,7 @@ from typing import Any, Mapping, Sequence
 from app.services.today_market_session import build_us_market_session_model
 
 
-TODAY_SCHEMA_VERSION = "today_home_v3"
+TODAY_SCHEMA_VERSION = "today_home_v4"
 _UNAVAILABLE_STATUSES = {
     "",
     "ERROR",
@@ -512,6 +512,108 @@ def _project_portfolio(workspace: Any) -> dict[str, Any]:
     }
 
 
+def _inactive_live_portfolio() -> dict[str, Any]:
+    return {
+        "status": "INACTIVE",
+        "label": "확정 종가",
+        "as_of_utc": None,
+        "trade_date": None,
+        "coverage": {"fresh": 0, "expected": 0, "fallback_symbols": []},
+        "metrics": None,
+        "contributors": [],
+        "curve_point": None,
+        "message": "저장된 확정 종가 기준입니다.",
+    }
+
+
+def _project_live_portfolio(model: Any) -> dict[str, Any]:
+    source = _as_mapping(model)
+    status = _status(source.get("status"))
+    if status not in {"LIVE_READY", "LIVE_PARTIAL", "EOD_WAITING"}:
+        return _inactive_live_portfolio()
+    coverage = _as_mapping(source.get("coverage"))
+    fallback_symbols = [
+        str(symbol).strip().upper()
+        for symbol in source.get("fallback_symbols")
+        or coverage.get("fallback_symbols")
+        or []
+        if str(symbol).strip()
+    ]
+    raw_metrics = _as_mapping(source.get("metrics"))
+    metrics = (
+        {
+            "current_value": _safe_float(raw_metrics.get("current_value")),
+            "latest_observation_return": _safe_float(
+                raw_metrics.get("latest_observation_return")
+            ),
+            "return_from_date": _date_text(raw_metrics.get("return_from_date")),
+            "return_to_date": _date_text(raw_metrics.get("return_to_date")),
+            "total_return": _safe_float(raw_metrics.get("total_return")),
+        }
+        if raw_metrics
+        else None
+    )
+    raw_point = _as_mapping(source.get("curve_point"))
+    curve_point = (
+        {
+            "date": _text(raw_point.get("date")),
+            "timestamp_utc": _text(raw_point.get("timestamp_utc")),
+            "kind": "intraday",
+            "unit_value": _safe_float(raw_point.get("unit_value")),
+            "total_value": _safe_float(raw_point.get("total_value")),
+            "cumulative_return": _safe_float(raw_point.get("cumulative_return")),
+        }
+        if raw_point and raw_point.get("kind") == "intraday"
+        else None
+    )
+    contributors = []
+    for raw_row in source.get("contributors") or []:
+        row = _as_mapping(raw_row)
+        value = _safe_float(row.get("contribution_value"))
+        if value is None:
+            continue
+        contributors.append(
+            {
+                "symbol": _text(row.get("symbol")),
+                "contribution_value": value,
+                "value": value,
+                "total_return": _safe_float(row.get("total_return")),
+                "tone": "positive" if value > 0 else "negative",
+            }
+        )
+    labels = {
+        "LIVE_READY": "장중 임시",
+        "LIVE_PARTIAL": "일부 장중 임시",
+        "EOD_WAITING": "종가 반영 대기",
+    }
+    messages = {
+        "LIVE_READY": "직접 종목의 최신 장중 가격을 반영했습니다.",
+        "LIVE_PARTIAL": "일부 직접 종목은 마지막 확정 종가를 유지합니다.",
+        "EOD_WAITING": "정규장 종료 후 당일 확정 종가 반영을 기다리고 있습니다.",
+    }
+    return {
+        "status": status,
+        "label": labels[status],
+        "as_of_utc": _text(source.get("as_of_utc"), "") or None,
+        "trade_date": _date_text(source.get("trade_date")),
+        "coverage": {
+            "fresh": int(coverage.get("fresh") or 0),
+            "expected": int(coverage.get("expected") or 0),
+            "fallback_symbols": fallback_symbols,
+        },
+        "metrics": metrics,
+        "contributors": contributors,
+        "curve_point": curve_point,
+        "message": messages[status],
+    }
+
+
+def project_today_portfolio_live(model: Any) -> dict[str, Any]:
+    """Expose the allowlisted live projection for DB-backed page refreshes."""
+
+    return _project_live_portfolio(model)
+
+
 def _market_headline(evidence: list[dict[str, Any]], ready_count: int) -> str:
     if ready_count < 3:
         return "현재 자료로 종합 판단 보류"
@@ -531,6 +633,7 @@ def build_today_read_model(
     events: Any,
     portfolio: Any,
     market_calendar: Any = None,
+    portfolio_live: Mapping[str, Any] | None = None,
     generated_at: datetime | None = None,
 ) -> dict[str, object]:
     """Compose the read-only Today payload from existing persisted read models."""
@@ -567,6 +670,7 @@ def build_today_read_model(
     if next_event and next_event.get("importance") == "High" and int(next_event.get("days_until") or 0) <= 7:
         watch_items.append(f"{next_event['date']} {next_event['title']} 일정을 확인합니다.")
     portfolio_model = _project_portfolio(portfolio)
+    portfolio_model["live"] = _project_live_portfolio(portfolio_live)
     calendar = _as_mapping(market_calendar)
     market_session = build_us_market_session_model(
         generated_at=timestamp,
@@ -628,4 +732,8 @@ def build_today_read_model(
     }
 
 
-__all__ = ["TODAY_SCHEMA_VERSION", "build_today_read_model"]
+__all__ = [
+    "TODAY_SCHEMA_VERSION",
+    "build_today_read_model",
+    "project_today_portfolio_live",
+]
