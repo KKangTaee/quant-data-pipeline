@@ -13,3 +13,5 @@
 - 최신 non-select 판단은 item-local replay blocker다.
 - 계속 추적하려면 Final Review가 새 selected 판단을 소유한다.
 - 종료는 기존 Portfolio Monitoring `end_item` 명령이 소유한다.
+- 동일 timestamp fallback은 loader 입력 순서가 아니라 `updated_at -> created_at -> decision_id`로 결정해 실행마다 같은 latest row를 선택한다.
+- 기존 item의 과거 decision ID는 requested provenance로 남기고 최신 selected decision ID를 effective provenance로 사용한다.
