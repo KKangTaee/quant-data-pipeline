@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import tempfile
 import unittest
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 
 class TodayHomeReadModelTests(unittest.TestCase):
@@ -376,6 +378,139 @@ class TodayHomePageContractTests(unittest.TestCase):
         self.assertIn("X축 · 저장 관측일", chart)
         self.assertIn("total_value", chart)
         self.assertIn("font-size: 26px", styles)
+
+    def test_today_component_availability_requires_built_index(self) -> None:
+        component = importlib.import_module("app.web.today_react_component")
+        with tempfile.TemporaryDirectory() as directory:
+            build = Path(directory)
+            self.assertFalse(component.today_react_component_available(build))
+            (build / "index.html").write_text("<html></html>", encoding="utf-8")
+            self.assertTrue(component.today_react_component_available(build))
+
+    def test_today_component_returns_event_envelope(self) -> None:
+        component = importlib.import_module("app.web.today_react_component")
+        fake_component = MagicMock(
+            return_value={"event": {"id": "open_market_research"}}
+        )
+        with patch.object(
+            component,
+            "_declare_today_component",
+            return_value=fake_component,
+        ):
+            result = component.render_today_workbench(
+                {"schema_version": "today_home_v2"}
+            )
+
+        self.assertEqual(result, {"event": {"id": "open_market_research"}})
+        fake_component.assert_called_once_with(
+            payload={"schema_version": "today_home_v2"},
+            key="today_workbench",
+            default={"event": None},
+        )
+
+    def test_today_page_uses_react_primary_and_routes_market_event(self) -> None:
+        page = importlib.import_module("app.web.today_page")
+        fake_st = MagicMock()
+        page.configure_today_page_targets(
+            {
+                "market_research": "market-page",
+                "stock_research": "stock-page",
+                "portfolio_monitoring": "monitoring-page",
+            }
+        )
+        with (
+            patch.object(page, "st", fake_st),
+            patch.object(page, "load_today_read_model", return_value={"schema_version": "today_home_v2"}),
+            patch.object(page, "today_react_component_available", return_value=True),
+            patch.object(
+                page,
+                "render_today_workbench",
+                return_value={"event": {"id": "open_market_research"}},
+            ) as render_component,
+        ):
+            page.render_today_page()
+
+        render_component.assert_called_once_with({"schema_version": "today_home_v2"})
+        fake_st.markdown.assert_not_called()
+        fake_st.switch_page.assert_called_once_with(
+            "market-page",
+            query_params={"overview_tab": "market-context"},
+        )
+
+    def test_today_page_routes_stock_and_portfolio_events(self) -> None:
+        page = importlib.import_module("app.web.today_page")
+        routes = (
+            (
+                "open_stock_research",
+                "stock-page",
+                {"overview_tab": "market-movers"},
+            ),
+            ("open_portfolio_monitoring", "monitoring-page", None),
+        )
+        for event_id, target, query_params in routes:
+            with self.subTest(event_id=event_id):
+                fake_st = MagicMock()
+                page.configure_today_page_targets(
+                    {
+                        "market_research": "market-page",
+                        "stock_research": "stock-page",
+                        "portfolio_monitoring": "monitoring-page",
+                    }
+                )
+                with (
+                    patch.object(page, "st", fake_st),
+                    patch.object(page, "load_today_read_model", return_value={"schema_version": "today_home_v2"}),
+                    patch.object(page, "today_react_component_available", return_value=True),
+                    patch.object(
+                        page,
+                        "render_today_workbench",
+                        return_value={"event": {"id": event_id}},
+                    ),
+                ):
+                    page.render_today_page()
+                if query_params is None:
+                    fake_st.switch_page.assert_called_once_with(target)
+                else:
+                    fake_st.switch_page.assert_called_once_with(
+                        target,
+                        query_params=query_params,
+                    )
+
+    def test_today_page_rejects_unknown_react_event(self) -> None:
+        page = importlib.import_module("app.web.today_page")
+        fake_st = MagicMock()
+        with (
+            patch.object(page, "st", fake_st),
+            patch.object(page, "load_today_read_model", return_value={"schema_version": "today_home_v2"}),
+            patch.object(page, "today_react_component_available", return_value=True),
+            patch.object(
+                page,
+                "render_today_workbench",
+                return_value={"event": {"id": "delete_everything"}},
+            ),
+        ):
+            page.render_today_page()
+
+        fake_st.warning.assert_called_once()
+        fake_st.switch_page.assert_not_called()
+
+    def test_today_page_falls_back_only_when_react_build_is_unavailable(self) -> None:
+        page = importlib.import_module("app.web.today_page")
+        fake_st = MagicMock()
+        model = {
+            "header": {},
+            "market": {"evidence": [], "watch_items": []},
+            "portfolio": {"metrics": {}, "curve": []},
+        }
+        with (
+            patch.object(page, "st", fake_st),
+            patch.object(page, "load_today_read_model", return_value=model),
+            patch.object(page, "today_react_component_available", return_value=False),
+        ):
+            page.render_today_page()
+
+        fake_st.markdown.assert_called_once()
+        fake_st.error.assert_called_once()
 
     def test_today_page_reuses_overview_visual_tokens_and_read_only_loaders(self) -> None:
         path = Path("app/web/today_page.py")

@@ -23,9 +23,24 @@ from app.web.overview_dashboard_helpers import (
     load_overview_market_events_snapshot,
     load_overview_market_sentiment_snapshot,
 )
+from app.web.today_react_component import (
+    render_today_workbench,
+    today_react_component_available,
+)
 
 
 _TODAY_PAGE_TARGETS: dict[str, object] = {}
+_TODAY_EVENT_ROUTES: dict[str, tuple[str, dict[str, str] | None]] = {
+    "open_market_research": (
+        "market_research",
+        {OVERVIEW_DEEP_TAB_QUERY_PARAM: "market-context"},
+    ),
+    "open_stock_research": (
+        "stock_research",
+        {OVERVIEW_DEEP_TAB_QUERY_PARAM: "market-movers"},
+    ),
+    "open_portfolio_monitoring": ("portfolio_monitoring", None),
+}
 
 
 def configure_today_page_targets(page_targets: dict[str, object]) -> None:
@@ -435,7 +450,8 @@ def _sparkline_svg(rows: list[dict[str, Any]]) -> str:
     values: list[float] = []
     for row in rows:
         try:
-            values.append(float(row.get("value")))
+            value = row.get("cumulative_return", row.get("value"))
+            values.append(float(value))
         except (TypeError, ValueError):
             continue
     if len(values) < 2:
@@ -492,6 +508,10 @@ def build_today_html(model: dict[str, Any]) -> str:
         else '<div class="today-event-detail">추가 제한 사항이 없습니다.</div>'
     )
     metrics = dict(portfolio.get("metrics") or {})
+    latest_return = metrics.get(
+        "latest_observation_return",
+        metrics.get("day_return"),
+    )
     contributors = [dict(row or {}) for row in portfolio.get("contributors") or []]
     contributor_html = (
         "".join(
@@ -556,7 +576,7 @@ def build_today_html(model: dict[str, Any]) -> str:
       <div class="today-portfolio-summary">{escape(str(portfolio.get('summary') or '평가 결과를 확인합니다.'))} · 기준 {escape(str(portfolio.get('basis_date') or '-'))}</div>
       <div class="today-metrics">
         <div class="today-metric"><div class="today-metric-label">평가액</div><div class="today-metric-value">{escape(_money(metrics.get('current_value')))}</div></div>
-        <div class="today-metric"><div class="today-metric-label">오늘</div><div class="today-metric-value {_value_tone(metrics.get('day_return'))}">{escape(_percent(metrics.get('day_return')))}</div></div>
+        <div class="today-metric"><div class="today-metric-label">최근 거래일</div><div class="today-metric-value {_value_tone(latest_return)}">{escape(_percent(latest_return))}</div></div>
         <div class="today-metric"><div class="today-metric-label">누적</div><div class="today-metric-value {_value_tone(metrics.get('total_return'))}">{escape(_percent(metrics.get('total_return')))}</div></div>
       </div>
       <div class="today-panel-meta" style="margin-top:0.58rem;">누적 기여</div>
@@ -592,15 +612,61 @@ def _render_action_links() -> None:
             st.page_link(target, **options)
 
 
-def render_today_page() -> None:
-    """Render the default read-only market-and-portfolio landing page."""
+def _normalize_today_event(value: object) -> dict[str, str] | None:
+    if not isinstance(value, dict):
+        return None
+    event = value.get("event")
+    if not isinstance(event, dict):
+        return None
+    event_id = str(event.get("id") or "").strip()
+    if event_id not in _TODAY_EVENT_ROUTES:
+        return None
+    return {"id": event_id}
 
-    model = load_today_read_model()
+
+def _render_today_fallback(model: dict[str, object]) -> None:
+    st.error(
+        "Today React 화면을 불러오지 못했습니다. "
+        "배포된 화면 빌드를 확인해 주세요."
+    )
     st.markdown(
         overview_ui_css() + _today_css() + build_today_html(model),
         unsafe_allow_html=True,
     )
     _render_action_links()
+
+
+def _route_today_event(event: dict[str, str]) -> None:
+    target_key, query_params = _TODAY_EVENT_ROUTES[event["id"]]
+    target = _TODAY_PAGE_TARGETS.get(target_key)
+    if target is None:
+        st.warning("연결할 기존 화면이 아직 준비되지 않았습니다.")
+        return
+    if query_params:
+        st.switch_page(target, query_params=query_params)
+        return
+    st.switch_page(target)
+
+
+def render_today_page() -> None:
+    """Render the default read-only market-and-portfolio landing page."""
+
+    model = load_today_read_model()
+    if not today_react_component_available():
+        _render_today_fallback(model)
+        return
+
+    component_value = render_today_workbench(model)
+    if component_value is None:
+        _render_today_fallback(model)
+        return
+
+    event = _normalize_today_event(component_value)
+    if component_value.get("event") is not None and event is None:
+        st.warning("지원하지 않는 Today 화면 동작은 실행하지 않았습니다.")
+        return
+    if event is not None:
+        _route_today_event(event)
 
 
 __all__ = [
