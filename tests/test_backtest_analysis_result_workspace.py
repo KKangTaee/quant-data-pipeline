@@ -133,6 +133,96 @@ def test_level1_gate_ignores_practical_validation_signals() -> None:
     assert readiness["reasons"] == []
 
 
+def test_level1_gate_blocks_price_refresh_and_rerun_states() -> None:
+    lifecycle = build_result_lifecycle(
+        result_bundle=result_bundle(),
+        current_configuration_fingerprint="same",
+        result_configuration_fingerprint="same",
+        result_requires_rerun=False,
+        is_running=False,
+        last_error=None,
+        last_error_kind=None,
+    )
+
+    for state, expected_readiness in (
+        ("refresh_required", "data_refresh_required"),
+        ("provider_gap", "data_refresh_required"),
+        ("rerun_required", "rerun_required"),
+    ):
+        readiness = build_level1_technical_handoff_readiness(
+            workspace_kind="single_strategy",
+            strategy_choice="GTAA",
+            result_bundle=result_bundle(),
+            lifecycle=lifecycle,
+            action_handlers={"save_and_move": lambda payload: None},
+            price_freshness_action={
+                "state": state,
+                "handoff_blocked": True,
+                "primary_action": None,
+            },
+        )
+
+        assert readiness["state"] == expected_readiness
+        assert readiness["can_handoff"] is False
+        assert readiness["action"] is None
+
+
+def test_result_workspace_exposes_only_freshness_primary_action_while_blocked() -> None:
+    freshness_action = {
+        "state": "refresh_required",
+        "handoff_blocked": True,
+        "summary": "요청 종료일 기준 데이터가 부족합니다.",
+        "primary_action": {
+            "id": "refresh_prices",
+            "label": "종목 데이터 최신화",
+            "enabled": True,
+        },
+    }
+
+    workspace = build_backtest_analysis_result_workspace(
+        workspace_kind="single_strategy",
+        strategy_choice="GTAA",
+        result_bundle=result_bundle(),
+        current_configuration_fingerprint="same",
+        result_configuration_fingerprint="same",
+        result_requires_rerun=False,
+        is_running=False,
+        last_error=None,
+        last_error_kind=None,
+        action_handlers={"save_and_move": lambda payload: None},
+        price_freshness_action=freshness_action,
+    )
+
+    assert workspace["data_freshness_action"] == freshness_action
+    assert workspace["technical_handoff_readiness"]["can_handoff"] is False
+    assert workspace["actions"] == {
+        "refresh_prices": freshness_action["primary_action"]
+    }
+
+
+def test_result_workspace_keeps_existing_handoff_when_prices_are_current() -> None:
+    workspace = build_backtest_analysis_result_workspace(
+        workspace_kind="single_strategy",
+        strategy_choice="GTAA",
+        result_bundle=result_bundle(),
+        current_configuration_fingerprint="same",
+        result_configuration_fingerprint="same",
+        result_requires_rerun=False,
+        is_running=False,
+        last_error=None,
+        last_error_kind=None,
+        action_handlers={"save_and_move": lambda payload: None},
+        price_freshness_action={
+            "state": "current",
+            "handoff_blocked": False,
+            "primary_action": None,
+        },
+    )
+
+    assert workspace["technical_handoff_readiness"]["state"] == "ready"
+    assert workspace["actions"]["save_and_move"]["enabled"] is True
+
+
 def test_practical_validation_gaps_become_level2_questions_once() -> None:
     questions = build_level2_validation_questions(
         meta=result_bundle()["meta"],
