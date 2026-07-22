@@ -7900,8 +7900,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
     def test_market_research_selector_uses_two_level_internal_widgets(self) -> None:
         source = Path("app/web/overview/navigation.py").read_text(encoding="utf-8")
-        helper_body = source[source.index("def _render_market_research_selector"):]
-        helper_body = helper_body[: helper_body.index("def _render_selected_market_research_view")]
+        helper_body = source[
+            source.index("def _render_market_research_streamlit_fallback"):
+        ]
+        helper_body = helper_body[
+            : helper_body.index("def _render_market_research_selector")
+        ]
 
         self.assertIn("st.segmented_control(", helper_body)
         self.assertIn("st.pills(", helper_body)

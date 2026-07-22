@@ -195,12 +195,54 @@ def test_market_research_page_uses_compact_keyed_header():
 
 def test_market_research_local_label_is_one_compact_html_block():
     source = Path("app/web/overview/navigation.py").read_text(encoding="utf-8")
-    selector_body = source[source.index("def _render_market_research_selector"):]
-    selector_body = selector_body[: selector_body.index("def _render_selected_market_research_view")]
+    selector_body = source[source.index("def _render_market_research_streamlit_fallback"):]
+    selector_body = selector_body[: selector_body.index("def _render_market_research_selector")]
 
     assert 'class="mr-market-research-local-label"' in selector_body
     assert 'st.caption("선택한 리서치")' not in selector_body
     assert "gap=\"small\"" in selector_body
+
+
+def test_market_research_selector_prefers_react_and_keeps_streamlit_fallback():
+    source = Path("app/web/overview/navigation.py").read_text(encoding="utf-8")
+    body = source[source.index("def _render_market_research_selector"):]
+    body = body[: body.index("def _render_selected_market_research_view")]
+
+    assert "market_research_navigation_react_component_available()" in body
+    assert "build_market_research_navigation_payload(current_view)" in body
+    assert "render_market_research_navigation(" in body
+    assert "resolve_market_research_navigation_event(" in body
+    assert "_render_market_research_streamlit_fallback(" in body
+    assert body.index("render_market_research_navigation(") < body.index(
+        "_render_market_research_streamlit_fallback("
+    )
+
+
+def test_market_research_react_selection_persists_then_reruns_for_payload_sync():
+    source = Path("app/web/overview/navigation.py").read_text(encoding="utf-8")
+    body = source[source.index("def _render_market_research_selector"):]
+    body = body[: body.index("def _render_selected_market_research_view")]
+
+    assert "if selected_view != current_view:" in body
+    changed_branch = body[body.index("if selected_view != current_view:"):]
+    changed_branch = changed_branch[: changed_branch.index("else:")]
+    assert "_store_market_research_view(str(selected_view))" in changed_branch
+    assert "st.rerun()" in changed_branch
+    assert changed_branch.index("_store_market_research_view") < changed_branch.index(
+        "st.rerun()"
+    )
+
+
+def test_market_research_page_renders_streamlit_header_only_for_fallback():
+    source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+    body = source[source.index("def render_overview_dashboard"):]
+
+    assert "market_research_navigation_react_component_available()" in body
+    assert "if not market_research_navigation_react_component_available():" in body
+    assert "_market_research_header_html()" in body
+    assert body.index(
+        "if not market_research_navigation_react_component_available():"
+    ) < body.index("_render_market_research_selector()")
 
 
 def test_market_movers_page_dispatch_can_suppress_duplicate_header():

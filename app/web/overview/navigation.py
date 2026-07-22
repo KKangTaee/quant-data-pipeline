@@ -5,6 +5,11 @@ from typing import Any, Callable
 
 import streamlit as st
 
+from app.web.overview.market_research_navigation_react_component import (
+    market_research_navigation_react_component_available,
+    render_market_research_navigation,
+)
+
 MARKET_RESEARCH_FAMILY_OPTIONS = (
     "market-environment",
     "index-valuation",
@@ -449,22 +454,11 @@ def _market_research_navigation_css() -> str:
 """
 
 
-def _render_market_research_selector() -> str:
-    query_slug = _market_research_query_slug()
-    applied_query = st.session_state.get(MARKET_RESEARCH_APPLIED_QUERY_KEY)
-    query_changed = bool(query_slug and query_slug != applied_query)
-    if query_changed:
-        st.session_state.pop(MARKET_RESEARCH_FAMILY_WIDGET_KEY, None)
-        st.session_state.pop(MARKET_RESEARCH_VIEW_WIDGET_KEY, None)
-
-    current_view = resolve_market_research_seed_view(
-        query_slug=query_slug,
-        applied_query_slug=applied_query,
-        widget_view=st.session_state.get(MARKET_RESEARCH_VIEW_WIDGET_KEY),
-        session_view=st.session_state.get(MARKET_RESEARCH_VIEW_KEY),
-        legacy_market_context_mode=st.session_state.get("overview_market_context_mode"),
-    )
-    current_family = market_research_family_for_view(current_view)
+def _render_market_research_streamlit_fallback(
+    current_view: str,
+    current_family: str,
+) -> str:
+    """Render the native controls only when the React bundle is unavailable."""
     st.markdown(_market_research_navigation_css(), unsafe_allow_html=True)
 
     family_options: dict[str, object] = {}
@@ -521,6 +515,42 @@ def _render_market_research_selector() -> str:
             **view_options,
         ) or selected_view
 
+    return str(selected_view)
+
+
+def _render_market_research_selector() -> str:
+    query_slug = _market_research_query_slug()
+    applied_query = st.session_state.get(MARKET_RESEARCH_APPLIED_QUERY_KEY)
+    query_changed = bool(query_slug and query_slug != applied_query)
+    if query_changed:
+        st.session_state.pop(MARKET_RESEARCH_FAMILY_WIDGET_KEY, None)
+        st.session_state.pop(MARKET_RESEARCH_VIEW_WIDGET_KEY, None)
+
+    current_view = resolve_market_research_seed_view(
+        query_slug=query_slug,
+        applied_query_slug=applied_query,
+        widget_view=st.session_state.get(MARKET_RESEARCH_VIEW_WIDGET_KEY),
+        session_view=st.session_state.get(MARKET_RESEARCH_VIEW_KEY),
+        legacy_market_context_mode=st.session_state.get("overview_market_context_mode"),
+    )
+    current_family = market_research_family_for_view(current_view)
+    if market_research_navigation_react_component_available():
+        component_value = render_market_research_navigation(
+            build_market_research_navigation_payload(current_view),
+            key="market_research_navigation",
+        )
+        selected_view = resolve_market_research_navigation_event(
+            current_view,
+            component_value,
+        )
+        if selected_view != current_view:
+            _store_market_research_view(str(selected_view))
+            st.rerun()
+    else:
+        selected_view = _render_market_research_streamlit_fallback(
+            current_view,
+            current_family,
+        )
     return _store_market_research_view(str(selected_view))
 
 
@@ -586,6 +616,7 @@ __all__ = [
     "_market_research_navigation_css",
     "_market_research_query_slug",
     "_render_market_research_selector",
+    "_render_market_research_streamlit_fallback",
     "_render_overview_tab_selector",
     "_render_selected_market_research_view",
     "_render_selected_overview_tab",

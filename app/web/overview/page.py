@@ -12,6 +12,9 @@ from app.web.overview.market_context_helpers import (
     render_market_context_valuation,
 )
 from app.web.overview.market_movers import render_market_movers_tab
+from app.web.overview.market_research_navigation_react_component import (
+    market_research_navigation_react_component_available,
+)
 from app.web.overview.navigation import (
     _render_market_research_selector,
     _render_selected_market_research_view,
@@ -85,9 +88,10 @@ def render_overview_dashboard(
 ) -> None:
     """Render the Market Research workspace."""
     del runtime_marker, loaded_at, git_sha, latest_result, recent_results, render_runtime_snapshot
-    st.markdown(_market_research_page_css(), unsafe_allow_html=True)
-    with st.container(key="market_research_page_header"):
-        st.markdown(_market_research_header_html(), unsafe_allow_html=True)
+    if not market_research_navigation_react_component_available():
+        st.markdown(_market_research_page_css(), unsafe_allow_html=True)
+        with st.container(key="market_research_page_header"):
+            st.markdown(_market_research_header_html(), unsafe_allow_html=True)
 
     active_view = _render_market_research_selector()
     _render_selected_market_research_view(
