@@ -467,6 +467,83 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
         self.assertFalse(model["replay"]["provenance"]["visible"])
         self.assertFalse(model["record"]["visible"])
 
+    def test_workspace_projects_collection_recheck_lifecycle_without_claiming_full_success(
+        self,
+    ) -> None:
+        from app.services.backtest_practical_validation_decision_workspace import (
+            build_practical_validation_decision_workspace,
+        )
+
+        model = build_practical_validation_decision_workspace(
+            source=self._source(),
+            validation_profile={"profile_id": "balanced_core"},
+            replay_result=None,
+            validation_result=None,
+            source_options=[self._source()],
+            enrichment_progress={
+                "status": "recheck_required",
+                "result_count": 3,
+            },
+            collection_results=[
+                {
+                    "status": "SUCCESS",
+                    "run_metadata": {
+                        "input_params": {"provider_area": "operability"}
+                    },
+                },
+                {
+                    "status": "PARTIAL",
+                    "run_metadata": {
+                        "input_params": {"provider_area": "holdings"}
+                    },
+                },
+                {
+                    "status": "FAILED",
+                    "run_metadata": {
+                        "input_params": {"provider_area": "macro"}
+                    },
+                },
+            ],
+        )
+
+        lifecycle = model["enrichment_lifecycle"]
+        summary = lifecycle["collection_summary"]
+        self.assertTrue(lifecycle["visible"])
+        self.assertEqual(lifecycle["state"], "recheck_required")
+        self.assertEqual(summary["success_count"], 1)
+        self.assertEqual(summary["review_count"], 1)
+        self.assertEqual(summary["failure_count"], 1)
+        self.assertEqual(summary["areas"], ["holdings", "macro", "operability"])
+        self.assertEqual(
+            model["actions"]["run_replay"]["label"],
+            "보강된 데이터로 재검증",
+        )
+
+    def test_semantic_notice_uses_warning_renderer_for_recheck_required(
+        self,
+    ) -> None:
+        from app.web.backtest_practical_validation import page
+
+        fake_streamlit = SimpleNamespace(
+            success=MagicMock(),
+            warning=MagicMock(),
+            error=MagicMock(),
+            info=MagicMock(),
+        )
+        with patch.object(page, "st", fake_streamlit):
+            page._render_practical_validation_notice(
+                {
+                    "tone": "warning",
+                    "title": "자료 보강을 실행했습니다",
+                    "detail": "보강된 데이터로 재검증하세요.",
+                }
+            )
+
+        fake_streamlit.warning.assert_called_once_with(
+            "자료 보강을 실행했습니다 보강된 데이터로 재검증하세요."
+        )
+        fake_streamlit.success.assert_not_called()
+
     def test_profile_answer_intent_rebuilds_decision_without_clearing_replay(
         self,
     ) -> None:

@@ -14605,6 +14605,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                 "backtest_practical_validation_data_enrichment_handoff",
                 fake_st.session_state,
             )
+            notice = fake_st.session_state[
+                "backtest_practical_validation_notice"
+            ]
+            self.assertEqual(notice["tone"], "warning")
+            self.assertEqual(notice["title"], "자료 보강을 실행했습니다")
+            self.assertIn("재검증", notice["detail"])
 
     def test_both_provider_collection_buttons_use_shared_recheck_completion_boundary(self) -> None:
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")

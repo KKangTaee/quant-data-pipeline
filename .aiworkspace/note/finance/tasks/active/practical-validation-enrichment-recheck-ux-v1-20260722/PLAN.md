@@ -35,7 +35,7 @@
 - Consumes: source별 `enrichment_progress: dict[str, Any]`, `collection_results: list[dict[str, Any]]`, current replay/validation result.
 - Produces: `build_practical_validation_decision_workspace(..., enrichment_progress=None, collection_results=None) -> dict`의 `enrichment_lifecycle` 모델과 structured Practical Validation notice.
 
-- [ ] **Step 1: Write the failing lifecycle projection test**
+- [x] **Step 1: Write the failing lifecycle projection test**
 
 ```python
 def test_workspace_projects_collection_recheck_lifecycle_without_claiming_full_success(self) -> None:
@@ -61,7 +61,7 @@ def test_workspace_projects_collection_recheck_lifecycle_without_claiming_full_s
     self.assertEqual(model["actions"]["run_replay"]["label"], "보강된 데이터로 재검증")
 ```
 
-- [ ] **Step 2: Write the failing structured notice assertion**
+- [x] **Step 2: Write the failing structured notice assertion**
 
 Extend `test_provider_collection_completion_clears_replay_for_regular_and_final_review_origins`:
 
@@ -72,7 +72,7 @@ self.assertEqual(notice["title"], "자료 보강을 실행했습니다")
 self.assertIn("재검증", notice["detail"])
 ```
 
-- [ ] **Step 3: Run the RED tests**
+- [x] **Step 3: Run the RED tests**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_practical_validation_decision_workspace.py::PracticalValidationDecisionWorkspaceTests::test_workspace_projects_collection_recheck_lifecycle_without_claiming_full_success -q
@@ -81,7 +81,7 @@ self.assertIn("재검증", notice["detail"])
 
 Expected: the builder rejects the new lifecycle arguments and collection completion still stores a string notice.
 
-- [ ] **Step 4: Implement the conservative collection result summary**
+- [x] **Step 4: Implement the conservative collection result summary**
 
 Add this pure interface in `app/services/backtest_practical_validation_decision_workspace.py`:
 
@@ -94,7 +94,7 @@ def summarize_provider_collection_results(
 
 Normalize `SUCCESS/PASS/OK/COMPLETED` as success, `PARTIAL/REVIEW/WARNING` and unknown statuses as review, and `FAILED/FAILURE/ERROR/BLOCKED` as failure. Return counts, unique provider areas, outcome label, and tone.
 
-- [ ] **Step 5: Project lifecycle state through the Decision Workspace**
+- [x] **Step 5: Project lifecycle state through the Decision Workspace**
 
 Extend the builder with optional `enrichment_progress` and `collection_results`. Reuse `build_practical_validation_recovery_progress()` and return:
 
@@ -111,15 +111,15 @@ Extend the builder with optional `enrichment_progress` and `collection_results`.
 
 When progress exists and replay is absent, label the replay action `보강된 데이터로 재검증`.
 
-- [ ] **Step 6: Store and render semantic feedback**
+- [x] **Step 6: Store and render semantic feedback**
 
 In `page.py`, add `_practical_validation_notice(tone, title, detail)` and `_render_practical_validation_notice(notice)`. Structured notices use the matching Streamlit method; legacy strings default to `st.info`. Collection completion stores a warning payload because collection is not validation completion.
 
-- [ ] **Step 7: Pass source-scoped lifecycle inputs into the fragment builder**
+- [x] **Step 7: Pass source-scoped lifecycle inputs into the fragment builder**
 
 Read the selected source's enrichment progress and provider collection result session keys and pass them to `build_practical_validation_decision_workspace()`. Do not read another source's state.
 
-- [ ] **Step 8: Run GREEN and focused regressions**
+- [x] **Step 8: Run GREEN and focused regressions**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_practical_validation_decision_workspace.py tests/test_service_contracts.py -q -k 'practical_validation_decision_workspace or provider_collection_completion or recovery_progress or save_and_move_rejects_missing_current_replay'
@@ -144,19 +144,19 @@ Expected: all selected tests pass.
 - Consumes: Task 1의 `workspace.enrichment_lifecycle`과 기존 `actions.run_replay` intent.
 - Produces: decision surface와 Streamlit fallback의 동일한 lifecycle progress/CTA 표현.
 
-- [ ] **Step 1: Write failing React lifecycle surface tests**
+- [x] **Step 1: Write failing React lifecycle surface tests**
 
 Assert the source contains `pv2-enrichment-lifecycle`, `workspace.enrichment_lifecycle.visible`, all four step labels, and renders the lifecycle before `pv2-recheck-mode-panel`. Assert `.pv2-enrichment-steps` collapses to one column at `760px`.
 
-- [ ] **Step 2: Replace the obsolete boundary assertion**
+- [x] **Step 2: Replace the obsolete boundary assertion**
 
 Keep the legacy Python recovery renderer out of the main render body, but assert `enrichment_progress=` and `collection_results=` are passed into the shared Decision Workspace builder.
 
-- [ ] **Step 3: Write the failing fallback contract test**
+- [x] **Step 3: Write the failing fallback contract test**
 
 Assert the fallback reads `enrichment_lifecycle`, shows headline/next action/collection counts before recheck controls, and retains the existing `run_replay` intent.
 
-- [ ] **Step 4: Run RED presentation tests**
+- [x] **Step 4: Run RED presentation tests**
 
 ```bash
 .venv/bin/python -m pytest tests/test_practical_validation_market_context_visual_contract.py tests/test_backtest_refactor_boundaries.py -q -k 'lifecycle or one_decision_workspace or fallback'
@@ -164,19 +164,19 @@ Assert the fallback reads `enrichment_lifecycle`, shows headline/next action/col
 
 Expected: no lifecycle surface exists yet.
 
-- [ ] **Step 5: Extend TypeScript contract and render lifecycle**
+- [x] **Step 5: Extend TypeScript contract and render lifecycle**
 
 Add lifecycle types. When visible, render one compact section inside Step 2 before replay mode with headline, next action, four step states, success/review/failure counts, and provider area labels. Do not render raw job/rows tables.
 
-- [ ] **Step 6: Add responsive styles**
+- [x] **Step 6: Add responsive styles**
 
 Use existing blue-gray tokens. Render four steps as a compact desktop grid and one column at `max-width: 760px`; do not add left-border risk bars.
 
-- [ ] **Step 7: Implement the same fallback order**
+- [x] **Step 7: Implement the same fallback order**
 
 Render the shared lifecycle before fallback replay controls. The fallback continues to emit existing intents and does not execute collection or validation directly.
 
-- [ ] **Step 8: Run GREEN tests and production build**
+- [x] **Step 8: Run GREEN tests and production build**
 
 ```bash
 .venv/bin/python -m pytest tests/test_practical_validation_market_context_visual_contract.py tests/test_backtest_refactor_boundaries.py tests/test_backtest_practical_validation_decision_workspace.py -q
@@ -201,7 +201,7 @@ Expected: all tests and Vite build pass, updating canonical `component_static` a
 - Consumes: verified lifecycle model and React/fallback surfaces.
 - Produces: actual interaction evidence, durable flow documentation, and one coherent implementation commit.
 
-- [ ] **Step 1: Run full focused verification**
+- [x] **Step 1: Run full focused verification**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_practical_validation_decision_workspace.py tests/test_practical_validation_market_context_visual_contract.py tests/test_backtest_refactor_boundaries.py tests/test_service_contracts.py -q -k 'practical_validation or provider_collection_completion or recovery_progress'
@@ -212,19 +212,19 @@ git diff --check
 
 Expected: zero failures, Python compile success, Vite build success, no whitespace errors.
 
-- [ ] **Step 2: Run actual Browser QA without provider writes**
+- [x] **Step 2: Run actual Browser QA without provider writes**
 
 Use a fixture/in-memory Streamlit route importing the production component. Verify `recheck_required`, one replay click, and `save_ready` or blocker state at desktop and `760px`; confirm no overflow/console error. Save `practical-validation-enrichment-recheck-ux-v1-qa.png` uncommitted and remove the fixture/process.
 
-- [ ] **Step 3: Synchronize durable docs**
+- [x] **Step 3: Synchronize durable docs**
 
 Update only affected flow paragraphs. Record that collection remains separate from replay, partial results are not full success, and the next CTA persists by source until replay/save transition.
 
-- [ ] **Step 4: Close task records**
+- [x] **Step 4: Close task records**
 
 Mark roadmap `3/3차`; record RED/GREEN, build/Browser evidence, and any remaining actual-provider QA gap. Keep root logs concise.
 
-- [ ] **Step 5: Stage only owned files and commit**
+- [x] **Step 5: Stage only owned files and commit**
 
 Do not stage registry JSONL, run history, saved setup, `.superpowers/`, or unrelated screenshots.
 

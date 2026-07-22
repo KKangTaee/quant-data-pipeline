@@ -256,6 +256,8 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn('st.tabs(["후보 원본", "재검증 원본", "판정 원본"])', page_source)
         self.assertIn("replay_result=replay_result", render_body)
         self.assertIn("validation_result=validation_result", render_body)
+        self.assertIn("enrichment_progress=enrichment_progress", render_body)
+        self.assertIn("collection_results=collection_results", render_body)
         self.assertIn(
             "render_practical_validation_decision_workspace_fallback(",
             render_body,
@@ -289,6 +291,13 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
             1,
         )[1]
         self.assertIn('workspace.get("resolution_lanes")', fallback_body)
+        self.assertIn('workspace.get("enrichment_lifecycle")', fallback_body)
+        self.assertIn("lifecycle.get('headline')", fallback_body)
+        self.assertIn('lifecycle.get("next_action")', fallback_body)
+        self.assertLess(
+            fallback_body.index('workspace.get("enrichment_lifecycle")'),
+            fallback_body.index('st.markdown("#### 2. 최신 데이터 기준 재검증")'),
+        )
         self.assertNotIn(
             "is_practical_validation_fix_queue_available()",
             fallback_body,

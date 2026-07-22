@@ -1141,3 +1141,7 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
   이동 가능 상태가 됐다. desktop / 760px Browser QA와 overflow 확인을 완료했다.
 - 구현/보정 커밋은 active task `STATUS.md`에 정리한다. historical universe PIT
   membership / delisting provider는 별도 승인 전 범위 밖 위험으로 유지한다.
+- 2026-07-22 보강 재검증 UX 후속을 완료했다. 외부 자료 보강 뒤 source별
+  `recheck_required` 상태와 부분 성공/실패 요약을 one-shell Step 2에 유지하고,
+  `보강된 데이터로 재검증 -> 새 결과 저장 -> Final Review`로 이어지는 CTA를
+  복구했다. collector / replay / Gate / append-only 저장 경계는 변경하지 않았다.

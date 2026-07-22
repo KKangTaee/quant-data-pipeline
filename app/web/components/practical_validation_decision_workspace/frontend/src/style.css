@@ -427,6 +427,124 @@ summary:focus-visible {
   margin-top: 14px;
 }
 
+.pv2-enrichment-lifecycle {
+  margin-top: 14px;
+  padding: 15px;
+  border: 1px solid var(--pv2-line);
+  border-radius: 14px;
+}
+
+.pv2-enrichment-lifecycle > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.pv2-enrichment-lifecycle > header span,
+.pv2-enrichment-lifecycle > header > strong {
+  color: var(--pv2-blue);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.pv2-enrichment-lifecycle h3,
+.pv2-enrichment-lifecycle p {
+  margin: 0;
+}
+
+.pv2-enrichment-lifecycle h3 {
+  margin-top: 4px;
+  font-size: 15px;
+}
+
+.pv2-enrichment-lifecycle header p {
+  margin-top: 4px;
+  color: var(--pv2-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.pv2-enrichment-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 13px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pv2-enrichment-steps li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--pv2-line-soft);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .72);
+}
+
+.pv2-enrichment-steps li > span {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--pv2-muted);
+  background: #e8eef3;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.pv2-enrichment-steps li > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.pv2-enrichment-steps strong,
+.pv2-enrichment-steps small {
+  overflow-wrap: anywhere;
+}
+
+.pv2-enrichment-steps strong {
+  font-size: 11px;
+}
+
+.pv2-enrichment-steps small {
+  color: var(--pv2-muted);
+  font-size: 9px;
+}
+
+.pv2-enrichment-steps li.is-completed > span {
+  color: #fff;
+  background: var(--pv2-positive);
+}
+
+.pv2-enrichment-steps li.is-current {
+  border-color: #7e9caf;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #7e9caf;
+}
+
+.pv2-enrichment-steps li.is-current > span {
+  color: #fff;
+  background: var(--pv2-blue);
+}
+
+.pv2-enrichment-steps li.is-blocked > span {
+  color: #fff;
+  background: var(--pv2-danger);
+}
+
+.pv2-enrichment-outcome {
+  margin-top: 10px !important;
+  color: var(--pv2-muted);
+  font-size: 10px;
+}
+
 .pv2-recheck-mode-panel {
   margin-top: 14px;
   padding: 14px;
@@ -931,8 +1049,14 @@ button:disabled {
   .pv2-selection-control-row,
   .pv2-threshold-summary,
   .pv2-profile-question-grid,
+  .pv2-enrichment-steps,
   .pv2-recheck-mode-grid,
   .pv2-provenance-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pv2-enrichment-lifecycle > header {
+    display: grid;
     grid-template-columns: 1fr;
   }
 

@@ -7072,3 +7072,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - 결과 component callback이 intent를 fragment rerun에서 선소비하던 경계를 제거하고, fragment 본문 소비 후 full-app rerun으로 승격했다.
 - GTAA synthetic actual Browser QA에서 한 번 클릭으로 handler 1회와 `LEVEL2_ROUTE_REACHED`를 확인했고 focused `51 passed`, console error/warning 0을 통과했다.
 - task `3/3차` 완료. 저장 schema·registry·validation gate 의미는 바꾸지 않았으며 상세는 `tasks/active/backtest-level2-fragment-handoff-fix-v1-20260722/`를 본다.
+
+## 2026-07-22 - Practical Validation 보강 재검증 one-shell 완료
+
+- 외부 자료 보강 뒤 source별 `recheck_required`와 부분 성공/실패 요약을 Step 2 one-shell에 연결하고, 일괄 success 안내를 semantic warning으로 교정했다.
+- `자료 보강 -> 재검증 -> 새 결과 저장 -> Final Review` lifecycle과 `보강된 데이터로 재검증` CTA를 React/fallback 공통 read model로 제공한다.
+- actual fixture에서 replay 클릭 후 `save_ready`, 760px overflow 0, console warning/error 0을 확인했다. task 전체 `3/3차`; 상세는 `tasks/active/practical-validation-enrichment-recheck-ux-v1-20260722/`를 본다.

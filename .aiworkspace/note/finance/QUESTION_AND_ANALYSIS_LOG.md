@@ -10446,3 +10446,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 후보 source는 한 번만 저장하면서 사용자가 한 번의 클릭으로 Practical Validation에 도달해야 함.
 - Analysis result: custom component callback이 intent를 소비한 뒤 fragment만 다시 실행되어 root route owner가 `backtest_requested_panel`을 읽지 못했다. intent를 fragment 본문에서 소비하고 `st.rerun(scope="app")`으로 승격하도록 수정했다.
 - Follow-up: task `3/3차` 완료. focused 51개와 synthetic GTAA actual Browser QA를 통과했으며 장기 실행 중인 Streamlit 서버는 재시작 후 확인한다.
+
+### 2026-07-22 - Level2 자료 보강은 검증 완료가 아니라 재검증 시작점이다
+
+- User request: Practical Validation에서 외부 데이터를 받은 뒤 기존 Flow 문구와 화면 흐름이 남아 혼란스러운 원인을 파악하고 올바른 UX/UI로 개선하도록 요청함.
+- Interpreted goal: collector, replay, Gate, 저장 안전 경계는 유지하면서 보강 직후 사용자가 현재 단계와 다음 행동을 같은 Level2 화면에서 이어서 완료해야 함.
+- Analysis result: one-shell 전환 때 기존 recovery renderer 호출만 제거되고 source별 progress/read model 연결이 빠졌으며 모든 notice가 success로 렌더링됐다. lifecycle을 Decision Workspace에 투영하고 partial/failed 결과를 보수적으로 요약하는 방식을 채택했다.
+- Follow-up: 전체 `3/3차` 완료. `보강된 데이터로 재검증` 클릭 후 새 결과 저장/Final Review 또는 blocker 경로로 전환되며, raw job 진단 panel은 first-read에 추가하지 않았다.
