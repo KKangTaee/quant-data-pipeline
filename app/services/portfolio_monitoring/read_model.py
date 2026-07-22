@@ -206,6 +206,20 @@ def _normalized_lane_curve(lane: ItemValueLane) -> pd.DataFrame:
     return frame.sort_values("date").drop_duplicates(subset=["date"], keep="last")
 
 
+def _lane_total_return(lane: ItemValueLane | None) -> Decimal | None:
+    """Return the last valid cash-flow-adjusted item return."""
+
+    if lane is None:
+        return None
+    frame = _normalized_lane_curve(lane)
+    if frame.empty or "flow_adjusted_index" not in frame:
+        return None
+    values = frame["flow_adjusted_index"].dropna()
+    if values.empty:
+        return None
+    return _money(values.iloc[-1]) - Decimal("1")
+
+
 def _value_at(
     item: MonitoringItemRecord,
     lane: ItemValueLane | None,
@@ -451,6 +465,9 @@ def align_group_value_lanes(
                 valid_lanes.get(item.monitoring_item_id),
                 basis_date,
             ),
+            "total_return": _lane_total_return(
+                valid_lanes.get(item.monitoring_item_id)
+            ),
             "failure": failures.get(item.monitoring_item_id),
         }
         for item in ordered_items
@@ -579,12 +596,8 @@ def _project_selected_position(
             "reason": "보유내역 가치곡선을 계산할 수 없습니다.",
         }
     command_eligible = selected.status in ACTIVE_ITEM_STATUSES
-    total_return = None
     frame = _normalized_lane_curve(lane)
-    if "flow_adjusted_index" in frame and not frame.empty:
-        value = frame.iloc[-1]["flow_adjusted_index"]
-        if pd.notna(value):
-            total_return = _money(value) - Decimal("1")
+    total_return = _lane_total_return(lane)
     latest_value = None
     if "total_value" in frame and not frame.empty:
         value = frame.iloc[-1]["total_value"]

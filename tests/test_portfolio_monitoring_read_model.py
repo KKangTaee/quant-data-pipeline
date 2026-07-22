@@ -147,6 +147,49 @@ class FakeRepository:
 
 
 class PortfolioMonitoringReadModelTests(unittest.TestCase):
+    def test_item_rows_expose_last_valid_flow_adjusted_total_return(self) -> None:
+        read_model = _load_read_model()
+        item = _item(
+            "item-amd",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+            funding_mode="fixed_shares",
+            input_shares=10,
+        )
+        lane = _position_lane(item)
+        lane.curve.loc[lane.curve.index[-1], "flow_adjusted_index"] = None
+
+        result = read_model.align_group_value_lanes(
+            [item], {item.monitoring_item_id: lane}
+        )
+
+        self.assertEqual(
+            result.item_rows[0]["total_return"],
+            Decimal("-0.0008"),
+        )
+
+    def test_item_rows_do_not_fabricate_total_return_without_flow_adjusted_index(
+        self,
+    ) -> None:
+        read_model = _load_read_model()
+        item = _item(
+            "item-amd",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+        )
+        lane = _lane(
+            item,
+            [("2026-07-01", 1000), ("2026-07-02", 1200)],
+        )
+
+        result = read_model.align_group_value_lanes(
+            [item], {item.monitoring_item_id: lane}
+        )
+
+        self.assertIsNone(result.item_rows[0]["total_return"])
+
     def test_group_metrics_exclude_external_flows_from_return_and_profit(self) -> None:
         read_model = _load_read_model()
         item = _item(
