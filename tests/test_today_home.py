@@ -567,6 +567,22 @@ class TodayHomePageContractTests(unittest.TestCase):
             "2027-12-31",
         )
 
+    def test_today_react_renders_regular_market_status_without_extended_hours(
+        self,
+    ) -> None:
+        root = Path("app/web/streamlit_components/today_workbench/src")
+        source = (root / "TodayWorkbench.tsx").read_text(encoding="utf-8")
+        styles = (root / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("미국 정규장", source)
+        self.assertIn("뉴욕", source)
+        self.assertIn("한국", source)
+        self.assertIn("resolveMarketSession", source)
+        self.assertIn("setInterval", source)
+        self.assertIn(".today-market-session", styles)
+        self.assertNotIn("프리마켓", source)
+        self.assertNotIn("애프터마켓", source)
+
     def test_today_react_source_uses_explicit_risk_labels_and_chart_semantics(self) -> None:
         root = Path("app/web/streamlit_components/today_workbench/src")
         workbench = (root / "TodayWorkbench.tsx").read_text(encoding="utf-8")

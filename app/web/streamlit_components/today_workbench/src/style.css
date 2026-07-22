@@ -55,6 +55,45 @@ button { font: inherit; }
 .today-hero aside strong { color: #8b641f; font-size: 18px; }
 .today-hero aside b { padding: 6px 9px; border-radius: 999px; color: #8b641f; background: #fff4d9; font-size: 10px; }
 
+.today-market-session {
+  display: grid;
+  grid-template-columns: minmax(150px, .75fr) minmax(220px, 1fr) minmax(270px, 1.25fr) minmax(190px, .8fr);
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #dbe5eb;
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(33, 53, 72, .04);
+}
+.today-market-session > div {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  gap: 4px;
+  padding: 14px 16px;
+  border-right: 1px solid #e6edf1;
+  overflow-wrap: anywhere;
+}
+.today-market-session > div:last-child { border-right: 0; }
+.today-market-session span { color: #718493; font-size: 10px; font-weight: 800; }
+.today-market-session strong { color: #29445a; font-size: 12px; line-height: 1.4; }
+.today-market-session-status { background: #f6fafb; }
+.today-market-session-status strong { color: #315f78; font-size: 15px; }
+.today-market-session-status b { width: fit-content; padding: 4px 7px; border-radius: 999px; color: #725d3e; background: #fff2df; font-size: 9px; }
+.today-market-session.phase-open .today-market-session-status { background: #edf8f3; }
+.today-market-session.phase-open .today-market-session-status strong { color: #1d6d5d; }
+.today-market-session.phase-closed .today-market-session-status,
+.today-market-session.phase-holiday .today-market-session-status,
+.today-market-session.phase-weekend .today-market-session-status { background: #f7f9fa; }
+.today-market-session.phase-closed .today-market-session-status strong,
+.today-market-session.phase-holiday .today-market-session-status strong,
+.today-market-session.phase-weekend .today-market-session-status strong { color: #64768a; }
+.today-market-session-clocks strong { display: flex; flex-wrap: wrap; gap: 5px; }
+.today-market-session-clocks i { color: #9aabb6; font-style: normal; }
+.today-market-session-hours small { color: #718493; font-size: 10px; line-height: 1.35; }
+.today-market-session-countdown { justify-items: end; text-align: right; }
+.today-market-session-countdown strong { color: #315f78; font-size: 15px; font-variant-numeric: tabular-nums; }
+
 .today-context-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(250px, .7fr); gap: 14px; }
 .today-panel,
 .today-portfolio-panel,
@@ -238,6 +277,9 @@ button { font: inherit; }
   .today-context-grid,
   .today-portfolio-detail-grid { display: grid; grid-template-columns: 1fr; }
   .today-hero aside { justify-items: start; text-align: left; }
+  .today-market-session { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .today-market-session > div:nth-child(2) { border-right: 0; }
+  .today-market-session > div:nth-child(-n+2) { border-bottom: 1px solid #e6edf1; }
   .today-evidence-grid { grid-template-columns: 1fr; }
   .today-metrics { grid-template-columns: 1fr; }
   .today-chart-header,
@@ -249,6 +291,11 @@ button { font: inherit; }
 @media (max-width: 460px) {
   .today-workbench { gap: 13px; padding-inline: 1px; }
   .today-hero { padding: 21px 19px; border-radius: 19px; }
+  .today-market-session { grid-template-columns: 1fr; border-radius: 15px; }
+  .today-market-session > div,
+  .today-market-session > div:nth-child(2) { border-right: 0; border-bottom: 1px solid #e6edf1; }
+  .today-market-session > div:last-child { border-bottom: 0; }
+  .today-market-session-countdown { justify-items: start; text-align: left; }
   .today-panel,
   .today-portfolio-panel,
   .today-action-section { padding: 17px 15px; border-radius: 17px; }

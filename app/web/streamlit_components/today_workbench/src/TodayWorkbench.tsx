@@ -1,8 +1,14 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 
 import TodayPortfolioChart from "./TodayPortfolioChart";
-import { signedMoneyText } from "./presentation";
+import {
+  formatCountdown,
+  formatSessionHours,
+  formatZonedClock,
+  resolveMarketSession,
+  signedMoneyText,
+} from "./presentation";
 import type { EvidenceRow, TodayEventId, TodayPayload } from "./types";
 import "./style.css";
 
@@ -48,6 +54,7 @@ function EvidenceCard({ row }: { row: EvidenceRow }) {
 function TodayWorkbench({ args, width }: Props) {
   const payload = args.payload;
   const rootRef = useRef<HTMLElement | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     Streamlit.setFrameHeight();
@@ -56,6 +63,11 @@ function TodayWorkbench({ args, width }: Props) {
     observer.observe(rootRef.current);
     return () => observer.disconnect();
   }, [payload, width]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   if (!payload) {
     return <div className="today-component-empty">Today payload를 불러오지 못했습니다.</div>;
@@ -66,6 +78,30 @@ function TodayWorkbench({ args, width }: Props) {
   const recentTone = (metrics.latest_observation_return ?? 0) < 0 ? "is-negative" : "is-positive";
   const totalTone = (metrics.total_return ?? 0) < 0 ? "is-negative" : "is-positive";
   const nextEvent = payload.market.next_event;
+  const resolvedSession = resolveMarketSession(payload.market_session, nowMs);
+  const phaseCopy = {
+    PRE_OPEN: { label: "개장 전", countdown: "정규장 개장까지" },
+    OPEN: { label: "장 진행 중", countdown: "정규장 마감까지" },
+    CLOSED: { label: "정규장 마감", countdown: "다음 정규장 개장까지" },
+    HOLIDAY: { label: "휴장", countdown: "다음 정규장 개장까지" },
+    WEEKEND: { label: "휴장", countdown: "다음 정규장 개장까지" },
+    STALE: { label: "일정 자료 부족", countdown: "새로고침 필요" },
+  }[resolvedSession.phase];
+  const displaySession = resolvedSession.today?.day_kind === "TRADING_DAY"
+    ? resolvedSession.today
+    : resolvedSession.nextTradingDay;
+  const sessionNote = resolvedSession.phase === "HOLIDAY"
+    ? resolvedSession.today?.holiday_label
+    : resolvedSession.phase === "WEEKEND"
+      ? "주말"
+      : displaySession?.is_early_close
+        ? "조기폐장"
+        : payload.market_session.calendar_quality === "LIMITED"
+          ? "일정 확인 필요"
+          : null;
+  const countdownText = resolvedSession.targetAtMs == null
+    ? "새로고침 필요"
+    : formatCountdown(resolvedSession.targetAtMs - nowMs);
 
   return (
     <main className="today-workbench" ref={rootRef}>
@@ -80,6 +116,39 @@ function TodayWorkbench({ args, width }: Props) {
           <strong>{payload.header.status_label}</strong>
           <b>{payload.header.source_ready_count}/{payload.header.source_count} READY</b>
         </aside>
+      </section>
+
+      <section className={`today-market-session phase-${resolvedSession.phase.toLowerCase()}`}>
+        <div className="today-market-session-status">
+          <span>미국 정규장</span>
+          <strong>{phaseCopy.label}</strong>
+          {sessionNote ? <b>{sessionNote}</b> : null}
+        </div>
+        <div className="today-market-session-clocks">
+          <span>현재 시각</span>
+          <strong>
+            뉴욕 {formatZonedClock(nowMs, payload.market_session.timezones.market)}
+            <i>·</i>
+            한국 {formatZonedClock(nowMs, payload.market_session.timezones.viewer)}
+          </strong>
+        </div>
+        <div className="today-market-session-hours">
+          <span>{displaySession?.trade_date ?? "거래 일정"}</span>
+          <strong>
+            ET · {displaySession
+              ? formatSessionHours(displaySession, payload.market_session.timezones.market)
+              : "일정 자료 부족"}
+          </strong>
+          <small>
+            KST · {displaySession
+              ? formatSessionHours(displaySession, payload.market_session.timezones.viewer)
+              : "일정 자료 부족"}
+          </small>
+        </div>
+        <div className="today-market-session-countdown">
+          <span>{phaseCopy.countdown}</span>
+          <strong>{countdownText}</strong>
+        </div>
       </section>
 
       <section className="today-context-grid">
