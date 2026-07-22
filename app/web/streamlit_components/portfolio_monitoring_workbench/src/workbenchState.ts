@@ -1,4 +1,4 @@
-import type { DiagnosisDisplayGroup, DiagnosisDisplayGroupView, DiagnosisHistoryRow, DiagnosisProjection, DiagnosisRow, GroupMetrics, GroupSummary, ItemRow, MacroObservationProjection, MarketChartRow, PriceRefreshProjection, RiskCalibrationProjection, SourceHealth } from "./contracts";
+import type { DiagnosisDisplayGroup, DiagnosisDisplayGroupView, DiagnosisHistoryRow, DiagnosisProjection, DiagnosisRow, GroupMetrics, GroupSummary, ItemRow, MacroObservationProjection, MarketChartRow, PortfolioMonitoringWorkspace, PriceRefreshProjection, RiskCalibrationProjection, SourceHealth } from "./contracts";
 
 export type MonitoringSourceType = "direct_security" | "selected_strategy";
 export type MonitoringKind = "stock" | "etf" | "strategy";
@@ -227,6 +227,25 @@ export function selectActiveGroup(groups: GroupSummary[], requestedId: string | 
 export function selectItem(items: ItemRow[], requestedId: string | null | undefined) {
   const requested = items.find((item) => item.monitoring_item_id === requestedId);
   return requested ?? items.find((item) => item.status !== "ended") ?? items[0] ?? null;
+}
+
+export function selectItemDetail(
+  workspace: PortfolioMonitoringWorkspace,
+  requestedId: string | null | undefined,
+) {
+  if (!requestedId) return { position: null, marketChart: null };
+  const detail = workspace.item_details?.[requestedId];
+  if (detail) {
+    return { position: detail.position, marketChart: detail.market_chart };
+  }
+  return {
+    position: workspace.selected_position.monitoring_item_id === requestedId
+      ? workspace.selected_position
+      : null,
+    marketChart: workspace.selected_item_market_chart?.monitoring_item_id === requestedId
+      ? workspace.selected_item_market_chart
+      : null,
+  };
 }
 
 export function partitionItemRows(items: ItemRow[]) {

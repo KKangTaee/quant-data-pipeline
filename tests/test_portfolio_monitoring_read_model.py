@@ -605,7 +605,7 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
 
         self.assertEqual(
             set(workspace),
-            {"schema_version", "generated_at", "config_fingerprint", "groups", "active_group", "selected_position", "catalog", "commands", "diagnosis", "macro_observation", "now_to_review", "source_health", "risk_calibration", "diagnosis_history", "method", "boundaries"},
+            {"schema_version", "generated_at", "config_fingerprint", "groups", "active_group", "selected_position", "item_details", "catalog", "commands", "diagnosis", "macro_observation", "now_to_review", "source_health", "risk_calibration", "diagnosis_history", "method", "boundaries"},
         )
         self.assertEqual(workspace["schema_version"], "portfolio_monitoring_workspace_v2")
         self.assertTrue(workspace["groups"][0]["selected"])
@@ -683,6 +683,89 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
 
         self.assertEqual(workspace["selected_item_market_chart"]["status"], "READY")
         self.assertEqual(workspace["selected_item_market_chart"]["monitoring_item_id"], "a")
+
+    def test_workspace_preloads_detail_for_every_item(self) -> None:
+        read_model = _load_read_model()
+        group = PortfolioGroupRecord("group-core", "Core", True)
+        first = _item(
+            "a",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+            funding_mode="fixed_shares",
+            input_shares=10,
+        )
+        second = _item(
+            "b",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+            funding_mode="fixed_shares",
+            input_shares=10,
+        )
+        repository = FakeRepository([group], [first, second])
+        loaded: list[str] = []
+
+        def load_chart(item, start, end):
+            loaded.append(item.monitoring_item_id)
+            if item.monitoring_item_id == "b":
+                raise RuntimeError("b chart unavailable")
+            return pd.DataFrame(
+                [{"date": end, "open": 10, "high": 11, "low": 9, "close": 10.5, "volume": 100}]
+            )
+
+        workspace = read_model.build_portfolio_monitoring_workspace(
+            repository,
+            active_group_id="group-core",
+            selected_item_id="a",
+            lane_loader=_position_lane,
+            market_chart_loader=load_chart,
+        )
+
+        self.assertEqual(set(workspace["item_details"]), {"a", "b"})
+        self.assertEqual(
+            workspace["item_details"]["a"]["position"]["monitoring_item_id"],
+            "a",
+        )
+        self.assertEqual(
+            workspace["item_details"]["b"]["position"]["monitoring_item_id"],
+            "b",
+        )
+        self.assertEqual(
+            workspace["item_details"]["a"]["market_chart"]["status"],
+            "READY",
+        )
+        self.assertEqual(
+            workspace["item_details"]["b"]["market_chart"]["status"],
+            "ERROR",
+        )
+        self.assertCountEqual(loaded, ["a", "b"])
+
+    def test_workspace_item_details_skip_market_charts_without_loader(self) -> None:
+        read_model = _load_read_model()
+        group = PortfolioGroupRecord("group-core", "Core", True)
+        item = _item(
+            "a",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+            funding_mode="fixed_shares",
+            input_shares=10,
+        )
+
+        workspace = read_model.build_portfolio_monitoring_workspace(
+            FakeRepository([group], [item]),
+            active_group_id="group-core",
+            selected_item_id="a",
+            lane_loader=_position_lane,
+        )
+
+        self.assertEqual(
+            workspace["item_details"]["a"]["position"]["monitoring_item_id"],
+            "a",
+        )
+        self.assertIsNone(workspace["item_details"]["a"]["market_chart"])
+        self.assertNotIn("selected_item_market_chart", workspace)
 
     def test_macro_projection_filters_low_confidence_and_exposes_source_health(self) -> None:
         read_model = _load_read_model()

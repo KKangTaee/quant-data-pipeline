@@ -640,6 +640,53 @@ def _project_selected_position(
     }
 
 
+def _project_item_details(
+    items: Sequence[MonitoringItemRecord],
+    lanes: Mapping[str, ItemValueLane | BaseException],
+    *,
+    basis_date: date | None,
+    market_chart_loader: MarketChartLoader | None,
+) -> dict[str, dict[str, Any]]:
+    """Preload per-item detail so read-only selection stays in React."""
+
+    return {
+        item.monitoring_item_id: {
+            "position": _project_selected_position(
+                items,
+                lanes,
+                item.monitoring_item_id,
+            ),
+            "market_chart": (
+                build_selected_item_market_chart(
+                    items,
+                    selected_item_id=item.monitoring_item_id,
+                    basis_date=basis_date,
+                    loader=market_chart_loader,
+                )
+                if market_chart_loader is not None
+                else None
+            ),
+        }
+        for item in items
+    }
+
+
+def _resolved_market_chart_item_id(
+    items: Sequence[MonitoringItemRecord],
+    selected_item_id: str | None,
+) -> str | None:
+    selected = next(
+        (item for item in items if item.monitoring_item_id == selected_item_id),
+        None,
+    )
+    if selected is None:
+        selected = next(
+            (item for item in items if item.status != "ended"),
+            items[0] if items else None,
+        )
+    return selected.monitoring_item_id if selected is not None else None
+
+
 def build_portfolio_monitoring_workspace(
     repository: MonitoringRepository,
     *,
@@ -771,6 +818,12 @@ def build_portfolio_monitoring_workspace(
         current_policy_version=DIAGNOSIS_POLICY_VERSION,
         current_config_fingerprint=config_fingerprint,
     )
+    item_details = _project_item_details(
+        selected_items,
+        lane_values,
+        basis_date=active_result.basis_date if active_result is not None else None,
+        market_chart_loader=market_chart_loader,
+    )
     workspace: dict[str, object] = {
         "schema_version": WORKSPACE_SCHEMA_VERSION,
         "generated_at": timestamp.isoformat(timespec="seconds"),
@@ -789,6 +842,7 @@ def build_portfolio_monitoring_workspace(
             lane_values,
             selected_item_id,
         ),
+        "item_details": item_details,
         "catalog": {"query": catalog_query, "items": []},
         "commands": [],
         "diagnosis": {
@@ -820,10 +874,18 @@ def build_portfolio_monitoring_workspace(
         },
     }
     if market_chart_loader is not None:
-        workspace["selected_item_market_chart"] = build_selected_item_market_chart(
+        resolved_item_id = _resolved_market_chart_item_id(
             selected_items,
-            selected_item_id=selected_item_id,
-            basis_date=active_result.basis_date if active_result is not None else None,
-            loader=market_chart_loader,
+            selected_item_id,
+        )
+        workspace["selected_item_market_chart"] = (
+            item_details[resolved_item_id]["market_chart"]
+            if resolved_item_id is not None
+            else build_selected_item_market_chart(
+                selected_items,
+                selected_item_id=selected_item_id,
+                basis_date=active_result.basis_date if active_result is not None else None,
+                loader=market_chart_loader,
+            )
         )
     return workspace

@@ -4505,8 +4505,14 @@ def _dispatch_portfolio_monitoring_event(
     if event_id == "add_item":
         return services.add_item(event)
     if event_id == "end_item":
+        services.session_state["portfolio_monitoring_selected_item_id"] = str(
+            event.get("monitoring_item_id") or ""
+        )
         return services.end_item(event)
     if event_id == "reopen_item":
+        services.session_state["portfolio_monitoring_selected_item_id"] = str(
+            event.get("monitoring_item_id") or ""
+        )
         return services.reopen_item(event)
     if event_id == "refresh_group_prices":
         return services.refresh_group_prices(event)

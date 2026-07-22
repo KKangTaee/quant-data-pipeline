@@ -121,6 +121,21 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn(".pm-market-candle.is-up", styles)
         self.assertIn(".pm-market-candle.is-down", styles)
 
+    def test_item_selection_updates_local_detail_without_streamlit_event(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+
+        choose_item = source.split(
+            "const chooseItem = (itemId: string) => {", 1
+        )[1].split("};", 1)[0]
+        self.assertIn("setSelectedItemId(itemId)", choose_item)
+        self.assertNotIn("emit(", choose_item)
+        self.assertNotIn('id: "select_item"', choose_item)
+        self.assertIn(
+            "selectItemDetail(workspace, selectedItem?.monitoring_item_id)", source
+        )
+
     def test_market_chart_exposes_client_side_zoom_pan_controls(self) -> None:
         source = Path(
             "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"

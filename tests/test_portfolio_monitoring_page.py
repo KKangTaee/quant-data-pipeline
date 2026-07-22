@@ -192,6 +192,10 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
         page._dispatch_portfolio_monitoring_event(event, services)
 
         self.assertIn(("reopen_item", event), services.calls)
+        self.assertEqual(
+            services.session_state["portfolio_monitoring_selected_item_id"],
+            "item-ended",
+        )
 
     def test_dispatches_group_price_refresh_once(self) -> None:
         from app.web import final_selected_portfolio_dashboard as page

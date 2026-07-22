@@ -7072,3 +7072,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 대표 포트폴리오는 최근 최대 60개 실제 일별 저장 종가, 실제 날짜 X축, 현금흐름 조정 누적 수익률 Y축과 최근 거래일의 정확한 두 날짜를 표시한다.
 - Python 26+연결 surface 114, React 5/typecheck/build와 1280·760·420 actual Browser QA, clean console, Market Context 이동을 통과했다.
 - 전체 roadmap `4/4차` 완료. 상세는 `tasks/active/today-home-react-workbench-v2-20260722/`를 본다.
+
+## 2026-07-22 - Portfolio Monitoring 종목 선택 로컬 전환 완료
+
+- `종목·전략 결과` 행 선택에서 `select_item` Streamlit event를 제거하고 additive `item_details`로 개별 추적 요약·보유내역·가격 차트만 즉시 바꾸도록 구현했다.
+- 그룹 선택, 가격 최신화, 종목 등록, 종료/취소, 거래 command의 server rerun 경계와 legacy selected projection을 유지했다.
+- Python 64 / React 36 / typecheck/build와 actual AMD↔RKLB Browser QA를 통과했으며 Running 0, clean console, 그룹 현재가치 유지를 확인했다.
+- 전체 roadmap `3/3차` 완료. 상세는 `tasks/active/portfolio-monitoring-local-item-selection-v1-20260722/`를 본다.

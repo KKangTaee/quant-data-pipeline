@@ -137,6 +137,11 @@ export type SelectedItemMarketChart = {
   reason: string | null;
 };
 
+export type ItemDetailProjection = {
+  position: SelectedPositionProjection;
+  market_chart: SelectedItemMarketChart | null;
+};
+
 export type PriceRefreshRow = {
   symbol: string;
   latest_date: string | null;
@@ -270,6 +275,7 @@ export type PortfolioMonitoringWorkspace = {
   groups: GroupSummary[];
   active_group: GroupValueResult | null;
   selected_position: SelectedPositionProjection;
+  item_details?: Record<string, ItemDetailProjection>;
   position_trade_close?: PositionTradeCloseProjection;
   initial_position_entry?: InitialPositionEntryProjection;
   position_editor_state?: PositionEditorRecoveryState | null;

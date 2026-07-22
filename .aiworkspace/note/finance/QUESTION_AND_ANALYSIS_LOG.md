@@ -10446,3 +10446,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 기존 상세 탭 내부를 개편하지 않고 browser root `/`의 판단 흐름만 같은 제품군의 React로 교체해 시장 근거와 대표 포트폴리오를 오해 없이 빠르게 읽게 한다.
 - Analysis result: V1은 React가 아닌 `st.markdown` HTML이었고 `day_return`과 axis 없는 sparkline이 일봉/주봉/장중 의미를 숨겼다. Python-owned text risk label과 `daily/stored_close/aggregation none/intraday false`, 실제 날짜 X축·누적 수익률 Y축 계약을 채택했다.
 - Follow-up: 전체 `4/4차`를 완료했다. actual QA에서 전 구간 양수인데 음수 padding 눈금이 생기는 문제도 발견해 0% 기준선에서 축을 멈추도록 보정했고, 1280·760·420 overflow 0, clean console, 기존 Market Context 이동을 확인했다.
+
+### 2026-07-22 - Portfolio Monitoring 항목 선택은 저장 command가 아니라 로컬 탐색이다
+
+- User request: `종목·전략 결과`에서 종목을 고를 때 개별 추적 결과뿐 아니라 탭 전체가 rerun되는 현상을 확인하고 개선해 달라고 요청함.
+- Interpreted goal: 그룹 계산과 화면 위치를 다시 만들지 않고 선택한 항목의 요약·보유내역·차트만 즉시 바꾸되 실제 데이터 변경 command는 기존 서버 검증을 유지해야 함.
+- Analysis result: React `select_item` event 뒤 공통 `runtime.rerun()`이 원인이었다. 활성 그룹의 표시 항목 detail을 workspace에 선적재하고 선택 click을 React local state로 전환했다.
+- Follow-up: 전체 `3/3차`를 완료했다. 그룹 선택·수집·등록·종료/취소·거래는 server rerun을 유지하고, actual AMD↔RKLB에서 Running 없이 detail만 바뀌는 것을 확인했다.

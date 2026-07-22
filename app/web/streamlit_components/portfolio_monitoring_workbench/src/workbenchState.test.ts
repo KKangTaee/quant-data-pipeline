@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { GroupSummary, GroupValueResult, PriceRefreshProjection } from "./contracts";
+import type { GroupSummary, GroupValueResult, PortfolioMonitoringWorkspace, PriceRefreshProjection } from "./contracts";
 import {
   buildCommonBasisBanner,
   buildPriceRefreshSummary,
@@ -13,6 +13,7 @@ import {
   validateItemDraft,
   selectActiveGroup,
   selectItem,
+  selectItemDetail,
   buildDiagnosisSections,
   buildMacroObservationPresentation,
   buildFullMarketChartViewport,
@@ -97,6 +98,52 @@ describe("portfolio monitoring workbench state", () => {
     expect(selectItem(activeGroup.item_rows, "ended")?.source_ref).toBe("OLD");
     expect(selectItem(activeGroup.item_rows, null)?.source_ref).toBe("AAPL");
     expect(activeGroup.item_rows.map((item) => item.status)).toEqual(["active", "ended"]);
+  });
+
+  it("selects preloaded item detail and only uses matching legacy detail as fallback", () => {
+    const legacyPosition = {
+      monitoring_item_id: "a",
+      eligible: false,
+      reason: null,
+      as_of_date: null,
+      current_value: null,
+      effective_initial_shares: null,
+      current_shares: null,
+      gross_contributions: 0,
+      gross_withdrawals: 0,
+      pnl: null,
+      total_return: null,
+      event_rows: [],
+    };
+    const detailPosition = { ...legacyPosition, monitoring_item_id: "b", current_shares: 12 };
+    const detailChart = {
+      status: "READY" as const,
+      monitoring_item_id: "b",
+      source_type: "direct_security" as const,
+      source_ref: "MSFT",
+      instrument_kind: "stock" as const,
+      timeframe: "1d" as const,
+      max_rows: 120,
+      rows: [{ date: "2026-07-21", open: 10, high: 11, low: 9, close: 10.5, volume: 100 }],
+      reason: null,
+    };
+    const workspace = {
+      selected_position: legacyPosition,
+      selected_item_market_chart: { ...detailChart, monitoring_item_id: "a", source_ref: "AAPL" },
+      item_details: {
+        b: { position: detailPosition, market_chart: detailChart },
+      },
+    } as unknown as PortfolioMonitoringWorkspace;
+
+    expect(selectItemDetail(workspace, "b")).toEqual({
+      position: detailPosition,
+      marketChart: detailChart,
+    });
+    expect(selectItemDetail(workspace, "a").position).toBe(legacyPosition);
+    expect(selectItemDetail(workspace, "missing")).toEqual({
+      position: null,
+      marketChart: null,
+    });
   });
 
   it("separates active tracking from ended history and uses lifecycle labels", () => {
