@@ -33,7 +33,7 @@
 - Produces: `_PRACTICAL_VALIDATION_FRAGMENT_CALLBACK_ACTIONS: frozenset[str]`
 - Consumes: `_consume_practical_validation_decision_workspace_intent(..., rerun_scope="fragment")`
 
-- [ ] **Step 1: Write the failing callback ownership test**
+- [x] **Step 1: Write the failing callback ownership test**
 
 ```python
 def test_fragment_callback_keeps_persistence_and_navigation_in_fragment_body(self) -> None:
@@ -46,13 +46,13 @@ def test_fragment_callback_keeps_persistence_and_navigation_in_fragment_body(sel
     self.assertNotIn("save_and_move", actions)
 ```
 
-- [ ] **Step 2: Run RED test**
+- [x] **Step 2: Run RED test**
 
 Run: `.venv/bin/python -m pytest -q tests/test_backtest_practical_validation_decision_workspace.py::PracticalValidationDecisionWorkspaceTests::test_fragment_callback_keeps_persistence_and_navigation_in_fragment_body`
 
 Expected: FAIL because `_PRACTICAL_VALIDATION_FRAGMENT_CALLBACK_ACTIONS` does not exist and the current inline callback set includes both persistence actions.
 
-- [ ] **Step 3: Implement the minimal callback action boundary**
+- [x] **Step 3: Implement the minimal callback action boundary**
 
 ```python
 _PRACTICAL_VALIDATION_FRAGMENT_CALLBACK_ACTIONS = frozenset(
@@ -66,7 +66,7 @@ _PRACTICAL_VALIDATION_FRAGMENT_CALLBACK_ACTIONS = frozenset(
 
 Use this constant as the decision component callback `allowed_actions`. Keep fragment-body intent consumption and the existing explicit app rerun for `save_and_move`.
 
-- [ ] **Step 4: Run focused GREEN tests**
+- [x] **Step 4: Run focused GREEN tests**
 
 Run: `.venv/bin/python -m pytest -q tests/test_backtest_practical_validation_decision_workspace.py`
 
@@ -85,7 +85,7 @@ Expected: all Practical Validation decision workspace tests pass.
 - Consumes: `load_practical_validation_results(limit=None)`
 - Returns: `True` only when a new JSONL row is appended; `False` when the stable `validation_id` already exists.
 
-- [ ] **Step 1: Write the failing idempotency test**
+- [x] **Step 1: Write the failing idempotency test**
 
 ```python
 def test_practical_validation_save_is_idempotent_by_validation_id(self) -> None:
@@ -99,13 +99,13 @@ def test_practical_validation_save_is_idempotent_by_validation_id(self) -> None:
     append.assert_called_once_with(result)
 ```
 
-- [ ] **Step 2: Run RED test**
+- [x] **Step 2: Run RED test**
 
 Run: `.venv/bin/python -m pytest -q tests/test_service_contracts.py::PracticalValidationServiceContractTests::test_practical_validation_save_is_idempotent_by_validation_id`
 
 Expected: FAIL because the loader is not imported, the function returns `None`, and both calls append.
 
-- [ ] **Step 3: Implement minimal idempotent save**
+- [x] **Step 3: Implement minimal idempotent save**
 
 ```python
 def save_practical_validation_result(result: dict[str, Any]) -> bool:
@@ -122,7 +122,7 @@ def save_practical_validation_result(result: dict[str, Any]) -> bool:
 
 Set `PracticalValidationFinalReviewHandoff.persisted` from the boolean return value instead of always setting it to `True`.
 
-- [ ] **Step 4: Run focused GREEN tests**
+- [x] **Step 4: Run focused GREEN tests**
 
 Run: `.venv/bin/python -m pytest -q tests/test_service_contracts.py -k 'practical_validation and (handoff or save)'`
 
@@ -140,7 +140,7 @@ Expected: idempotency and existing handoff contracts pass without writing the pr
 - Produces session state: `final_review_active_decision_brief_source_id = "practical_validation_result:<validation_id>"`
 - Preserves compatibility state: `final_review_source_selected`, `final_review_confirmed_candidate_key`
 
-- [ ] **Step 1: Extend the existing handoff test to fail on the current selector key**
+- [x] **Step 1: Extend the existing handoff test to fail on the current selector key**
 
 ```python
 stable_key = "practical_validation_result:validation-new"
@@ -150,13 +150,13 @@ self.assertEqual(
 )
 ```
 
-- [ ] **Step 2: Run RED test**
+- [x] **Step 2: Run RED test**
 
 Run: `.venv/bin/python -m pytest -q tests/test_service_contracts.py::BacktestRuntimeContractTests::test_practical_validation_save_and_move_confirms_new_validation_key`
 
 Expected: FAIL with missing `final_review_active_decision_brief_source_id`.
 
-- [ ] **Step 3: Set the current selector key in the successful handoff**
+- [x] **Step 3: Set the current selector key in the successful handoff**
 
 ```python
 st.session_state["final_review_active_decision_brief_source_id"] = validation_key
@@ -164,7 +164,7 @@ st.session_state["final_review_active_decision_brief_source_id"] = validation_ke
 
 Keep the root-owned `backtest_requested_panel` request and explicit `scope="app"` rerun.
 
-- [ ] **Step 4: Run focused GREEN tests**
+- [x] **Step 4: Run focused GREEN tests**
 
 Run: `.venv/bin/python -m pytest -q tests/test_service_contracts.py::BacktestRuntimeContractTests::test_practical_validation_save_and_move_confirms_new_validation_key tests/test_backtest_practical_validation_decision_workspace.py`
 
@@ -184,7 +184,7 @@ Expected: all selected tests pass.
 - Consumes: production Practical Validation component adapter, Python handler, and root route initialization
 - Produces: browser evidence for one-click / one-save / Final Review route arrival without protected JSONL writes
 
-- [ ] **Step 1: Run focused and boundary regression**
+- [x] **Step 1: Run focused and boundary regression**
 
 Run:
 
@@ -197,7 +197,7 @@ Run:
 
 Expected: all selected tests pass.
 
-- [ ] **Step 2: Run isolated actual interaction QA**
+- [x] **Step 2: Run isolated actual interaction QA**
 
 Use the production component and adapter with an in-memory persistence counter. Verify:
 
@@ -208,11 +208,11 @@ Use the production component and adapter with an in-memory persistence counter. 
 - active candidate key is `practical_validation_result:<validation_id>`
 - console warning/error count is zero
 
-- [ ] **Step 3: Capture one screenshot and remove the temporary app**
+- [x] **Step 3: Capture one screenshot and remove the temporary app**
 
 Save `practical-validation-final-review-route-fix-v1-qa.png` as a generated, uncommitted artifact. Stop the temporary Streamlit process and remove the diagnostic app.
 
-- [ ] **Step 4: Run code verification**
+- [x] **Step 4: Run code verification**
 
 Run:
 
@@ -243,18 +243,18 @@ Expected: compile and diff checks pass.
 - Consumes: verified implementation and QA evidence
 - Produces: durable current-state handoff and one coherent implementation commit
 
-- [ ] **Step 1: Record RED/GREEN and Browser evidence**
+- [x] **Step 1: Record RED/GREEN and Browser evidence**
 
 Update task status to overall `3/3차` only after the actual lifecycle QA succeeds. Record the existing three duplicate rows as preserved historical artifacts, not cleaned data.
 
-- [ ] **Step 2: Sync durable flow and root handoff docs**
+- [x] **Step 2: Sync durable flow and root handoff docs**
 
 Document that persistence/navigation intents leave the fragment callback, validation save is stable-id idempotent, and Final Review opens the handed-off candidate. Keep root logs to 3-5 concise lines.
 
-- [ ] **Step 3: Review and stage only owned files**
+- [x] **Step 3: Review and stage only owned files**
 
 Run `git status --short`, `git diff --check`, and inspect the staged diff. Exclude registries, saved JSONL, run history, screenshots, and unrelated user files.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit message: `수정: Practical Validation Final Review 인계 복구`

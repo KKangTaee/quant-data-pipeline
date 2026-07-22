@@ -7078,3 +7078,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 외부 자료 보강 뒤 source별 `recheck_required`와 부분 성공/실패 요약을 Step 2 one-shell에 연결하고, 일괄 success 안내를 semantic warning으로 교정했다.
 - `자료 보강 -> 재검증 -> 새 결과 저장 -> Final Review` lifecycle과 `보강된 데이터로 재검증` CTA를 React/fallback 공통 read model로 제공한다.
 - actual fixture에서 replay 클릭 후 `save_ready`, 760px overflow 0, console warning/error 0을 확인했다. task 전체 `3/3차`; 상세는 `tasks/active/practical-validation-enrichment-recheck-ux-v1-20260722/`를 본다.
+
+## 2026-07-22 - Practical Validation Final Review 인계 복구 완료
+
+- 저장/이동 intent가 fragment callback에서 선소비되어 root route가 실행되지 않던 원인을 교정했다.
+- 동일 stable `validation_id`는 한 번만 append하고, 성공 handoff는 현재 Final Review selector에 방금 인계한 후보 key를 전달한다.
+- 버튼 1회 Browser QA에서 저장 1회, full-app rerun 1회, Final Review 도달과 active candidate 일치를 확인했다.
+- task `3/3차` 완료. 기존 GTAA 중복 3행은 append-only history로 보존했으며 상세는 `tasks/active/practical-validation-final-review-route-fix-v1-20260722/`를 본다.

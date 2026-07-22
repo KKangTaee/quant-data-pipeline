@@ -1145,3 +1145,8 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
   `recheck_required` 상태와 부분 성공/실패 요약을 one-shell Step 2에 유지하고,
   `보강된 데이터로 재검증 -> 새 결과 저장 -> Final Review`로 이어지는 CTA를
   복구했다. collector / replay / Gate / append-only 저장 경계는 변경하지 않았다.
+- 2026-07-22 Final Review route 후속을 완료했다. 저장/이동 intent는 fragment
+  callback 선소비 대상에서 제외하고 full-app rerun으로 root route owner에
+  전달한다. stable `validation_id` 기준 중복 append를 막고 현재 Final Review
+  selector key를 함께 넘겨 한 번의 클릭으로 방금 인계한 후보를 연다. 기존
+  append-only 중복 행은 보존하고 Gate / replay / provider 의미는 바꾸지 않았다.

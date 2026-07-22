@@ -10453,3 +10453,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: collector, replay, Gate, 저장 안전 경계는 유지하면서 보강 직후 사용자가 현재 단계와 다음 행동을 같은 Level2 화면에서 이어서 완료해야 함.
 - Analysis result: one-shell 전환 때 기존 recovery renderer 호출만 제거되고 source별 progress/read model 연결이 빠졌으며 모든 notice가 success로 렌더링됐다. lifecycle을 Decision Workspace에 투영하고 partial/failed 결과를 보수적으로 요약하는 방식을 채택했다.
 - Follow-up: 전체 `3/3차` 완료. `보강된 데이터로 재검증` 클릭 후 새 결과 저장/Final Review 또는 blocker 경로로 전환되며, raw job 진단 panel은 first-read에 추가하지 않았다.
+
+### 2026-07-22 - Practical Validation 저장과 Final Review 이동은 한 번의 action으로 끝낸다
+
+- User request: 재검증 완료 후 `저장하고 Final Review로 이동`이 저장만 하고 화면을 이동하지 않는 문제를 진단하고 수정하도록 요청함.
+- Interpreted goal: 동일 validation 중복 저장 없이 버튼 한 번으로 방금 검증한 후보의 Final Review를 열어야 함.
+- Analysis result: component callback이 persistence/navigation intent를 fragment에서 선소비해 root route owner가 실행되지 않았고, handoff도 current Final Review selector key를 설정하지 않았다.
+- Follow-up: 전체 `3/3차` 완료. intent ownership, stable-id 중복 방지, active candidate handoff를 교정했고 isolated Browser lifecycle에서 저장 1회와 Final Review 도달을 확인했다. 기존 append-only 중복 3행은 보존했다.

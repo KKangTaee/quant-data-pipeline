@@ -1261,6 +1261,18 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
             on_change=on_change,
         )
 
+    def test_fragment_callback_keeps_persistence_and_navigation_in_fragment_body(
+        self,
+    ) -> None:
+        from app.web.backtest_practical_validation import page
+
+        actions = page._PRACTICAL_VALIDATION_FRAGMENT_CALLBACK_ACTIONS
+
+        self.assertIn("run_replay", actions)
+        self.assertIn("run_resolution_action", actions)
+        self.assertNotIn("save_audit_only", actions)
+        self.assertNotIn("save_and_move", actions)
+
     def test_component_change_consumes_replay_before_projection_without_rerun(
         self,
     ) -> None:

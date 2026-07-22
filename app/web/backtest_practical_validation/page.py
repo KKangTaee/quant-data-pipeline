@@ -88,6 +88,14 @@ FLOW4_CRITERIA_GROUP_HINTS = (
     "Conditional Evidence",
 )
 
+_PRACTICAL_VALIDATION_FRAGMENT_CALLBACK_ACTIONS = frozenset(
+    {
+        "run_replay",
+        "select_recheck_mode",
+        "run_resolution_action",
+    }
+)
+
 
 def _diagnostic_explanation(diagnostic: dict[str, Any]) -> str:
     domain = str(diagnostic.get("domain") or "").strip()
@@ -2788,6 +2796,9 @@ def _consume_practical_validation_next_stage_action(
     st.session_state["final_review_practical_validation_notice"] = handoff.notice
     st.session_state["final_review_source_selected"] = validation_key
     st.session_state["final_review_confirmed_candidate_key"] = validation_key
+    st.session_state[
+        "final_review_active_decision_brief_source_id"
+    ] = validation_key
     source_id = str(validation_result.get("selection_source_id") or "source").strip() or "source"
     st.session_state.pop(_enrichment_progress_state_key(source_id), None)
     st.session_state["backtest_requested_panel"] = handoff.requested_panel
@@ -2983,13 +2994,7 @@ def _render_practical_validation_decision_workspace_fragment(
             on_change=partial(
                 _consume_practical_validation_component_change,
                 component_key=component_key,
-                allowed_actions={
-                    "run_replay",
-                    "select_recheck_mode",
-                    "run_resolution_action",
-                    "save_audit_only",
-                    "save_and_move",
-                },
+                allowed_actions=_PRACTICAL_VALIDATION_FRAGMENT_CALLBACK_ACTIONS,
                 sources=selectable_sources,
                 source=source,
                 validation_result=validation_result,
