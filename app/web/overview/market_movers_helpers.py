@@ -1171,6 +1171,8 @@ def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverCont
         return {"handler": "set_market_movers_selected_symbol"}
     if action_id == "request_breadth":
         return {"handler": "set_market_movers_breadth_selection"}
+    if action_id == "open_us_stock_research":
+        return {"handler": "open_us_stock_research"}
     if action_id in {"fetch_news_evidence", "fetch_sec_evidence"}:
         return {"handler": action_id}
     return {"handler": "noop", "action_id": action_id}
@@ -1260,6 +1262,30 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
     handler = str(plan.get("handler") or "noop")
     if handler == "noop" or not _consume_market_movers_react_event(event):
         return False
+
+    if handler == "open_us_stock_research":
+        from app.web.overview.market_context_helpers import US_STOCK_SELECTED_SYMBOL_KEY
+        from app.web.overview.navigation import (
+            MARKET_RESEARCH_APPLIED_QUERY_KEY,
+            MARKET_RESEARCH_FAMILY_WIDGET_KEY,
+            MARKET_RESEARCH_VIEW_KEY,
+            MARKET_RESEARCH_VIEW_WIDGET_KEY,
+        )
+
+        payload = _market_movers_react_event_payload(event)
+        symbol = str(payload.get("symbol") or "").strip().upper()
+        selected_key = f"overview_market_movers_selected_symbol_{controls.coverage}"
+        selected_symbol = str(st.session_state.get(selected_key) or "").strip().upper()
+        if not symbol or symbol != selected_symbol:
+            return False
+        st.session_state[US_STOCK_SELECTED_SYMBOL_KEY] = symbol
+        st.session_state[MARKET_RESEARCH_VIEW_KEY] = "us-stock"
+        st.session_state.pop(MARKET_RESEARCH_FAMILY_WIDGET_KEY, None)
+        st.session_state.pop(MARKET_RESEARCH_VIEW_WIDGET_KEY, None)
+        st.session_state.pop(MARKET_RESEARCH_APPLIED_QUERY_KEY, None)
+        st.query_params["overview_tab"] = "us-stock"
+        st.rerun()
+        return True
 
     universe_code = str(plan.get("universe_code") or controls.coverage)
     universe_label = MARKET_COVERAGE_LABELS.get(universe_code, universe_code)

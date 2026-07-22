@@ -17207,6 +17207,13 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["handler"], "run_overview_market_intraday_snapshot")
         self.assertEqual(plan["universe_code"], "SP500")
         self.assertEqual(plan["universe_limit"], 500)
+        self.assertEqual(
+            market_movers_react_action_plan(
+                "open_us_stock_research",
+                controls=controls,
+            ),
+            {"handler": "open_us_stock_research"},
+        )
 
     @patch("app.web.overview.market_movers_helpers.st")
     def test_market_movers_react_actions_use_liquidity_universe_refresh_for_top_coverage(

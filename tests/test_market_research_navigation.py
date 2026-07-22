@@ -172,3 +172,83 @@ def test_events_page_dispatch_can_suppress_duplicate_header():
     ):
         render_events_tab(show_header=False)
     header.assert_not_called()
+
+
+@patch("app.web.overview.market_movers_helpers.st")
+def test_market_movers_handoff_opens_same_selected_symbol(mock_st):
+    from app.web.overview.market_context_helpers import US_STOCK_SELECTED_SYMBOL_KEY
+    from app.web.overview.market_movers_helpers import (
+        MarketMoverControls,
+        _dispatch_market_movers_react_event,
+    )
+    from app.web.overview.navigation import MARKET_RESEARCH_VIEW_KEY
+
+    controls = MarketMoverControls(
+        coverage="SP500",
+        universe_limit=500,
+        period="daily",
+        sector="All",
+        top_n=20,
+        mode="top_gainers",
+    )
+    mock_st.session_state = {"overview_market_movers_selected_symbol_SP500": "AMD"}
+    mock_st.query_params = {}
+
+    handled = _dispatch_market_movers_react_event(
+        {"event": {"id": "open_us_stock_research", "symbol": "amd", "nonce": 1}},
+        controls=controls,
+    )
+
+    assert handled is True
+    assert mock_st.session_state[US_STOCK_SELECTED_SYMBOL_KEY] == "AMD"
+    assert mock_st.session_state[MARKET_RESEARCH_VIEW_KEY] == "us-stock"
+    assert mock_st.query_params["overview_tab"] == "us-stock"
+    mock_st.rerun.assert_called_once_with()
+
+
+@patch("app.web.overview.market_movers_helpers.st")
+def test_market_movers_handoff_rejects_symbol_not_currently_selected(mock_st):
+    from app.web.overview.market_movers_helpers import (
+        MarketMoverControls,
+        _dispatch_market_movers_react_event,
+    )
+
+    controls = MarketMoverControls(
+        coverage="SP500",
+        universe_limit=500,
+        period="daily",
+        sector="All",
+        top_n=20,
+        mode="top_gainers",
+    )
+    mock_st.session_state = {"overview_market_movers_selected_symbol_SP500": "AMD"}
+    mock_st.query_params = {}
+
+    handled = _dispatch_market_movers_react_event(
+        {"event": {"id": "open_us_stock_research", "symbol": "AAPL", "nonce": 2}},
+        controls=controls,
+    )
+
+    assert handled is False
+    assert "overview_us_stock_valuation_selected_symbol" not in mock_st.session_state
+    mock_st.rerun.assert_not_called()
+
+
+def test_market_movers_action_plan_allow_lists_stock_research_handoff():
+    from app.web.overview.market_movers_helpers import (
+        MarketMoverControls,
+        market_movers_react_action_plan,
+    )
+
+    controls = MarketMoverControls(
+        coverage="SP500",
+        universe_limit=500,
+        period="daily",
+        sector="All",
+        top_n=20,
+        mode="top_gainers",
+    )
+    assert market_movers_react_action_plan(
+        "open_us_stock_research",
+        controls=controls,
+    ) == {"handler": "open_us_stock_research"}
