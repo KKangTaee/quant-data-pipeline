@@ -1,6 +1,6 @@
 # Today Contributor Performance Cards V1 Design
 
-Status: Written Spec Awaiting User Review
+Status: Approved
 Last Updated: 2026-07-22
 
 ## Problem
