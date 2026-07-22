@@ -69,3 +69,13 @@
 - RED: close handoff plan과 coordinator EOD runner 인자가 없어 focused service/coordinator 테스트가 실패하는 것을 확인했다.
 - GREEN: close +299/+300초, early close, confirmed daily row, 5분 cadence, 최대 6회 retry 테스트 통과.
 - 회귀: intraday, existing EOD refresh, NYSE calendar, Today 전체 80개 테스트 통과.
+
+## 2026-07-23 Task 9 — Closeout Verification
+
+- Python focused suite: intraday, EOD refresh, valuation, position events, NYSE calendar, Today `107 tests`, 모두 통과.
+- collector class `23 tests` 중 Today와 무관한 기존 AAII 2개 오류, explicit Today collector와 broad universe 관련 나머지 21개 통과. 이 baseline은 구현 시작 전 사용자 승인으로 분리했다.
+- Market Movers adjacent 파일은 pytest-style 함수이나 workspace에 pytest가 없어 unittest는 0개, pytest 실행은 `No module named pytest`였다. 이번 변경의 broad collector targeted regressions는 Task 1에서 별도 통과했다.
+- React: Vitest 13개, TypeScript typecheck, Vite production build 통과.
+- Browser: actual CLOSED 화면에서 `종가 반영 대기` → 2026-07-22 `확정 종가` 전환, 1280/760/420 overflow 0, loading text 없음, console error 0.
+- QA screenshot: `today-portfolio-intraday-auto-refresh-v1-qa.png` (generated, uncommitted).
+- actual OPEN live update는 시장이 CLOSED라 deterministic fixture 검증만 수행했다.

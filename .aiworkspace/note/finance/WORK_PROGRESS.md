@@ -7093,3 +7093,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - command/valuation/read model은 공통 eligibility를 사용하고, fixed-notional·strategy는 빈 숫자 카드 없이 경계만 표시한다.
 - Python 111 / React 36 / typecheck/build와 actual QQQ 4주·SOXX 6주 Browser QA, clean console을 확인했다.
 - 전체 roadmap `3/3차` 완료. 상세는 `tasks/active/portfolio-monitoring-etf-position-ledger-v1-20260722/`를 본다.
+
+## 2026-07-23 - Today 포트폴리오 장중 자동 갱신 4/4 구현
+
+- confirmed 정규장 OPEN에서 default portfolio direct stock·ETF를 5분 cadence로 group-scoped DB snapshot에 저장하고 `today_home_v4` live overlay로 표시한다.
+- partial/EOD fallback, Modified Dietz return, dashed live point와 close +5분·최대 6회 EOD handoff를 구현했다.
+- Python 107, React 13/typecheck/build, 1280·760·420 actual CLOSED QA를 확인했고 waiting→confirmed EOD 전환을 관찰했다.
+- actual OPEN-session iframe no-reset 실측만 남았다. 상세는 `tasks/active/today-portfolio-intraday-auto-refresh-v1-20260722/`를 본다.

@@ -28,3 +28,18 @@
 - 2/4차: single-worker coordinator와 15초 fragment
 - 3/4차: Python live valuation과 React overlay
 - 4/4차: EOD handoff, 회귀, actual Browser QA, durable docs
+
+## Implemented Contract
+
+- group universe는 `TODAY_` + portfolio group SHA-256 앞 16자를 사용한다.
+- 15초 fragment와 300초 provider cadence는 분리하고 MySQL advisory lock과 DB attempt time으로 multi-session 중복을 막는다.
+- quote age 600초 초과, provider error, EOD close 부재는 fresh coverage에서 제외한다.
+- fixed-notional/fixed-shares는 현재 units와 retained cash를 보존하고 selected strategy는 EOD value를 유지한다.
+- `today_home_v4`의 historical portfolio fields는 EOD로 유지하고 allowlisted `portfolio.live`만 임시 표시한다.
+- close +5분부터 existing EOD refresh를 5분 간격 최대 6회 실행하며 confirmed daily date에서 overlay를 제거한다.
+
+## QA Observation
+
+- 2026-07-23 KST 실제 CLOSED 화면 최초 관측에서는 2026-07-21 기준 `종가 반영 대기`였다.
+- 화면-open EOD background refresh 뒤 2026-07-22 기준 `$30,007`, `확정 종가`로 전환됐다.
+- 현재 시각상 actual OPEN quote 변화는 관측할 수 없어 service/coordinator/React fixture로 검증했다.

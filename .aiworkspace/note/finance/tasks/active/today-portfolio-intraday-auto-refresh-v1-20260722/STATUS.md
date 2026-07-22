@@ -1,7 +1,7 @@
 # Today Portfolio Intraday Auto Refresh V1 Status
 
-Status: 3/4 Complete
-Roadmap: 3/4 implementation stages complete
+Status: 4/4 Implemented — actual OPEN-session Browser QA pending
+Roadmap: 4/4 implementation stages complete
 Last Updated: 2026-07-23
 
 ## Completed
@@ -32,8 +32,12 @@ Last Updated: 2026-07-23
 - historical line과 별개인 dashed live segment와 hollow marker를 추가하고 stable payload update transition을 적용했다.
 - Task 8 scheduled close +5분 EOD handoff와 5분 간격 최대 6회 제한을 구현했다.
 - close 이후 intraday quote job을 제출하지 않고, 당일 daily date가 확인되면 live state를 즉시 `확정 종가`로 되돌린다.
+- Task 9 durable data/flow/project docs를 `today_home_v4`와 intraday/EOD 경계에 맞춰 동기화했다.
+- actual closed-session Browser QA에서 `종가 반영 대기` 뒤 2026-07-22 EOD 확인과 `확정 종가` 전환을 관찰했다.
+- 1280·760·420 viewport 가로 overflow 0, 420 screenshot, console error 0을 확인했다.
 
 ## Next
 
-- 4/4차 Task 9 통합 QA·문서 동기화를 진행한다.
-- 기존 AAII baseline 오류 2개는 사용자 승인에 따라 이번 Today scope와 분리한다.
+- 실제 미국 정규장 OPEN 시간에 background quote 저장 후 metric/live point가 iframe reset 없이 바뀌는지 최종 실측한다.
+- 현재 실제 시간이 CLOSED라 OPEN 화면은 deterministic fixture 자동 테스트로만 검증했다.
+- Today와 무관한 기존 AAII 테스트 오류 2개는 분리된 baseline issue로 유지한다.

@@ -10467,3 +10467,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 이미 정수 수량으로 등록·가치평가되는 ETF가 최초 설정 정정과 매수·매도 기록에서도 같은 수량 계약을 사용해야 함.
 - Analysis result: DB 수량이나 가격 문제가 아니라 command/valuation/read model의 stock-only eligibility와 ETF fixed-shares 등록 허용이 불일치했다. 공통 stock/ETF fixed-shares 판정으로 통합했다.
 - Follow-up: 전체 `3/3차` 완료. actual QQQ 4주와 SOXX 6주를 확인했으며 fixed-notional ETF·strategy·quant backtest는 원장 밖에 유지한다.
+
+### 2026-07-23 - Today는 화면-open 정규장 중 DB-backed 장중 overlay를 사용한다
+
+- User request: Today의 대표 포트폴리오 시장가를 5분마다 로딩 없이 자동 최신화하고 그래프·수익률을 갱신하되 DB에 저장하도록 요청함.
+- Interpreted goal: React/provider 직접 호출 없이 confirmed regular-session OPEN에서만 background 수집하고, 확정 종가 이력과 장중 임시 값을 명확히 분리한다.
+- Analysis result: 15초 fragment, 300초 group DB cadence/lock, 600초 stale, partial EOD fallback, `today_home_v4` live overlay와 close +5분 bounded EOD handoff를 채택했다.
+- Follow-up: 전체 구현 roadmap `4/4차` 완료. actual CLOSED waiting→confirmed 전환과 responsive QA를 확인했고 실제 OPEN-session no-reset 실측만 남았다.

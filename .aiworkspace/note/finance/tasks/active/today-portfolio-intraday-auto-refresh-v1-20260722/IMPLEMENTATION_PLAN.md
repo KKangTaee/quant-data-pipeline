@@ -1070,7 +1070,7 @@ git commit -m "기능: Today 장 마감 종가 전환 추가"
 - Consumes: Tasks 1–8 complete implementation.
 - Produces: verification evidence, one actual responsive Browser QA image, durable data/flow contract, roadmap 4/4 completion.
 
-- [ ] **Step 1: Run Python focused suites**
+- [x] **Step 1: Run Python focused suites**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -1084,7 +1084,7 @@ git commit -m "기능: Today 장 마감 종가 전환 추가"
 
 Expected: all tests pass with no errors or failures.
 
-- [ ] **Step 2: Run collector and adjacent Market Movers regression**
+- [x] **Step 2: Run collector and adjacent Market Movers regression**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -1095,7 +1095,7 @@ Expected: all tests pass with no errors or failures.
 
 Expected: broad-universe collection and Market Movers remain green; TODAY-scoped rows do not affect them.
 
-- [ ] **Step 3: Run React verification**
+- [x] **Step 3: Run React verification**
 
 ```bash
 cd app/web/streamlit_components/today_workbench
@@ -1106,7 +1106,7 @@ npm run build
 
 Expected: Vitest, typecheck, and build all exit 0.
 
-- [ ] **Step 4: Run syntax, whitespace, and changed-file checks**
+- [x] **Step 4: Run syntax, whitespace, and changed-file checks**
 
 ```bash
 .venv/bin/python -m py_compile \
@@ -1139,11 +1139,11 @@ Capture the representative 420px or desktop state to:
 
 Keep the screenshot untracked unless the user explicitly asks to commit it.
 
-- [ ] **Step 6: Run controlled close-handoff QA**
+- [x] **Step 6: Run controlled close-handoff QA**
 
 With a confirmed early-close fixture, move the controlled clock through close −1s, close, close +299s, and close +300s. Verify quote collection stops at close, EOD is not submitted before grace, `종가 반영 대기` appears at grace, and a confirmed daily row removes the live point and restores `확정 종가` copy.
 
-- [ ] **Step 7: Synchronize durable docs and task evidence**
+- [x] **Step 7: Synchronize durable docs and task evidence**
 
 Document:
 
@@ -1156,7 +1156,7 @@ Document:
 
 Set task `PLAN.md` and `STATUS.md` to `Roadmap: 4/4 implementation stages complete`, record exact commands/results in `RUNS.md`, decisions in `NOTES.md`, and only genuine remaining gaps in `RISKS.md`. Keep each root handoff log entry to 3–5 lines and point to the active task directory.
 
-- [ ] **Step 8: Review only the intended diff**
+- [x] **Step 8: Review only the intended diff**
 
 ```bash
 git diff --stat
@@ -1173,7 +1173,7 @@ git diff -- \
 
 Expected: no pre-existing registry, run-history, `.superpowers`, or unrelated QA artifacts in the intended diff.
 
-- [ ] **Step 9: Commit closeout documentation**
+- [x] **Step 9: Commit closeout documentation**
 
 ```bash
 git add .aiworkspace/note/finance/docs \

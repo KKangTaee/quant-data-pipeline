@@ -1,7 +1,7 @@
 # Today Portfolio Intraday Auto Refresh V1 Plan
 
-Status: 3/4 Complete
-Roadmap: 3/4 implementation stages complete
+Status: 4/4 Implemented — actual OPEN-session Browser QA pending
+Roadmap: 4/4 implementation stages complete
 Last Updated: 2026-07-23
 
 ## 이걸 하는 이유?

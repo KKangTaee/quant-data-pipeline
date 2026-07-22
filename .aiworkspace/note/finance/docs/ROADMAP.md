@@ -1,11 +1,19 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-22
+Last Verified: 2026-07-23
 
 ## Current State After Master Merge
 
 현재 active phase는 없다.
+
+Today Portfolio Intraday Auto Refresh V1은 전체 `4/4차` 구현과 closeout을 완료했다.
+
+- 정규장: confirmed regular-session OPEN에서 default group의 활성 direct stock·ETF 최대 10개를 group-scoped `TODAY_<hash>` snapshot으로 5분마다 DB 저장한다. 15초 fragment는 DB/future 상태만 확인한다.
+- 표시: fresh quote는 position ledger와 EOD retained cash를 보존한 `portfolio.live` 평가액·수익률·기여도에 반영한다. partial은 미반영 symbol을 EOD로 유지하며 historical curve에는 별도 dashed live point 하나만 겹친다.
+- 마감: scheduled close부터 quote를 중단하고 close +5분부터 기존 EOD refresh를 5분 간격 최대 6회 시도한다. 당일 daily row 확인 전에는 `종가 반영 대기`, 확인 후에는 `확정 종가`다.
+- 경계/QA: 프리마켓·애프터마켓, broker/order, selected-strategy 가상 live, intraday→daily 승격은 없다. Python/React 회귀와 1280·760·420 actual Browser QA를 수행했으며 actual closed-session에서 waiting→confirmed EOD 전환과 console error 0을 확인했다.
+- 상세: `tasks/active/today-portfolio-intraday-auto-refresh-v1-20260722/STATUS.md`, `docs/flows/TODAY_PORTFOLIO_INTRADAY_FLOW.md`.
 
 Today Home + Purpose Navigation V1은 전체 `4/4차` 구현과 closeout을 완료했다.
 
