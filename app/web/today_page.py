@@ -290,7 +290,7 @@ def _today_css() -> str:
 .today-portfolio {
   --today-tone: var(--ov-mi-color-positive);
   display: grid;
-  grid-template-columns: minmax(18rem, 0.82fr) minmax(20rem, 1.18fr);
+  grid-template-columns: 1fr;
   gap: 0.9rem;
   margin: 0 0 0.92rem;
   padding: 0.9rem 1rem;
@@ -345,7 +345,6 @@ def _today_css() -> str:
 .today-contributor-section {
   display: grid;
   gap: 0.5rem;
-  margin-top: 0.62rem;
 }
 .today-detail-heading {
   display: flex;
@@ -415,9 +414,6 @@ def _today_css() -> str:
   line-height: 1.45;
 }
 .today-portfolio-visual {
-  display: grid;
-  grid-template-rows: minmax(7.4rem, 1fr) auto;
-  gap: 0.55rem;
   min-width: 0;
 }
 .today-sparkline {
@@ -427,6 +423,21 @@ def _today_css() -> str:
   background: color-mix(in srgb, var(--ov-mi-color-surface-subtle) 62%, transparent);
 }
 .today-sparkline svg { width: 100%; height: 100%; }
+.today-portfolio-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+}
+.today-portfolio-detail-grid > section {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: var(--ov-mi-radius-card);
+  background: color-mix(in srgb, var(--ov-mi-color-surface) 78%, transparent);
+}
 .today-review-list {
   display: grid;
   gap: 0.28rem;
@@ -449,7 +460,7 @@ def _today_css() -> str:
 @media (max-width: 760px) {
   .today-header,
   .today-context-grid,
-  .today-portfolio {
+  .today-portfolio-detail-grid {
     grid-template-columns: 1fr;
   }
   .today-asof { text-align: left; }
@@ -650,7 +661,12 @@ def build_today_html(model: dict[str, Any]) -> str:
         <div class="today-metric"><div class="today-metric-label">최근 거래일</div><div class="today-metric-value {_value_tone(latest_return)}">{escape(_percent(latest_return))}</div></div>
         <div class="today-metric"><div class="today-metric-label">누적</div><div class="today-metric-value {_value_tone(metrics.get('total_return'))}">{escape(_percent(metrics.get('total_return')))}</div></div>
       </div>
-      <div class="today-contributor-section">
+    </div>
+    <div class="today-portfolio-visual">
+      <div class="today-sparkline">{_sparkline_svg(list(portfolio.get('curve') or []))}</div>
+    </div>
+    <div class="today-portfolio-detail-grid">
+      <section class="today-contributor-section">
         <div class="today-detail-heading">
           <span class="today-panel-meta">종목별 성과 기여</span>
           <span class="today-panel-meta">기여 상위 2 · 하위 2</span>
@@ -659,11 +675,13 @@ def build_today_html(model: dict[str, Any]) -> str:
         <div class="today-contributor-note">
           종목 수익률은 입출금 영향을 조정한 누적 성과 · 기준 {escape(str(portfolio.get('basis_date') or '-'))}
         </div>
-      </div>
-    </div>
-    <div class="today-portfolio-visual">
-      <div class="today-sparkline">{_sparkline_svg(list(portfolio.get('curve') or []))}</div>
-      <div class="today-review-list">{review_html}</div>
+      </section>
+      <section class="today-review-section">
+        <div class="today-detail-heading">
+          <span class="today-panel-meta">우선 확인</span>
+        </div>
+        <div class="today-review-list">{review_html}</div>
+      </section>
     </div>
   </section>
 

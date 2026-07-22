@@ -693,6 +693,43 @@ class TodayHomePageContractTests(unittest.TestCase):
         self.assertIn("수익률 자료 부족", html)
         self.assertIn("$11,915", html)
 
+    def test_today_fallback_keeps_chart_above_one_to_one_contributor_review_grid(self) -> None:
+        module = importlib.import_module("app.web.today_page")
+        model = {
+            "header": {},
+            "market": {"evidence": [], "watch_items": []},
+            "portfolio": {
+                "status": "READY",
+                "metrics": {},
+                "curve": [],
+                "contributors": [],
+                "review_items": [],
+            },
+        }
+
+        html = module.build_today_html(model)
+        css = module._today_css()
+
+        visual_index = html.index('<div class="today-portfolio-visual">')
+        detail_index = html.index('<div class="today-portfolio-detail-grid">')
+        contributor_index = html.index("종목별 성과 기여", detail_index)
+        review_index = html.index("우선 확인", detail_index)
+        self.assertLess(visual_index, detail_index)
+        self.assertLess(detail_index, contributor_index)
+        self.assertLess(contributor_index, review_index)
+
+        portfolio_rule = css.split(".today-portfolio {", 1)[1].split("}", 1)[0]
+        detail_rule = css.split(".today-portfolio-detail-grid {", 1)[1].split("}", 1)[0]
+        tablet_rule = css.split("@media (max-width: 760px) {", 1)[1].split(
+            "@media (max-width: 460px) {", 1
+        )[0]
+        phone_rule = css.split("@media (max-width: 460px) {", 1)[1]
+        self.assertIn("grid-template-columns: 1fr", portfolio_rule)
+        self.assertIn("grid-template-columns: 1fr 1fr", detail_rule)
+        self.assertIn(".today-portfolio-detail-grid", tablet_rule)
+        self.assertNotIn(".today-contributor-grid", tablet_rule)
+        self.assertIn(".today-contributor-grid", phone_rule)
+
     def test_unframed_today_header_inherits_streamlit_theme_text_color(self) -> None:
         module = importlib.import_module("app.web.today_page")
         css = module._today_css()
