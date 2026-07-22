@@ -10,6 +10,13 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-22 - Market Research 상단 visual polish 설계 승인
+
+- 3-family/7-view IA는 유지하고 full-width 2단 button form을 compact top research rail과 bounded secondary navigation으로 바꾸는 방향을 승인받았다.
+- 좌측 drawer, 공용정보 재추가, module body 변경은 제외하며 sticky는 actual QA 이후 별도 판단한다.
+- 잠정 roadmap은 `1/3차`; written spec review 뒤 implementation plan으로 전환한다.
+- 상세: `tasks/active/market-research-top-navigation-visual-polish-v1-20260722/DESIGN.md`.
+
 ### 2026-07-22 - Market Research 목적형 IA 개편 완료
 
 - 기존 Overview 동급 탭을 `시장 환경 | 지수 가치평가 | 종목 리서치` 3-family/7-view deep-research workspace로 전환했다.
