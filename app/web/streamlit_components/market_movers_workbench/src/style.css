@@ -680,6 +680,29 @@ body {
   color: var(--mm-ink);
 }
 
+.mm-decision__stock-analysis-link {
+  min-height: 2.25rem;
+  padding: 0.45rem 0.78rem;
+  border: 1px solid var(--mm-card-line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--mm-ink);
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .mm-decision__research-head {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .mm-decision__stock-analysis-link {
+    width: 100%;
+  }
+}
+
 .mm-decision__research-placeholder,
 .mm-decision__research-loading {
   border-top: 1px solid var(--mm-line);

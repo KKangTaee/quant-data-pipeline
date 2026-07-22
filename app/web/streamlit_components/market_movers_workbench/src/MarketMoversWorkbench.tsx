@@ -5,6 +5,7 @@ import {
   priceMomentumRangeLabel,
   PriceMomentumRange,
 } from "./priceMomentum";
+import { buildStockResearchHandoffEvent } from "./marketResearchHandoff";
 import "./style.css";
 
 export type MarketMoverAction = {
@@ -217,7 +218,7 @@ type MarketMoversPayload =
   | MarketMoverInvestigationPanePayload
   | MarketMoversSectorBreadthPayload;
 
-type Props = ComponentProps & {
+type Props = Omit<ComponentProps, "args"> & {
   args: {
     payload?: MarketMoversPayload;
   };
@@ -1357,6 +1358,13 @@ function StockResearchTabs({ payload, activeSymbol, onEvent }: StockResearchTabs
             >{label}</button>
           ))}
         </div>
+        <button
+          className="mm-decision__stock-analysis-link"
+          onClick={() => onEvent(buildStockResearchHandoffEvent(activeSymbol))}
+          type="button"
+        >
+          개별 종목 분석
+        </button>
       </div>
       <div aria-labelledby="mm-decision-tab-price" hidden={tab !== "price"} id="mm-decision-panel-price" role="tabpanel">
         {research ? <PriceMomentumChart research={research} /> : (
