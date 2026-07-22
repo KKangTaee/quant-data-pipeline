@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import unittest
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 from hashlib import sha256
 from types import SimpleNamespace
+
+import pandas as pd
 
 
 NOW = datetime(2026, 7, 22, 14, 0, tzinfo=timezone.utc)
@@ -317,6 +320,250 @@ class TodayPortfolioIntradayLockTests(unittest.TestCase):
         )
         self.assertTrue(fake_db.closed)
 
+
+class TodayPortfolioLiveValuationTests(unittest.TestCase):
+    def _scope(self):
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            build_intraday_refresh_scope,
+        )
+
+        amd = SimpleNamespace(
+            monitoring_item_id="amd-item",
+            source_ref="AMD",
+            source_type="direct_security",
+            instrument_kind="stock",
+            status="active",
+            funding_mode="fixed_notional",
+            input_notional=Decimal("1000"),
+            input_shares=None,
+            entry_close=Decimal("100"),
+        )
+        qqq = SimpleNamespace(
+            monitoring_item_id="qqq-item",
+            source_ref="QQQ",
+            source_type="direct_security",
+            instrument_kind="etf",
+            status="active",
+            funding_mode="fixed_shares",
+            input_notional=None,
+            input_shares=Decimal("5"),
+            entry_close=Decimal("200"),
+        )
+        return build_intraday_refresh_scope(_group(), [amd, qqq])
+
+    def _workspace(self, *, external_flow: Decimal = Decimal("0")):
+        return {
+            "active_group": {
+                "basis_date": date(2026, 7, 21),
+                "metrics": {
+                    "current_value": Decimal("2520"),
+                    "gross_contributions": Decimal("2200"),
+                    "gross_withdrawals": Decimal("0"),
+                    "total_return": Decimal("0.10"),
+                    "contribution_by_item": {
+                        "amd-item": Decimal("100"),
+                        "qqq-item": Decimal("120"),
+                        "strategy-item": Decimal("100"),
+                    },
+                },
+                "curve": pd.DataFrame(
+                    [
+                        {
+                            "date": pd.Timestamp("2026-07-21"),
+                            "total_value": 2520.0,
+                            "unit_value": 1.10,
+                        }
+                    ]
+                ),
+                "item_rows": (
+                    {
+                        "monitoring_item_id": "amd-item",
+                        "source_ref": "AMD",
+                        "current_value": Decimal("1000"),
+                        "total_return": Decimal("0.10"),
+                    },
+                    {
+                        "monitoring_item_id": "qqq-item",
+                        "source_ref": "QQQ",
+                        "current_value": Decimal("1020"),
+                        "total_return": Decimal("0.12"),
+                    },
+                    {
+                        "monitoring_item_id": "strategy-item",
+                        "source_ref": "strategy-a",
+                        "current_value": Decimal("500"),
+                        "total_return": Decimal("0.25"),
+                    },
+                ),
+            },
+            "item_details": {
+                "amd-item": {
+                    "position": {
+                        "current_shares": Decimal("10"),
+                        "gross_contributions": Decimal("900"),
+                        "gross_withdrawals": Decimal("0"),
+                    }
+                },
+                "qqq-item": {
+                    "position": {
+                        "current_shares": Decimal("5"),
+                        "gross_contributions": Decimal("900"),
+                        "gross_withdrawals": Decimal("0"),
+                    }
+                },
+            },
+            "intraday_external_flow": external_flow,
+        }
+
+    def _quotes(self, *, include_qqq: bool = True):
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            LatestPortfolioQuotes,
+        )
+
+        values = {
+            "AMD": {"symbol": "AMD", "latest_price": 105.0},
+        }
+        if include_qqq:
+            values["QQQ"] = {"symbol": "QQQ", "latest_price": 204.0}
+        fresh = tuple(values)
+        return LatestPortfolioQuotes(
+            status="LIVE_READY" if include_qqq else "LIVE_PARTIAL",
+            attempt_time_utc=NOW,
+            quote_time_utc=NOW,
+            quotes=values,
+            fresh_symbols=fresh,
+            fallback_symbols=() if include_qqq else ("QQQ",),
+            due=False,
+        )
+
+    def test_fixed_notional_and_share_items_preserve_retained_cash(self) -> None:
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            build_live_portfolio_overlay,
+        )
+
+        overlay = build_live_portfolio_overlay(
+            workspace=self._workspace(),
+            scope=self._scope(),
+            quotes=self._quotes(),
+            eod_closes={"AMD": Decimal("100"), "QQQ": Decimal("200")},
+            now=NOW,
+        )
+
+        self.assertIsNotNone(overlay)
+        assert overlay is not None
+        self.assertEqual(overlay["status"], "LIVE_READY")
+        self.assertEqual(overlay["coverage"], {"fresh": 2, "expected": 2})
+        self.assertEqual(overlay["metrics"]["current_value"], 2590.0)
+        values = {row["symbol"]: row["current_value"] for row in overlay["items"]}
+        self.assertEqual(values["AMD"], 1050.0)
+        self.assertEqual(values["QQQ"], 1040.0)
+
+    def test_partial_quote_falls_back_to_eod_and_excludes_strategy_from_coverage(self) -> None:
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            build_live_portfolio_overlay,
+        )
+
+        overlay = build_live_portfolio_overlay(
+            workspace=self._workspace(),
+            scope=self._scope(),
+            quotes=self._quotes(include_qqq=False),
+            eod_closes={"AMD": Decimal("100"), "QQQ": Decimal("200")},
+            now=NOW,
+        )
+
+        self.assertIsNotNone(overlay)
+        assert overlay is not None
+        self.assertEqual(overlay["status"], "LIVE_PARTIAL")
+        self.assertEqual(overlay["coverage"], {"fresh": 1, "expected": 2})
+        self.assertEqual(overlay["fallback_symbols"], ["QQQ"])
+        self.assertEqual(overlay["metrics"]["current_value"], 2570.0)
+
+    def test_all_quotes_missing_returns_no_live_point(self) -> None:
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            LatestPortfolioQuotes,
+            build_live_portfolio_overlay,
+        )
+
+        empty = LatestPortfolioQuotes.empty(self._scope(), due=False)
+        overlay = build_live_portfolio_overlay(
+            workspace=self._workspace(),
+            scope=self._scope(),
+            quotes=empty,
+            eod_closes={"AMD": Decimal("100"), "QQQ": Decimal("200")},
+            now=NOW,
+        )
+
+        self.assertIsNone(overlay)
+
+    def test_live_returns_chain_from_eod_unit_value_with_modified_dietz(self) -> None:
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            build_live_portfolio_overlay,
+        )
+
+        workspace = self._workspace(external_flow=Decimal("100"))
+        workspace["active_group"]["metrics"]["current_value"] = Decimal("1500")
+        workspace["active_group"]["curve"].loc[0, "total_value"] = 1500.0
+        workspace["active_group"]["item_rows"] = (
+            {
+                "monitoring_item_id": "amd-item",
+                "source_ref": "AMD",
+                "current_value": Decimal("1000"),
+                "total_return": Decimal("0.10"),
+            },
+            {
+                "monitoring_item_id": "qqq-item",
+                "source_ref": "QQQ",
+                "current_value": Decimal("0"),
+                "total_return": Decimal("0"),
+            },
+            {
+                "monitoring_item_id": "strategy-item",
+                "source_ref": "strategy-a",
+                "current_value": Decimal("500"),
+                "total_return": Decimal("0.25"),
+            },
+        )
+        overlay = build_live_portfolio_overlay(
+            workspace=workspace,
+            scope=self._scope(),
+            quotes=self._quotes(include_qqq=False),
+            eod_closes={"AMD": Decimal("100"), "QQQ": Decimal("200")},
+            now=NOW,
+        )
+
+        self.assertIsNotNone(overlay)
+        assert overlay is not None
+        # (1,550 - 1,500 - 100) / (1,500 + 0.5 * 100)
+        expected_daily = Decimal("-50") / Decimal("1550")
+        self.assertAlmostEqual(
+            overlay["metrics"]["latest_observation_return"],
+            float(expected_daily),
+        )
+        self.assertAlmostEqual(
+            overlay["metrics"]["total_return"],
+            float((Decimal("1.10") * (Decimal("1") + expected_daily)) - Decimal("1")),
+        )
+
+    def test_load_workspace_eod_closes_reads_only_group_basis_date(self) -> None:
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            load_workspace_eod_closes,
+        )
+
+        calls = []
+        closes = load_workspace_eod_closes(
+            workspace=self._workspace(),
+            scope=self._scope(),
+            price_loader=lambda **kwargs: calls.append(kwargs) or pd.DataFrame(
+                [
+                    {"symbol": "AMD", "date": "2026-07-21", "close": 100.0},
+                    {"symbol": "QQQ", "date": "2026-07-21", "close": 200.0},
+                ]
+            ),
+        )
+
+        self.assertEqual(closes, {"AMD": Decimal("100.0"), "QQQ": Decimal("200.0")})
+        self.assertEqual(calls[0]["start"], "2026-07-21")
+        self.assertEqual(calls[0]["end"], "2026-07-21")
 
 if __name__ == "__main__":
     unittest.main()

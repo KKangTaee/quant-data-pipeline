@@ -23,9 +23,11 @@ Last Updated: 2026-07-23
 - main thread에서 due state만 확인하고 running future의 `result()`를 호출하지 않으며 group별 one-inflight를 유지한다.
 - Task 4 read-only default group context와 `st.fragment(run_every=15)` heartbeat를 Today에 연결했다.
 - stable `today_workbench` component key, 기존 fallback/navigation, EOD-only interim render를 보존했다.
+- Task 5 DB-backed live valuation을 구현했다.
+- direct stock·ETF는 보유 수량과 EOD retained cash를 보존해 live value를 계산하고, selected strategy는 EOD value를 유지한다.
+- fresh/partial/all-failed coverage, EOD close basis-date 조회, Modified Dietz 장중 수익률을 41개 회귀로 확인했다.
 
 ## Next
 
-- 3/4차 Task 5 DB-backed live valuation을 TDD로 구현한다.
-- 이어서 Task 6 `portfolio.live` 계약과 Task 7 React overlay를 연결한다.
+- 3/4차 Task 6 `portfolio.live` 계약과 Task 7 React overlay를 연결한다.
 - 기존 AAII baseline 오류 2개는 사용자 승인에 따라 이번 Today scope와 분리한다.

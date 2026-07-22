@@ -44,3 +44,9 @@
 - 회귀: coordinator, Today page contract, market session, intraday service를 합친 39개 테스트 통과.
 - Today public page의 bare-test 경로와 실제 Streamlit fragment 경로를 분리해 기존 navigation/fallback 계약을 보존했다.
 - `py_compile` 대상 3개와 `git diff --check` 통과.
+
+## 2026-07-23 Task 5 — DB-Backed Live Valuation
+
+- RED: live overlay와 EOD close loader 부재로 focused 테스트 5개가 import error로 실패하는 것을 확인했다.
+- GREEN: fixed-notional, fixed-shares retained cash, selected-strategy EOD 유지, partial/all-failed, Modified Dietz flow, basis-date EOD close 테스트 5개 통과.
+- 회귀: intraday service, 기존 valuation, position-event ledger를 합친 41개 테스트 통과.

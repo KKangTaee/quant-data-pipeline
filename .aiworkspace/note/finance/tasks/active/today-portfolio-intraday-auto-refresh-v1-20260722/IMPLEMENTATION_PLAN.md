@@ -627,7 +627,7 @@ git commit -m "기능: Today 15초 장중 갱신 흐름 연결"
 - Produces: `load_workspace_eod_closes(*, workspace: Mapping[str, Any], scope: IntradayRefreshScope, price_loader: Callable[..., pd.DataFrame] = load_price_history) -> dict[str, Decimal]`; `build_live_portfolio_overlay(*, workspace: Mapping[str, Any], scope: IntradayRefreshScope, quotes: LatestPortfolioQuotes, eod_closes: Mapping[str, Decimal], now: datetime) -> dict[str, Any] | None`.
 - Output keys: `status`, `as_of_utc`, `trade_date`, `coverage`, `metrics`, `contributors`, `curve_point`, `fallback_symbols`.
 
-- [ ] **Step 1: Write failing valuation tests**
+- [x] **Step 1: Write failing valuation tests**
 
 Cover these exact fixtures:
 
@@ -641,7 +641,7 @@ Cover these exact fixtures:
 
 Assert money with `Decimal` internally and `float` only in the returned JSON-safe projection.
 
-- [ ] **Step 2: Run valuation tests and confirm RED**
+- [x] **Step 2: Run valuation tests and confirm RED**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -650,7 +650,7 @@ Assert money with `Decimal` internally and `float` only in the returned JSON-saf
 
 Expected: missing `build_live_portfolio_overlay`.
 
-- [ ] **Step 3: Implement terminal direct-security valuation**
+- [x] **Step 3: Implement terminal direct-security valuation**
 
 Implement focused helpers:
 
@@ -675,7 +675,7 @@ def _live_item_value(*, item, item_row, detail, latest_close, quote_price):
 
 For the group live index, apply `modified_dietz_return` to last EOD total, live total, and same-day external flow. Never append the live point to the stored/pandas EOD curve.
 
-- [ ] **Step 4: Run valuation and existing ledger tests**
+- [x] **Step 4: Run valuation and existing ledger tests**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -686,7 +686,7 @@ For the group live index, apply `modified_dietz_return` to last EOD total, live 
 
 Expected: live fixtures and all existing ledger/Modified Dietz tests pass.
 
-- [ ] **Step 5: Commit Task 5**
+- [x] **Step 5: Commit Task 5**
 
 ```bash
 git add app/services/portfolio_monitoring/intraday_refresh.py \

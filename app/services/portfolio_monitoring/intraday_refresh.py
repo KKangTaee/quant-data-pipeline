@@ -2,18 +2,23 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, is_dataclass
 from datetime import date, datetime, timezone
+from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 from typing import Any, Iterator
 from zoneinfo import ZoneInfo
+
+import pandas as pd
 
 from finance.data.db.mysql import MySQLClient
 from finance.data.market_intelligence import (
     collect_and_store_symbol_intraday_snapshot,
 )
+from finance.loaders import load_price_history
 
 from .persistence import MonitoringItemRecord, PortfolioGroupRecord
+from .valuation import modified_dietz_return
 
 
 DB_PRICE = "finance_price"
@@ -100,6 +105,24 @@ def _positive_float(value: Any) -> float | None:
     except (TypeError, ValueError):
         return None
     return parsed if parsed > 0 else None
+
+
+def _as_mapping(value: Any) -> dict[str, Any]:
+    if isinstance(value, Mapping):
+        return dict(value)
+    if is_dataclass(value):
+        return {field.name: getattr(value, field.name) for field in fields(value)}
+    return {}
+
+
+def _decimal(value: Any, default: Decimal = Decimal("0")) -> Decimal:
+    if value is None:
+        return default
+    try:
+        parsed = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return default
+    return parsed if parsed.is_finite() else default
 
 
 def portfolio_intraday_universe_code(portfolio_group_id: str) -> str:
@@ -404,6 +427,221 @@ def run_due_intraday_collection(
         db.close()
 
 
+def load_workspace_eod_closes(
+    *,
+    workspace: Mapping[str, Any],
+    scope: IntradayRefreshScope,
+    price_loader: Callable[..., pd.DataFrame] = load_price_history,
+) -> dict[str, Decimal]:
+    """Load only the confirmed EOD closes used by the current workspace."""
+
+    active_group = _as_mapping(workspace.get("active_group"))
+    raw_basis_date = active_group.get("basis_date")
+    if not scope.symbols or raw_basis_date is None:
+        return {}
+    basis_text = (
+        raw_basis_date.isoformat()
+        if isinstance(raw_basis_date, date)
+        else str(raw_basis_date)[:10]
+    )
+    frame = price_loader(
+        symbols=list(scope.symbols),
+        start=basis_text,
+        end=basis_text,
+        timeframe="1d",
+    )
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        return {}
+    required = {"symbol", "close"}
+    if not required.issubset(frame.columns):
+        return {}
+    normalized = frame.copy()
+    normalized["symbol"] = normalized["symbol"].map(_normalized_symbol)
+    normalized["close"] = pd.to_numeric(normalized["close"], errors="coerce")
+    normalized = normalized.dropna(subset=["symbol", "close"])
+    closes: dict[str, Decimal] = {}
+    for row in normalized.to_dict("records"):
+        symbol = str(row["symbol"])
+        close = _decimal(row["close"])
+        if symbol in scope.symbols and close > 0:
+            closes[symbol] = close
+    return closes
+
+
+def _direct_units(item: Any, detail: Mapping[str, Any]) -> Decimal:
+    position = _as_mapping(detail.get("position"))
+    if position.get("current_shares") is not None:
+        return _decimal(position.get("current_shares"))
+    funding_mode = str(getattr(item, "funding_mode", "") or "").lower()
+    if funding_mode == "fixed_notional":
+        notional = _decimal(getattr(item, "input_notional", None))
+        entry_close = _decimal(getattr(item, "entry_close", None))
+        return notional / entry_close if entry_close > 0 else Decimal("0")
+    return _decimal(getattr(item, "input_shares", None))
+
+
+def _latest_curve_values(active_group: Mapping[str, Any]) -> tuple[Decimal, Decimal]:
+    curve = active_group.get("curve")
+    if isinstance(curve, pd.DataFrame) and not curve.empty:
+        row = curve.iloc[-1]
+        return _decimal(row.get("total_value")), _decimal(row.get("unit_value"), Decimal("1"))
+    if isinstance(curve, Sequence) and curve:
+        row = _as_mapping(curve[-1])
+        return _decimal(row.get("total_value")), _decimal(row.get("unit_value"), Decimal("1"))
+    metrics = _as_mapping(active_group.get("metrics"))
+    return _decimal(metrics.get("current_value")), Decimal("1")
+
+
+def build_live_portfolio_overlay(
+    *,
+    workspace: Mapping[str, Any],
+    scope: IntradayRefreshScope,
+    quotes: LatestPortfolioQuotes,
+    eod_closes: Mapping[str, Decimal],
+    now: datetime,
+) -> dict[str, Any] | None:
+    """Overlay fresh DB quotes on the terminal EOD values without mutating them."""
+
+    active_group = _as_mapping(workspace.get("active_group"))
+    if not active_group or not scope.symbols:
+        return None
+    item_rows = {
+        str(row.get("monitoring_item_id") or ""): dict(row)
+        for raw_row in active_group.get("item_rows") or []
+        if (row := _as_mapping(raw_row))
+    }
+    item_details = _as_mapping(workspace.get("item_details"))
+    metrics = _as_mapping(active_group.get("metrics"))
+    eod_total, eod_unit_value = _latest_curve_values(active_group)
+    if eod_total <= 0:
+        eod_total = _decimal(metrics.get("current_value"))
+    live_total = eod_total
+    fresh_symbols: list[str] = []
+    live_items: list[dict[str, Any]] = []
+    contribution_by_id = {
+        str(key): _decimal(value)
+        for key, value in _as_mapping(metrics.get("contribution_by_item")).items()
+    }
+
+    for item in scope.items:
+        item_id = str(getattr(item, "monitoring_item_id", "") or "")
+        symbol = _normalized_symbol(getattr(item, "source_ref", None))
+        row = item_rows.get(item_id)
+        detail = _as_mapping(item_details.get(item_id))
+        eod_close = _decimal(eod_closes.get(symbol))
+        quote_row = _as_mapping(quotes.quotes.get(symbol))
+        quote_price = _decimal(quote_row.get("latest_price"))
+        eod_value = _decimal(row.get("current_value")) if row else Decimal("0")
+        can_value = (
+            row is not None
+            and symbol in quotes.fresh_symbols
+            and eod_close > 0
+            and quote_price > 0
+        )
+        live_value = eod_value
+        if can_value:
+            units = _direct_units(item, detail)
+            retained_cash = eod_value - (units * eod_close)
+            live_value = (units * quote_price) + retained_cash
+            live_total += live_value - eod_value
+            fresh_symbols.append(symbol)
+
+            position = _as_mapping(detail.get("position"))
+            contributions = _decimal(position.get("gross_contributions"))
+            withdrawals = _decimal(position.get("gross_withdrawals"))
+            contribution_by_id[item_id] = live_value + withdrawals - contributions
+        live_items.append(
+            {
+                "monitoring_item_id": item_id,
+                "symbol": symbol,
+                "current_value": float(live_value),
+                "fresh": can_value,
+            }
+        )
+
+    if not fresh_symbols:
+        return None
+    expected = len(scope.symbols)
+    fallback_symbols = [symbol for symbol in scope.symbols if symbol not in fresh_symbols]
+    external_flow = _decimal(workspace.get("intraday_external_flow"))
+    live_daily_return = modified_dietz_return(eod_total, live_total, external_flow)
+    if live_daily_return is None:
+        return None
+    live_unit_value = eod_unit_value * (Decimal("1") + live_daily_return)
+    live_total_return = live_unit_value - Decimal("1")
+
+    rows_by_id = item_rows
+    contributor_rows: list[dict[str, Any]] = []
+    for item_id, contribution in contribution_by_id.items():
+        if contribution == 0:
+            continue
+        row = rows_by_id.get(item_id, {})
+        live_row = next(
+            (candidate for candidate in live_items if candidate["monitoring_item_id"] == item_id),
+            None,
+        )
+        eod_value = _decimal(row.get("current_value"))
+        current_value = _decimal(live_row.get("current_value")) if live_row else eod_value
+        item_total_return = _decimal(row.get("total_return"))
+        if live_row and eod_value > 0:
+            item_total_return = (
+                (Decimal("1") + item_total_return) * (current_value / eod_value)
+            ) - Decimal("1")
+        contributor_rows.append(
+            {
+                "symbol": str(row.get("source_ref") or item_id),
+                "contribution_value": float(contribution),
+                "value": float(contribution),
+                "total_return": float(item_total_return),
+                "tone": "positive" if contribution > 0 else "negative",
+            }
+        )
+    positives = sorted(
+        (row for row in contributor_rows if row["contribution_value"] > 0),
+        key=lambda row: row["contribution_value"],
+        reverse=True,
+    )[:2]
+    negatives = sorted(
+        (row for row in contributor_rows if row["contribution_value"] < 0),
+        key=lambda row: row["contribution_value"],
+    )[:2]
+    instant = _as_utc(now)
+    if instant is None:
+        raise ValueError("now is required.")
+    trade_date = instant.astimezone(ZoneInfo("America/New_York")).date()
+    return {
+        "status": "LIVE_READY" if len(fresh_symbols) == expected else "LIVE_PARTIAL",
+        "as_of_utc": instant.isoformat(),
+        "trade_date": trade_date.isoformat(),
+        "coverage": {"fresh": len(fresh_symbols), "expected": expected},
+        "metrics": {
+            "current_value": float(live_total),
+            "latest_observation_return": float(live_daily_return),
+            "return_from_date": _date_text(active_group.get("basis_date")),
+            "return_to_date": trade_date.isoformat(),
+            "total_return": float(live_total_return),
+        },
+        "contributors": positives + negatives,
+        "curve_point": {
+            "date": instant.isoformat(),
+            "timestamp_utc": instant.isoformat(),
+            "kind": "intraday",
+            "unit_value": float(live_unit_value),
+            "total_value": float(live_total),
+            "cumulative_return": float(live_total_return),
+        },
+        "fallback_symbols": fallback_symbols,
+        "items": live_items,
+    }
+
+
+def _date_text(value: Any) -> str | None:
+    if isinstance(value, (date, datetime)):
+        return value.date().isoformat() if isinstance(value, datetime) else value.isoformat()
+    text = str(value or "").strip()
+    return text[:10] if text else None
+
+
 __all__ = [
     "INTRADAY_CADENCE_SECONDS",
     "QUOTE_STALE_SECONDS",
@@ -411,7 +649,9 @@ __all__ = [
     "LatestPortfolioQuotes",
     "RegularSessionState",
     "build_intraday_refresh_scope",
+    "build_live_portfolio_overlay",
     "load_latest_portfolio_quotes",
+    "load_workspace_eod_closes",
     "portfolio_intraday_universe_code",
     "resolve_regular_session_state",
     "run_due_intraday_collection",
