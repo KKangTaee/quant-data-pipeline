@@ -147,7 +147,9 @@ class FakeRepository:
 
 
 class PortfolioMonitoringReadModelTests(unittest.TestCase):
-    def test_item_rows_expose_last_valid_flow_adjusted_total_return(self) -> None:
+    def test_item_rows_require_valid_flow_adjusted_index_on_group_basis_date(
+        self,
+    ) -> None:
         read_model = _load_read_model()
         item = _item(
             "item-amd",
@@ -164,8 +166,42 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
             [item], {item.monitoring_item_id: lane}
         )
 
+        self.assertIsNone(result.item_rows[0]["total_return"])
+
+    def test_item_rows_do_not_use_observation_after_group_basis_date(self) -> None:
+        read_model = _load_read_model()
+        current = _item(
+            "item-amd",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+            funding_mode="fixed_shares",
+            input_shares=10,
+        )
+        stale = _item(
+            "item-stale",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+        )
+
+        result = read_model.align_group_value_lanes(
+            [current, stale],
+            {
+                current.monitoring_item_id: _position_lane(current),
+                stale.monitoring_item_id: _lane(
+                    stale,
+                    [("2026-07-01", 1000), ("2026-07-02", 1010)],
+                ),
+            },
+        )
+        rows_by_id = {
+            row["monitoring_item_id"]: row for row in result.item_rows
+        }
+
+        self.assertEqual(result.basis_date, date(2026, 7, 2))
         self.assertEqual(
-            result.item_rows[0]["total_return"],
+            rows_by_id[current.monitoring_item_id]["total_return"],
             Decimal("-0.0008"),
         )
 
@@ -358,6 +394,10 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
             workspace["selected_position"]["current_value"], Decimal("1200.0")
         )
         self.assertEqual(
+            workspace["selected_position"]["total_return"],
+            Decimal("-0.00154"),
+        )
+        self.assertEqual(
             workspace["selected_position"]["requested_start_date"],
             "2026-07-01",
         )
@@ -375,6 +415,35 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
             workspace["selected_position"]["event_rows"][0]["position_effect"],
             "buy",
         )
+
+    def test_selected_position_requires_valid_index_on_its_latest_usable_date(
+        self,
+    ) -> None:
+        read_model = _load_read_model()
+        group = PortfolioGroupRecord("group-core", "Core", True)
+        stock = _item(
+            "item-amd",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+            funding_mode="fixed_shares",
+            input_shares=10,
+        )
+        lane = _position_lane(stock)
+        lane.curve.loc[lane.curve.index[-1], "flow_adjusted_index"] = None
+
+        workspace = read_model.build_portfolio_monitoring_workspace(
+            FakeRepository([group], [stock]),
+            active_group_id="group-core",
+            selected_item_id=stock.monitoring_item_id,
+            lane_loader=lambda item: lane,
+        )
+
+        self.assertEqual(
+            workspace["selected_position"]["as_of_date"],
+            lane.latest_usable_date.isoformat(),
+        )
+        self.assertIsNone(workspace["selected_position"]["total_return"])
 
     def test_selected_position_uses_its_own_latest_date_when_group_basis_is_older(self) -> None:
         read_model = _load_read_model()

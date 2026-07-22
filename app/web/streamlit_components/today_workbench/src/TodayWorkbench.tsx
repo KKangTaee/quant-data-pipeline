@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 
 import TodayPortfolioChart from "./TodayPortfolioChart";
+import { signedMoneyText } from "./presentation";
 import type { EvidenceRow, TodayEventId, TodayPayload } from "./types";
 import "./style.css";
 
@@ -165,7 +166,7 @@ function TodayWorkbench({ args, width }: Props) {
                       <footer>
                         <span>포트폴리오 누적 기여</span>
                         <strong className={contributionTone}>
-                          {moneyText(row.contribution_value)}
+                          {signedMoneyText(row.contribution_value)}
                         </strong>
                       </footer>
                     </article>

@@ -501,6 +501,15 @@ def _money(value: Any) -> str:
         return "—"
 
 
+def _signed_money(value: Any) -> str:
+    try:
+        numeric = float(value)
+        sign = "+" if numeric > 0 else "-" if numeric < 0 else ""
+        return f"{sign}${abs(numeric):,.0f}"
+    except (TypeError, ValueError):
+        return "—"
+
+
 def _percent(value: Any) -> str:
     try:
         return f"{float(value):+.2%}"
@@ -600,7 +609,7 @@ def build_today_html(model: dict[str, Any]) -> str:
             f'{return_html}'
             '<div class="today-contributor-footer">'
             '<span>포트폴리오 누적 기여</span>'
-            f'<strong class="{_value_tone(contribution)}">{escape(_money(contribution))}</strong>'
+            f'<strong class="{_value_tone(contribution)}">{escape(_signed_money(contribution))}</strong>'
             '</div>'
             '</article>'
         )

@@ -7,6 +7,18 @@ import {
   chartDomains,
   pointCoordinates,
 } from "./presentation";
+import * as presentation from "./presentation";
+
+describe("Today contributor currency presentation", () => {
+  it("keeps explicit positive and negative contribution signs", () => {
+    const signedMoneyText = Reflect.get(presentation, "signedMoneyText") as
+      | ((value: number | null) => string)
+      | undefined;
+
+    expect(signedMoneyText?.(11915)).toBe("+$11,915");
+    expect(signedMoneyText?.(-401)).toBe("-$401");
+  });
+});
 
 describe("Today portfolio chart presentation", () => {
   it("uses elapsed calendar time for x coordinates", () => {

@@ -206,18 +206,24 @@ def _normalized_lane_curve(lane: ItemValueLane) -> pd.DataFrame:
     return frame.sort_values("date").drop_duplicates(subset=["date"], keep="last")
 
 
-def _lane_total_return(lane: ItemValueLane | None) -> Decimal | None:
-    """Return the last valid cash-flow-adjusted item return."""
+def _lane_total_return(
+    lane: ItemValueLane | None,
+    as_of_date: date,
+) -> Decimal | None:
+    """Return the cash-flow-adjusted item return observed on one exact date."""
 
     if lane is None:
         return None
     frame = _normalized_lane_curve(lane)
     if frame.empty or "flow_adjusted_index" not in frame:
         return None
-    values = frame["flow_adjusted_index"].dropna()
-    if values.empty:
+    exact = frame.loc[frame["date"] == pd.Timestamp(as_of_date)]
+    if exact.empty:
         return None
-    return _money(values.iloc[-1]) - Decimal("1")
+    value = exact.iloc[-1]["flow_adjusted_index"]
+    if pd.isna(value):
+        return None
+    return _money(value) - Decimal("1")
 
 
 def _value_at(
@@ -466,7 +472,8 @@ def align_group_value_lanes(
                 basis_date,
             ),
             "total_return": _lane_total_return(
-                valid_lanes.get(item.monitoring_item_id)
+                valid_lanes.get(item.monitoring_item_id),
+                basis_date,
             ),
             "failure": failures.get(item.monitoring_item_id),
         }
@@ -597,7 +604,7 @@ def _project_selected_position(
         }
     command_eligible = selected.status in ACTIVE_ITEM_STATUSES
     frame = _normalized_lane_curve(lane)
-    total_return = _lane_total_return(lane)
+    total_return = _lane_total_return(lane, lane.latest_usable_date)
     latest_value = None
     if "total_value" in frame and not frame.empty:
         value = frame.iloc[-1]["total_value"]

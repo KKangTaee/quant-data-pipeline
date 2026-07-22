@@ -575,6 +575,7 @@ class TodayHomePageContractTests(unittest.TestCase):
         self.assertIn("종목별 성과 기여", react_source)
         self.assertIn("기여 상위 2 · 하위 2", react_source)
         self.assertIn("수익률 자료 부족", react_source)
+        self.assertIn("signedMoneyText(row.contribution_value)", react_source)
         self.assertIn("contribution_value", types_source)
         self.assertIn("total_return", types_source)
         self.assertIn(".today-contributor-grid", css_source)
@@ -682,7 +683,14 @@ class TodayHomePageContractTests(unittest.TestCase):
                         "value": 11915.0,
                         "total_return": None,
                         "tone": "positive",
-                    }
+                    },
+                    {
+                        "symbol": "TEM",
+                        "contribution_value": -401.0,
+                        "value": -401.0,
+                        "total_return": None,
+                        "tone": "negative",
+                    },
                 ],
                 "review_items": [],
             },
@@ -691,7 +699,8 @@ class TodayHomePageContractTests(unittest.TestCase):
         html = module.build_today_html(model)
 
         self.assertIn("수익률 자료 부족", html)
-        self.assertIn("$11,915", html)
+        self.assertIn("+$11,915", html)
+        self.assertIn("-$401", html)
 
     def test_today_fallback_keeps_chart_above_one_to_one_contributor_review_grid(self) -> None:
         module = importlib.import_module("app.web.today_page")

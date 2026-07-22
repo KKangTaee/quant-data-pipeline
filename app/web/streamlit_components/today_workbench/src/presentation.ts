@@ -13,6 +13,17 @@ export type ChartInsets = {
 
 const DAY_MS = 86_400_000;
 
+export function signedMoneyText(value: number | null): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  const magnitude = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(Math.abs(value));
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+  return `${sign}${magnitude}`;
+}
+
 function dateTimestamp(value: string): number {
   return Date.parse(`${value}T00:00:00Z`);
 }
