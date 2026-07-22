@@ -1076,7 +1076,9 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn("run_compare_strategy", component)
         self.assertNotIn("build_weighted_portfolio_bundle", component)
         self.assertNotIn("save_saved_portfolio", component)
-        self.assertNotIn("configuration_fingerprint", component)
+        self.assertIn("current_configuration_fingerprint", component)
+        self.assertIn("workspace.configuration_fingerprint", component)
+        self.assertNotIn("build_portfolio_mix_fingerprint", component)
         self.assertNotIn("dangerouslySetInnerHTML", component)
 
     def test_react_settings_applies_python_owned_preset_profiles_without_strategy_rules(
