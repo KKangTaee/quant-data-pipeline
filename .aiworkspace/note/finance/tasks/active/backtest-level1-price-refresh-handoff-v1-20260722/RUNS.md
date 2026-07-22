@@ -14,4 +14,18 @@
   - 공통 public 함수 2개, 네 상태, 세 Single intent, Mix `run_mix` projection 정합성 확인
   - 6개 TDD task, focused pytest/compile/Vite build/Browser QA/문서 closeout 명령 구체화
   - placeholder scan과 `git diff --check` 통과
-- 제품 코드, DB, registry, saved setup은 변경하지 않았다.
+- TDD 구현:
+  - 공통 최신성 7, Single result 28, Portfolio Mix 36, refactor boundary 51 tests 통과
+  - 두 Result/Mix Vite bundle build와 Python compile 통과
+- 2026-07-23 actual GTAA + BIL 13종목, 요청 종료일 `2026-07-22` refresh 전 read-only plan:
+  - common latest `2026-07-06`, newest latest `2026-07-21`, stale 13, missing 0, provider gap 0
+  - `refresh_available`, collection `2026-07-07` ~ `2026-07-22`
+- actual Browser QA는 isolated `backtest-dev` 8502 서버에서 수행했다.
+  - `2026-07-18` 결과가 공통 최신일 `2026-07-06`, target `2026-07-17`, 대상 7개로 refresh card와 차단된 Level2를 표시
+  - `종목 데이터 최신화` 한 번으로 OHLCV 수집 완료, 자동 백테스트 없이 참고 결과와 `같은 설정으로 다시 백테스트` 표시
+  - QA 중 pending run 종료의 fragment-scope rerun 예외를 재현해 app-scope로 수정
+  - 새 서버 재실행에서 결과가 `2026-07-17`까지 확장되고 refresh card가 사라지며 Level2 인계 재개
+  - 1280px/760px 확인, 760 result `clientWidth=scrollWidth=717`, 대표 PNG 저장(커밋 제외)
+- refresh 후 `2026-07-22` read-only plan은 common latest `2026-07-17`, stale 13, missing/provider gap 0, collection `2026-07-18` ~ `2026-07-22`로 남았다.
+- Browser console에는 app React 예외 없이 direct `/backtest` 진입의 Streamlit `host-config` 404 두 건만 기록됐다.
+- 사용자 registry/saved/run history와 기존 generated artifact는 stage하지 않았다.

@@ -10467,3 +10467,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 유동성 판정과 Gate identity는 보존하면서 사용자가 현재 근거 수준과 통과 기준을 바로 이해해야 함.
 - Analysis result: Decision Brief가 `proof_status`를 `display_value`와 comparator에 그대로 사용했다. Python presentation adapter가 raw identity와 사용자 문구를 분리하는 방식을 채택했다.
 - Follow-up: 전체 `2/2차` 완료. 9개 known 상태와 unknown fallback을 한글화했고 1280·760px actual GTAA 화면에서 enum 미노출과 overflow 0을 확인했다.
+
+### 2026-07-23 - Level1 가격 부족은 저장 이후가 아니라 인계 전에 해결한다
+
+- User request: Level1 종료일까지 포트폴리오 종목 데이터가 없으면 안내와 수동 최신화 버튼을 제공하고, 포트폴리오 포함 종목을 최신화하도록 요청함.
+- Interpreted goal: 교집합 백테스트의 보수적 계산은 유지하되 짧아진 결과를 그대로 Level2에 넘기지 않고 사용자가 데이터 보강과 재실행을 한 흐름에서 끝내야 함.
+- Analysis result: current Result Workspace가 legacy refresh action과 분리되어 있었고 가격 gap이 technical handoff Gate에 포함되지 않았다. 공통 네 상태와 Single/Mix 종목 합집합, 명시 refresh, 참고 결과, explicit rerun 계약을 채택했다.
+- Follow-up: 전체 `3/3차` 완료. 수집은 자동 백테스트를 실행하지 않고 새 current 결과만 Level2를 다시 연다. provider/source gap은 반복 버튼 대신 원인 확인 상태로 차단한다.

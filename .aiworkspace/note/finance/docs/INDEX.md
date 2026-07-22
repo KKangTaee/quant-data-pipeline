@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-07-22
+Last Verified: 2026-07-23
 
 ## Purpose
 
@@ -32,6 +32,7 @@ Last Verified: 2026-07-22
 - Previous completed task: [Operations Portfolio Monitoring Only V1 2026-07-19](../tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md) — Operations를 Portfolio Monitoring 단일 사용자 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
 - Parallel active follow-up: [Portfolio Monitoring Chart Zoom / Pan V1 2026-07-19](../tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md) — 구현과 자동 회귀는 완료했고 전체 `2/3차`; 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다.
 - Recent completed Backtest task: [Backtest Analysis Level1 Decision Workspace V1 2026-07-17](../tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md) — 1~15차를 완료했고 Portfolio Mix를 four-step React shell과 Python-owned 실행·저장·Level2 인계 계약으로 전환했다.
+- Latest completed Backtest data handoff task: [Level1 Price Refresh Handoff V1 2026-07-22](../tasks/active/backtest-level1-price-refresh-handoff-v1-20260722/STATUS.md) — Single과 Portfolio Mix 결과에서 가격 부족을 Level2 blocker로 만들고, 수동 최신화 후 참고 결과 유지와 명시적 재실행을 거쳐 인계를 다시 여는 전체 `3/3차`를 완료했다.
 - Recent completed Practical Validation UI task: [Audit Evidence Absorption V1 2026-07-19](../tasks/active/practical-validation-audit-evidence-absorption-v1-20260719/STATUS.md) — 대형 source/replay/validation raw 탭을 제거하고 필요한 provenance를 Step 1/2/4로 흡수하는 전체 roadmap `3/3`을 완료했다.
 - Latest completed Practical Validation lifecycle task: [Final Review Route Fix V1 2026-07-22](../tasks/active/practical-validation-final-review-route-fix-v1-20260722/STATUS.md) — 저장/이동 intent를 fragment callback 선소비에서 분리하고 stable `validation_id` 중복 append를 막아 버튼 한 번으로 인계한 후보의 Final Review를 여는 전체 `3/3차`를 완료했다.
 - Previous completed Practical Validation lifecycle task: [Enrichment Recheck UX V1 2026-07-22](../tasks/active/practical-validation-enrichment-recheck-ux-v1-20260722/STATUS.md) — 자료 보강을 검증 완료로 오인하지 않도록 warning feedback과 source별 `자료 보강 -> 재검증 -> 새 결과 저장 -> Final Review` 진행 상태를 one-shell에 연결하고 전체 `3/3차`를 완료했다.

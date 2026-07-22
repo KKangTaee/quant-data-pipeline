@@ -1,7 +1,7 @@
 # Web Backtest UI Flow
 
 Status: Active
-Last Verified: 2026-07-21
+Last Verified: 2026-07-23
 
 ## 목적
 
@@ -17,6 +17,8 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 Backtest 단계의 primary reading order는 `page workflow shell -> active Level React hero -> body`다. Level2와 Level3 page renderer는 별도 Streamlit stage title/caption을 먼저 출력하지 않으며, 각각 `Practical Validation Decision Workspace`와 `Final Review Decision Workspace` hero가 stage 질문과 설명을 한 번만 소유한다. React를 사용할 수 없을 때는 기존 Python fallback body가 같은 read model을 이어서 표시한다. 이 title ownership 정리는 Level별 route, Gate, replay, candidate selection, persistence 계약을 변경하지 않는다.
 
 현재 전략을 바꿔도 마지막 성공 결과는 참고 근거로 보존하지만, 상단 `목적과 핵심 설정`은 현재 catalog selection만 보여주며 이전 결과의 `strategy_key`, timeframe, promotion field를 재사용하지 않는다. 설정 변경·가격 갱신·재실행 실패는 결과 header의 단일 lifecycle 안내로 구분하고, blue/yellow Streamlit reset notice와 refresh job raw table은 렌더링하지 않는다. 팩터 지표는 사용자에게 한국어 의미와 표준 약어로 표시하되 runner에는 기존 raw key 배열을 그대로 전달한다. factor option은 desktop과 760px에서 2열로 줄바꿈하고 520px 이하에서 1열로 접힌다.
+
+가격 기반 Single 또는 Portfolio Mix 결과의 공통 최신일이 요청 종료일 이하의 마지막 완료 NYSE 거래일보다 이르면 Result Workspace가 `요청 종료일 / 목표 거래일 / 현재 공통 기준일 / 최신화 대상` 행동 카드를 먼저 보여준다. 이 상태에서는 저장·Level2 인계를 차단하고, 사용자가 `종목 데이터 최신화`를 명시적으로 눌렀을 때만 기존 OHLCV ingestion을 실행한다. 수집 직후에는 기존 결과를 `가격 갱신 전 결과 · 참고용`으로 유지하고 자동 백테스트를 실행하지 않으며, `같은 설정으로 다시 백테스트`를 통해 새 결과를 만든 뒤에만 인계 Gate를 다시 연다. Portfolio Mix는 weighted 결과와 component bundle의 Universe·cash·benchmark·guardrail 종목 합집합을 중복 제거해 같은 계약을 적용한다. provider/source gap만 남으면 반복 refresh 대신 원인 안내 상태로 차단한다.
 
 ## 핵심 파일
 

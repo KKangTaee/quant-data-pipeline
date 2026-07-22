@@ -1166,6 +1166,8 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("consume_single_settings_intent", source)
         self.assertIn("render_single_settings_fallback", source)
         self.assertIn("_handle_backtest_run", source)
+        self.assertIn('st.rerun(scope="app")', render_body)
+        self.assertNotIn('st.rerun(scope="fragment")', render_body)
         self.assertNotIn("from app.web.backtest_single_forms import", source)
         for legacy_renderer in (
             "_render_equal_weight_form",

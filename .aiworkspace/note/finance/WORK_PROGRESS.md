@@ -7092,3 +7092,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - raw enum과 Gate는 유지하면서 제목·현황·설명·비교 기준을 사용자 문구로 변환하고 신규 상태 fallback도 추가했다.
 - Decision Brief/visual contract 45개와 refactor 경계 3개, 1280·760px actual Browser QA, overflow 0과 console error 0을 확인했다.
 - 전체 roadmap `2/2차`; 상세는 `tasks/active/final-review-liquidity-evidence-copy-v1-20260722/`를 본다.
+
+## 2026-07-23 - Backtest Level1 가격 최신화 인계 완료
+
+- Single과 Portfolio Mix 결과에 요청 종료일 기준 가격 부족, provider gap, 수집 후 재실행 전 상태를 공통 Level2 blocker로 연결했다.
+- 수동 OHLCV 최신화 뒤 기존 결과는 참고용으로 유지하고, 명시적 같은 설정 재실행이 완료된 뒤에만 저장/Level2 인계를 다시 연다.
+- actual GTAA QA 중 pending 실행의 fragment-scope rerun 예외를 발견해 app-scope로 수정했고 1280·760px 흐름을 확인했다.
+- 전체 roadmap `3/3차`; 상세는 `tasks/active/backtest-level1-price-refresh-handoff-v1-20260722/`를 본다.
