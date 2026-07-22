@@ -361,6 +361,22 @@ class TodayHomeReadModelTests(unittest.TestCase):
 
 
 class TodayHomePageContractTests(unittest.TestCase):
+    def test_today_react_source_uses_explicit_risk_labels_and_chart_semantics(self) -> None:
+        root = Path("app/web/streamlit_components/today_workbench/src")
+        workbench = (root / "TodayWorkbench.tsx").read_text(encoding="utf-8")
+        chart = (root / "TodayPortfolioChart.tsx").read_text(encoding="utf-8")
+        styles = (root / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("signal_label", workbench)
+        self.assertIn("risk_label", workbench)
+        self.assertNotIn("border-left", styles)
+        self.assertIn("일별 종가 기반 누적 수익률", chart)
+        self.assertIn("장중 아님", chart)
+        self.assertIn("Y축 · 누적 수익률 (%)", chart)
+        self.assertIn("X축 · 저장 관측일", chart)
+        self.assertIn("total_value", chart)
+        self.assertIn("font-size: 26px", styles)
+
     def test_today_page_reuses_overview_visual_tokens_and_read_only_loaders(self) -> None:
         path = Path("app/web/today_page.py")
         self.assertTrue(path.exists(), "Today page renderer should exist")
