@@ -12,3 +12,9 @@
 - placeholder scan: `TBD`, `TODO`, deferred implementation marker 없음.
 - consistency: OPEN/EOD waiting heartbeat, CLOSED confirmed no heartbeat, 300/600초 계약이 PLAN/DESIGN에서 일치함.
 - scope: 별도 API/push, provider cadence, DB schema, pre/after market는 명시적으로 제외함.
+
+## Implementation Plan Verification
+
+- `writing-plans` 절차로 projector/policy, React view split, minimal island/conditional fragment, phase event, Browser QA/docs를 3개 TDD task로 분해했다.
+- spec coverage, placeholder, type/status consistency, excluded scope를 self-review했다.
+- `git diff --check`를 통과했다.
