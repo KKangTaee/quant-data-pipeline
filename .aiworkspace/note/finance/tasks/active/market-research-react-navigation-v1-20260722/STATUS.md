@@ -1,6 +1,6 @@
 # Market Research React Navigation V1 Status
 
-Status: Written Spec Review
+Status: Implementation Plan Ready
 Roadmap: 0/3 implementation stages complete
 Last Updated: 2026-07-22
 
@@ -12,9 +12,9 @@ Last Updated: 2026-07-22
 
 ## Current
 
-- written design spec의 사용자 검토를 기다린다.
+- 3-task test-first implementation plan을 작성하고 execution 방식을 선택한다.
 
 ## Next
 
-- 사용자 승인 후 `writing-plans`로 test-first implementation plan 작성
+- inline 또는 subagent-driven execution 선택
 - implementation roadmap 1/3 시작
