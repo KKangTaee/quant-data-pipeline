@@ -24,26 +24,54 @@ def _market_research_page_css() -> str:
     return """
 <style>
 .st-key-market_research_page_header {
-  padding-top: 0.1rem;
-  padding-bottom: 0.35rem;
+  margin-top: -1rem;
+  padding-bottom: 0.45rem;
 }
-.st-key-market_research_page_header [data-testid="stCaptionContainer"] {
-  margin-bottom: 0.15rem;
+.mr-market-research-page-header {
+  display: grid;
+  gap: 0.4rem;
+  max-width: 48rem;
 }
-.st-key-market_research_page_header h1 {
+.mr-market-research-page-header__eyebrow {
+  color: color-mix(in srgb, var(--text-color) 55%, transparent);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+.mr-market-research-page-header h1 {
   margin: 0;
   padding: 0;
   font-size: clamp(2.45rem, 4.8vw, 3.55rem);
   line-height: 1.05;
   letter-spacing: -0.04em;
 }
+.mr-market-research-page-header p {
+  margin: 0;
+  color: color-mix(in srgb, var(--text-color) 58%, transparent);
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
 @media (max-width: 480px) {
-  .st-key-market_research_page_header h1 {
+  .st-key-market_research_page_header {
+    margin-top: -0.35rem;
+  }
+  .mr-market-research-page-header h1 {
     font-size: clamp(2.1rem, 11vw, 2.75rem);
   }
 }
 </style>
 """
+
+
+def _market_research_header_html() -> str:
+    """Return the compact, accessible Market Research page heading."""
+    return (
+        '<div class="mr-market-research-page-header">'
+        '<span class="mr-market-research-page-header__eyebrow">RESEARCH WORKSPACE</span>'
+        "<h1>Market Research</h1>"
+        "<p>Today에서 발견한 질문을 시장·지수·종목 근거로 확장합니다.</p>"
+        "</div>"
+    )
 
 
 def render_overview_dashboard(
@@ -59,9 +87,7 @@ def render_overview_dashboard(
     del runtime_marker, loaded_at, git_sha, latest_result, recent_results, render_runtime_snapshot
     st.markdown(_market_research_page_css(), unsafe_allow_html=True)
     with st.container(key="market_research_page_header"):
-        st.caption("RESEARCH WORKSPACE")
-        st.title("Market Research")
-        st.caption("Today에서 발견한 질문을 시장·지수·종목 근거로 확장합니다.")
+        st.markdown(_market_research_header_html(), unsafe_allow_html=True)
 
     active_view = _render_market_research_selector()
     _render_selected_market_research_view(

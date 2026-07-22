@@ -91,7 +91,8 @@ def test_market_research_navigation_css_uses_compact_and_responsive_contract():
     source = Path("app/web/overview/navigation.py").read_text(encoding="utf-8")
     assert ".st-key-market_research_local_navigation" in css
     assert "width: fit-content" in css
-    assert 'button[aria-pressed="true"]' in css
+    assert 'stBaseButton-segmented_controlActive' in css
+    assert ".mr-market-research-local-label" in css
     assert "repeat(3, minmax(0, 1fr))" in css
     assert "repeat(2, minmax(0, 1fr))" in css
     assert "button:only-child" in css
@@ -114,10 +115,15 @@ def test_market_research_dispatch_calls_only_selected_view():
 
 
 def test_market_research_page_removes_overview_global_blocks():
+    from app.web.overview.page import _market_research_header_html
+
     source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
     body = source[source.index("def render_overview_dashboard"):]
-    assert 'st.title("Market Research")' in body
-    assert "Today에서 발견한 질문을 시장·지수·종목 근거로 확장합니다." in body
+    assert "_market_research_header_html()" in body
+    assert (
+        "Today에서 발견한 질문을 시장·지수·종목 근거로 확장합니다."
+        in _market_research_header_html()
+    )
     assert 'st.container(key="market_research_page_header")' in body
     assert "render_reference_contextual_help" not in body
     assert "render_market_session_banner" not in body
@@ -125,15 +131,30 @@ def test_market_research_page_removes_overview_global_blocks():
 
 
 def test_market_research_page_uses_compact_keyed_header():
-    from app.web.overview.page import _market_research_page_css
+    from app.web.overview.page import (
+        _market_research_header_html,
+        _market_research_page_css,
+    )
 
     source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
     css = _market_research_page_css()
     assert 'st.container(key="market_research_page_header")' in source
-    assert 'st.caption("RESEARCH WORKSPACE")' in source
+    assert "mr-market-research-page-header" in _market_research_header_html()
+    assert "<h1>Market Research</h1>" in _market_research_header_html()
+    assert 'st.caption("RESEARCH WORKSPACE")' not in source
     assert "Today에서 발견한 질문을 시장·지수·종목 근거로 확장합니다." in source
     assert ".st-key-market_research_page_header" in css
     assert "clamp(" in css
+
+
+def test_market_research_local_label_is_one_compact_html_block():
+    source = Path("app/web/overview/navigation.py").read_text(encoding="utf-8")
+    selector_body = source[source.index("def _render_market_research_selector"):]
+    selector_body = selector_body[: selector_body.index("def _render_selected_market_research_view")]
+
+    assert 'class="mr-market-research-local-label"' in selector_body
+    assert 'st.caption("선택한 리서치")' not in selector_body
+    assert "gap=\"small\"" in selector_body
 
 
 def test_market_movers_page_dispatch_can_suppress_duplicate_header():

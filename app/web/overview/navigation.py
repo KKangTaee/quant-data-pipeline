@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 from typing import Any, Callable
 
 import streamlit as st
@@ -311,7 +312,7 @@ def _market_research_navigation_css() -> str:
   color: var(--text-color) !important;
   background: color-mix(in srgb, #7c96ad 7%, transparent) !important;
 }
-.st-key-market_research_family_widget button[aria-pressed="true"] {
+.st-key-market_research_family_widget [data-testid="stBaseButton-segmented_controlActive"] {
   color: var(--text-color) !important;
   font-weight: 700 !important;
   border-bottom-color: #647b8f !important;
@@ -324,11 +325,23 @@ def _market_research_navigation_css() -> str:
   border-radius: 0.85rem;
   background: color-mix(in srgb, #dce7ef 34%, var(--background-color));
 }
-.st-key-market_research_local_navigation [data-testid="stCaptionContainer"] {
-  margin-bottom: 0.05rem;
+.mr-market-research-local-label {
+  display: grid;
+  flex: 0 0 9.4rem;
+  min-width: 9.4rem;
+  gap: 0.12rem;
+  line-height: 1.25;
 }
-.st-key-market_research_local_navigation [data-testid="stMarkdownContainer"] p {
-  margin: 0;
+.mr-market-research-local-label span {
+  color: color-mix(in srgb, var(--text-color) 52%, transparent);
+  font-size: 0.69rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+.mr-market-research-local-label strong {
+  color: var(--text-color);
+  font-size: 0.9rem;
+  font-weight: 720;
 }
 .st-key-market_research_view_widget div[data-baseweb="button-group"] {
   display: flex;
@@ -440,11 +453,15 @@ def _render_market_research_selector() -> str:
         horizontal=True,
         horizontal_alignment="left",
         vertical_alignment="center",
-        gap="medium",
+        gap="small",
     ):
-        with st.container(width=150):
-            st.caption("선택한 리서치")
-            st.markdown(f"**{family_label}**")
+        st.markdown(
+            '<div class="mr-market-research-local-label">'
+            "<span>선택한 리서치</span>"
+            f"<strong>{escape(family_label)}</strong>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
         selected_view = st.pills(
             "세부 리서치",
             options=list(family_views),
