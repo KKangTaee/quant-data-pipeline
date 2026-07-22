@@ -10453,3 +10453,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 그룹 계산과 화면 위치를 다시 만들지 않고 선택한 항목의 요약·보유내역·차트만 즉시 바꾸되 실제 데이터 변경 command는 기존 서버 검증을 유지해야 함.
 - Analysis result: React `select_item` event 뒤 공통 `runtime.rerun()`이 원인이었다. 활성 그룹의 표시 항목 detail을 workspace에 선적재하고 선택 click을 React local state로 전환했다.
 - Follow-up: 전체 `3/3차`를 완료했다. 그룹 선택·수집·등록·종료/취소·거래는 server rerun을 유지하고, actual AMD↔RKLB에서 Running 없이 detail만 바뀌는 것을 확인했다.
+
+### 2026-07-22 - ETF 고정수량 항목도 주식과 같은 보유 원장을 사용한다
+
+- User request: ETF 선택 상세의 보유내역이 비어 있는 원인을 진단한 뒤 권장안대로 개발하도록 요청함.
+- Interpreted goal: 이미 정수 수량으로 등록·가치평가되는 ETF가 최초 설정 정정과 매수·매도 기록에서도 같은 수량 계약을 사용해야 함.
+- Analysis result: DB 수량이나 가격 문제가 아니라 command/valuation/read model의 stock-only eligibility와 ETF fixed-shares 등록 허용이 불일치했다. 공통 stock/ETF fixed-shares 판정으로 통합했다.
+- Follow-up: 전체 `3/3차` 완료. actual QQQ 4주와 SOXX 6주를 확인했으며 fixed-notional ETF·strategy·quant backtest는 원장 밖에 유지한다.

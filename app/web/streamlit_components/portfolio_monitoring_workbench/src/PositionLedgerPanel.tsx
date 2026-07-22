@@ -102,6 +102,8 @@ export function PositionLedgerPanel({
   if (!position.monitoring_item_id) return null;
   const itemId = position.monitoring_item_id;
   const currentShares = position.current_shares;
+  const hasLedger = position.current_shares != null
+    && position.effective_initial_shares != null;
   const initialEntryReady = draft
     ? matchesInitialEntryPreview(draft, initialProjection, itemId)
     : false;
@@ -204,42 +206,46 @@ export function PositionLedgerPanel({
         )}
       </header>
 
-      <div className="pm-position-summary">
-        <article><span>현재 보유수량</span><strong>{position.current_shares ?? "-"}주</strong><small>최초 {position.effective_initial_shares ?? "-"}주</small></article>
-        <article><span>누적 입금</span><strong>{money(position.gross_contributions)}</strong><small>최초 투자금 + 추가매수</small></article>
-        <article><span>누적 출금</span><strong>{money(position.gross_withdrawals)}</strong><small>일부매도 순대금</small></article>
-        <article><span>현재 평가금액</span><strong>{money(position.current_value)}</strong><small>{position.as_of_date ? `${position.as_of_date} 종목 기준` : "남은 주식 + 배당 현금"}</small></article>
-        <article className={(position.pnl ?? 0) < 0 ? "is-negative" : "is-positive"}><span>현금흐름 조정 손익</span><strong>{money(position.pnl)}</strong><small>{percent(position.total_return)}</small></article>
-      </div>
+      {hasLedger && (
+        <div className="pm-position-summary">
+          <article><span>현재 보유수량</span><strong>{position.current_shares}주</strong><small>최초 {position.effective_initial_shares}주</small></article>
+          <article><span>누적 입금</span><strong>{money(position.gross_contributions)}</strong><small>최초 투자금 + 추가매수</small></article>
+          <article><span>누적 출금</span><strong>{money(position.gross_withdrawals)}</strong><small>일부매도 순대금</small></article>
+          <article><span>현재 평가금액</span><strong>{money(position.current_value)}</strong><small>{position.as_of_date ? `${position.as_of_date} 종목 기준` : "남은 주식 + 배당 현금"}</small></article>
+          <article className={(position.pnl ?? 0) < 0 ? "is-negative" : "is-positive"}><span>현금흐름 조정 손익</span><strong>{money(position.pnl)}</strong><small>{percent(position.total_return)}</small></article>
+        </div>
+      )}
 
       {!position.eligible && position.reason && (
         <p className="pm-position-boundary">{position.reason}</p>
       )}
 
-      <div className="pm-position-history">
-        <div className="pm-position-history-title"><strong>거래 내역</strong><span>{position.event_rows.length}건</span></div>
-        {position.event_rows.map((row) => (
-          <article key={row.position_event_id} className={`status-${row.status}`}>
-            <div className="pm-position-event-main">
-              <span>{row.trade_date} · #{row.event_order}</span>
-              <strong>{effectLabel(row.position_effect)} {row.quantity == null ? "" : `${row.quantity}주`}</strong>
-              <small>{row.execution_price == null ? "시작 수량 기준" : `${money(row.execution_price)} · 수수료 ${money(row.fee_usd)}`}</small>
-            </div>
-            <div className="pm-position-event-meta">
-              <span>{statusLabel(row.status)}</span>
-              {row.execution_price_source && <small>{row.execution_price_source === "db_close_default" ? "종가 기본값" : "수동 체결가"}</small>}
-              {row.shares_after != null && <small>거래 후 {row.shares_after}주</small>}
-            </div>
-            {position.eligible && row.status === "active" && row.position_effect !== "initial_quantity_correction" && (
-              <div className="pm-position-event-actions">
-                <button type="button" onClick={() => openTrade(row.position_effect === "sell" ? "sell" : "buy", row)}>수정</button>
-                <button type="button" className="is-danger" onClick={() => voidTrade(row)}>취소</button>
+      {hasLedger && (
+        <div className="pm-position-history">
+          <div className="pm-position-history-title"><strong>거래 내역</strong><span>{position.event_rows.length}건</span></div>
+          {position.event_rows.map((row) => (
+            <article key={row.position_event_id} className={`status-${row.status}`}>
+              <div className="pm-position-event-main">
+                <span>{row.trade_date} · #{row.event_order}</span>
+                <strong>{effectLabel(row.position_effect)} {row.quantity == null ? "" : `${row.quantity}주`}</strong>
+                <small>{row.execution_price == null ? "시작 수량 기준" : `${money(row.execution_price)} · 수수료 ${money(row.fee_usd)}`}</small>
               </div>
-            )}
-          </article>
-        ))}
-        {!position.event_rows.length && <p>추가 거래가 없습니다. 최초 등록 수량을 기준으로 추적 중입니다.</p>}
-      </div>
+              <div className="pm-position-event-meta">
+                <span>{statusLabel(row.status)}</span>
+                {row.execution_price_source && <small>{row.execution_price_source === "db_close_default" ? "종가 기본값" : "수동 체결가"}</small>}
+                {row.shares_after != null && <small>거래 후 {row.shares_after}주</small>}
+              </div>
+              {position.eligible && row.status === "active" && row.position_effect !== "initial_quantity_correction" && (
+                <div className="pm-position-event-actions">
+                  <button type="button" onClick={() => openTrade(row.position_effect === "sell" ? "sell" : "buy", row)}>수정</button>
+                  <button type="button" className="is-danger" onClick={() => voidTrade(row)}>취소</button>
+                </div>
+              )}
+            </article>
+          ))}
+          {!position.event_rows.length && <p>추가 거래가 없습니다. 최초 등록 수량을 기준으로 추적 중입니다.</p>}
+        </div>
+      )}
 
       {draft && position.eligible && (
         <div className="pm-position-editor-layer" role="presentation" onMouseDown={(event) => {

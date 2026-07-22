@@ -34,14 +34,20 @@ Portfolio Monitoring Position Events V1도 전체 `3/3차`를 완료했다.
 
 - 완료 범위: direct U.S. stock + fixed shares에 최초 수량 정정, 추가매수, 일부매도, revision 수정·취소를 추가했다. exact-date DB 종가를 기본 체결가로 쓰고 actual price override provenance를 보존한다.
 - 성과 계약: 추가매수는 외부 입금, 일부매도 순대금은 외부 출금이며 daily Modified Dietz `0.5` 현금흐름 가중치와 flow-neutral group curve를 사용한다.
-- 경계: ETF, selected strategy, fixed notional, full sell, tax lot/FIFO, broker/account sync, quant backtest 변경은 없다. 전량매도는 기존 tracking end를 사용한다.
+- 당시 경계: 이 V1에서는 ETF를 변경하지 않았고 이후 ETF Position Ledger V1이 fixed-shares ETF로 확장했다. selected strategy, fixed notional, full sell, tax lot/FIFO, broker/account sync, quant backtest는 계속 원장 밖이며 전량매도는 기존 tracking end를 사용한다.
 - QA: additive 운영 table 적용 전후 기존 group/item/command `1/2/5`건을 보존하고 새 event table은 `0`건에서 시작했다. Python 137, React 29, typecheck/build, actual read-only route, isolated desktop/900/420 interaction QA를 통과했다.
+
+Portfolio Monitoring ETF Position Ledger V1도 전체 `3/3차`를 완료했다.
+
+- 완료 범위: direct ETF `fixed_shares`를 기존 stock position event와 같은 최초 설정 정정, 추가매수, 일부매도, revision 수정·취소 계약에 포함했다. split을 거래보다 먼저 적용하고 배당 현금·외부 입출금·Modified Dietz 성과를 동일하게 계산한다.
+- 일관성: command validation, valuation, selected read model이 `direct_security + stock/etf + fixed_shares` 공통 판정기를 사용한다. 기존 QQQ 4주·SOXX 6주는 migration 없이 저장 수량에서 자동 투영된다.
+- 경계/QA: fixed-notional ETF·selected strategy·quant backtest는 원장 대상이 아니며 빈 수량/금액 카드도 표시하지 않는다. Python 111, React 36, typecheck/build와 actual QQQ/SOXX read-only Browser QA, clean console을 통과했다.
 
 Portfolio Monitoring Initial Setting Correction V1도 전체 `4/4차`를 완료했다.
 
 - 완료 범위: `개별 추적 결과 > 보유내역`의 `최초 설정 정정`에서 direct U.S. stock + fixed shares의 최초 요청 시작일과 수량을 함께 수정한다. 요청일 이후 첫 DB 시장일·종가와 최초 투자금을 비교 확인하고 append-only revision으로 저장한다.
 - 재계산 계약: correction terminal revision이 유효 requested/effective start, entry close, initial shares/capital을 투영한다. 개별 lane과 그룹 timeline은 같은 초기 계약을 사용하며, 새 시작일 이전 거래나 새 수량으로 무효가 되는 매도는 transaction 전체를 거부한다.
-- 호환/경계: 기존 `correct_initial_quantity` / `initial_quantity_correction` identity와 legacy null-date fallback을 유지한다. ETF, fixed notional, selected strategy, quant backtest, registry/saved JSONL은 변경하지 않는다.
+- 호환/경계: 기존 `correct_initial_quantity` / `initial_quantity_correction` identity와 legacy null-date fallback을 유지한다. 이 task 당시에는 ETF를 변경하지 않았고 이후 ETF Position Ledger V1이 같은 계약으로 확장했다. fixed notional, selected strategy, quant backtest, registry/saved JSONL은 계속 변경하지 않는다.
 - QA: 운영 schema에 nullable date column 2개를 한 번만 추가했고 group/item/command/event row `1/5/8/0`과 registry/saved checksum을 보존했다. Portfolio Monitoring Python 156, React 32, typecheck/build와 actual route/420px overflow/console QA를 통과했다. 브라우저 저장 interaction은 QA iframe의 selection event가 서버 session으로 전달되지 않아 자동화 command/component 회귀로 대체했다.
 
 Portfolio Monitoring Initial Correction Local Preview V1도 전체 `3/3차`를 완료했다.

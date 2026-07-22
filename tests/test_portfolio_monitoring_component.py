@@ -34,6 +34,21 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn("종가 기본값", source)
         self.assertIn("수동 체결가", source)
 
+    def test_position_ledger_hides_empty_numeric_cards_for_ineligible_items(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PositionLedgerPanel.tsx"
+        ).read_text(encoding="utf-8")
+        backend_source = Path(
+            "app/services/portfolio_monitoring/position_events.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "const hasLedger = position.current_shares != null",
+            source,
+        )
+        self.assertGreaterEqual(source.count("{hasLedger && ("), 2)
+        self.assertIn("주식·ETF", backend_source)
+
     def test_initial_setting_correction_exposes_date_lookup_and_comparison(self) -> None:
         component_root = Path(
             "app/web/streamlit_components/portfolio_monitoring_workbench/src"

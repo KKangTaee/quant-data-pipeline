@@ -294,10 +294,9 @@ class PortfolioMonitoringPositionEventProjectionTests(unittest.TestCase):
         self.assertEqual(snapshots[-1].shares_before, Decimal("60"))
         self.assertEqual(snapshots[-1].shares_after, Decimal("10"))
 
-    def test_sequence_rejects_full_sell_and_non_stock_targets(self) -> None:
+    def test_sequence_rejects_full_sell(self) -> None:
         from app.services.portfolio_monitoring.position_events import (
             PositionEventValidationError,
-            assert_position_item_eligible,
             project_position_events,
             validate_position_sequence,
         )
@@ -314,8 +313,38 @@ class PortfolioMonitoringPositionEventProjectionTests(unittest.TestCase):
         with self.assertRaisesRegex(PositionEventValidationError, "최소 1주"):
             validate_position_sequence(_stock_item(), projection, split_factors={})
 
-        with self.assertRaisesRegex(PositionEventValidationError, "개별주식"):
-            assert_position_item_eligible(_stock_item(instrument_kind="etf"))
+    def test_etf_fixed_shares_is_position_eligible(self) -> None:
+        from app.services.portfolio_monitoring.position_events import (
+            assert_position_item_eligible,
+        )
+
+        assert_position_item_eligible(
+            _stock_item(instrument_kind="etf", source_ref="QQQ")
+        )
+
+    def test_non_share_and_strategy_targets_remain_ineligible(self) -> None:
+        from app.services.portfolio_monitoring.position_events import (
+            PositionEventValidationError,
+            assert_position_item_eligible,
+        )
+
+        with self.assertRaises(PositionEventValidationError):
+            assert_position_item_eligible(
+                _stock_item(
+                    instrument_kind="etf",
+                    source_ref="QQQ",
+                    funding_mode="fixed_notional",
+                    input_shares=None,
+                    input_notional=Decimal("3000"),
+                )
+            )
+        with self.assertRaises(PositionEventValidationError):
+            assert_position_item_eligible(
+                _stock_item(
+                    source_type="selected_strategy",
+                    instrument_kind="strategy",
+                )
+            )
 
 
 if __name__ == "__main__":

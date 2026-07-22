@@ -34,13 +34,14 @@ def _item(
     exit_value: str | None = None,
     funding_mode: str = "fixed_notional",
     input_shares: int | None = None,
+    instrument_kind: str = "stock",
 ) -> MonitoringItemRecord:
     return MonitoringItemRecord(
         monitoring_item_id=item_id,
         portfolio_group_id="group-core",
         source_type="direct_security",
         source_ref=item_id.upper(),
-        instrument_kind="stock",
+        instrument_kind=instrument_kind,
         requested_start_date=requested,
         effective_start_date=effective,
         funding_mode=funding_mode,
@@ -414,6 +415,38 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
         self.assertEqual(
             workspace["selected_position"]["event_rows"][0]["position_effect"],
             "buy",
+        )
+
+    def test_workspace_projects_selected_etf_fixed_shares_position(self) -> None:
+        read_model = _load_read_model()
+        group = PortfolioGroupRecord("group-core", "Core", True)
+        etf = _item(
+            "item-qqq",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+            funding_mode="fixed_shares",
+            input_shares=10,
+            instrument_kind="etf",
+        )
+
+        workspace = read_model.build_portfolio_monitoring_workspace(
+            FakeRepository([group], [etf]),
+            active_group_id="group-core",
+            selected_item_id=etf.monitoring_item_id,
+            lane_loader=_position_lane,
+        )
+
+        self.assertTrue(workspace["selected_position"]["eligible"])
+        self.assertEqual(
+            workspace["selected_position"]["effective_initial_shares"],
+            Decimal("10"),
+        )
+        self.assertEqual(
+            workspace["selected_position"]["current_shares"], Decimal("12")
+        )
+        self.assertEqual(
+            workspace["selected_position"]["current_value"], Decimal("1200.0")
         )
 
     def test_selected_position_requires_valid_index_on_its_latest_usable_date(

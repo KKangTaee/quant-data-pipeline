@@ -7079,3 +7079,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 그룹 선택, 가격 최신화, 종목 등록, 종료/취소, 거래 command의 server rerun 경계와 legacy selected projection을 유지했다.
 - Python 64 / React 36 / typecheck/build와 actual AMD↔RKLB Browser QA를 통과했으며 Running 0, clean console, 그룹 현재가치 유지를 확인했다.
 - 전체 roadmap `3/3차` 완료. 상세는 `tasks/active/portfolio-monitoring-local-item-selection-v1-20260722/`를 본다.
+
+## 2026-07-22 - Portfolio Monitoring ETF 보유 수량 원장 완료
+
+- ETF `fixed_shares`를 기존 주식과 같은 최초 설정 정정·추가매수·일부매도·revision 원장에 연결했다.
+- command/valuation/read model은 공통 eligibility를 사용하고, fixed-notional·strategy는 빈 숫자 카드 없이 경계만 표시한다.
+- Python 111 / React 36 / typecheck/build와 actual QQQ 4주·SOXX 6주 Browser QA, clean console을 확인했다.
+- 전체 roadmap `3/3차` 완료. 상세는 `tasks/active/portfolio-monitoring-etf-position-ledger-v1-20260722/`를 본다.

@@ -1,6 +1,6 @@
 # Portfolio Monitoring ETF Position Ledger Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** `direct_security + stock/etf + fixed_shares` 항목이 같은 append-only 보유 수량 원장과 정정·매수·매도 계약을 사용하도록 만든다.
 
@@ -29,7 +29,7 @@
 - Consumes: `MonitoringItemRecord`의 `source_type`, `instrument_kind`, `funding_mode`, `status`.
 - Produces: `is_position_ledger_item(item: MonitoringItemRecord) -> bool`; `assert_position_item_eligible()`이 이 helper를 사용한다.
 
-- [ ] **Step 1: ETF fixed-shares가 eligibility를 통과하는 실패 테스트 작성**
+- [x] **Step 1: ETF fixed-shares가 eligibility를 통과하는 실패 테스트 작성**
 
 ```python
 def test_etf_fixed_shares_is_position_eligible(self) -> None:
@@ -45,7 +45,7 @@ def test_etf_fixed_shares_is_position_eligible(self) -> None:
 
 ETF `fixed_notional`과 selected strategy는 `False`이고 validation error를 유지하는 별도 assertion을 추가한다.
 
-- [ ] **Step 2: 실패 원인이 기존 stock-only 검사인지 확인**
+- [x] **Step 2: 실패 원인이 기존 stock-only 검사인지 확인**
 
 Run:
 
@@ -55,7 +55,7 @@ Run:
 
 Expected: ETF가 `개별주식` validation error를 발생시켜 FAIL.
 
-- [ ] **Step 3: 최소 공통 helper 구현**
+- [x] **Step 3: 최소 공통 helper 구현**
 
 ```python
 def is_position_ledger_item(item: MonitoringItemRecord) -> bool:
@@ -68,7 +68,7 @@ def is_position_ledger_item(item: MonitoringItemRecord) -> bool:
 
 `_assert_position_item_shape()`은 helper가 `False`일 때 `주식·ETF의 보유 수량 방식에서만 사용할 수 있습니다.`를 발생시킨다.
 
-- [ ] **Step 4: focused test green 확인**
+- [x] **Step 4: focused test green 확인**
 
 Run:
 
@@ -90,7 +90,7 @@ Expected: PASS.
 - Consumes: Task 1의 `is_position_ledger_item()`.
 - Produces: ETF fixed-shares `ItemValueLane.position: PositionLedgerSummary`; workspace `selected_position`/`item_details`의 ETF 수량·가치·event rows.
 
-- [ ] **Step 1: ETF split/dividend/buy/sell valuation 실패 테스트 작성**
+- [x] **Step 1: ETF split/dividend/buy/sell valuation 실패 테스트 작성**
 
 `tests/test_portfolio_monitoring_valuation.py`의 `_item()`에 `instrument_kind`와 `source_ref` 인자를 추가하고 아래 계약을 검사한다.
 
@@ -138,7 +138,7 @@ self.assertIsNone(
 
 ETF `fixed_notional` lane의 `position`은 계속 `None`인지 검사한다.
 
-- [ ] **Step 2: ETF read-model projection 실패 테스트 작성**
+- [x] **Step 2: ETF read-model projection 실패 테스트 작성**
 
 `tests/test_portfolio_monitoring_read_model.py`의 `_item()`에 `instrument_kind`를 추가하고 아래 ETF + `_position_lane()` projection을 검사한다.
 
@@ -164,7 +164,7 @@ self.assertEqual(workspace["selected_position"]["current_shares"], Decimal("12")
 self.assertEqual(workspace["selected_position"]["current_value"], Decimal("1200.0"))
 ```
 
-- [ ] **Step 3: 두 테스트가 기존 stock-only 조건 때문에 실패하는지 확인**
+- [x] **Step 3: 두 테스트가 기존 stock-only 조건 때문에 실패하는지 확인**
 
 Run:
 
@@ -174,12 +174,12 @@ Run:
 
 Expected: ETF lane `position is None`, selected position `eligible is False`로 FAIL.
 
-- [ ] **Step 4: valuation과 read model을 공통 helper로 전환**
+- [x] **Step 4: valuation과 read model을 공통 helper로 전환**
 
 `valuation.build_direct_security_value_lane()`의 `position_eligible` 중복 조건과
 `read_model._project_selected_position()`의 stock-only 조건을 `is_position_ledger_item(item)` 호출로 교체한다. 지원 문구는 `주식·ETF의 보유 수량 방식`으로 맞춘다.
 
-- [ ] **Step 5: valuation/read-model green과 기존 stock 회귀 확인**
+- [x] **Step 5: valuation/read-model green과 기존 stock 회귀 확인**
 
 Run:
 
@@ -201,7 +201,7 @@ Expected: PASS.
 - Consumes: `SelectedPositionProjection.current_shares`, `effective_initial_shares`, `eligible`, `reason`.
 - Produces: `hasLedger` presentation guard; ended stock/ETF 원장은 read-only로 유지하고 fixed-notional/strategy는 boundary message만 표시한다.
 
-- [ ] **Step 1: source-contract 실패 테스트 작성**
+- [x] **Step 1: source-contract 실패 테스트 작성**
 
 ```python
 source = Path(
@@ -218,7 +218,7 @@ self.assertIn("{hasLedger && (", source)
 self.assertIn("주식·ETF", backend_source)
 ```
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 Run:
 
@@ -228,7 +228,7 @@ Run:
 
 Expected: `hasLedger` guard와 새 범위 문구 부재로 FAIL.
 
-- [ ] **Step 3: React presentation 최소 구현**
+- [x] **Step 3: React presentation 최소 구현**
 
 ```tsx
 const hasLedger = position.current_shares != null
@@ -237,7 +237,7 @@ const hasLedger = position.current_shares != null
 
 `hasLedger`일 때만 summary/history를 렌더링한다. action은 계속 `position.eligible`일 때만 보인다. 원장이 없는 항목은 `position.reason`만 표시한다.
 
-- [ ] **Step 4: component와 React tests green 확인**
+- [x] **Step 4: component와 React tests green 확인**
 
 Run:
 
@@ -268,7 +268,7 @@ Expected: Python component contract, React 36 tests, TypeScript PASS.
 - Consumes: Tasks 1-3의 green implementation.
 - Produces: 배포 가능한 Vite static asset, QQQ/SOXX actual QA evidence, 현재 계약과 일치하는 durable docs.
 
-- [ ] **Step 1: 전체 관련 자동 검증과 production build**
+- [x] **Step 1: 전체 관련 자동 검증과 production build**
 
 Run:
 
@@ -291,7 +291,7 @@ npm run build
 
 Expected: 모든 command exit 0.
 
-- [ ] **Step 2: actual Browser QA**
+- [x] **Step 2: actual Browser QA**
 
 `/selected-portfolio-dashboard`에서 QQQ와 SOXX를 차례로 선택해 다음을 확인한다.
 
@@ -301,11 +301,11 @@ Expected: 모든 command exit 0.
 - fixed-notional/strategy 원장은 빈 숫자 카드 대신 지원 경계만 표시.
 - Streamlit Running 0, browser console warning/error 0.
 
-- [ ] **Step 3: 문서와 task closeout 동기화**
+- [x] **Step 3: 문서와 task closeout 동기화**
 
 초기 `개별주식 전용` 문구를 `주식·ETF fixed-shares`로 바꾸고 DB/schema/브로커 경계가 그대로임을 기록한다.
 
-- [ ] **Step 4: diff 검증과 coherent commit**
+- [x] **Step 4: diff 검증과 coherent commit**
 
 Run:
 

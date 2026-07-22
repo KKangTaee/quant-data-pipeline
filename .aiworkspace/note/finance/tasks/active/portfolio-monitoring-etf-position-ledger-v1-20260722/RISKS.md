@@ -6,3 +6,8 @@
   원장 계산은 계속 비는 부분 수정이 된다.
 - existing fixed-notional ETF를 수량 원장으로 오인하면 가상 fractional units가 실제 보유량처럼
   표시되므로 세 조건의 교집합을 서버에서 검증해야 한다.
+
+## Closeout
+
+- 위 위험은 공통 helper와 ETF split/dividend/buy/sell 회귀 테스트로 닫았다.
+- 남은 제품 경계는 tax lot/FIFO, 전량매도, broker/account sync이며 이번 범위에 포함하지 않는다.

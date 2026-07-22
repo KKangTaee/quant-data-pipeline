@@ -12,6 +12,7 @@ from .valuation import ItemValueLane, modified_dietz_return
 from .diagnosis import DIAGNOSIS_POLICY_VERSION, DiagnosisFact, project_diagnoses
 from .macro_context import MACRO_CONTEXT_VERSION, MacroContext, MacroObservation
 from .market_chart import MarketChartLoader, build_selected_item_market_chart
+from .position_events import is_position_ledger_item
 from .schemas import build_request_fingerprint
 
 
@@ -568,7 +569,7 @@ def _project_selected_position(
     empty = {
         "monitoring_item_id": selected_item_id,
         "eligible": False,
-        "reason": "개별주식 종목을 선택해 주세요.",
+        "reason": "주식·ETF 종목을 선택해 주세요.",
         "as_of_date": None,
         "current_value": None,
         "requested_start_date": None,
@@ -585,15 +586,11 @@ def _project_selected_position(
     }
     if selected is None:
         return empty
-    if not (
-        selected.source_type == "direct_security"
-        and selected.instrument_kind == "stock"
-        and selected.funding_mode == "fixed_shares"
-    ):
+    if not is_position_ledger_item(selected):
         return {
             **empty,
             "monitoring_item_id": selected.monitoring_item_id,
-            "reason": "개별주식의 보유 수량 방식에서만 거래를 기록할 수 있습니다.",
+            "reason": "주식·ETF의 보유 수량 방식에서만 거래를 기록할 수 있습니다.",
         }
     lane = lanes.get(selected.monitoring_item_id)
     if not isinstance(lane, ItemValueLane) or lane.position is None:
