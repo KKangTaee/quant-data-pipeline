@@ -572,6 +572,7 @@ def build_today_read_model(
         generated_at=timestamp,
         holiday_rows=calendar.get("holiday_rows"),
         early_close_rows=calendar.get("early_close_rows"),
+        calendar_statuses=calendar.get("statuses"),
     )
     date_candidates = [
         row.get("as_of_date")

@@ -416,6 +416,25 @@ class TodayHomeReadModelTests(unittest.TestCase):
         )
         self.assertFalse(model["boundaries"]["provider_fetch"])
 
+    def test_market_calendar_loader_status_reaches_session_quality(self) -> None:
+        model = self._builder()(
+            **self._complete_inputs(),
+            market_calendar={
+                "holiday_rows": [
+                    {"Date": "2026-07-03", "Title": "Independence Day"}
+                ],
+                "early_close_rows": [],
+                "statuses": {"holiday": "OK", "early_close": "ERROR"},
+            },
+            generated_at=datetime(2026, 7, 22, 13, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(model["market_session"]["calendar_quality"], "LIMITED")
+        self.assertIn(
+            "공식 조기폐장 일정 자료 부족",
+            model["market_session"]["warnings"],
+        )
+
 
 class TodayMarketSessionTests(unittest.TestCase):
     def _builder(self):
@@ -530,6 +549,18 @@ class TodayMarketSessionTests(unittest.TestCase):
         self.assertFalse(model["schedule"][0]["is_early_close"])
         self.assertEqual(model["calendar_quality"], "LIMITED")
         self.assertIn("2026-11-27", model["warnings"][0])
+
+    def test_failed_calendar_source_marks_schedule_limited(self) -> None:
+        model = self._builder()(
+            generated_at=datetime(2026, 7, 22, 13, 0, tzinfo=timezone.utc),
+            holiday_rows=[
+                {"Date": "2026-07-03", "Title": "Independence Day"}
+            ],
+            early_close_rows=[],
+            calendar_statuses={"holiday": "OK", "early_close": "ERROR"},
+        )
+
+        self.assertEqual(model["calendar_quality"], "LIMITED")
 
 
 class TodayHomePageContractTests(unittest.TestCase):

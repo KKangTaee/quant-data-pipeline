@@ -52,6 +52,14 @@ export function resolveMarketSession(
   targetAtMs: number | null;
   nextTradingDay: MarketSessionDay | null;
 } {
+  if (payload.calendar_quality !== "CONFIRMED") {
+    return {
+      phase: "STALE",
+      today: null,
+      targetAtMs: null,
+      nextTradingDay: null,
+    };
+  }
   const today = payload.schedule.find(
     (row) => row.trade_date === marketDateKey(nowMs),
   ) ?? null;

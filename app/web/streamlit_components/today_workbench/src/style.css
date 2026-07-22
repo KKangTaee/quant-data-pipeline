@@ -288,7 +288,7 @@ button { font: inherit; }
   .today-action-rail { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 460px) {
+@media (max-width: 520px) {
   .today-workbench { gap: 13px; padding-inline: 1px; }
   .today-hero { padding: 21px 19px; border-radius: 19px; }
   .today-market-session { grid-template-columns: 1fr; border-radius: 15px; }

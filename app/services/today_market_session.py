@@ -62,6 +62,7 @@ def build_us_market_session_model(
     generated_at: datetime,
     holiday_rows: Any = None,
     early_close_rows: Any = None,
+    calendar_statuses: Any = None,
     horizon_days: int = 15,
 ) -> dict[str, Any]:
     """Build a bounded regular-session schedule without provider access."""
@@ -92,6 +93,17 @@ def build_us_market_session_model(
         for on_date in early_close_rows_by_date
         if on_date not in early_close_times
     ]
+    statuses = (
+        dict(calendar_statuses)
+        if isinstance(calendar_statuses, Mapping)
+        else {}
+    )
+    for key, label in (
+        ("holiday", "공식 휴장"),
+        ("early_close", "공식 조기폐장"),
+    ):
+        if statuses and str(statuses.get(key) or "").upper() != "OK":
+            warnings.append(f"{label} 일정 자료 부족")
     schedule: list[dict[str, Any]] = []
     for offset in range(max(8, min(int(horizon_days), 31))):
         local_date = start_date + timedelta(days=offset)

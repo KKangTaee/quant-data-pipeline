@@ -164,6 +164,24 @@ describe("Today U.S. regular-market phase", () => {
     expect(resolved.phase).toBe("WEEKEND");
     expect(resolved.targetAtMs).toBe(Date.parse("2026-11-30T14:30:00Z"));
   });
+
+  it("fails closed when the official calendar schedule is limited", () => {
+    const resolved = resolveMarketSession(
+      {
+        ...sessionPayload,
+        calendar_quality: "LIMITED",
+        warnings: ["공식 조기폐장 일정 자료 부족"],
+      },
+      Date.parse("2026-11-27T15:00:00Z"),
+    );
+
+    expect(resolved).toEqual({
+      phase: "STALE",
+      today: null,
+      targetAtMs: null,
+      nextTradingDay: null,
+    });
+  });
 });
 
 describe("Today U.S. regular-market time copy", () => {
