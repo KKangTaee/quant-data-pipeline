@@ -5,7 +5,11 @@ import {
   buildDateTicks,
   buildPercentTicks,
   chartDomains,
+  formatCountdown,
+  formatSessionHours,
+  formatZonedClock,
   pointCoordinates,
+  resolveMarketSession,
 } from "./presentation";
 import * as presentation from "./presentation";
 
@@ -82,5 +86,116 @@ describe("Today portfolio chart presentation", () => {
       { date: "2026-07-18", unit_value: 1, total_value: 100, cumulative_return: 0 },
     ]);
     expect(series.map((row) => row.date)).toEqual(["2026-07-18", "2026-07-21"]);
+  });
+});
+
+const sessionPayload = {
+  schema_version: "market_session_v1" as const,
+  generated_at_utc: "2026-11-27T12:00:00+00:00",
+  timezones: {
+    market: "America/New_York" as const,
+    viewer: "Asia/Seoul" as const,
+  },
+  calendar_quality: "CONFIRMED" as const,
+  warnings: [],
+  schedule: [
+    {
+      trade_date: "2026-11-27",
+      day_kind: "TRADING_DAY" as const,
+      holiday_label: null,
+      open_at_utc: "2026-11-27T14:30:00+00:00",
+      close_at_utc: "2026-11-27T18:00:00+00:00",
+      is_early_close: true,
+    },
+    {
+      trade_date: "2026-11-28",
+      day_kind: "WEEKEND" as const,
+      holiday_label: "주말",
+      open_at_utc: null,
+      close_at_utc: null,
+      is_early_close: false,
+    },
+    {
+      trade_date: "2026-11-29",
+      day_kind: "WEEKEND" as const,
+      holiday_label: "주말",
+      open_at_utc: null,
+      close_at_utc: null,
+      is_early_close: false,
+    },
+    {
+      trade_date: "2026-11-30",
+      day_kind: "TRADING_DAY" as const,
+      holiday_label: null,
+      open_at_utc: "2026-11-30T14:30:00+00:00",
+      close_at_utc: "2026-11-30T21:00:00+00:00",
+      is_early_close: false,
+    },
+  ],
+};
+
+describe("Today U.S. regular-market phase", () => {
+  it("switches exactly at open and early close boundaries", () => {
+    expect(
+      resolveMarketSession(
+        sessionPayload,
+        Date.parse("2026-11-27T14:29:59Z"),
+      ).phase,
+    ).toBe("PRE_OPEN");
+    expect(
+      resolveMarketSession(
+        sessionPayload,
+        Date.parse("2026-11-27T14:30:00Z"),
+      ).phase,
+    ).toBe("OPEN");
+    expect(
+      resolveMarketSession(
+        sessionPayload,
+        Date.parse("2026-11-27T18:00:00Z"),
+      ).phase,
+    ).toBe("CLOSED");
+  });
+
+  it("keeps weekend closed and targets the next trading-day open", () => {
+    const resolved = resolveMarketSession(
+      sessionPayload,
+      Date.parse("2026-11-28T12:00:00Z"),
+    );
+    expect(resolved.phase).toBe("WEEKEND");
+    expect(resolved.targetAtMs).toBe(Date.parse("2026-11-30T14:30:00Z"));
+  });
+});
+
+describe("Today U.S. regular-market time copy", () => {
+  it("formats clocks, countdown, and KST date crossing", () => {
+    expect(
+      formatCountdown(5 * 60 * 60 * 1000 + 18 * 60 * 1000 + 9 * 1000),
+    ).toBe("5시간 18분 09초");
+    expect(formatCountdown(-1)).toBe("전환 중");
+    expect(
+      formatZonedClock(
+        Date.parse("2026-07-22T13:00:00Z"),
+        "America/New_York",
+      ),
+    ).toBe("09:00");
+    expect(
+      formatZonedClock(
+        Date.parse("2026-07-22T13:00:00Z"),
+        "Asia/Seoul",
+      ),
+    ).toBe("22:00");
+    expect(
+      formatSessionHours(
+        {
+          trade_date: "2026-07-22",
+          day_kind: "TRADING_DAY",
+          holiday_label: null,
+          open_at_utc: "2026-07-22T13:30:00Z",
+          close_at_utc: "2026-07-22T20:00:00Z",
+          is_early_close: false,
+        },
+        "Asia/Seoul",
+      ),
+    ).toBe("07.22 22:30–07.23 05:00");
   });
 });

@@ -1,4 +1,9 @@
-import type { PortfolioCurveRow } from "./types";
+import type {
+  MarketSessionDay,
+  MarketSessionPayload,
+  MarketSessionPhase,
+  PortfolioCurveRow,
+} from "./types";
 
 export type ChartPoint = PortfolioCurveRow & { timestamp: number };
 export type ChartDomain = { minTime: number; maxTime: number; low: number; high: number };
@@ -12,6 +17,128 @@ export type ChartInsets = {
 };
 
 const DAY_MS = 86_400_000;
+
+function zonedParts(nowMs: number, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(nowMs));
+  return Object.fromEntries(parts.map((part) => [part.type, part.value]));
+}
+
+function marketDateKey(nowMs: number): string {
+  const parts = zonedParts(nowMs, "America/New_York");
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function nextOpen(schedule: MarketSessionDay[], afterMs: number) {
+  return schedule.find((row) => (
+    row.open_at_utc != null
+    && Date.parse(row.open_at_utc) > afterMs
+  )) ?? null;
+}
+
+export function resolveMarketSession(
+  payload: MarketSessionPayload,
+  nowMs: number,
+): {
+  phase: MarketSessionPhase;
+  today: MarketSessionDay | null;
+  targetAtMs: number | null;
+  nextTradingDay: MarketSessionDay | null;
+} {
+  const today = payload.schedule.find(
+    (row) => row.trade_date === marketDateKey(nowMs),
+  ) ?? null;
+  if (today == null) {
+    return {
+      phase: "STALE",
+      today: null,
+      targetAtMs: null,
+      nextTradingDay: null,
+    };
+  }
+  const upcoming = nextOpen(payload.schedule, nowMs);
+  if (today.day_kind !== "TRADING_DAY") {
+    return {
+      phase: today.day_kind,
+      today,
+      targetAtMs: upcoming?.open_at_utc
+        ? Date.parse(upcoming.open_at_utc)
+        : null,
+      nextTradingDay: upcoming,
+    };
+  }
+  const openMs = Date.parse(today.open_at_utc ?? "");
+  const closeMs = Date.parse(today.close_at_utc ?? "");
+  if (!Number.isFinite(openMs) || !Number.isFinite(closeMs)) {
+    return {
+      phase: "STALE",
+      today,
+      targetAtMs: null,
+      nextTradingDay: upcoming,
+    };
+  }
+  if (nowMs < openMs) {
+    return {
+      phase: "PRE_OPEN",
+      today,
+      targetAtMs: openMs,
+      nextTradingDay: today,
+    };
+  }
+  if (nowMs < closeMs) {
+    return {
+      phase: "OPEN",
+      today,
+      targetAtMs: closeMs,
+      nextTradingDay: today,
+    };
+  }
+  return {
+    phase: "CLOSED",
+    today,
+    targetAtMs: upcoming?.open_at_utc
+      ? Date.parse(upcoming.open_at_utc)
+      : null,
+    nextTradingDay: upcoming,
+  };
+}
+
+export function formatCountdown(remainingMs: number): string {
+  if (!Number.isFinite(remainingMs) || remainingMs <= 0) return "전환 중";
+  const totalSeconds = Math.floor(remainingMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const minuteSecond = `${minutes}분 ${String(seconds).padStart(2, "0")}초`;
+  return hours > 0 ? `${hours}시간 ${minuteSecond}` : minuteSecond;
+}
+
+export function formatZonedClock(nowMs: number, timeZone: string): string {
+  const parts = zonedParts(nowMs, timeZone);
+  return `${parts.hour}:${parts.minute}`;
+}
+
+export function formatSessionHours(
+  row: MarketSessionDay,
+  timeZone: string,
+): string {
+  if (row.open_at_utc == null || row.close_at_utc == null) {
+    return "일정 자료 부족";
+  }
+  const open = zonedParts(Date.parse(row.open_at_utc), timeZone);
+  const close = zonedParts(Date.parse(row.close_at_utc), timeZone);
+  return (
+    `${open.month}.${open.day} ${open.hour}:${open.minute}`
+    + `–${close.month}.${close.day} ${close.hour}:${close.minute}`
+  );
+}
 
 export function signedMoneyText(value: number | null): string {
   if (value == null || !Number.isFinite(value)) return "—";

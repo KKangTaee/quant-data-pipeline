@@ -47,8 +47,37 @@ export type TodayEvent = {
   importance: string;
 };
 
+export type MarketSessionDay = {
+  trade_date: string;
+  day_kind: "TRADING_DAY" | "HOLIDAY" | "WEEKEND";
+  holiday_label: string | null;
+  open_at_utc: string | null;
+  close_at_utc: string | null;
+  is_early_close: boolean;
+};
+
+export type MarketSessionPayload = {
+  schema_version: "market_session_v1";
+  generated_at_utc: string;
+  timezones: {
+    market: "America/New_York";
+    viewer: "Asia/Seoul";
+  };
+  calendar_quality: "CONFIRMED" | "LIMITED";
+  warnings: string[];
+  schedule: MarketSessionDay[];
+};
+
+export type MarketSessionPhase =
+  | "PRE_OPEN"
+  | "OPEN"
+  | "CLOSED"
+  | "HOLIDAY"
+  | "WEEKEND"
+  | "STALE";
+
 export type TodayPayload = {
-  schema_version: "today_home_v2";
+  schema_version: "today_home_v3";
   header: TodayHeader;
   market: {
     status: string;
@@ -59,6 +88,7 @@ export type TodayPayload = {
     next_event: TodayEvent | null;
     watch_items: string[];
   };
+  market_session: MarketSessionPayload;
   portfolio: {
     status: string;
     name: string;
