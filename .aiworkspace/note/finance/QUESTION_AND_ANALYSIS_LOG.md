@@ -10459,4 +10459,4 @@ Detailed historical analysis was archived on `2026-04-13`.
 - User request: 분류는 적절하지만 큰 2단 버튼처럼 보이는 상단 UI를 개선하고, 좌측 drawer와 현재 상단 방식 중 무엇이 나은지 검토해 달라고 요청함.
 - Interpreted goal: 3-family/7-view 구조와 deep link는 유지하면서 family/view 위계와 현재 위치를 더 빠르게 읽게 해야 함.
 - Analysis result: 현재 기능 수에는 drawer보다 content-width primary rail과 bounded secondary navigation이 적합하다. drawer는 향후 관심종목·최근 조회·저장 리서치 같은 보조 도구에만 검토한다.
-- Follow-up: visual mockup과 top rail 방향을 승인받았다. written spec 검토 후 `2/3차` 구현으로 전환한다.
+- Follow-up: 전체 `3/3차`를 완료했다. compact semantic header, content-width family rail, bounded local view surface를 구현하고 1280·760·420px actual Browser QA에서 overflow 0과 전체 family/view URL 전환을 확인했다. sticky는 필요하지 않았고 drawer는 보조 도구가 늘어날 때만 다시 검토한다.

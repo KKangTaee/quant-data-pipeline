@@ -21,6 +21,7 @@ Help: Reference Center
 Streamlit의 `default=True` page는 등록된 `url_path="today"`와 무관하게 browser root `/`를 소유한다. 따라서 Today의 canonical 최초 진입 주소는 `/`이며 기존 상세 URL은 유지한다.
 Today의 차트는 최신 최대 60개 실제 일별 관측을 주봉으로 변환하지 않고 실제 날짜 간격으로 표시한다. 장중 화면이나 매매 신호가 아니며, React가 반환하는 세 navigation event만 Python Page router가 처리한다.
 `Research > Market Research`는 Portfolio Lab의 필수 선행 단계가 아니라 Today에서 발견한 질문을 깊게 조사하는 표면이다. `/overview` 안에서 `시장 환경 | 지수 가치평가 | 종목 리서치`를 먼저 고르고, 각각 `경제 사이클·선물 매크로·심리·일정 | S&P 500 | 변동 종목·개별 종목`의 7개 canonical view로 이동한다.
+Market Research 상단은 content-width family rail과 선택 family를 표시하는 bounded local view surface를 사용한다. desktop에서는 내용 너비로 유지하고 420px에서는 family 3열·view 2열로 접히며, drawer와 sticky navigation은 사용하지 않는다.
 `Research > Institutional Holdings`도 Portfolio Lab의 필수 선행 단계가 아니라 delayed SEC 13F institutional holdings를 탐색하는 별도 research surface다.
 Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation gate, trade signal, monitoring signal을 만들지 않는다.
 Market Research 상단은 summary cockpit, page-global market-session banner, contextual Reference, 운영 진단 패널을 반복하지 않는다. 기준일·자료 상태·refresh action은 선택된 module이 소유한다.

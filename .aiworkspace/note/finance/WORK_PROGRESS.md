@@ -10,12 +10,12 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
-### 2026-07-22 - Market Research 상단 visual polish 설계 승인
+### 2026-07-22 - Market Research 상단 visual polish 완료
 
-- 3-family/7-view IA는 유지하고 full-width 2단 button form을 compact top research rail과 bounded secondary navigation으로 바꾸는 방향을 승인받았다.
-- 좌측 drawer, 공용정보 재추가, module body 변경은 제외하며 sticky는 actual QA 이후 별도 판단한다.
-- 잠정 roadmap은 `1/3차`; written spec review 뒤 implementation plan으로 전환한다.
-- 상세: `tasks/active/market-research-top-navigation-visual-polish-v1-20260722/DESIGN.md`.
+- 3-family/7-view IA와 deep link는 유지하고 full-width 2단 button form을 compact semantic header, content-width family rail, bounded local navigation으로 바꿨다.
+- actual QA에서 Streamlit element gap과 selected DOM selector drift를 찾아 보정했고 1280·760·420px overflow 0과 전 family/view 전환을 확인했다.
+- 좌측 drawer, 공용정보 재추가, module body 변경은 제외했고 sticky는 actual QA에서 필요하지 않아 추가하지 않았다.
+- 전체 roadmap `3/3차` 완료. 상세: `tasks/active/market-research-top-navigation-visual-polish-v1-20260722/STATUS.md`.
 
 ### 2026-07-22 - Market Research 목적형 IA 개편 완료
 
