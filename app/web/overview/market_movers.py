@@ -11,9 +11,10 @@ from app.web.overview.market_movers_helpers import (
 )
 
 
-def render_market_movers_tab() -> None:
+def render_market_movers_tab(*, show_header: bool = True) -> None:
     """Render the Market Movers Overview tab."""
-    render_market_movers_header()
+    if show_header:
+        render_market_movers_header()
     controls = render_market_movers_controls()
     render_market_movers_context_captions(controls)
     normalize_market_movers_refresh_mode(controls)

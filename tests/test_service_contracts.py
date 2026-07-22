@@ -7015,10 +7015,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("app.web.overview.events", imported_modules)
         render_body = source[source.index("def render_overview_dashboard"):]
         self.assertIn('"economic-cycle": render_economic_cycle', render_body)
-        self.assertIn('"market-movers": render_market_movers_tab', render_body)
-        self.assertIn('"futures-macro": render_futures_macro_tab', render_body)
-        self.assertIn('"sentiment": render_sentiment_tab', render_body)
-        self.assertIn('"events": render_events_tab', render_body)
+        self.assertIn('"market-movers": lambda: render_market_movers_tab(show_header=False)', render_body)
+        self.assertIn('"futures-macro": lambda: render_futures_macro_tab(show_header=False)', render_body)
+        self.assertIn('"sentiment": lambda: render_sentiment_tab(show_header=False)', render_body)
+        self.assertIn('"events": lambda: render_events_tab(show_header=False)', render_body)
         self.assertIn('default_instrument="sp500"', render_body)
         self.assertIn('default_instrument="us_stock"', render_body)
         self.assertNotIn("render_market_context_tab", render_body)
@@ -7950,7 +7950,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         futures_helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
 
-        self.assertIn('"futures-macro": render_futures_macro_tab', render_body)
+        self.assertIn('"futures-macro": lambda: render_futures_macro_tab(show_header=False)', render_body)
         self.assertIn("def render_futures_macro_tab", futures_source)
         self.assertIn("render_futures_macro_fragment(detail_expanded=False)", futures_source)
         self.assertNotIn("legacy_dashboard", futures_helper_source)

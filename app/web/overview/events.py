@@ -16,9 +16,10 @@ from app.web.overview.events_helpers import (
 )
 
 
-def render_events_tab() -> None:
+def render_events_tab(*, show_header: bool = True) -> None:
     """Render the Events Overview tab."""
-    render_events_header()
+    if show_header:
+        render_events_header()
     react_available = events_react_workbench_available()
     if react_available:
         event_filter = "ALL"

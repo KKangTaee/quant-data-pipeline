@@ -13,9 +13,10 @@ from app.web.overview.sentiment_helpers import (
 )
 
 
-def render_sentiment_tab() -> None:
+def render_sentiment_tab(*, show_header: bool = True) -> None:
     """Render the Sentiment Overview tab."""
-    render_sentiment_header()
+    if show_header:
+        render_sentiment_header()
     snapshot = load_sentiment_snapshot()
     react_rendered = render_sentiment_react_workbench_section(snapshot)
     if react_rendered:

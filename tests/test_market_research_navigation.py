@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest.mock import patch
 
 from app.web.overview.navigation import (
     MARKET_RESEARCH_FAMILY_OPTIONS,
@@ -94,3 +95,80 @@ def test_market_research_page_removes_overview_global_blocks():
     assert "render_reference_contextual_help" not in body
     assert "render_market_session_banner" not in body
     assert "_render_market_research_selector()" in body
+
+
+def test_market_movers_page_dispatch_can_suppress_duplicate_header():
+    from app.web.overview.market_movers import render_market_movers_tab
+
+    with (
+        patch("app.web.overview.market_movers.render_market_movers_header") as header,
+        patch("app.web.overview.market_movers.render_market_movers_controls") as controls,
+        patch("app.web.overview.market_movers.render_market_movers_context_captions"),
+        patch("app.web.overview.market_movers.normalize_market_movers_refresh_mode"),
+        patch(
+            "app.web.overview.market_movers.is_market_movers_auto_refresh_enabled",
+            return_value=False,
+        ),
+        patch("app.web.overview.market_movers.render_market_movers_snapshot"),
+    ):
+        controls.return_value = object()
+        render_market_movers_tab(show_header=False)
+    header.assert_not_called()
+
+
+def test_futures_sentiment_events_keep_legacy_header_default():
+    from app.web.overview.futures_macro import render_futures_macro_tab
+
+    with (
+        patch("app.web.overview.futures_macro.render_futures_macro_header") as header,
+        patch("app.web.overview.futures_macro.render_futures_macro_fragment"),
+    ):
+        render_futures_macro_tab()
+    header.assert_called_once_with()
+
+
+def test_futures_page_dispatch_can_suppress_duplicate_header():
+    from app.web.overview.futures_macro import render_futures_macro_tab
+
+    with (
+        patch("app.web.overview.futures_macro.render_futures_macro_header") as header,
+        patch("app.web.overview.futures_macro.render_futures_macro_fragment"),
+    ):
+        render_futures_macro_tab(show_header=False)
+    header.assert_not_called()
+
+
+def test_sentiment_page_dispatch_can_suppress_duplicate_header():
+    from app.web.overview.sentiment import render_sentiment_tab
+
+    with (
+        patch("app.web.overview.sentiment.render_sentiment_header") as header,
+        patch("app.web.overview.sentiment.load_sentiment_snapshot", return_value={}),
+        patch(
+            "app.web.overview.sentiment.render_sentiment_react_workbench_section",
+            return_value=True,
+        ),
+        patch("app.web.overview.sentiment.render_sentiment_job_result"),
+        patch("app.web.overview.sentiment.has_sentiment_rows", return_value=False),
+        patch("app.web.overview.sentiment.render_sentiment_empty_state"),
+    ):
+        render_sentiment_tab(show_header=False)
+    header.assert_not_called()
+
+
+def test_events_page_dispatch_can_suppress_duplicate_header():
+    from app.web.overview.events import render_events_tab
+
+    with (
+        patch("app.web.overview.events.render_events_header") as header,
+        patch("app.web.overview.events.events_react_workbench_available", return_value=True),
+        patch("app.web.overview.events.load_event_snapshot_context", return_value={}),
+        patch(
+            "app.web.overview.events.render_events_react_workbench_section",
+            return_value=True,
+        ),
+        patch("app.web.overview.events.has_event_rows", return_value=False),
+        patch("app.web.overview.events.render_events_empty_state"),
+    ):
+        render_events_tab(show_header=False)
+    header.assert_not_called()

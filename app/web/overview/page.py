@@ -39,14 +39,14 @@ def render_overview_dashboard(
         active_view,
         renderers={
             "economic-cycle": render_economic_cycle,
-            "futures-macro": render_futures_macro_tab,
-            "sentiment": render_sentiment_tab,
-            "events": render_events_tab,
+            "futures-macro": lambda: render_futures_macro_tab(show_header=False),
+            "sentiment": lambda: render_sentiment_tab(show_header=False),
+            "events": lambda: render_events_tab(show_header=False),
             "sp500": lambda: render_market_context_valuation(
                 default_instrument="sp500",
                 show_instrument_selector=False,
             ),
-            "market-movers": render_market_movers_tab,
+            "market-movers": lambda: render_market_movers_tab(show_header=False),
             "us-stock": lambda: render_market_context_valuation(
                 default_instrument="us_stock",
                 show_instrument_selector=False,
