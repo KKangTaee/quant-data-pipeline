@@ -355,6 +355,13 @@ class PortfolioMonitoringPageServices:
     refresh_group_prices: Callable[[dict[str, Any]], dict[str, Any]]
 
 
+@dataclass(frozen=True)
+class TodayPortfolioRuntimeContext:
+    group: Any | None
+    items: tuple[Any, ...]
+    workspace: dict[str, Any]
+
+
 def _monitoring_db_factory() -> MySQLClient:
     return MySQLClient("localhost", "root", "1234", 3306)
 
@@ -4609,6 +4616,31 @@ def load_default_portfolio_monitoring_workspace_for_today() -> dict[str, Any]:
 
     runtime = _default_portfolio_monitoring_services()
     return runtime.build_default_workspace()
+
+
+def load_default_portfolio_monitoring_context_for_today(
+    *,
+    repository: Any | None = None,
+    workspace_loader: Callable[[], dict[str, Any]] | None = None,
+) -> TodayPortfolioRuntimeContext:
+    """Read the persisted default group, its items, and its EOD workspace."""
+
+    repo = repository or MySQLMonitoringRepository(_monitoring_db_factory)
+    workspace = (
+        workspace_loader or load_default_portfolio_monitoring_workspace_for_today
+    )()
+    groups = repo.list_groups(include_deleted=False)
+    group = next((row for row in groups if row.is_default), None)
+    items = (
+        tuple(repo.list_items(group.portfolio_group_id))
+        if group is not None
+        else ()
+    )
+    return TodayPortfolioRuntimeContext(
+        group=group,
+        items=items,
+        workspace=workspace,
+    )
 
 
 def load_portfolio_monitoring_workspace_for_operations() -> dict[str, Any]:

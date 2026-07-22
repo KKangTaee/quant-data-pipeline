@@ -6,13 +6,20 @@ from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
 import streamlit as st
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 from app.services.futures_macro_snapshot import (
     load_overview_futures_macro_materialized_snapshot,
 )
 from app.services.overview.events import build_market_events_snapshot
+from app.services.portfolio_monitoring.intraday_refresh import (
+    build_intraday_refresh_scope,
+    resolve_regular_session_state,
+)
 from app.services.today import build_today_read_model
 from app.web.final_selected_portfolio_dashboard import (
+    TodayPortfolioRuntimeContext,
+    load_default_portfolio_monitoring_context_for_today,
     load_default_portfolio_monitoring_workspace_for_today,
 )
 from app.web.overview.components.common import overview_ui_css
@@ -28,6 +35,9 @@ from app.web.overview_dashboard_helpers import (
 from app.web.today_react_component import (
     render_today_workbench,
     today_react_component_available,
+)
+from app.web.today_intraday_auto_refresh import (
+    get_today_intraday_coordinator,
 )
 
 
@@ -104,10 +114,14 @@ def load_today_market_calendar(*, generated_at: datetime) -> dict[str, Any]:
     }
 
 
-def load_today_read_model() -> dict[str, object]:
+def load_today_read_model(
+    *,
+    generated_at: datetime | None = None,
+    portfolio_workspace: Any | None = None,
+) -> dict[str, object]:
     """Load existing persisted sources and compose one read-only Today model."""
 
-    generated_at = datetime.now(timezone.utc)
+    timestamp = generated_at or datetime.now(timezone.utc)
     return build_today_read_model(
         economic_cycle=_safe_load(load_economic_cycle_model, label="경제 사이클"),
         sp500=_safe_load(load_sp500_valuation_model, label="S&P 500"),
@@ -123,15 +137,19 @@ def load_today_read_model() -> dict[str, object]:
             lambda: load_overview_market_events_snapshot(horizon_days=45),
             label="시장 일정",
         ),
-        portfolio=_safe_load(
-            load_default_portfolio_monitoring_workspace_for_today,
-            label="대표 포트폴리오",
+        portfolio=(
+            portfolio_workspace
+            if portfolio_workspace is not None
+            else _safe_load(
+                load_default_portfolio_monitoring_workspace_for_today,
+                label="대표 포트폴리오",
+            )
         ),
         market_calendar=_safe_load(
-            lambda: load_today_market_calendar(generated_at=generated_at),
+            lambda: load_today_market_calendar(generated_at=timestamp),
             label="미국 증시 일정",
         ),
-        generated_at=generated_at,
+        generated_at=timestamp,
     )
 
 
@@ -796,25 +814,86 @@ def _route_today_event(event: dict[str, str]) -> None:
     st.switch_page(target)
 
 
-def render_today_page() -> None:
-    """Render the default read-only market-and-portfolio landing page."""
+def _load_today_portfolio_context() -> TodayPortfolioRuntimeContext:
+    try:
+        return load_default_portfolio_monitoring_context_for_today()
+    except Exception:  # pragma: no cover - actual UI resilience
+        return TodayPortfolioRuntimeContext(
+            group=None,
+            items=(),
+            workspace={
+                "status": "ERROR",
+                "reason": "대표 포트폴리오 저장 자료를 불러오지 못했습니다.",
+            },
+        )
 
-    model = load_today_read_model()
-    if not today_react_component_available():
-        _render_today_fallback(model)
-        return
 
-    component_value = render_today_workbench(model)
+def _handle_today_component_value(
+    component_value: dict[str, Any] | None,
+    model: dict[str, object],
+) -> None:
     if component_value is None:
         _render_today_fallback(model)
         return
-
     event = _normalize_today_event(component_value)
     if component_value.get("event") is not None and event is None:
         st.warning("지원하지 않는 Today 화면 동작은 실행하지 않았습니다.")
         return
     if event is not None:
         _route_today_event(event)
+
+
+def _render_today_dynamic_body(
+    *,
+    generated_at: datetime | None = None,
+) -> None:
+    timestamp = generated_at or datetime.now(timezone.utc)
+    context = _load_today_portfolio_context()
+    model = load_today_read_model(
+        generated_at=timestamp,
+        portfolio_workspace=context.workspace,
+    )
+    if context.group is not None:
+        try:
+            scope = build_intraday_refresh_scope(
+                context.group,
+                context.items,
+            )
+            session = resolve_regular_session_state(
+                model.get("market_session") or {},
+                timestamp,
+            )
+            get_today_intraday_coordinator().tick(
+                scope=scope,
+                session=session,
+                now=timestamp,
+            )
+        except Exception:
+            pass  # EOD Today remains available when live refresh is unavailable.
+
+    if not today_react_component_available():
+        _render_today_fallback(model)
+        return
+
+    component_value = render_today_workbench(
+        model,
+        key="today_workbench",
+    )
+    _handle_today_component_value(component_value, model)
+
+
+@st.fragment(run_every=15)
+def _render_today_dynamic_fragment() -> None:
+    _render_today_dynamic_body()
+
+
+def render_today_page() -> None:
+    """Render the default market-and-portfolio landing fragment."""
+
+    if get_script_run_ctx(suppress_warning=True) is None:
+        _render_today_dynamic_body()
+        return
+    _render_today_dynamic_fragment()
 
 
 __all__ = [

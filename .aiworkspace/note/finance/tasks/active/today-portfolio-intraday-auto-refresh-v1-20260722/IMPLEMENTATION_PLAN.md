@@ -514,7 +514,7 @@ git commit -m "기능: Today 장중 비동기 갱신 코디네이터 추가"
 - Produces: `TodayPortfolioRuntimeContext`, `load_default_portfolio_monitoring_context_for_today(...)`, and `_render_today_dynamic_fragment()` decorated with `@st.fragment(run_every=15)`.
 - `render_today_page()` remains the public page entry and delegates one stable component render to the fragment.
 
-- [ ] **Step 1: Write failing context and fragment source-contract tests**
+- [x] **Step 1: Write failing context and fragment source-contract tests**
 
 Add tests that verify:
 
@@ -537,7 +537,7 @@ def test_today_page_uses_15_second_fragment_and_stable_component_key(self):
 
 Patch the coordinator in a page test and assert one `tick` per fragment call, then assert the component receives the last DB-backed model immediately while the future remains running.
 
-- [ ] **Step 2: Run focused tests and confirm RED**
+- [x] **Step 2: Run focused tests and confirm RED**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -547,7 +547,7 @@ Patch the coordinator in a page test and assert one `tick` per fragment call, th
 
 Expected: missing context loader and fragment assertion failures.
 
-- [ ] **Step 3: Expose a read-only default context loader**
+- [x] **Step 3: Expose a read-only default context loader**
 
 In `final_selected_portfolio_dashboard.py`, introduce a small dataclass and injectable loader:
 
@@ -569,7 +569,7 @@ def load_default_portfolio_monitoring_context_for_today(*, repository=None, work
 
 This is read-only: it must not call `insert_group`, `insert_item`, or command handlers.
 
-- [ ] **Step 4: Move Today component render into the heartbeat fragment**
+- [x] **Step 4: Move Today component render into the heartbeat fragment**
 
 Refactor loading so one heartbeat timestamp is shared by calendar/session/context:
 
@@ -597,7 +597,7 @@ def render_today_page() -> None:
 
 Give `load_today_read_model` optional `generated_at` and `portfolio_workspace` keyword arguments so the fragment does not reload the same workspace. Split existing event handling into `_handle_today_component_value` without changing its allowlist or navigation semantics. Keep fallback render inside the fragment and do not call `st.rerun()` for quote completion. Task 4 intentionally renders the unchanged EOD projection; Task 6 connects the DB-backed live overlay after Task 5 supplies its valuation function.
 
-- [ ] **Step 5: Run Today page tests**
+- [x] **Step 5: Run Today page tests**
 
 ```bash
 .venv/bin/python -m unittest tests.test_today_home.TodayHomePageContractTests -v
@@ -605,7 +605,7 @@ Give `load_today_read_model` optional `generated_at` and `portfolio_workspace` k
 
 Expected: fragment, stable key, fallback, read-only, and navigation tests pass.
 
-- [ ] **Step 6: Commit Task 4**
+- [x] **Step 6: Commit Task 4**
 
 ```bash
 git add app/web/today_page.py app/web/final_selected_portfolio_dashboard.py tests/test_today_home.py

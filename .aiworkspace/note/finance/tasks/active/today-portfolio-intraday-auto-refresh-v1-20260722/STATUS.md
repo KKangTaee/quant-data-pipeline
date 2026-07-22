@@ -1,7 +1,7 @@
 # Today Portfolio Intraday Auto Refresh V1 Status
 
-Status: 2/4 In Progress — Task 3 Complete
-Roadmap: 1/4 implementation stages complete
+Status: 2/4 Complete
+Roadmap: 2/4 implementation stages complete
 Last Updated: 2026-07-23
 
 ## Completed
@@ -21,8 +21,11 @@ Last Updated: 2026-07-23
 - 새 process에서도 DB attempt가 cadence source-of-truth가 되는 회귀를 확인했다.
 - Task 3 process-cached single-worker coordinator를 구현했다.
 - main thread에서 due state만 확인하고 running future의 `result()`를 호출하지 않으며 group별 one-inflight를 유지한다.
+- Task 4 read-only default group context와 `st.fragment(run_every=15)` heartbeat를 Today에 연결했다.
+- stable `today_workbench` component key, 기존 fallback/navigation, EOD-only interim render를 보존했다.
 
 ## Next
 
-- 2/4차 Task 4에서 read-only default context와 15초 fragment를 연결한다.
+- 3/4차 Task 5 DB-backed live valuation을 TDD로 구현한다.
+- 이어서 Task 6 `portfolio.live` 계약과 Task 7 React overlay를 연결한다.
 - 기존 AAII baseline 오류 2개는 사용자 승인에 따라 이번 Today scope와 분리한다.

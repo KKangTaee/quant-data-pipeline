@@ -761,6 +761,122 @@ class TodayIntradayCoordinatorTests(unittest.TestCase):
 
 
 class TodayHomePageContractTests(unittest.TestCase):
+    def test_today_runtime_context_uses_default_group_without_creating_it(
+        self,
+    ) -> None:
+        dashboard = importlib.import_module(
+            "app.web.final_selected_portfolio_dashboard"
+        )
+        group = SimpleNamespace(
+            portfolio_group_id="default-group",
+            is_default=True,
+        )
+        items = [SimpleNamespace(source_ref="AMD")]
+
+        class ReadOnlyRepository:
+            def list_groups(self, *, include_deleted=False):
+                self.assert_false(include_deleted)
+                return [group]
+
+            def list_items(self, portfolio_group_id):
+                if portfolio_group_id != "default-group":
+                    raise AssertionError("unexpected group")
+                return items
+
+            @staticmethod
+            def assert_false(value):
+                if value:
+                    raise AssertionError("include_deleted must remain false")
+
+        workspace = {"schema_version": "portfolio_monitoring_workspace_v2"}
+        context = dashboard.load_default_portfolio_monitoring_context_for_today(
+            repository=ReadOnlyRepository(),
+            workspace_loader=lambda: workspace,
+        )
+
+        self.assertIs(context.group, group)
+        self.assertEqual(context.items, tuple(items))
+        self.assertIs(context.workspace, workspace)
+
+    def test_today_page_uses_15_second_fragment_and_stable_component_key(
+        self,
+    ) -> None:
+        source = Path("app/web/today_page.py").read_text(encoding="utf-8")
+
+        self.assertIn("@st.fragment(run_every=15)", source)
+        self.assertIn('key="today_workbench"', source)
+        self.assertNotIn("st.spinner", source)
+
+    def test_today_dynamic_body_ticks_coordinator_without_waiting(self) -> None:
+        page = importlib.import_module("app.web.today_page")
+        generated_at = datetime(2026, 7, 22, 14, 0, tzinfo=timezone.utc)
+        group = SimpleNamespace(portfolio_group_id="default-group")
+        item = SimpleNamespace(
+            source_ref="AMD",
+            source_type="direct_security",
+            instrument_kind="stock",
+            status="active",
+        )
+        context = SimpleNamespace(
+            group=group,
+            items=(item,),
+            workspace={"schema_version": "portfolio_monitoring_workspace_v2"},
+        )
+        model = {
+            "market_session": {
+                "calendar_quality": "CONFIRMED",
+                "timezones": {
+                    "market": "America/New_York",
+                    "viewer": "Asia/Seoul",
+                },
+                "schedule": [
+                    {
+                        "trade_date": "2026-07-22",
+                        "day_kind": "TRADING_DAY",
+                        "open_at_utc": "2026-07-22T13:30:00+00:00",
+                        "close_at_utc": "2026-07-22T20:00:00+00:00",
+                        "is_early_close": False,
+                    }
+                ],
+            }
+        }
+        coordinator = MagicMock()
+
+        with (
+            patch.object(
+                page,
+                "load_default_portfolio_monitoring_context_for_today",
+                return_value=context,
+            ),
+            patch.object(page, "load_today_read_model", return_value=model) as load_model,
+            patch.object(
+                page,
+                "get_today_intraday_coordinator",
+                return_value=coordinator,
+            ),
+            patch.object(page, "today_react_component_available", return_value=True),
+            patch.object(
+                page,
+                "render_today_workbench",
+                return_value={"event": None},
+            ) as render_workbench,
+        ):
+            page._render_today_dynamic_body(generated_at=generated_at)
+
+        load_model.assert_called_once_with(
+            generated_at=generated_at,
+            portfolio_workspace=context.workspace,
+        )
+        coordinator.tick.assert_called_once()
+        tick_kwargs = coordinator.tick.call_args.kwargs
+        self.assertEqual(tick_kwargs["scope"].symbols, ("AMD",))
+        self.assertEqual(tick_kwargs["session"].phase, "OPEN")
+        self.assertEqual(tick_kwargs["now"], generated_at)
+        render_workbench.assert_called_once_with(
+            model,
+            key="today_workbench",
+        )
+
     def test_today_market_calendar_loads_holidays_and_early_closes_separately(
         self,
     ) -> None:
@@ -878,7 +994,10 @@ class TodayHomePageContractTests(unittest.TestCase):
         ):
             page.render_today_page()
 
-        render_component.assert_called_once_with({"schema_version": "today_home_v2"})
+        render_component.assert_called_once_with(
+            {"schema_version": "today_home_v2"},
+            key="today_workbench",
+        )
         fake_st.markdown.assert_not_called()
         fake_st.switch_page.assert_called_once_with(
             "market-page",

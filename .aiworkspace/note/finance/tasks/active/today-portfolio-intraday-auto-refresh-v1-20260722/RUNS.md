@@ -36,3 +36,11 @@
 - GREEN: due OPEN submit, non-blocking result, one-inflight, not-due skip, closed/limited skip, completed future 수거 테스트 5개 통과.
 - 회귀: coordinator + Today market session + intraday scope 14개 테스트 통과.
 - `py_compile app/web/today_intraday_auto_refresh.py`와 `git diff --check` 통과.
+
+## 2026-07-23 Task 4 — Fragment And Default Context
+
+- RED: read-only context loader, 15초 fragment, dynamic body가 없어 focused 테스트 3개가 실패하는 것을 확인했다.
+- GREEN: default group/items/workspace read, stable key, heartbeat tick 테스트 3개 통과.
+- 회귀: coordinator, Today page contract, market session, intraday service를 합친 39개 테스트 통과.
+- Today public page의 bare-test 경로와 실제 Streamlit fragment 경로를 분리해 기존 navigation/fallback 계약을 보존했다.
+- `py_compile` 대상 3개와 `git diff --check` 통과.
