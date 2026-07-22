@@ -104,6 +104,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-22 - Market Research 상단 전체를 하나의 React surface로 통합한다
+
+- User request: Streamlit 기반처럼 보이는 Market Research 상단을 React로 개선하고 A안 전체 전환을 진행해 달라고 요청함.
+- Interpreted goal: 기존 3-family/7-view 정보 구조와 deep link는 유지하면서 제목·family·view가 한 제품 surface처럼 보이고 desktop/mobile에서 일관되게 작동하게 한다.
+- Analysis result: React는 presentation과 selection intent만 소유하고 Python이 canonical state와 renderer를 유지하는 구조가 적합하다. bundle 누락 시 Streamlit fallback을 보존하며 changed-view event 뒤 한 번 rerun해야 iframe payload와 본문 상태가 일치한다.
+- Follow-up: 전체 `3/3차` 구현, 자동 회귀, 1280·760·420px actual Browser QA를 완료했다. drawer/sticky와 module body redesign은 범위에서 제외했다.
+
 ### 2026-07-22 - Market Research는 Today의 반복 요약이 아니라 deep research를 소유한다
 
 - User request: 과거 최초 화면이던 Overview가 Market Research로 바뀐 현재, 기존 시장맥락·변동종목·선물·심리·일정 구조와 상단/tab UI를 분석하고 개편해 달라고 요청함.

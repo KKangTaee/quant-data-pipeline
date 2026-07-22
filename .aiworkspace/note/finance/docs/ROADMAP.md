@@ -39,6 +39,14 @@ Market Research Top Navigation Visual Polish V1도 전체 `3/3차` 구현과 clo
 - QA: Market Research + Today Python 47개(+2 subtests), py_compile/diff check와 1280·760·420px actual Browser navigation/overflow를 통과했다.
 - 상세: `tasks/active/market-research-top-navigation-visual-polish-v1-20260722/STATUS.md`.
 
+Market Research React Navigation V1도 전체 `3/3차` 구현과 closeout을 완료했다.
+
+- 표현: `RESEARCH WORKSPACE`, 실제 `<h1>`, 설명, 3-family와 family-local 7-view를 하나의 React/Vite surface로 통합했다.
+- 상태: React는 allow-listed selection event만 반환하고 Python이 query/session/legacy slug와 selected renderer를 계속 소유한다. view가 바뀐 event는 상태 저장 뒤 한 번 rerun해 URL·본문·iframe 선택 상태를 동기화한다.
+- 안전장치: canonical static bundle이 없으면 기존 semantic Streamlit header와 two-level widget navigation을 fallback으로 유지한다.
+- QA: Market Research·Today·관련 Overview contract Python 54개(+2 subtests), React 4개/typecheck/build, 1280·760·420px actual family/view navigation·overflow·keyboard focus를 통과했다.
+- 상세: `tasks/active/market-research-react-navigation-v1-20260722/STATUS.md`.
+
 Portfolio Monitoring React Command Center V1은 전체 `6/6차` 구현과 closeout을 완료했다.
 
 - 목적: legacy Streamlit dashboard를 Overview/시장맥락 계열 React one-shell로 전환하고, DB-backed group/item lifecycle, 공통 가치곡선, 근거형 진단, macro risk observation과 calibration gate를 제공한다.

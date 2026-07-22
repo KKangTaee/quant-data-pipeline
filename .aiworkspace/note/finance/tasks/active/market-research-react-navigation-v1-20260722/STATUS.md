@@ -1,20 +1,23 @@
 # Market Research React Navigation V1 Status
 
-Status: Implementation Plan Ready
-Roadmap: 0/3 implementation stages complete
+Status: Complete
+Roadmap: 3/3 implementation stages complete
 Last Updated: 2026-07-22
 
 ## Completed
 
-- current Streamlit/custom HTML hybrid 상단과 existing React component patterns를 확인했다.
-- 사용자가 상단 전체를 React로 전환하는 A안을 선택했다.
-- 전용 component, Python state ownership, fallback, responsive/accessibility 계약을 설계했다.
+- `market_research_navigation_v1` Python payload와 validated `select_view` event 계약을 구현했다.
+- header, 3-family selector, family-local 7-view selector를 하나의 responsive React/Vite surface로 전환했다.
+- Python을 canonical query/session/legacy normalization owner로 유지하고 static bundle 누락 시 기존 Streamlit header/navigation fallback을 보존했다.
+- 선택 event가 도착한 같은 run의 iframe에 이전 payload가 남던 문제를 state 저장 후 changed-view rerun으로 해소했다.
+- 1280·760·420px에서 전 family/view 이동, URL/selected state, frame height, overflow 0, keyboard focus를 actual Browser QA로 확인했다.
 
 ## Current
 
-- 3-task test-first implementation plan을 작성하고 execution 방식을 선택한다.
+- 전체 roadmap `3/3차` 완료.
+- QA screenshot: `market-research-react-navigation-qa.png` (generated, commit 제외)
 
 ## Next
 
-- inline 또는 subagent-driven execution 선택
-- implementation roadmap 1/3 시작
+- module body redesign, sticky/drawer, recent/saved research는 별도 승인 범위다.
+- Market Research 상단 후속은 `app/web/overview/navigation.py`, wrapper, React source/static bundle에서 이어간다.

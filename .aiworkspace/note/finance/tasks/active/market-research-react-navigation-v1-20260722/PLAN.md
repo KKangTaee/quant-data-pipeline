@@ -1,7 +1,7 @@
 # Market Research React Navigation V1 Plan
 
-Status: Design Approved
-Roadmap: 0/3 implementation stages complete
+Status: Complete
+Roadmap: 3/3 implementation stages complete
 Last Updated: 2026-07-22
 
 ## 이걸 하는 이유?
@@ -37,3 +37,9 @@ Last Updated: 2026-07-22
 - URL/session/legacy slug/lazy renderer 계약이 기존과 동일하다.
 - 1280/760/420px overflow 0과 keyboard focus를 actual Browser QA로 확인한다.
 - fallback과 connected Today 회귀가 통과한다.
+
+## Completion
+
+- 1차: Python payload/event 계약과 Streamlit custom-component wrapper 완료
+- 2차: React/Vite header·family·view surface와 canonical static bundle 완료
+- 3차: React-first integration, fallback, actual responsive Browser QA, 문서 closeout 완료

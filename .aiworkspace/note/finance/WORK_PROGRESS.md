@@ -10,6 +10,13 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-22 - Market Research React 상단 완료
+
+- eyebrow·제목·설명·3-family·7-view를 전용 React/Vite surface로 통합하고 Python의 URL/session/legacy normalization과 selected renderer ownership을 유지했다.
+- changed-view event를 저장한 뒤 한 번 rerun해 URL·본문·iframe selected state가 같은 canonical view를 표시하도록 수정했으며 static bundle 누락 시 Streamlit fallback을 보존했다.
+- Python 54개(+2 subtests), React 4개/typecheck/build와 1280·760·420px actual navigation·overflow·keyboard focus QA를 통과했다. screenshot은 generated `market-research-react-navigation-qa.png`다.
+- 전체 roadmap `3/3차` 완료. 상세: `tasks/active/market-research-react-navigation-v1-20260722/STATUS.md`.
+
 ### 2026-07-22 - Market Research 상단 visual polish 완료
 
 - 3-family/7-view IA와 deep link는 유지하고 full-width 2단 button form을 compact semantic header, content-width family rail, bounded local navigation으로 바꿨다.
