@@ -13,4 +13,12 @@
 - `superpowers:writing-plans` 절차로 승인 설계를 9개 TDD task와 4개 roadmap stage로 분해했다.
 - plan self-review에서 spec coverage, placeholder, type/status consistency를 대조했다.
 - `git diff --check`를 통과했다.
-- 현재 단계는 plan-only다. 제품 테스트와 Browser QA는 실행 방식 선택 후 수행한다.
+- 이 기록 시점에는 plan-only였으며, 이후 사용자가 Inline Execution을 선택했다.
+
+## 2026-07-23 Task 1 — Explicit Symbol Collector
+
+- baseline `MarketIntelligenceIngestionContractTests`: 21개 중 Today와 무관한 기존 AAII parser/header 2개 오류. 사용자 승인으로 별도 이슈로 유지했다.
+- RED: explicit collector 테스트 2개가 missing function으로 실패하는 것을 확인했다.
+- GREEN: explicit group symbol 저장과 batch exception error-row 저장 테스트 2개 통과.
+- 회귀: 기존 S&P 500/TOP1000/default liquidity/active alias/alias UPSERT 테스트 5개 통과.
+- `.venv/bin/python -m py_compile finance/data/market_intelligence.py`와 `git diff --check` 통과.

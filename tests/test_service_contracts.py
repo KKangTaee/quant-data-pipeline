@@ -27633,6 +27633,97 @@ class MarketIntelligenceIngestionContractTests(unittest.TestCase):
         self.assertAlmostEqual(float(written_rows[0]["return_pct"]), 12.0)
         self.assertAlmostEqual(float(written_rows[1]["return_pct"]), -4.0)
 
+    def test_explicit_intraday_collector_writes_only_requested_group_symbols(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        stored: list[dict[str, object]] = []
+        result = mi.collect_and_store_symbol_intraday_snapshot(
+            symbols=["amd", "QQQ", "AMD"],
+            universe_code="TODAY_0123456789ABCDEF",
+            source_ref="portfolio_group_id=group-a",
+            quote_fetcher=lambda symbols: [
+                {
+                    "symbol": symbol,
+                    "regularMarketPrice": 100.0,
+                    "regularMarketPreviousClose": 99.0,
+                    "regularMarketTime": 1784741400,
+                    "marketState": "REGULAR",
+                }
+                for symbol in symbols
+            ],
+            snapshot_time_utc=datetime(
+                2026,
+                7,
+                22,
+                14,
+                35,
+                42,
+                tzinfo=timezone.utc,
+            ),
+            upsert=lambda rows: stored.extend(rows) or len(rows),
+            previous_close_loader=lambda symbols: {
+                symbol: {"previous_close": 99.0} for symbol in symbols
+            },
+            alias_loader=lambda symbols: {},
+        )
+
+        self.assertEqual(result["symbols_requested"], 2)
+        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual({row["symbol"] for row in stored}, {"AMD", "QQQ"})
+        self.assertEqual(
+            {row["universe_code"] for row in stored},
+            {"TODAY_0123456789ABCDEF"},
+        )
+        self.assertEqual(
+            {row["snapshot_time_utc"] for row in stored},
+            {"2026-07-22 14:35:00"},
+        )
+        self.assertTrue(
+            all(
+                str(row["source_ref"]).startswith(
+                    "portfolio_group_id=group-a;yahoo_quote_v7"
+                )
+                for row in stored
+            )
+        )
+
+    def test_explicit_intraday_collector_persists_error_rows_for_batch_exception(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        stored: list[dict[str, object]] = []
+
+        def fail_quote_fetch(symbols):
+            del symbols
+            raise RuntimeError("provider down")
+
+        result = mi.collect_and_store_symbol_intraday_snapshot(
+            symbols=["AMD", "QQQ"],
+            universe_code="TODAY_0123456789ABCDEF",
+            source_ref="portfolio_group_id=group-a",
+            quote_fetcher=fail_quote_fetch,
+            snapshot_time_utc=datetime(
+                2026,
+                7,
+                22,
+                14,
+                35,
+                tzinfo=timezone.utc,
+            ),
+            upsert=lambda rows: stored.extend(rows) or len(rows),
+            previous_close_loader=lambda symbols: {},
+            alias_loader=lambda symbols: {},
+        )
+
+        self.assertEqual(result["failed_symbols"], ["AMD", "QQQ"])
+        self.assertEqual({row["provider_status"] for row in stored}, {"error"})
+        self.assertTrue(
+            all("provider down" in str(row["error_msg"]) for row in stored)
+        )
+        self.assertEqual(
+            {row["snapshot_time_utc"] for row in stored},
+            {"2026-07-22 14:35:00"},
+        )
+
     def test_top_universe_snapshot_writes_top1000_rows(self) -> None:
         from finance.data import market_intelligence as mi
 

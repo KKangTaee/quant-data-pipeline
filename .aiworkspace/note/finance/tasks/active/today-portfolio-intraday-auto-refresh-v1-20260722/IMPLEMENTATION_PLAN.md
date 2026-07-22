@@ -61,7 +61,7 @@
 - Produces: `collect_and_store_symbol_intraday_snapshot(*, symbols: Sequence[str], universe_code: str, source_ref: str, interval: str = "5m", quote_batch_size: int = 200, host: str = "localhost", user: str = "root", password: str = "1234", port: int = 3306, quote_fetcher: Callable[..., list[dict[str, Any]]] | None = None, snapshot_time_utc: datetime | None = None, upsert: Callable[[list[dict[str, Any]]], int] | None = None, previous_close_loader: Callable[[list[str]], dict[str, float]] | None = None, alias_loader: Callable[[list[str]], dict[str, dict[str, Any]]] | None = None) -> dict[str, Any]`.
 - Invariant: one attempt uses UTC minute precision so replay of the same `snapshot_time_utc` is idempotent under the existing unique key.
 
-- [ ] **Step 1: Write failing explicit-symbol and batch-error tests**
+- [x] **Step 1: Write failing explicit-symbol and batch-error tests**
 
 Add tests with this shape to `MarketIntradaySnapshotTests`:
 
@@ -112,7 +112,7 @@ def test_explicit_intraday_collector_persists_error_rows_for_batch_exception(sel
     self.assertTrue(all("provider down" in row["error_msg"] for row in stored))
 ```
 
-- [ ] **Step 2: Run the focused tests and confirm RED**
+- [x] **Step 2: Run the focused tests and confirm RED**
 
 Run:
 
@@ -124,7 +124,7 @@ Run:
 
 Expected: both tests fail because `collect_and_store_symbol_intraday_snapshot` does not exist.
 
-- [ ] **Step 3: Implement the bounded collector**
+- [x] **Step 3: Implement the bounded collector**
 
 Add a public function with injectable boundaries and a private error-row normalizer:
 
@@ -220,7 +220,7 @@ def collect_and_store_symbol_intraday_snapshot(
 
 Add required `re` and `Sequence` imports without changing the existing broad-universe function.
 
-- [ ] **Step 4: Run collector tests and broad-universe regression**
+- [x] **Step 4: Run collector tests and broad-universe regression**
 
 Run:
 
@@ -233,7 +233,7 @@ Run:
 
 Expected: new tests pass; existing SP500/TOP/NASDAQ collector tests remain green.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 ```bash
 git add finance/data/market_intelligence.py tests/test_service_contracts.py

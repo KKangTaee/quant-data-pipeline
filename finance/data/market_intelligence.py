@@ -4764,6 +4764,163 @@ def upsert_intraday_snapshot_rows(
         db.close()
 
 
+def _portfolio_snapshot_minute(value: datetime | None = None) -> str:
+    instant = value or _utc_now()
+    if instant.tzinfo is None:
+        instant = instant.replace(tzinfo=UTC)
+    return _timestamp_str(
+        instant.astimezone(UTC).replace(second=0, microsecond=0)
+    )
+
+
+def _portfolio_quote_error_rows(
+    *,
+    symbols: Sequence[str],
+    universe_code: str,
+    interval_code: str,
+    snapshot_time_utc: str,
+    source_ref: str,
+    error: BaseException,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "universe_code": universe_code,
+            "symbol": symbol,
+            "quote_symbol": symbol,
+            "interval_code": interval_code,
+            "snapshot_time_utc": snapshot_time_utc,
+            "quote_time_utc": None,
+            "source": "yahoo_quote",
+            "source_ref": f"{source_ref};yahoo_quote_v7;batch_error",
+            "previous_close": None,
+            "latest_price": None,
+            "return_pct": None,
+            "volume": None,
+            "provider_status": "error",
+            "error_msg": str(error)[:2000],
+        }
+        for symbol in symbols
+    ]
+
+
+def collect_and_store_symbol_intraday_snapshot(
+    *,
+    symbols: Sequence[str],
+    universe_code: str,
+    source_ref: str,
+    interval: str = DEFAULT_INTRADAY_INTERVAL,
+    quote_batch_size: int = 200,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+    quote_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+    snapshot_time_utc: datetime | None = None,
+    upsert: Callable[[list[dict[str, Any]]], int] | None = None,
+    previous_close_loader: Callable[[list[str]], dict[str, dict[str, Any]]] | None = None,
+    alias_loader: Callable[[list[str]], dict[str, dict[str, Any]]] | None = None,
+) -> dict[str, Any]:
+    """Persist one bounded Today portfolio quote attempt by explicit symbols."""
+
+    normalized_symbols = sorted(
+        {
+            symbol
+            for value in symbols
+            if (symbol := _normalize_symbol(value))
+        }
+    )
+    if not 1 <= len(normalized_symbols) <= 10:
+        raise ValueError(
+            "Portfolio intraday symbols must contain 1 to 10 unique symbols."
+        )
+    normalized_universe = str(universe_code or "").strip().upper()
+    if re.fullmatch(r"TODAY_[0-9A-F]{16}", normalized_universe) is None:
+        raise ValueError(
+            "Portfolio intraday universe_code must use TODAY_<16 hex>."
+        )
+    normalized_interval = str(interval or "").strip()
+    if normalized_interval != "5m":
+        raise ValueError("Portfolio intraday collection supports only 5m.")
+    normalized_source_ref = str(source_ref or "").strip()
+    if not normalized_source_ref or len(normalized_source_ref) > 128:
+        raise ValueError("A compact portfolio source_ref is required.")
+
+    started_at = datetime.now(UTC)
+    snapshot_time = _portfolio_snapshot_minute(snapshot_time_utc)
+    load_previous = previous_close_loader or (
+        lambda requested: _load_db_previous_close_map(
+            requested,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    load_aliases = alias_loader or (
+        lambda requested: load_active_market_symbol_aliases(
+            requested,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    try:
+        rows, failed_symbols, diagnostics = _collect_quote_snapshot_rows(
+            normalized_symbols,
+            universe_code=normalized_universe,
+            interval_code=normalized_interval,
+            snapshot_time=snapshot_time,
+            quote_batch_size=quote_batch_size,
+            quote_fetcher=quote_fetcher,
+            previous_close_map=load_previous(normalized_symbols),
+            alias_map=load_aliases(normalized_symbols),
+        )
+        for row in rows:
+            row["source_ref"] = (
+                f"{normalized_source_ref};{row.get('source_ref') or 'yahoo_quote_v7'}"
+            )[:255]
+    except Exception as exc:
+        rows = _portfolio_quote_error_rows(
+            symbols=normalized_symbols,
+            universe_code=normalized_universe,
+            interval_code=normalized_interval,
+            snapshot_time_utc=snapshot_time,
+            source_ref=normalized_source_ref,
+            error=exc,
+        )
+        failed_symbols = list(normalized_symbols)
+        diagnostics = {"quote_batch_error": str(exc)}
+
+    writer = upsert or (
+        lambda values: upsert_intraday_snapshot_rows(
+            values,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    rows_written = writer(rows)
+    return {
+        "rows_written": rows_written,
+        "symbols_requested": len(normalized_symbols),
+        "symbols_processed": len(normalized_symbols) - len(failed_symbols),
+        "failed_symbols": failed_symbols,
+        "snapshot_time_utc": snapshot_time,
+        "universe_code": normalized_universe,
+        "interval": normalized_interval,
+        "source": "yahoo_quote",
+        "method": "quote_fast",
+        "duration_sec": round(
+            (datetime.now(UTC) - started_at).total_seconds(),
+            3,
+        ),
+        "diagnostics": diagnostics,
+        "message": "Today portfolio intraday snapshot attempt stored.",
+    }
+
+
 def collect_and_store_market_intraday_snapshot(
     *,
     universe_code: str = "SP500",
