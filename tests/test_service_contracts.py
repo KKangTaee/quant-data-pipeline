@@ -7113,9 +7113,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         events_source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
         events_helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")
 
-        self.assertIn("from app.web.overview.components.layout import render_market_session_banner", page_source)
-        self.assertIn("render_market_session_banner(", page_source)
-        self.assertNotIn("_legacy.render_market_session_banner(", page_source)
+        self.assertNotIn("from app.web.overview.components.layout import render_market_session_banner", page_source)
+        self.assertNotIn("render_market_session_banner(", page_source)
+        self.assertIn("render_economic_cycle", page_source)
+        self.assertIn("render_market_context_valuation", page_source)
 
         self.assertIn("render_market_context_valuation", market_context_source)
         self.assertNotIn("render_macro_context_cockpit", market_context_source)
