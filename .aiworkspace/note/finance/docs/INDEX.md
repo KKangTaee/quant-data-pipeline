@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-07-22
+Last Verified: 2026-07-23
 
 ## Purpose
 
@@ -24,8 +24,8 @@ Last Verified: 2026-07-22
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: [Overview Sentiment CNN·AAII Balanced V1 2026-07-19](../tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md) — 전체 잠정 roadmap `2/4차`. 1차 균형형 UI와 2차 source별 immutable 수집 당시 기록, UTC known-at 조회, 24시간 자동 수집, full-history 그래프를 완료했다. 다음은 3차 독립 데이터 후보 검토이며 1W/1M은 4차 chronological PIT 검증 전까지 비공개다.
-- Latest completed Market Research UX task: [Market Research React Navigation V1 2026-07-22](../tasks/active/market-research-react-navigation-v1-20260722/STATUS.md) — eyebrow·제목·설명·3-family·7-view 상단 전체를 하나의 responsive React surface로 전환했다. Python이 URL/session/legacy normalization과 lazy renderer를 소유하고 Streamlit fallback을 유지하며, 전체 `3/3차`와 1280·760·420px actual Browser QA를 완료했다.
-- Previous completed Market Research UX task: [Market Research Top Navigation Visual Polish V1 2026-07-22](../tasks/active/market-research-top-navigation-visual-polish-v1-20260722/STATUS.md) — 3-family/7-view IA와 deep link는 유지하고 상단을 compact semantic header, content-width family rail, bounded local view surface로 정리했다. 이 표현 계약은 최신 React navigation이 계승했다.
+- Latest completed Market Research UX task: [Market Research Editorial Navigation V2 2026-07-23](../tasks/active/market-research-editorial-navigation-v2-20260722/STATUS.md) — React 상단을 full-width editorial header, divider+underline family text tab, unframed local view rail과 compact active pill로 정리했다. 기존 3-family/7-view와 Python state/fallback을 유지하며 전체 `3/3차`와 1280·760·420px actual Browser QA를 완료했다.
+- Previous completed Market Research UX task: [Market Research React Navigation V1 2026-07-22](../tasks/active/market-research-react-navigation-v1-20260722/STATUS.md) — eyebrow·제목·설명·3-family·7-view 상단 전체를 하나의 responsive React surface로 전환했다. 이 component/state 계약은 최신 Editorial Navigation V2가 계승했다.
 - Latest completed product IA task: [Today Home React Workbench V2 2026-07-22](../tasks/active/today-home-react-workbench-v2-20260722/STATUS.md) — browser root `/`의 Today 본문을 Market Context 계열 React로 전환하고, 텍스트 위험 분류와 일별 저장 종가 기반 포트폴리오 수익률의 실제 날짜 X축·0% 기준 Y축을 전체 `4/4차`로 완료했다. V1의 목적형 navigation과 기존 상세 URL은 그대로 유지한다.
 - Latest completed task: [Today Contributor Performance Cards V1 2026-07-22](../tasks/active/today-contributor-performance-cards-v1-20260722/STATUS.md) — Today의 기여 상위 2·하위 2를 현금흐름 조정 종목 수익률과 포트폴리오 누적 기여를 분리한 compact card로 정리하고 actual Browser QA를 완료했다.
 - Previous completed Portfolio Monitoring task: [Portfolio Monitoring Price Refresh V1 2026-07-22](../tasks/active/portfolio-monitoring-price-refresh-v1-20260722/STATUS.md) — 선택 그룹의 활성 direct stock·ETF를 최근 완료 NYSE 거래일까지 명시적으로 수집하고, 수집 후 DB 최신성을 다시 확인해 공통 기준일과 종합 가치곡선을 재계산한다. 전체 `3/3차`와 actual Browser QA를 완료했다.

@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-23 - Market Research family는 카드보다 editorial text tab이 적합하다
+
+- User request: 전체 React 전환 뒤에도 상단 디자인이 어색해 다른 방향을 검토하고, A Editorial Tabs와 inline execution을 승인함.
+- Interpreted goal: 3-family/7-view 정보 구조는 유지하면서 prototype/form처럼 보이는 큰 카드와 연속 가로 박스를 줄이고 본문을 더 빨리 시작한다.
+- Analysis result: 현재 깊이에는 drawer/left rail보다 full-width editorial header, divider+underline family text tab, unframed local view와 active pill이 적합하다. family 설명은 접근 가능한 label에 보존한다.
+- Follow-up: 전체 `3/3차` 구현과 자동 회귀, 7-view·1280/760/420·focus/overflow/console actual Browser QA를 완료했다. command bar, rail/drawer, module body redesign은 별도 범위다.
+
 ### 2026-07-22 - Today 종목 수익률과 포트폴리오 기여금은 다른 단위다
 
 - User request: Today의 단순 `누적 기여` chip을 종목 자체 성과와 포트폴리오에 미친 금액 효과를 구분하는 compact card로 개선하도록 요청함.

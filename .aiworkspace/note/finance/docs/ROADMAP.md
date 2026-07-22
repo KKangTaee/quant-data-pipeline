@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-22
+Last Verified: 2026-07-23
 
 ## Current State After Master Merge
 
@@ -46,6 +46,14 @@ Market Research React Navigation V1도 전체 `3/3차` 구현과 closeout을 완
 - 안전장치: canonical static bundle이 없으면 기존 semantic Streamlit header와 two-level widget navigation을 fallback으로 유지한다.
 - QA: Market Research·Today·관련 Overview contract Python 54개(+2 subtests), React 4개/typecheck/build, 1280·760·420px actual family/view navigation·overflow·keyboard focus를 통과했다.
 - 상세: `tasks/active/market-research-react-navigation-v1-20260722/STATUS.md`.
+
+Market Research Editorial Navigation V2도 전체 `3/3차` 구현과 closeout을 완료했다.
+
+- 표현: full-width editorial header 아래 family를 divider+2px underline text tab으로, family-local view를 외곽 surface 없는 compact active pill로 정리했다.
+- 반응형: desktop title 30px·좌우 header, 420px title 26px·stacked header·family 3열·view 2열을 사용하며 단일 view는 전체 열을 차지한다.
+- 경계: 3-family/7-view label, React event, Python query/session/legacy normalization, fallback, module/DB/provider 경계는 변경하지 않았다.
+- QA: Python 55개(+2 subtests), React 4개/typecheck/build/py_compile/diff check와 1280·760·420px actual 7-view navigation·overflow·keyboard focus·console QA를 통과했다.
+- 상세: `tasks/active/market-research-editorial-navigation-v2-20260722/STATUS.md`.
 
 Portfolio Monitoring React Command Center V1은 전체 `6/6차` 구현과 closeout을 완료했다.
 

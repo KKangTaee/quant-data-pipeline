@@ -1,8 +1,8 @@
 # Market Research Editorial Navigation V2 Plan
 
-Status: Design Approved
-Roadmap: 0/3 implementation stages complete
-Last Updated: 2026-07-22
+Status: Complete
+Roadmap: 3/3 implementation stages complete
+Last Updated: 2026-07-23
 
 ## 이걸 하는 이유?
 
@@ -37,3 +37,9 @@ Editorial Tabs 방향은 리서치 문서의 목차처럼 family를 얇은 text 
 - desktop header/navigation이 module 본문과 같은 축으로 정렬된다.
 - mobile은 family 3열과 view 2열을 유지하며 clipping/overflow가 없다.
 - 기존 7-view route, URL, fallback, keyboard/focus 계약이 회귀하지 않는다.
+
+## Completion
+
+- 1차: React header/family markup과 접근 가능한 family label 계약을 확정했다.
+- 2차: Editorial Tabs CSS와 production static bundle을 적용했다.
+- 3차: 1280px·760px·420px actual Browser QA, 7-view 전환, focus/overflow/console 검증과 문서 closeout을 완료했다.

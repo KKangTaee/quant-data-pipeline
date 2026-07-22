@@ -1,5 +1,12 @@
 # Finance Work Progress
 
+### 2026-07-23 - Market Research Editorial Tabs 완료
+
+- React 상단을 full-width editorial header, divider+underline family text tab, unframed local view와 compact active pill로 정리했다.
+- 3-family/7-view, Python URL/session/legacy normalization, fallback과 module/data 경계는 유지했다.
+- Python 55개(+2 subtests), React 4개/typecheck/build와 1280·760·420px actual navigation·overflow·keyboard focus·console QA를 통과했다.
+- 전체 roadmap `3/3차` 완료. 상세: `tasks/active/market-research-editorial-navigation-v2-20260722/STATUS.md`.
+
 ## Purpose
 This file is the current, concise implementation log for `finance` package work.
 
