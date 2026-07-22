@@ -22,3 +22,10 @@
 - GREEN: explicit group symbol 저장과 batch exception error-row 저장 테스트 2개 통과.
 - 회귀: 기존 S&P 500/TOP1000/default liquidity/active alias/alias UPSERT 테스트 5개 통과.
 - `.venv/bin/python -m py_compile finance/data/market_intelligence.py`와 `git diff --check` 통과.
+
+## 2026-07-23 Task 2 — Scope, Session, Due, Lock
+
+- RED: 신규 intraday service module 부재로 focused 테스트 9개가 실패하는 것을 확인했다.
+- GREEN: group scope/hash, direct-security eligibility, OPEN gate, pre-open/close, 300초 due, 600초 stale, partial coverage, lock contention/release, DB restart cadence 테스트 9개 통과.
+- 회귀: 신규 service와 기존 Portfolio Monitoring EOD refresh를 합친 17개 테스트 통과.
+- `py_compile` 대상 3개와 `git diff --check` 통과.

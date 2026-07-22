@@ -252,7 +252,7 @@ git commit -m "기능: Today 포트폴리오 장중 시세 수집 추가"
 - Produces: immutable `IntradayRefreshScope`, `LatestPortfolioQuotes`; `portfolio_intraday_universe_code(group_id)`, `build_intraday_refresh_scope(group, items)`, `resolve_regular_session_state(market_session, now)`, `load_latest_portfolio_quotes(scope, now)`, `run_due_intraday_collection(scope, now)`.
 - `LatestPortfolioQuotes.status` is one of `NO_ATTEMPT`, `LIVE_READY`, `LIVE_PARTIAL`, `STALE`, `FAILED`.
 
-- [ ] **Step 1: Write failing pure boundary tests**
+- [x] **Step 1: Write failing pure boundary tests**
 
 Create the test file with deterministic records:
 
@@ -282,7 +282,7 @@ Add DB-boundary tests using a fake `MySQLClient` for:
 - `GET_LOCK(%s, 0)=0` => normal `lock_contended` skip and no collector call
 - process restart equivalent => a new service instance still skips from latest DB attempt.
 
-- [ ] **Step 2: Run tests and confirm RED**
+- [x] **Step 2: Run tests and confirm RED**
 
 Run:
 
@@ -292,7 +292,7 @@ Run:
 
 Expected: import failure because the new service module does not exist.
 
-- [ ] **Step 3: Implement types and pure eligibility/session functions**
+- [x] **Step 3: Implement types and pure eligibility/session functions**
 
 Use exact contracts:
 
@@ -337,7 +337,7 @@ def build_intraday_refresh_scope(group, items):
 
 `resolve_regular_session_state` must parse only the current `TRADING_DAY` row and return `OPEN` for `open_at_utc <= now < close_at_utc`; any `LIMITED`, malformed, holiday, weekend, pre-open, or closed input returns `collection_allowed=False`.
 
-- [ ] **Step 4: Implement DB latest-attempt read and advisory lock**
+- [x] **Step 4: Implement DB latest-attempt read and advisory lock**
 
 Use a DB factory injection and one connection for lock ownership:
 
@@ -358,7 +358,7 @@ The latest snapshot query must join the group/interval's maximum `snapshot_time_
 
 Inside `run_due_intraday_collection`, re-read due after acquiring the lock, then call Task 1 exactly once with `source_ref=f"portfolio_group_id={scope.portfolio_group_id};provider=yahoo_quote"`. Return compact dictionaries with status in `submitted_result`, `not_due`, `lock_contended`, `no_symbols`, or `failed`; do not append run history.
 
-- [ ] **Step 5: Export and run tests**
+- [x] **Step 5: Export and run tests**
 
 Export only stable public types/functions through `portfolio_monitoring/__init__.py`, then run:
 
@@ -369,7 +369,7 @@ Export only stable public types/functions through `portfolio_monitoring/__init__
 
 Expected: all new scope/due/lock tests and existing EOD refresh tests pass.
 
-- [ ] **Step 6: Commit Task 2**
+- [x] **Step 6: Commit Task 2**
 
 ```bash
 git add app/services/portfolio_monitoring/intraday_refresh.py \

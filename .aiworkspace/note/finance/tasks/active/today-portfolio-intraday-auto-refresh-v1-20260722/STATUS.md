@@ -1,7 +1,7 @@
 # Today Portfolio Intraday Auto Refresh V1 Status
 
-Status: 1/4 In Progress — Task 1 Complete
-Roadmap: 0/4 implementation stages complete
+Status: 1/4 Complete
+Roadmap: 1/4 implementation stages complete
 Last Updated: 2026-07-23
 
 ## Completed
@@ -16,8 +16,12 @@ Last Updated: 2026-07-23
 - Task 1 explicit-symbol collector를 TDD로 구현했다.
 - 최대 10개 `TODAY_<group hash>` symbol과 UTC minute replay key를 고정했다.
 - provider batch exception도 symbol별 `provider_status=error` row로 저장한다.
+- Task 2 group SHA-256 scope, direct stock·ETF eligibility, confirmed regular-session gate를 구현했다.
+- DB latest attempt 300초 cadence, quote 600초 stale, partial coverage와 MySQL advisory lock을 구현했다.
+- 새 process에서도 DB attempt가 cadence source-of-truth가 되는 회귀를 확인했다.
 
 ## Next
 
-- 1/4차 Task 2 group scope, confirmed-session gate, DB due-check와 advisory lock을 TDD로 구현한다.
+- 2/4차 Task 3 single-worker non-blocking coordinator를 TDD로 구현한다.
+- 이어서 Task 4에서 default context와 15초 fragment를 연결한다.
 - 기존 AAII baseline 오류 2개는 사용자 승인에 따라 이번 Today scope와 분리한다.
