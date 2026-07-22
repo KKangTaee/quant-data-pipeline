@@ -4,7 +4,7 @@ import importlib
 import importlib.util
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -397,6 +397,121 @@ class TodayHomeReadModelTests(unittest.TestCase):
                 "auto_rebalance": False,
             },
         )
+
+
+class TodayMarketSessionTests(unittest.TestCase):
+    def _builder(self):
+        module = importlib.import_module("app.services.today_market_session")
+        return module.build_us_market_session_model
+
+    def test_regular_day_uses_new_york_wall_clock_and_utc_boundaries(self) -> None:
+        model = self._builder()(
+            generated_at=datetime(2026, 7, 22, 13, 0, tzinfo=timezone.utc),
+            holiday_rows=[
+                {"Date": "2026-07-03", "Title": "Independence Day"}
+            ],
+            early_close_rows=[
+                {
+                    "Date": "2026-11-27",
+                    "Event Time": "Early close 13:00 ET",
+                }
+            ],
+        )
+
+        today = next(
+            row
+            for row in model["schedule"]
+            if row["trade_date"] == "2026-07-22"
+        )
+        self.assertEqual(today["day_kind"], "TRADING_DAY")
+        self.assertEqual(today["open_at_utc"], "2026-07-22T13:30:00+00:00")
+        self.assertEqual(today["close_at_utc"], "2026-07-22T20:00:00+00:00")
+        self.assertFalse(today["is_early_close"])
+        self.assertEqual(
+            model["timezones"],
+            {"market": "America/New_York", "viewer": "Asia/Seoul"},
+        )
+
+    def test_winter_and_summer_keep_0930_et_but_shift_utc_boundary(self) -> None:
+        summer = self._builder()(
+            generated_at=datetime(2026, 7, 22, 0, 0, tzinfo=timezone.utc),
+            holiday_rows=[
+                {"Date": "2026-07-03", "Title": "Independence Day"}
+            ],
+            early_close_rows=[],
+        )["schedule"][0]
+        winter = self._builder()(
+            generated_at=datetime(2026, 12, 2, 0, 0, tzinfo=timezone.utc),
+            holiday_rows=[
+                {"Date": "2026-12-25", "Title": "Christmas Day"}
+            ],
+            early_close_rows=[],
+        )["schedule"][0]
+
+        self.assertEqual(summer["open_at_utc"][11:16], "13:30")
+        self.assertEqual(winter["open_at_utc"][11:16], "14:30")
+
+    def test_holiday_and_weekend_rows_have_no_session_boundaries(self) -> None:
+        model = self._builder()(
+            generated_at=datetime(2026, 7, 3, 12, 0, tzinfo=timezone.utc),
+            holiday_rows=[
+                {
+                    "Date": "2026-07-03",
+                    "Title": "US Market Holiday: Independence Day",
+                }
+            ],
+            early_close_rows=[],
+        )
+
+        holiday, weekend = model["schedule"][:2]
+        self.assertEqual(
+            (holiday["day_kind"], holiday["open_at_utc"]),
+            ("HOLIDAY", None),
+        )
+        self.assertIn("Independence Day", holiday["holiday_label"])
+        self.assertEqual(
+            (weekend["day_kind"], weekend["open_at_utc"]),
+            ("WEEKEND", None),
+        )
+
+    def test_official_early_close_uses_1300_et(self) -> None:
+        model = self._builder()(
+            generated_at=datetime(2026, 11, 27, 12, 0, tzinfo=timezone.utc),
+            holiday_rows=[
+                {"Date": "2026-11-26", "Title": "Thanksgiving Day"}
+            ],
+            early_close_rows=[
+                {
+                    "Date": "2026-11-27",
+                    "Event Time": "Early close 13:00 ET",
+                }
+            ],
+        )
+
+        self.assertEqual(
+            model["schedule"][0]["close_at_utc"],
+            "2026-11-27T18:00:00+00:00",
+        )
+        self.assertTrue(model["schedule"][0]["is_early_close"])
+
+    def test_malformed_early_close_time_keeps_regular_close_and_warns(self) -> None:
+        model = self._builder()(
+            generated_at=datetime(2026, 11, 27, 12, 0, tzinfo=timezone.utc),
+            holiday_rows=[
+                {"Date": "2026-11-26", "Title": "Thanksgiving Day"}
+            ],
+            early_close_rows=[
+                {"Date": "2026-11-27", "Event Time": "Early close"}
+            ],
+        )
+
+        self.assertEqual(
+            model["schedule"][0]["close_at_utc"],
+            "2026-11-27T21:00:00+00:00",
+        )
+        self.assertFalse(model["schedule"][0]["is_early_close"])
+        self.assertEqual(model["calendar_quality"], "LIMITED")
+        self.assertIn("2026-11-27", model["warnings"][0])
 
 
 class TodayHomePageContractTests(unittest.TestCase):
