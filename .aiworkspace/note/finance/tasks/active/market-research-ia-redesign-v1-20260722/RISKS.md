@@ -14,7 +14,7 @@ Last Updated: 2026-07-22
 
 ## Residual Validation Gap
 
-- broader service suite의 sentiment overlay 2개와 AAII parser 1개 실패는 이 task 이전부터 재현되며, 이 task diff가 해당 service/parser를 변경하지 않는다. 별도 sentiment task에서 다룬다.
+- 전체 service contract 기준선에는 Backtest/Practical Validation 11개, Futures Macro thermometer 3개, AAII header 1개의 기존 실패가 남아 있다. 이 task diff에는 해당 page/service/parser 구현 파일 변경이 없으며 Market Research 연결 범위 376개는 통과했다. 각 소유 task에서 별도로 정리한다.
 
 ## Deferred
 
