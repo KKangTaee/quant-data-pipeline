@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import asdict, is_dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from math import isfinite
 from typing import Any, Mapping, Sequence
 
+from app.services.today_market_session import build_us_market_session_model
 
-TODAY_SCHEMA_VERSION = "today_home_v2"
+
+TODAY_SCHEMA_VERSION = "today_home_v3"
 _UNAVAILABLE_STATUSES = {
     "",
     "ERROR",
@@ -528,11 +530,12 @@ def build_today_read_model(
     sentiment: Any,
     events: Any,
     portfolio: Any,
+    market_calendar: Any = None,
     generated_at: datetime | None = None,
 ) -> dict[str, object]:
     """Compose the read-only Today payload from existing persisted read models."""
 
-    timestamp = generated_at or datetime.now()
+    timestamp = generated_at or datetime.now(timezone.utc)
     evidence = _project_market_evidence(
         economic_cycle,
         sp500,
@@ -564,6 +567,12 @@ def build_today_read_model(
     if next_event and next_event.get("importance") == "High" and int(next_event.get("days_until") or 0) <= 7:
         watch_items.append(f"{next_event['date']} {next_event['title']} 일정을 확인합니다.")
     portfolio_model = _project_portfolio(portfolio)
+    calendar = _as_mapping(market_calendar)
+    market_session = build_us_market_session_model(
+        generated_at=timestamp,
+        holiday_rows=calendar.get("holiday_rows"),
+        early_close_rows=calendar.get("early_close_rows"),
+    )
     date_candidates = [
         row.get("as_of_date")
         for row in evidence
@@ -598,6 +607,7 @@ def build_today_read_model(
             "next_event": next_event,
             "watch_items": watch_items[:3],
         },
+        "market_session": market_session,
         "portfolio": portfolio_model,
         "actions": [
             {"key": "market_research", "label": "시장 근거 자세히 보기"},

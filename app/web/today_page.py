@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from html import escape
 from typing import Any, Callable
+from zoneinfo import ZoneInfo
 
 import streamlit as st
 
 from app.services.futures_macro_snapshot import (
     load_overview_futures_macro_materialized_snapshot,
 )
+from app.services.overview.events import build_market_events_snapshot
 from app.services.today import build_today_read_model
 from app.web.final_selected_portfolio_dashboard import (
     load_default_portfolio_monitoring_workspace_for_today,
@@ -67,9 +69,45 @@ def _safe_load(loader: Callable[[], Any], *, label: str) -> Any:
         }
 
 
+def load_today_market_calendar(*, generated_at: datetime) -> dict[str, Any]:
+    """Load official holiday and early-close rows without broad event mixing."""
+
+    now_utc = generated_at.astimezone(timezone.utc)
+    market_date = now_utc.astimezone(ZoneInfo("America/New_York")).date()
+    start_date = f"{market_date.year}-01-01"
+    end_date = f"{market_date.year + 1}-12-31"
+    snapshots = {
+        "holiday": build_market_events_snapshot(
+            start_date=start_date,
+            end_date=end_date,
+            event_type="MARKET_HOLIDAY",
+            recent_days=0,
+            limit=100,
+            today=market_date,
+        ),
+        "early_close": build_market_events_snapshot(
+            start_date=start_date,
+            end_date=end_date,
+            event_type="EARLY_CLOSE",
+            recent_days=0,
+            limit=100,
+            today=market_date,
+        ),
+    }
+    return {
+        "holiday_rows": snapshots["holiday"].get("rows"),
+        "early_close_rows": snapshots["early_close"].get("rows"),
+        "statuses": {
+            "holiday": snapshots["holiday"].get("status"),
+            "early_close": snapshots["early_close"].get("status"),
+        },
+    }
+
+
 def load_today_read_model() -> dict[str, object]:
     """Load existing persisted sources and compose one read-only Today model."""
 
+    generated_at = datetime.now(timezone.utc)
     return build_today_read_model(
         economic_cycle=_safe_load(load_economic_cycle_model, label="경제 사이클"),
         sp500=_safe_load(load_sp500_valuation_model, label="S&P 500"),
@@ -89,7 +127,11 @@ def load_today_read_model() -> dict[str, object]:
             load_default_portfolio_monitoring_workspace_for_today,
             label="대표 포트폴리오",
         ),
-        generated_at=datetime.now(),
+        market_calendar=_safe_load(
+            lambda: load_today_market_calendar(generated_at=generated_at),
+            label="미국 증시 일정",
+        ),
+        generated_at=generated_at,
     )
 
 

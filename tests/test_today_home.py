@@ -136,7 +136,7 @@ class TodayHomeReadModelTests(unittest.TestCase):
             generated_at=datetime(2026, 7, 22, 9, 0),
         )
 
-        self.assertEqual(model["schema_version"], "today_home_v2")
+        self.assertEqual(model["schema_version"], "today_home_v3")
         self.assertEqual(model["header"]["source_ready_count"], 5)
         self.assertEqual(
             model["header"]["as_of_date"],
@@ -355,7 +355,7 @@ class TodayHomeReadModelTests(unittest.TestCase):
         model = self._builder()(**inputs)
 
         portfolio = model["portfolio"]
-        self.assertEqual(model["schema_version"], "today_home_v2")
+        self.assertEqual(model["schema_version"], "today_home_v3")
         self.assertAlmostEqual(
             portfolio["metrics"]["latest_observation_return"],
             0.06,
@@ -397,6 +397,24 @@ class TodayHomeReadModelTests(unittest.TestCase):
                 "auto_rebalance": False,
             },
         )
+
+    def test_market_session_does_not_change_evidence_readiness(self) -> None:
+        inputs = self._complete_inputs()
+
+        model = self._builder()(
+            **inputs,
+            market_calendar={"holiday_rows": [], "early_close_rows": []},
+            generated_at=datetime(2026, 7, 22, 13, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(model["schema_version"], "today_home_v3")
+        self.assertEqual(model["header"]["source_count"], 5)
+        self.assertEqual(model["header"]["source_ready_count"], 5)
+        self.assertEqual(
+            model["market_session"]["schema_version"],
+            "market_session_v1",
+        )
+        self.assertFalse(model["boundaries"]["provider_fetch"])
 
 
 class TodayMarketSessionTests(unittest.TestCase):
@@ -515,6 +533,40 @@ class TodayMarketSessionTests(unittest.TestCase):
 
 
 class TodayHomePageContractTests(unittest.TestCase):
+    def test_today_market_calendar_loads_holidays_and_early_closes_separately(
+        self,
+    ) -> None:
+        page = importlib.import_module("app.web.today_page")
+        fake = MagicMock(
+            side_effect=[
+                {"status": "OK", "rows": []},
+                {"status": "OK", "rows": []},
+            ]
+        )
+        generated_at = datetime(2026, 7, 22, 13, 0, tzinfo=timezone.utc)
+
+        with patch.object(page, "build_market_events_snapshot", fake):
+            result = page.load_today_market_calendar(
+                generated_at=generated_at,
+            )
+
+        self.assertEqual(
+            set(result),
+            {"holiday_rows", "early_close_rows", "statuses"},
+        )
+        self.assertEqual(
+            [call.kwargs["event_type"] for call in fake.call_args_list],
+            ["MARKET_HOLIDAY", "EARLY_CLOSE"],
+        )
+        self.assertEqual(
+            fake.call_args_list[0].kwargs["start_date"],
+            "2026-01-01",
+        )
+        self.assertEqual(
+            fake.call_args_list[0].kwargs["end_date"],
+            "2027-12-31",
+        )
+
     def test_today_react_source_uses_explicit_risk_labels_and_chart_semantics(self) -> None:
         root = Path("app/web/streamlit_components/today_workbench/src")
         workbench = (root / "TodayWorkbench.tsx").read_text(encoding="utf-8")
