@@ -443,28 +443,37 @@ def _project_portfolio(workspace: Any) -> dict[str, Any]:
 
     metrics = _as_mapping(active.get("metrics"))
     item_rows = [_as_mapping(row) for row in active.get("item_rows") or []]
-    symbols = {
-        str(row.get("monitoring_item_id") or ""): _text(row.get("source_ref"))
+    items_by_id = {
+        str(row.get("monitoring_item_id") or ""): {
+            "symbol": _text(row.get("source_ref")),
+            "total_return": _safe_float(row.get("total_return")),
+        }
         for row in item_rows
     }
     raw_contributions = _as_mapping(metrics.get("contribution_by_item"))
-    contribution_rows = [
-        {
-            "symbol": symbols.get(str(item_id), str(item_id)),
-            "value": value,
-            "tone": "positive" if value > 0 else "negative",
-        }
-        for item_id, raw_value in raw_contributions.items()
-        if (value := _safe_float(raw_value)) not in (None, 0.0)
-    ]
+    contribution_rows = []
+    for item_id, raw_value in raw_contributions.items():
+        contribution_value = _safe_float(raw_value)
+        if contribution_value in (None, 0.0):
+            continue
+        item = items_by_id.get(str(item_id), {})
+        contribution_rows.append(
+            {
+                "symbol": _text(item.get("symbol"), str(item_id)),
+                "contribution_value": contribution_value,
+                "value": contribution_value,
+                "total_return": _safe_float(item.get("total_return")),
+                "tone": "positive" if contribution_value > 0 else "negative",
+            }
+        )
     positives = sorted(
-        (row for row in contribution_rows if row["value"] > 0),
-        key=lambda row: row["value"],
+        (row for row in contribution_rows if row["contribution_value"] > 0),
+        key=lambda row: row["contribution_value"],
         reverse=True,
     )[:2]
     negatives = sorted(
-        (row for row in contribution_rows if row["value"] < 0),
-        key=lambda row: row["value"],
+        (row for row in contribution_rows if row["contribution_value"] < 0),
+        key=lambda row: row["contribution_value"],
     )[:2]
     review_items = [
         {

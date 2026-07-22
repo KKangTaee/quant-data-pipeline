@@ -109,8 +109,16 @@ class TodayHomeReadModelTests(unittest.TestCase):
                         },
                     },
                     "item_rows": [
-                        {"monitoring_item_id": "nvda", "source_ref": "NVDA"},
-                        {"monitoring_item_id": "tlt", "source_ref": "TLT"},
+                        {
+                            "monitoring_item_id": "nvda",
+                            "source_ref": "NVDA",
+                            "total_return": Decimal("0.42"),
+                        },
+                        {
+                            "monitoring_item_id": "tlt",
+                            "source_ref": "TLT",
+                            "total_return": Decimal("-0.08"),
+                        },
                     ],
                 },
                 "now_to_review": [
@@ -157,8 +165,37 @@ class TodayHomeReadModelTests(unittest.TestCase):
             "2026-07-21",
         )
         self.assertAlmostEqual(model["portfolio"]["metrics"]["total_return"], 0.20)
-        self.assertEqual(model["portfolio"]["contributors"][0]["symbol"], "NVDA")
-        self.assertEqual(model["portfolio"]["contributors"][-1]["symbol"], "TLT")
+        self.assertEqual(
+            model["portfolio"]["contributors"][0],
+            {
+                "symbol": "NVDA",
+                "contribution_value": 240.0,
+                "value": 240.0,
+                "total_return": 0.42,
+                "tone": "positive",
+            },
+        )
+        self.assertEqual(
+            model["portfolio"]["contributors"][-1],
+            {
+                "symbol": "TLT",
+                "contribution_value": -40.0,
+                "value": -40.0,
+                "total_return": -0.08,
+                "tone": "negative",
+            },
+        )
+
+    def test_contributor_keeps_contribution_when_item_return_is_missing(self) -> None:
+        inputs = self._complete_inputs()
+        inputs["portfolio"]["active_group"]["item_rows"][0]["total_return"] = None
+
+        model = self._builder()(**inputs)
+
+        contributor = model["portfolio"]["contributors"][0]
+        self.assertEqual(contributor["symbol"], "NVDA")
+        self.assertEqual(contributor["contribution_value"], 240.0)
+        self.assertIsNone(contributor["total_return"])
 
     def test_insufficient_market_sources_hold_the_combined_judgment(self) -> None:
         inputs = self._complete_inputs()
