@@ -49,6 +49,20 @@ describe("Today portfolio chart presentation", () => {
     expect(series[0].total_value).toBeNull();
   });
 
+  it("does not invent a negative axis range for an all-positive series", () => {
+    const positive = buildChartSeries([
+      { date: "2026-07-18", unit_value: 1.8, total_value: 18000, cumulative_return: 0.8 },
+      { date: "2026-07-21", unit_value: 2.6, total_value: 26000, cumulative_return: 1.6 },
+    ]);
+    const negative = buildChartSeries([
+      { date: "2026-07-18", unit_value: 0.9, total_value: 9000, cumulative_return: -0.1 },
+      { date: "2026-07-21", unit_value: 0.7, total_value: 7000, cumulative_return: -0.3 },
+    ]);
+
+    expect(chartDomains(positive).low).toBe(0);
+    expect(chartDomains(negative).high).toBe(0);
+  });
+
   it("drops invalid dates and sorts the remaining observations", () => {
     const series = buildChartSeries([
       { date: "not-a-date", unit_value: 1, total_value: 100, cumulative_return: 0 },

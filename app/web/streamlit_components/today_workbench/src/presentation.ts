@@ -74,16 +74,19 @@ export function chartDomains(series: ChartPoint[]): ChartDomain {
     return { minTime: 0, maxTime: DAY_MS, low: -0.01, high: 0.01 };
   }
   const returns = series.map((row) => row.cumulative_return);
-  const rawLow = Math.min(0, ...returns);
-  const rawHigh = Math.max(0, ...returns);
+  const dataLow = Math.min(...returns);
+  const dataHigh = Math.max(...returns);
+  const rawLow = Math.min(0, dataLow);
+  const rawHigh = Math.max(0, dataHigh);
   const padding = Math.max((rawHigh - rawLow) * 0.12, 0.005);
+  const flatAtZero = dataLow === 0 && dataHigh === 0;
   const minTime = series[0].timestamp;
   const maxTime = series[series.length - 1].timestamp;
   return {
     minTime,
     maxTime: maxTime === minTime ? minTime + DAY_MS : maxTime,
-    low: rawLow - padding,
-    high: rawHigh + padding,
+    low: flatAtZero ? -padding : dataLow >= 0 ? 0 : rawLow - padding,
+    high: flatAtZero ? padding : dataHigh <= 0 ? 0 : rawHigh + padding,
   };
 }
 
