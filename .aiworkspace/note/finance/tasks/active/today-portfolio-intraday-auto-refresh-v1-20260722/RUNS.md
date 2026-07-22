@@ -63,3 +63,9 @@
 - GREEN: live/EOD fallback/partial coverage presentation을 포함한 Vitest 13개 통과.
 - TypeScript typecheck와 Vite production build 통과, static bundle 재생성.
 - Python Today read-model/static component 계약 18개 통과.
+
+## 2026-07-23 Task 8 — Bounded EOD Handoff
+
+- RED: close handoff plan과 coordinator EOD runner 인자가 없어 focused service/coordinator 테스트가 실패하는 것을 확인했다.
+- GREEN: close +299/+300초, early close, confirmed daily row, 5분 cadence, 최대 6회 retry 테스트 통과.
+- 회귀: intraday, existing EOD refresh, NYSE calendar, Today 전체 80개 테스트 통과.

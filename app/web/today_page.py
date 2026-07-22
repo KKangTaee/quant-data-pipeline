@@ -15,6 +15,7 @@ from app.services.overview.events import build_market_events_snapshot
 from app.services.portfolio_monitoring.intraday_refresh import (
     build_intraday_refresh_scope,
     build_live_portfolio_overlay,
+    load_latest_daily_dates,
     load_latest_portfolio_quotes,
     load_workspace_eod_closes,
     resolve_regular_session_state,
@@ -871,10 +872,16 @@ def _render_today_dynamic_body(
                 model.get("market_session") or {},
                 timestamp,
             )
-            get_today_intraday_coordinator().tick(
+            latest_daily_dates = (
+                load_latest_daily_dates(scope, end=session.trade_date)
+                if session.phase == "CLOSED"
+                else {}
+            )
+            coordinator_state = get_today_intraday_coordinator().tick(
                 scope=scope,
                 session=session,
                 now=timestamp,
+                latest_daily_dates=latest_daily_dates,
             )
             if session.collection_allowed:
                 quotes = load_latest_portfolio_quotes(scope, now=timestamp)
@@ -891,6 +898,27 @@ def _render_today_dynamic_body(
                 )
                 model["portfolio"]["live"] = project_today_portfolio_live(
                     overlay
+                )
+            elif coordinator_state.eod_state in {
+                "waiting",
+                "running",
+                "exhausted",
+            }:
+                missing = list(coordinator_state.eod_missing_symbols)
+                model["portfolio"]["live"] = project_today_portfolio_live(
+                    {
+                        "status": "EOD_WAITING",
+                        "trade_date": (
+                            session.trade_date.isoformat()
+                            if session.trade_date is not None
+                            else None
+                        ),
+                        "coverage": {
+                            "fresh": max(len(scope.symbols) - len(missing), 0),
+                            "expected": len(scope.symbols),
+                        },
+                        "fallback_symbols": missing,
+                    }
                 )
         except Exception:
             pass  # EOD Today remains available when live refresh is unavailable.

@@ -937,7 +937,7 @@ git commit -m "기능: Today 장중 수익률과 그래프 표시 추가"
 - Produces: `build_eod_handoff_plan(scope, session, freshness, now) -> EodHandoffPlan`; coordinator states `not_applicable`, `waiting`, `running`, `confirmed`, `exhausted`.
 - Constants: grace 300 seconds, retry cadence 300 seconds, max attempts 6.
 
-- [ ] **Step 1: Write failing close-boundary and retry tests**
+- [x] **Step 1: Write failing close-boundary and retry tests**
 
 Cover exact boundaries:
 
@@ -985,7 +985,7 @@ def test_confirmed_daily_rows_remove_live_overlay(self):
 
 Also assert premarket/after-hours snapshots are never accepted as EOD confirmation and that a process restart may retry only when DB EOD freshness still says missing.
 
-- [ ] **Step 2: Run close tests and confirm RED**
+- [x] **Step 2: Run close tests and confirm RED**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -995,7 +995,7 @@ Also assert premarket/after-hours snapshots are never accepted as EOD confirmati
 
 Expected: missing plan/retry state failures.
 
-- [ ] **Step 3: Implement the pure handoff plan**
+- [x] **Step 3: Implement the pure handoff plan**
 
 ```python
 EOD_GRACE_SECONDS = 300
@@ -1020,7 +1020,7 @@ def build_eod_handoff_plan(*, scope, session, latest_daily_dates, now):
     return EodHandoffPlan("waiting", session.trade_date, missing, now >= due_at)
 ```
 
-- [ ] **Step 4: Extend the coordinator without mixing quote and EOD futures**
+- [x] **Step 4: Extend the coordinator without mixing quote and EOD futures**
 
 Track future kind, last EOD submission time, trade date, and attempt count by group. Reset attempts when trade date changes or EOD becomes confirmed. Submit:
 
@@ -1030,7 +1030,7 @@ self._executor.submit(self._eod_runner, list(scope.items), now=now)
 
 only if `plan.due`, no future is running, attempts `< 6`, and at least 300 seconds elapsed since the last EOD submission. Quote jobs remain prohibited after close. Project `EOD_WAITING` while missing, including missing-symbol count but no provider diagnostics.
 
-- [ ] **Step 5: Run close/EOD regression tests**
+- [x] **Step 5: Run close/EOD regression tests**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -1042,7 +1042,7 @@ only if `plan.due`, no future is running, attempts `< 6`, and at least 300 secon
 
 Expected: all close, early-close, retry, existing EOD refresh, calendar, and Today tests pass.
 
-- [ ] **Step 6: Commit Task 8**
+- [x] **Step 6: Commit Task 8**
 
 ```bash
 git add app/services/portfolio_monitoring/intraday_refresh.py \

@@ -30,8 +30,10 @@ Last Updated: 2026-07-23
 - Today heartbeat가 DB snapshot과 workspace EOD close만 읽어 live overlay를 연결하며 historical curve/metrics는 바꾸지 않는다.
 - Task 7 React가 live metrics/contributors를 선택하고 quote 시각·partial coverage·장중 임시 badge를 표시한다.
 - historical line과 별개인 dashed live segment와 hollow marker를 추가하고 stable payload update transition을 적용했다.
+- Task 8 scheduled close +5분 EOD handoff와 5분 간격 최대 6회 제한을 구현했다.
+- close 이후 intraday quote job을 제출하지 않고, 당일 daily date가 확인되면 live state를 즉시 `확정 종가`로 되돌린다.
 
 ## Next
 
-- 4/4차 Task 8 장 마감 EOD handoff와 Task 9 통합 QA·문서 동기화를 진행한다.
+- 4/4차 Task 9 통합 QA·문서 동기화를 진행한다.
 - 기존 AAII baseline 오류 2개는 사용자 승인에 따라 이번 Today scope와 분리한다.

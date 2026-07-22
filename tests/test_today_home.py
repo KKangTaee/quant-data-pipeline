@@ -4,7 +4,7 @@ import importlib
 import importlib.util
 import tempfile
 import unittest
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
@@ -810,6 +810,61 @@ class TodayIntradayCoordinatorTests(unittest.TestCase):
         self.assertEqual(executor.futures[0].result_call_count, 1)
         self.assertEqual(result.collection_state, "idle")
         self.assertEqual(result.last_result, {"status": "submitted_result"})
+
+    def test_closed_session_retries_eod_every_five_minutes_at_most_six_times(self) -> None:
+        from app.web.today_intraday_auto_refresh import (
+            TodayIntradayCoordinator,
+        )
+
+        executor = _RecordingExecutor()
+        coordinator = TodayIntradayCoordinator(
+            executor=executor,
+            latest_loader=lambda *args, **kwargs: self._latest(due=False),
+            eod_runner=lambda *args, **kwargs: {"status": "failed"},
+        )
+        session = self._session(phase="CLOSED", allowed=False)
+        first_due = datetime(2026, 7, 22, 20, 5, tzinfo=timezone.utc)
+        stale = {"AMD": date(2026, 7, 21)}
+
+        for attempt in range(6):
+            snapshot = coordinator.tick(
+                scope=self._scope(),
+                session=session,
+                latest_daily_dates=stale,
+                now=first_due + timedelta(minutes=5 * attempt),
+            )
+            self.assertEqual(executor.submit_count, attempt + 1)
+            self.assertEqual(snapshot.eod_attempt_count, attempt + 1)
+            executor.futures[-1].done_flag = True
+            executor.futures[-1].value = {"status": "failed"}
+
+        exhausted = coordinator.tick(
+            scope=self._scope(),
+            session=session,
+            latest_daily_dates=stale,
+            now=first_due + timedelta(minutes=30),
+        )
+
+        self.assertEqual(executor.submit_count, 6)
+        self.assertEqual(exhausted.eod_state, "exhausted")
+        self.assertEqual(exhausted.eod_attempt_count, 6)
+
+    def test_confirmed_eod_resets_waiting_state_without_submission(self) -> None:
+        from app.web.today_intraday_auto_refresh import (
+            TodayIntradayCoordinator,
+        )
+
+        executor = _RecordingExecutor()
+        coordinator = TodayIntradayCoordinator(executor=executor)
+        snapshot = coordinator.tick(
+            scope=self._scope(),
+            session=self._session(phase="CLOSED", allowed=False),
+            latest_daily_dates={"AMD": date(2026, 7, 22)},
+            now=datetime(2026, 7, 22, 20, 5, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(snapshot.eod_state, "confirmed")
+        self.assertEqual(executor.submit_count, 0)
 
 
 class TodayHomePageContractTests(unittest.TestCase):

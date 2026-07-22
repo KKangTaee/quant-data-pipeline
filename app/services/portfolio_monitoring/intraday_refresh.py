@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, fields, is_dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 from typing import Any, Iterator
@@ -15,7 +15,7 @@ from finance.data.db.mysql import MySQLClient
 from finance.data.market_intelligence import (
     collect_and_store_symbol_intraday_snapshot,
 )
-from finance.loaders import load_price_history
+from finance.loaders import load_price_freshness_summary, load_price_history
 
 from .persistence import MonitoringItemRecord, PortfolioGroupRecord
 from .valuation import modified_dietz_return
@@ -26,6 +26,9 @@ INTRADAY_INTERVAL = "5m"
 INTRADAY_CADENCE_SECONDS = 300
 QUOTE_STALE_SECONDS = 600
 TODAY_INTRADAY_MAX_SYMBOLS = 10
+EOD_GRACE_SECONDS = 300
+EOD_RETRY_SECONDS = 300
+EOD_MAX_ATTEMPTS = 6
 ACTIVE_ITEM_STATUSES = {"active", "data_review"}
 DIRECT_INSTRUMENT_KINDS = {"stock", "etf"}
 
@@ -73,6 +76,14 @@ class LatestPortfolioQuotes:
             fallback_symbols=scope.symbols,
             due=due,
         )
+
+
+@dataclass(frozen=True)
+class EodHandoffPlan:
+    status: str
+    trade_date: date | None
+    missing_symbols: tuple[str, ...]
+    due: bool
 
 
 def _price_db_factory() -> MySQLClient:
@@ -123,6 +134,18 @@ def _decimal(value: Any, default: Decimal = Decimal("0")) -> Decimal:
     except (InvalidOperation, TypeError, ValueError):
         return default
     return parsed if parsed.is_finite() else default
+
+
+def _date_value(value: Any) -> date | None:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    text = str(value or "").strip()
+    try:
+        return date.fromisoformat(text[:10]) if text else None
+    except ValueError:
+        return None
 
 
 def portfolio_intraday_universe_code(portfolio_group_id: str) -> str:
@@ -468,6 +491,67 @@ def load_workspace_eod_closes(
     return closes
 
 
+def load_latest_daily_dates(
+    scope: IntradayRefreshScope,
+    *,
+    end: date | str | None = None,
+    freshness_loader: Callable[..., pd.DataFrame] = load_price_freshness_summary,
+) -> dict[str, date]:
+    """Read the durable latest 1d date for each direct-security symbol."""
+
+    if not scope.symbols:
+        return {}
+    end_text = end.isoformat() if isinstance(end, date) else str(end or "") or None
+    frame = freshness_loader(
+        list(scope.symbols),
+        end=end_text,
+        timeframe="1d",
+    )
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        return {}
+    dates: dict[str, date] = {}
+    for raw_row in frame.to_dict("records"):
+        symbol = _normalized_symbol(raw_row.get("symbol"))
+        latest_date = _date_value(raw_row.get("latest_date"))
+        if symbol in scope.symbols and latest_date is not None:
+            dates[symbol] = latest_date
+    return dates
+
+
+def build_eod_handoff_plan(
+    *,
+    scope: IntradayRefreshScope,
+    session: RegularSessionState,
+    latest_daily_dates: Mapping[str, date | str],
+    now: datetime,
+) -> EodHandoffPlan:
+    """Plan a bounded confirmed-daily refresh after the scheduled close."""
+
+    current = _as_utc(now)
+    if (
+        current is None
+        or session.phase != "CLOSED"
+        or session.trade_date is None
+        or session.close_at_utc is None
+        or not scope.symbols
+    ):
+        return EodHandoffPlan("not_applicable", session.trade_date, (), False)
+    missing = tuple(
+        symbol
+        for symbol in scope.symbols
+        if _date_value(latest_daily_dates.get(symbol)) != session.trade_date
+    )
+    if not missing:
+        return EodHandoffPlan("confirmed", session.trade_date, (), False)
+    due_at = session.close_at_utc + timedelta(seconds=EOD_GRACE_SECONDS)
+    return EodHandoffPlan(
+        "waiting",
+        session.trade_date,
+        missing,
+        current >= due_at,
+    )
+
+
 def _direct_units(item: Any, detail: Mapping[str, Any]) -> Decimal:
     position = _as_mapping(detail.get("position"))
     if position.get("current_shares") is not None:
@@ -644,13 +728,19 @@ def _date_text(value: Any) -> str | None:
 
 __all__ = [
     "INTRADAY_CADENCE_SECONDS",
+    "EOD_GRACE_SECONDS",
+    "EOD_RETRY_SECONDS",
+    "EOD_MAX_ATTEMPTS",
+    "EodHandoffPlan",
     "QUOTE_STALE_SECONDS",
     "IntradayRefreshScope",
     "LatestPortfolioQuotes",
     "RegularSessionState",
     "build_intraday_refresh_scope",
+    "build_eod_handoff_plan",
     "build_live_portfolio_overlay",
     "load_latest_portfolio_quotes",
+    "load_latest_daily_dates",
     "load_workspace_eod_closes",
     "portfolio_intraday_universe_code",
     "resolve_regular_session_state",

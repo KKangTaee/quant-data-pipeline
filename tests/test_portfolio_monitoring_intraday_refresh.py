@@ -565,5 +565,88 @@ class TodayPortfolioLiveValuationTests(unittest.TestCase):
         self.assertEqual(calls[0]["start"], "2026-07-21")
         self.assertEqual(calls[0]["end"], "2026-07-21")
 
+
+class TodayPortfolioEodHandoffTests(unittest.TestCase):
+    def _scope(self):
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            build_intraday_refresh_scope,
+        )
+
+        item = SimpleNamespace(
+            monitoring_item_id="amd-item",
+            source_ref="AMD",
+            source_type="direct_security",
+            instrument_kind="stock",
+            status="active",
+        )
+        return build_intraday_refresh_scope(_group(), [item])
+
+    def _closed_session(self, *, close_hour: int = 20):
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            RegularSessionState,
+        )
+
+        return RegularSessionState(
+            phase="CLOSED",
+            trade_date=date(2026, 7, 22),
+            open_at_utc=datetime(2026, 7, 22, 13, 30, tzinfo=timezone.utc),
+            close_at_utc=datetime(2026, 7, 22, close_hour, 0, tzinfo=timezone.utc),
+            collection_allowed=False,
+        )
+
+    def test_eod_handoff_starts_at_close_plus_five_minutes(self) -> None:
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            build_eod_handoff_plan,
+        )
+
+        close = datetime(2026, 7, 22, 20, 0, tzinfo=timezone.utc)
+        inputs = {
+            "scope": self._scope(),
+            "session": self._closed_session(),
+            "latest_daily_dates": {"AMD": date(2026, 7, 21)},
+        }
+        before = build_eod_handoff_plan(
+            **inputs,
+            now=close + timedelta(seconds=299),
+        )
+        due = build_eod_handoff_plan(
+            **inputs,
+            now=close + timedelta(seconds=300),
+        )
+
+        self.assertFalse(before.due)
+        self.assertTrue(due.due)
+        self.assertEqual(due.missing_symbols, ("AMD",))
+
+    def test_early_close_uses_scheduled_close_boundary(self) -> None:
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            build_eod_handoff_plan,
+        )
+
+        early_close = datetime(2026, 7, 22, 17, 0, tzinfo=timezone.utc)
+        plan = build_eod_handoff_plan(
+            scope=self._scope(),
+            session=self._closed_session(close_hour=17),
+            latest_daily_dates={"AMD": date(2026, 7, 21)},
+            now=early_close + timedelta(minutes=5),
+        )
+
+        self.assertTrue(plan.due)
+
+    def test_confirmed_daily_date_disables_handoff(self) -> None:
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            build_eod_handoff_plan,
+        )
+
+        plan = build_eod_handoff_plan(
+            scope=self._scope(),
+            session=self._closed_session(),
+            latest_daily_dates={"AMD": date(2026, 7, 22)},
+            now=datetime(2026, 7, 22, 20, 5, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(plan.status, "confirmed")
+        self.assertFalse(plan.due)
+
 if __name__ == "__main__":
     unittest.main()
