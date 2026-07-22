@@ -51,11 +51,19 @@ afterEach(cleanup);
 describe("MarketResearchNavigation", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders one accessible heading and selected family/view states", () => {
-    render(<MarketResearchNavigation {...props(payload)} />);
+  it("renders an editorial heading and label-only family tabs with selected states", () => {
+    const { container } = render(<MarketResearchNavigation {...props(payload)} />);
+
     expect(screen.getByRole("heading", { name: "Market Research", level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /시장 환경/ })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "경제 사이클" })).toHaveAttribute("aria-current", "page");
+    expect(container.querySelector(".mr-navigation__heading")).toBeInTheDocument();
+    expect(screen.queryByText("경제·매크로·심리·일정")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "시장 환경: 경제·매크로·심리·일정" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "경제 사이클" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("emits the target family default view once", async () => {

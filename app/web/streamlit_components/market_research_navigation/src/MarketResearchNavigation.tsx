@@ -44,8 +44,10 @@ export function MarketResearchNavigation({ args, width, theme }: Props) {
       className={`mr-navigation ${theme?.base === "dark" ? "is-dark" : "is-light"}`}
     >
       <header className="mr-navigation__header">
-        <span>{payload.eyebrow}</span>
-        <h1>{payload.title}</h1>
+        <div className="mr-navigation__heading">
+          <span>{payload.eyebrow}</span>
+          <h1>{payload.title}</h1>
+        </div>
         <p>{payload.description}</p>
       </header>
       <nav className="mr-navigation__families" aria-label="리서치 목적">
@@ -53,13 +55,13 @@ export function MarketResearchNavigation({ args, width, theme }: Props) {
           <button
             type="button"
             key={family.id}
+            aria-label={`${family.label}: ${family.description}`}
             aria-pressed={family.id === activeFamily.id}
             onClick={() => {
               if (family.id !== activeFamily.id) emit(family.views[0]?.id ?? "");
             }}
           >
             <strong>{family.label}</strong>
-            <span>{family.description}</span>
           </button>
         ))}
       </nav>
