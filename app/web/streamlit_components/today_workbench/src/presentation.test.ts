@@ -1,0 +1,60 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  buildChartSeries,
+  buildDateTicks,
+  buildPercentTicks,
+  chartDomains,
+  pointCoordinates,
+} from "./presentation";
+
+describe("Today portfolio chart presentation", () => {
+  it("uses elapsed calendar time for x coordinates", () => {
+    const series = buildChartSeries([
+      { date: "2026-07-18", unit_value: 1, total_value: 10000, cumulative_return: 0 },
+      { date: "2026-07-21", unit_value: 1.06, total_value: 10600, cumulative_return: 0.06 },
+      { date: "2026-07-22", unit_value: 1.07, total_value: 10700, cumulative_return: 0.07 },
+    ]);
+    const domain = chartDomains(series);
+    const box = { width: 400, height: 200, left: 50, right: 20, top: 20, bottom: 30 };
+    const saturday = pointCoordinates(series[0], domain, box);
+    const monday = pointCoordinates(series[1], domain, box);
+    const tuesday = pointCoordinates(series[2], domain, box);
+    expect(monday.x - saturday.x).toBeCloseTo(3 * (tuesday.x - monday.x));
+  });
+
+  it("keeps responsive date ticks within the requested count", () => {
+    const series = buildChartSeries(Array.from({ length: 9 }, (_, index) => ({
+      date: `2026-07-${String(index + 10).padStart(2, "0")}`,
+      unit_value: 1 + index / 100,
+      total_value: 10000 + index * 100,
+      cumulative_return: index / 100,
+    })));
+    expect(buildDateTicks(series, 5)).toHaveLength(5);
+    expect(buildDateTicks(series, 3)).toHaveLength(3);
+    expect(buildDateTicks(series, 3)[0].date).toBe(series[0].date);
+    const mobileTicks = buildDateTicks(series, 3);
+    expect(mobileTicks[mobileTicks.length - 1]?.date).toBe(series[series.length - 1]?.date);
+  });
+
+  it("includes zero in the percent domain and keeps a missing tooltip value", () => {
+    const series = buildChartSeries([
+      { date: "2026-07-18", unit_value: 0.98, total_value: null, cumulative_return: -0.02 },
+      { date: "2026-07-21", unit_value: 1.03, total_value: 10300, cumulative_return: 0.03 },
+    ]);
+    const domain = chartDomains(series);
+    expect(domain.low).toBeLessThanOrEqual(0);
+    expect(domain.high).toBeGreaterThanOrEqual(0);
+    expect(buildPercentTicks(domain, 5).some((value) => Math.abs(value) < 1e-12)).toBe(true);
+    expect(series[0].total_value).toBeNull();
+  });
+
+  it("drops invalid dates and sorts the remaining observations", () => {
+    const series = buildChartSeries([
+      { date: "not-a-date", unit_value: 1, total_value: 100, cumulative_return: 0 },
+      { date: "2026-07-21", unit_value: 1.03, total_value: 103, cumulative_return: 0.03 },
+      { date: "2026-07-18", unit_value: 1, total_value: 100, cumulative_return: 0 },
+    ]);
+    expect(series.map((row) => row.date)).toEqual(["2026-07-18", "2026-07-21"]);
+  });
+});
