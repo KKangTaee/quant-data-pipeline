@@ -1023,10 +1023,11 @@ Parallel active follow-up:
 
 Latest completed task:
 
-- `portfolio-monitoring-initial-setting-correction-v1-20260721` — 최초 요청 시작일·수량을 append-only initial contract revision으로 함께 정정하고 새 시장일·종가·최초 투자금부터 성과를 다시 계산하는 전체 `4/4차`를 완료했다.
+- `today-contributor-performance-cards-v1-20260722` — Today의 기여 상위 2·하위 2를 현금흐름 조정 종목 수익률과 포트폴리오 누적 기여를 분리한 compact card로 정리하고 actual Browser QA를 포함한 전체 `4/4차`를 완료했다.
 
 Previous completed task:
 
+- `portfolio-monitoring-initial-setting-correction-v1-20260721` — 최초 요청 시작일·수량을 append-only initial contract revision으로 함께 정정하고 새 시장일·종가·최초 투자금부터 성과를 다시 계산하는 전체 `4/4차`를 완료했다.
 - `overview-economic-cycle-intramonth-nowcast-v1-20260721` — 월말 canonical history를 보존하면서 날짜별 intramonth nowcast와 평일 fail-closed 증분 갱신을 전체 `4/4차`로 완료했다.
 - `overview-futures-macro-probabilistic-state-outlook-v2-20260720` — completed-session same-state target과 nested rolling-origin gate를 전체 `3/3차`로 완료했고 actual 5D/20D는 `NO_EDGE`로 비공개다.
 - `operations-portfolio-monitoring-only-v1-20260719` — Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.

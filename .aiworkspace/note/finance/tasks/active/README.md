@@ -35,7 +35,8 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| `portfolio-monitoring-initial-setting-correction-v1-20260721` | Latest completed record, 4/4 | 최초 요청 시작일과 수량을 append-only revision으로 함께 정정하고 새 DB 시장일·종가·최초 투자금부터 성과를 다시 계산한다. |
+| `today-contributor-performance-cards-v1-20260722` | Latest completed record, 4/4 | Today의 기여 상위 2·하위 2를 현금흐름 조정 종목 수익률과 포트폴리오 누적 기여를 분리한 compact card로 정리하고 actual Browser QA를 완료했다. |
+| `portfolio-monitoring-initial-setting-correction-v1-20260721` | Completed record, 4/4 | 최초 요청 시작일과 수량을 append-only revision으로 함께 정정하고 새 DB 시장일·종가·최초 투자금부터 성과를 다시 계산한다. |
 | `overview-economic-cycle-intramonth-nowcast-v1-20260721` | Completed record, 4/4 | 월말 canonical history를 보존하면서 날짜별 intramonth nowcast와 평일 fail-closed 증분 갱신을 완료했다. |
 | `overview-futures-macro-probabilistic-state-outlook-v2-20260720` | Completed record, 3/3 | completed-session same-state target과 nested rolling-origin gate를 완료했고 actual 5D/20D는 `NO_EDGE`로 비공개다. |
 | `portfolio-monitoring-reference-help-removal-v1-20260721` | Completed record, 2/2 | 중복 contextual help를 제거하고 canonical Reference Center의 journey·scenario·stale 안내를 보존했다. |
