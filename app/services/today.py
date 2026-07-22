@@ -6,7 +6,7 @@ from math import isfinite
 from typing import Any, Mapping, Sequence
 
 
-TODAY_SCHEMA_VERSION = "today_home_v1"
+TODAY_SCHEMA_VERSION = "today_home_v2"
 _UNAVAILABLE_STATUSES = {
     "",
     "ERROR",
@@ -15,6 +15,12 @@ _UNAVAILABLE_STATUSES = {
     "NO_DATA",
     "NOT_RUN",
     "UNAVAILABLE",
+}
+_SIGNAL_LABELS = {
+    "support": ("지지 신호", "위험도 낮음"),
+    "neutral": ("중립 신호", "위험도 중간"),
+    "watch": ("주의 신호", "위험도 높음"),
+    "limited": ("자료 제한", "판단 제한"),
 }
 
 
@@ -84,6 +90,7 @@ def _economic_cycle_evidence(model: Any) -> dict[str, Any]:
             "detail": "저장된 경제사이클 판단을 확인할 수 없습니다.",
             "as_of_date": _date_text(source.get("as_of_date")),
             "tone": "neutral",
+            "_semantic_code": "",
         }
     return {
         "key": "economic_cycle",
@@ -93,6 +100,7 @@ def _economic_cycle_evidence(model: Any) -> dict[str, Any]:
         "detail": _text(headline.get("summary"), "경제 국면 근거가 제한적입니다."),
         "as_of_date": _date_text(source.get("as_of_date")),
         "tone": "positive" if source_status == "READY" else "warning",
+        "_semantic_code": _text(headline.get("phase"), ""),
     }
 
 
@@ -115,6 +123,7 @@ def _sp500_evidence(model: Any) -> dict[str, Any]:
             "as_of_date": basis_date,
             "tone": "neutral",
             "provisional": False,
+            "_semantic_code": "",
         }
     bucket = _text(multiple.get("bucket"), "UNKNOWN").upper()
     bucket_label = {
@@ -138,6 +147,7 @@ def _sp500_evidence(model: Any) -> dict[str, Any]:
         "as_of_date": basis_date,
         "tone": "warning" if bucket in {"HIGH", "VERY_HIGH"} else "neutral",
         "provisional": provisional,
+        "_semantic_code": bucket,
     }
 
 
@@ -157,6 +167,7 @@ def _futures_evidence(model: Any) -> dict[str, Any]:
             ),
             "as_of_date": _date_text(metadata.get("as_of_date")),
             "tone": "neutral",
+            "_semantic_code": "",
         }
     macro = _as_mapping(source.get("macro"))
     summary = _as_mapping(macro.get("summary"))
@@ -169,6 +180,7 @@ def _futures_evidence(model: Any) -> dict[str, Any]:
         "detail": _text(summary.get("summary"), "저장된 선물 일봉의 현재 패턴을 확인합니다."),
         "as_of_date": _date_text(metadata.get("as_of_date")),
         "tone": _text(summary.get("tone") or macro.get("tone"), "neutral"),
+        "_semantic_code": _text(summary.get("tone") or macro.get("tone"), "neutral"),
     }
 
 
@@ -197,6 +209,7 @@ def _sentiment_evidence(model: Any) -> dict[str, Any]:
             "detail": "CNN·AAII 저장 관측을 확인할 수 없습니다.",
             "as_of_date": max(dates) if dates else None,
             "tone": "neutral",
+            "_semantic_code": "",
         }
     stale_count = int(_safe_float(coverage.get("stale_count")) or 0)
     missing_count = int(_safe_float(coverage.get("missing_count")) or 0)
@@ -208,7 +221,58 @@ def _sentiment_evidence(model: Any) -> dict[str, Any]:
         "detail": _text(analysis.get("headline"), "저장된 심리 관측을 확인합니다."),
         "as_of_date": max(dates) if dates else None,
         "tone": _text(analysis.get("tone"), "neutral"),
+        "_semantic_code": _text(analysis.get("tone"), "neutral"),
     }
+
+
+def _evidence_presentation(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Attach explicit display categories without creating a market score."""
+
+    result = dict(row)
+    key = str(result.get("key") or "")
+    status = _status(result.get("status"))
+    semantic_code = str(result.pop("_semantic_code", "") or "").upper()
+    normalized_tone = str(result.get("tone") or "neutral").strip().lower()
+    if status == "UNAVAILABLE":
+        level = "limited"
+    elif key == "economic_cycle":
+        level = {
+            "RECOVERY": "support",
+            "EXPANSION": "support",
+            "SLOWDOWN": "watch",
+            "RECESSION": "watch",
+        }.get(semantic_code, "neutral")
+    elif key == "sp500":
+        level = {
+            "VERY_HIGH": "watch",
+            "HIGH": "watch",
+            "MID": "neutral",
+            "NEUTRAL": "neutral",
+            "LOW": "support",
+            "VERY_LOW": "support",
+        }.get(semantic_code, "limited")
+    elif normalized_tone in {"positive", "support"}:
+        level = "support"
+    elif normalized_tone in {"warning", "negative", "danger", "burden"}:
+        level = "watch"
+    elif normalized_tone in {"neutral", "mixed"}:
+        level = "neutral"
+    else:
+        level = "limited"
+    signal_label, risk_label = _SIGNAL_LABELS[level]
+    result.update(
+        {
+            "signal_level": level,
+            "signal_label": signal_label,
+            "risk_label": risk_label,
+            "data_quality_label": (
+                "자료 제한"
+                if status != "READY" or bool(result.get("provisional"))
+                else "자료 확인"
+            ),
+        }
+    )
+    return result
 
 
 def _event_projection(model: Any) -> dict[str, Any] | None:
@@ -245,32 +309,56 @@ def _project_market_evidence(
     """Project existing market sources without creating a new market score."""
 
     return [
-        _economic_cycle_evidence(economic_cycle),
-        _sp500_evidence(sp500),
-        _futures_evidence(futures_macro),
-        _sentiment_evidence(sentiment),
+        _evidence_presentation(row)
+        for row in (
+            _economic_cycle_evidence(economic_cycle),
+            _sp500_evidence(sp500),
+            _futures_evidence(futures_macro),
+            _sentiment_evidence(sentiment),
+        )
     ]
 
 
-def _daily_return(curve: Any) -> float | None:
-    values = [
-        numeric
-        for numeric in (_safe_float(row.get("unit_value")) for row in _records(curve))
-        if numeric is not None
-    ]
-    if len(values) < 2 or values[-2] == 0:
-        return None
-    return values[-1] / values[-2] - 1.0
+def _portfolio_curve_projection(curve: Any) -> dict[str, Any]:
+    """Project at most 60 actual daily close observations with explicit units."""
 
-
-def _portfolio_curve(curve: Any) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for row in _records(curve)[-60:]:
-        value = _safe_float(row.get("unit_value"))
-        if value is None:
+    for row in _records(curve):
+        on_date = _date_text(row.get("date"))
+        unit_value = _safe_float(row.get("unit_value"))
+        if on_date is None or unit_value is None:
             continue
-        rows.append({"date": _date_text(row.get("date")), "value": value})
-    return rows
+        rows.append(
+            {
+                "date": on_date,
+                "unit_value": unit_value,
+                "total_value": _safe_float(row.get("total_value")),
+                "cumulative_return": unit_value - 1.0,
+            }
+        )
+    rows = sorted(rows, key=lambda item: str(item["date"]))[-60:]
+    latest_return = None
+    return_from_date = None
+    return_to_date = None
+    if len(rows) >= 2 and rows[-2]["unit_value"] != 0:
+        latest_return = rows[-1]["unit_value"] / rows[-2]["unit_value"] - 1.0
+        return_from_date = rows[-2]["date"]
+        return_to_date = rows[-1]["date"]
+    return {
+        "rows": rows,
+        "latest_observation_return": latest_return,
+        "return_from_date": return_from_date,
+        "return_to_date": return_to_date,
+        "metadata": {
+            "interval": "daily",
+            "price_basis": "stored_close",
+            "aggregation": "none",
+            "intraday": False,
+            "observation_count": len(rows),
+            "start_date": rows[0]["date"] if rows else None,
+            "end_date": rows[-1]["date"] if rows else None,
+        },
+    }
 
 
 def _project_portfolio(workspace: Any) -> dict[str, Any]:
@@ -280,9 +368,12 @@ def _project_portfolio(workspace: Any) -> dict[str, Any]:
     group = next((row for row in groups if row.get("is_default")), None)
     group = group or next((row for row in groups if row.get("selected")), None)
     group = group or (groups[0] if groups else None)
+    empty_curve = _portfolio_curve_projection([])
     empty_metrics = {
         "current_value": None,
-        "day_return": None,
+        "latest_observation_return": None,
+        "return_from_date": None,
+        "return_to_date": None,
         "total_return": None,
     }
     source_status = _status(source.get("status"))
@@ -299,6 +390,7 @@ def _project_portfolio(workspace: Any) -> dict[str, Any]:
             "summary": "대표 포트폴리오의 저장 결과를 확인할 수 없습니다.",
             "metrics": empty_metrics,
             "curve": [],
+            "curve_metadata": empty_curve["metadata"],
             "contributors": [],
             "review_items": [],
             "active_item_count": 0,
@@ -311,6 +403,7 @@ def _project_portfolio(workspace: Any) -> dict[str, Any]:
             "summary": "Portfolio Monitoring에서 대표 포트폴리오를 설정해 주세요.",
             "metrics": empty_metrics,
             "curve": [],
+            "curve_metadata": empty_curve["metadata"],
             "contributors": [],
             "review_items": [],
             "active_item_count": 0,
@@ -329,6 +422,7 @@ def _project_portfolio(workspace: Any) -> dict[str, Any]:
             "summary": "추적 중인 종목이나 전략이 없습니다. Portfolio Monitoring에서 추가해 주세요.",
             "metrics": empty_metrics,
             "curve": [],
+            "curve_metadata": empty_curve["metadata"],
             "contributors": [],
             "review_items": [],
             "active_item_count": 0,
@@ -341,6 +435,7 @@ def _project_portfolio(workspace: Any) -> dict[str, Any]:
             "summary": "대표 포트폴리오의 평가 결과를 확인할 수 없습니다.",
             "metrics": empty_metrics,
             "curve": [],
+            "curve_metadata": empty_curve["metadata"],
             "contributors": [],
             "review_items": [],
             "active_item_count": active_count,
@@ -381,6 +476,7 @@ def _project_portfolio(workspace: Any) -> dict[str, Any]:
     failures = _as_mapping(active.get("failures"))
     active_status = _status(active.get("status"))
     status = "PARTIAL" if failures or active_status == "PARTIAL" else "READY"
+    curve_projection = _portfolio_curve_projection(active.get("curve"))
     return {
         "status": status,
         "name": _text(group.get("name"), "대표 포트폴리오"),
@@ -392,10 +488,13 @@ def _project_portfolio(workspace: Any) -> dict[str, Any]:
         ),
         "metrics": {
             "current_value": _safe_float(metrics.get("current_value")),
-            "day_return": _daily_return(active.get("curve")),
+            "latest_observation_return": curve_projection["latest_observation_return"],
+            "return_from_date": curve_projection["return_from_date"],
+            "return_to_date": curve_projection["return_to_date"],
             "total_return": _safe_float(metrics.get("total_return")),
         },
-        "curve": _portfolio_curve(active.get("curve")),
+        "curve": curve_projection["rows"],
+        "curve_metadata": curve_projection["metadata"],
         "contributors": positives + negatives,
         "review_items": review_items,
         "active_item_count": active_count,

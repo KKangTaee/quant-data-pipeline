@@ -24,6 +24,7 @@ class TodayHomeReadModelTests(unittest.TestCase):
                 "status": "READY",
                 "as_of_date": "2026-06-30",
                 "headline": {
+                    "phase": "recovery",
                     "phase_label": "회복",
                     "summary": "현재는 회복 국면 가능성이 가장 높습니다.",
                 },
@@ -125,7 +126,7 @@ class TodayHomeReadModelTests(unittest.TestCase):
             generated_at=datetime(2026, 7, 22, 9, 0),
         )
 
-        self.assertEqual(model["schema_version"], "today_home_v1")
+        self.assertEqual(model["schema_version"], "today_home_v2")
         self.assertEqual(model["header"]["source_ready_count"], 5)
         self.assertEqual(
             model["header"]["as_of_date"],
@@ -141,7 +142,18 @@ class TodayHomeReadModelTests(unittest.TestCase):
         self.assertEqual(model["portfolio"]["status"], "READY")
         self.assertEqual(model["portfolio"]["name"], "Core")
         self.assertEqual(model["portfolio"]["metrics"]["current_value"], 1200.0)
-        self.assertAlmostEqual(model["portfolio"]["metrics"]["day_return"], 0.02)
+        self.assertAlmostEqual(
+            model["portfolio"]["metrics"]["latest_observation_return"],
+            0.02,
+        )
+        self.assertEqual(
+            model["portfolio"]["metrics"]["return_from_date"],
+            "2026-07-18",
+        )
+        self.assertEqual(
+            model["portfolio"]["metrics"]["return_to_date"],
+            "2026-07-21",
+        )
         self.assertAlmostEqual(model["portfolio"]["metrics"]["total_return"], 0.20)
         self.assertEqual(model["portfolio"]["contributors"][0]["symbol"], "NVDA")
         self.assertEqual(model["portfolio"]["contributors"][-1]["symbol"], "TLT")
@@ -238,7 +250,9 @@ class TodayHomeReadModelTests(unittest.TestCase):
 
         self.assertEqual(model["portfolio"]["status"], "EMPTY")
         self.assertIsNone(model["portfolio"]["metrics"]["current_value"])
-        self.assertIsNone(model["portfolio"]["metrics"]["day_return"])
+        self.assertIsNone(
+            model["portfolio"]["metrics"]["latest_observation_return"]
+        )
         self.assertIsNone(model["portfolio"]["metrics"]["total_return"])
 
     def test_portfolio_storage_failure_is_unavailable_not_empty(self) -> None:
@@ -260,6 +274,70 @@ class TodayHomeReadModelTests(unittest.TestCase):
 
         self.assertEqual(model["portfolio"]["status"], "UNAVAILABLE")
         self.assertIn("확인할 수 없습니다", model["portfolio"]["summary"])
+
+    def test_market_evidence_projects_explicit_signal_risk_and_quality_labels(self) -> None:
+        inputs = self._complete_inputs()
+        inputs["futures_macro"]["macro"]["summary"]["tone"] = "mixed"
+        inputs["sentiment"]["coverage"]["stale_count"] = 1
+
+        model = self._builder()(**inputs)
+
+        rows = {row["key"]: row for row in model["market"]["evidence"]}
+        self.assertEqual(rows["economic_cycle"]["signal_level"], "support")
+        self.assertEqual(rows["economic_cycle"]["risk_label"], "위험도 낮음")
+        self.assertEqual(rows["sp500"]["signal_level"], "watch")
+        self.assertEqual(rows["sp500"]["risk_label"], "위험도 높음")
+        self.assertEqual(rows["futures_macro"]["signal_level"], "neutral")
+        self.assertEqual(rows["sentiment"]["data_quality_label"], "자료 제한")
+
+    def test_unavailable_evidence_never_fabricates_low_or_high_risk(self) -> None:
+        inputs = self._complete_inputs()
+        inputs["economic_cycle"] = {"status": "UNAVAILABLE"}
+
+        model = self._builder()(**inputs)
+
+        row = next(
+            item
+            for item in model["market"]["evidence"]
+            if item["key"] == "economic_cycle"
+        )
+        self.assertEqual(row["signal_level"], "limited")
+        self.assertEqual(row["risk_label"], "판단 제한")
+        self.assertNotIn(row["risk_label"], {"위험도 낮음", "위험도 높음"})
+
+    def test_portfolio_curve_identifies_daily_stored_close_and_exact_return_dates(self) -> None:
+        inputs = self._complete_inputs()
+        inputs["portfolio"]["active_group"]["curve"] = [
+            {"date": "2026-07-17", "unit_value": 1.00, "total_value": 10000},
+            {"date": "2026-07-18", "unit_value": 1.02, "total_value": 10200},
+            {"date": "2026-07-21", "unit_value": 1.0812, "total_value": 10812},
+        ]
+
+        model = self._builder()(**inputs)
+
+        portfolio = model["portfolio"]
+        self.assertEqual(model["schema_version"], "today_home_v2")
+        self.assertAlmostEqual(
+            portfolio["metrics"]["latest_observation_return"],
+            0.06,
+            places=10,
+        )
+        self.assertEqual(portfolio["metrics"]["return_from_date"], "2026-07-18")
+        self.assertEqual(portfolio["metrics"]["return_to_date"], "2026-07-21")
+        self.assertEqual(portfolio["curve"][0]["cumulative_return"], 0.0)
+        self.assertEqual(portfolio["curve"][-1]["total_value"], 10812.0)
+        self.assertEqual(
+            portfolio["curve_metadata"],
+            {
+                "interval": "daily",
+                "price_basis": "stored_close",
+                "aggregation": "none",
+                "intraday": False,
+                "observation_count": 3,
+                "start_date": "2026-07-17",
+                "end_date": "2026-07-21",
+            },
+        )
 
     def test_today_contract_is_read_only_and_context_only(self) -> None:
         model = self._builder()(
