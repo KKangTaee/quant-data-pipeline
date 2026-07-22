@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from inspect import signature
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
@@ -642,3 +643,52 @@ def test_result_intent_requires_exact_current_run_and_enabled_action() -> None:
     assert accepted["ok"] is True
     assert stale == {"ok": False, "reason": "run_identity_mismatch"}
     assert disabled == {"ok": False, "reason": "action_unavailable"}
+
+
+def test_result_component_defers_intent_consumption_to_fragment_body() -> None:
+    from app.web import backtest_analysis_result_workspace as result_workspace
+
+    workspace = {
+        "visible": True,
+        "configuration_fingerprint": "fingerprint-current",
+        "identity": {"run_result_id": "run-current"},
+        "actions": {"save_and_move": {"enabled": True}},
+    }
+    intent = {
+        "action": "save_and_move",
+        "payload": {
+            "run_result_id": "run-current",
+            "current_configuration_fingerprint": "fingerprint-current",
+        },
+        "nonce": "handoff-fragment-1",
+    }
+    fake_streamlit = MagicMock()
+
+    with (
+        patch.object(result_workspace, "st", fake_streamlit),
+        patch.object(
+            result_workspace,
+            "build_current_backtest_analysis_result_workspace",
+            return_value=workspace,
+        ),
+        patch.object(
+            result_workspace,
+            "is_backtest_analysis_result_workspace_available",
+            return_value=True,
+        ),
+        patch.object(
+            result_workspace,
+            "render_backtest_analysis_result_workspace_component",
+            return_value=intent,
+        ) as render_component,
+        patch.object(
+            result_workspace,
+            "consume_result_workspace_intent",
+            return_value={"ok": True},
+        ) as consume_intent,
+    ):
+        result_workspace.render_backtest_analysis_result_workspace()
+
+    assert "on_change" not in render_component.call_args.kwargs
+    consume_intent.assert_called_once_with(intent, workspace=workspace)
+    fake_streamlit.rerun.assert_called_once_with(scope="app")

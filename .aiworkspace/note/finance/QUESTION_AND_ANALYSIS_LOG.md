@@ -10439,3 +10439,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 기존 상세 탭 내부를 개편하지 않고 browser root `/`의 판단 흐름만 같은 제품군의 React로 교체해 시장 근거와 대표 포트폴리오를 오해 없이 빠르게 읽게 한다.
 - Analysis result: V1은 React가 아닌 `st.markdown` HTML이었고 `day_return`과 axis 없는 sparkline이 일봉/주봉/장중 의미를 숨겼다. Python-owned text risk label과 `daily/stored_close/aggregation none/intraday false`, 실제 날짜 X축·누적 수익률 Y축 계약을 채택했다.
 - Follow-up: 전체 `4/4차`를 완료했다. actual QA에서 전 구간 양수인데 음수 padding 눈금이 생기는 문제도 발견해 0% 기준선에서 축을 멈추도록 보정했고, 1280·760·420 overflow 0, clean console, 기존 Market Context 이동을 확인했다.
+
+### 2026-07-22 - Backtest 후보 저장 후 Level2 이동은 full-app rerun에서 완료한다
+
+- User request: GTAA 백테스트 결과를 후보로 저장한 뒤 Level2 버튼이 정상 작동하지 않는 원인을 진단하고 수정하도록 요청함.
+- Interpreted goal: 후보 source는 한 번만 저장하면서 사용자가 한 번의 클릭으로 Practical Validation에 도달해야 함.
+- Analysis result: custom component callback이 intent를 소비한 뒤 fragment만 다시 실행되어 root route owner가 `backtest_requested_panel`을 읽지 못했다. intent를 fragment 본문에서 소비하고 `st.rerun(scope="app")`으로 승격하도록 수정했다.
+- Follow-up: task `3/3차` 완료. focused 51개와 synthetic GTAA actual Browser QA를 통과했으며 장기 실행 중인 Streamlit 서버는 재시작 후 확인한다.

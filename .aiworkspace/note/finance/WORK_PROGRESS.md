@@ -7066,3 +7066,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - 대표 포트폴리오는 최근 최대 60개 실제 일별 저장 종가, 실제 날짜 X축, 현금흐름 조정 누적 수익률 Y축과 최근 거래일의 정확한 두 날짜를 표시한다.
 - Python 26+연결 surface 114, React 5/typecheck/build와 1280·760·420 actual Browser QA, clean console, Market Context 이동을 통과했다.
 - 전체 roadmap `4/4차` 완료. 상세는 `tasks/active/today-home-react-workbench-v2-20260722/`를 본다.
+
+## 2026-07-22 - Backtest Level2 fragment 인계 복구 완료
+
+- 결과 component callback이 intent를 fragment rerun에서 선소비하던 경계를 제거하고, fragment 본문 소비 후 full-app rerun으로 승격했다.
+- GTAA synthetic actual Browser QA에서 한 번 클릭으로 handler 1회와 `LEVEL2_ROUTE_REACHED`를 확인했고 focused `51 passed`, console error/warning 0을 통과했다.
+- task `3/3차` 완료. 저장 schema·registry·validation gate 의미는 바꾸지 않았으며 상세는 `tasks/active/backtest-level2-fragment-handoff-fix-v1-20260722/`를 본다.

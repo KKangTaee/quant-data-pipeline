@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from functools import partial
 from typing import Any
 
 import streamlit as st
@@ -188,20 +187,6 @@ def consume_result_workspace_intent(
     return {"ok": True, "handler_result": result}
 
 
-def _consume_result_workspace_component_change(
-    *,
-    component_key: str,
-    is_running: bool,
-) -> None:
-    intent = st.session_state.get(component_key)
-    workspace = build_current_backtest_analysis_result_workspace(
-        is_running=is_running,
-    )
-    consumed = consume_result_workspace_intent(intent, workspace=workspace)
-    if consumed.get("ok"):
-        st.rerun(scope="app")
-
-
 def render_backtest_analysis_result_workspace(
     *,
     is_running: bool = False,
@@ -227,11 +212,6 @@ def render_backtest_analysis_result_workspace(
             intent = render_backtest_analysis_result_workspace_component(
                 workspace=workspace,
                 key=component_key,
-                on_change=partial(
-                    _consume_result_workspace_component_change,
-                    component_key=component_key,
-                    is_running=is_running,
-                ),
             )
         except Exception as exc:  # component availability must not hide results
             st.warning(

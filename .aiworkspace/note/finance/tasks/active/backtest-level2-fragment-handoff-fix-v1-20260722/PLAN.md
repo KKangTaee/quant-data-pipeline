@@ -31,7 +31,7 @@
 - Consumes: `render_backtest_analysis_result_workspace(is_running: bool = False) -> None`
 - Produces: custom component 반환 intent를 fragment 본문에서 한 번 소비하고 full-app rerun을 요청하는 adapter 계약
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 def test_result_component_defers_intent_consumption_to_fragment_body() -> None:
@@ -40,13 +40,13 @@ def test_result_component_defers_intent_consumption_to_fragment_body() -> None:
     # Assert the returned intent is consumed once and requests scope="app".
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_analysis_result_workspace.py::test_result_component_defers_intent_consumption_to_fragment_body -q`
 
 Expected: FAIL because the current adapter passes `on_change` into the custom component.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```python
 intent = render_backtest_analysis_result_workspace_component(
@@ -60,7 +60,7 @@ if consumed.get("ok"):
 
 Remove only the now-unused callback helper and `partial` import.
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_analysis_result_workspace.py tests/test_backtest_analysis_decision_workspace.py -q`
 
@@ -77,19 +77,19 @@ Expected: all focused tests pass.
 - Consumes: the production result component and adapter
 - Produces: browser evidence that one click executes one handler and triggers a full-app rerun
 
-- [ ] **Step 1: Run an isolated diagnostic Streamlit app**
+- [x] **Step 1: Run an isolated diagnostic Streamlit app**
 
 Use a synthetic GTAA bundle and an in-memory handler; do not write registry JSONL.
 
-- [ ] **Step 2: Verify the browser flow**
+- [x] **Step 2: Verify the browser flow**
 
 Check that the button is enabled, one click changes handler count `0 -> 1`, and a marker outside the fragment is visible after the full-app rerun.
 
-- [ ] **Step 3: Capture one QA screenshot**
+- [x] **Step 3: Capture one QA screenshot**
 
 Save `backtest-level2-fragment-handoff-fix-qa.png` as a generated, uncommitted artifact.
 
-- [ ] **Step 4: Remove the temporary diagnostic app**
+- [x] **Step 4: Remove the temporary diagnostic app**
 
 Delete `.codex_result_component_diagnostic.py` and stop its Streamlit process.
 
@@ -104,14 +104,14 @@ Delete `.codex_result_component_diagnostic.py` and stop its Streamlit process.
 - Consumes: verified code/test/browser results
 - Produces: concise durable handoff and one coherent implementation commit
 
-- [ ] **Step 1: Run final verification**
+- [x] **Step 1: Run final verification**
 
 Run focused pytest, `py_compile`, `git diff --check`, and inspect `git status --short`.
 
-- [ ] **Step 2: Sync task and root handoff docs**
+- [x] **Step 2: Sync task and root handoff docs**
 
 Record the root cause, chosen event lifecycle, RED/GREEN evidence, Browser QA, and remaining risk without changing high-level roadmap semantics.
 
-- [ ] **Step 3: Stage only owned files and commit**
+- [x] **Step 3: Stage only owned files and commit**
 
 Commit message: `수정: Backtest Level2 인계 fragment 라우팅 복구`
