@@ -4,9 +4,10 @@ import importlib
 import importlib.util
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 
@@ -561,6 +562,202 @@ class TodayMarketSessionTests(unittest.TestCase):
         )
 
         self.assertEqual(model["calendar_quality"], "LIMITED")
+
+
+class _RecordingFuture:
+    def __init__(self, *, done: bool = False, value=None) -> None:
+        self.done_flag = done
+        self.value = value
+        self.result_call_count = 0
+
+    def done(self) -> bool:
+        return self.done_flag
+
+    def result(self):
+        self.result_call_count += 1
+        return self.value
+
+
+class _RecordingExecutor:
+    def __init__(self, *, done: bool = False, value=None) -> None:
+        self.done = done
+        self.value = value
+        self.submit_count = 0
+        self.calls: list[tuple[object, tuple[object, ...], dict[str, object]]] = []
+        self.futures: list[_RecordingFuture] = []
+
+    def submit(self, fn, *args, **kwargs):
+        self.submit_count += 1
+        self.calls.append((fn, args, kwargs))
+        future = _RecordingFuture(done=self.done, value=self.value)
+        self.futures.append(future)
+        return future
+
+
+class TodayIntradayCoordinatorTests(unittest.TestCase):
+    @staticmethod
+    def _scope():
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            IntradayRefreshScope,
+        )
+
+        return IntradayRefreshScope(
+            portfolio_group_id="group-a",
+            universe_code="TODAY_0123456789ABCDEF",
+            symbols=("AMD",),
+            items=(SimpleNamespace(source_ref="AMD"),),
+        )
+
+    @staticmethod
+    def _session(*, phase: str = "OPEN", allowed: bool = True):
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            RegularSessionState,
+        )
+
+        return RegularSessionState(
+            phase=phase,
+            trade_date=date(2026, 7, 22),
+            open_at_utc=datetime(2026, 7, 22, 13, 30, tzinfo=timezone.utc),
+            close_at_utc=datetime(2026, 7, 22, 20, 0, tzinfo=timezone.utc),
+            collection_allowed=allowed,
+        )
+
+    @staticmethod
+    def _latest(*, due: bool):
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            LatestPortfolioQuotes,
+        )
+
+        return LatestPortfolioQuotes.empty(
+            TodayIntradayCoordinatorTests._scope(),
+            due=due,
+        )
+
+    def test_tick_submits_due_open_job_without_waiting(self) -> None:
+        from app.web.today_intraday_auto_refresh import (
+            TodayIntradayCoordinator,
+        )
+
+        executor = _RecordingExecutor(done=False)
+        coordinator = TodayIntradayCoordinator(
+            executor=executor,
+            latest_loader=lambda scope, **kwargs: self._latest(due=True),
+            quote_runner=lambda **kwargs: {"status": "success"},
+        )
+
+        result = coordinator.tick(
+            scope=self._scope(),
+            session=self._session(),
+            now=datetime(2026, 7, 22, 14, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(result.collection_state, "running")
+        self.assertEqual(executor.submit_count, 1)
+        self.assertEqual(executor.futures[0].result_call_count, 0)
+
+    def test_tick_keeps_one_inflight_job_per_group(self) -> None:
+        from app.web.today_intraday_auto_refresh import (
+            TodayIntradayCoordinator,
+        )
+
+        executor = _RecordingExecutor(done=False)
+        coordinator = TodayIntradayCoordinator(
+            executor=executor,
+            latest_loader=lambda scope, **kwargs: self._latest(due=True),
+        )
+
+        coordinator.tick(
+            scope=self._scope(),
+            session=self._session(),
+            now=datetime(2026, 7, 22, 14, 0, tzinfo=timezone.utc),
+        )
+        coordinator.tick(
+            scope=self._scope(),
+            session=self._session(),
+            now=datetime(2026, 7, 22, 14, 0, 15, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(executor.submit_count, 1)
+        self.assertEqual(executor.futures[0].result_call_count, 0)
+
+    def test_tick_skips_when_db_attempt_is_not_due(self) -> None:
+        from app.web.today_intraday_auto_refresh import (
+            TodayIntradayCoordinator,
+        )
+
+        executor = _RecordingExecutor()
+        coordinator = TodayIntradayCoordinator(
+            executor=executor,
+            latest_loader=lambda scope, **kwargs: self._latest(due=False),
+        )
+
+        result = coordinator.tick(
+            scope=self._scope(),
+            session=self._session(),
+            now=datetime(2026, 7, 22, 14, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(result.collection_state, "idle")
+        self.assertEqual(executor.submit_count, 0)
+
+    def test_closed_or_limited_session_never_submits_intraday_job(self) -> None:
+        from app.web.today_intraday_auto_refresh import (
+            TodayIntradayCoordinator,
+        )
+
+        executor = _RecordingExecutor()
+        latest_calls: list[str] = []
+        coordinator = TodayIntradayCoordinator(
+            executor=executor,
+            latest_loader=lambda scope, **kwargs: latest_calls.append(
+                scope.portfolio_group_id
+            ),
+        )
+
+        coordinator.tick(
+            scope=self._scope(),
+            session=self._session(phase="CLOSED", allowed=False),
+            now=datetime(2026, 7, 22, 20, 0, tzinfo=timezone.utc),
+        )
+        coordinator.tick(
+            scope=self._scope(),
+            session=self._session(phase="STALE", allowed=False),
+            now=datetime(2026, 7, 22, 14, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(executor.submit_count, 0)
+        self.assertEqual(latest_calls, [])
+
+    def test_completed_future_is_consumed_only_after_done(self) -> None:
+        from app.web.today_intraday_auto_refresh import (
+            TodayIntradayCoordinator,
+        )
+
+        executor = _RecordingExecutor(done=False)
+        due_values = iter([True, False])
+        coordinator = TodayIntradayCoordinator(
+            executor=executor,
+            latest_loader=lambda scope, **kwargs: self._latest(
+                due=next(due_values)
+            ),
+        )
+        coordinator.tick(
+            scope=self._scope(),
+            session=self._session(),
+            now=datetime(2026, 7, 22, 14, 0, tzinfo=timezone.utc),
+        )
+        executor.futures[0].done_flag = True
+        executor.futures[0].value = {"status": "submitted_result"}
+
+        result = coordinator.tick(
+            scope=self._scope(),
+            session=self._session(),
+            now=datetime(2026, 7, 22, 14, 0, 15, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(executor.futures[0].result_call_count, 1)
+        self.assertEqual(result.collection_state, "idle")
+        self.assertEqual(result.last_result, {"status": "submitted_result"})
 
 
 class TodayHomePageContractTests(unittest.TestCase):

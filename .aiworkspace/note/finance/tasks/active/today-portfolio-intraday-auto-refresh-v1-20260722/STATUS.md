@@ -1,6 +1,6 @@
 # Today Portfolio Intraday Auto Refresh V1 Status
 
-Status: 1/4 Complete
+Status: 2/4 In Progress — Task 3 Complete
 Roadmap: 1/4 implementation stages complete
 Last Updated: 2026-07-23
 
@@ -19,9 +19,10 @@ Last Updated: 2026-07-23
 - Task 2 group SHA-256 scope, direct stock·ETF eligibility, confirmed regular-session gate를 구현했다.
 - DB latest attempt 300초 cadence, quote 600초 stale, partial coverage와 MySQL advisory lock을 구현했다.
 - 새 process에서도 DB attempt가 cadence source-of-truth가 되는 회귀를 확인했다.
+- Task 3 process-cached single-worker coordinator를 구현했다.
+- main thread에서 due state만 확인하고 running future의 `result()`를 호출하지 않으며 group별 one-inflight를 유지한다.
 
 ## Next
 
-- 2/4차 Task 3 single-worker non-blocking coordinator를 TDD로 구현한다.
-- 이어서 Task 4에서 default context와 15초 fragment를 연결한다.
+- 2/4차 Task 4에서 read-only default context와 15초 fragment를 연결한다.
 - 기존 AAII baseline 오류 2개는 사용자 승인에 따라 이번 Today scope와 분리한다.

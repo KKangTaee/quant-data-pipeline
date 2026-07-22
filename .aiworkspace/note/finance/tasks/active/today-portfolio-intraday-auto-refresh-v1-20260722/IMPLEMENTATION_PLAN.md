@@ -393,7 +393,7 @@ git commit -m "기능: Today 장중 갱신 범위와 중복 방지 추가"
 - Produces: `TodayIntradayCoordinator.tick(*, scope, session, now) -> CoordinatorSnapshot`, `get_today_intraday_coordinator() -> TodayIntradayCoordinator`.
 - Invariant: `tick` never calls `Future.result()` on a running future and never submits a second future for the same group.
 
-- [ ] **Step 1: Write failing coordinator tests with a controlled executor**
+- [x] **Step 1: Write failing coordinator tests with a controlled executor**
 
 Add tests asserting:
 
@@ -421,7 +421,7 @@ def test_closed_or_limited_session_never_submits_intraday_job(self):
     self.assertEqual(executor.submit_count, 0)
 ```
 
-- [ ] **Step 2: Run coordinator tests and confirm RED**
+- [x] **Step 2: Run coordinator tests and confirm RED**
 
 Run:
 
@@ -432,7 +432,7 @@ Run:
 
 Expected: failure because `app.web.today_intraday_auto_refresh` is missing.
 
-- [ ] **Step 3: Implement the coordinator state machine**
+- [x] **Step 3: Implement the coordinator state machine**
 
 Use one executor and per-group future map:
 
@@ -477,7 +477,7 @@ class TodayIntradayCoordinator:
 
 Do not add a process daemon, sleep loop, or JSONL writer.
 
-- [ ] **Step 4: Add the Streamlit cache resource boundary**
+- [x] **Step 4: Add the Streamlit cache resource boundary**
 
 ```python
 @st.cache_resource
@@ -487,7 +487,7 @@ def get_today_intraday_coordinator() -> TodayIntradayCoordinator:
 
 Keep Streamlit imports in the web module; the service in Task 2 stays Streamlit-free.
 
-- [ ] **Step 5: Run coordinator tests**
+- [x] **Step 5: Run coordinator tests**
 
 ```bash
 .venv/bin/python -m unittest tests.test_today_home.TodayIntradayCoordinatorTests -v
@@ -495,7 +495,7 @@ Keep Streamlit imports in the web module; the service in Task 2 stays Streamlit-
 
 Expected: all coordinator tests pass and no test blocks on an unfinished future.
 
-- [ ] **Step 6: Commit Task 3**
+- [x] **Step 6: Commit Task 3**
 
 ```bash
 git add app/web/today_intraday_auto_refresh.py tests/test_today_home.py
