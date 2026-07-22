@@ -400,7 +400,7 @@ class TodayPortfolioLiveValuationTests(unittest.TestCase):
                 "amd-item": {
                     "position": {
                         "current_shares": Decimal("10"),
-                        "gross_contributions": Decimal("900"),
+                        "gross_contributions": Decimal("0"),
                         "gross_withdrawals": Decimal("0"),
                     }
                 },
@@ -457,6 +457,11 @@ class TodayPortfolioLiveValuationTests(unittest.TestCase):
         values = {row["symbol"]: row["current_value"] for row in overlay["items"]}
         self.assertEqual(values["AMD"], 1050.0)
         self.assertEqual(values["QQQ"], 1040.0)
+        contributors = {
+            row["symbol"]: row["contribution_value"]
+            for row in overlay["contributors"]
+        }
+        self.assertEqual(contributors["AMD"], 150.0)
 
     def test_partial_quote_falls_back_to_eod_and_excludes_strategy_from_coverage(self) -> None:
         from app.services.portfolio_monitoring.intraday_refresh import (

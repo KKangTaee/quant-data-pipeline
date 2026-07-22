@@ -35,6 +35,7 @@ Last Updated: 2026-07-23
 - Task 9 durable data/flow/project docs를 `today_home_v4`와 intraday/EOD 경계에 맞춰 동기화했다.
 - actual closed-session Browser QA에서 `종가 반영 대기` 뒤 2026-07-22 EOD 확인과 `확정 종가` 전환을 관찰했다.
 - 1280·760·420 viewport 가로 overflow 0, 420 screenshot, console error 0을 확인했다.
+- fixed-notional 종목의 장중 기여도는 기존 EOD 기여도에 장중 평가액 증감분만 반영하도록 최종 회귀 보정했고 전체 107개 Python 테스트를 다시 통과했다.
 
 ## Next
 

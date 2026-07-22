@@ -1183,7 +1183,7 @@ git add .aiworkspace/note/finance/docs \
 git commit -m "문서: Today 장중 자동 갱신 작업 마감"
 ```
 
-- [ ] **Step 10: Apply verification-before-completion**
+- [x] **Step 10: Apply verification-before-completion**
 
 Before reporting completion, invoke `superpowers:verification-before-completion`, re-run the exact final verification commands it requires, inspect the output rather than relying on earlier runs, and report:
 

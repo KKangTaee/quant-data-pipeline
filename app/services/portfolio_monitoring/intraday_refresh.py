@@ -630,10 +630,11 @@ def build_live_portfolio_overlay(
             live_total += live_value - eod_value
             fresh_symbols.append(symbol)
 
-            position = _as_mapping(detail.get("position"))
-            contributions = _decimal(position.get("gross_contributions"))
-            withdrawals = _decimal(position.get("gross_withdrawals"))
-            contribution_by_id[item_id] = live_value + withdrawals - contributions
+            contribution_by_id[item_id] = (
+                contribution_by_id.get(item_id, Decimal("0"))
+                + live_value
+                - eod_value
+            )
         live_items.append(
             {
                 "monitoring_item_id": item_id,

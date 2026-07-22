@@ -73,6 +73,7 @@
 ## 2026-07-23 Task 9 — Closeout Verification
 
 - Python focused suite: intraday, EOD refresh, valuation, position events, NYSE calendar, Today `107 tests`, 모두 통과.
+- 최종 self-review에서 fixed-notional item의 position ledger `gross_contributions=0`일 때 live contribution이 전체 시가로 왜곡되는 회귀를 재현했다. 기존 EOD contribution에 장중 평가액 증감분만 더하도록 보정하고 focused 회귀 및 전체 107개 suite를 다시 통과했다.
 - collector class `23 tests` 중 Today와 무관한 기존 AAII 2개 오류, explicit Today collector와 broad universe 관련 나머지 21개 통과. 이 baseline은 구현 시작 전 사용자 승인으로 분리했다.
 - Market Movers adjacent 파일은 pytest-style 함수이나 workspace에 pytest가 없어 unittest는 0개, pytest 실행은 `No module named pytest`였다. 이번 변경의 broad collector targeted regressions는 Task 1에서 별도 통과했다.
 - React: Vitest 13개, TypeScript typecheck, Vite production build 통과.
