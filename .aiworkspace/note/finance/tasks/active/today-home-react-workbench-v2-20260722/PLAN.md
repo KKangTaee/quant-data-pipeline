@@ -1,6 +1,6 @@
 # Today Home React Workbench V2 Plan
 
-Status: Design Review
+Status: Complete
 Last Updated: 2026-07-22
 
 ## 이걸 하는 이유?
@@ -43,6 +43,8 @@ Today 본문 전체를 시장맥락 계열과 같은 React/Vite Streamlit compon
 4. **실제 Browser QA와 문서 정렬 (`4/4차`)**
    - desktop/760px/420px에서 layout, axis, tooltip, action을 확인한다.
    - 완료 조건: overflow/console error 없음, QA screenshot, durable docs sync, coherent commit.
+
+전체 `4/4차`를 완료했다. 기존 상세 탭의 내부 기능은 변경하지 않았고, 최초 진입 Today 본문만 React workbench로 교체했다.
 
 ## Stop Condition
 

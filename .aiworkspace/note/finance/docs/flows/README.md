@@ -8,9 +8,9 @@ Last Verified: 2026-07-22
 ```text
 Finance Console `/` 최초 진입
   -> Research > Today
-     -> 오늘의 시장 판단과 저장 근거
-     -> 대표 포트폴리오 성과·누적 기여·주의 항목
-     -> Research > Market Research 또는 Portfolio > Portfolio Monitoring
+     -> React `오늘의 시장 판단`과 텍스트 신호·위험 분류
+     -> 대표 포트폴리오 최근 거래일 성과와 일별 저장 종가 기반 누적 수익률
+     -> Market Context / Market Movers / Portfolio Monitoring 기존 화면으로 이동
 
 Research: Today / Market Research / Institutional Holdings
 Portfolio: Portfolio Lab / Portfolio Monitoring
@@ -19,6 +19,7 @@ Help: Reference Center
 ```
 
 Streamlit의 `default=True` page는 등록된 `url_path="today"`와 무관하게 browser root `/`를 소유한다. 따라서 Today의 canonical 최초 진입 주소는 `/`이며 기존 상세 URL은 유지한다.
+Today의 차트는 최신 최대 60개 실제 일별 관측을 주봉으로 변환하지 않고 실제 날짜 간격으로 표시한다. 장중 화면이나 매매 신호가 아니며, React가 반환하는 세 navigation event만 Python Page router가 처리한다.
 `Research > Market Research`는 Portfolio Lab의 필수 선행 단계가 아니라 시장 context / data health 확인 표면이다.
 `Research > Institutional Holdings`도 Portfolio Lab의 필수 선행 단계가 아니라 delayed SEC 13F institutional holdings를 탐색하는 별도 research surface다.
 Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation gate, trade signal, monitoring signal을 만들지 않는다.

@@ -8,6 +8,8 @@
 
 **Tech Stack:** Python 3.12, Streamlit multipage API, `streamlit.components.v1`, React 18, TypeScript 5.7, Vite 6, Vitest 4, SVG, pytest/unittest.
 
+**Execution Result:** Complete on 2026-07-22. All five tasks and browser QA were executed inline. The browser review added one evidence-based correction: an all-positive/all-negative Y domain now stops at the 0% baseline instead of inventing an opposite-sign padded range.
+
 ## Global Constraints
 
 - Preserve `Ingestion -> DB -> Loader -> UI`; Today render must not fetch providers.
@@ -50,7 +52,7 @@
 - Consumes: existing `build_today_read_model(...) -> dict[str, object]` inputs and Portfolio Monitoring group curve rows.
 - Produces: `today_home_v2` payload with evidence presentation fields, `portfolio.metrics.latest_observation_return`, return dates, `portfolio.curve`, and `portfolio.curve_metadata`.
 
-- [ ] **Step 1: Write failing evidence-presentation tests**
+- [x] **Step 1: Write failing evidence-presentation tests**
 
 Add focused tests that call `build_today_read_model` using the existing fixture builder and assert the exact source-specific rules:
 
@@ -83,7 +85,7 @@ def test_unavailable_evidence_never_fabricates_low_or_high_risk(self) -> None:
     self.assertNotIn(row["risk_label"], {"위험도 낮음", "위험도 높음"})
 ```
 
-- [ ] **Step 2: Run the evidence test and verify RED**
+- [x] **Step 2: Run the evidence test and verify RED**
 
 Run:
 
@@ -93,7 +95,7 @@ Run:
 
 Expected: FAIL because `signal_level`, `risk_label`, and `data_quality_label` do not exist.
 
-- [ ] **Step 3: Implement deterministic Python-owned presentation mapping**
+- [x] **Step 3: Implement deterministic Python-owned presentation mapping**
 
 Add constants and a pure helper in `app/services/today.py`:
 
@@ -152,7 +154,7 @@ def _evidence_presentation(
 
 Call the helper inside all four evidence projection functions. Pass `headline.phase` for Economic Cycle, `multiple_regime.bucket` for S&P, canonical tone for Futures/Sentiment, and set `data_limited` when status is partial, provisional, stale, or missing.
 
-- [ ] **Step 4: Run evidence tests and verify GREEN**
+- [x] **Step 4: Run evidence tests and verify GREEN**
 
 Run:
 
@@ -162,7 +164,7 @@ Run:
 
 Expected: all selected tests PASS.
 
-- [ ] **Step 5: Write failing portfolio curve-semantics tests**
+- [x] **Step 5: Write failing portfolio curve-semantics tests**
 
 Add a group curve fixture containing dates, `unit_value`, and `total_value`, then assert:
 
@@ -195,7 +197,7 @@ def test_portfolio_curve_identifies_daily_stored_close_and_exact_return_dates(se
 
 Use `assertAlmostEqual(..., places=10)` for floating-point return values. Update the existing complete-input assertion from `today_home_v1` to `today_home_v2` and from `metrics.day_return` to `metrics.latest_observation_return`; assert its existing dates are `2026-07-18` and `2026-07-21`.
 
-- [ ] **Step 6: Run the curve test and verify RED**
+- [x] **Step 6: Run the curve test and verify RED**
 
 Run:
 
@@ -205,7 +207,7 @@ Run:
 
 Expected: FAIL because V1 exposes `{date, value}` and `day_return` without dates or metadata.
 
-- [ ] **Step 7: Implement the V2 curve projection**
+- [x] **Step 7: Implement the V2 curve projection**
 
 Replace `_daily_return` and `_portfolio_curve` with one projection that sorts/filters the last 60 valid rows and returns exact metadata:
 
@@ -250,7 +252,7 @@ def _portfolio_curve_projection(curve: Any) -> dict[str, Any]:
 
 Set `TODAY_SCHEMA_VERSION = "today_home_v2"`; project the new metric/date fields and metadata without retaining the ambiguous `day_return` UI contract.
 
-- [ ] **Step 8: Run all Today service tests and commit**
+- [x] **Step 8: Run all Today service tests and commit**
 
 Run:
 
@@ -286,7 +288,7 @@ git commit -m "개선: Today 근거와 성과곡선 의미 명시"
 - Consumes: V2 curve rows and metadata from Task 1.
 - Produces: `buildChartSeries`, `buildDateTicks`, `buildPercentTicks`, `chartDomains`, `pointCoordinates`, and shared payload types used by the React UI.
 
-- [ ] **Step 1: Create package/config and exact TypeScript contracts**
+- [x] **Step 1: Create package/config and exact TypeScript contracts**
 
 Use React 18/Vite 6/Vitest 4 versions aligned with `portfolio_monitoring_workbench`. `package.json` must contain:
 
@@ -393,7 +395,7 @@ export type TodayEventId =
 
 Run `npm install` in the component directory to generate the lockfile; do not use workspace-global dependencies.
 
-- [ ] **Step 2: Write failing pure presentation tests**
+- [x] **Step 2: Write failing pure presentation tests**
 
 Create Vitest cases that prove date spacing, tick limits, percent domain, and missing total values:
 
@@ -437,7 +439,7 @@ it("includes zero in the percent domain and keeps missing tooltip value", () => 
 });
 ```
 
-- [ ] **Step 3: Run Vitest and verify RED**
+- [x] **Step 3: Run Vitest and verify RED**
 
 Run:
 
@@ -448,7 +450,7 @@ npm test -- --reporter=verbose
 
 Expected: FAIL because `presentation.ts` exports do not exist.
 
-- [ ] **Step 4: Implement pure presentation helpers**
+- [x] **Step 4: Implement pure presentation helpers**
 
 Implement date parsing with `Date.parse(date + "T00:00:00Z")`, reject non-finite return values, preserve actual rows, and calculate padded percent domains. `pointCoordinates` must use epoch-time ratio for X and return ratio for Y. `buildDateTicks` must always retain range ends and choose interior targets by elapsed time, not row index.
 
@@ -466,7 +468,7 @@ export function chartDomains(series: ChartPoint[]): ChartDomain;
 export function pointCoordinates(point: ChartPoint, domain: ChartDomain, box: ChartInsets): { x: number; y: number };
 ```
 
-- [ ] **Step 5: Verify package helpers and commit**
+- [x] **Step 5: Verify package helpers and commit**
 
 Run:
 
@@ -508,7 +510,7 @@ git commit -m "개선: Today React 차트 좌표 계약 추가"
 - Consumes: `TodayPayload` and presentation helpers from Task 2.
 - Produces: one Streamlit-connected component that emits `{event: {id: TodayEventId}}` and builds to canonical static assets.
 
-- [ ] **Step 1: Write failing React source/style contract tests**
+- [x] **Step 1: Write failing React source/style contract tests**
 
 In `tests/test_today_home.py`, add a test reading the future TSX/CSS files and asserting the approved copy/classes:
 
@@ -529,7 +531,7 @@ def test_today_react_source_uses_explicit_risk_labels_and_chart_semantics(self) 
     self.assertIn("font-size: 26px", styles)
 ```
 
-- [ ] **Step 2: Run source contract and verify RED**
+- [x] **Step 2: Run source contract and verify RED**
 
 Run:
 
@@ -539,7 +541,7 @@ Run:
 
 Expected: FAIL with missing TSX/CSS files.
 
-- [ ] **Step 3: Implement `TodayPortfolioChart.tsx`**
+- [x] **Step 3: Implement `TodayPortfolioChart.tsx`**
 
 Use a 960×310 SVG with insets `{top: 44, right: 28, bottom: 44, left: 78}`. Render percent grid/tick text from `buildPercentTicks`, exact date ticks from `buildDateTicks`, an area and line path from date-linear coordinates, zero line when in-domain, pointer hit area, keyboard-focusable points, and a collision-aware tooltip containing:
 
@@ -551,7 +553,7 @@ YYYY.MM.DD · 저장 종가
 
 For fewer than two points, render `성과 추이를 표시할 관측치가 부족합니다.` plus metadata chips. Never label the line as a candlestick, day candle, weekly series, or intraday series.
 
-- [ ] **Step 4: Implement `TodayWorkbench.tsx`, `main.tsx`, and approved CSS**
+- [x] **Step 4: Implement `TodayWorkbench.tsx`, `main.tsx`, and approved CSS**
 
 The component section order must be:
 
@@ -575,7 +577,7 @@ Streamlit.setComponentValue({ event: { id } });
 
 Call `Streamlit.setFrameHeight()` after render and when payload/layout changes. Apply the exact typography tokens and responsive 760px/460px rules from the design spec.
 
-- [ ] **Step 5: Verify RED becomes GREEN and build static assets**
+- [x] **Step 5: Verify RED becomes GREEN and build static assets**
 
 Run:
 
@@ -590,7 +592,7 @@ test -f component_static/index.html
 
 Expected: Python contract PASS, Vitest PASS, typecheck/build exit 0, static index exists.
 
-- [ ] **Step 6: Commit the React UI unit**
+- [x] **Step 6: Commit the React UI unit**
 
 ```bash
 git add tests/test_today_home.py app/web/streamlit_components/today_workbench
@@ -610,7 +612,7 @@ git commit -m "개선: Today Market Context React 워크벤치 구현"
 - Consumes: built React component and `TodayPayload`.
 - Produces: `today_react_component_available`, `render_today_workbench`, `normalize_today_event`, and React-primary `render_today_page`.
 
-- [ ] **Step 1: Write failing wrapper availability/render tests**
+- [x] **Step 1: Write failing wrapper availability/render tests**
 
 Use temporary directories and a fake declared component:
 
@@ -630,7 +632,7 @@ def test_today_component_returns_allowlisted_event_envelope(self) -> None:
     )
 ```
 
-- [ ] **Step 2: Run wrapper tests and verify RED**
+- [x] **Step 2: Run wrapper tests and verify RED**
 
 Run:
 
@@ -640,7 +642,7 @@ Run:
 
 Expected: FAIL because `app.web.today_react_component` does not exist.
 
-- [ ] **Step 3: Implement the Python component wrapper**
+- [x] **Step 3: Implement the Python component wrapper**
 
 Follow existing wrapper ownership:
 
@@ -661,7 +663,7 @@ def render_today_workbench(payload: dict[str, Any], *, key: str = "today_workben
     return value if isinstance(value, dict) else None
 ```
 
-- [ ] **Step 4: Write failing React-primary and event-routing tests**
+- [x] **Step 4: Write failing React-primary and event-routing tests**
 
 Test these behaviors separately:
 
@@ -682,7 +684,7 @@ TODAY_EVENT_IDS = {
 }
 ```
 
-- [ ] **Step 5: Run integration tests and verify RED**
+- [x] **Step 5: Run integration tests and verify RED**
 
 Run:
 
@@ -692,7 +694,7 @@ Run:
 
 Expected: FAIL because V1 always calls `st.markdown` and page links.
 
-- [ ] **Step 6: Implement React-primary rendering and route adapter**
+- [x] **Step 6: Implement React-primary rendering and route adapter**
 
 `render_today_page` must load once, render React when build is available, normalize the returned event, and call `st.switch_page` using configured Page targets. Keep `build_today_html` only in `_render_today_fallback(model)`. Do not render both React and fallback in one successful request.
 
@@ -706,7 +708,7 @@ _TODAY_EVENT_ROUTES = {
 }
 ```
 
-- [ ] **Step 7: Verify integration and commit**
+- [x] **Step 7: Verify integration and commit**
 
 Run:
 
@@ -739,7 +741,7 @@ git commit -m "개선: Today React 기본 렌더러와 이동 연결"
 - Consumes: completed production implementation.
 - Produces: actual-browser evidence, aligned docs, final coherent commit/review handoff.
 
-- [ ] **Step 1: Run the full focused automated verification**
+- [x] **Step 1: Run the full focused automated verification**
 
 ```bash
 .venv/bin/python -m pytest tests/test_today_home.py tests/test_institutional_portfolios.py tests/test_reference_center.py tests/test_reference_contextual_help.py tests/test_portfolio_monitoring_page.py tests/test_portfolio_monitoring_read_model.py -q
@@ -751,7 +753,7 @@ git diff --check
 
 Expected: zero failures, zero type/build errors, silent diff check.
 
-- [ ] **Step 2: Perform actual Browser QA**
+- [x] **Step 2: Perform actual Browser QA**
 
 Start the Streamlit app using the repository's existing app command and verify root `/` at 1280px, 760px, and 420px:
 
@@ -768,15 +770,15 @@ Start the Streamlit app using the repository's existing app command and verify r
 
 Capture one full-page screenshot named `today-home-react-workbench-v2-browser-qa.png`; keep it untracked.
 
-- [ ] **Step 3: Review implementation against the written spec**
+- [x] **Step 3: Review implementation against the written spec**
 
 Compare every section of `DESIGN.md` with the diff. Reject the closeout if React is not primary, if chart metadata is missing, if UI infers risk labels, or if any render path writes/fetches. Record exact evidence and any gaps in task `RUNS.md`/`RISKS.md`.
 
-- [ ] **Step 4: Invoke `finance-doc-sync` and update durable docs**
+- [x] **Step 4: Invoke `finance-doc-sync` and update durable docs**
 
 Update long-lived docs only with verified final behavior: Today is a React workbench, evidence labels are Python-owned projections, and the portfolio chart is daily stored-close cumulative return. Keep detailed commands/screenshots in task docs, not root logs.
 
-- [ ] **Step 5: Final staging safety check and coherent commit**
+- [x] **Step 5: Final staging safety check and coherent commit**
 
 Stage only intended code, static build, tests, and docs. Before commit:
 
@@ -792,6 +794,6 @@ Commit:
 git commit -m "개선: Today React 시장 판단 워크벤치 완성"
 ```
 
-- [ ] **Step 6: Apply verification-before-completion**
+- [x] **Step 6: Apply verification-before-completion**
 
 Run fresh tests/build/diff checks after the final content change, inspect `git show --stat HEAD`, and report actual counts, Browser QA viewports, screenshot path, final roadmap `4/4`, remaining risks, and commit hashes without claiming unrun verification.

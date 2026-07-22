@@ -1,6 +1,6 @@
 # Today Home React Workbench V2 Design
 
-Status: Approved Visual Direction; Awaiting Written Spec Review
+Status: Implemented And Browser Verified
 Last Updated: 2026-07-22
 
 ## Problem Diagnosis
@@ -190,7 +190,7 @@ footer에는 `주봉 변환 없음 · 장중 데이터 없음`을 명시한다.
 ### Y Axis
 
 - `cumulative_return = unit_value - 1`을 percent scale로 표시한다.
-- 데이터 범위 기반 padding을 적용하되 0%가 의미 있는 범위에 있으면 zero baseline을 표시한다.
+- 데이터 범위 기반 padding을 적용하되 0% zero baseline을 표시한다. 전 구간이 양수이면 축 하단을 0%로, 전 구간이 음수이면 축 상단을 0%로 고정해 실제로 존재하지 않는 반대 부호 영역을 만들지 않는다.
 - tick은 사람이 읽기 좋은 간격으로 생성하고 단위 `%`를 축 제목에 명시한다.
 - 투자금 입출금으로 왜곡될 수 있는 total value를 primary line으로 사용하지 않는다.
 

@@ -10425,3 +10425,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 서로 다른 종목쌍·종목의 유효한 판정 근거는 유지하되 첫 화면에서는 같은 의미의 경고를 반복 카드로 읽지 않게 하고, 긴 목록이 이후 업무 영역을 계속 밀어내지 않아야 함.
 - Analysis result: root dedup은 정상이나 React가 subject identity를 숨겨 구현이 원래 중복 방지 의도에서 drift했다. Python display group을 additive로 두고 상관 집중·현재 낙폭만 가족별 요약하며 raw facts/history는 유지하는 방식을 채택했다.
 - Follow-up: 전체 `3/3차`를 완료했다. desktop 560px 내부 스크롤과 mobile 자연 스크롤, legacy fallback, 종목·종목쌍 상세를 구현했고 Python 142 / React 31과 fixture Browser QA를 통과했다. threshold/severity/DB/Backtest 정책은 변경하지 않았다.
+
+### 2026-07-22 - 최초 진입 Today를 시장맥락 계열 React workbench로 만든다
+
+- User request: Today 디자인이 실제 React가 맞는지 확인하고 경제사이클·S&P 500 UI를 참고해 개선하며, 위험도는 좌측선 대신 텍스트로 구분하고 포트폴리오 그래프의 주기와 X/Y축을 명확히 해 달라고 요청함.
+- Interpreted goal: 기존 상세 탭 내부를 개편하지 않고 browser root `/`의 판단 흐름만 같은 제품군의 React로 교체해 시장 근거와 대표 포트폴리오를 오해 없이 빠르게 읽게 한다.
+- Analysis result: V1은 React가 아닌 `st.markdown` HTML이었고 `day_return`과 axis 없는 sparkline이 일봉/주봉/장중 의미를 숨겼다. Python-owned text risk label과 `daily/stored_close/aggregation none/intraday false`, 실제 날짜 X축·누적 수익률 Y축 계약을 채택했다.
+- Follow-up: 전체 `4/4차`를 완료했다. actual QA에서 전 구간 양수인데 음수 padding 눈금이 생기는 문제도 발견해 0% 기준선에서 축을 멈추도록 보정했고, 1280·760·420 overflow 0, clean console, 기존 Market Context 이동을 확인했다.

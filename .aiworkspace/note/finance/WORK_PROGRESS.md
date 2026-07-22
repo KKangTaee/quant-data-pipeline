@@ -7052,3 +7052,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 상관 집중과 현재 낙폭의 서로 다른 원시 판정을 의미 가족별 한 카드로 표시하고, 종목·종목쌍별 근거는 disclosure와 raw `all_rows`/history에 보존했다.
 - desktop 진단 열은 560px 이후 내부 스크롤, 760px 이하 mobile은 자연 page scroll을 사용한다. Python 142 / React 31 / typecheck/build와 desktop/mobile Browser QA를 통과했다.
 - 전체 roadmap `3/3차` 완료. 상세는 `tasks/active/portfolio-monitoring-diagnosis-grouping-scroll-v1-20260721/`를 본다.
+
+## 2026-07-22 - Today Home React Workbench V2 완료
+
+- Finance Console root `/`의 Today 본문을 Market Context 계열 React로 전환하고 위험도를 좌측선 없이 text signal/risk/data-quality로 분리했다.
+- 대표 포트폴리오는 최근 최대 60개 실제 일별 저장 종가, 실제 날짜 X축, 현금흐름 조정 누적 수익률 Y축과 최근 거래일의 정확한 두 날짜를 표시한다.
+- Python 26+연결 surface 114, React 5/typecheck/build와 1280·760·420 actual Browser QA, clean console, Market Context 이동을 통과했다.
+- 전체 roadmap `4/4차` 완료. 상세는 `tasks/active/today-home-react-workbench-v2-20260722/`를 본다.
