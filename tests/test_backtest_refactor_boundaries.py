@@ -645,6 +645,7 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
 
         for token in (
             "performance_summary",
+            "data_freshness_action",
             "strategy_series",
             "current_allocation",
             "target_allocation",
@@ -669,6 +670,12 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         ):
             self.assertIn(token, types)
         self.assertIn('emitIntent("save_and_move"', source)
+        self.assertIn('emitIntent(action.id', source)
+        self.assertIn("DataFreshnessActionCard", source)
+        self.assertLess(
+            source.index("<DataFreshnessActionCard"),
+            source.index("<PerformanceSummary"),
+        )
         self.assertIn("<svg", chart)
         self.assertIn("<title>", chart)
         self.assertIn("<desc>", chart)
@@ -688,6 +695,8 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn(".bt1r-workspace {", css)
         self.assertIn(".bt1r-chart-tooltip", css)
         self.assertIn(".bt1r-schedule-strip", css)
+        self.assertIn(".bt1r-freshness-card", css)
+        self.assertIn(".bt1r-freshness-metrics", css)
         self.assertIn("overflow-x: hidden", css)
         self.assertIn("min-width: 0", css)
         self.assertNotIn("benchmark_available", source)
@@ -704,6 +713,8 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         )
         self.assertIn("계산 및 데이터 기준", fallback)
         self.assertIn("next_window_label", fallback)
+        self.assertIn('workspace.get("data_freshness_action")', fallback)
+        self.assertIn("현재 공통 기준일", fallback)
         self.assertNotIn("build_next_step_readiness_evaluation", fallback)
 
     def test_result_route_hides_before_first_run_and_removes_legacy_expander(

@@ -1045,3 +1045,63 @@ def test_result_component_defers_intent_consumption_to_fragment_body() -> None:
     assert "on_change" not in render_component.call_args.kwargs
     consume_intent.assert_called_once_with(intent, workspace=workspace)
     fake_streamlit.rerun.assert_called_once_with(scope="app")
+
+
+def test_result_fallback_emits_the_same_freshness_primary_action() -> None:
+    from app.web import backtest_analysis_result_workspace_panel as panel
+
+    workspace = _build_workspace(result_bundle())
+    workspace["data_freshness_action"] = {
+        "state": "refresh_required",
+        "requested_end": "2026-07-22",
+        "target_trading_end": "2026-07-21",
+        "current_common_latest": "2026-06-26",
+        "affected_symbol_count": 2,
+        "affected_symbol_sample": ["SPY", "TLT"],
+        "summary": "요청 종료일 기준 데이터가 부족합니다.",
+        "guidance": "가격을 최신화한 뒤 다시 백테스트하세요.",
+        "feedback": None,
+        "handoff_blocked": True,
+        "primary_action": {
+            "id": "refresh_prices",
+            "label": "종목 데이터 최신화",
+            "enabled": True,
+        },
+    }
+    workspace["actions"] = {
+        "refresh_prices": workspace["data_freshness_action"]["primary_action"]
+    }
+    fake_streamlit = MagicMock()
+    fake_streamlit.button.return_value = True
+    rendered_columns: list[MagicMock] = []
+
+    def columns(count: int) -> list[MagicMock]:
+        created = [MagicMock() for _ in range(count)]
+        rendered_columns.extend(created)
+        return created
+
+    fake_streamlit.columns.side_effect = columns
+
+    with patch.object(panel, "st", fake_streamlit):
+        intent = panel.render_backtest_analysis_result_workspace_fallback(workspace)
+
+    assert intent["action"] == "refresh_prices"
+    assert intent["payload"] == {
+        "run_result_id": "run-current",
+        "current_configuration_fingerprint": "same",
+    }
+    rendered_markdown = "\n".join(
+        str(call.args[0])
+        for call in [
+            *fake_streamlit.markdown.call_args_list,
+            *[
+                call
+                for column in rendered_columns
+                for call in column.markdown.call_args_list
+            ],
+        ]
+        if call.args
+    )
+    assert "요청 종료일 기준 데이터가 부족합니다" in rendered_markdown
+    assert "요청 종료일" in rendered_markdown
+    assert "현재 공통 기준일" in rendered_markdown
