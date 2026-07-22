@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   applyCloseDefault,
   buildPositionCommandEvent,
+  canRequestInitialEntryPreview,
   changeTradeDate,
   createPositionEditorDraft,
   markManualExecutionPrice,
+  matchesInitialEntryPreview,
   normalizePositionEditorRecovery,
   positionEditorRecoveryKey,
   validatePositionEditorDraft,
@@ -124,6 +126,46 @@ describe("position editor state", () => {
         initialEntryReady: true,
       }),
     ).toBeNull();
+  });
+
+  it("requires an explicit valid correction preview request", () => {
+    const correction = {
+      ...createPositionEditorDraft("correct_initial", "buy", "preview-1"),
+      tradeDate: "2026-06-28",
+      quantity: "40",
+    };
+
+    expect(canRequestInitialEntryPreview({ ...correction, tradeDate: "" })).toBe(false);
+    expect(canRequestInitialEntryPreview({ ...correction, quantity: "1.5" })).toBe(false);
+    expect(canRequestInitialEntryPreview({ ...correction, quantity: "0" })).toBe(false);
+    expect(canRequestInitialEntryPreview(correction)).toBe(true);
+  });
+
+  it("invalidates an initial-entry preview when the local date or quantity changes", () => {
+    const correction = {
+      ...createPositionEditorDraft("correct_initial", "buy", "preview-2"),
+      tradeDate: "2026-06-28",
+      quantity: "40",
+    };
+    const ready = {
+      status: "READY",
+      monitoring_item_id: "item-amd",
+      requested_start_date: "2026-06-28",
+      effective_start_date: "2026-06-29",
+      quantity: 40,
+      entry_close: 95,
+      initial_capital: 3800,
+      reason: null,
+    } as const;
+
+    expect(matchesInitialEntryPreview(correction, ready, "item-amd")).toBe(true);
+    expect(matchesInitialEntryPreview(
+      { ...correction, tradeDate: "2026-06-29" }, ready, "item-amd",
+    )).toBe(false);
+    expect(matchesInitialEntryPreview(
+      { ...correction, quantity: "41" }, ready, "item-amd",
+    )).toBe(false);
+    expect(matchesInitialEntryPreview(correction, ready, "item-rklb")).toBe(false);
   });
 
   it("preserves the DB-close source across a Streamlit rerun", () => {

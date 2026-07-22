@@ -10,6 +10,12 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-22 - Portfolio Monitoring 최초 설정 정정 입력 rerun 제거
+
+- 날짜·수량 입력은 React local state로 유지하고, 명시적 `변경값 확인`에서만 DB 적용일·종가·최초 투자금을 조회하도록 분리했다.
+- actual AMD에서 `2024-06-15 / 31주` 편집 중 dialog 유지·저장 잠금을 확인했고, 확인 뒤 `2024-06-17 / $158.40 / $4,910.40` preview와 저장 활성화를 확인했다. 실제 저장은 실행하지 않았다.
+- correction/valuation/DB 계약은 보존했으며 전체 roadmap `3/3차`를 완료했다. 상세: `tasks/active/portfolio-monitoring-initial-correction-local-preview-v1-20260722/STATUS.md`.
+
 ### 2026-07-22 - Today 종목별 성과 기여 카드 완료
 
 - 대표 포트폴리오의 기여 상위 2·하위 2를 `종목 누적 수익률`과 `포트폴리오 누적 기여`가 분리된 카드로 바꿨다.

@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-22 - 최초 설정 정정의 입력과 DB 미리보기는 분리한다
+
+- User request: 최초 설정 정정에서 시작일을 바꾸면 전체 화면이 다시 실행되는 느낌으로 달력의 월이 초기화되어 날짜를 바꿀 수 없다고 보고함.
+- Interpreted goal: 날짜·수량을 자유롭게 편집하되 새 시장 적용일·종가·최초 투자금은 저장 전에 계속 검증한다.
+- Analysis result: 입력마다 `lookup_initial_position_entry`를 보내던 것이 Streamlit rerun과 React 재마운트의 원인이었다. 입력은 local draft로만 바꾸고 명시적 `변경값 확인` 뒤 현재 draft와 일치하는 preview만 저장 근거로 인정하는 방식이 적합하다.
+- Follow-up: 전체 `3/3차` 구현·회귀·actual Browser QA를 완료했다. 저장 command와 append-only correction은 그대로 유지했고 QA 중 실제 저장은 실행하지 않았다.
+
 ### 2026-07-22 - Today 종목 수익률과 포트폴리오 기여금은 다른 단위다
 
 - User request: Today의 단순 `누적 기여` chip을 종목 자체 성과와 포트폴리오에 미친 금액 효과를 구분하는 compact card로 개선하도록 요청함.

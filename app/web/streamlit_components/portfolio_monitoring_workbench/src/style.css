@@ -297,6 +297,10 @@ button { outline: none; }
 .pm-position-editor-body input, .pm-position-editor-body textarea { width: 100%; padding: 9px 10px; border: 1px solid #ccdbe3; border-radius: 9px; color: #29465a; background: #fff; font: inherit; font-weight: 500; }
 .pm-position-editor-body textarea { min-height: 68px; resize: vertical; }
 .pm-position-editor-body label small { color: #778b98; font-size: 8px; font-weight: 500; line-height: 1.5; }
+.pm-initial-preview-action { display: flex; align-items: center; gap: 9px; }
+.pm-initial-preview-action button { flex: 0 0 auto; padding: 8px 11px; border: 1px solid #8bb8d4; border-radius: 9px; color: #28678f; background: #f2f8fc; cursor: pointer; font-size: 9px; font-weight: 850; }
+.pm-initial-preview-action button:disabled { cursor: not-allowed; opacity: .55; }
+.pm-initial-preview-action small { color: #718593; font-size: 8px; line-height: 1.45; }
 .pm-position-effect-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin: 0; padding: 0; border: 0; }
 .pm-position-effect-switch legend { grid-column: 1 / -1; margin-bottom: 6px; color: #3f5c6f; font-size: 10px; font-weight: 850; }
 .pm-position-effect-switch button { padding: 10px; border: 1px solid #d5e1e7; border-radius: 9px; color: #557184; background: #fff; cursor: pointer; font-size: 10px; font-weight: 850; }

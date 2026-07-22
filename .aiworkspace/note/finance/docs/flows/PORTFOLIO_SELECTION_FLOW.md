@@ -1,7 +1,7 @@
 # Portfolio Selection Flow
 
 Status: Active
-Last Verified: 2026-07-19
+Last Verified: 2026-07-22
 
 ## Purpose
 
@@ -103,7 +103,7 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 - Backtest Analysis result workspace는 실행 후에만 나타난다. current/target holdings와 성과는
   reproducible result evidence이며, Level2 검증을 통과했다는 의미나 broker 주문 지시가 아니다.
 - `Operations > Portfolio Monitoring`은 선정 후 추적을 바로 수행하는 Operations의 유일한 사용자-facing 화면이며 Backtest 후보 생성 단계가 아니다. 수집 실행 결과와 실패 원인은 `Workspace > Ingestion > 실행 기록 / 결과`에서 확인하고, Portfolio Monitoring에는 raw run/log 진단 패널을 두지 않는다.
-- Portfolio Monitoring의 직접 미국 주식 중 `보유 수량`으로 시작한 항목은 선택 상세에서 최초 수량 정정, 추가매수, 일부매도, 거래 수정·취소를 수행한다. 거래일의 정확한 저장 종가가 기본 체결가이고 실제 체결가로 바꿀 수 있다. 추가매수는 외부 입금, 일부매도 순대금은 외부 출금으로 성과에 반영하며, ETF·전략·투자금 방식과 quant backtest 결과는 이 거래 원장을 사용하지 않는다.
+- Portfolio Monitoring의 직접 미국 주식 중 `보유 수량`으로 시작한 항목은 선택 상세에서 최초 설정 정정, 추가매수, 일부매도, 거래 수정·취소를 수행한다. 최초 설정 정정의 날짜·수량은 화면에서 먼저 편집하고 명시적 `변경값 확인`으로 DB 적용일·종가·최초 투자금을 조회하며, 현재 입력과 일치하는 확인값이 있을 때만 저장한다. 거래일의 정확한 저장 종가가 기본 체결가이고 실제 체결가로 바꿀 수 있다. 추가매수는 외부 입금, 일부매도 순대금은 외부 출금으로 성과에 반영하며, ETF·전략·투자금 방식과 quant backtest 결과는 이 거래 원장을 사용하지 않는다.
 - Portfolio Monitoring의 공통 기준일이 최근 완료 NYSE 거래일보다 오래되면 선택 그룹의 활성 direct stock·ETF별 저장 최신일과 `보유 종목 가격 최신화` action을 보여준다. 사용자가 누른 경우에만 기존 daily OHLCV ingestion을 실행하고 수집 후 DB 최신성을 재검증해 공통 기준일과 가치곡선을 다시 계산한다. selected strategy와 종료 항목은 이 action에 포함하지 않으며 상세 수집 기록은 Ingestion 화면이 소유한다.
 - Backtest Analysis의 Promotion Policy Signal은 1차 후보 readiness만 보며, probation / monitoring / deployment를 시작하거나 확정하지 않는다. hard blocker는 1차 source 등록을 막고, `2차 확인` review focus는 source의 `entry_gate.review_focus_rows`로 Practical Validation에 전달한다.
 - Backtest Analysis의 Data Trust Summary는 DB 가격 기준일이 최신 완료 거래일보다 오래된 경우, 현재 후보 ticker만 대상으로 OHLCV 가격 이력 업데이트 action을 제공한다. 보이는 action card와 버튼은 React custom component 안에서 통합 렌더링되며, Python은 submit event를 받아 데이터 보강만 수행한다. 결과 재계산 / source 등록 / 2차 검증 전송은 사용자가 별도로 실행한다.

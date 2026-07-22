@@ -52,6 +52,29 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn("변경 후", source)
         self.assertIn("requested_start_date", contracts)
         self.assertIn("initial_position_entry", contracts)
+
+    def test_initial_correction_keeps_date_and_quantity_local_until_preview_action(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PositionLedgerPanel.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("변경값 확인", source)
+        self.assertIn("requestInitialEntryPreview", source)
+        self.assertIn("canRequestInitialEntryPreview", source)
+        self.assertIn("matchesInitialEntryPreview", source)
+        self.assertIn(
+            'onInput={(event) => setDraft(changeTradeDate(draft, event.currentTarget.value))}',
+            source,
+        )
+        self.assertNotIn(
+            'onChange={(event) => requestInitialEntry(changeTradeDate(draft, event.target.value))}',
+            source,
+        )
+        self.assertNotIn(
+            'if (draft.mode === "correct_initial") requestInitialEntry(next)',
+            source,
+        )
+
     def test_value_chart_exposes_visible_pointer_and_keyboard_tooltip(self) -> None:
         source = Path(
             "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"

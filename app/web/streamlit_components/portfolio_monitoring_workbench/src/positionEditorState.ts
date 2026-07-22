@@ -1,4 +1,5 @@
 import type {
+  InitialPositionEntryProjection,
   PositionEditorRecoveryState,
   PositionTradeCloseProjection,
 } from "./contracts";
@@ -114,6 +115,28 @@ export function changeTradeDate(
     executionPrice: "",
     priceMode: "awaiting_close",
   };
+}
+
+export function canRequestInitialEntryPreview(
+  draft: PositionEditorDraft,
+): boolean {
+  const quantity = Number(draft.quantity);
+  return draft.mode === "correct_initial"
+    && Boolean(draft.tradeDate)
+    && Number.isInteger(quantity)
+    && quantity >= 1;
+}
+
+export function matchesInitialEntryPreview(
+  draft: PositionEditorDraft,
+  projection: InitialPositionEntryProjection | null | undefined,
+  monitoringItemId: string,
+): boolean {
+  return canRequestInitialEntryPreview(draft)
+    && projection?.status === "READY"
+    && projection.monitoring_item_id === monitoringItemId
+    && projection.requested_start_date === draft.tradeDate
+    && projection.quantity === Number(draft.quantity);
 }
 
 export function validatePositionEditorDraft(
