@@ -6995,7 +6995,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
             module = importlib.import_module(module_name)
             self.assertTrue(callable(getattr(module, entrypoint, None)))
 
-    def test_overview_page_dispatches_primary_tabs_to_tab_modules(self) -> None:
+    def test_overview_page_dispatches_canonical_views_to_owned_modules(self) -> None:
         import ast
 
         page_path = Path("app/web/overview/page.py")
@@ -7008,17 +7008,20 @@ class OverviewAutomationContractTests(unittest.TestCase):
             if isinstance(node, ast.ImportFrom) and node.module
         }
 
-        self.assertIn("app.web.overview.market_context", imported_modules)
+        self.assertIn("app.web.overview.market_context_helpers", imported_modules)
         self.assertIn("app.web.overview.market_movers", imported_modules)
         self.assertIn("app.web.overview.futures_macro", imported_modules)
         self.assertIn("app.web.overview.sentiment", imported_modules)
         self.assertIn("app.web.overview.events", imported_modules)
         render_body = source[source.index("def render_overview_dashboard"):]
-        self.assertIn('"Market Context": render_market_context_tab', render_body)
-        self.assertIn('"Market Movers": render_market_movers_tab', render_body)
-        self.assertIn('"Futures Macro": render_futures_macro_tab', render_body)
-        self.assertIn('"Sentiment": render_sentiment_tab', render_body)
-        self.assertIn('"Events": render_events_tab', render_body)
+        self.assertIn('"economic-cycle": render_economic_cycle', render_body)
+        self.assertIn('"market-movers": render_market_movers_tab', render_body)
+        self.assertIn('"futures-macro": render_futures_macro_tab', render_body)
+        self.assertIn('"sentiment": render_sentiment_tab', render_body)
+        self.assertIn('"events": render_events_tab', render_body)
+        self.assertIn('default_instrument="sp500"', render_body)
+        self.assertIn('default_instrument="us_stock"', render_body)
+        self.assertNotIn("render_market_context_tab", render_body)
 
     def test_overview_primary_tab_modules_own_tab_orchestration(self) -> None:
         module_contracts = {
@@ -7354,11 +7357,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertFalse(Path("app/web/overview/legacy_dashboard.py").exists())
 
-    def test_overview_page_uses_session_helper_instead_of_legacy_dashboard(self) -> None:
+    def test_market_research_page_omits_global_session_banner(self) -> None:
         page_source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
         helper_source = Path("app/web/overview/session_helpers.py").read_text(encoding="utf-8")
 
-        self.assertIn("from app.web.overview.session_helpers import _market_session_banner_model", page_source)
+        self.assertNotIn("from app.web.overview.session_helpers import _market_session_banner_model", page_source)
+        self.assertNotIn("render_market_session_banner", page_source)
         self.assertNotIn("legacy_dashboard", page_source)
         self.assertNotIn("_legacy.", page_source)
         self.assertIn("def _market_session_banner_model", helper_source)
@@ -7742,8 +7746,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         wrapper_source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
 
         self.assertIn("from app.web.overview.navigation import (", page_source)
-        self.assertIn("_render_overview_tab_selector()", page_source)
-        self.assertIn("_render_selected_overview_tab(", page_source)
+        self.assertIn("_render_market_research_selector()", page_source)
+        self.assertIn("_render_selected_market_research_view(", page_source)
         self.assertNotIn("_legacy._render_overview_tab_selector()", page_source)
         self.assertNotIn("_legacy._render_selected_overview_tab(", page_source)
         self.assertNotIn("legacy_dashboard", wrapper_source)
@@ -7852,17 +7856,17 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("futures_macro_helpers", source)
         self.assertNotIn("for _name in dir", source)
 
-    def test_overview_dashboard_uses_lazy_selected_deep_tab_rendering(self) -> None:
+    def test_overview_dashboard_uses_lazy_selected_market_research_view(self) -> None:
         source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
-        context_label_index = render_body.index('"Market Context"')
-        market_label_index = render_body.index('"Market Movers"')
-        futures_macro_label_index = render_body.index('"Futures Macro"')
-        sentiment_label_index = render_body.index('"Sentiment"')
-        events_label_index = render_body.index('"Events"')
+        cycle_index = render_body.index('"economic-cycle"')
+        futures_macro_index = render_body.index('"futures-macro"')
+        sentiment_index = render_body.index('"sentiment"')
+        events_index = render_body.index('"events"')
+        market_index = render_body.index('"market-movers"')
 
-        self.assertIn("_render_overview_tab_selector(", render_body)
-        self.assertIn("_render_selected_overview_tab(", render_body)
+        self.assertIn("_render_market_research_selector(", render_body)
+        self.assertIn("_render_selected_market_research_view(", render_body)
         self.assertNotIn("st.tabs(", render_body)
         self.assertNotIn("snapshot = load_overview_dashboard_snapshot()", render_body)
         self.assertNotIn('"Futures Monitor"', render_body)
@@ -7870,10 +7874,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn('"Data Health": _render_collection_ops_tab', render_body)
         self.assertNotIn('"Candidate Ops"', render_body)
         self.assertNotIn("load_overview_dashboard_snapshot", render_body)
-        self.assertLess(context_label_index, market_label_index)
-        self.assertLess(market_label_index, futures_macro_label_index)
-        self.assertLess(futures_macro_label_index, sentiment_label_index)
-        self.assertLess(sentiment_label_index, events_label_index)
+        self.assertLess(cycle_index, futures_macro_index)
+        self.assertLess(futures_macro_index, sentiment_index)
+        self.assertLess(sentiment_index, events_index)
+        self.assertLess(events_index, market_index)
 
     def test_overview_dashboard_primary_selector_excludes_inactive_tabs(self) -> None:
         from app.web.overview.navigation import OVERVIEW_DEEP_TAB_OPTIONS
@@ -7893,29 +7897,25 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("Data Health", OVERVIEW_DEEP_TAB_OPTIONS)
         self.assertNotIn("Candidate Ops", OVERVIEW_DEEP_TAB_OPTIONS)
 
-    def test_overview_dashboard_primary_selector_uses_internal_pill_widget(self) -> None:
+    def test_market_research_selector_uses_two_level_internal_widgets(self) -> None:
         source = Path("app/web/overview/navigation.py").read_text(encoding="utf-8")
-        helper_body = source[source.index("def _render_overview_tab_selector"):]
-        helper_body = helper_body[: helper_body.index("def _render_selected_overview_tab")]
+        helper_body = source[source.index("def _render_market_research_selector"):]
+        helper_body = helper_body[: helper_body.index("def _render_selected_market_research_view")]
 
+        self.assertIn("st.segmented_control(", helper_body)
         self.assertIn("st.pills(", helper_body)
         self.assertIn('selection_mode="single"', helper_body)
         self.assertIn("required=True", helper_body)
-        self.assertIn("format_func=_overview_tab_display_label", helper_body)
+        self.assertIn("MARKET_RESEARCH_FAMILY_LABELS", helper_body)
+        self.assertIn("MARKET_RESEARCH_VIEW_LABELS", helper_body)
         self.assertIn("st.markdown(", helper_body)
-        self.assertIn("_overview_tab_nav_css()", helper_body)
-        self.assertNotIn("segmented_control", helper_body)
+        self.assertIn("_market_research_navigation_css()", helper_body)
         self.assertNotIn("st.radio(", helper_body)
         self.assertNotIn("href=", helper_body)
         self.assertNotIn("<a ", helper_body)
-        self.assertIn("ov-primary-nav", source)
-        self.assertIn('stBaseButton-pillsActive', source)
-        self.assertIn("border-bottom: 1px solid", source)
-        self.assertIn("border-radius: 0", source)
-        self.assertIn("box-shadow: none", source)
-        self.assertIn("var(--text-color)", source)
-        self.assertIn("#ff4b4b", source)
-        self.assertNotIn("background: #f2faf7", source)
+        self.assertIn("grid-template-columns: repeat(3", source)
+        self.assertIn("grid-template-columns: repeat(2", source)
+        self.assertIn("flex-wrap: wrap", source)
 
     def test_overview_dashboard_dispatches_only_selected_deep_tab(self) -> None:
         from app.web.overview.navigation import _render_selected_overview_tab
@@ -7944,13 +7944,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(normalize_market_research_view("market-movers"), "market-movers")
         self.assertEqual(normalize_market_research_view("futures-macro"), "futures-macro")
 
-    def test_overview_dashboard_routes_futures_macro_as_primary_tab(self) -> None:
+    def test_overview_dashboard_routes_futures_macro_as_canonical_view(self) -> None:
         source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
         futures_source = Path("app/web/overview/futures_macro.py").read_text(encoding="utf-8")
         futures_helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
 
-        self.assertIn('"Futures Macro": render_futures_macro_tab', render_body)
+        self.assertIn('"futures-macro": render_futures_macro_tab', render_body)
         self.assertIn("def render_futures_macro_tab", futures_source)
         self.assertIn("render_futures_macro_fragment(detail_expanded=False)", futures_source)
         self.assertNotIn("legacy_dashboard", futures_helper_source)
@@ -8971,7 +8971,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("선물 일봉 변화", trace_source)
         self.assertIn("해석 주의점", trace_source)
 
-    def test_overview_dashboard_renders_default_market_context_without_load_gate(self) -> None:
+    def test_market_research_renders_default_view_without_load_gate(self) -> None:
         source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
 
@@ -8979,8 +8979,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("시장 맥락 불러오기", source)
         self.assertNotIn("OVERVIEW_LOADED_TABS_KEY", source)
         self.assertLess(
-            render_body.index("active_tab = _render_overview_tab_selector()"),
-            render_body.index("_render_selected_overview_tab("),
+            render_body.index("active_view = _render_market_research_selector()"),
+            render_body.index("_render_selected_market_research_view("),
         )
 
     def test_overview_dashboard_renders_valuation_inside_market_context_tab(self) -> None:

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from app.web.overview.navigation import (
     MARKET_RESEARCH_FAMILY_OPTIONS,
     MARKET_RESEARCH_VIEW_OPTIONS,
@@ -67,3 +69,28 @@ def test_market_research_defaults_are_stable():
     assert market_research_default_view_for_family("index-valuation") == "sp500"
     assert market_research_default_view_for_family("stock-research") == "market-movers"
     assert market_research_family_for_view("broken") == "market-environment"
+
+
+def test_market_research_dispatch_calls_only_selected_view():
+    from app.web.overview.navigation import _render_selected_market_research_view
+
+    calls = []
+    selected = _render_selected_market_research_view(
+        "us-stock",
+        renderers={
+            "economic-cycle": lambda: calls.append("economic-cycle"),
+            "us-stock": lambda: calls.append("us-stock"),
+        },
+    )
+    assert selected == "us-stock"
+    assert calls == ["us-stock"]
+
+
+def test_market_research_page_removes_overview_global_blocks():
+    source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+    body = source[source.index("def render_overview_dashboard"):]
+    assert 'st.title("Market Research")' in body
+    assert "Today에서 확인한 시장 판단을 환경·가치평가·종목 근거로 확장합니다." in body
+    assert "render_reference_contextual_help" not in body
+    assert "render_market_session_banner" not in body
+    assert "_render_market_research_selector()" in body

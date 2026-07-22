@@ -5,18 +5,18 @@ from typing import Any, Callable
 
 import streamlit as st
 
-from app.web.overview.components.layout import render_market_session_banner
 from app.web.overview.events import render_events_tab
 from app.web.overview.futures_macro import render_futures_macro_tab
-from app.web.overview.market_context import render_market_context_tab
+from app.web.overview.market_context_helpers import (
+    render_economic_cycle,
+    render_market_context_valuation,
+)
 from app.web.overview.market_movers import render_market_movers_tab
 from app.web.overview.navigation import (
-    _render_overview_tab_selector,
-    _render_selected_overview_tab,
+    _render_market_research_selector,
+    _render_selected_market_research_view,
 )
 from app.web.overview.sentiment import render_sentiment_tab
-from app.web.overview.session_helpers import _market_session_banner_model
-from app.web.reference_contextual_help import render_reference_contextual_help
 
 
 def render_overview_dashboard(
@@ -28,21 +28,28 @@ def render_overview_dashboard(
     recent_results: list[dict[str, Any]] | None = None,
     render_runtime_snapshot: Callable[[], None] | None = None,
 ) -> None:
-    """Render the top-level product dashboard for Workspace > Overview."""
+    """Render the Market Research workspace."""
     del runtime_marker, loaded_at, git_sha, latest_result, recent_results, render_runtime_snapshot
-    st.title("Overview")
-    st.caption("저장된 시장 자료를 브리프처럼 읽고, 필요한 세부 근거는 각 탭에서 이어서 확인합니다.")
-    render_reference_contextual_help("overview", expanded=False)
-    render_market_session_banner(_market_session_banner_model())
+    st.caption("MARKET RESEARCH")
+    st.title("Market Research")
+    st.caption("Today에서 확인한 시장 판단을 환경·가치평가·종목 근거로 확장합니다.")
 
-    active_tab = _render_overview_tab_selector()
-    _render_selected_overview_tab(
-        active_tab,
+    active_view = _render_market_research_selector()
+    _render_selected_market_research_view(
+        active_view,
         renderers={
-            "Market Context": render_market_context_tab,
-            "Market Movers": render_market_movers_tab,
-            "Futures Macro": render_futures_macro_tab,
-            "Sentiment": render_sentiment_tab,
-            "Events": render_events_tab,
+            "economic-cycle": render_economic_cycle,
+            "futures-macro": render_futures_macro_tab,
+            "sentiment": render_sentiment_tab,
+            "events": render_events_tab,
+            "sp500": lambda: render_market_context_valuation(
+                default_instrument="sp500",
+                show_instrument_selector=False,
+            ),
+            "market-movers": render_market_movers_tab,
+            "us-stock": lambda: render_market_context_valuation(
+                default_instrument="us_stock",
+                show_instrument_selector=False,
+            ),
         },
     )
