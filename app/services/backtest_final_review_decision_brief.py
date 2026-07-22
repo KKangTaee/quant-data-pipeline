@@ -65,6 +65,18 @@ _ROUTE_PRESENTATION = {
     },
 }
 
+_LIQUIDITY_CAPACITY_STATUS_LABELS = {
+    "official_fresh_capacity_evidence": "공식 제공처의 최신 유동성 근거 확보",
+    "weak_source_or_proxy_liquidity_evidence": "공식 자료가 부족하거나 일부 대체 지표를 사용함",
+    "partial_liquidity_coverage": "일부 구성요소의 유동성만 확인됨",
+    "stale_or_unknown_provider_snapshot": "유동성 자료의 최신성 확인 필요",
+    "provider_operability_review": "유동성 근거 추가 검토 필요",
+    "missing_provider_operability": "유동성 근거가 아직 없음",
+    "blocked_provider_operability": "가격 또는 제공처 문제로 유동성 확인 불가",
+    "legacy_provider_pass_without_capacity_contract": "이전 형식 자료로 세부 유동성 근거 확인 필요",
+    "incomplete_liquidity_capacity_evidence": "유동성 근거가 불완전함",
+}
+
 _CHARACTER_AXES = (
     ("concentration", "집중 성향", "percent", "최대 구성 비중 근거가 없습니다."),
     ("drawdown", "손실 특성", "percent", "running-peak 낙폭 curve가 없습니다."),
@@ -654,6 +666,15 @@ def _display_percent(value: float, *, ratio: bool = False) -> str:
     return f"{displayed:.2f}%"
 
 
+def _liquidity_capacity_status_label(proof_status: str) -> str:
+    """Translate a stable audit identity into first-read Final Review copy."""
+
+    return _LIQUIDITY_CAPACITY_STATUS_LABELS.get(
+        str(proof_status or "").strip(),
+        "유동성 근거 상태 확인 필요",
+    )
+
+
 def _observation(
     *,
     observation_id: str,
@@ -771,11 +792,13 @@ def _build_execution_observations(
         observations.append(
             _observation(
                 observation_id="liquidity-capacity",
-                title="유동성·capacity 근거",
-                interpretation="저장된 provider operability와 freshness 근거 상태입니다.",
+                title="유동성·운용 가능성 근거",
+                interpretation="공식 제공처의 유동성 자료 범위와 최신성을 확인합니다.",
                 measured_value=liquidity_status,
-                display_value=liquidity_status,
-                threshold_or_comparator="official_fresh_capacity_evidence",
+                display_value=_liquidity_capacity_status_label(liquidity_status),
+                threshold_or_comparator=_liquidity_capacity_status_label(
+                    "official_fresh_capacity_evidence"
+                ),
                 evidence_refs=["validation.backtest_realism_audit.liquidity_capacity_contract"],
                 as_of=as_of,
                 finding_eligible=False,

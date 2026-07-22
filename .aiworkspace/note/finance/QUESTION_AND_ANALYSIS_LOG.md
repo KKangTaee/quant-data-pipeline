@@ -10460,3 +10460,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 동일 validation 중복 저장 없이 버튼 한 번으로 방금 검증한 후보의 Final Review를 열어야 함.
 - Analysis result: component callback이 persistence/navigation intent를 fragment에서 선소비해 root route owner가 실행되지 않았고, handoff도 current Final Review selector key를 설정하지 않았다.
 - Follow-up: 전체 `3/3차` 완료. intent ownership, stable-id 중복 방지, active candidate handoff를 교정했고 isolated Browser lifecycle에서 저장 1회와 Final Review 도달을 확인했다. 기존 append-only 중복 3행은 보존했다.
+
+### 2026-07-22 - Final Review 유동성 근거는 내부 상태명이 아니라 판단 문구로 읽는다
+
+- User request: Level3 유동성 근거 카드에 변수명처럼 표시되는 내부 상태를 사용자 언어로 개선하도록 요청함.
+- Interpreted goal: 유동성 판정과 Gate identity는 보존하면서 사용자가 현재 근거 수준과 통과 기준을 바로 이해해야 함.
+- Analysis result: Decision Brief가 `proof_status`를 `display_value`와 comparator에 그대로 사용했다. Python presentation adapter가 raw identity와 사용자 문구를 분리하는 방식을 채택했다.
+- Follow-up: 전체 `2/2차` 완료. 9개 known 상태와 unknown fallback을 한글화했고 1280·760px actual GTAA 화면에서 enum 미노출과 overflow 0을 확인했다.

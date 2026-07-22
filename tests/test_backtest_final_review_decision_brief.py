@@ -620,6 +620,63 @@ class FinalReviewDecisionBriefContractTests(unittest.TestCase):
         self.assertNotIn("순", cumulative["label"])
         self.assertTrue(any("비용" in gap for gap in brief["disclosures"]["source_gaps"]))
 
+    def test_liquidity_capacity_status_labels_cover_internal_contract(self) -> None:
+        from app.services import backtest_final_review_decision_brief as service
+
+        expected = {
+            "official_fresh_capacity_evidence": "공식 제공처의 최신 유동성 근거 확보",
+            "weak_source_or_proxy_liquidity_evidence": "공식 자료가 부족하거나 일부 대체 지표를 사용함",
+            "partial_liquidity_coverage": "일부 구성요소의 유동성만 확인됨",
+            "stale_or_unknown_provider_snapshot": "유동성 자료의 최신성 확인 필요",
+            "provider_operability_review": "유동성 근거 추가 검토 필요",
+            "missing_provider_operability": "유동성 근거가 아직 없음",
+            "blocked_provider_operability": "가격 또는 제공처 문제로 유동성 확인 불가",
+            "legacy_provider_pass_without_capacity_contract": "이전 형식 자료로 세부 유동성 근거 확인 필요",
+            "incomplete_liquidity_capacity_evidence": "유동성 근거가 불완전함",
+        }
+
+        for status, label in expected.items():
+            with self.subTest(status=status):
+                self.assertEqual(
+                    service._liquidity_capacity_status_label(status),
+                    label,
+                )
+        self.assertEqual(
+            service._liquidity_capacity_status_label("future_internal_status"),
+            "유동성 근거 상태 확인 필요",
+        )
+
+    def test_liquidity_observation_uses_user_copy_and_preserves_raw_status(
+        self,
+    ) -> None:
+        with patch(
+            "app.services.backtest_final_review_decision_brief.build_liquidity_capacity_contract",
+            return_value={
+                "proof_status": "weak_source_or_proxy_liquidity_evidence"
+            },
+        ):
+            brief = self._build(self._grs_inputs())
+
+        observation = next(
+            row
+            for row in brief["behavior_board"]["execution_observations"]
+            if row["observation_id"] == "liquidity-capacity"
+        )
+
+        self.assertEqual(observation["title"], "유동성·운용 가능성 근거")
+        self.assertEqual(
+            observation["measured_value"],
+            "weak_source_or_proxy_liquidity_evidence",
+        )
+        self.assertEqual(
+            observation["display_value"],
+            "공식 자료가 부족하거나 일부 대체 지표를 사용함",
+        )
+        self.assertEqual(
+            observation["threshold_or_comparator"],
+            "공식 제공처의 최신 유동성 근거 확보",
+        )
+
     def test_execution_observations_use_structured_values_and_refs(self) -> None:
         brief = self._build(self._grs_inputs())
         observations = {

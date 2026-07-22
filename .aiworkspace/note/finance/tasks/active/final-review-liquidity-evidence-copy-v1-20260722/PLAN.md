@@ -30,7 +30,7 @@
 - Preserves: `execution_observation["measured_value"] == proof_status`
 - Changes display only: `title`, `interpretation`, `display_value`, `threshold_or_comparator`
 
-- [ ] **Step 1: Write the failing status mapping test**
+- [x] **Step 1: Write the failing status mapping test**
 
 ```python
 def test_liquidity_capacity_status_labels_cover_internal_contract(self) -> None:
@@ -56,7 +56,7 @@ def test_liquidity_capacity_status_labels_cover_internal_contract(self) -> None:
     )
 ```
 
-- [ ] **Step 2: Write the failing Decision Brief display contract test**
+- [x] **Step 2: Write the failing Decision Brief display contract test**
 
 ```python
 def test_liquidity_observation_uses_user_copy_and_preserves_raw_status(self) -> None:
@@ -86,7 +86,7 @@ def test_liquidity_observation_uses_user_copy_and_preserves_raw_status(self) -> 
     )
 ```
 
-- [ ] **Step 3: Run the two tests to verify RED**
+- [x] **Step 3: Run the two tests to verify RED**
 
 Run:
 
@@ -98,7 +98,7 @@ Run:
 
 Expected: FAIL because the label helper does not exist and the current observation exposes raw enum text.
 
-- [ ] **Step 4: Implement the minimal presentation mapping**
+- [x] **Step 4: Implement the minimal presentation mapping**
 
 ```python
 _LIQUIDITY_CAPACITY_STATUS_LABELS = {
@@ -125,7 +125,7 @@ def _liquidity_capacity_status_label(proof_status: str) -> str:
 
 Use the helper only for `display_value`. Keep `measured_value=liquidity_status`, set the title to `유동성·운용 가능성 근거`, interpretation to `공식 제공처의 유동성 자료 범위와 최신성을 확인합니다.`, and comparator to the mapped official/fresh label.
 
-- [ ] **Step 5: Run focused GREEN tests**
+- [x] **Step 5: Run focused GREEN tests**
 
 Run:
 
@@ -150,21 +150,23 @@ Expected: all Final Review Decision Brief contract tests pass.
 - Consumes: verified Decision Brief display contract
 - Produces: actual Level3 visual evidence and durable closeout record
 
-- [ ] **Step 1: Run linked Final Review regression and compile checks**
+- [x] **Step 1: Run linked Final Review regression and compile checks**
 
 Run:
 
 ```bash
 .venv/bin/python -m pytest -q \
   tests/test_backtest_final_review_decision_brief.py \
-  tests/test_backtest_final_review_decision_workspace.py
+  tests/test_final_review_market_context_visual_contract.py
+.venv/bin/python -m pytest -q \
+  tests/test_backtest_refactor_boundaries.py -k final_review
 .venv/bin/python -m py_compile app/services/backtest_final_review_decision_brief.py
 git diff --check
 ```
 
 Expected: linked Final Review tests, compile, and diff checks pass.
 
-- [ ] **Step 2: Run actual Browser QA**
+- [x] **Step 2: Run actual Browser QA**
 
 Open the current Level3 candidate that reproduces the card and verify:
 
@@ -172,17 +174,17 @@ Open the current Level3 candidate that reproduces the card and verify:
 - display value contains no underscore enum
 - comparator is `공식 제공처의 최신 유동성 근거 확보`
 - desktop and 760px cards do not overflow
-- console warning/error count is zero
+- application console error count is zero; framework initialization warnings are recorded separately
 
-- [ ] **Step 3: Capture QA evidence and remove temporary artifacts**
+- [x] **Step 3: Capture QA evidence and remove temporary artifacts**
 
 Keep `final-review-liquidity-evidence-copy-v1-qa.png` uncommitted. Stop any temporary server and remove temporary diagnostic files.
 
-- [ ] **Step 4: Synchronize durable docs**
+- [x] **Step 4: Synchronize durable docs**
 
 Record the presentation adapter boundary and `2/2차` completion. Do not describe this as a Gate or provider behavior change.
 
-- [ ] **Step 5: Review and commit only owned files**
+- [x] **Step 5: Review and commit only owned files**
 
 Run `git status --short`, `git diff --check`, and inspect the staged diff. Exclude registries, saved JSONL, run history, screenshots, and unrelated user files.
 

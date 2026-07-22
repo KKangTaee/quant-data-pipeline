@@ -1119,6 +1119,7 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 - 1차~4차 완료: root issue dedup, Level2 action handler Gate, GRS signal/valuation 기간 계약, static/dynamic survivorship policy, Final Review terminal-state snapshot, measured-only score impact.
 - current Final Review 후보 계약은 `unresolved_actionable=0`, `critical_engineering=0`, `missing_contract=0`을 요구한다.
 - 2026-07-16 observation freshness continuation 완료: Final Review가 stored curve end / latest completed session / source DB common date / limiting symbol을 구분하고, 자동 해결 가능한 stale 가격은 one-click price refresh → replay → 새 validation append로 갱신한다. 갱신 전에는 selected route만 차단하며 React는 intent/presentation만 소유한다.
+- 2026-07-22 liquidity copy 후속 완료: 내부 `proof_status`는 raw 측정 identity로 유지하고, Decision Brief가 유동성·운용 가능성 카드의 현황과 비교 기준을 사용자 문구로 투영한다. Gate, provider evidence, registry 계약은 변경하지 않았다.
 - 다음 승인 후보는 dynamic historical universe용 PIT membership / delisting provider이며, 도입 전에는 해당 후보를 defer/block한다.
 
 ## 2026-07-16 Practical Validation Level2 Decision Workspace V1

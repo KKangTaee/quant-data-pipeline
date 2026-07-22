@@ -7085,3 +7085,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 동일 stable `validation_id`는 한 번만 append하고, 성공 handoff는 현재 Final Review selector에 방금 인계한 후보 key를 전달한다.
 - 버튼 1회 Browser QA에서 저장 1회, full-app rerun 1회, Final Review 도달과 active candidate 일치를 확인했다.
 - task `3/3차` 완료. 기존 GTAA 중복 3행은 append-only history로 보존했으며 상세는 `tasks/active/practical-validation-final-review-route-fix-v1-20260722/`를 본다.
+
+## 2026-07-22 - Final Review 유동성 근거 문구 개선 완료
+
+- Level3 실행 근거 카드가 stable liquidity `proof_status` enum을 그대로 노출하던 presentation 경계를 교정했다.
+- raw enum과 Gate는 유지하면서 제목·현황·설명·비교 기준을 사용자 문구로 변환하고 신규 상태 fallback도 추가했다.
+- Decision Brief/visual contract 45개와 refactor 경계 3개, 1280·760px actual Browser QA, overflow 0과 console error 0을 확인했다.
+- 전체 roadmap `2/2차`; 상세는 `tasks/active/final-review-liquidity-evidence-copy-v1-20260722/`를 본다.

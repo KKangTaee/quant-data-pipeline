@@ -35,6 +35,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `final-review-liquidity-evidence-copy-v1-20260722` | Latest completed record, 2/2 | stable liquidity proof status와 Gate는 유지하고 Level3 카드 제목·현황·설명·기준만 사용자 문구로 변환했다. |
 | `practical-validation-final-review-route-fix-v1-20260722` | Latest completed record, 3/3 | 저장/이동 intent를 fragment callback 선소비에서 분리하고 stable validation id 중복 append를 막아 방금 인계한 후보의 Final Review를 한 번의 클릭으로 연다. |
 | `today-contributor-performance-cards-v1-20260722` | Latest completed record, 4/4 | Today의 기여 상위 2·하위 2를 현금흐름 조정 종목 수익률과 포트폴리오 누적 기여를 분리한 compact card로 정리하고 actual Browser QA를 완료했다. |
 | `portfolio-monitoring-initial-setting-correction-v1-20260721` | Completed record, 4/4 | 최초 요청 시작일과 수량을 append-only revision으로 함께 정정하고 새 DB 시장일·종가·최초 투자금부터 성과를 다시 계산한다. |
