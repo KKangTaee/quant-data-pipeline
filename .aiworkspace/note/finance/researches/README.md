@@ -29,6 +29,7 @@ Last Verified: 2026-06-02
 
 | Research | Focus |
 | --- | --- |
+| `active/2026-07-market-research-ia-redesign/` | Today가 기본 화면이 된 이후 기존 Overview를 Market Research deep-research workspace로 재정의하고, 상단 공통 정보·tab hierarchy·시장/종목 경계를 검토 |
 | `active/2026-07-today-home-navigation-ia/` | 오늘의 시장 판단과 대표 포트폴리오 한 개를 결합한 신규 기본 `Today` 화면, 목적 중심 상위 navigation, 기존 각 탭 내부 화면 보존 범위의 승인된 IA 설계 |
 | `active/2026-07-portfolio-monitoring-react-redesign/` | Operations > Portfolio Monitoring을 그룹·직접 주식/ETF·Final Review 통과 전략의 통합 추적, React one-shell, 규칙 기반 강약점, 매크로 위험 신호로 전면 개편하기 위한 제품·데이터·진단 감사 |
 | `active/2026-07-final-review-decision-workspace-redesign/` | Final Review를 validation contract inspector가 아닌 질문 중심 Decision Workspace로 재정의하고, portfolio strength/weakness·Level2 경계·React-first UI 방향을 정리 |

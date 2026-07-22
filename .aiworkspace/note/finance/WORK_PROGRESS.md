@@ -10,6 +10,13 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-22 - Market Research IA 설계 승인
+
+- Today가 summary를 소유한 뒤에도 남아 있던 Overview title, 공통 session banner, 다섯 동급 tab의 역할 중복을 actual 화면과 코드에서 확인했다.
+- `시장 환경 | 지수 가치평가 | 종목 리서치` 3개 목적형 family를 한 `/overview` page에 두고 7개 기존 module과 legacy deep link를 보존하는 방향을 승인받았다.
+- 구현 roadmap은 `0/4차`이며 written spec user review 뒤 plan/code work로 전환한다.
+- 상세: `tasks/active/market-research-ia-redesign-v1-20260722/DESIGN.md`.
+
 ### 2026-07-22 - Today 종목별 성과 기여 카드 완료
 
 - 대표 포트폴리오의 기여 상위 2·하위 2를 `종목 누적 수익률`과 `포트폴리오 누적 기여`가 분리된 카드로 바꿨다.

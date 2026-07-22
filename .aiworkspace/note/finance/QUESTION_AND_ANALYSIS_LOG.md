@@ -104,6 +104,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-22 - Market Research는 Today의 반복 요약이 아니라 deep research를 소유한다
+
+- User request: 과거 최초 화면이던 Overview가 Market Research로 바뀐 현재, 기존 시장맥락·변동종목·선물·심리·일정 구조와 상단/tab UI를 분석하고 개편해 달라고 요청함.
+- Interpreted goal: Today summary를 반복하지 않고 시장 환경, 지수 가치평가, 종목 조사라는 실제 목적을 더 적은 판단 부담으로 수행하게 한다.
+- Analysis result: full 공통 session/reference 영역과 다섯 bilingual 동급 tab을 제거하고 `시장 환경 | 지수 가치평가 | 종목 리서치` 2-level navigation으로 기존 7개 module을 재배치하는 단일 page 안이 적합하다.
+- Follow-up: 사용자가 권장안을 승인했다. written spec 검토 뒤 전체 `1~4차` implementation plan으로 전환한다.
+
 ### 2026-07-21 - 최초 날짜 수정은 item overwrite가 아니라 초기 계약 revision이다
 
 - User request: 개별 추적 결과의 기존 최초 수량 정정에서 최초 추적 날짜도 수정할 수 있게 해 달라고 요청함.
