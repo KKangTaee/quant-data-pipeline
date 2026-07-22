@@ -245,6 +245,30 @@ def test_market_research_page_renders_streamlit_header_only_for_fallback():
     ) < body.index("_render_market_research_selector()")
 
 
+def test_market_research_react_css_uses_editorial_tabs_without_container_chrome():
+    css = Path(
+        "app/web/streamlit_components/market_research_navigation/src/style.css"
+    ).read_text(encoding="utf-8")
+
+    family_block = css.split(".mr-navigation__families button {", 1)[1].split("}", 1)[0]
+    view_block = css.split(".mr-navigation__views {", 1)[1].split("}", 1)[0]
+
+    assert ".mr-navigation__heading" in css
+    assert "font-size: 30px" in css
+    assert "font-size: 26px" in css
+    assert "width: min(100%, 820px)" not in css
+    assert "border-bottom: 2px solid transparent" in family_block
+    assert "border-radius" not in family_block
+    assert "background: transparent" in family_block
+    assert 'button[aria-pressed="true"]' in css
+    assert "border-bottom-color" in css
+    assert "border:" not in view_block
+    assert "border-radius:" not in view_block
+    assert "background:" not in view_block
+    assert "grid-template-columns: repeat(3, minmax(0, 1fr))" in css
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr))" in css
+
+
 def test_market_movers_page_dispatch_can_suppress_duplicate_header():
     from app.web.overview.market_movers import render_market_movers_tab
 
