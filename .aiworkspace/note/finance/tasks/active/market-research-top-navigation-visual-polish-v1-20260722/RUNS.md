@@ -17,6 +17,7 @@ Last Updated: 2026-07-22
 - DOM 조사로 native element gap 16px과 actual selected testid `stBaseButton-segmented_controlActive`를 확인했다.
 - 보정 test RED 4 failures를 확인한 뒤 single semantic HTML block과 actual selected selector를 구현했다.
 - `.venv/bin/python -m pytest tests/test_market_research_navigation.py tests/test_today_home.py -q`: `47 passed`, `2 subtests passed`.
+- `.venv/bin/python -m pytest tests/test_service_contracts.py -q`: `848 passed`, `18 failed`, `41 subtests passed`. 실패는 기존 Practical Validation/Backtest 13개, Futures Macro 3개, AAII 2개이며 Market Research navigation failure는 없다.
 - `.venv/bin/python -m py_compile app/web/overview/page.py app/web/overview/navigation.py`: exit 0.
 - `git diff --check`: exit 0.
 - Browser QA: 1280px header/local navigation/active underline, 760px overflow 0, 420px 3-column family + 2-column view grid와 overflow 0을 확인했다.

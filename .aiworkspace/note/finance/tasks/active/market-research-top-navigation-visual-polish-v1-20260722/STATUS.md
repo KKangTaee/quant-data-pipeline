@@ -19,6 +19,7 @@ Last Updated: 2026-07-22
 - `시장 환경 | 지수 가치평가 | 종목 리서치`와 7개 canonical view의 URL/session 계약을 유지했다.
 - desktop 1280px, tablet 760px, mobile 420px에서 overflow 0과 responsive rail을 확인했다.
 - final desktop QA에서 header 103.8px, local navigation 62.8px, active underline `rgb(100, 123, 143)` / weight 700을 확인했다.
+- fresh full service-contract 기준선은 `848 passed / 18 unrelated failed`이며 이번 Market Research scope 회귀는 없다.
 
 ## Current
 
