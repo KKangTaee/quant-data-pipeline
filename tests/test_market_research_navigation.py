@@ -4,8 +4,10 @@ from unittest.mock import patch
 from app.web.overview.navigation import (
     MARKET_RESEARCH_FAMILY_OPTIONS,
     MARKET_RESEARCH_VIEW_OPTIONS,
+    _market_research_navigation_css,
     market_research_default_view_for_family,
     market_research_family_for_view,
+    market_research_local_navigation_context,
     market_research_views_for_family,
     normalize_market_research_view,
     resolve_market_research_seed_view,
@@ -70,6 +72,30 @@ def test_market_research_defaults_are_stable():
     assert market_research_default_view_for_family("index-valuation") == "sp500"
     assert market_research_default_view_for_family("stock-research") == "market-movers"
     assert market_research_family_for_view("broken") == "market-environment"
+
+
+def test_market_research_local_navigation_context_covers_single_and_multi_view_families():
+    assert market_research_local_navigation_context("market-environment") == (
+        "시장 환경",
+        ("economic-cycle", "futures-macro", "sentiment", "events"),
+    )
+    assert market_research_local_navigation_context("index-valuation") == (
+        "지수 가치평가",
+        ("sp500",),
+    )
+    assert market_research_local_navigation_context("unknown")[0] == "시장 환경"
+
+
+def test_market_research_navigation_css_uses_compact_and_responsive_contract():
+    css = _market_research_navigation_css()
+    source = Path("app/web/overview/navigation.py").read_text(encoding="utf-8")
+    assert ".st-key-market_research_local_navigation" in css
+    assert "width: fit-content" in css
+    assert 'button[aria-pressed="true"]' in css
+    assert "repeat(3, minmax(0, 1fr))" in css
+    assert "repeat(2, minmax(0, 1fr))" in css
+    assert "button:only-child" in css
+    assert "key=MARKET_RESEARCH_LOCAL_NAV_KEY" in source
 
 
 def test_market_research_dispatch_calls_only_selected_view():

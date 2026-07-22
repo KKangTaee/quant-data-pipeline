@@ -58,6 +58,7 @@ MARKET_RESEARCH_VIEW_KEY = "market_research_active_view"
 MARKET_RESEARCH_FAMILY_WIDGET_KEY = "market_research_family_widget"
 MARKET_RESEARCH_VIEW_WIDGET_KEY = "market_research_view_widget"
 MARKET_RESEARCH_APPLIED_QUERY_KEY = "market_research_applied_query"
+MARKET_RESEARCH_LOCAL_NAV_KEY = "market_research_local_navigation"
 
 OVERVIEW_DEEP_TAB_KEY = "overview_active_deep_tab"
 OVERVIEW_DEEP_TAB_WIDGET_KEY = "overview_active_deep_tab_widget"
@@ -118,6 +119,19 @@ def market_research_views_for_family(family: object) -> tuple[str, ...]:
         view
         for view in MARKET_RESEARCH_VIEW_OPTIONS
         if MARKET_RESEARCH_VIEW_FAMILY[view] == normalized
+    )
+
+
+def market_research_local_navigation_context(
+    family: object,
+) -> tuple[str, tuple[str, ...]]:
+    """Return the visible family label and canonical child views."""
+    normalized = str(family or "").strip()
+    if normalized not in MARKET_RESEARCH_FAMILY_OPTIONS:
+        normalized = MARKET_RESEARCH_FAMILY_OPTIONS[0]
+    return (
+        MARKET_RESEARCH_FAMILY_LABELS[normalized],
+        market_research_views_for_family(normalized),
     )
 
 
@@ -275,26 +289,100 @@ def _market_research_navigation_css() -> str:
     return """
 <style>
 .st-key-market_research_family_widget div[data-baseweb="button-group"] {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.45rem;
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  gap: 0.25rem;
+  padding: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--text-color) 14%, transparent);
 }
 .st-key-market_research_family_widget button {
-  width: 100%;
-  min-height: 2.55rem;
+  width: auto !important;
+  min-height: 2.35rem;
+  padding: 0.4rem 0.75rem !important;
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: color-mix(in srgb, var(--text-color) 66%, transparent) !important;
+  box-shadow: none !important;
+}
+.st-key-market_research_family_widget button:hover {
+  color: var(--text-color) !important;
+  background: color-mix(in srgb, #7c96ad 7%, transparent) !important;
+}
+.st-key-market_research_family_widget button[aria-pressed="true"] {
+  color: var(--text-color) !important;
+  font-weight: 700 !important;
+  border-bottom-color: #647b8f !important;
+  background: transparent !important;
+}
+.st-key-market_research_local_navigation {
+  margin: 0.15rem 0 0.7rem;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid color-mix(in srgb, #7c96ad 26%, transparent) !important;
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, #dce7ef 34%, var(--background-color));
+}
+.st-key-market_research_local_navigation [data-testid="stCaptionContainer"] {
+  margin-bottom: 0.05rem;
+}
+.st-key-market_research_local_navigation [data-testid="stMarkdownContainer"] p {
+  margin: 0;
 }
 .st-key-market_research_view_widget div[data-baseweb="button-group"] {
   display: flex;
+  width: fit-content;
+  max-width: 100%;
   flex-wrap: wrap;
-  gap: 0.42rem;
+  gap: 0.35rem;
+}
+.st-key-market_research_view_widget [data-testid="stBaseButton-pills"],
+.st-key-market_research_view_widget [data-testid="stBaseButton-pillsActive"] {
+  width: auto;
+  min-height: 2.2rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  box-shadow: none !important;
+}
+.st-key-market_research_view_widget [data-testid="stBaseButton-pills"] {
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: color-mix(in srgb, var(--text-color) 70%, transparent) !important;
+}
+.st-key-market_research_view_widget [data-testid="stBaseButton-pillsActive"] {
+  border: 1px solid color-mix(in srgb, #647b8f 34%, transparent) !important;
+  background: color-mix(in srgb, #b9ccda 30%, var(--background-color)) !important;
+  color: var(--text-color) !important;
+  font-weight: 700 !important;
+}
+@media (max-width: 760px) {
+  .st-key-market_research_local_navigation [data-testid="stHorizontalBlock"] {
+    flex-wrap: wrap;
+  }
 }
 @media (max-width: 480px) {
+  .st-key-market_research_family_widget div[data-baseweb="button-group"] {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .st-key-market_research_family_widget button {
+    width: 100% !important;
+    padding-inline: 0.3rem !important;
+    white-space: normal;
+  }
   .st-key-market_research_view_widget div[data-baseweb="button-group"] {
     display: grid;
+    width: 100%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .st-key-market_research_view_widget button {
+  .st-key-market_research_view_widget [data-testid="stBaseButton-pills"],
+  .st-key-market_research_view_widget [data-testid="stBaseButton-pillsActive"] {
     width: 100%;
+  }
+  .st-key-market_research_view_widget button:only-child {
+    grid-column: 1 / -1;
   }
 }
 </style>
@@ -328,22 +416,35 @@ def _render_market_research_selector() -> str:
         format_func=lambda value: MARKET_RESEARCH_FAMILY_LABELS[str(value)],
         key=MARKET_RESEARCH_FAMILY_WIDGET_KEY,
         label_visibility="collapsed",
-        width="stretch",
+        width="content",
         **family_options,
     ) or current_family
 
-    family_views = market_research_views_for_family(selected_family)
+    family_label, family_views = market_research_local_navigation_context(
+        selected_family
+    )
     selected_view = (
         current_view
         if current_view in family_views
         else market_research_default_view_for_family(selected_family)
     )
-    if len(family_views) > 1:
-        if st.session_state.get(MARKET_RESEARCH_VIEW_WIDGET_KEY) not in family_views:
-            st.session_state.pop(MARKET_RESEARCH_VIEW_WIDGET_KEY, None)
-        view_options: dict[str, object] = {}
-        if MARKET_RESEARCH_VIEW_WIDGET_KEY not in st.session_state:
-            view_options["default"] = selected_view
+    if st.session_state.get(MARKET_RESEARCH_VIEW_WIDGET_KEY) not in family_views:
+        st.session_state.pop(MARKET_RESEARCH_VIEW_WIDGET_KEY, None)
+    view_options: dict[str, object] = {}
+    if MARKET_RESEARCH_VIEW_WIDGET_KEY not in st.session_state:
+        view_options["default"] = selected_view
+
+    with st.container(
+        key=MARKET_RESEARCH_LOCAL_NAV_KEY,
+        border=True,
+        horizontal=True,
+        horizontal_alignment="left",
+        vertical_alignment="center",
+        gap="medium",
+    ):
+        with st.container(width=150):
+            st.caption("선택한 리서치")
+            st.markdown(f"**{family_label}**")
         selected_view = st.pills(
             "세부 리서치",
             options=list(family_views),
@@ -352,12 +453,9 @@ def _render_market_research_selector() -> str:
             required=True,
             key=MARKET_RESEARCH_VIEW_WIDGET_KEY,
             label_visibility="collapsed",
-            width="stretch",
+            width="content",
             **view_options,
         ) or selected_view
-    else:
-        st.session_state.pop(MARKET_RESEARCH_VIEW_WIDGET_KEY, None)
-        selected_view = family_views[0]
 
     return _store_market_research_view(str(selected_view))
 
@@ -400,6 +498,7 @@ __all__ = [
     "MARKET_RESEARCH_FAMILY_OPTIONS",
     "MARKET_RESEARCH_LEGACY_LABELS",
     "MARKET_RESEARCH_LEGACY_SLUGS",
+    "MARKET_RESEARCH_LOCAL_NAV_KEY",
     "MARKET_RESEARCH_APPLIED_QUERY_KEY",
     "MARKET_RESEARCH_FAMILY_WIDGET_KEY",
     "MARKET_RESEARCH_VIEW_FAMILY",
@@ -428,6 +527,7 @@ __all__ = [
     "_store_market_research_view",
     "market_research_default_view_for_family",
     "market_research_family_for_view",
+    "market_research_local_navigation_context",
     "market_research_views_for_family",
     "normalize_market_research_view",
     "resolve_market_research_seed_view",
