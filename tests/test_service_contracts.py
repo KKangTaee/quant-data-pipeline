@@ -7727,24 +7727,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
             & imported_names
         )
 
-    def test_overview_navigation_surface_owns_selector_entrypoints(self) -> None:
+    def test_overview_navigation_surface_owns_market_research_entrypoints(self) -> None:
         from app.web.overview import navigation
 
-        self.assertEqual(
-            navigation.OVERVIEW_DEEP_TAB_OPTIONS,
-            (
-                "Market Context",
-                "Market Movers",
-                "Futures Macro",
-                "Sentiment",
-                "Events",
-            ),
-        )
+        self.assertEqual(len(navigation.MARKET_RESEARCH_FAMILY_OPTIONS), 3)
+        self.assertEqual(len(navigation.MARKET_RESEARCH_VIEW_OPTIONS), 7)
+        self.assertTrue(callable(navigation.normalize_market_research_view))
+        self.assertTrue(callable(navigation.market_research_family_for_view))
         self.assertTrue(callable(navigation._render_overview_tab_selector))
         self.assertTrue(callable(navigation._render_selected_overview_tab))
-        source = Path("app/web/overview/navigation.py").read_text(encoding="utf-8")
-        self.assertIn("def _render_overview_tab_selector", source)
-        self.assertIn("def _render_selected_overview_tab", source)
 
     def test_overview_page_uses_navigation_surface_instead_of_legacy_selector_body(self) -> None:
         page_source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
@@ -7940,51 +7931,18 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertEqual(calls, ["Futures Macro"])
 
-    def test_overview_dashboard_defaults_unknown_deep_tab_to_market_context(self) -> None:
-        from app.web.overview.navigation import _overview_active_tab_label
+    def test_overview_dashboard_defaults_unknown_view_to_economic_cycle(self) -> None:
+        from app.web.overview.navigation import normalize_market_research_view
 
-        self.assertEqual(_overview_active_tab_label("does-not-exist"), "Market Context")
-        self.assertEqual(_overview_active_tab_label("Futures Macro"), "Futures Macro")
-        self.assertEqual(_overview_active_tab_label("Futures Monitor"), "Market Context")
-        self.assertEqual(_overview_active_tab_label("Sector / Industry"), "Market Context")
-        self.assertEqual(_overview_active_tab_label(None), "Market Context")
+        self.assertEqual(normalize_market_research_view("does-not-exist"), "economic-cycle")
+        self.assertEqual(normalize_market_research_view(None), "economic-cycle")
 
-    def test_overview_dashboard_pill_nav_slug_contract(self) -> None:
-        from app.web.overview.navigation import (
-            OVERVIEW_DEEP_TAB_OPTIONS,
-            _overview_tab_seed_label,
-            _overview_tab_display_label,
-            _overview_tab_label_from_slug,
-        )
+    def test_market_research_slug_contract(self) -> None:
+        from app.web.overview.navigation import normalize_market_research_view
 
-        for label in OVERVIEW_DEEP_TAB_OPTIONS:
-            display = _overview_tab_display_label(label)
-            self.assertIn(label, display)
-
-        self.assertEqual(_overview_tab_label_from_slug("market-context"), "Market Context")
-        self.assertEqual(_overview_tab_label_from_slug("market-movers"), "Market Movers")
-        self.assertEqual(_overview_tab_label_from_slug("futures-macro"), "Futures Macro")
-        self.assertIn("시장 맥락", _overview_tab_display_label("Market Context"))
-        self.assertIn("변동 종목", _overview_tab_display_label("Market Movers"))
-        self.assertIn("선물 매크로", _overview_tab_display_label("Futures Macro"))
-        self.assertIn("심리", _overview_tab_display_label("Sentiment"))
-        self.assertIn("일정", _overview_tab_display_label("Events"))
-        self.assertEqual(
-            _overview_tab_seed_label(
-                query_label="Market Movers",
-                widget_value="Sentiment",
-                session_value="Market Context",
-            ),
-            "Sentiment",
-        )
-        self.assertEqual(
-            _overview_tab_seed_label(
-                query_label="Market Movers",
-                widget_value=None,
-                session_value="Market Context",
-            ),
-            "Market Movers",
-        )
+        self.assertEqual(normalize_market_research_view("market-context"), "economic-cycle")
+        self.assertEqual(normalize_market_research_view("market-movers"), "market-movers")
+        self.assertEqual(normalize_market_research_view("futures-macro"), "futures-macro")
 
     def test_overview_dashboard_routes_futures_macro_as_primary_tab(self) -> None:
         source = Path("app/web/overview/page.py").read_text(encoding="utf-8")

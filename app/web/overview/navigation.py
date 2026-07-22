@@ -4,6 +4,57 @@ from typing import Any, Callable
 
 import streamlit as st
 
+MARKET_RESEARCH_FAMILY_OPTIONS = (
+    "market-environment",
+    "index-valuation",
+    "stock-research",
+)
+MARKET_RESEARCH_FAMILY_LABELS = {
+    "market-environment": "시장 환경",
+    "index-valuation": "지수 가치평가",
+    "stock-research": "종목 리서치",
+}
+MARKET_RESEARCH_VIEW_OPTIONS = (
+    "economic-cycle",
+    "futures-macro",
+    "sentiment",
+    "events",
+    "sp500",
+    "market-movers",
+    "us-stock",
+)
+MARKET_RESEARCH_VIEW_LABELS = {
+    "economic-cycle": "경제 사이클",
+    "futures-macro": "선물 매크로",
+    "sentiment": "심리",
+    "events": "일정",
+    "sp500": "S&P 500",
+    "market-movers": "변동 종목",
+    "us-stock": "개별 종목",
+}
+MARKET_RESEARCH_VIEW_FAMILY = {
+    "economic-cycle": "market-environment",
+    "futures-macro": "market-environment",
+    "sentiment": "market-environment",
+    "events": "market-environment",
+    "sp500": "index-valuation",
+    "market-movers": "stock-research",
+    "us-stock": "stock-research",
+}
+MARKET_RESEARCH_LEGACY_SLUGS = {
+    "market-movers": "market-movers",
+    "futures-macro": "futures-macro",
+    "sentiment": "sentiment",
+    "events": "events",
+}
+MARKET_RESEARCH_LEGACY_LABELS = {
+    "market context": "economic-cycle",
+    "market movers": "market-movers",
+    "futures macro": "futures-macro",
+    "sentiment": "sentiment",
+    "events": "events",
+}
+
 OVERVIEW_DEEP_TAB_KEY = "overview_active_deep_tab"
 OVERVIEW_DEEP_TAB_WIDGET_KEY = "overview_active_deep_tab_widget"
 OVERVIEW_DEEP_TAB_QUERY_PARAM = "overview_tab"
@@ -28,6 +79,68 @@ OVERVIEW_DEEP_TAB_SLUGS = {
     "Sentiment": "sentiment",
     "Events": "events",
 }
+
+
+def normalize_market_research_view(
+    value: object,
+    legacy_market_context_mode: object = None,
+) -> str:
+    """Return the canonical Market Research view for current and legacy inputs."""
+    slug = str(value or "").strip().lower()
+    if slug in MARKET_RESEARCH_VIEW_OPTIONS:
+        return slug
+    if slug == "market-context":
+        legacy_mode = str(legacy_market_context_mode or "").strip().lower()
+        return {
+            "economic_cycle": "economic-cycle",
+            "sp500": "sp500",
+            "us_stock": "us-stock",
+        }.get(legacy_mode, "economic-cycle")
+    return MARKET_RESEARCH_LEGACY_SLUGS.get(
+        slug,
+        MARKET_RESEARCH_LEGACY_LABELS.get(slug, "economic-cycle"),
+    )
+
+
+def market_research_family_for_view(view: object) -> str:
+    return MARKET_RESEARCH_VIEW_FAMILY[normalize_market_research_view(view)]
+
+
+def market_research_views_for_family(family: object) -> tuple[str, ...]:
+    normalized = str(family or "").strip()
+    if normalized not in MARKET_RESEARCH_FAMILY_OPTIONS:
+        normalized = MARKET_RESEARCH_FAMILY_OPTIONS[0]
+    return tuple(
+        view
+        for view in MARKET_RESEARCH_VIEW_OPTIONS
+        if MARKET_RESEARCH_VIEW_FAMILY[view] == normalized
+    )
+
+
+def market_research_default_view_for_family(family: object) -> str:
+    return market_research_views_for_family(family)[0]
+
+
+def resolve_market_research_seed_view(
+    *,
+    query_slug: object,
+    applied_query_slug: object,
+    widget_view: object,
+    session_view: object,
+    legacy_market_context_mode: object,
+) -> str:
+    """Resolve URL, widget, and session state without letting stale widgets win."""
+    raw_query = str(query_slug or "").strip().lower()
+    raw_applied = str(applied_query_slug or "").strip().lower()
+    if raw_query and raw_query != raw_applied:
+        return normalize_market_research_view(raw_query, legacy_market_context_mode)
+    if str(widget_view or "").strip().lower() in MARKET_RESEARCH_VIEW_OPTIONS:
+        return normalize_market_research_view(widget_view)
+    if str(session_view or "").strip().lower() in MARKET_RESEARCH_VIEW_OPTIONS:
+        return normalize_market_research_view(session_view)
+    if raw_query:
+        return normalize_market_research_view(raw_query, legacy_market_context_mode)
+    return MARKET_RESEARCH_VIEW_OPTIONS[0]
 
 
 def _overview_active_tab_label(value: str | None) -> str:
@@ -165,6 +278,13 @@ def _render_selected_overview_tab(
 
 
 __all__ = [
+    "MARKET_RESEARCH_FAMILY_LABELS",
+    "MARKET_RESEARCH_FAMILY_OPTIONS",
+    "MARKET_RESEARCH_LEGACY_LABELS",
+    "MARKET_RESEARCH_LEGACY_SLUGS",
+    "MARKET_RESEARCH_VIEW_FAMILY",
+    "MARKET_RESEARCH_VIEW_LABELS",
+    "MARKET_RESEARCH_VIEW_OPTIONS",
     "OVERVIEW_DEEP_TAB_DISPLAY",
     "OVERVIEW_DEEP_TAB_KEY",
     "OVERVIEW_DEEP_TAB_OPTIONS",
@@ -179,5 +299,9 @@ __all__ = [
     "_overview_tab_seed_label",
     "_render_overview_tab_selector",
     "_render_selected_overview_tab",
+    "market_research_default_view_for_family",
+    "market_research_family_for_view",
+    "market_research_views_for_family",
+    "normalize_market_research_view",
+    "resolve_market_research_seed_view",
 ]
-
