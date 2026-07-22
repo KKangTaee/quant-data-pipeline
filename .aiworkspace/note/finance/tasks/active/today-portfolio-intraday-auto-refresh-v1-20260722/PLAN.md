@@ -1,6 +1,6 @@
 # Today Portfolio Intraday Auto Refresh V1 Plan
 
-Status: Design Approved; Written Spec Awaiting Review
+Status: Implementation Plan Ready
 Roadmap: 0/4 implementation stages complete
 Last Updated: 2026-07-22
 
@@ -44,3 +44,8 @@ Today 화면이 열려 있고 official calendar가 확인된 미국 정규장 `O
 ## Stop Condition
 
 대표 포트폴리오 direct stock·ETF의 장중 quote가 5분보다 자주 provider에 요청되지 않고 DB에 group scope로 저장되며, Today가 spinner나 전체-page rerun 없이 새 snapshot을 표시한다. partial/missing quote는 명시되고, confirmed EOD가 저장되기 전에는 live point를 종가로 취급하지 않으며, 장 마감 후 확정 일봉으로 안전하게 전환되어야 한다.
+
+## Implementation Plan
+
+- 승인된 설계를 TDD 단위로 분해한 실행 계획: `IMPLEMENTATION_PLAN.md`
+- 구현 시작 방식은 subagent-driven 또는 inline execution 중 하나를 선택한다.

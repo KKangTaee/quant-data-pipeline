@@ -10,4 +10,7 @@
 
 ## Verification
 
-- 현재 단계는 design-only다. 제품 테스트와 Browser QA는 implementation plan 승인 후 수행한다.
+- `superpowers:writing-plans` 절차로 승인 설계를 9개 TDD task와 4개 roadmap stage로 분해했다.
+- plan self-review에서 spec coverage, placeholder, type/status consistency를 대조했다.
+- `git diff --check`를 통과했다.
+- 현재 단계는 plan-only다. 제품 테스트와 Browser QA는 실행 방식 선택 후 수행한다.

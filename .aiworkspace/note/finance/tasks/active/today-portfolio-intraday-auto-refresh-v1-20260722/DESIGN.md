@@ -1,6 +1,6 @@
 # Today Portfolio Intraday Auto Refresh V1 Design
 
-Status: Approved Conversation Design; Written Spec Awaiting User Review
+Status: Written Spec Approved
 Last Updated: 2026-07-22
 
 ## Problem
