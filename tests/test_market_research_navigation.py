@@ -91,10 +91,23 @@ def test_market_research_page_removes_overview_global_blocks():
     source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
     body = source[source.index("def render_overview_dashboard"):]
     assert 'st.title("Market Research")' in body
-    assert "Today에서 확인한 시장 판단을 환경·가치평가·종목 근거로 확장합니다." in body
+    assert "Today에서 발견한 질문을 시장·지수·종목 근거로 확장합니다." in body
+    assert 'st.container(key="market_research_page_header")' in body
     assert "render_reference_contextual_help" not in body
     assert "render_market_session_banner" not in body
     assert "_render_market_research_selector()" in body
+
+
+def test_market_research_page_uses_compact_keyed_header():
+    from app.web.overview.page import _market_research_page_css
+
+    source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+    css = _market_research_page_css()
+    assert 'st.container(key="market_research_page_header")' in source
+    assert 'st.caption("RESEARCH WORKSPACE")' in source
+    assert "Today에서 발견한 질문을 시장·지수·종목 근거로 확장합니다." in source
+    assert ".st-key-market_research_page_header" in css
+    assert "clamp(" in css
 
 
 def test_market_movers_page_dispatch_can_suppress_duplicate_header():

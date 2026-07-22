@@ -19,6 +19,33 @@ from app.web.overview.navigation import (
 from app.web.overview.sentiment import render_sentiment_tab
 
 
+def _market_research_page_css() -> str:
+    """Return page-header styles scoped to the Market Research shell."""
+    return """
+<style>
+.st-key-market_research_page_header {
+  padding-top: 0.1rem;
+  padding-bottom: 0.35rem;
+}
+.st-key-market_research_page_header [data-testid="stCaptionContainer"] {
+  margin-bottom: 0.15rem;
+}
+.st-key-market_research_page_header h1 {
+  margin: 0;
+  padding: 0;
+  font-size: clamp(2.45rem, 4.8vw, 3.55rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+@media (max-width: 480px) {
+  .st-key-market_research_page_header h1 {
+    font-size: clamp(2.1rem, 11vw, 2.75rem);
+  }
+}
+</style>
+"""
+
+
 def render_overview_dashboard(
     *,
     runtime_marker: str,
@@ -30,9 +57,11 @@ def render_overview_dashboard(
 ) -> None:
     """Render the Market Research workspace."""
     del runtime_marker, loaded_at, git_sha, latest_result, recent_results, render_runtime_snapshot
-    st.caption("MARKET RESEARCH")
-    st.title("Market Research")
-    st.caption("Today에서 확인한 시장 판단을 환경·가치평가·종목 근거로 확장합니다.")
+    st.markdown(_market_research_page_css(), unsafe_allow_html=True)
+    with st.container(key="market_research_page_header"):
+        st.caption("RESEARCH WORKSPACE")
+        st.title("Market Research")
+        st.caption("Today에서 발견한 질문을 시장·지수·종목 근거로 확장합니다.")
 
     active_view = _render_market_research_selector()
     _render_selected_market_research_view(
