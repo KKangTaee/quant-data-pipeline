@@ -5,11 +5,13 @@ from app.web.overview.navigation import (
     MARKET_RESEARCH_FAMILY_OPTIONS,
     MARKET_RESEARCH_VIEW_OPTIONS,
     _market_research_navigation_css,
+    build_market_research_navigation_payload,
     market_research_default_view_for_family,
     market_research_family_for_view,
     market_research_local_navigation_context,
     market_research_views_for_family,
     normalize_market_research_view,
+    resolve_market_research_navigation_event,
     resolve_market_research_seed_view,
 )
 
@@ -84,6 +86,50 @@ def test_market_research_local_navigation_context_covers_single_and_multi_view_f
         ("sp500",),
     )
     assert market_research_local_navigation_context("unknown")[0] == "시장 환경"
+
+
+def test_market_research_react_payload_covers_all_families_and_views():
+    payload = build_market_research_navigation_payload("sp500")
+
+    assert payload["schema_version"] == "market_research_navigation_v1"
+    assert payload["active_family"] == "index-valuation"
+    assert payload["active_view"] == "sp500"
+    assert [row["id"] for row in payload["families"]] == [
+        "market-environment",
+        "index-valuation",
+        "stock-research",
+    ]
+    assert [
+        view["id"]
+        for family in payload["families"]
+        for view in family["views"]
+    ] == list(MARKET_RESEARCH_VIEW_OPTIONS)
+
+
+def test_market_research_react_event_accepts_only_canonical_view_selection():
+    assert resolve_market_research_navigation_event(
+        "economic-cycle",
+        {"event": {"id": "select_view", "view": "us-stock", "nonce": 1}},
+    ) == "us-stock"
+    assert resolve_market_research_navigation_event(
+        "economic-cycle",
+        {"event": {"id": "select_view", "view": "broken", "nonce": 2}},
+    ) == "economic-cycle"
+    assert resolve_market_research_navigation_event(
+        "economic-cycle",
+        {"event": {"id": "other", "view": "sp500", "nonce": 3}},
+    ) == "economic-cycle"
+    assert resolve_market_research_navigation_event("economic-cycle", None) == "economic-cycle"
+
+
+def test_market_research_react_wrapper_requires_static_index(tmp_path):
+    from app.web.overview.market_research_navigation_react_component import (
+        market_research_navigation_react_component_available,
+    )
+
+    assert not market_research_navigation_react_component_available(tmp_path)
+    (tmp_path / "index.html").write_text("<!doctype html>", encoding="utf-8")
+    assert market_research_navigation_react_component_available(tmp_path)
 
 
 def test_market_research_navigation_css_uses_compact_and_responsive_contract():

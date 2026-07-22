@@ -15,6 +15,11 @@ MARKET_RESEARCH_FAMILY_LABELS = {
     "index-valuation": "지수 가치평가",
     "stock-research": "종목 리서치",
 }
+MARKET_RESEARCH_FAMILY_DESCRIPTIONS = {
+    "market-environment": "경제·매크로·심리·일정",
+    "index-valuation": "대표지수 멀티플과 실적",
+    "stock-research": "변동 종목과 개별 기업",
+}
 MARKET_RESEARCH_VIEW_OPTIONS = (
     "economic-cycle",
     "futures-macro",
@@ -138,6 +143,48 @@ def market_research_local_navigation_context(
 
 def market_research_default_view_for_family(family: object) -> str:
     return market_research_views_for_family(family)[0]
+
+
+def build_market_research_navigation_payload(active_view: object) -> dict[str, object]:
+    """Build the presentation-only React navigation payload."""
+    canonical = normalize_market_research_view(active_view)
+    families = []
+    for family in MARKET_RESEARCH_FAMILY_OPTIONS:
+        families.append(
+            {
+                "id": family,
+                "label": MARKET_RESEARCH_FAMILY_LABELS[family],
+                "description": MARKET_RESEARCH_FAMILY_DESCRIPTIONS[family],
+                "views": [
+                    {"id": view, "label": MARKET_RESEARCH_VIEW_LABELS[view]}
+                    for view in market_research_views_for_family(family)
+                ],
+            }
+        )
+    return {
+        "schema_version": "market_research_navigation_v1",
+        "eyebrow": "RESEARCH WORKSPACE",
+        "title": "Market Research",
+        "description": "Today에서 발견한 질문을 시장·지수·종목 근거로 확장합니다.",
+        "active_family": market_research_family_for_view(canonical),
+        "active_view": canonical,
+        "families": families,
+    }
+
+
+def resolve_market_research_navigation_event(
+    current_view: object,
+    component_value: object,
+) -> str:
+    """Accept only a canonical React navigation selection event."""
+    canonical = normalize_market_research_view(current_view)
+    if not isinstance(component_value, dict):
+        return canonical
+    event = component_value.get("event")
+    if not isinstance(event, dict) or event.get("id") != "select_view":
+        return canonical
+    candidate = str(event.get("view") or "").strip().lower()
+    return candidate if candidate in MARKET_RESEARCH_VIEW_OPTIONS else canonical
 
 
 def resolve_market_research_seed_view(
@@ -511,6 +558,7 @@ def _render_selected_overview_tab(
 
 
 __all__ = [
+    "MARKET_RESEARCH_FAMILY_DESCRIPTIONS",
     "MARKET_RESEARCH_FAMILY_LABELS",
     "MARKET_RESEARCH_FAMILY_OPTIONS",
     "MARKET_RESEARCH_LEGACY_LABELS",
@@ -542,10 +590,12 @@ __all__ = [
     "_render_selected_market_research_view",
     "_render_selected_overview_tab",
     "_store_market_research_view",
+    "build_market_research_navigation_payload",
     "market_research_default_view_for_family",
     "market_research_family_for_view",
     "market_research_local_navigation_context",
     "market_research_views_for_family",
     "normalize_market_research_view",
     "resolve_market_research_seed_view",
+    "resolve_market_research_navigation_event",
 ]
