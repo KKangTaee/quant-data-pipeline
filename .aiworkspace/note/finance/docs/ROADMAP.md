@@ -23,6 +23,14 @@ Today Home React Workbench V2도 전체 `4/4차` 구현과 closeout을 완료했
 - 경계/QA: 기존 상세 탭과 계산·DB·수집은 변경하지 않았다. Today 26개와 연결 surface 114개 Python 회귀, React 5개/typecheck/build, 1280·760·420 overflow/console/action Browser QA를 통과했다.
 - 상세: `tasks/active/today-home-react-workbench-v2-20260722/STATUS.md`.
 
+Market Research IA Redesign V1도 전체 `4/4차` 구현과 closeout을 완료했다.
+
+- 구조: 기존 Overview의 동급 탭을 `/overview` 안의 `시장 환경 | 지수 가치평가 | 종목 리서치` 3개 purpose family와 7개 canonical view로 재편했다.
+- 흐름: Today는 compact summary를 유지하고 Market Research는 deep research를 소유한다. Market Movers selected symbol은 검증 후 같은 page의 U.S. Stock Research로 이어진다.
+- 경계: page-global market-session banner, contextual Reference, 운영 진단 패널은 제거하고 기준일·자료 상태·refresh action은 active module이 소유한다. module 계산, DB, loader, provider 수집 계약은 변경하지 않았다.
+- QA: navigation 14개, Today 29개, 관련 service 386개, React 4개와 typecheck/build를 통과했고 desktop·760px·420px actual navigation/handoff/overflow/console을 확인했다.
+- 상세: `tasks/active/market-research-ia-redesign-v1-20260722/STATUS.md`.
+
 Portfolio Monitoring React Command Center V1은 전체 `6/6차` 구현과 closeout을 완료했다.
 
 - 목적: legacy Streamlit dashboard를 Overview/시장맥락 계열 React one-shell로 전환하고, DB-backed group/item lifecycle, 공통 가치곡선, 근거형 진단, macro risk observation과 calibration gate를 제공한다.

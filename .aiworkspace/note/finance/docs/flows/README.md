@@ -20,11 +20,12 @@ Help: Reference Center
 
 Streamlit의 `default=True` page는 등록된 `url_path="today"`와 무관하게 browser root `/`를 소유한다. 따라서 Today의 canonical 최초 진입 주소는 `/`이며 기존 상세 URL은 유지한다.
 Today의 차트는 최신 최대 60개 실제 일별 관측을 주봉으로 변환하지 않고 실제 날짜 간격으로 표시한다. 장중 화면이나 매매 신호가 아니며, React가 반환하는 세 navigation event만 Python Page router가 처리한다.
-`Research > Market Research`는 Portfolio Lab의 필수 선행 단계가 아니라 시장 context / data health 확인 표면이다.
+`Research > Market Research`는 Portfolio Lab의 필수 선행 단계가 아니라 Today에서 발견한 질문을 깊게 조사하는 표면이다. `/overview` 안에서 `시장 환경 | 지수 가치평가 | 종목 리서치`를 먼저 고르고, 각각 `경제 사이클·선물 매크로·심리·일정 | S&P 500 | 변동 종목·개별 종목`의 7개 canonical view로 이동한다.
 `Research > Institutional Holdings`도 Portfolio Lab의 필수 선행 단계가 아니라 delayed SEC 13F institutional holdings를 탐색하는 별도 research surface다.
 Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation gate, trade signal, monitoring signal을 만들지 않는다.
-현재 Overview primary tabs는 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events`다.
-`Market Context`는 S&P 500의 최근 60개월 후행 PER 상대 구간과 FOMC SEP 기반 EPS/SPX 시나리오를 두 React 그래프로 읽는다. 36개월은 민감도이며, actual As-Reported TTM EPS가 없으면 예상 지수 숫자를 표시하지 않는다.
+Market Research 상단은 summary cockpit, page-global market-session banner, contextual Reference, 운영 진단 패널을 반복하지 않는다. 기준일·자료 상태·refresh action은 선택된 module이 소유한다.
+S&P 500 view는 최근 60개월 후행 PER 상대 구간과 FOMC SEP 기반 EPS/SPX 시나리오를 두 React 그래프로 읽는다. 36개월은 민감도이며, actual As-Reported TTM EPS가 없으면 예상 지수 숫자를 표시하지 않는다.
+Market Movers의 `개별 종목 분석`은 선택 symbol을 검증한 뒤 같은 page의 U.S. Stock Research로 넘기며 provider fetch나 write를 실행하지 않는다.
 `Futures Monitor`와 `Sector / Industry` standalone tab은 current primary navigation이 아니며, 관련 데이터는 Futures Macro / Market Movers의 context evidence로 읽는다.
 
 화면 경계가 code layer / storage boundary와 섞일 때는 [System Boundaries](../architecture/SYSTEM_BOUNDARIES.md)를 먼저 확인한다.
@@ -74,7 +75,7 @@ Data > Data Operations
 - Practical Validation의 최신 runtime replay 결과는 현재 세션에서 사용자가 직접 실행한 뒤에만 표시한다.
 - Final Review decision도 broker order나 auto rebalance가 아니다.
 - Portfolio > Portfolio Monitoring은 read-only monitoring surface이며 monitoring log 자동 저장, live approval, broker order, auto rebalance를 하지 않는다.
-- Overview의 Sentiment, Futures Macro, Why It Moved는 시장 배경 / 조사 단서이며 Practical Validation PASS / BLOCKER가 아니다.
+- Market Research의 Sentiment, Futures Macro, Why It Moved는 시장 배경 / 조사 단서이며 Practical Validation PASS / BLOCKER가 아니다.
 - 부족 provider data는 Practical Validation Provider Gaps에서 확인하고, 수집 가능한 항목은 ingestion job을 통해 보강한다.
 - Ingestion의 current listing snapshot, SEC identity cross-check, computed snapshot lifecycle row는 survivorship PASS 근거가 아니다. Form 25 delisting row도 delisting evidence이며, Form 25 부재를 active listing proof로 해석하지 않는다.
 

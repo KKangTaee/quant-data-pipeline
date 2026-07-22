@@ -10446,3 +10446,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 기존 상세 탭 내부를 개편하지 않고 browser root `/`의 판단 흐름만 같은 제품군의 React로 교체해 시장 근거와 대표 포트폴리오를 오해 없이 빠르게 읽게 한다.
 - Analysis result: V1은 React가 아닌 `st.markdown` HTML이었고 `day_return`과 axis 없는 sparkline이 일봉/주봉/장중 의미를 숨겼다. Python-owned text risk label과 `daily/stored_close/aggregation none/intraday false`, 실제 날짜 X축·누적 수익률 Y축 계약을 채택했다.
 - Follow-up: 전체 `4/4차`를 완료했다. actual QA에서 전 구간 양수인데 음수 padding 눈금이 생기는 문제도 발견해 0% 기준선에서 축을 멈추도록 보정했고, 1280·760·420 overflow 0, clean console, 기존 Market Context 이동을 확인했다.
+
+### 2026-07-22 - Today 이후 Overview를 목적형 Market Research로 재편한다
+
+- User request: 과거 최초 화면이던 Overview가 Today 도입 뒤 Market Research가 된 상황에서 기존 시장맥락·변동종목·선물매크로·심리·일정 탭과 상단 공용정보를 UX 관점으로 검토하고 승인안 2번을 구현해 달라고 요청함.
+- Interpreted goal: Today의 summary를 반복하지 않고 사용자가 조사 목적을 먼저 고른 뒤 기존 상세 기능에 도달하며, 변동 종목에서 개별 분석까지 같은 흐름으로 이어져야 함.
+- Analysis result: `시장 환경 | 지수 가치평가 | 종목 리서치` 3-family/7-view IA를 채택하고 page-global session/reference를 제거했다. module-local metadata와 legacy deep link는 유지하고 Market Movers symbol handoff는 fetch/write 없이 검증한다.
+- Follow-up: 전체 `4/4차`와 desktop·760px·420px actual Browser QA를 완료했다. 남은 구현 차수는 없으며 별도 sentiment baseline failure 3개는 해당 active task에서 다룬다.

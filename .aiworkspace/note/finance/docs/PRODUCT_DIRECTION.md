@@ -1,7 +1,7 @@
 # Product Direction
 
 Status: Active
-Last Verified: 2026-07-19
+Last Verified: 2026-07-22
 
 ## Product Summary
 
@@ -23,7 +23,7 @@ Last Verified: 2026-07-19
 ## Target Experience
 
 - 사용자는 Backtest Analysis에서 전략이나 저장된 포트폴리오 mix를 후보 source로 만든다.
-- Workspace > Overview는 Market Context, Market Movers / Why It Moved, Futures Macro, Sentiment, Events로 시장 context를 보여준다. Market Context는 5년 후행 PER 상대 구간과 FOMC 거시 가정 기반 EPS/SPX 시나리오를 보여주며, 공식 적정가나 거래 신호로 표현하지 않는다. Sector evidence는 Market Movers가 소유하고 수집 결과·실패 확인은 Workspace > Ingestion으로 분리한다.
+- Research > Today는 최초 진입 summary를, Research > Market Research는 `시장 환경 | 지수 가치평가 | 종목 리서치` deep research를 소유한다. Market Research는 경제 사이클·선물 매크로·심리·일정, S&P 500, 변동 종목·개별 종목을 7개 view로 제공하며 summary cockpit을 반복하지 않는다. S&P 500은 5년 후행 PER 상대 구간과 FOMC 거시 가정 기반 EPS/SPX 시나리오를 보여주되 공식 적정가나 거래 신호로 표현하지 않는다. Sector evidence는 Market Movers가 소유하고 수집 결과·실패 확인은 Data > Data Operations로 분리한다.
 - Workspace > Institutional Portfolios는 Overview Market Movers와 분리된 read-only research surface로, 투자 대가 / 기관별 delayed SEC Form 13F portfolio를 React workbench에서 포트폴리오 allocation, 상위 보유, 분기별 reported change, 섹터 노출, 종목별 보유기관 drill-down으로 탐색한다.
 - Practical Validation은 후보를 source traits, module gate, provider / macro / robustness / realism evidence로 검증한다.
 - Final Review는 selected-route gate를 통과한 후보를 최종 관찰 후보로 저장하되, live approval로 해석하지 않는다.
@@ -56,7 +56,7 @@ Last Verified: 2026-07-19
 현재 사용자-facing 주요 화면:
 
 - `Workspace > Ingestion`
-- `Workspace > Overview`
+- `Research > Market Research`
 - `Workspace > Institutional Portfolios`
 - `Backtest > Backtest Analysis`
 - `Backtest > Practical Validation`
@@ -66,7 +66,7 @@ Last Verified: 2026-07-19
 
 현재 구현 완료로 보는 큰 흐름:
 
-- Overview Market Intelligence는 Market Context, Market Movers / Why It Moved manual investigation, sector breadth / group leadership evidence, Futures Macro, events calendar, sentiment, data-health handoff, browser-session auto refresh까지 production baseline을 갖췄다. `Futures Monitor`와 `Sector / Industry` standalone tab 표현은 current primary surface가 아니라 retained data / helper context로 본다.
+- Market Research는 목적형 3-family/7-view navigation, Economic Cycle, Market Movers / Why It Moved manual investigation, S&P 500·U.S. Stock valuation, Futures Macro, events calendar, sentiment까지 production baseline을 갖췄다. page-global session/reference/diagnostic은 반복하지 않고 active module이 local metadata와 명시적 refresh를 소유한다. `Futures Monitor`와 `Sector / Industry` standalone 표현은 current primary surface가 아니라 retained data / helper context로 본다.
 - Institutional Portfolios는 SEC Form 13F 공식 data sets를 DB로 적재한 뒤 기관별 holdings를 allocation donut, 상위 보유 리스트, 신규 / 증가 / 감소 / 전량 매도 후보 board, 섹터 노출 bar, 종목별 보유 기관 reverse lookup으로 읽는 Workspace research surface다. DB가 비어 있으면 clearly labeled preview workbench만 보여주며 실제 보유로 표현하지 않는다. 13F 지연, long holdings 한계, CUSIP-symbol mapping caveat를 항상 표시하며 추천 / 매수매도 신호 / live approval로 해석하지 않는다.
 - Macro / sentiment context는 DB-backed collection과 loader를 통해 읽고, 화면에서는 freshness / source / partial state를 숨기지 않는다.
 - Backtest Analysis는 기존 ETF / factor / mix 후보와 Risk-On Momentum 5D Daily Swing research lane을 포함한다. Risk-On Momentum daily signal governance는 아직 Practical Validation / Final Review / Portfolio Monitoring에 연결하지 않았다.

@@ -10,12 +10,12 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
-### 2026-07-22 - Market Research IA 설계 승인
+### 2026-07-22 - Market Research 목적형 IA 개편 완료
 
-- Today가 summary를 소유한 뒤에도 남아 있던 Overview title, 공통 session banner, 다섯 동급 tab의 역할 중복을 actual 화면과 코드에서 확인했다.
-- `시장 환경 | 지수 가치평가 | 종목 리서치` 3개 목적형 family를 한 `/overview` page에 두고 7개 기존 module과 legacy deep link를 보존하는 방향을 승인받았다.
-- 구현 roadmap은 `0/4차`이며 written spec user review 뒤 plan/code work로 전환한다.
-- 상세: `tasks/active/market-research-ia-redesign-v1-20260722/DESIGN.md`.
+- 기존 Overview 동급 탭을 `시장 환경 | 지수 가치평가 | 종목 리서치` 3-family/7-view deep-research workspace로 전환했다.
+- page-global session/reference를 제거하고 active module local metadata, legacy query compatibility, Market Movers → 개별 종목 inline handoff를 구현했다.
+- Python 14+29+관련 service 386, React 4/typecheck/build와 desktop·760px·420px actual Browser QA를 통과했다.
+- 전체 roadmap `4/4차` 완료. 상세는 `tasks/active/market-research-ia-redesign-v1-20260722/STATUS.md`를 본다.
 
 ### 2026-07-22 - Today 종목별 성과 기여 카드 완료
 

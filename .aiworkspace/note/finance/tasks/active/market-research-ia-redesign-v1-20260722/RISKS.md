@@ -1,16 +1,20 @@
 # Market Research IA Redesign V1 Risks
 
-Status: Active
+Status: Complete
 Last Updated: 2026-07-22
 
-## Open Risks
+## Resolved Risks
 
-1. 기존 tests가 `Market Context` label과 helper 이름을 structural contract로 검사하므로 compatibility adapter 또는 focused test migration이 필요하다.
-2. Today CTA는 legacy `overview_tab=market-context`를 사용하므로 canonical view 확장 뒤에도 반드시 수용해야 한다.
-3. Market Movers와 U.S. Stock의 universe/profile 범위가 다를 수 있어 symbol handoff validation을 UI 문자열 복사만으로 처리하면 안 된다.
-4. module heading 제거 시 Streamlit fallback의 접근 가능한 heading hierarchy를 잃지 않아야 한다.
-5. 420px에서 native Streamlit pills의 실제 wrap/overflow 동작을 Browser QA로 확인해야 한다.
-6. actual app render가 registry/run-history local artifact를 갱신할 수 있으므로 commit selection을 path allow-list로 제한한다.
+1. structural contract는 새 page-global banner 부재와 direct renderer ownership으로 migration했다.
+2. legacy `market-context`와 Today CTA는 `economic-cycle` canonical view로 수용한다.
+3. Market Movers handoff는 현재 selected symbol과 event symbol을 대조한 뒤 session/query를 변경한다.
+4. page title과 module body heading 계층을 유지하고 중복 module title만 선택적으로 숨긴다.
+5. 420px에서 primary 3등분과 secondary 2열 wrap, overflow 0을 actual Browser QA로 확인했다.
+6. registry, run history, research bundle, 기존 QA image와 이번 generated screenshot을 stage하지 않았다.
+
+## Residual Validation Gap
+
+- broader service suite의 sentiment overlay 2개와 AAII parser 1개 실패는 이 task 이전부터 재현되며, 이 task diff가 해당 service/parser를 변경하지 않는다. 별도 sentiment task에서 다룬다.
 
 ## Deferred
 
