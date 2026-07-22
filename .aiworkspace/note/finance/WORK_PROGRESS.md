@@ -10,6 +10,13 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-22 - Today 미국 정규장 상태 표시 완료
+
+- Today hero 아래에 미국 정규장 상태, 뉴욕·한국 현재 시각, ET/KST 개장·마감 시각, 다음 전환 countdown을 추가했다. 프리마켓·애프터마켓은 제외했다.
+- official 휴장·조기폐장 DB row를 Python이 DST-safe UTC schedule로 만들고 React는 1초 local timer로만 표시를 갱신한다.
+- Python 48개, React 10개/typecheck/build와 desktop·420px actual QA를 통과했으며 09:30 ET에서 `개장 전 → 장 진행 중` 자동 전환을 확인했다. calendar source 비정상은 `일정 자료 부족`으로 fail-closed한다.
+- 전체 roadmap `3/3차` 완료. 상세: `tasks/active/today-us-market-session-status-v1-20260722/STATUS.md`.
+
 ### 2026-07-22 - Portfolio Monitoring 최초 설정 정정 입력 rerun 제거
 
 - 날짜·수량 입력은 React local state로 유지하고, 명시적 `변경값 확인`에서만 DB 적용일·종가·최초 투자금을 조회하도록 분리했다.

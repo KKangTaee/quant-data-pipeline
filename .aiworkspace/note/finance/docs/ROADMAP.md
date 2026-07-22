@@ -23,6 +23,13 @@ Today Home React Workbench V2도 전체 `4/4차` 구현과 closeout을 완료했
 - 경계/QA: 기존 상세 탭과 계산·DB·수집은 변경하지 않았다. Today 26개와 연결 surface 114개 Python 회귀, React 5개/typecheck/build, 1280·760·420 overflow/console/action Browser QA를 통과했다.
 - 상세: `tasks/active/today-home-react-workbench-v2-20260722/STATUS.md`.
 
+Today U.S. Market Session Status V1도 전체 `3/3차` 구현과 closeout을 완료했다.
+
+- 화면: Today hero 아래에서 미국 정규장의 `개장 전 / 장 진행 중 / 정규장 마감 / 휴장 / 일정 자료 부족`, 뉴욕·한국 현재 시각, ET/KST 개장·마감, 다음 개장 또는 마감까지 countdown을 확인한다.
+- 일정 계약: 09:30–16:00 ET와 official `MARKET_HOLIDAY`·`EARLY_CLOSE` DB row를 Python이 DST-safe UTC schedule로 만들고 React는 휴일 규칙 없이 받은 schedule만 1초 단위로 해석한다.
+- 경계/QA: 프리마켓·애프터마켓, provider fetch, 시장 방향·evidence 점수, 긴급 거래정지는 포함하지 않는다. calendar source 하나라도 비정상이면 `일정 자료 부족`으로 fail-closed한다. Python 48개, React 10개/typecheck/build와 desktop·420px actual QA를 통과했고 실제 09:30 ET 자동 전환을 확인했다.
+- 상세: `tasks/active/today-us-market-session-status-v1-20260722/STATUS.md`.
+
 Portfolio Monitoring React Command Center V1은 전체 `6/6차` 구현과 closeout을 완료했다.
 
 - 목적: legacy Streamlit dashboard를 Overview/시장맥락 계열 React one-shell로 전환하고, DB-backed group/item lifecycle, 공통 가치곡선, 근거형 진단, macro risk observation과 calibration gate를 제공한다.

@@ -1,5 +1,7 @@
 # Today U.S. Market Session Status V1 Implementation Plan
 
+**Execution Result:** Complete on 2026-07-22. Detailed verification evidence is recorded in `RUNS.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a DST-safe U.S. regular-market status strip to Today showing open state, New York and Korea clocks, both session-hour representations, and the countdown to the next open or close.

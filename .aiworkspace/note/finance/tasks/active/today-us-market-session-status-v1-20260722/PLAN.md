@@ -1,7 +1,7 @@
 # Today U.S. Market Session Status V1 Plan
 
-Status: Design Approved
-Roadmap: 0/3 implementation stages complete
+Status: Complete
+Roadmap: 3/3 implementation stages complete
 Last Updated: 2026-07-22
 
 ## 이걸 하는 이유?
@@ -38,3 +38,8 @@ Today 상단에서 미국 정규장의 `개장 전 / 장 진행 중 / 정규장 
 ## Stop Condition
 
 대표 DST/주말/휴일/조기폐장 시나리오가 자동 테스트를 통과하고, actual Today 화면에서 양쪽 시각과 상태·일정·카운트다운이 반응형으로 표시되며 기존 Today 판단·포트폴리오·navigation 계약이 회귀하지 않으면 완료한다.
+
+## Result
+
+- `1/3차~3/3차` 구현·자동 회귀·actual responsive Browser QA를 완료했다.
+- 09:30 ET 실제 경계 전환과 1초 countdown 갱신을 확인했다.

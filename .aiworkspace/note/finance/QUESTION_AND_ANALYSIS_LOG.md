@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-22 - Today의 시장 시간은 미국 정규장만 표시한다
+
+- User request: Today 화면에서 미국장의 현재 상태와 한국·뉴욕 개장·마감 시각, 남은 시간을 확인하되 프리마켓·애프터마켓은 제외하도록 요청함.
+- Interpreted goal: 시장 판단 근거를 읽기 전에 지금이 정규장 전·진행 중·마감 후·휴장인지 한눈에 파악한다.
+- Analysis result: official 휴장·조기폐장 DB 일정은 Python이 DST-safe UTC schedule로 만들고, React는 받은 일정과 local one-second timer로 양쪽 시각·countdown만 갱신하는 것이 기존 DB-only 경계를 보존한다.
+- Follow-up: 전체 `3/3차` 구현·회귀·desktop/420px actual QA를 완료했고 실제 09:30 ET 자동 상태 전환을 확인했다. 긴급 휴장·거래정지는 V1 범위 밖이다.
+
 ### 2026-07-22 - 최초 설정 정정의 입력과 DB 미리보기는 분리한다
 
 - User request: 최초 설정 정정에서 시작일을 바꾸면 전체 화면이 다시 실행되는 느낌으로 달력의 월이 초기화되어 날짜를 바꿀 수 없다고 보고함.
