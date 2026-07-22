@@ -1,6 +1,6 @@
 # Today Contributor Performance Cards V1 Design
 
-Status: Approved
+Status: Implemented and Verified
 Last Updated: 2026-07-22
 
 ## Problem
@@ -99,3 +99,10 @@ DB·ingestion·provider·position event 계산·그룹 curve는 변경하지 않
 - 최대 4개만 보여 전체 종목 비교는 못 하지만 Today의 scan 속도를 보존한다.
 - 정확한 flow-adjusted return을 사용하므로 단순 평가손익률과 값이 다를 수 있다. label과 footer에서 계산 의미를 밝힌다.
 - shared item row가 additive하게 확장되지만 Portfolio Monitoring UI를 바꾸지 않아 영향 범위를 제한한다.
+
+## Implemented Result
+
+- Portfolio Monitoring item row는 마지막 유효 `flow_adjusted_index - 1`을 `total_return`으로 투영하고, 값이 없으면 임의의 단순 수익률을 합성하지 않는다.
+- Today는 `contribution_value`로 상위 양수 2개·하위 음수 2개를 고르고 `total_return`과 함께 JSON-safe하게 전달한다. `value`는 Python compatibility alias로만 남는다.
+- React primary와 Python fallback은 `종목 누적 수익률`과 `포트폴리오 누적 기여`를 독립 label/tone으로 표시하고 동일한 기준일 footer를 사용한다.
+- root `/` actual QA에서 1280·760의 카드 2열, 760의 contributor/우선 확인 세로 적층, 420의 카드 1열과 overflow/clipping/console clean 상태를 확인했다.

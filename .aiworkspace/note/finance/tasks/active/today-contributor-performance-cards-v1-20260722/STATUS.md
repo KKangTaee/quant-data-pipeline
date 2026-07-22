@@ -1,19 +1,27 @@
 # Today Contributor Performance Cards V1 Status
 
-Status: Implementation Plan Ready
-Roadmap: 1/4 complete
+Status: Complete
+Roadmap: 4/4 complete
 Last Updated: 2026-07-22
 
 ## Completed
 
-- 현재 `$` 숫자가 종목 수익률이 아니라 포트폴리오 손익 기여금임을 확인했다.
-- Today가 양수 상위 2개와 음수 하위 2개만 projection하는 계약을 확인했다.
-- item lane의 `flow_adjusted_index`로 현금흐름 조정 종목 누적 수익률을 제공할 수 있음을 확인했다.
-- 사용자 승인 방향을 written design으로 정리했다.
-- 사용자 승인 후 TDD implementation plan과 네 개의 독립 검토 단위를 확정했다.
+- `app/services/portfolio_monitoring/read_model.py` item row에 flow-adjusted `total_return`을 additive하게 추가했다.
+- `app/services/today.py` contributor projection을 `contribution_value` / `total_return`으로 명시하고 기존 `value` alias 호환을 유지했다.
+- React primary와 Python fallback을 최대 4개의 compact performance card로 교체하고 독립 tone, 자료 부족, 기준일 footer를 구현했다.
+- Python `64 passed, 3 warnings, 2 subtests passed`, React `5 passed`, typecheck/build, py_compile, diff check를 fresh 실행으로 통과했다.
+- root `/`의 actual Browser QA에서 1280·760 2열, 760 outer stack, 420 1열, horizontal overflow 0, clipping 0, console error 0을 확인했다.
+- 전체 roadmap `4/4차`를 완료했고 DB·ingestion·provider·registry·saved·run-history·Portfolio Monitoring UI는 변경하지 않았다.
 
-## Next
+## Browser Evidence
 
-- 실행 방식 선택 후 2/4차 Python 성과 계약 구현
-- 3/4차 React/fallback 카드 구현
-- 4/4차 Browser QA와 문서 정렬
+- Server: `.venv/bin/streamlit run app/web/streamlit_app.py --server.port 8517 --server.headless true`
+- URL: `http://localhost:8517/`
+- Actual cards: AMD `+357.97% / $11,915`, RKLB `+166.56% / $4,319`, TEM `-21.46% / -$401`, SOXX `-7.84% / -$282`
+- Footer: `종목 수익률은 입출금 영향을 조정한 누적 성과 · 기준 2026-07-21`
+- Screenshot: `/Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev/today-contributor-performance-cards-v1-browser-qa.png` (generated, commit 제외)
+
+## Handoff
+
+- 승인 범위의 남은 차수는 없다.
+- 이후 Today contributor 변경은 `NOTES.md`의 field contract와 `RUNS.md`의 regression/viewport 기준에서 이어서 확인한다.

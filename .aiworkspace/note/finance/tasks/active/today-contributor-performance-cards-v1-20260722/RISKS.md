@@ -1,6 +1,13 @@
 # Today Contributor Performance Cards V1 Risks
 
-- contribution과 item return은 다른 단위이며 부호가 항상 같다고 가정하면 안 된다.
-- 추가매수·일부매도 종목에서 단순 current/initial 계산은 잘못된 수익률을 만든다.
-- shared Portfolio Monitoring item row 확장은 additive여야 하며 기존 화면/command 계약을 바꾸면 안 된다.
-- 최대 4개 selection임을 화면에서 밝히지 않으면 전체 종목처럼 오해할 수 있다.
+## Resolved
+
+- contribution과 item return의 단위·tone을 독립 field/label로 분리했다.
+- 추가매수·일부매도 종목은 마지막 유효 `flow_adjusted_index - 1`만 사용하고 단순 current/initial fallback을 금지했다.
+- shared Portfolio Monitoring item row는 additive field만 추가했으며 focused page regression을 통과했다.
+- `기여 상위 2 · 하위 2` scope note와 기준일 footer를 React/fallback에 함께 표시했다.
+- 1280/760/420 actual Browser QA에서 responsive layout, overflow, clipping, console 위험을 닫았다.
+
+## Remaining Gaps
+
+- 승인된 V1 범위의 미해결 위험은 없다. 전체 종목 탐색과 Portfolio Monitoring 본 화면 개편은 의도적으로 out of scope다.
