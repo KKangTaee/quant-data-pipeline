@@ -184,7 +184,7 @@ class ReferenceCenterCatalogContractTests(unittest.TestCase):
         source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")
         reference_page_source = Path("app/web/reference_center.py").read_text(encoding="utf-8")
 
-        self.assertIn('title="Reference"', source)
+        self.assertIn('title="Reference Center"', source)
         self.assertIn('url_path="reference"', source)
         self.assertNotIn('title="Guides"', source)
         self.assertNotIn('url_path="guides"', source)

@@ -34685,13 +34685,14 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(portfolio["virtual_capital_total"], 30000.0)
         self.assertTrue(portfolio["strategy_rows"][0]["slot_input_complete"])
 
-    def test_operations_navigation_contains_only_portfolio_monitoring(self) -> None:
+    def test_portfolio_navigation_contains_lab_and_monitoring_only(self) -> None:
         source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")
-        operations_block = source.split('"Operations": [', 1)[1].split("],", 1)[0]
+        portfolio_block = source.split('"Portfolio": [', 1)[1].split("],", 1)[0]
 
-        self.assertIn("selected_portfolio_dashboard_page", operations_block)
-        self.assertNotIn("operations_overview_page", operations_block)
-        self.assertNotIn("ops_review_page", operations_block)
+        self.assertIn("backtest_page", portfolio_block)
+        self.assertIn("selected_portfolio_dashboard_page", portfolio_block)
+        self.assertNotIn("operations_overview_page", portfolio_block)
+        self.assertNotIn("ops_review_page", portfolio_block)
         self.assertNotIn("app.web.operations_overview", source)
         self.assertNotIn("app.web.ops_review", source)
 

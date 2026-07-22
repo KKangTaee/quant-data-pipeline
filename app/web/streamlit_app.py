@@ -27,6 +27,7 @@ from app.web.reference_center import (
     configure_reference_center_page_targets,
     render_reference_center_page,
 )
+from app.web.today_page import configure_today_page_targets, render_today_page
 from app.workspace_paths import PROJECT_ROOT
 
 
@@ -159,15 +160,37 @@ def main() -> None:
     promote_pending_job()
     apply_pending_ingestion_prefill()
 
-    overview_page = st.Page(_render_overview_page, title="Overview", icon="🏠", default=True, url_path="overview")
+    today_page = st.Page(
+        render_today_page,
+        title="Today",
+        icon="☀️",
+        default=True,
+        url_path="today",
+    )
+    overview_page = st.Page(
+        _render_overview_page,
+        title="Market Research",
+        icon="🔎",
+        url_path="overview",
+    )
     institutional_portfolios_page = st.Page(
         _render_institutional_portfolios_page,
-        title="Institutional Portfolios",
+        title="Institutional Holdings",
         icon="🏛️",
         url_path="institutional-portfolios",
     )
-    ingestion_page = st.Page(_render_ingestion_page, title="Ingestion", icon="🛠️", url_path="ingestion")
-    backtest_page = st.Page(_render_backtest_page, title="Backtest", icon="📈", url_path="backtest")
+    ingestion_page = st.Page(
+        _render_ingestion_page,
+        title="Data Operations",
+        icon="🛠️",
+        url_path="ingestion",
+    )
+    backtest_page = st.Page(
+        _render_backtest_page,
+        title="Portfolio Lab",
+        icon="📈",
+        url_path="backtest",
+    )
 
     selected_portfolio_dashboard_page = st.Page(
         _render_selected_portfolio_dashboard_page,
@@ -177,9 +200,16 @@ def main() -> None:
     )
     reference_page = st.Page(
         render_reference_center_page,
-        title="Reference",
+        title="Reference Center",
         icon="📚",
         url_path="reference",
+    )
+    configure_today_page_targets(
+        {
+            "market_research": overview_page,
+            "stock_research": overview_page,
+            "portfolio_monitoring": selected_portfolio_dashboard_page,
+        }
     )
     configure_reference_center_page_targets(
         {
@@ -197,16 +227,19 @@ def main() -> None:
     )
     navigation = st.navigation(
         {
-            "Workspace": [
+            "Research": [
+                today_page,
                 overview_page,
                 institutional_portfolios_page,
-                ingestion_page,
-                backtest_page,
             ],
-            "Operations": [
+            "Portfolio": [
+                backtest_page,
                 selected_portfolio_dashboard_page,
             ],
-            "Reference": [
+            "Data": [
+                ingestion_page,
+            ],
+            "Help": [
                 reference_page,
             ],
         },

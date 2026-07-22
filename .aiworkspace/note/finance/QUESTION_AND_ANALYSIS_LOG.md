@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-22 - 최초 진입은 Today가 소유하고 상세 화면은 목적별로 보존한다
+
+- User request: 초기 prototype의 `Workspace / Operations / Reference` 분류를 다시 진단하고, 최초 진입에서 오늘의 시장 판단과 대표 포트폴리오 하나를 함께 보는 B안으로 구현해 달라고 요청함.
+- Interpreted goal: 기존 각 탭을 전면 재개편하지 않고 첫 질문과 다음 행동을 명확히 하며, Market Context와 같은 design language로 실제 사용할 수 있는 home을 만든다.
+- Analysis result: browser root `/`를 Today가 소유하고 기존 DB-backed read model을 compact projection으로 읽는 것이 적합하다. top navigation은 `Research / Portfolio / Data / Help`로 나누되 기존 상세 URL과 renderer는 유지한다.
+- Follow-up: 전체 `4/4차` 구현·자동 회귀·actual responsive Browser QA를 완료했다. Today는 provider fetch/write/투자 신호를 소유하지 않으며 부족 근거는 partial 상태로 남긴다.
+
 ### 2026-07-22 - Portfolio Monitoring 가격 최신화는 선택 그룹 direct security만 명시적으로 수집한다
 
 - User request: 종합 가치곡선 기준일이 구성 종목별 일봉 최신일 차이로 7/16에 머무는 문제를 검토하고, 선택 포트폴리오 종목 데이터를 최신화하는 버튼을 구현하도록 요청함.

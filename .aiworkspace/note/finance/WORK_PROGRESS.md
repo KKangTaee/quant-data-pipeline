@@ -10,6 +10,13 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-22 - Today 기본 진입과 목적형 navigation 완료
+
+- browser root `/`에 저장 시장 근거와 default 대표 포트폴리오를 한 흐름으로 읽는 Today B안을 추가했다.
+- top navigation은 `Research / Portfolio / Data / Help`로 재분류했고 기존 상세 URL과 각 renderer는 보존했다.
+- actual `3/5 READY · 5/5 available` partial payload를 desktop·760px·420px에서 확인했으며 overflow 0, clean console, owner link와 기존 7개 목적지 연속성을 통과했다.
+- 상세: `tasks/active/today-home-purpose-navigation-v1-20260722/STATUS.md`.
+
 ### 2026-07-22 - Portfolio Monitoring 보유 종목 가격 최신화 완료
 
 - 선택 그룹의 활성 direct stock·ETF를 최근 완료 NYSE 거래일까지 명시적으로 갱신하고, 수집 후 DB freshness를 재검증해 공통 기준일과 종합 가치곡선을 다시 계산한다.

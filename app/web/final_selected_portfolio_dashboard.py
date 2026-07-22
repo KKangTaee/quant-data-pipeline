@@ -339,6 +339,7 @@ def _format_signed_money(value: Any, *, default: str = "-") -> str:
 class PortfolioMonitoringPageServices:
     session_state: MutableMapping[str, Any]
     build_workspace: Callable[..., dict[str, Any]]
+    build_default_workspace: Callable[[], dict[str, Any]]
     render_workbench: Callable[[dict[str, Any]], dict[str, Any] | None]
     render_fallback: Callable[[dict[str, Any], str | None], None]
     rerun: Callable[[], None]
@@ -722,6 +723,21 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
             "macro_context": macro_context,
             "macro_observations": macro_observations,
         }
+
+    def build_default_workspace() -> dict[str, Any]:
+        try:
+            return _build_default_portfolio_monitoring_workspace(
+                repository,
+                history_repository=history_repository,
+                lane_loader=lane_loader,
+                analysis_builder=build_analysis,
+            )
+        except Exception as exc:
+            return _fallback_monitoring_workspace(
+                catalog_query="",
+                catalog_source_type=SourceType.DIRECT_SECURITY.value,
+                storage_error=str(exc),
+            )
 
     def build_workspace(
         *,
@@ -1133,6 +1149,7 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
     return PortfolioMonitoringPageServices(
         session_state=session_state,
         build_workspace=build_workspace,
+        build_default_workspace=build_default_workspace,
         render_workbench=render_portfolio_monitoring_workbench,
         render_fallback=_render_portfolio_monitoring_fallback,
         rerun=st.rerun,
@@ -4538,6 +4555,54 @@ def _command_projection(result: CommandResult | dict[str, Any]) -> dict[str, Any
         "target_id": result.target_id,
         "replayed": result.replayed,
     }
+
+
+def _build_default_portfolio_monitoring_workspace(
+    repository: Any,
+    *,
+    history_repository: Any | None = None,
+    lane_loader: Callable[[Any], Any] | None = None,
+    analysis_builder: Callable[..., Any] | None = None,
+    generated_at: datetime | None = None,
+) -> dict[str, Any]:
+    """Build the existing default group without creating or selecting a group."""
+
+    groups = repository.list_groups(include_deleted=False)
+    default_group = next((group for group in groups if group.is_default), None)
+    history_rows: list[dict[str, Any]] = []
+    calibration_artifact = None
+    if default_group is not None and history_repository is not None:
+        history_rows = load_diagnosis_history(
+            default_group.portfolio_group_id,
+            date.today() - timedelta(days=730),
+            date.today(),
+            repository=history_repository,
+        )
+        calibration_artifact = history_repository.load_latest_calibration_artifact(
+            config_fingerprint=build_monitoring_config_fingerprint(),
+            policy_version=DIAGNOSIS_POLICY_VERSION,
+        )
+    return dict(
+        build_portfolio_monitoring_workspace(
+            repository,
+            active_group_id=None,
+            selected_item_id=None,
+            catalog_query="",
+            generated_at=generated_at,
+            lane_loader=lane_loader,
+            analysis_builder=analysis_builder,
+            risk_calibration_artifact=calibration_artifact,
+            diagnosis_history=history_rows,
+            default_only=True,
+        )
+    )
+
+
+def load_default_portfolio_monitoring_workspace_for_today() -> dict[str, Any]:
+    """Load one deterministic default portfolio through a read-only path."""
+
+    runtime = _default_portfolio_monitoring_services()
+    return runtime.build_default_workspace()
 
 
 def load_portfolio_monitoring_workspace_for_operations() -> dict[str, Any]:

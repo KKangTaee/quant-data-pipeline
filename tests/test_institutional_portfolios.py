@@ -1748,21 +1748,21 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
             )
         )
 
-    def test_workspace_navigation_adds_institutional_portfolios_without_operations(self) -> None:
+    def test_research_navigation_adds_institutional_holdings_without_portfolio_group(self) -> None:
         source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")
 
         self.assertIn("render_institutional_portfolios_page", source)
-        self.assertIn('title="Institutional Portfolios"', source)
+        self.assertIn('title="Institutional Holdings"', source)
 
-        workspace_match = re.search(r'"Workspace": \[(.*?)\],\s*"Operations"', source, re.DOTALL)
-        self.assertIsNotNone(workspace_match)
-        workspace_block = workspace_match.group(1)
-        self.assertIn("institutional_portfolios_page", workspace_block)
-        self.assertLess(workspace_block.index("institutional_portfolios_page"), workspace_block.index("backtest_page"))
+        research_match = re.search(r'"Research": \[(.*?)\],\s*"Portfolio"', source, re.DOTALL)
+        self.assertIsNotNone(research_match)
+        research_block = research_match.group(1)
+        self.assertIn("institutional_portfolios_page", research_block)
+        self.assertLess(research_block.index("overview_page"), research_block.index("institutional_portfolios_page"))
 
-        operations_match = re.search(r'"Operations": \[(.*?)\],\s*"Reference"', source, re.DOTALL)
-        self.assertIsNotNone(operations_match)
-        self.assertNotIn("institutional_portfolios_page", operations_match.group(1))
+        portfolio_match = re.search(r'"Portfolio": \[(.*?)\],\s*"Data"', source, re.DOTALL)
+        self.assertIsNotNone(portfolio_match)
+        self.assertNotIn("institutional_portfolios_page", portfolio_match.group(1))
 
     def test_ingestion_registry_exposes_sec_13f_dataset_job(self) -> None:
         from app.web.ingestion.guides import JOB_GUIDE, PROGRESS_ENABLED_ACTIONS

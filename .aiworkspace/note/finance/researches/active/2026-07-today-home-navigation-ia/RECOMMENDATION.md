@@ -1,6 +1,6 @@
 # Today Home And Navigation IA Recommendation
 
-Status: Design Approved; Awaiting Written-Spec Review
+Status: Implemented; Follow-ups Deferred
 Last Updated: 2026-07-22
 
 ## Recommended Direction
@@ -13,8 +13,8 @@ Finance Console의 새 기본 진입점으로 `Today`를 추가한다.
 
 ## Decision Scope
 
-- Immediate next build: 신규 `Today` 기본 화면, 목적 중심 상위 navigation, 기존 화면으로 이동하는 CTA와 deep-link compatibility.
-- Needs human approval before execution: 이 문서의 written-spec review와 후속 implementation plan 승인.
+- Implemented: 신규 `Today` 기본 화면, 목적 중심 상위 navigation, 기존 화면으로 이동하는 CTA와 URL compatibility.
+- Implementation record: `.aiworkspace/note/finance/tasks/active/today-home-purpose-navigation-v1-20260722/`.
 - Longer roadmap option: Overview를 `Market Intelligence / Equity Research`로 실제 분리.
 - Not approved / parking lot: 기존 탭 내부 전면 개편, Backtest stage 독립 페이지화, live trading·broker·auto rebalance, 운영 진단 dashboard.
 
@@ -190,7 +190,7 @@ MySQL monitoring_portfolio_group(is_default)
 
 ## Decision Checkpoint
 
-사용자가 이 written spec을 검토하고 승인하면 다음 단계는 `superpowers:writing-plans`로 implementation plan을 작성하는 것이다. 현재 승인만으로 코드 구현을 시작하지 않는다.
+사용자 승인 뒤 written spec과 implementation plan을 거쳐 전체 `4/4차` 구현·actual Browser QA를 완료했다. 다음 선택지는 실제 사용 후 Overview의 Market / Equity Research 분리가 여전히 필요한지 재평가하는 것이다.
 
 ## Evidence Summary
 
@@ -203,7 +203,7 @@ MySQL monitoring_portfolio_group(is_default)
 
 ## Risks And Unknowns
 
-- 기존 서비스 output이 Today용 compact projection에 필요한 모든 freshness/as-of 필드를 같은 형식으로 제공하는지 implementation intake에서 재확인해야 한다.
-- Today가 모든 service를 직렬로 읽으면 initial load latency가 늘 수 있으므로 독립 loader call과 cache boundary를 측정해야 한다.
+- source별 freshness/as-of 형식 차이는 compact projection에서 정규화했고 future event 날짜는 header as-of에서 제외했다.
+- Today는 기존 cached loader를 직렬로 읽는다. actual Browser에서 완료를 확인했지만 별도 latency budget과 장기 성능 측정은 후속이다.
 - default group을 사용자가 변경하는 현재 command가 없으므로 대표 변경 UX가 필요하면 기존 DB field를 안전하게 전환하는 command/test가 필요하다.
 - 시장 브리프 문구가 지나치게 강하면 context를 매매 신호로 오해할 수 있으므로 상태와 근거를 분리해야 한다.

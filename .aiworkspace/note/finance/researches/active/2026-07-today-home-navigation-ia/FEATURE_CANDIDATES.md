@@ -1,6 +1,6 @@
 # Feature Candidates
 
-Status: Design Approved; Implementation Not Started
+Status: Selected Candidate Implemented
 Last Updated: 2026-07-22
 
 ## Summary
@@ -14,7 +14,7 @@ Last Updated: 2026-07-22
 
 | Candidate | Bucket | Impact | Effort | Risk | Confidence | Strategic Fit | Owner Area |
 |---|---|---:|---:|---:|---:|---:|---|
-| Today Home + Purpose-Based Navigation | Now | 5 | 3 | 2 | 5 | 5 | Finance app shell / Overview read models / Portfolio Monitoring read model |
+| Today Home + Purpose-Based Navigation | Implemented | 5 | 3 | 2 | 5 | 5 | Finance app shell / Overview read models / Portfolio Monitoring read model |
 | Overview를 Market / Equity Research로 실제 분리 | Next | 4 | 4 | 3 | 4 | 4 | Overview UI / routing |
 | 전체 workflow를 Build / Validate / Decide / Monitor 독립 페이지로 분리 | Later | 3 | 5 | 5 | 3 | 3 | Backtest routing / app shell |
 | First Screen Operations Diagnostics | Parking Lot | 1 | 3 | 3 | 5 | 1 | Ingestion / internal operations |

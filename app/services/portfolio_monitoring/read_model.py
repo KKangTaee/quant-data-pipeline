@@ -636,6 +636,7 @@ def build_portfolio_monitoring_workspace(
     analysis_builder: AnalysisBuilder | None = None,
     risk_calibration_artifact: Mapping[str, Any] | Any | None = None,
     diagnosis_history: Sequence[Mapping[str, Any]] | None = None,
+    default_only: bool = False,
 ) -> dict[str, object]:
     """Build the versioned, read-only projection consumed by the React workbench."""
 
@@ -644,12 +645,15 @@ def build_portfolio_monitoring_workspace(
         group.portfolio_group_id: repository.list_items(group.portfolio_group_id)
         for group in groups
     }
-    selected_group = next(
-        (group for group in groups if group.portfolio_group_id == active_group_id),
-        None,
-    )
-    if selected_group is None:
-        selected_group = next((group for group in groups if group.is_default), groups[0] if groups else None)
+    if default_only:
+        selected_group = next((group for group in groups if group.is_default), None)
+    else:
+        selected_group = next(
+            (group for group in groups if group.portfolio_group_id == active_group_id),
+            None,
+        )
+        if selected_group is None:
+            selected_group = next((group for group in groups if group.is_default), groups[0] if groups else None)
     active_result: GroupValueResult | None = None
     selected_items: list[MonitoringItemRecord] = []
     lane_values: dict[str, ItemValueLane | BaseException] = {}

@@ -1,22 +1,26 @@
 # Finance Flows
 
 Status: Active
-Last Verified: 2026-07-19
+Last Verified: 2026-07-22
 
 ## Main User Flow
 
 ```text
-Workspace > Ingestion
-  -> Workspace > Institutional Portfolios
-  -> Workspace > Overview
-  -> Backtest > Backtest Analysis
-  -> Backtest > Practical Validation
-  -> Backtest > Final Review
-  -> Operations > Portfolio Monitoring
+Finance Console `/` 최초 진입
+  -> Research > Today
+     -> 오늘의 시장 판단과 저장 근거
+     -> 대표 포트폴리오 성과·누적 기여·주의 항목
+     -> Research > Market Research 또는 Portfolio > Portfolio Monitoring
+
+Research: Today / Market Research / Institutional Holdings
+Portfolio: Portfolio Lab / Portfolio Monitoring
+Data: Data Operations
+Help: Reference Center
 ```
 
-`Workspace > Overview`는 Backtest의 필수 선행 단계가 아니라 시장 context / data health 확인 표면이다.
-`Workspace > Institutional Portfolios`도 Backtest의 필수 선행 단계가 아니라 delayed SEC 13F institutional holdings를 탐색하는 별도 research surface다.
+Streamlit의 `default=True` page는 등록된 `url_path="today"`와 무관하게 browser root `/`를 소유한다. 따라서 Today의 canonical 최초 진입 주소는 `/`이며 기존 상세 URL은 유지한다.
+`Research > Market Research`는 Portfolio Lab의 필수 선행 단계가 아니라 시장 context / data health 확인 표면이다.
+`Research > Institutional Holdings`도 Portfolio Lab의 필수 선행 단계가 아니라 delayed SEC 13F institutional holdings를 탐색하는 별도 research surface다.
 Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation gate, trade signal, monitoring signal을 만들지 않는다.
 현재 Overview primary tabs는 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events`다.
 `Market Context`는 S&P 500의 최근 60개월 후행 PER 상대 구간과 FOMC SEP 기반 EPS/SPX 시나리오를 두 React 그래프로 읽는다. 36개월은 민감도이며, actual As-Reported TTM EPS가 없으면 예상 지수 숫자를 표시하지 않는다.
@@ -26,7 +30,7 @@ Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation 
 
 ## Overview Futures Macro Flow
 
-`Workspace > Overview > Futures Macro`는 저장된 futures daily OHLCV를 읽어 오늘의 재가격화, 다중 기간 현재 패턴, 다음 5D / 20D 조건부 위험 체제를 한 흐름에서 확인하는 단기 매크로 레이더다. 장기 경제사이클, provider run 진단, 확정 예측, trading signal 화면이 아니다.
+`Research > Market Research > Futures Macro`는 저장된 futures daily OHLCV를 읽어 오늘의 재가격화, 다중 기간 현재 패턴, 다음 5D / 20D 조건부 위험 체제를 한 흐름에서 확인하는 단기 매크로 레이더다. 장기 경제사이클, provider run 진단, 확정 예측, trading signal 화면이 아니다.
 
 기본 화면의 정보 소유권은 다음처럼 유지한다.
 
@@ -48,7 +52,7 @@ Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation 
 ## Practical Validation Provider Flow
 
 ```text
-Workspace > Ingestion
+Data > Data Operations
   -> ETF provider source map discovery
   -> ETF operability / holdings / exposure snapshot
   -> FRED macro market-context snapshot
@@ -68,7 +72,7 @@ Workspace > Ingestion
 - Practical Validation의 `검증 결과 저장(기록용)`은 Final Review 후보 등록이 아니다. Final Review에는 Gate를 통과한 result만 표시한다.
 - Practical Validation의 최신 runtime replay 결과는 현재 세션에서 사용자가 직접 실행한 뒤에만 표시한다.
 - Final Review decision도 broker order나 auto rebalance가 아니다.
-- Operations > Portfolio Monitoring은 read-only monitoring surface이며 monitoring log 자동 저장, live approval, broker order, auto rebalance를 하지 않는다.
+- Portfolio > Portfolio Monitoring은 read-only monitoring surface이며 monitoring log 자동 저장, live approval, broker order, auto rebalance를 하지 않는다.
 - Overview의 Sentiment, Futures Macro, Why It Moved는 시장 배경 / 조사 단서이며 Practical Validation PASS / BLOCKER가 아니다.
 - 부족 provider data는 Practical Validation Provider Gaps에서 확인하고, 수집 가능한 항목은 ingestion job을 통해 보강한다.
 - Ingestion의 current listing snapshot, SEC identity cross-check, computed snapshot lifecycle row는 survivorship PASS 근거가 아니다. Form 25 delisting row도 delisting evidence이며, Form 25 부재를 active listing proof로 해석하지 않는다.

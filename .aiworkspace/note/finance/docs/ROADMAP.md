@@ -7,6 +7,14 @@ Last Verified: 2026-07-22
 
 현재 active phase는 없다.
 
+Today Home + Purpose Navigation V1은 전체 `4/4차` 구현과 closeout을 완료했다.
+
+- 완료 범위: Finance Console 최초 진입 root `/`에 `오늘의 시장 판단`을 두고, 저장된 Economic Cycle·S&P 500·Futures Macro·Sentiment·Events와 default Portfolio Monitoring group 하나를 `시장 결론 → 근거·일정 → 대표 포트폴리오 → 다음 확인` 순서로 읽는다.
+- 내비게이션: 기존 상세 URL과 내부 renderer는 유지하면서 top navigation을 `Research / Portfolio / Data / Help`로 재분류했다. Market Research, Institutional Holdings, Portfolio Lab, Portfolio Monitoring, Data Operations, Reference Center는 기존 화면으로 연결된다.
+- 경계: Today는 provider/FRED/SEC fetch, ingestion, registry/saved/monitoring write를 실행하지 않고 공식 적정가·확정 예측·매매 신호를 만들지 않는다. source가 부족하면 partial/unavailable 상태를 그대로 표시한다.
+- QA: actual DB 기준 `3/5 READY · 5/5 available` partial 상태와 default group `디폴트`를 desktop·760px·420px에서 확인했고, 가로 overflow 0, clean browser console, 세 owner link와 기존 7개 목적지의 렌더링 연속성을 확인했다.
+- 상세: `tasks/active/today-home-purpose-navigation-v1-20260722/STATUS.md`.
+
 Portfolio Monitoring React Command Center V1은 전체 `6/6차` 구현과 closeout을 완료했다.
 
 - 목적: legacy Streamlit dashboard를 Overview/시장맥락 계열 React one-shell로 전환하고, DB-backed group/item lifecycle, 공통 가치곡선, 근거형 진단, macro risk observation과 calibration gate를 제공한다.
