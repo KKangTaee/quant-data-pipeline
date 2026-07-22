@@ -4,6 +4,7 @@ import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-co
 import TodayPortfolioChart from "./TodayPortfolioChart";
 import {
   formatCountdown,
+  displayPortfolio,
   formatSessionHours,
   formatZonedClock,
   resolveMarketSession,
@@ -74,9 +75,9 @@ function TodayWorkbench({ args, width }: Props) {
   }
 
   const emit = (id: TodayEventId) => Streamlit.setComponentValue({ event: { id } });
-  const metrics = payload.portfolio.metrics;
-  const recentTone = (metrics.latest_observation_return ?? 0) < 0 ? "is-negative" : "is-positive";
-  const totalTone = (metrics.total_return ?? 0) < 0 ? "is-negative" : "is-positive";
+  const display = displayPortfolio(payload.portfolio);
+  const recentTone = (display.latestObservationReturn ?? 0) < 0 ? "is-negative" : "is-positive";
+  const totalTone = (display.totalReturn ?? 0) < 0 ? "is-negative" : "is-positive";
   const nextEvent = payload.market.next_event;
   const resolvedSession = resolveMarketSession(payload.market_session, nowMs);
   const phaseCopy = {
@@ -195,14 +196,15 @@ function TodayWorkbench({ args, width }: Props) {
           </div>
           <b className={`today-portfolio-status status-${payload.portfolio.status.toLowerCase()}`}>{payload.portfolio.status === "READY" ? "정상 추적" : "확인 필요"}</b>
         </header>
-        <div className="today-metrics">
-          <article><span>현재 평가액</span><strong>{moneyText(metrics.current_value)}</strong><small>{payload.portfolio.basis_date ?? "-"} 종가 기준</small></article>
-          <article><span>최근 거래일 수익률</span><strong className={recentTone}>{percentText(metrics.latest_observation_return)}</strong><small>{shortDate(metrics.return_from_date)} → {shortDate(metrics.return_to_date)}</small></article>
-          <article><span>누적 수익률</span><strong className={totalTone}>{percentText(metrics.total_return)}</strong><small>현금흐름 조정</small></article>
+        <div className="today-metrics" aria-live="polite">
+          <article><span>현재 평가액</span><strong>{moneyText(display.currentValue)}</strong><small>{display.badge}{display.asOfUtc ? ` · ${formatZonedClock(Date.parse(display.asOfUtc), "America/New_York")} ET` : ` · ${payload.portfolio.basis_date ?? "-"}`}</small></article>
+          <article><span>{display.latestReturnLabel}</span><strong className={recentTone}>{percentText(display.latestObservationReturn)}</strong><small>{shortDate(display.returnFromDate)} → {shortDate(display.returnToDate)}</small></article>
+          <article><span>누적 수익률</span><strong className={totalTone}>{percentText(display.totalReturn)}</strong><small>{display.coverageText ?? "현금흐름 조정"}</small></article>
         </div>
         <TodayPortfolioChart
           rows={payload.portfolio.curve}
           metadata={payload.portfolio.curve_metadata}
+          livePoint={display.livePoint}
           viewportWidth={width}
         />
         <div className="today-portfolio-detail-grid">
@@ -212,8 +214,8 @@ function TodayWorkbench({ args, width }: Props) {
               <small>기여 상위 2 · 하위 2</small>
             </header>
             <div className="today-contributor-grid">
-              {payload.portfolio.contributors.length
-                ? payload.portfolio.contributors.map((row) => {
+              {display.contributors.length
+                ? display.contributors.map((row) => {
                   const returnTone = row.total_return == null
                     ? "is-unavailable"
                     : row.total_return < 0 ? "is-negative" : "is-positive";
@@ -244,7 +246,7 @@ function TodayWorkbench({ args, width }: Props) {
                 : <small>기여 계산 자료가 없습니다.</small>}
             </div>
             <small className="today-contributor-note">
-              종목 수익률은 입출금 영향을 조정한 누적 성과 · 기준 {payload.portfolio.basis_date ?? "-"}
+              종목 수익률은 입출금 영향을 조정한 누적 성과 · {display.badge}
             </small>
           </section>
           <section>

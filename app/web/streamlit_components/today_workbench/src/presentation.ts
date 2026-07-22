@@ -3,7 +3,31 @@ import type {
   MarketSessionPayload,
   MarketSessionPhase,
   PortfolioCurveRow,
+  TodayPortfolio,
 } from "./types";
+
+export function displayPortfolio(portfolio: TodayPortfolio) {
+  const live = portfolio.live;
+  const usesLive = live.curve_point != null && live.metrics != null
+    && (live.status === "LIVE_READY" || live.status === "LIVE_PARTIAL");
+  const metrics = usesLive ? live.metrics! : portfolio.metrics;
+  const coverageText = live.status === "LIVE_PARTIAL" && live.coverage.expected > 0
+    ? `직접 종목 ${live.coverage.fresh}/${live.coverage.expected}개 장중 반영`
+    : null;
+  return {
+    currentValue: metrics.current_value,
+    latestObservationReturn: metrics.latest_observation_return,
+    totalReturn: metrics.total_return,
+    returnFromDate: metrics.return_from_date,
+    returnToDate: metrics.return_to_date,
+    contributors: usesLive ? live.contributors : portfolio.contributors,
+    livePoint: usesLive ? live.curve_point : null,
+    latestReturnLabel: usesLive ? "오늘 장중 수익률" : "최근 거래일 수익률",
+    badge: usesLive ? "장중 임시" : live.status === "EOD_WAITING" ? "종가 반영 대기" : "확정 종가",
+    coverageText,
+    asOfUtc: usesLive ? live.as_of_utc : null,
+  };
+}
 
 export type ChartPoint = PortfolioCurveRow & { timestamp: number };
 export type ChartDomain = { minTime: number; maxTime: number; low: number; high: number };

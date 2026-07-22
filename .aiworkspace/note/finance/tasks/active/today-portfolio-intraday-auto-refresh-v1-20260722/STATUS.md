@@ -1,7 +1,7 @@
 # Today Portfolio Intraday Auto Refresh V1 Status
 
-Status: 2/4 Complete
-Roadmap: 2/4 implementation stages complete
+Status: 3/4 Complete
+Roadmap: 3/4 implementation stages complete
 Last Updated: 2026-07-23
 
 ## Completed
@@ -28,8 +28,10 @@ Last Updated: 2026-07-23
 - fresh/partial/all-failed coverage, EOD close basis-date 조회, Modified Dietz 장중 수익률을 41개 회귀로 확인했다.
 - Task 6 `today_home_v4`의 allowlisted `portfolio.live` 계약을 추가했다.
 - Today heartbeat가 DB snapshot과 workspace EOD close만 읽어 live overlay를 연결하며 historical curve/metrics는 바꾸지 않는다.
+- Task 7 React가 live metrics/contributors를 선택하고 quote 시각·partial coverage·장중 임시 badge를 표시한다.
+- historical line과 별개인 dashed live segment와 hollow marker를 추가하고 stable payload update transition을 적용했다.
 
 ## Next
 
-- 3/4차 Task 7 React metrics와 dashed live point를 연결한다.
+- 4/4차 Task 8 장 마감 EOD handoff와 Task 9 통합 QA·문서 동기화를 진행한다.
 - 기존 AAII baseline 오류 2개는 사용자 승인에 따라 이번 Today scope와 분리한다.

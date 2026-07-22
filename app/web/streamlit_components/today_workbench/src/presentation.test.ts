@@ -5,6 +5,7 @@ import {
   buildDateTicks,
   buildPercentTicks,
   chartDomains,
+  displayPortfolio,
   formatCountdown,
   formatSessionHours,
   formatZonedClock,
@@ -12,6 +13,103 @@ import {
   resolveMarketSession,
 } from "./presentation";
 import * as presentation from "./presentation";
+import type { TodayPortfolio } from "./types";
+
+const eodPortfolio: TodayPortfolio = {
+  status: "READY",
+  name: "Core",
+  basis_date: "2026-07-21",
+  summary: "저장 종가",
+  metrics: {
+    current_value: 1500,
+    latest_observation_return: 0.02,
+    return_from_date: "2026-07-18",
+    return_to_date: "2026-07-21",
+    total_return: 0.10,
+  },
+  curve: [],
+  curve_metadata: {
+    interval: "daily",
+    price_basis: "stored_close",
+    aggregation: "none",
+    intraday: false,
+    observation_count: 0,
+    start_date: null,
+    end_date: null,
+  },
+  contributors: [],
+  review_items: [],
+  active_item_count: 2,
+  live: {
+    status: "INACTIVE",
+    label: "확정 종가",
+    as_of_utc: null,
+    trade_date: null,
+    coverage: { fresh: 0, expected: 0, fallback_symbols: [] },
+    metrics: null,
+    contributors: [],
+    curve_point: null,
+    message: "저장된 확정 종가 기준입니다.",
+  },
+};
+
+describe("Today live portfolio presentation", () => {
+  it("uses live values only when a live point exists", () => {
+    const result = displayPortfolio({
+      ...eodPortfolio,
+      live: {
+        ...eodPortfolio.live,
+        status: "LIVE_READY",
+        label: "장중 임시",
+        as_of_utc: "2026-07-22T14:00:00Z",
+        trade_date: "2026-07-22",
+        coverage: { fresh: 2, expected: 2, fallback_symbols: [] },
+        metrics: {
+          current_value: 1575,
+          latest_observation_return: 0.05,
+          return_from_date: "2026-07-21",
+          return_to_date: "2026-07-22",
+          total_return: 0.155,
+        },
+        curve_point: {
+          date: "2026-07-22T14:00:00Z",
+          timestamp_utc: "2026-07-22T14:00:00Z",
+          kind: "intraday",
+          unit_value: 1.155,
+          total_value: 1575,
+          cumulative_return: 0.155,
+        },
+      },
+    });
+
+    expect(result.currentValue).toBe(1575);
+    expect(result.latestReturnLabel).toBe("오늘 장중 수익률");
+    expect(result.badge).toBe("장중 임시");
+  });
+
+  it("keeps EOD values when all quotes fail", () => {
+    const result = displayPortfolio({
+      ...eodPortfolio,
+      live: { ...eodPortfolio.live, status: "LIVE_PARTIAL" },
+    });
+
+    expect(result.currentValue).toBe(1500);
+    expect(result.livePoint).toBeNull();
+  });
+
+  it("shows coverage for partial quotes", () => {
+    const result = displayPortfolio({
+      ...eodPortfolio,
+      live: {
+        ...eodPortfolio.live,
+        status: "LIVE_PARTIAL",
+        coverage: { fresh: 1, expected: 2, fallback_symbols: ["QQQ"] },
+      },
+    });
+
+    expect(result.coverageText).toBe("직접 종목 1/2개 장중 반영");
+  });
+});
 
 describe("Today contributor currency presentation", () => {
   it("keeps explicit positive and negative contribution signs", () => {

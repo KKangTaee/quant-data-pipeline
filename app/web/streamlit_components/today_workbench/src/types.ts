@@ -30,6 +30,55 @@ export type CurveMetadata = {
   end_date: string | null;
 };
 
+export type PortfolioMetrics = {
+  current_value: number | null;
+  latest_observation_return: number | null;
+  return_from_date: string | null;
+  return_to_date: string | null;
+  total_return: number | null;
+};
+
+export type PortfolioContributor = {
+  symbol: string;
+  contribution_value: number;
+  value?: number;
+  total_return: number | null;
+  tone: "positive" | "negative";
+};
+
+export type PortfolioLiveStatus = "INACTIVE" | "LIVE_READY" | "LIVE_PARTIAL" | "EOD_WAITING";
+
+export type PortfolioLivePoint = PortfolioCurveRow & {
+  timestamp_utc: string;
+  kind: "intraday";
+};
+
+export type PortfolioLive = {
+  status: PortfolioLiveStatus;
+  label: string;
+  as_of_utc: string | null;
+  trade_date: string | null;
+  coverage: { fresh: number; expected: number; fallback_symbols: string[] };
+  metrics: PortfolioMetrics | null;
+  contributors: PortfolioContributor[];
+  curve_point: PortfolioLivePoint | null;
+  message: string;
+};
+
+export type TodayPortfolio = {
+  status: string;
+  name: string;
+  basis_date: string | null;
+  summary: string;
+  metrics: PortfolioMetrics;
+  curve: PortfolioCurveRow[];
+  curve_metadata: CurveMetadata;
+  contributors: PortfolioContributor[];
+  review_items: Array<{ severity: string; meaning: string }>;
+  active_item_count: number;
+  live: PortfolioLive;
+};
+
 export type TodayHeader = {
   as_of_date: string | null;
   source_count: number;
@@ -77,7 +126,7 @@ export type MarketSessionPhase =
   | "STALE";
 
 export type TodayPayload = {
-  schema_version: "today_home_v3";
+  schema_version: "today_home_v4";
   header: TodayHeader;
   market: {
     status: string;
@@ -89,30 +138,7 @@ export type TodayPayload = {
     watch_items: string[];
   };
   market_session: MarketSessionPayload;
-  portfolio: {
-    status: string;
-    name: string;
-    basis_date: string | null;
-    summary: string;
-    metrics: {
-      current_value: number | null;
-      latest_observation_return: number | null;
-      return_from_date: string | null;
-      return_to_date: string | null;
-      total_return: number | null;
-    };
-    curve: PortfolioCurveRow[];
-    curve_metadata: CurveMetadata;
-    contributors: Array<{
-      symbol: string;
-      contribution_value: number;
-      value?: number;
-      total_return: number | null;
-      tone: "positive" | "negative";
-    }>;
-    review_items: Array<{ severity: string; meaning: string }>;
-    active_item_count: number;
-  };
+  portfolio: TodayPortfolio;
 };
 
 export type TodayEventId =

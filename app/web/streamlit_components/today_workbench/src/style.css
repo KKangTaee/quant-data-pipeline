@@ -151,6 +151,7 @@ button { font: inherit; }
 .today-metrics article { display: grid; gap: 5px; padding: 13px 14px; background: #fff; }
 .today-metrics span { color: #708293; font-size: 11px; }
 .today-metrics strong { color: #203a50; font-size: 15px; }
+.today-metrics strong { transition: color .22s ease, opacity .22s ease, transform .22s ease; }
 .today-metrics small { color: #82909b; font-size: 10px; }
 .today-metrics .is-positive,
 .today-contributor-section .is-positive { color: #1d6d5d; }
@@ -164,6 +165,7 @@ button { font: inherit; }
 .today-chart-chips { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
 .today-chart-chips b { padding: 5px 8px; border-radius: 999px; color: #315f78; background: #eaf2f6; font-size: 10px; white-space: nowrap; }
 .today-chart-chips b.is-limit { color: #725d3e; background: #fff2df; }
+.today-chart-chips b.is-live { color: #1d6d5d; background: #e7f4ef; }
 .today-chart-shell { min-width: 0; overflow: hidden; border: 1px solid #e1e8ed; border-radius: 15px; background: linear-gradient(180deg, #fff, #f8fbfc); }
 .today-chart-shell svg { display: block; width: 100%; min-height: 260px; }
 .today-chart-grid { stroke: #e8edf1; stroke-width: 1; stroke-dasharray: 3 5; vector-effect: non-scaling-stroke; }
@@ -172,6 +174,9 @@ button { font: inherit; }
 .today-axis-title { fill: #80909c; font-size: 11px; font-weight: 800; letter-spacing: .04em; }
 .today-chart-area { fill: url(#todayChartArea); }
 .today-chart-line { fill: none; stroke: #376f8b; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.today-chart-live path { fill: none; stroke: #2e8a73; stroke-width: 2.4; stroke-dasharray: 7 5; vector-effect: non-scaling-stroke; }
+.today-chart-live circle { fill: #fff; stroke: #2e8a73; stroke-width: 3; vector-effect: non-scaling-stroke; transition: transform .22s ease, opacity .22s ease; }
+.today-chart-live text { fill: #23705f; font-size: 10px; font-weight: 900; }
 .today-chart-point circle { fill: #fff; stroke: #376f8b; stroke-width: 2.4; opacity: 0; vector-effect: non-scaling-stroke; }
 .today-chart-point:focus circle { opacity: 1; }
 .today-chart-hit-area { fill: transparent; cursor: crosshair; touch-action: pan-y; }

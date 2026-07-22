@@ -56,3 +56,10 @@
 - RED: `portfolio_live` 인자와 `portfolio.live` 계약 부재로 focused 테스트 2개가 실패하는 것을 확인했다.
 - GREEN: `today_home_v4`, READY/INACTIVE allowlist, EOD curve 불변, provider diagnostics 비노출 테스트 통과.
 - 회귀: Today read-model/page/coordinator/session/navigation 49개 테스트 통과.
+
+## 2026-07-23 Task 7 — React Live Overlay
+
+- RED: live selector 부재로 Vitest 3개가 실패하는 것을 확인했다.
+- GREEN: live/EOD fallback/partial coverage presentation을 포함한 Vitest 13개 통과.
+- TypeScript typecheck와 Vite production build 통과, static bundle 재생성.
+- Python Today read-model/static component 계약 18개 통과.

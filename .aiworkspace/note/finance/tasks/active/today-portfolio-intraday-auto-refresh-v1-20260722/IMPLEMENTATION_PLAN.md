@@ -799,7 +799,7 @@ git commit -m "기능: Today 장중 포트폴리오 계약 연결"
 - Consumes: Task 6 `TodayPayload.portfolio.live`.
 - Produces: `displayPortfolio(payload.portfolio)` helper and optional chart `livePoint`; no Streamlit event changes.
 
-- [ ] **Step 1: Write failing TypeScript presentation tests**
+- [x] **Step 1: Write failing TypeScript presentation tests**
 
 Add tests:
 
@@ -823,7 +823,7 @@ it("shows coverage for partial quotes", () => {
 });
 ```
 
-- [ ] **Step 2: Run Vitest and confirm RED**
+- [x] **Step 2: Run Vitest and confirm RED**
 
 ```bash
 cd app/web/streamlit_components/today_workbench
@@ -832,7 +832,7 @@ npm test -- --run
 
 Expected: type/test failure because live types and `displayPortfolio` are missing.
 
-- [ ] **Step 3: Add exact live payload types and selector**
+- [x] **Step 3: Add exact live payload types and selector**
 
 ```typescript
 export type PortfolioLiveStatus = "INACTIVE" | "LIVE_READY" | "LIVE_PARTIAL" | "EOD_WAITING";
@@ -856,7 +856,7 @@ export type PortfolioLive = {
 
 Avoid a recursive `TodayPayload` alias by extracting `PortfolioMetrics` and `PortfolioContributor` named types first, then reference those in both historical and live contracts.
 
-- [ ] **Step 4: Render live values and semantic labels**
+- [x] **Step 4: Render live values and semantic labels**
 
 In `TodayWorkbench.tsx`, select values once:
 
@@ -873,7 +873,7 @@ Use `display.currentValue`, `display.latestObservationReturn`, `display.totalRet
 
 Add `aria-live="polite"` to the metric container and CSS transitions only on color/opacity/transform; do not introduce a loading overlay.
 
-- [ ] **Step 5: Draw one separate live segment**
+- [x] **Step 5: Draw one separate live segment**
 
 Extend chart props with `livePoint: PortfolioLivePoint | null`. Keep `rows` unchanged. Compute the EOD path from rows as before, then draw a separate path from the last EOD point to the projected live point:
 
@@ -889,7 +889,7 @@ Extend chart props with `livePoint: PortfolioLivePoint | null`. Keep `rows` unch
 
 The live point participates in chart domain calculation for visibility but not `metadata.observation_count`, EOD ticks, MDD, or CAGR. Tooltip copy for the live point is `장중 임시`; EOD tooltip remains `저장 종가`.
 
-- [ ] **Step 6: Run React tests, typecheck, and build**
+- [x] **Step 6: Run React tests, typecheck, and build**
 
 ```bash
 cd app/web/streamlit_components/today_workbench
@@ -900,7 +900,7 @@ npm run build
 
 Expected: all tests pass, TypeScript exits 0, and `component_static/index.html` plus hashed assets are regenerated.
 
-- [ ] **Step 7: Run Python static bundle contracts**
+- [x] **Step 7: Run Python static bundle contracts**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -910,7 +910,7 @@ Expected: all tests pass, TypeScript exits 0, and `component_static/index.html` 
 
 Expected: both tests pass with live semantics added and historical EOD wording preserved.
 
-- [ ] **Step 8: Commit Task 7**
+- [x] **Step 8: Commit Task 7**
 
 ```bash
 git add app/web/streamlit_components/today_workbench/src \

@@ -1,7 +1,7 @@
 # Today Portfolio Intraday Auto Refresh V1 Plan
 
-Status: 2/4 Complete
-Roadmap: 2/4 implementation stages complete
+Status: 3/4 Complete
+Roadmap: 3/4 implementation stages complete
 Last Updated: 2026-07-23
 
 ## 이걸 하는 이유?
