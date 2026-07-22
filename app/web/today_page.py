@@ -342,22 +342,78 @@ def _today_css() -> str:
 }
 .today-metric-value.is-positive { color: var(--ov-mi-color-positive); }
 .today-metric-value.is-negative { color: var(--ov-mi-color-danger); }
-.today-contributors {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.32rem;
+.today-contributor-section {
+  display: grid;
+  gap: 0.5rem;
   margin-top: 0.62rem;
 }
-.today-contributor {
-  padding: 0.22rem 0.46rem;
+.today-detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.62rem;
+}
+.today-contributor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.today-contributor-card {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+  padding: 0.68rem 0.75rem;
   border: 1px solid var(--ov-mi-border-faint);
-  border-radius: var(--ov-mi-radius-pill);
+  border-radius: var(--ov-mi-radius-card);
   background: var(--ov-mi-color-surface);
-  color: var(--ov-mi-color-text-subtle);
+}
+.today-contributor-symbol {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  overflow-wrap: anywhere;
+}
+.today-contributor-return-label {
+  color: var(--ov-mi-color-text-muted);
   font-size: var(--ov-mi-font-xs);
 }
-.today-contributor.is-positive { color: var(--ov-mi-color-positive); }
-.today-contributor.is-negative { color: var(--ov-mi-color-danger); }
+.today-contributor-return {
+  color: var(--ov-mi-color-text);
+  font-size: 0.94rem;
+  font-weight: var(--ov-mi-weight-value);
+}
+.today-contributor-return.is-unavailable {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+}
+.today-contributor-return.is-positive,
+.today-contributor-footer strong.is-positive { color: var(--ov-mi-color-positive); }
+.today-contributor-return.is-negative,
+.today-contributor-footer strong.is-negative { color: var(--ov-mi-color-danger); }
+.today-contributor-footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+  padding-top: 0.42rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.today-contributor-footer span {
+  min-width: 0;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  overflow-wrap: anywhere;
+}
+.today-contributor-footer strong {
+  font-size: var(--ov-mi-font-caption);
+  white-space: nowrap;
+}
+.today-contributor-note {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.45;
+}
 .today-portfolio-visual {
   display: grid;
   grid-template-rows: minmax(7.4rem, 1fr) auto;
@@ -409,6 +465,9 @@ def _today_css() -> str:
     border-top: 1px solid var(--ov-mi-border-faint);
   }
   .today-metric:first-child { border-top: 0; }
+}
+@media (max-width: 460px) {
+  .today-contributor-grid { grid-template-columns: 1fr; }
 }
 </style>
 """
@@ -513,18 +572,30 @@ def build_today_html(model: dict[str, Any]) -> str:
         metrics.get("day_return"),
     )
     contributors = [dict(row or {}) for row in portfolio.get("contributors") or []]
-    contributor_html = (
-        "".join(
-            '<span class="today-contributor '
-            + ("is-positive" if row.get("tone") == "positive" else "is-negative")
-            + '">'
-            + escape(str(row.get("symbol") or "-"))
-            + " "
-            + escape(_money(row.get("value")))
-            + "</span>"
-            for row in contributors
+    contributor_cards: list[str] = []
+    for row in contributors:
+        contribution = row.get("contribution_value", row.get("value"))
+        total_return = row.get("total_return")
+        return_html = (
+            f'<strong class="today-contributor-return {_value_tone(total_return)}">'
+            f'{escape(_percent(total_return))}</strong>'
+            if total_return is not None
+            else '<strong class="today-contributor-return is-unavailable">수익률 자료 부족</strong>'
         )
-        or '<span class="today-contributor">기여 계산 자료 없음</span>'
+        contributor_cards.append(
+            '<article class="today-contributor-card">'
+            f'<div class="today-contributor-symbol">{escape(str(row.get("symbol") or "-"))}</div>'
+            '<div class="today-contributor-return-label">종목 누적 수익률</div>'
+            f'{return_html}'
+            '<div class="today-contributor-footer">'
+            '<span>포트폴리오 누적 기여</span>'
+            f'<strong class="{_value_tone(contribution)}">{escape(_money(contribution))}</strong>'
+            '</div>'
+            '</article>'
+        )
+    contributor_html = (
+        "".join(contributor_cards)
+        or '<div class="today-event-detail">기여 계산 자료가 없습니다.</div>'
     )
     review_rows = [dict(row or {}) for row in portfolio.get("review_items") or []]
     review_html = (
@@ -579,8 +650,16 @@ def build_today_html(model: dict[str, Any]) -> str:
         <div class="today-metric"><div class="today-metric-label">최근 거래일</div><div class="today-metric-value {_value_tone(latest_return)}">{escape(_percent(latest_return))}</div></div>
         <div class="today-metric"><div class="today-metric-label">누적</div><div class="today-metric-value {_value_tone(metrics.get('total_return'))}">{escape(_percent(metrics.get('total_return')))}</div></div>
       </div>
-      <div class="today-panel-meta" style="margin-top:0.58rem;">누적 기여</div>
-      <div class="today-contributors">{contributor_html}</div>
+      <div class="today-contributor-section">
+        <div class="today-detail-heading">
+          <span class="today-panel-meta">종목별 성과 기여</span>
+          <span class="today-panel-meta">기여 상위 2 · 하위 2</span>
+        </div>
+        <div class="today-contributor-grid">{contributor_html}</div>
+        <div class="today-contributor-note">
+          종목 수익률은 입출금 영향을 조정한 누적 성과 · 기준 {escape(str(portfolio.get('basis_date') or '-'))}
+        </div>
+      </div>
     </div>
     <div class="today-portfolio-visual">
       <div class="today-sparkline">{_sparkline_svg(list(portfolio.get('curve') or []))}</div>

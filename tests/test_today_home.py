@@ -553,6 +553,15 @@ class TodayHomePageContractTests(unittest.TestCase):
         path = Path("app/web/today_page.py")
         self.assertTrue(path.exists(), "Today page renderer should exist")
         source = path.read_text(encoding="utf-8")
+        react_source = Path(
+            "app/web/streamlit_components/today_workbench/src/TodayWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        css_source = Path(
+            "app/web/streamlit_components/today_workbench/src/style.css"
+        ).read_text(encoding="utf-8")
+        types_source = Path(
+            "app/web/streamlit_components/today_workbench/src/types.ts"
+        ).read_text(encoding="utf-8")
 
         self.assertIn("overview_ui_css", source)
         self.assertIn("load_economic_cycle_model", source)
@@ -563,6 +572,16 @@ class TodayHomePageContractTests(unittest.TestCase):
         self.assertIn("load_default_portfolio_monitoring_workspace_for_today", source)
         self.assertNotIn("run_overview_", source)
         self.assertNotIn("requests.", source)
+        self.assertIn("종목별 성과 기여", react_source)
+        self.assertIn("기여 상위 2 · 하위 2", react_source)
+        self.assertIn("수익률 자료 부족", react_source)
+        self.assertIn("contribution_value", types_source)
+        self.assertIn("total_return", types_source)
+        self.assertIn(".today-contributor-grid", css_source)
+        self.assertIn(
+            "grid-template-columns: repeat(2, minmax(0, 1fr))",
+            css_source,
+        )
 
     def test_today_html_preserves_b_layout_order_and_escapes_market_copy(self) -> None:
         spec = importlib.util.find_spec("app.web.today_page")
@@ -617,7 +636,15 @@ class TodayHomePageContractTests(unittest.TestCase):
                     {"date": "2026-07-18", "value": 1.0},
                     {"date": "2026-07-21", "value": 1.02},
                 ],
-                "contributors": [{"symbol": "NVDA", "value": 240.0, "tone": "positive"}],
+                "contributors": [
+                    {
+                        "symbol": "NVDA",
+                        "contribution_value": 240.0,
+                        "value": 240.0,
+                        "total_return": 0.42,
+                        "tone": "positive",
+                    }
+                ],
                 "review_items": [{"severity": "HIGH", "meaning": "집중도 확인"}],
                 "active_item_count": 2,
             },
@@ -630,7 +657,41 @@ class TodayHomePageContractTests(unittest.TestCase):
         self.assertLess(html.index("today-market-brief"), html.index("today-portfolio"))
         self.assertIn("today-evidence-grid", html)
         self.assertIn("대표 포트폴리오", html)
-        self.assertIn("누적 기여", html)
+        self.assertIn("종목별 성과 기여", html)
+        self.assertIn("기여 상위 2 · 하위 2", html)
+        self.assertIn("종목 누적 수익률", html)
+        self.assertIn("+42.00%", html)
+        self.assertIn("포트폴리오 누적 기여", html)
+        self.assertIn("$240", html)
+        self.assertIn("입출금 영향을 조정한 누적 성과", html)
+
+    def test_today_fallback_labels_missing_item_return_without_hiding_contribution(self) -> None:
+        module = importlib.import_module("app.web.today_page")
+        model = {
+            "header": {},
+            "market": {"evidence": [], "watch_items": []},
+            "portfolio": {
+                "status": "READY",
+                "basis_date": "2026-07-21",
+                "metrics": {},
+                "curve": [],
+                "contributors": [
+                    {
+                        "symbol": "AMD",
+                        "contribution_value": 11915.0,
+                        "value": 11915.0,
+                        "total_return": None,
+                        "tone": "positive",
+                    }
+                ],
+                "review_items": [],
+            },
+        }
+
+        html = module.build_today_html(model)
+
+        self.assertIn("수익률 자료 부족", html)
+        self.assertIn("$11,915", html)
 
     def test_unframed_today_header_inherits_streamlit_theme_text_color(self) -> None:
         module = importlib.import_module("app.web.today_page")

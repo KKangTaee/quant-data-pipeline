@@ -136,15 +136,46 @@ function TodayWorkbench({ args, width }: Props) {
           viewportWidth={width}
         />
         <div className="today-portfolio-detail-grid">
-          <section>
-            <span>누적 기여</span>
-            <div className="today-contributors">
+          <section className="today-contributor-section">
+            <header className="today-detail-heading">
+              <span>종목별 성과 기여</span>
+              <small>기여 상위 2 · 하위 2</small>
+            </header>
+            <div className="today-contributor-grid">
               {payload.portfolio.contributors.length
-                ? payload.portfolio.contributors.map((row) => (
-                  <b key={`${row.symbol}-${row.value}`} className={row.tone === "negative" ? "is-negative" : "is-positive"}>{row.symbol} {moneyText(row.value)}</b>
-                ))
+                ? payload.portfolio.contributors.map((row) => {
+                  const returnTone = row.total_return == null
+                    ? "is-unavailable"
+                    : row.total_return < 0 ? "is-negative" : "is-positive";
+                  const contributionTone = row.tone === "negative"
+                    ? "is-negative"
+                    : "is-positive";
+                  return (
+                    <article
+                      className="today-contributor-card"
+                      key={`${row.symbol}-${row.contribution_value}`}
+                    >
+                      <strong className="today-contributor-symbol">{row.symbol}</strong>
+                      <span className="today-contributor-return-label">종목 누적 수익률</span>
+                      <b className={`today-contributor-return ${returnTone}`}>
+                        {row.total_return == null
+                          ? "수익률 자료 부족"
+                          : percentText(row.total_return)}
+                      </b>
+                      <footer>
+                        <span>포트폴리오 누적 기여</span>
+                        <strong className={contributionTone}>
+                          {moneyText(row.contribution_value)}
+                        </strong>
+                      </footer>
+                    </article>
+                  );
+                })
                 : <small>기여 계산 자료가 없습니다.</small>}
             </div>
+            <small className="today-contributor-note">
+              종목 수익률은 입출금 영향을 조정한 누적 성과 · 기준 {payload.portfolio.basis_date ?? "-"}
+            </small>
           </section>
           <section>
             <span>우선 확인</span>

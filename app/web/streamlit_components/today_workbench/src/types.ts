@@ -73,7 +73,13 @@ export type TodayPayload = {
     };
     curve: PortfolioCurveRow[];
     curve_metadata: CurveMetadata;
-    contributors: Array<{ symbol: string; value: number; tone: string }>;
+    contributors: Array<{
+      symbol: string;
+      contribution_value: number;
+      value?: number;
+      total_return: number | null;
+      tone: "positive" | "negative";
+    }>;
     review_items: Array<{ severity: string; meaning: string }>;
     active_item_count: number;
   };
