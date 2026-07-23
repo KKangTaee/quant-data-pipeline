@@ -1403,14 +1403,14 @@ def _events_workbench_command() -> dict[str, Any]:
         ],
         "earnings_universe": {
             "label": "실적 예상 일정 기준",
-            "symbol_source": "latest_movers",
+            "symbol_source": "priority_plus_sp500_cycle",
             "universe_code": "SP500",
             "description": (
-                "최근 S&P 500 movers snapshot의 상위 최대 20개 후보를 기준으로 삼고, "
-                "provider 호출은 최대 50개 symbol까지 제한합니다."
+                "보유·관심 종목, 시가총액 상위 종목, 이미 알려진 근접 일정을 매일 먼저 확인하고 "
+                "S&P 500 전체는 100개 단위로 순환 확인합니다."
             ),
-            "top_movers_limit": 20,
-            "max_symbols": 50,
+            "major_cap_limit": 100,
+            "shard_size": 100,
             "lookahead_days": 120,
             "cross_check": "Nasdaq calendar cross-check 사용",
         },

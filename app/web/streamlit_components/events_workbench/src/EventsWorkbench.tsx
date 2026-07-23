@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Streamlit, withStreamlitConnection, ComponentProps } from "streamlit-component-lib";
+import React, { useEffect, useMemo, useState } from "react";
+import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 import "./style.css";
 
 type EventBadge = {
@@ -9,96 +9,28 @@ type EventBadge = {
 
 type EventItem = {
   date: string;
+  display_date?: string;
+  display_time?: string | null;
+  time_basis?: string;
   days_until?: number | null;
   type: string;
   family: string;
-  subtype?: string;
   display_family?: string;
   display_family_label?: string;
   symbol?: string;
+  symbols?: string[];
+  issuer_key?: string;
+  issuer_name?: string;
   title: string;
-  importance?: string;
+  relevance?: string;
   validation?: string;
   freshness?: string;
   source_authority?: string;
-  universe_scope?: string;
   source_type?: string;
   source_url?: string;
-  confidence?: unknown;
   collected_at?: string;
-  event_time?: string;
   needs_review?: boolean;
   badges?: EventBadge[];
-};
-
-type EventRail = {
-  key: string;
-  label: string;
-  count: number;
-  review_count: number;
-  items: EventItem[];
-};
-
-type RailTabs = {
-  default_key?: string;
-  empty_text?: string;
-  tabs?: EventRail[];
-};
-
-type EventAction = {
-  id: string;
-  label: string;
-  kind?: string;
-  detail?: string;
-};
-
-type EventFilterOption = {
-  id: string;
-  label: string;
-};
-
-type EventFilterPayload = {
-  label?: string;
-  options?: EventFilterOption[];
-};
-
-type CommandResult = {
-  key?: string;
-  label?: string;
-  status?: string;
-  message?: string;
-  rows_written?: number | null;
-  events_found?: number | null;
-  source?: string | null;
-  method?: string | null;
-  duration_sec?: number | null;
-  jobs_run?: number | null;
-  jobs_failed?: number | null;
-  finished_at?: string | null;
-  sub_results?: { label?: string; status?: string; message?: string }[];
-};
-
-type TrustSection = {
-  key: string;
-  label: string;
-  count: number;
-  items: EventItem[];
-};
-
-type TrustReview = {
-  eyebrow?: string;
-  title?: string;
-  description?: string;
-  official_count?: number;
-  provider_estimate_count?: number;
-  estimate_only_count?: number;
-  cross_checked_count?: number;
-  not_confirmed_count?: number;
-  stale_estimate_count?: number;
-  conflict_count?: number;
-  warnings?: string[];
-  sections?: TrustSection[];
-  source_boundary?: string;
 };
 
 type CalendarDay = {
@@ -107,7 +39,6 @@ type CalendarDay = {
   review_count: number;
   stale_count: number;
   by_family?: Record<string, number>;
-  top_titles?: string[];
   items?: EventItem[];
 };
 
@@ -128,49 +59,33 @@ type DensityBucket = {
   by_family?: Record<string, number>;
 };
 
-type EvidencePayload = {
-  raw_fields?: string[];
-  rows?: Record<string, unknown>[];
-  row_count?: number;
+type EventAction = {
+  id: string;
+  label: string;
+  kind?: string;
+  detail?: string;
 };
 
-type EventsPayload = {
-  schema_version?: string;
+type EventFilterOption = {
+  id: string;
+  label: string;
+};
+
+type CommandResult = {
+  key?: string;
+  label?: string;
   status?: string;
+  message?: string;
+  jobs_run?: number | null;
+};
+
+type EventsView = {
   brief?: {
     title?: string;
     boundary_note?: string;
     next_event?: EventItem | null;
+    next_fomc?: EventItem | null;
     counts?: Record<string, number>;
-    source_summary?: Record<string, number>;
-    freshness_summary?: {
-      latest_collected_at?: string | null;
-      stale_estimate_count?: number;
-      has_stale_estimates?: boolean;
-      warning_count?: number;
-    };
-    family_counts?: Record<string, number>;
-  };
-  rails?: EventRail[];
-  rail_tabs?: RailTabs;
-  filters?: {
-    family?: EventFilterPayload;
-    source_state?: EventFilterPayload;
-  };
-  trust_review?: TrustReview;
-  command?: {
-    title?: string;
-    refresh_boundary?: string;
-    actions?: EventAction[];
-    earnings_universe?: {
-      label?: string;
-      description?: string;
-      top_movers_limit?: number;
-      max_symbols?: number;
-      lookahead_days?: number;
-      cross_check?: string;
-    };
-    last_results?: CommandResult[];
   };
   calendar?: {
     today?: string;
@@ -180,32 +95,56 @@ type EventsPayload = {
     days?: CalendarDay[];
     density?: DensityBucket[];
   };
-  evidence?: EvidencePayload;
+  trust_summary?: {
+    official?: number;
+    provider_estimate?: number;
+    review_required?: number;
+    warnings?: string[];
+  };
+  empty_state?: {
+    status?: string;
+    title?: string;
+    description?: string;
+  };
 };
 
-const FAMILY_OPTIONS = [
+type EventsPayload = {
+  schema_version?: string;
+  status?: string;
+  filter_options?: EventFilterOption[];
+  views?: Record<string, EventsView>;
+  coverage_summary?: {
+    status?: string;
+    label?: string;
+    description?: string;
+    expected_items?: number;
+    covered_items?: number;
+    failed_items?: number;
+  };
+  command?: {
+    refresh_boundary?: string;
+    actions?: EventAction[];
+    earnings_universe?: {
+      label?: string;
+      description?: string;
+    };
+    last_results?: CommandResult[];
+  };
+  evidence?: {
+    rows?: Record<string, unknown>[];
+    row_count?: number;
+  };
+};
+
+const DEFAULT_FILTERS: EventFilterOption[] = [
   { id: "all", label: "전체" },
   { id: "central_bank", label: "FOMC" },
-  { id: "macro", label: "매크로" },
   { id: "earnings", label: "실적" },
-  { id: "market_holiday", label: "미국 공휴일" },
-  { id: "options_expiration", label: "옵션 만기" },
-  { id: "market_reconstitution", label: "지수 재구성" },
-  { id: "market_structure", label: "기타 시장 일정" },
-];
-
-const REVIEW_OPTIONS = [
-  { id: "all", label: "전체" },
-  { id: "review", label: "확인 필요" },
-  { id: "official", label: "공식 / 확인됨" },
-  { id: "estimate", label: "추정 / 미확정" },
+  { id: "market_holiday", label: "휴장·조기폐장" },
 ];
 
 function valueText(value: unknown, fallback = "-"): string {
-  if (value === null || value === undefined || value === "") {
-    return fallback;
-  }
-  return String(value);
+  return value === null || value === undefined || value === "" ? fallback : String(value);
 }
 
 function normalizedText(value: unknown): string {
@@ -217,149 +156,40 @@ function cssToken(value: unknown): string {
 }
 
 function familyLabel(value: unknown): string {
+  const labels: Record<string, string> = {
+    central_bank: "FOMC",
+    earnings: "실적",
+    market_holiday: "휴장·조기폐장",
+    market_structure: "시장 일정",
+    macro: "매크로",
+    fixed_income: "국채·금리",
+  };
+  return labels[normalizedText(value)] || valueText(value, "기타");
+}
+
+function familyTone(value: unknown): string {
   const family = normalizedText(value);
-  if (family === "central_bank") {
-    return "FOMC";
-  }
-  if (family === "market_holiday") {
-    return "미국 공휴일";
-  }
-  if (family === "options_expiration") {
-    return "옵션 만기";
-  }
-  if (family === "market_reconstitution") {
-    return "지수 재구성";
-  }
-  if (family === "market_structure") {
-    return "기타 시장 일정";
-  }
-  if (family === "fixed_income") {
-    return "국채 / 금리";
-  }
-  if (family === "macro") {
-    return "매크로";
-  }
-  if (family === "earnings") {
-    return "실적";
-  }
-  return valueText(value, "미분류").replace(/_/g, " ");
+  if (family === "central_bank") return "fomc";
+  if (family === "market_holiday") return "holiday";
+  if (family === "earnings") return "earnings";
+  if (family === "macro" || family === "fixed_income") return "macro";
+  return cssToken(family);
 }
 
 function eventFamilyKey(item: EventItem): string {
   return valueText(item.display_family || item.family, "unknown");
 }
 
-function familyTone(value: unknown): string {
-  const family = normalizedText(value);
-  if (family === "central_bank") {
-    return "fomc";
-  }
-  if (family === "market_structure") {
-    return "structure";
-  }
-  if (family === "market_holiday") {
-    return "holiday";
-  }
-  if (family === "options_expiration") {
-    return "expiration";
-  }
-  if (family === "market_reconstitution") {
-    return "reconstitution";
-  }
-  if (family === "fixed_income") {
-    return "macro";
-  }
-  return cssToken(family);
-}
-
-function matchesFamily(item: EventItem, familyFilter: string): boolean {
-  if (familyFilter === "all") {
-    return true;
-  }
-  const family = normalizedText(item.family);
-  const displayFamily = normalizedText(item.display_family || item.family);
-  const type = normalizedText(item.type);
-  if (["market_holiday", "options_expiration", "market_reconstitution", "market_structure"].includes(familyFilter)) {
-    return displayFamily === familyFilter;
-  }
-  if (familyFilter === "central_bank") {
-    return family === "central_bank" || type.includes("fomc");
-  }
-  if (familyFilter === "macro") {
-    return family === "macro" || family === "fixed_income" || type.startsWith("macro") || type.startsWith("treasury");
-  }
-  return family === familyFilter;
-}
-
-function matchesReviewState(item: EventItem, reviewFilter: string): boolean {
-  if (reviewFilter === "all") {
-    return true;
-  }
-  const authority = normalizedText(item.source_authority);
-  const validation = normalizedText(item.validation);
-  if (reviewFilter === "review") {
-    return Boolean(item.needs_review);
-  }
-  if (reviewFilter === "official") {
-    return ["official", "issuer_confirmed", "cross_checked"].includes(authority) || validation === "official";
-  }
-  if (reviewFilter === "estimate") {
-    return (
-      authority.includes("estimate") ||
-      authority.includes("not_confirmed") ||
-      ["estimate only", "not confirmed", "conflict"].includes(validation)
-    );
-  }
-  return true;
-}
-
-function filterItems(items: EventItem[], familyFilter: string, reviewFilter: string): EventItem[] {
-  return items.filter((item) => matchesFamily(item, familyFilter) && matchesReviewState(item, reviewFilter));
-}
-
-function aggregateFamilies(items: EventItem[]): Record<string, number> {
-  return items.reduce<Record<string, number>>((acc, item) => {
-    const family = eventFamilyKey(item);
-    acc[family] = (acc[family] || 0) + 1;
-    return acc;
-  }, {});
-}
-
-function weekMatchesFilter(bucket: DensityBucket, familyFilter: string, reviewFilter: string): boolean {
-  if (reviewFilter === "review" && !bucket.review_count) {
-    return false;
-  }
-  if (reviewFilter === "estimate" && !bucket.review_count && !bucket.stale_count) {
-    return false;
-  }
-  if (familyFilter === "all") {
-    return true;
-  }
-  const families = bucket.by_family || {};
-  if (familyFilter === "macro") {
-    return Boolean(families.macro || families.fixed_income);
-  }
-  return Boolean(families[familyFilter]);
-}
-
 function parseDateParts(dateText: string): { year: number; month: number; day: number } | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateText || "");
-  if (!match) {
-    return null;
-  }
-  return {
-    year: Number(match[1]),
-    month: Number(match[2]),
-    day: Number(match[3]),
-  };
+  return match
+    ? { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) }
+    : null;
 }
 
 function dateFromText(dateText: string): Date | null {
   const parts = parseDateParts(dateText);
-  if (!parts) {
-    return null;
-  }
-  return new Date(parts.year, parts.month - 1, parts.day);
+  return parts ? new Date(parts.year, parts.month - 1, parts.day) : null;
 }
 
 function dateTextFromDate(value: Date): string {
@@ -375,94 +205,53 @@ function addDays(value: Date, days: number): Date {
   return next;
 }
 
-function isMonthText(monthText: string): boolean {
-  return /^\d{4}-\d{2}$/.test(monthText || "");
-}
-
 function dateFromMonthText(monthText: string): Date | null {
-  if (!isMonthText(monthText)) {
-    return null;
-  }
-  const [yearText, monthNumberText] = monthText.split("-");
-  return new Date(Number(yearText), Number(monthNumberText) - 1, 1);
+  if (!/^\d{4}-\d{2}$/.test(monthText || "")) return null;
+  const [year, month] = monthText.split("-").map(Number);
+  return new Date(year, month - 1, 1);
 }
 
 function monthTextFromDate(value: Date): string {
-  const year = value.getFullYear();
-  const month = `${value.getMonth() + 1}`.padStart(2, "0");
-  return `${year}-${month}`;
+  return `${value.getFullYear()}-${`${value.getMonth() + 1}`.padStart(2, "0")}`;
 }
 
 function moveCalendarMonthValue(monthText: string, offset: number): string {
   const current = dateFromMonthText(monthText);
-  if (!current) {
-    return monthText;
-  }
-  return monthTextFromDate(new Date(current.getFullYear(), current.getMonth() + offset, 1));
+  return current
+    ? monthTextFromDate(new Date(current.getFullYear(), current.getMonth() + offset, 1))
+    : monthText;
 }
 
 function formatMonthTitle(monthText: string): string {
   const current = dateFromMonthText(monthText);
-  if (!current) {
-    return "월 선택";
-  }
-  return `${current.getFullYear()}년 ${current.getMonth() + 1}월`;
+  return current ? `${current.getFullYear()}년 ${current.getMonth() + 1}월` : "월 선택";
 }
 
 function densityRangeLabel(bucket: DensityBucket): string {
-  if (bucket.label) {
-    return bucket.label;
-  }
+  if (bucket.label) return bucket.label;
   const start = dateFromText(bucket.week_start);
   const end = bucket.week_end ? dateFromText(bucket.week_end) : start ? addDays(start, 6) : null;
-  if (!start || !end) {
-    return bucket.week_start;
-  }
-  return `${start.getMonth() + 1}/${start.getDate()}-${end.getMonth() + 1}/${end.getDate()}`;
-}
-
-function monthOptionsFromDays(days: CalendarDay[], today?: string): string[] {
-  const options = Array.from(new Set(days.map((day) => day.date.slice(0, 7)).filter(Boolean))).sort();
-  const todayMonth = (today || "").slice(0, 7);
-  if (todayMonth && !options.includes(todayMonth)) {
-    options.unshift(todayMonth);
-  }
-  return options;
+  return start && end
+    ? `${start.getMonth() + 1}/${start.getDate()}-${end.getMonth() + 1}/${end.getDate()}`
+    : bucket.week_start;
 }
 
 function defaultMonthFromDays(days: CalendarDay[], today?: string): string {
-  const options = monthOptionsFromDays(days, today);
-  if (!options.length) {
-    return (today || dateTextFromDate(new Date())).slice(0, 7);
-  }
   const todayMonth = (today || "").slice(0, 7);
-  if (todayMonth && options.includes(todayMonth)) {
-    return todayMonth;
-  }
-  return options[0];
-}
-
-function monthSelectOptions(monthOptions: string[], activeMonth: string): string[] {
-  return Array.from(new Set([activeMonth, ...monthOptions].filter(Boolean))).sort();
+  const months = Array.from(new Set(days.map((day) => day.date.slice(0, 7)).filter(Boolean))).sort();
+  if (todayMonth && (months.includes(todayMonth) || !months.length)) return todayMonth;
+  return months[0] || monthTextFromDate(new Date());
 }
 
 function buildCalendarMonthDays(
   monthText: string,
   dayMap: Map<string, CalendarDay>,
-  calendar: EventsPayload["calendar"],
+  calendar: EventsView["calendar"],
 ): CalendarCell[] {
-  const [yearText, monthNumberText] = (monthText || "").split("-");
-  const year = Number(yearText);
-  const monthNumber = Number(monthNumberText);
-  if (!year || !monthNumber) {
-    return [];
-  }
-  const firstDay = new Date(year, monthNumber - 1, 1);
-  const mondayOffset = (firstDay.getDay() + 6) % 7;
-  const gridStart = addDays(firstDay, -mondayOffset);
-  const todayText = calendar?.today || "";
-  const weekStart = calendar?.current_week_start || "";
-  const weekEnd = calendar?.current_week_end || "";
+  const monthDate = dateFromMonthText(monthText);
+  if (!monthDate) return [];
+  const mondayOffset = (monthDate.getDay() + 6) % 7;
+  const gridStart = addDays(monthDate, -mondayOffset);
   return Array.from({ length: 42 }, (_value, index) => {
     const cellDate = addDays(gridStart, index);
     const dateText = dateTextFromDate(cellDate);
@@ -474,74 +263,129 @@ function buildCalendarMonthDays(
         review_count: 0,
         stale_count: 0,
         by_family: {},
-        top_titles: [],
         items: [],
       }),
-      in_month: cellDate.getMonth() === monthNumber - 1,
-      is_today: dateText === todayText,
-      is_current_week: Boolean(weekStart && weekEnd && dateText >= weekStart && dateText <= weekEnd),
+      in_month: cellDate.getMonth() === monthDate.getMonth(),
+      is_today: dateText === calendar?.today,
+      is_current_week: Boolean(
+        calendar?.current_week_start
+        && calendar?.current_week_end
+        && dateText >= calendar.current_week_start
+        && dateText <= calendar.current_week_end
+      ),
       day_number: cellDate.getDate(),
     };
   });
 }
 
-function CountTile({ label, value }: { label: string; value: unknown }) {
+function BriefCard({
+  label,
+  item,
+  value,
+}: {
+  label: string;
+  item?: EventItem | null;
+  value?: string;
+}) {
   return (
-    <div className="events-workbench__count-tile">
+    <article className="events-workbench__brief-card">
       <span>{label}</span>
-      <strong>{valueText(value, "0")}</strong>
-    </div>
-  );
-}
-
-function EventCard({ item }: { item: EventItem }) {
-  const title = item.symbol ? `${item.symbol} · ${item.title}` : item.title;
-  return (
-    <article className={`events-workbench__event-card events-workbench__event-card--${familyTone(eventFamilyKey(item))}`}>
-      <div className="events-workbench__event-date">
-        {item.date}
-        {item.event_time && item.event_time !== "-" ? <span>{item.event_time}</span> : null}
-      </div>
-      <div className="events-workbench__event-title">{title}</div>
-      <div className="events-workbench__event-meta">
-        {valueText(item.type)} · {valueText(item.freshness)} · {valueText(item.validation)}
-      </div>
-      <div className="events-workbench__badges">
-        {(item.badges || []).slice(0, 5).map((badge) => (
-          <span className={`events-workbench__badge events-workbench__badge--${badge.kind}`} key={`${badge.kind}-${badge.label}`}>
-            {badge.label}
-          </span>
-        ))}
-      </div>
+      {item ? (
+        <>
+          <strong>{item.title}</strong>
+          <p>{valueText(item.display_date || item.date)} · {valueText(item.time_basis, "시간 기준 미확인")}</p>
+        </>
+      ) : (
+        <>
+          <strong>{value || "예정 없음"}</strong>
+          <p>{value ? "선택 범위 기준" : "현재 기간에 확인된 일정이 없습니다."}</p>
+        </>
+      )}
     </article>
   );
 }
 
-function TrustItem({ item }: { item: EventItem }) {
-  const title = item.symbol ? `${item.symbol} · ${item.title}` : item.title;
-  const badgeText = (item.badges || [])
-    .filter((badge) => ["source_authority", "freshness", "validation"].includes(badge.kind))
-    .map((badge) => badge.label)
-    .join(" · ");
+function EventCard({ item }: { item: EventItem }) {
+  const symbols = item.symbols?.length ? item.symbols.join(" · ") : item.symbol;
   return (
-    <div className="events-workbench__trust-item">
-      <strong>{title}</strong>
-      <span>
-        {item.date}
-        {badgeText ? ` · ${badgeText}` : ""}
-      </span>
+    <article className={`events-workbench__event-card events-workbench__event-card--${familyTone(eventFamilyKey(item))}`}>
+      <div className="events-workbench__event-card-head">
+        <span>{familyLabel(eventFamilyKey(item))}</span>
+        <em>{valueText(item.relevance, "일반")}</em>
+      </div>
+      <strong>{item.title}</strong>
+      {symbols ? <p className="events-workbench__symbols">{symbols}</p> : null}
+      <p>{valueText(item.display_date || item.date)}{item.display_time ? ` ${item.display_time}` : ""}</p>
+      <p className="events-workbench__time-basis">{valueText(item.time_basis, "시간 기준 미확인")}</p>
+      <div className="events-workbench__badges">
+        {(item.badges || []).slice(0, 4).map((badge) => (
+          <span key={`${badge.kind}-${badge.label}`}>{badge.label}</span>
+        ))}
+      </div>
+      {item.source_url?.startsWith("http") ? (
+        <a href={item.source_url} rel="noreferrer" target="_blank">출처 확인</a>
+      ) : null}
+    </article>
+  );
+}
+
+function CalendarHeader({
+  activeMonth,
+  eventCount,
+  eventDays,
+  onMove,
+}: {
+  activeMonth: string;
+  eventCount: number;
+  eventDays: number;
+  onMove: (offset: number) => void;
+}) {
+  return (
+    <div className="events-workbench__calendar-header">
+      <div>
+        <span className="events-workbench__eyebrow">월간 캘린더</span>
+        <h3>{formatMonthTitle(activeMonth)}</h3>
+        <p className="events-workbench__month-summary">이벤트 날짜 {eventDays}일 · 총 {eventCount}건</p>
+      </div>
+      <div className="events-workbench__month-nav" aria-label="월 이동">
+        <button aria-label="이전 달" onClick={() => onMove(-1)} type="button">‹</button>
+        <strong className="events-workbench__month-title">{formatMonthTitle(activeMonth)}</strong>
+        <button aria-label="다음 달" onClick={() => onMove(1)} type="button">›</button>
+      </div>
     </div>
   );
 }
 
-function eventStatusText(item: EventItem): string {
-  return [item.type, item.freshness, item.validation].map((value) => valueText(value, "")).filter(Boolean).join(" · ");
-}
-
-function eventSourceText(item: EventItem): string {
-  const source = valueText(item.source_authority || item.source_type, "출처 미확인");
-  const collectedAt = valueText(item.collected_at, "수집일 미상");
-  return `${source} · 수집 ${collectedAt}`;
+function DensityChart({ buckets }: { buckets: DensityBucket[] }) {
+  const maxDensityCount = Math.max(1, ...buckets.map((bucket) => bucket.count || 0));
+  return (
+    <div className="events-workbench__density">
+      <div className="events-workbench__density-head">
+        <div>
+          <span className="events-workbench__eyebrow">주간 밀집도</span>
+          <h3>주간 일정 밀집도</h3>
+        </div>
+        <span>주간 합계</span>
+      </div>
+      {buckets.slice(0, 12).map((bucket) => (
+        <div className="events-workbench__density-row" key={bucket.week_start}>
+          <span>{densityRangeLabel(bucket)}</span>
+          <div className="events-workbench__density-bar" title={`주간 합계 ${bucket.count}건`}>
+            <div style={{ width: `${Math.max(8, (bucket.count / maxDensityCount) * 100)}%` }}>
+              {Object.entries(bucket.by_family || {}).map(([family, count]) => (
+                <i
+                  className={`events-workbench__density-segment events-workbench__density-segment--${familyTone(family)}`}
+                  key={`${bucket.week_start}-${family}`}
+                  style={{ width: `${Math.max(8, (Number(count) / Math.max(1, bucket.count)) * 100)}%` }}
+                />
+              ))}
+            </div>
+          </div>
+          <strong>총 {bucket.count}건</strong>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function rawValue(row: Record<string, unknown>, key: string): string {
@@ -550,103 +394,53 @@ function rawValue(row: Record<string, unknown>, key: string): string {
 
 function EventsWorkbench({ args }: ComponentProps) {
   const payload = ((args || {}).payload || {}) as EventsPayload;
-  const rails = payload.rails || [];
-  const railTabs = {
-    default_key: payload.rail_tabs?.default_key || rails[0]?.key || "",
-    empty_text: payload.rail_tabs?.empty_text || "선택한 조건에 맞는 일정이 없습니다.",
-    tabs: payload.rail_tabs?.tabs || rails,
-  };
-  const command = payload.command || { actions: [] };
-  const commandActions = command.actions || [];
-  const lastResults = command.last_results || [];
-  const calendar = payload.calendar || { days: [], density: [] };
+  const [familyFilter, setFamilyFilter] = useState("all");
+  const activeView = payload.views?.[familyFilter] || payload.views?.all || {};
+  const brief = activeView.brief || {};
+  const calendar = activeView.calendar || { days: [], density: [] };
   const calendarDays = calendar.days || [];
   const calendarDensity = calendar.density || [];
-  const evidence = payload.evidence || { rows: [] };
-  const evidenceRows = evidence.rows || [];
-  const brief = payload.brief || {};
-  const counts = brief.counts || {};
-  const sourceSummary = brief.source_summary || {};
-  const freshness = brief.freshness_summary || {};
-  const trust = payload.trust_review || {};
-  const trustSections = trust.sections || [];
+  const filterOptions = payload.filter_options || DEFAULT_FILTERS;
+  const command = payload.command || { actions: [] };
+  const commandActions = command.actions || [];
+  const secondaryActions = commandActions.filter((action) => action.id !== "refresh_all");
+  const lastResults = command.last_results || [];
+  const evidenceRows = payload.evidence?.rows || [];
   const [pendingActionId, setPendingActionId] = useState("");
-  const [familyFilter, setFamilyFilter] = useState("all");
-  const [reviewFilter, setReviewFilter] = useState("all");
-  const [activeRailKey, setActiveRailKey] = useState(railTabs.default_key || railTabs.tabs?.[0]?.key || "");
   const [calendarMonth, setCalendarMonth] = useState(defaultMonthFromDays(calendarDays, calendar.today));
   const [selectedDate, setSelectedDate] = useState("");
   const [expandedEvidence, setExpandedEvidence] = useState(false);
-  const isPayloadReady = payload.schema_version === "events_workbench_v1";
+  const isPayloadReady = payload.schema_version === "events_workbench_v2";
 
-  const familyOptions = payload.filters?.family?.options || FAMILY_OPTIONS;
-  const reviewOptions = payload.filters?.source_state?.options || REVIEW_OPTIONS;
-  const filteredRailTabs = (railTabs.tabs || []).map((rail) => {
-    const items = filterItems(rail.items || [], familyFilter, reviewFilter);
-    return {
-      ...rail,
-      count: items.length,
-      review_count: items.filter((item) => item.needs_review).length,
-      items,
-    };
-  });
-  const activeRail = filteredRailTabs.find((rail) => rail.key === activeRailKey) || filteredRailTabs[0];
-  const filteredCalendarDays = calendarDays
-    .map((day) => {
-      const items = filterItems(day.items || [], familyFilter, reviewFilter);
-      return {
-        ...day,
-        count: items.length,
-        review_count: items.filter((item) => item.needs_review).length,
-        stale_count: items.filter((item) => normalizedText(item.freshness).includes("stale")).length,
-        by_family: aggregateFamilies(items),
-        top_titles: items.slice(0, 3).map((item) => item.title),
-        items,
-      };
-    })
-    .filter((day) => day.count > 0);
-  const filteredDayMap = new Map(filteredCalendarDays.map((day) => [day.date, day]));
-  const monthOptions = monthOptionsFromDays(filteredCalendarDays, calendar.today);
-  const activeCalendarMonth = isMonthText(calendarMonth) ? calendarMonth : defaultMonthFromDays(filteredCalendarDays, calendar.today);
-  const calendarMonthDays = buildCalendarMonthDays(activeCalendarMonth, filteredDayMap, calendar);
+  const dayMap = useMemo(
+    () => new Map(calendarDays.map((day) => [day.date, day])),
+    [calendarDays],
+  );
+  const activeCalendarMonth = /^\d{4}-\d{2}$/.test(calendarMonth)
+    ? calendarMonth
+    : defaultMonthFromDays(calendarDays, calendar.today);
+  const calendarMonthDays = buildCalendarMonthDays(activeCalendarMonth, dayMap, calendar);
   const calendarMonthEventDays = calendarMonthDays.filter((day) => day.in_month && day.count > 0);
-  const calendarMonthEventCount = calendarMonthEventDays.reduce((total, day) => total + day.count, 0);
-  const visibleMonthOptions = monthSelectOptions(monthOptions, activeCalendarMonth);
-  const selectedCalendarDay = calendarMonthDays.find((day) => day.date === selectedDate && day.count > 0) || null;
-  const filteredDensity = calendarDensity.filter((bucket) => weekMatchesFilter(bucket, familyFilter, reviewFilter));
-  const maxDensityCount = Math.max(1, ...filteredDensity.map((bucket) => bucket.count || 0));
+  const calendarMonthEventCount = calendarMonthEventDays.reduce((sum, day) => sum + day.count, 0);
+  const selectedCalendarDay = calendarDays.find((day) => day.date === selectedDate) || null;
 
   useEffect(() => {
     Streamlit.setFrameHeight();
-  }, [payload]);
-
-  useEffect(() => {
-    Streamlit.setFrameHeight();
-  }, [familyFilter, reviewFilter, activeRailKey, calendarMonth, expandedEvidence, pendingActionId, selectedDate]);
+  }, [payload, familyFilter, calendarMonth, selectedDate, expandedEvidence, pendingActionId]);
 
   useEffect(() => {
     setPendingActionId("");
-  }, [payload.schema_version, brief.freshness_summary?.latest_collected_at]);
+  }, [payload.schema_version, payload.status]);
 
   useEffect(() => {
-    const defaultKey = railTabs.default_key || railTabs.tabs?.[0]?.key || "";
-    if (defaultKey && !filteredRailTabs.some((rail) => rail.key === activeRailKey)) {
-      setActiveRailKey(defaultKey);
+    const nextMonth = defaultMonthFromDays(calendarDays, calendar.today);
+    if (!calendarDays.some((day) => day.date.startsWith(activeCalendarMonth))) {
+      setCalendarMonth(nextMonth);
     }
-  }, [activeRailKey, filteredRailTabs, railTabs.default_key, railTabs.tabs]);
-
-  useEffect(() => {
-    const nextDefaultMonth = defaultMonthFromDays(filteredCalendarDays, calendar.today);
-    if (!isMonthText(calendarMonth)) {
-      setCalendarMonth(nextDefaultMonth);
-    }
-  }, [calendar.today, calendarMonth, filteredCalendarDays]);
-
-  useEffect(() => {
-    if (selectedDate && !calendarMonthDays.some((day) => day.date === selectedDate && day.count > 0)) {
+    if (selectedDate && !calendarDays.some((day) => day.date === selectedDate)) {
       setSelectedDate("");
     }
-  }, [calendarMonthDays, selectedDate]);
+  }, [activeCalendarMonth, calendar.today, calendarDays, selectedDate]);
 
   const emitEvent = (id: string) => {
     setPendingActionId(id);
@@ -668,234 +462,78 @@ function EventsWorkbench({ args }: ComponentProps) {
   return (
     <section className="events-workbench">
       <header className="events-workbench__hero">
-        <div className="events-workbench__hero-copy">
+        <div>
           <span className="events-workbench__eyebrow">시장 일정</span>
-          <h2>{brief.title || "다가오는 시장 이벤트 브리프"}</h2>
-          <p>{brief.boundary_note}</p>
+          <h2>이번 주 시장 일정</h2>
+          <p>한국시간 기준 · 공식 일정과 실적 추정을 구분합니다.</p>
         </div>
-        <div className="events-workbench__next-card">
-          <span className="events-workbench__eyebrow">다음 이벤트</span>
-          <strong>{brief.next_event ? brief.next_event.date : "예정 없음"}</strong>
-          <p>{brief.next_event ? brief.next_event.title : "현재 기간에 확인할 다음 일정이 없습니다."}</p>
-        </div>
+        <button
+          className="events-workbench__refresh"
+          disabled={pendingActionId === "refresh_all"}
+          onClick={() => emitEvent("refresh_all")}
+          type="button"
+        >
+          {pendingActionId === "refresh_all" ? "갱신 중" : "일정 갱신"}
+        </button>
       </header>
 
-      <div className="events-workbench__counts">
-        <CountTile label="오늘" value={counts.today} />
-        <CountTile label="이번 주" value={counts.this_week} />
-        <CountTile label="30일 내" value={counts.next_30d} />
-        <CountTile label="공식 일정" value={sourceSummary.official} />
-        <CountTile label="추정 일정" value={sourceSummary.provider_estimate} />
-        <CountTile label="오래된 추정" value={freshness.stale_estimate_count} />
-      </div>
-
-      <section className="events-workbench__command">
-        <div className="events-workbench__command-copy">
-          <span className="events-workbench__eyebrow">갱신</span>
-          <h3>{command.title || "화면 / 수집 갱신"}</h3>
-          <p>{command.refresh_boundary}</p>
-          {command.earnings_universe ? (
-            <div className="events-workbench__universe-note">
-              <strong>{command.earnings_universe.label || "실적 예상 일정 기준"}</strong>
-              <span>{command.earnings_universe.description}</span>
-              <em>
-                {command.earnings_universe.lookahead_days}일 lookahead · {command.earnings_universe.cross_check}
-              </em>
-            </div>
-          ) : null}
-        </div>
-        <div className="events-workbench__actions">
-          {commandActions.map((action) => (
+      <section className="events-workbench__filterbar">
+        <span>일정 타입</span>
+        <div>
+          {filterOptions.map((option) => (
             <button
-              className={`events-workbench__action events-workbench__action--${action.kind || "secondary"}`}
-              disabled={pendingActionId === action.id}
-              key={action.id}
-              onClick={() => emitEvent(action.id)}
-              title={action.detail || action.label}
+              className={familyFilter === option.id ? "is-active" : ""}
+              key={option.id}
+              onClick={() => setFamilyFilter(option.id)}
               type="button"
             >
-              {pendingActionId === action.id ? "실행 중" : action.label}
+              {option.label}
             </button>
           ))}
         </div>
-        {lastResults.length ? (
-          <div className="events-workbench__command-results">
-            <strong>마지막 갱신 결과</strong>
-            <div>
-              {lastResults.slice(0, 4).map((result) => (
-                <span className={`events-workbench__result-pill events-workbench__result-pill--${cssToken(result.status)}`} key={result.key || result.label}>
-                  {valueText(result.label)} · {valueText(result.status)}
-                  {result.jobs_run !== null && result.jobs_run !== undefined ? ` · ${result.jobs_run} jobs` : ""}
-                  {result.message ? ` · ${result.message}` : ""}
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : null}
       </section>
 
-      <section className="events-workbench__filterbar">
-        <div className="events-workbench__filtergroup">
-          <span>{payload.filters?.family?.label || "일정 타입"}</span>
-          <div>
-            {familyOptions.map((option) => (
-              <button
-                className={familyFilter === option.id ? "events-workbench__filter is-active" : "events-workbench__filter"}
-                key={option.id}
-                onClick={() => setFamilyFilter(option.id)}
-                type="button"
-              >
-                {option.label}
-              </button>
+      <div className="events-workbench__brief-grid">
+        <BriefCard label="가장 중요한 다음 일정" item={brief.next_event} />
+        <BriefCard label="이번 주 핵심 일정" value={`${valueText(brief.counts?.this_week, "0")}개`} />
+        <BriefCard label="다음 FOMC" item={brief.next_fomc} />
+      </div>
+
+      <section className="events-workbench__calendar-layout">
+        <div className="events-workbench__calendar-main">
+          <CalendarHeader
+            activeMonth={activeCalendarMonth}
+            eventCount={calendarMonthEventCount}
+            eventDays={calendarMonthEventDays.length}
+            onMove={moveCalendarMonth}
+          />
+          <div className="events-workbench__month-grid">
+            {(calendar.weekday_labels || ["월", "화", "수", "목", "금", "토", "일"]).map((label) => (
+              <div className="events-workbench__weekday" key={label}>{label}</div>
             ))}
-          </div>
-        </div>
-        <div className="events-workbench__filtergroup">
-          <span>{payload.filters?.source_state?.label || "자료 상태"}</span>
-          <div>
-            {reviewOptions.map((option) => (
-              <button
-                className={reviewFilter === option.id ? "events-workbench__filter is-active" : "events-workbench__filter"}
-                key={option.id}
-                onClick={() => setReviewFilter(option.id)}
-                type="button"
+            {calendarMonthDays.map((day) => (
+              <div
+                className={[
+                  "events-workbench__day",
+                  day.in_month ? "" : "events-workbench__day--outside-month",
+                  day.is_today ? "events-workbench__day--today" : "",
+                  day.is_current_week ? "events-workbench__day--current-week" : "",
+                  day.count ? "events-workbench__day--has-events" : "",
+                  day.date === selectedDate ? "events-workbench__day--selected" : "",
+                ].filter(Boolean).join(" ")}
+                key={day.date}
               >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="events-workbench__rail">
-        <div className="events-workbench__rail-header">
-          <div>
-            <span className="events-workbench__eyebrow">주의할 이벤트</span>
-            <h3>{activeRail?.label || "오늘 / 이번 주"}</h3>
-          </div>
-          <span>{activeRail?.count || 0} rows · {activeRail?.review_count || 0} 확인 필요</span>
-        </div>
-        <div className="events-workbench__rail-tabs">
-          {railTabs.tabs.map((rail) => {
-            const filteredRail = filteredRailTabs.find((candidate) => candidate.key === rail.key) || rail;
-            return (
-              <button
-                className={activeRailKey === rail.key ? "events-workbench__rail-tab is-active" : "events-workbench__rail-tab"}
-                key={rail.key}
-                onClick={() => setActiveRailKey(rail.key)}
-                type="button"
-              >
-                <strong>{rail.label}</strong>
-                <span>{filteredRail.count} · {filteredRail.review_count} 확인</span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="events-workbench__rail-items">
-          {(activeRail?.items || []).slice(0, 8).map((item) => (
-            <EventCard item={item} key={`${activeRail?.key}-${item.date}-${item.type}-${item.symbol || item.title}`} />
-          ))}
-          {!(activeRail?.items || []).length && <div className="events-workbench__empty">{railTabs.empty_text || "선택한 조건에 맞는 일정이 없습니다."}</div>}
-        </div>
-      </section>
-
-      <section className="events-workbench__trust">
-        <div>
-          <span className="events-workbench__eyebrow">{trust.eyebrow || "자료 상태"}</span>
-          <h3>{trust.title || "일정 확정성 / 추정 일정 점검"}</h3>
-          {trust.description ? <p>{trust.description}</p> : null}
-          {trust.source_boundary ? <p>{trust.source_boundary}</p> : null}
-        </div>
-        <div>
-          <div className="events-workbench__trust-grid">
-            <CountTile label="공식 일정" value={trust.official_count} />
-            <CountTile label="제공사 추정" value={trust.provider_estimate_count} />
-            <CountTile label="미확정" value={trust.not_confirmed_count} />
-            <CountTile label="오래된 추정" value={trust.stale_estimate_count} />
-          </div>
-          <div className="events-workbench__trust-sections">
-            {trustSections.map((section) => {
-              const items = filterItems(section.items || [], familyFilter, reviewFilter);
-              return (
-                <section className="events-workbench__trust-section" key={section.key}>
-                  <div className="events-workbench__trust-section-head">
-                    <strong>{section.label}</strong>
-                    <span>{items.length}</span>
+                <button
+                  aria-label={`${day.date} 일정 ${day.count}건 보기`}
+                  className="events-workbench__day-button"
+                  disabled={!day.count}
+                  onClick={() => day.count && setSelectedDate(day.date)}
+                  type="button"
+                >
+                  <div className="events-workbench__day-head">
+                    <strong>{day.day_number}</strong>
+                    {day.count ? <span>{day.count}</span> : null}
                   </div>
-                  {items.slice(0, 3).map((item) => (
-                    <TrustItem item={item} key={`${section.key}-${item.date}-${item.type}-${item.symbol || item.title}`} />
-                  ))}
-                  {!items.length && <div className="events-workbench__empty events-workbench__empty--compact">해당 일정 없음</div>}
-                </section>
-              );
-            })}
-          </div>
-          {(trust.warnings || []).length ? (
-            <div className="events-workbench__warnings">
-              {(trust.warnings || []).slice(0, 3).map((warning) => (
-                <span key={warning}>{warning}</span>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      <section className="events-workbench__calendar">
-        <div className="events-workbench__section-head">
-          <div>
-            <span className="events-workbench__eyebrow">캘린더</span>
-            <h3>캘린더로 보는 일정 근거</h3>
-          </div>
-          <div className="events-workbench__month-control">
-            <div className="events-workbench__month-nav" aria-label="월 이동">
-              <button aria-label="이전 달" onClick={() => moveCalendarMonth(-1)} type="button">
-                ‹
-              </button>
-              <strong className="events-workbench__month-title">{formatMonthTitle(activeCalendarMonth)}</strong>
-              <button aria-label="다음 달" onClick={() => moveCalendarMonth(1)} type="button">
-                ›
-              </button>
-            </div>
-            <span className="events-workbench__month-summary">
-              이벤트 날짜 {calendarMonthEventDays.length}일 · 이벤트 {calendarMonthEventCount}건
-            </span>
-            <select className="events-workbench__month-select" value={activeCalendarMonth} onChange={(event) => setCalendarMonth(event.target.value)}>
-              {visibleMonthOptions.map((month) => (
-                <option key={month} value={month}>
-                  {month}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="events-workbench__month-grid">
-          {(calendar.weekday_labels || ["월", "화", "수", "목", "금", "토", "일"]).map((label) => (
-            <div className="events-workbench__weekday" key={label}>{label}</div>
-          ))}
-          {calendarMonthDays.map((day) => (
-            <div
-              className={[
-                "events-workbench__day",
-                day.in_month ? "" : "events-workbench__day--outside-month",
-                day.is_today ? "events-workbench__day--today" : "",
-                day.is_current_week ? "events-workbench__day--current-week" : "",
-                day.count ? "events-workbench__day--has-events" : "",
-                day.date === selectedDate ? "events-workbench__day--selected" : "",
-              ].filter(Boolean).join(" ")}
-              key={day.date}
-            >
-              <button
-                aria-label={`${day.date} 일정 ${day.count}건 보기`}
-                className="events-workbench__day-button"
-                disabled={!day.count}
-                onClick={() => day.count && setSelectedDate(day.date)}
-                type="button"
-              >
-                <div className="events-workbench__day-head">
-                  <strong>{day.day_number}</strong>
-                  {day.count ? <span>총 {day.count}</span> : null}
-                </div>
-                {day.count ? (
                   <div className="events-workbench__day-families">
                     {Object.entries(day.by_family || {}).map(([family, count]) => (
                       <span className={`events-workbench__family-dot events-workbench__family-dot--${familyTone(family)}`} key={family}>
@@ -903,122 +541,100 @@ function EventsWorkbench({ args }: ComponentProps) {
                       </span>
                     ))}
                   </div>
-                ) : null}
-                {day.count ? (
-                  <div className="events-workbench__day-meta">
-                    확인 {day.review_count} · 오래된 추정 {day.stale_count}
-                  </div>
-                ) : null}
-              </button>
-            </div>
-          ))}
+                </button>
+              </div>
+            ))}
+          </div>
+          <DensityChart buckets={calendarDensity} />
         </div>
 
-        <div className="events-workbench__date-detail">
+        <aside className="events-workbench__selected-day">
           {selectedCalendarDay ? (
             <>
-              <div className="events-workbench__date-detail-head">
-                <div>
-                  <span className="events-workbench__eyebrow">선택 날짜</span>
-                  <h3>{selectedCalendarDay.date}</h3>
-                </div>
-                <span>총 {selectedCalendarDay.count}건 · 확인 필요 {selectedCalendarDay.review_count}건</span>
-              </div>
-              <div className="events-workbench__date-detail-list events-workbench__date-detail-list--scroll">
+              <span className="events-workbench__eyebrow">선택 날짜</span>
+              <h3>{selectedCalendarDay.date}</h3>
+              <p>총 {selectedCalendarDay.count}건 · 확인 필요 {selectedCalendarDay.review_count}건</p>
+              <div className="events-workbench__selected-day-list">
                 {(selectedCalendarDay.items || []).map((item) => (
-                  <article className={`events-workbench__date-detail-card events-workbench__date-detail-card--${familyTone(eventFamilyKey(item))}`} key={`${selectedCalendarDay.date}-${item.type}-${item.symbol || item.title}`}>
-                    <strong>{item.symbol ? `${item.symbol} · ${item.title}` : item.title}</strong>
-                    <span>{eventStatusText(item)}</span>
-                    <span>{eventSourceText(item)}</span>
-                    {item.source_url && item.source_url.startsWith("http") ? (
-                      <a href={item.source_url} rel="noreferrer" target="_blank">출처 열기</a>
-                    ) : null}
-                  </article>
+                  <EventCard
+                    item={item}
+                    key={`${selectedCalendarDay.date}-${item.issuer_key || item.symbol || item.title}`}
+                  />
                 ))}
               </div>
             </>
           ) : (
-            <div className="events-workbench__empty events-workbench__empty--compact">날짜를 선택하면 해당 날짜의 일정과 자료 상태를 고정해서 확인할 수 있습니다.</div>
+            <div className="events-workbench__empty">
+              <strong>{activeView.empty_state?.title || "날짜를 선택하세요"}</strong>
+              <p>{activeView.empty_state?.description || "날짜를 선택하면 해당 날짜의 중요 일정과 출처를 확인할 수 있습니다."}</p>
+            </div>
           )}
-        </div>
-
-        <div className="events-workbench__density">
-          <div className="events-workbench__density-head">
-            <div>
-              <span className="events-workbench__eyebrow">주간 밀집도</span>
-              <h3>주간 일정 밀집도</h3>
-              <p>막대와 우측 숫자는 하루가 아니라 해당 주 전체 이벤트 수입니다.</p>
-            </div>
-            <div className="events-workbench__density-legend" aria-label="일정 타입 색상">
-              <span><i className="events-workbench__density-segment--fomc" />FOMC</span>
-              <span><i className="events-workbench__density-segment--macro" />매크로</span>
-              <span><i className="events-workbench__density-segment--earnings" />실적</span>
-              <span><i className="events-workbench__density-segment--holiday" />미국 공휴일</span>
-              <span><i className="events-workbench__density-segment--expiration" />옵션 만기</span>
-              <span><i className="events-workbench__density-segment--reconstitution" />지수 재구성</span>
-            </div>
-          </div>
-          {filteredDensity.slice(0, 12).map((bucket) => (
-            <div className="events-workbench__density-row" key={bucket.week_start}>
-              <span>{densityRangeLabel(bucket)}</span>
-              <div className="events-workbench__density-bar" title={`주간 합계 ${bucket.count}건 · 확인 필요 ${bucket.review_count}건 · 오래된 추정 ${bucket.stale_count}건`}>
-                <div className="events-workbench__density-fill" style={{ width: `${Math.max(8, (bucket.count / maxDensityCount) * 100)}%` }}>
-                  {Object.entries(bucket.by_family || {}).map(([family, count]) => (
-                    <i
-                      className={`events-workbench__density-segment events-workbench__density-segment--${familyTone(family)}`}
-                      key={`${bucket.week_start}-${family}`}
-                      style={{ width: `${Math.max(8, (Number(count) / Math.max(1, bucket.count)) * 100)}%` }}
-                    />
-                  ))}
-                </div>
-              </div>
-              <strong>총 {bucket.count}건</strong>
-            </div>
-          ))}
-        </div>
+        </aside>
       </section>
 
-      <section className="events-workbench__evidence">
-        <div className="events-workbench__section-head">
+      <details className="events-workbench__support-details">
+        <summary>자료 신뢰와 수집 범위</summary>
+        <div className="events-workbench__support-grid">
           <div>
-            <span className="events-workbench__eyebrow">상세 근거</span>
-            <h3>원본 / 상세 근거</h3>
+            <strong>{payload.coverage_summary?.label || "수집 범위"}</strong>
+            <p>{payload.coverage_summary?.description}</p>
           </div>
-          <button type="button" onClick={() => setExpandedEvidence(!expandedEvidence)}>
-            {expandedEvidence ? "접기" : `${valueText(evidence.row_count, "0")} rows`}
-          </button>
+          <div>
+            <strong>공식 {valueText(activeView.trust_summary?.official, "0")}개</strong>
+            <span>추정 {valueText(activeView.trust_summary?.provider_estimate, "0")}개</span>
+            <span>확인 필요 {valueText(activeView.trust_summary?.review_required, "0")}개</span>
+          </div>
         </div>
+        <p className="events-workbench__support-boundary">{command.refresh_boundary}</p>
+        <div className="events-workbench__universe-note">
+          <strong>{command.earnings_universe?.label || "실적 예상 일정 기준"}</strong>
+          <span>{command.earnings_universe?.description}</span>
+        </div>
+        <div className="events-workbench__secondary-actions">
+          {secondaryActions.map((action) => (
+            <button
+              disabled={pendingActionId === action.id}
+              key={action.id}
+              onClick={() => emitEvent(action.id)}
+              title={action.detail}
+              type="button"
+            >
+              {pendingActionId === action.id ? "실행 중" : action.label}
+            </button>
+          ))}
+        </div>
+        {lastResults.length ? (
+          <div className="events-workbench__last-results">
+            <strong>마지막 갱신 결과</strong>
+            {lastResults.slice(0, 4).map((result) => (
+              <span className={`events-workbench__result--${cssToken(result.status)}`} key={result.key || result.label}>
+                {valueText(result.label)} · {valueText(result.status)}{result.message ? ` · ${result.message}` : ""}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        <button className="events-workbench__evidence-toggle" onClick={() => setExpandedEvidence(!expandedEvidence)} type="button">
+          {expandedEvidence ? "원본 근거 접기" : `원본 근거 ${valueText(payload.evidence?.row_count, "0")}건 보기`}
+        </button>
         {expandedEvidence ? (
           <div className="events-workbench__evidence-table">
             <div className="events-workbench__evidence-head">
-              <span>날짜</span>
-              <span>유형</span>
-              <span>제목</span>
-              <span>출처</span>
-              <span>수집 기준</span>
+              <span>날짜</span><span>유형</span><span>제목</span><span>출처</span><span>수집 기준</span>
             </div>
             {evidenceRows.slice(0, 10).map((row, index) => (
-              <div className="events-workbench__evidence-row" key={`${rawValue(row, "Date")}-${rawValue(row, "Type")}-${index}`}>
-                <span>{rawValue(row, "Date")}</span>
+              <div className="events-workbench__evidence-row" key={`${rawValue(row, "Date")}-${index}`}>
+                <span>{rawValue(row, "Display Date KST") !== "-" ? rawValue(row, "Display Date KST") : rawValue(row, "Date")}</span>
                 <span>{rawValue(row, "Type")}</span>
-                <strong>{rawValue(row, "Symbol") !== "-" ? `${rawValue(row, "Symbol")} · ${rawValue(row, "Title")}` : rawValue(row, "Title")}</strong>
-                <span>
-                  {rawValue(row, "Source URL").startsWith("http") ? (
-                    <a href={rawValue(row, "Source URL")} rel="noreferrer" target="_blank">
-                      {rawValue(row, "Source Authority")}
-                    </a>
-                  ) : (
-                    rawValue(row, "Source Authority")
-                  )}
-                </span>
+                <strong>{rawValue(row, "Title")}</strong>
+                <span>{rawValue(row, "Source Authority")}</span>
                 <span>{rawValue(row, "Collected At")}</span>
               </div>
             ))}
           </div>
         ) : null}
-      </section>
+      </details>
 
-      <button className="events-workbench__hidden-action" type="button" onClick={() => emitEvent("noop")}>
+      <button className="events-workbench__hidden-action" onClick={() => emitEvent("noop")} type="button">
         Component ready
       </button>
     </section>
