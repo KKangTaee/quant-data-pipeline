@@ -30,6 +30,13 @@ Portfolio Monitoring React Command Center V1은 전체 `6/6차` 구현과 closeo
 - 경계: provider direct fetch, live approval, broker order, account sync, auto rebalance는 없다. 조건부 확률은 현재 fingerprint의 검증 artifact가 READY일 때만 공개한다.
 - canonical docs: `docs/architecture/PORTFOLIO_MONITORING_REACT_COMMAND_CENTER.md`, `docs/data/PORTFOLIO_MONITORING_DATA_CONTRACT.md`, `docs/runbooks/PORTFOLIO_MONITORING_MIGRATION_AND_QA.md`.
 
+Portfolio Monitoring Latest Decision Lifecycle V1도 전체 `4/4차`를 완료했다.
+
+- 현재 자격: append-only Final Review 이력은 보존하고 후보별 최신 판단만 신규 `백테스트 전략` catalog와 기존 selected-strategy replay의 current truth로 사용한다.
+- 기존 항목: 최신 판단이 보류·제외·Level2 반환이면 삭제하지 않고 해당 item의 새 계산만 잠근다. `최신 판단 재확인`은 서버에서 latest source를 다시 확인해 Final Review로 이동하며 기존 `추적 종료`와 분리한다.
+- 재개/provenance: 같은 후보가 새 selected 판단을 받으면 기존 item은 최신 effective decision contract로 자동 재개하고, 과거 requested decision ID도 감사 근거로 보존한다.
+- QA: focused Python·React/typecheck/build와 actual 정상 Portfolio Monitoring route를 확인했고, actual registry에 superseded 후보가 없어 잠금 상태는 synthetic service/read-model/React 계약으로 검증했다.
+
 Portfolio Monitoring Position Events V1도 전체 `3/3차`를 완료했다.
 
 - 완료 범위: direct U.S. stock + fixed shares에 최초 수량 정정, 추가매수, 일부매도, revision 수정·취소를 추가했다. exact-date DB 종가를 기본 체결가로 쓰고 actual price override provenance를 보존한다.

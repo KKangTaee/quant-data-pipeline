@@ -10,6 +10,13 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-23 - Portfolio Monitoring 최신 Final Review 판단 수명주기 완료
+
+- append-only 판단 이력은 보존하면서 후보별 최신 Final Review 판단만 신규 catalog와 기존 selected-strategy replay의 current truth로 사용한다.
+- 최신 non-select는 기존 항목을 삭제하지 않고 해당 item의 새 계산만 잠그며, `최신 판단 재확인` 또는 기존 `추적 종료`를 제공한다. 새 selected 판단은 최신 effective contract로 자동 재개한다.
+- focused Python·React/typecheck/build와 actual responsive Browser QA를 통과했다. actual registry에 superseded 후보가 없어 잠금은 synthetic 계약으로 검증했고 broad suite의 동일 baseline 18 failures를 분리했다.
+- 전체 roadmap `4/4차` 완료. 상세: `tasks/active/portfolio-monitoring-latest-decision-lifecycle-v1-20260723/STATUS.md`.
+
 ### 2026-07-22 - Today 종목별 성과 기여 카드 완료
 
 - 대표 포트폴리오의 기여 상위 2·하위 2를 `종목 누적 수익률`과 `포트폴리오 누적 기여`가 분리된 카드로 바꿨다.

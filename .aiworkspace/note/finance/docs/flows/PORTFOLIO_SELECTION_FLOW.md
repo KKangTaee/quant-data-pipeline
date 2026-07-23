@@ -1,7 +1,7 @@
 # Portfolio Selection Flow
 
 Status: Active
-Last Verified: 2026-07-19
+Last Verified: 2026-07-23
 
 ## Purpose
 
@@ -38,7 +38,7 @@ Backtest page 최상단은 세 단계가 공유하는 React workflow shell이다
 | Backtest Analysis | 단일 후보 생성, Portfolio Mix 후보 생성, saved mix replay, 1차 후보 readiness, Practical Validation handoff gate | 최종 판단, 별도 후보 간 read-only 비교, 후속 monitoring / deployment 판단 |
 | Practical Validation | Final Review로 넘길 검증 근거 생성, source strategy / construction 확인, source traits 기반 module gate, selected-route preflight, ETF 운용사 / 공식 외부 데이터 gap, stress / sensitivity evidence, validation method strength / data coverage / backtest realism evidence, 데이터 / 실용성 REVIEW의 Level2 종결, 근거가 있는 handoff 분류 | 투자 승인, 최종 사용자 메모, full holdings 원장 저장, 근거가 없는 REVIEW의 무조건적 Final Review 승격, sentiment 기반 자동 통과 / 차단, 수익성 최종 랭킹 |
 | Final Review | latest eligible 후보 선택, Level2 `final_decision / accepted_limit / monitoring_transfer` 인계, Decision Brief 결론 / 행동 근거 / 실제 강점·약점 / measured trait, canonical route·사유·CTA, compact snapshot, selected-route Gate 기반 Portfolio Monitoring 후보 handoff | Decision Desk / visible Review Queue / confirmed-report 단계, composite score, Level2 remediation / pattern guide, React domain 계산·저장, Decision ID / storage path / 운영 조건 사용자 편집, Evidence Appendix, Saved Decisions ledger, provider data 수집, Practical Validation 재실행, 실제 자금 투입 승인, broker order, account sync, auto rebalance |
-| Operations > Portfolio Monitoring | CNN / AAII market sentiment context overlay, 사용자 dashboard portfolio 생성 / 선택 / soft delete, Final Review selected 후보 pool에서 strategy slot 추가 / 설정 적용 / 제거, 명시적 scenario update와 portfolio-level 성과 재확인, strategy별 target snapshot / next review schedule 표시, 선택한 1개 전략의 lazy detail에서 Final Review -> dashboard continuity check / read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison / optional allocation check / allocation evidence boundary, 같은 portfolio 안 전략 간 전환 비교 | sentiment 기반 monitoring signal, broker order, live approval, account / broker sync, auto rebalance |
+| Operations > Portfolio Monitoring | CNN / AAII market sentiment context overlay, 사용자 dashboard portfolio 생성 / 선택 / soft delete, 후보별 최신 Final Review 판단이 selected인 strategy slot 추가 / 설정 적용 / 제거, 명시적 scenario update와 portfolio-level 성과 재확인, strategy별 target snapshot / next review schedule 표시, 선택한 1개 전략의 lazy detail에서 Final Review -> dashboard continuity check / read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison / optional allocation check / allocation evidence boundary, 같은 portfolio 안 전략 간 전환 비교. 기존 항목은 과거 requested decision과 현재 effective decision을 함께 보존하며 최신 판단이 non-select이면 해당 항목만 실행을 잠근다 | sentiment 기반 monitoring signal, Final Review 판단 override / waiver, broker order, live approval, account / broker sync, auto rebalance |
 
 Live / Deployment Readiness는 현재 별도 화면으로 구현되지 않았다. Final Review는 향후 그 단계가 사용할 수 있도록 엄격한 `deployment_readiness_policy_snapshot`을 남기지만, 그 snapshot이 곧 live approval이나 주문 가능 상태를 뜻하지 않는다.
 
@@ -94,6 +94,7 @@ PORTFOLIO_SELECTION_SOURCES
 기존 `registry_id`, Review Note, Pre-Live registry, Portfolio Proposal registry는 legacy compatibility로 남을 수 있지만, 현재 주 흐름의 필수 저장 단계는 아니다.
 Portfolio Monitoring의 Timeline / Continuity / Review Signals / Decision Dossier는 `FINAL_PORTFOLIO_SELECTION_DECISIONS` row를 같은 durable source로 표시하고, session-state recheck / drift / alert evidence는 저장된 monitoring history가 아니라 read-only context로 표시한다.
 Portfolio Monitoring handoff review도 같은 Final Decision row를 읽으며, selected route / dashboard row build / monitorable 여부를 표시한다. 사용자가 만든 dashboard portfolio setup은 별도 saved state인 `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`에만 저장되며 Final Decision row를 수정하지 않는다.
+Final Review registry는 append-only 이력을 유지한다. Portfolio Monitoring의 현재 추적 자격은 과거 어느 row가 selected였는지가 아니라 `selection_source_id`, `source_type/source_id`, `decision_id` 순서로 묶은 subject의 최신 row가 `monitoring_candidate is True`인지로 판정한다. 신규 catalog는 최신 selected subject만 노출한다. 기존 item의 최신 판단이 non-select로 바뀌면 item과 과거 requested decision은 보존하되 새 replay / Scenario 계산만 잠그며, 이후 새 selected 판단이 저장되면 최신 decision을 effective contract로 사용해 자동으로 잠금을 해제한다.
 Final Decision row는 backward compatibility용 `gate_policy_snapshot`을 selection policy로 유지하고, `selection_gate_policy_snapshot`, `deployment_readiness_policy_snapshot`, `open_review_items`를 함께 저장해 선정 판단과 live 투입 감사 후보 항목을 분리한다.
 ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서 strict promotion default와 일관된 `promotion_min_benchmark_coverage`, `promotion_min_net_cagr_spread`, `promotion_min_liquidity_clean_coverage`, rolling underperformance, drawdown policy threshold를 함께 싣는다. Practical Validation이나 Final Review가 missing policy를 후처리로 채우지 않으며, net cost / turnover proof가 부족한 후보는 selected-route gate에서 계속 막힌다.
 
@@ -103,6 +104,7 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 - Backtest Analysis result workspace는 실행 후에만 나타난다. current/target holdings와 성과는
   reproducible result evidence이며, Level2 검증을 통과했다는 의미나 broker 주문 지시가 아니다.
 - `Operations > Portfolio Monitoring`은 선정 후 추적을 바로 수행하는 Operations의 유일한 사용자-facing 화면이며 Backtest 후보 생성 단계가 아니다. 수집 실행 결과와 실패 원인은 `Workspace > Ingestion > 실행 기록 / 결과`에서 확인하고, Portfolio Monitoring에는 raw run/log 진단 패널을 두지 않는다.
+- Portfolio Monitoring의 `백테스트 전략` 목록은 후보별 최신 Final Review 판단이 `계속 추적`인 항목만 보여준다. 이미 담긴 전략의 최신 판단이 보류·제외·Level2 반환으로 바뀌면 `추적 자격 변경` 카드에서 새 계산을 멈추고 `최신 판단 재확인`으로 Final Review를 열거나 기존 `추적 종료`를 선택하게 한다. Monitoring 화면은 판단을 대신 생성하거나 로컬 예외를 저장하지 않는다.
 - Portfolio Monitoring의 직접 미국 주식 중 `보유 수량`으로 시작한 항목은 선택 상세에서 최초 수량 정정, 추가매수, 일부매도, 거래 수정·취소를 수행한다. 거래일의 정확한 저장 종가가 기본 체결가이고 실제 체결가로 바꿀 수 있다. 추가매수는 외부 입금, 일부매도 순대금은 외부 출금으로 성과에 반영하며, ETF·전략·투자금 방식과 quant backtest 결과는 이 거래 원장을 사용하지 않는다.
 - Portfolio Monitoring의 공통 기준일이 최근 완료 NYSE 거래일보다 오래되면 선택 그룹의 활성 direct stock·ETF별 저장 최신일과 `보유 종목 가격 최신화` action을 보여준다. 사용자가 누른 경우에만 기존 daily OHLCV ingestion을 실행하고 수집 후 DB 최신성을 재검증해 공통 기준일과 가치곡선을 다시 계산한다. selected strategy와 종료 항목은 이 action에 포함하지 않으며 상세 수집 기록은 Ingestion 화면이 소유한다.
 - Backtest Analysis의 Promotion Policy Signal은 1차 후보 readiness만 보며, probation / monitoring / deployment를 시작하거나 확정하지 않는다. hard blocker는 1차 source 등록을 막고, `2차 확인` review focus는 source의 `entry_gate.review_focus_rows`로 Practical Validation에 전달한다.

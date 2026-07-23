@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-23 - Monitoring 추적 자격은 후보별 최신 Final Review 판단이 소유한다
+
+- User request: Final Review에서 `계속 추적`을 선택해야 Portfolio Monitoring에서 사용할 수 있는 구조를 진단하고, 판단이 나중에 바뀌는 경우까지 올바르게 개선하도록 요청함.
+- Interpreted goal: 과거 selected 기록을 지우거나 기존 Monitoring 항목을 자동 종료하지 않으면서 최신 판단과 신규 등록·기존 실행의 의미를 일치시킨다.
+- Analysis result: append-only row를 canonical subject로 묶은 최신 판단만 current truth로 사용한다. 최신 non-select는 item-local 실행 잠금이며, 새 selected 판단이 생기면 requested provenance를 보존한 채 effective contract를 교체한다.
+- Follow-up: `최신 판단 재확인`은 서버가 source를 다시 확인해 Final Review로 이동하고 종료는 기존 명령을 사용한다. 실제 registry는 모두 latest selected여서 잠금 UI는 synthetic 계약으로 검증했으며 전체 `4/4차`를 완료했다.
+
 ### 2026-07-22 - Today 종목 수익률과 포트폴리오 기여금은 다른 단위다
 
 - User request: Today의 단순 `누적 기여` chip을 종목 자체 성과와 포트폴리오에 미친 금액 효과를 구분하는 compact card로 개선하도록 요청함.
