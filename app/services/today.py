@@ -363,6 +363,30 @@ def _portfolio_curve_projection(curve: Any) -> dict[str, Any]:
     }
 
 
+def _contributor_tone(value: float) -> str:
+    """Classify contribution direction without treating zero as a loss."""
+
+    if value > 0:
+        return "positive"
+    if value < 0:
+        return "negative"
+    return "neutral"
+
+
+def _sort_contributors(
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Order contributors by portfolio impact with deterministic ties."""
+
+    return sorted(
+        rows,
+        key=lambda row: (
+            -abs(float(row["contribution_value"])),
+            str(row.get("symbol") or ""),
+        ),
+    )
+
+
 def _project_portfolio(workspace: Any) -> dict[str, Any]:
     source = _as_mapping(workspace)
     boundaries = _as_mapping(source.get("boundaries"))
@@ -456,7 +480,7 @@ def _project_portfolio(workspace: Any) -> dict[str, Any]:
     contribution_rows = []
     for item_id, raw_value in raw_contributions.items():
         contribution_value = _safe_float(raw_value)
-        if contribution_value in (None, 0.0):
+        if contribution_value is None:
             continue
         item = items_by_id.get(str(item_id), {})
         contribution_rows.append(
@@ -465,18 +489,9 @@ def _project_portfolio(workspace: Any) -> dict[str, Any]:
                 "contribution_value": contribution_value,
                 "value": contribution_value,
                 "total_return": _safe_float(item.get("total_return")),
-                "tone": "positive" if contribution_value > 0 else "negative",
+                "tone": _contributor_tone(contribution_value),
             }
         )
-    positives = sorted(
-        (row for row in contribution_rows if row["contribution_value"] > 0),
-        key=lambda row: row["contribution_value"],
-        reverse=True,
-    )[:2]
-    negatives = sorted(
-        (row for row in contribution_rows if row["contribution_value"] < 0),
-        key=lambda row: row["contribution_value"],
-    )[:2]
     review_items = [
         {
             "severity": _text(row.get("severity"), "INFO"),
@@ -506,7 +521,7 @@ def _project_portfolio(workspace: Any) -> dict[str, Any]:
         },
         "curve": curve_projection["rows"],
         "curve_metadata": curve_projection["metadata"],
-        "contributors": positives + negatives,
+        "contributors": _sort_contributors(contribution_rows),
         "review_items": review_items,
         "active_item_count": active_count,
     }
@@ -578,7 +593,7 @@ def _project_live_portfolio(model: Any) -> dict[str, Any]:
                 "contribution_value": value,
                 "value": value,
                 "total_return": _safe_float(row.get("total_return")),
-                "tone": "positive" if value > 0 else "negative",
+                "tone": _contributor_tone(value),
             }
         )
     labels = {
@@ -602,7 +617,7 @@ def _project_live_portfolio(model: Any) -> dict[str, Any]:
             "fallback_symbols": fallback_symbols,
         },
         "metrics": metrics,
-        "contributors": contributors,
+        "contributors": _sort_contributors(contributors),
         "curve_point": curve_point,
         "message": messages[status],
     }

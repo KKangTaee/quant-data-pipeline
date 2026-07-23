@@ -212,6 +212,95 @@ class TodayHomeReadModelTests(unittest.TestCase):
         self.assertEqual(contributor["contribution_value"], 240.0)
         self.assertIsNone(contributor["total_return"])
 
+    def test_contributors_keep_all_numeric_rows_in_absolute_impact_order(
+        self,
+    ) -> None:
+        inputs = self._complete_inputs()
+        active = inputs["portfolio"]["active_group"]
+        active["active_item_count"] = 5
+        active["item_rows"] = [
+            {
+                "monitoring_item_id": "amd",
+                "source_ref": "AMD",
+                "total_return": 3.64,
+            },
+            {
+                "monitoring_item_id": "tem",
+                "source_ref": "TEM",
+                "total_return": -0.24,
+            },
+            {
+                "monitoring_item_id": "rklb",
+                "source_ref": "RKLB",
+                "total_return": -0.05,
+            },
+            {
+                "monitoring_item_id": "soxx",
+                "source_ref": "SOXX",
+                "total_return": -0.07,
+            },
+            {
+                "monitoring_item_id": "qqq",
+                "source_ref": "QQQ",
+                "total_return": 0.0,
+            },
+        ]
+        active["metrics"]["contribution_by_item"] = {
+            "amd": 12136.60,
+            "tem": -462.00,
+            "rklb": -440.00,
+            "soxx": -265.08,
+            "qqq": 0.0,
+        }
+
+        model = self._builder()(**inputs)
+
+        self.assertEqual(
+            [row["symbol"] for row in model["portfolio"]["contributors"]],
+            ["AMD", "TEM", "RKLB", "SOXX", "QQQ"],
+        )
+        self.assertEqual(
+            model["portfolio"]["contributors"][-1]["tone"],
+            "neutral",
+        )
+
+    def test_live_contributors_use_the_same_absolute_impact_order(self) -> None:
+        inputs = self._complete_inputs()
+        inputs["portfolio_live"] = {
+            "status": "LIVE_READY",
+            "contributors": [
+                {
+                    "symbol": "QQQ",
+                    "contribution_value": 0.0,
+                    "total_return": 0.0,
+                },
+                {
+                    "symbol": "AMD",
+                    "contribution_value": 120.0,
+                    "total_return": 0.2,
+                },
+                {
+                    "symbol": "SOXX",
+                    "contribution_value": -30.0,
+                    "total_return": -0.1,
+                },
+            ],
+        }
+
+        model = self._builder()(**inputs)
+
+        self.assertEqual(
+            [
+                row["symbol"]
+                for row in model["portfolio"]["live"]["contributors"]
+            ],
+            ["AMD", "SOXX", "QQQ"],
+        )
+        self.assertEqual(
+            model["portfolio"]["live"]["contributors"][-1]["tone"],
+            "neutral",
+        )
+
     def test_insufficient_market_sources_hold_the_combined_judgment(self) -> None:
         inputs = self._complete_inputs()
         inputs["economic_cycle"] = {"status": "MISSING"}
