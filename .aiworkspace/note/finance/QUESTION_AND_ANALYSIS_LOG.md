@@ -10481,3 +10481,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 시계는 화면 안에서만 움직이고, DB가 바뀔 수 있는 장중 포트폴리오만 주기 조회하며 마감 상태에는 불필요한 Python 실행이 없어야 한다.
 - Analysis result: 실제 원인은 15초 whole-page fragment와 결합된 구조였고 1초 React timer 자체는 Python rerun 원인이 아니었다. static shell + conditional portfolio island를 채택했다.
 - Follow-up: 전체 `2/2차` 완료. actual CLOSED 21초 동안 loading/iframe 교체 0회와 chart 안정성을 확인했고 OPEN provider timing 실측만 거래시간 제약으로 남겼다.
+
+### 2026-07-23 - Today 종목 기여는 일부 대표값이 아니라 계산 가능한 전체를 보여준다
+
+- User request: Today에서 다른 종목이 보이지 않는 이유와 `우선 확인` 텍스트의 비정상적인 간격을 확인하고 개선하도록 요청함.
+- Interpreted goal: 유효한 종목 기여를 숨기지 않고 영향이 큰 순서로 비교하며, 우선 확인 항목은 같은 패널 안에서 자연스럽게 이어 읽게 한다.
+- Analysis result: 가격/계산 누락이 아니라 positive top-2 / negative bottom-2 투영이 SOXX·QQQ를 제거했고, 중첩 CSS grid stretch가 review 행을 벌렸다. 전체 numeric 기여, coverage copy, inner grid top alignment를 채택했다.
+- Follow-up: 전체 `2/2차` 완료. actual 5종목과 8px review gap, 1280·760·420 overflow 0, console error 0을 확인했으며 DB·계산·수집 경계는 유지했다.

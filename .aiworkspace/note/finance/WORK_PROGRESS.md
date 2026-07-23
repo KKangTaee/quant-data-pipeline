@@ -7107,3 +7107,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 15초 heartbeat는 OPEN/EOD-active `today_portfolio_island_v1`만 실행하며 CLOSED confirmed에는 periodic run이 없다.
 - Python 88 / React 17와 actual CLOSED 21초 QA에서 loading·iframe 교체 0, chart path 유지, responsive overflow·console error 0을 확인했다.
 - 전체 roadmap `2/2차` 완료. 상세는 `tasks/active/today-live-island-rerun-isolation-v1-20260723/`를 본다.
+
+## 2026-07-23 - Today 종목 기여 전체 표시와 우선 확인 간격 개선
+
+- positive top-2 / negative bottom-2 투영을 제거해 계산 가능한 EOD/live 종목을 절대 기여 영향도 순으로 모두 표시한다.
+- `전체 N개`/`기여 계산 N/M개` coverage copy와 중립 0값을 추가하고 `우선 확인` 3행을 상단 정렬·8px 간격으로 정리했다.
+- Python 93, React 19/typecheck/build와 actual 5종목·1280/760/420 Browser QA, console error 0을 확인했다.
+- 전체 roadmap `2/2차` 완료. 상세는 `tasks/active/today-contributor-coverage-layout-v1-20260723/`를 본다.

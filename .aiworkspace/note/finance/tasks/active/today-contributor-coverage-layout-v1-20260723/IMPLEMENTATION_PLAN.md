@@ -31,7 +31,7 @@
 - Consumes: Portfolio Monitoring workspace `active_group.item_rows`, `active_group.metrics.contribution_by_item`, optional live overlay `contributors`.
 - Produces: `project_today_portfolio(workspace, portfolio_live=None) -> dict[str, Any]` with complete deterministic contributor arrays and three-value tone.
 
-- [ ] **Step 1: Write failing EOD completeness and zero-tone tests**
+- [x] **Step 1: Write failing EOD completeness and zero-tone tests**
 
 Add a focused test beside existing Today contributor projection tests:
 
@@ -64,7 +64,7 @@ def test_contributors_keep_all_numeric_rows_in_absolute_impact_order(self) -> No
     self.assertEqual(model["portfolio"]["contributors"][-1]["tone"], "neutral")
 ```
 
-- [ ] **Step 2: Run the EOD test and confirm RED**
+- [x] **Step 2: Run the EOD test and confirm RED**
 
 Run:
 
@@ -75,7 +75,7 @@ Run:
 
 Expected: FAIL because the current projection drops zero and slices positive/negative rows to two each.
 
-- [ ] **Step 3: Write failing live ordering test**
+- [x] **Step 3: Write failing live ordering test**
 
 Add a focused public projector test:
 
@@ -100,7 +100,7 @@ def test_live_contributors_use_the_same_absolute_impact_order(self) -> None:
     self.assertEqual(model["portfolio"]["live"]["contributors"][-1]["tone"], "neutral")
 ```
 
-- [ ] **Step 4: Run the live test and confirm RED**
+- [x] **Step 4: Run the live test and confirm RED**
 
 Run:
 
@@ -111,7 +111,7 @@ Run:
 
 Expected: FAIL because live contributors retain input order and classify zero as negative.
 
-- [ ] **Step 5: Implement one shared sort/tone policy**
+- [x] **Step 5: Implement one shared sort/tone policy**
 
 Add helpers near portfolio projection functions:
 
@@ -138,7 +138,7 @@ In `_project_portfolio`, skip only `None`, keep zero, use `_contributor_tone`, d
 
 In `_project_live_portfolio`, use `_contributor_tone(value)` for every numeric row and return `_sort_contributors(contributors)`.
 
-- [ ] **Step 6: Run focused and Today Python tests**
+- [x] **Step 6: Run focused and Today Python tests**
 
 Run:
 
@@ -151,7 +151,7 @@ Run:
 
 Expected: all Today tests PASS.
 
-- [ ] **Step 7: Commit Task 1**
+- [x] **Step 7: Commit Task 1**
 
 ```bash
 git add app/services/today.py tests/test_today_home.py
@@ -175,7 +175,7 @@ git commit -m "수정: Today 종목 기여 전체 투영"
 - Consumes: `TodayPortfolio.active_item_count`, `displayPortfolio(portfolio).contributors`, three-value contributor tone.
 - Produces: visible contributor coverage copy, all contributor cards, and `today-review-section` compact layout.
 
-- [ ] **Step 1: Write failing React full/partial coverage tests**
+- [x] **Step 1: Write failing React full/partial coverage tests**
 
 Add SSR assertions to `view.test.tsx` using a five-contributor portfolio payload:
 
@@ -218,7 +218,7 @@ it("discloses partial contributor coverage", () => {
 });
 ```
 
-- [ ] **Step 2: Run React tests and confirm RED**
+- [x] **Step 2: Run React tests and confirm RED**
 
 Run:
 
@@ -229,7 +229,7 @@ npm test -- --run src/view.test.tsx
 
 Expected: FAIL because the dynamic coverage copy does not exist.
 
-- [ ] **Step 3: Write failing source/CSS contract test**
+- [x] **Step 3: Write failing source/CSS contract test**
 
 Replace the obsolete top/bottom assertion in `TodayHomePageContractTests.test_today_page_reuses_overview_visual_tokens_and_read_only_loaders` with:
 
@@ -242,7 +242,7 @@ self.assertIn("align-content: start", review_rule)
 self.assertIn("grid-auto-rows: max-content", review_rule)
 ```
 
-- [ ] **Step 4: Run Python contract test and confirm RED**
+- [x] **Step 4: Run Python contract test and confirm RED**
 
 Run:
 
@@ -253,7 +253,7 @@ Run:
 
 Expected: FAIL because old copy remains and compact review CSS is absent.
 
-- [ ] **Step 5: Implement coverage copy and neutral tone**
+- [x] **Step 5: Implement coverage copy and neutral tone**
 
 In `types.ts`, widen `PortfolioContributor.tone`:
 
@@ -274,7 +274,7 @@ Replace the fixed header copy with `contributorCoverageLabel`. Map tone to `is-p
 
 In `build_today_html`, derive the same coverage copy from the fallback portfolio's contributor count and `active_item_count` and replace `기여 상위 2 · 하위 2`. Update `test_today_html_preserves_b_layout_order_and_escapes_market_copy` to expect `기여 계산 1/2개 · 영향 큰 순` for its fixture.
 
-- [ ] **Step 6: Implement compact review CSS**
+- [x] **Step 6: Implement compact review CSS**
 
 Use:
 
@@ -298,7 +298,7 @@ Use:
 .today-contributor-section .is-neutral { color: #607486; }
 ```
 
-- [ ] **Step 7: Run focused React/Python tests**
+- [x] **Step 7: Run focused React/Python tests**
 
 Run:
 
@@ -312,7 +312,7 @@ cd ../../../..
 
 Expected: all focused tests PASS.
 
-- [ ] **Step 8: Build and commit Task 2**
+- [x] **Step 8: Build and commit Task 2**
 
 ```bash
 cd app/web/streamlit_components/today_workbench
@@ -338,7 +338,7 @@ git commit -m "개선: Today 종목 기여와 우선 확인 배치 정리"
 - Consumes: production component build and actual default portfolio DB state.
 - Produces: verified actual UI and durable task handoff.
 
-- [ ] **Step 1: Run full relevant regressions**
+- [x] **Step 1: Run full relevant regressions**
 
 Run:
 
@@ -358,7 +358,7 @@ git diff --check
 
 Expected: zero failures and exit code 0.
 
-- [ ] **Step 2: Run actual Browser QA**
+- [x] **Step 2: Run actual Browser QA**
 
 Start a fresh Streamlit server and verify:
 
@@ -369,11 +369,11 @@ Start a fresh Streamlit server and verify:
 - browser console has zero errors;
 - save `today-contributor-coverage-layout-v1-qa.png` without staging it.
 
-- [ ] **Step 3: Synchronize task and durable docs**
+- [x] **Step 3: Synchronize task and durable docs**
 
 Record the root cause, complete contributor policy, review-grid fix, test counts, Browser QA, and any remaining risk. Keep root handoff entries to 3–5 lines and do not stage registries, run history, screenshots, or local artifacts.
 
-- [ ] **Step 4: Apply verification-before-completion and commit docs**
+- [x] **Step 4: Apply verification-before-completion and commit docs**
 
 Run final fresh verification, then:
 
