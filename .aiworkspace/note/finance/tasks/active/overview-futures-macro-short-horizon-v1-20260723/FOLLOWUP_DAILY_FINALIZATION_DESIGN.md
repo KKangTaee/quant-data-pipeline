@@ -1,7 +1,7 @@
 # Futures Macro On-Demand Daily Finalization Follow-up Design
 
 Date: 2026-07-24
-Status: User-approved design; written-spec review pending
+Status: User-approved design and written spec; implementation plan ready
 
 ## 이걸 하는 이유?
 
