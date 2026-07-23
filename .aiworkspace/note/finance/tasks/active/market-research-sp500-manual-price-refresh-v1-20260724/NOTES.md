@@ -1,6 +1,6 @@
 # Market Research S&P 500 Manual Price Refresh V1 Notes
 
-Status: Active
+Status: Completed
 Last Updated: 2026-07-24
 
 ## Confirmed Evidence
@@ -32,3 +32,19 @@ Last Updated: 2026-07-24
 - bucket은 이번 표본에서 `HIGH`로 유지됐다.
 
 가격 최신화는 분포·SEP·EPS 자체를 바꾸지는 않지만 현재 위치와 시나리오 괴리를 실질적으로 바꾼다.
+
+## Implemented Contract
+
+- `sp500_valuation_freshness.py`가 DB-only SPX latest price와 최신 완료 NYSE session을 비교한다.
+- S&P read model은 freshness를 포함하고, Streamlit helper는 stale/missing action event를 nonce로 한 번만 소비한다.
+- 수동 action은 canonical `run_collect_ohlcv`를 `^GSPC`, `SPY`, `1mo`, `1d`, `managed_safe`로 호출한다.
+- 성공 판정은 collector 반환 문구가 아니라 수집 후 DB의 `^GSPC` 날짜 postcondition이다.
+- 성공 시 S&P 단독/통합 valuation cache를 함께 비우고 rerun한다. 실패 시 기존 latest-good 값을 유지한다.
+- React는 raw job/row/provider 세부값 대신 다음 행동, 실행 중 상태, 한 번의 compact 완료 안내만 표시한다.
+
+## Actual Verification
+
+- 수동 action 1회가 `overview_sp500_price_refresh`로 기록됐고 `success`, 저장 42행, 실패 0건, 2.971초였다.
+- DB `^GSPC`와 `SPY`가 모두 `2026-07-23`까지 갱신됐다.
+- 재계산 값은 `current_pe=28.3058798985`, `current_z=1.13710694`, `gap=6.468090506%`였다.
+- reload 뒤 current 상태에서는 action과 완료 bar가 다시 나타나지 않았다.

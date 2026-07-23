@@ -1,7 +1,7 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-07-21
+Last Verified: 2026-07-24
 
 ## Purpose
 
@@ -108,6 +108,30 @@ uv run python -c "from finance.economic_cycle_pipeline import replay_economic_cy
 - 화면은 run/job/row 진단 panel이 아니다. 운영 근거는 backend 결과와 DB audit에서 확인하고 사용자는 국면 확률, evidence, source date, 제한 사유를 읽는다.
 
 ## Valuation Refresh
+
+### S&P 500 수동 가격 최신화
+
+`Market Research > 지수 가치평가 > S&P 500` 진입은 provider를 호출하지 않는다. 저장된 `^GSPC` 가격 기준일을 최신 완료 NYSE 거래일과 비교하고, 최신이면 별도 action을 표시하지 않는다. 가격이 뒤처졌거나 없으면 상단 안내의 `최신 데이터로 다시 계산`을 누른다.
+
+버튼은 기존 OHLCV ingestion을 통해 `^GSPC`, `SPY`만 `period=1mo`, `interval=1d`, `execution_profile=managed_safe`로 수집한다. 수집 뒤 DB를 다시 읽어 `^GSPC`가 최신 완료 NYSE 거래일 이상이면 가치평가 캐시를 비우고 새 가격으로 다시 계산한다. `SPY`만 뒤처지면 `partial_success`, `^GSPC`가 여전히 뒤처지면 `incomplete`이며 기존 가치평가를 유지하고 재시도 action을 남긴다.
+
+Expected result:
+
+- 최신 상태에서는 헤더의 `가격 기준일`이 최신 완료 장과 일치하고 수동 action이 숨겨진다.
+- 뒤처진 상태에서 실행하면 한 번만 실행 이력이 기록되고, 성공 직후 새 가격 기준의 PER·Z-score·시나리오 괴리가 표시된다.
+- Shiller 월간 자료, FOMC SEP, 공식 S&P Index Earnings/EPS는 이 action의 수집 대상이 아니다.
+- 이 제품 흐름을 위한 `launchd`, cron, 브라우저 heartbeat 등 백그라운드 scheduler는 등록하지 않는다.
+- 2026-07-24 actual QA에서 `^GSPC 2026-07-16`, `SPY 2026-07-22`를 모두 `2026-07-23`으로 갱신했고, 화면의 가격 기준일도 `2026-07-23`으로 바뀌었다.
+
+Failure handling:
+
+- provider 지연이나 DB write 실패로 `^GSPC` postcondition을 충족하지 못하면 이전 latest-good 평가를 유지하고 버튼으로 다시 시도한다.
+- `SPY`만 지연된 경우 SPX 평가 최신성과 SPY 환산 준비 상태를 분리해서 본다. SPX 최신성을 거짓 성공 또는 실패로 바꾸지 않는다.
+- raw row/job/provider 로그는 이 화면에 별도 진단 panel로 추가하지 않는다. 필요하면 Data Operations 실행 이력과 backend 결과를 확인한다.
+
+Related docs: [S&P 500 manual refresh task](../../tasks/active/market-research-sp500-manual-price-refresh-v1-20260724/STATUS.md), [Data Flow Map](../data/DATA_FLOW_MAP.md).
+
+### Nasdaq-100 valuation refresh
 
 Nasdaq-100 QQQ proxy job의 due/skip 계획과 강제 실행은 아래처럼 확인한다.
 

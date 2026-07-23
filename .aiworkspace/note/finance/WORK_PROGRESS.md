@@ -10,6 +10,13 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-24 - S&P 500 수동 가격 최신화 완료
+
+- S&P 500 진입은 DB-only로 가격 기준일을 최신 완료 NYSE 장과 비교하고, 뒤처졌을 때만 `최신 데이터로 다시 계산`을 표시한다.
+- 명시 클릭은 `^GSPC`·`SPY` EOD만 수집하며 DB postcondition 통과 뒤 캐시를 비우고 평가를 다시 계산한다. background scheduler와 진단 panel은 추가하지 않았다.
+- actual QA에서 `^GSPC 7/16`, `SPY 7/22`를 모두 `7/23`으로 갱신하고 PER 28.31, Z-score 1.14, gap +6.5%와 desktop/420px 흐름을 확인했다.
+- 전체 roadmap `3/3차` 완료. 상세는 `tasks/active/market-research-sp500-manual-price-refresh-v1-20260724/`를 본다.
+
 ### 2026-07-23 - NYSE 주식·ETF current universe 최신화 완료
 
 - 2026-05-31 master와 NYSE 공식 현재 목록 차이를 확인해 stock `+158/-126`, ETF `+372/-67`을 한 transaction으로 반영했다.

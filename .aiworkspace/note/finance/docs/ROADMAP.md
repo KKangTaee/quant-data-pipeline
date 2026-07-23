@@ -1,11 +1,18 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-23
+Last Verified: 2026-07-24
 
 ## Current State After Master Merge
 
 현재 active phase는 없다.
+
+Market Research S&P 500 Manual Price Refresh V1은 전체 `3/3차` 구현과 closeout을 완료했다.
+
+- 화면 진입은 DB-only로 `^GSPC` 가격일과 최신 완료 NYSE session을 비교하며 stale/missing일 때만 수동 action을 노출한다.
+- 명시 클릭은 `^GSPC`·`SPY`의 bounded EOD만 수집하고 DB postcondition 통과 뒤 valuation cache를 비우고 재계산한다. background scheduler, Shiller/SEP/EPS 수집, raw diagnostics panel은 제외했다.
+- actual QA에서 `^GSPC 2026-07-16`, `SPY 2026-07-22`를 모두 `2026-07-23`으로 갱신하고 desktop/420px 흐름을 확인했다.
+- 상세: `tasks/active/market-research-sp500-manual-price-refresh-v1-20260724/STATUS.md`.
 
 NYSE Listing Universe Refresh V1은 전체 `3/3차` 구현과 closeout을 완료했다.
 

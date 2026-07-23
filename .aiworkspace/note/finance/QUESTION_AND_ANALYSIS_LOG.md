@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-24 - S&P 500 가격 최신화는 화면의 명시적 action으로 한정한다
+
+- User request: background 자동화는 만들지 않고 S&P 500 화면에서 최신 장과 비교해 필요할 때만 수동 수집·최신화하도록 요청함.
+- Interpreted goal: 화면 진입은 read-only로 유지하면서 오래된 `^GSPC` 가격 때문에 평가가 낡아지는 문제를 사용자가 한 번의 행동으로 복구한다.
+- Analysis result: `^GSPC`를 최신성 기준으로 삼고 `SPY`는 함께 수집하되 postcondition을 분리한다. 성공 시에만 캐시를 비우며 Shiller/SEP/EPS와 raw diagnostics는 범위에서 제외한다.
+- Follow-up: actual `^GSPC 7/16`, `SPY 7/22`를 모두 7/23으로 갱신하고 reload에서 action이 숨겨지는 것까지 확인해 전체 `3/3차`를 완료했다.
+
 ### 2026-07-23 - 전체 수집 전에 current listing master를 명시적으로 최신화한다
 
 - User request: 전체 종목 수집의 기준 ticker가 오래돼 최근 상장 ticker가 빠진 문제를 검토하고 사용자가 쉽게 최신화하도록 개발해 달라고 요청함.

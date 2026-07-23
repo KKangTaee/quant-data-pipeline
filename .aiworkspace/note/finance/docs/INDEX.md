@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-07-23
+Last Verified: 2026-07-24
 
 ## Purpose
 
@@ -24,6 +24,7 @@ Last Verified: 2026-07-23
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: [Overview Sentiment CNN·AAII Balanced V1 2026-07-19](../tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md) — 전체 잠정 roadmap `2/4차`. 1차 균형형 UI와 2차 source별 immutable 수집 당시 기록, UTC known-at 조회, 24시간 자동 수집, full-history 그래프를 완료했다. 다음은 3차 독립 데이터 후보 검토이며 1W/1M은 4차 chronological PIT 검증 전까지 비공개다.
+- Latest completed Market Research data task: [S&P 500 Manual Price Refresh V1 2026-07-24](../tasks/active/market-research-sp500-manual-price-refresh-v1-20260724/STATUS.md) — S&P 화면 진입은 DB-only freshness를 읽고 stale/missing일 때만 `^GSPC`·`SPY` 수동 EOD action을 제공한다. actual 7/16·7/22를 모두 7/23으로 갱신하고 전체 `3/3차`와 responsive Browser QA를 완료했다.
 - Latest completed data operations task: [NYSE Listing Universe Refresh V1 2026-07-23](../tasks/active/nyse-listing-universe-refresh-v1-20260723/STATUS.md) — stale stock·ETF current master를 NYSE 공식 snapshot으로 함께 갱신하는 atomic job과 Data Operations 첫 action을 구현했다. 실제 `2026-07-23` 기준 stock 6,770 / ETF 5,537과 가격 이력 불변, 전체 `3/3차` Browser QA를 확인했다.
 - Latest completed Market Research UX task: [Market Research Editorial Navigation V2 2026-07-23](../tasks/active/market-research-editorial-navigation-v2-20260722/STATUS.md) — React 상단을 full-width editorial header, divider+underline family text tab, unframed local view rail과 compact active pill로 정리했다. 기존 3-family/7-view와 Python state/fallback을 유지하며 전체 `3/3차`와 1280·760·420px actual Browser QA를 완료했다.
 - Previous completed Market Research UX task: [Market Research React Navigation V1 2026-07-22](../tasks/active/market-research-react-navigation-v1-20260722/STATUS.md) — eyebrow·제목·설명·3-family·7-view 상단 전체를 하나의 responsive React surface로 전환했다. 이 component/state 계약은 최신 Editorial Navigation V2가 계승했다.
