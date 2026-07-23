@@ -637,6 +637,16 @@ FUTURES_MARKET_SCHEMAS = {
           adj_close DOUBLE NULL,
           volume DOUBLE NULL,
 
+          final_open DOUBLE NULL,
+          final_high DOUBLE NULL,
+          final_low DOUBLE NULL,
+          final_close DOUBLE NULL,
+          final_adj_close DOUBLE NULL,
+          final_volume DOUBLE NULL,
+          finalization_basis VARCHAR(64) NULL,
+          final_source_ref VARCHAR(255) NULL,
+          finalized_at TIMESTAMP NULL,
+
           provider_status ENUM('ok','missing','error') NOT NULL DEFAULT 'ok',
           collected_at TIMESTAMP NULL,
           error_msg TEXT NULL,
