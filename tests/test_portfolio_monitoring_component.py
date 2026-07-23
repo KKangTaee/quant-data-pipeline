@@ -34,6 +34,21 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn("종가 기본값", source)
         self.assertIn("수동 체결가", source)
 
+    def test_position_ledger_hides_empty_numeric_cards_for_ineligible_items(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PositionLedgerPanel.tsx"
+        ).read_text(encoding="utf-8")
+        backend_source = Path(
+            "app/services/portfolio_monitoring/position_events.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "const hasLedger = position.current_shares != null",
+            source,
+        )
+        self.assertGreaterEqual(source.count("{hasLedger && ("), 2)
+        self.assertIn("주식·ETF", backend_source)
+
     def test_initial_setting_correction_exposes_date_lookup_and_comparison(self) -> None:
         component_root = Path(
             "app/web/streamlit_components/portfolio_monitoring_workbench/src"
@@ -52,6 +67,29 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn("변경 후", source)
         self.assertIn("requested_start_date", contracts)
         self.assertIn("initial_position_entry", contracts)
+
+    def test_initial_correction_keeps_date_and_quantity_local_until_preview_action(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PositionLedgerPanel.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("변경값 확인", source)
+        self.assertIn("requestInitialEntryPreview", source)
+        self.assertIn("canRequestInitialEntryPreview", source)
+        self.assertIn("matchesInitialEntryPreview", source)
+        self.assertIn(
+            'onInput={(event) => setDraft(changeTradeDate(draft, event.currentTarget.value))}',
+            source,
+        )
+        self.assertNotIn(
+            'onChange={(event) => requestInitialEntry(changeTradeDate(draft, event.target.value))}',
+            source,
+        )
+        self.assertNotIn(
+            'if (draft.mode === "correct_initial") requestInitialEntry(next)',
+            source,
+        )
+
     def test_value_chart_exposes_visible_pointer_and_keyboard_tooltip(self) -> None:
         source = Path(
             "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"
@@ -97,6 +135,21 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn('className="pm-market-tooltip"', source)
         self.assertIn(".pm-market-candle.is-up", styles)
         self.assertIn(".pm-market-candle.is-down", styles)
+
+    def test_item_selection_updates_local_detail_without_streamlit_event(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src/PortfolioMonitoringWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+
+        choose_item = source.split(
+            "const chooseItem = (itemId: string) => {", 1
+        )[1].split("};", 1)[0]
+        self.assertIn("setSelectedItemId(itemId)", choose_item)
+        self.assertNotIn("emit(", choose_item)
+        self.assertNotIn('id: "select_item"', choose_item)
+        self.assertIn(
+            "selectItemDetail(workspace, selectedItem?.monitoring_item_id)", source
+        )
 
     def test_market_chart_exposes_client_side_zoom_pan_controls(self) -> None:
         source = Path(
@@ -247,6 +300,26 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn('id: "reopen_item"', source)
         self.assertIn("원래 시작일부터 계속 추적한 것으로 다시 계산됩니다", source)
         self.assertIn(".pm-reopen-action", styles)
+
+    def test_latest_decision_lock_exposes_review_action_without_client_route_trust(
+        self,
+    ) -> None:
+        component_root = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src"
+        )
+        source = (component_root / "PortfolioMonitoringWorkbench.tsx").read_text(
+            encoding="utf-8"
+        )
+        contracts = (component_root / "contracts.ts").read_text(encoding="utf-8")
+        styles = (component_root / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("추적 자격 변경", source)
+        self.assertIn("최신 판단 재확인", source)
+        self.assertIn('id: "review_latest_decision"', source)
+        self.assertIn('id: "review_latest_decision"', contracts)
+        self.assertIn("decision_lifecycle", contracts)
+        self.assertIn(".pm-decision-lock", styles)
+        self.assertNotIn("latest_source_id: selectedItem", source)
 
     def test_build_availability_requires_index_html(self) -> None:
         component = _load_component()

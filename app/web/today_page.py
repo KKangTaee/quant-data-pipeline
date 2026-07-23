@@ -1,16 +1,36 @@
 from __future__ import annotations
 
-from datetime import datetime
+from collections.abc import Mapping
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from html import escape
 from typing import Any, Callable
+from zoneinfo import ZoneInfo
 
 import streamlit as st
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 from app.services.futures_macro_snapshot import (
     load_overview_futures_macro_materialized_snapshot,
 )
-from app.services.today import build_today_read_model
+from app.services.overview.events import build_market_events_snapshot
+from app.services.portfolio_monitoring.intraday_refresh import (
+    RegularSessionState,
+    build_intraday_refresh_scope,
+    build_live_portfolio_overlay,
+    load_latest_daily_dates,
+    load_latest_portfolio_quotes,
+    load_workspace_eod_closes,
+    resolve_regular_session_state,
+)
+from app.services.today import (
+    build_today_read_model,
+    project_today_portfolio,
+    project_today_portfolio_live,
+)
 from app.web.final_selected_portfolio_dashboard import (
+    TodayPortfolioRuntimeContext,
+    load_default_portfolio_monitoring_context_for_today,
     load_default_portfolio_monitoring_workspace_for_today,
 )
 from app.web.overview.components.common import overview_ui_css
@@ -27,6 +47,10 @@ from app.web.today_react_component import (
     render_today_workbench,
     today_react_component_available,
 )
+from app.web.today_intraday_auto_refresh import (
+    CoordinatorSnapshot,
+    get_today_intraday_coordinator,
+)
 
 
 _TODAY_PAGE_TARGETS: dict[str, object] = {}
@@ -41,6 +65,25 @@ _TODAY_EVENT_ROUTES: dict[str, tuple[str, dict[str, str] | None]] = {
     ),
     "open_portfolio_monitoring": ("portfolio_monitoring", None),
 }
+_MARKET_PHASE_EVENT_ID = "market_phase_changed"
+_TODAY_MARKET_PHASES = {
+    "PRE_OPEN",
+    "OPEN",
+    "CLOSED",
+    "HOLIDAY",
+    "WEEKEND",
+    "STALE",
+}
+
+
+@dataclass(frozen=True)
+class TodayPortfolioIslandState:
+    """Small DB-backed state owned by the refreshable portfolio island."""
+
+    payload: dict[str, Any]
+    session: RegularSessionState
+    coordinator_state: CoordinatorSnapshot
+    heartbeat_enabled: bool
 
 
 def configure_today_page_targets(page_targets: dict[str, object]) -> None:
@@ -67,9 +110,50 @@ def _safe_load(loader: Callable[[], Any], *, label: str) -> Any:
         }
 
 
-def load_today_read_model() -> dict[str, object]:
+def load_today_market_calendar(*, generated_at: datetime) -> dict[str, Any]:
+    """Load official holiday and early-close rows without broad event mixing."""
+
+    now_utc = generated_at.astimezone(timezone.utc)
+    market_date = now_utc.astimezone(ZoneInfo("America/New_York")).date()
+    start_date = f"{market_date.year}-01-01"
+    end_date = f"{market_date.year + 1}-12-31"
+    snapshots = {
+        "holiday": build_market_events_snapshot(
+            start_date=start_date,
+            end_date=end_date,
+            event_type="MARKET_HOLIDAY",
+            recent_days=0,
+            limit=100,
+            today=market_date,
+        ),
+        "early_close": build_market_events_snapshot(
+            start_date=start_date,
+            end_date=end_date,
+            event_type="EARLY_CLOSE",
+            recent_days=0,
+            limit=100,
+            today=market_date,
+        ),
+    }
+    return {
+        "holiday_rows": snapshots["holiday"].get("rows"),
+        "early_close_rows": snapshots["early_close"].get("rows"),
+        "statuses": {
+            "holiday": snapshots["holiday"].get("status"),
+            "early_close": snapshots["early_close"].get("status"),
+        },
+    }
+
+
+def load_today_read_model(
+    *,
+    generated_at: datetime | None = None,
+    portfolio_workspace: Any | None = None,
+    portfolio_live: Any | None = None,
+) -> dict[str, object]:
     """Load existing persisted sources and compose one read-only Today model."""
 
+    timestamp = generated_at or datetime.now(timezone.utc)
     return build_today_read_model(
         economic_cycle=_safe_load(load_economic_cycle_model, label="경제 사이클"),
         sp500=_safe_load(load_sp500_valuation_model, label="S&P 500"),
@@ -85,11 +169,20 @@ def load_today_read_model() -> dict[str, object]:
             lambda: load_overview_market_events_snapshot(horizon_days=45),
             label="시장 일정",
         ),
-        portfolio=_safe_load(
-            load_default_portfolio_monitoring_workspace_for_today,
-            label="대표 포트폴리오",
+        portfolio=(
+            portfolio_workspace
+            if portfolio_workspace is not None
+            else _safe_load(
+                load_default_portfolio_monitoring_workspace_for_today,
+                label="대표 포트폴리오",
+            )
         ),
-        generated_at=datetime.now(),
+        market_calendar=_safe_load(
+            lambda: load_today_market_calendar(generated_at=timestamp),
+            label="미국 증시 일정",
+        ),
+        portfolio_live=portfolio_live,
+        generated_at=timestamp,
     )
 
 
@@ -617,6 +710,16 @@ def build_today_html(model: dict[str, Any]) -> str:
         "".join(contributor_cards)
         or '<div class="today-event-detail">기여 계산 자료가 없습니다.</div>'
     )
+    contributor_count = len(contributor_cards)
+    active_item_count = int(portfolio.get("active_item_count") or 0)
+    if active_item_count <= 0:
+        contributor_coverage_label = "기여 계산 자료 없음"
+    elif contributor_count == active_item_count:
+        contributor_coverage_label = f"전체 {contributor_count}개 · 영향 큰 순"
+    else:
+        contributor_coverage_label = (
+            f"기여 계산 {contributor_count}/{active_item_count}개 · 영향 큰 순"
+        )
     review_rows = [dict(row or {}) for row in portfolio.get("review_items") or []]
     review_html = (
         "".join(
@@ -678,7 +781,7 @@ def build_today_html(model: dict[str, Any]) -> str:
       <section class="today-contributor-section">
         <div class="today-detail-heading">
           <span class="today-panel-meta">종목별 성과 기여</span>
-          <span class="today-panel-meta">기여 상위 2 · 하위 2</span>
+          <span class="today-panel-meta">{escape(contributor_coverage_label)}</span>
         </div>
         <div class="today-contributor-grid">{contributor_html}</div>
         <div class="today-contributor-note">
@@ -725,6 +828,11 @@ def _normalize_today_event(value: object) -> dict[str, str] | None:
     if not isinstance(event, dict):
         return None
     event_id = str(event.get("id") or "").strip()
+    if event_id == _MARKET_PHASE_EVENT_ID:
+        phase = str(event.get("phase") or "").strip().upper()
+        if phase in _TODAY_MARKET_PHASES:
+            return {"id": event_id, "phase": phase}
+        return None
     if event_id not in _TODAY_EVENT_ROUTES:
         return None
     return {"id": event_id}
@@ -754,30 +862,233 @@ def _route_today_event(event: dict[str, str]) -> None:
     st.switch_page(target)
 
 
-def render_today_page() -> None:
-    """Render the default read-only market-and-portfolio landing page."""
+def _load_today_portfolio_context() -> TodayPortfolioRuntimeContext:
+    try:
+        return load_default_portfolio_monitoring_context_for_today()
+    except Exception:  # pragma: no cover - actual UI resilience
+        return TodayPortfolioRuntimeContext(
+            group=None,
+            items=(),
+            workspace={
+                "status": "ERROR",
+                "reason": "대표 포트폴리오 저장 자료를 불러오지 못했습니다.",
+            },
+        )
 
-    model = load_today_read_model()
-    if not today_react_component_available():
-        _render_today_fallback(model)
-        return
 
-    component_value = render_today_workbench(model)
+def should_run_today_portfolio_heartbeat(
+    session: RegularSessionState,
+    coordinator_state: CoordinatorSnapshot,
+) -> bool:
+    """Keep periodic runs only while the portfolio DB state can change."""
+
+    if session.phase == "OPEN" and session.collection_allowed:
+        return True
+    return (
+        session.phase == "CLOSED"
+        and coordinator_state.eod_state in {"waiting", "running"}
+    )
+
+
+def _handle_today_component_value(
+    component_value: dict[str, Any] | None,
+    model: dict[str, object],
+) -> None:
     if component_value is None:
         _render_today_fallback(model)
         return
-
     event = _normalize_today_event(component_value)
     if component_value.get("event") is not None and event is None:
         st.warning("지원하지 않는 Today 화면 동작은 실행하지 않았습니다.")
         return
     if event is not None:
+        if event["id"] == _MARKET_PHASE_EVENT_ID:
+            return
         _route_today_event(event)
+
+
+def _empty_coordinator_snapshot() -> CoordinatorSnapshot:
+    return CoordinatorSnapshot(
+        collection_state="idle",
+        last_result=None,
+        eod_state="not_applicable",
+        eod_attempt_count=0,
+        eod_missing_symbols=(),
+    )
+
+
+def load_today_portfolio_island_state(
+    *,
+    market_session: Mapping[str, Any],
+    generated_at: datetime | None = None,
+    context: TodayPortfolioRuntimeContext | None = None,
+) -> TodayPortfolioIslandState:
+    """Load only portfolio DB state and optional live overlay for an island run."""
+
+    timestamp = generated_at or datetime.now(timezone.utc)
+    runtime = context or _load_today_portfolio_context()
+    portfolio = project_today_portfolio(runtime.workspace)
+    session = resolve_regular_session_state(market_session, timestamp)
+    coordinator_state = _empty_coordinator_snapshot()
+    if runtime.group is not None:
+        try:
+            scope = build_intraday_refresh_scope(
+                runtime.group,
+                runtime.items,
+            )
+            latest_daily_dates = (
+                load_latest_daily_dates(scope, end=session.trade_date)
+                if session.phase == "CLOSED"
+                else {}
+            )
+            coordinator_state = get_today_intraday_coordinator().tick(
+                scope=scope,
+                session=session,
+                now=timestamp,
+                latest_daily_dates=latest_daily_dates,
+            )
+            if session.collection_allowed:
+                quotes = load_latest_portfolio_quotes(scope, now=timestamp)
+                eod_closes = load_workspace_eod_closes(
+                    workspace=runtime.workspace,
+                    scope=scope,
+                )
+                overlay = build_live_portfolio_overlay(
+                    workspace=runtime.workspace,
+                    scope=scope,
+                    quotes=quotes,
+                    eod_closes=eod_closes,
+                    now=timestamp,
+                )
+                portfolio["live"] = project_today_portfolio_live(
+                    overlay
+                )
+            elif coordinator_state.eod_state in {
+                "waiting",
+                "running",
+                "exhausted",
+            }:
+                missing = list(coordinator_state.eod_missing_symbols)
+                portfolio["live"] = project_today_portfolio_live(
+                    {
+                        "status": "EOD_WAITING",
+                        "trade_date": (
+                            session.trade_date.isoformat()
+                            if session.trade_date is not None
+                            else None
+                        ),
+                        "coverage": {
+                            "fresh": max(len(scope.symbols) - len(missing), 0),
+                            "expected": len(scope.symbols),
+                        },
+                        "fallback_symbols": missing,
+                    }
+                )
+        except Exception:
+            pass  # EOD Today remains available when live refresh is unavailable.
+
+    heartbeat_enabled = (
+        runtime.group is not None
+        and should_run_today_portfolio_heartbeat(session, coordinator_state)
+    )
+    return TodayPortfolioIslandState(
+        payload={
+            "schema_version": "today_portfolio_island_v1",
+            "portfolio": portfolio,
+        },
+        session=session,
+        coordinator_state=coordinator_state,
+        heartbeat_enabled=heartbeat_enabled,
+    )
+
+
+def _render_today_portfolio_value(state: TodayPortfolioIslandState) -> None:
+    component_value = render_today_workbench(
+        state.payload,
+        view="portfolio",
+        key="today_portfolio_island",
+    )
+    _handle_today_component_value(
+        component_value,
+        {"portfolio": state.payload["portfolio"]},
+    )
+
+
+def _render_today_portfolio_fragment(
+    *,
+    market_session: Mapping[str, Any],
+    initial_state: TodayPortfolioIslandState,
+) -> None:
+    """Refresh only the portfolio component while its DB state can change."""
+
+    if get_script_run_ctx(suppress_warning=True) is None:
+        _render_today_portfolio_value(initial_state)
+        return
+
+    run_every = 15 if initial_state.heartbeat_enabled else None
+
+    @st.fragment(run_every=run_every)
+    def portfolio_fragment() -> None:
+        state = load_today_portfolio_island_state(
+            market_session=market_session,
+        )
+        _render_today_portfolio_value(state)
+        if initial_state.heartbeat_enabled and not state.heartbeat_enabled:
+            st.rerun(scope="app")
+
+    portfolio_fragment()
+
+
+def _render_today_split_body(
+    *,
+    generated_at: datetime | None = None,
+) -> None:
+    timestamp = generated_at or datetime.now(timezone.utc)
+    context = _load_today_portfolio_context()
+    model = load_today_read_model(
+        generated_at=timestamp,
+        portfolio_workspace=context.workspace,
+    )
+
+    if not today_react_component_available():
+        _render_today_fallback(model)
+        return
+
+    context_value = render_today_workbench(
+        model,
+        view="context",
+        key="today_context_shell",
+    )
+    _handle_today_component_value(context_value, model)
+
+    initial_state = load_today_portfolio_island_state(
+        market_session=model.get("market_session") or {},
+        generated_at=timestamp,
+        context=context,
+    )
+    _render_today_portfolio_fragment(
+        market_session=model.get("market_session") or {},
+        initial_state=initial_state,
+    )
+
+    action_value = render_today_workbench(
+        model,
+        view="actions",
+        key="today_action_shell",
+    )
+    _handle_today_component_value(action_value, model)
+
+
+def render_today_page() -> None:
+    """Render Today with a static shell and conditional portfolio island."""
+
+    _render_today_split_body()
 
 
 __all__ = [
     "build_today_html",
     "configure_today_page_targets",
+    "load_today_portfolio_island_state",
     "load_today_read_model",
     "render_today_page",
 ]

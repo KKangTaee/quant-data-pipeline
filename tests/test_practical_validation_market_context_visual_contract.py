@@ -171,6 +171,27 @@ class PracticalValidationMarketContextVisualContractTests(unittest.TestCase):
             decision.index('className="pv2-replay"'),
         )
 
+    def test_enrichment_lifecycle_precedes_recheck_controls_and_is_responsive(
+        self,
+    ) -> None:
+        source = WORKSPACE.read_text(encoding="utf-8")
+        style = STYLE.read_text(encoding="utf-8")
+        decision = source.split('{surface === "decision"', 1)[1]
+        responsive = style.split("@media (max-width: 760px)", 1)[1]
+
+        self.assertIn("workspace.enrichment_lifecycle.visible", decision)
+        self.assertIn("pv2-enrichment-lifecycle", decision)
+        self.assertIn("workspace.enrichment_lifecycle.steps.map", decision)
+        for label in ("자료 보강", "재검증", "새 결과 저장", "Final Review"):
+            self.assertIn(label, source)
+        self.assertLess(
+            decision.index("pv2-enrichment-lifecycle"),
+            decision.index("pv2-recheck-mode-panel"),
+        )
+        self.assertIn(".pv2-enrichment-steps", style)
+        self.assertIn(".pv2-enrichment-steps", responsive)
+        self.assertIn("grid-template-columns: 1fr;", responsive)
+
     def test_profile_and_recheck_controls_collapse_on_mobile(self) -> None:
         style = STYLE.read_text(encoding="utf-8")
         responsive = style.split("@media (max-width: 760px)", 1)[1]

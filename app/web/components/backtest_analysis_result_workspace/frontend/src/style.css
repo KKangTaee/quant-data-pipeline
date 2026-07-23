@@ -55,6 +55,31 @@ button { font: inherit; }
 .bt1r-lifecycle.is-stale,
 .bt1r-lifecycle.is-error_with_reference { border-color: #e8c78b; background: #fffaf0; }
 
+.bt1r-freshness-card {
+  display: grid;
+  min-width: 0;
+  gap: 18px;
+  padding: 24px 28px;
+  border: 1px solid #e2c47d;
+  border-radius: 22px;
+  background: #fffaf0;
+  box-shadow: 0 8px 24px rgba(83, 63, 24, .05);
+}
+.bt1r-freshness-card.is-provider_gap { border-color: #e1a8a1; background: #fff7f5; }
+.bt1r-freshness-card.is-rerun_required { border-color: #9fc5d7; background: #f3f9fc; }
+.bt1r-freshness-copy { min-width: 0; }
+.bt1r-freshness-copy > span { color: #806632; font-size: 12px; font-weight: 800; letter-spacing: .04em; }
+.bt1r-freshness-copy h2 { margin: 7px 0 0; font-size: clamp(20px, 2.4vw, 28px); }
+.bt1r-freshness-copy p { margin: 9px 0 0; color: #637888; line-height: 1.55; }
+.bt1r-freshness-copy small { display: block; margin-top: 8px; color: #5d7483; line-height: 1.45; }
+.bt1r-freshness-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.bt1r-freshness-metrics > div { min-width: 0; padding: 13px 14px; border: 1px solid rgba(176, 144, 77, .25); border-radius: 13px; background: rgba(255, 255, 255, .72); }
+.bt1r-freshness-metrics dt { color: #718390; font-size: 11px; font-weight: 700; }
+.bt1r-freshness-metrics dd { margin: 6px 0 0; overflow-wrap: anywhere; font-size: 15px; font-weight: 800; }
+.bt1r-freshness-symbols { margin: -5px 0 0; overflow-wrap: anywhere; color: #657b89 !important; font-size: 12px; }
+.bt1r-freshness-card button { justify-self: start; border: 0; border-radius: 12px; padding: 12px 18px; background: #315f77; color: #fff; font-weight: 800; cursor: pointer; }
+.bt1r-freshness-card button:disabled { cursor: not-allowed; opacity: .5; }
+
 .bt1r-section { padding: 26px 28px; }
 .bt1r-section-heading { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 22px; }
 .bt1r-section-heading > span { display: inline-grid; place-items: center; min-width: 34px; height: 34px; border-radius: 999px; background: #eaf3f7; color: #365e74; font-weight: 800; }
@@ -175,8 +200,10 @@ button { font: inherit; }
   .bt1r-component-list,
   .bt1r-schedule-strip,
   .bt1r-basis-grid { grid-template-columns: minmax(0, 1fr); }
+  .bt1r-freshness-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bt1r-header,
-  .bt1r-section { padding: 20px 16px; }
+  .bt1r-section,
+  .bt1r-freshness-card { padding: 20px 16px; }
   .bt1r-section-heading h2 { font-size: 20px; }
   .bt1r-handoff > div,
   .bt1r-allocation-card header { align-items: flex-start; flex-direction: column; }

@@ -97,12 +97,24 @@ export type PositionEditorRecoveryState = {
 
 export type ItemRow = {
   monitoring_item_id: string;
+  source_type: "direct_security" | "selected_strategy";
+  instrument_kind: "stock" | "etf" | "strategy" | string;
   source_ref: string;
   status: string;
   lane_status: string;
   initial_capital: number;
   current_value: number;
+  decision_lifecycle: Partial<DecisionLifecycleProjection>;
   failure: string | null;
+};
+
+export type DecisionLifecycleProjection = {
+  state: "CURRENT_SELECTED" | "SUPERSEDED_SELECTED" | "TRACKING_ELIGIBILITY_CHANGED" | "DECISION_NOT_FOUND" | string;
+  locked: boolean;
+  latest_route: string | null;
+  latest_route_label?: string | null;
+  latest_source_id: string | null;
+  message: string;
 };
 
 export type GroupValueResult = {
@@ -135,6 +147,11 @@ export type SelectedItemMarketChart = {
   max_rows: number;
   rows: MarketChartRow[];
   reason: string | null;
+};
+
+export type ItemDetailProjection = {
+  position: SelectedPositionProjection;
+  market_chart: SelectedItemMarketChart | null;
 };
 
 export type PriceRefreshRow = {
@@ -270,6 +287,7 @@ export type PortfolioMonitoringWorkspace = {
   groups: GroupSummary[];
   active_group: GroupValueResult | null;
   selected_position: SelectedPositionProjection;
+  item_details?: Record<string, ItemDetailProjection>;
   position_trade_close?: PositionTradeCloseProjection;
   initial_position_entry?: InitialPositionEntryProjection;
   position_editor_state?: PositionEditorRecoveryState | null;
@@ -304,6 +322,7 @@ export type PortfolioMonitoringEvent =
   | { id: "add_item"; payload: Record<string, unknown>; nonce: string }
   | { id: "end_item"; monitoring_item_id: string; requested_end_date: string; nonce: string }
   | { id: "reopen_item"; monitoring_item_id: string; nonce: string }
+  | { id: "review_latest_decision"; monitoring_item_id: string; nonce: string }
   | { id: "refresh_group_prices"; command_id: string; portfolio_group_id: string; nonce: string }
   | { id: "lookup_position_trade_close"; monitoring_item_id: string; trade_date: string; position_editor_state: PositionEditorRecoveryState; nonce: string }
   | { id: "lookup_initial_position_entry"; monitoring_item_id: string; requested_start_date: string; quantity: number; position_editor_state: PositionEditorRecoveryState; nonce: string }

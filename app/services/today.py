@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import asdict, is_dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from math import isfinite
 from typing import Any, Mapping, Sequence
 
+from app.services.today_market_session import build_us_market_session_model
 
-TODAY_SCHEMA_VERSION = "today_home_v2"
+
+TODAY_SCHEMA_VERSION = "today_home_v4"
 _UNAVAILABLE_STATUSES = {
     "",
     "ERROR",
@@ -361,6 +363,30 @@ def _portfolio_curve_projection(curve: Any) -> dict[str, Any]:
     }
 
 
+def _contributor_tone(value: float) -> str:
+    """Classify contribution direction without treating zero as a loss."""
+
+    if value > 0:
+        return "positive"
+    if value < 0:
+        return "negative"
+    return "neutral"
+
+
+def _sort_contributors(
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Order contributors by portfolio impact with deterministic ties."""
+
+    return sorted(
+        rows,
+        key=lambda row: (
+            -abs(float(row["contribution_value"])),
+            str(row.get("symbol") or ""),
+        ),
+    )
+
+
 def _project_portfolio(workspace: Any) -> dict[str, Any]:
     source = _as_mapping(workspace)
     boundaries = _as_mapping(source.get("boundaries"))
@@ -454,7 +480,7 @@ def _project_portfolio(workspace: Any) -> dict[str, Any]:
     contribution_rows = []
     for item_id, raw_value in raw_contributions.items():
         contribution_value = _safe_float(raw_value)
-        if contribution_value in (None, 0.0):
+        if contribution_value is None:
             continue
         item = items_by_id.get(str(item_id), {})
         contribution_rows.append(
@@ -463,18 +489,9 @@ def _project_portfolio(workspace: Any) -> dict[str, Any]:
                 "contribution_value": contribution_value,
                 "value": contribution_value,
                 "total_return": _safe_float(item.get("total_return")),
-                "tone": "positive" if contribution_value > 0 else "negative",
+                "tone": _contributor_tone(contribution_value),
             }
         )
-    positives = sorted(
-        (row for row in contribution_rows if row["contribution_value"] > 0),
-        key=lambda row: row["contribution_value"],
-        reverse=True,
-    )[:2]
-    negatives = sorted(
-        (row for row in contribution_rows if row["contribution_value"] < 0),
-        key=lambda row: row["contribution_value"],
-    )[:2]
     review_items = [
         {
             "severity": _text(row.get("severity"), "INFO"),
@@ -504,10 +521,124 @@ def _project_portfolio(workspace: Any) -> dict[str, Any]:
         },
         "curve": curve_projection["rows"],
         "curve_metadata": curve_projection["metadata"],
-        "contributors": positives + negatives,
+        "contributors": _sort_contributors(contribution_rows),
         "review_items": review_items,
         "active_item_count": active_count,
     }
+
+
+def _inactive_live_portfolio() -> dict[str, Any]:
+    return {
+        "status": "INACTIVE",
+        "label": "확정 종가",
+        "as_of_utc": None,
+        "trade_date": None,
+        "coverage": {"fresh": 0, "expected": 0, "fallback_symbols": []},
+        "metrics": None,
+        "contributors": [],
+        "curve_point": None,
+        "message": "저장된 확정 종가 기준입니다.",
+    }
+
+
+def _project_live_portfolio(model: Any) -> dict[str, Any]:
+    source = _as_mapping(model)
+    status = _status(source.get("status"))
+    if status not in {"LIVE_READY", "LIVE_PARTIAL", "EOD_WAITING"}:
+        return _inactive_live_portfolio()
+    coverage = _as_mapping(source.get("coverage"))
+    fallback_symbols = [
+        str(symbol).strip().upper()
+        for symbol in source.get("fallback_symbols")
+        or coverage.get("fallback_symbols")
+        or []
+        if str(symbol).strip()
+    ]
+    raw_metrics = _as_mapping(source.get("metrics"))
+    metrics = (
+        {
+            "current_value": _safe_float(raw_metrics.get("current_value")),
+            "latest_observation_return": _safe_float(
+                raw_metrics.get("latest_observation_return")
+            ),
+            "return_from_date": _date_text(raw_metrics.get("return_from_date")),
+            "return_to_date": _date_text(raw_metrics.get("return_to_date")),
+            "total_return": _safe_float(raw_metrics.get("total_return")),
+        }
+        if raw_metrics
+        else None
+    )
+    raw_point = _as_mapping(source.get("curve_point"))
+    curve_point = (
+        {
+            "date": _text(raw_point.get("date")),
+            "timestamp_utc": _text(raw_point.get("timestamp_utc")),
+            "kind": "intraday",
+            "unit_value": _safe_float(raw_point.get("unit_value")),
+            "total_value": _safe_float(raw_point.get("total_value")),
+            "cumulative_return": _safe_float(raw_point.get("cumulative_return")),
+        }
+        if raw_point and raw_point.get("kind") == "intraday"
+        else None
+    )
+    contributors = []
+    for raw_row in source.get("contributors") or []:
+        row = _as_mapping(raw_row)
+        value = _safe_float(row.get("contribution_value"))
+        if value is None:
+            continue
+        contributors.append(
+            {
+                "symbol": _text(row.get("symbol")),
+                "contribution_value": value,
+                "value": value,
+                "total_return": _safe_float(row.get("total_return")),
+                "tone": _contributor_tone(value),
+            }
+        )
+    labels = {
+        "LIVE_READY": "장중 임시",
+        "LIVE_PARTIAL": "일부 장중 임시",
+        "EOD_WAITING": "종가 반영 대기",
+    }
+    messages = {
+        "LIVE_READY": "직접 종목의 최신 장중 가격을 반영했습니다.",
+        "LIVE_PARTIAL": "일부 직접 종목은 마지막 확정 종가를 유지합니다.",
+        "EOD_WAITING": "정규장 종료 후 당일 확정 종가 반영을 기다리고 있습니다.",
+    }
+    return {
+        "status": status,
+        "label": labels[status],
+        "as_of_utc": _text(source.get("as_of_utc"), "") or None,
+        "trade_date": _date_text(source.get("trade_date")),
+        "coverage": {
+            "fresh": int(coverage.get("fresh") or 0),
+            "expected": int(coverage.get("expected") or 0),
+            "fallback_symbols": fallback_symbols,
+        },
+        "metrics": metrics,
+        "contributors": _sort_contributors(contributors),
+        "curve_point": curve_point,
+        "message": messages[status],
+    }
+
+
+def project_today_portfolio_live(model: Any) -> dict[str, Any]:
+    """Expose the allowlisted live projection for DB-backed page refreshes."""
+
+    return _project_live_portfolio(model)
+
+
+def project_today_portfolio(
+    workspace: Any,
+    *,
+    portfolio_live: Any | None = None,
+) -> dict[str, Any]:
+    """Project only the portfolio branch for lightweight Today refreshes."""
+
+    portfolio = _project_portfolio(workspace)
+    portfolio["live"] = _project_live_portfolio(portfolio_live)
+    return portfolio
 
 
 def _market_headline(evidence: list[dict[str, Any]], ready_count: int) -> str:
@@ -528,11 +659,13 @@ def build_today_read_model(
     sentiment: Any,
     events: Any,
     portfolio: Any,
+    market_calendar: Any = None,
+    portfolio_live: Mapping[str, Any] | None = None,
     generated_at: datetime | None = None,
 ) -> dict[str, object]:
     """Compose the read-only Today payload from existing persisted read models."""
 
-    timestamp = generated_at or datetime.now()
+    timestamp = generated_at or datetime.now(timezone.utc)
     evidence = _project_market_evidence(
         economic_cycle,
         sp500,
@@ -563,7 +696,17 @@ def build_today_read_model(
             watch_items.append(f"{row['label']} 근거에 제한이 있습니다.")
     if next_event and next_event.get("importance") == "High" and int(next_event.get("days_until") or 0) <= 7:
         watch_items.append(f"{next_event['date']} {next_event['title']} 일정을 확인합니다.")
-    portfolio_model = _project_portfolio(portfolio)
+    portfolio_model = project_today_portfolio(
+        portfolio,
+        portfolio_live=portfolio_live,
+    )
+    calendar = _as_mapping(market_calendar)
+    market_session = build_us_market_session_model(
+        generated_at=timestamp,
+        holiday_rows=calendar.get("holiday_rows"),
+        early_close_rows=calendar.get("early_close_rows"),
+        calendar_statuses=calendar.get("statuses"),
+    )
     date_candidates = [
         row.get("as_of_date")
         for row in evidence
@@ -598,6 +741,7 @@ def build_today_read_model(
             "next_event": next_event,
             "watch_items": watch_items[:3],
         },
+        "market_session": market_session,
         "portfolio": portfolio_model,
         "actions": [
             {"key": "market_research", "label": "시장 근거 자세히 보기"},
@@ -617,4 +761,9 @@ def build_today_read_model(
     }
 
 
-__all__ = ["TODAY_SCHEMA_VERSION", "build_today_read_model"]
+__all__ = [
+    "TODAY_SCHEMA_VERSION",
+    "build_today_read_model",
+    "project_today_portfolio",
+    "project_today_portfolio_live",
+]

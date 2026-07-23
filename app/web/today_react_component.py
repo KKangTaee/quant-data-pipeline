@@ -13,6 +13,7 @@ TODAY_REACT_COMPONENT_ROOT = (
 TODAY_REACT_BUILD_DIR = TODAY_REACT_COMPONENT_ROOT / "component_static"
 
 _today_component = None
+_TODAY_COMPONENT_VIEWS = {"full", "context", "portfolio", "actions"}
 
 
 def today_react_component_available(build_dir: Path | None = None) -> bool:
@@ -37,15 +38,19 @@ def _declare_today_component():
 def render_today_workbench(
     payload: dict[str, Any],
     *,
+    view: str = "full",
     key: str = "today_workbench",
 ) -> dict[str, Any] | None:
     """Render Today and return its small navigation-event envelope."""
 
+    if view not in _TODAY_COMPONENT_VIEWS:
+        raise ValueError(f"Unsupported Today component view: {view}")
     component = _declare_today_component()
     if component is None:
         return None
     value = component(
         payload=payload,
+        view=view,
         key=key,
         default={"event": None},
     )

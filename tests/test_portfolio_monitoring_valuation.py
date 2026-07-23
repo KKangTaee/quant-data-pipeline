@@ -32,13 +32,15 @@ class PortfolioMonitoringDirectValuationTests(unittest.TestCase):
         entry_close=Decimal("100"),
         initial_capital=Decimal("1000"),
         effective_start_date=date(2026, 7, 1),
+        instrument_kind="stock",
+        source_ref="AAPL",
     ):
         return MonitoringItemRecord(
             monitoring_item_id="item-aapl",
             portfolio_group_id="group-core",
             source_type="direct_security",
-            source_ref="AAPL",
-            instrument_kind="stock",
+            source_ref=source_ref,
+            instrument_kind=instrument_kind,
             requested_start_date=effective_start_date,
             effective_start_date=effective_start_date,
             funding_mode=funding_mode,
@@ -385,6 +387,92 @@ class PortfolioMonitoringDirectValuationTests(unittest.TestCase):
         self.assertEqual(curve.loc[pd.Timestamp("2026-07-03"), "market_value"], 1060.0)
         self.assertEqual(curve.loc[pd.Timestamp("2026-07-03"), "total_value"], 1080.0)
         self.assertEqual(curve.loc[pd.Timestamp("2026-07-03"), "effective_units"], 20.0)
+
+    def test_etf_fixed_shares_supports_split_dividend_buy_and_sell(self) -> None:
+        valuation = _load_valuation()
+        item = self._item(
+            instrument_kind="etf",
+            source_ref="QQQ",
+            input_shares=4,
+            entry_close=Decimal("100"),
+            initial_capital=Decimal("400"),
+        )
+        history = _history(
+            [
+                {
+                    "date": "2026-07-01",
+                    "close": 100,
+                    "adj_close": 50,
+                    "stock_splits": 0,
+                    "dividends": 0,
+                },
+                {
+                    "date": "2026-07-02",
+                    "close": 50,
+                    "adj_close": 50,
+                    "stock_splits": 2,
+                    "dividends": 0,
+                },
+                {
+                    "date": "2026-07-03",
+                    "close": 51,
+                    "adj_close": 51,
+                    "stock_splits": 0,
+                    "dividends": 1,
+                },
+            ]
+        )
+
+        lane = valuation.build_direct_security_value_lane(
+            item,
+            history,
+            position_events=[
+                self._event(
+                    event_id="buy-v1",
+                    root_id="buy-root",
+                    order=1,
+                    effect="buy",
+                    day="2026-07-02",
+                    quantity=1,
+                    price="50",
+                    fee="1",
+                ),
+                self._event(
+                    event_id="sell-v1",
+                    root_id="sell-root",
+                    order=2,
+                    effect="sell",
+                    day="2026-07-03",
+                    quantity=2,
+                    price="51",
+                    fee="1",
+                ),
+            ],
+        )
+
+        self.assertIsNotNone(lane.position)
+        assert lane.position is not None
+        self.assertEqual(lane.position.effective_initial_shares, Decimal("4"))
+        self.assertEqual(lane.position.current_shares, Decimal("7"))
+        self.assertEqual(lane.position.cumulative_contributions, Decimal("451"))
+        self.assertEqual(lane.position.cumulative_withdrawals, Decimal("101"))
+        self.assertEqual(
+            Decimal(str(lane.curve.iloc[-1]["dividend_cash"])), Decimal("7.0")
+        )
+
+        fixed_notional = self._item(
+            instrument_kind="etf",
+            source_ref="QQQ",
+            funding_mode="fixed_notional",
+            input_notional=Decimal("400"),
+            input_shares=None,
+            initial_capital=Decimal("400"),
+        )
+        self.assertIsNone(
+            valuation.build_direct_security_value_lane(
+                fixed_notional, history
+            ).position
+        )
 
     def test_adjusted_close_cross_check_uses_strict_review_tolerances(self) -> None:
         valuation = _load_valuation()

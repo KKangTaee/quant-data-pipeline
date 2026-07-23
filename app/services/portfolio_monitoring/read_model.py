@@ -12,6 +12,7 @@ from .valuation import ItemValueLane, modified_dietz_return
 from .diagnosis import DIAGNOSIS_POLICY_VERSION, DiagnosisFact, project_diagnoses
 from .macro_context import MACRO_CONTEXT_VERSION, MacroContext, MacroObservation
 from .market_chart import MarketChartLoader, build_selected_item_market_chart
+from .position_events import is_position_ledger_item
 from .schemas import build_request_fingerprint
 
 
@@ -304,6 +305,19 @@ def _effective_start(
     return lane.effective_start_date if lane is not None else item.effective_start_date
 
 
+def _decision_lifecycle_from_lane(
+    value: ItemValueLane | BaseException | None,
+) -> dict[str, Any]:
+    """Preserve selected-strategy eligibility context even when its lane is locked."""
+
+    readiness = (
+        value.readiness
+        if isinstance(value, ItemValueLane)
+        else getattr(value, "readiness", None)
+    )
+    return dict(getattr(readiness, "decision_lifecycle", {}) or {})
+
+
 def align_group_value_lanes(
     items: Sequence[MonitoringItemRecord],
     lanes: Mapping[str, ItemValueLane | BaseException],
@@ -454,6 +468,8 @@ def align_group_value_lanes(
     item_rows = tuple(
         {
             "monitoring_item_id": item.monitoring_item_id,
+            "source_type": item.source_type,
+            "instrument_kind": item.instrument_kind,
             "source_ref": item.source_ref,
             "status": item.status,
             "lane_status": (
@@ -474,6 +490,9 @@ def align_group_value_lanes(
             "total_return": _lane_total_return(
                 valid_lanes.get(item.monitoring_item_id),
                 basis_date,
+            ),
+            "decision_lifecycle": _decision_lifecycle_from_lane(
+                lanes.get(item.monitoring_item_id)
             ),
             "failure": failures.get(item.monitoring_item_id),
         }
@@ -568,7 +587,7 @@ def _project_selected_position(
     empty = {
         "monitoring_item_id": selected_item_id,
         "eligible": False,
-        "reason": "개별주식 종목을 선택해 주세요.",
+        "reason": "주식·ETF 종목을 선택해 주세요.",
         "as_of_date": None,
         "current_value": None,
         "requested_start_date": None,
@@ -585,15 +604,11 @@ def _project_selected_position(
     }
     if selected is None:
         return empty
-    if not (
-        selected.source_type == "direct_security"
-        and selected.instrument_kind == "stock"
-        and selected.funding_mode == "fixed_shares"
-    ):
+    if not is_position_ledger_item(selected):
         return {
             **empty,
             "monitoring_item_id": selected.monitoring_item_id,
-            "reason": "개별주식의 보유 수량 방식에서만 거래를 기록할 수 있습니다.",
+            "reason": "주식·ETF의 보유 수량 방식에서만 거래를 기록할 수 있습니다.",
         }
     lane = lanes.get(selected.monitoring_item_id)
     if not isinstance(lane, ItemValueLane) or lane.position is None:
@@ -638,6 +653,53 @@ def _project_selected_position(
         "total_return": total_return,
         "event_rows": list(lane.position.event_rows),
     }
+
+
+def _project_item_details(
+    items: Sequence[MonitoringItemRecord],
+    lanes: Mapping[str, ItemValueLane | BaseException],
+    *,
+    basis_date: date | None,
+    market_chart_loader: MarketChartLoader | None,
+) -> dict[str, dict[str, Any]]:
+    """Preload per-item detail so read-only selection stays in React."""
+
+    return {
+        item.monitoring_item_id: {
+            "position": _project_selected_position(
+                items,
+                lanes,
+                item.monitoring_item_id,
+            ),
+            "market_chart": (
+                build_selected_item_market_chart(
+                    items,
+                    selected_item_id=item.monitoring_item_id,
+                    basis_date=basis_date,
+                    loader=market_chart_loader,
+                )
+                if market_chart_loader is not None
+                else None
+            ),
+        }
+        for item in items
+    }
+
+
+def _resolved_market_chart_item_id(
+    items: Sequence[MonitoringItemRecord],
+    selected_item_id: str | None,
+) -> str | None:
+    selected = next(
+        (item for item in items if item.monitoring_item_id == selected_item_id),
+        None,
+    )
+    if selected is None:
+        selected = next(
+            (item for item in items if item.status != "ended"),
+            items[0] if items else None,
+        )
+    return selected.monitoring_item_id if selected is not None else None
 
 
 def build_portfolio_monitoring_workspace(
@@ -771,6 +833,12 @@ def build_portfolio_monitoring_workspace(
         current_policy_version=DIAGNOSIS_POLICY_VERSION,
         current_config_fingerprint=config_fingerprint,
     )
+    item_details = _project_item_details(
+        selected_items,
+        lane_values,
+        basis_date=active_result.basis_date if active_result is not None else None,
+        market_chart_loader=market_chart_loader,
+    )
     workspace: dict[str, object] = {
         "schema_version": WORKSPACE_SCHEMA_VERSION,
         "generated_at": timestamp.isoformat(timespec="seconds"),
@@ -789,6 +857,7 @@ def build_portfolio_monitoring_workspace(
             lane_values,
             selected_item_id,
         ),
+        "item_details": item_details,
         "catalog": {"query": catalog_query, "items": []},
         "commands": [],
         "diagnosis": {
@@ -820,10 +889,18 @@ def build_portfolio_monitoring_workspace(
         },
     }
     if market_chart_loader is not None:
-        workspace["selected_item_market_chart"] = build_selected_item_market_chart(
+        resolved_item_id = _resolved_market_chart_item_id(
             selected_items,
-            selected_item_id=selected_item_id,
-            basis_date=active_result.basis_date if active_result is not None else None,
-            loader=market_chart_loader,
+            selected_item_id,
+        )
+        workspace["selected_item_market_chart"] = (
+            item_details[resolved_item_id]["market_chart"]
+            if resolved_item_id is not None
+            else build_selected_item_market_chart(
+                selected_items,
+                selected_item_id=selected_item_id,
+                basis_date=active_result.basis_date if active_result is not None else None,
+                loader=market_chart_loader,
+            )
         )
     return workspace

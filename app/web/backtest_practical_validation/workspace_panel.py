@@ -594,6 +594,39 @@ def render_practical_validation_decision_workspace_fallback(
     summary = dict(workspace.get("summary") or {})
     resolution_lanes = dict(workspace.get("resolution_lanes") or {})
     actions = dict(workspace.get("actions") or {})
+    lifecycle = dict(workspace.get("enrichment_lifecycle") or {})
+
+    if bool(lifecycle.get("visible")):
+        with st.container(border=True):
+            st.caption("보강 이후 진행 상태")
+            st.markdown(f"##### {lifecycle.get('headline') or '다음 단계를 확인하세요.'}")
+            st.caption(str(lifecycle.get("next_action") or ""))
+            step_status_labels = {
+                "completed": "완료",
+                "current": "지금 할 일",
+                "blocked": "확인 필요",
+                "next": "다음 단계",
+                "pending": "대기",
+            }
+            steps = [
+                dict(row)
+                for row in list(lifecycle.get("steps") or [])
+                if isinstance(row, dict)
+            ]
+            if steps:
+                columns = st.columns(len(steps), gap="small")
+                for column, step in zip(columns, steps):
+                    status = str(step.get("status") or "pending")
+                    column.markdown(f"**{step.get('label') or '-'}**")
+                    column.caption(step_status_labels.get(status, status))
+            collection_summary = dict(lifecycle.get("collection_summary") or {})
+            if int(collection_summary.get("total_count") or 0) > 0:
+                st.caption(
+                    f"보강 작업 {int(collection_summary.get('total_count') or 0)}개 · "
+                    f"완료 {int(collection_summary.get('success_count') or 0)} · "
+                    f"확인 {int(collection_summary.get('review_count') or 0)} · "
+                    f"실패 {int(collection_summary.get('failure_count') or 0)}"
+                )
 
     st.markdown("#### 2. 최신 데이터 기준 재검증")
     mode_options = [

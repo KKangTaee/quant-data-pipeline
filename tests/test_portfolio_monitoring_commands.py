@@ -203,13 +203,20 @@ class PortfolioMonitoringCommandTests(unittest.TestCase):
             input_notional=Decimal("10000"),
         )
 
-    def _stored_direct_item(self, persistence, *, shares=30):
+    def _stored_direct_item(
+        self,
+        persistence,
+        *,
+        shares=30,
+        instrument_kind="stock",
+        source_ref="AMD",
+    ):
         return persistence.MonitoringItemRecord(
             monitoring_item_id="item-amd",
             portfolio_group_id="group-core",
             source_type="direct_security",
-            source_ref="AMD",
-            instrument_kind="stock",
+            source_ref=source_ref,
+            instrument_kind=instrument_kind,
             requested_start_date=date(2026, 7, 1),
             effective_start_date=date(2026, 7, 1),
             funding_mode="fixed_shares",
@@ -291,6 +298,42 @@ class PortfolioMonitoringCommandTests(unittest.TestCase):
         self.assertFalse(first.replayed)
         self.assertTrue(replay.replayed)
         self.assertEqual(len(repository.position_events), 1)
+        self.assertEqual(
+            repository.position_events[0].execution_price_source,
+            "db_close_default",
+        )
+
+    def test_record_trade_accepts_etf_fixed_shares(self) -> None:
+        commands, persistence, schemas = _load_modules()
+        repository = FakeRepository()
+        item = self._stored_direct_item(
+            persistence,
+            shares=4,
+            instrument_kind="etf",
+            source_ref="QQQ",
+        )
+        repository.items[item.monitoring_item_id] = item
+
+        commands.execute_record_position_trade(
+            repository,
+            self._command(
+                schemas,
+                "trade-etf",
+                schemas.CommandType.RECORD_POSITION_TRADE,
+                target_id=item.monitoring_item_id,
+            ),
+            schemas.PositionTradeInput(
+                monitoring_item_id=item.monitoring_item_id,
+                position_effect=schemas.PositionEffect.BUY,
+                trade_date=date(2026, 7, 10),
+                quantity=1,
+                execution_price=Decimal("750"),
+            ),
+            resolve_reference_close=lambda current, day: Decimal("750"),
+            validate_candidate=lambda current, records: None,
+        )
+
+        self.assertEqual(repository.position_events[0].quantity, 1)
         self.assertEqual(
             repository.position_events[0].execution_price_source,
             "db_close_default",

@@ -18,6 +18,7 @@ import {
   createItemDraft,
   formatMetric,
   itemBuilderRecoveryKey,
+  decisionLifecyclePresentation,
   itemLifecycleLabel,
   MIN_MARKET_CHART_VISIBLE_ROWS,
   nearestChartPointIndex,
@@ -28,6 +29,7 @@ import {
   placeChartTooltip,
   selectActiveGroup,
   selectItem,
+  selectItemDetail,
   validateItemDraft,
   zoomMarketChartViewport,
 } from "./workbenchState";
@@ -621,9 +623,14 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   const activeGroup = workspace.active_group;
   const selectedGroup = selectActiveGroup(workspace.groups, selectedGroupId);
   const selectedItem = selectItem(activeGroup?.item_rows ?? [], selectedItemId);
+  const selectedDetail = selectItemDetail(workspace, selectedItem?.monitoring_item_id);
+  const selectedDecisionLifecycle = selectedItem
+    ? decisionLifecyclePresentation(selectedItem)
+    : null;
   const itemSections = partitionItemRows(activeGroup?.item_rows ?? []);
   const latestCommand = workspace.commands[0];
-  const selectedMarketChart = workspace.selected_item_market_chart;
+  const selectedPosition = selectedDetail.position;
+  const selectedMarketChart = selectedDetail.marketChart;
   const metrics = activeGroup?.metrics;
   const priceRefresh = workspace.price_refresh;
   const diagnosis = workspace.diagnosis ?? {
@@ -663,7 +670,6 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
   };
   const chooseItem = (itemId: string) => {
     setSelectedItemId(itemId);
-    emit({ id: "select_item", monitoring_item_id: itemId });
   };
   const renderItemRow = (item: ItemRow) => {
     const contribution = metrics?.contribution_by_item[item.monitoring_item_id]
@@ -875,18 +881,34 @@ function PortfolioMonitoringWorkbench({ args }: ComponentProps) {
                       <div><dt>현재 가치</dt><dd>{formatMetric(selectedItem.current_value, "currency", metrics)}</dd></div>
                       <div><dt>기여 손익</dt><dd>{formatMetric(metrics?.contribution_by_item[selectedItem.monitoring_item_id], "currency", metrics)}</dd></div>
                     </dl>
-                    {selectedItem.failure && <p className="pm-failure">{selectedItem.failure}</p>}
-                    {workspace.selected_position.monitoring_item_id === selectedItem.monitoring_item_id && (
+                    {selectedDecisionLifecycle?.locked && (
+                      <section className="pm-decision-lock" aria-label="추적 자격 변경">
+                        <div>
+                          <span>추적 자격 변경</span>
+                          <strong>{selectedDecisionLifecycle.routeLabel}</strong>
+                        </div>
+                        <p>{selectedDecisionLifecycle.message}</p>
+                        <button type="button" onClick={() => emit({
+                          id: "review_latest_decision",
+                          monitoring_item_id: selectedItem.monitoring_item_id,
+                        })}>최신 판단 재확인</button>
+                      </section>
+                    )}
+                    {selectedItem.failure && !selectedDecisionLifecycle?.locked && <p className="pm-failure">{selectedItem.failure}</p>}
+                    {selectedPosition?.monitoring_item_id === selectedItem.monitoring_item_id && (
                       <PositionLedgerPanel
-                        position={workspace.selected_position}
-                        closeProjection={workspace.position_trade_close ?? null}
-                        initialProjection={workspace.initial_position_entry ?? null}
-                        recoveryState={workspace.position_editor_state}
+                        key={selectedItem.monitoring_item_id}
+                        position={selectedPosition}
+                        closeProjection={workspace.position_trade_close?.monitoring_item_id === selectedItem.monitoring_item_id ? workspace.position_trade_close : null}
+                        initialProjection={workspace.initial_position_entry?.monitoring_item_id === selectedItem.monitoring_item_id ? workspace.initial_position_entry : null}
+                        recoveryState={workspace.selected_position.monitoring_item_id === selectedItem.monitoring_item_id ? workspace.position_editor_state : null}
                         latestCommand={latestCommand ?? null}
                         emit={emit}
                       />
                     )}
-                    {selectedMarketChart?.monitoring_item_id !== selectedItem.monitoring_item_id ? (
+                    {selectedDecisionLifecycle?.locked ? (
+                      <div className="pm-market-state is-error"><strong>최신 판단 재확인 전에는 새 계산을 실행하지 않습니다.</strong></div>
+                    ) : selectedMarketChart?.monitoring_item_id !== selectedItem.monitoring_item_id ? (
                       <div className="pm-market-state"><strong>선택 항목 차트를 불러오는 중입니다.</strong></div>
                     ) : selectedMarketChart.source_type === "selected_strategy" ? (
                       <StrategyValueChart rows={activeGroup.curve} itemId={selectedItem.monitoring_item_id} />

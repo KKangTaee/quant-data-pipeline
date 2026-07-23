@@ -135,6 +135,19 @@ export function PracticalValidationDecisionWorkspace({
   const selectedProfile = workspace.profile.options.find(
     (option) => option.selected,
   )
+  const enrichmentStepFallbacks = [
+    "자료 보강",
+    "재검증",
+    "새 결과 저장",
+    "Final Review",
+  ]
+  const enrichmentStatusLabels: Record<string, string> = {
+    completed: "완료",
+    current: "지금 할 일",
+    blocked: "확인 필요",
+    next: "다음 단계",
+    pending: "대기",
+  }
 
   return (
     <main className="pv2-workspace" data-surface={surface}>
@@ -364,6 +377,44 @@ export function PracticalValidationDecisionWorkspace({
           title="현재 저장 데이터로 다시 재현하는가"
           detail="현재 세션 replay가 완료되어야 결과와 저장 경로가 열립니다."
         />
+        {workspace.enrichment_lifecycle.visible && (
+          <section
+            className={`pv2-enrichment-lifecycle pv2-tone-${workspace.enrichment_lifecycle.collection_summary.tone}`}
+            aria-label="자료 보강 후 Final Review 진행 상태"
+          >
+            <header>
+              <div>
+                <span>보강 이후 진행 상태</span>
+                <h3>{workspace.enrichment_lifecycle.headline}</h3>
+                <p>{workspace.enrichment_lifecycle.next_action}</p>
+              </div>
+              {workspace.enrichment_lifecycle.collection_summary.total_count > 0 && (
+                <strong>
+                  {workspace.enrichment_lifecycle.collection_summary.outcome_label}
+                </strong>
+              )}
+            </header>
+            <ol className="pv2-enrichment-steps">
+              {workspace.enrichment_lifecycle.steps.map((step, index) => (
+                <li className={`is-${step.status}`} key={step.key}>
+                  <span>{index + 1}</span>
+                  <div>
+                    <strong>{step.label || enrichmentStepFallbacks[index]}</strong>
+                    <small>{enrichmentStatusLabels[step.status] || step.status}</small>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            {workspace.enrichment_lifecycle.collection_summary.total_count > 0 && (
+              <p className="pv2-enrichment-outcome">
+                보강 작업 {workspace.enrichment_lifecycle.collection_summary.total_count}개 · 완료{" "}
+                {workspace.enrichment_lifecycle.collection_summary.success_count} · 확인{" "}
+                {workspace.enrichment_lifecycle.collection_summary.review_count} · 실패{" "}
+                {workspace.enrichment_lifecycle.collection_summary.failure_count}
+              </p>
+            )}
+          </section>
+        )}
         <div className="pv2-recheck-mode-panel">
           <div>
             <strong>재검증 범위</strong>

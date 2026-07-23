@@ -143,6 +143,30 @@ class PortfolioMonitoringCatalogTests(unittest.TestCase):
         self.assertEqual(rows[0].instrument_kind, "strategy")
         self.assertEqual(rows[0].label, "Ready Strategy")
 
+    def test_catalog_uses_only_latest_decision_per_selection_source(self) -> None:
+        catalog = _load_catalog()
+
+        rows = catalog.list_monitoring_candidates(
+            decision_loader=lambda: [
+                {
+                    "decision_id": "latest-hold",
+                    "selection_source_id": "selection-a",
+                    "updated_at": "2026-07-23T10:00:00",
+                    "decision_route": "HOLD_FOR_MORE_PAPER_TRACKING",
+                    "monitoring_candidate": False,
+                },
+                {
+                    "decision_id": "old-selected",
+                    "selection_source_id": "selection-a",
+                    "updated_at": "2026-07-22T10:00:00",
+                    "decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+                    "monitoring_candidate": True,
+                },
+            ]
+        )
+
+        self.assertEqual(rows, [])
+
     def test_combined_catalog_routes_by_source_type_and_filters_strategy_text(self) -> None:
         catalog = _load_catalog()
         db = FakeCatalogDb(

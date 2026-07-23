@@ -10,12 +10,46 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-23 - sub-dev 병합은 Market Research와 master 제품 계약을 함께 보존한다
+
+- User request: `codex/sub-dev`에서 진행 중인 master 병합 충돌을 `finance-integration-review`로 해결하도록 요청함.
+- Interpreted goal: 현재 브랜치의 Market Research·Futures 개선과 master의 Today·Backtest·Practical Validation·Final Review·Portfolio Monitoring 변경을 어느 쪽도 잃지 않고 통합한다.
+- Analysis result: 실제 충돌은 finance 문서 지도 5개뿐이며 양쪽 완료 기록은 모두 additive다. current active task는 Sentiment `2/4차`, latest completed task는 manifest와 일치하는 Today Contributor Coverage로 유지한다.
+- Follow-up: focused Python 423개와 React 56개, 5개 production build를 확인했다. broad service contract 18개 실패는 양쪽 task에 기록된 동일 baseline이며 registry·run history·research·QA 이미지는 stage에서 제외했다.
+
 ### 2026-07-23 - Market Research family는 카드보다 editorial text tab이 적합하다
 
 - User request: 전체 React 전환 뒤에도 상단 디자인이 어색해 다른 방향을 검토하고, A Editorial Tabs와 inline execution을 승인함.
 - Interpreted goal: 3-family/7-view 정보 구조는 유지하면서 prototype/form처럼 보이는 큰 카드와 연속 가로 박스를 줄이고 본문을 더 빨리 시작한다.
 - Analysis result: 현재 깊이에는 drawer/left rail보다 full-width editorial header, divider+underline family text tab, unframed local view와 active pill이 적합하다. family 설명은 접근 가능한 label에 보존한다.
 - Follow-up: 전체 `3/3차` 구현과 자동 회귀, 7-view·1280/760/420·focus/overflow/console actual Browser QA를 완료했다. command bar, rail/drawer, module body redesign은 별도 범위다.
+### 2026-07-23 - main-dev와 master의 독립된 Monitoring 계약은 정적 번들까지 다시 합성한다
+
+- User request: `codex/main-dev`에서 진행 중인 master 병합 충돌을 `finance-integration-review`로 해결하도록 요청함.
+- Interpreted goal: 현재 브랜치의 Today·Portfolio Monitoring 실사용 개선과 master의 Backtest/Final Review/Monitoring 판단 수명주기를 어느 쪽도 잃지 않고 커밋 가능한 통합 상태로 만든다.
+- Analysis result: Python export, dashboard route, React local item detail과 latest-decision lock은 서로 독립된 additive 계약이다. 정적 asset 해시는 한쪽을 선택할 수 없으므로 병합된 source에서 production bundle을 재생성해야 한다.
+- Follow-up: focused Python/React/typecheck/build는 통과했고 broad service contract의 동일 18개 기존 drift는 별도 범위로 유지했다. latest completed pointer는 실제 commit 시각과 task status에 따라 Today Contributor Coverage task로 정렬했다.
+
+### 2026-07-23 - Monitoring 추적 자격은 후보별 최신 Final Review 판단이 소유한다
+
+- User request: Final Review에서 `계속 추적`을 선택해야 Portfolio Monitoring에서 사용할 수 있는 구조를 진단하고, 판단이 나중에 바뀌는 경우까지 올바르게 개선하도록 요청함.
+- Interpreted goal: 과거 selected 기록을 지우거나 기존 Monitoring 항목을 자동 종료하지 않으면서 최신 판단과 신규 등록·기존 실행의 의미를 일치시킨다.
+- Analysis result: append-only row를 canonical subject로 묶은 최신 판단만 current truth로 사용한다. 최신 non-select는 item-local 실행 잠금이며, 새 selected 판단이 생기면 requested provenance를 보존한 채 effective contract를 교체한다.
+- Follow-up: `최신 판단 재확인`은 서버가 source를 다시 확인해 Final Review로 이동하고 종료는 기존 명령을 사용한다. 실제 registry는 모두 latest selected여서 잠금 UI는 synthetic 계약으로 검증했으며 전체 `4/4차`를 완료했다.
+
+### 2026-07-22 - Today의 시장 시간은 미국 정규장만 표시한다
+
+- User request: Today 화면에서 미국장의 현재 상태와 한국·뉴욕 개장·마감 시각, 남은 시간을 확인하되 프리마켓·애프터마켓은 제외하도록 요청함.
+- Interpreted goal: 시장 판단 근거를 읽기 전에 지금이 정규장 전·진행 중·마감 후·휴장인지 한눈에 파악한다.
+- Analysis result: official 휴장·조기폐장 DB 일정은 Python이 DST-safe UTC schedule로 만들고, React는 받은 일정과 local one-second timer로 양쪽 시각·countdown만 갱신하는 것이 기존 DB-only 경계를 보존한다.
+- Follow-up: 전체 `3/3차` 구현·회귀·desktop/420px actual QA를 완료했고 실제 09:30 ET 자동 상태 전환을 확인했다. 긴급 휴장·거래정지는 V1 범위 밖이다.
+
+### 2026-07-22 - 최초 설정 정정의 입력과 DB 미리보기는 분리한다
+
+- User request: 최초 설정 정정에서 시작일을 바꾸면 전체 화면이 다시 실행되는 느낌으로 달력의 월이 초기화되어 날짜를 바꿀 수 없다고 보고함.
+- Interpreted goal: 날짜·수량을 자유롭게 편집하되 새 시장 적용일·종가·최초 투자금은 저장 전에 계속 검증한다.
+- Analysis result: 입력마다 `lookup_initial_position_entry`를 보내던 것이 Streamlit rerun과 React 재마운트의 원인이었다. 입력은 local draft로만 바꾸고 명시적 `변경값 확인` 뒤 현재 draft와 일치하는 preview만 저장 근거로 인정하는 방식이 적합하다.
+- Follow-up: 전체 `3/3차` 구현·회귀·actual Browser QA를 완료했다. 저장 command와 append-only correction은 그대로 유지했고 QA 중 실제 저장은 실행하지 않았다.
 
 ### 2026-07-22 - Today 종목 수익률과 포트폴리오 기여금은 다른 단위다
 
@@ -10481,3 +10515,72 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 1D/5D 관측으로 단기 방향을 빠르게 읽고 5D 모델 우위는 별도 검증 결론으로 제한하며, 불필요한 전체 재수집·재계산 없이 같은 화면에서 근거 범위를 확인해야 함.
 - Analysis result: `NO_EDGE`는 데이터 누락이 아니라 조건부 모델이 unconditional baseline을 넘지 못한 상태다. 실제 반복 지연은 17개 1년 수집보다 Yahoo same-date 미완성 행을 완료로 판정해 매번 약 55초 nested validation을 재실행한 것이 주원인이었다.
 - Follow-up: 승인 UI와 1년 overlap/부족 symbol bootstrap, completed-input fast path, pending-session 판정을 구현했다. 실제 동일 입력 총시간은 64.859초에서 12.936초로 감소했고 420px/console Browser QA와 focused 69개·service contract 26개·Vite build까지 통과해 전체 `4/4차`를 완료했다.
+### 2026-07-22 - Portfolio Monitoring 항목 선택은 저장 command가 아니라 로컬 탐색이다
+
+- User request: `종목·전략 결과`에서 종목을 고를 때 개별 추적 결과뿐 아니라 탭 전체가 rerun되는 현상을 확인하고 개선해 달라고 요청함.
+- Interpreted goal: 그룹 계산과 화면 위치를 다시 만들지 않고 선택한 항목의 요약·보유내역·차트만 즉시 바꾸되 실제 데이터 변경 command는 기존 서버 검증을 유지해야 함.
+- Analysis result: React `select_item` event 뒤 공통 `runtime.rerun()`이 원인이었다. 활성 그룹의 표시 항목 detail을 workspace에 선적재하고 선택 click을 React local state로 전환했다.
+- Follow-up: 전체 `3/3차`를 완료했다. 그룹 선택·수집·등록·종료/취소·거래는 server rerun을 유지하고, actual AMD↔RKLB에서 Running 없이 detail만 바뀌는 것을 확인했다.
+
+### 2026-07-22 - ETF 고정수량 항목도 주식과 같은 보유 원장을 사용한다
+
+- User request: ETF 선택 상세의 보유내역이 비어 있는 원인을 진단한 뒤 권장안대로 개발하도록 요청함.
+- Interpreted goal: 이미 정수 수량으로 등록·가치평가되는 ETF가 최초 설정 정정과 매수·매도 기록에서도 같은 수량 계약을 사용해야 함.
+- Analysis result: DB 수량이나 가격 문제가 아니라 command/valuation/read model의 stock-only eligibility와 ETF fixed-shares 등록 허용이 불일치했다. 공통 stock/ETF fixed-shares 판정으로 통합했다.
+- Follow-up: 전체 `3/3차` 완료. actual QQQ 4주와 SOXX 6주를 확인했으며 fixed-notional ETF·strategy·quant backtest는 원장 밖에 유지한다.
+
+### 2026-07-22 - Backtest 후보 저장 후 Level2 이동은 full-app rerun에서 완료한다
+
+- User request: GTAA 백테스트 결과를 후보로 저장한 뒤 Level2 버튼이 정상 작동하지 않는 원인을 진단하고 수정하도록 요청함.
+- Interpreted goal: 후보 source는 한 번만 저장하면서 사용자가 한 번의 클릭으로 Practical Validation에 도달해야 함.
+- Analysis result: custom component callback이 intent를 소비한 뒤 fragment만 다시 실행되어 root route owner가 `backtest_requested_panel`을 읽지 못했다. intent를 fragment 본문에서 소비하고 `st.rerun(scope="app")`으로 승격하도록 수정했다.
+- Follow-up: task `3/3차` 완료. focused 51개와 synthetic GTAA actual Browser QA를 통과했으며 장기 실행 중인 Streamlit 서버는 재시작 후 확인한다.
+
+### 2026-07-22 - Level2 자료 보강은 검증 완료가 아니라 재검증 시작점이다
+
+- User request: Practical Validation에서 외부 데이터를 받은 뒤 기존 Flow 문구와 화면 흐름이 남아 혼란스러운 원인을 파악하고 올바른 UX/UI로 개선하도록 요청함.
+- Interpreted goal: collector, replay, Gate, 저장 안전 경계는 유지하면서 보강 직후 사용자가 현재 단계와 다음 행동을 같은 Level2 화면에서 이어서 완료해야 함.
+- Analysis result: one-shell 전환 때 기존 recovery renderer 호출만 제거되고 source별 progress/read model 연결이 빠졌으며 모든 notice가 success로 렌더링됐다. lifecycle을 Decision Workspace에 투영하고 partial/failed 결과를 보수적으로 요약하는 방식을 채택했다.
+- Follow-up: 전체 `3/3차` 완료. `보강된 데이터로 재검증` 클릭 후 새 결과 저장/Final Review 또는 blocker 경로로 전환되며, raw job 진단 panel은 first-read에 추가하지 않았다.
+
+### 2026-07-22 - Practical Validation 저장과 Final Review 이동은 한 번의 action으로 끝낸다
+
+- User request: 재검증 완료 후 `저장하고 Final Review로 이동`이 저장만 하고 화면을 이동하지 않는 문제를 진단하고 수정하도록 요청함.
+- Interpreted goal: 동일 validation 중복 저장 없이 버튼 한 번으로 방금 검증한 후보의 Final Review를 열어야 함.
+- Analysis result: component callback이 persistence/navigation intent를 fragment에서 선소비해 root route owner가 실행되지 않았고, handoff도 current Final Review selector key를 설정하지 않았다.
+- Follow-up: 전체 `3/3차` 완료. intent ownership, stable-id 중복 방지, active candidate handoff를 교정했고 isolated Browser lifecycle에서 저장 1회와 Final Review 도달을 확인했다. 기존 append-only 중복 3행은 보존했다.
+
+### 2026-07-22 - Final Review 유동성 근거는 내부 상태명이 아니라 판단 문구로 읽는다
+
+- User request: Level3 유동성 근거 카드에 변수명처럼 표시되는 내부 상태를 사용자 언어로 개선하도록 요청함.
+- Interpreted goal: 유동성 판정과 Gate identity는 보존하면서 사용자가 현재 근거 수준과 통과 기준을 바로 이해해야 함.
+- Analysis result: Decision Brief가 `proof_status`를 `display_value`와 comparator에 그대로 사용했다. Python presentation adapter가 raw identity와 사용자 문구를 분리하는 방식을 채택했다.
+- Follow-up: 전체 `2/2차` 완료. 9개 known 상태와 unknown fallback을 한글화했고 1280·760px actual GTAA 화면에서 enum 미노출과 overflow 0을 확인했다.
+
+### 2026-07-23 - Today는 화면-open 정규장 중 DB-backed 장중 overlay를 사용한다
+
+- User request: Today의 대표 포트폴리오 시장가를 5분마다 로딩 없이 자동 최신화하고 그래프·수익률을 갱신하되 DB에 저장하도록 요청함.
+- Interpreted goal: React/provider 직접 호출 없이 confirmed regular-session OPEN에서만 background 수집하고, 확정 종가 이력과 장중 임시 값을 명확히 분리한다.
+- Analysis result: 15초 fragment, 300초 group DB cadence/lock, 600초 stale, partial EOD fallback, `today_home_v4` live overlay와 close +5분 bounded EOD handoff를 채택했다.
+- Follow-up: 전체 구현 roadmap `4/4차` 완료. actual CLOSED waiting→confirmed 전환과 responsive QA를 확인했고 실제 OPEN-session no-reset 실측만 남았다.
+
+### 2026-07-23 - Today의 초 단위 시계와 포트폴리오 갱신은 서로 다른 실행 경계를 사용한다
+
+- User request: Today가 매 초 전체 화면을 rerun하며 로딩되는 현상이 의도된 사양인지 확인하고, 필요한 부분만 자연스럽게 비동기 갱신하도록 요청함.
+- Interpreted goal: 시계는 화면 안에서만 움직이고, DB가 바뀔 수 있는 장중 포트폴리오만 주기 조회하며 마감 상태에는 불필요한 Python 실행이 없어야 한다.
+- Analysis result: 실제 원인은 15초 whole-page fragment와 결합된 구조였고 1초 React timer 자체는 Python rerun 원인이 아니었다. static shell + conditional portfolio island를 채택했다.
+- Follow-up: 전체 `2/2차` 완료. actual CLOSED 21초 동안 loading/iframe 교체 0회와 chart 안정성을 확인했고 OPEN provider timing 실측만 거래시간 제약으로 남겼다.
+
+### 2026-07-23 - Today 종목 기여는 일부 대표값이 아니라 계산 가능한 전체를 보여준다
+
+- User request: Today에서 다른 종목이 보이지 않는 이유와 `우선 확인` 텍스트의 비정상적인 간격을 확인하고 개선하도록 요청함.
+- Interpreted goal: 유효한 종목 기여를 숨기지 않고 영향이 큰 순서로 비교하며, 우선 확인 항목은 같은 패널 안에서 자연스럽게 이어 읽게 한다.
+- Analysis result: 가격/계산 누락이 아니라 positive top-2 / negative bottom-2 투영이 SOXX·QQQ를 제거했고, 중첩 CSS grid stretch가 review 행을 벌렸다. 전체 numeric 기여, coverage copy, inner grid top alignment를 채택했다.
+- Follow-up: 전체 `2/2차` 완료. actual 5종목과 8px review gap, 1280·760·420 overflow 0, console error 0을 확인했으며 DB·계산·수집 경계는 유지했다.
+
+### 2026-07-23 - Level1 가격 부족은 저장 이후가 아니라 인계 전에 해결한다
+
+- User request: Level1 종료일까지 포트폴리오 종목 데이터가 없으면 안내와 수동 최신화 버튼을 제공하고, 포트폴리오 포함 종목을 최신화하도록 요청함.
+- Interpreted goal: 교집합 백테스트의 보수적 계산은 유지하되 짧아진 결과를 그대로 Level2에 넘기지 않고 사용자가 데이터 보강과 재실행을 한 흐름에서 끝내야 함.
+- Analysis result: current Result Workspace가 legacy refresh action과 분리되어 있었고 가격 gap이 technical handoff Gate에 포함되지 않았다. 공통 네 상태와 Single/Mix 종목 합집합, 명시 refresh, 참고 결과, explicit rerun 계약을 채택했다.
+- Follow-up: 전체 `3/3차` 완료. 수집은 자동 백테스트를 실행하지 않고 새 current 결과만 Level2를 다시 연다. provider/source gap은 반복 버튼 대신 원인 확인 상태로 차단한다.

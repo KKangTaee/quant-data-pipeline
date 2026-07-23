@@ -1,4 +1,4 @@
-import type { DiagnosisDisplayGroup, DiagnosisDisplayGroupView, DiagnosisHistoryRow, DiagnosisProjection, DiagnosisRow, GroupMetrics, GroupSummary, ItemRow, MacroObservationProjection, MarketChartRow, PriceRefreshProjection, RiskCalibrationProjection, SourceHealth } from "./contracts";
+import type { DiagnosisDisplayGroup, DiagnosisDisplayGroupView, DiagnosisHistoryRow, DiagnosisProjection, DiagnosisRow, GroupMetrics, GroupSummary, ItemRow, MacroObservationProjection, MarketChartRow, PortfolioMonitoringWorkspace, PriceRefreshProjection, RiskCalibrationProjection, SourceHealth } from "./contracts";
 
 export type MonitoringSourceType = "direct_security" | "selected_strategy";
 export type MonitoringKind = "stock" | "etf" | "strategy";
@@ -229,6 +229,25 @@ export function selectItem(items: ItemRow[], requestedId: string | null | undefi
   return requested ?? items.find((item) => item.status !== "ended") ?? items[0] ?? null;
 }
 
+export function selectItemDetail(
+  workspace: PortfolioMonitoringWorkspace,
+  requestedId: string | null | undefined,
+) {
+  if (!requestedId) return { position: null, marketChart: null };
+  const detail = workspace.item_details?.[requestedId];
+  if (detail) {
+    return { position: detail.position, marketChart: detail.market_chart };
+  }
+  return {
+    position: workspace.selected_position.monitoring_item_id === requestedId
+      ? workspace.selected_position
+      : null,
+    marketChart: workspace.selected_item_market_chart?.monitoring_item_id === requestedId
+      ? workspace.selected_item_market_chart
+      : null,
+  };
+}
+
 export function partitionItemRows(items: ItemRow[]) {
   return {
     active: items.filter((item) => item.status !== "ended"),
@@ -240,6 +259,20 @@ export function itemLifecycleLabel(item: Pick<ItemRow, "status">) {
   if (item.status === "ended") return "종료 기록";
   if (item.status === "data_review") return "확인 필요";
   return "활성 추적";
+}
+
+export function decisionLifecyclePresentation(
+  item: Pick<ItemRow, "source_type" | "instrument_kind" | "decision_lifecycle">,
+) {
+  const lifecycle = item.decision_lifecycle;
+  const locked = item.source_type === "selected_strategy" && lifecycle?.locked === true;
+  return {
+    locked,
+    label: locked ? "추적 자격 변경" : "",
+    actionLabel: locked ? "최신 판단 재확인" : "",
+    routeLabel: lifecycle?.latest_route_label || "최신 판단 확인 필요",
+    message: lifecycle?.message || "Final Review에서 최신 판단을 다시 확인하세요.",
+  };
 }
 
 function finiteNumber(value: unknown): number | null {

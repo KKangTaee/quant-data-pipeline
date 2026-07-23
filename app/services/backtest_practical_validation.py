@@ -28,7 +28,11 @@ from app.services.backtest_practical_validation_decision_workspace import (
 )
 from app.services.backtest_evidence_closure import build_evidence_closure_contract
 from app.services.overview.sentiment import build_market_sentiment_snapshot
-from app.runtime import append_portfolio_selection_source, append_practical_validation_result
+from app.runtime import (
+    append_portfolio_selection_source,
+    append_practical_validation_result,
+    load_practical_validation_results,
+)
 from finance.data.etf_provider import (
     EXPOSURE_PROVIDER_SOURCES,
     HOLDINGS_PROVIDER_SOURCES,
@@ -202,8 +206,18 @@ def build_market_sentiment_context_overlay(
     }
 
 
-def save_practical_validation_result(result: dict[str, Any]) -> None:
-    append_practical_validation_result(dict(result or {}))
+def save_practical_validation_result(result: dict[str, Any]) -> bool:
+    """Append a validation once, using its stable id as the persistence identity."""
+
+    row = dict(result or {})
+    validation_id = str(row.get("validation_id") or "").strip()
+    if validation_id and any(
+        str(existing.get("validation_id") or "").strip() == validation_id
+        for existing in load_practical_validation_results(limit=None)
+    ):
+        return False
+    append_practical_validation_result(row)
+    return True
 
 
 def prepare_practical_validation_source_handoff(
@@ -240,8 +254,7 @@ def prepare_final_review_handoff_from_validation(
 
     persisted = False
     if persist_validation:
-        save_practical_validation_result(validation_result)
-        persisted = True
+        persisted = save_practical_validation_result(validation_result)
 
     title = validation_result.get("source_title") or validation_result.get("selection_source_id")
     return PracticalValidationFinalReviewHandoff(

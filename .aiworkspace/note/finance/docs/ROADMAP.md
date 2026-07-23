@@ -7,6 +7,35 @@ Last Verified: 2026-07-23
 
 현재 active phase는 없다.
 
+Today U.S. Market Session Status V1도 전체 `3/3차` 구현과 closeout을 완료했다.
+
+- 화면: Today hero 아래에서 미국 정규장의 `개장 전 / 장 진행 중 / 정규장 마감 / 휴장 / 일정 자료 부족`, 뉴욕·한국 현재 시각, ET/KST 개장·마감, 다음 개장 또는 마감까지 countdown을 확인한다.
+- 일정 계약: 09:30–16:00 ET와 official `MARKET_HOLIDAY`·`EARLY_CLOSE` DB row를 Python이 DST-safe UTC schedule로 만들고 React는 휴일 규칙 없이 받은 schedule만 1초 단위로 해석한다.
+- 경계/QA: 프리마켓·애프터마켓, provider fetch, 시장 방향·evidence 점수, 긴급 거래정지는 포함하지 않는다. calendar source 하나라도 비정상이면 `일정 자료 부족`으로 fail-closed한다. Python 48개, React 10개/typecheck/build와 desktop·420px actual QA를 통과했고 실제 09:30 ET 자동 전환을 확인했다.
+- 상세: `tasks/active/today-us-market-session-status-v1-20260722/STATUS.md`.
+
+Today Portfolio Intraday Auto Refresh V1은 전체 `4/4차` 구현과 closeout을 완료했다.
+
+- 정규장: confirmed regular-session OPEN에서 default group의 활성 direct stock·ETF 최대 10개를 group-scoped `TODAY_<hash>` snapshot으로 5분마다 DB 저장한다. 15초 fragment는 DB/future 상태만 확인한다.
+- 표시: fresh quote는 position ledger와 EOD retained cash를 보존한 `portfolio.live` 평가액·수익률·기여도에 반영한다. partial은 미반영 symbol을 EOD로 유지하며 historical curve에는 별도 dashed live point 하나만 겹친다.
+- 마감: scheduled close부터 quote를 중단하고 close +5분부터 기존 EOD refresh를 5분 간격 최대 6회 시도한다. 당일 daily row 확인 전에는 `종가 반영 대기`, 확인 후에는 `확정 종가`다.
+- 경계/QA: 프리마켓·애프터마켓, broker/order, selected-strategy 가상 live, intraday→daily 승격은 없다. Python/React 회귀와 1280·760·420 actual Browser QA를 수행했으며 actual closed-session에서 waiting→confirmed EOD 전환과 console error 0을 확인했다.
+- 상세: `tasks/active/today-portfolio-intraday-auto-refresh-v1-20260722/STATUS.md`, `docs/flows/TODAY_PORTFOLIO_INTRADAY_FLOW.md`.
+
+Today Live Island Rerun Isolation V1은 전체 `2/2차` 구현과 closeout을 완료했다.
+
+- 정적 영역: 시장 판단·근거·일정·navigation은 initial app run에서 렌더하고, 1초 session clock/countdown은 React child local state만 갱신한다.
+- 동적 영역: `today_portfolio_island_v1`은 portfolio DB/coordinator만 읽으며 OPEN 또는 EOD waiting/running일 때만 15초 fragment를 사용한다. CLOSED confirmed·개장 전·휴일·주말에는 periodic Python run이 없다.
+- 전환/QA: regular-session phase가 실제로 바뀔 때만 allowlisted event로 app run 한 번을 요청한다. Python 88개, React 17개/typecheck/build와 actual CLOSED 21초 샘플에서 loading/iframe replacement 0, countdown 변화, chart path 유지, 1280·760·420 overflow 0, console error 0을 확인했다.
+- 상세: `tasks/active/today-live-island-rerun-isolation-v1-20260723/STATUS.md`, `docs/flows/TODAY_PORTFOLIO_INTRADAY_FLOW.md`.
+
+Today Contributor Coverage / Review Layout V1은 전체 `2/2차` 구현과 closeout을 완료했다.
+
+- 종목 기여: EOD와 live에서 계산 가능한 모든 종목을 보존하고 절대 포트폴리오 기여액 내림차순으로 표시한다. 0은 중립이며 누락값은 0으로 대체하지 않는다.
+- 화면 설명: 전체 계산 시 `전체 N개 · 영향 큰 순`, 일부 계산 시 `기여 계산 N/M개 · 영향 큰 순`으로 표시 범위를 명시한다.
+- 우선 확인/QA: 동일 높이 우측 패널의 review 행을 상단 정렬하고 8px 간격으로 고정했다. actual 5종목 전체 표시, Python 93개, React 19개/typecheck/build, 1280·760·420 overflow 0, console error 0을 확인했다.
+- 경계/상세: DB·계산식·수집 cadence·fragment 경계는 변경하지 않았다. `tasks/active/today-contributor-coverage-layout-v1-20260723/STATUS.md`.
+
 Today Home + Purpose Navigation V1은 전체 `4/4차` 구현과 closeout을 완료했다.
 
 - 완료 범위: Finance Console 최초 진입 root `/`에 `오늘의 시장 판단`을 두고, 저장된 Economic Cycle·S&P 500·Futures Macro·Sentiment·Events와 default Portfolio Monitoring group 하나를 `시장 결론 → 근거·일정 → 대표 포트폴리오 → 다음 확인` 순서로 읽는다.
@@ -62,19 +91,44 @@ Portfolio Monitoring React Command Center V1은 전체 `6/6차` 구현과 closeo
 - 경계: provider direct fetch, live approval, broker order, account sync, auto rebalance는 없다. 조건부 확률은 현재 fingerprint의 검증 artifact가 READY일 때만 공개한다.
 - canonical docs: `docs/architecture/PORTFOLIO_MONITORING_REACT_COMMAND_CENTER.md`, `docs/data/PORTFOLIO_MONITORING_DATA_CONTRACT.md`, `docs/runbooks/PORTFOLIO_MONITORING_MIGRATION_AND_QA.md`.
 
+Portfolio Monitoring Latest Decision Lifecycle V1도 전체 `4/4차`를 완료했다.
+
+- 현재 자격: append-only Final Review 이력은 보존하고 후보별 최신 판단만 신규 `백테스트 전략` catalog와 기존 selected-strategy replay의 current truth로 사용한다.
+- 기존 항목: 최신 판단이 보류·제외·Level2 반환이면 삭제하지 않고 해당 item의 새 계산만 잠근다. `최신 판단 재확인`은 서버에서 latest source를 다시 확인해 Final Review로 이동하며 기존 `추적 종료`와 분리한다.
+- 재개/provenance: 같은 후보가 새 selected 판단을 받으면 기존 item은 최신 effective decision contract로 자동 재개하고, 과거 requested decision ID도 감사 근거로 보존한다.
+- QA: focused Python·React/typecheck/build와 actual 정상 Portfolio Monitoring route를 확인했고, actual registry에 superseded 후보가 없어 잠금 상태는 synthetic service/read-model/React 계약으로 검증했다.
+
 Portfolio Monitoring Position Events V1도 전체 `3/3차`를 완료했다.
 
 - 완료 범위: direct U.S. stock + fixed shares에 최초 수량 정정, 추가매수, 일부매도, revision 수정·취소를 추가했다. exact-date DB 종가를 기본 체결가로 쓰고 actual price override provenance를 보존한다.
 - 성과 계약: 추가매수는 외부 입금, 일부매도 순대금은 외부 출금이며 daily Modified Dietz `0.5` 현금흐름 가중치와 flow-neutral group curve를 사용한다.
-- 경계: ETF, selected strategy, fixed notional, full sell, tax lot/FIFO, broker/account sync, quant backtest 변경은 없다. 전량매도는 기존 tracking end를 사용한다.
+- 당시 경계: 이 V1에서는 ETF를 변경하지 않았고 이후 ETF Position Ledger V1이 fixed-shares ETF로 확장했다. selected strategy, fixed notional, full sell, tax lot/FIFO, broker/account sync, quant backtest는 계속 원장 밖이며 전량매도는 기존 tracking end를 사용한다.
 - QA: additive 운영 table 적용 전후 기존 group/item/command `1/2/5`건을 보존하고 새 event table은 `0`건에서 시작했다. Python 137, React 29, typecheck/build, actual read-only route, isolated desktop/900/420 interaction QA를 통과했다.
+
+Portfolio Monitoring ETF Position Ledger V1도 전체 `3/3차`를 완료했다.
+
+- 완료 범위: direct ETF `fixed_shares`를 기존 stock position event와 같은 최초 설정 정정, 추가매수, 일부매도, revision 수정·취소 계약에 포함했다. split을 거래보다 먼저 적용하고 배당 현금·외부 입출금·Modified Dietz 성과를 동일하게 계산한다.
+- 일관성: command validation, valuation, selected read model이 `direct_security + stock/etf + fixed_shares` 공통 판정기를 사용한다. 기존 QQQ 4주·SOXX 6주는 migration 없이 저장 수량에서 자동 투영된다.
+- 경계/QA: fixed-notional ETF·selected strategy·quant backtest는 원장 대상이 아니며 빈 수량/금액 카드도 표시하지 않는다. Python 111, React 36, typecheck/build와 actual QQQ/SOXX read-only Browser QA, clean console을 통과했다.
 
 Portfolio Monitoring Initial Setting Correction V1도 전체 `4/4차`를 완료했다.
 
 - 완료 범위: `개별 추적 결과 > 보유내역`의 `최초 설정 정정`에서 direct U.S. stock + fixed shares의 최초 요청 시작일과 수량을 함께 수정한다. 요청일 이후 첫 DB 시장일·종가와 최초 투자금을 비교 확인하고 append-only revision으로 저장한다.
 - 재계산 계약: correction terminal revision이 유효 requested/effective start, entry close, initial shares/capital을 투영한다. 개별 lane과 그룹 timeline은 같은 초기 계약을 사용하며, 새 시작일 이전 거래나 새 수량으로 무효가 되는 매도는 transaction 전체를 거부한다.
-- 호환/경계: 기존 `correct_initial_quantity` / `initial_quantity_correction` identity와 legacy null-date fallback을 유지한다. ETF, fixed notional, selected strategy, quant backtest, registry/saved JSONL은 변경하지 않는다.
+- 호환/경계: 기존 `correct_initial_quantity` / `initial_quantity_correction` identity와 legacy null-date fallback을 유지한다. 이 task 당시에는 ETF를 변경하지 않았고 이후 ETF Position Ledger V1이 같은 계약으로 확장했다. fixed notional, selected strategy, quant backtest, registry/saved JSONL은 계속 변경하지 않는다.
 - QA: 운영 schema에 nullable date column 2개를 한 번만 추가했고 group/item/command/event row `1/5/8/0`과 registry/saved checksum을 보존했다. Portfolio Monitoring Python 156, React 32, typecheck/build와 actual route/420px overflow/console QA를 통과했다. 브라우저 저장 interaction은 QA iframe의 selection event가 서버 session으로 전달되지 않아 자동화 command/component 회귀로 대체했다.
+
+Portfolio Monitoring Initial Correction Local Preview V1도 전체 `3/3차`를 완료했다.
+
+- 완료 범위: `최초 설정 정정`의 날짜·수량 변경은 React local draft만 갱신한다. 유효한 입력에서 사용자가 `변경값 확인`을 누를 때만 기존 DB lookup을 실행하고, 현재 입력과 일치하는 READY preview가 있을 때만 저장을 활성화한다.
+- UX 계약: 달력에서 연·월을 이동하거나 수량을 편집하는 동안 Streamlit rerun이 발생하지 않는다. 확인 뒤 입력을 다시 바꾸면 이전 preview를 stale로 처리해 저장을 다시 잠근다.
+- 호환/QA: correction command, append-only revision, valuation과 DB schema는 변경하지 않았다. actual AMD에서 `2024-06-15 / 31주`가 로컬 유지되고 확인 후 적용일 `2024-06-17`, 종가 `$158.40`, 최초 투자금 `$4,910.40`이 표시되는 것을 확인했으며 저장은 실행하지 않았다.
+
+Portfolio Monitoring Local Item Selection V1도 전체 `3/3차`를 완료했다.
+
+- 완료 범위: `종목·전략 결과`의 읽기 전용 행 선택을 React local state로 전환하고, additive `item_details`에서 개별 추적 요약·보유내역·가격 차트만 즉시 교체한다.
+- 재실행 경계: 선택 클릭은 `select_item` event를 보내지 않는다. 그룹 선택·가격 최신화·종목 등록·추적 종료/취소·거래 조회/저장은 기존 server command와 rerun을 유지하며 item id로 선택을 복구한다.
+- 호환/QA: legacy selected projection과 dispatcher를 유지했다. Python 64, React 36, typecheck/build와 actual AMD↔RKLB 선택, 그룹 현재가치 유지, Running 0, clean console Browser QA를 통과했다.
 
 Portfolio Monitoring Price Refresh V1도 전체 `3/3차`를 완료했다.
 
@@ -957,6 +1011,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 | Portfolio Monitoring Chart Zoom / Pan V1 | Implementation complete; Browser QA pending | Selected direct stock/ETF line/candle chart owns a client-only inclusive viewport over the existing latest 120 stored daily rows. Wheel/center controls zoom to 15 sessions, horizontal drag pans with edge clamp, reset restores the full range, and mobile remains controls-only. Desktop contribution/detail is 35:65 with a 280px list minimum, and selected chart price/VOL/date axes use 11px/700 labels. Python/DB/strategy/group-chart contracts are unchanged. Automated Python 102 / React 24 / typecheck/build/static distribution pass; actual desktop/900px/420px interaction/layout/overflow QA is pending because local Browser DOM access was policy-blocked. |
 | Portfolio Monitoring Chart Clarity / OHLCV V1 | Complete | Group value curve hides static point halos and shows 5 desktop / 3 mobile actual-observation date ticks. Selected direct stock/ETF detail reads the latest 120 stored daily OHLCV rows for close line or candle/volume exploration; selected strategy remains value-only. The route stays DB-only and Operations summary adds no detail read. |
 | Backtest Analysis Level1 Decision Workspace V1 | Complete | Fixed Level1 question, purpose-grouped Single catalog, Python-owned maturity/fingerprint/Gate/handler validation, decision-first result와 stale-result preservation을 완료했다. 7차에서 9개 Single choice / 12개 primary concrete variant를 schema-driven React settings로 통일했고 8차 modifier-free multi-select, 9차 deterministic named preset, 10~12차 result/holdings/factor presentation, 13~14차 공통 workflow shell/title ownership을 정리했다. 15차는 Portfolio Mix를 별도 four-step React one-shell로 전환해 2~4 component validation, existing compare runner/weighted builder, new-schema saved setup과 distinct Level2 handoff를 Python에 통합했다. legacy native/compare form과 prototype Mix row는 compatibility-only다. Strategy runtime, provider, DB schema, Level2 / Level3 route semantics는 변경하지 않았다. |
+| Backtest Level1 Price Refresh Handoff V1 | Complete | Single/Mix 공통 최신성 계약이 요청 종료일, 마지막 완료 NYSE 거래일과 DB 공통 최신일을 비교한다. 부족·provider gap·수집 후 재실행 전에는 저장/Level2 인계를 차단하고, 명시적 기존 OHLCV 최신화 뒤 참고 결과를 유지한 채 같은 설정 재실행으로만 Gate를 다시 연다. Mix 종목은 component 합집합으로 중복 제거한다. |
 | Overview Legacy Dashboard Removal V17-V24 | Complete | `app/web/overview/legacy_dashboard.py` was physically removed after remaining helper ownership moved into tab-local helper modules. `app/web/overview_dashboard.py` now keeps explicit compatibility exports only, while active page / tab / helper ownership lives under `app/web/overview/`. |
 | Overview Tab Helper Extraction V11-V16 | Complete | Market Context, Events, Futures Macro, Market Movers, and Sentiment primary tab entry modules now call tab-local helper bridges instead of importing `legacy_dashboard.py` directly. |
 | Overview Legacy Cleanup V6-V10 | Complete | Overview navigation moved to `app/web/overview/navigation.py`, IA read-model ownership moved to `app/services/overview/ia.py`, confirmed unused standalone wrappers / Candidate Ops helpers were removed, and guard tests prevent reintroduction. |
@@ -1055,7 +1110,7 @@ Parallel active follow-up:
 
 Latest completed task:
 
-- `today-contributor-performance-cards-v1-20260722` — Today의 기여 상위 2·하위 2를 현금흐름 조정 종목 수익률과 포트폴리오 누적 기여를 분리한 compact card로 정리하고 actual Browser QA를 포함한 전체 `4/4차`를 완료했다.
+- `today-contributor-coverage-layout-v1-20260723` — Today의 계산 가능한 EOD/live 종목 기여를 절대 영향도 순으로 모두 표시하고 coverage copy와 compact top-aligned `우선 확인` 배치를 적용했다. 전체 `2/2차`와 responsive Browser QA를 완료했다.
 
 Previous completed task:
 
@@ -1151,6 +1206,7 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 - 1차~4차 완료: root issue dedup, Level2 action handler Gate, GRS signal/valuation 기간 계약, static/dynamic survivorship policy, Final Review terminal-state snapshot, measured-only score impact.
 - current Final Review 후보 계약은 `unresolved_actionable=0`, `critical_engineering=0`, `missing_contract=0`을 요구한다.
 - 2026-07-16 observation freshness continuation 완료: Final Review가 stored curve end / latest completed session / source DB common date / limiting symbol을 구분하고, 자동 해결 가능한 stale 가격은 one-click price refresh → replay → 새 validation append로 갱신한다. 갱신 전에는 selected route만 차단하며 React는 intent/presentation만 소유한다.
+- 2026-07-22 liquidity copy 후속 완료: 내부 `proof_status`는 raw 측정 identity로 유지하고, Decision Brief가 유동성·운용 가능성 카드의 현황과 비교 기준을 사용자 문구로 투영한다. Gate, provider evidence, registry 계약은 변경하지 않았다.
 - 다음 승인 후보는 dynamic historical universe용 PIT membership / delisting provider이며, 도입 전에는 해당 후보를 defer/block한다.
 
 ## 2026-07-16 Practical Validation Level2 Decision Workspace V1
@@ -1173,3 +1229,12 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
   이동 가능 상태가 됐다. desktop / 760px Browser QA와 overflow 확인을 완료했다.
 - 구현/보정 커밋은 active task `STATUS.md`에 정리한다. historical universe PIT
   membership / delisting provider는 별도 승인 전 범위 밖 위험으로 유지한다.
+- 2026-07-22 보강 재검증 UX 후속을 완료했다. 외부 자료 보강 뒤 source별
+  `recheck_required` 상태와 부분 성공/실패 요약을 one-shell Step 2에 유지하고,
+  `보강된 데이터로 재검증 -> 새 결과 저장 -> Final Review`로 이어지는 CTA를
+  복구했다. collector / replay / Gate / append-only 저장 경계는 변경하지 않았다.
+- 2026-07-22 Final Review route 후속을 완료했다. 저장/이동 intent는 fragment
+  callback 선소비 대상에서 제외하고 full-app rerun으로 root route owner에
+  전달한다. stable `validation_id` 기준 중복 append를 막고 현재 Final Review
+  selector key를 함께 넘겨 한 번의 클릭으로 방금 인계한 후보를 연다. 기존
+  append-only 중복 행은 보존하고 Gate / replay / provider 의미는 바꾸지 않았다.

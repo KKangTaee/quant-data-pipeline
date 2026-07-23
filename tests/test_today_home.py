@@ -4,9 +4,10 @@ import importlib
 import importlib.util
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 
@@ -18,6 +19,20 @@ class TodayHomeReadModelTests(unittest.TestCase):
         builder = getattr(module, "build_today_read_model", None)
         self.assertTrue(callable(builder), "build_today_read_model should be callable")
         return builder
+
+    def test_public_portfolio_projector_matches_full_today_portfolio(self) -> None:
+        from app.services.today import (
+            build_today_read_model,
+            project_today_portfolio,
+        )
+
+        inputs = self._complete_inputs()
+        full = build_today_read_model(**inputs)
+
+        self.assertEqual(
+            project_today_portfolio(inputs["portfolio"]),
+            full["portfolio"],
+        )
 
     @staticmethod
     def _complete_inputs() -> dict[str, object]:
@@ -136,7 +151,7 @@ class TodayHomeReadModelTests(unittest.TestCase):
             generated_at=datetime(2026, 7, 22, 9, 0),
         )
 
-        self.assertEqual(model["schema_version"], "today_home_v2")
+        self.assertEqual(model["schema_version"], "today_home_v4")
         self.assertEqual(model["header"]["source_ready_count"], 5)
         self.assertEqual(
             model["header"]["as_of_date"],
@@ -196,6 +211,95 @@ class TodayHomeReadModelTests(unittest.TestCase):
         self.assertEqual(contributor["symbol"], "NVDA")
         self.assertEqual(contributor["contribution_value"], 240.0)
         self.assertIsNone(contributor["total_return"])
+
+    def test_contributors_keep_all_numeric_rows_in_absolute_impact_order(
+        self,
+    ) -> None:
+        inputs = self._complete_inputs()
+        active = inputs["portfolio"]["active_group"]
+        active["active_item_count"] = 5
+        active["item_rows"] = [
+            {
+                "monitoring_item_id": "amd",
+                "source_ref": "AMD",
+                "total_return": 3.64,
+            },
+            {
+                "monitoring_item_id": "tem",
+                "source_ref": "TEM",
+                "total_return": -0.24,
+            },
+            {
+                "monitoring_item_id": "rklb",
+                "source_ref": "RKLB",
+                "total_return": -0.05,
+            },
+            {
+                "monitoring_item_id": "soxx",
+                "source_ref": "SOXX",
+                "total_return": -0.07,
+            },
+            {
+                "monitoring_item_id": "qqq",
+                "source_ref": "QQQ",
+                "total_return": 0.0,
+            },
+        ]
+        active["metrics"]["contribution_by_item"] = {
+            "amd": 12136.60,
+            "tem": -462.00,
+            "rklb": -440.00,
+            "soxx": -265.08,
+            "qqq": 0.0,
+        }
+
+        model = self._builder()(**inputs)
+
+        self.assertEqual(
+            [row["symbol"] for row in model["portfolio"]["contributors"]],
+            ["AMD", "TEM", "RKLB", "SOXX", "QQQ"],
+        )
+        self.assertEqual(
+            model["portfolio"]["contributors"][-1]["tone"],
+            "neutral",
+        )
+
+    def test_live_contributors_use_the_same_absolute_impact_order(self) -> None:
+        inputs = self._complete_inputs()
+        inputs["portfolio_live"] = {
+            "status": "LIVE_READY",
+            "contributors": [
+                {
+                    "symbol": "QQQ",
+                    "contribution_value": 0.0,
+                    "total_return": 0.0,
+                },
+                {
+                    "symbol": "AMD",
+                    "contribution_value": 120.0,
+                    "total_return": 0.2,
+                },
+                {
+                    "symbol": "SOXX",
+                    "contribution_value": -30.0,
+                    "total_return": -0.1,
+                },
+            ],
+        }
+
+        model = self._builder()(**inputs)
+
+        self.assertEqual(
+            [
+                row["symbol"]
+                for row in model["portfolio"]["live"]["contributors"]
+            ],
+            ["AMD", "SOXX", "QQQ"],
+        )
+        self.assertEqual(
+            model["portfolio"]["live"]["contributors"][-1]["tone"],
+            "neutral",
+        )
 
     def test_insufficient_market_sources_hold_the_combined_judgment(self) -> None:
         inputs = self._complete_inputs()
@@ -355,7 +459,7 @@ class TodayHomeReadModelTests(unittest.TestCase):
         model = self._builder()(**inputs)
 
         portfolio = model["portfolio"]
-        self.assertEqual(model["schema_version"], "today_home_v2")
+        self.assertEqual(model["schema_version"], "today_home_v4")
         self.assertAlmostEqual(
             portfolio["metrics"]["latest_observation_return"],
             0.06,
@@ -398,8 +502,815 @@ class TodayHomeReadModelTests(unittest.TestCase):
             },
         )
 
+    def test_market_session_does_not_change_evidence_readiness(self) -> None:
+        inputs = self._complete_inputs()
+
+        model = self._builder()(
+            **inputs,
+            market_calendar={"holiday_rows": [], "early_close_rows": []},
+            generated_at=datetime(2026, 7, 22, 13, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(model["schema_version"], "today_home_v4")
+        self.assertEqual(model["header"]["source_count"], 5)
+        self.assertEqual(model["header"]["source_ready_count"], 5)
+        self.assertEqual(
+            model["market_session"]["schema_version"],
+            "market_session_v1",
+        )
+        self.assertFalse(model["boundaries"]["provider_fetch"])
+
+    def test_market_calendar_loader_status_reaches_session_quality(self) -> None:
+        model = self._builder()(
+            **self._complete_inputs(),
+            market_calendar={
+                "holiday_rows": [
+                    {"Date": "2026-07-03", "Title": "Independence Day"}
+                ],
+                "early_close_rows": [],
+                "statuses": {"holiday": "OK", "early_close": "ERROR"},
+            },
+            generated_at=datetime(2026, 7, 22, 13, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(model["market_session"]["calendar_quality"], "LIMITED")
+        self.assertIn(
+            "공식 조기폐장 일정 자료 부족",
+            model["market_session"]["warnings"],
+        )
+
+    def test_today_read_model_keeps_eod_curve_and_adds_live_overlay(self) -> None:
+        inputs = self._complete_inputs()
+        expected_curve = list(inputs["portfolio"]["active_group"]["curve"])
+        overlay = {
+            "status": "LIVE_READY",
+            "as_of_utc": "2026-07-22T14:00:00+00:00",
+            "trade_date": "2026-07-22",
+            "coverage": {"fresh": 2, "expected": 2},
+            "metrics": {
+                "current_value": 1250.0,
+                "latest_observation_return": 0.04,
+                "return_from_date": "2026-07-21",
+                "return_to_date": "2026-07-22",
+                "total_return": 0.248,
+            },
+            "contributors": [],
+            "curve_point": {
+                "date": "2026-07-22T14:00:00+00:00",
+                "timestamp_utc": "2026-07-22T14:00:00+00:00",
+                "kind": "intraday",
+                "unit_value": 1.248,
+                "total_value": 1250.0,
+                "cumulative_return": 0.248,
+            },
+            "fallback_symbols": [],
+            "provider_diagnostics": {"must_not": "leak"},
+        }
+
+        model = self._builder()(**inputs, portfolio_live=overlay)
+
+        self.assertEqual(model["schema_version"], "today_home_v4")
+        self.assertFalse(model["portfolio"]["curve_metadata"]["intraday"])
+        self.assertEqual(
+            [row["date"] for row in model["portfolio"]["curve"]],
+            [row["date"] for row in expected_curve],
+        )
+        self.assertEqual(model["portfolio"]["live"]["status"], "LIVE_READY")
+        self.assertEqual(
+            model["portfolio"]["live"]["curve_point"]["kind"],
+            "intraday",
+        )
+        self.assertNotIn("provider_diagnostics", model["portfolio"]["live"])
+
+    def test_today_read_model_uses_explicit_inactive_live_contract(self) -> None:
+        model = self._builder()(**self._complete_inputs(), portfolio_live=None)
+
+        self.assertEqual(model["schema_version"], "today_home_v4")
+        self.assertEqual(model["portfolio"]["live"]["status"], "INACTIVE")
+        self.assertEqual(model["portfolio"]["live"]["label"], "확정 종가")
+        self.assertIsNone(model["portfolio"]["live"]["metrics"])
+        self.assertIsNone(model["portfolio"]["live"]["curve_point"])
+
+
+class TodayMarketSessionTests(unittest.TestCase):
+    def _builder(self):
+        module = importlib.import_module("app.services.today_market_session")
+        return module.build_us_market_session_model
+
+    def test_regular_day_uses_new_york_wall_clock_and_utc_boundaries(self) -> None:
+        model = self._builder()(
+            generated_at=datetime(2026, 7, 22, 13, 0, tzinfo=timezone.utc),
+            holiday_rows=[
+                {"Date": "2026-07-03", "Title": "Independence Day"}
+            ],
+            early_close_rows=[
+                {
+                    "Date": "2026-11-27",
+                    "Event Time": "Early close 13:00 ET",
+                }
+            ],
+        )
+
+        today = next(
+            row
+            for row in model["schedule"]
+            if row["trade_date"] == "2026-07-22"
+        )
+        self.assertEqual(today["day_kind"], "TRADING_DAY")
+        self.assertEqual(today["open_at_utc"], "2026-07-22T13:30:00+00:00")
+        self.assertEqual(today["close_at_utc"], "2026-07-22T20:00:00+00:00")
+        self.assertFalse(today["is_early_close"])
+        self.assertEqual(
+            model["timezones"],
+            {"market": "America/New_York", "viewer": "Asia/Seoul"},
+        )
+
+    def test_winter_and_summer_keep_0930_et_but_shift_utc_boundary(self) -> None:
+        summer = self._builder()(
+            generated_at=datetime(2026, 7, 22, 0, 0, tzinfo=timezone.utc),
+            holiday_rows=[
+                {"Date": "2026-07-03", "Title": "Independence Day"}
+            ],
+            early_close_rows=[],
+        )["schedule"][0]
+        winter = self._builder()(
+            generated_at=datetime(2026, 12, 2, 0, 0, tzinfo=timezone.utc),
+            holiday_rows=[
+                {"Date": "2026-12-25", "Title": "Christmas Day"}
+            ],
+            early_close_rows=[],
+        )["schedule"][0]
+
+        self.assertEqual(summer["open_at_utc"][11:16], "13:30")
+        self.assertEqual(winter["open_at_utc"][11:16], "14:30")
+
+    def test_holiday_and_weekend_rows_have_no_session_boundaries(self) -> None:
+        model = self._builder()(
+            generated_at=datetime(2026, 7, 3, 12, 0, tzinfo=timezone.utc),
+            holiday_rows=[
+                {
+                    "Date": "2026-07-03",
+                    "Title": "US Market Holiday: Independence Day",
+                }
+            ],
+            early_close_rows=[],
+        )
+
+        holiday, weekend = model["schedule"][:2]
+        self.assertEqual(
+            (holiday["day_kind"], holiday["open_at_utc"]),
+            ("HOLIDAY", None),
+        )
+        self.assertIn("Independence Day", holiday["holiday_label"])
+        self.assertEqual(
+            (weekend["day_kind"], weekend["open_at_utc"]),
+            ("WEEKEND", None),
+        )
+
+    def test_official_early_close_uses_1300_et(self) -> None:
+        model = self._builder()(
+            generated_at=datetime(2026, 11, 27, 12, 0, tzinfo=timezone.utc),
+            holiday_rows=[
+                {"Date": "2026-11-26", "Title": "Thanksgiving Day"}
+            ],
+            early_close_rows=[
+                {
+                    "Date": "2026-11-27",
+                    "Event Time": "Early close 13:00 ET",
+                }
+            ],
+        )
+
+        self.assertEqual(
+            model["schedule"][0]["close_at_utc"],
+            "2026-11-27T18:00:00+00:00",
+        )
+        self.assertTrue(model["schedule"][0]["is_early_close"])
+
+    def test_malformed_early_close_time_keeps_regular_close_and_warns(self) -> None:
+        model = self._builder()(
+            generated_at=datetime(2026, 11, 27, 12, 0, tzinfo=timezone.utc),
+            holiday_rows=[
+                {"Date": "2026-11-26", "Title": "Thanksgiving Day"}
+            ],
+            early_close_rows=[
+                {"Date": "2026-11-27", "Event Time": "Early close"}
+            ],
+        )
+
+        self.assertEqual(
+            model["schedule"][0]["close_at_utc"],
+            "2026-11-27T21:00:00+00:00",
+        )
+        self.assertFalse(model["schedule"][0]["is_early_close"])
+        self.assertEqual(model["calendar_quality"], "LIMITED")
+        self.assertIn("2026-11-27", model["warnings"][0])
+
+    def test_failed_calendar_source_marks_schedule_limited(self) -> None:
+        model = self._builder()(
+            generated_at=datetime(2026, 7, 22, 13, 0, tzinfo=timezone.utc),
+            holiday_rows=[
+                {"Date": "2026-07-03", "Title": "Independence Day"}
+            ],
+            early_close_rows=[],
+            calendar_statuses={"holiday": "OK", "early_close": "ERROR"},
+        )
+
+        self.assertEqual(model["calendar_quality"], "LIMITED")
+
+
+class _RecordingFuture:
+    def __init__(self, *, done: bool = False, value=None) -> None:
+        self.done_flag = done
+        self.value = value
+        self.result_call_count = 0
+
+    def done(self) -> bool:
+        return self.done_flag
+
+    def result(self):
+        self.result_call_count += 1
+        return self.value
+
+
+class _RecordingExecutor:
+    def __init__(self, *, done: bool = False, value=None) -> None:
+        self.done = done
+        self.value = value
+        self.submit_count = 0
+        self.calls: list[tuple[object, tuple[object, ...], dict[str, object]]] = []
+        self.futures: list[_RecordingFuture] = []
+
+    def submit(self, fn, *args, **kwargs):
+        self.submit_count += 1
+        self.calls.append((fn, args, kwargs))
+        future = _RecordingFuture(done=self.done, value=self.value)
+        self.futures.append(future)
+        return future
+
+
+class TodayIntradayCoordinatorTests(unittest.TestCase):
+    @staticmethod
+    def _scope():
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            IntradayRefreshScope,
+        )
+
+        return IntradayRefreshScope(
+            portfolio_group_id="group-a",
+            universe_code="TODAY_0123456789ABCDEF",
+            symbols=("AMD",),
+            items=(SimpleNamespace(source_ref="AMD"),),
+        )
+
+    @staticmethod
+    def _session(*, phase: str = "OPEN", allowed: bool = True):
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            RegularSessionState,
+        )
+
+        return RegularSessionState(
+            phase=phase,
+            trade_date=date(2026, 7, 22),
+            open_at_utc=datetime(2026, 7, 22, 13, 30, tzinfo=timezone.utc),
+            close_at_utc=datetime(2026, 7, 22, 20, 0, tzinfo=timezone.utc),
+            collection_allowed=allowed,
+        )
+
+    @staticmethod
+    def _latest(*, due: bool):
+        from app.services.portfolio_monitoring.intraday_refresh import (
+            LatestPortfolioQuotes,
+        )
+
+        return LatestPortfolioQuotes.empty(
+            TodayIntradayCoordinatorTests._scope(),
+            due=due,
+        )
+
+    def test_tick_submits_due_open_job_without_waiting(self) -> None:
+        from app.web.today_intraday_auto_refresh import (
+            TodayIntradayCoordinator,
+        )
+
+        executor = _RecordingExecutor(done=False)
+        coordinator = TodayIntradayCoordinator(
+            executor=executor,
+            latest_loader=lambda scope, **kwargs: self._latest(due=True),
+            quote_runner=lambda **kwargs: {"status": "success"},
+        )
+
+        result = coordinator.tick(
+            scope=self._scope(),
+            session=self._session(),
+            now=datetime(2026, 7, 22, 14, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(result.collection_state, "running")
+        self.assertEqual(executor.submit_count, 1)
+        self.assertEqual(executor.futures[0].result_call_count, 0)
+
+    def test_tick_keeps_one_inflight_job_per_group(self) -> None:
+        from app.web.today_intraday_auto_refresh import (
+            TodayIntradayCoordinator,
+        )
+
+        executor = _RecordingExecutor(done=False)
+        coordinator = TodayIntradayCoordinator(
+            executor=executor,
+            latest_loader=lambda scope, **kwargs: self._latest(due=True),
+        )
+
+        coordinator.tick(
+            scope=self._scope(),
+            session=self._session(),
+            now=datetime(2026, 7, 22, 14, 0, tzinfo=timezone.utc),
+        )
+        coordinator.tick(
+            scope=self._scope(),
+            session=self._session(),
+            now=datetime(2026, 7, 22, 14, 0, 15, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(executor.submit_count, 1)
+        self.assertEqual(executor.futures[0].result_call_count, 0)
+
+    def test_tick_skips_when_db_attempt_is_not_due(self) -> None:
+        from app.web.today_intraday_auto_refresh import (
+            TodayIntradayCoordinator,
+        )
+
+        executor = _RecordingExecutor()
+        coordinator = TodayIntradayCoordinator(
+            executor=executor,
+            latest_loader=lambda scope, **kwargs: self._latest(due=False),
+        )
+
+        result = coordinator.tick(
+            scope=self._scope(),
+            session=self._session(),
+            now=datetime(2026, 7, 22, 14, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(result.collection_state, "idle")
+        self.assertEqual(executor.submit_count, 0)
+
+    def test_closed_or_limited_session_never_submits_intraday_job(self) -> None:
+        from app.web.today_intraday_auto_refresh import (
+            TodayIntradayCoordinator,
+        )
+
+        executor = _RecordingExecutor()
+        latest_calls: list[str] = []
+        coordinator = TodayIntradayCoordinator(
+            executor=executor,
+            latest_loader=lambda scope, **kwargs: latest_calls.append(
+                scope.portfolio_group_id
+            ),
+        )
+
+        coordinator.tick(
+            scope=self._scope(),
+            session=self._session(phase="CLOSED", allowed=False),
+            now=datetime(2026, 7, 22, 20, 0, tzinfo=timezone.utc),
+        )
+        coordinator.tick(
+            scope=self._scope(),
+            session=self._session(phase="STALE", allowed=False),
+            now=datetime(2026, 7, 22, 14, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(executor.submit_count, 0)
+        self.assertEqual(latest_calls, [])
+
+    def test_completed_future_is_consumed_only_after_done(self) -> None:
+        from app.web.today_intraday_auto_refresh import (
+            TodayIntradayCoordinator,
+        )
+
+        executor = _RecordingExecutor(done=False)
+        due_values = iter([True, False])
+        coordinator = TodayIntradayCoordinator(
+            executor=executor,
+            latest_loader=lambda scope, **kwargs: self._latest(
+                due=next(due_values)
+            ),
+        )
+        coordinator.tick(
+            scope=self._scope(),
+            session=self._session(),
+            now=datetime(2026, 7, 22, 14, 0, tzinfo=timezone.utc),
+        )
+        executor.futures[0].done_flag = True
+        executor.futures[0].value = {"status": "submitted_result"}
+
+        result = coordinator.tick(
+            scope=self._scope(),
+            session=self._session(),
+            now=datetime(2026, 7, 22, 14, 0, 15, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(executor.futures[0].result_call_count, 1)
+        self.assertEqual(result.collection_state, "idle")
+        self.assertEqual(result.last_result, {"status": "submitted_result"})
+
+    def test_closed_session_retries_eod_every_five_minutes_at_most_six_times(self) -> None:
+        from app.web.today_intraday_auto_refresh import (
+            TodayIntradayCoordinator,
+        )
+
+        executor = _RecordingExecutor()
+        coordinator = TodayIntradayCoordinator(
+            executor=executor,
+            latest_loader=lambda *args, **kwargs: self._latest(due=False),
+            eod_runner=lambda *args, **kwargs: {"status": "failed"},
+        )
+        session = self._session(phase="CLOSED", allowed=False)
+        first_due = datetime(2026, 7, 22, 20, 5, tzinfo=timezone.utc)
+        stale = {"AMD": date(2026, 7, 21)}
+
+        for attempt in range(6):
+            snapshot = coordinator.tick(
+                scope=self._scope(),
+                session=session,
+                latest_daily_dates=stale,
+                now=first_due + timedelta(minutes=5 * attempt),
+            )
+            self.assertEqual(executor.submit_count, attempt + 1)
+            self.assertEqual(snapshot.eod_attempt_count, attempt + 1)
+            executor.futures[-1].done_flag = True
+            executor.futures[-1].value = {"status": "failed"}
+
+        exhausted = coordinator.tick(
+            scope=self._scope(),
+            session=session,
+            latest_daily_dates=stale,
+            now=first_due + timedelta(minutes=30),
+        )
+
+        self.assertEqual(executor.submit_count, 6)
+        self.assertEqual(exhausted.eod_state, "exhausted")
+        self.assertEqual(exhausted.eod_attempt_count, 6)
+
+    def test_confirmed_eod_resets_waiting_state_without_submission(self) -> None:
+        from app.web.today_intraday_auto_refresh import (
+            TodayIntradayCoordinator,
+        )
+
+        executor = _RecordingExecutor()
+        coordinator = TodayIntradayCoordinator(executor=executor)
+        snapshot = coordinator.tick(
+            scope=self._scope(),
+            session=self._session(phase="CLOSED", allowed=False),
+            latest_daily_dates={"AMD": date(2026, 7, 22)},
+            now=datetime(2026, 7, 22, 20, 5, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(snapshot.eod_state, "confirmed")
+        self.assertEqual(executor.submit_count, 0)
+
 
 class TodayHomePageContractTests(unittest.TestCase):
+    def test_component_passes_explicit_view_and_key(self) -> None:
+        component_module = importlib.import_module(
+            "app.web.today_react_component"
+        )
+        component = MagicMock(return_value={"event": None})
+        payload = {
+            "schema_version": "today_portfolio_island_v1",
+            "portfolio": {},
+        }
+
+        with patch.object(
+            component_module,
+            "_declare_today_component",
+            return_value=component,
+        ):
+            result = component_module.render_today_workbench(
+                payload,
+                view="portfolio",
+                key="today_portfolio_island",
+            )
+
+        self.assertEqual(result, {"event": None})
+        component.assert_called_once_with(
+            payload=payload,
+            view="portfolio",
+            key="today_portfolio_island",
+            default={"event": None},
+        )
+
+    def test_component_rejects_unknown_view(self) -> None:
+        component_module = importlib.import_module(
+            "app.web.today_react_component"
+        )
+
+        with self.assertRaises(ValueError):
+            component_module.render_today_workbench({}, view="unknown")
+
+    def test_island_loader_never_loads_broad_market_model(self) -> None:
+        page = importlib.import_module("app.web.today_page")
+        context = SimpleNamespace(
+            group=None,
+            items=(),
+            workspace={
+                "boundaries": {"storage_ready": True},
+                "groups": [],
+            },
+        )
+        market_session = {
+            "calendar_quality": "CONFIRMED",
+            "schedule": [
+                {
+                    "trade_date": "2026-07-22",
+                    "day_kind": "TRADING_DAY",
+                    "open_at_utc": "2026-07-22T13:30:00+00:00",
+                    "close_at_utc": "2026-07-22T20:00:00+00:00",
+                    "is_early_close": False,
+                }
+            ],
+        }
+
+        with patch.object(
+            page,
+            "load_today_read_model",
+            side_effect=AssertionError("broad reload"),
+        ):
+            state = page.load_today_portfolio_island_state(
+                market_session=market_session,
+                generated_at=datetime(
+                    2026,
+                    7,
+                    22,
+                    14,
+                    0,
+                    tzinfo=timezone.utc,
+                ),
+                context=context,
+            )
+
+        self.assertEqual(
+            state.payload["schema_version"],
+            "today_portfolio_island_v1",
+        )
+        self.assertFalse(state.heartbeat_enabled)
+
+    def test_periodic_fragment_is_scoped_to_portfolio_only(self) -> None:
+        source = Path("app/web/today_page.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("def _render_today_dynamic_fragment", source)
+        self.assertIn("def _render_today_portfolio_fragment", source)
+        self.assertIn('key="today_context_shell"', source)
+        self.assertIn('key="today_portfolio_island"', source)
+        self.assertIn('key="today_action_shell"', source)
+
+    def test_phase_event_is_allowlisted_without_navigation(self) -> None:
+        page = importlib.import_module("app.web.today_page")
+        event = page._normalize_today_event(
+            {
+                "event": {
+                    "id": "market_phase_changed",
+                    "phase": "OPEN",
+                }
+            }
+        )
+
+        self.assertEqual(
+            event,
+            {"id": "market_phase_changed", "phase": "OPEN"},
+        )
+        with patch.object(page.st, "switch_page") as switch_page:
+            page._handle_today_component_value({"event": event}, {})
+        switch_page.assert_not_called()
+
+    def test_heartbeat_runs_only_for_open_or_active_eod_handoff(self) -> None:
+        from app.web.today_intraday_auto_refresh import CoordinatorSnapshot
+        from app.web.today_page import should_run_today_portfolio_heartbeat
+
+        def session(phase: str, *, allowed: bool) -> SimpleNamespace:
+            return SimpleNamespace(
+                phase=phase,
+                collection_allowed=allowed,
+            )
+
+        def state(eod_state: str) -> CoordinatorSnapshot:
+            return CoordinatorSnapshot(
+                collection_state="idle",
+                last_result=None,
+                eod_state=eod_state,
+                eod_attempt_count=0,
+                eod_missing_symbols=(),
+            )
+
+        self.assertTrue(
+            should_run_today_portfolio_heartbeat(
+                session("OPEN", allowed=True),
+                state("not_applicable"),
+            )
+        )
+        self.assertTrue(
+            should_run_today_portfolio_heartbeat(
+                session("CLOSED", allowed=False),
+                state("waiting"),
+            )
+        )
+        self.assertTrue(
+            should_run_today_portfolio_heartbeat(
+                session("CLOSED", allowed=False),
+                state("running"),
+            )
+        )
+        for phase, eod_state in (
+            ("PRE_OPEN", "not_applicable"),
+            ("HOLIDAY", "not_applicable"),
+            ("WEEKEND", "not_applicable"),
+            ("STALE", "not_applicable"),
+            ("CLOSED", "confirmed"),
+            ("CLOSED", "exhausted"),
+        ):
+            self.assertFalse(
+                should_run_today_portfolio_heartbeat(
+                    session(phase, allowed=False),
+                    state(eod_state),
+                )
+            )
+
+    def test_today_runtime_context_uses_default_group_without_creating_it(
+        self,
+    ) -> None:
+        dashboard = importlib.import_module(
+            "app.web.final_selected_portfolio_dashboard"
+        )
+        group = SimpleNamespace(
+            portfolio_group_id="default-group",
+            is_default=True,
+        )
+        items = [SimpleNamespace(source_ref="AMD")]
+
+        class ReadOnlyRepository:
+            def list_groups(self, *, include_deleted=False):
+                self.assert_false(include_deleted)
+                return [group]
+
+            def list_items(self, portfolio_group_id):
+                if portfolio_group_id != "default-group":
+                    raise AssertionError("unexpected group")
+                return items
+
+            @staticmethod
+            def assert_false(value):
+                if value:
+                    raise AssertionError("include_deleted must remain false")
+
+        workspace = {"schema_version": "portfolio_monitoring_workspace_v2"}
+        context = dashboard.load_default_portfolio_monitoring_context_for_today(
+            repository=ReadOnlyRepository(),
+            workspace_loader=lambda: workspace,
+        )
+
+        self.assertIs(context.group, group)
+        self.assertEqual(context.items, tuple(items))
+        self.assertIs(context.workspace, workspace)
+
+    def test_today_page_uses_conditional_portfolio_fragment_and_stable_keys(
+        self,
+    ) -> None:
+        source = Path("app/web/today_page.py").read_text(encoding="utf-8")
+
+        self.assertIn("run_every = 15 if initial_state.heartbeat_enabled else None", source)
+        self.assertIn("@st.fragment(run_every=run_every)", source)
+        self.assertIn('key="today_context_shell"', source)
+        self.assertIn('key="today_portfolio_island"', source)
+        self.assertIn('key="today_action_shell"', source)
+        self.assertNotIn("st.spinner", source)
+
+    def test_today_portfolio_island_ticks_coordinator_without_broad_reload(self) -> None:
+        page = importlib.import_module("app.web.today_page")
+        generated_at = datetime(2026, 7, 22, 14, 0, tzinfo=timezone.utc)
+        group = SimpleNamespace(portfolio_group_id="default-group")
+        item = SimpleNamespace(
+            source_ref="AMD",
+            source_type="direct_security",
+            instrument_kind="stock",
+            status="active",
+        )
+        context = SimpleNamespace(
+            group=group,
+            items=(item,),
+            workspace={"schema_version": "portfolio_monitoring_workspace_v2"},
+        )
+        market_session = {
+                "calendar_quality": "CONFIRMED",
+                "timezones": {
+                    "market": "America/New_York",
+                    "viewer": "Asia/Seoul",
+                },
+                "schedule": [
+                    {
+                        "trade_date": "2026-07-22",
+                        "day_kind": "TRADING_DAY",
+                        "open_at_utc": "2026-07-22T13:30:00+00:00",
+                        "close_at_utc": "2026-07-22T20:00:00+00:00",
+                        "is_early_close": False,
+                    }
+                ],
+        }
+        coordinator = MagicMock()
+        coordinator.tick.return_value = importlib.import_module(
+            "app.web.today_intraday_auto_refresh"
+        ).CoordinatorSnapshot(
+            collection_state="running",
+            last_result=None,
+            eod_state="not_applicable",
+            eod_attempt_count=0,
+            eod_missing_symbols=(),
+        )
+
+        with (
+            patch.object(page, "load_today_read_model", side_effect=AssertionError("broad reload")),
+            patch.object(page, "project_today_portfolio", return_value={"live": {}}),
+            patch.object(
+                page,
+                "get_today_intraday_coordinator",
+                return_value=coordinator,
+            ),
+            patch.object(page, "load_latest_portfolio_quotes", return_value=object()),
+            patch.object(page, "load_workspace_eod_closes", return_value={}),
+            patch.object(page, "build_live_portfolio_overlay", return_value={}),
+        ):
+            state = page.load_today_portfolio_island_state(
+                market_session=market_session,
+                generated_at=generated_at,
+                context=context,
+            )
+
+        coordinator.tick.assert_called_once()
+        tick_kwargs = coordinator.tick.call_args.kwargs
+        self.assertEqual(tick_kwargs["scope"].symbols, ("AMD",))
+        self.assertEqual(tick_kwargs["session"].phase, "OPEN")
+        self.assertEqual(tick_kwargs["now"], generated_at)
+        self.assertTrue(state.heartbeat_enabled)
+
+    def test_today_market_calendar_loads_holidays_and_early_closes_separately(
+        self,
+    ) -> None:
+        page = importlib.import_module("app.web.today_page")
+        fake = MagicMock(
+            side_effect=[
+                {"status": "OK", "rows": []},
+                {"status": "OK", "rows": []},
+            ]
+        )
+        generated_at = datetime(2026, 7, 22, 13, 0, tzinfo=timezone.utc)
+
+        with patch.object(page, "build_market_events_snapshot", fake):
+            result = page.load_today_market_calendar(
+                generated_at=generated_at,
+            )
+
+        self.assertEqual(
+            set(result),
+            {"holiday_rows", "early_close_rows", "statuses"},
+        )
+        self.assertEqual(
+            [call.kwargs["event_type"] for call in fake.call_args_list],
+            ["MARKET_HOLIDAY", "EARLY_CLOSE"],
+        )
+        self.assertEqual(
+            fake.call_args_list[0].kwargs["start_date"],
+            "2026-01-01",
+        )
+        self.assertEqual(
+            fake.call_args_list[0].kwargs["end_date"],
+            "2027-12-31",
+        )
+
+    def test_today_react_renders_regular_market_status_without_extended_hours(
+        self,
+    ) -> None:
+        root = Path("app/web/streamlit_components/today_workbench/src")
+        source = (root / "MarketSessionClock.tsx").read_text(encoding="utf-8")
+        styles = (root / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("미국 정규장", source)
+        self.assertIn("뉴욕", source)
+        self.assertIn("한국", source)
+        self.assertIn("resolveMarketSession", source)
+        self.assertIn("setInterval", source)
+        self.assertIn(".today-market-session", styles)
+        self.assertNotIn("프리마켓", source)
+        self.assertNotIn("애프터마켓", source)
+
+    def test_clock_timer_is_isolated_from_portfolio_and_workbench(self) -> None:
+        root = Path("app/web/streamlit_components/today_workbench/src")
+        workbench = (root / "TodayWorkbench.tsx").read_text(encoding="utf-8")
+        clock = (root / "MarketSessionClock.tsx").read_text(encoding="utf-8")
+        portfolio = (root / "TodayPortfolioPanel.tsx").read_text(encoding="utf-8")
+
+        self.assertNotIn("setInterval", workbench)
+        self.assertNotIn("setInterval", portfolio)
+        self.assertIn("setInterval", clock)
+
     def test_today_react_source_uses_explicit_risk_labels_and_chart_semantics(self) -> None:
         root = Path("app/web/streamlit_components/today_workbench/src")
         workbench = (root / "TodayWorkbench.tsx").read_text(encoding="utf-8")
@@ -441,6 +1352,7 @@ class TodayHomePageContractTests(unittest.TestCase):
         self.assertEqual(result, {"event": {"id": "open_market_research"}})
         fake_component.assert_called_once_with(
             payload={"schema_version": "today_home_v2"},
+            view="full",
             key="today_workbench",
             default={"event": None},
         )
@@ -462,12 +1374,21 @@ class TodayHomePageContractTests(unittest.TestCase):
             patch.object(
                 page,
                 "render_today_workbench",
-                return_value={"event": {"id": "open_market_research"}},
+                side_effect=lambda _payload, *, view, key: (
+                    {"event": {"id": "open_market_research"}}
+                    if view == "context"
+                    else {"event": None}
+                ),
             ) as render_component,
         ):
             page.render_today_page()
 
-        render_component.assert_called_once_with({"schema_version": "today_home_v2"})
+        self.assertEqual(render_component.call_count, 3)
+        render_component.assert_any_call(
+            {"schema_version": "today_home_v2"},
+            view="context",
+            key="today_context_shell",
+        )
         fake_st.markdown.assert_not_called()
         fake_st.switch_page.assert_called_once_with(
             "market-page",
@@ -501,7 +1422,11 @@ class TodayHomePageContractTests(unittest.TestCase):
                     patch.object(
                         page,
                         "render_today_workbench",
-                        return_value={"event": {"id": event_id}},
+                        side_effect=lambda _payload, *, view, key: (
+                            {"event": {"id": event_id}}
+                            if view == "context"
+                            else {"event": None}
+                        ),
                     ),
                 ):
                     page.render_today_page()
@@ -523,7 +1448,11 @@ class TodayHomePageContractTests(unittest.TestCase):
             patch.object(
                 page,
                 "render_today_workbench",
-                return_value={"event": {"id": "delete_everything"}},
+                side_effect=lambda _payload, *, view, key: (
+                    {"event": {"id": "delete_everything"}}
+                    if view == "context"
+                    else {"event": None}
+                ),
             ),
         ):
             page.render_today_page()
@@ -553,9 +1482,17 @@ class TodayHomePageContractTests(unittest.TestCase):
         path = Path("app/web/today_page.py")
         self.assertTrue(path.exists(), "Today page renderer should exist")
         source = path.read_text(encoding="utf-8")
-        react_source = Path(
-            "app/web/streamlit_components/today_workbench/src/TodayWorkbench.tsx"
-        ).read_text(encoding="utf-8")
+        react_root = Path(
+            "app/web/streamlit_components/today_workbench/src"
+        )
+        react_source = "\n".join(
+            (
+                (react_root / "TodayWorkbench.tsx").read_text(encoding="utf-8"),
+                (react_root / "TodayPortfolioPanel.tsx").read_text(
+                    encoding="utf-8"
+                ),
+            )
+        )
         css_source = Path(
             "app/web/streamlit_components/today_workbench/src/style.css"
         ).read_text(encoding="utf-8")
@@ -573,7 +1510,9 @@ class TodayHomePageContractTests(unittest.TestCase):
         self.assertNotIn("run_overview_", source)
         self.assertNotIn("requests.", source)
         self.assertIn("종목별 성과 기여", react_source)
-        self.assertIn("기여 상위 2 · 하위 2", react_source)
+        self.assertNotIn("기여 상위 2 · 하위 2", react_source)
+        self.assertIn("contributorCoverageLabel", react_source)
+        self.assertIn('className="today-review-section"', react_source)
         self.assertIn("수익률 자료 부족", react_source)
         self.assertIn("signedMoneyText(row.contribution_value)", react_source)
         self.assertIn("contribution_value", types_source)
@@ -583,6 +1522,12 @@ class TodayHomePageContractTests(unittest.TestCase):
             "grid-template-columns: repeat(2, minmax(0, 1fr))",
             css_source,
         )
+        review_rule = css_source.split(
+            ".today-review-list {",
+            1,
+        )[1].split("}", 1)[0]
+        self.assertIn("align-content: start", review_rule)
+        self.assertIn("grid-auto-rows: max-content", review_rule)
 
     def test_today_html_preserves_b_layout_order_and_escapes_market_copy(self) -> None:
         spec = importlib.util.find_spec("app.web.today_page")
@@ -659,7 +1604,7 @@ class TodayHomePageContractTests(unittest.TestCase):
         self.assertIn("today-evidence-grid", html)
         self.assertIn("대표 포트폴리오", html)
         self.assertIn("종목별 성과 기여", html)
-        self.assertIn("기여 상위 2 · 하위 2", html)
+        self.assertIn("기여 계산 1/2개 · 영향 큰 순", html)
         self.assertIn("종목 누적 수익률", html)
         self.assertIn("+42.00%", html)
         self.assertIn("포트폴리오 누적 기여", html)

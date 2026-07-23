@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-22
+Last Verified: 2026-07-23
 
 ## Current State
 
@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `today-contributor-performance-cards-v1-20260722` — 전체 roadmap `4/4`; Today의 기여 상위 2·하위 2를 현금흐름 조정 종목 수익률과 포트폴리오 누적 기여를 분리한 compact card로 정리하고 actual Browser QA를 완료했다.
+- `today-contributor-coverage-layout-v1-20260723` — 전체 roadmap `2/2`; Today의 계산 가능한 EOD/live 종목 기여를 절대 영향도 순으로 모두 표시하고 coverage copy와 compact top-aligned `우선 확인` 배치를 적용했다.
 
 Current active task status:
 
@@ -24,6 +24,11 @@ Parallel active follow-up:
 
 Previous completed task:
 
+- `portfolio-monitoring-latest-decision-lifecycle-v1-20260723` — 전체 roadmap `4/4`; 후보별 최신 Final Review 판단을 current truth로 사용하고, 기존 항목은 삭제하지 않은 채 최신 non-select에서 item-local 실행 잠금과 재확인/종료 행동을 제공한다.
+- `backtest-level1-price-refresh-handoff-v1-20260722` — 전체 roadmap `3/3`; 가격 부족/provider gap/재실행 전 상태를 Level2 blocker로 만들고, 명시적 최신화와 재실행 뒤에만 인계를 다시 연다.
+- `final-review-liquidity-evidence-copy-v1-20260722` — 전체 roadmap `2/2`; stable liquidity proof status와 Gate는 유지하고 Level3 카드 제목·현황·설명·기준만 사용자 문구로 변환했다.
+- `practical-validation-final-review-route-fix-v1-20260722` — 전체 roadmap `3/3`; 저장/이동 intent를 fragment callback 선소비에서 분리하고 stable validation id 중복 append를 막아 방금 인계한 후보의 Final Review를 한 번의 클릭으로 연다.
+- `today-contributor-performance-cards-v1-20260722` — 전체 roadmap `4/4`; Today의 기여 상위 2·하위 2를 현금흐름 조정 종목 수익률과 포트폴리오 누적 기여를 분리한 compact card로 정리하고 actual Browser QA를 완료했다.
 - `portfolio-monitoring-initial-setting-correction-v1-20260721` — 전체 roadmap `4/4`; direct-stock fixed-shares의 최초 요청 시작일과 수량을 append-only initial contract revision으로 함께 정정하고 새 시장일·종가·최초 투자금부터 성과를 다시 계산한다.
 - `overview-economic-cycle-intramonth-nowcast-v1-20260721` — 전체 roadmap `4/4`; 월말 canonical history를 보존하면서 날짜별 intramonth nowcast와 평일 fail-closed 증분 갱신을 완료했다.
 - `overview-futures-macro-probabilistic-state-outlook-v2-20260720` — 전체 roadmap `3/3`; completed-session same-state target, nested rolling-origin 비교와 독립 publication gate를 완료했고 actual 5D/20D는 `NO_EDGE`다.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from inspect import signature
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
@@ -11,6 +12,7 @@ from app.services.backtest_analysis_result_workspace import (
     build_result_lifecycle,
 )
 from app.web.backtest_analysis_result_workspace import (
+    consume_result_workspace_intent,
     validate_result_workspace_intent,
 )
 
@@ -130,6 +132,96 @@ def test_level1_gate_ignores_practical_validation_signals() -> None:
     assert readiness["state"] == "ready"
     assert readiness["can_handoff"] is True
     assert readiness["reasons"] == []
+
+
+def test_level1_gate_blocks_price_refresh_and_rerun_states() -> None:
+    lifecycle = build_result_lifecycle(
+        result_bundle=result_bundle(),
+        current_configuration_fingerprint="same",
+        result_configuration_fingerprint="same",
+        result_requires_rerun=False,
+        is_running=False,
+        last_error=None,
+        last_error_kind=None,
+    )
+
+    for state, expected_readiness in (
+        ("refresh_required", "data_refresh_required"),
+        ("provider_gap", "data_refresh_required"),
+        ("rerun_required", "rerun_required"),
+    ):
+        readiness = build_level1_technical_handoff_readiness(
+            workspace_kind="single_strategy",
+            strategy_choice="GTAA",
+            result_bundle=result_bundle(),
+            lifecycle=lifecycle,
+            action_handlers={"save_and_move": lambda payload: None},
+            price_freshness_action={
+                "state": state,
+                "handoff_blocked": True,
+                "primary_action": None,
+            },
+        )
+
+        assert readiness["state"] == expected_readiness
+        assert readiness["can_handoff"] is False
+        assert readiness["action"] is None
+
+
+def test_result_workspace_exposes_only_freshness_primary_action_while_blocked() -> None:
+    freshness_action = {
+        "state": "refresh_required",
+        "handoff_blocked": True,
+        "summary": "요청 종료일 기준 데이터가 부족합니다.",
+        "primary_action": {
+            "id": "refresh_prices",
+            "label": "종목 데이터 최신화",
+            "enabled": True,
+        },
+    }
+
+    workspace = build_backtest_analysis_result_workspace(
+        workspace_kind="single_strategy",
+        strategy_choice="GTAA",
+        result_bundle=result_bundle(),
+        current_configuration_fingerprint="same",
+        result_configuration_fingerprint="same",
+        result_requires_rerun=False,
+        is_running=False,
+        last_error=None,
+        last_error_kind=None,
+        action_handlers={"save_and_move": lambda payload: None},
+        price_freshness_action=freshness_action,
+    )
+
+    assert workspace["data_freshness_action"] == freshness_action
+    assert workspace["technical_handoff_readiness"]["can_handoff"] is False
+    assert workspace["actions"] == {
+        "refresh_prices": freshness_action["primary_action"]
+    }
+
+
+def test_result_workspace_keeps_existing_handoff_when_prices_are_current() -> None:
+    workspace = build_backtest_analysis_result_workspace(
+        workspace_kind="single_strategy",
+        strategy_choice="GTAA",
+        result_bundle=result_bundle(),
+        current_configuration_fingerprint="same",
+        result_configuration_fingerprint="same",
+        result_requires_rerun=False,
+        is_running=False,
+        last_error=None,
+        last_error_kind=None,
+        action_handlers={"save_and_move": lambda payload: None},
+        price_freshness_action={
+            "state": "current",
+            "handoff_blocked": False,
+            "primary_action": None,
+        },
+    )
+
+    assert workspace["technical_handoff_readiness"]["state"] == "ready"
+    assert workspace["actions"]["save_and_move"]["enabled"] is True
 
 
 def test_practical_validation_gaps_become_level2_questions_once() -> None:
@@ -642,3 +734,374 @@ def test_result_intent_requires_exact_current_run_and_enabled_action() -> None:
     assert accepted["ok"] is True
     assert stale == {"ok": False, "reason": "run_identity_mismatch"}
     assert disabled == {"ok": False, "reason": "action_unavailable"}
+
+
+def test_result_intent_accepts_only_current_supported_action_union() -> None:
+    for action in (
+        "save_and_move",
+        "refresh_prices",
+        "rerun_same_configuration",
+    ):
+        workspace = {
+            "configuration_fingerprint": "fingerprint-current",
+            "identity": {"run_result_id": "run-current"},
+            "actions": {action: {"enabled": True}},
+        }
+        accepted = validate_result_workspace_intent(
+            {
+                "action": action,
+                "payload": {
+                    "run_result_id": "run-current",
+                    "current_configuration_fingerprint": "fingerprint-current",
+                },
+                "nonce": f"nonce-{action}",
+            },
+            workspace=workspace,
+        )
+
+        assert accepted["ok"] is True
+        assert accepted["action"] == action
+
+    rejected = validate_result_workspace_intent(
+        {
+            "action": "unknown_action",
+            "payload": {
+                "run_result_id": "run-current",
+                "current_configuration_fingerprint": "fingerprint-current",
+            },
+            "nonce": "nonce-unknown",
+        },
+        workspace={
+            "configuration_fingerprint": "fingerprint-current",
+            "identity": {"run_result_id": "run-current"},
+            "actions": {"unknown_action": {"enabled": True}},
+        },
+    )
+    assert rejected == {"ok": False, "reason": "invalid_intent"}
+
+
+def _result_action_workspace(action: str) -> dict:
+    return {
+        "configuration_fingerprint": "fingerprint-current",
+        "identity": {"run_result_id": "run-current"},
+        "actions": {action: {"enabled": True}},
+    }
+
+
+def _result_action_intent(action: str, nonce: str) -> dict:
+    return {
+        "action": action,
+        "payload": {
+            "run_result_id": "run-current",
+            "current_configuration_fingerprint": "fingerprint-current",
+        },
+        "nonce": nonce,
+    }
+
+
+def test_refresh_intent_runs_ingestion_once_and_marks_old_result_reference() -> None:
+    from app.web import backtest_analysis_result_workspace as adapter
+
+    session = {
+        "backtest_analysis_mode": "단일 전략",
+        "backtest_strategy_choice": "GTAA",
+        "backtest_last_bundle": {
+            "meta": {
+                "run_id": "run-current",
+                "tickers": ["SPY", "TLT"],
+                "start": "2016-01-01",
+                "end": "2026-07-22",
+                "price_freshness": {
+                    "status": "warning",
+                    "details": {
+                        "common_latest_date": "2026-06-26",
+                        "refresh_symbols_all": ["SPY", "TLT"],
+                        "stale_symbols_all": ["SPY", "TLT"],
+                    },
+                },
+            }
+        },
+        "backtest_current_draft_payload": {
+            "tickers": ["SPY", "TLT"],
+            "start": "2016-01-01",
+            "end": "2026-07-22",
+        },
+    }
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = session
+    refresh_result = {
+        "status": "success",
+        "rows_written": 12,
+        "message": "가격 최신화 완료",
+        "details": {"post_refresh_unresolved_symbols": []},
+    }
+
+    with (
+        patch.object(adapter, "st", fake_streamlit),
+        patch.object(
+            adapter,
+            "build_backtest_price_refresh_plan",
+            return_value={"eligible": True, "status": "refresh_available"},
+        ),
+        patch.object(
+            adapter,
+            "run_backtest_price_refresh",
+            return_value=refresh_result,
+        ) as runner,
+    ):
+        consumed = consume_result_workspace_intent(
+            _result_action_intent("refresh_prices", "refresh-1"),
+            workspace=_result_action_workspace("refresh_prices"),
+        )
+
+    assert consumed["ok"] is True
+    runner.assert_called_once()
+    assert session["backtest_last_result_refresh_result"] == refresh_result
+    assert session["backtest_last_result_requires_rerun"] is True
+    assert "backtest_pending_single_run" not in session
+
+
+def test_current_single_workspace_projects_live_refresh_plan_into_gate() -> None:
+    from app.web import backtest_analysis_result_workspace as adapter
+
+    bundle = result_bundle()
+    bundle["meta"].update(
+        {
+            "tickers": ["SPY", "TLT"],
+            "start": "2016-01-01",
+            "end": "2026-07-22",
+            "level1_configuration_fingerprint": "fingerprint-current",
+            "price_freshness": {
+                "status": "warning",
+                "details": {
+                    "common_latest_date": "2026-06-26",
+                    "refresh_symbols_all": ["SPY", "TLT"],
+                    "stale_symbols_all": ["SPY", "TLT"],
+                },
+            },
+        }
+    )
+    session = {
+        "backtest_analysis_mode": "단일 전략",
+        "backtest_strategy_choice": "GTAA",
+        "backtest_last_bundle": bundle,
+        "backtest_current_draft_payload": {
+            "tickers": ["SPY", "TLT"],
+            "start": "2016-01-01",
+            "end": "2026-07-22",
+        },
+        "backtest_current_configuration_fingerprint": "fingerprint-current",
+        "backtest_last_configuration_fingerprint": "fingerprint-current",
+    }
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = session
+
+    with (
+        patch.object(adapter, "st", fake_streamlit),
+        patch.object(
+            adapter,
+            "build_backtest_price_refresh_plan",
+            return_value={
+                "eligible": True,
+                "status": "refresh_available",
+                "target_end": "2026-07-21",
+                "current_common_latest": "2026-06-26",
+                "source_tickers": ["SPY", "TLT"],
+            },
+        ),
+    ):
+        workspace = adapter.build_current_backtest_analysis_result_workspace()
+
+    assert workspace["data_freshness_action"]["state"] == "refresh_required"
+    assert workspace["technical_handoff_readiness"]["can_handoff"] is False
+    assert list(workspace["actions"]) == ["refresh_prices"]
+
+
+def test_refresh_intent_rechecks_current_plan_before_running() -> None:
+    from app.web import backtest_analysis_result_workspace as adapter
+
+    session = {
+        "backtest_analysis_mode": "단일 전략",
+        "backtest_last_bundle": {"meta": {"run_id": "run-current"}},
+        "backtest_current_draft_payload": {"end": "2026-07-22"},
+    }
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = session
+
+    with (
+        patch.object(adapter, "st", fake_streamlit),
+        patch.object(
+            adapter,
+            "build_backtest_price_refresh_plan",
+            return_value={"eligible": False, "status": "up_to_date"},
+        ),
+        patch.object(adapter, "run_backtest_price_refresh") as runner,
+    ):
+        consumed = consume_result_workspace_intent(
+            _result_action_intent("refresh_prices", "refresh-stale"),
+            workspace=_result_action_workspace("refresh_prices"),
+        )
+
+    assert consumed == {"ok": False, "reason": "refresh_unavailable"}
+    runner.assert_not_called()
+
+
+def test_rerun_intent_queues_current_single_draft_without_collecting() -> None:
+    from app.web import backtest_analysis_result_workspace as adapter
+
+    draft = {"tickers": ["SPY", "TLT"], "end": "2026-07-22"}
+    session = {
+        "backtest_analysis_mode": "단일 전략",
+        "backtest_strategy_choice": "GTAA",
+        "backtest_current_draft_payload": draft,
+    }
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = session
+
+    with (
+        patch.object(adapter, "st", fake_streamlit),
+        patch.object(adapter, "run_backtest_price_refresh") as runner,
+    ):
+        consumed = consume_result_workspace_intent(
+            _result_action_intent("rerun_same_configuration", "rerun-1"),
+            workspace=_result_action_workspace("rerun_same_configuration"),
+        )
+
+    assert consumed["ok"] is True
+    assert session["backtest_pending_single_run"] == {
+        "payload": draft,
+        "strategy_name": "GTAA",
+    }
+    runner.assert_not_called()
+
+
+def test_duplicate_refresh_nonce_is_not_consumed_twice() -> None:
+    from app.web import backtest_analysis_result_workspace as adapter
+
+    session = {
+        "backtest_analysis_mode": "단일 전략",
+        "backtest_analysis_result_consumed_nonce": "refresh-duplicate",
+    }
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = session
+
+    with (
+        patch.object(adapter, "st", fake_streamlit),
+        patch.object(adapter, "run_backtest_price_refresh") as runner,
+    ):
+        consumed = consume_result_workspace_intent(
+            _result_action_intent("refresh_prices", "refresh-duplicate"),
+            workspace=_result_action_workspace("refresh_prices"),
+        )
+
+    assert consumed == {"ok": False, "reason": "duplicate_intent"}
+    runner.assert_not_called()
+
+
+def test_result_component_defers_intent_consumption_to_fragment_body() -> None:
+    from app.web import backtest_analysis_result_workspace as result_workspace
+
+    workspace = {
+        "visible": True,
+        "configuration_fingerprint": "fingerprint-current",
+        "identity": {"run_result_id": "run-current"},
+        "actions": {"save_and_move": {"enabled": True}},
+    }
+    intent = {
+        "action": "save_and_move",
+        "payload": {
+            "run_result_id": "run-current",
+            "current_configuration_fingerprint": "fingerprint-current",
+        },
+        "nonce": "handoff-fragment-1",
+    }
+    fake_streamlit = MagicMock()
+
+    with (
+        patch.object(result_workspace, "st", fake_streamlit),
+        patch.object(
+            result_workspace,
+            "build_current_backtest_analysis_result_workspace",
+            return_value=workspace,
+        ),
+        patch.object(
+            result_workspace,
+            "is_backtest_analysis_result_workspace_available",
+            return_value=True,
+        ),
+        patch.object(
+            result_workspace,
+            "render_backtest_analysis_result_workspace_component",
+            return_value=intent,
+        ) as render_component,
+        patch.object(
+            result_workspace,
+            "consume_result_workspace_intent",
+            return_value={"ok": True},
+        ) as consume_intent,
+    ):
+        result_workspace.render_backtest_analysis_result_workspace()
+
+    assert "on_change" not in render_component.call_args.kwargs
+    consume_intent.assert_called_once_with(intent, workspace=workspace)
+    fake_streamlit.rerun.assert_called_once_with(scope="app")
+
+
+def test_result_fallback_emits_the_same_freshness_primary_action() -> None:
+    from app.web import backtest_analysis_result_workspace_panel as panel
+
+    workspace = _build_workspace(result_bundle())
+    workspace["data_freshness_action"] = {
+        "state": "refresh_required",
+        "requested_end": "2026-07-22",
+        "target_trading_end": "2026-07-21",
+        "current_common_latest": "2026-06-26",
+        "affected_symbol_count": 2,
+        "affected_symbol_sample": ["SPY", "TLT"],
+        "summary": "요청 종료일 기준 데이터가 부족합니다.",
+        "guidance": "가격을 최신화한 뒤 다시 백테스트하세요.",
+        "feedback": None,
+        "handoff_blocked": True,
+        "primary_action": {
+            "id": "refresh_prices",
+            "label": "종목 데이터 최신화",
+            "enabled": True,
+        },
+    }
+    workspace["actions"] = {
+        "refresh_prices": workspace["data_freshness_action"]["primary_action"]
+    }
+    fake_streamlit = MagicMock()
+    fake_streamlit.button.return_value = True
+    rendered_columns: list[MagicMock] = []
+
+    def columns(count: int) -> list[MagicMock]:
+        created = [MagicMock() for _ in range(count)]
+        rendered_columns.extend(created)
+        return created
+
+    fake_streamlit.columns.side_effect = columns
+
+    with patch.object(panel, "st", fake_streamlit):
+        intent = panel.render_backtest_analysis_result_workspace_fallback(workspace)
+
+    assert intent["action"] == "refresh_prices"
+    assert intent["payload"] == {
+        "run_result_id": "run-current",
+        "current_configuration_fingerprint": "same",
+    }
+    rendered_markdown = "\n".join(
+        str(call.args[0])
+        for call in [
+            *fake_streamlit.markdown.call_args_list,
+            *[
+                call
+                for column in rendered_columns
+                for call in column.markdown.call_args_list
+            ],
+        ]
+        if call.args
+    )
+    assert "요청 종료일 기준 데이터가 부족합니다" in rendered_markdown
+    assert "요청 종료일" in rendered_markdown
+    assert "현재 공통 기준일" in rendered_markdown

@@ -30,6 +30,55 @@ export type CurveMetadata = {
   end_date: string | null;
 };
 
+export type PortfolioMetrics = {
+  current_value: number | null;
+  latest_observation_return: number | null;
+  return_from_date: string | null;
+  return_to_date: string | null;
+  total_return: number | null;
+};
+
+export type PortfolioContributor = {
+  symbol: string;
+  contribution_value: number;
+  value?: number;
+  total_return: number | null;
+  tone: "positive" | "negative" | "neutral";
+};
+
+export type PortfolioLiveStatus = "INACTIVE" | "LIVE_READY" | "LIVE_PARTIAL" | "EOD_WAITING";
+
+export type PortfolioLivePoint = PortfolioCurveRow & {
+  timestamp_utc: string;
+  kind: "intraday";
+};
+
+export type PortfolioLive = {
+  status: PortfolioLiveStatus;
+  label: string;
+  as_of_utc: string | null;
+  trade_date: string | null;
+  coverage: { fresh: number; expected: number; fallback_symbols: string[] };
+  metrics: PortfolioMetrics | null;
+  contributors: PortfolioContributor[];
+  curve_point: PortfolioLivePoint | null;
+  message: string;
+};
+
+export type TodayPortfolio = {
+  status: string;
+  name: string;
+  basis_date: string | null;
+  summary: string;
+  metrics: PortfolioMetrics;
+  curve: PortfolioCurveRow[];
+  curve_metadata: CurveMetadata;
+  contributors: PortfolioContributor[];
+  review_items: Array<{ severity: string; meaning: string }>;
+  active_item_count: number;
+  live: PortfolioLive;
+};
+
 export type TodayHeader = {
   as_of_date: string | null;
   source_count: number;
@@ -47,8 +96,37 @@ export type TodayEvent = {
   importance: string;
 };
 
+export type MarketSessionDay = {
+  trade_date: string;
+  day_kind: "TRADING_DAY" | "HOLIDAY" | "WEEKEND";
+  holiday_label: string | null;
+  open_at_utc: string | null;
+  close_at_utc: string | null;
+  is_early_close: boolean;
+};
+
+export type MarketSessionPayload = {
+  schema_version: "market_session_v1";
+  generated_at_utc: string;
+  timezones: {
+    market: "America/New_York";
+    viewer: "Asia/Seoul";
+  };
+  calendar_quality: "CONFIRMED" | "LIMITED";
+  warnings: string[];
+  schedule: MarketSessionDay[];
+};
+
+export type MarketSessionPhase =
+  | "PRE_OPEN"
+  | "OPEN"
+  | "CLOSED"
+  | "HOLIDAY"
+  | "WEEKEND"
+  | "STALE";
+
 export type TodayPayload = {
-  schema_version: "today_home_v2";
+  schema_version: "today_home_v4";
   header: TodayHeader;
   market: {
     status: string;
@@ -59,33 +137,19 @@ export type TodayPayload = {
     next_event: TodayEvent | null;
     watch_items: string[];
   };
-  portfolio: {
-    status: string;
-    name: string;
-    basis_date: string | null;
-    summary: string;
-    metrics: {
-      current_value: number | null;
-      latest_observation_return: number | null;
-      return_from_date: string | null;
-      return_to_date: string | null;
-      total_return: number | null;
-    };
-    curve: PortfolioCurveRow[];
-    curve_metadata: CurveMetadata;
-    contributors: Array<{
-      symbol: string;
-      contribution_value: number;
-      value?: number;
-      total_return: number | null;
-      tone: "positive" | "negative";
-    }>;
-    review_items: Array<{ severity: string; meaning: string }>;
-    active_item_count: number;
-  };
+  market_session: MarketSessionPayload;
+  portfolio: TodayPortfolio;
 };
+
+export type TodayPortfolioIslandPayload = {
+  schema_version: "today_portfolio_island_v1";
+  portfolio: TodayPortfolio;
+};
+
+export type TodayWorkbenchView = "full" | "context" | "portfolio" | "actions";
 
 export type TodayEventId =
   | "open_market_research"
   | "open_stock_research"
-  | "open_portfolio_monitoring";
+  | "open_portfolio_monitoring"
+  | "market_phase_changed";

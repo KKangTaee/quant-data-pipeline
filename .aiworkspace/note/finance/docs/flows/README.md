@@ -1,7 +1,7 @@
 # Finance Flows
 
 Status: Active
-Last Verified: 2026-07-22
+Last Verified: 2026-07-23
 
 ## Main User Flow
 
@@ -9,7 +9,7 @@ Last Verified: 2026-07-22
 Finance Console `/` 최초 진입
   -> Research > Today
      -> React `오늘의 시장 판단`과 텍스트 신호·위험 분류
-     -> 대표 포트폴리오 최근 거래일 성과와 일별 저장 종가 기반 누적 수익률
+     -> 대표 포트폴리오 확정 일봉 곡선과 정규장 중 장중 임시 평가 overlay
      -> Market Context / Market Movers / Portfolio Monitoring 기존 화면으로 이동
 
 Research: Today / Market Research / Institutional Holdings
@@ -19,7 +19,7 @@ Help: Reference Center
 ```
 
 Streamlit의 `default=True` page는 등록된 `url_path="today"`와 무관하게 browser root `/`를 소유한다. 따라서 Today의 canonical 최초 진입 주소는 `/`이며 기존 상세 URL은 유지한다.
-Today의 차트는 최신 최대 60개 실제 일별 관측을 주봉으로 변환하지 않고 실제 날짜 간격으로 표시한다. 장중 화면이나 매매 신호가 아니며, React가 반환하는 세 navigation event만 Python Page router가 처리한다.
+Today의 차트는 최신 최대 60개 실제 일별 관측을 주봉으로 변환하지 않고 실제 날짜 간격으로 표시한다. 정규장 중에는 확정 곡선을 바꾸지 않고 별도 점선·빈 marker 한 개로 장중 임시 값을 겹친다. 매매 신호가 아니며 React가 반환하는 세 navigation event만 Python Page router가 처리한다. 세부 흐름은 [Today Portfolio Intraday Flow](./TODAY_PORTFOLIO_INTRADAY_FLOW.md)를 본다.
 `Research > Market Research`는 Portfolio Lab의 필수 선행 단계가 아니라 Today에서 발견한 질문을 깊게 조사하는 표면이다. `/overview` 안에서 `시장 환경 | 지수 가치평가 | 종목 리서치`를 먼저 고르고, 각각 `경제 사이클·선물 매크로·심리·일정 | S&P 500 | 변동 종목·개별 종목`의 7개 canonical view로 이동한다.
 Market Research 상단은 eyebrow·실제 `<h1>`·설명을 full-width editorial header로 두고, family는 divider 위 text tab과 active underline, 선택 family의 local view는 외곽 surface 없는 compact active pill로 렌더링한다. desktop에서는 module 본문과 같은 축을 쓰고 420px에서는 stacked header·family 3열·view 2열로 접히며, drawer와 sticky navigation은 사용하지 않는다.
 `Research > Institutional Holdings`도 Portfolio Lab의 필수 선행 단계가 아니라 delayed SEC 13F institutional holdings를 탐색하는 별도 research surface다.

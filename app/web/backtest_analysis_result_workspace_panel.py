@@ -39,6 +39,47 @@ def render_backtest_analysis_result_workspace_fallback(
     if error:
         st.warning(str(error.get("message") or "이전 실행에서 오류가 발생했습니다."))
 
+    freshness = dict(workspace.get("data_freshness_action") or {})
+    if freshness and freshness.get("state") != "current":
+        st.markdown("### 요청 종료일과 가격 데이터 확인")
+        st.markdown(f"**{freshness.get('summary') or '가격 데이터 확인이 필요합니다.'}**")
+        freshness_columns = st.columns(4)
+        freshness_specs = (
+            ("요청 종료일", freshness.get("requested_end")),
+            ("목표 거래일", freshness.get("target_trading_end")),
+            ("현재 공통 기준일", freshness.get("current_common_latest")),
+            ("최신화 대상", f"{int(freshness.get('affected_symbol_count') or 0)}개"),
+        )
+        for column, (label, value) in zip(freshness_columns, freshness_specs):
+            column.markdown(f"**{label}**  \n{value or '-'}")
+        st.caption(str(freshness.get("guidance") or ""))
+        if freshness.get("feedback"):
+            st.caption(str(freshness["feedback"]))
+        freshness_primary = dict(freshness.get("primary_action") or {})
+        freshness_action_id = str(freshness_primary.get("id") or "")
+        freshness_action = dict(
+            dict(workspace.get("actions") or {}).get(freshness_action_id) or {}
+        )
+        if freshness_action and st.button(
+            str(freshness_action.get("label") or "다음 행동"),
+            disabled=not bool(freshness_action.get("enabled")),
+            type="primary",
+            key=(
+                "bt1_result_fallback_freshness_"
+                f"{freshness_action_id}_{identity.get('run_result_id') or 'none'}"
+            ),
+        ):
+            return {
+                "action": freshness_action_id,
+                "payload": {
+                    "run_result_id": str(identity.get("run_result_id") or ""),
+                    "current_configuration_fingerprint": str(
+                        workspace.get("configuration_fingerprint") or ""
+                    ),
+                },
+                "nonce": str(uuid4()),
+            }
+
     st.markdown("### 1. 성과 요약")
     metrics = list(workspace.get("performance_summary") or [])
     for offset in range(0, len(metrics), 2):

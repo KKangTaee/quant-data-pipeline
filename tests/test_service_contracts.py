@@ -1985,6 +1985,30 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertTrue(handoff.persisted)
         self.assertEqual(handoff.requested_panel, "Final Review")
 
+    def test_practical_validation_save_is_idempotent_by_validation_id(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        result = {
+            "validation_id": "validation-once",
+            "selection_source_id": "source-once",
+        }
+
+        with (
+            patch.object(
+                service,
+                "load_practical_validation_results",
+                side_effect=[[], [result]],
+            ),
+            patch.object(
+                service,
+                "append_practical_validation_result",
+            ) as append_result,
+        ):
+            self.assertTrue(service.save_practical_validation_result(result))
+            self.assertFalse(service.save_practical_validation_result(result))
+
+        append_result.assert_called_once_with(result)
+
     def test_final_review_source_options_hide_blocked_practical_validation_results(self) -> None:
         from app.web.backtest_final_review_helpers import _build_final_review_source_options
 
@@ -14585,6 +14609,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                 "backtest_practical_validation_data_enrichment_handoff",
                 fake_st.session_state,
             )
+            notice = fake_st.session_state[
+                "backtest_practical_validation_notice"
+            ]
+            self.assertEqual(notice["tone"], "warning")
+            self.assertEqual(notice["title"], "자료 보강을 실행했습니다")
+            self.assertIn("재검증", notice["detail"])
 
     def test_both_provider_collection_buttons_use_shared_recheck_completion_boundary(self) -> None:
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
@@ -14680,6 +14710,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(fake_st.session_state["final_review_source_selected"], stable_key)
         self.assertEqual(
             fake_st.session_state["final_review_confirmed_candidate_key"],
+            stable_key,
+        )
+        self.assertEqual(
+            fake_st.session_state[
+                "final_review_active_decision_brief_source_id"
+            ],
             stable_key,
         )
         self.assertNotIn(
@@ -27619,6 +27655,97 @@ class MarketIntelligenceIngestionContractTests(unittest.TestCase):
         self.assertEqual(written_rows[0]["source"], "yahoo_quote")
         self.assertAlmostEqual(float(written_rows[0]["return_pct"]), 12.0)
         self.assertAlmostEqual(float(written_rows[1]["return_pct"]), -4.0)
+
+    def test_explicit_intraday_collector_writes_only_requested_group_symbols(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        stored: list[dict[str, object]] = []
+        result = mi.collect_and_store_symbol_intraday_snapshot(
+            symbols=["amd", "QQQ", "AMD"],
+            universe_code="TODAY_0123456789ABCDEF",
+            source_ref="portfolio_group_id=group-a",
+            quote_fetcher=lambda symbols: [
+                {
+                    "symbol": symbol,
+                    "regularMarketPrice": 100.0,
+                    "regularMarketPreviousClose": 99.0,
+                    "regularMarketTime": 1784741400,
+                    "marketState": "REGULAR",
+                }
+                for symbol in symbols
+            ],
+            snapshot_time_utc=datetime(
+                2026,
+                7,
+                22,
+                14,
+                35,
+                42,
+                tzinfo=timezone.utc,
+            ),
+            upsert=lambda rows: stored.extend(rows) or len(rows),
+            previous_close_loader=lambda symbols: {
+                symbol: {"previous_close": 99.0} for symbol in symbols
+            },
+            alias_loader=lambda symbols: {},
+        )
+
+        self.assertEqual(result["symbols_requested"], 2)
+        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual({row["symbol"] for row in stored}, {"AMD", "QQQ"})
+        self.assertEqual(
+            {row["universe_code"] for row in stored},
+            {"TODAY_0123456789ABCDEF"},
+        )
+        self.assertEqual(
+            {row["snapshot_time_utc"] for row in stored},
+            {"2026-07-22 14:35:00"},
+        )
+        self.assertTrue(
+            all(
+                str(row["source_ref"]).startswith(
+                    "portfolio_group_id=group-a;yahoo_quote_v7"
+                )
+                for row in stored
+            )
+        )
+
+    def test_explicit_intraday_collector_persists_error_rows_for_batch_exception(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        stored: list[dict[str, object]] = []
+
+        def fail_quote_fetch(symbols):
+            del symbols
+            raise RuntimeError("provider down")
+
+        result = mi.collect_and_store_symbol_intraday_snapshot(
+            symbols=["AMD", "QQQ"],
+            universe_code="TODAY_0123456789ABCDEF",
+            source_ref="portfolio_group_id=group-a",
+            quote_fetcher=fail_quote_fetch,
+            snapshot_time_utc=datetime(
+                2026,
+                7,
+                22,
+                14,
+                35,
+                tzinfo=timezone.utc,
+            ),
+            upsert=lambda rows: stored.extend(rows) or len(rows),
+            previous_close_loader=lambda symbols: {},
+            alias_loader=lambda symbols: {},
+        )
+
+        self.assertEqual(result["failed_symbols"], ["AMD", "QQQ"])
+        self.assertEqual({row["provider_status"] for row in stored}, {"error"})
+        self.assertTrue(
+            all("provider down" in str(row["error_msg"]) for row in stored)
+        )
+        self.assertEqual(
+            {row["snapshot_time_utc"] for row in stored},
+            {"2026-07-22 14:35:00"},
+        )
 
     def test_top_universe_snapshot_writes_top1000_rows(self) -> None:
         from finance.data import market_intelligence as mi

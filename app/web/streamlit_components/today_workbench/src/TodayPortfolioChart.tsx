@@ -7,11 +7,12 @@ import {
   chartDomains,
   pointCoordinates,
 } from "./presentation";
-import type { CurveMetadata, PortfolioCurveRow } from "./types";
+import type { CurveMetadata, PortfolioCurveRow, PortfolioLivePoint } from "./types";
 
 type Props = {
   rows: PortfolioCurveRow[];
   metadata: CurveMetadata;
+  livePoint: PortfolioLivePoint | null;
   viewportWidth: number;
 };
 
@@ -43,10 +44,18 @@ function moneyText(value: number | null) {
   }).format(value)}`;
 }
 
-export default function TodayPortfolioChart({ rows, metadata, viewportWidth }: Props) {
+export default function TodayPortfolioChart({ rows, metadata, livePoint, viewportWidth }: Props) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const series = useMemo(() => buildChartSeries(rows), [rows]);
-  const domain = useMemo(() => chartDomains(series), [series]);
+  const liveSeriesPoint = useMemo(() => {
+    if (!livePoint) return null;
+    const timestamp = Date.parse(livePoint.timestamp_utc);
+    return Number.isFinite(timestamp) ? { ...livePoint, timestamp } : null;
+  }, [livePoint]);
+  const domain = useMemo(
+    () => chartDomains(liveSeriesPoint ? [...series, liveSeriesPoint] : series),
+    [series, liveSeriesPoint],
+  );
   const percentTicks = useMemo(() => buildPercentTicks(domain, 5), [domain]);
   const dateTicks = useMemo(
     () => buildDateTicks(series, viewportWidth <= 520 ? 3 : 5),
@@ -56,11 +65,15 @@ export default function TodayPortfolioChart({ rows, metadata, viewportWidth }: P
     () => series.map((row) => ({ row, ...pointCoordinates(row, domain, BOX) })),
     [series, domain],
   );
+  const liveCoordinates = useMemo(
+    () => liveSeriesPoint ? pointCoordinates(liveSeriesPoint, domain, BOX) : null,
+    [liveSeriesPoint, domain],
+  );
 
   if (series.length < 2) {
     return (
       <section className="today-chart-panel" aria-label="포트폴리오 성과 추이">
-        <ChartHeader metadata={metadata} />
+        <ChartHeader metadata={metadata} hasLive={liveCoordinates != null} />
         <div className="today-chart-empty">
           <strong>성과 추이를 표시할 관측치가 부족합니다.</strong>
           <span>현재 {metadata.observation_count}개 관측 · 일별 저장 종가 기준</span>
@@ -107,7 +120,7 @@ export default function TodayPortfolioChart({ rows, metadata, viewportWidth }: P
 
   return (
     <section className="today-chart-panel" aria-label="포트폴리오 성과 추이">
-      <ChartHeader metadata={metadata} />
+      <ChartHeader metadata={metadata} hasLive={liveCoordinates != null} />
       <div className="today-chart-shell">
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
@@ -133,6 +146,14 @@ export default function TodayPortfolioChart({ rows, metadata, viewportWidth }: P
           {zeroY != null && <line x1={BOX.left} x2={WIDTH - BOX.right} y1={zeroY} y2={zeroY} className="today-zero-line" />}
           <path d={areaPath} className="today-chart-area" />
           <path d={linePath} className="today-chart-line" />
+          {liveCoordinates && points.length > 0 && (
+            <g className="today-chart-live">
+              <path d={`M${points[points.length - 1].x},${points[points.length - 1].y} L${liveCoordinates.x},${liveCoordinates.y}`} />
+              <circle cx={liveCoordinates.x} cy={liveCoordinates.y} r={6} />
+              <text x={liveCoordinates.x - 8} y={liveCoordinates.y - 12} textAnchor="end">장중 임시</text>
+              <title>{`장중 임시 · ${percentText(livePoint?.cumulative_return ?? null, 2)} · ${moneyText(livePoint?.total_value ?? null)}`}</title>
+            </g>
+          )}
           {points.map((point, index) => (
             <g
               key={`${point.row.date}-${index}`}
@@ -183,24 +204,24 @@ export default function TodayPortfolioChart({ rows, metadata, viewportWidth }: P
       </div>
       <footer className="today-chart-footer">
         <span><strong>기간</strong> {metadata.start_date?.split("-").join(".") ?? "-"}–{metadata.end_date?.split("-").join(".") ?? "-"}</span>
-        <span><strong>정의</strong> 일별 종가 기반 · 주봉 변환 없음 · 장중 데이터 없음</span>
+        <span><strong>정의</strong> 확정 종가 곡선{liveCoordinates ? " + 장중 임시 점" : " · 장중 데이터 없음"}</span>
       </footer>
     </section>
   );
 }
 
-function ChartHeader({ metadata }: { metadata: CurveMetadata }) {
+function ChartHeader({ metadata, hasLive }: { metadata: CurveMetadata; hasLive: boolean }) {
   return (
     <header className="today-chart-header">
       <div>
         <span>PERFORMANCE TREND</span>
         <h3>일별 종가 기반 누적 수익률</h3>
-        <p>입출금 영향을 조정한 포트폴리오 단위가치의 변화입니다.</p>
+        <p>입출금 영향을 조정한 포트폴리오 단위가치의 변화{hasLive ? "와 장중 임시 값" : ""}입니다.</p>
       </div>
       <div className="today-chart-chips">
         <b>주기 · 일별</b>
         <b>최근 {metadata.observation_count}관측</b>
-        <b className="is-limit">장중 아님</b>
+        <b className={hasLive ? "is-live" : "is-limit"}>{hasLive ? "장중 임시" : "장중 아님"}</b>
       </div>
     </header>
   );

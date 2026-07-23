@@ -73,23 +73,29 @@ class PositionEventProjection:
 
 
 def assert_position_item_eligible(item: MonitoringItemRecord) -> None:
-    """Restrict position commands to active direct stocks held by share count."""
+    """Restrict commands to active direct stocks/ETFs held by share count."""
 
     _assert_position_item_shape(item)
     if item.status not in {"active", "data_review"}:
         raise PositionEventValidationError(
-            "활성 개별주식의 보유 수량 방식에서만 사용할 수 있습니다."
+            "활성 주식·ETF의 보유 수량 방식에서만 사용할 수 있습니다."
         )
 
 
-def _assert_position_item_shape(item: MonitoringItemRecord) -> None:
-    if not (
+def is_position_ledger_item(item: MonitoringItemRecord) -> bool:
+    """Return whether an item owns a share-count position ledger."""
+
+    return (
         item.source_type == "direct_security"
-        and item.instrument_kind == "stock"
+        and item.instrument_kind in {"stock", "etf"}
         and item.funding_mode == "fixed_shares"
-    ):
+    )
+
+
+def _assert_position_item_shape(item: MonitoringItemRecord) -> None:
+    if not is_position_ledger_item(item):
         raise PositionEventValidationError(
-            "개별주식의 보유 수량 방식에서만 사용할 수 있습니다."
+            "주식·ETF의 보유 수량 방식에서만 사용할 수 있습니다."
         )
 
 

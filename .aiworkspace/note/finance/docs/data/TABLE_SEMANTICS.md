@@ -181,6 +181,9 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 성격:
 
 - provider snapshot table이다.
+- Today 대표 포트폴리오는 `universe_code=TODAY_<portfolio_group_id SHA-256 앞 16자>`로 활성 direct stock·ETF 최대 10개를 broad Market Movers universe와 분리해 저장한다.
+- Today snapshot의 business key는 `(universe_code, symbol, interval_code, snapshot_time_utc)`이며 UTC minute UPSERT로 같은 5분 attempt replay를 idempotent하게 처리한다.
+- portfolio quote batch 자체가 실패해도 요청 symbol별 `provider_status=error` row를 저장한다. 실패 row의 snapshot 시각도 300초 cadence 기준이므로 화면 heartbeat가 15초마다 provider를 재호출하지 않는다.
 - 기본 source는 yfinance 세션을 통한 Yahoo quote batch이고, 실패 시 yfinance 5m OHLCV fallback을 사용할 수 있다.
 - `previous_close`, `latest_price`, `return_pct`, `provider_status`, `error_msg`를 함께 저장한다.
 - `quote_symbol`은 실제 provider quote 조회에 사용한 ticker다. ticker-change repair가 적용되면 `symbol`은 universe member ticker를 유지하고 `quote_symbol`만 replacement ticker가 될 수 있다.
@@ -194,6 +197,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - Market Movers quote gap diagnosis는 이 table의 missing row를 대상으로 추가 evidence를 조회해 job result로 보여주고, 반복 추적용으로 `market_data_issue`에도 누적 저장한다.
 - `TOP1000` / `TOP2000` 일중 스냅샷 갱신은 이미 materialize된 liquidity universe를 읽는다. Universe 기준 자체를 바꾸려면 Market Movers의 `유니버스 기준 갱신`을 먼저 실행한다.
 - active ticker alias가 있으면 quote lookup은 alias를 사용하지만 ranking / display symbol은 universe symbol을 유지한다. Source ref에 `alias_symbol=<ticker>`가 남는다.
+- Today는 `quote_time_utc`가 현재보다 600초 넘게 오래되면 stale로 처리하며, 해당 종목은 마지막 확정 EOD 가치로 fallback한다.
+- Today intraday row는 임시 quote evidence다. `nyse_price_history.close`, 확정 일봉, backtest input 또는 historical portfolio curve로 복사·승격하지 않는다.
 
 ## `market_data_issue`
 

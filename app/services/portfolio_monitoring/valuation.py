@@ -9,7 +9,11 @@ import pandas as pd
 
 from .commands import EndResolution, EntryResolution
 from .persistence import MonitoringItemRecord, PositionEventRecord
-from .position_events import project_position_events, validate_position_sequence
+from .position_events import (
+    is_position_ledger_item,
+    project_position_events,
+    validate_position_sequence,
+)
 from .schemas import FundingMode
 
 
@@ -265,14 +269,10 @@ def build_direct_security_value_lane(
     if item.entry_close <= 0 or item.initial_capital <= 0:
         raise ValuationInputError("positive entry close and initial capital are required.")
     event_records = tuple(position_events)
-    position_eligible = (
-        item.source_type == "direct_security"
-        and item.instrument_kind == "stock"
-        and item.funding_mode == FundingMode.FIXED_SHARES.value
-    )
+    position_eligible = is_position_ledger_item(item)
     if event_records and not position_eligible:
         raise ValuationInputError(
-            "Position events require an individual stock held by share count."
+            "Position events require a stock or ETF held by share count."
         )
     projection = (
         project_position_events(item, event_records)

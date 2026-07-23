@@ -8,6 +8,10 @@ from decimal import Decimal
 import pandas as pd
 
 from app.services.portfolio_monitoring.persistence import MonitoringItemRecord, PortfolioGroupRecord
+from app.services.portfolio_monitoring.selected_strategy import (
+    SelectedStrategyReadiness,
+    SelectedStrategyReplayError,
+)
 from app.services.portfolio_monitoring.valuation import (
     CorporateActionReview,
     ItemValueLane,
@@ -34,13 +38,14 @@ def _item(
     exit_value: str | None = None,
     funding_mode: str = "fixed_notional",
     input_shares: int | None = None,
+    instrument_kind: str = "stock",
 ) -> MonitoringItemRecord:
     return MonitoringItemRecord(
         monitoring_item_id=item_id,
         portfolio_group_id="group-core",
         source_type="direct_security",
         source_ref=item_id.upper(),
-        instrument_kind="stock",
+        instrument_kind=instrument_kind,
         requested_start_date=requested,
         effective_start_date=effective,
         funding_mode=funding_mode,
@@ -54,6 +59,23 @@ def _item(
         tracking_end_effective_date=end,
         exit_value=Decimal(exit_value) if exit_value is not None else None,
         status=status,
+    )
+
+
+def _selected_strategy_item(item_id: str, decision_id: str) -> MonitoringItemRecord:
+    return MonitoringItemRecord(
+        monitoring_item_id=item_id,
+        portfolio_group_id="group-core",
+        source_type="selected_strategy",
+        source_ref=decision_id,
+        instrument_kind="strategy",
+        requested_start_date=date(2026, 7, 1),
+        effective_start_date=date(2026, 7, 1),
+        funding_mode="fixed_notional",
+        input_notional=Decimal("10000"),
+        input_shares=None,
+        entry_close=Decimal("1"),
+        initial_capital=Decimal("10000"),
     )
 
 
@@ -147,6 +169,36 @@ class FakeRepository:
 
 
 class PortfolioMonitoringReadModelTests(unittest.TestCase):
+    def test_selected_strategy_failure_projects_decision_lifecycle_without_removing_item(
+        self,
+    ) -> None:
+        read_model = _load_read_model()
+        item = _selected_strategy_item("item-strategy", "old-selected")
+        readiness = SelectedStrategyReadiness(
+            status="BLOCKED",
+            blockers=("최신 Final Review 판단이 관찰 후 재검토로 변경되었습니다.",),
+            source_dates={},
+            decision_lifecycle={
+                "state": "TRACKING_ELIGIBILITY_CHANGED",
+                "locked": True,
+                "latest_route": "HOLD_FOR_MORE_PAPER_TRACKING",
+                "latest_route_label": "관찰 후 재검토",
+                "latest_source_id": "validation-new-hold",
+                "message": "최신 판단이 변경되어 새 계산을 잠갔습니다.",
+            },
+        )
+
+        result = read_model.align_group_value_lanes(
+            [item],
+            {item.monitoring_item_id: SelectedStrategyReplayError(readiness)},
+        )
+
+        self.assertEqual(result.status, "PARTIAL")
+        self.assertEqual(len(result.item_rows), 1)
+        self.assertEqual(result.item_rows[0]["source_type"], "selected_strategy")
+        self.assertEqual(result.item_rows[0]["instrument_kind"], "strategy")
+        self.assertTrue(result.item_rows[0]["decision_lifecycle"]["locked"])
+
     def test_item_rows_require_valid_flow_adjusted_index_on_group_basis_date(
         self,
     ) -> None:
@@ -416,6 +468,38 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
             "buy",
         )
 
+    def test_workspace_projects_selected_etf_fixed_shares_position(self) -> None:
+        read_model = _load_read_model()
+        group = PortfolioGroupRecord("group-core", "Core", True)
+        etf = _item(
+            "item-qqq",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+            funding_mode="fixed_shares",
+            input_shares=10,
+            instrument_kind="etf",
+        )
+
+        workspace = read_model.build_portfolio_monitoring_workspace(
+            FakeRepository([group], [etf]),
+            active_group_id="group-core",
+            selected_item_id=etf.monitoring_item_id,
+            lane_loader=_position_lane,
+        )
+
+        self.assertTrue(workspace["selected_position"]["eligible"])
+        self.assertEqual(
+            workspace["selected_position"]["effective_initial_shares"],
+            Decimal("10"),
+        )
+        self.assertEqual(
+            workspace["selected_position"]["current_shares"], Decimal("12")
+        )
+        self.assertEqual(
+            workspace["selected_position"]["current_value"], Decimal("1200.0")
+        )
+
     def test_selected_position_requires_valid_index_on_its_latest_usable_date(
         self,
     ) -> None:
@@ -605,7 +689,7 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
 
         self.assertEqual(
             set(workspace),
-            {"schema_version", "generated_at", "config_fingerprint", "groups", "active_group", "selected_position", "catalog", "commands", "diagnosis", "macro_observation", "now_to_review", "source_health", "risk_calibration", "diagnosis_history", "method", "boundaries"},
+            {"schema_version", "generated_at", "config_fingerprint", "groups", "active_group", "selected_position", "item_details", "catalog", "commands", "diagnosis", "macro_observation", "now_to_review", "source_health", "risk_calibration", "diagnosis_history", "method", "boundaries"},
         )
         self.assertEqual(workspace["schema_version"], "portfolio_monitoring_workspace_v2")
         self.assertTrue(workspace["groups"][0]["selected"])
@@ -683,6 +767,89 @@ class PortfolioMonitoringReadModelTests(unittest.TestCase):
 
         self.assertEqual(workspace["selected_item_market_chart"]["status"], "READY")
         self.assertEqual(workspace["selected_item_market_chart"]["monitoring_item_id"], "a")
+
+    def test_workspace_preloads_detail_for_every_item(self) -> None:
+        read_model = _load_read_model()
+        group = PortfolioGroupRecord("group-core", "Core", True)
+        first = _item(
+            "a",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+            funding_mode="fixed_shares",
+            input_shares=10,
+        )
+        second = _item(
+            "b",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+            funding_mode="fixed_shares",
+            input_shares=10,
+        )
+        repository = FakeRepository([group], [first, second])
+        loaded: list[str] = []
+
+        def load_chart(item, start, end):
+            loaded.append(item.monitoring_item_id)
+            if item.monitoring_item_id == "b":
+                raise RuntimeError("b chart unavailable")
+            return pd.DataFrame(
+                [{"date": end, "open": 10, "high": 11, "low": 9, "close": 10.5, "volume": 100}]
+            )
+
+        workspace = read_model.build_portfolio_monitoring_workspace(
+            repository,
+            active_group_id="group-core",
+            selected_item_id="a",
+            lane_loader=_position_lane,
+            market_chart_loader=load_chart,
+        )
+
+        self.assertEqual(set(workspace["item_details"]), {"a", "b"})
+        self.assertEqual(
+            workspace["item_details"]["a"]["position"]["monitoring_item_id"],
+            "a",
+        )
+        self.assertEqual(
+            workspace["item_details"]["b"]["position"]["monitoring_item_id"],
+            "b",
+        )
+        self.assertEqual(
+            workspace["item_details"]["a"]["market_chart"]["status"],
+            "READY",
+        )
+        self.assertEqual(
+            workspace["item_details"]["b"]["market_chart"]["status"],
+            "ERROR",
+        )
+        self.assertCountEqual(loaded, ["a", "b"])
+
+    def test_workspace_item_details_skip_market_charts_without_loader(self) -> None:
+        read_model = _load_read_model()
+        group = PortfolioGroupRecord("group-core", "Core", True)
+        item = _item(
+            "a",
+            requested=date(2026, 7, 1),
+            effective=date(2026, 7, 1),
+            capital="1000",
+            funding_mode="fixed_shares",
+            input_shares=10,
+        )
+
+        workspace = read_model.build_portfolio_monitoring_workspace(
+            FakeRepository([group], [item]),
+            active_group_id="group-core",
+            selected_item_id="a",
+            lane_loader=_position_lane,
+        )
+
+        self.assertEqual(
+            workspace["item_details"]["a"]["position"]["monitoring_item_id"],
+            "a",
+        )
+        self.assertIsNone(workspace["item_details"]["a"]["market_chart"])
+        self.assertNotIn("selected_item_market_chart", workspace)
 
     def test_macro_projection_filters_low_confidence_and_exposes_source_health(self) -> None:
         read_model = _load_read_model()
