@@ -29505,6 +29505,127 @@ END:VCALENDAR
         self.assertEqual(row["details"], {"failed_symbols": ["GOOGL"]})
         self.assertTrue(fake_db.closed)
 
+    def test_priority_earnings_merge_keeps_alphabet_and_source_order(self) -> None:
+        from finance.data.market_event_coverage import merge_priority_earnings_symbols
+
+        symbols = merge_priority_earnings_symbols(
+            retry_symbols=["ERR"],
+            portfolio_symbols=["GOOGL", "MSFT"],
+            watchlist_symbols=["GOOG"],
+            major_cap_symbols=["AAPL", "GOOG", "GOOGL"],
+            known_event_symbols=["NVDA", "MSFT"],
+        )
+
+        self.assertEqual(
+            symbols,
+            ["ERR", "GOOGL", "MSFT", "GOOG", "AAPL", "NVDA"],
+        )
+
+    def test_sp500_shard_plan_completes_five_clean_batches(self) -> None:
+        from finance.data.market_event_coverage import (
+            apply_sp500_shard_result,
+            build_sp500_shard_plan,
+        )
+
+        universe = [f"S{index:03d}" for index in range(500)]
+        checkpoint = None
+        for run_index in range(5):
+            plan = build_sp500_shard_plan(
+                universe,
+                checkpoint,
+                batch_size=100,
+            )
+            diagnostics = [
+                {"symbol": symbol, "status": "event_found", "reason": "ok"}
+                for symbol in plan["batch_symbols"]
+            ]
+            checkpoint = apply_sp500_shard_result(
+                plan,
+                diagnostics,
+                checked_at=f"2026-07-{23 + run_index:02d} 00:00:00",
+            )
+
+        self.assertEqual(checkpoint["covered_items"], 500)
+        self.assertEqual(checkpoint["failed_items"], 0)
+        self.assertEqual(checkpoint["coverage_status"], "complete")
+        self.assertEqual(checkpoint["cursor_offset"], 0)
+
+    def test_sp500_shard_result_keeps_failed_symbol_partial(self) -> None:
+        from finance.data.market_event_coverage import (
+            apply_sp500_shard_result,
+            build_sp500_shard_plan,
+        )
+
+        plan = build_sp500_shard_plan(
+            ["GOOG", "GOOGL"],
+            None,
+            batch_size=100,
+        )
+        checkpoint = apply_sp500_shard_result(
+            plan,
+            [
+                {"symbol": "GOOG", "status": "event_found", "reason": "ok"},
+                {
+                    "symbol": "GOOGL",
+                    "status": "failed",
+                    "reason": "provider_error",
+                },
+            ],
+            checked_at="2026-07-23 00:00:00",
+        )
+
+        self.assertEqual(checkpoint["coverage_status"], "partial")
+        self.assertEqual(checkpoint["details"]["covered_symbols"], ["GOOG"])
+        self.assertEqual(checkpoint["details"]["failed_symbols"], ["GOOGL"])
+
+    def test_completed_sp500_checkpoint_starts_a_fresh_cycle(self) -> None:
+        from finance.data.market_event_coverage import (
+            apply_sp500_shard_result,
+            build_sp500_shard_plan,
+        )
+
+        first_plan = build_sp500_shard_plan(
+            ["GOOG", "GOOGL"],
+            None,
+            batch_size=100,
+        )
+        completed = apply_sp500_shard_result(
+            first_plan,
+            [
+                {"symbol": "GOOG", "status": "event_found"},
+                {"symbol": "GOOGL", "status": "event_found"},
+            ],
+            checked_at="2026-07-23 00:00:00",
+        )
+        next_plan = build_sp500_shard_plan(
+            ["GOOG", "GOOGL"],
+            completed,
+            batch_size=100,
+        )
+
+        self.assertTrue(next_plan["cycle_reset"])
+        self.assertEqual(next_plan["prior"], {})
+        self.assertEqual(next_plan["batch_symbols"], ["GOOG", "GOOGL"])
+
+    def test_sp500_shard_ignores_diagnostics_outside_its_universe(self) -> None:
+        from finance.data.market_event_coverage import (
+            apply_sp500_shard_result,
+            build_sp500_shard_plan,
+        )
+
+        plan = build_sp500_shard_plan(["GOOG"], None, batch_size=100)
+        checkpoint = apply_sp500_shard_result(
+            plan,
+            [
+                {"symbol": "GOOG", "status": "event_found"},
+                {"symbol": "PORTFOLIO_ONLY", "status": "failed"},
+            ],
+            checked_at="2026-07-23 00:00:00",
+        )
+
+        self.assertEqual(checkpoint["coverage_status"], "complete")
+        self.assertEqual(checkpoint["details"]["failed_symbols"], [])
+
     def test_market_intelligence_sync_includes_event_calendar_table(self) -> None:
         from finance.data import market_intelligence as mi
 
