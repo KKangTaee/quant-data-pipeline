@@ -8,13 +8,18 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from finance.data.futures_market import FUTURES_MACRO_HISTORY_YEARS
+from finance.data.futures_market import (
+    DEFAULT_CORE_FUTURES_SYMBOLS,
+    FUTURES_MACRO_HISTORY_YEARS,
+)
 
 from app.jobs.overview_actions import (
     record_overview_action_result,
     run_overview_futures_daily_ohlcv,
 )
 from app.services.futures_macro_thermometer import (
+    SCORE_DEFINITIONS,
+    SIGNAL_Z_THRESHOLD,
     clear_overview_futures_macro_snapshot_cache,
 )
 from app.services.futures_macro_pattern_validation import (
@@ -750,6 +755,36 @@ PATTERN_ASSET_DEFINITIONS = (
     ("safe_haven", "안전자산", "safe_haven"),
     ("commodities", "원자재·물가", "inflation_pressure"),
 )
+PATTERN_CORE_FAMILY_DEFINITIONS = (
+    ("risk_on", "주가지수 위험선호"),
+    ("rate_pressure", "채권·금리 압력"),
+    ("dollar_pressure", "달러 압력"),
+    ("inflation_pressure", "원자재·물가 압력"),
+)
+PATTERN_CONFIRMATION_FAMILY_DEFINITIONS = (
+    ("growth", "경기민감 성장"),
+    ("safe_haven", "안전자산 선호"),
+)
+FUTURES_MACRO_SHARED_CONTEXT_SYMBOLS = ("DX-Y.NYB",)
+FUTURES_MACRO_RAW_OBSERVATION_SYMBOLS = ("SI=F",)
+FUTURES_MACRO_PUBLICATION_COPY = {
+    "VERIFIED": (
+        "검증된 5거래일 방향 우위",
+        "평소 결과 빈도보다 시간순 검증 성능이 높음",
+    ),
+    "NO_EDGE": (
+        "방향 예측 근거 부족",
+        "유사 국면 모델이 평소 5거래일 결과 빈도보다 정확하지 않음",
+    ),
+    "PROVISIONAL": (
+        "검증 중 · 방향 확정 보류",
+        "계산은 가능하지만 공개 검증 기준을 모두 충족하지 못함",
+    ),
+    "UNAVAILABLE": (
+        "검증 자료 부족",
+        "독립 표본 또는 시간순 평가가 부족함",
+    ),
+}
 
 
 def _pattern_observation_status(pattern: dict[str, Any]) -> str:
@@ -761,6 +796,180 @@ def _pattern_observation_status(pattern: dict[str, Any]) -> str:
     if status in {"PARTIAL", "LIMITED"}:
         return "PARTIAL"
     return "UNAVAILABLE"
+
+
+def _pattern_direction_value(value: Any) -> dict[str, Any]:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return {"label": "자료 부족", "tone": "unavailable", "value": None}
+    if not isfinite(numeric):
+        return {"label": "자료 부족", "tone": "unavailable", "value": None}
+    if numeric >= SIGNAL_Z_THRESHOLD:
+        label, tone = "강화", "positive"
+    elif numeric <= -SIGNAL_Z_THRESHOLD:
+        label, tone = "약화", "negative"
+    else:
+        label, tone = "중립", "neutral"
+    return {"label": label, "tone": tone, "value": numeric}
+
+
+def _pattern_family_direction_row(
+    families: dict[str, Any],
+    family_key: str,
+    label: str,
+) -> dict[str, Any]:
+    family = dict(families.get(family_key) or {})
+    return {
+        "key": family_key,
+        "label": label,
+        "one_day": _pattern_direction_value(family.get("one_day")),
+        "five_day": _pattern_direction_value(family.get("five_day")),
+        "twenty_day": _pattern_direction_value(family.get("twenty_day")),
+        "status": str(family.get("status") or "UNAVAILABLE"),
+    }
+
+
+def _material_family_phrases(rows: list[dict[str, Any]], window: str) -> list[str]:
+    phrases = []
+    for row in rows:
+        state = dict(row.get(window) or {})
+        if state.get("tone") not in {"positive", "negative"}:
+            continue
+        phrases.append(f"{row.get('label')} {state.get('label')}")
+    return phrases
+
+
+def _pattern_core_alignment_summary(core_rows: list[dict[str, Any]]) -> str:
+    phrases = _material_family_phrases(core_rows, "five_day")
+    if not phrases:
+        return "최근 5거래일 핵심 방향은 뚜렷하게 정렬되지 않았습니다."
+    return f"최근 5거래일 핵심 방향은 {' · '.join(phrases)}입니다."
+
+
+def _pattern_confirmation_summary(
+    core_rows: list[dict[str, Any]],
+    confirmation_rows: list[dict[str, Any]],
+) -> str:
+    core = {str(row.get("key")): row for row in core_rows}
+    confirmations = {str(row.get("key")): row for row in confirmation_rows}
+    risk_state = dict(core.get("risk_on", {}).get("five_day") or {})
+    safe_state = dict(confirmations.get("safe_haven", {}).get("five_day") or {})
+    if risk_state.get("tone") == "negative" and safe_state.get("tone") == "negative":
+        return "주가지수 약화와 안전자산 약화가 함께 나타나 전형적 방어 정렬은 아님을 확인합니다."
+    if risk_state.get("tone") == "negative" and safe_state.get("tone") == "positive":
+        return "안전자산 강화가 주가지수 약화를 확인해 방어 정렬이 나타납니다."
+    phrases = _material_family_phrases(confirmation_rows, "five_day")
+    if not phrases:
+        return "확인 신호는 최근 5거래일 핵심 방향을 뚜렷하게 확인하지 않습니다."
+    return f"확인 신호는 {' · '.join(phrases)}입니다."
+
+
+def _future_five_day_validation_payload(
+    pattern_outlook: dict[str, Any],
+) -> dict[str, Any]:
+    five_day = next(
+        (
+            dict(item)
+            for item in list(pattern_outlook.get("horizons") or [])
+            if int(dict(item).get("horizon") or 0) == 5
+        ),
+        {},
+    )
+    status = str(five_day.get("probability_status") or "UNAVAILABLE")
+    title, detail = FUTURES_MACRO_PUBLICATION_COPY.get(
+        status,
+        FUTURES_MACRO_PUBLICATION_COPY["UNAVAILABLE"],
+    )
+    return {
+        "status": status,
+        "title": title,
+        "detail": detail,
+        "episode_count": int(five_day.get("episode_count") or 0),
+    }
+
+
+def _futures_macro_calculation_scope(
+    macro: dict[str, Any],
+    pattern: dict[str, Any],
+) -> dict[str, Any]:
+    macro_coverage = dict(macro.get("coverage") or {})
+    pattern_coverage = dict(pattern.get("coverage") or {})
+    direct_symbols = sorted(
+        {
+            str(symbol)
+            for definition in SCORE_DEFINITIONS
+            for symbol in definition.members
+        }
+    )
+    return {
+        "collected_count": int(
+            macro_coverage.get("symbol_count") or len(DEFAULT_CORE_FUTURES_SYMBOLS)
+        ),
+        "direct_family_input_count": len(direct_symbols),
+        "available_family_count": int(
+            pattern_coverage.get("available_family_count") or 0
+        ),
+        "required_family_count": int(
+            pattern_coverage.get("required_family_count") or 6
+        ),
+        "shared_context_symbols": list(FUTURES_MACRO_SHARED_CONTEXT_SYMBOLS),
+        "raw_observation_symbols": list(FUTURES_MACRO_RAW_OBSERVATION_SYMBOLS),
+    }
+
+
+def _short_horizon_decision_payload(
+    macro: dict[str, Any],
+    pattern: dict[str, Any],
+    pattern_outlook: dict[str, Any],
+) -> dict[str, Any]:
+    families = dict(pattern.get("families") or {})
+    core_rows = [
+        _pattern_family_direction_row(families, key, label)
+        for key, label in PATTERN_CORE_FAMILY_DEFINITIONS
+    ]
+    confirmation_rows = [
+        _pattern_family_direction_row(families, key, label)
+        for key, label in PATTERN_CONFIRMATION_FAMILY_DEFINITIONS
+    ]
+    core_summary = _pattern_core_alignment_summary(core_rows)
+    confirmation_summary = _pattern_confirmation_summary(
+        core_rows,
+        confirmation_rows,
+    )
+    one_day_phrases = _material_family_phrases(core_rows, "one_day")
+    return {
+        "observation_windows": [
+            {"key": "1D", "label": "최근 1거래일", "role": "새 충격"},
+            {"key": "5D", "label": "최근 5거래일", "role": "단기 방향"},
+            {"key": "20D", "label": "최근 20거래일", "role": "배경 흐름"},
+        ],
+        "current_summary": f"{core_summary} {confirmation_summary}",
+        "one_day_shock": {
+            "title": "최근 1거래일 · 새 충격",
+            "summary": (
+                " · ".join(one_day_phrases)
+                if one_day_phrases
+                else "새로 발생한 핵심 충격은 중립 범위입니다."
+            ),
+        },
+        "five_day_direction": {
+            "title": "최근 5거래일 · 단기 방향",
+            "summary": core_summary,
+        },
+        "future_five_day_validation": _future_five_day_validation_payload(
+            pattern_outlook
+        ),
+        "core_directions": core_rows,
+        "confirmation_signals": confirmation_rows,
+        "confirmation_summary": confirmation_summary,
+        "change_conditions": [
+            str(item)
+            for item in list(pattern.get("change_conditions") or [])
+            if str(item).strip()
+        ],
+        "calculation_scope": _futures_macro_calculation_scope(macro, pattern),
+    }
 
 
 def _current_pattern_horizon(pattern: dict[str, Any]) -> dict[str, Any]:
@@ -878,18 +1087,17 @@ def _pattern_command_payload(macro: dict[str, Any], pattern_outlook: dict[str, A
 
 
 def _pattern_hero_payload(macro: dict[str, Any], pattern: dict[str, Any]) -> dict[str, Any]:
-    coverage = dict(pattern.get("coverage") or {})
     summary = dict(macro.get("summary") or {})
     evidence = dict(pattern.get("evidence") or {})
     return {
-        "kicker": "현재 선물 체제",
+        "kicker": "단기 방향 진단",
         "title": _display_text(pattern.get("regime_label"), "현재 체제 자료 부족"),
         "transition_label": _display_text(pattern.get("transition_label"), "자료 부족"),
         "summary": _display_text(pattern.get("summary") or summary.get("summary"), "현재 패턴을 계산할 자료가 부족합니다."),
         "today_summary": _display_text(summary.get("summary"), "오늘의 재가격화 근거가 부족합니다."),
         "as_of_date": _display_text(pattern.get("as_of_date"), "-"),
         "observation_status": _pattern_observation_status(pattern),
-        "coverage_label": f"family {coverage.get('available_family_count') or 0}/{coverage.get('required_family_count') or 6}",
+        "coverage_label": "최근 1 · 5 · 20거래일",
         "evidence": [str(value) for value in list(evidence.get("current") or []) if str(value).strip()],
     }
 
@@ -1084,10 +1292,15 @@ def build_futures_macro_react_workbench_payload(
     pattern = dict(pattern_outlook.get("current_pattern") or macro.get("pattern") or {})
     session = dict(pattern_outlook.get("session") or {})
     return {
-        "schema_version": "futures_macro_react_workbench_v3",
+        "schema_version": "futures_macro_react_workbench_v4",
         "component": "FuturesMacroWorkbench",
         "command": _pattern_command_payload(macro, pattern_outlook),
         "hero": _pattern_hero_payload(macro, pattern),
+        "short_horizon_decision": _short_horizon_decision_payload(
+            macro,
+            pattern,
+            pattern_outlook,
+        ),
         "horizons": [
             _current_pattern_horizon(pattern),
             *[

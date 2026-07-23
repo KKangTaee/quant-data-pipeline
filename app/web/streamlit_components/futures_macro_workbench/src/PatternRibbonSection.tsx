@@ -5,7 +5,7 @@ function PatternRibbonSection({ ribbon }: { ribbon: RibbonPayload }) {
   return (
     <section className="fm-workbench__ribbon-section" aria-labelledby="fm-ribbon-title">
       <div className="fm-workbench__section-heading">
-        <div><span>Regime path</span><h3 id="fm-ribbon-title">{ribbon.title}</h3></div>
+        <div><span>Regime history</span><h3 id="fm-ribbon-title">최근 체제 이력</h3></div>
         <small>색은 체제 · 사선은 전환 상태</small>
       </div>
       {ribbon.items.length > 0 ? (

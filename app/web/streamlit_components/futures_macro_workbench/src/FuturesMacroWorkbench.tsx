@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Streamlit, withStreamlitConnection, ComponentProps } from "streamlit-component-lib";
-import AssetPathwaysSection from "./AssetPathwaysSection";
+import CalculationScopeSection from "./CalculationScopeSection";
 import CalculationTraceDisclosure from "./CalculationTraceDisclosure";
-import CurrentEvidencePanel from "./CurrentEvidencePanel";
+import FamilyDirectionSection from "./FamilyDirectionSection";
 import MacroContextSection from "./MacroContextSection";
 import MethodDisclosure from "./MethodDisclosure";
-import PatternHorizonSection from "./PatternHorizonSection";
-import PatternMapSection from "./PatternMapSection";
 import PatternRibbonSection from "./PatternRibbonSection";
+import ShortHorizonDecisionSection from "./ShortHorizonDecisionSection";
 import "./style.css";
 
 export type PublicationStatus = "VERIFIED" | "PROVISIONAL" | "NO_EDGE" | "UNAVAILABLE";
@@ -145,6 +144,56 @@ export type RibbonItem = {
 
 export type RibbonPayload = { title: string; items: RibbonItem[] };
 
+export type ObservationWindow = {
+  key: "1D" | "5D" | "20D";
+  label: string;
+  role: string;
+};
+
+export type DirectionState = {
+  label: string;
+  tone: "positive" | "negative" | "neutral" | "unavailable";
+  value: number | null;
+};
+
+export type FamilyDirectionRow = {
+  key: "risk_on" | "growth" | "rate_pressure" | "dollar_pressure" | "safe_haven" | "inflation_pressure";
+  label: string;
+  one_day: DirectionState;
+  five_day: DirectionState;
+  twenty_day: DirectionState;
+  status: string;
+};
+
+export type FutureFiveDayValidation = {
+  status: PublicationStatus;
+  title: string;
+  detail: string;
+  episode_count: number;
+};
+
+export type CalculationScope = {
+  collected_count: number;
+  direct_family_input_count: number;
+  available_family_count: number;
+  required_family_count: number;
+  shared_context_symbols: string[];
+  raw_observation_symbols: string[];
+};
+
+export type ShortHorizonDecisionPayload = {
+  observation_windows: ObservationWindow[];
+  current_summary: string;
+  one_day_shock: { title: string; summary: string };
+  five_day_direction: { title: string; summary: string };
+  future_five_day_validation: FutureFiveDayValidation;
+  core_directions: FamilyDirectionRow[];
+  confirmation_signals: FamilyDirectionRow[];
+  confirmation_summary: string;
+  change_conditions: string[];
+  calculation_scope: CalculationScope;
+};
+
 export type AssetPathwayPayload = {
   key: "risk_assets" | "rates" | "dollar" | "safe_haven" | "commodities";
   label: string;
@@ -182,10 +231,11 @@ export type CalculationTracePayload = {
 };
 
 export type FuturesMacroWorkbenchPayload = {
-  schema_version: "futures_macro_react_workbench_v3";
+  schema_version: "futures_macro_react_workbench_v4";
   component: "FuturesMacroWorkbench";
   command: CommandPayload;
   hero: HeroPayload;
+  short_horizon_decision: ShortHorizonDecisionPayload;
   horizons: HorizonCard[];
   pattern_map: PatternMapPayload;
   session_evidence: SessionEvidence;
@@ -237,13 +287,17 @@ function FuturesMacroWorkbench({ args }: Props) {
         pendingActionId={pendingActionId}
         sessionEvidence={payload.session_evidence}
       />
-      <PatternHorizonSection horizons={payload.horizons} />
-      <div className="fm-workbench__pattern-layout">
-        <PatternMapSection patternMap={payload.pattern_map} horizons={payload.horizons} />
-        <CurrentEvidencePanel evidence={payload.evidence} />
-      </div>
+      <ShortHorizonDecisionSection decision={payload.short_horizon_decision} />
+      <FamilyDirectionSection
+        coreDirections={payload.short_horizon_decision.core_directions}
+        confirmationSignals={payload.short_horizon_decision.confirmation_signals}
+        confirmationSummary={payload.short_horizon_decision.confirmation_summary}
+      />
+      <CalculationScopeSection
+        changeConditions={payload.short_horizon_decision.change_conditions}
+        scope={payload.short_horizon_decision.calculation_scope}
+      />
       <PatternRibbonSection ribbon={payload.ribbon} />
-      <AssetPathwaysSection pathways={payload.asset_pathways} />
       <MethodDisclosure
         boundaryNote={payload.boundary_note}
         horizons={payload.horizons}

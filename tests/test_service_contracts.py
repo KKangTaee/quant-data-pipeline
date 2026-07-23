@@ -27288,7 +27288,7 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             "limitations": ["continuous futures roll caveat"],
         }
 
-    def test_futures_macro_v3_payload_separates_current_and_future_horizons(self) -> None:
+    def test_futures_macro_v4_payload_separates_current_and_future_horizons(self) -> None:
         from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
 
         macro = {
@@ -27300,7 +27300,7 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             pattern_outlook=self._pattern_outlook_payload_fixture(),
         )
 
-        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v3")
+        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v4")
         self.assertEqual([item["key"] for item in payload["horizons"]], ["current", "5D", "20D"])
         current, five_day, twenty_day = payload["horizons"]
         self.assertEqual(payload["hero"]["observation_status"], "OBSERVED")
