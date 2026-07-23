@@ -389,6 +389,30 @@ class MarketContextValuationTests(unittest.TestCase):
         self.assertNotIn("collect_us_stock_turnaround", component)
         self.assertNotIn("rows_written", component)
 
+    def test_react_sp500_stale_surface_has_price_basis_and_manual_action(
+        self,
+    ) -> None:
+        component = Path(
+            "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
+        ).read_text()
+        style = Path(
+            "app/web/streamlit_components/market_context_valuation/src/style.css"
+        ).read_text()
+
+        for token in (
+            "refresh_sp500_price_data",
+            "function IndexFreshnessBar",
+            "가격 자료 최신화 필요",
+            "최신 완료 장",
+            'action.id === "refresh_sp500_price_data"',
+            "emitEvent(action.id);",
+        ):
+            self.assertIn(token, component)
+        self.assertEqual(component.count("<IndexFreshnessBar"), 1)
+        self.assertNotIn(': "기준일";', component)
+        self.assertIn(".index-freshness", style)
+        self.assertIn("@media (max-width: 640px)", style)
+
     def test_selected_stock_renders_one_header_refresh_action_before_analysis_selector(self) -> None:
         component = Path(
             "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"

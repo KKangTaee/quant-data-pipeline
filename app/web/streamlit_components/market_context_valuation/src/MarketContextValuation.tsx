@@ -65,18 +65,22 @@ type Scenario = {
   price?: number;
 };
 type DataFreshness = {
-  status?: "READY" | "REFRESH_AVAILABLE" | "PARTIAL" | "BLOCKED" | string;
-  expected_price_date?: string;
+  status?: "READY" | "REFRESH_AVAILABLE" | "MISSING" | "ERROR" | "PARTIAL" | "BLOCKED" | string;
+  expected_price_date?: string | null;
   price_basis_date?: string | null;
+  spy_price_basis_date?: string | null;
+  gap_sessions?: number | null;
+  message?: string;
+  warnings?: string[];
   profile_basis_date?: string | null;
   statement_period_end?: string | null;
   statement_available_at?: string | null;
   gaps?: { scope: string; reason_code: string; repairable: boolean }[];
   action?: {
-    id: "refresh_us_stock_data";
+    id: "refresh_us_stock_data" | "refresh_sp500_price_data";
     label: string;
     detail?: string;
-    symbol: string;
+    symbol?: string;
     scopes?: string[];
     enabled: boolean;
   };
@@ -382,6 +386,19 @@ function FreshnessBar({ freshness, collecting, result, onRefresh }: { freshness?
   </section>;
 }
 
+function IndexFreshnessBar({ freshness, collecting, result, onRefresh }: { freshness?: DataFreshness; collecting: boolean; result?: CollectionResult; onRefresh: () => void }) {
+  const action = freshness?.action;
+  if (freshness?.status === "READY" && !result) return null;
+  return <section className={`index-freshness index-freshness-${(freshness?.status || "error").toLowerCase()}`} aria-label="S&P 500 가격 자료 최신화">
+    <div>
+      <strong>{freshness?.status === "READY" ? "가격 자료 최신화 완료" : "가격 자료 최신화 필요"}</strong>
+      <span>{result?.message || freshness?.message || "저장된 가격 자료를 확인합니다."}</span>
+      <small>가격 기준일 {freshness?.price_basis_date || "-"} · 최신 완료 장 {freshness?.expected_price_date || "-"}</small>
+    </div>
+    {action?.enabled ? <button type="button" disabled={collecting} onClick={onRefresh}>{collecting ? "갱신 중" : action.label || "최신 데이터로 다시 계산"}</button> : null}
+  </section>;
+}
+
 function MarketContextValuation({ args }: Props) {
   const root = args.payload;
   const combined = root && "instruments" in root ? root as CombinedPayload : null;
@@ -405,21 +422,29 @@ function MarketContextValuation({ args }: Props) {
       ? payload.data_freshness?.statement_period_end
       : payload.data_freshness?.price_basis_date || payload.selection?.latest_price_date || payload.basis?.price?.price_basis_date
     : payload.basis?.spx?.date;
-  const basisLabel = isStock ? showTurnaround ? "재무 기준일" : "가격 기준일" : "기준일";
+  const basisLabel = isStock ? showTurnaround ? "재무 기준일" : "가격 기준일" : "가격 기준일";
   const chooseAnalysis = (choice: AnalysisChoice) => {
     if (!payload.selection?.symbol) return;
     setAnalysisBySymbol((current) => ({ ...current, [payload.selection!.symbol!]: choice }));
   };
   const refresh = () => {
     const action = payload.data_freshness?.action;
-    if (!action?.enabled || action.id !== "refresh_us_stock_data") return;
-    setCollecting(true);
-    emitEvent(action.id, { symbol: action.symbol });
+    if (!action?.enabled) return;
+    if (isStock && action.id === "refresh_us_stock_data" && action.symbol) {
+      setCollecting(true);
+      emitEvent(action.id, { symbol: action.symbol });
+      return;
+    }
+    if (!isStock && action.id === "refresh_sp500_price_data") {
+      setCollecting(true);
+      emitEvent(action.id);
+    }
   };
   return <main className="valuation-workbench" data-status={showTurnaround ? payload.turnaround_analysis?.status : payload.status}>
     {showCombinedSelector ? <nav className="instrument-selector" aria-label="가치평가 대상 선택"><button type="button" aria-pressed={selectedInstrument === "sp500"} onClick={() => setSelectedInstrument("sp500")}><span>S&amp;P 500</span><small>시장 지수</small></button><button type="button" aria-pressed={selectedInstrument === "us_stock"} onClick={() => setSelectedInstrument("us_stock")}><span>미국 개별주식</span><small>기업명·티커 검색</small></button></nav> : null}
     {isStock ? <StockSearch payload={payload}/> : null}
     <header className="valuation-header"><div><span className="eyebrow">{isStock ? showTurnaround ? "U.S. STOCK TURNAROUND ANALYSIS" : "U.S. STOCK RELATIVE VALUATION" : "S&P 500 VALUATION"}</span><h2>{isStock && payload.selection ? `${payload.selection.name || symbol} ${showTurnaround ? "전환 분석" : "상대가치 평가"}` : "멀티플과 예상 실적을 한 화면에서 비교"}</h2><p>{isStock ? showTurnaround ? "분기 filing 근거로 영업·현금 전환과 생존 위험을 먼저 읽습니다." : "한 기업의 filing-aware EPS와 자체 멀티플 이력으로 현재 위치를 읽습니다." : "과거 대비 현재 가격 수준과 FOMC 거시 가정을 분리해 읽습니다."}</p></div><div className="basis"><span>{basisLabel}</span><strong>{basisDate || "-"}</strong><small>{showTurnaround ? `공개 ${payload.data_freshness?.statement_available_at || "-"} · 가격 ${payload.data_freshness?.price_basis_date || "-"}` : payload.instrument?.method_label || "As-Reported actual TTM"}</small></div></header>
+    {!isStock ? <IndexFreshnessBar freshness={payload.data_freshness} collecting={collecting} result={payload.collection_result} onRefresh={refresh}/> : null}
     {isStock && payload.selection?.symbol ? <FreshnessBar freshness={payload.data_freshness} collecting={collecting} result={payload.collection_result} onRefresh={refresh}/> : null}
     {isStock && payload.selection?.symbol ? <nav className="analysis-selector" aria-label="개별주식 분석 선택"><button type="button" aria-pressed={selectedAnalysis === "per"} onClick={() => chooseAnalysis("per")}><span>PER 상대가치</span><small>{payload.multiple_regime?.status === "READY" ? "적용 가능" : "적용 전"}</small></button><button type="button" aria-pressed={selectedAnalysis === "turnaround"} onClick={() => chooseAnalysis("turnaround")}><span>전환 분석</span><small>{payload.turnaround_analysis?.status || "확인 중"}</small></button></nav> : null}
     {showTurnaround
