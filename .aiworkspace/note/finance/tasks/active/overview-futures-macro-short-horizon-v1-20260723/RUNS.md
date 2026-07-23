@@ -19,8 +19,7 @@ Last Updated: 2026-07-23
 
 ## Pending
 
-- Spec-only diff check and commit
-- Implementation commands after written-spec approval
+- Product implementation commands after execution mode selection
 
 ## Spec self-review
 
@@ -28,3 +27,11 @@ Last Updated: 2026-07-23
 - Consistency: retained 60D regime history as secondary content instead of inferring deletion from the approved primary mockup.
 - Scope: kept family/model formulas, DXY/silver membership, DB schema, and backend 20D history out of the implementation change.
 - Ambiguity: fixed routine overlap to `1y/1d` and defined unchanged-input fingerprint fields and rebuild conditions.
+
+## Implementation-plan self-review
+
+- Added exact files, red/green commands, verification criteria, and coherent Korean commit boundaries for five execution units.
+- Confirmed the existing fingerprint comparison occurs after both builders and planned the comparison before builder invocation.
+- Preserved backend 20D evidence and the secondary 60D ribbon while removing them only from the primary short-horizon decision surface where approved.
+- Added actual backend timing evidence for download/normalize, UPSERT, input comparison, and materialization; no run diagnostics panel is introduced.
+- Placeholder scan found no `TODO`, `TBD`, incomplete code ellipsis, or unresolved product choice.

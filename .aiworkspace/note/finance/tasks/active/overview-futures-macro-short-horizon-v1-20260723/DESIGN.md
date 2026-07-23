@@ -1,6 +1,6 @@
 # Overview Futures Macro Short-Horizon V1 Design
 
-Status: User-approved visual direction; written spec review pending
+Status: User-approved implementation specification
 Last Updated: 2026-07-23
 
 ## Approved Product Direction
@@ -278,6 +278,8 @@ No provider or DB access moves into React/Streamlit render code.
 ## Approval Record
 
 - User selected short-horizon direction B: primary focus on recent 1D/5D and future 5D validation.
+- User approved option 3 with the option A-style judgment flow mixed in and retained the `핵심 4 + 확인 2` hierarchy.
+- User approved this written specification on 2026-07-23 and requested implementation.
 - User selected B3 factor matrix mixed with B1 decision flow.
 - User approved `최근 1 · 5 · 20거래일` wording and removal of the redundant 20D future-warning copy.
 - User approved `방향 예측 근거 부족` for `NO_EDGE`.

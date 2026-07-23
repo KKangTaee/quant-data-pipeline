@@ -1,6 +1,6 @@
 # Overview Futures Macro Short-Horizon V1 Plan
 
-Status: Design review pending
+Status: Implementation planning complete; execution mode selection pending
 Roadmap: 0/4 implementation stages complete
 Last Updated: 2026-07-23
 
@@ -50,6 +50,6 @@ Last Updated: 2026-07-23
 
 ## Current Stage
 
-- 전체 roadmap 중 설계 승인과 written spec 작성 단계다.
-- 제품 코드, 수집 동작, React bundle은 아직 변경하지 않는다.
-- 사용자가 이 written spec을 검토한 뒤 상세 implementation plan으로 전환한다.
+- 전체 roadmap 중 설계 승인과 상세 implementation plan 작성까지 완료했다.
+- 제품 코드, 수집 동작, React bundle은 아직 변경하지 않았다.
+- 다음 단계는 `IMPLEMENTATION_PLAN.md`를 기준으로 inline 또는 subagent-driven 방식 중 하나를 선택해 1~4차를 순서대로 구현하는 것이다.

@@ -1,6 +1,6 @@
 # Overview Futures Macro Short-Horizon V1 Status
 
-Status: Design review pending
+Status: Implementation plan ready; execution mode selection pending
 Roadmap: 0/4 implementation stages complete
 Last Updated: 2026-07-23
 
@@ -13,16 +13,18 @@ Last Updated: 2026-07-23
 - Confirmed the user-approved product direction: recent 1/5/20 observation roles, future 5D validation, core 4 + confirmation 2, and no primary 2D path/future 20D card.
 - Recorded the implementation boundary, refresh fast path, error handling, and QA contract in `DESIGN.md`.
 - Completed the written-spec placeholder, consistency, ambiguity, and scope review. Corrected the unapproved 60D removal assumption so the ribbon remains secondary history.
+- Received user approval for the written specification and request to proceed with development.
+- Wrote and self-reviewed `IMPLEMENTATION_PLAN.md` with TDD units for payload/UI, routine refresh, pre-materialization reuse, and integrated QA.
 
 ## Current
 
-- Spec-only commit and user review gate.
+- Execution mode selection before product-code changes.
 - No product code or production bundle has changed.
 
 ## Next
 
-- Commit only this active-task specification.
-- Ask the user to review the committed spec before writing the implementation plan.
+- Commit the approved status and detailed implementation plan.
+- Execute the plan inline or with subagent-driven checkpoints according to the user's selection.
 
 ## Remaining Roadmap
 
