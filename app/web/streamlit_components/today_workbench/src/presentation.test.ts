@@ -9,6 +9,7 @@ import {
   formatCountdown,
   formatSessionHours,
   formatZonedClock,
+  marketPhaseTransition,
   pointCoordinates,
   resolveMarketSession,
 } from "./presentation";
@@ -233,6 +234,15 @@ const sessionPayload = {
 };
 
 describe("Today U.S. regular-market phase", () => {
+  it("emits only when the regular-session phase changes", () => {
+    expect(marketPhaseTransition(null, "PRE_OPEN")).toBeNull();
+    expect(marketPhaseTransition("PRE_OPEN", "PRE_OPEN")).toBeNull();
+    expect(marketPhaseTransition("PRE_OPEN", "OPEN")).toEqual({
+      id: "market_phase_changed",
+      phase: "OPEN",
+    });
+  });
+
   it("switches exactly at open and early close boundaries", () => {
     expect(
       resolveMarketSession(

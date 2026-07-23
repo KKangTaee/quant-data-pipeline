@@ -882,6 +882,118 @@ class TodayIntradayCoordinatorTests(unittest.TestCase):
 
 
 class TodayHomePageContractTests(unittest.TestCase):
+    def test_component_passes_explicit_view_and_key(self) -> None:
+        component_module = importlib.import_module(
+            "app.web.today_react_component"
+        )
+        component = MagicMock(return_value={"event": None})
+        payload = {
+            "schema_version": "today_portfolio_island_v1",
+            "portfolio": {},
+        }
+
+        with patch.object(
+            component_module,
+            "_declare_today_component",
+            return_value=component,
+        ):
+            result = component_module.render_today_workbench(
+                payload,
+                view="portfolio",
+                key="today_portfolio_island",
+            )
+
+        self.assertEqual(result, {"event": None})
+        component.assert_called_once_with(
+            payload=payload,
+            view="portfolio",
+            key="today_portfolio_island",
+            default={"event": None},
+        )
+
+    def test_component_rejects_unknown_view(self) -> None:
+        component_module = importlib.import_module(
+            "app.web.today_react_component"
+        )
+
+        with self.assertRaises(ValueError):
+            component_module.render_today_workbench({}, view="unknown")
+
+    def test_island_loader_never_loads_broad_market_model(self) -> None:
+        page = importlib.import_module("app.web.today_page")
+        context = SimpleNamespace(
+            group=None,
+            items=(),
+            workspace={
+                "boundaries": {"storage_ready": True},
+                "groups": [],
+            },
+        )
+        market_session = {
+            "calendar_quality": "CONFIRMED",
+            "schedule": [
+                {
+                    "trade_date": "2026-07-22",
+                    "day_kind": "TRADING_DAY",
+                    "open_at_utc": "2026-07-22T13:30:00+00:00",
+                    "close_at_utc": "2026-07-22T20:00:00+00:00",
+                    "is_early_close": False,
+                }
+            ],
+        }
+
+        with patch.object(
+            page,
+            "load_today_read_model",
+            side_effect=AssertionError("broad reload"),
+        ):
+            state = page.load_today_portfolio_island_state(
+                market_session=market_session,
+                generated_at=datetime(
+                    2026,
+                    7,
+                    22,
+                    14,
+                    0,
+                    tzinfo=timezone.utc,
+                ),
+                context=context,
+            )
+
+        self.assertEqual(
+            state.payload["schema_version"],
+            "today_portfolio_island_v1",
+        )
+        self.assertFalse(state.heartbeat_enabled)
+
+    def test_periodic_fragment_is_scoped_to_portfolio_only(self) -> None:
+        source = Path("app/web/today_page.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("def _render_today_dynamic_fragment", source)
+        self.assertIn("def _render_today_portfolio_fragment", source)
+        self.assertIn('key="today_context_shell"', source)
+        self.assertIn('key="today_portfolio_island"', source)
+        self.assertIn('key="today_action_shell"', source)
+
+    def test_phase_event_is_allowlisted_without_navigation(self) -> None:
+        page = importlib.import_module("app.web.today_page")
+        event = page._normalize_today_event(
+            {
+                "event": {
+                    "id": "market_phase_changed",
+                    "phase": "OPEN",
+                }
+            }
+        )
+
+        self.assertEqual(
+            event,
+            {"id": "market_phase_changed", "phase": "OPEN"},
+        )
+        with patch.object(page.st, "switch_page") as switch_page:
+            page._handle_today_component_value({"event": event}, {})
+        switch_page.assert_not_called()
+
     def test_heartbeat_runs_only_for_open_or_active_eod_handoff(self) -> None:
         from app.web.today_intraday_auto_refresh import CoordinatorSnapshot
         from app.web.today_page import should_run_today_portfolio_heartbeat
@@ -971,16 +1083,19 @@ class TodayHomePageContractTests(unittest.TestCase):
         self.assertEqual(context.items, tuple(items))
         self.assertIs(context.workspace, workspace)
 
-    def test_today_page_uses_15_second_fragment_and_stable_component_key(
+    def test_today_page_uses_conditional_portfolio_fragment_and_stable_keys(
         self,
     ) -> None:
         source = Path("app/web/today_page.py").read_text(encoding="utf-8")
 
-        self.assertIn("@st.fragment(run_every=15)", source)
-        self.assertIn('key="today_workbench"', source)
+        self.assertIn("run_every = 15 if initial_state.heartbeat_enabled else None", source)
+        self.assertIn("@st.fragment(run_every=run_every)", source)
+        self.assertIn('key="today_context_shell"', source)
+        self.assertIn('key="today_portfolio_island"', source)
+        self.assertIn('key="today_action_shell"', source)
         self.assertNotIn("st.spinner", source)
 
-    def test_today_dynamic_body_ticks_coordinator_without_waiting(self) -> None:
+    def test_today_portfolio_island_ticks_coordinator_without_broad_reload(self) -> None:
         page = importlib.import_module("app.web.today_page")
         generated_at = datetime(2026, 7, 22, 14, 0, tzinfo=timezone.utc)
         group = SimpleNamespace(portfolio_group_id="default-group")
@@ -995,8 +1110,7 @@ class TodayHomePageContractTests(unittest.TestCase):
             items=(item,),
             workspace={"schema_version": "portfolio_monitoring_workspace_v2"},
         )
-        model = {
-            "market_session": {
+        market_session = {
                 "calendar_quality": "CONFIRMED",
                 "timezones": {
                     "market": "America/New_York",
@@ -1011,44 +1125,42 @@ class TodayHomePageContractTests(unittest.TestCase):
                         "is_early_close": False,
                     }
                 ],
-            }
         }
         coordinator = MagicMock()
+        coordinator.tick.return_value = importlib.import_module(
+            "app.web.today_intraday_auto_refresh"
+        ).CoordinatorSnapshot(
+            collection_state="running",
+            last_result=None,
+            eod_state="not_applicable",
+            eod_attempt_count=0,
+            eod_missing_symbols=(),
+        )
 
         with (
-            patch.object(
-                page,
-                "load_default_portfolio_monitoring_context_for_today",
-                return_value=context,
-            ),
-            patch.object(page, "load_today_read_model", return_value=model) as load_model,
+            patch.object(page, "load_today_read_model", side_effect=AssertionError("broad reload")),
+            patch.object(page, "project_today_portfolio", return_value={"live": {}}),
             patch.object(
                 page,
                 "get_today_intraday_coordinator",
                 return_value=coordinator,
             ),
-            patch.object(page, "today_react_component_available", return_value=True),
-            patch.object(
-                page,
-                "render_today_workbench",
-                return_value={"event": None},
-            ) as render_workbench,
+            patch.object(page, "load_latest_portfolio_quotes", return_value=object()),
+            patch.object(page, "load_workspace_eod_closes", return_value={}),
+            patch.object(page, "build_live_portfolio_overlay", return_value={}),
         ):
-            page._render_today_dynamic_body(generated_at=generated_at)
+            state = page.load_today_portfolio_island_state(
+                market_session=market_session,
+                generated_at=generated_at,
+                context=context,
+            )
 
-        load_model.assert_called_once_with(
-            generated_at=generated_at,
-            portfolio_workspace=context.workspace,
-        )
         coordinator.tick.assert_called_once()
         tick_kwargs = coordinator.tick.call_args.kwargs
         self.assertEqual(tick_kwargs["scope"].symbols, ("AMD",))
         self.assertEqual(tick_kwargs["session"].phase, "OPEN")
         self.assertEqual(tick_kwargs["now"], generated_at)
-        render_workbench.assert_called_once_with(
-            model,
-            key="today_workbench",
-        )
+        self.assertTrue(state.heartbeat_enabled)
 
     def test_today_market_calendar_loads_holidays_and_early_closes_separately(
         self,
@@ -1151,6 +1263,7 @@ class TodayHomePageContractTests(unittest.TestCase):
         self.assertEqual(result, {"event": {"id": "open_market_research"}})
         fake_component.assert_called_once_with(
             payload={"schema_version": "today_home_v2"},
+            view="full",
             key="today_workbench",
             default={"event": None},
         )
@@ -1172,14 +1285,20 @@ class TodayHomePageContractTests(unittest.TestCase):
             patch.object(
                 page,
                 "render_today_workbench",
-                return_value={"event": {"id": "open_market_research"}},
+                side_effect=lambda _payload, *, view, key: (
+                    {"event": {"id": "open_market_research"}}
+                    if view == "context"
+                    else {"event": None}
+                ),
             ) as render_component,
         ):
             page.render_today_page()
 
-        render_component.assert_called_once_with(
+        self.assertEqual(render_component.call_count, 3)
+        render_component.assert_any_call(
             {"schema_version": "today_home_v2"},
-            key="today_workbench",
+            view="context",
+            key="today_context_shell",
         )
         fake_st.markdown.assert_not_called()
         fake_st.switch_page.assert_called_once_with(
@@ -1214,7 +1333,11 @@ class TodayHomePageContractTests(unittest.TestCase):
                     patch.object(
                         page,
                         "render_today_workbench",
-                        return_value={"event": {"id": event_id}},
+                        side_effect=lambda _payload, *, view, key: (
+                            {"event": {"id": event_id}}
+                            if view == "context"
+                            else {"event": None}
+                        ),
                     ),
                 ):
                     page.render_today_page()
@@ -1236,7 +1359,11 @@ class TodayHomePageContractTests(unittest.TestCase):
             patch.object(
                 page,
                 "render_today_workbench",
-                return_value={"event": {"id": "delete_everything"}},
+                side_effect=lambda _payload, *, view, key: (
+                    {"event": {"id": "delete_everything"}}
+                    if view == "context"
+                    else {"event": None}
+                ),
             ),
         ):
             page.render_today_page()

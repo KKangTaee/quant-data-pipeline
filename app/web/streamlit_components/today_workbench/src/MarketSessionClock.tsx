@@ -4,6 +4,7 @@ import {
   formatCountdown,
   formatSessionHours,
   formatZonedClock,
+  marketPhaseTransition,
   resolveMarketSession,
 } from "./presentation";
 import type {
@@ -27,14 +28,12 @@ export default function MarketSessionClock({ marketSession, onPhaseChange }: Pro
   }, []);
 
   useEffect(() => {
-    if (phaseRef.current == null) {
-      phaseRef.current = resolvedSession.phase;
-      return;
-    }
-    if (phaseRef.current !== resolvedSession.phase) {
-      phaseRef.current = resolvedSession.phase;
-      onPhaseChange(resolvedSession.phase);
-    }
+    const transition = marketPhaseTransition(
+      phaseRef.current,
+      resolvedSession.phase,
+    );
+    phaseRef.current = resolvedSession.phase;
+    if (transition) onPhaseChange(transition.phase);
   }, [onPhaseChange, resolvedSession.phase]);
 
   const phaseCopy = {

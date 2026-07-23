@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from html import escape
 from typing import Any, Callable
@@ -23,6 +25,7 @@ from app.services.portfolio_monitoring.intraday_refresh import (
 )
 from app.services.today import (
     build_today_read_model,
+    project_today_portfolio,
     project_today_portfolio_live,
 )
 from app.web.final_selected_portfolio_dashboard import (
@@ -62,6 +65,25 @@ _TODAY_EVENT_ROUTES: dict[str, tuple[str, dict[str, str] | None]] = {
     ),
     "open_portfolio_monitoring": ("portfolio_monitoring", None),
 }
+_MARKET_PHASE_EVENT_ID = "market_phase_changed"
+_TODAY_MARKET_PHASES = {
+    "PRE_OPEN",
+    "OPEN",
+    "CLOSED",
+    "HOLIDAY",
+    "WEEKEND",
+    "STALE",
+}
+
+
+@dataclass(frozen=True)
+class TodayPortfolioIslandState:
+    """Small DB-backed state owned by the refreshable portfolio island."""
+
+    payload: dict[str, Any]
+    session: RegularSessionState
+    coordinator_state: CoordinatorSnapshot
+    heartbeat_enabled: bool
 
 
 def configure_today_page_targets(page_targets: dict[str, object]) -> None:
@@ -796,6 +818,11 @@ def _normalize_today_event(value: object) -> dict[str, str] | None:
     if not isinstance(event, dict):
         return None
     event_id = str(event.get("id") or "").strip()
+    if event_id == _MARKET_PHASE_EVENT_ID:
+        phase = str(event.get("phase") or "").strip().upper()
+        if phase in _TODAY_MARKET_PHASES:
+            return {"id": event_id, "phase": phase}
+        return None
     if event_id not in _TODAY_EVENT_ROUTES:
         return None
     return {"id": event_id}
@@ -865,28 +892,39 @@ def _handle_today_component_value(
         st.warning("지원하지 않는 Today 화면 동작은 실행하지 않았습니다.")
         return
     if event is not None:
+        if event["id"] == _MARKET_PHASE_EVENT_ID:
+            return
         _route_today_event(event)
 
 
-def _render_today_dynamic_body(
-    *,
-    generated_at: datetime | None = None,
-) -> None:
-    timestamp = generated_at or datetime.now(timezone.utc)
-    context = _load_today_portfolio_context()
-    model = load_today_read_model(
-        generated_at=timestamp,
-        portfolio_workspace=context.workspace,
+def _empty_coordinator_snapshot() -> CoordinatorSnapshot:
+    return CoordinatorSnapshot(
+        collection_state="idle",
+        last_result=None,
+        eod_state="not_applicable",
+        eod_attempt_count=0,
+        eod_missing_symbols=(),
     )
-    if context.group is not None:
+
+
+def load_today_portfolio_island_state(
+    *,
+    market_session: Mapping[str, Any],
+    generated_at: datetime | None = None,
+    context: TodayPortfolioRuntimeContext | None = None,
+) -> TodayPortfolioIslandState:
+    """Load only portfolio DB state and optional live overlay for an island run."""
+
+    timestamp = generated_at or datetime.now(timezone.utc)
+    runtime = context or _load_today_portfolio_context()
+    portfolio = project_today_portfolio(runtime.workspace)
+    session = resolve_regular_session_state(market_session, timestamp)
+    coordinator_state = _empty_coordinator_snapshot()
+    if runtime.group is not None:
         try:
             scope = build_intraday_refresh_scope(
-                context.group,
-                context.items,
-            )
-            session = resolve_regular_session_state(
-                model.get("market_session") or {},
-                timestamp,
+                runtime.group,
+                runtime.items,
             )
             latest_daily_dates = (
                 load_latest_daily_dates(scope, end=session.trade_date)
@@ -902,17 +940,17 @@ def _render_today_dynamic_body(
             if session.collection_allowed:
                 quotes = load_latest_portfolio_quotes(scope, now=timestamp)
                 eod_closes = load_workspace_eod_closes(
-                    workspace=context.workspace,
+                    workspace=runtime.workspace,
                     scope=scope,
                 )
                 overlay = build_live_portfolio_overlay(
-                    workspace=context.workspace,
+                    workspace=runtime.workspace,
                     scope=scope,
                     quotes=quotes,
                     eod_closes=eod_closes,
                     now=timestamp,
                 )
-                model["portfolio"]["live"] = project_today_portfolio_live(
+                portfolio["live"] = project_today_portfolio_live(
                     overlay
                 )
             elif coordinator_state.eod_state in {
@@ -921,7 +959,7 @@ def _render_today_dynamic_body(
                 "exhausted",
             }:
                 missing = list(coordinator_state.eod_missing_symbols)
-                model["portfolio"]["live"] = project_today_portfolio_live(
+                portfolio["live"] = project_today_portfolio_live(
                     {
                         "status": "EOD_WAITING",
                         "trade_date": (
@@ -939,34 +977,108 @@ def _render_today_dynamic_body(
         except Exception:
             pass  # EOD Today remains available when live refresh is unavailable.
 
+    heartbeat_enabled = (
+        runtime.group is not None
+        and should_run_today_portfolio_heartbeat(session, coordinator_state)
+    )
+    return TodayPortfolioIslandState(
+        payload={
+            "schema_version": "today_portfolio_island_v1",
+            "portfolio": portfolio,
+        },
+        session=session,
+        coordinator_state=coordinator_state,
+        heartbeat_enabled=heartbeat_enabled,
+    )
+
+
+def _render_today_portfolio_value(state: TodayPortfolioIslandState) -> None:
+    component_value = render_today_workbench(
+        state.payload,
+        view="portfolio",
+        key="today_portfolio_island",
+    )
+    _handle_today_component_value(
+        component_value,
+        {"portfolio": state.payload["portfolio"]},
+    )
+
+
+def _render_today_portfolio_fragment(
+    *,
+    market_session: Mapping[str, Any],
+    initial_state: TodayPortfolioIslandState,
+) -> None:
+    """Refresh only the portfolio component while its DB state can change."""
+
+    if get_script_run_ctx(suppress_warning=True) is None:
+        _render_today_portfolio_value(initial_state)
+        return
+
+    run_every = 15 if initial_state.heartbeat_enabled else None
+
+    @st.fragment(run_every=run_every)
+    def portfolio_fragment() -> None:
+        state = load_today_portfolio_island_state(
+            market_session=market_session,
+        )
+        _render_today_portfolio_value(state)
+        if initial_state.heartbeat_enabled and not state.heartbeat_enabled:
+            st.rerun(scope="app")
+
+    portfolio_fragment()
+
+
+def _render_today_split_body(
+    *,
+    generated_at: datetime | None = None,
+) -> None:
+    timestamp = generated_at or datetime.now(timezone.utc)
+    context = _load_today_portfolio_context()
+    model = load_today_read_model(
+        generated_at=timestamp,
+        portfolio_workspace=context.workspace,
+    )
+
     if not today_react_component_available():
         _render_today_fallback(model)
         return
 
-    component_value = render_today_workbench(
+    context_value = render_today_workbench(
         model,
-        key="today_workbench",
+        view="context",
+        key="today_context_shell",
     )
-    _handle_today_component_value(component_value, model)
+    _handle_today_component_value(context_value, model)
 
+    initial_state = load_today_portfolio_island_state(
+        market_session=model.get("market_session") or {},
+        generated_at=timestamp,
+        context=context,
+    )
+    _render_today_portfolio_fragment(
+        market_session=model.get("market_session") or {},
+        initial_state=initial_state,
+    )
 
-@st.fragment(run_every=15)
-def _render_today_dynamic_fragment() -> None:
-    _render_today_dynamic_body()
+    action_value = render_today_workbench(
+        model,
+        view="actions",
+        key="today_action_shell",
+    )
+    _handle_today_component_value(action_value, model)
 
 
 def render_today_page() -> None:
-    """Render the default market-and-portfolio landing fragment."""
+    """Render Today with a static shell and conditional portfolio island."""
 
-    if get_script_run_ctx(suppress_warning=True) is None:
-        _render_today_dynamic_body()
-        return
-    _render_today_dynamic_fragment()
+    _render_today_split_body()
 
 
 __all__ = [
     "build_today_html",
     "configure_today_page_targets",
+    "load_today_portfolio_island_state",
     "load_today_read_model",
     "render_today_page",
 ]

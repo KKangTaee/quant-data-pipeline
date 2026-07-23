@@ -151,4 +151,5 @@ export type TodayWorkbenchView = "full" | "context" | "portfolio" | "actions";
 export type TodayEventId =
   | "open_market_research"
   | "open_stock_research"
-  | "open_portfolio_monitoring";
+  | "open_portfolio_monitoring"
+  | "market_phase_changed";

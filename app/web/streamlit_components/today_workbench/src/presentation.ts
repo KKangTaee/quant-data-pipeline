@@ -6,6 +6,14 @@ import type {
   TodayPortfolio,
 } from "./types";
 
+export function marketPhaseTransition(
+  previous: MarketSessionPhase | null,
+  current: MarketSessionPhase,
+): { id: "market_phase_changed"; phase: MarketSessionPhase } | null {
+  if (previous == null || previous === current) return null;
+  return { id: "market_phase_changed", phase: current };
+}
+
 export function displayPortfolio(portfolio: TodayPortfolio) {
   const live = portfolio.live;
   const usesLive = live.curve_point != null && live.metrics != null
