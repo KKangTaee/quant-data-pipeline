@@ -74,10 +74,115 @@ from finance.data.market_intelligence import (
     persist_quote_gap_diagnostics,
     upsert_market_data_issue_rows,
 )
+from finance.data.nyse import fetch_nyse_listing_snapshot
+from finance.data.nyse_db import refresh_nyse_listing_universe
 from finance.data.sec_company_tickers import collect_and_store_sec_company_ticker_crosscheck
 from finance.data.sec_delisting import collect_and_store_sec_form25_delistings
 from finance.data.symbol_directory import collect_and_store_symbol_directory_snapshots
 from finance.economic_cycle_pipeline import materialize_economic_cycle_snapshot
+
+
+def run_refresh_nyse_listing_universe(
+    *,
+    snapshot_date: str | None = None,
+    minimum_retention_ratio: float = 0.8,
+    snapshot_fetcher: Callable[
+        [str],
+        tuple[Any, dict[str, Any]],
+    ] = fetch_nyse_listing_snapshot,
+    writer: Callable[..., dict[str, Any]] = refresh_nyse_listing_universe,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    """Refresh both current listing masters without allowing split snapshots."""
+
+    job_name = "refresh_nyse_listing_universe"
+    started_at = _now_str()
+    t0 = perf_counter()
+    source_stats: dict[str, dict[str, Any]] = {}
+
+    try:
+        frames: dict[str, Any] = {}
+        for stage_index, kind in enumerate(("stock", "etf"), start=1):
+            stage = f"fetch_{kind}_listings"
+            _emit_stage_progress(
+                progress_callback,
+                event="stage_start",
+                stage=stage,
+                stage_index=stage_index,
+                total_stages=3,
+            )
+            frames[kind], source_stats[kind] = snapshot_fetcher(kind)
+            _emit_stage_progress(
+                progress_callback,
+                event="stage_complete",
+                stage=stage,
+                stage_index=stage_index,
+                total_stages=3,
+            )
+
+        _emit_stage_progress(
+            progress_callback,
+            event="stage_start",
+            stage="persist_listing_universe",
+            stage_index=3,
+            total_stages=3,
+        )
+        summary = writer(
+            frames,
+            snapshot_date=snapshot_date,
+            minimum_retention_ratio=minimum_retention_ratio,
+        )
+        _emit_stage_progress(
+            progress_callback,
+            event="stage_complete",
+            stage="persist_listing_universe",
+            stage_index=3,
+            total_stages=3,
+        )
+
+        rows_written = int(summary.get("rows_written") or 0)
+        return _build_result(
+            job_name=job_name,
+            status="success",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=rows_written,
+            symbols_processed=rows_written,
+            failed_symbols=[],
+            message="NYSE stock and ETF listing universe refresh completed.",
+            details={
+                **summary,
+                "source_stats": source_stats,
+                "masters_preserved_until_commit": True,
+            },
+        )
+    except Exception as exc:
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=[],
+            message=(
+                "NYSE listing universe refresh failed; "
+                f"existing masters were preserved: {exc}"
+            ),
+            details={
+                "source_stats": source_stats,
+                "masters_preserved": True,
+                "target_tables": [
+                    "finance_meta.nyse_stock",
+                    "finance_meta.nyse_etf",
+                    "finance_meta.nyse_symbol_lifecycle",
+                ],
+            },
+        )
 
 
 def run_collect_economic_cycle_vintages(

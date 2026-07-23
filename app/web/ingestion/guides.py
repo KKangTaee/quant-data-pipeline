@@ -6,6 +6,31 @@ from typing import Any
 
 
 JOB_GUIDE: dict[str, dict[str, Any]] = {
+    "refresh_nyse_listing_universe": {
+        "title": "주식·ETF 종목 목록 최신화",
+        "purpose": (
+            "NYSE 공식 current listings에서 주식과 ETF master를 함께 최신화해 "
+            "전체 가격·자산 프로필 수집의 신규 상장 ticker 누락을 막습니다."
+        ),
+        "targets": [
+            "finance_meta.nyse_stock",
+            "finance_meta.nyse_etf",
+            "finance_meta.nyse_symbol_lifecycle",
+        ],
+        "used_by": [
+            "Daily Market Update raw NYSE universe",
+            "Asset Profile collection",
+            "NYSE-backed loader symbol sources",
+        ],
+        "caveats": [
+            "current listing snapshot이며 historical universe PASS 근거가 아닙니다.",
+            "종목 목록만 최신화하며 가격 이력 수집은 자동으로 시작하지 않습니다.",
+        ],
+        "next_action": (
+            "신규 ticker 가격이 필요하면 아래 일별 가격 업데이트에서 "
+            "NYSE 주식+ETF 전체 source를 선택해 실행하세요."
+        ),
+    },
     "daily_market_update": {
         "title": "일별 가격 업데이트",
         "purpose": "선택한 운용 universe의 OHLCV, 배당, 분할 가격 이력을 갱신합니다.",

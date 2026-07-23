@@ -41,6 +41,19 @@ COLLECTION_ENTRY_RELATIONSHIPS = {
     ),
 }
 INGESTION_ACTION_REGISTRY: dict[str, dict[str, Any]] = {
+    "refresh_nyse_listing_universe": {
+        "section": INGESTION_COLLECTION_OPERATIONAL,
+        "mode": "operational_low_frequency",
+        "active": True,
+        "compatibility": False,
+        "write_behavior": "db_write",
+        "target_tables": [
+            "finance_meta.nyse_stock",
+            "finance_meta.nyse_etf",
+            "finance_meta.nyse_symbol_lifecycle",
+        ],
+        "progress": "stage",
+    },
     "daily_market_update": {
         "section": INGESTION_COLLECTION_OPERATIONAL,
         "mode": "operational",

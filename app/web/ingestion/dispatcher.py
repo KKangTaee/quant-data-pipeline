@@ -34,6 +34,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_fundamentals,
     run_collect_ohlcv,
     run_pipeline_core_market_data,
+    run_refresh_nyse_listing_universe,
     run_weekly_fundamental_refresh,
 )
 from app.services.ingestion_diagnostics import (
@@ -167,6 +168,9 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
 
     if _diagnostic_state_key(action):
         return _dispatch_diagnostic_job(action, params, progress_callback=progress_callback)
+    if action == "refresh_nyse_listing_universe":
+        params["progress_callback"] = progress_callback
+        return run_refresh_nyse_listing_universe(**params)
     if action == "pipeline_core_market_data":
         params["progress_callback"] = progress_callback
         return run_pipeline_core_market_data(**params)

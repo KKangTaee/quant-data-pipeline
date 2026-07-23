@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pandas as pd
 
@@ -239,6 +239,132 @@ class NyseListingUniverseRefreshTest(unittest.TestCase):
         self.assertEqual(status["latest_snapshot_date"], "2026-05-31")
         self.assertEqual(status["kinds"]["stock"]["row_count"], 2)
         self.assertEqual(status["kinds"]["etf"]["row_count"], 1)
+
+    def test_job_fetches_both_snapshots_before_writer(self) -> None:
+        from app.jobs import ingestion_jobs
+
+        calls: list[tuple[str, object]] = []
+        frames = {
+            "stock": _listing_frame(("NEW", "New")),
+            "etf": _listing_frame(("NEWX", "New ETF")),
+        }
+
+        def fetcher(kind: str):
+            calls.append(("fetch", kind))
+            return frames[kind], {
+                "api_total": 1,
+                "deduped_rows": 1,
+            }
+
+        def writer(received, **kwargs):
+            calls.append(("write", tuple(received)))
+            return {
+                "snapshot_date": "2026-07-23",
+                "rows_written": 2,
+                "lifecycle_rows_written": 2,
+                "kinds": {
+                    "stock": {
+                        "current_count": 1,
+                        "added_count": 1,
+                        "removed_count": 0,
+                    },
+                    "etf": {
+                        "current_count": 1,
+                        "added_count": 1,
+                        "removed_count": 0,
+                    },
+                },
+            }
+
+        result = ingestion_jobs.run_refresh_nyse_listing_universe(
+            snapshot_fetcher=fetcher,
+            writer=writer,
+            snapshot_date="2026-07-23",
+        )
+
+        self.assertEqual(
+            calls,
+            [
+                ("fetch", "stock"),
+                ("fetch", "etf"),
+                ("write", ("stock", "etf")),
+            ],
+        )
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual(
+            result["details"]["source_stats"]["stock"]["api_total"],
+            1,
+        )
+
+    def test_job_does_not_write_when_etf_fetch_fails(self) -> None:
+        from app.jobs import ingestion_jobs
+
+        writer = Mock()
+        fetcher = Mock(
+            side_effect=[
+                (
+                    _listing_frame(("NEW", "New")),
+                    {"api_total": 1, "deduped_rows": 1},
+                ),
+                RuntimeError("ETF source unavailable"),
+            ]
+        )
+
+        result = ingestion_jobs.run_refresh_nyse_listing_universe(
+            snapshot_fetcher=fetcher,
+            writer=writer,
+        )
+
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["rows_written"], 0)
+        self.assertTrue(result["details"]["masters_preserved"])
+        self.assertIn("existing masters were preserved", result["message"])
+        writer.assert_not_called()
+
+    def test_action_is_registered_guided_and_dispatched(self) -> None:
+        from app.web.ingestion import dispatcher, guides, registry
+
+        definition = registry.INGESTION_ACTION_REGISTRY[
+            "refresh_nyse_listing_universe"
+        ]
+        self.assertEqual(
+            definition["section"],
+            registry.INGESTION_COLLECTION_OPERATIONAL,
+        )
+        self.assertEqual(
+            definition["target_tables"],
+            [
+                "finance_meta.nyse_stock",
+                "finance_meta.nyse_etf",
+                "finance_meta.nyse_symbol_lifecycle",
+            ],
+        )
+        self.assertEqual(
+            guides.JOB_GUIDE["refresh_nyse_listing_universe"]["title"],
+            "주식·ETF 종목 목록 최신화",
+        )
+
+        progress_callback = Mock()
+        with patch.object(
+            dispatcher,
+            "run_refresh_nyse_listing_universe",
+            return_value={"status": "success", "rows_written": 2},
+        ) as runner:
+            result = dispatcher.dispatch_job(
+                {
+                    "action": "refresh_nyse_listing_universe",
+                    "job_name": "refresh_nyse_listing_universe",
+                    "params": {"snapshot_date": "2026-07-23"},
+                },
+                progress_callback=progress_callback,
+            )
+
+        runner.assert_called_once_with(
+            snapshot_date="2026-07-23",
+            progress_callback=progress_callback,
+        )
+        self.assertEqual(result["status"], "success")
 
 
 if __name__ == "__main__":
