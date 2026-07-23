@@ -183,6 +183,21 @@ def _click_next(driver) -> bool:
         return False
 
 
+def fetch_nyse_listing_snapshot(
+    kind: str = "stock",
+) -> tuple[pd.DataFrame, dict[str, int]]:
+    """Fetch and normalize one current NYSE listing snapshot."""
+
+    if kind not in NYSE_URLS:
+        raise ValueError(f"kind는 {list(NYSE_URLS.keys())} 중 하나여야 합니다.")
+
+    rows = _fetch_api_rows(kind)
+    df, stats = _parse_api_rows(rows)
+    if df.empty:
+        raise RuntimeError(f"NYSE listing API returned no usable {kind} rows.")
+    return df, stats
+
+
 def load_nyse_listings(
     kind: str = "stock",
     save_csv: bool = True,
@@ -193,13 +208,8 @@ def load_nyse_listings(
 
     kind : "stock" | "etf"
     """
-    if kind not in NYSE_URLS:
-        raise ValueError(f"kind는 {list(NYSE_URLS.keys())} 중 하나여야 합니다.")
-
-    rows = _fetch_api_rows(kind)
-    df, stats = _parse_api_rows(rows)
-    if df.empty:
-        raise RuntimeError(f"NYSE listing API returned no usable {kind} rows.")
+    del sleep  # Legacy compatibility; the official API is one bounded request.
+    df, stats = fetch_nyse_listing_snapshot(kind)
 
     print(f"[{kind.upper()}] API 수집 완료: {stats}")
 
