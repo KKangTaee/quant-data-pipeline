@@ -74,7 +74,7 @@ SIMILARITY_SUFFIXES = (
     "breadth",
     "volatility_ratio",
 )
-PATTERN_ALGORITHM_VERSION = "pattern_outlook_v5_same_state_nested_hybrid"
+PATTERN_ALGORITHM_VERSION = "pattern_outlook_v6_same_state_nested_hybrid_finalized_sessions"
 PATTERN_OUTLOOK_SCHEMA_VERSION = "futures_macro_pattern_outlook_v2"
 NESTED_OUTER_MINIMUM_TRAIN = 756
 NESTED_INNER_MINIMUM_TRAIN = 504

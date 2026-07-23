@@ -34,7 +34,7 @@ class FuturesDailySessionResolverTests(unittest.TestCase):
         self.assertEqual(result["status"], "OK")
         self.assertEqual(builder.call_args.kwargs["evaluation_time"], evaluated_at)
 
-    def test_evaluation_cache_token_changes_at_new_york_final_cutoff(self) -> None:
+    def test_evaluation_cache_token_changes_only_with_new_york_date(self) -> None:
         from app.services.futures_macro_sessions import (
             futures_session_evaluation_token,
         )
@@ -46,8 +46,8 @@ class FuturesDailySessionResolverTests(unittest.TestCase):
             datetime(2026, 7, 20, 22, 15, tzinfo=timezone.utc)
         )
 
-        self.assertEqual(before, "2026-07-20:IN_PROGRESS")
-        self.assertEqual(after, "2026-07-20:FINAL")
+        self.assertEqual(before, "2026-07-20")
+        self.assertEqual(after, "2026-07-20")
 
     def test_validation_loader_selects_collection_timestamp(self) -> None:
         from app.services.futures_macro_validation import (
@@ -99,7 +99,7 @@ class FuturesDailySessionResolverTests(unittest.TestCase):
         self.assertEqual(result.session_date, "2026-07-20")
         self.assertEqual(result.status, "IN_PROGRESS")
 
-    def test_same_new_york_date_becomes_final_only_after_cutoff(self) -> None:
+    def test_same_new_york_date_is_pending_after_evening_reopen(self) -> None:
         from app.services.futures_macro_sessions import (
             resolve_futures_daily_session,
         )
@@ -118,7 +118,23 @@ class FuturesDailySessionResolverTests(unittest.TestCase):
         )
 
         self.assertEqual(before.status, "IN_PROGRESS")
-        self.assertEqual(after.status, "FINAL")
+        self.assertEqual(after.status, "IN_PROGRESS")
+        self.assertEqual(after.reason, "same_date_provider_bar_can_still_move")
+
+    def test_same_new_york_date_can_be_final_when_collected_during_settlement_gap(self) -> None:
+        from app.services.futures_macro_sessions import (
+            resolve_futures_daily_session,
+        )
+
+        result = resolve_futures_daily_session(
+            "ES=F",
+            "2026-07-20 00:00:00",
+            "2026-07-20 21:30:00",  # 17:30 ET, before the 18:00 reopen.
+            datetime(2026, 7, 21, 0, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(result.status, "FINAL")
+        self.assertEqual(result.reason, "same_date_collected_during_settlement_gap")
 
     def test_saturday_and_unparseable_labels_are_unknown(self) -> None:
         from app.services.futures_macro_sessions import (
@@ -179,14 +195,9 @@ class FuturesDailySessionResolverTests(unittest.TestCase):
         self.assertEqual(before_cutoff.latest_final_session, "2026-07-17")
         self.assertEqual(before_cutoff.pending_session, "2026-07-20")
         self.assertEqual([row["close"] for row in before_cutoff.rows], [100.0])
-        self.assertEqual(after_cutoff.latest_final_session, "2026-07-20")
-        self.assertIsNone(after_cutoff.pending_session)
-        self.assertEqual([row["close"] for row in after_cutoff.rows], [100.0, 102.0])
-        self.assertEqual(after_cutoff.rows[-1]["Date"], "2026-07-20")
-        self.assertEqual(
-            after_cutoff.rows[-1]["raw_candle_time_utc"],
-            "2026-07-20 00:00:00",
-        )
+        self.assertEqual(after_cutoff.latest_final_session, "2026-07-17")
+        self.assertEqual(after_cutoff.pending_session, "2026-07-20")
+        self.assertEqual([row["close"] for row in after_cutoff.rows], [100.0])
 
 
 if __name__ == "__main__":

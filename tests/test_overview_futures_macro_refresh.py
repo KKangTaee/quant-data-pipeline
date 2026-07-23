@@ -121,3 +121,18 @@ def test_daily_coverage_loader_uses_grouped_compact_query() -> None:
     assert "COUNT(*) AS daily_row_count" in captured["sql"]
     assert "GROUP BY provider_symbol" in captured["sql"]
     assert captured["params"] == ["1d", "ES=F", "NQ=F"]
+
+
+def test_refresh_duration_includes_snapshot_materialization(monkeypatch) -> None:
+    import app.jobs.overview_actions as overview_actions
+
+    ticks = iter([10.0, 11.0, 12.0, 70.0])
+    monkeypatch.setattr(overview_actions, "perf_counter", lambda: next(ticks))
+
+    result = overview_actions.run_overview_futures_daily_ohlcv(
+        coverage_loader=lambda symbols: _coverage(),
+        collect_runner=lambda **kwargs: _collection_result(list(kwargs["symbols"])),
+        materialize_fn=lambda: {"status": "materialized"},
+    )
+
+    assert result["duration_sec"] == 60.0

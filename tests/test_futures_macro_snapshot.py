@@ -12,7 +12,7 @@ def _compatible_row(
     *,
     source_marker: str,
     input_fingerprint: str = "a" * 64,
-    algorithm_version: str = "pattern_outlook_v5_same_state_nested_hybrid",
+    algorithm_version: str = "pattern_outlook_v6_same_state_nested_hybrid_finalized_sessions",
 ) -> dict[str, object]:
     return {
         "snapshot_key": "overview_current",
@@ -82,7 +82,7 @@ def _completed_probe(
         "status": "PENDING_SESSION_FINALIZATION" if pending_session else "OBSERVED",
         "latest_final_session": "2026-07-18",
         "pending_session": pending_session,
-        "resolver_version": "futures_daily_session_v1",
+        "resolver_version": "futures_daily_session_v2",
     }
     return {
         "input_fingerprint": input_fingerprint,
@@ -197,6 +197,8 @@ class FuturesMacroSnapshotPersistenceTests(unittest.TestCase):
         self.assertIn("ON DUPLICATE KEY UPDATE forecast_identity = forecast_identity", sql)
         self.assertIn("VALUES(as_of_date) >= as_of_date", sql)
         self.assertIn("session_status = 'LEGACY'", sql)
+        self.assertIn("schema_version <> VALUES(schema_version)", sql)
+        self.assertIn("algorithm_version <> VALUES(algorithm_version)", sql)
 
         failing = Connection(fail_on=2)
         with self.assertRaisesRegex(RuntimeError, "write failed"):

@@ -519,7 +519,7 @@ class FuturesMacroPatternPublicationTests(unittest.TestCase):
         self.assertEqual(snapshot["schema_version"], "futures_macro_pattern_outlook_v2")
         self.assertEqual(
             snapshot["method"]["algorithm_version"],
-            "pattern_outlook_v5_same_state_nested_hybrid",
+            "pattern_outlook_v6_same_state_nested_hybrid_finalized_sessions",
         )
         for horizon in snapshot["horizons"]:
             self.assertIn("selected_candidate", horizon)

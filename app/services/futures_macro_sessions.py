@@ -9,8 +9,9 @@ from typing import Literal
 from zoneinfo import ZoneInfo
 
 
-FUTURES_DAILY_SESSION_VERSION = "futures_daily_session_v1"
-FUTURES_DAILY_FINAL_CUTOFF_ET = time(18, 15)
+FUTURES_DAILY_SESSION_VERSION = "futures_daily_session_v2"
+FUTURES_DAILY_SETTLEMENT_STABLE_ET = time(17, 15)
+FUTURES_DAILY_EVENING_REOPEN_ET = time(18, 0)
 NEW_YORK = ZoneInfo("America/New_York")
 
 
@@ -65,12 +66,7 @@ def futures_session_evaluation_token(evaluation_time: datetime) -> str:
     if evaluation.tzinfo is None:
         evaluation = evaluation.replace(tzinfo=timezone.utc)
     evaluation_et = evaluation.astimezone(NEW_YORK)
-    phase = (
-        "FINAL"
-        if evaluation_et.time() >= FUTURES_DAILY_FINAL_CUTOFF_ET
-        else "IN_PROGRESS"
-    )
-    return f"{evaluation_et.date().isoformat()}:{phase}"
+    return evaluation_et.date().isoformat()
 
 
 def resolve_futures_daily_session(
@@ -81,7 +77,6 @@ def resolve_futures_daily_session(
 ) -> FuturesDailySession:
     """Map one provider candle label to a canonical trade date and finality."""
 
-    del collected_at
     candle = _utc_datetime(candle_time_utc)
     symbol = str(provider_symbol or "").strip().upper()
     if candle is None:
@@ -100,15 +95,24 @@ def resolve_futures_daily_session(
     if evaluation.tzinfo is None:
         evaluation = evaluation.replace(tzinfo=timezone.utc)
     evaluation_et = evaluation.astimezone(NEW_YORK)
+    collected = _utc_datetime(collected_at)
+    collected_et = collected.astimezone(NEW_YORK) if collected is not None else None
     if session_date < evaluation_et.date():
         status: Literal["FINAL", "IN_PROGRESS", "UNKNOWN"] = "FINAL"
         reason = "session_precedes_evaluation_date"
-    elif session_date == evaluation_et.date() and evaluation_et.time() >= FUTURES_DAILY_FINAL_CUTOFF_ET:
+    elif (
+        session_date == evaluation_et.date()
+        and collected_et is not None
+        and collected_et.date() == session_date
+        and FUTURES_DAILY_SETTLEMENT_STABLE_ET
+        <= collected_et.time()
+        < FUTURES_DAILY_EVENING_REOPEN_ET
+    ):
         status = "FINAL"
-        reason = "same_date_after_final_cutoff"
+        reason = "same_date_collected_during_settlement_gap"
     else:
         status = "IN_PROGRESS"
-        reason = "same_or_future_session_not_final"
+        reason = "same_date_provider_bar_can_still_move"
     return FuturesDailySession(
         symbol,
         raw_date.isoformat(),

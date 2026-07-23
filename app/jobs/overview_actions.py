@@ -265,7 +265,7 @@ def run_overview_futures_daily_ohlcv(
         "status": status,
         "started_at": started_at,
         "finished_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "duration_sec": round(perf_counter() - started, 6),
+        "duration_sec": 0.0,
         "rows_written": rows_written,
         "symbols_requested": len(selected),
         "symbols_processed": sum(int(result.get("symbols_processed") or 0) for result in results),
@@ -286,12 +286,15 @@ def run_overview_futures_daily_ohlcv(
             },
         },
     }
-    return attach_futures_macro_materialization(
+    attached = attach_futures_macro_materialization(
         combined,
         interval="1d",
         rows_written=rows_written,
         materialize_fn=materialize_fn,
     )
+    attached["duration_sec"] = round(perf_counter() - started, 6)
+    attached["finished_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return attached
 
 
 def run_overview_fomc_calendar(*, years: Iterable[int]) -> JobResult:
