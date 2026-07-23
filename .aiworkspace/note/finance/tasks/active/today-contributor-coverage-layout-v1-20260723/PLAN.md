@@ -32,6 +32,7 @@ Today의 `종목별 성과 기여`는 실제 대표 포트폴리오 5종목 중 
 - `app/web/streamlit_components/today_workbench/src/TodayPortfolioPanel.tsx`
 - `app/web/streamlit_components/today_workbench/src/types.ts`
 - `app/web/streamlit_components/today_workbench/src/style.css`
+- `app/web/today_page.py` fallback copy parity
 - Today Python / React contract tests와 canonical component build
 
 ## Out Of Scope

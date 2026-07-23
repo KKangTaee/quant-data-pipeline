@@ -43,6 +43,7 @@ The user approved approach 1. It removes unexplained omission without introducin
   - all active items computable: `전체 N개 · 영향 큰 순`
   - partial computation: `기여 계산 N/M개 · 영향 큰 순`
   - no active items: existing empty-state copy
+- The Python fallback uses the same coverage copy so a missing React bundle never restores the misleading top-2/bottom-2 label.
 - Keep two-column contributor cards on desktop and one column at the existing phone breakpoint.
 - Continue showing item cumulative return and portfolio cumulative contribution as distinct values.
 - Add a `today-review-section` class. Its content aligns to the top, and the review list uses max-content rows with a consistent 8px gap and zero paragraph margin.
