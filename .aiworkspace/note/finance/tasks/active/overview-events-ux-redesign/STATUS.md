@@ -30,5 +30,13 @@
 - Current: roadmap 2/4 design documentation and self-review completed. No implementation code or DB mutation has been performed for the 2026-07-23 correction.
 - 2026-07-23: User reviewed and approved the written spec. `IMPLEMENTATION_PLAN.md` now breaks implementation into seven TDD / review / commit units covering schema, pure coverage planning, hybrid collection, job wiring, service read model, React A layout, and final QA / docs.
 - 2026-07-23: Implementation-plan self-review completed. The plan now explicitly covers collection-coverage empty states, timezone-aware UTC conversion, family-specific row limits, exact generated-artifact cleanup, official-year checkpoint equality, and narrow staging paths.
-- Current: roadmap 2/4 design and implementation planning completed. No implementation code or DB mutation has been performed for the 2026-07-23 correction.
-- Next: execute `IMPLEMENTATION_PLAN.md` with subagent-driven development or inline executing-plans after the user chooses the execution mode.
+- 2026-07-24: Inline implementation started. Task 1 event issuer identity and durable collection-coverage persistence contract completed with focused RED / GREEN coverage.
+- 2026-07-24: Task 2 pure priority and S&P 500 shard planner completed. A completed checkpoint starts a fresh cycle, and diagnostics outside the S&P 500 universe cannot pollute its coverage state.
+- 2026-07-24: Task 3 hybrid earnings orchestration completed. Daily priority and S&P 500 shard checkpoints are separate, issuer identity is CIK-backed with symbol fallback, Nasdaq time labels are normalized, and only a second consecutive missing check marks a symbol stale.
+- 2026-07-24: Task 4 job / automation / official-year coverage completed. Manual and scheduled earnings now use the hybrid job, market-structure refresh is daily for current / next year, and FOMC / holiday checkpoints are stored by year.
+- 2026-07-24: Task 5 family-aware read model completed. Family-bounded loading, issuer grouping, KST semantics, and service-owned consistent filter views passed focused and broad service tests.
+- 2026-07-24: Task 6 React A layout completed. Three brief cards, one refresh action, calendar + selected-day desktop grid, consistently filtered density, and collapsed support evidence replaced the previous rail-heavy surface.
+- 2026-07-24: Task 7 live correction completed. Official FOMC rows cover 2026/2027, NYSE fallback fills the 2027 US holiday year missing from Nasdaq Trader, and the hybrid earnings run captured Alphabet while keeping the S&P 500 cycle explicitly partial.
+- 2026-07-24: Browser QA found and fixed a React payload datetime-marshalling regression with a RED/GREEN contract. Desktop/mobile layout, selected 2026-07-23 detail, single Alphabet issuer card, no horizontal overflow, and zero console errors were verified.
+- Current: roadmap 4/4 implementation and QA completed through `IMPLEMENTATION_PLAN.md`; final broad verification and commit evidence are recorded in `RUNS.md`.
+- Next: continue normal scheduled earnings refreshes until the current S&P 500 cycle reaches complete; issuer-confirmed IR ingestion remains a separate follow-up.

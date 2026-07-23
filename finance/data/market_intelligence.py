@@ -45,6 +45,9 @@ TREASURY_AUCTIONS_SOURCE = "treasurydirect_auction_calendar"
 MACRO_CALENDAR_SOURCE = "official_macro_release_schedules"
 NASDAQ_MARKET_HOLIDAY_SOURCE_URL = "https://www.nasdaqtrader.com/trader.aspx?id=calendar"
 NASDAQ_MARKET_HOLIDAY_SOURCE = "nasdaqtrader_equity_options_holiday_calendar"
+NYSE_MARKET_HOLIDAY_SOURCE_URL = "https://www.nyse.com/markets/hours-calendars"
+NYSE_MARKET_HOLIDAY_SOURCE = "nyse_market_holiday_calendar"
+US_EQUITY_FULL_DAY_HOLIDAY_MINIMUM = 10
 CBOE_OPTIONS_EXPIRATION_SOURCE_URL_TEMPLATE = "https://cdn.cboe.com/resources/options/Cboe{year}OPTIONSCalendar.pdf"
 CBOE_OPTIONS_EXPIRATION_SOURCE = "cboe_options_expiration_calendar"
 FTSE_RUSSELL_RECONSTITUTION_SOURCE_URL = (
@@ -1902,6 +1905,101 @@ def parse_nasdaq_market_holiday_calendar_events_from_html(
         )
     return events
 
+def parse_nyse_market_holiday_calendar_events_from_html(
+    html: str,
+    *,
+    source_url: str = NYSE_MARKET_HOLIDAY_SOURCE_URL,
+    years: Sequence[int] | None = None,
+) -> list[dict[str, Any]]:
+    """Parse NYSE's multi-year official holiday table and early-close footnotes."""
+    year_filter = {int(year) for year in years or []}
+    events: list[dict[str, Any]] = []
+    for record in _frame_records_from_html_table(html):
+        holiday = _clean_text(record.get("Holiday"))
+        if not holiday:
+            continue
+        for key, value in record.items():
+            year_text = str(key or "").strip()
+            if not re.fullmatch(r"20\d{2}", year_text):
+                continue
+            year = int(year_text)
+            if year_filter and year not in year_filter:
+                continue
+            date_text = re.sub(r"\([^)]*\)|\*+", "", _clean_text(value)).strip()
+            date_text = re.sub(r"^[A-Za-z]+,\s*", "", date_text)
+            event_date = _event_date_str(f"{date_text}, {year}")
+            if not event_date:
+                continue
+            events.append(
+                _market_structure_event_row(
+                    event_date=event_date,
+                    event_type="MARKET_HOLIDAY",
+                    title=f"US Market Holiday: {holiday}",
+                    source=NYSE_MARKET_HOLIDAY_SOURCE,
+                    source_url=source_url,
+                    event_subtype="market_holiday",
+                    event_time_label="Closed",
+                    raw_payload={
+                        "exchange": "NYSE",
+                        "calendar_year": year,
+                        "holiday": holiday,
+                        "market_status": "Closed",
+                        "source_row": record,
+                    },
+                )
+            )
+
+    page_text = re.sub(
+        r"\s+",
+        " ",
+        BeautifulSoup(html, "html.parser").get_text(" ", strip=True),
+    )
+    early_close_start = page_text.find("Each market will close early")
+    early_close_text = (
+        page_text[early_close_start:].split("Trading Hours", 1)[0]
+        if early_close_start >= 0
+        else ""
+    )
+    for weekday, month, day_text, year_text in re.findall(
+        r"(Monday|Tuesday|Wednesday|Thursday|Friday),\s+"
+        r"([A-Za-z]+)\s+(\d{1,2}),\s+(20\d{2})",
+        early_close_text,
+    ):
+        del weekday
+        year = int(year_text)
+        if year_filter and year not in year_filter:
+            continue
+        event_date = _event_date_str(f"{month} {day_text}, {year}")
+        if not event_date:
+            continue
+        events.append(
+            _market_structure_event_row(
+                event_date=event_date,
+                event_type="EARLY_CLOSE",
+                title="US Market Early Close: NYSE Equity Markets",
+                source=NYSE_MARKET_HOLIDAY_SOURCE,
+                source_url=source_url,
+                event_subtype="early_close",
+                event_time_label="Early close 13:00 ET",
+                release_time_et="13:00",
+                raw_payload={
+                    "exchange": "NYSE",
+                    "calendar_year": year,
+                    "market_status": "Early close 13:00 ET",
+                    "source_text": early_close_text,
+                },
+            )
+        )
+
+    deduplicated = {
+        (str(row.get("event_date")), str(row.get("event_type"))): row
+        for row in events
+    }
+    return [
+        deduplicated[key]
+        for key in sorted(deduplicated)
+    ]
+
 
 def _previous_business_day(value: date, *, exchange_holidays: set[str]) -> date:
     current = value
@@ -2175,6 +2273,23 @@ def fetch_nasdaq_market_holiday_calendar_events(
         raise RuntimeError(f"No Nasdaq Trader market holiday events were parsed{year_text}.")
     return events
 
+def fetch_nyse_market_holiday_calendar_events(
+    *,
+    years: Sequence[int] | None = None,
+    source_url: str = NYSE_MARKET_HOLIDAY_SOURCE_URL,
+    html_fetcher: Callable[[str], str] | None = None,
+) -> list[dict[str, Any]]:
+    fetcher = html_fetcher or _fetch_html
+    events = parse_nyse_market_holiday_calendar_events_from_html(
+        fetcher(source_url),
+        source_url=source_url,
+        years=years,
+    )
+    if not events:
+        year_text = f" for years {list(years)}" if years else ""
+        raise RuntimeError(f"No NYSE market holiday events were parsed{year_text}.")
+    return events
+
 
 def fetch_russell_reconstitution_events(
     *,
@@ -2190,6 +2305,21 @@ def fetch_russell_reconstitution_events(
     return events
 
 
+def _market_holiday_year_complete(
+    rows: Sequence[dict[str, Any]],
+    *,
+    year: int,
+) -> bool:
+    """Require the modern US-equity full-day holiday baseline for one year."""
+    full_day_dates = {
+        str(row.get("event_date"))
+        for row in rows
+        if str(row.get("event_date") or "").startswith(f"{int(year):04d}-")
+        and str(row.get("event_type") or "").upper() == "MARKET_HOLIDAY"
+    }
+    return len(full_day_dates) >= US_EQUITY_FULL_DAY_HOLIDAY_MINIMUM
+
+
 def fetch_market_structure_calendar_events(
     *,
     years: Sequence[int] | None = None,
@@ -2197,6 +2327,7 @@ def fetch_market_structure_calendar_events(
     include_options_expiration: bool = True,
     include_russell: bool = True,
     holiday_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+    holiday_fallback_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
     russell_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
     options_builder: Callable[..., list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
@@ -2206,17 +2337,62 @@ def fetch_market_structure_calendar_events(
     exchange_holidays: set[str] = set()
 
     if include_holidays:
+        holiday_events: list[dict[str, Any]] = []
         try:
             fetcher = holiday_fetcher or fetch_nasdaq_market_holiday_calendar_events
-            holiday_events = fetcher(years=target_years)
-            events.extend(holiday_events)
-            exchange_holidays = {
-                str(row.get("event_date"))
-                for row in holiday_events
-                if row.get("event_type") == "MARKET_HOLIDAY" and row.get("event_date")
-            }
+            holiday_events.extend(fetcher(years=target_years))
         except Exception as exc:
             failed_sources.append(f"Nasdaq Trader: {exc}")
+        covered_holiday_years = {
+            year
+            for year in target_years
+            if _market_holiday_year_complete(holiday_events, year=year)
+        }
+        missing_holiday_years = tuple(
+            year
+            for year in target_years
+            if year not in covered_holiday_years
+        )
+        fallback = holiday_fallback_fetcher or (
+            fetch_nyse_market_holiday_calendar_events
+            if holiday_fetcher is None
+            else None
+        )
+        if missing_holiday_years and fallback is not None:
+            try:
+                holiday_events.extend(fallback(years=missing_holiday_years))
+            except Exception as exc:
+                failed_sources.append(f"NYSE: {exc}")
+        holiday_events = list({
+            (
+                str(row.get("event_date") or ""),
+                str(row.get("event_type") or ""),
+            ): row
+            for row in holiday_events
+            if row.get("event_date") and row.get("event_type")
+        }.values())
+        covered_holiday_years = {
+            year
+            for year in target_years
+            if _market_holiday_year_complete(holiday_events, year=year)
+        }
+        missing_holiday_years = tuple(
+            year
+            for year in target_years
+            if year not in covered_holiday_years
+        )
+        if missing_holiday_years:
+            failed_sources.append(
+                f"Official holiday coverage missing years: {list(missing_holiday_years)}"
+            )
+        events.extend(holiday_events)
+        exchange_holidays = {
+            str(row.get("event_date"))
+            for row in holiday_events
+            if row.get("event_type") == "MARKET_HOLIDAY" and row.get("event_date")
+        }
+    else:
+        missing_holiday_years = ()
     if include_options_expiration:
         try:
             builder = options_builder or build_options_expiration_calendar_events
@@ -2242,6 +2418,7 @@ def fetch_market_structure_calendar_events(
         "events": events,
         "events_found": len(events),
         "failed_sources": failed_sources,
+        "holiday_missing_years": list(missing_holiday_years),
     }
 
 
@@ -2396,10 +2573,10 @@ def collect_and_store_market_structure_calendar(
         str(item)
         for item in result.get("failed_sources") or []
     ]
-    holiday_source_failed = any(
-        item.lower().startswith("nasdaq trader")
-        for item in failed_sources
-    )
+    missing_holiday_years = {
+        int(year)
+        for year in result.get("holiday_missing_years") or []
+    }
     coverage_years = (
         list(target_years)
         if target_years
@@ -2409,6 +2586,7 @@ def collect_and_store_market_structure_calendar(
         ]
     )
     for year in coverage_years:
+        holiday_source_failed = year in missing_holiday_years
         coverage_key = f"market_holiday:{year}"
         year_rows = [
             row
@@ -3311,7 +3489,7 @@ def load_event_issuer_identity_map(
     password: str = "1234",
     port: int = 3306,
 ) -> dict[str, dict[str, str]]:
-    """Resolve current SEC CIK identity evidence without fuzzy-name matching."""
+    """Resolve SEC CIK first, then exact current-listing name without fuzzy matching."""
     normalized = _normalize_symbol_list(symbols, max_symbols=5000)
     if not normalized:
         return {}
@@ -3321,29 +3499,51 @@ def load_event_issuer_identity_map(
         db.use_db(DB_META)
         rows = db.query(
             f"""
-            SELECT symbol, related_cik, name
+            SELECT symbol, related_cik, name, source
             FROM nyse_symbol_lifecycle
             WHERE symbol IN ({placeholders})
-              AND source = %s
-              AND related_cik IS NOT NULL
-            ORDER BY symbol ASC, collected_at DESC
+              AND name IS NOT NULL
+            ORDER BY
+              symbol ASC,
+              (related_cik IS NULL) ASC,
+              CASE source
+                WHEN 'sec_company_tickers_exchange' THEN 0
+                WHEN 'nyse_listings_directory' THEN 1
+                ELSE 2
+              END ASC,
+              collected_at DESC
             """,
-            [*normalized, "sec_company_tickers_exchange"],
+            normalized,
         )
     finally:
         db.close()
     output: dict[str, dict[str, str]] = {}
     for row in rows:
         symbol = str(row.get("symbol") or "").strip().upper()
-        if not symbol or symbol in output:
+        if not symbol:
             continue
         try:
             cik = str(int(row["related_cik"]))
         except (KeyError, TypeError, ValueError):
+            cik = ""
+        if cik:
+            current = output.get(symbol)
+            if current and str(current.get("issuer_key") or "").startswith("sec_cik:"):
+                continue
+            output[symbol] = {
+                "issuer_key": f"sec_cik:{cik}",
+                "issuer_name": str(row.get("name") or symbol),
+            }
+            continue
+        if symbol in output:
+            continue
+        issuer_name = _clean_text(row.get("name"))
+        normalized_name = re.sub(r"[^a-z0-9]+", "_", issuer_name.lower()).strip("_")
+        if not normalized_name:
             continue
         output[symbol] = {
-            "issuer_key": f"sec_cik:{cik}",
-            "issuer_name": str(row.get("name") or symbol),
+            "issuer_key": f"listing_name:{normalized_name}",
+            "issuer_name": issuer_name.title(),
         }
     return output
 

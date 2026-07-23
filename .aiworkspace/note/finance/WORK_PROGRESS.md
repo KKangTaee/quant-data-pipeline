@@ -7200,3 +7200,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - 수동 OHLCV 최신화 뒤 기존 결과는 참고용으로 유지하고, 명시적 같은 설정 재실행이 완료된 뒤에만 저장/Level2 인계를 다시 연다.
 - actual GTAA QA 중 pending 실행의 fragment-scope rerun 예외를 발견해 app-scope로 수정했고 1280·760px 흐름을 확인했다.
 - 전체 roadmap `3/3차`; 상세는 `tasks/active/backtest-level1-price-refresh-handoff-v1-20260722/`를 본다.
+- 2026-07-24 Overview Events omission correction and A-layout closeout:
+  - Replaced latest-movers-only earnings collection with daily priority plus a persisted S&P 500 shard cycle; collection coverage now distinguishes checked-no-event from not-checked.
+  - Added requested-year official coverage, including NYSE fallback for the 2027 holiday schedule, and issuer grouping that displays GOOG / GOOGL as one Alphabet event while retaining both ticker facts.
+  - Completed the React brief + calendar A layout, desktop/mobile Browser QA, and task closeout under `tasks/active/overview-events-ux-redesign/`.

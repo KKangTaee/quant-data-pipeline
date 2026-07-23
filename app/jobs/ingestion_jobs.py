@@ -1412,9 +1412,13 @@ def run_collect_overview_earnings_calendar(
             stage="earnings_calendar",
         )
         coverage = dict(result.get("coverage") or {})
+        priority_coverage = dict(result.get("priority_coverage") or {})
         status = (
             "success"
-            if coverage.get("coverage_status") == "complete"
+            if (
+                coverage.get("coverage_status") == "complete"
+                and priority_coverage.get("coverage_status") == "complete"
+            )
             else "partial_success"
         )
         return _build_result(

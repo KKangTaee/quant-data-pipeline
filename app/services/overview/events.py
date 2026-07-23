@@ -855,10 +855,13 @@ def _event_rows_frame(
     out: list[dict[str, Any]] = []
     for row in rows:
         display = _event_kst_display(row)
+        relative_row = dict(row)
+        if display["display_date_kst"]:
+            relative_row["event_date"] = display["display_date_kst"]
         out.append({
             "Date": _iso_date(row.get("event_date")) or "-",
-            "Days Until": _event_days_until(row, today=today),
-            "Window": _event_window_label(row, today=today, recent_days=recent_days),
+            "Days Until": _event_days_until(relative_row, today=today),
+            "Window": _event_window_label(relative_row, today=today, recent_days=recent_days),
             "Type": row.get("event_type") or "-",
             "Event Family": _event_family(row),
             "Event Subtype": _event_subtype(row),
@@ -873,7 +876,7 @@ def _event_rows_frame(
             "Title": row.get("title") or "-",
             "Importance": _event_importance_label(row),
             "Relevance": _event_relevance_label(row),
-            "Focus": _event_focus_label(row, today=today),
+            "Focus": _event_focus_label(relative_row, today=today),
             "Source Type": _event_source_type(row),
             "Validation": _event_validation_label(row),
             "Freshness": _event_freshness(row, today=today),
@@ -1398,7 +1401,7 @@ def _events_workbench_command() -> dict[str, Any]:
                 "id": "refresh_earnings",
                 "label": "실적 예상 일정 갱신",
                 "kind": "secondary",
-                "detail": "S&P 500 movers 기반 earnings estimate provider/job을 실행합니다.",
+                "detail": "매일 우선 확인 종목과 S&P 500 순환 coverage의 earnings estimate job을 실행합니다.",
             },
         ],
         "earnings_universe": {

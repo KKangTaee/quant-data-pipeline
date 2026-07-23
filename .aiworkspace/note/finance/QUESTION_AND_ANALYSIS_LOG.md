@@ -10584,3 +10584,9 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 교집합 백테스트의 보수적 계산은 유지하되 짧아진 결과를 그대로 Level2에 넘기지 않고 사용자가 데이터 보강과 재실행을 한 흐름에서 끝내야 함.
 - Analysis result: current Result Workspace가 legacy refresh action과 분리되어 있었고 가격 gap이 technical handoff Gate에 포함되지 않았다. 공통 네 상태와 Single/Mix 종목 합집합, 명시 refresh, 참고 결과, explicit rerun 계약을 채택했다.
 - Follow-up: 전체 `3/3차` 완료. 수집은 자동 백테스트를 실행하지 않고 새 current 결과만 Level2를 다시 연다. provider/source gap은 반복 버튼 대신 원인 확인 상태로 차단한다.
+### 2026-07-24 - Overview Events는 중요 종목 누락을 막고 브리프+캘린더로 판단 부담을 줄인다
+
+- User request: Google처럼 중요한 실적이 빠지지 않는지 진단하고, 수집 기준과 약점을 고친 뒤 다른 탭과 맞는 React UI로 개편해 달라고 요청함.
+- Interpreted goal: latest movers 편향을 제거하고, FOMC/미국 휴장 연도 coverage를 검증하며, 사용자가 이번 주 핵심 일정과 선택일 상세를 한 흐름에서 끝낼 수 있어야 함.
+- Analysis result: daily priority + persisted S&P 500 shard, year-specific official checkpoints, issuer grouping, service-owned views, and calendar-dominant A layout을 구현했다. Live DB에서 Alphabet 2026-07-23 event와 2027 FOMC/holiday coverage를 확인했다.
+- Follow-up: S&P 500 cycle은 정상 예약 갱신으로 완료하고, issuer-confirmed IR source 확대는 별도 product/data task로 다룬다.
