@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Callable, Iterable
 
@@ -10,6 +10,7 @@ from app.runtime.backtest.stores.portfolio_selection import (
     load_current_final_selection_decisions,
 )
 
+from .decision_lifecycle import resolve_monitoring_decision
 from .persistence import MonitoringItemRecord
 from .valuation import CorporateActionReview, ItemValueLane
 
@@ -33,6 +34,7 @@ class SelectedStrategyReadiness:
     status: str
     blockers: tuple[str, ...]
     source_dates: dict[str, str | None]
+    decision_lifecycle: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -92,31 +94,35 @@ class SelectedStrategyReplayAdapter:
 
     def load_candidate_contract(self, decision_id: str) -> SelectedStrategyContract:
         clean_id = str(decision_id or "").strip()
-        rows = [
-            dict(row)
-            for row in self._decision_loader()
-            if str(row.get("decision_id") or "").strip() == clean_id
-        ]
-        if not rows:
+        rows = [dict(row or {}) for row in self._decision_loader()]
+        lifecycle = resolve_monitoring_decision(rows, clean_id)
+        projection = lifecycle.to_projection()
+        row = dict(lifecycle.effective_row or {})
+        source_dates = {
+            "decision_updated_at": str(row.get("updated_at") or "") or None,
+            "requested_decision_id": lifecycle.requested_decision_id or None,
+            "effective_decision_id": lifecycle.effective_decision_id,
+        }
+        if lifecycle.requested_row is None:
             return SelectedStrategyContract(
                 decision_id=clean_id,
                 decision_row=None,
                 readiness=SelectedStrategyReadiness(
                     status="BLOCKED",
                     blockers=("Final Review decision was not found.",),
-                    source_dates={},
+                    source_dates=source_dates,
+                    decision_lifecycle=projection,
                 ),
             )
-        row = rows[0]
-        source_dates = {"decision_updated_at": str(row.get("updated_at") or "") or None}
-        if row.get("monitoring_candidate") is not True:
+        if lifecycle.locked:
             return SelectedStrategyContract(
                 decision_id=clean_id,
                 decision_row=row,
                 readiness=SelectedStrategyReadiness(
                     status="BLOCKED",
-                    blockers=("Final Review decision is not an authoritative monitoring candidate.",),
+                    blockers=(lifecycle.message,),
                     source_dates=source_dates,
+                    decision_lifecycle=projection,
                 ),
             )
         if not _selected_components(row):
@@ -127,6 +133,7 @@ class SelectedStrategyReplayAdapter:
                     status="BLOCKED",
                     blockers=("Selected strategy replay contract has no selected components.",),
                     source_dates=source_dates,
+                    decision_lifecycle=projection,
                 ),
             )
         return SelectedStrategyContract(
@@ -136,6 +143,7 @@ class SelectedStrategyReplayAdapter:
                 status="READY",
                 blockers=(),
                 source_dates=source_dates,
+                decision_lifecycle=projection,
             ),
         )
 
@@ -175,6 +183,7 @@ class SelectedStrategyReplayAdapter:
                 status="BLOCKED",
                 blockers=_clean_blockers(blockers or ["Selected strategy replay did not return a value curve."]),
                 source_dates=dict(contract.readiness.source_dates),
+                decision_lifecycle=dict(contract.readiness.decision_lifecycle),
             )
             raise SelectedStrategyReplayError(readiness)
 
@@ -185,6 +194,7 @@ class SelectedStrategyReplayAdapter:
                     status="BLOCKED",
                     blockers=("Selected strategy replay curve contract is invalid.",),
                     source_dates=dict(contract.readiness.source_dates),
+                    decision_lifecycle=dict(contract.readiness.decision_lifecycle),
                 )
             )
         frame["Date"] = pd.to_datetime(frame["Date"], errors="coerce").dt.normalize()
@@ -198,6 +208,7 @@ class SelectedStrategyReplayAdapter:
                     status="BLOCKED",
                     blockers=("Selected strategy replay value curve is empty.",),
                     source_dates=dict(contract.readiness.source_dates),
+                    decision_lifecycle=dict(contract.readiness.decision_lifecycle),
                 )
             )
 
@@ -212,6 +223,7 @@ class SelectedStrategyReplayAdapter:
             status="REVIEW" if blockers or result_status == "partial" else "READY",
             blockers=_clean_blockers(blockers),
             source_dates=source_dates,
+            decision_lifecycle=dict(contract.readiness.decision_lifecycle),
         )
         lane_status = "data_review" if readiness.status == "REVIEW" else item.status
         curve = pd.DataFrame(

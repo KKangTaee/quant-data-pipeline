@@ -106,6 +106,79 @@ class PortfolioMonitoringSelectedStrategyTests(unittest.TestCase):
         self.assertIn("replay contract", contract.readiness.blockers[0])
         self.assertEqual(calls, [])
 
+    def test_newer_hold_locks_existing_selected_strategy(self) -> None:
+        selected = _load_selected_strategy()
+        adapter = selected.SelectedStrategyReplayAdapter(
+            decision_loader=lambda: [
+                {
+                    "decision_id": "new-hold",
+                    "selection_source_id": "selection-a",
+                    "source_id": "validation-new-hold",
+                    "updated_at": "2026-07-23",
+                    "decision_route": "HOLD_FOR_MORE_PAPER_TRACKING",
+                    "monitoring_candidate": False,
+                },
+                {
+                    "decision_id": "old-selected",
+                    "selection_source_id": "selection-a",
+                    "source_id": "validation-old-selected",
+                    "updated_at": "2026-07-22",
+                    "decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+                    "monitoring_candidate": True,
+                    "selected_components": [
+                        {"registry_id": "candidate-a", "target_weight": 100.0}
+                    ],
+                },
+            ]
+        )
+
+        contract = adapter.load_candidate_contract("old-selected")
+
+        self.assertEqual(contract.readiness.status, "BLOCKED")
+        self.assertEqual(
+            contract.readiness.decision_lifecycle["state"],
+            "TRACKING_ELIGIBILITY_CHANGED",
+        )
+        self.assertIsNotNone(contract.decision_row)
+        self.assertEqual(contract.decision_row["decision_id"], "new-hold")
+
+    def test_newer_selected_row_reactivates_old_monitoring_reference(self) -> None:
+        selected = _load_selected_strategy()
+        adapter = selected.SelectedStrategyReplayAdapter(
+            decision_loader=lambda: [
+                {
+                    "decision_id": "new-selected",
+                    "selection_source_id": "selection-a",
+                    "updated_at": "2026-07-23",
+                    "decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+                    "monitoring_candidate": True,
+                    "selected_components": [
+                        {"registry_id": "candidate-new", "target_weight": 100.0}
+                    ],
+                },
+                {
+                    "decision_id": "old-selected",
+                    "selection_source_id": "selection-a",
+                    "updated_at": "2026-07-22",
+                    "decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+                    "monitoring_candidate": True,
+                    "selected_components": [
+                        {"registry_id": "candidate-old", "target_weight": 100.0}
+                    ],
+                },
+            ]
+        )
+
+        contract = adapter.load_candidate_contract("old-selected")
+
+        self.assertEqual(contract.readiness.status, "READY")
+        self.assertIsNotNone(contract.decision_row)
+        self.assertEqual(contract.decision_row["decision_id"], "new-selected")
+        self.assertEqual(
+            contract.readiness.source_dates["effective_decision_id"],
+            "new-selected",
+        )
+
     def test_replay_failure_surfaces_blocked_readiness(self) -> None:
         selected = _load_selected_strategy()
         adapter = selected.SelectedStrategyReplayAdapter(
