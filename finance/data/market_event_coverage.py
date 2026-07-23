@@ -62,7 +62,8 @@ def build_sp500_shard_plan(
     details = dict(prior.get("details") or {})
     universe_hash = _universe_hash(universe)
     cycle_complete = str(prior.get("coverage_status") or "").lower() == "complete"
-    reset = details.get("universe_hash") != universe_hash or cycle_complete
+    same_universe = details.get("universe_hash") == universe_hash
+    reset = not same_universe or cycle_complete
     cursor = 0 if reset else max(0, int(prior.get("cursor_offset") or 0))
     size = max(1, int(batch_size or 100))
     batch = universe[cursor : cursor + size]
@@ -79,6 +80,11 @@ def build_sp500_shard_plan(
         "batch_size": size,
         "cursor_offset": cursor,
         "prior": {} if reset else prior,
+        "prior_missing_streaks": (
+            dict(details.get("missing_streaks") or {})
+            if cycle_complete and same_universe
+            else {}
+        ),
         "universe_hash": universe_hash,
         "cycle_reset": reset,
     }
@@ -99,9 +105,10 @@ def apply_sp500_shard_result(
     failed = set(_symbols(prior_details.get("failed_symbols"))) & expected_set
     missing_streaks = {
         str(key).upper(): int(value)
-        for key, value in dict(
-            prior_details.get("missing_streaks") or {}
-        ).items()
+        for key, value in {
+            **dict(plan.get("prior_missing_streaks") or {}),
+            **dict(prior_details.get("missing_streaks") or {}),
+        }.items()
         if str(key).upper() in expected_set
     }
     applied_diagnostic_count = 0

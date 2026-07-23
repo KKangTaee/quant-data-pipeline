@@ -2580,8 +2580,17 @@ def fetch_nasdaq_earnings_calendar_symbols_by_date(
     for index, item in enumerate(normalized_dates):
         try:
             result = fetcher(item)
+            result_rows = [
+                dict(row)
+                for row in result.get("rows") or []
+                if isinstance(row, dict) and row.get("symbol")
+            ]
             out[item] = {
                 "symbols": list(result.get("symbols") or []),
+                "rows_by_symbol": {
+                    str(row["symbol"]).strip().upper(): row
+                    for row in result_rows
+                },
                 "source": result.get("source") or NASDAQ_EARNINGS_CALENDAR_SOURCE,
                 "source_url": result.get("source_url"),
                 "status": "ok",
@@ -2589,6 +2598,7 @@ def fetch_nasdaq_earnings_calendar_symbols_by_date(
         except Exception as exc:
             out[item] = {
                 "symbols": [],
+                "rows_by_symbol": {},
                 "source": NASDAQ_EARNINGS_CALENDAR_SOURCE,
                 "source_url": f"{NASDAQ_EARNINGS_CALENDAR_API_URL}?date={item}",
                 "status": "failed",
@@ -2597,6 +2607,27 @@ def fetch_nasdaq_earnings_calendar_symbols_by_date(
         if request_sleep_sec > 0 and index < len(normalized_dates) - 1:
             sleep(float(request_sleep_sec))
     return out
+
+
+def _normalize_earnings_time_label(value: Any) -> str:
+    text = (
+        str(value or "")
+        .strip()
+        .lower()
+        .replace("_", " ")
+        .replace("-", " ")
+    )
+    if any(
+        token in text
+        for token in ("after hour", "after market", "post market", "amc")
+    ):
+        return "after_market"
+    if any(
+        token in text
+        for token in ("before hour", "before market", "pre market", "bmo")
+    ):
+        return "before_market"
+    return "time_unknown"
 
 
 def _earnings_source_validation_payload(
@@ -2800,6 +2831,18 @@ def fetch_yfinance_earnings_calendar_events(
                 event_date=str(row["event_date"]),
                 nasdaq_by_date=nasdaq_by_date,
             )
+            nasdaq_result = dict(
+                nasdaq_by_date.get(str(row["event_date"])) or {}
+            )
+            nasdaq_row = dict(
+                (nasdaq_result.get("rows_by_symbol") or {}).get(
+                    str(row["symbol"])
+                )
+                or {}
+            )
+            row["event_time_label"] = _normalize_earnings_time_label(
+                nasdaq_row.get("time")
+            )
             row["validation_status"] = validation_status
             row["source_authority"] = _earnings_source_authority(validation_status)
             row["confidence"] = confidence
@@ -2938,6 +2981,8 @@ def collect_and_store_earnings_calendar(
     source_symbols_loader: Callable[[], list[str]] | None = None,
     source_symbol_loaders: dict[str, Callable[[], list[str]]] | None = None,
     earnings_fetcher: Callable[..., dict[str, Any]] | None = None,
+    symbol_scope_map: dict[str, Sequence[str]] | None = None,
+    issuer_identity_map: dict[str, dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Collect bounded upcoming earnings events and persist them to the common event calendar."""
     collected_at = _timestamp_str()
@@ -3006,13 +3051,29 @@ def collect_and_store_earnings_calendar(
     for row in result.get("events", []):
         enriched = {**row, "collected_at": collected_at}
         if str(enriched.get("event_type") or "").strip().upper() == "EARNINGS":
+            symbol = str(enriched.get("symbol") or "").strip().upper()
+            identity = dict((issuer_identity_map or {}).get(symbol) or {})
+            scopes = [
+                str(value)
+                for value in (symbol_scope_map or {}).get(symbol, [])
+                if str(value)
+            ]
             enriched.setdefault("event_family", "earnings")
             enriched.setdefault("event_subtype", "earnings_release")
-            enriched.setdefault("universe_scope", universe_scope)
+            enriched["issuer_key"] = (
+                identity.get("issuer_key") or f"symbol:{symbol}"
+            )
+            enriched["issuer_name"] = identity.get("issuer_name") or symbol
+            enriched["universe_scope"] = (
+                scopes[0]
+                if scopes
+                else enriched.get("universe_scope") or universe_scope
+            )
             enriched.setdefault("source_authority", _earnings_source_authority(enriched.get("validation_status")))
             raw_payload = dict(enriched.get("raw_payload") or {})
             raw_payload.setdefault("symbol_source", normalized_source)
-            raw_payload.setdefault("universe_scope", universe_scope)
+            raw_payload["universe_scope"] = enriched["universe_scope"]
+            raw_payload["coverage_scopes"] = scopes
             enriched["raw_payload"] = raw_payload
         events.append(enriched)
     rows_written = upsert_market_event_rows(events, host=host, user=user, password=password, port=port)
@@ -3070,6 +3131,370 @@ def collect_and_store_earnings_calendar(
         "superseded_rows_marked": superseded_rows_marked,
         "stale_rows_marked": stale_rows_marked,
         "collected_at": collected_at,
+    }
+
+
+def load_known_upcoming_earnings_symbols(
+    *,
+    lookahead_days: int = 45,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> list[str]:
+    """Read symbols with already-known active earnings inside the priority window."""
+    start_date = datetime.now(UTC).date()
+    end_date = start_date + timedelta(
+        days=max(1, int(lookahead_days or 45))
+    )
+    rows = load_market_event_calendar(
+        start_date=start_date.isoformat(),
+        end_date=end_date.isoformat(),
+        event_type="EARNINGS",
+        limit=5000,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+    return _normalize_symbol_list(
+        [row.get("symbol") for row in rows],
+        max_symbols=5000,
+    )
+
+
+def load_event_issuer_identity_map(
+    symbols: Sequence[Any],
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, dict[str, str]]:
+    """Resolve current SEC CIK identity evidence without fuzzy-name matching."""
+    normalized = _normalize_symbol_list(symbols, max_symbols=5000)
+    if not normalized:
+        return {}
+    placeholders = ",".join(["%s"] * len(normalized))
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        rows = db.query(
+            f"""
+            SELECT symbol, related_cik, name
+            FROM nyse_symbol_lifecycle
+            WHERE symbol IN ({placeholders})
+              AND source = %s
+              AND related_cik IS NOT NULL
+            ORDER BY symbol ASC, collected_at DESC
+            """,
+            [*normalized, "sec_company_tickers_exchange"],
+        )
+    finally:
+        db.close()
+    output: dict[str, dict[str, str]] = {}
+    for row in rows:
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if not symbol or symbol in output:
+            continue
+        try:
+            cik = str(int(row["related_cik"]))
+        except (KeyError, TypeError, ValueError):
+            continue
+        output[symbol] = {
+            "issuer_key": f"sec_cik:{cik}",
+            "issuer_name": str(row.get("name") or symbol),
+        }
+    return output
+
+
+def _mark_missing_earnings_symbols_stale(
+    symbols: Sequence[Any],
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> int:
+    normalized = _normalize_symbol_list(symbols, max_symbols=5000)
+    if not normalized:
+        return 0
+    placeholders = ",".join(["%s"] * len(normalized))
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        db.execute(
+            f"""
+            UPDATE market_event_calendar
+            SET event_status = %s
+            WHERE event_type = %s
+              AND source_type = %s
+              AND COALESCE(event_status, 'active') = %s
+              AND event_date >= %s
+              AND symbol IN ({placeholders})
+            """,
+            [
+                "stale",
+                "EARNINGS",
+                "provider_estimate",
+                "active",
+                datetime.now(UTC).date().isoformat(),
+                *normalized,
+            ],
+        )
+        return len(normalized)
+    finally:
+        db.close()
+
+
+def collect_and_store_overview_earnings_calendar(
+    *,
+    portfolio_symbols: Sequence[Any] = (),
+    watchlist_symbols: Sequence[Any] = (),
+    lookahead_days: int = 120,
+    known_event_days: int = 45,
+    major_cap_limit: int = 100,
+    shard_size: int = 100,
+    validate_with_nasdaq: bool = True,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+    major_cap_loader: Callable[[], list[dict[str, Any]]] | None = None,
+    sp500_loader: Callable[[], list[dict[str, Any]]] | None = None,
+    known_events_loader: Callable[[], list[str]] | None = None,
+    checkpoint_loader: Callable[[str], dict[str, Any] | None] | None = None,
+    checkpoint_writer: Callable[[dict[str, Any]], int] | None = None,
+    identity_loader: Callable[
+        [Sequence[Any]], dict[str, dict[str, str]]
+    ]
+    | None = None,
+    missing_stale_marker: Callable[[Sequence[Any]], Any] | None = None,
+    collector: Callable[..., dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Collect the daily priority set plus one persisted S&P 500 coverage shard."""
+    from finance.data.market_event_coverage import (
+        SUCCESS_DIAGNOSTIC_STATUSES,
+        apply_sp500_shard_result,
+        build_sp500_shard_plan,
+        merge_priority_earnings_symbols,
+    )
+
+    load_major = major_cap_loader or (
+        lambda: load_market_cap_universe_members(
+            "TOP1000",
+            universe_limit=major_cap_limit,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )[:major_cap_limit]
+    )
+    load_sp500 = sp500_loader or (
+        lambda: load_market_universe_members(
+            "SP500",
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    load_known = known_events_loader or (
+        lambda: load_known_upcoming_earnings_symbols(
+            lookahead_days=known_event_days,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    load_checkpoint = checkpoint_loader or (
+        lambda key: load_market_event_collection_coverage(
+            key,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    write_checkpoint = checkpoint_writer or (
+        lambda row: upsert_market_event_collection_coverage(
+            row,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    load_identity = identity_loader or (
+        lambda symbols: load_event_issuer_identity_map(
+            symbols,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    mark_missing_stale = missing_stale_marker or (
+        lambda symbols: _mark_missing_earnings_symbols_stale(
+            symbols,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    run_collector = collector or collect_and_store_earnings_calendar
+
+    sp500_symbols = [
+        row.get("symbol")
+        for row in load_sp500()
+        if isinstance(row, dict)
+    ]
+    sp500_checkpoint = load_checkpoint("earnings:sp500_cycle")
+    priority_checkpoint = load_checkpoint("earnings:priority_daily")
+    shard_plan = build_sp500_shard_plan(
+        sp500_symbols,
+        sp500_checkpoint,
+        batch_size=shard_size,
+    )
+    retry_symbols = list(
+        dict((sp500_checkpoint or {}).get("details") or {}).get(
+            "failed_symbols"
+        )
+        or []
+    )
+    major_cap_symbols = [
+        row.get("symbol")
+        for row in load_major()
+        if isinstance(row, dict)
+    ][:major_cap_limit]
+    known_event_symbols = load_known()
+    priority_symbols = merge_priority_earnings_symbols(
+        retry_symbols=retry_symbols,
+        portfolio_symbols=portfolio_symbols,
+        watchlist_symbols=watchlist_symbols,
+        major_cap_symbols=major_cap_symbols,
+        known_event_symbols=known_event_symbols,
+    )
+    target_symbols = merge_priority_earnings_symbols(
+        retry_symbols=priority_symbols,
+        major_cap_symbols=shard_plan["batch_symbols"],
+    )
+
+    scope_sources = (
+        ("portfolio", portfolio_symbols),
+        ("watchlist", watchlist_symbols),
+        ("major_cap", major_cap_symbols),
+        ("sp500", sp500_symbols),
+        ("known_event", known_event_symbols),
+    )
+    symbol_scope_map: dict[str, list[str]] = {}
+    target_set = set(target_symbols)
+    for scope, values in scope_sources:
+        for symbol in _normalize_symbol_list(values, max_symbols=5000):
+            if symbol in target_set:
+                symbol_scope_map.setdefault(symbol, []).append(scope)
+
+    issuer_identity_map = load_identity(target_symbols)
+    result = run_collector(
+        symbols=target_symbols,
+        symbol_source="manual",
+        lookahead_days=lookahead_days,
+        max_symbols=max(1, len(target_symbols)),
+        validate_with_nasdaq=validate_with_nasdaq,
+        symbol_scope_map=symbol_scope_map,
+        issuer_identity_map=issuer_identity_map,
+    )
+    collected_at = str(result.get("collected_at") or _timestamp_str())
+    diagnostic_by_symbol = {
+        str(row.get("symbol") or "").strip().upper(): dict(row)
+        for row in result.get("symbol_diagnostics") or []
+        if row.get("symbol")
+    }
+    diagnostics = []
+    for symbol in target_symbols:
+        diagnostics.append(
+            diagnostic_by_symbol.get(symbol)
+            or {
+                "symbol": symbol,
+                "status": "failed",
+                "reason": "missing_diagnostic",
+            }
+        )
+
+    coverage = apply_sp500_shard_result(
+        shard_plan,
+        diagnostics,
+        checked_at=collected_at,
+    )
+    write_checkpoint(coverage)
+
+    priority_set = set(priority_symbols)
+    priority_covered = sorted(
+        symbol
+        for symbol in priority_symbols
+        if str(
+            diagnostic_by_symbol.get(symbol, {}).get("status") or ""
+        ).lower()
+        in SUCCESS_DIAGNOSTIC_STATUSES
+    )
+    priority_failed = sorted(priority_set - set(priority_covered))
+    priority_status = (
+        "complete"
+        if priority_symbols and not priority_failed
+        else "partial" if priority_symbols else "pending"
+    )
+    priority_coverage = {
+        "coverage_key": "earnings:priority_daily",
+        "event_family": "earnings",
+        "universe_scope": "priority_daily",
+        "expected_items": len(priority_symbols),
+        "covered_items": len(priority_covered),
+        "failed_items": len(priority_failed),
+        "cursor_offset": 0,
+        "batch_size": max(1, len(priority_symbols)),
+        "coverage_status": priority_status,
+        "cycle_started_at": collected_at,
+        "cycle_completed_at": (
+            collected_at if priority_status == "complete" else None
+        ),
+        "last_attempted_at": collected_at,
+        "last_success_at": (
+            collected_at
+            if priority_status == "complete"
+            else (priority_checkpoint or {}).get("last_success_at")
+        ),
+        "details": {
+            "covered_symbols": priority_covered,
+            "failed_symbols": priority_failed,
+            "symbol_scopes": {
+                symbol: symbol_scope_map.get(symbol, [])
+                for symbol in priority_symbols
+            },
+        },
+    }
+    write_checkpoint(priority_coverage)
+
+    stale_symbols = sorted(
+        symbol
+        for symbol, streak in dict(
+            coverage.get("details", {}).get("missing_streaks") or {}
+        ).items()
+        if int(streak or 0) >= 2
+    )
+    if stale_symbols:
+        mark_missing_stale(stale_symbols)
+
+    return {
+        **result,
+        "priority_symbols": priority_symbols,
+        "shard_symbols": list(shard_plan["batch_symbols"]),
+        "target_symbols": target_symbols,
+        "symbol_scope_map": symbol_scope_map,
+        "coverage": coverage,
+        "priority_coverage": priority_coverage,
+        "missing_stale_symbols": stale_symbols,
     }
 
 

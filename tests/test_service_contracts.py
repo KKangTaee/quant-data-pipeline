@@ -29626,6 +29626,236 @@ END:VCALENDAR
         self.assertEqual(checkpoint["coverage_status"], "complete")
         self.assertEqual(checkpoint["details"]["failed_symbols"], [])
 
+    def test_overview_earnings_hybrid_includes_alphabet_and_updates_checkpoint(
+        self,
+    ) -> None:
+        from finance.data import market_intelligence as mi
+
+        captured: dict[str, object] = {}
+
+        def fake_collector(**kwargs):
+            captured.update(kwargs)
+            symbols = list(kwargs["symbols"])
+            return {
+                "rows_written": 2,
+                "events_found": 2,
+                "symbols_requested": len(symbols),
+                "symbols_processed": len(symbols),
+                "symbol_diagnostics": [
+                    {
+                        "symbol": symbol,
+                        "status": "event_found",
+                        "reason": "ok",
+                    }
+                    for symbol in symbols
+                ],
+                "failed_symbols": [],
+                "missing_symbols": [],
+                "collected_at": "2026-07-23 00:00:00",
+            }
+
+        checkpoints: list[dict[str, object]] = []
+        result = mi.collect_and_store_overview_earnings_calendar(
+            portfolio_symbols=["GOOGL"],
+            watchlist_symbols=["GOOG"],
+            major_cap_loader=lambda: [
+                {"symbol": "AAPL"},
+                {"symbol": "GOOG"},
+                {"symbol": "GOOGL"},
+            ],
+            sp500_loader=lambda: [
+                {"symbol": "GOOG"},
+                {"symbol": "GOOGL"},
+                {"symbol": "MSFT"},
+            ],
+            known_events_loader=lambda: ["NVDA"],
+            checkpoint_loader=lambda _key: None,
+            checkpoint_writer=lambda row: checkpoints.append(row) or 1,
+            identity_loader=lambda symbols: {
+                symbol: {
+                    "issuer_key": f"symbol:{symbol}",
+                    "issuer_name": symbol,
+                }
+                for symbol in symbols
+            },
+            collector=fake_collector,
+            shard_size=100,
+        )
+
+        self.assertIn("GOOG", captured["symbols"])
+        self.assertIn("GOOGL", captured["symbols"])
+        self.assertEqual(
+            len(captured["symbols"]),
+            len(set(captured["symbols"])),
+        )
+        self.assertEqual(
+            captured["symbol_scope_map"]["GOOG"],
+            ["watchlist", "major_cap", "sp500"],
+        )
+        self.assertEqual(
+            captured["symbol_scope_map"]["GOOGL"],
+            ["portfolio", "major_cap", "sp500"],
+        )
+        self.assertEqual(result["coverage"]["coverage_status"], "complete")
+        self.assertEqual(checkpoints[0]["coverage_key"], "earnings:sp500_cycle")
+        self.assertEqual(checkpoints[1]["coverage_key"], "earnings:priority_daily")
+
+    def test_earnings_rows_receive_shared_issuer_identity(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        captured_rows: list[dict[str, object]] = []
+        with (
+            patch.object(
+                mi,
+                "upsert_market_event_rows",
+                side_effect=lambda rows, **_: captured_rows.extend(rows) or len(rows),
+            ),
+            patch.object(
+                mi,
+                "mark_superseded_earnings_events",
+                return_value=0,
+            ),
+            patch.object(
+                mi,
+                "mark_stale_earnings_estimates",
+                return_value=0,
+            ),
+        ):
+            mi.collect_and_store_earnings_calendar(
+                symbols=["GOOG", "GOOGL"],
+                max_symbols=2,
+                issuer_identity_map={
+                    "GOOG": {
+                        "issuer_key": "sec_cik:1652044",
+                        "issuer_name": "Alphabet Inc.",
+                    },
+                    "GOOGL": {
+                        "issuer_key": "sec_cik:1652044",
+                        "issuer_name": "Alphabet Inc.",
+                    },
+                },
+                earnings_fetcher=lambda symbols, **_: {
+                    "events": [
+                        {
+                            "event_date": "2026-07-23",
+                            "event_type": "EARNINGS",
+                            "symbol": symbol,
+                            "title": f"{symbol} Earnings Release",
+                            "source": mi.EARNINGS_CALENDAR_SOURCE,
+                        }
+                        for symbol in symbols
+                    ],
+                    "symbol_diagnostics": [
+                        {
+                            "symbol": symbol,
+                            "status": "event_found",
+                            "reason": "ok",
+                        }
+                        for symbol in symbols
+                    ],
+                    "failed_symbols": [],
+                    "missing_symbols": [],
+                },
+            )
+
+        self.assertEqual(
+            {row["issuer_key"] for row in captured_rows},
+            {"sec_cik:1652044"},
+        )
+        self.assertEqual(
+            {row["issuer_name"] for row in captured_rows},
+            {"Alphabet Inc."},
+        )
+
+    def test_nasdaq_crosscheck_maps_after_hours_time_label(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        result = mi.fetch_yfinance_earnings_calendar_events(
+            ["GOOG"],
+            start_date="2026-07-20",
+            end_date="2026-07-25",
+            validate_with_nasdaq=True,
+            ticker_factory=lambda _symbol: type(
+                "Ticker",
+                (),
+                {"calendar": {"Earnings Date": [date(2026, 7, 22)]}},
+            )(),
+            nasdaq_fetcher=lambda _dates: {
+                "2026-07-22": {
+                    "symbols": ["GOOG"],
+                    "rows_by_symbol": {
+                        "GOOG": {"time": "After Hours"},
+                    },
+                    "status": "ok",
+                }
+            },
+        )
+
+        self.assertEqual(
+            result["events"][0]["event_time_label"],
+            "after_market",
+        )
+
+    def test_earnings_time_label_maps_pre_market_variant(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        self.assertEqual(
+            mi._normalize_earnings_time_label("Pre-Market"),  # noqa: SLF001
+            "before_market",
+        )
+
+    def test_hybrid_second_missing_check_marks_only_that_symbol_stale(
+        self,
+    ) -> None:
+        from finance.data import market_intelligence as mi
+        from finance.data.market_event_coverage import (
+            apply_sp500_shard_result,
+            build_sp500_shard_plan,
+        )
+
+        first_plan = build_sp500_shard_plan(
+            ["GOOG", "GOOGL"],
+            None,
+            batch_size=100,
+        )
+        prior = apply_sp500_shard_result(
+            first_plan,
+            [
+                {"symbol": "GOOG", "status": "event_found"},
+                {"symbol": "GOOGL", "status": "missing"},
+            ],
+            checked_at="2026-07-22 00:00:00",
+        )
+        marked: list[list[str]] = []
+
+        mi.collect_and_store_overview_earnings_calendar(
+            major_cap_loader=lambda: [],
+            sp500_loader=lambda: [
+                {"symbol": "GOOG"},
+                {"symbol": "GOOGL"},
+            ],
+            known_events_loader=lambda: [],
+            checkpoint_loader=lambda _key: prior,
+            checkpoint_writer=lambda _row: 1,
+            identity_loader=lambda _symbols: {},
+            missing_stale_marker=lambda symbols: marked.append(list(symbols)),
+            collector=lambda **_: {
+                "rows_written": 0,
+                "symbols_requested": 2,
+                "symbols_processed": 2,
+                "symbol_diagnostics": [
+                    {"symbol": "GOOG", "status": "event_found"},
+                    {"symbol": "GOOGL", "status": "missing"},
+                ],
+                "failed_symbols": [],
+                "missing_symbols": ["GOOGL"],
+                "collected_at": "2026-07-23 00:00:00",
+            },
+            shard_size=100,
+        )
+
+        self.assertEqual(marked, [["GOOGL"]])
+
     def test_market_intelligence_sync_includes_event_calendar_table(self) -> None:
         from finance.data import market_intelligence as mi
 
