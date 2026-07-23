@@ -34,7 +34,7 @@
 - Produces: `refresh_nyse_listing_universe(frames: Mapping[str, pd.DataFrame], *, snapshot_date: str | None = None, minimum_retention_ratio: float = 0.8, db_factory: Callable[..., MySQLClient] = MySQLClient, host: str = "localhost", user: str = "root", password: str = "1234", port: int = 3306) -> dict[str, Any]`
 - Produces: `load_nyse_listing_universe_status(...) -> dict[str, Any]`
 
-- [ ] **Step 1: Write failing source and atomic-writer tests**
+- [x] **Step 1: Write failing source and atomic-writer tests**
 
 Add tests that define the desired API:
 
@@ -89,7 +89,7 @@ def test_refresh_rolls_back_both_kinds_on_write_failure():
     assert db.rollback_count == 1
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run:
 
@@ -99,7 +99,7 @@ Run:
 
 Expected: FAIL because `fetch_nyse_listing_snapshot` and `refresh_nyse_listing_universe` do not exist.
 
-- [ ] **Step 3: Implement snapshot fetcher**
+- [x] **Step 3: Implement snapshot fetcher**
 
 In `finance/data/nyse.py`, extract the existing fetch/parse behavior:
 
@@ -116,7 +116,7 @@ def fetch_nyse_listing_snapshot(kind: str) -> tuple[pd.DataFrame, dict[str, int]
 
 Make `load_nyse_listings` call this function and preserve its optional CSV behavior.
 
-- [ ] **Step 4: Implement atomic writer and status loader**
+- [x] **Step 4: Implement atomic writer and status loader**
 
 In `finance/data/nyse_db.py`:
 
@@ -168,7 +168,7 @@ Add focused helpers for normalization, schema setup, symbol loading, retention v
 Add `load_nyse_listing_universe_status` that reads current counts plus the latest
 `nyse_listings_directory` lifecycle dates and returns `{status, kinds, latest_snapshot_date, message}` without mutating DB.
 
-- [ ] **Step 5: Run focused tests and verify GREEN**
+- [x] **Step 5: Run focused tests and verify GREEN**
 
 Run:
 
@@ -178,7 +178,7 @@ Run:
 
 Expected: all Task 1 tests PASS.
 
-- [ ] **Step 6: Commit Task 1**
+- [x] **Step 6: Commit Task 1**
 
 ```bash
 git add finance/data/nyse.py finance/data/nyse_db.py tests/test_nyse_listing_universe_refresh.py
@@ -204,7 +204,7 @@ git commit -m "기능: NYSE 종목 목록 원자적 최신화 구현"
 - Produces: `run_refresh_nyse_listing_universe(...) -> JobResult`
 - Produces action name: `refresh_nyse_listing_universe`
 
-- [ ] **Step 1: Write failing job and dispatch tests**
+- [x] **Step 1: Write failing job and dispatch tests**
 
 ```python
 def test_job_fetches_both_snapshots_before_writer():
@@ -256,7 +256,7 @@ def test_action_is_registered_guided_and_dispatched():
 
 Patch the dispatcher runner and assert the action forwards `snapshot_date` and the progress callback.
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run:
 
@@ -266,7 +266,7 @@ Run:
 
 Expected: new tests FAIL because the job/action contract is missing.
 
-- [ ] **Step 3: Implement job and action wiring**
+- [x] **Step 3: Implement job and action wiring**
 
 Add imports for the fetcher/writer and implement:
 
@@ -327,7 +327,7 @@ def run_refresh_nyse_listing_universe(
 Register the action as operational/stage progress, add the guide copy, import the runner in
 `dispatcher.py`, and dispatch it with `progress_callback`.
 
-- [ ] **Step 4: Run focused and ingestion contract tests**
+- [x] **Step 4: Run focused and ingestion contract tests**
 
 Run:
 
@@ -337,7 +337,7 @@ Run:
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Commit Task 2**
+- [x] **Step 5: Commit Task 2**
 
 ```bash
 git add app/jobs/ingestion_jobs.py app/web/ingestion/registry.py app/web/ingestion/dispatcher.py app/web/ingestion/guides.py tests/test_nyse_listing_universe_refresh.py
@@ -361,7 +361,7 @@ git commit -m "기능: Ingestion 종목 목록 최신화 작업 연결"
 - Consumes action: `refresh_nyse_listing_universe`
 - Produces: first operational action before `일별 가격 업데이트`
 
-- [ ] **Step 1: Write failing UI contract tests**
+- [x] **Step 1: Write failing UI contract tests**
 
 ```python
 def test_operational_section_places_universe_refresh_before_daily_price_update():
@@ -374,7 +374,7 @@ def test_operational_section_places_universe_refresh_before_daily_price_update()
     assert "load_nyse_listing_universe_status" in Path("app/web/ingestion/page.py").read_text(encoding="utf-8")
 ```
 
-- [ ] **Step 2: Run focused test and verify RED**
+- [x] **Step 2: Run focused test and verify RED**
 
 Run:
 
@@ -384,7 +384,7 @@ Run:
 
 Expected: UI placement test FAIL because the action is not rendered.
 
-- [ ] **Step 3: Implement compact action-first UI**
+- [x] **Step 3: Implement compact action-first UI**
 
 Import `load_nyse_listing_universe_status` in `page.py`. At the start of
 `render_operational_section`, before daily prices, render:
@@ -433,7 +433,7 @@ with st.expander("주식·ETF 종목 목록 최신화", expanded=True):
 
 Wire the standard progress callback while this action is running.
 
-- [ ] **Step 4: Run focused and ingestion contract tests**
+- [x] **Step 4: Run focused and ingestion contract tests**
 
 Run:
 
@@ -443,7 +443,7 @@ Run:
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Commit Task 3**
+- [x] **Step 5: Commit Task 3**
 
 ```bash
 git add app/web/ingestion/page.py app/web/ingestion/sections.py tests/test_nyse_listing_universe_refresh.py
@@ -471,7 +471,7 @@ git commit -m "개선: Ingestion 첫 화면에 종목 목록 최신화 배치"
 - Consumes: completed data/job/UI contract
 - Produces: durable source-of-truth docs and QA evidence
 
-- [ ] **Step 1: Run the focused test suite and static checks**
+- [x] **Step 1: Run the focused test suite and static checks**
 
 ```bash
 .venv/bin/python -m pytest tests/test_nyse_listing_universe_refresh.py tests/test_ingestion_module_split_contracts.py -q
@@ -481,7 +481,7 @@ git diff --check
 
 Expected: tests PASS, compilation exits 0, diff check emits no errors.
 
-- [ ] **Step 2: Execute the real refresh once**
+- [x] **Step 2: Execute the real refresh once**
 
 Run the job wrapper with the local DB and current NYSE API. Confirm:
 
@@ -491,7 +491,7 @@ Run the job wrapper with the local DB and current NYSE API. Confirm:
 - `NYSE Stocks + ETFs` symbol source contains a sample of newly added symbols
 - historical price row counts are not modified by the universe refresh
 
-- [ ] **Step 3: Update durable docs and task records**
+- [x] **Step 3: Update durable docs and task records**
 
 Document:
 
@@ -501,7 +501,7 @@ Document:
 - verification commands and actual added/removed counts
 - roadmap status `3/3 complete`
 
-- [ ] **Step 4: Run Browser QA**
+- [x] **Step 4: Run Browser QA**
 
 Open Workspace > Ingestion and capture one screenshot showing:
 
@@ -511,7 +511,7 @@ Open Workspace > Ingestion and capture one screenshot showing:
 
 Save the screenshot as local generated evidence and do not stage it.
 
-- [ ] **Step 5: Run final verification**
+- [x] **Step 5: Run final verification**
 
 ```bash
 .venv/bin/python -m pytest tests/test_nyse_listing_universe_refresh.py tests/test_ingestion_module_split_contracts.py -q
@@ -522,7 +522,7 @@ git status --short
 
 Expected: tests PASS, compilation exits 0, diff check clean, only intended source/docs/tests are staged or modified; generated/user artifacts remain unstaged.
 
-- [ ] **Step 6: Commit Task 4**
+- [x] **Step 6: Commit Task 4**
 
 ```bash
 git add finance/data/nyse.py finance/data/nyse_db.py app/jobs/ingestion_jobs.py app/web/ingestion/registry.py app/web/ingestion/dispatcher.py app/web/ingestion/guides.py app/web/ingestion/page.py app/web/ingestion/sections.py tests/test_nyse_listing_universe_refresh.py .aiworkspace/note/finance/docs .aiworkspace/note/finance/tasks/active/nyse-listing-universe-refresh-v1-20260723 .aiworkspace/note/finance/WORK_PROGRESS.md .aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md

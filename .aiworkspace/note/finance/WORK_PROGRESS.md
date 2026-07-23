@@ -10,6 +10,13 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-23 - NYSE 주식·ETF current universe 최신화 완료
+
+- 2026-05-31 master와 NYSE 공식 현재 목록 차이를 확인해 stock `+158/-126`, ETF `+372/-67`을 한 transaction으로 반영했다.
+- Data Operations 첫 action에서 기준일·종목 수를 확인하고 목록만 갱신하며, 실패·급감 시 기존 master와 과거 가격을 보존한다.
+- focused 19개 계약·compile/diff check와 1280·420px Browser QA를 통과했고 가격 이력 20,341,708행은 불변이었다.
+- 전체 roadmap `3/3차` 완료. 상세는 `tasks/active/nyse-listing-universe-refresh-v1-20260723/`를 본다.
+
 ### 2026-07-23 - sub-dev master 병합 충돌 해결
 
 - finance 문서 5개의 충돌을 수동 조정해 현재 브랜치의 Market Research·Futures 기록과 master의 Today·Backtest·Practical Validation·Final Review·Portfolio Monitoring 계약을 함께 보존했다.

@@ -1,7 +1,7 @@
 # Finance Data Map
 
 Status: Active
-Last Verified: 2026-07-20
+Last Verified: 2026-07-23
 
 ## Purpose
 
@@ -32,8 +32,8 @@ Last Verified: 2026-07-20
 
 | Table | Meaning |
 |---|---|
-| `nyse_stock` | NYSE stock listing master |
-| `nyse_etf` | NYSE ETF listing master |
+| `nyse_stock` | NYSE 공식 current stock listing master. Ingestion의 명시적 주식·ETF 목록 최신화가 `nyse_etf`와 함께 원자적으로 교체한다 |
+| `nyse_etf` | NYSE 공식 current ETF listing master. 전체 가격·자산 프로필 symbol source가 읽으며 과거 가격 이력과는 분리된다 |
 | `nyse_symbol_lifecycle` | symbol lifecycle / historical universe / delisting evidence table. SEC Form 25 collector가 official delisting evidence를 저장할 수 있다 |
 | `nyse_asset_profile` | stock / ETF profile and bridge metadata |
 | `equity_universe_snapshot` | Quality / Value strict family가 읽는 prebuilt monthly PIT-like equity universe snapshot header. V1은 DB price와 latest-known statement shares 기반 근사 market-cap universe다 |

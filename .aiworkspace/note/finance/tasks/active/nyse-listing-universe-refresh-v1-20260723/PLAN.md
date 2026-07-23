@@ -1,6 +1,6 @@
 # NYSE Listing Universe Refresh V1
 
-Status: Design approved
+Status: Complete
 Date: 2026-07-23
 
 ## 이걸 하는 이유?
@@ -28,7 +28,7 @@ symbol source로 사용한다. 두 master의 마지막 NYSE listing snapshot은 
 - 범위: NYSE collector/writer, ingestion job/dispatcher/registry, 단위·계약 테스트.
 - 완료 조건: 비정상 source 응답은 기존 master를 보존하고, 정상 snapshot은 current master를
   canonical replace하며 과거 가격과 lifecycle evidence를 삭제하지 않는다.
-- 상태: 대기.
+- 상태: 완료.
 
 ### 3차 — Ingestion 사용자 흐름과 QA
 
@@ -36,7 +36,7 @@ symbol source로 사용한다. 두 master의 마지막 NYSE listing snapshot은 
 - 범위: Ingestion `일상 운영 / 검증 데이터` 첫 action, 문서, Browser QA.
 - 완료 조건: 마지막 갱신 기준과 action이 보이고, 실행 후 최신 master가 후속 symbol source에
   반영되며 자동 테스트와 실제 화면 QA가 통과한다.
-- 상태: 대기.
+- 상태: 완료.
 
 ## 이번 작업 범위
 

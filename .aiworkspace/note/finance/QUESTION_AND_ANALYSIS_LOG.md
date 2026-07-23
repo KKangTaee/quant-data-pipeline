@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-23 - 전체 수집 전에 current listing master를 명시적으로 최신화한다
+
+- User request: 전체 종목 수집의 기준 ticker가 오래돼 최근 상장 ticker가 빠진 문제를 검토하고 사용자가 쉽게 최신화하도록 개발해 달라고 요청함.
+- Interpreted goal: 전체 가격·프로필 수집의 source를 최신 상태로 만들되 provider 장애나 목록 급감이 기존 master를 훼손하지 않고 가격 수집도 암묵적으로 시작하지 않아야 함.
+- Analysis result: 실제 기준은 `nyse_stock`·`nyse_etf`, 마지막 snapshot은 2026-05-31이었다. 독립 Ingestion action에서 두 공식 snapshot을 모두 검증한 뒤 atomic current-master replace와 lifecycle UPSERT를 수행하는 방식을 채택했다.
+- Follow-up: 2026-07-23 stock 6,770 / ETF 5,537로 갱신하고 가격 이력 불변, focused 회귀와 desktop/mobile Browser QA를 확인해 전체 `3/3차`를 완료했다.
+
 ### 2026-07-23 - sub-dev 병합은 Market Research와 master 제품 계약을 함께 보존한다
 
 - User request: `codex/sub-dev`에서 진행 중인 master 병합 충돌을 `finance-integration-review`로 해결하도록 요청함.

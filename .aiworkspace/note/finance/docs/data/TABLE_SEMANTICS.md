@@ -9,13 +9,20 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 역할:
 
-- 전체 universe의 listing master
+- 전체 universe의 current listing master
 
 성격:
 
-- 상대적으로 정적인 master data
+- 현재 상장 상태를 나타내는 교체 가능한 master data
 - source는 NYSE listing 수집 경로
 - 완전한 historical listing membership table은 아니다
+- `Workspace > Ingestion > 일상 운영 / 검증 데이터 > 주식·ETF 종목 목록 최신화`가
+  NYSE 공식 listings API의 두 snapshot을 모두 받은 뒤 한 transaction에서 함께 교체한다.
+- 정상 refresh에서 새 snapshot에 없는 row는 current master에서 제거하지만
+  `nyse_price_history`와 기존 `nyse_symbol_lifecycle` evidence는 삭제하지 않는다.
+- source 실패, 빈 snapshot, 기존 대비 80% 미만 급감이면 DB write 전에 중단하고 두 master를 유지한다.
+- 목록 최신화는 가격 수집을 자동 실행하지 않는다. 신규 ticker 가격이 필요하면
+  갱신 뒤 일별 가격 업데이트에서 해당 universe source를 명시적으로 실행한다.
 
 ## `nyse_symbol_lifecycle`
 
@@ -39,7 +46,9 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
   `resolution_status=candidate`는 Factor Readiness가 보여주는 검토 후보, `resolution_status=active`는 user-approved repair로서 가격 수집 ticker만 resolved symbol로 바꾸는 근거다.
   `confidence`는 identity 후보 점수이며, `evidence_json`은 `source_quality`, `review_note`, `evidence_factors`, `recommended_action` 같은 compact source evidence를 보존할 수 있다.
   Active repair를 읽은 price refresh plan은 `source_range`, `resolved_range`, `split_status`를 metadata-only PIT split contract로 노출할 수 있지만, source universe symbol을 자동 rewrite하거나 실제 old/new ticker price series stitching을 수행한다는 뜻은 아니다.
-- `finance/data/nyse_db.py`는 기존 NYSE listing CSV 적재 시 current snapshot row를 idempotent하게 UPSERT할 수 있다.
+- `finance/data/nyse_db.py`는 기존 NYSE listing CSV 적재와 주식·ETF 통합 current snapshot을
+  같은 master/lifecycle writer로 처리한다. 통합 refresh는 schema 준비 뒤 명시적 transaction에서
+  두 master UPSERT/canonical delete와 lifecycle UPSERT를 수행하며 실패 시 rollback한다.
 - `finance/data/symbol_directory.py`는 Nasdaq public Symbol Directory current files를 idempotent하게 UPSERT할 수 있다.
 - `finance/data/sec_company_tickers.py`는 SEC current CIK / ticker / exchange association을 idempotent하게 UPSERT할 수 있다.
 - `finance/data/sec_delisting.py`는 SEC EDGAR Form 25 / 25-NSE filing metadata를 idempotent하게 UPSERT할 수 있다.

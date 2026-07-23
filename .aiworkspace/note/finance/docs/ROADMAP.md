@@ -7,6 +7,13 @@ Last Verified: 2026-07-23
 
 현재 active phase는 없다.
 
+NYSE Listing Universe Refresh V1은 전체 `3/3차` 구현과 closeout을 완료했다.
+
+- 원천/저장: NYSE 공식 stock·ETF current snapshot을 모두 fetch/validate한 뒤 `nyse_stock`, `nyse_etf`, `nyse_symbol_lifecycle`을 한 transaction에서 갱신한다. source 실패·빈 응답·80% 미만 급감은 기존 master를 보존한다.
+- 실제 최신화: 2026-05-31 기준을 2026-07-23으로 갱신했고 stock `6,738→6,770(+158/-126)`, ETF `5,232→5,537(+372/-67)`을 반영했다. `nyse_price_history`는 20,341,708행으로 불변이었다.
+- UI/QA: Data Operations의 일상 운영 첫 action에서 기준일과 current counts를 보여주고 목록만 최신화한다. 결과는 종류별 증감과 다음 가격 수집 행동을 compact하게 안내하며 1280·420px overflow 0, console error 0을 확인했다.
+- 상세: `tasks/active/nyse-listing-universe-refresh-v1-20260723/STATUS.md`.
+
 Today U.S. Market Session Status V1도 전체 `3/3차` 구현과 closeout을 완료했다.
 
 - 화면: Today hero 아래에서 미국 정규장의 `개장 전 / 장 진행 중 / 정규장 마감 / 휴장 / 일정 자료 부족`, 뉴욕·한국 현재 시각, ET/KST 개장·마감, 다음 개장 또는 마감까지 countdown을 확인한다.
