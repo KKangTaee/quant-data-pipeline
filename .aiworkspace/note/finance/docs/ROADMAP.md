@@ -59,6 +59,13 @@ Portfolio Monitoring React Command Center V1은 전체 `6/6차` 구현과 closeo
 - 경계: provider direct fetch, live approval, broker order, account sync, auto rebalance는 없다. 조건부 확률은 현재 fingerprint의 검증 artifact가 READY일 때만 공개한다.
 - canonical docs: `docs/architecture/PORTFOLIO_MONITORING_REACT_COMMAND_CENTER.md`, `docs/data/PORTFOLIO_MONITORING_DATA_CONTRACT.md`, `docs/runbooks/PORTFOLIO_MONITORING_MIGRATION_AND_QA.md`.
 
+Portfolio Monitoring Latest Decision Lifecycle V1도 전체 `4/4차`를 완료했다.
+
+- 현재 자격: append-only Final Review 이력은 보존하고 후보별 최신 판단만 신규 `백테스트 전략` catalog와 기존 selected-strategy replay의 current truth로 사용한다.
+- 기존 항목: 최신 판단이 보류·제외·Level2 반환이면 삭제하지 않고 해당 item의 새 계산만 잠근다. `최신 판단 재확인`은 서버에서 latest source를 다시 확인해 Final Review로 이동하며 기존 `추적 종료`와 분리한다.
+- 재개/provenance: 같은 후보가 새 selected 판단을 받으면 기존 item은 최신 effective decision contract로 자동 재개하고, 과거 requested decision ID도 감사 근거로 보존한다.
+- QA: focused Python·React/typecheck/build와 actual 정상 Portfolio Monitoring route를 확인했고, actual registry에 superseded 후보가 없어 잠금 상태는 synthetic service/read-model/React 계약으로 검증했다.
+
 Portfolio Monitoring Position Events V1도 전체 `3/3차`를 완료했다.
 
 - 완료 범위: direct U.S. stock + fixed shares에 최초 수량 정정, 추가매수, 일부매도, revision 수정·취소를 추가했다. exact-date DB 종가를 기본 체결가로 쓰고 actual price override provenance를 보존한다.
@@ -972,6 +979,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 | Portfolio Monitoring Chart Zoom / Pan V1 | Implementation complete; Browser QA pending | Selected direct stock/ETF line/candle chart owns a client-only inclusive viewport over the existing latest 120 stored daily rows. Wheel/center controls zoom to 15 sessions, horizontal drag pans with edge clamp, reset restores the full range, and mobile remains controls-only. Desktop contribution/detail is 35:65 with a 280px list minimum, and selected chart price/VOL/date axes use 11px/700 labels. Python/DB/strategy/group-chart contracts are unchanged. Automated Python 102 / React 24 / typecheck/build/static distribution pass; actual desktop/900px/420px interaction/layout/overflow QA is pending because local Browser DOM access was policy-blocked. |
 | Portfolio Monitoring Chart Clarity / OHLCV V1 | Complete | Group value curve hides static point halos and shows 5 desktop / 3 mobile actual-observation date ticks. Selected direct stock/ETF detail reads the latest 120 stored daily OHLCV rows for close line or candle/volume exploration; selected strategy remains value-only. The route stays DB-only and Operations summary adds no detail read. |
 | Backtest Analysis Level1 Decision Workspace V1 | Complete | Fixed Level1 question, purpose-grouped Single catalog, Python-owned maturity/fingerprint/Gate/handler validation, decision-first result와 stale-result preservation을 완료했다. 7차에서 9개 Single choice / 12개 primary concrete variant를 schema-driven React settings로 통일했고 8차 modifier-free multi-select, 9차 deterministic named preset, 10~12차 result/holdings/factor presentation, 13~14차 공통 workflow shell/title ownership을 정리했다. 15차는 Portfolio Mix를 별도 four-step React one-shell로 전환해 2~4 component validation, existing compare runner/weighted builder, new-schema saved setup과 distinct Level2 handoff를 Python에 통합했다. legacy native/compare form과 prototype Mix row는 compatibility-only다. Strategy runtime, provider, DB schema, Level2 / Level3 route semantics는 변경하지 않았다. |
+| Backtest Level1 Price Refresh Handoff V1 | Complete | Single/Mix 공통 최신성 계약이 요청 종료일, 마지막 완료 NYSE 거래일과 DB 공통 최신일을 비교한다. 부족·provider gap·수집 후 재실행 전에는 저장/Level2 인계를 차단하고, 명시적 기존 OHLCV 최신화 뒤 참고 결과를 유지한 채 같은 설정 재실행으로만 Gate를 다시 연다. Mix 종목은 component 합집합으로 중복 제거한다. |
 | Overview Legacy Dashboard Removal V17-V24 | Complete | `app/web/overview/legacy_dashboard.py` was physically removed after remaining helper ownership moved into tab-local helper modules. `app/web/overview_dashboard.py` now keeps explicit compatibility exports only, while active page / tab / helper ownership lives under `app/web/overview/`. |
 | Overview Tab Helper Extraction V11-V16 | Complete | Market Context, Events, Futures Macro, Market Movers, and Sentiment primary tab entry modules now call tab-local helper bridges instead of importing `legacy_dashboard.py` directly. |
 | Overview Legacy Cleanup V6-V10 | Complete | Overview navigation moved to `app/web/overview/navigation.py`, IA read-model ownership moved to `app/services/overview/ia.py`, confirmed unused standalone wrappers / Candidate Ops helpers were removed, and guard tests prevent reintroduction. |
@@ -1070,7 +1078,7 @@ Parallel active follow-up:
 
 Latest completed task:
 
-- `today-contributor-performance-cards-v1-20260722` — Today의 기여 상위 2·하위 2를 현금흐름 조정 종목 수익률과 포트폴리오 누적 기여를 분리한 compact card로 정리하고 actual Browser QA를 포함한 전체 `4/4차`를 완료했다.
+- `today-contributor-coverage-layout-v1-20260723` — Today의 계산 가능한 EOD/live 종목 기여를 절대 영향도 순으로 모두 표시하고 coverage copy와 compact top-aligned `우선 확인` 배치를 적용했다. 전체 `2/2차`와 responsive Browser QA를 완료했다.
 
 Previous completed task:
 
@@ -1166,6 +1174,7 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 - 1차~4차 완료: root issue dedup, Level2 action handler Gate, GRS signal/valuation 기간 계약, static/dynamic survivorship policy, Final Review terminal-state snapshot, measured-only score impact.
 - current Final Review 후보 계약은 `unresolved_actionable=0`, `critical_engineering=0`, `missing_contract=0`을 요구한다.
 - 2026-07-16 observation freshness continuation 완료: Final Review가 stored curve end / latest completed session / source DB common date / limiting symbol을 구분하고, 자동 해결 가능한 stale 가격은 one-click price refresh → replay → 새 validation append로 갱신한다. 갱신 전에는 selected route만 차단하며 React는 intent/presentation만 소유한다.
+- 2026-07-22 liquidity copy 후속 완료: 내부 `proof_status`는 raw 측정 identity로 유지하고, Decision Brief가 유동성·운용 가능성 카드의 현황과 비교 기준을 사용자 문구로 투영한다. Gate, provider evidence, registry 계약은 변경하지 않았다.
 - 다음 승인 후보는 dynamic historical universe용 PIT membership / delisting provider이며, 도입 전에는 해당 후보를 defer/block한다.
 
 ## 2026-07-16 Practical Validation Level2 Decision Workspace V1
@@ -1188,3 +1197,12 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
   이동 가능 상태가 됐다. desktop / 760px Browser QA와 overflow 확인을 완료했다.
 - 구현/보정 커밋은 active task `STATUS.md`에 정리한다. historical universe PIT
   membership / delisting provider는 별도 승인 전 범위 밖 위험으로 유지한다.
+- 2026-07-22 보강 재검증 UX 후속을 완료했다. 외부 자료 보강 뒤 source별
+  `recheck_required` 상태와 부분 성공/실패 요약을 one-shell Step 2에 유지하고,
+  `보강된 데이터로 재검증 -> 새 결과 저장 -> Final Review`로 이어지는 CTA를
+  복구했다. collector / replay / Gate / append-only 저장 경계는 변경하지 않았다.
+- 2026-07-22 Final Review route 후속을 완료했다. 저장/이동 intent는 fragment
+  callback 선소비 대상에서 제외하고 full-app rerun으로 root route owner에
+  전달한다. stable `validation_id` 기준 중복 append를 막고 현재 Final Review
+  selector key를 함께 넘겨 한 번의 클릭으로 방금 인계한 후보를 연다. 기존
+  append-only 중복 행은 보존하고 Gate / replay / provider 의미는 바꾸지 않았다.

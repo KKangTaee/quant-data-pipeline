@@ -261,6 +261,20 @@ export function itemLifecycleLabel(item: Pick<ItemRow, "status">) {
   return "활성 추적";
 }
 
+export function decisionLifecyclePresentation(
+  item: Pick<ItemRow, "source_type" | "instrument_kind" | "decision_lifecycle">,
+) {
+  const lifecycle = item.decision_lifecycle;
+  const locked = item.source_type === "selected_strategy" && lifecycle?.locked === true;
+  return {
+    locked,
+    label: locked ? "추적 자격 변경" : "",
+    actionLabel: locked ? "최신 판단 재확인" : "",
+    routeLabel: lifecycle?.latest_route_label || "최신 판단 확인 필요",
+    message: lifecycle?.message || "Final Review에서 최신 판단을 다시 확인하세요.",
+  };
+}
+
 function finiteNumber(value: unknown): number | null {
   if (value == null || value === "") {
     return null;

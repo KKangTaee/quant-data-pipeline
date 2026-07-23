@@ -256,6 +256,8 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn('st.tabs(["후보 원본", "재검증 원본", "판정 원본"])', page_source)
         self.assertIn("replay_result=replay_result", render_body)
         self.assertIn("validation_result=validation_result", render_body)
+        self.assertIn("enrichment_progress=enrichment_progress", render_body)
+        self.assertIn("collection_results=collection_results", render_body)
         self.assertIn(
             "render_practical_validation_decision_workspace_fallback(",
             render_body,
@@ -289,6 +291,13 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
             1,
         )[1]
         self.assertIn('workspace.get("resolution_lanes")', fallback_body)
+        self.assertIn('workspace.get("enrichment_lifecycle")', fallback_body)
+        self.assertIn("lifecycle.get('headline')", fallback_body)
+        self.assertIn('lifecycle.get("next_action")', fallback_body)
+        self.assertLess(
+            fallback_body.index('workspace.get("enrichment_lifecycle")'),
+            fallback_body.index('st.markdown("#### 2. 최신 데이터 기준 재검증")'),
+        )
         self.assertNotIn(
             "is_practical_validation_fix_queue_available()",
             fallback_body,
@@ -636,6 +645,7 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
 
         for token in (
             "performance_summary",
+            "data_freshness_action",
             "strategy_series",
             "current_allocation",
             "target_allocation",
@@ -660,6 +670,12 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         ):
             self.assertIn(token, types)
         self.assertIn('emitIntent("save_and_move"', source)
+        self.assertIn('emitIntent(action.id', source)
+        self.assertIn("DataFreshnessActionCard", source)
+        self.assertLess(
+            source.index("<DataFreshnessActionCard"),
+            source.index("<PerformanceSummary"),
+        )
         self.assertIn("<svg", chart)
         self.assertIn("<title>", chart)
         self.assertIn("<desc>", chart)
@@ -679,6 +695,8 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn(".bt1r-workspace {", css)
         self.assertIn(".bt1r-chart-tooltip", css)
         self.assertIn(".bt1r-schedule-strip", css)
+        self.assertIn(".bt1r-freshness-card", css)
+        self.assertIn(".bt1r-freshness-metrics", css)
         self.assertIn("overflow-x: hidden", css)
         self.assertIn("min-width: 0", css)
         self.assertNotIn("benchmark_available", source)
@@ -695,6 +713,8 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         )
         self.assertIn("계산 및 데이터 기준", fallback)
         self.assertIn("next_window_label", fallback)
+        self.assertIn('workspace.get("data_freshness_action")', fallback)
+        self.assertIn("현재 공통 기준일", fallback)
         self.assertNotIn("build_next_step_readiness_evaluation", fallback)
 
     def test_result_route_hides_before_first_run_and_removes_legacy_expander(
@@ -1056,7 +1076,9 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn("run_compare_strategy", component)
         self.assertNotIn("build_weighted_portfolio_bundle", component)
         self.assertNotIn("save_saved_portfolio", component)
-        self.assertNotIn("configuration_fingerprint", component)
+        self.assertIn("current_configuration_fingerprint", component)
+        self.assertIn("workspace.configuration_fingerprint", component)
+        self.assertNotIn("build_portfolio_mix_fingerprint", component)
         self.assertNotIn("dangerouslySetInnerHTML", component)
 
     def test_react_settings_applies_python_owned_preset_profiles_without_strategy_rules(
@@ -1144,6 +1166,8 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("consume_single_settings_intent", source)
         self.assertIn("render_single_settings_fallback", source)
         self.assertIn("_handle_backtest_run", source)
+        self.assertIn('st.rerun(scope="app")', render_body)
+        self.assertNotIn('st.rerun(scope="fragment")', render_body)
         self.assertNotIn("from app.web.backtest_single_forms import", source)
         for legacy_renderer in (
             "_render_equal_weight_form",

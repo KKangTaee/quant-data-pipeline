@@ -6,6 +6,7 @@ from copy import deepcopy
 from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -503,6 +504,186 @@ def test_current_result_exposes_distinct_callable_save_and_handoff_actions():
     assert all(action["enabled"] is True for action in workspace["actions"])
 
 
+def test_mix_workspace_blocks_handoff_for_price_refresh_and_maps_rerun_to_run_mix():
+    module = _workspace_module()
+    draft = module.normalize_portfolio_mix_draft(
+        _valid_draft(),
+        runtime_options=_runtime_options(),
+    )
+    current_result = {
+        "run_result_id": "mix-run-current",
+        "configuration_fingerprint": module.build_portfolio_mix_fingerprint(
+            draft,
+            runtime_options=_runtime_options(),
+        ),
+    }
+    refresh_required = {
+        "state": "refresh_required",
+        "handoff_blocked": True,
+        "primary_action": {
+            "id": "refresh_prices",
+            "label": "종목 데이터 최신화",
+            "enabled": True,
+        },
+    }
+
+    refresh_workspace = module.build_portfolio_mix_workspace(
+        draft=draft,
+        current_result=current_result,
+        action_capabilities={
+            "run_mix": True,
+            "save_mix": True,
+            "handoff_level2": True,
+            "refresh_prices": True,
+        },
+        runtime_options=_runtime_options(),
+        price_freshness_action=refresh_required,
+    )
+    rerun_workspace = module.build_portfolio_mix_workspace(
+        draft=draft,
+        current_result=current_result,
+        action_capabilities={
+            "run_mix": True,
+            "save_mix": True,
+            "handoff_level2": True,
+            "refresh_prices": True,
+        },
+        runtime_options=_runtime_options(),
+        price_freshness_action={
+            "state": "rerun_required",
+            "handoff_blocked": True,
+            "primary_action": {
+                "id": "rerun_same_configuration",
+                "label": "같은 설정으로 다시 백테스트",
+                "enabled": True,
+            },
+        },
+    )
+
+    assert refresh_workspace["data_freshness_action"] == refresh_required
+    assert refresh_workspace["actions"] == []
+    assert refresh_workspace["execution_action"] is None
+    assert rerun_workspace["actions"] == []
+    assert rerun_workspace["data_freshness_action"]["primary_action"] == {
+        "id": "run_mix",
+        "label": "같은 설정으로 다시 백테스트",
+        "enabled": True,
+    }
+    assert rerun_workspace["execution_action"] == {
+        "id": "run_mix",
+        "label": "같은 설정으로 다시 백테스트",
+        "enabled": True,
+    }
+
+
+def test_mix_price_refresh_uses_deduplicated_component_union_without_running_mix():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    module = _workspace_module()
+    draft = _valid_draft()
+    fingerprint = module.build_portfolio_mix_fingerprint(
+        draft,
+        runtime_options=_runtime_options(),
+    )
+    session: dict[str, object] = {
+        adapter.MIX_SESSION_KEYS["draft"]: deepcopy(draft),
+        adapter.MIX_SESSION_KEYS["current_result"]: {
+            "run_result_id": "mix-run-current",
+            "configuration_fingerprint": fingerprint,
+        },
+        adapter.MIX_SESSION_KEYS["weighted_bundle"]: {
+            "meta": {"run_id": "mix-run-current", "tickers": ["SPY"]}
+        },
+        adapter.MIX_SESSION_KEYS["component_bundles"]: [
+            {
+                "meta": {
+                    "tickers": ["SPY", "TLT"],
+                    "cash_ticker": "BIL",
+                    "price_freshness": {
+                        "status": "warning",
+                        "details": {
+                            "common_latest_date": "2026-06-26",
+                            "refresh_symbols_all": ["SPY", "TLT", "BIL"],
+                            "stale_symbols_all": ["SPY", "TLT"],
+                            "missing_symbols_all": ["BIL"],
+                        },
+                    },
+                }
+            },
+            {
+                "meta": {
+                    "tickers": ["GLD", "SPY"],
+                    "price_freshness": {
+                        "status": "warning",
+                        "details": {
+                            "common_latest_date": "2026-06-30",
+                            "refresh_symbols_all": ["GLD", "SPY"],
+                            "stale_symbols_all": ["GLD", "SPY"],
+                        },
+                    },
+                }
+            },
+        ],
+    }
+    runner_calls: list[dict[str, object]] = []
+
+    response = adapter.refresh_current_portfolio_mix_prices(
+        {
+            "run_result_id": "mix-run-current",
+            "current_configuration_fingerprint": fingerprint,
+        },
+        session_state=session,
+        plan_builder=lambda meta: {
+            "eligible": True,
+            "status": "refresh_available",
+        },
+        refresh_runner=lambda meta: runner_calls.append(dict(meta))
+        or {
+            "status": "success",
+            "rows_written": 20,
+            "details": {"post_refresh_unresolved_symbols": []},
+        },
+    )
+
+    assert response["accepted"] is True
+    assert len(runner_calls) == 1
+    assert runner_calls[0]["tickers"] == ["SPY", "TLT", "BIL", "GLD"]
+    assert runner_calls[0]["end"] == "2026-07-19"
+    assert session[adapter.MIX_SESSION_KEYS["price_refresh_result"]][
+        "rows_written"
+    ] == 20
+    assert adapter.MIX_SESSION_KEYS["component_states"] not in session
+
+
+def test_mix_price_refresh_rejects_stale_result_identity_before_runner():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    module = _workspace_module()
+    draft = _valid_draft()
+    fingerprint = module.build_portfolio_mix_fingerprint(
+        draft,
+        runtime_options=_runtime_options(),
+    )
+    session: dict[str, object] = {
+        adapter.MIX_SESSION_KEYS["draft"]: deepcopy(draft),
+        adapter.MIX_SESSION_KEYS["current_result"]: {
+            "run_result_id": "mix-run-current",
+            "configuration_fingerprint": fingerprint,
+        },
+    }
+    calls: list[object] = []
+
+    response = adapter.refresh_current_portfolio_mix_prices(
+        {
+            "run_result_id": "mix-run-old",
+            "current_configuration_fingerprint": fingerprint,
+        },
+        session_state=session,
+        refresh_runner=lambda meta: calls.append(meta),
+    )
+
+    assert response == {"accepted": False, "reason": "run_identity_mismatch"}
+    assert calls == []
+
+
 def _intent(action: str, intent_id: str, **payload: object) -> dict[str, object]:
     return {
         "event": {
@@ -696,6 +877,62 @@ def test_mix_fallback_model_uses_same_four_step_read_model():
     assert fallback["actions"] == workspace["actions"]
 
 
+def test_mix_fallback_emits_refresh_action_with_current_result_identity():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    module = _workspace_module()
+    draft = module.normalize_portfolio_mix_draft(
+        _valid_draft(),
+        runtime_options=_runtime_options(),
+    )
+    fingerprint = module.build_portfolio_mix_fingerprint(
+        draft,
+        runtime_options=_runtime_options(),
+    )
+    workspace = module.build_portfolio_mix_workspace(
+        draft=draft,
+        current_result={
+            "run_result_id": "mix-run-current",
+            "configuration_fingerprint": fingerprint,
+        },
+        action_capabilities={
+            "run_mix": True,
+            "save_mix": True,
+            "handoff_level2": True,
+            "refresh_prices": True,
+        },
+        runtime_options=_runtime_options(),
+        price_freshness_action={
+            "state": "refresh_required",
+            "requested_end": "2026-07-22",
+            "target_trading_end": "2026-07-21",
+            "current_common_latest": "2026-06-26",
+            "affected_symbol_count": 2,
+            "affected_symbol_sample": ["SPY", "TLT"],
+            "summary": "요청 종료일 기준 데이터가 부족합니다.",
+            "guidance": "가격을 최신화한 뒤 다시 실행하세요.",
+            "handoff_blocked": True,
+            "primary_action": {
+                "id": "refresh_prices",
+                "label": "종목 데이터 최신화",
+                "enabled": True,
+            },
+            "feedback": None,
+        },
+    )
+    workspace["mode"] = "new"
+    fake_streamlit = MagicMock()
+    fake_streamlit.button.return_value = True
+
+    with patch.object(adapter, "st", fake_streamlit):
+        intent = adapter.render_backtest_portfolio_mix_workspace_fallback(workspace)
+
+    assert intent["event"]["id"] == "refresh_prices"
+    assert intent["event"]["payload"] == {
+        "run_result_id": "mix-run-current",
+        "current_configuration_fingerprint": fingerprint,
+    }
+
+
 def test_mix_mode_survives_rerun_through_python_session_read_model():
     adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
     session: dict[str, object] = {
@@ -827,6 +1064,97 @@ def test_failed_mix_run_preserves_previous_current_result_and_bundles():
     assert session[adapter.MIX_SESSION_KEYS["component_states"]]["component-equal"][
         "status"
     ] == "error"
+
+
+def test_successful_explicit_mix_rerun_clears_price_refresh_reference():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    session: dict[str, object] = {
+        adapter.MIX_SESSION_KEYS["draft"]: _valid_draft(),
+        adapter.MIX_SESSION_KEYS["price_refresh_result"]: {
+            "status": "success",
+            "rows_written": 12,
+        },
+    }
+
+    response = adapter.run_current_portfolio_mix(
+        session_state=session,
+        runtime_options=_runtime_options(),
+        run_component=lambda **kwargs: {
+            "strategy_name": kwargs["strategy_name"],
+            "meta": {"run_id": f"run-{kwargs['strategy_name']}"},
+        },
+        weighted_builder=lambda **kwargs: {
+            "strategy_name": "Weighted Portfolio",
+            "meta": {"run_id": "mix-run-new"},
+        },
+        history_appender=lambda **kwargs: None,
+    )
+
+    assert response["accepted"] is True
+    assert session[adapter.MIX_SESSION_KEYS["price_refresh_result"]] is None
+
+
+def test_zero_row_unresolved_mix_refresh_blocks_retry_and_handoff():
+    adapter = importlib.import_module("app.web.backtest_portfolio_mix_workspace")
+    module = _workspace_module()
+    draft = _valid_draft()
+    fingerprint = module.build_portfolio_mix_fingerprint(
+        draft,
+        runtime_options=_runtime_options(),
+    )
+    session: dict[str, object] = {
+        adapter.MIX_SESSION_KEYS["draft"]: deepcopy(draft),
+        adapter.MIX_SESSION_KEYS["current_result"]: {
+            "run_result_id": "mix-run-current",
+            "configuration_fingerprint": fingerprint,
+        },
+        adapter.MIX_SESSION_KEYS["weighted_bundle"]: {
+            "meta": {"run_id": "mix-run-current", "tickers": ["SPY"]}
+        },
+        adapter.MIX_SESSION_KEYS["component_bundles"]: [
+            {
+                "meta": {
+                    "tickers": ["SPY"],
+                    "price_freshness": {
+                        "status": "warning",
+                        "details": {
+                            "common_latest_date": "2026-06-26",
+                            "refresh_symbols_all": ["SPY"],
+                            "stale_symbols_all": ["SPY"],
+                        },
+                    },
+                }
+            }
+        ],
+        adapter.MIX_SESSION_KEYS["price_refresh_result"]: {
+            "status": "success",
+            "rows_written": 0,
+            "details": {"post_refresh_unresolved_symbols": ["SPY"]},
+        },
+    }
+
+    workspace = adapter.build_portfolio_mix_workspace_from_session(
+        session_state=session,
+        runtime_options=_runtime_options(),
+        action_capabilities={
+            "run_mix": True,
+            "save_mix": True,
+            "handoff_level2": True,
+            "refresh_prices": True,
+        },
+        price_refresh_plan_builder=lambda meta: {
+            "eligible": True,
+            "status": "refresh_available",
+            "target_end": "2026-07-17",
+            "current_common_latest": "2026-06-26",
+            "source_tickers": ["SPY"],
+        },
+    )
+
+    assert workspace["data_freshness_action"]["state"] == "provider_gap"
+    assert workspace["data_freshness_action"]["primary_action"] is None
+    assert workspace["actions"] == []
+    assert workspace["execution_action"] is None
 
 
 def test_runtime_intents_require_and_call_distinct_python_handlers_once():
@@ -1022,6 +1350,9 @@ def test_mix_result_react_visual_contract_owns_charts_hover_and_disclosure():
     ).read_text()
 
     assert "PortfolioMixResult" in app_source
+    assert "data_freshness_action" in app_source
+    assert "MixDataFreshnessAction" in app_source
+    assert 'emit("refresh_prices"' in app_source
     assert "equity_chart" in result_source
     assert "monthly_returns" in result_source
     assert "onPointerMove" in result_source
@@ -1032,6 +1363,8 @@ def test_mix_result_react_visual_contract_owns_charts_hover_and_disclosure():
     assert "상세 결과 근거" in result_source
     assert "component_summary" in result_source
     assert "mix-result-shell" in styles_source
+    assert "mix-freshness-card" in styles_source
+    assert "mix-freshness-metrics" in styles_source
     assert "mix-result-stack" in styles_source
     assert "mix-chart-grid" in styles_source
     assert "mix-chart-tooltip" in styles_source

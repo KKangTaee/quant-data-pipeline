@@ -5,6 +5,7 @@ from typing import Any, Callable, Iterable
 
 from finance.data.db.mysql import MySQLClient
 
+from .decision_lifecycle import latest_final_decision_rows
 from .schemas import SourceType
 
 
@@ -160,7 +161,7 @@ def list_monitoring_candidates(
 
     load = decision_loader or _default_decision_loader
     results: list[CatalogItem] = []
-    for source in load():
+    for source in latest_final_decision_rows(load()):
         row = dict(source or {})
         decision_id = str(row.get("decision_id") or "").strip()
         if row.get("monitoring_candidate") is not True or not decision_id:

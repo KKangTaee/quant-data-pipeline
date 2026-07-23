@@ -88,6 +88,14 @@ FLOW4_CRITERIA_GROUP_HINTS = (
     "Conditional Evidence",
 )
 
+_PRACTICAL_VALIDATION_FRAGMENT_CALLBACK_ACTIONS = frozenset(
+    {
+        "run_replay",
+        "select_recheck_mode",
+        "run_resolution_action",
+    }
+)
+
 
 def _diagnostic_explanation(diagnostic: dict[str, Any]) -> str:
     domain = str(diagnostic.get("domain") or "").strip()
@@ -824,13 +832,52 @@ def _enrichment_progress_state_key(source_id: str) -> str:
     return f"practical_validation_enrichment_progress_{source_id or 'source'}"
 
 
+def _practical_validation_notice(
+    tone: str,
+    title: str,
+    detail: str = "",
+) -> dict[str, str]:
+    """Build semantic feedback that survives a Streamlit rerun."""
+
+    normalized_tone = str(tone or "info").strip().lower()
+    if normalized_tone not in {"success", "warning", "error", "info"}:
+        normalized_tone = "info"
+    return {
+        "tone": normalized_tone,
+        "title": str(title or "").strip(),
+        "detail": str(detail or "").strip(),
+    }
+
+
+def _render_practical_validation_notice(notice: Any) -> None:
+    """Render structured feedback without treating every state as success."""
+
+    if isinstance(notice, dict):
+        payload = dict(notice)
+        tone = str(payload.get("tone") or "info").strip().lower()
+        title = str(payload.get("title") or "").strip()
+        detail = str(payload.get("detail") or "").strip()
+        message = " ".join(part for part in (title, detail) if part)
+    else:
+        tone = "info"
+        message = str(notice or "").strip()
+    renderer = {
+        "success": st.success,
+        "warning": st.warning,
+        "error": st.error,
+        "info": st.info,
+    }.get(tone, st.info)
+    if message:
+        renderer(message)
+
+
 def _complete_provider_gap_collection(
     validation_result: dict[str, Any],
     results: list[dict[str, Any]],
     *,
     origin: str,
 ) -> None:
-    """Record collection output and require a fresh Flow 2 replay for every entry path."""
+    """Record collection output and require a fresh replay for every entry path."""
 
     source_id = str(validation_result.get("selection_source_id") or "source").strip() or "source"
     st.session_state[provider_gap_state_key(validation_result)] = list(results or [])
@@ -844,8 +891,12 @@ def _complete_provider_gap_collection(
     }
     st.session_state.pop("backtest_practical_validation_data_enrichment_handoff", None)
     st.session_state["backtest_practical_validation_notice"] = (
-        f"외부 데이터 보강 작업 {len(results or [])}개를 실행했습니다. "
-        "기존 재검증 결과를 초기화했으므로 Flow 2에서 전략 재검증을 다시 실행하세요."
+        _practical_validation_notice(
+            "warning",
+            "자료 보강을 실행했습니다",
+            f"외부 데이터 작업 {len(results or [])}개를 실행했습니다. "
+            "기존 재검증 결과를 초기화했으므로 보강된 데이터로 재검증하세요.",
+        )
     )
 
 
@@ -864,7 +915,7 @@ def _execute_practical_validation_provider_gap_collection(
 
 
 def _has_current_session_replay_result(replay_result: Any) -> bool:
-    """Return True only after the user has attempted Flow 2 replay in this session."""
+    """Return True only after the user has attempted replay in this session."""
 
     if not isinstance(replay_result, dict) or not replay_result:
         return False
@@ -2745,6 +2796,9 @@ def _consume_practical_validation_next_stage_action(
     st.session_state["final_review_practical_validation_notice"] = handoff.notice
     st.session_state["final_review_source_selected"] = validation_key
     st.session_state["final_review_confirmed_candidate_key"] = validation_key
+    st.session_state[
+        "final_review_active_decision_brief_source_id"
+    ] = validation_key
     source_id = str(validation_result.get("selection_source_id") or "source").strip() or "source"
     st.session_state.pop(_enrichment_progress_state_key(source_id), None)
     st.session_state["backtest_requested_panel"] = handoff.requested_panel
@@ -2867,7 +2921,7 @@ def _render_practical_validation_decision_workspace_fragment(
 
     notice = st.session_state.pop("backtest_practical_validation_notice", None)
     if notice:
-        st.success(str(notice))
+        _render_practical_validation_notice(notice)
 
     selected_source_id = str(source.get("selection_source_id") or "")
     replay_result: dict[str, Any] | None = None
@@ -2900,6 +2954,23 @@ def _render_practical_validation_decision_workspace_fragment(
                 )
             )
 
+    enrichment_progress = dict(
+        st.session_state.get(
+            _enrichment_progress_state_key(selected_source_id)
+        )
+        or {}
+    )
+    collection_result_value = st.session_state.get(
+        provider_gap_state_key(
+            {"selection_source_id": selected_source_id}
+        )
+    )
+    collection_results = (
+        [dict(row) for row in collection_result_value if isinstance(row, dict)]
+        if isinstance(collection_result_value, list)
+        else []
+    )
+
     workspace_model = build_practical_validation_decision_workspace(
         source=source,
         validation_profile=validation_profile,
@@ -2907,6 +2978,8 @@ def _render_practical_validation_decision_workspace_fragment(
         validation_result=validation_result,
         source_options=selectable_sources,
         recheck_mode=replay_mode,
+        enrichment_progress=enrichment_progress,
+        collection_results=collection_results,
     )
 
     component_key = (
@@ -2921,13 +2994,7 @@ def _render_practical_validation_decision_workspace_fragment(
             on_change=partial(
                 _consume_practical_validation_component_change,
                 component_key=component_key,
-                allowed_actions={
-                    "run_replay",
-                    "select_recheck_mode",
-                    "run_resolution_action",
-                    "save_audit_only",
-                    "save_and_move",
-                },
+                allowed_actions=_PRACTICAL_VALIDATION_FRAGMENT_CALLBACK_ACTIONS,
                 sources=selectable_sources,
                 source=source,
                 validation_result=validation_result,

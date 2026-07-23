@@ -43,6 +43,19 @@ type CatalogItem = {
 }
 type Action = { id: string; label: string; enabled: boolean }
 type CurrentResult = Record<string, unknown> & { evidence?: MixResultEvidence }
+type MixDataFreshnessAction = {
+  state: "current" | "refresh_required" | "provider_gap" | "rerun_required"
+  requested_end?: string | null
+  target_trading_end?: string | null
+  current_common_latest?: string | null
+  affected_symbol_count: number
+  affected_symbol_sample: string[]
+  summary: string
+  guidance: string
+  handoff_blocked: boolean
+  primary_action: Action | null
+  feedback?: string | null
+}
 
 export type PortfolioMixWorkspace = {
   schema_version: string
@@ -57,6 +70,8 @@ export type PortfolioMixWorkspace = {
   validation: { valid: boolean; errors: Record<string, string>; issues: Array<{ root_issue_id: string; message: string }> }
   saved_mix: { rows: Array<{ id: string; name: string; saved_at: string; component_count: number; component_summary: string }>; empty: boolean }
   result: { status: "not_run" | "current" | "stale"; current: CurrentResult | null; reference: Record<string, unknown> | null }
+  configuration_fingerprint: string
+  data_freshness_action?: MixDataFreshnessAction | Record<string, never>
   execution_action: Action | null
   actions: Action[]
   feedback?: { notice?: string; error?: { message?: string } | null }
@@ -68,6 +83,34 @@ function emit(id: string, payload: Record<string, unknown> = {}) {
   Streamlit.setComponentValue({
     event: { id, intent_id: `${id}-${Date.now()}-${Math.random()}`, payload },
   })
+}
+
+function MixDataFreshnessAction({ workspace }: { workspace: PortfolioMixWorkspace }) {
+  const freshness = workspace.data_freshness_action
+  if (!freshness || !("state" in freshness) || freshness.state === "current") return null
+  const action = freshness.primary_action
+  const currentRunId = String(workspace.result.current?.run_result_id ?? "")
+  const identityPayload = {
+    run_result_id: currentRunId,
+    current_configuration_fingerprint: workspace.configuration_fingerprint,
+  }
+  const send = () => {
+    if (action?.id === "refresh_prices") emit("refresh_prices", identityPayload)
+    else if (action?.id === "run_mix") emit("run_mix", identityPayload)
+  }
+  return (
+    <article className={`mix-freshness-card is-${freshness.state}`} role={freshness.state === "provider_gap" ? "alert" : "status"}>
+      <div><small>요청 종료일과 가격 데이터 확인</small><h3>{freshness.summary}</h3><p>{freshness.guidance}</p>{freshness.feedback && <span>{freshness.feedback}</span>}</div>
+      <dl className="mix-freshness-metrics">
+        <div><dt>요청 종료일</dt><dd>{freshness.requested_end || "-"}</dd></div>
+        <div><dt>목표 거래일</dt><dd>{freshness.target_trading_end || "-"}</dd></div>
+        <div><dt>현재 공통 기준일</dt><dd>{freshness.current_common_latest || "-"}</dd></div>
+        <div><dt>최신화 대상</dt><dd>{freshness.affected_symbol_count}개</dd></div>
+      </dl>
+      {freshness.affected_symbol_sample.length > 0 && <p className="mix-freshness-symbols">대상 예시 · {freshness.affected_symbol_sample.join(", ")}</p>}
+      {action && <button type="button" className="mix-primary" disabled={!action.enabled} onClick={send}>{action.label}</button>}
+    </article>
+  )
 }
 
 function StepHeading({ number, title, copy }: { number: number; title: string; copy: string }) {
@@ -240,6 +283,11 @@ function App({ workspace }: { workspace: PortfolioMixWorkspace }) {
   const selected = new Set(workspace.component_cards.map((card) => card.strategy_choice))
   const shared = workspace.draft.shared
   const chooseMode = (next: "new" | "saved") => emit("set_mode", { value: next })
+  const freshnessBlocked = Boolean(
+    workspace.data_freshness_action
+    && "state" in workspace.data_freshness_action
+    && workspace.data_freshness_action.state !== "current",
+  )
   return (
     <main className="mix-workspace">
       <header className="mix-hero"><p className="mix-kicker">PORTFOLIO MIX DECISION WORKSPACE</p><h1>서로 다른 전략을 어떤 역할과 비중으로 함께 운용할까요?</h1><p>구성별 설정을 검증하고 같은 기간으로 실행한 뒤, Mix 전체를 하나의 Level1 후보로 판단합니다.</p></header>
@@ -268,8 +316,9 @@ function App({ workspace }: { workspace: PortfolioMixWorkspace }) {
 
       <section className="mix-step">
         <StepHeading number={3} title="Mix 실행과 해석" copy="구성 전략을 같은 조건으로 계산한 뒤 Mix 전체 결과를 확인합니다." />
-        {workspace.execution_action?.enabled && <button type="button" className="mix-primary" onClick={() => emit("run_mix")}>{workspace.execution_action.label}</button>}
+        {workspace.execution_action?.enabled && !freshnessBlocked && <button type="button" className="mix-primary" onClick={() => emit("run_mix")}>{workspace.execution_action.label}</button>}
         <div className="mix-result-shell">
+          <MixDataFreshnessAction workspace={workspace} />
           {workspace.result.status === "not_run" && <p className="mix-empty">설정을 완료한 뒤 실행하면 결과 해석이 이곳에 나타납니다.</p>}
           {workspace.result.status === "stale" && <div className="mix-reference"><strong>참고용 이전 결과</strong><p>현재 설정과 다르므로 다시 실행해야 저장하거나 Level2로 넘길 수 있습니다.</p></div>}
           {workspace.feedback?.error?.message && <p className="mix-error" role="alert">{workspace.feedback.error.message}</p>}

@@ -29,6 +29,7 @@ import {
   partitionItemRows,
   placeChartTooltip,
   itemLifecycleLabel,
+  decisionLifecyclePresentation,
   zoomMarketChartViewport,
 } from "./workbenchState";
 
@@ -80,8 +81,8 @@ const activeGroup = {
   },
   failures: {},
   item_rows: [
-    { monitoring_item_id: "a", source_ref: "AAPL", status: "active", lane_status: "active", initial_capital: 10000, current_value: 10500, failure: null },
-    { monitoring_item_id: "ended", source_ref: "OLD", status: "ended", lane_status: "ended", initial_capital: 10000, current_value: 9800, failure: null },
+    { monitoring_item_id: "a", source_type: "direct_security", instrument_kind: "stock", source_ref: "AAPL", status: "active", lane_status: "active", initial_capital: 10000, current_value: 10500, decision_lifecycle: {}, failure: null },
+    { monitoring_item_id: "ended", source_type: "direct_security", instrument_kind: "stock", source_ref: "OLD", status: "ended", lane_status: "ended", initial_capital: 10000, current_value: 9800, decision_lifecycle: {}, failure: null },
   ],
   active_item_count: 1,
   history_item_count: 2,
@@ -154,6 +155,26 @@ describe("portfolio monitoring workbench state", () => {
     expect(itemLifecycleLabel(sections.active[0])).toBe("활성 추적");
     expect(itemLifecycleLabel(sections.ended[0])).toBe("종료 기록");
     expect(itemLifecycleLabel({ ...sections.active[0], status: "data_review" })).toBe("확인 필요");
+  });
+
+  it("presents a locked latest-decision lifecycle", () => {
+    const view = decisionLifecyclePresentation({
+      ...activeGroup.item_rows[0],
+      source_type: "selected_strategy",
+      instrument_kind: "strategy",
+      decision_lifecycle: {
+        state: "TRACKING_ELIGIBILITY_CHANGED",
+        locked: true,
+        latest_route: "HOLD_FOR_MORE_PAPER_TRACKING",
+        latest_route_label: "관찰 후 재검토",
+        latest_source_id: "validation-new-hold",
+        message: "최신 판단이 변경되어 새 계산을 잠갔습니다.",
+      },
+    });
+
+    expect(view.locked).toBe(true);
+    expect(view.label).toBe("추적 자격 변경");
+    expect(view.actionLabel).toBe("최신 판단 재확인");
   });
 
   it("describes the common basis and partial state explicitly", () => {

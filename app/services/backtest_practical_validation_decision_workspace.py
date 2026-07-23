@@ -19,6 +19,9 @@ from app.services.backtest_practical_validation_replay import (
     RECHECK_MODE_LABELS,
     RECHECK_MODE_STORED_PERIOD,
 )
+from app.services.backtest_practical_validation_workspace import (
+    build_practical_validation_recovery_progress,
+)
 
 
 PRACTICAL_VALIDATION_DECISION_WORKSPACE_SCHEMA_VERSION = (
@@ -62,6 +65,58 @@ _SOURCE_KIND_LABELS = {
 
 def _dict_rows(value: Any) -> list[dict[str, Any]]:
     return [dict(row) for row in list(value or []) if isinstance(row, dict)]
+
+
+def summarize_provider_collection_results(
+    results: list[dict[str, Any]] | None,
+) -> dict[str, Any]:
+    """Summarize collector outcomes without treating unknown states as success."""
+
+    success_statuses = {"SUCCESS", "PASS", "OK", "COMPLETED"}
+    review_statuses = {"PARTIAL", "REVIEW", "WARNING"}
+    failure_statuses = {"FAILED", "FAILURE", "ERROR", "BLOCKED"}
+    counts = {"success_count": 0, "review_count": 0, "failure_count": 0}
+    areas: set[str] = set()
+    rows = _dict_rows(results)
+    for row in rows:
+        status = str(row.get("status") or "").strip().upper()
+        if status in success_statuses:
+            counts["success_count"] += 1
+        elif status in failure_statuses:
+            counts["failure_count"] += 1
+        elif status in review_statuses or status:
+            counts["review_count"] += 1
+        else:
+            counts["review_count"] += 1
+        metadata = dict(row.get("run_metadata") or {})
+        input_params = dict(metadata.get("input_params") or {})
+        area = str(
+            input_params.get("provider_area")
+            or row.get("provider_area")
+            or ""
+        ).strip()
+        if area:
+            areas.add(area)
+
+    if counts["failure_count"]:
+        outcome_label = "실패 항목 확인 필요"
+        tone = "danger"
+    elif counts["review_count"]:
+        outcome_label = "일부 결과 확인 필요"
+        tone = "warning"
+    elif counts["success_count"]:
+        outcome_label = "자료 보강 완료"
+        tone = "positive"
+    else:
+        outcome_label = "수집 결과 없음"
+        tone = "neutral"
+    return {
+        "total_count": len(rows),
+        **counts,
+        "areas": sorted(areas),
+        "outcome_label": outcome_label,
+        "tone": tone,
+    }
 
 
 def _audit_rows(
@@ -780,6 +835,8 @@ def build_practical_validation_decision_workspace(
     validation_result: dict[str, Any] | None,
     source_options: list[dict[str, Any]],
     recheck_mode: str = RECHECK_MODE_EXTEND_TO_LATEST,
+    enrichment_progress: dict[str, Any] | None = None,
+    collection_results: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Project Level2 truth into a question-first, root-deduplicated read model."""
 
@@ -849,6 +906,27 @@ def build_practical_validation_decision_workspace(
     can_move = state in {"ready", "ready_with_handoff"} and bool(
         dict(validation.get("final_review_gate") or {}).get("can_save_and_move")
     )
+    progress = dict(enrichment_progress or {})
+    recovery = (
+        build_practical_validation_recovery_progress(
+            collection_completed=True,
+            replay_completed=bool(replay_result),
+            can_save_and_move=can_move,
+            blocking=bool(replay_result) and not can_move,
+        )
+        if progress
+        else {}
+    )
+    enrichment_lifecycle = {
+        "visible": bool(progress),
+        "state": str(recovery.get("state") or "none"),
+        "headline": str(recovery.get("headline") or ""),
+        "next_action": str(recovery.get("next_action") or ""),
+        "steps": list(recovery.get("steps") or []),
+        "collection_summary": summarize_provider_collection_results(
+            collection_results
+        ),
+    }
     mode_model = _recheck_mode_model(recheck_mode)
     replay = dict(replay_result or {})
     validation_id = str(validation.get("validation_id") or "")
@@ -913,6 +991,7 @@ def build_practical_validation_decision_workspace(
             "replay_id": str(replay.get("replay_id") or "-"),
             "validation_id": validation_id or "-",
         },
+        "enrichment_lifecycle": enrichment_lifecycle,
         "verdict": _verdict(state, summary),
         "summary": summary,
         "verified_findings": verified,
@@ -930,6 +1009,9 @@ def build_practical_validation_decision_workspace(
             "run_replay": {
                 "id": "run_replay",
                 "label": (
+                    "보강된 데이터로 재검증"
+                    if progress and not replay_result
+                    else
                     "데이터 보강 후 재검증"
                     if provider_resolution_required
                     else "최신 데이터 기준 재검증"
@@ -964,4 +1046,5 @@ def build_practical_validation_decision_workspace(
 __all__ = [
     "PRACTICAL_VALIDATION_DECISION_WORKSPACE_SCHEMA_VERSION",
     "build_practical_validation_decision_workspace",
+    "summarize_provider_collection_results",
 ]

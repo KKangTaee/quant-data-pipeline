@@ -301,6 +301,26 @@ class PortfolioMonitoringComponentTests(unittest.TestCase):
         self.assertIn("원래 시작일부터 계속 추적한 것으로 다시 계산됩니다", source)
         self.assertIn(".pm-reopen-action", styles)
 
+    def test_latest_decision_lock_exposes_review_action_without_client_route_trust(
+        self,
+    ) -> None:
+        component_root = Path(
+            "app/web/streamlit_components/portfolio_monitoring_workbench/src"
+        )
+        source = (component_root / "PortfolioMonitoringWorkbench.tsx").read_text(
+            encoding="utf-8"
+        )
+        contracts = (component_root / "contracts.ts").read_text(encoding="utf-8")
+        styles = (component_root / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("추적 자격 변경", source)
+        self.assertIn("최신 판단 재확인", source)
+        self.assertIn('id: "review_latest_decision"', source)
+        self.assertIn('id: "review_latest_decision"', contracts)
+        self.assertIn("decision_lifecycle", contracts)
+        self.assertIn(".pm-decision-lock", styles)
+        self.assertNotIn("latest_source_id: selectedItem", source)
+
     def test_build_availability_requires_index_html(self) -> None:
         component = _load_component()
         with tempfile.TemporaryDirectory() as directory:

@@ -10,6 +10,20 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-23 - main-dev master 병합 충돌 해결
+
+- `main-dev`의 Today 장중 갱신·live island·전체 종목 기여·Portfolio Monitoring 로컬 항목 선택과 `master`의 Backtest 인계·Practical Validation·Final Review·Monitoring 최신 판단 수명주기를 함께 보존했다.
+- Portfolio Monitoring Python/React 충돌은 양쪽 계약을 수동 합성하고 병합된 React 소스로 canonical `component_static` 번들을 다시 생성했다.
+- focused Python `393 passed, 18 subtests passed`, React `37 passed`, typecheck/build와 conflict/diff 검사를 통과했다. broad service contract의 18 failures는 병합 전 기록과 동일한 기존 drift다.
+- registry, run history, QA 이미지와 `.superpowers/`는 통합 stage에서 제외했다.
+
+### 2026-07-23 - Portfolio Monitoring 최신 Final Review 판단 수명주기 완료
+
+- append-only 판단 이력은 보존하면서 후보별 최신 Final Review 판단만 신규 catalog와 기존 selected-strategy replay의 current truth로 사용한다.
+- 최신 non-select는 기존 항목을 삭제하지 않고 해당 item의 새 계산만 잠그며, `최신 판단 재확인` 또는 기존 `추적 종료`를 제공한다. 새 selected 판단은 최신 effective contract로 자동 재개한다.
+- focused Python·React/typecheck/build와 actual responsive Browser QA를 통과했다. actual registry에 superseded 후보가 없어 잠금은 synthetic 계약으로 검증했고 broad suite의 동일 baseline 18 failures를 분리했다.
+- 전체 roadmap `4/4차` 완료. 상세: `tasks/active/portfolio-monitoring-latest-decision-lifecycle-v1-20260723/STATUS.md`.
+
 ### 2026-07-22 - Today 미국 정규장 상태 표시 완료
 
 - Today hero 아래에 미국 정규장 상태, 뉴욕·한국 현재 시각, ET/KST 개장·마감 시각, 다음 전환 countdown을 추가했다. 프리마켓·애프터마켓은 제외했다.
@@ -7094,6 +7108,32 @@ Detailed historical logs were archived on `2026-04-13`.
 - Python 111 / React 36 / typecheck/build와 actual QQQ 4주·SOXX 6주 Browser QA, clean console을 확인했다.
 - 전체 roadmap `3/3차` 완료. 상세는 `tasks/active/portfolio-monitoring-etf-position-ledger-v1-20260722/`를 본다.
 
+## 2026-07-22 - Backtest Level2 fragment 인계 복구 완료
+
+- 결과 component callback이 intent를 fragment rerun에서 선소비하던 경계를 제거하고, fragment 본문 소비 후 full-app rerun으로 승격했다.
+- GTAA synthetic actual Browser QA에서 한 번 클릭으로 handler 1회와 `LEVEL2_ROUTE_REACHED`를 확인했고 focused `51 passed`, console error/warning 0을 통과했다.
+- task `3/3차` 완료. 저장 schema·registry·validation gate 의미는 바꾸지 않았으며 상세는 `tasks/active/backtest-level2-fragment-handoff-fix-v1-20260722/`를 본다.
+
+## 2026-07-22 - Practical Validation 보강 재검증 one-shell 완료
+
+- 외부 자료 보강 뒤 source별 `recheck_required`와 부분 성공/실패 요약을 Step 2 one-shell에 연결하고, 일괄 success 안내를 semantic warning으로 교정했다.
+- `자료 보강 -> 재검증 -> 새 결과 저장 -> Final Review` lifecycle과 `보강된 데이터로 재검증` CTA를 React/fallback 공통 read model로 제공한다.
+- actual fixture에서 replay 클릭 후 `save_ready`, 760px overflow 0, console warning/error 0을 확인했다. task 전체 `3/3차`; 상세는 `tasks/active/practical-validation-enrichment-recheck-ux-v1-20260722/`를 본다.
+
+## 2026-07-22 - Practical Validation Final Review 인계 복구 완료
+
+- 저장/이동 intent가 fragment callback에서 선소비되어 root route가 실행되지 않던 원인을 교정했다.
+- 동일 stable `validation_id`는 한 번만 append하고, 성공 handoff는 현재 Final Review selector에 방금 인계한 후보 key를 전달한다.
+- 버튼 1회 Browser QA에서 저장 1회, full-app rerun 1회, Final Review 도달과 active candidate 일치를 확인했다.
+- task `3/3차` 완료. 기존 GTAA 중복 3행은 append-only history로 보존했으며 상세는 `tasks/active/practical-validation-final-review-route-fix-v1-20260722/`를 본다.
+
+## 2026-07-22 - Final Review 유동성 근거 문구 개선 완료
+
+- Level3 실행 근거 카드가 stable liquidity `proof_status` enum을 그대로 노출하던 presentation 경계를 교정했다.
+- raw enum과 Gate는 유지하면서 제목·현황·설명·비교 기준을 사용자 문구로 변환하고 신규 상태 fallback도 추가했다.
+- Decision Brief/visual contract 45개와 refactor 경계 3개, 1280·760px actual Browser QA, overflow 0과 console error 0을 확인했다.
+- 전체 roadmap `2/2차`; 상세는 `tasks/active/final-review-liquidity-evidence-copy-v1-20260722/`를 본다.
+
 ## 2026-07-23 - Today 포트폴리오 장중 자동 갱신 4/4 구현
 
 - confirmed 정규장 OPEN에서 default portfolio direct stock·ETF를 5분 cadence로 group-scoped DB snapshot에 저장하고 `today_home_v4` live overlay로 표시한다.
@@ -7114,3 +7154,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - `전체 N개`/`기여 계산 N/M개` coverage copy와 중립 0값을 추가하고 `우선 확인` 3행을 상단 정렬·8px 간격으로 정리했다.
 - Python 93, React 19/typecheck/build와 actual 5종목·1280/760/420 Browser QA, console error 0을 확인했다.
 - 전체 roadmap `2/2차` 완료. 상세는 `tasks/active/today-contributor-coverage-layout-v1-20260723/`를 본다.
+
+## 2026-07-23 - Backtest Level1 가격 최신화 인계 완료
+
+- Single과 Portfolio Mix 결과에 요청 종료일 기준 가격 부족, provider gap, 수집 후 재실행 전 상태를 공통 Level2 blocker로 연결했다.
+- 수동 OHLCV 최신화 뒤 기존 결과는 참고용으로 유지하고, 명시적 같은 설정 재실행이 완료된 뒤에만 저장/Level2 인계를 다시 연다.
+- actual GTAA QA 중 pending 실행의 fragment-scope rerun 예외를 발견해 app-scope로 수정했고 1280·760px 흐름을 확인했다.
+- 전체 roadmap `3/3차`; 상세는 `tasks/active/backtest-level1-price-refresh-handoff-v1-20260722/`를 본다.

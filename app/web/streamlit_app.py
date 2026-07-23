@@ -12,7 +12,10 @@ DIRECT_RUN_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(DIRECT_RUN_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(DIRECT_RUN_PROJECT_ROOT))
 
-from app.web.final_selected_portfolio_dashboard import render_final_selected_portfolio_dashboard_page
+from app.web.final_selected_portfolio_dashboard import (
+    configure_portfolio_monitoring_page_targets,
+    render_final_selected_portfolio_dashboard_page,
+)
 from app.web.ingestion_console import (
     apply_pending_ingestion_prefill,
     init_ingestion_state,
@@ -211,6 +214,7 @@ def main() -> None:
             "portfolio_monitoring": selected_portfolio_dashboard_page,
         }
     )
+    configure_portfolio_monitoring_page_targets({"backtest": backtest_page})
     configure_reference_center_page_targets(
         {
             "overview": overview_page,

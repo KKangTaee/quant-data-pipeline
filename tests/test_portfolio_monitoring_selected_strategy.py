@@ -4,6 +4,7 @@ import importlib
 import unittest
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 import pandas as pd
 
@@ -18,12 +19,17 @@ def _load_selected_strategy():
 
 
 class PortfolioMonitoringSelectedStrategyTests(unittest.TestCase):
-    def _item(self, *, funding_mode="fixed_notional") -> MonitoringItemRecord:
+    def _item(
+        self,
+        *,
+        funding_mode="fixed_notional",
+        source_ref="decision-ready",
+    ) -> MonitoringItemRecord:
         return MonitoringItemRecord(
             monitoring_item_id="item-strategy",
             portfolio_group_id="group-core",
             source_type="selected_strategy",
-            source_ref="decision-ready",
+            source_ref=source_ref,
             instrument_kind="strategy",
             requested_start_date=date(2026, 7, 1),
             effective_start_date=date(2026, 7, 1),
@@ -105,6 +111,156 @@ class PortfolioMonitoringSelectedStrategyTests(unittest.TestCase):
         self.assertEqual(contract.readiness.status, "BLOCKED")
         self.assertIn("replay contract", contract.readiness.blockers[0])
         self.assertEqual(calls, [])
+
+    def test_newer_hold_locks_existing_selected_strategy(self) -> None:
+        selected = _load_selected_strategy()
+        adapter = selected.SelectedStrategyReplayAdapter(
+            decision_loader=lambda: [
+                {
+                    "decision_id": "new-hold",
+                    "selection_source_id": "selection-a",
+                    "source_id": "validation-new-hold",
+                    "updated_at": "2026-07-23",
+                    "decision_route": "HOLD_FOR_MORE_PAPER_TRACKING",
+                    "monitoring_candidate": False,
+                },
+                {
+                    "decision_id": "old-selected",
+                    "selection_source_id": "selection-a",
+                    "source_id": "validation-old-selected",
+                    "updated_at": "2026-07-22",
+                    "decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+                    "monitoring_candidate": True,
+                    "selected_components": [
+                        {"registry_id": "candidate-a", "target_weight": 100.0}
+                    ],
+                },
+            ]
+        )
+
+        contract = adapter.load_candidate_contract("old-selected")
+
+        self.assertEqual(contract.readiness.status, "BLOCKED")
+        self.assertEqual(
+            contract.readiness.decision_lifecycle["state"],
+            "TRACKING_ELIGIBILITY_CHANGED",
+        )
+        self.assertIsNotNone(contract.decision_row)
+        self.assertEqual(contract.decision_row["decision_id"], "new-hold")
+
+    def test_newer_selected_row_reactivates_old_monitoring_reference(self) -> None:
+        selected = _load_selected_strategy()
+        adapter = selected.SelectedStrategyReplayAdapter(
+            decision_loader=lambda: [
+                {
+                    "decision_id": "new-selected",
+                    "selection_source_id": "selection-a",
+                    "updated_at": "2026-07-23",
+                    "decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+                    "monitoring_candidate": True,
+                    "selected_components": [
+                        {"registry_id": "candidate-new", "target_weight": 100.0}
+                    ],
+                },
+                {
+                    "decision_id": "old-selected",
+                    "selection_source_id": "selection-a",
+                    "updated_at": "2026-07-22",
+                    "decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+                    "monitoring_candidate": True,
+                    "selected_components": [
+                        {"registry_id": "candidate-old", "target_weight": 100.0}
+                    ],
+                },
+            ]
+        )
+
+        contract = adapter.load_candidate_contract("old-selected")
+
+        self.assertEqual(contract.readiness.status, "READY")
+        self.assertIsNotNone(contract.decision_row)
+        self.assertEqual(contract.decision_row["decision_id"], "new-selected")
+        self.assertEqual(
+            contract.readiness.source_dates["effective_decision_id"],
+            "new-selected",
+        )
+
+    def test_default_loader_reads_full_decision_history(self) -> None:
+        selected = _load_selected_strategy()
+        rows = [
+            {
+                "decision_id": f"unrelated-{index}",
+                "monitoring_candidate": False,
+                "updated_at": f"2026-07-23T10:{index % 60:02d}:00",
+            }
+            for index in range(101)
+        ]
+        rows.extend(self._decision_rows())
+
+        with patch.object(
+            selected,
+            "load_current_final_selection_decisions",
+            return_value=rows,
+        ) as loader:
+            adapter = selected.SelectedStrategyReplayAdapter()
+            contract = adapter.load_candidate_contract("decision-ready")
+
+        self.assertEqual(contract.readiness.status, "READY")
+        loader.assert_called_once_with(limit=None)
+
+    def test_locked_strategy_can_build_tracking_end_lane_from_requested_decision(
+        self,
+    ) -> None:
+        selected = _load_selected_strategy()
+        rows = [
+            {
+                "decision_id": "new-hold",
+                "selection_source_id": "selection-a",
+                "source_id": "validation-new-hold",
+                "updated_at": "2026-07-23",
+                "decision_route": "HOLD_FOR_MORE_PAPER_TRACKING",
+                "monitoring_candidate": False,
+            },
+            {
+                "decision_id": "old-selected",
+                "selection_source_id": "selection-a",
+                "source_id": "validation-old-selected",
+                "updated_at": "2026-07-22",
+                "decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+                "monitoring_candidate": True,
+                "selected_components": [
+                    {"registry_id": "candidate-a", "target_weight": 100.0}
+                ],
+            },
+        ]
+        adapter = selected.SelectedStrategyReplayAdapter(
+            decision_loader=lambda: rows,
+            replay_runner=lambda *args, **kwargs: {
+                "status": "ok",
+                "blockers": [],
+                "portfolio_result_df": pd.DataFrame(
+                    {
+                        "Date": ["2026-07-01", "2026-07-02"],
+                        "Total Balance": [100.0, 105.0],
+                    }
+                ),
+            },
+        )
+
+        self.assertTrue(
+            hasattr(adapter, "build_tracking_end_lane"),
+            "locked selected strategies must retain a tracking-end replay path",
+        )
+        lane = adapter.build_tracking_end_lane(
+            self._item(source_ref="old-selected"),
+            end_date=date(2026, 7, 2),
+        )
+
+        self.assertEqual(lane.curve["total_value"].tolist(), [10000.0, 10500.0])
+        self.assertEqual(
+            lane.readiness.decision_lifecycle["state"],
+            "TRACKING_ELIGIBILITY_CHANGED",
+        )
 
     def test_replay_failure_surfaces_blocked_readiness(self) -> None:
         selected = _load_selected_strategy()

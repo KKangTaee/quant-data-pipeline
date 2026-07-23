@@ -88,6 +88,10 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
             add_item=lambda event: calls.append(("add_item", event)) or None,
             end_item=lambda event: calls.append(("end_item", event)) or None,
             reopen_item=lambda event: calls.append(("reopen_item", event)) or None,
+            review_latest_decision=lambda event: calls.append(
+                ("review_latest_decision", event)
+            )
+            or None,
             correct_initial_quantity=lambda event: calls.append(
                 ("correct_initial_quantity", event)
             ) or None,
@@ -195,6 +199,169 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
         self.assertEqual(
             services.session_state["portfolio_monitoring_selected_item_id"],
             "item-ended",
+        )
+
+    def test_dispatches_latest_decision_review_navigation(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        services = self._services()
+        event = {
+            "id": "review_latest_decision",
+            "monitoring_item_id": "item-strategy",
+        }
+
+        result = page._dispatch_portfolio_monitoring_event(event, services)
+
+        self.assertIsNone(result)
+        self.assertIn(("review_latest_decision", event), services.calls)
+
+    def test_default_latest_decision_review_routes_to_final_review_server_side(
+        self,
+    ) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        state = {}
+        switch_calls = []
+        item = SimpleNamespace(
+            monitoring_item_id="item-strategy",
+            source_type="selected_strategy",
+            source_ref="old-selected",
+            instrument_kind="strategy",
+        )
+        repository = SimpleNamespace(
+            get_item=lambda item_id: item if item_id == "item-strategy" else None
+        )
+        contract = SimpleNamespace(
+            decision_row={
+                "decision_id": "latest-hold",
+                "source_id": "validation-latest-hold",
+                "selection_source_id": "selection-a",
+            },
+            readiness=SimpleNamespace(
+                decision_lifecycle={
+                    "state": "TRACKING_ELIGIBILITY_CHANGED",
+                    "locked": True,
+                    "latest_source_id": "validation-latest-hold",
+                }
+            ),
+        )
+        adapter = SimpleNamespace(load_candidate_contract=lambda decision_id: contract)
+        fake_st = SimpleNamespace(
+            session_state=state,
+            rerun=lambda: None,
+            switch_page=lambda target: switch_calls.append(target),
+        )
+        target = object()
+        page.configure_portfolio_monitoring_page_targets({"backtest": target})
+        try:
+            with (
+                patch.object(page, "st", fake_st),
+                patch.object(
+                    page,
+                    "MySQLMonitoringRepository",
+                    return_value=repository,
+                ),
+                patch.object(
+                    page,
+                    "MySQLMonitoringHistoryRepository",
+                    return_value=SimpleNamespace(),
+                ),
+                patch.object(
+                    page,
+                    "SelectedStrategyReplayAdapter",
+                    return_value=adapter,
+                ),
+            ):
+                services = page._default_portfolio_monitoring_services()
+                result = services.review_latest_decision(
+                    {
+                        "id": "review_latest_decision",
+                        "monitoring_item_id": "item-strategy",
+                        "latest_source_id": "untrusted-client-value",
+                    }
+                )
+        finally:
+            page.configure_portfolio_monitoring_page_targets({})
+
+        self.assertIsNone(result)
+        self.assertEqual(state["backtest_requested_panel"], "Final Review")
+        self.assertEqual(
+            state["final_review_active_decision_brief_source_id"],
+            "practical_validation_result:validation-latest-hold",
+        )
+        self.assertEqual(switch_calls, [target])
+
+    def test_default_tracking_end_uses_original_selected_decision_replay_path(
+        self,
+    ) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        calls = []
+        item = SimpleNamespace(source_type="selected_strategy")
+        lane = object()
+        resolution = object()
+        adapter = SimpleNamespace(
+            build_tracking_end_lane=lambda value, end_date: calls.append(
+                ("tracking_end", value, end_date)
+            )
+            or lane,
+            build_value_lane=lambda *args, **kwargs: self.fail(
+                "tracking end must not use the lifecycle-locked value lane"
+            ),
+        )
+
+        def execute_end(repository, command, *, resolve_end):
+            self.assertIs(resolve_end(item), resolution)
+            return CommandResult(
+                status=CommandStatus.SUCCEEDED,
+                command_id=command.command_id,
+                target_id=command.target_id,
+                replayed=False,
+                message="ended",
+            )
+
+        fake_st = SimpleNamespace(session_state={}, rerun=lambda: None)
+        with (
+            patch.object(page, "st", fake_st),
+            patch.object(
+                page,
+                "MySQLMonitoringRepository",
+                return_value=SimpleNamespace(),
+            ),
+            patch.object(
+                page,
+                "MySQLMonitoringHistoryRepository",
+                return_value=SimpleNamespace(),
+            ),
+            patch.object(
+                page,
+                "SelectedStrategyReplayAdapter",
+                return_value=adapter,
+            ),
+            patch.object(page, "execute_end_item", side_effect=execute_end),
+            patch.object(
+                page,
+                "resolve_tracking_end",
+                side_effect=lambda value, requested: (
+                    self.assertIs(value, lane),
+                    self.assertEqual(requested, date(2026, 7, 23)),
+                    resolution,
+                )[-1],
+            ),
+        ):
+            services = page._default_portfolio_monitoring_services()
+            result = services.end_item(
+                {
+                    "command_id": "command-end",
+                    "monitoring_item_id": "item-strategy",
+                    "requested_end_date": "2026-07-23",
+                }
+            )
+
+        self.assertEqual(result.status, CommandStatus.SUCCEEDED)
+        self.assertEqual(
+            calls,
+            [("tracking_end", item, date(2026, 8, 2))],
         )
 
     def test_dispatches_group_price_refresh_once(self) -> None:

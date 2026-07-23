@@ -1,11 +1,16 @@
+export type ResultWorkspaceActionId =
+  | "save_and_move"
+  | "refresh_prices"
+  | "rerun_same_configuration"
+
 export type WorkspaceAction = {
-  id: string
+  id: ResultWorkspaceActionId
   label: string
   enabled: boolean
 }
 
 export type ResultWorkspaceIntent = {
-  action: "save_and_move"
+  action: ResultWorkspaceActionId
   payload: {
     run_result_id: string
     current_configuration_fingerprint: string
@@ -56,6 +61,20 @@ export type AllocationRow = {
   weight_label: string
 }
 
+export type DataFreshnessAction = {
+  state: "current" | "refresh_required" | "provider_gap" | "rerun_required"
+  requested_end: string | null
+  target_trading_end: string | null
+  current_common_latest: string | null
+  affected_symbol_count: number
+  affected_symbol_sample: string[]
+  summary: string
+  guidance: string
+  handoff_blocked: boolean
+  primary_action: WorkspaceAction | null
+  feedback: string | null
+}
+
 export type ResultWorkspace = {
   schema_version: string
   visible: boolean
@@ -81,6 +100,7 @@ export type ResultWorkspace = {
     run_at: string
     period_label: string
   }
+  data_freshness_action: DataFreshnessAction | Record<string, never>
   performance_summary: DisplayMetric[]
   chart: {
     normalized_base: number

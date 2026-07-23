@@ -142,6 +142,7 @@ def build_level1_technical_handoff_readiness(
     result_bundle: Mapping[str, Any] | None,
     lifecycle: Mapping[str, Any],
     action_handlers: Mapping[str, Callable[..., Any] | None],
+    price_freshness_action: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Decide Level2 handoff from Level1-owned technical contracts only."""
 
@@ -160,6 +161,17 @@ def build_level1_technical_handoff_readiness(
         return {
             "state": "unsupported",
             "label": "인계 기능 미지원",
+            "can_handoff": False,
+            "reasons": [],
+            "action": None,
+        }
+    freshness = dict(price_freshness_action or {})
+    if freshness.get("handoff_blocked"):
+        state = str(freshness.get("state") or "")
+        rerun_required = state == "rerun_required"
+        return {
+            "state": "rerun_required" if rerun_required else "data_refresh_required",
+            "label": "재실행 필요" if rerun_required else "데이터 최신화 필요",
             "can_handoff": False,
             "reasons": [],
             "action": None,
@@ -1343,6 +1355,7 @@ def build_backtest_analysis_result_workspace(
     last_error: str | None,
     last_error_kind: str | None,
     action_handlers: Mapping[str, Callable[..., Any] | None],
+    price_freshness_action: Mapping[str, Any] | None = None,
     component_bundles: Sequence[Mapping[str, Any]] = (),
     reference_reason: str | None = None,
 ) -> dict[str, Any]:
@@ -1373,7 +1386,23 @@ def build_backtest_analysis_result_workspace(
         result_bundle=bundle,
         lifecycle=lifecycle,
         action_handlers=action_handlers,
+        price_freshness_action=price_freshness_action,
     )
+    freshness_action = dict(price_freshness_action or {})
+    freshness_primary = dict(freshness_action.get("primary_action") or {})
+    if freshness_action.get("handoff_blocked"):
+        action_id = str(freshness_primary.get("id") or "")
+        actions = (
+            {action_id: freshness_primary}
+            if action_id and freshness_primary.get("enabled")
+            else {}
+        )
+    else:
+        actions = (
+            {"save_and_move": readiness["action"]}
+            if readiness.get("action")
+            else {}
+        )
     summary = _performance_summary(bundle.get("summary_df"), bundle.get("result_df"))
     period_label = next(
         (
@@ -1405,6 +1434,7 @@ def build_backtest_analysis_result_workspace(
             bundle,
             component_bundles=component_bundles,
         ),
+        "data_freshness_action": freshness_action,
         "technical_handoff_readiness": readiness,
         "level2_validation_questions": build_level2_validation_questions(
             meta=meta,
@@ -1419,11 +1449,7 @@ def build_backtest_analysis_result_workspace(
             lifecycle=lifecycle,
             configuration_fingerprint=current_configuration_fingerprint,
         ),
-        "actions": (
-            {"save_and_move": readiness["action"]}
-            if readiness.get("action")
-            else {}
-        ),
+        "actions": actions,
         "boundaries": {
             "react_calculates_gate": False,
             "react_calculates_weights": False,

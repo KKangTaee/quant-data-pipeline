@@ -810,6 +810,7 @@ def build_portfolio_mix_workspace(
     action_capabilities: Mapping[str, bool] | None = None,
     runtime_options: Mapping[str, Any] | None = None,
     today: date | None = None,
+    price_freshness_action: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the one-shell read model while keeping runner and persistence external."""
 
@@ -862,22 +863,41 @@ def build_portfolio_mix_workspace(
     }
     validation_issues = _validation_issues(errors, normalized)
     valid = not errors
-    execution_action = (
-        {
-            "id": "run_mix",
-            "label": "이 구성으로 Mix 실행",
-            "enabled": True,
-        }
-        if valid and capabilities.get("run_mix")
-        else None
-    )
+    freshness_action = deepcopy(_as_mapping(price_freshness_action))
+    freshness_blocked = bool(freshness_action.get("handoff_blocked"))
+    if freshness_action.get("state") == "rerun_required":
+        freshness_action["primary_action"] = (
+            {
+                "id": "run_mix",
+                "label": "같은 설정으로 다시 백테스트",
+                "enabled": True,
+            }
+            if valid and capabilities.get("run_mix")
+            else None
+        )
+    if freshness_blocked:
+        execution_action = (
+            deepcopy(freshness_action.get("primary_action"))
+            if freshness_action.get("state") == "rerun_required"
+            else None
+        )
+    else:
+        execution_action = (
+            {
+                "id": "run_mix",
+                "label": "이 구성으로 Mix 실행",
+                "enabled": True,
+            }
+            if valid and capabilities.get("run_mix")
+            else None
+        )
     has_development_component = any(
         LEVEL1_STRATEGY_MATURITY.get(str(component.get("strategy_choice")))
         == "development"
         for component in normalized["components"]
     )
     actions: list[dict[str, Any]] = []
-    if result_status == "current" and valid:
+    if result_status == "current" and valid and not freshness_blocked:
         if capabilities.get("save_mix"):
             actions.append(
                 {"id": "save_mix", "label": "Mix 설정 저장", "enabled": True}
@@ -941,6 +961,7 @@ def build_portfolio_mix_workspace(
             "current": current_projection,
             "reference": reference_projection,
         },
+        "data_freshness_action": freshness_action,
         "execution_action": execution_action,
         "actions": actions,
     }

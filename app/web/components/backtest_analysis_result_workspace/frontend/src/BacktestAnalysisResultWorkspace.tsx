@@ -42,6 +42,48 @@ function ResultHeader({ workspace }: { workspace: ResultWorkspace }) {
   )
 }
 
+function DataFreshnessActionCard({ workspace }: { workspace: ResultWorkspace }) {
+  const freshness = workspace.data_freshness_action
+  if (!freshness || !("state" in freshness) || freshness.state === "current") return null
+  const primary = freshness.primary_action
+  const action = primary ? workspace.actions[primary.id] : undefined
+  const metrics = [
+    ["요청 종료일", freshness.requested_end || "-"],
+    ["목표 거래일", freshness.target_trading_end || "-"],
+    ["현재 공통 기준일", freshness.current_common_latest || "-"],
+    ["최신화 대상", `${freshness.affected_symbol_count}개`],
+  ]
+  return (
+    <section
+      className={`bt1r-freshness-card is-${freshness.state}`}
+      role={freshness.state === "provider_gap" ? "alert" : "status"}
+    >
+      <div className="bt1r-freshness-copy">
+        <span>요청 종료일과 가격 데이터 확인</span>
+        <h2>{freshness.summary}</h2>
+        <p>{freshness.guidance}</p>
+        {freshness.feedback && <small>{freshness.feedback}</small>}
+      </div>
+      <dl className="bt1r-freshness-metrics">
+        {metrics.map(([label, value]) => (
+          <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
+        ))}
+      </dl>
+      {freshness.affected_symbol_sample.length > 0 && (
+        <p className="bt1r-freshness-symbols">
+          대상 예시 · {freshness.affected_symbol_sample.join(", ")}
+        </p>
+      )}
+      {action && (
+        <button type="button" disabled={!action.enabled} onClick={() => emitIntent(action.id, {
+          run_result_id: workspace.identity.run_result_id,
+          current_configuration_fingerprint: workspace.configuration_fingerprint,
+        })}>{action.label}</button>
+      )}
+    </section>
+  )
+}
+
 function PerformanceSummary({ workspace }: { workspace: ResultWorkspace }) {
   return (
     <section className="bt1r-section">
@@ -191,6 +233,7 @@ export function BacktestAnalysisResultWorkspace({ workspace }: { workspace: Resu
   return (
     <main className="bt1r-workspace">
       <ResultHeader workspace={workspace} />
+      <DataFreshnessActionCard workspace={workspace} />
       <PerformanceSummary workspace={workspace} />
       <ResultWorkspaceChart chart={workspace.chart} />
       <HoldingsComparison workspace={workspace} />

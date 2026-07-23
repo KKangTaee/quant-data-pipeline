@@ -8,6 +8,10 @@ from decimal import Decimal
 import pandas as pd
 
 from app.services.portfolio_monitoring.persistence import MonitoringItemRecord, PortfolioGroupRecord
+from app.services.portfolio_monitoring.selected_strategy import (
+    SelectedStrategyReadiness,
+    SelectedStrategyReplayError,
+)
 from app.services.portfolio_monitoring.valuation import (
     CorporateActionReview,
     ItemValueLane,
@@ -55,6 +59,23 @@ def _item(
         tracking_end_effective_date=end,
         exit_value=Decimal(exit_value) if exit_value is not None else None,
         status=status,
+    )
+
+
+def _selected_strategy_item(item_id: str, decision_id: str) -> MonitoringItemRecord:
+    return MonitoringItemRecord(
+        monitoring_item_id=item_id,
+        portfolio_group_id="group-core",
+        source_type="selected_strategy",
+        source_ref=decision_id,
+        instrument_kind="strategy",
+        requested_start_date=date(2026, 7, 1),
+        effective_start_date=date(2026, 7, 1),
+        funding_mode="fixed_notional",
+        input_notional=Decimal("10000"),
+        input_shares=None,
+        entry_close=Decimal("1"),
+        initial_capital=Decimal("10000"),
     )
 
 
@@ -148,6 +169,36 @@ class FakeRepository:
 
 
 class PortfolioMonitoringReadModelTests(unittest.TestCase):
+    def test_selected_strategy_failure_projects_decision_lifecycle_without_removing_item(
+        self,
+    ) -> None:
+        read_model = _load_read_model()
+        item = _selected_strategy_item("item-strategy", "old-selected")
+        readiness = SelectedStrategyReadiness(
+            status="BLOCKED",
+            blockers=("최신 Final Review 판단이 관찰 후 재검토로 변경되었습니다.",),
+            source_dates={},
+            decision_lifecycle={
+                "state": "TRACKING_ELIGIBILITY_CHANGED",
+                "locked": True,
+                "latest_route": "HOLD_FOR_MORE_PAPER_TRACKING",
+                "latest_route_label": "관찰 후 재검토",
+                "latest_source_id": "validation-new-hold",
+                "message": "최신 판단이 변경되어 새 계산을 잠갔습니다.",
+            },
+        )
+
+        result = read_model.align_group_value_lanes(
+            [item],
+            {item.monitoring_item_id: SelectedStrategyReplayError(readiness)},
+        )
+
+        self.assertEqual(result.status, "PARTIAL")
+        self.assertEqual(len(result.item_rows), 1)
+        self.assertEqual(result.item_rows[0]["source_type"], "selected_strategy")
+        self.assertEqual(result.item_rows[0]["instrument_kind"], "strategy")
+        self.assertTrue(result.item_rows[0]["decision_lifecycle"]["locked"])
+
     def test_item_rows_require_valid_flow_adjusted_index_on_group_basis_date(
         self,
     ) -> None:

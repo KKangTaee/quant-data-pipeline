@@ -1985,6 +1985,30 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertTrue(handoff.persisted)
         self.assertEqual(handoff.requested_panel, "Final Review")
 
+    def test_practical_validation_save_is_idempotent_by_validation_id(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        result = {
+            "validation_id": "validation-once",
+            "selection_source_id": "source-once",
+        }
+
+        with (
+            patch.object(
+                service,
+                "load_practical_validation_results",
+                side_effect=[[], [result]],
+            ),
+            patch.object(
+                service,
+                "append_practical_validation_result",
+            ) as append_result,
+        ):
+            self.assertTrue(service.save_practical_validation_result(result))
+            self.assertFalse(service.save_practical_validation_result(result))
+
+        append_result.assert_called_once_with(result)
+
     def test_final_review_source_options_hide_blocked_practical_validation_results(self) -> None:
         from app.web.backtest_final_review_helpers import _build_final_review_source_options
 
@@ -14605,6 +14629,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                 "backtest_practical_validation_data_enrichment_handoff",
                 fake_st.session_state,
             )
+            notice = fake_st.session_state[
+                "backtest_practical_validation_notice"
+            ]
+            self.assertEqual(notice["tone"], "warning")
+            self.assertEqual(notice["title"], "자료 보강을 실행했습니다")
+            self.assertIn("재검증", notice["detail"])
 
     def test_both_provider_collection_buttons_use_shared_recheck_completion_boundary(self) -> None:
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
@@ -14700,6 +14730,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(fake_st.session_state["final_review_source_selected"], stable_key)
         self.assertEqual(
             fake_st.session_state["final_review_confirmed_candidate_key"],
+            stable_key,
+        )
+        self.assertEqual(
+            fake_st.session_state[
+                "final_review_active_decision_brief_source_id"
+            ],
             stable_key,
         )
         self.assertNotIn(

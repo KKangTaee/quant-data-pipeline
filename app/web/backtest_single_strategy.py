@@ -228,6 +228,6 @@ def render_single_strategy_workspace() -> None:
             )
         finally:
             st.session_state.pop("backtest_pending_single_run", None)
-        st.rerun(scope="fragment")
+        st.rerun(scope="app")
 
 __all__ = ["render_single_strategy_workspace"]

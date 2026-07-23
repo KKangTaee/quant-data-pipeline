@@ -177,6 +177,27 @@ export type DecisionWorkspace = {
     replay_id: string
     validation_id: string
   }
+  enrichment_lifecycle: {
+    visible: boolean
+    state: string
+    headline: string
+    next_action: string
+    steps: Array<{
+      key: string
+      label: string
+      status: "completed" | "current" | "blocked" | "next" | "pending"
+      detail: string
+    }>
+    collection_summary: {
+      total_count: number
+      success_count: number
+      review_count: number
+      failure_count: number
+      areas: string[]
+      outcome_label: string
+      tone: Tone
+    }
+  }
   verdict: { tone: Tone; label: string; headline: string; detail: string }
   summary: Record<string, number>
   verified_findings: Array<{

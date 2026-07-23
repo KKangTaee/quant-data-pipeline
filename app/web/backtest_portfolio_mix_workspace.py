@@ -21,6 +21,15 @@ from app.services.backtest_portfolio_mix_workspace import (
     normalize_portfolio_mix_draft,
     project_portfolio_mix_component_payloads,
 )
+from app.services.backtest_level1_price_freshness import (
+    build_level1_price_freshness_action,
+    build_level1_price_refresh_meta,
+)
+from app.services.backtest_price_refresh import (
+    build_backtest_price_refresh_plan,
+    price_refresh_result_requires_backtest_rerun,
+    run_backtest_price_refresh,
+)
 from app.services.backtest_compare_catalog import (
     ComparePresetCatalog,
     run_compare_strategy,
@@ -79,6 +88,7 @@ MIX_SESSION_KEYS = {
     "error": "backtest_portfolio_mix_error",
     "notice": "backtest_portfolio_mix_notice",
     "last_intent_id": "backtest_portfolio_mix_last_intent_id",
+    "price_refresh_result": "backtest_portfolio_mix_price_refresh_result",
 }
 _COMPONENT_KEY = "backtest-portfolio-mix-workspace"
 _EDIT_ACTIONS = frozenset(
@@ -96,7 +106,14 @@ _EDIT_ACTIONS = frozenset(
     }
 )
 _DEFERRED_ACTIONS = frozenset(
-    {"restore_saved_mix", "run_saved_mix", "run_mix", "save_mix", "handoff_level2"}
+    {
+        "restore_saved_mix",
+        "run_saved_mix",
+        "run_mix",
+        "save_mix",
+        "handoff_level2",
+        "refresh_prices",
+    }
 )
 _SHARED_FIELDS = frozenset({"start", "end", "timeframe", "option", "date_policy"})
 
@@ -448,6 +465,7 @@ def run_current_portfolio_mix(
         result["component_bundles"]
     )
     session_state[MIX_SESSION_KEYS["weighted_bundle"]] = result["weighted_bundle"]
+    session_state[MIX_SESSION_KEYS["price_refresh_result"]] = None
     session_state[MIX_SESSION_KEYS["error"]] = None
     session_state[MIX_SESSION_KEYS["notice"]] = (
         "현재 구성으로 Portfolio Mix 계산을 완료했습니다."
@@ -466,6 +484,87 @@ def run_current_portfolio_mix(
             "Mix 계산은 완료했지만 실행 기록 저장을 확인해 주세요: " f"{exc}"
         )
     return {"accepted": True, "action": "run_mix", "result": result}
+
+
+def _portfolio_mix_price_refresh_context(
+    *,
+    session_state: Mapping[str, Any],
+    plan_builder: Callable[[Mapping[str, Any]], Mapping[str, Any]] = (
+        build_backtest_price_refresh_plan
+    ),
+) -> dict[str, Any] | None:
+    """Build one deduplicated Mix refresh input from the current saved result state."""
+
+    weighted_bundle = session_state.get(MIX_SESSION_KEYS["weighted_bundle"])
+    component_bundles = session_state.get(MIX_SESSION_KEYS["component_bundles"])
+    draft = session_state.get(MIX_SESSION_KEYS["draft"])
+    if not isinstance(weighted_bundle, Mapping) or not isinstance(
+        component_bundles, list
+    ):
+        return None
+    configuration = (
+        dict(draft.get("shared") or {}) if isinstance(draft, Mapping) else None
+    )
+    refresh_meta = build_level1_price_refresh_meta(
+        result_bundle=weighted_bundle,
+        component_bundles=[
+            item for item in component_bundles if isinstance(item, Mapping)
+        ],
+        configuration=configuration,
+    )
+    raw_plan = dict(plan_builder(refresh_meta))
+    plan = {**raw_plan, "requested_end": refresh_meta.get("end")}
+    return {"meta": refresh_meta, "plan": plan}
+
+
+def refresh_current_portfolio_mix_prices(
+    payload: Mapping[str, Any],
+    *,
+    session_state: MutableMapping[str, Any],
+    runtime_options: Mapping[str, Any] | None = None,
+    plan_builder: Callable[[Mapping[str, Any]], Mapping[str, Any]] = (
+        build_backtest_price_refresh_plan
+    ),
+    refresh_runner: Callable[[Mapping[str, Any]], Mapping[str, Any]] = (
+        run_backtest_price_refresh
+    ),
+) -> dict[str, Any]:
+    """Refresh current Mix price inputs once without executing any component."""
+
+    current_result = session_state.get(MIX_SESSION_KEYS["current_result"])
+    if not isinstance(current_result, Mapping):
+        return {"accepted": False, "reason": "current_result_required"}
+    expected_run_id = str(current_result.get("run_result_id") or "")
+    requested_run_id = str(payload.get("run_result_id") or "")
+    if not expected_run_id or requested_run_id != expected_run_id:
+        return {"accepted": False, "reason": "run_identity_mismatch"}
+    expected_fingerprint = str(
+        current_result.get("configuration_fingerprint") or ""
+    )
+    requested_fingerprint = str(
+        payload.get("current_configuration_fingerprint") or ""
+    )
+    if not expected_fingerprint or requested_fingerprint != expected_fingerprint:
+        return {"accepted": False, "reason": "configuration_mismatch"}
+    if runtime_options is not None and not _current_result_matches_draft(
+        session_state=session_state,
+        runtime_options=runtime_options,
+    ):
+        return {"accepted": False, "reason": "current_result_required"}
+    context = _portfolio_mix_price_refresh_context(
+        session_state=session_state,
+        plan_builder=plan_builder,
+    )
+    if not context:
+        return {"accepted": False, "reason": "weighted_bundle_required"}
+    if not dict(context["plan"]).get("eligible"):
+        return {"accepted": False, "reason": "refresh_unavailable"}
+    result = dict(refresh_runner(dict(context["meta"])))
+    session_state[MIX_SESSION_KEYS["price_refresh_result"]] = result
+    session_state[MIX_SESSION_KEYS["notice"]] = (
+        "가격 데이터 최신화를 실행했습니다. 저장된 row가 있으면 같은 설정으로 Mix를 다시 실행하세요."
+    )
+    return {"accepted": True, "action": "refresh_prices", "result": result}
 
 
 def apply_portfolio_mix_intent(
@@ -772,6 +871,7 @@ def restore_saved_portfolio_mix(
     session_state[MIX_SESSION_KEYS["current_result"]] = None
     session_state[MIX_SESSION_KEYS["component_bundles"]] = None
     session_state[MIX_SESSION_KEYS["weighted_bundle"]] = None
+    session_state[MIX_SESSION_KEYS["price_refresh_result"]] = None
     session_state[MIX_SESSION_KEYS["component_states"]] = {}
     session_state[MIX_SESSION_KEYS["error"]] = None
     session_state[MIX_SESSION_KEYS["notice"]] = (
@@ -989,7 +1089,13 @@ def build_portfolio_mix_fallback_model(
         "validation": deepcopy(dict(workspace.get("validation") or {})),
         "allocation": deepcopy(dict(workspace.get("allocation") or {})),
         "result": deepcopy(dict(workspace.get("result") or {})),
+        "configuration_fingerprint": str(
+            workspace.get("configuration_fingerprint") or ""
+        ),
         "execution_action": deepcopy(workspace.get("execution_action")),
+        "data_freshness_action": deepcopy(
+            dict(workspace.get("data_freshness_action") or {})
+        ),
         "actions": deepcopy(list(workspace.get("actions") or [])),
     }
 
@@ -1001,6 +1107,46 @@ def render_backtest_portfolio_mix_workspace_fallback(
 
     model = build_portfolio_mix_fallback_model(workspace)
     st.markdown("### Portfolio Mix Decision Workspace")
+    freshness = dict(model.get("data_freshness_action") or {})
+    if freshness and freshness.get("state") != "current":
+        with st.container(border=True):
+            st.markdown(
+                f"#### {freshness.get('summary') or '가격 데이터 확인이 필요합니다.'}"
+            )
+            st.markdown(
+                " · ".join(
+                    [
+                        f"요청 종료일 {freshness.get('requested_end') or '-'}",
+                        f"목표 거래일 {freshness.get('target_trading_end') or '-'}",
+                        f"현재 공통 기준일 {freshness.get('current_common_latest') or '-'}",
+                        f"최신화 대상 {int(freshness.get('affected_symbol_count') or 0)}개",
+                    ]
+                )
+            )
+            st.caption(str(freshness.get("guidance") or ""))
+            primary = dict(freshness.get("primary_action") or {})
+            if primary.get("enabled") and st.button(
+                str(primary.get("label") or "다음 행동"),
+                key=f"portfolio_mix_fallback_freshness_{primary.get('id')}",
+                use_container_width=True,
+            ):
+                current_result = dict(model["result"].get("current") or {})
+                return {
+                    "event": {
+                        "id": primary.get("id"),
+                        "intent_id": (
+                            f"fallback-{primary.get('id')}-{date.today().isoformat()}"
+                        ),
+                        "payload": {
+                            "run_result_id": str(
+                                current_result.get("run_result_id") or ""
+                            ),
+                            "current_configuration_fingerprint": str(
+                                model.get("configuration_fingerprint") or ""
+                            ),
+                        },
+                    }
+                }
     for index, step in enumerate(model["steps"], start=1):
         with st.container(border=True):
             st.markdown(f"#### {index}. {step['title']}")
@@ -1020,10 +1166,14 @@ def render_backtest_portfolio_mix_workspace_fallback(
                     st.warning(str(issue.get("message") or "설정을 확인해 주세요."))
             elif step["id"] == "execution":
                 action = dict(model.get("execution_action") or {})
-                if action.get("enabled") and st.button(
-                    str(action.get("label") or "Mix 실행"),
-                    key="portfolio_mix_fallback_run",
-                    use_container_width=True,
+                if (
+                    freshness.get("state") in (None, "", "current")
+                    and action.get("enabled")
+                    and st.button(
+                        str(action.get("label") or "Mix 실행"),
+                        key="portfolio_mix_fallback_run",
+                        use_container_width=True,
+                    )
                 ):
                     return {
                         "event": {
@@ -1057,6 +1207,9 @@ def build_portfolio_mix_workspace_from_session(
     runtime_options: Mapping[str, Any],
     saved_records: list[Mapping[str, Any]] | None = None,
     action_capabilities: Mapping[str, bool] | None = None,
+    price_refresh_plan_builder: Callable[
+        [Mapping[str, Any]], Mapping[str, Any]
+    ] = build_backtest_price_refresh_plan,
 ) -> dict[str, Any]:
     """Build one rerun-stable workspace from an explicit session mapping."""
 
@@ -1067,6 +1220,57 @@ def build_portfolio_mix_workspace_from_session(
     mode = str(session_state.get(MIX_SESSION_KEYS["mode"]) or "new")
     if mode not in {"new", "saved"}:
         mode = "new"
+    price_freshness_action: dict[str, Any] | None = None
+    if isinstance(session_state.get(MIX_SESSION_KEYS["current_result"]), Mapping):
+        try:
+            refresh_context = _portfolio_mix_price_refresh_context(
+                session_state=session_state,
+                plan_builder=price_refresh_plan_builder,
+            )
+        except Exception as exc:
+            weighted_bundle = session_state.get(MIX_SESSION_KEYS["weighted_bundle"])
+            component_bundles = session_state.get(MIX_SESSION_KEYS["component_bundles"])
+            draft = session_state.get(MIX_SESSION_KEYS["draft"])
+            refresh_meta = build_level1_price_refresh_meta(
+                result_bundle=(weighted_bundle if isinstance(weighted_bundle, Mapping) else {}),
+                component_bundles=(
+                    [item for item in component_bundles if isinstance(item, Mapping)]
+                    if isinstance(component_bundles, list)
+                    else []
+                ),
+                configuration=(
+                    dict(draft.get("shared") or {})
+                    if isinstance(draft, Mapping)
+                    else None
+                ),
+            )
+            refresh_context = {
+                "meta": refresh_meta,
+                "plan": {
+                    "eligible": False,
+                    "status": "unavailable",
+                    "requested_end": refresh_meta.get("end"),
+                    "target_end": refresh_meta.get("end"),
+                    "current_common_latest": refresh_meta.get("actual_result_end"),
+                    "provider_gap_symbols": list(refresh_meta.get("tickers") or []),
+                    "summary": f"가격 최신성 확인 중 오류가 발생했습니다: {exc}",
+                },
+            }
+        if refresh_context:
+            refresh_result = session_state.get(
+                MIX_SESSION_KEYS["price_refresh_result"]
+            )
+            price_freshness_action = build_level1_price_freshness_action(
+                plan=dict(refresh_context["plan"]),
+                refresh_result=(
+                    refresh_result
+                    if isinstance(refresh_result, Mapping)
+                    else None
+                ),
+                result_requires_rerun=price_refresh_result_requires_backtest_rerun(
+                    refresh_result if isinstance(refresh_result, Mapping) else None
+                ),
+            )
     workspace = build_portfolio_mix_workspace(
         draft=session_state[MIX_SESSION_KEYS["draft"]],
         saved_records=list(saved_records or []),
@@ -1075,6 +1279,7 @@ def build_portfolio_mix_workspace_from_session(
         last_result=session_state.get(MIX_SESSION_KEYS["last_result"]),
         action_capabilities=action_capabilities or {},
         runtime_options=runtime_options,
+        price_freshness_action=price_freshness_action,
     )
     return {
         **workspace,
@@ -1097,6 +1302,7 @@ def build_current_portfolio_mix_workspace() -> dict[str, Any]:
             "run_mix": True,
             "save_mix": True,
             "handoff_level2": True,
+            "refresh_prices": True,
         },
     )
 
@@ -1117,6 +1323,11 @@ def _current_action_handlers(
             runtime_options=runtime_options,
         ),
         "handoff_level2": lambda payload: handoff_current_portfolio_mix(
+            payload,
+            session_state=st.session_state,
+            runtime_options=runtime_options,
+        ),
+        "refresh_prices": lambda payload: refresh_current_portfolio_mix_prices(
             payload,
             session_state=st.session_state,
             runtime_options=runtime_options,
@@ -1164,6 +1375,7 @@ def render_backtest_portfolio_mix_workspace() -> None:
             "run_mix": True,
             "save_mix": True,
             "handoff_level2": True,
+            "refresh_prices": True,
         },
     )
     if is_backtest_portfolio_mix_workspace_available():
@@ -1194,6 +1406,7 @@ __all__ = [
     "build_portfolio_mix_workspace_from_session",
     "execute_portfolio_mix_draft",
     "handoff_current_portfolio_mix",
+    "refresh_current_portfolio_mix_prices",
     "restore_saved_portfolio_mix",
     "run_current_portfolio_mix",
     "run_saved_portfolio_mix",

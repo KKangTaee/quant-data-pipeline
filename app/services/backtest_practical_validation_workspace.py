@@ -1737,11 +1737,11 @@ def build_practical_validation_recovery_progress(
     if not collection_completed:
         state = "collection_required"
         headline = "먼저 부족하거나 오래된 자료를 보강하세요."
-        next_action = "데이터 보강을 실행한 뒤 Flow 2 재검증으로 이어갑니다."
+        next_action = "데이터 보강을 실행한 뒤 이 화면의 재검증으로 이어갑니다."
     elif not replay_completed:
         state = "recheck_required"
         headline = "자료 보강은 끝났고 새 재검증이 필요합니다."
-        next_action = "Flow 2의 전략 재검증 실행을 눌러 새 검증 근거를 계산합니다."
+        next_action = "아래 보강된 데이터로 재검증을 눌러 새 검증 근거를 계산합니다."
     elif blocking or not can_save_and_move:
         state = "blocked"
         headline = "재검증 후에도 Final Review 이동을 막는 항목이 남았습니다."
@@ -1760,7 +1760,7 @@ def build_practical_validation_recovery_progress(
         },
         {
             "key": "replay",
-            "label": "2. Flow 2 재검증",
+            "label": "2. 재검증",
             "status": "completed" if replay_completed else "current" if collection_completed else "pending",
             "detail": "보강된 자료를 반영해 전략과 검증 근거를 다시 계산합니다.",
         },
