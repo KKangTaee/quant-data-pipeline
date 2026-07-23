@@ -21963,7 +21963,157 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["coverage"]["stale_estimate_count"], 1)
         self.assertEqual(snapshot["rows"].iloc[0]["Freshness"], "Stale estimate")
         self.assertEqual(snapshot["rows"].iloc[0]["Age Days"], 27)
-        self.assertIn("Refresh Earnings Calendar", snapshot["warnings"][0])
+        self.assertIn("오래된 실적 추정 일정 1개", snapshot["warnings"][0])
+
+    def test_events_workbench_groups_alphabet_share_classes(self) -> None:
+        from app.services.overview.events import build_events_workbench_payload, build_market_events_snapshot
+
+        rows = [
+            {
+                "event_date": "2026-07-22",
+                "event_type": "EARNINGS",
+                "event_family": "earnings",
+                "event_subtype": "earnings_release",
+                "event_time_label": "after_market",
+                "issuer_key": "sec_cik:1652044",
+                "issuer_name": "Alphabet Inc.",
+                "symbol": symbol,
+                "title": f"{symbol} Earnings Release",
+                "source": "yfinance_calendar",
+                "source_type": "provider_estimate",
+                "source_authority": "provider_estimate",
+                "event_status": "active",
+                "collected_at": "2026-07-22 00:00:00",
+            }
+            for symbol in ("GOOG", "GOOGL")
+        ]
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 7, 22),
+            query_fn=lambda *_args: rows,
+        )
+        payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 22))
+        items = payload["views"]["earnings"]["calendar"]["days"][0]["items"]
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["issuer_name"], "Alphabet Inc.")
+        self.assertEqual(items[0]["symbols"], ["GOOG", "GOOGL"])
+        self.assertEqual(items[0]["display_date"], "2026-07-23")
+        self.assertEqual(items[0]["time_basis"], "한국시간 예정")
+
+    def test_unknown_earnings_time_does_not_invent_kst_date(self) -> None:
+        from app.services.overview.events import _event_kst_display
+
+        display = _event_kst_display({
+            "Date": "2026-07-22",
+            "Event Time": "time_unknown",
+            "Event Datetime UTC": "-",
+        })
+
+        self.assertIsNone(display["display_date_kst"])
+        self.assertEqual(display["label"], "미국 기준 · 한국시간 미확인")
+
+    def test_exact_utc_earnings_time_converts_to_kst(self) -> None:
+        from app.services.overview.events import _event_kst_display
+
+        display = _event_kst_display({
+            "Date": "2026-07-22",
+            "Event Time": "time_confirmed",
+            "Event Datetime UTC": "2026-07-22T20:05:00+00:00",
+        })
+
+        self.assertEqual(display["display_date_kst"], "2026-07-23")
+        self.assertEqual(display["display_time_kst"], "05:05")
+        self.assertEqual(display["time_basis"], "한국시간 확정")
+
+    def test_workbench_prefers_today_alphabet_over_later_fomc(self) -> None:
+        from app.services.overview.events import build_events_workbench_payload, build_market_events_snapshot
+
+        rows = [
+            {
+                "event_date": "2026-07-23",
+                "event_type": "EARNINGS",
+                "event_family": "earnings",
+                "universe_scope": "major_cap",
+                "symbol": "GOOG",
+                "title": "Alphabet Earnings",
+                "source": "yfinance_calendar",
+                "source_type": "provider_estimate",
+                "event_status": "active",
+            },
+            {
+                "event_date": "2026-07-29",
+                "event_type": "FOMC_MEETING",
+                "event_family": "central_bank",
+                "title": "FOMC Meeting",
+                "source": "federal_reserve_fomc_calendar",
+                "source_type": "official",
+                "event_status": "active",
+            },
+        ]
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 7, 23),
+            query_fn=lambda *_args: rows,
+        )
+        payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 23))
+
+        self.assertEqual(payload["views"]["all"]["brief"]["next_event"]["title"], "Alphabet Earnings")
+        self.assertEqual(payload["views"]["all"]["brief"]["next_fomc"]["title"], "FOMC Meeting")
+
+    def test_market_event_warnings_are_korean(self) -> None:
+        from app.services.overview.events import _event_warnings
+
+        warnings = _event_warnings({"stale_estimate_count": 2, "not_confirmed_count": 1})
+        self.assertIn("오래된 실적 추정 일정 2개", warnings[0])
+        self.assertFalse(any("row(s)" in warning for warning in warnings))
+
+    def test_overview_event_loader_uses_family_limits_not_global_200(self) -> None:
+        import inspect
+        from app.web import overview_dashboard_helpers
+
+        source = inspect.getsource(overview_dashboard_helpers.load_overview_market_events_snapshot)
+        self.assertIn("family_limits", source)
+        self.assertNotIn("limit=200", source)
+
+    def test_events_workbench_distinguishes_incomplete_coverage_from_checked_no_event(self) -> None:
+        import pandas as pd
+        from app.services.overview.events import EVENT_COLUMNS, build_events_workbench_payload
+
+        partial_snapshot = {
+            "status": "NO_EVENTS",
+            "rows": pd.DataFrame(columns=EVENT_COLUMNS),
+            "coverage": {},
+            "collection_coverage": [{
+                "coverage_key": "earnings:sp500_cycle",
+                "expected_items": 503,
+                "covered_items": 100,
+                "failed_items": 0,
+                "coverage_status": "partial",
+            }],
+        }
+        partial = build_events_workbench_payload(partial_snapshot, today=date(2026, 7, 23))
+        self.assertEqual(
+            partial["views"]["earnings"]["empty_state"]["status"],
+            "coverage_incomplete",
+        )
+        self.assertIn("전체 확인 진행 중", partial["coverage_summary"]["description"])
+
+        complete_snapshot = {
+            **partial_snapshot,
+            "collection_coverage": [{
+                "coverage_key": "earnings:sp500_cycle",
+                "expected_items": 503,
+                "covered_items": 503,
+                "failed_items": 0,
+                "coverage_status": "complete",
+            }],
+        }
+        complete = build_events_workbench_payload(complete_snapshot, today=date(2026, 7, 23))
+        self.assertEqual(
+            complete["views"]["earnings"]["empty_state"]["status"],
+            "checked_no_event",
+        )
 
     def test_events_workbench_payload_groups_brief_trust_calendar_and_evidence(self) -> None:
         from app.services.overview.events import build_events_workbench_payload, build_market_events_snapshot
@@ -22040,15 +22190,17 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             query_fn=query_fn,
         )
         payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 7))
+        view = payload["views"]["all"]
 
-        self.assertEqual(payload["schema_version"], "events_workbench_v1")
-        self.assertIn("거래 신호가 아니라", payload["brief"]["boundary_note"])
-        self.assertEqual(payload["brief"]["next_event"]["date"], "2026-07-07")
-        self.assertEqual(payload["brief"]["counts"]["today"], 1)
-        self.assertEqual(payload["brief"]["counts"]["this_week"], 2)
-        self.assertEqual(payload["brief"]["counts"]["next_30d"], 3)
-        self.assertEqual(payload["brief"]["source_summary"]["official"], 3)
-        self.assertTrue(payload["brief"]["freshness_summary"]["has_stale_estimates"])
+        self.assertEqual(payload["schema_version"], "events_workbench_v2")
+        self.assertIn("거래 신호가 아니라", view["brief"]["boundary_note"])
+        self.assertEqual(view["brief"]["next_event"]["date"], "2026-07-07")
+        self.assertEqual(view["brief"]["counts"]["today"], 1)
+        self.assertEqual(view["brief"]["counts"]["this_week"], 2)
+        self.assertEqual(view["brief"]["counts"]["next_30d"], 3)
+        self.assertEqual(view["trust_summary"]["official"], 3)
+        self.assertEqual(view["trust_summary"]["provider_estimate"], 1)
+        self.assertTrue(payload["warnings"])
         self.assertEqual(payload["command"]["actions"][0]["id"], "reload")
         self.assertIn("DB", payload["command"]["actions"][0]["detail"])
         self.assertIn("refresh_all", [action["id"] for action in payload["command"]["actions"]])
@@ -22056,38 +22208,25 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(payload["command"]["earnings_universe"]["symbol_source"], "latest_movers")
         self.assertEqual(payload["command"]["earnings_universe"]["top_movers_limit"], 20)
         self.assertEqual(payload["command"]["earnings_universe"]["max_symbols"], 50)
-        self.assertEqual(payload["filters"]["family"]["label"], "일정 타입")
-        self.assertIn("옵션 만기", [option["label"] for option in payload["filters"]["family"]["options"]])
-        self.assertIn("미국 공휴일", [option["label"] for option in payload["filters"]["family"]["options"]])
-        self.assertEqual(payload["filters"]["source_state"]["label"], "자료 상태")
-        self.assertEqual(payload["rails"][0]["key"], "recent_major")
-        self.assertEqual(payload["rails"][1]["items"][0]["symbol"], "MSFT")
-        self.assertEqual(payload["rail_tabs"]["default_key"], "near_term")
-        self.assertEqual(payload["rail_tabs"]["tabs"][1]["label"], "오늘 / 이번 주")
-        self.assertEqual(payload["rail_tabs"]["tabs"][1]["items"][0]["symbol"], "MSFT")
-        self.assertIn("최근 중요", [tab["label"] for tab in payload["rail_tabs"]["tabs"]])
-        self.assertEqual(payload["trust_review"]["eyebrow"], "자료 상태")
-        self.assertIn("일정 확정성", payload["trust_review"]["title"])
-        self.assertIn("공식 일정", payload["trust_review"]["source_boundary"])
-        self.assertIn("제공사 추정", payload["trust_review"]["source_boundary"])
-        self.assertEqual(payload["trust_review"]["sections"][0]["label"], "오래된 추정 일정")
-        self.assertEqual(payload["trust_review"]["not_confirmed_count"], 1)
-        self.assertEqual(payload["trust_review"]["stale_estimate_count"], 1)
-        self.assertEqual(payload["calendar"]["today"], "2026-07-07")
-        self.assertEqual(payload["calendar"]["current_week_start"], "2026-07-06")
-        self.assertEqual(payload["calendar"]["current_week_end"], "2026-07-12")
-        self.assertEqual(payload["calendar"]["days"][1]["date"], "2026-07-07")
-        self.assertEqual(payload["calendar"]["days"][1]["review_count"], 1)
-        options_day = next(day for day in payload["calendar"]["days"] if day["date"] == "2026-07-10")
+        self.assertEqual(
+            [option["id"] for option in payload["filter_options"]],
+            ["all", "central_bank", "earnings", "market_holiday"],
+        )
+        self.assertEqual(view["calendar"]["today"], "2026-07-07")
+        self.assertEqual(view["calendar"]["current_week_start"], "2026-07-06")
+        self.assertEqual(view["calendar"]["current_week_end"], "2026-07-12")
+        self.assertEqual(view["calendar"]["days"][1]["date"], "2026-07-07")
+        self.assertEqual(view["calendar"]["days"][1]["review_count"], 1)
+        options_day = next(day for day in view["calendar"]["days"] if day["date"] == "2026-07-10")
         self.assertIn("options_expiration", options_day["by_family"])
         self.assertNotIn("market_structure", options_day["by_family"])
         self.assertEqual(options_day["items"][0]["display_family"], "options_expiration")
         self.assertEqual(options_day["items"][0]["display_family_label"], "옵션 만기")
         self.assertEqual(options_day["items"][0]["badges"][0]["label"], "옵션 만기")
-        self.assertTrue(payload["calendar"]["density"])
-        self.assertEqual(payload["calendar"]["density"][0]["week_start"], "2026-07-06")
-        self.assertEqual(payload["calendar"]["density"][0]["week_end"], "2026-07-12")
-        self.assertEqual(payload["calendar"]["density"][0]["label"], "7/6-7/12")
+        self.assertTrue(view["calendar"]["density"])
+        self.assertEqual(view["calendar"]["density"][0]["week_start"], "2026-07-06")
+        self.assertEqual(view["calendar"]["density"][0]["week_end"], "2026-07-12")
+        self.assertEqual(view["calendar"]["density"][0]["label"], "7/6-7/12")
         self.assertIn("raw_fields", payload["evidence"])
         self.assertEqual(payload["evidence"]["rows"][1]["Source Authority"], "not_confirmed")
 
@@ -22148,7 +22287,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
         payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 1))
 
-        by_date = {day["date"]: day for day in payload["calendar"]["days"]}
+        by_date = {day["date"]: day for day in payload["views"]["all"]["calendar"]["days"]}
         self.assertEqual(by_date["2026-07-03"]["items"][0]["display_family"], "market_holiday")
         self.assertEqual(by_date["2026-07-03"]["items"][0]["display_family_label"], "미국 공휴일")
         self.assertIn("market_holiday", by_date["2026-07-03"]["by_family"])
@@ -22206,17 +22345,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
         payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 7))
 
-        near_term_tab = next(tab for tab in payload["rail_tabs"]["tabs"] if tab["key"] == "near_term")
-        next_30d_tab = next(tab for tab in payload["rail_tabs"]["tabs"] if tab["key"] == "next_30d")
-        near_term_dates = [item["date"] for item in near_term_tab["items"]]
-        next_30d_dates = [item["date"] for item in next_30d_tab["items"]]
+        view = payload["views"]["all"]
+        by_date = {day["date"]: day for day in view["calendar"]["days"]}
 
-        self.assertEqual(payload["calendar"]["current_week_start"], "2026-07-06")
-        self.assertEqual(payload["calendar"]["current_week_end"], "2026-07-12")
-        self.assertEqual(payload["brief"]["counts"]["this_week"], 1)
-        self.assertIn("2026-07-10", near_term_dates)
-        self.assertNotIn("2026-07-14", near_term_dates)
-        self.assertIn("2026-07-14", next_30d_dates)
+        self.assertEqual(view["calendar"]["current_week_start"], "2026-07-06")
+        self.assertEqual(view["calendar"]["current_week_end"], "2026-07-12")
+        self.assertEqual(view["brief"]["counts"]["this_week"], 1)
+        self.assertIn("2026-07-10", by_date)
+        self.assertIn("2026-07-14", by_date)
+        self.assertGreater(date.fromisoformat("2026-07-14"), date.fromisoformat(view["calendar"]["current_week_end"]))
 
     def test_collection_ops_snapshot_combines_db_freshness_and_run_history(self) -> None:
         from app.services.overview.data_health import build_collection_ops_snapshot
