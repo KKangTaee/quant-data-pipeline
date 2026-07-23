@@ -1,7 +1,7 @@
 # Overview Futures Macro Short-Horizon V1 Status
 
 Status: Complete
-Roadmap: 4/4 implementation stages complete
+Roadmap: 4/4 implementation stages + confirmation matrix follow-up complete
 Last Updated: 2026-07-23
 
 ## Completed
@@ -22,10 +22,12 @@ Last Updated: 2026-07-23
 - Actual unchanged-input refresh improved from 64.859 seconds to 12.936 seconds; nested materialization was 0 seconds on the verified fast path.
 - Completed actual desktop and 420px Browser QA with no horizontal overflow and no console warning/error.
 - Passed the final focused suite (69 tests, 15 subtests), Futures Macro service contracts (26 tests), py_compile, diff check, and Vite production build.
+- Replaced the two confirmation cards with a separate two-row matrix whose columns explicitly identify `최근 1D`, `최근 5D`, and `최근 20D`; payload and calculation contracts remain unchanged.
+- Re-verified the confirmation matrix on the actual desktop and 420px app with two signal rows, no horizontal overflow, and no warning/error on a clean initial load.
 
 ## Current
 
-- All implementation, performance, browser, and documentation completion gates are satisfied.
+- All implementation, performance, confirmation-display follow-up, browser, and documentation completion gates are satisfied.
 
 ## Next
 

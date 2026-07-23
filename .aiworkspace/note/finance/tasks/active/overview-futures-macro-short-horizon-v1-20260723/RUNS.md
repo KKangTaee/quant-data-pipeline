@@ -42,6 +42,16 @@ Last Updated: 2026-07-23
 - 420px QA: outer client/scroll width 420/420; workbench main client/scroll width 377/377; no console warning/error.
 - Representative generated screenshot: `futures-macro-short-horizon-v1-qa.png` (untracked, not staged).
 
+## Confirmation matrix follow-up
+
+- TDD RED: `test_confirmation_signals_use_explicit_recent_window_headers` failed against the former card footer because no explicit confirmation window headers existed.
+- GREEN: the full focused source-contract file passed with 10 tests after `DirectionHeaders` became label-configurable and confirmation reused `DirectionRow`.
+- Vite production build passed with 177 transformed modules; generated CSS 25.02 kB and JS 335.86 kB.
+- Actual desktop DOM: one confirmation block, headers `신호 / 최근 1D / 최근 5D / 최근 20D`, and exactly two signal rows.
+- Actual 420px QA: outer width 420/420, component frame 377/377, confirmation block 327/327 client/scroll width; no horizontal overflow.
+- The reload-only Streamlit `WebSocket onclose` warnings were isolated from the feature; a clean initial-load tab rendered the confirmation matrix with zero warning/error.
+- Representative generated screenshot: `futures-macro-confirmation-matrix-qa.png` (untracked, not staged).
+
 ## Spec self-review
 
 - Placeholder scan: no `TBD`, `TODO`, or incomplete requirement remains.

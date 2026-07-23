@@ -30,7 +30,7 @@
 - Consumes: existing `FamilyDirectionRow[]` in `confirmationSignals`.
 - Produces: a presentation-only confirmation matrix using existing `DirectionCell` and `DirectionRow`; no payload changes.
 
-- [ ] **Step 1: Write the failing source-contract test**
+- [x] **Step 1: Write the failing source-contract test**
 
 Add a focused assertion:
 
@@ -48,7 +48,7 @@ def test_confirmation_signals_use_explicit_recent_window_headers() -> None:
     assert "최근 1D · 5D · 20D" not in family
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run:
 
@@ -60,7 +60,7 @@ Run:
 
 Expected: FAIL because confirmation still uses cards and the ambiguous footer.
 
-- [ ] **Step 3: Implement configurable headers and confirmation rows**
+- [x] **Step 3: Implement configurable headers and confirmation rows**
 
 Change `DirectionHeaders` to accept explicit labels:
 
@@ -109,7 +109,7 @@ Replace the two confirmation cards with:
 
 Remove `.fm-workbench__confirmation-grid` card rules. Style the block as one bordered, low-emphasis matrix and keep the existing <=760px direction grid sizing.
 
-- [ ] **Step 4: Run GREEN and build**
+- [x] **Step 4: Run GREEN and build**
 
 Run:
 
@@ -121,7 +121,7 @@ git diff --check
 
 Expected: all tests and build PASS.
 
-- [ ] **Step 5: Actual Browser QA**
+- [x] **Step 5: Actual Browser QA**
 
 At `http://localhost:8501/overview?overview_tab=futures-macro`, verify:
 
@@ -130,7 +130,7 @@ At `http://localhost:8501/overview?overview_tab=futures-macro`, verify:
 - desktop and 420px have zero horizontal overflow;
 - browser console warning/error list is empty.
 
-- [ ] **Step 6: Closeout and commit**
+- [x] **Step 6: Closeout and commit**
 
 Update the active task `STATUS.md` and `RUNS.md` with this follow-up and QA evidence, then commit only:
 

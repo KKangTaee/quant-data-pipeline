@@ -1,7 +1,7 @@
 # Futures Macro Confirmation Matrix Follow-up Design
 
 Date: 2026-07-23
-Status: User-approved direction; written-spec review pending
+Status: User-approved, implemented, and verified
 
 ## 이걸 하는 이유?
 
