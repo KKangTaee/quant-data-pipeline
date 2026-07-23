@@ -11712,6 +11712,48 @@ class OverviewAutomationContractTests(unittest.TestCase):
         market_structure.assert_called_once_with(years=(2026, 2027))
         earnings.assert_called_once_with()
 
+    def test_overview_action_uses_hybrid_earnings_job(self) -> None:
+        from app.jobs import overview_actions
+
+        with patch.object(
+            overview_actions,
+            "run_collect_overview_earnings_calendar",
+            return_value={
+                "job_name": "collect_overview_earnings_calendar",
+                "status": "success",
+            },
+        ) as runner:
+            result = overview_actions.run_overview_earnings_calendar()
+
+        runner.assert_called_once_with(
+            lookahead_days=120,
+            validate_with_nasdaq=True,
+        )
+        self.assertEqual(
+            result["job_name"],
+            "collect_overview_earnings_calendar",
+        )
+
+    def test_overview_automation_registers_hybrid_earnings_and_market_structure(
+        self,
+    ) -> None:
+        from app.jobs import overview_automation
+
+        jobs = {
+            spec.job_id: spec
+            for spec in overview_automation.OVERVIEW_AUTOMATION_JOB_SPECS
+        }
+
+        self.assertIn("market_structure_calendar", jobs)
+        self.assertIn(
+            "priority",
+            jobs["earnings_calendar"].description.lower(),
+        )
+        self.assertEqual(
+            jobs["market_structure_calendar"].cadence_minutes,
+            24 * 60,
+        )
+
     def test_overview_action_facade_runs_market_context_refresh_bundle(self) -> None:
         from app.jobs import overview_actions
 
@@ -28613,6 +28655,11 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
                 ],
             ),
             patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows),
+            patch.object(
+                mi,
+                "upsert_market_event_collection_coverage",
+                return_value=1,
+            ),
         ):
             result = mi.collect_and_store_fomc_calendar(years=[2026])
 
@@ -28622,6 +28669,44 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         self.assertEqual(result["rows_written"], 1)
         self.assertEqual(result["event_dates"], ["2026-06-17"])
         self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
+
+    def test_official_collectors_persist_year_coverage(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        checkpoints: list[dict[str, object]] = []
+        with (
+            patch.object(mi, "upsert_market_event_rows", return_value=2),
+            patch.object(
+                mi,
+                "upsert_market_event_collection_coverage",
+                side_effect=lambda row, **_: checkpoints.append(row) or 1,
+            ),
+        ):
+            mi.collect_and_store_fomc_calendar(
+                years=[2026],
+                fomc_fetcher=lambda **_: {
+                    "events": [
+                        {
+                            "event_date": "2026-07-29",
+                            "event_type": "FOMC_MEETING",
+                            "title": "FOMC",
+                            "source": "fed",
+                        },
+                        {
+                            "event_date": "2026-09-16",
+                            "event_type": "FOMC_MEETING",
+                            "title": "FOMC",
+                            "source": "fed",
+                        },
+                    ],
+                    "events_found": 2,
+                },
+            )
+
+        self.assertEqual(checkpoints[0]["coverage_key"], "fomc:2026")
+        self.assertEqual(checkpoints[0]["expected_items"], 2)
+        self.assertEqual(checkpoints[0]["covered_items"], 2)
+        self.assertEqual(checkpoints[0]["coverage_status"], "complete")
 
     def test_bls_macro_calendar_parser_builds_official_event_rows(self) -> None:
         from finance.data import market_intelligence as mi
@@ -29037,7 +29122,18 @@ END:VCALENDAR
                 "failed_sources": [],
             }
 
-        with patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows):
+        with (
+            patch.object(
+                mi,
+                "upsert_market_event_rows",
+                side_effect=capture_rows,
+            ),
+            patch.object(
+                mi,
+                "upsert_market_event_collection_coverage",
+                return_value=1,
+            ),
+        ):
             result = mi.collect_and_store_market_structure_calendar(
                 years=[2026],
                 market_structure_fetcher=fake_fetcher,
@@ -29047,6 +29143,51 @@ END:VCALENDAR
         self.assertEqual(result["rows_written"], 1)
         self.assertEqual(result["event_types"], ["RUSSELL_RECONSTITUTION"])
         self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
+
+    def test_market_structure_collector_persists_holiday_year_coverage(
+        self,
+    ) -> None:
+        from finance.data import market_intelligence as mi
+
+        checkpoints: list[dict[str, object]] = []
+        with (
+            patch.object(mi, "upsert_market_event_rows", return_value=2),
+            patch.object(
+                mi,
+                "upsert_market_event_collection_coverage",
+                side_effect=lambda row, **_: checkpoints.append(row) or 1,
+            ),
+        ):
+            mi.collect_and_store_market_structure_calendar(
+                years=[2027],
+                market_structure_fetcher=lambda **_: {
+                    "source": mi.MARKET_STRUCTURE_CALENDAR_SOURCE,
+                    "events": [
+                        {
+                            "event_date": "2027-01-01",
+                            "event_type": "MARKET_HOLIDAY",
+                            "title": "New Year's Day",
+                            "source": mi.NASDAQ_MARKET_HOLIDAY_SOURCE,
+                        },
+                        {
+                            "event_date": "2027-06-25",
+                            "event_type": "RUSSELL_RECONSTITUTION",
+                            "title": "Russell Reconstitution",
+                            "source": mi.FTSE_RUSSELL_RECONSTITUTION_SOURCE,
+                        },
+                    ],
+                    "events_found": 2,
+                    "failed_sources": [],
+                },
+            )
+
+        self.assertEqual(
+            checkpoints[0]["coverage_key"],
+            "market_holiday:2027",
+        )
+        self.assertEqual(checkpoints[0]["expected_items"], 1)
+        self.assertEqual(checkpoints[0]["covered_items"], 1)
+        self.assertEqual(checkpoints[0]["coverage_status"], "complete")
 
     def test_collect_macro_calendar_writes_events_and_reports_failed_sources(self) -> None:
         from finance.data import market_intelligence as mi

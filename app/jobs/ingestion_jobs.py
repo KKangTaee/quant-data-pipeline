@@ -68,6 +68,7 @@ from finance.data.market_intelligence import (
     collect_and_store_fomc_calendar,
     collect_and_store_macro_calendar,
     collect_and_store_market_structure_calendar,
+    collect_and_store_overview_earnings_calendar,
     collect_and_store_market_intraday_snapshot,
     collect_and_store_sp500_universe,
     diagnose_market_quote_gaps,
@@ -1382,6 +1383,63 @@ def run_collect_earnings_calendar(
                 "request_sleep_sec": request_sleep_sec,
                 "invalid_symbols": invalid_symbols,
             },
+        )
+
+
+def run_collect_overview_earnings_calendar(
+    *,
+    lookahead_days: int = 120,
+    validate_with_nasdaq: bool = True,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    """Run the Overview priority + S&P 500 shard earnings contract."""
+    job_name = "collect_overview_earnings_calendar"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        _emit_stage_progress(
+            progress_callback,
+            event="stage_start",
+            stage="earnings_calendar",
+        )
+        result = collect_and_store_overview_earnings_calendar(
+            lookahead_days=lookahead_days,
+            validate_with_nasdaq=validate_with_nasdaq,
+        )
+        _emit_stage_progress(
+            progress_callback,
+            event="stage_complete",
+            stage="earnings_calendar",
+        )
+        coverage = dict(result.get("coverage") or {})
+        status = (
+            "success"
+            if coverage.get("coverage_status") == "complete"
+            else "partial_success"
+        )
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=int(result.get("rows_written") or 0),
+            symbols_requested=int(result.get("symbols_requested") or 0),
+            symbols_processed=int(result.get("symbols_processed") or 0),
+            failed_symbols=list(result.get("failed_symbols") or []),
+            message="Hybrid earnings coverage refresh completed.",
+            details=result,
+        )
+    except Exception as exc:
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"Hybrid earnings coverage refresh failed: {exc}",
+            details={"lookahead_days": lookahead_days},
         )
 
 

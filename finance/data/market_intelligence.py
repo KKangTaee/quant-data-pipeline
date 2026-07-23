@@ -1151,12 +1151,61 @@ def collect_and_store_fomc_calendar(
     user: str = "root",
     password: str = "1234",
     port: int = 3306,
+    fomc_fetcher: Callable[..., Any] | None = None,
 ) -> dict[str, Any]:
     collected_at = _timestamp_str()
-    events = fetch_fomc_calendar_events(source_url=source_url, years=years)
+    fetcher = fomc_fetcher or fetch_fomc_calendar_events
+    fetched = fetcher(source_url=source_url, years=years)
+    events = (
+        list(fetched.get("events") or [])
+        if isinstance(fetched, dict)
+        else list(fetched or [])
+    )
     rows = [{**row, "collected_at": collected_at} for row in events]
     rows_written = upsert_market_event_rows(rows, host=host, user=user, password=password, port=port)
     event_dates = sorted({str(row["event_date"]) for row in rows if row.get("event_date")})
+    target_years = (
+        [int(year) for year in years]
+        if years
+        else sorted(
+            {
+                int(str(row["event_date"])[:4])
+                for row in rows
+                if row.get("event_date")
+            }
+        )
+    )
+    for year in target_years:
+        year_rows = [
+            row
+            for row in rows
+            if str(row.get("event_date") or "").startswith(f"{year}-")
+        ]
+        upsert_market_event_collection_coverage(
+            {
+                "coverage_key": f"fomc:{year}",
+                "event_family": "central_bank",
+                "universe_scope": "official_macro",
+                "window_start": f"{year}-01-01",
+                "window_end": f"{year}-12-31",
+                "expected_items": len(year_rows),
+                "covered_items": len(year_rows),
+                "failed_items": 0,
+                "coverage_status": "complete" if year_rows else "error",
+                "last_attempted_at": collected_at,
+                "last_success_at": collected_at if year_rows else None,
+                "details": {
+                    "event_dates": sorted(
+                        str(row["event_date"])
+                        for row in year_rows
+                    )
+                },
+            },
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
     return {
         "source": FOMC_CALENDAR_SOURCE,
         "source_url": source_url,
@@ -2343,6 +2392,97 @@ def collect_and_store_market_structure_calendar(
     rows_written = upsert_market_event_rows(events, host=host, user=user, password=password, port=port)
     event_dates = sorted({str(row["event_date"]) for row in events if row.get("event_date")})
     event_types = sorted({str(row["event_type"]) for row in events if row.get("event_type")})
+    failed_sources = [
+        str(item)
+        for item in result.get("failed_sources") or []
+    ]
+    holiday_source_failed = any(
+        item.lower().startswith("nasdaq trader")
+        for item in failed_sources
+    )
+    coverage_years = (
+        list(target_years)
+        if target_years
+        else [
+            int(year)
+            for year in result.get("years") or [datetime.now(UTC).year]
+        ]
+    )
+    for year in coverage_years:
+        coverage_key = f"market_holiday:{year}"
+        year_rows = [
+            row
+            for row in events
+            if str(row.get("event_date") or "").startswith(f"{year}-")
+            and str(row.get("event_type") or "").upper()
+            in {"MARKET_HOLIDAY", "EARLY_CLOSE"}
+        ]
+        prior = (
+            load_market_event_collection_coverage(
+                coverage_key,
+                host=host,
+                user=user,
+                password=password,
+                port=port,
+            )
+            if holiday_source_failed
+            else None
+        )
+        prior_details = dict((prior or {}).get("details") or {})
+        expected_items = (
+            max(int((prior or {}).get("expected_items") or 0), len(year_rows))
+            if holiday_source_failed
+            else len(year_rows)
+        )
+        covered_items = (
+            max(int((prior or {}).get("covered_items") or 0), len(year_rows))
+            if holiday_source_failed
+            else len(year_rows)
+        )
+        details = {
+            **prior_details,
+            "event_dates": sorted(
+                {
+                    *[
+                        str(value)
+                        for value in prior_details.get("event_dates") or []
+                    ],
+                    *[
+                        str(row["event_date"])
+                        for row in year_rows
+                    ],
+                }
+            ),
+            "failed_sources": failed_sources,
+        }
+        upsert_market_event_collection_coverage(
+            {
+                "coverage_key": coverage_key,
+                "event_family": "market_structure",
+                "universe_scope": "all_us",
+                "window_start": f"{year}-01-01",
+                "window_end": f"{year}-12-31",
+                "expected_items": expected_items,
+                "covered_items": covered_items,
+                "failed_items": 1 if holiday_source_failed else 0,
+                "coverage_status": (
+                    "partial"
+                    if holiday_source_failed
+                    else "complete" if year_rows else "error"
+                ),
+                "last_attempted_at": collected_at,
+                "last_success_at": (
+                    (prior or {}).get("last_success_at")
+                    if holiday_source_failed
+                    else collected_at if year_rows else None
+                ),
+                "details": details,
+            },
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
     return {
         **result,
         "rows_written": rows_written,

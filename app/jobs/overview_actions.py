@@ -38,11 +38,11 @@ from app.services.futures_macro_pattern_validation import NESTED_OUTER_MINIMUM_T
 from app.jobs.ingestion_jobs import (
     JobResult,
     attach_futures_macro_materialization,
-    run_collect_earnings_calendar,
     run_collect_fomc_calendar,
     run_collect_futures_ohlcv,
     run_collect_macro_calendar,
     run_collect_market_structure_calendar,
+    run_collect_overview_earnings_calendar,
     run_collect_market_sentiment,
     run_collect_market_intraday_snapshot,
     run_repair_nasdaq100_valuation_coverage,
@@ -302,12 +302,8 @@ def run_overview_fomc_calendar(*, years: Iterable[int]) -> JobResult:
 
 
 def run_overview_earnings_calendar() -> JobResult:
-    return run_collect_earnings_calendar(
-        symbol_source="latest_movers",
-        universe_code="SP500",
-        top_movers_limit=20,
+    return run_collect_overview_earnings_calendar(
         lookahead_days=120,
-        max_symbols=50,
         validate_with_nasdaq=True,
     )
 
