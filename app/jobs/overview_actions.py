@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from calendar import monthrange
 from collections import Counter
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from math import isfinite
 from time import perf_counter
 from typing import Any, Callable, Iterable, Sequence
@@ -58,6 +58,9 @@ from app.jobs.ingestion_jobs import (
 )
 from app.jobs.overview_automation import run_overview_automation
 from app.jobs.run_history import append_run_history
+from app.jobs.futures_macro_daily_finalization import (
+    run_pending_futures_daily_finalization,
+)
 
 MARKET_MOVERS_EOD_COLLECTION_PERIODS = {
     "weekly": "3mo",
@@ -197,6 +200,8 @@ def run_overview_futures_daily_ohlcv(
     coverage_loader: Callable[[Sequence[str]], list[dict[str, Any]]] = load_futures_daily_coverage,
     collect_runner: Callable[..., JobResult] = run_collect_futures_ohlcv,
     materialize_fn: Callable[[], dict[str, Any]] | None = None,
+    evaluation_time: datetime | None = None,
+    finalization_runner: Callable[..., dict[str, Any]] | None = None,
 ) -> JobResult:
     """Refresh complete symbols with 1Y overlap and bootstrap only deficient history."""
 
@@ -286,6 +291,25 @@ def run_overview_futures_daily_ohlcv(
             },
         },
     }
+    finalize = (
+        finalization_runner
+        or run_pending_futures_daily_finalization
+    )
+    finalization = finalize(
+        symbols=selected,
+        evaluation_time=evaluation_time or datetime.now(timezone.utc),
+        collect_runner=collect_runner,
+    )
+    combined["details"]["daily_finalization"] = finalization
+    if (
+        str(finalization.get("status") or "") in {"incomplete", "error"}
+        and combined["status"] == "success"
+    ):
+        combined["status"] = "partial_success"
+        combined["message"] = (
+            f"{combined['message']} "
+            "Completed-session finalization kept the latest-good date."
+        )
     attached = attach_futures_macro_materialization(
         combined,
         interval="1d",

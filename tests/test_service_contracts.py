@@ -8065,6 +8065,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
             coverage_loader=lambda symbols: coverage,
             collect_runner=collector,
             materialize_fn=lambda: {"status": "reused"},
+            finalization_runner=lambda **kwargs: {
+                "status": "not_required",
+                "session_date": None,
+                "symbols_required": len(DEFAULT_CORE_FUTURES_SYMBOLS),
+                "symbols_finalized": 0,
+                "missing_symbols": [],
+                "reason": "test_no_pending_session",
+            },
         )
 
         kwargs = collector.call_args.kwargs
