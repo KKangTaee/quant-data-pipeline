@@ -128,3 +128,8 @@
 - 2026-07-08: Calendar follow-up QA - `.venv/bin/python -m py_compile app/services/overview/events.py tests/test_service_contracts.py` - PASS.
 - 2026-07-08: Calendar follow-up QA - `npm install && npm run build` in `app/web/streamlit_components/events_workbench` - PASS; generated `node_modules` removed after build.
 - 2026-07-08: Calendar follow-up Browser QA at `http://localhost:8516/?overview_tab=events` - PASS. DOM confirmed no hover tooltip DOM, `미국 공휴일` / `옵션 만기` / `기타 시장 일정` labels, no old overflow copy, and `2026-07-30` selected-date detail rendered 20 cards inside one scrollable detail container. Screenshot `browser-qa-events-calendar-hover-detail-subtypes.png` is generated and uncommitted.
+- 2026-07-23: Read current Overview earnings action / automation, symbol resolver, provider adapter, Events service / React source, active task docs, and official calendar evidence for diagnosis.
+- 2026-07-23: DB / provider diagnostic - current latest-movers snapshot excluded GOOG / GOOGL, stored event rows contained no Alphabet earnings, and direct GOOG / GOOGL provider lookup returned the 2026-07-23 earnings date.
+- 2026-07-23: User approved hybrid earnings coverage and `A · 브리프 + 캘린더`; design documented in `PLAN.md`, `DESIGN.md`, `STATUS.md`, `NOTES.md`, and `RISKS.md`.
+- 2026-07-23: Spec self-review - placeholder scan PASS; clarified successful five-run cycle versus retry completion, `covered_items` semantics, next-event ordering, and unknown-time KST behavior.
+- 2026-07-23: `git diff --check -- .aiworkspace/note/finance/tasks/active/overview-events-ux-redesign` - PASS.

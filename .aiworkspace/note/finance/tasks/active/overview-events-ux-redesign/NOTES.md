@@ -30,3 +30,10 @@
 - Rails는 service `rail_tabs`의 `최근 중요`, `오늘 / 이번 주`, `30일 내`, `나중` 탭으로 읽는다. 기존 non-overlapping `rails` list는 compatibility payload로 유지한다.
 - `일정 확정성 / 추정 일정 점검`은 prediction trust가 아니라 source authority / confirmation / freshness review다. Label과 explanatory copy는 service payload가 소유한다.
 - React calendar는 active-date grid가 아니라 월간 7열 calendar로 렌더한다. Today / current-week highlight 기준은 service `calendar.today`, `current_week_start`, `current_week_end`에서 온다.
+- 2026-07-23 diagnosis: `run_overview_earnings_calendar()` and `_run_earnings_calendar()` both use `latest_movers`, S&P 500, top 20. The source loader sorts `return_pct DESC`; GOOG / GOOGL were negative on the relevant snapshot and therefore never reached the provider call.
+- Direct provider inspection for GOOG / GOOGL returned the 2026-07-23 earnings date, so provider parsing was not the direct cause of the Alphabet omission.
+- `load_overview_market_events_snapshot(... limit=200)` is a cross-family global cap. It can hide later official FOMC rows when earnings estimates dominate the first 200 rows even though the DB has the official meetings.
+- Official 2026 US holidays and early closes match the published exchange schedule, but the DB lacks the already-published 2027 schedule.
+- Approved coverage rule: daily priority = US market-cap top 100 + explicit portfolio + explicit watchlist + known earnings within 45 days; periodic coverage = about 100 S&P 500 symbols per shard, complete within five successful runs.
+- Coverage is product trust evidence, not a refresh-job dashboard. It exists to distinguish "checked and no event" from "not checked".
+- Approved A layout: three concise brief items, calendar-dominant two-column desktop flow, selected-day detail, consistently filtered density, and collapsed trust / raw evidence.
