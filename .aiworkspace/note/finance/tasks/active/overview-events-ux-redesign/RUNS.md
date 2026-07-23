@@ -133,3 +133,5 @@
 - 2026-07-23: User approved hybrid earnings coverage and `A · 브리프 + 캘린더`; design documented in `PLAN.md`, `DESIGN.md`, `STATUS.md`, `NOTES.md`, and `RISKS.md`.
 - 2026-07-23: Spec self-review - placeholder scan PASS; clarified successful five-run cycle versus retry completion, `covered_items` semantics, next-event ordering, and unknown-time KST behavior.
 - 2026-07-23: `git diff --check -- .aiworkspace/note/finance/tasks/active/overview-events-ux-redesign` - PASS.
+- 2026-07-23: `superpowers:writing-plans` - implementation plan created as seven independently testable tasks with exact files, interfaces, RED / GREEN commands, Browser QA, documentation, and commit boundaries.
+- 2026-07-23: Implementation-plan self-review - 7 task headings and 144 balanced code fences confirmed; placeholder / trailing-whitespace scan and diff whitespace checks PASS. Coverage gaps found during review were resolved for incomplete-vs-no-event UI state, aware/naive UTC conversion, official checkpoint equality, exact `node_modules` cleanup, and narrow staging.
