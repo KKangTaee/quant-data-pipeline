@@ -614,6 +614,18 @@ def project_today_portfolio_live(model: Any) -> dict[str, Any]:
     return _project_live_portfolio(model)
 
 
+def project_today_portfolio(
+    workspace: Any,
+    *,
+    portfolio_live: Any | None = None,
+) -> dict[str, Any]:
+    """Project only the portfolio branch for lightweight Today refreshes."""
+
+    portfolio = _project_portfolio(workspace)
+    portfolio["live"] = _project_live_portfolio(portfolio_live)
+    return portfolio
+
+
 def _market_headline(evidence: list[dict[str, Any]], ready_count: int) -> str:
     if ready_count < 3:
         return "현재 자료로 종합 판단 보류"
@@ -669,8 +681,10 @@ def build_today_read_model(
             watch_items.append(f"{row['label']} 근거에 제한이 있습니다.")
     if next_event and next_event.get("importance") == "High" and int(next_event.get("days_until") or 0) <= 7:
         watch_items.append(f"{next_event['date']} {next_event['title']} 일정을 확인합니다.")
-    portfolio_model = _project_portfolio(portfolio)
-    portfolio_model["live"] = _project_live_portfolio(portfolio_live)
+    portfolio_model = project_today_portfolio(
+        portfolio,
+        portfolio_live=portfolio_live,
+    )
     calendar = _as_mapping(market_calendar)
     market_session = build_us_market_session_model(
         generated_at=timestamp,
@@ -735,5 +749,6 @@ def build_today_read_model(
 __all__ = [
     "TODAY_SCHEMA_VERSION",
     "build_today_read_model",
+    "project_today_portfolio",
     "project_today_portfolio_live",
 ]

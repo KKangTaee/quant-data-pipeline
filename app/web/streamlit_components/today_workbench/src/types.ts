@@ -141,6 +141,13 @@ export type TodayPayload = {
   portfolio: TodayPortfolio;
 };
 
+export type TodayPortfolioIslandPayload = {
+  schema_version: "today_portfolio_island_v1";
+  portfolio: TodayPortfolio;
+};
+
+export type TodayWorkbenchView = "full" | "context" | "portfolio" | "actions";
+
 export type TodayEventId =
   | "open_market_research"
   | "open_stock_research"

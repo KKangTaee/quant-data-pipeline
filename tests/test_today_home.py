@@ -20,6 +20,20 @@ class TodayHomeReadModelTests(unittest.TestCase):
         self.assertTrue(callable(builder), "build_today_read_model should be callable")
         return builder
 
+    def test_public_portfolio_projector_matches_full_today_portfolio(self) -> None:
+        from app.services.today import (
+            build_today_read_model,
+            project_today_portfolio,
+        )
+
+        inputs = self._complete_inputs()
+        full = build_today_read_model(**inputs)
+
+        self.assertEqual(
+            project_today_portfolio(inputs["portfolio"]),
+            full["portfolio"],
+        )
+
     @staticmethod
     def _complete_inputs() -> dict[str, object]:
         return {
@@ -868,6 +882,58 @@ class TodayIntradayCoordinatorTests(unittest.TestCase):
 
 
 class TodayHomePageContractTests(unittest.TestCase):
+    def test_heartbeat_runs_only_for_open_or_active_eod_handoff(self) -> None:
+        from app.web.today_intraday_auto_refresh import CoordinatorSnapshot
+        from app.web.today_page import should_run_today_portfolio_heartbeat
+
+        def session(phase: str, *, allowed: bool) -> SimpleNamespace:
+            return SimpleNamespace(
+                phase=phase,
+                collection_allowed=allowed,
+            )
+
+        def state(eod_state: str) -> CoordinatorSnapshot:
+            return CoordinatorSnapshot(
+                collection_state="idle",
+                last_result=None,
+                eod_state=eod_state,
+                eod_attempt_count=0,
+                eod_missing_symbols=(),
+            )
+
+        self.assertTrue(
+            should_run_today_portfolio_heartbeat(
+                session("OPEN", allowed=True),
+                state("not_applicable"),
+            )
+        )
+        self.assertTrue(
+            should_run_today_portfolio_heartbeat(
+                session("CLOSED", allowed=False),
+                state("waiting"),
+            )
+        )
+        self.assertTrue(
+            should_run_today_portfolio_heartbeat(
+                session("CLOSED", allowed=False),
+                state("running"),
+            )
+        )
+        for phase, eod_state in (
+            ("PRE_OPEN", "not_applicable"),
+            ("HOLIDAY", "not_applicable"),
+            ("WEEKEND", "not_applicable"),
+            ("STALE", "not_applicable"),
+            ("CLOSED", "confirmed"),
+            ("CLOSED", "exhausted"),
+        ):
+            self.assertFalse(
+                should_run_today_portfolio_heartbeat(
+                    session(phase, allowed=False),
+                    state(eod_state),
+                )
+            )
+
     def test_today_runtime_context_uses_default_group_without_creating_it(
         self,
     ) -> None:
@@ -1022,7 +1088,7 @@ class TodayHomePageContractTests(unittest.TestCase):
         self,
     ) -> None:
         root = Path("app/web/streamlit_components/today_workbench/src")
-        source = (root / "TodayWorkbench.tsx").read_text(encoding="utf-8")
+        source = (root / "MarketSessionClock.tsx").read_text(encoding="utf-8")
         styles = (root / "style.css").read_text(encoding="utf-8")
 
         self.assertIn("미국 정규장", source)
@@ -1033,6 +1099,16 @@ class TodayHomePageContractTests(unittest.TestCase):
         self.assertIn(".today-market-session", styles)
         self.assertNotIn("프리마켓", source)
         self.assertNotIn("애프터마켓", source)
+
+    def test_clock_timer_is_isolated_from_portfolio_and_workbench(self) -> None:
+        root = Path("app/web/streamlit_components/today_workbench/src")
+        workbench = (root / "TodayWorkbench.tsx").read_text(encoding="utf-8")
+        clock = (root / "MarketSessionClock.tsx").read_text(encoding="utf-8")
+        portfolio = (root / "TodayPortfolioPanel.tsx").read_text(encoding="utf-8")
+
+        self.assertNotIn("setInterval", workbench)
+        self.assertNotIn("setInterval", portfolio)
+        self.assertIn("setInterval", clock)
 
     def test_today_react_source_uses_explicit_risk_labels_and_chart_semantics(self) -> None:
         root = Path("app/web/streamlit_components/today_workbench/src")
@@ -1190,9 +1266,17 @@ class TodayHomePageContractTests(unittest.TestCase):
         path = Path("app/web/today_page.py")
         self.assertTrue(path.exists(), "Today page renderer should exist")
         source = path.read_text(encoding="utf-8")
-        react_source = Path(
-            "app/web/streamlit_components/today_workbench/src/TodayWorkbench.tsx"
-        ).read_text(encoding="utf-8")
+        react_root = Path(
+            "app/web/streamlit_components/today_workbench/src"
+        )
+        react_source = "\n".join(
+            (
+                (react_root / "TodayWorkbench.tsx").read_text(encoding="utf-8"),
+                (react_root / "TodayPortfolioPanel.tsx").read_text(
+                    encoding="utf-8"
+                ),
+            )
+        )
         css_source = Path(
             "app/web/streamlit_components/today_workbench/src/style.css"
         ).read_text(encoding="utf-8")

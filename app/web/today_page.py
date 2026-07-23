@@ -13,6 +13,7 @@ from app.services.futures_macro_snapshot import (
 )
 from app.services.overview.events import build_market_events_snapshot
 from app.services.portfolio_monitoring.intraday_refresh import (
+    RegularSessionState,
     build_intraday_refresh_scope,
     build_live_portfolio_overlay,
     load_latest_daily_dates,
@@ -44,6 +45,7 @@ from app.web.today_react_component import (
     today_react_component_available,
 )
 from app.web.today_intraday_auto_refresh import (
+    CoordinatorSnapshot,
     get_today_intraday_coordinator,
 )
 
@@ -835,6 +837,20 @@ def _load_today_portfolio_context() -> TodayPortfolioRuntimeContext:
                 "reason": "대표 포트폴리오 저장 자료를 불러오지 못했습니다.",
             },
         )
+
+
+def should_run_today_portfolio_heartbeat(
+    session: RegularSessionState,
+    coordinator_state: CoordinatorSnapshot,
+) -> bool:
+    """Keep periodic runs only while the portfolio DB state can change."""
+
+    if session.phase == "OPEN" and session.collection_allowed:
+        return True
+    return (
+        session.phase == "CLOSED"
+        and coordinator_state.eod_state in {"waiting", "running"}
+    )
 
 
 def _handle_today_component_value(

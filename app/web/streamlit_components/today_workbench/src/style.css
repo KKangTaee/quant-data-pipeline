@@ -22,6 +22,10 @@ button { font: inherit; }
   overflow-x: hidden;
 }
 
+.today-workbench.view-context { padding-bottom: 0; }
+.today-workbench.view-portfolio { padding-block: 0; }
+.today-workbench.view-actions { padding-top: 0; }
+
 .today-workbench h1,
 .today-workbench h2,
 .today-workbench h3,

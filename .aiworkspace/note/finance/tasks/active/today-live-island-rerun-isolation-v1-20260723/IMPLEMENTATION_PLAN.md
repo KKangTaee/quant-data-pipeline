@@ -53,7 +53,7 @@
 - `TodayWorkbenchView = "full" | "context" | "portfolio" | "actions"`.
 - `TodayPortfolioIslandPayload = {schema_version: "today_portfolio_island_v1"; portfolio: TodayPortfolio}`.
 
-- [ ] **Step 1: Write failing Python projector and policy tests**
+- [x] **Step 1: Write failing Python projector and policy tests**
 
 ```python
 def test_public_portfolio_projector_matches_full_today_portfolio(self):
@@ -82,7 +82,7 @@ def test_heartbeat_runs_only_for_open_or_active_eod_handoff(self):
         ))
 ```
 
-- [ ] **Step 2: Run Python tests and confirm RED**
+- [x] **Step 2: Run Python tests and confirm RED**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -92,7 +92,7 @@ def test_heartbeat_runs_only_for_open_or_active_eod_handoff(self):
 
 Expected: both public function imports fail.
 
-- [ ] **Step 3: Implement minimal projector and policy**
+- [x] **Step 3: Implement minimal projector and policy**
 
 ```python
 def project_today_portfolio(workspace: Any, *, portfolio_live: Any | None = None) -> dict[str, Any]:
@@ -109,7 +109,7 @@ def should_run_today_portfolio_heartbeat(session, coordinator_state) -> bool:
 
 Make `build_today_read_model` call the public projector so full/island schemas cannot drift.
 
-- [ ] **Step 4: Write failing React split-view and timer-isolation tests**
+- [x] **Step 4: Write failing React split-view and timer-isolation tests**
 
 ```tsx
 it("keeps portfolio markup out of context", () => {
@@ -138,7 +138,7 @@ def test_clock_timer_is_isolated_from_portfolio_and_workbench(self):
     self.assertIn("setInterval", (root / "MarketSessionClock.tsx").read_text())
 ```
 
-- [ ] **Step 5: Run React/source tests and confirm RED**
+- [x] **Step 5: Run React/source tests and confirm RED**
 
 ```bash
 cd app/web/streamlit_components/today_workbench
@@ -150,7 +150,7 @@ cd ../../../../..
 
 Expected: new components are missing and the timer remains in `TodayWorkbench`.
 
-- [ ] **Step 6: Extract the exact existing JSX**
+- [x] **Step 6: Extract the exact existing JSX**
 
 Create `MarketSessionClock` with the only timer and phase ref:
 
@@ -166,7 +166,7 @@ useEffect(() => {
 
 Move the existing four market-session cells unchanged into that component. Move the entire existing `today-portfolio-panel` section into `TodayPortfolioPanel`, which receives only `portfolio` and `viewportWidth`. Export `TodayContextView` and `TodayActionsView`; route four explicit views and retain `full` as compatibility composition.
 
-- [ ] **Step 7: Preserve split iframe spacing**
+- [x] **Step 7: Preserve split iframe spacing**
 
 ```css
 .today-workbench.view-context { padding-bottom: 0; }
@@ -174,7 +174,7 @@ Move the existing four market-session cells unchanged into that component. Move 
 .today-workbench.view-actions { padding-top: 0; }
 ```
 
-- [ ] **Step 8: Run regressions, build, and commit Task 1**
+- [x] **Step 8: Run regressions, build, and commit Task 1**
 
 ```bash
 .venv/bin/python -m unittest tests.test_today_home.TodayHomeReadModelTests \
