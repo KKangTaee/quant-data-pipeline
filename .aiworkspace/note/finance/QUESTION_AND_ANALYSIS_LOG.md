@@ -10474,3 +10474,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 3-family/7-view 구조와 deep link는 유지하면서 family/view 위계와 현재 위치를 더 빠르게 읽게 해야 함.
 - Analysis result: 현재 기능 수에는 drawer보다 content-width primary rail과 bounded secondary navigation이 적합하다. drawer는 향후 관심종목·최근 조회·저장 리서치 같은 보조 도구에만 검토한다.
 - Follow-up: 전체 `3/3차`를 완료했다. compact semantic header, content-width family rail, bounded local view surface를 구현하고 1280·760·420px actual Browser QA에서 overflow 0과 전체 family/view URL 전환을 확인했다. sticky는 필요하지 않았고 drawer는 보조 도구가 늘어날 때만 다시 검토한다.
+
+### 2026-07-23 - 선물 매크로는 단기 관측과 검증 결론을 분리하고 거짓 재계산을 막는다
+
+- User request: 일봉 갱신의 40~50초 지연, `NO_EDGE` 의미, 혼란스러운 과거/미래 경로 그래프와 수집 17개 대비 화면 활용 범위를 진단하고 승인한 3단계·핵심 4+확인 2 흐름으로 개발해 달라고 요청함.
+- Interpreted goal: 1D/5D 관측으로 단기 방향을 빠르게 읽고 5D 모델 우위는 별도 검증 결론으로 제한하며, 불필요한 전체 재수집·재계산 없이 같은 화면에서 근거 범위를 확인해야 함.
+- Analysis result: `NO_EDGE`는 데이터 누락이 아니라 조건부 모델이 unconditional baseline을 넘지 못한 상태다. 실제 반복 지연은 17개 1년 수집보다 Yahoo same-date 미완성 행을 완료로 판정해 매번 약 55초 nested validation을 재실행한 것이 주원인이었다.
+- Follow-up: 승인 UI와 1년 overlap/부족 symbol bootstrap, completed-input fast path, pending-session 판정을 구현했다. 실제 동일 입력 총시간은 64.859초에서 12.936초로 감소했고 420px/console Browser QA와 focused 69개·service contract 26개·Vite build까지 통과해 전체 `4/4차`를 완료했다.

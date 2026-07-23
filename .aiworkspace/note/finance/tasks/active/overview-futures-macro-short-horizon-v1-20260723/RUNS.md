@@ -17,9 +17,30 @@ Last Updated: 2026-07-23
 - Browser warning/error log was empty.
 - User selected `approve-core4-confirm2`.
 
-## Pending
+## Implementation verification
 
-- Product implementation commands after execution mode selection
+- Baseline focused suite: 49 passed, 15 subtests passed.
+- Integrated Futures Macro suite after session/fingerprint changes: 67 passed, 15 subtests passed.
+- React/Vite production bundle build passed after the approved UI change.
+- `git diff --check` passed before implementation commits.
+
+## Actual refresh diagnosis and timing
+
+- Coverage plan query: 17 routine symbols, 0 bootstrap symbols, one-year routine overlap.
+- Provider/DB before-after comparison: 4,397 recent rows compared; only 17 rows changed, all dated `2026-07-22`, one per symbol.
+- Slow path actual: 4,284 rows, download/normalize 6.845s, UPSERT 0.155s, input compare 2.938s, nested materialization 54.842s, total 64.859s.
+- After finalized-session fix and compatible current replacement: same 4,284-row refresh, download/normalize 9.755s, UPSERT 0.156s, input compare 2.941s, nested materialization 0s, total 12.936s, snapshot status `reused_pending`.
+- cProfile on a genuinely changed completed input: 420,936,066 calls in profiler mode; nested horizon selection/forecast and analog distance ranking dominate. This remains a separate deeper model-performance boundary.
+
+## Final verification and Browser QA
+
+- `py_compile` passed for the Futures Macro helper, action/ingestion jobs, pattern/snapshot services, collector, and loader.
+- Final focused suite: 69 passed, 15 subtests passed.
+- Futures Macro service-contract subset: 26 passed, 840 deselected.
+- Vite production build: 177 modules transformed; CSS 25.26 kB, JS 335.84 kB.
+- Actual Browser QA at the local sub-dev Streamlit app confirmed the three-step decision flow, all core 4 + confirmation 2 families, `방향 예측 근거 부족`, baseline explanation, calculation scope, pending-session disclosure, and secondary `최근 체제 이력`.
+- 420px QA: outer client/scroll width 420/420; workbench main client/scroll width 377/377; no console warning/error.
+- Representative generated screenshot: `futures-macro-short-horizon-v1-qa.png` (untracked, not staged).
 
 ## Spec self-review
 

@@ -49,7 +49,7 @@ def _raw_daily_rows() -> list[dict[str, object]]:
 
 
 class FuturesMacroV2IntegrationTests(unittest.TestCase):
-    def test_fixed_cutoff_keeps_sunday_monday_pending_and_prior_state_immutable(self) -> None:
+    def test_evening_reopen_keeps_sunday_monday_pending_and_prior_state_immutable(self) -> None:
         from app.services.futures_macro_pattern import (
             build_pattern_feature_frame,
             build_pattern_state_frame,
@@ -83,7 +83,9 @@ class FuturesMacroV2IntegrationTests(unittest.TestCase):
 
         self.assertEqual(before.latest_final_session, "2026-07-17")
         self.assertEqual(before.pending_session, "2026-07-20")
-        self.assertEqual(after.latest_final_session, "2026-07-20")
+        self.assertEqual(after.latest_final_session, "2026-07-17")
+        self.assertEqual(after.pending_session, "2026-07-20")
+        pd.testing.assert_frame_equal(before_state, after_state)
         pd.testing.assert_series_equal(
             before_state.loc[pd.Timestamp("2026-07-17")],
             after_state.loc[pd.Timestamp("2026-07-17")],

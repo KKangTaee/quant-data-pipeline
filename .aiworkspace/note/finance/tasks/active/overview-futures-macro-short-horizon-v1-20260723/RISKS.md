@@ -10,6 +10,7 @@ Last Updated: 2026-07-23
 - Hiding future 20D from the primary UI while retaining backend calculation creates compatibility cost, but deletion would unnecessarily broaden model/storage scope.
 - Fingerprint comparison must ignore collection timestamps while detecting OHLCV revisions.
 - Partial provider results must not replace a usable latest-good snapshot with a lower-coverage result.
+- A genuinely new completed session still triggers the full nested validation path (about 55 seconds in the actual sample). This task removes false/repeated rebuilds; it does not weaken validation gates or redesign the nested model artifact.
 
 ## Deferred Decisions
 

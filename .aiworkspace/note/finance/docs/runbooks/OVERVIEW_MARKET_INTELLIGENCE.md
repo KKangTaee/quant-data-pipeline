@@ -192,11 +192,13 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
 
 4. `Workspace > Overview > Futures Macro`
    - 이 tab은 저장된 주요 선물 1D OHLCV로 만든 compact macro snapshot을 읽는 current primary surface다. 화면 진입 중 provider fetch나 5D / 20D 전망 계산을 실행하지 않는다.
-   - `일봉 갱신`은 주요 선물 `5y / 1d`를 수집한 뒤 current macro와 5D / 20D 조건부 전망을 `finance_meta.futures_macro_snapshot`의 `overview_current` row로 materialize한다. 1m 수집은 이 snapshot을 갱신하지 않는다.
+   - `일봉 갱신`은 coverage가 충분한 17개 주요 선물에 `1y / 1d` overlap을 수집한다. nested-validation 최소 이력보다 부족한 symbol만 `10y / 1d` bootstrap하고, 완료 일봉 입력이 바뀐 경우에만 current macro와 5D / 20D 조건부 전망을 `finance_meta.futures_macro_snapshot`의 `overview_current` row로 materialize한다. 1m 수집은 이 snapshot을 갱신하지 않는다.
    - `다시 읽기`는 provider 수집이나 전망 계산 없이 저장된 compatible snapshot만 다시 읽는다. snapshot이 없거나 schema/algorithm version이 맞지 않으면 `일봉 갱신 필요` 상태를 표시한다.
-   - 첫 화면은 현재 체제, 현재/다음 1주/다음 1개월, `20D 전 → 5D 전 → 현재` 관측과 선택 horizon 예상 순이동·말일 도착 범위, 근거, 60D ribbon, 자산별 확인 포인트 순으로 읽는다.
-   - 5D / 20D 확률과 예상 위치는 과거 유사 episode의 조건부 빈도·중앙 이동이며 미래 보장이나 가격 목표가 아니다. 방향 우위가 검증 gate를 넘지 못하면 `PROVISIONAL`과 `방향 우위 미확인`을 유지한다.
-   - 현재 관측은 `관측 완료 / 일부 관측 / 관측 불가`, 미래 분포는 `VERIFIED / PROVISIONAL / UNAVAILABLE`로 분리한다. 미래 전망이 잠정이어도 현재 저장 자료가 완전하면 현재 관측을 잠정으로 낮추지 않는다.
+   - 첫 화면은 `최근 1거래일 새 충격 → 최근 5거래일 단기 방향 → 향후 5거래일 검증 결론` 순으로 읽는다. 방향 정렬은 Risk On, Rate Pressure, Dollar Pressure, Inflation Pressure의 핵심 4개와 Growth, Safe Haven 확인 2개를 분리하고, 최근 20거래일은 배경 흐름으로만 사용한다.
+   - 향후 5D 조건부 모델이 평소 결과 빈도 baseline보다 정확하지 않으면 `NO_EDGE`를 `방향 예측 근거 부족`으로 표시한다. 이는 현재 관측 데이터 부족이 아니라 유사 국면 모델의 추가 예측력이 검증되지 않았다는 뜻이다.
+   - future 20D와 2D path는 기본 화면에 표시하지 않지만 backend evidence에는 남는다. 60D ribbon은 `최근 체제 이력`이라는 secondary history로 유지한다.
+   - 계산 범위는 `17개 수집 · 15개 family 산식 · family 6/6`처럼 수집과 산식 참여를 구분한다. DXY는 Economic Cycle 공유 입력이고 silver는 raw observation이며, 이 task에서는 family membership을 바꾸지 않는다.
+   - Yahoo same-date 일봉은 미국 동부시간 저녁 재개 뒤에도 값이 움직일 수 있다. settlement 안정 구간에 수집된 행이 아니면 pending으로 제외하며, 완료 입력 fingerprint가 같으면 nested model을 다시 계산하지 않는다. 새 완료 일봉이 실제로 추가되면 검증 재계산이 실행될 수 있다.
    - `방법론과 품질`은 원천, 독립 표본, Brier, baseline, calibration, 제한을 보여준다. 펼침 높이는 React component가 Streamlit iframe과 동기화한다.
    - React `원본 데이터 / 계산 추적`은 snapshot 기준일/저장 시각/source marker와 compact `현재 점수 원본`, `점수 구성 기여`, `선물 일봉 변화`, 해석 주의점을 보여준다. 전체 10년 OHLCV 원본은 이 disclosure가 아니라 `finance_price.futures_ohlcv`에 남는다.
    - 일봉 수집 성공 뒤 materialization만 실패하면 job은 `partial_success`다. 이전 latest-good snapshot은 지우지 말고 attached materialization result를 확인한 뒤 일봉 갱신을 재시도한다.
@@ -403,7 +405,7 @@ PY
 - Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
 - Coverage Diagnostics keeps `Reason` / `Recommended Action` and adds compact `Likely Cause`, `Evidence Summary`, `Next Check`, `Listing Evidence`, `Profile Freshness`, and `Market Data Issue` evidence. These are DB-backed hints, not legal status, trading signal, validation gate, or monitoring signal.
 - Quote gap diagnostics persist repeated issue history to `finance_meta.market_data_issue` and display occurrence count / latest evidence in Coverage Diagnostics.
-- Futures Macro requests ten years of daily candles and stores the current 1D/5D/20D score state, 5D/20D independent-episode probabilities, empirical net movement, validation metrics, and bounded calculation trace in one compatible compact snapshot after `일봉 갱신`. The React workbench reads this row without render-time replay; `다시 읽기` is storage-only. Its conclusion and path stay metric-backed, keep current observation status separate from future publication gates, and must not create uncomputed recommendation prose.
+- Futures Macro routine refresh requests a one-year daily overlap for covered symbols and ten years only for deficient-symbol bootstrap. It stores current 1D/5D/20D state, 5D/20D independent-episode validation, metrics, and bounded calculation trace in one compatible compact snapshot. The default React decision surface uses 1D/5D observations and the 5D validation conclusion; 20D future/path evidence remains backend-only. Same-date provider bars that can still move are pending, and an unchanged completed-input fingerprint reuses the stored model without nested replay.
 - FOMC rows have `source=federal_reserve_fomc_calendar`, `confidence=1.0`, and `Source Type=Official`.
 - Macro rows have `Type=MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`, or `MACRO_GDP`, `Source Type=Official`, and `Validation=Official`.
 - BLS `.ics` import rows keep `source=bureau_labor_statistics_release_schedule` and `raw_payload_json.import_method=official_ics_file`.

@@ -7094,3 +7094,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 대표 포트폴리오는 최근 최대 60개 실제 일별 저장 종가, 실제 날짜 X축, 현금흐름 조정 누적 수익률 Y축과 최근 거래일의 정확한 두 날짜를 표시한다.
 - Python 26+연결 surface 114, React 5/typecheck/build와 1280·760·420 actual Browser QA, clean console, Market Context 이동을 통과했다.
 - 전체 roadmap `4/4차` 완료. 상세는 `tasks/active/today-home-react-workbench-v2-20260722/`를 본다.
+
+## 2026-07-23 - Overview Futures Macro 단기 판단·갱신 개선 진행
+
+- 첫 판단을 최근 1거래일 새 충격, 최근 5거래일 단기 방향, 향후 5거래일 검증 결론으로 재구성하고 핵심 4 + 확인 2 family 정렬과 계산 범위를 연결했다.
+- routine 일봉 수집은 17개 전체 10년 반복에서 1년 overlap + 부족 symbol 10년 bootstrap으로 바꿨고, Yahoo same-date 미완성 행을 pending 처리해 거짓 입력 변경을 막았다.
+- 실제 동일 입력 갱신은 64.859초에서 12.936초로 줄었고 nested materialization은 0초였다. 새 완료 session의 full validation 비용은 별도 후속 성능 경계로 남는다.
+- 420px overflow 0, console error 0의 actual Browser QA와 focused 69개·service contract 26개·Vite build를 통과해 전체 roadmap `4/4차`를 완료했다. 상세는 `tasks/active/overview-futures-macro-short-horizon-v1-20260723/`를 본다.
