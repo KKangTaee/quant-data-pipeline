@@ -136,6 +136,92 @@ class FuturesDailySessionResolverTests(unittest.TestCase):
         self.assertEqual(result.status, "FINAL")
         self.assertEqual(result.reason, "same_date_collected_during_settlement_gap")
 
+    def test_explicit_session_aggregate_is_final_after_evening_reopen(self) -> None:
+        from app.services.futures_macro_sessions import (
+            FUTURES_SESSION_FINALIZATION_BASIS,
+            resolve_futures_daily_session,
+        )
+
+        result = resolve_futures_daily_session(
+            "ES=F",
+            "2026-07-23 00:00:00",
+            "2026-07-23 22:02:00",
+            datetime(2026, 7, 23, 22, 2, tzinfo=timezone.utc),
+            finalization_basis=FUTURES_SESSION_FINALIZATION_BASIS,
+            final_close=6401.25,
+        )
+
+        self.assertEqual(result.status, "FINAL")
+        self.assertEqual(result.reason, "explicit_session_aggregate")
+        self.assertEqual(result.session_date, "2026-07-23")
+
+    def test_invalid_explicit_session_aggregate_remains_pending(self) -> None:
+        from app.services.futures_macro_sessions import (
+            FUTURES_SESSION_FINALIZATION_BASIS,
+            resolve_futures_daily_session,
+        )
+
+        missing_close = resolve_futures_daily_session(
+            "ES=F",
+            "2026-07-23 00:00:00",
+            "2026-07-23 22:02:00",
+            datetime(2026, 7, 23, 22, 2, tzinfo=timezone.utc),
+            finalization_basis=FUTURES_SESSION_FINALIZATION_BASIS,
+            final_close=None,
+        )
+        unknown_basis = resolve_futures_daily_session(
+            "ES=F",
+            "2026-07-23 00:00:00",
+            "2026-07-23 22:02:00",
+            datetime(2026, 7, 23, 22, 2, tzinfo=timezone.utc),
+            finalization_basis="other_basis",
+            final_close=6401.25,
+        )
+
+        self.assertEqual(missing_close.status, "IN_PROGRESS")
+        self.assertEqual(unknown_basis.status, "IN_PROGRESS")
+
+    def test_completed_rows_prefer_explicit_final_ohlcv(self) -> None:
+        from app.services.futures_macro_sessions import (
+            FUTURES_SESSION_FINALIZATION_BASIS,
+            select_completed_futures_daily_rows,
+        )
+
+        completed = select_completed_futures_daily_rows(
+            [
+                {
+                    "provider_symbol": "ES=F",
+                    "candle_time_utc": "2026-07-23 00:00:00",
+                    "collected_at": "2026-07-23 22:02:00",
+                    "open": 7000.0,
+                    "high": 7100.0,
+                    "low": 6900.0,
+                    "close": 7050.0,
+                    "adj_close": 7050.0,
+                    "volume": 999999.0,
+                    "final_open": 6300.0,
+                    "final_high": 6420.0,
+                    "final_low": 6280.0,
+                    "final_close": 6401.25,
+                    "final_adj_close": 6401.25,
+                    "final_volume": 123456.0,
+                    "finalization_basis": FUTURES_SESSION_FINALIZATION_BASIS,
+                }
+            ],
+            evaluation_time=datetime(2026, 7, 23, 22, 2, tzinfo=timezone.utc),
+        )
+
+        row = completed.rows[0]
+        self.assertEqual(completed.latest_final_session, "2026-07-23")
+        self.assertIsNone(completed.pending_session)
+        self.assertEqual(row["session_reason"], "explicit_session_aggregate")
+        self.assertEqual(
+            (row["open"], row["high"], row["low"], row["close"]),
+            (6300.0, 6420.0, 6280.0, 6401.25),
+        )
+        self.assertEqual(row["adj_close"], 6401.25)
+        self.assertEqual(row["volume"], 123456.0)
+
     def test_saturday_and_unparseable_labels_are_unknown(self) -> None:
         from app.services.futures_macro_sessions import (
             resolve_futures_daily_session,

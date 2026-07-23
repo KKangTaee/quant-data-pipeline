@@ -12,7 +12,7 @@ def _compatible_row(
     *,
     source_marker: str,
     input_fingerprint: str = "a" * 64,
-    algorithm_version: str = "pattern_outlook_v6_same_state_nested_hybrid_finalized_sessions",
+    algorithm_version: str = "pattern_outlook_v7_same_state_nested_hybrid_session_aggregate",
 ) -> dict[str, object]:
     return {
         "snapshot_key": "overview_current",
@@ -82,7 +82,7 @@ def _completed_probe(
         "status": "PENDING_SESSION_FINALIZATION" if pending_session else "OBSERVED",
         "latest_final_session": "2026-07-18",
         "pending_session": pending_session,
-        "resolver_version": "futures_daily_session_v2",
+        "resolver_version": "futures_daily_session_v3",
     }
     return {
         "input_fingerprint": input_fingerprint,

@@ -8,6 +8,9 @@ from typing import Any
 
 import pandas as pd
 
+from app.services.futures_macro_daily_loader import (
+    load_futures_macro_daily_rows,
+)
 from app.services.futures_macro_sessions import (
     futures_session_evaluation_token,
     select_completed_futures_daily_rows,
@@ -302,24 +305,11 @@ def _load_daily_rows(
     symbols: Sequence[str],
     lookback_days: int,
 ) -> list[dict[str, Any]]:
-    if not symbols:
-        return []
-    placeholders = ", ".join(["%s"] * len(symbols))
-    params: list[Any] = [DAILY_INTERVAL, *symbols, max(1, int(lookback_days))]
     try:
-        return query_fn(
-            "finance_price",
-            f"""
-            SELECT provider_symbol, interval_code, candle_time_utc,
-                   open, high, low, close, volume, source, provider_status,
-                   collected_at
-            FROM futures_ohlcv
-            WHERE interval_code = %s
-              AND provider_symbol IN ({placeholders})
-              AND candle_time_utc >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL %s DAY)
-            ORDER BY provider_symbol, candle_time_utc
-            """,
-            params,
+        return load_futures_macro_daily_rows(
+            query_fn,
+            symbols=symbols,
+            lookback_days=lookback_days,
         )
     except Exception:
         return []
