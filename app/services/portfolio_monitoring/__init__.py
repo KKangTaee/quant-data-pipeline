@@ -86,6 +86,12 @@ from .price_refresh import (
     build_portfolio_price_refresh_plan,
     run_portfolio_price_refresh,
 )
+from .decision_lifecycle import (
+    MonitoringDecisionLifecycle,
+    decision_subject_key,
+    latest_final_decision_rows,
+    resolve_monitoring_decision,
+)
 
 __all__ = [
     "AddMonitoringItemInput",
@@ -158,4 +164,8 @@ __all__ = [
     "calculate_group_metrics",
     "build_portfolio_price_refresh_plan",
     "run_portfolio_price_refresh",
+    "MonitoringDecisionLifecycle",
+    "decision_subject_key",
+    "latest_final_decision_rows",
+    "resolve_monitoring_decision",
 ]
