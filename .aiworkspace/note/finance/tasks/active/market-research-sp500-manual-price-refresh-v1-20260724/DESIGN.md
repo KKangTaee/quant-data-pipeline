@@ -1,6 +1,6 @@
 # Market Research S&P 500 Manual Price Refresh V1 Design
 
-Status: Proposed
+Status: Approved
 Last Updated: 2026-07-24
 
 ## Problem
