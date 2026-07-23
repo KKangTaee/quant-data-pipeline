@@ -686,6 +686,111 @@ class MarketContextValuationTests(unittest.TestCase):
         clear_cache.assert_called_once_with()
         rerun.assert_called_once_with()
 
+    def test_sp500_refresh_event_runs_once_and_clears_both_caches(self) -> None:
+        from app.web.overview.market_context_helpers import (
+            SP500_COLLECTION_RESULT_KEY,
+            _handle_market_context_valuation_event,
+        )
+
+        state = {}
+        run_action = Mock(
+            return_value={"status": "success", "message": "반영 완료"}
+        )
+        store_result = Mock()
+        clear_cache = Mock()
+        rerun = Mock()
+        event = {"id": "refresh_sp500_price_data", "nonce": "spx-1"}
+
+        first = _handle_market_context_valuation_event(
+            event,
+            state=state,
+            run_sp500_action=run_action,
+            store_sp500_result=store_result,
+            clear_sp500_cache=clear_cache,
+            rerun=rerun,
+        )
+        second = _handle_market_context_valuation_event(
+            event,
+            state=state,
+            run_sp500_action=run_action,
+            store_sp500_result=store_result,
+            clear_sp500_cache=clear_cache,
+            rerun=rerun,
+        )
+
+        self.assertTrue(first)
+        self.assertFalse(second)
+        run_action.assert_called_once_with()
+        store_result.assert_called_once_with(run_action.return_value)
+        clear_cache.assert_called_once_with()
+        rerun.assert_called_once_with()
+        self.assertEqual(
+            SP500_COLLECTION_RESULT_KEY,
+            "overview_sp500_price_refresh_result",
+        )
+
+    def test_sp500_failed_refresh_keeps_cache_and_reruns_with_retry_result(
+        self,
+    ) -> None:
+        from app.web.overview.market_context_helpers import (
+            _handle_market_context_valuation_event,
+        )
+
+        clear_cache = Mock()
+        rerun = Mock()
+        result = {"status": "failed", "message": "기존 결과 유지"}
+        handled = _handle_market_context_valuation_event(
+            {"id": "refresh_sp500_price_data", "nonce": "spx-2"},
+            state={},
+            run_sp500_action=Mock(return_value=result),
+            store_sp500_result=Mock(),
+            clear_sp500_cache=clear_cache,
+            rerun=rerun,
+        )
+
+        self.assertTrue(handled)
+        clear_cache.assert_not_called()
+        rerun.assert_called_once_with()
+
+    def test_sp500_collection_reflection_excludes_visible_row_diagnostics(
+        self,
+    ) -> None:
+        from app.web.overview.market_context_helpers import (
+            _sp500_collection_reflection,
+        )
+
+        reflection = _sp500_collection_reflection(
+            {
+                "status": "partial_success",
+                "message": "SPX 반영, SPY 확인 필요",
+                "rows_written": 42,
+                "failed_symbols": ["SPY"],
+            }
+        )
+
+        self.assertEqual(
+            reflection,
+            {
+                "status": "partial_success",
+                "message": "SPX 반영, SPY 확인 필요",
+            },
+        )
+
+    def test_sp500_cache_helper_clears_direct_and_combined_models(self) -> None:
+        from app.web.overview import market_context_helpers
+
+        with patch.object(
+            market_context_helpers.load_sp500_valuation_model,
+            "clear",
+        ) as clear_sp500, patch.object(
+            market_context_helpers.load_market_context_valuation_model,
+            "clear",
+        ) as clear_combined:
+            market_context_helpers._clear_sp500_valuation_caches()
+
+        clear_sp500.assert_called_once_with()
+        clear_combined.assert_called_once_with()
+
     def test_legacy_collection_events_and_analysis_switch_are_not_python_actions(self) -> None:
         from app.web.overview import market_context_helpers
 

@@ -13,6 +13,7 @@ from app.jobs.overview_actions import (
     record_overview_action_result,
     run_overview_market_context_refresh_all,
     run_overview_market_context_refresh_smart,
+    run_overview_sp500_price_refresh,
     run_overview_us_stock_data_refresh,
 )
 from app.web.overview.session_helpers import _market_context_session_payload
@@ -39,11 +40,14 @@ US_STOCK_SEARCH_QUERY_KEY = "overview_us_stock_valuation_search_query"
 US_STOCK_SELECTED_SYMBOL_KEY = "overview_us_stock_valuation_selected_symbol"
 US_STOCK_COLLECTION_RESULT_KEY = "overview_us_stock_valuation_collection_result"
 US_STOCK_EVENT_KEY = "overview_us_stock_valuation_last_event"
+SP500_COLLECTION_RESULT_KEY = "overview_sp500_price_refresh_result"
+SP500_EVENT_KEY = "overview_sp500_price_refresh_last_event"
 US_STOCK_EVENT_IDS = {
     "search_us_stock",
     "select_us_stock",
     "refresh_us_stock_data",
 }
+MARKET_CONTEXT_EVENT_IDS = US_STOCK_EVENT_IDS | {"refresh_sp500_price_data"}
 GROUP_TREND_HEATMAP_MIN_HEIGHT = 280
 GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
 
@@ -133,7 +137,28 @@ def _render_market_context_valuation_fallback(payload: dict[str, Any]) -> None:
     """Keep the valuation question readable when the React build is unavailable."""
     st.info("가치평가 화면 빌드를 찾지 못해 핵심 수치만 표시합니다.")
     instruments = dict(payload.get("instruments") or {})
-    payload = dict(instruments.get(payload.get("default_instrument") or "sp500") or payload)
+    selected_id = str(payload.get("default_instrument") or "sp500")
+    payload = dict(instruments.get(selected_id) or payload)
+    freshness = dict(payload.get("data_freshness") or {})
+    action = dict(freshness.get("action") or {})
+    if (
+        selected_id == "sp500"
+        and action.get("id") == "refresh_sp500_price_data"
+        and action.get("enabled")
+    ):
+        st.warning(str(freshness.get("message") or "가격 자료 최신화가 필요합니다."))
+        if st.button(
+            str(action.get("label") or "최신 데이터로 다시 계산"),
+            key="fallback_refresh_sp500_price_data",
+        ):
+            result = _run_sp500_price_refresh_for_ui()
+            _store_overview_job_result(SP500_COLLECTION_RESULT_KEY, result)
+            if str(result.get("status") or "").lower() in {
+                "success",
+                "partial_success",
+            }:
+                _clear_sp500_valuation_caches()
+            st.rerun()
     multiple = dict(payload.get("multiple_regime") or {})
     earnings = dict(payload.get("earnings_scenario") or {})
     index = dict(payload.get("index_scenario") or {})
@@ -176,13 +201,18 @@ def _consume_market_context_valuation_event(
     state: Any,
 ) -> bool:
     action_id = str(payload.get("id") or payload.get("action_id") or "").strip()
-    if action_id not in US_STOCK_EVENT_IDS:
+    if action_id not in MARKET_CONTEXT_EVENT_IDS:
         return False
     nonce = payload.get("nonce") or payload.get("token") or action_id
     event_token = f"{action_id}:{nonce}"
-    if state.get(US_STOCK_EVENT_KEY) == event_token:
+    event_key = (
+        SP500_EVENT_KEY
+        if action_id == "refresh_sp500_price_data"
+        else US_STOCK_EVENT_KEY
+    )
+    if state.get(event_key) == event_token:
         return False
-    state[US_STOCK_EVENT_KEY] = event_token
+    state[event_key] = event_token
     return True
 
 
@@ -224,19 +254,46 @@ def _run_us_stock_refresh_for_ui(symbol: str) -> dict[str, Any]:
     return result
 
 
+def _clear_sp500_valuation_caches() -> None:
+    load_sp500_valuation_model.clear()
+    load_market_context_valuation_model.clear()
+
+
+def _run_sp500_price_refresh_for_ui() -> dict[str, Any]:
+    with st.status(
+        "최신 장 마감 데이터를 수집하는 중입니다.",
+        expanded=True,
+    ) as status:
+        result = run_overview_sp500_price_refresh()
+        result_status = str(result.get("status") or "failed").lower()
+        state = (
+            "complete"
+            if result_status in {"success", "partial_success"}
+            else "error"
+        )
+        status.update(
+            label=str(result.get("message") or "가격 자료 확인을 마쳤습니다."),
+            state=state,
+        )
+    return result
+
+
 def _handle_market_context_valuation_event(
     event: dict[str, Any] | None,
     *,
     state: Any = None,
     run_action: Callable[[str], dict[str, Any]] | None = None,
+    run_sp500_action: Callable[[], dict[str, Any]] | None = None,
     store_result: Callable[[dict[str, Any]], None] | None = None,
+    store_sp500_result: Callable[[dict[str, Any]], None] | None = None,
     clear_cache: Callable[[], None] | None = None,
+    clear_sp500_cache: Callable[[], None] | None = None,
     rerun: Callable[[], None] | None = None,
 ) -> bool:
     resolved_state = state if state is not None else st.session_state
     payload = _market_context_valuation_event_payload(event)
     action_id = str(payload.get("id") or payload.get("action_id") or "").strip()
-    if action_id not in US_STOCK_EVENT_IDS:
+    if action_id not in MARKET_CONTEXT_EVENT_IDS:
         return False
     if action_id == "refresh_us_stock_data":
         selected = str(resolved_state.get(US_STOCK_SELECTED_SYMBOL_KEY) or "").upper()
@@ -245,6 +302,19 @@ def _handle_market_context_valuation_event(
             return False
     if not _consume_market_context_valuation_event(payload, state=resolved_state):
         return False
+    if action_id == "refresh_sp500_price_data":
+        result = (run_sp500_action or _run_sp500_price_refresh_for_ui)()
+        if store_sp500_result is not None:
+            store_sp500_result(result)
+        else:
+            _store_overview_job_result(SP500_COLLECTION_RESULT_KEY, result)
+        if str(result.get("status") or "").lower() in {
+            "success",
+            "partial_success",
+        }:
+            (clear_sp500_cache or _clear_sp500_valuation_caches)()
+        (rerun or st.rerun)()
+        return True
     if action_id == "search_us_stock":
         resolved_state[US_STOCK_SEARCH_QUERY_KEY] = str(payload.get("query") or "").strip()
         resolved_state.pop(US_STOCK_SELECTED_SYMBOL_KEY, None)
@@ -277,12 +347,19 @@ def _us_stock_collection_reflection(result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _sp500_collection_reflection(result: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "status": str(result.get("status") or "failed"),
+        "message": str(result.get("message") or ""),
+    }
+
+
 def render_market_context_valuation(
     *,
     default_instrument: str | None = None,
     show_instrument_selector: bool = True,
 ) -> None:
-    """Render the React-first valuation surface and consume explicit stock actions."""
+    """Render valuation models and consume explicit stock or S&P price actions."""
     from app.web.overview.market_context_react_component import (
         market_context_valuation_component_available,
         render_market_context_valuation_component,
@@ -305,6 +382,13 @@ def render_market_context_valuation(
         st.warning(f"시장 가치평가 자료를 불러오지 못했습니다: {exc}")
         return
     payload = json.loads(json.dumps(payload, default=str))
+    sp500_result = st.session_state.pop(SP500_COLLECTION_RESULT_KEY, None)
+    if isinstance(sp500_result, dict):
+        instruments = dict(payload.get("instruments") or {})
+        sp500 = dict(instruments.get("sp500") or {})
+        sp500["collection_result"] = _sp500_collection_reflection(sp500_result)
+        instruments["sp500"] = sp500
+        payload["instruments"] = instruments
     collection_result = st.session_state.pop(US_STOCK_COLLECTION_RESULT_KEY, None)
     if isinstance(collection_result, dict):
         instruments = dict(payload.get("instruments") or {})
