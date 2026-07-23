@@ -109,6 +109,47 @@ describe("Today split views", () => {
     expect(markup).not.toContain("NEXT ACTION");
   });
 
+  it("shows every contributor with explicit full coverage copy", () => {
+    const portfolio = {
+      ...payload.portfolio,
+      active_item_count: 5,
+      contributors: [
+        { symbol: "AMD", contribution_value: 12136, total_return: 3.64, tone: "positive" as const },
+        { symbol: "TEM", contribution_value: -462, total_return: -0.24, tone: "negative" as const },
+        { symbol: "RKLB", contribution_value: -440, total_return: -0.05, tone: "negative" as const },
+        { symbol: "SOXX", contribution_value: -265, total_return: -0.07, tone: "negative" as const },
+        { symbol: "QQQ", contribution_value: 0, total_return: 0, tone: "neutral" as const },
+      ],
+    };
+
+    const markup = renderToStaticMarkup(
+      <TodayPortfolioPanel portfolio={portfolio} viewportWidth={1200} />,
+    );
+
+    expect(markup).toContain("전체 5개 · 영향 큰 순");
+    for (const symbol of ["AMD", "TEM", "RKLB", "SOXX", "QQQ"]) {
+      expect(markup).toContain(symbol);
+    }
+  });
+
+  it("discloses partial contributor coverage", () => {
+    const portfolio = {
+      ...payload.portfolio,
+      active_item_count: 5,
+      contributors: [
+        { symbol: "AMD", contribution_value: 12136, total_return: 3.64, tone: "positive" as const },
+        { symbol: "TEM", contribution_value: -462, total_return: -0.24, tone: "negative" as const },
+        { symbol: "RKLB", contribution_value: -440, total_return: -0.05, tone: "negative" as const },
+      ],
+    };
+
+    const markup = renderToStaticMarkup(
+      <TodayPortfolioPanel portfolio={portfolio} viewportWidth={1200} />,
+    );
+
+    expect(markup).toContain("기여 계산 3/5개 · 영향 큰 순");
+  });
+
   it("keeps navigation buttons in the actions view", () => {
     const markup = renderToStaticMarkup(
       <TodayActionsView onEvent={() => undefined} />,

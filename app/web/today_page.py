@@ -710,6 +710,16 @@ def build_today_html(model: dict[str, Any]) -> str:
         "".join(contributor_cards)
         or '<div class="today-event-detail">기여 계산 자료가 없습니다.</div>'
     )
+    contributor_count = len(contributor_cards)
+    active_item_count = int(portfolio.get("active_item_count") or 0)
+    if active_item_count <= 0:
+        contributor_coverage_label = "기여 계산 자료 없음"
+    elif contributor_count == active_item_count:
+        contributor_coverage_label = f"전체 {contributor_count}개 · 영향 큰 순"
+    else:
+        contributor_coverage_label = (
+            f"기여 계산 {contributor_count}/{active_item_count}개 · 영향 큰 순"
+        )
     review_rows = [dict(row or {}) for row in portfolio.get("review_items") or []]
     review_html = (
         "".join(
@@ -771,7 +781,7 @@ def build_today_html(model: dict[str, Any]) -> str:
       <section class="today-contributor-section">
         <div class="today-detail-heading">
           <span class="today-panel-meta">종목별 성과 기여</span>
-          <span class="today-panel-meta">기여 상위 2 · 하위 2</span>
+          <span class="today-panel-meta">{escape(contributor_coverage_label)}</span>
         </div>
         <div class="today-contributor-grid">{contributor_html}</div>
         <div class="today-contributor-note">

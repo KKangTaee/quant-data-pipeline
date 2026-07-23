@@ -36,6 +36,12 @@ const TodayPortfolioPanel = memo(function TodayPortfolioPanel({
   const display = displayPortfolio(portfolio);
   const recentTone = (display.latestObservationReturn ?? 0) < 0 ? "is-negative" : "is-positive";
   const totalTone = (display.totalReturn ?? 0) < 0 ? "is-negative" : "is-positive";
+  const contributorCount = display.contributors.length;
+  const contributorCoverageLabel = portfolio.active_item_count <= 0
+    ? "기여 계산 자료 없음"
+    : contributorCount === portfolio.active_item_count
+      ? `전체 ${contributorCount}개 · 영향 큰 순`
+      : `기여 계산 ${contributorCount}/${portfolio.active_item_count}개 · 영향 큰 순`;
 
   return (
     <section className="today-portfolio-panel">
@@ -86,7 +92,7 @@ const TodayPortfolioPanel = memo(function TodayPortfolioPanel({
         <section className="today-contributor-section">
           <header className="today-detail-heading">
             <span>종목별 성과 기여</span>
-            <small>기여 상위 2 · 하위 2</small>
+            <small>{contributorCoverageLabel}</small>
           </header>
           <div className="today-contributor-grid">
             {display.contributors.length
@@ -94,9 +100,11 @@ const TodayPortfolioPanel = memo(function TodayPortfolioPanel({
                 const returnTone = row.total_return == null
                   ? "is-unavailable"
                   : row.total_return < 0 ? "is-negative" : "is-positive";
-                const contributionTone = row.tone === "negative"
-                  ? "is-negative"
-                  : "is-positive";
+                const contributionTone = row.tone === "positive"
+                  ? "is-positive"
+                  : row.tone === "negative"
+                    ? "is-negative"
+                    : "is-neutral";
                 return (
                   <article
                     className="today-contributor-card"
@@ -124,7 +132,7 @@ const TodayPortfolioPanel = memo(function TodayPortfolioPanel({
             종목 수익률은 입출금 영향을 조정한 누적 성과 · {display.badge}
           </small>
         </section>
-        <section>
+        <section className="today-review-section">
           <span>우선 확인</span>
           <div className="today-review-list">
             {portfolio.review_items.length

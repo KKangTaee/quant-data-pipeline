@@ -161,6 +161,7 @@ button { font: inherit; }
 .today-contributor-section .is-positive { color: #1d6d5d; }
 .today-metrics .is-negative,
 .today-contributor-section .is-negative { color: #ad584d; }
+.today-contributor-section .is-neutral { color: #607486; }
 
 .today-chart-panel { padding: 18px 18px 13px; border: 1px solid #dbe4eb; border-radius: 18px; background: #fff; box-shadow: 0 9px 26px rgba(33, 53, 72, .045); }
 .today-chart-header { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; margin-bottom: 14px; }
@@ -269,8 +270,22 @@ button { font: inherit; }
   line-height: 1.45;
 }
 .today-portfolio-detail-grid small { color: #7b8995; font-size: 11px; }
-.today-review-list { display: grid; gap: 7px; }
-.today-review-list p { display: grid; grid-template-columns: auto 1fr; gap: 7px; color: #607486; font-size: 11px; line-height: 1.45; }
+.today-review-section { align-content: start; }
+.today-review-list {
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 8px;
+}
+.today-review-list p {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 7px;
+  margin: 0;
+  color: #607486;
+  font-size: 11px;
+  line-height: 1.45;
+}
 .today-review-list p b { color: #8b5b21; }
 
 .today-action-section { padding-block: 18px; }

@@ -1510,7 +1510,9 @@ class TodayHomePageContractTests(unittest.TestCase):
         self.assertNotIn("run_overview_", source)
         self.assertNotIn("requests.", source)
         self.assertIn("종목별 성과 기여", react_source)
-        self.assertIn("기여 상위 2 · 하위 2", react_source)
+        self.assertNotIn("기여 상위 2 · 하위 2", react_source)
+        self.assertIn("contributorCoverageLabel", react_source)
+        self.assertIn('className="today-review-section"', react_source)
         self.assertIn("수익률 자료 부족", react_source)
         self.assertIn("signedMoneyText(row.contribution_value)", react_source)
         self.assertIn("contribution_value", types_source)
@@ -1520,6 +1522,12 @@ class TodayHomePageContractTests(unittest.TestCase):
             "grid-template-columns: repeat(2, minmax(0, 1fr))",
             css_source,
         )
+        review_rule = css_source.split(
+            ".today-review-list {",
+            1,
+        )[1].split("}", 1)[0]
+        self.assertIn("align-content: start", review_rule)
+        self.assertIn("grid-auto-rows: max-content", review_rule)
 
     def test_today_html_preserves_b_layout_order_and_escapes_market_copy(self) -> None:
         spec = importlib.util.find_spec("app.web.today_page")
@@ -1596,7 +1604,7 @@ class TodayHomePageContractTests(unittest.TestCase):
         self.assertIn("today-evidence-grid", html)
         self.assertIn("대표 포트폴리오", html)
         self.assertIn("종목별 성과 기여", html)
-        self.assertIn("기여 상위 2 · 하위 2", html)
+        self.assertIn("기여 계산 1/2개 · 영향 큰 순", html)
         self.assertIn("종목 누적 수익률", html)
         self.assertIn("+42.00%", html)
         self.assertIn("포트폴리오 누적 기여", html)

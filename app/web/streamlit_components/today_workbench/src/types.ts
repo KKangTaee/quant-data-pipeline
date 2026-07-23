@@ -43,7 +43,7 @@ export type PortfolioContributor = {
   contribution_value: number;
   value?: number;
   total_return: number | null;
-  tone: "positive" | "negative";
+  tone: "positive" | "negative" | "neutral";
 };
 
 export type PortfolioLiveStatus = "INACTIVE" | "LIVE_READY" | "LIVE_PARTIAL" | "EOD_WAITING";
