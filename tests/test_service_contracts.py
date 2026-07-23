@@ -28495,6 +28495,41 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         self.assertIn("KEY ix_event_family_date", schema_sql)
         self.assertIn("KEY ix_event_universe_date", schema_sql)
 
+    def test_market_event_schema_contains_issuer_and_coverage_contract(self) -> None:
+        from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS
+
+        event_sql = MARKET_INTELLIGENCE_SCHEMAS["market_event_calendar"]
+        coverage_sql = MARKET_INTELLIGENCE_SCHEMAS.get(
+            "market_event_collection_coverage",
+            "",
+        )
+
+        self.assertIn("issuer_key VARCHAR(64) NULL", event_sql)
+        self.assertIn("issuer_name VARCHAR(255) NULL", event_sql)
+        self.assertIn("coverage_key VARCHAR(128) NOT NULL", coverage_sql)
+        self.assertIn("coverage_status VARCHAR(16) NOT NULL", coverage_sql)
+        self.assertIn("UNIQUE KEY uk_market_event_coverage_key", coverage_sql)
+
+    def test_market_event_normalization_preserves_issuer_identity(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        rows = mi.normalize_market_event_rows(
+            [
+                {
+                    "event_date": "2026-07-23",
+                    "event_type": "EARNINGS",
+                    "symbol": "GOOG",
+                    "issuer_key": "sec_cik:1652044",
+                    "issuer_name": "Alphabet Inc.",
+                    "title": "GOOG Earnings Release",
+                    "source": mi.EARNINGS_CALENDAR_SOURCE,
+                }
+            ]
+        )
+
+        self.assertEqual(rows[0].get("issuer_key"), "sec_cik:1652044")
+        self.assertEqual(rows[0].get("issuer_name"), "Alphabet Inc.")
+
     def test_market_data_issue_schema_tracks_repeated_quote_gaps(self) -> None:
         from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS
 
@@ -29389,6 +29424,87 @@ END:VCALENDAR
         self.assertIn("source_authority", fake_db.executemany_calls[0][0])
         self.assertTrue(fake_db.closed)
 
+    def test_coverage_upsert_normalizes_complete_state(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        self.assertTrue(hasattr(mi, "upsert_market_event_collection_coverage"))
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.rows: list[dict[str, object]] = []
+
+            def use_db(self, _name: str) -> None:
+                pass
+
+            def execute(self, _sql: str, params=None) -> None:
+                self.rows.append(dict(params or {}))
+
+            def close(self) -> None:
+                pass
+
+        fake_db = FakeDb()
+        with (
+            patch.object(mi, "_db", return_value=fake_db),
+            patch.object(mi, "sync_table_schema"),
+        ):
+            written = mi.upsert_market_event_collection_coverage(
+                {
+                    "coverage_key": "earnings:sp500_cycle",
+                    "event_family": "earnings",
+                    "universe_scope": "sp500",
+                    "expected_items": 2,
+                    "covered_items": 2,
+                    "failed_items": 0,
+                    "cursor_offset": 0,
+                    "batch_size": 100,
+                    "details": {"covered_symbols": ["GOOG", "GOOGL"]},
+                }
+            )
+
+        self.assertEqual(written, 1)
+        self.assertEqual(fake_db.rows[0]["coverage_status"], "complete")
+        self.assertEqual(
+            fake_db.rows[0]["details_json"],
+            '{"covered_symbols":["GOOG","GOOGL"]}',
+        )
+
+    def test_coverage_loader_decodes_json_details(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.params: list[object] = []
+                self.closed = False
+
+            def use_db(self, _name: str) -> None:
+                pass
+
+            def query(self, _sql: str, params=None):
+                self.params = list(params or [])
+                return [
+                    {
+                        "coverage_key": "earnings:sp500_cycle",
+                        "coverage_status": "partial",
+                        "details_json": b'{"failed_symbols":["GOOGL"]}',
+                    }
+                ]
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with (
+            patch.object(mi, "_db", return_value=fake_db),
+            patch.object(mi, "sync_table_schema"),
+        ):
+            row = mi.load_market_event_collection_coverage(
+                "earnings:sp500_cycle"
+            )
+
+        self.assertEqual(fake_db.params, ["earnings:sp500_cycle"])
+        self.assertEqual(row["details"], {"failed_symbols": ["GOOGL"]})
+        self.assertTrue(fake_db.closed)
+
     def test_market_intelligence_sync_includes_event_calendar_table(self) -> None:
         from finance.data import market_intelligence as mi
 
@@ -29417,6 +29533,7 @@ END:VCALENDAR
         synced_tables = [call.args[1] for call in sync_schema.call_args_list]
         self.assertIn("market_universe_member", synced_tables)
         self.assertIn("market_event_calendar", synced_tables)
+        self.assertIn("market_event_collection_coverage", synced_tables)
         self.assertIn("market_data_issue", synced_tables)
         self.assertIn("market_intraday_snapshot", synced_tables)
 

@@ -357,6 +357,12 @@ def sync_market_intelligence_tables(
         )
         sync_table_schema(
             meta_db,
+            "market_event_collection_coverage",
+            MARKET_INTELLIGENCE_SCHEMAS["market_event_collection_coverage"],
+            DB_META,
+        )
+        sync_table_schema(
+            meta_db,
             "market_data_issue",
             MARKET_INTELLIGENCE_SCHEMAS["market_data_issue"],
             DB_META,
@@ -589,6 +595,8 @@ def normalize_market_event_rows(
             "universe_scope": _normalize_event_taxonomy_value(item.get("universe_scope")),
             "source_authority": _normalize_event_taxonomy_value(item.get("source_authority")),
             "symbol": _normalize_event_symbol(item.get("symbol")),
+            "issuer_key": str(item.get("issuer_key") or "").strip() or None,
+            "issuer_name": str(item.get("issuer_name") or "").strip() or None,
             "title": title,
             "source": source,
             "source_type": source_type,
@@ -604,6 +612,152 @@ def normalize_market_event_rows(
         row["event_key"] = str(item.get("event_key") or "").strip() or _market_event_key(row)
         normalized_rows.append(row)
     return normalized_rows
+
+
+VALID_EVENT_COVERAGE_STATUSES = {"pending", "partial", "complete", "stale", "error"}
+
+
+def normalize_market_event_collection_coverage(row: dict[str, Any]) -> dict[str, Any]:
+    """Normalize one durable collection-completeness checkpoint before persistence."""
+    expected = max(0, int(row.get("expected_items") or 0))
+    covered = max(0, int(row.get("covered_items") or 0))
+    failed = max(0, int(row.get("failed_items") or 0))
+    requested_status = str(row.get("coverage_status") or "").strip().lower()
+    is_complete = expected > 0 and covered == expected and failed == 0
+    if requested_status not in VALID_EVENT_COVERAGE_STATUSES:
+        requested_status = "complete" if is_complete else "partial"
+    elif requested_status == "complete" and not is_complete:
+        requested_status = "partial"
+    return {
+        "coverage_key": str(row.get("coverage_key") or "").strip(),
+        "event_family": str(row.get("event_family") or "").strip().lower(),
+        "universe_scope": str(row.get("universe_scope") or "").strip().lower(),
+        "window_start": _event_date_str(row.get("window_start")),
+        "window_end": _event_date_str(row.get("window_end")),
+        "expected_items": expected,
+        "covered_items": covered,
+        "failed_items": failed,
+        "cursor_offset": max(0, int(row.get("cursor_offset") or 0)),
+        "batch_size": max(1, int(row.get("batch_size") or 100)),
+        "coverage_status": requested_status,
+        "cycle_started_at": row.get("cycle_started_at"),
+        "cycle_completed_at": row.get("cycle_completed_at"),
+        "last_attempted_at": row.get("last_attempted_at"),
+        "last_success_at": row.get("last_success_at"),
+        "details_json": _json_payload(row.get("details_json") or row.get("details") or {}),
+    }
+
+
+def upsert_market_event_collection_coverage(
+    row: dict[str, Any],
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> int:
+    """Persist one idempotent collection checkpoint keyed by coverage_key."""
+    normalized = normalize_market_event_collection_coverage(row)
+    if not normalized["coverage_key"] or not normalized["event_family"] or not normalized["universe_scope"]:
+        return 0
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_event_collection_coverage",
+            MARKET_INTELLIGENCE_SCHEMAS["market_event_collection_coverage"],
+            DB_META,
+        )
+        db.execute(
+            """
+            INSERT INTO market_event_collection_coverage (
+              coverage_key, event_family, universe_scope, window_start, window_end,
+              expected_items, covered_items, failed_items, cursor_offset, batch_size,
+              coverage_status, cycle_started_at, cycle_completed_at,
+              last_attempted_at, last_success_at, details_json
+            ) VALUES (
+              %(coverage_key)s, %(event_family)s, %(universe_scope)s, %(window_start)s, %(window_end)s,
+              %(expected_items)s, %(covered_items)s, %(failed_items)s, %(cursor_offset)s, %(batch_size)s,
+              %(coverage_status)s, %(cycle_started_at)s, %(cycle_completed_at)s,
+              %(last_attempted_at)s, %(last_success_at)s, %(details_json)s
+            )
+            ON DUPLICATE KEY UPDATE
+              event_family = VALUES(event_family),
+              universe_scope = VALUES(universe_scope),
+              window_start = VALUES(window_start),
+              window_end = VALUES(window_end),
+              expected_items = VALUES(expected_items),
+              covered_items = VALUES(covered_items),
+              failed_items = VALUES(failed_items),
+              cursor_offset = VALUES(cursor_offset),
+              batch_size = VALUES(batch_size),
+              coverage_status = VALUES(coverage_status),
+              cycle_started_at = VALUES(cycle_started_at),
+              cycle_completed_at = VALUES(cycle_completed_at),
+              last_attempted_at = VALUES(last_attempted_at),
+              last_success_at = VALUES(last_success_at),
+              details_json = VALUES(details_json)
+            """,
+            normalized,
+        )
+        return 1
+    finally:
+        db.close()
+
+
+def load_market_event_collection_coverage(
+    coverage_key: str,
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any] | None:
+    """Load one exact checkpoint and expose decoded details to downstream readers."""
+    normalized_key = str(coverage_key or "").strip()
+    if not normalized_key:
+        return None
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_event_collection_coverage",
+            MARKET_INTELLIGENCE_SCHEMAS["market_event_collection_coverage"],
+            DB_META,
+        )
+        rows = db.query(
+            """
+            SELECT
+                coverage_key, event_family, universe_scope, window_start, window_end,
+                expected_items, covered_items, failed_items, cursor_offset, batch_size,
+                coverage_status, cycle_started_at, cycle_completed_at,
+                last_attempted_at, last_success_at, details_json,
+                created_at, updated_at
+            FROM market_event_collection_coverage
+            WHERE coverage_key = %s
+            LIMIT 1
+            """,
+            [normalized_key],
+        )
+    finally:
+        db.close()
+    if not rows:
+        return None
+    output = dict(rows[0])
+    raw_details = output.get("details_json")
+    if isinstance(raw_details, dict):
+        details = dict(raw_details)
+    else:
+        if isinstance(raw_details, (bytes, bytearray)):
+            raw_details = raw_details.decode("utf-8", errors="replace")
+        try:
+            details = json.loads(str(raw_details or "{}"))
+        except (json.JSONDecodeError, TypeError, ValueError):
+            details = {}
+    output["details"] = details if isinstance(details, dict) else {}
+    return output
 
 
 def upsert_market_event_rows(
@@ -629,12 +783,13 @@ def upsert_market_event_rows(
         sql = """
         INSERT INTO market_event_calendar (
           event_key, event_date, event_type, event_family, event_subtype, event_time_label,
-          event_datetime_utc, universe_scope, source_authority, symbol, title,
+          event_datetime_utc, universe_scope, source_authority, symbol, issuer_key, issuer_name, title,
           source, source_type, validation_status, event_status, superseded_by_event_key, superseded_at,
           source_url, confidence, collected_at, raw_payload_json
         ) VALUES (
           %(event_key)s, %(event_date)s, %(event_type)s, %(event_family)s, %(event_subtype)s, %(event_time_label)s,
-          %(event_datetime_utc)s, %(universe_scope)s, %(source_authority)s, %(symbol)s, %(title)s,
+          %(event_datetime_utc)s, %(universe_scope)s, %(source_authority)s, %(symbol)s,
+          %(issuer_key)s, %(issuer_name)s, %(title)s,
           %(source)s, %(source_type)s, %(validation_status)s, %(event_status)s,
           %(superseded_by_event_key)s, %(superseded_at)s,
           %(source_url)s, %(confidence)s, %(collected_at)s, %(raw_payload_json)s
@@ -649,6 +804,8 @@ def upsert_market_event_rows(
           universe_scope = VALUES(universe_scope),
           source_authority = VALUES(source_authority),
           symbol = VALUES(symbol),
+          issuer_key = VALUES(issuer_key),
+          issuer_name = VALUES(issuer_name),
           title = VALUES(title),
           source = VALUES(source),
           source_type = VALUES(source_type),
@@ -843,6 +1000,8 @@ def load_market_event_calendar(
                 universe_scope,
                 source_authority,
                 symbol,
+                issuer_key,
+                issuer_name,
                 title,
                 source,
                 source_type,
