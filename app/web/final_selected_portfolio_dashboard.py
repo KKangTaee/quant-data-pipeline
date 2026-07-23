@@ -95,6 +95,7 @@ from app.services.portfolio_monitoring.history import (
 from app.web.portfolio_monitoring_react_component import (
     render_portfolio_monitoring_workbench,
 )
+from app.web.backtest_workflow_routes import BACKTEST_STAGE_FINAL_REVIEW
 
 from app.services.backtest_evidence_read_model import build_decision_dossier
 from app.services.backtest_practical_validation import build_market_sentiment_context_overlay
@@ -348,11 +349,26 @@ class PortfolioMonitoringPageServices:
     add_item: Callable[[dict[str, Any]], CommandResult]
     end_item: Callable[[dict[str, Any]], CommandResult]
     reopen_item: Callable[[dict[str, Any]], CommandResult]
+    review_latest_decision: Callable[[dict[str, Any]], dict[str, Any] | None]
     correct_initial_quantity: Callable[[dict[str, Any]], CommandResult]
     record_position_trade: Callable[[dict[str, Any]], CommandResult]
     replace_position_trade: Callable[[dict[str, Any]], CommandResult]
     void_position_trade: Callable[[dict[str, Any]], CommandResult]
     refresh_group_prices: Callable[[dict[str, Any]], dict[str, Any]]
+
+
+_PORTFOLIO_MONITORING_PAGE_TARGETS: dict[str, object] = {}
+
+
+def configure_portfolio_monitoring_page_targets(
+    page_targets: dict[str, object],
+) -> None:
+    """Register Streamlit page objects without importing the app navigation shell."""
+
+    _PORTFOLIO_MONITORING_PAGE_TARGETS.clear()
+    target = dict(page_targets or {}).get("backtest")
+    if target is not None:
+        _PORTFOLIO_MONITORING_PAGE_TARGETS["backtest"] = target
 
 
 def _monitoring_db_factory() -> MySQLClient:
@@ -1146,6 +1162,41 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
             repository=repository,
         )
 
+    def review_latest_decision(event: dict[str, Any]) -> None:
+        """Resolve the item server-side and open its latest candidate in Final Review."""
+
+        item_id = str(event.get("monitoring_item_id") or "").strip()
+        item = repository.get_item(item_id)
+        if item is None:
+            raise ValueError("선택한 추적 항목을 찾을 수 없습니다.")
+        if (
+            item.source_type != SourceType.SELECTED_STRATEGY.value
+            or item.instrument_kind != InstrumentKind.STRATEGY.value
+        ):
+            raise ValueError("Final Review 재확인은 백테스트 전략에만 적용됩니다.")
+
+        contract = selected_adapter.load_candidate_contract(item.source_ref)
+        effective_row = dict(contract.decision_row or {})
+        lifecycle = dict(contract.readiness.decision_lifecycle or {})
+        latest_source_id = str(
+            lifecycle.get("latest_source_id")
+            or effective_row.get("source_id")
+            or effective_row.get("validation_id")
+            or effective_row.get("selection_source_id")
+            or ""
+        ).strip()
+        if not latest_source_id:
+            raise ValueError("최신 Final Review 후보의 원본을 찾을 수 없습니다.")
+        target = _PORTFOLIO_MONITORING_PAGE_TARGETS.get("backtest")
+        if target is None:
+            raise ValueError("Portfolio Lab 이동 경로가 설정되지 않았습니다.")
+
+        session_state["backtest_requested_panel"] = BACKTEST_STAGE_FINAL_REVIEW
+        session_state[
+            "final_review_active_decision_brief_source_id"
+        ] = latest_source_id
+        st.switch_page(target)
+
     return PortfolioMonitoringPageServices(
         session_state=session_state,
         build_workspace=build_workspace,
@@ -1158,6 +1209,7 @@ def _default_portfolio_monitoring_services() -> PortfolioMonitoringPageServices:
         add_item=add_item,
         end_item=end_item,
         reopen_item=reopen_item,
+        review_latest_decision=review_latest_decision,
         correct_initial_quantity=correct_initial_quantity,
         record_position_trade=record_position_trade,
         replace_position_trade=replace_position_trade,
@@ -4508,6 +4560,8 @@ def _dispatch_portfolio_monitoring_event(
         return services.end_item(event)
     if event_id == "reopen_item":
         return services.reopen_item(event)
+    if event_id == "review_latest_decision":
+        return services.review_latest_decision(event)
     if event_id == "refresh_group_prices":
         return services.refresh_group_prices(event)
     position_commands = {

@@ -88,6 +88,10 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
             add_item=lambda event: calls.append(("add_item", event)) or None,
             end_item=lambda event: calls.append(("end_item", event)) or None,
             reopen_item=lambda event: calls.append(("reopen_item", event)) or None,
+            review_latest_decision=lambda event: calls.append(
+                ("review_latest_decision", event)
+            )
+            or None,
             correct_initial_quantity=lambda event: calls.append(
                 ("correct_initial_quantity", event)
             ) or None,
@@ -192,6 +196,96 @@ class PortfolioMonitoringPageTests(unittest.TestCase):
         page._dispatch_portfolio_monitoring_event(event, services)
 
         self.assertIn(("reopen_item", event), services.calls)
+
+    def test_dispatches_latest_decision_review_navigation(self) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        services = self._services()
+        event = {
+            "id": "review_latest_decision",
+            "monitoring_item_id": "item-strategy",
+        }
+
+        result = page._dispatch_portfolio_monitoring_event(event, services)
+
+        self.assertIsNone(result)
+        self.assertIn(("review_latest_decision", event), services.calls)
+
+    def test_default_latest_decision_review_routes_to_final_review_server_side(
+        self,
+    ) -> None:
+        from app.web import final_selected_portfolio_dashboard as page
+
+        state = {}
+        switch_calls = []
+        item = SimpleNamespace(
+            monitoring_item_id="item-strategy",
+            source_type="selected_strategy",
+            source_ref="old-selected",
+            instrument_kind="strategy",
+        )
+        repository = SimpleNamespace(
+            get_item=lambda item_id: item if item_id == "item-strategy" else None
+        )
+        contract = SimpleNamespace(
+            decision_row={
+                "decision_id": "latest-hold",
+                "source_id": "validation-latest-hold",
+                "selection_source_id": "selection-a",
+            },
+            readiness=SimpleNamespace(
+                decision_lifecycle={
+                    "state": "TRACKING_ELIGIBILITY_CHANGED",
+                    "locked": True,
+                    "latest_source_id": "validation-latest-hold",
+                }
+            ),
+        )
+        adapter = SimpleNamespace(load_candidate_contract=lambda decision_id: contract)
+        fake_st = SimpleNamespace(
+            session_state=state,
+            rerun=lambda: None,
+            switch_page=lambda target: switch_calls.append(target),
+        )
+        target = object()
+        page.configure_portfolio_monitoring_page_targets({"backtest": target})
+        try:
+            with (
+                patch.object(page, "st", fake_st),
+                patch.object(
+                    page,
+                    "MySQLMonitoringRepository",
+                    return_value=repository,
+                ),
+                patch.object(
+                    page,
+                    "MySQLMonitoringHistoryRepository",
+                    return_value=SimpleNamespace(),
+                ),
+                patch.object(
+                    page,
+                    "SelectedStrategyReplayAdapter",
+                    return_value=adapter,
+                ),
+            ):
+                services = page._default_portfolio_monitoring_services()
+                result = services.review_latest_decision(
+                    {
+                        "id": "review_latest_decision",
+                        "monitoring_item_id": "item-strategy",
+                        "latest_source_id": "untrusted-client-value",
+                    }
+                )
+        finally:
+            page.configure_portfolio_monitoring_page_targets({})
+
+        self.assertIsNone(result)
+        self.assertEqual(state["backtest_requested_panel"], "Final Review")
+        self.assertEqual(
+            state["final_review_active_decision_brief_source_id"],
+            "validation-latest-hold",
+        )
+        self.assertEqual(switch_calls, [target])
 
     def test_dispatches_group_price_refresh_once(self) -> None:
         from app.web import final_selected_portfolio_dashboard as page

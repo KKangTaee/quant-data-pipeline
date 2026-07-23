@@ -304,6 +304,19 @@ def _effective_start(
     return lane.effective_start_date if lane is not None else item.effective_start_date
 
 
+def _decision_lifecycle_from_lane(
+    value: ItemValueLane | BaseException | None,
+) -> dict[str, Any]:
+    """Preserve selected-strategy eligibility context even when its lane is locked."""
+
+    readiness = (
+        value.readiness
+        if isinstance(value, ItemValueLane)
+        else getattr(value, "readiness", None)
+    )
+    return dict(getattr(readiness, "decision_lifecycle", {}) or {})
+
+
 def align_group_value_lanes(
     items: Sequence[MonitoringItemRecord],
     lanes: Mapping[str, ItemValueLane | BaseException],
@@ -454,6 +467,8 @@ def align_group_value_lanes(
     item_rows = tuple(
         {
             "monitoring_item_id": item.monitoring_item_id,
+            "source_type": item.source_type,
+            "instrument_kind": item.instrument_kind,
             "source_ref": item.source_ref,
             "status": item.status,
             "lane_status": (
@@ -474,6 +489,9 @@ def align_group_value_lanes(
             "total_return": _lane_total_return(
                 valid_lanes.get(item.monitoring_item_id),
                 basis_date,
+            ),
+            "decision_lifecycle": _decision_lifecycle_from_lane(
+                lanes.get(item.monitoring_item_id)
             ),
             "failure": failures.get(item.monitoring_item_id),
         }
