@@ -10474,3 +10474,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: React/provider 직접 호출 없이 confirmed regular-session OPEN에서만 background 수집하고, 확정 종가 이력과 장중 임시 값을 명확히 분리한다.
 - Analysis result: 15초 fragment, 300초 group DB cadence/lock, 600초 stale, partial EOD fallback, `today_home_v4` live overlay와 close +5분 bounded EOD handoff를 채택했다.
 - Follow-up: 전체 구현 roadmap `4/4차` 완료. actual CLOSED waiting→confirmed 전환과 responsive QA를 확인했고 실제 OPEN-session no-reset 실측만 남았다.
+
+### 2026-07-23 - Today의 초 단위 시계와 포트폴리오 갱신은 서로 다른 실행 경계를 사용한다
+
+- User request: Today가 매 초 전체 화면을 rerun하며 로딩되는 현상이 의도된 사양인지 확인하고, 필요한 부분만 자연스럽게 비동기 갱신하도록 요청함.
+- Interpreted goal: 시계는 화면 안에서만 움직이고, DB가 바뀔 수 있는 장중 포트폴리오만 주기 조회하며 마감 상태에는 불필요한 Python 실행이 없어야 한다.
+- Analysis result: 실제 원인은 15초 whole-page fragment와 결합된 구조였고 1초 React timer 자체는 Python rerun 원인이 아니었다. static shell + conditional portfolio island를 채택했다.
+- Follow-up: 전체 `2/2차` 완료. actual CLOSED 21초 동안 loading/iframe 교체 0회와 chart 안정성을 확인했고 OPEN provider timing 실측만 거래시간 제약으로 남겼다.

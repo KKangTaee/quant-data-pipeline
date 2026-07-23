@@ -26,3 +26,17 @@
 - GREEN: projector/policy focused tests와 Today read-model 회귀 통과.
 - RED: React split view가 missing component로, Python timer isolation이 missing file로 실패했다.
 - GREEN: context/portfolio/actions SSR 3개, timer isolation, Today Python 54개, React 전체 16개, typecheck/build 통과.
+
+## 2026-07-23 Task 2 — Conditional Portfolio Island
+
+- RED: explicit component view, portfolio-only loader, portfolio fragment scope, phase allowlist와 React phase-transition helper가 없는 상태를 확인했다.
+- GREEN: `today_portfolio_island_v1`, conditional fragment, stable component keys와 phase transition event를 구현했다.
+- Python Today 59개 및 intraday/price/calendar 포함 88개, React 17개, typecheck, production build를 통과했다.
+
+## Actual Browser QA
+
+- fresh port 8522에서 actual CLOSED Today를 21초 동안 0.25초 간격 84회 샘플링했다.
+- Streamlit status 0회, iframe identity 교체 0회, iframe 3개 유지, chart SVG path 유지였다.
+- countdown은 `13시간 18분 14초`에서 `13시간 17분 53초`로 변경됐다.
+- 1280·760·420px top/frame horizontal overflow 0, console error 0을 확인했다.
+- `today-live-island-rerun-isolation-v1-qa.png`는 generated QA artifact로 커밋하지 않는다.

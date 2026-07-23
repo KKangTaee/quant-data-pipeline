@@ -7100,3 +7100,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - partial/EOD fallback, Modified Dietz return, dashed live point와 close +5분·최대 6회 EOD handoff를 구현했다.
 - Python 107, React 13/typecheck/build, 1280·760·420 actual CLOSED QA를 확인했고 waiting→confirmed EOD 전환을 관찰했다.
 - actual OPEN-session iframe no-reset 실측만 남았다. 상세는 `tasks/active/today-portfolio-intraday-auto-refresh-v1-20260722/`를 본다.
+
+## 2026-07-23 - Today 전체 rerun을 portfolio live island로 격리
+
+- 1초 시장 시계를 React local state로 격리하고 context/actions를 static shell로 분리했다.
+- 15초 heartbeat는 OPEN/EOD-active `today_portfolio_island_v1`만 실행하며 CLOSED confirmed에는 periodic run이 없다.
+- Python 88 / React 17와 actual CLOSED 21초 QA에서 loading·iframe 교체 0, chart path 유지, responsive overflow·console error 0을 확인했다.
+- 전체 roadmap `2/2차` 완료. 상세는 `tasks/active/today-live-island-rerun-isolation-v1-20260723/`를 본다.
