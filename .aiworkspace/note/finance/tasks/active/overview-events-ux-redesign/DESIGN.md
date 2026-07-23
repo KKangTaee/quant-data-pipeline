@@ -501,3 +501,60 @@ GOOG · GOOGL
 2. Collection: daily priority composer, S&P 500 shard checkpoint, official-year completeness
 3. Service / React: family-aware loader, consistent filtered display model, A안 화면
 4. Verification / docs: DB smoke, broad tests, React build, Browser QA, durable docs, coherent commit
+
+## 2026-07-24 Refresh Completion / FOMC Follow-up
+
+### Approved User Outcome
+
+- 상단 `일정 갱신`은 약 10초 안에 끝나는 공식 일정만 갱신한다.
+  - FOMC
+  - 공식 매크로 일정
+  - 미국 휴장·조기폐장과 시장 구조 일정
+- 약 90초 이상 걸릴 수 있는 실적 예상 일정은 하단의 명시적 `실적 예상 일정 갱신`으로 분리한다.
+- 기존 `run_overview_event_calendars_refresh_all()`은 자동화와 기존 호출자 호환성을 위해 전체 4-step bundle로 유지한다.
+- 완료된 갱신은 React가 `finished_at` 기반 completion token으로 확인해 `갱신 중` 상태를 해제한다.
+- FOMC parser가 taxonomy를 source row에 직접 부여하고, 동일 event key UPSERT 재실행으로 기존 NULL taxonomy 행을 보정한다.
+
+### Root Cause Contract
+
+- 공식 FOMC 2026-07-28~29 일정은 DB에 2026-07-29 행으로 저장돼 있었다.
+- `_parse_fomc_calendar_events_from_html()`이 `event_family`, `event_subtype`, `universe_scope`, `source_authority`를 만들지 않아 2026/2027 FOMC 16행의 taxonomy가 NULL이었다.
+- family-bounded Events loader는 `event_family='central_bank'`만 읽으므로 저장된 FOMC가 workbench와 `다음 FOMC`에서 누락됐다.
+- React의 pending reset effect가 변하지 않는 `payload.schema_version`과 `payload.status`만 관찰해, 정상 완료 후에도 버튼이 `갱신 중`으로 남을 수 있었다.
+- 마지막 실제 bundle은 102초에 완료됐으며 그중 earnings가 92.091초였다. 긴 동기 실행과 현재 8521 QA 서버 종료는 별개로 다룬다.
+
+### Data / UI Flow
+
+```text
+상단 일정 갱신
+-> refresh_official
+-> FOMC -> Macro -> Market Structure
+-> DB 저장
+-> session result finished_at 변경
+-> Streamlit rerun
+-> React completion token 변경
+-> pending button 해제
+
+하단 실적 예상 일정 갱신
+-> refresh_earnings
+-> priority + S&P 500 shard
+-> DB 저장
+-> 동일 completion token 계약으로 pending 해제
+```
+
+### Error And Compatibility Rules
+
+- 공식 일정 중 일부가 `partial_success`여도 성공 row는 보존하고 완료 결과를 화면에 전달한다.
+- UI 기본 action을 분리해도 `refresh_all` Python facade와 기존 automation contract는 제거하지 않는다.
+- FOMC taxonomy는 parser 단계에서 정규화 전 source row에 명시한다. reader가 NULL을 임의 추론하는 fallback은 추가하지 않는다.
+- 화면 첫 영역에는 run/status dashboard를 추가하지 않는다. 기존 접힌 지원 근거만 유지한다.
+
+### Follow-up Acceptance
+
+- parser가 FOMC row에 `central_bank / fomc_meeting / all_us / federal_reserve`를 생성한다.
+- FOMC collector 재실행 후 DB의 2026/2027 FOMC taxonomy NULL이 0건이다.
+- `events_workbench_v2`의 `views.all.brief.next_fomc`가 2026-07-29 회의를 반환한다.
+- 상단 `일정 갱신`은 earnings collector를 호출하지 않는다.
+- `실적 예상 일정 갱신`은 기존 hybrid earnings job을 그대로 실행한다.
+- completion token 변경 시 primary/secondary pending state가 모두 해제된다.
+- focused tests, 관련 broad tests, React build, 실제 DB smoke, Browser QA가 통과한다.
