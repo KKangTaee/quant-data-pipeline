@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 from datetime import date, datetime
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from zoneinfo import ZoneInfo
 
 
@@ -144,3 +144,119 @@ class Sp500PriceFreshnessTests(unittest.TestCase):
 
         self.assertEqual(result["expected_price_date"], "2026-07-24")
         self.assertEqual(result["status"], "READY")
+
+
+def _sp500_model(
+    status: str,
+    spx: str | None,
+    spy: str | None,
+    expected: str = "2026-07-23",
+) -> dict:
+    action = (
+        {
+            "id": "refresh_sp500_price_data",
+            "label": "최신 데이터로 다시 계산",
+            "enabled": True,
+        }
+        if status != "READY"
+        else None
+    )
+    freshness = {
+        "status": status,
+        "expected_price_date": expected,
+        "price_basis_date": spx,
+        "spy_price_basis_date": spy,
+    }
+    if action:
+        freshness["action"] = action
+    return {"instruments": {"sp500": {"data_freshness": freshness}}}
+
+
+class Sp500PriceRefreshActionTests(unittest.TestCase):
+    def test_collects_only_spx_and_spy_and_verifies_both_dates(self) -> None:
+        from app.jobs.overview_actions import run_overview_sp500_price_refresh
+
+        model_builder = Mock(
+            side_effect=[
+                _sp500_model("REFRESH_AVAILABLE", "2026-07-16", "2026-07-22"),
+                _sp500_model("READY", "2026-07-23", "2026-07-23"),
+            ]
+        )
+        collector = Mock(return_value={"status": "success", "rows_written": 2})
+
+        result = run_overview_sp500_price_refresh(
+            model_builder=model_builder,
+            collection_runner=collector,
+        )
+
+        self.assertEqual(result["status"], "success")
+        collector.assert_called_once_with(
+            ["^GSPC", "SPY"],
+            period="1mo",
+            interval="1d",
+            execution_profile="managed_safe",
+        )
+        self.assertEqual(
+            result["details"]["after"]["price_basis_date"], "2026-07-23"
+        )
+
+    def test_collector_success_is_incomplete_when_spx_remains_stale(self) -> None:
+        from app.jobs.overview_actions import run_overview_sp500_price_refresh
+
+        stale = _sp500_model("REFRESH_AVAILABLE", "2026-07-16", "2026-07-23")
+        result = run_overview_sp500_price_refresh(
+            model_builder=Mock(side_effect=[stale, stale]),
+            collection_runner=Mock(
+                return_value={"status": "success", "rows_written": 1}
+            ),
+        )
+
+        self.assertEqual(result["status"], "incomplete")
+        self.assertIn("기존", result["message"])
+
+    def test_spx_current_and_spy_stale_is_partial_success(self) -> None:
+        from app.jobs.overview_actions import run_overview_sp500_price_refresh
+
+        result = run_overview_sp500_price_refresh(
+            model_builder=Mock(
+                side_effect=[
+                    _sp500_model("REFRESH_AVAILABLE", "2026-07-16", "2026-07-22"),
+                    _sp500_model("READY", "2026-07-23", "2026-07-22"),
+                ]
+            ),
+            collection_runner=Mock(
+                return_value={"status": "partial_success", "rows_written": 1}
+            ),
+        )
+
+        self.assertEqual(result["status"], "partial_success")
+        self.assertIn("SPY", result["message"])
+
+    def test_provider_exception_returns_failed_with_old_basis(self) -> None:
+        from app.jobs.overview_actions import run_overview_sp500_price_refresh
+
+        before = _sp500_model("REFRESH_AVAILABLE", "2026-07-16", "2026-07-22")
+        result = run_overview_sp500_price_refresh(
+            model_builder=Mock(return_value=before),
+            collection_runner=Mock(side_effect=RuntimeError("provider unavailable")),
+        )
+
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(
+            result["details"]["before"]["price_basis_date"], "2026-07-16"
+        )
+
+    def test_preflight_db_exception_returns_failed_without_calling_provider(
+        self,
+    ) -> None:
+        from app.jobs.overview_actions import run_overview_sp500_price_refresh
+
+        collector = Mock()
+        result = run_overview_sp500_price_refresh(
+            model_builder=Mock(side_effect=RuntimeError("db unavailable")),
+            collection_runner=collector,
+        )
+
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["details"]["before"], {})
+        collector.assert_not_called()

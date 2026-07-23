@@ -378,6 +378,153 @@ def run_overview_nasdaq100_valuation_repair(
     return result
 
 
+def _sp500_freshness_from_market_context(model: dict[str, Any]) -> dict[str, Any]:
+    instruments = dict(model.get("instruments") or {})
+    sp500 = dict(instruments.get("sp500") or {})
+    return dict(sp500.get("data_freshness") or {})
+
+
+def _sp500_price_refresh_result(
+    *,
+    started_at: datetime,
+    status: str,
+    message: str,
+    before: dict[str, Any],
+    after: dict[str, Any],
+    collection: dict[str, Any] | None,
+) -> JobResult:
+    finished_at = datetime.now()
+    collected = dict(collection or {})
+    return {
+        "job_name": "overview_sp500_price_refresh",
+        "status": status,
+        "started_at": started_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "finished_at": finished_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "duration_sec": round((finished_at - started_at).total_seconds(), 3),
+        "rows_written": int(collected.get("rows_written") or 0),
+        "symbols_requested": 2,
+        "symbols_processed": 2 if status in {"success", "partial_success"} else 0,
+        "failed_symbols": list(collected.get("failed_symbols") or []),
+        "message": message,
+        "details": {
+            "before": before,
+            "after": after,
+            "collection": collected,
+        },
+    }
+
+
+def run_overview_sp500_price_refresh(
+    *,
+    model_builder: Callable[..., dict[str, Any]] = build_market_context_valuation_read_model,
+    collection_runner: Callable[..., JobResult] = run_collect_ohlcv,
+) -> JobResult:
+    """Collect bounded SPX/SPY EOD data and verify the persisted SPX postcondition."""
+    started_at = datetime.now()
+    try:
+        before = _sp500_freshness_from_market_context(
+            dict(
+                model_builder(
+                    default_instrument="sp500",
+                    show_instrument_selector=False,
+                )
+            )
+        )
+    except Exception as exc:
+        return _sp500_price_refresh_result(
+            started_at=started_at,
+            status="failed",
+            message="저장된 S&P 500 가격 상태를 확인하지 못했습니다.",
+            before={},
+            after={},
+            collection={
+                "status": "failed",
+                "message": f"{type(exc).__name__}: {exc}",
+            },
+        )
+
+    if before.get("status") == "READY":
+        return _sp500_price_refresh_result(
+            started_at=started_at,
+            status="success",
+            message="S&P 500 가격 자료가 이미 최신 상태입니다.",
+            before=before,
+            after=before,
+            collection=None,
+        )
+
+    action = dict(before.get("action") or {})
+    if action.get("id") != "refresh_sp500_price_data" or not action.get("enabled"):
+        return _sp500_price_refresh_result(
+            started_at=started_at,
+            status="failed",
+            message="S&P 500 가격 갱신 조건을 확인할 수 없습니다.",
+            before=before,
+            after=before,
+            collection=None,
+        )
+
+    try:
+        collection = dict(
+            collection_runner(
+                ["^GSPC", "SPY"],
+                period="1mo",
+                interval="1d",
+                execution_profile="managed_safe",
+            )
+        )
+        after = _sp500_freshness_from_market_context(
+            dict(
+                model_builder(
+                    default_instrument="sp500",
+                    show_instrument_selector=False,
+                )
+            )
+        )
+    except Exception as exc:
+        return _sp500_price_refresh_result(
+            started_at=started_at,
+            status="failed",
+            message=(
+                "최신 가격 자료를 확인하지 못했습니다. "
+                f"기존 {before.get('price_basis_date') or '-'} 결과를 유지합니다."
+            ),
+            before=before,
+            after=before,
+            collection={
+                "status": "failed",
+                "message": f"{type(exc).__name__}: {exc}",
+            },
+        )
+
+    expected = str(after.get("expected_price_date") or "")
+    spx_date = str(after.get("price_basis_date") or "")
+    spy_date = str(after.get("spy_price_basis_date") or "")
+    if expected and spx_date >= expected and spy_date >= expected:
+        status = "success"
+        message = f"최신 완료 장 {expected} 가격으로 다시 계산했습니다."
+    elif expected and spx_date >= expected:
+        status = "partial_success"
+        message = (
+            f"SPX는 {expected}까지 반영했습니다. "
+            f"SPY는 {spy_date or '자료 없음'}까지 확인됐습니다."
+        )
+    else:
+        status = "incomplete"
+        message = (
+            "최신 완료 장까지 확인하지 못했습니다. "
+            f"기존 {before.get('price_basis_date') or '-'} 결과를 유지합니다."
+        )
+    return _sp500_price_refresh_result(
+        started_at=started_at,
+        status=status,
+        message=message,
+        before=before,
+        after=after,
+        collection=collection,
+    )
+
+
 def _selected_stock_from_market_context(model: dict[str, Any]) -> dict[str, Any]:
     return dict(dict(model.get("instruments") or {}).get("us_stock") or {})
 
