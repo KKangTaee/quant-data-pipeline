@@ -11,6 +11,7 @@ import pandas as pd
 import streamlit as st
 
 from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
+from finance.data.nyse_db import load_nyse_listing_universe_status
 from app.jobs.result_artifacts import write_run_artifacts
 from app.jobs.preflight_checks import (
     check_asset_profile_prerequisites,
@@ -66,6 +67,7 @@ from app.web.ingestion.results import (
     _format_count,
     _format_duration,
     build_common_last_result_summary as _build_common_last_result_summary,
+    build_listing_universe_refresh_summary as _build_listing_universe_refresh_summary,
     build_statement_refresh_action_summary as _build_statement_refresh_action_summary,
 )
 from app.web.ingestion.styles import install_ingestion_responsive_styles as _install_ingestion_responsive_styles
@@ -1046,6 +1048,21 @@ def _render_inline_last_completed_result(*job_names: str) -> None:
     if result is None:
         return
     if result.get("job_name") not in set(job_names):
+        return
+    if result.get("job_name") == "refresh_nyse_listing_universe":
+        summary = _build_listing_universe_refresh_summary(result)
+        st.markdown("#### 최신화 결과")
+        banner = _status_to_banner(summary["status"])
+        banner(summary["message"])
+        _render_ingestion_stat_grid(
+            [
+                ("기준일", summary["snapshot_date"], None),
+                ("주식 · 추가 / 제외", summary["stock"], None),
+                ("ETF · 추가 / 제외", summary["etf"], None),
+            ]
+        )
+        st.caption(summary["next_action"])
+        st.session_state.last_completed_result = None
         return
     st.markdown("#### 최근 완료된 수집")
     _render_result_summary(result)

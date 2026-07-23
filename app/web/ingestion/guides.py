@@ -398,6 +398,7 @@ PROGRESS_ENABLED_ACTIONS = (
     | INSTITUTIONAL_13F_JOBS
     | DIAGNOSTIC_PROGRESS_JOBS
     | {
+        "refresh_nyse_listing_universe",
         "weekly_fundamental_refresh",
         "extended_statement_refresh",
         "rebuild_statement_shadow",

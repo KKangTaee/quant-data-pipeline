@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from pathlib import Path
 import unittest
 from unittest.mock import Mock, patch
 
@@ -365,6 +366,71 @@ class NyseListingUniverseRefreshTest(unittest.TestCase):
             progress_callback=progress_callback,
         )
         self.assertEqual(result["status"], "success")
+
+    def test_operational_section_places_refresh_before_daily_price_update(
+        self,
+    ) -> None:
+        sections_source = Path(
+            "app/web/ingestion/sections.py"
+        ).read_text(encoding="utf-8")
+        page_source = Path(
+            "app/web/ingestion/page.py"
+        ).read_text(encoding="utf-8")
+
+        refresh_index = sections_source.index(
+            'with st.expander("주식·ETF 종목 목록 최신화"'
+        )
+        daily_index = sections_source.index(
+            'with st.expander("일별 가격 업데이트"'
+        )
+
+        self.assertLess(refresh_index, daily_index)
+        self.assertIn(
+            '"action": "refresh_nyse_listing_universe"',
+            sections_source,
+        )
+        self.assertIn(
+            '"주식·ETF 종목 목록 최신화"',
+            sections_source,
+        )
+        self.assertIn(
+            "load_nyse_listing_universe_status",
+            page_source,
+        )
+        self.assertNotIn(
+            '_render_job_brief("refresh_nyse_listing_universe")',
+            sections_source,
+        )
+
+    def test_inline_result_summary_focuses_on_universe_changes(self) -> None:
+        from app.web.ingestion import results
+
+        summary = results.build_listing_universe_refresh_summary(
+            {
+                "status": "success",
+                "message": "completed",
+                "details": {
+                    "snapshot_date": "2026-07-23",
+                    "kinds": {
+                        "stock": {
+                            "current_count": 6770,
+                            "added_count": 158,
+                            "removed_count": 126,
+                        },
+                        "etf": {
+                            "current_count": 5537,
+                            "added_count": 372,
+                            "removed_count": 67,
+                        },
+                    },
+                },
+            }
+        )
+
+        self.assertEqual(summary["snapshot_date"], "2026-07-23")
+        self.assertEqual(summary["stock"], "6,770 · +158 / -126")
+        self.assertEqual(summary["etf"], "5,537 · +372 / -67")
+        self.assertIn("일별 가격 업데이트", summary["next_action"])
 
 
 if __name__ == "__main__":

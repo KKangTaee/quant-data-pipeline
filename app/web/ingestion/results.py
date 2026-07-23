@@ -96,3 +96,37 @@ def build_statement_refresh_action_summary(result: JobResult) -> dict[str, str]:
         "next_action": next_action,
         "rows": f"{rows_written:,} rows written",
     }
+
+
+def build_listing_universe_refresh_summary(
+    result: JobResult,
+) -> dict[str, str]:
+    """Build the action-focused result shown beside the universe refresh."""
+
+    details = result.get("details") or {}
+    kinds = details.get("kinds") or {}
+
+    def _kind_summary(kind: str) -> str:
+        summary = kinds.get(kind) or {}
+        current_count = int(summary.get("current_count") or 0)
+        added_count = int(summary.get("added_count") or 0)
+        removed_count = int(summary.get("removed_count") or 0)
+        return (
+            f"{current_count:,} · "
+            f"+{added_count:,} / -{removed_count:,}"
+        )
+
+    status = str(result.get("status") or "")
+    next_action = (
+        "아래 일별 가격 업데이트에서 최신 NYSE 주식+ETF 전체 목록을 사용할 수 있습니다."
+        if status == "success"
+        else "기존 목록은 유지되었습니다. NYSE source 상태를 확인한 뒤 다시 실행하세요."
+    )
+    return {
+        "status": status,
+        "message": str(result.get("message") or ""),
+        "snapshot_date": str(details.get("snapshot_date") or "-"),
+        "stock": _kind_summary("stock"),
+        "etf": _kind_summary("etf"),
+        "next_action": next_action,
+    }

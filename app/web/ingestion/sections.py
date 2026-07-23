@@ -34,6 +34,74 @@ def render_operational_section() -> Any:
         "수집 결과가 부분 성공이면 downstream 화면에서도 coverage gap으로 남을 수 있습니다."
     )
 
+    with st.expander("주식·ETF 종목 목록 최신화", expanded=True):
+        st.write(
+            "전체 가격·자산 프로필 수집이 사용하는 현재 종목 목록을 "
+            "NYSE 공식 listings 기준으로 갱신합니다."
+        )
+        try:
+            universe_status = load_nyse_listing_universe_status()
+        except Exception as exc:
+            universe_status = {
+                "status": "error",
+                "latest_snapshot_date": None,
+                "kinds": {},
+            }
+            st.warning(
+                "현재 종목 목록의 기준을 읽지 못했습니다. "
+                f"최신화 실행은 가능하지만 DB 연결을 함께 확인하세요: {exc}"
+            )
+
+        universe_kinds = universe_status.get("kinds") or {}
+        stock_status = universe_kinds.get("stock") or {}
+        etf_status = universe_kinds.get("etf") or {}
+        stock_count = int(stock_status.get("row_count") or 0)
+        etf_count = int(etf_status.get("row_count") or 0)
+        snapshot_basis = (
+            universe_status.get("latest_snapshot_date")
+            or "확인 불가"
+        )
+        st.caption(
+            f"현재 기준 `{snapshot_basis}` · "
+            f"주식 `{stock_count:,}`개 · ETF `{etf_count:,}`개"
+        )
+        st.caption(
+            "목록만 최신화하며 가격 이력 수집은 자동으로 시작하지 않습니다."
+        )
+        if st.button(
+            "주식·ETF 종목 목록 최신화",
+            use_container_width=True,
+            disabled=_has_running_job(),
+        ):
+            _schedule_job(
+                {
+                    "action": "refresh_nyse_listing_universe",
+                    "job_name": "refresh_nyse_listing_universe",
+                    "spinner_text": (
+                        "Refreshing NYSE stock and ETF listing universe..."
+                    ),
+                    "params": {},
+                    "run_metadata": _job_metadata(
+                        pipeline_type="nyse_listing_universe_refresh",
+                        execution_mode="operational",
+                        symbol_source="NYSE official listings directory",
+                        symbol_count=stock_count + etf_count,
+                        execution_context=(
+                            "Explicit current stock and ETF listing universe "
+                            "refresh before downstream collection."
+                        ),
+                    ),
+                }
+            )
+        if _is_running_action("refresh_nyse_listing_universe"):
+            current_progress_callback = _build_progress_callback(
+                st.session_state.running_job,
+                label="주식·ETF 종목 목록 최신화",
+            )
+        _render_inline_last_completed_result(
+            "refresh_nyse_listing_universe"
+        )
+
     with st.expander("일별 가격 업데이트", expanded=True):
         _render_job_brief("daily_market_update")
         st.caption("권장 주기: 매 거래일 장 마감 후 또는 다음 backtest/data sync 전에 실행합니다.")
