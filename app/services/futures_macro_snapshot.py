@@ -6,13 +6,16 @@ import json
 import hashlib
 from datetime import date, datetime, timezone
 from math import isfinite
+from time import perf_counter
 from typing import Any, Callable
 
 import pandas as pd
 
 from app.services.futures_macro_pattern_validation import (
     PATTERN_ALGORITHM_VERSION,
+    build_overview_futures_macro_pattern_outlook_from_inputs,
     load_overview_futures_macro_pattern_outlook,
+    prepare_overview_futures_macro_pattern_inputs,
 )
 from app.services.futures_macro_pattern import PATTERN_STATE_SCHEMA_VERSION
 from app.services.futures_macro_thermometer import (
@@ -204,11 +207,127 @@ def _current_source_marker() -> str | None:
     return _latest_daily_cache_marker(_default_query, DEFAULT_CORE_FUTURES_SYMBOLS)
 
 
+def _forecast_history_row(
+    pattern_outlook: dict[str, Any],
+    *,
+    as_of_date: object,
+    source_marker: str,
+    input_fingerprint: str,
+    materialized_at: str,
+) -> dict[str, object]:
+    return {
+        "forecast_identity": build_futures_macro_forecast_identity(
+            as_of_date=as_of_date,
+            input_fingerprint=input_fingerprint,
+        ),
+        "as_of_date": as_of_date,
+        "source_marker": source_marker,
+        "input_fingerprint": input_fingerprint,
+        "schema_version": FUTURES_MACRO_SNAPSHOT_SCHEMA_VERSION,
+        "feature_schema_version": PATTERN_STATE_SCHEMA_VERSION,
+        "algorithm_version": PATTERN_ALGORITHM_VERSION,
+        "selected_models_json": json.dumps(
+            dict(pattern_outlook.get("method") or {}).get("selected_candidates") or {},
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
+        "status_json": json.dumps(
+            {
+                str(item.get("horizon")): {
+                    "probability_status": item.get("probability_status"),
+                    "coordinate_status": item.get("coordinate_status"),
+                    "vector_status": item.get("vector_status"),
+                }
+                for item in list(pattern_outlook.get("horizons") or [])
+                if isinstance(item, dict)
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
+        "forecast_json": json.dumps(
+            _json_safe(pattern_outlook),
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ),
+        "known_at": materialized_at,
+        "materialized_at": materialized_at,
+    }
+
+
+def _refresh_pending_session_evidence(
+    existing: dict[str, Any] | None,
+    session: dict[str, Any],
+    *,
+    source_marker: str,
+    input_fingerprint: str,
+    materialized_at: str,
+    write_fn: Callable[[dict[str, object], dict[str, object]], object],
+) -> dict[str, Any] | None:
+    """Patch pending-session disclosure without rerunning the nested outlook model."""
+
+    if not isinstance(existing, dict):
+        return None
+    try:
+        payload = json.loads(str(existing.get("snapshot_json") or ""))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    pattern_outlook = dict(payload.get("pattern_outlook") or {})
+    pattern_outlook["session"] = _json_safe(session)
+    pattern_outlook["input_fingerprint"] = input_fingerprint
+    payload["pattern_outlook"] = pattern_outlook
+    payload["source_marker"] = source_marker
+    payload["input_fingerprint"] = input_fingerprint
+    payload["materialized_at"] = materialized_at
+    as_of_date = existing.get("as_of_date") or pattern_outlook.get("as_of_date")
+    current_row: dict[str, object] = {
+        "snapshot_key": FUTURES_MACRO_SNAPSHOT_KEY,
+        "source_marker": source_marker,
+        "as_of_date": as_of_date,
+        "input_fingerprint": input_fingerprint,
+        "schema_version": FUTURES_MACRO_SNAPSHOT_SCHEMA_VERSION,
+        "algorithm_version": PATTERN_ALGORITHM_VERSION,
+        "session_status": "FINAL",
+        "status": str(existing.get("status") or pattern_outlook.get("status") or "LIMITED"),
+        "snapshot_json": json.dumps(
+            payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ),
+        "materialized_at": materialized_at,
+    }
+    history_row = _forecast_history_row(
+        pattern_outlook,
+        as_of_date=as_of_date,
+        source_marker=source_marker,
+        input_fingerprint=input_fingerprint,
+        materialized_at=materialized_at,
+    )
+    write_fn(current_row, history_row)
+    return {
+        "status": "materialized_pending_evidence",
+        "source_marker": source_marker,
+        "as_of_date": as_of_date,
+        "pending_session": session.get("pending_session"),
+        "materialized_at": materialized_at,
+        "input_fingerprint": input_fingerprint,
+        "forecast_identity": history_row["forecast_identity"],
+    }
+
+
 def materialize_overview_futures_macro_snapshot(
     *,
     force: bool = False,
     marker_fn: Callable[[], str | None] | None = None,
     load_fn: Callable[[], dict[str, Any] | None] | None = None,
+    input_probe_fn: Callable[[], dict[str, Any]] | None = None,
     macro_builder: Callable[[], dict[str, Any]] | None = None,
     outlook_builder: Callable[[], dict[str, Any]] | None = None,
     write_fn: Callable[[dict[str, object], dict[str, object]], object] | None = None,
@@ -227,6 +346,83 @@ def materialize_overview_futures_macro_snapshot(
     )
     existing = read()
     evaluated_at = evaluation_time or datetime.now(timezone.utc)
+    prepared: dict[str, Any] | None = None
+    input_compare_duration_sec = 0.0
+    use_input_probe = input_probe_fn is not None or (
+        macro_builder is None and outlook_builder is None
+    )
+    if use_input_probe:
+        compare_started = perf_counter()
+        prepared = (input_probe_fn or (
+            lambda: prepare_overview_futures_macro_pattern_inputs(
+                years=FUTURES_MACRO_HISTORY_YEARS,
+                evaluation_time=evaluated_at,
+            )
+        ))()
+        input_compare_duration_sec = perf_counter() - compare_started
+        session = dict(prepared.get("session") or {})
+        input_fingerprint = str(prepared.get("input_fingerprint") or "")
+        pending_session = (
+            str(session.get("status") or "")
+            == "PENDING_SESSION_FINALIZATION"
+        )
+        compatible_input = len(input_fingerprint) == 64 and _compatible_row(
+            existing,
+            input_fingerprint=input_fingerprint,
+        )
+        if (
+            pending_session
+            and compatible_input
+            and _stored_session_evidence_matches(existing, session)
+        ):
+            return {
+                "status": "reused_pending",
+                "source_marker": str(marker),
+                "as_of_date": existing.get("as_of_date"),
+                "pending_session": session.get("pending_session"),
+                "materialized_at": existing.get("materialized_at"),
+                "input_fingerprint": input_fingerprint,
+                "input_compare_duration_sec": round(
+                    input_compare_duration_sec, 6
+                ),
+                "materialization_duration_sec": 0.0,
+            }
+        if pending_session and compatible_input:
+            materialized_at = (
+                now_fn
+                or (
+                    lambda: datetime.now(timezone.utc).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                )
+            )()
+            pending_result = _refresh_pending_session_evidence(
+                existing,
+                session,
+                source_marker=str(marker),
+                input_fingerprint=input_fingerprint,
+                materialized_at=materialized_at,
+                write_fn=write_fn or persist_futures_macro_snapshot_bundle,
+            )
+            if pending_result is not None:
+                pending_result["input_compare_duration_sec"] = round(
+                    input_compare_duration_sec, 6
+                )
+                pending_result["materialization_duration_sec"] = 0.0
+                return pending_result
+        if not pending_session and not force and compatible_input:
+            return {
+                "status": "reused",
+                "source_marker": str(marker),
+                "as_of_date": existing.get("as_of_date"),
+                "materialized_at": existing.get("materialized_at"),
+                "input_fingerprint": input_fingerprint,
+                "input_compare_duration_sec": round(
+                    input_compare_duration_sec, 6
+                ),
+                "materialization_duration_sec": 0.0,
+            }
+
     build_macro = macro_builder or (
         lambda: load_overview_futures_macro_snapshot(
             include_validation=False,
@@ -235,23 +431,33 @@ def materialize_overview_futures_macro_snapshot(
             evaluation_time=evaluated_at,
         )
     )
-    build_outlook = outlook_builder or (
-        lambda: load_overview_futures_macro_pattern_outlook(
+    if outlook_builder is not None:
+        build_outlook = outlook_builder
+    elif prepared is not None:
+        build_outlook = lambda: build_overview_futures_macro_pattern_outlook_from_inputs(
+            prepared
+        )
+    else:
+        build_outlook = lambda: load_overview_futures_macro_pattern_outlook(
             years=FUTURES_MACRO_HISTORY_YEARS,
             force_refresh=True,
             cache_ttl_seconds=0,
             evaluation_time=evaluated_at,
         )
-    )
     materialized_at = (
         now_fn
         or (lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"))
     )()
+    materialization_started = perf_counter()
     macro = build_macro()
     pattern_outlook = build_outlook()
     session = dict(pattern_outlook.get("session") or {})
     pending_session = str(session.get("status") or "") == "PENDING_SESSION_FINALIZATION"
-    input_fingerprint = str(pattern_outlook.get("input_fingerprint") or "")
+    input_fingerprint = str(
+        (prepared or {}).get("input_fingerprint")
+        or pattern_outlook.get("input_fingerprint")
+        or ""
+    )
     if len(input_fingerprint) != 64:
         input_fingerprint = compute_futures_macro_input_fingerprint(
             {
@@ -265,7 +471,7 @@ def materialize_overview_futures_macro_snapshot(
         existing,
         input_fingerprint=input_fingerprint,
     )
-    if (
+    if not use_input_probe and (
         pending_session
         and compatible_input
         and _stored_session_evidence_matches(existing, session)
@@ -284,7 +490,7 @@ def materialize_overview_futures_macro_snapshot(
             ),
             "input_fingerprint": input_fingerprint,
         }
-    if not pending_session and not force and compatible_input:
+    if not use_input_probe and not pending_session and not force and compatible_input:
         return {
             "status": "reused",
             "source_marker": str(marker),
@@ -323,48 +529,14 @@ def materialize_overview_futures_macro_snapshot(
         ),
         "materialized_at": materialized_at,
     }
-    forecast_identity = build_futures_macro_forecast_identity(
+    history_row = _forecast_history_row(
+        pattern_outlook,
         as_of_date=as_of_date,
+        source_marker=str(marker),
         input_fingerprint=input_fingerprint,
+        materialized_at=materialized_at,
     )
-    history_row: dict[str, object] = {
-        "forecast_identity": forecast_identity,
-        "as_of_date": as_of_date,
-        "source_marker": str(marker),
-        "input_fingerprint": input_fingerprint,
-        "schema_version": FUTURES_MACRO_SNAPSHOT_SCHEMA_VERSION,
-        "feature_schema_version": PATTERN_STATE_SCHEMA_VERSION,
-        "algorithm_version": PATTERN_ALGORITHM_VERSION,
-        "selected_models_json": json.dumps(
-            dict(pattern_outlook.get("method") or {}).get("selected_candidates") or {},
-            ensure_ascii=False,
-            sort_keys=True,
-            separators=(",", ":"),
-        ),
-        "status_json": json.dumps(
-            {
-                str(item.get("horizon")): {
-                    "probability_status": item.get("probability_status"),
-                    "coordinate_status": item.get("coordinate_status"),
-                    "vector_status": item.get("vector_status"),
-                }
-                for item in list(pattern_outlook.get("horizons") or [])
-                if isinstance(item, dict)
-            },
-            ensure_ascii=False,
-            sort_keys=True,
-            separators=(",", ":"),
-        ),
-        "forecast_json": json.dumps(
-            _json_safe(pattern_outlook),
-            ensure_ascii=False,
-            sort_keys=True,
-            separators=(",", ":"),
-            allow_nan=False,
-        ),
-        "known_at": materialized_at,
-        "materialized_at": materialized_at,
-    }
+    forecast_identity = str(history_row["forecast_identity"])
     (write_fn or persist_futures_macro_snapshot_bundle)(row, history_row)
     materialization_status = "materialized"
     if pending_session:
@@ -381,6 +553,10 @@ def materialize_overview_futures_macro_snapshot(
         "snapshot_status": snapshot_status,
         "input_fingerprint": input_fingerprint,
         "forecast_identity": forecast_identity,
+        "input_compare_duration_sec": round(input_compare_duration_sec, 6),
+        "materialization_duration_sec": round(
+            perf_counter() - materialization_started, 6
+        ),
     }
 
 

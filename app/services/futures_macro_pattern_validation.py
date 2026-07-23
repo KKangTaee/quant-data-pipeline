@@ -1858,16 +1858,14 @@ def clear_futures_macro_pattern_validation_cache() -> None:
     _PATTERN_OUTLOOK_CACHE.clear()
 
 
-def load_overview_futures_macro_pattern_outlook(
+def prepare_overview_futures_macro_pattern_inputs(
     *,
     query_fn: QueryFn | None = None,
     symbols: Sequence[str] | None = None,
     years: int = FUTURES_MACRO_HISTORY_YEARS,
-    cache_ttl_seconds: int = PATTERN_OUTLOOK_CACHE_TTL_SECONDS,
-    force_refresh: bool = False,
     evaluation_time: datetime | None = None,
 ) -> dict[str, Any]:
-    """Load stored daily futures and cache the outlook by latest daily marker."""
+    """Load completed daily rows and PIT context once before nested validation."""
 
     query = query_fn or _default_query
     selected_symbols = tuple(
@@ -1875,25 +1873,7 @@ def load_overview_futures_macro_pattern_outlook(
         for symbol in (symbols or DEFAULT_CORE_FUTURES_SYMBOLS)
         if str(symbol).strip()
     )
-    marker = _latest_daily_cache_marker(query, selected_symbols)
     evaluated_at = evaluation_time or datetime.now(timezone.utc)
-    cache_key = (
-        id(query),
-        selected_symbols,
-        max(1, int(years)),
-        marker,
-        futures_session_evaluation_token(evaluated_at),
-        PATTERN_ALGORITHM_VERSION,
-    )
-    now = monotonic()
-    cached = _PATTERN_OUTLOOK_CACHE.get(cache_key)
-    if (
-        cached is not None
-        and not force_refresh
-        and cache_ttl_seconds > 0
-        and now - cached[0] <= cache_ttl_seconds
-    ):
-        return cached[1]
     rows = _load_validation_futures_rows(
         query,
         symbols=selected_symbols,
@@ -1936,14 +1916,7 @@ def load_overview_futures_macro_pattern_outlook(
             cycle_rows=cycle_rows,
             event_rows=event_rows,
         )
-    snapshot = build_pattern_outlook_snapshot(
-        candles,
-        features,
-        current,
-        selected_symbols=selected_symbols,
-        context_frame=context,
-    )
-    snapshot["session"] = {
+    session = {
         "resolver_version": FUTURES_DAILY_SESSION_VERSION,
         "latest_final_session": completed.latest_final_session,
         "pending_session": completed.pending_session,
@@ -1954,18 +1927,94 @@ def load_overview_futures_macro_pattern_outlook(
             else "OBSERVED"
         ),
     }
-    snapshot["input_fingerprint"] = _input_fingerprint(
+    fingerprint = _input_fingerprint(
         final_rows=completed.rows,
         cycle_rows=cycle_rows,
         event_rows=event_rows,
     )
-    snapshot["input_evidence"] = {
-        "resolver_version": FUTURES_DAILY_SESSION_VERSION,
-        "feature_schema_version": PATTERN_STATE_SCHEMA_VERSION,
-        "final_daily_row_count": len(completed.rows),
-        "cycle_replay_count": len(cycle_rows),
-        "eligible_event_count": len(event_rows),
+    return {
+        "selected_symbols": selected_symbols,
+        "candles": candles,
+        "features": features,
+        "current_pattern": current,
+        "context_frame": context,
+        "final_rows": completed.rows,
+        "cycle_rows": cycle_rows,
+        "event_rows": event_rows,
+        "session": session,
+        "as_of_date": current.get("as_of_date"),
+        "input_fingerprint": fingerprint,
+        "input_evidence": {
+            "resolver_version": FUTURES_DAILY_SESSION_VERSION,
+            "feature_schema_version": PATTERN_STATE_SCHEMA_VERSION,
+            "final_daily_row_count": len(completed.rows),
+            "cycle_replay_count": len(cycle_rows),
+            "eligible_event_count": len(event_rows),
+        },
     }
+
+
+def build_overview_futures_macro_pattern_outlook_from_inputs(
+    prepared: dict[str, Any],
+) -> dict[str, Any]:
+    """Run nested pattern validation from one prepared point-in-time input bundle."""
+
+    snapshot = build_pattern_outlook_snapshot(
+        prepared["candles"],
+        prepared["features"],
+        dict(prepared["current_pattern"]),
+        selected_symbols=tuple(prepared["selected_symbols"]),
+        context_frame=prepared["context_frame"],
+    )
+    snapshot["session"] = dict(prepared["session"])
+    snapshot["input_fingerprint"] = str(prepared["input_fingerprint"])
+    snapshot["input_evidence"] = dict(prepared["input_evidence"])
+    return snapshot
+
+
+def load_overview_futures_macro_pattern_outlook(
+    *,
+    query_fn: QueryFn | None = None,
+    symbols: Sequence[str] | None = None,
+    years: int = FUTURES_MACRO_HISTORY_YEARS,
+    cache_ttl_seconds: int = PATTERN_OUTLOOK_CACHE_TTL_SECONDS,
+    force_refresh: bool = False,
+    evaluation_time: datetime | None = None,
+) -> dict[str, Any]:
+    """Load stored daily futures and cache the outlook by latest daily marker."""
+
+    query = query_fn or _default_query
+    selected_symbols = tuple(
+        str(symbol).strip().upper()
+        for symbol in (symbols or DEFAULT_CORE_FUTURES_SYMBOLS)
+        if str(symbol).strip()
+    )
+    marker = _latest_daily_cache_marker(query, selected_symbols)
+    evaluated_at = evaluation_time or datetime.now(timezone.utc)
+    cache_key = (
+        id(query),
+        selected_symbols,
+        max(1, int(years)),
+        marker,
+        futures_session_evaluation_token(evaluated_at),
+        PATTERN_ALGORITHM_VERSION,
+    )
+    now = monotonic()
+    cached = _PATTERN_OUTLOOK_CACHE.get(cache_key)
+    if (
+        cached is not None
+        and not force_refresh
+        and cache_ttl_seconds > 0
+        and now - cached[0] <= cache_ttl_seconds
+    ):
+        return cached[1]
+    prepared = prepare_overview_futures_macro_pattern_inputs(
+        query_fn=query,
+        symbols=selected_symbols,
+        years=years,
+        evaluation_time=evaluated_at,
+    )
+    snapshot = build_overview_futures_macro_pattern_outlook_from_inputs(prepared)
     if cache_ttl_seconds > 0:
         _PATTERN_OUTLOOK_CACHE[cache_key] = (now, snapshot)
     return snapshot

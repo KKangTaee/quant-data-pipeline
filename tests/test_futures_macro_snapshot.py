@@ -8,14 +8,19 @@ from unittest.mock import patch
 import pandas as pd
 
 
-def _compatible_row(*, source_marker: str) -> dict[str, object]:
+def _compatible_row(
+    *,
+    source_marker: str,
+    input_fingerprint: str = "a" * 64,
+    algorithm_version: str = "pattern_outlook_v5_same_state_nested_hybrid",
+) -> dict[str, object]:
     return {
         "snapshot_key": "overview_current",
         "source_marker": source_marker,
         "as_of_date": "2026-07-17",
         "schema_version": "futures_macro_snapshot_v2",
-        "algorithm_version": "pattern_outlook_v5_same_state_nested_hybrid",
-        "input_fingerprint": "a" * 64,
+        "algorithm_version": algorithm_version,
+        "input_fingerprint": input_fingerprint,
         "session_status": "FINAL",
         "status": "READY",
         "snapshot_json": json.dumps(
@@ -65,6 +70,25 @@ def _minimal_outlook() -> dict[str, object]:
         "session": {"status": "OBSERVED", "latest_final_session": "2026-07-18"},
         "method": {"selected_candidates": {"5": "M1_MOMENTUM", "20": None}},
         "horizons": [],
+    }
+
+
+def _completed_probe(
+    input_fingerprint: str,
+    *,
+    pending_session: str | None = None,
+) -> dict[str, object]:
+    session = {
+        "status": "PENDING_SESSION_FINALIZATION" if pending_session else "OBSERVED",
+        "latest_final_session": "2026-07-18",
+        "pending_session": pending_session,
+        "resolver_version": "futures_daily_session_v1",
+    }
+    return {
+        "input_fingerprint": input_fingerprint,
+        "as_of_date": "2026-07-18",
+        "session": session,
+        "input_evidence": {"final_daily_row_count": 100},
     }
 
 
@@ -244,6 +268,96 @@ class FuturesMacroSnapshotPersistenceTests(unittest.TestCase):
 
 
 class FuturesMacroSnapshotServiceTests(unittest.TestCase):
+    def test_unchanged_probe_reuses_before_macro_and_outlook_builders(self) -> None:
+        from app.services.futures_macro_snapshot import (
+            materialize_overview_futures_macro_snapshot,
+        )
+
+        result = materialize_overview_futures_macro_snapshot(
+            marker_fn=lambda: "2026-07-20 00:00:00",
+            load_fn=lambda: _compatible_row(source_marker="2026-07-17 00:00:00"),
+            input_probe_fn=lambda: _completed_probe("a" * 64),
+            macro_builder=lambda: self.fail("macro builder must be skipped"),
+            outlook_builder=lambda: self.fail("outlook builder must be skipped"),
+            write_fn=lambda *_args: self.fail("write must be skipped"),
+        )
+
+        self.assertEqual(result["status"], "reused")
+        self.assertIn("input_compare_duration_sec", result)
+
+    def test_changed_probe_builds_and_writes_once(self) -> None:
+        from app.services.futures_macro_snapshot import (
+            materialize_overview_futures_macro_snapshot,
+        )
+
+        written: list[dict[str, object]] = []
+        result = materialize_overview_futures_macro_snapshot(
+            marker_fn=lambda: "2026-07-20 00:00:00",
+            load_fn=lambda: _compatible_row(source_marker="2026-07-17 00:00:00"),
+            input_probe_fn=lambda: _completed_probe("b" * 64),
+            macro_builder=_minimal_macro,
+            outlook_builder=_minimal_outlook,
+            write_fn=lambda current, history: written.append(
+                {"current": current, "history": history}
+            ),
+        )
+
+        self.assertEqual(result["status"], "materialized")
+        self.assertEqual(len(written), 1)
+
+    def test_incompatible_algorithm_rebuilds_even_when_probe_matches(self) -> None:
+        from app.services.futures_macro_snapshot import (
+            materialize_overview_futures_macro_snapshot,
+        )
+
+        built: list[str] = []
+        result = materialize_overview_futures_macro_snapshot(
+            marker_fn=lambda: "2026-07-20 00:00:00",
+            load_fn=lambda: _compatible_row(
+                source_marker="2026-07-17 00:00:00",
+                algorithm_version="legacy-algorithm",
+            ),
+            input_probe_fn=lambda: _completed_probe("a" * 64),
+            macro_builder=lambda: built.append("macro") or _minimal_macro(),
+            outlook_builder=lambda: built.append("outlook") or {
+                **_minimal_outlook(),
+                "input_fingerprint": "a" * 64,
+            },
+            write_fn=lambda *_args: 1,
+        )
+
+        self.assertEqual(result["status"], "materialized")
+        self.assertEqual(built, ["macro", "outlook"])
+
+    def test_pending_session_evidence_updates_without_nested_builders(self) -> None:
+        from app.services.futures_macro_snapshot import (
+            materialize_overview_futures_macro_snapshot,
+        )
+
+        written: list[dict[str, object]] = []
+        result = materialize_overview_futures_macro_snapshot(
+            marker_fn=lambda: "2026-07-20 12:00:00",
+            load_fn=lambda: _compatible_row(source_marker="2026-07-17 00:00:00"),
+            input_probe_fn=lambda: _completed_probe(
+                "a" * 64,
+                pending_session="2026-07-20",
+            ),
+            macro_builder=lambda: self.fail("macro builder must be skipped"),
+            outlook_builder=lambda: self.fail("outlook builder must be skipped"),
+            write_fn=lambda current, history: written.append(
+                {"current": current, "history": history}
+            ),
+            now_fn=lambda: "2026-07-20 12:00:01",
+        )
+
+        self.assertEqual(result["status"], "materialized_pending_evidence")
+        self.assertEqual(len(written), 1)
+        payload = json.loads(str(written[0]["current"]["snapshot_json"]))
+        self.assertEqual(
+            payload["pattern_outlook"]["session"]["pending_session"],
+            "2026-07-20",
+        )
+
     def test_compact_payload_turns_dataframes_into_json_records(self) -> None:
         from app.services.futures_macro_snapshot import (
             build_compact_futures_macro_payload,
