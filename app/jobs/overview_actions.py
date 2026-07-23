@@ -4,11 +4,13 @@ from calendar import monthrange
 from collections import Counter
 from datetime import date, datetime, timedelta
 from math import isfinite
-from typing import Any, Callable, Iterable
+from time import perf_counter
+from typing import Any, Callable, Iterable, Sequence
 
 from finance.data.futures_market import (
     DEFAULT_CORE_FUTURES_SYMBOLS,
-    FUTURES_MACRO_DAILY_PERIOD,
+    FUTURES_MACRO_BOOTSTRAP_DAILY_PERIOD,
+    FUTURES_MACRO_ROUTINE_DAILY_PERIOD,
 )
 from finance.data.market_intelligence import (
     build_price_history_limit_issue_rows,
@@ -23,6 +25,7 @@ from finance.data.market_intelligence import (
     upsert_market_symbol_aliases,
 )
 from finance.loaders.price import load_latest_prices, load_price_freshness_summary
+from finance.loaders.futures import load_futures_daily_coverage
 from finance.loaders.us_stock_valuation import build_us_stock_valuation_collection_plan
 from finance.loaders.us_stock_turnaround import build_us_stock_turnaround_collection_plan
 
@@ -30,9 +33,11 @@ from app.services.overview.market_context_valuation import (
     build_market_context_valuation_read_model,
 )
 from app.services.nyse_calendar import latest_completed_nyse_session
+from app.services.futures_macro_pattern_validation import NESTED_OUTER_MINIMUM_TRAIN
 
 from app.jobs.ingestion_jobs import (
     JobResult,
+    attach_futures_macro_materialization,
     run_collect_earnings_calendar,
     run_collect_fomc_calendar,
     run_collect_futures_ohlcv,
@@ -64,6 +69,7 @@ MARKET_MOVERS_EOD_MIN_PRICE_ROWS = {
     "monthly": 45,
     "yearly": 180,
 }
+FUTURES_MACRO_BOOTSTRAP_MIN_DAILY_ROWS = NESTED_OUTER_MINIMUM_TRAIN + 20
 
 
 def _market_movers_today() -> date:
@@ -157,15 +163,134 @@ def run_overview_futures_ohlcv(
     )
 
 
-def run_overview_futures_daily_ohlcv() -> JobResult:
-    return run_collect_futures_ohlcv(
-        symbols=list(DEFAULT_CORE_FUTURES_SYMBOLS),
-        period=FUTURES_MACRO_DAILY_PERIOD,
+def build_futures_macro_daily_refresh_plan(
+    coverage: Sequence[dict[str, Any]],
+    *,
+    symbols: Sequence[str] = DEFAULT_CORE_FUTURES_SYMBOLS,
+) -> dict[str, Any]:
+    """Split normal overlap refresh from per-symbol history bootstrap."""
+
+    selected = [str(symbol).strip().upper() for symbol in symbols if str(symbol).strip()]
+    by_symbol = {
+        str(row.get("provider_symbol") or "").strip().upper(): dict(row)
+        for row in coverage
+        if str(row.get("provider_symbol") or "").strip()
+    }
+    bootstrap = [
+        symbol
+        for symbol in selected
+        if int(by_symbol.get(symbol, {}).get("daily_row_count") or 0)
+        < FUTURES_MACRO_BOOTSTRAP_MIN_DAILY_ROWS
+    ]
+    bootstrap_set = set(bootstrap)
+    return {
+        "routine_symbols": [symbol for symbol in selected if symbol not in bootstrap_set],
+        "bootstrap_symbols": bootstrap,
+        "routine_period": FUTURES_MACRO_ROUTINE_DAILY_PERIOD,
+        "bootstrap_period": FUTURES_MACRO_BOOTSTRAP_DAILY_PERIOD,
+        "bootstrap_min_daily_rows": FUTURES_MACRO_BOOTSTRAP_MIN_DAILY_ROWS,
+    }
+
+
+def run_overview_futures_daily_ohlcv(
+    *,
+    coverage_loader: Callable[[Sequence[str]], list[dict[str, Any]]] = load_futures_daily_coverage,
+    collect_runner: Callable[..., JobResult] = run_collect_futures_ohlcv,
+    materialize_fn: Callable[[], dict[str, Any]] | None = None,
+) -> JobResult:
+    """Refresh complete symbols with 1Y overlap and bootstrap only deficient history."""
+
+    started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    started = perf_counter()
+    selected = list(DEFAULT_CORE_FUTURES_SYMBOLS)
+    plan = build_futures_macro_daily_refresh_plan(
+        coverage_loader(selected),
+        symbols=selected,
+    )
+    group_specs = (
+        ("routine", plan["routine_symbols"], plan["routine_period"]),
+        ("bootstrap", plan["bootstrap_symbols"], plan["bootstrap_period"]),
+    )
+    results: list[JobResult] = []
+    groups: list[dict[str, Any]] = []
+    for group, symbols, period in group_specs:
+        if not symbols:
+            continue
+        group_started = perf_counter()
+        result = collect_runner(
+            symbols=list(symbols),
+            period=period,
+            interval="1d",
+            cadence_mode=f"manual_macro_daily_{group}",
+            max_symbols=len(symbols),
+            batch_size=6,
+            sleep_sec=0.1,
+            materialize_snapshot=False,
+        )
+        results.append(result)
+        groups.append(
+            {
+                "group": group,
+                "period": period,
+                "symbols": list(symbols),
+                "status": result.get("status"),
+                "rows_written": int(result.get("rows_written") or 0),
+                "duration_sec": round(perf_counter() - group_started, 6),
+            }
+        )
+
+    rows_written = sum(int(result.get("rows_written") or 0) for result in results)
+    failed_symbols = sorted(
+        {
+            str(symbol)
+            for result in results
+            for symbol in list(result.get("failed_symbols") or [])
+        }
+    )
+    statuses = {str(result.get("status") or "failed") for result in results}
+    if rows_written <= 0:
+        status = "failed"
+    elif failed_symbols or any(value != "success" for value in statuses):
+        status = "partial_success"
+    else:
+        status = "success"
+    download_normalize = 0.0
+    upsert = 0.0
+    for result in results:
+        diagnostics = dict(dict(result.get("details") or {}).get("diagnostics") or {})
+        download_normalize += float(diagnostics.get("download_normalize_duration_sec") or 0.0)
+        upsert += float(diagnostics.get("upsert_duration_sec") or 0.0)
+    combined: JobResult = {
+        "job_name": "collect_futures_macro_daily",
+        "status": status,
+        "started_at": started_at,
+        "finished_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "duration_sec": round(perf_counter() - started, 6),
+        "rows_written": rows_written,
+        "symbols_requested": len(selected),
+        "symbols_processed": sum(int(result.get("symbols_processed") or 0) for result in results),
+        "failed_symbols": failed_symbols,
+        "message": (
+            "Futures Macro daily refresh completed."
+            if status == "success"
+            else "Futures Macro daily refresh completed with missing symbols."
+            if status == "partial_success"
+            else "Futures Macro daily refresh wrote no rows."
+        ),
+        "details": {
+            "refresh_plan": plan,
+            "collection_groups": groups,
+            "collection_timing": {
+                "download_normalize_duration_sec": round(download_normalize, 6),
+                "upsert_duration_sec": round(upsert, 6),
+            },
+        },
+    }
+    return attach_futures_macro_materialization(
+        combined,
         interval="1d",
-        cadence_mode="manual_macro_daily",
-        max_symbols=len(DEFAULT_CORE_FUTURES_SYMBOLS),
-        batch_size=6,
-        sleep_sec=0.1,
+        rows_written=rows_written,
+        materialize_fn=materialize_fn,
     )
 
 

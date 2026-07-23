@@ -8009,7 +8009,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("2.05, 0.62, 0.62, 1.25", controls_body)
         self.assertIn('"일봉 갱신"', controls_body)
         self.assertIn('"다시 읽기"', controls_body)
-        self.assertIn("compact snapshot을 갱신합니다", futures_helper_source)
+        self.assertIn("최근 1년 일봉을 겹쳐 갱신", futures_helper_source)
+        self.assertIn("이력이 부족한 종목만 장기 보강", futures_helper_source)
         self.assertIn("전망 계산 없이 저장된 snapshot을 다시 읽습니다", futures_helper_source)
         self.assertNotIn("snapshot cache를 비운", futures_helper_source)
         self.assertIn(".ov-futures-macro-action-title", style_source)
@@ -8019,21 +8020,34 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".st-key-overview_futures_macro_tab_daily_refresh button", style_source)
         self.assertIn(".st-key-overview_futures_macro_tab_reload button", style_source)
 
-    def test_overview_futures_daily_refresh_requests_ten_years(self) -> None:
+    def test_overview_futures_daily_refresh_requests_one_year_for_complete_history(self) -> None:
         from app.jobs import overview_actions
         from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
 
-        with patch.object(
-            overview_actions,
-            "run_collect_futures_ohlcv",
-            return_value={"status": "success"},
-        ) as collector:
-            overview_actions.run_overview_futures_daily_ohlcv()
+        collector = unittest.mock.Mock(
+            return_value={
+                "status": "success",
+                "rows_written": 250,
+                "symbols_processed": len(DEFAULT_CORE_FUTURES_SYMBOLS),
+                "failed_symbols": [],
+                "details": {"diagnostics": {}},
+            }
+        )
+        coverage = [
+            {"provider_symbol": symbol, "daily_row_count": 1_200}
+            for symbol in DEFAULT_CORE_FUTURES_SYMBOLS
+        ]
+        overview_actions.run_overview_futures_daily_ohlcv(
+            coverage_loader=lambda symbols: coverage,
+            collect_runner=collector,
+            materialize_fn=lambda: {"status": "reused"},
+        )
 
         kwargs = collector.call_args.kwargs
-        self.assertEqual(kwargs["period"], "10y")
+        self.assertEqual(kwargs["period"], "1y")
         self.assertEqual(kwargs["interval"], "1d")
         self.assertEqual(tuple(kwargs["symbols"]), DEFAULT_CORE_FUTURES_SYMBOLS)
+        self.assertFalse(kwargs["materialize_snapshot"])
 
     def test_futures_macro_symbol_extraction_accepts_snapshot_dataframe(self) -> None:
         import pandas as pd
@@ -8238,7 +8252,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
             {"id": "load_validation", "nonce": 102},
         )
 
-    def test_futures_macro_react_v2_renders_market_context_reading_order(self) -> None:
+    def test_futures_macro_react_v4_renders_short_horizon_reading_order(self) -> None:
         from app.web.overview.futures_macro_react_component import (
             FUTURES_MACRO_REACT_COMPONENT_NAME,
             futures_macro_react_component_available,
@@ -8255,21 +8269,24 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('default={"event": None}', wrapper_source)
         self.assertIn("build_futures_macro_react_workbench_payload", helper_source)
         for name in (
-            "PatternHorizonSection",
-            "PatternMapSection",
+            "ShortHorizonDecisionSection",
+            "FamilyDirectionSection",
+            "CalculationScopeSection",
             "PatternRibbonSection",
-            "AssetPathwaysSection",
             "MethodDisclosure",
             "CalculationTraceDisclosure",
         ):
             self.assertTrue((source_root / f"{name}.tsx").exists())
             self.assertIn(name, source)
-        self.assertLess(source.index("<MacroContextSection"), source.index("<PatternHorizonSection"))
-        self.assertLess(source.index("<PatternHorizonSection"), source.index("<PatternMapSection"))
-        self.assertLess(source.index("<PatternMapSection"), source.index("<PatternRibbonSection"))
-        self.assertLess(source.index("<PatternRibbonSection"), source.index("<AssetPathwaysSection"))
-        self.assertLess(source.index("<AssetPathwaysSection"), source.index("<MethodDisclosure"))
+        self.assertLess(source.index("<MacroContextSection"), source.index("<ShortHorizonDecisionSection"))
+        self.assertLess(source.index("<ShortHorizonDecisionSection"), source.index("<FamilyDirectionSection"))
+        self.assertLess(source.index("<FamilyDirectionSection"), source.index("<CalculationScopeSection"))
+        self.assertLess(source.index("<CalculationScopeSection"), source.index("<PatternRibbonSection"))
+        self.assertLess(source.index("<PatternRibbonSection"), source.index("<MethodDisclosure"))
         self.assertLess(source.index("<MethodDisclosure"), source.index("<CalculationTraceDisclosure"))
+        self.assertNotIn("<PatternHorizonSection", source)
+        self.assertNotIn("<PatternMapSection", source)
+        self.assertNotIn("<AssetPathwaysSection", source)
         self.assertNotIn("<RecentFlowSection", source)
         self.assertNotIn("<HistoricalValidationPanel", source)
         self.assertIn("Streamlit.setComponentValue", source)

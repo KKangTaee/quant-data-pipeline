@@ -499,6 +499,42 @@ class FuturesMacroSnapshotServiceTests(unittest.TestCase):
 
 
 class FuturesMacroSnapshotIngestionTests(unittest.TestCase):
+    def test_daily_collection_can_defer_materialization_for_grouped_refresh(self) -> None:
+        from app.jobs.ingestion_jobs import run_collect_futures_ohlcv
+
+        collected = {
+            "source": "yfinance",
+            "period": "1y",
+            "interval": "1d",
+            "cadence_mode": "manual_macro_daily_routine",
+            "rows_written": 250,
+            "symbols_requested": 1,
+            "symbols_processed": 1,
+            "failed_symbols": [],
+            "latest_candle_time_utc": "2026-07-22 00:00:00",
+            "run_id": "run-1",
+            "diagnostics": {},
+        }
+        with (
+            patch(
+                "app.jobs.ingestion_jobs.collect_and_store_futures_ohlcv",
+                return_value=collected,
+            ),
+            patch(
+                "app.jobs.ingestion_jobs.attach_futures_macro_materialization"
+            ) as attach,
+        ):
+            result = run_collect_futures_ohlcv(
+                symbols=["ES=F"],
+                period="1y",
+                interval="1d",
+                materialize_snapshot=False,
+            )
+
+        attach.assert_not_called()
+        self.assertEqual(result["status"], "success")
+        self.assertNotIn("futures_macro_snapshot", result["details"])
+
     def test_non_daily_ingestion_skips_materialization(self) -> None:
         from app.jobs.ingestion_jobs import attach_futures_macro_materialization
 

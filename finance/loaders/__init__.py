@@ -55,7 +55,7 @@ from .sp500_valuation import (
     load_sp500_monthly_valuation,
     resolve_sp500_ttm_eps,
 )
-from .futures import load_futures_ohlcv
+from .futures import load_futures_daily_coverage, load_futures_ohlcv
 from .institutional_13f import (
     load_institutional_13f_holdings,
     load_institutional_13f_interest,
@@ -80,6 +80,7 @@ __all__ = [
     "load_latest_prices",
     "load_price_history",
     "load_futures_ohlcv",
+    "load_futures_daily_coverage",
     "load_price_freshness_summary",
     "load_price_window_summary",
     "load_price_matrix",

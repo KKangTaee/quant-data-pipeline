@@ -1096,6 +1096,7 @@ def run_collect_futures_ohlcv(
     batch_size: int = 8,
     sleep_sec: float = 0.15,
     progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    materialize_snapshot: bool = True,
 ) -> JobResult:
     job_name = "collect_futures_ohlcv"
     started_at = _now_str()
@@ -1157,6 +1158,8 @@ def run_collect_futures_ohlcv(
                 "diagnostics": result.get("diagnostics") or {},
             },
         )
+        if not materialize_snapshot:
+            return job_result
         return attach_futures_macro_materialization(
             job_result,
             interval=interval,

@@ -1,12 +1,63 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Sequence
+from typing import Any
 
 import pandas as pd
 
 from finance.data.db.mysql import MySQLClient
 
 from ._common import normalize_date_range, parse_symbol_list
+
+
+FuturesQueryFn = Callable[[str, str, list[Any]], list[dict[str, Any]]]
+
+
+def _query_futures_rows(
+    db_name: str,
+    sql: str,
+    params: list[Any],
+) -> list[dict[str, Any]]:
+    db = MySQLClient("localhost", "root", "1234", 3306)
+    try:
+        db.use_db(db_name)
+        return [dict(row) for row in db.query(sql, params)]
+    finally:
+        db.close()
+
+
+def load_futures_daily_coverage(
+    symbols: Sequence[str],
+    *,
+    query_fn: FuturesQueryFn | None = None,
+) -> list[dict[str, Any]]:
+    """Return compact stored 1D row-count and date coverage per symbol."""
+
+    normalized = list(
+        dict.fromkeys(
+            str(symbol or "").strip().upper()
+            for symbol in symbols
+            if str(symbol or "").strip()
+        )
+    )
+    if not normalized:
+        return []
+    placeholders = ", ".join(["%s"] * len(normalized))
+    return (query_fn or _query_futures_rows)(
+        "finance_price",
+        f"""
+        SELECT provider_symbol,
+               COUNT(*) AS daily_row_count,
+               MIN(candle_time_utc) AS first_daily_candle,
+               MAX(candle_time_utc) AS latest_daily_candle
+        FROM futures_ohlcv
+        WHERE interval_code = %s
+          AND provider_symbol IN ({placeholders})
+        GROUP BY provider_symbol
+        ORDER BY provider_symbol
+        """,
+        ["1d", *normalized],
+    )
 
 
 def load_futures_ohlcv(

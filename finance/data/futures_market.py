@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Iterable, Sequence
 from datetime import UTC, datetime
-from time import sleep
+from time import perf_counter, sleep
 from typing import Any
 from uuid import uuid4
 
@@ -23,6 +23,8 @@ VALID_FUTURES_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "
 MIN_1D_INTRADAY_ROWS_BEFORE_FALLBACK = 120
 FUTURES_MACRO_HISTORY_YEARS = 10
 FUTURES_MACRO_DAILY_PERIOD = f"{FUTURES_MACRO_HISTORY_YEARS}y"
+FUTURES_MACRO_ROUTINE_DAILY_PERIOD = "1y"
+FUTURES_MACRO_BOOTSTRAP_DAILY_PERIOD = FUTURES_MACRO_DAILY_PERIOD
 
 DEFAULT_FUTURES_INSTRUMENTS: tuple[dict[str, Any], ...] = (
     {"provider_symbol": "ES=F", "display_name": "E-mini S&P 500", "futures_group": "Equity Index", "exchange": "CME", "contract_hint": "S&P 500 index futures", "sort_order": 10},
@@ -467,6 +469,7 @@ def collect_and_store_futures_ohlcv(
         return result
 
     price_downloader = downloader or _download_prices
+    download_normalize_started = perf_counter()
     all_rows: list[dict[str, Any]] = []
     failed_symbols: list[str] = []
     sparse_symbols: list[str] = []
@@ -569,6 +572,8 @@ def collect_and_store_futures_ohlcv(
                     all_rows.extend(fallback_rows_by_symbol[symbol])
         failed_symbols = [symbol for symbol in failed_symbols if symbol not in recovered_symbols]
 
+    download_normalize_duration_sec = perf_counter() - download_normalize_started
+    upsert_started = perf_counter()
     rows_written = upsert_futures_ohlcv_rows(
         all_rows,
         host=host,
@@ -576,6 +581,7 @@ def collect_and_store_futures_ohlcv(
         password=password,
         port=port,
     )
+    upsert_duration_sec = perf_counter() - upsert_started
     latest_candle = max((row["candle_time_utc"] for row in all_rows), default=None)
     symbols_processed = len(normalized_symbols) - len(set(failed_symbols))
     status = "failed" if rows_written <= 0 else "partial_success" if failed_symbols else "success"
@@ -590,6 +596,8 @@ def collect_and_store_futures_ohlcv(
     diagnostics = {
         "batches": batches,
         "fallback_retries": fallback_retries,
+        "download_normalize_duration_sec": round(download_normalize_duration_sec, 6),
+        "upsert_duration_sec": round(upsert_duration_sec, 6),
         "default_source": "yfinance pilot source; not exchange-grade realtime",
     }
     upsert_futures_monitor_run(

@@ -157,6 +157,18 @@ def test_hero_names_short_horizon_scope_in_user_language() -> None:
     assert hero["coverage_label"] == "최근 1 · 5 · 20거래일"
 
 
+def test_refresh_action_describes_overlap_and_selective_bootstrap() -> None:
+    detail = _payload()["command"]["actions"][0]["detail"]
+
+    assert "최근 1년" in detail
+    assert "이력이 부족한 종목만" in detail
+    assert "10년 1D OHLCV를 다시 수집" not in detail
+    helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(
+        encoding="utf-8"
+    )
+    assert "FUTURES_MACRO_HISTORY_YEARS}년 일봉을 yfinance에서 수집" not in helper_source
+
+
 def test_no_edge_copy_explains_baseline_without_exposing_internal_label() -> None:
     validation = _payload("NO_EDGE")["short_horizon_decision"][
         "future_five_day_validation"
