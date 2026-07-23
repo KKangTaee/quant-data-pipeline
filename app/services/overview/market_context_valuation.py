@@ -3,6 +3,9 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from app.services.overview.sp500_valuation import build_sp500_valuation_read_model
+from app.services.overview.sp500_valuation_freshness import (
+    build_sp500_price_freshness,
+)
 from app.services.overview.us_stock_freshness import build_us_stock_data_freshness
 from app.services.overview.us_stock_turnaround import (
     build_us_stock_turnaround_read_model,
@@ -54,9 +57,9 @@ def build_market_context_valuation_read_model(
     )
     instruments: dict[str, dict[str, Any]] = {}
     if "sp500" in selected_ids:
-        instruments["sp500"] = _isolated(
-            build_sp500_valuation_read_model, SP500_INSTRUMENT
-        )
+        sp500 = _isolated(build_sp500_valuation_read_model, SP500_INSTRUMENT)
+        sp500["data_freshness"] = build_sp500_price_freshness(sp500)
+        instruments["sp500"] = sp500
     if "us_stock" in selected_ids:
         stock_per = _isolated(
             lambda: build_us_stock_valuation_read_model(

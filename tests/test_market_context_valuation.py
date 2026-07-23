@@ -196,12 +196,54 @@ class MarketContextValuationTests(unittest.TestCase):
 
         self.assertEqual(model["schema_version"], "market_context_valuation_v5")
         self.assertEqual(set(model["instruments"]), {"sp500", "us_stock"})
-        self.assertEqual(model["instruments"]["sp500"], sp500)
+        self.assertEqual(model["instruments"]["sp500"]["marker"], "unchanged")
+        self.assertIn("data_freshness", model["instruments"]["sp500"])
         self.assertEqual(model["instruments"]["us_stock"]["status"], "ERROR")
         stock_builder.assert_called_once_with(
             selected_symbol="AAPL",
             search_query="apple",
         )
+
+    def test_combined_model_attaches_sp500_price_freshness_without_changing_valuation(
+        self,
+    ) -> None:
+        from app.services.overview.market_context_valuation import (
+            build_market_context_valuation_read_model,
+        )
+
+        sp500 = {
+            "status": "READY",
+            "basis": {
+                "spx": {"date": "2026-07-16"},
+                "spy": {"date": "2026-07-22"},
+            },
+            "marker": "preserved",
+        }
+        freshness = {
+            "status": "REFRESH_AVAILABLE",
+            "expected_price_date": "2026-07-23",
+            "price_basis_date": "2026-07-16",
+            "spy_price_basis_date": "2026-07-22",
+            "action": {"id": "refresh_sp500_price_data", "enabled": True},
+        }
+        with patch(
+            "app.services.overview.market_context_valuation.build_sp500_valuation_read_model",
+            return_value=sp500,
+        ), patch(
+            "app.services.overview.market_context_valuation.build_sp500_price_freshness",
+            return_value=freshness,
+            create=True,
+        ) as freshness_builder:
+            model = build_market_context_valuation_read_model(
+                default_instrument="sp500",
+                show_instrument_selector=False,
+            )
+
+        actual = model["instruments"]["sp500"]
+        self.assertEqual(actual["marker"], "preserved")
+        self.assertEqual(actual["data_freshness"], freshness)
+        freshness_builder.assert_called_once()
+        self.assertEqual(freshness_builder.call_args.args[0]["marker"], "preserved")
 
     def test_combined_model_preserves_per_fields_and_isolates_turnaround_failure(self) -> None:
         from app.services.overview.market_context_valuation import build_market_context_valuation_read_model
