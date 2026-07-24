@@ -10584,3 +10584,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 교집합 백테스트의 보수적 계산은 유지하되 짧아진 결과를 그대로 Level2에 넘기지 않고 사용자가 데이터 보강과 재실행을 한 흐름에서 끝내야 함.
 - Analysis result: current Result Workspace가 legacy refresh action과 분리되어 있었고 가격 gap이 technical handoff Gate에 포함되지 않았다. 공통 네 상태와 Single/Mix 종목 합집합, 명시 refresh, 참고 결과, explicit rerun 계약을 채택했다.
 - Follow-up: 전체 `3/3차` 완료. 수집은 자동 백테스트를 실행하지 않고 새 current 결과만 Level2를 다시 연다. provider/source gap은 반복 버튼 대신 원인 확인 상태로 차단한다.
+
+### 2026-07-24 - 갱신 시간대와 무관하게 직전 완료 선물 세션을 확정한다
+
+- User request: `17:15–18:00 ET` 밖에서 일봉 갱신하면 기준일이 전진하지 않는 과도한 제약을 개선하고 승인한 A안으로 진행하도록 요청함.
+- Interpreted goal: 한국시간 오전 7시 이후에도 다음 저녁 세션 가격을 섞지 않고 직전 완료 세션을 같은 클릭에서 반영해야 함.
+- Analysis result: mutable 1d row를 강제로 FINAL로 바꾸지 않고 stored 5m의 exact `D-1 18:00 ET <= bar < D 17:00 ET` 구간을 17/17 원자 집계해 별도 `final_*`로 보존하는 방식을 채택했다.
+- Follow-up: 실제 2026-07-23 세션 17/17 확정과 snapshot 기준일 이동, 즉시 재실행 8.659초 재사용, desktop/420px QA를 완료해 전체 `5/5차`를 마쳤다.

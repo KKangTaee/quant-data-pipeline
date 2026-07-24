@@ -2,7 +2,7 @@
 
 Status: Complete
 Roadmap: 4/4 implementation stages + confirmation matrix follow-up complete
-Last Updated: 2026-07-23
+Last Updated: 2026-07-24
 
 ## Completed
 
@@ -24,10 +24,14 @@ Last Updated: 2026-07-23
 - Passed the final focused suite (69 tests, 15 subtests), Futures Macro service contracts (26 tests), py_compile, diff check, and Vite production build.
 - Replaced the two confirmation cards with a separate two-row matrix whose columns explicitly identify `최근 1D`, `최근 5D`, and `최근 20D`; payload and calculation contracts remain unchanged.
 - Re-verified the confirmation matrix on the actual desktop and 420px app with two signal rows, no horizontal overflow, and no warning/error on a clean initial load.
+- Added the approved on-demand daily finalization follow-up: stored `2d/5m` exact-session aggregate, additive 1d `final_*` columns, 17/17 atomic write, explicit-final resolver preference, and same-click snapshot advancement.
+- Actual 2026-07-23 pending data finalized 17/17 at 19:53 ET; the snapshot advanced from 2026-07-22 to 2026-07-23 in the same run.
+- The first changed-session run took 75.645 seconds because the version bump forced 61.919 seconds of nested materialization; the immediate idempotent rerun reused both finalization and snapshot in 8.659 seconds.
+- Completed actual desktop and 420px Browser QA: 2026-07-23/관측 완료 visible, pending disclosure absent, overflow false, action labels unclipped, console error 0.
 
 ## Current
 
-- All implementation, performance, confirmation-display follow-up, browser, and documentation completion gates are satisfied.
+- All original implementation plus the on-demand daily-finalization follow-up, DB verification, browser, and documentation completion gates are satisfied.
 
 ## Next
 
@@ -40,3 +44,4 @@ Last Updated: 2026-07-23
 2. Routine incremental daily refresh — complete
 3. Unchanged-input materialization fast path — complete
 4. Verification, Browser QA, and durable docs — complete
+5. On-demand completed-session finalization follow-up — complete

@@ -7200,3 +7200,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 수동 OHLCV 최신화 뒤 기존 결과는 참고용으로 유지하고, 명시적 같은 설정 재실행이 완료된 뒤에만 저장/Level2 인계를 다시 연다.
 - actual GTAA QA 중 pending 실행의 fragment-scope rerun 예외를 발견해 app-scope로 수정했고 1280·760px 흐름을 확인했다.
 - 전체 roadmap `3/3차`; 상세는 `tasks/active/backtest-level1-price-refresh-handoff-v1-20260722/`를 본다.
+
+## 2026-07-24 - Futures Macro 요청형 완료 세션 확정
+
+- 저녁 재개 뒤 mutable Yahoo 1d row가 pending으로 남던 문제를 stored 2d/5m exact ET session aggregate로 해결했다.
+- 17/17 atomic `final_*` 저장과 explicit-final resolver를 연결해 실제 한 번의 갱신에서 기준일을 2026-07-22에서 2026-07-23으로 이동했다.
+- 즉시 재실행은 5m 수집/nested replay 없이 8.659초에 finalization·snapshot을 재사용했고 desktop/420px QA와 console error 0을 확인했다.
+- 전체 roadmap `5/5차` 완료. 상세는 `tasks/active/overview-futures-macro-short-horizon-v1-20260723/`를 본다.

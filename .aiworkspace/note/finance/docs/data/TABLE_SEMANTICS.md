@@ -308,7 +308,10 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - `Workspace > Overview > Futures Macro`의 주요 선물 daily macro context와 5D / 20D 조건부 전망을 materialize하고, 보조 stored-candle chart / diagnostics에서 1m OHLCV 상태를 read-only로 표시하기 위한 데이터 경계다.
 - `futures_instrument`는 watchlist preset / display metadata를 저장한다.
-- `futures_ohlcv`는 provider symbol / interval / candle time 기준 OHLCV row를 저장한다. 1m row는 stored-candle chart / diagnostics에, 1d row는 Futures Macro의 현재 점수 / 해석과 point-in-time historical validation에 사용된다.
+- `futures_ohlcv`는 provider symbol / interval / candle time 기준 raw OHLCV row를 저장한다. 1m row는 stored-candle chart / diagnostics에, 5m row는 요청형 완료 세션 재구성 evidence에, 1d row는 Futures Macro의 현재 점수 / 해석과 point-in-time historical validation에 사용된다.
+- Yahoo same-date 1d row가 저녁 재개 뒤 다시 변할 수 있으므로, 수동 `일봉 갱신`은 같은 뉴욕 날짜가 pending이고 `17:15 ET` 이후일 때 저장된 `2d/5m` row 중 `D-1 18:00 ET <= bar < D 17:00 ET`만 집계한다. `ZoneInfo("America/New_York")`가 EDT/EST를 계산한다.
+- 완료 세션 OHLCV는 기존 1d row의 `final_open/high/low/close/adj_close/volume`에 저장하고 provenance는 `finalization_basis=yfinance_5m_session_aggregate_v1`, exact ET window `final_source_ref`, `finalized_at`으로 남긴다. 일반 raw 1d UPSERT는 이 final column을 갱신하지 않는다.
+- `DEFAULT_CORE_FUTURES_SYMBOLS` 17/17이 모두 complete일 때만 한 transaction으로 final column을 저장한다. 16/17 이하, provider 실패, transaction 실패는 한 행도 부분 확정하지 않으며 latest-good snapshot을 유지한다.
 - `futures_market_monitor_run`은 수집 run별 status, failed symbols, latest candle time, diagnostics를 저장한다.
 - `futures_macro_snapshot`은 successful 1d ingestion 뒤 마지막 완료 세션으로 계산한 compact current macro / 5D / 20D outlook을 `snapshot_key=overview_current`로 유지한다. `input_fingerprint`, `schema_version`, `algorithm_version`, `session_status`로 호환성을 판단하며 미완료/과거 V2 row는 latest-good current를 덮지 못한다. 레거시 current는 첫 V2 전환 때만 완료 세션 row로 교체할 수 있다.
 - `futures_macro_forecast_history`는 `sha256(as_of_date|input_fingerprint|schema_version|algorithm_version)` identity별 전망을 immutable하게 보존한다. current와 history는 한 transaction에서 append/advance되고 재시도는 같은 identity로 idempotent하다.
@@ -320,6 +323,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - UI는 정상 render 때 provider를 직접 호출하지 않고 `futures_ohlcv`와 run diagnostics를 읽는다.
 - Futures Macro 첫 진입과 `다시 읽기`는 compatible `futures_macro_snapshot`만 읽으며, 없거나 버전이 다르면 `일봉 갱신 필요`를 표시한다. 원자료 최신일이 아직 완료 전이면 화면은 마지막 완료 세션 기준일과 제외 사유를 함께 표시한다. 전체 10년 OHLCV를 snapshot/history JSON에 복제하지 않는다.
 - 반복 수집은 `(provider_symbol, interval_code, candle_time_utc, source)` 기준 UPSERT로 idempotent하게 동작한다.
+- 동일 세션 17/17에 유효한 explicit final이 이미 있으면 추가 5m 수집과 final write를 생략한다. resolver는 explicit final OHLCV를 model/fingerprint input으로 사용하므로 다음 저녁 세션의 mutable raw 1d 값이 완료 세션 전망을 바꾸지 않는다.
 - yfinance `1d / 1m` 요청이 일부 futures symbol에서 빈 응답 또는 지나치게 희소한 응답을 줄 수 있어, collector는 해당 symbol만 `2d / 1m`으로 한 번 보강 수집한다. 희소 응답이 회복되면 초기 sparse rows를 같은 symbol의 fallback rows로 대체한 뒤 같은 `futures_ohlcv` UPSERT key로 저장하고, 초기 row 수 / 회복 symbol / 실패 symbol은 `fallback_retries` diagnostics로 남긴다.
 - 일봉 macro 해석은 `today_return / rolling_60d_volatility` 표준화 움직임과 252거래일 위치를 사용하며, 채권선물 / FX 선물은 경제적 해석 방향으로 변환해 점수화한다.
 - Historical validation은 저장된 daily futures row를 날짜별로 `date <= validation_date` 조건에서 재계산하고, 1D / 5D / 20D forward return과 비교해 과거 일관성, directional sample size, hit rate, false-positive rate, threshold sensitivity, score-forward-return relationship을 요약한다. `Max Adverse`는 해당 forward window의 endpoint가 아니라 window 안의 adverse path move 기준이다.
@@ -332,6 +336,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - 선물 거래 시간은 상품 / 거래소 / 휴장일별로 다르므로 NYSE cash session 상태와 동일하게 해석하지 않는다.
 - 무료 provider 기반이라 지연, 누락, rate limit, symbol coverage 변화가 발생할 수 있다.
+- session-bounded 5m aggregate는 Yahoo continuous futures bar로 만든 운영상 완료 세션 값이며 거래소 공식 settlement가 아니다.
 - `Stale`, `Missing`, `Partial` 상태는 pass가 아니라 provider freshness / coverage gap이다.
 - Macro Thermometer는 시장 해석 보조 기능이며 정규장 방향 예측이나 투자 판단 자동화가 아니다.
 - Historical validation은 과거 일관성 평가이며 예측 보장이 아니다.
