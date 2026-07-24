@@ -10590,3 +10590,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: latest movers 편향을 제거하고, FOMC/미국 휴장 연도 coverage를 검증하며, 사용자가 이번 주 핵심 일정과 선택일 상세를 한 흐름에서 끝낼 수 있어야 함.
 - Analysis result: daily priority + persisted S&P 500 shard, year-specific official checkpoints, issuer grouping, service-owned views, and calendar-dominant A layout을 구현했다. Live DB에서 Alphabet 2026-07-23 event와 2027 FOMC/holiday coverage를 확인했다.
 - Follow-up: S&P 500 cycle은 정상 예약 갱신으로 완료하고, issuer-confirmed IR source 확대는 별도 product/data task로 다룬다.
+
+### 2026-07-24 - 시장일정 기본 갱신은 공식 일정과 느린 실적 수집을 분리한다
+
+- User request: 일정 갱신이 1분 이상 걸리고 계속 갱신 중으로 남으며, 다음 주 FOMC가 예정 없음으로 보이는 문제를 확인하고 수정하도록 요청함.
+- Interpreted goal: 상단 갱신은 사용자가 기다릴 수 있는 공식 일정 범위로 끝나고, 완료 상태가 확실히 해제되며, 저장된 FOMC가 분류 누락 때문에 화면에서 사라지지 않아야 함.
+- Analysis result: 102초 중 약 92초가 hybrid earnings였고 FOMC 16행은 taxonomy NULL이었다. 공식 3종 facade, 별도 earnings action, parser taxonomy, UI-only completion token을 적용했으며 다음 FOMC 2026-07-29와 약 11.5초 완료 복귀를 확인했다.
+- Follow-up: S&P 500 earnings cycle과 issuer-confirmed IR 확대는 기존 별도 후속 범위로 유지한다.

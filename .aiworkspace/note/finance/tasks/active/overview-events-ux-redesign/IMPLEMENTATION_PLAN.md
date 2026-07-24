@@ -2157,10 +2157,10 @@ Expected: final commit succeeds without generated or unrelated artifacts.
 - Consumes: `_parse_fomc_calendar_events_from_html(html, years=...)`
 - Produces: FOMC source rows with `event_family=central_bank`, `event_subtype=fomc_meeting`, `universe_scope=all_us`, and `source_authority=federal_reserve`
 
-- [ ] Add a focused parser regression test that asserts all four taxonomy values.
-- [ ] Run the focused test and verify RED on the missing taxonomy values.
-- [ ] Add the four values at the FOMC parser source boundary.
-- [ ] Run the focused parser test and relevant event-calendar class; verify GREEN.
+- [x] Add a focused parser regression test that asserts all four taxonomy values.
+- [x] Run the focused test and verify RED on the missing taxonomy values.
+- [x] Add the four values at the FOMC parser source boundary.
+- [x] Run the focused parser test and relevant event-calendar class; verify GREEN.
 
 ### Task 9: Fast official refresh and completion acknowledgement
 
@@ -2175,13 +2175,14 @@ Expected: final commit succeeds without generated or unrelated artifacts.
 - Produces: `run_overview_event_calendars_refresh_official(*, years)` with FOMC, Macro, and Market Structure steps only
 - Preserves: `run_overview_event_calendars_refresh_all(*, years)` with all four legacy steps
 - Produces UI action: `refresh_official`
-- Consumes completion evidence: `command.last_results[*].finished_at`
+- Consumes completion evidence: `command.last_results[*].completion_token`
 
-- [ ] Add focused job/action/React source tests for official-only steps, separate earnings action, and completion-token reset.
-- [ ] Run the focused tests and verify RED on the missing official facade/action/reset contract.
-- [ ] Implement the official-only bundle and Python dispatch while preserving the legacy full bundle.
-- [ ] Change the primary React action to `refresh_official` and reset pending state when the last-result completion token changes.
-- [ ] Run focused tests, React build, and related service/automation test classes; verify GREEN.
+- [x] Add focused job/action/React source tests for official-only steps, separate earnings action, and completion-token reset.
+- [x] Run the focused tests and verify RED on the missing official facade/action/reset contract.
+- [x] Implement the official-only bundle and Python dispatch while preserving the legacy full bundle.
+- [x] Change the primary React action to `refresh_official` and reset pending state when the last-result completion token changes.
+- [x] Give every stored UI result a unique completion token and keep `reload` outside provider-job pending state.
+- [x] Run focused tests, React build, and related service/automation test classes; verify GREEN.
 
 ### Task 10: Live repair, QA, documentation, and commit
 
@@ -2189,10 +2190,10 @@ Expected: final commit succeeds without generated or unrelated artifacts.
 - Modify: active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
 - Modify only when durable meaning changed: Overview runbook / project map / architecture docs
 
-- [ ] Run the real FOMC collector for 2026/2027 so idempotent UPSERT repairs the 16 existing rows.
-- [ ] Verify DB taxonomy NULL count is zero and next FOMC is 2026-07-29 in `events_workbench_v2`.
-- [ ] Start the current worktree Streamlit server on 8521 and perform actual Browser QA.
-- [ ] Confirm the primary button completes without running earnings, leaves the browser connected, and resets its pending label.
-- [ ] Confirm the separate earnings action remains visible without executing the slow provider job during QA.
-- [ ] Run broad Python tests, compile, React production build, and `git diff --check`.
-- [ ] Sync task/durable docs, stage only scoped files, and create a Korean coherent follow-up commit.
+- [x] Run the real FOMC collector for 2026/2027 so idempotent UPSERT repairs the 16 existing rows.
+- [x] Verify DB taxonomy NULL count is zero and next FOMC is 2026-07-29 in `events_workbench_v2`.
+- [x] Start the current worktree Streamlit server on 8521 and perform actual Browser QA.
+- [x] Confirm the primary button completes without running earnings, leaves the browser connected, and resets its pending label.
+- [x] Confirm the separate earnings action remains visible without executing the slow provider job during QA.
+- [x] Run broad Python tests, compile, React production build, and `git diff --check`.
+- [x] Sync task/durable docs, stage only scoped files, and create a Korean coherent follow-up commit.

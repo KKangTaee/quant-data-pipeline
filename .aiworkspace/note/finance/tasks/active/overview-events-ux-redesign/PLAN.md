@@ -32,7 +32,7 @@ Events 탭은 FOMC / earnings / 미국 휴장 일정을 저장해서 보여주�
 2. 설계: 혼합 수집 계약과 A안 React 흐름 승인·문서화 — 완료
 3. 구현: coverage schema, earnings orchestrator, read model, React A안 적용 — 완료
 4. 검증·정리: DB smoke, contract tests, Browser QA, durable docs, commit — 완료
-5. 후속 교정: FOMC taxonomy, 빠른 공식 일정 갱신, React 완료 상태 해제 — 진행 중
+5. 후속 교정: FOMC taxonomy, 빠른 공식 일정 갱신, React 완료 상태 해제 — 완료
 
 ## Historical Scope
 

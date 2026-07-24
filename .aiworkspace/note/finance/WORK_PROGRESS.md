@@ -7204,3 +7204,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Replaced latest-movers-only earnings collection with daily priority plus a persisted S&P 500 shard cycle; collection coverage now distinguishes checked-no-event from not-checked.
   - Added requested-year official coverage, including NYSE fallback for the 2027 holiday schedule, and issuer grouping that displays GOOG / GOOGL as one Alphabet event while retaining both ticker facts.
   - Completed the React brief + calendar A layout, desktop/mobile Browser QA, and task closeout under `tasks/active/overview-events-ux-redesign/`.
+- 2026-07-24 Overview Events refresh follow-up:
+  - Repaired FOMC source taxonomy and verified the next 2026-07-29 meeting from the DB-backed workbench.
+  - Split the fast official-calendar refresh from the slow hybrid earnings action and hardened React completion acknowledgement with a unique UI token.
+  - Detailed evidence remains under `tasks/active/overview-events-ux-redesign/`.

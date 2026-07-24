@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from html import escape
 from typing import Any
+from uuid import uuid4
 
 import altair as alt
 import pandas as pd
@@ -15,6 +16,7 @@ from app.jobs.overview_actions import (
     record_overview_action_result,
     run_overview_earnings_calendar,
     run_overview_event_calendars_refresh_all,
+    run_overview_event_calendars_refresh_official,
     run_overview_fomc_calendar,
     run_overview_macro_calendar,
     run_overview_market_structure_calendar,
@@ -62,6 +64,7 @@ EVENT_TYPE_LABELS = {
 }
 
 EVENT_REFRESH_RESULT_KEYS = [
+    ("overview_events_official_calendar_result", "공식 일정 갱신"),
     ("overview_events_all_calendar_result", "전체 일정 갱신"),
     ("overview_fomc_calendar_result", "FOMC 공식 일정"),
     ("overview_macro_calendar_result", "매크로 공식 일정"),
@@ -92,7 +95,9 @@ def _event_filter_label(value: str) -> str:
 
 
 def _store_overview_job_result(result_key: str, result: dict[str, Any]) -> None:
-    st.session_state[result_key] = result
+    stored_result = dict(result)
+    stored_result["_ui_completion_token"] = uuid4().hex
+    st.session_state[result_key] = stored_result
     try:
         record_overview_action_result(result)
     except Exception as exc:  # pragma: no cover - UI resilience only
@@ -370,6 +375,7 @@ def _events_refresh_result_payload(result_key: str, label: str) -> dict[str, Any
         "jobs_run": result.get("jobs_run"),
         "jobs_failed": result.get("jobs_failed"),
         "finished_at": result.get("finished_at"),
+        "completion_token": result.get("_ui_completion_token") or result.get("finished_at"),
         "sub_results": [
             {
                 "label": row.get("label") or row.get("job_name") or "-",
@@ -425,6 +431,15 @@ def _handle_events_react_event(event: dict[str, Any], context: EventSnapshotCont
             _store_overview_job_result(
                 "overview_events_all_calendar_result",
                 run_overview_event_calendars_refresh_all(years=(current_year, current_year + 1)),
+            )
+        st.rerun()
+    if action_id == "refresh_official":
+        with st.spinner("Collecting official FOMC, macro, and market-structure calendars..."):
+            _store_overview_job_result(
+                "overview_events_official_calendar_result",
+                run_overview_event_calendars_refresh_official(
+                    years=(current_year, current_year + 1)
+                ),
             )
         st.rerun()
     if action_id == "refresh_fomc":

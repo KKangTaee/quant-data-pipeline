@@ -9,6 +9,7 @@
 - Earnings date providers often omit an exact release time. Unknown time must remain unknown and must not be converted to a misleading KST midnight.
 - Official holiday pages can change markup. Failed parsing must preserve last-known official rows and surface incomplete year coverage.
 - `events_helpers.py` and `EventsWorkbench.tsx` are already large. New orchestration and interpretation should stay in data/service modules rather than increasing UI-side business logic.
+- Official calendar refresh is much faster than hybrid earnings but still depends on multiple external official endpoints; partial source failure must remain visible without reintroducing the slow earnings collector into the primary action.
 
 ## Non-Blocking Follow-up
 

@@ -221,7 +221,7 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
 6. `Workspace > Ingestion > Overview Market Event Calendar > FOMC`
    - 기본은 current year와 next year를 수집한다.
    - 결과는 `finance_meta.market_event_calendar`에 `event_type=FOMC_MEETING`으로 저장된다.
-   - Events read model은 legacy row라도 `event_family=central_bank`, `universe_scope=official_macro`, `source_authority=official`로 읽을 수 있게 추론한다.
+   - parser source boundary에서 `event_family=central_bank`, `event_subtype=fomc_meeting`, `universe_scope=all_us`, `source_authority=federal_reserve`를 함께 저장한다. 기존 FOMC row도 같은 연도를 다시 수집하면 idempotent UPSERT로 분류값이 보정된다.
 
 7. `Workspace > Ingestion > Overview Market Event Calendar > Macro`
    - 기본은 current year와 next year를 수집한다.
@@ -253,7 +253,8 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
 
 9. `Workspace > Overview > Events`
    - React `이번 주 시장 일정` workbench가 available이면 `가장 중요한 다음 일정`, `이번 주 핵심 일정`, `다음 FOMC` 세 brief와 월간 calendar를 먼저 확인한다.
-   - 첫 화면의 `일정 갱신`은 Python `run_overview_event_calendars_refresh_all()` facade를 통해 FOMC / Macro / Market Structure / hybrid Earnings collectors를 순차 실행한다.
+   - 첫 화면의 `일정 갱신`은 Python `run_overview_event_calendars_refresh_official()` facade를 통해 FOMC / Macro / Market Structure만 갱신한다. provider 호출이 긴 hybrid Earnings는 `자료 신뢰와 수집 범위` 안의 `실적 예상 일정 갱신`으로 분리한다.
+   - legacy `run_overview_event_calendars_refresh_all()`은 자동화/호환 경로를 위해 네 collector bundle로 유지한다. React 수동 실행은 결과마다 고유 completion token을 받아 빠른 연속 실행에서도 pending 표시를 해제하며, `화면 새로고침`은 provider job pending 상태를 만들지 않는다.
    - `일정 타입`은 `전체`, `FOMC`, `실적`, `휴장·조기폐장` service-owned view를 전환한다. Brief, calendar, selected-day detail, weekly density, coverage evidence는 항상 같은 view를 사용한다.
    - desktop은 calendar와 selected-day detail을 2열로, 760px 이하는 1열로 표시한다. 날짜를 선택하면 그날의 모든 일정을 고정 높이 detail panel에서 확인한다.
    - Earnings는 issuer 단위로 표시한다. 예를 들어 GOOG / GOOGL은 `Alphabet Inc 실적` 한 건으로 보이고 두 ticker는 근거 symbol로 함께 표시된다.
@@ -416,7 +417,7 @@ PY
 - Earnings job results show `Earnings Diagnostics` when requested symbols are missing, outside the selected lookahead window, or fail at the provider layer.
 - Earnings event rows include `Quality Action`; `Estimate only` rows recommend cross-check or closer refresh, stale rows recommend refresh, and cross-checked rows show no action.
 - Overview Events starts with the React workbench when the component build exists: brief, command boundary with last refresh results, local display filters, tabbed event rails, schedule-confirmation review, monthly calendar grid, weekly density, and collapsed raw evidence appendix.
-- Current Overview Events A layout uses three service-owned brief cards, one refresh action, family views, a calendar + selected-day desktop grid, consistent weekly density, and collapsed collection/support evidence.
+- Current Overview Events A layout uses three service-owned brief cards, one fast official-calendar refresh, family views, a calendar + selected-day desktop grid, consistent weekly density, and collapsed collection/support evidence. Slow hybrid earnings refresh is a separate support action.
 - Earnings collection coverage uses daily priority plus a persisted S&P 500 shard cycle. Coverage checkpoints separate checked-no-event from not-checked and do not imply issuer-confirmed authority.
 - Issuer grouping preserves raw ticker evidence; exact CIK or exact listing-name matches can display GOOG / GOOGL as one Alphabet event.
 - FOMC and US holiday coverage is verified by requested year. NYSE official holidays backfill only years missing from the Nasdaq Trader response.

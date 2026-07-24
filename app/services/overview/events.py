@@ -1374,10 +1374,10 @@ def _events_workbench_command() -> dict[str, Any]:
                 "detail": "DB에 저장된 이벤트 rows를 다시 읽습니다.",
             },
             {
-                "id": "refresh_all",
-                "label": "전체 일정 갱신",
+                "id": "refresh_official",
+                "label": "일정 갱신",
                 "kind": "primary",
-                "detail": "FOMC, 매크로, 시장 구조, 실적 추정 일정 collector를 순차 실행합니다.",
+                "detail": "FOMC, 매크로, 시장 구조의 공식 일정 collector를 순차 실행합니다.",
             },
             {
                 "id": "refresh_fomc",

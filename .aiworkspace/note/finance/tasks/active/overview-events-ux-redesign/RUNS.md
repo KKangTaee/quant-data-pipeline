@@ -165,3 +165,13 @@
 - 2026-07-24: Post-review live Market Structure refresh - PASS, 49 rows written; 2026 checkpoint complete 12/12 and 2027 checkpoint complete 11/11.
 - 2026-07-24: Post-fix code re-review - no remaining Critical or Important issues; reviewer assessment `Ready to merge: Yes`.
 - 2026-07-24: Post-fix Browser QA - desktop two-column and mobile one-column layouts PASS, selected 2026-07-23 detail contained one Alphabet card with both symbols, horizontal overflow 0, support evidence closed by default, console errors 0.
+- 2026-07-24: Refresh diagnosis - previous full bundle 102s, including 92.091s hybrid earnings; DB contained 16 FOMC rows with all taxonomy columns NULL, so the family-bounded read model returned no next FOMC.
+- 2026-07-24: FOMC taxonomy RED/GREEN - focused parser test failed on missing taxonomy, then event-calendar class 50 tests PASS after source-boundary fields were added.
+- 2026-07-24: Live FOMC repair - success in 0.203s; all 16 current/next-year rows have non-NULL taxonomy and `events_workbench_v2` returns next FOMC 2026-07-29.
+- 2026-07-24: Official refresh RED/GREEN - missing facade/action/reset contracts failed first; focused action/React tests passed after FOMC / Macro / Market Structure-only facade and separate earnings action were added.
+- 2026-07-24: Browser official-refresh QA - primary action showed pending and returned to `일정 갱신` in 11.528s, browser stayed connected, next FOMC remained visible, and the separate earnings action was present but intentionally not executed.
+- 2026-07-24: Review regression RED/GREEN - reload pending and repeated same-second result completion were reproduced; two focused tests PASS after UI-only UUID completion tokens and reload pending exclusion.
+- 2026-07-24: Final React production build - PASS, 0 npm vulnerabilities; exact generated `node_modules` tree removed after build.
+- 2026-07-24: Final browser regression - `화면 새로고침` produced zero `실행 중` buttons; official refresh returned from `갱신 중` to `일정 갱신`; next FOMC remained 2026-07-29. Screenshot `overview-events-fast-refresh-final-browser-qa.jpg` remains generated and uncommitted.
+- 2026-07-24: Final broad QA - planned three contract classes, 414 tests PASS; focused `py_compile`, live `events_workbench_v2` next-FOMC smoke, `git diff --check`, and generated dependency cleanup PASS.
+- 2026-07-24: Post-completion-token re-review - no Critical or Important findings; reviewer assessment `Ready to merge: Yes`.

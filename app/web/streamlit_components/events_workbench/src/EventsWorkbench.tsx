@@ -77,6 +77,8 @@ type CommandResult = {
   status?: string;
   message?: string;
   jobs_run?: number | null;
+  finished_at?: string | null;
+  completion_token?: string | null;
 };
 
 type EventsView = {
@@ -403,8 +405,12 @@ function EventsWorkbench({ args }: ComponentProps) {
   const filterOptions = payload.filter_options || DEFAULT_FILTERS;
   const command = payload.command || { actions: [] };
   const commandActions = command.actions || [];
-  const secondaryActions = commandActions.filter((action) => action.id !== "refresh_all");
+  const primaryAction = commandActions.find((action) => action.id === "refresh_official");
+  const secondaryActions = commandActions.filter((action) => action.kind !== "primary");
   const lastResults = command.last_results || [];
+  const completionToken = lastResults
+    .map((result) => `${result.key || ""}:${result.status || ""}:${result.completion_token || result.finished_at || ""}`)
+    .join("|");
   const evidenceRows = payload.evidence?.rows || [];
   const [pendingActionId, setPendingActionId] = useState("");
   const [calendarMonth, setCalendarMonth] = useState(defaultMonthFromDays(calendarDays, calendar.today));
@@ -430,7 +436,7 @@ function EventsWorkbench({ args }: ComponentProps) {
 
   useEffect(() => {
     setPendingActionId("");
-  }, [payload.schema_version, payload.status]);
+  }, [completionToken]);
 
   useEffect(() => {
     const nextMonth = defaultMonthFromDays(calendarDays, calendar.today);
@@ -443,7 +449,9 @@ function EventsWorkbench({ args }: ComponentProps) {
   }, [activeCalendarMonth, calendar.today, calendarDays, selectedDate]);
 
   const emitEvent = (id: string) => {
-    setPendingActionId(id);
+    if (id !== "reload") {
+      setPendingActionId(id);
+    }
     Streamlit.setComponentValue({ event: { id, nonce: `${Date.now()}-${Math.random()}` } });
   };
 
@@ -469,11 +477,11 @@ function EventsWorkbench({ args }: ComponentProps) {
         </div>
         <button
           className="events-workbench__refresh"
-          disabled={pendingActionId === "refresh_all"}
-          onClick={() => emitEvent("refresh_all")}
+          disabled={pendingActionId === "refresh_official"}
+          onClick={() => emitEvent(primaryAction?.id || "refresh_official")}
           type="button"
         >
-          {pendingActionId === "refresh_all" ? "갱신 중" : "일정 갱신"}
+          {pendingActionId === "refresh_official" ? "갱신 중" : (primaryAction?.label || "일정 갱신")}
         </button>
       </header>
 

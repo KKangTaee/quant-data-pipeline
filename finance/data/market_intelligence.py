@@ -1114,6 +1114,10 @@ def _parse_fomc_calendar_events_from_html(
                 {
                     "event_date": event_date,
                     "event_type": "FOMC_MEETING",
+                    "event_family": "central_bank",
+                    "event_subtype": "fomc_meeting",
+                    "universe_scope": "all_us",
+                    "source_authority": "federal_reserve",
                     "symbol": None,
                     "title": f"FOMC Meeting: {range_text}, {year}",
                     "source": FOMC_CALENDAR_SOURCE,

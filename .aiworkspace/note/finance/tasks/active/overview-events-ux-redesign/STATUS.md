@@ -40,3 +40,5 @@
 - 2026-07-24: Browser QA found and fixed a React payload datetime-marshalling regression with a RED/GREEN contract. Desktop/mobile layout, selected 2026-07-23 detail, single Alphabet issuer card, no horizontal overflow, and zero console errors were verified.
 - Current: roadmap 4/4 implementation and QA completed through `IMPLEMENTATION_PLAN.md`; final broad verification and commit evidence are recorded in `RUNS.md`.
 - Next: continue normal scheduled earnings refreshes until the current S&P 500 cycle reaches complete; issuer-confirmed IR ingestion remains a separate follow-up.
+- 2026-07-24: 후속 교정의 FOMC taxonomy와 빠른 공식 일정 갱신을 구현했다. 기존 16개 FOMC row를 source-boundary taxonomy로 보정해 다음 회의 2026-07-29를 복구했고, 상단 갱신은 FOMC / Macro / Market Structure만 실행하도록 느린 hybrid Earnings와 분리했다.
+- 2026-07-24: final review에서 발견된 reload pending과 초 단위 결과 충돌 가능성을 고유 UI completion token으로 보완했다. `화면 새로고침`은 pending을 만들지 않고, 실제 공식 갱신은 약 11.5초 후 정상 버튼으로 복귀했다.

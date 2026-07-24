@@ -8620,21 +8620,53 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("_handle_events_react_event(", helper_source)
         self.assertIn('if action_id == "reload"', helper_source)
+        self.assertIn('if action_id == "refresh_official"', helper_source)
         self.assertIn('if action_id == "refresh_fomc"', helper_source)
         self.assertIn('if action_id == "refresh_macro"', helper_source)
         self.assertIn('if action_id == "refresh_market_structure"', helper_source)
         self.assertIn('if action_id == "refresh_earnings"', helper_source)
         self.assertIn('if action_id == "refresh_all"', helper_source)
+        self.assertIn("run_overview_event_calendars_refresh_official", helper_source)
         self.assertIn("run_overview_event_calendars_refresh_all", helper_source)
         self.assertIn("run_overview_market_structure_calendar", helper_source)
         self.assertIn("_events_refresh_results_payload", helper_source)
         self.assertIn('"last_results"', helper_source)
+        self.assertIn("completionToken", react_source)
+        self.assertIn("[completionToken]", react_source)
+        self.assertIn("result.completion_token", react_source)
+        self.assertIn('if (id !== "reload")', react_source)
+        self.assertIn('action.id === "refresh_official"', react_source)
         self.assertIn("secondaryActions.map", react_source)
         self.assertIn("setPendingActionId", react_source)
         self.assertIn("events-workbench__support-details", react_source)
         self.assertIn("refresh_boundary", react_source)
         self.assertIn("lastResults", react_source)
         self.assertIn("실적 예상 일정 기준", react_source)
+
+    def test_events_refresh_results_get_unique_ui_completion_tokens(self) -> None:
+        import app.web.overview.events_helpers as events_helpers
+
+        fake_streamlit = MagicMock()
+        fake_streamlit.session_state = {}
+        result = {
+            "status": "success",
+            "message": "done",
+            "finished_at": "2026-07-24T12:00:00",
+        }
+
+        with (
+            patch.object(events_helpers, "st", fake_streamlit),
+            patch.object(events_helpers, "record_overview_action_result"),
+        ):
+            events_helpers._store_overview_job_result("result", result)
+            first_token = fake_streamlit.session_state["result"]["_ui_completion_token"]
+            events_helpers._store_overview_job_result("result", result)
+            second_token = fake_streamlit.session_state["result"]["_ui_completion_token"]
+            payload = events_helpers._events_refresh_result_payload("result", "일정 갱신")
+
+        self.assertNotEqual(first_token, second_token)
+        self.assertEqual(payload["completion_token"], second_token)
+        self.assertNotIn("_ui_completion_token", result)
 
     def test_events_react_renders_a_layout_from_service_views(self) -> None:
         source = Path(
@@ -11761,6 +11793,53 @@ class OverviewAutomationContractTests(unittest.TestCase):
         macro.assert_called_once_with(years=(2026, 2027))
         market_structure.assert_called_once_with(years=(2026, 2027))
         earnings.assert_called_once_with()
+
+    def test_overview_action_facade_runs_official_events_without_earnings(self) -> None:
+        from app.jobs import overview_actions
+
+        calls: list[str] = []
+
+        def _result(job_name: str) -> dict[str, Any]:
+            calls.append(job_name)
+            return {"job_name": job_name, "status": "success", "message": f"{job_name} done"}
+
+        with (
+            patch.object(
+                overview_actions,
+                "run_overview_fomc_calendar",
+                side_effect=lambda **_: _result("fomc_calendar"),
+            ) as fomc,
+            patch.object(
+                overview_actions,
+                "run_overview_macro_calendar",
+                side_effect=lambda **_: _result("macro_calendar"),
+            ) as macro,
+            patch.object(
+                overview_actions,
+                "run_overview_market_structure_calendar",
+                side_effect=lambda **_: _result("market_structure_calendar"),
+            ) as market_structure,
+            patch.object(
+                overview_actions,
+                "run_overview_earnings_calendar",
+                side_effect=lambda: _result("earnings_calendar"),
+            ) as earnings,
+        ):
+            summary = overview_actions.run_overview_event_calendars_refresh_official(
+                years=(2026, 2027)
+            )
+
+        self.assertEqual(summary["job_name"], "overview_event_calendars_refresh_official")
+        self.assertEqual(summary["status"], "success")
+        self.assertEqual(summary["jobs_run"], 3)
+        self.assertEqual(
+            calls,
+            ["fomc_calendar", "macro_calendar", "market_structure_calendar"],
+        )
+        fomc.assert_called_once_with(years=(2026, 2027))
+        macro.assert_called_once_with(years=(2026, 2027))
+        market_structure.assert_called_once_with(years=(2026, 2027))
+        earnings.assert_not_called()
 
     def test_overview_action_uses_hybrid_earnings_job(self) -> None:
         from app.jobs import overview_actions
@@ -22279,7 +22358,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertTrue(payload["warnings"])
         self.assertEqual(payload["command"]["actions"][0]["id"], "reload")
         self.assertIn("DB", payload["command"]["actions"][0]["detail"])
-        self.assertIn("refresh_all", [action["id"] for action in payload["command"]["actions"]])
+        action_ids = [action["id"] for action in payload["command"]["actions"]]
+        self.assertIn("refresh_official", action_ids)
+        self.assertIn("refresh_earnings", action_ids)
+        self.assertNotIn("refresh_all", action_ids)
         self.assertIn("provider/job", payload["command"]["refresh_boundary"])
         self.assertEqual(payload["command"]["earnings_universe"]["symbol_source"], "priority_plus_sp500_cycle")
         self.assertEqual(payload["command"]["earnings_universe"]["major_cap_limit"], 100)
@@ -28839,6 +28921,28 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
             "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260617a.htm",
         )
         self.assertEqual(rows[1]["event_date"], "2026-05-01")
+
+    def test_fomc_calendar_parser_assigns_family_taxonomy_for_family_bounded_reader(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        rows = mi._parse_fomc_calendar_events_from_html(  # noqa: SLF001
+            """
+            <div class="panel panel-default">
+              <div class="panel-heading"><h4>2026 FOMC Meetings</h4></div>
+              <div class="row fomc-meeting">
+                <div class="fomc-meeting__month">July</div>
+                <div class="fomc-meeting__date">28-29</div>
+              </div>
+            </div>
+            """,
+            years=[2026],
+        )
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].get("event_family"), "central_bank")
+        self.assertEqual(rows[0].get("event_subtype"), "fomc_meeting")
+        self.assertEqual(rows[0].get("universe_scope"), "all_us")
+        self.assertEqual(rows[0].get("source_authority"), "federal_reserve")
 
     def test_collect_fomc_calendar_writes_event_rows(self) -> None:
         from finance.data import market_intelligence as mi
