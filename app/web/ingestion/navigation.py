@@ -16,6 +16,7 @@ from app.web.ingestion.workflows import (
 
 
 SECTION_STATE_KEY = "data_operations_section_choice"
+PENDING_SECTION_STATE_KEY = "data_operations_section_pending"
 WORKFLOW_STATE_KEY = "data_operations_workflow_choice"
 FOCUSED_ACTION_STATE_KEY = "data_operations_focused_action"
 
@@ -31,9 +32,23 @@ def apply_action_focus(
     state[FOCUSED_ACTION_STATE_KEY] = action
 
 
+def queue_action_focus(
+    state: MutableMapping[str, object],
+    action: str,
+) -> None:
+    """Queue a widget-backed section change for the next Streamlit rerun."""
+
+    action_definition(action)
+    state[PENDING_SECTION_STATE_KEY] = DATA_OPERATIONS_SECTION_ADVANCED
+    state[FOCUSED_ACTION_STATE_KEY] = action
+
+
 def select_data_operations_section() -> str:
     """Render and persist the five-section Data Operations selector."""
 
+    pending_section = st.session_state.pop(PENDING_SECTION_STATE_KEY, None)
+    if pending_section in DATA_OPERATIONS_SECTIONS:
+        st.session_state[SECTION_STATE_KEY] = pending_section
     if SECTION_STATE_KEY not in st.session_state:
         st.session_state[SECTION_STATE_KEY] = DATA_OPERATIONS_SECTION_PREPARATION
     selected = st.pills(
@@ -74,7 +89,7 @@ def selected_data_operations_workflow() -> str | None:
 def focus_data_operations_action(action: str) -> None:
     """Focus an action in Advanced and rerun from the top-level selector."""
 
-    apply_action_focus(st.session_state, action)
+    queue_action_focus(st.session_state, action)
     st.rerun()
 
 
@@ -94,12 +109,14 @@ def consume_focused_data_operations_action() -> str | None:
 
 __all__ = [
     "FOCUSED_ACTION_STATE_KEY",
+    "PENDING_SECTION_STATE_KEY",
     "SECTION_STATE_KEY",
     "WORKFLOW_STATE_KEY",
     "apply_action_focus",
     "clear_data_operations_workflow",
     "consume_focused_data_operations_action",
     "focus_data_operations_action",
+    "queue_action_focus",
     "select_data_operations_section",
     "select_data_operations_workflow",
     "selected_data_operations_workflow",

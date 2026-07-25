@@ -66,6 +66,31 @@ class DataOperationsWorkflowContractTest(unittest.TestCase):
 
         self.assertEqual(state, {"existing": "preserved"})
 
+    def test_widget_callback_queues_section_change_for_next_rerun(self) -> None:
+        from app.web.ingestion.navigation import (
+            FOCUSED_ACTION_STATE_KEY,
+            PENDING_SECTION_STATE_KEY,
+            SECTION_STATE_KEY,
+            queue_action_focus,
+        )
+        from app.web.ingestion.workflows import DATA_OPERATIONS_SECTION_ADVANCED
+
+        state: dict[str, object] = {
+            SECTION_STATE_KEY: "데이터 준비",
+        }
+
+        queue_action_focus(state, "collect_market_sentiment")
+
+        self.assertEqual(state[SECTION_STATE_KEY], "데이터 준비")
+        self.assertEqual(
+            state[PENDING_SECTION_STATE_KEY],
+            DATA_OPERATIONS_SECTION_ADVANCED,
+        )
+        self.assertEqual(
+            state[FOCUSED_ACTION_STATE_KEY],
+            "collect_market_sentiment",
+        )
+
     def test_official_import_and_recovery_actions_route_to_legacy_form_sections(self) -> None:
         from app.web.ingestion.registry import (
             INGESTION_COLLECTION_MANUAL,
