@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
+import EconomicCycleHero from "./EconomicCycleHero";
 import "./style.css";
 
 type Phase = "recovery" | "expansion" | "slowdown" | "recession";
@@ -1189,20 +1190,22 @@ function EconomicCycleWorkbench({ args }: Props) {
   const currentState = current ? resolveEstimateStatus(current) : "UNAVAILABLE";
   const realEvidence = payload.evidence.filter((evidence) => evidence.group === "real_economy");
   const forecastEvidence = payload.evidence.filter((evidence) => evidence.group === "forecast_context");
+  const estimateTone =
+    currentState === "VERIFIED"
+      ? "positive"
+      : currentState === "PROVISIONAL"
+        ? "caution"
+        : "neutral";
   return (
     <main className="cycle-workbench" data-status={payload.status} ref={rootRef}>
-      <header className="cycle-hero">
-        <div>
-          <span className="eyebrow">U.S. ECONOMIC CYCLE</span>
-          <h2>{payload.headline?.phase_label || "판단 불가"} {current?.dominant_phase ? "우세" : ""}</h2>
-          <p>{payload.headline?.summary || "저장된 경제사이클 결과를 확인합니다."}</p>
-        </div>
-        <div className="hero-basis">
-          <span>데이터 기준</span>
-          <strong>{payload.as_of_date || "-"}</strong>
-          <b className={`hero-status estimate-${currentState.toLowerCase()}`}>{ESTIMATE_LABEL[currentState]}</b>
-        </div>
-      </header>
+      <EconomicCycleHero
+        asOfDate={payload.as_of_date || "-"}
+        estimateLabel={ESTIMATE_LABEL[currentState]}
+        estimateTone={estimateTone}
+        hasIntramonth={Boolean(payload.intramonth)}
+        summary={payload.headline?.summary || "저장된 경제사이클 결과를 확인합니다."}
+        title={`${payload.headline?.phase_label || "판단 불가"} ${current?.dominant_phase ? "우세" : ""}`.trim()}
+      />
 
       <section className="horizon-section" aria-labelledby="horizon-title">
         <div className="section-heading"><div><span>Probability path</span><h3 id="horizon-title">현재와 앞으로 1·2개월</h3></div><small>각 카드의 네 국면 합계는 100%</small></div>

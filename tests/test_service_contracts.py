@@ -8367,13 +8367,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_futures_macro_react_separates_observation_and_outlook_statuses(self) -> None:
         root = Path("app/web/streamlit_components/futures_macro_workbench/src")
         types = (root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
+        presentation = (root / "presentation.ts").read_text(encoding="utf-8")
         context = (root / "MacroContextSection.tsx").read_text(encoding="utf-8")
         horizons = (root / "PatternHorizonSection.tsx").read_text(encoding="utf-8")
         assets = (root / "AssetPathwaysSection.tsx").read_text(encoding="utf-8")
         style = (root / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn('type ObservationStatus = "OBSERVED" | "PARTIAL" | "UNAVAILABLE"', types)
-        self.assertIn('OBSERVED: "관측 완료"', types)
+        self.assertIn('type ObservationStatus = "OBSERVED" | "PARTIAL" | "UNAVAILABLE"', presentation)
+        self.assertIn('OBSERVED: "관측 완료"', presentation)
         self.assertIn("observation_status", context)
         self.assertIn("OBSERVATION_LABEL", context)
         self.assertIn('item.kind === "observation"', horizons)

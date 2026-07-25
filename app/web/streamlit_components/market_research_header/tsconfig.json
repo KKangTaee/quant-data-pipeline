@@ -11,6 +11,11 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "Node",
+    "baseUrl": ".",
+    "paths": {
+      "react": ["./node_modules/@types/react"],
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime.d.ts"]
+    },
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx"
