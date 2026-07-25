@@ -10684,3 +10684,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 현재 브랜치의 공통 Market Research 헤더와 선물 완료 세션 변경을 유지하면서 master의 일정·기관 화면 개편과 데이터 coverage 변경을 손실 없이 통합해야 함.
 - Analysis result: Events의 새 `brief.counts` 계약과 공통 헤더 action을 연결하고, 낡은 hero CSS와 top-level counts 참조 회귀를 제거했다. 문서에는 Events coverage와 Futures completed-session finalization 양쪽 의미를 모두 보존했다.
 - Follow-up: 전체 통합 roadmap `3/3차` 완료. Python·React 검증과 1280/420px actual Browser QA를 통과한 병합 커밋을 기준으로 후속 개발을 이어간다.
+
+### 2026-07-25 - Data Operations는 collector 목록이 아니라 준비 목적에서 시작한다
+
+- User request: Data Operations 전체 진단에서 권고한 개선 방향대로 진행하도록 승인함.
+- Interpreted goal: backend 수집 기능은 보존하면서 사용자가 Market Research, Portfolio Lab, Institutional Holdings, Practical Validation 중 준비 목적을 먼저 선택하게 함.
+- Analysis result: `Task-oriented Hybrid`를 채택해 5-section IA, 네 consumer workflow, official import, diagnosis-led recovery, normalized history와 Advanced 경계를 설계했다. 새 raw status dashboard와 자동 연속 실행은 V1에서 제외한다.
+- Follow-up: `tasks/active/data-operations-task-oriented-ia-v1-20260725/DESIGN.md` 사용자 검토 후 3A/3B/3C 구현으로 전환한다.

@@ -7281,3 +7281,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Events는 master의 calendar-dominant 화면에 공통 `ResearchHeader`와 공식 일정 갱신 action을 연결하고 새 `brief.counts` payload 계약에 맞췄다.
 - 낡은 hero CSS와 런타임 counts 참조 회귀를 테스트로 고쳤으며 desktop 1280px·mobile 420px actual Browser QA에서 overflow와 console error가 없음을 확인했다.
 - 전체 통합 roadmap `3/3차` 완료. 사용자 registry, research, run history와 기존 QA 이미지는 병합 커밋에서 제외했다.
+
+## 2026-07-25 - Data Operations Task-Oriented IA 2차 설계
+
+- 사용자 승인에 따라 collector catalog를 consumer 목적 기반 workflow로 전환하는 `Task-oriented Hybrid` 상세 설계를 작성했다.
+- 기본 화면은 `데이터 준비 / 공식 파일 / 문제 복구 / 실행 이력 / 고급 도구`로 재정의하고 활성 action 30개의 유실 없는 ownership을 정리했다.
+- raw log·failure CSV·full JSON은 backend artifact로 보존하되 기본 UI에서 제거하며, 자동 다단계 실행·scheduler는 4차 후보로 분리했다.
+- 현재 전체 roadmap `2차 설계 완료 / 사용자 검토 대기`; 상세는 `tasks/active/data-operations-task-oriented-ia-v1-20260725/`를 본다.
