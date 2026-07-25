@@ -76,7 +76,7 @@
 - Consumes: `DESIGN.md`의 canonical reading flow와 workspace boundary
 - Produces: Tasks 2–4가 연결할 stable document discovery contract
 
-- [ ] **Step 1: 기존 INDEX rolling-history assertion 실행**
+- [x] **Step 1: 기존 INDEX rolling-history assertion 실행**
 
 Run:
 
@@ -87,7 +87,7 @@ rg -q "## Current Phase State" .aiworkspace/note/finance/docs/INDEX.md
 
 Expected: exit 0. INDEX가 task catalog와 phase-state dump를 포함한다.
 
-- [ ] **Step 2: INDEX를 다음 section으로 전면 재작성**
+- [x] **Step 2: INDEX를 다음 section으로 전면 재작성**
 
 ```text
 # Finance Documentation Index
@@ -103,7 +103,7 @@ Expected: exit 0. INDEX가 task catalog와 phase-state dump를 포함한다.
 `Current Work Pointers`는 `ROADMAP.md`, task active index,
 task / phase `STATUS_MANIFEST.md`만 연결하고 개별 완료 task를 나열하지 않는다.
 
-- [ ] **Step 3: INDEX 역할 assertion 실행**
+- [x] **Step 3: INDEX 역할 assertion 실행**
 
 Run:
 
@@ -117,7 +117,7 @@ done
 
 Expected: exit 0.
 
-- [ ] **Step 4: INDEX local link 검사**
+- [x] **Step 4: INDEX local link 검사**
 
 Run:
 
@@ -141,7 +141,7 @@ PY
 
 Expected: `INDEX links OK`.
 
-- [ ] **Step 5: 1차 commit**
+- [x] **Step 5: 1차 commit**
 
 ```bash
 git add \

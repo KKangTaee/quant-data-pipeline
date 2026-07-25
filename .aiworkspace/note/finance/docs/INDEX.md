@@ -1,189 +1,108 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-07-25
+Last Verified: 2026-07-26
 
 ## Purpose
 
-이 폴더는 `finance` 프로젝트의 장기 지식만 보관한다.
+이 폴더는 `finance` 패키지와 Finance Console의 오래 유지될 제품·구조·데이터·운영
+지식을 보관한다.
 
-작업 중 임시 분석, 실행 로그, 진행 상태는 `docs/`에 바로 넣지 않는다.
-진행 중 기록은 `.aiworkspace/note/finance/tasks/active/<task>/`, `.aiworkspace/note/finance/phases/active/<phase>/`, 또는 제품 방향 리서치의 경우 `.aiworkspace/note/finance/researches/active/<research-id>/`에 두고,
-반복적으로 필요한 내용만 이 폴더로 승격한다.
+현재 작업의 진행 상황, 실험 메모와 실행 로그는 task·phase·research 기록에 두고,
+반복해서 필요한 결론만 `docs/`로 승격한다. 이 문서는 상세 내용을 복제하지 않고
+사람과 AI를 올바른 책임 문서로 안내한다.
 
-## Read First
+## Start Here
 
-1. [Product Direction](./PRODUCT_DIRECTION.md)
-2. [Roadmap](./ROADMAP.md)
-3. [Project Map](./PROJECT_MAP.md)
-4. [Glossary](./GLOSSARY.md)
+1. [Product Direction](./PRODUCT_DIRECTION.md) — 제품이 해결하는 문제와 사용자 흐름
+2. [Roadmap](./ROADMAP.md) — 현재 구현 기준선, 열린 상태와 다음 승인 결정
+3. [Project Map](./PROJECT_MAP.md) — 화면·계층·저장소의 code ownership
+4. [Glossary](./GLOSSARY.md) — 제품과 검증 용어
 
-## Current Phase State
+처음 실행하거나 전체 제품을 빠르게 보고 싶다면 root
+[README](../../../../README.md)부터 읽는다. 저장소에서 작업하는 AI와 개발자는
+[AGENTS.md](../../../../AGENTS.md)의 범위·검증·기록 규칙을 함께 따른다.
 
-- Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
-- Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
-- Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
-- Latest completed Institutional Holdings UX task: [Institutional Holdings React Parity V1 2026-07-25](../tasks/active/institutional-holdings-react-parity-v1-20260725/STATUS.md) — 기존 기능과 DB 경계를 보존한 채 정상 화면을 React-owned `C · Modular Research Studio`로 전환했다. canonical 4개 destination, desktop research rail, 980px 이하 drawer, React 내 SEC dataset 갱신과 actual responsive Browser QA를 포함해 전체 `4/4차`를 완료했다.
-- Current active task: [Overview Sentiment CNN·AAII Balanced V1 2026-07-19](../tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md) — 전체 잠정 roadmap `2/4차`. 1차 균형형 UI와 2차 source별 immutable 수집 당시 기록, UTC known-at 조회, 24시간 자동 수집, full-history 그래프를 완료했다. 다음은 3차 독립 데이터 후보 검토이며 1W/1M은 4차 chronological PIT 검증 전까지 비공개다.
-- Latest completed Sentiment data-quality follow-up: [AAII Canonical Dedup V1 2026-07-25](../tasks/active/overview-sentiment-aaii-canonical-dedup-v1-20260725/STATUS.md) — complete XLS capture의 canonical date-window reconciliation과 actual full-workbook cleanup으로 HTML/XLS 동일 주차 이중 관측을 제거했다. Immutable snapshot/batch와 기존 `2/4차` roadmap은 유지한다.
-- Latest completed Market Research UX task: [Market Research Header System V1 2026-07-25](../tasks/active/market-research-header-system-v1-20260725/STATUS.md) — 경제사이클·선물매크로·심리·일정의 첫 화면을 공통 title/fact/meta/action shell로 통일했다. 중립 fact border와 상태값 내부 점을 사용하며 전체 `3/3차`, React DOM 9개, Python 33개, 네 build와 1280·760·420px actual Browser QA를 완료했다.
-- Latest completed Economic Cycle UX task: [Economic Cycle Asset Dedup Typography V1 2026-07-25](../tasks/active/market-research-economic-cycle-asset-dedup-typography-v1-20260725/STATUS.md) — 금·달러 공통 경제 배경의 3중 반복을 전용 블록 1회로 정리하고 asset-specific summary/current interpretation을 분리했다. 자산별 확인 포인트의 표시 글자를 scoped `+1px` 조정하고 전체 `2/2차`와 desktop/420px actual Browser QA를 완료했다.
-- Latest completed Market Research data task: [S&P 500 Manual Price Refresh V1 2026-07-24](../tasks/active/market-research-sp500-manual-price-refresh-v1-20260724/STATUS.md) — S&P 화면 진입은 DB-only freshness를 읽고 stale/missing일 때만 `^GSPC`·`SPY` 수동 EOD action을 제공한다. actual 7/16·7/22를 모두 7/23으로 갱신하고 전체 `3/3차`와 responsive Browser QA를 완료했다.
-- Latest completed data operations task: [NYSE Listing Universe Refresh V1 2026-07-23](../tasks/active/nyse-listing-universe-refresh-v1-20260723/STATUS.md) — stale stock·ETF current master를 NYSE 공식 snapshot으로 함께 갱신하는 atomic job과 Data Operations 첫 action을 구현했다. 실제 `2026-07-23` 기준 stock 6,770 / ETF 5,537과 가격 이력 불변, 전체 `3/3차` Browser QA를 확인했다.
-- Previous completed Market Research UX task: [Market Research Editorial Navigation V2 2026-07-23](../tasks/active/market-research-editorial-navigation-v2-20260722/STATUS.md) — React 상단을 full-width editorial header, divider+underline family text tab, unframed local view rail과 compact active pill로 정리했다. 기존 3-family/7-view와 Python state/fallback을 유지하며 전체 `3/3차`와 1280·760·420px actual Browser QA를 완료했다.
-- Previous completed Market Research UX task: [Market Research React Navigation V1 2026-07-22](../tasks/active/market-research-react-navigation-v1-20260722/STATUS.md) — eyebrow·제목·설명·3-family·7-view 상단 전체를 하나의 responsive React surface로 전환했다. 이 component/state 계약은 최신 Editorial Navigation V2가 계승했다.
-- Latest completed Portfolio Monitoring decision task: [Portfolio Monitoring Latest Decision Lifecycle V1 2026-07-23](../tasks/active/portfolio-monitoring-latest-decision-lifecycle-v1-20260723/STATUS.md) — 후보별 최신 Final Review 판단을 현재 추적 자격으로 사용하고, 기존 항목은 삭제하지 않은 채 최신 non-select에서 실행 잠금·재확인/종료 행동을 제공한다. 전체 `4/4차`와 actual 정상 상태·synthetic 잠금 상태 QA를 완료했다.
-- Latest completed Today portfolio task: [Today Portfolio Intraday Auto Refresh V1 2026-07-23](../tasks/active/today-portfolio-intraday-auto-refresh-v1-20260722/STATUS.md) — confirmed 정규장 OPEN에서 대표 포트폴리오 direct stock·ETF를 5분마다 DB 저장하고 `today_home_v4` live overlay로 표시한 뒤 close +5분 bounded EOD handoff로 확정 종가에 전환한다. 전체 `4/4차`를 완료했다.
-- Latest completed Today refresh-isolation task: [Today Live Island Rerun Isolation V1 2026-07-23](../tasks/active/today-live-island-rerun-isolation-v1-20260723/STATUS.md) — 1초 시계를 React local state로 격리하고 15초 heartbeat를 OPEN/EOD-active portfolio island로 제한했다. actual CLOSED 21초 관찰에서 Streamlit loading 0회, iframe 교체 0회, chart path 유지와 responsive overflow/console error 0을 확인해 전체 `2/2차`를 완료했다.
-- Latest completed Today contributor UX task: [Today Contributor Coverage / Review Layout V1 2026-07-23](../tasks/active/today-contributor-coverage-layout-v1-20260723/STATUS.md) — 계산 가능한 EOD/live 종목 기여를 절대 영향도 순으로 모두 표시하고 coverage copy와 compact top-aligned `우선 확인` 배치를 적용했다. actual AMD·TEM·RKLB·SOXX·QQQ 전체 표시와 responsive/browser QA를 포함해 `2/2차`를 완료했다.
-- Latest completed Today session task: [Today U.S. Market Session Status V1 2026-07-22](../tasks/active/today-us-market-session-status-v1-20260722/STATUS.md) — 정규장만 대상으로 official 휴장·조기폐장 일정, 뉴욕·한국 현재 시각과 개장·마감 시각, 다음 전환 countdown을 `today_home_v3`에 연결하고 전체 `3/3차` actual Browser QA를 완료했다.
-- Latest completed product IA task: [Today Home React Workbench V2 2026-07-22](../tasks/active/today-home-react-workbench-v2-20260722/STATUS.md) — browser root `/`의 Today 본문을 Market Context 계열 React로 전환하고, 텍스트 위험 분류와 일별 저장 종가 기반 포트폴리오 수익률의 실제 날짜 X축·0% 기준 Y축을 전체 `4/4차`로 완료했다. V1의 목적형 navigation과 기존 상세 URL은 그대로 유지한다.
-- Latest completed task: [Today Contributor Coverage / Review Layout V1 2026-07-23](../tasks/active/today-contributor-coverage-layout-v1-20260723/STATUS.md) — 계산 가능한 EOD/live 종목 기여를 절대 영향도 순으로 모두 표시하고 coverage copy와 compact top-aligned `우선 확인` 배치를 적용했다. 전체 `2/2차`와 responsive Browser QA를 완료했다.
-- Latest completed Portfolio Monitoring task: [Portfolio Monitoring ETF Position Ledger V1 2026-07-22](../tasks/active/portfolio-monitoring-etf-position-ledger-v1-20260722/STATUS.md) — direct ETF `fixed_shares`를 주식과 같은 최초 설정 정정·추가매수·일부매도·revision 원장에 연결하고 actual QQQ 4주·SOXX 6주를 확인해 전체 `3/3차`를 완료했다.
-- Previous completed Portfolio Monitoring UX task: [Portfolio Monitoring Local Item Selection V1 2026-07-22](../tasks/active/portfolio-monitoring-local-item-selection-v1-20260722/STATUS.md) — `종목·전략 결과` 선택을 React local state로 전환해 Streamlit 전체 rerun 없이 개별 추적 요약·보유내역·가격 차트만 바꾸도록 전체 `3/3차`를 완료했다.
-- Previous completed Portfolio Monitoring UX task: [Portfolio Monitoring Initial Correction Local Preview V1 2026-07-22](../tasks/active/portfolio-monitoring-initial-correction-local-preview-v1-20260722/STATUS.md) — 최초 설정 정정의 날짜·수량 편집을 React local state로 유지하고, 명시적 `변경값 확인` 뒤 현재 입력과 일치하는 DB 적용일·종가·최초 투자금이 있을 때만 저장하도록 전체 `3/3차`를 완료했다.
-- Previous completed Portfolio Monitoring task: [Portfolio Monitoring Price Refresh V1 2026-07-22](../tasks/active/portfolio-monitoring-price-refresh-v1-20260722/STATUS.md) — 선택 그룹의 활성 direct stock·ETF를 최근 완료 NYSE 거래일까지 명시적으로 수집하고, 수집 후 DB 최신성을 다시 확인해 공통 기준일과 종합 가치곡선을 재계산한다. 전체 `3/3차`와 actual Browser QA를 완료했다.
-- Previous completed Portfolio Monitoring setting task: [Portfolio Monitoring Initial Setting Correction V1 2026-07-21](../tasks/active/portfolio-monitoring-initial-setting-correction-v1-20260721/STATUS.md) — direct-stock fixed-shares의 최초 요청 시작일과 수량을 한 번에 append-only 정정하고, 새 DB 시장일·종가·최초 투자금부터 개별/그룹 성과를 다시 계산한다. 전체 `4/4차`를 완료했다.
-- Previous completed Portfolio Monitoring UX task: [Portfolio Monitoring Reference Help Removal V1 2026-07-21](../tasks/active/portfolio-monitoring-reference-help-removal-v1-20260721/STATUS.md) — 중복 contextual panel과 전용 설정을 제거해 Command Center부터 바로 시작하며, 모니터링 journey·scenario·stale 안내와 owner destination은 canonical Reference Center에 보존했다. 전체 `2/2차`와 desktop/420px actual QA를 완료했다.
-- Previous completed task: [Operations Portfolio Monitoring Only V1 2026-07-19](../tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md) — Operations를 Portfolio Monitoring 단일 사용자 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
-- Parallel active follow-up: [Portfolio Monitoring Chart Zoom / Pan V1 2026-07-19](../tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md) — 구현과 자동 회귀는 완료했고 전체 `2/3차`; 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다.
-- Recent completed Backtest task: [Backtest Analysis Level1 Decision Workspace V1 2026-07-17](../tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md) — 1~15차를 완료했고 Portfolio Mix를 four-step React shell과 Python-owned 실행·저장·Level2 인계 계약으로 전환했다.
-- Latest completed Backtest data handoff task: [Level1 Price Refresh Handoff V1 2026-07-22](../tasks/active/backtest-level1-price-refresh-handoff-v1-20260722/STATUS.md) — Single과 Portfolio Mix 결과에서 가격 부족을 Level2 blocker로 만들고, 수동 최신화 후 참고 결과 유지와 명시적 재실행을 거쳐 인계를 다시 여는 전체 `3/3차`를 완료했다.
-- Recent completed Practical Validation UI task: [Audit Evidence Absorption V1 2026-07-19](../tasks/active/practical-validation-audit-evidence-absorption-v1-20260719/STATUS.md) — 대형 source/replay/validation raw 탭을 제거하고 필요한 provenance를 Step 1/2/4로 흡수하는 전체 roadmap `3/3`을 완료했다.
-- Latest completed Practical Validation lifecycle task: [Final Review Route Fix V1 2026-07-22](../tasks/active/practical-validation-final-review-route-fix-v1-20260722/STATUS.md) — 저장/이동 intent를 fragment callback 선소비에서 분리하고 stable `validation_id` 중복 append를 막아 버튼 한 번으로 인계한 후보의 Final Review를 여는 전체 `3/3차`를 완료했다.
-- Previous completed Practical Validation lifecycle task: [Enrichment Recheck UX V1 2026-07-22](../tasks/active/practical-validation-enrichment-recheck-ux-v1-20260722/STATUS.md) — 자료 보강을 검증 완료로 오인하지 않도록 warning feedback과 source별 `자료 보강 -> 재검증 -> 새 결과 저장 -> Final Review` 진행 상태를 one-shell에 연결하고 전체 `3/3차`를 완료했다.
-- Latest completed Final Review display task: [Liquidity Evidence Copy V1 2026-07-22](../tasks/active/final-review-liquidity-evidence-copy-v1-20260722/STATUS.md) — stable liquidity `proof_status`는 보존하면서 Level3 카드의 제목·현황·설명·기준을 사용자 문구로 변환하고 전체 `2/2차`를 완료했다.
-- Recent completed Backtest packaging task: [Backtest Component Static Distribution V1 2026-07-19](../tasks/active/backtest-component-static-distribution-v1-20260719/STATUS.md) — 원래 12개와 merge 후 추가된 Portfolio Mix까지 Backtest 계열 React component 13개의 canonical Git 배포 산출물을 `component_static/`으로 통일했다.
-- Recent completed Operations task: [Portfolio Monitoring React Command Center V1 2026-07-19](../tasks/done/portfolio-monitoring-react-command-center-v1-20260719/STATUS.md) — 전체 `6/6차`. DB-backed group/item, direct stock/ETF와 selected strategy, common-basis KPI, diagnosis/macro/history/calibration React one-shell과 production schema/default group migration을 완료했다.
-- Latest completed Portfolio Monitoring position task: [Portfolio Monitoring Position Events V1 2026-07-20](../tasks/active/portfolio-monitoring-position-events-v1-20260720/STATUS.md) — 전체 `3/3차`. direct-stock fixed-shares의 최초 수량 정정, 추가매수·일부매도, revision 수정·취소, DB 종가 기본값과 현금흐름 조정 성과를 구현하고 additive schema·actual/fixture Browser QA를 완료했다.
-- Latest completed Portfolio Monitoring diagnosis follow-up: [Portfolio Monitoring Diagnosis Grouping / Scroll V1 2026-07-21](../tasks/active/portfolio-monitoring-diagnosis-grouping-scroll-v1-20260721/STATUS.md) — 전체 `3/3차`. 상관 집중·현재 낙폭의 반복 판정을 의미 가족별 카드로 묶되 원시 fact/history를 보존하고, desktop 560px 내부 스크롤과 mobile 자연 스크롤을 Browser QA로 확인했다.
-- Latest Portfolio Monitoring lifecycle follow-up: [Portfolio Monitoring Tracking End Reopen V1 2026-07-19](../tasks/active/portfolio-monitoring-tracking-end-reopen-v1-20260719/STATUS.md) — 동일 종료 항목의 종료일·종료금액을 취소하고 원래 시작 계약으로 연속 추적하는 `reopen_item`을 구현했다. 활성 10개와 동일 source 중복 제한을 재검증하며 자동 회귀는 완료했고 Browser interaction은 URL policy로 차단됐다.
-- Recent completed Overview task: [Futures Macro Pattern Outlook V1 2026-07-18](../tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md) — 전체 roadmap, materialized snapshot / React disclosure, 관측·전망 상태 분리, 10년 재검증과 60D 색상 범례를 완료했다. 일봉 갱신이 10년 compact snapshot을 저장하고 Overview 첫 진입은 DB-only로 읽는다. 현재는 관측 완료, 5D/20D 전망은 PROVISIONAL이다.
-- Latest completed Overview / Market Context task: [Economic Cycle Manual Refresh V1 2026-07-25](../tasks/active/market-research-economic-cycle-manual-refresh-v1-20260725/STATUS.md) — 진입은 DB-only로 유지하고 저장 cutoff가 최신 계산 가능 평일보다 뒤처졌을 때만 명시 클릭으로 기존 17-series pipeline을 실행한다. 2026-07-24 actual row, 월말 122행 불변, target business key 1행과 desktop/420px Browser QA를 확인했다.
-- Recent completed Overview / Market Context task: [Economic Cycle Intramonth Nowcast V1 2026-07-21](../tasks/active/overview-economic-cycle-intramonth-nowcast-v1-20260721/STATUS.md) — 과거 월말 snapshot은 그대로 보존하면서 평일 증분 vintage 수집과 날짜별 `intramonth_nowcast` 잠정치를 별도 저장·표시한다. 2026-07-21 actual row와 2026-06-30 월말 불변성, desktop/420px Browser QA를 확인했다.
-- Parallel Market Movers follow-up: [Market Movers Chart Navigation Polish V1 2026-07-21](../tasks/active/market-movers-chart-navigation-polish-v1-20260721/STATUS.md) — 재무 분기/연간 X축, exact hover, 긴 이력 가로 drag와 가격 readout text-only tone 구현 및 자동 회귀를 완료했다. 실제 Browser interaction QA는 localhost URL policy로 남아 있다.
-- Recent completed Institutional Portfolios task: [Institutional 13F OpenFIGI Mapping V1 2026-07-18](../tasks/active/institutional-13f-openfigi-mapping-v1-20260718/STATUS.md) — 전체 roadmap `4/4`. 무료 OpenFIGI v3 current resolution, error-preserving UPSERT, safe loader precedence, curated 12-manager backfill과 actual Browser QA를 완료했다.
-- Recent completed Overview / Market Context task: [S&P 500 Actual EPS Registration V1 2026-07-18](../tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/STATUS.md) — 공식 workbook 등록 제품 경로와 PIT loader 검증은 완료했고, 현재 공식 workbook과 발표일 입력은 외부 입력으로 남아 있다.
-- Previous completed task: [Economic Cycle Asset Pathways Stages 3-5 V1 2026-07-17](../tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/STATUS.md) — 전체 자산경로 roadmap `5/5`를 완료했다. 채권·금리 구조, S&P 500 단일 대표지수, WTI·구리·금의 daily/weekly/quarterly 측정 경로를 DB-only로 연결하고 공통 관측 UI와 actual desktop/mobile QA를 닫았다.
-- Previous completed task: [Economic Cycle Multichannel Asset Interpretation V1 2026-07-17](../tasks/active/overview-economic-cycle-multichannel-asset-interpretation-v1-20260717/STATUS.md) — 1차 공통 판정기와 2차 금·달러 파일럿에서 인과·가격예측·매매 결론을 만들지 않는 `economic_cycle_v2` 계약을 확립했다.
-- Previous completed task: [Economic Cycle Asset Signal Copy V1 2026-07-17](../tasks/active/overview-economic-cycle-asset-signal-copy-v1-20260717/STATUS.md) — 자산마다 반복되던 경제 전체 국면을 제거하고 금·달러를 `미국 경기 신호 / 실제 가격 / 두 신호 관계`로 분리했다. 이 계약은 최신 다중 경로 task에서 대체됐다.
-- Earlier completed task: [Economic Cycle Gold / Dollar Price Confirmation V1 2026-07-17](../tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md) — 금과 달러를 별도 카드로 분리하고 저장 일봉 가격 확인을 최초 연결했다. 배경 일치·불일치 계약은 최신 다중 경로 task에서 대체됐다.
-- Previous completed task: [Economic Cycle Asset Context V1 2026-07-16](../tasks/active/overview-economic-cycle-asset-context-v1-20260716/STATUS.md) — 정적 `시장의 다음 질문`을 네 canonical factor 기반 `자산별 확인 포인트`로 교체했다. 채권·금리/주식/금·달러/원자재를 `우호·부담·혼재·자료 부족`으로 구분하고 상위 근거 두 개와 바뀌는 조건을 2×2 카드로 표시한다. 자산 수익률 예측이나 매매 신호는 만들지 않는다.
-- Previous completed task: [Economic Cycle Provisional Hybrid V2 2026-07-16](../tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/STATUS.md) — validation threshold를 유지한 채 계산 가능한 LIMITED 결과를 `잠정 모델 추정`으로 공개하고 READY는 `검증된 모델 추정`, 계산 불가는 `판단 불가`로 분리했다. 원형 clock을 최근 12개월 2×2 국면 경로로 교체하고 hover/focus 지점 정보를 추가했으며, 최근 60개월+2개월 ribbon은 실제 history 개수로 전체 너비를 채운다. Actual 122 snapshot은 그대로 보존한다.
-- Previous completed task: [U.S. Economic Cycle V1 2026-07-16](../tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md) — 1차~5차 + actual bootstrap complete. 17-series FRED/ALFRED vintage ledger `1,232,856`행, strict as-of loader, leakage-safe h0/h1/h2 probability engine, 121개월 replay, rolling-origin publication gate, compact artifact/snapshot, `경제 사이클 | S&P 500 | 미국 개별주식` selector와 responsive React workbench를 연결했다.
-- Previous completed task: [Turnaround Derived Quarter Provenance V1 2026-07-16](../tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md) — 1차~4차 complete. Explicit concept family 안의 FY/Q1/Q2/Q3 확정 공시로 missing Q4를 안전하게 산출하고, per-metric/TTM provenance와 `공시 기반 산출` marker·badge·산식을 전환분석에 표시한다. MRNA 2023-Q4와 desktop/420px QA를 완료했다.
-- Previous completed task: [Turnaround Stage Semantics Fix V1 2026-07-16](../tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md) — 1차~3차 complete. Canonical `USD per share` diluted EPS를 turnaround reader에 포함하고, backend threshold를 유지한 채 6개 rail에서 전환 신호·이미 양수·PER 적용 가능·흑자지만 개선폭 미달을 구분한다. `ESTABLISHED`는 UI-local 상태이며 저장 milestone이 아니다.
-- Previous completed task: [US Stock Freshness Refresh V1 2026-07-15](../tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md) — 1차~3차 complete. 선택 종목 cached UI는 DB-only로 즉시 열고, 마지막 완료 NYSE 거래일·profile/가격 정렬·실제 재무 raw gap이 어긋날 때만 상단의 단일 `최신 데이터로 다시 계산` action을 표시한다. 명시 클릭에서 profile/price는 CIK 없이 먼저 수집하고 SEC statement만 identity를 요구한다.
-- Previous completed task: [US Stock Turnaround Analysis V1 2026-07-15](../tasks/active/overview-market-context-us-stock-turnaround-analysis-v1-20260715/STATUS.md) — 1차~5차 complete. 미국 개별주식 내부에 `PER 상대가치 | 전환 분석` selector를 추가하고, filing-aware discrete-quarter 매출·margin·OCF·FCF·EPS, cash runway·debt·dilution risk, stage-appropriate valuation readiness를 표시한다. PER가 READY인 AMD/AAPL은 기존 분석을 기본으로 유지하고 RIVN/LCID/PLTR는 전환 분석을 기본으로 연다. V1은 selected-company analysis이며 universe-wide screener/peer ranking은 후속이다.
-- Previous completed task: [US Stock Valuation V1 2026-07-14](../tasks/active/overview-market-context-us-stock-valuation-v1-20260714/STATUS.md) — original 1차~5차, 2026-07-15 정확성 후속 1차~3차, 부분 이력 후속 1차~3차 complete. Nasdaq-100 user-facing selector를 searchable 미국 개별주식 상대가치 화면으로 교체했고, primary-period filing-aware TTM EPS/PER, split-year share-basis 정규화, 60m/36m Graph 1과 독립 Graph 2 readiness, DB-only 검색과 explicit selected-symbol 수집을 연결했다. 1/3/5년은 계산 가능한 월을 원래 달력 위치에 표시하고 결측 구간을 연결·보간하지 않는다. 기존 Nasdaq backend는 보존한다.
-- Previous completed task: [Nasdaq-100 Scenario History Warmup V1 2026-07-13](../tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/STATUS.md) — 1차~5차 implementation/QA complete; 60개월 rolling 계약을 유지한 최대 119개월 보강 action과 선택 기간별 정확한 부족 안내를 추가했다. Local actual QA는 66/119 READY이며 무료 원천 gap은 합성하지 않는다.
-- Previous completed task: [Nasdaq-100 60m Coverage Repair Action V1 2026-07-13](../tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md) — valuation coverage blocker용 60개월 보강과 strict rematerialization을 완료했다.
-- Previous completed Institutional Portfolios task: [Institutional Portfolios Context-First Redesign V1 2026-07-18](../tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/STATUS.md).
-- Previous completed Institutional Portfolios task: [Institutional Portfolios Security Detail Chart Layout V1 2026-07-12](../tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
-- Previous completed task: [Institutional Portfolios Watchlist / Mapping V1 2026-07-12](../tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
-- Previous completed task: [Institutional Portfolios Two-Tier Tabs V1 2026-07-12](../tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/STATUS.md).
-- Previous completed task: [Institutional Portfolios Portfolio / Security IA V1 2026-07-12](../tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/STATUS.md).
-- Previous completed task: [Institutional Portfolios Interactive Security Chart V1 2026-07-12](../tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/STATUS.md).
-- Previous completed task: [Institutional Portfolios Holding Chart Refresh V1 2026-07-12](../tasks/active/institutional-portfolios-holding-chart-refresh-v1-20260712/STATUS.md).
-- Previous completed task: [Institutional Portfolios UX Detail / Performance V1 2026-07-11](../tasks/active/institutional-portfolios-ux-detail-performance-v1-20260711/STATUS.md).
-- Previous completed task: [Institutional Portfolios Live SEC 13F V1 2026-07-09](../tasks/active/institutional-portfolios-live-sec13f-v1-20260709/STATUS.md).
-- Previous completed task: [Institutional Portfolios React Workbench V1 2026-07-09](../tasks/active/institutional-portfolios-react-workbench-v1-20260709/STATUS.md).
-- Previous completed task: [Institutional Portfolios Workspace V1 2026-07-08](../tasks/active/institutional-portfolios-workspace-v1-20260708/STATUS.md).
-- Recent completed Final Review task: [Final Review Evidence Closure Contract V1 2026-07-12](../tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
-- Previous completed task: [S&P 500 Valuation V1 2026-07-12](../tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
-- Previous completed task: [Practical Validation Recheck Handoff Loop Fix V1 2026-07-12](../tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
-- Previous completed task: [Practical Validation Pre-Final Enrichment Gate V1 2026-07-12](../tasks/active/practical-validation-pre-final-enrichment-gate-v1-20260712/STATUS.md).
-- Current Market Movers redesign task: [Market Movers Hybrid Visual System V1 2026-07-20](../tasks/active/market-movers-hybrid-visual-system-v1-20260720/STATUS.md) — 전체 기능 roadmap `4/5차`, visual implementation `3/3차` 완료. ranking·sector/industry 확산·선택 종목 조사를 같은 React selected state로 통합하고 Market Context/Futures Macro 계열의 blue-gray surface와 report hierarchy를 적용했다. Desktop actual QA는 완료했으며 narrow/console/detail-click actual QA는 partial이다. 5차 conditional outlook는 OOS gate 설계 전까지 수치를 노출하지 않는다.
-- Previous completed task: [Overview Market Movers Top Actions / Monthly History V1 2026-07-11](../tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/STATUS.md).
-- Previous completed task: [Overview Market Movers Visual Grouping V1 2026-07-11](../tasks/active/overview-market-movers-visual-grouping-v1-20260711/STATUS.md).
-- Earlier completed task: [Overview Market Movers Section Title Unification V1 2026-07-11](../tasks/active/overview-market-movers-section-title-unification-v1-20260711/STATUS.md).
-- Previous completed task: [Final Review Readable Review Evidence V1 2026-07-11](../tasks/active/final-review-readable-review-evidence-v1-20260711/STATUS.md).
-- Previous completed task: [Final Review Decision Flow Simplification V1 2026-07-11](../tasks/active/final-review-decision-flow-simplification-v1-20260711/STATUS.md).
-- Previous completed task: [Final Review Responsive Evidence V1 2026-07-11](../tasks/active/final-review-responsive-evidence-v1-20260711/STATUS.md).
-- Previous completed task: [Final Review Decision Surface Consolidation V1 2026-07-11](../tasks/active/final-review-decision-surface-consolidation-v1-20260711/STATUS.md).
-- Previous completed task: [Portfolio Workflow Legacy Reset / Rebuild 2026-07-11](../tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
-- Previous completed task: [Final Review Confirmed Review Flow V1 2026-07-11](../tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
-- Previous completed task: [Final Review Investment Report Detail Tabs V1 2026-07-11](../tasks/active/final-review-investment-report-detail-tabs-v1-20260711/STATUS.md).
-- Previous completed task: [Final Review Investment Report Flat UI V1 2026-07-10](../tasks/active/final-review-investment-report-flat-ui-v1-20260710/STATUS.md).
-- Previous completed task: [Final Review Investment Report IA V1 2026-07-10](../tasks/active/final-review-investment-report-ia-v1-20260710/STATUS.md).
-- Previous completed task: [Final Review Candidate Selection Integration V1 2026-07-10](../tasks/active/final-review-candidate-selection-integration-v1-20260710/STATUS.md).
-- Previous completed task: [Final Review Sentiment Scope Cleanup V1 2026-07-10](../tasks/active/final-review-sentiment-scope-cleanup-v1-20260710/STATUS.md).
-- Previous completed task: [Final Review Detailed Scorecard V1-V6 2026-07-09](../tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
-- Previous completed task: [Final Review Level3 React V2-V6 2026-07-09](../tasks/active/final-review-level3-react-v2-v6-20260709/STATUS.md).
-- Previous completed task: [Practical Validation Flow5 CTA Integration V1 2026-07-09](../tasks/active/practical-validation-flow5-cta-integration-v1-20260709/STATUS.md).
-- Previous completed task: [Practical Validation Stage Ownership V1 2026-07-09](../tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
-- Previous completed task: [Practical Validation Flow4 Action Center V1 2026-07-09](../tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
-- Previous completed task: [Practical Validation Flow4 Data Action Board V1 2026-07-09](../tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
-- Previous completed task: [Practical Validation Flow Gating / Evidence IA V1 2026-07-08](../tasks/active/practical-validation-flow-gating-evidence-ia-v1-20260708/STATUS.md).
-- Previous completed task: [Practical Validation Category Empty State V1 2026-07-08](../tasks/active/practical-validation-category-empty-state-v1-20260708/STATUS.md).
-- Previous completed task: [Post-Merge Docs / Code Flow Refresh 2026-07-08](../tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
-- Previous completed task: [Practical Validation Boundary Cleanup V1 2026-07-08](../tasks/active/practical-validation-boundary-cleanup-v1-20260708/STATUS.md).
-- Previous completed task: [Practical Validation Flow4 Final Review Handoff V1 2026-07-08](../tasks/active/practical-validation-flow4-final-review-handoff-v1-20260708/STATUS.md).
-- Previous completed task: [Practical Validation Flow4 Outcome Taxonomy V1 2026-07-08](../tasks/active/practical-validation-flow4-outcome-taxonomy-v1-20260708/STATUS.md).
-- Previous completed task: [Practical Validation Required Taxonomy Refactor V1 2026-07-08](../tasks/active/practical-validation-required-taxonomy-refactor-v1-20260708/STATUS.md).
-- Previous completed task: [Practical Validation Required Taxonomy Audit V1 2026-07-08](../tasks/active/practical-validation-required-taxonomy-audit-v1-20260708/STATUS.md).
-- Previous completed task: [Backtest Symbol Resolver V1 2026-07-08](../tasks/active/backtest-symbol-resolver-v1-20260708/STATUS.md).
-- Previous completed task: [Backtest Factor Readiness Action UI V1 2026-07-07](../tasks/active/backtest-factor-readiness-action-ui-v1-20260707/STATUS.md).
-- Previous completed task: [Backtest Coverage Provider Gap Refresh V1 2026-07-07](../tasks/active/backtest-coverage-provider-gap-refresh-v1-20260707/STATUS.md).
-- Previous completed task: [Practical Validation Flow4 Action Steps V3 2026-07-07](../tasks/active/practical-validation-flow4-action-steps-v3-20260707/STATUS.md).
-- Earlier completed task: [Practical Validation Flow4 Action Guide V2 2026-07-07](../tasks/active/practical-validation-flow4-action-guide-v2-20260707/STATUS.md).
-- Earlier completed task: [Practical Validation Flow 4 Resolution Guide V1 2026-07-07](../tasks/active/practical-validation-flow4-resolution-guide-v1-20260707/STATUS.md).
-- Earlier completed task: [Backtest PIT Universe V1 2026-07-07](../tasks/active/backtest-pit-universe-v1-20260707/STATUS.md).
-- Earlier completed task: [Backtest Strategy Form Cleanup V1 2026-07-07](../tasks/active/backtest-strategy-form-cleanup-v1-20260707/STATUS.md).
-- Earlier completed task: [Backtest Strategy Detail React V1 2026-07-07](../tasks/active/backtest-strategy-detail-react-v1-20260707/STATUS.md) was superseded by the form cleanup task; the overbuilt Strategy Detail panel is no longer an active flow.
-- Earlier completed task: [Practical Validation Flow 4 Labels V1 2026-07-06](../tasks/active/practical-validation-flow4-labels-v1-20260706/STATUS.md).
-- Latest completed product task: [Practical Validation Taxonomy Roadmap V1 2026-07-05](../tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/STATUS.md).
-- Recent Backtest handoff task: [Backtest Second Stage Visibility V1 2026-07-05](../tasks/active/backtest-second-stage-visibility-v1-20260705/STATUS.md).
-- Recent Overview / Market Movers task: [Overview Market Movers Fundamental Charts 2026-07-08](../tasks/active/overview-market-movers-fundamental-charts-20260708/STATUS.md).
-- Recent Overview / Market Context task: [S&P 500 Valuation V1 2026-07-12](../tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
-- Recent Overview Futures Macro task: [Overview Futures Macro Evidence / Original Data UX 2026-07-06](../tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/STATUS.md).
-- Recent data-source migration: [Fundamental Source Migration P0-P8 research / implementation records](../researches/active/2026-06-fundamental-source-migration/DEVELOPMENT_GUIDE.md). Canonical financial statement source is EDGAR detailed statements plus statement shadow tables; broad yfinance fundamentals / factors are legacy compatibility only.
-- Recent Overview final cleanup task: [Overview Final Cleanup V33-V36 2026-06-29](../tasks/active/overview-final-cleanup-v33-v36-20260629/STATUS.md).
-- Recent Overview service split task: [Overview Service Split V25-V32 2026-06-29](../tasks/active/overview-service-split-v25-v32-20260629/STATUS.md).
-- Recent Overview legacy removal task: [Overview Legacy Dashboard Removal V17-V24 2026-06-25](../tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/STATUS.md).
-- Recent Overview helper extraction task: [Overview Tab Helper Extraction V11-V16 2026-06-25](../tasks/active/overview-tab-helper-extraction-v11-v16-20260625/STATUS.md).
-- Recent Backtest strategy contract task: [Risk Parity / Dual Momentum 5B 2026-06-10](../tasks/active/risk-parity-dual-momentum-5b-20260610/STATUS.md).
-- Latest completed Reference task: [Reference Center React V1 2026-07-20](../tasks/active/reference-center-react-v1-20260720/STATUS.md) — Guides/Glossary를 단일 search-first React Reference로 통합하고 stable deep link와 current-surface contextual help를 연결했다.
-- Previous Reference merge-review fix: [Merge Review Fixes 2026-06-08](../tasks/active/merge-review-fixes-20260608/STATUS.md).
-- Current product state: Research는 Today summary와 Market Research deep research를 분리한다. Market Research는 `/overview`에서 header·compact content-width family rail·bounded local view rail을 하나의 React surface로 렌더링한다. `시장 환경 | 지수 가치평가 | 종목 리서치` 아래 `경제 사이클·선물 매크로·심리·일정 | S&P 500 | 변동 종목·개별 종목` 7개 canonical view로 이동하며 Python이 URL/session normalization과 선택 module lazy render를 소유하고 Streamlit fallback을 유지한다. page-global session/reference/diagnostic은 반복하지 않고 module이 기준일·자료 상태·refresh action을 소유한다. Market Movers의 검증된 selected symbol은 같은 page의 U.S. Stock Research로 넘긴다. S&P 500은 Shiller/SEP 60m/36m와 1/3/5-year flow를, 개별 종목은 DB-only 검색 뒤 `PER 상대가치 | 전환 분석`을 유지한다. 화면 진입·분석 전환은 read-only이며 provider fetch나 write를 암묵적으로 실행하지 않는다. `Futures Monitor` / `Sector / Industry` are not primary navigation surfaces. See [Roadmap](./ROADMAP.md).
-- Current Final Review evidence state: [Final Review Evidence Closure Contract V1](../tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md) is completed. Practical Validation closes actionable root issues before handoff, while Final Review records accepted limits / Monitoring transfers as terminal states instead of treating REVIEW count as unfinished work.
+## Reading Paths
 
-## By Purpose
+### 제품과 사용자 흐름을 이해할 때
 
-| 목적 | 먼저 볼 문서 |
+```text
+README
+  -> Product Direction
+  -> Roadmap
+  -> 필요한 flows / data 문서
+```
+
+### 코드 변경 위치를 찾을 때
+
+```text
+AGENTS
+  -> Roadmap
+  -> Project Map
+  -> owning architecture / flow / data 문서
+  -> active task
+```
+
+### 실행·수집·QA 절차를 찾을 때
+
+```text
+Runbooks
+  -> 관련 architecture / data 문서
+  -> owning job / service / UI entry point
+```
+
+## Canonical Docs By Concern
+
+| 알고 싶은 것 | Canonical entry |
 |---|---|
-| 프로젝트가 무엇을 만드는지 확인 | [Product Direction](./PRODUCT_DIRECTION.md) |
-| 현재 개발 순서와 active task 확인 | [Roadmap](./ROADMAP.md) |
-| 코드 위치와 책임 확인 | [Project Map](./PROJECT_MAP.md) |
-| 용어 의미 확인 | [Glossary](./GLOSSARY.md) |
-| 시스템 구조와 layer 경계 확인 | [Architecture](./architecture/README.md) / [System Boundaries](./architecture/SYSTEM_BOUNDARIES.md) |
-| 사용자 / 런타임 흐름 확인 | [Flows](./flows/README.md) |
-| DB / JSONL / 저장 경계 확인 | [Data](./data/README.md) |
-| 실행 / 검증 / 운영 절차 확인 | [Runbooks](./runbooks/README.md) |
-| Portfolio Monitoring React 구조와 저장 계약 확인 | [Command Center Architecture](./architecture/PORTFOLIO_MONITORING_REACT_COMMAND_CENTER.md) / [Data Contract](./data/PORTFOLIO_MONITORING_DATA_CONTRACT.md) |
-| 제품 방향 / 벤치마킹 리서치 확인 | [Research](../researches/README.md) |
-| backtest 결과 report 확인 | [Backtest Reports](../reports/backtests/INDEX.md) |
+| 제품 목적, 대상 사용자, 사용자 여정과 non-goal | [Product Direction](./PRODUCT_DIRECTION.md) |
+| 현재 상태, paused work와 다음 결정 순서 | [Roadmap](./ROADMAP.md) |
+| 화면 entry point, layer와 code ownership | [Project Map](./PROJECT_MAP.md) |
+| system / UI-engine / storage 경계 | [Architecture](./architecture/README.md), [System Boundaries](./architecture/SYSTEM_BOUNDARIES.md) |
+| Today부터 Portfolio Monitoring까지 사용자·runtime 흐름 | [Flows](./flows/README.md) |
+| DB schema, table 의미와 JSONL 저장 정책 | [Data](./data/README.md) |
+| 반복 실행, ingestion, QA와 복구 절차 | [Runbooks](./runbooks/README.md) |
+| 제품 용어와 검증 상태 의미 | [Glossary](./GLOSSARY.md) |
+| 전략·후보·validation의 사람이 읽는 결과 | [Backtest Reports](../reports/backtests/INDEX.md) |
+| 제품 방향·벤치마킹·기능 후보 조사 | [Research Workspace](../researches/README.md) |
 
-## Work Records
+현재 Finance Console의 top-level 제품 surface는 `Research / Portfolio / Data / Help`
+아래 `Today / Market Research / Institutional Holdings / Portfolio Lab /
+Portfolio Monitoring / Data Operations / Reference Center`다. 각 화면의 가치와
+경계는 Product Direction, 구현 위치는 Project Map에서 확인한다.
+
+## Current Work Pointers
+
+- 제품 기준선과 다음 승인 후보: [Roadmap](./ROADMAP.md)
+- 현재와 retained task 기록: [Active Task Index](../tasks/active/README.md)
+- task 상태의 compact pointer: [Task Status Manifest](../tasks/active/STATUS_MANIFEST.md)
+- phase 상태의 compact pointer: [Phase Status Manifest](../phases/active/STATUS_MANIFEST.md)
+
+작업·phase 기록 폴더에는 과거 완료 board도 보존되어 있다. 폴더 위치만으로 현재
+진행 중이라고 판단하지 않고 Roadmap과 해당 `STATUS.md`를 함께 확인한다.
+
+## Workspace Boundaries
 
 | 위치 | 역할 |
 |---|---|
-| `.aiworkspace/note/finance/phases/active/` | `main-dev` worktree가 관리한 phase 단위 계획과 통합 기록. 현재 완료 board도 handoff 용도로 남아 있으므로 `STATUS_MANIFEST.md`, README, roadmap의 active 표시를 함께 확인 |
-| `.aiworkspace/note/finance/phases/done/` | 완료된 phase의 closeout summary. full board archive가 아니라 summary 중심 |
-| `.aiworkspace/note/finance/tasks/active/` | 개별 실행 task의 계획, 진행 상태, 실행 결과. 과거 완료 task도 retained work record로 남아 있으므로 `STATUS_MANIFEST.md`, README, roadmap에서 current active 상태를 확인 |
-| `.aiworkspace/note/finance/researches/active/` | 제품 방향, 벤치마킹, 기능 후보 리서치 산출물 |
-| `.aiworkspace/note/finance/agent/` | Codex 반복 실수, 교훈, 운영 팁 |
-| `.aiworkspace/note/finance/reports/backtests/` | 전략 탐색, 후보 근거, validation report |
-| `.aiworkspace/note/finance/registries/` | 제품 workflow가 읽고 쓰는 append-only JSONL registry |
-| `.aiworkspace/note/finance/saved/` | 사용자가 저장한 reusable portfolio setup |
+| `docs/` | 오래 유지될 제품·구조·데이터·운영 지식 |
+| `tasks/active/` | 개별 구현·문서·QA task의 계획과 실행 기록 |
+| `phases/active/` | 사용자가 승인한 multi-task phase의 통합 기록 |
+| `researches/active/` | 제품 방향, 벤치마킹과 기능 후보 리서치 |
+| `reports/backtests/` | 사람이 읽는 전략·실행·후보·validation report |
+| `agent/` | 반복 실수, 교훈과 Codex 운영 팁 |
+| `registries/` | 제품 workflow가 읽고 쓰는 append-only JSONL |
+| `saved/` | 사용자가 저장한 reusable portfolio setup |
+| `run_history/`, `run_artifacts/` | local runtime 기록과 generated artifact |
 
-## Documentation Rules
+## Maintenance Rules
 
-- `docs/`에는 오래 유지될 프로젝트 지식만 둔다.
-- 작업 중 추측, 조사 메모, 실패 로그는 task 문서에 먼저 둔다.
-- 제품 방향 리서치의 추측, 비교표, source note, 기능 후보는 research 문서에 먼저 둔다.
-- phase는 여러 task를 묶는 상위 관리 단위다.
-- task는 실제 코드나 문서를 수정하는 실행 단위다.
-- `registries/`와 `saved/`의 JSONL은 제품 데이터이므로 문서 정리 과정에서 삭제하거나 재작성하지 않는다.
-- backtest report는 `.aiworkspace/note/finance/reports/backtests/`에 두고, registry / saved source-of-truth와 섞지 않는다.
-- run history, runtime artifact, Playwright output, temp CSV는 장기 문서가 아니다.
+- INDEX에는 개별 완료 task 목록이나 최근 변경 로그를 복제하지 않는다.
+- 구현된 사실과 미래 계획을 같은 문장에 섞지 않는다.
+- 제품 목적이 바뀌면 Product Direction, code ownership이 바뀌면 Project Map,
+  우선순위·상태가 바뀌면 Roadmap을 수정한다.
+- 상세 algorithm, payload, table과 실행 절차는 각각 architecture, flow, data,
+  runbook 문서가 소유한다.
+- `registries/`와 `saved/`는 문서 정리 대상으로 삭제하거나 재작성하지 않는다.
+- 임시 분석, 실패 로그, QA 출력과 local run history는 durable docs에 넣지 않는다.

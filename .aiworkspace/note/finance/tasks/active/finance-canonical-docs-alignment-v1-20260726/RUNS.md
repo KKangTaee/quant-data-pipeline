@@ -15,3 +15,12 @@
 - link breakage보다 역할 혼합과 rolling history 누적이 주요 문제다.
 - 사용자 승인에 따라 INDEX를 포함한 역할 분리형 전면 정리를 설계했다.
 - canonical docs implementation은 written spec 검토 후 시작한다.
+
+## 2026-07-26 — Task 1 INDEX
+
+- 기존 INDEX task-path 124개와 `Current Phase State` rolling history 존재 확인
+- INDEX를 Purpose / Start Here / Reading Paths / Canonical Docs / Current Work /
+  Workspace Boundaries / Maintenance Rules 구조로 재작성
+- 108 lines, literal task-path reference 3개, required section 6개 확인
+- local Markdown link existence 검사 통과
+- 개별 완료 task 목록을 제거하고 Roadmap / task index / manifests로 discovery를 단일화
