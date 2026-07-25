@@ -1,6 +1,6 @@
 # README Product / Onboarding Overhaul V1 Status
 
-Status: In Progress — 3/4 Complete
+Status: Completed — 4/4
 Started: 2026-07-25
 
 ## Progress
@@ -26,19 +26,22 @@ Started: 2026-07-25
 - loading 종료, current navigation, Today hero / market evidence / next check, console warning/error 0과 민감정보 부재를 확인했다.
 - 실제 browser output이 JPEG임을 검증해 asset과 README 확장자를 `.jpg`로 일치시켰다.
 - README hero에 repository-relative Today image와 화면 역할 설명을 연결했다.
+- 4차에서 README local link, Markdown fence, Mermaid 2개와 current navigation contract를 검증했다.
+- backtest-dev `8510`의 Today, Market Research, Institutional Holdings, Portfolio Lab, Portfolio Monitoring, Data Operations, Reference Center를 실제로 열어 공통 제품 shell과 각 화면 본문을 확인했다.
+- root handoff와 task closeout을 동기화하고 unrelated registry / saved / run history / QA artifact를 stage 대상에서 제외했다.
 
 ## Current Step
 
-전체 roadmap `3/4차`.
+전체 roadmap `4/4차` 완료.
 
-제품 서사, 5분 실행, 기술 구현 구조와 Today 대표 이미지까지 완료했다. final link / Markdown / route / Browser QA와 docs closeout이 남아 있다.
+제품 서사, 5분 실행, 기술 구현 구조, Today 대표 이미지와 final QA / docs closeout까지 완료했다.
 
 ## Next Action
 
-4차에서 local link, Markdown / Mermaid, current app route, browser visual QA와 task / root handoff closeout을 완료한다.
+README는 root 진입점으로 유지하고, 빠르게 변하는 개발 상태는 Roadmap과 Active Task Index에서 이어서 본다.
 
 ## Scope Boundary
 
-- 현재 단계는 설계 문서화만 수행한다.
+- 이번 task는 README와 문서용 대표 이미지 개편만 수행했다.
 - 제품 code, DB, registry, saved setup, run history, 기존 QA artifact는 변경하지 않는다.
 - 구현 중 발견되는 제품 / DB 개선점은 README 범위로 흡수하지 않고 별도 follow-up으로 남긴다.

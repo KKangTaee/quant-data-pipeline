@@ -158,7 +158,7 @@ OPENFIGI_API_KEY=...
 
 | 기술 | 현재 역할 |
 |---|---|
-| Python `3.12+` | ingestion, MySQL persistence, loader, point-in-time 계산, 전략, 백테스트, validation과 read model |
+| Python 3.12+ | ingestion, MySQL persistence, loader, point-in-time 계산, 전략, 백테스트, validation과 read model |
 | Streamlit `1.44+` | app navigation, page routing, session state, Python command orchestration과 React event boundary |
 | React `18` + TypeScript `5` | Today, Market Research, Institutional Holdings, Portfolio Monitoring과 Backtest workflow의 interactive workbench |
 | Vite `6` | Streamlit이 local component로 읽는 React production bundle 생성 |

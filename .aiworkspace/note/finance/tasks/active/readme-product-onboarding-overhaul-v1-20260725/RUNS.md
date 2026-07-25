@@ -48,3 +48,16 @@
 - browser console warning/error `0`
 - screenshot 실제 포맷이 JPEG임을 `file`로 확인하고 `.jpg` 확장자로 정렬
 - `.aiworkspace/note/finance/docs/assets/readme/finance-console-today.jpg` 66,702 bytes 저장 및 README relative link 연결
+
+## 2026-07-26 — 4차 Final Consistency / Browser QA
+
+- README의 모든 local Markdown link가 실제 파일을 가리키는지 `uv run python`으로 검사해 통과
+- Markdown fence balance, Mermaid block 정확히 2개, Today hero image 1개를 검사해 통과
+- `app/web/streamlit_app.py`의 `Research / Portfolio / Data / Help`와 7개 `st.Page` title을 README와 대조해 통과
+- bare `python`은 PATH에 없어 첫 검증 wrapper가 중단됐고, project 표준인 `uv run python`으로 교정
+- `http://localhost:8510/` HTTP 200, representative JPEG 1280×720, README 기술·trust keyword와 `git diff --check` 확인
+- in-app Browser로 8510의 Today, Market Research, Institutional Holdings, Portfolio Lab, Portfolio Monitoring, Data Operations, Reference Center route를 순서대로 열어 공통 navigation과 각 화면의 실제 본문 확인
+- Today의 `오늘의 시장 판단`, Market Research의 `Market Research`, Institutional Holdings의 기관 portfolio, Portfolio Lab의 후보 판단 flow, Monitoring의 `PORTFOLIO COMMAND CENTER`, Data Operations의 `Ingestion`, Reference Center의 제품 도움말 본문 확인
+- README screenshot이 current Today first-read와 같은 제품 shell, navigation, hero / market evidence / next check를 사용함을 재확인
+- Browser QA session viewport와 test tab을 정리하고 사용자의 기존 8501 tab은 건드리지 않음
+- closeout 후 fresh verification에서 README contracts, JPEG 1280×720, 8510 HTTP 200, unchecked plan 0, `git diff --check`와 Today focused `61 passed / 2 subtests passed` 확인

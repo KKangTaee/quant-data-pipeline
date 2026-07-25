@@ -21,6 +21,10 @@
 - active task snapshot을 README에 복제하지 않는다.
 - 일반 quick start는 Streamlit default `8501`, backtest-dev actual screenshot / Browser QA는 `8510`을 사용한다.
 - Browser screenshot API의 실제 output은 JPEG였으므로 README asset은 `.jpg`로 관리한다.
+- route 이름은 `st.Page(title=...)`의 navigation contract를 기준으로 유지하고, 화면별 질문형 H1 또는 `Ingestion` 같은 본문 제목과 구분한다.
+- README는 7개 top-level surface를 설명하되 Practical Validation과 Final Review는 Portfolio Lab 내부 stage로 유지한다.
+- 제품 code와 canonical architecture / data / flow 문서는 바뀌지 않았으므로 durable docs 본문을 중복 수정하지 않고 README와 root handoff만 동기화한다.
+- README 검증 명령은 시스템 `python`이 아니라 project runtime인 `uv run python`을 사용한다.
 
 ## Protected Existing Work
 
@@ -31,3 +35,9 @@
 - `.aiworkspace/note/finance/saved/*.jsonl`
 - root의 기존 Backtest / Today / Market / Final Review QA image와 snapshot
 - `.superpowers/`
+
+## Final Maintenance Contract
+
+- README는 제품 정의, 빠른 실행, 구현 언어와 계층 경계, 신뢰 원칙, durable docs 진입점을 소유한다.
+- active task, 최근 완료 작업, 실행 로그와 일시적인 product 상태는 README에 복제하지 않는다.
+- navigation이나 저장 경계가 바뀌면 `app/web/streamlit_app.py`와 canonical finance docs를 먼저 갱신한 뒤 README를 다시 대조한다.

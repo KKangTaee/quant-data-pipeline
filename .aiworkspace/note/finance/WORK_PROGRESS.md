@@ -7281,3 +7281,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Events는 master의 calendar-dominant 화면에 공통 `ResearchHeader`와 공식 일정 갱신 action을 연결하고 새 `brief.counts` payload 계약에 맞췄다.
 - 낡은 hero CSS와 런타임 counts 참조 회귀를 테스트로 고쳤으며 desktop 1280px·mobile 420px actual Browser QA에서 overflow와 console error가 없음을 확인했다.
 - 전체 통합 roadmap `3/3차` 완료. 사용자 registry, research, run history와 기존 QA 이미지는 병합 커밋에서 제외했다.
+
+## 2026-07-26 - Root README 제품·개발 진입점 전면 개편 완료
+
+- README를 Evidence-first 퀀트 투자 리서치 워크스페이스의 현재 제품 흐름과 5분 실행, 구현 언어·계층·저장 경계를 함께 설명하는 진입점으로 개편했다.
+- Today 대표 화면과 제품 workflow / technical architecture를 연결하고 `Research / Portfolio / Data / Help`의 7개 현재 화면을 8510에서 검증했다.
+- 전체 roadmap `4/4차` 완료. 제품 code와 registry / saved / run history는 변경하지 않았다.
+- 상세 설계·검증 기록은 `tasks/active/readme-product-onboarding-overhaul-v1-20260725/`를 본다.

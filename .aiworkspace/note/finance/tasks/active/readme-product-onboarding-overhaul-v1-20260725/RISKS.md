@@ -35,3 +35,9 @@
 전체 pytest one-shot은 Streamlit module / singleton isolation이 보장되지 않아 test order에 따라 대량 실패한다.
 이번 README task는 실패했던 대표 63개 isolated test의 통과와 문서 전용 검증을 기준으로 진행한다.
 pytest dev dependency 선언과 full-suite isolation은 별도 test-harness task 대상이며 README 완료를 차단하지 않는다.
+
+## Closeout
+
+- README local link, diagram structure, navigation contract, 8510 actual Browser QA에는 남은 blocker가 없다.
+- 대표 이미지는 특정 날짜의 sample evidence 값을 포함하므로 향후 Today shell이 크게 바뀔 때만 교체한다. 단순 데이터 값 변화만으로 매번 갱신하지 않는다.
+- canonical product / architecture / data / flow behavior는 이번 문서 작업에서 변경하지 않았다.

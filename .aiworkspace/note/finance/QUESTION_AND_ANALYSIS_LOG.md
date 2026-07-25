@@ -10684,3 +10684,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 현재 브랜치의 공통 Market Research 헤더와 선물 완료 세션 변경을 유지하면서 master의 일정·기관 화면 개편과 데이터 coverage 변경을 손실 없이 통합해야 함.
 - Analysis result: Events의 새 `brief.counts` 계약과 공통 헤더 action을 연결하고, 낡은 hero CSS와 top-level counts 참조 회귀를 제거했다. 문서에는 Events coverage와 Futures completed-session finalization 양쪽 의미를 모두 보존했다.
 - Follow-up: 전체 통합 roadmap `3/3차` 완료. Python·React 검증과 1280/420px actual Browser QA를 통과한 병합 커밋을 기준으로 후속 개발을 이어간다.
+
+### 2026-07-26 - README는 현재 제품과 구현 방식을 함께 설명하는 첫 관문이어야 한다
+
+- User request: 오래된 프로토타입 README를 현재 상황에 맞게 전면 개편하고, 사용 언어와 구현 방식까지 포함해 합의한 단계대로 진행하도록 요청함.
+- Interpreted goal: 제품 사용자는 조사→후보→검증→판단→모니터링 흐름을 이해하고, 개발자는 5분 안에 앱을 실행한 뒤 Python / Streamlit / React / MySQL 경계를 찾을 수 있어야 함.
+- Analysis result: product journey first 본문, 현재 7개 surface, Today 대표 이미지, 두 Mermaid, quick start, tech / storage / trust / docs map을 하나의 root README로 구성했다.
+- Follow-up: 전체 roadmap `4/4차` 완료. backtest-dev `8510` actual route와 문서 구조를 검증했고, 빠르게 변하는 상태는 Roadmap / Active Task Index에서 이어서 관리한다.

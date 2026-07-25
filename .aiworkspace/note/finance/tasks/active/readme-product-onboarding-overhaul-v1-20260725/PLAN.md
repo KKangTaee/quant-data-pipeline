@@ -358,7 +358,7 @@ git commit -m "README 대표 제품 화면 추가"
 - Consumes: Tasks 1–3의 README와 representative asset
 - Produces: verified final README, `4/4차` task closeout, root handoff
 
-- [ ] **Step 1: README local Markdown link 존재 검사**
+- [x] **Step 1: README local Markdown link 존재 검사**
 
 Run:
 
@@ -385,7 +385,7 @@ PY
 
 Expected: `README local links OK`.
 
-- [ ] **Step 2: Markdown / Mermaid structure 검사**
+- [x] **Step 2: Markdown / Mermaid structure 검사**
 
 Run:
 
@@ -404,7 +404,7 @@ PY
 
 Expected: `README fences and Mermaid blocks OK`.
 
-- [ ] **Step 3: Current app contract 대조**
+- [x] **Step 3: Current app contract 대조**
 
 Run:
 
@@ -417,13 +417,13 @@ done
 
 Expected: exit 0.
 
-- [ ] **Step 4: Browser visual QA**
+- [x] **Step 4: Browser visual QA**
 
 in-app Browser에서 `http://localhost:8510/`의 README가 설명하는 current Today / Market Research / Institutional Holdings /
 Portfolio Lab / Portfolio Monitoring / Data Operations / Reference Center route 이름을 대조한다.
 README screenshot과 current Today first-read가 같은 제품 shell임을 확인한다.
 
-- [ ] **Step 5: Task / root handoff closeout**
+- [x] **Step 5: Task / root handoff closeout**
 
 다음 상태를 기록한다.
 
@@ -437,7 +437,7 @@ WORK_PROGRESS: 3~5줄 milestone과 task path
 QUESTION_AND_ANALYSIS_LOG: request / interpreted goal / analysis result / follow-up
 ```
 
-- [ ] **Step 6: Final hygiene와 stage audit**
+- [x] **Step 6: Final hygiene와 stage audit**
 
 Run:
 
@@ -455,7 +455,7 @@ registry / saved / run_history / unrelated QA artifact not staged
 README, representative asset, task docs, two root handoff logs only
 ```
 
-- [ ] **Step 7: 4차 commit**
+- [x] **Step 7: 4차 commit**
 
 ```bash
 git add README.md \
