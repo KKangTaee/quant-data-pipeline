@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   STUDIO_DESTINATIONS,
   filterSortAndPaginateHoldings,
+  managerDragExceededThreshold,
+  managerDragScrollTop,
   queriesMatch,
   studioDestination,
 } from "./workbenchState";
@@ -107,5 +109,17 @@ describe("institutional research studio navigation", () => {
   it("resolves the visible destination context", () => {
     expect(studioDestination("overview").shortLabel).toBe("맥락");
     expect(studioDestination("popularity").description).toContain("다기관");
+  });
+});
+
+describe("manager rail drag scrolling", () => {
+  it("moves scrollTop opposite to the pointer delta and never below zero", () => {
+    expect(managerDragScrollTop(120, 300, 240)).toBe(180);
+    expect(managerDragScrollTop(20, 100, 150)).toBe(0);
+  });
+
+  it("suppresses selection only after the pointer crosses the drag threshold", () => {
+    expect(managerDragExceededThreshold(100, 104)).toBe(false);
+    expect(managerDragExceededThreshold(100, 107)).toBe(true);
   });
 });

@@ -58,6 +58,22 @@ export function queriesMatch(left: string | null | undefined, right: string | nu
   return normalizedLeft === normalizedRight;
 }
 
+export function managerDragScrollTop(
+  startScrollTop: number,
+  startClientY: number,
+  currentClientY: number
+) {
+  return Math.max(0, startScrollTop - (currentClientY - startClientY));
+}
+
+export function managerDragExceededThreshold(
+  startClientY: number,
+  currentClientY: number,
+  threshold = 6
+) {
+  return Math.abs(currentClientY - startClientY) >= threshold;
+}
+
 export function filterSortAndPaginateHoldings<T extends HoldingStateRow>(options: {
   rows: T[];
   search: string;
