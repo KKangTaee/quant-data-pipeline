@@ -136,6 +136,46 @@ class DataOperationsWorkflowContractTest(unittest.TestCase):
 
         self.assertEqual(state, {"existing": "preserved"})
 
+    def test_leaving_advanced_clears_sticky_action_focus(self) -> None:
+        from app.web.ingestion import navigation
+
+        state: dict[str, object] = {
+            navigation.FOCUSED_ACTION_STATE_KEY: "daily_market_update",
+        }
+
+        self.assertTrue(
+            hasattr(navigation, "clear_action_focus_outside_advanced")
+        )
+        navigation.clear_action_focus_outside_advanced(
+            state,
+            "문제 복구",
+        )
+
+        self.assertNotIn(navigation.FOCUSED_ACTION_STATE_KEY, state)
+
+    def test_advanced_rerun_preserves_current_action_focus(self) -> None:
+        from app.web.ingestion import navigation
+        from app.web.ingestion.workflows import (
+            DATA_OPERATIONS_SECTION_ADVANCED,
+        )
+
+        state: dict[str, object] = {
+            navigation.FOCUSED_ACTION_STATE_KEY: "daily_market_update",
+        }
+
+        self.assertTrue(
+            hasattr(navigation, "clear_action_focus_outside_advanced")
+        )
+        navigation.clear_action_focus_outside_advanced(
+            state,
+            DATA_OPERATIONS_SECTION_ADVANCED,
+        )
+
+        self.assertEqual(
+            state[navigation.FOCUSED_ACTION_STATE_KEY],
+            "daily_market_update",
+        )
+
     def test_widget_callback_queues_section_change_for_next_rerun(self) -> None:
         from app.web.ingestion.navigation import (
             FOCUSED_ACTION_STATE_KEY,

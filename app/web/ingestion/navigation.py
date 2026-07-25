@@ -43,6 +43,16 @@ def queue_action_focus(
     state[FOCUSED_ACTION_STATE_KEY] = action
 
 
+def clear_action_focus_outside_advanced(
+    state: MutableMapping[str, object],
+    selected_section: str,
+) -> None:
+    """Drop a prior handoff after the user leaves Advanced."""
+
+    if selected_section != DATA_OPERATIONS_SECTION_ADVANCED:
+        state.pop(FOCUSED_ACTION_STATE_KEY, None)
+
+
 def select_data_operations_section() -> str:
     """Render and persist the five-section Data Operations selector."""
 
@@ -60,6 +70,7 @@ def select_data_operations_section() -> str:
     if selected not in DATA_OPERATIONS_SECTIONS:
         selected = DATA_OPERATIONS_SECTION_PREPARATION
         st.session_state[SECTION_STATE_KEY] = selected
+    clear_action_focus_outside_advanced(st.session_state, str(selected))
     return str(selected)
 
 
@@ -113,6 +124,7 @@ __all__ = [
     "SECTION_STATE_KEY",
     "WORKFLOW_STATE_KEY",
     "apply_action_focus",
+    "clear_action_focus_outside_advanced",
     "clear_data_operations_workflow",
     "consume_focused_data_operations_action",
     "focus_data_operations_action",
