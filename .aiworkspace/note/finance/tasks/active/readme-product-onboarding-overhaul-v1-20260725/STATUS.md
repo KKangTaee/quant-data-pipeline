@@ -1,6 +1,6 @@
 # README Product / Onboarding Overhaul V1 Status
 
-Status: Implementation Plan Ready
+Status: In Progress — 1/4 Complete
 Started: 2026-07-25
 
 ## Progress
@@ -15,16 +15,19 @@ Started: 2026-07-25
 - 사용자가 written spec을 승인했다.
 - `PLAN.md`를 file responsibility, 4개 독립 task, exact verification / commit step을 포함한 implementation plan으로 확장했다.
 - plan self-review에서 spec coverage, placeholder, task structure와 diff hygiene를 확인했다.
+- 1차에서 root README의 2026-05 Backtest 중심 서사와 옛 navigation을 제거했다.
+- Evidence-first positioning, current 7개 top-level surface, Portfolio Lab 3단계와 Data Operations 기반 workflow를 작성했다.
+- current 화면명 assertion과 `git diff --check`를 통과했다.
 
 ## Current Step
 
-전체 roadmap `0/4차`.
+전체 roadmap `1/4차`.
 
-implementation plan까지 완료했다. README 본문과 대표 이미지는 아직 수정하지 않았다.
+제품 서사와 사용자 흐름 재작성까지 완료했다. 5분 실행, 기술 구현 구조와 대표 이미지는 아직 추가하지 않았다.
 
 ## Next Action
 
-현재 session에서 `superpowers:executing-plans`로 Task 1부터 순서대로 실행한다.
+2차에서 5분 실행, 기술 stack / ownership, repository / storage / verification map을 작성한다.
 
 ## Scope Boundary
 

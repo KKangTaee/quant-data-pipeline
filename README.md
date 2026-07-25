@@ -1,182 +1,97 @@
 # Quant Data Pipeline
 
-MySQL 기반 데이터 수집, 전략 백테스트, 실전형 검증, 최종 포트폴리오 판단, 선정 이후 모니터링을 한 흐름으로 다루는 퀀트 리서치 워크스페이스입니다.
+시장 조사, 전략 실험, 실전 검증, 최종 판단, 선정 이후 모니터링을
+DB-backed evidence로 연결하는 **Evidence-first 퀀트 투자 리서치 워크스페이스**입니다.
 
-현재 이 저장소의 active product scope는 `finance` 패키지와 Streamlit 기반 `Finance Console`입니다.
-`financial_advisor` 디렉터리는 저장소에 남아 있지만, 별도 요청이 없다면 현재 개발 중심 범위가 아닙니다.
+> 좋은 백테스트를 찾는 데서 끝나지 않고, 그 결과를 실제로 계속 관찰할 후보로 받아들여도 되는지 근거와 함께 판단합니다.
 
-## 이 프로젝트가 하는 일
+현재 active product scope는 `finance` 패키지와 Streamlit 기반 `Finance Console`입니다.
+이 프로젝트는 리서치와 의사결정을 지원하지만 broker 연결, 실제 주문, 자동 리밸런싱 또는 수익 보장을 제공하지 않습니다.
 
-이 프로젝트의 핵심 질문은 다음입니다.
+## 왜 이 프로젝트를 만들었는가
 
-> 백테스트 결과가 좋아 보이는 전략을 실제로 추적 가능한 포트폴리오 후보로 봐도 되는가?
+백테스트 수익률 하나만으로는 실제 추적 가능한 포트폴리오를 고르기 어렵습니다.
 
-이를 위해 아래 흐름을 연결합니다.
+- 같은 성과라도 가격·재무·universe 데이터의 기준 시점과 coverage가 다를 수 있습니다.
+- 거래 비용, 유동성, ETF holdings, 집중도, stress와 robustness를 확인하지 않으면 실전 운용 가능성을 과대평가할 수 있습니다.
+- 시장 환경과 기관 보유 정보는 중요한 배경이지만, 그 자체가 매수·매도 신호나 투자 승인은 아닙니다.
+- 후보를 선정한 뒤에도 실제 성과, 종목별 기여, 보유 변화와 재검토 조건을 계속 확인해야 합니다.
 
-| 영역 | 역할 |
-|---|---|
-| 데이터 수집 | 가격, 재무제표, ETF provider, macro context 데이터를 DB에 수집 |
-| 전략 백테스트 | ETF / factor strategy family를 재사용 가능한 runtime으로 실행 |
-| Practical Validation | 데이터 신뢰도, ETF 운용성, holdings / exposure, macro, stress, sensitivity 진단 |
-| Final Review | 선정 / 보류 / 거절 / 재검토 판단과 근거 기록 |
-| Selected Portfolio Dashboard | 최종 선정된 포트폴리오를 사용자가 지정한 기간과 가상 투자금으로 재확인 |
-| 문서 / 리포트 | 장기 프로젝트 지식, backtest report, task 기록을 `.aiworkspace/note/finance/`에 정리 |
+Quant Data Pipeline은 이 문제를 `Research → Portfolio Lab → Practical Validation → Final Review → Portfolio Monitoring`의 하나의 흐름으로 다룹니다. 각 단계는 다음 단계가 사용할 근거를 만들며, 실행 결과와 판단 기록은 DB와 명시적인 workflow record 경계를 통해 보존됩니다.
 
-## 하지 않는 일
+## 현재 무엇을 할 수 있는가
 
-현재 이 저장소는 아래 기능을 제공하지 않습니다.
+Finance Console의 현재 상단 navigation은 `Research / Portfolio / Data / Help`입니다.
 
-- broker account 연결
-- live trading 승인
-- 자동 주문 생성
-- 자동 리밸런싱 실행
-- 투자 수익 보장 표현
-- 모든 ETF provider endpoint에 대한 universal connector
+| 영역 | 화면 | 사용자가 끝낼 수 있는 일 |
+|---|---|---|
+| `Research` | `Today` | 미국 시장 세션, 시장 상태, 대표 포트폴리오 변화와 우선 확인 항목을 첫 화면에서 파악합니다. |
+| `Research` | `Market Research` | 경제 사이클, 지수 가치평가, 개별 종목, 변동 종목, 거시·심리·일정을 source와 기준일이 보이는 상태로 조사합니다. |
+| `Research` | `Institutional Holdings` | delayed SEC Form 13F로 기관별 자산 배분, 보유 변화, 섹터 노출과 종목별 보유 기관을 탐색합니다. |
+| `Portfolio` | `Portfolio Lab` | 전략을 실행·비교하고 portfolio mix를 구성한 뒤 Practical Validation과 Final Review까지 이어갑니다. |
+| `Portfolio` | `Portfolio Monitoring` | 선정 후보와 직접 등록한 미국 주식·ETF를 그룹으로 추적하고 성과, 기여도, 보유 변화와 재검토 조건을 확인합니다. |
+| `Data` | `Data Operations` | 가격, 재무제표, 거시, ETF provider, 기관 보유 데이터를 MySQL에 수집하고 데이터 준비 상태를 관리합니다. |
+| `Help` | `Reference Center` | 제품 개념, 판단 기준, 데이터 제한, 문제 해결 방법과 관련 화면 이동 경로를 검색합니다. |
 
-현재 경계는 리서치, 검증, 최종 판단, 선정 이후 모니터링 지원입니다. 자동 매매 시스템이 아닙니다.
+### Research
 
-## 프로그램 사용 흐름
+`Today`는 매일의 출발점입니다. 미국 시장의 현재 세션과 주요 시장 맥락, 대표 포트폴리오의 최근 변화를 한 번에 읽고 더 깊게 확인할 Research 또는 Portfolio 화면으로 이동합니다.
 
-사용자-facing 주요 흐름은 아래와 같습니다.
+`Market Research`는 `시장 환경 / 지수 가치평가 / 종목 리서치`를 중심으로 경제 사이클, futures macro, sentiment, events, market movers와 미국 주식 분석을 제공합니다. 저장된 DB evidence와 freshness를 사용하며 자료가 없거나 오래된 상태를 숨기지 않습니다.
+
+`Institutional Holdings`는 SEC Form 13F 공식 data set을 DB에 저장한 뒤 기관별 portfolio와 종목별 보유 기관을 탐색하는 read-only research studio입니다. 13F의 보고 지연, long holdings 중심 범위와 CUSIP-symbol mapping 한계를 항상 함께 봅니다.
+
+### Portfolio
+
+`Portfolio Lab`은 세 단계로 구성됩니다.
+
+1. **Backtest Analysis** — 단일 전략 또는 portfolio mix를 실행하고 비교해 후보 source를 만듭니다.
+2. **Practical Validation** — 데이터 신뢰도, 실전 운용성, provider·holdings·macro·stress·robustness 근거와 보강 필요 항목을 확인합니다.
+3. **Final Review** — 검증 근거를 종합해 계속 추적, 관찰 후 재검토, 추적 제외 또는 Level 2 재검토 판단을 기록합니다.
+
+`Portfolio Monitoring`은 최종 선정 이후의 read-only 운영 화면입니다. 공통 기준 성과, 종목별 기여, 가격과 보유 변화, diagnosis와 재검토 조건을 확인하지만 주문을 만들거나 자동으로 리밸런싱하지 않습니다.
+
+### Data와 Help
+
+`Data Operations`는 제품 전체를 받치는 evidence 준비 화면입니다. UI에서 provider를 직접 호출해 즉석 계산하지 않고, 수집한 원천 데이터를 MySQL에 저장한 뒤 loader와 service를 통해 Research와 Portfolio workflow에 전달합니다.
+
+`Reference Center`는 별도 매뉴얼을 찾아다니지 않고 현재 화면에서 사용하는 용어, 데이터 기준, 상태 의미와 다음 이동 위치를 검색하는 제품 내 도움말입니다.
+
+## 제품 사용 흐름
 
 ```mermaid
-flowchart TD
-    A["Workspace > Ingestion<br/>DB 기반 데이터 수집 / 갱신"] --> B["Backtest > Backtest Analysis<br/>전략 실행 / 비교 / 후보 source 생성"]
-    B --> C["Backtest > Practical Validation<br/>12개 실전 진단"]
-    C --> D["Backtest > Final Review<br/>선정 / 보류 / 거절 / 재검토 판단"]
-    D --> E["Operations > Selected Portfolio Dashboard<br/>선정 이후 성과 재확인 / 모니터링"]
-
-    B -. "과거 실행 확인" .-> F["Operations > Backtest Run History"]
-    F -. "복원 / 재실행" .-> B
-
-    E -. "운영 기준 확인" .-> G["Reference > Guides / Glossary"]
+flowchart LR
+    D["Data Operations<br/>DB-backed evidence"] --> R["Research<br/>Today · Market · 13F"]
+    D --> L["Portfolio Lab"]
+    R --> L
+    L --> V["Practical Validation"]
+    V --> F["Final Review"]
+    F --> M["Portfolio Monitoring"]
+    M -. "재검토" .-> R
+    M -. "재실행" .-> L
 ```
 
-단계별 책임은 아래처럼 나뉩니다.
+Data Operations는 반드시 처음 한 번만 거치는 설치 단계가 아니라 모든 화면에 근거를 공급하는 기반입니다. Research에서 조사한 맥락은 후보를 해석하는 데 사용하고, Portfolio Lab에서 만든 후보는 검증과 최종 판단을 통과한 경우에만 Monitoring으로 이어집니다.
 
-| 단계 | 책임 |
-|---|---|
-| `Ingestion` | 백테스트와 검증에 필요한 데이터를 DB에 수집 |
-| `Backtest Analysis` | 단일 전략, 비교 실행, saved mix replay로 후보 source 생성 |
-| `Practical Validation` | 실전 검토에 필요한 12개 진단과 provider context 확인 |
-| `Final Review` | 최종 사용자 판단을 한 번 기록 |
-| `Selected Portfolio Dashboard` | 선정 이후 성과와 monitoring signal 확인. 주문 생성은 하지 않음 |
+| 단계 | 입력 | 이 단계에서 끝낼 일 | 다음 단계로 넘기는 것 |
+|---|---|---|---|
+| Research | 저장된 시장·재무·거시·13F evidence | 현재 환경과 조사 대상을 이해 | 전략·종목·위험에 대한 조사 맥락 |
+| Backtest Analysis | DB 가격·재무 데이터와 전략 설정 | 실행 결과를 비교하고 후보 구성 | 재현 가능한 후보 source와 결과 bundle |
+| Practical Validation | 후보 source와 validation evidence | 자료 부족, 실전성 문제와 보강 작업 확인 | 최신 validation result와 남은 제한 |
+| Final Review | Gate를 통과한 최신 validation | 최종 추적 여부와 사유 기록 | append-only decision과 monitoring 조건 |
+| Portfolio Monitoring | 선정 decision 또는 직접 등록한 자산 | 성과·기여·변화를 추적하고 재검토 판단 | Research 재확인 또는 Portfolio Lab 재실행 |
 
-## Finance Console
+## 현재 제품 경계
 
-메인 앱은 Streamlit으로 실행합니다.
+이 프로젝트가 제공하는 것은 리서치, 검증, 판단 기록과 선정 이후 모니터링입니다.
 
-```bash
-.venv/bin/streamlit run app/web/streamlit_app.py
-```
+제공하지 않는 기능:
 
-상단 navigation은 아래 기준으로 구성됩니다.
+- broker account 연결과 실제 보유 자동 동기화
+- live trading 승인 또는 주문 생성
+- 자동 리밸런싱과 자동 매매
+- 수익률 또는 투자 성과 보장
+- sentiment, 뉴스, 13F metadata의 자동 매수·매도 신호화
+- 모든 provider를 포괄하는 universal connector
 
-| 그룹 | 화면 |
-|---|---|
-| `Workspace` | `Overview`, `Ingestion`, `Backtest` |
-| `Operations` | `Ops Review`, `Selected Portfolio Dashboard`, `Backtest Run History`, `Candidate Library` |
-| `Reference` | `Guides`, `Glossary` |
-
-## 빠른 시작
-
-의존성 설치:
-
-```bash
-uv sync
-```
-
-앱 실행:
-
-```bash
-.venv/bin/streamlit run app/web/streamlit_app.py
-```
-
-주의:
-
-- Python `3.12+` 기준입니다.
-- 주요 finance workflow는 DB-backed 구조라 로컬 MySQL과 finance schema 데이터가 필요합니다.
-- Practical Validation 결과를 신뢰하려면 먼저 Ingestion에서 가격, provider, 재무제표, macro 데이터를 수집해야 합니다.
-- runtime artifact, run history, 임시 CSV는 로컬 운영 산출물이며 보통 커밋하지 않습니다.
-
-## 저장소 구조
-
-```text
-app/
-  jobs/                  # ingestion, diagnostics, run history, artifact helper
-  web/                   # Streamlit Finance Console 화면과 UI runtime glue
-
-finance/
-  data/                  # data collector, provider connector, DB-backed ingestion
-  data/db/               # schema definition, MySQL helper
-  loaders/               # backtest / validation runtime용 DB read path
-  engine.py              # strategy orchestration
-  strategy.py            # portfolio simulation / rebalancing logic
-  transform.py           # signal, factor, ranking, preprocessing
-  performance.py         # performance metric / summary
-
-.aiworkspace/note/finance/
-  docs/                  # 장기 제품 / 구조 / 데이터 / 흐름 / runbook 문서
-  tasks/active/          # active task의 계획, 상태, 실행 결과, 리스크
-  phases/active/         # phase 단위 통합 계획이 필요할 때 사용
-  reports/backtests/     # backtest report, strategy hub, strategy log
-  registries/            # append-only workflow JSONL registry
-  saved/                 # reusable saved portfolio setup
-```
-
-## 문서 지도
-
-먼저 볼 문서는 아래입니다.
-
-| 목적 | 문서 |
-|---|---|
-| 제품 목표와 경계 확인 | `.aiworkspace/note/finance/docs/PRODUCT_DIRECTION.md` |
-| 현재 작업과 로드맵 확인 | `.aiworkspace/note/finance/docs/ROADMAP.md` |
-| 코드 위치와 전체 구조 확인 | `.aiworkspace/note/finance/docs/PROJECT_MAP.md` |
-| 포트폴리오 선정 사용자 흐름 확인 | `.aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md` |
-| Backtest UI와 화면 책임 확인 | `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md` |
-| 데이터 / DB 의미와 table boundary 확인 | `.aiworkspace/note/finance/docs/data/README.md` |
-| architecture와 code-flow map 확인 | `.aiworkspace/note/finance/docs/architecture/README.md` |
-| 실행 명령과 운영 runbook 확인 | `.aiworkspace/note/finance/docs/runbooks/README.md` |
-| backtest report와 strategy log 확인 | `.aiworkspace/note/finance/reports/backtests/INDEX.md` |
-
-Codex / agent 작업 전에는 아래도 함께 봅니다.
-
-- `AGENTS.md`
-- `.aiworkspace/note/finance/docs/INDEX.md`
-- `.aiworkspace/note/finance/tasks/active/README.md`
-
-## 데이터와 저장 경계
-
-finance 시스템은 DB table과 JSONL record를 함께 사용합니다.
-
-| 저장 위치 | 역할 | 정책 |
-|---|---|---|
-| MySQL `finance_meta` | universe, asset profile, ETF provider snapshot, macro context | metadata / provider context의 DB source |
-| MySQL `finance_price` | OHLCV, dividend, split history | price runtime의 DB source |
-| MySQL `finance_fundamental` | fundamentals, statements, derived factors | factor workflow의 DB source |
-| `.aiworkspace/note/finance/registries/*.jsonl` | workflow source, validation result, decision record | append-only 제품 기록. 임의 재작성 금지 |
-| `.aiworkspace/note/finance/saved/*.jsonl` | reusable saved portfolio setup | 명시 요청 없이는 보존 |
-| `.aiworkspace/note/finance/run_history/*.jsonl` | local execution history | 보통 커밋하지 않음 |
-| `.aiworkspace/note/finance/run_artifacts/` | local job artifact / diagnostics | 보통 커밋하지 않음 |
-
-## 개발 원칙
-
-- Point-in-time correctness를 우선합니다.
-- Look-ahead bias와 survivorship bias를 항상 경계합니다.
-- UI validation code에서 provider / FRED / issuer page를 직접 fetch하지 않습니다.
-- 기본 흐름은 `Ingestion -> DB -> Loader -> Runtime -> UI`입니다.
-- strategy logic은 `transform`, `strategy`, `engine`, `performance` 계층을 가능한 유지합니다.
-- generated artifact, run history, local scratch file, `.DS_Store`, Playwright output은 명시 요청 없이는 커밋하지 않습니다.
-
-## 현재 개발 초점
-
-현재 finance 작업 상태는 `.aiworkspace/note/finance/docs/ROADMAP.md`와 `.aiworkspace/note/finance/tasks/active/`에서 확인합니다.
-
-이 README 갱신 시점의 active 방향은 아래입니다.
-
-- Practical Validation V2 provider / macro / stress diagnostics closeout
-- `.aiworkspace/note/finance/docs/` 기반 새 문서 체계 정착
-- `Backtest Analysis -> Practical Validation -> Final Review -> Selected Portfolio Dashboard`로 이어지는 Portfolio Selection V2 흐름 정리
-
-README는 상세 진행 로그가 아니라 첫 관문 문서입니다. 최신 작업 상태는 roadmap과 active task 문서를 기준으로 봅니다.
+`financial_advisor` 디렉터리는 저장소에 남아 있지만 현재 finance 제품 개발의 기본 범위가 아닙니다.

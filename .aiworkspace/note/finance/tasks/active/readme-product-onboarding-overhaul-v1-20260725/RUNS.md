@@ -19,3 +19,16 @@
 - `writing-plans` 기준으로 `PLAN.md`를 4개 independently verifiable task로 확장
 - exact files, interface, command, expected result, commit boundary 기록
 - spec coverage, placeholder, task structure, `git diff --check` self-review 통과
+
+## 2026-07-26 — Baseline Test Harness Investigation
+
+- full-suite one-shot은 `PYTHONPATH=.`와 ephemeral pytest를 사용해 `2035 passed / 319 failed`
+- 다수 테스트가 Streamlit-free contract를 위해 `sys.modules`에서 `streamlit`을 제거해 한 process 전체 실행에서 singleton / module state가 교차 오염됨
+- full run에서 실패한 Today 61개, Final Review 1개, Overview service contract 1개를 격리·결합 재실행해 `63 passed`
+- 사용자 승인에 따라 README와 무관한 full-suite harness gap은 별도 범위로 남기고 task-specific verification을 사용
+
+## 2026-07-26 — 1차 Product Journey
+
+- 옛 `Workspace / Operations / Selected Portfolio Dashboard`와 stale current-focus 표현 존재 확인
+- README를 Evidence-first product positioning, current surface map, Portfolio Lab 3단계, product workflow와 non-goal 중심으로 재작성
+- current 7개 surface assertion, old label 부재, `git diff --check` 통과

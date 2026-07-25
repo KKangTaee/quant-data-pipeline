@@ -28,4 +28,10 @@
 
 ## Current Blockers
 
-없음. 사용자 written spec review 후 implementation plan으로 전환할 수 있다.
+없음.
+
+## Non-Blocking Verification Gap
+
+전체 pytest one-shot은 Streamlit module / singleton isolation이 보장되지 않아 test order에 따라 대량 실패한다.
+이번 README task는 실패했던 대표 63개 isolated test의 통과와 문서 전용 검증을 기준으로 진행한다.
+pytest dev dependency 선언과 full-suite isolation은 별도 test-harness task 대상이며 README 완료를 차단하지 않는다.

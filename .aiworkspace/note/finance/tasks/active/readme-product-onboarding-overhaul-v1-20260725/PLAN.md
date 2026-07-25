@@ -90,7 +90,7 @@ Data Operations, Reference Center를 `Research / Portfolio / Data / Help` naviga
 - Consumes: `app/web/streamlit_app.py`의 current navigation, `DESIGN.md`의 product surface contract
 - Produces: README의 product definition, surface map, user workflow; Task 2의 기술 설명이 이어질 product context
 
-- [ ] **Step 1: 기존 README drift assertion 실행**
+- [x] **Step 1: 기존 README drift assertion 실행**
 
 Run:
 
@@ -100,7 +100,7 @@ rg -n "Workspace|Operations|Selected Portfolio Dashboard|현재 개발 초점" R
 
 Expected: 옛 navigation / surface / snapshot 표현이 발견된다.
 
-- [ ] **Step 2: README 앞부분을 product journey first 구조로 재작성**
+- [x] **Step 2: README 앞부분을 product journey first 구조로 재작성**
 
 다음 순서를 실제 본문으로 작성한다.
 
@@ -119,7 +119,7 @@ representative Today image path
 `Portfolio Lab`, `Portfolio Monitoring`, `Data Operations`, `Reference Center`를 설명하고,
 Practical Validation / Final Review는 Portfolio Lab 내부 stage로 설명한다.
 
-- [ ] **Step 3: Product workflow Mermaid 작성**
+- [x] **Step 3: Product workflow Mermaid 작성**
 
 README에 다음 ownership을 반영한 Mermaid를 작성한다.
 
@@ -135,7 +135,7 @@ flowchart LR
     M -. "재실행" .-> L
 ```
 
-- [ ] **Step 4: 현재 화면명 assertion 실행**
+- [x] **Step 4: 현재 화면명 assertion 실행**
 
 Run:
 
@@ -148,7 +148,7 @@ done
 
 Expected: exit 0, old user-facing navigation 표현 없음.
 
-- [ ] **Step 5: 문서 hygiene 확인**
+- [x] **Step 5: 문서 hygiene 확인**
 
 Run:
 
@@ -158,7 +158,7 @@ git diff --check -- README.md
 
 Expected: exit 0.
 
-- [ ] **Step 6: 1차 commit**
+- [x] **Step 6: 1차 commit**
 
 ```bash
 git add README.md .aiworkspace/note/finance/tasks/active/readme-product-onboarding-overhaul-v1-20260725/STATUS.md .aiworkspace/note/finance/tasks/active/readme-product-onboarding-overhaul-v1-20260725/RUNS.md
@@ -286,7 +286,7 @@ git commit -m "README 실행과 기술 구조 보강"
 
 **Interfaces:**
 
-- Consumes: live `http://localhost:8501/` Today route와 Task 1 README hero
+- Consumes: live `http://localhost:8510/` backtest-dev Today route와 Task 1 README hero
 - Produces: repository-relative stable README representative image
 
 - [ ] **Step 1: Browser에서 Today representative state 확인**
@@ -294,7 +294,7 @@ git commit -m "README 실행과 기술 구조 보강"
 확인 항목:
 
 ```text
-route: Today
+route: backtest-dev `http://localhost:8510/` Today
 viewport: desktop 1280px 이상
 top navigation: Research / Portfolio / Data / Help
 visible first read: market/session context and portfolio summary
@@ -419,7 +419,7 @@ Expected: exit 0.
 
 - [ ] **Step 4: Browser visual QA**
 
-in-app Browser에서 README가 설명하는 current Today / Market Research / Institutional Holdings /
+in-app Browser에서 `http://localhost:8510/`의 README가 설명하는 current Today / Market Research / Institutional Holdings /
 Portfolio Lab / Portfolio Monitoring / Data Operations / Reference Center route 이름을 대조한다.
 README screenshot과 current Today first-read가 같은 제품 shell임을 확인한다.
 
