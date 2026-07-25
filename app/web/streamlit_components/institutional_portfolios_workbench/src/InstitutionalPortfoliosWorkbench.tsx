@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 import {
   filterSortAndPaginateHoldings,
+  managerDragExceededThreshold,
+  managerDragScrollTop,
   queriesMatch,
   type HoldingSort,
   type MappingFilter,
@@ -17,6 +19,13 @@ type ManagerItem = {
   watchlist_label?: string | null;
   external_links?: Array<{ label: string; url: string }>;
   selected: boolean;
+};
+
+type ManagerRailDrag = {
+  pointerId: number;
+  startClientY: number;
+  startScrollTop: number;
+  dragged: boolean;
 };
 
 type Segment = {
@@ -974,6 +983,8 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   const [unresolvedHolding, setUnresolvedHolding] = useState<HoldingRow | null>(null);
   const managerRailRef = useRef<HTMLDivElement | null>(null);
   const managerRailScrollRef = useRef(0);
+  const managerRailDragRef = useRef<ManagerRailDrag | null>(null);
+  const suppressManagerClickRef = useRef(false);
 
   const resetHoldingsExplorer = () => {
     setHoldingSearch("");
@@ -1018,7 +1029,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   useEffect(() => {
     const rail = managerRailRef.current;
     if (rail) {
-      rail.scrollLeft = managerRailScrollRef.current;
+      rail.scrollTop = managerRailScrollRef.current;
     }
   }, [payload?.manager_picker.selected_cik, payload?.manager_picker.items.length]);
 
@@ -1278,7 +1289,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     }
     const rail = managerRailRef.current;
     if (rail) {
-      managerRailScrollRef.current = rail.scrollLeft;
+      managerRailScrollRef.current = rail.scrollTop;
     }
     setStudioDrawerOpen(false);
     setActionNotice(null);
@@ -1287,6 +1298,67 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     setUnresolvedHolding(null);
     setPendingAction({ kind: "manager", cik: item.cik, label: `${item.manager_name} 포트폴리오 불러오는 중` });
     sendEvent({ id: "select_manager", cik: item.cik });
+  };
+
+  const handleManagerRailPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch" || (event.pointerType === "mouse" && event.button !== 0)) {
+      return;
+    }
+    const rail = managerRailRef.current;
+    if (!rail) {
+      return;
+    }
+    suppressManagerClickRef.current = false;
+    managerRailDragRef.current = {
+      pointerId: event.pointerId,
+      startClientY: event.clientY,
+      startScrollTop: rail.scrollTop,
+      dragged: false,
+    };
+    rail.setPointerCapture(event.pointerId);
+  };
+
+  const handleManagerRailPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const rail = managerRailRef.current;
+    const drag = managerRailDragRef.current;
+    if (!rail || !drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    if (!drag.dragged && managerDragExceededThreshold(drag.startClientY, event.clientY)) {
+      drag.dragged = true;
+      rail.dataset.dragging = "true";
+    }
+    if (!drag.dragged) {
+      return;
+    }
+    event.preventDefault();
+    rail.scrollTop = managerDragScrollTop(drag.startScrollTop, drag.startClientY, event.clientY);
+  };
+
+  const handleManagerRailPointerEnd = (event: React.PointerEvent<HTMLDivElement>) => {
+    const rail = managerRailRef.current;
+    const drag = managerRailDragRef.current;
+    if (!rail || !drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    suppressManagerClickRef.current = drag.dragged && event.type === "pointerup";
+    if (rail.hasPointerCapture(event.pointerId)) {
+      rail.releasePointerCapture(event.pointerId);
+    }
+    delete rail.dataset.dragging;
+    managerRailDragRef.current = null;
+    window.setTimeout(() => {
+      suppressManagerClickRef.current = false;
+    }, 0);
+  };
+
+  const handleManagerRailClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!suppressManagerClickRef.current) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    suppressManagerClickRef.current = false;
   };
 
   const handlePopularityLoad = () => {
@@ -1368,8 +1440,14 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
               </form>
               <div
                 className="ip-manager-favorites ip-manager-rail"
-                aria-label="Institutional managers"
+                aria-label="기관 및 투자 대가 목록. 마우스로 잡아 위아래로 이동할 수 있습니다."
+                tabIndex={0}
                 ref={managerRailRef}
+                onPointerDown={handleManagerRailPointerDown}
+                onPointerMove={handleManagerRailPointerMove}
+                onPointerUp={handleManagerRailPointerEnd}
+                onPointerCancel={handleManagerRailPointerEnd}
+                onClickCapture={handleManagerRailClickCapture}
               >
                 {payload.manager_picker.items.map((item) => (
                   <button

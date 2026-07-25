@@ -2226,12 +2226,29 @@ a {
   grid-auto-columns: auto;
   grid-template-columns: minmax(0, 1fr);
   gap: 5px;
-  max-height: 250px;
+  max-height: 360px;
   padding: 0 3px 0 0;
   margin: 0;
   overflow-x: hidden;
   overflow-y: auto;
   scroll-snap-type: none;
+  scrollbar-width: none;
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.ip-studio-rail .ip-manager-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.ip-studio-rail .ip-manager-rail:focus-visible {
+  outline: 2px solid rgba(117, 185, 238, 0.72);
+  outline-offset: 3px;
+}
+
+.ip-studio-rail .ip-manager-rail[data-dragging="true"] {
+  cursor: grabbing;
+  user-select: none;
 }
 
 .ip-studio-rail .ip-manager-favorites .ip-manager-tab {
@@ -2291,22 +2308,40 @@ a {
   width: 100%;
   padding: 9px;
   border: 1px solid transparent;
-  border-radius: 11px;
+  border-radius: 0;
   color: #91a7c0;
   background: transparent;
   cursor: pointer;
   text-align: left;
 }
 
-.ip-studio-nav button:hover,
-.ip-studio-nav__active {
-  border-color: rgba(159, 195, 228, 0.18) !important;
+.ip-studio-nav button:hover:not(.ip-studio-nav__active) {
   color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.07) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
 }
 
 .ip-studio-nav__active {
-  box-shadow: inset 3px 0 0 #75b9ee;
+  border-color: transparent !important;
+  color: #ffffff !important;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.ip-studio-nav__active em {
+  color: #75b9ee;
+}
+
+.ip-studio-nav__active strong {
+  color: #ffffff;
+}
+
+.ip-studio-nav__active > span::after {
+  display: block;
+  width: 28px;
+  height: 2px;
+  margin-top: 7px;
+  background: #75b9ee;
+  content: "";
 }
 
 .ip-studio-nav em {
