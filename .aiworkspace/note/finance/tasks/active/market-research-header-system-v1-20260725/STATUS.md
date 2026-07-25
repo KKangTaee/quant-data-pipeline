@@ -1,6 +1,6 @@
 # Status
 
-State: Design approved; written spec awaiting user review
+State: Implementation plan complete; execution choice pending
 Roadmap: `1/3차`
 Updated: 2026-07-25
 
@@ -14,9 +14,9 @@ Updated: 2026-07-25
 
 ## Current
 
-- 승인된 시각 설계를 task 문서로 고정하고 사용자 문서 검토를 기다린다.
+- 승인된 설계에 대한 task-by-task TDD 구현 계획을 작성하고 자체 검토했다.
 
 ## Next
 
-- 문서 승인 후 implementation plan 작성
-- 그 다음에만 `2/3차` React / CSS 구현 시작
+- 실행 방식을 선택한 뒤 `2/3차` React / CSS 구현 시작
+- `3/3차` 네 화면 actual Browser QA와 문서 정렬

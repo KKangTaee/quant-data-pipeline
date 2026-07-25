@@ -19,3 +19,8 @@
   - `760px / 480px` 반응형 경계와 선택 영역 미렌더링 규칙을 명시
 - `git diff --check -- <task-dir>`
   - whitespace error 없음
+- written spec user review
+  - 사용자가 설계 문서 기준으로 진행을 승인했다.
+- `superpowers:writing-plans`
+  - 공통 contract, 두 번의 adapter 전환, 네 static build, Browser QA / docs closeout의 5개 task로 구현 계획을 작성했다.
+  - spec coverage, placeholder, type / property name 일관성을 자체 검토했다.

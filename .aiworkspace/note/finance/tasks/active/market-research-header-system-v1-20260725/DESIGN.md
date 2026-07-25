@@ -1,6 +1,6 @@
 # Market Research Header System V1 Design
 
-Status: Visual design approved; written spec awaiting user review
+Status: Approved
 Date: 2026-07-25
 
 ## 1. 문제 이해
