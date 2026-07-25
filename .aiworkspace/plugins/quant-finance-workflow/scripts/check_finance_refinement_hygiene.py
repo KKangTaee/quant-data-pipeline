@@ -89,7 +89,7 @@ def _classify(paths: list[str]) -> dict[str, list[str]]:
             out["indexes"].append(path)
         elif path in REGISTRY_DOCS:
             out["registries"].append(path)
-        elif path.startswith(".aiworkspace/note/finance/phases/active/phase") and path.endswith(".md"):
+        elif path.startswith(".aiworkspace/note/finance/phases/active/") and path.endswith(".md"):
             out["phase_docs"].append(path)
         elif path.startswith(".aiworkspace/note/finance/reports/backtests/strategies/") and path.endswith("_BACKTEST_LOG.md"):
             out["backtest_logs"].append(path)
@@ -128,25 +128,13 @@ def _family_token(path: str) -> str | None:
 
 def _build_checks(groups: dict[str, list[str]]) -> list[dict[str, str]]:
     checks: list[dict[str, str]] = []
-    phase_docs = groups["phase_docs"]
     strategy_hubs = groups["strategy_hubs"]
     backtest_logs = groups["backtest_logs"]
     one_pagers = groups["one_pagers"]
-    root_logs = groups["root_logs"]
     generated = groups["generated"]
     other_docs = groups["other_docs"]
     indexes = groups["indexes"]
     registries = groups["registries"]
-
-    if phase_docs:
-        has_todo = any("CURRENT_CHAPTER_TODO" in path for path in phase_docs)
-        checks.append(
-            {
-                "name": "active phase TODO synced",
-                "ok": "yes" if has_todo else "no",
-                "detail": "phase docs changed and CURRENT_CHAPTER_TODO is present" if has_todo else "phase docs changed but CURRENT_CHAPTER_TODO was not touched",
-            }
-        )
 
     changed_strategy_families = {
         token
@@ -165,17 +153,6 @@ def _build_checks(groups: dict[str, list[str]]) -> list[dict[str, str]]:
                 "detail": "all changed strategy families touched their backtest log"
                 if not missing_log_families
                 else f"missing backtest log update for: {', '.join(missing_log_families)}",
-            }
-        )
-
-    if phase_docs or strategy_hubs or one_pagers or other_docs:
-        checks.append(
-            {
-                "name": "root concise logs reviewed",
-                "ok": "yes" if root_logs else "no",
-                "detail": "WORK_PROGRESS or QUESTION_AND_ANALYSIS_LOG touched"
-                if root_logs
-                else "durable docs changed but root concise logs were not touched",
             }
         )
 
@@ -201,14 +178,15 @@ def _build_checks(groups: dict[str, list[str]]) -> list[dict[str, str]]:
             }
         )
 
-    if phase_docs or strategy_hubs or one_pagers:
+    if strategy_hubs or one_pagers:
+        report_index = ".aiworkspace/note/finance/reports/backtests/INDEX.md"
         checks.append(
             {
-                "name": "index docs reviewed",
-                "ok": "yes" if indexes else "no",
-                "detail": "docs/INDEX or reports/backtests/INDEX touched"
-                if indexes
-                else "durable docs changed but index docs were not touched",
+                "name": "backtest report index reviewed",
+                "ok": "yes" if report_index in indexes else "no",
+                "detail": "reports/backtests/INDEX touched"
+                if report_index in indexes
+                else "strategy report docs changed but reports/backtests/INDEX was not touched",
             }
         )
 

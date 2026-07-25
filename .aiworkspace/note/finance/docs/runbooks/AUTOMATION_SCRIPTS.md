@@ -24,34 +24,41 @@
 
 사용 시점:
 
-- 새 finance phase를 열 때
-- plan, TODO, completion summary, next-phase preparation, test checklist의 기본 골격이 필요할 때
+- 사용자가 phase-managed work를 명시적으로 요청해 새 finance phase를 열 때
+- 상위 목표, task board, 상태, risk, 통합 기준의 공통 골격이 필요할 때
 
 역할:
 
-- phase plan
-- current chapter TODO
-- completion summary draft
-- next phase preparation draft
-- test checklist draft
+- `PLAN.md`
+- `DESIGN.md`
+- `TASKS.md`
+- `STATUS.md`
+- `RISKS.md`
+- `INTEGRATION.md`
 
-를 한 번에 만든다.
+를 한 번에 만든다. 실제 구현과 실행 기록은 각 active task 문서에 둔다.
 
 생성 위치:
 
-- `.aiworkspace/note/finance/phases/active/phase<N>/`
+- `.aiworkspace/note/finance/phases/active/<phase-id>/`
 
-Template source:
+대표 명령:
 
-- `.aiworkspace/note/finance/docs/runbooks/templates/PHASE_PLAN_TEMPLATE.md`
-- `.aiworkspace/note/finance/docs/runbooks/templates/PHASE_TEST_CHECKLIST_TEMPLATE.md`
+```bash
+.venv/bin/python \
+  .aiworkspace/plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py \
+  --phase-id document-governance-alignment \
+  --title "Document Governance Alignment" \
+  --dry-run
+```
 
 주의:
 
+- `<phase-id>`는 의미가 드러나는 lowercase kebab-case를 사용한다.
+- 과거 `phase<N>`과 `CURRENT_CHAPTER_TODO` 구조는 새로 만들지 않는다.
 - 생성 후에는 반드시 사용자-facing 설명으로 다시 다듬는다.
-- phase plan에는 기존의 분리형 요약 / 완료 효과 섹션을 강제하지 않는다.
-- 대신 `이걸 하는 이유?` 섹션에서 문제 / 지금 필요한 이유 / 끝났을 때의 구체적 가치를 쉽게 설명한다.
-- checklist는 용어 정리보다 실제 확인 위치와 확인 행동을 우선한다.
+- `STATUS.md`의 `State:`는 `active`, `paused`, `verification_only`, `complete`, `blocked` 중 하나를 사용한다.
+- phase plan의 `이걸 하는 이유?`에서 문제, 지금 필요한 이유, 완료 후 가치를 쉽게 설명한다.
 
 ## Refinement hygiene helper
 
@@ -64,16 +71,17 @@ Template source:
 역할:
 
 - changed path 분류
-- phase docs 변경 여부 확인
-- root logs 확인
 - generated artifact unstaged 여부 확인
-- registry / index / report 관련 누락 가능성 확인
+- strategy report index와 candidate registry 관련 누락 가능성 확인
+- semantic phase folder와 task/docs 변경 현황 표시
 
 주의:
 
 - support tool이지 절대 blocker는 아니다.
 - generated JSONL은 보통 commit하지 않는다.
 - script output이 broad하게 권고해도 실제 diff 성격에 맞게 판단한다.
+- 평범한 task/phase closeout은 INDEX나 root log 갱신을 요구하지 않는다.
+- canonical 문서는 해당 역할의 사실이 실제로 바뀌었을 때만 갱신한다.
 
 ## UI / engine boundary helper
 
