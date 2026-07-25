@@ -496,6 +496,36 @@ def test_economic_cycle_asset_ui_uses_observation_sections_without_left_rails() 
     assert ".implication-card .movement-grid { grid-template-columns: 1fr; }" in style
 
 
+def test_economic_cycle_asset_section_prefers_explicit_copy_and_scopes_larger_type() -> None:
+    component = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/"
+        "EconomicCycleWorkbench.tsx"
+    ).read_text()
+    style = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/style.css"
+    ).read_text()
+
+    assert 'className="market-implications"' in component
+    assert "item.summary || item.narrative || item.context" in component
+    assert "asset.summary || asset.narrative" in component
+    assert (
+        "item.current_interpretation?.length "
+        "? item.current_interpretation "
+        ": [item.narrative || item.summary || item.context]"
+    ) in component
+    for rule in (
+        ".market-implications .section-heading > div > span { font-size: 11px; }",
+        ".market-implications .section-heading h3 { font-size: 19px; }",
+        ".market-implications .section-heading > small { font-size: 11px; }",
+        ".market-implications .implication-summary { font-size: 12px; }",
+        ".market-implications .economic-state-block p { font-size: 11px; }",
+        ".market-implications .observation-block li { font-size: 10px; }",
+        ".market-implications .series-primary-metrics > * { font-size: 9px; }",
+        ".market-implications .price-return-grid strong { font-size: 11px; }",
+    ):
+        assert rule in style
+
+
 def test_cycle_component_ready_and_limited_probability_semantics_are_safe() -> None:
     source = Path(
         "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"

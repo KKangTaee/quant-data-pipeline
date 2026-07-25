@@ -346,6 +346,41 @@ button, input, summary { font: inherit; }
 .unconnected-pathway-note { padding: 12px; border: 1px solid #e1e7eb; border-radius: 12px; background: #fff; }
 .unconnected-pathway-note p { margin-top: 5px; color: #6d7f8e; font-size: 10px; line-height: 1.55; }
 
+.market-implications .section-heading > div > span { font-size: 11px; }
+.market-implications .section-heading h3 { font-size: 19px; }
+.market-implications .section-heading > small { font-size: 11px; }
+.market-implications .implication-card > header span { font-size: 11px; }
+.market-implications .implication-card > header strong { font-size: 15px; }
+.market-implications .implication-overall > span { font-size: 9px !important; }
+.market-implications .implication-summary { font-size: 12px; }
+.market-implications .coverage-status { font-size: 10px; }
+.market-implications .economic-state-block h5,
+.market-implications .pathway-group h5,
+.market-implications .price-pathway h5,
+.market-implications .unmeasured-pathways h5,
+.market-implications .unconnected-pathway-note h5,
+.market-implications .observation-block > h5 { font-size: 11px; }
+.market-implications .economic-state-block p { font-size: 11px; }
+.market-implications .economic-observations span { font-size: 9px; }
+.market-implications .movement-unit-note { font-size: 9px; }
+.market-implications .observation-block li { font-size: 10px; }
+.market-implications .movement-item > header { font-size: 10px; }
+.market-implications .observed-pathways-block .pathway-item > p { font-size: 10px; }
+.market-implications .commodity-asset-card > header strong { font-size: 13px; }
+.market-implications .commodity-asset-card > p { font-size: 10px; }
+.market-implications .pathway-item > header strong { font-size: 12px; }
+.market-implications .pathway-item > header span { font-size: 9px; }
+.market-implications .pathway-empty { font-size: 10px; }
+.market-implications .series-primary-metrics > * { font-size: 9px; }
+.market-implications .pathway-hover-details { font-size: 9px; }
+.market-implications .pathway-details { font-size: 9px; }
+.market-implications .price-status { font-size: 9px; }
+.market-implications .price-return-grid span { font-size: 9px; }
+.market-implications .price-return-grid strong { font-size: 11px; }
+.market-implications .implication-basis { font-size: 9px; }
+.market-implications .unmeasured-pathways span { font-size: 9px; }
+.market-implications .unconnected-pathway-note p { font-size: 11px; }
+
 .cycle-usage-guide { overflow: hidden; border: 1px solid #d8e3e9; border-radius: 20px; background: #fff; }
 .cycle-usage-guide > summary { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 20px 24px; cursor: pointer; list-style: none; }
 .cycle-usage-guide > summary::-webkit-details-marker { display: none; }

@@ -185,6 +185,7 @@ type CommodityAsset = {
   asset_id: "wti" | "copper" | "gold";
   label: string;
   coverage: CoverageStatus;
+  summary?: string;
   price_context?: PriceContext | null;
   current_movement?: MovementMetric[];
   observed_pathways?: ObservedPathway[];
@@ -1017,6 +1018,7 @@ function UnmeasuredPathways({ rows }: { rows: UnmeasuredPathway[] }) {
 }
 
 function MarketImplicationCard({ item }: { item: MarketImplication }) {
+  const summary = item.summary || item.narrative || item.context;
   const interpretation = item.current_interpretation?.length ? item.current_interpretation : [item.narrative || item.summary || item.context];
   const nextChecks = item.next_check_conditions?.length
     ? item.next_check_conditions
@@ -1035,14 +1037,14 @@ function MarketImplicationCard({ item }: { item: MarketImplication }) {
           </b>
         </div>
       </header>
-      <p className="implication-summary">{item.narrative || item.summary || item.context}</p>
+      <p className="implication-summary">{summary}</p>
       <EconomicStateBlock state={item.economic_state} />
       {item.assets?.length ? (
         <div className="commodity-asset-grid">
           {item.assets.map((asset) => (
             <article className="commodity-asset-card" key={asset.asset_id}>
               <header><strong>{asset.label}</strong><span className={`coverage-status coverage-${asset.coverage.toLowerCase()}`}>{COVERAGE_LABEL[asset.coverage]}</span></header>
-              <p>{asset.narrative}</p>
+              <p>{asset.summary || asset.narrative}</p>
               <AssetObservationBody
                 label={asset.label}
                 economicAsOfDate={item.economic_as_of_date}
