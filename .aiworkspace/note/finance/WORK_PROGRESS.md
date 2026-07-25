@@ -7208,3 +7208,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - Repaired FOMC source taxonomy and verified the next 2026-07-29 meeting from the DB-backed workbench.
   - Split the fast official-calendar refresh from the slow hybrid earnings action and hardened React completion acknowledgement with a unique UI token.
   - Detailed evidence remains under `tasks/active/overview-events-ux-redesign/`.
+
+## 2026-07-25 - Institutional Holdings React 전면 화면 설계
+
+- Today / Market Research와 실제 desktop·420px 화면을 비교해 Streamlit / React 이중 shell, visual-token drift, navigation mismatch와 mobile first-read 지연을 확인했다.
+- 정상 화면은 React가 header·navigation·manager·portfolio/security·refresh/help/caveat를 소유하고 Streamlit은 route·DB payload·explicit event·fallback만 담당하는 방향을 사용자가 승인했다.
+- standalone SPA / API / DB 변경 없이 기존 기능을 보존하는 written spec을 작성했다. 현재 전체 roadmap `1/4차` 완료, 2차 디자인 사용자 검토 대기다.
+- 상세는 `tasks/active/institutional-holdings-react-parity-v1-20260725/`를 본다.

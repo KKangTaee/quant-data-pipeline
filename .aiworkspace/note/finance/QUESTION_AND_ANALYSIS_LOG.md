@@ -10597,3 +10597,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 상단 갱신은 사용자가 기다릴 수 있는 공식 일정 범위로 끝나고, 완료 상태가 확실히 해제되며, 저장된 FOMC가 분류 누락 때문에 화면에서 사라지지 않아야 함.
 - Analysis result: 102초 중 약 92초가 hybrid earnings였고 FOMC 16행은 taxonomy NULL이었다. 공식 3종 facade, 별도 earnings action, parser taxonomy, UI-only completion token을 적용했으며 다음 FOMC 2026-07-29와 약 11.5초 완료 복귀를 확인했다.
 - Follow-up: S&P 500 earnings cycle과 issuer-confirmed IR 확대는 기존 별도 후속 범위로 유지한다.
+
+### 2026-07-25 - Institutional Holdings는 Today와 같은 React-owned 정상 화면을 사용한다
+
+- User request: 기능은 만족스럽지만 Today / Market Research와 다른 Institutional Holdings 디자인을 진단하고, 장기 개선 관점에서 동일한 React 구현 pattern으로 전면 개선하도록 요청함.
+- Interpreted goal: 기존 기관·보유·종목·차트 기능과 SEC / DB 경계를 유지하면서 사용자가 보는 page shell과 interaction hierarchy를 최신 탭과 통일해야 함.
+- Analysis result: 주요 기능은 이미 React component지만 바깥 Streamlit title / help / refresh / fallback과 8px dense visual grammar가 남아 있었다. React가 정상 화면 전체를 소유하고 Streamlit은 thin adapter / unavailable fallback만 담당하는 방향을 채택했다.
+- Follow-up: 전체 roadmap `1/4차` 진단을 완료하고 2차 written design을 `tasks/active/institutional-holdings-react-parity-v1-20260725/`에 작성했다. 사용자 spec 승인 후 implementation plan으로 전환한다.
