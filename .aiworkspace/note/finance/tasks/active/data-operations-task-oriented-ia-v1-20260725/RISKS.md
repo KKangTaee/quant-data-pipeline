@@ -51,5 +51,8 @@ Updated: 2026-07-26
 - cancellation and resume
 - multi-user authorization
 - remote deployment operational security
+- collapsed Advanced expander body의 eager form / DB preflight 평가
+- `_bind_page_globals()` 기반 page/sections 동적 dependency
+- read-only diagnosis의 live provider / EDGAR probe에 대한 rate-limit 안내
 
 이 항목들은 4차 후보이며 V1 구현 완료 조건이 아니다.

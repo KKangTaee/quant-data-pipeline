@@ -32,7 +32,7 @@
 - Consumes: `focused_action: str | None`
 - Produces: `should_expand_action(focused_action: str | None, *actions: str) -> bool`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_secondary_views_do_not_repeat_selected_section_title():
@@ -46,13 +46,13 @@ def test_advanced_tools_open_only_matching_action_focus():
     assert should_expand_action("metadata_refresh", "daily_market_update") is False
 ```
 
-- [ ] **Step 2: Run RED tests**
+- [x] **Step 2: Run RED tests**
 
 Run: `.venv/bin/python -m unittest tests.test_data_operations_workflows -v`
 
 Expected: FAIL because duplicate subheaders and `should_expand_action` still exist only as nested default-aware helpers.
 
-- [ ] **Step 3: Implement the minimal UI change**
+- [x] **Step 3: Implement the minimal UI change**
 
 ```python
 def should_expand_action(
@@ -64,7 +64,7 @@ def should_expand_action(
 
 Remove the four selector-equivalent `st.subheader(...)` calls and use the pure helper for every Advanced expander. Do not change captions, form inputs, buttons, dispatchers, or job parameters.
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run: `.venv/bin/python -m unittest tests.test_data_operations_workflows tests.test_ingestion_module_split_contracts -v`
 
@@ -81,19 +81,19 @@ Expected: PASS.
 - Consumes: active action registry, workflow ownership, section source, dispatcher source, job guides
 - Produces: confirmed protections, current issues, follow-up priorities
 
-- [ ] **Step 1: Verify active action coverage**
+- [x] **Step 1: Verify active action coverage**
 
 Run a read-only script asserting every active action is owned by a workflow, rendered in `sections.py`, supported by `dispatcher.py`, and described by `JOB_GUIDE`.
 
 Expected: 30 active actions, zero missing entries.
 
-- [ ] **Step 2: Verify execution safety contracts**
+- [x] **Step 2: Verify execution safety contracts**
 
 Inspect each `db_write` action for an explicit Streamlit button and scheduled-job path, and verify diagnostic actions return `write_behavior="read_only"`.
 
 Expected: no collection starts during initial render; one scheduled job at a time; diagnostic results write no finance data rows.
 
-- [ ] **Step 3: Record issues without expanding implementation scope**
+- [x] **Step 3: Record issues without expanding implementation scope**
 
 Record that collapsed Streamlit expanders still evaluate their bodies, focused action state may remain sticky across reruns, and `sections.py` depends on dynamic globals from `page.py`. Keep these as performance/maintainability follow-ups unless a correctness failure is found.
 
@@ -108,13 +108,13 @@ Record that collapsed Streamlit expanders still evaluate their bodies, focused a
 - Consumes: completed Task 1 and Task 2
 - Produces: test evidence, desktop/mobile visual evidence, final handoff
 
-- [ ] **Step 1: Run the Data Operations regression suite**
+- [x] **Step 1: Run the Data Operations regression suite**
 
 Run: `.venv/bin/python -m unittest tests.test_data_operations_workflows tests.test_ingestion_module_split_contracts tests.test_service_contracts.BoundaryContractHardeningTests tests.test_reference_contextual_help tests.test_reference_center`
 
 Expected: all feature-specific tests PASS.
 
-- [ ] **Step 2: Run static checks**
+- [x] **Step 2: Run static checks**
 
 Run: `.venv/bin/python -m py_compile app/web/ingestion/sections.py app/web/ingestion/views/imports.py app/web/ingestion/views/recovery.py app/web/ingestion/views/history.py app/web/ingestion/views/advanced.py`
 
@@ -122,11 +122,11 @@ Run: `git diff --check`
 
 Expected: both PASS.
 
-- [ ] **Step 3: Verify in the in-app browser**
+- [x] **Step 3: Verify in the in-app browser**
 
 Open Data Operations, confirm `문제 복구` has no repeated page title, then open `고급 도구` and confirm every top-level expander is closed at desktop and 420px width. Do not click any run/import button.
 
-- [ ] **Step 4: Update task documentation and commit**
+- [x] **Step 4: Update task documentation and commit**
 
 Stage only the implementation, focused tests, and active task documentation. Exclude registries, saved files, run history, research bundles, and QA screenshots.
 

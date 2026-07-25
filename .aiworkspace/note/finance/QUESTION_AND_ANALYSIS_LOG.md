@@ -10698,3 +10698,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: backend 수집 기능은 보존하면서 사용자가 Market Research, Portfolio Lab, Institutional Holdings, Practical Validation 중 준비 목적을 먼저 선택하게 함.
 - Analysis result: `Task-oriented Hybrid`를 채택해 5-section IA, 네 consumer workflow, official import, diagnosis-led recovery, normalized history와 Advanced 경계를 설계했다. 새 raw status dashboard와 자동 연속 실행은 V1에서 제외한다.
 - Follow-up: `tasks/active/data-operations-task-oriented-ia-v1-20260725/DESIGN.md` 사용자 검토 후 3A/3B/3C 구현으로 전환한다.
+
+### 2026-07-26 - Data Operations의 현재 위치는 한 번만 말하고 Advanced는 닫힌 목록에서 시작한다
+
+- User request: 중복 타이틀을 찾아 정리하고 고급 도구의 첫 진입 collector를 모두 닫으며 기능·수집 이슈를 진단하도록 요청함.
+- Interpreted goal: section selector를 현재 위치의 유일한 상위 표식으로 사용하고, 직접 진입과 특정 action handoff를 구분하면서 기존 explicit execution을 보존한다.
+- Analysis result: 4개 반복 subheader와 첫 두 `default=True`, sticky focus를 교정했다. active 30개 action 연결과 26개 write action 버튼 경로에는 blocking gap이 없었고, collapsed body eager evaluation과 dynamic globals 결합이 후속 위험으로 남았다.
+- Follow-up: 전체 roadmap `3차 구현·QA 완료`. 4차는 Advanced lazy rendering / explicit dependency 또는 durable execution의 실제 운영 필요가 확인될 때 시작한다.

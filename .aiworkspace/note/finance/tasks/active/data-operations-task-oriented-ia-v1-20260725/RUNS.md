@@ -64,3 +64,37 @@
   - console warning 1건은 QA용 서버 재시작 시점의 WebSocket 종료 기록이며
     재시작 후 app error는 없었다.
 - collector write action은 실행하지 않았고 QA 이미지는 generated artifact로 남겼다.
+
+## 2026-07-26 — Heading Hierarchy And Advanced Closed Entry
+
+- 설계 / 계획 commit:
+  - `877749a32` 제목 계층·직접 진입/집중 진입 contract
+- TDD 구현 commit:
+  - `6c7aa79a1` selector-equivalent 제목 제거와 focus-only expander 규칙
+  - `71fee4264` 섹션 이탈 시 sticky action focus 초기화
+- RED:
+  - secondary view 4개 반복 `subheader`
+  - `should_expand_action` 부재
+  - operational 첫 두 expander의 `default=True`
+  - Advanced 이탈 뒤 focused action 잔존
+- GREEN:
+  - `tests.test_data_operations_workflows`
+  - `tests.test_ingestion_module_split_contracts`
+  - 26개 통과
+- active action 비파괴 audit:
+  - active 30 / workflow ownership missing 0
+  - renderer missing 0 / dispatcher missing 0 / guide missing 0
+  - `db_write` 26개 모두 explicit button 아래 scheduling
+  - button 밖 scheduling 0 / `read_only` diagnosis 4개
+- 최종 회귀:
+  - Data Operations / Ingestion boundary / Reference 확장 suite 91개 통과
+  - 변경 Python 6개 `py_compile` 통과
+  - `git diff --check` 통과
+- actual Browser QA:
+  - 1280×720: `문제 복구` 반복 heading 없음, Advanced open details 0,
+    document horizontal overflow 0
+  - 420×900: Advanced open details 0, document horizontal overflow 0
+  - console warning / error 0
+- collector / import / diagnosis 실행 버튼은 누르지 않았다.
+- QA 이미지는 `qa_data_operations_advanced_closed.png`,
+  `qa_data_operations_advanced_closed_mobile.png` local artifact로만 남겼다.

@@ -7295,3 +7295,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 기본 화면은 `데이터 준비 / 공식 파일 / 문제 복구 / 실행 이력 / 고급 도구`로 재정의하고 활성 action 30개의 유실 없는 ownership을 정리했다.
 - raw log·failure CSV·full JSON은 backend artifact로 보존하되 기본 UI에서 제거하며, 자동 다단계 실행·scheduler는 4차 후보로 분리했다.
 - 현재 전체 roadmap `2차 설계 완료 / 사용자 검토 대기`; 상세는 `tasks/active/data-operations-task-oriented-ia-v1-20260725/`를 본다.
+
+## 2026-07-26 - Data Operations 제목·고급 도구 후속 정리 완료
+
+- 보조 section의 반복 제목을 제거하고 Advanced 직접 진입을 전체 접힘 상태로 통일했다.
+- action handoff는 해당 도구만 열고, Advanced 이탈 뒤에는 stale focus를 지워 재진입 상태를 정리했다.
+- active 30개 action의 renderer/dispatcher/guide와 26개 write action의 explicit-button 경로를 확인했으며 blocking gap은 없었다.
+- 전체 roadmap `3차 구현·QA 완료 / 4차 성능·durable execution 후보`; 상세는 `tasks/active/data-operations-task-oriented-ia-v1-20260725/`를 본다.
