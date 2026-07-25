@@ -32,9 +32,13 @@ from finance.loaders.us_stock_turnaround import build_us_stock_turnaround_collec
 from app.services.overview.market_context_valuation import (
     build_market_context_valuation_read_model,
 )
+from app.services.overview.economic_cycle_freshness import (
+    latest_economic_cycle_refresh_date,
+)
 from app.services.nyse_calendar import latest_completed_nyse_session
 from app.services.futures_macro_pattern_validation import NESTED_OUTER_MINIMUM_TRAIN
 
+from app.jobs.economic_cycle_refresh import run_economic_cycle_intramonth_refresh
 from app.jobs.ingestion_jobs import (
     JobResult,
     attach_futures_macro_materialization,
@@ -58,6 +62,7 @@ from app.jobs.ingestion_jobs import (
 )
 from app.jobs.overview_automation import run_overview_automation
 from app.jobs.run_history import append_run_history
+from finance.loaders.economic_cycle import load_cycle_snapshot
 
 MARKET_MOVERS_EOD_COLLECTION_PERIODS = {
     "weekly": "3mo",
@@ -80,6 +85,166 @@ def _market_movers_today() -> date:
 def record_overview_action_result(result: JobResult) -> None:
     """Persist an explicit Overview action result to the shared ingestion run history."""
     append_run_history(result)
+
+
+def _economic_cycle_snapshot_date(row: Any) -> date | None:
+    if not isinstance(row, dict):
+        return None
+    value = row.get("as_of_date")
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(str(value or "")[:10])
+    except ValueError:
+        return None
+
+
+def _economic_cycle_manual_refresh_result(
+    *,
+    started_at: datetime,
+    status: str,
+    message: str,
+    target: date,
+    before_date: date | None,
+    after_date: date | None,
+    pipeline: dict[str, Any] | None,
+) -> JobResult:
+    finished_at = datetime.now()
+    pipeline_result = dict(pipeline or {})
+    return {
+        "job_name": "overview_economic_cycle_manual_refresh",
+        "status": status,
+        "started_at": started_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "finished_at": finished_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "duration_sec": round((finished_at - started_at).total_seconds(), 3),
+        "rows_written": int(pipeline_result.get("rows_written") or 0),
+        "symbols_requested": int(pipeline_result.get("symbols_requested") or 0),
+        "symbols_processed": int(pipeline_result.get("symbols_processed") or 0),
+        "failed_symbols": list(pipeline_result.get("failed_symbols") or []),
+        "message": message,
+        "details": {
+            "target_as_of_date": target.isoformat(),
+            "before_as_of_date": (
+                before_date.isoformat() if before_date is not None else None
+            ),
+            "after_as_of_date": (
+                after_date.isoformat() if after_date is not None else None
+            ),
+            "pipeline_status": pipeline_result.get("status") or "not_run",
+            "pipeline_job_name": pipeline_result.get("job_name"),
+        },
+    }
+
+
+def run_overview_economic_cycle_refresh(
+    *,
+    as_of_date: str | date | datetime | None = None,
+    refresh_runner: Callable[..., JobResult] = run_economic_cycle_intramonth_refresh,
+    snapshot_loader: Callable[..., dict[str, object] | None] = load_cycle_snapshot,
+) -> JobResult:
+    """Run the explicit combined refresh and verify its persisted target snapshot."""
+    started_at = datetime.now()
+    target = latest_economic_cycle_refresh_date(as_of_date)
+    before_date: date | None = None
+    try:
+        before = snapshot_loader(
+            as_of_date=target,
+            run_kind="intramonth_nowcast",
+        )
+        before_date = _economic_cycle_snapshot_date(before)
+    except Exception:
+        return _economic_cycle_manual_refresh_result(
+            started_at=started_at,
+            status="failed",
+            message="저장된 경제사이클 계산일을 확인하지 못했습니다.",
+            target=target,
+            before_date=None,
+            after_date=None,
+            pipeline=None,
+        )
+
+    if before_date is not None and before_date >= target:
+        return _economic_cycle_manual_refresh_result(
+            started_at=started_at,
+            status="success",
+            message=f"경제사이클 계산이 이미 {target.isoformat()} 기준으로 최신입니다.",
+            target=target,
+            before_date=before_date,
+            after_date=before_date,
+            pipeline=None,
+        )
+
+    pipeline: dict[str, Any] = {}
+    try:
+        pipeline = dict(refresh_runner(as_of_date=target))
+        after = snapshot_loader(
+            as_of_date=target,
+            run_kind="intramonth_nowcast",
+        )
+        after_date = _economic_cycle_snapshot_date(after)
+    except Exception:
+        preserved = before_date.isoformat() if before_date is not None else "-"
+        return _economic_cycle_manual_refresh_result(
+            started_at=started_at,
+            status="failed",
+            message=(
+                "경제사이클을 최신화하지 못했습니다. "
+                f"기존 {preserved} 결과를 유지합니다."
+            ),
+            target=target,
+            before_date=before_date,
+            after_date=before_date,
+            pipeline=pipeline,
+        )
+
+    pipeline_status = str(pipeline.get("status") or "failed").lower()
+    if pipeline_status in {"success", "partial_success"} and (
+        after_date is not None and after_date >= target
+    ):
+        if pipeline_status == "success":
+            message = (
+                f"최신 경제사이클 계산 기준 {target.isoformat()}를 반영했습니다."
+            )
+        else:
+            message = f"{target.isoformat()} 기준 잠정 계산을 반영했습니다."
+        status = pipeline_status
+    elif pipeline_status in {"success", "partial_success"}:
+        preserved = (
+            after_date.isoformat()
+            if after_date is not None
+            else before_date.isoformat()
+            if before_date is not None
+            else "-"
+        )
+        status = "incomplete"
+        message = (
+            "최신 계산일을 확인하지 못했습니다. "
+            f"기존 {preserved} 결과를 유지합니다."
+        )
+    else:
+        preserved = (
+            after_date.isoformat()
+            if after_date is not None
+            else before_date.isoformat()
+            if before_date is not None
+            else "-"
+        )
+        status = "failed"
+        message = (
+            "경제사이클을 최신화하지 못했습니다. "
+            f"기존 {preserved} 결과를 유지합니다."
+        )
+    return _economic_cycle_manual_refresh_result(
+        started_at=started_at,
+        status=status,
+        message=message,
+        target=target,
+        before_date=before_date,
+        after_date=after_date,
+        pipeline=pipeline,
+    )
 
 
 def run_overview_browser_auto_refresh(
