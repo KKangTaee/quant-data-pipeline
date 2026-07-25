@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-25 - Market Research 모듈 헤더는 공통 뼈대와 가변 정보 슬롯을 사용한다
+
+- User request: 경제사이클·선물매크로·심리·일정 상단의 폰트·정보 크기·디자인을 통일하고, 우측 box의 좌측 컬러 강조선은 다른 방식으로 바꾸도록 요청함.
+- Interpreted goal: 화면별 정보량은 유지하면서 이동할 때 `현재 판단 → 설명 → 기준 정보`를 같은 순서와 시각 계층으로 읽게 한다.
+- Analysis result: 공통 shell, 34/28px title, 선택형 action/fact/meta slot이 적합하다. fact box는 중립 border를 쓰고 상태 의미는 실제 상태값 내부의 6px 점과 문구 색으로만 표현한다.
+- Follow-up: 네 adapter와 production bundle을 전환하고 전체 `3/3차`, React DOM 9개, Python 33개, 1280·760·420px actual Browser QA를 완료했다. 계산·payload·DB·loader·collector는 변경하지 않았다.
+
 ### 2026-07-25 - AAII 하루 간격 점은 별도 설문이 아니라 canonical 날짜 중복이다
 
 - User request: Sentiment의 AAII graph에서 6/17·18, 7/8·9처럼 하루 간격의 동일 배율 점이 의도된 스펙인지 확인하고 개선하도록 요청함.

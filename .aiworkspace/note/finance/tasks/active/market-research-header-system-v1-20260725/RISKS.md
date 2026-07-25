@@ -1,11 +1,16 @@
 # Risks
 
-## Open
+## Resolved
 
-- 네 화면은 독립 Vite bundle이므로 공통 source import가 각 build와 static distribution에 모두 포함되는지 검증해야 한다.
-- 심리의 긴 headline과 선물매크로 action 2개가 420px에서 충돌하지 않는지 actual Browser QA가 필요하다.
-- 일정은 기존 두 카드 hero를 한 shell로 바꾸므로 count grid와 다음 command panel 사이의 여백 회귀를 확인해야 한다.
-- 경제사이클 payload에서 월중 추정 여부를 상단 meta에 투영할 때 기존 의미를 확장하거나 새 판단을 만들지 않아야 한다.
+- 네 독립 Vite bundle이 공통 source를 정상 포함하고 production build를 완료했다.
+- 심리의 긴 headline과 선물매크로 action 2개는 420px에서 overflow 없이 stack된다.
+- 일정의 header 이후 count / command 흐름과 경제사이클의 기존 payload 의미를 보존했다.
+- fact box 좌측 강조선은 제거됐고 상태 점은 실제 상태 fact에만 표시된다.
+
+## Known Unrelated Baseline
+
+- broad service suite의 Backtest, AAII parser, 구형 선물 thermometer 관련 18개 실패는 이번 구현 이전부터 존재한 baseline이다.
+- 사용자가 이번 범위에서 제외하도록 승인했으며 scoped 회귀는 모두 통과했다.
 
 ## Guardrails
 

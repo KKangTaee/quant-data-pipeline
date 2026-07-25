@@ -24,3 +24,22 @@
 - `superpowers:writing-plans`
   - 공통 contract, 두 번의 adapter 전환, 네 static build, Browser QA / docs closeout의 5개 task로 구현 계획을 작성했다.
   - spec coverage, placeholder, type / property name 일관성을 자체 검토했다.
+- `npm test && npx tsc --noEmit` in `market_research_header`
+  - 공통 component와 경제사이클·선물매크로·심리·일정 adapter의 actual DOM test `9 passed`
+  - TypeScript typecheck 통과
+- scoped Python regression
+  - `tests/test_market_context_economic_cycle.py`, `tests/test_overview_futures_macro_short_horizon.py`, `tests/test_service_contracts.py`
+  - `33 passed, 869 deselected`
+  - 새 공통 구조와 충돌하던 legacy hero class assertion만 현재 계약에 맞게 정렬
+- production build
+  - `economic_cycle_workbench`, `futures_macro_workbench`, `sentiment_workbench`, `events_workbench` 네 Vite build 통과
+  - Events는 local `node_modules`가 없어 `npm install` 후 빌드했으며 lockfile 변경 없음
+- actual Browser QA
+  - 선물매크로 1280px: title 34px, header overflow 없음, fact 3개 중 상태 점 1개
+  - 420px: 네 화면 title 28px, header/frame overflow 없음
+  - 760px: 일정 title 34px, header/frame overflow 없음
+  - 상태 점: 경제사이클 1, 선물매크로 1, 심리 2, 일정 0
+  - 모든 fact box의 left/top border color·width가 동일하고 console warning/error 0
+  - generated screenshot: `market-research-header-system-v1-qa.png`
+- `git diff --check`
+  - 구현·bundle·문서 whitespace error 없음

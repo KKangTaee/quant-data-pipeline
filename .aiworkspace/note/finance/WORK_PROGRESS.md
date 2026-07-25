@@ -10,6 +10,12 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-25 - Market Research 공통 헤더 완료
+
+- 경제사이클·선물매크로·심리·일정 첫 화면을 공통 `ResearchHeader` shell로 통일하고 화면별 데이터 의미와 refresh dispatch는 유지했다.
+- 우측 fact box의 좌측 컬러 강조선을 없애고 중립 border를 사용하며, 실제 상태값만 작은 점과 문구 색으로 구분한다.
+- React DOM 9개, 관련 Python 33개, 네 production build와 1280·760·420px actual Browser QA를 통과했다. 전체 roadmap `3/3차` 완료. 상세는 [active task](./tasks/active/market-research-header-system-v1-20260725/STATUS.md)를 본다.
+
 ### 2026-07-25 - AAII canonical 동일 주차 중복 정리 완료
 
 - complete AAII XLS capture가 incoming 날짜 범위를 official workbook date set으로 canonical reconcile한 뒤 UPSERT하도록 source transaction을 보강했다.

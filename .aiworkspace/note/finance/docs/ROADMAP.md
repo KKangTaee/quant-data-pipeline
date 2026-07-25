@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-23
+Last Verified: 2026-07-25
 
 ## Current State After Master Merge
 
@@ -83,6 +83,14 @@ Market Research Editorial Navigation V2도 전체 `3/3차` 구현과 closeout을
 - 경계: 3-family/7-view label, React event, Python query/session/legacy normalization, fallback, module/DB/provider 경계는 변경하지 않았다.
 - QA: Python 55개(+2 subtests), React 4개/typecheck/build/py_compile/diff check와 1280·760·420px actual 7-view navigation·overflow·keyboard focus·console QA를 통과했다.
 - 상세: `tasks/active/market-research-editorial-navigation-v2-20260722/STATUS.md`.
+
+Market Research Header System V1도 전체 `3/3차` 구현과 closeout을 완료했다.
+
+- 표현: 경제사이클·선물매크로·심리·일정 첫 화면을 같은 34px desktop / 28px mobile title, 선택형 action, fact, meta slot을 가진 공통 React shell로 통일했다.
+- 상태: fact box는 네 방향이 같은 중립 border를 사용하고, 실제 상태값만 6px 점과 문구 색으로 구분한다. 일정의 다음 이벤트·날짜·관측 범위 같은 사실값에는 상태 점을 표시하지 않는다.
+- 경계: 화면별 payload 의미, refresh action id, Streamlit Python dispatch, 계산·DB·loader·collector는 변경하지 않았다.
+- QA: React DOM 9개와 관련 Python 33개, 네 production build를 통과했다. actual 1280·760·420px에서 title 계층, fact border, 상태 점, overflow와 console error 0을 확인했다.
+- 상세: `tasks/active/market-research-header-system-v1-20260725/STATUS.md`.
 
 Portfolio Monitoring React Command Center V1은 전체 `6/6차` 구현과 closeout을 완료했다.
 
