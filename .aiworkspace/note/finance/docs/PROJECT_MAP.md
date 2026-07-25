@@ -1,288 +1,199 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-07-25
+Last Verified: 2026-07-26
 
-## Project Summary
+## System At A Glance
 
-`finance`는 MySQL-backed data ingestion, market context dashboard, strategy backtest runtime, Practical Validation / Final Review evidence workflow, Operations Portfolio Monitoring을 함께 가진 quant research workspace다.
+`finance`는 Python domain/runtime과 Streamlit application shell, React +
+TypeScript workbench를 결합한 DB-backed quant research workspace다.
 
-현재 merged product map은 네 경계를 특히 중요하게 본다.
+```text
+External Sources
+  -> finance/data
+  -> MySQL
+  -> finance/loaders
+  -> finance domain / app services / app runtime
+  -> Streamlit route and command boundary
+  -> React workbench or Streamlit fallback
 
-- Data / macro / sentiment / futures는 `finance/data/* -> MySQL -> finance/loaders/*` 흐름을 유지한다.
-- Financial statements now use EDGAR detailed statement ingestion and statement shadow tables as the canonical source path. Broad yfinance fundamentals / factors remain legacy compatibility for old replay or explicit comparison only.
-- Backtest strategy engine과 daily swing research lane은 `finance/*`, `app/runtime/*`, `app/services/*`가 소유하고, Streamlit UI는 payload / render / session state에 집중한다.
-- Practical Validation / Final Review / Portfolio Monitoring은 compact evidence와 read-only service model을 공유하되, approval / broker / auto rebalance 경계는 넘지 않는다.
-- Research > Market Research는 `시장 환경 | 지수 가치평가 | 종목 리서치` 목적형 deep-research surface이며 validation gate나 monitoring signal을 만들지 않는다. 경제 사이클 숫자는 자체 rolling-origin publication gate를 통과한 horizon에만 표시한다.
-- Research > Institutional Holdings는 Market Movers와 분리된 SEC Form 13F institutional research surface다. 정상 화면은 React modular research studio가 소유하고 Streamlit은 route / DB payload / explicit server event / unavailable fallback만 담당한다.
-- Finance Console의 browser root `/`는 Today React workbench가 소유한다. 시장 판단 근거는 기존 저장 결과의 compact read-only projection이다. 대표 포트폴리오는 confirmed 정규장 OPEN에서만 Python background coordinator가 direct stock·ETF quote를 5분 cadence로 수집·DB 저장하며, React는 DB-backed `portfolio.live`만 표시한다. Today는 static context/actions와 portfolio-only live island로 나뉘고, 15초 heartbeat는 OPEN/EOD-active island에만 존재한다. historical EOD curve, validation gate, monitoring signal, broker/order는 바꾸지 않는다. 판단 근거의 signal/risk/data-quality, 일별 저장 종가·누적 수익률, official calendar와 live/EOD 의미는 Python service가 소유하고 React는 시각화, local clock/countdown, allow-listed navigation/phase event만 소유한다.
+Workflow decisions and reusable setup
+  <-> append-only / preserved JSONL stores
+```
 
-## Top-Level Structure
+핵심 방향은 `Ingestion -> DB -> Loader / Service -> Runtime -> UI`다. UI에서
+provider를 직접 조회하지 않으며 React가 validation, Final Review decision이나
+canonical persistence를 독자적으로 계산하지 않는다.
+
+## Layer Ownership
+
+| Layer | Main Path | Responsibility |
+|---|---|---|
+| Data collection | `finance/data/` | 외부 source adapter, 원천 정규화와 MySQL write |
+| DB schema / client | `finance/data/db/` | MySQL schema와 connection / transaction helper |
+| Loader | `finance/loaders/` | 기준일·coverage를 반영한 DB read path |
+| Domain transform | `finance/transform.py` | signal, factor, ranking과 preprocessing |
+| Strategy simulation | `finance/strategy.py` | portfolio simulation과 rebalance logic |
+| Strategy orchestration | `finance/engine.py` | transform, strategy와 result 실행 orchestration |
+| Performance | `finance/performance.py` | return, drawdown과 portfolio performance metric |
+| App jobs | `app/jobs/` | ingestion과 bounded background / manual job orchestration |
+| App services | `app/services/` | Streamlit-free use case, read model, command, evidence interpretation |
+| App runtime | `app/runtime/` | backtest runner, result bundle과 workflow store boundary |
+| Streamlit web | `app/web/` | navigation, page adapter, session, server command와 React bridge |
+| React workbench | `app/web/streamlit_components/`, `app/web/components/` | local interaction, chart, responsive presentation과 explicit intent |
+| Tests | `tests/` | domain, service, persistence와 UI-boundary regression contract |
+
+### Repository Support Paths
 
 | Path | Responsibility |
 |---|---|
-| `finance/data/` | 외부 데이터 수집, ETF provider snapshot, FRED macro 수집 |
-| `finance/data/db/` | MySQL schema definition과 DB helper |
-| `finance/loaders/` | DB 데이터를 backtest / validation runtime 입력으로 읽는 loader |
-| `finance/engine.py` | strategy orchestration |
-| `finance/strategy.py` | portfolio simulation / rebalancing logic |
-| `finance/swing.py` | short-term swing strategy simulation / scanner logic |
-| `finance/transform.py` | signal, factor, ranking transform |
-| `finance/performance.py` | 성과 요약과 portfolio performance metric |
-| `finance/indicators.py` | reusable indicator helpers such as simple rolling ATR / True Range |
-| `finance/swing_macro.py` | Risk-On Momentum 5D macro hard filter / ranking penalty evaluation |
-| `finance/swing_analysis.py` | Risk-On Momentum 5D comparison, sensitivity, stability, trade-cause, quality warning analysis |
-| `app/services/` | Streamlit-free application service boundary. UI에서 runtime / engine을 직접 호출하기 전에 use-case 단위 dispatch와 error normalization을 담당 |
-| `app/services/portfolio_monitoring/` | Portfolio Monitoring group/item commands—including end/reopen and direct-stock position correction/trade revision lifecycle—DB persistence, cashflow-aware valuation, catalog, exposure/diagnosis, macro context, history/calibration, workspace-v2 React read model. See `docs/architecture/PORTFOLIO_MONITORING_REACT_COMMAND_CENTER.md` |
-| `app/runtime/` | Streamlit-free runtime / repository boundary. DB-backed backtest wrapper, JSONL registry / saved setup helper, selected portfolio runtime model |
-| `app/workspace_paths.py` | active worktree root와 canonical `.aiworkspace/note/finance` JSONL / docs / artifact 경로 상수 |
-| `app/web/` | Streamlit Finance Console 화면, form, session state, routing, user feedback |
-| `app/jobs/` | Ingestion console에서 실행하는 job wrapper |
-| `tests/` | service contract와 workflow helper 회귀 검증을 위한 focused Python tests |
-| `.aiworkspace/` | AI / Codex 작업 문서와 plugin source의 top-level workspace |
-| `.aiworkspace/note/finance/docs/` | 장기 프로젝트 지식 |
-| `.aiworkspace/note/finance/researches/` | 제품 방향, 벤치마킹, 기능 후보 리서치 산출물 |
-| `.aiworkspace/note/finance/reports/backtests/` | backtest 결과 report, 전략 hub, 후보 근거, validation report |
-| `.aiworkspace/note/finance/tasks/active/` | 실행 task 기록과 retained completed work record. current active 판정은 `STATUS_MANIFEST.md` / README / roadmap을 먼저 본다 |
-| `.aiworkspace/note/finance/phases/active/` | phase 단위 계획과 retained board 기록. current active phase 판정은 `STATUS_MANIFEST.md` / README / roadmap을 먼저 본다 |
-| `.aiworkspace/note/finance/registries/` | workflow JSONL registry |
-| `.aiworkspace/note/finance/saved/` | reusable saved portfolio setup |
-| `.aiworkspace/plugins/quant-finance-workflow/` | repo-local finance Codex skill / helper script source |
+| `app/workspace_paths.py` | active worktree 기준 docs / registry / saved / artifact 경로 |
+| `.aiworkspace/note/finance/docs/` | durable product, architecture, flow, data와 runbook |
+| `.aiworkspace/note/finance/tasks/active/` | implementation / docs / QA task 기록 |
+| `.aiworkspace/note/finance/phases/active/` | user-approved multi-task phase 통합 기록 |
+| `.aiworkspace/note/finance/researches/active/` | product direction / benchmark / feature research |
+| `.aiworkspace/note/finance/reports/backtests/` | 사람이 읽는 strategy / candidate / validation report |
+| `.aiworkspace/note/finance/registries/` | append-only workflow records |
+| `.aiworkspace/note/finance/saved/` | reusable user portfolio setup |
 
-## Main Entry Points
+## Product Surface Entry Points
 
-| Area | Entry Point |
-|---|---|
-| Finance Console shell / navigation | `app/web/streamlit_app.py`; `Research / Portfolio / Data / Help` 목적형 navigation, Today 기본 root `/`, 기존 상세 URL compatibility를 소유한다 |
-| Today home | `app/services/today.py`가 `today_home_v4` 전체 projection과 `today_portfolio_island_v1`용 portfolio-only projection을 소유한다. `app/services/today_market_session.py`가 DST-safe schedule을, `app/services/portfolio_monitoring/intraday_refresh.py`가 group scope·freshness·live valuation·EOD handoff를, `app/web/today_intraday_auto_refresh.py`가 single-worker coordinator를 소유한다. `app/web/today_page.py`는 static context/actions와 OPEN/EOD-active conditional portfolio fragment를 연결한다. React는 isolated local clock/countdown, portfolio presentation, allow-listed navigation/phase event를 담당한다 |
-| Data > Data Operations console | `app/web/ingestion_console.py` remains the compatibility facade. Active UI body lives under `app/web/ingestion/`: `page.py` owns the shell / session-state boundary, `registry.py` owns active vs legacy compatibility action classification, `guides.py` owns purpose-first job guide metadata, `styles.py` owns responsive CSS, `results.py` owns pure result summaries, `dispatcher.py` owns UI action dispatch / read-only diagnostic job wrapping, and `sections.py` owns the `일상 운영 / 검증 데이터`, `수동 복구 / 진단`, `실행 기록 / 결과` workbench renderers. Broad yfinance fundamentals / factors remain compatibility-only |
-| Data > Data Operations read-only diagnostics service | `app/services/ingestion_diagnostics.py` |
-| SEC Form 13F official dataset / identity ingestion | `finance/data/institutional_13f.py` parses official SEC quarterly Form 13F ZIP datasets and UPSERTs manager / filing / holding / legacy CUSIP-symbol map / refresh status tables. `finance/data/institutional_13f_mapping.py` separately resolves stored latest CUSIP/CINS through free OpenFIGI v3 US Equity mapping into `institutional_13f_identifier_resolution`; anonymous access is default and `OPENFIGI_API_KEY` is optional. `app/jobs/ingestion_jobs.py`, `app/web/ingestion/registry.py`, `dispatcher.py`, `guides.py`, and `sections.py` expose both explicit Ingestion actions. |
-| Research > Institutional Holdings | `app/web/institutional_portfolios.py` is the thin route / DB-service payload / explicit manager·security·popularity·price·SEC-refresh event adapter and renders legacy controls only when the React bundle is unavailable. `app/web/institutional_portfolios_react_component.py` and `app/web/streamlit_components/institutional_portfolios_workbench/` own the `institutional_portfolios_workbench_v2` normal UI: `InstitutionalStudioShell` desktop research rail / 980px 이하 drawer, canonical `포트폴리오 맥락 / 전체 보유 / 종목 상세 / 기관 보유 랭킹`, manager/data controls, context hero, allocation, comparison readiness, separated mapping / performance coverage, full holdings explorer with client-side 50-row pagination / search / filters / sort, unresolved guardrail, explicit security search, selected-security DB-backed OHLCV chart / holder list, sector exposure, performance and popularity. `app/services/institutional_portfolios.py` owns Streamlit-free v2 payloads and refresh action/result contract. `finance/loaders/institutional_13f.py` owns DB reads and applies `OpenFIGI mapped/ambiguous > legacy exact issuer-name > unresolved` identity precedence without provider fetch. |
-| Financial statement source migration path | EDGAR collection / raw ledger: `finance/data/financial_statements.py`; statement shadow rebuild: `finance/data/fundamentals.py`, `finance/data/factors.py`; loaders: `finance/loaders/financial_statements.py`, `finance/loaders/fundamentals.py`, `finance/loaders/factors.py`; Ingestion job orchestration: `app/jobs/ingestion_jobs.py` with shared helper contracts in `app/jobs/ingestion/common.py`; UI entry: `app/web/ingestion_console.py` / `app/web/ingestion/page.py` |
-| Finance workspace path constants | `app/workspace_paths.py` |
-| Backtest page | `app/web/backtest_page.py`; React workflow top shell을 먼저 렌더링하고 기존 Python stage dispatcher에 위임한다. 초기 `st.title` / 설명 / native `st.pills`는 active route가 아니다 |
-| Backtest workflow top shell | `app/services/backtest_workflow_shell.py`가 Level1~3 순서, current context와 `select_stage` intent truth를 소유하고, `app/web/backtest_workflow_shell.py`가 기존 route request helper로 검증된 intent만 전달한다. `app/web/components/backtest_workflow_shell/`은 같은 read model의 React presentation / ResizeObserver를, `app/web/backtest_workflow_shell_panel.py`는 Python fallback을 소유한다 |
-| Backtest workflow state boundary | `app/web/backtest_state.py` |
-| Single Backtest execution service | `app/services/backtest_execution.py` |
-| Single Backtest payload normalization service | `app/services/backtest_single_payload.py` |
-| Manual Compare execution service | `app/services/backtest_compare_execution.py` |
-| Compare runner catalog service | `app/services/backtest_compare_catalog.py` |
-| Runtime runner ownership catalog | `app/runtime/backtest/runner_catalog.py` |
-| Backtest result read model service | `app/services/backtest_result_read_model.py` |
-| Backtest Data Trust price refresh service | `app/services/backtest_price_refresh.py`; active ticker-change repair가 있으면 source ticker를 유지하고 collection ticker만 resolved symbol로 바꾸며, `source_range` / `resolved_range` split metadata를 plan/details에 남긴다 |
-| Final Review observation refresh service | `app/services/backtest_final_review_refresh.py`; current validation의 저장 curve 종료일, 최신 완료 NYSE session, source별 DB 공통 가격일과 제한 종목을 구분한다. 사용자가 요청하면 기존 가격 수집 → 동일 source replay → 새 Practical Validation append를 Python에서 순서대로 수행하며 기존 row를 재작성하지 않는다 |
-| Backtest strict preset / factor readiness / price freshness form helpers | `app/web/backtest_common.py`, `app/web/components/backtest_factor_readiness_panel/`, `app/web/components/backtest_price_freshness_preflight/`; Factor Readiness ticker-change candidate diagnostics / repair action glue 포함 |
-| Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
-| Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
-| Reference canonical catalog / drift guard | `app/services/reference_center.py`; curated 24-item user-facing catalog, stable IDs, 6개 journey, search projection, relation/destination/current-surface/legacy-label contract를 소유하며 Streamlit과 내부 `GLOSSARY.md` runtime parsing에 의존하지 않는다 |
-| Reference page / React bridge | `app/web/reference_center.py`, `app/web/reference_center_react_component.py`; `/reference?item=<id>` initial detail, invalid-link recovery, allowlisted `navigate_to_surface` intent와 JSON-safe custom-component boundary를 소유한다 |
-| Reference React workbench | `app/web/streamlit_components/reference_center_workbench/`; local search/filter/detail/related-item state, desktop drawer, 520px 이하 sheet와 production `component_static`을 소유한다. provider/DB/registry/session mutation은 하지 않는다 |
-| Reference contextual help service | `app/services/reference_contextual_help.py`; Overview, Institutional Portfolios, Ingestion, Backtest Analysis, Practical Validation, Final Review의 6개 surface를 stable Reference item ID로 연결한다 |
-| Reference contextual help renderer | `app/web/reference_contextual_help.py`; configured Reference `st.Page`와 `query_params={"item": ...}`만 사용한다. catalog compatibility는 유지하지만 active Market Research shell은 page-global contextual panel을 렌더링하지 않는다 |
-| Backtest Compare visual components | `app/web/backtest_compare/components.py` |
-| Practical Validation service | `app/services/backtest_practical_validation.py`; includes Practical Validation result build wrapper, source/result registry append, provider gap collection orchestration, and reusable read-only CNN / AAII market sentiment context overlay for downstream surfaces. Final Review first-read does not render this overlay |
-| Practical Validation source/profile/selection-history service helper | `app/services/backtest_practical_validation_source.py` |
-| Practical Validation curve service helper | `app/services/backtest_practical_validation_curve.py` |
-| Practical Validation curve context service helper | `app/services/backtest_practical_validation_curve_context.py` |
-| Practical Validation stress/sensitivity service helper | `app/services/backtest_practical_validation_stress_sensitivity.py` |
-| Backtest temporal validation service | `app/services/backtest_temporal_validation.py` |
-| Practical Validation provider context service helper | `app/services/backtest_practical_validation_provider_context.py` |
-| Practical Validation module gate service | `app/services/backtest_practical_validation_modules.py` |
-| Practical Validation status policy service | `app/services/backtest_validation_status_policy.py` |
-| Practical Validation board map service | `app/services/backtest_practical_validation_board_registry.py` |
-| Practical Validation workspace read model service | `app/services/backtest_practical_validation_workspace.py`; includes Flow 3 conclusion fields, Flow 4 criteria status summary groups, criteria-level resolution guides with numbered action steps, and Flow 4 display-only `data_action_board` built from provider collection plan / compact evidence rows |
-| Practical Validation Level2 Decision Workspace service | `app/services/backtest_practical_validation_decision_workspace.py`; root issue를 verified / measured caution / validated caution / resolve-now / engineering-required / Final Review handoff로 한 번만 투영하고 `source_required / replay_required / resolution_required / ready_with_handoff / ready`, top-level `validation_result_id`, summary counts, four-step actions를 만든다. accepted limit / final decision / monitoring transfer는 측정값이 있어도 Final Review handoff로 유지한다 |
-| Practical Validation explanation service | `app/services/backtest_practical_validation_explanation.py`; raw audit row를 사용자 언어의 검증명 / 확인 결과 / 의미 / 다음 행동으로 바꾸고 5개 evidence category와 secondary technical trace를 만든다 |
-| Construction risk audit service | `app/services/backtest_construction_risk_audit.py` |
-| Risk contribution audit service | `app/services/backtest_risk_contribution_audit.py` |
-| Component role / weight audit service | `app/services/backtest_component_role_weight_audit.py` |
-| Practical Validation method-strength audit service | `app/services/backtest_validation_efficacy.py` |
-| Data coverage audit service | `app/services/backtest_data_coverage_audit.py` |
-| Backtest realism audit service | `app/services/backtest_realism_audit.py` |
-| Backtest evidence read model service | `app/services/backtest_evidence_read_model.py`; investability packet, selected-route gate, decision guide, legacy investment report / scorecard / dossier compatibility read model을 유지한다. current Final Review first-read projection owner는 아니다 |
-| Final Review Decision Brief service | `app/services/backtest_final_review_decision_brief.py`; eligible current candidate를 `decision_brief_v1`으로 투영하고 exact-common cumulative / benchmark, underwater, execution observation, measured-only strength / weakness / trait, structured Monitoring condition, canonical route capability와 compact `decision_brief_snapshot_v1`을 만든다. replay, provider fetch, registry append는 수행하지 않는다 |
-| Final Review guidance service | `app/services/backtest_final_review_guidance.py`; legacy investment report compatibility용 10개 Monitoring pattern read model을 유지한다. current Decision Workspace는 이 service를 렌더하지 않으며 provider fetch / validation rerun / persistence도 수행하지 않는다 |
-| Final Review selected-route policy service | `app/services/backtest_final_review_policy.py` |
-| Market Research render | `app/web/overview_dashboard.py`는 compatibility wrapper이고 active shell은 `app/web/overview/page.py`다. `app/web/overview/market_research_navigation_react_component.py`와 `app/web/streamlit_components/market_research_navigation/`가 full-width editorial header, divider+underline `시장 환경 | 지수 가치평가 | 종목 리서치` family text tab, unframed family-local view rail과 compact active pill의 primary React presentation·production static bundle을 소유한다. `app/web/overview/navigation.py`는 payload/event allowlist, `economic-cycle`, `futures-macro`, `sentiment`, `events`, `sp500`, `market-movers`, `us-stock` 7개 canonical view, URL/session/legacy query normalization과 lazy renderer를 소유한다. changed-view event는 state 저장 후 rerun해 iframe payload와 본문을 동기화한다. static bundle이 없을 때만 `page.py`의 semantic header와 native Streamlit two-level controls가 fallback으로 렌더링된다. `app/web/streamlit_components/market_research_header/`는 경제사이클·선물매크로·심리·일정 첫 화면의 공통 title/fact/meta/action shell을 소유하며, 각 독립 Vite bundle이 source를 포함한다. fact box는 중립 border를 사용하고 실제 상태값만 작은 점과 문구 색으로 구분한다. 각 module은 기준일·자료상태·refresh action과 payload 의미를 계속 소유하며 shell은 page-global market-session banner, Reference panel, 운영 진단 패널을 반복하지 않는다. Market Movers selected symbol handoff는 provider fetch/write 없이 유지하고 drawer/sticky, `Futures Monitor`, `Sector / Industry` standalone surface는 primary navigation에 없다 |
-| Overview market intelligence service | `app/services/overview/*` owns the Streamlit-free Overview read-model implementation by domain: `market_context.py` for cockpit / source confidence; `market_movers.py` for movers / group leadership / breadth / date windows; `market_movers_read_model.py`, `market_movers_readiness.py`, and `market_movers_group_flow.py` for canonical taxonomy, collection readiness, current group flow, and market-cap bellwethers; `economic_cycle_freshness.py` for the DB-only comparison between the latest stored intramonth cutoff and the latest eligible weekday; `sp500_valuation_freshness.py` for the DB-only comparison between stored `^GSPC` price date and the latest completed NYSE session; `market_mover_research.py` for financial factor/current valuation contracts; `events.py` for event calendar / macro week lane; `sentiment.py` for CNN / AAII sentiment; `data_health.py` for collection ops / ingestion handoff; `why_it_moved.py` for the selected-symbol research façade and catalyst metadata; `market_interest.py` for selected-symbol market-interest evidence/source-policy links; and `ia.py` for static IA closeout guidance. The old aggregate compatibility service is removed; app/tests import the owning domain service directly. |
-| Overview Sentiment workbench | `app/services/overview/sentiment.py` owns the independent CNN market-behavior / AAII investor-survey interpretation, fixed 180-day current context, full canonical chart history, coverage metadata, watch conditions, and the 1W/1M publication gate. `app/web/overview/sentiment_helpers.py` projects `sentiment_react_workbench_v2`; `app/web/streamlit_components/sentiment_workbench/` renders the Hero, equal current-evidence boxes, shared 6M/1Y/full controls, a vertically stacked CNN chart plus AAII response/spread tab panel, unavailable horizon cards, and collapsed detail/raw evidence. `finance/data/sentiment_store.py` atomically preserves latest canonical and immutable source snapshots, while `finance/loaders/sentiment.py` provides UTC as-known reads. All time series preserve actual timestamps; CNN components are internal CNN evidence rather than another vote, and the workbench does not create a synthetic score, unvalidated probability, validation gate, monitoring signal, or trade action. |
-| Overview Market Movers workbench | The active React-first surface is assembled in `app/web/overview/market_movers_helpers.py` through the pure `market_movers_decision_ui.py` adapter and rendered by `app/web/streamlit_components/market_movers_workbench/` as `MarketMoversDecisionWorkbench`; the old Streamlit ranking/breadth/research composition remains only when the React component is unavailable. Phase-3 semantics are owned by the split Overview service modules and assembled by `app/web/overview/market_movers_payloads.py` as `market_movers_decision_payload_v1`: canonical sector filter, metric-specific collection readiness, sector/industry current flow, market-cap bellwether Top 3, and selected research v2. The one-shell loads only the requested sector/industry + daily/weekly/monthly breadth combination and reuses the result in coverage-scoped session state; ranking selection reuses that breadth instead of recalculating every group. The Market Context/Futures Macro-aligned integrated blue-gray surface includes hero/trust, current/market/data/manual-refresh timing, bounded manual actions, payload-derived market pulse, unified ranking/breadth cards, quick research, and expandable price/financial/events report-family tabs. Non-daily timing separates the latest completed NYSE session used as the EOD refresh target from the coverage-qualified ranking data basis; the price-history manual action remains visible even when preflight is current, while universe refresh only updates membership/liquidity criteria. Desktop ranking/breadth is `1.62fr / 1fr`, chart/readout is `7fr / 3fr`, and both collapse below 900px; keyboard focus uses explicit `:focus-visible`. Financial report frequency, group, and factor are independent controls; annual/quarterly trends are capped at 10/40 observations and support bar/line display. Long financial history uses point-count-based intrinsic SVG width, native horizontal scroll plus pointer drag, period ticks (`YYYY Qn` / `YYYY`), and exact period-end/value hover and keyboard focus. Price readout rows keep only semantic positive/negative/neutral text tone without per-row tint or primary accent line. `why_it_moved.py` no longer repeats current price across historical EPS; historical PER is absent, while current PER requires four consecutive PIT reported diluted-EPS quarters. It also exposes up to five PIT-safe rows from `finance_fundamental.nyse_financial_statement_filings`. News/Korean-news/latest SEC metadata remain button-triggered, selected-symbol-scoped, and session-only. UI components do not read providers or DB directly. Existing refresh/repair actions remain behind the Overview Python action façade and raw operations evidence is not a primary product surface. |
-| Overview historical analog service | `app/services/overview_market_context_analog.py`; sector leadership -> sector ETF proxy -> SPY-relative historical distribution read model. Supports selected as-of bounded replay and 5D / 20D / monthly pattern windows using existing DB prices plus current universe / sector metadata. Latest mode can receive a visible daily sector leadership snapshot from `app/web/overview_dashboard_helpers.py`, so the analog anchor sector can match the sector pressure map; selected as-of still loads a selected-date daily sector snapshot. `pattern_window` changes the similarity window, not the sector leadership source. The read model exposes requested vs effective as-of alignment, limiting symbols, basis warnings, and a bounded `overview_historical_analog_ohlcv` repair action when common daily price coverage is older than the selected date. As of `overview-futures-macro-tab-split-v1-20260624`, the default `Market Context` entry does not render historical analog controls or load this read model; it is retained as an opt-in read model / helper until a later approved surface decision. `app/web/overview/components/market_context.py` renders the broad result as compact basis summary, collapsed calculation-boundary detail, method line, summary strip, and a core 5D / 20D / 60D matrix across sector ETF / SPY / QQQ / TLT / GLD, with raw detail tables collapsed. Macro comparison remains a separate compact section and is hidden when broad analog rows are unavailable. The Macro section separates `Sector ETF vs SPY relative strength` as the broad basis from additional GLD / Rate Pressure futures conditions. FRED rates / events / sentiment hard conditioning remain disabled or excluded |
-| Overview Macro Context Cockpit read model | `app/services/overview/market_context.py` owns `build_overview_macro_context_cockpit` and composes the split domain services for movement, breadth, sentiment, events, and data state; rendered by `app/web/overview/components/market_context.py` and loaded through `app/web/overview_dashboard_helpers.py`. The default Market Context helper calls the cockpit with `include_futures_macro=False`, `include_historical_analog=False`, and direct Market Context refresh scope, so first entry reads movement, breadth, sentiment, events, and data state without running futures macro historical validation, historical analog, Top1000 / Top2000, or Futures refresh actions. Full futures macro diagnosis remains available when explicitly requested and is user-facing through `Futures Macro`. `brief_rows` is the user-facing Market Context brief sequence for movement, breadth, and event background in light mode; the full mode can include Futures/Macro backdrop. During open trading the brief can be `오늘의 시장 브리프`; during weekends / holidays it becomes `마지막 거래일 시장 브리프` and uses the previous trading date as basis. The sector pressure map normalizes provider sector aliases into the canonical 11 display sectors and should render all 11 as equal tiles; value and color, not tile size or omission, communicate pressure. Events remain in event timeline / source evidence / compatibility findings unless a future approved cause-analysis dimension changes that boundary. `refresh_plan` maps only direct Market Context resolvable or partially resolvable data issues to bounded Overview action ids; Top1000 / Top2000 and Futures refresh remain owned by Market Movers / Futures Macro or Ingestion surfaces. Non-actionable caveats and closed-session intraday elapsed-age stale states stay excluded; full Market Context refresh remains a secondary fallback limited to S&P 500 movers, sentiment, and event calendars. Top `자료 상태` should count actionable refresh items, not Events reference caveats or Data Health management meta. `context_findings` / `next_checks` remain compatibility payloads and should not be rendered as a default user-facing action checklist |
-| Overview Events / Macro Week read model | `app/services/overview/events.py` owns `build_market_events_snapshot`, `build_overview_macro_week_lane`, and `build_events_workbench_payload`; active tab entry is `app/web/overview/events.py`, with tab-local UI glue and Python refresh dispatch in `app/web/overview/events_helpers.py`, React wrapper in `app/web/overview/events_react_component.py`, React/Vite display component in `app/web/streamlit_components/events_workbench/`, and lower visual fallback components in `app/web/overview/components/events.py`. Event context reads recent 7D plus family-bounded upcoming rows and prioritizes FOMC / CPI / PPI / Employment / GDP over earnings for scan surfaces. `market_events_snapshot_v2` exposes source-neutral taxonomy columns for event family, subtype, universe scope, source authority, and event time; `events_workbench_v2` adds service-owned filter views, issuer-grouped earnings, KST display semantics, and collection-coverage evidence. React renders the A layout as three brief cards followed by a calendar-dominant desktop grid, selected-day detail, consistently filtered density, and collapsed support evidence. Its primary `refresh_official` action runs FOMC / Macro / Market Structure only; slow hybrid earnings collection remains a separate support action, and a per-result completion token closes pending state after every run. It may switch service-provided views and show local detail interactions but must not fetch providers, read DB directly, invent signal copy, or execute refresh actions outside Python helper dispatch. `finance_meta.market_event_collection_coverage` distinguishes checked-no-event from not-checked for priority earnings, the persisted S&P 500 cycle, and official year coverage; this evidence remains secondary to the user workflow. GOOG / GOOGL처럼 같은 issuer로 확인된 복수 class는 raw ticker evidence를 유지하면서 한 issuer event로 표시한다. When the React build exists, the legacy Streamlit Type selector and refresh result expander are hidden; `Agenda / Calendar / Quality / Raw` remain fallback/lower evidence |
-| Overview Data Health Ingestion Handoff read model | `app/services/overview/data_health.py` owns `build_collection_ops_snapshot` and `build_overview_data_health_ingestion_handoff`; retained as a read-only helper / historical task artifact. Collection ops rows now expose `Scope` / coverage counts that separate direct Market Context sources from reference or dedicated-tab sources such as Top1000 / Top2000 and Futures. Current user-facing Overview no longer has a `Data Health` tab; practical data-health navigation is Market Context source / refresh evidence plus `Data > Data Operations > 실행 기록 / 결과` |
-| Overview Source Confidence Catalog read model | `app/services/overview/market_context.py` owns `build_overview_source_confidence_catalog`; embedded in the macro cockpit model and rendered by `app/web/overview/components/market_context.py`. It exposes `source_role`, `actionability`, and `counts_for_status` so direct brief sources, reference limitations, and management meta are separated. Futures source confidence is included only when the cockpit explicitly includes futures macro. Events estimate caveats are `참고 제한`; Data Health is `관리 메타`; only actionable source rows count as unresolved `자료 확인 필요` |
-| Overview IA Closeout guide | `app/services/overview/ia.py` via `load_overview_ia_closeout_model`, imported through `app/web/overview_dashboard_helpers.py` for compatibility; now documents market-context tabs plus external Data Repair ownership. Candidate Ops is no longer part of the Overview guide |
-| Overview futures monitor service | `app/services/futures_market_monitoring.py` |
-| Overview futures macro pattern outlook | `app/services/futures_macro_thermometer.py`, `futures_macro_pattern.py`, and `futures_macro_pattern_validation.py` own the full-history current 1D/5D/20D state plus 5D/20D conditional outlook under `pattern_outlook_v6_same_state_nested_hybrid_finalized_sessions`. `app/services/futures_macro_sessions.py` excludes Yahoo's still-moving same-date evening bar from model inputs and exposes it as pending; completed inputs are fingerprinted before the expensive nested builders. `app/services/futures_macro_snapshot.py` builds a JSON-safe compact allowlist after successful daily ingestion; `finance/data/futures_macro_snapshot.py` atomically replaces an older current when schema/algorithm semantics change, and `finance/loaders/futures_macro_snapshot.py` provides the DB-only compatible read path. Routine `일봉 갱신` collects a one-year overlap for complete symbols and uses ten years only to bootstrap symbols below the nested-validation minimum; unchanged completed inputs reuse the stored outlook. `app/web/overview/futures_macro_helpers.py` never performs render-time provider fetch or historical replay; missing/incompatible materialization asks for `일봉 갱신`, while `다시 읽기` only rereads storage. The React workbench leads with `최근 1거래일 새 충격 → 최근 5거래일 단기 방향 → 향후 5거래일 검증 결론`, shows core four family directions plus growth/safe-haven confirmations, retains recent 20D as background and the 60D regime ribbon as secondary history, and keeps future 20D/path evidence out of the default surface. `NO_EDGE` is shown as `방향 예측 근거 부족`; backend 20D evidence and full stored OHLCV remain available for compatibility/audit. |
-| Overview futures macro historical validation service | `app/services/futures_macro_validation.py` |
-| Overview futures macro pattern services | `app/services/futures_macro_pattern.py`, `app/services/futures_macro_pattern_validation.py` |
-| Overview market intelligence ingestion | `finance/data/market_intelligence.py` |
-| Overview futures monitor ingestion | `finance/data/futures_market.py` |
-| Overview market sentiment ingestion | `finance/data/sentiment.py` |
-| Overview bounded refresh action facade | `app/jobs/overview_actions.py`; includes approved Overview refresh wrappers, Market Movers ticker alias repair application, and selected-symbol Market Movers statement refresh delegation to the existing Ingestion EDGAR statement job. The Economic Cycle action is explicit-click only: it delegates to the canonical 17-series overlap refresh and accepts success only when the target intramonth snapshot is persisted. The S&P 500 valuation action is also explicit-click only: it reuses canonical OHLCV ingestion for `^GSPC` / `SPY` with `period=1mo`, `interval=1d`, then judges completion from the stored DB postcondition. It does not collect Shiller, SEP, or official EPS data. |
-| Backtest Analysis | `app/web/backtest_analysis.py`가 고정 `context`와 결과 `decision` surface를 한 Level1 shell로 orchestration한다. `app/web/backtest_analysis_workspace.py`는 Python-owned 분류 / Gate / fingerprint / intent / 저장·인계 handler 검증을 연결한다. `app/services/backtest_single_settings_workspace.py`와 web adapter는 12개 primary concrete variant의 schema / payload / deterministic preset profile / fallback을 소유한다. `app/web/components/backtest_analysis_decision_workspace/`는 Single Strategy / Portfolio Mix entry, 목적별 catalog, schema와 preset profile의 presentation, decision-first 결과와 명시적 intent만 렌더링하며 전략별 preset 숫자를 계산하지 않는다. strategy runtime과 weighted result runtime은 기존 Python 경계를 유지한다 |
-| Practical Validation | `app/web/backtest_practical_validation/page.py`; one-shell 4단계 Level2 workspace를 orchestration하고 source / profile / replay / registered resolution / save intent를 current Python state와 `validation_result_id`로 재검증한다. 동일 replay/profile의 validation result를 session에서 재사용해 React intent round-trip 동안 ID를 안정적으로 유지한다 |
-| Practical Validation UI components | `app/web/backtest_practical_validation/components.py` |
-| Practical Validation workspace panel | `app/web/backtest_practical_validation/workspace_panel.py`; 새 `practical_validation_decision_workspace_v1` read model만 소비하는 4단계 Streamlit fallback을 소유한다. legacy Flow 3 renderer는 compatibility code로 남는다 |
-| Practical Validation status display helper | `app/web/backtest_practical_validation/status_display.py`; normalizes first-read statuses for user-facing labels / tones |
-| Practical Validation Level2 React component | `app/web/components/practical_validation_decision_workspace/`; Final Review와 같은 visual token으로 질문 중심 4단계 one-shell을 렌더링하고 `select_source / select_profile_preset / run_replay / run_resolution_action / save_audit_only / save_and_move` intent만 반환한다. finding / Gate / handler existence / replay / persistence는 계산하지 않는다 |
-| Practical Validation legacy React components | `app/web/components/practical_validation_fix_queue/`, `app/web/components/practical_validation_data_action_board/`; migration compatibility 전용이며 active first-read render에서는 사용하지 않는다. 물리 삭제는 별도 usage audit 뒤 결정한다 |
-| Final Review | `app/web/backtest_final_review/page.py`; primary question, latest eligible candidate context, Python Decision Brief projection, React candidate / observation refresh / route / reason intent 소비, 자동 Decision ID, authoritative save evaluation / append와 Monitoring handoff를 소유한다. observation refresh는 가격 수집·replay·새 validation 저장을 Python에서 실행하고 성공한 validation을 다시 선택한다. current 화면은 별도 Decision Desk / confirmed-report gate / Review Queue / standalone Decision Cockpit / Evidence Appendix / Saved Decisions ledger를 렌더링하지 않는다 |
-| Final Review UI components | `app/web/backtest_final_review/components.py` |
-| Final Review Decision Workspace React component | `app/web/components/final_review_investment_report/`; compatibility directory 이름을 유지하지만 current renderer는 후보 선택 → 결론 → 관측 최신성 → 행동 근거 → 실제 강점/약점 → 실제 성격/관리 압력 → Monitoring 변화 조건 → 최종 판단 → disclosure의 one-shell이다. overall / headline score는 표시하지 않고 evidence confidence만 disclosure metadata로 표시한다. React는 candidate / observation refresh / route / reason intent와 SVG 좌표만 소유하며 날짜 판정, 가격 수집, replay, Gate, normalization, dedup, save evaluation, 자동 ID, row append를 소유하지 않는다 |
-| Portfolio > Portfolio Monitoring | `app/web/final_selected_portfolio_dashboard.py`; legacy filename을 유지하는 React Command Center route. Python read/command bridge, exact-date trade close와 요청일 이후 initial-entry DB lookup, position editor rerun recovery와 DB-only selected-item OHLCV callback을 소유한다. 모니터링 흐름·scenario·stale 안내의 canonical 소유자는 `/reference`다 |
-| Ingestion jobs | `app/jobs/ingestion_jobs.py` |
-| NYSE current stock·ETF universe refresh | `finance/data/nyse.py` fetches and normalizes both NYSE official listing snapshots; `finance/data/nyse_db.py` validates retention and atomically replaces `finance_meta.nyse_stock` / `nyse_etf` while UPSERTing lifecycle evidence. `app/jobs/ingestion_jobs.py` exposes the all-or-nothing job and `app/web/ingestion/{registry,dispatcher,guides,results,sections}.py` places the compact action before daily price updates. Price history is not deleted or automatically collected |
-| Overview scheduled refresh automation | `app/jobs/overview_automation.py` |
-| DB schema | `finance/data/db/schema.py` |
-| SEC Form 25 delisting collector | `finance/data/sec_delisting.py` |
-| SEC CIK / ticker exchange crosscheck collector | `finance/data/sec_company_tickers.py` |
-| Nasdaq Symbol Directory snapshot collector | `finance/data/symbol_directory.py` |
-| Computed snapshot lifecycle collector | `finance/data/computed_lifecycle.py` |
-| Backtest symbol resolver persistence | `finance/data/symbol_resolver.py` |
-| Backtest symbol resolver loader | `finance/loaders/symbol_resolver.py` |
-| ETF provider ingestion | `finance/data/etf_provider.py` |
-| Macro ingestion | `finance/data/macro.py` |
-| Market sentiment loader | `finance/loaders/sentiment.py` |
-| Futures OHLCV loader | `finance/loaders/futures.py` |
-| Risk-On Momentum 5D strategy core | `finance/swing.py`, `finance/indicators.py`, `finance/swing_macro.py`, `finance/swing_analysis.py` |
-| Risk-On Momentum 5D DB runtime | `app/runtime/backtest/runners/risk_on_momentum.py`; compatibility export remains in `app/runtime/backtest/__init__.py` |
-| Backtest real-money / readiness runtime helpers | `app/runtime/backtest/real_money.py`; compatibility exports remain in `app/runtime/backtest/__init__.py` |
-| Backtest strict quality / value runtime wrappers | `app/runtime/backtest/runners/strict_factor.py`; compatibility exports remain in `app/runtime/backtest/__init__.py` |
-| Backtest result bundle runtime helper | `app/runtime/backtest/result_bundle.py` |
-| Service contract tests | `tests/test_service_contracts.py`; includes Overview structure contracts for active page / tab modules, component surfaces, service surfaces, lazy selected rendering, and UI / service / data import boundary guards |
+Top-level navigation과 route registration은 `app/web/streamlit_app.py`가 소유한다.
 
-## Practical Validation Core Files
+| Group / Surface | URL | Streamlit Entry | Primary Python Owner | React Presentation |
+|---|---|---|---|---|
+| Research / Today | `/` | `app/web/today_page.py` | `app/services/today.py`, `app/services/today_market_session.py`, `app/services/portfolio_monitoring/intraday_refresh.py` | `app/web/streamlit_components/today_workbench/` |
+| Research / Market Research | `/overview` | `app/web/overview/page.py`, `app/web/overview/navigation.py` | `app/services/overview/`, related finance loaders and interpretation modules | `app/web/streamlit_components/market_research_navigation/` and view-owned workbenches |
+| Research / Institutional Holdings | `/institutional-portfolios` | `app/web/institutional_portfolios.py` | `app/services/institutional_portfolios.py`, `finance/loaders/institutional_13f.py` | `app/web/streamlit_components/institutional_portfolios_workbench/` |
+| Portfolio / Portfolio Lab | `/backtest` | `app/web/backtest_page.py`, `app/web/backtest_workflow_shell.py` | `app/services/backtest_workflow_shell.py`, `app/runtime/backtest/` and stage-owned services | `app/web/components/` under each Backtest stage |
+| Portfolio / Portfolio Monitoring | `/selected-portfolio-dashboard` | `app/web/final_selected_portfolio_dashboard.py` | `app/services/portfolio_monitoring/`, `app/runtime/backtest/read_models/final_selected_portfolios.py` | `app/web/streamlit_components/portfolio_monitoring_workbench/` |
+| Data / Data Operations | `/ingestion` | `app/web/ingestion_console.py`, `app/web/ingestion/` | `app/jobs/ingestion_jobs.py`, `app/services/ingestion_diagnostics.py`, `finance/data/` | Streamlit workbench; job results are Python-owned |
+| Help / Reference Center | `/reference` | `app/web/reference_center.py` | `app/services/reference_center.py` | `app/web/streamlit_components/reference_center_workbench/` |
 
-| File | Responsibility |
-|---|---|
-| `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation result build wrapper, source/result registry append, Practical Validation / Final Review handoff contract, provider gap row / collection plan / ingestion job orchestration, and surface-aware read-only CNN / AAII sentiment overlay read model for Practical Validation, Final Review, and Portfolio Monitoring. The sentiment overlay is market context only and does not affect gate / PASS-BLOCKER / monitoring signal / registry / saved setup / live trading boundaries |
-| `app/services/backtest_practical_validation_source.py` | Streamlit-free validation profile / selection source builder / source component table / compact selection history helper |
-| `app/services/backtest_practical_validation_curve_context.py` | Streamlit-free compact curve snapshot, result curve normalize, DB price proxy curve, component curve combination, window perturbation / monthly returns helper |
-| `app/services/backtest_practical_validation_stress_sensitivity.py` | Streamlit-free rolling validation, stress window, baseline challenge, sensitivity interpretation, correlation risk, market context, overfit audit, Robustness Lab board helper |
-| `app/services/backtest_temporal_validation.py` | Streamlit-free benchmark-aligned temporal validation helper. Walk-forward rolling excess return, OOS holdout excess / deterioration, macro regime split excess / drawdown gap, curve / macro source strength, and compact storage boundary evidence를 만든다 |
-| `app/services/backtest_practical_validation_diagnostics.py` | Streamlit-free Practical Validation diagnostics orchestration, component context assembly, 12개 diagnostic result 생성, public compatibility export |
-| `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. source를 최신 DB 데이터 기준으로 다시 실행하거나 저장 기간 그대로 재현해 component / portfolio curve evidence와 replay selection history snapshot을 생성 |
-| `app/services/backtest_practical_validation_curve.py` | Streamlit-free curve normalize, provenance, benchmark parity helper |
-| `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free provider / macro loader output to compact coverage, provenance, freshness, diagnostic evidence, and look-through board context adapter |
-| `app/services/backtest_validation_status_policy.py` | Streamlit-free status policy helper. Practical Validation module planner와 audit 경계에서 쓰는 `PASS / READY / REVIEW / NOT_RUN / NEEDS_INPUT / BLOCKED` normalization / rank를 소유한다 |
-| `app/services/backtest_practical_validation_stage_roles.py` | Streamlit-free Practical Validation REVIEW role taxonomy. `REVIEW`를 `데이터 주의`, `2단계 실용성 주의`, `최종 판단 참고`, `Monitoring 추적`, `저장 전 보강`으로 분리하고 UI / Final Review / Monitoring visibility metadata를 만든다 |
-| `app/services/backtest_practical_validation_modules.py` | Streamlit-free source traits / validation module planner. source kind, component mix, strategy keys, profile, input checks, diagnostics, and audit rows를 읽어 필수 / 조건부 / 후속 참고 module, role-aware gate effect, gate reason, Final Review 이동 gate를 만들고 evidence board mapping을 붙인다 |
-| `app/services/backtest_practical_validation_board_registry.py` | Streamlit-free Practical Validation board registry. `Final Review Gate`, audit board, provider board, Robustness Lab 같은 화면 보드를 validation module과 연결하고 적용 / 비적용 board map을 만든다 |
-| `app/services/backtest_practical_validation_workspace.py` | Streamlit-free screen-oriented workspace read model. Practical Validation result에서 gate summary, category-first criteria status groups, role-aware `visible_criteria_detail_groups`, criteria-level `resolution_guide`와 `action_steps`, `통과 / 보강 후 재검증 / 실전 사용 어려움` main outcome summary, Final Review / Monitoring reference metadata, handoff summary groups, core / conditional / downstream evidence groups, technical details를 묶어 Flow 3 / Flow 4 화면이 같은 contract를 읽게 한다. Flow 3 / Flow 4 visible UI는 적용된 REVIEW-only Practical Validation category를 `데이터 주의` / `2단계 실용성 주의`로 표시하고, Final Review / Monitoring reference는 actionable issue가 아니라 보조 참고로 낮춘다 |
-| `app/services/backtest_practical_validation_decision_workspace.py` | Streamlit-free current Level2 projection owner. closure / audit / profile / replay를 읽어 root issue dedup, measured-only caution, callable-handler-only resolve-now, engineering blocker, Final Review handoff, stable result identity, four-step action enablement를 만든다 |
-| `app/services/backtest_construction_risk_audit.py` | Streamlit-free construction risk audit read model. Existing component weight, provider look-through coverage, top holding, holdings overlap, dominant asset, and unknown exposure evidence를 읽어 concentration / overlap / exposure risk를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
-| `app/services/backtest_risk_contribution_audit.py` | Streamlit-free risk contribution audit read model. Existing component return matrix, pairwise correlation, max risk contribution proxy, drop-one dependency, and storage boundary evidence를 읽어 risk contribution construction risk를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
-| `app/services/backtest_component_role_weight_audit.py` | Streamlit-free component role / weight audit read model. Existing proposal role, target weight, validation profile, role concentration, profile intent, weight reason, and storage boundary evidence를 읽어 role / weight discipline risk를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
-| `app/services/backtest_validation_efficacy.py` | Streamlit-free validation method-strength audit read model. Practical Validation의 walk-forward temporal validation, OOS holdout validation, regime split validation evidence만 읽어 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다. Source contract, latest replay, benchmark parity, provider freshness, robustness, PIT / look-ahead, survivorship / universe, execution / storage boundary는 각 owner module이 소유한다 |
-| `app/services/backtest_data_coverage_audit.py` | Streamlit-free data coverage audit read model. DB price window summary, provider freshness, PIT replay / period coverage, universe listing, survivorship evidence를 compact `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
-| `app/services/backtest_realism_audit.py` | Streamlit-free backtest realism audit read model. Existing result metadata와 compact validation evidence를 읽어 transaction cost, net cost curve, turnover, cost / slippage sensitivity, liquidity / operability, net performance policy, rebalance timing, tax / account scope, execution boundary gap을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
-| `app/web/backtest_practical_validation/page.py` | Practical Validation one-shell UI orchestration. visible flow는 후보/기준 -> 최신 replay -> 결과/해결 구분 -> 저장/Final Review 이동이며, advanced profile / replay mode / raw evidence만 secondary disclosure에 둔다. Python이 source/profile/replay/action/save intent validation과 execution을 소유한다 |
-| `app/web/backtest_practical_validation/components.py` | Practical Validation 전용 product shell / CSS helper. White square Command Center, section header, card grid, step rail, alert panel을 담당하며 검증 로직이나 저장 계약은 포함하지 않는다 |
-| `app/web/backtest_practical_validation/workspace_panel.py` | current read model 기반 four-step fallback과 legacy Flow 3 compatibility renderer를 함께 소유한다 |
-| `app/web/backtest_practical_validation/status_display.py` | Practical Validation UI display helper. `BLOCKED_FOR_FINAL_REVIEW`, `READY_WITH_REVIEW`, `READY_FOR_FINAL_REVIEW` 같은 raw route-like status를 first-read labels `BLOCKED`, `REVIEW`, `PASS`로 정규화한다 |
-| `app/web/components/practical_validation_decision_workspace/` | current Level2 one-shell React component. 분리된 후보/검증 관점, summary counts, non-empty lane, 5개 category Step 3 disclosure, final actions를 렌더링하며 ResizeObserver로 iframe 높이를 동기화하고 760px에서 단일 열로 접힌다 |
-| `app/web/components/practical_validation_fix_queue/`, `app/web/components/practical_validation_data_action_board/` | compatibility-only legacy components. active page는 새 one-shell을 사용한다 |
-| `finance/data/etf_provider.py` | ETF source map discovery, operability / holdings / exposure snapshot 수집과 저장 |
-| `finance/loaders/provider.py` | ETF provider snapshot read path |
-| `finance/data/macro.py` | FRED macro series 수집 |
-| `finance/loaders/macro.py` | macro market-context read path |
-| `finance/data/sentiment.py` / `finance/data/sentiment_store.py` | CNN Fear & Greed / AAII source-isolated collection and atomic latest-canonical + immutable capture persistence |
-| `finance/loaders/sentiment.py` | Overview market sentiment read path |
+`app/web/overview_dashboard.py`와 일부 facade / fallback module은 기존 caller와 bundle
+unavailable 상황을 위해 남아 있다. current 정상 화면의 owner는 위 표의 page,
+service와 React workbench다.
 
-## Final Review / Selected Portfolio Evidence Files
+## Workflow Ownership
 
-| File | Responsibility |
-|---|---|
-| `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision status, decision record guide, investability packet / selected-route gate, saved decision review / dossier와 legacy scorecard / investment report compatibility payload를 소유한다. current Decision Workspace는 직접 소비하지 않는다 |
-| `app/services/backtest_final_review_decision_brief.py` | current Final Review `decision_brief_v1`과 durable `decision_brief_snapshot_v1` owner. stored curve priority, exact common date rebasing, underwater, cost-proof disclosure, measured observation / finding / trait / structured trigger, canonical route capability와 Level2 `final_decision / accepted_limit / monitoring_transfer` root-dedup handoff를 Python에서 계산한다 |
-| `app/services/backtest_final_review_guidance.py` | legacy investment report compatibility용 조건부 Monitoring pattern / evidence trace / action guidance owner. current Decision Workspace first-read에서는 inactive다 |
-| `app/web/backtest_final_review/page.py` | Final Review primary question, latest eligible candidate context, Decision Brief / candidate selector 생성, React intent 소비, Python save evaluation / 자동 Decision ID / route template / decision row append와 Monitoring handoff를 소유한다. same active Decision Brief를 화면과 저장 row에 함께 전달한다 |
-| `app/web/backtest_final_review/components.py` | Final Review 전용 visual shell. Command center, flow rail, section header, lane grid, action panel CSS / HTML helper를 제공하며 service/gate/persistence 로직은 포함하지 않는다 |
-| `app/web/backtest_final_review_helpers.py` | Final Review source eligibility filter, validation reuse, paper observation snapshot, investability packet wiring, save readiness, final decision row construction과 compact `decision_brief_snapshot` 저장, selected-route Gate / closure 기반 Monitoring handoff flagging |
-| `app/web/final_selected_portfolio_dashboard.py` | `Portfolio > Portfolio Monitoring` React Command Center route. Legacy filename은 유지한다. deterministic default group, group/item add/end/reopen과 direct-stock 최초 시작일·수량 정정·매매 revision command intent, catalog/editor rerun recovery와 session 선택 상태를 Python service에 연결한다. 선택한 direct 미국 주식·ETF에 한해 기존 `load_price_history` DB 일봉, exact-date trade close와 요청일 이후 첫 initial-entry close를 전달하며 provider를 직접 fetch하지 않는다 |
-| `app/services/portfolio_monitoring/market_chart.py` | 현재 선택한 active direct security의 완전한 OHLC와 nullable volume을 최신 120거래일 `selected_item_market_chart`로 compact한다. selected strategy는 loader 호출 없이 `UNSUPPORTED`, 결측/오류는 해당 projection에만 격리한다 |
-| `app/web/streamlit_components/portfolio_monitoring_workbench/` | Portfolio-first React shell, group/value curve, Context Drawer, diagnosis/macro context와 선택 상세를 렌더링한다. eligible direct stock fixed-shares에는 보유수량·입출금·손익 summary, 최초 시작일·수량의 변경 전/후 정정 UI와 매수·매도·revision UI를 제공한다. direct security만 line/candle/volume을 제공하고 strategy는 가치곡선만 제공한다 |
-| `app/web/final_selected_portfolio_dashboard_helpers.py` | Dashboard portfolio / selected strategy pool / strategy slot / strategy comparison table, Selected Dashboard handoff table, component / continuity / timeline / recheck preflight / recheck readiness / symbol freshness / provider evidence policy / review signal policy / open issue follow-up / deployment readiness / recheck comparison / drift / alert / allocation boundary / source contract display helpers |
-| `app/runtime/backtest/read_models/final_selected_portfolios.py` | Read-only selected portfolio dashboard runtime model. 새 row는 `decision_brief_snapshot.monitoring_conditions`를 Monitoring trigger display로 우선 읽고, snapshot이 없는 legacy row는 `paper_tracking_snapshot.review_triggers`를 fallback으로 유지한다. dashboard saved state, handoff / continuity, source contract, open issue, preflight, recheck, drift, timeline 경계는 기존과 같다 |
+### Research Evidence
 
-## Backtest Workflow Boundary
+```text
+Data Operations
+  -> MySQL market / macro / statement / provider / 13F data
+  -> finance loaders
+  -> app/services/overview or app/services/institutional_portfolios.py
+  -> Research surfaces
+```
+
+- Today는 저장된 Research evidence와 대표 Portfolio Monitoring projection을
+  compact하게 조합한다.
+- Market Research의 canonical 7-view normalization은
+  `app/web/overview/navigation.py`가, 각 view 계산과 read model은 owning service가
+  담당한다.
+- Institutional Holdings의 SEC dataset과 identifier resolution은
+  `finance/data/institutional_13f.py`와
+  `finance/data/institutional_13f_mapping.py`가 저장하고 loader/service가 읽는다.
+- Research context는 validation gate, trading signal이나 monitoring decision을
+  만들지 않는다.
+
+### Portfolio Selection
 
 ```text
 Backtest Analysis
+  -> candidate source
   -> Practical Validation
-  -> Final Review
-  -> Portfolio > Portfolio Monitoring
+  -> Final Review decision
+  -> Portfolio Monitoring handoff
 ```
 
-역할:
+| Stage | Main Owner |
+|---|---|
+| Backtest Analysis | `app/web/backtest_analysis.py`, `app/services/backtest_execution.py`, `app/runtime/backtest/` |
+| Practical Validation | `app/web/backtest_practical_validation/`, `app/services/backtest_practical_validation_workspace.py`, `app/services/backtest_practical_validation_replay.py` |
+| Final Review | `app/web/backtest_final_review/`, `app/services/backtest_final_review_policy.py`, `app/services/backtest_final_review_decision_brief.py` |
+| Monitoring handoff | `app/runtime/backtest/stores/final_selection_decisions.py`, `app/services/portfolio_monitoring/decision_lifecycle.py` |
 
-- Backtest Analysis는 “이 전략 또는 조합을 Level2 검증 후보로 만들 수 있는가?”를 묻는다. 실행만으로 source를 만들지 않고, 현재 설정과 같은 fresh result 및 Python Gate를 확인한 뒤 사용자가 명시적으로 인계할 때만 후보 source를 만든다. Single 결과는 설정 변경 시 지우지 않고 stale 참고 근거로 보존하며 인계만 차단한다. Portfolio Mix setup 저장과 Level2 후보 등록은 서로 다른 action이다.
-- Current Practical Validation visible flow는 `후보와 검증 기준 확인 -> 최신 데이터 기준 재검증 -> 결과 해석과 해결 구분 -> 저장하고 Final Review로 이동`이다. `상세 검증 근거`는 Step 3 disclosure이며 별도 Flow 5가 아니다. Python은 finding / applicability / root dedup / Gate / handler validation / replay / save를 소유하고 React는 presentation과 intent만 소유한다. old Fix Queue / Data Action Board는 compatibility-only다.
-- Practical Validation은 source를 실전 투입 전 조건으로 검증하고 source traits 기반 module planner로 필수 / 조건부 / 후속 참고 검증과 Final Review 이동 gate를 만든다. 화면은 `후보 Source 확인 -> 검증 기준 설정 / 실전 재검증 실행 -> 검증 결론 / 다음 행동 -> 검증 기준 상세`의 4개 user-facing flow로 읽는다. Flow 1은 source snapshot과 Backtest에서 넘어온 2차 확인 항목만 확인하고, Flow 2는 validation profile과 replay 실행을 함께 설정한다. Flow 3은 workspace read model의 Practical Validation outcome summary를 통해 `통과 / 보강 후 재검증 / 실전 사용 어려움`, 실패 카테고리, 검증 카테고리, Final Review 이동 가능 여부, `검증 결과 저장(기록용)`, `저장하고 Final Review로 이동` CTA를 compact하게 보여주는 first-read conclusion / next-action surface다. PV-owned REVIEW caution이 남아도 차단이 아니면 Flow 3은 `주의 포함 이동 가능`으로 표시해 노란불 통과와 초록 통과를 구분한다. React는 CTA intent만 전달하고, save-only audit append / Final Review handoff는 Python page + service path가 처리한다. `검증한 것 / 해결해야 할 항목 / 해결 방법 / 통과 기준 / 위치` 같은 해결 guide는 Flow 4에서 확인한다. Flow 4의 `해결 방법`은 `resolution_guide.action_steps` 번호 목록으로 렌더링해 row별 `Next Action`, provider 보강, DB 보강, Flow 2 재검증 같은 실행 단계를 분리해 보여준다. Flow 4는 같은 read model의 `visible_criteria_detail_groups`를 `카테고리별 검증 결과` board로 보여주고, Source & Replay / Data Quality / Bias Control / Comparison Validity / Realism / Tradability / Validation Method Strength / Stress / Robustness / Portfolio Construction / Conditional Evidence별 `상태 / 통과한 기준 / 남은 문제 / 판정`을 요약한다. 이 board는 raw status 위에 `통과`, `보강 후 재검증 필요`, `실전 사용 어려움` main outcome layer를 둔다. `READY`는 통과로 읽고, `REVIEW`는 하나의 Final Review 숙제가 아니라 `데이터 주의`, `2단계 실용성 주의`, `최종 판단 참고`, `Monitoring 추적`, `저장 전 보강` role로 분리한다. 적용된 Practical Validation category가 REVIEW-only라도 Flow 4에 표시하고, Final Review / Monitoring 전용 reference는 actionable issue가 아니라 보조 참고로 낮춘다. `NEEDS_INPUT` / `NOT_RUN`은 보강 후 재검증 대상, `BLOCKED`는 현재 상태로 실전 후보 사용이 어려운 차단 결론으로 분리한다. `selected_route_preflight`와 Final Review 저장 전 gap은 Flow 3 CTA disabled reason과 Flow 4 보조 근거에서 다루며 별도 visible Flow 5 container로 반복하지 않는다. Stress / robustness 미실행은 기본 review, construction risk는 ETF-like 또는 weighted mix에만 적용, sentiment risk-on/off overlay는 context-only로 둔다. `NEEDS_INPUT` / `NOT_RUN` 같은 raw status는 기술 detail에 남기며, `검증 결과 저장(기록용)`은 audit trail만 남기고 Gate 미통과 result는 Final Review 후보가 아니다.
-- Final Review는 Practical Validation Gate를 통과한 result만 source picker에 표시한다. Provider / Look-through / Robustness Lab / Construction Risk / Risk Contribution / Component Role Weight / Validation Method Strength / Data Coverage / Backtest Realism 근거와 investability packet을 읽어 profile-aware gate policy로 selected-route 가능 여부를 판정한다. Investment report scorecard는 `Investment`, `Risk`, `Readiness`, `Evidence Quality`, `Monitoring Suitability` weighted dimension과 Level2 REVIEW role별 score impact를 보여주며, hard blocker / selected-route not-ready / gate review-required / excessive open review는 score cap으로 추천권 과대평가를 막는다. Investment report first-read는 총평 바로 아래 `성과 해석 / 위험 해석 / 근거 신뢰도 / Monitoring 적합성` 4행을 두고, named evidence adapter로 판정한 10개 pattern 중 중요도 상위 최대 6개만 `현재 진단 / 의미 / 변화 조건 / 다음 행동`으로 보여준다. 나머지 패턴과 source / 기준일 / technical path는 접힌 상세 근거에 남는다. Level2 REVIEW는 `최종 판단에서 결정할 것 / 2단계에서 인수한 제한사항 / Monitoring으로 넘길 조건 / 선정 전 해소할 차단 항목`으로 소유권을 나누며, Flow4 보강 문구를 Final Review 사용자 행동으로 반복하지 않는다. Validation Method Strength의 walk-forward / OOS / regime non-PASS row와 Construction Risk / Risk Contribution / Component Role / Weight non-PASS row도 selected-route blocker 또는 review-required 근거로 표시한다. `SELECT_FOR_PRACTICAL_PORTFOLIO`, 보류, 거절, 재검토는 모두 Final Review 판단 record로 append할 수 있지만, Portfolio Monitoring handoff는 selected-route gate가 통과해 `monitoring_candidate`로 표시된 row만 대상이다. 저장된 판단 기록은 read-only dossier와 Portfolio Monitoring handoff summary로 다시 보여준다.
-- Portfolio group에는 `Portfolio Lab / Portfolio Monitoring`을 사용자-facing 화면으로 등록한다. 기존 Selected Portfolio Dashboard route를 유지하며 Active Portfolio Monitoring Scenario를 상단 hero로 먼저 보여준다. active portfolio가 없으면 생성 안내를, portfolio는 있지만 item이 없으면 등록 안내를, 데이터가 부족하면 해당 workspace/item 문맥의 상태를 표시한다. group/value curve/KPI/contribution/개별 상세와 diagnosis/macro/history/calibration은 Portfolio Monitoring React one-shell이 소유한다. 수집 실행 결과, persistent run history, recent logs, failure CSV는 `Data > Data Operations > 실행 기록 / 결과`가 소유하고 Portfolio Monitoring에 raw 진단 패널로 중복하지 않는다. Backtest Run History / Candidate Library helper와 저장 데이터는 hidden compatibility path로 보존한다. live approval, 주문, broker-account 연동, 자동 리밸런싱은 만들지 않는다.
+Practical Validation은 자료 보강을 pass로 간주하지 않고 재검증과 새 result를 요구한다.
+Final Review에는 현재 gate를 충족한 validation만 selected-route 후보로 전달한다.
+decision은 append-only record이며 broker order나 live approval이 아니다.
 
-## Data Boundary
+### Strategy Runtime
 
-| Data | Location | Commit Policy |
+| Responsibility | Owner |
+|---|---|
+| runner catalog and compatibility facade | `app/runtime/backtest/runner_catalog.py`, `app/runtime/backtest/facade.py` |
+| strategy-specific runtime adapters | `app/runtime/backtest/runners/` |
+| result bundle | `app/runtime/backtest/result_bundle.py` |
+| strategy transforms / simulation | `finance/transform.py`, `finance/strategy.py`, `finance/engine.py` |
+| performance metrics | `finance/performance.py` |
+| price / factor / statement inputs | `finance/loaders/price.py`, `finance/loaders/factors.py`, `finance/loaders/financial_statements.py` |
+
+### Portfolio Monitoring
+
+`app/services/portfolio_monitoring/`가 group/item command, position event, DB persistence,
+cashflow-aware valuation, exposure, diagnosis, history, market chart와 read model을
+분리해 소유한다. React는 group/item 선택, chart navigation과 form draft 같은 local
+interaction을 담당하고 server write는 explicit command event로만 요청한다.
+
+Today의 장중 대표 포트폴리오 overlay도 이 service의 DB-backed intraday refresh
+경계를 재사용한다. historical EOD curve나 monitoring canonical state를 React가
+변경하지 않는다.
+
+### Data Operations
+
+`app/web/ingestion_console.py`는 compatibility facade이며 active page body는
+`app/web/ingestion/`에 있다. `app/jobs/ingestion_jobs.py`가 visible job boundary를
+제공하고 collector와 DB persistence는 `finance/data/`가 소유한다.
+
+재무제표 active source는 EDGAR detailed statement와 statement shadow path다.
+broader legacy yfinance fundamentals / factors action은 old replay compatibility
+범위이며 current canonical financial statement refresh가 아니다.
+
+## Data And Storage Boundaries
+
+| Data | Canonical Location | Policy |
 |---|---|---|
-| Current / candidate / final decision registries | `.aiworkspace/note/finance/registries/*.jsonl` | 명시 요청 없이는 새 runtime 생성물 커밋 금지. 저장 경계는 `docs/data/STORAGE_GOVERNANCE.md` 기준 |
-| Full SEC Form 13F manager / filing / holdings / current identifier rows | MySQL `finance_meta.institutional_13f_*` | Ingestion -> DB -> loader -> service read model -> UI 경로만 사용. Workflow JSONL / saved setup에 full holdings를 저장하지 않음. `institutional_13f_refresh_status`는 freshness metadata이고 source holdings를 대체하지 않음. `institutional_13f_identifier_resolution`은 current provider identity이며 historical PIT row가 아니다. UI-facing portfolio rows are aggregated by CUSIP / put-call in the service layer; raw holdings remain in DB |
-| Saved portfolio setup | `.aiworkspace/note/finance/saved/*.jsonl` | 보존 대상. validation / approval record가 아니라 reusable setup. `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`은 Portfolio > Portfolio Monitoring의 사용자 monitoring portfolio setup이며 legacy dashboard file name을 유지한다 |
-| Backtest result reports | `.aiworkspace/note/finance/reports/backtests/` | 사람이 읽는 결과/근거 문서. JSONL source-of-truth 대체 금지 |
-| Backtest run history | `.aiworkspace/note/finance/run_history/*.jsonl` | local runtime artifact, 보통 커밋 금지 |
-| Backtest generated artifacts | `.aiworkspace/note/finance/backtest_artifacts/` | full scanner / trade detail 같은 generated artifact, 보통 커밋 금지 |
-| Run artifacts | `.aiworkspace/note/finance/run_artifacts/` | local runtime artifact, 보통 커밋 금지 |
-| Playwright output | `.playwright-mcp/` | generated artifact, 커밋 금지 |
+| universe, asset profile, macro, provider, event, 13F metadata | MySQL `finance_meta` | ingestion / loader boundary를 통해 사용 |
+| price and volume history | MySQL `finance_price` | backtest와 monitoring의 canonical price source |
+| raw filing, statement and derived factor | MySQL `finance_fundamental` | EDGAR statement shadow가 active financial source |
+| candidate / validation / Final Review decision | `.aiworkspace/note/finance/registries/*.jsonl` | append-only workflow record |
+| reusable portfolio / monitoring setup | `.aiworkspace/note/finance/saved/*.jsonl` | 사용자 설정으로 보존 |
+| local run history | `.aiworkspace/note/finance/run_history/*.jsonl` | generated runtime record, 보통 commit하지 않음 |
+| human-readable backtest evidence | `.aiworkspace/note/finance/reports/backtests/` | registry / saved source-of-truth를 대체하지 않음 |
+| local job artifact | task별 local generated artifact directory | generated artifact, 보통 commit하지 않음 |
 
-### Current Market Research Economic Cycle / Valuation Boundary
+Full holdings, macro series와 raw provider response는 DB에 두고 workflow JSONL에는
+compact evidence와 identity만 저장한다. 자세한 규칙은
+[Storage Governance](./data/STORAGE_GOVERNANCE.md)를 따른다.
 
-`Research > Market Research`의 기본 canonical view는 `시장 환경 > 경제 사이클`이며 S&P 500은 `지수 가치평가`, 미국 개별주식은 `종목 리서치` family가 소유한다. 경제 사이클 branch는 `finance/data/economic_cycle_vintages.py -> finance/loaders/economic_cycle.py -> finance/economic_cycle_* -> economic_cycle_model_artifact/economic_cycle_snapshot -> app/services/overview/economic_cycle.py` 경계를 따른다. `current/historical_replay` 월말 snapshot은 canonical history로 유지하고, `intramonth_nowcast`는 같은 model version과 직전 월말 baseline을 사용하는 날짜별 별도 row다. `app/jobs/economic_cycle_refresh.py`는 official vintage overlap 증분 수집, 누락 직전 월말 append-only rollover, 당일 잠정치 materialization을 순서대로 수행하며 source 일부라도 실패하면 last-good를 유지한다. UI 진입은 compact DB snapshot/history와 별도 intramonth 비교만 읽는다. `app/services/overview/economic_cycle_freshness.py`가 저장 cutoff를 최신 계산 가능 평일과 비교하고, 뒤처짐·결측·오류일 때만 `app/jobs/overview_actions.py`의 명시 클릭 action을 제공한다. action은 기존 combined refresh를 재사용하고 target snapshot DB postcondition 통과 뒤에만 캐시를 비운다. background scheduler는 이 수동 제품 흐름의 요구사항이 아니며 월중 점은 monthly ribbon/history에 합치지 않는다. 자산 경로는 `finance/data/macro.py`의 FRED 금리·금융 계열과 `finance/data/eia_petroleum.py`의 EIA weekly petroleum 계열을 `macro_series_observation`에 저장하고, `finance/loaders/economic_cycle_assets.py`가 macro, `futures_ohlcv`의 `CL=F`·`HG=F`·`GC=F`·`DX-Y.NYB`, `nyse_price_history`의 `^GSPC`(SPY explicit fallback)를 기준일 이전 데이터로만 읽는다. S&P 실제 EPS는 `Data > Data Operations > S&P 500 실제 EPS 등록`에서 공식 Index Earnings XLSX와 발표일을 등록해 `sp500_index_earnings` release vintage로 저장한다. `finance/loaders/sp500_valuation.py`는 `period_end`와 `source_release_date`가 모두 기준일 이하인 actual/as-reported 완료 분기 8개가 있을 때만 실제 current/prior TTM EPS 경로를 만든다. `finance/economic_cycle_asset_pathways.py`가 daily 5/21/63거래일, EIA weekly 최근 4주·전년 대비, actual EPS 완료 분기 TTM 전년 대비를 빈도별로 계산하고 `finance/economic_cycle_interpretation.py`가 채권·금리, S&P 500, 금, 달러, WTI·구리·금을 인과가 아닌 deterministic 설명으로 조립한다. 자산별 UI는 공통 `economic_state`를 전용 블록 한 곳에 표시하고, 금·달러의 summary/current interpretation은 측정 경로·실제 가격·자료 한계만 설명한다. React는 explicit 필드를 우선하고 legacy narrative fallback을 유지한다. `현재 움직임 / 함께 관찰된 경로 / 현재 해석 / 향후 1·2개월 확인 조건`을 공통으로 사용하며 개별 결측 경로만 격리한다. 해당 section의 typography는 기존 `.market-implications` scope에서만 `+1px` 조정한다. 경제사이클 publication status와 자산 경로 coverage는 별도 계약이고, UI/provider 직접 호출, 목표가격, 매수·매도 신호는 없다.
+## Where To Start By Change Type
 
-S&P 500 V1.4는 기존 Shiller/SEP flow를 유지한다. 개별주는 선택 종목 내부에 `PER 상대가치 | 전환 분석`을 둔다. PER branch는 `finance/data/us_stock_valuation.py -> finance/loaders/us_stock_valuation.py -> app/services/overview/us_stock_valuation.py`에서 bounded 가격·SEC statement·SEP DB 자료를 read-time 계산한다. 월말까지 공개된 최신 4개 분기 diluted EPS로 filing-aware TTM을 만들고, 같은 시점의 split-neutral price/EPS 단위로 positive monthly P/E만 계산한다. 1/3/5년 history는 모든 달력 월을 `timeline` slot으로 유지하고 결측 구간을 연결·보간하지 않는다. Turnaround branch는 `finance/data/us_stock_turnaround.py -> finance/loaders/us_stock_turnaround.py -> app/services/overview/us_stock_turnaround.py`에서 duration/instant fact를 분리하고 direct Q, H1/9M/FY cumulative derivation, explicit equivalent-concept family의 guarded missing-Q4 fallback, per-metric/TTM provenance, TTM operating/cash series, independent milestone/risk, fresh-input valuation readiness를 만든다. Direct Q4와 exact-concept 계산이 우선이며, guard를 통과한 산출값만 React에서 `공시 기반 산출`로 구분한다. `app/services/nyse_calendar.py`와 `app/services/overview/us_stock_freshness.py`는 마지막 완료 NYSE session, profile/가격 7일 정렬, 실제 statement raw gap을 하나의 freshness 계약으로 합친다. `app/services/overview/market_context_valuation.py`는 S&P, PER, turnaround failure를 각각 격리하고 positive Graph 1 READY PER만 기본 추천한다. explicit valuation mode는 기존 React 내부 instrument selector를 숨기고, legacy caller는 compatibility selector를 유지한다. 검색·화면 진입·분석 전환은 DB read-only이며 repairable gap이 있을 때만 header와 분석 selector 사이에 `최신 데이터로 다시 계산` action 하나를 표시한다. 명시 클릭은 exact selected symbol만 수집하고 profile/price는 CIK 없이 먼저 보존하며 SEC statement만 identity equality를 요구한다. 기존 Nasdaq data/materialization/collector 코드는 retained backend로 남지만 current user-facing selector/action path에서는 호출하지 않는다. 기존 Market Context cockpit/analog helper도 retained compatibility code이며 current entrypoint에서 렌더링하지 않는다.
+| Change | Start Here | Then Read |
+|---|---|---|
+| top navigation / route | `app/web/streamlit_app.py` | [Flows](./flows/README.md) |
+| Today | `app/web/today_page.py`, `app/services/today.py` | [Today Intraday Flow](./flows/TODAY_PORTFOLIO_INTRADAY_FLOW.md) |
+| Market Research | `app/web/overview/page.py`, `app/web/overview/navigation.py` | view owner under `app/services/overview/` |
+| economic cycle / valuation | owning module under `finance/`, `finance/loaders/`, `app/services/overview/` | [Data Quality And PIT](./data/DATA_QUALITY_AND_PIT_NOTES.md) |
+| Institutional Holdings / 13F | `app/web/institutional_portfolios.py`, `app/services/institutional_portfolios.py` | [Institutional Flow](./flows/INSTITUTIONAL_PORTFOLIOS_FLOW.md) |
+| Backtest Analysis / strategy | `app/web/backtest_analysis.py`, `app/runtime/backtest/` | [Backtest Runtime](./architecture/BACKTEST_RUNTIME_FLOW.md), [Strategy Flow](./architecture/STRATEGY_IMPLEMENTATION_FLOW.md) |
+| Practical Validation | `app/web/backtest_practical_validation/` | [Backtest UI Flow](./flows/BACKTEST_UI_FLOW.md) |
+| Final Review | `app/web/backtest_final_review/` | [Portfolio Selection Flow](./flows/PORTFOLIO_SELECTION_FLOW.md) |
+| Portfolio Monitoring | `app/services/portfolio_monitoring/` | [Command Center Architecture](./architecture/PORTFOLIO_MONITORING_REACT_COMMAND_CENTER.md), [Data Contract](./data/PORTFOLIO_MONITORING_DATA_CONTRACT.md) |
+| ingestion / DB schema / loader | `app/jobs/ingestion_jobs.py`, `finance/data/db/schema.py` | [Data DB Pipeline](./architecture/DATA_DB_PIPELINE_FLOW.md), [DB Schema Map](./data/DB_SCHEMA_MAP.md) |
+| Reference Center | `app/services/reference_center.py`, `app/web/reference_center.py` | [Glossary](./GLOSSARY.md) |
+| automated / repeated operation | `app/jobs/` | [Runbooks](./runbooks/README.md) |
 
-Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/jobs should not recreate legacy `.note/finance` paths directly.
+## Detailed Documentation
 
-## Where To Look
-
-| Situation | Start Here |
+| Need | Document |
 |---|---|
-| 미국 경제 사이클 vintage / 모델 / publication gate / 월중 nowcast / 수동 최신화 / 자산 경로 / Overview React 수정 | `finance/economic_cycle_catalog.py`, `finance/data/economic_cycle_vintages.py`, `finance/loaders/economic_cycle.py`, `finance/data/macro.py`, `finance/data/eia_petroleum.py`, `finance/loaders/economic_cycle_assets.py`, `finance/loaders/sp500_valuation.py`, `finance/economic_cycle_asset_pathways.py`, `finance/economic_cycle_interpretation.py`, `finance/economic_cycle_features.py`, `finance/economic_cycle_labels.py`, `finance/economic_cycle_model.py`, `finance/economic_cycle_validation.py`, `finance/economic_cycle_pipeline.py`, `finance/data/economic_cycle_results.py`, `app/services/overview/economic_cycle.py`, `app/services/overview/economic_cycle_freshness.py`, `app/web/overview/market_context.py`, `app/web/overview/economic_cycle_react_component.py`, `app/web/streamlit_components/economic_cycle_workbench/`, `app/jobs/economic_cycle_refresh.py`, `app/jobs/overview_actions.py`, `app/jobs/overview_automation.py`, `app/jobs/ingestion_jobs.py` |
-| S&P 500 Market Context valuation / EPS / SEP / price freshness / React 수정 | `finance/data/sp500_valuation.py`, `finance/loaders/sp500_valuation.py`, `app/services/overview/sp500_valuation.py`, `app/services/overview/sp500_valuation_freshness.py`, `app/services/overview/market_context_valuation.py`, `app/jobs/overview_actions.py`, `app/web/overview/market_context.py`, `app/web/overview/market_context_helpers.py`, `app/web/overview/market_context_react_component.py`, `app/web/streamlit_components/market_context_valuation/`, `app/jobs/overview_automation.py` |
-| 미국 개별주식 검색 / PER·전환 분석 / freshness / selected-symbol 수집 수정 | `finance/data/financial_statements.py`, `finance/data/us_stock_valuation.py`, `finance/data/us_stock_turnaround.py`, `finance/loaders/us_stock_valuation.py`, `finance/loaders/us_stock_turnaround.py`, `app/services/nyse_calendar.py`, `app/services/overview/us_stock_valuation.py`, `app/services/overview/us_stock_turnaround.py`, `app/services/overview/us_stock_freshness.py`, `app/services/overview/market_context_valuation.py`, `app/jobs/ingestion_jobs.py`, `app/jobs/overview_actions.py`, `app/web/overview/market_context_helpers.py`, `app/web/streamlit_components/market_context_valuation/` |
-| Retained Nasdaq-100 QQQ public-filing backend / materialization / collector 수정 | `finance/data/nasdaq100_valuation.py`, `finance/loaders/nasdaq100_valuation.py`, `app/services/overview/nasdaq100_valuation.py`, `app/jobs/ingestion_jobs.py`, `app/jobs/overview_actions.py`, `app/jobs/overview_automation.py` |
-| Overview macro context cockpit / historical analog / market movers / Why It Moved / sector leadership / futures monitor / sentiment 수정 | `app/jobs/overview_actions.py`, `app/services/overview/`, `app/services/overview_market_context_analog.py`, `app/services/futures_market_monitoring.py`, `app/services/futures_macro_thermometer.py`, `app/services/futures_macro_validation.py`, `finance/data/sentiment.py`, `finance/loaders/sentiment.py`, `app/web/overview_dashboard.py`, `app/web/overview/`, `app/web/overview/components/`, `app/web/overview_dashboard_helpers.py`, `app/web/overview_ui_components.py` |
-| 투자 대가 / 기관별 SEC 13F portfolio explorer / identifier mapping 수정 | `finance/data/institutional_13f.py`, `finance/data/institutional_13f_mapping.py`, `finance/data/db/schema.py`, `finance/loaders/institutional_13f.py`, `app/services/institutional_portfolios.py`, `app/web/institutional_portfolios.py`, `app/web/institutional_portfolios_react_component.py`, `app/web/streamlit_components/institutional_portfolios_workbench/`, `app/web/streamlit_app.py`, `app/web/ingestion/*`, `app/jobs/ingestion_jobs.py` |
-| S&P 500 / Nasdaq-listed universe, intraday snapshot, market event calendar 수정 | `finance/data/market_intelligence.py`, `finance/data/symbol_directory.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/jobs/overview_actions.py`, `app/services/overview/market_movers.py`, `app/services/overview/events.py` |
-| Overview 자동 수집 cadence / cron / launchd runner 수정 | `app/jobs/overview_automation.py`, `app/jobs/overview_actions.py`, `app/jobs/run_history.py`, `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` |
-| Backtest UI 수정 | page-level stage shell은 `app/services/backtest_workflow_shell.py`, `app/web/backtest_workflow_shell.py`, `app/web/components/backtest_workflow_shell/`, `app/web/backtest_page.py`; Level 내부 화면은 관련 `app/web/backtest_*.py`; Compare visual shell은 `app/web/backtest_compare/components.py` |
-| Risk-On Momentum 5D 수정 | `finance/swing.py`, `finance/indicators.py`, `finance/swing_macro.py`, `finance/swing_analysis.py`, `finance/transform.py`, `finance/loaders/futures.py`, `app/runtime/backtest/runners/risk_on_momentum.py`, `app/runtime/backtest/__init__.py` compatibility facade, `app/web/backtest_single_forms/`, `app/web/backtest_result_display.py` |
-| Backtest real-money / guardrail / deployment readiness helper 수정 | `app/runtime/backtest/real_money.py`, `app/runtime/backtest/__init__.py` compatibility facade, `app/web/backtest_common.py`, `app/web/backtest_result_display.py`, `app/web/backtest_history_helpers.py`, related `app/services/backtest_*` replay / execution callers |
-| Strict quality / value / quality-value runtime wrapper 수정 | `app/runtime/backtest/runners/strict_factor.py`, `app/runtime/backtest/__init__.py` compatibility facade, `finance/loaders/factors.py`, `finance/loaders/financial_statements.py`, `app/services/backtest_execution.py`, `app/services/backtest_compare_catalog.py`, `app/web/backtest_single_forms/` |
-| Backtest ticker-change repair / symbol identity resolver 수정 | `finance/loaders/symbol_resolver.py`, `finance/data/symbol_resolver.py`, `finance/data/db/schema.py`, `app/services/backtest_price_refresh.py`, `app/web/backtest_common.py`, `app/web/backtest_result_display.py`, `app/runtime/backtest/runners/strict_factor.py` |
-| UI-engine boundary 수정 | `app/services/*`, 호출하는 `app/web/backtest_*.py`, 관련 `app/runtime/*` |
-| Service contract 회귀 검증 | `tests/test_service_contracts.py`, `.aiworkspace/note/finance/docs/runbooks/README.md` |
-| Practical Validation P2 / decision workspace / evidence closure 수정 | `app/web/backtest_practical_validation/`, `app/web/components/practical_validation_decision_workspace/`, `app/services/backtest_practical_validation_decision_workspace.py`, `app/services/backtest_evidence_closure.py`, `app/services/backtest_practical_validation_replay.py`, `app/services/backtest_practical_validation_workspace.py`, `finance/data/etf_provider.py`, `finance/loaders/provider.py`, `finance/data/macro.py`, `finance/loaders/macro.py` |
-| Final Review closure / measured score / decision snapshot 수정 | `app/services/backtest_evidence_closure.py`, `app/services/backtest_evidence_read_model.py`, `app/web/backtest_final_review/`, `app/web/components/final_review_investment_report/` |
-| DB schema 변경 | `finance/data/db/schema.py` |
-| 재무제표 source / factor source 변경 | `finance/data/financial_statements.py`, `finance/data/fundamentals.py`, `finance/data/factors.py`, `finance/loaders/financial_statements.py`, `finance/loaders/fundamentals.py`, `finance/loaders/factors.py`, `app/jobs/ingestion_jobs.py`, `app/web/ingestion_console.py`, `.aiworkspace/note/finance/docs/data/` |
-| Ingestion page / job UI 변경 | `app/web/ingestion_console.py`, `app/services/ingestion_diagnostics.py`, `app/jobs/ingestion_jobs.py`, `finance/data/*` |
-| Strategy runtime 변경 | `finance/engine.py`, `finance/strategy.py`, `finance/transform.py`, `finance/performance.py` |
-| 제품 방향 / 벤치마킹 리서치 | `.aiworkspace/note/finance/researches/README.md`, `.aiworkspace/note/finance/researches/active/<research-id>/` |
-| Backtest report 작성 / 정리 | `.aiworkspace/note/finance/reports/backtests/INDEX.md` |
-| 문서 / AI workspace 체계 변경 | `.aiworkspace/note/finance/tasks/active/doc-system-rebuild/`, `.aiworkspace/note/finance/tasks/active/ai-workspace-migration/` |
-
-## Detailed Documentation Maps
-
-| Need | Start Here |
-|---|---|
-| layer / storage / UI-engine 경계 판정 | `.aiworkspace/note/finance/docs/architecture/SYSTEM_BOUNDARIES.md` |
-| script별 책임 지도 | `.aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md` |
-| backtest runtime / result bundle 흐름 | `.aiworkspace/note/finance/docs/architecture/BACKTEST_RUNTIME_FLOW.md` |
-| data / DB / loader 코드 흐름 | `.aiworkspace/note/finance/docs/architecture/DATA_DB_PIPELINE_FLOW.md` |
-| Backtest UI / Final Review / Portfolio Monitoring 화면 흐름 | `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md` |
-| Portfolio Selection 사용자 흐름 | `.aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md` |
-| helper script / automation 사용법 | `.aiworkspace/note/finance/docs/runbooks/AUTOMATION_SCRIPTS.md` |
+| layer / storage / product surface boundary | [System Boundaries](./architecture/SYSTEM_BOUNDARIES.md) |
+| script-level responsibility | [Script Structure Map](./architecture/SCRIPT_STRUCTURE_MAP.md) |
+| Backtest payload / runtime / result flow | [Backtest Runtime Flow](./architecture/BACKTEST_RUNTIME_FLOW.md) |
+| ingestion / persistence / loader flow | [Data DB Pipeline Flow](./architecture/DATA_DB_PIPELINE_FLOW.md) |
+| top-level and detailed user flow | [Finance Flows](./flows/README.md) |
+| Backtest stages and handoff | [Backtest UI Flow](./flows/BACKTEST_UI_FLOW.md) |
+| portfolio selection lifecycle | [Portfolio Selection Flow](./flows/PORTFOLIO_SELECTION_FLOW.md) |
+| data meaning and persistence | [Data Documentation](./data/README.md) |
+| commands, ingestion and QA procedures | [Runbooks](./runbooks/README.md) |

@@ -27,6 +27,10 @@
   7개 current surface, 원칙, safety와 known limit만 소유한다.
 - Data Operations는 설치 단계가 아니라 전체 workflow evidence layer이며 Research는
   Portfolio Lab의 필수 선행 gate가 아니다.
+- Project Map은 surface별 route adapter, primary Python owner와 React presentation을
+  한 표에서 찾게 하고, algorithm / payload / UX history는 focused docs로 넘긴다.
+- optional generated directory처럼 현재 존재하지 않는 위치는 실제 code path처럼
+  표기하지 않고 storage policy로만 설명한다.
 
 ## Protected Existing Work
 

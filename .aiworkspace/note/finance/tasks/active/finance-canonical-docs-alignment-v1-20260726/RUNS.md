@@ -33,3 +33,13 @@
 - current navigation group, 7개 surface, Practical Validation / Final Review 내부
   stage와 product boundary keyword assertion 통과
 - local link와 `git diff --check` 통과
+
+## 2026-07-26 — Task 3 Project Map
+
+- `streamlit_app.py`에서 7개 `st.Page` title과 app / finance inventory 재확인
+- System / Layer / Surface Entry / Workflow / Storage / Change-Type /
+  Detailed Documentation 구조로 199 lines 재작성
+- current surface와 core layer assertion, old navigation 부재 확인
+- backtick code / storage path existence 검사에서 optional 미생성 artifact path 1개를
+  발견해 policy 표현으로 교정한 뒤 전체 path 검사 통과
+- line cap과 `git diff --check` 통과

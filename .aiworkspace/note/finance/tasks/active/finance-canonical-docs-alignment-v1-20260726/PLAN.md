@@ -251,7 +251,7 @@ git commit -m "finance 제품 방향 현재화"
 - Consumes: Task 2 surface names, actual code tree, focused architecture / flow / data docs
 - Produces: route / layer / workflow / storage ownership map used by developers and AI
 
-- [ ] **Step 1: actual entry point inventory 확인**
+- [x] **Step 1: actual entry point inventory 확인**
 
 Run:
 
@@ -263,7 +263,7 @@ rg -n "title=\"(Today|Market Research|Institutional Holdings|Portfolio Lab|Portf
 
 Expected: 7개 `st.Page` title과 current code inventory가 확인된다.
 
-- [ ] **Step 2: Project Map을 다음 section으로 전면 재작성**
+- [x] **Step 2: Project Map을 다음 section으로 전면 재작성**
 
 ```text
 # Finance Project Map
@@ -280,7 +280,7 @@ surface entry table은 top-level route adapter, primary service/runtime owner,
 React workbench와 downstream flow만 적는다. domain algorithm과 UX history는
 focused docs link로 넘긴다.
 
-- [ ] **Step 3: route / layer assertion 실행**
+- [x] **Step 3: route / layer assertion 실행**
 
 Run:
 
@@ -298,7 +298,7 @@ done
 
 Expected: exit 0.
 
-- [ ] **Step 4: Project Map local path 검사**
+- [x] **Step 4: Project Map local path 검사**
 
 Run:
 
@@ -322,7 +322,7 @@ PY
 
 Expected: `PROJECT_MAP paths OK`.
 
-- [ ] **Step 5: Project Map scope / stale-name 검사**
+- [x] **Step 5: Project Map scope / stale-name 검사**
 
 Run:
 
@@ -335,7 +335,7 @@ git diff --check -- .aiworkspace/note/finance/docs/PROJECT_MAP.md
 
 Expected: exit 0.
 
-- [ ] **Step 6: 3차 commit**
+- [x] **Step 6: 3차 commit**
 
 ```bash
 git add \
