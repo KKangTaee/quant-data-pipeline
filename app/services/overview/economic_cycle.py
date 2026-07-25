@@ -5,11 +5,14 @@ from __future__ import annotations
 import json
 import math
 from collections.abc import Callable, Mapping, Sequence
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 import pandas as pd
 
+from app.services.overview.economic_cycle_freshness import (
+    build_economic_cycle_freshness,
+)
 from finance.economic_cycle_interpretation import (
     build_market_implications,
     evidence_direction,
@@ -77,6 +80,7 @@ def _empty_model(
     status: str,
     reason_code: str,
     as_of_date: object = None,
+    freshness_date: str | date | datetime | None = None,
 ) -> dict[str, object]:
     reason = translate_reason_code(reason_code)
     economic_as_of_date = str(as_of_date or "") or None
@@ -104,6 +108,11 @@ def _empty_model(
         "as_of_date": str(as_of_date or "") or None,
         "model_version": None,
         "intramonth": None,
+        "data_freshness": build_economic_cycle_freshness(
+            None,
+            today=freshness_date,
+            read_error=status == "ERROR",
+        ),
         "headline": {
             "phase": None,
             "phase_label": "판단 제한",
@@ -387,6 +396,7 @@ def build_economic_cycle_read_model(
     asset_price_loader: Callable[..., Sequence[Mapping[str, object]]] | None = None,
     sp500_earnings_loader: Callable[..., Mapping[str, object]] | None = None,
     price_reference_date: str | date | None = None,
+    freshness_date: str | date | datetime | None = None,
 ) -> dict[str, object]:
     """Adapt persisted compact rows; never fetch, fit, write, or mutate UI state."""
 
@@ -396,13 +406,17 @@ def build_economic_cycle_read_model(
         snapshot = load_snapshot(as_of_date=as_of_date)
     except Exception:
         return _empty_model(
-            status="ERROR", reason_code="READ_ERROR", as_of_date=as_of_date
+            status="ERROR",
+            reason_code="READ_ERROR",
+            as_of_date=as_of_date,
+            freshness_date=freshness_date,
         )
     if not snapshot:
         return _empty_model(
             status="LIMITED",
             reason_code="NOT_MATERIALIZED",
             as_of_date=as_of_date,
+            freshness_date=freshness_date,
         )
 
     resolved_snapshot = dict(snapshot)
@@ -413,7 +427,10 @@ def build_economic_cycle_read_model(
         history_rows = load_history(start_date=start, end_date=end)
     except Exception:
         return _empty_model(
-            status="ERROR", reason_code="READ_ERROR", as_of_date=snapshot_date
+            status="ERROR",
+            reason_code="READ_ERROR",
+            as_of_date=snapshot_date,
+            freshness_date=freshness_date,
         )
 
     horizons = _horizons(resolved_snapshot)
@@ -439,6 +456,10 @@ def build_economic_cycle_read_model(
         resolved_snapshot,
         horizons,
         intramonth_row,
+    )
+    data_freshness = build_economic_cycle_freshness(
+        intramonth,
+        today=freshness_date,
     )
 
     market_reference = pd.Timestamp(
@@ -512,6 +533,7 @@ def build_economic_cycle_read_model(
         "as_of_date": snapshot_date or None,
         "model_version": str(resolved_snapshot.get("model_version") or "") or None,
         "intramonth": intramonth,
+        "data_freshness": data_freshness,
         "headline": {
             "phase": current_phase,
             "phase_label": PHASE_LABELS.get(str(current_phase), "판단 제한"),

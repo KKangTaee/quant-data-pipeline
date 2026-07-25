@@ -108,6 +108,7 @@ def test_ready_read_model_maps_horizons_evidence_sources_and_separate_history() 
         "as_of_date",
         "model_version",
         "intramonth",
+        "data_freshness",
         "headline",
         "horizons",
         "cycle_clock",
@@ -225,6 +226,24 @@ def test_service_pairs_latest_intramonth_with_exact_monthly_baseline() -> None:
     assert bridge["source_coverage"]["available_series"] == 17
     assert len(model["history"]) == 12
     assert all(item["date"] != "2026-07-21" for item in model["history"])
+
+
+def test_service_attaches_intramonth_freshness() -> None:
+    service = _load_service()
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: _ready_snapshot(),
+        intramonth_loader=lambda **_kwargs: _intramonth_snapshot(),
+        history_loader=lambda **_kwargs: [],
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=lambda **_kwargs: {},
+        freshness_date=date(2026, 7, 25),
+    )
+
+    assert model["data_freshness"]["persisted_as_of_date"] == "2026-07-21"
+    assert model["data_freshness"]["target_as_of_date"] == "2026-07-24"
+    assert model["data_freshness"]["status"] == "REFRESH_AVAILABLE"
 
 
 @pytest.mark.parametrize(
