@@ -1,6 +1,6 @@
 # Economic Cycle Manual Refresh V1 Plan
 
-Status: Design Review
+Status: Implementation Plan Ready
 Last Updated: 2026-07-25
 
 ## 이걸 하는 이유?
@@ -62,10 +62,14 @@ background scheduler 대신 최신화 필요 여부를 직접 확인하고 버�
 
 ## Current Step
 
-전체 roadmap `0/3차`다. 현재는 승인된 대화 설계를 written spec으로 고정하고 사용자의
-명세 검토를 기다리는 단계다. 이번 단계에서는 `.env` 저장이나 code/database 변경을
-수행하지 않는다.
+전체 roadmap `0/3차`다. written design spec은 승인됐고 test-first implementation
+plan을 작성했다. 실행 방식 선택 후 1차 local secret/runtime boundary부터 시작한다.
+아직 `.env` 저장이나 code/database 변경은 수행하지 않았다.
 
 ## Canonical Design
 
 `docs/superpowers/specs/2026-07-25-economic-cycle-manual-refresh-design.md`
+
+## Implementation Plan
+
+`docs/superpowers/plans/2026-07-25-economic-cycle-manual-refresh.md`

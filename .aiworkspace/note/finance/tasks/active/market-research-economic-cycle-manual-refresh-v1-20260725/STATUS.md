@@ -1,6 +1,6 @@
 # Status
 
-Status: Design Review
+Status: Implementation Plan Ready
 Last Updated: 2026-07-25
 
 ## Roadmap
@@ -11,8 +11,8 @@ Last Updated: 2026-07-25
 
 ## Current Step
 
-대화에서 선택한 manual refresh 방향을 written design spec으로 정리했다. 사용자의
-명세 검토 후 implementation plan을 작성한다.
+written design spec 승인을 반영했고 7개 task의 test-first implementation plan을
+작성했다. 실행 방식 선택 후 1차를 시작한다.
 
 ## Current Evidence
 
@@ -25,5 +25,5 @@ Last Updated: 2026-07-25
 
 ## Next
 
-사용자 명세 승인 후 `superpowers:writing-plans`로 test-first implementation plan을
-작성한다.
+`superpowers:subagent-driven-development` 또는 `superpowers:executing-plans` 중
+실행 방식을 선택하고 1차 local secret/runtime boundary를 구현한다.

@@ -1,6 +1,6 @@
 # Economic Cycle Manual Refresh Design
 
-Status: Review Requested
+Status: Approved
 Date: 2026-07-25
 Owner: Overview / Market Context
 
@@ -131,7 +131,7 @@ failure는 새 결과를 성공으로 표시하지 않는다.
 
 경제사이클 React shell의 월중 흐름 가까이에 compact freshness/action bar를 둔다.
 
-- 최신 상태: `최신 계산 기준 YYYY-MM-DD`를 보이고 action은 숨기거나 비활성화한다.
+- 최신 상태: 저장된 최신 계산 기준일을 보이고 action은 숨기거나 비활성화한다.
 - 최신화 필요: 현재 계산일과 목표일을 짧게 설명하고
   `최신 데이터로 다시 계산` 버튼을 표시한다.
 - 수집 중: 중복 클릭을 막고 `최신 자료를 수집하고 경제사이클을 다시 계산하는 중`으로
