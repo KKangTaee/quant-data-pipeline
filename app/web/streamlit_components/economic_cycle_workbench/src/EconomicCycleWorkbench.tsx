@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 import "./style.css";
 
@@ -195,12 +195,32 @@ type CommodityAsset = {
   narrative: string;
 };
 
+type EconomicCycleFreshness = {
+  status: "READY" | "REFRESH_AVAILABLE" | "MISSING" | "ERROR";
+  persisted_as_of_date?: string | null;
+  target_as_of_date?: string | null;
+  refresh_required: boolean;
+  message: string;
+  action?: {
+    id: "refresh_economic_cycle_data";
+    label: string;
+    enabled: boolean;
+  };
+};
+
+type RefreshResult = {
+  status: "success" | "partial_success" | "incomplete" | "failed";
+  message: string;
+};
+
 type CyclePayload = {
   schema_version: "economic_cycle_v2";
   status: "READY" | "LIMITED" | "ERROR";
   as_of_date?: string | null;
   model_version?: string | null;
   intramonth?: IntramonthSnapshot | null;
+  data_freshness?: EconomicCycleFreshness;
+  refresh_result?: RefreshResult;
   headline?: {
     phase?: Phase | null;
     phase_label?: string;
@@ -1173,6 +1193,63 @@ function MonthlySignalGuide() {
   );
 }
 
+function EconomicCycleFreshnessBar({
+  freshness,
+  result,
+}: {
+  freshness?: EconomicCycleFreshness;
+  result?: RefreshResult;
+}) {
+  const [collecting, setCollecting] = useState(false);
+  if (!freshness && !result) return null;
+
+  const action = freshness?.action;
+  const handleRefresh = () => {
+    if (!action?.enabled || collecting) return;
+    setCollecting(true);
+    Streamlit.setComponentValue({
+      event: {
+        id: "refresh_economic_cycle_data",
+        nonce: `${Date.now()}`,
+      },
+    });
+  };
+
+  return (
+    <section
+      className="cycle-freshness-bar"
+      data-status={freshness?.status || result?.status || "READY"}
+      aria-live="polite"
+    >
+      <div className="cycle-freshness-copy">
+        <span>DATA FRESHNESS</span>
+        <strong>
+          {freshness?.status === "READY"
+            ? `최신 계산 기준 ${freshness.persisted_as_of_date || freshness.target_as_of_date || "-"}`
+            : freshness?.message || "경제사이클 최신 자료를 확인할 수 있습니다."}
+        </strong>
+        {result ? (
+          <small className={`cycle-refresh-result result-${result.status}`}>
+            {result.message}
+          </small>
+        ) : null}
+      </div>
+      {action?.enabled ? (
+        <button
+          className="cycle-freshness-action"
+          type="button"
+          disabled={collecting}
+          onClick={handleRefresh}
+        >
+          {collecting
+            ? "최신 자료를 수집하고 다시 계산하는 중"
+            : action.label || "최신 데이터로 다시 계산"}
+        </button>
+      ) : null}
+    </section>
+  );
+}
+
 function EconomicCycleWorkbench({ args }: Props) {
   const payload = args.payload;
   const rootRef = useRef<HTMLElement>(null);
@@ -1208,6 +1285,11 @@ function EconomicCycleWorkbench({ args }: Props) {
         <div className="section-heading"><div><span>Probability path</span><h3 id="horizon-title">현재와 앞으로 1·2개월</h3></div><small>각 카드의 네 국면 합계는 100%</small></div>
         <div className="horizon-grid">{payload.horizons.map((horizon) => <HorizonCard key={horizon.horizon_months} horizon={horizon} />)}</div>
       </section>
+
+      <EconomicCycleFreshnessBar
+        freshness={payload.data_freshness}
+        result={payload.refresh_result}
+      />
 
       {payload.intramonth ? <IntramonthFlow intramonth={payload.intramonth} monthly={current} /> : null}
 

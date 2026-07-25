@@ -405,6 +405,28 @@ def test_cycle_component_renders_intramonth_flow_without_touching_ribbon() -> No
     assert ".intramonth-flow-grid" in css
     assert ".intramonth-bridge-path" in css
     assert ".legend-intramonth" in css
+
+
+def test_cycle_component_has_compact_manual_freshness_action() -> None:
+    source = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"
+    ).read_text()
+    css = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/style.css"
+    ).read_text()
+
+    for token in (
+        "data_freshness?: EconomicCycleFreshness",
+        "refresh_result?: RefreshResult",
+        "최신 데이터로 다시 계산",
+        'id: "refresh_economic_cycle_data"',
+        "Streamlit.setComponentValue",
+        'className="cycle-freshness-bar"',
+    ):
+        assert token in source
+    assert ".cycle-freshness-bar" in css
+    assert "rows_written" not in source
+    assert "failed_symbols" not in source
     assert "@media (max-width: 760px)" in css
     assert "@media (max-width: 420px)" in css
 
@@ -566,7 +588,6 @@ def test_cycle_component_has_no_fetch_job_trading_or_refresh_loop() -> None:
         "axios",
         "setinterval",
         "settimeout",
-        "streamlit.setcomponentvalue",
         "run_collect",
         "materialize",
         "매수",
