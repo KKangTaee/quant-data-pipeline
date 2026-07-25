@@ -10,6 +10,17 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-25 - 경제사이클 국면명은 수준과 최근 방향을 함께 설명한다
+
+- User request: 생산·소비와 고용·소득 수준이 낮은데도 `회복`인 이유를 화면에서 바로
+  이해하도록 문구를 개선해 달라고 요청함.
+- Interpreted goal: 짧은 `회복 우세` 제목은 유지하면서 회복이 `낮은 수준 + 최근 3개월
+  개선`이라는 모델 의미를 첫 화면에서 설명한다.
+- Analysis result: Python read model이 네 phase의 수준×3개월 방향 설명을 동적으로
+  제공하고 React는 기존 headline payload를 그대로 표시한다. 확률·모델·DB는 불변이다.
+- Follow-up: focused 56개, React build, desktop/420px에서 overflow와 console
+  warning/error 0을 확인했다.
+
 ### 2026-07-25 - 금·달러 공통 경제 배경은 한 번만 표시한다
 
 - User request: 자산별 확인 포인트의 금·달러 현재 수준과 공통 경제 배경이 중복되는지
