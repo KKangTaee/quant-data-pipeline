@@ -1,6 +1,6 @@
 # README Product / Onboarding Overhaul V1 Status
 
-Status: In Progress — 1/4 Complete
+Status: In Progress — 2/4 Complete
 Started: 2026-07-25
 
 ## Progress
@@ -18,16 +18,20 @@ Started: 2026-07-25
 - 1차에서 root README의 2026-05 Backtest 중심 서사와 옛 navigation을 제거했다.
 - Evidence-first positioning, current 7개 top-level surface, Portfolio Lab 3단계와 Data Operations 기반 workflow를 작성했다.
 - current 화면명 assertion과 `git diff --check`를 통과했다.
+- 2차에서 5분 quick start, optional provider 설정, local MySQL 경계와 worktree port 사용법을 추가했다.
+- Python / Streamlit / React / TypeScript / Vite / MySQL / JSONL의 실제 역할과 계층별 ownership을 설명했다.
+- repository / storage / evidence trust / focused verification / durable docs map을 추가했다.
+- backtest-dev `8510` listener의 cwd와 HTTP 200, 기술 키워드와 `git diff --check`를 확인했다.
 
 ## Current Step
 
-전체 roadmap `1/4차`.
+전체 roadmap `2/4차`.
 
-제품 서사와 사용자 흐름 재작성까지 완료했다. 5분 실행, 기술 구현 구조와 대표 이미지는 아직 추가하지 않았다.
+제품 서사, 5분 실행과 기술 구현 구조까지 완료했다. Today 대표 이미지와 final QA가 남아 있다.
 
 ## Next Action
 
-2차에서 5분 실행, 기술 stack / ownership, repository / storage / verification map을 작성한다.
+3차에서 backtest-dev `8510`의 Today first-read를 README 전용 PNG로 캡처하고 hero에 연결한다.
 
 ## Scope Boundary
 

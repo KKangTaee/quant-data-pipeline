@@ -95,3 +95,227 @@ Data Operations는 반드시 처음 한 번만 거치는 설치 단계가 아니
 - 모든 provider를 포괄하는 universal connector
 
 `financial_advisor` 디렉터리는 저장소에 남아 있지만 현재 finance 제품 개발의 기본 범위가 아닙니다.
+
+## 5분 빠른 시작
+
+### 준비 사항
+
+| 항목 | 용도 | 필수 범위 |
+|---|---|---|
+| Python `3.12+` | finance runtime과 Streamlit 앱 | 앱 실행에 필수 |
+| [`uv`](https://docs.astral.sh/uv/) | Python 환경과 dependency 관리 | 앱 실행에 필수 |
+| local MySQL | 가격·재무·거시·provider·monitoring 데이터 | DB-backed 기능 사용에 필요 |
+| Node.js와 npm | React component test, typecheck, production build | frontend를 수정할 때만 필요 |
+| provider API 설정 | FRED vintage, SEC identity, OpenFIGI mapping 등 | 해당 데이터를 수집할 때만 필요 |
+
+React production bundle은 `component_static/`에 포함되어 있습니다. 따라서 앱을 처음 실행할 때 npm install이나 frontend 전체 build를 먼저 할 필요는 없습니다.
+
+### 설치와 실행
+
+```bash
+uv sync
+uv run streamlit run app/web/streamlit_app.py
+```
+
+기본 주소는 [http://localhost:8501](http://localhost:8501)입니다. 여러 worktree를 동시에 실행한다면 port를 명시합니다.
+
+```bash
+uv run streamlit run app/web/streamlit_app.py --server.port 8510
+```
+
+현재 `backtest-dev` worktree의 local QA port는 `8510`입니다.
+
+### 첫 실행 확인
+
+1. 상단에 `Research / Portfolio / Data / Help`가 표시되는지 확인합니다.
+2. 기본 route인 `Today`가 열리는지 확인합니다.
+3. 데이터가 준비되지 않았다면 unavailable, partial 또는 stale 상태가 명시적으로 표시되는지 확인합니다.
+4. 실제 Research와 Portfolio workflow를 사용하기 전 `Data Operations`에서 필요한 DB evidence를 준비합니다.
+
+빈 DB에서도 앱 진입과 자료 부족 상태 확인까지는 가능합니다. 의미 있는 분석 결과를 얻으려면 가격, 재무제표, macro, ETF provider와 필요한 universe 데이터가 먼저 수집되어야 합니다.
+
+### 선택적 provider 설정
+
+프로젝트 root의 `.env`는 외부 수집 기능이 필요할 때만 사용합니다.
+
+```dotenv
+FRED_API_KEY=...
+SEC_USER_AGENT=Your Name your-email@example.com
+OPENFIGI_API_KEY=...
+```
+
+- `FRED_API_KEY`는 vintage 기반 경제 데이터 수집에 필요합니다.
+- `SEC_USER_AGENT`는 SEC fair-access 정책에 맞는 identity를 명시합니다.
+- `OPENFIGI_API_KEY`가 없으면 기관 보유 symbol mapping coverage가 제한될 수 있습니다.
+
+현재 MySQL 연결은 하나의 통합 환경변수 config로 추상화되어 있지 않고 여러 data/service 경로의 local connection contract를 사용합니다. 빈 환경에서 schema와 데이터를 준비할 때는 [Finance Runbooks](.aiworkspace/note/finance/docs/runbooks/README.md)와 `Data Operations`를 기준으로 하며, README는 실제보다 단순한 자동 bootstrap을 약속하지 않습니다.
+
+## 기술 스택과 구현 방식
+
+| 기술 | 현재 역할 |
+|---|---|
+| Python `3.12+` | ingestion, MySQL persistence, loader, point-in-time 계산, 전략, 백테스트, validation과 read model |
+| Streamlit `1.44+` | app navigation, page routing, session state, Python command orchestration과 React event boundary |
+| React `18` + TypeScript `5` | Today, Market Research, Institutional Holdings, Portfolio Monitoring과 Backtest workflow의 interactive workbench |
+| Vite `6` | Streamlit이 local component로 읽는 React production bundle 생성 |
+| MySQL + PyMySQL | 가격, 재무제표, 거시, provider, 기관 보유와 monitoring 데이터의 canonical persistence |
+| JSONL | candidate source, validation, Final Review decision, saved setup과 local run history의 workflow 기록 |
+| pandas | 시계열 정렬, factor·strategy 계산과 tabular read model |
+
+### 계층별 책임
+
+```mermaid
+flowchart LR
+    S["External Sources<br/>SEC · FRED · market/provider data"]
+    J["Python Ingestion / Jobs"]
+    DB["MySQL<br/>meta · price · fundamentals"]
+    L["Python Loaders / Services"]
+    R["Strategy · Backtest · Validation Runtime"]
+    ST["Streamlit<br/>routing · session · commands"]
+    UI["React + TypeScript<br/>interactive workbenches"]
+    JL["JSONL<br/>workflow · decision · saved setup"]
+
+    S --> J --> DB
+    DB --> L
+    L --> R
+    L --> ST
+    R --> ST
+    ST --> UI
+    ST <--> JL
+```
+
+#### Python domain과 application layer
+
+- `finance/data`는 collector, provider adapter, schema와 MySQL write path를 소유합니다.
+- `finance/loaders`는 기준일과 coverage를 반영한 DB read path를 소유합니다.
+- `finance/transform.py`, `strategy.py`, `engine.py`, `performance.py`는 preprocessing, simulation, orchestration과 성과 계산을 분리합니다.
+- `app/jobs`는 수집·자동화·실행 job을, `app/services`는 Streamlit-free application read model과 command boundary를 담당합니다.
+- `app/runtime`은 Backtest runner와 runtime orchestration을 UI에서 분리합니다.
+
+#### Streamlit application shell
+
+Streamlit은 `app/web/streamlit_app.py`에서 top-level route를 구성하고 Python session·command를 조정합니다. 데이터 수집, Gate 계산과 persistence authority는 Python에 남기며, React에 JSON-safe payload와 작은 event envelope만 전달합니다.
+
+#### React workbench
+
+React와 TypeScript는 복잡한 화면 탐색, local selection, chart, responsive layout과 명시적인 사용자 intent를 담당합니다. React component는 MySQL이나 provider를 직접 호출하지 않고 validation·Final Review·Monitoring 상태를 독자적으로 계산하거나 저장하지 않습니다.
+
+Python이 server state를 다시 읽어야 하는 동작만 Streamlit event boundary를 넘습니다. 화면 안에서 끝나는 tab, filter, hover와 presentation state는 가능한 React local state로 유지합니다.
+
+## 프로젝트 구조
+
+```text
+app/
+  jobs/                         # ingestion, automation, execution jobs
+  services/                     # Streamlit-free application/read-model layer
+  runtime/                      # Backtest runners and runtime orchestration
+  web/                          # Streamlit pages and React adapters
+    streamlit_components/       # page-level React/TypeScript workbenches
+    components/*/frontend/      # Backtest workflow React components
+
+finance/
+  data/                         # collectors, provider adapters, MySQL writes
+  data/db/                      # MySQL client and schema definitions
+  loaders/                      # DB-backed read paths
+  transform.py                  # signals, factors, ranking, preprocessing
+  strategy.py                   # portfolio simulation and rebalancing
+  engine.py                     # strategy orchestration
+  performance.py                # performance metrics
+
+tests/                          # Python domain, service and UI-boundary contracts
+
+.aiworkspace/note/finance/
+  docs/                         # durable product, architecture, data and runbook knowledge
+  tasks/active/                 # task plan, status, runs and risks
+  phases/active/                # multi-task phase integration when explicitly opened
+  researches/active/            # product direction and benchmark research
+  reports/backtests/            # human-readable strategy and run reports
+  registries/                   # append-only workflow records
+  saved/                        # reusable user portfolio setups
+  run_history/                  # local execution history
+```
+
+더 세밀한 file ownership은 [Project Map](.aiworkspace/note/finance/docs/PROJECT_MAP.md)에서 확인합니다.
+
+## 데이터와 저장 경계
+
+| 저장 위치 | 역할 | 정책 |
+|---|---|---|
+| MySQL `finance_meta` | universe, asset profile, provider snapshot, macro, events, 13F와 운영 metadata | canonical metadata / evidence source |
+| MySQL `finance_price` | 주식·ETF·futures 가격, 거래량과 corporate action history | canonical price source |
+| MySQL `finance_fundamental` | raw filing, financial statement와 derived factor | canonical fundamental source |
+| `.aiworkspace/note/finance/registries/*.jsonl` | candidate, validation과 decision workflow record | append-only, 임의 재작성 금지 |
+| `.aiworkspace/note/finance/saved/*.jsonl` | reusable portfolio와 monitoring setup | 사용자 설정으로 보존 |
+| `.aiworkspace/note/finance/run_history/*.jsonl` | local execution history | 보통 commit하지 않음 |
+| `.aiworkspace/note/finance/run_artifacts/` | local job artifact와 diagnostic output | 보통 commit하지 않음 |
+| `.aiworkspace/note/finance/reports/backtests/` | 사람이 읽는 전략·실행 근거 | registry나 saved source를 대체하지 않음 |
+
+## 데이터 신뢰성과 투자 경계
+
+- **Point-in-time correctness** — 각 기준일에 실제로 알 수 있었던 데이터만 사용하도록 설계합니다.
+- **Look-ahead bias** — 미래 발표값, 수정된 vintage 또는 이후 universe 정보를 과거 판단에 섞지 않습니다.
+- **Survivorship bias** — 현재 상장 종목 목록만으로 historical universe가 완전하다고 가정하지 않습니다.
+- **Visible evidence state** — source, freshness, coverage와 partial·stale·unavailable 상태를 숨기지 않습니다.
+- **`NOT_RUN` is not pass** — 데이터나 구현이 없어 실행하지 못한 검증은 통과가 아닙니다.
+- **Context is not approval** — macro, sentiment, events, news와 13F는 조사 근거이지 자동 투자 신호가 아닙니다.
+- **DB before UI** — 기본 경로는 `Ingestion → DB → Loader / Service → Runtime → UI`이며 UI에서 provider를 직접 fetch하지 않습니다.
+
+이 원칙은 높은 수익률보다 evidence quality와 재현 가능한 판단 경로를 우선하기 위한 것입니다.
+
+## 개발과 검증
+
+### Python
+
+변경한 domain의 focused suite를 실행합니다.
+
+```bash
+uv run python -m unittest tests.test_today_home
+```
+
+pytest 기반 파일은 project root import 경계를 명시해 실행할 수 있습니다.
+
+```bash
+PYTHONPATH=. uv run --with pytest python -m pytest tests/test_today_home.py -q
+```
+
+### React와 TypeScript
+
+각 component directory에서 제공하는 script를 사용합니다.
+
+```bash
+npm run typecheck
+npm run test
+npm run build
+```
+
+component마다 지원하는 script가 다르므로 해당 `package.json`을 먼저 확인합니다. production build 결과인 `component_static/`은 Streamlit이 직접 읽는 배포 자산이며, component를 수정했다면 source와 함께 검증합니다.
+
+### 공통 확인
+
+```bash
+git diff --check
+git status --short
+```
+
+generated QA image, run history, local experiment output, registry와 saved setup은 명시적인 사용자 요청 없이 stage하지 않습니다.
+
+## 상세 문서
+
+README는 제품의 첫 관문이며 빠르게 변하는 active task 상태를 복제하지 않습니다.
+
+| 목적 | 문서 |
+|---|---|
+| 문서 전체 진입점 | [Finance Documentation Index](.aiworkspace/note/finance/docs/INDEX.md) |
+| 제품 목표와 non-goal | [Product Direction](.aiworkspace/note/finance/docs/PRODUCT_DIRECTION.md) |
+| 현재 개발 상태와 다음 결정 | [Roadmap](.aiworkspace/note/finance/docs/ROADMAP.md) |
+| code ownership과 entry point | [Project Map](.aiworkspace/note/finance/docs/PROJECT_MAP.md) |
+| layer와 UI-engine 경계 | [Architecture](.aiworkspace/note/finance/docs/architecture/README.md) |
+| 데이터 의미와 schema 지도 | [Data Documentation](.aiworkspace/note/finance/docs/data/README.md) |
+| Backtest 화면과 stage 책임 | [Backtest UI Flow](.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md) |
+| 후보 생성부터 Monitoring까지 | [Portfolio Selection Flow](.aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md) |
+| Institutional 13F 사용자 흐름 | [Institutional Holdings Flow](.aiworkspace/note/finance/docs/flows/INSTITUTIONAL_PORTFOLIOS_FLOW.md) |
+| 실행·수집·QA 절차 | [Finance Runbooks](.aiworkspace/note/finance/docs/runbooks/README.md) |
+| 전략과 backtest report | [Backtest Reports](.aiworkspace/note/finance/reports/backtests/INDEX.md) |
+| 현재 실행 task | [Active Task Index](.aiworkspace/note/finance/tasks/active/README.md) |
+
+Codex 또는 agent가 이 저장소에서 작업할 때는 [AGENTS.md](AGENTS.md), Documentation Index, Roadmap과 Project Map을 먼저 확인합니다.

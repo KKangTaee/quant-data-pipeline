@@ -181,7 +181,7 @@ git commit -m "README 제품 흐름 전면 개편"
 - Consumes: Task 1 product context, committed `component_static` bundles, Python / React package manifests
 - Produces: executable quick start, architecture diagram, tech ownership, repository / storage / verification map
 
-- [ ] **Step 1: Runtime prerequisite evidence 재확인**
+- [x] **Step 1: Runtime prerequisite evidence 재확인**
 
 Run:
 
@@ -194,7 +194,7 @@ test -f app/web/streamlit_components/today_workbench/package.json
 
 Expected: exit 0.
 
-- [ ] **Step 2: 5분 빠른 시작 작성**
+- [x] **Step 2: 5분 빠른 시작 작성**
 
 README에 다음 명령을 그대로 제공한다.
 
@@ -207,7 +207,7 @@ uv run streamlit run app/web/streamlit_app.py
 Python / uv, local MySQL, optional provider `.env`, frontend-only Node.js 역할을 구분한다.
 schema / initial collection은 Data Operations와 runbook link로 넘긴다.
 
-- [ ] **Step 3: 기술 스택과 ownership 작성**
+- [x] **Step 3: 기술 스택과 ownership 작성**
 
 다음 경계를 명시한다.
 
@@ -220,13 +220,13 @@ MySQL: meta, price, fundamentals and monitoring canonical data
 JSONL: workflow registry, decision record, saved setup, local run history separation
 ```
 
-- [ ] **Step 4: Architecture Mermaid 작성**
+- [x] **Step 4: Architecture Mermaid 작성**
 
 `External Sources -> Python Jobs -> MySQL -> Loaders / Services -> Runtime / Streamlit -> React`
 데이터 흐름과 Streamlit / JSONL 양방향 workflow 기록을 그린다.
 React에서 DB / provider로 직접 향하는 edge는 만들지 않는다.
 
-- [ ] **Step 5: Repository map, trust boundary, verification, docs hub 작성**
+- [x] **Step 5: Repository map, trust boundary, verification, docs hub 작성**
 
 다음 durable section을 작성한다.
 
@@ -239,7 +239,7 @@ React에서 DB / provider로 직접 향하는 edge는 만들지 않는다.
 
 active task snapshot section은 만들지 않고 Roadmap / active task index link만 제공한다.
 
-- [ ] **Step 6: Quick-start command smoke**
+- [x] **Step 6: Quick-start command smoke**
 
 기존 localhost app이 실행 중이면 현재 process / route를 확인한다.
 실행 중이지 않으면 다음 명령으로 bounded smoke를 수행한다.
@@ -250,7 +250,7 @@ uv run streamlit run app/web/streamlit_app.py --server.headless true --server.po
 
 Expected: Streamlit이 import error 없이 기동하고 local URL을 출력한다. 확인 후 test process만 종료한다.
 
-- [ ] **Step 7: Tech / boundary assertion 실행**
+- [x] **Step 7: Tech / boundary assertion 실행**
 
 Run:
 
@@ -266,7 +266,7 @@ rg -q "survivorship" README.md
 
 Expected: exit 0.
 
-- [ ] **Step 8: 2차 commit**
+- [x] **Step 8: 2차 commit**
 
 ```bash
 git add README.md .aiworkspace/note/finance/tasks/active/readme-product-onboarding-overhaul-v1-20260725/

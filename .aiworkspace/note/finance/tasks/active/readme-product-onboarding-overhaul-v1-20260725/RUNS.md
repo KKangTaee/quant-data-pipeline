@@ -32,3 +32,11 @@
 - 옛 `Workspace / Operations / Selected Portfolio Dashboard`와 stale current-focus 표현 존재 확인
 - README를 Evidence-first product positioning, current surface map, Portfolio Lab 3단계, product workflow와 non-goal 중심으로 재작성
 - current 7개 surface assertion, old label 부재, `git diff --check` 통과
+
+## 2026-07-26 — 2차 Quick Start / Technical Architecture
+
+- Python 3.12, `pyproject.toml`, Today committed `component_static`과 frontend manifest 존재 확인
+- default `8501` quick start와 multiple-worktree `8510` example, provider `.env`와 current local MySQL limitation 기록
+- Python / Streamlit / React / TypeScript / Vite / MySQL / JSONL ownership, architecture Mermaid, repository / storage / trust / verification map 작성
+- backtest-dev `8510` listener가 current worktree cwd를 사용하고 HTTP 200을 반환함을 확인
+- README 321 lines, 기술·PIT·bias keyword assertion과 `git diff --check` 통과
