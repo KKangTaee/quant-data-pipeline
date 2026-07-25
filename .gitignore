@@ -9,6 +9,9 @@ node_modules/
 
 # Virtual environments
 .venv
+.env
+.env.*
+!.env.example
 
 # IDE files
 .idea/

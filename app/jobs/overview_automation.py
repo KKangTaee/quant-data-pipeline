@@ -24,6 +24,7 @@ from app.jobs.ingestion_jobs import (
 )
 from app.jobs.economic_cycle_refresh import run_economic_cycle_intramonth_refresh
 from app.jobs.run_history import append_run_history, load_run_history
+from app.runtime_env import load_project_local_env
 from app.workspace_paths import RUN_ARTIFACT_DIR
 
 US_MARKET_TZ = ZoneInfo("America/New_York")
@@ -621,6 +622,7 @@ def _print_text_summary(summary: dict[str, Any]) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    load_project_local_env()
     parser = argparse.ArgumentParser(description="Run browser-independent Overview market intelligence automation.")
     parser.add_argument("--profile", default="standard", choices=VALID_PROFILES, help="Automation profile to evaluate.")
     parser.add_argument("--job", action="append", dest="job_ids", help="Limit run to one job_id or job_name. Repeatable.")

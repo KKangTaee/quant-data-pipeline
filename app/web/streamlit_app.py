@@ -12,6 +12,10 @@ DIRECT_RUN_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(DIRECT_RUN_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(DIRECT_RUN_PROJECT_ROOT))
 
+from app.runtime_env import load_project_local_env
+
+load_project_local_env(DIRECT_RUN_PROJECT_ROOT)
+
 from app.web.final_selected_portfolio_dashboard import (
     configure_portfolio_monitoring_page_targets,
     render_final_selected_portfolio_dashboard_page,
