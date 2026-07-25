@@ -1,5 +1,7 @@
 # Status
 
+State: verification_only
+
 - Current: 선택 차트의 desktop 목록 35% / 상세 65%와 축 11px 가독성 후속 구현 및 자동 회귀 완료, 실제 Browser interaction/layout QA 대기
 - Roadmap: 2/3차 완료, 3차 자동 검증·문서 정렬 완료 / Browser QA 미완료
 - Delivered:

@@ -87,7 +87,7 @@ def _classify(paths: list[str]) -> dict[str, list[str]]:
             out["root_logs"].append(path)
         elif path in INDEX_DOCS:
             out["indexes"].append(path)
-        elif path in REGISTRY_DOCS:
+        elif path.startswith(".aiworkspace/note/finance/registries/") and path.endswith(".jsonl"):
             out["registries"].append(path)
         elif path.startswith(".aiworkspace/note/finance/phases/active/") and path.endswith(".md"):
             out["phase_docs"].append(path)

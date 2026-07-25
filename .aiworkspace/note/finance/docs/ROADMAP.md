@@ -108,7 +108,10 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 | Paused | 구현된 현재 범위는 유지하지만 다음 확장은 명시적 재개 전까지 진행하지 않음 |
 | Verification-Only | behavior implementation은 끝났고 실제 환경 QA와 closeout 기록만 남음 |
 | Candidate | 아직 승인되지 않은 다음 결정 후보 |
-| Complete | 요구된 구현, 관련 검증, durable docs와 handoff가 모두 정렬됨 |
+| Complete | 요구된 구현, 관련 검증, durable docs와 필요한 handoff가 모두 정렬됨 |
+
+여기서 handoff는 우선 task/phase `STATUS.md`, `RUNS.md`, `RISKS.md`의 다음 행동과 검증 기록을 뜻한다.
+root handoff log는 다음 작업자가 반드시 알아야 할 고신호 milestone이나 decision이 있을 때만 갱신한다.
 
 ### Product Completion
 

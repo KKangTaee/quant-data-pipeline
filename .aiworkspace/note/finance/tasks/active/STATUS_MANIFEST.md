@@ -1,26 +1,26 @@
 # Active Task State Manifest
 
-Status: Active
-Last Verified: 2026-07-23
+Document Status: Maintained
+Last Verified: 2026-07-26
 
 ## Current State
 
-Current active task:
+Current active product task:
 
-- `overview-sentiment-cnn-aaii-v1-20260719`
+- none
 
-Latest completed task:
+Paused task:
+
+- `overview-sentiment-cnn-aaii-v1-20260719` — `State: paused`; 전체 잠정 roadmap `2/4차`. 현재 공개 범위는 유지하고 3차 독립 데이터 후보 검토는 명시적 재개 전까지 진행하지 않는다.
+
+Verification-Only tasks:
+
+- `portfolio-monitoring-chart-zoom-pan-v1-20260719` — `State: verification_only`; 구현과 자동 회귀 완료, actual responsive interaction QA 대기
+- `market-movers-chart-navigation-polish-v1-20260721` — `State: verification_only`; 구현과 production build 완료, actual hover/drag/responsive QA 대기
+
+Latest completed product task:
 
 - `today-contributor-coverage-layout-v1-20260723` — 전체 roadmap `2/2`; Today의 계산 가능한 EOD/live 종목 기여를 절대 영향도 순으로 모두 표시하고 coverage copy와 compact top-aligned `우선 확인` 배치를 적용했다.
-
-Current active task status:
-
-- `overview-sentiment-cnn-aaii-v1-20260719`: 전체 잠정 roadmap `2/4차`. 1차 균형형 UI와 2차 PIT 이중 저장·known-at 조회·장기 그래프를 완료했다. 다음은 3차 독립 데이터 후보 검토다.
-
-Parallel active follow-up:
-
-- `portfolio-monitoring-chart-zoom-pan-v1-20260719`: 구현과 자동 회귀는 완료했고 전체 `2/3차`; 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다.
-- `market-movers-chart-navigation-polish-v1-20260721`: 구현과 자동 회귀·production build는 완료했고, localhost URL policy로 실제 hover/drag Browser QA가 남아 있다. broader Market Movers roadmap은 `4/5차`다.
 
 Previous completed task:
 

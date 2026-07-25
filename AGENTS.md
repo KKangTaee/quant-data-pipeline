@@ -28,15 +28,19 @@
 작업 시작 시 먼저 아래를 확인한다.
 
 1. `.aiworkspace/note/finance/docs/INDEX.md`
-2. `.aiworkspace/note/finance/docs/ROADMAP.md`
-3. `.aiworkspace/note/finance/docs/PROJECT_MAP.md`
-4. 필요한 경우 `.aiworkspace/note/finance/docs/GLOSSARY.md`
-5. 작업 성격에 맞는 `.aiworkspace/note/finance/docs/architecture/`, `flows/`, `data/`, `runbooks/`
-6. 관련 active phase가 있으면 `.aiworkspace/note/finance/phases/active/<phase>/`
-7. 관련 active task가 있으면 `.aiworkspace/note/finance/tasks/active/<task>/`
-8. 제품 방향 / 벤치마킹 / 기능 후보 리서치면 `.aiworkspace/note/finance/researches/README.md`와 관련 `.aiworkspace/note/finance/researches/active/<research-id>/`
-9. backtest report 작업이면 `.aiworkspace/note/finance/reports/backtests/INDEX.md`
-10. 반복 이슈가 의심되면 `.aiworkspace/note/finance/agent/GOTCHAS.md`
+2. 제품 약속, 사용자 여정, product boundary를 다루면 `.aiworkspace/note/finance/docs/PRODUCT_DIRECTION.md`
+3. 현재 baseline, 작업 상태, 우선순위를 다루면 `.aiworkspace/note/finance/docs/ROADMAP.md`
+4. 코드, 화면, 저장소, 소유 경계를 다루면 `.aiworkspace/note/finance/docs/PROJECT_MAP.md`
+5. 필요한 경우 `.aiworkspace/note/finance/docs/GLOSSARY.md`
+6. 작업 성격에 맞는 `.aiworkspace/note/finance/docs/architecture/`, `flows/`, `data/`, `runbooks/`
+7. 관련 active phase가 있으면 `.aiworkspace/note/finance/phases/active/<phase>/`
+8. 관련 active task가 있으면 `.aiworkspace/note/finance/tasks/active/<task>/`
+9. 제품 방향 / 벤치마킹 / 기능 후보 리서치면 `.aiworkspace/note/finance/researches/README.md`와 관련 `.aiworkspace/note/finance/researches/active/<research-id>/`
+10. backtest report 작업이면 `.aiworkspace/note/finance/reports/backtests/INDEX.md`
+11. 반복 이슈가 의심되면 `.aiworkspace/note/finance/agent/GOTCHAS.md`
+
+`INDEX.md`가 읽기 경로의 canonical source다. 2~4번은 모든 작업에서 고정 순서로
+전부 읽는 목록이 아니라 작업 성격에 따라 선택하는 역할별 entry다.
 
 legacy `operations/`, `research/`, `support_tracks/`, `archive/`, root current-state markdown 문서는 새 구조로 흡수 후 제거했다.
 현재 `.aiworkspace/note/finance/researches/`는 legacy dump가 아니라 제품 방향 리서치 전용 active/done 작업장이다.
@@ -88,7 +92,7 @@ legacy `operations/`, `research/`, `support_tracks/`, `archive/`, root current-s
 공통 workflow skill:
 
 - 요청 분류, 읽을 문서 결정, active task 위치 결정: `finance-task-intake`
-- 구현 후 문서 alignment, index/roadmap/root log final sync: `finance-doc-sync`
+- 구현 후 역할별 durable doc alignment와 closeout 판단: `finance-doc-sync`
 - merge conflict, worktree 통합, parallel/sub 결과 통합, staged diff 검토: `finance-integration-review`
 - 반복 명령, 운영 절차, helper script 사용법을 runbook으로 정리: `finance-runbook-maintainer`
 
@@ -136,6 +140,9 @@ Main은 다음을 담당한다.
 - 충돌 가능 파일과 통합 검증 기준 관리
 - phase 완료 시 `docs/`로 승격할 장기 지식 선별
 
+새로 만들거나 이번 작업에서 수정하는 phase `STATUS.md`도
+`State: active | paused | verification_only | complete | blocked` 계약을 따른다.
+
 ### Task Work
 
 Task work는 실제 구현, 조사, 문서 정리, QA를 수행하는 실행 단위다.
@@ -156,6 +163,9 @@ Task work는 실제 구현, 조사, 문서 정리, QA를 수행하는 실행 단
 여러 파일 수정, 구조 판단, QA, 문서 체계 변경은 active task로 관리한다.
 
 작업 중 발견한 사실은 `NOTES.md`, 실행한 명령과 결과는 `RUNS.md`, 남은 검증 공백은 `RISKS.md`에 남긴다.
+새로 만들거나 이번 작업에서 수정하는 `STATUS.md`는
+`State: active | paused | verification_only | complete | blocked` 중 하나를 사용한다.
+기존 `Status:` 문서는 일괄 변환하지 않고 해당 task를 다시 수정할 때 점진적으로 정렬한다.
 
 ### Product Direction Research
 
@@ -187,11 +197,34 @@ Task work는 실제 구현, 조사, 문서 정리, QA를 수행하는 실행 단
 - 오래된 task 내용 중 반복 가치가 있는 것만 `docs/` 또는 `agent/GOTCHAS.md`로 승격한다.
 - `AGENTS.md`에는 상세 아키텍처 설명을 길게 넣지 않는다. 상세 지도는 `docs/`에 둔다.
 - 신규 또는 크게 바뀐 phase / task plan에는 `이걸 하는 이유?` 또는 그에 준하는 목적 설명을 포함한다.
+- 평범한 task / phase closeout은 active task/phase 문서만 갱신하는 것이 정상이다.
+- canonical 문서의 역할에 해당하는 사실이 바뀌지 않았다면 “canonical doc change 없음”을 정상 결과로 기록한다.
+
+### Canonical Document Ownership And Update Triggers
+
+| 문서 | 소유하는 내용 | 갱신하는 경우 | 넣지 않는 내용 |
+|---|---|---|---|
+| `docs/INDEX.md` | 문서 탐색 구조, 읽기 순서, canonical 위치 | 문서 체계, canonical 경로, discovery flow가 바뀜 | 완료 task 목록, current/latest 작업 이력 |
+| `docs/PRODUCT_DIRECTION.md` | 제품 약속, 사용자 여정, surface 역할, 원칙, non-goal | 승인된 제품 방향이나 사용자 가치 경계가 바뀜 | 미승인 아이디어, 구현 이력, 세부 파일 지도 |
+| `docs/PROJECT_MAP.md` | 현재 코드·화면·workflow·storage 소유 경계 | 구현된 소유 경계나 high-level runtime 구조가 바뀜 | 미래 계획, task 진행 로그, 작은 copy 변경 |
+| `docs/ROADMAP.md` | 현재 baseline, Active/Paused/Verification-Only, 다음 결정과 우선순위 | 상태, baseline, 승인 범위, 제품 우선순위가 바뀜 | 완료 작업 chronology, 상세 실행 로그 |
+
+상세 runtime/코드 흐름은 `docs/architecture/`, 사용자/화면 흐름은 `docs/flows/`,
+DB와 데이터 의미는 `docs/data/`, 반복 절차는 `docs/runbooks/`가 소유한다.
+완료 이력과 검증 결과는 task/phase 문서가 소유한다.
+
+### Source-Of-Truth Priority
+
+- 구현과 소유 사실: 실제 코드 > 해당 영역의 focused durable doc > task status
+- workflow 상태: 명시적 사용자 결정 > 정규화된 task/phase `STATUS.md` > compact manifest > Roadmap 요약 > root log
+- 제품 우선순위: 명시적 사용자 결정 > Roadmap
+- root log는 handoff pointer이며 구현, 상태, 우선순위의 authority가 아니다.
 
 ## Root Handoff Logs
 
 - `.aiworkspace/note/finance/WORK_PROGRESS.md`와 `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`는 root handoff log로 유지한다.
 - root log는 작업 현장 기록이 아니라 지도 역할을 한다. 작업 단위당 3~5줄의 핵심 milestone / decision / handoff만 남긴다.
+- 모든 작업에서 root log를 갱신하지 않는다. 다음 작업자가 반드시 알아야 할 milestone, decision, handoff가 있을 때만 추가한다.
 - 상세 구현 과정, 긴 분석, 명령 출력, 시행착오, 중간 판단은 active task의 `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`로 보낸다.
 - `WORK_PROGRESS.md`에는 무엇을 끝냈는지와 다음에 어디를 보면 되는지만 남긴다.
 - `QUESTION_AND_ANALYSIS_LOG.md`에는 `User request`, `Interpreted goal`, `Analysis result`, `Follow-up` 중심의 결론만 남기고 대화 전체를 옮기지 않는다.
@@ -200,7 +233,8 @@ Task work는 실제 구현, 조사, 문서 정리, QA를 수행하는 실행 단
 ## Code Work Rules
 
 - 코드 수정 전에는 `.aiworkspace/note/finance/docs/PROJECT_MAP.md`에서 소유 파일과 경계를 확인한다.
-- Backtest / Streamlit UI 변경은 `app/web/pages/backtest.py`와 관련 `app/web/backtest_*.py` 소유 경계를 먼저 확인한다.
+- Backtest / Streamlit UI 변경은 `app/web/backtest_page.py`, `app/web/backtest_workflow_shell.py`,
+  관련 `app/web/backtest_*`, `app/services/backtest_*`, `app/runtime/backtest/` 소유 경계를 먼저 확인한다.
 - DB / ingestion 변경은 `finance/data/db/schema.py`와 관련 `finance/data/*`, `finance/loaders/*`를 먼저 확인한다.
 - Strategy 변경은 기존 분리를 따른다.
   - preprocessing: `finance/transform.py`

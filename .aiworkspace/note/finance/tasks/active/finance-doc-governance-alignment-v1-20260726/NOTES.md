@@ -22,3 +22,12 @@
 - 기존 phase/task 폴더와 완료 이력은 보존한다.
 - phase bootstrap의 과거 numbered CLI는 새 문서에서 제거하며, 새 생성은 현재 계약만 허용한다.
 
+## Forward Review Result
+
+- Backtest instruction paths가 실제 Project Map과 달랐던 문제를 발견해
+  `app/web/backtest_page.py`, `app/services/backtest_*`, `app/runtime/backtest/` 기준으로 교정했다.
+- INDEX가 소유하는 읽기 경로와 AGENTS의 역할별 first read를 맞췄다.
+- Roadmap의 `Complete`에서 handoff는 task/phase 기록이 기본이며 root log는 고신호일 때만
+  필요하다고 명시했다.
+- INDEX는 discovery/read-order 사실이, Roadmap은 completion state 의미가 바뀌었기 때문에
+  이번 작업에서 역할에 맞게 갱신했다.

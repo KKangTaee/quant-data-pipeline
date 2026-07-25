@@ -18,3 +18,24 @@
   - semantic phase id 아래 canonical 6개 파일만 계획하는 것을 확인
 - 두 automation script `py_compile`
   - passed
+- focused service contract 2개
+  - Roadmap/root log 문구 대신 owning flow/task 문서를 검증하도록 교정
+  - 2 tests passed
+- full `tests.test_service_contracts`
+  - 905 tests run, 18 failures/errors
+  - 이번 diff가 바꾼 두 문서 계약 테스트는 통과
+  - 나머지 18개는 기존 task/root log에도 기록된 Final Review, Practical Validation, Futures Macro baseline이며 이번 문서 운영 범위에서 수정하지 않음
+- skill source validation
+  - `.venv` Python으로 `quick_validate.py` 실행
+  - task-intake, doc-sync, integration-review, backtest-web-workflow 모두 valid
+- runtime mirror sync
+  - repo source 4개 skill을 `~/.codex/skills/` mirror에 동기화
+  - mirror validation passed, source/mirror diff 없음
+- hygiene registry 분류 추가 진단
+  - RED: allowlist 밖 registry JSONL이 `other_files`로 분류됨
+  - root cause: 고정 `REGISTRY_DOCS` membership만 registry로 분류
+  - GREEN: `registries/*.jsonl` 전체를 registry로 분류, 전체 6 tests passed
+- independent skill forward review
+  - Backtest stale ownership path, INDEX/AGENTS read-order ambiguity, Roadmap handoff 의미 모호성 3건 발견
+  - 실제 파일/Project Map과 대조해 모두 교정
+  - state precedence와 role-based merge rule에는 추가 conflict 없음

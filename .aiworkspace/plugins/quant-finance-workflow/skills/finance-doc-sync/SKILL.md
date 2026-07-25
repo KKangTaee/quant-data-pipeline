@@ -36,14 +36,15 @@ For the detailed update matrix, read `references/doc-sync-matrix.md`.
 
 ## Core Workflow
 
-1. Identify the completed change and which docs are now stale.
-2. Update the smallest durable doc set needed to keep future readers oriented.
+1. Identify the completed change and classify it by document role.
+2. Update only the owning durable docs whose facts actually changed.
 3. Keep implemented behavior separate from future plans.
-4. Record durable decisions in `QUESTION_AND_ANALYSIS_LOG.md` only when the user-facing interpretation changed.
-5. Record concise milestones in `WORK_PROGRESS.md` only for non-trivial work.
-6. If roadmap/index/report discovery changed, update those maps.
-7. If a runbook procedure changed, route the procedure detail to `finance-runbook-maintainer`.
-8. If integration or conflict risk remains, route the review to `finance-integration-review`.
+4. Treat “no canonical doc change” as a normal closeout result and record it in the task when useful.
+5. Record a root handoff entry only when the next worker needs a high-signal decision or milestone.
+6. Update Roadmap only when baseline, workflow state, approved scope, or priority changed.
+7. Update Index only when document discovery, canonical path, or read order changed.
+8. If a runbook procedure changed, route the procedure detail to `finance-runbook-maintainer`.
+9. If integration or conflict risk remains, route the review to `finance-integration-review`.
 
 ## Boundary
 

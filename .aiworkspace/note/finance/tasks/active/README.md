@@ -1,12 +1,13 @@
 # Active Finance Tasks
 
-Status: Active
-Last Verified: 2026-07-23
+Document Status: Maintained
+Last Verified: 2026-07-26
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
 현재 상태를 볼 때는 이 폴더의 모든 하위 폴더를 literal active work로 해석하지 않는다.
-현재 작업은 [STATUS_MANIFEST.md](./STATUS_MANIFEST.md), 아래 `Current Active Tasks`, [Roadmap](../../docs/ROADMAP.md)을 우선 확인한다.
+현재 작업은 명시적 사용자 결정, 각 task의 정규화된 `State:`, [STATUS_MANIFEST.md](./STATUS_MANIFEST.md),
+[Roadmap](../../docs/ROADMAP.md) 순으로 확인한다. Roadmap은 제품 수준 요약이며 root log는 상태 authority가 아니다.
 
 권장 구조:
 
@@ -23,13 +24,22 @@ tasks/active/<task-name>/
 작은 단일 파일 수정에는 task 문서를 만들지 않아도 된다.
 여러 파일을 건드리거나, 조사 / 설계 / QA가 필요한 작업은 active task로 관리한다.
 
-## Current Active Tasks
+## Current Active Product Tasks
 
-| Task | Status | Notes |
+현재 user-approved product implementation은 없다.
+
+## Paused Tasks
+
+| Task | State | Resume Condition |
 |---|---|---|
-| `overview-sentiment-cnn-aaii-v1-20260719` | 2/4 complete | 1차 균형형 UI와 2차 PIT 이중 저장·known-at 조회·장기 그래프를 완료했다. 다음은 독립 데이터 후보 검토다. |
-| `portfolio-monitoring-chart-zoom-pan-v1-20260719` | Parallel follow-up, 2/3 complete | 구현과 자동 회귀는 완료했다. 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다. |
-| `market-movers-chart-navigation-polish-v1-20260721` | Parallel follow-up, implementation complete | 재무 날짜축·exact hover·가로 drag와 가격 readout tone 구현·자동 회귀는 완료했다. 실제 Browser interaction QA가 남아 있다. |
+| `overview-sentiment-cnn-aaii-v1-20260719` | `paused`, 2/4 complete | 독립 데이터 후보와 저장 경계, 1W/1M 공개 전 chronological PIT validation 범위를 새로 승인 |
+
+## Verification-Only Tasks
+
+| Task | State | Remaining Verification |
+|---|---|---|
+| `portfolio-monitoring-chart-zoom-pan-v1-20260719` | `verification_only` | desktop/900px/420px interaction·layout·overflow Browser QA |
+| `market-movers-chart-navigation-polish-v1-20260721` | `verification_only` | 최신 local app에서 hover·drag·responsive·console Browser QA |
 
 ## Recent Completed / Retained Current Work
 

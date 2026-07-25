@@ -4,13 +4,13 @@
 
 | Change type | Typical trigger | Code inspection required? |
 |---|---|---|
-| Code implementation | `finance/*`, `app/web/pages/backtest.py`, DB/schema/runtime changes | Yes |
+| Code implementation | `finance/*`, `app/web/backtest_*`, `app/services/backtest_*`, `app/runtime/backtest/`, DB/schema/runtime changes | Yes |
 | Data / DB pipeline | ingestion, persistence, schema, UPSERT, collector changes | Yes |
 | Strategy / backtest behavior | strategy inputs, transforms, engine, performance, result schema | Yes |
-| Phase planning | new phase, roadmap, phase plan, TODO board | Usually no |
-| Phase QA / closeout | checklist updates, manual validation, completion summary | Usually no |
+| Phase planning | explicit phase-managed work, phase plan, task board | Usually no |
+| Phase QA / closeout | phase status, integration result, validation summary | Usually no |
 | Backtest report | durable result report, strategy log, candidate note | Inspect scripts/code only if result source is uncertain |
-| Roadmap refresh | product direction, phase ordering, support track, scope change | Usually no |
+| Roadmap refresh | baseline, workflow state, approved scope, next decision, priority change | Usually no |
 | User-requested analysis | user asks to analyze a result, compare candidates, or interpret metrics | Usually no unless rerunning code |
 | Skill / workflow guidance sync | AGENTS, skills, templates, hygiene workflow | Usually no |
 
@@ -58,14 +58,39 @@ Update architecture/flow docs when runtime/result bundle flow, UI flow, or strat
 
 For phase/task plans, include `이걸 하는 이유?` or an equivalent purpose section. Explain the problem, why it matters now, and the concrete value created when finished.
 
-For closeout, sync:
+For every closeout, sync the owning task or phase records:
 
 - active task or phase `STATUS.md`
 - `RUNS.md`, `NOTES.md`, `RISKS.md` when relevant
-- `.aiworkspace/note/finance/docs/ROADMAP.md`
-- `.aiworkspace/note/finance/docs/INDEX.md`
-- `.aiworkspace/note/finance/WORK_PROGRESS.md`
-- `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md` when a durable decision was made
+
+Then apply this change-based matrix:
+
+| Observed change | Update |
+|---|---|
+| Product promise, user journey, surface purpose, principle, or non-goal changed | `docs/PRODUCT_DIRECTION.md` |
+| Implemented code/screen/workflow/storage ownership boundary changed | `docs/PROJECT_MAP.md` and the owning architecture/flow/data doc |
+| Baseline, Active/Paused/Verification-Only state, approved scope, or priority changed | `docs/ROADMAP.md` |
+| Document discovery, canonical path, or read order changed | `docs/INDEX.md` |
+| Repeated operating procedure changed | owning runbook |
+| Durable term changed | `docs/GLOSSARY.md` |
+| Backtest report discovery changed | `reports/backtests/INDEX.md` |
+| Next worker needs a high-signal milestone or decision | the relevant root handoff log, limited to 3-5 lines |
+| None of the above changed | no canonical/root-log update; record “canonical doc change 없음” in task closeout when useful |
+
+Do not use INDEX or ROADMAP as completed-task chronology. Keep completion history in task/phase documents.
+
+## Common Scenarios
+
+| Scenario | Default documentation |
+|---|---|
+| Small UI copy, minor bug fix, or focused QA | task docs only |
+| Navigation or user journey change | Product Direction, Project Map, owning flow; Roadmap only if baseline/state changed |
+| Ownership refactor | Project Map and owning architecture doc |
+| DB schema/source change | data and architecture docs; Project Map only for a high-level boundary change |
+| Pause, resume, or verification-only decision | task status, compact manifest, Roadmap |
+| Unapproved product research | research bundle only |
+| Approved product direction | Product Direction and Roadmap; Project Map after implementation changes ownership |
+| Documentation structure change | Index, AGENTS, and owning runbook |
 
 ## Backtest Reports
 

@@ -38,10 +38,10 @@ README
 
 ```text
 AGENTS
-  -> Roadmap
   -> Project Map
   -> owning architecture / flow / data 문서
   -> active task
+  -> Roadmap (baseline / state / priority가 관련될 때)
 ```
 
 ### 실행·수집·QA 절차를 찾을 때

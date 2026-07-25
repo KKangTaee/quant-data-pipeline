@@ -95,6 +95,17 @@ class FinanceHygieneContractTests(unittest.TestCase):
 
         self.assertEqual(generated_check["ok"], "yes")
 
+    def test_all_finance_registry_jsonl_files_are_classified_as_registries(self) -> None:
+        paths = [
+            ".aiworkspace/note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl",
+            ".aiworkspace/note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl",
+        ]
+
+        groups = self.hygiene._classify(paths)
+
+        self.assertEqual(groups["registries"], paths)
+        self.assertEqual(groups["other_files"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

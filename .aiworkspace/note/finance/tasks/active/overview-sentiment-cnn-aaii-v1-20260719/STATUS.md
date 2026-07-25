@@ -1,5 +1,7 @@
 # Status
 
+State: paused
+
 - 상태: 전체 잠정 로드맵 `2/4차` 완료. 1차 기능·시각 polish와 2차 PIT 축적·공통기간 보정 구현 완료
 - 완료 범위: 합성점수 없는 CNN 시장 행동 / AAII 투자자 인식 두 축, Hero 교차 판정, 균형 current evidence, CNN 고정 + AAII 응답/Spread 전환의 동시 2 graph, 1W·1M unavailable 기간 card, confirm/reverse/persist 관찰 조건, 접힌 상세 근거
 - 판정 계약: AAII Bull-Bear Spread `>= +10pp`는 낙관, `<= -10pp`는 비관, 그 사이는 중립이며 결측은 판단 불가다. CNN 구성요소는 CNN headline 내부 근거로만 사용한다.
