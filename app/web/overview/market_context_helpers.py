@@ -11,6 +11,7 @@ import streamlit as st
 
 from app.jobs.overview_actions import (
     record_overview_action_result,
+    run_overview_economic_cycle_refresh,
     run_overview_market_context_refresh_all,
     run_overview_market_context_refresh_smart,
     run_overview_sp500_price_refresh,
@@ -36,6 +37,9 @@ from app.web.overview.components.common import (
 
 MARKET_CONTEXT_REFRESH_RESULT_KEY = "overview_market_context_refresh_all_result"
 MARKET_CONTEXT_REFRESH_REFLECTION_KEY = "overview_market_context_refresh_reflection"
+ECONOMIC_CYCLE_RESULT_KEY = "overview_economic_cycle_refresh_result"
+ECONOMIC_CYCLE_EVENT_KEY = "overview_economic_cycle_refresh_last_event"
+ECONOMIC_CYCLE_ACTION_ID = "refresh_economic_cycle_data"
 US_STOCK_SEARCH_QUERY_KEY = "overview_us_stock_valuation_search_query"
 US_STOCK_SELECTED_SYMBOL_KEY = "overview_us_stock_valuation_selected_symbol"
 US_STOCK_COLLECTION_RESULT_KEY = "overview_us_stock_valuation_collection_result"
@@ -98,6 +102,30 @@ def load_market_context_valuation_model(
 
 def _render_economic_cycle_fallback(payload: dict[str, Any]) -> None:
     """Keep the core cycle reading available before the React build exists."""
+    freshness = dict(payload.get("data_freshness") or {})
+    action = dict(freshness.get("action") or {})
+    if (
+        action.get("id") == ECONOMIC_CYCLE_ACTION_ID
+        and action.get("enabled")
+    ):
+        st.warning(
+            str(
+                freshness.get("message")
+                or "경제사이클 최신화가 필요합니다."
+            )
+        )
+        if st.button(
+            str(action.get("label") or "최신 데이터로 다시 계산"),
+            key="fallback_refresh_economic_cycle_data",
+        ):
+            result = _run_economic_cycle_refresh_for_ui()
+            _store_overview_job_result(ECONOMIC_CYCLE_RESULT_KEY, result)
+            if str(result.get("status") or "").lower() in {
+                "success",
+                "partial_success",
+            }:
+                load_economic_cycle_model.clear()
+            st.rerun()
     headline = dict(payload.get("headline") or {})
     if payload.get("status") == "ERROR":
         st.warning(str(headline.get("summary") or "경제사이클 결과를 읽지 못했습니다."))
@@ -116,7 +144,7 @@ def _render_economic_cycle_fallback(payload: dict[str, Any]) -> None:
 
 
 def render_economic_cycle() -> None:
-    """Render the DB-only cycle workbench without emitting operational events."""
+    """Render persisted cycle data and consume one explicit manual refresh event."""
     from app.web.overview.economic_cycle_react_component import (
         economic_cycle_component_available,
         render_economic_cycle_component,
@@ -127,10 +155,97 @@ def render_economic_cycle() -> None:
     except Exception as exc:  # pragma: no cover - UI resilience only
         st.warning(f"경제사이클 자료를 불러오지 못했습니다: {exc}")
         return
+    payload = json.loads(json.dumps(payload, default=str))
+    result = st.session_state.pop(ECONOMIC_CYCLE_RESULT_KEY, None)
+    if isinstance(result, dict):
+        payload["refresh_result"] = _economic_cycle_collection_reflection(result)
     if economic_cycle_component_available():
-        render_economic_cycle_component(payload)
+        event = render_economic_cycle_component(payload)
+        _handle_economic_cycle_event(event)
         return
     _render_economic_cycle_fallback(payload)
+
+
+def _economic_cycle_event_payload(
+    event: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if not isinstance(event, dict):
+        return {}
+    nested = event.get("event")
+    return dict(nested) if isinstance(nested, dict) else dict(event)
+
+
+def _consume_economic_cycle_event(
+    payload: dict[str, Any],
+    *,
+    state: Any,
+) -> bool:
+    if str(payload.get("id") or "") != ECONOMIC_CYCLE_ACTION_ID:
+        return False
+    nonce = payload.get("nonce") or ECONOMIC_CYCLE_ACTION_ID
+    token = f"{ECONOMIC_CYCLE_ACTION_ID}:{nonce}"
+    if state.get(ECONOMIC_CYCLE_EVENT_KEY) == token:
+        return False
+    state[ECONOMIC_CYCLE_EVENT_KEY] = token
+    return True
+
+
+def _run_economic_cycle_refresh_for_ui() -> dict[str, Any]:
+    with st.status(
+        "최신 자료를 수집하고 경제사이클을 다시 계산하는 중입니다.",
+        expanded=True,
+    ) as status:
+        result = run_overview_economic_cycle_refresh()
+        result_status = str(result.get("status") or "failed").lower()
+        state = (
+            "complete"
+            if result_status in {"success", "partial_success"}
+            else "error"
+        )
+        status.update(
+            label=str(
+                result.get("message")
+                or "경제사이클 최신 자료 확인을 마쳤습니다."
+            ),
+            state=state,
+        )
+    return result
+
+
+def _handle_economic_cycle_event(
+    event: dict[str, Any] | None,
+    *,
+    state: Any = None,
+    run_action: Callable[[], dict[str, Any]] | None = None,
+    store_result: Callable[[dict[str, Any]], None] | None = None,
+    clear_cache: Callable[[], None] | None = None,
+    rerun: Callable[[], None] | None = None,
+) -> bool:
+    resolved_state = state if state is not None else st.session_state
+    payload = _economic_cycle_event_payload(event)
+    if not _consume_economic_cycle_event(payload, state=resolved_state):
+        return False
+    result = (run_action or _run_economic_cycle_refresh_for_ui)()
+    if store_result is not None:
+        store_result(result)
+    else:
+        _store_overview_job_result(ECONOMIC_CYCLE_RESULT_KEY, result)
+    if str(result.get("status") or "").lower() in {
+        "success",
+        "partial_success",
+    }:
+        (clear_cache or load_economic_cycle_model.clear)()
+    (rerun or st.rerun)()
+    return True
+
+
+def _economic_cycle_collection_reflection(
+    result: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "status": str(result.get("status") or "failed"),
+        "message": str(result.get("message") or ""),
+    }
 
 
 def _render_market_context_valuation_fallback(payload: dict[str, Any]) -> None:

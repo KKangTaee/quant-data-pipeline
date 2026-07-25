@@ -151,7 +151,7 @@ def test_content_router_passes_mode_and_hidden_selector_to_valuation() -> None:
     )
 
 
-def test_cycle_bridge_is_db_only_and_has_no_action_event() -> None:
+def test_cycle_bridge_is_db_only_and_keeps_provider_jobs_outside_ui() -> None:
     helper_source = Path("app/web/overview/market_context_helpers.py").read_text()
     bridge_source = Path(
         "app/web/overview/economic_cycle_react_component.py"
@@ -165,7 +165,96 @@ def test_cycle_bridge_is_db_only_and_has_no_action_event() -> None:
     assert "finance.data.economic_cycle_vintages" not in combined_source
     assert "run_economic_cycle_intramonth_refresh" not in combined_source
     assert "materialize_economic_cycle_intramonth_snapshot" not in combined_source
-    assert "event" not in bridge_source.lower()
+
+
+def test_cycle_component_returns_explicit_action_event() -> None:
+    module = importlib.import_module(
+        "app.web.overview.economic_cycle_react_component"
+    )
+    component = Mock(
+        return_value={
+            "event": {
+                "id": "refresh_economic_cycle_data",
+                "nonce": "cycle-1",
+            }
+        }
+    )
+
+    with patch.object(
+        module,
+        "_declare_economic_cycle_component",
+        return_value=component,
+    ):
+        result = module.render_economic_cycle_component(
+            {"schema_version": "economic_cycle_v2"}
+        )
+
+    assert result["event"]["id"] == "refresh_economic_cycle_data"
+
+
+def test_cycle_event_runs_once_and_clears_cache_only_on_usable_success() -> None:
+    helpers = importlib.import_module("app.web.overview.market_context_helpers")
+    state = {}
+    run_action = Mock(
+        return_value={"status": "partial_success", "message": "refreshed"}
+    )
+    store = Mock()
+    clear = Mock()
+    rerun = Mock()
+    event = {
+        "event": {
+            "id": "refresh_economic_cycle_data",
+            "nonce": "cycle-1",
+        }
+    }
+
+    assert (
+        helpers._handle_economic_cycle_event(
+            event,
+            state=state,
+            run_action=run_action,
+            store_result=store,
+            clear_cache=clear,
+            rerun=rerun,
+        )
+        is True
+    )
+    assert (
+        helpers._handle_economic_cycle_event(
+            event,
+            state=state,
+            run_action=run_action,
+            store_result=store,
+            clear_cache=clear,
+            rerun=rerun,
+        )
+        is False
+    )
+    run_action.assert_called_once_with()
+    store.assert_called_once()
+    clear.assert_called_once_with()
+    rerun.assert_called_once_with()
+
+
+def test_cycle_event_keeps_cache_on_incomplete_result() -> None:
+    helpers = importlib.import_module("app.web.overview.market_context_helpers")
+    clear = Mock()
+
+    helpers._handle_economic_cycle_event(
+        {
+            "event": {
+                "id": "refresh_economic_cycle_data",
+                "nonce": "cycle-2",
+            }
+        },
+        state={},
+        run_action=lambda: {"status": "incomplete", "message": "kept"},
+        store_result=Mock(),
+        clear_cache=clear,
+        rerun=Mock(),
+    )
+
+    clear.assert_not_called()
 
 
 def test_legacy_valuation_call_keeps_both_instruments_and_internal_selector() -> None:

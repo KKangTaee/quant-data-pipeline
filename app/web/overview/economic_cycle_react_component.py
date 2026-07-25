@@ -37,7 +37,9 @@ def render_economic_cycle_component(
     payload: dict[str, Any],
     *,
     key: str = "economic_cycle_workbench",
-) -> None:
+) -> dict[str, Any] | None:
     component = _declare_economic_cycle_component()
-    if component is not None:
-        component(payload=payload, key=key, default=None)
+    if component is None:
+        return None
+    result = component(payload=payload, key=key, default=None)
+    return dict(result) if isinstance(result, dict) else None
