@@ -17,6 +17,43 @@ Data Operations는 Streamlit 기반 내부 운영 도구 성격을 유지하되,
 
 이 설계는 기존 action을 삭제하지 않고 노출 위치와 진입 순서를 재정의한다.
 
+## 21. Follow-up — 제목 계층과 고급 도구 초기 상태
+
+### 문제 이해
+
+- 상단 section selector가 현재 위치를 이미 보여주는데 `공식 파일 가져오기`,
+  `문제 복구`, `실행 이력`, `고급 도구`가 본문 `subheader`로 한 번 더 반복된다.
+- 고급 도구에 직접 들어가면 `주식·ETF 종목 목록 최신화`와
+  `일별 가격 업데이트`가 기본으로 열려 있어 전체 도구 목록을 빠르게 훑기 어렵다.
+- 목적 화면이나 실행 이력에서 특정 action으로 이동한 경우에는 해당 도구가
+  열려야 하므로, 직접 진입과 action-focused 진입을 구분해야 한다.
+
+### 결정
+
+- section selector와 같은 의미의 view-level `subheader`만 제거한다.
+- 설명 caption, `원인 진단` 같은 작업군 제목, 개별 진단·수집 도구 제목은 유지한다.
+- 고급 도구에 직접 진입하면 모든 collector / diagnosis expander를 닫는다.
+- 특정 action handoff가 있으면 일치하는 expander 하나만 연다.
+- collection action, 파라미터 기본값, dispatcher, DB writer는 바꾸지 않는다.
+
+### 사용자 흐름
+
+```text
+section selector
+  -> 중복 제목 없이 설명과 첫 작업군 확인
+  -> 고급 도구 직접 진입: 전체 도구가 접힌 목록
+  -> 목적/이력에서 특정 작업 열기: 해당 도구만 펼침
+  -> 실행은 기존 explicit button click으로만 시작
+```
+
+### Trade-off
+
+직접 진입 시 form 입력이 바로 보이지 않아 한 번 펼쳐야 하지만,
+도구 탐색과 위험 범위 확인이 쉬워진다. Streamlit expander는 접혀 있어도
+본문 코드를 평가하므로 이번 변경은 시각적 복잡도를 줄이지만 초기 DB-backed
+preflight 비용 자체를 제거하지는 않는다. 이 성능 문제는 별도 구조 개선 후보로
+진단 결과에 남긴다.
+
 ## 2. Assumptions
 
 ### Primary User
