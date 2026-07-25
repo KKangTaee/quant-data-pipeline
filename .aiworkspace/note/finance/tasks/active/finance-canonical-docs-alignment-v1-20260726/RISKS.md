@@ -24,4 +24,11 @@
 
 ## Current Blockers
 
-없음. Written spec 사용자 검토가 다음 gate다.
+없음.
+
+## Non-Blocking Follow-Up
+
+- `tasks/active/`와 `phases/active/`의 retained completed board 물리 이동은 별도 승인
+  범위다.
+- two Verification-Only task의 actual Browser QA와 status closeout은 이번 문서
+  개편이 아니라 각 owning task에서 수행한다.

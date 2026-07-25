@@ -31,6 +31,10 @@
   한 표에서 찾게 하고, algorithm / payload / UX history는 focused docs로 넘긴다.
 - optional generated directory처럼 현재 존재하지 않는 위치는 실제 code path처럼
   표기하지 않고 storage policy로만 설명한다.
+- Roadmap은 active product work 없음, Sentiment paused, 두 Browser QA task를
+  Verification-Only로 분리하고 future candidate는 approval queue로만 유지한다.
+- next order는 verification debt → correctness PIT decision → one product research
+  lane → strategy governance → maintenance / platform work다.
 
 ## Protected Existing Work
 

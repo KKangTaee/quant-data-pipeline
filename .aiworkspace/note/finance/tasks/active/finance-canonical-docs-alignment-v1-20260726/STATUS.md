@@ -16,13 +16,13 @@ Started: 2026-07-26
 
 ## Current Step
 
-전체 roadmap `3/4차` 진행 중. 구현 task `3/4` 완료.
+전체 roadmap `3/4차` 진행 중. canonical content `4/4` 완료, final closeout 대기.
 
-INDEX, Product Direction과 Project Map 개편을 완료했고 Roadmap 개편을 진행한다.
+네 canonical 문서 개편을 완료했고 cross-document verification과 closeout을 진행한다.
 
 ## Next Action
 
-Roadmap을 개편한 뒤 cross-document closeout을 수행한다.
+local link, route, path, state와 protected-path audit 후 root handoff를 정렬한다.
 
 ## Scope Boundary
 

@@ -363,7 +363,7 @@ git commit -m "finance 프로젝트 지도 간결화"
 - Consumes: Tasks 1–3 stable roles and named task `STATUS.md`
 - Produces: current baseline, paused / verification-only state, prioritized approval queue
 
-- [ ] **Step 1: source statuses 재확인**
+- [x] **Step 1: source statuses 재확인**
 
 Run:
 
@@ -378,7 +378,7 @@ sed -n '1,120p' \
 
 Expected: Sentiment next work is paused; two named tasks are implementation-complete with Browser QA debt.
 
-- [ ] **Step 2: Roadmap을 다음 section으로 전면 재작성**
+- [x] **Step 2: Roadmap을 다음 section으로 전면 재작성**
 
 ```text
 # Finance Roadmap
@@ -396,7 +396,7 @@ Expected: Sentiment next work is paused; two named tasks are implementation-comp
 `Next Decision Queue`는 correctness, product-value, maintenance 순으로
 후보와 승인 필요 지점을 기록한다.
 
-- [ ] **Step 3: roadmap size / history assertion 실행**
+- [x] **Step 3: roadmap size / history assertion 실행**
 
 Run:
 
@@ -412,7 +412,7 @@ done
 
 Expected: exit 0.
 
-- [ ] **Step 4: state meaning assertion 실행**
+- [x] **Step 4: state meaning assertion 실행**
 
 Run:
 
@@ -426,7 +426,7 @@ done
 
 Expected: exit 0.
 
-- [ ] **Step 5: 4차 content commit**
+- [x] **Step 5: 4차 content commit**
 
 ```bash
 git add \

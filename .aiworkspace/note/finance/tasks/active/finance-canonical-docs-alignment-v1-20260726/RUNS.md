@@ -43,3 +43,13 @@
 - backtick code / storage path existence 검사에서 optional 미생성 artifact path 1개를
   발견해 policy 표현으로 교정한 뒤 전체 path 검사 통과
 - line cap과 `git diff --check` 통과
+
+## 2026-07-26 — Task 4 Roadmap
+
+- Sentiment paused status와 Portfolio Monitoring / Market Movers Browser QA-only
+  status를 source `STATUS.md`에서 재확인
+- Current Snapshot / Implemented Baseline / Current Work State / Decision Queue /
+  Recommended Order / Completion Rules / Work Model / Update Rules 구조로 재작성
+- 1,291 lines에서 155 lines로 축소하고 completed-task changelog를 제거
+- direct task reference 4개, old navigation 0, required state / section, local link와
+  `git diff --check` 확인
