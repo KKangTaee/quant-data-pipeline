@@ -1,7 +1,7 @@
 # Risks
 
-Status: Open
-Updated: 2026-07-25
+Status: Closed With Deferred Candidates
+Updated: 2026-07-26
 
 ## Product Risks
 
@@ -31,6 +31,18 @@ Updated: 2026-07-25
 - action form과 dispatcher는 unique ownership을 유지한다.
 - old history는 known job name mapping만 적용하고 unknown은 default UI에서 제외한다.
 - desktop/mobile Browser QA에서 first-action visibility와 overflow를 확인한다.
+
+## Closeout Result
+
+- active action 30개는 workflow / import / recovery ownership으로 모두 분류됐고 compatibility action은 승격하지 않았다.
+- shared action은 registry/form/dispatcher를 복제하지 않고 여러 consumer workflow에서 같은 action identity를 참조한다.
+- old history는 active known job만 표시하고 consumer-origin unknown run은 기본 이력에서 제외한다.
+- current/PIT/survivorship caveat는 guide와 기존 preflight/advanced form에 유지한다.
+- Browser QA에서 발견한 widget-backed navigation mutation은 pending section state로 해소했다.
+- raw artifact와 run history backend는 삭제하지 않고 사용자 기본 화면에서만 제거했다.
+- broad service contract 924개 중 Data Operations 관련 회귀는 통과했다. 전체
+  모듈의 기존 18건 baseline failure는 이번 소유 파일 밖이며 이 task에서
+  수정하지 않았다.
 
 ## Deferred Risks
 

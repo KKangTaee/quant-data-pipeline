@@ -1,8 +1,8 @@
 # Status
 
-Status: Design Ready For User Review
-Updated: 2026-07-25
-Roadmap: 2차 설계 작성 완료 / 사용자 검토 대기
+Status: Complete
+Updated: 2026-07-26
+Roadmap: 3차 구현·QA 완료 / 4차 durable execution·scheduling 후보 보류
 
 ## Completed
 
@@ -13,16 +13,24 @@ Roadmap: 2차 설계 작성 완료 / 사용자 검토 대기
 - 활성 action 30개의 primary / recovery / advanced ownership을 정의했다.
 - 기본 UI 제거 대상과 backend 보존 contract를 분리했다.
 - target module structure, error handling, responsive QA, test contract를 정리했다.
+- `데이터 준비 / 공식 파일 / 문제 복구 / 실행 이력 / 고급 도구` 5개 section을 실제 화면에 반영했다.
+- Market Research, Portfolio Lab, Institutional Holdings, Practical Validation 목적 카드와 순서형 action handoff를 구현했다.
+- 공식 XLSX/ICS, 읽기 전용 진단, 수동 복구 entry를 목적별로 분리하되 기존 action form·dispatcher는 한 벌만 유지했다.
+- Runtime/Build, 정적 4-step 안내, raw log/failure CSV/full payload history viewer를 기본 제품 화면과 코드에서 제거했다.
+- 실행 이력은 active Data Operations job만 `시각 / 작업 / 목적 / 상태 / 범위 / 결과 / 다음 행동`으로 표시한다.
+- 선택한 action의 기존 expander와 event/validation 하위 tab을 자동으로 펼치는 advanced focus를 구현했다.
+- focused Python 59개와 desktop/mobile actual Browser QA를 통과했다.
 
 ## Current
 
-- 2차 설계 문서 사용자 검토 대기.
-- UI / collector code는 아직 변경하지 않았다.
+- 1차 audit, 2차 설계, 3차 구현·QA를 완료했다.
+- collector, DB schema, loader, write behavior는 변경하지 않았다.
+- explicit click, preflight, progress, partial-success, run artifact backend는 유지한다.
 
 ## Next
 
-사용자 승인 후 3차 구현:
+4차 후보는 durable execution이 실제로 필요하다는 운영 근거가 생겼을 때만 연다.
 
-1. 3A page identity / default preparation / clutter removal
-2. 3B workflow / import / recovery / normalized history / advanced
-3. 3C module boundary / tests / Browser QA / docs sync
+1. background queue / scheduler / cancellation / resume 필요성 검증
+2. multi-user authorization과 remote deployment security 검토
+3. consumer-origin refresh까지 포함할 history scope 재검토

@@ -1,11 +1,21 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-25
+Last Verified: 2026-07-26
 
 ## Current State After Master Merge
 
 현재 active phase는 없다.
+
+Data Operations Task-Oriented IA V1은 1차 audit, 2차 설계, 3차 구현·QA를 완료했다.
+
+- 기본 흐름: `데이터 준비`에서 Market Research, Portfolio Lab, Institutional Holdings, Practical Validation 목적을 먼저 고른다.
+- 보조 흐름: 공식 XLSX/ICS는 `공식 파일`, read-only diagnosis와 bounded recovery는 `문제 복구`, low-level form은 `고급 도구`가 소유한다.
+- 결과: `실행 이력`은 active Data Operations job의 상태·범위·결과·다음 행동만 보여주며 Runtime/Build, raw log, failure CSV, absolute path, full payload viewer는 기본 화면에서 제거했다.
+- 경계: active action 30개, registry/form/dispatcher, explicit click, preflight, progress, partial-success, artifact backend, DB/loader 의미는 유지한다.
+- QA: focused Python 59개와 1280×720·420×900 actual Browser QA를 통과했다. 최초 발견한 Streamlit section-key mutation은 pending-state 방식으로 수정 후 재검증했다.
+- 후속: background queue, scheduler, cancellation/resume, multi-user security는 실제 운영 필요가 확인될 때 여는 4차 후보이며 이번 완료 범위가 아니다.
+- 상세: `tasks/active/data-operations-task-oriented-ia-v1-20260725/STATUS.md`.
 
 Institutional Holdings React Parity V1은 전체 `4/4차` 구현과 closeout을 완료했다.
 
@@ -216,7 +226,7 @@ Previous completed task는 `.aiworkspace/note/finance/tasks/active/operations-po
 
 - 목적: 사용하지 않는 Operations Overview와 System/Data Health 중복 화면을 제거하고 선정 이후 Portfolio Monitoring 업무만 남긴다.
 - 완료: 전체 `3/3차`; route/UI/test 제거와 Python/React/Browser QA를 닫았다.
-- 보존: 수집 실행 이력·로그·failure CSV는 `Workspace > Ingestion > 실행 기록 / 결과`에 유지한다.
+- 후속 변경: 당시 보존한 raw log·failure CSV viewer는 Data Operations Task-Oriented IA V1에서 기본 제품 화면에서 제거했다. backend run artifact는 유지하고 사용자-facing 결과와 다음 행동은 `Data > Data Operations > 실행 이력`에서 확인한다.
 - 경계: Portfolio Monitoring에 개발자 진단 패널을 옮기지 않는다.
 
 Latest completed Overview Futures Macro task는 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-probabilistic-state-outlook-v2-20260720/`다.
@@ -814,7 +824,7 @@ Recent data-source migration task는 `.aiworkspace/note/finance/tasks/active/fun
 2026-06-07 master 병합 후 제품은 다음 네 흐름이 함께 연결된 상태다.
 
 ```text
-Workspace > Ingestion
+Data > Data Operations
   -> Workspace > Overview market context
   -> Backtest > Backtest Analysis
   -> Backtest > Practical Validation
@@ -1043,17 +1053,18 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 
 | Track | Current State | Main Surfaces | Boundary |
 |---|---|---|---|
-| Data Collection / Data Trust | DB-backed ingestion baseline complete | `Workspace > Ingestion`, MySQL, loaders | UI에서 provider / FRED / external source를 직접 fetch하지 않는다. Overview bounded refresh는 `app/jobs/overview_actions.py` facade만 통과한다 |
+| Data Collection / Data Trust | DB-backed ingestion baseline plus task-oriented Data Operations IA complete | `Data > Data Operations`, MySQL, loaders | 목적별 explicit action만 기존 Ingestion -> DB -> Loader 경계를 통과한다. UI에서 provider / FRED / external source를 직접 fetch하지 않는다. Overview bounded refresh는 `app/jobs/overview_actions.py` facade만 통과한다 |
 | Overview / Market Context | Production baseline plus recent sentiment / Why It Moved work complete | `Workspace > Overview` | Market context and investigation only; bounded refresh action allowed through facade; no trade signal, approval, order, registry rewrite |
 | Backtest Analysis | Level1 decision workspace one-shell complete | `Backtest > Backtest Analysis` | Single / Mix 실행 결과의 fresh / data / execution readiness를 판단하고 명시적으로 후보 source를 만든다. setup 저장, 실행, Level2 handoff는 distinct action이며 final investment decision / monitoring governance는 후속 단계다 |
 | Practical Validation / Final Review | Investability evidence workflow complete through P2 / P3 and first hardening cycle | `Backtest > Practical Validation`, `Backtest > Final Review` | PASS / BLOCKER / selected-route gate는 validation evidence가 소유; sentiment overlay is context-only |
-| Operations / Portfolio Monitoring | React Portfolio-first Command Center supports group/item lifecycle, group performance, deterministic diagnosis/macro context, sharp value curve, and selected direct-security line/OHLCV candle detail; it is the sole user-facing Operations page | `Operations > Portfolio Monitoring`; run/log/failure review stays in `Workspace > Ingestion > 실행 기록 / 결과` | DB-backed virtual monitoring only; no live approval, broker order, account sync, auto rebalance |
+| Operations / Portfolio Monitoring | React Portfolio-first Command Center supports group/item lifecycle, group performance, deterministic diagnosis/macro context, sharp value curve, and selected direct-security line/OHLCV candle detail; it is the sole user-facing Operations page | `Operations > Portfolio Monitoring`; compact collection result review stays in `Data > Data Operations > 실행 이력` | DB-backed virtual monitoring only; no live approval, broker order, account sync, auto rebalance |
 | UI / Engine Boundary | Service/runtime boundary and lint baseline complete | `app/services`, `app/runtime`, `app/web` | UI handles render/session state; runtime / service owns engine dispatch, JSONL helpers, read models |
 
 ## Recently Merged Work
 
 | Workstream | Status | Durable Notes |
 |---|---|---|
+| Data Operations Task-Oriented IA V1 | Complete through 3차; 4차 candidate deferred | Five-section purpose-first flow, four consumer workflows, active 30-action ownership, focused Advanced forms, compact history, and removal of default runtime/raw artifact viewers are complete. Collector/DB/loader semantics and explicit execution are unchanged. |
 | Portfolio Monitoring Position Events V1 | Complete | Direct-stock fixed-shares detail supports initial quantity correction, additional buy, partial sell, immutable replace/void revisions, exact-date DB-close default/manual override provenance and cashflow-aware performance. Full sell stays in tracking end; ETF/strategy/fixed-notional/backtest remain unchanged. |
 | Portfolio Monitoring Initial Setting Correction V1 | Complete | `최초 설정 정정` extends the append-only initial correction with requested/effective start dates and DB entry close. Individual/group valuation replays from the corrected initial contract; legacy rows fall back to the item start contract. |
 | Portfolio Monitoring Price Refresh V1 | Complete | The common-basis banner exposes an explicit refresh only when active direct stock/ETF daily prices trail the latest completed NYSE session. It reuses the existing OHLCV ingestion job, rechecks DB freshness, recalculates the value curve, and records details in Ingestion history. Selected strategies and ended items remain excluded. |

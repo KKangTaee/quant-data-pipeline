@@ -1,7 +1,7 @@
 # Institutional Portfolios Flow
 
 Status: Active
-Last Verified: 2026-07-25
+Last Verified: 2026-07-26
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Market Movers는 선택된 급등락 종목이 왜 관심받는지 보는 곳이
 ## User Flow
 
 ```text
-Workspace > Ingestion
+Data > Data Operations
   -> SEC Form 13F 데이터셋 수집
   -> MySQL finance_meta.institutional_13f_* + refresh status
   -> Research > Institutional Holdings

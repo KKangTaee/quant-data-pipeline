@@ -1,7 +1,7 @@
 # Finance Flows
 
 Status: Active
-Last Verified: 2026-07-23
+Last Verified: 2026-07-26
 
 ## Main User Flow
 
@@ -69,6 +69,27 @@ Data > Data Operations
   -> Practical Validation diagnostics
 ```
 
+## Data Operations Flow
+
+```text
+Data > Data Operations
+  -> 데이터 준비
+     -> Market Research / Portfolio Lab / Institutional Holdings / Practical Validation
+     -> 필요한 action의 목적·순서·주의사항 확인
+     -> 설정 열기
+  -> 고급 도구
+     -> 선택 action의 기존 form / preflight 자동 확장
+     -> 사용자 명시 클릭
+     -> 기존 Ingestion -> DB -> Loader -> UI 경계
+  -> 실행 이력
+     -> 시각 / 작업 / 목적 / 상태 / 범위 / 결과 / 다음 행동
+     -> partial / failed이면 같은 설정으로 복귀
+```
+
+공식 XLSX/ICS는 `공식 파일`, 읽기 전용 진단과 bounded 수동 보강은 `문제 복구`에서 시작한다.
+모든 active action은 기존 registry/form/dispatcher를 한 벌만 유지하며 consumer workflow가 action을 복제하지 않는다.
+Runtime/Build, raw log, failure CSV, absolute artifact path, full payload는 기본 user flow가 아니다.
+
 ## Flow Rules
 
 - Practical Validation result는 최종 투자 승인 기록이 아니다.
@@ -78,7 +99,7 @@ Data > Data Operations
 - Portfolio > Portfolio Monitoring은 read-only monitoring surface이며 monitoring log 자동 저장, live approval, broker order, auto rebalance를 하지 않는다.
 - Market Research의 Sentiment, Futures Macro, Why It Moved는 시장 배경 / 조사 단서이며 Practical Validation PASS / BLOCKER가 아니다.
 - 부족 provider data는 Practical Validation Provider Gaps에서 확인하고, 수집 가능한 항목은 ingestion job을 통해 보강한다.
-- Ingestion의 current listing snapshot, SEC identity cross-check, computed snapshot lifecycle row는 survivorship PASS 근거가 아니다. Form 25 delisting row도 delisting evidence이며, Form 25 부재를 active listing proof로 해석하지 않는다.
+- Data Operations의 current listing snapshot, SEC identity cross-check, computed snapshot lifecycle row는 survivorship PASS 근거가 아니다. Form 25 delisting row도 delisting evidence이며, Form 25 부재를 active listing proof로 해석하지 않는다.
 
 ## Detailed Flow Docs
 

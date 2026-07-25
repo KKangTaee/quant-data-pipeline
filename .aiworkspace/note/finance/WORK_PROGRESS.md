@@ -10,6 +10,13 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-26 - Data Operations 목적형 IA 3차 완료
+
+- collector-first Ingestion 랜딩을 `데이터 준비 / 공식 파일 / 문제 복구 / 실행 이력 / 고급 도구`로 전환하고 네 downstream 목적에서 active action 30개를 찾도록 했다.
+- 기존 form·dispatcher·explicit click·preflight·progress·partial-success는 유지하고 Runtime/Build, 정적 4-step, raw log/failure/full-payload viewer를 기본 화면과 dead code에서 제거했다.
+- focused Python 59개와 1280×720·420×900 actual Browser QA를 통과했다. click QA에서 발견한 section-key mutation은 pending-state로 수정 후 동일 경로를 재검증했다.
+- 전체 roadmap은 1차 audit, 2차 설계, 3차 구현·QA 완료다. scheduler/queue/cancel/resume/security는 필요성 검증 후 여는 4차 후보이며 상세는 [task status](./tasks/active/data-operations-task-oriented-ia-v1-20260725/STATUS.md)를 본다.
+
 ### 2026-07-25 - main-dev master 병합 충돌 해결
 
 - Economic Cycle/data 완료 이력과 master의 Header/Sentiment/Institutional/Futures 완료 이력을 문서 역할별로 모두 보존하고 current/latest 표기를 정리했다.

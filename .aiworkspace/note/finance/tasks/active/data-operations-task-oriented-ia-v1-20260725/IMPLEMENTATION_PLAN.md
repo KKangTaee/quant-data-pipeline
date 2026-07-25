@@ -1,6 +1,6 @@
 # Data Operations Task-Oriented IA V1 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Replace the collector-first Ingestion landing page with a task-oriented Data Operations surface while preserving all existing ingestion actions, explicit execution, progress, artifacts, and compatibility dispatch.
 
@@ -43,7 +43,7 @@
   - `action_definition(action: str) -> dict[str, object]`
   - `validate_workflow_inventory() -> dict[str, object]`
 
-- [ ] **Step 1: Write the failing workflow inventory tests**
+- [x] **Step 1: Write the failing workflow inventory tests**
 
 ```python
 class DataOperationsWorkflowContractTest(unittest.TestCase):
@@ -72,7 +72,7 @@ class DataOperationsWorkflowContractTest(unittest.TestCase):
         )
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run:
 
@@ -82,7 +82,7 @@ Run:
 
 Expected: import failure because `app.web.ingestion.workflows` does not exist.
 
-- [ ] **Step 3: Implement the pure catalog**
+- [x] **Step 3: Implement the pure catalog**
 
 Use literal workflow definitions with these action ids:
 
@@ -145,7 +145,7 @@ Add official-import ownership for:
 
 Add recovery ownership for the four diagnostic and four manual actions. Derive `ACTION_WORKFLOW_OWNERSHIP` once and validate it against `_active_ingestion_actions()`.
 
-- [ ] **Step 4: Run tests and verify GREEN**
+- [x] **Step 4: Run tests and verify GREEN**
 
 ```bash
 .venv/bin/python -m unittest tests.test_data_operations_workflows tests.test_ingestion_module_split_contracts
@@ -153,7 +153,7 @@ Add recovery ownership for the four diagnostic and four manual actions. Derive `
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 ```bash
 git add app/web/ingestion/workflows.py app/web/ingestion/registry.py tests/test_data_operations_workflows.py
@@ -181,7 +181,7 @@ git commit -m "기능: Data Operations workflow catalog 추가"
   - `consume_focused_data_operations_action() -> str | None`
   - `render_preparation_view(*, on_action_focus: Callable[[str], None]) -> None`
 
-- [ ] **Step 1: Write failing state-transition tests**
+- [x] **Step 1: Write failing state-transition tests**
 
 Use a real dict as the state boundary:
 
@@ -199,7 +199,7 @@ def test_action_focus_moves_to_advanced_without_losing_action() -> None:
 
 Add one test that rejects an unknown action with `KeyError`.
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```bash
 .venv/bin/python -m unittest tests.test_data_operations_workflows
@@ -207,7 +207,7 @@ Add one test that rejects an unknown action with `KeyError`.
 
 Expected: import failure because `navigation.py` does not exist.
 
-- [ ] **Step 3: Implement navigation state helpers**
+- [x] **Step 3: Implement navigation state helpers**
 
 `apply_action_focus(state, action)` must validate with `action_definition(action)` before mutating:
 
@@ -220,11 +220,11 @@ def apply_action_focus(state: MutableMapping[str, object], action: str) -> None:
 
 Streamlit wrappers delegate to the pure function and call `st.rerun()` only from button callbacks.
 
-- [ ] **Step 4: Implement preparation cards**
+- [x] **Step 4: Implement preparation cards**
 
 Each card shows title, purpose, included data, cadence, and one `열기` button. Once selected, render the workflow's ordered steps with `_job_title(action)`, purpose, caveat, and `설정 열기`. Do not render runtime/build, raw counts, or a health dashboard.
 
-- [ ] **Step 5: Add responsive styles**
+- [x] **Step 5: Add responsive styles**
 
 Add scoped classes:
 
@@ -236,14 +236,14 @@ Add scoped classes:
 }
 ```
 
-- [ ] **Step 6: Run tests and verify GREEN**
+- [x] **Step 6: Run tests and verify GREEN**
 
 ```bash
 .venv/bin/python -m unittest tests.test_data_operations_workflows tests.test_ingestion_module_split_contracts
 .venv/bin/python -m py_compile app/web/ingestion/navigation.py app/web/ingestion/views/preparation.py app/web/ingestion/page.py
 ```
 
-- [ ] **Step 7: Commit Task 2**
+- [x] **Step 7: Commit Task 2**
 
 ```bash
 git add app/web/ingestion/navigation.py app/web/ingestion/views/__init__.py app/web/ingestion/views/preparation.py app/web/ingestion/page.py app/web/ingestion/styles.py tests/test_data_operations_workflows.py
@@ -271,7 +271,7 @@ git commit -m "기능: Data Operations 목적별 준비 화면 추가"
   - `render_advanced_view(*, focused_action: str | None) -> Any`
   - `section_for_action(action: str) -> str`
 
-- [ ] **Step 1: Write failing routing tests**
+- [x] **Step 1: Write failing routing tests**
 
 ```python
 def test_official_import_and_recovery_actions_route_to_expected_legacy_section() -> None:
@@ -284,7 +284,7 @@ def test_official_import_and_recovery_actions_route_to_expected_legacy_section()
 
 Add a test that unknown/compatibility-only actions raise `KeyError`.
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```bash
 .venv/bin/python -m unittest tests.test_data_operations_workflows
@@ -292,7 +292,7 @@ Add a test that unknown/compatibility-only actions raise `KeyError`.
 
 Expected: import failure because the view modules do not exist.
 
-- [ ] **Step 3: Implement official import view**
+- [x] **Step 3: Implement official import view**
 
 Render only:
 
@@ -301,11 +301,11 @@ Render only:
 
 Each item explains when to use it and calls `on_action_focus(action)`. It must not duplicate upload widgets or dispatcher calls.
 
-- [ ] **Step 4: Implement recovery view**
+- [x] **Step 4: Implement recovery view**
 
 Render the four diagnostic actions first and the four manual write actions under `직접 복구 도구`. Each action calls the same focus handoff. State clearly that diagnosis is read-only and manual write actions remain explicit.
 
-- [ ] **Step 5: Implement advanced view**
+- [x] **Step 5: Implement advanced view**
 
 Select operational/manual legacy form group from the focused action's registry section. Show one compact banner:
 
@@ -316,14 +316,14 @@ Select operational/manual legacy form group from the focused action's registry s
 
 Reuse existing `render_operational_section()` / `render_manual_section()` without duplicating action forms. Add `focused_action: str | None = None` parameters so the existing expander matching that action can open by default where practical; form behavior remains unchanged.
 
-- [ ] **Step 6: Run tests and verify GREEN**
+- [x] **Step 6: Run tests and verify GREEN**
 
 ```bash
 .venv/bin/python -m unittest tests.test_data_operations_workflows tests.test_ingestion_module_split_contracts
 .venv/bin/python -m py_compile app/web/ingestion/views/imports.py app/web/ingestion/views/recovery.py app/web/ingestion/views/advanced.py app/web/ingestion/sections.py
 ```
 
-- [ ] **Step 7: Commit Task 3**
+- [x] **Step 7: Commit Task 3**
 
 ```bash
 git add app/web/ingestion/views/imports.py app/web/ingestion/views/recovery.py app/web/ingestion/views/advanced.py app/web/ingestion/page.py app/web/ingestion/sections.py tests/test_data_operations_workflows.py tests/test_ingestion_module_split_contracts.py
@@ -347,7 +347,7 @@ git commit -m "기능: Data Operations 가져오기와 복구 흐름 분리"
   - `build_data_activity_row(record: dict[str, Any]) -> dict[str, str]`
   - `render_history_view() -> None`
 
-- [ ] **Step 1: Write failing behavior tests**
+- [x] **Step 1: Write failing behavior tests**
 
 ```python
 def test_history_filters_non_data_jobs_and_never_returns_raw_paths() -> None:
@@ -368,7 +368,7 @@ def test_history_filters_non_data_jobs_and_never_returns_raw_paths() -> None:
 
 Add literal assertions for partial-success label and next-action copy.
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```bash
 .venv/bin/python -m unittest tests.test_data_operations_workflows
@@ -376,7 +376,7 @@ Add literal assertions for partial-success label and next-action copy.
 
 Expected: import failure because `views/history.py` does not exist.
 
-- [ ] **Step 3: Implement pure history filtering and rows**
+- [x] **Step 3: Implement pure history filtering and rows**
 
 Only known active/compatibility action ids pass the filter. Use compact fields:
 
@@ -394,7 +394,7 @@ Only known active/compatibility action ids pass the filter. Use compact fields:
 
 Never copy `details`, log paths, failure CSV paths, full params, or artifact paths into the row.
 
-- [ ] **Step 4: Implement the history view**
+- [x] **Step 4: Implement the history view**
 
 Render a compact dataframe plus a selected record summary. Do not call:
 
@@ -403,14 +403,14 @@ Render a compact dataframe plus a selected record summary. Do not call:
 - `_render_failure_csv_preview`
 - `_render_result_summary` when it exposes full JSON/artifacts
 
-- [ ] **Step 5: Run tests and verify GREEN**
+- [x] **Step 5: Run tests and verify GREEN**
 
 ```bash
 .venv/bin/python -m unittest tests.test_data_operations_workflows
 .venv/bin/python -m py_compile app/web/ingestion/views/history.py app/web/ingestion/results.py
 ```
 
-- [ ] **Step 6: Commit Task 4**
+- [x] **Step 6: Commit Task 4**
 
 ```bash
 git add app/web/ingestion/views/history.py app/web/ingestion/results.py app/web/ingestion/page.py tests/test_data_operations_workflows.py
@@ -432,7 +432,7 @@ git commit -m "개선: Data Operations 실행 이력 간소화"
 - Consumes: five explicit view renderers and navigation state.
 - Produces: `render_ingestion_console()` as a thin Data Operations view dispatcher.
 
-- [ ] **Step 1: Replace obsolete source-string tests with behavior contracts**
+- [x] **Step 1: Replace obsolete source-string tests with behavior contracts**
 
 Remove tests that require:
 
@@ -443,7 +443,7 @@ Remove tests that require:
 
 Add import/contract tests for the five new view renderers and pure navigation behavior. Name each test after the user-visible break it catches.
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 ```bash
 .venv/bin/python -m unittest tests.test_data_operations_workflows tests.test_ingestion_module_split_contracts
@@ -451,7 +451,7 @@ Add import/contract tests for the five new view renderers and pure navigation be
 
 Expected: failures because the legacy landing shell still renders the old selector and clutter.
 
-- [ ] **Step 3: Implement the thin dispatcher**
+- [x] **Step 3: Implement the thin dispatcher**
 
 `render_ingestion_console()` must:
 
@@ -463,7 +463,7 @@ Expected: failures because the legacy landing shell still renders the old select
 
 It must not render runtime/build, the static workflow overview, the old common recent-result card, or the old `작업 영역` copy.
 
-- [ ] **Step 4: Align page identity**
+- [x] **Step 4: Align page identity**
 
 Change:
 
@@ -480,7 +480,7 @@ st.caption("Research와 Portfolio workflow가 읽는 데이터를 준비하고, 
 
 Keep the public compatibility facade and runtime metadata passed into run records.
 
-- [ ] **Step 5: Run focused and regression tests**
+- [x] **Step 5: Run focused and regression tests**
 
 ```bash
 .venv/bin/python -m unittest tests.test_data_operations_workflows tests.test_ingestion_module_split_contracts
@@ -494,7 +494,7 @@ Keep the public compatibility facade and runtime metadata passed into run record
 git diff --check
 ```
 
-- [ ] **Step 6: Commit Task 5**
+- [x] **Step 6: Commit Task 5**
 
 ```bash
 git add app/web/ingestion app/web/ingestion_console.py tests/test_data_operations_workflows.py tests/test_ingestion_module_split_contracts.py tests/test_service_contracts.py
@@ -521,7 +521,7 @@ git commit -m "개편: Data Operations 목적 중심 화면 전환"
 - Consumes: final implemented Data Operations behavior and Browser QA evidence.
 - Produces: durable docs aligned to the new five-section workflow.
 
-- [ ] **Step 1: Run automated verification**
+- [x] **Step 1: Run automated verification**
 
 ```bash
 .venv/bin/python -m unittest tests.test_data_operations_workflows tests.test_ingestion_module_split_contracts
@@ -530,7 +530,7 @@ git commit -m "개편: Data Operations 목적 중심 화면 전환"
 git diff --check
 ```
 
-- [ ] **Step 2: Run Browser QA**
+- [x] **Step 2: Run Browser QA**
 
 At `http://localhost:8501/ingestion` verify:
 
@@ -546,7 +546,7 @@ At `http://localhost:8501/ingestion` verify:
 
 Save one generated QA screenshot outside the commit.
 
-- [ ] **Step 3: Apply finance-doc-sync**
+- [x] **Step 3: Apply finance-doc-sync**
 
 Update the smallest durable doc set:
 
@@ -557,7 +557,7 @@ Update the smallest durable doc set:
 - active task status/runs/risks
 - root logs: 3–5 line handoff only
 
-- [ ] **Step 4: Run final verification**
+- [x] **Step 4: Run final verification**
 
 ```bash
 git diff --check
@@ -565,7 +565,7 @@ git diff --check
 git status --short
 ```
 
-- [ ] **Step 5: Commit Task 6**
+- [x] **Step 5: Commit Task 6**
 
 ```bash
 git add .aiworkspace/note/finance/docs .aiworkspace/note/finance/tasks/active/data-operations-task-oriented-ia-v1-20260725 .aiworkspace/note/finance/WORK_PROGRESS.md .aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md

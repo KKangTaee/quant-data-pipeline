@@ -219,7 +219,7 @@ Legacy / compatibility 흐름:
 Operations 화면:
 
 - `Operations > Portfolio Monitoring`: 기존 Selected Portfolio Dashboard route다. `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 selected strategy pool로 읽고, 사용자가 만든 dashboard portfolio에 strategy slot으로 추가해 모니터링한다. Dashboard는 daily-monitoring-first로 읽힌다. 상단 Active Portfolio Monitoring Scenario가 active portfolio, 실행 상태, 설정 투자금, 평가 금액, 손익, 총 수익률, CAGR / MDD, 기준일, session update timestamp, daily badges, value curve, 전략별 성과, target snapshot을 먼저 보여준다. Portfolio가 없거나 strategy가 없거나 scenario가 아직 실행되지 않은 상태는 각각 생성 / 전략 추가 / 업데이트 실행 안내로 구분한다. Portfolio card shelf는 hero 아래 active selector이고, portfolio name / description edit, compact strategy board, `포트폴리오 시나리오 업데이트`는 그 아래 관리 영역이다. 각 slot은 start / latest-end mode / balance / memo를 저장하고, update action은 pending / stale strategy만 기본 replay하며 `전체 재실행`을 켠 경우 full refresh한다. Target snapshot은 마지막 monitoring scenario 기준 산출 목표 비중이고 Next Review Date는 수동 재계산 예정일이다. Snapshot, Final Review -> dashboard continuity check, source contract, Monitoring Signals의 Timeline / Review Signals / Open Issues / Why Selected / optional Actual Allocation / allocation evidence boundary / Decision Dossier / Audit은 사용자가 선택한 1개 strategy 상세를 열 때만 보여준다. Recheck Operations Preflight / Recheck Readiness / Symbol Freshness / Provider Evidence도 하단 상세 점검으로 낮춘다. 같은 dashboard portfolio 안 전략이 2개 이상이면 최신 scenario 결과로 전환 비교를 표시한다. Preflight / Readiness / Symbol Freshness / Provider Evidence / Continuity / Timeline / Recheck Comparison / Allocation Boundary / Dossier는 read-only이며, live approval / broker order / account sync / auto rebalance는 disabled로 둔다.
-- `Workspace > Ingestion > 실행 기록 / 결과`: 수집 실행 결과, persistent run history, recent logs, failure CSV를 확인한다. 이 internal evidence를 Portfolio Monitoring에 별도 진단 패널로 반복하지 않는다.
+- `Data > Data Operations > 실행 이력`: active data action의 상태, 목적, 범위, compact 결과와 다음 행동을 확인한다. raw log, failure CSV, absolute artifact path와 full payload는 backend evidence로 남기고 Portfolio Monitoring에 별도 진단 패널로 반복하지 않는다.
 
 ## 현재 Reference Center 제품 흐름
 
@@ -254,7 +254,7 @@ owner 화면 이동은 `overview`, `institutional_portfolios`, `ingestion`, `bac
 |---|---|---|
 | `Workspace > Overview` | `overview` | 시장 이해 흐름, Market Context |
 | `Research > Institutional Portfolios` | `institutional_portfolios` | 기관 보유 해석 흐름, Provider Coverage |
-| `Workspace > Ingestion` | `ingestion` | 데이터 준비 흐름, 자료 부족 playbook |
+| `Data > Data Operations` | `ingestion` | 목적별 데이터 준비, 공식 파일, 문제 복구, compact 실행 이력 |
 | `Backtest > Backtest Analysis` | `backtest_analysis` | 후보 생성 흐름, Saved Portfolio |
 | `Backtest > Practical Validation` | `practical_validation` | NOT_RUN, REVIEW, BLOCKED, NOT_RUN playbook |
 | `Backtest > Final Review` | `final_review` | Selected-route Gate, 후보 미노출 playbook |
@@ -320,7 +320,7 @@ Backtest > Final Review
   - 선택 그룹의 `active` / `data_review` stock·ETF만 대상으로 하고 selected strategy와 종료 항목은 제외
   - 최근 완료 NYSE 거래일보다 오래된 종목이 있으면 공통 기준일 배너에 종목별 최신일과 `보유 종목 가격 최신화` action을 표시
   - 명시 클릭에서 기존 daily OHLCV ingestion job을 실행하고, 수집 후 DB freshness를 재검증한 다음 같은 DB 가격으로 공통 기준일과 종합 가치곡선을 다시 계산
-  - unresolved symbol은 partial/failed feedback과 배너에 계속 남기며 상세 job 결과는 `Workspace > Ingestion > 실행 기록 / 결과`가 소유
+  - unresolved symbol은 partial/failed feedback과 배너에 계속 남기며 사용자-facing job 결과와 다음 행동은 `Data > Data Operations > 실행 이력`이 소유
 - recheck comparison:
   - 최신 Performance Recheck result를 Final Review baseline과 비교
   - CAGR delta, MDD delta, benchmark spread, component coverage, period coverage를 `PASS / WATCH / BREACHED / NEEDS_INPUT`으로 분류

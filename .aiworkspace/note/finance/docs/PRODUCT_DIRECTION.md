@@ -1,7 +1,7 @@
 # Product Direction
 
 Status: Active
-Last Verified: 2026-07-22
+Last Verified: 2026-07-26
 
 ## Product Summary
 
@@ -28,7 +28,7 @@ Last Verified: 2026-07-22
 - Practical Validation은 후보를 source traits, module gate, provider / macro / robustness / realism evidence로 검증한다.
 - Final Review는 selected-route gate를 통과한 후보를 최종 관찰 후보로 저장하되, live approval로 해석하지 않는다.
 - Operations > Portfolio Monitoring은 사용자가 만든 monitoring portfolio에 최종 선정 후보를 담고, 명시적 scenario update 후 성과와 review signal을 read-only로 확인한다.
-- Workspace > Ingestion은 백테스트와 Practical Validation, Overview에 필요한 DB-backed data snapshot을 수집한다.
+- Data > Data Operations는 먼저 Market Research, Portfolio Lab, Institutional Holdings, Practical Validation 중 실제 사용 목적을 고른 뒤 필요한 DB-backed data action을 명시적으로 실행한다. 공식 파일, 문제 복구, 실행 이력, 저수준 설정은 별도 보조 section으로 분리한다.
 
 ## Core Pillars
 
@@ -55,7 +55,7 @@ Last Verified: 2026-07-22
 
 현재 사용자-facing 주요 화면:
 
-- `Workspace > Ingestion`
+- `Data > Data Operations`
 - `Research > Market Research`
 - `Workspace > Institutional Portfolios`
 - `Backtest > Backtest Analysis`
@@ -71,6 +71,7 @@ Last Verified: 2026-07-22
 - Macro / sentiment context는 DB-backed collection과 loader를 통해 읽고, 화면에서는 freshness / source / partial state를 숨기지 않는다.
 - Backtest Analysis는 기존 ETF / factor / mix 후보와 Risk-On Momentum 5D Daily Swing research lane을 포함한다. Risk-On Momentum daily signal governance는 아직 Practical Validation / Final Review / Portfolio Monitoring에 연결하지 않았다.
 - Practical Validation V2 P2 / P3, Final Review selection readiness, Operations > Portfolio Monitoring read-only monitoring / recheck 연결은 closeout 완료 상태다.
-- Operations는 Portfolio Monitoring만 사용자-facing 화면으로 둔다. 최종 선정 후보의 그룹·항목 lifecycle, 공통 기준 성과, contribution, 개별 상세와 review context를 이 화면에서 바로 확인한다. 수집 실행 결과, run history, log, failure CSV는 `Workspace > Ingestion > 실행 기록 / 결과`가 소유하며 Portfolio Monitoring에 진단 패널로 중복하지 않는다.
+- Data Operations는 `데이터 준비 / 공식 파일 / 문제 복구 / 실행 이력 / 고급 도구`로 읽는다. 첫 화면은 collector나 run 지표가 아니라 downstream 목적을 먼저 보여주며, 모든 write action은 기존 explicit click·preflight·progress·partial-success 경계를 유지한다. 실행 이력은 active Data Operations job의 상태·범위·결과·다음 행동만 compact하게 표시하고 raw log, failure CSV, 절대 경로, full payload는 기본 제품 화면에서 제외한다.
+- Operations는 Portfolio Monitoring만 사용자-facing 화면으로 둔다. 최종 선정 후보의 그룹·항목 lifecycle, 공통 기준 성과, contribution, 개별 상세와 review context를 이 화면에서 바로 확인한다. 수집 결과의 사용자-facing 확인은 `Data > Data Operations > 실행 이력`이 소유하며 Portfolio Monitoring에 raw run/log 진단 패널로 중복하지 않는다.
 
 현재 active phase는 없다. 다음 개발은 사용자가 승인한 구체적 scope를 새 task 또는 phase로 열어 진행한다.

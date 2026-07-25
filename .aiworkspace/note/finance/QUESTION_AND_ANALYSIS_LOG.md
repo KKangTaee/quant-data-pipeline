@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-26 - Data Operations 첫 화면은 collector가 아니라 사용 목적을 묻는다
+
+- User request: Data Operations 탭의 코드와 사용 편의성을 전체 진단하고 불필요한 기능을 제거하며 필요한 기능을 추가·개선하도록 승인함.
+- Interpreted goal: run/job/row 진단값을 재배치하는 것이 아니라 사용자가 Market Research, Portfolio Lab, Institutional Holdings, Practical Validation 데이터를 더 적은 판단으로 준비하게 한다.
+- Analysis result: active action 30개와 단일 form/dispatcher는 보존하고, `데이터 준비 / 공식 파일 / 문제 복구 / 실행 이력 / 고급 도구` five-section IA로 분리하는 것이 적합하다. history는 상태·범위·결과·다음 행동만 보여주고 raw logs/artifact paths/full payload는 기본 제품 흐름에서 제외한다.
+- Follow-up: 1차 audit, 2차 설계, 3차 구현·QA를 완료했다. collector/DB/loader/schema는 변경하지 않았고 durable scheduling은 운영 근거가 생길 때 검토하는 4차 후보로 남겼다.
+
 ### 2026-07-25 - main-dev와 master의 독립 제품 계약을 역할별로 함께 보존한다
 
 - User request: `codex/main-dev`의 master 병합 충돌을 `finance-integration-review`로 해결해 달라고 요청함.
