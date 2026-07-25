@@ -36,6 +36,15 @@ EVENT_ESTIMATE_STALE_DAYS = 14
 
 EVENT_RECENT_WINDOW_DAYS = 7
 
+DEFAULT_EVENT_FAMILY_LIMITS = {
+    "central_bank": 500,
+    "earnings": 5000,
+    "market_structure": 1000,
+    "macro": 1000,
+    "fixed_income": 1000,
+    "other": 500,
+}
+
 MAJOR_MACRO_EVENT_TYPES = {
     "FOMC_MEETING",
     "MACRO_CPI",
@@ -194,9 +203,13 @@ EVENT_COLUMNS = [
     "Source Authority",
     "Event Time",
     "Event Datetime UTC",
+    "Issuer Key",
+    "Issuer Name",
     "Symbol",
+    "Symbols",
     "Title",
     "Importance",
+    "Relevance",
     "Focus",
     "Source Type",
     "Validation",
@@ -208,6 +221,9 @@ EVENT_COLUMNS = [
     "Confidence",
     "Collected At",
     "Source URL",
+    "Display Date KST",
+    "Display Time KST",
+    "Time Basis",
 ]
 
 def _default_query(db_name: str, sql: str, params: Sequence[Any] | None = None) -> list[dict[str, Any]]:
@@ -441,6 +457,7 @@ def _load_market_event_rows(
     event_type: str | None,
     limit: int,
     query_fn: QueryFn,
+    event_family: str | None = None,
 ) -> list[dict[str, Any]]:
     conditions = ["event_date >= %s", "event_date <= %s"]
     params: list[Any] = [start_date, end_date]
@@ -452,7 +469,11 @@ def _load_market_event_rows(
         else:
             conditions.append("event_type = %s")
             params.append(normalized_type)
-    bounded_limit = _normalize_limit(limit, default=200, min_value=1, max_value=1000)
+    normalized_family = _normalize_taxonomy_value(event_family)
+    if normalized_family:
+        conditions.append("event_family = %s")
+        params.append(normalized_family)
+    bounded_limit = _normalize_limit(limit, default=200, min_value=1, max_value=5000)
     active_conditions = conditions + ["COALESCE(event_status, 'active') <> %s"]
     active_params = params + ["superseded", bounded_limit]
     try:
@@ -460,6 +481,7 @@ def _load_market_event_rows(
             "finance_meta",
             f"""
             SELECT
+                event_key,
                 event_date,
                 event_type,
                 event_family,
@@ -468,6 +490,8 @@ def _load_market_event_rows(
                 event_datetime_utc,
                 universe_scope,
                 source_authority,
+                issuer_key,
+                issuer_name,
                 symbol,
                 title,
                 source,
@@ -670,6 +694,17 @@ def _event_importance_label(row: dict[str, Any]) -> str:
         return "Medium"
     return "Low"
 
+def _event_relevance_label(row: dict[str, Any]) -> str:
+    scope = _event_universe_scope(row)
+    event_type = _normalize_event_type_value(row.get("event_type") or row.get("Type"))
+    if event_type == "FOMC_MEETING":
+        return "핵심"
+    if scope in {"portfolio", "watchlist"}:
+        return "보유·관심"
+    if event_type == "EARNINGS" and scope == "major_cap":
+        return "핵심"
+    return "일반"
+
 def _event_focus_label(row: dict[str, Any], *, today: date) -> str:
     if _event_quality_action(row, today=today) != "No action":
         return "Needs Review"
@@ -755,18 +790,61 @@ def _event_coverage(rows: list[dict[str, Any]], *, today: date, recent_days: int
 
 def _event_warnings(coverage: dict[str, Any]) -> list[str]:
     warnings: list[str] = []
-    stale_estimates = int(coverage.get("stale_estimate_count") or 0)
-    if stale_estimates > 0:
-        warnings.append(
-            f"{stale_estimates} earnings estimate row(s) were collected more than "
-            f"{EVENT_ESTIMATE_STALE_DAYS} days ago. Refresh Earnings Calendar before acting on those dates."
-        )
-    not_confirmed = int(coverage.get("not_confirmed_count") or 0)
-    if not_confirmed > 0:
-        warnings.append(
-            f"{not_confirmed} earnings estimate row(s) were not confirmed by the alternate Nasdaq calendar cross-check."
-        )
+    stale = int(coverage.get("stale_estimate_count") or 0)
+    if stale:
+        warnings.append(f"오래된 실적 추정 일정 {stale}개가 있습니다. 발표일이 가까우면 다시 확인하세요.")
+    unconfirmed = int(coverage.get("not_confirmed_count") or 0)
+    if unconfirmed:
+        warnings.append(f"교차 확인되지 않은 실적 추정 일정 {unconfirmed}개가 있습니다.")
     return warnings
+
+def _event_kst_display(record: dict[str, Any]) -> dict[str, Any]:
+    utc_text = str(
+        record.get("Event Datetime UTC")
+        or record.get("event_datetime_utc")
+        or ""
+    ).strip()
+    if utc_text and utc_text != "-":
+        try:
+            value = pd.Timestamp(utc_text)
+            if not pd.isna(value):
+                value = value.tz_localize("UTC") if value.tzinfo is None else value.tz_convert("UTC")
+                value = value.tz_convert("Asia/Seoul")
+                return {
+                    "display_date_kst": value.date().isoformat(),
+                    "display_time_kst": value.strftime("%H:%M"),
+                    "label": f"{value.strftime('%Y-%m-%d %H:%M')} KST",
+                    "time_basis": "한국시간 확정",
+                }
+        except (TypeError, ValueError):
+            pass
+    event_date = _date_value(record.get("Date") or record.get("event_date"))
+    time_label = str(
+        record.get("Event Time")
+        or record.get("event_time_label")
+        or ""
+    ).strip().lower()
+    if event_date and time_label == "after_market":
+        display_date = event_date + timedelta(days=1)
+        return {
+            "display_date_kst": display_date.isoformat(),
+            "display_time_kst": None,
+            "label": f"{display_date.isoformat()} KST · 장후 예정",
+            "time_basis": "한국시간 예정",
+        }
+    if event_date and time_label == "before_market":
+        return {
+            "display_date_kst": event_date.isoformat(),
+            "display_time_kst": None,
+            "label": f"{event_date.isoformat()} KST · 장전 예정",
+            "time_basis": "한국시간 예정",
+        }
+    return {
+        "display_date_kst": None,
+        "display_time_kst": None,
+        "label": "미국 기준 · 한국시간 미확인",
+        "time_basis": "미국 기준",
+    }
 
 def _event_rows_frame(
     rows: list[dict[str, Any]],
@@ -774,11 +852,16 @@ def _event_rows_frame(
     today: date,
     recent_days: int = EVENT_RECENT_WINDOW_DAYS,
 ) -> pd.DataFrame:
-    out = [
-        {
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        display = _event_kst_display(row)
+        relative_row = dict(row)
+        if display["display_date_kst"]:
+            relative_row["event_date"] = display["display_date_kst"]
+        out.append({
             "Date": _iso_date(row.get("event_date")) or "-",
-            "Days Until": _event_days_until(row, today=today),
-            "Window": _event_window_label(row, today=today, recent_days=recent_days),
+            "Days Until": _event_days_until(relative_row, today=today),
+            "Window": _event_window_label(relative_row, today=today, recent_days=recent_days),
             "Type": row.get("event_type") or "-",
             "Event Family": _event_family(row),
             "Event Subtype": _event_subtype(row),
@@ -786,10 +869,14 @@ def _event_rows_frame(
             "Source Authority": _event_source_authority(row),
             "Event Time": _event_time_label(row),
             "Event Datetime UTC": _event_datetime_utc_label(row),
+            "Issuer Key": row.get("issuer_key") or "-",
+            "Issuer Name": row.get("issuer_name") or "-",
             "Symbol": row.get("symbol") or "-",
+            "Symbols": [str(row.get("symbol"))] if row.get("symbol") else [],
             "Title": row.get("title") or "-",
             "Importance": _event_importance_label(row),
-            "Focus": _event_focus_label(row, today=today),
+            "Relevance": _event_relevance_label(row),
+            "Focus": _event_focus_label(relative_row, today=today),
             "Source Type": _event_source_type(row),
             "Validation": _event_validation_label(row),
             "Freshness": _event_freshness(row, today=today),
@@ -804,10 +891,30 @@ def _event_rows_frame(
             ),
             "Collected At": _display_datetime(row.get("collected_at")) or "-",
             "Source URL": row.get("source_url") or "-",
-        }
-        for row in rows
-    ]
+            "Display Date KST": display["display_date_kst"],
+            "Display Time KST": display["display_time_kst"],
+            "Time Basis": display["time_basis"],
+        })
     return pd.DataFrame(out, columns=EVENT_COLUMNS)
+
+def _deduplicate_market_event_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduplicated: dict[tuple[Any, ...], dict[str, Any]] = {}
+    for row in rows:
+        event_key = str(row.get("event_key") or "").strip()
+        key: tuple[Any, ...]
+        if event_key:
+            key = ("event_key", event_key)
+        else:
+            key = (
+                "legacy",
+                _iso_date(row.get("event_date")),
+                _normalize_event_type_value(row.get("event_type")),
+                str(row.get("symbol") or ""),
+                str(row.get("title") or ""),
+                str(row.get("source") or ""),
+            )
+        deduplicated[key] = row
+    return list(deduplicated.values())
 
 def build_market_events_snapshot(
     *,
@@ -817,6 +924,7 @@ def build_market_events_snapshot(
     horizon_days: int = 365,
     recent_days: int = EVENT_RECENT_WINDOW_DAYS,
     limit: int = 200,
+    family_limits: dict[str, int] | None = None,
     today: date | None = None,
     query_fn: QueryFn | None = None,
 ) -> dict[str, Any]:
@@ -827,13 +935,28 @@ def build_market_events_snapshot(
     normalized_type = _normalize_event_type_value(event_type)
     query = query_fn or _default_query
     try:
-        rows = _load_market_event_rows(
-            start_date=normalized_start,
-            end_date=normalized_end,
-            event_type=normalized_type,
-            limit=limit,
-            query_fn=query,
-        )
+        if normalized_type is None:
+            configured_limits = family_limits or DEFAULT_EVENT_FAMILY_LIMITS
+            rows = _deduplicate_market_event_rows([
+                row
+                for family, family_limit in configured_limits.items()
+                for row in _load_market_event_rows(
+                    start_date=normalized_start,
+                    end_date=normalized_end,
+                    event_type=None,
+                    event_family=family,
+                    limit=family_limit,
+                    query_fn=query,
+                )
+            ])
+        else:
+            rows = _load_market_event_rows(
+                start_date=normalized_start,
+                end_date=normalized_end,
+                event_type=normalized_type,
+                limit=limit,
+                query_fn=query,
+            )
         if not rows:
             return _empty_events_snapshot(
                 status="NO_EVENTS",
@@ -903,6 +1026,43 @@ def _workbench_records(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
         ),
     )
 
+def _group_issuer_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+    passthrough: list[dict[str, Any]] = []
+    for record in records:
+        if _display_key(record.get("Event Family")) != "earnings":
+            passthrough.append(record)
+            continue
+        issuer_value = str(record.get("Issuer Key") or "").strip()
+        issuer_key = issuer_value if issuer_value and issuer_value != "-" else f"symbol:{record.get('Symbol')}"
+        grouped.setdefault(
+            (
+                issuer_key,
+                str(record.get("Date") or ""),
+                str(record.get("Event Subtype") or "earnings_release"),
+            ),
+            [],
+        ).append(record)
+    for rows in grouped.values():
+        representative = dict(max(rows, key=lambda row: str(row.get("Collected At") or "")))
+        representative["Symbols"] = sorted({
+            str(row.get("Symbol"))
+            for row in rows
+            if row.get("Symbol") not in (None, "", "-")
+        })
+        issuer_name = str(representative.get("Issuer Name") or "").strip()
+        if issuer_name and issuer_name != "-":
+            representative["Title"] = f"{issuer_name} 실적"
+        passthrough.append(representative)
+    return sorted(
+        passthrough,
+        key=lambda item: (
+            str(item.get("Display Date KST") or item.get("Date") or ""),
+            str(item.get("Type") or ""),
+            str(item.get("Title") or ""),
+        ),
+    )
+
 def _workbench_days_until(record: dict[str, Any]) -> int | None:
     value = _safe_float(record.get("Days Until"))
     if value is None:
@@ -910,7 +1070,7 @@ def _workbench_days_until(record: dict[str, Any]) -> int | None:
     return int(value)
 
 def _workbench_event_date(record: dict[str, Any]) -> date | None:
-    return _date_value(record.get("Date"))
+    return _date_value(record.get("Display Date KST") or record.get("Date"))
 
 def _workbench_row_needs_review(record: dict[str, Any]) -> bool:
     action = str(record.get("Quality Action") or "").strip()
@@ -965,6 +1125,13 @@ def _workbench_item(record: dict[str, Any]) -> dict[str, Any]:
         badges.append({"label": _display_label(EVENT_VALIDATION_LABELS_KO, validation), "kind": "validation"})
     return {
         "date": str(record.get("Date") or "-"),
+        "display_date": str(record.get("Display Date KST") or record.get("Date") or "-"),
+        "display_time": (
+            None
+            if record.get("Display Time KST") in (None, "", "-")
+            else str(record.get("Display Time KST"))
+        ),
+        "time_basis": str(record.get("Time Basis") or "미국 기준"),
         "days_until": days_until,
         "window": str(record.get("Window") or "-"),
         "type": event_type,
@@ -973,8 +1140,12 @@ def _workbench_item(record: dict[str, Any]) -> dict[str, Any]:
         "display_family": display_family,
         "display_family_label": display_family_label,
         "symbol": "" if str(record.get("Symbol") or "-") == "-" else str(record.get("Symbol") or ""),
+        "symbols": list(record.get("Symbols") or []),
+        "issuer_key": "" if str(record.get("Issuer Key") or "-") == "-" else str(record.get("Issuer Key") or ""),
+        "issuer_name": "" if str(record.get("Issuer Name") or "-") == "-" else str(record.get("Issuer Name") or ""),
         "title": str(record.get("Title") or "-"),
         "importance": str(record.get("Importance") or "Low"),
+        "relevance": str(record.get("Relevance") or "일반"),
         "focus": str(record.get("Focus") or "-"),
         "source_type": str(record.get("Source Type") or "-"),
         "source_authority": source_authority,
@@ -1085,7 +1256,7 @@ def _workbench_week_label(week_start: str, week_end: str | None = None) -> str:
 def _events_workbench_calendar(records: list[dict[str, Any]], *, today: date) -> dict[str, Any]:
     by_day: dict[str, list[dict[str, Any]]] = {}
     for record in records:
-        date_text = str(record.get("Date") or "")
+        date_text = str(record.get("Display Date KST") or record.get("Date") or "")
         if not date_text or date_text == "-":
             continue
         by_day.setdefault(date_text, []).append(record)
@@ -1203,10 +1374,10 @@ def _events_workbench_command() -> dict[str, Any]:
                 "detail": "DB에 저장된 이벤트 rows를 다시 읽습니다.",
             },
             {
-                "id": "refresh_all",
-                "label": "전체 일정 갱신",
+                "id": "refresh_official",
+                "label": "일정 갱신",
                 "kind": "primary",
-                "detail": "FOMC, 매크로, 시장 구조, 실적 추정 일정 collector를 순차 실행합니다.",
+                "detail": "FOMC, 매크로, 시장 구조의 공식 일정 collector를 순차 실행합니다.",
             },
             {
                 "id": "refresh_fomc",
@@ -1230,23 +1401,187 @@ def _events_workbench_command() -> dict[str, Any]:
                 "id": "refresh_earnings",
                 "label": "실적 예상 일정 갱신",
                 "kind": "secondary",
-                "detail": "S&P 500 movers 기반 earnings estimate provider/job을 실행합니다.",
+                "detail": "매일 우선 확인 종목과 S&P 500 순환 coverage의 earnings estimate job을 실행합니다.",
             },
         ],
         "earnings_universe": {
             "label": "실적 예상 일정 기준",
-            "symbol_source": "latest_movers",
+            "symbol_source": "priority_plus_sp500_cycle",
             "universe_code": "SP500",
             "description": (
-                "최근 S&P 500 movers snapshot의 상위 최대 20개 후보를 기준으로 삼고, "
-                "provider 호출은 최대 50개 symbol까지 제한합니다."
+                "보유·관심 종목, 시가총액 상위 종목, 이미 알려진 근접 일정을 매일 먼저 확인하고 "
+                "S&P 500 전체는 100개 단위로 순환 확인합니다."
             ),
-            "top_movers_limit": 20,
-            "max_symbols": 50,
+            "major_cap_limit": 100,
+            "shard_size": 100,
             "lookahead_days": 120,
             "cross_check": "Nasdaq calendar cross-check 사용",
         },
         "last_results": [],
+    }
+
+def _workbench_filter_key(record: dict[str, Any]) -> str:
+    return _workbench_display_family(
+        str(record.get("Event Family") or "unknown"),
+        str(record.get("Event Subtype") or "unknown"),
+        str(record.get("Type") or "-"),
+    )
+
+def _workbench_next_event_key(item: dict[str, Any]) -> tuple[Any, ...]:
+    days_until = item.get("days_until")
+    proximity = 0 if days_until == 0 else 1 if isinstance(days_until, int) and days_until <= 7 else 2
+    scope = _display_key(item.get("universe_scope"))
+    family = _display_key(item.get("display_family") or item.get("family"))
+    if str(item.get("type") or "").upper() == "FOMC_MEETING":
+        relevance = 0
+    elif scope in {"portfolio", "watchlist"}:
+        relevance = 1
+    elif family == "earnings" and scope == "major_cap":
+        relevance = 2
+    elif family == "market_holiday":
+        relevance = 3
+    else:
+        relevance = 4
+    authority = {
+        "official": 0,
+        "issuer_confirmed": 1,
+        "cross_checked": 2,
+        "provider_estimate": 3,
+        "not_confirmed": 4,
+        "unknown": 5,
+    }.get(_display_key(item.get("source_authority")), 6)
+    return (
+        proximity,
+        int(days_until) if isinstance(days_until, int) else 9999,
+        relevance,
+        authority,
+        str(item.get("display_date") or ""),
+        str(item.get("display_time") or ""),
+        str(item.get("title") or ""),
+    )
+
+def _workbench_counts(items: list[dict[str, Any]], *, today: date) -> dict[str, int]:
+    current_week_end = today - timedelta(days=today.weekday()) + timedelta(days=6)
+    next_30d_end = today + timedelta(days=30)
+    dates = [_date_value(item.get("display_date")) for item in items]
+    return {
+        "today": sum(1 for value in dates if value == today),
+        "this_week": sum(1 for value in dates if value is not None and today <= value <= current_week_end),
+        "next_30d": sum(1 for value in dates if value is not None and today <= value <= next_30d_end),
+        "total": len(items),
+    }
+
+def _events_collection_coverage_summary(
+    rows: list[dict[str, Any]],
+    *,
+    error: str = "",
+) -> dict[str, Any]:
+    by_key = {str(row.get("coverage_key") or ""): row for row in rows}
+    cycle = dict(by_key.get("earnings:sp500_cycle") or {})
+    priority = dict(by_key.get("earnings:priority_daily") or {})
+    expected = int(cycle.get("expected_items") or 0)
+    covered = int(cycle.get("covered_items") or 0)
+    failed = int(cycle.get("failed_items") or 0)
+    status = _display_key(cycle.get("coverage_status")) or "unknown"
+    if error:
+        status = "error"
+        label = "수집 범위 확인 필요"
+        description = "수집 범위 정보를 읽지 못했습니다. 일정 갱신 후 수집 소스를 다시 확인하세요."
+    elif status == "complete":
+        label = "수집 범위 확인 완료"
+        description = f"S&P 500 전체 확인 완료 · {covered}/{expected}" if expected else "S&P 500 전체 확인 완료"
+    elif status in {"partial", "pending"}:
+        label = "수집 범위 확인 중"
+        description = f"S&P 500 전체 확인 진행 중 · {covered}/{expected}"
+    elif status in {"error", "stale"}:
+        label = "수집 범위 확인 필요"
+        description = "저장된 일정은 유지됩니다. 일정 갱신 후 실패 항목과 수집 소스를 확인하세요."
+    else:
+        status = "unknown"
+        label = "수집 범위 확인 필요"
+        description = "S&P 500 전체 확인 진행 전입니다. 실적 일정을 갱신하세요."
+    return {
+        "status": status,
+        "label": label,
+        "description": description,
+        "expected_items": expected,
+        "covered_items": covered,
+        "failed_items": failed,
+        "priority_last_attempted_at": priority.get("last_attempted_at"),
+        "priority_last_success_at": priority.get("last_success_at"),
+    }
+
+def _events_workbench_empty_state(
+    *,
+    filter_key: str,
+    item_count: int,
+    coverage_summary: dict[str, Any],
+) -> dict[str, Any]:
+    if item_count:
+        return {"status": "has_events", "title": "", "description": ""}
+    if filter_key == "earnings":
+        if coverage_summary.get("status") == "complete":
+            return {
+                "status": "checked_no_event",
+                "title": "확인된 실적 일정이 없습니다",
+                "description": "현재 기간과 수집 범위에서 예정된 실적 발표가 확인되지 않았습니다.",
+            }
+        return {
+            "status": "coverage_incomplete",
+            "title": "실적 일정 확인이 아직 끝나지 않았습니다",
+            "description": str(coverage_summary.get("description") or ""),
+        }
+    return {
+        "status": "no_event",
+        "title": "선택한 일정이 없습니다",
+        "description": "현재 기간에는 저장된 일정이 없습니다.",
+    }
+
+def _events_workbench_trust_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "official": sum(1 for row in records if str(row.get("Source Type") or "") == "Official"),
+        "provider_estimate": sum(1 for row in records if str(row.get("Source Type") or "") == "Provider Estimate"),
+        "review_required": sum(1 for row in records if _workbench_row_needs_review(row)),
+    }
+
+def _events_workbench_view(
+    records: list[dict[str, Any]],
+    *,
+    filter_key: str,
+    today: date,
+    coverage_summary: dict[str, Any],
+) -> dict[str, Any]:
+    selected = [
+        record
+        for record in records
+        if filter_key == "all" or _workbench_filter_key(record) == filter_key
+    ]
+    items = [_workbench_item(record) for record in selected]
+    upcoming = [
+        item
+        for item in items
+        if item.get("days_until") is not None
+        and item["days_until"] >= 0
+        and _display_key(item.get("event_status")) not in {"stale", "superseded"}
+    ]
+    next_event = min(upcoming, key=_workbench_next_event_key) if upcoming else None
+    fomc_items = [item for item in upcoming if item.get("family") == "central_bank"]
+    next_fomc = min(fomc_items, key=_workbench_next_event_key) if fomc_items else None
+    return {
+        "brief": {
+            "title": "다가오는 시장 이벤트 브리프",
+            "boundary_note": "이 화면은 거래 신호가 아니라 시장 배경 확인용입니다.",
+            "next_event": next_event,
+            "next_fomc": next_fomc,
+            "counts": _workbench_counts(items, today=today),
+        },
+        "calendar": _events_workbench_calendar(selected, today=today),
+        "trust_summary": _events_workbench_trust_summary(selected),
+        "empty_state": _events_workbench_empty_state(
+            filter_key=filter_key,
+            item_count=len(items),
+            coverage_summary=coverage_summary,
+        ),
     }
 
 def build_events_workbench_payload(
@@ -1257,122 +1592,43 @@ def build_events_workbench_payload(
     recent_days: int = EVENT_RECENT_WINDOW_DAYS,
     limit: int = 500,
 ) -> dict[str, Any]:
-    """Build a React-ready Events payload while keeping interpretation in Python."""
+    """Build the filter-first React contract from stored event and coverage evidence."""
     today_value = today or date.today()
     snapshot = events_snapshot or build_market_events_snapshot(
         event_type=None,
         today=today_value,
         horizon_days=horizon_days,
         recent_days=recent_days,
-        limit=limit,
+        family_limits=DEFAULT_EVENT_FAMILY_LIMITS,
     )
-    records = _workbench_records(snapshot)
-    coverage = dict(snapshot.get("coverage") or {})
+    records = _group_issuer_records(_workbench_records(snapshot))
     warnings = list(snapshot.get("warnings") or [])
-    items = [_workbench_item(record) for record in records]
-    upcoming_items = [item for item in items if item["days_until"] is not None and item["days_until"] >= 0]
-    next_event = upcoming_items[0] if upcoming_items else None
-    current_week_start = today_value - timedelta(days=today_value.weekday())
-    current_week_end = current_week_start + timedelta(days=6)
-    next_30d_end = today_value + timedelta(days=30)
-
-    recent_major_records = [
-        record
-        for record in records
-        if (_workbench_days_until(record) is not None and _workbench_days_until(record) < 0)
-        and str(record.get("Importance") or "") == "High"
-    ]
-    today_records = [
-        record
-        for record in records
-        if _workbench_event_date(record) == today_value or _workbench_days_until(record) == 0
-    ]
-    this_week_records = [
-        record
-        for record in records
-        if (
-            _workbench_event_date(record) is not None
-            and today_value < _workbench_event_date(record) <= current_week_end
-        )
-    ]
-    next_30d_records = [
-        record
-        for record in records
-        if (
-            _workbench_event_date(record) is not None
-            and current_week_end < _workbench_event_date(record) <= next_30d_end
-        )
-    ]
-    later_records = [
-        record
-        for record in records
-        if (
-            _workbench_event_date(record) is None
-            or _workbench_event_date(record) > next_30d_end
-        )
-    ]
-
-    today_count = len(today_records)
-    this_week_count = sum(
-        1
-        for record in records
-        if _workbench_event_date(record) is not None
-        and today_value <= _workbench_event_date(record) <= current_week_end
+    coverage_summary = _events_collection_coverage_summary(
+        list(snapshot.get("collection_coverage") or []),
+        error=str(snapshot.get("collection_coverage_error") or ""),
     )
-    next_30d_count = sum(
-        1
-        for record in records
-        if _workbench_event_date(record) is not None
-        and today_value <= _workbench_event_date(record) <= next_30d_end
-    )
-    freshness_summary = {
-        "latest_collected_at": coverage.get("latest_collected_at"),
-        "stale_estimate_count": int(coverage.get("stale_estimate_count") or 0),
-        "has_stale_estimates": int(coverage.get("stale_estimate_count") or 0) > 0,
-        "warning_count": len(warnings),
-    }
-
+    filter_options = [
+        {"id": "all", "label": "전체"},
+        {"id": "central_bank", "label": "FOMC"},
+        {"id": "earnings", "label": "실적"},
+        {"id": "market_holiday", "label": "휴장·조기폐장"},
+    ]
     return {
-        "schema_version": "events_workbench_v1",
+        "schema_version": "events_workbench_v2",
         "status": snapshot.get("status") or "UNKNOWN",
         "date_window": dict(snapshot.get("date_window") or {}),
-        "brief": {
-            "title": "다가오는 시장 이벤트 브리프",
-            "boundary_note": "이 화면은 거래 신호가 아니라 시장 배경 확인용입니다.",
-            "next_event": next_event,
-            "counts": {
-                "today": today_count,
-                "this_week": this_week_count,
-                "next_30d": next_30d_count,
-                "total": len(items),
-            },
-            "source_summary": {
-                "official": int(coverage.get("official_count") or 0),
-                "provider_estimate": int(coverage.get("estimate_count") or 0),
-                "cross_checked": int(coverage.get("cross_checked_count") or 0),
-                "not_confirmed": int(coverage.get("not_confirmed_count") or 0),
-            },
-            "freshness_summary": freshness_summary,
-            "family_counts": dict(coverage.get("family_counts") or {}),
+        "filter_options": filter_options,
+        "views": {
+            key: _events_workbench_view(
+                records,
+                filter_key=key,
+                today=today_value,
+                coverage_summary=coverage_summary,
+            )
+            for key in ("all", "central_bank", "earnings", "market_holiday")
         },
-        "rails": [
-            _workbench_rail("recent_major", "최근 중요", recent_major_records),
-            _workbench_rail("today", "오늘", today_records),
-            _workbench_rail("this_week", "이번 주", this_week_records),
-            _workbench_rail("next_30d", "30일 내", next_30d_records),
-            _workbench_rail("later", "나중", later_records),
-        ],
-        "rail_tabs": _events_workbench_rail_tabs(
-            recent_major_records=recent_major_records,
-            today_records=today_records,
-            this_week_records=this_week_records,
-            next_30d_records=next_30d_records,
-            later_records=later_records,
-        ),
-        "filters": _events_workbench_filters(),
+        "coverage_summary": coverage_summary,
         "command": _events_workbench_command(),
-        "trust_review": _events_workbench_trust_review(records, coverage=coverage, warnings=warnings),
-        "calendar": _events_workbench_calendar(records, today=today_value),
         "evidence": {
             "raw_fields": list(EVENT_COLUMNS),
             "rows": records[: max(1, int(limit or 500))],

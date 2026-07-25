@@ -7,6 +7,14 @@ Last Verified: 2026-07-25
 
 현재 active phase는 없다.
 
+Institutional Holdings React Parity V1은 전체 `4/4차` 구현과 closeout을 완료했다.
+
+- 화면: 기존 기관·보유·종목·차트 기능을 유지하면서 정상 화면 전체를 `C · Modular Research Studio` React shell로 전환했다. desktop은 research rail, 980px 이하는 top switcher / drawer를 사용한다.
+- 흐름: `포트폴리오 맥락 / 전체 보유 / 종목 상세 / 기관 보유 랭킹`을 canonical destination으로 고정하고 manager context와 SEC dataset 갱신을 같은 studio 안에 배치했다.
+- 경계: React가 정상 UI를 소유하고 Streamlit은 route, DB payload, explicit server event, React unavailable fallback만 담당한다. provider fetch나 DB 의미는 변경하지 않았다.
+- QA: React 7개, Python 58개, typecheck/build와 1280·760·420px actual Browser QA를 통과했고 Bridgewater 검색, AAPL 상세, unresolved filter, mobile drawer, console error 0을 확인했다.
+- 상세: `tasks/active/institutional-holdings-react-parity-v1-20260725/STATUS.md`, `docs/flows/INSTITUTIONAL_PORTFOLIOS_FLOW.md`.
+
 Today U.S. Market Session Status V1도 전체 `3/3차` 구현과 closeout을 완료했다.
 
 - 화면: Today hero 아래에서 미국 정규장의 `개장 전 / 장 진행 중 / 정규장 마감 / 휴장 / 일정 자료 부족`, 뉴욕·한국 현재 시각, ET/KST 개장·마감, 다음 개장 또는 마감까지 countdown을 확인한다.

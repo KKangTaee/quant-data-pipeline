@@ -7219,3 +7219,26 @@ Detailed historical logs were archived on `2026-04-13`.
 - 17/17 atomic `final_*` 저장과 explicit-final resolver를 연결해 실제 한 번의 갱신에서 기준일을 2026-07-22에서 2026-07-23으로 이동했다.
 - 즉시 재실행은 5m 수집/nested replay 없이 8.659초에 finalization·snapshot을 재사용했고 desktop/420px QA와 console error 0을 확인했다.
 - 전체 roadmap `5/5차` 완료. 상세는 `tasks/active/overview-futures-macro-short-horizon-v1-20260723/`를 본다.
+
+- 2026-07-24 Overview Events omission correction and A-layout closeout:
+  - Replaced latest-movers-only earnings collection with daily priority plus a persisted S&P 500 shard cycle; collection coverage now distinguishes checked-no-event from not-checked.
+  - Added requested-year official coverage, including NYSE fallback for the 2027 holiday schedule, and issuer grouping that displays GOOG / GOOGL as one Alphabet event while retaining both ticker facts.
+  - Completed the React brief + calendar A layout, desktop/mobile Browser QA, and task closeout under `tasks/active/overview-events-ux-redesign/`.
+- 2026-07-24 Overview Events refresh follow-up:
+  - Repaired FOMC source taxonomy and verified the next 2026-07-29 meeting from the DB-backed workbench.
+  - Split the fast official-calendar refresh from the slow hybrid earnings action and hardened React completion acknowledgement with a unique UI token.
+  - Detailed evidence remains under `tasks/active/overview-events-ux-redesign/`.
+
+## 2026-07-25 - Institutional Holdings React 전면 화면 구현 완료
+
+- 정상 화면을 React-owned `C · Modular Research Studio`로 전환하고 desktop research rail, 980px 이하 drawer, canonical 4개 destination을 적용했다.
+- 기관 검색·보유 explorer·종목 상세/차트·랭킹·unresolved guardrail과 SEC dataset 갱신 기능을 studio 안에서 보존했다. Streamlit은 route·DB payload·explicit event·unavailable fallback만 담당한다.
+- React 7개, Python 58개, typecheck/build와 1280·760·420px actual Browser QA를 통과했으며 console error는 0이었다.
+- 전체 roadmap `4/4차` 완료. 상세는 `tasks/active/institutional-holdings-react-parity-v1-20260725/`를 본다.
+
+## 2026-07-25 - master 병합 충돌 통합 완료
+
+- 문서 충돌은 current의 Futures completed-session finalization과 master의 Events S&P 500 coverage·Institutional React studio 기록을 함께 보존했다.
+- Events는 master의 calendar-dominant 화면에 공통 `ResearchHeader`와 공식 일정 갱신 action을 연결하고 새 `brief.counts` payload 계약에 맞췄다.
+- 낡은 hero CSS와 런타임 counts 참조 회귀를 테스트로 고쳤으며 desktop 1280px·mobile 420px actual Browser QA에서 overflow와 console error가 없음을 확인했다.
+- 전체 통합 roadmap `3/3차` 완료. 사용자 registry, research, run history와 기존 QA 이미지는 병합 커밋에서 제외했다.

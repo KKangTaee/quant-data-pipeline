@@ -10605,3 +10605,31 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 한국시간 오전 7시 이후에도 다음 저녁 세션 가격을 섞지 않고 직전 완료 세션을 같은 클릭에서 반영해야 함.
 - Analysis result: mutable 1d row를 강제로 FINAL로 바꾸지 않고 stored 5m의 exact `D-1 18:00 ET <= bar < D 17:00 ET` 구간을 17/17 원자 집계해 별도 `final_*`로 보존하는 방식을 채택했다.
 - Follow-up: 실제 2026-07-23 세션 17/17 확정과 snapshot 기준일 이동, 즉시 재실행 8.659초 재사용, desktop/420px QA를 완료해 전체 `5/5차`를 마쳤다.
+
+### 2026-07-24 - Overview Events는 중요 종목 누락을 막고 브리프+캘린더로 판단 부담을 줄인다
+
+- User request: Google처럼 중요한 실적이 빠지지 않는지 진단하고, 수집 기준과 약점을 고친 뒤 다른 탭과 맞는 React UI로 개편해 달라고 요청함.
+- Interpreted goal: latest movers 편향을 제거하고, FOMC/미국 휴장 연도 coverage를 검증하며, 사용자가 이번 주 핵심 일정과 선택일 상세를 한 흐름에서 끝낼 수 있어야 함.
+- Analysis result: daily priority + persisted S&P 500 shard, year-specific official checkpoints, issuer grouping, service-owned views, and calendar-dominant A layout을 구현했다. Live DB에서 Alphabet 2026-07-23 event와 2027 FOMC/holiday coverage를 확인했다.
+- Follow-up: S&P 500 cycle은 정상 예약 갱신으로 완료하고, issuer-confirmed IR source 확대는 별도 product/data task로 다룬다.
+
+### 2026-07-24 - 시장일정 기본 갱신은 공식 일정과 느린 실적 수집을 분리한다
+
+- User request: 일정 갱신이 1분 이상 걸리고 계속 갱신 중으로 남으며, 다음 주 FOMC가 예정 없음으로 보이는 문제를 확인하고 수정하도록 요청함.
+- Interpreted goal: 상단 갱신은 사용자가 기다릴 수 있는 공식 일정 범위로 끝나고, 완료 상태가 확실히 해제되며, 저장된 FOMC가 분류 누락 때문에 화면에서 사라지지 않아야 함.
+- Analysis result: 102초 중 약 92초가 hybrid earnings였고 FOMC 16행은 taxonomy NULL이었다. 공식 3종 facade, 별도 earnings action, parser taxonomy, UI-only completion token을 적용했으며 다음 FOMC 2026-07-29와 약 11.5초 완료 복귀를 확인했다.
+- Follow-up: S&P 500 earnings cycle과 issuer-confirmed IR 확대는 기존 별도 후속 범위로 유지한다.
+
+### 2026-07-25 - Institutional Holdings는 Today와 같은 React-owned 정상 화면을 사용한다
+
+- User request: 기능은 만족스럽지만 Today / Market Research와 다른 Institutional Holdings 디자인을 진단하고, 장기 개선 관점에서 동일한 React 구현 pattern으로 전면 개선하도록 요청함.
+- Interpreted goal: 기존 기관·보유·종목·차트 기능과 SEC / DB 경계를 유지하면서 사용자가 보는 page shell과 interaction hierarchy를 최신 탭과 통일해야 함.
+- Analysis result: 주요 기능은 이미 React component였지만 바깥 Streamlit shell과 visual/navigation drift가 남아 있었다. 최종 선택한 `C · Modular Research Studio`로 정상 화면 전체, canonical 4개 destination, desktop research rail과 responsive drawer를 React에 통합하고 Streamlit은 thin adapter / unavailable fallback으로 축소했다.
+- Follow-up: 전체 roadmap `4/4차` 구현·actual Browser QA·문서 정렬을 완료했다. 상세 결과와 남은 비차단 iframe 폭 제약은 `tasks/active/institutional-holdings-react-parity-v1-20260725/`에 기록했다.
+
+### 2026-07-25 - master 병합은 양쪽 제품 변경과 데이터 계약을 함께 보존한다
+
+- User request: `codex/sub-dev`에서 발생한 master 병합 충돌을 해결해 달라고 요청함.
+- Interpreted goal: 현재 브랜치의 공통 Market Research 헤더와 선물 완료 세션 변경을 유지하면서 master의 일정·기관 화면 개편과 데이터 coverage 변경을 손실 없이 통합해야 함.
+- Analysis result: Events의 새 `brief.counts` 계약과 공통 헤더 action을 연결하고, 낡은 hero CSS와 top-level counts 참조 회귀를 제거했다. 문서에는 Events coverage와 Futures completed-session finalization 양쪽 의미를 모두 보존했다.
+- Follow-up: 전체 통합 roadmap `3/3차` 완료. Python·React 검증과 1280/420px actual Browser QA를 통과한 병합 커밋을 기준으로 후속 개발을 이어간다.

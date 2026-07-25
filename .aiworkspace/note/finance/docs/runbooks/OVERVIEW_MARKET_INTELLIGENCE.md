@@ -221,7 +221,7 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
 6. `Workspace > Ingestion > Overview Market Event Calendar > FOMC`
    - 기본은 current year와 next year를 수집한다.
    - 결과는 `finance_meta.market_event_calendar`에 `event_type=FOMC_MEETING`으로 저장된다.
-   - Events read model은 legacy row라도 `event_family=central_bank`, `universe_scope=official_macro`, `source_authority=official`로 읽을 수 있게 추론한다.
+   - parser source boundary에서 `event_family=central_bank`, `event_subtype=fomc_meeting`, `universe_scope=all_us`, `source_authority=federal_reserve`를 함께 저장한다. 기존 FOMC row도 같은 연도를 다시 수집하면 idempotent UPSERT로 분류값이 보정된다.
 
 7. `Workspace > Ingestion > Overview Market Event Calendar > Macro`
    - 기본은 current year와 next year를 수집한다.
@@ -236,29 +236,31 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
    - `.ics` import도 같은 `market_event_calendar` table에 저장되며, Data Health의 Macro Calendar coverage에 포함된다.
 
 8. `Workspace > Ingestion > Overview Market Event Calendar > Earnings`
-   - 기본은 `Latest S&P 500 Movers` source를 사용한다.
-   - broader coverage는 `S&P 500 Universe Batch`, `Top1000 Batch`, `Top2000 Batch`를 사용한다.
-   - broader mode는 `Max Symbols`, `Batch Offset`, `Ticker Cooldown Sec`을 작게 잡아 저빈도로 실행한다.
+   - Overview 수동/예약 갱신의 기본 경로는 hybrid earnings collector다.
+   - daily priority는 미국 시가총액 상위 100, 명시적인 portfolio/watchlist, 이미 알려진 45일 내 실적 symbol을 중복 제거해 먼저 확인한다.
+   - S&P 500은 한 번에 약 100개씩 persisted shard로 확인하며, 정상 실행 약 5회에 한 cycle을 완료한다. 부분 완료는 미수집 상태로 숨기지 않고 coverage evidence로 남는다.
+   - priority와 S&P 500 cycle checkpoint는 독립적이다. 한 universe의 실패가 다른 coverage를 오염시키지 않는다.
    - `Nasdaq cross-check`를 켜면 yfinance estimate를 Nasdaq의 무료 earnings calendar endpoint와 날짜 단위로 비교한다.
-   - latest movers mode는 stored S&P 500 intraday snapshot이 먼저 있어야 한다.
    - 특정 ticker 확인이 필요하면 `Manual Symbols`를 사용한다.
    - 결과는 `finance_meta.market_event_calendar`에 `event_type=EARNINGS`, `source=yfinance_calendar`, `source_type=provider_estimate`로 저장된다.
-   - S&P 500 / Nasdaq-100 / portfolio / watchlist / major-cap earnings coverage는 후속 확장 대상이며, 저장 row는 `universe_scope`로 구분한다.
+   - 확인 범위와 retry/cycle 상태는 `finance_meta.market_event_collection_coverage`에 저장한다. `complete`는 이번 cycle의 확인 완료이며 다음 실행은 새 cycle을 시작한다.
    - yfinance-only estimate는 `validation_status=estimate_only`, Nasdaq 확인 row는 `validation_status=cross_checked`, Nasdaq에서 확인하지 못한 row는 `validation_status=not_confirmed`가 된다.
    - `source_authority=provider_estimate` 또는 `cross_checked`는 공식 실적 일정 확인이 아니다. 회사 IR / SEC / issuer-confirmed source가 붙은 경우만 official/issuer-confirmed로 올린다.
+   - SEC CIK를 우선하고, 없으면 exact listing name을 사용해 issuer identity를 보강한다. 같은 issuer의 복수 class는 Overview에서 한 일정으로 묶되 원래 symbol들은 근거로 유지한다.
    - 같은 symbol/source의 이전 active estimate는 새 수집 결과가 있으면 `event_status=superseded`로 정리된다.
    - 수집 결과에는 `symbol_diagnostics`가 포함되며 `no_provider_earnings_date`, `outside_window`, `provider_error` 같은 missing / failure reason을 확인할 수 있다.
    - Ingestion 실행 결과와 Overview refresh 결과의 `Earnings Diagnostics` expander에서 issue count, reason count, symbol-level detail을 확인한다.
 
 9. `Workspace > Overview > Events`
-   - React `다가오는 시장 이벤트 브리프` workbench가 available이면 next event, today / this week / next 30D counts, official vs provider-estimate counts, stale estimate count, and context-only boundary를 먼저 확인한다.
-   - `화면 / 수집 갱신` command band에서 `화면 새로고침`은 stored DB rows를 다시 읽고, `전체 일정 갱신`은 FOMC / Macro / Market Structure / Earnings collectors를 `app/jobs/overview_actions.py` facade에서 순차 실행한다. 개별 refresh도 같은 Python facade를 통과한다.
-   - `실적 예상 일정 갱신`은 최근 S&P 500 movers snapshot 상위 최대 20개 후보를 기준으로 하며 provider 호출은 최대 50개 symbol / 120일 lookahead로 제한한다. 이 일정은 issuer-confirmed source가 붙기 전까지 provider estimate다.
-   - React `일정 타입` filter는 `전체`, `FOMC`, `매크로`, `실적`, `시장 구조`를 display-only로 좁힌다. `자료 상태` filter는 `전체`, `확인 필요`, `공식 / 확인됨`, `추정 / 미확정`을 display-only로 좁힌다.
-   - Event rails는 row 5개를 한 번에 펼치지 않고 `최근 중요`, `오늘 / 이번 주`, `30일 내`, `나중` 탭으로 읽는다. Badge는 공식 일정 / 제공사 추정 / 교차 확인 / 오래된 추정 / 미확정 같은 source-state를 구분한다.
-   - `일정 확정성 / 추정 일정 점검`에서 오래된 추정 일정, 미확정 일정, 추정만 있음, 일정 충돌 sections를 확인한다. 이 섹션의 신뢰는 예측 신뢰가 아니라 source authority / freshness / confirmation 상태다.
-   - `캘린더로 보는 일정 근거`는 월간 7열 calendar grid와 weekly density bars를 보여준다. 오늘과 이번 주는 별도 색으로 표시되며, hover tooltip은 날짜별 event count, major title, stale/review count, family mix를 보여준다. 이 정보는 일정 밀도와 자료 상태 근거이며 예측/신호가 아니다.
-   - `원본 / 상세 근거`는 collapsed appendix다. 펼치면 Source URL, Source Authority, Collected At 등 service-provided evidence rows를 확인한다.
+   - React `이번 주 시장 일정` workbench가 available이면 `가장 중요한 다음 일정`, `이번 주 핵심 일정`, `다음 FOMC` 세 brief와 월간 calendar를 먼저 확인한다.
+   - 첫 화면의 `일정 갱신`은 Python `run_overview_event_calendars_refresh_official()` facade를 통해 FOMC / Macro / Market Structure만 갱신한다. provider 호출이 긴 hybrid Earnings는 `자료 신뢰와 수집 범위` 안의 `실적 예상 일정 갱신`으로 분리한다.
+   - legacy `run_overview_event_calendars_refresh_all()`은 자동화/호환 경로를 위해 네 collector bundle로 유지한다. React 수동 실행은 결과마다 고유 completion token을 받아 빠른 연속 실행에서도 pending 표시를 해제하며, `화면 새로고침`은 provider job pending 상태를 만들지 않는다.
+   - `일정 타입`은 `전체`, `FOMC`, `실적`, `휴장·조기폐장` service-owned view를 전환한다. Brief, calendar, selected-day detail, weekly density, coverage evidence는 항상 같은 view를 사용한다.
+   - desktop은 calendar와 selected-day detail을 2열로, 760px 이하는 1열로 표시한다. 날짜를 선택하면 그날의 모든 일정을 고정 높이 detail panel에서 확인한다.
+   - Earnings는 issuer 단위로 표시한다. 예를 들어 GOOG / GOOGL은 `Alphabet Inc 실적` 한 건으로 보이고 두 ticker는 근거 symbol로 함께 표시된다.
+   - `자료 신뢰와 수집 범위`는 collapsed support section이다. checked-no-event와 not-checked, incomplete S&P 500 cycle, source/confirmation 상태를 확인할 수 있지만 첫 화면의 주인공은 아니다.
+   - 표시 시간이 확인된 경우 미국 기준 시각을 KST로 변환한다. 제공사가 정확한 시간을 주지 않으면 `미국 기준` 또는 `한국시간 예정`처럼 원래 의미를 보존하고 임의의 자정으로 변환하지 않는다.
+   - 미국 휴장·조기폐장은 current/next year를 확인한다. 요청 연도에 현대 미국 주식시장 full-day holiday 10개가 모두 확인되지 않으면 NYSE official multi-year calendar로 해당 연도를 보완하고 중복 날짜를 조정한다.
    - React build가 없으면 기존 Streamlit summary/source lane과 `Agenda`, `Calendar`, `Quality`, `Raw` tabs가 fallback으로 남는다.
    - 하단 Streamlit detail filters인 `Window`, `Source Type`, `Validation`, `Importance`로 캘린더 범위와 source quality를 더 좁힐 수 있다.
    - Overview Events는 UI render 중 직접 외부 source를 scraping하지 않는다. External source fetch는 ingestion job wrapper가 DB에 저장한 뒤 service read model이 읽는다.
@@ -415,6 +417,10 @@ PY
 - Earnings job results show `Earnings Diagnostics` when requested symbols are missing, outside the selected lookahead window, or fail at the provider layer.
 - Earnings event rows include `Quality Action`; `Estimate only` rows recommend cross-check or closer refresh, stale rows recommend refresh, and cross-checked rows show no action.
 - Overview Events starts with the React workbench when the component build exists: brief, command boundary with last refresh results, local display filters, tabbed event rails, schedule-confirmation review, monthly calendar grid, weekly density, and collapsed raw evidence appendix.
+- Current Overview Events A layout uses three service-owned brief cards, one fast official-calendar refresh, family views, a calendar + selected-day desktop grid, consistent weekly density, and collapsed collection/support evidence. Slow hybrid earnings refresh is a separate support action.
+- Earnings collection coverage uses daily priority plus a persisted S&P 500 shard cycle. Coverage checkpoints separate checked-no-event from not-checked and do not imply issuer-confirmed authority.
+- Issuer grouping preserves raw ticker evidence; exact CIK or exact listing-name matches can display GOOG / GOOGL as one Alphabet event.
+- FOMC and US holiday coverage is verified by requested year. NYSE official holidays backfill only years missing from the Nasdaq Trader response.
 - Overview Events read model includes `Days Until`, `Importance`, taxonomy, quality / validation fields, source status summaries, and workbench payload sections; FOMC / macro / fixed-income rows are high-context official rows, earnings rows remain estimates until confirmed, and rows with source / validation action show `Needs Review`.
 - Overview Events calendar/density visuals show schedule clustering and stale/review evidence only. Today and the current week can be highlighted in the month grid, but they do not create validation gates, trade signals, monitoring signals, or automated actions.
 - Overview Events keeps existing Streamlit `Agenda`, `Calendar`, `Quality`, `Raw` tabs with Window / Source Type / Validation / Importance filters as fallback and lower evidence sections.
@@ -433,6 +439,8 @@ PY
 |---|---|---|
 | Earnings latest movers mode writes no rows | No latest S&P 500 intraday snapshot | Run S&P 500 market snapshot first or switch to manual symbols |
 | Some earnings symbols are missing | yfinance calendar has no upcoming date, date is outside the selected window, or provider request failed | Open `Earnings Diagnostics`; retry with wider lookahead for `outside_window`, retry later for `provider_error`, or inspect ticker manually for `no_provider_earnings_date` |
+| S&P 500 earnings coverage is incomplete | The persisted shard cycle has not checked every current constituent yet | Continue normal earnings refreshes; do not interpret unchecked symbols as having no event |
+| Next-year US holidays are absent | Nasdaq Trader response did not contain the requested year or official page markup changed | Run Market Structure refresh; confirm the NYSE fallback and the year-specific coverage checkpoint |
 | Earnings row is not confirmed | Nasdaq cross-check did not find the same symbol on that event date | Treat as provider estimate only; refresh later or inspect company IR manually |
 | Old earnings date remains in DB | Estimate date changed | Overview hides superseded rows by default; inspect DB if an audit trail is needed |
 | Market Movers missing count is high | Provider quote rows missing or DB previous close missing | Open `Coverage Diagnostics`, then refresh OHLCV / snapshot source if needed |

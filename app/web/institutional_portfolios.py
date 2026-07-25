@@ -410,6 +410,28 @@ def _handle_workbench_event(event: dict[str, Any] | None) -> None:
             st.session_state["institutional_13f_refresh_panel_expanded"] = True
             st.rerun()
         return
+    if event_name == "collect_sec_13f_dataset":
+        dataset_label = str(payload.get("dataset_label") or DEFAULT_SEC_13F_DATASET_LABEL).strip()
+        dataset_url = str(payload.get("dataset_url") or DEFAULT_SEC_13F_DATASET_URL).strip()
+        local_zip_path = str(payload.get("local_zip_path") or "").strip()
+        user_agent = str(payload.get("user_agent") or "").strip()
+        if not dataset_url and not local_zip_path:
+            st.session_state["institutional_13f_refresh_result"] = {
+                "status": "failed",
+                "message": "SEC dataset URL 또는 local ZIP path가 필요합니다.",
+                "rows_written": 0,
+            }
+            st.rerun()
+            return
+        with st.spinner("Collecting official SEC Form 13F dataset into DB..."):
+            st.session_state["institutional_13f_refresh_result"] = run_collect_sec_13f_dataset(
+                dataset_url=None if local_zip_path else dataset_url,
+                dataset_zip_path=local_zip_path or None,
+                source_dataset=dataset_label or None,
+                user_agent=user_agent or None,
+            )
+        st.rerun()
+        return
     if event_name == "manager_search":
         query = str(payload.get("query") or "").strip()
         st.session_state["institutional_portfolios_manager_search"] = query
@@ -476,11 +498,11 @@ def _handle_workbench_event(event: dict[str, Any] | None) -> None:
         st.rerun()
 
 
-def _render_workbench_or_fallback(payload: dict[str, Any], *, key: str) -> None:
+def _render_workbench_or_fallback(payload: dict[str, Any], *, key: str) -> bool:
     if institutional_portfolios_react_component_available():
         event = render_institutional_portfolios_workbench(payload, key=key)
         _handle_workbench_event(event)
-        return
+        return True
 
     st.info("React workbench build is unavailable. Run the component build step to render the visual portfolio explorer.")
     st.json(
@@ -491,6 +513,7 @@ def _render_workbench_or_fallback(payload: dict[str, Any], *, key: str) -> None:
             "change_board": payload.get("change_board"),
         }
     )
+    return False
 
 
 def render_institutional_portfolios_page(
@@ -500,35 +523,36 @@ def render_institutional_portfolios_page(
     git_sha: str | None = None,
     render_runtime_snapshot: Callable[[], None] | None = None,
 ) -> None:
-    st.title("Institutional Portfolios")
-    st.caption(
-        "저장된 SEC Form 13F 기준으로 기관 / 투자 대가의 포트폴리오, 분기 보고 변화, 보유 기관 역조회를 탐색합니다. "
-        "이 화면은 읽기 전용 리서치 화면이며 Market Movers와 분리되어 있습니다."
-    )
-    render_reference_contextual_help("institutional_portfolios", expanded=False)
+    react_available = institutional_portfolios_react_component_available()
+    if not react_available:
+        st.title("Institutional Portfolios")
+        st.caption(
+            "저장된 SEC Form 13F 기준으로 기관 / 투자 대가의 포트폴리오, 분기 보고 변화, 보유 기관 역조회를 탐색합니다. "
+            "이 화면은 읽기 전용 리서치 화면이며 Market Movers와 분리되어 있습니다."
+        )
+        render_reference_contextual_help("institutional_portfolios", expanded=False)
 
-    if render_runtime_snapshot is not None:
-        with st.expander("Runtime / Build", expanded=False):
-            render_runtime_snapshot()
-    elif runtime_marker or loaded_at or git_sha:
-        st.caption(f"Runtime: {runtime_marker or '-'} · Loaded: {loaded_at or '-'} · Git: {git_sha or '-'}")
+        if render_runtime_snapshot is not None:
+            with st.expander("Runtime / Build", expanded=False):
+                render_runtime_snapshot()
+        elif runtime_marker or loaded_at or git_sha:
+            st.caption(f"Runtime: {runtime_marker or '-'} · Loaded: {loaded_at or '-'} · Git: {git_sha or '-'}")
 
     search = str(st.session_state.get("institutional_portfolios_manager_search") or "").strip()
     refresh_result = load_institutional_refresh_status()
     refresh_status = dict(refresh_result.get("model") or {})
-    refresh_panel_rendered = _render_requested_refresh_status_panel(refresh_status)
     manager_result = load_institutional_manager_choices(search, limit=24)
     if manager_result["status"] != "ok":
         payload = build_institutional_preview_workbench_payload(
             "Local 13F data is not ready yet. This preview shows the visual portfolio workflow before official SEC rows are loaded."
         )
         payload.setdefault("manager_picker", {})["search_query"] = search
-        _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_error")
-        if not refresh_panel_rendered:
+        react_rendered = _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_error")
+        if not react_rendered:
             _render_refresh_status_panel(refresh_status)
-        with st.expander("Source caveats and setup", expanded=False):
-            _render_caveats()
-            _render_diagnostic_detail(manager_result.get("message"))
+            with st.expander("Source caveats and setup", expanded=False):
+                _render_caveats()
+                _render_diagnostic_detail(manager_result.get("message"))
         return
 
     managers = list(manager_result.get("managers") or [])
@@ -537,11 +561,11 @@ def render_institutional_portfolios_page(
     if selected_manager is None:
         payload = build_institutional_preview_workbench_payload("Local 13F DB has no manager rows yet. Preview mode is shown until data is collected.")
         payload.setdefault("manager_picker", {})["search_query"] = search
-        _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_empty")
-        if not refresh_panel_rendered:
+        react_rendered = _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_empty")
+        if not react_rendered:
             _render_refresh_status_panel(refresh_status)
-        with st.expander("Source caveats and setup", expanded=False):
-            _render_caveats()
+            with st.expander("Source caveats and setup", expanded=False):
+                _render_caveats()
         return
 
     portfolio_result = load_institutional_portfolio_model(str(selected_manager.get("cik") or ""))
@@ -550,12 +574,12 @@ def render_institutional_portfolios_page(
             "The selected manager portfolio is not available in the local 13F snapshot. Preview mode shows the intended visual workflow."
         )
         payload.setdefault("manager_picker", {})["search_query"] = search
-        _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_model_error")
-        if not refresh_panel_rendered:
+        react_rendered = _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_model_error")
+        if not react_rendered:
             _render_refresh_status_panel(refresh_status)
-        with st.expander("Source caveats and setup", expanded=False):
-            _render_caveats()
-            _render_diagnostic_detail(portfolio_result.get("message"))
+            with st.expander("Source caveats and setup", expanded=False):
+                _render_caveats()
+                _render_diagnostic_detail(portfolio_result.get("message"))
         return
 
     model = dict(portfolio_result.get("model") or {})
@@ -604,25 +628,25 @@ def render_institutional_portfolios_page(
         selected_security_model=selected_security_model,
         popularity_model=popularity_model,
         price_refresh_result=dict(st.session_state.get("institutional_price_refresh_result") or {}),
+        refresh_result=dict(st.session_state.get("institutional_13f_refresh_result") or {}),
         mode="live",
         refresh_status=refresh_status,
         preserve_manager_order=search_active,
         manager_search_query=search,
     )
-    _render_workbench_or_fallback(payload, key="institutional_portfolios_workbench")
-    if not refresh_panel_rendered:
+    react_rendered = _render_workbench_or_fallback(payload, key="institutional_portfolios_workbench")
+    if not react_rendered:
         _render_refresh_status_panel(refresh_status)
-
-    with st.expander("Detailed filings / table fallback", expanded=False):
-        _render_summary(model)
-        holdings_tab, changes_tab, exposure_tab, lookup_tab = st.tabs(
-            ["Holdings", "Reported Changes", "Sector Exposure", "Institutional Interest"]
-        )
-        with holdings_tab:
-            _render_holdings(model)
-        with changes_tab:
-            _render_changes(model)
-        with exposure_tab:
-            _render_exposure(model)
-        with lookup_tab:
-            _render_reverse_lookup()
+        with st.expander("Detailed filings / table fallback", expanded=False):
+            _render_summary(model)
+            holdings_tab, changes_tab, exposure_tab, lookup_tab = st.tabs(
+                ["Holdings", "Reported Changes", "Sector Exposure", "Institutional Interest"]
+            )
+            with holdings_tab:
+                _render_holdings(model)
+            with changes_tab:
+                _render_changes(model)
+            with exposure_tab:
+                _render_exposure(model)
+            with lookup_tab:
+                _render_reverse_lookup()

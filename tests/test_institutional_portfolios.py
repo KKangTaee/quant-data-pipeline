@@ -1290,55 +1290,26 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
 
 
 class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
-    def test_context_hero_basis_and_controls_share_alignment_contract(self) -> None:
+    def test_modular_research_studio_owns_desktop_rail_and_mobile_drawer_contract(self) -> None:
         component_source = _component_source()
         style_source = _component_style_source()
-        hero_grid_rule = _css_rule(style_source, ".ip-context-hero__grid")
-        controls_rule = _css_rule(style_source, ".ip-context-controls")
-        basis_span_rule = _css_rule(
-            style_source,
-            ".ip-context-basis__snapshot",
-            ".ip-context-basis .ip-source-link",
-        )
-        shared_label_rule = _css_rule(
-            style_source,
-            ".ip-manager-search > label",
-            ".ip-context-control-label",
-        )
-        freshness_rule = _css_rule(style_source, ".ip-freshness")
-        freshness_action_rule = _css_rule(style_source, ".ip-freshness__action")
-        freshness_period_rule = _css_rule(style_source, ".ip-freshness strong")
-        freshness_time_rule = _css_rule(style_source, ".ip-freshness em")
-        mobile_style_source = style_source[
-            style_source.index("@media (max-width: 720px) {") : style_source.index("@media (max-width: 420px) {")
-        ]
-        mobile_freshness_rule = _css_rule(mobile_style_source, ".ip-freshness")
+        shell_source = Path(
+            "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalStudioShell.tsx"
+        ).read_text(encoding="utf-8")
+        studio_rule = _css_rule(style_source, ".ip-studio")
+        rail_rule = _css_rule(style_source, ".ip-studio-rail")
 
-        self.assertIn('className="ip-context-basis__snapshot"', component_source)
-        self.assertIn('className="ip-freshness-block"', component_source)
-        self.assertIn('className="ip-context-control-label">데이터 기준</span>', component_source)
-        self.assertIn("--ip-context-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);", style_source)
-        for grid_rule in (hero_grid_rule, controls_rule):
-            self.assertIn("grid-template-columns: var(--ip-context-columns);", grid_rule)
-            self.assertIn("gap: 18px;", grid_rule)
-        self.assertIn("align-items: start;", controls_rule)
-        self.assertIn("grid-column: 1 / -1;", basis_span_rule)
-        for declaration in (
-            "display: block;",
-            "min-height: 18px;",
-            "margin-bottom: 6px;",
-            "color: #334155;",
-            "font-size: 12px;",
-            "font-weight: 800;",
-            "line-height: 18px;",
-        ):
-            self.assertIn(declaration, shared_label_rule)
-        self.assertIn('grid-template-areas: "action period" "time time";', freshness_rule)
-        self.assertIn("grid-area: action;", freshness_action_rule)
-        self.assertIn("grid-area: period;", freshness_period_rule)
-        self.assertIn("grid-area: time;", freshness_time_rule)
-        self.assertIn("white-space: normal;", freshness_time_rule)
-        self.assertIn('grid-template-areas: "action" "period" "time";', mobile_freshness_rule)
+        self.assertIn("InstitutionalStudioShell", component_source)
+        self.assertIn('className="ip-studio-rail"', shell_source)
+        self.assertIn('className="ip-studio-mobile-bar"', shell_source)
+        self.assertIn('aria-controls="ip-institutional-studio-rail"', shell_source)
+        self.assertIn('event.key === "Escape"', shell_source)
+        self.assertIn("STUDIO_DESTINATIONS.map", shell_source)
+        self.assertIn("grid-template-columns: minmax(218px, 238px) minmax(0, 1fr);", studio_rule)
+        self.assertIn("linear-gradient(180deg, #111c2d 0%, #0b1422 100%)", rail_rule)
+        self.assertIn("@media (max-width: 980px)", style_source)
+        self.assertIn(".ip-studio--drawer-open .ip-studio-rail", style_source)
+        self.assertIn("transform: translateX(0);", style_source)
 
         build_dir = Path("app/web/streamlit_components/institutional_portfolios_workbench/component_static")
         index_source = (build_dir / "index.html").read_text(encoding="utf-8")
@@ -1349,38 +1320,13 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertEqual(len(javascript_paths), 1)
         runtime_css = (build_dir / css_paths[0]).read_text(encoding="utf-8")
         runtime_javascript = (build_dir / javascript_paths[0]).read_text(encoding="utf-8")
-        runtime_hero_rule = _css_rule(runtime_css, ".ip-hero")
-        runtime_hero_grid_rule = _css_rule(runtime_css, ".ip-context-hero__grid")
-        runtime_controls_rule = _css_rule(runtime_css, ".ip-context-controls")
-        runtime_basis_span_rule = _css_rule(
-            runtime_css,
-            ".ip-context-basis__snapshot",
-            ".ip-context-basis .ip-source-link",
-        )
-        runtime_freshness_rule = _css_rule(runtime_css, ".ip-freshness")
-        runtime_freshness_action_rule = _css_rule(runtime_css, ".ip-freshness__action")
-        runtime_freshness_period_rule = _css_rule(runtime_css, ".ip-freshness strong")
-        runtime_freshness_time_rule = _css_rule(runtime_css, ".ip-freshness em")
-        runtime_mobile_style = runtime_css[
-            runtime_css.index("@media(max-width:720px){") : runtime_css.index("@media(max-width:420px){")
-        ]
-        runtime_mobile_freshness_rule = _css_rule(runtime_mobile_style, ".ip-freshness")
-        self.assertRegex(
-            runtime_hero_rule,
-            r"--ip-context-columns:\s*minmax\(0,\s*1\.45fr\)\s*minmax\(320px,\s*0?\.75fr\)",
-        )
-        for runtime_grid_rule in (runtime_hero_grid_rule, runtime_controls_rule):
-            self.assertIn("grid-template-columns:var(--ip-context-columns)", runtime_grid_rule)
-            self.assertIn("gap:18px", runtime_grid_rule)
-        self.assertIn("grid-column:1 / -1", runtime_basis_span_rule)
-        self.assertIn('grid-template-areas:"action period" "time time"', runtime_freshness_rule)
-        self.assertIn("grid-area:action", runtime_freshness_action_rule)
-        self.assertIn("grid-area:period", runtime_freshness_period_rule)
-        self.assertIn("grid-area:time", runtime_freshness_time_rule)
-        self.assertIn("white-space:normal", runtime_freshness_time_rule)
-        self.assertIn('grid-template-areas:"action" "period" "time"', runtime_mobile_freshness_rule)
-        self.assertIn("ip-freshness-block", runtime_css)
-        self.assertIn("ip-freshness-block", runtime_javascript)
+        runtime_studio_rule = _css_rule(runtime_css, ".ip-studio")
+        runtime_rail_rule = _css_rule(runtime_css, ".ip-studio-rail")
+        self.assertIn("grid-template-columns:minmax(218px,238px) minmax(0,1fr)", runtime_studio_rule)
+        self.assertIn("#111c2d", runtime_rail_rule)
+        self.assertIn("ip-studio-mobile-bar", runtime_css)
+        self.assertIn("ip-studio-mobile-bar", runtime_javascript)
+        self.assertIn("Institutional Holdings", runtime_javascript)
         self.assertIn("데이터 기준", runtime_javascript)
         self.assertNotIn("slice(0,80)", runtime_javascript)
         self.assertNotIn("slice(0, 80)", runtime_javascript)
@@ -1714,6 +1660,67 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         )
         self.assertEqual(fake_streamlit.rerun_count, 1)
 
+    def test_dataset_refresh_event_preserves_url_zip_and_user_agent_inputs(self) -> None:
+        import app.web.institutional_portfolios as page
+
+        calls: list[dict[str, object]] = []
+
+        class Spinner:
+            def __enter__(self) -> None:
+                return None
+
+            def __exit__(self, *_args: object) -> None:
+                return None
+
+        class FakeStreamlit:
+            def __init__(self) -> None:
+                self.session_state: dict[str, object] = {}
+                self.rerun_count = 0
+
+            def spinner(self, _message: str) -> Spinner:
+                return Spinner()
+
+            def rerun(self) -> None:
+                self.rerun_count += 1
+
+        def fake_collect(**kwargs: object) -> dict[str, object]:
+            calls.append(kwargs)
+            return {"status": "success", "message": "done", "rows_written": 42}
+
+        original_streamlit = page.st
+        original_collect = page.run_collect_sec_13f_dataset
+        fake_streamlit = FakeStreamlit()
+        try:
+            page.st = fake_streamlit
+            page.run_collect_sec_13f_dataset = fake_collect
+            page._handle_workbench_event(
+                {
+                    "id": "collect_sec_13f_dataset",
+                    "dataset_label": "Quarterly 13F",
+                    "dataset_url": "https://example.test/13f.zip",
+                    "local_zip_path": "/tmp/local-13f.zip",
+                    "user_agent": "research@example.test",
+                    "nonce": "refresh-1",
+                }
+            )
+        finally:
+            page.st = original_streamlit
+            page.run_collect_sec_13f_dataset = original_collect
+
+        self.assertEqual(
+            calls,
+            [
+                {
+                    "dataset_url": None,
+                    "dataset_zip_path": "/tmp/local-13f.zip",
+                    "source_dataset": "Quarterly 13F",
+                    "user_agent": "research@example.test",
+                }
+            ],
+        )
+        self.assertEqual(fake_streamlit.session_state["institutional_13f_refresh_result"]["rows_written"], 42)
+        self.assertEqual(fake_streamlit.rerun_count, 1)
+
     def test_reverse_lookup_loader_uses_filing_total_without_full_holding_groupby(self) -> None:
         source = Path("finance/loaders/institutional_13f.py").read_text(encoding="utf-8")
         interest_source = source[source.index("def load_institutional_13f_interest") :]
@@ -1787,27 +1794,24 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertLess(source.index("render_institutional_portfolios_workbench"), source.index("st.dataframe"))
         self.assertLess(source.index("render_institutional_portfolios_workbench"), source.index("_render_refresh_status_panel"))
 
-    def test_refresh_strip_opens_streamlit_refresh_panel(self) -> None:
+    def test_react_studio_runs_sec_refresh_without_opening_streamlit_panel(self) -> None:
         page_source = Path("app/web/institutional_portfolios.py").read_text(encoding="utf-8")
         component_source = Path(
             "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalPortfoliosWorkbench.tsx"
         ).read_text(encoding="utf-8")
 
         self.assertIn("Streamlit.setComponentValue({ event: {", component_source)
-        self.assertIn('id: "open_refresh"', component_source)
-        self.assertIn('className="ip-freshness__action"', component_source)
-        self.assertIn("갱신 설정 사용 가능", component_source)
-        self.assertNotIn("refresh available below", component_source)
+        self.assertIn('id: "collect_sec_13f_dataset"', component_source)
+        self.assertIn('className="ip-studio-refresh-form"', component_source)
+        self.assertIn("refreshLocalZipPath", component_source)
+        self.assertIn("refreshUserAgent", component_source)
+        self.assertNotIn('id: "open_refresh"', component_source)
         self.assertIn("_workbench_event_payload", page_source)
-        self.assertIn("institutional_13f_refresh_panel_expanded", page_source)
         self.assertIn('event_name = str(payload.get("id")', page_source)
-        self.assertIn('event_name == "open_refresh"', page_source)
-        self.assertIn("expanded=refresh_panel_expanded", page_source)
-        self.assertIn("_render_requested_refresh_status_panel", page_source)
-        self.assertLess(
-            page_source.index("_render_requested_refresh_status_panel(refresh_status)"),
-            page_source.index("manager_result = load_institutional_manager_choices"),
-        )
+        self.assertIn('event_name == "collect_sec_13f_dataset"', page_source)
+        self.assertIn("run_collect_sec_13f_dataset", page_source)
+        self.assertIn("refresh_result=dict(st.session_state.get", page_source)
+        self.assertIn("if not react_rendered:", page_source)
 
     def test_workbench_preserves_scroll_and_exposes_security_detail_and_popularity_tab(self) -> None:
         page_source = Path("app/web/institutional_portfolios.py").read_text(encoding="utf-8")
@@ -1824,33 +1828,34 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn("ip-security-detail", component_source)
         self.assertIn("ip-performance-panel", component_source)
 
-    def test_workbench_uses_two_tier_portfolio_and_security_tabs(self) -> None:
+    def test_workbench_uses_one_canonical_research_destination_navigation(self) -> None:
         component_source = Path(
             "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalPortfoliosWorkbench.tsx"
         ).read_text(encoding="utf-8")
         style_source = Path("app/web/streamlit_components/institutional_portfolios_workbench/src/style.css").read_text(
             encoding="utf-8"
         )
+        shell_source = Path(
+            "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalStudioShell.tsx"
+        ).read_text(encoding="utf-8")
+        state_source = Path(
+            "app/web/streamlit_components/institutional_portfolios_workbench/src/workbenchState.ts"
+        ).read_text(encoding="utf-8")
 
-        self.assertIn('type ViewName = "overview" | "holdings" | "security" | "popularity";', component_source)
-        self.assertIn('type WorkspaceSection = "portfolio" | "security";', component_source)
-        self.assertIn("activeWorkspaceSection", component_source)
-        self.assertIn("switchWorkspaceSection", component_source)
-        self.assertIn('aria-label="작업 영역"', component_source)
-        self.assertIn('"포트폴리오 세부 보기"', component_source)
-        self.assertIn('"종목 분석 세부 보기"', component_source)
-        self.assertIn("포트폴리오", component_source)
-        self.assertIn("종목 분석", component_source)
-        self.assertIn("종목 상세", component_source)
+        self.assertIn('export type StudioView = "overview" | "holdings" | "security" | "popularity";', state_source)
+        self.assertIn("STUDIO_DESTINATIONS", state_source)
+        for label in ("포트폴리오 맥락", "전체 보유", "종목 상세", "기관 보유 랭킹"):
+            self.assertIn(label, state_source)
+        self.assertIn("STUDIO_DESTINATIONS.map", shell_source)
+        self.assertIn('aria-label="리서치 목적지"', shell_source)
+        self.assertIn("onViewChange", shell_source)
         self.assertIn('setActiveView("security")', component_source)
         self.assertIn('activeView === "security"', component_source)
         self.assertNotIn("보유 기관 조회", component_source)
-        self.assertIn(".ip-view-navigation", style_source)
-        self.assertIn(".ip-primary-tabs", style_source)
-        self.assertIn(".ip-secondary-tabs", style_source)
-        self.assertIn(".ip-primary-tabs__active", style_source)
-        self.assertNotIn("ip-tab-group__label", component_source)
-        self.assertNotIn(".ip-tab-group", style_source)
+        self.assertIn(".ip-studio-nav", style_source)
+        self.assertIn(".ip-studio-nav__active", style_source)
+        self.assertIn(".ip-studio-mobile-bar", style_source)
+        self.assertGreaterEqual(component_source.count("setStudioDrawerOpen(false);"), 3)
 
     def test_selected_security_price_collection_button_routes_through_python_job_boundary(self) -> None:
         page_source = Path("app/web/institutional_portfolios.py").read_text(encoding="utf-8")
