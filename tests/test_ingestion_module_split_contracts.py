@@ -117,13 +117,26 @@ class IngestionModuleSplitContractsTest(unittest.TestCase):
         )
         self.assertEqual(result["status"], "success")
 
-    def test_ingestion_collection_sections_live_in_dedicated_module(self) -> None:
+    def test_data_operations_page_composes_task_oriented_views(self) -> None:
         from app.web.ingestion import page
-        from app.web.ingestion import sections
+        from app.web.ingestion import navigation
+        from app.web.ingestion.views import (
+            render_advanced_view,
+            render_history_view,
+            render_imports_view,
+            render_preparation_view,
+            render_recovery_view,
+        )
 
-        self.assertIs(page._render_ingestion_operational_section, sections.render_operational_section)
-        self.assertIs(page._render_ingestion_manual_section, sections.render_manual_section)
-        self.assertIs(page._render_selected_ingestion_collection_section, sections.render_selected_section)
+        self.assertIs(
+            page.select_data_operations_section,
+            navigation.select_data_operations_section,
+        )
+        self.assertIs(page.render_preparation_view, render_preparation_view)
+        self.assertIs(page.render_imports_view, render_imports_view)
+        self.assertIs(page.render_recovery_view, render_recovery_view)
+        self.assertIs(page.render_history_view, render_history_view)
+        self.assertIs(page.render_advanced_view, render_advanced_view)
 
     def test_sp500_actual_eps_upload_is_visible_in_operational_section(self) -> None:
         source = Path("app/web/ingestion/sections.py").read_text(encoding="utf-8")

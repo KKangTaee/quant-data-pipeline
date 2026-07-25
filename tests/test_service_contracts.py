@@ -6193,26 +6193,33 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertIn("저장된 과거 결과 호환", source)
         self.assertIn("Quality Snapshot (Strict Annual)", source)
 
-    def test_ingestion_collection_section_selector_is_stateful_across_reruns(self) -> None:
-        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+    def test_data_operations_section_selector_is_stateful_across_reruns(self) -> None:
+        from app.web.ingestion.navigation import apply_action_focus
+        from app.web.ingestion.workflows import (
+            DATA_OPERATIONS_SECTIONS,
+            DATA_OPERATIONS_SECTION_ADVANCED,
+        )
 
-        self.assertIn("INGESTION_COLLECTION_SECTIONS", source)
-        self.assertIn("ingestion_collection_section_choice", source)
-        self.assertIn("st.pills(", source)
-        self.assertNotIn('st.tabs(["일상 운영 / 검증 데이터", "수동 복구 / 진단"])', source)
+        self.assertEqual(
+            DATA_OPERATIONS_SECTIONS,
+            ("데이터 준비", "공식 파일", "문제 복구", "실행 이력", "고급 도구"),
+        )
+        state: dict[str, object] = {}
+        apply_action_focus(state, "collect_market_sentiment")
+        self.assertEqual(
+            state["data_operations_section_choice"],
+            DATA_OPERATIONS_SECTION_ADVANCED,
+        )
 
-    def test_ingestion_console_moves_run_records_into_third_collection_section(self) -> None:
-        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+    def test_data_operations_history_hides_raw_run_artifacts(self) -> None:
+        source = Path("app/web/ingestion/views/history.py").read_text(encoding="utf-8")
 
-        self.assertIn('INGESTION_COLLECTION_RECORDS = "실행 기록 / 결과"', source)
-        self.assertIn("INGESTION_COLLECTION_RECORDS", source)
-        self.assertIn("def _render_ingestion_records_section", source)
-        self.assertIn("selected_collection_section == INGESTION_COLLECTION_RECORDS", source)
-        self.assertNotIn("col_left, col_right = st.columns([3, 2])", source)
-        self.assertIn("_render_recent_results()", source)
-        self.assertIn("_render_persistent_run_history()", source)
-        self.assertIn("_render_recent_logs()", source)
-        self.assertIn("_render_failure_csv_preview()", source)
+        self.assertIn("build_data_activity_row", source)
+        self.assertNotIn("HISTORY_FILE", source)
+        self.assertNotIn("LOG_DIR", source)
+        self.assertNotIn("CSV_DIR", source)
+        self.assertNotIn("st.json(", source)
+        self.assertNotIn("st.code(", source)
 
     def test_ingestion_console_dispatches_collection_sections_to_dedicated_renderers(self) -> None:
         import ast
@@ -6226,12 +6233,13 @@ class BoundaryContractHardeningTests(unittest.TestCase):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
 
-        self.assertIn("render_operational_section as _render_ingestion_operational_section", source)
-        self.assertIn("render_manual_section as _render_ingestion_manual_section", source)
-        self.assertIn("render_selected_section as _render_selected_ingestion_collection_section", source)
+        self.assertIn("render_preparation_view", source)
+        self.assertIn("render_imports_view", source)
+        self.assertIn("render_recovery_view", source)
+        self.assertIn("render_history_view", source)
+        self.assertIn("render_advanced_view", source)
         self.assertIn("def render_operational_section", sections_source)
         self.assertIn("def render_manual_section", sections_source)
-        self.assertIn("def render_selected_section", sections_source)
 
         entrypoint = functions["render_ingestion_console"]
         entrypoint_calls = {
@@ -6239,7 +6247,12 @@ class BoundaryContractHardeningTests(unittest.TestCase):
             for node in ast.walk(entrypoint)
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
         }
-        self.assertIn("_render_selected_ingestion_collection_section", entrypoint_calls)
+        self.assertIn("select_data_operations_section", entrypoint_calls)
+        self.assertIn("render_preparation_view", entrypoint_calls)
+        self.assertIn("render_imports_view", entrypoint_calls)
+        self.assertIn("render_recovery_view", entrypoint_calls)
+        self.assertIn("render_history_view", entrypoint_calls)
+        self.assertIn("render_advanced_view", entrypoint_calls)
         self.assertNotIn("_render_price_stale_diagnosis_card", entrypoint_calls)
         self.assertNotIn("_render_statement_pit_inspection_card", entrypoint_calls)
 
@@ -35910,14 +35923,16 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertNotIn("app.web.operations_overview", source)
         self.assertNotIn("app.web.ops_review", source)
 
-    def test_ingestion_records_preserve_run_log_and_failure_review(self) -> None:
-        source = Path("app/web/ingestion/page.py").read_text(encoding="utf-8")
+    def test_data_operations_landing_removes_raw_log_and_failure_viewers(self) -> None:
+        entrypoint_source = Path("app/web/ingestion/page.py").read_text(encoding="utf-8")
+        history_source = Path("app/web/ingestion/views/history.py").read_text(
+            encoding="utf-8"
+        )
 
-        self.assertIn("def _render_ingestion_records_section", source)
-        self.assertIn("_render_recent_results()", source)
-        self.assertIn("_render_persistent_run_history()", source)
-        self.assertIn("_render_recent_logs()", source)
-        self.assertIn("_render_failure_csv_preview()", source)
+        self.assertNotIn("_render_recent_logs()", entrypoint_source)
+        self.assertNotIn("_render_failure_csv_preview()", entrypoint_source)
+        self.assertNotIn("related log", history_source.lower())
+        self.assertNotIn("failure csv", history_source.lower())
 
     def test_portfolio_monitoring_rebalance_table_uses_target_snapshot_language(self) -> None:
         from app.web.final_selected_portfolio_dashboard import _build_rebalance_table

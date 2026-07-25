@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 from html import escape
-from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -18,22 +17,17 @@ from app.jobs.preflight_checks import (
     check_symbol_input,
 )
 from app.jobs.run_history import (
-    HISTORY_FILE,
     append_run_history,
     estimate_duration_from_history,
-    load_run_history,
 )
 from app.jobs.symbol_sources import resolve_symbol_source
 from app.jobs.symbol_sources import filter_non_plain_symbols
 from app.services.ingestion_diagnostics import load_price_window_preflight_summary
 from app.web.backtest_common import QUALITY_STRICT_PRESETS, clear_backtest_preview_caches
 from app.web.reference_contextual_help import render_reference_contextual_help
-from app.workspace_paths import PROJECT_ROOT
 
 
 JobResult = dict[str, Any]
-LOG_DIR = PROJECT_ROOT / "logs"
-CSV_DIR = PROJECT_ROOT / "csv"
 _runtime_marker = "unknown"
 _runtime_loaded_at: datetime | None = None
 _runtime_git_sha: str | None = None
@@ -58,10 +52,25 @@ from app.web.ingestion.guides import (
     _result_metric_labels,
     _status_label,
 )
-from app.web.ingestion.sections import (
-    render_manual_section as _render_ingestion_manual_section,
-    render_operational_section as _render_ingestion_operational_section,
-    render_selected_section as _render_selected_ingestion_collection_section,
+from app.web.ingestion.navigation import (
+    apply_action_focus,
+    consume_focused_data_operations_action,
+    focus_data_operations_action,
+    select_data_operations_section,
+)
+from app.web.ingestion.views import (
+    render_advanced_view,
+    render_history_view,
+    render_imports_view,
+    render_preparation_view,
+    render_recovery_view,
+)
+from app.web.ingestion.workflows import (
+    DATA_OPERATIONS_SECTION_ADVANCED,
+    DATA_OPERATIONS_SECTION_HISTORY,
+    DATA_OPERATIONS_SECTION_IMPORTS,
+    DATA_OPERATIONS_SECTION_PREPARATION,
+    DATA_OPERATIONS_SECTION_RECOVERY,
 )
 from app.web.ingestion.results import (
     _format_count,
@@ -255,6 +264,10 @@ def apply_pending_ingestion_prefill() -> None:
     if notice:
         st.session_state.ingestion_prefill_notice = str(notice)
 
+    try:
+        apply_action_focus(st.session_state, target)
+    except KeyError:
+        pass
     st.session_state.ingestion_prefill_request = None
 
 
@@ -333,44 +346,6 @@ def _render_ingestion_meta_grid(items: list[tuple[str, str]]) -> None:
             '<div class="ingestion-meta-grid">' + "".join(cards) + "</div>",
             unsafe_allow_html=True,
         )
-
-
-def _render_ingestion_workflow_overview() -> None:
-    cards = [
-        (
-            "Step 1",
-            "수집 범위 선택",
-            "심볼 source, 기간, provider 옵션은 기존처럼 사용자가 직접 정합니다.",
-        ),
-        (
-            "Step 2",
-            "Preflight 확인",
-            "입력값, 대상 수, 기존 DB coverage, 대량 실행 위험을 먼저 확인합니다.",
-        ),
-        (
-            "Step 3",
-            "DB 저장",
-            "외부 API / 공식 파일 / provider page 결과를 MySQL table에 저장합니다.",
-        ),
-        (
-            "Step 4",
-            "결과 해석",
-            "row 수, symbol 누락, partial evidence 의미를 job 유형별로 구분해서 확인합니다.",
-        ),
-    ]
-    html = []
-    for step, title, body in cards:
-        html.append(
-            '<div class="ingestion-workflow-card">'
-            f'<div class="ingestion-workflow-step">{escape(step)}</div>'
-            f'<div class="ingestion-workflow-title">{escape(title)}</div>'
-            f'<div class="ingestion-workflow-body">{escape(body)}</div>'
-            "</div>"
-        )
-    st.markdown(
-        '<div class="ingestion-workflow-grid">' + "".join(html) + "</div>",
-        unsafe_allow_html=True,
-    )
 
 
 def _render_data_quality_callout(title: str, body: str, *, tone: str = "info") -> None:
@@ -848,72 +823,12 @@ def _render_running_banner() -> None:
     )
 
 
-def _render_runtime_build_indicator() -> None:
-    with st.container(border=True):
-        st.markdown("### Runtime / Build")
-        st.caption(
-            "이 정보는 현재 Streamlit 프로세스가 어떤 코드 상태로 떠 있는지 보여줍니다. "
-            "코드를 고친 뒤 결과가 기대와 다르면 먼저 이 `Loaded At`과 `Git SHA`를 확인하는 것이 좋습니다."
-        )
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Runtime Marker", _runtime_marker)
-        col2.metric("Loaded At", _runtime_loaded_at_text())
-        col3.metric("Git SHA", _runtime_git_sha or "unknown")
-
-
-def _render_ingestion_runtime_build_indicator() -> None:
-    with st.container(border=True):
-        st.markdown("### Runtime / Build")
-        st.caption(
-            "이 정보는 현재 Streamlit 프로세스가 어떤 코드 상태로 떠 있는지 보여줍니다. "
-            "코드를 고친 뒤 결과가 기대와 다르면 먼저 이 `Loaded At`과 `Git SHA`를 확인하는 것이 좋습니다."
-        )
-        _render_ingestion_meta_grid(
-            [
-                ("Runtime Marker", _runtime_marker),
-                ("Loaded At", _runtime_loaded_at_text()),
-                ("Git SHA", _runtime_git_sha or "unknown"),
-            ]
-        )
-
-
 def _render_inline_running_hint(action: str, label: str, *, job: dict[str, Any] | None = None) -> None:
     if _is_running_action(action):
         st.info(
             f"`{label}` 실행 중입니다. 현재 실행은 동기 처리라 job이 끝난 뒤 화면이 다시 갱신됩니다. "
             f"경과 `{_format_job_elapsed(job or st.session_state.running_job)}`."
         )
-
-
-def _render_ingestion_collection_section_selector() -> str:
-    pending_section = st.session_state.get("ingestion_collection_section_pending")
-    if pending_section is not None:
-        del st.session_state["ingestion_collection_section_pending"]
-
-    running_or_pending_job = st.session_state.running_job or st.session_state.pending_job
-    forced_section = _infer_ingestion_collection_section(running_or_pending_job) if running_or_pending_job else None
-    selected_section = (
-        pending_section
-        or forced_section
-        or st.session_state.get("ingestion_collection_section_choice")
-        or INGESTION_COLLECTION_OPERATIONAL
-    )
-    if selected_section not in INGESTION_COLLECTION_SECTIONS:
-        selected_section = INGESTION_COLLECTION_OPERATIONAL
-
-    if forced_section or pending_section or "ingestion_collection_section_choice" not in st.session_state:
-        st.session_state.ingestion_collection_section_choice = selected_section
-
-    selected = st.pills(
-        "수집 작업 구분",
-        options=list(INGESTION_COLLECTION_SECTIONS),
-        key="ingestion_collection_section_choice",
-        label_visibility="collapsed",
-    )
-    if selected not in INGESTION_COLLECTION_SECTIONS:
-        selected = selected_section
-    st.session_state.ingestion_collection_section = selected
-    return str(selected)
 
 
 def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
@@ -1236,241 +1151,6 @@ def _render_result_summary(result: JobResult) -> None:
                 "Each run now emits a standardized JSON artifact, and when symbol-level issues exist it also emits a standardized failure CSV."
             )
             st.json(artifact_info, expanded=False)
-
-
-def _render_recent_results() -> None:
-    st.subheader("세션 내 최근 수집")
-    results = st.session_state.recent_results
-    if not results:
-        st.info("현재 세션에서 실행한 수집 작업이 아직 없습니다.")
-        return
-
-    for idx, result in enumerate(results):
-        with st.container(border=True):
-            job_name = str(result.get("job_name") or "")
-            st.markdown(f"**{idx + 1}. {_job_title(job_name)}**")
-            st.caption(f"내부 job id: `{job_name}`")
-            st.write(
-                f'상태: `{_status_label(result["status"])}` | '
-                f'시작: `{result["started_at"]}` | '
-                f'종료: `{result["finished_at"]}` | '
-                f'누락 / 실패: `{len(result.get("failed_symbols") or [])}`'
-            )
-            run_metadata = result.get("run_metadata") or {}
-            symbol_source = run_metadata.get("symbol_source")
-            execution_mode = run_metadata.get("execution_mode")
-            pipeline_type = run_metadata.get("pipeline_type")
-            execution_context = run_metadata.get("execution_context")
-            if execution_mode:
-                st.write(f"실행 모드: `{execution_mode}`")
-            if pipeline_type:
-                st.write(f"파이프라인: `{pipeline_type}`")
-            if symbol_source:
-                st.write(f"심볼 소스: `{symbol_source}`")
-            if execution_context:
-                st.write(f"실행 맥락: {execution_context}")
-            st.write(result["message"])
-            if result.get("failed_symbols"):
-                st.write("누락 / 실패 대상:", ", ".join(result["failed_symbols"]))
-
-
-def _get_recent_files(directory: Path, pattern: str, limit: int = 5) -> list[Path]:
-    if not directory.exists():
-        return []
-    return sorted(
-        directory.glob(pattern),
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    )[:limit]
-
-
-def _read_tail(path: Path, max_lines: int = 20) -> str:
-    try:
-        lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
-    except Exception as exc:
-        return f"Failed to read log file: {exc}"
-
-    if not lines:
-        return "(empty file)"
-    return "\n".join(lines[-max_lines:])
-
-
-def _render_recent_logs() -> None:
-    st.subheader("최근 로그")
-    st.caption("`logs/` 아래에서 최근 갱신된 `*.log` 5개를 보여주고, 선택한 파일의 마지막 20줄을 표시합니다.")
-    log_files = _get_recent_files(LOG_DIR, "*.log", limit=5)
-    if not log_files:
-        st.info("표시할 로그 파일이 없습니다.")
-        return
-
-    labels = [p.name for p in log_files]
-    selected_name = st.selectbox("로그 파일", labels, key="recent_log_file")
-    selected = next(p for p in log_files if p.name == selected_name)
-
-    st.caption(f"경로: {selected}")
-    st.code(_read_tail(selected, max_lines=20), language="text")
-
-
-def _render_failure_csv_preview() -> None:
-    st.subheader("실패 CSV 미리보기")
-    st.caption(
-        "`csv/` 아래의 최근 `*failures*.csv` artifact를 보여줍니다. "
-        "심볼 단위 문제가 있는 실행은 표준 failure CSV를 남기므로, 재실행 대상을 확인할 때 사용합니다."
-    )
-    csv_files = _get_recent_files(CSV_DIR, "*failures*.csv", limit=5)
-    if not csv_files:
-        st.info("표시할 failure CSV가 없습니다.")
-        return
-
-    labels = [p.name for p in csv_files]
-    selected_name = st.selectbox("Failure CSV", labels, key="failure_csv_file")
-    selected = next(p for p in csv_files if p.name == selected_name)
-
-    st.caption(f"경로: {selected}")
-    try:
-        df = pd.read_csv(selected)
-    except Exception as exc:
-        st.error(f"Failed to read failure CSV: {exc}")
-        return
-
-    if df.empty:
-        st.info("Selected failure CSV is empty.")
-        return
-
-    st.dataframe(df.head(20), use_container_width=True)
-
-
-def _history_record_label(record: dict[str, Any]) -> str:
-    started_at = record.get("started_at") or "-"
-    if isinstance(started_at, str) and len(started_at) >= 16:
-        started_at = started_at[5:16]
-    job_name = record.get("job_name") or "-"
-    status = _status_label(record.get("status"))
-    return f"{started_at} · {_job_title(job_name)} · {status}"
-
-
-def _history_record_full_label(record: dict[str, Any]) -> str:
-    started_at = record.get("started_at") or "-"
-    job_name = record.get("job_name") or "-"
-    status = _status_label(record.get("status"))
-    return f"{started_at} | {_job_title(job_name)} | {status}"
-
-
-def _related_log_patterns(job_name: str | None) -> list[str]:
-    mapping = {
-        "daily_market_update": ["*price*.log", "*ohlcv*.log"],
-        "collect_ohlcv": ["*price*.log", "*ohlcv*.log"],
-        "pipeline_core_market_data": ["*price*.log", "*fundamentals*.log", "*factors*.log"],
-        "weekly_fundamental_refresh": ["*fundamentals*.log", "*factors*.log"],
-        "collect_fundamentals": ["*fundamentals*.log"],
-        "calculate_factors": ["*factors*.log"],
-        "extended_statement_refresh": ["*financial_statements*.log", "*fundamentals*.log", "*factors*.log"],
-        "collect_financial_statements": ["*financial_statements*.log"],
-        "rebuild_statement_shadow": ["*fundamentals*.log", "*factors*.log"],
-        "collect_asset_profiles": ["*profile*.log"],
-        "metadata_refresh": ["*profile*.log"],
-    }
-    return mapping.get(str(job_name or ""), ["*.log"])
-
-
-def _find_related_logs(record: dict[str, Any], limit: int = 5) -> list[Path]:
-    matched: list[Path] = []
-    seen: set[Path] = set()
-    for pattern in _related_log_patterns(record.get("job_name")):
-        for path in _get_recent_files(LOG_DIR, pattern, limit=limit):
-            if path in seen:
-                continue
-            seen.add(path)
-            matched.append(path)
-    return matched[:limit]
-
-
-def _render_run_history_inspector(history: list[dict[str, Any]]) -> None:
-    st.markdown("#### 실행 기록 상세")
-    st.caption(
-        "저장된 실행 기록을 선택해 입력값, 파이프라인 단계, runtime marker, artifact, 관련 로그를 확인합니다."
-    )
-    options = list(range(len(history)))
-    st.markdown("**저장된 실행 선택**")
-    selected_idx = st.selectbox(
-        "저장된 실행 선택",
-        options=options,
-        format_func=lambda idx: _history_record_label(history[idx]),
-        key="persistent_run_history_inspector",
-        label_visibility="collapsed",
-    )
-    selected = history[selected_idx]
-    selected_label = _history_record_full_label(selected)
-    st.markdown(
-        f'<div class="ingestion-select-caption">현재 선택: {escape(selected_label)}</div>',
-        unsafe_allow_html=True,
-    )
-    _render_result_summary(selected)
-
-    related_logs = _find_related_logs(selected)
-    if related_logs:
-        with st.expander("관련 로그", expanded=False):
-            log_labels = [path.name for path in related_logs]
-            log_name = st.selectbox(
-                "관련 로그 파일",
-                options=log_labels,
-                key=f"run_inspector_log_{selected.get('started_at')}_{selected.get('job_name')}",
-            )
-            chosen = next(path for path in related_logs if path.name == log_name)
-            st.caption(f"경로: {chosen}")
-            st.code(_read_tail(chosen, max_lines=20), language="text")
-
-
-def _render_persistent_run_history() -> None:
-    st.subheader("누적 실행 기록")
-    history = load_run_history(limit=30)
-    if not history:
-        st.info("아직 저장된 실행 기록이 없습니다.")
-        return
-
-    st.caption(f"경로: {HISTORY_FILE}")
-    rows = []
-    for item in history:
-        run_metadata = item.get("run_metadata") or {}
-        input_params = run_metadata.get("input_params") or {}
-        rows.append(
-            {
-                "started_at": item.get("started_at"),
-                "job": _job_title(item.get("job_name")),
-                "job_name": item.get("job_name"),
-                "status": item.get("status"),
-                "mode": run_metadata.get("execution_mode"),
-                "pipeline": run_metadata.get("pipeline_type"),
-                "source": run_metadata.get("symbol_source"),
-                "runtime": run_metadata.get("runtime_marker"),
-                "symbols": item.get("symbols_requested"),
-                "rows_written": item.get("rows_written"),
-                "duration_sec": item.get("duration_sec"),
-                "context": run_metadata.get("execution_context"),
-                "params": ", ".join(f"{k}={v}" for k, v in input_params.items()),
-                "message": item.get("message"),
-            }
-        )
-
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-    st.caption(
-        "최근 실행 기록에는 runtime/build metadata와 표준 artifact 경로가 함께 저장됩니다. 아래 상세 보기에서 전체 payload를 확인할 수 있습니다."
-    )
-    _render_run_history_inspector(history)
-
-
-def _render_ingestion_records_section() -> None:
-    st.info(
-        "실행 기록 / 결과: 현재 세션에서 끝난 수집, 저장된 누적 실행 기록, 관련 로그와 failure CSV를 한곳에서 확인합니다. "
-        "수집 실행 화면과 분리해, 완료 후 원인 파악과 재실행 payload 확인에 집중할 수 있게 했습니다."
-    )
-    _render_recent_results()
-    st.divider()
-    _render_persistent_run_history()
-    st.divider()
-    _render_recent_logs()
-    st.divider()
-    _render_failure_csv_preview()
 
 
 def _render_check_result(result: dict[str, Any]) -> None:
@@ -2385,31 +2065,35 @@ def _resolve_daily_market_execution_profile(
 
 def render_ingestion_console() -> None:
     _render_running_banner()
-    _render_ingestion_runtime_build_indicator()
     prefill_notice = st.session_state.get("ingestion_prefill_notice")
     if prefill_notice:
         st.success(prefill_notice)
         st.session_state.ingestion_prefill_notice = None
-    st.info(
-        "이 화면은 외부 API / 공식 파일 / provider page에서 데이터를 수집해 MySQL에 저장하는 운영 콘솔입니다. "
-        "각 작업은 기존처럼 사용자가 심볼, 기간, 소스, 옵션을 직접 정하되, 무엇을 수집하고 어디에 쓰이는지 먼저 보여줍니다."
-    )
-    _render_ingestion_workflow_overview()
-    _render_common_last_result_summary()
 
     current_progress_callback = None
-    collection_body = st.container()
+    selected_section = select_data_operations_section()
+    st.divider()
 
-    with collection_body:
-        st.subheader("작업 영역")
-        st.caption(
-            "정기적으로 돌리는 일상 업데이트, 검증 데이터 보강, 수동 복구 / 진단, 실행 기록 확인을 목적별로 분리했습니다. "
-            "영어 job id는 실행 기록 추적용으로만 보시면 됩니다."
+    if selected_section == DATA_OPERATIONS_SECTION_PREPARATION:
+        render_preparation_view(
+            on_action_focus=focus_data_operations_action,
         )
-
-        selected_collection_section = _render_ingestion_collection_section_selector()
-
-        current_progress_callback = _render_selected_ingestion_collection_section(selected_collection_section)
+    elif selected_section == DATA_OPERATIONS_SECTION_IMPORTS:
+        render_imports_view(
+            on_action_focus=focus_data_operations_action,
+        )
+    elif selected_section == DATA_OPERATIONS_SECTION_RECOVERY:
+        render_recovery_view(
+            on_action_focus=focus_data_operations_action,
+        )
+    elif selected_section == DATA_OPERATIONS_SECTION_HISTORY:
+        render_history_view(
+            on_action_focus=focus_data_operations_action,
+        )
+    elif selected_section == DATA_OPERATIONS_SECTION_ADVANCED:
+        current_progress_callback = render_advanced_view(
+            focused_action=consume_focused_data_operations_action(),
+        )
 
     if _has_running_job():
         _run_scheduled_job(progress_callback=current_progress_callback)
@@ -2420,7 +2104,10 @@ def render_ingestion_console() -> None:
 def render_ingestion_page(*, runtime_marker: str, loaded_at: datetime, git_sha: str | None) -> None:
     _set_runtime_context(runtime_marker=runtime_marker, loaded_at=loaded_at, git_sha=git_sha)
     _install_ingestion_responsive_styles()
-    st.title("Ingestion")
-    st.caption("API / 공식 파일 / provider page에서 데이터를 수집하고 DB에 저장하는 작업 공간입니다.")
+    st.title("Data Operations")
+    st.caption(
+        "Research·Portfolio 화면이 읽는 데이터를 목적별로 준비하고, "
+        "공식 파일 등록과 문제 복구를 한곳에서 진행합니다."
+    )
     render_reference_contextual_help("ingestion", expanded=False)
     render_ingestion_console()

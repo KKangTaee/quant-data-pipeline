@@ -2174,11 +2174,10 @@ def render_manual_section(*, focused_action: str | None = None) -> Any:
 
 
 def render_selected_section(selected_collection_section: str) -> Any:
-    _bind_page_globals()
     if selected_collection_section == INGESTION_COLLECTION_OPERATIONAL:
-        return _render_ingestion_operational_section()
+        return render_operational_section()
     if selected_collection_section == INGESTION_COLLECTION_MANUAL:
-        return _render_ingestion_manual_section()
+        return render_manual_section()
     if selected_collection_section == INGESTION_COLLECTION_RECORDS:
-        _render_ingestion_records_section()
+        st.info("실행 기록은 Data Operations의 `실행 이력`에서 확인하세요.")
     return None

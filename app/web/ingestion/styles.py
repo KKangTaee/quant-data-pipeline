@@ -143,38 +143,6 @@ def install_ingestion_responsive_styles() -> None:
             margin: -0.25rem 0 0.45rem;
             overflow-wrap: anywhere;
           }
-          .ingestion-workflow-grid {
-            display: grid;
-            gap: 0.75rem;
-            grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-            margin: 0.85rem 0 1.1rem;
-          }
-          .ingestion-workflow-card {
-            border: 1px solid rgba(49, 51, 63, 0.12);
-            border-radius: 0.5rem;
-            min-width: 0;
-            padding: 0.78rem 0.86rem;
-          }
-          .ingestion-workflow-step {
-            color: #6f7480;
-            font-size: 0.75rem;
-            font-weight: 800;
-            line-height: 1.2;
-            text-transform: uppercase;
-          }
-          .ingestion-workflow-title {
-            font-size: 0.98rem;
-            font-weight: 760;
-            line-height: 1.25;
-            margin-top: 0.18rem;
-          }
-          .ingestion-workflow-body {
-            color: #6f7480;
-            font-size: 0.84rem;
-            line-height: 1.4;
-            margin-top: 0.28rem;
-            overflow-wrap: anywhere;
-          }
           .ingestion-contract-panel,
           .ingestion-callout {
             border: 1px solid rgba(49, 51, 63, 0.12);
@@ -255,7 +223,6 @@ def install_ingestion_responsive_styles() -> None:
             .ingestion-meta-grid {
               grid-template-columns: minmax(0, 1fr);
             }
-            .ingestion-workflow-grid,
             .ingestion-contract-grid {
               grid-template-columns: minmax(0, 1fr);
             }

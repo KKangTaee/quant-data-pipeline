@@ -50,13 +50,16 @@ def render_advanced_view(
             "아래 고급 설정에서 범위와 preflight를 확인한 뒤 실행하세요."
         )
     else:
+        if "data_operations_advanced_section" not in st.session_state:
+            st.session_state["data_operations_advanced_section"] = (
+                INGESTION_COLLECTION_OPERATIONAL
+            )
         selected_section = st.pills(
             "고급 도구 구분",
             options=[
                 INGESTION_COLLECTION_OPERATIONAL,
                 INGESTION_COLLECTION_MANUAL,
             ],
-            default=INGESTION_COLLECTION_OPERATIONAL,
             key="data_operations_advanced_section",
             label_visibility="collapsed",
         )

@@ -34,10 +34,11 @@ def apply_action_focus(
 def select_data_operations_section() -> str:
     """Render and persist the five-section Data Operations selector."""
 
+    if SECTION_STATE_KEY not in st.session_state:
+        st.session_state[SECTION_STATE_KEY] = DATA_OPERATIONS_SECTION_PREPARATION
     selected = st.pills(
         "Data Operations 구분",
         options=list(DATA_OPERATIONS_SECTIONS),
-        default=DATA_OPERATIONS_SECTION_PREPARATION,
         key=SECTION_STATE_KEY,
         label_visibility="collapsed",
     )
