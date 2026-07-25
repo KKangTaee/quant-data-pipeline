@@ -554,3 +554,18 @@ provider rate limit, official release date, source별 partial success,
 
 구현 중 action 삭제 필요성이 새로 발견되면
 backend 삭제와 UI removal을 구분해 다시 사용자 확인을 받는다.
+
+## 20. Follow-up — Contextual Reference Help Removal
+
+2026-07-26 사용자 확인에 따라 Data Operations 상단의
+`Reference help · Ingestion` contextual panel은 제거한다.
+
+- 제거 범위는 `render_ingestion_page()`의 renderer 호출과 전용 import뿐이다.
+- canonical Reference Center, Ingestion catalog item, destination과 related journey는
+  유지한다.
+- 목적 카드, section navigation, action form, dispatcher, collector, DB와 loader는
+  변경하지 않는다.
+- source contract test로 Data Operations page가 contextual help를 다시 호출하지
+  않도록 고정한다.
+- desktop/mobile Browser QA에서 제목 다음에 section navigation과 목적 카드가
+  바로 이어지는지 확인한다.
