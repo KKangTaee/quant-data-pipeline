@@ -37,7 +37,6 @@ def render_advanced_view(
 ) -> Any:
     """Render the single existing form implementation for advanced execution."""
 
-    st.subheader("고급 도구")
     st.caption(
         "저수준 collector와 복구 작업의 범위·provider 옵션·preflight를 직접 설정합니다. "
         "일상 작업은 데이터 준비 화면에서 목적을 먼저 선택하는 것을 권장합니다."

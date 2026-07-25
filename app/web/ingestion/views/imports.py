@@ -26,7 +26,6 @@ def render_imports_view(
     *,
     on_action_focus: Callable[[str], None],
 ) -> None:
-    st.subheader("공식 파일 가져오기")
     st.caption(
         "자동 provider 수집이 대신할 수 없는 공식 workbook과 fallback 파일만 이곳에서 등록합니다."
     )

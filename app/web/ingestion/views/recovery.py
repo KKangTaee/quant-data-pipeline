@@ -42,7 +42,6 @@ def render_recovery_view(
     *,
     on_action_focus: Callable[[str], None],
 ) -> None:
-    st.subheader("문제 복구")
     st.caption(
         "먼저 읽기 전용 진단으로 원인을 좁힌 뒤, 필요한 심볼과 기간만 수동으로 보강하세요."
     )

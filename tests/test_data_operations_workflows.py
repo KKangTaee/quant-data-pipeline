@@ -18,8 +18,60 @@ class DataOperationsPageContractTest(unittest.TestCase):
             page_source,
         )
 
+    def test_secondary_views_do_not_repeat_selected_section_title(
+        self,
+    ) -> None:
+        repeated_subheaders = {
+            "app/web/ingestion/views/imports.py": 'st.subheader("공식 파일 가져오기")',
+            "app/web/ingestion/views/recovery.py": 'st.subheader("문제 복구")',
+            "app/web/ingestion/views/history.py": 'st.subheader("실행 이력")',
+            "app/web/ingestion/views/advanced.py": 'st.subheader("고급 도구")',
+        }
+
+        for path, repeated_subheader in repeated_subheaders.items():
+            with self.subTest(path=path):
+                source = Path(path).read_text(encoding="utf-8")
+                self.assertNotIn(repeated_subheader, source)
+
 
 class DataOperationsWorkflowContractTest(unittest.TestCase):
+    def test_advanced_tools_are_closed_without_action_focus(self) -> None:
+        from app.web.ingestion import sections
+
+        self.assertTrue(hasattr(sections, "should_expand_action"))
+        self.assertFalse(
+            sections.should_expand_action(None, "daily_market_update")
+        )
+
+    def test_advanced_tools_open_only_matching_action_focus(self) -> None:
+        from app.web.ingestion import sections
+
+        self.assertTrue(hasattr(sections, "should_expand_action"))
+        self.assertTrue(
+            sections.should_expand_action(
+                "daily_market_update",
+                "daily_market_update",
+            )
+        )
+        self.assertFalse(
+            sections.should_expand_action(
+                "metadata_refresh",
+                "daily_market_update",
+            )
+        )
+
+    def test_advanced_sections_share_focus_only_expansion_rule(self) -> None:
+        source = Path("app/web/ingestion/sections.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertNotIn("default=True", source)
+        self.assertNotIn("def expand_for(", source)
+        self.assertGreaterEqual(
+            source.count("expanded=should_expand_action("),
+            2,
+        )
+
     def test_active_actions_are_owned_without_promoting_compatibility_actions(self) -> None:
         from app.web.ingestion.registry import (
             active_ingestion_actions,

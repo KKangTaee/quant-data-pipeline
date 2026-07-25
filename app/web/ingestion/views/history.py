@@ -104,7 +104,6 @@ def render_history_view(
 ) -> None:
     """Render recent Data Operations activity without raw payloads or file paths."""
 
-    st.subheader("실행 이력")
     st.caption(
         "Data Operations에서 직접 실행한 작업만 보여줍니다. "
         "성공 여부와 다음 행동을 확인하고 필요한 설정으로 바로 돌아갈 수 있습니다."

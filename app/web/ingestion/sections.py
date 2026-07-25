@@ -26,14 +26,18 @@ def _bind_page_globals() -> None:
     )
 
 
+def should_expand_action(
+    focused_action: str | None,
+    *actions: str,
+) -> bool:
+    """Open only the tool explicitly selected by an upstream handoff."""
+
+    return focused_action is not None and focused_action in actions
+
+
 def render_operational_section(*, focused_action: str | None = None) -> Any:
     _bind_page_globals()
     current_progress_callback = None
-
-    def expand_for(*actions: str, default: bool = False) -> bool:
-        if focused_action is None:
-            return default
-        return focused_action in actions
 
     st.info(
         "일상 운영 / 검증 데이터: 백테스트와 Practical Validation, Overview가 DB에서 읽을 데이터를 채웁니다. "
@@ -42,7 +46,10 @@ def render_operational_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "주식·ETF 종목 목록 최신화",
-        expanded=expand_for("refresh_nyse_listing_universe", default=True),
+        expanded=should_expand_action(
+            focused_action,
+            "refresh_nyse_listing_universe",
+        ),
     ):
         st.write(
             "전체 가격·자산 프로필 수집이 사용하는 현재 종목 목록을 "
@@ -113,7 +120,10 @@ def render_operational_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "일별 가격 업데이트",
-        expanded=expand_for("daily_market_update", default=True),
+        expanded=should_expand_action(
+            focused_action,
+            "daily_market_update",
+        ),
     ):
         _render_job_brief("daily_market_update")
         st.caption("권장 주기: 매 거래일 장 마감 후 또는 다음 backtest/data sync 전에 실행합니다.")
@@ -254,7 +264,10 @@ def render_operational_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "선물 OHLCV 수집",
-        expanded=expand_for("collect_futures_ohlcv"),
+        expanded=should_expand_action(
+            focused_action,
+            "collect_futures_ohlcv",
+        ),
     ):
         _render_job_brief("collect_futures_ohlcv")
         st.caption("Overview Futures Monitor에서 사용할 선물 캔들 데이터를 수집합니다.")
@@ -354,7 +367,10 @@ def render_operational_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "시장 심리 수집",
-        expanded=expand_for("collect_market_sentiment"),
+        expanded=should_expand_action(
+            focused_action,
+            "collect_market_sentiment",
+        ),
     ):
         _render_job_brief("collect_market_sentiment")
         st.caption("저장 테이블: `finance_meta.macro_series_observation`")
@@ -417,7 +433,10 @@ def render_operational_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "EDGAR 재무제표 갱신",
-        expanded=expand_for("extended_statement_refresh"),
+        expanded=should_expand_action(
+            focused_action,
+            "extended_statement_refresh",
+        ),
     ):
         _render_job_brief("extended_statement_refresh")
         st.caption("권장 주기: 월 1회 또는 긴 기간 factor research / backtest 준비 전에 실행합니다.")
@@ -505,7 +524,8 @@ def render_operational_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "SEC Form 13F 데이터셋 수집",
-        expanded=expand_for(
+        expanded=should_expand_action(
+            focused_action,
             "collect_sec_13f_dataset",
             "collect_sec_13f_identifier_mappings",
         ),
@@ -639,7 +659,10 @@ def render_operational_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "종목 메타데이터 업데이트",
-        expanded=expand_for("metadata_refresh"),
+        expanded=should_expand_action(
+            focused_action,
+            "metadata_refresh",
+        ),
     ):
         _render_job_brief("metadata_refresh")
         st.caption("권장 주기: 주 1회 또는 tracked universe / profile filter가 바뀐 뒤 실행합니다.")
@@ -679,7 +702,10 @@ def render_operational_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "S&P 500 실제 EPS 등록",
-        expanded=expand_for("import_sp500_index_earnings_xlsx"),
+        expanded=should_expand_action(
+            focused_action,
+            "import_sp500_index_earnings_xlsx",
+        ),
     ):
         _render_job_brief("import_sp500_index_earnings_xlsx")
         st.write(
@@ -742,7 +768,8 @@ def render_operational_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "시장 이벤트 캘린더 수집",
-        expanded=expand_for(
+        expanded=should_expand_action(
+            focused_action,
             "collect_fomc_calendar",
             "collect_macro_calendar",
             "import_bls_macro_calendar_ics",
@@ -1168,7 +1195,8 @@ def render_operational_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "Practical Validation 검증 데이터 보강",
-        expanded=expand_for(
+        expanded=should_expand_action(
+            focused_action,
             "discover_etf_provider_source_map",
             "collect_etf_operability_provider",
             "collect_etf_holdings_exposure",
@@ -1834,16 +1862,13 @@ def render_manual_section(*, focused_action: str | None = None) -> Any:
     _bind_page_globals()
     current_progress_callback = None
 
-    def expand_for(action: str) -> bool:
-        return focused_action == action
-
     st.info(
         "수동 복구 / 진단: 특정 심볼 재수집, 저수준 파이프라인 확인, PIT inspection 같은 보조 작업입니다. "
         "정기 운영보다 느리거나 실험적인 작업은 이곳에서 필요한 범위만 좁혀 실행합니다."
     )
     with st.expander(
         "가격 이력 수동 수집",
-        expanded=expand_for("collect_ohlcv"),
+        expanded=should_expand_action(focused_action, "collect_ohlcv"),
     ):
         _render_job_brief("collect_ohlcv")
         st.caption(
@@ -1940,7 +1965,10 @@ def render_manual_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "자산 프로필 수동 수집",
-        expanded=expand_for("collect_asset_profiles"),
+        expanded=should_expand_action(
+            focused_action,
+            "collect_asset_profiles",
+        ),
     ):
         _render_job_brief("collect_asset_profiles")
         st.caption(
@@ -1982,7 +2010,10 @@ def render_manual_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "상세 재무제표 수동 수집",
-        expanded=expand_for("collect_financial_statements"),
+        expanded=should_expand_action(
+            focused_action,
+            "collect_financial_statements",
+        ),
     ):
         _render_job_brief("collect_financial_statements")
         st.caption(
@@ -2068,7 +2099,10 @@ def render_manual_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "재무제표 shadow 재구성",
-        expanded=expand_for("rebuild_statement_shadow"),
+        expanded=should_expand_action(
+            focused_action,
+            "rebuild_statement_shadow",
+        ),
     ):
         _render_job_brief("rebuild_statement_shadow")
         st.caption(
@@ -2129,7 +2163,10 @@ def render_manual_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "가격 stale 원인 진단",
-        expanded=expand_for("diagnose_price_stale"),
+        expanded=should_expand_action(
+            focused_action,
+            "diagnose_price_stale",
+        ),
     ):
         _render_price_stale_diagnosis_card()
     if _is_running_action("diagnose_price_stale"):
@@ -2140,7 +2177,10 @@ def render_manual_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "재무제표 universe coverage QA",
-        expanded=expand_for("diagnose_statement_universe_coverage"),
+        expanded=should_expand_action(
+            focused_action,
+            "diagnose_statement_universe_coverage",
+        ),
     ):
         _render_statement_universe_coverage_qa_card()
     if _is_running_action("diagnose_statement_universe_coverage"):
@@ -2151,7 +2191,10 @@ def render_manual_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "재무제표 coverage 원인 진단",
-        expanded=expand_for("diagnose_statement_coverage"),
+        expanded=should_expand_action(
+            focused_action,
+            "diagnose_statement_coverage",
+        ),
     ):
         _render_statement_coverage_diagnosis_card()
     if _is_running_action("diagnose_statement_coverage"):
@@ -2162,7 +2205,10 @@ def render_manual_section(*, focused_action: str | None = None) -> Any:
 
     with st.expander(
         "재무제표 PIT inspection",
-        expanded=expand_for("inspect_statement_pit"),
+        expanded=should_expand_action(
+            focused_action,
+            "inspect_statement_pit",
+        ),
     ):
         _render_statement_pit_inspection_card()
     if _is_running_action("inspect_statement_pit"):
