@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-26 - canonical 문서는 역할이 바뀔 때만 갱신한다
+
+- User request: 핵심 문서 개편 뒤, 해당 문서를 수정하는 지침과 상태 모델도 안전하고 깊게 진단해 개선하도록 요청함.
+- Interpreted goal: AI와 사람이 같은 source-of-truth와 갱신 조건을 사용하고 ordinary closeout이 INDEX/ROADMAP/root log를 다시 비대하게 만들지 않게 한다.
+- Analysis result: INDEX는 discovery, Product Direction은 제품 약속, Project Map은 구현 소유권, Roadmap은 baseline/state/priority를 소유한다. 상태는 사용자 결정 → task/phase status → manifest → Roadmap → root log 순이다.
+- Follow-up: phase 자동화, finance skill/runtime mirror, current state pointer와 focused tests를 정렬했다. 과거 task 일괄 변환과 root log 압축, main-dev 통합은 별도 범위다.
+
 ### 2026-07-26 - Data Operations 첫 화면은 collector가 아니라 사용 목적을 묻는다
 
 - User request: Data Operations 탭의 코드와 사용 편의성을 전체 진단하고 불필요한 기능을 제거하며 필요한 기능을 추가·개선하도록 승인함.
@@ -175,10 +182,10 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Latest completed Portfolio Monitoring position decision: [portfolio-monitoring-initial-setting-correction-v1-20260721](./tasks/active/portfolio-monitoring-initial-setting-correction-v1-20260721/STATUS.md). 기존 item overwrite 대신 append-only initial contract revision으로 최초 요청 시작일·수량·적용 종가를 함께 정정한다.
   - Latest completed Portfolio Monitoring UX decision: [portfolio-monitoring-reference-help-removal-v1-20260721](./tasks/active/portfolio-monitoring-reference-help-removal-v1-20260721/STATUS.md). 기본 업무 화면의 중복 contextual panel은 제거하고 모니터링 도움말 source-of-truth는 canonical Reference Center로 단일화했다.
   - Latest completed Reference decision: [reference-center-react-v1-20260720](./tasks/active/reference-center-react-v1-20260720/STATUS.md). Guide와 Glossary를 단일 Search-first React Reference로 통합하고 legacy·개발자 용어와 로그 surface를 제외한 채 전체 `4/4차` 구현·responsive QA를 완료했다.
-  - Current active task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `2/4차`; 1차 균형형 UI와 2차 PIT 이중 저장·known-at 조회·장기 그래프를 완료했고, 다음은 3차 독립 데이터 후보 검토다.
+  - Current active product task is none. [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md)은 `paused`; 전체 잠정 roadmap `2/4차`의 공개 범위는 유지하고 3차 독립 데이터 후보 검토는 명시적 재개 전까지 진행하지 않는다.
   - The completed stage-2 implementation record is [overview-sentiment-history-pit-v2-20260720](./tasks/active/overview-sentiment-history-pit-v2-20260720/STATUS.md).
   - Previous completed task is [operations-portfolio-monitoring-only-v1-20260719](./tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md). Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
-  - Parallel active follow-up is [portfolio-monitoring-chart-zoom-pan-v1-20260719](./tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md). 구현과 자동 회귀는 완료했고 전체 `2/3차`; 실제 desktop/900px/420px interaction·layout·overflow Browser QA가 남아 있다.
+  - Verification-only follow-up은 [portfolio-monitoring-chart-zoom-pan-v1-20260719](./tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md)과 [market-movers-chart-navigation-polish-v1-20260721](./tasks/active/market-movers-chart-navigation-polish-v1-20260721/STATUS.md)이다. 두 작업 모두 behavior implementation은 완료했고 actual Browser interaction/layout QA만 남아 있다.
   - Recent completed Backtest task is [backtest-analysis-level1-decision-workspace-v1-20260717](./tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/STATUS.md). 1~15차와 Portfolio Mix React one-shell 구현·QA를 완료했다.
   - Recent completed Overview task is [overview-futures-macro-pattern-outlook-v1-20260718](./tasks/active/overview-futures-macro-pattern-outlook-v1-20260718/STATUS.md). 현재 관측과 미래 검증 상태를 분리하고, 10년 compact materialization·DB-only 첫 진입·React 방법론/계산 추적까지 마무리했다. 현재는 관측 완료, 미래 둘은 PROVISIONAL이다.
   - Recent completed Institutional Portfolios task is [institutional-13f-openfigi-mapping-v1-20260718](./tasks/active/institutional-13f-openfigi-mapping-v1-20260718/STATUS.md). 무료 OpenFIGI current resolution과 curated-manager actual backfill을 전체 roadmap `4/4`로 완료했다.
@@ -10692,16 +10699,21 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result: Events의 새 `brief.counts` 계약과 공통 헤더 action을 연결하고, 낡은 hero CSS와 top-level counts 참조 회귀를 제거했다. 문서에는 Events coverage와 Futures completed-session finalization 양쪽 의미를 모두 보존했다.
 - Follow-up: 전체 통합 roadmap `3/3차` 완료. Python·React 검증과 1280/420px actual Browser QA를 통과한 병합 커밋을 기준으로 후속 개발을 이어간다.
 
-### 2026-07-25 - Data Operations는 collector 목록이 아니라 준비 목적에서 시작한다
+### 2026-07-26 - README는 현재 제품과 구현 방식을 함께 설명하는 첫 관문이어야 한다
 
-- User request: Data Operations 전체 진단에서 권고한 개선 방향대로 진행하도록 승인함.
-- Interpreted goal: backend 수집 기능은 보존하면서 사용자가 Market Research, Portfolio Lab, Institutional Holdings, Practical Validation 중 준비 목적을 먼저 선택하게 함.
-- Analysis result: `Task-oriented Hybrid`를 채택해 5-section IA, 네 consumer workflow, official import, diagnosis-led recovery, normalized history와 Advanced 경계를 설계했다. 새 raw status dashboard와 자동 연속 실행은 V1에서 제외한다.
-- Follow-up: `tasks/active/data-operations-task-oriented-ia-v1-20260725/DESIGN.md` 사용자 검토 후 3A/3B/3C 구현으로 전환한다.
+- User request: 오래된 프로토타입 README를 현재 상황에 맞게 전면 개편하고, 사용 언어와 구현 방식까지 포함해 합의한 단계대로 진행하도록 요청함.
+- Interpreted goal: 제품 사용자는 조사→후보→검증→판단→모니터링 흐름을 이해하고, 개발자는 5분 안에 앱을 실행한 뒤 Python / Streamlit / React / MySQL 경계를 찾을 수 있어야 함.
+- Analysis result: product journey first 본문, 현재 7개 surface, Today 대표 이미지, 두 Mermaid, quick start, tech / storage / trust / docs map을 하나의 root README로 구성했다.
+- Follow-up: 전체 roadmap `4/4차` 완료. backtest-dev `8510` actual route와 문서 구조를 검증했고, 빠르게 변하는 상태는 Roadmap / Active Task Index에서 이어서 관리한다.
 
-### 2026-07-26 - Data Operations의 현재 위치는 한 번만 말하고 Advanced는 닫힌 목록에서 시작한다
+### 2026-07-26 - 핵심 문서는 제품 목적·구현 위치·현재 결정의 역할을 나눠야 한다
 
-- User request: 중복 타이틀을 찾아 정리하고 고급 도구의 첫 진입 collector를 모두 닫으며 기능·수집 이슈를 진단하도록 요청함.
-- Interpreted goal: section selector를 현재 위치의 유일한 상위 표식으로 사용하고, 직접 진입과 특정 action handoff를 구분하면서 기존 explicit execution을 보존한다.
-- Analysis result: 4개 반복 subheader와 첫 두 `default=True`, sticky focus를 교정했다. active 30개 action 연결과 26개 write action 버튼 경로에는 blocking gap이 없었고, collapsed body eager evaluation과 dynamic globals 결합이 후속 위험으로 남았다.
-- Follow-up: 전체 roadmap `3차 구현·QA 완료`. 4차는 Advanced lazy rendering / explicit dependency 또는 durable execution의 실제 운영 필요가 확인될 때 시작한다.
+- User request: Product Direction, Project Map, Roadmap과 INDEX가 현재 개발에 맞는지
+  진단하고 사람과 AI가 흐름을 이해할 수 있도록 전면 정리해 달라고 요청함.
+- Interpreted goal: 완료 기록을 잃지 않으면서 첫 읽기 문서에서 current product,
+  code ownership, actual open state와 다음 승인을 빠르게 구분해야 함.
+- Analysis result: INDEX / Product Direction / Project Map / Roadmap을 stable router /
+  product purpose / ownership map / current decision queue로 분리하고 old navigation과
+  rolling completed-task dump를 제거했다.
+- Follow-up: 전체 `4/4차` 완료. detailed history는 retained task / phase / root handoff에
+  보존하고 verification debt와 future candidates는 Roadmap의 별도 상태로 관리한다.

@@ -173,9 +173,10 @@ Repo-local helper script 사용 기준은 [AUTOMATION_SCRIPTS.md](./AUTOMATION_S
 
 ## Templates
 
-Phase helper가 사용하는 template은 아래에 둔다.
+수동 phase planning과 QA checklist 작성에 참고할 template은 아래에 둔다.
 
 - [PHASE_PLAN_TEMPLATE.md](./templates/PHASE_PLAN_TEMPLATE.md)
 - [PHASE_TEST_CHECKLIST_TEMPLATE.md](./templates/PHASE_TEST_CHECKLIST_TEMPLATE.md)
 
-이 template은 root legacy 문서가 아니라 helper script가 읽는 source file이다.
+phase bootstrap은 현재 canonical 6-file skeleton을 직접 생성한다. 아래 template은 사람이 내용을
+확장할 때 쓰는 참고 자료이며 helper의 파일 구조 계약은 아니다.

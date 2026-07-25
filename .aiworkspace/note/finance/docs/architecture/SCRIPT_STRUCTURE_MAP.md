@@ -223,8 +223,8 @@
 
 | 스크립트 | 관리하는 기능 |
 |---|---|
-| `.aiworkspace/plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py` | 새 finance phase 문서 bundle 생성 |
-| `.aiworkspace/plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` | finance diff의 docs / logs / generated artifact hygiene 점검 |
+| `.aiworkspace/plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py` | semantic phase id 아래 `PLAN / DESIGN / TASKS / STATUS / RISKS / INTEGRATION` canonical bundle 생성 |
+| `.aiworkspace/plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` | finance diff 분류, strategy report/registry 연계, generated artifact hygiene를 advisory로 점검 |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` | `app/services` / `app/runtime` Streamlit-free boundary, `app.web` import 금지, staged artifact guard 점검 |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py` | Current Candidate Registry list / show / validate / append helper |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | Pre-Live Candidate Registry template / draft / list / show / validate / append helper |
@@ -234,6 +234,7 @@
 | 스크립트 | 관리하는 기능 |
 |---|---|
 | `tests/test_service_contracts.py` | `app/services` / `app/runtime` contract, Practical Validation handoff, Final Review evidence read model, Overview structure / boundary guard, boundary checker behavior를 DB / Streamlit runtime 없이 검증 |
+| `tests/test_finance_document_workflow.py` | finance phase bundle 6-file contract, semantic phase 분류, 역할 기반 closeout hygiene 계약 검증 |
 | `tests/test_backtest_evidence_closure.py` | root issue dedup, action handler, eligibility, GRS market-date contract, survivorship applicability, terminal-state finalization, measured-only score 계약 검증 |
 | `tests/test_backtest_practical_validation_decision_workspace.py` | Level2 truth/applicability, closure class counts, action handler, state/read-model dedup, measured caution, stable validation id 계약 검증 |
 | `tests/test_practical_validation_market_context_visual_contract.py` | four-step order, Level3-compatible visual token, zero-action lane omission, 760px layout, ResizeObserver 계약 검증 |

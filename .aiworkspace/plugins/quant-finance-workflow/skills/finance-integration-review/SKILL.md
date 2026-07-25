@@ -12,6 +12,9 @@ This skill owns merge/worktree review, conflict-resolution reasoning, sub-result
 ## First Reads
 
 - `AGENTS.md`
+- `.aiworkspace/note/finance/docs/INDEX.md`
+- `.aiworkspace/note/finance/docs/PRODUCT_DIRECTION.md` when product promise or user journey is affected
+- `.aiworkspace/note/finance/docs/ROADMAP.md` when state or priority is affected
 - `.aiworkspace/note/finance/docs/PROJECT_MAP.md`
 - the active task or phase docs related to the integration
 - affected architecture / flow / data docs only when touched files imply those domains
@@ -32,7 +35,7 @@ For `.aiworkspace/note/finance` documentation conflicts, also read `references/d
 1. Inspect `git status --short` and identify unrelated local artifacts.
 2. Identify affected ownership areas from `PROJECT_MAP.md`.
 3. For conflicts, read both sides and preserve distinct behavior unless the user asks to discard one side.
-4. For finance docs conflicts, merge by document role and reading flow rather than conflict hunk order.
+4. For finance docs conflicts, merge by document role and reading flow rather than conflict hunk order or chronology accumulation.
 5. Check for stale paths, broken source boundaries, generated artifacts, and registry/run-history mistakes.
 6. Run focused validation for the affected domains.
 7. Record only durable integration decisions in task docs or root handoff logs.

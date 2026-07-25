@@ -11,144 +11,143 @@ from textwrap import dedent
 REPO_ROOT = Path(__file__).resolve().parents[4]
 FINANCE_NOTE_DIR = REPO_ROOT / ".aiworkspace" / "note" / "finance"
 PHASES_DIR = FINANCE_NOTE_DIR / "phases"
-TEMPLATE_DIR = FINANCE_NOTE_DIR / "docs" / "runbooks" / "templates"
-PHASE_PLAN_TEMPLATE = TEMPLATE_DIR / "PHASE_PLAN_TEMPLATE.md"
-PHASE_CHECKLIST_TEMPLATE = TEMPLATE_DIR / "PHASE_TEST_CHECKLIST_TEMPLATE.md"
 
 
-def _slugify(value: str) -> str:
-    token = re.sub(r"[^A-Za-z0-9]+", "_", value.strip()).strip("_")
-    return token.upper() or "NEW_PHASE"
+def _validate_phase_id(value: str) -> str:
+    phase_id = value.strip()
+    if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", phase_id):
+        raise ValueError("phase id must be a lowercase kebab-case identifier")
+    if re.fullmatch(r"phase\d+", phase_id):
+        raise ValueError("number-only legacy phase ids are not allowed; use a semantic phase id")
+    return phase_id
 
 
-def _phase_dir(phase_number: int) -> Path:
+def _phase_dir(phase_id: str) -> Path:
     # Return the canonical location for phase-specific planning bundles.
-    return PHASES_DIR / "active" / f"phase{phase_number}"
+    return PHASES_DIR / "active" / _validate_phase_id(phase_id)
 
 
-def _prefixed_template(header: str, template_path: Path) -> str:
-    body = template_path.read_text(encoding="utf-8").strip()
-    return f"{header}\n\n{body}\n"
-
-
-def _todo_skeleton(phase_number: int, title: str) -> str:
+def _plan_skeleton(title: str) -> str:
     return dedent(
         f"""\
-        # Phase {phase_number} Current Chapter TODO
+        # {title} Plan
 
-        ## 상태
-        - `kickoff / first_work_unit_in_progress`
+        ## Goal
 
-        ## 1. 핵심 작업
+        - 이 phase에서 달성할 상위 목표를 적는다.
 
-        - `in_progress` 첫 번째 작업 단위
-          - {title} phase를 실제로 시작하기 위한 첫 작업을 적는다
-        - `pending` 두 번째 작업 단위
-          - 첫 번째 작업 이후 바로 이어질 구현/정리 항목을 적는다
+        ## 이걸 하는 이유?
 
-        ## 2. Validation
+        - 지금 이 phase가 필요한 이유와 완료 후 좋아지는 점을 적는다.
 
-        - `pending` `py_compile`
-        - `pending` `.venv` import smoke
-        - `pending` targeted manual validation
+        ## Scope
 
-        ## 3. Documentation Sync
+        - 포함할 task와 소유 경계를 적는다.
 
-        - `completed` phase kickoff plan 문서 생성
-        - `completed` current chapter TODO 문서 생성
-        - `pending` first work-unit 문서 생성
-        - `pending` roadmap / doc index / work log / question log sync
+        ## Exit Criteria
+
+        - phase 종료 조건을 적는다.
         """
     )
 
 
-def _completion_skeleton(phase_number: int, title: str) -> str:
+def _design_skeleton(title: str) -> str:
     return dedent(
         f"""\
-        # Phase {phase_number} Completion Summary
+        # {title} Design
 
-        ## 목적
+        ## Current State
 
-        - Phase {phase_number} `{title}`를 closeout 기준으로 정리한다.
+        - 현재 구조와 제약을 적는다.
 
-        ## 이번 phase에서 실제로 완료된 것
+        ## Direction
 
-        ### 1. 첫 번째 큰 정리 항목
+        - phase 수준의 설계 방향과 task 경계를 적는다.
 
-        - 이 phase에서 실제로 끝낸 구현/정리 내용을 적는다.
+        ## Tradeoffs
 
-        이걸 하는 이유?:
-
-        - 이 정리가 왜 필요했고, 끝나면 무엇이 좋아지는지 적는다.
-
-        ## 아직 남아 있지만 closeout blocker는 아닌 것
-
-        - 후속 polish 또는 다음 phase로 넘길 항목을 적는다.
-
-        이걸 하는 이유?:
-
-        - 지금 남아 있는 일이 무엇이고, 왜 이번 phase blocker가 아닌지 쉽게 적는다.
-
-        ## closeout 판단
-
-        - 현재 기준 상태를 적는다.
+        - 선택한 방향의 장단점과 제외 범위를 적는다.
         """
     )
 
 
-def _next_phase_skeleton(phase_number: int) -> str:
+def _tasks_skeleton(title: str) -> str:
     return dedent(
         f"""\
-        # Phase {phase_number} Next Phase Preparation
+        # {title} Tasks
 
-        ## 목적
+        ## Task Board
 
-        - Phase {phase_number} 이후 어떤 질문으로 다음 phase를 여는 것이 자연스러운지 정리한다.
-
-        ## 현재 handoff 상태
-
-        - 이번 phase를 통해 무엇이 고정되었는지 적는다.
-
-        ## 다음 phase에서 더 중요한 질문
-
-        1. 다음에 먼저 다뤄야 할 질문
-        2. 그 다음 질문
-
-        ## 다음 phase에서 실제로 할 작업
-
-        이걸 하는 이유?:
-
-        - 다음 phase에서 무엇을 실제로 만들거나 정리하는지 적는다.
-        - 왜 다음 phase로 다루는지와 끝나면 무엇이 좋아지는지 바로 보이게 적는다.
-
-        주요 작업:
-
-        1. 첫 번째 작업
-           - 무엇을 바꾸거나 확인하는지 적는다.
-        2. 두 번째 작업
-           - 무엇을 바꾸거나 확인하는지 적는다.
-
-        ## 추천 다음 방향
-
-        - 왜 그 방향이 자연스러운지 적는다.
-
-        ## handoff 메모
-
-        - 다음 턴에서 바로 읽어야 할 문서나 주의점을 적는다.
+        | Task | State | Owner | Dependency | Active task |
+        |---|---|---|---|---|
+        | 첫 작업 단위 | pending | TBD | none | TBD |
         """
     )
 
 
-def _build_paths(phase_number: int, title: str) -> dict[str, Path]:
-    phase_dir = _phase_dir(phase_number)
-    slug = _slugify(title)
+def _status_skeleton(title: str) -> str:
+    return dedent(
+        f"""\
+        # {title} Status
+
+        State: active
+
+        ## Current
+
+        - phase kickoff
+
+        ## Next
+
+        - 첫 active task를 확정한다.
+        """
+    )
+
+
+def _risks_skeleton(title: str) -> str:
+    return dedent(
+        f"""\
+        # {title} Risks
+
+        ## Open Risks
+
+        - 현재 risk와 영향 범위를 적는다.
+
+        ## Mitigations
+
+        - 완화 방법과 확인 시점을 적는다.
+        """
+    )
+
+
+def _integration_skeleton(title: str) -> str:
+    return dedent(
+        f"""\
+        # {title} Integration
+
+        ## Integration Order
+
+        - task 간 통합 순서와 dependency를 적는다.
+
+        ## Conflict Surface
+
+        - 충돌 가능 파일과 소유 경계를 적는다.
+
+        ## Verification
+
+        - phase 통합 완료 전 실행할 검증을 적는다.
+        """
+    )
+
+
+def _build_operations(phase_id: str, title: str) -> dict[Path, str]:
+    phase_dir = _phase_dir(phase_id)
     return {
-        "phase_dir": phase_dir,
-        "plan": phase_dir / f"PHASE{phase_number}_{slug}_PLAN.md",
-        "todo": phase_dir / f"PHASE{phase_number}_CURRENT_CHAPTER_TODO.md",
-        "completion": phase_dir / f"PHASE{phase_number}_COMPLETION_SUMMARY.md",
-        "next_phase": phase_dir / f"PHASE{phase_number}_NEXT_PHASE_PREPARATION.md",
-        "checklist": phase_dir / f"PHASE{phase_number}_TEST_CHECKLIST.md",
+        phase_dir / "PLAN.md": _plan_skeleton(title),
+        phase_dir / "DESIGN.md": _design_skeleton(title),
+        phase_dir / "TASKS.md": _tasks_skeleton(title),
+        phase_dir / "STATUS.md": _status_skeleton(title),
+        phase_dir / "RISKS.md": _risks_skeleton(title),
+        phase_dir / "INTEGRATION.md": _integration_skeleton(title),
     }
 
 
@@ -162,26 +161,24 @@ def _write(path: Path, content: str, *, force: bool) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Bootstrap a finance phase document bundle from the repo templates.")
-    parser.add_argument("--phase", type=int, required=True, help="Phase number, for example 21.")
-    parser.add_argument("--title", required=True, help="Phase title, for example 'Research Automation And Experiment Persistence'.")
+    parser.add_argument(
+        "--phase-id",
+        required=True,
+        help="Semantic lowercase kebab-case id, for example 'research-automation'.",
+    )
+    parser.add_argument(
+        "--title",
+        required=True,
+        help="Human-readable phase title, for example 'Research Automation'.",
+    )
     parser.add_argument("--force", action="store_true", help="Overwrite files if they already exist.")
     parser.add_argument("--dry-run", action="store_true", help="Print the file plan without writing files.")
     args = parser.parse_args()
 
-    paths = _build_paths(args.phase, args.title)
-    operations = {
-        paths["plan"]: _prefixed_template(
-            f"# Phase {args.phase} {args.title} Plan",
-            PHASE_PLAN_TEMPLATE,
-        ),
-        paths["todo"]: _todo_skeleton(args.phase, args.title),
-        paths["completion"]: _completion_skeleton(args.phase, args.title),
-        paths["next_phase"]: _next_phase_skeleton(args.phase),
-        paths["checklist"]: _prefixed_template(
-            f"# Phase {args.phase} Test Checklist",
-            PHASE_CHECKLIST_TEMPLATE,
-        ),
-    }
+    try:
+        operations = _build_operations(args.phase_id, args.title)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     if args.dry_run:
         for path in operations:

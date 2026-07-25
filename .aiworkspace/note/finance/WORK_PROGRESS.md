@@ -10,11 +10,18 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-26 - Finance 문서 지침·상태 모델 정렬
+
+- canonical 네 문서의 역할별 update trigger와 workflow 상태 우선순위를 AGENTS/finance skill/runbook에 통일했다.
+- phase bootstrap을 semantic id의 6-file bundle로 바꾸고 ordinary closeout의 INDEX·root log 의무 갱신을 제거했다.
+- product state는 Active 없음, Sentiment Paused, chart 2건 Verification-Only로 정렬했으며 protected registry/generated staged-path 경고를 추가했다.
+- focused 9개 계약, script compile/dry-run, skill source/mirror validation을 통과했다. 상세는 [governance task](./tasks/active/finance-doc-governance-alignment-v1-20260726/STATUS.md)를 본다.
+
 ### 2026-07-26 - Data Operations 목적형 IA 3차 완료
 
 - collector-first Ingestion 랜딩을 `데이터 준비 / 공식 파일 / 문제 복구 / 실행 이력 / 고급 도구`로 전환하고 네 downstream 목적에서 active action 30개를 찾도록 했다.
 - 기존 form·dispatcher·explicit click·preflight·progress·partial-success는 유지하고 Runtime/Build, 정적 4-step, raw log/failure/full-payload viewer를 기본 화면과 dead code에서 제거했다.
-- focused Python 59개와 1280×720·420×900 actual Browser QA를 통과했다. click QA에서 발견한 section-key mutation은 pending-state로 수정 후 동일 경로를 재검증했다.
+- focused Python 91개와 1280×720·420×900 actual Browser QA를 통과했다. click QA에서 발견한 section-key mutation과 후속 sticky focus·중복 제목을 수정한 뒤 동일 경로를 재검증했다.
 - 전체 roadmap은 1차 audit, 2차 설계, 3차 구현·QA 완료다. scheduler/queue/cancel/resume/security는 필요성 검증 후 여는 4차 후보이며 상세는 [task status](./tasks/active/data-operations-task-oriented-ia-v1-20260725/STATUS.md)를 본다.
 
 ### 2026-07-25 - main-dev master 병합 충돌 해결
@@ -186,10 +193,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - Latest completed Portfolio Monitoring position follow-up is [portfolio-monitoring-initial-setting-correction-v1-20260721](./tasks/active/portfolio-monitoring-initial-setting-correction-v1-20260721/STATUS.md). 최초 요청 시작일·수량을 append-only로 함께 정정하고 새 적용 시장일·종가부터 개별/그룹 성과를 재계산하는 전체 `4/4차`를 완료했다.
   - Latest completed Portfolio Monitoring UX task is [portfolio-monitoring-reference-help-removal-v1-20260721](./tasks/active/portfolio-monitoring-reference-help-removal-v1-20260721/STATUS.md). 중복 contextual panel을 제거하고 canonical Reference 3개 항목을 보존한 채 전체 `2/2차` actual QA를 완료했다.
   - Latest completed Reference task is [reference-center-react-v1-20260720](./tasks/active/reference-center-react-v1-20260720/STATUS.md). 단일 Search-first React Reference, curated 24-item catalog, stable contextual deep link, legacy removal과 responsive Browser QA를 전체 `4/4차`로 완료했다.
-  - Current active task is [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md). 전체 잠정 roadmap `2/4차`; 1차 균형형 UI와 2차 PIT 이중 저장·known-at 조회·장기 그래프를 완료했고, 다음은 3차 독립 데이터 후보 검토다.
+  - Current active product task is none. [overview-sentiment-cnn-aaii-v1-20260719](./tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md)은 `paused`; 전체 잠정 roadmap `2/4차`의 공개 범위는 유지하고 3차 독립 데이터 후보 검토는 명시적 재개 전까지 진행하지 않는다.
   - The completed stage-2 implementation record is [overview-sentiment-history-pit-v2-20260720](./tasks/active/overview-sentiment-history-pit-v2-20260720/STATUS.md).
   - Previous completed task is [operations-portfolio-monitoring-only-v1-20260719](./tasks/active/operations-portfolio-monitoring-only-v1-20260719/STATUS.md). Operations를 Portfolio Monitoring 단일 화면으로 정리하고 Ingestion 기록·로그·failure 기능은 보존했다.
-  - Parallel active follow-up is [portfolio-monitoring-chart-zoom-pan-v1-20260719](./tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md). 기능과 자동 검증은 완료했고 전체 `2/3차`; desktop·900px·420px Browser interaction/layout QA가 남아 있다.
+  - Verification-only follow-up은 [portfolio-monitoring-chart-zoom-pan-v1-20260719](./tasks/active/portfolio-monitoring-chart-zoom-pan-v1-20260719/STATUS.md)과 [market-movers-chart-navigation-polish-v1-20260721](./tasks/active/market-movers-chart-navigation-polish-v1-20260721/STATUS.md)이다. 두 작업 모두 behavior implementation은 완료했고 actual Browser interaction/layout QA만 남아 있다.
   - Latest Portfolio Monitoring lifecycle follow-up is [portfolio-monitoring-tracking-end-reopen-v1-20260719](./tasks/active/portfolio-monitoring-tracking-end-reopen-v1-20260719/STATUS.md). 종료된 동일 item의 종료 필드를 취소하고 원래 시작 계약으로 재활성화하는 `reopen_item`을 추가했다. Python 112 / React 25 / typecheck/build/static asset 검증을 통과했으며 Browser interaction은 URL policy로 차단됐다.
   - Latest completed Portfolio Monitoring chart task is [portfolio-monitoring-chart-clarity-ohlcv-v1-20260719](./tasks/active/portfolio-monitoring-chart-clarity-ohlcv-v1-20260719/STATUS.md). 종합 가치곡선 선명도·5/3개 날짜 눈금과 선택 direct 종목의 DB-only line/OHLCV candle/volume을 전체 roadmap `4/4`로 완료했다.
   - Latest completed Portfolio Monitoring follow-up is [portfolio-monitoring-item-builder-ux-fix-v1-20260719](./tasks/active/portfolio-monitoring-item-builder-ux-fix-v1-20260719/STATUS.md). 등록 drawer를 560px frame/internal scroll로 제한하고 검색 rerun 상태 복구와 요청 시작일 입력 유지를 전체 roadmap `3/3`으로 완료했다.
@@ -7289,16 +7296,18 @@ Detailed historical logs were archived on `2026-04-13`.
 - 낡은 hero CSS와 런타임 counts 참조 회귀를 테스트로 고쳤으며 desktop 1280px·mobile 420px actual Browser QA에서 overflow와 console error가 없음을 확인했다.
 - 전체 통합 roadmap `3/3차` 완료. 사용자 registry, research, run history와 기존 QA 이미지는 병합 커밋에서 제외했다.
 
-## 2026-07-25 - Data Operations Task-Oriented IA 2차 설계
+## 2026-07-26 - Root README 제품·개발 진입점 전면 개편 완료
 
-- 사용자 승인에 따라 collector catalog를 consumer 목적 기반 workflow로 전환하는 `Task-oriented Hybrid` 상세 설계를 작성했다.
-- 기본 화면은 `데이터 준비 / 공식 파일 / 문제 복구 / 실행 이력 / 고급 도구`로 재정의하고 활성 action 30개의 유실 없는 ownership을 정리했다.
-- raw log·failure CSV·full JSON은 backend artifact로 보존하되 기본 UI에서 제거하며, 자동 다단계 실행·scheduler는 4차 후보로 분리했다.
-- 현재 전체 roadmap `2차 설계 완료 / 사용자 검토 대기`; 상세는 `tasks/active/data-operations-task-oriented-ia-v1-20260725/`를 본다.
+- README를 Evidence-first 퀀트 투자 리서치 워크스페이스의 현재 제품 흐름과 5분 실행, 구현 언어·계층·저장 경계를 함께 설명하는 진입점으로 개편했다.
+- Today 대표 화면과 제품 workflow / technical architecture를 연결하고 `Research / Portfolio / Data / Help`의 7개 현재 화면을 8510에서 검증했다.
+- 전체 roadmap `4/4차` 완료. 제품 code와 registry / saved / run history는 변경하지 않았다.
+- 상세 설계·검증 기록은 `tasks/active/readme-product-onboarding-overhaul-v1-20260725/`를 본다.
 
-## 2026-07-26 - Data Operations 제목·고급 도구 후속 정리 완료
+## 2026-07-26 - Finance canonical 문서 역할 분리형 개편 완료
 
-- 보조 section의 반복 제목을 제거하고 Advanced 직접 진입을 전체 접힘 상태로 통일했다.
-- action handoff는 해당 도구만 열고, Advanced 이탈 뒤에는 stale focus를 지워 재진입 상태를 정리했다.
-- active 30개 action의 renderer/dispatcher/guide와 26개 write action의 explicit-button 경로를 확인했으며 blocking gap은 없었다.
-- 전체 roadmap `3차 구현·QA 완료 / 4차 성능·durable execution 후보`; 상세는 `tasks/active/data-operations-task-oriented-ia-v1-20260725/`를 본다.
+- INDEX는 stable router, Product Direction은 제품 목적, Project Map은 ownership,
+  Roadmap은 current state와 next decisions를 소유하도록 전면 정리했다.
+- old navigation과 완료 task changelog를 제거하고 current 7개 surface, paused /
+  Verification-Only 상태와 approval queue를 실제 코드·task status에 맞췄다.
+- 전체 roadmap `4/4차` 완료. code / DB / registry / saved / run history는 변경하지 않았다.
+- 상세 설계·실행·검증은 `tasks/active/finance-canonical-docs-alignment-v1-20260726/`를 본다.

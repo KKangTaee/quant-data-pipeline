@@ -18,4 +18,4 @@ Last Verified: 2026-07-08
 - `research/` 폴더를 삭제하기 전에는 코드가 읽는 reference data가 없는지 확인한다. Practical Validation stress window JSON처럼 런타임이 읽는 파일은 먼저 새 위치로 옮기고 코드 경로를 바꾼다.
 - `support_tracks/`의 과거 plugin / skill / automation 계획을 active 기준처럼 읽지 않는다. 현재 기준은 `AGENTS.md`, `docs/runbooks/`, 실제 설치된 skill이다.
 - 과거 task / root handoff log의 화면명은 current product surface가 아닐 수 있다. 특히 `Futures Monitor`, `Sector / Industry`, `Data Health`처럼 primary tab에서 내려간 이름은 `docs/INDEX.md`, `docs/ROADMAP.md`, `docs/PROJECT_MAP.md`, 실제 `app/web/overview/page.py` tab dispatch를 함께 확인한 뒤 current 문서에 반영한다.
-- post-merge 문서 정리에서는 `Latest completed task`, `Current active task`, `Current active phase` pointer를 Index / Roadmap / task manifest / phase manifest에서 함께 검사한다. 한 파일에만 latest를 바꾸면 다음 병합에서 current state가 다시 갈라진다.
+- post-merge 문서 정리는 역할별로 판단한다. workflow 상태는 명시적 사용자 결정, 정규화된 task/phase `STATUS.md`, compact manifest, Roadmap 요약 순으로 확인하고 root log는 handoff로만 읽는다. INDEX에는 current/latest 이력을 쌓지 않고 문서 탐색 구조가 바뀐 경우에만 수정한다.

@@ -18,7 +18,7 @@
 
 1. 가장 핵심 UI 또는 workflow 확인
 2. history / reload / compare 같은 연결 흐름 확인
-3. 문서 / closeout / index 확인
+3. 문서 역할 / 상태 / closeout 확인
 
 ## 1. 첫 번째 확인 영역
 
@@ -48,15 +48,17 @@
 ## 4. 문서와 closeout 확인
 
 - 확인 문서:
-  - 관련 phase TODO
-  - completion summary
-  - next phase preparation
-  - roadmap / index
+  - phase `PLAN.md`, `DESIGN.md`, `TASKS.md`, `STATUS.md`, `RISKS.md`, `INTEGRATION.md`
+  - 관련 active task `STATUS.md`, `RUNS.md`, `RISKS.md`
+  - 역할상 실제 변경이 있는 canonical / focused durable doc
 - 체크 항목:
   - [ ] phase 상태가 현재 구현 상태와 맞는지
-  - [ ] 새 문서가 index에서 바로 찾히는지
+  - [ ] `State:`가 `active`, `paused`, `verification_only`, `complete`, `blocked` 중 하나인지
+  - [ ] 새 문서가 discovery 구조를 바꿨을 때만 INDEX가 갱신되었는지
+  - [ ] baseline, 상태, 우선순위가 바뀌었을 때만 ROADMAP이 갱신되었는지
+  - [ ] root log에는 필요한 고신호 handoff만 남았는지
   - [ ] 다음 단계로 넘어가는 이유가 충분히 설명되어 있는지
-  - [ ] next phase preparation에 다음 phase에서 실제로 할 작업이 쉽게 설명되어 있는지
+  - [ ] 다음 작업은 `TASKS.md`와 active task pointer에서 바로 찾을 수 있는지
 
 ## 한 줄 판단 기준
 

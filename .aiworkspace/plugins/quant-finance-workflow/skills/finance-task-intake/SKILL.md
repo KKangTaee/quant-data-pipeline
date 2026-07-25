@@ -14,8 +14,9 @@ This is an intake and routing skill. It does not own implementation, merge revie
 Read only what is needed:
 - `AGENTS.md`
 - `.aiworkspace/note/finance/docs/INDEX.md`
-- `.aiworkspace/note/finance/docs/ROADMAP.md`
-- `.aiworkspace/note/finance/docs/PROJECT_MAP.md`
+- `.aiworkspace/note/finance/docs/PRODUCT_DIRECTION.md` for product promise, user journey, or surface-boundary work
+- `.aiworkspace/note/finance/docs/ROADMAP.md` for baseline, workflow state, priority, or next-decision work
+- `.aiworkspace/note/finance/docs/PROJECT_MAP.md` for code, screen, workflow, storage, or ownership work
 - `.aiworkspace/note/finance/researches/README.md` when product direction research is requested
 - the active task under `.aiworkspace/note/finance/tasks/active/` when continuing existing work
 - `.aiworkspace/note/finance/docs/runbooks/README.md` when operating procedure is unclear
@@ -63,6 +64,18 @@ If more than one domain is involved, state the boundary first and keep edits sco
 5. If task docs are needed, create or update only the active task shell and initial status.
 6. If product direction research is needed, use or create a research bundle under `.aiworkspace/note/finance/researches/active/<research-id>/`.
 7. Hand off implementation to the domain skill, merge/integration to `finance-integration-review`, runbook changes to `finance-runbook-maintainer`, or final docs to `finance-doc-sync`.
+
+## State Resolution
+
+Resolve workflow state in this order:
+
+1. explicit user decision
+2. normalized task or phase `STATUS.md`
+3. compact status manifest
+4. Roadmap summary
+5. root handoff log
+
+Treat root logs as handoff pointers, not state authority. If sources disagree, record the chosen source and reason in the active task.
 
 ## Research Worktree Handling
 

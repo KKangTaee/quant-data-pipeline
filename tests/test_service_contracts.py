@@ -13867,8 +13867,6 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         backtest_flow = Path(".aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md").read_text(
             encoding="utf-8"
         )
-        roadmap = Path(".aiworkspace/note/finance/docs/ROADMAP.md").read_text(encoding="utf-8")
-
         required_boundary = (
             "시장심리 timing / rebalance 활용은 별도 리서치와 look-ahead-safe 검증 전까지 "
             "Final Review gate나 Portfolio Monitoring signal로 쓰지 않는다"
@@ -13878,7 +13876,6 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("Workspace > Overview > Sentiment", backtest_flow)
         self.assertIn("Final Review first-read에서는 CNN / AAII 시장심리 패널을 렌더링하지 않는다", backtest_flow)
         self.assertIn(required_boundary, backtest_flow)
-        self.assertIn("sentiment timing / rebalance research", roadmap)
 
     def test_practical_validation_flow3_excludes_final_review_reference_from_actionable_summary(self) -> None:
         from app.web.backtest_practical_validation.workspace_panel import (
@@ -14993,8 +14990,6 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         selection_doc = Path(".aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md").read_text(
             encoding="utf-8"
         )
-        progress_doc = Path(".aiworkspace/note/finance/WORK_PROGRESS.md").read_text(encoding="utf-8")
-        question_doc = Path(".aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md").read_text(encoding="utf-8")
         task_status = Path(
             ".aiworkspace/note/finance/tasks/active/backtest-handoff-policy-signal-action-v1-v4-20260704/STATUS.md"
         ).read_text(encoding="utf-8")
@@ -15004,8 +14999,6 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("source registration button inside the Handoff panel", flow_doc)
         self.assertIn("Policy Signals owns evidence detail", selection_doc)
         self.assertIn("React custom component owns the visible Handoff card and button", selection_doc)
-        self.assertIn("Backtest Handoff / Policy Signals action cleanup V1-V4", progress_doc)
-        self.assertIn("React Handoff action card", question_doc)
         self.assertIn("V4 complete", task_status)
 
     def test_candidate_review_draft_captures_handoff_readiness_snapshot(self) -> None:

@@ -1,0 +1,63 @@
+# README Product / Onboarding Overhaul V1 Runs
+
+## 2026-07-25 — Design Discovery
+
+- `README.md`, `docs/INDEX.md`, `docs/ROADMAP.md`, `docs/PROJECT_MAP.md`, `docs/PRODUCT_DIRECTION.md` 확인
+- `git log --follow -- README.md`와 `git blame README.md`로 마지막 실질 개편 시점 확인
+- `app/web/streamlit_app.py`에서 current top navigation과 route 확인
+- `pyproject.toml`, `.python-version`, React component `package.json` 확인
+- committed `component_static` bundle 존재와 Node runtime 비필수 경계 확인
+- `docs/architecture/`, `docs/runbooks/`, `tests/`로 구현 / 검증 경계 확인
+
+## Result
+
+- 설계 문서 작성 완료
+- README implementation / screenshot capture / verification은 아직 실행하지 않음
+
+## 2026-07-25 — Implementation Plan
+
+- `writing-plans` 기준으로 `PLAN.md`를 4개 independently verifiable task로 확장
+- exact files, interface, command, expected result, commit boundary 기록
+- spec coverage, placeholder, task structure, `git diff --check` self-review 통과
+
+## 2026-07-26 — Baseline Test Harness Investigation
+
+- full-suite one-shot은 `PYTHONPATH=.`와 ephemeral pytest를 사용해 `2035 passed / 319 failed`
+- 다수 테스트가 Streamlit-free contract를 위해 `sys.modules`에서 `streamlit`을 제거해 한 process 전체 실행에서 singleton / module state가 교차 오염됨
+- full run에서 실패한 Today 61개, Final Review 1개, Overview service contract 1개를 격리·결합 재실행해 `63 passed`
+- 사용자 승인에 따라 README와 무관한 full-suite harness gap은 별도 범위로 남기고 task-specific verification을 사용
+
+## 2026-07-26 — 1차 Product Journey
+
+- 옛 `Workspace / Operations / Selected Portfolio Dashboard`와 stale current-focus 표현 존재 확인
+- README를 Evidence-first product positioning, current surface map, Portfolio Lab 3단계, product workflow와 non-goal 중심으로 재작성
+- current 7개 surface assertion, old label 부재, `git diff --check` 통과
+
+## 2026-07-26 — 2차 Quick Start / Technical Architecture
+
+- Python 3.12, `pyproject.toml`, Today committed `component_static`과 frontend manifest 존재 확인
+- default `8501` quick start와 multiple-worktree `8510` example, provider `.env`와 current local MySQL limitation 기록
+- Python / Streamlit / React / TypeScript / Vite / MySQL / JSONL ownership, architecture Mermaid, repository / storage / trust / verification map 작성
+- backtest-dev `8510` listener가 current worktree cwd를 사용하고 HTTP 200을 반환함을 확인
+- README 321 lines, 기술·PIT·bias keyword assertion과 `git diff --check` 통과
+
+## 2026-07-26 — 3차 Today Representative Image
+
+- in-app Browser를 `http://localhost:8510/?readme_capture=1`의 새 Today session으로 열어 sub-dev `8501`과 분리
+- 1280×720 first-read에 current navigation, Today hero, market evidence와 next check가 보이고 loading / raw diagnostic / local path / secret이 없음을 확인
+- browser console warning/error `0`
+- screenshot 실제 포맷이 JPEG임을 `file`로 확인하고 `.jpg` 확장자로 정렬
+- `.aiworkspace/note/finance/docs/assets/readme/finance-console-today.jpg` 66,702 bytes 저장 및 README relative link 연결
+
+## 2026-07-26 — 4차 Final Consistency / Browser QA
+
+- README의 모든 local Markdown link가 실제 파일을 가리키는지 `uv run python`으로 검사해 통과
+- Markdown fence balance, Mermaid block 정확히 2개, Today hero image 1개를 검사해 통과
+- `app/web/streamlit_app.py`의 `Research / Portfolio / Data / Help`와 7개 `st.Page` title을 README와 대조해 통과
+- bare `python`은 PATH에 없어 첫 검증 wrapper가 중단됐고, project 표준인 `uv run python`으로 교정
+- `http://localhost:8510/` HTTP 200, representative JPEG 1280×720, README 기술·trust keyword와 `git diff --check` 확인
+- in-app Browser로 8510의 Today, Market Research, Institutional Holdings, Portfolio Lab, Portfolio Monitoring, Data Operations, Reference Center route를 순서대로 열어 공통 navigation과 각 화면의 실제 본문 확인
+- Today의 `오늘의 시장 판단`, Market Research의 `Market Research`, Institutional Holdings의 기관 portfolio, Portfolio Lab의 후보 판단 flow, Monitoring의 `PORTFOLIO COMMAND CENTER`, Data Operations의 `Ingestion`, Reference Center의 제품 도움말 본문 확인
+- README screenshot이 current Today first-read와 같은 제품 shell, navigation, hero / market evidence / next check를 사용함을 재확인
+- Browser QA session viewport와 test tab을 정리하고 사용자의 기존 8501 tab은 건드리지 않음
+- closeout 후 fresh verification에서 README contracts, JPEG 1280×720, 8510 HTTP 200, unchecked plan 0, `git diff --check`와 Today focused `61 passed / 2 subtests passed` 확인

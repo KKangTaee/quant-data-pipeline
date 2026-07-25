@@ -3,75 +3,122 @@
 Status: Active
 Last Verified: 2026-07-26
 
-## Product Summary
+## Product Promise
 
-`finance` 프로젝트는 데이터 수집, 백테스트, 실전 후보 검증, 최종 포트폴리오 선정 이후 모니터링까지 이어지는 퀀트 리서치 워크스페이스다.
+`finance`는 시장 조사, 전략 실험, 실전 검증, 최종 판단과 선정 이후 모니터링을
+DB-backed evidence로 연결하는 **Evidence-first 퀀트 투자 리서치 워크스페이스**다.
 
-현재 제품의 중심은 "좋아 보이는 백테스트 결과"를 바로 투자 판단으로 받아들이지 않고,
-데이터 신뢰도, ETF 운용성, holdings / exposure, macro context, stress / sensitivity, Final Review evidence를 통해
-실전 추적 가능한 후보인지 확인하는 데 있다.
+좋아 보이는 백테스트 결과를 바로 투자 대상으로 받아들이지 않는다. 사용자가
+데이터의 기준 시점과 coverage, 운용 가능성, 비용·유동성·구성 위험, stress와
+robustness를 확인하고 “계속 추적할 후보인가?”를 근거와 함께 판단하게 한다.
 
-2026-07-08 master 병합 후 현재 제품은 네 축으로 읽는다.
+## Who It Is For
 
-| 축 | 현재 의미 |
+- 전략과 포트폴리오를 직접 실험하되 수익률 하나로 결론 내리고 싶지 않은 리서처
+- 시장·재무·기관 보유 맥락과 백테스트 근거를 같은 기준으로 확인하려는 사용자
+- 후보 생성부터 검증, 판단 기록과 사후 모니터링까지 재현 가능한 흐름이 필요한 운영자
+- 데이터·전략·UI의 책임 경계를 유지하며 기능을 확장하는 개발자와 AI 작업자
+
+현재 범위는 개인 또는 소규모 리서치 workflow다. broker 계좌, 주문 시스템이나
+수탁·운용 업무를 대신하는 제품이 아니다.
+
+## User Journey
+
+```text
+Data Operations
+  -> Research
+  -> Portfolio Lab
+       -> Backtest Analysis
+       -> Practical Validation
+       -> Final Review
+  -> Portfolio Monitoring
+  -> Research 재확인 또는 Portfolio Lab 재실행
+```
+
+Data Operations는 최초 설치 단계가 아니라 전체 workflow에 evidence를 공급하는
+기반이다. Research는 Portfolio Lab의 강제 선행 gate가 아니라 후보와 시장 맥락을
+해석하기 위한 조사 surface다.
+
+Portfolio Lab에서는 전략·mix 후보를 만들고, Practical Validation에서 데이터
+신뢰도와 실전 운용성 근거를 확인한 뒤, Final Review에서 추적 여부와 이유를
+기록한다. 선정 후보는 Portfolio Monitoring에서 성과·기여·보유 변화와 재검토
+조건을 확인하고 필요하면 조사나 재실행으로 돌아간다.
+
+## Current Product Surfaces
+
+Finance Console의 current top navigation은 `Research / Portfolio / Data / Help`다.
+
+| Group | Surface | 사용자가 끝낼 수 있는 일 |
+|---|---|---|
+| Research | Today | 미국 시장 세션, 저장된 시장 근거, 다음 일정과 대표 포트폴리오 상태를 첫 화면에서 파악한다. |
+| Research | Market Research | 경제 사이클, 선물 매크로, 심리, 일정, S&P 500 가치평가, 변동 종목과 미국 개별 종목을 기준일·source와 함께 조사한다. |
+| Research | Institutional Holdings | delayed SEC Form 13F로 기관별 allocation·보유 변화·섹터 노출과 종목별 보유 기관을 탐색한다. |
+| Portfolio | Portfolio Lab | 전략을 실행·비교하고 후보를 만든 뒤 Practical Validation과 Final Review까지 이어간다. |
+| Portfolio | Portfolio Monitoring | 최종 선정 후보와 직접 등록한 미국 주식·ETF의 공통 기준 성과, 기여도, 보유 변화와 재검토 조건을 추적한다. |
+| Data | Data Operations | Market Research·Portfolio Lab·Institutional Holdings·Practical Validation 목적별로 evidence를 준비하고, 공식 파일 등록·문제 복구·실행 이력·고급 도구로 이어간다. |
+| Help | Reference Center | 제품 개념, 판단 기준, 데이터 제한, 문제 해결 방법과 관련 화면을 검색한다. |
+
+Today와 Research의 macro·sentiment·events·13F 정보는 조사 맥락이다. 자동
+투자 신호, Practical Validation PASS, Final Review 승인 또는 Monitoring
+경고로 승격하지 않는다.
+
+## Product Principles
+
+| Principle | Meaning |
 |---|---|
-| Data / Market Context | DB-backed 가격·지수 EPS·SEP·macro·futures·sentiment를 바탕으로 시장 상태를 입체적으로 본다. Market Context 기본 화면은 S&P 500 상대 멀티플과 예상 실적 기반 지수 시나리오를 분리해 보여준다 |
-| Transparent Macro Evidence | FRED, futures OHLCV, FOMC / BLS / BEA calendar, CNN Fear & Greed, AAII sentiment 같은 macro / sentiment context를 source와 freshness가 보이는 형태로 표시한다 |
-| Backtest To Monitoring Workflow | Backtest Analysis에서 후보를 만들고, Practical Validation과 Final Review를 거쳐 Operations Portfolio Monitoring에서 사후 확인한다 |
-| UI / Engine Boundary | Streamlit UI는 화면과 session state를 담당하고, 데이터 수집 / loader / runtime / service read model은 Streamlit-free 계층에 둔다 |
+| Evidence First | 높은 백테스트 수익률보다 데이터 신뢰도, 운용 가능성과 검증 근거를 우선한다. |
+| DB-Backed Runtime | 기본 흐름은 `Ingestion -> DB -> Loader / Service -> Runtime -> UI`이며 UI가 provider를 직접 조회하지 않는다. |
+| Point-in-Time Before Convenience | 과거 시점에 알 수 있었던 데이터와 이후 수정·발표된 정보를 구분한다. |
+| Visible Data State | source, 기준일, freshness, coverage와 partial·stale·unavailable 상태를 숨기지 않는다. |
+| NOT_RUN Is Not Pass | 자료나 구현이 없어 실행하지 못한 검증을 통과로 취급하지 않는다. |
+| Context Is Not Approval | 시장 맥락과 기관 보유 정보는 판단 근거이지 자동 추천이나 승인 권한이 아니다. |
+| Human Decision Boundary | 후보 선정, 보류, 제외와 재검토는 사람이 근거를 읽고 기록하는 판단이다. |
+| Layer Ownership | Python이 수집·계산·검증·저장 authority를, Streamlit과 React가 route·interaction·presentation 경계를 맡는다. |
 
-## Target Experience
+## Safety And Non-Goals
 
-- 사용자는 Backtest Analysis에서 전략이나 저장된 포트폴리오 mix를 후보 source로 만든다.
-- Research > Today는 최초 진입 summary를, Research > Market Research는 `시장 환경 | 지수 가치평가 | 종목 리서치` deep research를 소유한다. Market Research는 경제 사이클·선물 매크로·심리·일정, S&P 500, 변동 종목·개별 종목을 7개 view로 제공하며 summary cockpit을 반복하지 않는다. S&P 500은 5년 후행 PER 상대 구간과 FOMC 거시 가정 기반 EPS/SPX 시나리오를 보여주되 공식 적정가나 거래 신호로 표현하지 않는다. Sector evidence는 Market Movers가 소유하고 수집 결과·실패 확인은 Data > Data Operations로 분리한다.
-- Workspace > Institutional Portfolios는 Overview Market Movers와 분리된 read-only research surface로, 투자 대가 / 기관별 delayed SEC Form 13F portfolio를 React workbench에서 포트폴리오 allocation, 상위 보유, 분기별 reported change, 섹터 노출, 종목별 보유기관 drill-down으로 탐색한다.
-- Practical Validation은 후보를 source traits, module gate, provider / macro / robustness / realism evidence로 검증한다.
-- Final Review는 selected-route gate를 통과한 후보를 최종 관찰 후보로 저장하되, live approval로 해석하지 않는다.
-- Operations > Portfolio Monitoring은 사용자가 만든 monitoring portfolio에 최종 선정 후보를 담고, 명시적 scenario update 후 성과와 review signal을 read-only로 확인한다.
-- Data > Data Operations는 먼저 Market Research, Portfolio Lab, Institutional Holdings, Practical Validation 중 실제 사용 목적을 고른 뒤 필요한 DB-backed data action을 명시적으로 실행한다. 공식 파일, 문제 복구, 실행 이력, 저수준 설정은 별도 보조 section으로 분리한다.
+현재 제품이 제공하지 않는 기능:
 
-## Core Pillars
+- broker account 연결과 실제 보유 자동 동기화
+- live approval, 주문 생성과 자동 매매
+- auto rebalance 또는 broker-side allocation 실행
+- 투자 성과나 수익 보장
+- sentiment, news, events와 13F를 자동 매수·매도 신호로 변환
+- 불완전한 provider field를 완전한 사실로 간주
+- full raw provider response나 holdings를 workflow JSONL에 복제
 
-| Pillar | Meaning |
-|---|---|
-| Evidence First | 백테스트 수익률보다 데이터 신뢰도와 검증 근거를 우선한다 |
-| DB-Backed Runtime | UI에서 직접 원격 fetch하지 않고, ingestion과 loader를 통해 DB 데이터를 사용한다 |
-| Practical Validation | 실전 운용 전 ETF 비용, 유동성, holdings, macro, stress, sensitivity를 확인한다 |
-| Clear Workflow Boundary | Backtest Analysis, Practical Validation, Final Review, Operations > Portfolio Monitoring의 책임을 분리한다 |
-| Context Is Not Approval | sentiment, futures macro, Why It Moved는 시장 배경 / 조사 단서이며 PASS, BLOCKER, trade signal, monitoring signal이 아니다 |
-| No Live Trading | 현재 시스템은 live approval, broker order, auto rebalance를 만들지 않는다 |
+Final Review decision과 Portfolio Monitoring의 재검토 표시는 투자 자문, 주문 승인
+또는 자동 운용 명령이 아니다.
 
-## Non Goals
+## Current Maturity And Known Limits
 
-- 자동 매매 주문 생성
-- broker account holding 자동 연결
-- 투자 수익 보장 표현
-- 모든 ETF provider를 완전하게 지원하는 universal connector
-- 모든 실험 로그와 임시 run artifact를 장기 문서로 보존
-- phase 문서와 task 문서를 하나의 무거운 진행 로그로 합치는 것
-- 시장 심리, 뉴스, 공시 metadata를 자동 catalyst 판정이나 투자 신호로 바꾸는 것
+현재 구현된 baseline:
 
-## Current Product Boundary
+- Research, Portfolio, Data, Help의 7개 top-level surface와 목적형 navigation
+- MySQL-backed market·financial statement·macro·provider·13F evidence
+- Data Operations의 목적형 준비, 공식 파일, bounded recovery, compact history와 고급 도구 경계
+- 단일 전략과 portfolio mix 실행, 비교, 저장·재실행과 후보 source 생성
+- Practical Validation의 데이터·운용·robustness·construction evidence와 보강 flow
+- Final Review의 gate-aware 판단 기록과 Portfolio Monitoring handoff
+- 선정 이후 direct stock·ETF와 selected strategy의 read-only monitoring / recheck
+- Python / Streamlit / React + TypeScript의 분리된 정상 화면과 fallback 경계
 
-현재 사용자-facing 주요 화면:
+계속 보수적으로 다루는 제한:
 
-- `Data > Data Operations`
-- `Research > Market Research`
-- `Workspace > Institutional Portfolios`
-- `Backtest > Backtest Analysis`
-- `Backtest > Practical Validation`
-- `Backtest > Final Review`
-- `Operations > Portfolio Monitoring`
-- `Reference > Guides`
+- historical universe membership, delisting과 일부 provider coverage는 완전하지 않다.
+- survivorship bias와 look-ahead bias는 현재 구현이 완전히 제거했다고 주장하지 않는다.
+- SEC 13F는 보고 지연, long holdings 중심 범위와 identifier mapping 한계가 있다.
+- macro·sentiment·conditional outlook은 독립 시계열 검증 gate를 통과하지 못하면
+  확률이나 확정 전망으로 공개하지 않는다.
+- local MySQL 준비와 source별 수집 상태에 따라 화면 evidence가 partial 또는
+  unavailable일 수 있다.
+- Data Operations는 explicit-click 실행을 유지하며 background queue, scheduler,
+  cancellation, resume와 multi-user authorization은 현재 baseline이 아니다.
 
-현재 구현 완료로 보는 큰 흐름:
+## Related Canonical Docs
 
-- Market Research는 목적형 3-family/7-view navigation, Economic Cycle, Market Movers / Why It Moved manual investigation, S&P 500·U.S. Stock valuation, Futures Macro, events calendar, sentiment까지 production baseline을 갖췄다. page-global session/reference/diagnostic은 반복하지 않고 active module이 local metadata와 명시적 refresh를 소유한다. `Futures Monitor`와 `Sector / Industry` standalone 표현은 current primary surface가 아니라 retained data / helper context로 본다.
-- Institutional Portfolios는 SEC Form 13F 공식 data sets를 DB로 적재한 뒤 기관별 holdings를 allocation donut, 상위 보유 리스트, 신규 / 증가 / 감소 / 전량 매도 후보 board, 섹터 노출 bar, 종목별 보유 기관 reverse lookup으로 읽는 Workspace research surface다. DB가 비어 있으면 clearly labeled preview workbench만 보여주며 실제 보유로 표현하지 않는다. 13F 지연, long holdings 한계, CUSIP-symbol mapping caveat를 항상 표시하며 추천 / 매수매도 신호 / live approval로 해석하지 않는다.
-- Macro / sentiment context는 DB-backed collection과 loader를 통해 읽고, 화면에서는 freshness / source / partial state를 숨기지 않는다.
-- Backtest Analysis는 기존 ETF / factor / mix 후보와 Risk-On Momentum 5D Daily Swing research lane을 포함한다. Risk-On Momentum daily signal governance는 아직 Practical Validation / Final Review / Portfolio Monitoring에 연결하지 않았다.
-- Practical Validation V2 P2 / P3, Final Review selection readiness, Operations > Portfolio Monitoring read-only monitoring / recheck 연결은 closeout 완료 상태다.
-- Data Operations는 `데이터 준비 / 공식 파일 / 문제 복구 / 실행 이력 / 고급 도구`로 읽는다. 첫 화면은 collector나 run 지표가 아니라 downstream 목적을 먼저 보여주며, 모든 write action은 기존 explicit click·preflight·progress·partial-success 경계를 유지한다. 실행 이력은 active Data Operations job의 상태·범위·결과·다음 행동만 compact하게 표시하고 raw log, failure CSV, 절대 경로, full payload는 기본 제품 화면에서 제외한다.
-- Operations는 Portfolio Monitoring만 사용자-facing 화면으로 둔다. 최종 선정 후보의 그룹·항목 lifecycle, 공통 기준 성과, contribution, 개별 상세와 review context를 이 화면에서 바로 확인한다. 수집 결과의 사용자-facing 확인은 `Data > Data Operations > 실행 이력`이 소유하며 Portfolio Monitoring에 raw run/log 진단 패널로 중복하지 않는다.
-
-현재 active phase는 없다. 다음 개발은 사용자가 승인한 구체적 scope를 새 task 또는 phase로 열어 진행한다.
+- 현재 상태와 다음 승인 결정: [Roadmap](./ROADMAP.md)
+- 화면·계층·저장 code ownership: [Project Map](./PROJECT_MAP.md)
+- 사용자·runtime 흐름: [Flows](./flows/README.md)
+- system과 storage boundary: [System Boundaries](./architecture/SYSTEM_BOUNDARIES.md)
+- 데이터 의미와 저장 정책: [Data Documentation](./data/README.md)
