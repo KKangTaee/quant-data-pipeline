@@ -53,3 +53,15 @@
 - 1,291 lines에서 155 lines로 축소하고 completed-task changelog를 제거
 - direct task reference 4개, old navigation 0, required state / section, local link와
   `git diff --check` 확인
+
+## 2026-07-26 — Task 5 Cross-Document Verification
+
+- canonical four docs local Markdown link와 Markdown fence 검사 통과
+- `streamlit_app.py`의 4개 navigation group / 7개 `st.Page` title과 문서 대조 통과
+- four docs old `Workspace / Operations / Backtest / Reference` navigation 표현 0
+- Project Map의 backtick current code / storage path existence 검사 통과
+- final line count: INDEX 108, Product Direction 121, Project Map 199, Roadmap 155
+- direct task-path reference: INDEX 3, Product Direction 0, Project Map 1, Roadmap 4
+- 전체 `git diff --check` 통과
+- INDEX 최초 content commit 직전 trailing whitespace 1건을 발견해 즉시 같은 commit에
+  amend하고 fresh diff check를 통과했다.

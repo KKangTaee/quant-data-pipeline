@@ -7288,3 +7288,12 @@ Detailed historical logs were archived on `2026-04-13`.
 - Today 대표 화면과 제품 workflow / technical architecture를 연결하고 `Research / Portfolio / Data / Help`의 7개 현재 화면을 8510에서 검증했다.
 - 전체 roadmap `4/4차` 완료. 제품 code와 registry / saved / run history는 변경하지 않았다.
 - 상세 설계·검증 기록은 `tasks/active/readme-product-onboarding-overhaul-v1-20260725/`를 본다.
+
+## 2026-07-26 - Finance canonical 문서 역할 분리형 개편 완료
+
+- INDEX는 stable router, Product Direction은 제품 목적, Project Map은 ownership,
+  Roadmap은 current state와 next decisions를 소유하도록 전면 정리했다.
+- old navigation과 완료 task changelog를 제거하고 current 7개 surface, paused /
+  Verification-Only 상태와 approval queue를 실제 코드·task status에 맞췄다.
+- 전체 roadmap `4/4차` 완료. code / DB / registry / saved / run history는 변경하지 않았다.
+- 상세 설계·실행·검증은 `tasks/active/finance-canonical-docs-alignment-v1-20260726/`를 본다.

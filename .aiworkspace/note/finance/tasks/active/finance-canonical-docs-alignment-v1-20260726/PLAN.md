@@ -454,7 +454,7 @@ git commit -m "finance 로드맵 현재 상태 중심 재작성"
 - Consumes: four rewritten canonical docs
 - Produces: verified 4/4 closeout and root handoff
 
-- [ ] **Step 1: 모든 canonical doc local link 검사**
+- [x] **Step 1: 모든 canonical doc local link 검사**
 
 Run:
 
@@ -484,7 +484,7 @@ PY
 
 Expected: `canonical doc links OK`.
 
-- [ ] **Step 2: navigation과 stale-name 교차 검사**
+- [x] **Step 2: navigation과 stale-name 교차 검사**
 
 Run:
 
@@ -518,7 +518,7 @@ PY
 
 Expected: `navigation contract OK`.
 
-- [ ] **Step 3: task closeout과 root handoff 기록**
+- [x] **Step 3: task closeout과 root handoff 기록**
 
 기록할 상태:
 
@@ -532,7 +532,7 @@ WORK_PROGRESS: 3~5줄 milestone과 task path
 QUESTION_AND_ANALYSIS_LOG: request / interpreted goal / result / follow-up
 ```
 
-- [ ] **Step 4: final hygiene / protected-path stage audit**
+- [x] **Step 4: final hygiene / protected-path stage audit**
 
 Run:
 
@@ -550,7 +550,7 @@ registry / saved / run_history / unrelated QA artifact not staged
 canonical docs, this task docs, two root handoff logs only
 ```
 
-- [ ] **Step 5: final closeout commit**
+- [x] **Step 5: final closeout commit**
 
 ```bash
 git add \

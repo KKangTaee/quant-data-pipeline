@@ -32,3 +32,11 @@
   범위다.
 - two Verification-Only task의 actual Browser QA와 status closeout은 이번 문서
   개편이 아니라 각 owning task에서 수행한다.
+
+## Closeout
+
+- canonical docs link / route / path / state 검증에는 남은 blocker가 없다.
+- 제품 code, DB, registry, saved setup, run history와 generated artifact는 변경하지
+  않았다.
+- architecture / flow / data / runbook의 상세 본문은 current ownership link로
+  연결했으며 이번 task에서 전면 재작성하지 않았다.

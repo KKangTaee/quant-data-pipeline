@@ -43,3 +43,16 @@
 - `.aiworkspace/note/finance/run_history/*.jsonl`
 - root의 기존 generated QA image / snapshot
 - 사용자와 다른 task가 만든 unrelated dirty changes
+
+## Final Maintenance Contract
+
+- INDEX는 stable router이며 completed task catalog가 아니다.
+- Product Direction은 product promise, user journey, current surface, principle와
+  non-goal만 소유한다.
+- Project Map은 current entry point와 layer / workflow / storage owner를 소유하고
+  상세 algorithm과 UX history는 focused docs로 넘긴다.
+- Roadmap은 implemented baseline, actual open state, decision queue와 approval
+  rule만 소유한다.
+- paused와 Verification-Only는 Active와 구분하고, folder 위치만으로 current state를
+  판단하지 않는다.
+- 과거 상세 이력은 retained task / phase / root handoff에서 찾는다.

@@ -10691,3 +10691,15 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 제품 사용자는 조사→후보→검증→판단→모니터링 흐름을 이해하고, 개발자는 5분 안에 앱을 실행한 뒤 Python / Streamlit / React / MySQL 경계를 찾을 수 있어야 함.
 - Analysis result: product journey first 본문, 현재 7개 surface, Today 대표 이미지, 두 Mermaid, quick start, tech / storage / trust / docs map을 하나의 root README로 구성했다.
 - Follow-up: 전체 roadmap `4/4차` 완료. backtest-dev `8510` actual route와 문서 구조를 검증했고, 빠르게 변하는 상태는 Roadmap / Active Task Index에서 이어서 관리한다.
+
+### 2026-07-26 - 핵심 문서는 제품 목적·구현 위치·현재 결정의 역할을 나눠야 한다
+
+- User request: Product Direction, Project Map, Roadmap과 INDEX가 현재 개발에 맞는지
+  진단하고 사람과 AI가 흐름을 이해할 수 있도록 전면 정리해 달라고 요청함.
+- Interpreted goal: 완료 기록을 잃지 않으면서 첫 읽기 문서에서 current product,
+  code ownership, actual open state와 다음 승인을 빠르게 구분해야 함.
+- Analysis result: INDEX / Product Direction / Project Map / Roadmap을 stable router /
+  product purpose / ownership map / current decision queue로 분리하고 old navigation과
+  rolling completed-task dump를 제거했다.
+- Follow-up: 전체 `4/4차` 완료. detailed history는 retained task / phase / root handoff에
+  보존하고 verification debt와 future candidates는 Roadmap의 별도 상태로 관리한다.

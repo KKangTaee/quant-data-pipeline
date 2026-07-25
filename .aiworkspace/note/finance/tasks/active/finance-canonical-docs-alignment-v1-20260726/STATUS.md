@@ -1,6 +1,6 @@
 # Finance Canonical Docs Alignment V1 Status
 
-Status: Implementation In Progress — 3/4
+Status: Completed — 4/4
 Started: 2026-07-26
 
 ## Completed
@@ -13,16 +13,25 @@ Started: 2026-07-26
 - 상세 implementation plan을 5개 독립 task로 확정했다.
 - INDEX의 124개 task link 중심 rolling history를 제거하고 stable document router로 재작성했다.
 - INDEX local link, section, line-count와 work-pointer contract를 검증했다.
+- Product Direction을 current product journey, 7개 surface, principles와 safety
+  boundary 중심으로 재작성했다.
+- Project Map을 layer, surface entry, workflow와 storage ownership 중심으로
+  재작성하고 표시된 current path를 검증했다.
+- Roadmap에서 완료 task changelog를 제거하고 baseline, paused,
+  Verification-Only와 next decision queue를 분리했다.
+- 네 문서의 link, fence, navigation, path, stale-name과 diff hygiene를 교차 검증했다.
 
 ## Current Step
 
-전체 roadmap `3/4차` 진행 중. canonical content `4/4` 완료, final closeout 대기.
+전체 roadmap `4/4차` 완료.
 
-네 canonical 문서 개편을 완료했고 cross-document verification과 closeout을 진행한다.
+INDEX, Product Direction, Project Map, Roadmap의 역할 분리와 current-state alignment,
+cross-document verification과 root handoff를 완료했다.
 
 ## Next Action
 
-local link, route, path, state와 protected-path audit 후 root handoff를 정렬한다.
+향후 제품 목적, ownership 또는 roadmap 상태가 변할 때 각 owning canonical 문서만
+갱신하고 완료 task history를 INDEX / Roadmap에 다시 복제하지 않는다.
 
 ## Scope Boundary
 
