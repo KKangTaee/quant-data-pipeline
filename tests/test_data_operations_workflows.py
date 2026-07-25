@@ -88,6 +88,64 @@ class DataOperationsWorkflowContractTest(unittest.TestCase):
         with self.assertRaises(KeyError):
             section_for_action("weekly_fundamental_refresh")
 
+    def test_history_filters_out_non_data_operations_and_compatibility_runs(self) -> None:
+        from app.web.ingestion.views.history import filter_data_operations_history
+
+        records = [
+            {"job_name": "daily_market_update"},
+            {"job_name": "weekly_fundamental_refresh"},
+            {"job_name": "portfolio_monitoring_price_refresh"},
+            {"job_name": "collect_market_sentiment"},
+        ]
+
+        filtered = filter_data_operations_history(records)
+
+        self.assertEqual(
+            [record["job_name"] for record in filtered],
+            ["daily_market_update", "collect_market_sentiment"],
+        )
+
+    def test_history_row_is_compact_and_does_not_expose_raw_paths(self) -> None:
+        from app.web.ingestion.views.history import build_data_activity_row
+
+        row = build_data_activity_row(
+            {
+                "job_name": "collect_futures_ohlcv",
+                "status": "success",
+                "finished_at": "2026-07-23 07:27:19",
+                "rows_written": 42486,
+                "symbols_requested": 17,
+                "artifact_path": "/private/tmp/raw-result.json",
+                "failure_csv": "/private/tmp/failures.csv",
+                "details": {"log_path": "/private/tmp/collector.log"},
+            }
+        )
+
+        self.assertEqual(
+            set(row),
+            {"실행 시각", "작업", "목적", "상태", "범위", "결과", "다음 행동"},
+        )
+        self.assertNotIn("/private/", repr(row))
+        self.assertEqual(row["범위"], "17개 대상")
+        self.assertEqual(row["결과"], "42,486 rows 저장")
+
+    def test_partial_history_row_explains_next_action(self) -> None:
+        from app.web.ingestion.views.history import build_data_activity_row
+
+        row = build_data_activity_row(
+            {
+                "job_name": "daily_market_update",
+                "status": "partial_success",
+                "rows_written": 980,
+                "symbols_requested": 1000,
+                "failed_symbols": ["AAA", "BBB"],
+            }
+        )
+
+        self.assertEqual(row["상태"], "부분 성공")
+        self.assertIn("Price Stale Diagnosis", row["다음 행동"])
+        self.assertIn("2개 누락/실패", row["결과"])
+
 
 if __name__ == "__main__":
     unittest.main()
