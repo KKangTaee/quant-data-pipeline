@@ -98,3 +98,9 @@
 - collector / import / diagnosis 실행 버튼은 누르지 않았다.
 - QA 이미지는 `qa_data_operations_advanced_closed.png`,
   `qa_data_operations_advanced_closed_mobile.png` local artifact로만 남겼다.
+- branch finishing 전체 `unittest discover -s tests`는 최신 트리에서
+  1,901개를 실행했고 `11 failures + 298 errors`로 종료됐다.
+  failures는 기존 Practical Validation / Futures Macro / Sentiment contract
+  drift이고, errors 대부분은 suite-wide import 순서의 기존 Streamlit
+  `DeltaGeneratorSingleton instance already exists` 수명 문제다.
+  전체 suite가 green이 아니므로 merge / push / PR은 진행하지 않았다.
