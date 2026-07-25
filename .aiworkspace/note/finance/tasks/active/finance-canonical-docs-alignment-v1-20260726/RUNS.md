@@ -24,3 +24,12 @@
 - 108 lines, literal task-path reference 3개, required section 6개 확인
 - local Markdown link existence 검사 통과
 - 개별 완료 task 목록을 제거하고 Roadmap / task index / manifests로 discovery를 단일화
+
+## 2026-07-26 — Task 2 Product Direction
+
+- old `Workspace / Operations / Backtest / Reference` navigation 표현 존재 확인
+- Product Promise / Who It Is For / User Journey / Current Product Surfaces /
+  Principles / Safety / Maturity 구조로 121 lines 재작성
+- current navigation group, 7개 surface, Practical Validation / Final Review 내부
+  stage와 product boundary keyword assertion 통과
+- local link와 `git diff --check` 통과

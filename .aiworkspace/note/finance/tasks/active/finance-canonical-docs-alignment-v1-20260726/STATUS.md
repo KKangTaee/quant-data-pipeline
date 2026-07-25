@@ -16,13 +16,13 @@ Started: 2026-07-26
 
 ## Current Step
 
-전체 roadmap `3/4차` 진행 중. 구현 task `1/4` 완료.
+전체 roadmap `3/4차` 진행 중. 구현 task `2/4` 완료.
 
-INDEX 개편을 완료했고 Product Direction 개편을 진행한다.
+INDEX와 Product Direction 개편을 완료했고 Project Map 개편을 진행한다.
 
 ## Next Action
 
-Product Direction, Project Map, Roadmap을 순서대로 개편한 뒤 cross-document closeout을 수행한다.
+Project Map과 Roadmap을 순서대로 개편한 뒤 cross-document closeout을 수행한다.
 
 ## Scope Boundary
 

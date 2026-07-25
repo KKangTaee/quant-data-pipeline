@@ -167,7 +167,7 @@ git commit -m "finance 문서 인덱스 재구성"
 - Consumes: current navigation and README product contract
 - Produces: stable product promise and surface meaning for Roadmap / Project Map
 
-- [ ] **Step 1: stale navigation assertion 실행**
+- [x] **Step 1: stale navigation assertion 실행**
 
 Run:
 
@@ -178,7 +178,7 @@ rg -n "Workspace >|Operations >|Backtest >|Reference >" \
 
 Expected: old user-facing navigation expressions are found.
 
-- [ ] **Step 2: Product Direction을 다음 section으로 전면 재작성**
+- [x] **Step 2: Product Direction을 다음 section으로 전면 재작성**
 
 ```text
 # Product Direction
@@ -196,7 +196,7 @@ Expected: old user-facing navigation expressions are found.
 사용자 완료 작업 기준으로 설명한다. `Portfolio Lab` 내부에 Backtest Analysis,
 Practical Validation, Final Review를 둔다.
 
-- [ ] **Step 3: current product contract assertion 실행**
+- [x] **Step 3: current product contract assertion 실행**
 
 Run:
 
@@ -212,7 +212,7 @@ done
 
 Expected: exit 0.
 
-- [ ] **Step 4: product boundary assertion 실행**
+- [x] **Step 4: product boundary assertion 실행**
 
 Run:
 
@@ -224,7 +224,7 @@ done
 
 Expected: exit 0.
 
-- [ ] **Step 5: 2차 commit**
+- [x] **Step 5: 2차 commit**
 
 ```bash
 git add \

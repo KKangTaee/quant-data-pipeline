@@ -23,6 +23,10 @@
 - current docs에는 current fact, stable ownership, next decision만 남긴다.
 - active, paused, verification-only를 명시적으로 구분한다.
 - detailed code/data/flow/runbook content는 owning focused doc으로 연결한다.
+- Product Direction은 task 이름과 구현 이력을 제거하고 product promise, 사용자 여정,
+  7개 current surface, 원칙, safety와 known limit만 소유한다.
+- Data Operations는 설치 단계가 아니라 전체 workflow evidence layer이며 Research는
+  Portfolio Lab의 필수 선행 gate가 아니다.
 
 ## Protected Existing Work
 
