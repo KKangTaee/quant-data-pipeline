@@ -1,6 +1,6 @@
 # Status
 
-Status: Design Review
+Status: Implementation Plan Ready
 Last Updated: 2026-07-25
 
 ## Roadmap
@@ -16,4 +16,5 @@ Last Updated: 2026-07-25
 
 ## Next
 
-written spec 사용자 review 뒤 test-first implementation plan을 작성한다.
+`superpowers:subagent-driven-development` 또는 `superpowers:executing-plans` 중 실행
+방식을 선택하고 1차 금·달러 의미 분리부터 구현한다.

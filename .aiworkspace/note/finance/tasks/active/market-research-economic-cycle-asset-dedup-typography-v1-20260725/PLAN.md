@@ -1,6 +1,6 @@
 # Economic Cycle Asset Dedup Typography V1 Plan
 
-Status: Design Review
+Status: Implementation Plan Ready
 Last Updated: 2026-07-25
 
 ## 이걸 하는 이유?
@@ -52,9 +52,13 @@ Last Updated: 2026-07-25
 
 ## Current Step
 
-전체 roadmap `0/2차`다. 승인 방향을 written design으로 정리했고 사용자 spec review 뒤
-구현 계획을 작성한다.
+전체 roadmap `0/2차`다. written design 검토 승인을 반영했고 세 task의 test-first
+implementation plan을 작성했다. 실행 방식 선택 후 1차 의미 분리부터 시작한다.
 
 ## Canonical Design
 
 `docs/superpowers/specs/2026-07-25-economic-cycle-asset-dedup-typography-design.md`
+
+## Implementation Plan
+
+`docs/superpowers/plans/2026-07-25-economic-cycle-asset-dedup-typography.md`
