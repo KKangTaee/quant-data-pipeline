@@ -66,6 +66,28 @@ class DataOperationsWorkflowContractTest(unittest.TestCase):
 
         self.assertEqual(state, {"existing": "preserved"})
 
+    def test_official_import_and_recovery_actions_route_to_legacy_form_sections(self) -> None:
+        from app.web.ingestion.registry import (
+            INGESTION_COLLECTION_MANUAL,
+            INGESTION_COLLECTION_OPERATIONAL,
+        )
+        from app.web.ingestion.views.advanced import section_for_action
+
+        self.assertEqual(
+            section_for_action("import_sp500_index_earnings_xlsx"),
+            INGESTION_COLLECTION_OPERATIONAL,
+        )
+        self.assertEqual(
+            section_for_action("diagnose_price_stale"),
+            INGESTION_COLLECTION_MANUAL,
+        )
+
+    def test_advanced_routing_rejects_inactive_compatibility_action(self) -> None:
+        from app.web.ingestion.views.advanced import section_for_action
+
+        with self.assertRaises(KeyError):
+            section_for_action("weekly_fundamental_refresh")
+
 
 if __name__ == "__main__":
     unittest.main()

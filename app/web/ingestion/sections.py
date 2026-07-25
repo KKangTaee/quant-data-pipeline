@@ -26,15 +26,24 @@ def _bind_page_globals() -> None:
     )
 
 
-def render_operational_section() -> Any:
+def render_operational_section(*, focused_action: str | None = None) -> Any:
     _bind_page_globals()
     current_progress_callback = None
+
+    def expand_for(*actions: str, default: bool = False) -> bool:
+        if focused_action is None:
+            return default
+        return focused_action in actions
+
     st.info(
         "일상 운영 / 검증 데이터: 백테스트와 Practical Validation, Overview가 DB에서 읽을 데이터를 채웁니다. "
         "수집 결과가 부분 성공이면 downstream 화면에서도 coverage gap으로 남을 수 있습니다."
     )
 
-    with st.expander("주식·ETF 종목 목록 최신화", expanded=True):
+    with st.expander(
+        "주식·ETF 종목 목록 최신화",
+        expanded=expand_for("refresh_nyse_listing_universe", default=True),
+    ):
         st.write(
             "전체 가격·자산 프로필 수집이 사용하는 현재 종목 목록을 "
             "NYSE 공식 listings 기준으로 갱신합니다."
@@ -102,7 +111,10 @@ def render_operational_section() -> Any:
             "refresh_nyse_listing_universe"
         )
 
-    with st.expander("일별 가격 업데이트", expanded=True):
+    with st.expander(
+        "일별 가격 업데이트",
+        expanded=expand_for("daily_market_update", default=True),
+    ):
         _render_job_brief("daily_market_update")
         st.caption("권장 주기: 매 거래일 장 마감 후 또는 다음 backtest/data sync 전에 실행합니다.")
         st.caption(
@@ -240,7 +252,10 @@ def render_operational_section() -> Any:
             )
         _render_inline_last_completed_result("daily_market_update")
 
-    with st.expander("선물 OHLCV 수집", expanded=False):
+    with st.expander(
+        "선물 OHLCV 수집",
+        expanded=expand_for("collect_futures_ohlcv"),
+    ):
         _render_job_brief("collect_futures_ohlcv")
         st.caption("Overview Futures Monitor에서 사용할 선물 캔들 데이터를 수집합니다.")
         st.caption("기본값은 주요 지수 / 금리 / 원자재 / FX 선물이며, 저장 테이블은 `finance_price.futures_ohlcv`입니다.")
@@ -337,7 +352,10 @@ def render_operational_section() -> Any:
                 label="Futures OHLCV Collection",
             )
 
-    with st.expander("시장 심리 수집", expanded=False):
+    with st.expander(
+        "시장 심리 수집",
+        expanded=expand_for("collect_market_sentiment"),
+    ):
         _render_job_brief("collect_market_sentiment")
         st.caption("저장 테이블: `finance_meta.macro_series_observation`")
         sentiment_cols = st.columns(2)
@@ -397,7 +415,10 @@ def render_operational_section() -> Any:
             )
         _render_inline_last_completed_result("collect_market_sentiment")
 
-    with st.expander("EDGAR 재무제표 갱신", expanded=False):
+    with st.expander(
+        "EDGAR 재무제표 갱신",
+        expanded=expand_for("extended_statement_refresh"),
+    ):
         _render_job_brief("extended_statement_refresh")
         st.caption("권장 주기: 월 1회 또는 긴 기간 factor research / backtest 준비 전에 실행합니다.")
         st.caption("권장 source: `Profile Filtered Stocks`나 statement coverage preset부터 시작하세요.")
@@ -482,7 +503,13 @@ def render_operational_section() -> Any:
             )
         _render_inline_last_completed_result("extended_statement_refresh")
 
-    with st.expander("SEC Form 13F 데이터셋 수집", expanded=False):
+    with st.expander(
+        "SEC Form 13F 데이터셋 수집",
+        expanded=expand_for(
+            "collect_sec_13f_dataset",
+            "collect_sec_13f_identifier_mappings",
+        ),
+    ):
         _render_job_brief("collect_sec_13f_dataset")
         st.caption(
             "SEC 공식 Form 13F quarterly data set zip을 DB에 저장해 `Workspace > Institutional Portfolios`에서 읽습니다. "
@@ -610,7 +637,10 @@ def render_operational_section() -> Any:
             )
         _render_inline_last_completed_result("collect_sec_13f_identifier_mappings")
 
-    with st.expander("종목 메타데이터 업데이트", expanded=False):
+    with st.expander(
+        "종목 메타데이터 업데이트",
+        expanded=expand_for("metadata_refresh"),
+    ):
         _render_job_brief("metadata_refresh")
         st.caption("권장 주기: 주 1회 또는 tracked universe / profile filter가 바뀐 뒤 실행합니다.")
         st.caption("권장 scope: 한쪽만 갱신할 의도가 아니라면 `stock`과 `etf`를 함께 선택하세요.")
@@ -647,7 +677,10 @@ def render_operational_section() -> Any:
             )
         _render_inline_last_completed_result("metadata_refresh")
 
-    with st.expander("S&P 500 실제 EPS 등록", expanded=False):
+    with st.expander(
+        "S&P 500 실제 EPS 등록",
+        expanded=expand_for("import_sp500_index_earnings_xlsx"),
+    ):
         _render_job_brief("import_sp500_index_earnings_xlsx")
         st.write(
             "경제 사이클의 `실제 TTM EPS`에 사용할 S&P 500 완료 분기 실적을 등록합니다. "
@@ -707,15 +740,33 @@ def render_operational_section() -> Any:
             )
         _render_inline_last_completed_result("import_sp500_index_earnings_xlsx")
 
-    with st.expander("시장 이벤트 캘린더 수집", expanded=False):
+    with st.expander(
+        "시장 이벤트 캘린더 수집",
+        expanded=expand_for(
+            "collect_fomc_calendar",
+            "collect_macro_calendar",
+            "import_bls_macro_calendar_ics",
+            "collect_market_structure_calendar",
+            "collect_earnings_calendar",
+        ),
+    ):
         st.write("Overview Events 탭에서 읽을 시장 이벤트 캘린더를 공식 무료 소스에서 수집합니다.")
         st.caption(
             "현재 구현 대상: Federal Reserve FOMC, BLS/BEA macro release schedule, "
             "Nasdaq/Cboe/Russell market-structure calendar, yfinance + Nasdaq cross-check 기반 earnings estimate."
         )
         st.caption("저장 테이블: `finance_meta.market_event_calendar`")
+        event_tab_default = {
+            "collect_fomc_calendar": "FOMC 일정",
+            "collect_macro_calendar": "매크로 발표",
+            "import_bls_macro_calendar_ics": "매크로 발표",
+            "collect_market_structure_calendar": "시장 구조 일정",
+            "collect_earnings_calendar": "실적 발표",
+        }.get(focused_action)
         fomc_tab, macro_event_tab, market_structure_tab, earnings_tab = st.tabs(
-            ["FOMC 일정", "매크로 발표", "시장 구조 일정", "실적 발표"]
+            ["FOMC 일정", "매크로 발표", "시장 구조 일정", "실적 발표"],
+            default=event_tab_default,
+            key="data_operations_event_calendar_tabs",
         )
         with fomc_tab:
             _render_job_brief("collect_fomc_calendar")
@@ -1115,7 +1166,19 @@ def render_operational_section() -> Any:
             "collect_earnings_calendar",
         )
 
-    with st.expander("Practical Validation 검증 데이터 보강", expanded=False):
+    with st.expander(
+        "Practical Validation 검증 데이터 보강",
+        expanded=expand_for(
+            "discover_etf_provider_source_map",
+            "collect_etf_operability_provider",
+            "collect_etf_holdings_exposure",
+            "collect_macro_market_context",
+            "collect_sec_form25_delistings",
+            "collect_symbol_directory_snapshots",
+            "collect_sec_company_ticker_crosscheck",
+            "collect_computed_snapshot_lifecycle",
+        ),
+    ):
         st.write("Practical Validation에서 포트폴리오를 검토할 때 사용할 provider snapshot 데이터를 수집합니다.")
         st.caption(
             "ETF의 운용 가능성, ETF 내부 구성, 시장 환경 데이터를 DB에 저장해 둡니다. "
@@ -1126,6 +1189,16 @@ def render_operational_section() -> Any:
             "`finance_meta.etf_holdings_snapshot`, `finance_meta.etf_exposure_snapshot`, "
             "`finance_meta.macro_series_observation`, `finance_meta.nyse_symbol_lifecycle`"
         )
+        validation_tab_default = {
+            "discover_etf_provider_source_map": "ETF 소스 매핑",
+            "collect_etf_operability_provider": "ETF 운용성",
+            "collect_etf_holdings_exposure": "ETF 구성 / 노출",
+            "collect_macro_market_context": "FRED 시장환경",
+            "collect_sec_form25_delistings": "상장 / 상폐 근거",
+            "collect_symbol_directory_snapshots": "상장 / 상폐 근거",
+            "collect_sec_company_ticker_crosscheck": "상장 / 상폐 근거",
+            "collect_computed_snapshot_lifecycle": "상장 / 상폐 근거",
+        }.get(focused_action)
         source_map_tab, provider_tab, holdings_tab, macro_tab, lifecycle_tab = st.tabs(
             [
                 "ETF 소스 매핑",
@@ -1133,7 +1206,9 @@ def render_operational_section() -> Any:
                 "ETF 구성 / 노출",
                 "FRED 시장환경",
                 "상장 / 상폐 근거",
-            ]
+            ],
+            default=validation_tab_default,
+            key="data_operations_validation_tabs",
         )
 
         with source_map_tab:
@@ -1451,8 +1526,16 @@ def render_operational_section() -> Any:
                 "current snapshot 계열은 historical membership PASS 근거가 아니며, 실제 historical source나 delisting source와 구분해서 봅니다.",
                 tone="warning",
             )
+            lifecycle_tab_default = {
+                "collect_sec_form25_delistings": "SEC Form 25",
+                "collect_symbol_directory_snapshots": "Nasdaq 현재 상장",
+                "collect_sec_company_ticker_crosscheck": "SEC CIK 교차확인",
+                "collect_computed_snapshot_lifecycle": "반복 관찰 요약",
+            }.get(focused_action)
             form25_tab, symdir_tab, sec_cik_tab, computed_tab = st.tabs(
-                ["SEC Form 25", "Nasdaq 현재 상장", "SEC CIK 교차확인", "반복 관찰 요약"]
+                ["SEC Form 25", "Nasdaq 현재 상장", "SEC CIK 교차확인", "반복 관찰 요약"],
+                default=lifecycle_tab_default,
+                key="data_operations_lifecycle_tabs",
             )
 
             with form25_tab:
@@ -1747,14 +1830,21 @@ def render_operational_section() -> Any:
     return current_progress_callback
 
 
-def render_manual_section() -> Any:
+def render_manual_section(*, focused_action: str | None = None) -> Any:
     _bind_page_globals()
     current_progress_callback = None
+
+    def expand_for(action: str) -> bool:
+        return focused_action == action
+
     st.info(
         "수동 복구 / 진단: 특정 심볼 재수집, 저수준 파이프라인 확인, PIT inspection 같은 보조 작업입니다. "
         "정기 운영보다 느리거나 실험적인 작업은 이곳에서 필요한 범위만 좁혀 실행합니다."
     )
-    with st.expander("가격 이력 수동 수집", expanded=False):
+    with st.expander(
+        "가격 이력 수동 수집",
+        expanded=expand_for("collect_ohlcv"),
+    ):
         _render_job_brief("collect_ohlcv")
         st.caption(
             "`Symbols` 입력을 사용합니다. Factors 계산 전에 가격 row를 좁은 범위로 보강할 때 적합합니다. "
@@ -1848,7 +1938,10 @@ def render_manual_section() -> Any:
             )
         _render_inline_last_completed_result("collect_ohlcv")
 
-    with st.expander("자산 프로필 수동 수집", expanded=False):
+    with st.expander(
+        "자산 프로필 수동 수집",
+        expanded=expand_for("collect_asset_profiles"),
+    ):
         _render_job_brief("collect_asset_profiles")
         st.caption(
             "`Symbols` 입력은 사용하지 않습니다. 선택한 `Asset Profile Kinds`와 MySQL의 "
@@ -1887,7 +1980,10 @@ def render_manual_section() -> Any:
             )
         _render_inline_last_completed_result("collect_asset_profiles")
 
-    with st.expander("상세 재무제표 수동 수집", expanded=False):
+    with st.expander(
+        "상세 재무제표 수동 수집",
+        expanded=expand_for("collect_financial_statements"),
+    ):
         _render_job_brief("collect_financial_statements")
         st.caption(
             "`Symbols` 입력을 사용합니다. normalized fundamentals보다 느리고, issuer별 실패가 있으면 partial success가 될 수 있습니다."
@@ -1970,7 +2066,10 @@ def render_manual_section() -> Any:
             )
         _render_inline_last_completed_result("collect_financial_statements")
 
-    with st.expander("재무제표 shadow 재구성", expanded=False):
+    with st.expander(
+        "재무제표 shadow 재구성",
+        expanded=expand_for("rebuild_statement_shadow"),
+    ):
         _render_job_brief("rebuild_statement_shadow")
         st.caption(
             "`Statement Shadow Coverage Preview`가 `raw_statement_present_but_shadow_missing`라고 표시할 때 사용합니다. "
@@ -2028,7 +2127,10 @@ def render_manual_section() -> Any:
             )
         _render_inline_last_completed_result("rebuild_statement_shadow")
 
-    with st.expander("가격 stale 원인 진단", expanded=False):
+    with st.expander(
+        "가격 stale 원인 진단",
+        expanded=expand_for("diagnose_price_stale"),
+    ):
         _render_price_stale_diagnosis_card()
     if _is_running_action("diagnose_price_stale"):
         current_progress_callback = _build_progress_callback(
@@ -2036,7 +2138,10 @@ def render_manual_section() -> Any:
             label="Price Stale Diagnosis",
         )
 
-    with st.expander("재무제표 universe coverage QA", expanded=False):
+    with st.expander(
+        "재무제표 universe coverage QA",
+        expanded=expand_for("diagnose_statement_universe_coverage"),
+    ):
         _render_statement_universe_coverage_qa_card()
     if _is_running_action("diagnose_statement_universe_coverage"):
         current_progress_callback = _build_progress_callback(
@@ -2044,7 +2149,10 @@ def render_manual_section() -> Any:
             label="Statement Universe Coverage QA",
         )
 
-    with st.expander("재무제표 coverage 원인 진단", expanded=False):
+    with st.expander(
+        "재무제표 coverage 원인 진단",
+        expanded=expand_for("diagnose_statement_coverage"),
+    ):
         _render_statement_coverage_diagnosis_card()
     if _is_running_action("diagnose_statement_coverage"):
         current_progress_callback = _build_progress_callback(
@@ -2052,7 +2160,10 @@ def render_manual_section() -> Any:
             label="Statement Coverage Diagnosis",
         )
 
-    with st.expander("재무제표 PIT inspection", expanded=False):
+    with st.expander(
+        "재무제표 PIT inspection",
+        expanded=expand_for("inspect_statement_pit"),
+    ):
         _render_statement_pit_inspection_card()
     if _is_running_action("inspect_statement_pit"):
         current_progress_callback = _build_progress_callback(
