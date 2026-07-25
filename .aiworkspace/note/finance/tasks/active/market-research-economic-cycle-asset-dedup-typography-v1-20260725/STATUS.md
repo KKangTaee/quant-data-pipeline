@@ -1,20 +1,26 @@
 # Status
 
-Status: Implementation Plan Ready
+Status: Complete
 Last Updated: 2026-07-25
 
 ## Roadmap
 
-- [ ] 1차 금·달러 의미 분리
-- [ ] 2차 typography, Browser QA, closeout
+- [x] 1차 금·달러 의미 분리
+- [x] 2차 typography, Browser QA, closeout
 
-## Current Evidence
+## Completion Evidence
 
-- actual 금·달러 `narrative` 앞부분과 `economic_state.summary`가 동일하다.
-- 금·달러 `current_interpretation`이 없어 React가 narrative를 다시 표시한다.
-- 자산별 영역의 주요 본문·수치·배지 font-size는 `8px~14px`에 분산돼 있다.
+- 금·달러 summary/current interpretation은 측정 경로·실제 가격·자료 한계만 설명하고
+  common `economic_state` 문장을 포함하지 않는다.
+- React는 explicit summary/current interpretation을 우선하고 legacy narrative fallback을
+  유지한다.
+- `.market-implications` 안의 표시 글자를 모두 `+1px` 조정했다.
+- focused Python regression `72 passed`, React production build, py_compile,
+  `git diff --check`를 통과했다.
+- actual desktop/420px Browser QA에서 공통 배경 문구는 금·달러 카드당 각각 1회,
+  가로 overflow와 console warning/error는 0건이었다.
 
-## Next
+## Boundaries Preserved
 
-`superpowers:subagent-driven-development` 또는 `superpowers:executing-plans` 중 실행
-방식을 선택하고 1차 금·달러 의미 분리부터 구현한다.
+- 모델·가격·경로 산식, DB, provider 수집은 변경하지 않았다.
+- 다른 Economic Cycle section typography와 layout spacing은 변경하지 않았다.

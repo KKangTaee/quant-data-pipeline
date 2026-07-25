@@ -10,6 +10,18 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-25 - 금·달러 공통 경제 배경은 한 번만 표시한다
+
+- User request: 자산별 확인 포인트의 금·달러 현재 수준과 공통 경제 배경이 중복되는지
+  확인하고 전체 글자를 1포인트 키우도록 요청함.
+- Interpreted goal: 공통 경기 상태와 자산별 관측을 한 카드에서 반복 없이 읽고 작은
+  표시 글자의 가독성을 높인다.
+- Analysis result: Gold/Dollar narrative가 common summary를 포함하고 React가 이를 상단과
+  현재 해석에 다시 써 3중 반복됐다. 공통 블록은 유지하고 explicit asset summary/current
+  interpretation을 분리하며 `.market-implications`만 `+1px` 조정했다.
+- Follow-up: focused 72개, React build, desktop/420px actual QA에서 중복 1회·overflow
+  0·console warning/error 0을 확인해 전체 `2/2차`를 완료했다.
+
 ### 2026-07-25 - 경제 사이클 최신화는 필요할 때만 명시 클릭으로 실행한다
 
 - User request: background 기능은 만들지 않고 경제 사이클 화면에서 최신화 필요 여부를 알려준 뒤 버튼으로 수동 수집·계산하도록 요청함.

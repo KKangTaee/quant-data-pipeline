@@ -1,6 +1,6 @@
 # Economic Cycle Asset Dedup Typography V1 Plan
 
-Status: Implementation Plan Ready
+Status: Complete
 Last Updated: 2026-07-25
 
 ## 이걸 하는 이유?
@@ -40,20 +40,22 @@ Last Updated: 2026-07-25
 
 ### 1차 — 의미 분리
 
-- [ ] 금·달러 summary에서 common economic state 제거
-- [ ] 금·달러 current interpretation 명시
-- [ ] legacy fallback 유지
+- [x] 금·달러 summary에서 common economic state 제거
+- [x] 금·달러 current interpretation 명시
+- [x] legacy fallback 유지
 
 ### 2차 — typography와 QA
 
-- [ ] 자산별 section 전체 글자 `+1px`
-- [ ] focused Python/React/build 검증
-- [ ] desktop/420px Browser QA와 docs closeout
+- [x] 자산별 section 전체 글자 `+1px`
+- [x] focused Python/React/build 검증
+- [x] desktop/420px Browser QA와 docs closeout
 
 ## Current Step
 
-전체 roadmap `0/2차`다. written design 검토 승인을 반영했고 세 task의 test-first
-implementation plan을 작성했다. 실행 방식 선택 후 1차 의미 분리부터 시작한다.
+전체 roadmap `2/2차`를 완료했다. 금·달러의 공통 경제 배경은 전용 블록 한 곳에만
+남기고 자산별 summary/current interpretation을 분리했다. 기존
+`.market-implications` scope 안의 표시 글자를 `+1px` 조정하고 desktop/420px actual
+Browser QA까지 닫았다.
 
 ## Canonical Design
 

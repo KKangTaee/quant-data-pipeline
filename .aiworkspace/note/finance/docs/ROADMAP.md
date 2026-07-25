@@ -1,11 +1,23 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-24
+Last Verified: 2026-07-25
 
 ## Current State After Master Merge
 
 현재 active phase는 없다.
+
+Economic Cycle Asset Dedup Typography V1은 전체 `2/2차` 구현과 closeout을 완료했다.
+
+- 의미 분리: 금·달러의 공통 `economic_state`는 전용 블록에서 한 번만 표시하고, 상단
+  summary와 현재 해석은 측정 경로·실제 가격·자료 한계만 설명한다. legacy narrative
+  fallback은 유지한다.
+- 표현: 기존 `.market-implications` scope 안의 모든 표시 글자를 `+1px` 조정하되
+  layout spacing, grid, line-height와 다른 Economic Cycle section은 변경하지 않았다.
+- QA: focused Python `72 passed`, React production build와 actual desktop/420px에서
+  공통 문구 카드당 1회, overflow 0, console warning/error 0을 확인했다.
+- 상세:
+  `tasks/active/market-research-economic-cycle-asset-dedup-typography-v1-20260725/STATUS.md`.
 
 Market Research S&P 500 Manual Price Refresh V1은 전체 `3/3차` 구현과 closeout을 완료했다.
 

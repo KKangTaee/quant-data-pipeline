@@ -332,7 +332,7 @@ git commit -m "기능: 경제사이클 금·달러 해석 중복 제거"
 
 **Interfaces:**
 - Consumes: Task 1의 `MarketImplication.summary`, `CommodityAsset.summary`, `current_interpretation`, `narrative`, `economic_state`
-- Produces: `.implication-section` scoped UI, summary-first display, legacy narrative fallback
+- Produces: existing `.market-implications` scoped UI, summary-first display, legacy narrative fallback
 - Preserves: 기존 `EconomicStateBlock`, `AssetObservationBody`, responsive grid와 component event contract
 
 - [ ] **Step 1: React 의미 우선순위와 typography source contract 테스트를 작성한다**
@@ -349,7 +349,7 @@ def test_economic_cycle_asset_section_prefers_explicit_copy_and_scopes_larger_ty
         "app/web/streamlit_components/economic_cycle_workbench/src/style.css"
     ).read_text()
 
-    assert 'className="implication-section"' in component
+    assert 'className="market-implications"' in component
     assert "item.summary || item.narrative || item.context" in component
     assert "asset.summary || asset.narrative" in component
     assert (
@@ -358,14 +358,14 @@ def test_economic_cycle_asset_section_prefers_explicit_copy_and_scopes_larger_ty
         ": [item.narrative || item.summary || item.context]"
     ) in component
     for rule in (
-        ".implication-section .section-heading > div > span { font-size: 11px; }",
-        ".implication-section .section-heading h3 { font-size: 19px; }",
-        ".implication-section .section-heading > small { font-size: 11px; }",
-        ".implication-section .implication-summary { font-size: 12px; }",
-        ".implication-section .economic-state-block p { font-size: 11px; }",
-        ".implication-section .observation-block li { font-size: 10px; }",
-        ".implication-section .series-primary-metrics > * { font-size: 9px; }",
-        ".implication-section .price-return-grid strong { font-size: 11px; }",
+        ".market-implications .section-heading > div > span { font-size: 11px; }",
+        ".market-implications .section-heading h3 { font-size: 19px; }",
+        ".market-implications .section-heading > small { font-size: 11px; }",
+        ".market-implications .implication-summary { font-size: 12px; }",
+        ".market-implications .economic-state-block p { font-size: 11px; }",
+        ".market-implications .observation-block li { font-size: 10px; }",
+        ".market-implications .series-primary-metrics > * { font-size: 9px; }",
+        ".market-implications .price-return-grid strong { font-size: 11px; }",
     ):
         assert rule in style
 ```
@@ -380,7 +380,7 @@ PYTHONPATH=. uv run --with pytest pytest -q \
   -k 'asset_section_prefers_explicit_copy'
 ```
 
-Expected: FAIL with missing `implication-section` or scoped font rule.
+Expected: FAIL with missing scoped font rule or explicit-copy priority.
 
 - [ ] **Step 3: React가 명시 summary/current interpretation을 우선하게 한다**
 
@@ -407,10 +407,10 @@ const interpretation = item.current_interpretation?.length
 <p>{asset.summary || asset.narrative}</p>
 ```
 
-자산별 section에 scope class를 추가한다.
+자산별 section의 기존 전용 scope class를 유지한다.
 
 ```tsx
-<section className="implication-section" aria-labelledby="implication-title">
+<section className="market-implications">
 ```
 
 legacy payload가 summary/current interpretation을 제공하지 않아도 기존 narrative fallback이
@@ -418,43 +418,43 @@ legacy payload가 summary/current interpretation을 제공하지 않아도 기�
 
 - [ ] **Step 4: 자산별 section의 모든 표시 글자에 `+1px` scoped override를 추가한다**
 
-`style.css`의 asset block 뒤에 `.implication-section` scope로 다음 값을 추가한다.
+`style.css`의 asset block 뒤에 기존 `.market-implications` scope로 다음 값을 추가한다.
 
 ```css
-.implication-section .section-heading > div > span { font-size: 11px; }
-.implication-section .section-heading h3 { font-size: 19px; }
-.implication-section .section-heading > small { font-size: 11px; }
-.implication-section .implication-card > header span { font-size: 11px; }
-.implication-section .implication-card > header strong { font-size: 15px; }
-.implication-section .implication-overall > span { font-size: 9px !important; }
-.implication-section .implication-summary { font-size: 12px; }
-.implication-section .coverage-status { font-size: 10px; }
-.implication-section .economic-state-block h5,
-.implication-section .pathway-group h5,
-.implication-section .price-pathway h5,
-.implication-section .unmeasured-pathways h5,
-.implication-section .unconnected-pathway-note h5,
-.implication-section .observation-block > h5 { font-size: 11px; }
-.implication-section .economic-state-block p { font-size: 11px; }
-.implication-section .economic-observations span { font-size: 9px; }
-.implication-section .movement-unit-note { font-size: 9px; }
-.implication-section .observation-block li { font-size: 10px; }
-.implication-section .movement-item > header { font-size: 10px; }
-.implication-section .observed-pathways-block .pathway-item > p { font-size: 10px; }
-.implication-section .commodity-asset-card > header strong { font-size: 13px; }
-.implication-section .commodity-asset-card > p { font-size: 10px; }
-.implication-section .pathway-item > header strong { font-size: 12px; }
-.implication-section .pathway-item > header span { font-size: 9px; }
-.implication-section .pathway-empty { font-size: 10px; }
-.implication-section .series-primary-metrics > * { font-size: 9px; }
-.implication-section .pathway-hover-details { font-size: 9px; }
-.implication-section .pathway-details { font-size: 9px; }
-.implication-section .price-status { font-size: 9px; }
-.implication-section .price-return-grid span { font-size: 9px; }
-.implication-section .price-return-grid strong { font-size: 11px; }
-.implication-section .implication-basis { font-size: 9px; }
-.implication-section .unmeasured-pathways span { font-size: 9px; }
-.implication-section .unconnected-pathway-note p { font-size: 11px; }
+.market-implications .section-heading > div > span { font-size: 11px; }
+.market-implications .section-heading h3 { font-size: 19px; }
+.market-implications .section-heading > small { font-size: 11px; }
+.market-implications .implication-card > header span { font-size: 11px; }
+.market-implications .implication-card > header strong { font-size: 15px; }
+.market-implications .implication-overall > span { font-size: 9px !important; }
+.market-implications .implication-summary { font-size: 12px; }
+.market-implications .coverage-status { font-size: 10px; }
+.market-implications .economic-state-block h5,
+.market-implications .pathway-group h5,
+.market-implications .price-pathway h5,
+.market-implications .unmeasured-pathways h5,
+.market-implications .unconnected-pathway-note h5,
+.market-implications .observation-block > h5 { font-size: 11px; }
+.market-implications .economic-state-block p { font-size: 11px; }
+.market-implications .economic-observations span { font-size: 9px; }
+.market-implications .movement-unit-note { font-size: 9px; }
+.market-implications .observation-block li { font-size: 10px; }
+.market-implications .movement-item > header { font-size: 10px; }
+.market-implications .observed-pathways-block .pathway-item > p { font-size: 10px; }
+.market-implications .commodity-asset-card > header strong { font-size: 13px; }
+.market-implications .commodity-asset-card > p { font-size: 10px; }
+.market-implications .pathway-item > header strong { font-size: 12px; }
+.market-implications .pathway-item > header span { font-size: 9px; }
+.market-implications .pathway-empty { font-size: 10px; }
+.market-implications .series-primary-metrics > * { font-size: 9px; }
+.market-implications .pathway-hover-details { font-size: 9px; }
+.market-implications .pathway-details { font-size: 9px; }
+.market-implications .price-status { font-size: 9px; }
+.market-implications .price-return-grid span { font-size: 9px; }
+.market-implications .price-return-grid strong { font-size: 11px; }
+.market-implications .implication-basis { font-size: 9px; }
+.market-implications .unmeasured-pathways span { font-size: 9px; }
+.market-implications .unconnected-pathway-note p { font-size: 11px; }
 ```
 
 기존 base rule, padding, gap, grid, line-height는 변경하지 않는다. mobile의

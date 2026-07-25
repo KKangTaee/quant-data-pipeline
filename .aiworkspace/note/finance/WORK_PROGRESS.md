@@ -10,6 +10,17 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-25 - 경제 사이클 금·달러 중복과 자산 카드 가독성 정리 완료
+
+- 금·달러 공통 경제 배경의 3중 반복을 전용 블록 1회로 줄이고 상단 summary와 현재
+  해석을 자산별 측정 경로·실제 가격·자료 한계 문구로 분리했다.
+- 자산별 확인 포인트의 표시 글자를 기존 `.market-implications` scope에서 `+1px`
+  조정했으며 layout과 다른 Economic Cycle section은 유지했다.
+- focused `72 passed`, React build, desktop/420px actual Browser QA에서 카드별 공통
+  문구 1회, overflow 0, console warning/error 0을 확인했다.
+- 전체 roadmap `2/2차` 완료. 상세:
+  `tasks/active/market-research-economic-cycle-asset-dedup-typography-v1-20260725/`.
+
 ### 2026-07-25 - 경제 사이클 수동 최신화 완료
 
 - 경제 사이클 진입은 DB-only로 저장 cutoff와 최신 계산 가능 평일을 비교하고, 뒤처졌을 때만 `최신 데이터로 다시 계산`을 표시한다.
