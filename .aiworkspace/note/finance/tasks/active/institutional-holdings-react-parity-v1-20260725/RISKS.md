@@ -22,6 +22,10 @@ Only the studio shell/navigation was extracted. Mature allocation, holdings, cha
 
 Desktop and mobile use one destination list and active view. Drawer closes on destination and server-event actions; Escape returns focus to the menu trigger.
 
+### Manager Grab Scrolling
+
+The 6px threshold separates click from drag, the trailing click after a drag is consumed once, and reruns preserve vertical `scrollTop`. Actual mouse drag, wheel scrolling and normal manager click were verified independently. Touch retains native `pan-y` behavior instead of using the custom mouse drag path.
+
 ### Existing Dirty Worktree
 
 Registry, saved portfolio, run history and many generated QA artifacts already exist in the worktree. They must not be staged or modified by this task.

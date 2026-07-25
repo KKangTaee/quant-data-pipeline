@@ -17,12 +17,15 @@ Started: 2026-07-25
 - 2026-07-25: Preserved URL/local ZIP/User-Agent refresh inputs through a new explicit `collect_sec_13f_dataset` event. Streamlit remains the route, DB read-model, server event and unavailable fallback adapter.
 - 2026-07-25: Actual QA passed for Berkshire, Bridgewater manager search, AAPL detail/chart, unresolved Bridgewater CUSIP guardrail, 1280/760/420 layout and mobile drawer. No browser errors or warnings were recorded.
 - 2026-07-25: Mobile rerun QA found and fixed an open-drawer persistence issue by closing the drawer before manager search/selection and dataset-refresh server events.
+- 2026-07-25: Follow-up polish replaced the rounded destination active card / left inset bar with a flat editorial text state and 28px horizontal marker.
+- 2026-07-25: Expanded the manager list from 250px to 360px and added scrollbar-free mouse grab scrolling while retaining wheel, touch, keyboard and normal click behavior.
+- 2026-07-25: Follow-up actual QA confirmed mouse drag `scrollTop 0 -> 100` without changing the selected manager, wheel `0 -> 180`, normal Third Point selection, 760/420 drawer behavior and zero console warnings/errors.
 
 ## Current Step
 
 전체 roadmap `4/4차` complete.
 
-`C · Modular Research Studio` 구현, automated verification, actual responsive interaction QA와 documentation closeout까지 완료했다.
+`C · Modular Research Studio` 구현과 rail interaction polish, automated verification, actual responsive interaction QA와 documentation closeout까지 완료했다.
 
 ## Next Action
 

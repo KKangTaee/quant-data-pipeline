@@ -37,4 +37,7 @@
 - Physical split stayed focused: shell/navigation moved to one presentation component and all domain-specific portfolio/security rendering stayed in the existing workbench.
 - Refresh fields use the versioned workbench payload and explicit `collect_sec_13f_dataset` event; no new API or DB schema was added.
 - Drawer closes before server-rerun events and supports Escape with focus return.
+- Destination selection now uses a flat text hierarchy and short horizontal marker instead of a rounded active card or left inset bar.
+- The manager region is a 360px keyboard-focusable vertical viewport with hidden scrollbar, native wheel/touch scrolling and mouse pointer capture for grab scrolling. A 6px threshold suppresses only the click that follows a real drag.
+- The vertical manager position is preserved through manager reruns with `scrollTop`; the earlier horizontal `scrollLeft` preservation no longer matches the studio rail and was corrected.
 - Reference Center deep-link integration was not added because the existing caveats and SEC source link cover the approved scope; this is not a regression from the prior page.

@@ -41,6 +41,7 @@ Workspace > Ingestion
 
 - `schema_version`은 `institutional_portfolios_workbench_v2`다.
 - canonical destination은 `포트폴리오 맥락 / 전체 보유 / 종목 상세 / 기관 보유 랭킹` 네 개이며 desktop rail과 980px 이하 drawer가 같은 `StudioView` state를 사용한다.
+- 선택 destination은 rounded card / left inset bar 없이 번호·제목 대비와 짧은 수평 marker로 표시한다. manager 목록은 360px 세로 viewport에서 scrollbar를 숨기고 mouse grab, wheel, touch, keyboard 탐색을 함께 지원하며 실제 drag 이후 click은 한 번 차단한다.
 - 정상 경로에서 Streamlit title / contextual help / refresh expander / detailed-table fallback은 렌더링하지 않는다. React component가 없을 때만 legacy fallback을 사용한다.
 - 첫 화면은 선택 기관의 concentration, largest mapped sector, ticker mapping coverage, previous-quarter readiness를 먼저 요약한다.
 - `coverage`는 holding count mapping, mapped reported-value weight, performance-covered weight를 분리한다.

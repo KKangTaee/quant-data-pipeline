@@ -35,3 +35,18 @@
 - `git diff --check`: passed.
 - Browser actual DB QA: Berkshire desktop, Bridgewater manager search, AAPL selected-security chart, Bridgewater unresolved CUSIP guardrail, 1280/760/420 rendering and mobile drawer passed; console error/warning 0.
 - QA screenshot: `institutional-holdings-research-studio-desktop-qa.png` (generated artifact, not staged).
+
+## 2026-07-25 Rail Interaction Polish
+
+- TDD RED: focused Vitest run failed on the missing `managerDragScrollTop` and `managerDragExceededThreshold` exports.
+- TDD GREEN: `npm test -- --run src/workbenchState.test.ts` passed 9 tests after the pure drag helpers were added.
+- `npm test -- --run`: 9 passed.
+- `npm run typecheck`: passed.
+- `npm run build`: passed and rebuilt the tracked component bundle.
+- `.venv/bin/python -m unittest tests.test_institutional_portfolios`: 58 passed.
+- `.venv/bin/python -m py_compile app/services/institutional_portfolios.py app/web/institutional_portfolios.py`: passed.
+- Actual 1280px style metrics: active destination `border-radius 0`, transparent background/border, no box shadow, horizontal marker `28 × 2px`; manager viewport `360px`, scrollbar hidden.
+- Actual mouse drag moved manager `scrollTop 0 -> 100` without changing Berkshire; targeted wheel scroll moved `0 -> 180`; a normal click changed the manager to Third Point.
+- 760px and 420px drawer opened/closed with the same 360px manager viewport and `touch-action: pan-y`; 420px body was `361/361` with no horizontal overflow.
+- Final browser console warning/error count: 0.
+- QA screenshot: `institutional-holdings-rail-drag-polish-qa.png` (generated artifact, not staged).
