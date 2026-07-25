@@ -16,14 +16,6 @@ body {
   padding: 16px;
 }
 
-.events-workbench__hero {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.38fr);
-}
-
-.events-workbench__hero-copy,
-.events-workbench__next-card,
 .events-workbench__rail,
 .events-workbench__trust,
 .events-workbench__calendar,
@@ -35,14 +27,6 @@ body {
   padding: 14px;
 }
 
-.events-workbench__hero-copy {
-  border-top: 4px solid #0f766e;
-}
-
-.events-workbench__next-card {
-  border-top: 4px solid #d97706;
-}
-
 .events-workbench__eyebrow {
   color: #64748b;
   display: block;
@@ -52,17 +36,9 @@ body {
   text-transform: uppercase;
 }
 
-.events-workbench h2,
 .events-workbench h3,
 .events-workbench p {
   margin: 0;
-}
-
-.events-workbench h2 {
-  font-size: 1.35rem;
-  font-weight: 860;
-  line-height: 1.2;
-  margin-top: 9px;
 }
 
 .events-workbench h3 {
@@ -76,14 +52,6 @@ body {
   font-size: 0.9rem;
   font-weight: 620;
   line-height: 1.45;
-  margin-top: 8px;
-}
-
-.events-workbench__next-card strong {
-  display: block;
-  font-size: 1.2rem;
-  font-weight: 850;
-  line-height: 1.2;
   margin-top: 8px;
 }
 
@@ -1065,7 +1033,6 @@ body {
     padding: 12px;
   }
 
-  .events-workbench__hero,
   .events-workbench__command,
   .events-workbench__filterbar,
   .events-workbench__trust {

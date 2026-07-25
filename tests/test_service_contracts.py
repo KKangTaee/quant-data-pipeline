@@ -8535,9 +8535,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('payload.schema_version === "sentiment_react_workbench_v2"', react_source)
         self.assertIn("payload.command.actions.map", all_source)
         self.assertIn("Streamlit.setComponentValue", react_source)
-        self.assertIn("sentiment-workbench__command-row", all_source)
-        self.assertIn("sentiment-workbench__actions", all_source)
-        self.assertIn(".sentiment-workbench__command", react_style)
+        self.assertIn("ResearchHeader", all_source)
+        self.assertIn("actionFeedback=", all_source)
+        self.assertNotIn(".sentiment-workbench__hero", react_style)
         self.assertIn("@media (max-width: 760px)", react_style)
 
     def test_events_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
@@ -8581,7 +8581,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("Streamlit.setComponentValue", react_source)
         self.assertIn("Streamlit.setFrameHeight", react_source)
         self.assertIn("events-workbench__fallback-note", react_source)
-        self.assertIn(".events-workbench__hero", react_style)
+        self.assertTrue((component_root / "src" / "EventsHero.tsx").exists())
+        self.assertIn("<EventsHero", react_source)
+        self.assertNotIn(".events-workbench__hero", react_style)
         self.assertIn("@media (max-width: 760px)", react_style)
 
     def test_events_react_refresh_actions_are_python_dispatched(self) -> None:
@@ -8754,8 +8756,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_sentiment_react_redesign_css_uses_balanced_surfaces_and_mobile_stack(self) -> None:
         style = Path("app/web/streamlit_components/sentiment_workbench/src/style.css").read_text(encoding="utf-8")
 
-        self.assertIn(".sentiment-workbench__hero", style)
-        self.assertIn("linear-gradient", style)
+        self.assertNotIn(".sentiment-workbench__hero", style)
         self.assertIn(".sentiment-workbench__source-grid", style)
         self.assertIn(".sentiment-workbench__source-box", style)
         source_box_rule = style[style.index(".sentiment-workbench__source-box {") :]
@@ -8780,14 +8781,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
             path.read_text(encoding="utf-8") for path in (component_root / "src").glob("*.tsx")
         )
 
-        self.assertIn("sentiment-workbench__hero", all_source)
+        self.assertIn("ResearchHeader", all_source)
         self.assertIn("payload.summary.phase_label", all_source)
-        self.assertIn("sentiment-workbench__headline", all_source)
+        self.assertIn('titleId="sentiment-hero-title"', all_source)
         self.assertIn("payload.summary.headline", all_source)
-        self.assertIn("sentiment-workbench__summary-copy", all_source)
+        self.assertIn("summary={payload.cross_read.meaning}", all_source)
         self.assertIn("payload.axes.market_behavior", all_source)
         self.assertIn("payload.axes.investor_survey", all_source)
-        self.assertIn("sentiment-workbench__hero-meta", all_source)
+        self.assertIn('id: "cnn-date"', all_source)
+        self.assertIn('id: "aaii-date"', all_source)
         self.assertIn("sentiment-workbench__source-grid", all_source)
         self.assertIn("sentiment-workbench__source-box", all_source)
         self.assertIn("sentiment-workbench__source-empty", all_source)
@@ -8808,7 +8810,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
 
         self.assertIn("시장 행동", all_source)
-        self.assertIn("개인투자자 설문", all_source)
+        self.assertIn("AAII 투자자 설문", all_source)
         self.assertIn("두 축의 현재 근거", all_source)
         self.assertIn("다음 확인 조건", all_source)
         self.assertNotIn('className="sentiment-workbench__cross-read"', all_source)
@@ -8844,8 +8846,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("CrossRead", all_source)
         self.assertIn("payload.cross_read.status", all_source)
         self.assertIn("payload.cross_read.meaning", all_source)
-        self.assertIn("sentiment-workbench__hero-side", all_source)
-        self.assertIn("sentiment-workbench__hero-meta", all_source)
+        self.assertIn("ResearchHeaderFact", all_source)
+        self.assertIn("showIndicator: true", all_source)
         self.assertIn("sentiment-workbench__source-box", all_source)
         self.assertIn("axis.range?.sample_count", all_source)
         self.assertIn("axis.range?.position_label", all_source)

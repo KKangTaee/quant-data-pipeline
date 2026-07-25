@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Streamlit, withStreamlitConnection, ComponentProps } from "streamlit-component-lib";
+import EventsHero from "./EventsHero";
 import "./style.css";
 
 type EventBadge = {
@@ -667,18 +668,22 @@ function EventsWorkbench({ args }: ComponentProps) {
 
   return (
     <section className="events-workbench">
-      <header className="events-workbench__hero">
-        <div className="events-workbench__hero-copy">
-          <span className="events-workbench__eyebrow">시장 일정</span>
-          <h2>{brief.title || "다가오는 시장 이벤트 브리프"}</h2>
-          <p>{brief.boundary_note}</p>
-        </div>
-        <div className="events-workbench__next-card">
-          <span className="events-workbench__eyebrow">다음 이벤트</span>
-          <strong>{brief.next_event ? brief.next_event.date : "예정 없음"}</strong>
-          <p>{brief.next_event ? brief.next_event.title : "현재 기간에 확인할 다음 일정이 없습니다."}</p>
-        </div>
-      </header>
+      <EventsHero
+        boundaryNote={brief.boundary_note || ""}
+        counts={{
+          next30d: counts.next_30d,
+          staleEstimate: freshness.stale_estimate_count,
+          thisWeek: counts.this_week,
+          today: counts.today,
+        }}
+        nextEvent={brief.next_event
+          ? {
+              date: brief.next_event.date,
+              title: brief.next_event.title,
+            }
+          : null}
+        title={brief.title || ""}
+      />
 
       <div className="events-workbench__counts">
         <CountTile label="오늘" value={counts.today} />
