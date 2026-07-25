@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-25 - 경제 사이클 최신화는 필요할 때만 명시 클릭으로 실행한다
+
+- User request: background 기능은 만들지 않고 경제 사이클 화면에서 최신화 필요 여부를 알려준 뒤 버튼으로 수동 수집·계산하도록 요청함.
+- Interpreted goal: 브라우저 진입은 read-only로 유지하면서 stale한 월중 결과를 사용자가 한 번의 행동으로 최신 cutoff까지 복구한다.
+- Analysis result: weekday target freshness와 target snapshot DB postcondition을 두고 기존 17-series combined refresh를 재사용한다. 실패 시 last-good를 유지하고 READY에서는 action을 숨긴다.
+- Follow-up: actual 2026-07-24 `LIMITED` row, 월말 122행 불변, target business key 1행과 desktop/420px QA를 확인해 전체 `3/3차`를 완료했다.
+
 ### 2026-07-24 - S&P 500 가격 최신화는 화면의 명시적 action으로 한정한다
 
 - User request: background 자동화는 만들지 않고 S&P 500 화면에서 최신 장과 비교해 필요할 때만 수동 수집·최신화하도록 요청함.

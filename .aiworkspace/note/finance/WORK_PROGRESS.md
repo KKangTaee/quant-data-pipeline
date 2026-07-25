@@ -10,6 +10,13 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-25 - 경제 사이클 수동 최신화 완료
+
+- 경제 사이클 진입은 DB-only로 저장 cutoff와 최신 계산 가능 평일을 비교하고, 뒤처졌을 때만 `최신 데이터로 다시 계산`을 표시한다.
+- 명시 클릭은 기존 17-series overlap 수집·nowcast를 실행하며 target DB postcondition 통과 뒤에만 캐시를 비운다. background scheduler와 진단 panel은 추가하지 않았다.
+- actual QA에서 2026-07-21 `LIMITED`를 2026-07-24로 갱신했고 월말 122행 checksum 불변, target business key 1행, desktop/420px 흐름을 확인했다.
+- 전체 roadmap `3/3차` 완료. 상세는 `tasks/active/market-research-economic-cycle-manual-refresh-v1-20260725/`를 본다.
+
 ### 2026-07-24 - S&P 500 수동 가격 최신화 완료
 
 - S&P 500 진입은 DB-only로 가격 기준일을 최신 완료 NYSE 장과 비교하고, 뒤처졌을 때만 `최신 데이터로 다시 계산`을 표시한다.

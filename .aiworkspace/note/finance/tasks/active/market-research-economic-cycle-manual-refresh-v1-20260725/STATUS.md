@@ -1,29 +1,30 @@
 # Status
 
-Status: Implementation Plan Ready
+Status: Complete
 Last Updated: 2026-07-25
 
 ## Roadmap
 
-- [ ] 1차 local secret and runtime boundary
-- [ ] 2차 freshness and manual action
-- [ ] 3차 actual refresh, QA, and closeout
+- [x] 1차 local secret and runtime boundary
+- [x] 2차 freshness and manual action
+- [x] 3차 actual refresh, QA, and closeout
 
 ## Current Step
 
-written design spec 승인을 반영했고 7개 task의 test-first implementation plan을
-작성했다. 실행 방식 선택 후 1차를 시작한다.
+전체 roadmap `3/3차`와 implementation plan `7/7 task`를 완료했다.
 
 ## Current Evidence
 
 - persisted monthly current: 2026-06-30, `LIMITED`
-- persisted intramonth: 2026-07-21, `LIMITED`
-- intramonth source collected at: 2026-07-16
+- persisted intramonth: 2026-07-24, `LIMITED`
+- intramonth source collected at: 2026-07-25 08:22:00
 - 2026-07-25 기준 weekday target: 2026-07-24
-- existing combined refresh runner: `run_economic_cycle_intramonth_refresh`
-- current runtime: `FRED_API_KEY` 미주입
+- actual manual action: `partial_success`, persisted postcondition 통과
+- monthly canonical history: 122행, 실행 전후 checksum 동일
+- target business key: 1행
+- Browser QA: desktop/420px, horizontal overflow와 console warning/error 없음
 
 ## Next
 
-`superpowers:subagent-driven-development` 또는 `superpowers:executing-plans` 중
-실행 방식을 선택하고 1차 local secret/runtime boundary를 구현한다.
+대화에 노출된 credential을 rotation한 뒤 세 worktree local `.env` 값을 교체한다.
+자동화가 필요해지기 전까지 launchd/cron은 등록하지 않는다.

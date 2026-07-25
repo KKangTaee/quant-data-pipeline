@@ -1,6 +1,6 @@
 # Economic Cycle Manual Refresh V1 Plan
 
-Status: Implementation Plan Ready
+Status: Complete
 Last Updated: 2026-07-25
 
 ## 이걸 하는 이유?
@@ -44,27 +44,27 @@ background scheduler 대신 최신화 필요 여부를 직접 확인하고 버�
 
 ### 1차 — Local secret and runtime boundary
 
-- [ ] `.env` shared/tracked Git protection
-- [ ] main-dev/sub-dev/backtest-dev local credential storage
-- [ ] process env precedence를 보존하는 loader 및 tests
+- [x] `.env` shared/tracked Git protection
+- [x] main-dev/sub-dev/backtest-dev local credential storage
+- [x] process env precedence를 보존하는 loader 및 tests
 
 ### 2차 — Freshness and manual action
 
-- [ ] weekday target freshness contract
-- [ ] combined refresh action wrapper와 persisted postcondition
-- [ ] React event/fallback action, cache/rerun behavior
+- [x] weekday target freshness contract
+- [x] combined refresh action wrapper와 persisted postcondition
+- [x] React event/fallback action, cache/rerun behavior
 
 ### 3차 — Actual refresh and closeout
 
-- [ ] real FRED refresh와 monthly history invariant 검증
-- [ ] React build, focused regression, Browser QA
-- [ ] finance durable docs와 root handoff sync
+- [x] real FRED refresh와 monthly history invariant 검증
+- [x] React build, focused regression, Browser QA
+- [x] finance durable docs와 root handoff sync
 
 ## Current Step
 
-전체 roadmap `0/3차`다. written design spec은 승인됐고 test-first implementation
-plan을 작성했다. 실행 방식 선택 후 1차 local secret/runtime boundary부터 시작한다.
-아직 `.env` 저장이나 code/database 변경은 수행하지 않았다.
+전체 roadmap `3/3차`를 완료했다. local secret/runtime boundary, freshness/manual action,
+actual FRED refresh와 문서·Browser QA까지 닫았다. background scheduler와 진단 panel은
+추가하지 않았다.
 
 ## Canonical Design
 

@@ -198,13 +198,20 @@ Latest completed Overview Futures Macro task는 `.aiworkspace/note/finance/tasks
 - 품질 경계: `NO_EDGE`는 정상 결과다. macro/event는 momentum보다 동일 fold에서 증분 가치가 있을 때만 채택하며, UI 진입은 provider를 호출하거나 전망을 재계산하지 않는다. 이 결과는 추천·매매 신호·미래 경로 보장이 아니다.
 - 후속 후보: roll-aware/back-adjusted source 확장과 PIT macro coverage 증가는 별도 데이터 과제다. gate를 실제 결과에 맞춰 완화하지 않는다.
 
-Latest completed Overview / Market Context Economic Cycle task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-intramonth-nowcast-v1-20260721/`다.
+Latest completed Overview / Market Context Economic Cycle task는 `.aiworkspace/note/finance/tasks/active/market-research-economic-cycle-manual-refresh-v1-20260725/`다.
+
+- 목적: background scheduler 없이 화면 진입 시 저장 cutoff와 최신 계산 가능 평일을 비교하고, 뒤처졌을 때만 명시 클릭으로 기존 17-series 수집·nowcast를 실행한다.
+- 완료: 전체 `3/3차`. 세 worktree local `.env` 보호, process-env 우선 loader, freshness read model, persisted target postcondition, React/fallback action, actual DB와 desktop/420px Browser QA를 닫았다.
+- actual 상태: 2026-07-21 `LIMITED` intramonth를 2026-07-24로 갱신했다. 월말 122행 checksum은 불변이고 target business key는 1행이며 최신 상태에서 action은 숨겨진다.
+- 운영 경계: 진입은 DB-only이고 launchd/cron을 등록하지 않는다. weekday target은 미국 공휴일 calendar가 아닌 PIT cutoff이며, 대화에 노출된 credential은 rotation이 권장된다.
+
+Previous completed Overview / Market Context Economic Cycle task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-intramonth-nowcast-v1-20260721/`다.
 
 - 목적: 최신 화면 날짜가 2026-07-21인데 경제사이클이 2026-06-30 월말에서 멈춰 보이던 문제를, 월말 이력을 훼손하지 않는 별도 월중 잠정 계산으로 해소한다.
 - 완료: 전체 `4/4차`. 17-series overlap 증분 수집, 평일 자동 갱신, 누락 직전 월말 append-only rollover, 날짜별 `intramonth_nowcast` 저장, exact 월말 baseline 비교 read model과 React 월말→월중 흐름을 연결했다.
 - actual 상태: 2026-06-30 월말 회복 46.7%와 2026-07-21 월중 회복 52.7%를 분리해 표시한다. 월말 `current/historical_replay` 122행의 SHA-256은 실행 전후 동일했고 같은 날 재실행은 월중 business key 1행만 유지했다.
 - 품질 경계: 월말과 월중 모두 모델 추정이며 현재 LIMITED 결과는 잠정이다. 월중 값은 monthly ribbon/history에 섞지 않고, 보간하지 않으며, 전체 source refresh가 성공하지 않으면 snapshot을 쓰지 않고 last-good를 유지한다.
-- 남은 운영 확인: 이 환경에는 `FRED_API_KEY`가 없어 실제 외부 incremental collection은 실행하지 않았다. credential이 있는 운영 환경에서 첫 scheduled run의 17-series overlap 결과를 확인한다.
+- 후속 상태: 2026-07-25 수동 최신화 task에서 실제 credential 기반 17-series overlap 실행과 2026-07-24 target 저장을 확인했다.
 
 Recent completed task는 `.aiworkspace/note/finance/tasks/active/institutional-13f-openfigi-mapping-v1-20260718/`다.
 
@@ -1128,6 +1135,7 @@ Latest completed task:
 
 Previous completed task:
 
+- `market-research-economic-cycle-manual-refresh-v1-20260725` — 경제 사이클의 DB-only freshness 비교, explicit-click 17-series refresh, persisted target postcondition과 actual 2026-07-24 최신화를 전체 `3/3차`로 완료했다.
 - `portfolio-monitoring-initial-setting-correction-v1-20260721` — 최초 요청 시작일·수량을 append-only initial contract revision으로 함께 정정하고 새 시장일·종가·최초 투자금부터 성과를 다시 계산하는 전체 `4/4차`를 완료했다.
 - `overview-economic-cycle-intramonth-nowcast-v1-20260721` — 월말 canonical history를 보존하면서 날짜별 intramonth nowcast와 평일 fail-closed 증분 갱신을 전체 `4/4차`로 완료했다.
 - `overview-futures-macro-probabilistic-state-outlook-v2-20260720` — completed-session same-state target과 nested rolling-origin gate를 전체 `3/3차`로 완료했고 actual 5D/20D는 `NO_EDGE`로 비공개다.

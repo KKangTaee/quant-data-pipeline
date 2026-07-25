@@ -1,7 +1,7 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-07-24
+Last Verified: 2026-07-25
 
 ## Purpose
 
@@ -17,7 +17,7 @@ Last Verified: 2026-07-24
 - CNN Fear & Greed / AAII bearish sentiment context를 갱신하거나 freshness를 확인해야 할 때
 - Overview Events / Market Movers 화면이 비어 있거나 오래된 것으로 보일 때
 - Market Context의 S&P/Nasdaq valuation source와 coverage gate를 갱신할 때
-- Market Context 경제 사이클 vintage를 수집하고 학습·검증·current/10년 replay snapshot을 명시적으로 materialize할 때
+- Market Context 경제 사이클가 최신 계산 가능일보다 뒤처졌을 때 화면에서 수동 최신화하거나, vintage를 수집하고 학습·검증·current/10년 replay snapshot을 명시적으로 materialize할 때
 - 브라우저를 켜지 않고 scheduled refresh runner를 cron / launchd / 외부 automation으로 호출하고 싶을 때
 
 ## App Startup
@@ -36,12 +36,13 @@ http://localhost:8501
 
 ## Economic Cycle Vintage / Model Refresh
 
-화면 render는 provider를 호출하지 않고 저장된 compact snapshot만 읽는다. full bootstrap·재학습·10년 replay는 운영자가 명시적으로 실행하고, 이후 월중 nowcast는 `FRED_API_KEY`가 있는 unattended Overview scheduler의 평일 1회 job으로 증분 갱신한다.
+화면 render는 provider를 호출하지 않고 저장된 compact snapshot만 읽는다. full bootstrap·재학습·10년 replay는 운영자가 명시적으로 실행한다. 이후 월중 nowcast의 기본 제품 흐름은 저장 cutoff를 최신 계산 가능 평일과 비교하고, 뒤처졌을 때 사용자가 버튼을 눌러 증분 수집·계산하는 방식이다. CLI automation은 운영 보조 경로이며 launchd/cron 등록은 이 기능의 요구사항이 아니다.
 
 ### 1. Prerequisite와 schema
 
+worktree root의 Git 제외 `.env`에 `FRED_API_KEY`를 저장한다. app entrypoint와 Overview CLI는 이 파일을 `override=False`로 읽으므로 이미 주입된 process environment가 우선한다. main-dev/sub-dev/backtest-dev는 서로 다른 물리적 `.env`를 사용한다.
+
 ```bash
-export FRED_API_KEY='<local secret>'
 uv run python -c "from finance.data.economic_cycle_vintages import ensure_economic_cycle_vintage_schema; from finance.data.economic_cycle_results import ensure_economic_cycle_result_schemas; ensure_economic_cycle_vintage_schema(); ensure_economic_cycle_result_schemas(); print('economic-cycle schemas ready')"
 ```
 
@@ -63,20 +64,33 @@ uv run python -c "from app.jobs.ingestion_jobs import run_collect_economic_cycle
 - 동일 범위 재실행 뒤 business row 수가 증가하지 않는지
 - `.`/non-finite value가 0이 아니라 `coverage_status=missing` row로 남는지
 
-### 3. Weekday intramonth refresh
+### 3. 화면 수동 intramonth refresh
+
+`Market Research > 시장 환경 > 경제 사이클`에 진입한다.
+
+- 저장된 최신 intramonth cutoff가 최신 계산 가능 평일보다 뒤처졌거나 결과가 없으면 `최신 데이터로 다시 계산` action이 표시된다.
+- 클릭하면 Python action façade가 기존 17-series overlap 수집과 combined nowcast refresh를 실행한다. React는 event만 보내며 provider/DB를 직접 호출하지 않는다.
+- success 또는 usable partial success는 target 날짜의 `intramonth_nowcast`가 DB에 실제 저장된 경우에만 인정한다. 그 뒤에만 캐시를 비우고 새 결과를 다시 읽는다.
+- 일부 source 실패, 예외, target 미저장에서는 이전 monthly/intramonth latest-good를 유지하고 action을 남긴다.
+- 최신 상태에서는 `최신 계산 기준 YYYY-MM-DD`를 표시하고 action을 숨긴다.
+- target은 미국 공휴일 calendar가 아니라 weekday 규칙이다. 표시 날짜는 신규 지표 발표일이나 미국 거래일을 뜻하지 않고 PIT 계산 cutoff다.
+
+2026-07-25 actual QA에서는 2026-07-21 intramonth를 target 2026-07-24로 갱신했다. 결과는 `LIMITED`인 usable partial success였고, 월말 122행 checksum은 실행 전후 동일하며 target business key는 1행이었다.
+
+### 4. CLI weekday intramonth refresh
 
 ```bash
 uv run python -m app.jobs.overview_automation --profile safe --job economic_cycle_intramonth --dry-run
 uv run python -m app.jobs.overview_automation --profile safe --job economic_cycle_intramonth --force --json
 ```
 
-- 이 job은 `safe/standard/broad` profile에만 있고 `browser_safe`에는 없다. 평일 24시간 cadence로 평가한다.
+- 이 job은 `safe/standard/broad` profile에만 있고 `browser_safe`에는 없다. 평일 24시간 cadence로 평가하지만 실제 자동 실행 여부는 외부 scheduler 등록에 달려 있다.
 - series별 마지막 stored `realtime_start` 앞의 overlap window부터 official vintage를 다시 읽어 open revision interval을 놓치지 않는다.
 - 17개 source 중 하나라도 실패하면 그날 `intramonth_nowcast`를 쓰지 않고 이전 last-good를 유지한다.
 - 새 달 첫 실행은 누락된 직전 월말 `current` row만 append하고 기존 월말 row를 수정하지 않는다.
 - 같은 날짜 재실행은 `(as_of_date, model_version, run_kind)` business key 1행을 유지한다.
 
-### 4. Train, validate, current materialization
+### 5. Train, validate, current materialization
 
 아래 날짜는 latest fully available month에 맞게 운영자가 지정한다.
 
@@ -88,7 +102,7 @@ uv run python -c "from finance.economic_cycle_pipeline import train_validate_eco
 - horizon별 gate는 `READY/LIMITED` publication status를 결정한다. 완전한 artifact와 입력으로 계산 가능한 LIMITED horizon은 숫자 확률을 snapshot에 보존하고 UI에서 `잠정 모델 추정`으로 표시한다. READY는 `검증된 모델 추정`, phase support·parameter·입력이 불완전하면 `판단 불가`다.
 - validation metadata 누락이나 실행 오류가 있으면 latest approved artifact/snapshot을 ERROR row로 덮지 않는다.
 
-### 5. Ten-year month-end replay와 idempotence
+### 6. Ten-year month-end replay와 idempotence
 
 ```bash
 uv run python -c "from finance.economic_cycle_pipeline import replay_economic_cycle_history; print(replay_economic_cycle_history(start_date='YYYY-MM-DD', end_date='YYYY-MM-DD'))"
@@ -98,7 +112,7 @@ uv run python -c "from finance.economic_cycle_pipeline import replay_economic_cy
 - 같은 날짜 범위를 한 번 더 실행하고 `(as_of_date, model_version, run_kind)` business key가 중복되지 않는지 확인한다.
 - payroll series 한 origin과 recession-era 한 origin을 표본으로 골라 stored eligible `realtime_start/realtime_end`가 official FRED/ALFRED response metadata와 일치하는지 확인한다.
 
-### 6. Failure / recovery
+### 7. Failure / recovery
 
 - `FRED_API_KEY` 부재: 수집을 중단하고 UI의 `NOT_MATERIALIZED` 또는 latest-good LIMITED/READY snapshot을 유지한다.
 - 월중 refresh 일부 series 실패: closed-month rollover와 당일 snapshot write를 진행하지 않고 last-good intramonth row를 유지한다.
