@@ -515,6 +515,7 @@ def build_market_implications(
             item = dict(context)
             coverage = str(item.get("coverage") or "INSUFFICIENT")
             narrative = str(item.get("narrative") or "")
+            summary = str(item.get("summary") or narrative)
             item.update(
                 {
                     "label": labels[asset_group],
@@ -524,7 +525,7 @@ def build_market_implications(
                         "INSUFFICIENT": "LIMITED",
                     }.get(coverage, "LIMITED"),
                     "coverage_status": coverage,
-                    "summary": narrative,
+                    "summary": summary,
                     "context": narrative,
                     "is_directional_forecast": False,
                 }

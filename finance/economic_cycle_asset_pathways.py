@@ -536,26 +536,10 @@ def _price_context(
     }
 
 
-def _pathway_narrative(
-    *,
+def _price_direction_summary(
     asset_group: str,
-    economic_state: Mapping[str, object],
-    pathways: Sequence[Mapping[str, object]],
     price_context: Mapping[str, object],
 ) -> str:
-    rising = [str(row["label"]) for row in pathways if row["status"] == "SUPPORTS_RISE"]
-    falling = [str(row["label"]) for row in pathways if row["status"] == "SUPPORTS_FALL"]
-    mixed = [str(row["label"]) for row in pathways if row["status"] in {"MIXED", "NEUTRAL"}]
-    unavailable = [str(row["label"]) for row in pathways if row["status"] == "UNAVAILABLE"]
-    clauses = [str(economic_state.get("summary") or "")]
-    if rising:
-        clauses.append(f"측정된 {', '.join(rising)}는 상승 요인으로 나타납니다.")
-    if falling:
-        clauses.append(f"측정된 {', '.join(falling)}는 하락 요인으로 나타납니다.")
-    if mixed:
-        clauses.append(f"{', '.join(mixed)}는 방향이 뚜렷하지 않습니다.")
-    if unavailable:
-        clauses.append(f"{', '.join(unavailable)}는 자료가 부족합니다.")
     price_label = {
         "RISING": "상승",
         "FALLING": "하락",
@@ -564,11 +548,79 @@ def _pathway_narrative(
         "UNAVAILABLE": "확인 불가",
     }.get(str(price_context.get("status")), "확인 불가")
     subject = "달러지수" if asset_group == "dollar" else "금 가격"
-    clauses.append(f"실제 {subject}의 1개월·3개월 방향은 {price_label}입니다.")
+    return f"실제 {subject}의 1개월·3개월 방향은 {price_label}입니다."
+
+
+def _pathway_overall_label(
+    pathways: Sequence[Mapping[str, object]],
+) -> str:
+    statuses = [
+        str(row.get("status") or "UNAVAILABLE")
+        for row in pathways
+        if str(row.get("status") or "UNAVAILABLE") != "UNAVAILABLE"
+    ]
+    unavailable = any(
+        str(row.get("status") or "UNAVAILABLE") == "UNAVAILABLE"
+        for row in pathways
+    )
+    if not statuses:
+        return "자료가 부족합니다"
+    if set(statuses) == {"SUPPORTS_RISE"}:
+        return (
+            "상승 쪽으로 모이지만 일부 자료가 부족합니다"
+            if unavailable
+            else "상승 쪽으로 모입니다"
+        )
+    if set(statuses) == {"SUPPORTS_FALL"}:
+        return (
+            "하락 쪽으로 모이지만 일부 자료가 부족합니다"
+            if unavailable
+            else "하락 쪽으로 모입니다"
+        )
+    return (
+        "혼재하고 일부 자료가 부족합니다"
+        if unavailable
+        else "혼재합니다"
+    )
+
+
+def _pathway_summary(
+    *,
+    asset_group: str,
+    pathways: Sequence[Mapping[str, object]],
+    price_context: Mapping[str, object],
+) -> str:
+    asset_label = "달러" if asset_group == "dollar" else "금"
+    return (
+        f"{asset_label}의 측정 경로는 {_pathway_overall_label(pathways)}. "
+        f"{_price_direction_summary(asset_group, price_context)}"
+    )
+
+
+def _pathway_current_interpretation(
+    *,
+    asset_group: str,
+    pathways: Sequence[Mapping[str, object]],
+    price_context: Mapping[str, object],
+) -> list[str]:
+    rising = [str(row["label"]) for row in pathways if row["status"] == "SUPPORTS_RISE"]
+    falling = [str(row["label"]) for row in pathways if row["status"] == "SUPPORTS_FALL"]
+    mixed = [str(row["label"]) for row in pathways if row["status"] in {"MIXED", "NEUTRAL"}]
+    unavailable = [str(row["label"]) for row in pathways if row["status"] == "UNAVAILABLE"]
+    clauses: list[str] = []
+    if rising:
+        clauses.append(f"측정된 {', '.join(rising)}는 상승 요인으로 나타납니다.")
+    if falling:
+        clauses.append(f"측정된 {', '.join(falling)}는 하락 요인으로 나타납니다.")
+    if mixed:
+        clauses.append(f"{', '.join(mixed)}는 방향이 뚜렷하지 않습니다.")
+    if unavailable:
+        clauses.append(f"{', '.join(unavailable)}는 자료가 부족합니다.")
+    clauses.append(_price_direction_summary(asset_group, price_context))
     if asset_group == "dollar":
         clauses.append("해외 상대금리가 아직 없어 달러의 국가 간 금리 차이는 판정하지 않습니다.")
-    clauses.append("이 결과는 측정된 경로를 나눈 설명이며 가격 원인을 확정하지 않습니다.")
-    return " ".join(clause for clause in clauses if clause)
+    clauses.append("측정된 경로를 나눈 설명이며 가격 원인을 확정하지 않습니다.")
+    return clauses
 
 
 def _daily_direction_text(evaluation: Mapping[str, object]) -> str:
@@ -1026,7 +1078,13 @@ def build_commodities_context(
         "narrative": " ".join(copper_interpretation),
     }
 
-    gold_narrative = str(gold_context.get("narrative") or "")
+    gold_summary = str(gold_context.get("summary") or "")
+    gold_narrative = str(gold_context.get("narrative") or gold_summary)
+    gold_interpretation = [
+        str(row)
+        for row in gold_context.get("current_interpretation") or []
+        if str(row).strip()
+    ]
     gold = {
         "asset_id": "gold",
         "label": "금",
@@ -1036,7 +1094,13 @@ def build_commodities_context(
         "observed_pathways": [
             dict(row) for row in gold_context.get("pathways") or []
         ],
-        "current_interpretation": [gold_narrative] if gold_narrative else [],
+        "current_interpretation": (
+            gold_interpretation
+            if gold_interpretation
+            else [gold_narrative]
+            if gold_narrative
+            else []
+        ),
         "next_check_conditions": [
             "금 가격과 실질금리·달러 경로의 다음 측정값을 각각 확인합니다."
         ],
@@ -1045,6 +1109,7 @@ def build_commodities_context(
             str(row.get("label") or row.get("reason_code") or "")
             for row in gold_context.get("unmeasured_pathways") or []
         ],
+        "summary": gold_summary or gold_narrative,
         "narrative": gold_narrative,
     }
     assets = [wti, copper, gold]
@@ -1211,6 +1276,16 @@ def build_asset_pathway_contexts(
                     "reason_code": "RELATIVE_RATE_NOT_COLLECTED",
                 },
             )
+        summary = _pathway_summary(
+            asset_group=asset_group,
+            pathways=pathways,
+            price_context=price_context,
+        )
+        current_interpretation = _pathway_current_interpretation(
+            asset_group=asset_group,
+            pathways=pathways,
+            price_context=price_context,
+        )
         contexts[asset_group] = {
             "asset_group": asset_group,
             "coverage": coverage,
@@ -1218,13 +1293,10 @@ def build_asset_pathway_contexts(
             "pathways": pathways,
             "price_context": price_context,
             "unmeasured_pathways": unmeasured,
+            "summary": summary,
+            "current_interpretation": current_interpretation,
+            "narrative": " ".join(current_interpretation),
         }
-        contexts[asset_group]["narrative"] = _pathway_narrative(
-            asset_group=asset_group,
-            economic_state=economic_state,
-            pathways=pathways,
-            price_context=price_context,
-        )
     contexts["commodities"] = build_commodities_context(
         evaluations=evaluations,
         economic_state=economic_state,

@@ -246,6 +246,28 @@ def test_service_attaches_intramonth_freshness() -> None:
     assert model["data_freshness"]["status"] == "REFRESH_AVAILABLE"
 
 
+def test_service_preserves_asset_specific_summary_without_common_state_copy() -> None:
+    service = _load_service()
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: _ready_snapshot(),
+        history_loader=lambda **_kwargs: [],
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=lambda **_kwargs: {},
+    )
+
+    by_asset = {
+        item["asset_group"]: item
+        for item in model["market_implications"]
+    }
+    common_summary = by_asset["gold"]["economic_state"]["summary"]
+    for asset_group in ("gold", "dollar"):
+        item = by_asset[asset_group]
+        assert common_summary not in item["summary"]
+        assert item["summary"] != item["narrative"]
+        assert item["current_interpretation"]
+
+
 @pytest.mark.parametrize(
     "mutator",
     [
@@ -499,7 +521,13 @@ def test_market_implications_separate_observed_state_from_asset_pathways() -> No
         "STRENGTHENING",
         "STRENGTHENING",
     ]
-    assert summary in gold["narrative"]
+    assert summary not in gold["summary"]
+    assert summary not in gold["narrative"]
+    assert all(
+        summary not in row
+        for row in gold["current_interpretation"]
+    )
+    assert gold["summary"] != gold["narrative"]
     assert "가격 원인을 확정하지 않습니다" in gold["narrative"]
     assert "해외 상대금리" in dollar["narrative"]
     assert gold["price_context"]["status"] == "UNAVAILABLE"

@@ -501,6 +501,15 @@ def test_commodities_keep_wti_copper_and_gold_separate() -> None:
     assert assets["copper"]["coverage"] == "PARTIAL"
     assert assets["gold"]["price_context"] == contexts["gold"]["price_context"]
     assert assets["gold"]["narrative"] == contexts["gold"]["narrative"]
+    assert assets["gold"]["summary"] == contexts["gold"]["summary"]
+    assert (
+        assets["gold"]["current_interpretation"]
+        == contexts["gold"]["current_interpretation"]
+    )
+    assert (
+        contexts["gold"]["economic_state"]["summary"]
+        not in assets["gold"]["narrative"]
+    )
 
 
 def test_gold_pathways_separate_real_yield_dollar_and_risk_directions() -> None:
@@ -572,3 +581,35 @@ def test_dollar_is_partial_until_relative_rates_are_collected() -> None:
     )
     assert relative_rates["reason_code"] == "RELATIVE_RATE_NOT_COLLECTED"
     assert "해외 상대금리" in dollar["narrative"]
+
+
+def test_gold_and_dollar_keep_common_economic_state_out_of_asset_copy() -> None:
+    pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
+    contexts = pathways.build_asset_pathway_contexts(
+        evidence=_economic_evidence(),
+        market_rows=_macro_history(
+            {
+                "DFII10": "UP",
+                "DGS2": "UP",
+                "DGS10": "UP",
+                "VIXCLS": "DOWN",
+                "BAA10Y": "DOWN",
+            }
+        ),
+        price_rows=_price_history({"GC=F": "DOWN", "DX-Y.NYB": "UP"}),
+        reference_date="2026-07-17",
+    )
+
+    common_summary = contexts["gold"]["economic_state"]["summary"]
+    for asset_group in ("gold", "dollar"):
+        context = contexts[asset_group]
+        assert common_summary not in context["summary"]
+        assert common_summary not in context["narrative"]
+        assert all(
+            common_summary not in row
+            for row in context["current_interpretation"]
+        )
+        assert "현재 수준:" not in context["summary"]
+        assert "전망 여건:" not in context["summary"]
+        assert context["current_interpretation"]
+        assert context["summary"] != " ".join(context["current_interpretation"])
