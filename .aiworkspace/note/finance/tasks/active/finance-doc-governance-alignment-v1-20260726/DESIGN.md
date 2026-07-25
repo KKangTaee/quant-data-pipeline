@@ -99,4 +99,3 @@ retained task/phase 이동은 이번 범위가 아니다.
 - 모든 과거 task/phase 상태의 일괄 변환
 - root handoff log의 전면 압축
 - `main-dev`와의 branch 통합
-

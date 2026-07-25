@@ -90,7 +90,7 @@ class FinanceHygieneContractTests(unittest.TestCase):
 
         checks = self.hygiene._build_checks(groups)
         generated_check = next(
-            check for check in checks if check["name"] == "generated artifacts remain unstaged"
+            check for check in checks if check["name"] == "protected artifacts remain unstaged"
         )
 
         self.assertEqual(generated_check["ok"], "yes")
@@ -105,6 +105,18 @@ class FinanceHygieneContractTests(unittest.TestCase):
 
         self.assertEqual(groups["registries"], paths)
         self.assertEqual(groups["other_files"], [])
+
+    def test_staged_registry_is_reported_as_a_protected_artifact_violation(self) -> None:
+        path = ".aiworkspace/note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl"
+        groups = self.hygiene._classify([path])
+
+        checks = self.hygiene._build_checks(groups, staged_paths={path})
+        protected_check = next(
+            check for check in checks if check["name"] == "protected artifacts remain unstaged"
+        )
+
+        self.assertEqual(protected_check["ok"], "no")
+        self.assertIn(path, protected_check["detail"])
 
 
 if __name__ == "__main__":

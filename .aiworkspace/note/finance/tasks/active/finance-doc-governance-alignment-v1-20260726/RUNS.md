@@ -39,3 +39,14 @@
   - Backtest stale ownership path, INDEX/AGENTS read-order ambiguity, Roadmap handoff 의미 모호성 3건 발견
   - 실제 파일/Project Map과 대조해 모두 교정
   - state precedence와 role-based merge rule에는 추가 conflict 없음
+- independent code review
+  - Critical 없음
+  - Important: staged protected artifact 경고 부재, stale task status 2건
+  - Minor: 초기 task 문서 3개의 EOF blank line
+  - protected artifact staged-path test를 RED/GREEN으로 추가하고 closeout status/EOF를 교정
+- code re-review
+  - current worktree 기준 Critical/Important 잔여 finding 없음
+- final focused verification
+  - document workflow 7개 + corrected service contract 2개 = 9 tests passed
+  - phase script compile/dry-run, hygiene no-violation, skill source/mirror validation/equality passed
+  - base commit부터 current worktree까지 `git diff --check` passed

@@ -1,24 +1,26 @@
 # Finance Document Governance Alignment V1 Status
 
-State: active
+State: complete
 
 ## Current
 
-- 안전 진단과 깊은 진단 결과를 승인된 설계와 실행 계획으로 고정했다.
-- 현재 `codex/backtest-dev` linked worktree에서 작업 중이다.
-- 다음 작업은 phase bootstrap과 hygiene checker의 새 계약을 실패 테스트로 먼저 고정하는 것이다.
+- 역할 기반 canonical 문서 갱신, 정규화된 workflow state, semantic phase bundle 계약을 정렬했다.
+- phase/hygiene 자동화와 runbook/template, AGENTS, finance skill source/runtime mirror를 함께 교정했다.
+- current product state는 Active 없음, Sentiment Paused, chart 2건 Verification-Only로 정렬했다.
+- 독립 forward review와 code review에서 발견된 stale Backtest path, read order, handoff 의미,
+  staged protected artifact 경고를 모두 반영했다.
 
-## Next
+## Verification
 
-1. `tests/test_finance_document_workflow.py` 작성
-2. RED 확인
-3. phase 자동화와 runbook 교정
-4. 지침·skill·상태 pointer 동기화
-5. mirror 및 최종 검증
+- document workflow focused tests: passed
+- corrected service contract tests: passed
+- phase scripts compile/dry-run: passed
+- 4 skill source/mirror validation and equality: passed
+- protected registry/saved/run-history staged paths: none
+- full service suite: 905 tests 중 기존 baseline 18 failures/errors, 이번 task 소유 테스트는 통과
 
-## Scope Guard
+## Follow-Up
 
-- registry, saved portfolio, run history, QA 이미지에는 손대지 않는다.
-- 과거 task 491개의 상태 형식은 일괄 변환하지 않는다.
-- `main-dev` 통합은 별도 작업으로 남긴다.
-
+- `main-dev`와의 semantic integration은 별도 작업이다.
+- 과거 task 491개의 상태 형식과 대형 root log 압축은 점진/별도 작업으로 남긴다.
+- 기존 service contract 18개 baseline은 해당 제품 task가 소유한다.

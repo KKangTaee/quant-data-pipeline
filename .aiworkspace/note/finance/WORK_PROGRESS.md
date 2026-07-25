@@ -10,6 +10,13 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-26 - Finance 문서 지침·상태 모델 정렬
+
+- canonical 네 문서의 역할별 update trigger와 workflow 상태 우선순위를 AGENTS/finance skill/runbook에 통일했다.
+- phase bootstrap을 semantic id의 6-file bundle로 바꾸고 ordinary closeout의 INDEX·root log 의무 갱신을 제거했다.
+- product state는 Active 없음, Sentiment Paused, chart 2건 Verification-Only로 정렬했으며 protected registry/generated staged-path 경고를 추가했다.
+- focused 9개 계약, script compile/dry-run, skill source/mirror validation을 통과했다. 상세는 [governance task](./tasks/active/finance-doc-governance-alignment-v1-20260726/STATUS.md)를 본다.
+
 ### 2026-07-25 - main-dev master 병합 충돌 해결
 
 - Economic Cycle/data 완료 이력과 master의 Header/Sentiment/Institutional/Futures 완료 이력을 문서 역할별로 모두 보존하고 current/latest 표기를 정리했다.

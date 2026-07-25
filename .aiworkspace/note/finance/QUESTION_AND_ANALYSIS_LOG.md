@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-26 - canonical 문서는 역할이 바뀔 때만 갱신한다
+
+- User request: 핵심 문서 개편 뒤, 해당 문서를 수정하는 지침과 상태 모델도 안전하고 깊게 진단해 개선하도록 요청함.
+- Interpreted goal: AI와 사람이 같은 source-of-truth와 갱신 조건을 사용하고 ordinary closeout이 INDEX/ROADMAP/root log를 다시 비대하게 만들지 않게 한다.
+- Analysis result: INDEX는 discovery, Product Direction은 제품 약속, Project Map은 구현 소유권, Roadmap은 baseline/state/priority를 소유한다. 상태는 사용자 결정 → task/phase status → manifest → Roadmap → root log 순이다.
+- Follow-up: phase 자동화, finance skill/runtime mirror, current state pointer와 focused tests를 정렬했다. 과거 task 일괄 변환과 root log 압축, main-dev 통합은 별도 범위다.
+
 ### 2026-07-25 - main-dev와 master의 독립 제품 계약을 역할별로 함께 보존한다
 
 - User request: `codex/main-dev`의 master 병합 충돌을 `finance-integration-review`로 해결해 달라고 요청함.

@@ -126,8 +126,13 @@ def _family_token(path: str) -> str | None:
     return None
 
 
-def _build_checks(groups: dict[str, list[str]]) -> list[dict[str, str]]:
+def _build_checks(
+    groups: dict[str, list[str]],
+    *,
+    staged_paths: set[str] | None = None,
+) -> list[dict[str, str]]:
     checks: list[dict[str, str]] = []
+    staged_paths = staged_paths or set()
     strategy_hubs = groups["strategy_hubs"]
     backtest_logs = groups["backtest_logs"]
     one_pagers = groups["one_pagers"]
@@ -190,13 +195,22 @@ def _build_checks(groups: dict[str, list[str]]) -> list[dict[str, str]]:
             }
         )
 
+    protected_paths = generated + registries
+    staged_protected = sorted(set(protected_paths) & staged_paths)
+    if staged_protected:
+        protected_status = "no"
+        protected_detail = f"staged protected paths: {', '.join(staged_protected)}"
+    elif protected_paths:
+        protected_status = "yes"
+        protected_detail = "protected registry/generated paths are present but remain unstaged"
+    else:
+        protected_status = "n/a"
+        protected_detail = "no protected registry/generated paths detected in git status"
     checks.append(
         {
-            "name": "generated artifacts remain unstaged",
-            "ok": "yes" if generated else "n/a",
-            "detail": "generated artifacts are present and should usually stay uncommitted"
-            if generated
-            else "no generated artifacts detected in git status",
+            "name": "protected artifacts remain unstaged",
+            "ok": protected_status,
+            "detail": protected_detail,
         }
     )
 
@@ -254,12 +268,20 @@ def main() -> int:
 
     status_rows = _git_status()
     paths = [row["path"] for row in status_rows]
+    staged_paths = {
+        row["path"]
+        for row in status_rows
+        if row["status"][0] not in {" ", "?"}
+    }
     groups = _classify(paths)
-    checks = _build_checks(groups)
+    checks = _build_checks(groups, staged_paths=staged_paths)
 
     payload = {
         "repo_root": str(REPO_ROOT),
         "changed_count": len(status_rows),
+        "staged_protected_paths": sorted(
+            staged_paths & set(groups["generated"] + groups["registries"])
+        ),
         "groups": groups,
         "checks": checks,
     }
