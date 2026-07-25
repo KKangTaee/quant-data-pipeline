@@ -15,12 +15,15 @@ REQUIRED_CONTEXTUAL_SURFACES = {
 }
 
 OWNER_CALL_SITES = {
-    "overview": Path("app/web/overview/page.py"),
     "institutional_portfolios": Path("app/web/institutional_portfolios.py"),
-    "ingestion": Path("app/web/ingestion/page.py"),
     "backtest_analysis": Path("app/web/backtest_analysis.py"),
     "practical_validation": Path("app/web/backtest_practical_validation/page.py"),
     "final_review": Path("app/web/backtest_final_review/page.py"),
+}
+
+CATALOG_ONLY_SURFACES = {
+    "overview": Path("app/web/overview/page.py"),
+    "ingestion": Path("app/web/ingestion/page.py"),
 }
 
 
@@ -127,6 +130,15 @@ class ReferenceContextualHelpContractTests(unittest.TestCase):
             with self.subTest(surface_key=surface_key):
                 source = path.read_text(encoding="utf-8")
                 self.assertIn(f'render_reference_contextual_help("{surface_key}"', source)
+
+    def test_catalog_only_surfaces_do_not_render_page_global_contextual_help(self) -> None:
+        for surface_key, path in CATALOG_ONLY_SURFACES.items():
+            with self.subTest(surface_key=surface_key):
+                source = path.read_text(encoding="utf-8")
+                self.assertNotIn(
+                    f'render_reference_contextual_help("{surface_key}"',
+                    source,
+                )
 
     def test_streamlit_shell_keeps_contextual_config_behind_module_boundary(self) -> None:
         source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")

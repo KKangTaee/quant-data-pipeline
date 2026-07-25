@@ -38,3 +38,23 @@
     pending-state 방식으로 수정 후 동일 경로 재검증
 - 실제 collector write action은 실행하지 않았다.
 - registry, saved JSONL, run history는 수정·stage하지 않았다.
+
+## 2026-07-26 — Contextual Reference Help Removal
+
+- Data Operations 상단 `Reference help · Ingestion`은 목적 카드와 중복되어
+  `render_ingestion_page()`의 import와 호출만 제거했다.
+- canonical Reference Center, Ingestion catalog item, section/action/form/dispatcher는
+  변경하지 않았다.
+- source contract를 RED로 확인한 뒤 minimal removal로 GREEN을 확인했다.
+- focused Python 60개와 `page.py` compile, `git diff --check`를 통과했다.
+- Reference 확장 회귀에서 catalog owner와 page renderer를 동일시하던 stale
+  contract를 발견해, 6개 catalog는 유지하면서 Market Research와 Data Operations를
+  catalog-only surface로 명시했다.
+- Data Operations, Ingestion boundary, Reference contextual/catalog 확장 회귀
+  85개를 최종 통과했다.
+- actual Browser QA:
+  - 1280×720: contextual help 비노출, 5개 section 유지, document overflow 0
+  - 420×900: contextual help 비노출, 첫 purpose card 노출, document overflow 0
+  - console warning 1건은 QA용 서버 재시작 시점의 WebSocket 종료 기록이며
+    재시작 후 app error는 없었다.
+- collector write action은 실행하지 않았고 QA 이미지는 generated artifact로 남겼다.

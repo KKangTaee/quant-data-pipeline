@@ -20,6 +20,9 @@ Roadmap: 3차 구현·QA 완료 / 4차 durable execution·scheduling 후보 보�
 - 실행 이력은 active Data Operations job만 `시각 / 작업 / 목적 / 상태 / 범위 / 결과 / 다음 행동`으로 표시한다.
 - 선택한 action의 기존 expander와 event/validation 하위 tab을 자동으로 펼치는 advanced focus를 구현했다.
 - focused Python 59개와 desktop/mobile actual Browser QA를 통과했다.
+- 후속 UX 정리에서 중복 `Reference help · Ingestion` contextual panel을 제거해
+  제목·설명 다음에 목적 section이 바로 시작하도록 했다. canonical Reference
+  Center와 Ingestion catalog item은 유지한다.
 
 ## Current
 

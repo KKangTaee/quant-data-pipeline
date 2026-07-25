@@ -24,7 +24,6 @@ from app.jobs.symbol_sources import resolve_symbol_source
 from app.jobs.symbol_sources import filter_non_plain_symbols
 from app.services.ingestion_diagnostics import load_price_window_preflight_summary
 from app.web.backtest_common import QUALITY_STRICT_PRESETS, clear_backtest_preview_caches
-from app.web.reference_contextual_help import render_reference_contextual_help
 
 
 JobResult = dict[str, Any]
@@ -2109,5 +2108,4 @@ def render_ingestion_page(*, runtime_marker: str, loaded_at: datetime, git_sha: 
         "Research·Portfolio 화면이 읽는 데이터를 목적별로 준비하고, "
         "공식 파일 등록과 문제 복구를 한곳에서 진행합니다."
     )
-    render_reference_contextual_help("ingestion", expanded=False)
     render_ingestion_console()

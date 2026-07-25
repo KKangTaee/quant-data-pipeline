@@ -1,4 +1,22 @@
+from pathlib import Path
 import unittest
+
+
+class DataOperationsPageContractTest(unittest.TestCase):
+    def test_data_operations_page_does_not_render_contextual_reference_help(
+        self,
+    ) -> None:
+        page_source = Path("app/web/ingestion/page.py").read_text(encoding="utf-8")
+
+        self.assertNotIn(
+            "from app.web.reference_contextual_help import "
+            "render_reference_contextual_help",
+            page_source,
+        )
+        self.assertNotIn(
+            'render_reference_contextual_help("ingestion"',
+            page_source,
+        )
 
 
 class DataOperationsWorkflowContractTest(unittest.TestCase):
