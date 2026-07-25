@@ -145,6 +145,55 @@ def test_ready_read_model_maps_horizons_evidence_sources_and_separate_history() 
     json.dumps(model, allow_nan=False)
 
 
+@pytest.mark.parametrize(
+    ("phase", "expected"),
+    [
+        (
+            "recovery",
+            "생산·소비와 고용·소득 수준은 낮지만 최근 3개월 흐름은 개선 중입니다.",
+        ),
+        (
+            "expansion",
+            "생산·소비와 고용·소득 수준이 높고 최근 3개월 흐름도 개선 중입니다.",
+        ),
+        (
+            "slowdown",
+            "생산·소비와 고용·소득 수준은 높지만 최근 3개월 흐름은 약화 중입니다.",
+        ),
+        (
+            "recession",
+            "생산·소비와 고용·소득 수준이 낮고 최근 3개월 흐름도 약화 중입니다.",
+        ),
+    ],
+)
+def test_headline_explains_phase_as_level_and_three_month_momentum(
+    phase: str,
+    expected: str,
+) -> None:
+    service = _load_service()
+    snapshot = _ready_snapshot()
+    horizons = json.loads(str(snapshot["forecast_path_json"]))
+    horizons[0].update(
+        {
+            "dominant_phase": phase,
+            "probabilities": _probabilities(phase),
+        }
+    )
+    snapshot["current_phase"] = phase
+    snapshot["forecast_path_json"] = json.dumps(horizons)
+    snapshot["probabilities_json"] = json.dumps(_probabilities(phase))
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: snapshot,
+        history_loader=lambda **_kwargs: _history_rows(),
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=lambda **_kwargs: {},
+    )
+
+    assert model["headline"]["summary"] == expected
+
+
 def _intramonth_snapshot() -> dict[str, object]:
     probabilities = {
         "recovery": 0.16,

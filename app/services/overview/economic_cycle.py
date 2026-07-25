@@ -35,6 +35,12 @@ PHASE_LABELS = {
     "slowdown": "둔화",
     "recession": "침체",
 }
+PHASE_HEADLINE_SUMMARIES = {
+    "recovery": "생산·소비와 고용·소득 수준은 낮지만 최근 3개월 흐름은 개선 중입니다.",
+    "expansion": "생산·소비와 고용·소득 수준이 높고 최근 3개월 흐름도 개선 중입니다.",
+    "slowdown": "생산·소비와 고용·소득 수준은 높지만 최근 3개월 흐름은 약화 중입니다.",
+    "recession": "생산·소비와 고용·소득 수준이 낮고 최근 3개월 흐름도 약화 중입니다.",
+}
 ESTIMATE_LABELS = {
     "VERIFIED": "검증된 모델 추정",
     "PROVISIONAL": "잠정 모델 추정",
@@ -523,7 +529,7 @@ def build_economic_cycle_read_model(
         for item in horizons[1:]
     ]
     headline_summary = (
-        f"현재는 {PHASE_LABELS.get(str(current_phase), '판단 제한')} 국면 가능성이 가장 높습니다."
+        PHASE_HEADLINE_SUMMARIES.get(str(current_phase))
         if current_phase
         else str(current.get("reason") or "현재 국면 판단이 제한적입니다.")
     )
