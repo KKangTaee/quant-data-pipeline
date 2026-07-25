@@ -52,6 +52,12 @@
   catalog-only surface로 명시했다.
 - Data Operations, Ingestion boundary, Reference contextual/catalog 확장 회귀
   85개를 최종 통과했다.
+- branch finishing용 전체 `unittest discover -s tests`는 1,895개를 실행했고
+  `11 failures + 294 errors`로 종료됐다. errors 대부분은 suite-wide import
+  순서에서 발생하는 기존 Streamlit `DeltaGeneratorSingleton instance already
+  exists` 수명 문제이며, failures는 기존 Backtest / Practical Validation /
+  Futures Macro / Sentiment contract drift다. 이 후속 변경 소유 파일 밖이므로
+  merge·push하지 않고 feature-owned 85개 격리 회귀를 완료 기준으로 유지한다.
 - actual Browser QA:
   - 1280×720: contextual help 비노출, 5개 section 유지, document overflow 0
   - 420×900: contextual help 비노출, 첫 purpose card 노출, document overflow 0
