@@ -1,6 +1,6 @@
 # README Product / Onboarding Overhaul V1 Status
 
-Status: Design Written — Awaiting User Spec Review
+Status: Implementation Plan Ready
 Started: 2026-07-25
 
 ## Progress
@@ -12,16 +12,19 @@ Started: 2026-07-25
 - quick start, Python / Streamlit / React / TypeScript / Vite / MySQL / JSONL 경계와 유지 정책을 합의했다.
 - 전체 `4차` roadmap과 files / verification scope를 확정했다.
 - 승인된 설계를 `DESIGN.md`에 기록했다.
+- 사용자가 written spec을 승인했다.
+- `PLAN.md`를 file responsibility, 4개 독립 task, exact verification / commit step을 포함한 implementation plan으로 확장했다.
+- plan self-review에서 spec coverage, placeholder, task structure와 diff hygiene를 확인했다.
 
 ## Current Step
 
 전체 roadmap `0/4차`.
 
-구현 전 written spec review 단계다. README 본문과 대표 이미지는 아직 수정하지 않았다.
+implementation plan까지 완료했다. README 본문과 대표 이미지는 아직 수정하지 않았다.
 
 ## Next Action
 
-사용자가 written spec을 검토하고 승인하면 implementation plan을 작성한다.
+현재 session에서 `superpowers:executing-plans`로 Task 1부터 순서대로 실행한다.
 
 ## Scope Boundary
 

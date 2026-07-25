@@ -13,3 +13,9 @@
 
 - 설계 문서 작성 완료
 - README implementation / screenshot capture / verification은 아직 실행하지 않음
+
+## 2026-07-25 — Implementation Plan
+
+- `writing-plans` 기준으로 `PLAN.md`를 4개 independently verifiable task로 확장
+- exact files, interface, command, expected result, commit boundary 기록
+- spec coverage, placeholder, task structure, `git diff --check` self-review 통과
