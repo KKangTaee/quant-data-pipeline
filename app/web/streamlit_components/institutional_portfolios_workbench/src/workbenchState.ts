@@ -10,6 +10,43 @@ export type HoldingStateRow = {
 
 export type MappingFilter = "all" | "mapped" | "unresolved";
 export type HoldingSort = "weight_desc" | "value_desc" | "issuer_asc";
+export type StudioView = "overview" | "holdings" | "security" | "popularity";
+
+export const STUDIO_DESTINATIONS: ReadonlyArray<{
+  id: StudioView;
+  label: string;
+  shortLabel: string;
+  description: string;
+}> = [
+  {
+    id: "overview",
+    label: "포트폴리오 맥락",
+    shortLabel: "맥락",
+    description: "집중도, 분기 변화와 섹터 노출",
+  },
+  {
+    id: "holdings",
+    label: "전체 보유",
+    shortLabel: "전체 보유",
+    description: "13F 보유 종목 검색과 필터",
+  },
+  {
+    id: "security",
+    label: "종목 상세",
+    shortLabel: "종목 상세",
+    description: "가격 흐름과 보유 기관 역조회",
+  },
+  {
+    id: "popularity",
+    label: "기관 보유 랭킹",
+    shortLabel: "랭킹",
+    description: "동일 분기 기준 다기관 보유 순위",
+  },
+];
+
+export function studioDestination(view: StudioView) {
+  return STUDIO_DESTINATIONS.find((item) => item.id === view) || STUDIO_DESTINATIONS[0];
+}
 
 export function normalizeQuery(value: string | null | undefined) {
   return String(value || "").trim().toLocaleUpperCase();

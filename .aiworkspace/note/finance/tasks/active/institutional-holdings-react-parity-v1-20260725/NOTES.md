@@ -3,10 +3,12 @@
 ## Implemented Facts
 
 - `Institutional Holdings` normal data surface is already a Streamlit custom React component.
-- Streamlit still renders visible title, caption, contextual help, SEC refresh and detailed table fallback around the React component.
+- Healthy React rendering no longer shows a Streamlit title, caption, contextual help, SEC refresh expander or detailed-table fallback around the component. Those remain unavailable-component fallback only.
 - Today uses React-owned context / portfolio / action surfaces and keeps only data / event orchestration in Python.
 - Market Research uses React-owned header and two-tier navigation while Python owns URL / session normalization and selected-module dispatch.
-- Institutional workbench source is currently 1,747 TSX lines and 2,102 CSS lines.
+- `InstitutionalStudioShell.tsx` owns the responsive studio frame and canonical navigation, while mature chart / holdings logic remains in the existing workbench.
+- `workbenchState.ts` owns the canonical `overview / holdings / security / popularity` destination list shared by desktop and mobile.
+- The React data disclosure owns dataset label/URL/local ZIP/User-Agent inputs and renders the last refresh result.
 
 ## Actual Render Findings
 
@@ -30,9 +32,9 @@
 - Tablet / mobile replace the rail with a React-owned top switcher / drawer sharing the same canonical view and manager state.
 - Today / Market Research visual tokens remain the baseline even though the Institutional layout is intentionally more tool-like.
 
-## Open Detail For Implementation Planning
+## Implementation Outcome
 
-- Final physical file split should balance component ownership with avoiding excessive tiny files.
-- Existing refresh input / result fields must be mapped into a versioned React event / payload contract.
-- Contextual Reference handoff can reuse the current page-target mechanism through an `open_reference` event.
-- Rail / drawer focus return, body scroll and dynamic frame-height behavior need explicit React tests.
+- Physical split stayed focused: shell/navigation moved to one presentation component and all domain-specific portfolio/security rendering stayed in the existing workbench.
+- Refresh fields use the versioned workbench payload and explicit `collect_sec_13f_dataset` event; no new API or DB schema was added.
+- Drawer closes before server-rerun events and supports Escape with focus return.
+- Reference Center deep-link integration was not added because the existing caveats and SEC source link cover the approved scope; this is not a regression from the prior page.

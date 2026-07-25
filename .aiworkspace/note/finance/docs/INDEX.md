@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-07-23
+Last Verified: 2026-07-25
 
 ## Purpose
 
@@ -23,6 +23,7 @@ Last Verified: 2026-07-23
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
+- Latest completed Institutional Holdings UX task: [Institutional Holdings React Parity V1 2026-07-25](../tasks/active/institutional-holdings-react-parity-v1-20260725/STATUS.md) — 기존 기능과 DB 경계를 보존한 채 정상 화면을 React-owned `C · Modular Research Studio`로 전환했다. canonical 4개 destination, desktop research rail, 980px 이하 drawer, React 내 SEC dataset 갱신과 actual responsive Browser QA를 포함해 전체 `4/4차`를 완료했다.
 - Current active task: [Overview Sentiment CNN·AAII Balanced V1 2026-07-19](../tasks/active/overview-sentiment-cnn-aaii-v1-20260719/STATUS.md) — 전체 잠정 roadmap `2/4차`. 1차 균형형 UI와 2차 source별 immutable 수집 당시 기록, UTC known-at 조회, 24시간 자동 수집, full-history 그래프를 완료했다. 다음은 3차 독립 데이터 후보 검토이며 1W/1M은 4차 chronological PIT 검증 전까지 비공개다.
 - Latest completed Market Research UX task: [Market Research Editorial Navigation V2 2026-07-23](../tasks/active/market-research-editorial-navigation-v2-20260722/STATUS.md) — React 상단을 full-width editorial header, divider+underline family text tab, unframed local view rail과 compact active pill로 정리했다. 기존 3-family/7-view와 Python state/fallback을 유지하며 전체 `3/3차`와 1280·760·420px actual Browser QA를 완료했다.
 - Previous completed Market Research UX task: [Market Research React Navigation V1 2026-07-22](../tasks/active/market-research-react-navigation-v1-20260722/STATUS.md) — eyebrow·제목·설명·3-family·7-view 상단 전체를 하나의 responsive React surface로 전환했다. 이 component/state 계약은 최신 Editorial Navigation V2가 계승했다.

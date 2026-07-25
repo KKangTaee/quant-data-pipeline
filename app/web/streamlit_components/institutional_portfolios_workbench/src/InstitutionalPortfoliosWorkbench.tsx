@@ -5,7 +5,9 @@ import {
   queriesMatch,
   type HoldingSort,
   type MappingFilter,
+  type StudioView,
 } from "./workbenchState";
+import { InstitutionalStudioShell } from "./InstitutionalStudioShell";
 import "./style.css";
 
 type ManagerItem = {
@@ -108,6 +110,13 @@ type PriceAction = {
 
 type PriceRefreshResult = {
   symbol?: string | null;
+  status?: string;
+  message?: string;
+  rows_written?: number;
+  finished_at?: string | null;
+};
+
+type DatasetRefreshResult = {
   status?: string;
   message?: string;
   rows_written?: number;
@@ -223,7 +232,10 @@ type WorkbenchPayload = {
     label: string;
     primary: boolean;
     description: string;
+    default_dataset_label?: string;
+    default_dataset_url?: string;
   };
+  refresh_result?: DatasetRefreshResult;
   hero: {
     manager_name: string;
     cik?: string | null;
@@ -322,9 +334,6 @@ type Props = Omit<ComponentProps, "args"> & {
     payload?: WorkbenchPayload;
   };
 };
-
-type ViewName = "overview" | "holdings" | "security" | "popularity";
-type WorkspaceSection = "portfolio" | "security";
 
 const HOLDINGS_PAGE_SIZE = 50;
 const WORKBENCH_SCHEMA_VERSION = "institutional_portfolios_workbench_v2";
@@ -944,7 +953,8 @@ function PopularityRankingPanel({
 
 function InstitutionalPortfoliosWorkbench({ args }: Props) {
   const payload = args.payload;
-  const [activeView, setActiveView] = useState<ViewName>("overview");
+  const [activeView, setActiveView] = useState<StudioView>("overview");
+  const [studioDrawerOpen, setStudioDrawerOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [localSelectedQuery, setLocalSelectedQuery] = useState<string>("");
@@ -955,6 +965,12 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   const [holdingPage, setHoldingPage] = useState(1);
   const [managerSearch, setManagerSearch] = useState(payload?.manager_picker.search_query || "");
   const [securitySearch, setSecuritySearch] = useState(payload?.security_search.current_query || "");
+  const [refreshDatasetLabel, setRefreshDatasetLabel] = useState(
+    payload?.refresh_action?.default_dataset_label || "SEC Form 13F Data Sets"
+  );
+  const [refreshDatasetUrl, setRefreshDatasetUrl] = useState(payload?.refresh_action?.default_dataset_url || "");
+  const [refreshLocalZipPath, setRefreshLocalZipPath] = useState("");
+  const [refreshUserAgent, setRefreshUserAgent] = useState("");
   const [unresolvedHolding, setUnresolvedHolding] = useState<HoldingRow | null>(null);
   const managerRailRef = useRef<HTMLDivElement | null>(null);
   const managerRailScrollRef = useRef(0);
@@ -1030,6 +1046,10 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
       pendingAction.kind === "price" &&
       String(payload.price_refresh_result?.symbol || "").toUpperCase() === pendingAction.symbol
     ) {
+      setPendingAction(null);
+      setActionNotice(null);
+    }
+    if (pendingAction.kind === "refresh" && payload.refresh_result?.status) {
       setPendingAction(null);
       setActionNotice(null);
     }
@@ -1151,8 +1171,6 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     return <div className="ip-empty">Institutional portfolio payload is unavailable.</div>;
   }
 
-  const activeWorkspaceSection: WorkspaceSection =
-    activeView === "overview" || activeView === "holdings" ? "portfolio" : "security";
   const holdingsStart = holdingsState.start;
   const holdingsEnd = holdingsState.end;
   const allocationOtherSegment = payload.allocation.segments.find(
@@ -1174,18 +1192,11 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     syncFrameHeightSoon();
   };
 
-  const switchView = (view: ViewName) => {
+  const switchView = (view: StudioView) => {
     const position = hostScrollPosition();
     setActiveView(view);
     restoreHostScroll(position);
     syncFrameHeightSoon();
-  };
-
-  const switchWorkspaceSection = (section: WorkspaceSection) => {
-    if (section === activeWorkspaceSection) {
-      return;
-    }
-    switchView(section === "portfolio" ? "overview" : "security");
   };
 
   const handleDrilldown = (query: string) => {
@@ -1247,6 +1258,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   const submitManagerSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const query = managerSearch.trim();
+    setStudioDrawerOpen(false);
     setActionNotice(null);
     setLocalSelectedQuery("");
     setSecuritySearch("");
@@ -1268,6 +1280,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     if (rail) {
       managerRailScrollRef.current = rail.scrollLeft;
     }
+    setStudioDrawerOpen(false);
     setActionNotice(null);
     setLocalSelectedQuery("");
     setSecuritySearch("");
@@ -1292,11 +1305,21 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     sendEvent({ id: "collect_price_history", symbol, start_date: action.start_date || payload.hero.latest_report_period });
   };
 
-  const handleRefreshOpen = () => {
+  const submitDatasetRefresh = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!refreshDatasetUrl.trim() && !refreshLocalZipPath.trim()) {
+      return;
+    }
+    setStudioDrawerOpen(false);
     setActionNotice(null);
-    setPendingAction({ kind: "refresh", label: "13F 데이터 갱신 설정을 여는 중" });
-    sendEvent({ id: "open_refresh" });
-    window.setTimeout(() => setPendingAction((current) => (current?.kind === "refresh" ? null : current)), 900);
+    setPendingAction({ kind: "refresh", label: "공식 SEC 13F 데이터 적재 중" });
+    sendEvent({
+      id: "collect_sec_13f_dataset",
+      dataset_label: refreshDatasetLabel.trim(),
+      dataset_url: refreshDatasetUrl.trim(),
+      local_zip_path: refreshLocalZipPath.trim(),
+      user_agent: refreshUserAgent.trim(),
+    });
   };
 
   return (
@@ -1306,12 +1329,107 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
       data-contract-version={WORKBENCH_SCHEMA_VERSION}
       data-mode={payload.mode}
     >
-      <section className="ip-hero">
-        <div className="ip-hero__topline">
-          <span className={`ip-state ${payload.data_state.is_preview ? "ip-state--preview" : ""}`}>{payload.data_state.label}</span>
-          <span>{payload.hero.caveat}</span>
-        </div>
+      <InstitutionalStudioShell
+        activeView={activeView}
+        managerName={payload.hero.manager_name}
+        periodLabel={payload.hero.latest_report_period}
+        isPreview={payload.data_state.is_preview}
+        drawerOpen={studioDrawerOpen}
+        onDrawerOpen={() => setStudioDrawerOpen(true)}
+        onDrawerClose={() => setStudioDrawerOpen(false)}
+        onViewChange={switchView}
+        headerMeta={(
+          <>
+            <span className={`ip-state ${payload.data_state.is_preview ? "ip-state--preview" : ""}`}>{payload.data_state.label}</span>
+            <span>{payload.hero.latest_report_period}</span>
+          </>
+        )}
+        railContent={(
+          <>
+            <section className="ip-studio-manager-context">
+              <span className="ip-studio-rail__label">선택 기관</span>
+              <strong>{payload.hero.manager_name}</strong>
+              <small>CIK {payload.hero.cik || "-"} · {payload.hero.latest_report_period}</small>
+            </section>
 
+            <div className="ip-manager-switcher">
+              <form className="ip-manager-search" onSubmit={submitManagerSearch}>
+                <label htmlFor="ip-manager-search-input">기관 / 투자 대가 검색</label>
+                <div>
+                  <input
+                    id="ip-manager-search-input"
+                    type="search"
+                    value={managerSearch}
+                    placeholder="Berkshire, Pershing Square"
+                    onChange={(event) => setManagerSearch(event.target.value)}
+                  />
+                  <button type="submit" disabled={Boolean(pendingAction)} aria-label="기관 검색">→</button>
+                </div>
+              </form>
+              <div
+                className="ip-manager-favorites ip-manager-rail"
+                aria-label="Institutional managers"
+                ref={managerRailRef}
+              >
+                {payload.manager_picker.items.map((item) => (
+                  <button
+                    key={item.cik || item.manager_name}
+                    type="button"
+                    className={`ip-manager-tab ${item.selected ? "ip-manager-tab--active" : ""} ${
+                      pendingAction?.kind === "manager" && pendingAction.cik === item.cik ? "ip-manager-tab--pending" : ""
+                    }`}
+                    data-cik={item.cik || ""}
+                    disabled={Boolean(pendingAction)}
+                    onClick={() => handleManagerSelect(item)}
+                  >
+                    <strong>{item.watchlist_label || item.manager_name}</strong>
+                    <span>{item.manager_name} · {item.latest_report_period}</span>
+                  </button>
+                ))}
+              </div>
+              {payload.manager_picker.search_state === "empty" ? (
+                <div className="ip-manager-search-empty" role="status">
+                  <strong>검색 결과 없음</strong>
+                  <span>{payload.manager_picker.search_empty_message}</span>
+                </div>
+              ) : payload.manager_picker.search_state === "results" ? (
+                <div className="ip-manager-search-count" role="status">
+                  검색 결과 {Number(payload.manager_picker.search_result_count || 0).toLocaleString()}개
+                </div>
+              ) : null}
+            </div>
+
+            <details className={`ip-studio-data-panel ${payload.freshness?.is_stale ? "is-stale" : ""}`}>
+              <summary>
+                <span>데이터 기준</span>
+                <strong>{payload.freshness?.latest_report_period || "수집 필요"}</strong>
+              </summary>
+              <p>{payload.refresh_action?.description}</p>
+              <dl>
+                <div><dt>상태</dt><dd>{payload.freshness?.status || "missing"}</dd></div>
+                <div><dt>수집</dt><dd>{payload.freshness?.last_collected_at || "미수집"}</dd></div>
+                <div><dt>rows</dt><dd>{Number(payload.freshness?.rows_written || 0).toLocaleString()}</dd></div>
+              </dl>
+              {payload.freshness?.stale_reason ? <small>{payload.freshness.stale_reason}</small> : null}
+              {payload.refresh_result?.status ? (
+                <div className={`ip-studio-refresh-result is-${payload.refresh_result.status}`} role="status">
+                  <strong>{payload.refresh_result.status}</strong>
+                  <span>{payload.refresh_result.message}</span>
+                </div>
+              ) : null}
+              <form className="ip-studio-refresh-form" onSubmit={submitDatasetRefresh}>
+                <label>Dataset label<input value={refreshDatasetLabel} onChange={(event) => setRefreshDatasetLabel(event.target.value)} /></label>
+                <label>SEC dataset URL<input type="url" value={refreshDatasetUrl} onChange={(event) => setRefreshDatasetUrl(event.target.value)} /></label>
+                <label>Local ZIP path<input value={refreshLocalZipPath} onChange={(event) => setRefreshLocalZipPath(event.target.value)} placeholder="선택 사항" /></label>
+                <label>SEC User-Agent<input value={refreshUserAgent} onChange={(event) => setRefreshUserAgent(event.target.value)} placeholder="선택 사항" /></label>
+                <button type="submit" disabled={Boolean(pendingAction) || (!refreshDatasetUrl.trim() && !refreshLocalZipPath.trim())}>
+                  {payload.refresh_action?.label || "최신 13F 데이터 갱신"}
+                </button>
+              </form>
+            </details>
+          </>
+        )}
+      >
         {pendingAction ? (
           <div className="ip-loading-banner" role="status" aria-live="polite">
             <span className="ip-spinner" aria-hidden="true" />
@@ -1320,208 +1438,78 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
                 ? "포트폴리오 불러오는 중"
                 : pendingAction.kind === "manager_search"
                   ? "기관 검색 중"
-                : pendingAction.kind === "interest"
-                  ? "종목 상세 불러오는 중"
-                  : pendingAction.kind === "popularity"
-                    ? "기관 보유 랭킹 불러오는 중"
-                    : pendingAction.kind === "price"
-                      ? "가격 데이터 수집 중"
-                      : "갱신 설정 여는 중"}
+                  : pendingAction.kind === "interest"
+                    ? "종목 상세 불러오는 중"
+                    : pendingAction.kind === "popularity"
+                      ? "기관 보유 랭킹 불러오는 중"
+                      : pendingAction.kind === "price"
+                        ? "가격 데이터 수집 중"
+                        : "13F 데이터 갱신 중"}
             </strong>
             <em>{pendingAction.label}</em>
           </div>
         ) : null}
 
-        <div className="ip-context-hero__grid">
-          <div className="ip-context-hero__copy">
-            <div className="ip-context-hero__eyebrow">INSTITUTIONAL PORTFOLIO CONTEXT</div>
-            <h2>{payload.context_summary.headline}</h2>
-            <p>{payload.context_summary.summary}</p>
-            <div className="ip-context-hero__signals">
-              <span>상위 5개 {payload.context_summary.top5_weight_label}</span>
-              <span>최대 섹터 {payload.context_summary.largest_sector} {payload.context_summary.largest_sector_weight_label}</span>
-            </div>
+        <section className="ip-hero">
+          <div className="ip-hero__topline">
+            <span>{payload.hero.manager_name}</span>
+            <span>{payload.hero.caveat}</span>
           </div>
-          <aside className="ip-context-basis" aria-label="보고 근거">
-            <div><span>보고 기준 분기</span><strong>{payload.hero.latest_report_period}</strong></div>
-            <div><span>제출일</span><strong>{payload.hero.latest_filing_date}</strong></div>
-            <div className="ip-context-basis__snapshot">
-              <span>DB snapshot</span>
-              <strong>{payload.freshness?.last_collected_at || payload.data_state.as_of_label}</strong>
-            </div>
-            {payload.hero.source_ref ? (
-              <a className="ip-source-link" href={payload.hero.source_ref} target="_blank" rel="noreferrer">
-                SEC 원문 열기
-              </a>
-            ) : null}
-          </aside>
-        </div>
-
-        <div className="ip-context-controls">
-          <div className="ip-manager-switcher">
-            <form className="ip-manager-search" onSubmit={submitManagerSearch}>
-              <label htmlFor="ip-manager-search-input">기관 / 투자 대가 검색</label>
-              <div>
-                <input
-                  id="ip-manager-search-input"
-                  type="search"
-                  value={managerSearch}
-                  placeholder="Berkshire Hathaway, Pershing Square"
-                  onChange={(event) => setManagerSearch(event.target.value)}
-                />
-                <button type="submit" disabled={Boolean(pendingAction)}>검색</button>
+          <div className="ip-context-hero__grid">
+            <div className="ip-context-hero__copy">
+              <div className="ip-context-hero__eyebrow">INSTITUTIONAL PORTFOLIO CONTEXT</div>
+              <h2>{payload.context_summary.headline}</h2>
+              <p>{payload.context_summary.summary}</p>
+              <div className="ip-context-hero__signals">
+                <span>상위 5개 {payload.context_summary.top5_weight_label}</span>
+                <span>최대 섹터 {payload.context_summary.largest_sector} {payload.context_summary.largest_sector_weight_label}</span>
               </div>
-            </form>
-            <div
-              className="ip-manager-favorites ip-manager-rail"
-              role="tablist"
-              aria-label="Institutional managers"
-              ref={managerRailRef}
-              onScroll={(event) => {
-                managerRailScrollRef.current = event.currentTarget.scrollLeft;
-              }}
-            >
-              {payload.manager_picker.items.map((item) => (
-                <button
-                  key={item.cik || item.manager_name}
-                  type="button"
-                  className={`ip-manager-tab ${item.selected ? "ip-manager-tab--active" : ""} ${
-                    pendingAction?.kind === "manager" && pendingAction.cik === item.cik ? "ip-manager-tab--pending" : ""
-                  }`}
-                  data-cik={item.cik || ""}
-                  disabled={Boolean(pendingAction)}
-                  onClick={() => handleManagerSelect(item)}
-                >
-                  <strong>{item.watchlist_label || item.manager_name}</strong>
-                  <span>{item.manager_name} · {item.latest_report_period}</span>
-                </button>
-              ))}
             </div>
-            {payload.manager_picker.search_state === "empty" ? (
-              <div className="ip-manager-search-empty" role="status">
-                <strong>검색 결과가 없습니다</strong>
-                <span>{payload.manager_picker.search_empty_message}</span>
+            <aside className="ip-context-basis" aria-label="보고 근거">
+              <div><span>보고 기준 분기</span><strong>{payload.hero.latest_report_period}</strong></div>
+              <div><span>제출일</span><strong>{payload.hero.latest_filing_date}</strong></div>
+              <div className="ip-context-basis__snapshot">
+                <span>DB snapshot</span>
+                <strong>{payload.freshness?.last_collected_at || payload.data_state.as_of_label}</strong>
               </div>
-            ) : payload.manager_picker.search_state === "results" ? (
-              <div className="ip-manager-search-count" role="status">
-                검색 결과 {Number(payload.manager_picker.search_result_count || 0).toLocaleString()}개
-              </div>
-            ) : null}
-          </div>
-          <div className="ip-freshness-block">
-            <span className="ip-context-control-label">데이터 기준</span>
-            <div className={`ip-freshness ${payload.freshness?.is_stale ? "ip-freshness--stale" : ""}`}>
-              <button type="button" className="ip-freshness__action" onClick={handleRefreshOpen}>
-                {payload.refresh_action?.label || "SEC 13F 데이터"}
-              </button>
-              <strong>{payload.freshness?.latest_report_period || "로컬 13F 데이터 없음"}</strong>
-              <em>{payload.freshness?.last_collected_at ? `수집 시각 ${payload.freshness.last_collected_at}` : "갱신 설정 사용 가능"}</em>
-            </div>
-          </div>
-        </div>
-
-        <div className="ip-allocation-panel">
-          <div className="ip-section-head">
-            <div>
-              <h3>{payload.allocation.title}</h3>
-              <p>{payload.allocation.subtitle}</p>
-            </div>
-            <strong>{payload.allocation.total_label}</strong>
-          </div>
-          <div className="ip-allocation-layout">
-            <AllocationDonut segments={payload.allocation.segments} />
-            <div className="ip-holding-list">
-              {payload.allocation.top_holdings.slice(0, 6).map((holding) => (
-                <button type="button" key={`${holding.key}-${holding.label}`} className="ip-holding-row" onClick={() => handleAllocationDrilldown(holding)}>
-                  <span className="ip-dot" style={{ backgroundColor: holding.color }} />
-                  <span>
-                    <strong>{holding.label}</strong>
-                    <small>{holding.issuer_name}</small>
-                  </span>
-                  <em>{holding.weight_label}</em>
-                </button>
-              ))}
-              {allocationOtherSegment ? (
-                <div className="ip-allocation-other">
-                  <span>Other 버킷</span>
-                  <strong>{allocationOtherCount.toLocaleString()}개 · {allocationOtherWeight}</strong>
-                </div>
+              {payload.hero.source_ref ? (
+                <a className="ip-source-link" href={payload.hero.source_ref} target="_blank" rel="noreferrer">SEC 원문 열기</a>
               ) : null}
-            </div>
+            </aside>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <nav className="ip-view-navigation" aria-label="Institutional portfolio workspace views">
-        <div className="ip-primary-tabs" role="tablist" aria-label="작업 영역">
-          <button
-            className={activeWorkspaceSection === "portfolio" ? "ip-primary-tabs__active" : ""}
-            type="button"
-            aria-selected={activeWorkspaceSection === "portfolio"}
-            onClick={() => switchWorkspaceSection("portfolio")}
-          >
-            포트폴리오
-          </button>
-          <button
-            className={activeWorkspaceSection === "security" ? "ip-primary-tabs__active" : ""}
-            type="button"
-            aria-selected={activeWorkspaceSection === "security"}
-            onClick={() => switchWorkspaceSection("security")}
-          >
-            종목 분석
-          </button>
-        </div>
-
-        <div
-          className="ip-secondary-tabs"
-          role="tablist"
-          aria-label={activeWorkspaceSection === "portfolio" ? "포트폴리오 세부 보기" : "종목 분석 세부 보기"}
-        >
-          {activeWorkspaceSection === "portfolio" ? (
-            <>
-              <button
-                className={activeView === "overview" ? "ip-secondary-tabs__active" : ""}
-                type="button"
-                aria-selected={activeView === "overview"}
-                onClick={() => switchView("overview")}
-              >
-                요약
-              </button>
-              <button
-                className={activeView === "holdings" ? "ip-secondary-tabs__active" : ""}
-                type="button"
-                aria-selected={activeView === "holdings"}
-                onClick={() => switchView("holdings")}
-              >
-                전체 보유
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                className={activeView === "security" ? "ip-secondary-tabs__active" : ""}
-                type="button"
-                aria-selected={activeView === "security"}
-                onClick={() => switchView("security")}
-              >
-                종목 상세
-              </button>
-              <button
-                className={activeView === "popularity" ? "ip-secondary-tabs__active" : ""}
-                type="button"
-                aria-selected={activeView === "popularity"}
-                onClick={() => switchView("popularity")}
-              >
-                기관 보유 랭킹
-              </button>
-            </>
-          )}
-        </div>
-      </nav>
-
-      <div className="ip-view-body">
+        <div className="ip-view-body">
         {activeView === "overview" ? (
           <section className="ip-overview-stack">
+            <div className="ip-panel ip-allocation-panel">
+              <div className="ip-section-head">
+                <div>
+                  <h3>{payload.allocation.title}</h3>
+                  <p>{payload.allocation.subtitle}</p>
+                </div>
+                <strong>{payload.allocation.total_label}</strong>
+              </div>
+              <div className="ip-allocation-layout">
+                <AllocationDonut segments={payload.allocation.segments} />
+                <div className="ip-holding-list">
+                  {payload.allocation.top_holdings.slice(0, 6).map((holding) => (
+                    <button type="button" key={`${holding.key}-${holding.label}`} className="ip-holding-row" onClick={() => handleAllocationDrilldown(holding)}>
+                      <span className="ip-dot" style={{ backgroundColor: holding.color }} />
+                      <span><strong>{holding.label}</strong><small>{holding.issuer_name}</small></span>
+                      <em>{holding.weight_label}</em>
+                    </button>
+                  ))}
+                  {allocationOtherSegment ? (
+                    <div className="ip-allocation-other">
+                      <span>Other 버킷</span>
+                      <strong>{allocationOtherCount.toLocaleString()}개 · {allocationOtherWeight}</strong>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
             <div className="ip-panel ip-panel--changes">
               <div className="ip-section-head">
                 <div>
@@ -1740,6 +1728,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
           ))}
         </section>
       ) : null}
+      </InstitutionalStudioShell>
     </main>
   );
 }

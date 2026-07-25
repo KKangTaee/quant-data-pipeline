@@ -1,6 +1,6 @@
 # Institutional Holdings React Parity V1 Plan
 
-Status: Design Review
+Status: Completed
 Started: 2026-07-25
 
 ## 이걸 하는 이유?
@@ -35,7 +35,7 @@ Started: 2026-07-25
 - 목적: 정상 화면에서 React가 소유할 영역과 Streamlit adapter / fallback 경계를 written spec으로 고정한다.
 - 범위: `C · Modular Research Studio`, research rail / main canvas, component map, payload / event / responsive / QA contract.
 - 완료 조건: placeholder와 모순이 없는 written spec을 사용자가 승인한다.
-- 상태: draft 작성 중.
+- 상태: 완료.
 
 ### 3차: React shell / component 분리 / visual parity 구현
 
@@ -46,7 +46,7 @@ Started: 2026-07-25
   - `app/web/streamlit_components/institutional_portfolios_workbench/src/`
   - focused Python / React tests
 - 완료 조건: normal path React ownership, explicit event boundary, fallback preservation, focused automated checks 통과.
-- 상태: pending.
+- 상태: 완료.
 
 ### 4차: actual interaction QA / documentation closeout
 
@@ -56,7 +56,7 @@ Started: 2026-07-25
   - manager selection, holdings search/filter/page, mapped/unmapped security, chart, refresh/help disclosure.
   - 1280px / 760px / 420px overflow와 console 확인.
   - durable docs / root handoff 정렬과 coherent commit.
-- 상태: pending.
+- 상태: 완료.
 
 ## In Scope
 

@@ -7209,10 +7209,9 @@ Detailed historical logs were archived on `2026-04-13`.
   - Split the fast official-calendar refresh from the slow hybrid earnings action and hardened React completion acknowledgement with a unique UI token.
   - Detailed evidence remains under `tasks/active/overview-events-ux-redesign/`.
 
-## 2026-07-25 - Institutional Holdings React 전면 화면 설계
+## 2026-07-25 - Institutional Holdings React 전면 화면 구현 완료
 
-- Today / Market Research와 실제 desktop·420px 화면을 비교해 Streamlit / React 이중 shell, visual-token drift, navigation mismatch와 mobile first-read 지연을 확인했다.
-- 정상 화면은 React가 header·navigation·manager·portfolio/security·refresh/help/caveat를 소유하고 Streamlit은 route·DB payload·explicit event·fallback만 담당하는 방향을 사용자가 승인했다.
-- visual companion 3안 중 `C · Modular Research Studio`를 최종 선택했다. desktop은 component-local research rail / main canvas, tablet/mobile은 top switcher / drawer를 사용한다.
-- standalone SPA / API / DB 변경 없이 기존 기능을 보존하는 written spec을 C direction으로 갱신했다. 현재 전체 roadmap `1/4차` 완료, 2차 디자인 사용자 검토 대기다.
-- 상세는 `tasks/active/institutional-holdings-react-parity-v1-20260725/`를 본다.
+- 정상 화면을 React-owned `C · Modular Research Studio`로 전환하고 desktop research rail, 980px 이하 drawer, canonical 4개 destination을 적용했다.
+- 기관 검색·보유 explorer·종목 상세/차트·랭킹·unresolved guardrail과 SEC dataset 갱신 기능을 studio 안에서 보존했다. Streamlit은 route·DB payload·explicit event·unavailable fallback만 담당한다.
+- React 7개, Python 58개, typecheck/build와 1280·760·420px actual Browser QA를 통과했으며 console error는 0이었다.
+- 전체 roadmap `4/4차` 완료. 상세는 `tasks/active/institutional-holdings-react-parity-v1-20260725/`를 본다.

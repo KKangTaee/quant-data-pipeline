@@ -1,26 +1,26 @@
 # Institutional Holdings React Parity V1 Risks
 
-## Active Risks
+## Resolved Risks
 
 ### React Event Rerun Can Lose Local Context
 
-Manager selection, security search, refresh and price collection cross the Streamlit boundary. The implementation must preserve active workspace, disclosure and pending intent until the matching replacement payload arrives.
+Manager/security/refresh/price events retain the existing pending intent. Mobile QA found that an open drawer could survive a rerun, so manager search/selection and dataset refresh now close it before the event.
 
 ### Refresh Presentation Migration
 
-Moving the existing Streamlit refresh expander into React must preserve dataset inputs, explicit execution, result feedback and failure handling without turning the normal surface into an operations console.
+React preserves dataset label, URL, local ZIP, User-Agent, explicit execution and result feedback inside a collapsed data disclosure.
 
 ### Large Source Refactor
 
-The existing TSX and CSS are large and contain mature chart / holdings interactions. Component extraction and visual changes must be separated enough that regressions can be located and reviewed.
+Only the studio shell/navigation was extracted. Mature allocation, holdings, chart and popularity implementations were retained and regression-tested.
 
 ### Component Height / Mobile Layout
 
-The custom component relies on dynamic frame height. New disclosures, result messages and responsive stacks must continue to trigger correct `Streamlit.setFrameHeight()` behavior without internal clipping.
+1280/760/420 actual rendering showed no internal clipping or console warning. Existing `syncFrameHeightSoon` behavior remains.
 
 ### Research Rail / Drawer State Parity
 
-Desktop rail and tablet/mobile drawer must control the same manager and destination state. Breakpoint changes, drawer close and server payload replacement must not reset the current view or leave keyboard focus in a hidden surface.
+Desktop and mobile use one destination list and active view. Drawer closes on destination and server-event actions; Escape returns focus to the menu trigger.
 
 ### Existing Dirty Worktree
 
@@ -31,3 +31,4 @@ Registry, saved portfolio, run history and many generated QA artifacts already e
 - Standalone React SPA / API migration is a product-wide architecture decision, not this UI task.
 - Historical 13F backfill and security-master coverage remain separate data dependencies.
 - Current custom price chart remains in place; chart-library migration is not part of visual parity.
+- The component is still hosted in a Streamlit iframe, so its rail/drawer cannot remain fixed relative to the outer Streamlit scroll viewport. The implemented first-read and event paths are verified; a truly app-global persistent rail would require a product-wide shell change.
