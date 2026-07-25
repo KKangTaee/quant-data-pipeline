@@ -1,6 +1,6 @@
 # README Product / Onboarding Overhaul V1 Status
 
-Status: In Progress — 2/4 Complete
+Status: In Progress — 3/4 Complete
 Started: 2026-07-25
 
 ## Progress
@@ -22,16 +22,20 @@ Started: 2026-07-25
 - Python / Streamlit / React / TypeScript / Vite / MySQL / JSONL의 실제 역할과 계층별 ownership을 설명했다.
 - repository / storage / evidence trust / focused verification / durable docs map을 추가했다.
 - backtest-dev `8510` listener의 cwd와 HTTP 200, 기술 키워드와 `git diff --check`를 확인했다.
+- 3차에서 backtest-dev `8510`의 독립 Today session을 1280×720 representative first-read로 캡처했다.
+- loading 종료, current navigation, Today hero / market evidence / next check, console warning/error 0과 민감정보 부재를 확인했다.
+- 실제 browser output이 JPEG임을 검증해 asset과 README 확장자를 `.jpg`로 일치시켰다.
+- README hero에 repository-relative Today image와 화면 역할 설명을 연결했다.
 
 ## Current Step
 
-전체 roadmap `2/4차`.
+전체 roadmap `3/4차`.
 
-제품 서사, 5분 실행과 기술 구현 구조까지 완료했다. Today 대표 이미지와 final QA가 남아 있다.
+제품 서사, 5분 실행, 기술 구현 구조와 Today 대표 이미지까지 완료했다. final link / Markdown / route / Browser QA와 docs closeout이 남아 있다.
 
 ## Next Action
 
-3차에서 backtest-dev `8510`의 Today first-read를 README 전용 PNG로 캡처하고 hero에 연결한다.
+4차에서 local link, Markdown / Mermaid, current app route, browser visual QA와 task / root handoff closeout을 완료한다.
 
 ## Scope Boundary
 

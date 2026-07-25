@@ -19,6 +19,8 @@
 - app이 빈 DB에서도 unavailable / missing evidence를 숨기지 않는다는 점을 정상 경계로 설명한다.
 - current MySQL local-default contract를 env-configured architecture처럼 과장하지 않는다.
 - active task snapshot을 README에 복제하지 않는다.
+- 일반 quick start는 Streamlit default `8501`, backtest-dev actual screenshot / Browser QA는 `8510`을 사용한다.
+- Browser screenshot API의 실제 output은 JPEG였으므로 README asset은 `.jpg`로 관리한다.
 
 ## Protected Existing Work
 

@@ -213,7 +213,7 @@ component별 전체 명령은 runbook과 해당 task 문서로 연결한다.
 ## Files In Scope
 
 - `README.md`
-- `.aiworkspace/note/finance/docs/assets/readme/<today-image>`
+- `.aiworkspace/note/finance/docs/assets/readme/finance-console-today.jpg`
 - `.aiworkspace/note/finance/tasks/active/readme-product-onboarding-overhaul-v1-20260725/*`
 - `.aiworkspace/note/finance/WORK_PROGRESS.md`
 - `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`

@@ -40,3 +40,11 @@
 - Python / Streamlit / React / TypeScript / Vite / MySQL / JSONL ownership, architecture Mermaid, repository / storage / trust / verification map 작성
 - backtest-dev `8510` listener가 current worktree cwd를 사용하고 HTTP 200을 반환함을 확인
 - README 321 lines, 기술·PIT·bias keyword assertion과 `git diff --check` 통과
+
+## 2026-07-26 — 3차 Today Representative Image
+
+- in-app Browser를 `http://localhost:8510/?readme_capture=1`의 새 Today session으로 열어 sub-dev `8501`과 분리
+- 1280×720 first-read에 current navigation, Today hero, market evidence와 next check가 보이고 loading / raw diagnostic / local path / secret이 없음을 확인
+- browser console warning/error `0`
+- screenshot 실제 포맷이 JPEG임을 `file`로 확인하고 `.jpg` 확장자로 정렬
+- `.aiworkspace/note/finance/docs/assets/readme/finance-console-today.jpg` 66,702 bytes 저장 및 README relative link 연결

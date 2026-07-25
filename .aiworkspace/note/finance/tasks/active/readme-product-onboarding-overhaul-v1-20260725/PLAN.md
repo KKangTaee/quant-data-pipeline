@@ -58,7 +58,7 @@ Data Operations, Reference Center를 `Research / Portfolio / Data / Help` naviga
 
 ### Create
 
-- `.aiworkspace/note/finance/docs/assets/readme/finance-console-today.png`
+- `.aiworkspace/note/finance/docs/assets/readme/finance-console-today.jpg`
   - README의 유일한 대표 제품 화면을 소유한다.
 
 ### Read-Only Sources Of Truth
@@ -279,7 +279,7 @@ git commit -m "README 실행과 기술 구조 보강"
 
 **Files:**
 
-- Create: `.aiworkspace/note/finance/docs/assets/readme/finance-console-today.png`
+- Create: `.aiworkspace/note/finance/docs/assets/readme/finance-console-today.jpg`
 - Modify: `README.md`
 - Modify: `.aiworkspace/note/finance/tasks/active/readme-product-onboarding-overhaul-v1-20260725/STATUS.md`
 - Modify: `.aiworkspace/note/finance/tasks/active/readme-product-onboarding-overhaul-v1-20260725/RUNS.md`
@@ -289,7 +289,7 @@ git commit -m "README 실행과 기술 구조 보강"
 - Consumes: live `http://localhost:8510/` backtest-dev Today route와 Task 1 README hero
 - Produces: repository-relative stable README representative image
 
-- [ ] **Step 1: Browser에서 Today representative state 확인**
+- [x] **Step 1: Browser에서 Today representative state 확인**
 
 확인 항목:
 
@@ -303,39 +303,39 @@ no expanded raw diagnostic panel
 no visible secret or local filesystem path
 ```
 
-- [ ] **Step 2: README 전용 screenshot 저장**
+- [x] **Step 2: README 전용 screenshot 저장**
 
 in-app Browser 또는 연결된 browser control로 full-page가 아닌 representative first-read viewport를 캡처해
 다음 exact path에 저장한다.
 
 ```text
-.aiworkspace/note/finance/docs/assets/readme/finance-console-today.png
+.aiworkspace/note/finance/docs/assets/readme/finance-console-today.jpg
 ```
 
-- [ ] **Step 3: README hero에 relative image 연결**
+- [x] **Step 3: README hero에 relative image 연결**
 
 README 첫 설명 바로 아래에 다음 relative asset을 연결한다.
 
 ```markdown
-![Finance Console Today 화면](.aiworkspace/note/finance/docs/assets/readme/finance-console-today.png)
+![Finance Console Today 화면](.aiworkspace/note/finance/docs/assets/readme/finance-console-today.jpg)
 ```
 
-- [ ] **Step 4: Asset 검증**
+- [x] **Step 4: Asset 검증**
 
 Run:
 
 ```bash
-test -s .aiworkspace/note/finance/docs/assets/readme/finance-console-today.png
-file .aiworkspace/note/finance/docs/assets/readme/finance-console-today.png
-rg -qF ".aiworkspace/note/finance/docs/assets/readme/finance-console-today.png" README.md
+test -s .aiworkspace/note/finance/docs/assets/readme/finance-console-today.jpg
+file .aiworkspace/note/finance/docs/assets/readme/finance-console-today.jpg
+rg -qF ".aiworkspace/note/finance/docs/assets/readme/finance-console-today.jpg" README.md
 ```
 
-Expected: non-empty PNG, README exact relative path 존재.
+Expected: non-empty 1280×720 JPEG, README exact relative path 존재.
 
-- [ ] **Step 5: 3차 commit**
+- [x] **Step 5: 3차 commit**
 
 ```bash
-git add README.md .aiworkspace/note/finance/docs/assets/readme/finance-console-today.png .aiworkspace/note/finance/tasks/active/readme-product-onboarding-overhaul-v1-20260725/
+git add README.md .aiworkspace/note/finance/docs/assets/readme/finance-console-today.jpg .aiworkspace/note/finance/tasks/active/readme-product-onboarding-overhaul-v1-20260725/
 git commit -m "README 대표 제품 화면 추가"
 ```
 
@@ -459,7 +459,7 @@ README, representative asset, task docs, two root handoff logs only
 
 ```bash
 git add README.md \
-  .aiworkspace/note/finance/docs/assets/readme/finance-console-today.png \
+  .aiworkspace/note/finance/docs/assets/readme/finance-console-today.jpg \
   .aiworkspace/note/finance/tasks/active/readme-product-onboarding-overhaul-v1-20260725 \
   .aiworkspace/note/finance/WORK_PROGRESS.md \
   .aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md

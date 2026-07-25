@@ -8,6 +8,10 @@ DB-backed evidence로 연결하는 **Evidence-first 퀀트 투자 리서치 워�
 현재 active product scope는 `finance` 패키지와 Streamlit 기반 `Finance Console`입니다.
 이 프로젝트는 리서치와 의사결정을 지원하지만 broker 연결, 실제 주문, 자동 리밸런싱 또는 수익 보장을 제공하지 않습니다.
 
+![Finance Console Today 화면](.aiworkspace/note/finance/docs/assets/readme/finance-console-today.jpg)
+
+`Today`는 시장 근거, 다음 일정과 대표 포트폴리오 상태를 한 화면에서 읽고 더 깊은 Research 또는 Portfolio 작업으로 이동하는 기본 진입점입니다.
+
 ## 왜 이 프로젝트를 만들었는가
 
 백테스트 수익률 하나만으로는 실제 추적 가능한 포트폴리오를 고르기 어렵습니다.
