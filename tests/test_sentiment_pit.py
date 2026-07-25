@@ -44,9 +44,14 @@ class SentimentPitSchemaTests(unittest.TestCase):
 
 
 class FakeTransactionDb(FakeSchemaDb):
-    def __init__(self, fail_snapshot: bool = False) -> None:
+    def __init__(
+        self,
+        fail_snapshot: bool = False,
+        fail_reconcile: bool = False,
+    ) -> None:
         super().__init__()
         self.fail_snapshot = fail_snapshot
+        self.fail_reconcile = fail_reconcile
         self.events: list[str] = []
 
     def begin(self) -> None:
@@ -68,8 +73,13 @@ class FakeTransactionDb(FakeSchemaDb):
 
     def execute(self, sql: str, params=None) -> None:
         if "DELETE FROM macro_series_observation" in sql:
-            self.events.append("delete")
+            if self.fail_reconcile and "NOT IN" in sql:
+                raise RuntimeError("canonical reconciliation failed")
+            self.events.append(
+                "canonical_window" if "NOT IN" in sql else "delete"
+            )
             self.deleted_params = dict(params or {})
+            self.deleted_sql = sql
             return
         if params is not None:
             self.events.append("batch")
@@ -110,6 +120,7 @@ def aaii_week_rows(observation_date: str) -> list[dict]:
             "observation_date": observation_date,
             "source": "aaii_sentiment_survey",
             "source_mode": "xls",
+            "source_ref": "https://www.aaii.com/files/surveys/sentiment.xls",
         }
         for series_id, value in values.items()
     ]
@@ -337,6 +348,189 @@ class SentimentPitPersistenceTests(unittest.TestCase):
         )
         self.assertEqual(db.events, ["begin", "batch", "snapshot", "canonical", "commit"])
         self.assertEqual(result["snapshot_rows_written"], 1)
+
+    def test_aaii_xls_capture_reconciles_canonical_window_before_upsert(self) -> None:
+        from finance.data.sentiment_store import persist_market_sentiment_source_capture
+
+        db = FakeTransactionDb()
+        rows = aaii_week_rows("2026-07-09") + aaii_week_rows("2026-07-16")
+
+        persist_market_sentiment_source_capture(
+            db,
+            collection_id="c",
+            batch_id="b",
+            source="aaii_sentiment_survey",
+            source_ref="https://www.aaii.com/files/surveys/sentiment.xls",
+            requested_at="2026-07-20 00:59:59.000000",
+            observed_at="2026-07-20 01:00:00.000000",
+            completed_at="2026-07-20 01:00:01.000000",
+            status="success",
+            coverage={"expected": 4, "observed": 4, "missing_series": []},
+            rows=rows,
+        )
+
+        self.assertEqual(
+            db.events,
+            [
+                "begin",
+                "batch",
+                "snapshot",
+                "canonical_window",
+                "canonical",
+                "commit",
+            ],
+        )
+        self.assertEqual(db.deleted_params["start_date"], "2026-07-09")
+        self.assertEqual(db.deleted_params["end_date"], "2026-07-16")
+        self.assertEqual(
+            {
+                db.deleted_params["keep_date_0"],
+                db.deleted_params["keep_date_1"],
+            },
+            {"2026-07-09", "2026-07-16"},
+        )
+
+    def test_aaii_html_capture_does_not_reconcile_canonical_window(self) -> None:
+        from finance.data.sentiment_store import persist_market_sentiment_source_capture
+
+        db = FakeTransactionDb()
+        rows = [
+            {**row, "source_mode": "html"}
+            for row in aaii_week_rows("2026-07-16")
+        ]
+
+        result = persist_market_sentiment_source_capture(
+            db,
+            collection_id="c",
+            batch_id="b",
+            source="aaii_sentiment_survey",
+            source_ref="https://www.aaii.com/sentimentsurvey/sent_results",
+            requested_at="2026-07-20 00:59:59.000000",
+            observed_at="2026-07-20 01:00:00.000000",
+            completed_at="2026-07-20 01:00:01.000000",
+            status="success",
+            coverage={"expected": 4, "observed": 4, "missing_series": []},
+            rows=rows,
+        )
+
+        self.assertEqual(
+            db.events,
+            ["begin", "batch", "snapshot", "canonical", "commit"],
+        )
+        self.assertIsNone(result["canonical_window_reconciled"])
+
+    def test_aaii_xls_capture_with_missing_week_does_not_reconcile(self) -> None:
+        from finance.data.sentiment_store import persist_market_sentiment_source_capture
+
+        db = FakeTransactionDb()
+        rows = aaii_week_rows("2026-07-02") + aaii_week_rows("2026-07-16")
+
+        result = persist_market_sentiment_source_capture(
+            db,
+            collection_id="c",
+            batch_id="b",
+            source="aaii_sentiment_survey",
+            source_ref="https://www.aaii.com/sentimentsurvey/sent_results",
+            requested_at="2026-07-20 00:59:59.000000",
+            observed_at="2026-07-20 01:00:00.000000",
+            completed_at="2026-07-20 01:00:01.000000",
+            status="success",
+            coverage={"expected": 4, "observed": 4, "missing_series": []},
+            rows=rows,
+        )
+
+        self.assertEqual(
+            db.events,
+            ["begin", "batch", "snapshot", "canonical", "commit"],
+        )
+        self.assertIsNone(result["canonical_window_reconciled"])
+
+    def test_aaii_xls_reconciliation_requires_authoritative_capture_contract(
+        self,
+    ) -> None:
+        from finance.data.sentiment_store import persist_market_sentiment_source_capture
+
+        cases = (
+            ("outer_source", {"source": "cnn_fear_greed"}),
+            ("partial_status", {"status": "partial"}),
+            (
+                "non_official_type",
+                {
+                    "rows": [
+                        {**row, "source_type": "community"}
+                        for row in aaii_week_rows("2026-07-16")
+                    ]
+                },
+            ),
+            (
+                "non_workbook_ref",
+                {
+                    "rows": [
+                        {**row, "source_ref": "https://example.com/sentiment.xls"}
+                        for row in aaii_week_rows("2026-07-16")
+                    ]
+                },
+            ),
+        )
+
+        for label, overrides in cases:
+            with self.subTest(label=label):
+                db = FakeTransactionDb()
+                values = {
+                    "source": "aaii_sentiment_survey",
+                    "status": "success",
+                    "rows": (
+                        aaii_week_rows("2026-07-09")
+                        + aaii_week_rows("2026-07-16")
+                    ),
+                    **overrides,
+                }
+                result = persist_market_sentiment_source_capture(
+                    db,
+                    collection_id="c",
+                    batch_id=f"b-{label}",
+                    source=values["source"],
+                    source_ref="https://www.aaii.com/sentimentsurvey/sent_results",
+                    requested_at="2026-07-20 00:59:59.000000",
+                    observed_at="2026-07-20 01:00:00.000000",
+                    completed_at="2026-07-20 01:00:01.000000",
+                    status=values["status"],
+                    coverage={"expected": 4, "observed": 4, "missing_series": []},
+                    rows=values["rows"],
+                )
+
+                self.assertNotIn("canonical_window", db.events)
+                self.assertIsNone(result["canonical_window_reconciled"])
+
+    def test_aaii_xls_reconciliation_failure_rolls_back_before_upsert(self) -> None:
+        from finance.data.sentiment_store import persist_market_sentiment_source_capture
+
+        db = FakeTransactionDb(fail_reconcile=True)
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "canonical reconciliation failed",
+        ):
+            persist_market_sentiment_source_capture(
+                db,
+                collection_id="c",
+                batch_id="b",
+                source="aaii_sentiment_survey",
+                source_ref="https://www.aaii.com/files/surveys/sentiment.xls",
+                requested_at="2026-07-20 00:59:59.000000",
+                observed_at="2026-07-20 01:00:00.000000",
+                completed_at="2026-07-20 01:00:01.000000",
+                status="success",
+                coverage={"expected": 4, "observed": 4, "missing_series": []},
+                rows=(
+                    aaii_week_rows("2026-07-09")
+                    + aaii_week_rows("2026-07-16")
+                ),
+            )
+
+        self.assertEqual(
+            db.events,
+            ["begin", "batch", "snapshot", "rollback"],
+        )
 
     def test_snapshot_failure_rolls_back_before_canonical(self) -> None:
         from finance.data.sentiment_store import persist_market_sentiment_source_capture

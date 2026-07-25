@@ -65,7 +65,7 @@ Last Verified: 2026-07-20
 | `etf_operability_snapshot` | ETF 비용, 규모, 유동성, spread, NAV 관련 snapshot |
 | `etf_holdings_snapshot` | ETF holdings row snapshot. QQQ SEC rows는 CUSIP/ISIN/LEI/CIK, filing/accession, anchor quality를 함께 보존한다. |
 | `etf_exposure_snapshot` | holdings 또는 provider aggregate 기반 exposure summary |
-| `macro_series_observation` | FRED VIX / yield curve / credit spread와 Economic Cycle asset-path series (`DGS2`, `DGS10`, `DFII10`, `T10YIE`, `VIXCLS`, `BAA10Y`), EIA weekly petroleum (`WCESTUS1`, `WCRFPUS2`, `WRPUPUS2`), Overview CNN Fear & Greed / AAII sentiment context. 경제사이클 자산 경로는 기준일 이전 DB row만 loader로 읽으며 UI가 직접 수집하지 않는다 |
+| `macro_series_observation` | FRED VIX / yield curve / credit spread와 Economic Cycle asset-path series (`DGS2`, `DGS10`, `DFII10`, `T10YIE`, `VIXCLS`, `BAA10Y`), EIA weekly petroleum (`WCESTUS1`, `WCRFPUS2`, `WRPUPUS2`), Overview CNN Fear & Greed / AAII sentiment context. AAII complete XLS capture는 incoming 최소~최대 날짜를 official workbook date set으로 canonical reconcile한 뒤 UPSERT해 과거 HTML 날짜와 같은 주차가 이중 관측으로 남지 않게 한다. 경제사이클 자산 경로는 기준일 이전 DB row만 loader로 읽으며 UI가 직접 수집하지 않는다 |
 | `market_sentiment_collection_batch` / `market_sentiment_observation_snapshot` | CNN / AAII source별 수집 batch와 immutable normalized view. UTC `known_at`은 앱 관측 시각이며 legacy canonical history는 소급 backfill하지 않는다 |
 | `macro_series_vintage_observation` | 미국 경제 사이클 17개 지표의 FRED/ALFRED real-time revision ledger. 발표 당시 값을 보존하며 revised CSV로 대체하지 않는다 |
 | `economic_cycle_model_artifact` | 학습 cutoff, horizon별 calibration/validation/publication 판정을 포함한 경제 사이클 model artifact |

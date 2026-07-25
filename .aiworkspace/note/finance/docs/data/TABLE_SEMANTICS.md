@@ -435,6 +435,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - `series_id`, `observation_date`, `source`가 business key다.
 - Sentiment에서 이 table은 최신 canonical view다. 발표 당시 재현에는 `market_sentiment_collection_batch` / `market_sentiment_observation_snapshot`을 사용한다.
 - AAII official workbook full backfill은 이 canonical table만 보강한다. Workbook 최신일 이하의 네 AAII series를 같은 날짜 집합으로 교체하고 이후 prospective row는 보존하며, historical canonical row를 immutable snapshot으로 복제하지 않는다.
+- 일상 AAII success official XLS capture도 네 series의 동일 날짜 집합과 연속 7일 cadence를 확인한 뒤 incoming 최소~최대 날짜를 official workbook date set으로 canonical reconcile하고 UPSERT한다. 이 범위의 과거 HTML 수요일/XLS 목요일 동일 주차 중복은 canonical에서 제거하지만 immutable capture와 batch는 보존한다. HTML fallback, partial/non-official, 중간 주차 누락 capture에는 canonical window 삭제 권한이 없다.
 - API key가 있으면 FRED API, 없으면 FRED official CSV download를 사용한다.
 
 주의:

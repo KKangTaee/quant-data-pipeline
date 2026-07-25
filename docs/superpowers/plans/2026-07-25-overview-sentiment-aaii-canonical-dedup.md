@@ -27,11 +27,11 @@
 - Consumes: `persist_market_sentiment_source_capture(db, ..., rows)`
 - Produces: `_reconcile_aaii_canonical_window(db, rows) -> dict[str, Any] | None`
 
-- [ ] **Step 1: Write the failing XLS reconciliation test**
+- [x] **Step 1: Write the failing XLS reconciliation test**
 
 `tests/test_sentiment_pit.py`의 `FakeTransactionDb`에 canonical-window delete event와 params capture를 추가하고, 두 XLS 주차 capture가 batch/snapshot 뒤 canonical UPSERT 전에 `start_date`, `end_date`, 두 keep date를 전달해 window cleanup을 실행한다고 단언한다.
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
 Run:
 
@@ -41,7 +41,7 @@ Run:
 
 Expected: 현재 구현에는 reconciliation event가 없어 assertion failure.
 
-- [ ] **Step 3: Implement minimal canonical-window reconciliation**
+- [x] **Step 3: Implement minimal canonical-window reconciliation**
 
 `finance/data/sentiment_store.py`에 다음 동작을 추가한다.
 
@@ -57,7 +57,7 @@ def _reconcile_aaii_canonical_window(
 
 `persist_market_sentiment_source_capture()`는 `source == "aaii_sentiment_survey"`일 때 snapshot insert 후, canonical UPSERT 전에 이 함수를 호출한다.
 
-- [ ] **Step 4: Run focused test and verify GREEN**
+- [x] **Step 4: Run focused test and verify GREEN**
 
 Run:
 
@@ -67,11 +67,11 @@ Run:
 
 Expected: PASS.
 
-- [ ] **Step 5: Add negative and rollback coverage**
+- [x] **Step 5: Add negative and rollback coverage**
 
 HTML rows에는 reconciliation event가 없고, reconciliation delete 실패 시 transaction이 rollback되며 canonical UPSERT가 실행되지 않는 테스트를 추가한다.
 
-- [ ] **Step 6: Run complete sentiment PIT suite**
+- [x] **Step 6: Run complete sentiment PIT suite**
 
 Run:
 
@@ -91,11 +91,11 @@ Expected: all tests PASS.
 - Consumes: `finance.data.sentiment.backfill_aaii_sentiment_history()`
 - Produces: official XLS-backed `finance_meta.macro_series_observation` AAII canonical history
 
-- [ ] **Step 1: Capture exact pre-cleanup duplicate rows**
+- [x] **Step 1: Capture exact pre-cleanup duplicate rows**
 
 Read only `AAII_BULL_BEAR_SPREAD` rows from 2026-06-15 through 2026-07-17 and record HTML/XLS adjacent pairs.
 
-- [ ] **Step 2: Run atomic official workbook backfill**
+- [x] **Step 2: Run atomic official workbook backfill**
 
 Run:
 
@@ -105,7 +105,7 @@ Run:
 
 Expected: four aligned series, full official workbook history, transaction commit.
 
-- [ ] **Step 3: Verify canonical and immutable boundaries**
+- [x] **Step 3: Verify canonical and immutable boundaries**
 
 Verify:
 
@@ -114,7 +114,7 @@ Verify:
 - `2026-06-18`, `2026-07-09`, `2026-07-16` official XLS rows remain
 - immutable snapshot and batch row counts are unchanged
 
-- [ ] **Step 4: Verify downstream React payload**
+- [x] **Step 4: Verify downstream React payload**
 
 Build `build_market_sentiment_snapshot()` and `build_sentiment_react_workbench_payload()` and confirm recent AAII spread points have one point per official week.
 
@@ -133,11 +133,11 @@ Build `build_market_sentiment_snapshot()` and `build_sentiment_react_workbench_p
 - Consumes: verified implementation and DB cleanup evidence
 - Produces: durable canonical refresh semantics and task handoff
 
-- [ ] **Step 1: Sync durable docs**
+- [x] **Step 1: Sync durable docs**
 
 Document that official AAII XLS capture owns the canonical recent date window, while immutable captures remain append-only.
 
-- [ ] **Step 2: Run verification**
+- [x] **Step 2: Run verification**
 
 Run:
 
@@ -148,11 +148,10 @@ git diff --check
 git status --short
 ```
 
-- [ ] **Step 3: Review scoped diff**
+- [x] **Step 3: Review scoped diff**
 
 Confirm no registry, saved setup, run history, QA image, or unrelated dirty file is staged.
 
-- [ ] **Step 4: Commit coherent implementation**
+- [x] **Step 4: Commit coherent implementation**
 
 Stage only the task’s code, tests, specs, task docs, and durable docs, then commit with a Korean message.
-

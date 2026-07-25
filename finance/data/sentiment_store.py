@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from typing import Any, Literal
 
 from finance.data.db.mysql import MySQLClient
@@ -24,6 +25,9 @@ AAII_CANONICAL_SERIES = {
     "AAII_BEARISH",
     "AAII_BULL_BEAR_SPREAD",
 }
+AAII_OFFICIAL_WORKBOOK_SOURCE_REF = (
+    "https://www.aaii.com/files/surveys/sentiment.xls"
+)
 
 
 def ensure_market_sentiment_schema(db: MySQLClient) -> None:
@@ -146,6 +150,89 @@ def _upsert_canonical_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> None:
     )
 
 
+def _reconcile_aaii_canonical_window(
+    db: MySQLClient,
+    rows: list[dict[str, Any]],
+    *,
+    capture_source: str,
+    capture_status: CaptureStatus,
+    coverage: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Keep only authoritative XLS dates inside one complete AAII capture window."""
+    if (
+        capture_source != "aaii_sentiment_survey"
+        or capture_status != "success"
+        or int(coverage.get("expected") or 0) != len(AAII_CANONICAL_SERIES)
+        or int(coverage.get("observed") or 0) != len(AAII_CANONICAL_SERIES)
+        or list(coverage.get("missing_series") or [])
+    ):
+        return None
+
+    dates_by_series: dict[str, set[str]] = {
+        series_id: set() for series_id in AAII_CANONICAL_SERIES
+    }
+    for row in rows:
+        series_id = str(row.get("series_id") or "").upper()
+        if (
+            row.get("source") != "aaii_sentiment_survey"
+            or row.get("source_type") != "official"
+            or row.get("source_mode") != "xls"
+            or row.get("source_ref") != AAII_OFFICIAL_WORKBOOK_SOURCE_REF
+            or series_id not in AAII_CANONICAL_SERIES
+        ):
+            return None
+        observation_date = str(row.get("observation_date") or "")
+        if not observation_date:
+            return None
+        dates_by_series[series_id].add(observation_date)
+
+    date_sets = list(dates_by_series.values())
+    if not date_sets[0] or any(item != date_sets[0] for item in date_sets[1:]):
+        return None
+
+    dates = sorted(date_sets[0])
+    try:
+        parsed_dates = [date.fromisoformat(value) for value in dates]
+    except ValueError:
+        return None
+    if len(parsed_dates) < 2 or any(
+        (current - previous).days != 7
+        for previous, current in zip(parsed_dates, parsed_dates[1:])
+    ):
+        return None
+
+    keep_params = {
+        f"keep_date_{index}": observation_date
+        for index, observation_date in enumerate(dates)
+    }
+    keep_placeholders = ", ".join(
+        f"%(keep_date_{index})s" for index in range(len(dates))
+    )
+    db.execute(
+        f"""
+        DELETE FROM {MACRO_TABLE}
+        WHERE source = %(source)s
+          AND series_id IN (
+            'AAII_BULLISH', 'AAII_NEUTRAL', 'AAII_BEARISH',
+            'AAII_BULL_BEAR_SPREAD'
+          )
+          AND observation_date BETWEEN %(start_date)s AND %(end_date)s
+          AND observation_date NOT IN ({keep_placeholders})
+        """,
+        {
+            "source": "aaii_sentiment_survey",
+            "start_date": dates[0],
+            "end_date": dates[-1],
+            **keep_params,
+        },
+    )
+    return {
+        "start_date": dates[0],
+        "end_date": dates[-1],
+        "date_count": len(dates),
+    }
+
+
 def replace_aaii_canonical_history(
     db: MySQLClient,
     rows: list[dict[str, Any]],
@@ -235,6 +322,13 @@ def persist_market_sentiment_source_capture(
     try:
         _insert_batch(db, batch)
         _insert_snapshot_rows(db, batch_id, collection_id, observed_at, normalized)
+        reconciled_window = _reconcile_aaii_canonical_window(
+            db,
+            normalized,
+            capture_source=source,
+            capture_status=status,
+            coverage=coverage,
+        )
         _upsert_canonical_rows(db, normalized)
         db.commit()
     except Exception:
@@ -245,6 +339,7 @@ def persist_market_sentiment_source_capture(
         "status": status,
         "snapshot_rows_written": len(normalized),
         "canonical_rows_written": len(normalized),
+        "canonical_window_reconciled": reconciled_window,
     }
 
 

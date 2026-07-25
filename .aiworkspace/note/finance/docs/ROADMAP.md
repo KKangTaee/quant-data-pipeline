@@ -152,6 +152,7 @@ Portfolio Monitoring Reference Help Removal V1도 전체 `2/2차`를 완료했�
 
 - 목적: CNN 중심·중복 구조와 단위가 섞인 이력 그래프를 정리하고, CNN 시장 행동과 AAII 개인투자자 인식을 동등한 두 축으로 읽게 한다.
 - 완료: 전체 잠정 roadmap `2/4차`. 1차의 균형형 CNN/AAII UI에 이어 source별 atomic latest+immutable 저장, UTC known-at 조회, 24시간 자동 수집, 전체 canonical 이력과 고정 180일 해석 분리, 공통 6M/1Y/전체 그래프와 desktop/420px Browser QA를 완료했다.
+- data-quality follow-up 완료: `overview-sentiment-aaii-canonical-dedup-v1-20260725`에서 과거 HTML 수요일/XLS 목요일 동일 주차가 canonical에 함께 남던 문제를 수정했다. Complete XLS capture는 incoming date window를 official workbook date set으로 reconcile하며, actual canonical은 `2,033주 / 8,132행`으로 원자 재구축했다. Immutable snapshot `1,104행`과 batch `11건`은 보존했다.
 - 품질 경계: CNN 구성요소는 headline 내부 근거다. 확인 조건은 관찰 checklist이며 1W/1M 예측, validation / monitoring / trading signal을 만들지 않는다.
 - 남은 차수: 3차 독립 데이터 후보 검토, 4차 충분히 축적된 prospective PIT 이력의 chronological validation 뒤 1W/1M 전망 제공 여부 결정.
 

@@ -10,6 +10,12 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-25 - AAII canonical 동일 주차 중복 정리 완료
+
+- complete AAII XLS capture가 incoming 날짜 범위를 official workbook date set으로 canonical reconcile한 뒤 UPSERT하도록 source transaction을 보강했다.
+- 기존 canonical을 official workbook으로 원자 재구축해 HTML/XLS 동일 주차 중복을 제거했고, `2,033주 / 8,132행`과 React 주간 단일 point를 확인했다.
+- immutable snapshot `1,104행`과 batch `11건`은 보존했다. Sentiment PIT 회귀 `26 passed`, actual Sentiment Browser에서 AAII `2,033개`·latest/previous 7일 간격·console error 0을 확인했다. 상세는 [active task](./tasks/active/overview-sentiment-aaii-canonical-dedup-v1-20260725/STATUS.md)를 본다.
+
 ### 2026-07-23 - sub-dev master 병합 충돌 해결
 
 - finance 문서 5개의 충돌을 수동 조정해 현재 브랜치의 Market Research·Futures 기록과 master의 Today·Backtest·Practical Validation·Final Review·Portfolio Monitoring 계약을 함께 보존했다.

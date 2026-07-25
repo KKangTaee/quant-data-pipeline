@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-25 - AAII 하루 간격 점은 별도 설문이 아니라 canonical 날짜 중복이다
+
+- User request: Sentiment의 AAII graph에서 6/17·18, 7/8·9처럼 하루 간격의 동일 배율 점이 의도된 스펙인지 확인하고 개선하도록 요청함.
+- Interpreted goal: 주간 AAII 설문을 한 주 한 관측으로 표시하면서 기존 immutable 수집 증거는 보존한다.
+- Analysis result: 앞 날짜는 legacy HTML, 뒤 날짜는 official XLS이며 값은 반올림 차이만 있는 동일 주차다. Official XLS date set이 canonical truth이고 HTML fallback은 window cleanup 권한을 갖지 않는 것이 안전하다.
+- Follow-up: complete XLS transaction에 canonical date-window reconciliation을 추가하고 actual full history를 `2,033주`로 재구축했다. Immutable snapshot/batch는 변경하지 않았고 기존 Sentiment `2/4차` roadmap과 판정/차트 계약도 유지했다.
+
 ### 2026-07-23 - sub-dev 병합은 Market Research와 master 제품 계약을 함께 보존한다
 
 - User request: `codex/sub-dev`에서 진행 중인 master 병합 충돌을 `finance-integration-review`로 해결하도록 요청함.
