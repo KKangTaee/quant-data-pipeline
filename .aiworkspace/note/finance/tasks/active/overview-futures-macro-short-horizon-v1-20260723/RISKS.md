@@ -1,6 +1,6 @@
 # Overview Futures Macro Short-Horizon V1 Risks
 
-Last Updated: 2026-07-23
+Last Updated: 2026-07-24
 
 ## Open Risks
 
@@ -11,6 +11,9 @@ Last Updated: 2026-07-23
 - Fingerprint comparison must ignore collection timestamps while detecting OHLCV revisions.
 - Partial provider results must not replace a usable latest-good snapshot with a lower-coverage result.
 - A genuinely new completed session still triggers the full nested validation path (about 55 seconds in the actual sample). This task removes false/repeated rebuilds; it does not weaken validation gates or redesign the nested model artifact.
+- The first session after the resolver/algorithm version bump required 61.919 seconds of nested materialization and 75.645 seconds end-to-end. Same-input reruns are 8.659 seconds, but genuinely changed-session model optimization remains separate.
+- Yahoo 5m continuous futures coverage can change by symbol or date. The 17/17 gate prevents partial advancement but may leave the previous date visible until provider coverage recovers.
+- `yfinance_5m_session_aggregate_v1` is an exact time-window aggregate, not exchange settlement. Product copy and downstream consumers must not relabel it as official settlement.
 
 ## Deferred Decisions
 

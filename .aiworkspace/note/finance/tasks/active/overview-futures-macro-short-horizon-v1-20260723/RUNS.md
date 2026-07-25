@@ -1,6 +1,6 @@
 # Overview Futures Macro Short-Horizon V1 Runs
 
-Last Updated: 2026-07-23
+Last Updated: 2026-07-24
 
 ## Read-only diagnosis
 
@@ -42,6 +42,16 @@ Last Updated: 2026-07-23
 - 420px QA: outer client/scroll width 420/420; workbench main client/scroll width 377/377; no console warning/error.
 - Representative generated screenshot: `futures-macro-short-horizon-v1-qa.png` (untracked, not staged).
 
+## Confirmation matrix follow-up
+
+- TDD RED: `test_confirmation_signals_use_explicit_recent_window_headers` failed against the former card footer because no explicit confirmation window headers existed.
+- GREEN: the full focused source-contract file passed with 10 tests after `DirectionHeaders` became label-configurable and confirmation reused `DirectionRow`.
+- Vite production build passed with 177 transformed modules; generated CSS 25.02 kB and JS 335.86 kB.
+- Actual desktop DOM: one confirmation block, headers `신호 / 최근 1D / 최근 5D / 최근 20D`, and exactly two signal rows.
+- Actual 420px QA: outer width 420/420, component frame 377/377, confirmation block 327/327 client/scroll width; no horizontal overflow.
+- The reload-only Streamlit `WebSocket onclose` warnings were isolated from the feature; a clean initial-load tab rendered the confirmation matrix with zero warning/error.
+- Representative generated screenshot: `futures-macro-confirmation-matrix-qa.png` (untracked, not staged).
+
 ## Spec self-review
 
 - Placeholder scan: no `TBD`, `TODO`, or incomplete requirement remains.
@@ -56,3 +66,14 @@ Last Updated: 2026-07-23
 - Preserved backend 20D evidence and the secondary 60D ribbon while removing them only from the primary short-horizon decision surface where approved.
 - Added actual backend timing evidence for download/normalize, UPSERT, input comparison, and materialization; no run diagnostics panel is introduced.
 - Placeholder scan found no `TODO`, `TBD`, incomplete code ellipsis, or unresolved product choice.
+
+## On-demand daily finalization follow-up
+
+- Baseline before follow-up: 79 passed, 15 subtests passed.
+- TDD checkpoints: final-aware loader/resolver 67 passed; exact ET aggregate 17 passed; schema/storage 27 passed plus Futures Market contracts 7 passed; integrated follow-up 108 passed, 15 subtests passed.
+- Additive schema sync created and verified nine nullable columns: six `final_*`, `finalization_basis`, `final_source_ref`, `finalized_at`.
+- Actual first run at 2026-07-23 19:53 ET: raw rows 4,284, failed symbols 0, finalization `finalized` 17/17, snapshot `materialized`, as-of 2026-07-23, fingerprint `8302d35b62aa0115704e1a9737972ca6639e67be4633518996f4b9d2245cc8e6`, total 75.645s.
+- Actual stored evidence: 17 final rows, one shared exact EDT source window, non-null final close for every symbol, algorithm `pattern_outlook_v7_same_state_nested_hybrid_session_aggregate`, session status FINAL.
+- Actual immediate rerun: finalization `reused`, snapshot `reused`, identical fingerprint, materialization 0s, total 8.659s.
+- Browser QA: hero/command 기준일 2026-07-23, 관측 완료, pending disclosure absent, desktop console error 0. At 420px outer 420/420 and component 377/377 client/scroll width; both action buttons 160/160 and unclipped.
+- Representative generated screenshot: `futures-macro-daily-finalization-qa.png` (untracked, not staged).

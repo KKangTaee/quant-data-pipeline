@@ -5,11 +5,16 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
+import math
 from typing import Literal
 from zoneinfo import ZoneInfo
 
+from finance.data.futures_session_finalization import (
+    FUTURES_SESSION_FINALIZATION_BASIS,
+)
 
-FUTURES_DAILY_SESSION_VERSION = "futures_daily_session_v2"
+
+FUTURES_DAILY_SESSION_VERSION = "futures_daily_session_v3"
 FUTURES_DAILY_SETTLEMENT_STABLE_ET = time(17, 15)
 FUTURES_DAILY_EVENING_REOPEN_ET = time(18, 0)
 NEW_YORK = ZoneInfo("America/New_York")
@@ -74,6 +79,9 @@ def resolve_futures_daily_session(
     candle_time_utc: object,
     collected_at: object,
     evaluation_time: datetime,
+    *,
+    finalization_basis: object = None,
+    final_close: object = None,
 ) -> FuturesDailySession:
     """Map one provider candle label to a canonical trade date and finality."""
 
@@ -91,14 +99,23 @@ def resolve_futures_daily_session(
             "saturday_provider_label",
         )
     session_date = raw_date + timedelta(days=1) if raw_date.weekday() == 6 else raw_date
+    explicit_final = False
+    if str(finalization_basis or "").strip() == FUTURES_SESSION_FINALIZATION_BASIS:
+        try:
+            explicit_final = final_close is not None and math.isfinite(float(final_close))
+        except (TypeError, ValueError):
+            explicit_final = False
     evaluation = evaluation_time
     if evaluation.tzinfo is None:
         evaluation = evaluation.replace(tzinfo=timezone.utc)
     evaluation_et = evaluation.astimezone(NEW_YORK)
     collected = _utc_datetime(collected_at)
     collected_et = collected.astimezone(NEW_YORK) if collected is not None else None
-    if session_date < evaluation_et.date():
+    if explicit_final:
         status: Literal["FINAL", "IN_PROGRESS", "UNKNOWN"] = "FINAL"
+        reason = "explicit_session_aggregate"
+    elif session_date < evaluation_et.date():
+        status = "FINAL"
         reason = "session_precedes_evaluation_date"
     elif (
         session_date == evaluation_et.date()
@@ -138,6 +155,8 @@ def select_completed_futures_daily_rows(
             row.get("candle_time_utc"),
             row.get("collected_at"),
             evaluation_time,
+            finalization_basis=row.get("finalization_basis"),
+            final_close=row.get("final_close"),
         )
         if resolved.status == "UNKNOWN" or resolved.session_date is None:
             unknown_count += 1
@@ -172,6 +191,16 @@ def select_completed_futures_daily_rows(
         normalized["Date"] = session_date
         normalized["session_status"] = resolved.status
         normalized["session_reason"] = resolved.reason
+        if resolved.reason == "explicit_session_aggregate":
+            for field in ("open", "high", "low", "close", "volume"):
+                final_value = row.get(f"final_{field}")
+                if final_value is not None:
+                    normalized[field] = final_value
+            normalized["adj_close"] = (
+                row.get("final_adj_close")
+                if row.get("final_adj_close") is not None
+                else row.get("final_close")
+            )
         final_rows.append(normalized)
         final_dates.append(session_date)
     return CompletedFuturesInput(

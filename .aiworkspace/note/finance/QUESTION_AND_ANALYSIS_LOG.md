@@ -10,6 +10,27 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-25 - main-dev와 master의 독립 제품 계약을 역할별로 함께 보존한다
+
+- User request: `codex/main-dev`의 master 병합 충돌을 `finance-integration-review`로 해결해 달라고 요청함.
+- Interpreted goal: current branch의 Economic Cycle/data 개선과 master의 Header/Sentiment/Institutional/Futures 변경을 잃지 않고 검증 가능한 merge 상태로 복구한다.
+- Analysis result: 문서 기록은 최신순·surface별 latest/previous로 합치고, Python import는 양쪽을 유지하며, 해시가 충돌한 Economic Cycle static asset은 merged source build가 다시 소유하는 것이 적합하다.
+- Follow-up: 자동 회귀와 main-dev 전용 1280·420px Browser QA를 통과했다. 최초 8501 확인은 sub-dev 프로세스였음을 cwd로 식별했으며 제품 코드 누락은 없었다.
+
+### 2026-07-25 - Market Research 모듈 헤더는 공통 뼈대와 가변 정보 슬롯을 사용한다
+
+- User request: 경제사이클·선물매크로·심리·일정 상단의 폰트·정보 크기·디자인을 통일하고, 우측 box의 좌측 컬러 강조선은 다른 방식으로 바꾸도록 요청함.
+- Interpreted goal: 화면별 정보량은 유지하면서 이동할 때 `현재 판단 → 설명 → 기준 정보`를 같은 순서와 시각 계층으로 읽게 한다.
+- Analysis result: 공통 shell, 34/28px title, 선택형 action/fact/meta slot이 적합하다. fact box는 중립 border를 쓰고 상태 의미는 실제 상태값 내부의 6px 점과 문구 색으로만 표현한다.
+- Follow-up: 네 adapter와 production bundle을 전환하고 전체 `3/3차`, React DOM 9개, Python 33개, 1280·760·420px actual Browser QA를 완료했다. 계산·payload·DB·loader·collector는 변경하지 않았다.
+
+### 2026-07-25 - AAII 하루 간격 점은 별도 설문이 아니라 canonical 날짜 중복이다
+
+- User request: Sentiment의 AAII graph에서 6/17·18, 7/8·9처럼 하루 간격의 동일 배율 점이 의도된 스펙인지 확인하고 개선하도록 요청함.
+- Interpreted goal: 주간 AAII 설문을 한 주 한 관측으로 표시하면서 기존 immutable 수집 증거는 보존한다.
+- Analysis result: 앞 날짜는 legacy HTML, 뒤 날짜는 official XLS이며 값은 반올림 차이만 있는 동일 주차다. Official XLS date set이 canonical truth이고 HTML fallback은 window cleanup 권한을 갖지 않는 것이 안전하다.
+- Follow-up: complete XLS transaction에 canonical date-window reconciliation을 추가하고 actual full history를 `2,033주`로 재구축했다. Immutable snapshot/batch는 변경하지 않았고 기존 Sentiment `2/4차` roadmap과 판정/차트 계약도 유지했다.
+
 ### 2026-07-25 - 경제사이클 국면명은 수준과 최근 방향을 함께 설명한다
 
 - User request: 생산·소비와 고용·소득 수준이 낮은데도 `회복`인 이유를 화면에서 바로
@@ -10628,3 +10649,38 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 교집합 백테스트의 보수적 계산은 유지하되 짧아진 결과를 그대로 Level2에 넘기지 않고 사용자가 데이터 보강과 재실행을 한 흐름에서 끝내야 함.
 - Analysis result: current Result Workspace가 legacy refresh action과 분리되어 있었고 가격 gap이 technical handoff Gate에 포함되지 않았다. 공통 네 상태와 Single/Mix 종목 합집합, 명시 refresh, 참고 결과, explicit rerun 계약을 채택했다.
 - Follow-up: 전체 `3/3차` 완료. 수집은 자동 백테스트를 실행하지 않고 새 current 결과만 Level2를 다시 연다. provider/source gap은 반복 버튼 대신 원인 확인 상태로 차단한다.
+
+### 2026-07-24 - 갱신 시간대와 무관하게 직전 완료 선물 세션을 확정한다
+
+- User request: `17:15–18:00 ET` 밖에서 일봉 갱신하면 기준일이 전진하지 않는 과도한 제약을 개선하고 승인한 A안으로 진행하도록 요청함.
+- Interpreted goal: 한국시간 오전 7시 이후에도 다음 저녁 세션 가격을 섞지 않고 직전 완료 세션을 같은 클릭에서 반영해야 함.
+- Analysis result: mutable 1d row를 강제로 FINAL로 바꾸지 않고 stored 5m의 exact `D-1 18:00 ET <= bar < D 17:00 ET` 구간을 17/17 원자 집계해 별도 `final_*`로 보존하는 방식을 채택했다.
+- Follow-up: 실제 2026-07-23 세션 17/17 확정과 snapshot 기준일 이동, 즉시 재실행 8.659초 재사용, desktop/420px QA를 완료해 전체 `5/5차`를 마쳤다.
+
+### 2026-07-24 - Overview Events는 중요 종목 누락을 막고 브리프+캘린더로 판단 부담을 줄인다
+
+- User request: Google처럼 중요한 실적이 빠지지 않는지 진단하고, 수집 기준과 약점을 고친 뒤 다른 탭과 맞는 React UI로 개편해 달라고 요청함.
+- Interpreted goal: latest movers 편향을 제거하고, FOMC/미국 휴장 연도 coverage를 검증하며, 사용자가 이번 주 핵심 일정과 선택일 상세를 한 흐름에서 끝낼 수 있어야 함.
+- Analysis result: daily priority + persisted S&P 500 shard, year-specific official checkpoints, issuer grouping, service-owned views, and calendar-dominant A layout을 구현했다. Live DB에서 Alphabet 2026-07-23 event와 2027 FOMC/holiday coverage를 확인했다.
+- Follow-up: S&P 500 cycle은 정상 예약 갱신으로 완료하고, issuer-confirmed IR source 확대는 별도 product/data task로 다룬다.
+
+### 2026-07-24 - 시장일정 기본 갱신은 공식 일정과 느린 실적 수집을 분리한다
+
+- User request: 일정 갱신이 1분 이상 걸리고 계속 갱신 중으로 남으며, 다음 주 FOMC가 예정 없음으로 보이는 문제를 확인하고 수정하도록 요청함.
+- Interpreted goal: 상단 갱신은 사용자가 기다릴 수 있는 공식 일정 범위로 끝나고, 완료 상태가 확실히 해제되며, 저장된 FOMC가 분류 누락 때문에 화면에서 사라지지 않아야 함.
+- Analysis result: 102초 중 약 92초가 hybrid earnings였고 FOMC 16행은 taxonomy NULL이었다. 공식 3종 facade, 별도 earnings action, parser taxonomy, UI-only completion token을 적용했으며 다음 FOMC 2026-07-29와 약 11.5초 완료 복귀를 확인했다.
+- Follow-up: S&P 500 earnings cycle과 issuer-confirmed IR 확대는 기존 별도 후속 범위로 유지한다.
+
+### 2026-07-25 - Institutional Holdings는 Today와 같은 React-owned 정상 화면을 사용한다
+
+- User request: 기능은 만족스럽지만 Today / Market Research와 다른 Institutional Holdings 디자인을 진단하고, 장기 개선 관점에서 동일한 React 구현 pattern으로 전면 개선하도록 요청함.
+- Interpreted goal: 기존 기관·보유·종목·차트 기능과 SEC / DB 경계를 유지하면서 사용자가 보는 page shell과 interaction hierarchy를 최신 탭과 통일해야 함.
+- Analysis result: 주요 기능은 이미 React component였지만 바깥 Streamlit shell과 visual/navigation drift가 남아 있었다. 최종 선택한 `C · Modular Research Studio`로 정상 화면 전체, canonical 4개 destination, desktop research rail과 responsive drawer를 React에 통합하고 Streamlit은 thin adapter / unavailable fallback으로 축소했다.
+- Follow-up: 전체 roadmap `4/4차` 구현·actual Browser QA·문서 정렬을 완료했다. 상세 결과와 남은 비차단 iframe 폭 제약은 `tasks/active/institutional-holdings-react-parity-v1-20260725/`에 기록했다.
+
+### 2026-07-25 - master 병합은 양쪽 제품 변경과 데이터 계약을 함께 보존한다
+
+- User request: `codex/sub-dev`에서 발생한 master 병합 충돌을 해결해 달라고 요청함.
+- Interpreted goal: 현재 브랜치의 공통 Market Research 헤더와 선물 완료 세션 변경을 유지하면서 master의 일정·기관 화면 개편과 데이터 coverage 변경을 손실 없이 통합해야 함.
+- Analysis result: Events의 새 `brief.counts` 계약과 공통 헤더 action을 연결하고, 낡은 hero CSS와 top-level counts 참조 회귀를 제거했다. 문서에는 Events coverage와 Futures completed-session finalization 양쪽 의미를 모두 보존했다.
+- Follow-up: 전체 통합 roadmap `3/3차` 완료. Python·React 검증과 1280/420px actual Browser QA를 통과한 병합 커밋을 기준으로 후속 개발을 이어간다.

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import unittest
-from datetime import date
+from datetime import date, datetime, timezone
 from unittest.mock import patch
 
 import pandas as pd
@@ -12,7 +12,7 @@ def _compatible_row(
     *,
     source_marker: str,
     input_fingerprint: str = "a" * 64,
-    algorithm_version: str = "pattern_outlook_v6_same_state_nested_hybrid_finalized_sessions",
+    algorithm_version: str = "pattern_outlook_v7_same_state_nested_hybrid_session_aggregate",
 ) -> dict[str, object]:
     return {
         "snapshot_key": "overview_current",
@@ -82,7 +82,7 @@ def _completed_probe(
         "status": "PENDING_SESSION_FINALIZATION" if pending_session else "OBSERVED",
         "latest_final_session": "2026-07-18",
         "pending_session": pending_session,
-        "resolver_version": "futures_daily_session_v2",
+        "resolver_version": "futures_daily_session_v3",
     }
     return {
         "input_fingerprint": input_fingerprint,
@@ -137,6 +137,60 @@ class FuturesMacroSnapshotPersistenceTests(unittest.TestCase):
             compute_futures_macro_input_fingerprint(left),
             compute_futures_macro_input_fingerprint(right),
         )
+
+    def test_explicit_finalization_isolates_fingerprint_from_raw_next_session(self) -> None:
+        from app.services.futures_macro_sessions import (
+            FUTURES_SESSION_FINALIZATION_BASIS,
+            select_completed_futures_daily_rows,
+        )
+        from app.services.futures_macro_snapshot import (
+            compute_futures_macro_input_fingerprint,
+        )
+
+        def completed(raw_close: float, final_close: float):
+            return select_completed_futures_daily_rows(
+                [
+                    {
+                        "provider_symbol": "ES=F",
+                        "candle_time_utc": "2026-07-23 00:00:00",
+                        "collected_at": "2026-07-23 22:02:00",
+                        "open": raw_close - 1.0,
+                        "high": raw_close + 1.0,
+                        "low": raw_close - 2.0,
+                        "close": raw_close,
+                        "adj_close": raw_close,
+                        "volume": raw_close * 10.0,
+                        "final_open": 100.0,
+                        "final_high": 103.0,
+                        "final_low": 99.0,
+                        "final_close": final_close,
+                        "final_adj_close": final_close,
+                        "final_volume": 1000.0,
+                        "finalization_basis": FUTURES_SESSION_FINALIZATION_BASIS,
+                    }
+                ],
+                evaluation_time=datetime(
+                    2026, 7, 23, 22, 2, tzinfo=timezone.utc
+                ),
+            )
+
+        first = completed(150.0, 101.0)
+        second = completed(250.0, 101.0)
+        changed_final = completed(250.0, 102.0)
+
+        first_fingerprint = compute_futures_macro_input_fingerprint(
+            {"daily_rows": first.rows}
+        )
+        second_fingerprint = compute_futures_macro_input_fingerprint(
+            {"daily_rows": second.rows}
+        )
+        changed_fingerprint = compute_futures_macro_input_fingerprint(
+            {"daily_rows": changed_final.rows}
+        )
+
+        self.assertEqual(first.rows[0]["close"], second.rows[0]["close"])
+        self.assertEqual(first_fingerprint, second_fingerprint)
+        self.assertNotEqual(first_fingerprint, changed_fingerprint)
 
     def test_bundle_persistence_is_idempotent_and_transactional(self) -> None:
         from finance.data.futures_macro_snapshot import (

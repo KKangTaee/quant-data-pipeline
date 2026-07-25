@@ -128,3 +128,50 @@
 - 2026-07-08: Calendar follow-up QA - `.venv/bin/python -m py_compile app/services/overview/events.py tests/test_service_contracts.py` - PASS.
 - 2026-07-08: Calendar follow-up QA - `npm install && npm run build` in `app/web/streamlit_components/events_workbench` - PASS; generated `node_modules` removed after build.
 - 2026-07-08: Calendar follow-up Browser QA at `http://localhost:8516/?overview_tab=events` - PASS. DOM confirmed no hover tooltip DOM, `미국 공휴일` / `옵션 만기` / `기타 시장 일정` labels, no old overflow copy, and `2026-07-30` selected-date detail rendered 20 cards inside one scrollable detail container. Screenshot `browser-qa-events-calendar-hover-detail-subtypes.png` is generated and uncommitted.
+- 2026-07-23: Read current Overview earnings action / automation, symbol resolver, provider adapter, Events service / React source, active task docs, and official calendar evidence for diagnosis.
+- 2026-07-23: DB / provider diagnostic - current latest-movers snapshot excluded GOOG / GOOGL, stored event rows contained no Alphabet earnings, and direct GOOG / GOOGL provider lookup returned the 2026-07-23 earnings date.
+- 2026-07-23: User approved hybrid earnings coverage and `A · 브리프 + 캘린더`; design documented in `PLAN.md`, `DESIGN.md`, `STATUS.md`, `NOTES.md`, and `RISKS.md`.
+- 2026-07-23: Spec self-review - placeholder scan PASS; clarified successful five-run cycle versus retry completion, `covered_items` semantics, next-event ordering, and unknown-time KST behavior.
+- 2026-07-23: `git diff --check -- .aiworkspace/note/finance/tasks/active/overview-events-ux-redesign` - PASS.
+- 2026-07-23: `superpowers:writing-plans` - implementation plan created as seven independently testable tasks with exact files, interfaces, RED / GREEN commands, Browser QA, documentation, and commit boundaries.
+- 2026-07-23: Implementation-plan self-review - 7 task headings and 144 balanced code fences confirmed; placeholder / trailing-whitespace scan and diff whitespace checks PASS. Coverage gaps found during review were resolved for incomplete-vs-no-event UI state, aware/naive UTC conversion, official checkpoint equality, exact `node_modules` cleanup, and narrow staging.
+- 2026-07-24: Inline baseline - `MarketIntelligenceEventCalendarContractTests`, `OverviewMarketIntelligenceServiceContractTests`, and `OverviewAutomationContractTests`, 378 tests - PASS.
+- 2026-07-24: Task 1 RED - issuer / coverage schema and normalization tests failed on missing contract; coverage UPSERT test failed on missing writer; coverage loader test failed on bytes JSON decode.
+- 2026-07-24: Task 1 GREEN - issuer / coverage schema, normalization, UPSERT, exact loader, sync registration, and existing event UPSERT contracts, 6 tests - PASS.
+- 2026-07-24: Task 2 RED - five pure planner contracts failed because `finance.data.market_event_coverage` did not exist.
+- 2026-07-24: Task 2 GREEN - ordered priority merge, five clean shards, failed-symbol retry state, completed-cycle restart, and out-of-universe diagnostic isolation, 5 tests - PASS.
+- 2026-07-24: Task 3 RED - hybrid orchestrator, issuer enrichment keyword, Nasdaq after-hours label, and consecutive-missing stale route were absent; pre-market variant normalized to unknown.
+- 2026-07-24: Task 3 GREEN - hybrid / issuer / time / stale focused contracts, 9 tests - PASS; full `MarketIntelligenceEventCalendarContractTests`, 42 tests - PASS.
+- 2026-07-24: Task 4 RED - Overview hybrid action import, market-structure schedule, FOMC fetch injection, and official-year checkpoint writes were absent.
+- 2026-07-24: Task 4 focused GREEN - action / automation / FOMC / holiday coverage contracts, 7 tests - PASS.
+- 2026-07-24: Task 4 broad GREEN - `MarketIntelligenceEventCalendarContractTests` + `OverviewAutomationContractTests`, 239 tests - PASS with pre-existing third-party deprecation and no-Streamlit-runtime warnings.
+- 2026-07-24: Task 4 isolation note - existing collector tests initially did not mock the newly introduced coverage writer and may have written synthetic 2026 checkpoints to local MySQL; mocks were added immediately. Task 7 official refresh must overwrite and verify them.
+- 2026-07-24: Task 5 broad QA - `OverviewMarketIntelligenceServiceContractTests`, 164 tests - PASS after family-aware loading, issuer grouping, KST semantics, and consistent service-owned views.
+- 2026-07-24: Task 6 QA - Events React `npm install && npm run build` PASS; combined `OverviewAutomationContractTests` + `OverviewMarketIntelligenceServiceContractTests`, 360 tests - PASS; generated `node_modules` removed.
+- 2026-07-24: Live FOMC refresh - PASS; 2026/2027 each stored 8 meetings and year checkpoints completed at 8/8.
+- 2026-07-24: Live Market Structure diagnosis - Nasdaq Trader returned 2026 holidays but no requested 2027 table. RED/GREEN NYSE fallback tests added; rerun stored 11 2027 holiday/early-close rows and completed `market_holiday:2027` at 11/11.
+- 2026-07-24: Live hybrid earnings refresh - `partial_success`, 261 rows written; daily priority complete 204/204, current S&P 500 cycle partial 260/503 with 0 failed. GOOG/GOOGL 2026-07-23 rows were present.
+- 2026-07-24: Exact issuer identity smoke - GOOG and GOOGL both resolved to `listing_name:alphabet_inc`; the workbench earnings view rendered one `Alphabet Inc 실적` item with symbols `GOOG · GOOGL`.
+- 2026-07-24: Browser QA found `datetime is not JSON serializable` before rendering. Focused RED reproduced the Streamlit marshal failure; JSON-safe wrapper GREEN passed.
+- 2026-07-24: Browser QA desktop - PASS at `http://localhost:8521/overview?overview_tab=events`; A-layout grid computed as two columns, support details closed by default, 2026-07-23 selection showed one Alphabet issuer card, horizontal overflow 0, console errors 0.
+- 2026-07-24: Browser QA mobile 390x844 - PASS; calendar layout collapsed to one column and body horizontal overflow remained 0. Screenshots `overview-events-a-layout-browser-qa.png` and `overview-events-a-layout-mobile-browser-qa.png` remain generated/uncommitted.
+- 2026-07-24: Final broad QA - `MarketIntelligenceEventCalendarContractTests` + `OverviewMarketIntelligenceServiceContractTests` + `OverviewAutomationContractTests`, 408 tests - PASS.
+- 2026-07-24: Final compile / build - listed Python modules `py_compile` PASS; Events React Vite production build PASS with 0 npm vulnerabilities; generated `node_modules` removed.
+- 2026-07-24: Final DB smoke - `events_workbench_v2` exposed all four views; Alphabet grouped once; priority 204/204 complete, S&P 500 260/503 partial, FOMC 2027 8/8 complete, holiday 2027 11/11 complete.
+- 2026-07-24: Final `git diff --check` - PASS; unrelated registry, saved portfolio, run history, `.superpowers`, and existing/generated QA artifacts were preserved and excluded from staging.
+- 2026-07-24: Final code review - no Critical findings; four Important cases were reproduced with RED tests: partial holiday year, lower-priority CIK overwrite, KST relative-date drift, and priority-failure job status.
+- 2026-07-24: Review fixes GREEN - four focused regression tests PASS. Holiday coverage now requires the modern 10-full-day baseline and reconciles partial years through NYSE; preferred CIK is stable; KST-known dates drive relative fields; both coverage tracks determine job success.
+- 2026-07-24: Post-review broad QA - three planned contract classes, 411 tests - PASS.
+- 2026-07-24: Post-review live Market Structure refresh - PASS, 49 rows written; 2026 checkpoint complete 12/12 and 2027 checkpoint complete 11/11.
+- 2026-07-24: Post-fix code re-review - no remaining Critical or Important issues; reviewer assessment `Ready to merge: Yes`.
+- 2026-07-24: Post-fix Browser QA - desktop two-column and mobile one-column layouts PASS, selected 2026-07-23 detail contained one Alphabet card with both symbols, horizontal overflow 0, support evidence closed by default, console errors 0.
+- 2026-07-24: Refresh diagnosis - previous full bundle 102s, including 92.091s hybrid earnings; DB contained 16 FOMC rows with all taxonomy columns NULL, so the family-bounded read model returned no next FOMC.
+- 2026-07-24: FOMC taxonomy RED/GREEN - focused parser test failed on missing taxonomy, then event-calendar class 50 tests PASS after source-boundary fields were added.
+- 2026-07-24: Live FOMC repair - success in 0.203s; all 16 current/next-year rows have non-NULL taxonomy and `events_workbench_v2` returns next FOMC 2026-07-29.
+- 2026-07-24: Official refresh RED/GREEN - missing facade/action/reset contracts failed first; focused action/React tests passed after FOMC / Macro / Market Structure-only facade and separate earnings action were added.
+- 2026-07-24: Browser official-refresh QA - primary action showed pending and returned to `일정 갱신` in 11.528s, browser stayed connected, next FOMC remained visible, and the separate earnings action was present but intentionally not executed.
+- 2026-07-24: Review regression RED/GREEN - reload pending and repeated same-second result completion were reproduced; two focused tests PASS after UI-only UUID completion tokens and reload pending exclusion.
+- 2026-07-24: Final React production build - PASS, 0 npm vulnerabilities; exact generated `node_modules` tree removed after build.
+- 2026-07-24: Final browser regression - `화면 새로고침` produced zero `실행 중` buttons; official refresh returned from `갱신 중` to `일정 갱신`; next FOMC remained 2026-07-29. Screenshot `overview-events-fast-refresh-final-browser-qa.jpg` remains generated and uncommitted.
+- 2026-07-24: Final broad QA - planned three contract classes, 414 tests PASS; focused `py_compile`, live `events_workbench_v2` next-FOMC smoke, `git diff --check`, and generated dependency cleanup PASS.
+- 2026-07-24: Post-completion-token re-review - no Critical or Important findings; reviewer assessment `Ready to merge: Yes`.

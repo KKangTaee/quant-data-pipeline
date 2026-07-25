@@ -25,32 +25,12 @@ button, input, summary { font: inherit; }
   padding: 4px 2px 18px;
 }
 
-.cycle-workbench h2,
 .cycle-workbench h3,
 .cycle-workbench h4,
 .cycle-workbench p { margin: 0; }
-.cycle-workbench h2 { margin-top: 7px; color: var(--ink); font-size: clamp(25px, 3vw, 36px); letter-spacing: -.045em; line-height: 1.14; }
 .cycle-workbench h3 { margin-top: 5px; color: #20364b; font-size: 18px; letter-spacing: -.025em; }
 .cycle-workbench h4 { color: #29445a; font-size: 14px; }
-.eyebrow,
 .section-heading > div > span { color: #638092; font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
-
-.cycle-hero {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 28px;
-  padding: 28px 30px;
-  border: 1px solid #d9e5e8;
-  border-radius: 23px;
-  background: radial-gradient(circle at 90% 18%, rgba(79, 143, 199, .15), transparent 34%), linear-gradient(135deg, #f8fbfd, #f3f8f6);
-  box-shadow: 0 16px 42px rgba(30, 56, 75, .07);
-}
-.cycle-hero p { max-width: 670px; margin-top: 10px; color: var(--muted); font-size: 13px; line-height: 1.6; }
-.hero-basis { display: grid; min-width: 176px; justify-items: end; gap: 5px; text-align: right; }
-.hero-basis > span { color: #6e8291; font-size: 10px; font-weight: 850; }
-.hero-basis > strong { color: #27485e; font-size: 17px; }
-.hero-status { padding: 6px 9px; border-radius: 999px; font-size: 10px; }
 
 .horizon-section,
 .intramonth-flow-panel,
@@ -430,8 +410,6 @@ button, input, summary { font: inherit; }
 .method-disclosure ul { margin: 8px 0 0; padding-left: 18px; }
 
 @media (max-width: 760px) {
-  .cycle-hero { display: grid; padding: 22px; }
-  .hero-basis { min-width: 0; justify-items: start; text-align: left; }
   .horizon-grid,
   .intramonth-flow-grid,
   .cycle-layout,
@@ -455,17 +433,14 @@ button, input, summary { font: inherit; }
   body,
   .cycle-workbench { overflow-x: hidden; }
   .cycle-workbench { gap: 14px; padding-inline: 0; }
-  .cycle-hero,
   .horizon-section,
   .intramonth-flow-panel,
   .cycle-map-panel,
   .evidence-panel,
   .market-implications,
   .ribbon-section { padding: 18px 15px; border-radius: 17px; }
-  .cycle-hero { gap: 15px; }
   .cycle-freshness-bar { grid-template-columns: 1fr; padding: 15px; }
   .cycle-freshness-action { width: 100%; }
-  .cycle-workbench h2 { font-size: 24px; }
   .section-heading { display: grid; gap: 5px; }
   .section-heading > small { text-align: left; }
   .evidence-row-heading { align-items: flex-start; }

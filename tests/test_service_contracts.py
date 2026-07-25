@@ -8065,6 +8065,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
             coverage_loader=lambda symbols: coverage,
             collect_runner=collector,
             materialize_fn=lambda: {"status": "reused"},
+            finalization_runner=lambda **kwargs: {
+                "status": "not_required",
+                "session_date": None,
+                "symbols_required": len(DEFAULT_CORE_FUTURES_SYMBOLS),
+                "symbols_finalized": 0,
+                "missing_symbols": [],
+                "reason": "test_no_pending_session",
+            },
         )
 
         kwargs = collector.call_args.kwargs
@@ -8359,13 +8367,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_futures_macro_react_separates_observation_and_outlook_statuses(self) -> None:
         root = Path("app/web/streamlit_components/futures_macro_workbench/src")
         types = (root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
+        presentation = (root / "presentation.ts").read_text(encoding="utf-8")
         context = (root / "MacroContextSection.tsx").read_text(encoding="utf-8")
         horizons = (root / "PatternHorizonSection.tsx").read_text(encoding="utf-8")
         assets = (root / "AssetPathwaysSection.tsx").read_text(encoding="utf-8")
         style = (root / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn('type ObservationStatus = "OBSERVED" | "PARTIAL" | "UNAVAILABLE"', types)
-        self.assertIn('OBSERVED: "관측 완료"', types)
+        self.assertIn('type ObservationStatus = "OBSERVED" | "PARTIAL" | "UNAVAILABLE"', presentation)
+        self.assertIn('OBSERVED: "관측 완료"', presentation)
         self.assertIn("observation_status", context)
         self.assertIn("OBSERVATION_LABEL", context)
         self.assertIn('item.kind === "observation"', horizons)
@@ -8526,9 +8535,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('payload.schema_version === "sentiment_react_workbench_v2"', react_source)
         self.assertIn("payload.command.actions.map", all_source)
         self.assertIn("Streamlit.setComponentValue", react_source)
-        self.assertIn("sentiment-workbench__command-row", all_source)
-        self.assertIn("sentiment-workbench__actions", all_source)
-        self.assertIn(".sentiment-workbench__command", react_style)
+        self.assertIn("ResearchHeader", all_source)
+        self.assertIn("actionFeedback=", all_source)
+        self.assertNotIn(".sentiment-workbench__hero", react_style)
         self.assertIn("@media (max-width: 760px)", react_style)
 
     def test_events_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
@@ -8565,15 +8574,56 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("render_events_overview_lanes(context)", events_tab_source)
         self.assertIn("render_events_streamlit_evidence_section(context, expanded=False)", events_tab_source)
         self.assertIn('default={"event": None}', wrapper_source)
-        self.assertIn('payload.schema_version === "events_workbench_v1"', react_source)
-        self.assertIn("payload.brief", react_source)
-        self.assertIn("railTabs.tabs.map", react_source)
-        self.assertIn("payload.trust_review", react_source)
+        self.assertIn('payload.schema_version === "events_workbench_v2"', react_source)
+        self.assertIn("payload.views", react_source)
+        self.assertIn("payload.coverage_summary", react_source)
         self.assertIn("Streamlit.setComponentValue", react_source)
         self.assertIn("Streamlit.setFrameHeight", react_source)
         self.assertIn("events-workbench__fallback-note", react_source)
-        self.assertIn(".events-workbench__hero", react_style)
+        self.assertTrue((component_root / "src" / "EventsHero.tsx").exists())
+        self.assertIn("<EventsHero", react_source)
+        self.assertNotIn(".events-workbench__hero", react_style)
         self.assertIn("@media (max-width: 760px)", react_style)
+
+    @patch("app.web.overview.events_react_component._declare_events_component")
+    def test_events_react_component_sanitizes_datetime_payload_before_render(
+        self,
+        mock_declare_component: MagicMock,
+    ) -> None:
+        import app.web.overview.events_react_component as react_component
+
+        rendered_payload: dict[str, Any] = {}
+
+        def fake_component(**kwargs: Any) -> dict[str, Any]:
+            rendered_payload.update(kwargs["payload"])
+            json.dumps(kwargs["payload"], ensure_ascii=False)
+            return {"event": None}
+
+        mock_declare_component.return_value = fake_component
+        payload = {
+            "schema_version": "events_workbench_v2",
+            "coverage_summary": {
+                "checked_at": datetime(2026, 7, 24, 8, 10),
+                "market_date": date(2026, 7, 23),
+                "last_event_at": pd.Timestamp("2026-07-23 20:00:00+00:00"),
+                "missing_since": pd.NaT,
+                "coverage_pct": Decimal("99.75"),
+                "bad_numeric": float("nan"),
+            },
+        }
+
+        result = react_component.render_events_react_workbench(payload, key="events_json_safe_test")
+
+        self.assertEqual(result, {"event": None})
+        self.assertEqual(rendered_payload["coverage_summary"]["checked_at"], "2026-07-24T08:10:00")
+        self.assertEqual(rendered_payload["coverage_summary"]["market_date"], "2026-07-23")
+        self.assertEqual(
+            rendered_payload["coverage_summary"]["last_event_at"],
+            "2026-07-23T20:00:00+00:00",
+        )
+        self.assertIsNone(rendered_payload["coverage_summary"]["missing_since"])
+        self.assertEqual(rendered_payload["coverage_summary"]["coverage_pct"], 99.75)
+        self.assertIsNone(rendered_payload["coverage_summary"]["bad_numeric"])
 
     def test_events_react_refresh_actions_are_python_dispatched(self) -> None:
         helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")
@@ -8581,33 +8631,78 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("_handle_events_react_event(", helper_source)
         self.assertIn('if action_id == "reload"', helper_source)
+        self.assertIn('if action_id == "refresh_official"', helper_source)
         self.assertIn('if action_id == "refresh_fomc"', helper_source)
         self.assertIn('if action_id == "refresh_macro"', helper_source)
         self.assertIn('if action_id == "refresh_market_structure"', helper_source)
         self.assertIn('if action_id == "refresh_earnings"', helper_source)
         self.assertIn('if action_id == "refresh_all"', helper_source)
+        self.assertIn("run_overview_event_calendars_refresh_official", helper_source)
         self.assertIn("run_overview_event_calendars_refresh_all", helper_source)
         self.assertIn("run_overview_market_structure_calendar", helper_source)
         self.assertIn("_events_refresh_results_payload", helper_source)
         self.assertIn('"last_results"', helper_source)
-        self.assertIn("commandActions.map", react_source)
+        self.assertIn("completionToken", react_source)
+        self.assertIn("[completionToken]", react_source)
+        self.assertIn("result.completion_token", react_source)
+        self.assertIn('if (id !== "reload")', react_source)
+        self.assertIn('action.id === "refresh_official"', react_source)
+        self.assertIn("secondaryActions.map", react_source)
         self.assertIn("setPendingActionId", react_source)
-        self.assertIn("events-workbench__command", react_source)
+        self.assertIn("events-workbench__support-details", react_source)
         self.assertIn("refresh_boundary", react_source)
         self.assertIn("lastResults", react_source)
         self.assertIn("실적 예상 일정 기준", react_source)
+
+    def test_events_refresh_results_get_unique_ui_completion_tokens(self) -> None:
+        import app.web.overview.events_helpers as events_helpers
+
+        fake_streamlit = MagicMock()
+        fake_streamlit.session_state = {}
+        result = {
+            "status": "success",
+            "message": "done",
+            "finished_at": "2026-07-24T12:00:00",
+        }
+
+        with (
+            patch.object(events_helpers, "st", fake_streamlit),
+            patch.object(events_helpers, "record_overview_action_result"),
+        ):
+            events_helpers._store_overview_job_result("result", result)
+            first_token = fake_streamlit.session_state["result"]["_ui_completion_token"]
+            events_helpers._store_overview_job_result("result", result)
+            second_token = fake_streamlit.session_state["result"]["_ui_completion_token"]
+            payload = events_helpers._events_refresh_result_payload("result", "일정 갱신")
+
+        self.assertNotEqual(first_token, second_token)
+        self.assertEqual(payload["completion_token"], second_token)
+        self.assertNotIn("_ui_completion_token", result)
+
+    def test_events_react_renders_a_layout_from_service_views(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/events_workbench/src/EventsWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('payload.schema_version === "events_workbench_v2"', source)
+        self.assertIn("const activeView = payload.views?.[familyFilter]", source)
+        self.assertIn("가장 중요한 다음 일정", source)
+        self.assertIn("다음 FOMC", source)
+        self.assertIn("events-workbench__calendar-layout", source)
+        self.assertIn("events-workbench__selected-day", source)
+        self.assertIn("events-workbench__support-details", source)
+        self.assertNotIn("events-workbench__rail-tabs", source)
+        self.assertNotIn("weekMatchesFilter", source)
 
     def test_events_react_workbench_renders_filters_calendar_trust_and_evidence(self) -> None:
         component_root = Path("app/web/streamlit_components/events_workbench")
         react_source = (component_root / "src" / "EventsWorkbench.tsx").read_text(encoding="utf-8")
         react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("familyOptions.map", react_source)
+        self.assertIn("filterOptions.map", react_source)
         self.assertIn("setFamilyFilter", react_source)
-        self.assertIn("setReviewFilter", react_source)
-        self.assertIn("railTabs.tabs.map", react_source)
-        self.assertIn("activeRailKey", react_source)
-        self.assertIn("trustSections.map", react_source)
+        self.assertNotIn("setReviewFilter", react_source)
+        self.assertNotIn("railTabs.tabs.map", react_source)
         self.assertIn("calendarDays", react_source)
         self.assertIn("calendarDensity", react_source)
         self.assertIn("calendarMonthDays", react_source)
@@ -8629,24 +8724,23 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("setSelectedDate", react_source)
         self.assertIn("events-workbench__day-button", react_source)
         self.assertIn("events-workbench__day--selected", react_source)
-        self.assertIn("events-workbench__date-detail", react_source)
-        self.assertIn("events-workbench__date-detail-card", react_source)
+        self.assertIn("events-workbench__selected-day", react_source)
         self.assertIn("(selectedCalendarDay.items || []).map((item)", react_source)
-        self.assertIn("events-workbench__date-detail-list--scroll", react_source)
+        self.assertIn("events-workbench__selected-day-list", react_source)
         self.assertNotIn(".slice(0, 6).map((item)", react_source)
         self.assertNotIn("원본 / 상세 근거에서 확인할 수 있습니다", react_source)
         self.assertIn("eventFamilyKey", react_source)
         self.assertIn("display_family", react_source)
-        self.assertIn("미국 공휴일", react_source)
-        self.assertIn("옵션 만기", react_source)
+        self.assertIn("휴장·조기폐장", react_source)
         self.assertIn("densityRangeLabel", react_source)
         self.assertIn("주간 일정 밀집도", react_source)
         self.assertIn("주간 합계", react_source)
         self.assertIn("총 {bucket.count}건", react_source)
         self.assertIn("일정 타입", react_source)
-        self.assertIn("일정 확정성", react_source)
+        self.assertIn("자료 신뢰와 수집 범위", react_source)
         self.assertIn(".events-workbench__filterbar", react_style)
-        self.assertIn(".events-workbench__rail-tabs", react_style)
+        self.assertIn(".events-workbench__brief-grid", react_style)
+        self.assertIn(".events-workbench__calendar-layout", react_style)
         self.assertIn(".events-workbench__month-grid", react_style)
         self.assertIn(".events-workbench__month-nav", react_style)
         self.assertIn(".events-workbench__month-title", react_style)
@@ -8654,12 +8748,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".events-workbench__day--outside-month", react_style)
         self.assertIn(".events-workbench__day-button", react_style)
         self.assertIn(".events-workbench__day--selected", react_style)
-        self.assertIn(".events-workbench__date-detail", react_style)
-        self.assertIn(".events-workbench__date-detail-card", react_style)
-        self.assertIn(".events-workbench__date-detail-list--scroll", react_style)
+        self.assertIn(".events-workbench__selected-day", react_style)
+        self.assertIn(".events-workbench__selected-day-list", react_style)
+        self.assertIn(".events-workbench__support-details", react_style)
         self.assertIn("overflow-y: auto", react_style)
         self.assertIn(".events-workbench__density-head", react_style)
-        self.assertIn(".events-workbench__density-legend", react_style)
         self.assertIn(".events-workbench__day--today", react_style)
         self.assertIn(".events-workbench__day--current-week", react_style)
         self.assertNotIn(".events-workbench__day-tooltip", react_style)
@@ -8745,8 +8838,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_sentiment_react_redesign_css_uses_balanced_surfaces_and_mobile_stack(self) -> None:
         style = Path("app/web/streamlit_components/sentiment_workbench/src/style.css").read_text(encoding="utf-8")
 
-        self.assertIn(".sentiment-workbench__hero", style)
-        self.assertIn("linear-gradient", style)
+        self.assertNotIn(".sentiment-workbench__hero", style)
         self.assertIn(".sentiment-workbench__source-grid", style)
         self.assertIn(".sentiment-workbench__source-box", style)
         source_box_rule = style[style.index(".sentiment-workbench__source-box {") :]
@@ -8771,14 +8863,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
             path.read_text(encoding="utf-8") for path in (component_root / "src").glob("*.tsx")
         )
 
-        self.assertIn("sentiment-workbench__hero", all_source)
+        self.assertIn("ResearchHeader", all_source)
         self.assertIn("payload.summary.phase_label", all_source)
-        self.assertIn("sentiment-workbench__headline", all_source)
+        self.assertIn('titleId="sentiment-hero-title"', all_source)
         self.assertIn("payload.summary.headline", all_source)
-        self.assertIn("sentiment-workbench__summary-copy", all_source)
+        self.assertIn("summary={payload.cross_read.meaning}", all_source)
         self.assertIn("payload.axes.market_behavior", all_source)
         self.assertIn("payload.axes.investor_survey", all_source)
-        self.assertIn("sentiment-workbench__hero-meta", all_source)
+        self.assertIn('id: "cnn-date"', all_source)
+        self.assertIn('id: "aaii-date"', all_source)
         self.assertIn("sentiment-workbench__source-grid", all_source)
         self.assertIn("sentiment-workbench__source-box", all_source)
         self.assertIn("sentiment-workbench__source-empty", all_source)
@@ -8799,7 +8892,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
 
         self.assertIn("시장 행동", all_source)
-        self.assertIn("개인투자자 설문", all_source)
+        self.assertIn("AAII 투자자 설문", all_source)
         self.assertIn("두 축의 현재 근거", all_source)
         self.assertIn("다음 확인 조건", all_source)
         self.assertNotIn('className="sentiment-workbench__cross-read"', all_source)
@@ -8835,8 +8928,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("CrossRead", all_source)
         self.assertIn("payload.cross_read.status", all_source)
         self.assertIn("payload.cross_read.meaning", all_source)
-        self.assertIn("sentiment-workbench__hero-side", all_source)
-        self.assertIn("sentiment-workbench__hero-meta", all_source)
+        self.assertIn("ResearchHeaderFact", all_source)
+        self.assertIn("showIndicator: true", all_source)
         self.assertIn("sentiment-workbench__source-box", all_source)
         self.assertIn("axis.range?.sample_count", all_source)
         self.assertIn("axis.range?.position_label", all_source)
@@ -11711,6 +11804,118 @@ class OverviewAutomationContractTests(unittest.TestCase):
         macro.assert_called_once_with(years=(2026, 2027))
         market_structure.assert_called_once_with(years=(2026, 2027))
         earnings.assert_called_once_with()
+
+    def test_overview_action_facade_runs_official_events_without_earnings(self) -> None:
+        from app.jobs import overview_actions
+
+        calls: list[str] = []
+
+        def _result(job_name: str) -> dict[str, Any]:
+            calls.append(job_name)
+            return {"job_name": job_name, "status": "success", "message": f"{job_name} done"}
+
+        with (
+            patch.object(
+                overview_actions,
+                "run_overview_fomc_calendar",
+                side_effect=lambda **_: _result("fomc_calendar"),
+            ) as fomc,
+            patch.object(
+                overview_actions,
+                "run_overview_macro_calendar",
+                side_effect=lambda **_: _result("macro_calendar"),
+            ) as macro,
+            patch.object(
+                overview_actions,
+                "run_overview_market_structure_calendar",
+                side_effect=lambda **_: _result("market_structure_calendar"),
+            ) as market_structure,
+            patch.object(
+                overview_actions,
+                "run_overview_earnings_calendar",
+                side_effect=lambda: _result("earnings_calendar"),
+            ) as earnings,
+        ):
+            summary = overview_actions.run_overview_event_calendars_refresh_official(
+                years=(2026, 2027)
+            )
+
+        self.assertEqual(summary["job_name"], "overview_event_calendars_refresh_official")
+        self.assertEqual(summary["status"], "success")
+        self.assertEqual(summary["jobs_run"], 3)
+        self.assertEqual(
+            calls,
+            ["fomc_calendar", "macro_calendar", "market_structure_calendar"],
+        )
+        fomc.assert_called_once_with(years=(2026, 2027))
+        macro.assert_called_once_with(years=(2026, 2027))
+        market_structure.assert_called_once_with(years=(2026, 2027))
+        earnings.assert_not_called()
+
+    def test_overview_action_uses_hybrid_earnings_job(self) -> None:
+        from app.jobs import overview_actions
+
+        with patch.object(
+            overview_actions,
+            "run_collect_overview_earnings_calendar",
+            return_value={
+                "job_name": "collect_overview_earnings_calendar",
+                "status": "success",
+            },
+        ) as runner:
+            result = overview_actions.run_overview_earnings_calendar()
+
+        runner.assert_called_once_with(
+            lookahead_days=120,
+            validate_with_nasdaq=True,
+        )
+        self.assertEqual(
+            result["job_name"],
+            "collect_overview_earnings_calendar",
+        )
+
+    def test_hybrid_earnings_job_is_partial_when_priority_coverage_fails(self) -> None:
+        from app.jobs import ingestion_jobs
+
+        with patch.object(
+            ingestion_jobs,
+            "collect_and_store_overview_earnings_calendar",
+            return_value={
+                "rows_written": 10,
+                "symbols_requested": 101,
+                "symbols_processed": 100,
+                "failed_symbols": ["PRIVATE"],
+                "coverage": {"coverage_status": "complete"},
+                "priority_coverage": {
+                    "coverage_status": "partial",
+                    "failed_items": 1,
+                },
+            },
+        ):
+            result = ingestion_jobs.run_collect_overview_earnings_calendar()
+
+        self.assertEqual(result["status"], "partial_success")
+        self.assertEqual(result["failed_symbols"], ["PRIVATE"])
+
+    def test_overview_automation_registers_hybrid_earnings_and_market_structure(
+        self,
+    ) -> None:
+        from app.jobs import overview_automation
+
+        jobs = {
+            spec.job_id: spec
+            for spec in overview_automation.OVERVIEW_AUTOMATION_JOB_SPECS
+        }
+
+        self.assertIn("market_structure_calendar", jobs)
+        self.assertIn(
+            "priority",
+            jobs["earnings_calendar"].description.lower(),
+        )
+        self.assertEqual(
+            jobs["market_structure_calendar"].cadence_minutes,
+            24 * 60,
+        )
 
     def test_overview_action_facade_runs_market_context_refresh_bundle(self) -> None:
         from app.jobs import overview_actions
@@ -21921,7 +22126,160 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["coverage"]["stale_estimate_count"], 1)
         self.assertEqual(snapshot["rows"].iloc[0]["Freshness"], "Stale estimate")
         self.assertEqual(snapshot["rows"].iloc[0]["Age Days"], 27)
-        self.assertIn("Refresh Earnings Calendar", snapshot["warnings"][0])
+        self.assertIn("오래된 실적 추정 일정 1개", snapshot["warnings"][0])
+
+    def test_events_workbench_groups_alphabet_share_classes(self) -> None:
+        from app.services.overview.events import build_events_workbench_payload, build_market_events_snapshot
+
+        rows = [
+            {
+                "event_date": "2026-07-22",
+                "event_type": "EARNINGS",
+                "event_family": "earnings",
+                "event_subtype": "earnings_release",
+                "event_time_label": "after_market",
+                "issuer_key": "sec_cik:1652044",
+                "issuer_name": "Alphabet Inc.",
+                "symbol": symbol,
+                "title": f"{symbol} Earnings Release",
+                "source": "yfinance_calendar",
+                "source_type": "provider_estimate",
+                "source_authority": "provider_estimate",
+                "validation_status": "cross_checked",
+                "event_status": "active",
+                "collected_at": "2026-07-22 00:00:00",
+            }
+            for symbol in ("GOOG", "GOOGL")
+        ]
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 7, 22),
+            query_fn=lambda *_args: rows,
+        )
+        payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 22))
+        items = payload["views"]["earnings"]["calendar"]["days"][0]["items"]
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["issuer_name"], "Alphabet Inc.")
+        self.assertEqual(items[0]["symbols"], ["GOOG", "GOOGL"])
+        self.assertEqual(items[0]["display_date"], "2026-07-23")
+        self.assertEqual(items[0]["time_basis"], "한국시간 예정")
+        self.assertEqual(items[0]["days_until"], 1)
+        self.assertEqual(items[0]["focus"], "This Week")
+
+    def test_unknown_earnings_time_does_not_invent_kst_date(self) -> None:
+        from app.services.overview.events import _event_kst_display
+
+        display = _event_kst_display({
+            "Date": "2026-07-22",
+            "Event Time": "time_unknown",
+            "Event Datetime UTC": "-",
+        })
+
+        self.assertIsNone(display["display_date_kst"])
+        self.assertEqual(display["label"], "미국 기준 · 한국시간 미확인")
+
+    def test_exact_utc_earnings_time_converts_to_kst(self) -> None:
+        from app.services.overview.events import _event_kst_display
+
+        display = _event_kst_display({
+            "Date": "2026-07-22",
+            "Event Time": "time_confirmed",
+            "Event Datetime UTC": "2026-07-22T20:05:00+00:00",
+        })
+
+        self.assertEqual(display["display_date_kst"], "2026-07-23")
+        self.assertEqual(display["display_time_kst"], "05:05")
+        self.assertEqual(display["time_basis"], "한국시간 확정")
+
+    def test_workbench_prefers_today_alphabet_over_later_fomc(self) -> None:
+        from app.services.overview.events import build_events_workbench_payload, build_market_events_snapshot
+
+        rows = [
+            {
+                "event_date": "2026-07-23",
+                "event_type": "EARNINGS",
+                "event_family": "earnings",
+                "universe_scope": "major_cap",
+                "symbol": "GOOG",
+                "title": "Alphabet Earnings",
+                "source": "yfinance_calendar",
+                "source_type": "provider_estimate",
+                "event_status": "active",
+            },
+            {
+                "event_date": "2026-07-29",
+                "event_type": "FOMC_MEETING",
+                "event_family": "central_bank",
+                "title": "FOMC Meeting",
+                "source": "federal_reserve_fomc_calendar",
+                "source_type": "official",
+                "event_status": "active",
+            },
+        ]
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 7, 23),
+            query_fn=lambda *_args: rows,
+        )
+        payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 23))
+
+        self.assertEqual(payload["views"]["all"]["brief"]["next_event"]["title"], "Alphabet Earnings")
+        self.assertEqual(payload["views"]["all"]["brief"]["next_fomc"]["title"], "FOMC Meeting")
+
+    def test_market_event_warnings_are_korean(self) -> None:
+        from app.services.overview.events import _event_warnings
+
+        warnings = _event_warnings({"stale_estimate_count": 2, "not_confirmed_count": 1})
+        self.assertIn("오래된 실적 추정 일정 2개", warnings[0])
+        self.assertFalse(any("row(s)" in warning for warning in warnings))
+
+    def test_overview_event_loader_uses_family_limits_not_global_200(self) -> None:
+        import inspect
+        from app.web import overview_dashboard_helpers
+
+        source = inspect.getsource(overview_dashboard_helpers.load_overview_market_events_snapshot)
+        self.assertIn("family_limits", source)
+        self.assertNotIn("limit=200", source)
+
+    def test_events_workbench_distinguishes_incomplete_coverage_from_checked_no_event(self) -> None:
+        import pandas as pd
+        from app.services.overview.events import EVENT_COLUMNS, build_events_workbench_payload
+
+        partial_snapshot = {
+            "status": "NO_EVENTS",
+            "rows": pd.DataFrame(columns=EVENT_COLUMNS),
+            "coverage": {},
+            "collection_coverage": [{
+                "coverage_key": "earnings:sp500_cycle",
+                "expected_items": 503,
+                "covered_items": 100,
+                "failed_items": 0,
+                "coverage_status": "partial",
+            }],
+        }
+        partial = build_events_workbench_payload(partial_snapshot, today=date(2026, 7, 23))
+        self.assertEqual(
+            partial["views"]["earnings"]["empty_state"]["status"],
+            "coverage_incomplete",
+        )
+        self.assertIn("전체 확인 진행 중", partial["coverage_summary"]["description"])
+
+        complete_snapshot = {
+            **partial_snapshot,
+            "collection_coverage": [{
+                "coverage_key": "earnings:sp500_cycle",
+                "expected_items": 503,
+                "covered_items": 503,
+                "failed_items": 0,
+                "coverage_status": "complete",
+            }],
+        }
+        complete = build_events_workbench_payload(complete_snapshot, today=date(2026, 7, 23))
+        self.assertEqual(
+            complete["views"]["earnings"]["empty_state"]["status"],
+            "checked_no_event",
+        )
 
     def test_events_workbench_payload_groups_brief_trust_calendar_and_evidence(self) -> None:
         from app.services.overview.events import build_events_workbench_payload, build_market_events_snapshot
@@ -21998,54 +22356,46 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             query_fn=query_fn,
         )
         payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 7))
+        view = payload["views"]["all"]
 
-        self.assertEqual(payload["schema_version"], "events_workbench_v1")
-        self.assertIn("거래 신호가 아니라", payload["brief"]["boundary_note"])
-        self.assertEqual(payload["brief"]["next_event"]["date"], "2026-07-07")
-        self.assertEqual(payload["brief"]["counts"]["today"], 1)
-        self.assertEqual(payload["brief"]["counts"]["this_week"], 2)
-        self.assertEqual(payload["brief"]["counts"]["next_30d"], 3)
-        self.assertEqual(payload["brief"]["source_summary"]["official"], 3)
-        self.assertTrue(payload["brief"]["freshness_summary"]["has_stale_estimates"])
+        self.assertEqual(payload["schema_version"], "events_workbench_v2")
+        self.assertIn("거래 신호가 아니라", view["brief"]["boundary_note"])
+        self.assertEqual(view["brief"]["next_event"]["date"], "2026-07-07")
+        self.assertEqual(view["brief"]["counts"]["today"], 1)
+        self.assertEqual(view["brief"]["counts"]["this_week"], 2)
+        self.assertEqual(view["brief"]["counts"]["next_30d"], 3)
+        self.assertEqual(view["trust_summary"]["official"], 3)
+        self.assertEqual(view["trust_summary"]["provider_estimate"], 1)
+        self.assertTrue(payload["warnings"])
         self.assertEqual(payload["command"]["actions"][0]["id"], "reload")
         self.assertIn("DB", payload["command"]["actions"][0]["detail"])
-        self.assertIn("refresh_all", [action["id"] for action in payload["command"]["actions"]])
+        action_ids = [action["id"] for action in payload["command"]["actions"]]
+        self.assertIn("refresh_official", action_ids)
+        self.assertIn("refresh_earnings", action_ids)
+        self.assertNotIn("refresh_all", action_ids)
         self.assertIn("provider/job", payload["command"]["refresh_boundary"])
-        self.assertEqual(payload["command"]["earnings_universe"]["symbol_source"], "latest_movers")
-        self.assertEqual(payload["command"]["earnings_universe"]["top_movers_limit"], 20)
-        self.assertEqual(payload["command"]["earnings_universe"]["max_symbols"], 50)
-        self.assertEqual(payload["filters"]["family"]["label"], "일정 타입")
-        self.assertIn("옵션 만기", [option["label"] for option in payload["filters"]["family"]["options"]])
-        self.assertIn("미국 공휴일", [option["label"] for option in payload["filters"]["family"]["options"]])
-        self.assertEqual(payload["filters"]["source_state"]["label"], "자료 상태")
-        self.assertEqual(payload["rails"][0]["key"], "recent_major")
-        self.assertEqual(payload["rails"][1]["items"][0]["symbol"], "MSFT")
-        self.assertEqual(payload["rail_tabs"]["default_key"], "near_term")
-        self.assertEqual(payload["rail_tabs"]["tabs"][1]["label"], "오늘 / 이번 주")
-        self.assertEqual(payload["rail_tabs"]["tabs"][1]["items"][0]["symbol"], "MSFT")
-        self.assertIn("최근 중요", [tab["label"] for tab in payload["rail_tabs"]["tabs"]])
-        self.assertEqual(payload["trust_review"]["eyebrow"], "자료 상태")
-        self.assertIn("일정 확정성", payload["trust_review"]["title"])
-        self.assertIn("공식 일정", payload["trust_review"]["source_boundary"])
-        self.assertIn("제공사 추정", payload["trust_review"]["source_boundary"])
-        self.assertEqual(payload["trust_review"]["sections"][0]["label"], "오래된 추정 일정")
-        self.assertEqual(payload["trust_review"]["not_confirmed_count"], 1)
-        self.assertEqual(payload["trust_review"]["stale_estimate_count"], 1)
-        self.assertEqual(payload["calendar"]["today"], "2026-07-07")
-        self.assertEqual(payload["calendar"]["current_week_start"], "2026-07-06")
-        self.assertEqual(payload["calendar"]["current_week_end"], "2026-07-12")
-        self.assertEqual(payload["calendar"]["days"][1]["date"], "2026-07-07")
-        self.assertEqual(payload["calendar"]["days"][1]["review_count"], 1)
-        options_day = next(day for day in payload["calendar"]["days"] if day["date"] == "2026-07-10")
+        self.assertEqual(payload["command"]["earnings_universe"]["symbol_source"], "priority_plus_sp500_cycle")
+        self.assertEqual(payload["command"]["earnings_universe"]["major_cap_limit"], 100)
+        self.assertEqual(payload["command"]["earnings_universe"]["shard_size"], 100)
+        self.assertEqual(
+            [option["id"] for option in payload["filter_options"]],
+            ["all", "central_bank", "earnings", "market_holiday"],
+        )
+        self.assertEqual(view["calendar"]["today"], "2026-07-07")
+        self.assertEqual(view["calendar"]["current_week_start"], "2026-07-06")
+        self.assertEqual(view["calendar"]["current_week_end"], "2026-07-12")
+        self.assertEqual(view["calendar"]["days"][1]["date"], "2026-07-07")
+        self.assertEqual(view["calendar"]["days"][1]["review_count"], 1)
+        options_day = next(day for day in view["calendar"]["days"] if day["date"] == "2026-07-10")
         self.assertIn("options_expiration", options_day["by_family"])
         self.assertNotIn("market_structure", options_day["by_family"])
         self.assertEqual(options_day["items"][0]["display_family"], "options_expiration")
         self.assertEqual(options_day["items"][0]["display_family_label"], "옵션 만기")
         self.assertEqual(options_day["items"][0]["badges"][0]["label"], "옵션 만기")
-        self.assertTrue(payload["calendar"]["density"])
-        self.assertEqual(payload["calendar"]["density"][0]["week_start"], "2026-07-06")
-        self.assertEqual(payload["calendar"]["density"][0]["week_end"], "2026-07-12")
-        self.assertEqual(payload["calendar"]["density"][0]["label"], "7/6-7/12")
+        self.assertTrue(view["calendar"]["density"])
+        self.assertEqual(view["calendar"]["density"][0]["week_start"], "2026-07-06")
+        self.assertEqual(view["calendar"]["density"][0]["week_end"], "2026-07-12")
+        self.assertEqual(view["calendar"]["density"][0]["label"], "7/6-7/12")
         self.assertIn("raw_fields", payload["evidence"])
         self.assertEqual(payload["evidence"]["rows"][1]["Source Authority"], "not_confirmed")
 
@@ -22106,7 +22456,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
         payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 1))
 
-        by_date = {day["date"]: day for day in payload["calendar"]["days"]}
+        by_date = {day["date"]: day for day in payload["views"]["all"]["calendar"]["days"]}
         self.assertEqual(by_date["2026-07-03"]["items"][0]["display_family"], "market_holiday")
         self.assertEqual(by_date["2026-07-03"]["items"][0]["display_family_label"], "미국 공휴일")
         self.assertIn("market_holiday", by_date["2026-07-03"]["by_family"])
@@ -22164,17 +22514,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
         payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 7))
 
-        near_term_tab = next(tab for tab in payload["rail_tabs"]["tabs"] if tab["key"] == "near_term")
-        next_30d_tab = next(tab for tab in payload["rail_tabs"]["tabs"] if tab["key"] == "next_30d")
-        near_term_dates = [item["date"] for item in near_term_tab["items"]]
-        next_30d_dates = [item["date"] for item in next_30d_tab["items"]]
+        view = payload["views"]["all"]
+        by_date = {day["date"]: day for day in view["calendar"]["days"]}
 
-        self.assertEqual(payload["calendar"]["current_week_start"], "2026-07-06")
-        self.assertEqual(payload["calendar"]["current_week_end"], "2026-07-12")
-        self.assertEqual(payload["brief"]["counts"]["this_week"], 1)
-        self.assertIn("2026-07-10", near_term_dates)
-        self.assertNotIn("2026-07-14", near_term_dates)
-        self.assertIn("2026-07-14", next_30d_dates)
+        self.assertEqual(view["calendar"]["current_week_start"], "2026-07-06")
+        self.assertEqual(view["calendar"]["current_week_end"], "2026-07-12")
+        self.assertEqual(view["brief"]["counts"]["this_week"], 1)
+        self.assertIn("2026-07-10", by_date)
+        self.assertIn("2026-07-14", by_date)
+        self.assertGreater(date.fromisoformat("2026-07-14"), date.fromisoformat(view["calendar"]["current_week_end"]))
 
     def test_collection_ops_snapshot_combines_db_freshness_and_run_history(self) -> None:
         from app.services.overview.data_health import build_collection_ops_snapshot
@@ -28495,6 +28843,41 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         self.assertIn("KEY ix_event_family_date", schema_sql)
         self.assertIn("KEY ix_event_universe_date", schema_sql)
 
+    def test_market_event_schema_contains_issuer_and_coverage_contract(self) -> None:
+        from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS
+
+        event_sql = MARKET_INTELLIGENCE_SCHEMAS["market_event_calendar"]
+        coverage_sql = MARKET_INTELLIGENCE_SCHEMAS.get(
+            "market_event_collection_coverage",
+            "",
+        )
+
+        self.assertIn("issuer_key VARCHAR(64) NULL", event_sql)
+        self.assertIn("issuer_name VARCHAR(255) NULL", event_sql)
+        self.assertIn("coverage_key VARCHAR(128) NOT NULL", coverage_sql)
+        self.assertIn("coverage_status VARCHAR(16) NOT NULL", coverage_sql)
+        self.assertIn("UNIQUE KEY uk_market_event_coverage_key", coverage_sql)
+
+    def test_market_event_normalization_preserves_issuer_identity(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        rows = mi.normalize_market_event_rows(
+            [
+                {
+                    "event_date": "2026-07-23",
+                    "event_type": "EARNINGS",
+                    "symbol": "GOOG",
+                    "issuer_key": "sec_cik:1652044",
+                    "issuer_name": "Alphabet Inc.",
+                    "title": "GOOG Earnings Release",
+                    "source": mi.EARNINGS_CALENDAR_SOURCE,
+                }
+            ]
+        )
+
+        self.assertEqual(rows[0].get("issuer_key"), "sec_cik:1652044")
+        self.assertEqual(rows[0].get("issuer_name"), "Alphabet Inc.")
+
     def test_market_data_issue_schema_tracks_repeated_quote_gaps(self) -> None:
         from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS
 
@@ -28550,6 +28933,28 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         )
         self.assertEqual(rows[1]["event_date"], "2026-05-01")
 
+    def test_fomc_calendar_parser_assigns_family_taxonomy_for_family_bounded_reader(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        rows = mi._parse_fomc_calendar_events_from_html(  # noqa: SLF001
+            """
+            <div class="panel panel-default">
+              <div class="panel-heading"><h4>2026 FOMC Meetings</h4></div>
+              <div class="row fomc-meeting">
+                <div class="fomc-meeting__month">July</div>
+                <div class="fomc-meeting__date">28-29</div>
+              </div>
+            </div>
+            """,
+            years=[2026],
+        )
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].get("event_family"), "central_bank")
+        self.assertEqual(rows[0].get("event_subtype"), "fomc_meeting")
+        self.assertEqual(rows[0].get("universe_scope"), "all_us")
+        self.assertEqual(rows[0].get("source_authority"), "federal_reserve")
+
     def test_collect_fomc_calendar_writes_event_rows(self) -> None:
         from finance.data import market_intelligence as mi
 
@@ -28578,6 +28983,11 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
                 ],
             ),
             patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows),
+            patch.object(
+                mi,
+                "upsert_market_event_collection_coverage",
+                return_value=1,
+            ),
         ):
             result = mi.collect_and_store_fomc_calendar(years=[2026])
 
@@ -28587,6 +28997,44 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         self.assertEqual(result["rows_written"], 1)
         self.assertEqual(result["event_dates"], ["2026-06-17"])
         self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
+
+    def test_official_collectors_persist_year_coverage(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        checkpoints: list[dict[str, object]] = []
+        with (
+            patch.object(mi, "upsert_market_event_rows", return_value=2),
+            patch.object(
+                mi,
+                "upsert_market_event_collection_coverage",
+                side_effect=lambda row, **_: checkpoints.append(row) or 1,
+            ),
+        ):
+            mi.collect_and_store_fomc_calendar(
+                years=[2026],
+                fomc_fetcher=lambda **_: {
+                    "events": [
+                        {
+                            "event_date": "2026-07-29",
+                            "event_type": "FOMC_MEETING",
+                            "title": "FOMC",
+                            "source": "fed",
+                        },
+                        {
+                            "event_date": "2026-09-16",
+                            "event_type": "FOMC_MEETING",
+                            "title": "FOMC",
+                            "source": "fed",
+                        },
+                    ],
+                    "events_found": 2,
+                },
+            )
+
+        self.assertEqual(checkpoints[0]["coverage_key"], "fomc:2026")
+        self.assertEqual(checkpoints[0]["expected_items"], 2)
+        self.assertEqual(checkpoints[0]["covered_items"], 2)
+        self.assertEqual(checkpoints[0]["coverage_status"], "complete")
 
     def test_bls_macro_calendar_parser_builds_official_event_rows(self) -> None:
         from finance.data import market_intelligence as mi
@@ -28923,6 +29371,105 @@ END:VCALENDAR
         self.assertEqual(rows[0]["source_authority"], "official")
         self.assertEqual(rows[1]["event_time_label"], "Early close 13:00 ET")
 
+    def test_nyse_holiday_fallback_covers_requested_2027_year(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Holiday</th><th>2026</th><th>2027</th></tr></thead>
+          <tbody>
+            <tr><td>New Year's Day</td><td>Thursday, January 1</td><td>Friday, January 1</td></tr>
+            <tr><td>Thanksgiving Day</td><td>Thursday, November 26</td><td>Thursday, November 25</td></tr>
+          </tbody>
+        </table>
+        <p>Each market will close early at 1:00 p.m. on Friday, November 26, 2027
+        (the day after Thanksgiving). All times are Eastern Time.</p>
+        """
+
+        rows = mi.parse_nyse_market_holiday_calendar_events_from_html(
+            html,
+            source_url="https://www.nyse.test/hours-calendars",
+            years=[2027],
+        )
+
+        self.assertEqual(
+            [(row["event_date"], row["event_type"]) for row in rows],
+            [
+                ("2027-01-01", "MARKET_HOLIDAY"),
+                ("2027-11-25", "MARKET_HOLIDAY"),
+                ("2027-11-26", "EARLY_CLOSE"),
+            ],
+        )
+        self.assertTrue(all(row["source_authority"] == "official" for row in rows))
+
+    def test_market_structure_uses_nyse_for_year_missing_from_nasdaq(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        result = mi.fetch_market_structure_calendar_events(
+            years=[2026, 2027],
+            include_options_expiration=False,
+            include_russell=False,
+            holiday_fetcher=lambda **_: [
+                {
+                    "event_date": f"2026-{month:02d}-01",
+                    "event_type": "MARKET_HOLIDAY",
+                    "source": mi.NASDAQ_MARKET_HOLIDAY_SOURCE,
+                }
+                for month in range(1, 11)
+            ],
+            holiday_fallback_fetcher=lambda **kwargs: [
+                {
+                    "event_date": f"2027-{month:02d}-01",
+                    "event_type": "MARKET_HOLIDAY",
+                    "source": mi.NYSE_MARKET_HOLIDAY_SOURCE,
+                }
+                for month in range(1, 11)
+            ] if kwargs["years"] == (2027,) else [],
+        )
+
+        self.assertEqual(
+            {
+                str(row["event_date"])[:4]
+                for row in result["events"]
+            },
+            {"2026", "2027"},
+        )
+        self.assertEqual(len(result["events"]), 20)
+        self.assertEqual(result["failed_sources"], [])
+
+    def test_market_structure_uses_nyse_for_partially_parsed_year(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        result = mi.fetch_market_structure_calendar_events(
+            years=[2027],
+            include_options_expiration=False,
+            include_russell=False,
+            holiday_fetcher=lambda **_: [
+                {
+                    "event_date": "2027-01-01",
+                    "event_type": "MARKET_HOLIDAY",
+                    "source": mi.NASDAQ_MARKET_HOLIDAY_SOURCE,
+                }
+            ],
+            holiday_fallback_fetcher=lambda **_: [
+                {
+                    "event_date": f"2027-{month:02d}-01",
+                    "event_type": "MARKET_HOLIDAY",
+                    "source": mi.NYSE_MARKET_HOLIDAY_SOURCE,
+                }
+                for month in range(1, 11)
+            ],
+        )
+
+        year_rows = [
+            row
+            for row in result["events"]
+            if str(row["event_date"]).startswith("2027-")
+            and row["event_type"] == "MARKET_HOLIDAY"
+        ]
+        self.assertEqual(len(year_rows), 10)
+        self.assertEqual(result["holiday_missing_years"], [])
+
     def test_build_options_expiration_calendar_events_adjusts_holidays(self) -> None:
         from finance.data import market_intelligence as mi
 
@@ -29002,7 +29549,18 @@ END:VCALENDAR
                 "failed_sources": [],
             }
 
-        with patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows):
+        with (
+            patch.object(
+                mi,
+                "upsert_market_event_rows",
+                side_effect=capture_rows,
+            ),
+            patch.object(
+                mi,
+                "upsert_market_event_collection_coverage",
+                return_value=1,
+            ),
+        ):
             result = mi.collect_and_store_market_structure_calendar(
                 years=[2026],
                 market_structure_fetcher=fake_fetcher,
@@ -29012,6 +29570,51 @@ END:VCALENDAR
         self.assertEqual(result["rows_written"], 1)
         self.assertEqual(result["event_types"], ["RUSSELL_RECONSTITUTION"])
         self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
+
+    def test_market_structure_collector_persists_holiday_year_coverage(
+        self,
+    ) -> None:
+        from finance.data import market_intelligence as mi
+
+        checkpoints: list[dict[str, object]] = []
+        with (
+            patch.object(mi, "upsert_market_event_rows", return_value=2),
+            patch.object(
+                mi,
+                "upsert_market_event_collection_coverage",
+                side_effect=lambda row, **_: checkpoints.append(row) or 1,
+            ),
+        ):
+            mi.collect_and_store_market_structure_calendar(
+                years=[2027],
+                market_structure_fetcher=lambda **_: {
+                    "source": mi.MARKET_STRUCTURE_CALENDAR_SOURCE,
+                    "events": [
+                        {
+                            "event_date": "2027-01-01",
+                            "event_type": "MARKET_HOLIDAY",
+                            "title": "New Year's Day",
+                            "source": mi.NASDAQ_MARKET_HOLIDAY_SOURCE,
+                        },
+                        {
+                            "event_date": "2027-06-25",
+                            "event_type": "RUSSELL_RECONSTITUTION",
+                            "title": "Russell Reconstitution",
+                            "source": mi.FTSE_RUSSELL_RECONSTITUTION_SOURCE,
+                        },
+                    ],
+                    "events_found": 2,
+                    "failed_sources": [],
+                },
+            )
+
+        self.assertEqual(
+            checkpoints[0]["coverage_key"],
+            "market_holiday:2027",
+        )
+        self.assertEqual(checkpoints[0]["expected_items"], 1)
+        self.assertEqual(checkpoints[0]["covered_items"], 1)
+        self.assertEqual(checkpoints[0]["coverage_status"], "complete")
 
     def test_collect_macro_calendar_writes_events_and_reports_failed_sources(self) -> None:
         from finance.data import market_intelligence as mi
@@ -29389,6 +29992,502 @@ END:VCALENDAR
         self.assertIn("source_authority", fake_db.executemany_calls[0][0])
         self.assertTrue(fake_db.closed)
 
+    def test_coverage_upsert_normalizes_complete_state(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        self.assertTrue(hasattr(mi, "upsert_market_event_collection_coverage"))
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.rows: list[dict[str, object]] = []
+
+            def use_db(self, _name: str) -> None:
+                pass
+
+            def execute(self, _sql: str, params=None) -> None:
+                self.rows.append(dict(params or {}))
+
+            def close(self) -> None:
+                pass
+
+        fake_db = FakeDb()
+        with (
+            patch.object(mi, "_db", return_value=fake_db),
+            patch.object(mi, "sync_table_schema"),
+        ):
+            written = mi.upsert_market_event_collection_coverage(
+                {
+                    "coverage_key": "earnings:sp500_cycle",
+                    "event_family": "earnings",
+                    "universe_scope": "sp500",
+                    "expected_items": 2,
+                    "covered_items": 2,
+                    "failed_items": 0,
+                    "cursor_offset": 0,
+                    "batch_size": 100,
+                    "details": {"covered_symbols": ["GOOG", "GOOGL"]},
+                }
+            )
+
+        self.assertEqual(written, 1)
+        self.assertEqual(fake_db.rows[0]["coverage_status"], "complete")
+        self.assertEqual(
+            fake_db.rows[0]["details_json"],
+            '{"covered_symbols":["GOOG","GOOGL"]}',
+        )
+
+    def test_coverage_loader_decodes_json_details(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.params: list[object] = []
+                self.closed = False
+
+            def use_db(self, _name: str) -> None:
+                pass
+
+            def query(self, _sql: str, params=None):
+                self.params = list(params or [])
+                return [
+                    {
+                        "coverage_key": "earnings:sp500_cycle",
+                        "coverage_status": "partial",
+                        "details_json": b'{"failed_symbols":["GOOGL"]}',
+                    }
+                ]
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with (
+            patch.object(mi, "_db", return_value=fake_db),
+            patch.object(mi, "sync_table_schema"),
+        ):
+            row = mi.load_market_event_collection_coverage(
+                "earnings:sp500_cycle"
+            )
+
+        self.assertEqual(fake_db.params, ["earnings:sp500_cycle"])
+        self.assertEqual(row["details"], {"failed_symbols": ["GOOGL"]})
+        self.assertTrue(fake_db.closed)
+
+    def test_priority_earnings_merge_keeps_alphabet_and_source_order(self) -> None:
+        from finance.data.market_event_coverage import merge_priority_earnings_symbols
+
+        symbols = merge_priority_earnings_symbols(
+            retry_symbols=["ERR"],
+            portfolio_symbols=["GOOGL", "MSFT"],
+            watchlist_symbols=["GOOG"],
+            major_cap_symbols=["AAPL", "GOOG", "GOOGL"],
+            known_event_symbols=["NVDA", "MSFT"],
+        )
+
+        self.assertEqual(
+            symbols,
+            ["ERR", "GOOGL", "MSFT", "GOOG", "AAPL", "NVDA"],
+        )
+
+    def test_sp500_shard_plan_completes_five_clean_batches(self) -> None:
+        from finance.data.market_event_coverage import (
+            apply_sp500_shard_result,
+            build_sp500_shard_plan,
+        )
+
+        universe = [f"S{index:03d}" for index in range(500)]
+        checkpoint = None
+        for run_index in range(5):
+            plan = build_sp500_shard_plan(
+                universe,
+                checkpoint,
+                batch_size=100,
+            )
+            diagnostics = [
+                {"symbol": symbol, "status": "event_found", "reason": "ok"}
+                for symbol in plan["batch_symbols"]
+            ]
+            checkpoint = apply_sp500_shard_result(
+                plan,
+                diagnostics,
+                checked_at=f"2026-07-{23 + run_index:02d} 00:00:00",
+            )
+
+        self.assertEqual(checkpoint["covered_items"], 500)
+        self.assertEqual(checkpoint["failed_items"], 0)
+        self.assertEqual(checkpoint["coverage_status"], "complete")
+        self.assertEqual(checkpoint["cursor_offset"], 0)
+
+    def test_sp500_shard_result_keeps_failed_symbol_partial(self) -> None:
+        from finance.data.market_event_coverage import (
+            apply_sp500_shard_result,
+            build_sp500_shard_plan,
+        )
+
+        plan = build_sp500_shard_plan(
+            ["GOOG", "GOOGL"],
+            None,
+            batch_size=100,
+        )
+        checkpoint = apply_sp500_shard_result(
+            plan,
+            [
+                {"symbol": "GOOG", "status": "event_found", "reason": "ok"},
+                {
+                    "symbol": "GOOGL",
+                    "status": "failed",
+                    "reason": "provider_error",
+                },
+            ],
+            checked_at="2026-07-23 00:00:00",
+        )
+
+        self.assertEqual(checkpoint["coverage_status"], "partial")
+        self.assertEqual(checkpoint["details"]["covered_symbols"], ["GOOG"])
+        self.assertEqual(checkpoint["details"]["failed_symbols"], ["GOOGL"])
+
+    def test_completed_sp500_checkpoint_starts_a_fresh_cycle(self) -> None:
+        from finance.data.market_event_coverage import (
+            apply_sp500_shard_result,
+            build_sp500_shard_plan,
+        )
+
+        first_plan = build_sp500_shard_plan(
+            ["GOOG", "GOOGL"],
+            None,
+            batch_size=100,
+        )
+        completed = apply_sp500_shard_result(
+            first_plan,
+            [
+                {"symbol": "GOOG", "status": "event_found"},
+                {"symbol": "GOOGL", "status": "event_found"},
+            ],
+            checked_at="2026-07-23 00:00:00",
+        )
+        next_plan = build_sp500_shard_plan(
+            ["GOOG", "GOOGL"],
+            completed,
+            batch_size=100,
+        )
+
+        self.assertTrue(next_plan["cycle_reset"])
+        self.assertEqual(next_plan["prior"], {})
+        self.assertEqual(next_plan["batch_symbols"], ["GOOG", "GOOGL"])
+
+    def test_sp500_shard_ignores_diagnostics_outside_its_universe(self) -> None:
+        from finance.data.market_event_coverage import (
+            apply_sp500_shard_result,
+            build_sp500_shard_plan,
+        )
+
+        plan = build_sp500_shard_plan(["GOOG"], None, batch_size=100)
+        checkpoint = apply_sp500_shard_result(
+            plan,
+            [
+                {"symbol": "GOOG", "status": "event_found"},
+                {"symbol": "PORTFOLIO_ONLY", "status": "failed"},
+            ],
+            checked_at="2026-07-23 00:00:00",
+        )
+
+        self.assertEqual(checkpoint["coverage_status"], "complete")
+        self.assertEqual(checkpoint["details"]["failed_symbols"], [])
+
+    def test_overview_earnings_hybrid_includes_alphabet_and_updates_checkpoint(
+        self,
+    ) -> None:
+        from finance.data import market_intelligence as mi
+
+        captured: dict[str, object] = {}
+
+        def fake_collector(**kwargs):
+            captured.update(kwargs)
+            symbols = list(kwargs["symbols"])
+            return {
+                "rows_written": 2,
+                "events_found": 2,
+                "symbols_requested": len(symbols),
+                "symbols_processed": len(symbols),
+                "symbol_diagnostics": [
+                    {
+                        "symbol": symbol,
+                        "status": "event_found",
+                        "reason": "ok",
+                    }
+                    for symbol in symbols
+                ],
+                "failed_symbols": [],
+                "missing_symbols": [],
+                "collected_at": "2026-07-23 00:00:00",
+            }
+
+        checkpoints: list[dict[str, object]] = []
+        result = mi.collect_and_store_overview_earnings_calendar(
+            portfolio_symbols=["GOOGL"],
+            watchlist_symbols=["GOOG"],
+            major_cap_loader=lambda: [
+                {"symbol": "AAPL"},
+                {"symbol": "GOOG"},
+                {"symbol": "GOOGL"},
+            ],
+            sp500_loader=lambda: [
+                {"symbol": "GOOG"},
+                {"symbol": "GOOGL"},
+                {"symbol": "MSFT"},
+            ],
+            known_events_loader=lambda: ["NVDA"],
+            checkpoint_loader=lambda _key: None,
+            checkpoint_writer=lambda row: checkpoints.append(row) or 1,
+            identity_loader=lambda symbols: {
+                symbol: {
+                    "issuer_key": f"symbol:{symbol}",
+                    "issuer_name": symbol,
+                }
+                for symbol in symbols
+            },
+            collector=fake_collector,
+            shard_size=100,
+        )
+
+        self.assertIn("GOOG", captured["symbols"])
+        self.assertIn("GOOGL", captured["symbols"])
+        self.assertEqual(
+            len(captured["symbols"]),
+            len(set(captured["symbols"])),
+        )
+        self.assertEqual(
+            captured["symbol_scope_map"]["GOOG"],
+            ["watchlist", "major_cap", "sp500"],
+        )
+        self.assertEqual(
+            captured["symbol_scope_map"]["GOOGL"],
+            ["portfolio", "major_cap", "sp500"],
+        )
+        self.assertEqual(result["coverage"]["coverage_status"], "complete")
+        self.assertEqual(checkpoints[0]["coverage_key"], "earnings:sp500_cycle")
+        self.assertEqual(checkpoints[1]["coverage_key"], "earnings:priority_daily")
+
+    def test_earnings_rows_receive_shared_issuer_identity(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        captured_rows: list[dict[str, object]] = []
+        with (
+            patch.object(
+                mi,
+                "upsert_market_event_rows",
+                side_effect=lambda rows, **_: captured_rows.extend(rows) or len(rows),
+            ),
+            patch.object(
+                mi,
+                "mark_superseded_earnings_events",
+                return_value=0,
+            ),
+            patch.object(
+                mi,
+                "mark_stale_earnings_estimates",
+                return_value=0,
+            ),
+        ):
+            mi.collect_and_store_earnings_calendar(
+                symbols=["GOOG", "GOOGL"],
+                max_symbols=2,
+                issuer_identity_map={
+                    "GOOG": {
+                        "issuer_key": "sec_cik:1652044",
+                        "issuer_name": "Alphabet Inc.",
+                    },
+                    "GOOGL": {
+                        "issuer_key": "sec_cik:1652044",
+                        "issuer_name": "Alphabet Inc.",
+                    },
+                },
+                earnings_fetcher=lambda symbols, **_: {
+                    "events": [
+                        {
+                            "event_date": "2026-07-23",
+                            "event_type": "EARNINGS",
+                            "symbol": symbol,
+                            "title": f"{symbol} Earnings Release",
+                            "source": mi.EARNINGS_CALENDAR_SOURCE,
+                        }
+                        for symbol in symbols
+                    ],
+                    "symbol_diagnostics": [
+                        {
+                            "symbol": symbol,
+                            "status": "event_found",
+                            "reason": "ok",
+                        }
+                        for symbol in symbols
+                    ],
+                    "failed_symbols": [],
+                    "missing_symbols": [],
+                },
+            )
+
+        self.assertEqual(
+            {row["issuer_key"] for row in captured_rows},
+            {"sec_cik:1652044"},
+        )
+        self.assertEqual(
+            {row["issuer_name"] for row in captured_rows},
+            {"Alphabet Inc."},
+        )
+
+    def test_event_issuer_identity_uses_exact_listing_name_when_cik_is_missing(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def use_db(self, _db_name: str) -> None:
+                return None
+
+            def query(self, _sql: str, _params=None):
+                return [
+                    {
+                        "symbol": "GOOG",
+                        "related_cik": None,
+                        "name": "ALPHABET INC",
+                        "source": "nyse_listings_directory",
+                    },
+                    {
+                        "symbol": "GOOGL",
+                        "related_cik": None,
+                        "name": "ALPHABET INC",
+                        "source": "nyse_listings_directory",
+                    },
+                ]
+
+            def close(self) -> None:
+                return None
+
+        with patch.object(mi, "_db", return_value=FakeDb()):
+            identity = mi.load_event_issuer_identity_map(["GOOG", "GOOGL"])
+
+        self.assertEqual(identity["GOOG"]["issuer_key"], identity["GOOGL"]["issuer_key"])
+        self.assertEqual(identity["GOOG"]["issuer_name"], "Alphabet Inc")
+
+    def test_event_issuer_identity_keeps_first_preferred_cik_row(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def use_db(self, _db_name: str) -> None:
+                return None
+
+            def query(self, _sql: str, _params=None):
+                return [
+                    {
+                        "symbol": "GOOG",
+                        "related_cik": 1652044,
+                        "name": "Alphabet Inc.",
+                        "source": "sec_company_tickers_exchange",
+                    },
+                    {
+                        "symbol": "GOOG",
+                        "related_cik": 9999999,
+                        "name": "Stale Alphabet Identity",
+                        "source": "legacy_source",
+                    },
+                ]
+
+            def close(self) -> None:
+                return None
+
+        with patch.object(mi, "_db", return_value=FakeDb()):
+            identity = mi.load_event_issuer_identity_map(["GOOG"])
+
+        self.assertEqual(identity["GOOG"]["issuer_key"], "sec_cik:1652044")
+        self.assertEqual(identity["GOOG"]["issuer_name"], "Alphabet Inc.")
+
+    def test_nasdaq_crosscheck_maps_after_hours_time_label(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        result = mi.fetch_yfinance_earnings_calendar_events(
+            ["GOOG"],
+            start_date="2026-07-20",
+            end_date="2026-07-25",
+            validate_with_nasdaq=True,
+            ticker_factory=lambda _symbol: type(
+                "Ticker",
+                (),
+                {"calendar": {"Earnings Date": [date(2026, 7, 22)]}},
+            )(),
+            nasdaq_fetcher=lambda _dates: {
+                "2026-07-22": {
+                    "symbols": ["GOOG"],
+                    "rows_by_symbol": {
+                        "GOOG": {"time": "After Hours"},
+                    },
+                    "status": "ok",
+                }
+            },
+        )
+
+        self.assertEqual(
+            result["events"][0]["event_time_label"],
+            "after_market",
+        )
+
+    def test_earnings_time_label_maps_pre_market_variant(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        self.assertEqual(
+            mi._normalize_earnings_time_label("Pre-Market"),  # noqa: SLF001
+            "before_market",
+        )
+
+    def test_hybrid_second_missing_check_marks_only_that_symbol_stale(
+        self,
+    ) -> None:
+        from finance.data import market_intelligence as mi
+        from finance.data.market_event_coverage import (
+            apply_sp500_shard_result,
+            build_sp500_shard_plan,
+        )
+
+        first_plan = build_sp500_shard_plan(
+            ["GOOG", "GOOGL"],
+            None,
+            batch_size=100,
+        )
+        prior = apply_sp500_shard_result(
+            first_plan,
+            [
+                {"symbol": "GOOG", "status": "event_found"},
+                {"symbol": "GOOGL", "status": "missing"},
+            ],
+            checked_at="2026-07-22 00:00:00",
+        )
+        marked: list[list[str]] = []
+
+        mi.collect_and_store_overview_earnings_calendar(
+            major_cap_loader=lambda: [],
+            sp500_loader=lambda: [
+                {"symbol": "GOOG"},
+                {"symbol": "GOOGL"},
+            ],
+            known_events_loader=lambda: [],
+            checkpoint_loader=lambda _key: prior,
+            checkpoint_writer=lambda _row: 1,
+            identity_loader=lambda _symbols: {},
+            missing_stale_marker=lambda symbols: marked.append(list(symbols)),
+            collector=lambda **_: {
+                "rows_written": 0,
+                "symbols_requested": 2,
+                "symbols_processed": 2,
+                "symbol_diagnostics": [
+                    {"symbol": "GOOG", "status": "event_found"},
+                    {"symbol": "GOOGL", "status": "missing"},
+                ],
+                "failed_symbols": [],
+                "missing_symbols": ["GOOGL"],
+                "collected_at": "2026-07-23 00:00:00",
+            },
+            shard_size=100,
+        )
+
+        self.assertEqual(marked, [["GOOGL"]])
+
     def test_market_intelligence_sync_includes_event_calendar_table(self) -> None:
         from finance.data import market_intelligence as mi
 
@@ -29417,6 +30516,7 @@ END:VCALENDAR
         synced_tables = [call.args[1] for call in sync_schema.call_args_list]
         self.assertIn("market_universe_member", synced_tables)
         self.assertIn("market_event_calendar", synced_tables)
+        self.assertIn("market_event_collection_coverage", synced_tables)
         self.assertIn("market_data_issue", synced_tables)
         self.assertIn("market_intraday_snapshot", synced_tables)
 

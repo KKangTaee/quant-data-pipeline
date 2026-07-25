@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from calendar import monthrange
 from collections import Counter
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from math import isfinite
 from time import perf_counter
 from typing import Any, Callable, Iterable, Sequence
@@ -42,11 +42,11 @@ from app.jobs.economic_cycle_refresh import run_economic_cycle_intramonth_refres
 from app.jobs.ingestion_jobs import (
     JobResult,
     attach_futures_macro_materialization,
-    run_collect_earnings_calendar,
     run_collect_fomc_calendar,
     run_collect_futures_ohlcv,
     run_collect_macro_calendar,
     run_collect_market_structure_calendar,
+    run_collect_overview_earnings_calendar,
     run_collect_market_sentiment,
     run_collect_market_intraday_snapshot,
     run_repair_nasdaq100_valuation_coverage,
@@ -62,6 +62,9 @@ from app.jobs.ingestion_jobs import (
 )
 from app.jobs.overview_automation import run_overview_automation
 from app.jobs.run_history import append_run_history
+from app.jobs.futures_macro_daily_finalization import (
+    run_pending_futures_daily_finalization,
+)
 from finance.loaders.economic_cycle import load_cycle_snapshot
 
 MARKET_MOVERS_EOD_COLLECTION_PERIODS = {
@@ -362,6 +365,8 @@ def run_overview_futures_daily_ohlcv(
     coverage_loader: Callable[[Sequence[str]], list[dict[str, Any]]] = load_futures_daily_coverage,
     collect_runner: Callable[..., JobResult] = run_collect_futures_ohlcv,
     materialize_fn: Callable[[], dict[str, Any]] | None = None,
+    evaluation_time: datetime | None = None,
+    finalization_runner: Callable[..., dict[str, Any]] | None = None,
 ) -> JobResult:
     """Refresh complete symbols with 1Y overlap and bootstrap only deficient history."""
 
@@ -451,6 +456,25 @@ def run_overview_futures_daily_ohlcv(
             },
         },
     }
+    finalize = (
+        finalization_runner
+        or run_pending_futures_daily_finalization
+    )
+    finalization = finalize(
+        symbols=selected,
+        evaluation_time=evaluation_time or datetime.now(timezone.utc),
+        collect_runner=collect_runner,
+    )
+    combined["details"]["daily_finalization"] = finalization
+    if (
+        str(finalization.get("status") or "") in {"incomplete", "error"}
+        and combined["status"] == "success"
+    ):
+        combined["status"] = "partial_success"
+        combined["message"] = (
+            f"{combined['message']} "
+            "Completed-session finalization kept the latest-good date."
+        )
     attached = attach_futures_macro_materialization(
         combined,
         interval="1d",
@@ -467,12 +491,8 @@ def run_overview_fomc_calendar(*, years: Iterable[int]) -> JobResult:
 
 
 def run_overview_earnings_calendar() -> JobResult:
-    return run_collect_earnings_calendar(
-        symbol_source="latest_movers",
-        universe_code="SP500",
-        top_movers_limit=20,
+    return run_collect_overview_earnings_calendar(
         lookahead_days=120,
-        max_symbols=50,
         validate_with_nasdaq=True,
     )
 
@@ -483,6 +503,34 @@ def run_overview_macro_calendar(*, years: Iterable[int]) -> JobResult:
 
 def run_overview_market_structure_calendar(*, years: Iterable[int]) -> JobResult:
     return run_collect_market_structure_calendar(years=years)
+
+
+def run_overview_event_calendars_refresh_official(
+    *,
+    years: Iterable[int] | None = None,
+) -> JobResult:
+    """Refresh the official event sources without the slower earnings provider sweep."""
+    started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    current_year = datetime.now().year
+    target_years = tuple(years or (current_year, current_year + 1))
+    steps: list[tuple[str, Callable[[], JobResult]]] = [
+        ("FOMC Calendar", lambda: run_overview_fomc_calendar(years=target_years)),
+        ("Macro Calendar", lambda: run_overview_macro_calendar(years=target_years)),
+        ("Market Structure Calendar", lambda: run_overview_market_structure_calendar(years=target_years)),
+    ]
+    result = _run_overview_market_context_refresh_steps(
+        job_name="overview_event_calendars_refresh_official",
+        execution_mode="manual_events_official",
+        steps=steps,
+        started_at=started_at,
+    )
+    completed_count = int(result.get("jobs_run") or 0) - int(result.get("jobs_failed") or 0)
+    result["message"] = (
+        f"공식 일정 갱신: {completed_count}/{len(steps)} jobs completed."
+        if result.get("status") != "failed"
+        else "공식 일정 갱신이 실패했습니다."
+    )
+    return result
 
 
 def run_overview_event_calendars_refresh_all(*, years: Iterable[int] | None = None) -> JobResult:

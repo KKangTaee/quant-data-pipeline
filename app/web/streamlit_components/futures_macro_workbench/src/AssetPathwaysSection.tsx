@@ -1,4 +1,4 @@
-import { OBSERVATION_LABEL } from "./FuturesMacroWorkbench";
+import { OBSERVATION_LABEL } from "./presentation";
 import type { AssetPathwayPayload } from "./FuturesMacroWorkbench";
 
 function AssetPathwaysSection({ pathways }: { pathways: AssetPathwayPayload[] }) {

@@ -5,8 +5,25 @@ function DirectionCell({ row, window }: { row: FamilyDirectionRow; window: "one_
   return <span className={`fm-workbench__direction-cell tone-${state.tone}`}>{state.label}</span>;
 }
 
-function DirectionHeaders() {
-  return <div className="fm-workbench__direction-headers"><span>방향축</span><span>1D</span><span>5D</span><span>20D</span></div>;
+function DirectionHeaders({
+  firstLabel = "방향축",
+  oneDayLabel = "1D",
+  fiveDayLabel = "5D",
+  twentyDayLabel = "20D",
+}: {
+  firstLabel?: string;
+  oneDayLabel?: string;
+  fiveDayLabel?: string;
+  twentyDayLabel?: string;
+}) {
+  return (
+    <div className="fm-workbench__direction-headers">
+      <span>{firstLabel}</span>
+      <span>{oneDayLabel}</span>
+      <span>{fiveDayLabel}</span>
+      <span>{twentyDayLabel}</span>
+    </div>
+  );
 }
 
 function DirectionRow({ row }: { row: FamilyDirectionRow }) {
@@ -39,15 +56,18 @@ function FamilyDirectionSection({ coreDirections, confirmationSignals, confirmat
         {coreDirections.map((row) => <DirectionRow key={row.key} row={row} />)}
       </div>
       <div className="fm-workbench__confirmation-block">
-        <div><span>Confirmation</span><h4>확인 신호</h4><p>{confirmationSummary}</p></div>
-        <div className="fm-workbench__confirmation-grid">
-          {confirmationSignals.map((row) => (
-            <article key={row.key}>
-              <strong>{row.label}</strong>
-              <div><DirectionCell row={row} window="one_day" /><DirectionCell row={row} window="five_day" /><DirectionCell row={row} window="twenty_day" /></div>
-              <small>최근 1D · 5D · 20D</small>
-            </article>
-          ))}
+        <div className="fm-workbench__confirmation-intro">
+          <div><span>Confirmation</span><h4>확인 신호</h4></div>
+          <p>{confirmationSummary}</p>
+        </div>
+        <div className="fm-workbench__confirmation-matrix">
+          <DirectionHeaders
+            firstLabel="신호"
+            oneDayLabel="최근 1D"
+            fiveDayLabel="최근 5D"
+            twentyDayLabel="최근 20D"
+          />
+          {confirmationSignals.map((row) => <DirectionRow key={row.key} row={row} />)}
         </div>
       </div>
     </section>

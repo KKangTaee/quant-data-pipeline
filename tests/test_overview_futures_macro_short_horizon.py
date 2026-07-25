@@ -266,3 +266,16 @@ def test_react_copy_keeps_recent_twenty_day_as_observation_only() -> None:
     assert "핵심 방향 정렬" in family
     assert "확인 신호" in family
     assert "20D는 미래 예측이 아닙니다" not in all_source
+
+
+def test_confirmation_signals_use_explicit_recent_window_headers() -> None:
+    family = Path(
+        "app/web/streamlit_components/futures_macro_workbench/src/"
+        "FamilyDirectionSection.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert 'firstLabel="신호"' in family
+    assert 'oneDayLabel="최근 1D"' in family
+    assert 'fiveDayLabel="최근 5D"' in family
+    assert 'twentyDayLabel="최근 20D"' in family
+    assert "최근 1D · 5D · 20D" not in family

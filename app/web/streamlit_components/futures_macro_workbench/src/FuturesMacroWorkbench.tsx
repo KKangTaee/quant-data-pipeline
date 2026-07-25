@@ -7,42 +7,26 @@ import MacroContextSection from "./MacroContextSection";
 import MethodDisclosure from "./MethodDisclosure";
 import PatternRibbonSection from "./PatternRibbonSection";
 import ShortHorizonDecisionSection from "./ShortHorizonDecisionSection";
+import type { ObservationStatus } from "./presentation";
+import type {
+  CommandPayload,
+  FuturesMacroAction,
+  HeroPayload,
+  SessionEvidence,
+} from "./contracts";
 import "./style.css";
 
 export type PublicationStatus = "VERIFIED" | "PROVISIONAL" | "NO_EDGE" | "UNAVAILABLE";
 export type EstimateStatus = PublicationStatus;
-export type ObservationStatus = "OBSERVED" | "PARTIAL" | "UNAVAILABLE";
-export const OBSERVATION_LABEL: Record<ObservationStatus, string> = {
-  OBSERVED: "관측 완료",
-  PARTIAL: "일부 관측",
-  UNAVAILABLE: "관측 불가",
-};
+export type { ObservationStatus } from "./presentation";
 export type RegimeKey = "risk_seeking" | "defensive" | "inflation_rate_pressure" | "mixed";
 
-export type FuturesMacroAction = {
-  id: "daily_refresh" | "reload";
-  label: string;
-  kind: "primary" | "secondary";
-  detail?: string;
-};
-
-export type CommandPayload = {
-  title: string;
-  detail: string;
-  actions: FuturesMacroAction[];
-};
-
-export type HeroPayload = {
-  kicker: string;
-  title: string;
-  transition_label: string;
-  summary: string;
-  today_summary?: string;
-  as_of_date: string;
-  observation_status: ObservationStatus;
-  coverage_label: string;
-  evidence: string[];
-};
+export type {
+  CommandPayload,
+  FuturesMacroAction,
+  HeroPayload,
+  SessionEvidence,
+} from "./contracts";
 
 export type ProbabilityRow = {
   key: RegimeKey;
@@ -118,12 +102,6 @@ export type PatternMapPayload = {
   y_label: string;
   domain: { x: [number, number]; y: [number, number] };
   path: PatternPoint[];
-};
-
-export type SessionEvidence = {
-  latest_final_session?: string | null;
-  pending_session?: string | null;
-  status?: string | null;
 };
 
 export type EvidenceGroup = {

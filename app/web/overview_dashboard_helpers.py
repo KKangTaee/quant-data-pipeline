@@ -10,6 +10,7 @@ from app.services.overview.data_health import (
     build_overview_data_health_ingestion_handoff,
 )
 from app.services.overview.events import (
+    DEFAULT_EVENT_FAMILY_LIMITS,
     build_market_events_snapshot,
     build_overview_macro_week_lane,
 )
@@ -27,6 +28,7 @@ from app.services.overview.why_it_moved import build_market_mover_research_snaps
 from app.services.overview.sentiment import build_market_sentiment_snapshot
 from app.services.overview_market_context_analog import build_historical_analog_snapshot
 from app.services.futures_macro_thermometer import load_overview_futures_macro_snapshot
+from finance.data.market_intelligence import load_market_event_collection_coverage
 
 
 # Load the DB-backed market movers snapshot for the Overview market scan tab.
@@ -106,13 +108,22 @@ def load_overview_market_events_snapshot(
     *,
     event_type: str | None = "FOMC_MEETING",
     horizon_days: int = 365,
-    limit: int = 200,
 ) -> dict[str, Any]:
-    return build_market_events_snapshot(
+    snapshot = build_market_events_snapshot(
         event_type=event_type,
         horizon_days=horizon_days,
-        limit=limit,
+        family_limits=DEFAULT_EVENT_FAMILY_LIMITS,
     )
+    try:
+        snapshot["collection_coverage"] = [
+            row
+            for key in ("earnings:priority_daily", "earnings:sp500_cycle")
+            if (row := load_market_event_collection_coverage(key)) is not None
+        ]
+    except Exception as exc:
+        snapshot["collection_coverage"] = []
+        snapshot["collection_coverage_error"] = str(exc)
+    return snapshot
 
 
 # Build a near-term macro week lane from the already loaded market events snapshot.

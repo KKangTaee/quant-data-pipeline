@@ -1,6 +1,6 @@
 # Overview Futures Macro Short-Horizon V1 Notes
 
-Last Updated: 2026-07-23
+Last Updated: 2026-07-24
 
 ## Confirmed Facts
 
@@ -12,6 +12,8 @@ Last Updated: 2026-07-23
 - Repeated 1Y provider collection changed exactly 17 rows: one `2026-07-22` same-date row per symbol. Completed historical rows did not change.
 - At 2026-07-23 09:56 KST / 2026-07-22 20:56 ET, those rows continued changing close/high/low/volume after the configured final cutoff. The old resolver therefore fingerprinted an in-progress provider bar as final.
 - Nested outlook profiling showed the genuine changed-input path is model-bound: `_build_nested_horizon_outlook` and repeated analog configuration forecasts dominate, not the 1Y download or DB UPSERT.
+- A 2026-07-24 live probe found 17/17 core symbols and 276 stored 5m bars per symbol inside the target 2026-07-23 session window; next-session bars starting 22:00 UTC were also present but excluded by the half-open end.
+- The live final source reference is exactly `yfinance:5m:[2026-07-22T18:00:00-04:00,2026-07-23T17:00:00-04:00)`.
 
 ## Decisions
 
@@ -23,6 +25,9 @@ Last Updated: 2026-07-23
 - Separate routine overlap refresh from full bootstrap and add an unchanged-input fast path.
 - Treat a same-date row as final only when its collection timestamp falls in the 17:15–18:00 ET settlement-stable gap; otherwise keep it pending until the provider date advances.
 - Bump the pattern algorithm identity because completed-session semantics changed, and allow incompatible stored current versions to replace a newer-date legacy semantic row.
+- Keep mutable Yahoo raw 1d fields and explicit completed-session `final_*` fields on the same stable row. Routine 1d UPSERT updates only raw fields; completed resolver/model input uses valid `yfinance_5m_session_aggregate_v1` values first.
+- Require all 17 core symbols before writing any final value. Missing coverage and transaction errors preserve the prior latest-good snapshot rather than advancing a partial market state.
+- Treat the 5m aggregate as an operational completed-session value, not an exchange official settlement.
 
 ## Visual Approval
 

@@ -10,6 +10,25 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-25 - main-dev master 병합 충돌 해결
+
+- Economic Cycle/data 완료 이력과 master의 Header/Sentiment/Institutional/Futures 완료 이력을 문서 역할별로 모두 보존하고 current/latest 표기를 정리했다.
+- `overview_actions.py`의 Economic Cycle snapshot loader와 Futures Macro 일봉 확정 import를 함께 유지하고 Economic Cycle merged source에서 production bundle을 재생성했다.
+- focused Python `456 passed`, subtest `23 passed`, 공통 Header React `11 passed`, TypeScript/build/compile과 1280·420px actual Browser QA를 통과했다.
+- run history·registry 수정·기존 QA 이미지는 merge에서 제외했다. 상세는 [integration task](./tasks/active/master-merge-resolution-20260725/STATUS.md)를 본다.
+
+### 2026-07-25 - Market Research 공통 헤더 완료
+
+- 경제사이클·선물매크로·심리·일정 첫 화면을 공통 `ResearchHeader` shell로 통일하고 화면별 데이터 의미와 refresh dispatch는 유지했다.
+- 우측 fact box의 좌측 컬러 강조선을 없애고 중립 border를 사용하며, 실제 상태값만 작은 점과 문구 색으로 구분한다.
+- React DOM 9개, 관련 Python 33개, 네 production build와 1280·760·420px actual Browser QA를 통과했다. 전체 roadmap `3/3차` 완료. 상세는 [active task](./tasks/active/market-research-header-system-v1-20260725/STATUS.md)를 본다.
+
+### 2026-07-25 - AAII canonical 동일 주차 중복 정리 완료
+
+- complete AAII XLS capture가 incoming 날짜 범위를 official workbook date set으로 canonical reconcile한 뒤 UPSERT하도록 source transaction을 보강했다.
+- 기존 canonical을 official workbook으로 원자 재구축해 HTML/XLS 동일 주차 중복을 제거했고, `2,033주 / 8,132행`과 React 주간 단일 point를 확인했다.
+- immutable snapshot `1,104행`과 batch `11건`은 보존했다. Sentiment PIT 회귀 `26 passed`, actual Sentiment Browser에서 AAII `2,033개`·latest/previous 7일 간격·console error 0을 확인했다. 상세는 [active task](./tasks/active/overview-sentiment-aaii-canonical-dedup-v1-20260725/STATUS.md)를 본다.
+
 ### 2026-07-25 - 경제 사이클 금·달러 중복과 자산 카드 가독성 정리 완료
 
 - 금·달러 공통 경제 배경의 3중 반복을 전용 블록 1회로 줄이고 상단 summary와 현재
@@ -7232,3 +7251,33 @@ Detailed historical logs were archived on `2026-04-13`.
 - 수동 OHLCV 최신화 뒤 기존 결과는 참고용으로 유지하고, 명시적 같은 설정 재실행이 완료된 뒤에만 저장/Level2 인계를 다시 연다.
 - actual GTAA QA 중 pending 실행의 fragment-scope rerun 예외를 발견해 app-scope로 수정했고 1280·760px 흐름을 확인했다.
 - 전체 roadmap `3/3차`; 상세는 `tasks/active/backtest-level1-price-refresh-handoff-v1-20260722/`를 본다.
+
+## 2026-07-24 - Futures Macro 요청형 완료 세션 확정
+
+- 저녁 재개 뒤 mutable Yahoo 1d row가 pending으로 남던 문제를 stored 2d/5m exact ET session aggregate로 해결했다.
+- 17/17 atomic `final_*` 저장과 explicit-final resolver를 연결해 실제 한 번의 갱신에서 기준일을 2026-07-22에서 2026-07-23으로 이동했다.
+- 즉시 재실행은 5m 수집/nested replay 없이 8.659초에 finalization·snapshot을 재사용했고 desktop/420px QA와 console error 0을 확인했다.
+- 전체 roadmap `5/5차` 완료. 상세는 `tasks/active/overview-futures-macro-short-horizon-v1-20260723/`를 본다.
+
+- 2026-07-24 Overview Events omission correction and A-layout closeout:
+  - Replaced latest-movers-only earnings collection with daily priority plus a persisted S&P 500 shard cycle; collection coverage now distinguishes checked-no-event from not-checked.
+  - Added requested-year official coverage, including NYSE fallback for the 2027 holiday schedule, and issuer grouping that displays GOOG / GOOGL as one Alphabet event while retaining both ticker facts.
+  - Completed the React brief + calendar A layout, desktop/mobile Browser QA, and task closeout under `tasks/active/overview-events-ux-redesign/`.
+- 2026-07-24 Overview Events refresh follow-up:
+  - Repaired FOMC source taxonomy and verified the next 2026-07-29 meeting from the DB-backed workbench.
+  - Split the fast official-calendar refresh from the slow hybrid earnings action and hardened React completion acknowledgement with a unique UI token.
+  - Detailed evidence remains under `tasks/active/overview-events-ux-redesign/`.
+
+## 2026-07-25 - Institutional Holdings React 전면 화면 구현 완료
+
+- 정상 화면을 React-owned `C · Modular Research Studio`로 전환하고 desktop research rail, 980px 이하 drawer, canonical 4개 destination을 적용했다.
+- 기관 검색·보유 explorer·종목 상세/차트·랭킹·unresolved guardrail과 SEC dataset 갱신 기능을 studio 안에서 보존했다. Streamlit은 route·DB payload·explicit event·unavailable fallback만 담당한다.
+- React 7개, Python 58개, typecheck/build와 1280·760·420px actual Browser QA를 통과했으며 console error는 0이었다.
+- 전체 roadmap `4/4차` 완료. 상세는 `tasks/active/institutional-holdings-react-parity-v1-20260725/`를 본다.
+
+## 2026-07-25 - master 병합 충돌 통합 완료
+
+- 문서 충돌은 current의 Futures completed-session finalization과 master의 Events S&P 500 coverage·Institutional React studio 기록을 함께 보존했다.
+- Events는 master의 calendar-dominant 화면에 공통 `ResearchHeader`와 공식 일정 갱신 action을 연결하고 새 `brief.counts` payload 계약에 맞췄다.
+- 낡은 hero CSS와 런타임 counts 참조 회귀를 테스트로 고쳤으며 desktop 1280px·mobile 420px actual Browser QA에서 overflow와 console error가 없음을 확인했다.
+- 전체 통합 roadmap `3/3차` 완료. 사용자 registry, research, run history와 기존 QA 이미지는 병합 커밋에서 제외했다.

@@ -502,6 +502,8 @@ MARKET_INTELLIGENCE_SCHEMAS = {
           universe_scope VARCHAR(64) NULL,
           source_authority VARCHAR(32) NULL,
           symbol VARCHAR(20) NULL,
+          issuer_key VARCHAR(64) NULL,
+          issuer_name VARCHAR(255) NULL,
           title VARCHAR(512) NOT NULL,
 
           source VARCHAR(64) NOT NULL,
@@ -525,6 +527,35 @@ MARKET_INTELLIGENCE_SCHEMAS = {
           KEY ix_event_symbol_date (symbol, event_date),
           KEY ix_event_status (event_type, event_status),
           KEY ix_event_source (source)
+        );
+    """,
+    "market_event_collection_coverage": """
+        CREATE TABLE IF NOT EXISTS market_event_collection_coverage (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          coverage_key VARCHAR(128) NOT NULL,
+          event_family VARCHAR(32) NOT NULL,
+          universe_scope VARCHAR(64) NOT NULL,
+          window_start DATE NULL,
+          window_end DATE NULL,
+          expected_items INT NOT NULL DEFAULT 0,
+          covered_items INT NOT NULL DEFAULT 0,
+          failed_items INT NOT NULL DEFAULT 0,
+          cursor_offset INT NOT NULL DEFAULT 0,
+          batch_size INT NOT NULL DEFAULT 100,
+          coverage_status VARCHAR(16) NOT NULL DEFAULT 'pending',
+          cycle_started_at TIMESTAMP NULL,
+          cycle_completed_at TIMESTAMP NULL,
+          last_attempted_at TIMESTAMP NULL,
+          last_success_at TIMESTAMP NULL,
+          details_json JSON NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_market_event_coverage_key (coverage_key),
+          KEY ix_market_event_coverage_family (event_family, universe_scope),
+          KEY ix_market_event_coverage_status (coverage_status)
         );
     """,
     "market_data_issue": """
@@ -636,6 +667,16 @@ FUTURES_MARKET_SCHEMAS = {
           close DOUBLE NULL,
           adj_close DOUBLE NULL,
           volume DOUBLE NULL,
+
+          final_open DOUBLE NULL,
+          final_high DOUBLE NULL,
+          final_low DOUBLE NULL,
+          final_close DOUBLE NULL,
+          final_adj_close DOUBLE NULL,
+          final_volume DOUBLE NULL,
+          finalization_basis VARCHAR(64) NULL,
+          final_source_ref VARCHAR(255) NULL,
+          finalized_at TIMESTAMP NULL,
 
           provider_status ENUM('ok','missing','error') NOT NULL DEFAULT 'ok',
           collected_at TIMESTAMP NULL,

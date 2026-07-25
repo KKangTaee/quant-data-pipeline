@@ -45,6 +45,9 @@ TREASURY_AUCTIONS_SOURCE = "treasurydirect_auction_calendar"
 MACRO_CALENDAR_SOURCE = "official_macro_release_schedules"
 NASDAQ_MARKET_HOLIDAY_SOURCE_URL = "https://www.nasdaqtrader.com/trader.aspx?id=calendar"
 NASDAQ_MARKET_HOLIDAY_SOURCE = "nasdaqtrader_equity_options_holiday_calendar"
+NYSE_MARKET_HOLIDAY_SOURCE_URL = "https://www.nyse.com/markets/hours-calendars"
+NYSE_MARKET_HOLIDAY_SOURCE = "nyse_market_holiday_calendar"
+US_EQUITY_FULL_DAY_HOLIDAY_MINIMUM = 10
 CBOE_OPTIONS_EXPIRATION_SOURCE_URL_TEMPLATE = "https://cdn.cboe.com/resources/options/Cboe{year}OPTIONSCalendar.pdf"
 CBOE_OPTIONS_EXPIRATION_SOURCE = "cboe_options_expiration_calendar"
 FTSE_RUSSELL_RECONSTITUTION_SOURCE_URL = (
@@ -357,6 +360,12 @@ def sync_market_intelligence_tables(
         )
         sync_table_schema(
             meta_db,
+            "market_event_collection_coverage",
+            MARKET_INTELLIGENCE_SCHEMAS["market_event_collection_coverage"],
+            DB_META,
+        )
+        sync_table_schema(
+            meta_db,
             "market_data_issue",
             MARKET_INTELLIGENCE_SCHEMAS["market_data_issue"],
             DB_META,
@@ -589,6 +598,8 @@ def normalize_market_event_rows(
             "universe_scope": _normalize_event_taxonomy_value(item.get("universe_scope")),
             "source_authority": _normalize_event_taxonomy_value(item.get("source_authority")),
             "symbol": _normalize_event_symbol(item.get("symbol")),
+            "issuer_key": str(item.get("issuer_key") or "").strip() or None,
+            "issuer_name": str(item.get("issuer_name") or "").strip() or None,
             "title": title,
             "source": source,
             "source_type": source_type,
@@ -604,6 +615,152 @@ def normalize_market_event_rows(
         row["event_key"] = str(item.get("event_key") or "").strip() or _market_event_key(row)
         normalized_rows.append(row)
     return normalized_rows
+
+
+VALID_EVENT_COVERAGE_STATUSES = {"pending", "partial", "complete", "stale", "error"}
+
+
+def normalize_market_event_collection_coverage(row: dict[str, Any]) -> dict[str, Any]:
+    """Normalize one durable collection-completeness checkpoint before persistence."""
+    expected = max(0, int(row.get("expected_items") or 0))
+    covered = max(0, int(row.get("covered_items") or 0))
+    failed = max(0, int(row.get("failed_items") or 0))
+    requested_status = str(row.get("coverage_status") or "").strip().lower()
+    is_complete = expected > 0 and covered == expected and failed == 0
+    if requested_status not in VALID_EVENT_COVERAGE_STATUSES:
+        requested_status = "complete" if is_complete else "partial"
+    elif requested_status == "complete" and not is_complete:
+        requested_status = "partial"
+    return {
+        "coverage_key": str(row.get("coverage_key") or "").strip(),
+        "event_family": str(row.get("event_family") or "").strip().lower(),
+        "universe_scope": str(row.get("universe_scope") or "").strip().lower(),
+        "window_start": _event_date_str(row.get("window_start")),
+        "window_end": _event_date_str(row.get("window_end")),
+        "expected_items": expected,
+        "covered_items": covered,
+        "failed_items": failed,
+        "cursor_offset": max(0, int(row.get("cursor_offset") or 0)),
+        "batch_size": max(1, int(row.get("batch_size") or 100)),
+        "coverage_status": requested_status,
+        "cycle_started_at": row.get("cycle_started_at"),
+        "cycle_completed_at": row.get("cycle_completed_at"),
+        "last_attempted_at": row.get("last_attempted_at"),
+        "last_success_at": row.get("last_success_at"),
+        "details_json": _json_payload(row.get("details_json") or row.get("details") or {}),
+    }
+
+
+def upsert_market_event_collection_coverage(
+    row: dict[str, Any],
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> int:
+    """Persist one idempotent collection checkpoint keyed by coverage_key."""
+    normalized = normalize_market_event_collection_coverage(row)
+    if not normalized["coverage_key"] or not normalized["event_family"] or not normalized["universe_scope"]:
+        return 0
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_event_collection_coverage",
+            MARKET_INTELLIGENCE_SCHEMAS["market_event_collection_coverage"],
+            DB_META,
+        )
+        db.execute(
+            """
+            INSERT INTO market_event_collection_coverage (
+              coverage_key, event_family, universe_scope, window_start, window_end,
+              expected_items, covered_items, failed_items, cursor_offset, batch_size,
+              coverage_status, cycle_started_at, cycle_completed_at,
+              last_attempted_at, last_success_at, details_json
+            ) VALUES (
+              %(coverage_key)s, %(event_family)s, %(universe_scope)s, %(window_start)s, %(window_end)s,
+              %(expected_items)s, %(covered_items)s, %(failed_items)s, %(cursor_offset)s, %(batch_size)s,
+              %(coverage_status)s, %(cycle_started_at)s, %(cycle_completed_at)s,
+              %(last_attempted_at)s, %(last_success_at)s, %(details_json)s
+            )
+            ON DUPLICATE KEY UPDATE
+              event_family = VALUES(event_family),
+              universe_scope = VALUES(universe_scope),
+              window_start = VALUES(window_start),
+              window_end = VALUES(window_end),
+              expected_items = VALUES(expected_items),
+              covered_items = VALUES(covered_items),
+              failed_items = VALUES(failed_items),
+              cursor_offset = VALUES(cursor_offset),
+              batch_size = VALUES(batch_size),
+              coverage_status = VALUES(coverage_status),
+              cycle_started_at = VALUES(cycle_started_at),
+              cycle_completed_at = VALUES(cycle_completed_at),
+              last_attempted_at = VALUES(last_attempted_at),
+              last_success_at = VALUES(last_success_at),
+              details_json = VALUES(details_json)
+            """,
+            normalized,
+        )
+        return 1
+    finally:
+        db.close()
+
+
+def load_market_event_collection_coverage(
+    coverage_key: str,
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any] | None:
+    """Load one exact checkpoint and expose decoded details to downstream readers."""
+    normalized_key = str(coverage_key or "").strip()
+    if not normalized_key:
+        return None
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_event_collection_coverage",
+            MARKET_INTELLIGENCE_SCHEMAS["market_event_collection_coverage"],
+            DB_META,
+        )
+        rows = db.query(
+            """
+            SELECT
+                coverage_key, event_family, universe_scope, window_start, window_end,
+                expected_items, covered_items, failed_items, cursor_offset, batch_size,
+                coverage_status, cycle_started_at, cycle_completed_at,
+                last_attempted_at, last_success_at, details_json,
+                created_at, updated_at
+            FROM market_event_collection_coverage
+            WHERE coverage_key = %s
+            LIMIT 1
+            """,
+            [normalized_key],
+        )
+    finally:
+        db.close()
+    if not rows:
+        return None
+    output = dict(rows[0])
+    raw_details = output.get("details_json")
+    if isinstance(raw_details, dict):
+        details = dict(raw_details)
+    else:
+        if isinstance(raw_details, (bytes, bytearray)):
+            raw_details = raw_details.decode("utf-8", errors="replace")
+        try:
+            details = json.loads(str(raw_details or "{}"))
+        except (json.JSONDecodeError, TypeError, ValueError):
+            details = {}
+    output["details"] = details if isinstance(details, dict) else {}
+    return output
 
 
 def upsert_market_event_rows(
@@ -629,12 +786,13 @@ def upsert_market_event_rows(
         sql = """
         INSERT INTO market_event_calendar (
           event_key, event_date, event_type, event_family, event_subtype, event_time_label,
-          event_datetime_utc, universe_scope, source_authority, symbol, title,
+          event_datetime_utc, universe_scope, source_authority, symbol, issuer_key, issuer_name, title,
           source, source_type, validation_status, event_status, superseded_by_event_key, superseded_at,
           source_url, confidence, collected_at, raw_payload_json
         ) VALUES (
           %(event_key)s, %(event_date)s, %(event_type)s, %(event_family)s, %(event_subtype)s, %(event_time_label)s,
-          %(event_datetime_utc)s, %(universe_scope)s, %(source_authority)s, %(symbol)s, %(title)s,
+          %(event_datetime_utc)s, %(universe_scope)s, %(source_authority)s, %(symbol)s,
+          %(issuer_key)s, %(issuer_name)s, %(title)s,
           %(source)s, %(source_type)s, %(validation_status)s, %(event_status)s,
           %(superseded_by_event_key)s, %(superseded_at)s,
           %(source_url)s, %(confidence)s, %(collected_at)s, %(raw_payload_json)s
@@ -649,6 +807,8 @@ def upsert_market_event_rows(
           universe_scope = VALUES(universe_scope),
           source_authority = VALUES(source_authority),
           symbol = VALUES(symbol),
+          issuer_key = VALUES(issuer_key),
+          issuer_name = VALUES(issuer_name),
           title = VALUES(title),
           source = VALUES(source),
           source_type = VALUES(source_type),
@@ -843,6 +1003,8 @@ def load_market_event_calendar(
                 universe_scope,
                 source_authority,
                 symbol,
+                issuer_key,
+                issuer_name,
                 title,
                 source,
                 source_type,
@@ -952,6 +1114,10 @@ def _parse_fomc_calendar_events_from_html(
                 {
                     "event_date": event_date,
                     "event_type": "FOMC_MEETING",
+                    "event_family": "central_bank",
+                    "event_subtype": "fomc_meeting",
+                    "universe_scope": "all_us",
+                    "source_authority": "federal_reserve",
                     "symbol": None,
                     "title": f"FOMC Meeting: {range_text}, {year}",
                     "source": FOMC_CALENDAR_SOURCE,
@@ -992,12 +1158,61 @@ def collect_and_store_fomc_calendar(
     user: str = "root",
     password: str = "1234",
     port: int = 3306,
+    fomc_fetcher: Callable[..., Any] | None = None,
 ) -> dict[str, Any]:
     collected_at = _timestamp_str()
-    events = fetch_fomc_calendar_events(source_url=source_url, years=years)
+    fetcher = fomc_fetcher or fetch_fomc_calendar_events
+    fetched = fetcher(source_url=source_url, years=years)
+    events = (
+        list(fetched.get("events") or [])
+        if isinstance(fetched, dict)
+        else list(fetched or [])
+    )
     rows = [{**row, "collected_at": collected_at} for row in events]
     rows_written = upsert_market_event_rows(rows, host=host, user=user, password=password, port=port)
     event_dates = sorted({str(row["event_date"]) for row in rows if row.get("event_date")})
+    target_years = (
+        [int(year) for year in years]
+        if years
+        else sorted(
+            {
+                int(str(row["event_date"])[:4])
+                for row in rows
+                if row.get("event_date")
+            }
+        )
+    )
+    for year in target_years:
+        year_rows = [
+            row
+            for row in rows
+            if str(row.get("event_date") or "").startswith(f"{year}-")
+        ]
+        upsert_market_event_collection_coverage(
+            {
+                "coverage_key": f"fomc:{year}",
+                "event_family": "central_bank",
+                "universe_scope": "official_macro",
+                "window_start": f"{year}-01-01",
+                "window_end": f"{year}-12-31",
+                "expected_items": len(year_rows),
+                "covered_items": len(year_rows),
+                "failed_items": 0,
+                "coverage_status": "complete" if year_rows else "error",
+                "last_attempted_at": collected_at,
+                "last_success_at": collected_at if year_rows else None,
+                "details": {
+                    "event_dates": sorted(
+                        str(row["event_date"])
+                        for row in year_rows
+                    )
+                },
+            },
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
     return {
         "source": FOMC_CALENDAR_SOURCE,
         "source_url": source_url,
@@ -1694,6 +1909,101 @@ def parse_nasdaq_market_holiday_calendar_events_from_html(
         )
     return events
 
+def parse_nyse_market_holiday_calendar_events_from_html(
+    html: str,
+    *,
+    source_url: str = NYSE_MARKET_HOLIDAY_SOURCE_URL,
+    years: Sequence[int] | None = None,
+) -> list[dict[str, Any]]:
+    """Parse NYSE's multi-year official holiday table and early-close footnotes."""
+    year_filter = {int(year) for year in years or []}
+    events: list[dict[str, Any]] = []
+    for record in _frame_records_from_html_table(html):
+        holiday = _clean_text(record.get("Holiday"))
+        if not holiday:
+            continue
+        for key, value in record.items():
+            year_text = str(key or "").strip()
+            if not re.fullmatch(r"20\d{2}", year_text):
+                continue
+            year = int(year_text)
+            if year_filter and year not in year_filter:
+                continue
+            date_text = re.sub(r"\([^)]*\)|\*+", "", _clean_text(value)).strip()
+            date_text = re.sub(r"^[A-Za-z]+,\s*", "", date_text)
+            event_date = _event_date_str(f"{date_text}, {year}")
+            if not event_date:
+                continue
+            events.append(
+                _market_structure_event_row(
+                    event_date=event_date,
+                    event_type="MARKET_HOLIDAY",
+                    title=f"US Market Holiday: {holiday}",
+                    source=NYSE_MARKET_HOLIDAY_SOURCE,
+                    source_url=source_url,
+                    event_subtype="market_holiday",
+                    event_time_label="Closed",
+                    raw_payload={
+                        "exchange": "NYSE",
+                        "calendar_year": year,
+                        "holiday": holiday,
+                        "market_status": "Closed",
+                        "source_row": record,
+                    },
+                )
+            )
+
+    page_text = re.sub(
+        r"\s+",
+        " ",
+        BeautifulSoup(html, "html.parser").get_text(" ", strip=True),
+    )
+    early_close_start = page_text.find("Each market will close early")
+    early_close_text = (
+        page_text[early_close_start:].split("Trading Hours", 1)[0]
+        if early_close_start >= 0
+        else ""
+    )
+    for weekday, month, day_text, year_text in re.findall(
+        r"(Monday|Tuesday|Wednesday|Thursday|Friday),\s+"
+        r"([A-Za-z]+)\s+(\d{1,2}),\s+(20\d{2})",
+        early_close_text,
+    ):
+        del weekday
+        year = int(year_text)
+        if year_filter and year not in year_filter:
+            continue
+        event_date = _event_date_str(f"{month} {day_text}, {year}")
+        if not event_date:
+            continue
+        events.append(
+            _market_structure_event_row(
+                event_date=event_date,
+                event_type="EARLY_CLOSE",
+                title="US Market Early Close: NYSE Equity Markets",
+                source=NYSE_MARKET_HOLIDAY_SOURCE,
+                source_url=source_url,
+                event_subtype="early_close",
+                event_time_label="Early close 13:00 ET",
+                release_time_et="13:00",
+                raw_payload={
+                    "exchange": "NYSE",
+                    "calendar_year": year,
+                    "market_status": "Early close 13:00 ET",
+                    "source_text": early_close_text,
+                },
+            )
+        )
+
+    deduplicated = {
+        (str(row.get("event_date")), str(row.get("event_type"))): row
+        for row in events
+    }
+    return [
+        deduplicated[key]
+        for key in sorted(deduplicated)
+    ]
+
 
 def _previous_business_day(value: date, *, exchange_holidays: set[str]) -> date:
     current = value
@@ -1967,6 +2277,23 @@ def fetch_nasdaq_market_holiday_calendar_events(
         raise RuntimeError(f"No Nasdaq Trader market holiday events were parsed{year_text}.")
     return events
 
+def fetch_nyse_market_holiday_calendar_events(
+    *,
+    years: Sequence[int] | None = None,
+    source_url: str = NYSE_MARKET_HOLIDAY_SOURCE_URL,
+    html_fetcher: Callable[[str], str] | None = None,
+) -> list[dict[str, Any]]:
+    fetcher = html_fetcher or _fetch_html
+    events = parse_nyse_market_holiday_calendar_events_from_html(
+        fetcher(source_url),
+        source_url=source_url,
+        years=years,
+    )
+    if not events:
+        year_text = f" for years {list(years)}" if years else ""
+        raise RuntimeError(f"No NYSE market holiday events were parsed{year_text}.")
+    return events
+
 
 def fetch_russell_reconstitution_events(
     *,
@@ -1982,6 +2309,21 @@ def fetch_russell_reconstitution_events(
     return events
 
 
+def _market_holiday_year_complete(
+    rows: Sequence[dict[str, Any]],
+    *,
+    year: int,
+) -> bool:
+    """Require the modern US-equity full-day holiday baseline for one year."""
+    full_day_dates = {
+        str(row.get("event_date"))
+        for row in rows
+        if str(row.get("event_date") or "").startswith(f"{int(year):04d}-")
+        and str(row.get("event_type") or "").upper() == "MARKET_HOLIDAY"
+    }
+    return len(full_day_dates) >= US_EQUITY_FULL_DAY_HOLIDAY_MINIMUM
+
+
 def fetch_market_structure_calendar_events(
     *,
     years: Sequence[int] | None = None,
@@ -1989,6 +2331,7 @@ def fetch_market_structure_calendar_events(
     include_options_expiration: bool = True,
     include_russell: bool = True,
     holiday_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+    holiday_fallback_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
     russell_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
     options_builder: Callable[..., list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
@@ -1998,17 +2341,62 @@ def fetch_market_structure_calendar_events(
     exchange_holidays: set[str] = set()
 
     if include_holidays:
+        holiday_events: list[dict[str, Any]] = []
         try:
             fetcher = holiday_fetcher or fetch_nasdaq_market_holiday_calendar_events
-            holiday_events = fetcher(years=target_years)
-            events.extend(holiday_events)
-            exchange_holidays = {
-                str(row.get("event_date"))
-                for row in holiday_events
-                if row.get("event_type") == "MARKET_HOLIDAY" and row.get("event_date")
-            }
+            holiday_events.extend(fetcher(years=target_years))
         except Exception as exc:
             failed_sources.append(f"Nasdaq Trader: {exc}")
+        covered_holiday_years = {
+            year
+            for year in target_years
+            if _market_holiday_year_complete(holiday_events, year=year)
+        }
+        missing_holiday_years = tuple(
+            year
+            for year in target_years
+            if year not in covered_holiday_years
+        )
+        fallback = holiday_fallback_fetcher or (
+            fetch_nyse_market_holiday_calendar_events
+            if holiday_fetcher is None
+            else None
+        )
+        if missing_holiday_years and fallback is not None:
+            try:
+                holiday_events.extend(fallback(years=missing_holiday_years))
+            except Exception as exc:
+                failed_sources.append(f"NYSE: {exc}")
+        holiday_events = list({
+            (
+                str(row.get("event_date") or ""),
+                str(row.get("event_type") or ""),
+            ): row
+            for row in holiday_events
+            if row.get("event_date") and row.get("event_type")
+        }.values())
+        covered_holiday_years = {
+            year
+            for year in target_years
+            if _market_holiday_year_complete(holiday_events, year=year)
+        }
+        missing_holiday_years = tuple(
+            year
+            for year in target_years
+            if year not in covered_holiday_years
+        )
+        if missing_holiday_years:
+            failed_sources.append(
+                f"Official holiday coverage missing years: {list(missing_holiday_years)}"
+            )
+        events.extend(holiday_events)
+        exchange_holidays = {
+            str(row.get("event_date"))
+            for row in holiday_events
+            if row.get("event_type") == "MARKET_HOLIDAY" and row.get("event_date")
+        }
+    else:
+        missing_holiday_years = ()
     if include_options_expiration:
         try:
             builder = options_builder or build_options_expiration_calendar_events
@@ -2034,6 +2422,7 @@ def fetch_market_structure_calendar_events(
         "events": events,
         "events_found": len(events),
         "failed_sources": failed_sources,
+        "holiday_missing_years": list(missing_holiday_years),
     }
 
 
@@ -2184,6 +2573,98 @@ def collect_and_store_market_structure_calendar(
     rows_written = upsert_market_event_rows(events, host=host, user=user, password=password, port=port)
     event_dates = sorted({str(row["event_date"]) for row in events if row.get("event_date")})
     event_types = sorted({str(row["event_type"]) for row in events if row.get("event_type")})
+    failed_sources = [
+        str(item)
+        for item in result.get("failed_sources") or []
+    ]
+    missing_holiday_years = {
+        int(year)
+        for year in result.get("holiday_missing_years") or []
+    }
+    coverage_years = (
+        list(target_years)
+        if target_years
+        else [
+            int(year)
+            for year in result.get("years") or [datetime.now(UTC).year]
+        ]
+    )
+    for year in coverage_years:
+        holiday_source_failed = year in missing_holiday_years
+        coverage_key = f"market_holiday:{year}"
+        year_rows = [
+            row
+            for row in events
+            if str(row.get("event_date") or "").startswith(f"{year}-")
+            and str(row.get("event_type") or "").upper()
+            in {"MARKET_HOLIDAY", "EARLY_CLOSE"}
+        ]
+        prior = (
+            load_market_event_collection_coverage(
+                coverage_key,
+                host=host,
+                user=user,
+                password=password,
+                port=port,
+            )
+            if holiday_source_failed
+            else None
+        )
+        prior_details = dict((prior or {}).get("details") or {})
+        expected_items = (
+            max(int((prior or {}).get("expected_items") or 0), len(year_rows))
+            if holiday_source_failed
+            else len(year_rows)
+        )
+        covered_items = (
+            max(int((prior or {}).get("covered_items") or 0), len(year_rows))
+            if holiday_source_failed
+            else len(year_rows)
+        )
+        details = {
+            **prior_details,
+            "event_dates": sorted(
+                {
+                    *[
+                        str(value)
+                        for value in prior_details.get("event_dates") or []
+                    ],
+                    *[
+                        str(row["event_date"])
+                        for row in year_rows
+                    ],
+                }
+            ),
+            "failed_sources": failed_sources,
+        }
+        upsert_market_event_collection_coverage(
+            {
+                "coverage_key": coverage_key,
+                "event_family": "market_structure",
+                "universe_scope": "all_us",
+                "window_start": f"{year}-01-01",
+                "window_end": f"{year}-12-31",
+                "expected_items": expected_items,
+                "covered_items": covered_items,
+                "failed_items": 1 if holiday_source_failed else 0,
+                "coverage_status": (
+                    "partial"
+                    if holiday_source_failed
+                    else "complete" if year_rows else "error"
+                ),
+                "last_attempted_at": collected_at,
+                "last_success_at": (
+                    (prior or {}).get("last_success_at")
+                    if holiday_source_failed
+                    else collected_at if year_rows else None
+                ),
+                "details": details,
+            },
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
     return {
         **result,
         "rows_written": rows_written,
@@ -2421,8 +2902,17 @@ def fetch_nasdaq_earnings_calendar_symbols_by_date(
     for index, item in enumerate(normalized_dates):
         try:
             result = fetcher(item)
+            result_rows = [
+                dict(row)
+                for row in result.get("rows") or []
+                if isinstance(row, dict) and row.get("symbol")
+            ]
             out[item] = {
                 "symbols": list(result.get("symbols") or []),
+                "rows_by_symbol": {
+                    str(row["symbol"]).strip().upper(): row
+                    for row in result_rows
+                },
                 "source": result.get("source") or NASDAQ_EARNINGS_CALENDAR_SOURCE,
                 "source_url": result.get("source_url"),
                 "status": "ok",
@@ -2430,6 +2920,7 @@ def fetch_nasdaq_earnings_calendar_symbols_by_date(
         except Exception as exc:
             out[item] = {
                 "symbols": [],
+                "rows_by_symbol": {},
                 "source": NASDAQ_EARNINGS_CALENDAR_SOURCE,
                 "source_url": f"{NASDAQ_EARNINGS_CALENDAR_API_URL}?date={item}",
                 "status": "failed",
@@ -2438,6 +2929,27 @@ def fetch_nasdaq_earnings_calendar_symbols_by_date(
         if request_sleep_sec > 0 and index < len(normalized_dates) - 1:
             sleep(float(request_sleep_sec))
     return out
+
+
+def _normalize_earnings_time_label(value: Any) -> str:
+    text = (
+        str(value or "")
+        .strip()
+        .lower()
+        .replace("_", " ")
+        .replace("-", " ")
+    )
+    if any(
+        token in text
+        for token in ("after hour", "after market", "post market", "amc")
+    ):
+        return "after_market"
+    if any(
+        token in text
+        for token in ("before hour", "before market", "pre market", "bmo")
+    ):
+        return "before_market"
+    return "time_unknown"
 
 
 def _earnings_source_validation_payload(
@@ -2641,6 +3153,18 @@ def fetch_yfinance_earnings_calendar_events(
                 event_date=str(row["event_date"]),
                 nasdaq_by_date=nasdaq_by_date,
             )
+            nasdaq_result = dict(
+                nasdaq_by_date.get(str(row["event_date"])) or {}
+            )
+            nasdaq_row = dict(
+                (nasdaq_result.get("rows_by_symbol") or {}).get(
+                    str(row["symbol"])
+                )
+                or {}
+            )
+            row["event_time_label"] = _normalize_earnings_time_label(
+                nasdaq_row.get("time")
+            )
             row["validation_status"] = validation_status
             row["source_authority"] = _earnings_source_authority(validation_status)
             row["confidence"] = confidence
@@ -2779,6 +3303,8 @@ def collect_and_store_earnings_calendar(
     source_symbols_loader: Callable[[], list[str]] | None = None,
     source_symbol_loaders: dict[str, Callable[[], list[str]]] | None = None,
     earnings_fetcher: Callable[..., dict[str, Any]] | None = None,
+    symbol_scope_map: dict[str, Sequence[str]] | None = None,
+    issuer_identity_map: dict[str, dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Collect bounded upcoming earnings events and persist them to the common event calendar."""
     collected_at = _timestamp_str()
@@ -2847,13 +3373,29 @@ def collect_and_store_earnings_calendar(
     for row in result.get("events", []):
         enriched = {**row, "collected_at": collected_at}
         if str(enriched.get("event_type") or "").strip().upper() == "EARNINGS":
+            symbol = str(enriched.get("symbol") or "").strip().upper()
+            identity = dict((issuer_identity_map or {}).get(symbol) or {})
+            scopes = [
+                str(value)
+                for value in (symbol_scope_map or {}).get(symbol, [])
+                if str(value)
+            ]
             enriched.setdefault("event_family", "earnings")
             enriched.setdefault("event_subtype", "earnings_release")
-            enriched.setdefault("universe_scope", universe_scope)
+            enriched["issuer_key"] = (
+                identity.get("issuer_key") or f"symbol:{symbol}"
+            )
+            enriched["issuer_name"] = identity.get("issuer_name") or symbol
+            enriched["universe_scope"] = (
+                scopes[0]
+                if scopes
+                else enriched.get("universe_scope") or universe_scope
+            )
             enriched.setdefault("source_authority", _earnings_source_authority(enriched.get("validation_status")))
             raw_payload = dict(enriched.get("raw_payload") or {})
             raw_payload.setdefault("symbol_source", normalized_source)
-            raw_payload.setdefault("universe_scope", universe_scope)
+            raw_payload["universe_scope"] = enriched["universe_scope"]
+            raw_payload["coverage_scopes"] = scopes
             enriched["raw_payload"] = raw_payload
         events.append(enriched)
     rows_written = upsert_market_event_rows(events, host=host, user=user, password=password, port=port)
@@ -2911,6 +3453,392 @@ def collect_and_store_earnings_calendar(
         "superseded_rows_marked": superseded_rows_marked,
         "stale_rows_marked": stale_rows_marked,
         "collected_at": collected_at,
+    }
+
+
+def load_known_upcoming_earnings_symbols(
+    *,
+    lookahead_days: int = 45,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> list[str]:
+    """Read symbols with already-known active earnings inside the priority window."""
+    start_date = datetime.now(UTC).date()
+    end_date = start_date + timedelta(
+        days=max(1, int(lookahead_days or 45))
+    )
+    rows = load_market_event_calendar(
+        start_date=start_date.isoformat(),
+        end_date=end_date.isoformat(),
+        event_type="EARNINGS",
+        limit=5000,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+    return _normalize_symbol_list(
+        [row.get("symbol") for row in rows],
+        max_symbols=5000,
+    )
+
+
+def load_event_issuer_identity_map(
+    symbols: Sequence[Any],
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, dict[str, str]]:
+    """Resolve SEC CIK first, then exact current-listing name without fuzzy matching."""
+    normalized = _normalize_symbol_list(symbols, max_symbols=5000)
+    if not normalized:
+        return {}
+    placeholders = ",".join(["%s"] * len(normalized))
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        rows = db.query(
+            f"""
+            SELECT symbol, related_cik, name, source
+            FROM nyse_symbol_lifecycle
+            WHERE symbol IN ({placeholders})
+              AND name IS NOT NULL
+            ORDER BY
+              symbol ASC,
+              (related_cik IS NULL) ASC,
+              CASE source
+                WHEN 'sec_company_tickers_exchange' THEN 0
+                WHEN 'nyse_listings_directory' THEN 1
+                ELSE 2
+              END ASC,
+              collected_at DESC
+            """,
+            normalized,
+        )
+    finally:
+        db.close()
+    output: dict[str, dict[str, str]] = {}
+    for row in rows:
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if not symbol:
+            continue
+        try:
+            cik = str(int(row["related_cik"]))
+        except (KeyError, TypeError, ValueError):
+            cik = ""
+        if cik:
+            current = output.get(symbol)
+            if current and str(current.get("issuer_key") or "").startswith("sec_cik:"):
+                continue
+            output[symbol] = {
+                "issuer_key": f"sec_cik:{cik}",
+                "issuer_name": str(row.get("name") or symbol),
+            }
+            continue
+        if symbol in output:
+            continue
+        issuer_name = _clean_text(row.get("name"))
+        normalized_name = re.sub(r"[^a-z0-9]+", "_", issuer_name.lower()).strip("_")
+        if not normalized_name:
+            continue
+        output[symbol] = {
+            "issuer_key": f"listing_name:{normalized_name}",
+            "issuer_name": issuer_name.title(),
+        }
+    return output
+
+
+def _mark_missing_earnings_symbols_stale(
+    symbols: Sequence[Any],
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> int:
+    normalized = _normalize_symbol_list(symbols, max_symbols=5000)
+    if not normalized:
+        return 0
+    placeholders = ",".join(["%s"] * len(normalized))
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        db.execute(
+            f"""
+            UPDATE market_event_calendar
+            SET event_status = %s
+            WHERE event_type = %s
+              AND source_type = %s
+              AND COALESCE(event_status, 'active') = %s
+              AND event_date >= %s
+              AND symbol IN ({placeholders})
+            """,
+            [
+                "stale",
+                "EARNINGS",
+                "provider_estimate",
+                "active",
+                datetime.now(UTC).date().isoformat(),
+                *normalized,
+            ],
+        )
+        return len(normalized)
+    finally:
+        db.close()
+
+
+def collect_and_store_overview_earnings_calendar(
+    *,
+    portfolio_symbols: Sequence[Any] = (),
+    watchlist_symbols: Sequence[Any] = (),
+    lookahead_days: int = 120,
+    known_event_days: int = 45,
+    major_cap_limit: int = 100,
+    shard_size: int = 100,
+    validate_with_nasdaq: bool = True,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+    major_cap_loader: Callable[[], list[dict[str, Any]]] | None = None,
+    sp500_loader: Callable[[], list[dict[str, Any]]] | None = None,
+    known_events_loader: Callable[[], list[str]] | None = None,
+    checkpoint_loader: Callable[[str], dict[str, Any] | None] | None = None,
+    checkpoint_writer: Callable[[dict[str, Any]], int] | None = None,
+    identity_loader: Callable[
+        [Sequence[Any]], dict[str, dict[str, str]]
+    ]
+    | None = None,
+    missing_stale_marker: Callable[[Sequence[Any]], Any] | None = None,
+    collector: Callable[..., dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Collect the daily priority set plus one persisted S&P 500 coverage shard."""
+    from finance.data.market_event_coverage import (
+        SUCCESS_DIAGNOSTIC_STATUSES,
+        apply_sp500_shard_result,
+        build_sp500_shard_plan,
+        merge_priority_earnings_symbols,
+    )
+
+    load_major = major_cap_loader or (
+        lambda: load_market_cap_universe_members(
+            "TOP1000",
+            universe_limit=major_cap_limit,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )[:major_cap_limit]
+    )
+    load_sp500 = sp500_loader or (
+        lambda: load_market_universe_members(
+            "SP500",
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    load_known = known_events_loader or (
+        lambda: load_known_upcoming_earnings_symbols(
+            lookahead_days=known_event_days,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    load_checkpoint = checkpoint_loader or (
+        lambda key: load_market_event_collection_coverage(
+            key,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    write_checkpoint = checkpoint_writer or (
+        lambda row: upsert_market_event_collection_coverage(
+            row,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    load_identity = identity_loader or (
+        lambda symbols: load_event_issuer_identity_map(
+            symbols,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    mark_missing_stale = missing_stale_marker or (
+        lambda symbols: _mark_missing_earnings_symbols_stale(
+            symbols,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    run_collector = collector or collect_and_store_earnings_calendar
+
+    sp500_symbols = [
+        row.get("symbol")
+        for row in load_sp500()
+        if isinstance(row, dict)
+    ]
+    sp500_checkpoint = load_checkpoint("earnings:sp500_cycle")
+    priority_checkpoint = load_checkpoint("earnings:priority_daily")
+    shard_plan = build_sp500_shard_plan(
+        sp500_symbols,
+        sp500_checkpoint,
+        batch_size=shard_size,
+    )
+    retry_symbols = list(
+        dict((sp500_checkpoint or {}).get("details") or {}).get(
+            "failed_symbols"
+        )
+        or []
+    )
+    major_cap_symbols = [
+        row.get("symbol")
+        for row in load_major()
+        if isinstance(row, dict)
+    ][:major_cap_limit]
+    known_event_symbols = load_known()
+    priority_symbols = merge_priority_earnings_symbols(
+        retry_symbols=retry_symbols,
+        portfolio_symbols=portfolio_symbols,
+        watchlist_symbols=watchlist_symbols,
+        major_cap_symbols=major_cap_symbols,
+        known_event_symbols=known_event_symbols,
+    )
+    target_symbols = merge_priority_earnings_symbols(
+        retry_symbols=priority_symbols,
+        major_cap_symbols=shard_plan["batch_symbols"],
+    )
+
+    scope_sources = (
+        ("portfolio", portfolio_symbols),
+        ("watchlist", watchlist_symbols),
+        ("major_cap", major_cap_symbols),
+        ("sp500", sp500_symbols),
+        ("known_event", known_event_symbols),
+    )
+    symbol_scope_map: dict[str, list[str]] = {}
+    target_set = set(target_symbols)
+    for scope, values in scope_sources:
+        for symbol in _normalize_symbol_list(values, max_symbols=5000):
+            if symbol in target_set:
+                symbol_scope_map.setdefault(symbol, []).append(scope)
+
+    issuer_identity_map = load_identity(target_symbols)
+    result = run_collector(
+        symbols=target_symbols,
+        symbol_source="manual",
+        lookahead_days=lookahead_days,
+        max_symbols=max(1, len(target_symbols)),
+        validate_with_nasdaq=validate_with_nasdaq,
+        symbol_scope_map=symbol_scope_map,
+        issuer_identity_map=issuer_identity_map,
+    )
+    collected_at = str(result.get("collected_at") or _timestamp_str())
+    diagnostic_by_symbol = {
+        str(row.get("symbol") or "").strip().upper(): dict(row)
+        for row in result.get("symbol_diagnostics") or []
+        if row.get("symbol")
+    }
+    diagnostics = []
+    for symbol in target_symbols:
+        diagnostics.append(
+            diagnostic_by_symbol.get(symbol)
+            or {
+                "symbol": symbol,
+                "status": "failed",
+                "reason": "missing_diagnostic",
+            }
+        )
+
+    coverage = apply_sp500_shard_result(
+        shard_plan,
+        diagnostics,
+        checked_at=collected_at,
+    )
+    write_checkpoint(coverage)
+
+    priority_set = set(priority_symbols)
+    priority_covered = sorted(
+        symbol
+        for symbol in priority_symbols
+        if str(
+            diagnostic_by_symbol.get(symbol, {}).get("status") or ""
+        ).lower()
+        in SUCCESS_DIAGNOSTIC_STATUSES
+    )
+    priority_failed = sorted(priority_set - set(priority_covered))
+    priority_status = (
+        "complete"
+        if priority_symbols and not priority_failed
+        else "partial" if priority_symbols else "pending"
+    )
+    priority_coverage = {
+        "coverage_key": "earnings:priority_daily",
+        "event_family": "earnings",
+        "universe_scope": "priority_daily",
+        "expected_items": len(priority_symbols),
+        "covered_items": len(priority_covered),
+        "failed_items": len(priority_failed),
+        "cursor_offset": 0,
+        "batch_size": max(1, len(priority_symbols)),
+        "coverage_status": priority_status,
+        "cycle_started_at": collected_at,
+        "cycle_completed_at": (
+            collected_at if priority_status == "complete" else None
+        ),
+        "last_attempted_at": collected_at,
+        "last_success_at": (
+            collected_at
+            if priority_status == "complete"
+            else (priority_checkpoint or {}).get("last_success_at")
+        ),
+        "details": {
+            "covered_symbols": priority_covered,
+            "failed_symbols": priority_failed,
+            "symbol_scopes": {
+                symbol: symbol_scope_map.get(symbol, [])
+                for symbol in priority_symbols
+            },
+        },
+    }
+    write_checkpoint(priority_coverage)
+
+    stale_symbols = sorted(
+        symbol
+        for symbol, streak in dict(
+            coverage.get("details", {}).get("missing_streaks") or {}
+        ).items()
+        if int(streak or 0) >= 2
+    )
+    if stale_symbols:
+        mark_missing_stale(stale_symbols)
+
+    return {
+        **result,
+        "priority_symbols": priority_symbols,
+        "shard_symbols": list(shard_plan["batch_symbols"]),
+        "target_symbols": target_symbols,
+        "symbol_scope_map": symbol_scope_map,
+        "coverage": coverage,
+        "priority_coverage": priority_coverage,
+        "missing_stale_symbols": stale_symbols,
     }
 
 

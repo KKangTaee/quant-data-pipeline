@@ -7,6 +7,14 @@ Last Verified: 2026-07-25
 
 현재 active phase는 없다.
 
+Institutional Holdings React Parity V1은 전체 `4/4차` 구현과 closeout을 완료했다.
+
+- 화면: 기존 기관·보유·종목·차트 기능을 유지하면서 정상 화면 전체를 `C · Modular Research Studio` React shell로 전환했다. desktop은 research rail, 980px 이하는 top switcher / drawer를 사용한다.
+- 흐름: `포트폴리오 맥락 / 전체 보유 / 종목 상세 / 기관 보유 랭킹`을 canonical destination으로 고정하고 manager context와 SEC dataset 갱신을 같은 studio 안에 배치했다.
+- 경계: React가 정상 UI를 소유하고 Streamlit은 route, DB payload, explicit server event, React unavailable fallback만 담당한다. provider fetch나 DB 의미는 변경하지 않았다.
+- QA: React 7개, Python 58개, typecheck/build와 1280·760·420px actual Browser QA를 통과했고 Bridgewater 검색, AAPL 상세, unresolved filter, mobile drawer, console error 0을 확인했다.
+- 상세: `tasks/active/institutional-holdings-react-parity-v1-20260725/STATUS.md`, `docs/flows/INSTITUTIONAL_PORTFOLIOS_FLOW.md`.
+
 Economic Cycle Asset Dedup Typography V1은 전체 `2/2차` 구현과 closeout을 완료했다.
 
 - 의미 분리: 금·달러의 공통 `economic_state`는 전용 블록에서 한 번만 표시하고, 상단
@@ -110,6 +118,14 @@ Market Research Editorial Navigation V2도 전체 `3/3차` 구현과 closeout을
 - QA: Python 55개(+2 subtests), React 4개/typecheck/build/py_compile/diff check와 1280·760·420px actual 7-view navigation·overflow·keyboard focus·console QA를 통과했다.
 - 상세: `tasks/active/market-research-editorial-navigation-v2-20260722/STATUS.md`.
 
+Market Research Header System V1도 전체 `3/3차` 구현과 closeout을 완료했다.
+
+- 표현: 경제사이클·선물매크로·심리·일정 첫 화면을 같은 34px desktop / 28px mobile title, 선택형 action, fact, meta slot을 가진 공통 React shell로 통일했다.
+- 상태: fact box는 네 방향이 같은 중립 border를 사용하고, 실제 상태값만 6px 점과 문구 색으로 구분한다. 일정의 다음 이벤트·날짜·관측 범위 같은 사실값에는 상태 점을 표시하지 않는다.
+- 경계: 화면별 payload 의미, refresh action id, Streamlit Python dispatch, 계산·DB·loader·collector는 변경하지 않았다.
+- QA: React DOM 9개와 관련 Python 33개, 네 production build를 통과했다. actual 1280·760·420px에서 title 계층, fact border, 상태 점, overflow와 console error 0을 확인했다.
+- 상세: `tasks/active/market-research-header-system-v1-20260725/STATUS.md`.
+
 Portfolio Monitoring React Command Center V1은 전체 `6/6차` 구현과 closeout을 완료했다.
 
 - 목적: legacy Streamlit dashboard를 Overview/시장맥락 계열 React one-shell로 전환하고, DB-backed group/item lifecycle, 공통 가치곡선, 근거형 진단, macro risk observation과 calibration gate를 제공한다.
@@ -178,6 +194,7 @@ Portfolio Monitoring Reference Help Removal V1도 전체 `2/2차`를 완료했�
 
 - 목적: CNN 중심·중복 구조와 단위가 섞인 이력 그래프를 정리하고, CNN 시장 행동과 AAII 개인투자자 인식을 동등한 두 축으로 읽게 한다.
 - 완료: 전체 잠정 roadmap `2/4차`. 1차의 균형형 CNN/AAII UI에 이어 source별 atomic latest+immutable 저장, UTC known-at 조회, 24시간 자동 수집, 전체 canonical 이력과 고정 180일 해석 분리, 공통 6M/1Y/전체 그래프와 desktop/420px Browser QA를 완료했다.
+- data-quality follow-up 완료: `overview-sentiment-aaii-canonical-dedup-v1-20260725`에서 과거 HTML 수요일/XLS 목요일 동일 주차가 canonical에 함께 남던 문제를 수정했다. Complete XLS capture는 incoming date window를 official workbook date set으로 reconcile하며, actual canonical은 `2,033주 / 8,132행`으로 원자 재구축했다. Immutable snapshot `1,104행`과 batch `11건`은 보존했다.
 - 품질 경계: CNN 구성요소는 headline 내부 근거다. 확인 조건은 관찰 checklist이며 1W/1M 예측, validation / monitoring / trading signal을 만들지 않는다.
 - 남은 차수: 3차 독립 데이터 후보 검토, 4차 충분히 축적된 prospective PIT 이력의 chronological validation 뒤 1W/1M 전망 제공 여부 결정.
 

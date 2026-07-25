@@ -1,4 +1,4 @@
-import { OBSERVATION_LABEL } from "./FuturesMacroWorkbench";
+import { OBSERVATION_LABEL } from "./presentation";
 import type { HorizonCard, ProbabilityRow } from "./FuturesMacroWorkbench";
 
 function ProbabilityBar({ row }: { row: ProbabilityRow }) {

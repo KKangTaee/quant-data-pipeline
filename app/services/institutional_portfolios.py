@@ -1507,6 +1507,7 @@ def build_institutional_workbench_payload(
     selected_security_model: dict[str, Any] | None = None,
     popularity_model: dict[str, Any] | None = None,
     price_refresh_result: dict[str, Any] | None = None,
+    refresh_result: dict[str, Any] | None = None,
     mode: str = "live",
     data_message: str = "",
     refresh_status: dict[str, Any] | None = None,
@@ -1568,6 +1569,7 @@ def build_institutional_workbench_payload(
         },
         "freshness": freshness,
         "refresh_action": _refresh_action_payload(),
+        "refresh_result": dict(refresh_result or {}),
         "hero": {
             "manager_name": manager_name,
             "cik": _text(summary.get("cik")) or selected_cik,

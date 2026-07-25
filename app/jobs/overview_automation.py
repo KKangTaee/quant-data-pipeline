@@ -12,15 +12,16 @@ from zoneinfo import ZoneInfo
 
 from app.jobs.ingestion_jobs import (
     JobResult,
-    run_collect_earnings_calendar,
     run_collect_fomc_calendar,
     run_collect_macro_calendar,
+    run_collect_market_structure_calendar,
     run_collect_market_sentiment,
     run_collect_market_intraday_snapshot,
     run_collect_nasdaq100_valuation_context,
     run_collect_sp500_valuation_context,
     run_collect_sp500_universe,
     run_collect_symbol_directory_snapshots,
+    run_collect_overview_earnings_calendar,
 )
 from app.jobs.economic_cycle_refresh import run_economic_cycle_intramonth_refresh
 from app.jobs.run_history import append_run_history, load_run_history
@@ -135,13 +136,15 @@ def _run_macro_calendar(value: datetime) -> JobResult:
 
 
 def _run_earnings_calendar(_: datetime) -> JobResult:
-    return run_collect_earnings_calendar(
-        symbol_source="latest_movers",
-        universe_code="SP500",
-        top_movers_limit=20,
+    return run_collect_overview_earnings_calendar(
         lookahead_days=120,
-        max_symbols=50,
         validate_with_nasdaq=True,
+    )
+
+
+def _run_market_structure_calendar(value: datetime) -> JobResult:
+    return run_collect_market_structure_calendar(
+        years=(value.year, value.year + 1)
     )
 
 
@@ -282,14 +285,28 @@ OVERVIEW_AUTOMATION_JOB_SPECS: tuple[ScheduledJobSpec, ...] = (
         description="Refresh official BLS / BEA macro release calendar rows.",
     ),
     ScheduledJobSpec(
+        job_id="market_structure_calendar",
+        job_name="collect_market_structure_calendar",
+        label="US Market Holiday Calendar",
+        cadence_minutes=24 * 60,
+        profiles=("safe", "standard", "broad", "events"),
+        market_hours_only=False,
+        runner=_run_market_structure_calendar,
+        description=(
+            "Refresh current and next-year US market holidays and early closes."
+        ),
+    ),
+    ScheduledJobSpec(
         job_id="earnings_calendar",
-        job_name="collect_earnings_calendar",
+        job_name="collect_overview_earnings_calendar",
         label="Earnings Calendar",
         cadence_minutes=24 * 60,
         profiles=("safe", "standard", "broad", "events"),
         market_hours_only=False,
         runner=_run_earnings_calendar,
-        description="Refresh bounded upcoming earnings for latest S&P 500 movers.",
+        description=(
+            "Refresh daily priority earnings plus the next S&P 500 coverage shard."
+        ),
     ),
 )
 
