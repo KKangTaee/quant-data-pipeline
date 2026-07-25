@@ -1,0 +1,31 @@
+# README Product / Onboarding Overhaul V1 Risks
+
+## Open Risks
+
+### README가 다시 current-state log가 될 위험
+
+- 대응: active task와 최근 완료 목록을 복제하지 않고 canonical roadmap / task index로 연결한다.
+
+### Quick start가 실제 DB 준비보다 쉬워 보일 위험
+
+- 대응: app process 시작과 DB-backed feature readiness를 분리하고, MySQL / initial collection은 상세 runbook으로 넘긴다.
+
+### MySQL 설정을 실제보다 통합된 구조로 설명할 위험
+
+- 대응: 현재 local-default connection contract를 그대로 밝히고 env-based unified configuration을 주장하지 않는다.
+
+### 대표 화면에 개인 / runtime-specific 상태가 포함될 위험
+
+- 대응: 캡처 전 Today 화면의 값과 노출 범위를 확인하고 README용 stable viewport / 상태를 사용한다.
+
+### React 기술 설명이 runtime prerequisite를 혼동시킬 위험
+
+- 대응: committed production bundle과 frontend development dependency를 분리한다.
+
+### README가 지나치게 길어질 위험
+
+- 대응: 화면 설명은 2~3문장, component별 명령과 schema detail은 canonical docs link로 제한한다.
+
+## Current Blockers
+
+없음. 사용자 written spec review 후 implementation plan으로 전환할 수 있다.
