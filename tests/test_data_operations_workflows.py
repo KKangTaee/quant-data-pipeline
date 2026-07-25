@@ -39,6 +39,33 @@ class DataOperationsWorkflowContractTest(unittest.TestCase):
             ("market_research", "portfolio_lab"),
         )
 
+    def test_action_focus_moves_to_advanced_without_losing_action(self) -> None:
+        from app.web.ingestion.navigation import apply_action_focus
+        from app.web.ingestion.workflows import DATA_OPERATIONS_SECTION_ADVANCED
+
+        state: dict[str, object] = {}
+
+        apply_action_focus(state, "collect_sec_13f_dataset")
+
+        self.assertEqual(
+            state["data_operations_section_choice"],
+            DATA_OPERATIONS_SECTION_ADVANCED,
+        )
+        self.assertEqual(
+            state["data_operations_focused_action"],
+            "collect_sec_13f_dataset",
+        )
+
+    def test_action_focus_rejects_unknown_action_without_mutating_state(self) -> None:
+        from app.web.ingestion.navigation import apply_action_focus
+
+        state: dict[str, object] = {"existing": "preserved"}
+
+        with self.assertRaises(KeyError):
+            apply_action_focus(state, "unknown_action")
+
+        self.assertEqual(state, {"existing": "preserved"})
+
 
 if __name__ == "__main__":
     unittest.main()

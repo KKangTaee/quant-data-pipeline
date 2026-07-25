@@ -239,6 +239,9 @@ def install_ingestion_responsive_styles() -> None:
             margin-top: 0.62rem;
             overflow-wrap: anywhere;
           }
+          div[data-testid="stVerticalBlockBorderWrapper"] {
+            min-width: 0;
+          }
           @media (max-width: 760px) {
             div[data-testid="column"] {
               flex: 1 1 100% !important;
