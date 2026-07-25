@@ -25,9 +25,14 @@
 - Preserve all existing portfolio / security research capabilities.
 - Move refresh / help / caveat presentation into React instead of deleting them.
 - Do not create an operational diagnostics panel.
+- Final visual direction: `C · Modular Research Studio`.
+- Desktop uses a component-local research rail; it is not the app-global Streamlit sidebar.
+- Tablet / mobile replace the rail with a React-owned top switcher / drawer sharing the same canonical view and manager state.
+- Today / Market Research visual tokens remain the baseline even though the Institutional layout is intentionally more tool-like.
 
 ## Open Detail For Implementation Planning
 
 - Final physical file split should balance component ownership with avoiding excessive tiny files.
 - Existing refresh input / result fields must be mapped into a versioned React event / payload contract.
 - Contextual Reference handoff can reuse the current page-target mechanism through an `open_reference` event.
+- Rail / drawer focus return, body scroll and dynamic frame-height behavior need explicit React tests.

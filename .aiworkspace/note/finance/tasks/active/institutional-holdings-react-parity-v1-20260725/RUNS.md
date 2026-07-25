@@ -12,4 +12,7 @@
 ## 2026-07-25 Design
 
 - Created the active task shell and written React parity design.
+- Visual Companion rendered three one-shot directions using the same Berkshire manager context and existing feature set.
+- Terminal feedback is the primary selection record: the user replaced B with `C · Modular Research Studio`.
+- Updated the written design for desktop research rail / main canvas and tablet/mobile studio switcher / drawer.
 - No implementation code, registry, saved setup or generated artifact was changed.

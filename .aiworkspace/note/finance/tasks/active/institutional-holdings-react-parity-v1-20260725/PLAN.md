@@ -15,6 +15,9 @@ Started: 2026-07-25
 
 - `Today`와 `Market Research`처럼 Streamlit은 route, DB read-model, explicit server event, fallback만 소유한다.
 - 정상 상태에서 보이는 page header, navigation, manager switcher, data status, refresh, help, caveat, portfolio/security workspace는 React가 소유한다.
+- 세 가지 visual companion 시안 중 `C · Modular Research Studio`를 최종 방향으로 사용한다.
+- desktop은 기관·리서치 전환을 상시 노출하는 React-owned research rail과 main canvas를 사용하고, mobile은 같은 기능을 compact top switcher / drawer로 접는다.
+- Today / Market Research의 blue-gray token, radius, typography는 유지하되 layout은 기관 탐색 빈도가 높은 전문 research studio에 맞춘다.
 - 별도 React SPA, 신규 public API, DB schema 변경은 만들지 않는다.
 - 기존 institutional 기능과 SEC / DB / loader correctness boundary는 유지한다.
 
@@ -30,13 +33,13 @@ Started: 2026-07-25
 ### 2차: React 전면 디자인과 component boundary 확정
 
 - 목적: 정상 화면에서 React가 소유할 영역과 Streamlit adapter / fallback 경계를 written spec으로 고정한다.
-- 범위: `DESIGN.md`, component map, payload / event / responsive / QA contract.
+- 범위: `C · Modular Research Studio`, research rail / main canvas, component map, payload / event / responsive / QA contract.
 - 완료 조건: placeholder와 모순이 없는 written spec을 사용자가 승인한다.
 - 상태: draft 작성 중.
 
 ### 3차: React shell / component 분리 / visual parity 구현
 
-- 목적: 기존 기능을 보존하면서 Today / Market Research 계열의 page shell, typography, surface, navigation, responsive layout으로 전환한다.
+- 목적: 기존 기능을 보존하면서 공통 visual token 위에 Institutional 전용 research rail / main canvas layout을 구현한다.
 - 예상 범위:
   - `app/web/institutional_portfolios.py`
   - `app/web/institutional_portfolios_react_component.py`
@@ -59,6 +62,7 @@ Started: 2026-07-25
 
 - 정상 화면의 Streamlit visual shell 제거.
 - React-owned page header, manager workspace, refresh/help/caveat presentation.
+- desktop research rail과 tablet/mobile adaptive manager / view switcher.
 - Institutional workbench component 분리와 state ownership 정리.
 - Today / Market Research visual token과 responsive grammar 적용.
 - 기존 기능과 payload 의미를 유지하는 event contract 보강.

@@ -18,6 +18,10 @@ The existing TSX and CSS are large and contain mature chart / holdings interacti
 
 The custom component relies on dynamic frame height. New disclosures, result messages and responsive stacks must continue to trigger correct `Streamlit.setFrameHeight()` behavior without internal clipping.
 
+### Research Rail / Drawer State Parity
+
+Desktop rail and tablet/mobile drawer must control the same manager and destination state. Breakpoint changes, drawer close and server payload replacement must not reset the current view or leave keyboard focus in a hidden surface.
+
 ### Existing Dirty Worktree
 
 Registry, saved portfolio, run history and many generated QA artifacts already exist in the worktree. They must not be staged or modified by this task.

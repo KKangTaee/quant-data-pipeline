@@ -7213,5 +7213,6 @@ Detailed historical logs were archived on `2026-04-13`.
 
 - Today / Market Research와 실제 desktop·420px 화면을 비교해 Streamlit / React 이중 shell, visual-token drift, navigation mismatch와 mobile first-read 지연을 확인했다.
 - 정상 화면은 React가 header·navigation·manager·portfolio/security·refresh/help/caveat를 소유하고 Streamlit은 route·DB payload·explicit event·fallback만 담당하는 방향을 사용자가 승인했다.
-- standalone SPA / API / DB 변경 없이 기존 기능을 보존하는 written spec을 작성했다. 현재 전체 roadmap `1/4차` 완료, 2차 디자인 사용자 검토 대기다.
+- visual companion 3안 중 `C · Modular Research Studio`를 최종 선택했다. desktop은 component-local research rail / main canvas, tablet/mobile은 top switcher / drawer를 사용한다.
+- standalone SPA / API / DB 변경 없이 기존 기능을 보존하는 written spec을 C direction으로 갱신했다. 현재 전체 roadmap `1/4차` 완료, 2차 디자인 사용자 검토 대기다.
 - 상세는 `tasks/active/institutional-holdings-react-parity-v1-20260725/`를 본다.

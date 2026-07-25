@@ -10,12 +10,14 @@ Started: 2026-07-25
 - 2026-07-25: Actual 1280px and 420px render comparison confirmed duplicate Streamlit / React shell, visual-token drift, navigation mismatch, manager-control competition, and delayed mobile first-read.
 - 2026-07-25: User approved the direction that the normal user-facing surface should follow Today / Market Research: React owns the complete visible page while Streamlit remains a thin route / data / event / fallback adapter.
 - 2026-07-25: Written design drafted for React ownership, component boundaries, event states, visual parity, responsive behavior, fallback and QA.
+- 2026-07-25: Visual Companion compared `A · Editorial Research`, `B · Today Decision Canvas`, and `C · Modular Research Studio` with the same Berkshire data and preserved feature set.
+- 2026-07-25: User selected `C · Modular Research Studio` as the final visual direction, replacing the briefly stated B preference. The spec now uses a desktop research rail / main canvas and tablet/mobile studio switcher / drawer.
 
 ## Current Step
 
 전체 roadmap `1/4차` complete.
 
-`2차 React 전면 디자인과 component boundary` written spec을 사용자 검토에 올리는 단계다. 구현 코드는 아직 변경하지 않았다.
+`2차 React 전면 디자인과 component boundary` written spec을 C direction으로 갱신해 사용자 검토에 올리는 단계다. 구현 코드는 아직 변경하지 않았다.
 
 ## Next Action
 

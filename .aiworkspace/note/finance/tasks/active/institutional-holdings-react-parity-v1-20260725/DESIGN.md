@@ -1,6 +1,6 @@
 # Institutional Holdings React Parity V1 Design
 
-Status: Draft For User Review
+Status: Draft For User Review — Direction C Selected
 Last Updated: 2026-07-25
 
 ## Product Intent
@@ -33,8 +33,34 @@ Last Updated: 2026-07-25
 ### Institutional Holdings Target
 
 - Today의 `React-owned normal surface + thin Python adapter`를 기본 pattern으로 사용한다.
-- Market Research의 `page header -> primary family -> local view -> selected module` hierarchy를 navigation pattern으로 사용한다.
+- Today / Market Research의 blue-gray visual token, rounded surface, typography and semantic-state grammar를 사용한다.
+- 화면 구조는 사용자가 visual companion에서 선택한 `C · Modular Research Studio`를 사용한다.
 - Holdings는 periodic live data가 아니므로 Today의 15초 fragment를 복제하지 않는다. manager selection, security search, refresh, price collection 같은 explicit event만 server boundary를 넘는다.
+
+## Selected Visual Direction
+
+### C · Modular Research Studio — Chosen
+
+Institutional Holdings는 다른 research surface보다 manager 전환, 전체 보유 탐색, 종목 drilldown을 자주 왕복한다. 따라서 desktop에서는 선택 기관과 research destination을 상시 노출하는 전용 rail을 두고, main canvas에는 현재 manager와 선택 view의 근거를 집중시킨다.
+
+- left research rail:
+  - product identity.
+  - selected / favorite managers.
+  - explicit manager search.
+  - portfolio / holdings / security / ranking destination.
+  - compact data-status and help entry.
+- main canvas:
+  - selected manager context.
+  - current view navigation.
+  - allocation / evidence / holdings / security content.
+- tablet / mobile:
+  - persistent rail을 제거하고 same-function top switcher / drawer로 전환.
+  - rail이 없어져도 selected manager와 current destination을 항상 읽을 수 있어야 한다.
+
+### Rejected As Default
+
+- `A · Editorial Research`: Market Research와 가장 유사하지만 manager 전환과 holdings drilldown이 page header 아래로 밀린다.
+- `B · Today Decision Canvas`: 첫 판단은 가장 빠르지만 기관을 자주 바꾸고 보유 종목을 조사하는 research workflow가 단일 summary canvas에 과도하게 압축된다.
 
 ## Screen Ownership
 
@@ -75,34 +101,37 @@ Fallback content remains available only when the React bundle or required payloa
 
 ```text
 Institutional Holdings React page
-  -> Page header
-       -> purpose
-       -> compact help / source status
-  -> Research navigation
-       -> 기관 포트폴리오
+  -> Research studio frame
+       -> Research rail (desktop)
+            -> product identity
+            -> selected / favorite manager
+            -> manager search
             -> 포트폴리오 맥락
             -> 전체 보유
-       -> 종목 리서치
             -> 종목 상세
             -> 기관 보유 랭킹
-  -> Selected manager module
-       -> manager switcher
-       -> manager context hero
-       -> selected view body
-  -> Data basis / caveats disclosure
+            -> data basis / help
+       -> Main canvas
+            -> slim page header / current data state
+            -> selected manager context
+            -> local current-view navigation
+            -> selected view body
+            -> source / refresh / caveat disclosure
+  -> Compact top switcher / drawer (tablet and mobile replacement for rail)
 ```
 
-Page header와 selected manager hero는 같은 제목을 반복하지 않는다.
+Research rail, slim page header and selected manager hero는 같은 제목을 반복하지 않는다.
 
-- page header: 제품 목적과 현재 surface identity.
+- research rail: 제품 identity와 manager / destination 전환.
+- page header: current report basis와 surface-level status.
 - manager hero: 선택 기관 이름, 분기, 집중도, coverage, SEC source.
 
 ## Page Header
 
-- eyebrow: `INSTITUTIONAL RESEARCH`.
-- title: `Institutional Holdings`.
-- purpose copy: delayed SEC 13F를 이용해 기관 포트폴리오와 종목 보유 맥락을 탐색한다는 한 문장.
-- right-side status:
+- desktop에서는 main canvas 상단의 slim header로 렌더링한다.
+- eyebrow / compact title: `INSTITUTIONAL HOLDINGS`.
+- current-view label: `포트폴리오 맥락`, `전체 보유`, `종목 상세`, `기관 보유 랭킹`.
+- right-side basis:
   - report period.
   - saved snapshot state.
   - delayed-data label.
@@ -110,39 +139,70 @@ Page header와 selected manager hero는 같은 제목을 반복하지 않는다.
   - `도움말`.
   - `자료 기준`.
 
-Today hero와 동일한 blue-gray gradient, rounded surface, restrained shadow를 사용한다. 데이터 상태는 의미가 있을 때만 semantic amber / blue로 표시하며 saturated cobalt를 page-wide accent로 사용하지 않는다.
+header 자체를 큰 hero card로 만들지 않는다. rail과 main canvas 사이에 충분한 whitespace를 두고 manager context hero가 첫 primary surface가 되게 한다. 데이터 상태는 의미가 있을 때만 semantic amber / blue로 표시하며 saturated cobalt를 page-wide accent로 사용하지 않는다.
 
 ## Research Navigation
 
-Market Research의 two-tier grammar를 재사용한다.
+desktop research rail이 primary destination navigation을 소유한다.
 
-### Primary
+- `포트폴리오 맥락`.
+- `전체 보유`.
+- `종목 상세`.
+- `기관 보유 랭킹`.
 
-- `기관 포트폴리오`.
-- `종목 리서치`.
+family 구분은 rail 안의 section label과 spacing으로 표현한다.
 
-얇은 underline family navigation을 사용한다. 현재의 black segmented control은 제거한다.
+- portfolio: `포트폴리오 맥락 | 전체 보유`.
+- security research: `종목 상세 | 기관 보유 랭킹`.
 
-### Secondary
+main canvas에는 현재 family 안에서의 local view tabs만 compact하게 보여 현재 위치를 재확인할 수 있게 한다. 현재의 black segmented primary control과 red secondary underline은 제거한다.
 
-- 기관 포트폴리오: `포트폴리오 맥락 | 전체 보유`.
-- 종목 리서치: `종목 상세 | 기관 보유 랭킹`.
+Navigation click은 React local state다. server data가 필요한 security search나 popularity load만 event를 보낸다. desktop rail과 mobile switcher는 같은 canonical view state를 공유한다.
 
-muted blue pill navigation을 사용한다. 현재의 red underline secondary navigation은 제거한다.
+## Research Rail
 
-Navigation click은 React local state다. server data가 필요한 security search나 popularity load만 event를 보낸다.
+research rail은 app-global Streamlit sidebar가 아니라 Institutional React component 내부의 제품 navigation이다.
+
+### Desktop
+
+- width: 대략 210~240px의 bounded column.
+- dark blue-gray 또는 deep neutral surface.
+- top:
+  - `Institutional Studio` identity.
+  - delayed 13F label.
+- managers:
+  - current manager.
+  - curated / recent managers.
+  - explicit search action.
+- research:
+  - four canonical destinations.
+- footer:
+  - data basis.
+  - help.
+  - refresh status entry.
+
+rail은 viewport-fixed가 아니라 component flow 안에서 main canvas와 같은 height contract를 사용한다. 문서 전체 scroll과 별도의 강제 내부 scroll을 기본값으로 만들지 않는다.
+
+### Tablet And Mobile
+
+- <= 980px에서 persistent left rail을 제거한다.
+- main canvas 위에 selected manager + current destination을 보여주는 compact studio switcher를 둔다.
+- `기관 변경` 또는 `연구 메뉴` action으로 React-owned drawer / disclosure를 연다.
+- drawer 안에서 manager search, curated managers, destination navigation, data/help actions에 접근한다.
+- drawer open / close는 React local state이며 Streamlit rerun을 만들지 않는다.
 
 ## Manager Switcher
 
-기존 검색과 모든 manager 접근 기능을 유지하되 page hero와 경쟁하지 않게 한다.
+기존 검색과 모든 manager 접근 기능을 research rail의 핵심 도구로 유지한다.
 
 - selected manager는 manager context hero의 headline으로 표시한다.
-- switcher는 hero 위 또는 바로 아래의 compact command row에 둔다.
-- 기본 curated manager는 compact horizontal chips / cards로 유지한다.
+- desktop rail은 selected manager와 curated / recent managers를 vertical compact items로 표시한다.
+- manager list는 bounded section으로 구성하되 기본적으로 긴 내부 scroll을 강요하지 않고 selected + curated first set을 보여준다.
+- 나머지 manager는 explicit search로 접근한다.
 - manager search는 explicit submit이다.
 - 검색 결과 수, 0건, pending selection state를 유지한다.
-- generic search result가 curated list와 섞여 first-read를 밀어내지 않게 한다.
-- desktop은 한 줄, tablet은 줄바꿈 가능한 bounded row, mobile은 한 개 selected summary + horizontal result rail을 사용한다.
+- generic search result는 current context를 지우지 않고 rail / drawer의 result section에 나타난다.
+- mobile은 selected manager summary와 `기관 변경` action을 사용하며 horizontal manager card rail을 기본 first-read로 만들지 않는다.
 
 Manager selection은 server event다. pending label과 현재 화면을 유지한 뒤 새 payload가 도착하면 selected manager context만 갱신한다.
 
@@ -159,7 +219,7 @@ Manager selection은 server event다. pending label과 현재 화면을 유지�
 - comparison availability.
 - SEC source action.
 
-기존의 긴 summary 문장은 desktop에서 최대 readable width를 제한하고, mobile에서는 핵심 문장과 supporting facts를 분리한다. metadata card를 여러 겹 쌓지 않고 Today / Market Research module hero처럼 한 surface 안에서 hierarchy를 만든다.
+기존의 긴 summary 문장은 desktop에서 최대 readable width를 제한하고, mobile에서는 핵심 문장과 supporting facts를 분리한다. studio main canvas의 첫 primary surface로 렌더링하되 metadata card를 여러 겹 쌓지 않는다.
 
 ## Portfolio Views
 
@@ -227,9 +287,12 @@ chart interaction은 React local state다. DB price collection만 explicit serve
 현재 단일 `InstitutionalPortfoliosWorkbench.tsx`를 다음 책임 단위로 분리한다. 실제 파일명은 implementation plan에서 repository naming과 test ergonomics를 확인해 확정한다.
 
 - `InstitutionalHoldingsPage`: payload validation, top-level composition, server event envelope.
-- `InstitutionalPageHeader`: page identity, global status, help / basis actions.
-- `InstitutionalNavigation`: primary / secondary local navigation.
-- `ManagerSwitcher`: selected manager, curated rail, explicit search, pending state.
+- `InstitutionalStudioFrame`: research rail / main canvas responsive composition.
+- `InstitutionalResearchRail`: product identity, manager tools, canonical destinations, data/help entry.
+- `InstitutionalStudioSwitcher`: tablet/mobile rail replacement and React-owned drawer.
+- `InstitutionalPageHeader`: current view, global status and report basis.
+- `InstitutionalNavigation`: main-canvas local navigation synchronized with rail / switcher.
+- `ManagerSwitcher`: selected manager, curated / search result groups, explicit search and pending state.
 - `ManagerContextHero`: manager summary, report basis, SEC source.
 - `PortfolioAllocation`: donut and top holdings drilldown.
 - `PortfolioEvidence`: comparison, coverage, sector, assumed performance composition.
@@ -246,11 +309,12 @@ Component split은 시각 개편에 필요한 범위로 제한한다. service / 
 
 ### React Local State
 
-- active primary / secondary view.
+- canonical active view shared by rail, local navigation and mobile switcher.
+- mobile studio drawer open / close and focus-return target.
 - holdings search / filter / sort / page.
 - chart mode / frequency / pan / hover.
 - disclosure open state.
-- manager rail scroll.
+- manager result section state.
 - immediately available mapped holding preview.
 
 ### Python / Streamlit State
@@ -306,6 +370,10 @@ Today / Market Research 계열 token을 institutional scope에서 재사용한�
   - green / red는 수익·방향 의미에만 사용.
   - amber는 delayed / limited / stale.
   - blue는 selected / informational state.
+- research rail:
+  - deep blue-gray / neutral background.
+  - selected manager와 active destination만 light blue-gray surface로 강조.
+  - pure black active tab과 saturated blue blocks는 사용하지 않는다.
 
 Sector color는 category distinction을 위해 유지할 수 있지만 page chrome과 navigation accent로 확장하지 않는다.
 
@@ -313,21 +381,24 @@ Sector color는 category distinction을 위해 유지할 수 있지만 page chro
 
 ### Desktop
 
-- content-width aligned page header, navigation, manager hero and view body.
+- research rail + main canvas two-column studio frame.
+- rail 210~240px bounded width, main canvas min-width 0.
+- slim page header, manager hero and view body share the main-canvas content edge.
 - manager context and report basis는 balanced two-column.
 - portfolio evidence는 의미에 맞는 asymmetric grid.
 
 ### Tablet
 
+- persistent rail을 compact studio switcher / drawer로 교체한다.
 - page header status와 manager context basis를 자연스럽게 stack.
-- primary / secondary navigation은 readable width를 유지하고 불필요한 horizontal overflow를 만들지 않는다.
+- current destination과 selected manager가 drawer를 열지 않아도 보인다.
 
 ### 420px
 
-- page title은 한 줄 또는 의도된 compact two-line 안에서 끝난다.
+- compact studio switcher는 selected manager와 current destination을 두 줄 이내로 표시한다.
 - selected manager name과 context summary가 첫 viewport 안에 등장한다.
-- manager search와 report basis는 single column.
-- primary navigation은 2-column family, secondary navigation은 2-column pills.
+- manager search, destination navigation and data/help actions는 drawer 안에서 single column.
+- report basis는 main canvas 안에서 single column.
 - metric / evidence / holding rows는 meaning-preserving stack으로 전환한다.
 - document와 component 모두 horizontal overflow가 없어야 한다.
 
@@ -338,6 +409,7 @@ Sector color는 category distinction을 위해 유지할 수 있지만 page chro
 - pending state는 `aria-live`로 알린다.
 - color만으로 mapping / return / availability 상태를 구분하지 않는다.
 - focus-visible outline을 shared token으로 통일한다.
+- mobile drawer는 labelled dialog / disclosure semantics, Escape close and trigger focus return을 제공한다.
 - prefers-reduced-motion에서 non-essential transition을 제거한다.
 
 ## Verification Contract
@@ -359,6 +431,7 @@ Sector color는 category distinction을 위해 유지할 수 있지만 page chro
 - Bridgewater complete holdings paging and unresolved row.
 - mapped AAPL security detail and chart controls.
 - manager switch and zero-result search.
+- desktop rail destination switch and tablet/mobile studio drawer parity.
 - SEC refresh disclosure open / cancel or bounded test path.
 - Reference / caveat disclosure.
 - 1280px / 760px / 420px.
@@ -370,7 +443,8 @@ Generated screenshots remain ignored unless the user explicitly asks to commit t
 ## Success Criteria
 
 - healthy React path에 visible Streamlit title / caption / expander / fallback table이 없다.
-- Today / Market Research와 같은 page shell, typography, surface and navigation hierarchy로 읽힌다.
+- Today / Market Research와 같은 typography, surface and semantic visual language를 사용하면서 Institutional 전용 research studio layout으로 읽힌다.
+- desktop research rail과 tablet/mobile studio switcher가 동일한 manager / destination state를 사용한다.
 - selected manager identity와 core context가 mobile initial viewport에 나타난다.
 - 기존 manager / portfolio / holdings / security / chart / ranking / refresh 기능이 유지된다.
 - local interactions do not trigger unnecessary full-app reruns.
@@ -382,7 +456,8 @@ Generated screenshots remain ignored unless the user explicitly asks to commit t
 - Streamlit custom component iframe과 server event rerun은 유지된다. standalone SPA의 route / fetch independence는 이번 범위가 아니다.
 - React-owned refresh disclosure는 event / payload contract를 보강해야 하지만 visible Streamlit expander를 유지하는 것보다 product consistency가 높다.
 - component split은 변경 파일 수를 늘리지만 1,747-line TSX와 2,102-line CSS를 그대로 polish하는 것보다 회귀 위치를 좁힌다.
-- manager rail을 compact하게 낮추면 동시에 보이는 manager 수는 줄 수 있으나 검색과 전체 접근은 유지되고 selected-manager context의 우선순위가 명확해진다.
+- persistent desktop rail은 manager 전환과 destination 접근을 빠르게 하지만 main canvas width를 사용하고 Today / Market Research보다 전문 도구 성격이 강해진다.
+- tablet/mobile에서 rail을 drawer로 바꾸기 때문에 두 표현이 동일한 local state와 accessible focus contract를 공유해야 한다.
 
 ## Explicit Non-Goals
 

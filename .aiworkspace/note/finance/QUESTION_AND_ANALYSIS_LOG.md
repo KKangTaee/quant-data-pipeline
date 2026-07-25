@@ -10602,5 +10602,5 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 - User request: 기능은 만족스럽지만 Today / Market Research와 다른 Institutional Holdings 디자인을 진단하고, 장기 개선 관점에서 동일한 React 구현 pattern으로 전면 개선하도록 요청함.
 - Interpreted goal: 기존 기관·보유·종목·차트 기능과 SEC / DB 경계를 유지하면서 사용자가 보는 page shell과 interaction hierarchy를 최신 탭과 통일해야 함.
-- Analysis result: 주요 기능은 이미 React component지만 바깥 Streamlit title / help / refresh / fallback과 8px dense visual grammar가 남아 있었다. React가 정상 화면 전체를 소유하고 Streamlit은 thin adapter / unavailable fallback만 담당하는 방향을 채택했다.
+- Analysis result: 주요 기능은 이미 React component지만 바깥 Streamlit title / help / refresh / fallback과 8px dense visual grammar가 남아 있었다. React가 정상 화면 전체를 소유하고 Streamlit은 thin adapter / unavailable fallback만 담당한다. visual companion에서는 최종 `C · Modular Research Studio`를 선택해 desktop research rail과 responsive studio switcher를 사용한다.
 - Follow-up: 전체 roadmap `1/4차` 진단을 완료하고 2차 written design을 `tasks/active/institutional-holdings-react-parity-v1-20260725/`에 작성했다. 사용자 spec 승인 후 implementation plan으로 전환한다.
