@@ -7,7 +7,7 @@ Last Verified: 2026-07-26
 
 Current active product task:
 
-- none
+- `risk-on-momentum-5d-productionization-20260726` — `State: active`; 전체 roadmap `0/3차`. 승인된 범위는 runtime productionization, Daily Swing validation handoff, maturity / Final Review / Monitoring governance closeout이다.
 
 Paused task:
 

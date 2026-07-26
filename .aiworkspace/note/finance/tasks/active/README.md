@@ -26,7 +26,9 @@ tasks/active/<task-name>/
 
 ## Current Active Product Tasks
 
-현재 user-approved product implementation은 없다.
+| Task | State | Scope |
+|---|---|---|
+| `risk-on-momentum-5d-productionization-20260726` | `active`, 전체 roadmap `0/3차` | Risk-On Momentum 5D runtime 성능·Daily Swing validation·maturity/governance productionization |
 
 ## Paused Tasks
 
