@@ -1,12 +1,109 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from .swing import RiskOnMomentumConfig, SwingBacktestResult, clone_config, run_risk_on_momentum_backtest
+from .swing import (
+    PreparedSwingSimulationData,
+    RiskOnMomentumConfig,
+    SwingBacktestResult,
+    clone_config,
+    prepare_swing_simulation_data,
+    run_risk_on_momentum_backtest,
+)
+
+
+@dataclass(frozen=True)
+class SwingAnalysisControls:
+    intensity: str
+    random_iterations: int
+    run_comparison_suite: bool
+    run_sensitivity_suite: bool
+
+
+def resolve_swing_analysis_controls(
+    analysis_intensity: str | None,
+    *,
+    random_iterations: int,
+    run_comparison_suite: bool,
+    run_sensitivity_suite: bool,
+) -> SwingAnalysisControls:
+    """Resolve UI presets while preserving explicit controls in legacy payloads."""
+
+    intensity = str(analysis_intensity or "").strip().lower()
+    presets = {
+        "quick": SwingAnalysisControls("quick", 0, False, False),
+        "standard": SwingAnalysisControls("standard", 10, True, False),
+        "deep": SwingAnalysisControls("deep", 50, True, True),
+    }
+    if not intensity or intensity == "custom_legacy":
+        return SwingAnalysisControls(
+            "custom_legacy",
+            max(0, int(random_iterations)),
+            bool(run_comparison_suite),
+            bool(run_sensitivity_suite),
+        )
+    if intensity not in presets:
+        raise ValueError("analysis_intensity must be quick, standard, deep, or custom_legacy.")
+    return presets[intensity]
+
+
+class SwingSimulationExecutor:
+    """Run each behaviorally distinct swing config once per analysis request."""
+
+    def __init__(
+        self,
+        *,
+        price_history: pd.DataFrame,
+        macro_scores: pd.DataFrame | None,
+        statement_history: pd.DataFrame | None,
+        prepared_features: pd.DataFrame,
+    ) -> None:
+        self.price_history = price_history
+        self.macro_scores = macro_scores
+        self.statement_history = statement_history
+        self.prepared_features = prepared_features
+        self._prepared: dict[tuple[int, str | None, str | None], PreparedSwingSimulationData] = {}
+        self._results: dict[RiskOnMomentumConfig, tuple[SwingBacktestResult, bool]] = {}
+        self.request_count = 0
+        self.executed_count = 0
+        self.cache_hit_count = 0
+
+    @staticmethod
+    def _result_key(config: RiskOnMomentumConfig) -> RiskOnMomentumConfig:
+        return clone_config(config, collect_scanner_rows=False)
+
+    def _prepared_for(self, config: RiskOnMomentumConfig) -> PreparedSwingSimulationData:
+        key = (int(config.atr_period), config.start, config.end)
+        if key not in self._prepared:
+            self._prepared[key] = prepare_swing_simulation_data(
+                self.prepared_features,
+                config=config,
+            )
+        return self._prepared[key]
+
+    def run(self, config: RiskOnMomentumConfig) -> SwingBacktestResult:
+        self.request_count += 1
+        key = self._result_key(config)
+        cached = self._results.get(key)
+        wants_scanner = bool(config.collect_scanner_rows)
+        if cached is not None and (cached[1] or not wants_scanner):
+            self.cache_hit_count += 1
+            return cached[0]
+        result = run_risk_on_momentum_backtest(
+            self.price_history,
+            config=config,
+            macro_scores=self.macro_scores,
+            statement_history=self.statement_history,
+            prepared_simulation=self._prepared_for(config),
+        )
+        self.executed_count += 1
+        self._results[key] = (result, wants_scanner)
+        return result
 
 
 def _metric_row(
@@ -72,10 +169,14 @@ def _run_variant(
     macro_scores: pd.DataFrame | None,
     statement_history: pd.DataFrame | None,
     prepared_features: pd.DataFrame | None,
+    simulation_executor: SwingSimulationExecutor | None = None,
 ) -> SwingBacktestResult:
+    variant_config = clone_config(config, collect_scanner_rows=False)
+    if simulation_executor is not None:
+        return simulation_executor.run(variant_config)
     return run_risk_on_momentum_backtest(
         price_history,
-        config=clone_config(config, collect_scanner_rows=False),
+        config=variant_config,
         macro_scores=macro_scores,
         statement_history=statement_history,
         prepared_features=prepared_features,
@@ -90,6 +191,7 @@ def build_swing_comparison_suite(
     macro_scores: pd.DataFrame | None,
     statement_history: pd.DataFrame | None,
     prepared_features: pd.DataFrame | None,
+    simulation_executor: SwingSimulationExecutor | None = None,
 ) -> dict[str, pd.DataFrame]:
     rows: list[dict[str, Any]] = []
     curves: dict[str, pd.DataFrame] = {}
@@ -103,12 +205,25 @@ def build_swing_comparison_suite(
     ]
     exit_results: list[tuple[str, SwingBacktestResult]] = []
     for label, variant_config in exit_variants:
-        result = primary_result if variant_config == config else _run_variant(
-            price_history,
-            config=variant_config,
-            macro_scores=macro_scores,
-            statement_history=statement_history,
-            prepared_features=prepared_features,
+        result = (
+            _run_variant(
+                price_history,
+                config=variant_config,
+                macro_scores=macro_scores,
+                statement_history=statement_history,
+                prepared_features=prepared_features,
+                simulation_executor=simulation_executor,
+            )
+            if simulation_executor is not None
+            else primary_result
+            if variant_config == config
+            else _run_variant(
+                price_history,
+                config=variant_config,
+                macro_scores=macro_scores,
+                statement_history=statement_history,
+                prepared_features=prepared_features,
+            )
         )
         exit_results.append((label, result))
         rows.append(_metric_row(label, result, variant_config, suite="comparison", variable="exit_mode", value=variant_config.exit_mode))
@@ -121,12 +236,25 @@ def build_swing_comparison_suite(
     ]
     macro_results: list[tuple[str, SwingBacktestResult]] = []
     for label, variant_config in macro_variants:
-        result = primary_result if variant_config == config else _run_variant(
-            price_history,
-            config=variant_config,
-            macro_scores=macro_scores,
-            statement_history=statement_history,
-            prepared_features=prepared_features,
+        result = (
+            _run_variant(
+                price_history,
+                config=variant_config,
+                macro_scores=macro_scores,
+                statement_history=statement_history,
+                prepared_features=prepared_features,
+                simulation_executor=simulation_executor,
+            )
+            if simulation_executor is not None
+            else primary_result
+            if variant_config == config
+            else _run_variant(
+                price_history,
+                config=variant_config,
+                macro_scores=macro_scores,
+                statement_history=statement_history,
+                prepared_features=prepared_features,
+            )
         )
         macro_results.append((label, result))
         rows.append(_metric_row(label, result, variant_config, suite="comparison", variable="macro_filter_mode", value=variant_config.macro_filter_mode))
@@ -138,12 +266,25 @@ def build_swing_comparison_suite(
     ]
     holding_results: list[tuple[str, SwingBacktestResult]] = []
     for label, variant_config in holding_variants:
-        result = primary_result if variant_config == config else _run_variant(
-            price_history,
-            config=variant_config,
-            macro_scores=macro_scores,
-            statement_history=statement_history,
-            prepared_features=prepared_features,
+        result = (
+            _run_variant(
+                price_history,
+                config=variant_config,
+                macro_scores=macro_scores,
+                statement_history=statement_history,
+                prepared_features=prepared_features,
+                simulation_executor=simulation_executor,
+            )
+            if simulation_executor is not None
+            else primary_result
+            if variant_config == config
+            else _run_variant(
+                price_history,
+                config=variant_config,
+                macro_scores=macro_scores,
+                statement_history=statement_history,
+                prepared_features=prepared_features,
+            )
         )
         holding_results.append((label, result))
         rows.append(_metric_row(label, result, variant_config, suite="comparison", variable="max_holding_days", value=str(variant_config.max_holding_days)))
@@ -162,6 +303,7 @@ def build_swing_sensitivity_suite(
     macro_scores: pd.DataFrame | None,
     statement_history: pd.DataFrame | None,
     prepared_features: pd.DataFrame | None,
+    simulation_executor: SwingSimulationExecutor | None = None,
 ) -> pd.DataFrame:
     variants: list[tuple[str, str, str, RiskOnMomentumConfig]] = []
     for stop_loss, take_profit in [(-2.0, 4.0), (-2.5, 5.0), (-3.0, 6.0)]:
@@ -222,6 +364,7 @@ def build_swing_sensitivity_suite(
             macro_scores=macro_scores,
             statement_history=statement_history,
             prepared_features=prepared_features,
+            simulation_executor=simulation_executor,
         )
         rows.append(_metric_row(suite_label, result, variant_config, suite="sensitivity", variable=variable, value=value))
     return pd.DataFrame(rows)

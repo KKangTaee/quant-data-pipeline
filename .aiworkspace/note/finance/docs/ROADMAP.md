@@ -29,8 +29,8 @@ scope는 아래 Decision Queue에서 하나씩 승인해 여는 상태다.
 | Market Research | 경제 사이클, 선물 매크로, 심리, 일정, S&P 500, Market Movers, 미국 개별 종목의 3-family / 7-view research | context-only, validation / monitoring signal 아님 |
 | Institutional Holdings | SEC Form 13F 기관 portfolio, holdings, sector, security detail와 identifier coverage | delayed long holdings research, recommendation 아님 |
 | Data Operations | 네 consumer 목적별 data preparation, 공식 파일, bounded recovery, compact history와 active 30-action 고급 도구 | explicit click만 실행, UI direct fetch와 자동 연속 실행 없음 |
-| Backtest Analysis | single strategy와 portfolio mix 실행·비교, result bundle, save / replay와 candidate source | 높은 수익률만으로 선정하지 않음 |
-| Practical Validation | data trust, realism, provider, holdings, macro, stress, robustness와 construction evidence | `NOT_RUN`은 pass가 아니며 보강 뒤 재검증 필요 |
+| Backtest Analysis | single strategy와 portfolio mix 실행·비교, result bundle, save / replay와 candidate source. Risk-On Momentum 5D는 Quick / Standard / Deep 분석 강도와 compact Daily Swing evidence를 제공 | 높은 수익률만으로 선정하지 않음 |
+| Practical Validation | data trust, realism, provider, holdings, macro, stress, robustness와 construction evidence. Daily Swing은 거래·비용·회전율·PIT/survivorship 전용 module로 fail-closed | `NOT_RUN`은 pass가 아니며 보강 뒤 재검증 필요 |
 | Final Review | gate-aware investment report, selected / hold / reject / re-review decision과 monitoring handoff | human decision record, live approval 아님 |
 | Portfolio Monitoring | direct stock·ETF와 selected strategy의 group/item, cashflow-aware performance, contribution, diagnosis와 recheck | read-only monitoring, broker / auto rebalance 없음 |
 | Reference Center | 7개 current surface의 개념·journey·failure state·deep link 검색 | product help owner |
@@ -75,7 +75,6 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 | P1 | Existing Browser verification debt closeout | 구현 완료 task의 실제 interaction evidence와 status drift를 작은 범위로 닫을 수 있음 | 대상 task별 QA-only 범위 확인 |
 | P1 | Market Movers sector conditional outlook | 현재 broader roadmap의 다음 단계지만 확률·분포를 공개하려면 독립 episode와 OOS publication gate가 필요 | target, sample independence, chronological validation과 공개 기준 승인 |
 | P1 | Sentiment independent evidence / PIT validation | CNN·AAII의 현재 맥락을 장기 검증 가능한 evidence로 확장할 수 있음 | paused 해제, 신규 source와 chronological PIT validation scope 승인 |
-| P2 | Risk-On Momentum 5D governance | research lane을 Practical Validation / Final Review / Monitoring에 연결할지 결정해야 함 | daily signal semantics, validation module, review / monitoring policy 승인 |
 | P2 | Overview scheduler hardening | browser-session 수동 흐름을 넘어 unattended collection을 운영할 때 필요 | launchd / scheduler 운영권한, retry, alert와 runbook 승인 |
 | P3 | Data Operations durable execution / dependency hardening | 운영 근거가 생기면 queue·cancel·resume 또는 collapsed-body 초기 평가와 dynamic dependency 위험을 줄일 수 있음 | 실제 unattended / multi-user 필요, authorization, history scope와 한 번에 하나의 refactor boundary 승인 |
 | P3 | Focused code refactor follow-up | transitional Backtest helper와 일부 large surface의 ownership을 더 명확히 할 수 있음 | 한 번에 하나의 owner boundary와 public call-path 변경 승인 |
@@ -90,9 +89,7 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
    승인하거나 명시적으로 defer한다.
 3. **One product research lane** — Market Movers outlook 또는 Sentiment validation 중
    하나만 선택해 target과 publication gate를 먼저 설계한다.
-4. **Strategy governance** — daily swing lane을 validation / review / monitoring에
-   연결할 실제 필요가 확인되면 연다.
-5. **Maintenance / platform work** — Data Operations hardening, refactor, scheduler,
+4. **Maintenance / platform work** — Data Operations hardening, refactor, scheduler,
    UI split과 archive migration은 제품 가치나 운영 병목이 확인된 범위로만 연다.
 
 동시에 여러 broad track을 열지 않는다. 각 후보는 source correctness, 사용자 완료

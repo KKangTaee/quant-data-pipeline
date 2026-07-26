@@ -121,8 +121,10 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 - DB-backed wrapper implementation은 `app/runtime/backtest/runners/risk_on_momentum.py`의 `run_risk_on_momentum_5d_backtest_from_db`다. 기존 UI / service compatibility를 위해 `app/runtime/backtest/__init__.py`도 같은 runner를 re-export하며, UI는 `Backtest Analysis > Single Strategy`에 연결한다.
 - full trade / scanner detail은 workflow registry가 아니라 generated `.aiworkspace/note/finance/backtest_artifacts/` JSON artifact에 둔다.
 - V2는 `close_based` D close 판단 / D+1 open 체결 가정은 유지하면서 `fixed_pct`와 `atr_based` exit, macro `hard_filter` / `ranking_penalty` / `off`, one-variable comparison, bounded sensitivity, stability, trade-cause, quality-warning rows를 Backtest Analysis 연구 surface로 제공한다.
-- ATR math lives in `finance/indicators.py`, macro mode logic in `finance/swing_macro.py`, and repeated analysis suites in `finance/swing_analysis.py`.
-- Practical Validation / Final Review / Portfolio Monitoring 연결은 Daily Swing 전용 governance 설계가 필요하므로 V2 코드 범위에서 제외한다.
+- `finance/swing.py`의 prepared date/symbol index와 O(1) holding-day lookup을 variant가 공유한다. `finance/swing_analysis.py`는 동일 config 결과를 재사용하고 `Quick / Standard / Deep` 분석 강도를 해석한다.
+- full trade / scanner row는 generated artifact에 남기고, downstream에는 `daily_swing_evidence_v1` compact packet만 전달한다.
+- Practical Validation은 거래·보유·회전율·비용·benchmark/random·PIT/survivorship 전용 module을 사용한다. Final Review / Portfolio Monitoring은 daily after-market-close 수동 검토, 1 market day stale, no auto order / rebalance 정책을 따른다.
+- ATR math lives in `finance/indicators.py`, macro mode logic in `finance/swing_macro.py`, repeated analysis suites in `finance/swing_analysis.py`, downstream policy in `app/services/backtest_daily_swing_validation.py`와 `backtest_daily_swing_policy.py`에 둔다.
 
 ## Strict Annual Contract 요약
 

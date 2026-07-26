@@ -26,9 +26,7 @@ tasks/active/<task-name>/
 
 ## Current Active Product Tasks
 
-| Task | State | Scope |
-|---|---|---|
-| `risk-on-momentum-5d-productionization-20260726` | `active`, 전체 roadmap `0/3차` | Risk-On Momentum 5D runtime 성능·Daily Swing validation·maturity/governance productionization |
+현재 user-approved active product task는 없다.
 
 ## Paused Tasks
 
@@ -47,6 +45,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `risk-on-momentum-5d-productionization-20260726` | Completed record, 3/3 | Prepared/cache runtime과 분석 강도로 Top1000 2년 Standard를 21.247초로 줄이고, compact Daily Swing validation / Final Review / manual monitoring policy를 연결해 production maturity로 전환했다. |
 | `today-contributor-coverage-layout-v1-20260723` | Latest completed record, 2/2 | Today의 계산 가능한 EOD/live 종목 기여를 절대 영향도 순으로 모두 표시하고 coverage copy와 compact top-aligned `우선 확인` 배치를 적용했다. |
 | `portfolio-monitoring-latest-decision-lifecycle-v1-20260723` | Completed record, 4/4 | 후보별 최신 Final Review 판단을 current truth로 사용하고, 기존 항목은 삭제하지 않은 채 최신 non-select에서 item-local 실행 잠금과 재확인/종료 행동을 제공한다. |
 | `backtest-level1-price-refresh-handoff-v1-20260722` | Completed record, 3/3 | 가격 부족/provider gap/재실행 전 상태를 Level2 blocker로 만들고, 명시적 최신화와 재실행 뒤에만 인계를 다시 연다. |

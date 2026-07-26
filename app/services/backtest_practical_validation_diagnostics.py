@@ -28,6 +28,7 @@ from app.services.backtest_practical_validation_curve_context import (
 )
 from app.services.backtest_practical_validation_provider_context import build_provider_context
 from app.services.backtest_practical_validation_modules import build_validation_module_plan
+from app.services.backtest_daily_swing_validation import build_daily_swing_validation
 from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
 from app.services.backtest_selected_route_preflight import (
     build_practical_validation_selected_route_preflight,
@@ -1688,6 +1689,14 @@ def build_practical_validation_result(
     validation_efficacy_audit = build_validation_efficacy_audit(result)
     result["validation_efficacy_audit"] = validation_efficacy_audit
     result["validation_efficacy_display_rows"] = list(validation_efficacy_audit.get("rows") or [])
+    daily_swing_validation = build_daily_swing_validation(
+        source_row,
+        replay_result=replay_row,
+    )
+    result["daily_swing_validation"] = daily_swing_validation
+    result["daily_swing_validation_display_rows"] = list(
+        daily_swing_validation.get("rows") or []
+    )
     selected_route_preflight = build_practical_validation_selected_route_preflight(result)
     result["selected_route_preflight"] = selected_route_preflight
     module_plan = build_validation_module_plan(
@@ -1701,6 +1710,7 @@ def build_practical_validation_result(
         risk_contribution_rows=result["risk_contribution_display_rows"],
         component_role_weight_rows=result["component_role_weight_display_rows"],
         backtest_realism_rows=result["backtest_realism_display_rows"],
+        daily_swing_validation=daily_swing_validation,
         selected_route_preflight=selected_route_preflight,
     )
     result["source_traits"] = dict(module_plan.get("source_traits") or {})

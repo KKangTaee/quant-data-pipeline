@@ -36,8 +36,8 @@ _RESEARCH_EVIDENCE = [
     },
     {
         "evidence": "generated swing artifacts",
-        "status": "Boundary needed",
-        "interpretation": "Generated artifacts need storage and audit policy before downstream workflow use.",
+        "status": "Compact boundary implemented",
+        "interpretation": "Raw rows stay generated while JSON-safe compact evidence enters downstream validation.",
     },
 ]
 
@@ -54,57 +54,56 @@ _REQUIRED_MODULES = [
         "module_key": "daily_swing_practical_validation",
         "module": "Daily Swing Practical Validation module",
         "owner_surface": "Practical Validation",
-        "readiness": "Needs design",
-        "blocker": "Existing Practical Validation modules are built around candidate sources and longer rebalance horizons.",
-        "next_action": "Define Daily Swing evidence rows for trade count, holding period, turnover, cost, macro filter, and failed-trade quality.",
+        "readiness": "Implemented",
+        "blocker": "",
+        "next_action": "Review trade count, holding period, turnover, cost, macro, robustness, and universe-bias rows.",
     },
     {
         "module_key": "final_review_selected_route_rule",
         "module": "Final Review selected-route rule",
         "owner_surface": "Final Review",
-        "readiness": "Deferred",
-        "blocker": "No approved rule says when short-term swing research can become a selected portfolio candidate.",
-        "next_action": "Design a selected-route policy that starts as review evidence and blocks automatic approval.",
+        "readiness": "Implemented",
+        "blocker": "",
+        "next_action": "Require compact evidence and carry REVIEW limitations into the selected-route record.",
     },
     {
         "module_key": "portfolio_monitoring_daily_policy",
         "module": "Portfolio Monitoring daily review cadence / signal policy",
         "owner_surface": "Operations > Portfolio Monitoring",
-        "readiness": "Deferred",
-        "blocker": "Daily signals need cadence, stale signal handling, manual review, and no-auto-order boundaries.",
-        "next_action": "Define daily review cadence and signal expiration before any monitoring surface integration.",
+        "readiness": "Implemented",
+        "blocker": "",
+        "next_action": "Review after market close; expire after one market day; keep manual recheck and no-auto-order.",
     },
     {
         "module_key": "artifact_trade_log_storage_boundary",
         "module": "Artifact / trade log storage boundary",
         "owner_surface": "Runtime / reports / registries",
-        "readiness": "Needs design",
-        "blocker": "Generated swing artifacts are not compact registry evidence and should not be promoted by path alone.",
-        "next_action": "Specify which compact artifact metadata can enter validation records and which raw artifacts stay generated.",
+        "readiness": "Implemented",
+        "blocker": "",
+        "next_action": "Keep raw trade/scanner rows generated and pass only compact JSON-safe metadata downstream.",
     },
     {
         "module_key": "universe_survivorship_review",
         "module": "Universe / survivorship assumption review",
         "owner_surface": "Backtest Analysis / Practical Validation",
-        "readiness": "Needs design",
-        "blocker": "S&P 500 / Top1000 / Top2000 / manual stock universes need explicit survivorship and listing assumptions.",
-        "next_action": "Add review criteria for universe source, point-in-time membership, delisting, and symbol freshness evidence.",
+        "readiness": "Implemented",
+        "blocker": "",
+        "next_action": "Treat current membership and missing delisting coverage as explicit REVIEW limitations.",
     },
 ]
 
 _GOVERNANCE_RULES = [
-    "Keep Risk-On Momentum 5D in the Backtest Analysis Daily Swing research lane until a governance task explicitly promotes it.",
-    "Start downstream work as review evidence, not an automatic monitoring signal.",
-    "Do not reuse monthly / annual selected-route gates without a Daily Swing-specific Practical Validation module.",
+    "Promote Risk-On Momentum 5D through the Daily Swing-specific Practical Validation module.",
+    "Keep downstream work as review evidence, not an automatic monitoring signal.",
+    "Use the Daily Swing selected-route policy in addition to generic Final Review gates.",
     "Do not write validation results, final decisions, monitoring logs, registries, saved setups, or run history from this panel.",
     "Portfolio Monitoring integration, if later approved, must remain manual-review and no-live-order by default.",
 ]
 
 _NEXT_WORKFLOW_STEPS = [
-    "Define the Daily Swing Practical Validation module contract.",
-    "Define the Final Review selected-route blocker / review-required policy for short holding-period strategies.",
-    "Define artifact and trade-log compact evidence storage boundaries.",
-    "Define Portfolio Monitoring daily review cadence before showing any daily signal.",
+    "Run the compact Daily Swing evidence and current-runtime replay.",
+    "Acknowledge survivorship/PIT limitations in Final Review.",
+    "Use daily-after-close manual review and one-market-day stale handling in Monitoring.",
 ]
 
 
@@ -118,14 +117,14 @@ def build_risk_on_momentum_governance() -> dict[str, Any]:
             "title": "Risk-On Momentum 5D Governance",
             "strategy_key": RISK_ON_MOMENTUM_STRATEGY_KEY,
             "display_name": display_name,
-            "status": "Governance deferred",
-            "lane": "Backtest Analysis research lane",
+            "status": "Governance implemented",
+            "lane": "Daily Swing validation and monitoring lane",
             "summary": (
-                "Risk-On Momentum 5D has mature Daily Swing research evidence, but it is not promoted "
-                "to Practical Validation, Final Review, or Portfolio Monitoring until Daily Swing governance is approved."
+                "Risk-On Momentum 5D carries compact Daily Swing evidence through Practical Validation "
+                "and Final Review into manual, stale-aware Portfolio Monitoring."
             ),
-            "promoted_to_practical_validation": False,
-            "promoted_to_final_review": False,
+            "promoted_to_practical_validation": True,
+            "promoted_to_final_review": True,
             "monitoring_signal_enabled": False,
             "research_evidence": _RESEARCH_EVIDENCE,
             "required_modules": _REQUIRED_MODULES,
@@ -136,8 +135,8 @@ def build_risk_on_momentum_governance() -> dict[str, Any]:
                 "final decisions, monitoring logs, run history, or generated artifacts."
             ),
             "route_boundary": (
-                "Backtest Analysis research lane only; not Practical Validation-ready, not Final Review-selected, "
-                "and not a Portfolio Monitoring signal."
+                "Daily Swing selected-route is manual-review only; evidence is not an automatic Portfolio "
+                "Monitoring signal, live approval, broker order, or auto rebalance."
             ),
         }
     )

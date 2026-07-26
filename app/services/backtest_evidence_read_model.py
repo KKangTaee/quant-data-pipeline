@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from app.services.backtest_daily_swing_policy import build_daily_swing_policy
+
 from app.services.backtest_component_role_weight_audit import build_component_role_weight_audit
 from app.services.backtest_construction_risk_audit import build_construction_risk_audit
 from app.services.backtest_data_coverage_audit import build_data_coverage_audit
@@ -1150,6 +1152,7 @@ def build_investability_evidence_packet(
         "decision_id": None,
         "monitoring_snapshot_id": None,
     }
+    daily_swing_policy = build_daily_swing_policy(validation)
     checks = [
         {
             "Section": "Source Chain",
@@ -1267,6 +1270,18 @@ def build_investability_evidence_packet(
             "Meaning": "이 packet은 투자 판단 보조 근거이며 주문이나 자동매매가 아닙니다.",
         },
     ]
+    if daily_swing_policy.get("applies"):
+        checks.append(
+            {
+                "Section": "Daily Swing Selected-Route Policy",
+                "Ready": bool(daily_swing_policy.get("selected_route_allowed")),
+                "Current": daily_swing_policy.get("validation_status") or "-",
+                "Meaning": (
+                    "Daily Swing 후보는 compact execution/bias evidence를 통과하고, "
+                    "daily manual review·1 market-day stale·no-auto-order 조건을 유지해야 합니다."
+                ),
+            }
+        )
     validation_for_gate_policy = dict(validation)
     validation_for_gate_policy.setdefault("validation_efficacy_audit", validation_efficacy_audit)
     validation_for_gate_policy.setdefault("construction_risk_audit", construction_risk_audit)
@@ -1351,6 +1366,7 @@ def build_investability_evidence_packet(
         "risk_contribution_audit": risk_contribution_audit,
         "component_role_weight_audit": component_role_weight_audit,
         "backtest_realism_audit": backtest_realism_audit,
+        "daily_swing_policy_snapshot": daily_swing_policy,
         "summary": {
             "pass": int(status_counts.get("PASS", 0) or 0),
             "review": int(status_counts.get("REVIEW", 0) or 0),
