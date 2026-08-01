@@ -777,6 +777,50 @@ class UsStockValuationServiceTests(unittest.TestCase):
         self.assertIn("상대가치", result["index_scenario"]["label"])
         json.dumps(result, ensure_ascii=False)
 
+    def test_service_uses_latest_price_month_when_current_calendar_month_has_no_trade(self) -> None:
+        from app.services.overview.us_stock_valuation import build_us_stock_valuation_read_model
+
+        inputs = _ready_loaded_inputs()
+        inputs["monthly_rows"] = [
+            *inputs["monthly_rows"],
+            {
+                "symbol": "AAPL",
+                "month": "2025-12-01",
+                "price": None,
+                "price_basis_date": None,
+                "ttm_eps": 12.0,
+                "eps_basis_date": "2025-12-01",
+                "trailing_pe": None,
+                "quality": "missing_price",
+            },
+        ]
+        inputs["window"] = {**inputs["window"], "as_of_date": "2025-12-01"}
+
+        result = build_us_stock_valuation_read_model(
+            selected_symbol="AAPL",
+            loaded_inputs=inputs,
+        )
+
+        self.assertEqual(result["index_scenario"]["current_price"], 209.0)
+        self.assertEqual(result["index_scenario"]["as_of"], "2025-11-30")
+        self.assertEqual(result["earnings_scenario"]["current_ttm_eps"], 10.0)
+        self.assertEqual(result["basis"]["price"]["price_basis_date"], "2025-11-30")
+
+    def test_service_defaults_loader_cutoff_to_latest_completed_nyse_session(self) -> None:
+        from app.services.overview.us_stock_valuation import build_us_stock_valuation_read_model
+
+        with patch(
+            "app.services.nyse_calendar.latest_completed_nyse_session",
+            return_value=pd.Timestamp("2026-07-31").date(),
+        ), patch(
+            "app.services.overview.us_stock_valuation.load_us_stock_valuation_inputs",
+            return_value=_ready_loaded_inputs(),
+        ) as loader:
+            result = build_us_stock_valuation_read_model(selected_symbol="AAPL")
+
+        self.assertEqual(result["status"], "READY")
+        loader.assert_called_once_with("AAPL", as_of_date="2026-07-31")
+
     def test_service_keeps_graph_one_ready_when_growth_history_only_blocks_graph_two(self) -> None:
         from app.services.overview.us_stock_valuation import build_us_stock_valuation_read_model
 
