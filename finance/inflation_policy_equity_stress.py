@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from datetime import date, datetime, timezone
 
+import numpy as np
 import pandas as pd
 
 
@@ -33,6 +35,43 @@ PANEL_COLUMNS = (
     "multiple_change_pct",
     "index_change_pct",
 )
+
+EQUITY_FEATURES = (
+    "measured_next_year_eps_revision_pct",
+    "months_to_year_end",
+    "policy_repricing_bp",
+    "dgs10_change_bp",
+    "real_yield_change_bp",
+    "breakeven_change_bp",
+)
+
+
+@dataclass(frozen=True)
+class EquityStressValidationReport:
+    origin_count: int
+    fold_count: int
+    index_mae: float | None
+    baseline_index_mae: float | None
+    eps_mae: float | None
+    multiple_mae: float | None
+    coverage_80: float | None
+    validation_scheme: str
+    publication_status: str
+    reason_codes: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class EquityStressArtifact:
+    model_version: str
+    eps_response: dict[str, float]
+    multiple_response: dict[str, float]
+    joint_residuals: tuple[tuple[float, float], ...]
+    validation_metrics: dict[str, object]
+    trained_through: str | None
+    publication_status: str
+    reason_codes: tuple[str, ...]
+    latest_measured_next_year_eps_revision_pct: float | None
+    forecast_horizon: str = "calendar_year_end"
 
 
 def _timestamp(value: object, *, field: str) -> pd.Timestamp:
@@ -310,3 +349,262 @@ def build_equity_calibration_panel(
             }
         )
     return pd.DataFrame(rows, columns=PANEL_COLUMNS)
+
+
+def _completed_panel(panel: pd.DataFrame) -> pd.DataFrame:
+    required = {
+        "origin_date",
+        *EQUITY_FEATURES,
+        "eps_change_pct",
+        "multiple_change_pct",
+        "index_change_pct",
+    }
+    if not required.issubset(panel.columns):
+        return pd.DataFrame(columns=sorted(required))
+    frame = panel.copy()
+    frame["origin_date"] = pd.to_datetime(frame["origin_date"], errors="coerce")
+    for column in (*EQUITY_FEATURES, "eps_change_pct", "multiple_change_pct", "index_change_pct"):
+        frame[column] = pd.to_numeric(frame[column], errors="coerce")
+    frame = frame.replace([np.inf, -np.inf], np.nan)
+    return (
+        frame.dropna(
+            subset=("origin_date", "eps_change_pct", "multiple_change_pct", "index_change_pct")
+        )
+        .sort_values("origin_date")
+        .reset_index(drop=True)
+    )
+
+
+def _feature_matrix(frame: pd.DataFrame) -> np.ndarray:
+    values = frame.loc[:, EQUITY_FEATURES].to_numpy(dtype=float)
+    for column in range(values.shape[1]):
+        finite = np.isfinite(values[:, column])
+        replacement = float(np.median(values[finite, column])) if finite.any() else 0.0
+        values[~finite, column] = replacement
+    return values
+
+
+def _fit_ridge_coefficients(
+    frame: pd.DataFrame, *, target: str, ridge_alpha: float
+) -> dict[str, float]:
+    x = _feature_matrix(frame)
+    y = frame[target].to_numpy(dtype=float)
+    means = x.mean(axis=0)
+    scales = x.std(axis=0)
+    scales[scales <= 1e-12] = 1.0
+    standardized = (x - means) / scales
+    design = np.column_stack((np.ones(len(standardized)), standardized))
+    penalty = np.eye(design.shape[1]) * float(ridge_alpha)
+    penalty[0, 0] = 0.0
+    beta = np.linalg.solve(design.T @ design + penalty, design.T @ y)
+    slopes = beta[1:] / scales
+    intercept = float(beta[0] - np.dot(slopes, means))
+    return {
+        "intercept": intercept,
+        **{
+            feature: float(value)
+            for feature, value in zip(EQUITY_FEATURES, slopes, strict=True)
+        },
+    }
+
+
+def _predict_response(
+    frame: pd.DataFrame, coefficients: Mapping[str, object]
+) -> np.ndarray:
+    x = _feature_matrix(frame)
+    slopes = np.asarray(
+        [float(coefficients.get(feature, 0.0)) for feature in EQUITY_FEATURES],
+        dtype=float,
+    )
+    return float(coefficients.get("intercept", 0.0)) + x @ slopes
+
+
+def _combined_index_change(eps_change: float, multiple_change: float) -> float:
+    return ((1.0 + eps_change / 100.0) * (1.0 + multiple_change / 100.0) - 1.0) * 100.0
+
+
+def rolling_origin_validate_equity_stress(
+    panel: pd.DataFrame,
+    *,
+    minimum_origins: int = 60,
+    ridge_alpha: float = 1.0,
+) -> EquityStressValidationReport:
+    """Evaluate only on origins after their expanding training window."""
+
+    frame = _completed_panel(panel)
+    count = len(frame)
+    if count < int(minimum_origins):
+        return EquityStressValidationReport(
+            origin_count=count,
+            fold_count=0,
+            index_mae=None,
+            baseline_index_mae=None,
+            eps_mae=None,
+            multiple_mae=None,
+            coverage_80=None,
+            validation_scheme="rolling_origin",
+            publication_status="NOT_AVAILABLE",
+            reason_codes=("insufficient_origins",),
+        )
+    minimum_training = max(24, min(36, int(minimum_origins) // 2))
+    model_errors: list[float] = []
+    baseline_errors: list[float] = []
+    eps_errors: list[float] = []
+    multiple_errors: list[float] = []
+    covered: list[float] = []
+    for index in range(minimum_training, count):
+        training = frame.iloc[:index]
+        evaluation = frame.iloc[[index]]
+        eps_coefficients = _fit_ridge_coefficients(
+            training, target="eps_change_pct", ridge_alpha=ridge_alpha
+        )
+        multiple_coefficients = _fit_ridge_coefficients(
+            training, target="multiple_change_pct", ridge_alpha=ridge_alpha
+        )
+        predicted_eps = float(_predict_response(evaluation, eps_coefficients)[0])
+        predicted_multiple = float(
+            _predict_response(evaluation, multiple_coefficients)[0]
+        )
+        predicted_index = _combined_index_change(predicted_eps, predicted_multiple)
+        actual_eps = float(evaluation.iloc[0]["eps_change_pct"])
+        actual_multiple = float(evaluation.iloc[0]["multiple_change_pct"])
+        actual_index = float(evaluation.iloc[0]["index_change_pct"])
+        baseline_eps = float(training["eps_change_pct"].median())
+        baseline_multiple = float(training["multiple_change_pct"].median())
+        baseline_index = _combined_index_change(baseline_eps, baseline_multiple)
+        model_errors.append(abs(predicted_index - actual_index))
+        baseline_errors.append(abs(baseline_index - actual_index))
+        eps_errors.append(abs(predicted_eps - actual_eps))
+        multiple_errors.append(abs(predicted_multiple - actual_multiple))
+
+        train_eps_predictions = _predict_response(training, eps_coefficients)
+        train_multiple_predictions = _predict_response(training, multiple_coefficients)
+        train_index_predictions = np.asarray(
+            [
+                _combined_index_change(eps_value, multiple_value)
+                for eps_value, multiple_value in zip(
+                    train_eps_predictions, train_multiple_predictions, strict=True
+                )
+            ]
+        )
+        residuals = training["index_change_pct"].to_numpy(dtype=float) - train_index_predictions
+        lower, upper = np.quantile(residuals, (0.10, 0.90))
+        covered.append(
+            float(predicted_index + lower <= actual_index <= predicted_index + upper)
+        )
+    index_mae = float(np.mean(model_errors))
+    baseline_mae = float(np.mean(baseline_errors))
+    reasons: list[str] = []
+    if index_mae >= baseline_mae - 1e-12:
+        reasons.append("baseline_not_beaten")
+    status = "READY" if not reasons else "LIMITED"
+    return EquityStressValidationReport(
+        origin_count=count,
+        fold_count=len(model_errors),
+        index_mae=index_mae,
+        baseline_index_mae=baseline_mae,
+        eps_mae=float(np.mean(eps_errors)),
+        multiple_mae=float(np.mean(multiple_errors)),
+        coverage_80=float(np.mean(covered)),
+        validation_scheme="rolling_origin",
+        publication_status=status,
+        reason_codes=tuple(reasons),
+    )
+
+
+def _empty_artifact(
+    *,
+    frame: pd.DataFrame,
+    report: EquityStressValidationReport,
+    model_version: str,
+) -> EquityStressArtifact:
+    latest_revision: float | None = None
+    if not frame.empty and "measured_next_year_eps_revision_pct" in frame:
+        revisions = pd.to_numeric(
+            frame["measured_next_year_eps_revision_pct"], errors="coerce"
+        ).dropna()
+        latest_revision = float(revisions.iloc[-1]) if not revisions.empty else None
+    return EquityStressArtifact(
+        model_version=model_version,
+        eps_response={},
+        multiple_response={},
+        joint_residuals=(),
+        validation_metrics={
+            "origin_count": float(report.origin_count),
+            "fold_count": float(report.fold_count),
+            "validation_scheme": report.validation_scheme,
+        },
+        trained_through=(
+            pd.Timestamp(frame.iloc[-1]["origin_date"]).strftime("%Y-%m-%d")
+            if not frame.empty
+            else None
+        ),
+        publication_status=report.publication_status,
+        reason_codes=report.reason_codes,
+        latest_measured_next_year_eps_revision_pct=latest_revision,
+    )
+
+
+def fit_equity_stress_model(
+    panel: pd.DataFrame,
+    *,
+    minimum_origins: int = 60,
+    ridge_alpha: float = 1.0,
+    model_version: str = "equity-stress-year-end-v1",
+) -> EquityStressArtifact:
+    """Fit paired EPS/multiple responses after a chronological publication gate."""
+
+    frame = _completed_panel(panel)
+    report = rolling_origin_validate_equity_stress(
+        frame, minimum_origins=minimum_origins, ridge_alpha=ridge_alpha
+    )
+    if report.publication_status == "NOT_AVAILABLE":
+        return _empty_artifact(
+            frame=frame, report=report, model_version=str(model_version)
+        )
+    eps_coefficients = _fit_ridge_coefficients(
+        frame, target="eps_change_pct", ridge_alpha=ridge_alpha
+    )
+    multiple_coefficients = _fit_ridge_coefficients(
+        frame, target="multiple_change_pct", ridge_alpha=ridge_alpha
+    )
+    eps_predictions = _predict_response(frame, eps_coefficients)
+    multiple_predictions = _predict_response(frame, multiple_coefficients)
+    residuals = tuple(
+        (float(actual_eps - predicted_eps), float(actual_multiple - predicted_multiple))
+        for actual_eps, predicted_eps, actual_multiple, predicted_multiple in zip(
+            frame["eps_change_pct"].to_numpy(dtype=float),
+            eps_predictions,
+            frame["multiple_change_pct"].to_numpy(dtype=float),
+            multiple_predictions,
+            strict=True,
+        )
+    )
+    revisions = pd.to_numeric(
+        frame["measured_next_year_eps_revision_pct"], errors="coerce"
+    ).dropna()
+    validation_metrics: dict[str, object] = {
+        "origin_count": float(report.origin_count),
+        "fold_count": float(report.fold_count),
+        "index_mae": float(report.index_mae or 0.0),
+        "baseline_index_mae": float(report.baseline_index_mae or 0.0),
+        "eps_mae": float(report.eps_mae or 0.0),
+        "multiple_mae": float(report.multiple_mae or 0.0),
+        "coverage_80": float(report.coverage_80 or 0.0),
+        "validation_scheme": report.validation_scheme,
+    }
+    return EquityStressArtifact(
+        model_version=str(model_version),
+        eps_response=eps_coefficients,
+        multiple_response=multiple_coefficients,
+        joint_residuals=residuals,
+        validation_metrics=validation_metrics,
+        trained_through=pd.Timestamp(frame.iloc[-1]["origin_date"]).strftime(
+            "%Y-%m-%d"
+        ),
+        publication_status=report.publication_status,
+        reason_codes=report.reason_codes,
+        latest_measured_next_year_eps_revision_pct=(
+            float(revisions.iloc[-1]) if not revisions.empty else None
+        ),
+    )

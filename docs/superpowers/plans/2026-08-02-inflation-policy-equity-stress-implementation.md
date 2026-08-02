@@ -136,11 +136,11 @@ class EquityStressArtifact:
 def rolling_origin_validate_equity_stress(panel: pd.DataFrame, *, minimum_origins: int = 60) -> ValidationReport: ...
 ```
 
-- [ ] **Step 1: Write failing identity, residual, and gate tests**
+- [x] **Step 1: Write failing identity, residual, and gate tests**
 
 Test every simulated index equals EPS × multiple, joint residual sampling preserves EPS/multiple correlation, no random split, and a model worse than constant EPS/multiple baseline becomes `LIMITED`.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_equity_stress.py -q
@@ -148,15 +148,15 @@ Test every simulated index equals EPS × multiple, joint residual sampling prese
 
 Expected: FAIL on missing fit/validation behavior.
 
-- [ ] **Step 3: Implement conditional response calibration**
+- [x] **Step 3: Implement conditional response calibration**
 
 Fit regularized changes in next-year EPS and forward multiple against inflation state, policy repricing, DGS10/real-yield/breakeven changes, and recession input only when the recession component is independently `READY`. Resample paired EPS/multiple residuals so the joint relationship is retained.
 
-- [ ] **Step 4: Implement chronological validation**
+- [x] **Step 4: Implement chronological validation**
 
 Compare index-distribution error/coverage against constant EPS, constant multiple, and historical unconditional-change baselines. Store event windows as associations with pre-event expectations; do not assign causal coefficients in copy or artifact names.
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_equity_stress.py -q

@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 import pandas as pd
 import pytest
+import numpy as np
 
 
 def _next_year_eps_rows(
@@ -184,3 +185,121 @@ def test_panel_returns_explicit_columns_when_inputs_are_empty() -> None:
     assert isinstance(panel, pd.DataFrame)
     assert panel.empty
     assert {"origin_date", "forward_eps", "forward_multiple"}.issubset(panel.columns)
+
+
+def _synthetic_model_panel(*, rows: int = 84, regime_flip: bool = False) -> pd.DataFrame:
+    dates = pd.date_range("2018-01-31", periods=rows, freq="ME")
+    result: list[dict[str, object]] = []
+    for index, origin in enumerate(dates):
+        revision = ((index % 9) - 4) * 0.7
+        policy = ((index % 7) - 3) * 8.0
+        dgs10 = ((index % 11) - 5) * 5.0
+        real = ((index % 5) - 2) * 7.0
+        breakeven = dgs10 - real
+        shared_noise = ((index % 4) - 1.5) * 0.08
+        sign = -1.0 if regime_flip and index >= rows // 3 else 1.0
+        eps_change = sign * (
+            0.75 * revision - 0.025 * policy - 0.015 * real
+        ) + shared_noise
+        multiple_change = sign * (
+            -0.035 * dgs10 - 0.045 * real + 0.02 * breakeven
+        ) + shared_noise * 1.4
+        current_eps = 200.0 + index * 0.2
+        current_index = 4000.0 + index * 4.0
+        current_multiple = current_index / current_eps
+        future_eps = current_eps * (1.0 + eps_change / 100.0)
+        future_multiple = current_multiple * (1.0 + multiple_change / 100.0)
+        future_index = future_eps * future_multiple
+        result.append(
+            {
+                "origin_date": origin.strftime("%Y-%m-%d"),
+                "measured_next_year_eps_revision_pct": revision,
+                "months_to_year_end": 12 - origin.month,
+                "policy_repricing_bp": policy,
+                "dgs10_change_bp": dgs10,
+                "real_yield_change_bp": real,
+                "breakeven_change_bp": breakeven,
+                "current_index_level": current_index,
+                "forward_eps": current_eps,
+                "forward_multiple": current_multiple,
+                "future_forward_eps": future_eps,
+                "future_forward_multiple": future_multiple,
+                "future_index_level": future_index,
+                "eps_change_pct": eps_change,
+                "multiple_change_pct": multiple_change,
+                "index_change_pct": (future_index / current_index - 1.0) * 100.0,
+            }
+        )
+    return pd.DataFrame(result)
+
+
+def test_equity_model_uses_chronological_validation_and_beats_constant_baseline() -> None:
+    from finance.inflation_policy_equity_stress import fit_equity_stress_model
+
+    artifact = fit_equity_stress_model(
+        _synthetic_model_panel(), minimum_origins=60, ridge_alpha=1.0
+    )
+
+    assert artifact.publication_status == "READY"
+    assert artifact.validation_metrics["origin_count"] == pytest.approx(84.0)
+    assert artifact.validation_metrics["fold_count"] >= 24.0
+    assert artifact.validation_metrics["index_mae"] < artifact.validation_metrics[
+        "baseline_index_mae"
+    ]
+    assert artifact.validation_metrics["validation_scheme"] == "rolling_origin"
+    assert artifact.trained_through == "2024-12-31"
+    assert set(artifact.eps_response) >= {
+        "intercept",
+        "measured_next_year_eps_revision_pct",
+        "policy_repricing_bp",
+    }
+    assert set(artifact.multiple_response) >= {
+        "intercept",
+        "dgs10_change_bp",
+        "real_yield_change_bp",
+    }
+
+
+def test_equity_model_keeps_paired_eps_multiple_residuals() -> None:
+    from finance.inflation_policy_equity_stress import fit_equity_stress_model
+
+    artifact = fit_equity_stress_model(
+        _synthetic_model_panel(), minimum_origins=60, ridge_alpha=1.0
+    )
+    residuals = np.asarray(artifact.joint_residuals, dtype=float)
+
+    assert residuals.shape == (84, 2)
+    assert np.isfinite(residuals).all()
+    assert np.corrcoef(residuals[:, 0], residuals[:, 1])[0, 1] > 0.5
+
+
+def test_equity_model_fails_closed_with_insufficient_completed_origins() -> None:
+    from finance.inflation_policy_equity_stress import fit_equity_stress_model
+
+    panel = _synthetic_model_panel(rows=30)
+    panel.loc[10:, "future_index_level"] = np.nan
+    panel.loc[10:, "eps_change_pct"] = np.nan
+    panel.loc[10:, "multiple_change_pct"] = np.nan
+    panel.loc[10:, "index_change_pct"] = np.nan
+
+    artifact = fit_equity_stress_model(panel, minimum_origins=60)
+
+    assert artifact.publication_status == "NOT_AVAILABLE"
+    assert "insufficient_origins" in artifact.reason_codes
+    assert artifact.validation_metrics["origin_count"] == pytest.approx(10.0)
+
+
+def test_equity_model_that_does_not_beat_baseline_is_limited() -> None:
+    from finance.inflation_policy_equity_stress import fit_equity_stress_model
+
+    artifact = fit_equity_stress_model(
+        _synthetic_model_panel(regime_flip=True),
+        minimum_origins=60,
+        ridge_alpha=0.25,
+    )
+
+    assert artifact.publication_status == "LIMITED"
+    assert "baseline_not_beaten" in artifact.reason_codes
+    assert artifact.validation_metrics["index_mae"] >= artifact.validation_metrics[
+        "baseline_index_mae"
+    ]
