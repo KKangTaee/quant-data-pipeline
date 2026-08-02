@@ -12,6 +12,7 @@ from finance.inflation_policy_catalog import get_inflation_policy_catalog
 
 
 DB_META = "finance_meta"
+DB_PRICE = "finance_price"
 QueryFn = Callable[[str, str, tuple[Any, ...]], list[dict[str, Any]]]
 
 
@@ -22,6 +23,17 @@ class InflationPolicyDataBundle:
     sep_rows: tuple[dict[str, object], ...]
     decision_rows: tuple[dict[str, object], ...]
     term_premium_rows: tuple[dict[str, object], ...]
+    coverage: dict[str, object]
+
+
+@dataclass(frozen=True)
+class InflationPolicyEquityBundle:
+    """PIT-safe raw inputs for the independently gated equity component."""
+
+    as_of_at: str
+    price_rows: tuple[dict[str, object], ...]
+    eps_rows: tuple[dict[str, object], ...]
+    yield_rows: tuple[dict[str, object], ...]
     coverage: dict[str, object]
 
 
@@ -321,6 +333,129 @@ def load_inflation_policy_data_bundle(
         decision_rows=decision_rows,
         term_premium_rows=term_rows,
         coverage=coverage,
+    )
+
+
+def load_inflation_policy_equity_bundle(
+    *,
+    as_of_at: str | datetime,
+    history_start: str | date,
+    query_fn: QueryFn | None = None,
+) -> InflationPolicyEquityBundle:
+    """Load official EPS vintages, S&P 500 prices, and yield vintages known then."""
+
+    as_of = _datetime_value(as_of_at, field="as_of_at")
+    start = _date_value(history_start, field="history_start")
+    if start > as_of.date():
+        raise ValueError("history_start cannot be after as_of_at")
+    as_of_sql = _sql_datetime(as_of)
+
+    eps_raw = _query(
+        DB_META,
+        """
+        SELECT period_end, period_type, earnings_basis, value_status, eps,
+               source, source_ref, source_release_date, collected_at
+        FROM sp500_index_earnings
+        WHERE period_type = 'quarterly'
+          AND eps > 0
+          AND source_release_date <= %s
+          AND period_end >= %s
+        ORDER BY source_release_date, period_end, earnings_basis, value_status
+        """,
+        (as_of.date().isoformat(), start.isoformat()),
+        query_fn=query_fn,
+    )
+    eps_rows: list[dict[str, object]] = []
+    for raw in eps_raw:
+        row = dict(raw)
+        try:
+            release_date = _date_value(
+                row.get("source_release_date"), field="source_release_date"
+            )
+            period_end = _date_value(row.get("period_end"), field="period_end")
+            value = float(row.get("eps"))
+        except (TypeError, ValueError):
+            continue
+        if release_date > as_of.date() or period_end < start or value <= 0.0:
+            continue
+        if str(row.get("period_type") or "quarterly").lower() != "quarterly":
+            continue
+        row["source_release_date"] = release_date.isoformat()
+        row["period_end"] = period_end.isoformat()
+        eps_rows.append(row)
+
+    price_raw = _query(
+        DB_PRICE,
+        """
+        SELECT symbol, Date, Close
+        FROM nyse_price_history
+        WHERE symbol = '^GSPC'
+          AND Date >= %s
+          AND Date <= %s
+          AND Close > 0
+        ORDER BY Date
+        """,
+        (start.isoformat(), as_of.date().isoformat()),
+        query_fn=query_fn,
+    )
+    price_rows: list[dict[str, object]] = []
+    for raw in price_raw:
+        row = dict(raw)
+        try:
+            observed = _date_value(row.get("Date"), field="Date")
+            close = float(row.get("Close"))
+        except (TypeError, ValueError):
+            continue
+        if not start <= observed <= as_of.date() or close <= 0.0:
+            continue
+        row["Date"] = observed.isoformat()
+        row["Close"] = close
+        price_rows.append(row)
+
+    yield_raw = _query(
+        DB_META,
+        """
+        SELECT series_id, observation_date, released_at, realtime_start,
+               realtime_end, value, collected_at, updated_at
+        FROM macro_series_vintage_observation
+        WHERE series_id IN ('DGS2', 'DGS10', 'DFII10', 'T10YIE')
+          AND observation_date >= %s
+          AND observation_date <= %s
+          AND released_at IS NOT NULL
+          AND released_at <= %s
+        ORDER BY series_id, observation_date, released_at
+        """,
+        (start.isoformat(), as_of.date().isoformat(), as_of_sql),
+        query_fn=query_fn,
+    )
+    yield_rows = _latest_vintages(
+        yield_raw,
+        as_of=as_of,
+        history_start=start,
+        allowed_series={"DGS2", "DGS10", "DFII10", "T10YIE"},
+    )
+    return InflationPolicyEquityBundle(
+        as_of_at=as_of.isoformat(),
+        price_rows=tuple(sorted(price_rows, key=lambda row: str(row["Date"]))),
+        eps_rows=tuple(
+            sorted(
+                eps_rows,
+                key=lambda row: (
+                    str(row["source_release_date"]),
+                    str(row["period_end"]),
+                    str(row.get("earnings_basis") or ""),
+                ),
+            )
+        ),
+        yield_rows=yield_rows,
+        coverage={
+            "official_eps_vintage_status": "READY" if eps_rows else "NOT_AVAILABLE",
+            "official_eps_vintage_rows": len(eps_rows),
+            "sp500_price_status": "READY" if price_rows else "NOT_AVAILABLE",
+            "sp500_price_rows": len(price_rows),
+            "yield_status": "READY" if yield_rows else "NOT_AVAILABLE",
+            "yield_rows": len(yield_rows),
+        },
     )
 
 

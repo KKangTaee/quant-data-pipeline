@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Convert inflation-policy-yield paths into a conditional S&P 500 level distribution using stored EPS vintages, valuation-multiple responses, and an explicit user AI-profitability EPS assumption.
+**Goal:** Convert inflation-policy-yield paths into a conditional year-end S&P 500 level distribution using stored next-year EPS vintages, valuation-multiple responses, and an explicit user AI-profitability EPS assumption.
 
 **Architecture:** Calibrate EPS and forward-multiple changes on point-in-time monthly/event panels, then apply them to each macro simulation path. Measured next-year EPS revisions and user AI uplift remain separate fields; the service presents associations and conditional ranges, never a deterministic index target or causal claim.
 
@@ -16,6 +16,8 @@
 - Do not claim rate changes caused an equity move; event-study output is conditional association.
 - Do not emit buy/sell, target-price, or portfolio-allocation instructions.
 - Equity failure cannot change inflation, policy, yield, or recession probabilities.
+- The official `sp500_index_earnings` release vintages and stored joint macro paths are hard gates. Shiller trailing EPS or current revised data cannot fill either gap.
+- Historical labels use the same calendar-year-end horizon as the workbench; `months_to_year_end` remains an explicit feature.
 
 ---
 
@@ -23,14 +25,16 @@
 
 ### Create
 
-- `finance/inflation_policy/equity_stress.py`: PIT calibration and conditional index simulation.
+- `finance/inflation_policy_equity_stress.py`: PIT calibration and conditional index simulation.
 - `tests/test_inflation_policy_equity_stress.py`
 - `app/web/streamlit_components/economic_cycle_workbench/src/EquityStressPanel.tsx`
 
 ### Modify
 
-- `finance/inflation_policy/panel.py`: add PIT EPS/multiple calibration panel builder.
-- `finance/inflation_policy/pipeline.py`: attach independently gated equity stress.
+- `finance/loaders/inflation_policy.py`: load official EPS vintages and stored S&P 500 prices through a DB-only boundary.
+- `finance/data/db/schema.py`: add the independent `equity_json` snapshot field.
+- `finance/data/inflation_policy_results.py`: validate and persist `equity_json`.
+- `finance/inflation_policy_pipeline.py`: attach independently gated equity stress.
 - `app/services/overview/inflation_policy.py`: adapt equity section without affecting other sections.
 - `app/services/overview/inflation_policy_commands.py`: accept bounded equity target/AI uplift reverse scenarios.
 - `app/web/streamlit_components/economic_cycle_workbench/src/inflationPolicyTypes.ts`
@@ -55,16 +59,16 @@ class EquityStressResult:
     publication_status: str
     reason_codes: tuple[str, ...]
 
-def build_equity_calibration_panel(*, valuation_rows: Sequence[Mapping[str, object]], eps_rows: Sequence[Mapping[str, object]], yield_rows: Sequence[Mapping[str, object]], as_of_at: str) -> pd.DataFrame: ...
+def build_equity_calibration_panel(*, price_rows: Sequence[Mapping[str, object]], eps_rows: Sequence[Mapping[str, object]], yield_rows: Sequence[Mapping[str, object]], as_of_at: str) -> pd.DataFrame: ...
 def fit_equity_stress_model(panel: pd.DataFrame) -> EquityStressArtifact: ...
-def simulate_equity_stress(artifact: EquityStressArtifact, forward_paths: ForwardScenarioResult, *, current_index: float, forward_eps: float, user_ai_eps_uplift_pct: float = 0.0, target_levels: Sequence[float] = ()) -> EquityStressResult: ...
+def simulate_equity_stress(artifact: EquityStressArtifact, forward_paths: Sequence[SimulationPath], *, current_index: float, forward_eps: float, user_ai_eps_uplift_pct: float = 0.0, target_levels: Sequence[float] = ()) -> EquityStressResult: ...
 ```
 
-### Task 1: Build the PIT EPS and multiple panel
+### Task 1: Build the DB-only PIT EPS and multiple panel
 
 **Files:**
-- Modify: `finance/inflation_policy/panel.py`
-- Create: `finance/inflation_policy/equity_stress.py`
+- Modify: `finance/loaders/inflation_policy.py`
+- Create: `finance/inflation_policy_equity_stress.py`
 - Create: `tests/test_inflation_policy_equity_stress.py`
 - Create: `.aiworkspace/note/finance/tasks/active/inflation-policy-equity-stress/{PLAN,DESIGN,STATUS,NOTES,RUNS,RISKS}.md`
 
@@ -72,12 +76,12 @@ def simulate_equity_stress(artifact: EquityStressArtifact, forward_paths: Forwar
 - Consumes: `sp500_index_earnings`, monthly valuation rows, stored yield observations.
 - Produces: one row per PIT origin with current index, forward EPS known then, measured revision, forward multiple, real yield, DGS10, breakeven, and future outcomes.
 
-- [ ] **Step 1: Write failing look-ahead tests**
+- [x] **Step 1: Write failing look-ahead tests**
 
 ```python
 def test_eps_estimate_released_after_origin_is_excluded() -> None:
     panel = build_equity_calibration_panel(
-        valuation_rows=valuation_fixture(),
+        price_rows=price_fixture(),
         eps_rows=eps_fixture_with_next_release(),
         yield_rows=yield_fixture(),
         as_of_at="2026-06-17T18:00:00+00:00",
@@ -86,7 +90,7 @@ def test_eps_estimate_released_after_origin_is_excluded() -> None:
     assert panel.iloc[-1]["forward_eps"] == pytest.approx(known_eps_before_sep())
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_equity_stress.py -q
@@ -94,15 +98,15 @@ def test_eps_estimate_released_after_origin_is_excluded() -> None:
 
 Expected: FAIL on missing module/panel builder.
 
-- [ ] **Step 3: Implement as-of matching**
+- [x] **Step 3: Implement as-of matching**
 
-Select latest EPS release at or before origin for each target period/basis, calculate revision only between two releases both known at the origin, and align index/valuation/yield by latest prior trading day. Missing next-year EPS yields `NOT_AVAILABLE`, not trailing-EPS substitution.
+Select the latest EPS release at or before each monthly origin for the four quarters of the next calendar year, calculate revision only between two releases both known at the origin, and align index/yield by latest prior trading day. The label is the same-year December endpoint and keeps `months_to_year_end` explicit. Missing next-year EPS yields `NOT_AVAILABLE`, not trailing-EPS substitution.
 
-- [ ] **Step 4: Run tests and commit**
+- [x] **Step 4: Run tests and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_equity_stress.py tests/test_sp500_valuation.py -q
-git add finance/inflation_policy/panel.py finance/inflation_policy/equity_stress.py \
+git add finance/loaders/inflation_policy.py finance/inflation_policy_equity_stress.py \
   tests/test_inflation_policy_equity_stress.py \
   .aiworkspace/note/finance/tasks/active/inflation-policy-equity-stress
 git commit -m "주식 스트레스 PIT 패널 추가"
@@ -111,7 +115,7 @@ git commit -m "주식 스트레스 PIT 패널 추가"
 ### Task 2: Fit and validate conditional EPS/multiple responses
 
 **Files:**
-- Modify: `finance/inflation_policy/equity_stress.py`
+- Modify: `finance/inflation_policy_equity_stress.py`
 - Modify: `tests/test_inflation_policy_equity_stress.py`
 
 **Interfaces:**
@@ -156,14 +160,14 @@ Compare index-distribution error/coverage against constant EPS, constant multipl
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_equity_stress.py -q
-git add finance/inflation_policy/equity_stress.py tests/test_inflation_policy_equity_stress.py
+git add finance/inflation_policy_equity_stress.py tests/test_inflation_policy_equity_stress.py
 git commit -m "조건부 주식 스트레스 모델 추가"
 ```
 
 ### Task 3: Add AI EPS assumption and target-level reverse decomposition
 
 **Files:**
-- Modify: `finance/inflation_policy/equity_stress.py`
+- Modify: `finance/inflation_policy_equity_stress.py`
 - Modify: `app/services/overview/inflation_policy_commands.py`
 - Modify: `tests/test_inflation_policy_equity_stress.py`
 - Modify: `tests/test_inflation_policy_commands.py`
@@ -183,7 +187,7 @@ def test_measured_revision_and_ai_assumption_are_separate() -> None:
     )
     assert result.user_ai_eps_uplift_pct == 5.0
     assert result.measured_next_year_eps_revision_pct == pytest.approx(measured_revision_fixture())
-    assert "6400" not in Path("finance/inflation_policy/equity_stress.py").read_text()
+    assert "6400" not in Path("finance/inflation_policy_equity_stress.py").read_text()
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -202,7 +206,7 @@ Allow AI uplift from `-30%` to `+50%` and positive target levels. Apply uplift o
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_equity_stress.py tests/test_inflation_policy_commands.py -q
-git add finance/inflation_policy/equity_stress.py app/services/overview/inflation_policy_commands.py \
+git add finance/inflation_policy_equity_stress.py app/services/overview/inflation_policy_commands.py \
   tests/test_inflation_policy_equity_stress.py tests/test_inflation_policy_commands.py
 git commit -m "AI EPS 가정과 지수 역산 시나리오 추가"
 ```
@@ -210,7 +214,9 @@ git commit -m "AI EPS 가정과 지수 역산 시나리오 추가"
 ### Task 4: Integrate the independently gated result and UI
 
 **Files:**
-- Modify: `finance/inflation_policy/pipeline.py`
+- Modify: `finance/inflation_policy_pipeline.py`
+- Modify: `finance/data/db/schema.py`
+- Modify: `finance/data/inflation_policy_results.py`
 - Modify: `app/services/overview/inflation_policy.py`
 - Create: `app/web/streamlit_components/economic_cycle_workbench/src/EquityStressPanel.tsx`
 - Modify: `app/web/streamlit_components/economic_cycle_workbench/src/inflationPolicyTypes.ts`
@@ -237,7 +243,7 @@ Expected: FAIL on missing integration.
 
 - [ ] **Step 3: Integrate pipeline/service**
 
-Fit/materialize equity after macro forward paths. Store equity status/reasons independently; an equity exception records unavailable equity and still permits the macro snapshot when its own gates pass.
+Fit/materialize equity after macro forward paths. Store equity in the independent `equity_json` snapshot field; an equity exception records unavailable equity and still permits the macro snapshot when its own gates pass.
 
 - [ ] **Step 4: Implement the panel**
 
@@ -249,7 +255,7 @@ Show index range, EPS range, multiple range, user target probability, and assump
 .venv/bin/python -m pytest tests/test_inflation_policy_equity_stress.py tests/test_inflation_policy_pipeline.py tests/test_inflation_policy_service.py -q
 npm --prefix app/web/streamlit_components/economic_cycle_workbench test
 npm --prefix app/web/streamlit_components/economic_cycle_workbench run build
-git add finance/inflation_policy/pipeline.py app/services/overview/inflation_policy.py \
+git add finance/inflation_policy_pipeline.py app/services/overview/inflation_policy.py \
   app/web/streamlit_components/economic_cycle_workbench/src/EquityStressPanel.tsx \
   app/web/streamlit_components/economic_cycle_workbench/src/inflationPolicyTypes.ts \
   app/web/streamlit_components/economic_cycle_workbench/src/InflationPolicyWorkbench.tsx \
