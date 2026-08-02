@@ -7311,3 +7311,10 @@ Detailed historical logs were archived on `2026-04-13`.
   Verification-Only 상태와 approval queue를 실제 코드·task status에 맞췄다.
 - 전체 roadmap `4/4차` 완료. code / DB / registry / saved / run history는 변경하지 않았다.
 - 상세 설계·실행·검증은 `tasks/active/finance-canonical-docs-alignment-v1-20260726/`를 본다.
+
+## 2026-08-02 - Inflation / Policy Yield Path 1/5 데이터 기반 완료
+
+- 독립 FRED/ALFRED 26-series, 익명 SEP·FOMC 의결, 선택 BEA/ACM 수집과 strict `released_at` loader를 구현했다.
+- 실제 2026 source에서 6월 점도표/Core PCE 분포, 7월 9-3 동결과 3명 인상 선호, 다음 날 PCE cutoff 제외를 확인했다.
+- 기존 경제 사이클 결과는 입력/fallback으로 사용하지 않으며 BEA는 `NOT_AVAILABLE`, ACM replay는 `LIMITED`로 보존한다.
+- 전체 5차 중 1차 완료; 다음 위치는 `tasks/active/inflation-policy-data-pipeline/`과 `phases/active/inflation-policy-yield-path/`다.

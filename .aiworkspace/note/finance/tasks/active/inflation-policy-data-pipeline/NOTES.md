@@ -40,3 +40,14 @@
   release origin으로 저장하며, `BEA_API_KEY`가 없으면 breadth만 `NOT_AVAILABLE`이다.
 - scheduler는 weekday 24시간 cadence로 `safe/standard/broad`에만 등록했다.
   `browser_safe`에는 포함하지 않았고 새 run/status UI panel은 추가하지 않았다.
+- 실제 FRED API는 표면상 2,000개인 window 안의 inclusive internal vintage를 하나 더
+  셀 수 있다. default chunk는 1,999개 safety slot으로 제한한다.
+- 과거 SEP summary year와 participant note는 release마다 다르며, 새 forecast horizon은
+  current column 하나만 가질 수 있다. URL의 release year/month와 실제 colspan을 기준으로
+  현재 분포를 선택한다.
+- 2026 FOMC 성명은 명시적 `N-N vote` 문구와 과거 `Voting for/against` paragraph가
+  섞여 있다. target range의 nonbreaking hyphen도 normalize하며, 4월의 금리인하 선호와
+  easing-bias 반대를 같은 행동으로 합치지 않는다.
+- 실제 2026-07-29 cutoff에서 다음 날 공개된 6월 Core PCE는 strict loader에 나타나지
+  않았고 공개 시각 이후에만 선택됐다. observation date나 realtime date fallback으로
+  미래 release를 끌어오지 않는다.

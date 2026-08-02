@@ -120,6 +120,13 @@ def test_ingestion_wrapper_returns_compact_job_result(monkeypatch) -> None:
 def test_cli_prints_one_compact_json_result(monkeypatch, capsys) -> None:
     import app.jobs.inflation_policy_refresh as module
 
+    loaded: list[bool] = []
+    monkeypatch.setattr(
+        module,
+        "load_project_local_env",
+        lambda: loaded.append(True),
+        raising=False,
+    )
     monkeypatch.setattr(
         module,
         "run_inflation_policy_raw_refresh",
@@ -136,3 +143,4 @@ def test_cli_prints_one_compact_json_result(monkeypatch, capsys) -> None:
     assert module.main(["--as-of-at", "2026-08-02T03:15:00+00:00"]) == 0
     output = json.loads(capsys.readouterr().out)
     assert output["status"] == "success"
+    assert loaded == [True]

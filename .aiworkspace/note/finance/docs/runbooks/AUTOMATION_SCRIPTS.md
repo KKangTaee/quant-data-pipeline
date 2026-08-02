@@ -16,7 +16,9 @@
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | pre-live candidate registry template / draft-from-current / list / show / validate / append |
 | `app/jobs/overview_automation.py` | 브라우저 없이 Overview Market Intelligence 수집 job을 cadence / market-hours / lock 기준으로 실행하는 run-once CLI |
 | `app/jobs/economic_cycle_refresh.py::run_economic_cycle_intramonth_refresh` | 평일 17-series overlap 증분 수집 → 누락 직전 월말 append-only rollover → 당일 intramonth materialization을 fail-closed로 실행. 일부 source 실패나 credential 부재 시 snapshot을 쓰지 않고 last-good 유지 |
+| `app/jobs/inflation_policy_refresh.py` | 독립 inflation-policy FRED/ALFRED 빈티지, SEP, FOMC 결정과 선택 BEA/ACM 원천을 수집하고 필수 source/series coverage로 향후 materialization 허용 여부를 판정하는 backend-only CLI |
 | `app/jobs/ingestion_jobs.py::run_collect_economic_cycle_vintages` | 승인된 17-series FRED/ALFRED vintage catalog를 명시적으로 수집하는 `JobResult` wrapper. `FRED_API_KEY` 필수 |
+| `app/jobs/ingestion_jobs.py::run_collect_inflation_policy_raw_context` | inflation-policy raw refresh 결과를 Data Operations/automation용 compact `JobResult`로 변환하는 wrapper |
 | `app/jobs/ingestion_jobs.py::run_materialize_economic_cycle` | provider 호출 없이 approved artifact와 stored vintages로 current compact snapshot을 만드는 명시적 `JobResult` wrapper |
 | `finance/economic_cycle_pipeline.py` | 경제 사이클 train/validate, current materialization, origin-specific month-end replay, exact-artifact intramonth materialization, closed-month rollover 함수. scheduler 등록은 `app/jobs/overview_automation.py`가 소유 |
 
@@ -176,7 +178,14 @@ uv run python -m app.jobs.overview_automation --profile browser_safe
 - Intraday snapshot은 기본적으로 미국 정규장 시간에만 실행된다.
 - 실행 결과는 각 ingestion job result로 `.aiworkspace/note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl`에 남고, Data Health가 그 기록을 읽는다.
 
-경제 사이클은 이 scheduled profile에 포함하지 않는다. vintage collection, model validation, current/10년 replay는 [Overview Market Intelligence Runbook](./OVERVIEW_MARKET_INTELLIGENCE.md)의 명시적 backend 절차로만 실행한다.
+경제 사이클의 full vintage collection/model validation/current·10년 replay는 scheduled
+profile에 포함하지 않는다. 별도의 weekday intramonth job만 등록돼 있으며 상세 기준은
+[Overview Market Intelligence Runbook](./OVERVIEW_MARKET_INTELLIGENCE.md)을 본다.
+
+Inflation / Policy raw context는 `safe`, `standard`, `broad`에 평일 24시간 cadence로
+등록된다. 이 job은 raw source와 coverage gate만 갱신하고 확률 snapshot을 만들지 않으며,
+브라우저 진입용 `browser_safe`에는 포함되지 않는다. 수동 실행과 상태 의미는
+[Inflation / Policy Point-in-Time Data Refresh](./INFLATION_POLICY_DATA_REFRESH.md)를 본다.
 
 ## 새 script를 추가할 때 기록 기준
 

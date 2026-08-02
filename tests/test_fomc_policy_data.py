@@ -94,6 +94,90 @@ def test_sep_parser_rejects_inconsistent_current_participant_total() -> None:
         )
 
 
+def test_sep_participant_total_uses_current_release_not_prior_note() -> None:
+    from finance.data.fomc_policy import parse_fomc_sep_distributions
+
+    page = FIXTURE.read_text().replace(
+        "<p>Eighteen participants submitted information",
+        "<p>Nineteen participants submitted information in conjunction with the March 17–18, 2026, meeting.</p>\n"
+        "<p>Eighteen participants submitted information",
+    )
+
+    rows = parse_fomc_sep_distributions(
+        page,
+        source_url=SOURCE_URL,
+        released_at="2026-06-17T18:00:00+00:00",
+        collected_at="2026-06-17T18:05:00+00:00",
+    )
+    assert sum(
+        int(row["participant_count"])
+        for row in rows
+        if row["distribution_kind"] == "DOT" and row["target_period"] == "2026"
+    ) == 18
+
+
+def test_sep_summary_accepts_release_specific_year_headers() -> None:
+    from finance.data.fomc_policy import parse_fomc_sep_distributions
+
+    page = FIXTURE.read_text().replace(
+        "<th>2026</th><th>2027</th><th>2028</th><th>Longer run</th>",
+        "<th>2021</th><th>2022</th><th>2023</th><th>Longer run</th>",
+        3,
+    )
+    rows = parse_fomc_sep_distributions(
+        page,
+        source_url=SOURCE_URL,
+        released_at="2026-06-17T18:00:00+00:00",
+        collected_at="2026-06-17T18:05:00+00:00",
+    )
+
+    assert any(
+        row["distribution_kind"] == "SUMMARY"
+        and row["target_period"] == "2021"
+        for row in rows
+    )
+
+
+def test_sep_histogram_accepts_new_horizon_with_one_current_column() -> None:
+    from bs4 import BeautifulSoup
+    from finance.data.fomc_policy import _parse_histogram
+
+    table = BeautifulSoup(
+        """
+        <table><thead>
+          <tr><th>Percent Range</th><th colspan="2">2025</th><th colspan="2">2026</th>
+              <th colspan="2">2027</th><th>2028</th><th colspan="2">Longer Run</th></tr>
+          <tr><th>June projections</th><th>September projections</th>
+              <th>June projections</th><th>September projections</th>
+              <th>June projections</th><th>September projections</th>
+              <th>September projections</th>
+              <th>June projections</th><th>September projections</th></tr>
+        </thead><tbody>
+          <tr><th>2.1-2.2</th><td>1</td><td>2</td><td>3</td><td>4</td>
+              <td>5</td><td>6</td><td>7</td><td>8</td><td>9</td></tr>
+        </tbody></table>
+        """,
+        "html.parser",
+    ).find("table")
+    rows = _parse_histogram(
+        "Figure 3.A. Distribution of participants' projections for real GDP",
+        table,
+        release_month="September",
+        source_url="https://www.federalreserve.gov/monetarypolicy/fomcprojtabl20250917.htm",
+        released_at="2025-09-17T18:00:00+00:00",
+        collected_at="2025-09-17T18:05:00+00:00",
+    )
+
+    counts = {row["target_period"]: row["participant_count"] for row in rows}
+    assert counts == {
+        "2025": 2,
+        "2026": 4,
+        "2027": 6,
+        "2028": 7,
+        "longer_run": 9,
+    }
+
+
 def test_projection_url_discovery_uses_official_accessible_pages() -> None:
     from finance.data.fomc_policy import discover_fomc_projection_urls
 
@@ -220,6 +304,54 @@ def test_decision_without_prior_range_is_partial_not_future_filled() -> None:
     assert row["target_lower_before_pct"] is None
     assert row["target_upper_before_pct"] is None
     assert row["coverage_status"] == "PARTIAL"
+
+
+def test_old_vote_format_and_nonbreaking_hyphen_are_supported() -> None:
+    from finance.data.fomc_policy import parse_fomc_policy_decision
+
+    html = """
+      <p>In support of its goals, the Committee decided to maintain the target range
+      for the federal funds rate at 3‑1/2 to 3‑3/4 percent.</p>
+      <p>Voting for the monetary policy action were A. One; B. Two; and C. Three.
+      Voting against this action were D. Four and E. Five, who preferred to lower
+      the target range for the federal funds rate by 1/4 percentage point at this meeting.</p>
+    """
+    row = parse_fomc_policy_decision(
+        html,
+        source_url="https://www.federalreserve.gov/newsevents/pressreleases/monetary20260128a.htm",
+        released_at="2026-01-28T19:00:00+00:00",
+        prior_range=None,
+        collected_at="2026-01-28T19:05:00+00:00",
+    )
+
+    assert row["vote_for_count"] == 3
+    assert row["vote_against_count"] == 2
+    assert {item["preferred_action"] for item in json.loads(row["dissents_json"])} == {
+        "CUT_25"
+    }
+
+
+def test_mixed_dissent_groups_preserve_distinct_explicit_preferences() -> None:
+    from finance.data.fomc_policy import parse_fomc_policy_decision
+
+    html = """
+      <p>The Committee decided to maintain the target range for the federal funds rate
+      at 3‑1/2 to 3‑3/4 percent.</p>
+      <p>Voting for the monetary policy action were A. One; and B. Two.
+      Voting against this action were C. Three, who preferred to lower the target range
+      by 1/4 percentage point at this meeting; and D. Four and E. Five, who supported
+      maintaining the target range but did not support inclusion of an easing bias.</p>
+    """
+    row = parse_fomc_policy_decision(
+        html,
+        source_url="https://www.federalreserve.gov/newsevents/pressreleases/monetary20260429a.htm",
+        released_at="2026-04-29T18:00:00+00:00",
+        prior_range=(3.5, 3.75),
+        collected_at="2026-04-29T18:05:00+00:00",
+    )
+
+    actions = [item["preferred_action"] for item in json.loads(row["dissents_json"])]
+    assert actions == ["CUT_25", "HOLD_NO_EASING_BIAS", "HOLD_NO_EASING_BIAS"]
 
 
 def test_policy_history_collects_oldest_first_without_future_fill(monkeypatch) -> None:

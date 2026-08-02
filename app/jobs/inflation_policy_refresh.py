@@ -15,6 +15,7 @@ from finance.data.fomc_policy import (
 )
 from finance.data.nyfed_term_premium import collect_and_store_acm_term_premium
 from finance.inflation_policy_catalog import collect_inflation_policy_vintages
+from app.runtime_env import load_project_local_env
 
 
 REQUIRED_SOURCES = ("macro_vintages", "sep", "decisions")
@@ -149,6 +150,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument("--as-of-at", default=None)
     args = parser.parse_args(argv)
+    load_project_local_env()
     result = run_inflation_policy_raw_refresh(as_of_at=args.as_of_at)
     print(json.dumps(result, ensure_ascii=False, sort_keys=True))
     return 0 if result["status"] in {"success", "partial_success"} else 1

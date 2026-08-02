@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-07-26
+Last Verified: 2026-08-02
 
 ## System At A Glance
 
@@ -75,6 +75,26 @@ unavailable 상황을 위해 남아 있다. current 정상 화면의 owner는 �
 service와 React workbench다.
 
 ## Workflow Ownership
+
+### Inflation / Policy Yield Path (Active Backend Foundation)
+
+```text
+FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
+  -> app/jobs/inflation_policy_refresh.py
+  -> finance_meta PIT tables
+  -> finance/loaders/inflation_policy.py
+  -> independent engines and workbench (next stages)
+```
+
+- `finance/inflation_policy_catalog.py`와 `finance/data/fred_vintages.py`가 독립 26-series
+  catalog와 공용 vintage transport를 소유한다.
+- `finance/data/fomc_policy.py`, `bea_pce_components.py`,
+  `nyfed_term_premium.py`가 익명 SEP/의결·선택 PCE breadth·기간 프리미엄 source를
+  저장한다.
+- `finance/loaders/inflation_policy.py`는 `released_at <= as_of_at`인 DB row만 읽고
+  기존 `economic_cycle_snapshot`/artifact/확률을 사용하지 않는다.
+- 현재는 backend raw context와 result-store 계약까지만 구현됐다. 사용자 workbench와
+  확률 엔진은 phase 2~3의 별도 owner를 추가한 뒤 이 지도에 연결한다.
 
 ### Research Evidence
 
@@ -184,6 +204,7 @@ compact evidence와 identity만 저장한다. 자세한 규칙은
 | Today | `app/web/today_page.py`, `app/services/today.py` | [Today Intraday Flow](./flows/TODAY_PORTFOLIO_INTRADAY_FLOW.md) |
 | Market Research | `app/web/overview/page.py`, `app/web/overview/navigation.py` | view owner under `app/services/overview/` |
 | economic cycle / valuation | owning module under `finance/`, `finance/loaders/`, `app/services/overview/` | [Data Quality And PIT](./data/DATA_QUALITY_AND_PIT_NOTES.md) |
+| inflation / policy / yield path | `app/jobs/inflation_policy_refresh.py`, `finance/inflation_policy_catalog.py`, `finance/data/fomc_policy.py`, `finance/loaders/inflation_policy.py` | [Inflation / Policy Data Refresh](./runbooks/INFLATION_POLICY_DATA_REFRESH.md), [Data DB Pipeline](./architecture/DATA_DB_PIPELINE_FLOW.md) |
 | Institutional Holdings / 13F | `app/web/institutional_portfolios.py`, `app/services/institutional_portfolios.py` | [Institutional Flow](./flows/INSTITUTIONAL_PORTFOLIOS_FLOW.md) |
 | Backtest Analysis / strategy | `app/web/backtest_analysis.py`, `app/runtime/backtest/` | [Backtest Runtime](./architecture/BACKTEST_RUNTIME_FLOW.md), [Strategy Flow](./architecture/STRATEGY_IMPLEMENTATION_FLOW.md) |
 | Practical Validation | `app/web/backtest_practical_validation/` | [Backtest UI Flow](./flows/BACKTEST_UI_FLOW.md) |

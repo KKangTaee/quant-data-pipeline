@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -57,6 +57,20 @@ def test_realtime_windows_honor_explicit_chunk_size_and_lower_bound() -> None:
         ("2026-01-01", "2026-01-19"),
         ("2026-01-20", "9999-12-31"),
     ]
+
+
+def test_default_realtime_windows_leave_one_vintage_safety_slot() -> None:
+    from finance.data.fred_vintages import build_realtime_windows
+
+    start = date(2010, 1, 1)
+    dates = [(start + timedelta(days=index)).isoformat() for index in range(2_001)]
+    windows = build_realtime_windows(dates, lower_bound=dates[0])
+
+    counts = [
+        sum(window_start <= item <= window_end for item in dates)
+        for window_start, window_end in windows
+    ]
+    assert max(counts) <= 1_999
 
 
 def test_fetch_fred_vintages_preserves_incremental_realtime_start() -> None:

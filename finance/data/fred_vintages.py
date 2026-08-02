@@ -20,6 +20,7 @@ EARLIEST_REALTIME_DATE = "1776-07-04"
 OPEN_ENDED_REALTIME_DATE = "9999-12-31"
 FRED_SOURCE_MODE = "fred_output_type_1_realtime_intervals"
 MAX_VINTAGE_DATES_PER_REQUEST = 2_000
+SAFE_VINTAGE_DATES_PER_WINDOW = MAX_VINTAGE_DATES_PER_REQUEST - 1
 MAX_VINTAGE_DATE_PAGE_SIZE = 10_000
 DEFAULT_OBSERVATION_PAGE_SIZE = 50_000
 VINTAGE_UPSERT_MAX_STATEMENT_LENGTH = 16 * 1024 * 1024
@@ -260,6 +261,9 @@ def build_realtime_windows(
         raise FredVintageError(
             f"chunk_size must be between 1 and {MAX_VINTAGE_DATES_PER_REQUEST}"
         )
+    # FRED can count one additional internal vintage inside an otherwise exact
+    # 2,000-date boundary. Leave one slot so the API's inclusive count stays safe.
+    window_size = min(int(chunk_size), SAFE_VINTAGE_DATES_PER_WINDOW)
     resolved_lower_bound = _date_text(
         lower_bound or EARLIEST_REALTIME_DATE,
         field="lower_bound",
@@ -276,11 +280,11 @@ def build_realtime_windows(
         return [(resolved_lower_bound, OPEN_ENDED_REALTIME_DATE)]
 
     windows: list[tuple[str, str]] = []
-    for index in range(0, len(normalized_dates), int(chunk_size)):
+    for index in range(0, len(normalized_dates), window_size):
         realtime_start = (
             resolved_lower_bound if index == 0 else normalized_dates[index]
         )
-        next_index = index + int(chunk_size)
+        next_index = index + window_size
         realtime_end = (
             (
                 date.fromisoformat(normalized_dates[next_index])

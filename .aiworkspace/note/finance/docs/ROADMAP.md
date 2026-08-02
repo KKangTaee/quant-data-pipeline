@@ -1,24 +1,25 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-26
+Last Verified: 2026-08-02
 
 ## Current Snapshot
 
 Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level surface를
 제공하는 Evidence-first 퀀트 투자 리서치 워크스페이스다.
 
-현재 사용자-approved active phase와 신규 product implementation task는 없다.
-구현된 baseline을 유지하면서 남은 verification debt를 닫고, 다음 product / data
-scope는 아래 Decision Queue에서 하나씩 승인해 여는 상태다.
+현재 사용자 승인 `Inflation Policy Yield Path` 5단계 phase가 active다. 1차 독립
+Point-in-Time 데이터 기반을 완료하고 2차 Core PCE·정책·금리 확률 엔진으로 이동하는
+상태다. 기존 baseline과 남은 verification debt는 유지하며 다른 신규 product/data
+scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는다.
 
 현재 판단 기준:
 
 - Product baseline: Research → Portfolio Lab → Portfolio Monitoring 흐름 구현
 - Data baseline: MySQL-backed ingestion / loader / service / UI 경계 구현
 - Safety baseline: no live approval, broker order, auto rebalance
-- Active phase: none
-- Active product implementation: none
+- Active phase: `inflation-policy-yield-path` (1/5 데이터 기반 완료)
+- Active product implementation: 2차 독립 확률 엔진 준비
 - Paused work와 Verification-Only work는 별도 상태로 관리
 
 ## Implemented Baseline
@@ -35,6 +36,7 @@ scope는 아래 Decision Queue에서 하나씩 승인해 여는 상태다.
 | Portfolio Monitoring | direct stock·ETF와 selected strategy의 group/item, cashflow-aware performance, contribution, diagnosis와 recheck | read-only monitoring, broker / auto rebalance 없음 |
 | Reference Center | 7개 current surface의 개념·journey·failure state·deep link 검색 | product help owner |
 | Architecture | Python domain / service / runtime, Streamlit command boundary와 React presentation 분리 | React가 DB / provider / canonical decision을 소유하지 않음 |
+| Inflation / Policy Data Foundation | 독립 26-series FRED/ALFRED PIT 원장, 익명 SEP·FOMC 의결, 선택 BEA/ACM, strict as-of loader와 result-store 계약 | 기존 경제 사이클 확률 재사용 없음; BEA는 key 부재 시 `NOT_AVAILABLE`, ACM replay는 `LIMITED` |
 
 상세 구현과 과거 QA는 개별 task / phase 기록에 남아 있다. 현재 제품 의미는
 [Product Direction](./PRODUCT_DIRECTION.md), code ownership은
@@ -44,9 +46,12 @@ scope는 아래 Decision Queue에서 하나씩 승인해 여는 상태다.
 
 ### Active
 
-현재 user-approved product implementation 또는 active phase는 없다.
-새 제품 범위는 목적, 완료 조건과 data / safety boundary를 합의한 뒤 task 또는
-명시적으로 요청된 phase로 연다.
+| Work | Current State | Next Gate |
+|---|---|---|
+| [Inflation Policy Yield Path](../phases/active/inflation-policy-yield-path/STATUS.md) | 전체 5차 중 1차 독립 PIT data pipeline·실제 2026 source smoke 완료 | 2차 Core PCE 5상태, 정책 경로, 2Y/10Y와 동적 저항 확률 엔진의 rolling-origin calibration/publication gate |
+
+이 phase 외 새 제품 범위는 목적, 완료 조건과 data/safety boundary를 합의한 뒤 별도
+task 또는 명시적으로 승인된 phase로 연다.
 
 ### Paused
 
@@ -84,15 +89,17 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 
 ## Recommended Order
 
-1. **Verification debt closeout** — 이미 구현된 interaction을 작은 QA-only 작업으로 닫아
+1. **Active inflation-policy phase** — 2차 엔진을 독립 rolling-origin 검증으로 구현하고
+   publication gate를 통과한 결과만 3차 workbench로 연결한다.
+2. **Verification debt closeout** — 이미 구현된 interaction을 작은 QA-only 작업으로 닫아
    active-state 신뢰도를 먼저 높인다.
-2. **Correctness decision** — historical universe / delisting PIT source와 storage policy를
+3. **Correctness decision** — historical universe / delisting PIT source와 storage policy를
    승인하거나 명시적으로 defer한다.
-3. **One product research lane** — Market Movers outlook 또는 Sentiment validation 중
+4. **One product research lane** — Market Movers outlook 또는 Sentiment validation 중
    하나만 선택해 target과 publication gate를 먼저 설계한다.
-4. **Strategy governance** — daily swing lane을 validation / review / monitoring에
+5. **Strategy governance** — daily swing lane을 validation / review / monitoring에
    연결할 실제 필요가 확인되면 연다.
-5. **Maintenance / platform work** — Data Operations hardening, refactor, scheduler,
+6. **Maintenance / platform work** — Data Operations hardening, refactor, scheduler,
    UI split과 archive migration은 제품 가치나 운영 병목이 확인된 범위로만 연다.
 
 동시에 여러 broad track을 열지 않는다. 각 후보는 source correctness, 사용자 완료

@@ -61,7 +61,12 @@ _NUMBER_WORDS = {
 
 def _clean_text(value: object) -> str:
     text = " ".join(str(value or "").replace("\xa0", " ").split()).strip()
-    text = text.replace("–", "-").replace("—", "-")
+    text = (
+        text.replace("–", "-")
+        .replace("—", "-")
+        .replace("‑", "-")
+        .replace("−", "-")
+    )
     return re.sub(r"\s*-\s*", "-", text)
 
 
@@ -207,32 +212,45 @@ def _parse_summary(
     header_rows = table.select("thead tr")
     if not header_rows:
         return []
-    periods = [
-        _clean_text(cell.get_text(" "))
-        for cell in header_rows[-1].find_all(["th", "td"], recursive=False)
-        if _clean_text(cell.get_text(" ")).casefold() in {"2026", "2027", "2028", "longer run"}
-    ]
-    if len(periods) != 12:
-        raise ValueError("SEP summary header must contain 12 target-period cells")
+    periods: list[str] = []
+    for cell in header_rows[-1].find_all(["th", "td"], recursive=False):
+        label = _clean_text(cell.get_text(" "))
+        try:
+            _target_period(label)
+        except ValueError:
+            continue
+        periods.append(label)
+    if not periods or len(periods) % 3 != 0:
+        raise ValueError("SEP summary header must contain three target-period groups")
+    period_count = len(periods) // 3
+    expected_periods = [_target_period(item) for item in periods[:period_count]]
+    if any(
+        [_target_period(item) for item in periods[index * period_count : (index + 1) * period_count]]
+        != expected_periods
+        for index in range(1, 3)
+    ):
+        raise ValueError("SEP summary target-period groups must match")
 
     rows: list[dict[str, object]] = []
     group_labels = ("median", "central_tendency", "range")
     for tr in table.select("tbody tr"):
         cells = tr.find_all(["th", "td"], recursive=False)
-        if len(cells) < 13:
+        if len(cells) < len(periods) + 1:
             continue
         variable = _variable_from_text(cells[0].get_text(" "))
         if variable is None:
             continue
-        values = cells[1:13]
+        values = cells[1 : len(periods) + 1]
         for group_index, group_label in enumerate(group_labels):
-            for period_index in range(4):
+            for period_index in range(period_count):
                 value_text = _clean_text(
-                    values[group_index * 4 + period_index].get_text(" ")
+                    values[group_index * period_count + period_index].get_text(" ")
                 )
                 if not value_text:
                     continue
-                target = _target_period(periods[group_index * 4 + period_index])
+                target = _target_period(
+                    periods[group_index * period_count + period_index]
+                )
                 lower, upper = _range(value_text)
                 value = _number(value_text) if group_label == "median" else None
                 rows.append(
@@ -331,23 +349,31 @@ def _parse_histogram(
     if len(header_rows) < 2:
         return []
     first_cells = header_rows[0].find_all(["th", "td"], recursive=False)
-    periods = [_target_period(cell.get_text(" ")) for cell in first_cells[1:]]
+    period_specs = [
+        (
+            _target_period(cell.get_text(" ")),
+            int(str(cell.get("colspan") or "1")),
+        )
+        for cell in first_cells[1:]
+    ]
     projection_cells = header_rows[-1].find_all(["th", "td"], recursive=False)
     projections = [_clean_text(cell.get_text(" ")) for cell in projection_cells]
-    if len(projections) != len(periods) * 2:
+    if len(projections) != sum(width for _target, width in period_specs):
         raise ValueError(f"SEP histogram header mismatch: {heading}")
 
     selected_columns: list[tuple[str, int]] = []
-    for index, target in enumerate(periods):
-        pair = projections[index * 2 : index * 2 + 2]
+    offset = 0
+    for target, width in period_specs:
+        group = projections[offset : offset + width]
         matches = [
-            offset
-            for offset, label in enumerate(pair)
+            group_offset
+            for group_offset, label in enumerate(group)
             if label.casefold().startswith(release_month.casefold())
         ]
         if len(matches) != 1:
             raise ValueError(f"SEP histogram current-release column missing: {heading}")
-        selected_columns.append((target, index * 2 + matches[0]))
+        selected_columns.append((target, offset + matches[0]))
+        offset += width
 
     rows: list[dict[str, object]] = []
     for tr in table.select("tbody tr"):
@@ -383,11 +409,23 @@ def _parse_histogram(
     return rows
 
 
-def _expected_participant_count(soup: BeautifulSoup) -> int | None:
+def _expected_participant_count(
+    soup: BeautifulSoup,
+    *,
+    release_month: str,
+) -> int | None:
     page_text = _clean_text(soup.get_text(" ")).casefold()
-    match = re.search(r"([a-z]+|\d+) participants submitted information", page_text)
-    if match is None:
+    matches = list(
+        re.finditer(r"([a-z]+|\d+) participants submitted information", page_text)
+    )
+    if not matches:
         return None
+    current = [
+        match
+        for match in matches
+        if release_month.casefold() in page_text[match.end() : match.end() + 160]
+    ]
+    match = current[-1] if current else matches[-1]
     token = match.group(1)
     return int(token) if token.isdigit() else _NUMBER_WORDS.get(token)
 
@@ -396,13 +434,14 @@ def _validate_current_totals(
     rows: Sequence[Mapping[str, object]],
     *,
     expected: int | None,
+    current_period: str,
 ) -> None:
     if expected is None:
         dot_total = sum(
             int(row["participant_count"])
             for row in rows
             if row["distribution_kind"] == "DOT"
-            and row["target_period"] == "2026"
+            and row["target_period"] == current_period
         )
         expected = dot_total or None
     if expected is None:
@@ -410,7 +449,7 @@ def _validate_current_totals(
 
     totals: dict[tuple[str, str], int] = defaultdict(int)
     for row in rows:
-        if row["target_period"] != "2026" or row["distribution_kind"] == "SUMMARY":
+        if row["target_period"] != current_period or row["distribution_kind"] == "SUMMARY":
             continue
         totals[(str(row["variable_name"]), str(row["distribution_kind"]))] += int(
             row["participant_count"]
@@ -456,8 +495,8 @@ def discover_fomc_statement_urls(calendar_html: str) -> list[str]:
 
 def _preferred_action(dissent_text: str) -> tuple[str, int]:
     normalized = _clean_text(dissent_text).casefold()
-    if "preferred" not in normalized:
-        raise ValueError("FOMC dissent preference was not found")
+    if "did not support inclusion of an easing bias" in normalized:
+        return "HOLD_NO_EASING_BIAS", 0
     if "raise" in normalized or "increase" in normalized:
         direction = "HIKE"
     elif "lower" in normalized or "reduce" in normalized:
@@ -476,6 +515,78 @@ def _preferred_action(dissent_text: str) -> tuple[str, int]:
     return f"{direction}_{basis_points}", basis_points
 
 
+def _split_member_names(value: str) -> list[str]:
+    text = _clean_text(value).strip(" .;")
+    if ";" in text:
+        items = [item.strip() for item in text.split(";")]
+    else:
+        items = re.sub(r",?\s+and\s+", ", ", text).split(",")
+    names: list[str] = []
+    for item in items:
+        name = re.sub(r"^and\s+", "", item.strip(), flags=re.IGNORECASE)
+        name = re.sub(r",\s*(?:Vice Chair|Chair)$", "", name, flags=re.IGNORECASE)
+        if name:
+            names.append(name)
+    return names
+
+
+def _vote_for_names(paragraphs: Sequence[str]) -> list[str]:
+    for paragraph in paragraphs:
+        if "voting for the monetary policy action" not in paragraph.casefold():
+            continue
+        segment = re.split(
+            r"\.\s+Voting against",
+            paragraph,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0]
+        match = re.search(
+            r"Voting for the monetary policy action (?:were|was)\s+(.+)$",
+            segment,
+            flags=re.IGNORECASE,
+        )
+        if match is not None:
+            return _split_member_names(match.group(1))
+    return []
+
+
+def _parse_dissents(paragraphs: Sequence[str]) -> list[dict[str, object]]:
+    dissent_text = ""
+    for paragraph in paragraphs:
+        match = re.search(r"Voting against", paragraph, flags=re.IGNORECASE)
+        if match is not None:
+            dissent_text = paragraph[match.start() :]
+            break
+    if not dissent_text:
+        return []
+    body = re.sub(
+        r"^Voting against (?:the monetary policy action|this action) "
+        r"(?:were|was)\s+",
+        "",
+        dissent_text,
+        flags=re.IGNORECASE,
+    ).strip(" .")
+    groups = re.split(r";\s+and\s+", body, flags=re.IGNORECASE)
+    dissents: list[dict[str, object]] = []
+    for group in groups:
+        match = re.fullmatch(r"(.+?),\s+who\s+(.+)", group.strip(" ."), re.IGNORECASE)
+        if match is None:
+            raise ValueError("FOMC dissent group was not recognized")
+        names = _split_member_names(match.group(1))
+        preference_text = _clean_text(match.group(2)).strip(" .")
+        action, change_bps = _preferred_action(preference_text)
+        dissents.extend(
+            {
+                "member_name": name,
+                "preferred_action": action,
+                "change_bps": change_bps,
+                "preference_text": preference_text,
+            }
+            for name in names
+        )
+    return dissents
+
+
 def parse_fomc_policy_decision(
     html: str,
     *,
@@ -488,6 +599,11 @@ def parse_fomc_policy_decision(
 
     soup = BeautifulSoup(html, "html.parser")
     statement_text = _clean_text(soup.get_text(" "))
+    paragraphs = [
+        _clean_text(paragraph.get_text(" "))
+        for paragraph in soup.find_all("p")
+        if _clean_text(paragraph.get_text(" "))
+    ]
     target_match = re.search(
         r"target range for the federal funds rate at\s+"
         r"(\d+(?:-\d+/\d+|/\d+)?|\d+(?:\.\d+)?)\s+to\s+"
@@ -507,33 +623,15 @@ def parse_fomc_policy_decision(
         statement_text,
         flags=re.IGNORECASE,
     )
-    if vote_match is None:
-        raise ValueError("FOMC statement vote was not found")
-    vote_for = int(vote_match.group(1))
-    vote_against = int(vote_match.group(2))
-
-    dissents: list[dict[str, object]] = []
-    dissent_match = re.search(
-        r"Voting against the monetary policy action were\s+(.+?),\s+who preferred\s+(.+?)(?:\.|$)",
-        statement_text,
-        flags=re.IGNORECASE,
-    )
-    if dissent_match is not None:
-        names_text = re.sub(r",?\s+and\s+", ", ", dissent_match.group(1))
-        names = [name.strip() for name in names_text.split(",") if name.strip()]
-        action, change_bps = _preferred_action(
-            f"preferred {dissent_match.group(2)} percentage point"
-            if "percentage point" not in dissent_match.group(2).casefold()
-            else f"preferred {dissent_match.group(2)}"
-        )
-        dissents = [
-            {
-                "member_name": name,
-                "preferred_action": action,
-                "change_bps": change_bps,
-            }
-            for name in names
-        ]
+    dissents = _parse_dissents(paragraphs)
+    if vote_match is not None:
+        vote_for = int(vote_match.group(1))
+        vote_against = int(vote_match.group(2))
+    else:
+        vote_for = len(_vote_for_names(paragraphs))
+        vote_against = len(dissents)
+        if vote_for == 0:
+            raise ValueError("FOMC statement vote was not found")
     if len(dissents) != vote_against:
         raise ValueError(
             f"FOMC dissent count mismatch: {len(dissents)} != {vote_against}"
@@ -656,7 +754,11 @@ def parse_fomc_sep_distributions(
         raise ValueError("SEP exact rate-dot table was not found")
     if not any(row["variable_name"] == "core_pce" for row in rows):
         raise ValueError("SEP core PCE distribution was not found")
-    _validate_current_totals(rows, expected=_expected_participant_count(soup))
+    _validate_current_totals(
+        rows,
+        expected=_expected_participant_count(soup, release_month=release_month),
+        current_period=str(_source_date(source_url).year),
+    )
     return sorted(
         rows,
         key=lambda row: (

@@ -1,7 +1,7 @@
 # DB Schema Map
 
 Status: Active
-Last Verified: 2026-07-20
+Last Verified: 2026-08-02
 
 ## 목적
 
@@ -48,9 +48,15 @@ Last Verified: 2026-07-20
 | `macro_series_observation` | FRED macro context plus CNN Fear & Greed / AAII sentiment context series observation. VIX / yield curve / credit spread, CNN score / component score, AAII bullish / neutral / bearish / bull-bear spread를 long-form으로 저장 |
 | `market_sentiment_collection_batch` | CNN / AAII source별 수집 batch ledger. collection/source/status, app-observed UTC `observed_at`, row 수와 오류를 기록하며 한 source 실패가 다른 source transaction을 되돌리지 않게 한다 |
 | `market_sentiment_observation_snapshot` | 성공 batch에서 앱이 실제 관측한 normalized sentiment view의 immutable row snapshot. 동일 값의 반복 capture도 보존하며 legacy canonical row를 과거 PIT로 소급 생성하지 않는다 |
-| `macro_series_vintage_observation` | 경제 사이클 17개 FRED/ALFRED series의 observation별 real-time revision interval을 저장. unique key는 `(series_id, observation_date, realtime_start, source)`이고 strict as-of loader가 과거 origin 당시 값을 선택한다 |
+| `macro_series_vintage_observation` | 경제 사이클 17-series와 독립 inflation-policy 26-series FRED/ALFRED observation별 real-time revision interval, 선택 BEA PCE 구성항목과 ACM collection vintage를 저장. unique key는 `(series_id, observation_date, realtime_start, source)`이고 `released_at`이 확인된 row만 각 strict as-of loader가 선택한다 |
 | `economic_cycle_model_artifact` | 경제 사이클 model version과 학습 cutoff, horizon별 parameter/calibration/rolling-origin gate 판정을 저장. unique key는 `(model_version, trained_through)`이다 |
 | `economic_cycle_snapshot` | current/historical replay별 compact 국면 확률·근거·source date·publication status를 저장. unique key는 `(as_of_date, model_version, run_kind)`이며 계산 가능한 LIMITED 확률도 잠정 추정용으로 보존하고 계산 불가 horizon만 비운다 |
+| `fomc_sep_distribution` | release별 익명 SEP summary/histogram/rate-dot 분포. participant count만 저장하며 Core PCE 분포와 금리 dot 사이의 개인별 대응을 만들지 않는다 |
+| `fomc_policy_decision` | FOMC 회의별 target range 전후, 찬반 수, 반대자 이름과 원문에 명시된 선호 조치. 수집 범위 첫 회의의 직전 range가 없으면 `PARTIAL`로 둔다 |
+| `inflation_policy_model_artifact` | Core PCE·정책·금리 component별 학습 cutoff, schema version, parameter, validation/calibration과 publication status를 저장. 2차 엔진이 검증 뒤 사용한다 |
+| `inflation_policy_snapshot` | 하나의 `as_of_at`, model version, run kind에 대한 순방향·역산 결과와 evidence/freshness/warning을 compact JSON으로 저장. 기존 경제 사이클 snapshot을 fallback하지 않는다 |
+| `yield_resistance_definition` | 자동 산출 또는 사용자 입력 10년물 저항 zone 정의와 산출 근거를 저장. 4.7% 같은 값은 날짜·근거가 붙은 definition이지 전역 상수가 아니다 |
+| `yield_resistance_snapshot` | 저항 정의별 관측 시점의 접근·돌파 시도·확인·유지·실패 상태와 확인 근거를 저장 |
 | `sp500_monthly_valuation` | Shiller 월별 P/E 이력. month+source unique UPSERT, price/EPS/PER/CAPE/quality/source reference 저장. EPS 미발표 최신 월은 price-only `missing` row로 유지 |
 | `nasdaq100_monthly_valuation` | QQQ proxy 월별 price/reconstructed EPS/PER/earnings yield와 weighted coverage, holdings/price basis, blocked reason 저장. `(observation_month, proxy_symbol, source)` unique UPSERT |
 | `sp500_index_earnings` | S&P index EPS의 period type, As-Reported/Operating basis, actual/estimate/mixed status, source release vintage 저장 |
@@ -100,8 +106,10 @@ Phase 8 source migration closeout 기준으로 production financial statement so
 | connector metadata | provider endpoint / parser mapping cache | `etf_provider_source_map` |
 | provider snapshot | provider / DB bridge에서 온 검증용 snapshot | `etf_operability_snapshot`, `etf_holdings_snapshot`, `macro_series_observation`, `market_intraday_snapshot`, `market_event_calendar`, `futures_ohlcv`, `futures_market_monitor_run` |
 | raw vintage ledger | source의 real-time revision interval을 보존하는 PIT 원장 | `macro_series_vintage_observation` |
-| model artifact | 재현 가능한 학습 cutoff·parameter·검증·publication 판정 | `economic_cycle_model_artifact` |
-| compact materialized snapshot | 승인된 수치와 제한 사유만 UI 소비 형태로 저장 | `economic_cycle_snapshot` |
+| model artifact | 재현 가능한 학습 cutoff·parameter·검증·publication 판정 | `economic_cycle_model_artifact`, `inflation_policy_model_artifact` |
+| compact materialized snapshot | 승인된 수치와 제한 사유만 UI 소비 형태로 저장 | `economic_cycle_snapshot`, `inflation_policy_snapshot`, `yield_resistance_snapshot` |
+| policy distribution / decision ledger | 공개 시각이 붙은 익명 전망 분포와 실제 정책 의결 | `fomc_sep_distribution`, `fomc_policy_decision` |
+| user/auto analysis definition | 날짜와 근거가 붙은 재사용 분석 기준 | `yield_resistance_definition` |
 | issue tracking | 반복되는 수집 / coverage 이슈를 운영 판단용으로 누적 | `market_data_issue` |
 | raw ledger | raw source에 가까운 fact ledger | `nyse_price_history`, `nyse_financial_statement_values` |
 | filing ledger | filing 단위 metadata | `nyse_financial_statement_filings` |
