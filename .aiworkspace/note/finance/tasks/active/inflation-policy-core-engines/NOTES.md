@@ -25,3 +25,11 @@
   하나의 additive decomposition으로 중복 합산하지 않는다.
 - 10년물 `CONFIRMED/HOLD`만으로 물가 확인이 되지 않는다. breakeven, driver와 Core PCE
   재가속 posterior 상승이 결합돼야 `INFLATION_CONFIRMED`다.
+- joint simulation path는 Core PCE, 평균 남은 MoM, 정책 순이동과 instrument별 금리 path를
+  함께 보존한다. 정책 25bp와 10년물 25bp를 기계적으로 매핑하지 않고 두 rate lens의
+  calibrated weight로 10년물 path를 만든다.
+- 역산은 `REACH/BREAK/HOLD`를 만족한 path likelihood를 재정규화해 정책 횟수·연말 PCE·
+  필요 MoM 조건부분포를 반환한다. support count와 effective sample이 부족하면
+  `NOT_AVAILABLE`이며 외삽하지 않는다.
+- 다음 PCE `0.1~0.5` 시나리오는 각 path의 다음 MoM likelihood로 target posterior를
+  재가중한다. 어떤 발표치도 boolean 인상 trigger가 아니다.

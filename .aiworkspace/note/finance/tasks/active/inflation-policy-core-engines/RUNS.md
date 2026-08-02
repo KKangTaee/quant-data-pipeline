@@ -16,3 +16,7 @@
   - RED: 신규 module 부재로 5 failed, multi-lookback 동일 pivot touch 중복으로 1 failed
   - GREEN: pivot known-at, dynamic clustering/confluence, 상태 전이, 두 driver lens,
     joint inflation confirmation 6 passed; Core/Policy 포함 17 passed
+- 2026-08-02: `tests/test_inflation_policy_simulation.py`
+  - RED: 신규 module 부재로 5 failed, conditional float exact assertion 1 failed
+  - GREEN: two-lens rate path, weighted target probability, reverse conditional distribution,
+    sparse support fail-closed, next-PCE likelihood reweight 5 passed; 전체 domain 22 passed
