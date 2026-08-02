@@ -33,3 +33,10 @@
   artifact, AUTO/USER 저항 정의, 저항 snapshot은 각 schema business key로만 UPSERT한다.
 - 새 loader/store는 `economic_cycle_snapshot`과 `economic_cycle_model_artifact`를 import,
   query, fallback 하지 않는다.
+- raw refresh의 필수 source는 macro vintages, SEP, FOMC decisions이고, macro 내부 필수
+  series는 `PCEPILFE`, `DGS2`, `DGS10`, `DFII10`, `T10YIE`다. 필수 gap이면
+  `materialization_allowed=false`; ACM/BEA detail 제한만 있으면 `partial_success`다.
+- BEA current API table도 수집 이전 공개시각을 복원하지 않는다. 현재 collection instant를
+  release origin으로 저장하며, `BEA_API_KEY`가 없으면 breadth만 `NOT_AVAILABLE`이다.
+- scheduler는 weekday 24시간 cadence로 `safe/standard/broad`에만 등록했다.
+  `browser_safe`에는 포함하지 않았고 새 run/status UI panel은 추가하지 않았다.

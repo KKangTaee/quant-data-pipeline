@@ -165,3 +165,37 @@ def test_bea_component_store_uses_shared_vintage_table(monkeypatch) -> None:
 
     assert result == {"status": "success", "stored": 12, "source": "bea_nipa_t20804"}
     assert ("bea_nipa_t20804", db) in calls
+
+
+def test_bea_current_collection_uses_actual_collection_time(monkeypatch) -> None:
+    bea_module = importlib.import_module("finance.data.bea_pce_components")
+    captured: list[dict[str, object]] = []
+    monkeypatch.setattr(bea_module, "sync_table_schema", lambda *_args: None)
+    monkeypatch.setattr(
+        bea_module,
+        "upsert_fred_vintage_rows",
+        lambda rows, *, db: captured.extend(rows) or len(rows),
+    )
+
+    class DB:
+        def use_db(self, _name: str) -> None:
+            pass
+
+        def execute(self, _sql: str) -> None:
+            pass
+
+        def close(self) -> None:
+            pass
+
+    result = bea_module.collect_and_store_bea_pce_components(
+        api_key="test-key",
+        collected_at="2026-08-02T03:15:00+00:00",
+        payload_fetcher=lambda _key: _bea_payload(),
+        db_factory=lambda *_args: DB(),
+    )
+
+    assert result["status"] == "success"
+    assert result["stored"] == 12
+    assert {row["released_at"] for row in captured} == {
+        "2026-08-02T03:15:00+00:00"
+    }

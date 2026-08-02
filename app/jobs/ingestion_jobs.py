@@ -15,6 +15,7 @@ from app.jobs.ingestion.common import (
     parse_symbols,
     split_valid_invalid_symbols,
 )
+from app.jobs.inflation_policy_refresh import run_inflation_policy_raw_refresh
 from typing import Any, Callable, Iterable, Mapping
 
 from finance.data.data import store_ohlcv_to_mysql
@@ -250,6 +251,62 @@ def run_collect_economic_cycle_vintages(
                 "source_mode": "fred_output_type_1_realtime_intervals",
                 "target_table": "finance_meta.macro_series_vintage_observation",
             },
+        )
+
+
+def run_collect_inflation_policy_raw_context(
+    *,
+    as_of_at: str | None = None,
+) -> JobResult:
+    """Refresh official inflation-policy inputs without materializing a forecast."""
+
+    job_name = "collect_inflation_policy_raw_context"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        summary = run_inflation_policy_raw_refresh(as_of_at=as_of_at)
+        status = str(summary.get("status") or "failed")
+        rows_written = int(summary.get("rows_written") or 0)
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=5,
+            symbols_processed=(
+                5 - len(summary.get("failed_sources") or [])
+                if status in {"success", "partial_success"}
+                else 0
+            ),
+            failed_symbols=list(summary.get("failed_sources") or []),
+            message=(
+                "Inflation-policy raw context refresh completed."
+                if status == "success"
+                else "Inflation-policy raw context refresh completed with source limits."
+                if status == "partial_success"
+                else "Inflation-policy raw context refresh failed required source gates."
+            ),
+            details={
+                **summary,
+                "target_tables": [
+                    "finance_meta.macro_series_vintage_observation",
+                    "finance_meta.fomc_sep_distribution",
+                    "finance_meta.fomc_policy_decision",
+                ],
+            },
+        )
+    except Exception as exc:
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"Inflation-policy raw context refresh failed: {exc}",
+            details={"as_of_at": as_of_at, "materialization_allowed": False},
         )
 
 

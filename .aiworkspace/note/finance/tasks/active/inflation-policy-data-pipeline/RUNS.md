@@ -23,6 +23,13 @@
   - GREEN: cutoff, latest vintage, ACM limitation, finite JSON, UPSERT, snapshot 6 passed
 - 2026-08-02: strict loader/store focused regression 및 compile
   - Result: 28 passed, `py_compile` passed, `economic_cycle` reference 0건
+- 2026-08-02: `.venv/bin/python -m pytest tests/test_inflation_policy_refresh.py -q`
+  - RED: refresh module/wrapper/scheduler 부재로 6 failed
+  - GREEN: required gate, optional limit, macro coverage, scheduler, wrapper, CLI 6 passed
+- 2026-08-02: ingestion/scheduler regression
+  - Result: 관련 31 passed, third-party `edgar` deprecation warning 3개
+- 2026-08-02: BEA/refresh/loader focused compile gate
+  - Result: 18 passed, `py_compile` 및 `git diff --check` passed
 - 2026-08-02: `.venv/bin/python -m pytest tests/test_fred_vintages.py -q`
   - RED: module 부재로 7 failed
   - GREEN: release clock, pagination, normalization, UPSERT 7 passed

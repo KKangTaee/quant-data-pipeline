@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 from datetime import date, datetime, timezone
 from statistics import median
 from typing import Callable, Mapping, Sequence
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 from .db.mysql import MySQLClient
 from .db.schema import PROVIDER_SCHEMAS, sync_table_schema
@@ -19,6 +22,7 @@ BEA_SOURCE = "bea_nipa_t20804"
 BEA_SOURCE_REF = "https://apps.bea.gov/api/data/?datasetname=NIPA&TableName=T20804"
 REQUIRED_AGGREGATE_ROLES = ("headline", "goods", "services", "core")
 DB_META = "finance_meta"
+BEA_API_URL = "https://apps.bea.gov/api/data"
 
 
 def _parse_datetime(value: str, *, field: str) -> datetime:
@@ -171,6 +175,59 @@ def store_bea_pce_components(
     finally:
         db.close()
     return {"status": "success", "stored": stored, "source": BEA_SOURCE}
+
+
+def fetch_bea_pce_components(api_key: str) -> Mapping[str, object]:
+    """Fetch the current official monthly T20804 table from the BEA API."""
+
+    key = str(api_key or "").strip()
+    if not key:
+        raise ValueError("BEA_API_KEY is required")
+    params = {
+        "UserID": key,
+        "method": "GetData",
+        "datasetname": "NIPA",
+        "TableName": BEA_TABLE_NAME,
+        "Frequency": "M",
+        "Year": "X",
+        "ResultFormat": "JSON",
+    }
+    request = Request(
+        f"{BEA_API_URL}?{urlencode(params)}",
+        headers={"User-Agent": "quant-data-pipeline/1.0 research@example.com"},
+    )
+    with urlopen(request, timeout=60) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    if not isinstance(payload, Mapping):
+        raise ValueError("BEA response must be a JSON object")
+    return payload
+
+
+def collect_and_store_bea_pce_components(
+    *,
+    api_key: str | None = None,
+    collected_at: str | None = None,
+    payload_fetcher: Callable[[str], Mapping[str, object]] = fetch_bea_pce_components,
+    db_factory: Callable[..., object] = MySQLClient,
+) -> dict[str, object]:
+    """Store the current BEA table only from the instant it was collected."""
+
+    resolved_key = str(api_key or os.environ.get("BEA_API_KEY") or "").strip()
+    if not resolved_key:
+        return {
+            "status": "not_available",
+            "stored": 0,
+            "source": BEA_SOURCE,
+            "reason": "BEA_API_KEY missing",
+        }
+    observed = collected_at or datetime.now(timezone.utc).isoformat()
+    payload = payload_fetcher(resolved_key)
+    return store_bea_pce_components(
+        payload,
+        released_at=observed,
+        collected_at=observed,
+        db_factory=db_factory,
+    )
 
 
 def calculate_component_breadth(

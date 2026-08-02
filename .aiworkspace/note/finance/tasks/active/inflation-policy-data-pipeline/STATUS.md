@@ -11,9 +11,10 @@ State: active
 - Task 5/9: FOMC 정책 결정·표결·반대 방향 parser와 chronology 수집 완료
 - Task 6/9: New York Fed ACMTP10 현재 workbook 빈티지 수집 완료
 - Task 7/9: strict as-of DB bundle과 검증형 결과 저장소 구현 완료
+- Task 8/9: backend raw refresh gate·ingestion wrapper·weekday scheduler 구현 완료
 - Baseline `tests/test_economic_cycle_vintages.py`: 27 passed
 - Focused regression gate: 93 passed, dependency deprecation warning 3개
 
 ## Next
 
-Task 8의 backend refresh orchestration과 automation 등록을 구현한다.
+Task 9의 실제 source/PIT smoke, durable doc 정렬, 데이터 task closeout을 수행한다.
