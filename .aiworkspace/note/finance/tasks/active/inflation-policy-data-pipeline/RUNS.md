@@ -8,3 +8,8 @@
   - GREEN: 30 passed
 - 2026-08-02: `git diff --check`
   - Result: passed
+- 2026-08-02: `.venv/bin/python -m pytest tests/test_fred_vintages.py -q`
+  - RED: module 부재로 7 failed
+  - GREEN: release clock, pagination, normalization, UPSERT 7 passed
+- 2026-08-02: `.venv/bin/python -m pytest tests/test_fred_vintages.py tests/test_economic_cycle_vintages.py tests/test_economic_cycle_refresh.py -q`
+  - Result: 41 passed, dependency deprecation warning 3개

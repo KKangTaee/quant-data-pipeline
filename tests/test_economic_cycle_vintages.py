@@ -295,7 +295,10 @@ def test_urllib_failure_does_not_expose_provider_reason_or_api_key() -> None:
     secret = "sensitive-test-key"
     reason = f"https://provider.test/failure?api_key={secret}"
 
-    with patch.object(module, "urlopen", side_effect=URLError(reason)):
+    with patch(
+        "finance.data.fred_vintages.urlopen",
+        side_effect=URLError(reason),
+    ):
         try:
             module.fetch_fred_vintage_dates(
                 "PAYEMS",
