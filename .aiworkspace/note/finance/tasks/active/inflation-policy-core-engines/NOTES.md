@@ -18,3 +18,10 @@
   committee marginal로만 쓴다. 임의 hawkish score로 압축하지 않는다.
 - 경제 component는 versioned state-to-policy reaction matrix를 요구하므로 충격성 재가속도
   100% 인상 boolean이 되지 않는다. missing optional market prior는 제외 후 재정규화한다.
+- 저항 기준은 strict pivot high가 오른쪽 확인 window를 채운 `known_at` 이후에만 사용한다.
+  63/252/504일에서 반복 발견된 같은 pivot은 confluence는 3개지만 touch는 1회다.
+- zone tolerance는 `max(5bp, 최근 63일 절대 일간변화 중앙값)`이며 값 자체를 고정하지 않는다.
+- 명목 10년물은 `실질+breakeven` lens와 `2년 정책 proxy/ACM` lens를 분리한다. 두 lens를
+  하나의 additive decomposition으로 중복 합산하지 않는다.
+- 10년물 `CONFIRMED/HOLD`만으로 물가 확인이 되지 않는다. breakeven, driver와 Core PCE
+  재가속 posterior 상승이 결합돼야 `INFLATION_CONFIRMED`다.

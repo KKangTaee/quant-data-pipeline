@@ -12,3 +12,7 @@
   - RED: 신규 module 부재로 5 failed, compact target bin contract 불일치로 1 failed
   - GREEN: SEP marginal, vote direction, reaction matrix, optional prior 재정규화,
     component weight cap, net-move/target-bin consistency 5 passed; Core 포함 11 passed
+- 2026-08-02: `tests/test_yield_resistance.py`
+  - RED: 신규 module 부재로 5 failed, multi-lookback 동일 pivot touch 중복으로 1 failed
+  - GREEN: pivot known-at, dynamic clustering/confluence, 상태 전이, 두 driver lens,
+    joint inflation confirmation 6 passed; Core/Policy 포함 17 passed
