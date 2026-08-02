@@ -226,3 +226,64 @@ describe("forward inflation policy decision flow", () => {
     expect(screen.getByText("실질금리·성장 주도")).toBeInTheDocument();
   });
 });
+
+describe("reverse target and saved criterion workflow", () => {
+  it("submits a conditional target instead of a required hike scalar", async () => {
+    const onCommand = vi.fn();
+    render(<InflationPolicyWorkbench payload={readyPayload()} onCommand={onCommand} />);
+
+    await userEvent.selectOptions(screen.getByLabelText("금리 종류"), "DGS10");
+    await userEvent.clear(screen.getByLabelText("구간 하단"));
+    await userEvent.type(screen.getByLabelText("구간 하단"), "4.68");
+    await userEvent.clear(screen.getByLabelText("구간 상단"));
+    await userEvent.type(screen.getByLabelText("구간 상단"), "4.75");
+    await userEvent.click(screen.getByRole("button", { name: "필요 경로 역산" }));
+
+    expect(onCommand.mock.calls[0][0].id).toBe("run_reverse_scenario");
+    expect(onCommand.mock.calls[0][0].payload).toMatchObject({
+      instrument: "DGS10",
+      zone_lower_pct: 4.68,
+      zone_upper_pct: 4.75,
+      condition: "CONFIRMED",
+    });
+    expect(onCommand.mock.calls[0][0].payload).not.toHaveProperty("required_hike_count");
+  });
+
+  it("disables reverse submission when target bounds are invalid", async () => {
+    render(<InflationPolicyWorkbench payload={readyPayload()} onCommand={vi.fn()} />);
+
+    await userEvent.clear(screen.getByLabelText("구간 하단"));
+    await userEvent.type(screen.getByLabelText("구간 하단"), "5.10");
+    await userEvent.clear(screen.getByLabelText("구간 상단"));
+    await userEvent.type(screen.getByLabelText("구간 상단"), "4.70");
+
+    expect(screen.getByRole("button", { name: "필요 경로 역산" })).toBeDisabled();
+    expect(screen.getByText("구간 하단은 상단보다 낮아야 합니다.")).toBeInTheDocument();
+  });
+
+  it("copies an automatic zone into a separately owned user definition", async () => {
+    const onCommand = vi.fn();
+    render(<InflationPolicyWorkbench payload={readyPayload()} onCommand={onCommand} />);
+
+    expect(screen.queryByRole("button", { name: "자동 기준 수정" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "사용자 기준으로 복사" }));
+    await userEvent.clear(screen.getByLabelText("기준 이름"));
+    await userEvent.type(screen.getByLabelText("기준 이름"), "내 장기금리 기준");
+    await userEvent.click(screen.getByRole("button", { name: "사용자 기준 저장" }));
+
+    expect(onCommand.mock.calls[0][0].id).toBe("save_yield_criterion");
+    expect(onCommand.mock.calls[0][0].payload).toMatchObject({
+      owner: "USER",
+      definition_name: "내 장기금리 기준",
+      instrument: "DGS10",
+    });
+  });
+
+  it("shows an unavailable reverse reason without inventing a required path", () => {
+    render(<InflationPolicyWorkbench payload={readyPayload()} onCommand={vi.fn()} />);
+
+    expect(screen.getByText("공동 경로 검증 전")).toBeInTheDocument();
+    expect(screen.getByText(/구간을 넓히거나 horizon을 늘린 뒤/)).toBeInTheDocument();
+    expect(screen.queryByText(/필요 인상 횟수: [0-9]/)).not.toBeInTheDocument();
+  });
+});

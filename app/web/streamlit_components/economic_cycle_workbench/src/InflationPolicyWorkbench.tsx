@@ -1,9 +1,10 @@
 import InflationStatePanel from "./InflationStatePanel";
 import PolicyPathPanel from "./PolicyPathPanel";
+import ReverseScenarioPanel from "./ReverseScenarioPanel";
 import YieldResistancePanel from "./YieldResistancePanel";
 import type { InflationPolicyWorkbenchProps } from "./inflationPolicyTypes";
 
-function InflationPolicyWorkbench({ payload }: InflationPolicyWorkbenchProps) {
+function InflationPolicyWorkbench({ payload, onCommand }: InflationPolicyWorkbenchProps) {
   const showProbabilities = payload.publication_status === "READY";
   const q4 = payload.inflation.q4_quantiles_pct;
   const dominantState = [...payload.inflation.state_rows]
@@ -37,6 +38,7 @@ function InflationPolicyWorkbench({ payload }: InflationPolicyWorkbenchProps) {
       <InflationStatePanel inflation={payload.inflation} showProbabilities={showProbabilities} />
       <PolicyPathPanel policy={payload.policy} showProbabilities={showProbabilities} />
       <YieldResistancePanel rates={payload.rates} />
+      <ReverseScenarioPanel payload={payload} onCommand={onCommand} />
     </main>
   );
 }
