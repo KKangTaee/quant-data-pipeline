@@ -18,6 +18,11 @@
   - GREEN: discovery, no-forward-fill normalization, `LIMITED` collector 3 passed
 - 2026-08-02: 공식 `ACMTermPremium.xls` live normalization smoke
   - Result: `ACM Daily` 최신 관측 2026-07-30, `ACMTP10` 정상화 성공
+- 2026-08-02: `.venv/bin/python -m pytest tests/test_inflation_policy_loaders.py -q`
+  - RED: loader/store module 부재로 6 failed
+  - GREEN: cutoff, latest vintage, ACM limitation, finite JSON, UPSERT, snapshot 6 passed
+- 2026-08-02: strict loader/store focused regression 및 compile
+  - Result: 28 passed, `py_compile` passed, `economic_cycle` reference 0건
 - 2026-08-02: `.venv/bin/python -m pytest tests/test_fred_vintages.py -q`
   - RED: module 부재로 7 failed
   - GREEN: release clock, pagination, normalization, UPSERT 7 passed

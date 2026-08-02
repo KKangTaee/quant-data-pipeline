@@ -1,0 +1,358 @@
+"""Strict DB-only point-in-time readers for inflation, policy, and yield paths."""
+
+from __future__ import annotations
+
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass
+from datetime import date, datetime, time, timezone
+from typing import Any
+
+from finance.data.db.mysql import MySQLClient
+from finance.inflation_policy_catalog import get_inflation_policy_catalog
+
+
+DB_META = "finance_meta"
+QueryFn = Callable[[str, str, tuple[Any, ...]], list[dict[str, Any]]]
+
+
+@dataclass(frozen=True)
+class InflationPolicyDataBundle:
+    as_of_at: str
+    macro_rows: tuple[dict[str, object], ...]
+    sep_rows: tuple[dict[str, object], ...]
+    decision_rows: tuple[dict[str, object], ...]
+    term_premium_rows: tuple[dict[str, object], ...]
+    coverage: dict[str, object]
+
+
+def _datetime_value(value: object, *, field: str) -> datetime:
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, date):
+        parsed = datetime.combine(value, time.min)
+    else:
+        try:
+            parsed = datetime.fromisoformat(
+                str(value).strip().replace("Z", "+00:00")
+            )
+        except ValueError as exc:
+            raise ValueError(f"Invalid {field}: {value!r}") from exc
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _date_value(value: object, *, field: str) -> date:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(str(value).strip()[:10])
+    except ValueError as exc:
+        raise ValueError(f"Invalid {field}: {value!r}") from exc
+
+
+def _sql_datetime(value: datetime) -> str:
+    return value.astimezone(timezone.utc).replace(tzinfo=None).strftime(
+        "%Y-%m-%d %H:%M:%S.%f"
+    )
+
+
+def _query(
+    database: str,
+    sql: str,
+    params: tuple[Any, ...],
+    *,
+    query_fn: QueryFn | None,
+) -> list[dict[str, Any]]:
+    if query_fn is not None:
+        return list(query_fn(database, sql, params))
+    db = MySQLClient("localhost", "root", "1234", 3306)
+    try:
+        db.use_db(database)
+        return db.query(sql, params)
+    except Exception as exc:
+        message = str(exc).casefold()
+        if ("doesn't exist" in message or "unknown table" in message) and any(
+            table in message
+            for table in (
+                "macro_series_vintage_observation",
+                "fomc_sep_distribution",
+                "fomc_policy_decision",
+                "inflation_policy_snapshot",
+            )
+        ):
+            return []
+        raise
+    finally:
+        db.close()
+
+
+def _release_eligible(row: Mapping[str, object], *, as_of: datetime) -> bool:
+    released_at = row.get("released_at")
+    if released_at in (None, ""):
+        return False
+    try:
+        return _datetime_value(released_at, field="released_at") <= as_of
+    except ValueError:
+        return False
+
+
+def _sort_timestamp(value: object) -> datetime:
+    if value in (None, ""):
+        return datetime.min.replace(tzinfo=timezone.utc)
+    try:
+        return _datetime_value(value, field="timestamp")
+    except ValueError:
+        return datetime.min.replace(tzinfo=timezone.utc)
+
+
+def _latest_vintages(
+    rows: Iterable[Mapping[str, object]],
+    *,
+    as_of: datetime,
+    history_start: date,
+    allowed_series: set[str] | None = None,
+    allow_component_group: bool = False,
+) -> tuple[dict[str, object], ...]:
+    latest: dict[tuple[str, date], dict[str, object]] = {}
+    for raw in rows:
+        row = dict(raw)
+        series_id = str(row.get("series_id") or "").strip().upper()
+        is_component = (
+            allow_component_group
+            and str(row.get("factor_group") or "") == "inflation_pce_component"
+        )
+        if not series_id or (
+            allowed_series is not None
+            and series_id not in allowed_series
+            and not is_component
+        ):
+            continue
+        try:
+            observation = _date_value(
+                row.get("observation_date"), field="observation_date"
+            )
+        except ValueError:
+            continue
+        if not history_start <= observation <= as_of.date():
+            continue
+        if not _release_eligible(row, as_of=as_of):
+            continue
+        key = (series_id, observation)
+        candidate_key = (
+            _sort_timestamp(row.get("released_at")),
+            _sort_timestamp(row.get("realtime_start")),
+            _sort_timestamp(row.get("collected_at")),
+            _sort_timestamp(row.get("updated_at")),
+        )
+        current = latest.get(key)
+        if current is None:
+            latest[key] = row
+            continue
+        current_key = (
+            _sort_timestamp(current.get("released_at")),
+            _sort_timestamp(current.get("realtime_start")),
+            _sort_timestamp(current.get("collected_at")),
+            _sort_timestamp(current.get("updated_at")),
+        )
+        if candidate_key > current_key:
+            latest[key] = row
+    return tuple(
+        latest[key]
+        for key in sorted(latest, key=lambda item: (item[0], item[1]))
+    )
+
+
+def _released_rows(
+    rows: Iterable[Mapping[str, object]],
+    *,
+    as_of: datetime,
+    date_field: str,
+) -> tuple[dict[str, object], ...]:
+    eligible: list[dict[str, object]] = []
+    for raw in rows:
+        row = dict(raw)
+        if not _release_eligible(row, as_of=as_of):
+            continue
+        eligible.append(row)
+    return tuple(
+        sorted(
+            eligible,
+            key=lambda row: (
+                str(row.get(date_field) or ""),
+                _sort_timestamp(row.get("released_at")),
+                str(row.get("variable_name") or ""),
+                str(row.get("bin_label") or ""),
+            ),
+        )
+    )
+
+
+def load_inflation_policy_data_bundle(
+    *,
+    as_of_at: str | datetime,
+    history_start: str | date,
+    query_fn: QueryFn | None = None,
+) -> InflationPolicyDataBundle:
+    """Load only versions actually released by one forecast origin."""
+
+    as_of = _datetime_value(as_of_at, field="as_of_at")
+    start = _date_value(history_start, field="history_start")
+    if start > as_of.date():
+        raise ValueError("history_start cannot be after as_of_at")
+    catalog_ids = tuple(spec.series_id for spec in get_inflation_policy_catalog())
+    placeholders = ",".join(["%s"] * len(catalog_ids))
+    as_of_sql = _sql_datetime(as_of)
+
+    macro_sql = f"""
+    WITH eligible_versions AS (
+      SELECT source_rows.*,
+             ROW_NUMBER() OVER (
+               PARTITION BY series_id, observation_date
+               ORDER BY released_at DESC, realtime_start DESC,
+                        collected_at DESC, updated_at DESC
+             ) AS version_rank
+      FROM macro_series_vintage_observation source_rows
+      WHERE (series_id IN ({placeholders})
+             OR factor_group = 'inflation_pce_component')
+        AND observation_date >= %s
+        AND observation_date <= %s
+        AND released_at IS NOT NULL
+        AND released_at <= %s
+    )
+    SELECT * FROM eligible_versions
+    WHERE version_rank = 1
+    ORDER BY series_id, observation_date
+    """
+    macro_raw = _query(
+        DB_META,
+        macro_sql,
+        (*catalog_ids, start.isoformat(), as_of.date().isoformat(), as_of_sql),
+        query_fn=query_fn,
+    )
+    macro_rows = _latest_vintages(
+        macro_raw,
+        as_of=as_of,
+        history_start=start,
+        allowed_series=set(catalog_ids),
+        allow_component_group=True,
+    )
+
+    sep_sql = """
+    SELECT * FROM fomc_sep_distribution
+    WHERE released_at IS NOT NULL
+      AND released_at <= %s
+    ORDER BY released_at, target_period, variable_name, distribution_kind, bin_label
+    """
+    sep_rows = _released_rows(
+        _query(DB_META, sep_sql, (as_of_sql,), query_fn=query_fn),
+        as_of=as_of,
+        date_field="released_at",
+    )
+
+    decision_sql = """
+    SELECT * FROM fomc_policy_decision
+    WHERE released_at IS NOT NULL
+      AND released_at <= %s
+    ORDER BY meeting_date, released_at
+    """
+    decision_rows = _released_rows(
+        _query(DB_META, decision_sql, (as_of_sql,), query_fn=query_fn),
+        as_of=as_of,
+        date_field="meeting_date",
+    )
+
+    term_sql = """
+    WITH eligible_versions AS (
+      SELECT source_rows.*,
+             ROW_NUMBER() OVER (
+               PARTITION BY series_id, observation_date
+               ORDER BY released_at DESC, realtime_start DESC,
+                        collected_at DESC, updated_at DESC
+             ) AS version_rank
+      FROM macro_series_vintage_observation source_rows
+      WHERE series_id = 'ACMTP10'
+        AND observation_date >= %s
+        AND observation_date <= %s
+        AND released_at IS NOT NULL
+        AND released_at <= %s
+    )
+    SELECT * FROM eligible_versions
+    WHERE version_rank = 1
+    ORDER BY observation_date
+    """
+    term_rows = _latest_vintages(
+        _query(
+            DB_META,
+            term_sql,
+            (start.isoformat(), as_of.date().isoformat(), as_of_sql),
+            query_fn=query_fn,
+        ),
+        as_of=as_of,
+        history_start=start,
+        allowed_series={"ACMTP10"},
+    )
+
+    present_series = sorted(
+        {
+            str(row.get("series_id") or "").strip().upper()
+            for row in macro_rows
+            if row.get("series_id")
+        }
+    )
+    coverage: dict[str, object] = {
+        "catalog_series_requested": len(catalog_ids),
+        "catalog_series_present": present_series,
+        "catalog_series_missing": sorted(set(catalog_ids) - set(present_series)),
+        "sep_status": "READY" if sep_rows else "NOT_AVAILABLE",
+        "decision_status": "READY" if decision_rows else "NOT_AVAILABLE",
+        # Current ACM workbooks revise history, so availability does not remove
+        # the historical-replay limitation recorded by the collector.
+        "term_premium_status": "LIMITED" if term_rows else "NOT_AVAILABLE",
+    }
+    return InflationPolicyDataBundle(
+        as_of_at=as_of.isoformat(),
+        macro_rows=macro_rows,
+        sep_rows=sep_rows,
+        decision_rows=decision_rows,
+        term_premium_rows=term_rows,
+        coverage=coverage,
+    )
+
+
+def load_latest_inflation_policy_snapshot(
+    *,
+    as_of_at: str | datetime | None = None,
+    query_fn: QueryFn | None = None,
+) -> dict[str, object] | None:
+    """Return the latest persisted snapshot no later than the requested time."""
+
+    as_of = _datetime_value(
+        as_of_at or datetime.now(timezone.utc), field="as_of_at"
+    )
+    sql = """
+    SELECT * FROM inflation_policy_snapshot
+    WHERE as_of_at <= %s
+    ORDER BY as_of_at DESC, updated_at DESC
+    """
+    rows = _query(DB_META, sql, (_sql_datetime(as_of),), query_fn=query_fn)
+    eligible: list[dict[str, object]] = []
+    for raw in rows:
+        row = dict(raw)
+        try:
+            row_as_of = _datetime_value(row.get("as_of_at"), field="as_of_at")
+        except ValueError:
+            continue
+        if row_as_of <= as_of:
+            eligible.append(row)
+    if not eligible:
+        return None
+    return max(
+        eligible,
+        key=lambda row: (
+            _sort_timestamp(row.get("as_of_at")),
+            _sort_timestamp(row.get("updated_at")),
+        ),
+    )

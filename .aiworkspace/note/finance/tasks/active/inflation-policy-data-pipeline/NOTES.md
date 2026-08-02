@@ -26,3 +26,10 @@
   소급하지 않는다. 모든 행은 실제 `collected_at`을 release/realtime origin으로 갖는다.
 - ACM은 기간 프리미엄을 분해하는 보조 추정치이며 New York Fed/FOMC의 공식 전망값이
   아니다. 충분한 자체 수집 빈티지가 쌓일 때까지 replay coverage는 `LIMITED`다.
+- strict loader의 모든 raw SQL은 `released_at IS NOT NULL AND released_at <= as_of_at`을
+  요구한다. 같은 series/observation에서는 release, realtime start, collection 순으로
+  최신 eligible vintage를 선택하며 `realtime_start` fallback은 허용하지 않는다.
+- 결과 저장소는 JSON과 수치의 finite 여부를 DB 연결 전에 검증한다. snapshot, model
+  artifact, AUTO/USER 저항 정의, 저항 snapshot은 각 schema business key로만 UPSERT한다.
+- 새 loader/store는 `economic_cycle_snapshot`과 `economic_cycle_model_artifact`를 import,
+  query, fallback 하지 않는다.
