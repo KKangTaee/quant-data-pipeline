@@ -21,3 +21,8 @@
   검증했다. 임의의 hawkish/dovish 점수는 만들지 않는다.
 - 정책 이력은 날짜 오름차순으로 파싱해 직전 range를 연결한다. 수집 범위의 첫 회의처럼
   과거 결정이 없으면 미래 값으로 채우지 않고 `PARTIAL`로 둔다.
+- New York Fed ACM workbook의 `ACM Daily.DATE`와 `ACMTP10`을 사용한다. 모델이 월별로
+  재추정되어 과거 값도 바뀔 수 있으므로 workbook의 과거 행을 과거 공개 빈티지로
+  소급하지 않는다. 모든 행은 실제 `collected_at`을 release/realtime origin으로 갖는다.
+- ACM은 기간 프리미엄을 분해하는 보조 추정치이며 New York Fed/FOMC의 공식 전망값이
+  아니다. 충분한 자체 수집 빈티지가 쌓일 때까지 replay coverage는 `LIMITED`다.

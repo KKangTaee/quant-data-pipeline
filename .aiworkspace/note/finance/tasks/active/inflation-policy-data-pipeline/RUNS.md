@@ -13,6 +13,11 @@
   - GREEN: SEP와 결정 chronology 통합 9 passed
 - 2026-08-02: 공식 `monetary20260729a.htm` live parser smoke
   - Result: 3.50-3.75%, 9-3, `HIKE_25` 반대 3명, `READY`
+- 2026-08-02: `.venv/bin/python -m pytest tests/test_nyfed_term_premium.py -q`
+  - RED: ACM collector module 부재로 3 failed
+  - GREEN: discovery, no-forward-fill normalization, `LIMITED` collector 3 passed
+- 2026-08-02: 공식 `ACMTermPremium.xls` live normalization smoke
+  - Result: `ACM Daily` 최신 관측 2026-07-30, `ACMTP10` 정상화 성공
 - 2026-08-02: `.venv/bin/python -m pytest tests/test_fred_vintages.py -q`
   - RED: module 부재로 7 failed
   - GREEN: release clock, pagination, normalization, UPSERT 7 passed
