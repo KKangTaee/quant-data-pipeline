@@ -17,3 +17,10 @@
   - RED: 독립 catalog와 BEA component module 부재로 6 failed
 - 2026-08-02: `.venv/bin/python -m pytest tests/test_inflation_policy_catalog.py tests/test_fred_vintages.py tests/test_bea_pce_components.py tests/test_economic_cycle_vintages.py -q`
   - Result: 42 passed
+- 2026-08-02: `.venv/bin/python -m pytest tests/test_fomc_policy_data.py -q`
+  - RED: SEP module/collector 부재와 불일치 fixture target 오류 확인
+  - GREEN: 익명 분포, participant 합계, URL discovery, UPSERT, 수집 경계 6 passed
+- 2026-08-02: `.venv/bin/python -m pytest tests/test_fomc_policy_data.py tests/test_inflation_policy_schema.py tests/test_fred_vintages.py tests/test_economic_cycle_vintages.py tests/test_sp500_valuation.py -q`
+  - Result: 93 passed, third-party `edgar` deprecation warning 3개
+- 2026-08-02: `git diff --check`
+  - Result: passed

@@ -11,3 +11,8 @@
 - BEA NIPA `T20804` index level은 저장된 release 안에서 전월 index와 비교해 breadth를
   계산한다. 필수 headline/goods/services/core가 없거나 2개월 history가 없으면
   `NOT_AVAILABLE`이다.
+- SEP parser는 공식 accessible HTML의 제목을 기준으로 Table 1, Figure 2, Figure 3을
+  구분한다. 2026년 6월 익명 집계에서 rate dots 합계 18명과 Core PCE `3.5-3.6` 4명을
+  검증하되, 두 분포 사이의 개인별 연결은 생성하지 않는다.
+- SEP 공개 시각은 페이지의 공식 `For release at` 문구를 미국 동부시간으로 해석하고,
+  URL 날짜와 다르면 저장하지 않는다.
