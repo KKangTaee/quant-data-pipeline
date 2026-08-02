@@ -303,3 +303,182 @@ def test_equity_model_that_does_not_beat_baseline_is_limited() -> None:
     assert artifact.validation_metrics["index_mae"] >= artifact.validation_metrics[
         "baseline_index_mae"
     ]
+
+
+def _ready_equity_artifact(*, status: str = "READY"):
+    from finance.inflation_policy_equity_stress import EquityStressArtifact
+
+    return EquityStressArtifact(
+        model_version="equity-stress-test-v1",
+        eps_response={
+            "intercept": 0.0,
+            "measured_next_year_eps_revision_pct": 0.4,
+            "months_to_year_end": 0.0,
+            "policy_repricing_bp": -0.01,
+            "dgs10_change_bp": 0.0,
+            "real_yield_change_bp": -0.01,
+            "breakeven_change_bp": 0.0,
+        },
+        multiple_response={
+            "intercept": -2.0,
+            "measured_next_year_eps_revision_pct": 0.0,
+            "months_to_year_end": 0.0,
+            "policy_repricing_bp": -0.005,
+            "dgs10_change_bp": -0.03,
+            "real_yield_change_bp": -0.04,
+            "breakeven_change_bp": 0.01,
+        },
+        joint_residuals=((-0.5, -1.0), (0.0, 0.0), (0.5, 1.0)),
+        validation_metrics={
+            "origin_count": 84.0,
+            "index_mae": 1.2,
+            "baseline_index_mae": 2.0,
+            "validation_scheme": "rolling_origin",
+        },
+        trained_through="2025-12-31",
+        publication_status=status,
+        reason_codes=(),
+        latest_measured_next_year_eps_revision_pct=2.5,
+        scenario_feature_values={
+            "months_to_year_end": 5.0,
+            "dgs10_pct": 4.4,
+            "real_yield_10y_pct": 2.0,
+            "breakeven_10y_pct": 2.4,
+        },
+    )
+
+
+def _forward_paths():
+    from finance.inflation_policy_simulation import SimulationPath
+
+    return (
+        SimulationPath(
+            path_id="mild",
+            weight=0.25,
+            q4_core_pce_pct=3.2,
+            remaining_monthly_mom_pct=(0.2, 0.2),
+            policy_net_steps=0,
+            year_end_policy_midpoint_pct=3.875,
+            rate_paths_pct={
+                "DGS10": (4.4, 4.45),
+                "DFII10": (2.0, 2.05),
+                "T10YIE": (2.4, 2.4),
+            },
+        ),
+        SimulationPath(
+            path_id="central",
+            weight=0.50,
+            q4_core_pce_pct=3.5,
+            remaining_monthly_mom_pct=(0.3, 0.3),
+            policy_net_steps=1,
+            year_end_policy_midpoint_pct=4.125,
+            rate_paths_pct={
+                "DGS10": (4.4, 4.7),
+                "DFII10": (2.0, 2.2),
+                "T10YIE": (2.4, 2.5),
+            },
+        ),
+        SimulationPath(
+            path_id="stress",
+            weight=0.25,
+            q4_core_pce_pct=3.9,
+            remaining_monthly_mom_pct=(0.4, 0.4),
+            policy_net_steps=2,
+            year_end_policy_midpoint_pct=4.375,
+            rate_paths_pct={
+                "DGS10": (4.4, 5.0),
+                "DFII10": (2.0, 2.5),
+                "T10YIE": (2.4, 2.5),
+            },
+        ),
+    )
+
+
+def test_ai_uplift_changes_eps_only_and_keeps_measured_revision_separate() -> None:
+    from finance.inflation_policy_equity_stress import simulate_equity_stress
+
+    base = simulate_equity_stress(
+        _ready_equity_artifact(),
+        _forward_paths(),
+        current_index=6800.0,
+        forward_eps=300.0,
+    )
+    uplift = simulate_equity_stress(
+        _ready_equity_artifact(),
+        _forward_paths(),
+        current_index=6800.0,
+        forward_eps=300.0,
+        user_ai_eps_uplift_pct=5.0,
+        target_levels=(6400.0,),
+    )
+
+    assert uplift.publication_status == "READY"
+    assert uplift.measured_next_year_eps_revision_pct == pytest.approx(2.5)
+    assert uplift.user_ai_eps_uplift_pct == pytest.approx(5.0)
+    assert uplift.scenario_kind == "USER_ASSUMPTION"
+    assert uplift.eps_quantiles["p50"] == pytest.approx(
+        base.eps_quantiles["p50"] * 1.05
+    )
+    assert uplift.multiple_quantiles == base.multiple_quantiles
+    assert set(uplift.threshold_probabilities) == {"below_or_equal:6400.0000"}
+    assert 0.0 <= uplift.threshold_probabilities["below_or_equal:6400.0000"] <= 1.0
+    assert "below_or_equal:6400.0000" in uplift.target_decompositions
+
+
+def test_equity_target_is_arbitrary_positive_input_not_a_fixed_level() -> None:
+    from finance.inflation_policy_equity_stress import simulate_equity_stress
+
+    result = simulate_equity_stress(
+        _ready_equity_artifact(),
+        _forward_paths(),
+        current_index=6800.0,
+        forward_eps=300.0,
+        target_levels=(6123.0,),
+    )
+
+    assert set(result.threshold_probabilities) == {"below_or_equal:6123.0000"}
+    assert set(result.target_decompositions) == {"below_or_equal:6123.0000"}
+
+
+@pytest.mark.parametrize("uplift", (-30.01, 50.01, float("nan")))
+def test_equity_ai_uplift_rejects_values_outside_bounded_range(uplift: float) -> None:
+    from finance.inflation_policy_equity_stress import simulate_equity_stress
+
+    with pytest.raises(ValueError, match="AI EPS uplift"):
+        simulate_equity_stress(
+            _ready_equity_artifact(),
+            _forward_paths(),
+            current_index=6800.0,
+            forward_eps=300.0,
+            user_ai_eps_uplift_pct=uplift,
+        )
+
+
+def test_equity_target_rejects_non_positive_level() -> None:
+    from finance.inflation_policy_equity_stress import simulate_equity_stress
+
+    with pytest.raises(ValueError, match="target level"):
+        simulate_equity_stress(
+            _ready_equity_artifact(),
+            _forward_paths(),
+            current_index=6800.0,
+            forward_eps=300.0,
+            target_levels=(0.0,),
+        )
+
+
+def test_limited_equity_model_hides_target_probability_but_keeps_wide_ranges() -> None:
+    from finance.inflation_policy_equity_stress import simulate_equity_stress
+
+    result = simulate_equity_stress(
+        _ready_equity_artifact(status="LIMITED"),
+        _forward_paths(),
+        current_index=6800.0,
+        forward_eps=300.0,
+        target_levels=(6400.0,),
+    )
+
+    assert result.publication_status == "LIMITED"
+    assert result.index_quantiles
+    assert result.threshold_probabilities == {}
+    assert result.target_decompositions == {}

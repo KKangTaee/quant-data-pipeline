@@ -1,7 +1,7 @@
 # Inflation Policy Equity Stress Status
 
 State: active
-Roadmap: 2/5 implementation checkpoints complete
+Roadmap: 3/5 implementation checkpoints complete
 Last Updated: 2026-08-03
 
 ## Current
@@ -14,3 +14,4 @@ Last Updated: 2026-08-03
 - DB-only equity bundle과 PIT year-end EPS×multiple panel을 구현했다.
 - EPS·multiple response와 paired residual을 시간순 rolling-origin으로 검증하고
   baseline 미달을 `LIMITED`, 표본 부족을 `NOT_AVAILABLE`로 닫았다.
+- 사용자 AI EPS uplift와 임의 지수 수준 역산을 bounded scenario로 추가했다.

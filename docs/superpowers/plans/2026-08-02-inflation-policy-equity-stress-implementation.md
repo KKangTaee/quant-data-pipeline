@@ -176,7 +176,7 @@ git commit -m "조건부 주식 스트레스 모델 추가"
 - Consumes: measured next-year EPS revision and user `user_ai_eps_uplift_pct`.
 - Produces: target-level probability and required EPS/multiple combinations.
 
-- [ ] **Step 1: Write failing separation and no-hardcode tests**
+- [x] **Step 1: Write failing separation and no-hardcode tests**
 
 ```python
 def test_measured_revision_and_ai_assumption_are_separate() -> None:
@@ -190,7 +190,7 @@ def test_measured_revision_and_ai_assumption_are_separate() -> None:
     assert "6400" not in Path("finance/inflation_policy_equity_stress.py").read_text()
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_equity_stress.py tests/test_inflation_policy_commands.py -q
@@ -198,11 +198,11 @@ def test_measured_revision_and_ai_assumption_are_separate() -> None:
 
 Expected: FAIL on missing fields/command support.
 
-- [ ] **Step 3: Implement bounded scenario inputs**
+- [x] **Step 3: Implement bounded scenario inputs**
 
 Allow AI uplift from `-30%` to `+50%` and positive target levels. Apply uplift only to forward EPS, leave measured revision unchanged, and return target probability plus weighted EPS/multiple quantiles among matching paths. Label result `USER_ASSUMPTION`.
 
-- [ ] **Step 4: Run tests and commit**
+- [x] **Step 4: Run tests and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_equity_stress.py tests/test_inflation_policy_commands.py -q

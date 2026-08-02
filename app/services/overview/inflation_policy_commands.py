@@ -11,6 +11,10 @@ from datetime import datetime, timezone
 from typing import Any
 
 from finance.data.inflation_policy_results import save_yield_resistance_definition
+from finance.inflation_policy_equity_stress import (
+    EquityStressArtifact,
+    simulate_equity_stress,
+)
 from finance.inflation_policy_simulation import (
     RateTargetCondition,
     SimulationPath,
@@ -353,3 +357,140 @@ def run_reverse_scenario_command(
             for value in (0.1, 0.2, 0.3, 0.4, 0.5)
         ]
     return result
+
+
+def _equity_artifact(value: Mapping[str, object]) -> EquityStressArtifact:
+    parameters = _decoded_mapping(value.get("parameters_json"), field="parameters_json")
+    artifact_raw = _decoded_mapping(parameters.get("artifact", parameters), field="artifact")
+    residual_rows = artifact_raw.get("joint_residuals") or []
+    residuals: list[tuple[float, float]] = []
+    if isinstance(residual_rows, Sequence) and not isinstance(residual_rows, (str, bytes)):
+        for index, row in enumerate(residual_rows):
+            if not isinstance(row, Sequence) or isinstance(row, (str, bytes)) or len(row) != 2:
+                raise ValueError(f"joint_residuals[{index}] must contain two values")
+            residuals.append(
+                (
+                    _finite(row[0], field="EPS residual"),
+                    _finite(row[1], field="multiple residual"),
+                )
+            )
+    eps_response = _decoded_mapping(artifact_raw.get("eps_response"), field="eps_response")
+    multiple_response = _decoded_mapping(
+        artifact_raw.get("multiple_response"), field="multiple_response"
+    )
+    scenario_features = _decoded_mapping(
+        artifact_raw.get("scenario_feature_values"), field="scenario_feature_values"
+    )
+    return EquityStressArtifact(
+        model_version=str(value.get("model_version") or artifact_raw.get("model_version") or ""),
+        eps_response={key: _finite(item, field=f"eps_response.{key}") for key, item in eps_response.items()},
+        multiple_response={key: _finite(item, field=f"multiple_response.{key}") for key, item in multiple_response.items()},
+        joint_residuals=tuple(residuals),
+        validation_metrics=_decoded_mapping(
+            value.get("validation_json"), field="validation_json"
+        ),
+        trained_through=(
+            str(artifact_raw.get("trained_through"))
+            if artifact_raw.get("trained_through")
+            else None
+        ),
+        publication_status=str(value.get("publication_status") or "NOT_AVAILABLE"),
+        reason_codes=tuple(
+            str(item)
+            for item in (artifact_raw.get("reason_codes") or [])
+        ),
+        latest_measured_next_year_eps_revision_pct=(
+            _finite(
+                artifact_raw.get("latest_measured_next_year_eps_revision_pct"),
+                field="latest measured EPS revision",
+            )
+            if artifact_raw.get("latest_measured_next_year_eps_revision_pct") is not None
+            else None
+        ),
+        scenario_feature_values={
+            key: _finite(item, field=f"scenario_feature_values.{key}")
+            for key, item in scenario_features.items()
+        },
+    )
+
+
+def run_equity_stress_scenario_command(
+    command: Mapping[str, object],
+    *,
+    snapshot_loader: Callable[..., Mapping[str, object] | None] = (
+        load_latest_inflation_policy_snapshot
+    ),
+    artifact_loader: Callable[..., Mapping[str, object] | None] = (
+        load_inflation_policy_model_artifact
+    ),
+    scenario_runner: Callable[..., object] = simulate_equity_stress,
+) -> dict[str, object]:
+    """Run a bounded user EPS/level scenario against exact stored artifacts."""
+
+    target_level = _finite(command.get("target_level"), field="target level")
+    if target_level <= 0.0:
+        raise ValueError("target level must be positive")
+    uplift = _finite(
+        command.get("user_ai_eps_uplift_pct", 0.0), field="AI EPS uplift"
+    )
+    if not -30.0 <= uplift <= 50.0:
+        raise ValueError("AI EPS uplift must be between -30% and +50%")
+    snapshot = snapshot_loader(as_of_at=command.get("as_of_at"))
+    if snapshot is None:
+        return _not_available(reason="선택한 기준시각의 snapshot이 없습니다.")
+    freshness = _decoded_mapping(snapshot.get("freshness_json"), field="freshness_json")
+    trained_cutoff_at = freshness.get("trained_cutoff_at") or snapshot.get("as_of_at")
+    model_version = str(snapshot.get("model_version") or "")
+    equity_row = artifact_loader(
+        model_version=model_version,
+        trained_cutoff_at=trained_cutoff_at,
+        component="equity_stress",
+    )
+    if equity_row is None:
+        return _not_available(
+            reason="선택한 snapshot과 정확히 일치하는 주식 스트레스 artifact가 없습니다.",
+            snapshot=snapshot,
+        )
+    macro_row = artifact_loader(
+        model_version=model_version,
+        trained_cutoff_at=trained_cutoff_at,
+        component="core_pce_hybrid",
+    )
+    if macro_row is None:
+        return _not_available(
+            reason="선택한 snapshot과 정확히 일치하는 공동 거시경로 artifact가 없습니다.",
+            snapshot=snapshot,
+        )
+    equity_parameters = _decoded_mapping(
+        equity_row.get("parameters_json"), field="equity parameters"
+    )
+    macro_parameters = _decoded_mapping(
+        macro_row.get("parameters_json"), field="macro parameters"
+    )
+    current_index = equity_parameters.get("current_index_level")
+    forward_eps = equity_parameters.get("base_forward_eps")
+    raw_paths = macro_parameters.get("joint_rate_paths")
+    if current_index is None or forward_eps is None:
+        return _not_available(
+            reason="주식 스트레스 artifact에 현재 지수와 차년도 EPS 기준이 없습니다.",
+            snapshot=snapshot,
+        )
+    if not isinstance(raw_paths, Sequence) or isinstance(raw_paths, (str, bytes)) or not raw_paths:
+        return _not_available(
+            reason="검증 artifact에 공동 물가·정책·금리 경로가 저장되어 있지 않습니다.",
+            snapshot=snapshot,
+        )
+    result = scenario_runner(
+        _equity_artifact(equity_row),
+        _simulation_paths(raw_paths),
+        current_index=_finite(current_index, field="current index"),
+        forward_eps=_finite(forward_eps, field="forward EPS"),
+        user_ai_eps_uplift_pct=uplift,
+        target_levels=(target_level,),
+    )
+    return {
+        **_summary_mapping(result),
+        "reason": "저장된 공동 경로에 사용자 EPS 가정과 지수 조건을 적용했습니다.",
+        "model_version": model_version,
+        "as_of_at": snapshot.get("as_of_at"),
+    }

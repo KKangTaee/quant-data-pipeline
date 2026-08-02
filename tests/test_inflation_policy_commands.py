@@ -252,3 +252,37 @@ def test_reverse_command_preserves_sparse_support_as_not_available() -> None:
     assert result["supporting_path_count"] == 2
     assert result["effective_path_count"] == 1.2
     assert result["q4_core_pce_quantiles_pct"] is None
+
+
+def test_equity_command_fails_closed_without_exact_ready_artifacts() -> None:
+    from app.services.overview.inflation_policy_commands import (
+        run_equity_stress_scenario_command,
+    )
+
+    snapshot = {
+        "as_of_at": "2026-08-03T00:00:00Z",
+        "model_version": "inflation-policy-v1",
+        "freshness_json": {"trained_cutoff_at": "2026-07-31T00:00:00Z"},
+    }
+
+    result = run_equity_stress_scenario_command(
+        {"target_level": 6400.0, "user_ai_eps_uplift_pct": 5.0},
+        snapshot_loader=lambda **_kwargs: snapshot,
+        artifact_loader=lambda **_kwargs: None,
+    )
+
+    assert result["publication_status"] == "NOT_AVAILABLE"
+    assert "정확히 일치" in str(result["reason"])
+
+
+def test_equity_command_validates_user_bounds_before_loading_artifacts() -> None:
+    from app.services.overview.inflation_policy_commands import (
+        run_equity_stress_scenario_command,
+    )
+
+    with pytest.raises(ValueError, match="AI EPS uplift"):
+        run_equity_stress_scenario_command(
+            {"target_level": 6400.0, "user_ai_eps_uplift_pct": 51.0},
+            snapshot_loader=lambda **_kwargs: None,
+            artifact_loader=lambda **_kwargs: None,
+        )

@@ -22,3 +22,12 @@
 - adverse fixture가 baseline을 실제로 이기고 있던 원인을 metric으로 확인한 뒤 평가
   시작부터 regime이 뒤집히도록 fixture만 교정했다.
 - equity/model/loader focused 20건 통과.
+
+## 2026-08-03 User Equity Scenario
+
+- RED: equity simulation과 command interface 부재로 9건 실패.
+- 측정 EPS revision과 `-30~+50%` 사용자 AI EPS uplift를 분리하고, 임의 양수
+  지수 수준 이하 확률·EPS/multiple decomposition을 구현했다.
+- `LIMITED` artifact는 범위만 남기고 target probability를 비공개한다.
+- exact equity/macro artifact가 없으면 command가 `NOT_AVAILABLE`로 닫힌다.
+- equity/command focused 29건 통과.

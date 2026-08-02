@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 
 import numpy as np
 import pandas as pd
+
+from finance.inflation_policy_simulation import SimulationPath
 
 
 PANEL_COLUMNS = (
@@ -71,7 +73,25 @@ class EquityStressArtifact:
     publication_status: str
     reason_codes: tuple[str, ...]
     latest_measured_next_year_eps_revision_pct: float | None
+    scenario_feature_values: dict[str, float] = field(default_factory=dict)
     forecast_horizon: str = "calendar_year_end"
+
+
+@dataclass(frozen=True)
+class EquityStressResult:
+    as_of_at: str | None
+    index_quantiles: dict[str, float]
+    eps_quantiles: dict[str, float]
+    multiple_quantiles: dict[str, float]
+    threshold_probabilities: dict[str, float]
+    target_decompositions: dict[str, dict[str, object]]
+    measured_next_year_eps_revision_pct: float | None
+    user_ai_eps_uplift_pct: float
+    publication_status: str
+    reason_codes: tuple[str, ...]
+    scenario_kind: str
+    current_index_level: float
+    base_forward_eps: float
 
 
 def _timestamp(value: object, *, field: str) -> pd.Timestamp:
@@ -607,4 +627,244 @@ def fit_equity_stress_model(
         latest_measured_next_year_eps_revision_pct=(
             float(revisions.iloc[-1]) if not revisions.empty else None
         ),
+        scenario_feature_values={
+            feature: float(value)
+            for feature, value in frame.iloc[-1].items()
+            if feature in {
+                *EQUITY_FEATURES,
+                "dgs2_pct",
+                "dgs10_pct",
+                "real_yield_10y_pct",
+                "breakeven_10y_pct",
+            }
+            and value is not None
+            and not pd.isna(value)
+        },
+    )
+
+
+def _weighted_quantiles(
+    values: Sequence[float], weights: Sequence[float]
+) -> dict[str, float]:
+    ordered = sorted(zip(values, weights, strict=True), key=lambda item: item[0])
+    total = sum(weight for _value, weight in ordered)
+    if total <= 0.0:
+        raise ValueError("weighted quantiles require positive mass")
+    result: dict[str, float] = {}
+    for label, probability in (
+        ("p05", 0.05),
+        ("p20", 0.20),
+        ("p50", 0.50),
+        ("p80", 0.80),
+        ("p95", 0.95),
+    ):
+        threshold = probability * total
+        cumulative = 0.0
+        selected = ordered[-1][0]
+        for value, weight in ordered:
+            cumulative += weight
+            if cumulative + 1e-15 >= threshold:
+                selected = value
+                break
+        result[label] = float(selected)
+    return result
+
+
+def _normalized_forward_paths(
+    paths: Sequence[SimulationPath],
+) -> tuple[tuple[SimulationPath, float], ...]:
+    if not paths:
+        raise ValueError("forward paths cannot be empty")
+    weighted: list[tuple[SimulationPath, float]] = []
+    for path in paths:
+        weight = _finite(path.weight, field="path weight")
+        if weight < 0.0:
+            raise ValueError("path weight cannot be negative")
+        weighted.append((path, weight))
+    total = sum(weight for _path, weight in weighted)
+    if total <= 0.0:
+        raise ValueError("forward paths require positive probability mass")
+    return tuple((path, weight / total) for path, weight in weighted)
+
+
+def _path_endpoint(path: SimulationPath, instrument: str) -> float | None:
+    values = path.rate_paths_pct.get(instrument)
+    if not values:
+        return None
+    return _finite(values[-1], field=f"{instrument} endpoint")
+
+
+def _scenario_features(
+    artifact: EquityStressArtifact, path: SimulationPath
+) -> dict[str, float]:
+    base = dict(artifact.scenario_feature_values)
+    current_dgs10 = base.get("dgs10_pct")
+    current_real = base.get("real_yield_10y_pct")
+    current_breakeven = base.get("breakeven_10y_pct")
+    endpoint_dgs10 = _path_endpoint(path, "DGS10")
+    endpoint_real = _path_endpoint(path, "DFII10")
+    endpoint_breakeven = _path_endpoint(path, "T10YIE")
+    return {
+        "measured_next_year_eps_revision_pct": float(
+            artifact.latest_measured_next_year_eps_revision_pct or 0.0
+        ),
+        "months_to_year_end": float(base.get("months_to_year_end", 0.0)),
+        "policy_repricing_bp": float(path.policy_net_steps) * 25.0,
+        "dgs10_change_bp": (
+            (endpoint_dgs10 - current_dgs10) * 100.0
+            if endpoint_dgs10 is not None and current_dgs10 is not None
+            else float(base.get("dgs10_change_bp", 0.0))
+        ),
+        "real_yield_change_bp": (
+            (endpoint_real - current_real) * 100.0
+            if endpoint_real is not None and current_real is not None
+            else float(base.get("real_yield_change_bp", 0.0))
+        ),
+        "breakeven_change_bp": (
+            (endpoint_breakeven - current_breakeven) * 100.0
+            if endpoint_breakeven is not None and current_breakeven is not None
+            else float(base.get("breakeven_change_bp", 0.0))
+        ),
+    }
+
+
+def _response_for_features(
+    coefficients: Mapping[str, object], features: Mapping[str, float]
+) -> float:
+    return float(coefficients.get("intercept", 0.0)) + sum(
+        float(coefficients.get(feature, 0.0)) * float(features.get(feature, 0.0))
+        for feature in EQUITY_FEATURES
+    )
+
+
+def simulate_equity_stress(
+    artifact: EquityStressArtifact,
+    forward_paths: Sequence[SimulationPath],
+    *,
+    current_index: float,
+    forward_eps: float,
+    user_ai_eps_uplift_pct: float = 0.0,
+    target_levels: Sequence[float] = (),
+) -> EquityStressResult:
+    """Apply paired historical response residuals to auditable macro paths."""
+
+    current_level = _finite(current_index, field="current index")
+    base_eps = _finite(forward_eps, field="forward EPS")
+    uplift = _finite(user_ai_eps_uplift_pct, field="AI EPS uplift")
+    if current_level <= 0.0 or base_eps <= 0.0:
+        raise ValueError("current index and forward EPS must be positive")
+    if not -30.0 <= uplift <= 50.0:
+        raise ValueError("AI EPS uplift must be between -30% and +50%")
+    targets = tuple(_finite(value, field="target level") for value in target_levels)
+    if any(value <= 0.0 for value in targets):
+        raise ValueError("target level must be positive")
+    if artifact.publication_status not in {"READY", "LIMITED"}:
+        return EquityStressResult(
+            as_of_at=artifact.trained_through,
+            index_quantiles={},
+            eps_quantiles={},
+            multiple_quantiles={},
+            threshold_probabilities={},
+            target_decompositions={},
+            measured_next_year_eps_revision_pct=(
+                artifact.latest_measured_next_year_eps_revision_pct
+            ),
+            user_ai_eps_uplift_pct=uplift,
+            publication_status="NOT_AVAILABLE",
+            reason_codes=artifact.reason_codes or ("artifact_not_publishable",),
+            scenario_kind=(
+                "USER_ASSUMPTION" if uplift != 0.0 or targets else "MODEL_BASE"
+            ),
+            current_index_level=current_level,
+            base_forward_eps=base_eps,
+        )
+    if not artifact.joint_residuals:
+        return EquityStressResult(
+            as_of_at=artifact.trained_through,
+            index_quantiles={},
+            eps_quantiles={},
+            multiple_quantiles={},
+            threshold_probabilities={},
+            target_decompositions={},
+            measured_next_year_eps_revision_pct=(
+                artifact.latest_measured_next_year_eps_revision_pct
+            ),
+            user_ai_eps_uplift_pct=uplift,
+            publication_status="NOT_AVAILABLE",
+            reason_codes=("joint_residuals_missing",),
+            scenario_kind=(
+                "USER_ASSUMPTION" if uplift != 0.0 or targets else "MODEL_BASE"
+            ),
+            current_index_level=current_level,
+            base_forward_eps=base_eps,
+        )
+
+    current_multiple = current_level / base_eps
+    simulated: list[tuple[float, float, float, float]] = []
+    for index, (path, weight) in enumerate(_normalized_forward_paths(forward_paths)):
+        features = _scenario_features(artifact, path)
+        eps_change = _response_for_features(artifact.eps_response, features)
+        multiple_change = _response_for_features(artifact.multiple_response, features)
+        residual_eps, residual_multiple = artifact.joint_residuals[
+            index % len(artifact.joint_residuals)
+        ]
+        eps_level = (
+            base_eps
+            * (1.0 + (eps_change + residual_eps) / 100.0)
+            * (1.0 + uplift / 100.0)
+        )
+        multiple_level = current_multiple * (
+            1.0 + (multiple_change + residual_multiple) / 100.0
+        )
+        if eps_level <= 0.0 or multiple_level <= 0.0:
+            raise ValueError("simulated EPS and multiple must remain positive")
+        simulated.append((eps_level * multiple_level, eps_level, multiple_level, weight))
+    levels = [row[0] for row in simulated]
+    eps_levels = [row[1] for row in simulated]
+    multiples = [row[2] for row in simulated]
+    weights = [row[3] for row in simulated]
+    threshold_probabilities: dict[str, float] = {}
+    decompositions: dict[str, dict[str, object]] = {}
+    if artifact.publication_status == "READY":
+        for target in targets:
+            key = f"below_or_equal:{target:.4f}"
+            selected = [row for row in simulated if row[0] <= target]
+            probability = sum(row[3] for row in selected)
+            threshold_probabilities[key] = probability
+            decompositions[key] = {
+                "target_level": target,
+                "probability": probability,
+                "eps_quantiles": (
+                    _weighted_quantiles(
+                        [row[1] for row in selected], [row[3] for row in selected]
+                    )
+                    if selected
+                    else {}
+                ),
+                "multiple_quantiles": (
+                    _weighted_quantiles(
+                        [row[2] for row in selected], [row[3] for row in selected]
+                    )
+                    if selected
+                    else {}
+                ),
+            }
+    return EquityStressResult(
+        as_of_at=artifact.trained_through,
+        index_quantiles=_weighted_quantiles(levels, weights),
+        eps_quantiles=_weighted_quantiles(eps_levels, weights),
+        multiple_quantiles=_weighted_quantiles(multiples, weights),
+        threshold_probabilities=threshold_probabilities,
+        target_decompositions=decompositions,
+        measured_next_year_eps_revision_pct=(
+            artifact.latest_measured_next_year_eps_revision_pct
+        ),
+        user_ai_eps_uplift_pct=uplift,
+        publication_status=artifact.publication_status,
+        reason_codes=artifact.reason_codes,
+        scenario_kind=(
+            "USER_ASSUMPTION" if uplift != 0.0 or targets else "MODEL_BASE"
+        ),
+        current_index_level=current_level,
+        base_forward_eps=base_eps,
     )
