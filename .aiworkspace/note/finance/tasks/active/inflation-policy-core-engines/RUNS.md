@@ -8,3 +8,7 @@
   - RED: 신규 module/function 부재로 4 failed, simulation API 부재로 2 failed
   - GREEN: Q4/Q4, compounded root solve, SEP-versioned 5상태, threshold/simplex,
     component mixture와 empirical-residual requirement 6 passed
+- 2026-08-02: `tests/test_policy_path.py`
+  - RED: 신규 module 부재로 5 failed, compact target bin contract 불일치로 1 failed
+  - GREEN: SEP marginal, vote direction, reaction matrix, optional prior 재정규화,
+    component weight cap, net-move/target-bin consistency 5 passed; Core 포함 11 passed

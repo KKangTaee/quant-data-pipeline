@@ -12,3 +12,9 @@
   forecast error와 물가안정 목표에서 파생해 release hash가 붙은 definition으로 보존한다.
 - path uncertainty는 rolling-origin에서 전달받을 component weight와 predictive residual
   history를 요구한다. residual evidence 없이 정밀 분포를 생성하지 않는다.
+- SEP rate dots는 현재 midpoint 대비 순이동 marginal로만 변환한다. 2026년 6월 실제
+  분포는 1회 인하 1명, 동결 8명, 1회 인상 3명, 2회 5명, 3회 이상 1명이다.
+- 최근 FOMC 표결은 실제 action에 찬성한 표와 dissent의 명시적 선호 방향을 다음 회의
+  committee marginal로만 쓴다. 임의 hawkish score로 압축하지 않는다.
+- 경제 component는 versioned state-to-policy reaction matrix를 요구하므로 충격성 재가속도
+  100% 인상 boolean이 되지 않는다. missing optional market prior는 제외 후 재정규화한다.
