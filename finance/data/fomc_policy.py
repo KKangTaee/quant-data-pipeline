@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from collections import defaultdict
 from datetime import date, datetime, timezone
@@ -19,7 +21,11 @@ from .db.schema import INFLATION_POLICY_SCHEMAS, sync_table_schema
 FED_BASE_URL = "https://www.federalreserve.gov"
 DB_META = "finance_meta"
 FOMC_CALENDAR_URL = f"{FED_BASE_URL}/monetarypolicy/fomccalendars.htm"
+FOMC_PRESS_RELEASE_URL = (
+    f"{FED_BASE_URL}/newsevents/pressreleases/2026-press-fomc.htm"
+)
 SEP_PARSER_VERSION = "fomc_sep_v1"
+DECISION_PARSER_VERSION = "fomc_decision_v1"
 
 _VARIABLE_LABELS = {
     "change in real gdp": "real_gdp",
@@ -70,9 +76,13 @@ def _sql_datetime(value: str, *, field: str) -> str:
 
 
 def _source_date(source_url: str) -> date:
-    match = re.search(r"(\d{8})(?=\.htm(?:l)?(?:$|\?))", str(source_url))
+    match = re.search(
+        r"(\d{8})(?:[a-z]\d*)?(?=\.htm(?:l)?(?:$|\?))",
+        str(source_url),
+        flags=re.IGNORECASE,
+    )
     if match is None:
-        raise ValueError("Projection source URL has no release date")
+        raise ValueError("Federal Reserve source URL has no release date")
     return datetime.strptime(match.group(1), "%Y%m%d").date()
 
 
@@ -102,6 +112,19 @@ def _number(value: object) -> float | None:
         return float(text)
     except ValueError:
         return None
+
+
+def _mixed_fraction(value: str) -> float:
+    text = _clean_text(value)
+    whole_match = re.fullmatch(r"(\d+)-(\d+)/(\d+)", text)
+    if whole_match is not None:
+        return int(whole_match.group(1)) + int(whole_match.group(2)) / int(
+            whole_match.group(3)
+        )
+    fraction_match = re.fullmatch(r"(\d+)/(\d+)", text)
+    if fraction_match is not None:
+        return int(fraction_match.group(1)) / int(fraction_match.group(2))
+    return float(text)
 
 
 def _range(value: object) -> tuple[float | None, float | None]:
@@ -415,6 +438,133 @@ def discover_fomc_projection_urls(calendar_html: str) -> list[str]:
     return sorted(urls)
 
 
+def discover_fomc_statement_urls(calendar_html: str) -> list[str]:
+    """Return dated official FOMC statement pages, oldest first."""
+
+    soup = BeautifulSoup(calendar_html, "html.parser")
+    urls = {
+        urljoin(FED_BASE_URL, str(anchor.get("href")))
+        for anchor in soup.find_all("a", href=True)
+        if re.search(
+            r"/newsevents/pressreleases/monetary\d{8}a\.htm(?:l)?$",
+            str(anchor.get("href")),
+            flags=re.IGNORECASE,
+        )
+    }
+    return sorted(urls, key=lambda url: (_source_date(url), url))
+
+
+def _preferred_action(dissent_text: str) -> tuple[str, int]:
+    normalized = _clean_text(dissent_text).casefold()
+    if "preferred" not in normalized:
+        raise ValueError("FOMC dissent preference was not found")
+    if "raise" in normalized or "increase" in normalized:
+        direction = "HIKE"
+    elif "lower" in normalized or "reduce" in normalized:
+        direction = "CUT"
+    elif "maintain" in normalized or "no change" in normalized:
+        return "HOLD", 0
+    else:
+        raise ValueError("FOMC dissent direction was not recognized")
+    change = re.search(
+        r"by\s+(\d+(?:-\d+/\d+|/\d+)?|\d+(?:\.\d+)?)\s+percentage point",
+        normalized,
+    )
+    if change is None:
+        raise ValueError("FOMC dissent change size was not found")
+    basis_points = round(_mixed_fraction(change.group(1)) * 100)
+    return f"{direction}_{basis_points}", basis_points
+
+
+def parse_fomc_policy_decision(
+    html: str,
+    *,
+    source_url: str,
+    released_at: str,
+    prior_range: tuple[float, float] | None,
+    collected_at: str,
+) -> dict[str, object]:
+    """Parse the range, vote, and explicit dissent direction from one statement."""
+
+    soup = BeautifulSoup(html, "html.parser")
+    statement_text = _clean_text(soup.get_text(" "))
+    target_match = re.search(
+        r"target range for the federal funds rate at\s+"
+        r"(\d+(?:-\d+/\d+|/\d+)?|\d+(?:\.\d+)?)\s+to\s+"
+        r"(\d+(?:-\d+/\d+|/\d+)?|\d+(?:\.\d+)?)\s+percent",
+        statement_text,
+        flags=re.IGNORECASE,
+    )
+    if target_match is None:
+        raise ValueError("FOMC target range was not found")
+    target_after = (
+        _mixed_fraction(target_match.group(1)),
+        _mixed_fraction(target_match.group(2)),
+    )
+
+    vote_match = re.search(
+        r"approved the following statement for release by a\s+(\d+)-(\d+)\s+vote",
+        statement_text,
+        flags=re.IGNORECASE,
+    )
+    if vote_match is None:
+        raise ValueError("FOMC statement vote was not found")
+    vote_for = int(vote_match.group(1))
+    vote_against = int(vote_match.group(2))
+
+    dissents: list[dict[str, object]] = []
+    dissent_match = re.search(
+        r"Voting against the monetary policy action were\s+(.+?),\s+who preferred\s+(.+?)(?:\.|$)",
+        statement_text,
+        flags=re.IGNORECASE,
+    )
+    if dissent_match is not None:
+        names_text = re.sub(r",?\s+and\s+", ", ", dissent_match.group(1))
+        names = [name.strip() for name in names_text.split(",") if name.strip()]
+        action, change_bps = _preferred_action(
+            f"preferred {dissent_match.group(2)} percentage point"
+            if "percentage point" not in dissent_match.group(2).casefold()
+            else f"preferred {dissent_match.group(2)}"
+        )
+        dissents = [
+            {
+                "member_name": name,
+                "preferred_action": action,
+                "change_bps": change_bps,
+            }
+            for name in names
+        ]
+    if len(dissents) != vote_against:
+        raise ValueError(
+            f"FOMC dissent count mismatch: {len(dissents)} != {vote_against}"
+        )
+
+    before_lower, before_upper = prior_range or (None, None)
+    return {
+        "meeting_date": _source_date(source_url).isoformat(),
+        "released_at": _sql_datetime(released_at, field="released_at"),
+        "target_lower_before_pct": before_lower,
+        "target_upper_before_pct": before_upper,
+        "target_lower_after_pct": target_after[0],
+        "target_upper_after_pct": target_after[1],
+        "vote_total_count": vote_for + vote_against,
+        "vote_for_count": vote_for,
+        "vote_against_count": vote_against,
+        "dissents_json": json.dumps(
+            dissents,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
+        "statement_hash": hashlib.sha256(statement_text.encode("utf-8")).hexdigest(),
+        "source": "federal_reserve_fomc",
+        "source_ref": source_url,
+        "parser_version": DECISION_PARSER_VERSION,
+        "coverage_status": "READY" if prior_range is not None else "PARTIAL",
+        "collected_at": _sql_datetime(collected_at, field="collected_at"),
+    }
+
+
 def _fetch_official_html(url: str) -> str:
     request = Request(
         url,
@@ -425,28 +575,39 @@ def _fetch_official_html(url: str) -> str:
 
 
 def _extract_released_at(html: str, *, source_url: str) -> str:
-    """Resolve the official 2 p.m. ET SEP release to an aware UTC timestamp."""
+    """Resolve an official Federal Reserve release clock to aware UTC."""
 
     page_text = _clean_text(BeautifulSoup(html, "html.parser").get_text(" "))
     match = re.search(
-        r"For release at\s+(\d{1,2}):(\d{2})\s+([ap])\.m\.,\s*"
-        r"(?:EDT|EST|ET),\s*([A-Z][a-z]+\s+\d{1,2},\s+\d{4})",
+        r"For release at\s+(\d{1,2}):(\d{2})\s+([ap])\.m\.?,?\s*"
+        r"(?:EDT|EST|ET)",
         page_text,
         flags=re.IGNORECASE,
     )
     if match is None:
-        raise ValueError(f"Official SEP release timestamp was not found: {source_url}")
+        raise ValueError(f"Official Federal Reserve release time was not found: {source_url}")
     hour = int(match.group(1)) % 12
     if match.group(3).casefold() == "p":
         hour += 12
-    local_date = datetime.strptime(match.group(4), "%B %d, %Y")
+    source_date = _source_date(source_url)
+    dated_release = re.search(
+        r"For release at.+?(?:EDT|EST|ET),\s*"
+        r"([A-Z][a-z]+\s+\d{1,2},\s+\d{4})",
+        page_text,
+        flags=re.IGNORECASE,
+    )
+    local_date = (
+        datetime.strptime(dated_release.group(1), "%B %d, %Y")
+        if dated_release is not None
+        else datetime.combine(source_date, datetime.min.time())
+    )
     local = local_date.replace(
         hour=hour,
         minute=int(match.group(2)),
         tzinfo=ZoneInfo("America/New_York"),
     )
-    if local.date() != _source_date(source_url):
-        raise ValueError("SEP page timestamp does not match its dated source URL")
+    if local.date() != source_date:
+        raise ValueError("Federal Reserve page timestamp does not match its dated URL")
     return local.astimezone(timezone.utc).isoformat()
 
 
@@ -543,6 +704,50 @@ def upsert_fomc_sep_distributions(
     return len(prepared)
 
 
+def upsert_fomc_policy_decisions(
+    rows: Iterable[Mapping[str, object]],
+    *,
+    db: object,
+) -> int:
+    """Idempotently persist official policy decisions by meeting date."""
+
+    prepared = [dict(row) for row in rows]
+    if not prepared:
+        return 0
+    sql = """
+    INSERT INTO fomc_policy_decision (
+      meeting_date, released_at, target_lower_before_pct, target_upper_before_pct,
+      target_lower_after_pct, target_upper_after_pct, vote_total_count,
+      vote_for_count, vote_against_count, dissents_json, statement_hash,
+      source, source_ref, parser_version, coverage_status, collected_at
+    ) VALUES (
+      %(meeting_date)s, %(released_at)s, %(target_lower_before_pct)s,
+      %(target_upper_before_pct)s, %(target_lower_after_pct)s,
+      %(target_upper_after_pct)s, %(vote_total_count)s, %(vote_for_count)s,
+      %(vote_against_count)s, %(dissents_json)s, %(statement_hash)s,
+      %(source)s, %(source_ref)s, %(parser_version)s, %(coverage_status)s,
+      %(collected_at)s
+    )
+    ON DUPLICATE KEY UPDATE
+      released_at = VALUES(released_at),
+      target_lower_before_pct = VALUES(target_lower_before_pct),
+      target_upper_before_pct = VALUES(target_upper_before_pct),
+      target_lower_after_pct = VALUES(target_lower_after_pct),
+      target_upper_after_pct = VALUES(target_upper_after_pct),
+      vote_total_count = VALUES(vote_total_count),
+      vote_for_count = VALUES(vote_for_count),
+      vote_against_count = VALUES(vote_against_count),
+      dissents_json = VALUES(dissents_json),
+      statement_hash = VALUES(statement_hash),
+      source_ref = VALUES(source_ref),
+      parser_version = VALUES(parser_version),
+      coverage_status = VALUES(coverage_status),
+      collected_at = VALUES(collected_at)
+    """
+    db.executemany(sql, prepared)
+    return len(prepared)
+
+
 def collect_and_store_fomc_sep_distributions(
     *,
     calendar_url: str = FOMC_CALENDAR_URL,
@@ -583,3 +788,51 @@ def collect_and_store_fomc_sep_distributions(
         if owns_connection:
             db.close()
     return {"releases": len(source_urls), "stored": stored}
+
+
+def collect_and_store_fomc_policy_history(
+    *,
+    calendar_url: str = FOMC_PRESS_RELEASE_URL,
+    connection: object | None = None,
+    fetch_html: Callable[[str], str] | None = None,
+    collected_at: str | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, int]:
+    """Collect statements oldest-first so prior ranges never come from the future."""
+
+    fetcher = fetch_html or _fetch_official_html
+    statement_urls = discover_fomc_statement_urls(fetcher(calendar_url))
+    if not statement_urls:
+        raise ValueError("No official FOMC statement pages were discovered")
+    observed_at = collected_at or datetime.now(timezone.utc).isoformat()
+
+    owns_connection = connection is None
+    db = connection or MySQLClient(host, user, password, port)
+    prior_range: tuple[float, float] | None = None
+    stored = 0
+    try:
+        db.use_db(DB_META)
+        schema = INFLATION_POLICY_SCHEMAS["fomc_policy_decision"]
+        db.execute(schema)
+        sync_table_schema(db, "fomc_policy_decision", schema, DB_META)
+        for source_url in statement_urls:
+            page = fetcher(source_url)
+            row = parse_fomc_policy_decision(
+                page,
+                source_url=source_url,
+                released_at=_extract_released_at(page, source_url=source_url),
+                prior_range=prior_range,
+                collected_at=observed_at,
+            )
+            stored += upsert_fomc_policy_decisions([row], db=db)
+            prior_range = (
+                float(row["target_lower_after_pct"]),
+                float(row["target_upper_after_pct"]),
+            )
+    finally:
+        if owns_connection:
+            db.close()
+    return {"meetings": len(statement_urls), "stored": stored}

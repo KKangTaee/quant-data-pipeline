@@ -8,6 +8,11 @@
   - GREEN: 30 passed
 - 2026-08-02: `git diff --check`
   - Result: passed
+- 2026-08-02: `.venv/bin/python -m pytest tests/test_fomc_policy_data.py -q`
+  - RED: decision parser/history collector 부재 확인
+  - GREEN: SEP와 결정 chronology 통합 9 passed
+- 2026-08-02: 공식 `monetary20260729a.htm` live parser smoke
+  - Result: 3.50-3.75%, 9-3, `HIKE_25` 반대 3명, `READY`
 - 2026-08-02: `.venv/bin/python -m pytest tests/test_fred_vintages.py -q`
   - RED: module 부재로 7 failed
   - GREEN: release clock, pagination, normalization, UPSERT 7 passed

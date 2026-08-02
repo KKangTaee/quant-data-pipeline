@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import importlib
+import json
 from pathlib import Path
 
 import pytest
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "fomc_sep_20260617_excerpt.html"
+STATEMENT_FIXTURE = (
+    Path(__file__).parent / "fixtures" / "fomc_statement_20260729_excerpt.html"
+)
 SOURCE_URL = "https://www.federalreserve.gov/monetarypolicy/fomcprojtabl20260617.htm"
+STATEMENT_URL = (
+    "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260729a.htm"
+)
 
 
 def _parse_fixture() -> list[dict[str, object]]:
@@ -167,3 +174,112 @@ def test_collect_and_store_sep_discovers_release_and_syncs_schema(monkeypatch) -
     assert db.database == "finance_meta"
     assert synced == [("fomc_sep_distribution", "finance_meta")]
     assert {row["released_at"] for row in db.rows} == {"2026-06-17 18:00:00.000000"}
+
+
+def test_july_2026_hold_and_three_hike_dissents_are_preserved() -> None:
+    from finance.data.fomc_policy import parse_fomc_policy_decision
+
+    row = parse_fomc_policy_decision(
+        STATEMENT_FIXTURE.read_text(),
+        source_url=STATEMENT_URL,
+        released_at="2026-07-29T18:00:00+00:00",
+        prior_range=(3.50, 3.75),
+        collected_at="2026-07-29T18:02:00+00:00",
+    )
+
+    assert (row["target_lower_after_pct"], row["target_upper_after_pct"]) == (
+        3.50,
+        3.75,
+    )
+    assert row["target_lower_before_pct"] == 3.50
+    assert row["target_upper_before_pct"] == 3.75
+    assert row["vote_total_count"] == 12
+    assert row["vote_for_count"] == 9
+    assert row["vote_against_count"] == 3
+    dissents = json.loads(str(row["dissents_json"]))
+    assert {item["preferred_action"] for item in dissents} == {"HIKE_25"}
+    assert {item["member_name"] for item in dissents} == {
+        "Beth M. Hammack",
+        "Neel Kashkari",
+        "Lorie K. Logan",
+    }
+    assert row["coverage_status"] == "READY"
+
+
+def test_decision_without_prior_range_is_partial_not_future_filled() -> None:
+    from finance.data.fomc_policy import parse_fomc_policy_decision
+
+    row = parse_fomc_policy_decision(
+        STATEMENT_FIXTURE.read_text(),
+        source_url=STATEMENT_URL,
+        released_at="2026-07-29T18:00:00+00:00",
+        prior_range=None,
+        collected_at="2026-07-29T18:02:00+00:00",
+    )
+
+    assert row["target_lower_before_pct"] is None
+    assert row["target_upper_before_pct"] is None
+    assert row["coverage_status"] == "PARTIAL"
+
+
+def test_policy_history_collects_oldest_first_without_future_fill(monkeypatch) -> None:
+    module = importlib.import_module("finance.data.fomc_policy")
+    calendar_url = "https://www.federalreserve.gov/newsevents/pressreleases/2026-press-fomc.htm"
+    june_url = (
+        "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260617a.htm"
+    )
+    calendar = f'<a href="{STATEMENT_URL}">July</a><a href="{june_url}">June</a>'
+    july_page = STATEMENT_FIXTURE.read_text()
+    june_page = (
+        july_page.replace("July 29, 2026", "June 17, 2026")
+        .replace("9 – 3 vote", "12 – 0 vote")
+        .replace(
+            '<p>Voting against the monetary policy action were Beth M. Hammack, Neel Kashkari, and Lorie K. Logan, who preferred to raise the target range for the federal funds rate by 1/4 percentage point at this meeting.</p>',
+            "",
+        )
+    )
+    fetched: list[str] = []
+    synced: list[tuple[str, str]] = []
+
+    def fetch_html(url: str) -> str:
+        fetched.append(url)
+        if url == calendar_url:
+            return calendar
+        return june_page if url == june_url else july_page
+
+    monkeypatch.setattr(
+        module,
+        "sync_table_schema",
+        lambda _db, table, _schema, database: synced.append((table, database)),
+    )
+
+    class DB:
+        def __init__(self) -> None:
+            self.rows: list[dict[str, object]] = []
+
+        def use_db(self, _database: str) -> None:
+            pass
+
+        def execute(self, _sql: str) -> None:
+            pass
+
+        def executemany(self, _sql: str, values: list[dict[str, object]]) -> None:
+            self.rows.extend(values)
+
+    db = DB()
+    result = module.collect_and_store_fomc_policy_history(
+        calendar_url=calendar_url,
+        connection=db,
+        fetch_html=fetch_html,
+        collected_at="2026-07-29T18:02:00+00:00",
+    )
+
+    assert fetched == [calendar_url, june_url, STATEMENT_URL]
+    assert result == {"meetings": 2, "stored": 2}
+    assert synced == [("fomc_policy_decision", "finance_meta")]
+    assert db.rows[0]["meeting_date"] == "2026-06-17"
+    assert db.rows[0]["coverage_status"] == "PARTIAL"
+    assert db.rows[1]["meeting_date"] == "2026-07-29"
+    assert db.rows[1]["target_lower_before_pct"] == 3.50
+    assert db.rows[1]["target_upper_before_pct"] == 3.75
+    assert db.rows[1]["coverage_status"] == "READY"
