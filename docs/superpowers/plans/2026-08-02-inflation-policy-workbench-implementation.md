@@ -40,6 +40,8 @@
 
 ### Modify
 
+- `finance/loaders/inflation_policy.py`: add strict DB readers for saved resistance definitions and exact model artifacts.
+- `tests/test_inflation_policy_loaders.py`: cover PIT cutoff, active-user filtering, and exact artifact identity.
 - `app/web/overview/market_context_helpers.py:58-175`: attach independent payload, handle explicit commands, and add fallback.
 - `app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx`: add inner selector and render independent child.
 - `app/web/streamlit_components/economic_cycle_workbench/src/style.css`: add responsive decision-workbench styles.
@@ -77,6 +79,8 @@ Read-model top-level keys, in order:
 ### Task 1: Build the independent Overview read model
 
 **Files:**
+- Modify: `finance/loaders/inflation_policy.py`
+- Modify: `tests/test_inflation_policy_loaders.py`
 - Create: `app/services/overview/inflation_policy.py`
 - Create: `tests/test_inflation_policy_service.py`
 - Create: `.aiworkspace/note/finance/tasks/active/inflation-policy-workbench/{PLAN,DESIGN,STATUS,NOTES,RUNS,RISKS}.md`
@@ -84,6 +88,14 @@ Read-model top-level keys, in order:
 **Interfaces:**
 - Consumes: `load_latest_inflation_policy_snapshot`, `load_yield_resistance_definitions`.
 - Produces: `inflation_policy_v1` JSON-safe read model.
+
+- [ ] **Step 0: Add the missing DB-only loader contracts with TDD**
+
+Add `load_yield_resistance_definitions(as_of_at=..., include_inactive=False)` and
+`load_inflation_policy_model_artifact(model_version=..., trained_cutoff_at=...)`.
+Definitions must exclude future `known_at`/`saved_at` rows and inactive USER rows by
+default. Artifact lookup must require both exact identity fields and fail closed with
+`None`; it must never select a different cutoff for the same version.
 
 - [ ] **Step 1: Write the failing ready-payload test**
 

@@ -282,6 +282,122 @@ def test_latest_snapshot_respects_requested_as_of() -> None:
     assert "as_of_at <= %s" in captured[0]
 
 
+def test_resistance_definitions_exclude_future_and_inactive_user_rows() -> None:
+    from finance.loaders.inflation_policy import load_yield_resistance_definitions
+
+    captured: list[tuple[str, tuple[object, ...]]] = []
+    rows = [
+        {
+            "definition_id": "auto-known",
+            "owner": "AUTO",
+            "instrument": "DGS10",
+            "known_at": "2026-07-29 12:00:00",
+            "saved_at": "2026-07-29 12:01:00",
+            "is_active": 1,
+        },
+        {
+            "definition_id": "user-known",
+            "owner": "USER",
+            "instrument": "DGS10",
+            "known_at": "2026-07-29 12:00:00",
+            "saved_at": "2026-07-30 09:00:00",
+            "is_active": 1,
+        },
+        {
+            "definition_id": "user-inactive",
+            "owner": "USER",
+            "instrument": "DGS10",
+            "known_at": "2026-07-20 12:00:00",
+            "saved_at": "2026-07-20 12:01:00",
+            "is_active": 0,
+        },
+        {
+            "definition_id": "future-auto",
+            "owner": "AUTO",
+            "instrument": "DGS10",
+            "known_at": "2026-08-03 12:00:00",
+            "saved_at": "2026-08-03 12:01:00",
+            "is_active": 1,
+        },
+    ]
+
+    def query(_database: str, sql: str, params: tuple[object, ...]):
+        captured.append((sql, params))
+        return rows
+
+    selected = load_yield_resistance_definitions(
+        as_of_at="2026-08-02T00:00:00+00:00",
+        query_fn=query,
+    )
+
+    assert [row["definition_id"] for row in selected] == [
+        "auto-known",
+        "user-known",
+    ]
+    assert "known_at <= %s" in captured[0][0]
+    assert "saved_at <= %s" in captured[0][0]
+
+
+def test_model_artifact_loader_requires_exact_version_cutoff_and_component() -> None:
+    from finance.loaders.inflation_policy import load_inflation_policy_model_artifact
+
+    rows = [
+        {
+            "model_version": "inflation-policy-hybrid-v1",
+            "trained_cutoff_at": "2026-07-28 18:00:00",
+            "component": "core_pce_hybrid",
+        },
+        {
+            "model_version": "inflation-policy-hybrid-v1",
+            "trained_cutoff_at": "2026-07-29 18:00:00",
+            "component": "core_pce_momentum",
+        },
+        {
+            "model_version": "inflation-policy-hybrid-v1",
+            "trained_cutoff_at": "2026-07-29 18:00:00",
+            "component": "core_pce_hybrid",
+        },
+    ]
+    captured: list[tuple[str, tuple[object, ...]]] = []
+
+    def query(_database: str, sql: str, params: tuple[object, ...]):
+        captured.append((sql, params))
+        return rows
+
+    selected = load_inflation_policy_model_artifact(
+        model_version="inflation-policy-hybrid-v1",
+        trained_cutoff_at="2026-07-29T18:00:00+00:00",
+        component="core_pce_hybrid",
+        query_fn=query,
+    )
+
+    assert selected is not None
+    assert selected["trained_cutoff_at"] == "2026-07-29 18:00:00"
+    assert selected["component"] == "core_pce_hybrid"
+    assert "model_version = %s" in captured[0][0]
+    assert "trained_cutoff_at = %s" in captured[0][0]
+    assert "component = %s" in captured[0][0]
+
+
+def test_model_artifact_loader_fails_closed_when_exact_identity_is_missing() -> None:
+    from finance.loaders.inflation_policy import load_inflation_policy_model_artifact
+
+    selected = load_inflation_policy_model_artifact(
+        model_version="inflation-policy-hybrid-v1",
+        trained_cutoff_at="2026-07-29T18:00:00+00:00",
+        component="core_pce_hybrid",
+        query_fn=lambda *_args: [
+            {
+                "model_version": "inflation-policy-hybrid-v1",
+                "trained_cutoff_at": "2026-07-28 18:00:00",
+                "component": "core_pce_hybrid",
+            }
+        ],
+    )
+
+    assert selected is None
+
+
 def test_result_store_exports_all_approved_persistence_boundaries() -> None:
     module = importlib.import_module("finance.data.inflation_policy_results")
 

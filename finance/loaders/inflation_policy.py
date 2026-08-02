@@ -426,3 +426,100 @@ def load_latest_inflation_policy_snapshot(
             _sort_timestamp(row.get("updated_at")),
         ),
     )
+
+
+def load_yield_resistance_definitions(
+    *,
+    as_of_at: str | datetime | None = None,
+    include_inactive: bool = False,
+    query_fn: QueryFn | None = None,
+) -> tuple[dict[str, object], ...]:
+    """Return definitions that were known and saved by one point in time."""
+
+    as_of = _datetime_value(
+        as_of_at or datetime.now(timezone.utc), field="as_of_at"
+    )
+    active_clause = "" if include_inactive else "AND is_active = 1"
+    sql = f"""
+    SELECT * FROM yield_resistance_definition
+    WHERE known_at <= %s
+      AND saved_at <= %s
+      {active_clause}
+    ORDER BY owner, instrument, zone_lower_pct, saved_at
+    """
+    rows = _query(
+        DB_META,
+        sql,
+        (_sql_datetime(as_of), _sql_datetime(as_of)),
+        query_fn=query_fn,
+    )
+    eligible: list[dict[str, object]] = []
+    for raw in rows:
+        row = dict(raw)
+        try:
+            known_at = _datetime_value(row.get("known_at"), field="known_at")
+            saved_at = _datetime_value(row.get("saved_at"), field="saved_at")
+        except ValueError:
+            continue
+        if known_at > as_of or saved_at > as_of:
+            continue
+        if not include_inactive and not bool(row.get("is_active", 0)):
+            continue
+        eligible.append(row)
+    return tuple(
+        sorted(
+            eligible,
+            key=lambda row: (
+                str(row.get("owner") or ""),
+                str(row.get("instrument") or ""),
+                float(row.get("zone_lower_pct") or 0.0),
+                _sort_timestamp(row.get("saved_at")),
+            ),
+        )
+    )
+
+
+def load_inflation_policy_model_artifact(
+    *,
+    model_version: str,
+    trained_cutoff_at: str | datetime,
+    component: str,
+    query_fn: QueryFn | None = None,
+) -> dict[str, object] | None:
+    """Load one artifact only when its complete training identity matches."""
+
+    version = str(model_version).strip()
+    component_name = str(component).strip()
+    if not version or not component_name:
+        raise ValueError("model_version and component cannot be empty")
+    trained_cutoff = _datetime_value(
+        trained_cutoff_at, field="trained_cutoff_at"
+    )
+    sql = """
+    SELECT * FROM inflation_policy_model_artifact
+    WHERE model_version = %s
+      AND trained_cutoff_at = %s
+      AND component = %s
+    ORDER BY updated_at DESC
+    """
+    rows = _query(
+        DB_META,
+        sql,
+        (version, _sql_datetime(trained_cutoff), component_name),
+        query_fn=query_fn,
+    )
+    for raw in rows:
+        row = dict(raw)
+        try:
+            row_cutoff = _datetime_value(
+                row.get("trained_cutoff_at"), field="trained_cutoff_at"
+            )
+        except ValueError:
+            continue
+        if (
+            str(row.get("model_version") or "") == version
+            and row_cutoff == trained_cutoff
+            and str(row.get("component") or "") == component_name
+        ):
+            return row
+    return None
