@@ -10,6 +10,60 @@ html, body, #root { width: 100%; min-height: 100%; margin: 0; }
 body { overflow-x: hidden; }
 button, input, summary { font: inherit; }
 
+.cycle-workbench-shell,
+.cycle-workbench-frame {
+  width: 100%;
+}
+.cycle-inner-navigation {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin: 3px 2px 15px;
+  padding: 4px;
+  border: 1px solid #dbe4eb;
+  border-radius: 13px;
+  background: #f2f6f8;
+}
+.cycle-inner-navigation button {
+  min-height: 40px;
+  padding: 8px 15px;
+  border: 0;
+  border-radius: 9px;
+  color: #617486;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.cycle-inner-navigation button[aria-selected="true"] {
+  color: #244c63;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(33, 53, 72, .08);
+}
+.cycle-inner-navigation button:focus-visible {
+  outline: 3px solid rgba(55, 111, 139, .18);
+  outline-offset: 2px;
+}
+.inflation-policy-workbench {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+  padding: 2px 2px 18px;
+}
+.inflation-policy-placeholder-hero,
+.inflation-policy-unavailable {
+  padding: 22px 24px;
+  border: 1px solid #dbe4eb;
+  border-radius: 21px;
+  background: #fff;
+}
+.inflation-policy-placeholder-hero span { color: #638092; font-size: 10px; font-weight: 900; letter-spacing: .12em; }
+.inflation-policy-placeholder-hero h2 { margin: 7px 0; color: #20364b; font-size: 25px; }
+.inflation-policy-placeholder-hero p,
+.inflation-policy-unavailable p { margin: 0; color: #64768a; font-size: 12px; line-height: 1.6; }
+.inflation-policy-placeholder-hero small { display: block; margin-top: 11px; color: #7b8b98; font-size: 10px; }
+.inflation-policy-unavailable strong { color: #8b641f; font-size: 13px; }
+
 .cycle-workbench {
   --recovery: #72aee6;
   --expansion: #39a47f;
