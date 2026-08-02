@@ -135,6 +135,52 @@ def test_latest_eligible_acm_collection_vintage_is_selected() -> None:
     assert bundle.coverage["term_premium_status"] == "LIMITED"
 
 
+def test_training_vintage_loader_preserves_all_then_known_versions() -> None:
+    from finance.loaders.inflation_policy import (
+        load_inflation_policy_training_vintages,
+    )
+
+    captured: list[tuple[str, tuple[object, ...]]] = []
+
+    def query(_database: str, sql: str, params: tuple[object, ...]):
+        captured.append((sql, params))
+        return [
+            {
+                "series_id": "PCEPILFE",
+                "observation_date": "2026-04-01",
+                "released_at": "2026-05-28 12:30:00",
+                "realtime_start": "2026-05-28",
+                "value": 129.6,
+            },
+            {
+                "series_id": "PCEPILFE",
+                "observation_date": "2026-04-01",
+                "released_at": "2026-06-25 12:30:00",
+                "realtime_start": "2026-06-25",
+                "value": 129.7,
+            },
+            {
+                "series_id": "PCEPILFE",
+                "observation_date": "2026-05-01",
+                "released_at": "2026-07-30 12:30:00",
+                "realtime_start": "2026-07-30",
+                "value": 130.2,
+            },
+        ]
+
+    rows = load_inflation_policy_training_vintages(
+        as_of_at="2026-07-29T18:00:00+00:00",
+        history_start="2025-01-01",
+        series_ids=("PCEPILFE",),
+        query_fn=query,
+    )
+
+    assert [row["value"] for row in rows] == [129.6, 129.7]
+    assert len(captured) == 1
+    assert "released_at <= %s" in captured[0][0]
+    assert "ROW_NUMBER" not in captured[0][0]
+
+
 def test_invalid_snapshot_json_performs_no_database_write() -> None:
     module = importlib.import_module("finance.data.inflation_policy_results")
     opened = 0

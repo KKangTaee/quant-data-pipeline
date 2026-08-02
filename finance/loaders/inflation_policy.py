@@ -322,6 +322,76 @@ def load_inflation_policy_data_bundle(
     )
 
 
+def load_inflation_policy_training_vintages(
+    *,
+    as_of_at: str | datetime,
+    history_start: str | date,
+    series_ids: Iterable[str],
+    query_fn: QueryFn | None = None,
+) -> tuple[dict[str, object], ...]:
+    """Load every eligible vintage needed to reconstruct historical origins."""
+
+    as_of = _datetime_value(as_of_at, field="as_of_at")
+    start = _date_value(history_start, field="history_start")
+    if start > as_of.date():
+        raise ValueError("history_start cannot be after as_of_at")
+    approved = tuple(
+        dict.fromkeys(str(value).strip().upper() for value in series_ids if str(value).strip())
+    )
+    if not approved:
+        raise ValueError("series_ids cannot be empty")
+    placeholders = ",".join(["%s"] * len(approved))
+    sql = f"""
+    SELECT * FROM macro_series_vintage_observation
+    WHERE series_id IN ({placeholders})
+      AND observation_date >= %s
+      AND observation_date <= %s
+      AND released_at IS NOT NULL
+      AND released_at <= %s
+    ORDER BY series_id, observation_date, released_at, realtime_start
+    """
+    raw_rows = _query(
+        DB_META,
+        sql,
+        (
+            *approved,
+            start.isoformat(),
+            as_of.date().isoformat(),
+            _sql_datetime(as_of),
+        ),
+        query_fn=query_fn,
+    )
+    eligible: list[dict[str, object]] = []
+    for raw in raw_rows:
+        row = dict(raw)
+        series_id = str(row.get("series_id") or "").strip().upper()
+        if series_id not in approved:
+            continue
+        try:
+            observation = _date_value(
+                row.get("observation_date"), field="observation_date"
+            )
+        except ValueError:
+            continue
+        if not start <= observation <= as_of.date() or not _release_eligible(
+            row, as_of=as_of
+        ):
+            continue
+        row["series_id"] = series_id
+        eligible.append(row)
+    return tuple(
+        sorted(
+            eligible,
+            key=lambda row: (
+                str(row.get("series_id") or ""),
+                str(row.get("observation_date") or ""),
+                _sort_timestamp(row.get("released_at")),
+                str(row.get("realtime_start") or ""),
+            ),
+        )
+    )
+
+
 def load_latest_inflation_policy_snapshot(
     *,
     as_of_at: str | datetime | None = None,
