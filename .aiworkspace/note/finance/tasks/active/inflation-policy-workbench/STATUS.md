@@ -1,7 +1,7 @@
 # Inflation Policy Workbench Status
 
 State: active
-Roadmap: 1/4 implementation checkpoints complete
+Roadmap: 2/4 implementation checkpoints complete
 Last Updated: 2026-08-02
 
 ## Completed
@@ -12,9 +12,10 @@ Last Updated: 2026-08-02
   PIT-safe 조회로 추가했다.
 - 독립 `inflation_policy_v1` read model이 snapshot JSON을 검증하고 AUTO/USER 기준을
   분리하며, 오류 시 숫자 없이 `FAILED`로 닫힌다.
+- Streamlit transport가 cycle과 inflation-policy read model을 렌더 직전에만 합성하고,
+  save/reverse command nonce와 cache를 cycle refresh에서 분리한다.
 
 ## Next
 
-1. USER 기준 저장·bounded reverse command와 Streamlit bridge
-2. React 순방향·역산 workbench
-3. actual DB/Browser QA와 문서 정렬
+1. React 순방향·역산 workbench
+2. actual DB/Browser QA와 문서 정렬

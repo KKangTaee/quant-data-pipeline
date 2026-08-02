@@ -81,6 +81,8 @@ def _query(
                 "fomc_sep_distribution",
                 "fomc_policy_decision",
                 "inflation_policy_snapshot",
+                "inflation_policy_model_artifact",
+                "yield_resistance_definition",
             )
         ):
             return []

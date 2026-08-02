@@ -21,3 +21,14 @@
 - command GREEN: USER-only 저장 검증, exact artifact identity, READY gate, 200bp·50,000
   path 상한, sparse support fail-closed를 구현했다.
 - command와 simulation focused 검증 16건 통과.
+
+## 2026-08-02 Streamlit Bridge And Actual DB Smoke
+
+- bridge RED: 독립 transport/event API 부재 5건 실패, 기존 cycle 28건 통과.
+- bridge GREEN: 독립 payload 합성, separate nonce/cache, command result handoff,
+  read-only fallback을 구현해 33건 통과.
+- actual DB smoke에서 아직 생성되지 않은 optional `yield_resistance_definition` table이
+  reader를 중단시키는 문제를 재현했다. missing optional table을 빈 정의로 처리하는 RED/GREEN
+  회귀 테스트를 추가했다.
+- actual latest read model은 전체/물가/정책/금리 `LIMITED`, AUTO zone 2개,
+  reverse/recession `NOT_AVAILABLE`로 승격 없이 반환됐다.

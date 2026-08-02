@@ -398,6 +398,28 @@ def test_model_artifact_loader_fails_closed_when_exact_identity_is_missing() -> 
     assert selected is None
 
 
+def test_optional_resistance_table_absence_returns_empty_definitions(monkeypatch) -> None:
+    from finance.loaders import inflation_policy as module
+
+    class MissingTableDB:
+        def use_db(self, _database: str) -> None:
+            pass
+
+        def query(self, _sql: str, _params: tuple[object, ...]):
+            raise RuntimeError(
+                "Table 'finance_meta.yield_resistance_definition' doesn't exist"
+            )
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr(module, "MySQLClient", lambda *_args: MissingTableDB())
+
+    assert module.load_yield_resistance_definitions(
+        as_of_at="2026-08-02T00:00:00+00:00"
+    ) == ()
+
+
 def test_result_store_exports_all_approved_persistence_boundaries() -> None:
     module = importlib.import_module("finance.data.inflation_policy_results")
 
