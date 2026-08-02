@@ -186,6 +186,52 @@ function readyPayload(): InflationPolicyPayload {
   };
 }
 
+function limitedHistoricalPayload(): InflationPolicyPayload {
+  const ready = readyPayload();
+  return {
+    ...ready,
+    publication_status: "LIMITED",
+    model_version: "inflation-policy-hybrid-v1",
+    as_of_at: "2026-07-29T18:00:00Z",
+    headline: {
+      ...ready.headline,
+      is_historical: true,
+      history_label: "과거 기준",
+      run_kind: "historical_replay",
+      summary: "검증 제한 상태에서는 확률을 현재 판단으로 승격하지 않습니다.",
+    },
+    inflation: {
+      ...ready.inflation,
+      publication_status: "LIMITED",
+      state_definition: { definition_version: "sep-20260617-v1" },
+    },
+    policy: { ...ready.policy, publication_status: "LIMITED" },
+    rates: { ...ready.rates, publication_status: "LIMITED" },
+    evidence: {
+      items: [{
+        label: "Core PCE",
+        supports: "inflation",
+        observation_date: "2026-06-01",
+        released_at: "2026-07-30T12:30:00Z",
+        collected_at: "2026-07-30T12:35:00Z",
+      }],
+      details: { benchmark_suite_status: "INCOMPLETE" },
+    },
+    freshness: {
+      PCEPILFE: {
+        latest_observation_date: "2026-06-01",
+        latest_released_at: "2026-07-30T12:30:00Z",
+        collected_at: "2026-07-30T12:35:00Z",
+      },
+    },
+    recession: {
+      publication_status: "NOT_AVAILABLE",
+      reason: "침체 모델은 5차 개발 전까지 연결하지 않습니다.",
+    },
+    warnings: ["연말 Core PCE 경로의 시점별 검증이 아직 부족합니다."],
+  };
+}
+
 describe("inflation policy inner navigation", () => {
   it("keeps 경기 국면 as default and opens 물가·정책 경로 explicitly", async () => {
     render(<EconomicCycleWorkbenchView payload={cyclePayload} onCommand={vi.fn()} />);
@@ -285,5 +331,28 @@ describe("reverse target and saved criterion workflow", () => {
     expect(screen.getByText("공동 경로 검증 전")).toBeInTheDocument();
     expect(screen.getByText(/구간을 넓히거나 horizon을 늘린 뒤/)).toBeInTheDocument();
     expect(screen.queryByText(/필요 인상 횟수: [0-9]/)).not.toBeInTheDocument();
+  });
+});
+
+describe("evidence, freshness, and unavailable boundaries", () => {
+  it("shows historical evidence clocks and version provenance without promoting limited probabilities", async () => {
+    render(<InflationPolicyWorkbench payload={limitedHistoricalPayload()} onCommand={vi.fn()} />);
+
+    expect(screen.getByText(/과거 기준 · 2026-07-29/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("고착 40%")).not.toBeInTheDocument();
+    expect(screen.queryByText("5상태 합계 100%")).not.toBeInTheDocument();
+    expect(screen.getByText("침체 모델 미연결")).toBeInTheDocument();
+    expect(screen.getByText(/5차 개발 전까지 연결하지 않습니다/)).toBeInTheDocument();
+
+    const disclosure = screen.getByText("근거·시점·버전 확인").closest("details");
+    expect(disclosure).not.toHaveAttribute("open");
+    await userEvent.click(screen.getByText("근거·시점·버전 확인"));
+    expect(screen.getByText("inflation-policy-hybrid-v1")).toBeInTheDocument();
+    expect(screen.getByText("sep-20260617-v1")).toBeInTheDocument();
+    expect(screen.getAllByText("yield-zone-v1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2026-06-01").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2026-07-30T12:30:00Z").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2026-07-30T12:35:00Z").length).toBeGreaterThan(0);
+    expect(screen.getByText("연말 Core PCE 경로의 시점별 검증이 아직 부족합니다.")).toBeInTheDocument();
   });
 });

@@ -1,3 +1,4 @@
+import InflationEvidencePanel from "./InflationEvidencePanel";
 import InflationStatePanel from "./InflationStatePanel";
 import PolicyPathPanel from "./PolicyPathPanel";
 import ReverseScenarioPanel from "./ReverseScenarioPanel";
@@ -39,6 +40,7 @@ function InflationPolicyWorkbench({ payload, onCommand }: InflationPolicyWorkben
       <PolicyPathPanel policy={payload.policy} showProbabilities={showProbabilities} />
       <YieldResistancePanel rates={payload.rates} />
       <ReverseScenarioPanel payload={payload} onCommand={onCommand} />
+      <InflationEvidencePanel payload={payload} />
     </main>
   );
 }
