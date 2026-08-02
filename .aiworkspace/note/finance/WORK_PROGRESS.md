@@ -7318,3 +7318,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 실제 2026 source에서 6월 점도표/Core PCE 분포, 7월 9-3 동결과 3명 인상 선호, 다음 날 PCE cutoff 제외를 확인했다.
 - 기존 경제 사이클 결과는 입력/fallback으로 사용하지 않으며 BEA는 `NOT_AVAILABLE`, ACM replay는 `LIMITED`로 보존한다.
 - 전체 5차 중 1차 완료; 다음 위치는 `tasks/active/inflation-policy-data-pipeline/`과 `phases/active/inflation-policy-yield-path/`다.
+
+## 2026-08-02 - Inflation / Policy Yield Path 2/5 핵심 엔진 완료
+
+- PIT 전체 vintage 기반 bridge·ridge·momentum Core PCE, 익명 SEP·실제 표결 policy marginal, 동적 국채 저항과 조건부 역산 계약을 구현했다.
+- 2026-07-29 replay의 1개월 artifact와 통합 snapshot은 `LIMITED`; 역산·침체는 `NOT_AVAILABLE`로 저장했다.
+- 당시 10년물은 active 4.58~4.65%, next overhead 4.67%였으며 4.7 고정 상수를 사용하지 않았다.
+- 전체 5차 중 2차 완료; 다음 위치는 `tasks/active/inflation-policy-core-engines/`와 phase 3 workbench다.

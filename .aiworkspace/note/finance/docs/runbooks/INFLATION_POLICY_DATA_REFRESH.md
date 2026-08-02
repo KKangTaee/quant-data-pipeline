@@ -6,8 +6,9 @@ Last Verified: 2026-08-02
 ## 목적
 
 Core PCE, FOMC SEP·정책 결정, 국채금리와 기간 프리미엄 원천을 UI나 기존 경제
-사이클 결과에 의존하지 않고 MySQL의 독립 Point-in-Time 원장으로 갱신한다. 이
-절차는 raw context만 수집하며 확률·저항대·주가 스트레스 결과를 계산하지 않는다.
+사이클 결과에 의존하지 않고 MySQL의 독립 Point-in-Time 원장으로 갱신한다. raw
+갱신과 DB-only 모델 재현·저장은 별도 명령이며, 수집 명령 자체는 확률·저항대·주가
+스트레스 결과를 계산하지 않는다.
 
 ## 언제 사용하는가
 
@@ -50,6 +51,37 @@ Core PCE, FOMC SEP·정책 결정, 국채금리와 기간 프리미엄 원천을
 .venv/bin/python -m app.jobs.overview_automation --profile standard
 ```
 
+## 모델 재현과 명시적 저장
+
+먼저 읽기 전용으로 exact cutoff를 재현한다. `--as-of-at` 이후 공개된 행은 참조월이
+과거여도 제외된다.
+
+```bash
+.venv/bin/python -m finance.inflation_policy_pipeline \
+  --as-of-at 2026-07-29T18:00:00+00:00 \
+  --run-kind historical_replay
+```
+
+출력과 publication status를 확인한 뒤 같은 business key를 저장하려면
+`--persist`를 명시한다. 이 옵션이 없으면 DB write가 없다.
+
+```bash
+.venv/bin/python -m finance.inflation_policy_pipeline \
+  --as-of-at 2026-07-29T18:00:00+00:00 \
+  --model-version inflation-policy-hybrid-v1 \
+  --run-kind historical_replay \
+  --persist
+```
+
+저장은 `READY|LIMITED` artifact/snapshot만 허용한다. hybrid 학습이 불가능하거나
+critical input이 없으면 `NOT_AVAILABLE`을 반환하고 artifact/snapshot을 쓰지 않는다.
+같은 `model_version + cutoff + component`와 `as_of_at + model_version + run_kind`는
+UPSERT된다.
+
+artifact의 `trained_cutoff_at`은 실제 hybrid fit cutoff이며 replay cutoff와 정확히
+일치해야 한다. Core PCE 학습이 실패하거나 cutoff/관측월이 맞지 않는 artifact가 주입된 run은 Treasury
+read payload를 독립 계산할 수 있어도 신규 artifact/snapshot은 저장하지 않는다.
+
 ## 기대 결과
 
 출력은 한 줄 JSON이다.
@@ -67,6 +99,14 @@ Core PCE, FOMC SEP·정책 결정, 국채금리와 기간 프리미엄 원천을
 부재로 PCE 구성항목은 `NOT_AVAILABLE`, 현재 ACM workbook은 과거 공개 빈티지를
 복원할 수 없어 term premium은 `LIMITED`였다.
 
+2026-07-29 18:00 UTC historical replay에서는 1개월 Core PCE hybrid가 97개
+release origin/99 targets에서 CRPS `0.06052`로 최선의 비교 가능 baseline
+`0.10757`보다 낮았다. 다만 SEP/공식 nowcast benchmark 묶음이 완성되지 않아
+artifact와 통합 snapshot은 모두 `LIMITED`로 저장됐다. 연말 Q4/Q4, 정책 경로,
+저항 돌파·안착은 별도 검증 전이며 역산과 침체는
+`NOT_AVAILABLE`이다. 당시 10년물 자동 기준은 active `4.58~4.65%`, 다음 overhead
+`4.67%`로 계산됐으며 4.7%를 전역 상수로 사용하지 않았다.
+
 ## 실패 처리
 
 - `materialization_allowed=false`: 확률 snapshot을 만들지 않는다. `failed_sources`와
@@ -82,6 +122,16 @@ Core PCE, FOMC SEP·정책 결정, 국채금리와 기간 프리미엄 원천을
   breadth 기능만 비활성 상태로 둔다.
 - `term_premium=LIMITED`: 현재 workbook의 과거 행을 과거 시점에 소급하지 않는다.
   실제 collection 빈티지가 누적될 때까지 historical replay에서는 제한을 유지한다.
+- `benchmark_suite_incomplete`: 비교 가능한 carry-forward·3개월·6개월 baseline은
+  모두 저장하지만 SEP/공식 benchmark가 준비되기 전 artifact를 `READY`로 올리지 않는다.
+- `q4_path_rolling_origin_validation_not_ready`: 월간 artifact 결과를 연말 확률로
+  승격하지 않는다. snapshot의 `LIMITED`를 유지한다.
+- `policy_rolling_origin_validation_not_ready`: 현재 2026 decision history만으로 정책
+  확률을 정밀 확률로 공개하지 않는다.
+- `joint_rate_path_validation_not_ready`: 저장된 저항 zone은 볼 수 있지만 목표 zone
+  역산은 `NOT_AVAILABLE`로 둔다.
+- `core_pce_artifact_not_publishable` 또는 artifact cutoff 오류: 물가·정책·역산은
+  차단한다. Treasury read payload는 독립 계산하되 해당 실패 run은 저장하지 않는다.
 
 집중 검증:
 
@@ -93,12 +143,18 @@ Core PCE, FOMC SEP·정책 결정, 국채금리와 기간 프리미엄 원천을
   tests/test_fomc_policy_data.py \
   tests/test_nyfed_term_premium.py \
   tests/test_inflation_policy_loaders.py \
-  tests/test_inflation_policy_refresh.py -q
+  tests/test_inflation_policy_refresh.py \
+  tests/test_inflation_policy_model.py \
+  tests/test_inflation_policy_pipeline.py \
+  tests/test_inflation_policy_validation.py \
+  tests/test_inflation_policy_simulation.py \
+  tests/test_yield_resistance.py -q
 ```
 
 ## 관련 문서
 
 - [Data / DB Pipeline Flow](../architecture/DATA_DB_PIPELINE_FLOW.md)
+- [Inflation / Policy Engine Flow](../architecture/INFLATION_POLICY_ENGINE_FLOW.md)
 - [DB Schema Map](../data/DB_SCHEMA_MAP.md)
 - [Automation Scripts Guide](./AUTOMATION_SCRIPTS.md)
 - [Inflation Policy Yield Path phase](../../phases/active/inflation-policy-yield-path/PLAN.md)

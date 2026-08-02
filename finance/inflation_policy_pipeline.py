@@ -41,8 +41,8 @@ from finance.policy_path import (
 )
 from finance.yield_resistance import (
     build_dynamic_resistance_zones,
-    classify_resistance_state,
     decompose_yield_driver,
+    replay_resistance_state,
 )
 
 
@@ -50,6 +50,7 @@ from finance.yield_resistance import (
 class CorePCEMomentumArtifact:
     training_start_date: str
     trained_through_date: str
+    trained_cutoff_at: str
     component_weights: dict[str, float]
     component_errors: dict[str, float]
     predictive_residuals_pct: tuple[float, ...]
@@ -225,6 +226,11 @@ def fit_core_pce_momentum_artifact(
         "recent_3m": [],
         "recent_6m": [],
     }
+    validation_baseline_errors: dict[str, list[float]] = {
+        "persistence": [],
+        "rolling_3m": [],
+        "rolling_6m": [],
+    }
     residuals: list[float] = []
     predictions: list[ContinuousValidationPrediction] = []
     values = [item[2] for item in changes]
@@ -243,7 +249,13 @@ def fit_core_pce_momentum_artifact(
         else:
             weights = {name: 1.0 / 3.0 for name in component_errors}
         predicted = sum(weights[name] * components[name] for name in components)
-        prior_residuals = tuple(residuals) if residuals else (0.0,)
+        if residuals:
+            residual_center = sum(residuals) / len(residuals)
+            prior_residuals = tuple(
+                residual - residual_center for residual in residuals
+            )
+        else:
+            prior_residuals = (0.0,)
         actual = values[index]
         training_release = max(_timestamp(item[1]) for item in changes[:index])
         target_release = _timestamp(changes[index][1])
@@ -262,6 +274,14 @@ def fit_core_pce_momentum_artifact(
                     complete_feature_ratio=1.0,
                 )
             )
+            for baseline_name, component_name in (
+                ("persistence", "persistence"),
+                ("rolling_3m", "recent_3m"),
+                ("rolling_6m", "recent_6m"),
+            ):
+                validation_baseline_errors[baseline_name].append(
+                    abs(actual - components[component_name])
+                )
         for name, component_prediction in components.items():
             component_errors[name].append(abs(actual - component_prediction))
         residuals.append(actual - predicted)
@@ -287,6 +307,25 @@ def fit_core_pce_momentum_artifact(
             "complete_feature_ratio": 0.0,
         }
         calibration_error = 1.0
+    baseline_source = (
+        validation_baseline_errors if predictions else {
+            "persistence": component_errors["persistence"],
+            "rolling_3m": component_errors["recent_3m"],
+            "rolling_6m": component_errors["recent_6m"],
+        }
+    )
+    baseline_scores = {
+        name: sum(errors) / len(errors)
+        for name, errors in baseline_source.items()
+    }
+    metrics.update(
+        {
+            "baseline_persistence_crps": baseline_scores["persistence"],
+            "baseline_rolling_3m_crps": baseline_scores["rolling_3m"],
+            "baseline_rolling_6m_crps": baseline_scores["rolling_6m"],
+            "baseline_crps": min(baseline_scores.values()),
+        }
+    )
     decision = evaluate_publication_gate(
         PublicationEvidence(
             origin_count=len(predictions),
@@ -312,12 +351,17 @@ def fit_core_pce_momentum_artifact(
         "origin_count": float(len(predictions)),
         "calibration_error": calibration_error,
     }
+    residual_center = sum(residuals) / len(residuals)
+    centered_residuals = tuple(
+        residual - residual_center for residual in residuals
+    )
     return CorePCEMomentumArtifact(
         training_start_date=levels[0][0].isoformat(),
         trained_through_date=levels[-1][0].isoformat(),
+        trained_cutoff_at=max(_timestamp(row[1]) for row in levels).isoformat(),
         component_weights=final_weights,
         component_errors=final_errors,
-        predictive_residuals_pct=tuple(residuals),
+        predictive_residuals_pct=centered_residuals,
         validation_metrics=validation,
         publication_status=decision.status,
         publication_reasons=decision.reason_codes,
@@ -399,6 +443,103 @@ def _change_bp(rows: Sequence[Mapping[str, object]], *, lookback_rows: int = 21)
     return (float(window[-1]["value"]) - float(window[0]["value"])) * 100.0
 
 
+def _freshness_summary(
+    bundle: InflationPolicyDataBundle,
+    *,
+    trained_through_date: str | None = None,
+    trained_cutoff_at: str | None = None,
+) -> dict[str, object]:
+    """Build compact release/observation evidence and enforce the PIT cutoff."""
+
+    cutoff = _timestamp(bundle.as_of_at)
+    if (trained_through_date is None) != (trained_cutoff_at is None):
+        raise ValueError("artifact freshness fields must be provided together")
+    artifact_cutoff: datetime | None = None
+    trained_through: date | None = None
+    if trained_cutoff_at is not None and trained_through_date is not None:
+        artifact_cutoff = _timestamp(trained_cutoff_at)
+        if artifact_cutoff > cutoff:
+            raise ValueError(
+                f"artifact trained_cutoff_at {artifact_cutoff.isoformat()} "
+                f"exceeds cutoff {cutoff.isoformat()}"
+            )
+        if artifact_cutoff != cutoff:
+            raise ValueError(
+                f"artifact trained_cutoff_at {artifact_cutoff.isoformat()} "
+                f"does not match replay cutoff {cutoff.isoformat()}"
+            )
+        trained_through = date.fromisoformat(
+            str(trained_through_date).strip()[:10]
+        )
+        if trained_through > cutoff.date():
+            raise ValueError(
+                f"artifact trained_through_date {trained_through.isoformat()} "
+                f"exceeds cutoff date {cutoff.date().isoformat()}"
+            )
+    all_releases: list[datetime] = []
+
+    def component(
+        rows: Sequence[Mapping[str, object]],
+        *,
+        observation_field: str,
+    ) -> dict[str, object]:
+        releases: list[datetime] = []
+        observations: list[str] = []
+        for row in rows:
+            if row.get("released_at") in (None, ""):
+                raise ValueError("input row is missing released_at")
+            released_at = _timestamp(row["released_at"])
+            if released_at > cutoff:
+                raise ValueError(
+                    f"input release {released_at.isoformat()} exceeds cutoff "
+                    f"{cutoff.isoformat()}"
+                )
+            releases.append(released_at)
+            all_releases.append(released_at)
+            if row.get(observation_field) not in (None, ""):
+                observations.append(str(row[observation_field])[:10])
+        return {
+            "row_count": len(rows),
+            "latest_observation_date": max(observations) if observations else None,
+            "latest_released_at": (
+                max(releases).isoformat() if releases else None
+            ),
+        }
+
+    macro_groups: dict[str, list[Mapping[str, object]]] = {}
+    for row in bundle.macro_rows:
+        series_id = str(row.get("series_id") or "").strip().upper()
+        if not series_id:
+            raise ValueError("macro input row is missing series_id")
+        macro_groups.setdefault(series_id, []).append(row)
+    macro_series = {
+        series_id: component(rows, observation_field="observation_date")
+        for series_id, rows in sorted(macro_groups.items())
+    }
+    sep = component(bundle.sep_rows, observation_field="meeting_date")
+    decisions = component(bundle.decision_rows, observation_field="meeting_date")
+    term_premium = component(
+        bundle.term_premium_rows,
+        observation_field="observation_date",
+    )
+    summary: dict[str, object] = {
+        "as_of_at": cutoff.isoformat(),
+        "max_released_at": max(all_releases).isoformat() if all_releases else None,
+        "macro_series": macro_series,
+        "sep": sep,
+        "fomc_decisions": decisions,
+        "term_premium": term_premium,
+    }
+    if artifact_cutoff is not None and trained_through is not None:
+        summary.update(
+            {
+                "trained_cutoff_at": artifact_cutoff.isoformat(),
+                "trained_through_date": trained_through.isoformat(),
+            }
+        )
+    return summary
+
+
 def _resistance_payload(
     rows: Sequence[Mapping[str, object]],
 ) -> dict[str, object]:
@@ -412,11 +553,12 @@ def _resistance_payload(
     serialized_zones = []
     for zone in zones:
         payload = asdict(zone)
-        payload["state"] = classify_resistance_state(
-            recent,
+        payload["state"] = replay_resistance_state(
+            rows,
             zone_lower_pct=zone.zone_lower_pct,
             zone_upper_pct=zone.zone_upper_pct,
             buffer_pct=zone.tolerance_pct,
+            known_at_date=zone.known_at_date,
         )
         payload["breakout_probability"] = None
         payload["hold_probability"] = None
@@ -467,6 +609,119 @@ def _resistance_payload(
     }
 
 
+def _build_rates_payload(bundle: InflationPolicyDataBundle) -> dict[str, object]:
+    """Materialize Treasury evidence independently from the Core PCE gate."""
+
+    rate_series = {
+        series_id: _series_rows(bundle.macro_rows, series_id)
+        for series_id in ("DGS2", "DGS10", "DFII10", "T10YIE")
+    }
+    if not rate_series["DGS10"]:
+        return {
+            "publication_status": "NOT_AVAILABLE",
+            "reason": "DGS10_not_available",
+        }
+    instruments = {
+        series_id: _resistance_payload(rows)
+        for series_id, rows in rate_series.items()
+    }
+    try:
+        driver = decompose_yield_driver(
+            nominal_10y_change_bp=_change_bp(rate_series["DGS10"]),
+            two_year_change_bp=_change_bp(rate_series["DGS2"]),
+            real_10y_change_bp=_change_bp(rate_series["DFII10"]),
+            breakeven_10y_change_bp=_change_bp(rate_series["T10YIE"]),
+            term_premium_change_bp=(
+                _change_bp(bundle.term_premium_rows)
+                if len(bundle.term_premium_rows) >= 2
+                else None
+            ),
+        )
+        driver_payload: dict[str, object] = asdict(driver)
+    except ValueError as exc:
+        driver_payload = {
+            "dominant_driver": "NOT_AVAILABLE",
+            "reason": f"driver_inputs_not_available:{exc}",
+        }
+    return {
+        "publication_status": "LIMITED",
+        "reason": "resistance_event_calibration_not_ready",
+        "instruments": instruments,
+        # Keep the primary instrument at the top level for compact readers.
+        "DGS10": instruments["DGS10"],
+        "driver_decomposition": driver_payload,
+        "inflation_confirmation": {
+            "status": "UNCONFIRMED",
+            "reason": "prior_inflation_probability_not_available",
+        },
+        "term_premium_status": bundle.coverage.get(
+            "term_premium_status", "NOT_AVAILABLE"
+        ),
+    }
+
+
+def _rates_only_materialization(
+    *,
+    bundle: InflationPolicyDataBundle,
+    config: InflationPolicyEngineConfig,
+    reason: str,
+) -> InflationPolicyMaterialization:
+    """Return independent rate evidence while keeping core-dependent outputs closed."""
+
+    try:
+        freshness = _freshness_summary(bundle)
+    except (TypeError, ValueError) as exc:
+        return _not_available_materialization(
+            bundle=bundle,
+            config=config,
+            reason=f"freshness_not_available:{exc}",
+        )
+    inflation = {"publication_status": "NOT_AVAILABLE", "reason": reason}
+    policy = {"publication_status": "NOT_AVAILABLE", "reason": reason}
+    rates = _build_rates_payload(bundle)
+    reverse = {"publication_status": "NOT_AVAILABLE", "reason": reason}
+    warnings = tuple(
+        dict.fromkeys(
+            (
+                reason,
+                *(
+                    ("resistance_event_calibration_not_ready",)
+                    if rates["publication_status"] == "LIMITED"
+                    else ()
+                ),
+                "recession_model_not_available",
+            )
+        )
+    )
+    overall_status = (
+        "LIMITED"
+        if rates["publication_status"] in {"READY", "LIMITED"}
+        else "NOT_AVAILABLE"
+    )
+    snapshot = {
+        "as_of_at": bundle.as_of_at,
+        "model_version": config.model_version,
+        "run_kind": "historical_replay",
+        "publication_status": overall_status,
+        "inflation_json": inflation,
+        "policy_json": policy,
+        "rates_json": rates,
+        "reverse_json": reverse,
+        "evidence_json": {"coverage": bundle.coverage},
+        "freshness_json": freshness,
+        "warnings_json": warnings,
+    }
+    return InflationPolicyMaterialization(
+        snapshot_row=snapshot,
+        model_artifact_rows=(),
+        inflation=inflation,
+        policy=policy,
+        rates=rates,
+        reverse=reverse,
+        warnings=warnings,
+    )
+
+
 def _serialize_core_forecast(
     forecast: CorePCEPathForecast,
     *,
@@ -498,24 +753,49 @@ def materialize_inflation_policy_analysis(
     """Build a compact current/replay payload while preserving each component gate."""
 
     if core_artifact is None:
-        try:
-            core_artifact = fit_core_pce_momentum_artifact(
-                bundle.macro_rows,
-                thresholds=config.core_validation_thresholds,
-                minimum_history_months=24,
-                max_component_weight=min(0.60, float(config.max_component_weight)),
-            )
-        except ValueError as exc:
-            return _not_available_materialization(
-                bundle=bundle,
-                config=config,
-                reason=f"core_pce_not_available:{exc}",
-            )
+        return _rates_only_materialization(
+            bundle=bundle,
+            config=config,
+            reason="core_pce_pit_artifact_required",
+        )
+    if core_artifact.publication_status not in {"READY", "LIMITED"}:
+        return _rates_only_materialization(
+            bundle=bundle,
+            config=config,
+            reason=(
+                "core_pce_artifact_not_publishable:"
+                f"{core_artifact.publication_status}"
+            ),
+        )
+    try:
+        freshness = _freshness_summary(
+            bundle,
+            trained_through_date=core_artifact.trained_through_date,
+            trained_cutoff_at=core_artifact.trained_cutoff_at,
+        )
+    except (TypeError, ValueError) as exc:
+        return _rates_only_materialization(
+            bundle=bundle,
+            config=config,
+            reason=f"freshness_not_available:{exc}",
+        )
     levels = _core_level_rows(bundle.macro_rows)
+    if not levels:
+        return _rates_only_materialization(
+            bundle=bundle,
+            config=config,
+            reason="core_pce_current_levels_missing",
+        )
     latest_month = levels[-1][0]
+    if latest_month != _month(core_artifact.trained_through_date):
+        return _rates_only_materialization(
+            bundle=bundle,
+            config=config,
+            reason="core_pce_artifact_bundle_month_mismatch",
+        )
     forecast_months = _forecast_months(latest_month)
     if not forecast_months:
-        return _not_available_materialization(
+        return _rates_only_materialization(
             bundle=bundle,
             config=config,
             reason="core_pce_forecast_horizon_empty",
@@ -547,7 +827,7 @@ def materialize_inflation_policy_analysis(
             thresholds_pct=config.threshold_levels_pct,
         )
     except ValueError as exc:
-        return _not_available_materialization(
+        return _rates_only_materialization(
             bundle=bundle,
             config=config,
             reason=f"inflation_path_not_available:{exc}",
@@ -605,55 +885,7 @@ def materialize_inflation_policy_analysis(
         }
         policy_warnings.append("policy_not_available")
 
-    rate_series = {
-        series_id: _series_rows(bundle.macro_rows, series_id)
-        for series_id in ("DGS2", "DGS10", "DFII10", "T10YIE")
-    }
-    dgs10 = rate_series["DGS10"]
-    rates: dict[str, object]
-    if dgs10:
-        instruments = {
-            series_id: _resistance_payload(rows)
-            for series_id, rows in rate_series.items()
-        }
-        try:
-            driver = decompose_yield_driver(
-                nominal_10y_change_bp=_change_bp(rate_series["DGS10"]),
-                two_year_change_bp=_change_bp(rate_series["DGS2"]),
-                real_10y_change_bp=_change_bp(rate_series["DFII10"]),
-                breakeven_10y_change_bp=_change_bp(rate_series["T10YIE"]),
-                term_premium_change_bp=(
-                    _change_bp(bundle.term_premium_rows)
-                    if len(bundle.term_premium_rows) >= 2
-                    else None
-                ),
-            )
-            driver_payload: dict[str, object] = asdict(driver)
-        except ValueError as exc:
-            driver_payload = {
-                "dominant_driver": "NOT_AVAILABLE",
-                "reason": f"driver_inputs_not_available:{exc}",
-            }
-        rates = {
-            "publication_status": "LIMITED",
-            "reason": "resistance_event_calibration_not_ready",
-            "instruments": instruments,
-            # Keep the primary instrument at the top level for compact readers.
-            "DGS10": instruments["DGS10"],
-            "driver_decomposition": driver_payload,
-            "inflation_confirmation": {
-                "status": "UNCONFIRMED",
-                "reason": "prior_inflation_probability_not_available",
-            },
-            "term_premium_status": bundle.coverage.get(
-                "term_premium_status", "NOT_AVAILABLE"
-            ),
-        }
-    else:
-        rates = {
-            "publication_status": "NOT_AVAILABLE",
-            "reason": "DGS10_not_available",
-        }
+    rates = _build_rates_payload(bundle)
     reverse = {
         "publication_status": "NOT_AVAILABLE",
         "reason": "joint_rate_path_validation_not_ready",
@@ -695,7 +927,7 @@ def materialize_inflation_policy_analysis(
         )
     artifact_row = {
         "model_version": config.model_version,
-        "trained_cutoff_at": bundle.as_of_at,
+        "trained_cutoff_at": core_artifact.trained_cutoff_at,
         "component": "core_pce_hybrid" if hybrid else "core_pce_momentum",
         "feature_schema_version": (
             "core-pce-hybrid-features-v1" if hybrid else "core-pce-level-v1"
@@ -703,7 +935,9 @@ def materialize_inflation_policy_analysis(
         "transform_schema_version": "mom-index-q4q4-v1",
         "state_schema_version": state_definition.definition_version,
         "training_start_date": core_artifact.training_start_date,
-        "forecast_horizon": "monthly_to_year_end",
+        "forecast_horizon": (
+            "one_month_core_pce_nowcast" if hybrid else "one_month_momentum"
+        ),
         "ensemble_weight": 1.0,
         "parameters_json": artifact_parameters,
         "validation_json": core_artifact.validation_metrics,
@@ -726,7 +960,7 @@ def materialize_inflation_policy_analysis(
             "coverage": bundle.coverage,
             "core_validation": core_artifact.validation_metrics,
         },
-        "freshness_json": {"as_of_at": bundle.as_of_at},
+        "freshness_json": freshness,
         "warnings_json": warnings,
     }
     return InflationPolicyMaterialization(
@@ -781,7 +1015,7 @@ def run_inflation_policy_materialization(
             max_component_weight=min(0.60, float(config.max_component_weight)),
         )
     except (TypeError, ValueError) as exc:
-        unavailable = _not_available_materialization(
+        unavailable = _rates_only_materialization(
             bundle=bundle,
             config=config,
             reason=f"core_pce_hybrid_not_available:{exc}",
@@ -813,7 +1047,11 @@ def run_inflation_policy_materialization(
         reverse=result.reverse,
         warnings=result.warnings,
     )
-    if not persist or snapshot["publication_status"] not in {"READY", "LIMITED"}:
+    if (
+        not persist
+        or snapshot["publication_status"] not in {"READY", "LIMITED"}
+        or not result.model_artifact_rows
+    ):
         return result
     if artifact_saver is None or snapshot_saver is None:
         from finance.data.inflation_policy_results import (

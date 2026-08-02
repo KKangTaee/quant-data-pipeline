@@ -170,3 +170,28 @@ def test_policy_forecast_keeps_net_moves_and_target_bins_consistent() -> None:
         "hike": 0.425,
     }
     assert math.isclose(sum(forecast.year_end_target_probabilities.values()), 1.0)
+
+
+def test_policy_target_bins_preserve_three_plus_tail_semantics() -> None:
+    from finance.policy_path import build_policy_path_forecast
+
+    tails = {
+        **_empty_net_moves(),
+        "cut_3_plus": 0.40,
+        "hike_3_plus": 0.60,
+    }
+    forecast = build_policy_path_forecast(
+        current_midpoint_pct=3.625,
+        net_move_components={"sep": tails},
+        net_move_weights={"sep": 1.0},
+        next_action_components={
+            "committee": {"cut": 0.0, "hold": 1.0, "hike": 0.0}
+        },
+        next_action_weights={"committee": 1.0},
+        max_component_weight=1.0,
+    )
+
+    assert forecast.year_end_target_probabilities == {
+        "<=2.8750": 0.40,
+        ">=4.3750": 0.60,
+    }

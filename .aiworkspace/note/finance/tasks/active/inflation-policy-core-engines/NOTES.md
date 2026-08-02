@@ -33,3 +33,25 @@
   `NOT_AVAILABLE`이며 외삽하지 않는다.
 - 다음 PCE `0.1~0.5` 시나리오는 각 path의 다음 MoM likelihood로 target posterior를
   재가중한다. 어떤 발표치도 boolean 인상 trigger가 아니다.
+- Core PCE hybrid는 당시 공개된 전체 vintage에서 target 직전 version을 다시 선택한다.
+  같은 개정일에 함께 공개된 과거 관측치를 별도 forecast origin으로 세지 않는다.
+- 관측 종료월과 실제 학습 cutoff timestamp를 별도 저장한다. artifact cutoff가 replay
+  cutoff와 정확히 같지 않거나 관측월이 bundle 최신 Core PCE 월과 다르면 core-dependent
+  출력을 만들지 않고, 해당 실패 run은 저장하지 않는다.
+- Core PCE gate가 닫혀도 DGS10 원장이 유효하면 저항/driver read payload는 독립적으로
+  `LIMITED`를 반환한다.
+- 월별 hybrid component는 최근 Core PCE momentum, CPI·PPI·임금·trimmed-mean bridge,
+  정규화 ridge다. 실제 2026-07-29 cutoff weight는 bridge 0.3443, ridge 0.3864,
+  momentum 0.2693으로 어느 component도 0.60 cap을 넘지 않았다.
+- 1개월 monthly artifact는 97개 독립 release origin/99 targets에서 CRPS 0.06052,
+  carry-forward 0.11337, 3개월 0.11746, 6개월 0.10757 중 최선보다 낮았고 calibration
+  error는 0.17374였다. SEP/공식 benchmark 묶음이 남아 publication은 `LIMITED`다.
+- 연말 Q4/Q4 simulation은 월별 component disagreement와 empirical residual을 보존하지만
+  자체 rolling-origin gate 전이므로 별도로 `LIMITED`다.
+- 2026-07-29 18:00 UTC replay는 6월 PCE의 다음 날 발표를 제외하고 5월 Core PCE까지만
+  사용했다. 자동 10년물 active zone은 4.58~4.65%, next overhead는 4.67%였다.
+- 4.67%은 당시 confirmed pivot 군집의 결과다. `4.7`은 production source의 고정
+  저항 상수나 인플레이션 trigger로 들어가지 않았다.
+- 정책 component는 2026 의결 5건과 versioned 수동 reaction prior의 검증 부족 때문에
+  `LIMITED`, 저항 event probability는 `null/LIMITED`, joint reverse와 침체는
+  `NOT_AVAILABLE`이다.

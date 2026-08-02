@@ -10723,4 +10723,4 @@ Detailed historical analysis was archived on `2026-04-13`.
 - User request: 처음 제시한 Core PCE→FOMC→10년물 전고점 접근을 정형화하되 개발 중인 기존 경기 사이클 확률을 재사용하지 말고, 순방향과 10년물 목표 역산을 혼합형으로 만들도록 요청함.
 - Interpreted goal: 4.7%·3.5% 같은 값은 날짜가 붙은 시나리오로 두고, 독립 PIT 원천에서 5상태 물가·정책·금리·동적 저항 확률을 계산하는 workbench를 단계적으로 구현한다.
 - Analysis result: 공식 원천→PIT DB→strict loader→독립 artifact/snapshot 경계를 채택했고 실제 2026 source와 다음 날 PCE cutoff 제외로 1차 기반을 검증했다.
-- Follow-up: 전체 5차 중 1차 완료. 2차는 Core PCE·정책·2Y/10Y·동적 저항 엔진이며 침체는 5차 독립 검증 전까지 `NOT_AVAILABLE`이다.
+- Follow-up: 전체 5차 중 2차 완료. 2026-07-29 replay의 1개월 Core PCE artifact와 통합 snapshot은 benchmark/component gate에 따라 `LIMITED`이며 당시 동적 10년물 기준은 active 4.58~4.65%·next overhead 4.67%였다. 3차는 저장 snapshot 기반 순방향·목표 역산 workbench이고 침체는 5차 독립 검증 전까지 `NOT_AVAILABLE`이다.

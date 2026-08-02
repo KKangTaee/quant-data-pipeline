@@ -218,12 +218,14 @@ def derive_state_definition(
         if cumulative >= total / 2.0:
             center = midpoint
             break
-    boundaries = (
-        max(target + error, center - 2.0 * error),
-        center - error,
-        center + error,
-        center + 3.0 * error,
-    )
+    # Anchor the middle transition at no less than the long-run target, then
+    # expand outward. This preserves the high-inflation SEP spacing while
+    # remaining ordered when the SEP median converges to or undershoots target.
+    gradual_upper = max(target, center - error)
+    rapid_upper = gradual_upper - error
+    sticky_upper = max(center + error, gradual_upper + error)
+    shock_lower = sticky_upper + 2.0 * error
+    boundaries = (rapid_upper, gradual_upper, sticky_upper, shock_lower)
     if any(left >= right for left, right in zip(boundaries, boundaries[1:])):
         raise ValueError("SEP center and forecast error do not produce ordered states")
     rounded = tuple(round(value, 4) for value in boundaries)

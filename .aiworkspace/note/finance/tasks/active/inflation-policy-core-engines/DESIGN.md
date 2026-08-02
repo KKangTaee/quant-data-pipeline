@@ -4,12 +4,17 @@
 
 | Module | Responsibility |
 |---|---|
+| `finance/inflation_policy_model.py` | PIT vintage panel, bridge·ridge·momentum 1개월 Core PCE hybrid artifact |
 | `finance/inflation_path.py` | Core PCE index math, state definition, probabilistic monthly/Q4 path |
 | `finance/policy_path.py` | SEP/economic/decision component와 policy path probability |
 | `finance/yield_resistance.py` | confirmed pivot, dynamic zone, state transition, driver lens |
 | `finance/inflation_policy_simulation.py` | forward path join과 reverse conditional reweighting |
 | `finance/inflation_policy_validation.py` | chronological metric, baseline, calibration/publication gate |
 | `finance/inflation_policy_pipeline.py` | strict loader bundle에서 current/replay snapshot 조립 |
+
+`core_pce_hybrid` artifact의 검증 horizon은 `one_month_core_pce_nowcast`다.
+carry-forward·3개월·6개월 benchmark와는 독립 비교하지만 SEP/공식 benchmark 묶음이
+완성되기 전 publication은 `LIMITED`다. 이 결과를 연말 Q4/Q4 path에 상속하지 않는다.
 
 ## Safety Decisions
 

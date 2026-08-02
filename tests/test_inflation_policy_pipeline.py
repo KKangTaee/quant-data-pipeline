@@ -31,7 +31,7 @@ def _month_rows() -> list[dict[str, object]]:
 
 
 def _rate_rows() -> list[dict[str, object]]:
-    values = (
+    recent_values = (
         4.10,
         4.20,
         4.35,
@@ -48,7 +48,11 @@ def _rate_rows() -> list[dict[str, object]]:
         4.62,
         4.58,
     )
-    start = date(2026, 7, 1)
+    prefix_count = 505
+    values = tuple(
+        4.00 + 0.002 * (index % 7) for index in range(prefix_count)
+    ) + recent_values
+    start = date(2026, 7, 1) - timedelta(days=prefix_count)
     rows: list[dict[str, object]] = []
     for series_id, offset in (
         ("DGS10", 0.0),
@@ -129,6 +133,35 @@ def _reaction_matrix():
     return matrix
 
 
+def _momentum_artifact(*, publication_status: str = "LIMITED"):
+    from finance.inflation_policy_pipeline import CorePCEMomentumArtifact
+
+    return CorePCEMomentumArtifact(
+        training_start_date="2019-10-01",
+        trained_through_date="2026-06-01",
+        trained_cutoff_at="2026-07-29T18:00:00+00:00",
+        component_weights={
+            "persistence": 1 / 3,
+            "recent_3m": 1 / 3,
+            "recent_6m": 1 / 3,
+        },
+        component_errors={
+            "persistence": 0.10,
+            "recent_3m": 0.10,
+            "recent_6m": 0.10,
+        },
+        predictive_residuals_pct=(-0.10, 0.0, 0.10),
+        validation_metrics={"rmse": 0.15, "origin_count": 48.0},
+        publication_status=publication_status,
+        publication_reasons=("fixture_limited",),
+        latest_component_mom_pct={
+            "persistence": 0.20,
+            "recent_3m": 0.20,
+            "recent_6m": 0.20,
+        },
+    )
+
+
 def test_core_momentum_artifact_is_rolling_origin_and_baseline_gated() -> None:
     from finance.inflation_policy_pipeline import fit_core_pce_momentum_artifact
     from finance.inflation_policy_validation import PublicationThresholds
@@ -148,9 +181,16 @@ def test_core_momentum_artifact_is_rolling_origin_and_baseline_gated() -> None:
     assert artifact.training_start_date == "2019-10-01"
     assert artifact.trained_through_date == "2026-06-01"
     assert artifact.validation_metrics["origin_count"] >= 24
+    baseline_scores = [
+        artifact.validation_metrics["baseline_persistence_crps"],
+        artifact.validation_metrics["baseline_rolling_3m_crps"],
+        artifact.validation_metrics["baseline_rolling_6m_crps"],
+    ]
+    assert artifact.validation_metrics["baseline_crps"] == min(baseline_scores)
     assert math.isclose(sum(artifact.component_weights.values()), 1.0)
     assert max(artifact.component_weights.values()) <= 0.60 + 1e-12
     assert artifact.predictive_residuals_pct
+    assert abs(sum(artifact.predictive_residuals_pct)) < 1e-12
     assert artifact.publication_status in {"READY", "LIMITED"}
 
 
@@ -239,6 +279,7 @@ def test_pipeline_materializes_compact_limited_snapshot_without_cycle_fallback()
         config=config,
         sample_count=400,
         seed=11,
+        core_artifact=_momentum_artifact(),
     )
 
     assert result.snapshot_row["publication_status"] == "LIMITED"
@@ -311,12 +352,19 @@ def test_pipeline_returns_not_available_without_core_pce_history() -> None:
     )
 
     result = materialize_inflation_policy_analysis(
-        bundle, config=config, sample_count=100, seed=1
+        bundle,
+        config=config,
+        sample_count=100,
+        seed=1,
+        core_artifact=_momentum_artifact(),
     )
 
-    assert result.snapshot_row["publication_status"] == "NOT_AVAILABLE"
+    assert result.snapshot_row["publication_status"] == "LIMITED"
     assert result.inflation["publication_status"] == "NOT_AVAILABLE"
+    assert result.inflation["reason"] == "core_pce_current_levels_missing"
     assert result.policy["publication_status"] == "NOT_AVAILABLE"
+    assert result.rates["publication_status"] == "LIMITED"
+    assert result.rates["DGS10"]["zones"]
 
 
 def test_pipeline_preserves_hybrid_component_evidence_in_model_artifact() -> None:
@@ -331,6 +379,7 @@ def test_pipeline_preserves_hybrid_component_evidence_in_model_artifact() -> Non
     hybrid = CorePCEHybridArtifact(
         training_start_date="2017-07-01",
         trained_through_date="2026-06-01",
+        trained_cutoff_at="2026-07-29T18:00:00+00:00",
         feature_names=("core_lag_1", "core_cpi_mom"),
         feature_means=(0.2, 0.25),
         feature_scales=(0.1, 0.2),
@@ -393,8 +442,53 @@ def test_pipeline_preserves_hybrid_component_evidence_in_model_artifact() -> Non
     }
     stored = result.model_artifact_rows[0]
     assert stored["component"] == "core_pce_hybrid"
+    assert stored["trained_cutoff_at"] == hybrid.trained_cutoff_at
     assert stored["feature_schema_version"] == "core-pce-hybrid-features-v1"
+    assert stored["forecast_horizon"] == "one_month_core_pce_nowcast"
     assert stored["parameters_json"]["feature_names"] == hybrid.feature_names
+    freshness = result.snapshot_row["freshness_json"]
+    assert freshness["trained_through_date"] == "2026-06-01"
+    assert freshness["macro_series"]["PCEPILFE"]["latest_observation_date"] == (
+        "2026-06-01"
+    )
+    assert freshness["fomc_decisions"]["latest_released_at"] == (
+        "2026-07-29T18:00:00+00:00"
+    )
+    assert freshness["max_released_at"] <= freshness["as_of_at"]
+
+
+def test_pipeline_rejects_any_bundle_release_after_cutoff() -> None:
+    from finance.inflation_policy_pipeline import (
+        build_limited_reference_config,
+        materialize_inflation_policy_analysis,
+    )
+    from finance.loaders.inflation_policy import InflationPolicyDataBundle
+
+    future_row = {
+        "series_id": "DGS10",
+        "observation_date": "2026-07-29",
+        "released_at": "2026-07-30 00:00:00",
+        "value": 4.7,
+    }
+    bundle = InflationPolicyDataBundle(
+        as_of_at="2026-07-29T18:00:00+00:00",
+        macro_rows=tuple(_month_rows() + _rate_rows() + [future_row]),
+        sep_rows=tuple(_sep_rows()),
+        decision_rows=(),
+        term_premium_rows=(),
+        coverage={},
+    )
+
+    result = materialize_inflation_policy_analysis(
+        bundle,
+        config=build_limited_reference_config(model_version="future-release-v1"),
+        sample_count=100,
+        seed=1,
+        core_artifact=_momentum_artifact(),
+    )
+
+    assert result.snapshot_row["publication_status"] == "NOT_AVAILABLE"
+    assert result.inflation["reason"].startswith("freshness_not_available:")
 
 
 def test_runner_performs_no_write_when_hybrid_training_is_unavailable() -> None:
@@ -482,3 +576,241 @@ def test_pipeline_cli_is_dry_run_unless_persist_is_explicit(monkeypatch, capsys)
     assert exit_code == 0
     assert captured["persist"] is False
     assert '"publication_status": "LIMITED"' in output
+
+
+def test_pipeline_resistance_payload_replays_prior_state(monkeypatch) -> None:
+    import finance.inflation_policy_pipeline as module
+    from finance.yield_resistance import ResistanceZone
+
+    zone = ResistanceZone(
+        zone_lower_pct=4.70,
+        zone_upper_pct=4.72,
+        tolerance_pct=0.0,
+        touch_count=2,
+        timeframes=(63,),
+        known_at_date="2026-07-01",
+        as_of_date="2026-07-06",
+        zone_strength=3.0,
+    )
+    monkeypatch.setattr(
+        module,
+        "build_dynamic_resistance_zones",
+        lambda *_args, **_kwargs: (zone,),
+    )
+    rows = [
+        {"observation_date": f"2026-07-{index + 1:02d}", "value": value}
+        for index, value in enumerate((4.70, 4.73, 4.74, 4.75, 4.76, 4.65))
+    ]
+
+    payload = module._resistance_payload(rows)
+
+    assert payload["zones"][0]["state"] == "FAILED"
+
+
+def test_materializer_requires_an_explicit_pit_artifact() -> None:
+    from finance.inflation_policy_pipeline import (
+        build_limited_reference_config,
+        materialize_inflation_policy_analysis,
+    )
+    from finance.loaders.inflation_policy import InflationPolicyDataBundle
+
+    bundle = InflationPolicyDataBundle(
+        as_of_at="2026-07-29T18:00:00+00:00",
+        macro_rows=tuple(_month_rows() + _rate_rows()),
+        sep_rows=tuple(_sep_rows()),
+        decision_rows=(),
+        term_premium_rows=(),
+        coverage={},
+    )
+
+    result = materialize_inflation_policy_analysis(
+        bundle,
+        config=build_limited_reference_config(model_version="explicit-artifact-v1"),
+        sample_count=100,
+        seed=1,
+    )
+
+    assert result.snapshot_row["publication_status"] == "LIMITED"
+    assert result.inflation["reason"] == "core_pce_pit_artifact_required"
+    assert result.rates["publication_status"] == "LIMITED"
+
+
+def test_runner_does_not_persist_a_failed_core_artifact() -> None:
+    from finance.inflation_policy_model import CorePCEHybridArtifact
+    from finance.inflation_policy_pipeline import (
+        build_limited_reference_config,
+        run_inflation_policy_materialization,
+    )
+    from finance.loaders.inflation_policy import InflationPolicyDataBundle
+
+    failed = CorePCEHybridArtifact(
+        training_start_date="2017-07-01",
+        trained_through_date="2026-06-01",
+        trained_cutoff_at="2026-07-29T18:00:00+00:00",
+        feature_names=("core_lag_1",),
+        feature_means=(0.2,),
+        feature_scales=(0.1,),
+        ridge_coefficients=(0.2, 0.0),
+        ridge_alpha=1.0,
+        bridge_weights={"core_lag_1": 1.0},
+        component_weights={"bridge": 1 / 3, "ridge": 1 / 3, "momentum": 1 / 3},
+        component_errors={"bridge": 0.1, "ridge": 0.1, "momentum": 0.1},
+        predictive_residuals_pct=(-0.1, 0.0, 0.1),
+        validation_metrics={"rmse": 0.15, "origin_count": 48.0},
+        publication_status="FAILED",
+        publication_reasons=("invalid_probability_or_metric",),
+        latest_component_mom_pct={"bridge": 0.2, "ridge": 0.2, "momentum": 0.2},
+        latest_feature_values={"core_lag_1": 0.2},
+    )
+    bundle = InflationPolicyDataBundle(
+        as_of_at="2026-07-29T18:00:00+00:00",
+        macro_rows=tuple(_month_rows() + _rate_rows()),
+        sep_rows=tuple(_sep_rows()),
+        decision_rows=(),
+        term_premium_rows=(),
+        coverage={},
+    )
+    saved_artifacts: list[dict[str, object]] = []
+    saved_snapshots: list[dict[str, object]] = []
+
+    result = run_inflation_policy_materialization(
+        as_of_at=bundle.as_of_at,
+        history_start="2015-01-01",
+        config=build_limited_reference_config(model_version="failed-artifact-v1"),
+        run_kind="historical_replay",
+        persist=True,
+        bundle_loader=lambda **_kwargs: bundle,
+        vintage_loader=lambda **_kwargs: (),
+        artifact_trainer=lambda *_args, **_kwargs: failed,
+        artifact_saver=saved_artifacts.append,
+        snapshot_saver=saved_snapshots.append,
+    )
+
+    assert result.snapshot_row["publication_status"] == "LIMITED"
+    assert result.inflation["reason"] == "core_pce_artifact_not_publishable:FAILED"
+    assert result.rates["publication_status"] == "LIMITED"
+    assert saved_artifacts == []
+    assert saved_snapshots == []
+
+
+def test_runner_does_not_persist_an_artifact_trained_after_replay_cutoff() -> None:
+    from dataclasses import replace
+
+    from finance.inflation_policy_pipeline import (
+        build_limited_reference_config,
+        run_inflation_policy_materialization,
+    )
+    from finance.loaders.inflation_policy import InflationPolicyDataBundle
+
+    future_trained = replace(
+        _momentum_artifact(),
+        trained_cutoff_at="2026-08-01T00:00:00+00:00",
+    )
+    bundle = InflationPolicyDataBundle(
+        as_of_at="2026-07-29T18:00:00+00:00",
+        macro_rows=tuple(_month_rows() + _rate_rows()),
+        sep_rows=tuple(_sep_rows()),
+        decision_rows=(),
+        term_premium_rows=(),
+        coverage={},
+    )
+    saved_artifacts: list[dict[str, object]] = []
+    saved_snapshots: list[dict[str, object]] = []
+
+    result = run_inflation_policy_materialization(
+        as_of_at=bundle.as_of_at,
+        history_start="2015-01-01",
+        config=build_limited_reference_config(model_version="future-trained-v1"),
+        run_kind="historical_replay",
+        persist=True,
+        bundle_loader=lambda **_kwargs: bundle,
+        vintage_loader=lambda **_kwargs: (),
+        artifact_trainer=lambda *_args, **_kwargs: future_trained,
+        artifact_saver=saved_artifacts.append,
+        snapshot_saver=saved_snapshots.append,
+    )
+
+    assert result.snapshot_row["publication_status"] == "LIMITED"
+    assert result.inflation["reason"].startswith("freshness_not_available:")
+    assert result.rates["publication_status"] == "LIMITED"
+    assert saved_artifacts == []
+    assert saved_snapshots == []
+
+
+def test_runner_rejects_artifact_and_bundle_core_month_mismatch() -> None:
+    from dataclasses import replace
+
+    from finance.inflation_policy_pipeline import (
+        build_limited_reference_config,
+        run_inflation_policy_materialization,
+    )
+    from finance.loaders.inflation_policy import InflationPolicyDataBundle
+
+    stale_artifact = replace(
+        _momentum_artifact(),
+        trained_through_date="2026-05-01",
+    )
+    bundle = InflationPolicyDataBundle(
+        as_of_at="2026-07-29T18:00:00+00:00",
+        macro_rows=tuple(_month_rows() + _rate_rows()),
+        sep_rows=tuple(_sep_rows()),
+        decision_rows=(),
+        term_premium_rows=(),
+        coverage={},
+    )
+    saved_artifacts: list[dict[str, object]] = []
+    saved_snapshots: list[dict[str, object]] = []
+
+    result = run_inflation_policy_materialization(
+        as_of_at=bundle.as_of_at,
+        history_start="2015-01-01",
+        config=build_limited_reference_config(model_version="misaligned-artifact-v1"),
+        run_kind="historical_replay",
+        persist=True,
+        bundle_loader=lambda **_kwargs: bundle,
+        vintage_loader=lambda **_kwargs: (),
+        artifact_trainer=lambda *_args, **_kwargs: stale_artifact,
+        artifact_saver=saved_artifacts.append,
+        snapshot_saver=saved_snapshots.append,
+    )
+
+    assert result.snapshot_row["publication_status"] == "LIMITED"
+    assert result.inflation["reason"] == "core_pce_artifact_bundle_month_mismatch"
+    assert result.rates["publication_status"] == "LIMITED"
+    assert saved_artifacts == []
+    assert saved_snapshots == []
+
+
+def test_materializer_requires_exact_artifact_and_replay_cutoff_identity() -> None:
+    from dataclasses import replace
+
+    from finance.inflation_policy_pipeline import (
+        build_limited_reference_config,
+        materialize_inflation_policy_analysis,
+    )
+    from finance.loaders.inflation_policy import InflationPolicyDataBundle
+
+    stale_cutoff = replace(
+        _momentum_artifact(),
+        trained_cutoff_at="2026-07-01T00:00:00+00:00",
+    )
+    bundle = InflationPolicyDataBundle(
+        as_of_at="2026-07-29T18:00:00+00:00",
+        macro_rows=tuple(_month_rows() + _rate_rows()),
+        sep_rows=tuple(_sep_rows()),
+        decision_rows=(),
+        term_premium_rows=(),
+        coverage={},
+    )
+
+    result = materialize_inflation_policy_analysis(
+        bundle,
+        config=build_limited_reference_config(model_version="stale-cutoff-v1"),
+        sample_count=100,
+        seed=1,
+        core_artifact=stale_cutoff,
+    )
+
+    assert result.snapshot_row["publication_status"] == "LIMITED"
+    assert result.inflation["reason"].startswith("freshness_not_available:")
+    assert result.rates["publication_status"] == "LIMITED"

@@ -76,14 +76,16 @@ service와 React workbench다.
 
 ## Workflow Ownership
 
-### Inflation / Policy Yield Path (Active Backend Foundation)
+### Inflation / Policy Yield Path (Backend Engines Complete)
 
 ```text
 FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
   -> app/jobs/inflation_policy_refresh.py
   -> finance_meta PIT tables
   -> finance/loaders/inflation_policy.py
-  -> independent engines and workbench (next stages)
+  -> independent Core PCE / policy / yield engines
+  -> inflation_policy_model_artifact / inflation_policy_snapshot
+  -> workbench (next stage)
 ```
 
 - `finance/inflation_policy_catalog.py`와 `finance/data/fred_vintages.py`가 독립 26-series
@@ -92,9 +94,15 @@ FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
   `nyfed_term_premium.py`가 익명 SEP/의결·선택 PCE breadth·기간 프리미엄 source를
   저장한다.
 - `finance/loaders/inflation_policy.py`는 `released_at <= as_of_at`인 DB row만 읽고
-  기존 `economic_cycle_snapshot`/artifact/확률을 사용하지 않는다.
-- 현재는 backend raw context와 result-store 계약까지만 구현됐다. 사용자 workbench와
-  확률 엔진은 phase 2~3의 별도 owner를 추가한 뒤 이 지도에 연결한다.
+  과거 origin 재구성에는 eligible 전체 vintage를 별도로 읽는다. 기존
+  `economic_cycle_snapshot`/artifact/확률을 사용하지 않는다.
+- `finance/inflation_policy_model.py`, `inflation_path.py`, `policy_path.py`,
+  `yield_resistance.py`, `inflation_policy_simulation.py`가 혼합형 Core PCE,
+  익명 SEP·실제 표결 policy marginal, 동적 저항대와 순방향·역산 계산을 소유한다.
+- `finance/inflation_policy_validation.py`와 `inflation_policy_pipeline.py`는 component별
+  rolling-origin gate, exact-cutoff replay와 compact artifact/snapshot을 소유한다.
+  1개월 Core PCE artifact와 연말·정책·돌파·역산 상태를 독립적으로 보존한다.
+- 사용자 workbench와 저장 snapshot read service는 phase 3의 다음 owner다.
 
 ### Research Evidence
 
@@ -204,7 +212,7 @@ compact evidence와 identity만 저장한다. 자세한 규칙은
 | Today | `app/web/today_page.py`, `app/services/today.py` | [Today Intraday Flow](./flows/TODAY_PORTFOLIO_INTRADAY_FLOW.md) |
 | Market Research | `app/web/overview/page.py`, `app/web/overview/navigation.py` | view owner under `app/services/overview/` |
 | economic cycle / valuation | owning module under `finance/`, `finance/loaders/`, `app/services/overview/` | [Data Quality And PIT](./data/DATA_QUALITY_AND_PIT_NOTES.md) |
-| inflation / policy / yield path | `app/jobs/inflation_policy_refresh.py`, `finance/inflation_policy_catalog.py`, `finance/data/fomc_policy.py`, `finance/loaders/inflation_policy.py` | [Inflation / Policy Data Refresh](./runbooks/INFLATION_POLICY_DATA_REFRESH.md), [Data DB Pipeline](./architecture/DATA_DB_PIPELINE_FLOW.md) |
+| inflation / policy / yield path | `app/jobs/inflation_policy_refresh.py`, `finance/loaders/inflation_policy.py`, `finance/inflation_policy_model.py`, `finance/inflation_policy_pipeline.py` | [Inflation / Policy Engine Flow](./architecture/INFLATION_POLICY_ENGINE_FLOW.md), [Inflation / Policy Data Refresh](./runbooks/INFLATION_POLICY_DATA_REFRESH.md) |
 | Institutional Holdings / 13F | `app/web/institutional_portfolios.py`, `app/services/institutional_portfolios.py` | [Institutional Flow](./flows/INSTITUTIONAL_PORTFOLIOS_FLOW.md) |
 | Backtest Analysis / strategy | `app/web/backtest_analysis.py`, `app/runtime/backtest/` | [Backtest Runtime](./architecture/BACKTEST_RUNTIME_FLOW.md), [Strategy Flow](./architecture/STRATEGY_IMPLEMENTATION_FLOW.md) |
 | Practical Validation | `app/web/backtest_practical_validation/` | [Backtest UI Flow](./flows/BACKTEST_UI_FLOW.md) |
@@ -223,6 +231,7 @@ compact evidence와 identity만 저장한다. 자세한 규칙은
 | script-level responsibility | [Script Structure Map](./architecture/SCRIPT_STRUCTURE_MAP.md) |
 | Backtest payload / runtime / result flow | [Backtest Runtime Flow](./architecture/BACKTEST_RUNTIME_FLOW.md) |
 | ingestion / persistence / loader flow | [Data DB Pipeline Flow](./architecture/DATA_DB_PIPELINE_FLOW.md) |
+| Core PCE / FOMC / dynamic-yield model and publication flow | [Inflation / Policy Engine Flow](./architecture/INFLATION_POLICY_ENGINE_FLOW.md) |
 | top-level and detailed user flow | [Finance Flows](./flows/README.md) |
 | Backtest stages and handoff | [Backtest UI Flow](./flows/BACKTEST_UI_FLOW.md) |
 | portfolio selection lifecycle | [Portfolio Selection Flow](./flows/PORTFOLIO_SELECTION_FLOW.md) |

@@ -66,6 +66,7 @@ class CorePCENowcastRow:
 class CorePCEHybridArtifact:
     training_start_date: str
     trained_through_date: str
+    trained_cutoff_at: str
     feature_names: tuple[str, ...]
     feature_means: tuple[float, ...]
     feature_scales: tuple[float, ...]
@@ -478,17 +479,26 @@ def fit_core_pce_hybrid_artifact(
         "ridge": [],
         "momentum": [],
     }
+    baseline_errors: dict[str, list[float]] = {
+        "persistence": [],
+        "rolling_3m": [],
+        "rolling_6m": [],
+    }
     residuals: list[float] = []
     predictions: list[ContinuousValidationPrediction] = []
-    for index in range(minimum, len(panel)):
-        training = panel[:index]
-        means, scales, coefficients = _ridge_fit(training, alpha=ridge_alpha)
-        components = _component_predictions(
-            panel[index].features,
-            means=means,
-            scales=scales,
-            coefficients=coefficients,
+    release_groups: dict[str, list[CorePCENowcastRow]] = {}
+    for row in panel:
+        release_groups.setdefault(row.target_available_at, []).append(row)
+    origin_count = 0
+    for release_at in sorted(release_groups, key=_timestamp):
+        training = tuple(
+            row
+            for row in panel
+            if _timestamp(row.target_available_at) < _timestamp(release_at)
         )
+        if len(training) < minimum:
+            continue
+        means, scales, coefficients = _ridge_fit(training, alpha=ridge_alpha)
         if all(component_errors[name] for name in component_errors):
             weights = derive_capped_inverse_error_weights(
                 {
@@ -499,27 +509,72 @@ def fit_core_pce_hybrid_artifact(
             )
         else:
             weights = {name: 1.0 / len(component_errors) for name in component_errors}
-        predicted = sum(weights[name] * components[name] for name in components)
-        prior_residuals = tuple(residuals) if residuals else (0.0,)
-        actual = panel[index].target_mom_pct
-        predictions.append(
-            ContinuousValidationPrediction(
-                forecast_origin_at=panel[index].forecast_origin_at,
-                target_available_at=panel[index].target_available_at,
-                training_target_through_at=training[-1].target_available_at,
-                actual_value=actual,
-                predicted_median=predicted,
-                predictive_samples=tuple(
-                    predicted + residual for residual in prior_residuals
-                ),
-                baseline_prediction=float(panel[index].features["core_lag_1"]),
-                complete_feature_ratio=panel[index].complete_feature_ratio,
+        if residuals:
+            residual_center = sum(residuals) / len(residuals)
+            prior_residuals = tuple(
+                residual - residual_center for residual in residuals
             )
-        )
-        for name, value in components.items():
-            component_errors[name].append(abs(actual - value))
-        residuals.append(actual - predicted)
+        else:
+            prior_residuals = (0.0,)
+        training_through = max(
+            training,
+            key=lambda row: _timestamp(row.target_available_at),
+        ).target_available_at
+        batch_updates: list[tuple[dict[str, float], float, float]] = []
+        for evaluation in release_groups[release_at]:
+            components = _component_predictions(
+                evaluation.features,
+                means=means,
+                scales=scales,
+                coefficients=coefficients,
+            )
+            predicted = sum(
+                weights[name] * components[name] for name in components
+            )
+            actual = evaluation.target_mom_pct
+            baseline_values = {
+                "persistence": evaluation.features["core_lag_1"],
+                "rolling_3m": evaluation.features["core_lag_3_mean"],
+                "rolling_6m": evaluation.features["core_lag_6_mean"],
+            }
+            if any(value is None for value in baseline_values.values()):
+                raise ValueError("Core PCE baseline features are incomplete")
+            predictions.append(
+                ContinuousValidationPrediction(
+                    forecast_origin_at=evaluation.forecast_origin_at,
+                    target_available_at=evaluation.target_available_at,
+                    training_target_through_at=training_through,
+                    actual_value=actual,
+                    predicted_median=predicted,
+                    predictive_samples=tuple(
+                        predicted + residual for residual in prior_residuals
+                    ),
+                    baseline_prediction=float(evaluation.features["core_lag_1"]),
+                    complete_feature_ratio=evaluation.complete_feature_ratio,
+                )
+            )
+            for name, value in baseline_values.items():
+                baseline_errors[name].append(abs(actual - float(value)))
+            batch_updates.append((components, actual, predicted))
+        # Targets released in one batch cannot update sibling predictions.
+        for components, actual, predicted in batch_updates:
+            for name, value in components.items():
+                component_errors[name].append(abs(actual - value))
+            residuals.append(actual - predicted)
+        origin_count += 1
     metrics = calculate_continuous_metrics(predictions)
+    baseline_scores = {
+        name: sum(errors) / len(errors)
+        for name, errors in baseline_errors.items()
+    }
+    metrics.update(
+        {
+            "baseline_persistence_crps": baseline_scores["persistence"],
+            "baseline_rolling_3m_crps": baseline_scores["rolling_3m"],
+            "baseline_rolling_6m_crps": baseline_scores["rolling_6m"],
+            "baseline_crps": min(baseline_scores.values()),
+        }
+    )
     calibration_error = max(
         abs(metrics["interval_50_coverage"] - 0.50),
         abs(metrics["interval_80_coverage"] - 0.80),
@@ -527,7 +582,7 @@ def fit_core_pce_hybrid_artifact(
     )
     decision = evaluate_publication_gate(
         PublicationEvidence(
-            origin_count=len(predictions),
+            origin_count=origin_count,
             complete_feature_ratio=metrics["complete_feature_ratio"],
             primary_score=metrics["crps"],
             baseline_score=metrics["baseline_crps"],
@@ -536,6 +591,12 @@ def fit_core_pce_hybrid_artifact(
             critical_inputs_available=True,
         ),
         thresholds,
+    )
+    publication_status = (
+        "LIMITED" if decision.status == "READY" else decision.status
+    )
+    publication_reasons = tuple(
+        dict.fromkeys((*decision.reason_codes, "benchmark_suite_incomplete"))
     )
     errors = {
         name: max(sum(values) / len(values), 1e-9)
@@ -568,12 +629,18 @@ def fit_core_pce_hybrid_artifact(
     )
     validation = {
         **metrics,
-        "origin_count": float(len(predictions)),
+        "origin_count": float(origin_count),
+        "target_count": float(len(predictions)),
         "calibration_error": calibration_error,
     }
+    residual_center = sum(residuals) / len(residuals)
+    centered_residuals = tuple(
+        residual - residual_center for residual in residuals
+    )
     return CorePCEHybridArtifact(
         training_start_date=panel[0].observation_month,
         trained_through_date=core_points[-1]["observation_date"].isoformat(),
+        trained_cutoff_at=_timestamp(as_of_at).isoformat(),
         feature_names=CORE_PCE_FEATURES,
         feature_means=tuple(float(value) for value in means),
         feature_scales=tuple(float(value) for value in scales),
@@ -582,10 +649,10 @@ def fit_core_pce_hybrid_artifact(
         bridge_weights=dict(_BRIDGE_WEIGHTS),
         component_weights=weights,
         component_errors=errors,
-        predictive_residuals_pct=tuple(residuals),
+        predictive_residuals_pct=centered_residuals,
         validation_metrics=validation,
-        publication_status=decision.status,
-        publication_reasons=decision.reason_codes,
+        publication_status=publication_status,
+        publication_reasons=publication_reasons,
         latest_component_mom_pct=latest_components,
         latest_feature_values=current_features,
     )

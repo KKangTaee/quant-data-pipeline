@@ -159,8 +159,64 @@ def test_hybrid_core_model_blends_bridge_ridge_and_momentum_with_capped_weights(
         "momentum",
     }
     assert artifact.validation_metrics["origin_count"] >= 24
-    assert artifact.publication_status in {"READY", "LIMITED"}
+    baseline_scores = [
+        artifact.validation_metrics["baseline_persistence_crps"],
+        artifact.validation_metrics["baseline_rolling_3m_crps"],
+        artifact.validation_metrics["baseline_rolling_6m_crps"],
+    ]
+    assert artifact.validation_metrics["baseline_crps"] == min(baseline_scores)
+    assert artifact.publication_status == "LIMITED"
+    assert "benchmark_suite_incomplete" in artifact.publication_reasons
     assert artifact.predictive_residuals_pct
+    assert abs(sum(artifact.predictive_residuals_pct)) < 1e-12
+
+
+def test_same_release_batch_counts_one_origin_and_cannot_train_sibling_target() -> None:
+    from finance.inflation_policy_model import (
+        build_core_pce_nowcast_panel,
+        fit_core_pce_hybrid_artifact,
+    )
+    from finance.inflation_policy_validation import PublicationThresholds
+
+    rows = []
+    for row in _hybrid_vintages():
+        if (
+            row["series_id"] == "PCEPILFE"
+            and row["observation_date"] == "2022-05-01"
+            and str(row["released_at"]).startswith("2022-06-25")
+        ):
+            rows.append({**row, "released_at": "2022-07-25T12:30:00+00:00"})
+        else:
+            rows.append(row)
+    panel = build_core_pce_nowcast_panel(
+        rows,
+        as_of_at="2026-07-29T18:00:00+00:00",
+    )
+    eligible_origins = {
+        row.forecast_origin_at
+        for row in panel
+        if sum(
+            candidate.target_available_at < row.target_available_at
+            for candidate in panel
+        )
+        >= 36
+    }
+
+    artifact = fit_core_pce_hybrid_artifact(
+        rows,
+        as_of_at="2026-07-29T18:00:00+00:00",
+        thresholds=PublicationThresholds(24, 0.80, 0.35, True),
+        minimum_training_rows=36,
+        ridge_alpha=1.0,
+        max_component_weight=0.60,
+    )
+
+    assert artifact.validation_metrics["origin_count"] == float(
+        len(eligible_origins)
+    )
+    assert artifact.validation_metrics["target_count"] > artifact.validation_metrics[
+        "origin_count"
+    ]
 
 
 def test_hybrid_model_source_has_no_cycle_dependency() -> None:

@@ -192,14 +192,19 @@ def build_dynamic_resistance_zones(
     )
     pivots: list[ConfirmedPivot] = []
     for lookback in lookbacks:
-        window = ordered[-int(lookback) :]
+        supported_rows = int(lookback)
+        if supported_rows <= 0:
+            raise ValueError("lookbacks must be positive")
+        if len(ordered) < supported_rows:
+            continue
+        window = ordered[-supported_rows:]
         pivots.extend(
             detect_confirmed_pivots(
                 window,
                 left_days=left_days,
                 right_days=right_days,
                 as_of_date=cutoff,
-                timeframe_days=int(lookback),
+                timeframe_days=supported_rows,
             )
         )
     tolerance = adaptive_pivot_tolerance(
@@ -248,6 +253,43 @@ def classify_resistance_state(
     if latest >= lower - buffer:
         return "APPROACH"
     return None
+
+
+def replay_resistance_state(
+    observations: Sequence[Mapping[str, object]],
+    *,
+    zone_lower_pct: float,
+    zone_upper_pct: float,
+    buffer_pct: float,
+    known_at_date: object,
+    hold_days: int = 5,
+) -> str | None:
+    """Reconstruct the current zone state from observations known after definition."""
+
+    known = _date(known_at_date)
+    eligible = sorted(
+        (
+            (_date(row["observation_date"]), _finite(row["value"], field="yield"))
+            for row in observations
+            if _date(row["observation_date"]) >= known
+        ),
+        key=lambda item: item[0],
+    )
+    if not eligible:
+        return None
+    prior_state: str | None = None
+    values: list[float] = []
+    for _observation_date, value in eligible:
+        values.append(value)
+        prior_state = classify_resistance_state(
+            values[-5:],
+            zone_lower_pct=zone_lower_pct,
+            zone_upper_pct=zone_upper_pct,
+            buffer_pct=buffer_pct,
+            prior_state=prior_state,
+            hold_days=hold_days,
+        )
+    return prior_state
 
 
 def decompose_yield_driver(

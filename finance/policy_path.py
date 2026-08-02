@@ -268,7 +268,12 @@ def build_policy_path_forecast(
         if net_moves[bucket] <= 0.0:
             continue
         target = midpoint + _BUCKET_STEPS[bucket] * int(step_bps) / 100.0
-        label = f"{target:.4f}"
+        if bucket == "cut_3_plus":
+            label = f"<={target:.4f}"
+        elif bucket == "hike_3_plus":
+            label = f">={target:.4f}"
+        else:
+            label = f"{target:.4f}"
         target_bins[label] = target_bins.get(label, 0.0) + net_moves[bucket]
     return PolicyPathForecast(
         next_meeting_probabilities=next_actions,

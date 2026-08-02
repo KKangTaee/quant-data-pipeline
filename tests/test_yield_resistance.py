@@ -75,6 +75,22 @@ def test_same_pivot_seen_in_multiple_lookbacks_is_one_touch() -> None:
     assert zone.timeframes == (63, 252, 504)
 
 
+def test_incomplete_history_does_not_claim_long_lookback_confluence() -> None:
+    from finance.yield_resistance import build_dynamic_resistance_zones
+
+    observations = [
+        {"observation_date": f"2026-07-{index + 1:02d}", "value": value}
+        for index, value in enumerate(
+            (4.10, 4.20, 4.35, 4.55, 4.30, 4.18, 4.25, 4.40, 4.60, 4.42, 4.30)
+        )
+    ]
+
+    assert build_dynamic_resistance_zones(
+        observations,
+        as_of_date="2026-07-11",
+    ) == ()
+
+
 def test_resistance_state_requires_confirmation_and_preserves_failure() -> None:
     from finance.yield_resistance import classify_resistance_state
 
@@ -117,6 +133,32 @@ def test_resistance_state_requires_confirmation_and_preserves_failure() -> None:
         )
         == "FAILED"
     )
+
+
+def test_resistance_state_replay_reconstructs_hold_and_failure() -> None:
+    from finance.yield_resistance import replay_resistance_state
+
+    observations = [
+        {"observation_date": f"2026-07-{index + 1:02d}", "value": value}
+        for index, value in enumerate((4.70, 4.73, 4.74, 4.75, 4.76, 4.65))
+    ]
+
+    assert replay_resistance_state(
+        observations[:-1],
+        zone_lower_pct=4.70,
+        zone_upper_pct=4.72,
+        buffer_pct=0.0,
+        known_at_date="2026-07-01",
+        hold_days=3,
+    ) == "HOLD"
+    assert replay_resistance_state(
+        observations,
+        zone_lower_pct=4.70,
+        zone_upper_pct=4.72,
+        buffer_pct=0.0,
+        known_at_date="2026-07-01",
+        hold_days=3,
+    ) == "FAILED"
 
 
 def test_driver_decomposition_keeps_two_lenses_separate() -> None:

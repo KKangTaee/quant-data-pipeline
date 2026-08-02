@@ -112,6 +112,42 @@ def test_state_definition_is_versioned_from_sep_distribution_and_error() -> None
     assert definition.definition_version.startswith("sep-20260617-")
 
 
+def test_state_definition_remains_ordered_when_sep_is_near_or_below_target() -> None:
+    from finance.inflation_path import derive_state_definition
+
+    def definition_for(center: float):
+        return derive_state_definition(
+            (
+                {
+                    "released_at": "2026-06-17 18:00:00",
+                    "target_period": "2026",
+                    "variable_name": "core_pce",
+                    "distribution_kind": "HISTOGRAM",
+                    "bin_lower_pct": center - 0.05,
+                    "bin_upper_pct": center + 0.05,
+                    "participant_count": 18,
+                },
+            ),
+            target_period="2026",
+            forecast_error_pct=0.20,
+            price_stability_target_pct=2.0,
+        )
+
+    near_target = definition_for(2.20)
+    below_target = definition_for(1.80)
+
+    assert near_target.boundaries_pct == (1.8, 2.0, 2.4, 2.8)
+    assert below_target.boundaries_pct == (1.8, 2.0, 2.2, 2.6)
+    assert all(
+        left < right
+        for definition in (near_target, below_target)
+        for left, right in zip(
+            definition.boundaries_pct,
+            definition.boundaries_pct[1:],
+        )
+    )
+
+
 def test_state_and_threshold_probabilities_are_complete_simplexes() -> None:
     from finance.inflation_path import (
         InflationStateDefinition,
