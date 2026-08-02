@@ -780,10 +780,15 @@ button, input, summary { font: inherit; }
   .reverse-support-grid,
   .conditional-quantiles,
   .user-criterion-fields,
+  .yield-driver-summary,
+  .yield-lens-grid,
+  .resistance-zone-grid,
+  .reverse-workspace-grid,
   .model-boundary-grid,
   .provenance-version-grid,
   .inflation-evidence-list dl,
   .freshness-clock-list article { grid-template-columns: 1fr; }
-  .reverse-form-actions > button { width: 100%; }
+  .reverse-form-actions { flex-direction: column; }
+  .reverse-form-actions > button { width: 100%; flex: 0 0 auto; }
   .inflation-evidence-disclosure > summary { align-items: flex-start; }
 }

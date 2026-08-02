@@ -89,7 +89,7 @@ Read-model top-level keys, in order:
 - Consumes: `load_latest_inflation_policy_snapshot`, `load_yield_resistance_definitions`.
 - Produces: `inflation_policy_v1` JSON-safe read model.
 
-- [ ] **Step 0: Add the missing DB-only loader contracts with TDD**
+- [x] **Step 0: Add the missing DB-only loader contracts with TDD**
 
 Add `load_yield_resistance_definitions(as_of_at=..., include_inactive=False)` and
 `load_inflation_policy_model_artifact(model_version=..., trained_cutoff_at=...)`.
@@ -97,7 +97,7 @@ Definitions must exclude future `known_at`/`saved_at` rows and inactive USER row
 default. Artifact lookup must require both exact identity fields and fail closed with
 `None`; it must never select a different cutoff for the same version.
 
-- [ ] **Step 1: Write the failing ready-payload test**
+- [x] **Step 1: Write the failing ready-payload test**
 
 ```python
 def test_ready_read_model_keeps_forward_reverse_and_quality_separate() -> None:
@@ -116,7 +116,7 @@ def test_ready_read_model_keeps_forward_reverse_and_quality_separate() -> None:
     json.dumps(model, allow_nan=False)
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_service.py -q
@@ -124,11 +124,11 @@ def test_ready_read_model_keeps_forward_reverse_and_quality_separate() -> None:
 
 Expected: FAIL on missing service.
 
-- [ ] **Step 3: Implement strict snapshot adaptation**
+- [x] **Step 3: Implement strict snapshot adaptation**
 
 Decode only expected JSON fields, normalize simplexes, preserve null optional components, and translate publication reasons into Korean. If the snapshot is missing, return `NOT_AVAILABLE` with empty typed sections. If schema/probability validation fails, return `FAILED`; never call a provider or model fit function.
 
-- [ ] **Step 4: Add source-boundary assertions**
+- [x] **Step 4: Add source-boundary assertions**
 
 ```python
 def test_service_is_db_only_and_cycle_independent() -> None:
@@ -138,7 +138,7 @@ def test_service_is_db_only_and_cycle_independent() -> None:
     assert "economic_cycle" not in source
 ```
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_service.py -q
@@ -157,7 +157,7 @@ git commit -m "물가 정책 경로 조회 모델 추가"
 - Consumes: stored definitions, exact snapshot/artifact, `reverse_condition_paths`.
 - Produces the command functions in the stable interface.
 
-- [ ] **Step 1: Write failing command validation tests**
+- [x] **Step 1: Write failing command validation tests**
 
 ```python
 def test_save_command_cannot_claim_auto_owner() -> None:
@@ -177,7 +177,7 @@ def test_reverse_command_uses_exact_snapshot_model_version() -> None:
     assert result["model_version"] == "inflation-policy-v1"
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_commands.py -q
@@ -185,15 +185,15 @@ def test_reverse_command_uses_exact_snapshot_model_version() -> None:
 
 Expected: FAIL on missing commands.
 
-- [ ] **Step 3: Implement save validation**
+- [x] **Step 3: Implement save validation**
 
 Allow only `USER`, instruments `DGS2|DGS10|DFII10|T10YIE|T10Y2Y|ACMTP10`, finite ordered bounds, non-negative buffer, lookbacks from `63|252|504`, and confirmation window/count within `1..20`. Generate a stable UUID, persist through the result store, and return compact definition/read-model data.
 
-- [ ] **Step 4: Implement bounded reverse execution**
+- [x] **Step 4: Implement bounded reverse execution**
 
 Require target condition `REACH|CONFIRMED|HOLD`, horizon not before snapshot as-of, target width at most 200bp, and exact artifact match. Run only stored-data simulation with a maximum 50,000 paths and return `NOT_AVAILABLE` when effective sample size is below the model threshold.
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_commands.py tests/test_inflation_policy_simulation.py -q
@@ -212,7 +212,7 @@ git commit -m "금리 기준 저장과 역산 명령 추가"
 - Consumes: both independent read-model builders and explicit commands.
 - Produces: optional `payload["inflation_policy"]` and event IDs `save_yield_criterion`, `run_reverse_scenario`.
 
-- [ ] **Step 1: Write failing payload-isolation tests**
+- [x] **Step 1: Write failing payload-isolation tests**
 
 ```python
 def test_cycle_transport_attaches_independent_inflation_policy_payload() -> None:
@@ -232,7 +232,7 @@ def test_inflation_command_never_triggers_provider_refresh() -> None:
     assert result is True
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 .venv/bin/python -m pytest tests/test_market_context_inflation_policy.py tests/test_market_context_economic_cycle.py -q
@@ -240,19 +240,19 @@ def test_inflation_command_never_triggers_provider_refresh() -> None:
 
 Expected: new tests fail; existing cycle tests pass.
 
-- [ ] **Step 3: Implement cached independent composition**
+- [x] **Step 3: Implement cached independent composition**
 
 Create `load_inflation_policy_model()` with the same 300-second DB-only cache. `load_economic_cycle_model()` remains cycle-only; `render_economic_cycle()` composes the two JSON-safe dictionaries immediately before transport so neither service calls the other.
 
-- [ ] **Step 4: Implement once-only command events**
+- [x] **Step 4: Implement once-only command events**
 
 Use nonce tokens separate from `ECONOMIC_CYCLE_EVENT_KEY`. Save command results in session state, clear only the inflation-policy cache on success, and rerun. Provider refresh remains bound only to the existing explicit refresh event.
 
-- [ ] **Step 5: Add fallback rendering**
+- [x] **Step 5: Add fallback rendering**
 
 When the React build is missing, add a small `st.segmented_control` and render Core PCE state, policy path, nearest zone, and unavailable reason. Reverse/save forms remain React-only; the fallback must not compute probabilities.
 
-- [ ] **Step 6: Run tests and commit**
+- [x] **Step 6: Run tests and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_market_context_inflation_policy.py tests/test_market_context_economic_cycle.py -q
@@ -285,7 +285,7 @@ export type InflationPolicyWorkbenchProps = {
 };
 ```
 
-- [ ] **Step 1: Add Vitest dependencies and failing navigation test**
+- [x] **Step 1: Add Vitest dependencies and failing navigation test**
 
 Add script `"test": "vitest run"` and dev dependencies `vitest`, `jsdom`, `@testing-library/react`, `@testing-library/jest-dom`.
 
@@ -298,7 +298,7 @@ it("keeps 경기 국면 as default and opens 물가·정책 경로 explicitly", 
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 ```bash
 npm --prefix app/web/streamlit_components/economic_cycle_workbench test
@@ -306,15 +306,15 @@ npm --prefix app/web/streamlit_components/economic_cycle_workbench test
 
 Expected: FAIL on missing types/component/navigation.
 
-- [ ] **Step 3: Implement typed payload and selector**
+- [x] **Step 3: Implement typed payload and selector**
 
 Add optional `inflation_policy?: InflationPolicyPayload` to the existing transport type. Render an accessible two-button tablist above both screens. Hide the new tab only when the property is absent; show it with `NOT_AVAILABLE` content when the property exists but data is unavailable.
 
-- [ ] **Step 4: Implement command transport**
+- [x] **Step 4: Implement command transport**
 
 Convert child commands to `Streamlit.setComponentValue({ event: command })` and keep the existing refresh event unchanged. Generate nonce from command type plus `Date.now()` only at click submission, not during render.
 
-- [ ] **Step 5: Run tests/build and commit**
+- [x] **Step 5: Run tests/build and commit**
 
 ```bash
 npm --prefix app/web/streamlit_components/economic_cycle_workbench test
@@ -338,11 +338,11 @@ git commit -m "물가 정책 경로 화면 선택기 추가"
 - Consumes: inflation, policy, rates sections.
 - Produces: conclusion → five states → next-release preparation → policy → rates flow.
 
-- [ ] **Step 1: Write failing content-priority tests**
+- [x] **Step 1: Write failing content-priority tests**
 
 Test five state labels and 100% total, 3.4/3.5/3.6 thresholds, next-print rows 0.1–0.5, policy net-move bins, automatic/user zone badges, and no visible strings matching `저장 rows|실행 job|실패 job`.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 npm --prefix app/web/streamlit_components/economic_cycle_workbench test
@@ -350,15 +350,15 @@ npm --prefix app/web/streamlit_components/economic_cycle_workbench test
 
 Expected: FAIL on missing panels.
 
-- [ ] **Step 3: Implement the decision hierarchy**
+- [x] **Step 3: Implement the decision hierarchy**
 
 Top summary shows Q4Q4 median/range, dominant inflation state, next-meeting path, nearest DGS10 zone/state, and one next condition. Five-state bars retain every probability. The preparation table shows each hypothetical next print and posterior delta without action recommendations.
 
-- [ ] **Step 4: Implement rate-driver and confirmation copy**
+- [x] **Step 4: Implement rate-driver and confirmation copy**
 
 Show separate policy/term-premium and real/breakeven lenses, driver label, and `미확인|혼합|인플레이션 확인`. If ACM is unavailable, label the missing lens and do not infer a term-premium value.
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 ```bash
 npm --prefix app/web/streamlit_components/economic_cycle_workbench test
@@ -378,7 +378,7 @@ git commit -m "물가 정책 순방향 판단 패널 추가"
 - Consumes: zones and optional command results.
 - Produces: validated `save_yield_criterion` and `run_reverse_scenario` events.
 
-- [ ] **Step 1: Write failing form/event tests**
+- [x] **Step 1: Write failing form/event tests**
 
 ```tsx
 it("submits a conditional target instead of a required hike scalar", async () => {
@@ -395,7 +395,7 @@ it("submits a conditional target instead of a required hike scalar", async () =>
 
 Test invalid bounds disable submit, automatic criteria cannot be edited, and save emits owner `USER`.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 npm --prefix app/web/streamlit_components/economic_cycle_workbench test
@@ -403,15 +403,15 @@ npm --prefix app/web/streamlit_components/economic_cycle_workbench test
 
 Expected: FAIL on missing workflow.
 
-- [ ] **Step 3: Implement criterion save form**
+- [x] **Step 3: Implement criterion save form**
 
 Initialize from an automatic zone but label it `사용자 기준으로 복사`. Accept name, bounds, buffer, confirmation count/window, breakeven confirmation, and term-premium exclusion. On save, show pending state until Python returns the saved criterion.
 
-- [ ] **Step 4: Implement reverse result presentation**
+- [x] **Step 4: Implement reverse result presentation**
 
 Show conditional policy distribution, Q4Q4 quantiles, required remaining monthly PCE quantiles, next-print sensitivity, matched path count/effective sample size, and explicit `조건부분포` copy. `NOT_AVAILABLE` shows the reason and suggests widening the zone/horizon, not a guessed value.
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 ```bash
 npm --prefix app/web/streamlit_components/economic_cycle_workbench test
@@ -434,19 +434,19 @@ git commit -m "금리 목표 역산과 사용자 기준 저장 화면 추가"
 - Consumes: evidence, freshness, warnings, replay timestamps.
 - Produces: completed responsive workbench and durable flow documentation.
 
-- [ ] **Step 1: Write failing evidence/unavailable tests**
+- [x] **Step 1: Write failing evidence/unavailable tests**
 
 Test observation/release/collection/as-of timestamps, model/state/zone versions, warnings, historical last-good labeling, `NOT_AVAILABLE` recession, and no numeric probability when publication status is not `READY`.
 
-- [ ] **Step 2: Implement evidence and replay disclosure**
+- [x] **Step 2: Implement evidence and replay disclosure**
 
 Keep methodology collapsed by default. Show top evidence with observation/release dates and whether it supports inflation, policy, or yield confirmation. Historical results must begin with `과거 기준` and the original as-of time.
 
-- [ ] **Step 3: Implement responsive styles**
+- [x] **Step 3: Implement responsive styles**
 
 Desktop uses a 12-column grid with conclusion and preparation first. At `max-width: 720px`, use one column in the same semantic order. Ensure long model/reason strings wrap and form controls have 44px minimum hit height.
 
-- [ ] **Step 4: Run automated verification**
+- [x] **Step 4: Run automated verification**
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_service.py tests/test_inflation_policy_commands.py tests/test_market_context_inflation_policy.py tests/test_market_context_economic_cycle.py -q
@@ -457,11 +457,11 @@ git diff --check
 
 Expected: all tests/builds pass.
 
-- [ ] **Step 5: Run Browser QA**
+- [x] **Step 5: Run Browser QA**
 
 Open Market Research > 경제 사이클, select 물가·정책 경로, and verify at desktop and 420px: forward content, next-print table, policy, zones, criterion form, reverse result, unavailable states, keyboard tab order, no horizontal overflow, and zero console/page errors. Save one screenshot as a generated artifact outside the commit.
 
-- [ ] **Step 6: Use `finance-doc-sync`, update state, and commit**
+- [x] **Step 6: Use `finance-doc-sync`, update state, and commit**
 
 Set the workbench task complete only with automated and Browser QA evidence; keep phase active for equity/recession.
 

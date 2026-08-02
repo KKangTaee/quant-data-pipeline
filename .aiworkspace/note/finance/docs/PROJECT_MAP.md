@@ -76,7 +76,7 @@ service와 React workbench다.
 
 ## Workflow Ownership
 
-### Inflation / Policy Yield Path (Backend Engines Complete)
+### Inflation / Policy Yield Path (Workbench Complete)
 
 ```text
 FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
@@ -85,7 +85,8 @@ FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
   -> finance/loaders/inflation_policy.py
   -> independent Core PCE / policy / yield engines
   -> inflation_policy_model_artifact / inflation_policy_snapshot
-  -> workbench (next stage)
+  -> app/services/overview/inflation_policy*.py
+  -> Market Research > 경제 사이클 > 물가·정책 경로
 ```
 
 - `finance/inflation_policy_catalog.py`와 `finance/data/fred_vintages.py`가 독립 26-series
@@ -102,7 +103,12 @@ FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
 - `finance/inflation_policy_validation.py`와 `inflation_policy_pipeline.py`는 component별
   rolling-origin gate, exact-cutoff replay와 compact artifact/snapshot을 소유한다.
   1개월 Core PCE artifact와 연말·정책·돌파·역산 상태를 독립적으로 보존한다.
-- 사용자 workbench와 저장 snapshot read service는 phase 3의 다음 owner다.
+- `app/services/overview/inflation_policy.py`는 저장 snapshot과 PIT definition을
+  `inflation_policy_v1` read model로 변환하고, `inflation_policy_commands.py`는
+  USER 기준 저장과 exact READY artifact의 bounded reverse만 실행한다.
+- `app/web/overview/market_context_helpers.py`는 기존 cycle과 독립 payload를 렌더 직전에만
+  합성하고 별도 nonce/cache를 소유한다. React workbench는 순방향·역산·근거 UI와
+  `LIMITED/NOT_AVAILABLE` 비공개 표현만 맡는다.
 
 ### Research Evidence
 
@@ -212,7 +218,7 @@ compact evidence와 identity만 저장한다. 자세한 규칙은
 | Today | `app/web/today_page.py`, `app/services/today.py` | [Today Intraday Flow](./flows/TODAY_PORTFOLIO_INTRADAY_FLOW.md) |
 | Market Research | `app/web/overview/page.py`, `app/web/overview/navigation.py` | view owner under `app/services/overview/` |
 | economic cycle / valuation | owning module under `finance/`, `finance/loaders/`, `app/services/overview/` | [Data Quality And PIT](./data/DATA_QUALITY_AND_PIT_NOTES.md) |
-| inflation / policy / yield path | `app/jobs/inflation_policy_refresh.py`, `finance/loaders/inflation_policy.py`, `finance/inflation_policy_model.py`, `finance/inflation_policy_pipeline.py` | [Inflation / Policy Engine Flow](./architecture/INFLATION_POLICY_ENGINE_FLOW.md), [Inflation / Policy Data Refresh](./runbooks/INFLATION_POLICY_DATA_REFRESH.md) |
+| inflation / policy / yield path | `app/jobs/inflation_policy_refresh.py`, `finance/loaders/inflation_policy.py`, `finance/inflation_policy_model.py`, `finance/inflation_policy_pipeline.py`, `app/services/overview/inflation_policy*.py` | [Inflation / Policy Engine Flow](./architecture/INFLATION_POLICY_ENGINE_FLOW.md), [Inflation / Policy Data Refresh](./runbooks/INFLATION_POLICY_DATA_REFRESH.md) |
 | Institutional Holdings / 13F | `app/web/institutional_portfolios.py`, `app/services/institutional_portfolios.py` | [Institutional Flow](./flows/INSTITUTIONAL_PORTFOLIOS_FLOW.md) |
 | Backtest Analysis / strategy | `app/web/backtest_analysis.py`, `app/runtime/backtest/` | [Backtest Runtime](./architecture/BACKTEST_RUNTIME_FLOW.md), [Strategy Flow](./architecture/STRATEGY_IMPLEMENTATION_FLOW.md) |
 | Practical Validation | `app/web/backtest_practical_validation/` | [Backtest UI Flow](./flows/BACKTEST_UI_FLOW.md) |

@@ -27,7 +27,7 @@ external source
 |---|---|---|
 | Backtest Analysis | `app/runtime/backtest/`, `finance/loaders/*`, `finance/*` runtime | 후보 source와 result bundle 생성. Final approval / monitoring policy는 소유하지 않는다 |
 | Practical Validation / Final Review | `app/services/backtest_*`, `finance/loaders/provider.py`, `finance/loaders/macro.py`, `finance/loaders/sentiment.py` | compact evidence와 gate / selected-route read model 생성. Full provider / macro / holdings row는 DB에 둔다 |
-| Workspace > Overview | `app/services/overview/*`, futures / sentiment services | market context / data health only. Trade signal이나 validation PASS / BLOCKER가 아니다 |
+| Workspace > Overview | `app/services/overview/*`, futures / sentiment services | market context / data health only. Inflation-policy는 저장 snapshot/definition/exact artifact만 읽고 `LIMITED/NOT_AVAILABLE`을 보존한다. Trade signal이나 validation PASS / BLOCKER가 아니다 |
 | Workspace > Institutional Portfolios | `app/services/institutional_portfolios.py`, `finance/loaders/institutional_13f.py` | delayed 13F portfolio research only. 추천 / 매수매도 신호 / monitoring signal이 아니다 |
 | Operations > Portfolio Monitoring | `app/runtime/backtest/read_models/final_selected_portfolios.py`, `app/services/backtest_practical_validation.py` sentiment overlay | read-only monitoring / explicit scenario update. No broker order, live approval, auto rebalance |
 
@@ -121,7 +121,7 @@ external source
 
 | 파일 | 역할 |
 |---|---|
-| `finance/loaders/inflation_policy.py` | 하나의 `as_of_at` 이전에 실제 공개된 macro vintage, SEP, 정책 결정과 ACM collection vintage만 선택하는 독립 DB-only bundle. `economic_cycle_*` 결과를 query/fallback하지 않는다 |
+| `finance/loaders/inflation_policy.py` | 하나의 `as_of_at` 이전에 실제 공개된 macro vintage, SEP, 정책 결정과 ACM collection vintage만 선택하는 독립 DB-only bundle. active USER/AUTO definition은 `known_at/saved_at` PIT cutoff로 읽고 model artifact는 version+trained cutoff+component exact identity만 허용한다. optional definition/artifact table이 아직 없으면 빈 결과로 닫으며 `economic_cycle_*` 결과를 query/fallback하지 않는다 |
 | `finance/loaders/universe.py` | universe, asset profile status, symbol lifecycle coverage summary, prebuilt PIT monthly equity universe membership 조회 |
 | `finance/loaders/symbol_resolver.py` | `nyse_symbol_lifecycle`의 ticker-change evidence와 price freshness를 결합해 symbol identity 후보 / active repair map을 읽는다 |
 | `finance/loaders/price.py` | price history, price matrix, freshness, symbol별 latest price, validation window coverage summary 조회 |

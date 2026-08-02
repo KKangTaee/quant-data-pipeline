@@ -9,8 +9,8 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 제공하는 Evidence-first 퀀트 투자 리서치 워크스페이스다.
 
 현재 사용자 승인 `Inflation Policy Yield Path` 5단계 phase가 active다. 1차 독립
-Point-in-Time 데이터 기반과 2차 Core PCE·정책·금리 엔진을 완료하고 3차
-순방향·10년물 목표 역산 workbench로 이동하는 상태다. 기존 baseline과 남은
+Point-in-Time 데이터 기반, 2차 Core PCE·정책·금리 엔진과 3차
+순방향·10년물 목표 역산 workbench를 완료하고 4차 조건부 S&P 500 스트레스로 이동하는 상태다. 기존 baseline과 남은
 verification debt는 유지하며 다른 신규 product/data
 scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는다.
 
@@ -19,8 +19,8 @@ scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는�
 - Product baseline: Research → Portfolio Lab → Portfolio Monitoring 흐름 구현
 - Data baseline: MySQL-backed ingestion / loader / service / UI 경계 구현
 - Safety baseline: no live approval, broker order, auto rebalance
-- Active phase: `inflation-policy-yield-path` (2/5 backend 완료)
-- Active product implementation: 3차 DB-backed workbench 준비
+- Active phase: `inflation-policy-yield-path` (3/5 workbench 완료)
+- Active product implementation: 4차 독립 PIT S&P 500 stress 대기
 - Paused work와 Verification-Only work는 별도 상태로 관리
 
 ## Implemented Baseline
@@ -38,6 +38,7 @@ scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는�
 | Reference Center | 7개 current surface의 개념·journey·failure state·deep link 검색 | product help owner |
 | Architecture | Python domain / service / runtime, Streamlit command boundary와 React presentation 분리 | React가 DB / provider / canonical decision을 소유하지 않음 |
 | Inflation / Policy Backend | 독립 26-series PIT 원장, 익명 SEP·FOMC 의결, strict as-of/vintage loader, 혼합형 Core PCE, 정책 marginal, 동적 저항대, 순방향·역산 계약과 artifact/snapshot pipeline | 기존 경제 사이클 결과 재사용 없음; 월간 artifact는 비교 가능한 3개 baseline을 앞서지만 SEP/공식 benchmark 묶음 전까지 `LIMITED`, 역산·침체는 `NOT_AVAILABLE` |
+| Inflation / Policy Workbench | 기존 경기 국면 기본 선택기 아래 DB-backed 순방향 다섯 상태·다음 발표 준비·정책 순이동·DGS10 동적 저항과 목표 조건부 역산·USER 기준 저장·근거 disclosure | `READY`가 아니면 확률 비공개; provider/UI 계산 없음; reverse·주가·침체 미검증 값은 `NOT_AVAILABLE` |
 
 상세 구현과 과거 QA는 개별 task / phase 기록에 남아 있다. 현재 제품 의미는
 [Product Direction](./PRODUCT_DIRECTION.md), code ownership은
@@ -49,7 +50,7 @@ scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는�
 
 | Work | Current State | Next Gate |
 |---|---|---|
-| [Inflation Policy Yield Path](../phases/active/inflation-policy-yield-path/STATUS.md) | 전체 5차 중 1차 PIT data와 2차 독립 backend engine·2026 replay 완료 | 3차 저장 snapshot 기반 순방향·10년물 목표 역산 workbench와 상태별 제한 표시 |
+| [Inflation Policy Yield Path](../phases/active/inflation-policy-yield-path/STATUS.md) | 전체 5차 중 1차 PIT data·2차 독립 backend·3차 DB-backed workbench와 actual Browser QA 완료 | 4차 독립 PIT S&P 500 조건부 stress와 publication gate |
 
 이 phase 외 새 제품 범위는 목적, 완료 조건과 data/safety boundary를 합의한 뒤 별도
 task 또는 명시적으로 승인된 phase로 연다.
@@ -90,9 +91,9 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 
 ## Recommended Order
 
-1. **Active inflation-policy phase** — 3차 workbench는 저장 snapshot을 읽고,
-   `READY/LIMITED/NOT_AVAILABLE`과 자동·사용자 저항 기준을 숨기지 않은 채 순방향·역산
-   사용자 흐름을 연결한다.
+1. **Active inflation-policy phase** — 4차 S&P 500 stress는 물가·정책·금리 조건을
+   독립 PIT episode와 연결하고 chronological holdout/publication gate를 통과한 경우만
+   조건부분포를 공개한다.
 2. **Verification debt closeout** — 이미 구현된 interaction을 작은 QA-only 작업으로 닫아
    active-state 신뢰도를 먼저 높인다.
 3. **Correctness decision** — historical universe / delisting PIT source와 storage policy를

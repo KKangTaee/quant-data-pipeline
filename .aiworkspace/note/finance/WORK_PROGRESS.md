@@ -7325,3 +7325,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - 2026-07-29 replay의 1개월 artifact와 통합 snapshot은 `LIMITED`; 역산·침체는 `NOT_AVAILABLE`로 저장했다.
 - 당시 10년물은 active 4.58~4.65%, next overhead 4.67%였으며 4.7 고정 상수를 사용하지 않았다.
 - 전체 5차 중 2차 완료; 다음 위치는 `tasks/active/inflation-policy-core-engines/`와 phase 3 workbench다.
+
+## 2026-08-02 - Inflation / Policy Yield Path 3/5 workbench 완료
+
+- Market Research 경제 사이클 안에 DB-backed `물가·정책 경로` 순방향·역산 화면과 USER 금리 기준 저장을 연결했다.
+- `LIMITED` 확률은 비공개, reverse·주가·침체는 `NOT_AVAILABLE`로 유지하며 기존 경기 사이클 확률을 재사용하지 않는다.
+- Python 122·React 8, actual DB와 desktop/420px Browser QA를 통과했다. 다음 위치는 4차 `inflation-policy-equity-stress`다.

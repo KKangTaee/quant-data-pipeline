@@ -1,6 +1,6 @@
 # Inflation Policy Workbench Plan
 
-State: active
+State: complete
 Last Updated: 2026-08-02
 
 ## 이걸 하는 이유?
