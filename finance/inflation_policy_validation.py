@@ -31,6 +31,7 @@ class ContinuousValidationPrediction:
     predictive_samples: tuple[float, ...]
     baseline_prediction: float
     complete_feature_ratio: float
+    baseline_samples: tuple[float, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -139,10 +140,15 @@ def run_continuous_rolling_origin(
 
 
 def _empirical_crps(samples: Sequence[float], actual: float) -> float:
-    values = tuple(float(value) for value in samples)
-    first = sum(abs(value - actual) for value in values) / len(values)
-    pairwise = sum(abs(left - right) for left in values for right in values)
-    return first - 0.5 * pairwise / (len(values) ** 2)
+    values = tuple(sorted(float(value) for value in samples))
+    count = len(values)
+    first = sum(abs(value - actual) for value in values) / count
+    # Exact E|X-X'| for an empirical distribution without the O(n^2) matrix.
+    pairwise = 2.0 * sum(
+        (2 * index - count - 1) * value
+        for index, value in enumerate(values, start=1)
+    ) / (count**2)
+    return first - 0.5 * pairwise
 
 
 def calculate_continuous_metrics(
@@ -170,7 +176,15 @@ def calculate_continuous_metrics(
         errors.append(abs(error))
         squared.append(error**2)
         crps.append(_empirical_crps(samples, actual))
-        baseline_crps.append(abs(_finite(row.baseline_prediction, field="baseline") - actual))
+        baseline_samples = tuple(
+            _finite(value, field="baseline sample")
+            for value in row.baseline_samples
+        )
+        baseline_crps.append(
+            _empirical_crps(baseline_samples, actual)
+            if baseline_samples
+            else abs(_finite(row.baseline_prediction, field="baseline") - actual)
+        )
         array = np.asarray(samples, dtype=float)
         for coverage in interval_hits:
             tail = (1.0 - coverage) / 2.0

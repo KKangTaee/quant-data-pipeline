@@ -8,6 +8,7 @@ def _required_success_collectors():
         "macro_vintages": lambda: {"status": "success", "rows": 100},
         "sep": lambda: {"status": "success", "rows": 40},
         "decisions": lambda: {"status": "success", "rows": 6},
+        "spf_core_pce": lambda: {"status": "success", "rows": 200},
         "term_premium": lambda: {
             "status": "success",
             "rows": 500,

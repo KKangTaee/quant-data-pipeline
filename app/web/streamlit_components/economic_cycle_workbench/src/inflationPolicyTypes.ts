@@ -9,6 +9,8 @@ export type InflationStateRow = {
 export type NextReleaseScenario = {
   mom_pct: number;
   publication_status: InflationPublicationStatus;
+  inflation_publication_status?: InflationPublicationStatus;
+  policy_publication_status?: InflationPublicationStatus;
   reacceleration_delta?: number | null;
   hike_delta?: number | null;
   reason?: string | null;

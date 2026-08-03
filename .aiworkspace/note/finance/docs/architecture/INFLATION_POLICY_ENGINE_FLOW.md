@@ -12,10 +12,12 @@ Last Verified: 2026-08-03
 ## Runtime Flow
 
 ```text
-released_at PIT macro vintages + anonymous SEP + actual FOMC vote
+released_at PIT macro vintages + Philadelphia Fed SPF + anonymous SEP + actual FOMC vote
   -> finance/loaders/inflation_policy.py
   -> finance/inflation_policy_model.py
        bridge + ridge + momentum one-month Core PCE nowcast
+  -> finance/core_pce_q4.py
+       monthly path + official SPF linear pool + chronological Q4/Q4 gate
   -> finance/inflation_path.py
        index recursion + Q4/Q4 distribution + five states
   -> finance/policy_path.py
@@ -49,6 +51,7 @@ payload는 서비스 입력·fallback·침체 확률로 사용하지 않는다.
 | Owner | Responsibility |
 |---|---|
 | `finance/loaders/inflation_policy.py` | 한 cutoff의 strict bundle, 과거 origin 재구성용 전체 eligible vintage, PIT USER/AUTO definition과 exact cutoff artifact read |
+| `finance/data/spf_core_pce.py` / `finance/core_pce_q4.py` | Philadelphia Fed SPF Q4/Q4 probability-bin vintage 수집과 월간 모델/SPF 선형 pool, internally consistent first-release index-vintage target, chronological CRPS·coverage gate |
 | `finance/inflation_policy_model.py` | Core PCE 모멘텀, CPI·PPI·임금·trimmed-mean bridge, 정규화 ridge와 rolling-origin component weight |
 | `finance/inflation_path.py` | 월별 index 복리 경로, Q4 평균 기반 Q4/Q4, SEP-versioned 5상태와 사용자 threshold probability |
 | `finance/policy_path.py` | 익명 SEP 금리점의 순이동 marginal, 실제 의결·dissent 방향, versioned state-to-policy 반응행렬 |
@@ -56,7 +59,7 @@ payload는 서비스 입력·fallback·침체 확률로 사용하지 않는다.
 | `finance/inflation_policy_simulation.py` | 정책 25bp와 10년물 25bp를 기계적으로 연결하지 않는 순방향·조건부 역산 계약 |
 | `finance/inflation_policy_equity_stress.py` | complete same-workbook 차년도 EPS vintage와 origin별 저장 가격·금리의 year-end PIT panel, 공개시각 rolling ridge, paired residual, 3-baseline/coverage gate와 bounded 사용자 AI EPS/지수 수준 scenario |
 | `finance/inflation_policy_validation.py` | CRPS/MAE/coverage, Brier/log loss/ECE, baseline 비교와 fail-closed publication gate |
-| `finance/inflation_policy_pipeline.py` | exact cutoff 학습·재현, production equity bundle→panel→artifact→`joint_macro_paths`→simulation 실행, snapshot별 live equity context와 component-independent result 직렬화, compact evidence, 명시적 저장 CLI |
+| `finance/inflation_policy_pipeline.py` | exact cutoff 1개월/Q4 학습·재현, production equity bundle→panel→artifact→`joint_macro_paths`→simulation 실행, 5개 다음 물가 발표 scenario와 snapshot별 live equity context의 component-independent 직렬화, compact evidence, 명시적 저장 CLI |
 | `app/services/overview/inflation_policy.py` | snapshot JSON 검증, 상태 사유·AUTO/USER zone·equity gate·근거/신선도·5차 침체 미연결 경계를 포함한 `inflation_policy_v1` read model |
 | `app/services/overview/inflation_policy_commands.py` | USER-only criterion 저장과 선택 snapshot의 정확히 일치하는 READY artifact만 쓰는 bounded rate/equity scenario command |
 | `app/web/overview/market_context_helpers.py` | cycle과 독립 read model을 렌더 직전에만 합성하고 command nonce/cache/result를 cycle refresh와 분리 |

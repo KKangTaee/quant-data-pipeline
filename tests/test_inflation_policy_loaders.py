@@ -135,6 +135,50 @@ def test_latest_eligible_acm_collection_vintage_is_selected() -> None:
     assert bundle.coverage["term_premium_status"] == "LIMITED"
 
 
+def test_spf_probability_loader_is_release_cutoff_safe_and_keeps_full_bins() -> None:
+    from finance.loaders.inflation_policy import load_inflation_policy_data_bundle
+
+    captured: list[tuple[str, tuple[object, ...]]] = []
+
+    def query(_database: str, sql: str, params: tuple[object, ...]):
+        if "spf_core_pce_probability" not in sql:
+            return []
+        captured.append((sql, params))
+        return [
+            {
+                "survey_year": 2026,
+                "survey_quarter": 2,
+                "target_year": 2026,
+                "bin_number": bin_number,
+                "bin_label": str(bin_number),
+                "mean_probability_pct": 10.0,
+                "released_at": "2026-05-16 03:59:59.999999",
+            }
+            for bin_number in range(1, 11)
+        ] + [
+            {
+                "survey_year": 2026,
+                "survey_quarter": 3,
+                "target_year": 2026,
+                "bin_number": 1,
+                "bin_label": ">=4.0",
+                "mean_probability_pct": 100.0,
+                "released_at": "2026-08-14 04:00:00",
+            }
+        ]
+
+    bundle = load_inflation_policy_data_bundle(
+        as_of_at="2026-08-03T03:15:00+00:00",
+        history_start="2015-01-01",
+        query_fn=query,
+    )
+
+    assert len(bundle.spf_rows) == 10
+    assert {row["survey_quarter"] for row in bundle.spf_rows} == {2}
+    assert bundle.coverage["spf_core_pce_status"] == "READY"
+    assert captured and "released_at <= %s" in captured[0][0]
+
+
 def test_training_vintage_loader_preserves_all_then_known_versions() -> None:
     from finance.loaders.inflation_policy import (
         load_inflation_policy_training_vintages,

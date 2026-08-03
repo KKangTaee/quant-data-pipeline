@@ -1075,6 +1075,37 @@ INFLATION_POLICY_SCHEMAS = {
           KEY ix_fomc_policy_released (released_at, meeting_date)
         );
     """,
+    "spf_core_pce_probability": """
+        CREATE TABLE IF NOT EXISTS spf_core_pce_probability (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          survey_year SMALLINT NOT NULL,
+          survey_quarter TINYINT NOT NULL,
+          target_year SMALLINT NOT NULL,
+          horizon ENUM('CURRENT_YEAR','NEXT_YEAR') NOT NULL,
+          bin_number TINYINT NOT NULL,
+          bin_label VARCHAR(32) NOT NULL,
+          bin_lower_pct DECIMAL(10,4) NULL,
+          bin_upper_pct DECIMAL(10,4) NULL,
+          mean_probability_pct DECIMAL(10,6) NOT NULL,
+          release_date DATE NOT NULL,
+          released_at DATETIME(6) NOT NULL,
+          release_time_basis VARCHAR(64) NOT NULL,
+
+          source VARCHAR(64) NOT NULL DEFAULT 'philadelphia_fed_spf',
+          source_ref VARCHAR(1024) NOT NULL,
+          parser_version VARCHAR(128) NOT NULL,
+          collected_at DATETIME(6) NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_spf_core_pce_probability
+            (survey_year, survey_quarter, target_year, bin_number),
+          KEY ix_spf_core_pce_released
+            (released_at, target_year, survey_year, survey_quarter)
+        );
+    """,
     "inflation_policy_model_artifact": """
         CREATE TABLE IF NOT EXISTS inflation_policy_model_artifact (
           id BIGINT AUTO_INCREMENT PRIMARY KEY,

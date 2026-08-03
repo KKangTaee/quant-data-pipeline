@@ -67,6 +67,30 @@ def test_continuous_metrics_compare_distribution_score_and_interval_coverage() -
     assert metrics["complete_feature_ratio"] == 1.0
 
 
+def test_continuous_metrics_score_a_distributional_official_benchmark() -> None:
+    from finance.inflation_policy_validation import (
+        ContinuousValidationPrediction,
+        calculate_continuous_metrics,
+    )
+
+    prediction = ContinuousValidationPrediction(
+        forecast_origin_at="2025-05-16T12:00:00+00:00",
+        target_available_at="2026-01-30T13:30:00+00:00",
+        training_target_through_at="2025-01-31T13:30:00+00:00",
+        actual_value=3.0,
+        predicted_median=3.0,
+        predictive_samples=(2.8, 3.0, 3.2),
+        baseline_prediction=2.5,
+        complete_feature_ratio=1.0,
+        baseline_samples=(1.0, 2.5, 4.0),
+    )
+
+    metrics = calculate_continuous_metrics((prediction,))
+
+    assert metrics["crps"] < metrics["baseline_crps"]
+    assert metrics["baseline_crps"] < abs(prediction.baseline_prediction - 3.0) + 0.01
+
+
 def test_categorical_metrics_require_exact_simplex_and_report_calibration() -> None:
     from finance.inflation_policy_validation import calculate_categorical_metrics
 

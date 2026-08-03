@@ -9,8 +9,19 @@ from dataclasses import asdict, dataclass
 from datetime import date, datetime, timezone
 from typing import Callable, Mapping, Sequence
 
+import numpy as np
+
+from finance.core_pce_q4 import (
+    CorePCEQ4Artifact,
+    blend_q4_samples,
+    fit_core_pce_q4_artifact,
+    spf_probability_samples,
+)
+
 from finance.inflation_path import (
     CorePCEPathForecast,
+    calculate_state_probabilities,
+    calculate_threshold_probabilities,
     derive_state_definition,
     simulate_core_pce_paths,
 )
@@ -84,6 +95,13 @@ class InflationPolicyEngineConfig:
     next_action_component_weights: Mapping[str, object]
     max_component_weight: float
     core_validation_thresholds: PublicationThresholds
+    q4_validation_thresholds: PublicationThresholds = PublicationThresholds(
+        minimum_origins=20,
+        minimum_complete_feature_ratio=0.80,
+        maximum_calibration_error=0.35,
+        require_baseline_improvement=True,
+    )
+    q4_minimum_target_years: int = 6
 
 
 @dataclass(frozen=True)
@@ -789,6 +807,9 @@ def _serialize_core_forecast(
     publication_status: str,
     publication_reason: str,
     state_definition: object,
+    validation: Mapping[str, object] | None = None,
+    q4_component_weights: Mapping[str, object] | None = None,
+    next_release_scenarios: Sequence[Mapping[str, object]] = (),
 ) -> dict[str, object]:
     return {
         "publication_status": publication_status,
@@ -799,8 +820,82 @@ def _serialize_core_forecast(
         "monthly_mom_quantiles_pct": forecast.monthly_mom_quantiles_pct,
         "monthly_index_quantiles": forecast.monthly_index_quantiles,
         "component_weights": forecast.component_weights,
+        "q4_component_weights": dict(q4_component_weights or {}),
+        "validation": dict(validation or {}),
+        "next_release_scenarios": [dict(row) for row in next_release_scenarios],
         "state_definition": asdict(state_definition),
     }
+
+
+def _q4_quantiles(samples: Sequence[object]) -> dict[str, float]:
+    points = np.quantile(
+        np.asarray(tuple(float(item) for item in samples)),
+        (0.05, 0.20, 0.50, 0.80, 0.95),
+    )
+    return {
+        label: float(value)
+        for label, value in zip(("p05", "p20", "p50", "p80", "p95"), points, strict=True)
+    }
+
+
+def _next_release_scenarios(
+    *,
+    levels: Mapping[object, object],
+    forecast_months: Sequence[object],
+    component_paths: Mapping[str, Mapping[object, object]],
+    core_artifact: CorePCEMomentumArtifact | CorePCEHybridArtifact,
+    q4_artifact: CorePCEQ4Artifact,
+    spf_samples: Sequence[object],
+    base_state_probabilities: Mapping[str, object],
+    state_definition: object,
+    sample_count: int,
+    seed: int,
+) -> list[dict[str, object]]:
+    """Condition only the next print; later months retain empirical uncertainty."""
+
+    if not forecast_months:
+        return []
+    base_reacceleration = float(base_state_probabilities.get("reacceleration") or 0.0) + float(
+        base_state_probabilities.get("shock_reacceleration") or 0.0
+    )
+    rows: list[dict[str, object]] = []
+    first_month = forecast_months[0]
+    for mom_pct in (0.1, 0.2, 0.3, 0.4, 0.5):
+        scenario_model = simulate_core_pce_paths(
+            levels,
+            forecast_months=forecast_months,
+            component_monthly_mom_pct=component_paths,
+            component_weights=core_artifact.component_weights,
+            residual_history_pct=core_artifact.predictive_residuals_pct,
+            fixed_monthly_mom_pct={first_month: mom_pct},
+            sample_count=sample_count,
+            seed=seed + int(mom_pct * 1_000),
+            state_definition=state_definition,
+            thresholds_pct=(),
+        )
+        pooled = blend_q4_samples(
+            scenario_model.q4_samples_pct,
+            spf_samples,
+            model_weight=q4_artifact.model_weight,
+            sample_count=sample_count,
+        )
+        probabilities = calculate_state_probabilities(pooled, state_definition)
+        reacceleration = probabilities["reacceleration"] + probabilities[
+            "shock_reacceleration"
+        ]
+        rows.append(
+            {
+                "mom_pct": mom_pct,
+                "publication_status": "READY",
+                "inflation_publication_status": "READY",
+                "policy_publication_status": "LIMITED",
+                "reacceleration_delta": reacceleration - base_reacceleration,
+                "hike_delta": None,
+                "q4_p50_pct": _q4_quantiles(pooled)["p50"],
+                "reason": "inflation_path_validated_policy_path_pending",
+            }
+        )
+    return rows
 
 
 def materialize_inflation_policy_analysis(
@@ -810,6 +905,7 @@ def materialize_inflation_policy_analysis(
     sample_count: int,
     seed: int,
     core_artifact: CorePCEMomentumArtifact | CorePCEHybridArtifact | None = None,
+    q4_artifact: CorePCEQ4Artifact | None = None,
     equity: Mapping[str, object] | EquityStressResult | None = None,
     equity_joint_paths_ready: bool = False,
 ) -> InflationPolicyMaterialization:
@@ -895,14 +991,77 @@ def materialize_inflation_policy_analysis(
             config=config,
             reason=f"inflation_path_not_available:{exc}",
         )
+    q4_weights: dict[str, float] = {}
+    next_release_rows: list[dict[str, object]] = []
+    if q4_artifact is not None and q4_artifact.publication_status in {"READY", "LIMITED"}:
+        try:
+            spf_samples, spf_released_at = spf_probability_samples(
+                bundle.spf_rows,
+                target_year=latest_month.year,
+                sample_count=sample_count,
+            )
+            pooled_samples = blend_q4_samples(
+                core_forecast.q4_samples_pct,
+                spf_samples,
+                model_weight=q4_artifact.model_weight,
+                sample_count=sample_count,
+            )
+            q4_weights = {
+                "monthly_model": q4_artifact.model_weight,
+                "official_spf": q4_artifact.spf_weight,
+            }
+            core_forecast = CorePCEPathForecast(
+                monthly_mom_quantiles_pct=core_forecast.monthly_mom_quantiles_pct,
+                monthly_index_quantiles=core_forecast.monthly_index_quantiles,
+                q4_quantiles_pct=_q4_quantiles(pooled_samples),
+                q4_samples_pct=pooled_samples,
+                state_probabilities=calculate_state_probabilities(
+                    pooled_samples, state_definition
+                ),
+                threshold_probabilities=calculate_threshold_probabilities(
+                    pooled_samples, config.threshold_levels_pct
+                ),
+                component_weights=core_forecast.component_weights,
+                state_definition_version=core_forecast.state_definition_version,
+            )
+            next_release_rows = _next_release_scenarios(
+                levels=level_mapping,
+                forecast_months=forecast_months,
+                component_paths=component_paths,
+                core_artifact=core_artifact,
+                q4_artifact=q4_artifact,
+                spf_samples=spf_samples,
+                base_state_probabilities=core_forecast.state_probabilities,
+                state_definition=state_definition,
+                sample_count=sample_count,
+                seed=seed,
+            )
+            inflation_status = q4_artifact.publication_status
+            inflation_reason = (
+                "q4_direct_rolling_origin_validated"
+                if inflation_status == "READY"
+                else ",".join(q4_artifact.publication_reasons)
+            )
+            q4_validation = {
+                **q4_artifact.validation_metrics,
+                "official_spf_released_at": spf_released_at,
+            }
+        except (TypeError, ValueError) as exc:
+            inflation_status = "NOT_AVAILABLE"
+            inflation_reason = f"q4_linear_pool_not_available:{exc}"
+            q4_validation = {}
+    else:
+        inflation_status = "LIMITED"
+        inflation_reason = "q4_path_rolling_origin_validation_not_ready"
+        q4_validation = {}
     inflation = _serialize_core_forecast(
         core_forecast,
-        # The component artifact is validated one month ahead.  Until the
-        # complete Q4/Q4 path has its own PIT rolling-origin evidence, its
-        # longer-horizon probabilities must not inherit the component READY.
-        publication_status="LIMITED",
-        publication_reason="q4_path_rolling_origin_validation_not_ready",
+        publication_status=inflation_status,
+        publication_reason=inflation_reason,
         state_definition=state_definition,
+        validation=q4_validation,
+        q4_component_weights=q4_weights,
+        next_release_scenarios=next_release_rows,
     )
 
     policy: dict[str, object]
@@ -971,7 +1130,11 @@ def materialize_inflation_policy_analysis(
         dict.fromkeys(
             (
                 *(core_artifact.publication_reasons or ()),
-                "q4_path_rolling_origin_validation_not_ready",
+                *(
+                    ()
+                    if inflation["publication_status"] == "READY"
+                    else (str(inflation.get("reason") or "q4_path_not_ready"),)
+                ),
                 *policy_warnings,
                 "resistance_event_calibration_not_ready",
                 "recession_model_not_available",
@@ -1024,6 +1187,29 @@ def materialize_inflation_policy_analysis(
         "publication_status": core_artifact.publication_status,
         "publication_reasons_json": core_artifact.publication_reasons,
     }
+    q4_artifact_row: dict[str, object] | None = None
+    if q4_artifact is not None:
+        q4_artifact_row = {
+            "model_version": config.model_version,
+            "trained_cutoff_at": q4_artifact.trained_cutoff_at,
+            "component": "core_pce_q4_linear_pool",
+            "feature_schema_version": "core-pce-q4-pit-origins-v1",
+            "transform_schema_version": "spf-monthly-linear-pool-v1",
+            "state_schema_version": state_definition.definition_version,
+            "training_start_date": q4_artifact.training_start_date,
+            "forecast_horizon": "calendar_year_q4_over_q4",
+            "ensemble_weight": q4_artifact.model_weight,
+            "parameters_json": {
+                "monthly_model_weight": q4_artifact.model_weight,
+                "official_spf_weight": q4_artifact.spf_weight,
+            },
+            "validation_json": q4_artifact.validation_metrics,
+            "calibration_json": {
+                "publication_status": q4_artifact.publication_status,
+            },
+            "publication_status": q4_artifact.publication_status,
+            "publication_reasons_json": q4_artifact.publication_reasons,
+        }
     snapshot = {
         "as_of_at": bundle.as_of_at,
         "model_version": config.model_version,
@@ -1037,13 +1223,18 @@ def materialize_inflation_policy_analysis(
         "evidence_json": {
             "coverage": bundle.coverage,
             "core_validation": core_artifact.validation_metrics,
+            "q4_validation": (
+                q4_artifact.validation_metrics if q4_artifact is not None else {}
+            ),
         },
         "freshness_json": freshness,
         "warnings_json": warnings,
     }
     return InflationPolicyMaterialization(
         snapshot_row=snapshot,
-        model_artifact_rows=(artifact_row,),
+        model_artifact_rows=(artifact_row,) + (
+            (q4_artifact_row,) if q4_artifact_row is not None else ()
+        ),
         inflation=inflation,
         policy=policy,
         rates=rates,
@@ -1177,6 +1368,9 @@ def run_inflation_policy_materialization(
     artifact_trainer: Callable[..., CorePCEHybridArtifact] = (
         fit_core_pce_hybrid_artifact
     ),
+    q4_artifact_trainer: Callable[..., CorePCEQ4Artifact] = (
+        fit_core_pce_q4_artifact
+    ),
     equity_bundle_loader: Callable[..., InflationPolicyEquityBundle] = (
         load_inflation_policy_equity_bundle
     ),
@@ -1227,6 +1421,19 @@ def run_inflation_policy_materialization(
             equity=unavailable.equity,
             warnings=unavailable.warnings,
         )
+    q4_artifact: CorePCEQ4Artifact | None = None
+    try:
+        q4_artifact = q4_artifact_trainer(
+            vintages,
+            bundle.spf_rows,
+            as_of_at=as_of_at,
+            thresholds=config.q4_validation_thresholds,
+            minimum_target_years=config.q4_minimum_target_years,
+            sample_count=min(400, int(sample_count)),
+            minimum_training_rows=36,
+        )
+    except (TypeError, ValueError, np.linalg.LinAlgError):
+        q4_artifact = None
     equity_payload: Mapping[str, object] | EquityStressResult | None = None
     equity_artifact_row: dict[str, object] | None = None
     equity_context: Mapping[str, object] | None = None
@@ -1336,6 +1543,7 @@ def run_inflation_policy_materialization(
         sample_count=sample_count,
         seed=seed,
         core_artifact=artifact,
+        q4_artifact=q4_artifact,
         equity=equity_payload,
         equity_joint_paths_ready=equity_joint_paths_ready,
     )

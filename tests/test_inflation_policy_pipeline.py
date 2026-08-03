@@ -115,6 +115,35 @@ def _sep_rows() -> list[dict[str, object]]:
     return core + dots
 
 
+def _spf_probability_rows() -> list[dict[str, object]]:
+    bins = (
+        (1, ">=4.0", 4.0, None, 3.0),
+        (2, "3.5-3.9", 3.5, 3.9, 23.0),
+        (3, "3.0-3.4", 3.0, 3.4, 31.0),
+        (4, "2.5-2.9", 2.5, 2.9, 27.0),
+        (5, "2.0-2.4", 2.0, 2.4, 11.0),
+        (6, "1.5-1.9", 1.5, 1.9, 4.0),
+        (7, "1.0-1.4", 1.0, 1.4, 1.0),
+        (8, "0.5-0.9", 0.5, 0.9, 0.0),
+        (9, "0.0-0.4", 0.0, 0.4, 0.0),
+        (10, "decline", None, 0.0, 0.0),
+    )
+    return [
+        {
+            "survey_year": 2026,
+            "survey_quarter": 2,
+            "target_year": 2026,
+            "bin_number": number,
+            "bin_label": label,
+            "bin_lower_pct": lower,
+            "bin_upper_pct": upper,
+            "mean_probability_pct": probability,
+            "released_at": "2026-05-16 03:59:59.999999",
+        }
+        for number, label, lower, upper, probability in bins
+    ]
+
+
 def _reaction_matrix():
     from finance.inflation_path import INFLATION_STATES
     from finance.policy_path import POLICY_NET_MOVE_BUCKETS
@@ -321,6 +350,82 @@ def test_pipeline_materializes_compact_limited_snapshot_without_cycle_fallback()
     }
     assert "recession_model_not_available" in result.warnings
     assert "q4_path_rolling_origin_validation_not_ready" in result.warnings
+
+
+def test_direct_q4_validation_publishes_spf_monthly_linear_pool() -> None:
+    from finance.core_pce_q4 import CorePCEQ4Artifact
+    from finance.inflation_policy_pipeline import (
+        build_limited_reference_config,
+        materialize_inflation_policy_analysis,
+    )
+    from finance.loaders.inflation_policy import InflationPolicyDataBundle
+
+    bundle = InflationPolicyDataBundle(
+        as_of_at="2026-07-29T18:00:00+00:00",
+        macro_rows=tuple(_month_rows() + _rate_rows()),
+        sep_rows=tuple(_sep_rows()),
+        decision_rows=(
+            {
+                "meeting_date": "2026-07-29",
+                "released_at": "2026-07-29 18:00:00",
+                "target_lower_before_pct": 3.5,
+                "target_upper_before_pct": 3.75,
+                "target_lower_after_pct": 3.5,
+                "target_upper_after_pct": 3.75,
+                "vote_for_count": 12,
+                "vote_against_count": 0,
+                "dissents_json": "[]",
+            },
+        ),
+        term_premium_rows=(),
+        coverage={"spf_core_pce_status": "READY"},
+        spf_rows=tuple(_spf_probability_rows()),
+    )
+    q4_artifact = CorePCEQ4Artifact(
+        trained_cutoff_at=bundle.as_of_at,
+        training_start_date="2018-01-01",
+        trained_through_date="2025-12-31",
+        model_weight=0.50,
+        spf_weight=0.50,
+        validation_metrics={
+            "origin_count": 31.0,
+            "target_year_count": 8.0,
+            "crps": 0.36,
+            "baseline_crps": 0.78,
+            "calibration_error": 0.05,
+        },
+        publication_status="READY",
+        publication_reasons=(),
+    )
+
+    result = materialize_inflation_policy_analysis(
+        bundle,
+        config=build_limited_reference_config(model_version="q4-ready-v1"),
+        sample_count=400,
+        seed=11,
+        core_artifact=_momentum_artifact(),
+        q4_artifact=q4_artifact,
+    )
+
+    assert result.inflation["publication_status"] == "READY"
+    assert result.inflation["reason"] == "q4_direct_rolling_origin_validated"
+    assert result.inflation["q4_component_weights"] == {
+        "monthly_model": 0.5,
+        "official_spf": 0.5,
+    }
+    assert result.inflation["validation"]["origin_count"] == 31.0
+    assert math.isclose(sum(result.inflation["state_probabilities"].values()), 1.0)
+    scenarios = result.inflation["next_release_scenarios"]
+    assert [row["mom_pct"] for row in scenarios] == [0.1, 0.2, 0.3, 0.4, 0.5]
+    assert all(row["inflation_publication_status"] == "READY" for row in scenarios)
+    assert all(row["policy_publication_status"] == "LIMITED" for row in scenarios)
+    assert all(row["hike_delta"] is None for row in scenarios)
+    assert scenarios[0]["reacceleration_delta"] <= scenarios[-1]["reacceleration_delta"]
+    assert "q4_path_rolling_origin_validation_not_ready" not in result.warnings
+    assert {row["component"] for row in result.model_artifact_rows} == {
+        "core_pce_momentum",
+        "core_pce_q4_linear_pool",
+    }
 
 
 def test_equity_failure_is_stored_without_changing_macro_sections() -> None:

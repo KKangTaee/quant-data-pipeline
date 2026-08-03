@@ -9,8 +9,8 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 제공하는 Evidence-first 퀀트 투자 리서치 워크스페이스다.
 
 현재 사용자 승인 `Inflation Policy Yield Path` 5단계 phase가 active다. 실제 DB와
-Browser 재감사 결과 1차 독립 Point-in-Time 데이터 기반만 완료 상태이며, 2차
-Core PCE·정책·금리 엔진, 3차 순방향·10년물 목표 역산 workbench와 4차 조건부
+Browser 재감사 결과 1차 독립 Point-in-Time 데이터 기반과 2차 Core PCE Q4/Q4가
+완료 상태이며, 3차 정책·순방향·10년물 목표 역산 workbench와 4차 조건부
 S&P 500 스트레스는 production data·검증·command 경로를 복구 중이다. 5차 독립
 침체 위험 모델은 2~4차가 실제로 작동한 뒤 진행한다. 기존 baseline과 남은
 verification debt는 유지하며 다른 신규 product/data
@@ -21,8 +21,8 @@ scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는�
 - Product baseline: Research → Portfolio Lab → Portfolio Monitoring 흐름 구현
 - Data baseline: MySQL-backed ingestion / loader / service / UI 경계 구현
 - Safety baseline: no live approval, broker order, auto rebalance
-- Active phase: `inflation-policy-yield-path` (1/5 complete, 2~4차 functional recovery)
-- Active product implementation: reverse transport 복구 완료, Core PCE·policy·joint path·equity actual materialization 진행
+- Active phase: `inflation-policy-yield-path` (2/5 complete, 3~4차 functional recovery)
+- Active product implementation: reverse transport와 Core PCE Q4/Q4 복구 완료, policy·joint path·equity actual materialization 진행
 - Paused work와 Verification-Only work는 별도 상태로 관리
 
 ## Implemented Baseline
@@ -39,8 +39,8 @@ scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는�
 | Portfolio Monitoring | direct stock·ETF와 selected strategy의 group/item, cashflow-aware performance, contribution, diagnosis와 recheck | read-only monitoring, broker / auto rebalance 없음 |
 | Reference Center | 7개 current surface의 개념·journey·failure state·deep link 검색 | product help owner |
 | Architecture | Python domain / service / runtime, Streamlit command boundary와 React presentation 분리 | React가 DB / provider / canonical decision을 소유하지 않음 |
-| Inflation / Policy Backend | 독립 26-series PIT 원장, 익명 SEP·FOMC 의결, strict as-of/vintage loader, 혼합형 Core PCE, 정책 marginal, 동적 저항대와 계산 계약 | 기존 경제 사이클 결과 재사용 없음; 월간 artifact는 내부 baseline을 앞서지만 Q4·policy·joint path production validation은 복구 중 |
-| Inflation / Policy Workbench | 기존 경기 국면 기본 선택기 아래 DB-backed 물가·정책·금리·역산·equity surface와 USER 기준 저장 | reverse command JSON 크래시와 component 전역 gate는 복구 완료; actual Q4/policy/reverse/equity result는 해당 component data/validation 완료 전까지 독립적으로 제한 |
+| Inflation / Policy Backend | 독립 26-series PIT 원장, Philadelphia Fed SPF 확률 bin, 익명 SEP·FOMC 의결, strict as-of/vintage loader, 혼합형 Core PCE, 정책 marginal, 동적 저항대와 계산 계약 | 기존 경제 사이클 결과 재사용 없음; 1개월·Q4 artifact는 actual chronological gate 통과, policy·joint path production validation은 복구 중 |
+| Inflation / Policy Workbench | 기존 경기 국면 기본 선택기 아래 DB-backed 물가·정책·금리·역산·equity surface와 USER 기준 저장 | reverse command JSON 크래시와 component 전역 gate 복구; actual Q4 5상태·threshold·5개 다음 발표 민감도 공개, policy/reverse/equity는 해당 component gate 전까지 독립 제한 |
 
 상세 구현과 과거 QA는 개별 task / phase 기록에 남아 있다. 현재 제품 의미는
 [Product Direction](./PRODUCT_DIRECTION.md), code ownership은
@@ -52,7 +52,7 @@ scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는�
 
 | Work | Current State | Next Gate |
 |---|---|---|
-| [Inflation Policy Yield Path](../phases/active/inflation-policy-yield-path/STATUS.md) | 전체 5차 중 1차 PIT data 완료, 2~4차 functional recovery active; runtime JSON/component gate 1차 복구 완료 | Q4/Q4 공식 benchmark, FOMC history/policy validation, joint path와 PIT forward EPS actual materialization |
+| [Inflation Policy Yield Path](../phases/active/inflation-policy-yield-path/STATUS.md) | 전체 5차 중 1차 PIT data와 2차 Core PCE Q4/Q4 완료, 3~4차 functional recovery active | FOMC history/policy validation, joint path와 PIT forward EPS actual materialization |
 
 이 phase 외 새 제품 범위는 목적, 완료 조건과 data/safety boundary를 합의한 뒤 별도
 task 또는 명시적으로 승인된 phase로 연다.

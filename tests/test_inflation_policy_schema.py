@@ -14,6 +14,7 @@ def test_inflation_policy_schema_keeps_release_and_identity_boundaries() -> None
     assert set(INFLATION_POLICY_SCHEMAS) == {
         "fomc_sep_distribution",
         "fomc_policy_decision",
+        "spf_core_pce_probability",
         "inflation_policy_model_artifact",
         "inflation_policy_snapshot",
         "yield_resistance_definition",
@@ -24,6 +25,10 @@ def test_inflation_policy_schema_keeps_release_and_identity_boundaries() -> None
     assert "participant_id" not in sep
     assert "released_at DATETIME(6) NOT NULL" in sep
     assert "participant_count SMALLINT NOT NULL" in sep
+
+    spf = _compact(INFLATION_POLICY_SCHEMAS["spf_core_pce_probability"])
+    assert "released_at DATETIME(6) NOT NULL" in spf
+    assert "mean_probability_pct DECIMAL(10,6) NOT NULL" in spf
 
 
 def test_inflation_policy_schema_uses_point_in_time_business_keys() -> None:
@@ -39,6 +44,15 @@ def test_inflation_policy_schema_uses_point_in_time_business_keys() -> None:
     decision = _compact(INFLATION_POLICY_SCHEMAS["fomc_policy_decision"])
     assert "UNIQUE KEY uk_fomc_policy_meeting (meeting_date)" in decision
     assert "KEY ix_fomc_policy_released (released_at, meeting_date)" in decision
+
+    spf = _compact(INFLATION_POLICY_SCHEMAS["spf_core_pce_probability"])
+    assert (
+        "UNIQUE KEY uk_spf_core_pce_probability "
+        "(survey_year, survey_quarter, target_year, bin_number)"
+    ) in spf
+    assert (
+        "KEY ix_spf_core_pce_released (released_at, target_year, survey_year, survey_quarter)"
+    ) in spf
 
     artifact = _compact(INFLATION_POLICY_SCHEMAS["inflation_policy_model_artifact"])
     assert (

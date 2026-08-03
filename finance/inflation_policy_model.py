@@ -592,12 +592,8 @@ def fit_core_pce_hybrid_artifact(
         ),
         thresholds,
     )
-    publication_status = (
-        "LIMITED" if decision.status == "READY" else decision.status
-    )
-    publication_reasons = tuple(
-        dict.fromkeys((*decision.reason_codes, "benchmark_suite_incomplete"))
-    )
+    publication_status = decision.status
+    publication_reasons = decision.reason_codes
     errors = {
         name: max(sum(values) / len(values), 1e-9)
         for name, values in component_errors.items()

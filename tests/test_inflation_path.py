@@ -237,6 +237,54 @@ def test_core_path_simulation_preserves_index_compounding_and_uncertainty_contra
     assert forecast.component_weights == {"bridge": 1.0}
 
 
+def test_next_release_scenario_fixes_the_assumed_print_before_future_residuals() -> None:
+    from finance.inflation_path import (
+        InflationStateDefinition,
+        simulate_core_pce_paths,
+    )
+
+    definition = InflationStateDefinition(
+        definition_version="fixture-v1",
+        target_period="2026",
+        sep_released_at="2026-06-17T18:00:00+00:00",
+        sep_center_pct=3.35,
+        forecast_error_pct=0.20,
+        price_stability_target_pct=2.0,
+        boundaries_pct=(2.95, 3.15, 3.55, 3.95),
+    )
+    months = tuple(f"2026-{month:02d}-01" for month in range(7, 13))
+
+    forecast = simulate_core_pce_paths(
+        {
+            "2025-10-01": 100.0,
+            "2025-11-01": 100.0,
+            "2025-12-01": 100.0,
+            "2026-06-01": 102.0,
+        },
+        forecast_months=months,
+        component_monthly_mom_pct={
+            "bridge": {month: 0.2 for month in months},
+        },
+        component_weights={"bridge": 1.0},
+        residual_history_pct=(-0.1, 0.1),
+        fixed_monthly_mom_pct={"2026-07-01": 0.4},
+        sample_count=100,
+        seed=7,
+        state_definition=definition,
+        thresholds_pct=(3.4,),
+    )
+
+    assert forecast.monthly_mom_quantiles_pct["2026-07-01"] == {
+        "p05": 0.4,
+        "p20": 0.4,
+        "p50": 0.4,
+        "p80": 0.4,
+        "p95": 0.4,
+    }
+    assert forecast.monthly_mom_quantiles_pct["2026-08-01"]["p05"] < 0.2
+    assert forecast.monthly_mom_quantiles_pct["2026-08-01"]["p95"] > 0.2
+
+
 def test_core_path_simulation_requires_empirical_residual_evidence() -> None:
     import pytest
     from finance.inflation_path import (

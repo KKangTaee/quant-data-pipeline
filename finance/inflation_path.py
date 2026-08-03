@@ -322,6 +322,7 @@ def simulate_core_pce_paths(
     seed: int,
     state_definition: InflationStateDefinition,
     thresholds_pct: Sequence[object],
+    fixed_monthly_mom_pct: Mapping[object, object] | None = None,
 ) -> CorePCEPathForecast:
     """Simulate a weighted component mixture with bootstrapped predictive residuals."""
 
@@ -343,6 +344,14 @@ def simulate_core_pce_paths(
     if total_weight <= 0.0:
         raise ValueError("component weights must contain positive mass")
     weights = {name: value / total_weight for name, value in weights.items()}
+    fixed = {
+        _month(raw_month): float(raw_value)
+        for raw_month, raw_value in (fixed_monthly_mom_pct or {}).items()
+    }
+    if not set(fixed).issubset(set(months)) or any(
+        not math.isfinite(value) or value <= -100.0 for value in fixed.values()
+    ):
+        raise ValueError("fixed monthly scenarios must be finite requested months")
 
     components: dict[str, dict[date, float]] = {}
     for name in component_names:
@@ -369,7 +378,11 @@ def simulate_core_pce_paths(
     for raw_choice in choices:
         name = str(raw_choice)
         monthly_changes = {
-            month: components[name][month] + float(rng.choice(residuals))
+            month: (
+                fixed[month]
+                if month in fixed
+                else components[name][month] + float(rng.choice(residuals))
+            )
             for month in months
         }
         projected = project_index_levels(

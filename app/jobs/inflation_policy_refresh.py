@@ -14,11 +14,12 @@ from finance.data.fomc_policy import (
     collect_and_store_fomc_sep_distributions,
 )
 from finance.data.nyfed_term_premium import collect_and_store_acm_term_premium
+from finance.data.spf_core_pce import collect_and_store_spf_core_pce_probabilities
 from finance.inflation_policy_catalog import collect_inflation_policy_vintages
 from app.runtime_env import load_project_local_env
 
 
-REQUIRED_SOURCES = ("macro_vintages", "sep", "decisions")
+REQUIRED_SOURCES = ("macro_vintages", "sep", "decisions", "spf_core_pce")
 OPTIONAL_SOURCES = ("term_premium", "pce_components")
 SOURCE_ORDER = (*REQUIRED_SOURCES, *OPTIONAL_SOURCES)
 REQUIRED_MACRO_SERIES = ("PCEPILFE", "DGS2", "DGS10", "DFII10", "T10YIE")
@@ -62,6 +63,7 @@ def _default_collectors(observed_at: str) -> dict[str, Callable[[], Mapping[str,
         "macro_vintages": collect_inflation_policy_vintages,
         "sep": collect_and_store_fomc_sep_distributions,
         "decisions": collect_and_store_fomc_policy_history,
+        "spf_core_pce": collect_and_store_spf_core_pce_probabilities,
         "term_premium": lambda: collect_and_store_acm_term_premium(
             collected_at=observed_at
         ),

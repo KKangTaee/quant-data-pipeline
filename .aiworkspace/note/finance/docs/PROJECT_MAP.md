@@ -95,6 +95,9 @@ FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
 - `finance/data/fomc_policy.py`, `bea_pce_components.py`,
   `nyfed_term_premium.py`가 익명 SEP/의결·선택 PCE breadth·기간 프리미엄 source를
   저장한다.
+- `finance/data/spf_core_pce.py`는 Philadelphia Fed SPF current/next-year Core PCE
+  Q4/Q4 확률 bin과 공식 release vintage를 저장하고, `finance/core_pce_q4.py`는 월간
+  모델과 SPF를 chronological linear pool로 결합해 5상태·threshold 확률을 검증한다.
 - `finance/loaders/inflation_policy.py`는 `released_at <= as_of_at`인 DB row와 official
   S&P 500 EPS release vintage, 저장된 `^GSPC` 가격을 DB에서만 읽고 과거 origin
   재구성에는 eligible 전체 vintage를 별도로 읽는다. 기존
@@ -104,7 +107,8 @@ FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
   익명 SEP·실제 표결 policy marginal, 동적 저항대와 순방향·역산 계산을 소유한다.
 - `finance/inflation_policy_validation.py`와 `inflation_policy_pipeline.py`는 component별
   rolling-origin gate, exact-cutoff replay와 compact artifact/snapshot을 소유한다.
-  1개월 Core PCE artifact와 연말·정책·돌파·역산·equity 상태를 독립적으로 보존한다.
+  1개월 Core PCE와 `core_pce_q4_linear_pool` artifact, 5개 다음 발표 scenario,
+  정책·돌파·역산·equity 상태를 독립적으로 보존한다.
 - `finance/inflation_policy_equity_stress.py`는 당시 공개된 차년도 EPS, 가격·금리로
   complete same-workbook year-end EPS×multiple panel을 만들고 label 공개시각
   rolling-origin ridge, 세 baseline·coverage 비교, paired residual과 사용자 AI EPS

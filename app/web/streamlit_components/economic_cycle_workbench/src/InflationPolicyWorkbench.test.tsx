@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { EconomicCycleWorkbenchView } from "./EconomicCycleWorkbench";
@@ -332,6 +332,28 @@ describe("forward inflation policy decision flow", () => {
     expect(screen.getByText("5상태 합계 100%")).toBeInTheDocument();
     expect(screen.queryByLabelText("연말까지 정책 순변화 확률")).not.toBeInTheDocument();
     expect(screen.getByText(/정책 rolling-origin 검증 대기/)).toBeInTheDocument();
+  });
+
+  it("shows validated next-print inflation sensitivity while policy validation is pending", () => {
+    const payload = readyPayload();
+    payload.policy = {
+      ...payload.policy,
+      publication_status: "LIMITED",
+      reason: "정책 rolling-origin 검증 대기",
+    };
+    payload.inflation.next_release_scenarios = payload.inflation.next_release_scenarios.map((row) => ({
+      ...row,
+      inflation_publication_status: "READY" as const,
+      policy_publication_status: "LIMITED" as const,
+      hike_delta: null,
+    }));
+
+    render(<InflationPolicyWorkbench payload={payload} onCommand={vi.fn()} />);
+
+    const row = screen.getByRole("row", { name: /Core PCE 0\.5% 시나리오/ });
+    expect(within(row).getByText("+10.0%p")).toBeInTheDocument();
+    expect(within(row).getByText("연말 물가 변화 계산 · 정책 검증 대기")).toBeInTheDocument();
+    expect(within(row).getAllByText("—")).toHaveLength(1);
   });
 });
 

@@ -68,13 +68,20 @@ function InflationStatePanel({ inflation, showProbabilities }: Props) {
             <tbody>
               {printRows.map((mom) => {
                 const scenario = scenarioFor(inflation.next_release_scenarios, mom);
-                const available = showProbabilities && scenario?.publication_status === "READY";
+                const inflationAvailable = showProbabilities
+                  && (scenario?.inflation_publication_status || scenario?.publication_status) === "READY";
+                const policyAvailable = inflationAvailable
+                  && (scenario?.policy_publication_status || scenario?.publication_status) === "READY";
                 return (
                   <tr key={mom} aria-label={`Core PCE ${mom.toFixed(1)}% 시나리오`}>
                     <th>Core PCE {mom.toFixed(1)}%</th>
-                    <td>{available ? signedPoints(scenario?.reacceleration_delta) : "—"}</td>
-                    <td>{available ? signedPoints(scenario?.hike_delta) : "—"}</td>
-                    <td>{available ? "기존 경로를 posterior로 갱신" : scenario?.reason || "검증 전"}</td>
+                    <td>{inflationAvailable ? signedPoints(scenario?.reacceleration_delta) : "—"}</td>
+                    <td>{policyAvailable ? signedPoints(scenario?.hike_delta) : "—"}</td>
+                    <td>{inflationAvailable
+                      ? policyAvailable
+                        ? "기존 경로를 posterior로 갱신"
+                        : "연말 물가 변화 계산 · 정책 검증 대기"
+                      : scenario?.reason || "검증 전"}</td>
                   </tr>
                 );
               })}

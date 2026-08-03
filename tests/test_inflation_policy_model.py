@@ -165,8 +165,8 @@ def test_hybrid_core_model_blends_bridge_ridge_and_momentum_with_capped_weights(
         artifact.validation_metrics["baseline_rolling_6m_crps"],
     ]
     assert artifact.validation_metrics["baseline_crps"] == min(baseline_scores)
-    assert artifact.publication_status == "LIMITED"
-    assert "benchmark_suite_incomplete" in artifact.publication_reasons
+    assert artifact.publication_status == "READY"
+    assert "benchmark_suite_incomplete" not in artifact.publication_reasons
     assert artifact.predictive_residuals_pct
     assert abs(sum(artifact.predictive_residuals_pct)) < 1e-12
 

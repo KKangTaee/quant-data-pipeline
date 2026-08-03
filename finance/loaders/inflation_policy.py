@@ -25,6 +25,7 @@ class InflationPolicyDataBundle:
     decision_rows: tuple[dict[str, object], ...]
     term_premium_rows: tuple[dict[str, object], ...]
     coverage: dict[str, object]
+    spf_rows: tuple[dict[str, object], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -113,6 +114,7 @@ def _query(
                 "macro_series_vintage_observation",
                 "fomc_sep_distribution",
                 "fomc_policy_decision",
+                "spf_core_pce_probability",
                 "inflation_policy_snapshot",
                 "inflation_policy_model_artifact",
                 "yield_resistance_definition",
@@ -299,6 +301,18 @@ def load_inflation_policy_data_bundle(
         date_field="meeting_date",
     )
 
+    spf_sql = """
+    SELECT * FROM spf_core_pce_probability
+    WHERE released_at IS NOT NULL
+      AND released_at <= %s
+    ORDER BY released_at, target_year, bin_number
+    """
+    spf_rows = _released_rows(
+        _query(DB_META, spf_sql, (as_of_sql,), query_fn=query_fn),
+        as_of=as_of,
+        date_field="released_at",
+    )
+
     term_sql = """
     WITH eligible_versions AS (
       SELECT source_rows.*,
@@ -343,6 +357,7 @@ def load_inflation_policy_data_bundle(
         "catalog_series_missing": sorted(set(catalog_ids) - set(present_series)),
         "sep_status": "READY" if sep_rows else "NOT_AVAILABLE",
         "decision_status": "READY" if decision_rows else "NOT_AVAILABLE",
+        "spf_core_pce_status": "READY" if spf_rows else "NOT_AVAILABLE",
         # Current ACM workbooks revise history, so availability does not remove
         # the historical-replay limitation recorded by the collector.
         "term_premium_status": "LIMITED" if term_rows else "NOT_AVAILABLE",
@@ -354,6 +369,7 @@ def load_inflation_policy_data_bundle(
         decision_rows=decision_rows,
         term_premium_rows=term_rows,
         coverage=coverage,
+        spf_rows=spf_rows,
     )
 
 
