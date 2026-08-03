@@ -320,29 +320,28 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
     ).read_text()
 
     for token in (
-        'const PHASE_ORDER: Phase[] = ["recovery", "expansion", "slowdown", "recession"]',
-        '0: "현재"',
-        '1: "1개월 후"',
-        '2: "2개월 후"',
-        'className="probability-bar"',
-        ".slice(-12)",
-        "실선은 최근 12개월",
-        "최근 5년 + 2개월 전망",
+        'schema_version: "economic_cycle_v3"',
+        'const PHASE_ORDER: Phase[] = ["recovery", "expansion", "slowdown", "contraction"]',
+        'contraction: "위축"',
+        "현재 관측 국면",
+        "최근 1·3·6개월 변화",
+        "실제 좌표로 본 최근 12개월",
+        "다음 국면 전환 조건",
+        "예측 경로가 아니라 다음 정식 발표에서 확인할 조건입니다",
+        "지속성",
+        "확산도",
+        "활동·고용 동반 확인",
         'className="cycle-quadrant"',
         'className="observed-path"',
-        'className="forecast-path"',
-        "probabilityCoordinate",
-        "resolveEstimateStatus",
-        "잠정 모델 추정",
-        "검증된 모델 추정",
+        'className="current-cycle-dot"',
+        "actualCoordinate",
         'evidence.group === "real_economy"',
         'evidence.group === "forecast_context"',
-        "현재와 전망의 판단 근거",
+        "현재 국면과 전환의 판단 근거",
         "현재 위치의 근거",
         "현재점에 반영되는 생산·소비와 고용·소득",
-        "1·2개월 전망에 추가되는 근거",
-        "현재 근거에 더해 미래 확률을 조정하는 금융·선행 여건과 물가·정책",
-        "현재 수준과 전망 영향을 구분해 표시",
+        "전환을 해석할 참고 맥락",
+        "현재 국면을 바꾸지 않고 전환 조건을 해석하는 금융·선행·물가·정책 정보",
         'financial_leading_score: "금융·선행 여건"',
         'statusLabel: "기준 이상"',
         'statusLabel: "기준 이하"',
@@ -352,8 +351,6 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         'statusLabel: "부담 완화"',
         'statusLabel: "영향 중립"',
         "자기 과거 기준보다 낮아 현재 경기 위치를 낮추는 근거입니다",
-        "향후 1·2개월 경기 전망을 지지하는 방향입니다",
-        "향후 1·2개월 경기 전망에 부담을 주는 방향입니다",
         "resolveEconomicStatePresentation",
         'STRENGTHENING: "강화"',
         'WEAKENING: "약화"',
@@ -375,15 +372,23 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         'className="pathway-details"',
         'className="regime-ribbon"',
         'className="nber-recession"',
-        'className="limited-hatch"',
         "방법론과 품질",
-        "모델과 NBER 이력을 분리",
+        "관측 국면과 NBER 이력을 분리",
         "수익률 예측이나 매매 지시가 아닙니다",
     ):
         assert token in source
+    for forbidden in (
+        "probabilityCoordinate",
+        "HorizonCard",
+        'className="forecast-path"',
+        "payload.horizons",
+        "payload.history",
+        "probability_deltas",
+    ):
+        assert forbidden not in source
 
 
-def test_cycle_component_renders_intramonth_flow_without_touching_ribbon() -> None:
+def test_cycle_component_renders_provisional_intramonth_change_without_replacing_headline() -> None:
     source = Path(
         "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"
     ).read_text()
@@ -392,19 +397,19 @@ def test_cycle_component_renders_intramonth_flow_without_touching_ribbon() -> No
     ).read_text()
 
     for token in (
-        "type IntramonthSnapshot",
-        "function IntramonthFlow",
-        "현재 입수정보 기반 잠정 계산",
-        'className="intramonth-bridge-path"',
-        'className="intramonth-cycle-dot"',
-        "payload.intramonth",
-        "legend-intramonth",
+        "type IntramonthChange",
+        "function IntramonthChangePanel",
+        "월말 이후 잠정 변화",
+        "정식 월말 국면을 바꾸지 않습니다",
+        "payload.intramonth_change",
+        'className="intramonth-change-panel"',
+        'className="intramonth-factor-deltas"',
     ):
         assert token in source
-    assert "history.concat(payload.intramonth" not in source
-    assert ".intramonth-flow-grid" in css
-    assert ".intramonth-bridge-path" in css
-    assert ".legend-intramonth" in css
+    assert "current_horizon" not in source
+    assert "probability_deltas" not in source
+    assert ".intramonth-change-panel" in css
+    assert ".intramonth-factor-deltas" in css
 
 
 def test_cycle_component_has_compact_manual_freshness_action() -> None:
@@ -476,7 +481,7 @@ def test_economic_cycle_asset_ui_uses_observation_sections_without_left_rails() 
     ).read_text()
 
     for token in (
-        'schema_version: "economic_cycle_v2"',
+        'schema_version: "economic_cycle_v3"',
         "사이클 판단의 공통 경제 배경",
         "현재 움직임",
         "함께 관찰된 경로",
@@ -526,33 +531,30 @@ def test_economic_cycle_asset_section_prefers_explicit_copy_and_scopes_larger_ty
         assert rule in style
 
 
-def test_cycle_component_ready_and_limited_probability_semantics_are_safe() -> None:
+def test_cycle_component_ready_and_limited_observed_state_semantics_are_safe() -> None:
     source = Path(
         "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"
     ).read_text()
 
-    assert "PHASE_ORDER.map((phase)" in source
-    assert "horizon.probabilities" in source
-    assert 'horizon.estimate_status === "PROVISIONAL"' in source
-    assert 'horizon.estimate_status === "VERIFIED"' in source
-    assert "formatPercent(probabilities[phase])" in source
-    assert "horizon.probabilities ?? { recovery: 0" not in source
-    assert "formatPercent(0)" not in source
+    assert "payload.observed_state" in source
+    assert "confidence_label" in source
+    assert "revision_sensitivity_label" in source
+    assert "data_status" in source
+    assert "probabilities" not in source
     assert "판단 불가" in source
 
 
-def test_cycle_component_breaks_paths_at_unavailable_months_and_horizons() -> None:
+def test_cycle_component_uses_only_persisted_actual_cycle_coordinates() -> None:
     source = Path(
         "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"
     ).read_text()
 
     assert "splitPointSegments" in source
-    assert "payload.history.slice(-12)" in source
-    assert "const forecastSlots = [0, 1, 2].map" in source
+    assert "payload.cycle_map.points.slice(-12)" in source
     assert "observedSegments.map" in source
-    assert "forecastSegments.map" in source
-    assert "payload.history\n    .filter" not in source
-    assert "payload.horizons\n    .filter" not in source
+    assert "actualCoordinate" in source
+    assert "forecastSegments" not in source
+    assert "forecastSlots" not in source
 
 
 def test_cycle_component_ribbon_grid_uses_actual_history_month_count() -> None:
@@ -564,7 +566,7 @@ def test_cycle_component_ribbon_grid_uses_actual_history_month_count() -> None:
     ).read_text()
 
     assert "--history-month-count" in source
-    assert "Math.max(history.length, 1)" in source
+    assert "Math.max(points.length, 1)" in source
     assert "repeat(var(--history-month-count)" in css
     assert "repeat(121" not in css
 
@@ -592,15 +594,14 @@ def test_cycle_component_cycle_points_expose_hover_and_focus_tooltips() -> None:
     assert ".cycle-hover-target:focus .cycle-tooltip" in css
 
 
-def test_cycle_component_ribbon_preserves_empty_history_and_forecast_slots() -> None:
+def test_cycle_component_ribbon_preserves_empty_actual_history_without_forecast_slots() -> None:
     source = Path(
         "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"
     ).read_text()
 
-    assert "const forecastSlots = [1, 2].map" in source
-    assert "forecastSlots.map" in source
     assert "ribbon-empty-history" in source
-    assert "horizons.filter((item) => item.horizon_months > 0)" not in source
+    assert "forecast-ribbon" not in source
+    assert "+2M" not in source
     assert 'role="group"' in source
     assert 'role="img"' in source
 
@@ -634,7 +635,7 @@ def test_cycle_component_responsive_contract_avoids_mobile_horizontal_scroll() -
 
     assert "@media (max-width: 420px)" in css
     assert "overflow-x: hidden" in css
-    assert ".horizon-grid" in css
+    assert ".recent-change-grid" in css
     assert "grid-template-columns: 1fr" in css
     assert ".cycle-layout" in css
     assert ".regime-ribbon" in css
@@ -657,11 +658,11 @@ def test_cycle_component_has_collapsed_monthly_signal_usage_guide() -> None:
         "회복 신호",
         "확장 신호",
         "둔화 신호",
-        "침체 신호",
-        "침체 → 회복",
+        "위축 신호",
+        "위축 → 회복",
         "회복 → 확장",
         "확장 → 둔화",
-        "둔화 → 침체",
+        "둔화 → 위축",
     ):
         assert token in source
 

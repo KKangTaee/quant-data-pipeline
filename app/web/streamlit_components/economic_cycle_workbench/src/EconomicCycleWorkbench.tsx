@@ -3,31 +3,86 @@ import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-co
 import EconomicCycleHero from "./EconomicCycleHero";
 import "./style.css";
 
-type Phase = "recovery" | "expansion" | "slowdown" | "recession";
-type PublicationStatus = "READY" | "LIMITED";
-type EstimateStatus = "VERIFIED" | "PROVISIONAL" | "UNAVAILABLE";
-type Probabilities = Record<Phase, number>;
+type Phase = "recovery" | "expansion" | "slowdown" | "contraction";
+type DataStatus = "READY" | "LIMITED" | "UNAVAILABLE";
 
-type Horizon = {
-  horizon_months: 0 | 1 | 2;
-  label: string;
-  probabilities: Probabilities | null;
-  dominant_phase: Phase | null;
-  dominant_phase_label?: string | null;
-  confidence: number | null;
-  publication_status: PublicationStatus;
-  estimate_status?: EstimateStatus;
-  estimate_label?: string;
-  reason?: string | null;
+type ObservedState = {
+  as_of_date?: string | null;
+  raw_level?: number | null;
+  level?: number | null;
+  momentum?: number | null;
+  phase?: Phase | null;
+  phase_label?: string | null;
+  activity_level?: number | null;
+  labor_income_level?: number | null;
+  activity_momentum?: number | null;
+  labor_income_momentum?: number | null;
+  level_breadth?: number | null;
+  momentum_breadth?: number | null;
+  available_series?: number | null;
+  stale_series?: number | null;
+  duration_months?: number | null;
+  confidence?: "HIGH" | "MEDIUM" | "LIMITED";
+  confidence_label?: string;
+  revision_sensitivity?: "STABLE" | "SENSITIVE" | "UNAVAILABLE";
+  revision_sensitivity_label?: string;
+  data_status?: DataStatus;
 };
 
-type HistoryPoint = {
+type RecentChange = {
+  horizon_months: 1 | 3 | 6;
+  label: string;
+  status: "STRENGTHENING" | "WEAKENING" | "MIXED" | "UNAVAILABLE";
+  status_label: string;
+  composite_delta?: number | null;
+  breadth?: number | null;
+  available_pairs?: number;
+  activity_delta?: number | null;
+  labor_income_delta?: number | null;
+};
+
+type CyclePoint = {
   date: string;
-  phase: Phase | null;
-  probabilities: Probabilities | null;
-  status: PublicationStatus;
-  estimate_status?: EstimateStatus;
+  level: number;
+  momentum: number;
+  phase: Phase;
+  phase_label: string;
   nber_recession: boolean;
+  confidence?: string | null;
+  revision_sensitivity?: string | null;
+};
+
+type TransitionCondition = {
+  condition_id: "persistence" | "diffusion" | "corroboration";
+  label: string;
+  status: "MET" | "UNMET";
+  value?: unknown;
+  threshold?: string;
+};
+
+type TransitionContext = {
+  factor: string;
+  value?: number | null;
+  relation: "TOWARD_TARGET" | "SUPPORT_CURRENT" | "MIXED";
+  relation_label: string;
+};
+
+type TransitionMonitor = {
+  observed_phase?: Phase | null;
+  observed_phase_label?: string | null;
+  anchor_phase?: Phase | null;
+  anchor_phase_label?: string | null;
+  target_phase?: Phase | null;
+  target_phase_label?: string | null;
+  status: "MAINTAIN" | "WATCH" | "CONFIRMED";
+  status_label: string;
+  conditions_met: number;
+  conditions_total: number;
+  candidate_started_at?: string | null;
+  confirmed_at?: string | null;
+  non_adjacent_observation?: boolean;
+  conditions: TransitionCondition[];
+  context: TransitionContext[];
 };
 
 type IntramonthFactorDelta = {
@@ -48,14 +103,15 @@ type IntramonthSourceCoverage = {
   }[];
 };
 
-type IntramonthSnapshot = {
+type IntramonthChange = {
   baseline_as_of_date: string;
   as_of_date: string;
-  estimate_status: "PROVISIONAL";
-  estimate_label: string;
+  provisional: true;
+  label: string;
   model_version?: string | null;
-  current_horizon: Horizon;
-  probability_deltas: Probabilities;
+  raw_level_delta?: number | null;
+  observed_state?: ObservedState | null;
+  recent_changes?: RecentChange[];
   factor_deltas: IntramonthFactorDelta[];
   source_collected_at?: string | null;
   source_coverage: IntramonthSourceCoverage;
@@ -216,11 +272,11 @@ type RefreshResult = {
 };
 
 type CyclePayload = {
-  schema_version: "economic_cycle_v2";
+  schema_version: "economic_cycle_v3";
   status: "READY" | "LIMITED" | "ERROR";
   as_of_date?: string | null;
   model_version?: string | null;
-  intramonth?: IntramonthSnapshot | null;
+  intramonth_change?: IntramonthChange | null;
   data_freshness?: EconomicCycleFreshness;
   refresh_result?: RefreshResult;
   headline?: {
@@ -228,25 +284,15 @@ type CyclePayload = {
     phase_label?: string;
     summary?: string;
   };
-  horizons: Horizon[];
-  cycle_clock?: {
-    recent_path?: {
-      date: string;
-      phase: Phase | null;
-      status: PublicationStatus;
-      estimate_status?: EstimateStatus;
-    }[];
-    forecast_markers?: {
-      horizon_months: number;
-      phase: Phase | null;
-      status: PublicationStatus;
-      estimate_status?: EstimateStatus;
-    }[];
-    expected_transition?: string | null;
+  observed_state: ObservedState;
+  recent_changes: RecentChange[];
+  transition_monitor?: TransitionMonitor | null;
+  cycle_map: {
+    phase_order: Phase[];
+    points: CyclePoint[];
   };
   evidence: Evidence[];
   market_implications: MarketImplication[];
-  history: HistoryPoint[];
   sources?: { name: string; source_date: string; basis?: string }[];
   limitations: string[];
 };
@@ -255,22 +301,12 @@ type Props = Omit<ComponentProps, "args"> & { args: { payload?: CyclePayload } }
 type PlotPoint = { x: number; y: number };
 type RibbonStyle = React.CSSProperties & { "--history-month-count": number };
 
-const PHASE_ORDER: Phase[] = ["recovery", "expansion", "slowdown", "recession"];
+const PHASE_ORDER: Phase[] = ["recovery", "expansion", "slowdown", "contraction"];
 const PHASE_LABEL: Record<Phase, string> = {
   recovery: "회복",
   expansion: "확장",
   slowdown: "둔화",
-  recession: "침체",
-};
-const HORIZON_LABEL: Record<number, string> = {
-  0: "현재",
-  1: "1개월 후",
-  2: "2개월 후",
-};
-const ESTIMATE_LABEL: Record<EstimateStatus, string> = {
-  VERIFIED: "검증된 모델 추정",
-  PROVISIONAL: "잠정 모델 추정",
-  UNAVAILABLE: "판단 불가",
+  contraction: "위축",
 };
 const FACTOR_LABEL: Record<string, string> = {
   activity_score: "생산·소비 활동",
@@ -332,8 +368,7 @@ function resolveEvidencePresentation(item: Evidence): EvidencePresentation {
   };
 }
 
-const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
-const formatSignedPoint = (value: number) => `${value > 0 ? "+" : ""}${(value * 100).toFixed(1)}%p`;
+const formatRatio = (value?: number | null) => value == null ? "-" : `${Math.round(value * 100)}%`;
 const formatSignedScore = (value: number) => `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
 const formatSignedPercent = (value: number | null) => value == null
   ? "-"
@@ -341,7 +376,7 @@ const formatSignedPercent = (value: number | null) => value == null
 const formatSeriesChange = (value: number | null, unit?: string | null) => value == null
   ? "-"
   : `${value > 0 ? "+" : ""}${value.toFixed(1)}${unit === "bp" ? "bp" : "%"}`;
-const formatMovementLevel = (value: number | null, unit?: string | null) => value == null
+const formatMovementLevel = (value?: number | null, unit?: string | null) => value == null
   ? "-"
   : unit === "percent" ? `연 ${value.toFixed(2)}%`
   : `${value.toFixed(2)} ${unit || ""}`.trim();
@@ -395,40 +430,15 @@ const CHANGE_LABEL: Record<string, string> = {
   yoy_ttm: "완료 분기 TTM 전년 대비",
 };
 
-function probabilityCoordinate(probabilities: Probabilities): PlotPoint {
-  const level = probabilities.expansion + probabilities.slowdown
-    - probabilities.recovery - probabilities.recession;
-  const momentum = probabilities.recovery + probabilities.expansion
-    - probabilities.slowdown - probabilities.recession;
+function actualCoordinate(point: Pick<CyclePoint, "level" | "momentum">): PlotPoint {
   return {
-    x: 180 + Math.max(-1, Math.min(1, level)) * 128,
-    y: 160 - Math.max(-1, Math.min(1, momentum)) * 112,
+    x: 180 + Math.max(-1, Math.min(1, point.level / 2)) * 128,
+    y: 160 - Math.max(-1, Math.min(1, point.momentum)) * 112,
   };
-}
-
-function resolveEstimateStatus(item: {
-  estimate_status?: EstimateStatus;
-  publication_status?: PublicationStatus;
-  status?: PublicationStatus;
-  probabilities?: Probabilities | null;
-}): EstimateStatus {
-  if (item.estimate_status && item.estimate_status in ESTIMATE_LABEL) {
-    return item.estimate_status;
-  }
-  if (!item.probabilities) return "UNAVAILABLE";
-  return (item.publication_status || item.status) === "READY"
-    ? "VERIFIED"
-    : "PROVISIONAL";
 }
 
 function pointList(points: PlotPoint[]) {
   return points.map((point) => `${point.x},${point.y}`).join(" ");
-}
-
-function dominantProbabilityPhase(probabilities: Probabilities): Phase {
-  return PHASE_ORDER.reduce((winner, phase) =>
-    probabilities[phase] > probabilities[winner] ? phase : winner
-  );
 }
 
 function cycleTooltipPosition(point: PlotPoint) {
@@ -438,13 +448,8 @@ function cycleTooltipPosition(point: PlotPoint) {
   };
 }
 
-function cyclePointLabel(
-  period: string,
-  phase: Phase,
-  confidence: number,
-  estimateStatus: EstimateStatus,
-) {
-  return `${period} · ${PHASE_LABEL[phase]} 우세 · ${formatPercent(confidence)} · ${ESTIMATE_LABEL[estimateStatus]}`;
+function cyclePointLabel(point: CyclePoint) {
+  return `${formatMonth(point.date)} · ${PHASE_LABEL[point.phase]} · 레벨 ${formatSignedScore(point.level)} · 모멘텀 ${formatSignedScore(point.momentum)}`;
 }
 
 function CyclePointTooltip({
@@ -486,57 +491,60 @@ function splitPointSegments(points: Array<PlotPoint | null>): PlotPoint[][] {
   return segments;
 }
 
-function HorizonCard({ horizon }: { horizon: Horizon }) {
-  const probabilities = horizon.probabilities;
-  const available = Boolean(probabilities && horizon.dominant_phase);
-  const estimateStatus = resolveEstimateStatus(horizon);
-  const provisional = horizon.estimate_status === "PROVISIONAL" || estimateStatus === "PROVISIONAL";
-  const verified = horizon.estimate_status === "VERIFIED" || estimateStatus === "VERIFIED";
-  const label = horizon.estimate_label || ESTIMATE_LABEL[estimateStatus];
+const RECENT_ROLE: Record<number, string> = {
+  1: "최신 변화 감지",
+  3: "방향 확인",
+  6: "현재 국면의 배경",
+};
+const CONDITION_LABEL: Record<TransitionCondition["condition_id"], string> = {
+  persistence: "지속성",
+  diffusion: "확산도",
+  corroboration: "활동·고용 동반 확인",
+};
+
+function CurrentObservedState({ state, recent }: { state: ObservedState; recent: RecentChange[] }) {
+  const phase = state.phase;
   return (
-    <article className={`horizon-card estimate-${estimateStatus.toLowerCase()}`} tabIndex={0}>
-      <header>
-        <div>
-          <span>{HORIZON_LABEL[horizon.horizon_months] || horizon.label}</span>
-          <strong>{available && horizon.dominant_phase ? `${PHASE_LABEL[horizon.dominant_phase]} 우세` : "판단 불가"}</strong>
-        </div>
-        <div className="horizon-state">
-          <b className={verified ? "badge-verified" : provisional ? "badge-provisional" : "badge-unavailable"}>
-            {label}
-          </b>
-          {available && horizon.confidence != null ? <em>{formatPercent(horizon.confidence)}</em> : null}
-        </div>
-      </header>
-      {available && probabilities ? (
-        <>
-          <div className="probability-list" aria-label={`${horizon.label} 국면 확률`}>
-            {PHASE_ORDER.map((phase) => (
-              <div className="probability-row" key={phase}>
-                <span>{PHASE_LABEL[phase]}</span>
-                <div className="probability-bar" aria-label={`${PHASE_LABEL[phase]} ${formatPercent(probabilities[phase])}`}>
-                  <i className={`phase-${phase}`} style={{ width: formatPercent(probabilities[phase]) }} />
-                </div>
-                <strong>{formatPercent(probabilities[phase])}</strong>
-              </div>
-            ))}
+    <section className="observed-state-section" aria-labelledby="observed-state-title">
+      <div className="section-heading">
+        <div><span>Observed state</span><h3 id="observed-state-title">현재 관측 국면</h3></div>
+        <small>정식 월말 실물 데이터로 계산한 현재 위치</small>
+      </div>
+      <div className="observed-state-layout">
+        <article className={`observed-state-card ${phase ? `phase-${phase}` : "phase-missing"}`}>
+          <div className="observed-state-phase">
+            <span>현재 국면</span>
+            <strong>{phase ? PHASE_LABEL[phase] : "판단 불가"}</strong>
+            <p>경기 수준과 최근 3개월 변화 속도를 함께 본 상대 성장순환 위치입니다.</p>
           </div>
-          {provisional ? <p className="validation-note">검증: {horizon.reason || "일부 공개 기준 미달"}</p> : null}
-        </>
-      ) : (
-        <p className="unavailable-copy">{horizon.reason || "유효한 모델 확률을 계산하지 못했습니다."}</p>
-      )}
-    </article>
+          <dl className="observed-state-metrics">
+            <div><dt>경기 수준</dt><dd>{state.level == null ? "-" : formatSignedScore(state.level)}</dd></div>
+            <div><dt>3개월 모멘텀</dt><dd>{state.momentum == null ? "-" : formatSignedScore(state.momentum)}</dd></div>
+            <div><dt>국면 지속</dt><dd>{state.duration_months == null ? "-" : `${state.duration_months}개월`}</dd></div>
+            <div><dt>판단 신뢰도</dt><dd>{state.confidence_label || "제한"}</dd></div>
+            <div><dt>수정 민감도</dt><dd>{state.revision_sensitivity_label || "비교 불가"}</dd></div>
+            <div><dt>실물 커버리지</dt><dd>{state.available_series == null ? "-" : `${state.available_series}/8`}</dd></div>
+          </dl>
+        </article>
+        <div className="recent-change-block">
+          <header><div><span>Recent changes</span><h4>최근 1·3·6개월 변화</h4></div><small>강화·약화의 속도와 확산을 분리</small></header>
+          <div className="recent-change-grid">
+            {recent.length ? recent.map((item) => (
+              <article className={`recent-change-card change-${item.status.toLowerCase()}`} key={item.horizon_months}>
+                <header><span>{item.label}</span><b>{item.status_label}</b></header>
+                <strong>{RECENT_ROLE[item.horizon_months]}</strong>
+                <p>종합 변화 {item.composite_delta == null ? "-" : formatSignedScore(item.composite_delta)}</p>
+                <small>같은 방향 지표 {formatRatio(item.breadth)} · {item.available_pairs ?? 0}/8개 비교</small>
+              </article>
+            )) : <p className="empty-copy">최근 변화를 계산할 자료가 아직 없습니다.</p>}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
-function IntramonthFlow({
-  intramonth,
-  monthly,
-}: {
-  intramonth: IntramonthSnapshot;
-  monthly?: Horizon;
-}) {
-  const current = intramonth.current_horizon;
+function IntramonthChangePanel({ intramonth }: { intramonth: IntramonthChange }) {
   const latestSourceDate = (intramonth.source_coverage.series || [])
     .map((item) => item.latest_observation_date || "")
     .filter(Boolean)
@@ -546,51 +554,22 @@ function IntramonthFlow({
   const coverageLabel = coverage.requested_series != null
     ? `${coverage.available_series ?? 0}/${coverage.requested_series}개 원천`
     : "원천 범위 확인 중";
-  const phaseDeltaEntries = PHASE_ORDER.map((phase) => ({
-    phase,
-    delta: intramonth.probability_deltas[phase],
-  }));
+  const provisionalPhase = intramonth.observed_state?.phase;
   return (
-    <section className="intramonth-flow-panel" aria-labelledby="intramonth-flow-title">
+    <section className="intramonth-change-panel" aria-labelledby="intramonth-change-title">
       <div className="section-heading">
-        <div><span>Intramonth flow</span><h3 id="intramonth-flow-title">월말 이후 경제사이클 흐름</h3></div>
-        <small>과거 월말은 유지하고 새로 공개된 정보만 별도 비교</small>
+        <div><span>Provisional update</span><h3 id="intramonth-change-title">월말 이후 잠정 변화</h3></div>
+        <small>새로 입수된 정보이며 정식 월말 국면을 바꾸지 않습니다</small>
       </div>
-      <div className="intramonth-flow-grid">
-        <article className="intramonth-endpoint baseline-endpoint" tabIndex={0}>
-          <span>월말 추정</span>
-          <strong>{intramonth.baseline_as_of_date}</strong>
-          <b>{monthly?.dominant_phase ? `${PHASE_LABEL[monthly.dominant_phase]} 우세` : "판단 불가"}</b>
-          <small>{monthly?.confidence != null ? formatPercent(monthly.confidence) : "-"}</small>
-        </article>
-
-        <div className="intramonth-change" aria-label="월말 대비 월중 변화">
-          <div className="intramonth-change-arrow" aria-hidden="true"><i /><span>월말 대비 변화</span><i /></div>
-          <div className="intramonth-probability-deltas">
-            {phaseDeltaEntries.map(({ phase, delta }) => (
-              <span className={delta > 0 ? "delta-up" : delta < 0 ? "delta-down" : "delta-flat"} key={phase}>
-                {PHASE_LABEL[phase]} <strong>{formatSignedPoint(delta)}</strong>
-              </span>
-            ))}
-          </div>
-          <div className="intramonth-factor-deltas">
-            {intramonth.factor_deltas.map((item) => (
-              <span key={item.factor}>
-                {FACTOR_LABEL[item.factor] || item.factor}
-                <strong className={item.delta > 0 ? "delta-up" : item.delta < 0 ? "delta-down" : "delta-flat"}>
-                  {formatSignedScore(item.delta)}
-                </strong>
-              </span>
-            ))}
-          </div>
+      <div className="intramonth-change-grid">
+        <article><span>비교 기준</span><strong>{intramonth.baseline_as_of_date}</strong><small>정식 월말</small></article>
+        <article><span>잠정 계산일</span><strong>{intramonth.as_of_date}</strong><small>{provisionalPhase ? `${PHASE_LABEL[provisionalPhase]} 좌표` : "좌표 판단 제한"}</small></article>
+        <article><span>실물 종합 변화</span><strong>{intramonth.raw_level_delta == null ? "-" : formatSignedScore(intramonth.raw_level_delta)}</strong><small>월말 대비 raw level</small></article>
+        <div className="intramonth-factor-deltas">
+          {intramonth.factor_deltas.map((item) => (
+            <span key={item.factor}>{FACTOR_LABEL[item.factor] || item.factor}<strong className={item.delta > 0 ? "delta-up" : item.delta < 0 ? "delta-down" : "delta-flat"}>{formatSignedScore(item.delta)}</strong></span>
+          ))}
         </div>
-
-        <article className="intramonth-endpoint current-endpoint" tabIndex={0}>
-          <span>현재 입수정보 기반 잠정 계산</span>
-          <strong>{intramonth.as_of_date}</strong>
-          <b>{current.dominant_phase ? `${PHASE_LABEL[current.dominant_phase]} 우세` : "판단 불가"}</b>
-          <small>{current.confidence != null ? formatPercent(current.confidence) : "-"}</small>
-        </article>
       </div>
       <div className="intramonth-source-line">
         <span>계산 기준일 <strong>{intramonth.as_of_date}</strong></span>
@@ -603,62 +582,28 @@ function IntramonthFlow({
 }
 
 function QuadrantChart({ payload }: { payload: CyclePayload }) {
-  const recent = payload.history.slice(-12);
-  const observedSegments = splitPointSegments(
-    recent.map((item) => item.probabilities ? probabilityCoordinate(item.probabilities) : null),
-  );
-  const observedHoverPoints = recent.flatMap((item) => {
-    if (!item.probabilities) return [];
-    const phase = item.phase || dominantProbabilityPhase(item.probabilities);
-    const estimateStatus = resolveEstimateStatus(item);
-    const confidence = item.probabilities[phase];
-    const period = formatMonth(item.date);
-    return [{
-      key: item.date,
-      point: probabilityCoordinate(item.probabilities),
-      label: cyclePointLabel(period, phase, confidence, estimateStatus),
-      title: `${period} · ${PHASE_LABEL[phase]} 우세`,
-      detail: `${formatPercent(confidence)} · ${ESTIMATE_LABEL[estimateStatus]}`,
-    }];
-  });
-  const recentObservedDots = recent
-    .slice(-6)
-    .flatMap((item) => item.probabilities ? [probabilityCoordinate(item.probabilities)] : []);
-  const forecastSlots = [0, 1, 2].map((horizon) =>
-    payload.horizons.find((item) => item.horizon_months === horizon) || null
-  );
-  const forecastSegments = splitPointSegments(
-    forecastSlots.map((item) => item?.probabilities ? probabilityCoordinate(item.probabilities) : null),
-  );
-  const forecastHorizons = forecastSlots.filter(
-    (item): item is Horizon & { probabilities: Probabilities } => Boolean(item?.probabilities),
-  );
-  const current = forecastSlots[0]?.probabilities ? forecastSlots[0] : null;
-  const currentProbabilities = current?.probabilities;
-  const currentPoint = currentProbabilities ? probabilityCoordinate(currentProbabilities) : null;
-  const intramonthHorizon = payload.intramonth?.current_horizon;
-  const intramonthProbabilities = intramonthHorizon?.probabilities;
-  const intramonthPoint = intramonthProbabilities
-    ? probabilityCoordinate(intramonthProbabilities)
-    : null;
+  const recent = payload.cycle_map.points.slice(-12);
+  const observedSegments = splitPointSegments(recent.map((item) => actualCoordinate(item)));
+  const current = recent.at(-1);
+  const currentPoint = current ? actualCoordinate(current) : null;
 
   return (
     <section className="cycle-map-panel" aria-labelledby="cycle-map-title">
       <div className="section-heading">
-        <div><span>Cycle map</span><h3 id="cycle-map-title">레벨과 모멘텀으로 읽는 순환 위치</h3></div>
-        <small>실선은 최근 12개월 · 주황 점선은 +2개월 · 보라 점선은 월중</small>
+        <div><span>Actual cycle map</span><h3 id="cycle-map-title">실제 좌표로 본 최근 12개월</h3></div>
+        <small>월별 level·momentum 관측값만 연결</small>
       </div>
       <div className="cycle-map-body">
-        <svg className="cycle-quadrant" viewBox="0 0 360 320" role="group" aria-label="회복 확장 둔화 침체 2×2 경제사이클 경로">
+        <svg className="cycle-quadrant" viewBox="0 0 360 320" role="group" aria-label="회복 확장 둔화 위축 2×2 실제 경제사이클 경로">
           <rect className="quadrant recovery-zone" x="24" y="24" width="156" height="136" />
           <rect className="quadrant expansion-zone" x="180" y="24" width="156" height="136" />
-          <rect className="quadrant recession-zone" x="24" y="160" width="156" height="136" />
+          <rect className="quadrant contraction-zone" x="24" y="160" width="156" height="136" />
           <rect className="quadrant slowdown-zone" x="180" y="160" width="156" height="136" />
           <line className="quadrant-axis" x1="180" y1="24" x2="180" y2="296" />
           <line className="quadrant-axis" x1="24" y1="160" x2="336" y2="160" />
           <text className="quadrant-label" x="38" y="48">회복</text>
           <text className="quadrant-label" x="292" y="48">확장</text>
-          <text className="quadrant-label" x="38" y="282">침체</text>
+          <text className="quadrant-label" x="38" y="282">위축</text>
           <text className="quadrant-label" x="292" y="282">둔화</text>
           <text className="axis-label" x="180" y="314">성장 레벨 →</text>
           <text className="axis-label vertical-label" x="9" y="160">모멘텀 →</text>
@@ -667,90 +612,65 @@ function QuadrantChart({ payload }: { payload: CyclePayload }) {
               ? <polyline className="observed-path" points={pointList(segment)} key={`observed-segment-${index}`} />
               : null
           ))}
-          {recentObservedDots.map((point, index) => (
-            <circle className="observed-dot" cx={point.x} cy={point.y} r={index === recentObservedDots.length - 1 ? 3.5 : 2.5} key={`observed-${index}`} />
-          ))}
-          {forecastSegments.map((segment, index) => (
-            segment.length > 1
-              ? <polyline className="forecast-path" points={pointList(segment)} key={`forecast-segment-${index}`} />
-              : null
-          ))}
-          {currentPoint && intramonthPoint ? (
-            <line
-              className="intramonth-bridge-path"
-              x1={currentPoint.x}
-              y1={currentPoint.y}
-              x2={intramonthPoint.x}
-              y2={intramonthPoint.y}
-            />
-          ) : null}
-          {currentPoint ? <circle className={`current-cycle-dot ${current && resolveEstimateStatus(current) === "PROVISIONAL" ? "is-provisional" : ""}`} cx={currentPoint.x} cy={currentPoint.y} r="8" /> : null}
-          {intramonthPoint ? (
-            <circle className="intramonth-cycle-dot" cx={intramonthPoint.x} cy={intramonthPoint.y} r="6.5" />
-          ) : null}
-          {forecastHorizons.filter((item) => item.horizon_months > 0).map((item) => {
-            const point = probabilityCoordinate(item.probabilities);
-            const estimateStatus = resolveEstimateStatus(item);
-            return (
-              <g key={item.horizon_months} className={`forecast-point estimate-${estimateStatus.toLowerCase()}`}>
-                <circle cx={point.x} cy={point.y} r={item.horizon_months === 1 ? 6 : 5} />
-                <text x={point.x + 9} y={point.y - 8}>+{item.horizon_months}M</text>
-              </g>
-            );
+          {recent.map((item, index) => {
+            const point = actualCoordinate(item);
+            return <circle className="observed-dot" cx={point.x} cy={point.y} r={index === recent.length - 1 ? 3.5 : 2.5} key={`observed-${item.date}`} />;
           })}
-          {observedHoverPoints.map((item) => (
-            <CyclePointTooltip
-              key={`history-tooltip-${item.key}`}
-              point={item.point}
-              label={item.label}
-              title={item.title}
-              detail={item.detail}
-            />
-          ))}
-          {forecastHorizons.map((item) => {
-            const point = probabilityCoordinate(item.probabilities);
-            const phase = item.dominant_phase || dominantProbabilityPhase(item.probabilities);
-            const estimateStatus = resolveEstimateStatus(item);
-            const confidence = item.confidence ?? item.probabilities[phase];
-            const period = HORIZON_LABEL[item.horizon_months] || item.label;
-            const label = cyclePointLabel(period, phase, confidence, estimateStatus);
+          {currentPoint && current?.revision_sensitivity === "SENSITIVE" ? (
+            <circle className="revision-sensitive-halo" cx={currentPoint.x} cy={currentPoint.y} r="13" />
+          ) : null}
+          {currentPoint ? <circle className="current-cycle-dot" cx={currentPoint.x} cy={currentPoint.y} r="8" /> : null}
+          {recent.map((item) => {
+            const point = actualCoordinate(item);
             return (
               <CyclePointTooltip
-                key={`forecast-tooltip-${item.horizon_months}`}
+                key={`actual-tooltip-${item.date}`}
                 point={point}
-                label={label}
-                title={`${period} · ${PHASE_LABEL[phase]} 우세`}
-                detail={`${formatPercent(confidence)} · ${ESTIMATE_LABEL[estimateStatus]}`}
+                label={cyclePointLabel(item)}
+                title={`${formatMonth(item.date)} · ${PHASE_LABEL[item.phase]}`}
+                detail={`레벨 ${formatSignedScore(item.level)} · 모멘텀 ${formatSignedScore(item.momentum)}`}
               />
             );
           })}
-          {intramonthPoint && intramonthProbabilities && intramonthHorizon ? (
-            <CyclePointTooltip
-              point={intramonthPoint}
-              label={cyclePointLabel(
-                payload.intramonth?.as_of_date || "월중",
-                intramonthHorizon.dominant_phase || dominantProbabilityPhase(intramonthProbabilities),
-                intramonthHorizon.confidence
-                  ?? intramonthProbabilities[
-                    intramonthHorizon.dominant_phase || dominantProbabilityPhase(intramonthProbabilities)
-                  ],
-                "PROVISIONAL",
-              )}
-              title={`${payload.intramonth?.as_of_date || "월중"} · ${PHASE_LABEL[
-                intramonthHorizon.dominant_phase || dominantProbabilityPhase(intramonthProbabilities)
-              ]} 우세`}
-              detail="현재 입수정보 기반 잠정 계산"
-            />
-          ) : null}
         </svg>
         <div className="cycle-map-legend">
-          <span><i className="legend-observed" />과거 관측 경로</span>
-          <span><i className="legend-forecast" />미래 모델 경로</span>
-          {payload.intramonth ? <span><i className="legend-intramonth" />월말→월중 잠정 흐름</span> : null}
-          <span><i className="legend-provisional" />잠정 추정</span>
+          <span><i className="legend-observed" />실제 월별 경로</span>
+          <span><i className="legend-current" />현재 월말 좌표</span>
+          {current?.revision_sensitivity === "SENSITIVE" ? <span><i className="legend-sensitive" />수정 민감</span> : null}
         </div>
-        <p>확률이 오른쪽일수록 성장 레벨이 높고, 위쪽일수록 모멘텀이 강합니다. 경계에 가까울수록 두 국면이 경합합니다.</p>
+        <p>오른쪽일수록 자기 과거보다 경기 수준이 높고, 위쪽일수록 최근 3개월 변화가 개선됐다는 뜻입니다.</p>
       </div>
+    </section>
+  );
+}
+
+function TransitionPanel({ monitor }: { monitor?: TransitionMonitor | null }) {
+  if (!monitor) {
+    return <section className="transition-panel"><div className="section-heading"><div><span>Transition monitor</span><h3>다음 국면 전환 조건</h3></div></div><p className="empty-copy">전환 조건을 계산할 자료가 아직 없습니다.</p></section>;
+  }
+  return (
+    <section className={`transition-panel transition-${monitor.status.toLowerCase()}`} aria-labelledby="transition-title">
+      <div className="section-heading">
+        <div><span>Transition monitor</span><h3 id="transition-title">다음 국면 전환 조건</h3></div>
+        <b>{monitor.status_label} · {monitor.conditions_met}/{monitor.conditions_total}</b>
+      </div>
+      <div className="transition-route">
+        <article><span>마지막 확인 국면</span><strong>{monitor.anchor_phase ? PHASE_LABEL[monitor.anchor_phase] : "-"}</strong></article>
+        <i aria-hidden="true">→</i>
+        <article><span>다음 확인 대상</span><strong>{monitor.target_phase ? PHASE_LABEL[monitor.target_phase] : "-"}</strong></article>
+      </div>
+      <p className="transition-boundary">예측 경로가 아니라 다음 정식 발표에서 확인할 조건입니다.</p>
+      <div className="transition-condition-grid">
+        {monitor.conditions.map((condition) => (
+          <article className={`condition-${condition.status.toLowerCase()}`} key={condition.condition_id}>
+            <header><span>{condition.label || CONDITION_LABEL[condition.condition_id]}</span><b>{condition.status === "MET" ? "충족" : "관찰 중"}</b></header>
+            <p>{condition.threshold || "다음 정식 발표에서 재확인"}</p>
+          </article>
+        ))}
+      </div>
+      {monitor.context.length ? (
+        <div className="transition-context"><strong>보조 맥락</strong>{monitor.context.map((item) => <span key={item.factor}>{FACTOR_LABEL[item.factor] || item.factor} · {item.relation_label}</span>)}</div>
+      ) : null}
     </section>
   );
 }
@@ -1075,48 +995,25 @@ function MarketImplicationCard({ item }: { item: MarketImplication }) {
   );
 }
 
-function RegimeRibbon({ history, horizons }: { history: HistoryPoint[]; horizons: Horizon[] }) {
-  const forecastSlots = [1, 2].map((horizon) =>
-    horizons.find((item) => item.horizon_months === horizon) || null
-  );
+function RegimeRibbon({ points }: { points: CyclePoint[] }) {
   const ribbonStyle: RibbonStyle = {
-    "--history-month-count": Math.max(history.length, 1),
+    "--history-month-count": Math.max(points.length, 1),
   };
   return (
     <section className="ribbon-section" aria-labelledby="ribbon-title">
-      <div className="section-heading"><div><span>Regime ribbon</span><h3 id="ribbon-title">과거·현재·미래를 한 시간축으로 보기</h3></div><small>최근 5년 + 2개월 전망</small></div>
-      <div className="ribbon-legend"><span className="legend-model">모델 우세 국면</span><span className="nber-recession">NBER 침체</span><span className="limited-hatch">잠정 추정</span></div>
-      <div className="regime-ribbon" role="list" aria-label="월별 경제 국면 이력과 전망" style={ribbonStyle}>
-        {history.length ? history.map((item, index) => (
-          <div className={`ribbon-month ${item.phase ? `phase-${item.phase}` : "phase-missing"} ${resolveEstimateStatus(item) === "PROVISIONAL" ? "is-limited" : ""}`} role="listitem" tabIndex={0} key={`${item.date}-${index}`} title={`${formatMonth(item.date)} · ${item.phase ? PHASE_LABEL[item.phase] : "판단 불가"} · ${ESTIMATE_LABEL[resolveEstimateStatus(item)]} · NBER ${item.nber_recession ? "침체" : "비침체"}`}>
+      <div className="section-heading"><div><span>Observed phase ribbon</span><h3 id="ribbon-title">최근 12개월 국면 흐름</h3></div><small>실제 관측 국면 · NBER 이력은 별도 음영</small></div>
+      <div className="ribbon-legend"><span className="legend-model">관측 국면</span><span className="nber-recession">NBER 침체 이력</span></div>
+      <div className="regime-ribbon" role="list" aria-label="최근 월별 관측 경제 국면" style={ribbonStyle}>
+        {points.length ? points.map((item, index) => (
+          <div className={`ribbon-month phase-${item.phase}`} role="listitem" tabIndex={0} key={`${item.date}-${index}`} title={`${formatMonth(item.date)} · ${PHASE_LABEL[item.phase]} · NBER ${item.nber_recession ? "침체" : "비침체"}`}>
             {item.nber_recession ? <i className="nber-recession" aria-label="NBER 침체" /> : null}
-            {resolveEstimateStatus(item) === "PROVISIONAL" ? <i className="limited-hatch" aria-label="잠정 모델 추정" /> : null}
-            {index === history.length - 1 ? <i className="current-marker" aria-label="현재" /> : null}
+            {index === points.length - 1 ? <i className="current-marker" aria-label="현재" /> : null}
           </div>
         )) : (
           <div className="ribbon-month ribbon-empty-history phase-missing" role="listitem" aria-label="과거 경제사이클 이력 없음" />
         )}
-        {forecastSlots.map((item, index) => {
-          const horizon = index + 1;
-          if (!item) {
-            return (
-              <div
-                className="ribbon-month forecast-ribbon phase-missing"
-                role="listitem"
-                tabIndex={0}
-                key={`forecast-missing-${horizon}`}
-                title={`+${horizon}M · 판단 불가`}
-              />
-            );
-          }
-          return (
-            <div className={`ribbon-month forecast-ribbon ${item.dominant_phase ? `phase-${item.dominant_phase}` : "phase-missing"}`} role="listitem" tabIndex={0} key={`forecast-${item.horizon_months}`} title={`+${item.horizon_months}M · ${item.dominant_phase ? PHASE_LABEL[item.dominant_phase] : "판단 불가"} · ${ESTIMATE_LABEL[resolveEstimateStatus(item)]}`}>
-              {resolveEstimateStatus(item) === "PROVISIONAL" ? <i className="limited-hatch" aria-label="잠정 모델 추정" /> : null}
-            </div>
-          );
-        })}
       </div>
-      <div className="ribbon-axis"><span>{formatMonth(history[0]?.date)}</span><span>{formatMonth(history[Math.floor(history.length / 2)]?.date)}</span><span>현재</span><span>+2M</span></div>
+      <div className="ribbon-axis"><span>{formatMonth(points[0]?.date)}</span><span>{formatMonth(points[Math.floor(points.length / 2)]?.date)}</span><span>현재</span></div>
     </section>
   );
 }
@@ -1171,20 +1068,20 @@ function MonthlySignalGuide() {
             <strong>성장 레벨은 높지만 모멘텀이 약화</strong>
             <p>정상화인지 광범위한 약화인지 구분하고, 쏠림·부채·경기민감 노출을 점검합니다.</p>
           </article>
-          <article className="guide-phase-recession">
-            <span>침체 신호</span>
+          <article className="guide-phase-contraction">
+            <span>위축 신호</span>
             <strong>성장 레벨과 모멘텀이 함께 약함</strong>
-            <p>실물과 신용의 약화 범위가 넓어지는지 확인하고, 현금 수요와 감내 가능한 손실 범위를 점검합니다.</p>
+            <p>상대 성장순환의 위축을 뜻하며 NBER 공식 침체와 같지 않습니다. 실물 약화의 범위와 지속성을 확인합니다.</p>
           </article>
         </div>
 
         <section className="cycle-guide-transitions" aria-labelledby="cycle-guide-transition-title">
           <h4 id="cycle-guide-transition-title">국면 전환은 이렇게 읽습니다</h4>
           <div className="cycle-guide-transition-grid">
-            <article><strong>침체 → 회복</strong><p>바닥 통과의 초기 신호로 읽고 지속성을 확인합니다.</p></article>
+            <article><strong>위축 → 회복</strong><p>바닥 통과의 초기 신호로 읽고 지속성을 확인합니다.</p></article>
             <article><strong>회복 → 확장</strong><p>기대 개선이 실제 생산·고용·이익으로 이어지는지 확인합니다.</p></article>
             <article><strong>확장 → 둔화</strong><p>건전한 정상화인지 여러 지표의 동반 약화인지 구분합니다.</p></article>
-            <article><strong>둔화 → 침체</strong><p>약화가 일시적 충격을 넘어 넓고 오래 지속되는지 확인합니다.</p></article>
+            <article><strong>둔화 → 위축</strong><p>약화가 일시적 충격을 넘어 넓고 오래 지속되는지 확인합니다.</p></article>
           </div>
         </section>
 
@@ -1263,51 +1160,51 @@ function EconomicCycleWorkbench({ args }: Props) {
     observer.observe(rootRef.current);
     return () => observer.disconnect();
   }, [payload]);
-  if (!payload || payload.schema_version !== "economic_cycle_v2") return null;
+  if (!payload || payload.schema_version !== "economic_cycle_v3") return null;
 
-  const current = payload.horizons.find((item) => item.horizon_months === 0);
-  const currentState = current ? resolveEstimateStatus(current) : "UNAVAILABLE";
+  const observed = payload.observed_state;
   const realEvidence = payload.evidence.filter((evidence) => evidence.group === "real_economy");
   const forecastEvidence = payload.evidence.filter((evidence) => evidence.group === "forecast_context");
   const estimateTone =
-    currentState === "VERIFIED"
+    observed.data_status === "READY"
       ? "positive"
-      : currentState === "PROVISIONAL"
+      : observed.data_status === "LIMITED"
         ? "caution"
         : "neutral";
   return (
     <main className="cycle-workbench" data-status={payload.status} ref={rootRef}>
       <EconomicCycleHero
         asOfDate={payload.as_of_date || "-"}
-        estimateLabel={ESTIMATE_LABEL[currentState]}
+        estimateLabel={observed.confidence_label || "판단 제한"}
         estimateTone={estimateTone}
-        hasIntramonth={Boolean(payload.intramonth)}
+        hasIntramonth={Boolean(payload.intramonth_change)}
         summary={payload.headline?.summary || "저장된 경제사이클 결과를 확인합니다."}
-        title={`${payload.headline?.phase_label || "판단 불가"} ${current?.dominant_phase ? "우세" : ""}`.trim()}
+        title={payload.headline?.phase_label || "판단 불가"}
       />
-
-      <section className="horizon-section" aria-labelledby="horizon-title">
-        <div className="section-heading"><div><span>Probability path</span><h3 id="horizon-title">현재와 앞으로 1·2개월</h3></div><small>각 카드의 네 국면 합계는 100%</small></div>
-        <div className="horizon-grid">{payload.horizons.map((horizon) => <HorizonCard key={horizon.horizon_months} horizon={horizon} />)}</div>
-      </section>
 
       <EconomicCycleFreshnessBar
         freshness={payload.data_freshness}
         result={payload.refresh_result}
       />
 
-      {payload.intramonth ? <IntramonthFlow intramonth={payload.intramonth} monthly={current} /> : null}
+      <CurrentObservedState state={observed} recent={payload.recent_changes} />
+
+      {payload.intramonth_change ? <IntramonthChangePanel intramonth={payload.intramonth_change} /> : null}
 
       <div className="cycle-layout">
         <QuadrantChart payload={payload} />
-        <section className="evidence-panel" aria-labelledby="evidence-title">
-          <div className="section-heading"><div><span>Evidence</span><h3 id="evidence-title">현재와 전망의 판단 근거</h3></div><small>현재 수준과 전망 영향을 구분해 표시</small></div>
-          <EvidenceGroup title="현재 위치의 근거" subtitle="현재점에 반영되는 생산·소비와 고용·소득" rows={realEvidence} />
-          <EvidenceGroup title="1·2개월 전망에 추가되는 근거" subtitle="현재 근거에 더해 미래 확률을 조정하는 금융·선행 여건과 물가·정책" rows={forecastEvidence} />
-        </section>
+        <TransitionPanel monitor={payload.transition_monitor} />
       </div>
 
-      <RegimeRibbon history={payload.history} horizons={payload.horizons} />
+      <section className="evidence-panel" aria-labelledby="evidence-title">
+        <div className="section-heading"><div><span>Evidence</span><h3 id="evidence-title">현재 국면과 전환의 판단 근거</h3></div><small>현재 국면을 바꾸는 실물 근거와 보조 맥락을 구분</small></div>
+        <div className="evidence-overview-grid">
+          <EvidenceGroup title="현재 위치의 근거" subtitle="현재점에 반영되는 생산·소비와 고용·소득" rows={realEvidence} />
+          <EvidenceGroup title="전환을 해석할 참고 맥락" subtitle="현재 국면을 바꾸지 않고 전환 조건을 해석하는 금융·선행·물가·정책 정보" rows={forecastEvidence} />
+        </div>
+      </section>
+
+      <RegimeRibbon points={payload.cycle_map.points} />
 
       <section className="market-implications" aria-labelledby="implication-title">
         <div className="section-heading"><div><span>Measured market pathways</span><h3 id="implication-title">자산별 확인 포인트</h3></div><small>경제 상태·측정 경로·실제 가격을 분리해 확인</small></div>
@@ -1320,8 +1217,8 @@ function EconomicCycleWorkbench({ args }: Props) {
 
       <details className="method-disclosure">
         <summary>방법론과 품질</summary>
-        <div className="method-grid"><div><span>모델 버전</span><strong>{payload.model_version || "-"}</strong></div><div><span>기준일</span><strong>{payload.as_of_date || "-"}</strong></div><div><span>검증 상태</span><strong>{ESTIMATE_LABEL[currentState]}</strong></div></div>
-        <p>잠정 모델 추정은 계산 결과를 보여주되 검증 미달 사유를 함께 표시합니다. 모델과 NBER 이력을 분리해 표시하며, 금·달러 가격은 저장된 연속선물 일봉이라 계약 교체 효과가 포함될 수 있습니다. 이 결과는 NBER의 공식 경기판정이 아니고 수익률 예측이나 매매 지시가 아닙니다.</p>
+        <div className="method-grid"><div><span>모델 버전</span><strong>{payload.model_version || "-"}</strong></div><div><span>기준일</span><strong>{payload.as_of_date || "-"}</strong></div><div><span>판단 신뢰도</span><strong>{observed.confidence_label || "판단 제한"}</strong></div></div>
+        <p>현재 국면은 월말 point-in-time 실물지표의 수준과 3개월 모멘텀으로 계산합니다. 관측 국면과 NBER 이력을 분리해 표시하며, 전환 카드는 특정 월을 예측하지 않고 다음 정식 발표에서 확인할 조건만 보여줍니다. 금·달러 가격은 저장된 연속선물 일봉이라 계약 교체 효과가 포함될 수 있습니다. 이 결과는 NBER의 공식 경기판정이 아니고 수익률 예측이나 매매 지시가 아닙니다.</p>
         <ul>{payload.limitations.map((item) => <li key={item}>{item}</li>)}</ul>
       </details>
     </main>

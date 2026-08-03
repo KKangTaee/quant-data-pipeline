@@ -24,6 +24,13 @@ Last Updated: 2026-08-03
 - Market implications receive the same evidence, market, price, earnings and reference-date
   inputs as before. Their unused legacy horizon argument is now an empty tuple, verified by
   deep-equality regression.
+- The React workbench now presents current observed state, recent 1/3/6M changes, a 12-month
+  actual-coordinate map and adjacent-phase transition conditions. It has no probability card,
+  future point or forecast ribbon presentation.
+- NBER remains a separate overlay on the observed phase ribbon. `contraction` is rendered as
+  `위축` everywhere in the relative growth-cycle surface.
+- The `MarketImplicationCard` through asset observation body source block and the asset CSS block
+  are byte-identical to the pre-v3 implementation.
 
 ## Reproduced Root Causes
 

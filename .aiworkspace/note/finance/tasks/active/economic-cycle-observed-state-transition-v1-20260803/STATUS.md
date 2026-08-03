@@ -18,18 +18,19 @@ Last Updated: 2026-08-03
 - Task 2 additive snapshot schema, PIT/revised panel loaders and materialization integration
   complete.
 - Task 3 Overview `economic_cycle_v3` read model and frozen asset-payload regression complete.
+- Task 4 React v3 workbench implementation and static build complete.
 
 ## Roadmap Position
 
 - 1차 audit: complete
 - 2차 diagnostic model design: complete
 - 3차 UI / product contract design: complete and approved
-- 4차 implementation / QA: Tasks 1–3 complete; Task 4 React UI next
+- 4차 implementation / QA: Tasks 1–4 complete; Task 5 acceptance and Browser QA next
 
 ## Next Action
 
-Implement Task 4 React workbench against the v3 payload, remove probability/future-coordinate
-presentation and preserve the existing asset checkpoint component and CSS selectors.
+Run Task 5 full acceptance, actual-app Browser QA, screenshot capture, durable documentation
+alignment and final integration review.
 
 ## Scope Boundary
 

@@ -89,3 +89,19 @@ Last Updated: 2026-08-03
   observed-state contracts.
 - Verification: service + observed domain + result + pipeline selection `70 passed`,
   `py_compile` and `git diff --check` passed. Three pre-existing edgar warnings remain.
+
+## Task 4 TDD — React Workbench V3
+
+- RED: six source-contract tests failed on the v2 schema, probability cards, future path,
+  probability intramonth bridge and forecast ribbon.
+- GREEN: the component now consumes only `economic_cycle_v3` observed-state, recent-change,
+  transition-monitor, actual cycle-map and provisional intramonth-change fields.
+- Replaced the top-level workflow with current observed state, recent 1/3/6M movement, actual
+  12-month coordinates and three-condition transition monitoring.
+- Removed UI references to probability payloads, h0/+1M/+2M, future coordinates and forecast
+  ribbon slots. Updated phase language from recession to contraction / 위축 while retaining NBER
+  as a separate historical overlay.
+- Frozen-surface check: asset JSX block and asset CSS block are byte-identical to HEAD before the
+  v3 UI change.
+- Verification: economic-cycle Python selection `192 passed`; React `vite build` and
+  `tsc --noEmit` passed; `git diff --check` passed. Three pre-existing edgar warnings remain.

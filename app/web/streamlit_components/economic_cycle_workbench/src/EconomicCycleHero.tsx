@@ -30,7 +30,7 @@ function EconomicCycleHero({
     },
     {
       id: "estimate",
-      label: "검증 상태",
+      label: "판단 신뢰도",
       value: estimateLabel,
       tone: estimateTone,
       showIndicator: true,
@@ -38,11 +38,11 @@ function EconomicCycleHero({
   ];
   const meta: ResearchHeaderMeta[] = [
     {
-      id: "horizons",
-      label: "현재 · +1개월 · +2개월",
+      id: "flow",
+      label: "현재 관측 국면 · 최근 변화 · 전환 조건",
     },
     ...(hasIntramonth
-      ? [{ id: "intramonth", label: "월중 추정 별도 표시" }]
+      ? [{ id: "intramonth", label: "월중 잠정 변화 별도 표시" }]
       : []),
   ];
 
