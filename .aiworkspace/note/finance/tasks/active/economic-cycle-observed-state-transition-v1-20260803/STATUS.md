@@ -15,18 +15,20 @@ Last Updated: 2026-08-03
 - Written design spec approved by the user.
 - Detailed TDD implementation plan committed.
 - Task 1 observed-state / transition domain implementation and focused verification complete.
+- Task 2 additive snapshot schema, PIT/revised panel loaders and materialization integration
+  complete.
 
 ## Roadmap Position
 
 - 1차 audit: complete
 - 2차 diagnostic model design: complete
 - 3차 UI / product contract design: complete and approved
-- 4차 implementation / QA: Task 1 complete; Task 2 persistence integration next
+- 4차 implementation / QA: Tasks 1–2 complete; Task 3 service v3 next
 
 ## Next Action
 
-Implement Task 2 additive snapshot schema, loader panels and pipeline materialization through
-RED/GREEN checkpoints.
+Implement Task 3 `economic_cycle_v3` Overview read model and asset deep-equality regression
+through RED/GREEN checkpoints.
 
 ## Scope Boundary
 

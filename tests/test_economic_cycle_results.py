@@ -63,6 +63,13 @@ def test_economic_cycle_result_schemas_lock_business_keys_and_indexes() -> None:
     assert "baseline_as_of_date DATE NULL" in snapshot_sql
     assert "source_collected_at DATETIME NULL" in snapshot_sql
     assert "source_coverage_json LONGTEXT NULL" in snapshot_sql
+    assert (
+        "current_phase ENUM('recovery','expansion','slowdown','recession','contraction') NULL"
+        in snapshot_sql
+    )
+    assert "observed_state_json LONGTEXT NULL" in snapshot_sql
+    assert "recent_changes_json LONGTEXT NULL" in snapshot_sql
+    assert "transition_monitor_json LONGTEXT NULL" in snapshot_sql
 
 
 def test_model_artifact_and_snapshot_serializers_round_trip_vocabularies() -> None:
@@ -98,6 +105,13 @@ def test_model_artifact_and_snapshot_serializers_round_trip_vocabularies() -> No
         top_evidence=({"series_id": "INDPRO", "direction": "strengthening"},),
         warnings=("1개월 전망은 제한적입니다.",),
         expected_transition="expansion_to_slowdown",
+        observed_state={"phase": "contraction", "level": -0.6, "momentum": -0.2},
+        recent_changes=({"horizon_months": 1, "status": "MIXED"},),
+        transition_monitor={
+            "anchor_phase": "contraction",
+            "target_phase": "recovery",
+            "status": "WATCH",
+        },
     )
     payload = module.serialize_cycle_snapshot(snapshot)
 
@@ -193,6 +207,13 @@ def test_result_upserts_reuse_artifact_and_snapshot_business_keys() -> None:
     assert stored_snapshot["baseline_as_of_date"] is None
     assert stored_snapshot["source_collected_at"] is None
     assert stored_snapshot["source_coverage_json"] is None
+    assert stored_snapshot["observed_state_json"] is None
+    assert stored_snapshot["recent_changes_json"] is None
+    assert stored_snapshot["transition_monitor_json"] is None
+    snapshot_sql = connection.sql[-1]
+    assert "observed_state_json = VALUES(observed_state_json)" in snapshot_sql
+    assert "recent_changes_json = VALUES(recent_changes_json)" in snapshot_sql
+    assert "transition_monitor_json = VALUES(transition_monitor_json)" in snapshot_sql
 
 
 def test_exact_artifact_loader_accepts_limited_artifact() -> None:
@@ -268,6 +289,45 @@ def test_result_schema_sync_extends_existing_snapshot_run_kind_enum() -> None:
         sql for sql in connection.executed if "MODIFY COLUMN run_kind" in sql
     )
     assert "'intramonth_nowcast'" in alter
+
+
+def test_result_schema_sync_extends_current_phase_enum_without_dropping_legacy_value() -> None:
+    module = _load_module()
+
+    class Connection:
+        def __init__(self) -> None:
+            self.executed: list[str] = []
+
+        def use_db(self, _database: str) -> None:
+            return None
+
+        def execute(self, sql: str, *_args) -> None:
+            self.executed.append(sql)
+
+        def query(self, sql: str, *_args):
+            if "COLUMN_NAME = 'current_phase'" in sql:
+                return [
+                    {
+                        "COLUMN_TYPE": "enum('recovery','expansion','slowdown','recession')"
+                    }
+                ]
+            if "COLUMN_NAME = 'run_kind'" in sql:
+                return [
+                    {
+                        "COLUMN_TYPE": "enum('historical_replay','current','intramonth_nowcast')"
+                    }
+                ]
+            return []
+
+    connection = Connection()
+    with patch.object(module, "sync_table_schema"):
+        module.ensure_economic_cycle_result_schemas(connection=connection)
+
+    alter = next(
+        sql for sql in connection.executed if "MODIFY COLUMN current_phase" in sql
+    )
+    assert "'recession'" in alter
+    assert "'contraction'" in alter
 
 
 def test_result_loaders_choose_approved_artifact_and_bounded_sorted_history() -> None:

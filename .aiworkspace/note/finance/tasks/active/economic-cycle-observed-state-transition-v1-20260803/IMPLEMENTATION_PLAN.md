@@ -125,7 +125,7 @@
 - Produces: `EconomicCyclePipelineLoader.load_prediction_panel(as_of_date) -> pd.DataFrame` and `load_revised_prediction_panel(as_of_date) -> pd.DataFrame`.
 - Produces: `CycleSnapshot.observed_state`, `recent_changes`, and `transition_monitor` optional fields while retaining legacy shadow horizon fields.
 
-- [ ] **Step 1: Write failing additive schema and UPSERT tests**
+- [x] **Step 1: Write failing additive schema and UPSERT tests**
 
   Require `current_phase ENUM('recovery','expansion','slowdown','recession','contraction')`, three nullable LONGTEXT columns, an in-place current-phase ENUM migration, default `None` values for legacy caller rows, and all three columns in INSERT/UPDATE SQL.
 
@@ -135,17 +135,17 @@
   assert "observed_state_json = VALUES(observed_state_json)" in connection.sql[-1]
   ```
 
-- [ ] **Step 2: Run result tests and verify RED**
+- [x] **Step 2: Run result tests and verify RED**
 
   Run: `.venv/bin/python -m pytest tests/test_economic_cycle_results.py -q`
 
   Expected: assertions fail because the new columns and ENUM migration do not exist.
 
-- [ ] **Step 3: Implement additive schema sync and round-trip persistence**
+- [x] **Step 3: Implement additive schema sync and round-trip persistence**
 
   Extend the table definition and add `_sync_snapshot_current_phase_enum()` beside the existing run-kind migration. Normalize all new JSON fields with `setdefault(..., None)` and update INSERT/UPSERT column lists without rewriting existing rows.
 
-- [ ] **Step 4: Write failing pipeline integration tests**
+- [x] **Step 4: Write failing pipeline integration tests**
 
   Provide a fake loader with seven literal PIT panel rows and a revised panel. Assert persisted `current_phase` equals `observed_state_json.phase`, all three JSON fields are canonical JSON, h0 probabilities may remain stored but do not overwrite the phase, and origin-specific replay coordinates differ when input history differs.
 
@@ -156,17 +156,17 @@
   assert json.loads(row["transition_monitor_json"])["conditions_total"] == 3
   ```
 
-- [ ] **Step 5: Run pipeline tests and verify RED**
+- [x] **Step 5: Run pipeline tests and verify RED**
 
   Run: `.venv/bin/python -m pytest tests/test_economic_cycle_pipeline.py -q`
 
   Expected: new persisted fields are absent and `current_phase` still comes from h0 argmax.
 
-- [ ] **Step 6: Implement panel loaders and observed-state materialization**
+- [x] **Step 6: Implement panel loaders and observed-state materialization**
 
   `load_prediction_panel()` returns the safe PIT prefix. `load_revised_prediction_panel()` loads the latest eligible versions at the loader's materialization/replay cutoff, removes revision-interval columns, and rebuilds the same monthly transforms for a revision diagnostic only. Materialization calls Task 1, writes its three JSON records, uses its phase for `current_phase`, and retains shadow probability JSON strictly for compatibility.
 
-- [ ] **Step 7: Verify Task 2 GREEN and commit**
+- [x] **Step 7: Verify Task 2 GREEN and commit**
 
   Run:
 

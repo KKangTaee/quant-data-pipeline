@@ -59,3 +59,16 @@ Last Updated: 2026-08-03
   UNAVAILABLE; the focused test now passes.
 - Verification: `13 passed` observed-state tests, `6 passed` existing feature tests, `py_compile`
   and `git diff --check` passed.
+
+## Task 2 TDD — Snapshot / Loader / Pipeline
+
+- RED: schema, serializer, UPSERT default and current-phase ENUM migration produced 4 expected
+  failures; additive schema and round-trip implementation made all 9 result tests pass.
+- RED/GREEN: persisted h0 was forced to recovery while actual coordinates were contraction;
+  snapshot `current_phase` now follows observed state and stores all three canonical JSON records.
+- RED/GREEN: default PIT/revised panel loader methods were removed, tested absent, and restored;
+  revised diagnostic uses the materialization cutoff and strips revision intervals before rebuild.
+- Additional RED/GREEN: observed JSON with unavailable phase initially fell back to h0 recovery;
+  persisted `current_phase` now remains null instead.
+- Verification: result + pipeline selection `27 passed`, `py_compile` and `git diff --check`
+  passed. Three pre-existing edgar deprecation warnings remain.

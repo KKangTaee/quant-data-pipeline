@@ -45,6 +45,37 @@ def _panel(periods: int = 32) -> tuple[pd.DataFrame, pd.Series]:
     return pd.DataFrame(rows), phases
 
 
+def _observed_panel(raw_levels: list[float]) -> pd.DataFrame:
+    real_series = (
+        "INDPRO",
+        "W875RX1",
+        "RRSFS",
+        "CFNAI",
+        "PAYEMS",
+        "UNRATE",
+        "ICSA",
+        "AWHMAN",
+    )
+    origins = pd.date_range("2002-02-28", periods=len(raw_levels), freq="ME")
+    rows: list[dict[str, object]] = []
+    for origin, value in zip(origins, raw_levels, strict=True):
+        row: dict[str, object] = {
+            "forecast_origin": origin,
+            "activity_score": value,
+            "labor_income_score": value,
+            "activity_momentum_3m": 5.0,
+            "labor_income_momentum_3m": 5.0,
+            "financial_leading_score": 0.25,
+            "inflation_policy_score": 0.10,
+            "USREC_signal": 0.0,
+        }
+        for series_id in real_series:
+            row[f"{series_id}_z"] = value
+            row[f"{series_id}_stale"] = False
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
 def _horizon_validation(*, ready: bool = True) -> HorizonValidation:
     return HorizonValidation(
         origin_count=150 if ready else 80,
@@ -174,6 +205,109 @@ def test_materialization_persists_provisional_probabilities_for_limited_horizons
     assert snapshot.horizons[2].confidence is not None
     assert snapshot.horizons[2].publication_status == "LIMITED"
     assert snapshot.warnings
+
+
+def test_materialization_persists_observed_phase_instead_of_h0_argmax(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_module()
+    training_panel, labels = _panel()
+    observed_panel = _observed_panel(
+        [-1.0, -1.0, -1.0, -2.0, -2.0, -2.0, -2.0]
+    )
+    writer = Writer()
+    training = module.train_validate_economic_cycle_model(
+        trained_through="2002-07-31",
+        loader=TrainingLoader(training_panel, labels),
+        writer=writer,
+        validator=lambda *_args, **_kwargs: ValidationReport(
+            horizons={horizon: _horizon_validation() for horizon in (0, 1, 2)},
+            predictions=(),
+        ),
+    )
+
+    class Loader:
+        def load_artifact(self, **_kwargs):
+            return training["artifact_row"]
+
+        def load_prediction_data(self, _as_of_date):
+            return observed_panel.iloc[-1].to_dict()
+
+        def load_prediction_panel(self, _as_of_date):
+            return observed_panel
+
+        def load_revised_prediction_panel(self, _as_of_date):
+            return observed_panel.copy(deep=True)
+
+    monkeypatch.setattr(
+        module,
+        "_predict_horizon",
+        lambda *_args, **_kwargs: {
+            "recovery": 0.70,
+            "expansion": 0.10,
+            "slowdown": 0.10,
+            "recession": 0.10,
+        },
+    )
+
+    snapshot = module.materialize_economic_cycle_snapshot(
+        as_of_date="2002-08-31",
+        loader=Loader(),
+        writer=writer,
+    )
+
+    row = next(
+        value
+        for key, value in writer.snapshots.items()
+        if key[0] == "2002-08-31" and key[2] == "current"
+    )
+    observed = json.loads(row["observed_state_json"])
+    transition = json.loads(row["transition_monitor_json"])
+    assert snapshot.horizons[0].dominant_phase == "recovery"
+    assert snapshot.observed_state == observed
+    assert row["current_phase"] == observed["phase"] == "contraction"
+    assert observed["level"] == pytest.approx(-2.0)
+    assert observed["momentum"] < 0.0
+    assert json.loads(row["recent_changes_json"])[0]["horizon_months"] == 1
+    assert transition["conditions_total"] == 3
+
+
+def test_snapshot_row_never_falls_back_to_h0_when_observed_state_is_unavailable() -> None:
+    module = _load_module()
+    snapshot = module.CycleSnapshot(
+        as_of_date=date(2026, 6, 30),
+        model_version="cycle-v1",
+        status="LIMITED",
+        horizons=(
+            module.HorizonProbability(
+                horizon_months=0,
+                probabilities={
+                    "recovery": 0.70,
+                    "expansion": 0.10,
+                    "slowdown": 0.10,
+                    "recession": 0.10,
+                },
+                dominant_phase="recovery",
+                confidence=0.70,
+                publication_status="READY",
+            ),
+        ),
+        factor_contributions=(),
+        top_evidence=(),
+        warnings=(),
+        observed_state={"phase": None, "data_status": "UNAVAILABLE"},
+        recent_changes=(),
+        transition_monitor=None,
+    )
+
+    row = module._snapshot_row(
+        snapshot,
+        artifact_row={"trained_through": "2026-05-31"},
+        run_kind="current",
+        feature_row={},
+    )
+
+    assert row["current_phase"] is None
 
 
 def test_materialization_marks_incomplete_artifact_unavailable_without_aborting() -> (
@@ -370,6 +504,64 @@ def test_default_loader_builds_and_reuses_one_bulk_pit_panel() -> None:
         date(2020, 1, 31),
         date(2020, 2, 29),
     ]
+
+
+def test_default_loader_returns_bounded_pit_prediction_panel() -> None:
+    module = _load_module()
+    loader = module.EconomicCyclePipelineLoader(history_start=date(2020, 1, 31))
+    loader._panel_cache_cutoff = date(2020, 3, 31)
+    loader._panel_cache = pd.DataFrame(
+        {
+            "forecast_origin": pd.to_datetime(
+                ["2020-01-31", "2020-02-29", "2020-03-31"]
+            ),
+            "activity_score": [1.0, 2.0, 3.0],
+        }
+    )
+
+    panel = loader.load_prediction_panel("2020-02-29")
+
+    assert panel["forecast_origin"].dt.date.tolist() == [
+        date(2020, 1, 31),
+        date(2020, 2, 29),
+    ]
+
+
+def test_default_loader_builds_revised_diagnostic_at_materialization_cutoff(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_module()
+    loader = module.EconomicCyclePipelineLoader(history_start=date(2026, 1, 31))
+    loader._panel_cache_cutoff = date(2026, 7, 31)
+    calls: dict[str, object] = {}
+
+    def load_latest(*_args, **kwargs):
+        calls["load"] = kwargs
+        return [
+            {
+                "series_id": "INDPRO",
+                "observation_date": "2026-01-01",
+                "realtime_start": "2026-07-15",
+                "realtime_end": "9999-12-31",
+                "value": 100.0,
+            }
+        ]
+
+    def build_panel(rows, _catalog, *, forecast_origins):
+        calls["rows"] = list(rows)
+        calls["origins"] = tuple(forecast_origins)
+        return pd.DataFrame({"forecast_origin": pd.to_datetime(forecast_origins)})
+
+    monkeypatch.setattr(module, "load_economic_cycle_vintages", load_latest)
+    monkeypatch.setattr(module, "build_monthly_feature_panel", build_panel)
+
+    panel = loader.load_revised_prediction_panel("2026-06-30")
+
+    assert calls["load"]["as_of_date"] == date(2026, 7, 31)
+    assert calls["load"]["end_date"] == date(2026, 7, 31)
+    assert "realtime_start" not in calls["rows"][0]
+    assert "realtime_end" not in calls["rows"][0]
+    assert panel["forecast_origin"].dt.date.max() == date(2026, 6, 30)
 
 
 def test_default_loader_adds_only_explicit_partial_origin() -> None:

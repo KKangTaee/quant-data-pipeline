@@ -34,6 +34,7 @@ from finance.economic_cycle_model import (
     fit_temperature,
     predict_phase_probabilities,
 )
+from finance.economic_cycle_observed_state import build_observed_state_snapshot
 from finance.economic_cycle_validation import (
     PublicationDecision,
     ValidationReport,
@@ -109,6 +110,8 @@ class EconomicCyclePipelineLoader:
         self._origin_rows: dict[str, list[dict[str, object]]] = {}
         self._panel_cache_cutoff: date | None = None
         self._panel_cache: pd.DataFrame | None = None
+        self._revised_panel_cache_as_of: date | None = None
+        self._revised_panel_cache: pd.DataFrame | None = None
 
     def remember_origin(
         self,
@@ -189,10 +192,55 @@ class EconomicCyclePipelineLoader:
 
     def load_prediction_data(self, as_of_date: str | date) -> dict[str, object]:
         cutoff = _as_date(as_of_date, field="as_of_date")
-        panel = self._panel_through(cutoff)
+        panel = self.load_prediction_panel(cutoff)
         if panel.empty:
             raise LookupError(f"No economic-cycle features available for {cutoff}")
         return panel.iloc[-1].to_dict()
+
+    def load_prediction_panel(self, as_of_date: str | date) -> pd.DataFrame:
+        """Return the complete PIT feature prefix needed by observed-state logic."""
+
+        return self._panel_through(_as_date(as_of_date, field="as_of_date"))
+
+    def load_revised_prediction_panel(self, as_of_date: str | date) -> pd.DataFrame:
+        """Build a latest-revised diagnostic panel without changing PIT authority."""
+
+        cutoff = _as_date(as_of_date, field="as_of_date")
+        revision_as_of = max(self._panel_cache_cutoff or cutoff, cutoff)
+        if (
+            self._revised_panel_cache is None
+            or self._revised_panel_cache_as_of != revision_as_of
+        ):
+            rows = load_economic_cycle_vintages(
+                [item.series_id for item in get_economic_cycle_catalog()],
+                start_date=self.history_start,
+                end_date=revision_as_of,
+                as_of_date=revision_as_of,
+            )
+            latest_rows = [
+                {
+                    key: value
+                    for key, value in row.items()
+                    if key not in {"realtime_start", "realtime_end"}
+                }
+                for row in rows
+            ]
+            origins = list(month_end_origins(self.history_start, revision_as_of))
+            if revision_as_of not in origins:
+                origins.append(revision_as_of)
+                origins.sort()
+            self._revised_panel_cache = build_monthly_feature_panel(
+                latest_rows,
+                get_economic_cycle_catalog(),
+                forecast_origins=origins,
+            ).reset_index(drop=True)
+            self._revised_panel_cache_as_of = revision_as_of
+        origins = pd.to_datetime(
+            self._revised_panel_cache["forecast_origin"], errors="coerce"
+        )
+        return self._revised_panel_cache.loc[
+            origins <= pd.Timestamp(cutoff)
+        ].reset_index(drop=True).copy()
 
     def load_artifact(
         self,
@@ -474,6 +522,11 @@ def _snapshot_row(
     horizon_zero = next(
         (item for item in snapshot.horizons if item.horizon_months == 0), None
     )
+    observed_phase = (
+        snapshot.observed_state.get("phase")
+        if snapshot.observed_state is not None
+        else None
+    )
     return {
         "as_of_date": snapshot.as_of_date.isoformat(),
         "model_version": snapshot.model_version,
@@ -490,9 +543,30 @@ def _snapshot_row(
             _canonical_json(source_coverage) if source_coverage is not None else None
         ),
         "status": snapshot.status,
-        "current_phase": horizon_zero.dominant_phase if horizon_zero else None,
+        "current_phase": (
+            observed_phase
+            if snapshot.observed_state is not None
+            else horizon_zero.dominant_phase
+            if horizon_zero
+            else None
+        ),
         "expected_transition": snapshot.expected_transition,
         "nber_recession": int(float(feature_row.get("USREC_signal") or 0.0) >= 0.5),
+        "observed_state_json": (
+            _canonical_json(snapshot.observed_state)
+            if snapshot.observed_state is not None
+            else None
+        ),
+        "recent_changes_json": (
+            _canonical_json(snapshot.recent_changes)
+            if snapshot.observed_state is not None
+            else None
+        ),
+        "transition_monitor_json": (
+            _canonical_json(snapshot.transition_monitor)
+            if snapshot.transition_monitor is not None
+            else None
+        ),
         "probabilities_json": _canonical_json(
             horizon_zero.probabilities if horizon_zero else None
         ),
@@ -543,6 +617,19 @@ def materialize_economic_cycle_snapshot(
     artifacts = _decode_artifact_bundle(selected_row)
     statuses = json.loads(str(selected_row.get("publication_status_json") or "{}"))
     feature_row = getattr(resolved_loader, "load_prediction_data")(origin)
+    observed_result = None
+    if hasattr(resolved_loader, "load_prediction_panel"):
+        prediction_panel = getattr(resolved_loader, "load_prediction_panel")(origin)
+        revised_panel = (
+            getattr(resolved_loader, "load_revised_prediction_panel")(origin)
+            if hasattr(resolved_loader, "load_revised_prediction_panel")
+            else None
+        )
+        if not prediction_panel.empty:
+            observed_result = build_observed_state_snapshot(
+                prediction_panel,
+                revised_panel=revised_panel,
+            )
 
     horizons: list[HorizonProbability] = []
     warnings: list[str] = []
@@ -653,24 +740,46 @@ def materialize_economic_cycle_snapshot(
         if name in feature_row and pd.notna(feature_row[name])
     )
     one_month = next(item for item in horizons if item.horizon_months == 1)
-    expected_transition = (
-        f"{current_phase}_to_{one_month.dominant_phase}"
-        if current_phase and one_month.dominant_phase
+    if observed_result is not None:
+        anchor = observed_result.transition_monitor.get("anchor_phase")
+        target = observed_result.transition_monitor.get("target_phase")
+        expected_transition = f"{anchor}_to_{target}" if anchor and target else None
+    else:
+        expected_transition = (
+            f"{current_phase}_to_{one_month.dominant_phase}"
+            if current_phase and one_month.dominant_phase
+            else None
+        )
+    shadow_status = (
+        "READY"
+        if all(item.publication_status == "READY" for item in horizons)
+        else "LIMITED"
+    )
+    observed_status = (
+        str(observed_result.observed_state.get("data_status"))
+        if observed_result is not None
         else None
     )
     snapshot = CycleSnapshot(
         as_of_date=origin,
         model_version=resolved_model_version,
-        status=(
-            "READY"
-            if all(item.publication_status == "READY" for item in horizons)
-            else "LIMITED"
-        ),
+        status=("READY" if observed_status == "READY" else "LIMITED")
+        if observed_status is not None
+        else shadow_status,
         horizons=tuple(horizons),
         factor_contributions=contributions,
         top_evidence=evidence,
         warnings=tuple(warnings),
         expected_transition=expected_transition,
+        observed_state=(
+            observed_result.observed_state if observed_result is not None else None
+        ),
+        recent_changes=(
+            observed_result.recent_changes if observed_result is not None else ()
+        ),
+        transition_monitor=(
+            observed_result.transition_monitor if observed_result is not None else None
+        ),
     )
     if require_h0 and snapshot.horizons[0].probabilities is None:
         raise LookupError(f"No usable intramonth h0 estimate for {origin}")

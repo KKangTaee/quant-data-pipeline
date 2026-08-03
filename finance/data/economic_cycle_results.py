@@ -19,6 +19,9 @@ SNAPSHOT_TABLE = "economic_cycle_snapshot"
 SNAPSHOT_RUN_KIND_ENUM = (
     "ENUM('historical_replay','current','intramonth_nowcast')"
 )
+SNAPSHOT_CURRENT_PHASE_ENUM = (
+    "ENUM('recovery','expansion','slowdown','recession','contraction')"
+)
 
 
 def _sync_snapshot_run_kind_enum(db: Any) -> None:
@@ -45,6 +48,30 @@ def _sync_snapshot_run_kind_enum(db: Any) -> None:
     )
 
 
+def _sync_snapshot_current_phase_enum(db: Any) -> None:
+    """Add contraction while retaining the legacy recession value."""
+
+    rows = db.query(
+        """
+        SELECT COLUMN_TYPE
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = %s
+          AND TABLE_NAME = %s
+          AND COLUMN_NAME = 'current_phase'
+        """,
+        (DB_META, SNAPSHOT_TABLE),
+    )
+    if not rows:
+        return
+    column_type = str(rows[0].get("COLUMN_TYPE") or "").lower()
+    if "contraction" in column_type:
+        return
+    db.execute(
+        f"ALTER TABLE {SNAPSHOT_TABLE} "
+        f"MODIFY COLUMN current_phase {SNAPSHOT_CURRENT_PHASE_ENUM} NULL"
+    )
+
+
 @dataclass(frozen=True)
 class HorizonProbability:
     horizon_months: int
@@ -65,6 +92,9 @@ class CycleSnapshot:
     top_evidence: tuple[dict[str, object], ...]
     warnings: tuple[str, ...]
     expected_transition: str | None = None
+    observed_state: dict[str, object] | None = None
+    recent_changes: tuple[dict[str, object], ...] = ()
+    transition_monitor: dict[str, object] | None = None
 
 
 def _canonical_json(value: object) -> str:
@@ -151,6 +181,19 @@ def deserialize_cycle_snapshot(payload: str) -> CycleSnapshot:
         top_evidence=tuple(dict(item) for item in raw["top_evidence"]),
         warnings=tuple(str(item) for item in raw["warnings"]),
         expected_transition=raw.get("expected_transition"),
+        observed_state=(
+            dict(raw["observed_state"])
+            if isinstance(raw.get("observed_state"), dict)
+            else None
+        ),
+        recent_changes=tuple(
+            dict(item) for item in (raw.get("recent_changes") or ())
+        ),
+        transition_monitor=(
+            dict(raw["transition_monitor"])
+            if isinstance(raw.get("transition_monitor"), dict)
+            else None
+        ),
     )
 
 
@@ -170,6 +213,7 @@ def ensure_economic_cycle_result_schemas(
             db.execute(schema)
             sync_table_schema(db, table_name, schema, DB_META)
         _sync_snapshot_run_kind_enum(db)
+        _sync_snapshot_current_phase_enum(db)
     finally:
         if owns_connection:
             db.close()
@@ -228,25 +272,31 @@ def upsert_cycle_snapshots(
             db.execute(schema)
             sync_table_schema(db, SNAPSHOT_TABLE, schema, DB_META)
             _sync_snapshot_run_kind_enum(db)
+            _sync_snapshot_current_phase_enum(db)
         normalized_rows = []
         for row in rows:
             normalized = dict(row)
             normalized.setdefault("baseline_as_of_date", None)
             normalized.setdefault("source_collected_at", None)
             normalized.setdefault("source_coverage_json", None)
+            normalized.setdefault("observed_state_json", None)
+            normalized.setdefault("recent_changes_json", None)
+            normalized.setdefault("transition_monitor_json", None)
             normalized_rows.append(normalized)
         sql = f"""
         INSERT INTO {SNAPSHOT_TABLE} (
           as_of_date, model_version, run_kind, training_cutoff_date,
           data_cutoff_date, baseline_as_of_date, source_collected_at,
           source_coverage_json, status, current_phase, expected_transition,
-          nber_recession, probabilities_json, forecast_path_json,
+          nber_recession, observed_state_json, recent_changes_json,
+          transition_monitor_json, probabilities_json, forecast_path_json,
           factor_contributions_json, top_evidence_json, warnings_json
         ) VALUES (
           %(as_of_date)s, %(model_version)s, %(run_kind)s, %(training_cutoff_date)s,
           %(data_cutoff_date)s, %(baseline_as_of_date)s, %(source_collected_at)s,
           %(source_coverage_json)s, %(status)s, %(current_phase)s, %(expected_transition)s,
-          %(nber_recession)s, %(probabilities_json)s, %(forecast_path_json)s,
+          %(nber_recession)s, %(observed_state_json)s, %(recent_changes_json)s,
+          %(transition_monitor_json)s, %(probabilities_json)s, %(forecast_path_json)s,
           %(factor_contributions_json)s, %(top_evidence_json)s, %(warnings_json)s
         )
         ON DUPLICATE KEY UPDATE
@@ -259,6 +309,9 @@ def upsert_cycle_snapshots(
           current_phase = VALUES(current_phase),
           expected_transition = VALUES(expected_transition),
           nber_recession = VALUES(nber_recession),
+          observed_state_json = VALUES(observed_state_json),
+          recent_changes_json = VALUES(recent_changes_json),
+          transition_monitor_json = VALUES(transition_monitor_json),
           probabilities_json = VALUES(probabilities_json),
           forecast_path_json = VALUES(forecast_path_json),
           factor_contributions_json = VALUES(factor_contributions_json),

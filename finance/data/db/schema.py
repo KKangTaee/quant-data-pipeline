@@ -1046,9 +1046,13 @@ ECONOMIC_CYCLE_SCHEMAS = {
           source_collected_at DATETIME NULL,
           source_coverage_json LONGTEXT NULL,
           status ENUM('READY','LIMITED','ERROR') NOT NULL,
-          current_phase ENUM('recovery','expansion','slowdown','recession') NULL,
+          current_phase ENUM('recovery','expansion','slowdown','recession','contraction') NULL,
           expected_transition VARCHAR(128) NULL,
           nber_recession TINYINT(1) NOT NULL DEFAULT 0,
+
+          observed_state_json LONGTEXT NULL,
+          recent_changes_json LONGTEXT NULL,
+          transition_monitor_json LONGTEXT NULL,
 
           probabilities_json LONGTEXT NOT NULL,
           forecast_path_json LONGTEXT NOT NULL,
