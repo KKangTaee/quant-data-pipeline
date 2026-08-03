@@ -706,6 +706,52 @@ button, input, summary { font: inherit; }
 .criterion-checks { display: flex; flex-wrap: wrap; gap: 12px; }
 .criterion-checks label { display: flex; grid-template-columns: auto 1fr; align-items: center; gap: 7px; }
 .criterion-checks input { width: 18px; min-height: 18px; }
+.equity-input-gate {
+  display: grid;
+  gap: 7px;
+  margin-top: 18px;
+  padding: 17px;
+  border: 1px dashed #d8cda9;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fffcf5, #f9fbfc);
+}
+.equity-input-gate strong { color: #725c2f; font-size: 13px; }
+.equity-input-gate p,
+.equity-input-gate small { color: #7b715e; font-size: 9px; line-height: 1.55; }
+.equity-assumption-grid,
+.equity-range-grid { display: grid; gap: 10px; margin-top: 18px; }
+.equity-assumption-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.equity-range-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.equity-assumption-grid article,
+.equity-range-grid article {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  padding: 14px;
+  border: 1px solid #dfe7eb;
+  border-radius: 13px;
+  background: #f8fafb;
+}
+.equity-assumption-grid span,
+.equity-range-grid span,
+.equity-threshold-list > span { color: #6b7f8d; font-size: 9px; font-weight: 850; }
+.equity-assumption-grid strong { color: #294c61; font-size: 17px; }
+.equity-assumption-grid small { color: #7a8994; font-size: 8px; }
+.equity-range-grid article > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.equity-range-grid b,
+.equity-threshold-list b {
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: #34586d;
+  background: #edf3f5;
+  font-size: 9px;
+}
+.equity-threshold-list { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 12px; padding: 12px; border-radius: 11px; background: #f3f7f8; }
+.equity-threshold-list > span { width: 100%; }
+.equity-scenario-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; align-items: end; gap: 9px; margin-top: 15px; }
+.equity-scenario-form label { display: grid; min-width: 0; gap: 6px; color: #5d7585; font-size: 9px; font-weight: 850; }
+.equity-scenario-form input { width: 100%; min-width: 0; min-height: 44px; padding: 9px 10px; border: 1px solid #cfdae0; border-radius: 9px; color: #294b60; background: #fff; font: inherit; font-size: 11px; }
+.equity-association-disclosure { margin-top: 14px !important; padding-top: 11px; border-top: 1px solid #e4eaee; color: #71828e; font-size: 9px; line-height: 1.55; }
 .model-boundary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
 .model-boundary-grid article { display: grid; gap: 6px; padding: 14px; border: 1px solid #e1e8ec; border-radius: 13px; background: #f8fafb; }
 .model-boundary-grid span { color: #7b8790; font-size: 8px; font-weight: 900; letter-spacing: .08em; }
@@ -753,6 +799,7 @@ button, input, summary { font: inherit; }
   .yield-lens-grid,
   .resistance-zone-grid,
   .reverse-workspace-grid,
+  .equity-range-grid,
   .provenance-version-grid { grid-template-columns: 1fr 1fr; }
   .freshness-clock-list article { grid-template-columns: 1fr 1fr; }
 }
@@ -784,6 +831,9 @@ button, input, summary { font: inherit; }
   .yield-lens-grid,
   .resistance-zone-grid,
   .reverse-workspace-grid,
+  .equity-assumption-grid,
+  .equity-range-grid,
+  .equity-scenario-form,
   .model-boundary-grid,
   .provenance-version-grid,
   .inflation-evidence-list dl,

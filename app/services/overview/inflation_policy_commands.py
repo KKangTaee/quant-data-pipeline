@@ -12,10 +12,12 @@ from typing import Any
 
 from finance.data.inflation_policy_results import save_yield_resistance_definition
 from finance.inflation_policy_equity_stress import (
+    EQUITY_PUBLICATION_CONTRACT_VERSION,
     EquityStressArtifact,
     simulate_equity_stress,
 )
 from finance.inflation_policy_simulation import (
+    JOINT_PATH_COMPONENT,
     RateTargetCondition,
     SimulationPath,
     condition_paths_on_target,
@@ -243,6 +245,27 @@ def _summary_mapping(value: object) -> dict[str, object]:
     raise ValueError("reverse scenario runner returned an invalid summary")
 
 
+def _joint_path_contract_ready(artifact: Mapping[str, object]) -> bool:
+    if str(artifact.get("publication_status") or "") != "READY":
+        return False
+    validation = _decoded_mapping(
+        artifact.get("validation_json"), field="joint path validation_json"
+    )
+    return str(validation.get("joint_path_publication_status") or "") == "READY"
+
+
+def _equity_contract_versioned(artifact: Mapping[str, object]) -> bool:
+    if str(artifact.get("publication_status") or "") not in {"READY", "LIMITED"}:
+        return False
+    validation = _decoded_mapping(
+        artifact.get("validation_json"), field="equity validation_json"
+    )
+    return (
+        str(validation.get("publication_contract_version") or "")
+        == EQUITY_PUBLICATION_CONTRACT_VERSION
+    )
+
+
 def run_reverse_scenario_command(
     command: Mapping[str, object],
     *,
@@ -279,16 +302,16 @@ def run_reverse_scenario_command(
     artifact = artifact_loader(
         model_version=model_version,
         trained_cutoff_at=trained_cutoff_at,
-        component="core_pce_hybrid",
+        component=JOINT_PATH_COMPONENT,
     )
     if artifact is None:
         return _not_available(
             reason="선택한 snapshot과 정확히 일치하는 검증 artifact가 없습니다.",
             snapshot=snapshot,
         )
-    if str(artifact.get("publication_status") or "") != "READY":
+    if not _joint_path_contract_ready(artifact):
         return _not_available(
-            reason="정확히 일치하는 artifact가 아직 READY 검증을 통과하지 못했습니다.",
+            reason="정확히 일치하는 공동 거시경로가 아직 READY 검증을 통과하지 못했습니다.",
             snapshot=snapshot,
         )
     parameters = _decoded_mapping(artifact.get("parameters_json"), field="parameters_json")
@@ -451,28 +474,57 @@ def run_equity_stress_scenario_command(
             reason="선택한 snapshot과 정확히 일치하는 주식 스트레스 artifact가 없습니다.",
             snapshot=snapshot,
         )
+    if not _equity_contract_versioned(equity_row):
+        return _not_available(
+            reason="선택한 주식 스트레스 artifact의 공개 검증 계약이 일치하지 않습니다.",
+            snapshot=snapshot,
+        )
     macro_row = artifact_loader(
         model_version=model_version,
         trained_cutoff_at=trained_cutoff_at,
-        component="core_pce_hybrid",
+        component=JOINT_PATH_COMPONENT,
     )
     if macro_row is None:
         return _not_available(
             reason="선택한 snapshot과 정확히 일치하는 공동 거시경로 artifact가 없습니다.",
             snapshot=snapshot,
         )
-    equity_parameters = _decoded_mapping(
-        equity_row.get("parameters_json"), field="equity parameters"
-    )
+    if not _joint_path_contract_ready(macro_row):
+        return _not_available(
+            reason="선택한 snapshot의 공동 거시경로가 READY 검증을 통과하지 못했습니다.",
+            snapshot=snapshot,
+        )
     macro_parameters = _decoded_mapping(
         macro_row.get("parameters_json"), field="macro parameters"
     )
-    current_index = equity_parameters.get("current_index_level")
-    forward_eps = equity_parameters.get("base_forward_eps")
+    try:
+        equity_snapshot = _decoded_mapping(
+            snapshot.get("equity_json"), field="snapshot.equity_json"
+        )
+    except ValueError:
+        return _not_available(
+            reason="선택한 snapshot에 재현 가능한 주식 scenario context가 없습니다.",
+            snapshot=snapshot,
+        )
+    current_index = equity_snapshot.get("current_index_level")
+    forward_eps = equity_snapshot.get("base_forward_eps")
+    measured_revision = equity_snapshot.get(
+        "measured_next_year_eps_revision_pct"
+    )
+    try:
+        scenario_features = _decoded_mapping(
+            equity_snapshot.get("scenario_feature_values"),
+            field="snapshot.equity_json.scenario_feature_values",
+        )
+    except ValueError:
+        return _not_available(
+            reason="선택한 snapshot에 시작 금리 context가 없습니다.",
+            snapshot=snapshot,
+        )
     raw_paths = macro_parameters.get("joint_rate_paths")
     if current_index is None or forward_eps is None:
         return _not_available(
-            reason="주식 스트레스 artifact에 현재 지수와 차년도 EPS 기준이 없습니다.",
+            reason="선택한 snapshot에 현재 지수와 차년도 EPS 기준이 없습니다.",
             snapshot=snapshot,
         )
     if not isinstance(raw_paths, Sequence) or isinstance(raw_paths, (str, bytes)) or not raw_paths:
@@ -480,13 +532,24 @@ def run_equity_stress_scenario_command(
             reason="검증 artifact에 공동 물가·정책·금리 경로가 저장되어 있지 않습니다.",
             snapshot=snapshot,
         )
+    equity_artifact = _equity_artifact(equity_row)
     result = scenario_runner(
-        _equity_artifact(equity_row),
+        equity_artifact,
         _simulation_paths(raw_paths),
         current_index=_finite(current_index, field="current index"),
         forward_eps=_finite(forward_eps, field="forward EPS"),
         user_ai_eps_uplift_pct=uplift,
         target_levels=(target_level,),
+        scenario_feature_values={
+            key: _finite(item, field=f"scenario_feature_values.{key}")
+            for key, item in scenario_features.items()
+        },
+        measured_next_year_eps_revision_pct=(
+            _finite(measured_revision, field="measured next-year EPS revision")
+            if measured_revision is not None
+            else None
+        ),
+        as_of_at=str(snapshot.get("as_of_at") or ""),
     )
     return {
         **_summary_mapping(result),

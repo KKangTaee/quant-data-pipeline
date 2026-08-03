@@ -27,9 +27,22 @@ from finance.inflation_policy_model import (
     CorePCEHybridArtifact,
     fit_core_pce_hybrid_artifact,
 )
+from finance.inflation_policy_equity_stress import (
+    EQUITY_PUBLICATION_CONTRACT_VERSION,
+    EquityStressArtifact,
+    EquityStressResult,
+    build_equity_calibration_panel,
+    build_equity_scenario_context,
+    fit_equity_stress_model,
+    simulate_equity_stress,
+)
+from finance.inflation_policy_simulation import JOINT_PATH_COMPONENT, SimulationPath
 from finance.loaders.inflation_policy import (
     InflationPolicyDataBundle,
+    InflationPolicyEquityBundle,
     load_inflation_policy_data_bundle,
+    load_inflation_policy_equity_bundle,
+    load_inflation_policy_model_artifact,
     load_inflation_policy_training_vintages,
 )
 from finance.policy_path import (
@@ -81,6 +94,7 @@ class InflationPolicyMaterialization:
     policy: dict[str, object]
     rates: dict[str, object]
     reverse: dict[str, object]
+    equity: dict[str, object]
     warnings: tuple[str, ...]
 
 
@@ -379,6 +393,7 @@ def _not_available_materialization(
     policy = {"publication_status": "NOT_AVAILABLE", "reason": reason}
     rates = {"publication_status": "NOT_AVAILABLE", "reason": reason}
     reverse = {"publication_status": "NOT_AVAILABLE", "reason": reason}
+    equity = _empty_equity_payload()
     warnings = (reason, "recession_model_not_available")
     snapshot = {
         "as_of_at": bundle.as_of_at,
@@ -389,6 +404,7 @@ def _not_available_materialization(
         "policy_json": policy,
         "rates_json": rates,
         "reverse_json": reverse,
+        "equity_json": equity,
         "evidence_json": {"coverage": bundle.coverage},
         "freshness_json": {"as_of_at": bundle.as_of_at},
         "warnings_json": warnings,
@@ -400,8 +416,50 @@ def _not_available_materialization(
         policy=policy,
         rates=rates,
         reverse=reverse,
+        equity=equity,
         warnings=warnings,
     )
+
+
+def _empty_equity_payload(
+    reason: str = "official_eps_vintages_or_joint_paths_not_available",
+) -> dict[str, object]:
+    """Return a typed, independently gated equity component payload."""
+
+    return {
+        "publication_status": "NOT_AVAILABLE",
+        "reason": reason,
+        "index_quantiles": {},
+        "eps_quantiles": {},
+        "multiple_quantiles": {},
+        "threshold_probabilities": {},
+        "target_decompositions": {},
+        "measured_next_year_eps_revision_pct": None,
+        "user_ai_eps_uplift_pct": 0.0,
+        "scenario_kind": "MODEL_BASE",
+        "current_index_level": None,
+        "base_forward_eps": None,
+        "scenario_feature_values": {},
+    }
+
+
+def _equity_payload_with_context(
+    payload: Mapping[str, object], context: Mapping[str, object]
+) -> dict[str, object]:
+    """Attach snapshot-as-of inputs without mutating the model artifact identity."""
+
+    return {
+        **dict(payload),
+        "as_of_at": context.get("as_of_at"),
+        "current_index_level": context.get("current_index_level"),
+        "base_forward_eps": context.get("base_forward_eps"),
+        "measured_next_year_eps_revision_pct": context.get(
+            "measured_next_year_eps_revision_pct"
+        ),
+        "scenario_feature_values": dict(
+            context.get("scenario_feature_values") or {}
+        ),
+    }
 
 
 def _forecast_months(last_known: date) -> tuple[date, ...]:
@@ -680,6 +738,7 @@ def _rates_only_materialization(
     policy = {"publication_status": "NOT_AVAILABLE", "reason": reason}
     rates = _build_rates_payload(bundle)
     reverse = {"publication_status": "NOT_AVAILABLE", "reason": reason}
+    equity = _empty_equity_payload()
     warnings = tuple(
         dict.fromkeys(
             (
@@ -707,6 +766,7 @@ def _rates_only_materialization(
         "policy_json": policy,
         "rates_json": rates,
         "reverse_json": reverse,
+        "equity_json": equity,
         "evidence_json": {"coverage": bundle.coverage},
         "freshness_json": freshness,
         "warnings_json": warnings,
@@ -718,6 +778,7 @@ def _rates_only_materialization(
         policy=policy,
         rates=rates,
         reverse=reverse,
+        equity=equity,
         warnings=warnings,
     )
 
@@ -749,6 +810,8 @@ def materialize_inflation_policy_analysis(
     sample_count: int,
     seed: int,
     core_artifact: CorePCEMomentumArtifact | CorePCEHybridArtifact | None = None,
+    equity: Mapping[str, object] | EquityStressResult | None = None,
+    equity_joint_paths_ready: bool = False,
 ) -> InflationPolicyMaterialization:
     """Build a compact current/replay payload while preserving each component gate."""
 
@@ -890,6 +953,20 @@ def materialize_inflation_policy_analysis(
         "publication_status": "NOT_AVAILABLE",
         "reason": "joint_rate_path_validation_not_ready",
     }
+    if isinstance(equity, EquityStressResult):
+        equity_payload = asdict(equity)
+    elif equity is not None:
+        equity_payload = dict(equity)
+    else:
+        equity_payload = _empty_equity_payload()
+    if (
+        str(equity_payload.get("publication_status") or "") in {"READY", "LIMITED"}
+        and not equity_joint_paths_ready
+    ):
+        equity_payload = _equity_payload_with_context(
+            _empty_equity_payload("joint_rate_paths_not_available"),
+            equity_payload,
+        )
     warnings = tuple(
         dict.fromkeys(
             (
@@ -956,6 +1033,7 @@ def materialize_inflation_policy_analysis(
         "policy_json": policy,
         "rates_json": rates,
         "reverse_json": reverse,
+        "equity_json": equity_payload,
         "evidence_json": {
             "coverage": bundle.coverage,
             "core_validation": core_artifact.validation_metrics,
@@ -970,8 +1048,115 @@ def materialize_inflation_policy_analysis(
         policy=policy,
         rates=rates,
         reverse=reverse,
+        equity=equity_payload,
         warnings=warnings,
     )
+
+
+def _decoded_object(value: object, *, field: str) -> dict[str, object]:
+    try:
+        decoded = json.loads(value) if isinstance(value, str) else value
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{field} must be valid JSON") from exc
+    if not isinstance(decoded, Mapping):
+        raise ValueError(f"{field} must be an object")
+    return {str(key): item for key, item in decoded.items()}
+
+
+def _validated_joint_paths(
+    artifact: Mapping[str, object] | None,
+) -> tuple[SimulationPath, ...]:
+    """Deserialize paths only when their own publication contract is READY."""
+
+    if artifact is None or str(artifact.get("publication_status") or "") != "READY":
+        return ()
+    validation = _decoded_object(
+        artifact.get("validation_json"), field="joint path validation_json"
+    )
+    if str(validation.get("joint_path_publication_status") or "") != "READY":
+        return ()
+    parameters = _decoded_object(
+        artifact.get("parameters_json"), field="joint path parameters_json"
+    )
+    raw_paths = parameters.get("joint_rate_paths")
+    if not isinstance(raw_paths, Sequence) or isinstance(raw_paths, (str, bytes)):
+        return ()
+    paths: list[SimulationPath] = []
+    for index, raw in enumerate(raw_paths[:50_000]):
+        if not isinstance(raw, Mapping):
+            raise ValueError(f"joint_rate_paths[{index}] must be an object")
+        rate_paths = _decoded_object(
+            raw.get("rate_paths_pct"),
+            field=f"joint_rate_paths[{index}].rate_paths_pct",
+        )
+        paths.append(
+            SimulationPath(
+                path_id=str(raw.get("path_id") or f"path-{index}"),
+                weight=_finite(raw.get("weight"), field="joint path weight"),
+                q4_core_pce_pct=_finite(
+                    raw.get("q4_core_pce_pct"), field="joint path Core PCE"
+                ),
+                remaining_monthly_mom_pct=tuple(
+                    _finite(item, field="joint path remaining PCE")
+                    for item in (raw.get("remaining_monthly_mom_pct") or ())
+                ),
+                policy_net_steps=int(raw.get("policy_net_steps") or 0),
+                year_end_policy_midpoint_pct=_finite(
+                    raw.get("year_end_policy_midpoint_pct"),
+                    field="joint path policy midpoint",
+                ),
+                rate_paths_pct={
+                    str(instrument): tuple(
+                        _finite(item, field=f"{instrument} joint path")
+                        for item in values
+                    )
+                    for instrument, values in rate_paths.items()
+                    if isinstance(values, Sequence)
+                    and not isinstance(values, (str, bytes))
+                },
+            )
+        )
+    return tuple(paths)
+
+
+def _equity_artifact_row(
+    artifact: EquityStressArtifact,
+    *,
+    model_version: str,
+    trained_cutoff_at: str,
+) -> dict[str, object]:
+    training_start = artifact.validation_metrics.get("training_start_date")
+    if not training_start:
+        raise ValueError("equity artifact training_start_date is required")
+    artifact_payload = asdict(artifact)
+    # Model artifacts are immutable for a training cutoff. Live market context is
+    # snapshot-as-of state and must never be UPSERTed into this identity.
+    artifact_payload["latest_measured_next_year_eps_revision_pct"] = None
+    artifact_payload["scenario_feature_values"] = {}
+    return {
+        "model_version": str(model_version),
+        "trained_cutoff_at": str(trained_cutoff_at),
+        "component": "equity_stress",
+        "feature_schema_version": "equity-year-end-path-features-v2",
+        "transform_schema_version": "next-year-eps-forward-multiple-v2",
+        "state_schema_version": "equity-conditional-stress-v1",
+        "training_start_date": str(training_start),
+        "forecast_horizon": "calendar_year_end",
+        "ensemble_weight": 1.0,
+        "parameters_json": {"artifact": artifact_payload},
+        "validation_json": artifact.validation_metrics,
+        "calibration_json": {
+            "publication_status": artifact.publication_status,
+            "publication_contract_version": artifact.validation_metrics.get(
+                "publication_contract_version"
+            ),
+            "maximum_coverage_80_error": artifact.validation_metrics.get(
+                "maximum_coverage_80_error"
+            ),
+        },
+        "publication_status": artifact.publication_status,
+        "publication_reasons_json": artifact.reason_codes,
+    }
 
 
 def run_inflation_policy_materialization(
@@ -992,6 +1177,17 @@ def run_inflation_policy_materialization(
     artifact_trainer: Callable[..., CorePCEHybridArtifact] = (
         fit_core_pce_hybrid_artifact
     ),
+    equity_bundle_loader: Callable[..., InflationPolicyEquityBundle] = (
+        load_inflation_policy_equity_bundle
+    ),
+    equity_panel_builder: Callable[..., object] = build_equity_calibration_panel,
+    equity_artifact_trainer: Callable[..., EquityStressArtifact] = (
+        fit_equity_stress_model
+    ),
+    joint_path_artifact_loader: Callable[..., Mapping[str, object] | None] = (
+        load_inflation_policy_model_artifact
+    ),
+    equity_scenario_runner: Callable[..., EquityStressResult] = simulate_equity_stress,
     artifact_saver: Callable[[Mapping[str, object]], object] | None = None,
     snapshot_saver: Callable[[Mapping[str, object]], object] | None = None,
 ) -> InflationPolicyMaterialization:
@@ -1028,23 +1224,133 @@ def run_inflation_policy_materialization(
             policy=unavailable.policy,
             rates=unavailable.rates,
             reverse=unavailable.reverse,
+            equity=unavailable.equity,
             warnings=unavailable.warnings,
         )
+    equity_payload: Mapping[str, object] | EquityStressResult | None = None
+    equity_artifact_row: dict[str, object] | None = None
+    equity_context: Mapping[str, object] | None = None
+    equity_joint_paths_ready = False
+    try:
+        equity_bundle = equity_bundle_loader(
+            as_of_at=as_of_at, history_start=history_start
+        )
+        required_coverage = (
+            "official_eps_vintage_status",
+            "sp500_price_status",
+            "yield_status",
+        )
+        missing_coverage = [
+            field
+            for field in required_coverage
+            if str(equity_bundle.coverage.get(field) or "") != "READY"
+        ]
+        if missing_coverage:
+            equity_payload = _empty_equity_payload(
+                "official_eps_vintages_or_joint_paths_not_available"
+            )
+        else:
+            equity_panel = equity_panel_builder(
+                price_rows=equity_bundle.price_rows,
+                eps_rows=equity_bundle.eps_rows,
+                yield_rows=equity_bundle.yield_rows,
+                as_of_at=equity_bundle.as_of_at,
+            )
+            equity_context = build_equity_scenario_context(
+                equity_panel, as_of_at=equity_bundle.as_of_at
+            )
+            equity_artifact = equity_artifact_trainer(
+                equity_panel,
+                minimum_origins=60,
+                ridge_alpha=1.0,
+                model_version=config.model_version,
+            )
+            contract_version = str(
+                equity_artifact.validation_metrics.get(
+                    "publication_contract_version"
+                )
+                or ""
+            )
+            if (
+                equity_artifact.publication_status in {"READY", "LIMITED"}
+                and contract_version == EQUITY_PUBLICATION_CONTRACT_VERSION
+            ):
+                equity_artifact_row = _equity_artifact_row(
+                    equity_artifact,
+                    model_version=config.model_version,
+                    trained_cutoff_at=artifact.trained_cutoff_at,
+                )
+                joint_artifact = joint_path_artifact_loader(
+                    model_version=config.model_version,
+                    trained_cutoff_at=artifact.trained_cutoff_at,
+                    component=JOINT_PATH_COMPONENT,
+                )
+                joint_paths = _validated_joint_paths(joint_artifact)
+                if joint_paths:
+                    equity_payload = equity_scenario_runner(
+                        equity_artifact,
+                        joint_paths,
+                        current_index=equity_context["current_index_level"],
+                        forward_eps=equity_context["base_forward_eps"],
+                        scenario_feature_values=equity_context[
+                            "scenario_feature_values"
+                        ],
+                        measured_next_year_eps_revision_pct=equity_context[
+                            "measured_next_year_eps_revision_pct"
+                        ],
+                        as_of_at=str(equity_context["as_of_at"]),
+                    )
+                    equity_joint_paths_ready = True
+                else:
+                    equity_payload = _equity_payload_with_context(
+                        _empty_equity_payload("joint_rate_paths_not_available"),
+                        equity_context,
+                    )
+            else:
+                equity_payload = _equity_payload_with_context(
+                    _empty_equity_payload(
+                        "equity_model_not_publishable:"
+                        + ",".join(
+                            equity_artifact.reason_codes
+                            or ("publication_contract_mismatch",)
+                        )
+                    ),
+                    equity_context,
+                )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        equity_payload = {
+            **(
+                _equity_payload_with_context(
+                    _empty_equity_payload(f"equity_component_exception:{exc}"),
+                    equity_context,
+                )
+                if equity_context is not None
+                else _empty_equity_payload(f"equity_component_exception:{exc}")
+            ),
+            "publication_status": "FAILED",
+        }
+
     result = materialize_inflation_policy_analysis(
         bundle,
         config=config,
         sample_count=sample_count,
         seed=seed,
         core_artifact=artifact,
+        equity=equity_payload,
+        equity_joint_paths_ready=equity_joint_paths_ready,
     )
     snapshot = {**result.snapshot_row, "run_kind": run_kind}
+    artifact_rows = result.model_artifact_rows + (
+        (equity_artifact_row,) if equity_artifact_row is not None else ()
+    )
     result = InflationPolicyMaterialization(
         snapshot_row=snapshot,
-        model_artifact_rows=result.model_artifact_rows,
+        model_artifact_rows=artifact_rows,
         inflation=result.inflation,
         policy=result.policy,
         rates=result.rates,
         reverse=result.reverse,
+        equity=result.equity,
         warnings=result.warnings,
     )
     if (
@@ -1098,6 +1404,7 @@ def _compact_cli_payload(
             "next_overhead_zone": dgs10.get("next_overhead_zone"),
         },
         "reverse": result.reverse,
+        "equity": result.equity,
         "warnings": result.warnings,
     }
 

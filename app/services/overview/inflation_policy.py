@@ -42,6 +42,15 @@ REASON_LABELS = {
         "검증된 사전 인플레이션 확률이 없어 확인 상태를 확정할 수 없습니다."
     ),
     "benchmark_suite_incomplete": "필수 비교 검증 묶음이 아직 완전하지 않습니다.",
+    "official_eps_vintages_not_available": (
+        "공식 S&P 500 EPS 빈티지가 없어 주가 스트레스를 계산할 수 없습니다."
+    ),
+    "official_eps_vintages_or_joint_paths_not_available": (
+        "공식 S&P 500 EPS 빈티지와 검증된 공동 거시경로가 필요합니다."
+    ),
+    "joint_rate_paths_not_available": (
+        "검증된 물가·정책·금리 공동 경로가 없어 주가 스트레스를 계산할 수 없습니다."
+    ),
     "recession_model_not_available": "침체 모델은 5차 개발 전까지 연결하지 않습니다.",
 }
 
@@ -176,6 +185,91 @@ def _empty_reverse(reason: str) -> dict[str, object]:
     return {"publication_status": "NOT_AVAILABLE", "reason": reason}
 
 
+def _empty_equity(reason: str, *, status: str = "NOT_AVAILABLE") -> dict[str, object]:
+    return {
+        "publication_status": status,
+        "reason": reason,
+        "as_of_at": None,
+        "index_quantiles": {},
+        "eps_quantiles": {},
+        "multiple_quantiles": {},
+        "threshold_probabilities": {},
+        "target_decompositions": {},
+        "measured_next_year_eps_revision_pct": None,
+        "user_ai_eps_uplift_pct": 0.0,
+        "scenario_kind": "MODEL_BASE",
+        "current_index_level": None,
+        "base_forward_eps": None,
+    }
+
+
+def _optional_finite(value: object, *, field: str) -> float | None:
+    if value is None:
+        return None
+    return _finite(value, field=field)
+
+
+def _finite_mapping(value: object, *, field: str) -> dict[str, float]:
+    return {
+        key: _finite(item, field=f"{field}.{key}")
+        for key, item in _mapping(value).items()
+    }
+
+
+def _equity_section(value: object) -> dict[str, object]:
+    unavailable_reason = "공식 S&P 500 EPS 빈티지와 검증된 공동 거시경로가 필요합니다."
+    try:
+        raw = _mapping(value)
+        if not raw:
+            return _empty_equity(unavailable_reason)
+        status = _status(raw.get("publication_status"))
+        ai_uplift = _finite(
+            raw.get("user_ai_eps_uplift_pct", 0.0),
+            field="equity.user_ai_eps_uplift_pct",
+        )
+        if not -30.0 <= ai_uplift <= 50.0:
+            raise ValueError("equity.user_ai_eps_uplift_pct must be between -30 and 50")
+        thresholds = _probabilities(
+            raw.get("threshold_probabilities"), field="equity thresholds"
+        )
+        if status != "READY":
+            thresholds = {}
+        return {
+            "publication_status": status,
+            "reason": _reason(raw.get("reason"), fallback=unavailable_reason),
+            "as_of_at": _json_safe(raw.get("as_of_at")),
+            "index_quantiles": _finite_mapping(
+                raw.get("index_quantiles"), field="equity.index_quantiles"
+            ),
+            "eps_quantiles": _finite_mapping(
+                raw.get("eps_quantiles"), field="equity.eps_quantiles"
+            ),
+            "multiple_quantiles": _finite_mapping(
+                raw.get("multiple_quantiles"), field="equity.multiple_quantiles"
+            ),
+            "threshold_probabilities": thresholds,
+            "target_decompositions": _json_safe(
+                _mapping(raw.get("target_decompositions"))
+            ),
+            "measured_next_year_eps_revision_pct": _optional_finite(
+                raw.get("measured_next_year_eps_revision_pct"),
+                field="equity.measured_next_year_eps_revision_pct",
+            ),
+            "user_ai_eps_uplift_pct": ai_uplift,
+            "scenario_kind": str(raw.get("scenario_kind") or "MODEL_BASE"),
+            "current_index_level": _optional_finite(
+                raw.get("current_index_level"), field="equity.current_index_level"
+            ),
+            "base_forward_eps": _optional_finite(
+                raw.get("base_forward_eps"), field="equity.base_forward_eps"
+            ),
+        }
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return _empty_equity(
+            "저장된 주가 스트레스 payload 검증에 실패했습니다.", status="FAILED"
+        )
+
+
 def _criterion_row(
     raw: Mapping[str, object],
     *,
@@ -284,6 +378,7 @@ def _build_model(
     policy_raw = _mapping(snapshot.get("policy_json"))
     rates_raw = _mapping(snapshot.get("rates_json"))
     reverse_raw = _mapping(snapshot.get("reverse_json"))
+    equity = _equity_section(snapshot.get("equity_json"))
     evidence_raw = _mapping(snapshot.get("evidence_json"))
     freshness_raw = _mapping(snapshot.get("freshness_json"))
     warning_rows = _sequence(snapshot.get("warnings_json"))
@@ -410,10 +505,7 @@ def _build_model(
         "policy": policy,
         "rates": rates,
         "reverse_scenario": reverse,
-        "equity_stress": {
-            "publication_status": "NOT_AVAILABLE",
-            "reason": "주식시장 조건부 스트레스는 4차 개발 범위입니다.",
-        },
+        "equity_stress": equity,
         "recession": {
             "publication_status": "NOT_AVAILABLE",
             "reason": "침체 모델은 5차 개발 전까지 연결하지 않습니다.",
@@ -451,10 +543,9 @@ def _unavailable_model(*, status: str, summary: str) -> dict[str, object]:
         "policy": _empty_policy(reason),
         "rates": _empty_rates(reason),
         "reverse_scenario": _empty_reverse(reason),
-        "equity_stress": {
-            "publication_status": "NOT_AVAILABLE",
-            "reason": "주식시장 조건부 스트레스는 4차 개발 범위입니다.",
-        },
+        "equity_stress": _empty_equity(
+            "공식 S&P 500 EPS 빈티지와 검증된 공동 거시경로가 필요합니다."
+        ),
         "recession": {
             "publication_status": "NOT_AVAILABLE",
             "reason": "침체 모델은 5차 개발 전까지 연결하지 않습니다.",

@@ -323,6 +323,166 @@ def test_pipeline_materializes_compact_limited_snapshot_without_cycle_fallback()
     assert "q4_path_rolling_origin_validation_not_ready" in result.warnings
 
 
+def test_equity_failure_is_stored_without_changing_macro_sections() -> None:
+    from finance.inflation_policy_pipeline import (
+        build_limited_reference_config,
+        materialize_inflation_policy_analysis,
+    )
+    from finance.loaders.inflation_policy import InflationPolicyDataBundle
+
+    bundle = InflationPolicyDataBundle(
+        as_of_at="2026-07-29T18:00:00+00:00",
+        macro_rows=tuple(_month_rows() + _rate_rows()),
+        sep_rows=tuple(_sep_rows()),
+        decision_rows=(
+            {
+                "meeting_date": "2026-07-29",
+                "released_at": "2026-07-29 18:00:00",
+                "target_lower_before_pct": 3.5,
+                "target_upper_before_pct": 3.75,
+                "target_lower_after_pct": 3.5,
+                "target_upper_after_pct": 3.75,
+                "vote_for_count": 12,
+                "vote_against_count": 0,
+                "dissents_json": "[]",
+            },
+        ),
+        term_premium_rows=(),
+        coverage={"term_premium_status": "NOT_AVAILABLE"},
+    )
+    equity = {
+        "publication_status": "FAILED",
+        "reason": "equity_component_exception:fixture",
+        "index_quantiles": {},
+        "eps_quantiles": {},
+        "multiple_quantiles": {},
+        "threshold_probabilities": {},
+    }
+
+    result = materialize_inflation_policy_analysis(
+        bundle,
+        config=build_limited_reference_config(model_version="equity-isolation-v1"),
+        sample_count=100,
+        seed=3,
+        core_artifact=_momentum_artifact(),
+        equity=equity,
+        equity_joint_paths_ready=True,
+    )
+
+    assert result.inflation["publication_status"] == "LIMITED"
+    assert result.policy["publication_status"] == "LIMITED"
+    assert result.rates["publication_status"] == "LIMITED"
+    assert result.equity == equity
+    assert result.snapshot_row["equity_json"] == equity
+    assert result.snapshot_row["publication_status"] == "LIMITED"
+
+
+def test_pipeline_serializes_equity_stress_result_without_adapter() -> None:
+    from finance.inflation_policy_equity_stress import EquityStressResult
+    from finance.inflation_policy_pipeline import (
+        build_limited_reference_config,
+        materialize_inflation_policy_analysis,
+    )
+    from finance.loaders.inflation_policy import InflationPolicyDataBundle
+
+    bundle = InflationPolicyDataBundle(
+        as_of_at="2026-07-29T18:00:00+00:00",
+        macro_rows=tuple(_month_rows() + _rate_rows()),
+        sep_rows=tuple(_sep_rows()),
+        decision_rows=(
+            {
+                "meeting_date": "2026-07-29",
+                "released_at": "2026-07-29 18:00:00",
+                "target_lower_before_pct": 3.5,
+                "target_upper_before_pct": 3.75,
+                "target_lower_after_pct": 3.5,
+                "target_upper_after_pct": 3.75,
+                "vote_for_count": 12,
+                "vote_against_count": 0,
+                "dissents_json": "[]",
+            },
+        ),
+        term_premium_rows=(),
+        coverage={"term_premium_status": "NOT_AVAILABLE"},
+    )
+    equity = EquityStressResult(
+        as_of_at=bundle.as_of_at,
+        index_quantiles={"p50": 6400.0},
+        eps_quantiles={"p50": 320.0},
+        multiple_quantiles={"p50": 20.0},
+        threshold_probabilities={"6400": 0.50},
+        target_decompositions={},
+        measured_next_year_eps_revision_pct=1.5,
+        user_ai_eps_uplift_pct=3.0,
+        publication_status="READY",
+        reason_codes=(),
+        scenario_kind="conditional_stress",
+        current_index_level=6600.0,
+        base_forward_eps=310.0,
+    )
+
+    result = materialize_inflation_policy_analysis(
+        bundle,
+        config=build_limited_reference_config(model_version="equity-result-v1"),
+        sample_count=100,
+        seed=3,
+        core_artifact=_momentum_artifact(),
+        equity=equity,
+        equity_joint_paths_ready=True,
+    )
+
+    assert result.equity["publication_status"] == "READY"
+    assert result.equity["index_quantiles"] == {"p50": 6400.0}
+    assert result.equity["reason_codes"] == ()
+    assert result.snapshot_row["equity_json"] == result.equity
+
+
+def test_pipeline_downgrades_ready_equity_without_verified_joint_paths() -> None:
+    from finance.inflation_policy_equity_stress import EquityStressResult
+    from finance.inflation_policy_pipeline import (
+        build_limited_reference_config,
+        materialize_inflation_policy_analysis,
+    )
+    from finance.loaders.inflation_policy import InflationPolicyDataBundle
+
+    bundle = InflationPolicyDataBundle(
+        as_of_at="2026-07-29T18:00:00+00:00",
+        macro_rows=tuple(_month_rows() + _rate_rows()),
+        sep_rows=tuple(_sep_rows()),
+        decision_rows=(),
+        term_premium_rows=(),
+        coverage={},
+    )
+    equity = EquityStressResult(
+        as_of_at=bundle.as_of_at,
+        index_quantiles={"p50": 6400.0},
+        eps_quantiles={"p50": 320.0},
+        multiple_quantiles={"p50": 20.0},
+        threshold_probabilities={"6400": 0.50},
+        target_decompositions={},
+        measured_next_year_eps_revision_pct=1.5,
+        user_ai_eps_uplift_pct=0.0,
+        publication_status="READY",
+        reason_codes=(),
+        scenario_kind="MODEL_BASE",
+        current_index_level=6600.0,
+        base_forward_eps=310.0,
+    )
+
+    result = materialize_inflation_policy_analysis(
+        bundle,
+        config=build_limited_reference_config(model_version="equity-gate-v1"),
+        sample_count=100,
+        seed=3,
+        core_artifact=_momentum_artifact(),
+        equity=equity,
+    )
+
+    assert result.equity["publication_status"] == "NOT_AVAILABLE"
+    assert result.equity["index_quantiles"] == {}
+    assert result.inflation["publication_status"] == "LIMITED"
+
+
 def test_pipeline_returns_not_available_without_core_pce_history() -> None:
     from finance.inflation_policy_pipeline import (
         InflationPolicyEngineConfig,
@@ -526,6 +686,195 @@ def test_runner_performs_no_write_when_hybrid_training_is_unavailable() -> None:
     assert saved_snapshots == []
 
 
+def test_runner_materializes_and_persists_ready_equity_from_production_inputs() -> None:
+    import pandas as pd
+
+    from finance.inflation_policy_equity_stress import EquityStressArtifact
+    from finance.inflation_policy_pipeline import (
+        build_limited_reference_config,
+        run_inflation_policy_materialization,
+    )
+    from finance.loaders.inflation_policy import (
+        InflationPolicyDataBundle,
+        InflationPolicyEquityBundle,
+    )
+
+    bundle = InflationPolicyDataBundle(
+        as_of_at="2026-07-29T18:00:00+00:00",
+        macro_rows=tuple(_month_rows() + _rate_rows()),
+        sep_rows=tuple(_sep_rows()),
+        decision_rows=(),
+        term_premium_rows=(),
+        coverage={},
+    )
+    equity_bundle = InflationPolicyEquityBundle(
+        as_of_at=bundle.as_of_at,
+        price_rows=(),
+        eps_rows=(),
+        yield_rows=(),
+        coverage={
+            "official_eps_vintage_status": "READY",
+            "sp500_price_status": "READY",
+            "yield_status": "READY",
+        },
+    )
+    panel = pd.DataFrame(
+        [
+            {
+                "origin_date": "2026-07-29",
+                "current_index_level": 6600.0,
+                "forward_eps": 300.0,
+                "measured_next_year_eps_revision_pct": 1.5,
+                "months_to_year_end": 5.0,
+                "dgs10_pct": 4.4,
+                "real_yield_10y_pct": 2.0,
+                "breakeven_10y_pct": 2.4,
+            }
+        ]
+    )
+    equity_artifact = EquityStressArtifact(
+        model_version="runner-equity-v1",
+        eps_response={"intercept": 0.0},
+        multiple_response={"intercept": 0.0},
+        joint_residuals=((0.0, 0.0),),
+        validation_metrics={
+            "training_start_date": "2018-01-31",
+            "publication_contract_version": "equity-stress-publication-v1",
+            "maximum_coverage_80_error": 0.15,
+        },
+        trained_through="2025-12-31",
+        publication_status="READY",
+        reason_codes=(),
+        latest_measured_next_year_eps_revision_pct=1.5,
+        scenario_feature_values={
+            "months_to_year_end": 5.0,
+            "dgs2_pct": 3.7,
+            "dgs10_pct": 4.4,
+            "real_yield_10y_pct": 2.0,
+            "breakeven_10y_pct": 2.4,
+        },
+    )
+    joint_artifact = {
+        "publication_status": "READY",
+        "validation_json": {"joint_path_publication_status": "READY"},
+        "parameters_json": {
+            "joint_rate_paths": [
+                {
+                    "path_id": "central",
+                    "weight": 1.0,
+                    "q4_core_pce_pct": 3.5,
+                    "remaining_monthly_mom_pct": [0.2, 0.3],
+                    "policy_net_steps": 1,
+                    "year_end_policy_midpoint_pct": 4.125,
+                    "rate_paths_pct": {
+                        "DGS2": [3.7, 3.95],
+                        "DGS10": [4.4, 4.7],
+                        "DFII10": [2.0, 2.2],
+                        "T10YIE": [2.4, 2.5],
+                    },
+                }
+            ]
+        },
+    }
+    saved_artifacts: list[dict[str, object]] = []
+    saved_snapshots: list[dict[str, object]] = []
+    requested_joint_components: list[str] = []
+    artifact_store: dict[tuple[str, str, str], dict[str, object]] = {
+        (
+            "runner-equity-v1",
+            "2026-07-29T18:00:00+00:00",
+            "joint_macro_paths",
+        ): joint_artifact
+    }
+
+    def load_joint_artifact(**kwargs):
+        requested_joint_components.append(str(kwargs["component"]))
+        return artifact_store.get(
+            (
+                str(kwargs["model_version"]),
+                str(kwargs["trained_cutoff_at"]),
+                str(kwargs["component"]),
+            )
+        )
+
+    def save_artifact(row):
+        saved_artifacts.append(dict(row))
+        artifact_store[
+            (
+                str(row["model_version"]),
+                str(row["trained_cutoff_at"]),
+                str(row["component"]),
+            )
+        ] = dict(row)
+
+    result = run_inflation_policy_materialization(
+        as_of_at=bundle.as_of_at,
+        history_start="2015-01-01",
+        config=build_limited_reference_config(model_version="runner-equity-v1"),
+        run_kind="historical_replay",
+        persist=True,
+        bundle_loader=lambda **_kwargs: bundle,
+        vintage_loader=lambda **_kwargs: (),
+        artifact_trainer=lambda *_args, **_kwargs: _momentum_artifact(),
+        equity_bundle_loader=lambda **_kwargs: equity_bundle,
+        equity_panel_builder=lambda **_kwargs: panel,
+        equity_artifact_trainer=lambda *_args, **_kwargs: equity_artifact,
+        joint_path_artifact_loader=load_joint_artifact,
+        artifact_saver=save_artifact,
+        snapshot_saver=saved_snapshots.append,
+    )
+
+    repeated = run_inflation_policy_materialization(
+        as_of_at=bundle.as_of_at,
+        history_start="2015-01-01",
+        config=build_limited_reference_config(model_version="runner-equity-v1"),
+        run_kind="historical_replay",
+        persist=True,
+        bundle_loader=lambda **_kwargs: bundle,
+        vintage_loader=lambda **_kwargs: (),
+        artifact_trainer=lambda *_args, **_kwargs: _momentum_artifact(),
+        equity_bundle_loader=lambda **_kwargs: equity_bundle,
+        equity_panel_builder=lambda **_kwargs: panel,
+        equity_artifact_trainer=lambda *_args, **_kwargs: equity_artifact,
+        joint_path_artifact_loader=load_joint_artifact,
+        artifact_saver=save_artifact,
+        snapshot_saver=saved_snapshots.append,
+    )
+
+    assert result.equity["publication_status"] == "READY"
+    assert result.equity["as_of_at"] == bundle.as_of_at
+    assert result.equity["index_quantiles"]["p50"] == 6600.0
+    assert {row["component"] for row in saved_artifacts} == {
+        "core_pce_momentum",
+        "equity_stress",
+    }
+    assert repeated.equity["publication_status"] == "READY"
+    assert requested_joint_components == ["joint_macro_paths", "joint_macro_paths"]
+    assert artifact_store[
+        (
+            "runner-equity-v1",
+            "2026-07-29T18:00:00+00:00",
+            "joint_macro_paths",
+        )
+    ]["parameters_json"]["joint_rate_paths"]
+    equity_saved = next(
+        row for row in saved_artifacts if row["component"] == "equity_stress"
+    )
+    assert "current_index_level" not in equity_saved["parameters_json"]
+    assert "base_forward_eps" not in equity_saved["parameters_json"]
+    assert equity_saved["parameters_json"]["artifact"][
+        "scenario_feature_values"
+    ] == {}
+    assert equity_saved["parameters_json"]["artifact"][
+        "latest_measured_next_year_eps_revision_pct"
+    ] is None
+    assert saved_snapshots[0]["equity_json"]["publication_status"] == "READY"
+    assert saved_snapshots[0]["equity_json"]["current_index_level"] == 6600.0
+    assert saved_snapshots[0]["equity_json"]["scenario_feature_values"][
+        "dgs10_pct"
+    ] == 4.4
+
+
 def test_reference_config_is_explicitly_limited_and_contains_no_absolute_yield() -> None:
     from finance.inflation_policy_pipeline import build_limited_reference_config
 
@@ -558,6 +907,7 @@ def test_pipeline_cli_is_dry_run_unless_persist_is_explicit(monkeypatch, capsys)
             policy={"publication_status": "LIMITED"},
             rates={"publication_status": "LIMITED"},
             reverse={"publication_status": "NOT_AVAILABLE"},
+            equity={"publication_status": "NOT_AVAILABLE"},
             warnings=("fixture",),
         )
 

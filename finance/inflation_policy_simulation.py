@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from typing import Mapping, Sequence
 
 
+JOINT_PATH_COMPONENT = "joint_macro_paths"
+
+
 @dataclass(frozen=True)
 class RatePathProjection:
     """A 2-year path and two separate explanatory 10-year lenses."""

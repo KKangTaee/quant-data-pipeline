@@ -36,6 +36,22 @@ export type ResistanceZone = {
   editable: boolean;
 };
 
+export type EquityStressPayload = {
+  publication_status: InflationPublicationStatus;
+  reason: string;
+  as_of_at?: string | null;
+  index_quantiles: Record<string, number>;
+  eps_quantiles: Record<string, number>;
+  multiple_quantiles: Record<string, number>;
+  threshold_probabilities: Record<string, number>;
+  target_decompositions: Record<string, Record<string, unknown>>;
+  measured_next_year_eps_revision_pct?: number | null;
+  user_ai_eps_uplift_pct: number;
+  scenario_kind: string;
+  current_index_level?: number | null;
+  base_forward_eps?: number | null;
+};
+
 export type InflationPolicyPayload = {
   schema_version: "inflation_policy_v1";
   publication_status: InflationPublicationStatus;
@@ -81,12 +97,13 @@ export type InflationPolicyPayload = {
     publication_status: InflationPublicationStatus;
     reason: string;
   };
-  equity_stress: { publication_status: InflationPublicationStatus; reason: string };
+  equity_stress: EquityStressPayload;
   recession: { publication_status: InflationPublicationStatus; reason: string };
   evidence: { items: Record<string, unknown>[]; details: Record<string, unknown> };
   freshness: Record<string, unknown>;
   warnings: string[];
   command_result?: Record<string, unknown> & {
+    command_id?: InflationPolicyCommand["id"];
     publication_status?: InflationPublicationStatus;
     reason?: string;
   };
@@ -119,9 +136,16 @@ export type ReverseScenarioPayload = {
   as_of_at?: string | null;
 };
 
+export type EquityScenarioPayload = {
+  target_level: number;
+  user_ai_eps_uplift_pct: number;
+  as_of_at?: string | null;
+};
+
 export type InflationPolicyCommand =
   | { id: "save_yield_criterion"; nonce: string; payload: SaveCriterionPayload }
-  | { id: "run_reverse_scenario"; nonce: string; payload: ReverseScenarioPayload };
+  | { id: "run_reverse_scenario"; nonce: string; payload: ReverseScenarioPayload }
+  | { id: "run_equity_stress_scenario"; nonce: string; payload: EquityScenarioPayload };
 
 export type InflationPolicyWorkbenchProps = {
   payload: InflationPolicyPayload;

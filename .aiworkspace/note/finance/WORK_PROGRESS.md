@@ -7331,3 +7331,14 @@ Detailed historical logs were archived on `2026-04-13`.
 - Market Research 경제 사이클 안에 DB-backed `물가·정책 경로` 순방향·역산 화면과 USER 금리 기준 저장을 연결했다.
 - `LIMITED` 확률은 비공개, reverse·주가·침체는 `NOT_AVAILABLE`로 유지하며 기존 경기 사이클 확률을 재사용하지 않는다.
 - Python 122·React 8, actual DB와 desktop/420px Browser QA를 통과했다. 다음 위치는 4차 `inflation-policy-equity-stress`다.
+
+## 2026-08-03 - Inflation / Policy Yield Path 4/5 조건부 주식 스트레스 완료
+
+- official S&P 500 EPS vintage와 저장 가격·금리의 PIT year-end EPS×multiple model,
+  paired residual, bounded 사용자 AI EPS/임의 지수 수준 scenario를 구현했다.
+- 독립 `equity_json`·서비스·React panel을 연결했고 equity 실패는 물가·정책·금리
+  상태를 바꾸지 않는다. actual EPS 0건은 Shiller로 대체하지 않아 `NOT_AVAILABLE`이다.
+- 공동경로를 `joint_macro_paths`, live 지수·EPS·금리 context를 snapshot에 분리해 반복
+  실행과 historical replay 재현성을 고정했다.
+- Python 159·React 11, build와 actual desktop/390px Browser QA를 통과했다. 전체 4/5차
+  완료; 다음 위치는 기존 cycle 확률을 재사용하지 않는 5차 독립 침체 위험 모델이다.

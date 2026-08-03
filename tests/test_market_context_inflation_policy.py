@@ -56,6 +56,7 @@ def test_inflation_command_never_triggers_provider_refresh() -> None:
         {
             "publication_status": "NOT_AVAILABLE",
             "reason": "DGS10 공동 경로 부족",
+            "command_id": "run_reverse_scenario",
         }
     ]
     provider_refresh.assert_not_called()
@@ -142,5 +143,36 @@ def test_invalid_command_is_returned_to_ui_without_crashing_render() -> None:
 
     assert handled is True
     assert results == [
-        {"publication_status": "FAILED", "reason": "하단 오류"}
+        {
+            "publication_status": "FAILED",
+            "reason": "하단 오류",
+            "command_id": "run_reverse_scenario",
+        }
     ]
+
+
+def test_equity_scenario_event_is_routed_without_provider_refresh() -> None:
+    from app.web.overview.market_context_helpers import handle_inflation_policy_event
+
+    runner = Mock(return_value={"publication_status": "READY", "scenario_kind": "USER_ASSUMPTION"})
+    results: list[dict[str, object]] = []
+
+    handled = handle_inflation_policy_event(
+        {
+            "id": "run_equity_stress_scenario",
+            "nonce": "equity-1",
+            "payload": {"target_level": 6123, "user_ai_eps_uplift_pct": 5},
+        },
+        state={},
+        command_runner=runner,
+        provider_refresh=Mock(side_effect=AssertionError("provider must not run")),
+        store_result=results.append,
+        clear_cache=Mock(),
+        rerun=Mock(),
+    )
+
+    assert handled is True
+    runner.assert_called_once_with(
+        {"target_level": 6123, "user_ai_eps_uplift_pct": 5}
+    )
+    assert results[0]["command_id"] == "run_equity_stress_scenario"

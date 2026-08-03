@@ -1115,6 +1115,7 @@ INFLATION_POLICY_SCHEMAS = {
           policy_json LONGTEXT NOT NULL,
           rates_json LONGTEXT NOT NULL,
           reverse_json LONGTEXT NOT NULL,
+          equity_json LONGTEXT NOT NULL,
           evidence_json LONGTEXT NOT NULL,
           freshness_json LONGTEXT NOT NULL,
           warnings_json LONGTEXT NOT NULL,

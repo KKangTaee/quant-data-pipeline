@@ -42,8 +42,8 @@ function InflationEvidencePanel({ payload }: Props) {
 
       <div className="model-boundary-grid">
         <article>
-          <span>4차 예정</span>
-          <strong>주가 스트레스 미연결</strong>
+          <span>{payload.equity_stress.publication_status === "NOT_AVAILABLE" ? "4차 입력 대기" : "4차 연결"}</span>
+          <strong>{payload.equity_stress.publication_status === "NOT_AVAILABLE" ? "주가 스트레스 입력 미충족" : "조건부 주가 스트레스"}</strong>
           <p>{payload.equity_stress.reason}</p>
         </article>
         <article>

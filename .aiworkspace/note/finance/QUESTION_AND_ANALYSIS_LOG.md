@@ -10724,3 +10724,15 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 4.7%·3.5% 같은 값은 날짜가 붙은 시나리오로 두고, 독립 PIT 원천에서 5상태 물가·정책·금리·동적 저항 확률을 계산하는 workbench를 단계적으로 구현한다.
 - Analysis result: 공식 원천→PIT DB→strict loader→독립 artifact/snapshot 경계를 채택했고 실제 2026 source와 다음 날 PCE cutoff 제외로 1차 기반을 검증했다.
 - Follow-up: 전체 5차 중 3차 완료. 2026-07-29 replay를 읽는 순방향·목표 역산 workbench는 `LIMITED/NOT_AVAILABLE`을 승격하지 않고 AUTO/USER 기준을 분리한다. actual desktop/mobile QA까지 완료했으며 다음은 4차 독립 PIT S&P 500 stress다. 침체는 5차 독립 검증 전까지 `NOT_AVAILABLE`이다.
+
+### 2026-08-03 - 주가 경로는 EPS와 multiple의 조건부 범위로 분해한다
+
+- User request: 승인한 혼합형 물가·정책·10년물 틀의 다음 단계로 조건부 주식 스트레스
+  개발을 진행하도록 요청함.
+- Interpreted goal: 6,400을 전역 목표로 쓰지 않고 `차년도 EPS × forward multiple`로
+  분해하며, 측정 EPS 수정과 사용자 AI 수익화 가정을 분리하고 침체/cycle과 독립시킨다.
+- Analysis result: PIT rolling-origin model, independent `equity_json`, bounded scenario와
+  fail-closed UI를 구현했다. 공동경로 artifact와 snapshot별 live context를 분리했으며,
+  actual official EPS vintage 0건은 Shiller로 대체하지 않았다.
+- Follow-up: 전체 4/5차 완료. 다음 5차는 기존 경제 사이클 확률을 재사용하지 않는 독립
+  episode/OOS 침체 위험 모델이며, equity actual probability는 input/validation gate 전까지 숨긴다.

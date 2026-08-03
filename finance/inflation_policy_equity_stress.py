@@ -15,6 +15,7 @@ from finance.inflation_policy_simulation import SimulationPath
 
 PANEL_COLUMNS = (
     "origin_date",
+    "label_available_at",
     "eps_source_release_date",
     "target_eps_year",
     "current_index_level",
@@ -22,6 +23,7 @@ PANEL_COLUMNS = (
     "forward_multiple",
     "measured_next_year_eps_revision_pct",
     "months_to_year_end",
+    "q4_core_pce_pct",
     "dgs2_pct",
     "dgs10_pct",
     "real_yield_10y_pct",
@@ -41,11 +43,16 @@ PANEL_COLUMNS = (
 EQUITY_FEATURES = (
     "measured_next_year_eps_revision_pct",
     "months_to_year_end",
+    "q4_core_pce_pct",
     "policy_repricing_bp",
     "dgs10_change_bp",
     "real_yield_change_bp",
     "breakeven_change_bp",
 )
+
+EQUITY_PUBLICATION_CONTRACT_VERSION = "equity-stress-publication-v1"
+DEFAULT_MAXIMUM_COVERAGE_80_ERROR = 0.15
+MAX_RESIDUAL_DRAWS_PER_PATH = 16
 
 
 @dataclass(frozen=True)
@@ -54,6 +61,7 @@ class EquityStressValidationReport:
     fold_count: int
     index_mae: float | None
     baseline_index_mae: float | None
+    baseline_mae_by_name: dict[str, float]
     eps_mae: float | None
     multiple_mae: float | None
     coverage_80: float | None
@@ -92,6 +100,7 @@ class EquityStressResult:
     scenario_kind: str
     current_index_level: float
     base_forward_eps: float
+    scenario_feature_values: dict[str, float] = field(default_factory=dict)
 
 
 def _timestamp(value: object, *, field: str) -> pd.Timestamp:
@@ -104,6 +113,41 @@ def _timestamp(value: object, *, field: str) -> pd.Timestamp:
     if parsed.tzinfo is not None:
         parsed = parsed.tz_convert("UTC").tz_localize(None)
     return parsed.normalize()
+
+
+def _instant(value: object, *, field: str, date_only_at_end: bool = False) -> pd.Timestamp:
+    try:
+        parsed = pd.Timestamp(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Invalid {field}: {value!r}") from exc
+    if pd.isna(parsed):
+        raise ValueError(f"Invalid {field}: {value!r}")
+    if parsed.tzinfo is not None:
+        parsed = parsed.tz_convert("UTC").tz_localize(None)
+    date_only = (
+        isinstance(value, date)
+        and not isinstance(value, datetime)
+        or isinstance(value, str)
+        and len(value.strip()) == 10
+    )
+    if date_only_at_end and date_only:
+        parsed = parsed.normalize() + pd.Timedelta(days=1) - pd.Timedelta(microseconds=1)
+    return parsed
+
+
+def _end_of_day(value: pd.Timestamp) -> pd.Timestamp:
+    return value.normalize() + pd.Timedelta(days=1) - pd.Timedelta(microseconds=1)
+
+
+def _known_price_cutoff(as_of: pd.Timestamp) -> pd.Timestamp:
+    """Conservatively map an exact UTC cutoff to the latest known US close."""
+
+    utc = as_of.tz_localize("UTC") if as_of.tzinfo is None else as_of.tz_convert("UTC")
+    eastern = utc.tz_convert("America/New_York")
+    cutoff = eastern.normalize()
+    if eastern.hour < 16:
+        cutoff -= pd.Timedelta(days=1)
+    return cutoff.tz_localize(None)
 
 
 def _finite(value: object, *, field: str) -> float:
@@ -119,6 +163,7 @@ def _finite(value: object, *, field: str) -> float:
 def _price_frame(
     rows: Sequence[Mapping[str, object]], *, as_of: pd.Timestamp
 ) -> pd.DataFrame:
+    known_close_date = _known_price_cutoff(as_of)
     normalized: list[dict[str, object]] = []
     for raw in rows:
         date_value = raw.get("Date", raw.get("date", raw.get("observation_date")))
@@ -128,7 +173,7 @@ def _price_frame(
             close = _finite(close_value, field="index close")
         except ValueError:
             continue
-        if observed > as_of or close <= 0.0:
+        if observed > known_close_date or close <= 0.0:
             continue
         normalized.append({"date": observed, "close": close})
     if not normalized:
@@ -153,8 +198,10 @@ def _eps_frame(
             continue
         try:
             period_end = _timestamp(raw.get("period_end"), field="period_end")
-            released = _timestamp(
-                raw.get("source_release_date"), field="source_release_date"
+            released = _instant(
+                raw.get("source_release_date"),
+                field="source_release_date",
+                date_only_at_end=True,
             )
             eps = _finite(raw.get("eps"), field="EPS")
         except ValueError:
@@ -168,6 +215,8 @@ def _eps_frame(
                 "basis": basis,
                 "status": status,
                 "eps": eps,
+                "source": str(raw.get("source") or ""),
+                "source_ref": str(raw.get("source_ref") or ""),
             }
         )
     return pd.DataFrame(normalized)
@@ -178,7 +227,14 @@ def _forward_eps_at(
     *,
     cutoff: pd.Timestamp,
     target_year: int,
-) -> tuple[float, pd.Timestamp, dict[pd.Timestamp, float]] | None:
+) -> tuple[
+    float,
+    pd.Timestamp,
+    dict[pd.Timestamp, float],
+    str,
+    str,
+    str,
+] | None:
     if eps.empty:
         return None
     eligible = eps.loc[
@@ -192,24 +248,40 @@ def _forward_eps_at(
     }
     status_rank = {"estimate": 0, "mixed": 1, "actual": 2}
     eligible["status_rank"] = eligible["status"].map(status_rank).fillna(-1)
-    for basis in ("operating", "as_reported"):
-        basis_rows = eligible.loc[eligible["basis"] == basis].sort_values(
-            ["period_end", "released", "status_rank"]
+    complete: list[tuple[int, pd.Timestamp, str, str, pd.DataFrame]] = []
+    for (basis, source, source_ref, released), rows in eligible.groupby(
+        ["basis", "source", "source_ref", "released"], dropna=False
+    ):
+        selected = rows.sort_values(["period_end", "status_rank"]).drop_duplicates(
+            "period_end", keep="last"
         )
-        if basis_rows.empty:
-            continue
-        selected = basis_rows.drop_duplicates("period_end", keep="last")
         selected = selected.loc[selected["period_end"].isin(expected_periods)]
         if set(selected["period_end"]) != expected_periods:
             continue
+        complete.append(
+            (
+                1 if str(basis) == "operating" else 0,
+                pd.Timestamp(released),
+                str(source),
+                str(source_ref),
+                selected,
+            )
+        )
+    if complete:
+        _basis_rank, released, source, source_ref, selected = max(
+            complete, key=lambda item: (item[1], item[0], item[2], item[3])
+        )
         values = {
             pd.Timestamp(row.period_end): float(row.eps)
             for row in selected.itertuples()
         }
         return (
             float(sum(values.values())),
-            pd.Timestamp(selected["released"].max()),
+            released,
             values,
+            str(selected.iloc[0]["basis"]),
+            source,
+            source_ref,
         )
     return None
 
@@ -217,12 +289,19 @@ def _forward_eps_at(
 def _measured_revision(
     eps: pd.DataFrame,
     *,
-    selected: tuple[float, pd.Timestamp, dict[pd.Timestamp, float]],
+    selected: tuple[
+        float,
+        pd.Timestamp,
+        dict[pd.Timestamp, float],
+        str,
+        str,
+        str,
+    ],
     target_year: int,
 ) -> float | None:
-    current_value, release, _values = selected
+    current_value, release, _values, basis, source, _source_ref = selected
     prior = _forward_eps_at(
-        eps,
+        eps.loc[(eps["basis"] == basis) & (eps["source"] == source)],
         cutoff=release - pd.Timedelta(days=1),
         target_year=target_year,
     )
@@ -237,11 +316,15 @@ def _yield_series(
     by_series: dict[str, list[dict[str, object]]] = {}
     for raw in rows:
         series_id = str(raw.get("series_id") or "").upper()
-        if series_id not in {"DGS2", "DGS10", "DFII10", "T10YIE"}:
+        if series_id not in {"DGS2", "DGS10", "DFII10", "T10YIE", "PCEPILFE"}:
             continue
         try:
             observed = _timestamp(raw.get("observation_date"), field="yield date")
-            released = _timestamp(raw.get("released_at") or observed, field="released_at")
+            released = _instant(
+                raw.get("released_at") or observed,
+                field="released_at",
+                date_only_at_end=True,
+            )
             value = _finite(raw.get("value"), field=series_id)
         except ValueError:
             continue
@@ -252,40 +335,88 @@ def _yield_series(
         )
     result: dict[str, pd.DataFrame] = {}
     for series_id, values in by_series.items():
-        frame = pd.DataFrame(values).sort_values(["date", "released"])
-        result[series_id] = frame.drop_duplicates("date", keep="last").reset_index(
-            drop=True
-        )
+        result[series_id] = pd.DataFrame(values).sort_values(
+            ["date", "released"]
+        ).reset_index(drop=True)
     return result
 
 
-def _yield_at(
-    series: dict[str, pd.DataFrame], *, origin: pd.Timestamp
+def _series_value_at(
+    frame: pd.DataFrame | None, *, cutoff: pd.Timestamp
+) -> float | None:
+    if frame is None or frame.empty:
+        return None
+    eligible = frame.loc[
+        (frame["date"] <= cutoff.normalize()) & (frame["released"] <= cutoff)
+    ].sort_values(["date", "released"])
+    if eligible.empty:
+        return None
+    selected = eligible.drop_duplicates("date", keep="last")
+    return float(selected.iloc[-1]["value"])
+
+
+def _q4_core_pce_at(
+    series: dict[str, pd.DataFrame], *, target_year: int
+) -> tuple[float | None, pd.Timestamp | None]:
+    frame = series.get("PCEPILFE")
+    if frame is None or frame.empty:
+        return None, None
+    december = frame.loc[
+        (frame["date"].dt.year == target_year) & (frame["date"].dt.month == 12)
+    ].sort_values("released")
+    required = {
+        pd.Timestamp(date(year, month, 1))
+        for year in (target_year - 1, target_year)
+        for month in (10, 11, 12)
+    }
+    for release in december["released"].drop_duplicates():
+        eligible = frame.loc[
+            (frame["date"].isin(required)) & (frame["released"] <= release)
+        ].sort_values(["date", "released"])
+        selected = eligible.drop_duplicates("date", keep="last")
+        if set(selected["date"]) != required:
+            continue
+        values = {pd.Timestamp(row.date): float(row.value) for row in selected.itertuples()}
+        prior = sum(values[pd.Timestamp(date(target_year - 1, month, 1))] for month in (10, 11, 12)) / 3.0
+        current = sum(values[pd.Timestamp(date(target_year, month, 1))] for month in (10, 11, 12)) / 3.0
+        if prior > 0.0:
+            return (current / prior - 1.0) * 100.0, pd.Timestamp(release)
+    return None, None
+
+
+def _yield_path_features(
+    series: dict[str, pd.DataFrame],
+    *,
+    origin: pd.Timestamp,
+    endpoint: pd.Timestamp | None,
 ) -> dict[str, float | None]:
-    levels: dict[str, float | None] = {}
-    changes: dict[str, float | None] = {}
+    current: dict[str, float | None] = {}
+    future: dict[str, float | None] = {}
+    origin_cutoff = _end_of_day(origin)
+    endpoint_cutoff = _end_of_day(endpoint) if endpoint is not None else None
     for series_id in ("DGS2", "DGS10", "DFII10", "T10YIE"):
         frame = series.get(series_id)
-        eligible = frame.loc[frame["date"] <= origin] if frame is not None else None
-        if eligible is None or eligible.empty:
-            levels[series_id] = None
-            changes[series_id] = None
-            continue
-        levels[series_id] = float(eligible.iloc[-1]["value"])
-        prior_index = max(0, len(eligible) - 22)
-        changes[series_id] = (
-            float(eligible.iloc[-1]["value"] - eligible.iloc[prior_index]["value"])
-            * 100.0
+        current[series_id] = _series_value_at(frame, cutoff=origin_cutoff)
+        future[series_id] = (
+            _series_value_at(frame, cutoff=endpoint_cutoff)
+            if endpoint_cutoff is not None
+            else None
         )
+
+    def change(series_id: str) -> float | None:
+        start = current[series_id]
+        end = future[series_id]
+        return (end - start) * 100.0 if start is not None and end is not None else None
+
     return {
-        "dgs2_pct": levels["DGS2"],
-        "dgs10_pct": levels["DGS10"],
-        "real_yield_10y_pct": levels["DFII10"],
-        "breakeven_10y_pct": levels["T10YIE"],
-        "policy_repricing_bp": changes["DGS2"],
-        "dgs10_change_bp": changes["DGS10"],
-        "real_yield_change_bp": changes["DFII10"],
-        "breakeven_change_bp": changes["T10YIE"],
+        "dgs2_pct": current["DGS2"],
+        "dgs10_pct": current["DGS10"],
+        "real_yield_10y_pct": current["DFII10"],
+        "breakeven_10y_pct": current["T10YIE"],
+        "policy_repricing_bp": change("DGS2"),
+        "dgs10_change_bp": change("DGS10"),
+        "real_yield_change_bp": change("DFII10"),
+        "breakeven_change_bp": change("T10YIE"),
     }
 
 
@@ -304,7 +435,7 @@ def build_equity_calibration_panel(
 ) -> pd.DataFrame:
     """Build monthly origins without exposing later EPS releases to their features."""
 
-    as_of = _timestamp(as_of_at, field="as_of_at")
+    as_of = _instant(as_of_at, field="as_of_at", date_only_at_end=True)
     prices = _price_frame(price_rows, as_of=as_of)
     eps = _eps_frame(eps_rows, as_of=as_of)
     if prices.empty or eps.empty:
@@ -315,10 +446,19 @@ def build_equity_calibration_panel(
     for price in month_ends.itertuples():
         origin = pd.Timestamp(price.date)
         target_year = origin.year + 1
-        current_eps = _forward_eps_at(eps, cutoff=origin, target_year=target_year)
+        current_eps = _forward_eps_at(
+            eps, cutoff=_end_of_day(origin), target_year=target_year
+        )
         if current_eps is None:
             continue
-        current_eps_value, eps_release, _current_quarters = current_eps
+        (
+            current_eps_value,
+            eps_release,
+            _current_quarters,
+            _eps_basis,
+            _eps_source,
+            _eps_source_ref,
+        ) = current_eps
         current_index = float(price.close)
         current_multiple = current_index / current_eps_value
         year_prices = prices.loc[prices["date"].dt.year == origin.year]
@@ -335,7 +475,9 @@ def build_equity_calibration_panel(
             else None
         )
         future_eps_record = (
-            _forward_eps_at(eps, cutoff=endpoint_date, target_year=target_year)
+            _forward_eps_at(
+                eps, cutoff=_end_of_day(endpoint_date), target_year=target_year
+            )
             if endpoint_date is not None
             else None
         )
@@ -345,10 +487,22 @@ def build_equity_calibration_panel(
             if future_index is not None and future_eps is not None and future_eps > 0.0
             else None
         )
+        q4_core_pce_pct, q4_available_at = _q4_core_pce_at(
+            yields, target_year=origin.year
+        )
+        label_available_at = None
+        if endpoint_date is not None:
+            label_available_at = max(
+                _end_of_day(endpoint_date),
+                q4_available_at or _end_of_day(endpoint_date),
+            )
         rows.append(
             {
                 "origin_date": origin.strftime("%Y-%m-%d"),
-                "eps_source_release_date": eps_release.strftime("%Y-%m-%d"),
+                "label_available_at": (
+                    label_available_at.isoformat() if label_available_at is not None else None
+                ),
+                "eps_source_release_date": eps_release.date().isoformat(),
                 "target_eps_year": target_year,
                 "current_index_level": current_index,
                 "forward_eps": current_eps_value,
@@ -357,7 +511,10 @@ def build_equity_calibration_panel(
                     eps, selected=current_eps, target_year=target_year
                 ),
                 "months_to_year_end": 12 - origin.month,
-                **_yield_at(yields, origin=origin),
+                "q4_core_pce_pct": q4_core_pce_pct,
+                **_yield_path_features(
+                    yields, origin=origin, endpoint=endpoint_date
+                ),
                 "future_index_level": future_index,
                 "future_forward_eps": future_eps,
                 "future_forward_multiple": future_multiple,
@@ -374,6 +531,7 @@ def build_equity_calibration_panel(
 def _completed_panel(panel: pd.DataFrame) -> pd.DataFrame:
     required = {
         "origin_date",
+        "label_available_at",
         *EQUITY_FEATURES,
         "eps_change_pct",
         "multiple_change_pct",
@@ -383,12 +541,22 @@ def _completed_panel(panel: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=sorted(required))
     frame = panel.copy()
     frame["origin_date"] = pd.to_datetime(frame["origin_date"], errors="coerce")
+    frame["label_available_at"] = pd.to_datetime(
+        frame["label_available_at"], errors="coerce"
+    )
     for column in (*EQUITY_FEATURES, "eps_change_pct", "multiple_change_pct", "index_change_pct"):
         frame[column] = pd.to_numeric(frame[column], errors="coerce")
     frame = frame.replace([np.inf, -np.inf], np.nan)
     return (
         frame.dropna(
-            subset=("origin_date", "eps_change_pct", "multiple_change_pct", "index_change_pct")
+            subset=(
+                "origin_date",
+                "label_available_at",
+                *EQUITY_FEATURES,
+                "eps_change_pct",
+                "multiple_change_pct",
+                "index_change_pct",
+            )
         )
         .sort_values("origin_date")
         .reset_index(drop=True)
@@ -448,6 +616,7 @@ def rolling_origin_validate_equity_stress(
     *,
     minimum_origins: int = 60,
     ridge_alpha: float = 1.0,
+    maximum_coverage_80_error: float = DEFAULT_MAXIMUM_COVERAGE_80_ERROR,
 ) -> EquityStressValidationReport:
     """Evaluate only on origins after their expanding training window."""
 
@@ -459,6 +628,7 @@ def rolling_origin_validate_equity_stress(
             fold_count=0,
             index_mae=None,
             baseline_index_mae=None,
+            baseline_mae_by_name={},
             eps_mae=None,
             multiple_mae=None,
             coverage_80=None,
@@ -468,13 +638,20 @@ def rolling_origin_validate_equity_stress(
         )
     minimum_training = max(24, min(36, int(minimum_origins) // 2))
     model_errors: list[float] = []
-    baseline_errors: list[float] = []
+    baseline_errors: dict[str, list[float]] = {
+        "constant_eps": [],
+        "constant_multiple": [],
+        "unconditional_index_change": [],
+    }
     eps_errors: list[float] = []
     multiple_errors: list[float] = []
     covered: list[float] = []
-    for index in range(minimum_training, count):
-        training = frame.iloc[:index]
+    for index in range(count):
         evaluation = frame.iloc[[index]]
+        evaluation_origin = pd.Timestamp(evaluation.iloc[0]["origin_date"])
+        training = frame.loc[frame["label_available_at"] <= evaluation_origin]
+        if len(training) < minimum_training:
+            continue
         eps_coefficients = _fit_ridge_coefficients(
             training, target="eps_change_pct", ridge_alpha=ridge_alpha
         )
@@ -489,11 +666,18 @@ def rolling_origin_validate_equity_stress(
         actual_eps = float(evaluation.iloc[0]["eps_change_pct"])
         actual_multiple = float(evaluation.iloc[0]["multiple_change_pct"])
         actual_index = float(evaluation.iloc[0]["index_change_pct"])
+        model_errors.append(abs(predicted_index - actual_index))
         baseline_eps = float(training["eps_change_pct"].median())
         baseline_multiple = float(training["multiple_change_pct"].median())
-        baseline_index = _combined_index_change(baseline_eps, baseline_multiple)
-        model_errors.append(abs(predicted_index - actual_index))
-        baseline_errors.append(abs(baseline_index - actual_index))
+        baseline_errors["constant_eps"].append(
+            abs(_combined_index_change(0.0, baseline_multiple) - actual_index)
+        )
+        baseline_errors["constant_multiple"].append(
+            abs(_combined_index_change(baseline_eps, 0.0) - actual_index)
+        )
+        baseline_errors["unconditional_index_change"].append(
+            abs(float(training["index_change_pct"].median()) - actual_index)
+        )
         eps_errors.append(abs(predicted_eps - actual_eps))
         multiple_errors.append(abs(predicted_multiple - actual_multiple))
 
@@ -512,21 +696,43 @@ def rolling_origin_validate_equity_stress(
         covered.append(
             float(predicted_index + lower <= actual_index <= predicted_index + upper)
         )
+    if not model_errors:
+        return EquityStressValidationReport(
+            origin_count=count,
+            fold_count=0,
+            index_mae=None,
+            baseline_index_mae=None,
+            baseline_mae_by_name={},
+            eps_mae=None,
+            multiple_mae=None,
+            coverage_80=None,
+            validation_scheme="rolling_origin_label_available",
+            publication_status="NOT_AVAILABLE",
+            reason_codes=("insufficient_validation_folds",),
+        )
     index_mae = float(np.mean(model_errors))
-    baseline_mae = float(np.mean(baseline_errors))
+    baseline_mae_by_name = {
+        name: float(np.mean(errors)) for name, errors in baseline_errors.items()
+    }
+    baseline_mae = min(baseline_mae_by_name.values())
+    coverage_80 = float(np.mean(covered))
     reasons: list[str] = []
     if index_mae >= baseline_mae - 1e-12:
         reasons.append("baseline_not_beaten")
+    coverage_error = abs(coverage_80 - 0.80)
+    if coverage_error > float(maximum_coverage_80_error) + 1e-12:
+        reasons.append("coverage_80_miscalibrated")
     status = "READY" if not reasons else "LIMITED"
     return EquityStressValidationReport(
         origin_count=count,
         fold_count=len(model_errors),
         index_mae=index_mae,
         baseline_index_mae=baseline_mae,
+        baseline_mae_by_name=baseline_mae_by_name,
         eps_mae=float(np.mean(eps_errors)),
         multiple_mae=float(np.mean(multiple_errors)),
-        coverage_80=float(np.mean(covered)),
-        validation_scheme="rolling_origin",
+        coverage_80=coverage_80,
+        validation_scheme="rolling_origin_label_available",
         publication_status=status,
         reason_codes=tuple(reasons),
     )
@@ -535,24 +741,27 @@ def rolling_origin_validate_equity_stress(
 def _empty_artifact(
     *,
     frame: pd.DataFrame,
+    source_panel: pd.DataFrame,
     report: EquityStressValidationReport,
     model_version: str,
 ) -> EquityStressArtifact:
-    latest_revision: float | None = None
-    if not frame.empty and "measured_next_year_eps_revision_pct" in frame:
-        revisions = pd.to_numeric(
-            frame["measured_next_year_eps_revision_pct"], errors="coerce"
-        ).dropna()
-        latest_revision = float(revisions.iloc[-1]) if not revisions.empty else None
+    latest_revision, scenario_features = _latest_scenario_values(source_panel)
     return EquityStressArtifact(
         model_version=model_version,
         eps_response={},
         multiple_response={},
         joint_residuals=(),
         validation_metrics={
+            "training_start_date": (
+                pd.Timestamp(frame.iloc[0]["origin_date"]).strftime("%Y-%m-%d")
+                if not frame.empty
+                else None
+            ),
             "origin_count": float(report.origin_count),
             "fold_count": float(report.fold_count),
             "validation_scheme": report.validation_scheme,
+            "publication_contract_version": EQUITY_PUBLICATION_CONTRACT_VERSION,
+            "baseline_mae_by_name": report.baseline_mae_by_name,
         },
         trained_through=(
             pd.Timestamp(frame.iloc[-1]["origin_date"]).strftime("%Y-%m-%d")
@@ -562,7 +771,71 @@ def _empty_artifact(
         publication_status=report.publication_status,
         reason_codes=report.reason_codes,
         latest_measured_next_year_eps_revision_pct=latest_revision,
+        scenario_feature_values=scenario_features,
     )
+
+
+def _latest_scenario_values(
+    panel: pd.DataFrame,
+) -> tuple[float | None, dict[str, float]]:
+    if panel.empty or "origin_date" not in panel:
+        return None, {}
+    source = panel.copy()
+    source["origin_date"] = pd.to_datetime(source["origin_date"], errors="coerce")
+    source = source.dropna(subset=("origin_date",)).sort_values("origin_date")
+    if source.empty:
+        return None, {}
+    latest = source.iloc[-1]
+    revision_value = pd.to_numeric(
+        pd.Series([latest.get("measured_next_year_eps_revision_pct")]),
+        errors="coerce",
+    ).iloc[0]
+    revision = float(revision_value) if not pd.isna(revision_value) else None
+    context_fields = {
+        "months_to_year_end",
+        "dgs2_pct",
+        "dgs10_pct",
+        "real_yield_10y_pct",
+        "breakeven_10y_pct",
+    }
+    features: dict[str, float] = {}
+    for field_name in context_fields:
+        value = pd.to_numeric(pd.Series([latest.get(field_name)]), errors="coerce").iloc[0]
+        if not pd.isna(value) and math.isfinite(float(value)):
+            features[field_name] = float(value)
+    return revision, features
+
+
+def build_equity_scenario_context(
+    panel: pd.DataFrame, *, as_of_at: str | datetime
+) -> dict[str, object]:
+    """Return the latest live PIT inputs separately from completed training labels."""
+
+    if panel.empty or "origin_date" not in panel:
+        raise ValueError("equity scenario context requires at least one origin")
+    cutoff = _instant(as_of_at, field="as_of_at")
+    source = panel.copy()
+    source["origin_date"] = pd.to_datetime(source["origin_date"], errors="coerce")
+    source = source.loc[
+        source["origin_date"].notna()
+        & (source["origin_date"] <= cutoff.normalize())
+    ].sort_values("origin_date")
+    if source.empty:
+        raise ValueError("equity scenario context has no eligible origin")
+    current = source.iloc[-1]
+    current_index = _finite(current.get("current_index_level"), field="current index")
+    forward_eps = _finite(current.get("forward_eps"), field="forward EPS")
+    if current_index <= 0.0 or forward_eps <= 0.0:
+        raise ValueError("equity scenario index and forward EPS must be positive")
+    revision, features = _latest_scenario_values(source)
+    return {
+        "as_of_at": str(as_of_at),
+        "origin_date": pd.Timestamp(current["origin_date"]).strftime("%Y-%m-%d"),
+        "current_index_level": current_index,
+        "base_forward_eps": forward_eps,
+        "measured_next_year_eps_revision_pct": revision,
+        "scenario_feature_values": features,
+    }
 
 
 def fit_equity_stress_model(
@@ -570,17 +843,24 @@ def fit_equity_stress_model(
     *,
     minimum_origins: int = 60,
     ridge_alpha: float = 1.0,
+    maximum_coverage_80_error: float = DEFAULT_MAXIMUM_COVERAGE_80_ERROR,
     model_version: str = "equity-stress-year-end-v1",
 ) -> EquityStressArtifact:
     """Fit paired EPS/multiple responses after a chronological publication gate."""
 
     frame = _completed_panel(panel)
     report = rolling_origin_validate_equity_stress(
-        frame, minimum_origins=minimum_origins, ridge_alpha=ridge_alpha
+        frame,
+        minimum_origins=minimum_origins,
+        ridge_alpha=ridge_alpha,
+        maximum_coverage_80_error=maximum_coverage_80_error,
     )
     if report.publication_status == "NOT_AVAILABLE":
         return _empty_artifact(
-            frame=frame, report=report, model_version=str(model_version)
+            frame=frame,
+            source_panel=panel,
+            report=report,
+            model_version=str(model_version),
         )
     eps_coefficients = _fit_ridge_coefficients(
         frame, target="eps_change_pct", ridge_alpha=ridge_alpha
@@ -600,10 +880,11 @@ def fit_equity_stress_model(
             strict=True,
         )
     )
-    revisions = pd.to_numeric(
-        frame["measured_next_year_eps_revision_pct"], errors="coerce"
-    ).dropna()
+    latest_revision, scenario_features = _latest_scenario_values(panel)
     validation_metrics: dict[str, object] = {
+        "training_start_date": pd.Timestamp(frame.iloc[0]["origin_date"]).strftime(
+            "%Y-%m-%d"
+        ),
         "origin_count": float(report.origin_count),
         "fold_count": float(report.fold_count),
         "index_mae": float(report.index_mae or 0.0),
@@ -612,6 +893,9 @@ def fit_equity_stress_model(
         "multiple_mae": float(report.multiple_mae or 0.0),
         "coverage_80": float(report.coverage_80 or 0.0),
         "validation_scheme": report.validation_scheme,
+        "publication_contract_version": EQUITY_PUBLICATION_CONTRACT_VERSION,
+        "maximum_coverage_80_error": float(maximum_coverage_80_error),
+        "baseline_mae_by_name": report.baseline_mae_by_name,
     }
     return EquityStressArtifact(
         model_version=str(model_version),
@@ -624,22 +908,8 @@ def fit_equity_stress_model(
         ),
         publication_status=report.publication_status,
         reason_codes=report.reason_codes,
-        latest_measured_next_year_eps_revision_pct=(
-            float(revisions.iloc[-1]) if not revisions.empty else None
-        ),
-        scenario_feature_values={
-            feature: float(value)
-            for feature, value in frame.iloc[-1].items()
-            if feature in {
-                *EQUITY_FEATURES,
-                "dgs2_pct",
-                "dgs10_pct",
-                "real_yield_10y_pct",
-                "breakeven_10y_pct",
-            }
-            and value is not None
-            and not pd.isna(value)
-        },
+        latest_measured_next_year_eps_revision_pct=latest_revision,
+        scenario_feature_values=scenario_features,
     )
 
 
@@ -681,7 +951,14 @@ def _normalized_forward_paths(
         if weight < 0.0:
             raise ValueError("path weight cannot be negative")
         weighted.append((path, weight))
-    total = sum(weight for _path, weight in weighted)
+    weighted.sort(
+        key=lambda item: (
+            str(item[0].path_id),
+            float(item[0].q4_core_pce_pct),
+            int(item[0].policy_net_steps),
+        )
+    )
+    total = math.fsum(weight for _path, weight in weighted)
     if total <= 0.0:
         raise ValueError("forward paths require positive probability mass")
     return tuple((path, weight / total) for path, weight in weighted)
@@ -695,35 +972,62 @@ def _path_endpoint(path: SimulationPath, instrument: str) -> float | None:
 
 
 def _scenario_features(
-    artifact: EquityStressArtifact, path: SimulationPath
+    artifact: EquityStressArtifact,
+    path: SimulationPath,
+    *,
+    scenario_feature_values: Mapping[str, object] | None = None,
 ) -> dict[str, float]:
-    base = dict(artifact.scenario_feature_values)
+    base = {
+        **artifact.scenario_feature_values,
+        **(dict(scenario_feature_values) if scenario_feature_values is not None else {}),
+    }
     current_dgs10 = base.get("dgs10_pct")
+    current_dgs2 = base.get("dgs2_pct")
     current_real = base.get("real_yield_10y_pct")
     current_breakeven = base.get("breakeven_10y_pct")
     endpoint_dgs10 = _path_endpoint(path, "DGS10")
+    endpoint_dgs2 = _path_endpoint(path, "DGS2")
     endpoint_real = _path_endpoint(path, "DFII10")
     endpoint_breakeven = _path_endpoint(path, "T10YIE")
     return {
-        "measured_next_year_eps_revision_pct": float(
-            artifact.latest_measured_next_year_eps_revision_pct or 0.0
+        "measured_next_year_eps_revision_pct": _finite(
+            base.get("measured_next_year_eps_revision_pct"),
+            field="measured next-year EPS revision",
         ),
-        "months_to_year_end": float(base.get("months_to_year_end", 0.0)),
-        "policy_repricing_bp": float(path.policy_net_steps) * 25.0,
+        "months_to_year_end": _finite(
+            base.get("months_to_year_end"), field="months to year end"
+        ),
+        "q4_core_pce_pct": float(path.q4_core_pce_pct),
+        "policy_repricing_bp": (
+            (endpoint_dgs2 - current_dgs2) * 100.0
+            if endpoint_dgs2 is not None and current_dgs2 is not None
+            else _finite(
+                base.get("policy_repricing_bp"),
+                field="DGS2 origin-to-year-end path change",
+            )
+        ),
         "dgs10_change_bp": (
             (endpoint_dgs10 - current_dgs10) * 100.0
             if endpoint_dgs10 is not None and current_dgs10 is not None
-            else float(base.get("dgs10_change_bp", 0.0))
+            else _finite(
+                base.get("dgs10_change_bp"), field="DGS10 origin-to-year-end change"
+            )
         ),
         "real_yield_change_bp": (
             (endpoint_real - current_real) * 100.0
             if endpoint_real is not None and current_real is not None
-            else float(base.get("real_yield_change_bp", 0.0))
+            else _finite(
+                base.get("real_yield_change_bp"),
+                field="real-yield origin-to-year-end change",
+            )
         ),
         "breakeven_change_bp": (
             (endpoint_breakeven - current_breakeven) * 100.0
             if endpoint_breakeven is not None and current_breakeven is not None
-            else float(base.get("breakeven_change_bp", 0.0))
+            else _finite(
+                base.get("breakeven_change_bp"),
+                field="breakeven origin-to-year-end change",
+            )
         ),
     }
 
@@ -737,6 +1041,30 @@ def _response_for_features(
     )
 
 
+def _paired_residual_draws(
+    residuals: Sequence[tuple[float, float]],
+) -> tuple[tuple[float, float], ...]:
+    """Keep a bounded, order-independent quantile sample of paired residuals."""
+
+    ordered = sorted(
+        (
+            (
+                _finite(eps, field="EPS residual"),
+                _finite(multiple, field="multiple residual"),
+            )
+            for eps, multiple in residuals
+        ),
+        key=lambda item: (item[0], item[1]),
+    )
+    if len(ordered) <= MAX_RESIDUAL_DRAWS_PER_PATH:
+        return tuple(ordered)
+    count = MAX_RESIDUAL_DRAWS_PER_PATH
+    return tuple(
+        ordered[min(len(ordered) - 1, int((index + 0.5) * len(ordered) / count))]
+        for index in range(count)
+    )
+
+
 def simulate_equity_stress(
     artifact: EquityStressArtifact,
     forward_paths: Sequence[SimulationPath],
@@ -745,6 +1073,9 @@ def simulate_equity_stress(
     forward_eps: float,
     user_ai_eps_uplift_pct: float = 0.0,
     target_levels: Sequence[float] = (),
+    scenario_feature_values: Mapping[str, object] | None = None,
+    measured_next_year_eps_revision_pct: float | None = None,
+    as_of_at: str | None = None,
 ) -> EquityStressResult:
     """Apply paired historical response residuals to auditable macro paths."""
 
@@ -758,16 +1089,45 @@ def simulate_equity_stress(
     targets = tuple(_finite(value, field="target level") for value in target_levels)
     if any(value <= 0.0 for value in targets):
         raise ValueError("target level must be positive")
+    measured_revision = (
+        _finite(
+            measured_next_year_eps_revision_pct,
+            field="measured next-year EPS revision",
+        )
+        if measured_next_year_eps_revision_pct is not None
+        else artifact.latest_measured_next_year_eps_revision_pct
+    )
+    result_as_of = str(as_of_at) if as_of_at is not None else artifact.trained_through
+    scenario_inputs = {
+        **artifact.scenario_feature_values,
+        **(dict(scenario_feature_values) if scenario_feature_values is not None else {}),
+    }
+    stored_scenario_features = {
+        key: _finite(value, field=f"scenario feature {key}")
+        for key, value in scenario_inputs.items()
+        if key
+        in {
+            "months_to_year_end",
+            "dgs2_pct",
+            "dgs10_pct",
+            "real_yield_10y_pct",
+            "breakeven_10y_pct",
+            "policy_repricing_bp",
+            "dgs10_change_bp",
+            "real_yield_change_bp",
+            "breakeven_change_bp",
+        }
+    }
     if artifact.publication_status not in {"READY", "LIMITED"}:
         return EquityStressResult(
-            as_of_at=artifact.trained_through,
+            as_of_at=result_as_of,
             index_quantiles={},
             eps_quantiles={},
             multiple_quantiles={},
             threshold_probabilities={},
             target_decompositions={},
             measured_next_year_eps_revision_pct=(
-                artifact.latest_measured_next_year_eps_revision_pct
+                measured_revision
             ),
             user_ai_eps_uplift_pct=uplift,
             publication_status="NOT_AVAILABLE",
@@ -777,17 +1137,18 @@ def simulate_equity_stress(
             ),
             current_index_level=current_level,
             base_forward_eps=base_eps,
+            scenario_feature_values=stored_scenario_features,
         )
     if not artifact.joint_residuals:
         return EquityStressResult(
-            as_of_at=artifact.trained_through,
+            as_of_at=result_as_of,
             index_quantiles={},
             eps_quantiles={},
             multiple_quantiles={},
             threshold_probabilities={},
             target_decompositions={},
             measured_next_year_eps_revision_pct=(
-                artifact.latest_measured_next_year_eps_revision_pct
+                measured_revision
             ),
             user_ai_eps_uplift_pct=uplift,
             publication_status="NOT_AVAILABLE",
@@ -797,28 +1158,82 @@ def simulate_equity_stress(
             ),
             current_index_level=current_level,
             base_forward_eps=base_eps,
+            scenario_feature_values=stored_scenario_features,
+        )
+
+    missing_context = [
+        field_name
+        for field_name in (
+            "months_to_year_end",
+            "dgs2_pct",
+            "dgs10_pct",
+            "real_yield_10y_pct",
+            "breakeven_10y_pct",
+        )
+        if scenario_inputs.get(field_name) is None
+    ]
+    if measured_revision is None:
+        missing_context.append("measured_next_year_eps_revision_pct")
+    for path in forward_paths:
+        for instrument in ("DGS2", "DGS10", "DFII10", "T10YIE"):
+            values = path.rate_paths_pct.get(instrument)
+            if not values:
+                missing_context.append(f"path.{path.path_id}.{instrument}_endpoint")
+    if missing_context:
+        reason = "scenario_context_incomplete:" + ",".join(
+            sorted(set(missing_context))
+        )
+        return EquityStressResult(
+            as_of_at=result_as_of,
+            index_quantiles={},
+            eps_quantiles={},
+            multiple_quantiles={},
+            threshold_probabilities={},
+            target_decompositions={},
+            measured_next_year_eps_revision_pct=measured_revision,
+            user_ai_eps_uplift_pct=uplift,
+            publication_status="NOT_AVAILABLE",
+            reason_codes=(reason,),
+            scenario_kind=(
+                "USER_ASSUMPTION" if uplift != 0.0 or targets else "MODEL_BASE"
+            ),
+            current_index_level=current_level,
+            base_forward_eps=base_eps,
+            scenario_feature_values=stored_scenario_features,
         )
 
     current_multiple = current_level / base_eps
+    scenario_inputs["measured_next_year_eps_revision_pct"] = float(
+        measured_revision or 0.0
+    )
     simulated: list[tuple[float, float, float, float]] = []
-    for index, (path, weight) in enumerate(_normalized_forward_paths(forward_paths)):
-        features = _scenario_features(artifact, path)
+    residual_draws = _paired_residual_draws(artifact.joint_residuals)
+    residual_weight = 1.0 / len(residual_draws)
+    for path, weight in _normalized_forward_paths(forward_paths):
+        features = _scenario_features(
+            artifact, path, scenario_feature_values=scenario_inputs
+        )
         eps_change = _response_for_features(artifact.eps_response, features)
         multiple_change = _response_for_features(artifact.multiple_response, features)
-        residual_eps, residual_multiple = artifact.joint_residuals[
-            index % len(artifact.joint_residuals)
-        ]
-        eps_level = (
-            base_eps
-            * (1.0 + (eps_change + residual_eps) / 100.0)
-            * (1.0 + uplift / 100.0)
-        )
-        multiple_level = current_multiple * (
-            1.0 + (multiple_change + residual_multiple) / 100.0
-        )
-        if eps_level <= 0.0 or multiple_level <= 0.0:
-            raise ValueError("simulated EPS and multiple must remain positive")
-        simulated.append((eps_level * multiple_level, eps_level, multiple_level, weight))
+        for residual_eps, residual_multiple in residual_draws:
+            eps_level = (
+                base_eps
+                * (1.0 + (eps_change + residual_eps) / 100.0)
+                * (1.0 + uplift / 100.0)
+            )
+            multiple_level = current_multiple * (
+                1.0 + (multiple_change + residual_multiple) / 100.0
+            )
+            if eps_level <= 0.0 or multiple_level <= 0.0:
+                raise ValueError("simulated EPS and multiple must remain positive")
+            simulated.append(
+                (
+                    eps_level * multiple_level,
+                    eps_level,
+                    multiple_level,
+                    weight * residual_weight,
+                )
+            )
     levels = [row[0] for row in simulated]
     eps_levels = [row[1] for row in simulated]
     multiples = [row[2] for row in simulated]
@@ -850,14 +1265,14 @@ def simulate_equity_stress(
                 ),
             }
     return EquityStressResult(
-        as_of_at=artifact.trained_through,
+        as_of_at=result_as_of,
         index_quantiles=_weighted_quantiles(levels, weights),
         eps_quantiles=_weighted_quantiles(eps_levels, weights),
         multiple_quantiles=_weighted_quantiles(multiples, weights),
         threshold_probabilities=threshold_probabilities,
         target_decompositions=decompositions,
         measured_next_year_eps_revision_pct=(
-            artifact.latest_measured_next_year_eps_revision_pct
+            measured_revision
         ),
         user_ai_eps_uplift_pct=uplift,
         publication_status=artifact.publication_status,
@@ -867,4 +1282,5 @@ def simulate_equity_stress(
         ),
         current_index_level=current_level,
         base_forward_eps=base_eps,
+        scenario_feature_values=stored_scenario_features,
     )

@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-08-02
+Last Verified: 2026-08-03
 
 ## System At A Glance
 
@@ -76,14 +76,15 @@ service와 React workbench다.
 
 ## Workflow Ownership
 
-### Inflation / Policy Yield Path (Workbench Complete)
+### Inflation / Policy Yield Path (4/5 Equity Stress Complete)
 
 ```text
 FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
+  + official S&P 500 Index Earnings vintages + stored ^GSPC prices
   -> app/jobs/inflation_policy_refresh.py
   -> finance_meta PIT tables
   -> finance/loaders/inflation_policy.py
-  -> independent Core PCE / policy / yield engines
+  -> independent Core PCE / policy / yield / equity-stress engines
   -> inflation_policy_model_artifact / inflation_policy_snapshot
   -> app/services/overview/inflation_policy*.py
   -> Market Research > 경제 사이클 > 물가·정책 경로
@@ -94,21 +95,29 @@ FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
 - `finance/data/fomc_policy.py`, `bea_pce_components.py`,
   `nyfed_term_premium.py`가 익명 SEP/의결·선택 PCE breadth·기간 프리미엄 source를
   저장한다.
-- `finance/loaders/inflation_policy.py`는 `released_at <= as_of_at`인 DB row만 읽고
-  과거 origin 재구성에는 eligible 전체 vintage를 별도로 읽는다. 기존
+- `finance/loaders/inflation_policy.py`는 `released_at <= as_of_at`인 DB row와 official
+  S&P 500 EPS release vintage, 저장된 `^GSPC` 가격을 DB에서만 읽고 과거 origin
+  재구성에는 eligible 전체 vintage를 별도로 읽는다. 기존
   `economic_cycle_snapshot`/artifact/확률을 사용하지 않는다.
 - `finance/inflation_policy_model.py`, `inflation_path.py`, `policy_path.py`,
   `yield_resistance.py`, `inflation_policy_simulation.py`가 혼합형 Core PCE,
   익명 SEP·실제 표결 policy marginal, 동적 저항대와 순방향·역산 계산을 소유한다.
 - `finance/inflation_policy_validation.py`와 `inflation_policy_pipeline.py`는 component별
   rolling-origin gate, exact-cutoff replay와 compact artifact/snapshot을 소유한다.
-  1개월 Core PCE artifact와 연말·정책·돌파·역산 상태를 독립적으로 보존한다.
+  1개월 Core PCE artifact와 연말·정책·돌파·역산·equity 상태를 독립적으로 보존한다.
+- `finance/inflation_policy_equity_stress.py`는 당시 공개된 차년도 EPS, 가격·금리로
+  complete same-workbook year-end EPS×multiple panel을 만들고 label 공개시각
+  rolling-origin ridge, 세 baseline·coverage 비교, paired residual과 사용자 AI EPS
+  uplift/지수 수준 시나리오를 소유한다. production runner와 command는 versioned equity
+  artifact와 별도 `joint_macro_paths`의 독립 `READY`를 함께 요구한다. model artifact에는
+  불변 모델만, 현재 지수·EPS·시작금리는 snapshot `equity_json`에 두며, official EPS나
+  검증된 joint path가 없으면 Shiller로 대체하지 않고 equity만 `NOT_AVAILABLE`로 닫는다.
 - `app/services/overview/inflation_policy.py`는 저장 snapshot과 PIT definition을
   `inflation_policy_v1` read model로 변환하고, `inflation_policy_commands.py`는
-  USER 기준 저장과 exact READY artifact의 bounded reverse만 실행한다.
+  USER 기준 저장과 exact READY artifact의 bounded rate/equity scenario만 실행한다.
 - `app/web/overview/market_context_helpers.py`는 기존 cycle과 독립 payload를 렌더 직전에만
-  합성하고 별도 nonce/cache를 소유한다. React workbench는 순방향·역산·근거 UI와
-  `LIMITED/NOT_AVAILABLE` 비공개 표현만 맡는다.
+  합성하고 별도 nonce/cache를 소유한다. React workbench는 순방향·역산·조건부 S&P 500
+  stress·근거 UI와 `LIMITED/NOT_AVAILABLE` 비공개 표현만 맡는다.
 
 ### Research Evidence
 
@@ -218,7 +227,7 @@ compact evidence와 identity만 저장한다. 자세한 규칙은
 | Today | `app/web/today_page.py`, `app/services/today.py` | [Today Intraday Flow](./flows/TODAY_PORTFOLIO_INTRADAY_FLOW.md) |
 | Market Research | `app/web/overview/page.py`, `app/web/overview/navigation.py` | view owner under `app/services/overview/` |
 | economic cycle / valuation | owning module under `finance/`, `finance/loaders/`, `app/services/overview/` | [Data Quality And PIT](./data/DATA_QUALITY_AND_PIT_NOTES.md) |
-| inflation / policy / yield path | `app/jobs/inflation_policy_refresh.py`, `finance/loaders/inflation_policy.py`, `finance/inflation_policy_model.py`, `finance/inflation_policy_pipeline.py`, `app/services/overview/inflation_policy*.py` | [Inflation / Policy Engine Flow](./architecture/INFLATION_POLICY_ENGINE_FLOW.md), [Inflation / Policy Data Refresh](./runbooks/INFLATION_POLICY_DATA_REFRESH.md) |
+| inflation / policy / yield / equity stress | `app/jobs/inflation_policy_refresh.py`, `finance/loaders/inflation_policy.py`, `finance/inflation_policy_model.py`, `finance/inflation_policy_equity_stress.py`, `finance/inflation_policy_pipeline.py`, `app/services/overview/inflation_policy*.py` | [Inflation / Policy Engine Flow](./architecture/INFLATION_POLICY_ENGINE_FLOW.md), [Inflation / Policy Data Refresh](./runbooks/INFLATION_POLICY_DATA_REFRESH.md) |
 | Institutional Holdings / 13F | `app/web/institutional_portfolios.py`, `app/services/institutional_portfolios.py` | [Institutional Flow](./flows/INSTITUTIONAL_PORTFOLIOS_FLOW.md) |
 | Backtest Analysis / strategy | `app/web/backtest_analysis.py`, `app/runtime/backtest/` | [Backtest Runtime](./architecture/BACKTEST_RUNTIME_FLOW.md), [Strategy Flow](./architecture/STRATEGY_IMPLEMENTATION_FLOW.md) |
 | Practical Validation | `app/web/backtest_practical_validation/` | [Backtest UI Flow](./flows/BACKTEST_UI_FLOW.md) |

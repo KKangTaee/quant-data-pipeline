@@ -200,6 +200,69 @@ def test_ready_read_model_keeps_forward_reverse_and_quality_separate() -> None:
     json.dumps(model, allow_nan=False)
 
 
+def test_equity_read_model_exposes_identity_ranges_and_assumption_provenance() -> None:
+    from app.services.overview.inflation_policy import build_inflation_policy_read_model
+
+    snapshot = _ready_snapshot()
+    snapshot["equity_json"] = {
+        "publication_status": "READY",
+        "reason": "validated_conditional_association",
+        "as_of_at": "2026-08-02T00:00:00Z",
+        "index_quantiles": {"p20": 6200.0, "p50": 6800.0, "p80": 7200.0},
+        "eps_quantiles": {"p20": 285.0, "p50": 300.0, "p80": 315.0},
+        "multiple_quantiles": {"p20": 21.0, "p50": 22.67, "p80": 23.4},
+        "threshold_probabilities": {"below_or_equal:6400.0000": 0.25},
+        "target_decompositions": {
+            "below_or_equal:6400.0000": {
+                "target_level": 6400.0,
+                "probability": 0.25,
+                "eps_quantiles": {"p50": 290.0},
+                "multiple_quantiles": {"p50": 21.5},
+            }
+        },
+        "measured_next_year_eps_revision_pct": 3.2,
+        "user_ai_eps_uplift_pct": 5.0,
+        "scenario_kind": "USER_ASSUMPTION",
+        "current_index_level": 6800.0,
+        "base_forward_eps": 300.0,
+    }
+
+    model = build_inflation_policy_read_model(
+        snapshot_loader=lambda **_: snapshot,
+        definitions_loader=lambda **_: [],
+    )
+
+    assert model["equity_stress"]["publication_status"] == "READY"
+    assert model["equity_stress"]["index_quantiles"]["p50"] == pytest.approx(6800.0)
+    assert model["equity_stress"]["measured_next_year_eps_revision_pct"] == pytest.approx(3.2)
+    assert model["equity_stress"]["user_ai_eps_uplift_pct"] == pytest.approx(5.0)
+    assert model["equity_stress"]["threshold_probabilities"] == {
+        "below_or_equal:6400.0000": 0.25
+    }
+
+
+def test_invalid_equity_payload_fails_only_equity_section() -> None:
+    from app.services.overview.inflation_policy import build_inflation_policy_read_model
+
+    snapshot = _ready_snapshot()
+    snapshot["equity_json"] = {
+        "publication_status": "READY",
+        "index_quantiles": {"p50": float("nan")},
+    }
+
+    model = build_inflation_policy_read_model(
+        snapshot_loader=lambda **_: snapshot,
+        definitions_loader=lambda **_: [],
+    )
+
+    assert model["publication_status"] == "READY"
+    assert model["inflation"]["publication_status"] == "READY"
+    assert model["policy"]["publication_status"] == "READY"
+    assert model["rates"]["publication_status"] == "READY"
+    assert model["equity_stress"]["publication_status"] == "FAILED"
+    assert model["equity_stress"]["index_quantiles"] == {}
+
+
 def test_missing_snapshot_returns_typed_not_available_sections() -> None:
     from app.services.overview.inflation_policy import build_inflation_policy_read_model
 

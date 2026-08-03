@@ -65,10 +65,10 @@ function ReverseScenarioPanel({ payload, onCommand }: Props) {
   const confirmationError = confirmationCount > confirmationWindow
     ? "확인 횟수는 확인 기간을 초과할 수 없습니다."
     : null;
-  const reverseResult = payload.command_result && !("definition" in payload.command_result)
+  const reverseResult = payload.command_result?.command_id === "run_reverse_scenario"
     ? payload.command_result
     : payload.reverse_scenario;
-  const saveResult = payload.command_result && "definition" in payload.command_result
+  const saveResult = payload.command_result?.command_id === "save_yield_criterion"
     ? payload.command_result
     : null;
 

@@ -1,7 +1,7 @@
 # DB Schema Map
 
 Status: Active
-Last Verified: 2026-08-02
+Last Verified: 2026-08-03
 
 ## 목적
 
@@ -53,8 +53,8 @@ Last Verified: 2026-08-02
 | `economic_cycle_snapshot` | current/historical replay별 compact 국면 확률·근거·source date·publication status를 저장. unique key는 `(as_of_date, model_version, run_kind)`이며 계산 가능한 LIMITED 확률도 잠정 추정용으로 보존하고 계산 불가 horizon만 비운다 |
 | `fomc_sep_distribution` | release별 익명 SEP summary/histogram/rate-dot 분포. participant count만 저장하며 Core PCE 분포와 금리 dot 사이의 개인별 대응을 만들지 않는다 |
 | `fomc_policy_decision` | FOMC 회의별 target range 전후, 찬반 수, 반대자 이름과 원문에 명시된 선호 조치. 수집 범위 첫 회의의 직전 range가 없으면 `PARTIAL`로 둔다 |
-| `inflation_policy_model_artifact` | Core PCE·정책·금리 component별 학습 cutoff, schema version, parameter, validation/calibration과 publication status를 저장. 2차 엔진이 검증 뒤 사용한다 |
-| `inflation_policy_snapshot` | 하나의 `as_of_at`, model version, run kind에 대한 순방향·역산 결과와 evidence/freshness/warning을 compact JSON으로 저장. 기존 경제 사이클 snapshot을 fallback하지 않는다 |
+| `inflation_policy_model_artifact` | Core PCE·정책·금리 component별 학습 cutoff, schema version, parameter, validation/calibration과 publication status를 저장. core 계수와 검증 공동경로는 각각 `core_pce_hybrid`, `joint_macro_paths` identity를 쓰고 equity artifact에는 live market context를 넣지 않는다 |
+| `inflation_policy_snapshot` | 하나의 `as_of_at`, model version, run kind에 대한 inflation/policy/rates/reverse와 독립 `equity_json`, evidence/freshness/warning을 compact JSON으로 저장. `equity_json`은 해당 snapshot의 current index/forward EPS/start-yield context도 소유한다. malformed/legacy equity는 해당 section만 `NOT_AVAILABLE`로 닫고 기존 경제 사이클 snapshot을 fallback하지 않는다 |
 | `yield_resistance_definition` | 자동 산출 또는 사용자 입력 10년물 저항 zone 정의와 산출 근거를 저장. 4.7% 같은 값은 날짜·근거가 붙은 definition이지 전역 상수가 아니다 |
 | `yield_resistance_snapshot` | 저항 정의별 관측 시점의 접근·돌파 시도·확인·유지·실패 상태와 확인 근거를 저장 |
 | `sp500_monthly_valuation` | Shiller 월별 P/E 이력. month+source unique UPSERT, price/EPS/PER/CAPE/quality/source reference 저장. EPS 미발표 최신 월은 price-only `missing` row로 유지 |

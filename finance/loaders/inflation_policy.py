@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from finance.data.db.mysql import MySQLClient
 from finance.inflation_policy_catalog import get_inflation_policy_catalog
@@ -69,6 +70,26 @@ def _sql_datetime(value: datetime) -> str:
     return value.astimezone(timezone.utc).replace(tzinfo=None).strftime(
         "%Y-%m-%d %H:%M:%S.%f"
     )
+
+
+def _price_cutoff_date(value: object, *, as_of: datetime) -> date:
+    """Return the latest US close logically known at an exact replay instant."""
+
+    date_only = (
+        isinstance(value, date)
+        and not isinstance(value, datetime)
+        or isinstance(value, str)
+        and len(value.strip()) == 10
+    )
+    if date_only:
+        return as_of.date()
+    eastern = as_of.astimezone(ZoneInfo("America/New_York"))
+    cutoff = eastern.date()
+    # There is no collection timestamp on legacy daily rows. Before the regular
+    # close, exclude the current US calendar day rather than leaking its close.
+    if eastern.time() < time(16, 0):
+        cutoff -= timedelta(days=1)
+    return cutoff
 
 
 def _query(
@@ -349,6 +370,7 @@ def load_inflation_policy_equity_bundle(
     if start > as_of.date():
         raise ValueError("history_start cannot be after as_of_at")
     as_of_sql = _sql_datetime(as_of)
+    price_cutoff = _price_cutoff_date(as_of_at, as_of=as_of)
 
     eps_raw = _query(
         DB_META,
@@ -395,7 +417,7 @@ def load_inflation_policy_equity_bundle(
           AND Close > 0
         ORDER BY Date
         """,
-        (start.isoformat(), as_of.date().isoformat()),
+        (start.isoformat(), price_cutoff.isoformat()),
         query_fn=query_fn,
     )
     price_rows: list[dict[str, object]] = []
@@ -406,7 +428,7 @@ def load_inflation_policy_equity_bundle(
             close = float(row.get("Close"))
         except (TypeError, ValueError):
             continue
-        if not start <= observed <= as_of.date() or close <= 0.0:
+        if not start <= observed <= price_cutoff or close <= 0.0:
             continue
         row["Date"] = observed.isoformat()
         row["Close"] = close
@@ -418,7 +440,7 @@ def load_inflation_policy_equity_bundle(
         SELECT series_id, observation_date, released_at, realtime_start,
                realtime_end, value, collected_at, updated_at
         FROM macro_series_vintage_observation
-        WHERE series_id IN ('DGS2', 'DGS10', 'DFII10', 'T10YIE')
+        WHERE series_id IN ('DGS2', 'DGS10', 'DFII10', 'T10YIE', 'PCEPILFE')
           AND observation_date >= %s
           AND observation_date <= %s
           AND released_at IS NOT NULL
@@ -428,11 +450,10 @@ def load_inflation_policy_equity_bundle(
         (start.isoformat(), as_of.date().isoformat(), as_of_sql),
         query_fn=query_fn,
     )
-    yield_rows = _latest_vintages(
+    yield_rows = _released_rows(
         yield_raw,
         as_of=as_of,
-        history_start=start,
-        allowed_series={"DGS2", "DGS10", "DFII10", "T10YIE"},
+        date_field="observation_date",
     )
     return InflationPolicyEquityBundle(
         as_of_at=as_of.isoformat(),

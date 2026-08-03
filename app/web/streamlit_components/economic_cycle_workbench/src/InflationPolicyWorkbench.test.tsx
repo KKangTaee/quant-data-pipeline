@@ -69,7 +69,20 @@ const cyclePayload = {
       resistance_zones: [],
     },
     reverse_scenario: { publication_status: "NOT_AVAILABLE" as const, reason: "검증 전" },
-    equity_stress: { publication_status: "NOT_AVAILABLE" as const, reason: "4차" },
+    equity_stress: {
+      publication_status: "NOT_AVAILABLE" as const,
+      reason: "4차",
+      index_quantiles: {},
+      eps_quantiles: {},
+      multiple_quantiles: {},
+      threshold_probabilities: {},
+      target_decompositions: {},
+      measured_next_year_eps_revision_pct: null,
+      user_ai_eps_uplift_pct: 0,
+      scenario_kind: "MODEL_BASE",
+      current_index_level: null,
+      base_forward_eps: null,
+    },
     recession: { publication_status: "NOT_AVAILABLE" as const, reason: "5차" },
     evidence: { items: [], details: {} },
     freshness: {},
@@ -183,6 +196,21 @@ function readyPayload(): InflationPolicyPayload {
         },
       ],
     },
+    equity_stress: {
+      publication_status: "READY",
+      reason: "검증된 조건부 연관 범위",
+      as_of_at: "2026-08-02T00:00:00Z",
+      index_quantiles: { p20: 6200, p50: 6800, p80: 7200 },
+      eps_quantiles: { p20: 285, p50: 300, p80: 315 },
+      multiple_quantiles: { p20: 21.0, p50: 22.67, p80: 23.4 },
+      threshold_probabilities: { "below_or_equal:6400.0000": 0.25 },
+      target_decompositions: {},
+      measured_next_year_eps_revision_pct: 3.2,
+      user_ai_eps_uplift_pct: 0,
+      scenario_kind: "MODEL_BASE",
+      current_index_level: 6800,
+      base_forward_eps: 300,
+    },
   };
 }
 
@@ -227,6 +255,13 @@ function limitedHistoricalPayload(): InflationPolicyPayload {
     recession: {
       publication_status: "NOT_AVAILABLE",
       reason: "침체 모델은 5차 개발 전까지 연결하지 않습니다.",
+    },
+    equity_stress: {
+      ...ready.equity_stress,
+      publication_status: "LIMITED",
+      reason: "baseline 비교 검증 제한",
+      threshold_probabilities: {},
+      target_decompositions: {},
     },
     warnings: ["연말 Core PCE 경로의 시점별 검증이 아직 부족합니다."],
   };
@@ -354,5 +389,44 @@ describe("evidence, freshness, and unavailable boundaries", () => {
     expect(screen.getAllByText("2026-07-30T12:30:00Z").length).toBeGreaterThan(0);
     expect(screen.getAllByText("2026-07-30T12:35:00Z").length).toBeGreaterThan(0);
     expect(screen.getByText("연말 Core PCE 경로의 시점별 검증이 아직 부족합니다.")).toBeInTheDocument();
+  });
+});
+
+describe("conditional S&P 500 equity stress", () => {
+  it("separates measured EPS revision from the user AI assumption", () => {
+    render(<InflationPolicyWorkbench payload={readyPayload()} onCommand={vi.fn()} />);
+
+    expect(screen.getByRole("heading", { name: "S&P 500 조건부 스트레스" })).toBeInTheDocument();
+    expect(screen.getByText("측정된 차년도 EPS 수정")).toBeInTheDocument();
+    expect(screen.getByText("+3.2%")).toBeInTheDocument();
+    expect(screen.getByText("사용자 AI 수익화 가정")).toBeInTheDocument();
+    expect(screen.getByText("+0.0%")).toBeInTheDocument();
+    expect(screen.getByText("조건부 연관 분석이며 인과효과가 아닙니다.")).toBeInTheDocument();
+    expect(screen.queryByText(/목표가|매수|매도/)).not.toBeInTheDocument();
+  });
+
+  it("submits a bounded AI and user level scenario", async () => {
+    const onCommand = vi.fn();
+    render(<InflationPolicyWorkbench payload={readyPayload()} onCommand={onCommand} />);
+
+    await userEvent.clear(screen.getByLabelText("AI EPS 변화 가정"));
+    await userEvent.type(screen.getByLabelText("AI EPS 변화 가정"), "5");
+    await userEvent.clear(screen.getByLabelText("확인할 S&P 500 수준"));
+    await userEvent.type(screen.getByLabelText("확인할 S&P 500 수준"), "6400");
+    await userEvent.click(screen.getByRole("button", { name: "조건부 범위 계산" }));
+
+    expect(onCommand.mock.calls[0][0]).toMatchObject({
+      id: "run_equity_stress_scenario",
+      payload: { user_ai_eps_uplift_pct: 5, target_level: 6400 },
+    });
+  });
+
+  it("shows the official EPS and joint-path gates when unavailable", () => {
+    render(<InflationPolicyWorkbench payload={cyclePayload.inflation_policy} onCommand={vi.fn()} />);
+
+    expect(screen.getByRole("heading", { name: "S&P 500 조건부 스트레스" })).toBeInTheDocument();
+    expect(screen.getByText("공식 S&P 500 EPS 빈티지 필요")).toBeInTheDocument();
+    expect(screen.getByText(/Ingestion에서 공식 Index Earnings workbook/)).toBeInTheDocument();
+    expect(screen.queryByText(/25%/)).not.toBeInTheDocument();
   });
 });

@@ -228,11 +228,11 @@ git commit -m "AI EPS 가정과 지수 역산 시나리오 추가"
 - Consumes: `EquityStressResult` or null.
 - Produces: a conditional equity card and reverse target form without altering other probability sections.
 
-- [ ] **Step 1: Write failing service/UI isolation tests**
+- [x] **Step 1: Write failing service/UI isolation tests**
 
 Test equity `FAILED` maps to an unavailable equity section while inflation/policy/rates remain unchanged. React test checks `측정된 EPS 수정` and `사용자 AI 수익화 가정` labels and conditional-association disclosure.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_pipeline.py tests/test_inflation_policy_service.py -q
@@ -241,15 +241,15 @@ npm --prefix app/web/streamlit_components/economic_cycle_workbench test
 
 Expected: FAIL on missing integration.
 
-- [ ] **Step 3: Integrate pipeline/service**
+- [x] **Step 3: Integrate pipeline/service**
 
 Fit/materialize equity after macro forward paths. Store equity in the independent `equity_json` snapshot field; an equity exception records unavailable equity and still permits the macro snapshot when its own gates pass.
 
-- [ ] **Step 4: Implement the panel**
+- [x] **Step 4: Implement the panel**
 
 Show index range, EPS range, multiple range, user target probability, and assumption provenance. Use `조건부 스트레스` and `연관 분석`; exclude `목표가`, `매수`, `매도`.
 
-- [ ] **Step 5: Run tests/build and commit**
+- [x] **Step 5: Run tests/build and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_equity_stress.py tests/test_inflation_policy_pipeline.py tests/test_inflation_policy_service.py -q
@@ -276,7 +276,7 @@ git commit -m "주식시장 조건부 스트레스 화면 연결"
 - Consumes: verified equity engine/service/UI.
 - Produces: truthful phase-five handoff.
 
-- [ ] **Step 1: Run complete automated verification**
+- [x] **Step 1: Run complete automated verification**
 
 ```bash
 .venv/bin/python -m pytest tests/test_inflation_policy_equity_stress.py tests/test_inflation_policy_commands.py tests/test_inflation_policy_pipeline.py tests/test_inflation_policy_service.py -q
@@ -287,11 +287,13 @@ git diff --check
 
 Expected: all pass.
 
-- [ ] **Step 2: Run Browser QA**
+- [x] **Step 2: Run Browser QA**
 
-Verify default/no-AI assumption, positive/negative uplift, user target 6,400, unavailable EPS, mobile wrapping, and zero console/page errors. Capture one generated screenshot outside the commit.
+READY-state default/positive/negative AI uplift and arbitrary user target behavior are verified by
+domain and React tests. Actual Browser QA verifies the official-EPS unavailable gate and mobile
+wrapping without injecting a fixture into the DB. Capture one generated screenshot outside the commit.
 
-- [ ] **Step 3: Use `finance-doc-sync`, update states, and commit**
+- [x] **Step 3: Use `finance-doc-sync`, update states, and commit**
 
 Keep phase active for the recession plan. Record equity validation status; do not mark a `LIMITED` artifact as successful probability validation.
 

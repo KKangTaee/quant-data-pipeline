@@ -42,7 +42,11 @@ ECONOMIC_CYCLE_EVENT_KEY = "overview_economic_cycle_refresh_last_event"
 ECONOMIC_CYCLE_ACTION_ID = "refresh_economic_cycle_data"
 INFLATION_POLICY_EVENT_KEY = "overview_inflation_policy_last_event"
 INFLATION_POLICY_COMMAND_RESULT_KEY = "overview_inflation_policy_command_result"
-INFLATION_POLICY_EVENT_IDS = {"save_yield_criterion", "run_reverse_scenario"}
+INFLATION_POLICY_EVENT_IDS = {
+    "save_yield_criterion",
+    "run_reverse_scenario",
+    "run_equity_stress_scenario",
+}
 US_STOCK_SEARCH_QUERY_KEY = "overview_us_stock_valuation_search_query"
 US_STOCK_SELECTED_SYMBOL_KEY = "overview_us_stock_valuation_selected_symbol"
 US_STOCK_COLLECTION_RESULT_KEY = "overview_us_stock_valuation_collection_result"
@@ -376,21 +380,23 @@ def handle_inflation_policy_event(
     command_payload = dict(command) if isinstance(command, dict) else {}
     if command_runner is None:
         from app.services.overview.inflation_policy_commands import (
+            run_equity_stress_scenario_command,
             run_reverse_scenario_command,
             save_user_resistance_definition,
         )
 
-        resolved_runner = (
-            save_user_resistance_definition
-            if event_id == "save_yield_criterion"
-            else run_reverse_scenario_command
-        )
+        resolved_runner = {
+            "save_yield_criterion": save_user_resistance_definition,
+            "run_reverse_scenario": run_reverse_scenario_command,
+            "run_equity_stress_scenario": run_equity_stress_scenario_command,
+        }[event_id]
     else:
         resolved_runner = command_runner
     try:
         result = resolved_runner(command_payload)
     except ValueError as exc:
         result = {"publication_status": "FAILED", "reason": str(exc)}
+    result = {**result, "command_id": event_id}
     if store_result is not None:
         store_result(result)
     else:
