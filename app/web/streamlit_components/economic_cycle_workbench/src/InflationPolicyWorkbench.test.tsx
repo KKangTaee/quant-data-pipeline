@@ -267,6 +267,24 @@ function limitedHistoricalPayload(): InflationPolicyPayload {
   };
 }
 
+function mixedComponentPayload(): InflationPolicyPayload {
+  const ready = readyPayload();
+  return {
+    ...ready,
+    publication_status: "LIMITED",
+    headline: {
+      ...ready.headline,
+      summary: "정책 경로 검증은 제한됐지만 연말 물가 경로는 검증됐습니다.",
+    },
+    inflation: { ...ready.inflation, publication_status: "READY" },
+    policy: {
+      ...ready.policy,
+      publication_status: "LIMITED",
+      reason: "정책 rolling-origin 검증 대기",
+    },
+  };
+}
+
 describe("inflation policy inner navigation", () => {
   it("keeps 경기 국면 as default and opens 물가·정책 경로 explicitly", async () => {
     render(<EconomicCycleWorkbenchView payload={cyclePayload} onCommand={vi.fn()} />);
@@ -305,6 +323,15 @@ describe("forward inflation policy decision flow", () => {
     expect(screen.getByText("기간 프리미엄 자료 없음")).toBeInTheDocument();
     expect(screen.getByText("혼합")).toBeInTheDocument();
     expect(screen.getByText("실질금리·성장 주도")).toBeInTheDocument();
+  });
+
+  it("publishes each component from its own validation status", () => {
+    render(<InflationPolicyWorkbench payload={mixedComponentPayload()} onCommand={vi.fn()} />);
+
+    expect(screen.getByLabelText("연말 Core PCE 5상태 확률")).toBeInTheDocument();
+    expect(screen.getByText("5상태 합계 100%")).toBeInTheDocument();
+    expect(screen.queryByLabelText("연말까지 정책 순변화 확률")).not.toBeInTheDocument();
+    expect(screen.getByText(/정책 rolling-origin 검증 대기/)).toBeInTheDocument();
   });
 });
 

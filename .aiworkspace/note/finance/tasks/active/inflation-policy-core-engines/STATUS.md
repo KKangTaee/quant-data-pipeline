@@ -1,8 +1,11 @@
 # Inflation Policy Core Engines Status
 
-State: complete
+State: active
 
 ## Current
+
+- 2026-08-03 actual DB 재감사에서 Q4/Q4·policy·joint path가 production validation과
+  materialization을 갖추지 못한 사실이 확인되어 functional recovery로 재개했다.
 
 - 전체 phase 2/5차 완료
 - Task 0/7: 설계 분해·소유 경계·baseline 확인 완료

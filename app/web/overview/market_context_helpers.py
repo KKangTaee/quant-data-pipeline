@@ -106,6 +106,19 @@ def load_market_context_cycle_transport(
     return cycle
 
 
+def attach_inflation_policy_command_result(
+    payload: dict[str, Any],
+    command_result: dict[str, Any],
+) -> dict[str, Any]:
+    """Attach even legacy session results through the final JSON transport gate."""
+
+    combined = dict(payload)
+    inflation_policy = dict(combined.get("inflation_policy") or {})
+    inflation_policy["command_result"] = command_result
+    combined["inflation_policy"] = inflation_policy
+    return json.loads(json.dumps(combined, default=str))
+
+
 @st.cache_data(ttl=300, show_spinner=False)
 def load_sp500_valuation_model() -> dict[str, Any]:
     """Load the DB-backed, JSON-safe valuation read model."""
@@ -267,9 +280,7 @@ def render_economic_cycle() -> None:
         INFLATION_POLICY_COMMAND_RESULT_KEY, None
     )
     if isinstance(command_result, dict):
-        inflation_policy = dict(payload.get("inflation_policy") or {})
-        inflation_policy["command_result"] = command_result
-        payload["inflation_policy"] = inflation_policy
+        payload = attach_inflation_policy_command_result(payload, command_result)
     if economic_cycle_component_available():
         event = render_economic_cycle_component(payload)
         if handle_inflation_policy_event(event):
@@ -396,7 +407,9 @@ def handle_inflation_policy_event(
         result = resolved_runner(command_payload)
     except ValueError as exc:
         result = {"publication_status": "FAILED", "reason": str(exc)}
-    result = {**result, "command_id": event_id}
+    result = json.loads(
+        json.dumps({**result, "command_id": event_id}, default=str)
+    )
     if store_result is not None:
         store_result(result)
     else:

@@ -1,11 +1,14 @@
 # Active Phase State Manifest
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-08-03
 
 ## Current State
 
-Current active phase: none.
+Current active phase: `inflation-policy-yield-path`.
+
+- actual DB 재감사 기준 1차 PIT data 완료, 2~4차 functional recovery active,
+  5차 independent recession model pending
 
 New phase work should be opened only after a user-approved scope is selected from current roadmap, research, or carry-forward material.
 

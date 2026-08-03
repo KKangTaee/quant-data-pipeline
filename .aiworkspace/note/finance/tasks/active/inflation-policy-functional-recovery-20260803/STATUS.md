@@ -1,7 +1,7 @@
 # Inflation Policy Functional Recovery Status
 
 State: active
-Roadmap: 0/5 recovery stages complete
+Roadmap: 1/5 recovery stages complete
 Last Updated: 2026-08-03
 
 ## Current
@@ -10,11 +10,13 @@ Last Updated: 2026-08-03
 - 기존 집중 baseline은 Python 190건, React 11건 통과했지만 actual reverse click과
   production materialization contract를 포함하지 않았음을 확인했다.
 - 승인된 복구 설계와 5차 roadmap을 기록했다.
-- 현재 1차 runtime 무결성 복구의 실패 테스트 작성 단계다.
+- reverse command result를 payload 저장 전 JSON-safe하게 정규화했다.
+- React가 snapshot 전체 상태가 아니라 inflation/policy component별 상태로 확률을
+  표시하도록 복구했다.
+- actual DB reverse command 결과가 `datetime`을 문자열로 변환하고 JSON 직렬화되는지
+  확인했다. joint path 부재로 결과 자체는 정확히 `NOT_AVAILABLE`이다.
 
 ## Next
 
-- reverse command `datetime` transport 회귀 테스트를 RED로 확인한다.
-- component별 publication gate React 회귀 테스트를 RED로 확인한다.
-- 최소 구현 후 actual DB reverse click을 다시 검증한다.
-
+- 2차 Core PCE Q4/Q4 rolling-origin과 공식 benchmark source를 구현한다.
+- `next_release_scenarios`를 snapshot serializer에 연결한다.

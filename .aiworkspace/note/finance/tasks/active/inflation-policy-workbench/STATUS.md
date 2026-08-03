@@ -1,10 +1,14 @@
 # Inflation Policy Workbench Status
 
-State: complete
+State: active
 Roadmap: 4/4 implementation checkpoints complete
 Last Updated: 2026-08-02
 
 ## Completed
+
+- 2026-08-03 actual reverse click의 `datetime` JSON crash와 통합 상태 전역 gate를 확인해
+  functional recovery로 재개했다. 기존 아래 항목은 구현 이력이며 actual result 완료를
+  뜻하지 않는다.
 
 - 승인된 spec과 7-task implementation plan을 재검토했다.
 - 기존 경제 사이클 독립성, DB-only UI, 상태 공개 경계에 설계 충돌은 없다.

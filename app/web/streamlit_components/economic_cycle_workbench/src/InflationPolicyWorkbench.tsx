@@ -7,7 +7,9 @@ import YieldResistancePanel from "./YieldResistancePanel";
 import type { InflationPolicyWorkbenchProps } from "./inflationPolicyTypes";
 
 function InflationPolicyWorkbench({ payload, onCommand }: InflationPolicyWorkbenchProps) {
-  const showProbabilities = payload.publication_status === "READY";
+  const showInflationProbabilities = payload.inflation.publication_status === "READY";
+  const showPolicyProbabilities = payload.policy.publication_status === "READY";
+  const showCombinedConclusion = showInflationProbabilities && showPolicyProbabilities;
   const q4 = payload.inflation.q4_quantiles_pct;
   const dominantState = [...payload.inflation.state_rows]
     .sort((left, right) => right.probability - left.probability)[0];
@@ -23,7 +25,7 @@ function InflationPolicyWorkbench({ payload, onCommand }: InflationPolicyWorkben
         <p>{payload.headline.summary}</p>
         <small>{payload.headline.history_label} · {payload.as_of_at || "기준시각 없음"}</small>
       </header>
-      {showProbabilities ? (
+      {showCombinedConclusion ? (
         <section className="inflation-policy-conclusion" aria-label="물가 정책 금리 현재 결론">
           <article><span>연말 Core PCE 중간값</span><strong>{q4.p50?.toFixed(2) || "—"}%</strong><small>{q4.p20?.toFixed(2) || "—"}~{q4.p80?.toFixed(2) || "—"}%</small></article>
           <article><span>가장 큰 물가 상태</span><strong>{dominantState?.label || "—"}</strong><small>{dominantState ? `${Math.round(dominantState.probability * 100)}%` : "확률 없음"}</small></article>
@@ -37,8 +39,8 @@ function InflationPolicyWorkbench({ payload, onCommand }: InflationPolicyWorkben
           <p>{payload.headline.summary}</p>
         </section>
       )}
-      <InflationStatePanel inflation={payload.inflation} showProbabilities={showProbabilities} />
-      <PolicyPathPanel policy={payload.policy} showProbabilities={showProbabilities} />
+      <InflationStatePanel inflation={payload.inflation} showProbabilities={showInflationProbabilities} />
+      <PolicyPathPanel policy={payload.policy} showProbabilities={showPolicyProbabilities} />
       <YieldResistancePanel rates={payload.rates} />
       <ReverseScenarioPanel payload={payload} onCommand={onCommand} />
       <EquityStressPanel payload={payload} onCommand={onCommand} />

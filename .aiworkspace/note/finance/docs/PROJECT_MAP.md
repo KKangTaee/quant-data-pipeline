@@ -76,7 +76,7 @@ service와 React workbench다.
 
 ## Workflow Ownership
 
-### Inflation / Policy Yield Path (4/5 Equity Stress Complete)
+### Inflation / Policy Yield Path (Functional Recovery Active)
 
 ```text
 FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
@@ -116,8 +116,9 @@ FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
   `inflation_policy_v1` read model로 변환하고, `inflation_policy_commands.py`는
   USER 기준 저장과 exact READY artifact의 bounded rate/equity scenario만 실행한다.
 - `app/web/overview/market_context_helpers.py`는 기존 cycle과 독립 payload를 렌더 직전에만
-  합성하고 별도 nonce/cache를 소유한다. React workbench는 순방향·역산·조건부 S&P 500
-  stress·근거 UI와 `LIMITED/NOT_AVAILABLE` 비공개 표현만 맡는다.
+  합성하고 별도 nonce/cache를 소유한다. command result는 component transport 전에 다시
+  JSON-safe하게 정규화한다. React workbench는 순방향·역산·조건부 S&P 500 stress·근거
+  UI와 component별 `READY/LIMITED/NOT_AVAILABLE` 표현만 맡는다.
 
 ### Research Evidence
 

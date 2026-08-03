@@ -1,10 +1,13 @@
 # Inflation Policy Equity Stress Status
 
-State: complete
+State: active
 Roadmap: 5/5 implementation checkpoints complete
 Last Updated: 2026-08-03
 
 ## Current
+
+- 2026-08-03 actual EPS 0건과 production `joint_macro_paths` 생성 경로 부재를 구현
+  미완료로 재분류해 functional recovery로 재개했다.
 
 - 전체 phase의 4/5차 조건부 S&P 500 스트레스 구현과 actual Browser QA를 완료했다.
 - 승인된 equity-stress 구현 계획을 실제 평면 module 구조와 독립 `equity_json` 저장
