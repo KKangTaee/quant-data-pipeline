@@ -63,3 +63,11 @@ The complete stored-vintage PIT and latest-revised panel pair takes roughly 48 s
 current local DB. Normal UI render remains DB-read-only and fast. Future performance work may
 cache or incrementally update the diagnostic panel, but must not weaken origin-specific PIT or
 revision comparison semantics.
+
+## Repository-Wide Test Isolation
+
+The full repository suite is not green when all tests share one Python process because unrelated
+Streamlit modules repeatedly recreate the global DeltaGenerator singleton. Representative full-
+suite failures pass when rerun in a fresh process, and the complete economic-cycle selection is
+green. Fixing global Streamlit test isolation is outside this task and remains a repository test-
+infrastructure gap rather than an economic-cycle regression.

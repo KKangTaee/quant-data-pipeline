@@ -125,3 +125,7 @@ Last Updated: 2026-08-03
   `tsc --noEmit`, `py_compile`, `git diff --check` passed. Pre-v3 comparison reported
   `asset_markup_identical=True` and `asset_css_identical=True`.
 - QA screenshots were generated as local untracked artifacts and excluded from commit.
+- Repository-wide single-process `pytest -q` reached `2063 passed / 335 failed`; failures shared
+  the existing Streamlit `DeltaGeneratorSingleton instance already exists` test-order/isolation
+  error across unrelated Backtest, Today and Overview suites. Three representative failed tests
+  rerun in a fresh process all passed. The economic-cycle 192-test selection remains green.
