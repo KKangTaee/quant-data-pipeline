@@ -66,3 +66,23 @@
   1,690개 경로 표시, component error 없음. 새 snapshot target sync와 같은 snapshot의
   dirty form 보존을 rerender test로 확인
   - QA: `inflation-policy-stage3-leak-free-qa.png`
+
+## 2026-08-03 Recovery Stage 4
+
+- FactSet monthly archive 후보 확인: 2018-01~2026-07 103/103 PDF 경로 발견
+- strict two-CY-label 표/OCR 재감사 후 actual DB 저장: 80 release dates, 160 annual EPS rows,
+  `2018-01-19~2026-07-31`; archive 후보 103개 중 검증 실패 23개 report는 제외
+- 기존 geometry fallback으로 들어간 8 release/16 derived rows를 exact audit 후 제거했다.
+  원본 PDF는 보존되며 strict parser가 통과할 때만 재적재된다.
+- actual equity validation: completed origin 77, evaluation fold 44, interval fold 32,
+  index-change MAE 6.9258 < best baseline 7.6929, 80% interval coverage 0.8125,
+  publication `READY`
+- actual materialization `2026-08-03T03:15:00Z --persist`: equity `READY`, measured EPS
+  revision +1.4242%, index p20/p50/p80 7,654/8,190.6/8,594.9
+- actual equity command: user index 6,400, probability `0.02571875`, EPS×multiple target
+  decomposition 저장·JSON transport 성공
+- focused review fixes: 75 passed; 1~4차 통합 regression `244 passed`(기존 edgar
+  deprecation warning 3건); React 17 passed, typecheck/build 성공
+- actual Browser `localhost:8502`: S&P panel의 공개시점 EPS 근거, 분포와 `6,400 이하 · 2.6%`
+  표시, click crash 없음
+  - QA: `inflation-policy-equity-oos-ready-qa.png`

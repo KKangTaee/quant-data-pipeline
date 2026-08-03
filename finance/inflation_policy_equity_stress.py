@@ -53,12 +53,14 @@ EQUITY_FEATURES = (
 EQUITY_PUBLICATION_CONTRACT_VERSION = "equity-stress-publication-v1"
 DEFAULT_MAXIMUM_COVERAGE_80_ERROR = 0.15
 MAX_RESIDUAL_DRAWS_PER_PATH = 16
+MINIMUM_OOS_INTERVAL_RESIDUALS = 12
 
 
 @dataclass(frozen=True)
 class EquityStressValidationReport:
     origin_count: int
     fold_count: int
+    interval_fold_count: int
     index_mae: float | None
     baseline_index_mae: float | None
     baseline_mae_by_name: dict[str, float]
@@ -68,6 +70,7 @@ class EquityStressValidationReport:
     validation_scheme: str
     publication_status: str
     reason_codes: tuple[str, ...]
+    joint_oos_residuals: tuple[tuple[float, float], ...]
 
 
 @dataclass(frozen=True)
@@ -188,7 +191,8 @@ def _eps_frame(
 ) -> pd.DataFrame:
     normalized: list[dict[str, object]] = []
     for raw in rows:
-        if str(raw.get("period_type") or "quarterly").lower() != "quarterly":
+        period_type = str(raw.get("period_type") or "quarterly").lower()
+        if period_type not in {"quarterly", "annual"}:
             continue
         basis = str(raw.get("earnings_basis") or "").lower()
         if basis not in {"operating", "as_reported"}:
@@ -211,6 +215,7 @@ def _eps_frame(
         normalized.append(
             {
                 "period_end": period_end,
+                "period_type": period_type,
                 "released": released,
                 "basis": basis,
                 "status": status,
@@ -248,35 +253,59 @@ def _forward_eps_at(
     }
     status_rank = {"estimate": 0, "mixed": 1, "actual": 2}
     eligible["status_rank"] = eligible["status"].map(status_rank).fillna(-1)
-    complete: list[tuple[int, pd.Timestamp, str, str, pd.DataFrame]] = []
+    complete: list[
+        tuple[int, pd.Timestamp, int, str, str, pd.DataFrame, float]
+    ] = []
     for (basis, source, source_ref, released), rows in eligible.groupby(
         ["basis", "source", "source_ref", "released"], dropna=False
     ):
+        annual = rows.loc[
+            (rows["period_type"] == "annual")
+            & (rows["period_end"] == pd.Timestamp(date(target_year, 12, 31)))
+        ].sort_values("status_rank")
+        if not annual.empty:
+            selected_annual = annual.iloc[[-1]]
+            complete.append(
+                (
+                    1 if str(basis) == "operating" else 0,
+                    pd.Timestamp(released),
+                    1,
+                    str(source),
+                    str(source_ref),
+                    selected_annual,
+                    float(selected_annual.iloc[0]["eps"]),
+                )
+            )
         selected = rows.sort_values(["period_end", "status_rank"]).drop_duplicates(
             "period_end", keep="last"
         )
-        selected = selected.loc[selected["period_end"].isin(expected_periods)]
+        selected = selected.loc[
+            (selected["period_type"] == "quarterly")
+            & selected["period_end"].isin(expected_periods)
+        ]
         if set(selected["period_end"]) != expected_periods:
             continue
         complete.append(
             (
                 1 if str(basis) == "operating" else 0,
                 pd.Timestamp(released),
+                0,
                 str(source),
                 str(source_ref),
                 selected,
+                float(selected["eps"].sum()),
             )
         )
     if complete:
-        _basis_rank, released, source, source_ref, selected = max(
-            complete, key=lambda item: (item[1], item[0], item[2], item[3])
+        _basis_rank, released, _annual_rank, source, source_ref, selected, total = max(
+            complete, key=lambda item: (item[1], item[0], item[2], item[3], item[4])
         )
         values = {
             pd.Timestamp(row.period_end): float(row.eps)
             for row in selected.itertuples()
         }
         return (
-            float(sum(values.values())),
+            total,
             released,
             values,
             str(selected.iloc[0]["basis"]),
@@ -626,6 +655,7 @@ def rolling_origin_validate_equity_stress(
         return EquityStressValidationReport(
             origin_count=count,
             fold_count=0,
+            interval_fold_count=0,
             index_mae=None,
             baseline_index_mae=None,
             baseline_mae_by_name={},
@@ -635,6 +665,7 @@ def rolling_origin_validate_equity_stress(
             validation_scheme="rolling_origin",
             publication_status="NOT_AVAILABLE",
             reason_codes=("insufficient_origins",),
+            joint_oos_residuals=(),
         )
     minimum_training = max(24, min(36, int(minimum_origins) // 2))
     model_errors: list[float] = []
@@ -646,6 +677,8 @@ def rolling_origin_validate_equity_stress(
     eps_errors: list[float] = []
     multiple_errors: list[float] = []
     covered: list[float] = []
+    prior_oos_residuals: list[float] = []
+    joint_oos_residuals: list[tuple[float, float]] = []
     for index in range(count):
         evaluation = frame.iloc[[index]]
         evaluation_origin = pd.Timestamp(evaluation.iloc[0]["origin_date"])
@@ -681,25 +714,25 @@ def rolling_origin_validate_equity_stress(
         eps_errors.append(abs(predicted_eps - actual_eps))
         multiple_errors.append(abs(predicted_multiple - actual_multiple))
 
-        train_eps_predictions = _predict_response(training, eps_coefficients)
-        train_multiple_predictions = _predict_response(training, multiple_coefficients)
-        train_index_predictions = np.asarray(
-            [
-                _combined_index_change(eps_value, multiple_value)
-                for eps_value, multiple_value in zip(
-                    train_eps_predictions, train_multiple_predictions, strict=True
-                )
-            ]
-        )
-        residuals = training["index_change_pct"].to_numpy(dtype=float) - train_index_predictions
-        lower, upper = np.quantile(residuals, (0.10, 0.90))
-        covered.append(
-            float(predicted_index + lower <= actual_index <= predicted_index + upper)
+        # In-sample residuals are too narrow after fitting and understated actual
+        # year-end uncertainty. Calibrate only from errors produced by earlier,
+        # chronologically completed evaluation folds.
+        if len(prior_oos_residuals) >= MINIMUM_OOS_INTERVAL_RESIDUALS:
+            lower, upper = np.quantile(
+                prior_oos_residuals, (0.10, 0.90), method="inverted_cdf"
+            )
+            covered.append(
+                float(predicted_index + lower <= actual_index <= predicted_index + upper)
+            )
+        prior_oos_residuals.append(actual_index - predicted_index)
+        joint_oos_residuals.append(
+            (actual_eps - predicted_eps, actual_multiple - predicted_multiple)
         )
     if not model_errors:
         return EquityStressValidationReport(
             origin_count=count,
             fold_count=0,
+            interval_fold_count=0,
             index_mae=None,
             baseline_index_mae=None,
             baseline_mae_by_name={},
@@ -709,23 +742,27 @@ def rolling_origin_validate_equity_stress(
             validation_scheme="rolling_origin_label_available",
             publication_status="NOT_AVAILABLE",
             reason_codes=("insufficient_validation_folds",),
+            joint_oos_residuals=(),
         )
     index_mae = float(np.mean(model_errors))
     baseline_mae_by_name = {
         name: float(np.mean(errors)) for name, errors in baseline_errors.items()
     }
     baseline_mae = min(baseline_mae_by_name.values())
-    coverage_80 = float(np.mean(covered))
+    coverage_80 = float(np.mean(covered)) if covered else None
     reasons: list[str] = []
     if index_mae >= baseline_mae - 1e-12:
         reasons.append("baseline_not_beaten")
-    coverage_error = abs(coverage_80 - 0.80)
+    coverage_error = (
+        abs(float(coverage_80) - 0.80) if coverage_80 is not None else math.inf
+    )
     if coverage_error > float(maximum_coverage_80_error) + 1e-12:
         reasons.append("coverage_80_miscalibrated")
     status = "READY" if not reasons else "LIMITED"
     return EquityStressValidationReport(
         origin_count=count,
         fold_count=len(model_errors),
+        interval_fold_count=len(covered),
         index_mae=index_mae,
         baseline_index_mae=baseline_mae,
         baseline_mae_by_name=baseline_mae_by_name,
@@ -735,6 +772,7 @@ def rolling_origin_validate_equity_stress(
         validation_scheme="rolling_origin_label_available",
         publication_status=status,
         reason_codes=tuple(reasons),
+        joint_oos_residuals=tuple(joint_oos_residuals),
     )
 
 
@@ -759,6 +797,9 @@ def _empty_artifact(
             ),
             "origin_count": float(report.origin_count),
             "fold_count": float(report.fold_count),
+            "interval_fold_count": float(report.interval_fold_count),
+            "interval_calibration_scheme": "prior_oos_residuals",
+            "residual_calibration_scheme": "chronological_oos_fold_pairs",
             "validation_scheme": report.validation_scheme,
             "publication_contract_version": EQUITY_PUBLICATION_CONTRACT_VERSION,
             "baseline_mae_by_name": report.baseline_mae_by_name,
@@ -868,18 +909,10 @@ def fit_equity_stress_model(
     multiple_coefficients = _fit_ridge_coefficients(
         frame, target="multiple_change_pct", ridge_alpha=ridge_alpha
     )
-    eps_predictions = _predict_response(frame, eps_coefficients)
-    multiple_predictions = _predict_response(frame, multiple_coefficients)
-    residuals = tuple(
-        (float(actual_eps - predicted_eps), float(actual_multiple - predicted_multiple))
-        for actual_eps, predicted_eps, actual_multiple, predicted_multiple in zip(
-            frame["eps_change_pct"].to_numpy(dtype=float),
-            eps_predictions,
-            frame["multiple_change_pct"].to_numpy(dtype=float),
-            multiple_predictions,
-            strict=True,
-        )
-    )
+    # The publication gate and the deployed distribution must describe the same
+    # forecast errors. Persist only residual pairs generated by chronological OOS
+    # folds, never the narrower in-sample errors of the final refit.
+    residuals = report.joint_oos_residuals
     latest_revision, scenario_features = _latest_scenario_values(panel)
     validation_metrics: dict[str, object] = {
         "training_start_date": pd.Timestamp(frame.iloc[0]["origin_date"]).strftime(
@@ -887,6 +920,9 @@ def fit_equity_stress_model(
         ),
         "origin_count": float(report.origin_count),
         "fold_count": float(report.fold_count),
+        "interval_fold_count": float(report.interval_fold_count),
+        "interval_calibration_scheme": "prior_oos_residuals",
+        "residual_calibration_scheme": "chronological_oos_fold_pairs",
         "index_mae": float(report.index_mae or 0.0),
         "baseline_index_mae": float(report.baseline_index_mae or 0.0),
         "eps_mae": float(report.eps_mae or 0.0),

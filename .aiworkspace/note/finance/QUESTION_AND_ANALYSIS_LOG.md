@@ -10736,3 +10736,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   actual official EPS vintage 0건은 Shiller로 대체하지 않았다.
 - Follow-up: 전체 4/5차 완료. 다음 5차는 기존 경제 사이클 확률을 재사용하지 않는 독립
   episode/OOS 침체 위험 모델이며, equity actual probability는 input/validation gate 전까지 숨긴다.
+
+### 2026-08-03 - 미충족 S&P 스트레스는 검증 가능한 EPS 공개빈티지로 복구한다
+
+- User request: 안내나 새 버전으로 회피하지 말고 actual DB에서 비어 있던 기능의 근본
+  원인을 해결해 클릭 뒤 정상 작동하게 하도록 요청함.
+- Interpreted goal: 현재 estimate를 과거에 복제하거나 Shiller를 대신 쓰지 않고, 공개일이
+  검증된 EPS consensus vintage와 OOS validation으로 기존 equity surface를 실제 복구한다.
+- Analysis result: FactSet annual current/next-year bottom-up EPS 80 release/160행을 저장하고
+  77 origin에서 baseline 개선과 OOS interval coverage를 통과해 equity `READY`를 만들었다.
+- Follow-up: actual 6,400 command는 `2.57%`로 동작한다. 전체 4/5차 완료이며
+  다음은 기존 경제 사이클 결과를 전혀 재사용하지 않는 5차 독립 침체 모델이다.

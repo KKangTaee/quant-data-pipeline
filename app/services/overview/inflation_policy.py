@@ -48,6 +48,12 @@ REASON_LABELS = {
     "official_eps_vintages_or_joint_paths_not_available": (
         "공식 S&P 500 EPS 빈티지와 검증된 공동 거시경로가 필요합니다."
     ),
+    "verified_eps_vintages_not_available": (
+        "발표일이 검증된 S&P 500 EPS 빈티지가 없어 주가 스트레스를 계산할 수 없습니다."
+    ),
+    "verified_eps_vintages_or_joint_paths_not_available": (
+        "발표일이 검증된 S&P 500 EPS 빈티지와 공동 거시경로가 필요합니다."
+    ),
     "joint_rate_paths_not_available": (
         "검증된 물가·정책·금리 공동 경로가 없어 주가 스트레스를 계산할 수 없습니다."
     ),
@@ -217,7 +223,9 @@ def _finite_mapping(value: object, *, field: str) -> dict[str, float]:
 
 
 def _equity_section(value: object) -> dict[str, object]:
-    unavailable_reason = "공식 S&P 500 EPS 빈티지와 검증된 공동 거시경로가 필요합니다."
+    unavailable_reason = (
+        "발표일이 검증된 S&P 500 EPS 빈티지와 공동 거시경로가 필요합니다."
+    )
     try:
         raw = _mapping(value)
         if not raw:
@@ -550,7 +558,7 @@ def _unavailable_model(*, status: str, summary: str) -> dict[str, object]:
         "rates": _empty_rates(reason),
         "reverse_scenario": _empty_reverse(reason),
         "equity_stress": _empty_equity(
-            "공식 S&P 500 EPS 빈티지와 검증된 공동 거시경로가 필요합니다."
+            "발표일이 검증된 S&P 500 EPS 빈티지와 공동 거시경로가 필요합니다."
         ),
         "recession": {
             "publication_status": "NOT_AVAILABLE",

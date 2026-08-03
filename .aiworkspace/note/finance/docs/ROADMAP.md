@@ -9,10 +9,10 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 제공하는 Evidence-first 퀀트 투자 리서치 워크스페이스다.
 
 현재 사용자 승인 `Inflation Policy Yield Path` 5단계 phase가 active다. 실제 DB와
-Browser 재감사 결과 1차 독립 Point-in-Time 데이터 기반, 2차 Core PCE Q4/Q4와
-3차 정책·공동 금리 경로·10년물 목표 역산이 완료 상태이며, 4차 조건부
-S&P 500 스트레스는 production data·검증·command 경로를 복구 중이다. 5차 독립
-침체 위험 모델은 2~4차가 실제로 작동한 뒤 진행한다. 기존 baseline과 남은
+Browser 재감사 결과 1차 독립 Point-in-Time 데이터 기반, 2차 Core PCE Q4/Q4,
+3차 정책·공동 금리 경로·10년물 목표 역산과 4차 조건부 S&P 500 스트레스가
+actual data·검증·command 경로에서 완료됐다. 5차 독립 침체 위험 모델을 진행한다.
+기존 baseline과 남은
 verification debt는 유지하며 다른 신규 product/data
 scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는다.
 
@@ -21,8 +21,8 @@ scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는�
 - Product baseline: Research → Portfolio Lab → Portfolio Monitoring 흐름 구현
 - Data baseline: MySQL-backed ingestion / loader / service / UI 경계 구현
 - Safety baseline: no live approval, broker order, auto rebalance
-- Active phase: `inflation-policy-yield-path` (3/5 complete, 4차 functional recovery)
-- Active product implementation: Core PCE·policy·joint rate·reverse actual materialization 완료, PIT forward EPS/equity 진행
+- Active phase: `inflation-policy-yield-path` (4/5 complete, 5차 independent recession)
+- Active product implementation: Core PCE·policy·joint rate·reverse·equity actual materialization 완료, 독립 침체 진행
 - Paused work와 Verification-Only work는 별도 상태로 관리
 
 ## Implemented Baseline
@@ -39,8 +39,8 @@ scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는�
 | Portfolio Monitoring | direct stock·ETF와 selected strategy의 group/item, cashflow-aware performance, contribution, diagnosis와 recheck | read-only monitoring, broker / auto rebalance 없음 |
 | Reference Center | 7개 current surface의 개념·journey·failure state·deep link 검색 | product help owner |
 | Architecture | Python domain / service / runtime, Streamlit command boundary와 React presentation 분리 | React가 DB / provider / canonical decision을 소유하지 않음 |
-| Inflation / Policy Backend | 독립 26-series PIT 원장, Philadelphia Fed SPF 확률 bin, 공식 FOMC rate decision 86건·SEP 40 release, 익명 SEP·실제 의결, strict as-of/vintage loader, 혼합형 Core PCE, 검증 정책 marginal과 2,000개 joint rate path, 동적 저항대 | 기존 경제 사이클 결과 재사용 없음; December 동시결과 누수를 제외한 Core/Q4/policy/joint-rate actual chronological gate 통과, equity PIT source 복구 중 |
-| Inflation / Policy Workbench | 기존 경기 국면 기본 선택기 아래 DB-backed 물가·정책·금리·역산·equity surface와 USER 기준 저장 | actual Q4 5상태·다음 발표·다음 회의·연말 정책·동적 4.79% 역산 공개와 command QA 완료; equity만 해당 component gate 전까지 독립 제한 |
+| Inflation / Policy Backend | 독립 26-series PIT 원장, Philadelphia Fed SPF 확률 bin, 공식 FOMC rate decision 86건·SEP 40 release, FactSet 두 CY 라벨 검증 annual EPS 80 release, strict as-of/vintage loader, 혼합형 Core PCE, 검증 정책 marginal·2,000개 joint rate path·equity stress, 동적 저항대 | 기존 경제 사이클 결과 재사용 없음; December 동시결과 누수를 제외한 Core/Q4/policy/joint-rate와 equity actual chronological gate 통과, 독립 침체만 진행 중 |
+| Inflation / Policy Workbench | 기존 경기 국면 기본 선택기 아래 DB-backed 물가·정책·금리·역산·equity surface와 USER 기준 저장 | actual Q4 5상태·다음 발표·다음 회의·연말 정책·동적 4.79% 역산·EPS×multiple 스트레스 공개와 command QA 완료; 침체만 별도 gate 전까지 독립 제한 |
 
 상세 구현과 과거 QA는 개별 task / phase 기록에 남아 있다. 현재 제품 의미는
 [Product Direction](./PRODUCT_DIRECTION.md), code ownership은
@@ -52,7 +52,7 @@ scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는�
 
 | Work | Current State | Next Gate |
 |---|---|---|
-| [Inflation Policy Yield Path](../phases/active/inflation-policy-yield-path/STATUS.md) | 전체 5차 중 1~3차 PIT data·Core PCE·policy/joint-rate/reverse 완료, 4차 functional recovery active | PIT forward EPS와 equity actual materialization |
+| [Inflation Policy Yield Path](../phases/active/inflation-policy-yield-path/STATUS.md) | 전체 5차 중 1~4차 PIT data·Core PCE·policy/joint-rate/reverse/equity 완료, 5차 active | 독립 침체 episode/OOS validation과 actual 통합 |
 
 이 phase 외 새 제품 범위는 목적, 완료 조건과 data/safety boundary를 합의한 뒤 별도
 task 또는 명시적으로 승인된 phase로 연다.
@@ -95,8 +95,7 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 
 1. **Active inflation-policy phase** — 5차 침체 위험은 기존 경제 사이클 확률을
    재사용하지 않고 독립 episode/OOS validation과 publication gate를 통과한 경우만
-   확률을 공개한다. 4차 equity는 official EPS/joint-path gate가 준비될 때까지
-   `NOT_AVAILABLE`을 유지한다.
+   확률을 공개한다. 4차 equity는 날짜 검증 EPS와 joint-path gate를 통과해 완료됐다.
 2. **Verification debt closeout** — 이미 구현된 interaction을 작은 QA-only 작업으로 닫아
    active-state 신뢰도를 먼저 높인다.
 3. **Correctness decision** — historical universe / delisting PIT source와 storage policy를

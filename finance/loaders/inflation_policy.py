@@ -379,7 +379,7 @@ def load_inflation_policy_equity_bundle(
     history_start: str | date,
     query_fn: QueryFn | None = None,
 ) -> InflationPolicyEquityBundle:
-    """Load official EPS vintages, S&P 500 prices, and yield vintages known then."""
+    """Load verified EPS vintages, S&P 500 prices, and yield vintages known then."""
 
     as_of = _datetime_value(as_of_at, field="as_of_at")
     start = _date_value(history_start, field="history_start")
@@ -394,7 +394,10 @@ def load_inflation_policy_equity_bundle(
         SELECT period_end, period_type, earnings_basis, value_status, eps,
                source, source_ref, source_release_date, collected_at
         FROM sp500_index_earnings
-        WHERE period_type = 'quarterly'
+        WHERE source = 'factset_earnings_insight'
+          AND period_type = 'annual'
+          AND earnings_basis = 'operating'
+          AND value_status IN ('mixed', 'estimate')
           AND eps > 0
           AND source_release_date <= %s
           AND period_end >= %s
@@ -416,7 +419,12 @@ def load_inflation_policy_equity_bundle(
             continue
         if release_date > as_of.date() or period_end < start or value <= 0.0:
             continue
-        if str(row.get("period_type") or "quarterly").lower() != "quarterly":
+        if (
+            str(row.get("source") or "").lower() != "factset_earnings_insight"
+            or str(row.get("period_type") or "").lower() != "annual"
+            or str(row.get("earnings_basis") or "").lower() != "operating"
+            or str(row.get("value_status") or "").lower() not in {"mixed", "estimate"}
+        ):
             continue
         row["source_release_date"] = release_date.isoformat()
         row["period_end"] = period_end.isoformat()
@@ -471,6 +479,28 @@ def load_inflation_policy_equity_bundle(
         as_of=as_of,
         date_field="observation_date",
     )
+    release_identities: dict[str, set[tuple[int, str]]] = {}
+    for row in eps_rows:
+        release_date = _date_value(
+            row["source_release_date"], field="source_release_date"
+        )
+        period_end = _date_value(row["period_end"], field="period_end")
+        release_identities.setdefault(release_date.isoformat(), set()).add(
+            (period_end.year, str(row.get("value_status") or "").lower())
+        )
+    verified_release_count = sum(
+        1
+        for release_text, identities in release_identities.items()
+        if (
+            (date.fromisoformat(release_text).year, "mixed") in identities
+            and (date.fromisoformat(release_text).year + 1, "estimate") in identities
+        )
+    )
+    verified_eps_status = (
+        "READY"
+        if verified_release_count >= 60
+        else "LIMITED" if eps_rows else "NOT_AVAILABLE"
+    )
     return InflationPolicyEquityBundle(
         as_of_at=as_of.isoformat(),
         price_rows=tuple(sorted(price_rows, key=lambda row: str(row["Date"]))),
@@ -486,7 +516,12 @@ def load_inflation_policy_equity_bundle(
         ),
         yield_rows=yield_rows,
         coverage={
-            "official_eps_vintage_status": "READY" if eps_rows else "NOT_AVAILABLE",
+            "verified_eps_vintage_status": verified_eps_status,
+            "verified_eps_vintage_rows": len(eps_rows),
+            "verified_eps_vintage_releases": verified_release_count,
+            # Compatibility aliases for persisted callers created before the
+            # verified FactSet PIT source was connected.
+            "official_eps_vintage_status": verified_eps_status,
             "official_eps_vintage_rows": len(eps_rows),
             "sp500_price_status": "READY" if price_rows else "NOT_AVAILABLE",
             "sp500_price_rows": len(price_rows),

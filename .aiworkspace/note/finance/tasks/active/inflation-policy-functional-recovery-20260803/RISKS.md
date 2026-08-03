@@ -11,10 +11,14 @@
 - Philadelphia Fed SPF 확률분포는 Q4/Q4 survey benchmark이지 월별 Core PCE nowcast의
   대체물이 아니다. horizon을 섞지 않는다.
 - current official S&P workbook를 과거 origin에 복제하면 forward EPS PIT가 조작된다.
-- free/public source가 historical consensus vintage를 제공하지 않으면 equity READY를
-  만들기 위해 trailing EPS나 현재 estimate로 우회하지 않는다.
+- FactSet archive 103개 중 23개는 차트 page/두 CY 라벨/구조 검증 실패로 제외됐다. collector의
+  partial health를 모델 source coverage와 혼동하지 않으며, parser 기준을 낮추거나 OCR
+  숫자를 수동 추정해 채우지 않는다.
+- FactSet 연간 bottom-up estimate는 날짜가 검증된 analyst estimate source이지 S&P 공식
+  actual EPS가 아니다. source/basis를 유지하고 Market Context actual TTM과 섞지 않는다.
 - joint rate path를 25bp policy move와 10년물 25bp로 기계 매핑하면 사용자의 원래
   분석 취지와 데이터 의미를 모두 훼손한다.
 - 기존 task/phase의 `complete` 상태는 구현 파일 존재를 뜻했지만 실제 사용 가능성을
-  과장한다. recovery 진행에 맞춰 2~4차를 재개 상태로 정렬해야 한다.
+  과장했다. 4차는 actual DB·validation·command·Browser evidence가 모두 생긴 뒤에만
+  다시 완료로 정렬했다.
 - worktree의 사용자 registry 수정과 untracked artifact를 커밋하지 않는다.

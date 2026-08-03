@@ -7342,3 +7342,12 @@ Detailed historical logs were archived on `2026-04-13`.
   실행과 historical replay 재현성을 고정했다.
 - Python 159·React 11, build와 actual desktop/390px Browser QA를 통과했다. 전체 4/5차
   완료; 다음 위치는 기존 cycle 확률을 재사용하지 않는 5차 독립 침체 위험 모델이다.
+
+## 2026-08-03 - Inflation / Policy 4차 actual 기능 복구
+
+- FactSet Earnings Insight의 두 CY 라벨 검증 월별 공개시점 80개와 annual bottom-up EPS
+  160행을 DB에 적재하고, 검증 실패 report 23개는 추정하지 않고 제외했다.
+- 77 completed origin에서 equity MAE 6.9258%가 best baseline 7.6929%보다 낮고 OOS 80%
+  interval coverage 0.8125를 통과해 equity를 actual `READY`로 복구했다.
+- actual 6,400 scenario가 `2.57%`와 EPS×multiple 분해로 동작한다. 전체 복구
+  roadmap은 4/5차이며 다음 위치는 `inflation-policy-functional-recovery-20260803`의 독립 침체 단계다.

@@ -207,7 +207,7 @@ def save_inflation_policy_snapshot(
         "equity_json",
         {
             "publication_status": "NOT_AVAILABLE",
-            "reason": "official_eps_vintages_or_joint_paths_not_available",
+            "reason": "verified_eps_vintages_or_joint_paths_not_available",
         },
     )
     prepared = _required(

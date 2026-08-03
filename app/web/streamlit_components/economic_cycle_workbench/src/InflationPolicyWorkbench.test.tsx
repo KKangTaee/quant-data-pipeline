@@ -549,12 +549,25 @@ describe("conditional S&P 500 equity stress", () => {
     });
   });
 
-  it("shows the official EPS and joint-path gates when unavailable", () => {
+  it("does not call a READY base scenario validation-limited when no user level ran yet", () => {
+    const payload = readyPayload();
+    payload.equity_stress = {
+      ...payload.equity_stress,
+      threshold_probabilities: {},
+    };
+
+    render(<InflationPolicyWorkbench payload={payload} onCommand={vi.fn()} />);
+
+    expect(screen.queryByText(/검증이 제한된 상태에서는 범위만 표시/)).not.toBeInTheDocument();
+    expect(screen.getByText(/확인할 S&P 500 수준을 입력하면/)).toBeInTheDocument();
+  });
+
+  it("shows the verified EPS and joint-path gates when unavailable", () => {
     render(<InflationPolicyWorkbench payload={cyclePayload.inflation_policy} onCommand={vi.fn()} />);
 
     expect(screen.getByRole("heading", { name: "S&P 500 조건부 스트레스" })).toBeInTheDocument();
-    expect(screen.getByText("공식 S&P 500 EPS 빈티지 필요")).toBeInTheDocument();
-    expect(screen.getByText(/Ingestion에서 공식 Index Earnings workbook/)).toBeInTheDocument();
+    expect(screen.getByText("검증된 S&P 500 EPS 빈티지 필요")).toBeInTheDocument();
+    expect(screen.getByText(/날짜가 확인되는 bottom-up EPS 빈티지/)).toBeInTheDocument();
     expect(screen.queryByText(/25%/)).not.toBeInTheDocument();
   });
 });

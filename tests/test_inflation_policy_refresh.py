@@ -9,6 +9,7 @@ def _required_success_collectors():
         "sep": lambda: {"status": "success", "rows": 40},
         "decisions": lambda: {"status": "success", "rows": 6},
         "spf_core_pce": lambda: {"status": "success", "rows": 200},
+        "factset_sp500_eps": lambda: {"status": "success", "rows": 206},
         "term_premium": lambda: {
             "status": "success",
             "rows": 500,

@@ -65,3 +65,30 @@
   stored target 4.79%/REACH에서 시작하고 같은 artifact로 command를 실행한다. snapshot
   identity가 바뀌면 새 target으로 재동기화하고, 같은 snapshot의 command rerender는 dirty
   input을 유지한다.
+
+## 2026-08-03 S&P 500 조건부 스트레스 복구 결론
+
+- FactSet Earnings Insight 월별 PDF의 `Bottom-Up EPS Estimates: Current & Historical`
+  표는 보고서 공개일 당시 current/next calendar-year 연간 bottom-up EPS를 함께 제공한다.
+  분기 차트는 연초에 차년도 Q1~Q4 전체가 아니라 rolling 12-quarter 범위이므로 연간
+  차년도 EPS를 재구성하는 근거로 쓰지 않는다.
+- source URL은 FactSet report archive로 보존하고, 동일 PDF의 FactSet 소유 HubSpot CDN
+  mirror를 download transport로 사용한다. PDF 표 제목·연도·우측 막대 구조를 검증하지
+  못한 보고서는 OCR 숫자를 저장하지 않는다.
+- archive 후보 103개월 가운데 80개 공개시점/160행만 두 CY 라벨 검증에 통과했다. loader의 model
+  source gate는 60개 이상 개별 검증된 공개시점이므로 `READY`이며, collector health는
+  23개 제외를 숨기지 않고 `LIMITED/PARTIAL`로 남긴다.
+- EPS basis는 FactSet analyst comparable/adjusted bottom-up annual estimate를 기존
+  operating basis에 정규화한다. S&P 공식 actual quarterly workbook와 동일 source로
+  가장하지 않으며 Market Context actual TTM 경로를 대체하지 않는다.
+- 기존 80% interval은 같은 학습 fold 잔차로 폭을 정해 coverage가 0.632로 낮았다.
+  각 fold 이전의 OOS 잔차만 누적하는 conformal interval로 바꾼 뒤 coverage 0.8125를
+  얻었다. 배포 simulation도 전체 학습행의 in-sample 잔차가 아니라 동일 chronological
+  OOS fold의 EPS·multiple paired residual만 사용한다.
+- 독립 리뷰에서 타 source quarterly actual 60건으로 verified gate가 열리는 경로,
+  연도 라벨 없는 geometry 추정, partial/latest report 미복구를 재현했다. loader source·
+  basis·status와 complete pair를 고정하고 두 CY 라벨을 필수화했으며 collector가 partial과
+  최신 월을 idempotent re-extract하도록 수정했다.
+- equity artifact는 publishable Core PCE model identity가 없는 실행에서 별도로 저장하지
+  않는다. actual DB에 EPS가 생긴 뒤 invalid-core regression이 artifact를 남기던 숨은
+  production 결합을 회귀 테스트로 차단했다.

@@ -13,6 +13,9 @@ from finance.data.fomc_policy import (
     collect_and_store_fomc_policy_history,
     collect_and_store_fomc_sep_distributions,
 )
+from finance.data.factset_sp500_eps import (
+    collect_and_store_factset_sp500_eps_vintages,
+)
 from finance.data.nyfed_term_premium import collect_and_store_acm_term_premium
 from finance.data.spf_core_pce import collect_and_store_spf_core_pce_probabilities
 from finance.inflation_policy_catalog import collect_inflation_policy_vintages
@@ -20,7 +23,7 @@ from app.runtime_env import load_project_local_env
 
 
 REQUIRED_SOURCES = ("macro_vintages", "sep", "decisions", "spf_core_pce")
-OPTIONAL_SOURCES = ("term_premium", "pce_components")
+OPTIONAL_SOURCES = ("term_premium", "pce_components", "factset_sp500_eps")
 SOURCE_ORDER = (*REQUIRED_SOURCES, *OPTIONAL_SOURCES)
 REQUIRED_MACRO_SERIES = ("PCEPILFE", "DGS2", "DGS10", "DFII10", "T10YIE")
 SUCCESS_STATUSES = {"success", "partial_success", "ready", "limited"}
@@ -69,6 +72,9 @@ def _default_collectors(observed_at: str) -> dict[str, Callable[[], Mapping[str,
         ),
         "pce_components": lambda: collect_and_store_bea_pce_components(
             collected_at=observed_at
+        ),
+        "factset_sp500_eps": lambda: collect_and_store_factset_sp500_eps_vintages(
+            end_date=observed_at[:10], collected_at=observed_at
         ),
     }
 

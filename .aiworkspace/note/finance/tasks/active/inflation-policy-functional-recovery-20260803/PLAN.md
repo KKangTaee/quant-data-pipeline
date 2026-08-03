@@ -21,8 +21,8 @@ Streamlit component transport에서 직렬화되지 않아 클릭 시 화면이 
 | 4 | S&P 500 조건부 stress 실사용화 | PIT forward EPS source/backfill, equity validation, joint path 연결 | official/검증 가능한 EPS vintage로 actual equity result가 계산된다. |
 | 5 | 독립 침체 연결 | 별도 episode/OOS 침체 모델 | 경제 사이클 재사용 없이 검증된 침체 결과가 연결된다. |
 
-현재 1차 runtime 복구, 2차 Core PCE Q4 직접검증, 3차 정책·공동 금리 경로까지
-완료했고 4차 S&P 500 조건부 stress를 진행한다. 확률 gate를 느슨하게 만들거나 fixture 숫자를 노출하지 않고,
+현재 1차 runtime 복구, 2차 Core PCE Q4 직접검증, 3차 정책·공동 금리 경로와
+4차 S&P 500 조건부 stress까지 완료했고 5차 독립 침체 연결을 진행한다. 확률 gate를 느슨하게 만들거나 fixture 숫자를 노출하지 않고,
 각 차수의 실제 DB 입력과 독립 검증을 채운다.
 
 ## 구현 순서
@@ -69,10 +69,12 @@ Streamlit component transport에서 직렬화되지 않아 클릭 시 화면이 
   확보하고, 없으면 해당 origin은 제외한다.
 - actual DB에서 60개 이상 completed origin과 세 baseline/coverage gate를 검증한다.
 
-### Task 5. 실제 DB와 Browser QA
+### Task 5. 독립 침체 모델과 최종 실제 DB/Browser QA
 
+- 기존 경제 사이클 확률·artifact·snapshot을 입력이나 fallback으로 사용하지 않는다.
+- 침체 episode와 label 공개시각을 별도로 정의하고 chronological OOS gate를 통과시킨다.
 - 동일한 production materialization command로 2026-08-03 snapshot을 재생성한다.
-- 역산·정책·equity command를 actual DB로 실행한다.
+- 역산·정책·equity command와 독립 침체 결과를 actual DB로 실행한다.
 - desktop/mobile Browser에서 결과, click, overflow와 console을 확인한다.
 - 기존 task/phase의 잘못된 `complete` 기록을 실제 상태로 정렬하고 QA screenshot을 남긴다.
 

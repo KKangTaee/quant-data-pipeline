@@ -16,8 +16,8 @@
   cycle-independent recession 경계를 테스트와 Browser QA로 고정했다.
 - 4차 주가 스트레스가 S&P 500 6,400 같은 사용자 숫자를 전역 target으로 승격하거나
   동시발생을 인과효과로 해석하면 안 된다. 독립 episode 정의와 chronological holdout이 필요하다.
-- 4차 엔진·저장·UI는 구현됐지만 official EPS 빈티지와 검증된 공동 거시경로가 없어
-  actual 결과는 `NOT_AVAILABLE`이다. Shiller EPS나 UI fixture로 이 gate를 우회하지 않는다.
+- FactSet archive 후보 103개 중 80개 release/160행만 두 CY 라벨과 구조 검증을 통과했다.
+  제외된 23개를 OCR 추정치로 채우지 않으며 collector partial health를 공개한다.
 - equity PIT validation은 year-end label이 실제 공개된 뒤의 fold에서만 학습하고,
   production/command 모두 versioned equity artifact와 independently READY joint path를
   요구한다. payload 존재만으로 publication gate를 우회하지 않는다.
@@ -27,6 +27,5 @@
   `NOT_AVAILABLE`로 닫는다.
 - 5차 침체 연결 시 4차 equity model feature에 기존 경제 사이클 확률을 편의상 넣지 않는다.
   독립 침체 artifact가 `READY`인 경우에만 별도 versioned feature로 추가한다.
-- 저장소 전체 `pytest -q`는 Streamlit singleton 순차 실행 격리 문제로 green이 아니다.
-  4차 closeout은 inflation-policy + S&P valuation Python 159건, React 11건, production build와
-  actual desktop/mobile Browser QA로 검증했다.
+- 4차 closeout은 actual PIT EPS 80 release, 77 completed origin, MAE/baseline/OOS coverage,
+  focused regression, React 17건, production build와 actual Browser command로 검증했다.

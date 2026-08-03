@@ -5,7 +5,7 @@ Last Verified: 2026-08-03
 
 ## 목적
 
-Core PCE, FOMC SEP·정책 결정, 국채금리와 기간 프리미엄 원천을 UI나 기존 경제
+Core PCE, FOMC SEP·정책 결정, 국채금리, 기간 프리미엄과 날짜 검증 annual EPS 원천을 UI나 기존 경제
 사이클 결과에 의존하지 않고 MySQL의 독립 Point-in-Time 원장으로 갱신한다. raw
 갱신과 DB-only 모델 재현·저장은 별도 명령이며, 수집 명령 자체는 확률·저항대·주가
 스트레스 결과를 계산하지 않는다.
@@ -14,6 +14,7 @@ Core PCE, FOMC SEP·정책 결정, 국채금리와 기간 프리미엄 원천을
 
 - inflation-policy 엔진의 현재 또는 historical replay 입력을 준비할 때
 - 새 FOMC 성명이나 SEP가 공개된 뒤 익명 분포와 의결 이력을 갱신할 때
+- FactSet Earnings Insight 새 월별 보고서의 current/next-year bottom-up EPS vintage를 갱신할 때
 - FRED/ALFRED 물가·노동·활동·금리 빈티지를 다시 적재할 때
 - 필수 source coverage 때문에 모델 materialization이 차단됐는지 확인할 때
 
@@ -24,6 +25,8 @@ Core PCE, FOMC SEP·정책 결정, 국채금리와 기간 프리미엄 원천을
 - `BEA_API_KEY`는 선택이다. 없으면 PCE 구성항목 breadth는 `NOT_AVAILABLE`이지만
   headline Core PCE와 필수 정책·금리 경로는 계속 준비할 수 있다.
 - Federal Reserve와 New York Fed 공식 페이지에 접근할 수 있어야 한다.
+- EPS PDF 검증에는 `pdftotext`, `pdftoppm`, `tesseract`가 필요하다. 표 제목·연도·구조를
+  검증하지 못한 보고서는 수집 성공으로 간주하지 않는다.
 - `--as-of-at`은 수집 실행의 관측 시각이다. 과거 공개 시각을 새로 만들어내는
   옵션이 아니며, 저장된 row는 source별 검증된 `released_at` 경계를 따른다.
 
@@ -96,16 +99,20 @@ read payload를 독립 계산할 수 있어도 신규 artifact/snapshot은 저�
 
 2026-08-03 실제 source smoke에서는 26개 FRED/ALFRED series, current calendar와
 2016~2020 historical material에서 SEP 40개 release·5,787개 distribution row와
-rate decision 86건을 적재했고 `materialization_allowed=true`였다. `BEA_API_KEY`
+rate decision 86건, FactSet 두 CY 라벨 검증 annual EPS 80 release/160행을 적재했고
+`materialization_allowed=true`였다. FactSet archive 후보 103개 중 표 검증에 실패한
+23개는 제외되어 해당 collector health는 partial로 남는다. `BEA_API_KEY`
 부재로 PCE 구성항목은 `NOT_AVAILABLE`, 현재 ACM workbook은 과거 공개 빈티지를
 복원할 수 없어 term premium은 `LIMITED`였다.
 
 2026-08-03 03:15 UTC current materialization에서는 1개월 Core PCE와 SPF 혼합 Q4/Q4,
 다음회의·연말 policy, DGS2/DGS10/DFII10/T10YIE 공동 경로와 dynamic resistance event가
-각 chronological baseline/calibration gate를 통과했다. inflation/policy/rates/reverse는
+각 chronological baseline/calibration gate를 통과했다. 날짜 검증 EPS 77 completed
+origin의 equity MAE 6.9258%가 best baseline 7.6929%보다 낮고 OOS 80% interval coverage가
+0.8125라 inflation/policy/rates/reverse/equity는
 `READY`이고, 10년물 자동 기준은 active `4.58~4.65%`, 다음 overhead `4.79%`다.
-4.79% 도달 역산은 2,000개 중 1,690개 경로가 지지한다. 통합 snapshot은 equity와
-독립 침체 component가 남아 `LIMITED`지만 이미 READY인 네 macro component의 수치는
+4.79% 도달 역산은 2,000개 중 1,690개 경로가 지지한다. 통합 snapshot은 독립 침체
+component만 남아 `LIMITED`지만 이미 READY인 다섯 component의 수치는
 그 상태와 무관하게 공개한다. 4.7%를 전역 상수로 사용하지 않는다.
 
 ## 실패 처리
@@ -123,6 +130,10 @@ rate decision 86건을 적재했고 `materialization_allowed=true`였다. `BEA_A
   breadth 기능만 비활성 상태로 둔다.
 - `term_premium=LIMITED`: 현재 workbook의 과거 행을 과거 시점에 소급하지 않는다.
   실제 collection 빈티지가 누적될 때까지 historical replay에서는 제한을 유지한다.
+- `factset_sp500_eps=LIMITED`: 제외 report의 PDF 표 제목·연도·구조를 먼저 확인한다.
+  OCR 숫자를 수동 보정하거나 현재 estimate로 빈 과거 origin을 채우지 않는다. 60개 이상
+  개별 검증 release가 있으면 equity model source gate와 collector archive health는 서로
+  다른 상태일 수 있다.
 - `benchmark_suite_incomplete`: 비교 가능한 carry-forward·3개월·6개월 baseline은
   모두 저장하지만 SEP/공식 benchmark가 준비되기 전 artifact를 `READY`로 올리지 않는다.
 - `q4_path_rolling_origin_validation_not_ready`: 월간 artifact 결과를 연말 확률로

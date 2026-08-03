@@ -80,7 +80,7 @@ service와 React workbench다.
 
 ```text
 FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
-  + official S&P 500 Index Earnings vintages + stored ^GSPC prices
+  + verified FactSet Earnings Insight annual EPS vintages + stored ^GSPC prices
   -> app/jobs/inflation_policy_refresh.py
   -> finance_meta PIT tables
   -> finance/loaders/inflation_policy.py
@@ -98,8 +98,11 @@ FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
 - `finance/data/spf_core_pce.py`는 Philadelphia Fed SPF current/next-year Core PCE
   Q4/Q4 확률 bin과 공식 release vintage를 저장하고, `finance/core_pce_q4.py`는 월간
   모델과 SPF를 chronological linear pool로 결합해 5상태·threshold 확률을 검증한다.
+- `finance/data/factset_sp500_eps.py`는 FactSet 월별 보고서의 날짜·표 제목·연도·구조를
+  fail-closed로 확인하고 current/next-calendar-year annual bottom-up EPS release vintage만
+  저장한다. S&P 공식 actual quarterly workbook의 대체 source가 아니다.
 - `finance/loaders/inflation_policy.py`는 `released_at <= as_of_at`인 DB row와 official
-  S&P 500 EPS release vintage, 저장된 `^GSPC` 가격을 DB에서만 읽고 과거 origin
+  macro row, 검증된 FactSet EPS release vintage, 저장된 `^GSPC` 가격을 DB에서만 읽고 과거 origin
   재구성에는 eligible 전체 vintage를 별도로 읽는다. 기존
   `economic_cycle_snapshot`/artifact/확률을 사용하지 않는다.
 - `finance/inflation_policy_model.py`, `inflation_path.py`, `policy_path.py`,
@@ -110,13 +113,13 @@ FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
   rolling-origin gate, exact-cutoff replay와 compact artifact/snapshot을 소유한다.
   1개월 Core PCE와 `core_pce_q4_linear_pool` artifact, 5개 다음 발표 scenario,
   정책·돌파·역산·equity 상태를 독립적으로 보존한다.
-- `finance/inflation_policy_equity_stress.py`는 당시 공개된 차년도 EPS, 가격·금리로
-  complete same-workbook year-end EPS×multiple panel을 만들고 label 공개시각
-  rolling-origin ridge, 세 baseline·coverage 비교, paired residual과 사용자 AI EPS
+- `finance/inflation_policy_equity_stress.py`는 당시 공개된 annual 차년도 EPS, 가격·금리로
+  year-end EPS×multiple panel을 만들고 label 공개시각 rolling-origin ridge, 세 baseline·
+  과거 OOS 잔차 interval coverage 비교, paired residual과 사용자 AI EPS
   uplift/지수 수준 시나리오를 소유한다. production runner와 command는 versioned equity
   artifact와 별도 `joint_macro_paths`의 독립 `READY`를 함께 요구한다. model artifact에는
-  불변 모델만, 현재 지수·EPS·시작금리는 snapshot `equity_json`에 두며, official EPS나
-  검증된 joint path가 없으면 Shiller로 대체하지 않고 equity만 `NOT_AVAILABLE`로 닫는다.
+  불변 모델만, 현재 지수·EPS·시작금리는 snapshot `equity_json`에 두며, 검증된 EPS
+  release vintage나 joint path가 없으면 Shiller로 대체하지 않고 equity만 `NOT_AVAILABLE`로 닫는다.
 - `app/services/overview/inflation_policy.py`는 저장 snapshot과 PIT definition을
   `inflation_policy_v1` read model로 변환하고, `inflation_policy_commands.py`는
   USER 기준 저장과 exact READY artifact의 bounded rate/equity scenario만 실행한다.

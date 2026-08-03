@@ -54,11 +54,37 @@ def _yield_rows(*dates: str) -> list[dict[str, object]]:
 def test_equity_bundle_excludes_rows_not_known_at_cutoff() -> None:
     from finance.loaders.inflation_policy import load_inflation_policy_equity_bundle
 
-    eps_rows = _next_year_eps_rows(
-        release_date="2025-03-15", target_year=2026, quarterly_values=(20, 25, 25, 30)
-    ) + _next_year_eps_rows(
-        release_date="2025-06-15", target_year=2026, quarterly_values=(25, 30, 30, 35)
-    )
+    eps_rows = []
+    for release_date, current_eps, next_eps in (
+        ("2025-03-15", 220.0, 250.0),
+        ("2025-06-15", 230.0, 270.0),
+    ):
+        eps_rows.extend(
+            [
+                {
+                    "period_end": "2025-12-31",
+                    "period_type": "annual",
+                    "earnings_basis": "operating",
+                    "value_status": "mixed",
+                    "eps": current_eps,
+                    "source": "factset_earnings_insight",
+                    "source_ref": f"EarningsInsight_{release_date}.pdf",
+                    "source_release_date": release_date,
+                    "collected_at": f"{release_date}T23:59:59Z",
+                },
+                {
+                    "period_end": "2026-12-31",
+                    "period_type": "annual",
+                    "earnings_basis": "operating",
+                    "value_status": "estimate",
+                    "eps": next_eps,
+                    "source": "factset_earnings_insight",
+                    "source_ref": f"EarningsInsight_{release_date}.pdf",
+                    "source_release_date": release_date,
+                    "collected_at": f"{release_date}T23:59:59Z",
+                },
+            ]
+        )
     price_rows = [
         {"symbol": "^GSPC", "Date": "2025-03-31", "Close": 4000.0},
         {"symbol": "^GSPC", "Date": "2025-06-02", "Close": 4200.0},
@@ -88,7 +114,7 @@ def test_equity_bundle_excludes_rows_not_known_at_cutoff() -> None:
         query_fn=query,
     )
 
-    assert len(bundle.eps_rows) == 4
+    assert len(bundle.eps_rows) == 2
     assert {row["source_release_date"] for row in bundle.eps_rows} == {"2025-03-15"}
     assert [row["Date"] for row in bundle.price_rows] == ["2025-03-31"]
     assert all(str(row["observation_date"]) <= "2025-05-31" for row in bundle.yield_rows)
@@ -100,7 +126,88 @@ def test_equity_bundle_excludes_rows_not_known_at_cutoff() -> None:
             and str(row["observation_date"]) == "2025-03-31"
         ]
     ) == 2
-    assert bundle.coverage["official_eps_vintage_status"] == "READY"
+    assert bundle.coverage["verified_eps_vintage_status"] == "LIMITED"
+    assert bundle.coverage["verified_eps_vintage_releases"] == 1
+
+
+def test_equity_bundle_does_not_verify_other_source_quarterly_rows() -> None:
+    from finance.loaders.inflation_policy import load_inflation_policy_equity_bundle
+
+    eps_rows: list[dict[str, object]] = []
+    for index in range(60):
+        release = pd.Timestamp("2019-01-31") + pd.offsets.MonthEnd(index)
+        eps_rows.append(
+            {
+                "period_end": release.strftime("%Y-%m-%d"),
+                "period_type": "quarterly",
+                "earnings_basis": "as_reported",
+                "value_status": "actual",
+                "eps": 50.0 + index,
+                "source": "unverified_other_source",
+                "source_ref": "other.xlsx",
+                "source_release_date": release.strftime("%Y-%m-%d"),
+                "collected_at": release.strftime("%Y-%m-%dT23:59:00Z"),
+            }
+        )
+
+    def query(database: str, sql: str, _params: tuple[object, ...]):
+        if "sp500_index_earnings" in sql:
+            return eps_rows
+        if database == "finance_price":
+            return [{"symbol": "^GSPC", "Date": "2024-01-31", "Close": 4800.0}]
+        if "macro_series_vintage_observation" in sql:
+            return _yield_rows("2024-01-31")
+        raise AssertionError(sql)
+
+    bundle = load_inflation_policy_equity_bundle(
+        as_of_at="2024-12-31T23:59:59Z",
+        history_start="2018-01-01",
+        query_fn=query,
+    )
+
+    assert bundle.eps_rows == ()
+    assert bundle.coverage["verified_eps_vintage_status"] == "NOT_AVAILABLE"
+    assert bundle.coverage["verified_eps_vintage_releases"] == 0
+
+
+def test_panel_accepts_verified_annual_next_year_eps_vintages() -> None:
+    from finance.inflation_policy_equity_stress import build_equity_calibration_panel
+
+    eps = [
+        {
+            "period_end": "2026-12-31",
+            "period_type": "annual",
+            "earnings_basis": "operating",
+            "value_status": "estimate",
+            "eps": 280.0,
+            "source": "factset_earnings_insight",
+            "source_ref": "EarningsInsight_031425.pdf",
+            "source_release_date": "2025-03-14",
+        },
+        {
+            "period_end": "2026-12-31",
+            "period_type": "annual",
+            "earnings_basis": "operating",
+            "value_status": "estimate",
+            "eps": 294.0,
+            "source": "factset_earnings_insight",
+            "source_ref": "EarningsInsight_042525.pdf",
+            "source_release_date": "2025-04-25",
+        },
+    ]
+    panel = build_equity_calibration_panel(
+        price_rows=[
+            {"Date": "2025-03-31", "Close": 5600.0},
+            {"Date": "2025-04-30", "Close": 5880.0},
+        ],
+        eps_rows=eps,
+        yield_rows=_yield_rows("2025-03-31", "2025-04-30"),
+        as_of_at="2025-05-01T23:59:59Z",
+    )
+
+    assert panel.loc[panel["origin_date"] == "2025-03-31", "forward_eps"].iloc[0] == pytest.approx(280.0)
+    assert panel.loc[panel["origin_date"] == "2025-04-30", "forward_eps"].iloc[0] == pytest.approx(294.0)
+    assert panel.iloc[-1]["measured_next_year_eps_revision_pct"] == pytest.approx(5.0)
 
 
 def test_equity_bundle_excludes_same_day_close_before_us_market_close() -> None:
@@ -373,6 +480,12 @@ def test_equity_model_uses_chronological_validation_and_beats_constant_baseline(
     assert artifact.validation_metrics["validation_scheme"] == (
         "rolling_origin_label_available"
     )
+    assert artifact.validation_metrics["interval_calibration_scheme"] == (
+        "prior_oos_residuals"
+    )
+    assert artifact.validation_metrics["interval_fold_count"] == pytest.approx(
+        artifact.validation_metrics["fold_count"] - 12.0
+    )
     assert artifact.validation_metrics["publication_contract_version"] == (
         "equity-stress-publication-v1"
     )
@@ -464,7 +577,13 @@ def test_equity_model_keeps_paired_eps_multiple_residuals() -> None:
     )
     residuals = np.asarray(artifact.joint_residuals, dtype=float)
 
-    assert residuals.shape == (84, 2)
+    assert residuals.shape == (
+        int(artifact.validation_metrics["fold_count"]),
+        2,
+    )
+    assert artifact.validation_metrics["residual_calibration_scheme"] == (
+        "chronological_oos_fold_pairs"
+    )
     assert np.isfinite(residuals).all()
     assert np.corrcoef(residuals[:, 0], residuals[:, 1])[0, 1] > 0.5
 

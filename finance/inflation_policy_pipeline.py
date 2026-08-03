@@ -456,7 +456,7 @@ def _not_available_materialization(
 
 
 def _empty_equity_payload(
-    reason: str = "official_eps_vintages_or_joint_paths_not_available",
+    reason: str = "verified_eps_vintages_or_joint_paths_not_available",
 ) -> dict[str, object]:
     """Return a typed, independently gated equity component payload."""
 
@@ -1752,7 +1752,7 @@ def run_inflation_policy_materialization(
             as_of_at=as_of_at, history_start=history_start
         )
         required_coverage = (
-            "official_eps_vintage_status",
+            "verified_eps_vintage_status",
             "sp500_price_status",
             "yield_status",
         )
@@ -1763,7 +1763,7 @@ def run_inflation_policy_materialization(
         ]
         if missing_coverage:
             equity_payload = _empty_equity_payload(
-                "official_eps_vintages_or_joint_paths_not_available"
+                "verified_eps_vintages_or_joint_paths_not_available"
             )
         else:
             equity_panel = equity_panel_builder(
@@ -1859,8 +1859,17 @@ def run_inflation_policy_materialization(
         equity_joint_paths_ready=equity_joint_paths_ready,
     )
     snapshot = {**result.snapshot_row, "run_kind": run_kind}
+    has_publishable_core_identity = any(
+        str(row.get("component") or "")
+        in {"core_pce_hybrid", "core_pce_momentum"}
+        for row in result.model_artifact_rows
+    )
+    # Equity shares the snapshot's model/cutoff identity. Do not persist an
+    # otherwise valid equity fit under a failed or temporally invalid core run.
     artifact_rows = result.model_artifact_rows + (
-        (equity_artifact_row,) if equity_artifact_row is not None else ()
+        (equity_artifact_row,)
+        if equity_artifact_row is not None and has_publishable_core_identity
+        else ()
     )
     result = InflationPolicyMaterialization(
         snapshot_row=snapshot,

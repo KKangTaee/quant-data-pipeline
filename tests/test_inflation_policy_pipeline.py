@@ -1012,6 +1012,7 @@ def test_runner_materializes_and_persists_ready_equity_from_production_inputs() 
         eps_rows=(),
         yield_rows=(),
         coverage={
+            "verified_eps_vintage_status": "READY",
             "official_eps_vintage_status": "READY",
             "sp500_price_status": "READY",
             "yield_status": "READY",

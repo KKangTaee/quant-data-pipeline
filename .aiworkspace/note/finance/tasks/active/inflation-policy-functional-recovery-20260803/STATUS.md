@@ -1,7 +1,7 @@
 # Inflation Policy Functional Recovery Status
 
 State: active
-Roadmap: 3/5 recovery stages complete
+Roadmap: 4/5 recovery stages complete
 Last Updated: 2026-08-03
 
 ## Current
@@ -45,9 +45,20 @@ Last Updated: 2026-08-03
   눌러 같은 조건부분포가 표시되고 component crash가 없음을 확인했다. 새 snapshot은
   form을 새 target으로 동기화하고 같은 snapshot의 command 결과는 사용자가 수정 중인
   입력을 덮어쓰지 않도록 보완했다.
+- FactSet Earnings Insight의 날짜가 붙은 월별 보고서를 backfill해 검증 가능한 공개시점
+  80개와 current/next-calendar-year 연간 bottom-up EPS 160행을 저장했다. archive 후보
+  103개 중 표·두 CY 라벨을 검증하지 못한 23개는 숫자를 추정하지 않고 제외했다.
+- 77개 completed equity origin으로 공개시각 rolling validation을 수행했다. 지수 변화
+  MAE 6.9258%가 best baseline 7.6929%보다 낮고, 과거 OOS 잔차만 사용한 80% interval
+  coverage가 0.8125(32 folds)로 gate를 통과해 equity가 `READY`다.
+- actual snapshot에서 measured next-year EPS revision +1.4242%, index p20/p50/p80
+  7,654/8,190.6/8,594.9를 저장했다. Browser에서 사용자 6,400 조건을 실행해 동일
+  snapshot/artifact 기준 `6,400 이하 2.6%`(exact 2.5719%)와 EPS×multiple 분해가 표시되고 crash가
+  없음을 확인했다.
+- 통합 snapshot은 inflation/policy/rates/reverse/equity가 모두 `READY`이며, 남은
+  `LIMITED` 이유는 독립 침체 모델 미연결 하나다.
 
 ## Next
 
-- 4차 official/PIT forward EPS source와 release clock을 실제 DB에 backfill한다.
-- equity EPS×multiple panel을 completed origin에서 검증하고 이미 READY인 공동 금리
-  경로와 연결해 actual S&P 500 조건부 stress와 command를 복구한다.
+- 5차 독립 침체 episode/OOS 모델을 구현한다.
+- 기존 경제 사이클 결과를 재사용하지 않고 actual snapshot·service·UI와 최종 통합한다.

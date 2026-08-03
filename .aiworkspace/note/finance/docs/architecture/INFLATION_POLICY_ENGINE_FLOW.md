@@ -13,6 +13,7 @@ Last Verified: 2026-08-03
 
 ```text
 released_at PIT macro vintages + Philadelphia Fed SPF + anonymous SEP + actual FOMC vote
+  + verified FactSet annual EPS release vintages
   -> finance/loaders/inflation_policy.py
   -> finance/inflation_policy_model.py
        bridge + ridge + momentum one-month Core PCE nowcast
@@ -56,6 +57,7 @@ payload는 서비스 입력·fallback·침체 확률로 사용하지 않는다.
 |---|---|
 | `finance/loaders/inflation_policy.py` | 한 cutoff의 strict bundle, 과거 origin 재구성용 전체 eligible vintage, PIT USER/AUTO definition과 exact cutoff artifact read |
 | `finance/data/spf_core_pce.py` / `finance/core_pce_q4.py` | Philadelphia Fed SPF Q4/Q4 probability-bin vintage 수집과 월간 모델/SPF 선형 pool, internally consistent first-release index-vintage target, chronological CRPS·coverage gate |
+| `finance/data/factset_sp500_eps.py` | FactSet 월별 보고서의 공개일·annual bottom-up EPS 표 제목·연도·구조를 검증하고 current/next calendar-year release vintage를 fail-closed로 저장 |
 | `finance/inflation_policy_model.py` | Core PCE 모멘텀, CPI·PPI·임금·trimmed-mean bridge, 정규화 ridge와 rolling-origin component weight |
 | `finance/inflation_path.py` | 월별 index 복리 경로, Q4 평균 기반 Q4/Q4, SEP-versioned 5상태와 사용자 threshold probability |
 | `finance/policy_path.py` | 익명 SEP 금리점의 순이동 marginal, 실제 의결·dissent 방향, versioned state-to-policy 반응행렬 |
@@ -63,7 +65,7 @@ payload는 서비스 입력·fallback·침체 확률로 사용하지 않는다.
 | `finance/yield_resistance.py` | 오른쪽 확인 이후에만 알려지는 pivot, adaptive tolerance, 동적 zone과 2개 driver lens |
 | `finance/joint_rate_paths.py` | completed monthly rate episode의 동시 변화를 current Q4/policy marginal과 rank-couple하고, endpoint CRPS와 PIT resistance-reach Brier/calibration으로 2,000개 공동 경로 공개를 결정 |
 | `finance/inflation_policy_simulation.py` | 정책 25bp와 10년물 25bp를 기계적으로 연결하지 않는 순방향·조건부 역산 계약 |
-| `finance/inflation_policy_equity_stress.py` | complete same-workbook 차년도 EPS vintage와 origin별 저장 가격·금리의 year-end PIT panel, 공개시각 rolling ridge, paired residual, 3-baseline/coverage gate와 bounded 사용자 AI EPS/지수 수준 scenario |
+| `finance/inflation_policy_equity_stress.py` | 당시 공개된 annual 차년도 EPS vintage와 origin별 저장 가격·금리의 year-end PIT panel, 공개시각 rolling ridge, paired residual, 3-baseline/과거 OOS residual coverage gate와 bounded 사용자 AI EPS/지수 수준 scenario |
 | `finance/inflation_policy_validation.py` | CRPS/MAE/coverage, Brier/log loss/ECE, baseline 비교와 fail-closed publication gate |
 | `finance/inflation_policy_pipeline.py` | exact cutoff 1개월/Q4 학습·재현, production equity bundle→panel→artifact→`joint_macro_paths`→simulation 실행, 5개 다음 물가 발표 scenario와 snapshot별 live equity context의 component-independent 직렬화, compact evidence, 명시적 저장 CLI |
 | `app/services/overview/inflation_policy.py` | snapshot JSON 검증, 상태 사유·AUTO/USER zone·equity gate·근거/신선도·5차 침체 미연결 경계를 포함한 `inflation_policy_v1` read model |
@@ -95,15 +97,16 @@ payload는 서비스 입력·fallback·침체 확률로 사용하지 않는다.
 - 공동 금리 episode의 역사 Q4 actual은 completed outcome의 결합 순위에만 쓰며 현재
   forecast feature로 사용하지 않는다. 각 origin은 당시 알려진 동적 zone과 이전 연도의
   completed episode만 사용해 endpoint와 resistance event를 검증한다.
-- equity origin은 당시 공개된 official S&P 500 차년도 EPS vintage와 직전 저장 시장
+- equity origin은 당시 공개된 FactSet annual 차년도 bottom-up EPS vintage와 직전 저장 시장
   가격·금리만 쓴다. Shiller trailing EPS, 현재 수정값이나 이후 공개 estimate를 과거
   origin에 대입하지 않는다.
-- forward EPS는 한 workbook release의 같은 basis/source에 네 분기가 모두 있는 경우만
-  합산한다. yield revision은 loader에서 전체 eligible vintage를 보존한 뒤 origin마다
+- forward EPS는 같은 release/source의 연간 next-calendar-year 값을 사용한다. FactSet
+  분기 차트는 rolling 12-quarter 범위라 연초 차년도 Q1~Q4 합으로 사용하지 않는다.
+  yield revision은 loader에서 전체 eligible vintage를 보존한 뒤 origin마다
   다시 고르며, 역사 label은 year-end endpoint와 Q4 Core PCE 공개시각 중 늦은
   `label_available_at` 이후 fold에서만 사용한다.
 - equity validation은 constant EPS, constant multiple, unconditional index-change baseline과
-  80% interval coverage를 함께 검사한다. 현재 scenario context는 학습 마지막 역사 row가
+  이전 fold의 OOS residual만으로 만든 80% interval coverage를 함께 검사한다. 현재 scenario context는 학습 마지막 역사 row가
   아니라 live snapshot에서 따로 만들며 artifact cutoff를 변경하지 않는다.
 - core coefficients와 verified joint paths는 각각 `core_pce_hybrid`, `joint_macro_paths`
   component로 저장해 UPSERT identity를 공유하지 않는다. equity model artifact에는 계수·paired
@@ -136,13 +139,15 @@ payload는 서비스 입력·fallback·침체 확률로 사용하지 않는다.
 | `FAILED` | schema, simplex, non-finite 또는 실행 계약 위반 |
 
 현재 `core_pce_hybrid`, `core_pce_q4_linear_pool`, `policy_path`,
-`joint_macro_paths`는 actual chronological gate를 통과했다. 공식 FOMC rate decision
+`joint_macro_paths`, `equity_stress`는 actual chronological gate를 통과했다. 공식 FOMC rate decision
 86건과 SEP 40개 release를 기반으로 다음 회의 78개·연말 22개 evaluation origin을 검증했고, completed rate episode
 110개와 resistance event 57개로 DGS2/DGS10/DFII10/T10YIE endpoint와 동적 zone event를
 검증했다. 현재 snapshot의 inflation/policy/rates/reverse는 `READY`이며 DGS10 next
-overhead 4.79% 도달 역산은 2,000개 중 1,690개 경로가 지지한다. 통합 snapshot은 equity와
-신규 침체 모델이 남아 `LIMITED`다. equity 엔진과 UI는 연결됐지만 actual official EPS
-vintage가 아직 없어 equity만 `NOT_AVAILABLE`이다.
+overhead 4.79% 도달 역산은 2,000개 중 1,690개 경로가 지지한다. FactSet의 검증된 EPS
+80 release/160행으로 77 equity origin을 만들었고 index-change MAE 6.9258%가 best baseline
+7.6929%보다 낮으며 OOS 80% interval coverage가 0.8125라 equity도 `READY`다. 검증과
+배포 simulation은 동일 chronological OOS paired residual을 사용한다. 통합
+snapshot은 신규 침체 모델만 남아 `LIMITED`다.
 
 equity production runner와 scenario command는 payload 존재만으로 공동경로를 승인하지
 않는다. exact `joint_macro_paths` artifact의 독립 `joint_path_publication_status=READY`와
@@ -152,7 +157,7 @@ UI는 전체 snapshot 상태가 아니라 inflation/policy/rates/reverse/equity 
 publication status로 해당 숫자를 표시한다. exact stored reverse target을 form 기본값과
 일치시키고 command도 같은 snapshot/artifact를 사용한다. 자동 zone은 읽기 전용이고
 수정은 별도 USER definition으로만 저장한다. equity는 `READY`일 때만 target probability를 표시하고 `LIMITED`에서는
-EPS·multiple 범위만, `NOT_AVAILABLE`에서는 공식 EPS/공동경로 준비 조건만 보여준다.
+EPS·multiple 범위만, `NOT_AVAILABLE`에서는 검증된 EPS/공동경로 준비 조건만 보여준다.
 
 ## Related Docs
 

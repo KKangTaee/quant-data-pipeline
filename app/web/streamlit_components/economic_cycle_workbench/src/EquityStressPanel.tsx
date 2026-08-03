@@ -105,8 +105,8 @@ function EquityStressPanel({ payload, onCommand }: Props) {
 
       {!available ? (
         <section className="equity-input-gate" aria-live="polite">
-          <strong>공식 S&amp;P 500 EPS 빈티지 필요</strong>
-          <p>Ingestion에서 공식 Index Earnings workbook을 등록하고 공동 물가·정책·금리 경로 검증을 완료해야 합니다.</p>
+          <strong>검증된 S&amp;P 500 EPS 빈티지 필요</strong>
+          <p>날짜가 확인되는 bottom-up EPS 빈티지와 공동 물가·정책·금리 경로가 모두 필요합니다.</p>
           <small>{result.reason}</small>
         </section>
       ) : (
@@ -115,7 +115,7 @@ function EquityStressPanel({ payload, onCommand }: Props) {
             <article>
               <span>측정된 차년도 EPS 수정</span>
               <strong>{signedPercent(result.measured_next_year_eps_revision_pct)}</strong>
-              <small>공식 release vintage에서 관측</small>
+              <small>날짜가 검증된 release vintage에서 관측</small>
             </article>
             <article>
               <span>사용자 AI 수익화 가정</span>
@@ -138,6 +138,8 @@ function EquityStressPanel({ payload, onCommand }: Props) {
                 return <b key={key}>{level(target)} 이하 · {probability(value)}</b>;
               })}
             </div>
+          ) : result.publication_status === "READY" ? (
+            <p className="ip-limited-copy">확인할 S&amp;P 500 수준을 입력하면 그 이하의 조건부 확률을 계산합니다.</p>
           ) : (
             <p className="ip-limited-copy">검증이 제한된 상태에서는 범위만 표시하고 수준별 확률은 공개하지 않습니다.</p>
           )}
