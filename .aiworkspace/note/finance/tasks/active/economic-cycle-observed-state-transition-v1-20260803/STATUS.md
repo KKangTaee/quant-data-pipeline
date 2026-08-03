@@ -12,19 +12,20 @@ Last Updated: 2026-08-03
 - Decision-centered UI structure approved.
 - Existing `자산별 확인 포인트` design, calculation and card structure frozen by explicit
   user decision.
-- Written design spec and internal consistency review complete; user review is pending before
-  implementation planning.
+- Written design spec approved by the user.
+- Detailed TDD implementation plan is being finalized before production changes.
 
 ## Roadmap Position
 
 - 1차 audit: complete
 - 2차 diagnostic model design: complete
-- 3차 UI / product contract design: complete, user review pending
+- 3차 UI / product contract design: complete and approved
 - 4차 implementation / QA: not started
 
 ## Next Action
 
-Obtain explicit user review of `DESIGN.md`, then create the detailed implementation plan.
+Self-review and commit `IMPLEMENTATION_PLAN.md`, then execute Tasks 1–5 inline with RED/GREEN
+checkpoints.
 
 ## Scope Boundary
 
