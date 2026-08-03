@@ -13,19 +13,20 @@ Last Updated: 2026-08-03
 - Existing `자산별 확인 포인트` design, calculation and card structure frozen by explicit
   user decision.
 - Written design spec approved by the user.
-- Detailed TDD implementation plan is being finalized before production changes.
+- Detailed TDD implementation plan committed.
+- Task 1 observed-state / transition domain implementation and focused verification complete.
 
 ## Roadmap Position
 
 - 1차 audit: complete
 - 2차 diagnostic model design: complete
 - 3차 UI / product contract design: complete and approved
-- 4차 implementation / QA: not started
+- 4차 implementation / QA: Task 1 complete; Task 2 persistence integration next
 
 ## Next Action
 
-Self-review and commit `IMPLEMENTATION_PLAN.md`, then execute Tasks 1–5 inline with RED/GREEN
-checkpoints.
+Implement Task 2 additive snapshot schema, loader panels and pipeline materialization through
+RED/GREEN checkpoints.
 
 ## Scope Boundary
 

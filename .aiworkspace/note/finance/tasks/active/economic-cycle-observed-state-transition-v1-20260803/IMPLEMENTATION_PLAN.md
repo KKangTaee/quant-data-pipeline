@@ -35,7 +35,7 @@
 - Produces: `ObservedStateResult(observed_state: dict[str, object], recent_changes: tuple[dict[str, object], ...], transition_monitor: dict[str, object])`.
 - Produces: `build_observed_state_history(panel, *, revised_panel=None) -> tuple[ObservedStateResult, ...]` and `build_observed_state_snapshot(panel, *, revised_panel=None) -> ObservedStateResult`.
 
-- [ ] **Step 1: Write failing formula and eligibility tests**
+- [x] **Step 1: Write failing formula and eligibility tests**
 
   Add literal fixtures covering all four zero-tie quadrants, the six monthly values needed for two non-overlapping three-month means, eight/fresh versus six/stale versus five-series coverage, and exact breadth values.
 
@@ -47,13 +47,13 @@
   assert result.observed_state["data_status"] == "READY"
   ```
 
-- [ ] **Step 2: Run the focused tests and verify RED**
+- [x] **Step 2: Run the focused tests and verify RED**
 
   Run: `.venv/bin/python -m pytest tests/test_economic_cycle_observed_state_v1.py -q`
 
   Expected: collection/import failure because `finance.economic_cycle_observed_state` does not exist.
 
-- [ ] **Step 3: Implement deterministic coordinates, breadth, recent changes, and confidence**
+- [x] **Step 3: Implement deterministic coordinates, breadth, recent changes, and confidence**
 
   Implement immutable constants and the public result dataclass. Emit `UNAVAILABLE` when fewer than six real-economy series or either required factor is missing; emit `LIMITED` for six/seven series or any stale available series. Confidence is `HIGH` only for READY + STABLE revision quadrant + two observed months in the same quadrant + breadth support on both axes; it is never a number.
 
@@ -75,7 +75,7 @@
       return history[-1]
   ```
 
-- [ ] **Step 4: Write failing transition-state tests**
+- [x] **Step 4: Write failing transition-state tests**
 
   Cover initialization, first boundary crossing with anchor retained, `WATCH 0/3`, two-release persistence, diffusion, activity/labor corroboration, confirmation on the release where all three conditions pass, anchor promotion on the next valid release, candidate reversal, unavailable-month streak break, and non-adjacent shock handling.
 
@@ -86,17 +86,17 @@
   assert crossing.transition_monitor["status"] == "WATCH"
   ```
 
-- [ ] **Step 5: Run transition tests and verify RED for missing state behavior**
+- [x] **Step 5: Run transition tests and verify RED for missing state behavior**
 
   Run: `.venv/bin/python -m pytest tests/test_economic_cycle_observed_state_v1.py -q`
 
   Expected: formula cases pass; transition cases fail because the anchor state machine is not implemented.
 
-- [ ] **Step 6: Implement the sequential anchor/target state machine and revised-history diagnostic**
+- [x] **Step 6: Implement the sequential anchor/target state machine and revised-history diagnostic**
 
   Use the sequence `recovery -> expansion -> slowdown -> contraction -> recovery`. Persist condition records with `MET / UNMET / UNAVAILABLE`; leading and inflation-policy factors produce `TOWARD_TARGET / SUPPORT_CURRENT / MIXED` context but never contribute to `conditions_met`. Compare the PIT phase with the same-origin phase from `revised_panel` to emit `STABLE / SENSITIVE / UNAVAILABLE`.
 
-- [ ] **Step 7: Verify Task 1 GREEN and commit**
+- [x] **Step 7: Verify Task 1 GREEN and commit**
 
   Run:
 

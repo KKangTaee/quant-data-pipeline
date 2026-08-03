@@ -46,3 +46,16 @@ Last Updated: 2026-08-03
   corroboration all pass.
 - Confirmed current asset builder ignores the legacy horizons argument and preserves the fixed
   rates, equities, gold, dollar and commodities output order.
+
+## Task 1 TDD — Observed State / Transition Domain
+
+- RED: 8 formula/eligibility tests failed because the observed-state module did not exist.
+- GREEN: deterministic 3M level, non-overlapping momentum, eight-series breadth, 1/3/6M change,
+  revision sensitivity and confidence tests passed.
+- RED: 4 transition tests failed on missing condition/state-machine behavior.
+- GREEN: first boundary crossing, delayed anchor promotion, reversal, unavailable-month streak
+  break and non-adjacent observation contracts passed.
+- Additional RED/GREEN: a missing activity factor column initially raised instead of returning
+  UNAVAILABLE; the focused test now passes.
+- Verification: `13 passed` observed-state tests, `6 passed` existing feature tests, `py_compile`
+  and `git diff --check` passed.
