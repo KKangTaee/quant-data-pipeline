@@ -30,6 +30,7 @@ class InflationPolicySeriesSpec:
     transform: str
     required_for: tuple[str, ...]
     release_policy: str
+    release_anchor: str = "realtime_start"
 
 
 _CATALOG = (
@@ -53,12 +54,13 @@ _CATALOG = (
     InflationPolicySeriesSpec("PCEC96", "activity", "monthly", "mom_3m", ("policy",), "OFFICIAL_0830_ET"),
     InflationPolicySeriesSpec("CMRMTSPL", "activity", "monthly", "mom_3m", ("policy",), "OFFICIAL_1000_ET"),
     InflationPolicySeriesSpec("FEDFUNDS", "policy", "monthly", "level", ("policy",), "END_OF_DAY_ET"),
-    InflationPolicySeriesSpec("DGS2", "rates", "daily", "level", ("policy", "rates", "reverse"), "END_OF_DAY_ET"),
-    InflationPolicySeriesSpec("DGS10", "rates", "daily", "level", ("rates", "reverse"), "END_OF_DAY_ET"),
-    InflationPolicySeriesSpec("DFII10", "rates", "daily", "level", ("rates", "reverse"), "END_OF_DAY_ET"),
-    InflationPolicySeriesSpec("T10YIE", "rates", "daily", "level", ("rates", "reverse"), "END_OF_DAY_ET"),
-    InflationPolicySeriesSpec("T10Y2Y", "rates", "daily", "level", ("rates",), "END_OF_DAY_ET"),
-    InflationPolicySeriesSpec("BAMLH0A0HYM2", "rates", "daily", "level", ("rates",), "END_OF_DAY_ET"),
+    InflationPolicySeriesSpec("DGS2", "rates", "daily", "level", ("policy", "rates", "reverse"), "END_OF_DAY_ET", "observation_date"),
+    InflationPolicySeriesSpec("DGS10", "rates", "daily", "level", ("rates", "reverse"), "END_OF_DAY_ET", "observation_date"),
+    InflationPolicySeriesSpec("DFII10", "rates", "daily", "level", ("rates", "reverse"), "END_OF_DAY_ET", "observation_date"),
+    InflationPolicySeriesSpec("T10YIE", "rates", "daily", "level", ("rates", "reverse"), "END_OF_DAY_ET", "observation_date"),
+    InflationPolicySeriesSpec("T10Y2Y", "rates", "daily", "level", ("rates",), "END_OF_DAY_ET", "observation_date"),
+    InflationPolicySeriesSpec("BAMLH0A0HYM2", "rates", "daily", "level", ("rates",), "END_OF_DAY_ET", "observation_date"),
+    InflationPolicySeriesSpec("USREC", "recession_label", "monthly", "binary_label", ("recession",), "END_OF_DAY_ET"),
 )
 
 

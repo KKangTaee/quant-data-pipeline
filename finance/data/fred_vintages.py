@@ -411,6 +411,11 @@ def normalize_fred_vintage_rows(
     ).strip()
     frequency = str(getattr(spec, "frequency", "") or "").strip() or None
     release_policy = str(getattr(spec, "release_policy", "") or "").strip()
+    release_anchor = str(
+        getattr(spec, "release_anchor", "realtime_start") or "realtime_start"
+    ).strip()
+    if release_anchor not in {"realtime_start", "observation_date"}:
+        raise FredVintageError(f"Unknown release_anchor: {release_anchor!r}")
     if not series_id or not factor_group:
         raise FredVintageError("spec must define series_id and group/factor")
 
@@ -426,8 +431,13 @@ def normalize_fred_vintage_rows(
             field="realtime_end",
         )
         value = _parse_value(item.get("value"))
+        release_date = (
+            observation_date
+            if release_anchor == "observation_date"
+            else realtime_start
+        )
         release_lag_days = (
-            date.fromisoformat(realtime_start) - date.fromisoformat(observation_date)
+            date.fromisoformat(release_date) - date.fromisoformat(observation_date)
         ).days
         missing_fields = ["value"] if value is None else []
         negative_lag = release_lag_days < 0
@@ -442,7 +452,7 @@ def normalize_fred_vintage_rows(
                 "realtime_end": realtime_end,
                 "released_at": (
                     resolve_released_at(
-                        realtime_start,
+                        release_date,
                         release_policy=release_policy,
                     )
                     if release_policy

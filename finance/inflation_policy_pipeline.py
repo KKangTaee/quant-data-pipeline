@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timezone
 from typing import Callable, Mapping, Sequence
 
@@ -39,6 +39,7 @@ from finance.inflation_policy_model import (
     fit_core_pce_hybrid_artifact,
 )
 from finance.inflation_policy_equity_stress import (
+    EQUITY_RIDGE_ALPHA_CANDIDATES,
     EQUITY_PUBLICATION_CONTRACT_VERSION,
     EquityStressArtifact,
     EquityStressResult,
@@ -46,6 +47,17 @@ from finance.inflation_policy_equity_stress import (
     build_equity_scenario_context,
     fit_equity_stress_model,
     simulate_equity_stress,
+)
+from finance.inflation_policy_recession import (
+    RECESSION_COMPONENT,
+    RECESSION_FEATURE_SCHEMA_VERSION,
+    RECESSION_SERIES,
+    RECESSION_VALIDATION_VERSION,
+    RecessionRiskArtifact,
+    RecessionRiskResult,
+    build_recession_origin_panel,
+    fit_recession_risk_model,
+    predict_recession_risk,
 )
 from finance.inflation_policy_simulation import (
     JOINT_PATH_COMPONENT,
@@ -130,6 +142,18 @@ class InflationPolicyMaterialization:
     reverse: dict[str, object]
     equity: dict[str, object]
     warnings: tuple[str, ...]
+    recession: dict[str, object] = field(
+        default_factory=lambda: {
+            "publication_status": "NOT_AVAILABLE",
+            "probability_12m": None,
+            "risk_state": None,
+            "risk_label": None,
+            "horizon_months": 12,
+            "top_drivers": (),
+            "reason_codes": ("recession_model_not_available",),
+            "validation_metrics": {},
+        }
+    )
 
 
 def build_limited_reference_config(*, model_version: str) -> InflationPolicyEngineConfig:
@@ -428,6 +452,7 @@ def _not_available_materialization(
     rates = {"publication_status": "NOT_AVAILABLE", "reason": reason}
     reverse = {"publication_status": "NOT_AVAILABLE", "reason": reason}
     equity = _empty_equity_payload()
+    recession = _empty_recession_payload()
     warnings = (reason, "recession_model_not_available")
     snapshot = {
         "as_of_at": bundle.as_of_at,
@@ -439,6 +464,7 @@ def _not_available_materialization(
         "rates_json": rates,
         "reverse_json": reverse,
         "equity_json": equity,
+        "recession_json": recession,
         "evidence_json": {"coverage": bundle.coverage},
         "freshness_json": {"as_of_at": bundle.as_of_at},
         "warnings_json": warnings,
@@ -451,6 +477,7 @@ def _not_available_materialization(
         rates=rates,
         reverse=reverse,
         equity=equity,
+        recession=recession,
         warnings=warnings,
     )
 
@@ -474,6 +501,23 @@ def _empty_equity_payload(
         "current_index_level": None,
         "base_forward_eps": None,
         "scenario_feature_values": {},
+    }
+
+
+def _empty_recession_payload(
+    reason: str = "recession_model_not_available",
+) -> dict[str, object]:
+    """Return the separately gated recession component without cycle fallback."""
+
+    return {
+        "publication_status": "NOT_AVAILABLE",
+        "reason": reason,
+        "probability_12m": None,
+        "risk_state": None,
+        "risk_label": None,
+        "horizon_months": 12,
+        "top_drivers": [],
+        "validation_metrics": {},
     }
 
 
@@ -773,6 +817,7 @@ def _rates_only_materialization(
     rates = _build_rates_payload(bundle)
     reverse = {"publication_status": "NOT_AVAILABLE", "reason": reason}
     equity = _empty_equity_payload()
+    recession = _empty_recession_payload()
     warnings = tuple(
         dict.fromkeys(
             (
@@ -801,6 +846,7 @@ def _rates_only_materialization(
         "rates_json": rates,
         "reverse_json": reverse,
         "equity_json": equity,
+        "recession_json": recession,
         "evidence_json": {"coverage": bundle.coverage},
         "freshness_json": freshness,
         "warnings_json": warnings,
@@ -813,6 +859,7 @@ def _rates_only_materialization(
         rates=rates,
         reverse=reverse,
         equity=equity,
+        recession=recession,
         warnings=warnings,
     )
 
@@ -1500,6 +1547,7 @@ def materialize_inflation_policy_analysis(
         "rates_json": rates,
         "reverse_json": reverse,
         "equity_json": equity_payload,
+        "recession_json": _empty_recession_payload(),
         "evidence_json": {
             "coverage": bundle.coverage,
             "core_validation": core_artifact.validation_metrics,
@@ -1534,6 +1582,7 @@ def materialize_inflation_policy_analysis(
         rates=rates,
         reverse=reverse,
         equity=equity_payload,
+        recession=_empty_recession_payload(),
         warnings=warnings,
     )
 
@@ -1644,6 +1693,45 @@ def _equity_artifact_row(
     }
 
 
+def _recession_artifact_row(
+    artifact: RecessionRiskArtifact,
+    *,
+    model_version: str,
+    trained_cutoff_at: str,
+) -> dict[str, object]:
+    """Serialize only immutable independent recession model state."""
+
+    if not artifact.trained_through:
+        raise ValueError("recession artifact trained_through is required")
+    return {
+        "model_version": model_version,
+        "trained_cutoff_at": trained_cutoff_at,
+        "component": RECESSION_COMPONENT,
+        "feature_schema_version": RECESSION_FEATURE_SCHEMA_VERSION,
+        "transform_schema_version": RECESSION_VALIDATION_VERSION,
+        "state_schema_version": "recession-risk-five-band-v1",
+        "training_start_date": artifact.validation_metrics.get("training_start_date")
+        or artifact.trained_through,
+        "forecast_horizon": "recession_within_12_months",
+        "ensemble_weight": 1.0,
+        "parameters_json": {
+            "feature_names": artifact.feature_names,
+            "feature_means": artifact.feature_means,
+            "feature_scales": artifact.feature_scales,
+            "coefficients": artifact.coefficients,
+            "intercept": artifact.intercept,
+            "forecast_horizon_months": artifact.forecast_horizon_months,
+        },
+        "validation_json": artifact.validation_metrics,
+        "calibration_json": {
+            "publication_status": artifact.publication_status,
+            "validation_scheme": RECESSION_VALIDATION_VERSION,
+        },
+        "publication_status": artifact.publication_status,
+        "publication_reasons_json": artifact.reason_codes,
+    }
+
+
 def run_inflation_policy_materialization(
     *,
     as_of_at: str,
@@ -1659,6 +1747,12 @@ def run_inflation_policy_materialization(
     vintage_loader: Callable[..., Sequence[Mapping[str, object]]] = (
         load_inflation_policy_training_vintages
     ),
+    recession_vintage_loader: Callable[..., Sequence[Mapping[str, object]]] | None = None,
+    recession_panel_builder: Callable[..., object] = build_recession_origin_panel,
+    recession_artifact_trainer: Callable[..., RecessionRiskArtifact] = (
+        fit_recession_risk_model
+    ),
+    recession_predictor: Callable[..., RecessionRiskResult] = predict_recession_risk,
     artifact_trainer: Callable[..., CorePCEHybridArtifact] = (
         fit_core_pce_hybrid_artifact
     ),
@@ -1719,6 +1813,7 @@ def run_inflation_policy_materialization(
             rates=unavailable.rates,
             reverse=unavailable.reverse,
             equity=unavailable.equity,
+            recession=unavailable.recession,
             warnings=unavailable.warnings,
         )
     q4_artifact: CorePCEQ4Artifact | None = None
@@ -1743,6 +1838,57 @@ def run_inflation_policy_materialization(
         )
     except (KeyError, TypeError, ValueError, json.JSONDecodeError):
         policy_artifact = None
+    recession_payload: dict[str, object] = _empty_recession_payload()
+    recession_artifact_row: dict[str, object] | None = None
+    recession_enabled = (
+        recession_vintage_loader is not None
+        or vintage_loader is load_inflation_policy_training_vintages
+    )
+    if recession_enabled:
+        resolved_recession_loader = (
+            recession_vintage_loader or load_inflation_policy_training_vintages
+        )
+        try:
+            recession_rows = resolved_recession_loader(
+                as_of_at=as_of_at,
+                history_start=min(str(history_start), "1988-01-01"),
+                series_ids=RECESSION_SERIES,
+            )
+            recession_panel = recession_panel_builder(
+                recession_rows,
+                recession_rows,
+                as_of_at=as_of_at,
+            )
+            recession_artifact = recession_artifact_trainer(
+                recession_panel,
+                as_of_at=as_of_at,
+                model_version=config.model_version,
+                minimum_origins=100,
+                minimum_training_rows=40,
+                minimum_complete_feature_ratio=0.60,
+                maximum_calibration_error=0.15,
+                ridge_alpha=50.0,
+            )
+            recession_result = recession_predictor(
+                recession_artifact, as_of_at=as_of_at
+            )
+            recession_payload = asdict(recession_result)
+            recession_payload["reason"] = (
+                "independent_pit_recession_validation_ready"
+                if recession_result.publication_status == "READY"
+                else ",".join(recession_result.reason_codes)
+                or "recession_model_not_available"
+            )
+            if recession_artifact.publication_status in {"READY", "LIMITED"}:
+                recession_artifact_row = _recession_artifact_row(
+                    recession_artifact,
+                    model_version=config.model_version,
+                    trained_cutoff_at=artifact.trained_cutoff_at,
+                )
+        except (KeyError, TypeError, ValueError, np.linalg.LinAlgError) as exc:
+            recession_payload = _empty_recession_payload(
+                f"recession_component_exception:{exc}"
+            )
     equity_payload: Mapping[str, object] | EquityStressResult | None = None
     equity_artifact_row: dict[str, object] | None = None
     equity_context: Mapping[str, object] | None = None
@@ -1779,6 +1925,7 @@ def run_inflation_policy_materialization(
                 equity_panel,
                 minimum_origins=60,
                 ridge_alpha=1.0,
+                ridge_alpha_candidates=EQUITY_RIDGE_ALPHA_CANDIDATES,
                 model_version=config.model_version,
             )
             contract_version = str(
@@ -1858,7 +2005,41 @@ def run_inflation_policy_materialization(
         equity=equity_payload,
         equity_joint_paths_ready=equity_joint_paths_ready,
     )
-    snapshot = {**result.snapshot_row, "run_kind": run_kind}
+    warnings = tuple(
+        dict.fromkeys(
+            (
+                *(item for item in result.warnings if item != "recession_model_not_available"),
+                *(
+                    ()
+                    if recession_payload.get("publication_status") == "READY"
+                    else (
+                        str(
+                            recession_payload.get("reason")
+                            or "recession_model_not_available"
+                        ),
+                    )
+                ),
+            )
+        )
+    )
+    all_components_ready = all(
+        str(component.get("publication_status") or "") == "READY"
+        for component in (
+            result.inflation,
+            result.policy,
+            result.rates,
+            result.reverse,
+            result.equity,
+            recession_payload,
+        )
+    )
+    snapshot = {
+        **result.snapshot_row,
+        "run_kind": run_kind,
+        "publication_status": "READY" if all_components_ready else result.snapshot_row["publication_status"],
+        "recession_json": recession_payload,
+        "warnings_json": warnings,
+    }
     has_publishable_core_identity = any(
         str(row.get("component") or "")
         in {"core_pce_hybrid", "core_pce_momentum"}
@@ -1870,6 +2051,10 @@ def run_inflation_policy_materialization(
         (equity_artifact_row,)
         if equity_artifact_row is not None and has_publishable_core_identity
         else ()
+    ) + (
+        (recession_artifact_row,)
+        if recession_artifact_row is not None and has_publishable_core_identity
+        else ()
     )
     result = InflationPolicyMaterialization(
         snapshot_row=snapshot,
@@ -1879,7 +2064,8 @@ def run_inflation_policy_materialization(
         rates=result.rates,
         reverse=result.reverse,
         equity=result.equity,
-        warnings=result.warnings,
+        recession=recession_payload,
+        warnings=warnings,
     )
     if (
         not persist
@@ -1933,6 +2119,7 @@ def _compact_cli_payload(
         },
         "reverse": result.reverse,
         "equity": result.equity,
+        "recession": result.recession,
         "warnings": result.warnings,
     }
 

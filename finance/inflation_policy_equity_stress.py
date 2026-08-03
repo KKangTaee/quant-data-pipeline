@@ -54,6 +54,9 @@ EQUITY_PUBLICATION_CONTRACT_VERSION = "equity-stress-publication-v1"
 DEFAULT_MAXIMUM_COVERAGE_80_ERROR = 0.15
 MAX_RESIDUAL_DRAWS_PER_PATH = 16
 MINIMUM_OOS_INTERVAL_RESIDUALS = 12
+EQUITY_RIDGE_ALPHA_CANDIDATES = (1.0, 3.0, 10.0, 30.0, 100.0)
+MINIMUM_INNER_RIDGE_TRAINING_ROWS = 18
+MINIMUM_INNER_RIDGE_FOLDS = 6
 
 
 @dataclass(frozen=True)
@@ -593,7 +596,7 @@ def _completed_panel(panel: pd.DataFrame) -> pd.DataFrame:
 
 
 def _feature_matrix(frame: pd.DataFrame) -> np.ndarray:
-    values = frame.loc[:, EQUITY_FEATURES].to_numpy(dtype=float)
+    values = frame.loc[:, EQUITY_FEATURES].to_numpy(dtype=float).copy()
     for column in range(values.shape[1]):
         finite = np.isfinite(values[:, column])
         replacement = float(np.median(values[finite, column])) if finite.any() else 0.0
@@ -640,16 +643,73 @@ def _combined_index_change(eps_change: float, multiple_change: float) -> float:
     return ((1.0 + eps_change / 100.0) * (1.0 + multiple_change / 100.0) - 1.0) * 100.0
 
 
+def _normalized_ridge_candidates(
+    values: Sequence[float] | None,
+) -> tuple[float, ...]:
+    candidates = tuple(
+        sorted(
+            {
+                float(value)
+                for value in (values or ())
+                if math.isfinite(float(value)) and float(value) > 0.0
+            }
+        )
+    )
+    if values is not None and not candidates:
+        raise ValueError("ridge_alpha_candidates require positive finite values")
+    return candidates
+
+
+def _select_ridge_alpha(
+    frame: pd.DataFrame,
+    *,
+    candidates: Sequence[float],
+) -> float:
+    """Select regularization only from chronological folds inside the caller's training set."""
+
+    resolved = _normalized_ridge_candidates(candidates)
+    scores: dict[float, list[float]] = {value: [] for value in resolved}
+    for index in range(len(frame)):
+        evaluation = frame.iloc[[index]]
+        origin = pd.Timestamp(evaluation.iloc[0]["origin_date"])
+        training = frame.loc[frame["label_available_at"] <= origin]
+        if len(training) < MINIMUM_INNER_RIDGE_TRAINING_ROWS:
+            continue
+        actual_index = float(evaluation.iloc[0]["index_change_pct"])
+        for alpha in resolved:
+            eps_response = _fit_ridge_coefficients(
+                training, target="eps_change_pct", ridge_alpha=alpha
+            )
+            multiple_response = _fit_ridge_coefficients(
+                training, target="multiple_change_pct", ridge_alpha=alpha
+            )
+            predicted_index = _combined_index_change(
+                float(_predict_response(evaluation, eps_response)[0]),
+                float(_predict_response(evaluation, multiple_response)[0]),
+            )
+            scores[alpha].append(abs(predicted_index - actual_index))
+    eligible = [
+        (float(np.mean(errors)), -alpha, alpha)
+        for alpha, errors in scores.items()
+        if len(errors) >= MINIMUM_INNER_RIDGE_FOLDS
+    ]
+    # Sparse early windows use the strongest predeclared regularization instead
+    # of choosing on the outer evaluation target.
+    return min(eligible)[2] if eligible else max(resolved)
+
+
 def rolling_origin_validate_equity_stress(
     panel: pd.DataFrame,
     *,
     minimum_origins: int = 60,
     ridge_alpha: float = 1.0,
+    ridge_alpha_candidates: Sequence[float] | None = None,
     maximum_coverage_80_error: float = DEFAULT_MAXIMUM_COVERAGE_80_ERROR,
 ) -> EquityStressValidationReport:
     """Evaluate only on origins after their expanding training window."""
 
     frame = _completed_panel(panel)
+    candidates = _normalized_ridge_candidates(ridge_alpha_candidates)
     count = len(frame)
     if count < int(minimum_origins):
         return EquityStressValidationReport(
@@ -685,11 +745,16 @@ def rolling_origin_validate_equity_stress(
         training = frame.loc[frame["label_available_at"] <= evaluation_origin]
         if len(training) < minimum_training:
             continue
+        selected_alpha = (
+            _select_ridge_alpha(training, candidates=candidates)
+            if candidates
+            else float(ridge_alpha)
+        )
         eps_coefficients = _fit_ridge_coefficients(
-            training, target="eps_change_pct", ridge_alpha=ridge_alpha
+            training, target="eps_change_pct", ridge_alpha=selected_alpha
         )
         multiple_coefficients = _fit_ridge_coefficients(
-            training, target="multiple_change_pct", ridge_alpha=ridge_alpha
+            training, target="multiple_change_pct", ridge_alpha=selected_alpha
         )
         predicted_eps = float(_predict_response(evaluation, eps_coefficients)[0])
         predicted_multiple = float(
@@ -739,7 +804,11 @@ def rolling_origin_validate_equity_stress(
             eps_mae=None,
             multiple_mae=None,
             coverage_80=None,
-            validation_scheme="rolling_origin_label_available",
+            validation_scheme=(
+                "rolling_origin_label_available_nested_ridge"
+                if candidates
+                else "rolling_origin_label_available"
+            ),
             publication_status="NOT_AVAILABLE",
             reason_codes=("insufficient_validation_folds",),
             joint_oos_residuals=(),
@@ -769,7 +838,11 @@ def rolling_origin_validate_equity_stress(
         eps_mae=float(np.mean(eps_errors)),
         multiple_mae=float(np.mean(multiple_errors)),
         coverage_80=coverage_80,
-        validation_scheme="rolling_origin_label_available",
+        validation_scheme=(
+            "rolling_origin_label_available_nested_ridge"
+            if candidates
+            else "rolling_origin_label_available"
+        ),
         publication_status=status,
         reason_codes=tuple(reasons),
         joint_oos_residuals=tuple(joint_oos_residuals),
@@ -884,6 +957,7 @@ def fit_equity_stress_model(
     *,
     minimum_origins: int = 60,
     ridge_alpha: float = 1.0,
+    ridge_alpha_candidates: Sequence[float] | None = None,
     maximum_coverage_80_error: float = DEFAULT_MAXIMUM_COVERAGE_80_ERROR,
     model_version: str = "equity-stress-year-end-v1",
 ) -> EquityStressArtifact:
@@ -894,6 +968,7 @@ def fit_equity_stress_model(
         frame,
         minimum_origins=minimum_origins,
         ridge_alpha=ridge_alpha,
+        ridge_alpha_candidates=ridge_alpha_candidates,
         maximum_coverage_80_error=maximum_coverage_80_error,
     )
     if report.publication_status == "NOT_AVAILABLE":
@@ -903,11 +978,17 @@ def fit_equity_stress_model(
             report=report,
             model_version=str(model_version),
         )
+    candidates = _normalized_ridge_candidates(ridge_alpha_candidates)
+    deployment_alpha = (
+        _select_ridge_alpha(frame, candidates=candidates)
+        if candidates
+        else float(ridge_alpha)
+    )
     eps_coefficients = _fit_ridge_coefficients(
-        frame, target="eps_change_pct", ridge_alpha=ridge_alpha
+        frame, target="eps_change_pct", ridge_alpha=deployment_alpha
     )
     multiple_coefficients = _fit_ridge_coefficients(
-        frame, target="multiple_change_pct", ridge_alpha=ridge_alpha
+        frame, target="multiple_change_pct", ridge_alpha=deployment_alpha
     )
     # The publication gate and the deployed distribution must describe the same
     # forecast errors. Persist only residual pairs generated by chronological OOS
@@ -930,6 +1011,11 @@ def fit_equity_stress_model(
         "coverage_80": float(report.coverage_80 or 0.0),
         "validation_scheme": report.validation_scheme,
         "publication_contract_version": EQUITY_PUBLICATION_CONTRACT_VERSION,
+        "ridge_selection_scheme": (
+            "nested_chronological_inner_mae" if candidates else "fixed"
+        ),
+        "ridge_alpha_candidates": list(candidates),
+        "deployment_ridge_alpha": deployment_alpha,
         "maximum_coverage_80_error": float(maximum_coverage_80_error),
         "baseline_mae_by_name": report.baseline_mae_by_name,
     }

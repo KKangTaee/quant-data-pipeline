@@ -11,12 +11,14 @@ def test_catalog_has_independent_required_groups() -> None:
     assert {"PCEPI", "PCEPILFE", "CPIAUCSL", "CPILFESL"} <= ids
     assert {"UNRATE", "PAYEMS", "ICSA", "INDPRO", "PCEC96"} <= ids
     assert {"FEDFUNDS", "DGS2", "DGS10", "DFII10", "T10YIE"} <= ids
+    assert "USREC" in ids
     assert {item.group for item in catalog} >= {
         "inflation",
         "labor_cost",
         "activity",
         "policy",
         "rates",
+        "recession_label",
     }
 
 
@@ -30,6 +32,9 @@ def test_catalog_locks_release_policy_and_model_roles() -> None:
     assert by_id["DGS10"].release_policy == "END_OF_DAY_ET"
     assert by_id["DGS10"].required_for == ("rates", "reverse")
     assert by_id["DFII10"].transform == "level"
+    assert by_id["USREC"].required_for == ("recession",)
+    assert by_id["DGS10"].release_anchor == "observation_date"
+    assert by_id["PCEPILFE"].release_anchor == "realtime_start"
 
 
 def test_catalog_collection_uses_generic_fred_boundary(monkeypatch) -> None:
@@ -86,4 +91,3 @@ def test_catalog_collection_uses_generic_fred_boundary(monkeypatch) -> None:
     assert result["stored"] == 1
     assert result["coverage"] == {"PCEPILFE": 1}
     assert ("PCEPILFE", db) in calls
-

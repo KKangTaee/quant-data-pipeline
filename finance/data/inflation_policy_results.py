@@ -198,6 +198,7 @@ def save_inflation_policy_snapshot(
         "rates_json",
         "reverse_json",
         "equity_json",
+        "recession_json",
         "evidence_json",
         "freshness_json",
         "warnings_json",
@@ -208,6 +209,13 @@ def save_inflation_policy_snapshot(
         {
             "publication_status": "NOT_AVAILABLE",
             "reason": "verified_eps_vintages_or_joint_paths_not_available",
+        },
+    )
+    source.setdefault(
+        "recession_json",
+        {
+            "publication_status": "NOT_AVAILABLE",
+            "reason": "recession_model_not_available",
         },
     )
     prepared = _required(
@@ -231,11 +239,11 @@ def save_inflation_policy_snapshot(
     INSERT INTO inflation_policy_snapshot (
       as_of_at, model_version, run_kind, publication_status,
       inflation_json, policy_json, rates_json, reverse_json,
-      equity_json, evidence_json, freshness_json, warnings_json
+      equity_json, recession_json, evidence_json, freshness_json, warnings_json
     ) VALUES (
       %(as_of_at)s, %(model_version)s, %(run_kind)s, %(publication_status)s,
       %(inflation_json)s, %(policy_json)s, %(rates_json)s, %(reverse_json)s,
-      %(equity_json)s, %(evidence_json)s, %(freshness_json)s, %(warnings_json)s
+      %(equity_json)s, %(recession_json)s, %(evidence_json)s, %(freshness_json)s, %(warnings_json)s
     )
     ON DUPLICATE KEY UPDATE
       publication_status = VALUES(publication_status),
@@ -244,6 +252,7 @@ def save_inflation_policy_snapshot(
       rates_json = VALUES(rates_json),
       reverse_json = VALUES(reverse_json),
       equity_json = VALUES(equity_json),
+      recession_json = VALUES(recession_json),
       evidence_json = VALUES(evidence_json),
       freshness_json = VALUES(freshness_json),
       warnings_json = VALUES(warnings_json)

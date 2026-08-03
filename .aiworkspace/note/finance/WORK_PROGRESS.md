@@ -7351,3 +7351,11 @@ Detailed historical logs were archived on `2026-04-13`.
   interval coverage 0.8125를 통과해 equity를 actual `READY`로 복구했다.
 - actual 6,400 scenario가 `2.57%`와 EPS×multiple 분해로 동작한다. 전체 복구
   roadmap은 4/5차이며 다음 위치는 `inflation-policy-functional-recovery-20260803`의 독립 침체 단계다.
+
+## 2026-08-04 - Inflation / Policy 5/5 독립 침체와 기능 복구 완료
+
+- 기존 경제 사이클을 읽지 않는 12개월 침체 모델을 138 origin·86 OOS fold·2 episode로
+  검증해 Brier 0.146934 < base-rate 0.157162, calibration 0.024324로 `READY` 처리했다.
+- actual snapshot은 침체 23.1484%·`WATCH/관찰`이며 6개 component와 overall 모두 `READY`다.
+- DGS 등 일별 PIT clock의 데이터셋 등록일 오류를 관측일 EOD로 바로잡았고 equity도
+  nested chronological ridge로 MAE 6.0751·coverage 0.875를 재검증했다. 상세는 functional recovery task다.

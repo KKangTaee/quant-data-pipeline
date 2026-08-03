@@ -30,6 +30,20 @@ production data materialization 완료를 혼동했고, 통합 snapshot의 `LIMI
 - 10년물 4.7%는 전역 상수가 아니라 그 시점의 confirmed pivot/zone 후보로만 다룬다.
 - 경제 사이클 확률은 침체·policy·equity fallback으로 사용하지 않는다.
 
+## 5차 독립 침체 계약
+
+- target은 각 분기 origin 이후 12개월 안에 NBER recession month가 존재하는지다.
+- `USREC`은 outcome label로만 쓰고 origin feature로 쓰지 않으며 label은 target 종료 후
+  24개월이 지난 fold에서만 학습에 들어간다.
+- feature는 당시 발표된 실업률·고용·실업수당·근로시간·임시고용·산업생산·실질소득·
+  실질소비·10Y-2Y·하이일드 OAS뿐이다.
+- 미개정 일별 시장 series의 `released_at`은 ALFRED 데이터셋 등록일이 아니라 보수적
+  관측일 EOD다. revision identity인 `realtime_start/end`는 그대로 보존한다.
+- expanding-window OOS Brier가 당시 base-rate Brier보다 낮고, calibration error 0.15 이하,
+  평가구간 침체 episode 2개 이상, current feature completeness 80% 이상일 때만 확률을 공개한다.
+- 결과는 기존 `inflation_policy_v1`의 별도 `recession_json`/`recession_risk` artifact로
+  저장하며 경제 사이클 snapshot/artifact/query를 import하지 않는다.
+
 ## 검증 전략
 
 모든 production 변경은 실패 테스트를 먼저 추가한다.
@@ -41,4 +55,3 @@ production data materialization 완료를 혼동했고, 통합 snapshot의 `LIMI
 5. joint path artifact가 fixture injection 없이 production bundle에서 생성되는지 확인한다.
 6. equity는 PIT forward EPS와 label 공개시각을 지키는지 확인한다.
 7. 마지막에 actual DB materialization과 Browser click을 재현한다.
-

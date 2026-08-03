@@ -92,3 +92,24 @@
 - equity artifact는 publishable Core PCE model identity가 없는 실행에서 별도로 저장하지
   않는다. actual DB에 EPS가 생긴 뒤 invalid-core regression이 artifact를 남기던 숨은
   production 결합을 회귀 테스트로 차단했다.
+
+## 2026-08-04 독립 침체 연결 결론
+
+- 기존 경제 사이클의 현재·1개월·2개월 확률은 입력·fallback·label 어느 용도로도 쓰지
+  않는다. 별도 `finance/inflation_policy_recession.py`만 원시 PIT ledger를 읽는다.
+- label은 NBER `USREC`의 향후 12개월 내 존재 여부이며 target 종료 후 24개월이 지난
+  origin만 학습에 사용한다. 현재 판단에는 label을 feature로 넣지 않는다.
+- DGS2/DGS10 같은 미개정 일별 series는 observation 당시 존재했지만 ALFRED
+  `realtime_start`가 데이터셋 등록/재공개일인 경우가 있다. 이를 발표일로 쓰면 과거
+  금리곡선이 인위적으로 사라지므로 catalog가 `observation_date` EOD anchor를 명시한다.
+- 고수익 OAS 공식 API는 현재 2023-08 이후만 반환한다. 과거 값을 추정하지 않고 해당
+  feature는 과거 fold에서 median-impute하며 최소 feature 완전성 60%와 current 80% gate를
+  별도로 적용한다.
+- ridge alpha와 feature-completeness 설정은 actual chronological validation에서 고정했다.
+  배포 결과는 138 origins, 86 folds, 2 episodes, Brier 0.146934, baseline 0.157162,
+  calibration 0.024324다.
+- DFII10/T10YIE까지 observation-date EOD로 바로잡자 equity의 고정 alpha=1 모델은
+  MAE 7.9403으로 baseline 7.6929를 못 이겼다. feature를 사후 삭제하지 않고, 각 outer
+  evaluation의 training set 안에서만 alpha 1/3/10/30/100을 chronological inner MAE로
+  고르는 nested regularization을 적용했다. outer OOS MAE 6.0751, coverage 0.875이며 최종
+  alpha=100도 전체 completed history의 inner folds로만 선택한다.

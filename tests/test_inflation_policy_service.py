@@ -127,6 +127,26 @@ def _ready_snapshot() -> dict[str, object]:
             }
         },
         "warnings_json": [],
+        "recession_json": {
+            "publication_status": "READY",
+            "reason": "independent_pit_recession_validation_ready",
+            "probability_12m": 0.18,
+            "risk_state": "WATCH",
+            "risk_label": "관찰",
+            "horizon_months": 12,
+            "top_drivers": [
+                {
+                    "feature": "yield_curve_slope_pct",
+                    "value": 0.42,
+                    "contribution": -0.31,
+                    "direction": "risk_down",
+                }
+            ],
+            "validation_metrics": {
+                "brier": 0.1469,
+                "baseline_brier": 0.1572,
+            },
+        },
     }
 
 
@@ -193,10 +213,10 @@ def test_ready_read_model_keeps_forward_reverse_and_quality_separate() -> None:
         "USER",
     }
     assert model["reverse_scenario"]["publication_status"] == "READY"
-    assert model["recession"] == {
-        "publication_status": "NOT_AVAILABLE",
-        "reason": "침체 모델은 5차 개발 전까지 연결하지 않습니다.",
-    }
+    assert model["recession"]["publication_status"] == "READY"
+    assert model["recession"]["probability_12m"] == pytest.approx(0.18)
+    assert model["recession"]["risk_label"] == "관찰"
+    assert model["recession"]["top_drivers"][0]["feature"] == "yield_curve_slope_pct"
     json.dumps(model, allow_nan=False)
 
 

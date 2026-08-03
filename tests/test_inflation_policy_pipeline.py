@@ -985,10 +985,15 @@ def test_runner_performs_no_write_when_hybrid_training_is_unavailable() -> None:
     assert saved_snapshots == []
 
 
-def test_runner_materializes_and_persists_ready_equity_from_production_inputs() -> None:
+def test_runner_materializes_and_persists_ready_equity_and_recession_components() -> None:
     import pandas as pd
 
     from finance.inflation_policy_equity_stress import EquityStressArtifact
+    from finance.inflation_policy_recession import (
+        RECESSION_FEATURES,
+        RecessionRiskArtifact,
+        RecessionRiskResult,
+    )
     from finance.inflation_policy_pipeline import (
         build_limited_reference_config,
         run_inflation_policy_materialization,
@@ -1054,6 +1059,33 @@ def test_runner_materializes_and_persists_ready_equity_from_production_inputs() 
             "breakeven_10y_pct": 2.4,
         },
     )
+    recession_artifact = RecessionRiskArtifact(
+        model_version="runner-equity-v1",
+        feature_names=RECESSION_FEATURES,
+        feature_means=tuple(0.0 for _ in RECESSION_FEATURES),
+        feature_scales=tuple(1.0 for _ in RECESSION_FEATURES),
+        coefficients=tuple(0.0 for _ in RECESSION_FEATURES),
+        intercept=-1.0,
+        validation_metrics={
+            "training_start_date": "1989-03-31",
+            "brier": 0.14,
+            "baseline_brier": 0.16,
+        },
+        publication_status="READY",
+        reason_codes=(),
+        trained_through="2023-06-30",
+    )
+    recession_result = RecessionRiskResult(
+        as_of_at=bundle.as_of_at,
+        probability_12m=0.23,
+        risk_state="WATCH",
+        risk_label="관찰",
+        horizon_months=12,
+        top_drivers=(),
+        publication_status="READY",
+        reason_codes=(),
+        validation_metrics=recession_artifact.validation_metrics,
+    )
     joint_artifact = {
         "publication_status": "READY",
         "validation_json": {"joint_path_publication_status": "READY"},
@@ -1116,6 +1148,10 @@ def test_runner_materializes_and_persists_ready_equity_from_production_inputs() 
         bundle_loader=lambda **_kwargs: bundle,
         vintage_loader=lambda **_kwargs: (),
         artifact_trainer=lambda *_args, **_kwargs: _momentum_artifact(),
+        recession_vintage_loader=lambda **_kwargs: ({"series_id": "USREC"},),
+        recession_panel_builder=lambda *_args, **_kwargs: panel,
+        recession_artifact_trainer=lambda *_args, **_kwargs: recession_artifact,
+        recession_predictor=lambda *_args, **_kwargs: recession_result,
         equity_bundle_loader=lambda **_kwargs: equity_bundle,
         equity_panel_builder=lambda **_kwargs: panel,
         equity_artifact_trainer=lambda *_args, **_kwargs: equity_artifact,
@@ -1133,6 +1169,10 @@ def test_runner_materializes_and_persists_ready_equity_from_production_inputs() 
         bundle_loader=lambda **_kwargs: bundle,
         vintage_loader=lambda **_kwargs: (),
         artifact_trainer=lambda *_args, **_kwargs: _momentum_artifact(),
+        recession_vintage_loader=lambda **_kwargs: ({"series_id": "USREC"},),
+        recession_panel_builder=lambda *_args, **_kwargs: panel,
+        recession_artifact_trainer=lambda *_args, **_kwargs: recession_artifact,
+        recession_predictor=lambda *_args, **_kwargs: recession_result,
         equity_bundle_loader=lambda **_kwargs: equity_bundle,
         equity_panel_builder=lambda **_kwargs: panel,
         equity_artifact_trainer=lambda *_args, **_kwargs: equity_artifact,
@@ -1147,6 +1187,7 @@ def test_runner_materializes_and_persists_ready_equity_from_production_inputs() 
     assert {row["component"] for row in saved_artifacts} == {
         "core_pce_momentum",
         "equity_stress",
+        "recession_risk",
     }
     assert repeated.equity["publication_status"] == "READY"
     assert requested_joint_components == ["joint_macro_paths", "joint_macro_paths"]
@@ -1173,6 +1214,8 @@ def test_runner_materializes_and_persists_ready_equity_from_production_inputs() 
     assert saved_snapshots[0]["equity_json"]["scenario_feature_values"][
         "dgs10_pct"
     ] == 4.4
+    assert saved_snapshots[0]["recession_json"]["probability_12m"] == 0.23
+    assert result.recession["risk_state"] == "WATCH"
 
 
 def test_reference_config_is_explicitly_limited_and_contains_no_absolute_yield() -> None:

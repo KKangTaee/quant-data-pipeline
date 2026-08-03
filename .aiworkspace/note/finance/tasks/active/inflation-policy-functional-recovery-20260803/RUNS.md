@@ -86,3 +86,21 @@
 - actual Browser `localhost:8502`: S&P panel의 공개시점 EPS 근거, 분포와 `6,400 이하 · 2.6%`
   표시, click crash 없음
   - QA: `inflation-policy-equity-oos-ready-qa.png`
+
+## 2026-08-04 Recovery Stage 5
+
+- FRED/ALFRED `USREC` 2,076 vintage rows 적재. DGS2/DGS10/BAML daily release anchor를
+  관측일 EOD로 재정렬하고 DGS2 34,875, DGS10 46,156, BAML 795 rows를 idempotent UPSERT.
+- actual recession validation: completed origin 138, OOS fold 86, episode 2,
+  Brier 0.146934 < base-rate 0.157162, ECE 0.024324, current completeness 1.0, `READY`.
+- actual materialization `2026-08-03T03:15:00Z --persist`: 신규 DB column migration,
+  `recession_risk` artifact와 `recession_json` 저장, overall과 6 component 모두 `READY`.
+- actual result: 12개월 침체 0.231484, `WATCH/관찰`; top drivers와 OOS metrics read model 통과.
+- Python 관련 통합 suite 161 passed, 기존 edgar deprecation warning 3건.
+- React 18 passed, TypeScript typecheck와 Vite production build 통과.
+- actual Browser `localhost:8502`: 23%·관찰·주요 동인·기존 사이클 미재사용 문구 확인;
+  component error 없음. Streamlit route health/host-config 404는 기존 개발서버 소음이다.
+  - QA: `inflation-policy-recession-ready-qa.png`
+- full rate-clock backfill 뒤 equity fixed-alpha 회귀를 재현: MAE 7.9403 > baseline 7.6929,
+  `LIMITED`. nested chronological ridge regression 추가 후 MAE 6.0751, coverage 0.875,
+  deployment alpha 100, `READY`; 재-materialization overall `READY`.

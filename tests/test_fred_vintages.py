@@ -141,6 +141,33 @@ def test_normalization_attaches_release_time_without_cycle_dependency() -> None:
     assert rows[0]["collected_at"] == "2026-07-30 13:00:00"
 
 
+def test_market_series_can_anchor_release_to_its_observation_date() -> None:
+    from finance.data.fred_vintages import normalize_fred_vintage_rows
+
+    spec = SimpleNamespace(
+        series_id="DGS10",
+        group="rates",
+        frequency="daily",
+        release_policy="END_OF_DAY_ET",
+        release_anchor="observation_date",
+    )
+    rows = normalize_fred_vintage_rows(
+        spec,
+        [
+            {
+                "date": "1988-03-31",
+                "realtime_start": "2005-06-28",
+                "realtime_end": "9999-12-31",
+                "value": "8.72",
+            }
+        ],
+        collected_at=datetime(2026, 8, 3, tzinfo=timezone.utc),
+    )
+
+    assert rows[0]["released_at"] == "1988-04-01T04:59:59.999999+00:00"
+    assert rows[0]["release_lag_days"] == 0
+
+
 def test_generic_upsert_persists_released_at_and_is_idempotent_sql() -> None:
     from finance.data.fred_vintages import upsert_fred_vintage_rows
 

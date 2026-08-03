@@ -54,6 +54,22 @@ export type EquityStressPayload = {
   base_forward_eps?: number | null;
 };
 
+export type RecessionRiskPayload = {
+  publication_status: InflationPublicationStatus;
+  reason: string;
+  probability_12m?: number | null;
+  risk_state?: string | null;
+  risk_label?: string | null;
+  horizon_months: number;
+  top_drivers: Array<{
+    feature: string;
+    value: number;
+    contribution: number;
+    direction: string;
+  }>;
+  validation_metrics: Record<string, unknown>;
+};
+
 export type InflationPolicyPayload = {
   schema_version: "inflation_policy_v1";
   publication_status: InflationPublicationStatus;
@@ -100,7 +116,7 @@ export type InflationPolicyPayload = {
     reason: string;
   };
   equity_stress: EquityStressPayload;
-  recession: { publication_status: InflationPublicationStatus; reason: string };
+  recession: RecessionRiskPayload;
   evidence: { items: Record<string, unknown>[]; details: Record<string, unknown> };
   freshness: Record<string, unknown>;
   warnings: string[];

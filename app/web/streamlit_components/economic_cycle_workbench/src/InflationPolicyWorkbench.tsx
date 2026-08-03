@@ -2,6 +2,7 @@ import EquityStressPanel from "./EquityStressPanel";
 import InflationEvidencePanel from "./InflationEvidencePanel";
 import InflationStatePanel from "./InflationStatePanel";
 import PolicyPathPanel from "./PolicyPathPanel";
+import RecessionRiskPanel from "./RecessionRiskPanel";
 import ReverseScenarioPanel from "./ReverseScenarioPanel";
 import YieldResistancePanel from "./YieldResistancePanel";
 import type { InflationPolicyWorkbenchProps } from "./inflationPolicyTypes";
@@ -44,6 +45,7 @@ function InflationPolicyWorkbench({ payload, onCommand }: InflationPolicyWorkben
       <YieldResistancePanel rates={payload.rates} />
       <ReverseScenarioPanel payload={payload} onCommand={onCommand} />
       <EquityStressPanel payload={payload} onCommand={onCommand} />
+      <RecessionRiskPanel recession={payload.recession} />
       <InflationEvidencePanel payload={payload} />
     </main>
   );

@@ -83,7 +83,16 @@ const cyclePayload = {
       current_index_level: null,
       base_forward_eps: null,
     },
-    recession: { publication_status: "NOT_AVAILABLE" as const, reason: "5차" },
+    recession: {
+      publication_status: "NOT_AVAILABLE" as const,
+      reason: "독립 시점 데이터 부족",
+      probability_12m: null,
+      risk_state: null,
+      risk_label: null,
+      horizon_months: 12,
+      top_drivers: [],
+      validation_metrics: {},
+    },
     evidence: { items: [], details: {} },
     freshness: {},
     warnings: [],
@@ -211,6 +220,19 @@ function readyPayload(): InflationPolicyPayload {
       current_index_level: 6800,
       base_forward_eps: 300,
     },
+    recession: {
+      publication_status: "READY",
+      reason: "독립 시점 데이터의 순차 검증을 통과했습니다.",
+      probability_12m: 0.18,
+      risk_state: "WATCH",
+      risk_label: "관찰",
+      horizon_months: 12,
+      top_drivers: [
+        { feature: "yield_curve_slope_pct", value: 0.42, contribution: -0.31, direction: "risk_down" },
+        { feature: "unemployment_gap_pct", value: 0.2, contribution: 0.14, direction: "risk_up" },
+      ],
+      validation_metrics: { brier: 0.1469, baseline_brier: 0.1572 },
+    },
   };
 }
 
@@ -254,7 +276,13 @@ function limitedHistoricalPayload(): InflationPolicyPayload {
     },
     recession: {
       publication_status: "NOT_AVAILABLE",
-      reason: "침체 모델은 5차 개발 전까지 연결하지 않습니다.",
+      reason: "독립 침체 모델의 원시 시점 데이터가 없습니다.",
+      probability_12m: null,
+      risk_state: null,
+      risk_label: null,
+      horizon_months: 12,
+      top_drivers: [],
+      validation_metrics: {},
     },
     equity_stress: {
       ...ready.equity_stress,
@@ -498,6 +526,16 @@ describe("reverse target and saved criterion workflow", () => {
 });
 
 describe("evidence, freshness, and unavailable boundaries", () => {
+  it("shows the independently validated 12-month recession probability and drivers", () => {
+    render(<InflationPolicyWorkbench payload={readyPayload()} onCommand={vi.fn()} />);
+
+    expect(screen.getByRole("heading", { name: "향후 12개월 침체 확률" })).toBeInTheDocument();
+    expect(screen.getByText("18%")).toBeInTheDocument();
+    expect(screen.getByText("관찰")).toBeInTheDocument();
+    expect(screen.getByText("10년-2년 금리차")).toBeInTheDocument();
+    expect(screen.getByText("독립 12개월 침체 위험")).toBeInTheDocument();
+  });
+
   it("shows historical evidence clocks and version provenance without promoting limited probabilities", async () => {
     render(<InflationPolicyWorkbench payload={limitedHistoricalPayload()} onCommand={vi.fn()} />);
 
@@ -505,7 +543,7 @@ describe("evidence, freshness, and unavailable boundaries", () => {
     expect(screen.queryByLabelText("고착 40%")).not.toBeInTheDocument();
     expect(screen.queryByText("5상태 합계 100%")).not.toBeInTheDocument();
     expect(screen.getByText("침체 모델 미연결")).toBeInTheDocument();
-    expect(screen.getByText(/5차 개발 전까지 연결하지 않습니다/)).toBeInTheDocument();
+    expect(screen.getAllByText(/독립 침체 모델의 원시 시점 데이터가 없습니다/).length).toBeGreaterThan(0);
 
     const disclosure = screen.getByText("근거·시점·버전 확인").closest("details");
     expect(disclosure).not.toHaveAttribute("open");

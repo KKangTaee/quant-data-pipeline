@@ -47,8 +47,8 @@ function InflationEvidencePanel({ payload }: Props) {
           <p>{payload.equity_stress.reason}</p>
         </article>
         <article>
-          <span>5차 예정</span>
-          <strong>침체 모델 미연결</strong>
+          <span>{payload.recession.publication_status === "READY" ? "5차 연결" : "5차 입력 대기"}</span>
+          <strong>{payload.recession.publication_status === "READY" ? "독립 12개월 침체 위험" : "침체 모델 미연결"}</strong>
           <p>{payload.recession.reason}</p>
         </article>
       </div>

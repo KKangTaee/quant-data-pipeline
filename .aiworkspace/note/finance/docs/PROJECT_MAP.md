@@ -76,22 +76,24 @@ service와 React workbench다.
 
 ## Workflow Ownership
 
-### Inflation / Policy Yield Path (Functional Recovery Active)
+### Inflation / Policy Yield Path
 
 ```text
-FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
+FRED/ALFRED + NBER USREC label + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
   + verified FactSet Earnings Insight annual EPS vintages + stored ^GSPC prices
   -> app/jobs/inflation_policy_refresh.py
   -> finance_meta PIT tables
   -> finance/loaders/inflation_policy.py
-  -> independent Core PCE / policy / yield / equity-stress engines
+  -> independent Core PCE / policy / yield / equity-stress / recession-risk engines
   -> inflation_policy_model_artifact / inflation_policy_snapshot
   -> app/services/overview/inflation_policy*.py
   -> Market Research > 경제 사이클 > 물가·정책 경로
 ```
 
-- `finance/inflation_policy_catalog.py`와 `finance/data/fred_vintages.py`가 독립 26-series
+- `finance/inflation_policy_catalog.py`와 `finance/data/fred_vintages.py`가 독립 27-series
   catalog와 공용 vintage transport를 소유한다.
+- `finance/inflation_policy_recession.py`는 기존 경제 사이클을 읽지 않고 10개 원시
+  macro/rate feature와 24개월 지연 `USREC` outcome으로 12개월 침체 확률을 검증한다.
 - `finance/data/fomc_policy.py`, `bea_pce_components.py`,
   `nyfed_term_premium.py`가 익명 SEP/의결·선택 PCE breadth·기간 프리미엄 source를
   저장한다.

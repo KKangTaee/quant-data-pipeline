@@ -1,8 +1,8 @@
 # Inflation Policy Functional Recovery Status
 
-State: active
-Roadmap: 4/5 recovery stages complete
-Last Updated: 2026-08-03
+State: complete
+Roadmap: 5/5 recovery stages complete
+Last Updated: 2026-08-04
 
 ## Current
 
@@ -55,10 +55,23 @@ Last Updated: 2026-08-03
   7,654/8,190.6/8,594.9를 저장했다. Browser에서 사용자 6,400 조건을 실행해 동일
   snapshot/artifact 기준 `6,400 이하 2.6%`(exact 2.5719%)와 EPS×multiple 분해가 표시되고 crash가
   없음을 확인했다.
-- 통합 snapshot은 inflation/policy/rates/reverse/equity가 모두 `READY`이며, 남은
-  `LIMITED` 이유는 독립 침체 모델 미연결 하나다.
+- 일별 미개정 Treasury series의 PIT clock이 ALFRED 데이터셋 등록일로 잘못 잡혀
+  1988~2005 금리곡선을 누락한 원인을 수정했다. 관측일 EOD release anchor로 DGS2/DGS10을
+  재적재하되 revision interval identity는 보존했다.
+- 독립 침체 모델은 1989~2023 completed origin 138개, chronological OOS fold 86개와
+  독립 침체 episode 2개를 평가했다. Brier 0.146934 < base-rate 0.157162,
+  calibration error 0.024324, current feature completeness 1.0으로 `READY`다.
+- 2026-08-03 snapshot의 향후 12개월 침체 확률은 23.1484%, 5단계 상태는 `WATCH/관찰`이다.
+  `USREC`은 24개월 지연 outcome label로만 쓰고 기존 경제 사이클 확률·artifact·snapshot은
+  import/query/fallback하지 않는다.
+- 모든 일별 금리 PIT clock 수정 직후 기존 고정 ridge는 MAE 7.9403으로 baseline을 못 이겨
+  `LIMITED`가 됐다. outer 평가를 보지 않는 nested chronological inner-fold ridge 선택으로
+  수정한 뒤 77 origins/44 folds, MAE 6.0751 < baseline 7.6929, OOS 80% coverage 0.875로
+  다시 `READY`임을 확인했다. 배포 alpha는 inner-fold가 선택한 100이다.
+- 실제 DB read model에서 inflation/policy/rates/reverse/equity/recession과 overall이 모두
+  `READY`다. Browser에서 침체 23%·관찰·주요 동인과 기존 사이클 미재사용 문구를 확인했다.
 
 ## Next
 
-- 5차 독립 침체 episode/OOS 모델을 구현한다.
-- 기존 경제 사이클 결과를 재사용하지 않고 actual snapshot·service·UI와 최종 통합한다.
+- 기능 복구 5단계는 종료한다. 이후는 새 범위가 아니라 정기 raw refresh와 동일
+  materialization 명령으로 최신 snapshot을 갱신한다.

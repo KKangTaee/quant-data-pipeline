@@ -22,3 +22,11 @@
   과장했다. 4차는 actual DB·validation·command·Browser evidence가 모두 생긴 뒤에만
   다시 완료로 정렬했다.
 - worktree의 사용자 registry 수정과 untracked artifact를 커밋하지 않는다.
+- `USREC`은 NBER outcome label이며 현재 feature가 아니다. label delay 24개월을 제거하거나
+  기존 경제 사이클 확률을 혼합하면 독립성과 시점 계약이 깨진다.
+- 미개정 일별 시장 series만 observation-date EOD anchor를 쓴다. 월간/분기 수정 series에
+  같은 anchor를 적용하면 미래 revision을 과거에 보게 된다.
+- equity ridge strength는 outer evaluation 결과로 직접 고르지 않는다. 후보나 inner-fold
+  규칙을 바꿀 때는 nested chronological validation 전체를 다시 실행한다.
+- 공식 BAML OAS history가 현재 2023-08 이후로 제한되므로 과거 fold에서는 결측이다.
+  제3자 값으로 소급 채우지 않고 current completeness와 OOS gate를 계속 확인한다.

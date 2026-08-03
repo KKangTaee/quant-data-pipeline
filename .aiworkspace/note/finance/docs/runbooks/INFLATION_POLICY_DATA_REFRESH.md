@@ -1,11 +1,11 @@
 # Inflation / Policy Point-in-Time Data Refresh
 
 Status: Active
-Last Verified: 2026-08-03
+Last Verified: 2026-08-04
 
 ## 목적
 
-Core PCE, FOMC SEP·정책 결정, 국채금리, 기간 프리미엄과 날짜 검증 annual EPS 원천을 UI나 기존 경제
+Core PCE, FOMC SEP·정책 결정, 국채금리, 기간 프리미엄, 날짜 검증 annual EPS와 독립 침체 label 원천을 UI나 기존 경제
 사이클 결과에 의존하지 않고 MySQL의 독립 Point-in-Time 원장으로 갱신한다. raw
 갱신과 DB-only 모델 재현·저장은 별도 명령이며, 수집 명령 자체는 확률·저항대·주가
 스트레스 결과를 계산하지 않는다.
@@ -15,7 +15,7 @@ Core PCE, FOMC SEP·정책 결정, 국채금리, 기간 프리미엄과 날짜 �
 - inflation-policy 엔진의 현재 또는 historical replay 입력을 준비할 때
 - 새 FOMC 성명이나 SEP가 공개된 뒤 익명 분포와 의결 이력을 갱신할 때
 - FactSet Earnings Insight 새 월별 보고서의 current/next-year bottom-up EPS vintage를 갱신할 때
-- FRED/ALFRED 물가·노동·활동·금리 빈티지를 다시 적재할 때
+- FRED/ALFRED 물가·노동·활동·금리·USREC label 빈티지를 다시 적재할 때
 - 필수 source coverage 때문에 모델 materialization이 차단됐는지 확인할 때
 
 ## 입력과 사전 조건
@@ -97,7 +97,7 @@ read payload를 독립 계산할 수 있어도 신규 artifact/snapshot은 저�
   필수 입력에 누락이 없다.
 - `failed_sources=[]`: FRED/ALFRED, SEP, FOMC 결정 필수 수집기가 성공했다.
 
-2026-08-03 실제 source smoke에서는 26개 FRED/ALFRED series, current calendar와
+2026-08-04 실제 source smoke에서는 27개 FRED/ALFRED series, current calendar와
 2016~2020 historical material에서 SEP 40개 release·5,787개 distribution row와
 rate decision 86건, FactSet 두 CY 라벨 검증 annual EPS 80 release/160행을 적재했고
 `materialization_allowed=true`였다. FactSet archive 후보 103개 중 표 검증에 실패한
@@ -108,12 +108,12 @@ rate decision 86건, FactSet 두 CY 라벨 검증 annual EPS 80 release/160행�
 2026-08-03 03:15 UTC current materialization에서는 1개월 Core PCE와 SPF 혼합 Q4/Q4,
 다음회의·연말 policy, DGS2/DGS10/DFII10/T10YIE 공동 경로와 dynamic resistance event가
 각 chronological baseline/calibration gate를 통과했다. 날짜 검증 EPS 77 completed
-origin의 equity MAE 6.9258%가 best baseline 7.6929%보다 낮고 OOS 80% interval coverage가
-0.8125라 inflation/policy/rates/reverse/equity는
-`READY`이고, 10년물 자동 기준은 active `4.58~4.65%`, 다음 overhead `4.79%`다.
-4.79% 도달 역산은 2,000개 중 1,690개 경로가 지지한다. 통합 snapshot은 독립 침체
-component만 남아 `LIMITED`지만 이미 READY인 다섯 component의 수치는
-그 상태와 무관하게 공개한다. 4.7%를 전역 상수로 사용하지 않는다.
+origin의 nested-ridge equity MAE 6.0751%가 best baseline 7.6929%보다 낮고 OOS 80%
+interval coverage가 0.875다. 독립 침체는 138 origins/86 OOS folds에서 Brier 0.146934 < base-rate
+0.157162, calibration 0.024324로 통과했다. 따라서 6개 component와 통합 snapshot은
+모두 `READY`이고, 10년물 자동 기준은 active `4.58~4.65%`, 다음 overhead `4.79%`다.
+4.79% 도달 역산은 2,000개 중 1,690개 경로가 지지하며 12개월 침체 확률은 23.1484%,
+`WATCH/관찰`이다. 4.7%를 전역 상수로 사용하지 않는다.
 
 ## 실패 처리
 
@@ -143,6 +143,8 @@ component만 남아 `LIMITED`지만 이미 READY인 다섯 component의 수치�
   December 동시결과를 제외한 `SEP released_at < final decision released_at`만 센다.
 - `joint_rate_path_validation_not_ready`: 저장된 저항 zone은 볼 수 있지만 목표 zone
   역산은 `NOT_AVAILABLE`로 둔다.
+- `recession_baseline_not_beaten`/`recession_calibration_not_ready`: 기존 경제 사이클
+  숫자로 대체하지 않는다. PIT raw history, 24개월 label delay와 OOS metrics를 확인한다.
 - `core_pce_artifact_not_publishable` 또는 artifact cutoff 오류: 물가·정책·역산은
   차단한다. Treasury read payload는 독립 계산하되 해당 실패 run은 저장하지 않는다.
 

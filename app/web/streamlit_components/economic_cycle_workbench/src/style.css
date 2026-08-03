@@ -757,6 +757,14 @@ button, input, summary { font: inherit; }
 .model-boundary-grid span { color: #7b8790; font-size: 8px; font-weight: 900; letter-spacing: .08em; }
 .model-boundary-grid strong { color: #3a5364; font-size: 12px; }
 .model-boundary-grid p { color: #71828e; font-size: 9px; line-height: 1.55; }
+.recession-risk-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+.recession-risk-summary article { display: grid; gap: 6px; padding: 16px; border: 1px solid #dce8e4; border-radius: 13px; background: #f5faf8; }
+.recession-risk-summary span { color: #73847e; font-size: 9px; font-weight: 800; }
+.recession-risk-summary strong { color: #214e43; font-size: 22px; }
+.recession-driver-list { display: grid; gap: 8px; margin-top: 12px; }
+.recession-driver-list article { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 10px 12px; border-bottom: 1px solid #edf1ef; }
+.recession-driver-list strong { color: #344d46; font-size: 11px; }
+.recession-driver-list span, .recession-driver-list small { color: #6f807a; font-size: 9px; }
 .inflation-evidence-disclosure { margin-top: 12px; overflow: hidden; border: 1px solid #dfe7eb; border-radius: 14px; background: #fff; }
 .inflation-evidence-disclosure > summary { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 56px; padding: 13px 15px; cursor: pointer; list-style: none; }
 .inflation-evidence-disclosure > summary::-webkit-details-marker { display: none; }
@@ -835,6 +843,7 @@ button, input, summary { font: inherit; }
   .equity-range-grid,
   .equity-scenario-form,
   .model-boundary-grid,
+  .recession-risk-summary,
   .provenance-version-grid,
   .inflation-evidence-list dl,
   .freshness-clock-list article { grid-template-columns: 1fr; }

@@ -88,4 +88,5 @@ def test_inflation_policy_schema_keeps_json_payloads_and_rate_precision() -> Non
     assert "validation_json LONGTEXT NOT NULL" in combined
     assert "inflation_json LONGTEXT NOT NULL" in combined
     assert "equity_json LONGTEXT NOT NULL" in combined
+    assert "recession_json LONGTEXT NOT NULL" in combined
     assert "quality_json LONGTEXT NOT NULL" in combined

@@ -1,17 +1,17 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-08-03
+Last Verified: 2026-08-04
 
 ## Current Snapshot
 
 Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level surface를
 제공하는 Evidence-first 퀀트 투자 리서치 워크스페이스다.
 
-현재 사용자 승인 `Inflation Policy Yield Path` 5단계 phase가 active다. 실제 DB와
-Browser 재감사 결과 1차 독립 Point-in-Time 데이터 기반, 2차 Core PCE Q4/Q4,
-3차 정책·공동 금리 경로·10년물 목표 역산과 4차 조건부 S&P 500 스트레스가
-actual data·검증·command 경로에서 완료됐다. 5차 독립 침체 위험 모델을 진행한다.
+사용자 승인 `Inflation Policy Yield Path` 5단계 phase는 actual DB와 Browser 재감사를
+통과해 완료됐다. 독립 Point-in-Time 데이터, Core PCE Q4/Q4, 정책·공동 금리 경로·
+10년물 목표 역산, 조건부 S&P 500 스트레스와 독립 12개월 침체 위험이 기존 V1 workflow에
+연결됐다.
 기존 baseline과 남은
 verification debt는 유지하며 다른 신규 product/data
 scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는다.
@@ -21,8 +21,8 @@ scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는�
 - Product baseline: Research → Portfolio Lab → Portfolio Monitoring 흐름 구현
 - Data baseline: MySQL-backed ingestion / loader / service / UI 경계 구현
 - Safety baseline: no live approval, broker order, auto rebalance
-- Active phase: `inflation-policy-yield-path` (4/5 complete, 5차 independent recession)
-- Active product implementation: Core PCE·policy·joint rate·reverse·equity actual materialization 완료, 독립 침체 진행
+- Completed phase: `inflation-policy-yield-path` (5/5 actual DB/Browser verified)
+- Product baseline: Core PCE·policy·joint rate·reverse·equity·independent recession materialization READY
 - Paused work와 Verification-Only work는 별도 상태로 관리
 
 ## Implemented Baseline
@@ -39,8 +39,8 @@ scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는�
 | Portfolio Monitoring | direct stock·ETF와 selected strategy의 group/item, cashflow-aware performance, contribution, diagnosis와 recheck | read-only monitoring, broker / auto rebalance 없음 |
 | Reference Center | 7개 current surface의 개념·journey·failure state·deep link 검색 | product help owner |
 | Architecture | Python domain / service / runtime, Streamlit command boundary와 React presentation 분리 | React가 DB / provider / canonical decision을 소유하지 않음 |
-| Inflation / Policy Backend | 독립 26-series PIT 원장, Philadelphia Fed SPF 확률 bin, 공식 FOMC rate decision 86건·SEP 40 release, FactSet 두 CY 라벨 검증 annual EPS 80 release, strict as-of/vintage loader, 혼합형 Core PCE, 검증 정책 marginal·2,000개 joint rate path·equity stress, 동적 저항대 | 기존 경제 사이클 결과 재사용 없음; December 동시결과 누수를 제외한 Core/Q4/policy/joint-rate와 equity actual chronological gate 통과, 독립 침체만 진행 중 |
-| Inflation / Policy Workbench | 기존 경기 국면 기본 선택기 아래 DB-backed 물가·정책·금리·역산·equity surface와 USER 기준 저장 | actual Q4 5상태·다음 발표·다음 회의·연말 정책·동적 4.79% 역산·EPS×multiple 스트레스 공개와 command QA 완료; 침체만 별도 gate 전까지 독립 제한 |
+| Inflation / Policy Backend | 독립 27-series PIT 원장, Philadelphia Fed SPF 확률 bin, 공식 FOMC rate decision 86건·SEP 40 release, FactSet 두 CY 라벨 검증 annual EPS 80 release, strict as-of/vintage loader, 혼합형 Core PCE, 검증 정책 marginal·2,000개 joint rate path·equity stress·독립 침체, 동적 저항대 | 기존 경제 사이클 결과 재사용 없음; Core/Q4/policy/joint-rate/equity/recession actual chronological gate 통과 |
+| Inflation / Policy Workbench | 기존 경기 국면 기본 선택기 아래 DB-backed 물가·정책·금리·역산·equity·12개월 침체 surface와 USER 기준 저장 | actual Q4 5상태·다음 발표·다음 회의·연말 정책·동적 4.79% 역산·EPS×multiple 스트레스·침체 5단계 공개와 Browser QA 완료 |
 
 상세 구현과 과거 QA는 개별 task / phase 기록에 남아 있다. 현재 제품 의미는
 [Product Direction](./PRODUCT_DIRECTION.md), code ownership은

@@ -57,7 +57,15 @@ REASON_LABELS = {
     "joint_rate_paths_not_available": (
         "검증된 물가·정책·금리 공동 경로가 없어 주가 스트레스를 계산할 수 없습니다."
     ),
-    "recession_model_not_available": "침체 모델은 5차 개발 전까지 연결하지 않습니다.",
+    "recession_model_not_available": "독립 침체 모델에 필요한 시점 데이터가 부족합니다.",
+    "recession_inputs_not_available": "독립 침체 모델의 원시 시점 데이터가 없습니다.",
+    "insufficient_recession_origins": "침체 확률을 검증할 과거 시점이 부족합니다.",
+    "insufficient_recession_validation_folds": "침체 확률의 순차 검증 구간이 부족합니다.",
+    "recession_baseline_not_beaten": "침체 모델이 과거 기준확률보다 개선되지 않았습니다.",
+    "recession_calibration_not_ready": "침체 확률의 보정 오차가 공개 기준을 넘었습니다.",
+    "insufficient_recession_episodes": "순차 검증에 포함된 침체 국면이 부족합니다.",
+    "current_recession_inputs_incomplete": "현재 침체 판단 입력의 완전성이 부족합니다.",
+    "independent_pit_recession_validation_ready": "독립 시점 데이터의 순차 검증을 통과했습니다.",
 }
 
 
@@ -209,6 +217,21 @@ def _empty_equity(reason: str, *, status: str = "NOT_AVAILABLE") -> dict[str, ob
     }
 
 
+def _empty_recession(
+    reason: str, *, status: str = "NOT_AVAILABLE"
+) -> dict[str, object]:
+    return {
+        "publication_status": status,
+        "reason": reason,
+        "probability_12m": None,
+        "risk_state": None,
+        "risk_label": None,
+        "horizon_months": 12,
+        "top_drivers": [],
+        "validation_metrics": {},
+    }
+
+
 def _optional_finite(value: object, *, field: str) -> float | None:
     if value is None:
         return None
@@ -275,6 +298,53 @@ def _equity_section(value: object) -> dict[str, object]:
     except (TypeError, ValueError, json.JSONDecodeError):
         return _empty_equity(
             "저장된 주가 스트레스 payload 검증에 실패했습니다.", status="FAILED"
+        )
+
+
+def _recession_section(value: object) -> dict[str, object]:
+    unavailable_reason = "독립 침체 모델에 필요한 시점 데이터가 부족합니다."
+    try:
+        raw = _mapping(value)
+        if not raw:
+            return _empty_recession(unavailable_reason)
+        status = _status(raw.get("publication_status"))
+        probability = _optional_finite(
+            raw.get("probability_12m"), field="recession.probability_12m"
+        )
+        if probability is not None and not 0.0 <= probability <= 1.0:
+            raise ValueError("recession.probability_12m must be between zero and one")
+        if status == "READY" and probability is None:
+            raise ValueError("READY recession payload requires probability_12m")
+        if status != "READY":
+            probability = None
+        drivers = []
+        if status == "READY":
+            for item in _sequence(raw.get("top_drivers")):
+                driver = _mapping(item)
+                drivers.append(
+                    {
+                        "feature": str(driver.get("feature") or ""),
+                        "value": _finite(driver.get("value"), field="recession.driver.value"),
+                        "contribution": _finite(
+                            driver.get("contribution"),
+                            field="recession.driver.contribution",
+                        ),
+                        "direction": str(driver.get("direction") or ""),
+                    }
+                )
+        return {
+            "publication_status": status,
+            "reason": _reason(raw.get("reason"), fallback=unavailable_reason),
+            "probability_12m": probability,
+            "risk_state": str(raw.get("risk_state") or "") if status == "READY" else None,
+            "risk_label": str(raw.get("risk_label") or "") if status == "READY" else None,
+            "horizon_months": int(_finite(raw.get("horizon_months", 12), field="recession.horizon_months")),
+            "top_drivers": drivers,
+            "validation_metrics": _json_safe(_mapping(raw.get("validation_metrics"))),
+        }
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return _empty_recession(
+            "저장된 침체 확률 payload 검증에 실패했습니다.", status="FAILED"
         )
 
 
@@ -387,6 +457,7 @@ def _build_model(
     rates_raw = _mapping(snapshot.get("rates_json"))
     reverse_raw = _mapping(snapshot.get("reverse_json"))
     equity = _equity_section(snapshot.get("equity_json"))
+    recession = _recession_section(snapshot.get("recession_json"))
     evidence_raw = _mapping(snapshot.get("evidence_json"))
     freshness_raw = _mapping(snapshot.get("freshness_json"))
     warning_rows = _sequence(snapshot.get("warnings_json"))
@@ -520,10 +591,7 @@ def _build_model(
         "rates": rates,
         "reverse_scenario": reverse,
         "equity_stress": equity,
-        "recession": {
-            "publication_status": "NOT_AVAILABLE",
-            "reason": "침체 모델은 5차 개발 전까지 연결하지 않습니다.",
-        },
+        "recession": recession,
         "evidence": {
             "items": _sequence(evidence_raw.get("top_evidence")),
             "details": evidence_raw,
@@ -560,10 +628,9 @@ def _unavailable_model(*, status: str, summary: str) -> dict[str, object]:
         "equity_stress": _empty_equity(
             "발표일이 검증된 S&P 500 EPS 빈티지와 공동 거시경로가 필요합니다."
         ),
-        "recession": {
-            "publication_status": "NOT_AVAILABLE",
-            "reason": "침체 모델은 5차 개발 전까지 연결하지 않습니다.",
-        },
+        "recession": _empty_recession(
+            "독립 침체 모델에 필요한 시점 데이터가 부족합니다."
+        ),
         "evidence": {"items": [], "details": {}},
         "freshness": {},
         "warnings": [],

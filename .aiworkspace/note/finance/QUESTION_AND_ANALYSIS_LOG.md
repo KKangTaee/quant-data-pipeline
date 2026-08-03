@@ -10747,3 +10747,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   77 origin에서 baseline 개선과 OOS interval coverage를 통과해 equity `READY`를 만들었다.
 - Follow-up: actual 6,400 command는 `2.57%`로 동작한다. 전체 4/5차 완료이며
   다음은 기존 경제 사이클 결과를 전혀 재사용하지 않는 5차 독립 침체 모델이다.
+
+### 2026-08-04 - 빈 상태 안내가 아니라 독립 침체 결과까지 실제 복구한다
+
+- User request: 미충족/검증 제한 안내로 끝내지 말고 기존 V1 기능이 actual DB와 클릭
+  경로에서 정상 작동하도록 근본 원인을 해결해 달라고 요청함.
+- Interpreted goal: 기존 경기 사이클 확률을 배제한 별도 12개월 침체 확률을 마지막
+  component로 연결하고 전체 5단계 복구를 실제 Browser까지 끝낸다.
+- Analysis result: 잘못된 일별 금리 release clock을 수정하고 지연 label OOS gate를 통과한
+  침체 23.1484%·관찰 상태를 snapshot/service/UI에 저장·표시했다.
+- Follow-up: 5/5 완료. 이후는 같은 raw refresh/materialization 계약의 정기 갱신이다.

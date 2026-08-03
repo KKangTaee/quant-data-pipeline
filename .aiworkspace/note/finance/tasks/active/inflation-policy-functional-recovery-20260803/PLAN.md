@@ -21,9 +21,9 @@ Streamlit component transport에서 직렬화되지 않아 클릭 시 화면이 
 | 4 | S&P 500 조건부 stress 실사용화 | PIT forward EPS source/backfill, equity validation, joint path 연결 | official/검증 가능한 EPS vintage로 actual equity result가 계산된다. |
 | 5 | 독립 침체 연결 | 별도 episode/OOS 침체 모델 | 경제 사이클 재사용 없이 검증된 침체 결과가 연결된다. |
 
-현재 1차 runtime 복구, 2차 Core PCE Q4 직접검증, 3차 정책·공동 금리 경로와
-4차 S&P 500 조건부 stress까지 완료했고 5차 독립 침체 연결을 진행한다. 확률 gate를 느슨하게 만들거나 fixture 숫자를 노출하지 않고,
-각 차수의 실제 DB 입력과 독립 검증을 채운다.
+1~5차를 모두 완료했다. 마지막 5차는 기존 경제 사이클 결과를 읽지 않고 독립
+FRED/ALFRED 시점 원장과 지연 확정 NBER label만 사용해 실제 snapshot·service·UI까지
+연결했다. 확률 gate를 fixture 숫자나 안내 문구로 우회하지 않았다.
 
 ## 구현 순서
 

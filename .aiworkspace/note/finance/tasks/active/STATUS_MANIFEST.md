@@ -1,14 +1,16 @@
 # Active Task State Manifest
 
 Document Status: Maintained
-Last Verified: 2026-08-03
+Last Verified: 2026-08-04
 
 ## Current State
 
-Current active product task:
+Current active product task: none.
+
+Latest completed inflation-policy task:
 
 - `inflation-policy-functional-recovery-20260803` — actual DB 기준 reverse transport,
-  Q4/Q4·policy·joint path와 PIT forward EPS를 기존 workbench에 근본 연결하는 5차 복구
+  Q4/Q4·policy·joint path·PIT forward EPS·독립 침체를 기존 V1 workbench에 연결한 5/5 복구
 
 Paused task:
 

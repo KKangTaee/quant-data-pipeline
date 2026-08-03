@@ -588,6 +588,29 @@ def test_equity_model_keeps_paired_eps_multiple_residuals() -> None:
     assert np.corrcoef(residuals[:, 0], residuals[:, 1])[0, 1] > 0.5
 
 
+def test_equity_model_selects_ridge_only_with_nested_chronological_folds() -> None:
+    from finance.inflation_policy_equity_stress import fit_equity_stress_model
+
+    artifact = fit_equity_stress_model(
+        _synthetic_model_panel(),
+        minimum_origins=60,
+        ridge_alpha=1.0,
+        ridge_alpha_candidates=(1.0, 10.0, 100.0),
+    )
+
+    assert artifact.validation_metrics["validation_scheme"] == (
+        "rolling_origin_label_available_nested_ridge"
+    )
+    assert artifact.validation_metrics["ridge_selection_scheme"] == (
+        "nested_chronological_inner_mae"
+    )
+    assert artifact.validation_metrics["deployment_ridge_alpha"] in {
+        1.0,
+        10.0,
+        100.0,
+    }
+
+
 def test_equity_model_fails_closed_with_insufficient_completed_origins() -> None:
     from finance.inflation_policy_equity_stress import fit_equity_stress_model
 
