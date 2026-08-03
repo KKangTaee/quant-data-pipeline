@@ -17,20 +17,22 @@ Last Updated: 2026-08-03
 - Task 1 observed-state / transition domain implementation and focused verification complete.
 - Task 2 additive snapshot schema, PIT/revised panel loaders and materialization integration
   complete.
+- Task 3 Overview `economic_cycle_v3` read model and frozen asset-payload regression complete.
 
 ## Roadmap Position
 
 - 1차 audit: complete
 - 2차 diagnostic model design: complete
 - 3차 UI / product contract design: complete and approved
-- 4차 implementation / QA: Tasks 1–2 complete; Task 3 service v3 next
+- 4차 implementation / QA: Tasks 1–3 complete; Task 4 React UI next
 
 ## Next Action
 
-Implement Task 3 `economic_cycle_v3` Overview read model and asset deep-equality regression
-through RED/GREEN checkpoints.
+Implement Task 4 React workbench against the v3 payload, remove probability/future-coordinate
+presentation and preserve the existing asset checkpoint component and CSS selectors.
 
 ## Scope Boundary
 
-No production code has been changed for this task. The next implementation must not modify
-asset-pathway calculation or the existing asset-card design.
+Tasks 1–3 changed only the observed-state domain, additive persistence/pipeline wiring and the
+Overview service contract. Asset-pathway calculation and the existing asset-card design remain
+outside the authorized change boundary.

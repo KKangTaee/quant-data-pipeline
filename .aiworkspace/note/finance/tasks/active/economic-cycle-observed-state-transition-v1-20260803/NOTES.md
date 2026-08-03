@@ -17,6 +17,13 @@ Last Updated: 2026-08-03
 - Headline phase is the immediately observed quadrant. Transition confirmation keeps a separate
   last-confirmed anchor so a first boundary crossing can be shown immediately without being
   called a confirmed regime change.
+- The v3 service has no `forecast_path_json` or `probabilities_json` read path. Legacy rows with
+  no observed-state JSON remain limited instead of reconstructing a phase from h0 probability.
+- The v3 cycle map is a maximum 12-month trail of persisted actual level/momentum coordinates;
+  the current snapshot replaces a same-date history point so headline and graph cannot diverge.
+- Market implications receive the same evidence, market, price, earnings and reference-date
+  inputs as before. Their unused legacy horizon argument is now an empty tuple, verified by
+  deep-equality regression.
 
 ## Reproduced Root Causes
 

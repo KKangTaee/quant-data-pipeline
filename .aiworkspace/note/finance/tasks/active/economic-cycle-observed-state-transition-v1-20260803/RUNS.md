@@ -72,3 +72,20 @@ Last Updated: 2026-08-03
   persisted `current_phase` now remains null instead.
 - Verification: result + pipeline selection `27 passed`, `py_compile` and `git diff --check`
   passed. Three pre-existing edgar deprecation warnings remain.
+
+## Task 3 TDD — Overview Service V3
+
+- RED: v3 schema/current-state tests failed because the service still returned v2 horizons and
+  selected headline phase from h0 probability.
+- GREEN: the service now decodes only persisted observed state, recent changes and transition
+  monitor JSON, with a 12-month actual-coordinate cycle map.
+- RED/GREEN: legacy probability-only snapshots remain LIMITED and do not restore a phase;
+  `forecast_path_json` and `probabilities_json` no longer occur in the service source.
+- RED/GREEN: intramonth output is baseline-relative and provisional, while the monthly headline
+  and cycle-map point remain unchanged; fewer than six real-economy series suppress the
+  provisional coordinate.
+- Frozen-surface regression: same-input `market_implications` payload deep equality passed.
+- Replaced obsolete future-probability and 60-month probability-history test contracts with v3
+  observed-state contracts.
+- Verification: service + observed domain + result + pipeline selection `70 passed`,
+  `py_compile` and `git diff --check` passed. Three pre-existing edgar warnings remain.

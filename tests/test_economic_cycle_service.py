@@ -6,6 +6,7 @@ import json
 from datetime import date, timedelta
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 from finance.economic_cycle_model import PHASES
@@ -73,7 +74,180 @@ def _ready_snapshot() -> dict[str, object]:
         ),
         "top_evidence_json": json.dumps(evidence),
         "warnings_json": "[]",
+        "observed_state_json": json.dumps(
+            {
+                "as_of_date": "2026-06-30",
+                "raw_level": 0.40,
+                "level": 0.35,
+                "momentum": 0.10,
+                "phase": "expansion",
+                "activity_level": 0.42,
+                "labor_income_level": 0.28,
+                "activity_momentum": 0.12,
+                "labor_income_momentum": 0.08,
+                "level_breadth": 0.75,
+                "momentum_breadth": 0.75,
+                "available_series": 8,
+                "stale_series": 0,
+                "duration_months": 4,
+                "confidence": "HIGH",
+                "revision_sensitivity": "STABLE",
+                "revised_phase": "expansion",
+                "data_status": "READY",
+            }
+        ),
+        "recent_changes_json": "[]",
+        "transition_monitor_json": json.dumps(
+            {
+                "observed_phase": "expansion",
+                "anchor_phase": "expansion",
+                "target_phase": "slowdown",
+                "status": "MAINTAIN",
+                "conditions_met": 0,
+                "conditions_total": 3,
+                "conditions": [],
+                "context": [],
+            }
+        ),
     }
+
+
+def _observed_snapshot() -> dict[str, object]:
+    snapshot = _ready_snapshot()
+    snapshot.update(
+        {
+            "status": "READY",
+            "current_phase": "contraction",
+            "observed_state_json": json.dumps(
+                {
+                    "as_of_date": "2026-06-30",
+                    "raw_level": -0.63,
+                    "level": -0.56,
+                    "momentum": -0.24,
+                    "phase": "contraction",
+                    "activity_level": -0.70,
+                    "labor_income_level": -0.42,
+                    "activity_momentum": -0.31,
+                    "labor_income_momentum": -0.17,
+                    "level_breadth": 0.50,
+                    "momentum_breadth": 0.50,
+                    "available_series": 8,
+                    "stale_series": 0,
+                    "duration_months": 3,
+                    "confidence": "MEDIUM",
+                    "revision_sensitivity": "SENSITIVE",
+                    "revised_phase": "recovery",
+                    "data_status": "READY",
+                }
+            ),
+            "recent_changes_json": json.dumps(
+                [
+                    {
+                        "horizon_months": 1,
+                        "status": "MIXED",
+                        "composite_delta": 0.05,
+                        "breadth": 0.50,
+                        "available_pairs": 8,
+                        "activity_delta": 0.08,
+                        "labor_income_delta": 0.02,
+                    },
+                    {
+                        "horizon_months": 3,
+                        "status": "WEAKENING",
+                        "composite_delta": -0.18,
+                        "breadth": 0.25,
+                        "available_pairs": 8,
+                        "activity_delta": -0.22,
+                        "labor_income_delta": -0.14,
+                    },
+                    {
+                        "horizon_months": 6,
+                        "status": "MIXED",
+                        "composite_delta": -0.04,
+                        "breadth": 0.50,
+                        "available_pairs": 8,
+                        "activity_delta": -0.06,
+                        "labor_income_delta": -0.02,
+                    },
+                ]
+            ),
+            "transition_monitor_json": json.dumps(
+                {
+                    "observed_phase": "contraction",
+                    "anchor_phase": "contraction",
+                    "target_phase": "recovery",
+                    "status": "WATCH",
+                    "conditions_met": 1,
+                    "conditions_total": 3,
+                    "candidate_started_at": "2026-06-30",
+                    "confirmed_at": None,
+                    "non_adjacent_observation": False,
+                    "conditions": [
+                        {
+                            "condition_id": "persistence",
+                            "status": "UNMET",
+                            "value": {"current": -0.24, "previous": -0.20},
+                            "threshold": ">= 0 for two releases",
+                        },
+                        {
+                            "condition_id": "diffusion",
+                            "status": "UNMET",
+                            "value": {"breadth": 0.50, "available_pairs": 8},
+                            "threshold": ">= 0.60",
+                        },
+                        {
+                            "condition_id": "corroboration",
+                            "status": "MET",
+                            "value": {"activity": 0.04, "labor_income": 0.02},
+                            "threshold": "both >= 0",
+                        },
+                    ],
+                    "context": [
+                        {
+                            "factor": "financial_leading_score",
+                            "value": 0.22,
+                            "relation": "TOWARD_TARGET",
+                        },
+                        {
+                            "factor": "inflation_policy_score",
+                            "value": 0.79,
+                            "relation": "SUPPORT_CURRENT",
+                        },
+                    ],
+                }
+            ),
+        }
+    )
+    return snapshot
+
+
+def _observed_history(count: int = 12) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for index, origin in enumerate(
+        pd.date_range("2025-07-31", periods=count, freq="ME")
+    ):
+        level = -1.1 + index * 0.05
+        momentum = -0.4 + index * 0.01
+        rows.append(
+            {
+                "as_of_date": origin.date().isoformat(),
+                "status": "READY",
+                "current_phase": "contraction",
+                "nber_recession": 1 if index < 2 else 0,
+                "observed_state_json": json.dumps(
+                    {
+                        "as_of_date": origin.date().isoformat(),
+                        "level": level,
+                        "momentum": momentum,
+                        "phase": "contraction",
+                        "confidence": "MEDIUM",
+                        "revision_sensitivity": "STABLE",
+                        "data_status": "READY",
+                    }
+                ),
+            }
+        )
+    return rows
 
 
 def _history_rows(count: int = 130) -> list[dict[str, object]]:
@@ -95,11 +269,145 @@ def _history_rows(count: int = 130) -> list[dict[str, object]]:
     return list(reversed(rows))
 
 
+def test_v3_exposes_observed_state_recent_changes_and_actual_cycle_map() -> None:
+    service = _load_service()
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: _observed_snapshot(),
+        history_loader=lambda **_kwargs: _observed_history(),
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=lambda **_kwargs: {},
+        price_reference_date=date(2026, 7, 17),
+    )
+
+    assert model["schema_version"] == "economic_cycle_v3"
+    assert model["headline"] == {
+        "phase": "contraction",
+        "phase_label": "위축",
+        "summary": "실물경제 수준이 낮고 최근 3개월 흐름도 약화된 상태입니다.",
+        "reason_code": None,
+    }
+    assert model["observed_state"]["level"] == pytest.approx(-0.56)
+    assert model["observed_state"]["momentum"] == pytest.approx(-0.24)
+    assert model["observed_state"]["confidence_label"] == "보통"
+    assert [item["horizon_months"] for item in model["recent_changes"]] == [
+        1,
+        3,
+        6,
+    ]
+    assert model["transition_monitor"]["status"] == "WATCH"
+    assert model["transition_monitor"]["conditions_met"] == 1
+    assert len(model["cycle_map"]["points"]) == 12
+    assert model["cycle_map"]["points"][-1]["level"] == pytest.approx(-0.56)
+    assert model["cycle_map"]["points"][-1]["momentum"] == pytest.approx(-0.24)
+    assert "horizons" not in model
+    assert "cycle_clock" not in model
+    assert "history" not in model
+    json.dumps(model, allow_nan=False)
+
+
+def test_v3_legacy_probability_snapshot_does_not_restore_current_phase() -> None:
+    service = _load_service()
+    legacy_snapshot = _ready_snapshot()
+    legacy_snapshot.pop("observed_state_json")
+    legacy_snapshot.pop("recent_changes_json")
+    legacy_snapshot.pop("transition_monitor_json")
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: legacy_snapshot,
+        history_loader=lambda **_kwargs: [],
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=lambda **_kwargs: {},
+    )
+
+    assert model["schema_version"] == "economic_cycle_v3"
+    assert model["status"] == "LIMITED"
+    assert model["headline"]["phase"] is None
+    assert model["headline"]["reason_code"] == "OBSERVED_STATE_MISSING"
+    assert model["observed_state"]["data_status"] == "UNAVAILABLE"
+    assert model["cycle_map"]["points"] == []
+    assert len(model["market_implications"]) == 5
+    source = Path("app/services/overview/economic_cycle.py").read_text(encoding="utf-8")
+    assert "forecast_path_json" not in source
+    assert "probabilities_json" not in source
+
+
+def test_v3_keeps_asset_checkpoint_payload_identical() -> None:
+    service = _load_service()
+    interpretation = importlib.import_module("finance.economic_cycle_interpretation")
+    snapshot = _observed_snapshot()
+    market_rows: list[dict[str, object]] = []
+    asset_rows: list[dict[str, object]] = []
+    earnings: dict[str, object] = {}
+    reference = date(2026, 7, 17)
+    expected = interpretation.build_market_implications(
+        (),
+        service._evidence(snapshot),
+        asset_rows,
+        market_rows=market_rows,
+        sp500_earnings=earnings,
+        economic_as_of_date="2026-06-30",
+        price_reference_date=reference,
+    )
+    for item in expected:
+        item["economic_as_of_date"] = "2026-06-30"
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: snapshot,
+        history_loader=lambda **_kwargs: [],
+        market_series_loader=lambda **_kwargs: market_rows,
+        asset_price_loader=lambda **_kwargs: asset_rows,
+        sp500_earnings_loader=lambda **_kwargs: earnings,
+        price_reference_date=reference,
+    )
+
+    assert model["market_implications"] == expected
+
+
+def test_v3_intramonth_is_provisional_and_never_replaces_monthly_headline() -> None:
+    service = _load_service()
+    monthly = _observed_snapshot()
+    intramonth = _intramonth_snapshot()
+    intramonth["observed_state_json"] = json.dumps(
+        {
+            "as_of_date": "2026-07-21",
+            "raw_level": -0.40,
+            "level": -0.45,
+            "momentum": 0.08,
+            "phase": "recovery",
+            "available_series": 8,
+            "stale_series": 0,
+            "confidence": "MEDIUM",
+            "revision_sensitivity": "STABLE",
+            "data_status": "READY",
+        }
+    )
+
+    model = service.build_economic_cycle_read_model(
+        as_of_date="2026-07-21",
+        snapshot_loader=lambda **_kwargs: monthly,
+        intramonth_loader=lambda **_kwargs: intramonth,
+        history_loader=lambda **_kwargs: [],
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=lambda **_kwargs: {},
+    )
+
+    assert model["headline"]["phase"] == "contraction"
+    assert model["as_of_date"] == "2026-06-30"
+    assert model["intramonth_change"]["provisional"] is True
+    assert model["intramonth_change"]["as_of_date"] == "2026-07-21"
+    assert model["intramonth_change"]["raw_level_delta"] == pytest.approx(0.23)
+    assert model["intramonth_change"]["observed_state"]["phase"] == "recovery"
+
+
 def test_ready_read_model_maps_horizons_evidence_sources_and_separate_history() -> None:
     service = _load_service()
     model = service.build_economic_cycle_read_model(
-        snapshot_loader=lambda **_kwargs: _ready_snapshot(),
-        history_loader=lambda **_kwargs: _history_rows(),
+        snapshot_loader=lambda **_kwargs: _observed_snapshot(),
+        history_loader=lambda **_kwargs: _observed_history(),
     )
 
     assert list(model) == [
@@ -107,41 +415,29 @@ def test_ready_read_model_maps_horizons_evidence_sources_and_separate_history() 
         "status",
         "as_of_date",
         "model_version",
-        "intramonth",
+        "intramonth_change",
         "data_freshness",
         "headline",
-        "horizons",
-        "cycle_clock",
+        "observed_state",
+        "recent_changes",
+        "transition_monitor",
+        "cycle_map",
         "evidence",
         "market_implications",
-        "history",
         "sources",
         "limitations",
     ]
-    assert model["schema_version"] == "economic_cycle_v2"
-    assert [item["label"] for item in model["horizons"]] == [
-        "현재",
-        "1개월 후",
-        "2개월 후",
-    ]
-    assert all(set(item["probabilities"]) == set(PHASES) for item in model["horizons"])
-    assert all(item["estimate_status"] == "VERIFIED" for item in model["horizons"])
-    assert model["cycle_clock"]["expected_transition"] == "expansion_to_slowdown"
+    assert model["schema_version"] == "economic_cycle_v3"
+    assert model["observed_state"]["phase"] == "contraction"
+    assert model["transition_monitor"]["target_phase"] == "recovery"
     assert {item["direction"] for item in model["evidence"]} <= {
         "강화",
         "약화",
         "중립",
     }
     assert all(item["source_date"] for item in model["sources"])
-    assert len(model["history"]) == 60
-    assert model["history"] == sorted(model["history"], key=lambda item: item["date"])
-    assert all("nber_recession" in item for item in model["history"])
-    assert all(
-        "phase" in item
-        and "probabilities" in item
-        and "estimate_status" in item
-        for item in model["history"]
-    )
+    assert len(model["cycle_map"]["points"]) == 12
+    assert all("nber_recession" in item for item in model["cycle_map"]["points"])
     json.dumps(model, allow_nan=False)
 
 
@@ -150,19 +446,19 @@ def test_ready_read_model_maps_horizons_evidence_sources_and_separate_history() 
     [
         (
             "recovery",
-            "생산·소비와 고용·소득 수준은 낮지만 최근 3개월 흐름은 개선 중입니다.",
+            "실물경제 수준은 낮지만 최근 3개월 흐름이 개선된 상태입니다.",
         ),
         (
             "expansion",
-            "생산·소비와 고용·소득 수준이 높고 최근 3개월 흐름도 개선 중입니다.",
+            "실물경제 수준이 높고 최근 3개월 흐름도 개선된 상태입니다.",
         ),
         (
             "slowdown",
-            "생산·소비와 고용·소득 수준은 높지만 최근 3개월 흐름은 약화 중입니다.",
+            "실물경제 수준은 높지만 최근 3개월 흐름이 약화된 상태입니다.",
         ),
         (
-            "recession",
-            "생산·소비와 고용·소득 수준이 낮고 최근 3개월 흐름도 약화 중입니다.",
+            "contraction",
+            "실물경제 수준이 낮고 최근 3개월 흐름도 약화된 상태입니다.",
         ),
     ],
 )
@@ -172,16 +468,10 @@ def test_headline_explains_phase_as_level_and_three_month_momentum(
 ) -> None:
     service = _load_service()
     snapshot = _ready_snapshot()
-    horizons = json.loads(str(snapshot["forecast_path_json"]))
-    horizons[0].update(
-        {
-            "dominant_phase": phase,
-            "probabilities": _probabilities(phase),
-        }
-    )
+    observed = json.loads(str(snapshot["observed_state_json"]))
+    observed["phase"] = phase
     snapshot["current_phase"] = phase
-    snapshot["forecast_path_json"] = json.dumps(horizons)
-    snapshot["probabilities_json"] = json.dumps(_probabilities(phase))
+    snapshot["observed_state_json"] = json.dumps(observed)
 
     model = service.build_economic_cycle_read_model(
         snapshot_loader=lambda **_kwargs: snapshot,
@@ -239,6 +529,21 @@ def _intramonth_snapshot() -> dict[str, object]:
                 ],
             }
         ),
+        "observed_state_json": json.dumps(
+            {
+                "as_of_date": "2026-07-21",
+                "raw_level": 0.46,
+                "level": 0.39,
+                "momentum": 0.12,
+                "phase": "expansion",
+                "available_series": 8,
+                "stale_series": 0,
+                "confidence": "MEDIUM",
+                "revision_sensitivity": "STABLE",
+                "data_status": "READY",
+            }
+        ),
+        "recent_changes_json": "[]",
     }
 
 
@@ -261,20 +566,19 @@ def test_service_pairs_latest_intramonth_with_exact_monthly_baseline() -> None:
         history_loader=lambda **_kwargs: _history_rows(12),
     )
 
-    bridge = model["intramonth"]
+    bridge = model["intramonth_change"]
     assert bridge["baseline_as_of_date"] == "2026-06-30"
     assert bridge["as_of_date"] == "2026-07-21"
-    assert bridge["estimate_status"] == "PROVISIONAL"
-    assert bridge["current_horizon"]["estimate_status"] == "PROVISIONAL"
-    assert bridge["probability_deltas"]["recovery"] == pytest.approx(0.06)
+    assert bridge["provisional"] is True
+    assert bridge["raw_level_delta"] == pytest.approx(0.06)
+    assert bridge["observed_state"]["phase"] == "expansion"
     factor = next(
         item for item in bridge["factor_deltas"] if item["factor"] == "labor_income_score"
     )
     assert factor["delta"] == pytest.approx(0.15)
     assert bridge["source_collected_at"] == "2026-07-16 10:02:56"
     assert bridge["source_coverage"]["available_series"] == 17
-    assert len(model["history"]) == 12
-    assert all(item["date"] != "2026-07-21" for item in model["history"])
+    assert [item["date"] for item in model["cycle_map"]["points"]] == ["2026-06-30"]
 
 
 def test_service_attaches_intramonth_freshness() -> None:
@@ -322,7 +626,6 @@ def test_service_preserves_asset_specific_summary_without_common_state_copy() ->
     [
         lambda row: row.update(baseline_as_of_date="2026-05-31"),
         lambda row: row.update(model_version="different-model"),
-        lambda row: row.update(forecast_path_json='[{"horizon_months":0,"probabilities":null}]'),
         lambda row: row.update(as_of_date="2026-06-30"),
     ],
 )
@@ -338,7 +641,25 @@ def test_service_hides_unpaired_or_malformed_intramonth_rows(mutator) -> None:
         history_loader=lambda **_kwargs: [],
     )
 
-    assert model["intramonth"] is None
+    assert model["intramonth_change"] is None
+
+
+def test_service_suppresses_intramonth_coordinate_when_real_economy_coverage_is_low() -> None:
+    service = _load_service()
+    nowcast = _intramonth_snapshot()
+    observed = json.loads(str(nowcast["observed_state_json"]))
+    observed.update({"available_series": 5, "data_status": "UNAVAILABLE"})
+    nowcast["observed_state_json"] = json.dumps(observed)
+
+    model = service.build_economic_cycle_read_model(
+        as_of_date="2026-07-21",
+        snapshot_loader=lambda **_kwargs: _ready_snapshot(),
+        intramonth_loader=lambda **_kwargs: nowcast,
+        history_loader=lambda **_kwargs: [],
+    )
+
+    assert model["intramonth_change"] is not None
+    assert model["intramonth_change"]["observed_state"] is None
 
 
 def test_service_isolates_intramonth_loader_error() -> None:
@@ -354,61 +675,8 @@ def test_service_isolates_intramonth_loader_error() -> None:
     )
 
     assert model["status"] == "READY"
-    assert model["intramonth"] is None
+    assert model["intramonth_change"] is None
     assert "nowcast table unavailable" not in json.dumps(model, ensure_ascii=False)
-
-
-def test_limited_horizon_exposes_provisional_probabilities_with_validation_reason() -> (
-    None
-):
-    service = _load_service()
-    snapshot = _ready_snapshot()
-    horizons = json.loads(str(snapshot["forecast_path_json"]))
-    horizons[1].update(
-        {
-            "publication_status": "LIMITED",
-            "reason": "CALIBRATION_ERROR",
-        }
-    )
-    snapshot["forecast_path_json"] = json.dumps(horizons)
-
-    model = service.build_economic_cycle_read_model(
-        snapshot_loader=lambda **_kwargs: snapshot,
-        history_loader=lambda **_kwargs: [],
-    )
-
-    assert model["horizons"][0]["probabilities"] is not None
-    assert model["horizons"][1]["probabilities"] == _probabilities("slowdown")
-    assert model["horizons"][1]["dominant_phase"] == "slowdown"
-    assert model["horizons"][1]["estimate_status"] == "PROVISIONAL"
-    assert model["horizons"][1]["estimate_label"] == "잠정 모델 추정"
-    assert "확률 보정" in model["horizons"][1]["reason"]
-    assert model["horizons"][2]["probabilities"] is not None
-
-
-def test_missing_limited_probabilities_are_unavailable_instead_of_provisional() -> None:
-    service = _load_service()
-    snapshot = _ready_snapshot()
-    horizons = json.loads(str(snapshot["forecast_path_json"]))
-    horizons[2].update(
-        {
-            "probabilities": None,
-            "dominant_phase": None,
-            "confidence": None,
-            "publication_status": "LIMITED",
-            "reason": "PARTIAL_FACTORS",
-        }
-    )
-    snapshot["forecast_path_json"] = json.dumps(horizons)
-
-    model = service.build_economic_cycle_read_model(
-        snapshot_loader=lambda **_kwargs: snapshot,
-        history_loader=lambda **_kwargs: [],
-    )
-
-    assert model["horizons"][2]["estimate_status"] == "UNAVAILABLE"
-    assert model["horizons"][2]["estimate_label"] == "판단 불가"
-    assert model["horizons"][2]["probabilities"] is None
 
 
 def test_no_snapshot_and_read_failure_have_stable_states_without_collector() -> None:
@@ -433,21 +701,21 @@ def test_no_snapshot_and_read_failure_have_stable_states_without_collector() -> 
     assert "collect_economic_cycle" not in source
 
 
-def test_service_truncates_evidence_and_history_without_recalculation() -> None:
+def test_service_truncates_evidence_and_cycle_map_without_recalculation() -> None:
     service = _load_service()
     snapshot = _ready_snapshot()
     model = service.build_economic_cycle_read_model(
         snapshot_loader=lambda **_kwargs: snapshot,
-        history_loader=lambda **_kwargs: _history_rows(140),
+        history_loader=lambda **_kwargs: _observed_history(20),
     )
 
     assert len(model["evidence"]) == 10
-    assert len(model["history"]) == 60
-    assert model["history"][0]["date"] > "2020-01-01"
-    assert all(item["status"] in {"READY", "LIMITED"} for item in model["history"])
+    assert len(model["cycle_map"]["points"]) == 12
+    assert model["cycle_map"]["points"][0]["date"] > "2020-01-01"
+    assert all("probabilities" not in item for item in model["cycle_map"]["points"])
 
 
-def test_service_requests_only_the_recent_sixty_month_display_window() -> None:
+def test_service_requests_only_the_recent_twelve_month_cycle_map_window() -> None:
     service = _load_service()
     requested: dict[str, object] = {}
 
@@ -460,7 +728,7 @@ def test_service_requests_only_the_recent_sixty_month_display_window() -> None:
         history_loader=load_history,
     )
 
-    assert str(requested["start_date"]) == "2021-07-30"
+    assert str(requested["start_date"]) == "2025-07-30"
     assert str(requested["end_date"]) == "2026-06-30"
 
 
@@ -677,7 +945,7 @@ def test_service_uses_one_reference_date_for_market_pathway_reads() -> None:
         price_reference_date="2026-06-30",
     )
 
-    assert model["schema_version"] == "economic_cycle_v2"
+    assert model["schema_version"] == "economic_cycle_v3"
     assert calls["market"]["end_date"] == date(2026, 6, 30)
     assert calls["price"] == {
         "lookback_rows": 1500,
