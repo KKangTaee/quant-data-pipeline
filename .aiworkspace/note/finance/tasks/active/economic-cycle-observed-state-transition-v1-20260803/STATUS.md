@@ -19,8 +19,9 @@ Last Updated: 2026-08-03
   complete.
 - Task 3 Overview `economic_cycle_v3` read model and frozen asset-payload regression complete.
 - Task 4 React v3 workbench implementation and static build complete.
-- Task 5 12-month replay, actual DB/app Browser QA, durable documentation alignment and
-  integration verification complete.
+- Task 5 independent review follow-up complete: intramonth transition-state isolation,
+  shadow h0 decoupling, deterministic replay selection, chart annotations and production
+  acceptance coverage are verified.
 
 ## Roadmap Position
 

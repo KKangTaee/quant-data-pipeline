@@ -34,11 +34,19 @@ Closeout result: the additive columns and enum compatibility are verified, legac
 LIMITED instead of being reconstructed from probability, and the latest 12 month ends were
 replayed with origin-specific observed coordinates.
 
+Multiple model versions may still exist for the same replay month because the storage business
+key includes `model_version`. The loader/read model now resolve those rows deterministically by
+`updated_at`, `id`, and `model_version`; the current snapshot always overrides replay for its date.
+
 ## Intramonth Comparability
 
 Monthly sources arrive on different schedules. Intramonth data cannot advance persistence or
 replace the month-end headline, and source coverage below six real-economy series suppresses the
 coordinate.
+
+Closeout verification now enforces that contract at persistence time: a usable observed state is
+required, legacy h0 probability is not a gate, and `intramonth_nowcast.transition_monitor_json`
+is null so a provisional origin cannot increment or confirm the monthly state machine.
 
 ## Conditional Path Misinterpretation
 

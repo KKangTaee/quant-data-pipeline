@@ -634,6 +634,12 @@ def test_default_loader_uses_exact_artifact_and_compact_source_coverage() -> Non
 def test_intramonth_materialization_writes_separate_row_and_preserves_baseline() -> None:
     module = _load_module()
     panel, labels = _panel()
+    observed_panel = _observed_panel(
+        [-1.0, -1.0, -1.0, -2.0, -2.0, -2.0, 2.0]
+    )
+    observed_panel.loc[observed_panel.index[-1], "forecast_origin"] = pd.Timestamp(
+        "2002-08-15"
+    )
     writer = Writer()
     training = module.train_validate_economic_cycle_model(
         trained_through="2002-06-30",
@@ -661,7 +667,13 @@ def test_intramonth_materialization_writes_separate_row_and_preserves_baseline()
             return training["artifact_row"]
 
         def load_prediction_data(self, _as_of_date):
-            return panel.iloc[-1].to_dict()
+            return observed_panel.iloc[-1].to_dict()
+
+        def load_prediction_panel(self, _as_of_date):
+            return observed_panel
+
+        def load_revised_prediction_panel(self, _as_of_date):
+            return observed_panel.copy(deep=True)
 
     loader = Loader()
     snapshot = module.materialize_economic_cycle_intramonth_snapshot(
@@ -691,7 +703,111 @@ def test_intramonth_materialization_writes_separate_row_and_preserves_baseline()
     assert loader.artifact_calls[0]["model_version"] == training["model_version"]
 
 
-def test_intramonth_unusable_h0_does_not_write() -> None:
+def test_intramonth_observed_state_never_persists_transition_progress() -> None:
+    module = _load_module()
+    panel, labels = _panel()
+    observed_panel = _observed_panel(
+        [-1.0, -1.0, -1.0, -2.0, -2.0, -2.0, 2.0]
+    )
+    observed_panel.loc[observed_panel.index[-1], "forecast_origin"] = pd.Timestamp(
+        "2002-08-15"
+    )
+    writer = Writer()
+    training = module.train_validate_economic_cycle_model(
+        trained_through="2002-06-30",
+        loader=TrainingLoader(panel, labels),
+        writer=writer,
+        validator=lambda *_args, **_kwargs: ValidationReport(
+            horizons={horizon: _horizon_validation() for horizon in (0, 1, 2)},
+            predictions=(),
+        ),
+    )
+
+    class Loader:
+        def prime_panel(self, *_args, **_kwargs):
+            return observed_panel
+
+        def load_artifact(self, **_kwargs):
+            return training["artifact_row"]
+
+        def load_prediction_data(self, _as_of_date):
+            return observed_panel.iloc[-1].to_dict()
+
+        def load_prediction_panel(self, _as_of_date):
+            return observed_panel
+
+        def load_revised_prediction_panel(self, _as_of_date):
+            return observed_panel.copy(deep=True)
+
+    snapshot = module.materialize_economic_cycle_intramonth_snapshot(
+        as_of_date="2002-08-15",
+        baseline_snapshot={
+            "as_of_date": "2002-07-31",
+            "model_version": training["model_version"],
+        },
+        loader=Loader(),
+        writer=writer,
+        source_coverage={"series": []},
+    )
+
+    key = ("2002-08-15", training["model_version"], "intramonth_nowcast")
+    assert snapshot.observed_state is not None
+    assert snapshot.observed_state["phase"] == "recovery"
+    assert snapshot.transition_monitor is None
+    assert writer.snapshots[key]["transition_monitor_json"] is None
+
+
+def test_intramonth_unusable_h0_still_writes_usable_observed_state() -> None:
+    module = _load_module()
+    writer = Writer()
+    observed_panel = _observed_panel(
+        [-1.0, -1.0, -1.0, -2.0, -2.0, -2.0, 2.0]
+    )
+    observed_panel.loc[observed_panel.index[-1], "forecast_origin"] = pd.Timestamp(
+        "2002-08-15"
+    )
+
+    class Loader:
+        def prime_panel(self, *_args, **_kwargs):
+            return observed_panel
+
+        def load_artifact(self, **_kwargs):
+            return {
+                "model_version": "unusable-v1",
+                "trained_through": "2002-06-30",
+                "parameters_json": '{"horizons":{}}',
+                "publication_status_json": "{}",
+            }
+
+        def load_prediction_data(self, _as_of_date):
+            return observed_panel.iloc[-1].to_dict()
+
+        def load_prediction_panel(self, _as_of_date):
+            return observed_panel
+
+        def load_revised_prediction_panel(self, _as_of_date):
+            return observed_panel.copy(deep=True)
+
+    snapshot = module.materialize_economic_cycle_intramonth_snapshot(
+        as_of_date="2002-08-15",
+        baseline_snapshot={
+            "as_of_date": "2002-07-31",
+            "model_version": "unusable-v1",
+        },
+        loader=Loader(),
+        writer=writer,
+        source_coverage={"series": []},
+    )
+
+    key = ("2002-08-15", "unusable-v1", "intramonth_nowcast")
+    assert snapshot.status == "READY"
+    assert snapshot.observed_state is not None
+    assert snapshot.observed_state["data_status"] == "READY"
+    assert snapshot.horizons[0].probabilities is None
+    assert key in writer.snapshots
+
+
+def test_intramonth_without_usable_observed_state_does_not_write() -> None:
     module = _load_module()
     writer = Writer()
 
@@ -710,7 +826,7 @@ def test_intramonth_unusable_h0_does_not_write() -> None:
         def load_prediction_data(self, _as_of_date):
             return {"activity_score": 0.0}
 
-    with pytest.raises(LookupError, match="intramonth h0"):
+    with pytest.raises(LookupError, match="observed state"):
         module.materialize_economic_cycle_intramonth_snapshot(
             as_of_date="2002-08-15",
             baseline_snapshot={

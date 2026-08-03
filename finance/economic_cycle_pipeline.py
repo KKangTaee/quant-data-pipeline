@@ -740,7 +740,9 @@ def materialize_economic_cycle_snapshot(
         if name in feature_row and pd.notna(feature_row[name])
     )
     one_month = next(item for item in horizons if item.horizon_months == 1)
-    if observed_result is not None:
+    if run_kind == "intramonth_nowcast":
+        expected_transition = None
+    elif observed_result is not None:
         anchor = observed_result.transition_monitor.get("anchor_phase")
         target = observed_result.transition_monitor.get("target_phase")
         expected_transition = f"{anchor}_to_{target}" if anchor and target else None
@@ -760,6 +762,12 @@ def materialize_economic_cycle_snapshot(
         if observed_result is not None
         else None
     )
+    if run_kind == "intramonth_nowcast" and (
+        observed_result is None
+        or observed_status not in {"READY", "LIMITED"}
+        or observed_result.observed_state.get("phase") is None
+    ):
+        raise LookupError(f"No usable intramonth observed state for {origin}")
     snapshot = CycleSnapshot(
         as_of_date=origin,
         model_version=resolved_model_version,
@@ -778,7 +786,9 @@ def materialize_economic_cycle_snapshot(
             observed_result.recent_changes if observed_result is not None else ()
         ),
         transition_monitor=(
-            observed_result.transition_monitor if observed_result is not None else None
+            observed_result.transition_monitor
+            if observed_result is not None and run_kind != "intramonth_nowcast"
+            else None
         ),
     )
     if require_h0 and snapshot.horizons[0].probabilities is None:
@@ -851,7 +861,7 @@ def materialize_economic_cycle_intramonth_snapshot(
         baseline_as_of_date=baseline_date,
         source_collected_at=coverage.get("source_collected_at"),
         source_coverage=coverage,
-        require_h0=True,
+        require_h0=False,
     )
 
 

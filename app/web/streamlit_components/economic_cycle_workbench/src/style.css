@@ -152,8 +152,11 @@ button, input, summary { font: inherit; }
 .axis-label { fill: #8a98a3; font-size: 8px; text-anchor: middle; }
 .vertical-label { transform: rotate(-90deg); transform-origin: 9px 160px; }
 .observed-path { fill: none; stroke: #368bd9; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; opacity: .82; }
+.transition-pressure-arrow { stroke: #c88924; stroke-width: 2; stroke-linecap: round; stroke-dasharray: 5 4; opacity: .9; }
+#transition-pressure-arrowhead path { fill: #c88924; }
 .observed-dot { fill: #85b8e8; stroke: #fff; stroke-width: 1.5; }
 .current-cycle-dot { fill: #1c78ca; stroke: #fff; stroke-width: 4; filter: drop-shadow(0 2px 3px rgba(20, 72, 110, .24)); }
+.cycle-point-label { fill: #4f6575; font-size: 8px; font-weight: 850; text-anchor: middle; paint-order: stroke; stroke: rgba(255,255,255,.9); stroke-width: 3px; stroke-linejoin: round; }
 .revision-sensitive-halo { fill: rgba(214,111,98,.08); stroke: #d66f62; stroke-width: 1.5; stroke-dasharray: 3 3; }
 .cycle-hover-target { cursor: help; outline: none; }
 .cycle-hover-area { fill: transparent; stroke: transparent; pointer-events: all; }
@@ -190,6 +193,8 @@ button, input, summary { font: inherit; }
 .transition-condition-grid header b { padding: 4px 6px; border-radius: 999px; color: #8b641f; background: #fff1d2; font-size: 7px; white-space: nowrap; }
 .transition-condition-grid .condition-met { border-color: #cbe4da; background: #f6fbf9; }
 .transition-condition-grid .condition-met header b { color: #1d6d5d; background: #e7f4ef; }
+.transition-condition-grid .condition-unavailable { border-color: #dfe5e8; background: #f5f7f8; }
+.transition-condition-grid .condition-unavailable header b { color: #6d7c87; background: #e8edef; }
 .transition-condition-grid p { color: #748593; font-size: 8px; line-height: 1.45; }
 .transition-context { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 2px; }
 .transition-context > strong { color: #617787; font-size: 8px; }

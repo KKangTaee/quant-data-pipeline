@@ -55,7 +55,7 @@ type CyclePoint = {
 type TransitionCondition = {
   condition_id: "persistence" | "diffusion" | "corroboration";
   label: string;
-  status: "MET" | "UNMET";
+  status: "MET" | "UNMET" | "UNAVAILABLE";
   value?: unknown;
   threshold?: string;
 };
@@ -271,7 +271,7 @@ type RefreshResult = {
   message: string;
 };
 
-type CyclePayload = {
+export type CyclePayload = {
   schema_version: "economic_cycle_v3";
   status: "READY" | "LIMITED" | "ERROR";
   as_of_date?: string | null;
@@ -430,11 +430,29 @@ const CHANGE_LABEL: Record<string, string> = {
   yoy_ttm: "완료 분기 TTM 전년 대비",
 };
 
-function actualCoordinate(point: Pick<CyclePoint, "level" | "momentum">): PlotPoint {
+export function actualCoordinate(point: Pick<CyclePoint, "level" | "momentum">): PlotPoint {
   return {
     x: 180 + Math.max(-1, Math.min(1, point.level / 2)) * 128,
-    y: 160 - Math.max(-1, Math.min(1, point.momentum)) * 112,
+    y: 160 - Math.max(-1, Math.min(1, point.momentum / 2)) * 112,
   };
+}
+
+export const projectActualCoordinate = actualCoordinate;
+
+const PHASE_COORDINATE_CENTER: Record<Phase, Pick<CyclePoint, "level" | "momentum">> = {
+  recovery: { level: -1, momentum: 1 },
+  expansion: { level: 1, momentum: 1 },
+  slowdown: { level: 1, momentum: -1 },
+  contraction: { level: -1, momentum: -1 },
+};
+
+function pressureArrowEnd(start: PlotPoint, target: PlotPoint): PlotPoint {
+  const dx = target.x - start.x;
+  const dy = target.y - start.y;
+  const distance = Math.hypot(dx, dy);
+  if (!distance) return start;
+  const length = Math.min(44, distance);
+  return { x: start.x + (dx / distance) * length, y: start.y + (dy / distance) * length };
 }
 
 function pointList(points: PlotPoint[]) {
@@ -583,9 +601,22 @@ function IntramonthChangePanel({ intramonth }: { intramonth: IntramonthChange })
 
 function QuadrantChart({ payload }: { payload: CyclePayload }) {
   const recent = payload.cycle_map.points.slice(-12);
-  const observedSegments = splitPointSegments(recent.map((item) => actualCoordinate(item)));
+  const observedSegments = splitPointSegments(recent.map((item) => projectActualCoordinate(item)));
   const current = recent.at(-1);
-  const currentPoint = current ? actualCoordinate(current) : null;
+  const currentPoint = current ? projectActualCoordinate(current) : null;
+  const pressureTarget = payload.transition_monitor?.target_phase
+    ? projectActualCoordinate(PHASE_COORDINATE_CENTER[payload.transition_monitor.target_phase])
+    : null;
+  const pressureEnd = currentPoint && pressureTarget
+    ? pressureArrowEnd(currentPoint, pressureTarget)
+    : null;
+  const pointLabels = [
+    { index: recent.length - 7, label: "6개월 전" },
+    { index: recent.length - 4, label: "3개월 전" },
+    { index: recent.length - 1, label: "현재" },
+  ].filter((item, index, rows) => (
+    item.index >= 0 && rows.findIndex((candidate) => candidate.index === item.index) === index
+  ));
 
   return (
     <section className="cycle-map-panel" aria-labelledby="cycle-map-title">
@@ -595,6 +626,11 @@ function QuadrantChart({ payload }: { payload: CyclePayload }) {
       </div>
       <div className="cycle-map-body">
         <svg className="cycle-quadrant" viewBox="0 0 360 320" role="group" aria-label="회복 확장 둔화 위축 2×2 실제 경제사이클 경로">
+          <defs>
+            <marker id="transition-pressure-arrowhead" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <path d="M0,0 L7,3.5 L0,7 Z" />
+            </marker>
+          </defs>
           <rect className="quadrant recovery-zone" x="24" y="24" width="156" height="136" />
           <rect className="quadrant expansion-zone" x="180" y="24" width="156" height="136" />
           <rect className="quadrant contraction-zone" x="24" y="160" width="156" height="136" />
@@ -612,16 +648,32 @@ function QuadrantChart({ payload }: { payload: CyclePayload }) {
               ? <polyline className="observed-path" points={pointList(segment)} key={`observed-segment-${index}`} />
               : null
           ))}
+          {payload.transition_monitor?.status === "WATCH" && currentPoint && pressureEnd ? (
+            <line
+              className="transition-pressure-arrow"
+              x1={currentPoint.x}
+              y1={currentPoint.y}
+              x2={pressureEnd.x}
+              y2={pressureEnd.y}
+              markerEnd="url(#transition-pressure-arrowhead)"
+              role="img"
+              aria-label="전환 조건이 향하는 방향 · 예측 경로가 아님"
+            />
+          ) : null}
           {recent.map((item, index) => {
-            const point = actualCoordinate(item);
+            const point = projectActualCoordinate(item);
             return <circle className="observed-dot" cx={point.x} cy={point.y} r={index === recent.length - 1 ? 3.5 : 2.5} key={`observed-${item.date}`} />;
           })}
           {currentPoint && current?.revision_sensitivity === "SENSITIVE" ? (
             <circle className="revision-sensitive-halo" cx={currentPoint.x} cy={currentPoint.y} r="13" />
           ) : null}
           {currentPoint ? <circle className="current-cycle-dot" cx={currentPoint.x} cy={currentPoint.y} r="8" /> : null}
+          {pointLabels.map(({ index, label }) => {
+            const point = projectActualCoordinate(recent[index]);
+            return <text className="cycle-point-label" x={point.x} y={point.y - 13} key={`point-label-${label}`}>{label}</text>;
+          })}
           {recent.map((item) => {
-            const point = actualCoordinate(item);
+            const point = projectActualCoordinate(item);
             return (
               <CyclePointTooltip
                 key={`actual-tooltip-${item.date}`}
@@ -663,7 +715,7 @@ function TransitionPanel({ monitor }: { monitor?: TransitionMonitor | null }) {
       <div className="transition-condition-grid">
         {monitor.conditions.map((condition) => (
           <article className={`condition-${condition.status.toLowerCase()}`} key={condition.condition_id}>
-            <header><span>{condition.label || CONDITION_LABEL[condition.condition_id]}</span><b>{condition.status === "MET" ? "충족" : "관찰 중"}</b></header>
+            <header><span>{condition.label || CONDITION_LABEL[condition.condition_id]}</span><b>{condition.status === "MET" ? "충족" : condition.status === "UNAVAILABLE" ? "자료 부족" : "관찰 중"}</b></header>
             <p>{condition.threshold || "다음 정식 발표에서 재확인"}</p>
           </article>
         ))}
@@ -1150,18 +1202,13 @@ function EconomicCycleFreshnessBar({
   );
 }
 
-function EconomicCycleWorkbench({ args }: Props) {
-  const payload = args.payload;
-  const rootRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    Streamlit.setFrameHeight();
-    if (!rootRef.current || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => Streamlit.setFrameHeight());
-    observer.observe(rootRef.current);
-    return () => observer.disconnect();
-  }, [payload]);
-  if (!payload || payload.schema_version !== "economic_cycle_v3") return null;
-
+export function EconomicCycleWorkbenchView({
+  payload,
+  rootRef,
+}: {
+  payload: CyclePayload;
+  rootRef?: React.Ref<HTMLElement>;
+}) {
   const observed = payload.observed_state;
   const realEvidence = payload.evidence.filter((evidence) => evidence.group === "real_economy");
   const forecastEvidence = payload.evidence.filter((evidence) => evidence.group === "forecast_context");
@@ -1223,6 +1270,20 @@ function EconomicCycleWorkbench({ args }: Props) {
       </details>
     </main>
   );
+}
+
+function EconomicCycleWorkbench({ args }: Props) {
+  const payload = args.payload;
+  const rootRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    Streamlit.setFrameHeight();
+    if (!rootRef.current || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => Streamlit.setFrameHeight());
+    observer.observe(rootRef.current);
+    return () => observer.disconnect();
+  }, [payload]);
+  if (!payload || payload.schema_version !== "economic_cycle_v3") return null;
+  return <EconomicCycleWorkbenchView payload={payload} rootRef={rootRef} />;
 }
 
 export default withStreamlitConnection(EconomicCycleWorkbench);

@@ -448,7 +448,7 @@ def load_cycle_history(
     SELECT *
     FROM economic_cycle_snapshot
     WHERE {' AND '.join(where)}
-    ORDER BY as_of_date ASC
+    ORDER BY as_of_date ASC, updated_at ASC, id ASC, model_version ASC
     """
     rows = _query(
         DB_META, sql, tuple(params), query_fn=query_fn
@@ -473,4 +473,20 @@ def load_cycle_history(
             row["data_cutoff_date"] = data_cutoff.isoformat()
         row["as_of_date"] = observed.isoformat()
         eligible.append(row)
-    return sorted(eligible, key=lambda row: str(row["as_of_date"]))
+    canonical: dict[str, dict[str, object]] = {}
+    ranks: dict[str, tuple[str, int, str]] = {}
+    for row in eligible:
+        observed = str(row["as_of_date"])
+        try:
+            row_id = int(row.get("id") or -1)
+        except (TypeError, ValueError):
+            row_id = -1
+        rank = (
+            _updated_sort_value(row.get("updated_at") or row.get("created_at")),
+            row_id,
+            str(row.get("model_version") or ""),
+        )
+        if observed not in ranks or rank > ranks[observed]:
+            canonical[observed] = row
+            ranks[observed] = rank
+    return [canonical[key] for key in sorted(canonical)]

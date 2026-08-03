@@ -129,3 +129,26 @@ Last Updated: 2026-08-03
   the existing Streamlit `DeltaGeneratorSingleton instance already exists` test-order/isolation
   error across unrelated Backtest, Today and Overview suites. Three representative failed tests
   rerun in a fresh process all passed. The economic-cycle 192-test selection remains green.
+
+## Independent Review Follow-up
+
+- Review found no Critical issue and independently confirmed the frozen asset JSX/CSS and
+  same-input asset payload remained unchanged.
+- RED/GREEN: intramonth materialization previously stored a WATCH/CONFIRMED transition monitor
+  and required the legacy h0 probability. Intramonth rows now require a usable observed state,
+  store only provisional observed coordinates/recent changes, leave transition monitor null and
+  treat all probability horizons as best-effort shadow output.
+- RED/GREEN: duplicate historical replay rows for one month previously depended on input order.
+  Loader and v3 service now select the latest `updated_at`, then `id`, then `model_version`, while
+  the canonical current snapshot always owns its own date.
+- RED/GREEN: React production rendering now has a Vitest server-render suite. Both axes use a
+  fixed `[-2, 2]` display domain; the chart labels 6개월 전/3개월 전/현재, renders a dashed
+  non-forecast pressure arrow only in WATCH and displays `UNAVAILABLE` as `자료 부족`.
+- Added literal acceptance tests: plotted-phase mismatches 0, confirmed one-month flipbacks 0,
+  NBER never overrides the observed phase and revision-sensitive states are explicitly reported.
+- Final economic-cycle selection: `200 passed`, with three existing edgar deprecation warnings.
+  React: `4 passed`; Vite build and `tsc --noEmit` passed; Python `py_compile` and
+  `git diff --check` passed.
+- Final Browser QA on the rebuilt bundle: widths 1280/760/420 all had zero horizontal overflow;
+  five asset cards remained; desktop asset grid had two columns and narrower widths one column;
+  WATCH arrow count was 1 and chart labels were exactly 6개월 전/3개월 전/현재.

@@ -189,7 +189,7 @@
 - Consumes: persisted JSON fields from Task 2, recent historical snapshot rows, existing DB-only asset pathway loaders, and existing `build_market_implications()`.
 - Produces: `build_economic_cycle_read_model(...) -> dict[str, object]` with `schema_version = economic_cycle_v3` and top-level `headline`, `observed_state`, `recent_changes`, `transition_monitor`, `cycle_map`, `intramonth_change`, `data_freshness`, `evidence`, `market_implications`, `sources`, and `limitations`.
 
-- [ ] **Step 1: Replace obsolete service tests with failing V3 contract tests**
+- [x] **Step 1: Replace obsolete service tests with failing V3 contract tests**
 
   Build literal snapshot fixtures containing the three JSON fields. Assert headline/observed phase identity, 12 actual cycle points, no horizons/probabilities/future markers, transition condition availability, explicit confidence labels, and a stable limited state for legacy rows without observed JSON.
 
@@ -201,17 +201,17 @@
   assert model["cycle_map"]["points"][-1]["level"] == -0.56
   ```
 
-- [ ] **Step 2: Run service tests and verify RED**
+- [x] **Step 2: Run service tests and verify RED**
 
   Run: `.venv/bin/python -m pytest tests/test_economic_cycle_service.py -q`
 
   Expected: V2 key/field assertions fail because the service still emits probability horizons.
 
-- [ ] **Step 3: Implement safe JSON decoders, headline copy, cycle map, recent changes, and transition projection**
+- [x] **Step 3: Implement safe JSON decoders, headline copy, cycle map, recent changes, and transition projection**
 
   Decode only dict/list shapes; never reconstruct current phase from probability JSON. Map confidence to `높음 / 보통 / 제한`, transition status to `유지 / 전환 감시 / 전환 확인`, and phase copy to relative growth-cycle language. History points come only from `observed_state_json`; legacy history rows do not get probability-derived coordinates.
 
-- [ ] **Step 4: Implement month-end/intramonth separation and asset deep-equality regression**
+- [x] **Step 4: Implement month-end/intramonth separation and asset deep-equality regression**
 
   Intramonth output contains provisional raw-level/factor/recent-change deltas and never replaces headline/transition persistence. Call `build_market_implications((), evidence, price_rows, market_rows=..., sp500_earnings=..., economic_as_of_date=..., price_reference_date=...)` with the same non-horizon inputs as V2 and compare against a direct builder call in the test.
 
@@ -223,7 +223,7 @@
   )
   ```
 
-- [ ] **Step 5: Verify Task 3 GREEN and commit**
+- [x] **Step 5: Verify Task 3 GREEN and commit**
 
   Run:
 
@@ -251,7 +251,7 @@
 - Produces: exported `EconomicCycleWorkbenchView({ payload })` for real server-rendered component tests and the existing Streamlit-connected default export.
 - Produces: actual coordinate projection from fixed `[-2, 2]` domain, 12-month path, current/revision halo, WATCH-only dashed pressure arrow, recent 1/3/6M cards, transition conditions, and context cards.
 
-- [ ] **Step 1: Add Vitest and write failing real-render tests**
+- [x] **Step 1: Add Vitest and write failing real-render tests**
 
   Add `"test": "vitest run"` and `vitest` to dev dependencies. Render `EconomicCycleWorkbenchView` through `react-dom/server` using a complete V3 fixture. Assert user-visible section order and absence of probability/future copy; assert the five asset groups and their existing observation sub-blocks remain present and ordered.
 
@@ -263,21 +263,21 @@
   expect(html).toContain("함께 관찰된 경로");
   ```
 
-- [ ] **Step 2: Run React tests and verify RED**
+- [x] **Step 2: Run React tests and verify RED**
 
   Run: `npm test --prefix app/web/streamlit_components/economic_cycle_workbench`
 
   Expected: test import/render fails because the V3 view export does not exist.
 
-- [ ] **Step 3: Implement the V3 types and decision-centered section order**
+- [x] **Step 3: Implement the V3 types and decision-centered section order**
 
   Keep `MarketImplicationCard` and its child markup unchanged. Replace the probability horizon, probability-derived quadrant, future ribbon, and forecast evidence sections with current hero, actual cycle map + recent changes, transition monitor, contextual conditions, then the unchanged asset section and method disclosure.
 
-- [ ] **Step 4: Implement accessible fixed-domain SVG and responsive CSS**
+- [x] **Step 4: Implement accessible fixed-domain SVG and responsive CSS**
 
   Clamp only display coordinates, preserve raw values in accessible labels/tooltips, label 6M/3M/current points, show no future terminal point, and show the dashed direction arrow only for WATCH with `예측 경로가 아님`. Append new upper-section styles without altering asset selectors or the existing `.implication-grid` breakpoints.
 
-- [ ] **Step 5: Verify Task 4 GREEN and commit**
+- [x] **Step 5: Verify Task 4 GREEN and commit**
 
   Run:
 
@@ -307,7 +307,7 @@
 - Consumes: Tasks 1–4 and the local PIT vintage DB.
 - Produces: reproducible stability/revision report assertions, aligned canonical docs, final desktop/tablet/phone Browser QA, and one uncommitted QA screenshot.
 
-- [ ] **Step 1: Write and run failing historical acceptance test**
+- [x] **Step 1: Write and run failing historical acceptance test**
 
   Build a deterministic literal history fixture for CI assertions and run the same summary against
   the configured local DB. If the DB read is unavailable, record the exact reason in `RISKS.md`
@@ -315,11 +315,11 @@
   transition-confirmed one-month flipbacks are zero, NBER never overrides observed phase, and each
   revision-sensitive result is reported rather than silently replaced.
 
-- [ ] **Step 2: Implement any acceptance-only corrections through RED/GREEN**
+- [x] **Step 2: Implement any acceptance-only corrections through RED/GREEN**
 
   If a metric fails, add the smallest reproducing unit test before correcting domain/pipeline behavior. Do not tune thresholds to obtain a preferred current phase.
 
-- [ ] **Step 3: Run complete automated verification**
+- [x] **Step 3: Run complete automated verification**
 
   Run:
 
@@ -331,14 +331,14 @@
   git diff --check
   ```
 
-- [ ] **Step 4: Perform Browser QA at desktop, 760px, and 420px**
+- [x] **Step 4: Perform Browser QA at desktop, 760px, and 420px**
 
   Start the Finance Streamlit app with the repository's normal entry point, open the economic-cycle tab through the in-app browser, verify zero horizontal overflow and section order, verify no probability/future point, and compare the asset checkpoint layout/copy blocks with the pre-change contract. Save one final screenshot outside the commit.
 
-- [ ] **Step 5: Synchronize durable docs and task closeout**
+- [x] **Step 5: Synchronize durable docs and task closeout**
 
   Use `finance-doc-sync`. Update only canonical facts that actually changed: observed-state ownership, v3 product promise, snapshot JSON meaning, and roadmap baseline. Record commands/results in `RUNS.md`; move task state to `complete` only after Browser QA and full verification pass.
 
-- [ ] **Step 6: Review staged diff and commit the closeout unit**
+- [x] **Step 6: Review staged diff and commit the closeout unit**
 
   Use `finance-integration-review` for the staged diff because the change spans domain, persistence, service, UI, and documentation. Confirm frozen asset modules are absent from the diff. Commit with message: `완료: 경제사이클 관측 국면 전환 개편 검증`.

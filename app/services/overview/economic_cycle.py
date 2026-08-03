@@ -333,8 +333,18 @@ def _cycle_map(
 ) -> dict[str, object]:
     """Build a short actual-coordinate trail; never infer points from probabilities."""
 
-    by_date: dict[str, dict[str, object]] = {}
-    for snapshot in [*history_rows, current_snapshot]:
+    def replay_rank(snapshot: Mapping[str, object]) -> tuple[str, int, str]:
+        try:
+            row_id = int(snapshot.get("id") or -1)
+        except (TypeError, ValueError):
+            row_id = -1
+        return (
+            str(snapshot.get("updated_at") or snapshot.get("created_at") or ""),
+            row_id,
+            str(snapshot.get("model_version") or ""),
+        )
+
+    def point_from(snapshot: Mapping[str, object]) -> tuple[str, dict[str, object]] | None:
         state = _observed_state(snapshot)
         level = _finite_number(state.get("level"))
         momentum = _finite_number(state.get("momentum"))
@@ -343,8 +353,8 @@ def _cycle_map(
             state.get("as_of_date") or snapshot.get("as_of_date") or ""
         )[:10]
         if not point_date or level is None or momentum is None or phase not in OBSERVED_PHASES:
-            continue
-        by_date[point_date] = {
+            return None
+        return point_date, {
             "date": point_date,
             "level": level,
             "momentum": momentum,
@@ -354,6 +364,25 @@ def _cycle_map(
             "confidence": state.get("confidence"),
             "revision_sensitivity": state.get("revision_sensitivity"),
         }
+
+    by_date: dict[str, dict[str, object]] = {}
+    selected_rank: dict[str, tuple[str, int, str]] = {}
+    for snapshot in history_rows:
+        resolved = point_from(snapshot)
+        if resolved is None:
+            continue
+        point_date, point = resolved
+        rank = replay_rank(snapshot)
+        if point_date not in selected_rank or rank > selected_rank[point_date]:
+            by_date[point_date] = point
+            selected_rank[point_date] = rank
+
+    # The canonical current snapshot always owns its date, even if a replay row was
+    # regenerated later with a different model version.
+    current = point_from(current_snapshot)
+    if current is not None:
+        point_date, point = current
+        by_date[point_date] = point
     points = sorted(by_date.values(), key=lambda item: str(item["date"]))[-12:]
     return {"phase_order": list(OBSERVED_PHASES), "points": points}
 

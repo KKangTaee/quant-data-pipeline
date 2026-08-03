@@ -307,6 +307,66 @@ def test_v3_exposes_observed_state_recent_changes_and_actual_cycle_map() -> None
     json.dumps(model, allow_nan=False)
 
 
+@pytest.mark.parametrize("reverse_rows", [False, True])
+def test_cycle_map_selects_latest_replay_deterministically_for_duplicate_date(
+    reverse_rows: bool,
+) -> None:
+    service = _load_service()
+
+    def replay(*, level: float, updated_at: str, row_id: int) -> dict[str, object]:
+        return {
+            "id": row_id,
+            "as_of_date": "2026-05-31",
+            "model_version": f"cycle-v{row_id}",
+            "updated_at": updated_at,
+            "nber_recession": 0,
+            "observed_state_json": json.dumps(
+                {
+                    "as_of_date": "2026-05-31",
+                    "level": level,
+                    "momentum": 0.20,
+                    "phase": "expansion",
+                    "data_status": "READY",
+                }
+            ),
+        }
+
+    rows = [
+        replay(level=-0.80, updated_at="2026-06-01 09:00:00", row_id=1),
+        replay(level=0.75, updated_at="2026-06-02 09:00:00", row_id=2),
+    ]
+    if reverse_rows:
+        rows.reverse()
+
+    points = service._cycle_map(rows, _observed_snapshot())["points"]
+
+    may = next(point for point in points if point["date"] == "2026-05-31")
+    assert may["level"] == pytest.approx(0.75)
+
+
+def test_cycle_map_current_snapshot_overrides_replay_for_same_date() -> None:
+    service = _load_service()
+    current = _observed_snapshot()
+    replay = dict(current)
+    replay["updated_at"] = "2099-01-01 00:00:00"
+    replay["id"] = 999
+    replay["observed_state_json"] = json.dumps(
+        {
+            "as_of_date": "2026-06-30",
+            "level": 1.50,
+            "momentum": 1.00,
+            "phase": "expansion",
+            "data_status": "READY",
+        }
+    )
+
+    points = service._cycle_map([replay], current)["points"]
+
+    assert len(points) == 1
+    assert points[0]["level"] == pytest.approx(-0.56)
+    assert points[0]["phase"] == "contraction"
+
+
 def test_v3_legacy_probability_snapshot_does_not_restore_current_phase() -> None:
     service = _load_service()
     legacy_snapshot = _ready_snapshot()
