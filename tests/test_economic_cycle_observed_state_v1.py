@@ -155,6 +155,20 @@ def test_first_boundary_crossing_changes_observation_but_keeps_transition_anchor
     assert len(crossing.transition_monitor["context"]) == 2
 
 
+def test_initial_transition_anchor_records_first_valid_origin_without_claiming_confirmation() -> None:
+    module = _module()
+    history = module.build_observed_state_history(
+        _panel([-1.0, -1.0, -1.0, -2.0, -2.0, -2.0])
+    )
+
+    initial = history[-1].transition_monitor
+
+    assert initial["anchor_phase"] == "contraction"
+    assert initial["anchor_started_at"] == "2025-06-30"
+    assert initial["anchor_source"] == "INITIALIZED"
+    assert initial["anchor_confirmed_at"] is None
+
+
 def test_transition_confirms_on_three_conditions_and_promotes_anchor_next_release() -> None:
     module = _module()
     history = module.build_observed_state_history(
@@ -170,6 +184,9 @@ def test_transition_confirms_on_three_conditions_and_promotes_anchor_next_releas
     assert confirmed.transition_monitor["confirmed_at"] == "2025-08-31"
     assert promoted.transition_monitor["anchor_phase"] == "recovery"
     assert promoted.transition_monitor["target_phase"] == "expansion"
+    assert promoted.transition_monitor["anchor_started_at"] == "2025-08-31"
+    assert promoted.transition_monitor["anchor_source"] == "CONFIRMED"
+    assert promoted.transition_monitor["anchor_confirmed_at"] == "2025-08-31"
 
 
 def test_candidate_reversal_returns_to_maintain_without_changing_anchor() -> None:

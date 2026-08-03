@@ -358,7 +358,11 @@ def build_observed_state_history(
     revised_phases = _revision_phases(revised_panel)
     results: list[ObservedStateResult] = []
     anchor_phase: str | None = None
+    anchor_started_at: str | None = None
+    anchor_source: str | None = None
+    anchor_confirmed_at: str | None = None
     pending_anchor: str | None = None
+    pending_anchor_confirmed_at: str | None = None
     candidate_started_at: str | None = None
     previous_phase: str | None = None
     duration = 0
@@ -376,7 +380,11 @@ def build_observed_state_history(
         )
         if data_status != "UNAVAILABLE" and pending_anchor is not None:
             anchor_phase = pending_anchor
+            anchor_started_at = pending_anchor_confirmed_at or origin
+            anchor_source = "CONFIRMED"
+            anchor_confirmed_at = pending_anchor_confirmed_at
             pending_anchor = None
+            pending_anchor_confirmed_at = None
             candidate_started_at = None
         if phase is not None and phase == previous_phase:
             duration += 1
@@ -408,6 +416,9 @@ def build_observed_state_history(
             confidence = "MEDIUM"
         if anchor_phase is None and phase is not None:
             anchor_phase = phase
+            anchor_started_at = origin
+            anchor_source = "INITIALIZED"
+            anchor_confirmed_at = None
         target_phase = _next_phase(anchor_phase)
         previous_data_status = (
             str(results[-1].observed_state["data_status"]) if results else None
@@ -432,6 +443,7 @@ def build_observed_state_history(
             if candidate_started_at is None:
                 candidate_started_at = origin
             pending_anchor = target_phase
+            pending_anchor_confirmed_at = origin
         elif conditions_met > 0 or (phase is not None and phase != anchor_phase):
             status = "WATCH"
             if candidate_started_at is None:
@@ -469,6 +481,9 @@ def build_observed_state_history(
         transition_monitor = {
             "observed_phase": phase,
             "anchor_phase": anchor_phase,
+            "anchor_started_at": anchor_started_at,
+            "anchor_source": anchor_source,
+            "anchor_confirmed_at": anchor_confirmed_at,
             "target_phase": target_phase,
             "status": status,
             "conditions_met": conditions_met,
