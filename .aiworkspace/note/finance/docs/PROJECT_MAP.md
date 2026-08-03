@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-07-26
+Last Verified: 2026-08-03
 
 ## System At A Glance
 
@@ -91,6 +91,11 @@ Data Operations
 - Market Research의 canonical 7-view normalization은
   `app/web/overview/navigation.py`가, 각 view 계산과 read model은 owning service가
   담당한다.
+- 경제 사이클의 현재 국면·최근 1/3/6개월 변화·전환 조건은
+  `finance/economic_cycle_observed_state.py`가 계산하고,
+  `economic_cycle_snapshot -> app/services/overview/economic_cycle.py ->
+  economic_cycle_workbench`가 저장·해석·표시한다. 미래 1/2개월 확률은 제품 read
+  model에 포함하지 않으며 자산별 확인 포인트는 별도 기존 pathway 계약을 유지한다.
 - Institutional Holdings의 SEC dataset과 identifier resolution은
   `finance/data/institutional_13f.py`와
   `finance/data/institutional_13f_mapping.py`가 저장하고 loader/service가 읽는다.
@@ -166,6 +171,7 @@ broader legacy yfinance fundamentals / factors action은 old replay compatibilit
 | universe, asset profile, macro, provider, event, 13F metadata | MySQL `finance_meta` | ingestion / loader boundary를 통해 사용 |
 | price and volume history | MySQL `finance_price` | backtest와 monitoring의 canonical price source |
 | raw filing, statement and derived factor | MySQL `finance_fundamental` | EDGAR statement shadow가 active financial source |
+| economic-cycle vintage, model and observed snapshot | MySQL `finance_meta` | PIT vintage와 계산 artifact를 보존하고 UI는 compact observed-state snapshot만 읽음 |
 | candidate / validation / Final Review decision | `.aiworkspace/note/finance/registries/*.jsonl` | append-only workflow record |
 | reusable portfolio / monitoring setup | `.aiworkspace/note/finance/saved/*.jsonl` | 사용자 설정으로 보존 |
 | local run history | `.aiworkspace/note/finance/run_history/*.jsonl` | generated runtime record, 보통 commit하지 않음 |

@@ -30,6 +30,10 @@ Existing snapshot rows lack v3 JSON fields and use `recession` in the enum. Migr
 additive, old rows must remain readable and historical replay must backfill actual coordinates
 before the graph claims a continuous path.
 
+Closeout result: the additive columns and enum compatibility are verified, legacy rows remain
+LIMITED instead of being reconstructed from probability, and the latest 12 month ends were
+replayed with origin-specific observed coordinates.
+
 ## Intramonth Comparability
 
 Monthly sources arrive on different schedules. Intramonth data cannot advance persistence or
@@ -52,3 +56,10 @@ regression are release blockers.
 NBER chronology is not the current-state truth. It is reported as an ex-post reference alongside
 PIT stability, revision matrix, transition churn and delay; no single benchmark is optimized in
 isolation.
+
+## Materialization Cost
+
+The complete stored-vintage PIT and latest-revised panel pair takes roughly 48 seconds on the
+current local DB. Normal UI render remains DB-read-only and fast. Future performance work may
+cache or incrementally update the diagnostic panel, but must not weaken origin-specific PIT or
+revision comparison semantics.

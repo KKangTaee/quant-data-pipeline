@@ -479,7 +479,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - `macro_series_vintage_observation`은 미국 경제 사이클 17개 지표의 발표 당시 값과 이후 revision interval을 raw ledger로 보존한다.
 - `economic_cycle_model_artifact`는 model version, `trained_through`, horizon별 parameter·temperature calibration·rolling-origin metric·publication gate를 보존한다.
-- `economic_cycle_snapshot`은 `current`, `historical_replay`, `intramonth_nowcast`가 만든 compact 네 국면 확률, evidence, source date, 제한 사유를 저장하며 Overview read model의 source-of-truth다.
+- `economic_cycle_snapshot`은 `current`, `historical_replay`, `intramonth_nowcast`가 만든 current phase, observed state, recent 1/3/6M changes, transition monitor, evidence, source date와 제한 사유를 저장하며 Overview read model의 source-of-truth다.
 - 월말 `current/historical_replay` row는 canonical history다. 월중은 날짜별 별도 `run_kind=intramonth_nowcast` row로 저장하고 `baseline_as_of_date`, `source_coverage_json`, `source_collected_at`으로 비교 기준과 입수 범위를 명시한다. 이 nullable provenance column 추가는 기존 월말 row의 payload나 business key를 재작성하지 않는다.
 - 같은 날짜·model version·run kind 재실행은 UPSERT로 1행을 유지하지만 과거 월말 row는 rollover 대상이 아니다. 새 달 첫 평일에는 누락된 직전 월말만 `current`로 append할 수 있다.
 
@@ -493,8 +493,10 @@ PIT / publication 계약:
 
 - historical origin은 `realtime_start <= origin <= realtime_end`인 version 중 최신 eligible row 하나만 읽는다. 이후 발표·수정값은 관측일이 과거여도 사용할 수 없다.
 - feature scaling은 expanding history만, calibration/validation은 rolling-origin out-of-fold만 사용한다. retrospective label은 activity/labor와 해당 origin에 eligible한 `USREC`만 사용한다.
-- 각 h0/h1/h2 horizon은 독립적으로 `READY/LIMITED`를 판정한다. 유효한 LIMITED 확률은 reason evidence와 함께 snapshot에 보존하고 UI에서 `잠정 모델 추정`으로 표시한다. READY는 `검증된 모델 추정`이며 phase support·parameter·입력이 불완전한 horizon만 numeric probabilities를 비우고 `판단 불가`로 둔다.
-- raw full series, model parameter, 121개월 replay snapshot은 DB에 남고 UI service는 최근 최대 60개월 compact history/evidence만 읽는다. UI render 중 provider fetch, fit, materialization, DB write를 실행하지 않는다.
+- current observed phase는 activity/labor 8개 실물지표의 3개월 평균 level과 직전 3개월 대비 momentum quadrant가 소유한다. 최신 수정치와 NBER chronology는 confidence/역사 참고이며 current phase를 덮어쓰지 않는다.
+- persistence·diffusion·activity/labor corroboration 세 조건은 다음 인접 국면의 `MAINTAIN/WATCH/CONFIRMED`를 만들며 특정 미래 월이나 확률을 뜻하지 않는다.
+- h0/h1/h2 artifact·probability·forecast column은 shadow validation과 old-row compatibility로 보존할 수 있지만 Overview v3 read model과 기본 UI는 읽지 않는다.
+- raw full series, model parameter와 더 긴 replay snapshot은 DB에 남고 UI service는 최근 최대 12개월 actual coordinate history/evidence만 읽는다. UI render 중 provider fetch, fit, materialization, DB write를 실행하지 않는다.
 
 주의:
 

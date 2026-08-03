@@ -50,7 +50,7 @@ Last Verified: 2026-07-20
 | `market_sentiment_observation_snapshot` | 성공 batch에서 앱이 실제 관측한 normalized sentiment view의 immutable row snapshot. 동일 값의 반복 capture도 보존하며 legacy canonical row를 과거 PIT로 소급 생성하지 않는다 |
 | `macro_series_vintage_observation` | 경제 사이클 17개 FRED/ALFRED series의 observation별 real-time revision interval을 저장. unique key는 `(series_id, observation_date, realtime_start, source)`이고 strict as-of loader가 과거 origin 당시 값을 선택한다 |
 | `economic_cycle_model_artifact` | 경제 사이클 model version과 학습 cutoff, horizon별 parameter/calibration/rolling-origin gate 판정을 저장. unique key는 `(model_version, trained_through)`이다 |
-| `economic_cycle_snapshot` | current/historical replay별 compact 국면 확률·근거·source date·publication status를 저장. unique key는 `(as_of_date, model_version, run_kind)`이며 계산 가능한 LIMITED 확률도 잠정 추정용으로 보존하고 계산 불가 horizon만 비운다 |
+| `economic_cycle_snapshot` | current/historical replay/intramonth별 current phase, observed-state·recent-change·transition-monitor JSON, source date와 publication status를 저장. unique key는 `(as_of_date, model_version, run_kind)`이다. 기존 probability/forecast JSON은 shadow/legacy 호환용이며 제품 read model은 사용하지 않는다 |
 | `sp500_monthly_valuation` | Shiller 월별 P/E 이력. month+source unique UPSERT, price/EPS/PER/CAPE/quality/source reference 저장. EPS 미발표 최신 월은 price-only `missing` row로 유지 |
 | `nasdaq100_monthly_valuation` | QQQ proxy 월별 price/reconstructed EPS/PER/earnings yield와 weighted coverage, holdings/price basis, blocked reason 저장. `(observation_month, proxy_symbol, source)` unique UPSERT |
 | `sp500_index_earnings` | S&P index EPS의 period type, As-Reported/Operating basis, actual/estimate/mixed status, source release vintage 저장 |

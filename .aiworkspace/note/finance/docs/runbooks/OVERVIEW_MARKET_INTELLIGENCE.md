@@ -1,7 +1,7 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-07-25
+Last Verified: 2026-08-03
 
 ## Purpose
 
@@ -98,8 +98,9 @@ uv run python -m app.jobs.overview_automation --profile safe --job economic_cycl
 uv run python -c "from finance.economic_cycle_pipeline import train_validate_economic_cycle_model, materialize_economic_cycle_snapshot; trained_through='YYYY-MM-DD'; as_of_date='YYYY-MM-DD'; result=train_validate_economic_cycle_model(trained_through=trained_through); print(result['model_version'], result['publication_status']); print(materialize_economic_cycle_snapshot(as_of_date=as_of_date, model_version=result['model_version'], artifact_row=result['artifact_row']))"
 ```
 
-- h0/h1/h2별 origin count, phase support, recession episode, complete-feature ratio, Brier, log loss, ECE, persistence/historical-transition baseline, reason code를 확인한다.
-- horizon별 gate는 `READY/LIMITED` publication status를 결정한다. 완전한 artifact와 입력으로 계산 가능한 LIMITED horizon은 숫자 확률을 snapshot에 보존하고 UI에서 `잠정 모델 추정`으로 표시한다. READY는 `검증된 모델 추정`, phase support·parameter·입력이 불완전하면 `판단 불가`다.
+- h0/h1/h2 origin count, phase support, recession episode, complete-feature ratio, Brier, log loss, ECE, baseline과 reason code는 shadow artifact 검증용으로 확인한다.
+- 제품 current phase는 h0 argmax가 아니라 실물 8개 지표의 3개월 평균 level/momentum observed-state에서 나온다. Snapshot에 `observed_state_json`, `recent_changes_json`, `transition_monitor_json`이 채워지고 `current_phase`가 observed phase와 같은지 확인한다.
+- horizon publication status나 저장된 확률은 제품 UI에 노출하지 않는다. Legacy probability-only snapshot은 새 현재 국면으로 복원하지 않고 LIMITED로 읽힌다.
 - validation metadata 누락이나 실행 오류가 있으면 latest approved artifact/snapshot을 ERROR row로 덮지 않는다.
 
 ### 6. Ten-year month-end replay와 idempotence
@@ -109,6 +110,7 @@ uv run python -c "from finance.economic_cycle_pipeline import replay_economic_cy
 ```
 
 - 각 origin은 직전 month-end까지 학습한 origin-specific artifact와 그 origin 당시 eligible vintage를 사용한다.
+- replay row마다 observed-state 세 JSON이 origin-specific 값으로 저장되어 최근 12개월 actual coordinate path와 전환 이력을 구성하는지 확인한다.
 - 같은 날짜 범위를 한 번 더 실행하고 `(as_of_date, model_version, run_kind)` business key가 중복되지 않는지 확인한다.
 - payroll series 한 origin과 recession-era 한 origin을 표본으로 골라 stored eligible `realtime_start/realtime_end`가 official FRED/ALFRED response metadata와 일치하는지 확인한다.
 
@@ -116,10 +118,10 @@ uv run python -c "from finance.economic_cycle_pipeline import replay_economic_cy
 
 - `FRED_API_KEY` 부재: 수집을 중단하고 UI의 `NOT_MATERIALIZED` 또는 latest-good LIMITED/READY snapshot을 유지한다.
 - 월중 refresh 일부 series 실패: closed-month rollover와 당일 snapshot write를 진행하지 않고 last-good intramonth row를 유지한다.
-- sparse coverage/calibration/origin/baseline 성능 미달: 해당 horizon을 `LIMITED`로 두고 계산 가능하면 잠정 추정으로 공개한다. threshold를 낮추거나 artifact status를 손으로 바꾸지 않는다.
+- sparse coverage/calibration/origin/baseline 성능 미달: 해당 horizon을 shadow `LIMITED`로 유지한다. threshold나 artifact status를 손으로 바꾸지 않고 제품 화면은 observed-state data status와 전환 조건만 공개한다.
 - missing phase support 또는 불완전 parameter/input: 해당 horizon은 `UNAVAILABLE`로 materialize하고 다른 horizon·origin 처리는 계속한다.
 - stale/vintage gap: missing series/date/revision interval을 공식 API에서 보강한 뒤 collection부터 재실행한다.
-- 화면은 run/job/row 진단 panel이 아니다. 운영 근거는 backend 결과와 DB audit에서 확인하고 사용자는 국면 확률, evidence, source date, 제한 사유를 읽는다.
+- 화면은 run/job/row 진단 panel이 아니다. 운영 근거는 backend 결과와 DB audit에서 확인하고 사용자는 현재 관측 국면, 최근 변화, 전환 확인 조건, evidence, source date와 제한 사유를 읽는다.
 
 ## Valuation Refresh
 

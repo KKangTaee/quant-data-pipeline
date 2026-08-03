@@ -99,17 +99,16 @@ yfinance
 
 ## Overview market intelligence 흐름
 
-### U.S. economic cycle regime forecast
+### U.S. economic cycle observed state and transition monitor
 
 ```text
 FRED/ALFRED vintage-dates API + observations API output_type=1 + FRED_API_KEY
   -> finance.data.economic_cycle_vintages
   -> finance_meta.macro_series_vintage_observation
   -> finance.loaders.economic_cycle strict as-of selection
-  -> finance.economic_cycle_features / economic_cycle_labels
-  -> finance.economic_cycle_model / economic_cycle_validation
+  -> finance.economic_cycle_features
+  -> finance.economic_cycle_observed_state
   -> finance.economic_cycle_pipeline
-  -> finance_meta.economic_cycle_model_artifact
   -> finance_meta.economic_cycle_snapshot
   -> app.services.overview.economic_cycle
   -> Workspace > Overview > 시장 맥락 > 경제 사이클 React workbench
@@ -118,8 +117,9 @@ FRED/ALFRED vintage-dates API + observations API output_type=1 + FRED_API_KEY
 의미:
 
 - 17개 고정 catalog는 real-time revision interval을 보존하고, 각 forecast origin은 당시 발표되어 유효한 row만 읽는다.
-- h0 label/model은 activity/labor 중심이며 h1/h2는 financial-leading/inflation-policy context를 보조 입력으로 사용할 수 있다.
-- h0/h1/h2는 각각 rolling-origin gate로 `READY/LIMITED`를 판정한다. 완전한 artifact와 입력으로 계산 가능한 LIMITED horizon은 확률·우세 국면을 snapshot에 보존하고 UI에서 `잠정 모델 추정`으로 표시한다. READY는 `검증된 모델 추정`, parameter/입력 불완전은 `판단 불가`다.
+- 현재 국면은 activity/labor 8개 실물지표의 3개월 평균 수준과 직전 3개월 대비 모멘텀으로 `회복/확장/둔화/위축`을 직접 판정한다. 최근 1/3/6개월 변화와 다음 인접 국면의 지속성·확산도·활동/고용 동반 확인 조건을 함께 저장한다.
+- 최신 수정치 track은 revision sensitivity와 confidence 진단에만 사용하며 PIT 현재 국면을 바꾸지 않는다. NBER 침체 이력도 별도 사후 참고선이다.
+- 기존 h0/h1/h2 artifact와 확률 column은 shadow validation 및 old-row compatibility로 보존하지만 product read model과 기본 UI는 미래 1/2개월 확률이나 미래 좌표를 읽지 않는다.
 - 수집, 학습/검증, current materialization, 10년 replay는 명시적인 backend 실행이다. Overview render는 compact snapshot/history DB row만 읽고 provider나 model job을 호출하지 않는다.
 - 기존 revised `macro_series_observation`과 달리 이 경로에는 CSV fallback이 없다. `FRED_API_KEY`가 없으면 수집을 실패시키고 latest-good snapshot 또는 `NOT_MATERIALIZED` LIMITED 상태를 유지한다.
 

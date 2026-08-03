@@ -10717,3 +10717,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   rolling completed-task dump를 제거했다.
 - Follow-up: 전체 `4/4차` 완료. detailed history는 retained task / phase / root handoff에
   보존하고 verification debt와 future candidates는 Roadmap의 별도 상태로 관리한다.
+
+### 2026-08-03 - 경제 사이클은 미래 월별 확률보다 현재 관측과 전환 조건을 먼저 답한다
+
+- User request: 잘못되거나 과도하게 보수적인 현재/+1M/+2M 국면 확률과 미래 경로를
+  새로 진단하고, 기존 자산별 확인 포인트 디자인은 그대로 유지한 채 구현하도록 요청함.
+- Interpreted goal: 현재 상대 성장순환 위치를 실제 PIT 실물지표로 일관되게 판정하고,
+  미래는 목표 월·확률이 아니라 어떤 조건이 이어져야 전환을 확인하는지 보여줘야 함.
+- Analysis result: 3M-smoothed activity/labor level·momentum 현재 국면, 1/3/6M 변화,
+  persistence·diffusion·corroboration 전환 monitor와 12M actual path를 채택했다.
+- Follow-up: 전체 `4/4차` 구현·replay·Browser QA·문서 정렬 완료. Shadow 확률 artifact는
+  호환용으로 남지만 v3 제품 read model과 UI에는 공개하지 않는다.

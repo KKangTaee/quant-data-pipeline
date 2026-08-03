@@ -7311,3 +7311,12 @@ Detailed historical logs were archived on `2026-04-13`.
   Verification-Only 상태와 approval queue를 실제 코드·task status에 맞췄다.
 - 전체 roadmap `4/4차` 완료. code / DB / registry / saved / run history는 변경하지 않았다.
 - 상세 설계·실행·검증은 `tasks/active/finance-canonical-docs-alignment-v1-20260726/`를 본다.
+
+## 2026-08-03 - 경제 사이클 관측 국면·전환 조건 V1 완료
+
+- 현재/+1M/+2M 확률 화면을 실물 8개 기반 현재 관측 국면, 최근 1·3·6개월 변화와
+  다음 인접 국면의 세 가지 확인 조건으로 교체했다.
+- 12개월 PIT replay와 actual DB/app QA를 완료했고 현재 2026-06-30은 `위축`, level
+  `-0.561`, momentum `-0.239`, READY / 신뢰도 보통으로 재현됐다.
+- 기존 `자산별 확인 포인트`의 계산·markup·CSS는 유지했다. 상세는
+  `tasks/active/economic-cycle-observed-state-transition-v1-20260803/`를 본다.

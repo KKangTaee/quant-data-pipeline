@@ -339,32 +339,32 @@ function resolveEvidencePresentation(item: Evidence): EvidencePresentation {
   }
   if (item.factor === "financial_leading_score") {
     if (direction === "강화") return {
-      statusLabel: "전망 지원",
+      statusLabel: "전환 지원",
       tone: "support",
-      description: "금리차·신용스프레드·금융여건·선행지표 조합이 향후 1·2개월 경기 전망을 지지하는 방향입니다.",
+      description: "금리차·신용스프레드·금융여건·선행지표 조합이 다음 국면 전환 조건을 지지하는 참고 맥락입니다.",
     };
     if (direction === "약화") return {
-      statusLabel: "전망 부담",
+      statusLabel: "전환 제약",
       tone: "burden",
-      description: "금리차·신용스프레드·금융여건·선행지표 조합이 향후 1·2개월 경기 전망을 제약하는 방향입니다.",
+      description: "금리차·신용스프레드·금융여건·선행지표 조합이 다음 국면 전환 조건을 제약하는 참고 맥락입니다.",
     };
   }
   if (item.factor === "inflation_policy_score") {
     if (direction === "강화") return {
-      statusLabel: "전망 부담",
+      statusLabel: "전환 제약",
       tone: "burden",
-      description: "근원물가·기대인플레이션·정책금리 조합의 압력이 높아 향후 1·2개월 경기 전망에 부담을 주는 방향입니다.",
+      description: "근원물가·기대인플레이션·정책금리 조합의 압력이 높아 다음 국면 전환 조건을 제약하는 참고 맥락입니다.",
     };
     if (direction === "약화") return {
-      statusLabel: "부담 완화",
+      statusLabel: "제약 완화",
       tone: "support",
-      description: "근원물가·기대인플레이션·정책금리 조합의 압력이 낮아 향후 1·2개월 경기 전망의 부담이 완화된 상태입니다.",
+      description: "근원물가·기대인플레이션·정책금리 조합의 압력이 낮아 다음 국면 전환 제약이 완화된 참고 맥락입니다.",
     };
   }
   return {
     statusLabel: "영향 중립",
     tone: "neutral",
-    description: "현재 종합점수는 자기 과거 기준 부근으로 전망에 미치는 영향이 중립적입니다.",
+    description: "현재 종합점수는 자기 과거 기준 부근으로 다음 국면 전환 조건에 미치는 영향이 중립적입니다.",
   };
 }
 

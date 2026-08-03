@@ -105,3 +105,23 @@ Last Updated: 2026-08-03
   v3 UI change.
 - Verification: economic-cycle Python selection `192 passed`; React `vite build` and
   `tsc --noEmit` passed; `git diff --check` passed. Three pre-existing edgar warnings remain.
+
+## Task 5 — Replay, Actual App And Closeout
+
+- Materialized the 2026-06-30 current snapshot with the persisted approved artifact. Actual DB
+  read model returned `economic_cycle_v3 / READY`, observed `contraction`, level `-0.5614`,
+  momentum `-0.2387`, confidence `MEDIUM` and stable revision sensitivity.
+- Replayed 2025-07-31 through 2026-06-30 month ends: 12 origins processed with origin-specific
+  artifacts and v3 observed-state JSON. The actual cycle map then returned 12 coordinates.
+- Runtime timing on the full stored vintage set was about 25 seconds for the PIT panel and 23
+  seconds for the latest-revised diagnostic panel. This is explicit materialization cost, not UI
+  render work.
+- Browser QA at 1280, 760 and 420 widths: horizontal overflow 0; current state, recent changes,
+  transition monitor and five asset cards present; desktop asset grid 2 columns and narrower
+  layouts 1 column; console warning/error count 0.
+- Browser copy regression found and fixed one top-level stale `향후 1·2개월 경기 전망`
+  phrase. The frozen asset section's existing `향후 1·2개월 확인 조건` remains unchanged.
+- Final regression: economic-cycle Python selection `192 passed`; React `vite build` and
+  `tsc --noEmit`, `py_compile`, `git diff --check` passed. Pre-v3 comparison reported
+  `asset_markup_identical=True` and `asset_css_identical=True`.
+- QA screenshots were generated as local untracked artifacts and excluded from commit.

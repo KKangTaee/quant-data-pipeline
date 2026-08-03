@@ -346,10 +346,12 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         'statusLabel: "기준 이상"',
         'statusLabel: "기준 이하"',
         'statusLabel: "기준 부근"',
-        'statusLabel: "전망 지원"',
-        'statusLabel: "전망 부담"',
-        'statusLabel: "부담 완화"',
+        'statusLabel: "전환 지원"',
+        'statusLabel: "전환 제약"',
+        'statusLabel: "제약 완화"',
         'statusLabel: "영향 중립"',
+        "다음 국면 전환 조건을 지지하는 참고 맥락입니다",
+        "다음 국면 전환 조건을 제약하는 참고 맥락입니다",
         "자기 과거 기준보다 낮아 현재 경기 위치를 낮추는 근거입니다",
         "resolveEconomicStatePresentation",
         'STRENGTHENING: "강화"',
@@ -384,6 +386,7 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         "payload.horizons",
         "payload.history",
         "probability_deltas",
+        "향후 1·2개월 경기 전망",
     ):
         assert forbidden not in source
 

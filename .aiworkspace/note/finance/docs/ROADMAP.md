@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-26
+Last Verified: 2026-08-03
 
 ## Current Snapshot
 
@@ -26,7 +26,7 @@ scope는 아래 Decision Queue에서 하나씩 승인해 여는 상태다.
 | Track | Current Baseline | Boundary |
 |---|---|---|
 | Today | 시장 세션, 저장된 시장 근거, 일정과 대표 포트폴리오 EOD/live overlay | summary / navigation surface, trading signal 아님 |
-| Market Research | 경제 사이클, 선물 매크로, 심리, 일정, S&P 500, Market Movers, 미국 개별 종목의 3-family / 7-view research | context-only, validation / monitoring signal 아님 |
+| Market Research | 관측 기반 현재 국면·최근 변화·조건부 전환 감시 경제 사이클, 선물 매크로, 심리, 일정, S&P 500, Market Movers, 미국 개별 종목의 3-family / 7-view research | context-only, 미래 월별 국면 예측·validation / monitoring signal 아님 |
 | Institutional Holdings | SEC Form 13F 기관 portfolio, holdings, sector, security detail와 identifier coverage | delayed long holdings research, recommendation 아님 |
 | Data Operations | 네 consumer 목적별 data preparation, 공식 파일, bounded recovery, compact history와 active 30-action 고급 도구 | explicit click만 실행, UI direct fetch와 자동 연속 실행 없음 |
 | Backtest Analysis | single strategy와 portfolio mix 실행·비교, result bundle, save / replay와 candidate source | 높은 수익률만으로 선정하지 않음 |

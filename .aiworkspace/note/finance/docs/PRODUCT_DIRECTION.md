@@ -1,7 +1,7 @@
 # Product Direction
 
 Status: Active
-Last Verified: 2026-07-26
+Last Verified: 2026-08-03
 
 ## Product Promise
 
@@ -51,7 +51,7 @@ Finance Console의 current top navigation은 `Research / Portfolio / Data / Help
 | Group | Surface | 사용자가 끝낼 수 있는 일 |
 |---|---|---|
 | Research | Today | 미국 시장 세션, 저장된 시장 근거, 다음 일정과 대표 포트폴리오 상태를 첫 화면에서 파악한다. |
-| Research | Market Research | 경제 사이클, 선물 매크로, 심리, 일정, S&P 500 가치평가, 변동 종목과 미국 개별 종목을 기준일·source와 함께 조사한다. |
+| Research | Market Research | 현재 관측 국면·최근 변화·전환 확인 조건을 포함한 경제 사이클, 선물 매크로, 심리, 일정, S&P 500 가치평가, 변동 종목과 미국 개별 종목을 기준일·source와 함께 조사한다. |
 | Research | Institutional Holdings | delayed SEC Form 13F로 기관별 allocation·보유 변화·섹터 노출과 종목별 보유 기관을 탐색한다. |
 | Portfolio | Portfolio Lab | 전략을 실행·비교하고 후보를 만든 뒤 Practical Validation과 Final Review까지 이어간다. |
 | Portfolio | Portfolio Monitoring | 최종 선정 후보와 직접 등록한 미국 주식·ETF의 공통 기준 성과, 기여도, 보유 변화와 재검토 조건을 추적한다. |
@@ -69,6 +69,7 @@ Today와 Research의 macro·sentiment·events·13F 정보는 조사 맥락이다
 | Evidence First | 높은 백테스트 수익률보다 데이터 신뢰도, 운용 가능성과 검증 근거를 우선한다. |
 | DB-Backed Runtime | 기본 흐름은 `Ingestion -> DB -> Loader / Service -> Runtime -> UI`이며 UI가 provider를 직접 조회하지 않는다. |
 | Point-in-Time Before Convenience | 과거 시점에 알 수 있었던 데이터와 이후 수정·발표된 정보를 구분한다. |
+| Observed State Before Forecast | 현재 상태는 관측 가능한 근거로 먼저 진단하고, 검증되지 않은 미래 확률 대신 무엇이 확인되면 상태가 바뀌는지 보여준다. |
 | Visible Data State | source, 기준일, freshness, coverage와 partial·stale·unavailable 상태를 숨기지 않는다. |
 | NOT_RUN Is Not Pass | 자료나 구현이 없어 실행하지 못한 검증을 통과로 취급하지 않는다. |
 | Context Is Not Approval | 시장 맥락과 기관 보유 정보는 판단 근거이지 자동 추천이나 승인 권한이 아니다. |
@@ -108,8 +109,9 @@ Final Review decision과 Portfolio Monitoring의 재검토 표시는 투자 자�
 - historical universe membership, delisting과 일부 provider coverage는 완전하지 않다.
 - survivorship bias와 look-ahead bias는 현재 구현이 완전히 제거했다고 주장하지 않는다.
 - SEC 13F는 보고 지연, long holdings 중심 범위와 identifier mapping 한계가 있다.
-- macro·sentiment·conditional outlook은 독립 시계열 검증 gate를 통과하지 못하면
-  확률이나 확정 전망으로 공개하지 않는다.
+- 경제 사이클은 현재 관측 국면과 조건부 전환 감시를 제공하며 NBER 공식 판정이나
+  특정 월의 미래 국면 예측이 아니다. 다른 macro·sentiment·conditional outlook도
+  독립 시계열 검증 gate를 통과하지 못하면 확률이나 확정 전망으로 공개하지 않는다.
 - local MySQL 준비와 source별 수집 상태에 따라 화면 evidence가 partial 또는
   unavailable일 수 있다.
 - Data Operations는 explicit-click 실행을 유지하며 background queue, scheduler,

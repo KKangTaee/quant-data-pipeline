@@ -69,7 +69,7 @@ Last Verified: 2026-07-23
 | `market_sentiment_collection_batch` / `market_sentiment_observation_snapshot` | CNN / AAII source별 수집 batch와 immutable normalized view. UTC `known_at`은 앱 관측 시각이며 legacy canonical history는 소급 backfill하지 않는다 |
 | `macro_series_vintage_observation` | 미국 경제 사이클 17개 지표의 FRED/ALFRED real-time revision ledger. 발표 당시 값을 보존하며 revised CSV로 대체하지 않는다 |
 | `economic_cycle_model_artifact` | 학습 cutoff, horizon별 calibration/validation/publication 판정을 포함한 경제 사이클 model artifact |
-| `economic_cycle_snapshot` | 현재 및 historical replay의 compact 국면 확률·근거 snapshot. Overview가 읽는 source-of-truth |
+| `economic_cycle_snapshot` | 현재 및 historical replay의 관측 국면·최근 변화·전환 조건 compact snapshot. 확률/forecast column은 legacy·shadow 호환용이고 Overview v3는 observed JSON을 source-of-truth로 읽는다 |
 | `nyse_financial_statement_filings` | EDGAR filing-level metadata ledger |
 | `nyse_financial_statement_values` | EDGAR filing / concept / period raw fact ledger |
 | `nyse_fundamentals_statement` | EDGAR statement ledger 기반 canonical financial statement shadow |

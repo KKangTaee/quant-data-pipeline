@@ -66,9 +66,18 @@ For 2026-06-30 under the approved candidate:
 
 The values above are a design-time reproduction, not a hard-coded UI fixture.
 
+Actual closeout materialization reproduced the same values from the stored DB and returned a
+READY v3 read model with 12 actual replay coordinates. The transition monitor reported the last
+confirmed anchor as recovery, the next sequential confirmation target as expansion and WATCH
+0/3 while the immediate observed headline remained contraction. This is the approved separation
+between current coordinate and sequential confirmed transition, not a second current-phase
+answer.
+
 ## Approval Record
 
 - User approved proceeding with relative growth-cycle and separate NBER reference.
 - User approved the recommended decision-centered screen structure.
 - User explicitly confirmed twice that `자산별 확인 포인트` must retain the current design.
 - User authorized continuing the work after the scope was restated.
+- User authorized implementation after the final UI structure and frozen asset design were
+  reconfirmed.
