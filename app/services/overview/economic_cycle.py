@@ -79,6 +79,12 @@ CONTEXT_LABELS = {
     "SUPPORT_CURRENT": "현재 국면을 지지",
     "MIXED": "혼조",
 }
+ANCHOR_SOURCE_LABELS = {
+    "INITIALIZED": "초기 기준",
+    "CONFIRMED": "조건 확인",
+    "LEGACY_OBSERVED": "조회 이력 내 최초 관측",
+    "UNKNOWN": "기준일 기록 없음",
+}
 
 
 def _json_value(value: object, fallback: object) -> object:
@@ -288,7 +294,10 @@ def _recent_changes(snapshot: Mapping[str, object]) -> list[dict[str, object]]:
     return sorted(rows, key=lambda item: int(item["horizon_months"]))
 
 
-def _transition_monitor(snapshot: Mapping[str, object]) -> dict[str, object] | None:
+def _transition_monitor(
+    snapshot: Mapping[str, object],
+    history_rows: Sequence[Mapping[str, object]] = (),
+) -> dict[str, object] | None:
     raw = _json_value(snapshot.get("transition_monitor_json"), {})
     if not isinstance(raw, Mapping) or not raw:
         return None
@@ -300,6 +309,51 @@ def _transition_monitor(snapshot: Mapping[str, object]) -> dict[str, object] | N
         phase = str(raw.get(field) or "")
         output[field] = phase if phase in OBSERVED_PHASES else None
         output[f"{field}_label"] = PHASE_LABELS.get(phase)
+    anchor_phase = output.get("anchor_phase")
+    anchor_started_at = str(raw.get("anchor_started_at") or "")[:10] or None
+    anchor_confirmed_at = str(raw.get("anchor_confirmed_at") or "")[:10] or None
+    anchor_source = str(raw.get("anchor_source") or "").upper()
+    confirmed_candidates: list[str] = []
+    first_seen_candidates: list[str] = []
+    if anchor_phase and (
+        not anchor_started_at or anchor_source not in {"INITIALIZED", "CONFIRMED"}
+    ):
+        for row in history_rows:
+            record = _json_value(row.get("transition_monitor_json"), {})
+            if not isinstance(record, Mapping):
+                continue
+            row_date = str(row.get("as_of_date") or "")[:10]
+            if not row_date:
+                continue
+            if str(record.get("anchor_phase") or "") == anchor_phase:
+                first_seen_candidates.append(row_date)
+            if (
+                str(record.get("status") or "").upper() == "CONFIRMED"
+                and str(record.get("target_phase") or "") == anchor_phase
+            ):
+                confirmed_candidates.append(
+                    str(record.get("confirmed_at") or row_date)[:10]
+                )
+        if confirmed_candidates:
+            anchor_confirmed_at = max(confirmed_candidates)
+            anchor_started_at = anchor_confirmed_at
+            anchor_source = "CONFIRMED"
+        elif first_seen_candidates:
+            anchor_started_at = min(first_seen_candidates)
+            anchor_confirmed_at = None
+            anchor_source = "LEGACY_OBSERVED"
+        else:
+            anchor_source = "UNKNOWN"
+    elif anchor_source not in ANCHOR_SOURCE_LABELS:
+        anchor_source = "UNKNOWN"
+    output.update(
+        {
+            "anchor_started_at": anchor_started_at,
+            "anchor_source": anchor_source,
+            "anchor_source_label": ANCHOR_SOURCE_LABELS[anchor_source],
+            "anchor_confirmed_at": anchor_confirmed_at,
+        }
+    )
     conditions: list[dict[str, object]] = []
     raw_conditions = raw.get("conditions")
     if isinstance(raw_conditions, (list, tuple)):
@@ -529,7 +583,7 @@ def build_economic_cycle_read_model(
 
     observed_state = _observed_state(resolved_snapshot)
     recent_changes = _recent_changes(resolved_snapshot)
-    transition_monitor = _transition_monitor(resolved_snapshot)
+    transition_monitor = _transition_monitor(resolved_snapshot, history_rows)
     cycle_map = _cycle_map(history_rows, resolved_snapshot)
     evidence = _evidence(resolved_snapshot)
     load_intramonth = (

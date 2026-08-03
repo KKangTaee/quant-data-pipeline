@@ -6,7 +6,7 @@ from typing import Any
 
 ACTION = {
     "id": "refresh_economic_cycle_data",
-    "label": "최신 데이터로 다시 계산",
+    "label": "최신 발표 확인·재계산",
     "enabled": True,
 }
 
@@ -34,6 +34,24 @@ def latest_economic_cycle_refresh_date(
     return resolved
 
 
+def _latest_source_observation_date(
+    intramonth: Mapping[str, Any],
+) -> date | None:
+    coverage = intramonth.get("source_coverage")
+    if not isinstance(coverage, Mapping):
+        return None
+    series = coverage.get("series")
+    if not isinstance(series, (list, tuple)):
+        return None
+    dates = [
+        parsed
+        for item in series
+        if isinstance(item, Mapping)
+        and (parsed := _as_date(item.get("latest_observation_date"))) is not None
+    ]
+    return max(dates) if dates else None
+
+
 def build_economic_cycle_freshness(
     intramonth: Mapping[str, Any] | None,
     *,
@@ -42,7 +60,10 @@ def build_economic_cycle_freshness(
 ) -> dict[str, Any]:
     """Compare one persisted intramonth cutoff with the latest eligible weekday."""
     target = latest_economic_cycle_refresh_date(today)
-    persisted = _as_date(dict(intramonth or {}).get("as_of_date"))
+    resolved_intramonth = dict(intramonth or {})
+    persisted = _as_date(resolved_intramonth.get("as_of_date"))
+    checked_at = str(resolved_intramonth.get("source_collected_at") or "").strip()
+    latest_source = _latest_source_observation_date(resolved_intramonth)
     if read_error:
         status = "ERROR"
         message = (
@@ -68,6 +89,10 @@ def build_economic_cycle_freshness(
         "status": status,
         "persisted_as_of_date": persisted.isoformat() if persisted else None,
         "target_as_of_date": target.isoformat(),
+        "last_checked_at": checked_at or None,
+        "latest_source_observation_date": (
+            latest_source.isoformat() if latest_source else None
+        ),
         "refresh_required": status != "READY",
         "message": message,
     }

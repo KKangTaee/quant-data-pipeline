@@ -307,6 +307,85 @@ def test_v3_exposes_observed_state_recent_changes_and_actual_cycle_map() -> None
     json.dumps(model, allow_nan=False)
 
 
+def test_transition_monitor_recovers_confirmed_anchor_date_from_legacy_history() -> None:
+    service = _load_service()
+    current = _observed_snapshot()
+    current["transition_monitor_json"] = json.dumps(
+        {
+            "observed_phase": "contraction",
+            "anchor_phase": "recovery",
+            "target_phase": "expansion",
+            "status": "WATCH",
+            "conditions_met": 0,
+            "conditions_total": 3,
+            "non_adjacent_observation": True,
+            "conditions": [],
+            "context": [],
+        }
+    )
+    confirmed = _observed_history(1)[0]
+    confirmed["as_of_date"] = "2025-08-31"
+    confirmed["transition_monitor_json"] = json.dumps(
+        {
+            "anchor_phase": "contraction",
+            "target_phase": "recovery",
+            "status": "CONFIRMED",
+            "confirmed_at": "2025-08-31",
+        }
+    )
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: current,
+        history_loader=lambda **_kwargs: [confirmed],
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=lambda **_kwargs: {},
+    )
+
+    monitor = model["transition_monitor"]
+    assert monitor["anchor_started_at"] == "2025-08-31"
+    assert monitor["anchor_source"] == "CONFIRMED"
+    assert monitor["anchor_source_label"] == "조건 확인"
+    assert monitor["anchor_confirmed_at"] == "2025-08-31"
+
+
+def test_transition_monitor_labels_first_seen_legacy_anchor_without_claiming_confirmation() -> None:
+    service = _load_service()
+    current = _observed_snapshot()
+    current_transition = json.loads(str(current["transition_monitor_json"]))
+    current_transition.update(
+        {
+            "anchor_phase": "recovery",
+            "target_phase": "expansion",
+            "non_adjacent_observation": True,
+        }
+    )
+    current["transition_monitor_json"] = json.dumps(current_transition)
+    first_seen = _observed_history(1)[0]
+    first_seen["as_of_date"] = "2025-10-31"
+    first_seen["transition_monitor_json"] = json.dumps(
+        {
+            "anchor_phase": "recovery",
+            "target_phase": "expansion",
+            "status": "MAINTAIN",
+        }
+    )
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: current,
+        history_loader=lambda **_kwargs: [first_seen],
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=lambda **_kwargs: {},
+    )
+
+    monitor = model["transition_monitor"]
+    assert monitor["anchor_started_at"] == "2025-10-31"
+    assert monitor["anchor_source"] == "LEGACY_OBSERVED"
+    assert monitor["anchor_source_label"] == "조회 이력 내 최초 관측"
+    assert monitor["anchor_confirmed_at"] is None
+
+
 @pytest.mark.parametrize("reverse_rows", [False, True])
 def test_cycle_map_selects_latest_replay_deterministically_for_duplicate_date(
     reverse_rows: bool,
@@ -657,6 +736,11 @@ def test_service_attaches_intramonth_freshness() -> None:
     assert model["data_freshness"]["persisted_as_of_date"] == "2026-07-21"
     assert model["data_freshness"]["target_as_of_date"] == "2026-07-24"
     assert model["data_freshness"]["status"] == "REFRESH_AVAILABLE"
+    assert model["data_freshness"]["last_checked_at"] == "2026-07-16 10:02:56"
+    assert (
+        model["data_freshness"]["latest_source_observation_date"]
+        == "2026-06-01"
+    )
 
 
 def test_service_preserves_asset_specific_summary_without_common_state_copy() -> None:

@@ -29,7 +29,7 @@ def test_stale_intramonth_exposes_manual_action() -> None:
     assert result["refresh_required"] is True
     assert result["action"] == {
         "id": "refresh_economic_cycle_data",
-        "label": "최신 데이터로 다시 계산",
+        "label": "최신 발표 확인·재계산",
         "enabled": True,
     }
 
@@ -65,3 +65,28 @@ def test_missing_and_read_error_remain_actionable() -> None:
     assert failed["status"] == "ERROR"
     assert missing["action"]["id"] == "refresh_economic_cycle_data"
     assert failed["action"]["id"] == "refresh_economic_cycle_data"
+
+
+def test_freshness_separates_check_time_calculation_cutoff_and_source_observation() -> None:
+    from app.services.overview.economic_cycle_freshness import (
+        build_economic_cycle_freshness,
+    )
+
+    result = build_economic_cycle_freshness(
+        {
+            "as_of_date": "2026-07-24",
+            "source_collected_at": "2026-07-24 09:31:12",
+            "source_coverage": {
+                "series": [
+                    {"latest_observation_date": "2026-06-30"},
+                    {"latest_observation_date": "2026-07-23"},
+                    {"latest_observation_date": None},
+                ]
+            },
+        },
+        today=date(2026, 7, 25),
+    )
+
+    assert result["persisted_as_of_date"] == "2026-07-24"
+    assert result["last_checked_at"] == "2026-07-24 09:31:12"
+    assert result["latest_source_observation_date"] == "2026-07-23"
