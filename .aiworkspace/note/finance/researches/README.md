@@ -1,7 +1,7 @@
 # Finance Research Workspace
 
 Status: Active
-Last Verified: 2026-06-02
+Last Verified: 2026-08-03
 
 ## Purpose
 
@@ -29,6 +29,7 @@ Last Verified: 2026-06-02
 
 | Research | Focus |
 | --- | --- |
+| `active/2026-08-economic-cycle-independent-reaudit/` | 과거 경제사이클 리서치 결론을 재사용하지 않고 현재 코드·DB·검증 결과에서 현재 국면 판정, 1·2개월 전망, 4분면 좌표와 전환 해석의 구조적 문제를 독립 재감사 |
 | `active/2026-07-data-operations-product-audit/` | Data > Data Operations의 활성 action 30개, 제품/내부 운영 경계, desktop/mobile 첫 행동 탐색 비용, 유지·통합·고급 경로 이동·기본 UI 제거 후보와 task-oriented 개선 방향을 감사 |
 | `active/2026-07-market-research-ia-redesign/` | Today가 기본 화면이 된 이후 기존 Overview를 Market Research deep-research workspace로 재정의하고, 상단 공통 정보·tab hierarchy·시장/종목 경계를 검토 |
 | `active/2026-07-today-home-navigation-ia/` | 오늘의 시장 판단과 대표 포트폴리오 한 개를 결합한 신규 기본 `Today` 화면, 목적 중심 상위 navigation, 기존 각 탭 내부 화면 보존 범위의 승인된 IA 설계 |
