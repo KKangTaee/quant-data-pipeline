@@ -103,8 +103,9 @@ FRED/ALFRED + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
   재구성에는 eligible 전체 vintage를 별도로 읽는다. 기존
   `economic_cycle_snapshot`/artifact/확률을 사용하지 않는다.
 - `finance/inflation_policy_model.py`, `inflation_path.py`, `policy_path.py`,
-  `yield_resistance.py`, `inflation_policy_simulation.py`가 혼합형 Core PCE,
-  익명 SEP·실제 표결 policy marginal, 동적 저항대와 순방향·역산 계산을 소유한다.
+  `policy_validation.py`, `joint_rate_paths.py`, `yield_resistance.py`,
+  `inflation_policy_simulation.py`가 혼합형 Core PCE, 익명 SEP·실제 표결 policy marginal,
+  시간순 정책 검증, empirical 공동 금리 경로, 동적 저항대와 순방향·역산 계산을 소유한다.
 - `finance/inflation_policy_validation.py`와 `inflation_policy_pipeline.py`는 component별
   rolling-origin gate, exact-cutoff replay와 compact artifact/snapshot을 소유한다.
   1개월 Core PCE와 `core_pce_q4_linear_pool` artifact, 5개 다음 발표 scenario,

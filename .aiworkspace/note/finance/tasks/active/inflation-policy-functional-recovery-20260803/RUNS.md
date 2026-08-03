@@ -37,3 +37,32 @@
   inflation `READY`, policy `LIMITED`, next release scenarios 5 rows
 - actual Browser `localhost:8502`: 5상태/threshold/0.1~0.5 민감도 표시 확인
   - QA: `inflation-policy-core-pce-q4-ready-qa.png`
+
+## 2026-08-03 Recovery Stage 3
+
+- 최초 검토에서 December SEP와 같은 회의의 이미 관측된 연말 결정이 validation target에
+  포함된 누수를 발견했다. `release_at < final decision released_at` 회귀 테스트를 먼저
+  추가했고 기존 13-origin 수치와 READY 근거를 폐기했다.
+- 공식 FOMC historical backfill: 2016~2020 accessible SEP의 외부 table heading·별도 `b`
+  release clock·구형 vote/dissent 문구 지원. actual DB는 SEP 40 releases/5,787 rows,
+  2016~2026 rate decision 86건이다.
+- 누수 제거 policy validation: next-meeting 78 evaluation origins, Brier 0.509346 < best
+  baseline 0.516433, ECE 0.068302; year-end 22 evaluation origins(28 completed), Brier
+  0.539700 < prior-SEP baseline 0.837982, ECE 0.162442
+- 재리뷰 follow-up: historical nonmeeting panel은 discovery에서 제외하고 실제 meeting
+  statement의 unknown target syntax는 fail-closed하도록 수정. collector 회귀 포함
+  `tests/test_fomc_policy_data.py` 23 passed, actual historical rate statement 41/41 parsed
+- joint rate validation: episode 110, endpoint 최소 58 origins. DGS2/DGS10/DFII10/T10YIE
+  CRPS가 각각 0.4663/0.3218/0.3684/0.2020으로 각 random-walk baseline보다 낮음
+- dynamic resistance reach: 57 origins, Brier 0.131555 < no-change 0.859649,
+  ECE 0.159810
+- actual materialization `2026-08-03T03:15:00Z --persist`: policy/rates/reverse `READY`,
+  `policy_path`와 2,000개 `joint_macro_paths` artifact 저장
+- actual reverse command: DGS10 4.79% REACH, probability 0.845, 1,690 supporting paths,
+  JSON serialization 성공
+- focused Python suite: 163 passed, 기존 edgar deprecation warning 3건
+- React: 16 passed, typecheck/build 성공
+- actual Browser `localhost:8502`: stored target/form 4.79% 일치, 역산 click 후 84.5%와
+  1,690개 경로 표시, component error 없음. 새 snapshot target sync와 같은 snapshot의
+  dirty form 보존을 rerender test로 확인
+  - QA: `inflation-policy-stage3-leak-free-qa.png`

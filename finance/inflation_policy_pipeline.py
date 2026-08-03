@@ -47,7 +47,18 @@ from finance.inflation_policy_equity_stress import (
     fit_equity_stress_model,
     simulate_equity_stress,
 )
-from finance.inflation_policy_simulation import JOINT_PATH_COMPONENT, SimulationPath
+from finance.inflation_policy_simulation import (
+    JOINT_PATH_COMPONENT,
+    RateTargetCondition,
+    SimulationPath,
+    calculate_target_probability,
+    condition_paths_on_target,
+    posterior_policy_hike_probability_for_next_pce,
+)
+from finance.joint_rate_paths import (
+    JointRatePathArtifact,
+    fit_joint_rate_path_artifact,
+)
 from finance.loaders.inflation_policy import (
     InflationPolicyDataBundle,
     InflationPolicyEquityBundle,
@@ -62,6 +73,11 @@ from finance.policy_path import (
     derive_decision_action_prior,
     derive_sep_net_move_prior,
     project_inflation_states_to_policy,
+)
+from finance.policy_validation import (
+    PolicyPathArtifact,
+    fit_policy_path_artifact,
+    smooth_probability_row,
 )
 from finance.yield_resistance import (
     build_dynamic_resistance_zones,
@@ -906,6 +922,8 @@ def materialize_inflation_policy_analysis(
     seed: int,
     core_artifact: CorePCEMomentumArtifact | CorePCEHybridArtifact | None = None,
     q4_artifact: CorePCEQ4Artifact | None = None,
+    policy_artifact: PolicyPathArtifact | None = None,
+    joint_path_builder: Callable[..., JointRatePathArtifact] | None = None,
     equity: Mapping[str, object] | EquityStressResult | None = None,
     equity_joint_paths_ready: bool = False,
 ) -> InflationPolicyMaterialization:
@@ -1066,40 +1084,92 @@ def materialize_inflation_policy_analysis(
 
     policy: dict[str, object]
     policy_warnings: list[str] = []
+    current_policy_midpoint: float | None = None
     try:
         decision = _latest_decision(bundle.decision_rows)
         current_midpoint = (
             float(decision["target_lower_after_pct"])
             + float(decision["target_upper_after_pct"])
         ) / 2.0
-        sep_prior = derive_sep_net_move_prior(
+        current_policy_midpoint = current_midpoint
+        raw_sep_prior = derive_sep_net_move_prior(
             bundle.sep_rows,
             target_period=str(latest_month.year),
             current_midpoint_pct=current_midpoint,
         )
-        economic = project_inflation_states_to_policy(
-            core_forecast.state_probabilities,
-            reaction_matrix=config.reaction_matrix,
-        )
-        committee = derive_decision_action_prior(decision)
-        policy_forecast = build_policy_path_forecast(
-            current_midpoint_pct=current_midpoint,
-            net_move_components={"sep": sep_prior, "economic": economic},
-            net_move_weights=config.policy_component_weights,
-            next_action_components={"committee": committee},
-            next_action_weights=config.next_action_component_weights,
-            max_component_weight=config.max_component_weight,
-        )
-        policy = {
-            "publication_status": "LIMITED",
-            "reason": "policy_rolling_origin_validation_not_ready",
-            "next_meeting_probabilities": policy_forecast.next_meeting_probabilities,
-            "net_move_probabilities": policy_forecast.net_move_probabilities,
-            "year_end_target_probabilities": policy_forecast.year_end_target_probabilities,
-            "sep_net_move_prior": sep_prior,
-            "committee_vote_prior": committee,
-        }
-        policy_warnings.append("policy_rolling_origin_validation_not_ready")
+        raw_committee = derive_decision_action_prior(decision)
+        if policy_artifact is not None:
+            if _timestamp(policy_artifact.trained_cutoff_at) != _timestamp(
+                core_artifact.trained_cutoff_at
+            ):
+                raise ValueError("policy artifact cutoff does not match core artifact")
+            sep_prior = smooth_probability_row(
+                raw_sep_prior,
+                labels=POLICY_NET_MOVE_BUCKETS,
+                smoothing=policy_artifact.year_end_smoothing,
+            )
+            committee = smooth_probability_row(
+                raw_committee,
+                labels=("cut", "hold", "hike"),
+                smoothing=policy_artifact.next_meeting_smoothing,
+            )
+            policy_forecast = build_policy_path_forecast(
+                current_midpoint_pct=current_midpoint,
+                net_move_components={"sep": sep_prior},
+                net_move_weights={"sep": 1.0},
+                next_action_components={"committee": committee},
+                next_action_weights={"committee": 1.0},
+                max_component_weight=1.0,
+            )
+            policy_status = policy_artifact.publication_status
+            policy_reason = (
+                "policy_rolling_origin_validated"
+                if policy_status == "READY"
+                else ",".join(
+                    policy_artifact.reason_codes
+                    or ("policy_rolling_origin_validation_limited",)
+                )
+            )
+            policy = {
+                "publication_status": policy_status,
+                "reason": policy_reason,
+                "next_meeting_probabilities": policy_forecast.next_meeting_probabilities,
+                "net_move_probabilities": policy_forecast.net_move_probabilities,
+                "year_end_target_probabilities": policy_forecast.year_end_target_probabilities,
+                "sep_net_move_prior": sep_prior,
+                "committee_vote_prior": committee,
+                "raw_sep_net_move_prior": raw_sep_prior,
+                "raw_committee_vote_prior": raw_committee,
+                "validation": {
+                    "next_meeting": policy_artifact.next_meeting_validation,
+                    "year_end": policy_artifact.year_end_validation,
+                },
+            }
+            if policy_status != "READY":
+                policy_warnings.extend(policy_artifact.reason_codes)
+        else:
+            economic = project_inflation_states_to_policy(
+                core_forecast.state_probabilities,
+                reaction_matrix=config.reaction_matrix,
+            )
+            policy_forecast = build_policy_path_forecast(
+                current_midpoint_pct=current_midpoint,
+                net_move_components={"sep": raw_sep_prior, "economic": economic},
+                net_move_weights=config.policy_component_weights,
+                next_action_components={"committee": raw_committee},
+                next_action_weights=config.next_action_component_weights,
+                max_component_weight=config.max_component_weight,
+            )
+            policy = {
+                "publication_status": "LIMITED",
+                "reason": "policy_rolling_origin_validation_not_ready",
+                "next_meeting_probabilities": policy_forecast.next_meeting_probabilities,
+                "net_move_probabilities": policy_forecast.net_move_probabilities,
+                "year_end_target_probabilities": policy_forecast.year_end_target_probabilities,
+                "sep_net_move_prior": raw_sep_prior,
+                "committee_vote_prior": raw_committee,
+            }
+            policy_warnings.append("policy_rolling_origin_validation_not_ready")
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         policy = {
             "publication_status": "NOT_AVAILABLE",
@@ -1112,6 +1182,158 @@ def materialize_inflation_policy_analysis(
         "publication_status": "NOT_AVAILABLE",
         "reason": "joint_rate_path_validation_not_ready",
     }
+    joint_artifact: JointRatePathArtifact | None = None
+    joint_warnings: list[str] = []
+    if (
+        joint_path_builder is not None
+        and inflation.get("publication_status") == "READY"
+        and policy.get("publication_status") == "READY"
+        and current_policy_midpoint is not None
+    ):
+        try:
+            joint_artifact = joint_path_builder(
+                macro_rows=bundle.macro_rows,
+                q4_samples_pct=core_forecast.q4_samples_pct,
+                policy_net_move_probabilities=policy["net_move_probabilities"],
+                levels=level_mapping,
+                forecast_months=forecast_months,
+                current_policy_midpoint_pct=current_policy_midpoint,
+                as_of_at=bundle.as_of_at,
+                sample_count=min(2_000, int(sample_count)),
+                seed=seed,
+            )
+            if _timestamp(joint_artifact.trained_cutoff_at) != _timestamp(
+                core_artifact.trained_cutoff_at
+            ):
+                raise ValueError("joint artifact cutoff does not match core artifact")
+            if joint_artifact.publication_status == "READY" and joint_artifact.paths:
+                joint_paths = joint_artifact.paths
+                total_weight = sum(float(path.weight) for path in joint_paths)
+                base_hike = sum(
+                    float(path.weight)
+                    for path in joint_paths
+                    if int(path.policy_net_steps) > 0
+                ) / total_weight
+                for row in next_release_rows:
+                    observed_mom = float(row["mom_pct"])
+                    row["policy_publication_status"] = "READY"
+                    row["publication_status"] = "READY"
+                    row["hike_delta"] = (
+                        posterior_policy_hike_probability_for_next_pce(
+                            joint_paths,
+                            observed_mom_pct=observed_mom,
+                            observation_noise_pct=0.08,
+                        )
+                        - base_hike
+                    )
+                    row["reason"] = "joint_policy_path_reweighted"
+                inflation["next_release_scenarios"] = next_release_rows
+
+                dgs10 = rates.get("DGS10")
+                if isinstance(dgs10, Mapping):
+                    zones = dgs10.get("zones")
+                    if isinstance(zones, list):
+                        for zone in zones:
+                            if not isinstance(zone, dict):
+                                continue
+                            target = RateTargetCondition(
+                                instrument="DGS10",
+                                zone_lower_pct=float(zone["zone_lower_pct"]),
+                                zone_upper_pct=float(zone["zone_upper_pct"]),
+                                condition="BREAK",
+                                buffer_pct=float(zone.get("tolerance_pct") or 0.0),
+                                hold_days=3,
+                            )
+                            zone["breakout_probability"] = calculate_target_probability(
+                                joint_paths, target
+                            )
+                    selected_zone = dgs10.get("next_overhead_zone") or dgs10.get(
+                        "active_test_zone"
+                    )
+                    if isinstance(selected_zone, dict):
+                        selected_breakout_target = RateTargetCondition(
+                            instrument="DGS10",
+                            zone_lower_pct=float(selected_zone["zone_lower_pct"]),
+                            zone_upper_pct=float(selected_zone["zone_upper_pct"]),
+                            condition="BREAK",
+                            buffer_pct=float(
+                                selected_zone.get("tolerance_pct") or 0.0
+                            ),
+                            hold_days=3,
+                        )
+                        # The selected zone is a copy of the canonical zone row.
+                        # Publish its probability too so the UI does not lose the
+                        # validated result while rendering the selected summary.
+                        selected_zone["breakout_probability"] = (
+                            calculate_target_probability(
+                                joint_paths, selected_breakout_target
+                            )
+                        )
+                        reverse_target = RateTargetCondition(
+                            instrument="DGS10",
+                            zone_lower_pct=float(selected_zone["zone_lower_pct"]),
+                            zone_upper_pct=float(selected_zone["zone_upper_pct"]),
+                            condition="REACH",
+                            buffer_pct=float(
+                                selected_zone.get("tolerance_pct") or 0.0
+                            ),
+                            hold_days=3,
+                        )
+                        summary = condition_paths_on_target(
+                            joint_paths,
+                            reverse_target,
+                            minimum_supporting_paths=max(
+                                1,
+                                int(
+                                    joint_artifact.validation_metrics.get(
+                                        "reverse_minimum_supporting_paths"
+                                    )
+                                    or 20
+                                ),
+                            ),
+                            minimum_effective_paths=max(
+                                1.0,
+                                float(
+                                    joint_artifact.validation_metrics.get(
+                                        "reverse_minimum_effective_paths"
+                                    )
+                                    or 10.0
+                                ),
+                            ),
+                        )
+                        reverse = {
+                            **asdict(summary),
+                            "publication_status": (
+                                "READY"
+                                if summary.status == "AVAILABLE"
+                                else "NOT_AVAILABLE"
+                            ),
+                            "reason": (
+                                "dynamic_resistance_joint_paths_ready"
+                                if summary.status == "AVAILABLE"
+                                else "dynamic_resistance_path_support_too_small"
+                            ),
+                            "target": {
+                                "instrument": "DGS10",
+                                "zone_lower_pct": reverse_target.zone_lower_pct,
+                                "zone_upper_pct": reverse_target.zone_upper_pct,
+                                "condition": "REACH",
+                            },
+                        }
+                rates = {
+                    **rates,
+                    "publication_status": "READY",
+                    "reason": "joint_rate_path_chronological_validation_ready",
+                    "joint_path_validation": joint_artifact.validation_metrics,
+                }
+            else:
+                joint_warnings.extend(
+                    joint_artifact.reason_codes
+                    or ("joint_rate_path_validation_not_ready",)
+                )
+        except (KeyError, TypeError, ValueError) as exc:
+            joint_artifact = None
+            joint_warnings.append(f"joint_rate_path_not_available:{exc}")
     if isinstance(equity, EquityStressResult):
         equity_payload = asdict(equity)
     elif equity is not None:
@@ -1136,7 +1358,13 @@ def materialize_inflation_policy_analysis(
                     else (str(inflation.get("reason") or "q4_path_not_ready"),)
                 ),
                 *policy_warnings,
-                "resistance_event_calibration_not_ready",
+                *(
+                    ()
+                    if joint_artifact is not None
+                    and joint_artifact.publication_status == "READY"
+                    else ("resistance_event_calibration_not_ready",)
+                ),
+                *joint_warnings,
                 "recession_model_not_available",
             )
         )
@@ -1210,6 +1438,58 @@ def materialize_inflation_policy_analysis(
             "publication_status": q4_artifact.publication_status,
             "publication_reasons_json": q4_artifact.publication_reasons,
         }
+    policy_artifact_row: dict[str, object] | None = None
+    if policy_artifact is not None:
+        policy_artifact_row = {
+            "model_version": config.model_version,
+            "trained_cutoff_at": policy_artifact.trained_cutoff_at,
+            "component": "policy_path",
+            "feature_schema_version": "fomc-sep-vote-marginals-v1",
+            "transform_schema_version": "chronological-probability-smoothing-v1",
+            "state_schema_version": "policy-next-year-end-v1",
+            "training_start_date": policy_artifact.training_start_decision_date,
+            "forecast_horizon": "next_fomc_and_calendar_year_end",
+            "ensemble_weight": 1.0,
+            "parameters_json": {
+                "next_meeting_smoothing": policy_artifact.next_meeting_smoothing,
+                "year_end_smoothing": policy_artifact.year_end_smoothing,
+            },
+            "validation_json": {
+                "next_meeting": policy_artifact.next_meeting_validation,
+                "year_end": policy_artifact.year_end_validation,
+                "trained_through_decision_date": (
+                    policy_artifact.trained_through_decision_date
+                ),
+            },
+            "calibration_json": {
+                "publication_status": policy_artifact.publication_status,
+            },
+            "publication_status": policy_artifact.publication_status,
+            "publication_reasons_json": policy_artifact.reason_codes,
+        }
+    joint_artifact_row: dict[str, object] | None = None
+    if joint_artifact is not None:
+        joint_artifact_row = {
+            "model_version": config.model_version,
+            "trained_cutoff_at": joint_artifact.trained_cutoff_at,
+            "component": JOINT_PATH_COMPONENT,
+            "feature_schema_version": "rate-episode-rank-copula-v1",
+            "transform_schema_version": "year-end-empirical-path-v1",
+            "state_schema_version": "joint-inflation-policy-rate-v1",
+            "training_start_date": joint_artifact.training_start_date,
+            "forecast_horizon": "calendar_year_end_joint_paths",
+            "ensemble_weight": 1.0,
+            "parameters_json": {
+                "rate_scales": joint_artifact.rate_scales,
+                "joint_rate_paths": [asdict(path) for path in joint_artifact.paths],
+            },
+            "validation_json": joint_artifact.validation_metrics,
+            "calibration_json": {
+                "publication_status": joint_artifact.publication_status,
+            },
+            "publication_status": joint_artifact.publication_status,
+            "publication_reasons_json": joint_artifact.reason_codes,
+        }
     snapshot = {
         "as_of_at": bundle.as_of_at,
         "model_version": config.model_version,
@@ -1226,15 +1506,29 @@ def materialize_inflation_policy_analysis(
             "q4_validation": (
                 q4_artifact.validation_metrics if q4_artifact is not None else {}
             ),
+            "policy_validation": (
+                {
+                    "next_meeting": policy_artifact.next_meeting_validation,
+                    "year_end": policy_artifact.year_end_validation,
+                }
+                if policy_artifact is not None
+                else {}
+            ),
+            "joint_path_validation": (
+                joint_artifact.validation_metrics
+                if joint_artifact is not None
+                else {}
+            ),
         },
         "freshness_json": freshness,
         "warnings_json": warnings,
     }
     return InflationPolicyMaterialization(
         snapshot_row=snapshot,
-        model_artifact_rows=(artifact_row,) + (
-            (q4_artifact_row,) if q4_artifact_row is not None else ()
-        ),
+        model_artifact_rows=(artifact_row,)
+        + ((q4_artifact_row,) if q4_artifact_row is not None else ())
+        + ((policy_artifact_row,) if policy_artifact_row is not None else ())
+        + ((joint_artifact_row,) if joint_artifact_row is not None else ()),
         inflation=inflation,
         policy=policy,
         rates=rates,
@@ -1371,6 +1665,12 @@ def run_inflation_policy_materialization(
     q4_artifact_trainer: Callable[..., CorePCEQ4Artifact] = (
         fit_core_pce_q4_artifact
     ),
+    policy_artifact_trainer: Callable[..., PolicyPathArtifact] = (
+        fit_policy_path_artifact
+    ),
+    joint_path_builder: Callable[..., JointRatePathArtifact] = (
+        fit_joint_rate_path_artifact
+    ),
     equity_bundle_loader: Callable[..., InflationPolicyEquityBundle] = (
         load_inflation_policy_equity_bundle
     ),
@@ -1434,6 +1734,15 @@ def run_inflation_policy_materialization(
         )
     except (TypeError, ValueError, np.linalg.LinAlgError):
         q4_artifact = None
+    policy_artifact: PolicyPathArtifact | None = None
+    try:
+        policy_artifact = policy_artifact_trainer(
+            bundle.decision_rows,
+            bundle.sep_rows,
+            as_of_at=as_of_at,
+        )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+        policy_artifact = None
     equity_payload: Mapping[str, object] | EquityStressResult | None = None
     equity_artifact_row: dict[str, object] | None = None
     equity_context: Mapping[str, object] | None = None
@@ -1544,6 +1853,8 @@ def run_inflation_policy_materialization(
         seed=seed,
         core_artifact=artifact,
         q4_artifact=q4_artifact,
+        policy_artifact=policy_artifact,
+        joint_path_builder=joint_path_builder,
         equity=equity_payload,
         equity_joint_paths_ready=equity_joint_paths_ready,
     )

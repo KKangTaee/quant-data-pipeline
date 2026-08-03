@@ -477,7 +477,13 @@ def _build_model(
     dominant_state = max(state_rows, key=lambda item: item["probability"], default=None)
     run_kind = str(snapshot.get("run_kind") or "current")
     historical = run_kind == "historical_replay"
-    if publication_status == "READY" and dominant_state:
+    macro_path_ready = (
+        inflation["publication_status"] == "READY"
+        and policy["publication_status"] == "READY"
+        and rates["publication_status"] == "READY"
+        and reverse["publication_status"] == "READY"
+    )
+    if macro_path_ready and dominant_state:
         summary = (
             f"가장 큰 물가 상태는 {dominant_state['label']}입니다. "
             "다음 Core PCE와 정책·금리 확인 조건을 함께 보세요."

@@ -1,7 +1,7 @@
 # Inflation / Policy Point-in-Time Data Refresh
 
 Status: Active
-Last Verified: 2026-08-02
+Last Verified: 2026-08-03
 
 ## 목적
 
@@ -94,18 +94,19 @@ read payload를 독립 계산할 수 있어도 신규 artifact/snapshot은 저�
   필수 입력에 누락이 없다.
 - `failed_sources=[]`: FRED/ALFRED, SEP, FOMC 결정 필수 수집기가 성공했다.
 
-2026-08-02 실제 source smoke에서는 26개 FRED/ALFRED series, 2021~2026 SEP와
-2026 FOMC 결정 5건을 적재했고 `materialization_allowed=true`였다. `BEA_API_KEY`
+2026-08-03 실제 source smoke에서는 26개 FRED/ALFRED series, current calendar와
+2016~2020 historical material에서 SEP 40개 release·5,787개 distribution row와
+rate decision 86건을 적재했고 `materialization_allowed=true`였다. `BEA_API_KEY`
 부재로 PCE 구성항목은 `NOT_AVAILABLE`, 현재 ACM workbook은 과거 공개 빈티지를
 복원할 수 없어 term premium은 `LIMITED`였다.
 
-2026-07-29 18:00 UTC historical replay에서는 1개월 Core PCE hybrid가 97개
-release origin/99 targets에서 CRPS `0.06052`로 최선의 비교 가능 baseline
-`0.10757`보다 낮았다. 다만 SEP/공식 nowcast benchmark 묶음이 완성되지 않아
-artifact와 통합 snapshot은 모두 `LIMITED`로 저장됐다. 연말 Q4/Q4, 정책 경로,
-저항 돌파·안착은 별도 검증 전이며 역산과 침체는
-`NOT_AVAILABLE`이다. 당시 10년물 자동 기준은 active `4.58~4.65%`, 다음 overhead
-`4.67%`로 계산됐으며 4.7%를 전역 상수로 사용하지 않았다.
+2026-08-03 03:15 UTC current materialization에서는 1개월 Core PCE와 SPF 혼합 Q4/Q4,
+다음회의·연말 policy, DGS2/DGS10/DFII10/T10YIE 공동 경로와 dynamic resistance event가
+각 chronological baseline/calibration gate를 통과했다. inflation/policy/rates/reverse는
+`READY`이고, 10년물 자동 기준은 active `4.58~4.65%`, 다음 overhead `4.79%`다.
+4.79% 도달 역산은 2,000개 중 1,690개 경로가 지지한다. 통합 snapshot은 equity와
+독립 침체 component가 남아 `LIMITED`지만 이미 READY인 네 macro component의 수치는
+그 상태와 무관하게 공개한다. 4.7%를 전역 상수로 사용하지 않는다.
 
 ## 실패 처리
 
@@ -126,8 +127,9 @@ artifact와 통합 snapshot은 모두 `LIMITED`로 저장됐다. 연말 Q4/Q4, �
   모두 저장하지만 SEP/공식 benchmark가 준비되기 전 artifact를 `READY`로 올리지 않는다.
 - `q4_path_rolling_origin_validation_not_ready`: 월간 artifact 결과를 연말 확률로
   승격하지 않는다. snapshot의 `LIMITED`를 유지한다.
-- `policy_rolling_origin_validation_not_ready`: 현재 2026 decision history만으로 정책
-  확률을 정밀 확률로 공개하지 않는다.
+- `policy_rolling_origin_validation_not_ready`: 공식 calendar 전체를 다시 수집하고
+  historical material까지 실제 rate statement만 선택됐는지 확인한다. 연말 origin은
+  December 동시결과를 제외한 `SEP released_at < final decision released_at`만 센다.
 - `joint_rate_path_validation_not_ready`: 저장된 저항 zone은 볼 수 있지만 목표 zone
   역산은 `NOT_AVAILABLE`로 둔다.
 - `core_pce_artifact_not_publishable` 또는 artifact cutoff 오류: 물가·정책·역산은

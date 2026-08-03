@@ -358,6 +358,85 @@ describe("forward inflation policy decision flow", () => {
 });
 
 describe("reverse target and saved criterion workflow", () => {
+  it("initializes the form from the exact stored reverse target", () => {
+    const payload = readyPayload();
+    payload.reverse_scenario = {
+      publication_status: "READY",
+      reason: "검증된 공동 경로",
+      target: {
+        instrument: "DGS10",
+        zone_lower_pct: 4.79,
+        zone_upper_pct: 4.79,
+        condition: "REACH",
+      },
+      target_probability: 0.845,
+    };
+
+    render(<InflationPolicyWorkbench payload={payload} onCommand={vi.fn()} />);
+
+    expect(screen.getByLabelText("구간 하단")).toHaveValue(4.79);
+    expect(screen.getByLabelText("구간 상단")).toHaveValue(4.79);
+    expect(screen.getByLabelText("확인 조건")).toHaveValue("REACH");
+    expect(screen.getByText("84.5%")).toBeInTheDocument();
+  });
+
+  it("synchronizes the form when a new snapshot carries a different target", () => {
+    const first = readyPayload();
+    first.reverse_scenario = {
+      publication_status: "READY",
+      reason: "first snapshot",
+      target: {
+        instrument: "DGS10",
+        zone_lower_pct: 4.79,
+        zone_upper_pct: 4.79,
+        condition: "REACH",
+      },
+    };
+    const { rerender } = render(
+      <InflationPolicyWorkbench payload={first} onCommand={vi.fn()} />,
+    );
+
+    const second = readyPayload();
+    second.as_of_at = "2026-08-04T00:00:00Z";
+    second.reverse_scenario = {
+      publication_status: "READY",
+      reason: "second snapshot",
+      target: {
+        instrument: "DGS2",
+        zone_lower_pct: 4.21,
+        zone_upper_pct: 4.28,
+        condition: "HOLD",
+      },
+    };
+    rerender(<InflationPolicyWorkbench payload={second} onCommand={vi.fn()} />);
+
+    expect(screen.getByLabelText("금리 종류")).toHaveValue("DGS2");
+    expect(screen.getByLabelText("구간 하단")).toHaveValue(4.21);
+    expect(screen.getByLabelText("구간 상단")).toHaveValue(4.28);
+    expect(screen.getByLabelText("확인 조건")).toHaveValue("HOLD");
+  });
+
+  it("preserves dirty inputs when only the command result updates", async () => {
+    const first = readyPayload();
+    const { rerender } = render(
+      <InflationPolicyWorkbench payload={first} onCommand={vi.fn()} />,
+    );
+    await userEvent.clear(screen.getByLabelText("구간 하단"));
+    await userEvent.type(screen.getByLabelText("구간 하단"), "4.72");
+
+    const commandUpdate = readyPayload();
+    commandUpdate.command_result = {
+      command_id: "run_reverse_scenario",
+      publication_status: "READY",
+      reason: "same snapshot result",
+    };
+    rerender(
+      <InflationPolicyWorkbench payload={commandUpdate} onCommand={vi.fn()} />,
+    );
+
+    expect(screen.getByLabelText("구간 하단")).toHaveValue(4.72);
+  });
+
   it("submits a conditional target instead of a required hike scalar", async () => {
     const onCommand = vi.fn();
     render(<InflationPolicyWorkbench payload={readyPayload()} onCommand={onCommand} />);

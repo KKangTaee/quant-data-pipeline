@@ -21,11 +21,9 @@ from .db.schema import INFLATION_POLICY_SCHEMAS, sync_table_schema
 FED_BASE_URL = "https://www.federalreserve.gov"
 DB_META = "finance_meta"
 FOMC_CALENDAR_URL = f"{FED_BASE_URL}/monetarypolicy/fomccalendars.htm"
-FOMC_PRESS_RELEASE_URL = (
-    f"{FED_BASE_URL}/newsevents/pressreleases/2026-press-fomc.htm"
-)
-SEP_PARSER_VERSION = "fomc_sep_v1"
-DECISION_PARSER_VERSION = "fomc_decision_v1"
+FOMC_HISTORICAL_URL = f"{FED_BASE_URL}/monetarypolicy/fomchistorical{{year}}.htm"
+SEP_PARSER_VERSION = "fomc_sep_v2"
+DECISION_PARSER_VERSION = "fomc_decision_v2"
 
 _VARIABLE_LABELS = {
     "change in real gdp": "real_gdp",
@@ -193,6 +191,10 @@ def _table_containers(soup: BeautifulSoup) -> list[tuple[str, Tag]]:
     found: list[tuple[str, Tag]] = []
     for container in soup.select("div.data-table"):
         heading = container.find(["h3", "h4", "h5"], class_="tablehead")
+        if heading is None:
+            # Historical accessible SEP pages place the table heading directly
+            # before the data-table container instead of nesting it inside.
+            heading = container.find_previous(["h3", "h4", "h5"])
         table = container.find("table", recursive=False) or container.find("table")
         if heading is not None and isinstance(table, Tag):
             found.append((_clean_text(heading.get_text(" ")), table))
@@ -207,7 +209,11 @@ def _parse_summary(
     released_at: str,
     collected_at: str,
 ) -> list[dict[str, object]]:
-    if not heading.casefold().startswith("table 1."):
+    normalized_heading = heading.casefold()
+    if not (
+        normalized_heading.startswith("table 1.")
+        or normalized_heading.startswith("advance release of table 1")
+    ):
         return []
     header_rows = table.select("thead tr")
     if not header_rows:
@@ -477,23 +483,68 @@ def discover_fomc_projection_urls(calendar_html: str) -> list[str]:
     return sorted(urls)
 
 
+def discover_historical_fomc_projection_urls(history_html: str) -> list[str]:
+    """Derive official accessible SEP URLs from historical SEP compilation links."""
+
+    soup = BeautifulSoup(history_html, "html.parser")
+    release_dates = {
+        match.group(1)
+        for anchor in soup.find_all("a", href=True)
+        if (
+            match := re.search(
+                r"/monetarypolicy/files/FOMC(\d{8})SEPcompilation\.pdf$",
+                str(anchor.get("href")),
+                flags=re.IGNORECASE,
+            )
+        )
+    }
+    return [
+        f"{FED_BASE_URL}/monetarypolicy/fomcprojtabl{release_date}.htm"
+        for release_date in sorted(release_dates)
+    ]
+
+
 def discover_fomc_statement_urls(calendar_html: str) -> list[str]:
     """Return dated official FOMC statement pages, oldest first."""
 
     soup = BeautifulSoup(calendar_html, "html.parser")
-    urls = {
-        urljoin(FED_BASE_URL, str(anchor.get("href")))
-        for anchor in soup.find_all("a", href=True)
+    calendar_layout = bool(soup.select(".fomc-meeting"))
+    historical_layout = bool(
+        re.search(r"\bMeeting\s*-\s*20\d{2}\b", _clean_text(soup.get_text(" ")))
+    )
+    urls: set[str] = set()
+    for anchor in soup.find_all("a", href=True):
+        href = str(anchor.get("href"))
         if re.search(
             r"/newsevents/pressreleases/monetary\d{8}a\.htm(?:l)?$",
-            str(anchor.get("href")),
+            href,
             flags=re.IGNORECASE,
-        )
-    }
+        ) is None:
+            continue
+        if calendar_layout:
+            parent_text = _clean_text(anchor.parent.get_text(" ")).casefold()
+            if _clean_text(anchor.get_text(" ")).casefold() != "html" or not (
+                parent_text.startswith("statement:")
+                or parent_text.startswith("statement :")
+            ):
+                continue
+        elif historical_layout:
+            if _clean_text(anchor.get_text(" ")).casefold() != "statement":
+                continue
+            panel = anchor.find_parent(class_=lambda value: value and "panel" in value)
+            heading = panel.find(["h3", "h4", "h5"]) if panel is not None else None
+            heading_text = _clean_text(heading.get_text(" ")) if heading is not None else ""
+            if re.search(r"\bMeeting\s*-\s*20\d{2}\b", heading_text) is None:
+                continue
+        urls.add(urljoin(FED_BASE_URL, href))
     return sorted(urls, key=lambda url: (_source_date(url), url))
 
 
-def _preferred_action(dissent_text: str) -> tuple[str, int]:
+def _preferred_action(
+    dissent_text: str,
+    *,
+    target_after: tuple[float, float] | None = None,
+) -> tuple[str, int]:
     normalized = _clean_text(dissent_text).casefold()
     if "did not support inclusion of an easing bias" in normalized:
         return "HOLD_NO_EASING_BIAS", 0
@@ -509,14 +560,45 @@ def _preferred_action(dissent_text: str) -> tuple[str, int]:
         r"by\s+(\d+(?:-\d+/\d+|/\d+)?|\d+(?:\.\d+)?)\s+percentage point",
         normalized,
     )
-    if change is None:
+    if change is not None:
+        basis_points = round(_mixed_fraction(change.group(1)) * 100)
+        return f"{direction}_{basis_points}", basis_points
+    basis_point_change = re.search(r"by\s+(\d+)\s+basis points?", normalized)
+    if basis_point_change is not None:
+        basis_points = int(basis_point_change.group(1))
+        return f"{direction}_{basis_points}", basis_points
+    preferred_range = re.search(
+        r"(?:at|to)\s+(\d+(?:-\d+/\d+|/\d+|\.\d+)?)\s+to\s+"
+        r"(\d+(?:-\d+/\d+|/\d+|\.\d+)?)\s+percent",
+        normalized,
+    )
+    if preferred_range is None or target_after is None:
         raise ValueError("FOMC dissent change size was not found")
-    basis_points = round(_mixed_fraction(change.group(1)) * 100)
+    preferred_midpoint = (
+        _mixed_fraction(preferred_range.group(1))
+        + _mixed_fraction(preferred_range.group(2))
+    ) / 2.0
+    actual_midpoint = (float(target_after[0]) + float(target_after[1])) / 2.0
+    basis_points = round(abs(preferred_midpoint - actual_midpoint) * 100)
+    if basis_points <= 0:
+        raise ValueError("FOMC dissent change size was not found")
     return f"{direction}_{basis_points}", basis_points
 
 
 def _split_member_names(value: str) -> list[str]:
     text = _clean_text(value).strip(" .;")
+    text = re.sub(
+        r",\s*(?:Vice\s+)?Chair(?:man)?\s*,\s*",
+        "; ",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r",\s*(?:Vice\s+)?Chair(?:man)?(?=\s*;|$)",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
     if ";" in text:
         items = [item.strip() for item in text.split(";")]
     else:
@@ -524,7 +606,6 @@ def _split_member_names(value: str) -> list[str]:
     names: list[str] = []
     for item in items:
         name = re.sub(r"^and\s+", "", item.strip(), flags=re.IGNORECASE)
-        name = re.sub(r",\s*(?:Vice Chair|Chair)$", "", name, flags=re.IGNORECASE)
         if name:
             names.append(name)
     return names
@@ -532,7 +613,11 @@ def _split_member_names(value: str) -> list[str]:
 
 def _vote_for_names(paragraphs: Sequence[str]) -> list[str]:
     for paragraph in paragraphs:
-        if "voting for the monetary policy action" not in paragraph.casefold():
+        if re.search(
+            r"voting for the (?:FOMC\s+)?monetary policy action",
+            paragraph,
+            flags=re.IGNORECASE,
+        ) is None:
             continue
         segment = re.split(
             r"\.\s+Voting against",
@@ -541,7 +626,8 @@ def _vote_for_names(paragraphs: Sequence[str]) -> list[str]:
             flags=re.IGNORECASE,
         )[0]
         match = re.search(
-            r"Voting for the monetary policy action (?:were|was)\s+(.+)$",
+            r"Voting for the (?:FOMC\s+)?monetary policy action "
+            r"(?:were|was):?\s+(.+)$",
             segment,
             flags=re.IGNORECASE,
         )
@@ -550,7 +636,11 @@ def _vote_for_names(paragraphs: Sequence[str]) -> list[str]:
     return []
 
 
-def _parse_dissents(paragraphs: Sequence[str]) -> list[dict[str, object]]:
+def _parse_dissents(
+    paragraphs: Sequence[str],
+    *,
+    target_after: tuple[float, float] | None = None,
+) -> list[dict[str, object]]:
     dissent_text = ""
     for paragraph in paragraphs:
         match = re.search(r"Voting against", paragraph, flags=re.IGNORECASE)
@@ -560,8 +650,8 @@ def _parse_dissents(paragraphs: Sequence[str]) -> list[dict[str, object]]:
     if not dissent_text:
         return []
     body = re.sub(
-        r"^Voting against (?:the monetary policy action|this action) "
-        r"(?:were|was)\s+",
+        r"^Voting against (?:the monetary policy action|this action|the action) "
+        r"(?:were|was):?\s+",
         "",
         dissent_text,
         flags=re.IGNORECASE,
@@ -569,12 +659,19 @@ def _parse_dissents(paragraphs: Sequence[str]) -> list[dict[str, object]]:
     groups = re.split(r";\s+and\s+", body, flags=re.IGNORECASE)
     dissents: list[dict[str, object]] = []
     for group in groups:
-        match = re.fullmatch(r"(.+?),\s+who\s+(.+)", group.strip(" ."), re.IGNORECASE)
+        match = re.fullmatch(
+            r"(.+?),\s+(?:each of whom|who)\s+(.+)",
+            group.strip(" ."),
+            re.IGNORECASE,
+        )
         if match is None:
             raise ValueError("FOMC dissent group was not recognized")
         names = _split_member_names(match.group(1))
         preference_text = _clean_text(match.group(2)).strip(" .")
-        action, change_bps = _preferred_action(preference_text)
+        action, change_bps = _preferred_action(
+            preference_text,
+            target_after=target_after,
+        )
         dissents.extend(
             {
                 "member_name": name,
@@ -605,9 +702,10 @@ def parse_fomc_policy_decision(
         if _clean_text(paragraph.get_text(" "))
     ]
     target_match = re.search(
-        r"target range for the federal funds rate at\s+"
-        r"(\d+(?:-\d+/\d+|/\d+)?|\d+(?:\.\d+)?)\s+to\s+"
-        r"(\d+(?:-\d+/\d+|/\d+)?|\d+(?:\.\d+)?)\s+percent",
+        r"target range for the federal funds rate[^.]{0,180}?"
+        r"(?:at|to)\s+"
+        r"(\d+(?:-\d+/\d+|/\d+|\.\d+)?)\s+to\s+"
+        r"(\d+(?:-\d+/\d+|/\d+|\.\d+)?)\s+percent",
         statement_text,
         flags=re.IGNORECASE,
     )
@@ -623,7 +721,7 @@ def parse_fomc_policy_decision(
         statement_text,
         flags=re.IGNORECASE,
     )
-    dissents = _parse_dissents(paragraphs)
+    dissents = _parse_dissents(paragraphs, target_after=target_after)
     if vote_match is not None:
         vote_for = int(vote_match.group(1))
         vote_against = int(vote_match.group(2))
@@ -707,6 +805,49 @@ def _extract_released_at(html: str, *, source_url: str) -> str:
     if local.date() != source_date:
         raise ValueError("Federal Reserve page timestamp does not match its dated URL")
     return local.astimezone(timezone.utc).isoformat()
+
+
+def _projection_release_url(source_url: str) -> str:
+    release_date = _source_date(source_url).strftime("%Y%m%d")
+    return (
+        f"{FED_BASE_URL}/newsevents/pressreleases/"
+        f"monetary{release_date}b.htm"
+    )
+
+
+def _projection_released_at(
+    html: str,
+    *,
+    source_url: str,
+    fetcher: Callable[[str], str],
+) -> str:
+    """Use the accessible page clock, then its official SEP release page."""
+
+    try:
+        return _extract_released_at(html, source_url=source_url)
+    except ValueError as exc:
+        if "release time was not found" not in str(exc):
+            raise
+    release_url = _projection_release_url(source_url)
+    release_page = fetcher(release_url)
+    return _extract_released_at(release_page, source_url=release_url)
+
+
+def _historical_pages(
+    fetcher: Callable[[str], str],
+    *,
+    historical_start_year: int | None,
+    current_urls: Sequence[str],
+) -> list[str]:
+    if historical_start_year is None or not current_urls:
+        return []
+    earliest_current_year = min(_source_date(url).year for url in current_urls)
+    if historical_start_year >= earliest_current_year:
+        return []
+    return [
+        fetcher(FOMC_HISTORICAL_URL.format(year=year))
+        for year in range(int(historical_start_year), earliest_current_year)
+    ]
 
 
 def parse_fomc_sep_distributions(
@@ -860,11 +1001,31 @@ def collect_and_store_fomc_sep_distributions(
     user: str = "root",
     password: str = "1234",
     port: int = 3306,
+    historical_start_year: int | None = 2016,
 ) -> dict[str, int]:
     """Discover official accessible SEP pages and persist their anonymous bins."""
 
     fetcher = fetch_html or _fetch_official_html
-    source_urls = discover_fomc_projection_urls(fetcher(calendar_url))
+    calendar_html = fetcher(calendar_url)
+    current_statement_urls = discover_fomc_statement_urls(calendar_html)
+    current_projection_urls = discover_fomc_projection_urls(calendar_html)
+    current_urls = current_statement_urls or current_projection_urls
+    history_pages = _historical_pages(
+        fetcher,
+        historical_start_year=historical_start_year,
+        current_urls=current_urls,
+    )
+    source_urls = sorted(
+        {
+            *current_projection_urls,
+            *(
+                url
+                for page in history_pages
+                for url in discover_historical_fomc_projection_urls(page)
+            ),
+        },
+        key=lambda url: (_source_date(url), url),
+    )
     if not source_urls:
         raise ValueError("No official accessible SEP pages were discovered")
     observed_at = collected_at or datetime.now(timezone.utc).isoformat()
@@ -882,7 +1043,11 @@ def collect_and_store_fomc_sep_distributions(
             rows = parse_fomc_sep_distributions(
                 page,
                 source_url=source_url,
-                released_at=_extract_released_at(page, source_url=source_url),
+                released_at=_projection_released_at(
+                    page,
+                    source_url=source_url,
+                    fetcher=fetcher,
+                ),
                 collected_at=observed_at,
             )
             stored += upsert_fomc_sep_distributions(rows, db=db)
@@ -894,7 +1059,7 @@ def collect_and_store_fomc_sep_distributions(
 
 def collect_and_store_fomc_policy_history(
     *,
-    calendar_url: str = FOMC_PRESS_RELEASE_URL,
+    calendar_url: str = FOMC_CALENDAR_URL,
     connection: object | None = None,
     fetch_html: Callable[[str], str] | None = None,
     collected_at: str | None = None,
@@ -902,11 +1067,29 @@ def collect_and_store_fomc_policy_history(
     user: str = "root",
     password: str = "1234",
     port: int = 3306,
+    historical_start_year: int | None = 2016,
 ) -> dict[str, int]:
     """Collect statements oldest-first so prior ranges never come from the future."""
 
     fetcher = fetch_html or _fetch_official_html
-    statement_urls = discover_fomc_statement_urls(fetcher(calendar_url))
+    calendar_html = fetcher(calendar_url)
+    current_statement_urls = discover_fomc_statement_urls(calendar_html)
+    history_pages = _historical_pages(
+        fetcher,
+        historical_start_year=historical_start_year,
+        current_urls=current_statement_urls,
+    )
+    statement_urls = sorted(
+        {
+            *current_statement_urls,
+            *(
+                url
+                for page in history_pages
+                for url in discover_fomc_statement_urls(page)
+            ),
+        },
+        key=lambda url: (_source_date(url), url),
+    )
     if not statement_urls:
         raise ValueError("No official FOMC statement pages were discovered")
     observed_at = collected_at or datetime.now(timezone.utc).isoformat()
@@ -937,4 +1120,4 @@ def collect_and_store_fomc_policy_history(
     finally:
         if owns_connection:
             db.close()
-    return {"meetings": len(statement_urls), "stored": stored}
+    return {"meetings": stored, "stored": stored}

@@ -3,6 +3,8 @@ from __future__ import annotations
 import math
 from datetime import date, timedelta
 
+import pytest
+
 
 def _month_rows() -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
@@ -352,6 +354,81 @@ def test_pipeline_materializes_compact_limited_snapshot_without_cycle_fallback()
     assert "q4_path_rolling_origin_validation_not_ready" in result.warnings
 
 
+def test_ready_policy_artifact_publishes_calibrated_next_and_year_end_paths() -> None:
+    from finance.inflation_policy_pipeline import (
+        build_limited_reference_config,
+        materialize_inflation_policy_analysis,
+    )
+    from finance.loaders.inflation_policy import InflationPolicyDataBundle
+    from finance.policy_validation import PolicyPathArtifact
+
+    bundle = InflationPolicyDataBundle(
+        as_of_at="2026-07-29T18:00:00+00:00",
+        macro_rows=tuple(_month_rows() + _rate_rows()),
+        sep_rows=tuple(_sep_rows()),
+        decision_rows=(
+            {
+                "meeting_date": "2026-07-29",
+                "released_at": "2026-07-29 18:00:00",
+                "target_lower_before_pct": 3.5,
+                "target_upper_before_pct": 3.75,
+                "target_lower_after_pct": 3.5,
+                "target_upper_after_pct": 3.75,
+                "vote_for_count": 9,
+                "vote_against_count": 3,
+                "dissents_json": [
+                    {"preferred_action": "HIKE_25"},
+                    {"preferred_action": "HIKE_25"},
+                    {"preferred_action": "HIKE_25"},
+                ],
+            },
+        ),
+        term_premium_rows=(),
+        coverage={"term_premium_status": "NOT_AVAILABLE"},
+    )
+    artifact = PolicyPathArtifact(
+        trained_cutoff_at=bundle.as_of_at,
+        training_start_decision_date="2021-01-27",
+        trained_through_decision_date="2026-07-29",
+        next_meeting_smoothing=0.25,
+        year_end_smoothing=0.05,
+        next_meeting_validation={
+            "origin_count": 37,
+            "brier_score": 0.36,
+            "baseline_brier_score": 0.39,
+            "calibration_error": 0.07,
+        },
+        year_end_validation={
+            "origin_count": 13,
+            "brier_score": 0.60,
+            "baseline_brier_score": 0.88,
+            "calibration_error": 0.14,
+        },
+        publication_status="READY",
+        reason_codes=(),
+    )
+
+    result = materialize_inflation_policy_analysis(
+        bundle,
+        config=build_limited_reference_config(model_version="policy-ready-v1"),
+        sample_count=200,
+        seed=13,
+        core_artifact=_momentum_artifact(),
+        policy_artifact=artifact,
+    )
+
+    assert result.policy["publication_status"] == "READY"
+    assert result.policy["reason"] == "policy_rolling_origin_validated"
+    assert result.policy["next_meeting_probabilities"] == pytest.approx(
+        {"cut": 1 / 12, "hold": 31 / 48, "hike": 13 / 48}
+    )
+    assert math.isclose(sum(result.policy["net_move_probabilities"].values()), 1.0)
+    assert result.policy["validation"]["next_meeting"]["origin_count"] == 37
+    assert any(
+        row["component"] == "policy_path" for row in result.model_artifact_rows
+    )
+
+
 def test_direct_q4_validation_publishes_spf_monthly_linear_pool() -> None:
     from finance.core_pce_q4 import CorePCEQ4Artifact
     from finance.inflation_policy_pipeline import (
@@ -426,6 +503,123 @@ def test_direct_q4_validation_publishes_spf_monthly_linear_pool() -> None:
         "core_pce_momentum",
         "core_pce_q4_linear_pool",
     }
+
+
+def test_ready_joint_paths_publish_reverse_and_policy_next_print_sensitivity() -> None:
+    from finance.core_pce_q4 import CorePCEQ4Artifact
+    from finance.inflation_policy_pipeline import (
+        build_limited_reference_config,
+        materialize_inflation_policy_analysis,
+    )
+    from finance.inflation_policy_simulation import SimulationPath
+    from finance.joint_rate_paths import JointRatePathArtifact
+    from finance.loaders.inflation_policy import InflationPolicyDataBundle
+    from finance.policy_validation import PolicyPathArtifact
+
+    bundle = InflationPolicyDataBundle(
+        as_of_at="2026-07-29T18:00:00+00:00",
+        macro_rows=tuple(_month_rows() + _rate_rows()),
+        sep_rows=tuple(_sep_rows()),
+        decision_rows=(
+            {
+                "meeting_date": "2026-07-29",
+                "released_at": "2026-07-29 18:00:00",
+                "target_lower_before_pct": 3.5,
+                "target_upper_before_pct": 3.75,
+                "target_lower_after_pct": 3.5,
+                "target_upper_after_pct": 3.75,
+                "vote_for_count": 9,
+                "vote_against_count": 3,
+                "dissents_json": [
+                    {"preferred_action": "HIKE_25"},
+                    {"preferred_action": "HIKE_25"},
+                    {"preferred_action": "HIKE_25"},
+                ],
+            },
+        ),
+        term_premium_rows=(),
+        coverage={"spf_core_pce_status": "READY"},
+        spf_rows=tuple(_spf_probability_rows()),
+    )
+    q4_artifact = CorePCEQ4Artifact(
+        trained_cutoff_at=bundle.as_of_at,
+        training_start_date="2018-01-01",
+        trained_through_date="2025-12-31",
+        model_weight=0.5,
+        spf_weight=0.5,
+        validation_metrics={"origin_count": 31.0},
+        publication_status="READY",
+        publication_reasons=(),
+    )
+    policy_artifact = PolicyPathArtifact(
+        trained_cutoff_at=bundle.as_of_at,
+        training_start_decision_date="2021-01-27",
+        trained_through_decision_date="2026-07-29",
+        next_meeting_smoothing=0.25,
+        year_end_smoothing=0.05,
+        next_meeting_validation={"origin_count": 37},
+        year_end_validation={"origin_count": 13},
+        publication_status="READY",
+        reason_codes=(),
+    )
+    paths = tuple(
+        SimulationPath(
+            path_id=f"path-{index}",
+            weight=0.25,
+            q4_core_pce_pct=3.0 + 0.3 * index,
+            remaining_monthly_mom_pct=(0.15 + 0.1 * index,) * 6,
+            policy_net_steps=index - 1,
+            year_end_policy_midpoint_pct=3.625 + 0.25 * (index - 1),
+            rate_paths_pct={
+                "DGS2": (3.7, 3.8, 3.9, 4.0, 4.1),
+                "DGS10": (4.6, 4.7, 4.8, 4.9, 5.0),
+                "DFII10": (2.0, 2.1, 2.2, 2.3, 2.4),
+                "T10YIE": (2.6, 2.6, 2.6, 2.6, 2.6),
+            },
+        )
+        for index in range(4)
+    )
+    joint = JointRatePathArtifact(
+        trained_cutoff_at=bundle.as_of_at,
+        training_start_date="2016-01-29",
+        trained_through_date="2025-12-31",
+        current_observation_date="2026-07-29",
+        rate_scales={key: 1.0 for key in ("DGS2", "DGS10", "DFII10", "T10YIE")},
+        validation_metrics={
+            "joint_path_publication_status": "READY",
+            "reverse_minimum_supporting_paths": 1,
+            "reverse_minimum_effective_paths": 1.0,
+        },
+        publication_status="READY",
+        reason_codes=(),
+        paths=paths,
+    )
+
+    result = materialize_inflation_policy_analysis(
+        bundle,
+        config=build_limited_reference_config(model_version="joint-ready-v1"),
+        sample_count=200,
+        seed=17,
+        core_artifact=_momentum_artifact(),
+        q4_artifact=q4_artifact,
+        policy_artifact=policy_artifact,
+        joint_path_builder=lambda **_kwargs: joint,
+    )
+
+    assert result.rates["publication_status"] == "READY"
+    assert result.reverse["publication_status"] == "READY"
+    dgs10 = result.rates["DGS10"]
+    selected_zone = dgs10["next_overhead_zone"] or dgs10["active_test_zone"]
+    assert selected_zone["breakout_probability"] is not None
+    assert all(
+        row["policy_publication_status"] == "READY"
+        and row["hike_delta"] is not None
+        for row in result.inflation["next_release_scenarios"]
+    )
+    assert any(
+        row["component"] == "joint_macro_paths"
+        for row in result.model_artifact_rows
+    )
 
 
 def test_equity_failure_is_stored_without_changing_macro_sections() -> None:

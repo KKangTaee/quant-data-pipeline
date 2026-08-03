@@ -54,7 +54,7 @@ Last Verified: 2026-08-03
 | `fomc_sep_distribution` | release별 익명 SEP summary/histogram/rate-dot 분포. participant count만 저장하며 Core PCE 분포와 금리 dot 사이의 개인별 대응을 만들지 않는다 |
 | `spf_core_pce_probability` | Philadelphia Fed SPF의 survey vintage별 current/next-year Core PCE Q4/Q4 확률 bin. 10개 bin의 원 확률, 공식 release 시각과 parser version을 저장하며 공개 전 origin에는 보이지 않는다 |
 | `fomc_policy_decision` | FOMC 회의별 target range 전후, 찬반 수, 반대자 이름과 원문에 명시된 선호 조치. 수집 범위 첫 회의의 직전 range가 없으면 `PARTIAL`로 둔다 |
-| `inflation_policy_model_artifact` | Core PCE·정책·금리 component별 학습 cutoff, schema version, parameter, validation/calibration과 publication status를 저장. 1개월 core 계수, 연말 Q4/Q4 선형 pool, 검증 공동경로는 각각 `core_pce_hybrid`, `core_pce_q4_linear_pool`, `joint_macro_paths` identity를 쓰고 equity artifact에는 live market context를 넣지 않는다 |
+| `inflation_policy_model_artifact` | Core PCE·정책·금리 component별 학습 cutoff, schema version, parameter, validation/calibration과 publication status를 저장. 1개월 core 계수, 연말 Q4/Q4 선형 pool, 다음회의·연말 정책 검증, 2,000개 검증 공동경로는 각각 `core_pce_hybrid`, `core_pce_q4_linear_pool`, `policy_path`, `joint_macro_paths` identity를 쓰고 equity artifact에는 live market context를 넣지 않는다 |
 | `inflation_policy_snapshot` | 하나의 `as_of_at`, model version, run kind에 대한 inflation/policy/rates/reverse와 독립 `equity_json`, evidence/freshness/warning을 compact JSON으로 저장. `equity_json`은 해당 snapshot의 current index/forward EPS/start-yield context도 소유한다. malformed/legacy equity는 해당 section만 `NOT_AVAILABLE`로 닫고 기존 경제 사이클 snapshot을 fallback하지 않는다 |
 | `yield_resistance_definition` | 자동 산출 또는 사용자 입력 10년물 저항 zone 정의와 산출 근거를 저장. 4.7% 같은 값은 날짜·근거가 붙은 definition이지 전역 상수가 아니다 |
 | `yield_resistance_snapshot` | 저항 정의별 관측 시점의 접근·돌파 시도·확인·유지·실패 상태와 확인 근거를 저장 |

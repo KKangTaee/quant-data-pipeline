@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   InflationPolicyCommand,
   InflationPolicyPayload,
@@ -38,13 +38,49 @@ function initialZone(payload: InflationPolicyPayload): ResistanceZone | undefine
     || payload.rates.resistance_zones[0];
 }
 
+function initialTarget(payload: InflationPolicyPayload) {
+  const storedTarget = mapping(payload.reverse_scenario.target);
+  const fallbackZone = initialZone(payload);
+  const lower = finiteNumber(storedTarget.zone_lower_pct);
+  const upper = finiteNumber(storedTarget.zone_upper_pct);
+  const instrument = String(storedTarget.instrument || fallbackZone?.instrument || "DGS10");
+  const matchingZone = payload.rates.resistance_zones.find((candidate) => (
+    candidate.instrument === instrument
+    && lower !== null
+    && upper !== null
+    && candidate.zone_lower_pct === lower
+    && candidate.zone_upper_pct === upper
+  ));
+  const condition = String(storedTarget.condition || "CONFIRMED");
+  return {
+    zone: matchingZone || fallbackZone,
+    instrument,
+    lower: lower ?? fallbackZone?.zone_lower_pct ?? 4.58,
+    upper: upper ?? fallbackZone?.zone_upper_pct ?? 4.65,
+    buffer: matchingZone?.buffer_pct ?? fallbackZone?.buffer_pct ?? 0.05,
+    condition: ["REACH", "CONFIRMED", "HOLD"].includes(condition)
+      ? condition as "REACH" | "CONFIRMED" | "HOLD"
+      : "CONFIRMED",
+  };
+}
+
 function ReverseScenarioPanel({ payload, onCommand }: Props) {
-  const zone = useMemo(() => initialZone(payload), [payload]);
-  const [instrument, setInstrument] = useState(zone?.instrument || "DGS10");
-  const [lower, setLower] = useState(zone?.zone_lower_pct ?? 4.58);
-  const [upper, setUpper] = useState(zone?.zone_upper_pct ?? 4.65);
-  const [buffer, setBuffer] = useState(zone?.buffer_pct ?? 0.05);
-  const [condition, setCondition] = useState<"REACH" | "CONFIRMED" | "HOLD">("CONFIRMED");
+  const target = useMemo(() => initialTarget(payload), [payload]);
+  const zone = target.zone;
+  const snapshotIdentity = `${payload.as_of_at || ""}|${payload.model_version || ""}`;
+  const targetIdentity = [
+    target.instrument,
+    target.lower,
+    target.upper,
+    target.buffer,
+    target.condition,
+  ].join("|");
+  const [instrument, setInstrument] = useState(target.instrument);
+  const [lower, setLower] = useState(target.lower);
+  const [upper, setUpper] = useState(target.upper);
+  const [buffer, setBuffer] = useState(target.buffer);
+  const [condition, setCondition] = useState<"REACH" | "CONFIRMED" | "HOLD">(target.condition);
+  const [formDirty, setFormDirty] = useState(false);
   const [holdDays, setHoldDays] = useState(3);
   const year = /^\d{4}/.test(payload.as_of_at || "") ? String(payload.as_of_at).slice(0, 4) : "2026";
   const [horizon, setHorizon] = useState(`${year}-12-31`);
@@ -54,6 +90,27 @@ function ReverseScenarioPanel({ payload, onCommand }: Props) {
   const [confirmationWindow, setConfirmationWindow] = useState(5);
   const [requireBreakeven, setRequireBreakeven] = useState(false);
   const [excludeTermPremiumOnly, setExcludeTermPremiumOnly] = useState(true);
+  const previousSnapshotIdentity = useRef(snapshotIdentity);
+
+  useEffect(() => {
+    const snapshotChanged = previousSnapshotIdentity.current !== snapshotIdentity;
+    if (snapshotChanged || !formDirty) {
+      setInstrument(target.instrument);
+      setLower(target.lower);
+      setUpper(target.upper);
+      setBuffer(target.buffer);
+      setCondition(target.condition);
+      if (snapshotChanged) {
+        const snapshotYear = /^\d{4}/.test(payload.as_of_at || "")
+          ? String(payload.as_of_at).slice(0, 4)
+          : "2026";
+        setHoldDays(3);
+        setHorizon(`${snapshotYear}-12-31`);
+      }
+      setFormDirty(false);
+    }
+    previousSnapshotIdentity.current = snapshotIdentity;
+  }, [snapshotIdentity, targetIdentity]);
 
   const boundsError = lower > upper
     ? "구간 하단은 상단보다 낮아야 합니다."
@@ -127,28 +184,28 @@ function ReverseScenarioPanel({ payload, onCommand }: Props) {
         <form className="reverse-target-form" onSubmit={(event) => { event.preventDefault(); runReverse(); }}>
           <label>
             <span>금리 종류</span>
-            <select value={instrument} onChange={(event) => setInstrument(event.target.value)}>
+            <select value={instrument} onChange={(event) => { setInstrument(event.target.value); setFormDirty(true); }}>
               {INSTRUMENTS.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
           <div className="reverse-bound-grid">
             <label>
               <span>구간 하단</span>
-              <input type="number" min="0" max="20" step="0.01" value={lower} onChange={(event) => setLower(Number(event.target.value))} />
+              <input type="number" min="0" max="20" step="0.01" value={lower} onChange={(event) => { setLower(Number(event.target.value)); setFormDirty(true); }} />
             </label>
             <label>
               <span>구간 상단</span>
-              <input type="number" min="0" max="20" step="0.01" value={upper} onChange={(event) => setUpper(Number(event.target.value))} />
+              <input type="number" min="0" max="20" step="0.01" value={upper} onChange={(event) => { setUpper(Number(event.target.value)); setFormDirty(true); }} />
             </label>
             <label>
               <span>확인 buffer</span>
-              <input type="number" min="0" max="2" step="0.01" value={buffer} onChange={(event) => setBuffer(Number(event.target.value))} />
+              <input type="number" min="0" max="2" step="0.01" value={buffer} onChange={(event) => { setBuffer(Number(event.target.value)); setFormDirty(true); }} />
             </label>
           </div>
           <div className="reverse-bound-grid">
             <label>
               <span>확인 조건</span>
-              <select value={condition} onChange={(event) => setCondition(event.target.value as "REACH" | "CONFIRMED" | "HOLD")}>
+              <select value={condition} onChange={(event) => { setCondition(event.target.value as "REACH" | "CONFIRMED" | "HOLD"); setFormDirty(true); }}>
                 <option value="REACH">구간 도달</option>
                 <option value="CONFIRMED">상단 돌파 확인</option>
                 <option value="HOLD">돌파 후 유지</option>
@@ -156,11 +213,11 @@ function ReverseScenarioPanel({ payload, onCommand }: Props) {
             </label>
             <label>
               <span>확인 일수</span>
-              <input type="number" min="1" max="20" step="1" value={holdDays} onChange={(event) => setHoldDays(Number(event.target.value))} />
+              <input type="number" min="1" max="20" step="1" value={holdDays} onChange={(event) => { setHoldDays(Number(event.target.value)); setFormDirty(true); }} />
             </label>
             <label>
               <span>분석 horizon</span>
-              <input type="date" value={horizon} onChange={(event) => setHorizon(event.target.value)} />
+              <input type="date" value={horizon} onChange={(event) => { setHorizon(event.target.value); setFormDirty(true); }} />
             </label>
           </div>
           {boundsError ? <p className="ip-form-error" role="alert">{boundsError}</p> : null}

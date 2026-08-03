@@ -170,3 +170,18 @@ def test_next_pce_scenario_reweights_target_posterior_instead_of_triggering_bool
     )
 
     assert 0.0 < cool < hot < 1.0
+
+
+def test_next_pce_scenario_reweights_policy_hike_probability_from_joint_paths() -> None:
+    from finance.inflation_policy_simulation import (
+        posterior_policy_hike_probability_for_next_pce,
+    )
+
+    cool = posterior_policy_hike_probability_for_next_pce(
+        _paths(), observed_mom_pct=0.2, observation_noise_pct=0.08
+    )
+    hot = posterior_policy_hike_probability_for_next_pce(
+        _paths(), observed_mom_pct=0.5, observation_noise_pct=0.08
+    )
+
+    assert 0.0 < cool < hot < 1.0

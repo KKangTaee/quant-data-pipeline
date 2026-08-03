@@ -323,6 +323,26 @@ def test_historical_limited_snapshot_is_labeled_and_reason_is_translated() -> No
     assert model["inflation"]["reason"] == "연말 Core PCE 경로의 시점별 검증이 아직 부족합니다."
 
 
+def test_limited_overall_snapshot_does_not_hide_ready_macro_path() -> None:
+    from app.services.overview.inflation_policy import build_inflation_policy_read_model
+
+    snapshot = _ready_snapshot()
+    snapshot["publication_status"] = "LIMITED"
+    snapshot["equity_json"] = {
+        "publication_status": "NOT_AVAILABLE",
+        "reason": "equity_model_not_available",
+    }
+
+    model = build_inflation_policy_read_model(
+        snapshot_loader=lambda **_: snapshot,
+        definitions_loader=lambda **_: [],
+    )
+
+    assert model["publication_status"] == "LIMITED"
+    assert "가장 큰 물가 상태" in model["headline"]["summary"]
+    assert "검증이 제한적" not in model["headline"]["summary"]
+
+
 def test_service_is_db_only_and_cycle_independent() -> None:
     source = Path("app/services/overview/inflation_policy.py").read_text()
 

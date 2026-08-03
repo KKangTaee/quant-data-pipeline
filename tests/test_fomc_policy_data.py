@@ -138,6 +138,28 @@ def test_sep_summary_accepts_release_specific_year_headers() -> None:
     )
 
 
+def test_historical_advance_release_heading_is_treated_as_table_one() -> None:
+    from finance.data.fomc_policy import parse_fomc_sep_distributions
+
+    page = FIXTURE.read_text().replace(
+        "Table 1. Economic projections of Federal Reserve Board members and Federal Reserve Bank presidents, June 2026",
+        "Advance release of table 1 of the Summary of Economic Projections to be released with the FOMC minutes",
+    )
+
+    rows = parse_fomc_sep_distributions(
+        page,
+        source_url=SOURCE_URL,
+        released_at="2026-06-17T18:00:00+00:00",
+        collected_at="2026-06-17T18:05:00+00:00",
+    )
+
+    assert any(
+        row["distribution_kind"] == "SUMMARY"
+        and row["variable_name"] == "core_pce"
+        for row in rows
+    )
+
+
 def test_sep_histogram_accepts_new_horizon_with_one_current_column() -> None:
     from bs4 import BeautifulSoup
     from finance.data.fomc_policy import _parse_histogram
@@ -191,6 +213,112 @@ def test_projection_url_discovery_uses_official_accessible_pages() -> None:
         "https://www.federalreserve.gov/monetarypolicy/fomcprojtabl20260318.htm",
         "https://www.federalreserve.gov/monetarypolicy/fomcprojtabl20260617.htm",
     ]
+
+
+def test_historical_sep_table_heading_can_precede_data_container() -> None:
+    from bs4 import BeautifulSoup
+    from finance.data.fomc_policy import _table_containers
+
+    soup = BeautifulSoup(
+        """
+        <h5 class="tablehead">Figure 2. FOMC participants' assessments</h5>
+        <div class="data-table"><table><tbody><tr><td>row</td></tr></tbody></table></div>
+        """,
+        "html.parser",
+    )
+
+    containers = _table_containers(soup)
+
+    assert len(containers) == 1
+    assert containers[0][0].startswith("Figure 2.")
+
+
+def test_historical_statement_discovery_uses_only_exact_statement_links() -> None:
+    from finance.data.fomc_policy import discover_fomc_statement_urls
+
+    page = """
+      <div class="panel">
+        <h5>September 20-21 Meeting - 2016</h5>
+        <p><a href="/newsevents/pressreleases/monetary20160921a.htm">Statement</a></p>
+        <p><a href="/newsevents/pressreleases/monetary20160921b.htm">Implementation Note</a></p>
+        <p><a href="/newsevents/pressreleases/monetary20160827a.htm">Statement on Longer-Run Goals</a></p>
+      </div>
+      <div class="panel">
+        <h5>August 27 (notation vote) - 2016</h5>
+        <p><a href="/newsevents/pressreleases/monetary20160827a.htm">Statement</a></p>
+      </div>
+    """
+
+    assert discover_fomc_statement_urls(page) == [
+        "https://www.federalreserve.gov/newsevents/pressreleases/monetary20160921a.htm"
+    ]
+
+
+def test_historical_collector_skips_explicit_nonmeeting_statement_but_fails_on_unknown_rate_syntax(
+    monkeypatch,
+) -> None:
+    module = importlib.import_module("finance.data.fomc_policy")
+    calendar_url = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+    historical_url = "https://www.federalreserve.gov/monetarypolicy/fomchistorical2020.htm"
+    nonrate_url = (
+        "https://www.federalreserve.gov/newsevents/pressreleases/"
+        "monetary20200323a.htm"
+    )
+    unsupported_rate_url = (
+        "https://www.federalreserve.gov/newsevents/pressreleases/"
+        "monetary20200429a.htm"
+    )
+    current_url = (
+        "https://www.federalreserve.gov/newsevents/pressreleases/"
+        "monetary20210127a.htm"
+    )
+    pages = {
+        calendar_url: f'<a href="{current_url}">Statement</a>',
+        historical_url: f"""
+          <div class="panel">
+            <h5>March 23 (notation vote) - 2020</h5>
+            <p><a href="{nonrate_url}">Statement</a></p>
+          </div>
+          <div class="panel">
+            <h5>April 28-29 Meeting - 2020</h5>
+            <p><a href="{unsupported_rate_url}">Statement</a></p>
+          </div>
+        """,
+        unsupported_rate_url: """
+          <p>For release at 2:00 p.m. EDT</p>
+          <p>The Committee used an unsupported policy-rate wording.</p>
+          <p>Voting for the monetary policy action were A. One and B. Two.</p>
+        """,
+    }
+    fetched: list[str] = []
+
+    def fetch_html(url: str) -> str:
+        fetched.append(url)
+        return pages[url]
+
+    monkeypatch.setattr(module, "sync_table_schema", lambda *_args, **_kwargs: None)
+
+    class DB:
+        def use_db(self, _database: str) -> None:
+            pass
+
+        def execute(self, _sql: str) -> None:
+            pass
+
+        def executemany(self, _sql: str, _values: list[dict[str, object]]) -> None:
+            pass
+
+    with pytest.raises(ValueError, match="target range was not found"):
+        module.collect_and_store_fomc_policy_history(
+            calendar_url=calendar_url,
+            connection=DB(),
+            fetch_html=fetch_html,
+            collected_at="2026-08-03T03:15:00+00:00",
+            historical_start_year=2020,
+        )
+
+    assert nonrate_url not in fetched
+    assert unsupported_rate_url in fetched
 
 
 def test_sep_upsert_uses_release_distribution_business_key() -> None:
@@ -251,6 +379,7 @@ def test_collect_and_store_sep_discovers_release_and_syncs_schema(monkeypatch) -
         connection=db,
         fetch_html=fetch_html,
         collected_at="2026-06-17T18:05:00+00:00",
+        historical_start_year=None,
     )
 
     assert fetched == [calendar_url, SOURCE_URL]
@@ -331,6 +460,111 @@ def test_old_vote_format_and_nonbreaking_hyphen_are_supported() -> None:
     }
 
 
+def test_historical_fomc_vote_and_target_range_dissents_are_supported() -> None:
+    from finance.data.fomc_policy import parse_fomc_policy_decision
+
+    html = """
+      <p>The Committee decided to maintain the target range for the federal funds rate
+      at 1/4 to 1/2 percent.</p>
+      <p>Voting for the FOMC monetary policy action were: Janet L. Yellen, Chair;
+      William C. Dudley, Vice Chairman; and Lael Brainard. Voting against the action
+      were: Esther L. George, Loretta J. Mester, and Eric Rosengren, each of whom
+      preferred at this meeting to raise the target range for the federal funds rate
+      to 1/2 to 3/4 percent.</p>
+    """
+
+    row = parse_fomc_policy_decision(
+        html,
+        source_url=(
+            "https://www.federalreserve.gov/newsevents/pressreleases/"
+            "monetary20160921a.htm"
+        ),
+        released_at="2016-09-21T18:00:00+00:00",
+        prior_range=(0.25, 0.50),
+        collected_at="2026-08-03T03:15:00+00:00",
+    )
+
+    assert row["vote_for_count"] == 3
+    assert row["vote_against_count"] == 3
+    assert {item["preferred_action"] for item in json.loads(row["dissents_json"])} == {
+        "HIKE_25"
+    }
+
+
+def test_historical_sep_release_clock_falls_back_to_official_release_page(
+    monkeypatch,
+) -> None:
+    module = importlib.import_module("finance.data.fomc_policy")
+    calendar_url = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+    historical_url = "https://www.federalreserve.gov/monetarypolicy/fomchistorical2016.htm"
+    projection_url = (
+        "https://www.federalreserve.gov/monetarypolicy/fomcprojtabl20160615.htm"
+    )
+    release_url = (
+        "https://www.federalreserve.gov/newsevents/pressreleases/"
+        "monetary20160615b.htm"
+    )
+    current_calendar = '<a href="/newsevents/pressreleases/monetary20170201a.htm">Statement</a>'
+    historical_page = """
+      <h5>June 14-15 Meeting - 2016</h5>
+      <a href="/newsevents/pressreleases/monetary20160615a.htm">Statement</a>
+      <a href="/monetarypolicy/files/FOMC20160615SEPcompilation.pdf">
+        SEP: Individual Projections
+      </a>
+    """
+    projection_page = FIXTURE.read_text().replace(
+        "<p>For release at 2:00 p.m., EDT, June 17, 2026</p>",
+        "",
+    )
+    release_page = '<p>For release at 2:00 p.m. EDT</p>'
+    pages = {
+        calendar_url: current_calendar,
+        historical_url: historical_page,
+        projection_url: projection_page,
+        release_url: release_page,
+    }
+    fetched: list[str] = []
+
+    def fetch_html(url: str) -> str:
+        fetched.append(url)
+        return pages[url]
+
+    monkeypatch.setattr(module, "sync_table_schema", lambda *_args, **_kwargs: None)
+
+    class DB:
+        def __init__(self) -> None:
+            self.rows: list[dict[str, object]] = []
+
+        def use_db(self, _database: str) -> None:
+            pass
+
+        def execute(self, _sql: str) -> None:
+            pass
+
+        def executemany(self, _sql: str, values: list[dict[str, object]]) -> None:
+            self.rows.extend(values)
+
+    db = DB()
+    result = module.collect_and_store_fomc_sep_distributions(
+        calendar_url=calendar_url,
+        connection=db,
+        fetch_html=fetch_html,
+        collected_at="2026-08-03T03:15:00+00:00",
+        historical_start_year=2016,
+    )
+
+    assert result["releases"] == 1
+    assert {row["released_at"] for row in db.rows} == {
+        "2016-06-15 18:00:00.000000"
+    }
+    assert fetched == [
+        calendar_url,
+        historical_url,
+        projection_url,
+        release_url,
+    ]
+
+
 def test_mixed_dissent_groups_preserve_distinct_explicit_preferences() -> None:
     from finance.data.fomc_policy import parse_fomc_policy_decision
 
@@ -404,6 +638,7 @@ def test_policy_history_collects_oldest_first_without_future_fill(monkeypatch) -
         connection=db,
         fetch_html=fetch_html,
         collected_at="2026-07-29T18:02:00+00:00",
+        historical_start_year=None,
     )
 
     assert fetched == [calendar_url, june_url, STATEMENT_URL]
@@ -415,3 +650,68 @@ def test_policy_history_collects_oldest_first_without_future_fill(monkeypatch) -
     assert db.rows[1]["target_lower_before_pct"] == 3.50
     assert db.rows[1]["target_upper_before_pct"] == 3.75
     assert db.rows[1]["coverage_status"] == "READY"
+
+
+def test_calendar_statement_discovery_excludes_non_rate_notation_vote() -> None:
+    from finance.data.fomc_policy import discover_fomc_statement_urls
+
+    html = """
+      <div class="row fomc-meeting">
+        <div>July</div><div>28-29</div>
+        <div><strong>Statement:</strong><br>
+          <a href="/monetarypolicy/files/monetary20250729a1.pdf">PDF</a> |
+          <a href="/newsevents/pressreleases/monetary20250729a.htm">HTML</a>
+        </div>
+      </div>
+      <div class="row fomc-meeting fomc-meeting--shaded">
+        <div>August</div><div>22 (notation vote)</div>
+        <div><a href="/newsevents/pressreleases/monetary20250822a.htm">
+          Statement on Longer-Run Goals and Monetary Policy Strategy
+        </a></div>
+      </div>
+    """
+
+    assert discover_fomc_statement_urls(html) == [
+        "https://www.federalreserve.gov/newsevents/pressreleases/monetary20250729a.htm"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("decision_text", "expected_range"),
+    (
+        (
+            "raise the target range for the federal funds rate to 1/4 to 1/2 percent",
+            (0.25, 0.50),
+        ),
+        (
+            "lower the target range for the federal funds rate by 1/2 percentage point, "
+            "to 4-3/4 to 5 percent",
+            (4.75, 5.00),
+        ),
+    ),
+)
+def test_rate_change_statement_parses_final_target_range(
+    decision_text: str,
+    expected_range: tuple[float, float],
+) -> None:
+    from finance.data.fomc_policy import parse_fomc_policy_decision
+
+    html = f"""
+      <p>The Committee decided to {decision_text}.</p>
+      <p>Voting for the monetary policy action were A. One; B. Two; and C. Three.</p>
+    """
+    row = parse_fomc_policy_decision(
+        html,
+        source_url=(
+            "https://www.federalreserve.gov/newsevents/pressreleases/"
+            "monetary20220316a.htm"
+        ),
+        released_at="2022-03-16T18:00:00+00:00",
+        prior_range=(0.0, 0.25),
+        collected_at="2026-08-03T13:30:00+00:00",
+    )
+
+    assert (
+        row["target_lower_after_pct"],
+        row["target_upper_after_pct"],
+    ) == expected_range

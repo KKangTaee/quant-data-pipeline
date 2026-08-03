@@ -309,3 +309,30 @@ def posterior_target_probability_for_next_pce(
         for path, weight in weighted
         if _condition_matches(path, target)
     ) / denominator
+
+
+def posterior_policy_hike_probability_for_next_pce(
+    paths: Sequence[SimulationPath],
+    *,
+    observed_mom_pct: float,
+    observation_noise_pct: float,
+) -> float:
+    """Reweight the validated joint paths and return positive net-policy mass."""
+
+    observed = _finite(observed_mom_pct, field="observed_mom_pct")
+    noise = _finite(observation_noise_pct, field="observation_noise_pct")
+    if noise <= 0.0:
+        raise ValueError("observation_noise_pct must be positive")
+    weighted: list[tuple[SimulationPath, float]] = []
+    for path, prior_weight in _normalized_paths(paths):
+        expected = _finite(
+            path.remaining_monthly_mom_pct[0], field="next path MoM"
+        )
+        likelihood = math.exp(-0.5 * ((observed - expected) / noise) ** 2)
+        weighted.append((path, prior_weight * likelihood))
+    denominator = sum(weight for _path, weight in weighted)
+    if denominator <= 0.0:
+        raise ValueError("next PCE scenario has no supported likelihood mass")
+    return sum(
+        weight for path, weight in weighted if int(path.policy_net_steps) > 0
+    ) / denominator
