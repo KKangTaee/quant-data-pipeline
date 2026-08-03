@@ -62,7 +62,9 @@ def build_economic_cycle_freshness(
     target = latest_economic_cycle_refresh_date(today)
     resolved_intramonth = dict(intramonth or {})
     persisted = _as_date(resolved_intramonth.get("as_of_date"))
-    checked_at = str(resolved_intramonth.get("source_collected_at") or "").strip()
+    successful_collection_at = str(
+        resolved_intramonth.get("source_collected_at") or ""
+    ).strip()
     latest_source = _latest_source_observation_date(resolved_intramonth)
     if read_error:
         status = "ERROR"
@@ -89,7 +91,7 @@ def build_economic_cycle_freshness(
         "status": status,
         "persisted_as_of_date": persisted.isoformat() if persisted else None,
         "target_as_of_date": target.isoformat(),
-        "last_checked_at": checked_at or None,
+        "last_successful_collection_at": successful_collection_at or None,
         "latest_source_observation_date": (
             latest_source.isoformat() if latest_source else None
         ),

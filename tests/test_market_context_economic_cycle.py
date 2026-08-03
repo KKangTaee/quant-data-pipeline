@@ -325,9 +325,9 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         'contraction: "위축"',
         "현재 관측 국면",
         "최근 1·3·6개월 변화",
-        "실제 좌표로 본 최근 12개월",
-        "다음 국면 전환 조건",
-        "예측 경로가 아니라 다음 정식 발표에서 확인할 조건입니다",
+        "핵심 시점으로 본 실제 경로",
+        "현재 관측과 전환 기준",
+        "가능성이 높다는 예측이 아닙니다",
         "지속성",
         "확산도",
         "활동·고용 동반 확인",
@@ -553,7 +553,10 @@ def test_cycle_component_uses_only_persisted_actual_cycle_coordinates() -> None:
     ).read_text()
 
     assert "splitPointSegments" in source
-    assert "payload.cycle_map.points.slice(-12)" in source
+    assert "selectCycleMapCheckpoints(payload.cycle_map.points)" in source
+    assert "points.length - 7" in source
+    assert "points.length - 4" in source
+    assert "points.length - 2" in source
     assert "observedSegments.map" in source
     assert "actualCoordinate" in source
     assert "forecastSegments" not in source

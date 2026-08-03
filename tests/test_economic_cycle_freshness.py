@@ -67,7 +67,7 @@ def test_missing_and_read_error_remain_actionable() -> None:
     assert failed["action"]["id"] == "refresh_economic_cycle_data"
 
 
-def test_freshness_separates_check_time_calculation_cutoff_and_source_observation() -> None:
+def test_freshness_separates_successful_collection_cutoff_and_source_observation() -> None:
     from app.services.overview.economic_cycle_freshness import (
         build_economic_cycle_freshness,
     )
@@ -88,5 +88,6 @@ def test_freshness_separates_check_time_calculation_cutoff_and_source_observatio
     )
 
     assert result["persisted_as_of_date"] == "2026-07-24"
-    assert result["last_checked_at"] == "2026-07-24 09:31:12"
+    assert result["last_successful_collection_at"] == "2026-07-24 09:31:12"
+    assert "last_checked_at" not in result
     assert result["latest_source_observation_date"] == "2026-07-23"

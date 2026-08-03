@@ -736,7 +736,10 @@ def test_service_attaches_intramonth_freshness() -> None:
     assert model["data_freshness"]["persisted_as_of_date"] == "2026-07-21"
     assert model["data_freshness"]["target_as_of_date"] == "2026-07-24"
     assert model["data_freshness"]["status"] == "REFRESH_AVAILABLE"
-    assert model["data_freshness"]["last_checked_at"] == "2026-07-16 10:02:56"
+    assert (
+        model["data_freshness"]["last_successful_collection_at"]
+        == "2026-07-16 10:02:56"
+    )
     assert (
         model["data_freshness"]["latest_source_observation_date"]
         == "2026-06-01"

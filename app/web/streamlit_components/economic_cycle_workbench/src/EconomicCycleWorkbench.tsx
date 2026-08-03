@@ -72,6 +72,10 @@ type TransitionMonitor = {
   observed_phase_label?: string | null;
   anchor_phase?: Phase | null;
   anchor_phase_label?: string | null;
+  anchor_started_at?: string | null;
+  anchor_source?: "INITIALIZED" | "CONFIRMED" | "LEGACY_OBSERVED" | "UNKNOWN";
+  anchor_source_label?: string;
+  anchor_confirmed_at?: string | null;
   target_phase?: Phase | null;
   target_phase_label?: string | null;
   status: "MAINTAIN" | "WATCH" | "CONFIRMED";
@@ -257,6 +261,8 @@ type EconomicCycleFreshness = {
   status: "READY" | "REFRESH_AVAILABLE" | "MISSING" | "ERROR";
   persisted_as_of_date?: string | null;
   target_as_of_date?: string | null;
+  last_successful_collection_at?: string | null;
+  latest_source_observation_date?: string | null;
   refresh_required: boolean;
   message: string;
   action?: {
@@ -307,6 +313,16 @@ const PHASE_LABEL: Record<Phase, string> = {
   expansion: "확장",
   slowdown: "둔화",
   contraction: "위축",
+};
+const CONFIDENCE_LABEL: Record<string, string> = {
+  HIGH: "높음",
+  MEDIUM: "보통",
+  LIMITED: "제한",
+};
+const REVISION_SENSITIVITY_LABEL: Record<string, string> = {
+  STABLE: "안정",
+  SENSITIVE: "민감",
+  UNAVAILABLE: "비교 불가",
 };
 const FACTOR_LABEL: Record<string, string> = {
   activity_score: "생산·소비 활동",
@@ -381,6 +397,10 @@ const formatMovementLevel = (value?: number | null, unit?: string | null) => val
   : unit === "percent" ? `연 ${value.toFixed(2)}%`
   : `${value.toFixed(2)} ${unit || ""}`.trim();
 const formatMonth = (value?: string | null) => value ? value.slice(0, 7).replace("-", ".") : "-";
+const formatKoreanMonth = (value?: string | null) => {
+  const text = String(value || "");
+  return text.length >= 7 ? `${text.slice(0, 4)}년 ${text.slice(5, 7)}월` : "기록 없음";
+};
 
 const ECONOMIC_TO_EVIDENCE_DIRECTION: Record<
   Exclude<EconomicState["observations"][number]["direction"], "UNAVAILABLE">,
@@ -445,6 +465,36 @@ const PHASE_COORDINATE_CENTER: Record<Phase, Pick<CyclePoint, "level" | "momentu
   slowdown: { level: 1, momentum: -1 },
   contraction: { level: -1, momentum: -1 },
 };
+
+export function selectCycleMapCheckpoints(points: CyclePoint[]): CyclePoint[] {
+  const indexes = [points.length - 7, points.length - 4, points.length - 2, points.length - 1];
+  return indexes
+    .filter((index, position) => index >= 0 && indexes.indexOf(index) === position)
+    .map((index) => points[index]);
+}
+
+function nextPhase(phase?: Phase | null): Phase | null {
+  if (!phase) return null;
+  const index = PHASE_ORDER.indexOf(phase);
+  return index >= 0 ? PHASE_ORDER[(index + 1) % PHASE_ORDER.length] : null;
+}
+
+export function resolveMapDirectionPhase(
+  monitor?: TransitionMonitor | null,
+  observedPhase?: Phase | null,
+): Phase | null {
+  if (monitor?.non_adjacent_observation) return nextPhase(observedPhase);
+  return monitor?.target_phase || nextPhase(observedPhase);
+}
+
+function monthDistance(from: string, to: string): number | null {
+  const fromYear = Number(from.slice(0, 4));
+  const fromMonth = Number(from.slice(5, 7));
+  const toYear = Number(to.slice(0, 4));
+  const toMonth = Number(to.slice(5, 7));
+  if (![fromYear, fromMonth, toYear, toMonth].every(Number.isFinite)) return null;
+  return (toYear - fromYear) * 12 + toMonth - fromMonth;
+}
 
 function pressureArrowEnd(start: PlotPoint, target: PlotPoint): PlotPoint {
   const dx = target.x - start.x;
@@ -600,29 +650,28 @@ function IntramonthChangePanel({ intramonth }: { intramonth: IntramonthChange })
 }
 
 function QuadrantChart({ payload }: { payload: CyclePayload }) {
-  const recent = payload.cycle_map.points.slice(-12);
+  const recent = selectCycleMapCheckpoints(payload.cycle_map.points);
   const observedSegments = splitPointSegments(recent.map((item) => projectActualCoordinate(item)));
   const current = recent.at(-1);
   const currentPoint = current ? projectActualCoordinate(current) : null;
-  const pressureTarget = payload.transition_monitor?.target_phase
-    ? projectActualCoordinate(PHASE_COORDINATE_CENTER[payload.transition_monitor.target_phase])
+  const directionPhase = resolveMapDirectionPhase(payload.transition_monitor, current?.phase);
+  const pressureTarget = directionPhase
+    ? projectActualCoordinate(PHASE_COORDINATE_CENTER[directionPhase])
     : null;
   const pressureEnd = currentPoint && pressureTarget
     ? pressureArrowEnd(currentPoint, pressureTarget)
     : null;
-  const pointLabels = [
-    { index: recent.length - 7, label: "6개월 전" },
-    { index: recent.length - 4, label: "3개월 전" },
-    { index: recent.length - 1, label: "현재" },
-  ].filter((item, index, rows) => (
-    item.index >= 0 && rows.findIndex((candidate) => candidate.index === item.index) === index
-  ));
+  const pointLabels = recent.map((item, index) => {
+    if (!current || index === recent.length - 1) return { index, label: "현재" };
+    const distance = monthDistance(item.date, current.date);
+    return { index, label: distance == null ? formatMonth(item.date) : `${distance}개월 전` };
+  });
 
   return (
     <section className="cycle-map-panel" aria-labelledby="cycle-map-title">
       <div className="section-heading">
-        <div><span>Actual cycle map</span><h3 id="cycle-map-title">실제 좌표로 본 최근 12개월</h3></div>
-        <small>월별 level·momentum 관측값만 연결</small>
+        <div><span>Actual cycle map</span><h3 id="cycle-map-title">핵심 시점으로 본 실제 경로</h3></div>
+        <small>6개월 전 · 3개월 전 · 1개월 전 · 현재</small>
       </div>
       <div className="cycle-map-body">
         <svg className="cycle-quadrant" viewBox="0 0 360 320" role="group" aria-label="회복 확장 둔화 위축 2×2 실제 경제사이클 경로">
@@ -657,7 +706,7 @@ function QuadrantChart({ payload }: { payload: CyclePayload }) {
               y2={pressureEnd.y}
               markerEnd="url(#transition-pressure-arrowhead)"
               role="img"
-              aria-label="전환 조건이 향하는 방향 · 예측 경로가 아님"
+              aria-label={`현재 관측 ${current?.phase ? PHASE_LABEL[current.phase] : "국면"} 기준 구조적 다음 인접 국면 ${directionPhase ? PHASE_LABEL[directionPhase] : "-"} · 예측 경로가 아님`}
             />
           ) : null}
           {recent.map((item, index) => {
@@ -686,8 +735,9 @@ function QuadrantChart({ payload }: { payload: CyclePayload }) {
           })}
         </svg>
         <div className="cycle-map-legend">
-          <span><i className="legend-observed" />실제 월별 경로</span>
+          <span><i className="legend-observed" />실제 핵심 시점 경로</span>
           <span><i className="legend-current" />현재 월말 좌표</span>
+          {directionPhase ? <span><i className="legend-direction" />구조적 다음 국면 {PHASE_LABEL[directionPhase]} · 예측 아님</span> : null}
           {current?.revision_sensitivity === "SENSITIVE" ? <span><i className="legend-sensitive" />수정 민감</span> : null}
         </div>
         <p>오른쪽일수록 자기 과거보다 경기 수준이 높고, 위쪽일수록 최근 3개월 변화가 개선됐다는 뜻입니다.</p>
@@ -696,22 +746,41 @@ function QuadrantChart({ payload }: { payload: CyclePayload }) {
   );
 }
 
-function TransitionPanel({ monitor }: { monitor?: TransitionMonitor | null }) {
+function TransitionPanel({ monitor, state }: { monitor?: TransitionMonitor | null; state: ObservedState }) {
   if (!monitor) {
-    return <section className="transition-panel"><div className="section-heading"><div><span>Transition monitor</span><h3>다음 국면 전환 조건</h3></div></div><p className="empty-copy">전환 조건을 계산할 자료가 아직 없습니다.</p></section>;
+    return <section className="transition-panel"><div className="section-heading"><div><span>Transition monitor</span><h3>현재 관측과 전환 기준</h3></div></div><p className="empty-copy">전환 조건을 계산할 자료가 아직 없습니다.</p></section>;
   }
+  const observedPhase = monitor.observed_phase || state.phase;
+  const anchorLabel = monitor.anchor_phase ? PHASE_LABEL[monitor.anchor_phase] : "-";
+  const targetLabel = monitor.target_phase ? PHASE_LABEL[monitor.target_phase] : "-";
   return (
     <section className={`transition-panel transition-${monitor.status.toLowerCase()}`} aria-labelledby="transition-title">
       <div className="section-heading">
-        <div><span>Transition monitor</span><h3 id="transition-title">다음 국면 전환 조건</h3></div>
+        <div><span>Transition monitor</span><h3 id="transition-title">현재 관측과 전환 기준</h3></div>
         <b>{monitor.status_label} · {monitor.conditions_met}/{monitor.conditions_total}</b>
       </div>
-      <div className="transition-route">
-        <article><span>마지막 확인 국면</span><strong>{monitor.anchor_phase ? PHASE_LABEL[monitor.anchor_phase] : "-"}</strong></article>
-        <i aria-hidden="true">→</i>
-        <article><span>다음 확인 대상</span><strong>{monitor.target_phase ? PHASE_LABEL[monitor.target_phase] : "-"}</strong></article>
+      <article className={`transition-current phase-${observedPhase || "missing"}`}>
+        <div>
+          <span>현재 좌표가 말하는 국면</span>
+          <strong>현재 관측 {observedPhase ? PHASE_LABEL[observedPhase] : "판단 불가"}</strong>
+          <p>{state.duration_months ? `${state.duration_months}개월 연속 관측 · ` : ""}다음 정식 발표에서 같은 국면이 지속되는지 확인합니다.</p>
+        </div>
+        {monitor.non_adjacent_observation ? <b>모델 기준과 불일치 · 지속 여부 재확인</b> : <b>모델 기준과 인접</b>}
+      </article>
+      <div className="transition-reference-grid">
+        <article>
+          <span>전환 기준 앵커</span>
+          <strong>{anchorLabel}</strong>
+          <small>{monitor.anchor_source_label || "기준일 기록 없음"} · {formatKoreanMonth(monitor.anchor_started_at)}</small>
+        </article>
+        <article>
+          <span>앵커 기준 구조적 다음 국면</span>
+          <strong>{targetLabel}</strong>
+          <small>{monitor.candidate_started_at ? `조건 관찰 ${formatKoreanMonth(monitor.candidate_started_at)} 시작` : "활성 조건 관찰 없음"}</small>
+        </article>
       </div>
-      <p className="transition-boundary">예측 경로가 아니라 다음 정식 발표에서 확인할 조건입니다.</p>
+      <p className="transition-boundary">{targetLabel} 가능성이 높다는 예측이 아닙니다. {anchorLabel} 앵커에서 순서상 다음에 확인하는 인접 국면입니다.</p>
+      <div className="transition-condition-heading"><strong>{anchorLabel} → {targetLabel} 확인 조건</strong><span>{monitor.conditions_met}/{monitor.conditions_total} 충족</span></div>
       <div className="transition-condition-grid">
         {monitor.conditions.map((condition) => (
           <article className={`condition-${condition.status.toLowerCase()}`} key={condition.condition_id}>
@@ -1054,12 +1123,24 @@ function RegimeRibbon({ points }: { points: CyclePoint[] }) {
   return (
     <section className="ribbon-section" aria-labelledby="ribbon-title">
       <div className="section-heading"><div><span>Observed phase ribbon</span><h3 id="ribbon-title">최근 12개월 국면 흐름</h3></div><small>실제 관측 국면 · NBER 이력은 별도 음영</small></div>
-      <div className="ribbon-legend"><span className="legend-model">관측 국면</span><span className="nber-recession">NBER 침체 이력</span></div>
+      <div className="ribbon-legend">
+        <span className="legend-recovery">회복</span>
+        <span className="legend-expansion">확장</span>
+        <span className="legend-slowdown">둔화</span>
+        <span className="legend-contraction">위축</span>
+        <span className="nber-recession">NBER 침체 이력</span>
+      </div>
       <div className="regime-ribbon" role="list" aria-label="최근 월별 관측 경제 국면" style={ribbonStyle}>
         {points.length ? points.map((item, index) => (
-          <div className={`ribbon-month phase-${item.phase}`} role="listitem" tabIndex={0} key={`${item.date}-${index}`} title={`${formatMonth(item.date)} · ${PHASE_LABEL[item.phase]} · NBER ${item.nber_recession ? "침체" : "비침체"}`}>
+          <div className={`ribbon-month phase-${item.phase}`} role="listitem" tabIndex={0} key={`${item.date}-${index}`} aria-label={`${formatKoreanMonth(item.date)} · ${PHASE_LABEL[item.phase]} · NBER ${item.nber_recession ? "침체" : "비침체"}`}>
             {item.nber_recession ? <i className="nber-recession" aria-label="NBER 침체" /> : null}
             {index === points.length - 1 ? <i className="current-marker" aria-label="현재" /> : null}
+            <div className="ribbon-tooltip" role="tooltip">
+              <strong>{formatKoreanMonth(item.date)} · {PHASE_LABEL[item.phase]}</strong>
+              <span>NBER {item.nber_recession ? "침체" : "비침체"}</span>
+              <span>판단 신뢰도 {CONFIDENCE_LABEL[item.confidence || ""] || "확인 불가"}</span>
+              <span>수정 민감도 {REVISION_SENSITIVITY_LABEL[item.revision_sensitivity || ""] || "확인 불가"}</span>
+            </div>
           </div>
         )) : (
           <div className="ribbon-month ribbon-empty-history phase-missing" role="listitem" aria-label="과거 경제사이클 이력 없음" />
@@ -1180,6 +1261,12 @@ function EconomicCycleFreshnessBar({
             ? `최신 계산 기준 ${freshness.persisted_as_of_date || freshness.target_as_of_date || "-"}`
             : freshness?.message || "경제사이클 최신 자료를 확인할 수 있습니다."}
         </strong>
+        <div className="cycle-freshness-meta">
+          <span>마지막 성공 수집 <b>{freshness?.last_successful_collection_at || "기록 없음"}</b></span>
+          <span>계산 기준일 <b>{freshness?.persisted_as_of_date || "없음"}</b></span>
+          <span>사용 원천 최신일 <b>{freshness?.latest_source_observation_date || "확인 불가"}</b></span>
+        </div>
+        {action?.enabled ? <small className="cycle-refresh-duration">최신 발표 여부 확인과 전체 재계산은 보통 1분 내외 걸립니다.</small> : null}
         {result ? (
           <small className={`cycle-refresh-result result-${result.status}`}>
             {result.message}
@@ -1194,7 +1281,7 @@ function EconomicCycleFreshnessBar({
           onClick={handleRefresh}
         >
           {collecting
-            ? "최신 자료를 수집하고 다시 계산하는 중"
+            ? "원천 확인과 재계산 중 · 보통 1분 내외"
             : action.label || "최신 데이터로 다시 계산"}
         </button>
       ) : null}
@@ -1240,7 +1327,7 @@ export function EconomicCycleWorkbenchView({
 
       <div className="cycle-layout">
         <QuadrantChart payload={payload} />
-        <TransitionPanel monitor={payload.transition_monitor} />
+        <TransitionPanel monitor={payload.transition_monitor} state={observed} />
       </div>
 
       <section className="evidence-panel" aria-labelledby="evidence-title">

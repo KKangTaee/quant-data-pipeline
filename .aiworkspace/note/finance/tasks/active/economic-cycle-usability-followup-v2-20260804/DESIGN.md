@@ -38,7 +38,7 @@ reference로 내린다. 비인접 관측이면 불일치를 명시하고 지도 
 
 Freshness bar는 아래 시점을 분리한다.
 
-- `last_checked_at`: provider 확인을 실행한 시각
+- `last_successful_collection_at`: 저장까지 성공한 원천 수집 시각
 - `persisted_as_of_date`: 월중 계산 cutoff
 - `latest_source_observation_date`: 실제 계산에 포함된 원천 중 최신 관측일
 - 공식 국면 기준일은 hero의 month-end `as_of_date`로 유지한다.
@@ -49,8 +49,9 @@ Freshness bar는 아래 시점을 분리한다.
 
 평일 cutoff 기반 refresh eligibility는 이번 범위에서 유지한다. release calendar를
 모든 series에 연결하지 않은 상태에서 신규 발표 여부를 미리 확정하면 false negative가
-생길 수 있기 때문이다. 대신 `오늘 확인했다`와 `원천 관측일이 오늘이다`를 같은
-의미로 표시하지 않는다.
+생길 수 있기 때문이다. 대신 `수집이 성공한 시각`과 `원천 관측일이 오늘이다`를 같은
+의미로 표시하지 않는다. 실패한 확인 시각은 snapshot에 영속되지 않으므로 성공 수집
+시각으로 오인 없이 표시하고, 현재 실행 결과는 일회성 refresh result로 전달한다.
 
 ## Actual Cycle Map Contract
 

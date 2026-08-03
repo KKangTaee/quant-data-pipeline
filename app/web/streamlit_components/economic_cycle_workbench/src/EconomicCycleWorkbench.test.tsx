@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 import {
   EconomicCycleWorkbenchView,
   projectActualCoordinate,
+  resolveMapDirectionPhase,
+  selectCycleMapCheckpoints,
   type CyclePayload,
 } from "./EconomicCycleWorkbench";
 
@@ -67,6 +69,20 @@ function fixture(): CyclePayload {
       available_series: 8,
       data_status: "READY",
     },
+    data_freshness: {
+      status: "REFRESH_AVAILABLE",
+      persisted_as_of_date: "2026-07-21",
+      target_as_of_date: "2026-07-24",
+      last_successful_collection_at: "2026-07-21 09:31:12",
+      latest_source_observation_date: "2026-06-30",
+      refresh_required: true,
+      message: "현재 계산일 2026-07-21 · 최신 계산 가능일 2026-07-24",
+      action: {
+        id: "refresh_economic_cycle_data",
+        label: "최신 발표 확인·재계산",
+        enabled: true,
+      },
+    },
     recent_changes: [
       { horizon_months: 1, label: "최근 1개월", status: "MIXED", status_label: "혼조", composite_delta: 0.02, breadth: 0.50, available_pairs: 8 },
       { horizon_months: 3, label: "최근 3개월", status: "WEAKENING", status_label: "약화", composite_delta: -0.30, breadth: 0.25, available_pairs: 8 },
@@ -74,12 +90,18 @@ function fixture(): CyclePayload {
     ],
     transition_monitor: {
       observed_phase: "contraction",
-      anchor_phase: "contraction",
-      target_phase: "recovery",
+      anchor_phase: "recovery",
+      anchor_started_at: "2025-08-31",
+      anchor_source: "CONFIRMED",
+      anchor_source_label: "조건 확인",
+      anchor_confirmed_at: "2025-08-31",
+      target_phase: "expansion",
       status: "WATCH",
       status_label: "전환 조건 관찰",
       conditions_met: 1,
       conditions_total: 3,
+      candidate_started_at: "2026-05-31",
+      non_adjacent_observation: true,
       conditions: [
         { condition_id: "persistence", label: "지속성", status: "UNMET", threshold: "두 번 연속 확인" },
         { condition_id: "diffusion", label: "확산도", status: "UNAVAILABLE", threshold: "6개 이상 비교 필요" },
@@ -110,9 +132,9 @@ describe("EconomicCycleWorkbenchView", () => {
   it("renders the decision flow and preserves the five asset checkpoint blocks", () => {
     const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={fixture()} />);
 
-    expect(html.indexOf("현재 관측 국면")).toBeLessThan(html.indexOf("실제 좌표로 본 최근 12개월"));
-    expect(html.indexOf("실제 좌표로 본 최근 12개월")).toBeLessThan(html.indexOf("다음 국면 전환 조건"));
-    expect(html.indexOf("다음 국면 전환 조건")).toBeLessThan(html.indexOf("자산별 확인 포인트"));
+    expect(html.indexOf("현재 관측 국면")).toBeLessThan(html.indexOf("핵심 시점으로 본 실제 경로"));
+    expect(html.indexOf("핵심 시점으로 본 실제 경로")).toBeLessThan(html.indexOf("현재 관측과 전환 기준"));
+    expect(html.indexOf("현재 관측과 전환 기준")).toBeLessThan(html.indexOf("자산별 확인 포인트"));
     expect(html).not.toContain("현재와 앞으로 1·2개월");
     expect(html).not.toContain("전망 확률");
 
@@ -132,7 +154,9 @@ describe("EconomicCycleWorkbenchView", () => {
     expect(projectActualCoordinate({ level: -2, momentum: -2 })).toEqual({ x: 52, y: 272 });
   });
 
-  it("labels six-month, three-month and current points and shows a WATCH-only pressure arrow", () => {
+  it("selects and labels six-month, three-month, one-month and current checkpoints", () => {
+    const payload = fixture();
+    const checkpoints = selectCycleMapCheckpoints(payload.cycle_map.points);
     const watchHtml = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={fixture()} />);
     const maintain = fixture();
     maintain.transition_monitor = {
@@ -142,12 +166,35 @@ describe("EconomicCycleWorkbenchView", () => {
     };
     const maintainHtml = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={maintain} />);
 
+    expect(checkpoints.map((point) => point.date)).toEqual([
+      "2025-12-31",
+      "2026-03-31",
+      "2026-05-31",
+      "2026-06-30",
+    ]);
     expect(watchHtml).toContain("6개월 전");
     expect(watchHtml).toContain("3개월 전");
+    expect(watchHtml).toContain("1개월 전");
     expect(watchHtml).toContain("현재</text>");
     expect(watchHtml).toContain('class="transition-pressure-arrow"');
     expect(watchHtml).toContain("예측 경로가 아님");
     expect(maintainHtml).not.toContain('class="transition-pressure-arrow"');
+  });
+
+  it("resolves a non-adjacent map arrow from the current observed phase", () => {
+    const payload = fixture();
+
+    expect(resolveMapDirectionPhase(payload.transition_monitor, "contraction")).toBe("recovery");
+  });
+
+  it("puts the current observation before the anchor and explains the structural target", () => {
+    const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={fixture()} />);
+
+    expect(html.indexOf("현재 관측 위축")).toBeLessThan(html.indexOf("전환 기준 앵커"));
+    expect(html).toContain("모델 기준과 불일치");
+    expect(html).toContain("회복 → 확장 확인 조건");
+    expect(html).toContain("확장 가능성이 높다는 예측이 아닙니다");
+    expect(html).toContain("조건 확인 · 2025년 08월");
   });
 
   it("distinguishes unavailable transition evidence from an unmet condition", () => {
@@ -155,5 +202,34 @@ describe("EconomicCycleWorkbenchView", () => {
 
     expect(html).toContain("condition-unavailable");
     expect(html).toContain("자료 부족");
+  });
+
+  it("separates freshness dates and shows expected refresh duration", () => {
+    const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={fixture()} />);
+
+    expect(html).toContain("마지막 성공 수집");
+    expect(html).toContain("2026-07-21 09:31:12");
+    expect(html).toContain("계산 기준일");
+    expect(html).toContain("사용 원천 최신일");
+    expect(html).toContain("보통 1분 내외");
+  });
+
+  it("shows all phase colors and accessible month details in the regime ribbon", () => {
+    const payload = fixture();
+    payload.cycle_map.points = payload.cycle_map.points.map((point, index) => ({
+      ...point,
+      phase: (["recovery", "expansion", "slowdown", "contraction"] as const)[index % 4],
+      nber_recession: index === 0,
+    }));
+    const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={payload} />);
+
+    expect(html).toContain('class="legend-recovery"');
+    expect(html).toContain('class="legend-expansion"');
+    expect(html).toContain('class="legend-slowdown"');
+    expect(html).toContain('class="legend-contraction"');
+    expect(html).toContain('role="tooltip"');
+    expect(html).toContain("판단 신뢰도 보통");
+    expect(html).toContain("수정 민감도 안정");
+    expect(html).toContain("NBER 침체");
   });
 });
