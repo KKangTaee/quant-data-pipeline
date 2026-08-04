@@ -40,7 +40,12 @@ function InflationPolicyWorkbench({ payload, onCommand }: InflationPolicyWorkben
           <p>{payload.headline.summary}</p>
         </section>
       )}
-      <InflationStatePanel inflation={payload.inflation} showProbabilities={showInflationProbabilities} />
+      <InflationStatePanel
+        inflation={payload.inflation}
+        policy={payload.policy}
+        showProbabilities={showInflationProbabilities}
+        showPolicyProbabilities={showPolicyProbabilities}
+      />
       <PolicyPathPanel policy={payload.policy} showProbabilities={showPolicyProbabilities} />
       <YieldResistancePanel rates={payload.rates} />
       <ReverseScenarioPanel payload={payload} onCommand={onCommand} />

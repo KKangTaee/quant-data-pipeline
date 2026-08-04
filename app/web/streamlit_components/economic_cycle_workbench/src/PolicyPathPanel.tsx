@@ -6,13 +6,13 @@ type Props = {
 };
 
 const policyLabels: Record<string, string> = {
-  cut_3_plus: "3회 이상 인하",
-  cut_2: "2회 인하",
-  cut_1: "1회 인하",
+  cut_3_plus: "순 3회 이상 인하",
+  cut_2: "순 2회 인하",
+  cut_1: "순 1회 인하",
   hold: "동결",
-  hike_1: "1회 인상",
-  hike_2: "2회 인상",
-  hike_3_plus: "3회 이상 인상",
+  hike_1: "순 1회 인상",
+  hike_2: "순 2회 인상",
+  hike_3_plus: "순 3회 이상 인상",
 };
 const nextLabels: Record<string, string> = { cut: "인하", hold: "동결", hike: "인상" };
 const order = ["cut_3_plus", "cut_2", "cut_1", "hold", "hike_1", "hike_2", "hike_3_plus"];
@@ -25,7 +25,7 @@ function PolicyPathPanel({ policy, showProbabilities }: Props) {
     <section className="policy-path-panel workbench-panel" aria-labelledby="policy-path-title">
       <div className="ip-section-heading">
         <div><span>FORWARD · FOMC</span><h3 id="policy-path-title">다음 회의와 연말 정책 경로</h3></div>
-        <small>SEP 익명 분포를 개인별 물가 전망과 연결하지 않음</small>
+        <small>25bp 단위 연말 순변화 · SEP 익명 분포를 개인별 물가 전망과 연결하지 않음</small>
       </div>
       {showProbabilities ? (
         <>

@@ -337,12 +337,46 @@ describe("forward inflation policy decision flow", () => {
     for (const nextPrint of ["0.1%", "0.2%", "0.3%", "0.4%", "0.5%"]) {
       expect(screen.getByRole("row", { name: new RegExp(`Core PCE ${nextPrint.replace(".", "\\.")}`) })).toBeInTheDocument();
     }
-    for (const path of ["동결", "1회 인상", "2회 인상", "3회 이상 인상"]) {
+    for (const path of ["동결", "순 1회 인상", "순 2회 인상", "순 3회 이상 인상"]) {
       expect(screen.getAllByText(path).length).toBeGreaterThan(0);
     }
     expect(screen.getAllByText("자동 추천").length).toBeGreaterThan(0);
     expect(screen.getByText("사용자 기준")).toBeInTheDocument();
     expect(screen.queryByText(/저장 rows|실행 job|실패 job/)).not.toBeInTheDocument();
+  });
+
+  it("shows exact current reacceleration and net-hike baselines beside the next-print table", () => {
+    const payload = readyPayload();
+    payload.inflation.state_probabilities = {
+      ...payload.inflation.state_probabilities,
+      reacceleration: 0.143,
+      shock_reacceleration: 0.0174,
+    };
+    payload.policy.net_move_probabilities = {
+      cut_1: 0.06428571428571428,
+      cut_2: 0.014285714285714285,
+      cut_3_plus: 0.014285714285714285,
+      hold: 0.41428571428571426,
+      hike_1: 0.16428571428571428,
+      hike_2: 0.2642857142857143,
+      hike_3_plus: 0.06428571428571428,
+    };
+
+    render(<InflationPolicyWorkbench payload={payload} onCommand={vi.fn()} />);
+
+    const baseline = screen.getByRole("region", { name: "다음 Core PCE 현재 비교 기준" });
+    for (const value of ["14.30%", "1.74%", "16.04%", "16.43%", "26.43%", "6.43%", "49.29%"]) {
+      expect(within(baseline).getByText(value)).toBeInTheDocument();
+    }
+    expect(within(baseline).getByText(/25bp 단위 연말 순변화/)).toBeInTheDocument();
+  });
+
+  it("does not publish the net-hike baseline when policy validation is pending", () => {
+    render(<InflationPolicyWorkbench payload={mixedComponentPayload()} onCommand={vi.fn()} />);
+
+    const baseline = screen.getByRole("region", { name: "다음 Core PCE 현재 비교 기준" });
+    expect(within(baseline).getByText("정책 경로 검증 후 공개")).toBeInTheDocument();
+    expect(within(baseline).queryByText("60.00%")).not.toBeInTheDocument();
   });
 
   it("keeps missing term premium explicit and labels mixed inflation confirmation", () => {
