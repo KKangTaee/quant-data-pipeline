@@ -5,8 +5,10 @@ import { describe, expect, it } from "vitest";
 import {
   EconomicCycleWorkbenchView,
   projectActualCoordinate,
+  resolveCycleRouteTransition,
   resolveMapDirectionPhase,
   selectCycleMapCheckpoints,
+  summarizeCycleRouteHistory,
   type CyclePayload,
 } from "./EconomicCycleWorkbench";
 
@@ -129,6 +131,35 @@ function fixture(): CyclePayload {
 }
 
 describe("EconomicCycleWorkbenchView", () => {
+  it("resolves watch, maintain and confirmed route transitions from explicit phases", () => {
+    const payload = fixture();
+    const monitor = payload.transition_monitor!;
+
+    expect(resolveCycleRouteTransition(monitor, "contraction")).toEqual({
+      from: "contraction",
+      to: "recovery",
+      status: "WATCH",
+    });
+    expect(resolveCycleRouteTransition({ ...monitor, status: "MAINTAIN" }, "contraction")).toBeNull();
+    expect(resolveCycleRouteTransition({ ...monitor, status: "CONFIRMED" }, "contraction")).toEqual({
+      from: "recovery",
+      to: "expansion",
+      status: "CONFIRMED",
+    });
+  });
+
+  it("summarizes stable and changed checkpoint histories without plotting each month", () => {
+    const payload = fixture();
+    const changed = payload.cycle_map.points.map((point, index) => ({
+      ...point,
+      phase: index < 4 ? "recovery" as const : "contraction" as const,
+    }));
+
+    expect(summarizeCycleRouteHistory(payload.cycle_map.points)).toBe("최근 6개월 · 위축 유지");
+    expect(summarizeCycleRouteHistory(changed)).toBe("최근 6개월 · 회복에서 위축으로 변화");
+    expect(summarizeCycleRouteHistory([])).toBe("과거 이력 부족");
+  });
+
   it("renders the decision flow and preserves the five asset checkpoint blocks", () => {
     const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={fixture()} />);
 

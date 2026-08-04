@@ -487,6 +487,41 @@ export function resolveMapDirectionPhase(
   return monitor?.target_phase || nextPhase(observedPhase);
 }
 
+export type CycleRouteTransition = {
+  from: Phase;
+  to: Phase;
+  status: "WATCH" | "CONFIRMED";
+};
+
+export function resolveCycleRouteTransition(
+  monitor: TransitionMonitor | null | undefined,
+  currentPhase: Phase | null | undefined,
+): CycleRouteTransition | null {
+  if (!monitor || monitor.status === "MAINTAIN") return null;
+  if (monitor.status === "CONFIRMED") {
+    const from = monitor.anchor_phase;
+    const to = monitor.target_phase;
+    return from && to && from !== to ? { from, to, status: "CONFIRMED" } : null;
+  }
+  const to = resolveMapDirectionPhase(monitor, currentPhase);
+  return currentPhase && to && currentPhase !== to
+    ? { from: currentPhase, to, status: "WATCH" }
+    : null;
+}
+
+export function summarizeCycleRouteHistory(points: CyclePoint[]): string {
+  const checkpoints = selectCycleMapCheckpoints(points);
+  if (!checkpoints.length) return "과거 이력 부족";
+  const prefix = points.length >= 7 ? "최근 6개월" : "조회 가능한 기간";
+  const first = checkpoints[0].phase;
+  const current = checkpoints[checkpoints.length - 1].phase;
+  if (checkpoints.every((point) => point.phase === current)) {
+    return `${prefix} · ${PHASE_LABEL[current]} 유지`;
+  }
+  if (first === current) return `${prefix} · ${PHASE_LABEL[current]} 국면 내 변동`;
+  return `${prefix} · ${PHASE_LABEL[first]}에서 ${PHASE_LABEL[current]}으로 변화`;
+}
+
 function monthDistance(from: string, to: string): number | null {
   const fromYear = Number(from.slice(0, 4));
   const fromMonth = Number(from.slice(5, 7));
