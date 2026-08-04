@@ -7,13 +7,13 @@ Last Verified: 2026-08-04
 
 Current active product task:
 
-- `inflation-policy-preparation-baseline-ux-20260804` — `State: active`; 전체 2차 중
-  준비표의 현재 재가속·연말 순인상 비교 기준 설계를 확정하고 구현 전 검토 중
+- none
 
 Latest completed inflation-policy task:
 
-- `inflation-policy-functional-recovery-20260803` — actual DB 기준 reverse transport,
-  Q4/Q4·policy·joint path·PIT forward EPS·독립 침체를 기존 V1 workbench에 연결한 5/5 복구
+- `inflation-policy-preparation-baseline-ux-20260804` — 전체 2/2; 준비표에 현재
+  재가속·연말 순인상 구성과 합계를 직접 표시하고 최신 current snapshot 선택 회귀를
+  수정해 actual DB READY 화면과 Browser QA를 완료했다.
 
 Paused task:
 

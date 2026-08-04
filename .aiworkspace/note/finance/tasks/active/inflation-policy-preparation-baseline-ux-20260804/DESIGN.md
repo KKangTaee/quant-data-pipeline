@@ -1,6 +1,6 @@
 # Inflation Policy Preparation Baseline UX Design
 
-State: active
+State: complete
 Last Verified: 2026-08-04
 
 ## 사용자 문제
@@ -66,6 +66,14 @@ Last Verified: 2026-08-04
 - policy LIMITED/NOT_AVAILABLE이면 숨겨진 합계를 계산해 공개하지 않는다.
 - 확률이 누락된 bucket은 0으로 안전하게 처리하되 component gate를 우선한다.
 - React test, TypeScript typecheck, production build와 실제 DB Browser QA를 수행한다.
+
+## 실제 DB QA에서 보정한 선택 규칙
+
+실제 화면은 READY 03:15 snapshot보다 앞서 materialize된 23:59 LIMITED snapshot을
+단순히 더 큰 `as_of_at`이라는 이유로 선택하고 있었다. 기본 current 화면은 가장 최근에
+갱신된 `run_kind=current` snapshot을 사용하고, 사용자가 과거 기준시각을 명시한 조회는
+기존처럼 cutoff 이하의 가장 늦은 origin을 사용한다. publication gate를 완화하거나
+LIMITED 확률을 READY처럼 표시하지 않는다.
 
 ## 범위 밖
 

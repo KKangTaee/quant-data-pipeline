@@ -606,8 +606,9 @@ def load_latest_inflation_policy_snapshot(
     as_of_at: str | datetime | None = None,
     query_fn: QueryFn | None = None,
 ) -> dict[str, object] | None:
-    """Return the latest persisted snapshot no later than the requested time."""
+    """Return the latest current run, or the latest origin for an explicit time."""
 
+    explicit_as_of = as_of_at is not None
     as_of = _datetime_value(
         as_of_at or datetime.now(timezone.utc), field="as_of_at"
     )
@@ -628,6 +629,18 @@ def load_latest_inflation_policy_snapshot(
             eligible.append(row)
     if not eligible:
         return None
+    if not explicit_as_of:
+        current_rows = [
+            row for row in eligible if str(row.get("run_kind") or "") == "current"
+        ]
+        if current_rows:
+            return max(
+                current_rows,
+                key=lambda row: (
+                    _sort_timestamp(row.get("updated_at")),
+                    _sort_timestamp(row.get("as_of_at")),
+                ),
+            )
     return max(
         eligible,
         key=lambda row: (

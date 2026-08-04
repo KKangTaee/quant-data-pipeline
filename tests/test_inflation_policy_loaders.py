@@ -326,6 +326,41 @@ def test_latest_snapshot_respects_requested_as_of() -> None:
     assert "as_of_at <= %s" in captured[0]
 
 
+def test_latest_snapshot_without_as_of_uses_most_recent_current_materialization() -> None:
+    from finance.loaders.inflation_policy import load_latest_inflation_policy_snapshot
+
+    rows = [
+        {
+            "as_of_at": "2026-08-03 23:59:59",
+            "updated_at": "2026-08-03 09:04:07",
+            "model_version": "stale-limited",
+            "run_kind": "current",
+            "publication_status": "LIMITED",
+        },
+        {
+            "as_of_at": "2026-08-03 03:15:00",
+            "updated_at": "2026-08-04 01:21:13",
+            "model_version": "latest-ready",
+            "run_kind": "current",
+            "publication_status": "READY",
+        },
+        {
+            "as_of_at": "2026-08-03 20:00:00",
+            "updated_at": "2026-08-04 02:00:00",
+            "model_version": "historical-replay",
+            "run_kind": "historical_replay",
+            "publication_status": "READY",
+        },
+    ]
+
+    selected = load_latest_inflation_policy_snapshot(
+        query_fn=lambda _database, _sql, _params: rows,
+    )
+
+    assert selected is not None
+    assert selected["model_version"] == "latest-ready"
+
+
 def test_resistance_definitions_exclude_future_and_inactive_user_rows() -> None:
     from finance.loaders.inflation_policy import load_yield_resistance_definitions
 

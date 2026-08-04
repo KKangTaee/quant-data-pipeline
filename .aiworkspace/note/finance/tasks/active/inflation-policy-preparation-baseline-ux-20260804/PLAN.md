@@ -31,7 +31,7 @@
 - Consumes: `InflationPolicyPayload["inflation"]`, `InflationPolicyPayload["policy"]`, 두 component의 `publication_status`
 - Produces: `InflationStatePanel` props `policy`와 `showPolicyProbabilities`, 접근 가능한 `다음 Core PCE 현재 비교 기준` 영역
 
-- [ ] **Step 1: READY와 policy LIMITED 표시 계약을 실패 테스트로 추가**
+- [x] **Step 1: READY와 policy LIMITED 표시 계약을 실패 테스트로 추가**
 
 ```tsx
 it("shows exact current reacceleration and net-hike baselines beside the next-print table", () => {
@@ -68,13 +68,13 @@ it("does not publish the net-hike baseline when policy validation is pending", (
 });
 ```
 
-- [ ] **Step 2: 새 테스트가 실패하는지 확인**
+- [x] **Step 2: 새 테스트가 실패하는지 확인**
 
 Run: `npm --prefix app/web/streamlit_components/economic_cycle_workbench test -- --run InflationPolicyWorkbench.test.tsx`
 
 Expected: `다음 Core PCE 현재 비교 기준` region을 찾지 못해 FAIL.
 
-- [ ] **Step 3: Workbench에서 policy와 gate를 InflationStatePanel에 전달**
+- [x] **Step 3: Workbench에서 policy와 gate를 InflationStatePanel에 전달**
 
 ```tsx
 <InflationStatePanel
@@ -85,7 +85,7 @@ Expected: `다음 Core PCE 현재 비교 기준` region을 찾지 못해 FAIL.
 />
 ```
 
-- [ ] **Step 4: 준비표 기준 합계와 fail-closed 표시를 구현**
+- [x] **Step 4: 준비표 기준 합계와 fail-closed 표시를 구현**
 
 ```tsx
 type Props = {
@@ -109,7 +109,7 @@ READY이면 `재가속`, `충격성 재가속`, `재가속 합계`, `순 1회`, 
 `순 3회 이상`, `연말 순인상 경로 합계`를 표시한다. policy가 READY가 아니면
 정책 기준 숫자 대신 `정책 경로 검증 후 공개`를 표시한다.
 
-- [ ] **Step 5: 정책 경로와 준비표 용어를 순변화 계약으로 맞춤**
+- [x] **Step 5: 정책 경로와 준비표 용어를 순변화 계약으로 맞춤**
 
 ```tsx
 const policyLabels: Record<string, string> = {
@@ -125,7 +125,7 @@ const policyLabels: Record<string, string> = {
 
 준비표 column은 `현재 전망 대비 재가속 변화`와 `현재 전망 대비 연말 순인상 경로 변화`로 바꾼다.
 
-- [ ] **Step 6: React 테스트가 통과하는지 확인**
+- [x] **Step 6: React 테스트가 통과하는지 확인**
 
 Run: `npm --prefix app/web/streamlit_components/economic_cycle_workbench test -- --run InflationPolicyWorkbench.test.tsx`
 
@@ -143,13 +143,13 @@ Expected: 모든 `InflationPolicyWorkbench.test.tsx` 테스트 PASS.
 - Consumes: Task 1의 `.next-release-current-baseline`, `.baseline-card`, `.baseline-breakdown`
 - Produces: desktop과 좁은 화면에서 순서가 보존되는 compact 2-card summary
 
-- [ ] **Step 1: 기존 next-release 반응형 style 경계를 확인**
+- [x] **Step 1: 기존 next-release 반응형 style 경계를 확인**
 
 Run: `rg -n "next-release|inflation-state|@media" app/web/streamlit_components/economic_cycle_workbench/src/style.css`
 
 Expected: 준비표와 기존 responsive breakpoint 위치가 확인됨.
 
-- [ ] **Step 2: 기준 합계가 먼저 읽히는 2-card style을 추가**
+- [x] **Step 2: 기준 합계가 먼저 읽히는 2-card style을 추가**
 
 ```css
 .next-release-current-baseline {
@@ -173,7 +173,7 @@ Expected: 준비표와 기존 responsive breakpoint 위치가 확인됨.
 
 기존 breakpoint에서는 `.baseline-card-grid { grid-template-columns: 1fr; }`로 전환한다.
 
-- [ ] **Step 3: typecheck와 전체 React test를 실행**
+- [x] **Step 3: typecheck와 전체 React test를 실행**
 
 Run: `npm --prefix app/web/streamlit_components/economic_cycle_workbench run typecheck`
 
@@ -183,13 +183,13 @@ Run: `npm --prefix app/web/streamlit_components/economic_cycle_workbench test`
 
 Expected: 모든 test file PASS.
 
-- [ ] **Step 4: production component_static을 재빌드**
+- [x] **Step 4: production component_static을 재빌드**
 
 Run: `npm --prefix app/web/streamlit_components/economic_cycle_workbench run build`
 
 Expected: Vite build exit 0, `component_static/index.html`이 새 hashed CSS/JS를 참조함.
 
-- [ ] **Step 5: 구현 단위를 commit**
+- [x] **Step 5: 구현 단위를 commit**
 
 ```bash
 git add app/web/streamlit_components/economic_cycle_workbench/src \
@@ -212,13 +212,13 @@ git commit -m "물가 준비표 현재 비교 기준 표시"
 - Consumes: 실제 DB-backed `inflation_policy_v1` READY snapshot
 - Produces: 2/2 complete task record와 generated QA screenshot
 
-- [ ] **Step 1: 사용자 8501을 건드리지 않고 별도 QA 서버를 실행**
+- [x] **Step 1: 사용자 8501을 건드리지 않고 별도 QA 서버를 실행**
 
 Run: `.venv/bin/streamlit run app/web/streamlit_app.py --server.port 8502 --server.headless true`
 
 Expected: 8501은 계속 LISTEN, 8502가 QA 서버로 LISTEN.
 
-- [ ] **Step 2: Browser에서 물가·정책 경로와 준비표 확인**
+- [x] **Step 2: Browser에서 물가·정책 경로와 준비표 확인**
 
 Expected:
 
@@ -227,13 +227,13 @@ Expected:
 - 준비표의 기존 0.1~0.5 scenario와 정책·역산·주가·침체 panel이 유지된다.
 - component crash와 새 console error가 없다.
 
-- [ ] **Step 3: QA screenshot을 generated artifact로 저장**
+- [x] **Step 3: QA screenshot을 generated artifact로 저장**
 
 Save: `inflation-policy-preparation-baseline-qa.png`
 
 Expected: screenshot은 사용자에게 전달하지만 commit하지 않음.
 
-- [ ] **Step 4: task 상태와 실행 근거를 2/2 complete로 갱신**
+- [x] **Step 4: task 상태와 실행 근거를 2/2 complete로 갱신**
 
 `STATUS.md`는 `State: complete`, manifest는 current active product task `none`으로
 복구하고 테스트·build·Browser 결과를 `RUNS.md`에 기록한다.

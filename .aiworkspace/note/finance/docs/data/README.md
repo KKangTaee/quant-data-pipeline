@@ -1,7 +1,7 @@
 # Finance Data Map
 
 Status: Active
-Last Verified: 2026-07-23
+Last Verified: 2026-08-04
 
 ## Purpose
 
@@ -103,6 +103,9 @@ runtime-defined JSONL 파일은 첫 workflow write 전에는 로컬에 없을 �
 ## Data Integrity Rules
 
 - 백테스트와 validation에서는 point-in-time, look-ahead, survivorship risk를 항상 고려한다.
+- Inflation / Policy snapshot의 기본 current read는 가장 최근에 갱신된
+  `run_kind=current` materialization을 사용하고, 명시적 `as_of_at` read는 cutoff 이하
+  최신 origin을 사용해 현재 화면과 과거 PIT 조회의 의미를 분리한다.
 - 경제 사이클 historical origin은 `realtime_start <= origin <= realtime_end`인 vintage만 읽는다. 현재 revised observation을 과거 origin에 소급하지 않는다.
 - provider field는 안정적이거나 완전하다고 가정하지 않는다.
 - Market Movers Top1000 / Top2000은 `nyse_asset_profile.market_cap` 순위가 아니라 `nyse_price_history`의 최근 20거래일 평균 거래대금 기준이다. 따라서 "가장 큰 기업" 순위가 아니라 "최근 거래대금이 큰 종목" 순위이며, current listing source와 최신 EOD 가격 row가 모두 필요하다.

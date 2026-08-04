@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-08-03
+Last Verified: 2026-08-04
 
 ## System At A Glance
 
@@ -106,7 +106,9 @@ FRED/ALFRED + NBER USREC label + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
 - `finance/loaders/inflation_policy.py`는 `released_at <= as_of_at`인 DB row와 official
   macro row, 검증된 FactSet EPS release vintage, 저장된 `^GSPC` 가격을 DB에서만 읽고 과거 origin
   재구성에는 eligible 전체 vintage를 별도로 읽는다. 기존
-  `economic_cycle_snapshot`/artifact/확률을 사용하지 않는다.
+  `economic_cycle_snapshot`/artifact/확률을 사용하지 않는다. 기본 current 화면은
+  `run_kind=current` 중 가장 최근에 materialize/update된 snapshot을 읽고, 명시적
+  `as_of_at` 조회는 해당 cutoff 이하의 가장 늦은 origin을 유지한다.
 - `finance/inflation_policy_model.py`, `inflation_path.py`, `policy_path.py`,
   `policy_validation.py`, `joint_rate_paths.py`, `yield_resistance.py`,
   `inflation_policy_simulation.py`가 혼합형 Core PCE, 익명 SEP·실제 표결 policy marginal,

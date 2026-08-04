@@ -123,7 +123,7 @@ external source
 
 | 파일 | 역할 |
 |---|---|
-| `finance/loaders/inflation_policy.py` | 하나의 `as_of_at` 이전에 실제 공개된 macro/verified FactSet EPS vintage, SEP, 정책 결정과 ACM collection vintage, 저장 index price만 선택하는 독립 DB-only bundle. active USER/AUTO definition은 `known_at/saved_at` PIT cutoff로 읽고 model artifact는 version+trained cutoff+component exact identity만 허용한다. optional definition/artifact table이 아직 없으면 빈 결과로 닫으며 `economic_cycle_*` 결과를 query/fallback하지 않는다 |
+| `finance/loaders/inflation_policy.py` | 하나의 `as_of_at` 이전에 실제 공개된 macro/verified FactSet EPS vintage, SEP, 정책 결정과 ACM collection vintage, 저장 index price만 선택하는 독립 DB-only bundle. 인자 없는 current read는 `run_kind=current` 중 가장 최근에 갱신된 materialization을 선택해 나중에 작성된 READY 결과가 더 큰 origin 시각의 오래된 row에 가려지지 않게 하고, 명시적 `as_of_at` read는 cutoff 이하 최신 origin을 선택한다. active USER/AUTO definition은 `known_at/saved_at` PIT cutoff로 읽고 model artifact는 version+trained cutoff+component exact identity만 허용한다. optional definition/artifact table이 아직 없으면 빈 결과로 닫으며 `economic_cycle_*` 결과를 query/fallback하지 않는다 |
 | `finance/loaders/universe.py` | universe, asset profile status, symbol lifecycle coverage summary, prebuilt PIT monthly equity universe membership 조회 |
 | `finance/loaders/symbol_resolver.py` | `nyse_symbol_lifecycle`의 ticker-change evidence와 price freshness를 결합해 symbol identity 후보 / active repair map을 읽는다 |
 | `finance/loaders/price.py` | price history, price matrix, freshness, symbol별 latest price, validation window coverage summary 조회 |
