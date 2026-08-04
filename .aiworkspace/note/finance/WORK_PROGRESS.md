@@ -10,6 +10,13 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-07-26 - Risk-On Momentum 5D productionization 완료
+
+- full-universe daily row 변환과 중복 variant 실행을 제거해 Top1000 2년 Standard actual DB 실행을 `21.247s`로 줄였다.
+- Quick / Standard / Deep 분석 강도, compact Daily Swing evidence, Practical Validation module과 Final Review / manual monitoring policy를 연결했다.
+- 전략 maturity를 production / `운영 전략`으로 전환했으며 current-membership historical PIT / delisting 한계는 `REVIEW`로 유지한다.
+- 전체 roadmap `3/3차` 완료. 상세는 [task status](./tasks/active/risk-on-momentum-5d-productionization-20260726/STATUS.md)를 본다.
+
 ### 2026-07-26 - Finance 문서 지침·상태 모델 정렬
 
 - canonical 네 문서의 역할별 update trigger와 workflow 상태 우선순위를 AGENTS/finance skill/runbook에 통일했다.

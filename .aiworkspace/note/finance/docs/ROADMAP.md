@@ -12,17 +12,18 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 통과해 완료됐다. 독립 Point-in-Time 데이터, Core PCE Q4/Q4, 정책·공동 금리 경로·
 10년물 목표 역산, 조건부 S&P 500 스트레스와 독립 12개월 침체 위험이 기존 V1 workflow에
 연결됐다.
-기존 baseline과 남은
-verification debt는 유지하며 다른 신규 product/data
-scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는다.
+기존 baseline과 남은 verification debt는 유지하며 다른 신규 product/data scope는
+아래 Decision Queue에서 별도 승인 없이 함께 열지 않는다.
 
 현재 판단 기준:
 
 - Product baseline: Research → Portfolio Lab → Portfolio Monitoring 흐름 구현
 - Data baseline: MySQL-backed ingestion / loader / service / UI 경계 구현
 - Safety baseline: no live approval, broker order, auto rebalance
+- Active phase: none
+- Active product implementation: none
 - Completed phase: `inflation-policy-yield-path` (5/5 actual DB/Browser verified)
-- Product baseline: Core PCE·policy·joint rate·reverse·equity·independent recession materialization READY
+- Inflation / Policy baseline: Core PCE·policy·joint rate·reverse·equity·independent recession materialization READY
 - Paused work와 Verification-Only work는 별도 상태로 관리
 
 ## Implemented Baseline
@@ -33,8 +34,8 @@ scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는�
 | Market Research | 경제 사이클, 선물 매크로, 심리, 일정, S&P 500, Market Movers, 미국 개별 종목의 3-family / 7-view research | context-only, validation / monitoring signal 아님 |
 | Institutional Holdings | SEC Form 13F 기관 portfolio, holdings, sector, security detail와 identifier coverage | delayed long holdings research, recommendation 아님 |
 | Data Operations | 네 consumer 목적별 data preparation, 공식 파일, bounded recovery, compact history와 active 30-action 고급 도구 | explicit click만 실행, UI direct fetch와 자동 연속 실행 없음 |
-| Backtest Analysis | single strategy와 portfolio mix 실행·비교, result bundle, save / replay와 candidate source | 높은 수익률만으로 선정하지 않음 |
-| Practical Validation | data trust, realism, provider, holdings, macro, stress, robustness와 construction evidence | `NOT_RUN`은 pass가 아니며 보강 뒤 재검증 필요 |
+| Backtest Analysis | single strategy와 portfolio mix 실행·비교, result bundle, save / replay와 candidate source. Risk-On Momentum 5D는 Quick / Standard / Deep 분석 강도와 compact Daily Swing evidence를 제공 | 높은 수익률만으로 선정하지 않음 |
+| Practical Validation | data trust, realism, provider, holdings, macro, stress, robustness와 construction evidence. Daily Swing은 거래·비용·회전율·PIT/survivorship 전용 module로 fail-closed | `NOT_RUN`은 pass가 아니며 보강 뒤 재검증 필요 |
 | Final Review | gate-aware investment report, selected / hold / reject / re-review decision과 monitoring handoff | human decision record, live approval 아님 |
 | Portfolio Monitoring | direct stock·ETF와 selected strategy의 group/item, cashflow-aware performance, contribution, diagnosis와 recheck | read-only monitoring, broker / auto rebalance 없음 |
 | Reference Center | 7개 current surface의 개념·journey·failure state·deep link 검색 | product help owner |
@@ -50,12 +51,9 @@ scope는 아래 Decision Queue에서 별도 승인 없이 함께 열지 않는�
 
 ### Active
 
-| Work | Current State | Next Gate |
-|---|---|---|
-| [Inflation Policy Yield Path](../phases/active/inflation-policy-yield-path/STATUS.md) | 전체 5차 중 1~4차 PIT data·Core PCE·policy/joint-rate/reverse/equity 완료, 5차 active | 독립 침체 episode/OOS validation과 actual 통합 |
-
-이 phase 외 새 제품 범위는 목적, 완료 조건과 data/safety boundary를 합의한 뒤 별도
-task 또는 명시적으로 승인된 phase로 연다.
+현재 user-approved product implementation 또는 active phase는 없다.
+새 제품 범위는 목적, 완료 조건과 data/safety boundary를 합의한 뒤 task 또는
+명시적으로 요청된 phase로 연다.
 
 ### Paused
 
@@ -84,7 +82,6 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 | P1 | Existing Browser verification debt closeout | 구현 완료 task의 실제 interaction evidence와 status drift를 작은 범위로 닫을 수 있음 | 대상 task별 QA-only 범위 확인 |
 | P1 | Market Movers sector conditional outlook | 현재 broader roadmap의 다음 단계지만 확률·분포를 공개하려면 독립 episode와 OOS publication gate가 필요 | target, sample independence, chronological validation과 공개 기준 승인 |
 | P1 | Sentiment independent evidence / PIT validation | CNN·AAII의 현재 맥락을 장기 검증 가능한 evidence로 확장할 수 있음 | paused 해제, 신규 source와 chronological PIT validation scope 승인 |
-| P2 | Risk-On Momentum 5D governance | research lane을 Practical Validation / Final Review / Monitoring에 연결할지 결정해야 함 | daily signal semantics, validation module, review / monitoring policy 승인 |
 | P2 | Overview scheduler hardening | browser-session 수동 흐름을 넘어 unattended collection을 운영할 때 필요 | launchd / scheduler 운영권한, retry, alert와 runbook 승인 |
 | P3 | Data Operations durable execution / dependency hardening | 운영 근거가 생기면 queue·cancel·resume 또는 collapsed-body 초기 평가와 dynamic dependency 위험을 줄일 수 있음 | 실제 unattended / multi-user 필요, authorization, history scope와 한 번에 하나의 refactor boundary 승인 |
 | P3 | Focused code refactor follow-up | transitional Backtest helper와 일부 large surface의 ownership을 더 명확히 할 수 있음 | 한 번에 하나의 owner boundary와 public call-path 변경 승인 |
@@ -93,18 +90,13 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 
 ## Recommended Order
 
-1. **Active inflation-policy phase** — 5차 침체 위험은 기존 경제 사이클 확률을
-   재사용하지 않고 독립 episode/OOS validation과 publication gate를 통과한 경우만
-   확률을 공개한다. 4차 equity는 날짜 검증 EPS와 joint-path gate를 통과해 완료됐다.
-2. **Verification debt closeout** — 이미 구현된 interaction을 작은 QA-only 작업으로 닫아
+1. **Verification debt closeout** — 이미 구현된 interaction을 작은 QA-only 작업으로 닫아
    active-state 신뢰도를 먼저 높인다.
-3. **Correctness decision** — historical universe / delisting PIT source와 storage policy를
+2. **Correctness decision** — historical universe / delisting PIT source와 storage policy를
    승인하거나 명시적으로 defer한다.
-4. **One product research lane** — Market Movers outlook 또는 Sentiment validation 중
+3. **One product research lane** — Market Movers outlook 또는 Sentiment validation 중
    하나만 선택해 target과 publication gate를 먼저 설계한다.
-5. **Strategy governance** — daily swing lane을 validation / review / monitoring에
-   연결할 실제 필요가 확인되면 연다.
-6. **Maintenance / platform work** — Data Operations hardening, refactor, scheduler,
+4. **Maintenance / platform work** — Data Operations hardening, refactor, scheduler,
    UI split과 archive migration은 제품 가치나 운영 병목이 확인된 범위로만 연다.
 
 동시에 여러 broad track을 열지 않는다. 각 후보는 source correctness, 사용자 완료

@@ -1456,6 +1456,197 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
 
 
 class RiskOnMomentumSwingContractTests(unittest.TestCase):
+    def test_prepared_swing_simulation_indexes_dates_and_symbols(self) -> None:
+        from finance.swing import (
+            RiskOnMomentumConfig,
+            prepare_swing_feature_frame,
+            prepare_swing_simulation_data,
+        )
+
+        prices, statements, _ = _risk_on_momentum_fixture()
+        config = RiskOnMomentumConfig(start="2024-03-15", end="2024-05-03")
+        features = prepare_swing_feature_frame(prices, statement_history=statements)
+
+        prepared = prepare_swing_simulation_data(features, config=config)
+
+        self.assertTrue(prepared.dates)
+        first_date = prepared.dates[0]
+        self.assertEqual(prepared.date_positions[first_date], 0)
+        self.assertEqual(prepared.by_date[first_date].index.name, "symbol")
+        self.assertTrue(prepared.by_date[first_date].index.is_unique)
+
+    def test_prepared_swing_simulation_preserves_backtest_results(self) -> None:
+        from finance.swing import (
+            RiskOnMomentumConfig,
+            prepare_swing_feature_frame,
+            prepare_swing_simulation_data,
+            run_risk_on_momentum_backtest,
+        )
+
+        prices, statements, macro_scores = _risk_on_momentum_fixture()
+        config = RiskOnMomentumConfig(
+            start="2024-03-15",
+            end="2024-05-03",
+            start_balance=10_000.0,
+            macro_filter_enabled=True,
+            scanner_top_n_per_day=10,
+            random_seed=1,
+        )
+        features = prepare_swing_feature_frame(prices, statement_history=statements)
+        baseline = run_risk_on_momentum_backtest(
+            prices,
+            config=config,
+            macro_scores=macro_scores,
+            statement_history=statements,
+            prepared_features=features,
+        )
+        prepared = prepare_swing_simulation_data(features, config=config)
+
+        optimized = run_risk_on_momentum_backtest(
+            prices,
+            config=config,
+            macro_scores=macro_scores,
+            statement_history=statements,
+            prepared_simulation=prepared,
+        )
+
+        pd.testing.assert_frame_equal(optimized.result_df, baseline.result_df)
+        pd.testing.assert_frame_equal(optimized.trade_log_df, baseline.trade_log_df)
+        pd.testing.assert_frame_equal(optimized.scanner_df, baseline.scanner_df)
+        self.assertEqual(optimized.metrics, baseline.metrics)
+
+    def test_swing_analysis_intensity_resolves_standard_and_legacy_controls(self) -> None:
+        from finance.swing_analysis import resolve_swing_analysis_controls
+
+        standard = resolve_swing_analysis_controls(
+            "standard",
+            random_iterations=50,
+            run_comparison_suite=False,
+            run_sensitivity_suite=True,
+        )
+        legacy = resolve_swing_analysis_controls(
+            None,
+            random_iterations=7,
+            run_comparison_suite=False,
+            run_sensitivity_suite=True,
+        )
+
+        self.assertEqual(
+            (
+                standard.intensity,
+                standard.random_iterations,
+                standard.run_comparison_suite,
+                standard.run_sensitivity_suite,
+            ),
+            ("standard", 10, True, False),
+        )
+        self.assertEqual(
+            (
+                legacy.intensity,
+                legacy.random_iterations,
+                legacy.run_comparison_suite,
+                legacy.run_sensitivity_suite,
+            ),
+            ("custom_legacy", 7, False, True),
+        )
+
+    def test_swing_simulation_executor_reuses_equivalent_variants(self) -> None:
+        from finance.swing import RiskOnMomentumConfig, clone_config, prepare_swing_feature_frame
+        from finance.swing_analysis import SwingSimulationExecutor
+
+        prices, statements, macro_scores = _risk_on_momentum_fixture()
+        config = RiskOnMomentumConfig(
+            start="2024-03-15",
+            end="2024-05-03",
+            scanner_top_n_per_day=10,
+        )
+        features = prepare_swing_feature_frame(prices, statement_history=statements)
+        executor = SwingSimulationExecutor(
+            price_history=prices,
+            macro_scores=macro_scores,
+            statement_history=statements,
+            prepared_features=features,
+        )
+
+        first = executor.run(config)
+        cached = executor.run(clone_config(config, collect_scanner_rows=False))
+        distinct_seed = executor.run(
+            clone_config(
+                config,
+                ranking_mode="random",
+                random_seed=config.random_seed + 1,
+                collect_scanner_rows=False,
+            )
+        )
+
+        self.assertIs(cached, first)
+        self.assertIsNot(distinct_seed, first)
+        self.assertEqual(executor.executed_count, 2)
+        self.assertEqual(executor.cache_hit_count, 1)
+        self.assertEqual(executor.request_count, 3)
+
+    def test_risk_on_runtime_standard_intensity_reports_deduplicated_execution(self) -> None:
+        from app.runtime import backtest as facade_runtime
+        from app.runtime.backtest.runners import risk_on_momentum as runtime
+
+        prices, statements, macro_scores = _risk_on_momentum_fixture()
+        with (
+            patch.object(
+                facade_runtime,
+                "inspect_strict_annual_price_freshness",
+                return_value={"status": "ok", "message": "fresh"},
+            ),
+            patch.object(runtime, "load_price_history", return_value=prices),
+            patch.object(runtime, "load_statement_fundamentals_shadow", return_value=statements),
+            patch.object(runtime, "load_futures_ohlcv", return_value=pd.DataFrame()),
+            patch.object(runtime, "build_futures_macro_mean_z_scores", return_value=macro_scores),
+            patch.object(runtime, "_write_risk_on_momentum_artifact", return_value={"run_json": "test.json"}),
+        ):
+            bundle = runtime.run_risk_on_momentum_5d_backtest_from_db(
+                tickers=sorted(prices["symbol"].unique()),
+                universe_mode="manual_tickers",
+                start="2024-03-15",
+                end="2024-05-03",
+                analysis_intensity="standard",
+            )
+
+        meta = bundle["meta"]
+        self.assertEqual(meta["analysis_intensity"], "standard")
+        self.assertEqual(meta["random_iterations"], 10)
+        self.assertEqual(meta["simulation_request_count"], 20)
+        self.assertEqual(meta["simulation_executed_count"], 16)
+        self.assertEqual(meta["simulation_cache_hit_count"], 4)
+
+    def test_risk_on_single_settings_projects_standard_analysis_intensity(self) -> None:
+        from app.services.backtest_single_settings_workspace import (
+            build_single_settings_workspace,
+            project_single_settings_payload,
+        )
+
+        workspace = build_single_settings_workspace(
+            "Risk-On Momentum 5D",
+            None,
+            {},
+            {},
+        )
+        risk_fields = {
+            field["field_id"]: field
+            for section in workspace["sections"]
+            if section["section_id"] == "risk"
+            for field in section["fields"]
+        }
+        payload = project_single_settings_payload(workspace, {})
+
+        self.assertEqual(risk_fields["analysis_intensity"]["value"], "standard")
+        self.assertEqual(
+            [option["value"] for option in risk_fields["analysis_intensity"]["options"]],
+            ["quick", "standard", "deep"],
+        )
+        self.assertNotIn("random_iterations", risk_fields)
+        self.assertNotIn("run_comparison_suite", risk_fields)
+        self.assertNotIn("run_sensitivity_suite", risk_fields)
+        self.assertEqual(payload["analysis_intensity"], "standard")
+
     def test_risk_on_momentum_atr_indicator_uses_simple_true_range_mean(self) -> None:
         from finance.indicators import add_atr
 

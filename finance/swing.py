@@ -111,6 +111,19 @@ class SwingBacktestResult:
     warnings: list[str]
 
 
+@dataclass(frozen=True)
+class PreparedSwingSimulationData:
+    """Reusable, date-indexed inputs for repeated swing simulations."""
+
+    features: pd.DataFrame
+    dates: tuple[pd.Timestamp, ...]
+    by_date: dict[pd.Timestamp, pd.DataFrame]
+    date_positions: dict[pd.Timestamp, int]
+    atr_column: str
+    start_date: pd.Timestamp
+    end_date: pd.Timestamp
+
+
 def _normalize_percent(value: float) -> float:
     value = float(value or 0.0)
     return value / 100.0 if abs(value) > 1.0 else value
@@ -137,6 +150,49 @@ def _ensure_atr_feature(features: pd.DataFrame, config: RiskOnMomentumConfig) ->
     if atr_col in features.columns:
         return features
     return add_atr(features, period=int(config.atr_period), symbol_col="symbol", date_col="date")
+
+
+def prepare_swing_simulation_data(
+    features: pd.DataFrame,
+    *,
+    config: RiskOnMomentumConfig,
+) -> PreparedSwingSimulationData:
+    """Normalize and index feature rows once for primary and variant simulations."""
+
+    if features is None or features.empty:
+        raise ValueError("No usable feature rows were available for Risk-On Momentum 5D.")
+    prepared = _ensure_atr_feature(features.copy(), config)
+    prepared["date"] = pd.to_datetime(prepared["date"], errors="coerce").dt.normalize()
+    prepared["symbol"] = prepared["symbol"].astype(str)
+    start_ts = pd.to_datetime(config.start).normalize() if config.start else prepared["date"].min()
+    end_ts = pd.to_datetime(config.end).normalize() if config.end else prepared["date"].max()
+    prepared = prepared[
+        prepared["date"].notna() & (prepared["date"] <= end_ts)
+    ].sort_values(["date", "symbol"]).reset_index(drop=True)
+    dates = tuple(
+        pd.Timestamp(value).normalize()
+        for value in sorted(prepared["date"].dropna().unique())
+        if start_ts <= pd.Timestamp(value).normalize() <= end_ts
+    )
+    if len(dates) < 2:
+        raise ValueError("At least two trading dates are required for D+1 execution.")
+    by_date: dict[pd.Timestamp, pd.DataFrame] = {}
+    for date_value, frame in prepared.groupby("date", sort=True):
+        normalized_date = pd.Timestamp(date_value).normalize()
+        indexed = frame.drop_duplicates("symbol", keep="last").set_index(
+            "symbol",
+            drop=False,
+        )
+        by_date[normalized_date] = indexed
+    return PreparedSwingSimulationData(
+        features=prepared,
+        dates=dates,
+        by_date=by_date,
+        date_positions={date_value: index for index, date_value in enumerate(dates)},
+        atr_column=_atr_column(config),
+        start_date=start_ts,
+        end_date=end_ts,
+    )
 
 
 def _position_exit_prices(
@@ -451,17 +507,26 @@ def _portfolio_value(
     *,
     cash: float,
     positions: dict[str, Position],
-    day_rows_by_symbol: dict[str, dict[str, Any]],
+    day_rows: pd.DataFrame,
     price_col: str,
 ) -> float:
     total = float(cash)
     for symbol, position in positions.items():
-        row = day_rows_by_symbol.get(symbol)
-        price = _safe_float(row.get(price_col)) if row else None
+        row = _day_symbol_row(day_rows, symbol)
+        price = _safe_float(row.get(price_col)) if row is not None else None
         if price is None:
             price = position.entry_price
         total += position.quantity * float(price)
     return float(total)
+
+
+def _day_symbol_row(day_rows: pd.DataFrame, symbol: str) -> pd.Series | None:
+    if day_rows is None or day_rows.empty or symbol not in day_rows.index:
+        return None
+    row = day_rows.loc[symbol]
+    if isinstance(row, pd.DataFrame):
+        return row.iloc[-1]
+    return row
 
 
 def _consecutive_loss_count(trades: pd.DataFrame) -> int:
@@ -558,28 +623,22 @@ def run_risk_on_momentum_backtest(
     macro_scores: pd.DataFrame | None = None,
     statement_history: pd.DataFrame | None = None,
     prepared_features: pd.DataFrame | None = None,
+    prepared_simulation: PreparedSwingSimulationData | None = None,
 ) -> SwingBacktestResult:
     _validate_config(config)
     warnings: list[str] = []
 
-    features = prepared_features.copy() if prepared_features is not None else prepare_swing_feature_frame(
-        price_history,
-        statement_history=statement_history,
-    )
-    if features.empty:
-        raise ValueError("No usable price rows were available for Risk-On Momentum 5D.")
-    features = _ensure_atr_feature(features, config)
-
-    features["date"] = pd.to_datetime(features["date"], errors="coerce").dt.normalize()
-    start_ts = pd.to_datetime(config.start).normalize() if config.start else features["date"].min()
-    end_ts = pd.to_datetime(config.end).normalize() if config.end else features["date"].max()
-    features = features[(features["date"] <= end_ts)].sort_values(["date", "symbol"]).reset_index(drop=True)
-    dates = [pd.Timestamp(value).normalize() for value in sorted(features["date"].dropna().unique())]
-    dates = [value for value in dates if value >= start_ts and value <= end_ts]
-    if len(dates) < 2:
-        raise ValueError("At least two trading dates are required for D+1 execution.")
-
-    by_date = {pd.Timestamp(date_value).normalize(): frame for date_value, frame in features.groupby("date", sort=True)}
+    if prepared_simulation is None:
+        features = prepared_features if prepared_features is not None else prepare_swing_feature_frame(
+            price_history,
+            statement_history=statement_history,
+        )
+        prepared_simulation = prepare_swing_simulation_data(features, config=config)
+    elif prepared_simulation.atr_column != _atr_column(config):
+        raise ValueError("Prepared swing simulation ATR period does not match the config.")
+    dates = prepared_simulation.dates
+    by_date = prepared_simulation.by_date
+    date_positions = prepared_simulation.date_positions
     macro_lookup = build_macro_lookup(macro_scores)
     rng = np.random.default_rng(int(config.random_seed))
 
@@ -597,18 +656,14 @@ def run_risk_on_momentum_backtest(
 
     for idx, signal_date in enumerate(dates):
         day_rows = by_date.get(signal_date, pd.DataFrame())
-        day_rows_by_symbol = {
-            str(row["symbol"]): dict(row)
-            for _, row in day_rows.iterrows()
-        }
 
         if pending_sells:
             remaining_sells: list[dict[str, Any]] = []
             for order in pending_sells:
                 symbol = str(order["symbol"])
                 position = positions.get(symbol)
-                row = day_rows_by_symbol.get(symbol)
-                open_price = _safe_float(row.get("open")) if row else None
+                row = _day_symbol_row(day_rows, symbol)
+                open_price = _safe_float(row.get("open")) if row is not None else None
                 if position is None:
                     continue
                 if open_price is None:
@@ -620,7 +675,11 @@ def run_risk_on_momentum_backtest(
                 net_proceeds = gross_proceeds - exit_fee
                 cash += net_proceeds
                 exit_signal_date = pd.Timestamp(order["exit_signal_date"]).normalize()
-                holding_days = sum(1 for date_value in dates if position.entry_date <= date_value <= exit_signal_date)
+                holding_days = (
+                    date_positions[exit_signal_date]
+                    - date_positions[position.entry_date]
+                    + 1
+                )
                 gross_pnl = gross_proceeds - position.entry_notional
                 net_pnl = net_proceeds - position.entry_notional - position.entry_fee
                 trade_rows.append(
@@ -676,7 +735,7 @@ def run_risk_on_momentum_backtest(
             portfolio_open_value = _portfolio_value(
                 cash=cash,
                 positions=positions,
-                day_rows_by_symbol=day_rows_by_symbol,
+                day_rows=day_rows,
                 price_col="open",
             )
             slot_value = portfolio_open_value / float(config.max_total_positions)
@@ -687,8 +746,8 @@ def run_risk_on_momentum_backtest(
                 symbol = str(order["symbol"])
                 if symbol in positions and not config.allow_duplicate_positions:
                     continue
-                row = day_rows_by_symbol.get(symbol)
-                open_price = _safe_float(row.get("open")) if row else None
+                row = _day_symbol_row(day_rows, symbol)
+                open_price = _safe_float(row.get("open")) if row is not None else None
                 if open_price is None:
                     remaining_buys.append(order)
                     continue
@@ -729,7 +788,7 @@ def run_risk_on_momentum_backtest(
         total_balance = _portfolio_value(
             cash=cash,
             positions=positions,
-            day_rows_by_symbol=day_rows_by_symbol,
+            day_rows=day_rows,
             price_col="close",
         )
         total_return = np.nan if previous_total is None else total_balance / previous_total - 1.0
@@ -759,11 +818,15 @@ def run_risk_on_momentum_backtest(
         next_date_exists = idx < len(dates) - 1
         exit_orders: list[dict[str, Any]] = []
         for symbol, position in list(positions.items()):
-            row = day_rows_by_symbol.get(symbol)
-            close_price = _safe_float(row.get("close")) if row else None
+            row = _day_symbol_row(day_rows, symbol)
+            close_price = _safe_float(row.get("close")) if row is not None else None
             if close_price is None:
                 continue
-            trading_holding_days = sum(1 for date_value in dates if position.entry_date <= date_value <= signal_date)
+            trading_holding_days = (
+                date_positions[signal_date]
+                - date_positions[position.entry_date]
+                + 1
+            )
             reason = None
             if close_price <= position.stop_price:
                 reason = "STOP_LOSS"
@@ -789,7 +852,7 @@ def run_risk_on_momentum_backtest(
         buy_orders: list[dict[str, Any]] = []
         ranked = pd.DataFrame()
         if macro_pass and next_date_exists and available_new > 0:
-            ranked = _rank_candidates(day_rows, config, rng)
+            ranked = _rank_candidates(day_rows.reset_index(drop=True), config, rng)
             if not ranked.empty:
                 ranked["macro_penalty_total"] = float(macro_eval.penalty_total)
                 if float(macro_eval.penalty_total) > 0:
@@ -872,10 +935,9 @@ def run_risk_on_momentum_backtest(
 
     final_date = dates[-1]
     final_rows = by_date.get(final_date, pd.DataFrame())
-    final_by_symbol = {str(row["symbol"]): dict(row) for _, row in final_rows.iterrows()}
     for symbol, position in positions.items():
-        row = final_by_symbol.get(symbol)
-        close_price = _safe_float(row.get("close")) if row else position.entry_price
+        row = _day_symbol_row(final_rows, symbol)
+        close_price = _safe_float(row.get("close")) if row is not None else position.entry_price
         gross_proceeds = position.quantity * float(close_price)
         gross_pnl = gross_proceeds - position.entry_notional
         net_pnl = gross_proceeds - position.entry_notional - position.entry_fee
@@ -897,7 +959,11 @@ def run_risk_on_momentum_backtest(
                 "net_return_pct": gross_proceeds / (position.entry_notional + position.entry_fee) - 1.0,
                 "exit_reason": "END_OF_BACKTEST",
                 "exit_reason_code": "end_of_backtest",
-                "holding_days": sum(1 for date_value in dates if position.entry_date <= date_value <= final_date),
+                "holding_days": (
+                    date_positions[final_date]
+                    - date_positions[position.entry_date]
+                    + 1
+                ),
                 "ranking_score": position.ranking_score,
                 "ranking_score_raw": position.entry_features.get("ranking_score_raw"),
                 "entry_return_20d": position.entry_features.get("return_20d"),

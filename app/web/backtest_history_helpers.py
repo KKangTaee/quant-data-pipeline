@@ -345,6 +345,8 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         payload["scanner_top_n_per_day"] = int(record.get("scanner_top_n_per_day") or 50)
         payload["run_comparison_suite"] = bool(record.get("run_comparison_suite", True))
         payload["run_sensitivity_suite"] = bool(record.get("run_sensitivity_suite", False))
+        if record.get("analysis_intensity"):
+            payload["analysis_intensity"] = str(record.get("analysis_intensity"))
         if record.get("universe_limit") is not None:
             payload["universe_limit"] = int(record.get("universe_limit") or 0)
     if record.get("promotion_min_etf_aum_b") is not None:

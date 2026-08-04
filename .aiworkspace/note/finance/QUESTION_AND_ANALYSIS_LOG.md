@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-07-26 - Risk-On Momentum 5D는 Daily Swing 수동 검토 계약으로 production 전환한다
+
+- User request: 개발 중인 Risk-On Momentum 5D의 미완성 부분과 2년 실행 지연 원인을 진단하고 개발을 마무리하도록 요청함.
+- Interpreted goal: 성능만 개선하거나 label만 바꾸지 않고 core runtime, Daily Swing validation handoff, Final Review / Monitoring 경계를 모두 닫는다.
+- Analysis result: 병목은 날짜별 전체 universe `iterrows()` 변환과 기본 최대 57회 중복 simulation이었다. prepared index와 distinct-config cache로 Standard를 16회로 줄였고 actual 2년 실행은 `21.247s`다.
+- Follow-up: production maturity와 수동 daily review / 1 market day stale / no-auto-order 정책을 구현했다. Historical PIT membership / delisting 자료는 미검증이므로 계속 `REVIEW`다.
+
 ### 2026-07-26 - canonical 문서는 역할이 바뀔 때만 갱신한다
 
 - User request: 핵심 문서 개편 뒤, 해당 문서를 수정하는 지침과 상태 모델도 안전하고 깊게 진단해 개선하도록 요청함.

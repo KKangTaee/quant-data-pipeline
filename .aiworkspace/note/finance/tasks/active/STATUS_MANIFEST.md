@@ -5,9 +5,7 @@ Last Verified: 2026-08-04
 
 ## Current State
 
-Current active product task:
-
-- none
+Current active product task: none.
 
 Latest completed inflation-policy task:
 
@@ -26,10 +24,11 @@ Verification-Only tasks:
 
 Latest completed product task:
 
-- `today-contributor-coverage-layout-v1-20260723` — 전체 roadmap `2/2`; Today의 계산 가능한 EOD/live 종목 기여를 절대 영향도 순으로 모두 표시하고 coverage copy와 compact top-aligned `우선 확인` 배치를 적용했다.
+- `risk-on-momentum-5d-productionization-20260726` — 전체 roadmap `3/3`; Top1000 2년 Standard `21.247s`, compact Daily Swing validation, Final Review / manual monitoring policy와 production maturity 전환을 완료했다.
 
 Previous completed task:
 
+- `today-contributor-coverage-layout-v1-20260723` — 전체 roadmap `2/2`; Today의 계산 가능한 EOD/live 종목 기여를 절대 영향도 순으로 모두 표시하고 coverage copy와 compact top-aligned `우선 확인` 배치를 적용했다.
 - `portfolio-monitoring-latest-decision-lifecycle-v1-20260723` — 전체 roadmap `4/4`; 후보별 최신 Final Review 판단을 current truth로 사용하고, 기존 항목은 삭제하지 않은 채 최신 non-select에서 item-local 실행 잠금과 재확인/종료 행동을 제공한다.
 - `backtest-level1-price-refresh-handoff-v1-20260722` — 전체 roadmap `3/3`; 가격 부족/provider gap/재실행 전 상태를 Level2 blocker로 만들고, 명시적 최신화와 재실행 뒤에만 인계를 다시 연다.
 - `final-review-liquidity-evidence-copy-v1-20260722` — 전체 roadmap `2/2`; stable liquidity proof status와 Gate는 유지하고 Level3 카드 제목·현황·설명·기준만 사용자 문구로 변환했다.

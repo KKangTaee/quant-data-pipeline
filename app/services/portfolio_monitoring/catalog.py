@@ -167,6 +167,12 @@ def list_monitoring_candidates(
         if row.get("monitoring_candidate") is not True or not decision_id:
             continue
         raw_decision = dict(row.get("raw_decision") or {})
+        investability_packet = dict(raw_decision.get("investability_evidence_packet") or {})
+        daily_swing_policy = dict(
+            raw_decision.get("daily_swing_policy_snapshot")
+            or investability_packet.get("daily_swing_policy_snapshot")
+            or {}
+        )
         label = str(
             row.get("source_title")
             or raw_decision.get("source_title")
@@ -186,6 +192,16 @@ def list_monitoring_candidates(
                     "selection_source_id": row.get("selection_source_id"),
                     "updated_at": row.get("updated_at"),
                     "baseline_start": row.get("baseline_start"),
+                    "daily_swing_policy": daily_swing_policy,
+                    "review_cadence": daily_swing_policy.get("review_cadence"),
+                    "stale_after_market_days": daily_swing_policy.get(
+                        "stale_after_market_days"
+                    ),
+                    "manual_recheck_required": daily_swing_policy.get(
+                        "manual_recheck_required"
+                    ),
+                    "auto_order": False,
+                    "auto_rebalance": False,
                 },
                 readiness="READY",
             )

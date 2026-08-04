@@ -53,7 +53,7 @@ Backtest 단계의 primary reading order는 `page workflow shell -> active Level
 | `app/services/backtest_execution.py` | Streamlit-free Single Strategy execution service. DB-backed runtime dispatch, input/data/system error normalization, runtime owner metadata attach 담당 |
 | `app/services/backtest_compare_execution.py` | Streamlit-free manual Compare execution service. 여러 전략 실행 loop와 input/data/system error normalization 담당 |
 | `app/services/backtest_compare_catalog.py` | Streamlit-free Compare runner catalog service. 전략별 default / universe resolution / runtime dispatch / runtime owner metadata attach 담당 |
-| `app/services/backtest_strategy_catalog.py` | Streamlit-free purpose group / maturity catalog. `Risk-On Momentum 5D`는 research가 아니라 development로 분류한다 |
+| `app/services/backtest_strategy_catalog.py` | Streamlit-free purpose group / maturity catalog. `Risk-On Momentum 5D`를 Daily Swing 운영 전략으로 분류하고 Level2 handoff maturity를 제공한다 |
 | `app/services/backtest_analysis_decision_workspace.py` | Streamlit-free Level1 read model. Single / Mix 공통 truth, result freshness, root reason dedup, KPI / error / action projection을 계산한다 |
 | `app/services/backtest_single_settings_workspace.py` | Streamlit-free Single settings schema / validation / exact payload projection / deterministic preset profile. current primary 12개 concrete variant와 legacy replay-only Quality Snapshot을 구분하고, named preset마다 schema base와 evidence override를 합친 complete patch를 제공한다 |
 | `app/services/backtest_portfolio_mix_workspace.py` | Streamlit-free Portfolio Mix draft/read model. 2~4개 component, concrete strategy 중복, 공통 기간, 역할·비중·100% 합계, effective fingerprint, fresh/stale result, new-schema saved shelf와 handler-aware action을 계산한다. fresh weighted bundle은 KPI, 실제 날짜 base-100 누적 성과, 월별 수익률, component 기여도와 계산/data trust의 JSON-safe evidence로 투영한다 |
@@ -65,7 +65,7 @@ Backtest 단계의 primary reading order는 `page workflow shell -> active Level
 | `app/services/backtest_analysis_research_board.py` | Streamlit-free Backtest Analysis research/reference board placement service. Reference help와 3A~4B evidence / governance / workbench 항목을 분류하고 기본 숨김 정책을 제공 |
 | `app/services/backtest_strategy_evidence_inventory.py` | Streamlit-free strategy evidence inventory read model. 모든 catalog strategy의 maturity / evidence / next action을 읽기 전용으로 해석 |
 | `app/services/backtest_strategy_bridge.py` | Streamlit-free Strict Annual + GTAA / Equal Weight bridge read model. evidence-mature group의 component role / validation evidence / next workflow를 읽기 전용으로 해석 |
-| `app/services/backtest_risk_on_governance.py` | Streamlit-free Risk-On Momentum 5D governance read model. Daily Swing research evidence와 아직 deferred인 validation / review / monitoring governance module을 분리해 읽기 전용으로 해석 |
+| `app/services/backtest_risk_on_governance.py` | Streamlit-free Risk-On Momentum 5D governance read model. Daily Swing research evidence, Practical Validation, Final Review와 수동 monitoring 경계를 읽기 전용으로 해석 |
 | `app/services/backtest_etf_evidence_expansion.py` | Streamlit-free ETF evidence expansion read model. GRS / Risk Parity / Dual Momentum의 current anchor, near miss, not-ready reason, required evidence, next workflow를 읽기 전용으로 해석 |
 | `app/services/backtest_etf_current_anchor.py` | Streamlit-free ETF current-anchor workbench read model. 기존 run history / Practical Validation source handoff row를 읽어 GRS / Risk Parity / Dual Momentum의 latest run, source evidence, missing evidence, next action을 읽기 전용으로 해석 |
 | `app/services/backtest_etf_rerun_matrix.py` | Streamlit-free ETF rerun matrix workbench service. GRS / Risk Parity / Dual Momentum의 session-only rerun scenario plan을 만들고, 선택한 전략만 버튼 실행해 compact result evidence를 session state로 돌려준다. registry / saved setup / run history / validation result / current candidate promotion artifact는 쓰지 않는다 |
@@ -90,6 +90,8 @@ Backtest 단계의 primary reading order는 `page workflow shell -> active Level
 | `app/services/backtest_practical_validation_modules.py` | Streamlit-free Practical Validation module planner. source traits와 profile / input checks / diagnostic / audit rows를 읽어 필수 / 조건부 / 후속 참고 module, gate effect, gate reason, evidence board 연결, Final Review 이동 gate를 만든다 |
 | `app/services/backtest_practical_validation_board_registry.py` | Streamlit-free Practical Validation board registry. 화면 보드가 어떤 validation module의 evidence인지, 현재 후보에 적용되는지, 어떤 gate effect를 갖는지 매핑한다 |
 | `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. 기존 strategy runtime 재검증 계획, actual replay result, replay selection history snapshot을 만든다 |
+| `app/services/backtest_daily_swing_validation.py` | Streamlit-free Daily Swing Practical Validation owner. compact evidence에서 거래·보유·회전율·비용·benchmark/random·PIT/survivorship 상태를 판정하고 missing evidence를 fail-closed로 처리한다 |
+| `app/services/backtest_daily_swing_policy.py` | Streamlit-free Daily Swing selected-route / monitoring policy owner. daily after-market-close cadence, 1 market day stale, manual recheck, no auto order / rebalance 경계를 제공한다 |
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free Practical Validation curve normalize, compact curve records, curve provenance, benchmark parity helper |
 | `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free P2 provider context adapter. DB에 저장된 ETF operability / holdings / exposure / FRED macro snapshot을 compact coverage / provenance / freshness evidence와 look-through board로 바꿔 Practical Diagnostics에 연결 |
 | `app/services/backtest_construction_risk_audit.py` | Streamlit-free Construction Risk Audit. Practical Validation metrics와 provider look-through board를 읽어 component concentration, provider coverage, top holding, holdings overlap, asset bucket exposure를 compact audit row로 표시 |
@@ -454,7 +456,7 @@ Phase 30 third work unit status:
 - 복원 후 결과를 갱신하려면 사용자가 다시 실행해야 한다.
 - 실행 직후 result fingerprint가 current 설정과 같으면 fresh다. 전략 / variant / form 설정이 바뀌면 이전 결과를 없애지 않고 `이전 설정 결과`로 보존하며 Level2 action만 차단한다.
 - 실행 성공은 자동 handoff가 아니다. Python read model이 maturity / data / execution / handler Gate를 통과시키고 사용자가 인계 action을 눌러야 source가 생성된다.
-- `Risk-On Momentum 5D`는 development 전략이며 실행 surface는 유지하되 현재 Level2 CTA는 제공하지 않는다.
+- `Risk-On Momentum 5D`는 production Daily Swing 전략이다. 실행 결과에 compact Daily Swing evidence가 있어야 Level2가 해석할 수 있고, 누락 시 fail-closed한다. Current-membership universe의 PIT/survivorship 한계는 숨기지 않고 `REVIEW`로 전달한다.
 - React `multi_select`는 option 20개 이하에서 modifier key가 필요 없는 checkbox-card,
   21개 이상에서 검색·bounded checkbox list·selected chip을 사용한다. 선택 결과는 schema
   catalog 순서의 배열로 정규화하며 React local edit만으로 Streamlit rerun을 만들지 않는다.

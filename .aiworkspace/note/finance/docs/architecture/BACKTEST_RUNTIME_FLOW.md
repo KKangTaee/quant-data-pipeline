@@ -49,7 +49,7 @@ app/web/streamlit_app.py
   -> saved replay result context
 ```
 
-Risk-On Momentum 5D 흐름은 기존 rebalance engine과 다른 Daily Swing 연구 lane이다.
+Risk-On Momentum 5D 흐름은 기존 rebalance engine과 다른 Daily Swing 운영 전략 lane이다.
 
 ```text
 app/web/streamlit_app.py
@@ -60,12 +60,18 @@ app/web/streamlit_app.py
   -> finance/transform.py
   -> finance/swing.py
   -> finance/indicators.py / finance/swing_macro.py / finance/swing_analysis.py
-  -> result bundle + generated swing artifacts
+  -> result bundle + generated swing artifacts + compact Daily Swing evidence
   -> Backtest Analysis Swing Detail
+  -> Practical Validation Daily Swing module
+  -> Final Review manual selected-route policy
 ```
 
-이 lane은 Backtest Analysis 후보 연구 surface다.
-Practical Validation / Final Review / Portfolio Monitoring daily signal governance 연결은 별도 승인 task 전까지 deferred다.
+Single Strategy의 기본 `Standard` 분석은 random 10회와 비교 suite를 사용하고,
+동일 config 결과와 prepared daily index를 한 runtime 안에서 재사용한다.
+`Quick`은 설정 반복, `Deep`은 50회 random과 sensitivity를 포함한 명시적 정밀 연구용이다.
+Practical Validation은 compact evidence 누락을 차단하며 current-membership universe의
+PIT/survivorship 한계를 `REVIEW`로 유지한다. Final Review와 Portfolio Monitoring은
+daily after-market-close 수동 재검토, 1 market day stale, no auto order / rebalance 경계를 따른다.
 
 ## 핵심 파일
 
@@ -82,7 +88,8 @@ Practical Validation / Final Review / Portfolio Monitoring daily signal governan
 | `app/services/backtest_saved_portfolio_replay.py` | Saved portfolio replay strategy rerun, weighted bundle creation, replay source / history context assembly |
 | `app/services/backtest_realism_audit.py` | Practical Validation / Final Review가 읽는 read-only backtest realism audit. 기존 runtime metadata와 compact validation evidence에서 비용, turnover, liquidity, net policy, rebalance, tax/account, execution boundary gap을 해석한다 |
 | `app/runtime/backtest/__init__.py` / `facade.py` | UI payload를 DB-backed runtime 실행으로 변환하는 public compatibility facade. Price-only ETF runtime wrappers를 소유하고, split module runner / helper를 re-export한다 |
-| `app/runtime/backtest/runners/risk_on_momentum.py` | Risk-On Momentum 5D DB runtime implementation. `app.runtime.backtest`가 기존 public import path를 위해 runner를 re-export한다 |
+| `app/runtime/backtest/runners/risk_on_momentum.py` | Risk-On Momentum 5D DB runtime implementation. 분석 강도, variant reuse, artifact와 compact Daily Swing evidence를 조립하며 `app.runtime.backtest`가 기존 public import path를 위해 runner를 re-export한다 |
+| `app/services/backtest_daily_swing_validation.py` / `backtest_daily_swing_policy.py` | Daily Swing Practical Validation과 Final Review / monitoring 수동 운영 경계를 소유한다 |
 | `app/runtime/backtest/real_money.py` | Real-money / guardrail / benchmark / deployment readiness helper implementation. `app.runtime.backtest`가 기존 public import path를 위해 constants and helper functions를 re-export한다 |
 | `app/runtime/backtest/runners/strict_factor.py` | Strict quality / value / quality-value annual and quarterly runtime implementation. PIT Monthly Snapshot visible contract와 Static / Historical Dynamic PIT legacy internal contract를 해석하고, `app.runtime.backtest`가 기존 public import path를 위해 runner and strict helper functions를 re-export한다 |
 | `app/runtime/backtest/result_bundle.py` | runtime 결과를 UI-facing result bundle / summary / chart / metadata contract로 변환 |
