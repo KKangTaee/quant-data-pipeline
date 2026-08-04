@@ -5,7 +5,10 @@ Last Verified: 2026-08-04
 
 ## Current State
 
-Current active product task: none.
+Current active product task:
+
+- `inflation-policy-preparation-baseline-ux-20260804` — `State: active`; 전체 2차 중
+  준비표의 현재 재가속·연말 순인상 비교 기준 설계를 확정하고 구현 전 검토 중
 
 Latest completed inflation-policy task:
 
