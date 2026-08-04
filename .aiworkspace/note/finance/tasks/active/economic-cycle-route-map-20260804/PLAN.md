@@ -21,8 +21,8 @@
 ## Roadmap
 
 1. 설계와 구현 계획: complete
-2. route helper와 UI 구현: active
-3. integrated verification와 Browser QA: pending
+2. route helper와 UI 구현: complete
+3. integrated verification와 Browser QA: complete
 
 ## Stop Condition
 

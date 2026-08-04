@@ -30,7 +30,7 @@
 - Consumes: `TransitionMonitor | null`, `Phase | null`, and `CyclePoint[]`.
 - Produces: `resolveCycleRouteTransition(monitor, currentPhase): CycleRouteTransition | null` and `summarizeCycleRouteHistory(points): string`.
 
-- [ ] **Step 1: Write failing helper tests**
+- [x] **Step 1: Write failing helper tests**
 
 Add imports and assertions equivalent to:
 
@@ -56,7 +56,7 @@ expect(summarizeCycleRouteHistory(changed)).toBe(
 
 Also test that `MAINTAIN` returns `null` and `CONFIRMED` returns the monitor anchor/target pair.
 
-- [ ] **Step 2: Run Vitest and verify RED**
+- [x] **Step 2: Run Vitest and verify RED**
 
 Run: `npm test -- --run EconomicCycleWorkbench.test.tsx`
 
@@ -64,7 +64,7 @@ Working directory: `app/web/streamlit_components/economic_cycle_workbench`
 
 Expected: imports fail because `resolveCycleRouteTransition` and `summarizeCycleRouteHistory` do not exist.
 
-- [ ] **Step 3: Implement minimal pure helpers**
+- [x] **Step 3: Implement minimal pure helpers**
 
 Add the following exact public shape:
 
@@ -109,13 +109,13 @@ export function summarizeCycleRouteHistory(points: CyclePoint[]): string {
 }
 ```
 
-- [ ] **Step 4: Run focused Vitest and verify GREEN**
+- [x] **Step 4: Run focused Vitest and verify GREEN**
 
 Run: `npm test -- --run EconomicCycleWorkbench.test.tsx`
 
 Expected: all helper and existing component tests pass.
 
-- [ ] **Step 5: Commit the helper unit**
+- [x] **Step 5: Commit the helper unit**
 
 Stage only the React source and test, then commit:
 
@@ -136,7 +136,7 @@ Stage only the React source and test, then commit:
 - Consumes: Task 1 helpers, `payload.observed_state`, `payload.transition_monitor`, and `payload.cycle_map.points`.
 - Produces: `CycleRouteMap({ payload })` with four fixed phase nodes, one current node, optional route arc, and one history-summary line.
 
-- [ ] **Step 1: Replace old render assertions with failing route assertions**
+- [x] **Step 1: Replace old render assertions with failing route assertions**
 
 Assert the rendered markup contains:
 
@@ -154,7 +154,7 @@ expect(html).not.toContain("성장 레벨 →");
 Render a `MAINTAIN` fixture and assert that it has no `cycle-route-direction` path.
 Retain the existing five asset block order assertions.
 
-- [ ] **Step 2: Update the Python source-contract test and verify RED**
+- [x] **Step 2: Update the Python source-contract test and verify RED**
 
 Replace quadrant-specific assertions with route contracts:
 
@@ -174,7 +174,7 @@ Run:
 
 Expected: source-contract failures because the quadrant still exists.
 
-- [ ] **Step 3: Implement `CycleRouteMap` and remove dead quadrant helpers**
+- [x] **Step 3: Implement `CycleRouteMap` and remove dead quadrant helpers**
 
 Use fixed nodes:
 
@@ -198,7 +198,7 @@ Render one neutral circular/rounded route track, four phase nodes in the fixed o
 
 Remove now-unused `PlotPoint`, `actualCoordinate`, `projectActualCoordinate`, `PHASE_COORDINATE_CENTER`, `monthDistance`, `pressureArrowEnd`, `pointList`, `cyclePointLabel`, `CyclePointTooltip`, and `splitPointSegments` plus their tests and CSS.
 
-- [ ] **Step 4: Implement responsive route CSS**
+- [x] **Step 4: Implement responsive route CSS**
 
 Add scoped classes for:
 
@@ -218,7 +218,7 @@ Add scoped classes for:
 
 Use the existing phase colors and ensure the SVG width is `min(100%, 440px)`. On narrow screens keep the SVG within 340px and let the existing `.cycle-layout` stack the route and transition panels.
 
-- [ ] **Step 5: Run React and Python tests, then build**
+- [x] **Step 5: Run React and Python tests, then build**
 
 Run from the component directory:
 
@@ -235,11 +235,11 @@ Run from the repository root:
 
 Expected: React tests, Python source contracts, TypeScript transform, and Vite production build all pass.
 
-- [ ] **Step 6: Review frozen asset boundary**
+- [x] **Step 6: Review frozen asset boundary**
 
 Run a scoped diff search and confirm no diff hunk changes `MarketImplicationCard`, `MarketImplicationBody`, `market_implications`, asset ordering, or asset CSS. Do not stage registries, run history, generated QA images, or `.superpowers/`.
 
-- [ ] **Step 7: Commit the route-map implementation**
+- [x] **Step 7: Commit the route-map implementation**
 
 Stage the React source/test/CSS, Python contract test, and rebuilt component assets, then commit:
 
@@ -261,7 +261,7 @@ Stage the React source/test/CSS, Python contract test, and rebuilt component ass
 - Consumes: the committed route-map component and production bundle.
 - Produces: reproducible verification evidence, one generated Browser QA screenshot, and a complete task status.
 
-- [ ] **Step 1: Run the full focused verification suite**
+- [x] **Step 1: Run the full focused verification suite**
 
 Run:
 
@@ -278,7 +278,7 @@ npm run build
 
 Expected: all focused Python and React tests pass and the production bundle is current.
 
-- [ ] **Step 2: Run static checks**
+- [x] **Step 2: Run static checks**
 
 Run separately:
 
@@ -289,7 +289,7 @@ git diff --check
 
 Expected: both commands exit 0.
 
-- [ ] **Step 3: Perform Browser QA**
+- [x] **Step 3: Perform Browser QA**
 
 Restart the local Streamlit server only after the final build. Verify the live route at:
 
@@ -299,11 +299,11 @@ http://localhost:8503/overview?view=economic-cycle&overview_tab=economic-cycle
 
 Check the four nodes, current contraction, dashed contraction-to-recovery arc, non-forecast copy, compact history summary, unchanged transition panel, unchanged 12-month ribbon, and unchanged asset checkpoint section. Capture one screenshot outside the staged source set.
 
-- [ ] **Step 4: Close task documentation**
+- [x] **Step 4: Close task documentation**
 
 Record exact commands/results, remaining semantic trade-off, Browser QA screenshot path, code-review outcome, and `canonical doc change 없음` unless product or ownership boundaries changed. Set `STATUS.md` to `State: complete` only after all checks pass.
 
-- [ ] **Step 5: Commit closeout docs**
+- [x] **Step 5: Commit closeout docs**
 
 Stage only the task directory and plan checkbox updates, then commit:
 

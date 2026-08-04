@@ -8,3 +8,12 @@
 - Keep exact level/momentum in the existing current-observed card.
 - Keep monthly detail in the existing 12-month ribbon.
 - Preserve the transition panel and asset checkpoint surface.
+- Unknown runtime transition statuses fail closed and do not render a directional arc.
+- CONFIRMED uses the solid anchor-to-target arc without applying WATCH-only next-node styling to the current target.
+
+## Closeout
+
+- The route map is a structural reading aid, not a coordinate projection or forecast probability display.
+- Exact level and momentum remain in the existing `현재 관측 국면` metrics rather than the route geometry.
+- `MarketImplicationCard`, asset copy/order/CSS, and ribbon implementation have no scoped diff.
+- Canonical doc change 없음: product promise, ownership boundary, data contract, and workflow priority did not change.
