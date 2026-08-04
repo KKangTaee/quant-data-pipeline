@@ -498,6 +498,7 @@ export function resolveCycleRouteTransition(
     const to = monitor.target_phase;
     return from && to && from !== to ? { from, to, status: "CONFIRMED" } : null;
   }
+  if (monitor.status !== "WATCH") return null;
   const to = resolveMapDirectionPhase(monitor, currentPhase);
   return currentPhase && to && currentPhase !== to
     ? { from: currentPhase, to, status: "WATCH" }
@@ -661,7 +662,7 @@ function CycleRouteMap({ payload }: { payload: CyclePayload }) {
           {PHASE_ORDER.map((phase) => {
             const node = CYCLE_ROUTE_NODES[phase];
             const isCurrent = currentPhase === phase;
-            const isNext = transition?.to === phase;
+            const isNext = transition?.status === "WATCH" && transition.to === phase;
             return (
               <g className="cycle-route-node" key={phase}>
                 <circle

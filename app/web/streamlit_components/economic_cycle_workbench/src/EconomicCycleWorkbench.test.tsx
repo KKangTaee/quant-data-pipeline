@@ -144,6 +144,10 @@ describe("EconomicCycleWorkbenchView", () => {
       to: "expansion",
       status: "CONFIRMED",
     });
+    expect(resolveCycleRouteTransition(
+      { ...monitor, status: "UNKNOWN" } as unknown as NonNullable<CyclePayload["transition_monitor"]>,
+      "contraction",
+    )).toBeNull();
   });
 
   it("summarizes stable and changed checkpoint histories without plotting each month", () => {
@@ -198,6 +202,23 @@ describe("EconomicCycleWorkbenchView", () => {
     expect(watchHtml).not.toContain("성장 레벨 →");
     expect(maintainHtml).not.toContain("cycle-route-direction");
     expect(maintainHtml).toContain("현재 국면 유지");
+  });
+
+  it("renders a confirmed arc while preserving the solid current-node emphasis", () => {
+    const confirmed = fixture();
+    confirmed.observed_state.phase = "expansion";
+    confirmed.transition_monitor = {
+      ...confirmed.transition_monitor!,
+      observed_phase: "expansion",
+      status: "CONFIRMED",
+      status_label: "국면 전환 확인",
+    };
+    const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={confirmed} />);
+
+    expect(html).toContain('class="cycle-route-direction route-confirmed"');
+    expect(html).toContain("회복 → 확장 국면 전환 확인");
+    expect(html).toContain("route-phase-expansion cycle-route-node-current");
+    expect(html).not.toContain("cycle-route-node-current cycle-route-node-next");
   });
 
   it("resolves a non-adjacent map arrow from the current observed phase", () => {
