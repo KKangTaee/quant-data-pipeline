@@ -304,7 +304,6 @@ export type CyclePayload = {
 };
 
 type Props = Omit<ComponentProps, "args"> & { args: { payload?: CyclePayload } };
-type PlotPoint = { x: number; y: number };
 type RibbonStyle = React.CSSProperties & { "--history-month-count": number };
 
 const PHASE_ORDER: Phase[] = ["recovery", "expansion", "slowdown", "contraction"];
@@ -313,6 +312,18 @@ const PHASE_LABEL: Record<Phase, string> = {
   expansion: "확장",
   slowdown: "둔화",
   contraction: "위축",
+};
+const CYCLE_ROUTE_NODES: Record<Phase, { x: number; y: number; labelX: number; labelY: number }> = {
+  recovery: { x: 70, y: 70, labelX: 70, labelY: 34 },
+  expansion: { x: 250, y: 70, labelX: 250, labelY: 34 },
+  slowdown: { x: 250, y: 250, labelX: 250, labelY: 286 },
+  contraction: { x: 70, y: 250, labelX: 70, labelY: 286 },
+};
+const CYCLE_ROUTE_ARCS: Record<string, string> = {
+  "recovery:expansion": "M70 70 C118 25 202 25 250 70",
+  "expansion:slowdown": "M250 70 C295 118 295 202 250 250",
+  "slowdown:contraction": "M250 250 C202 295 118 295 70 250",
+  "contraction:recovery": "M70 250 C25 202 25 118 70 70",
 };
 const CONFIDENCE_LABEL: Record<string, string> = {
   HIGH: "높음",
@@ -450,22 +461,6 @@ const CHANGE_LABEL: Record<string, string> = {
   yoy_ttm: "완료 분기 TTM 전년 대비",
 };
 
-export function actualCoordinate(point: Pick<CyclePoint, "level" | "momentum">): PlotPoint {
-  return {
-    x: 180 + Math.max(-1, Math.min(1, point.level / 2)) * 128,
-    y: 160 - Math.max(-1, Math.min(1, point.momentum / 2)) * 112,
-  };
-}
-
-export const projectActualCoordinate = actualCoordinate;
-
-const PHASE_COORDINATE_CENTER: Record<Phase, Pick<CyclePoint, "level" | "momentum">> = {
-  recovery: { level: -1, momentum: 1 },
-  expansion: { level: 1, momentum: 1 },
-  slowdown: { level: 1, momentum: -1 },
-  contraction: { level: -1, momentum: -1 },
-};
-
 export function selectCycleMapCheckpoints(points: CyclePoint[]): CyclePoint[] {
   const indexes = [points.length - 7, points.length - 4, points.length - 2, points.length - 1];
   return indexes
@@ -520,78 +515,6 @@ export function summarizeCycleRouteHistory(points: CyclePoint[]): string {
   }
   if (first === current) return `${prefix} · ${PHASE_LABEL[current]} 국면 내 변동`;
   return `${prefix} · ${PHASE_LABEL[first]}에서 ${PHASE_LABEL[current]}으로 변화`;
-}
-
-function monthDistance(from: string, to: string): number | null {
-  const fromYear = Number(from.slice(0, 4));
-  const fromMonth = Number(from.slice(5, 7));
-  const toYear = Number(to.slice(0, 4));
-  const toMonth = Number(to.slice(5, 7));
-  if (![fromYear, fromMonth, toYear, toMonth].every(Number.isFinite)) return null;
-  return (toYear - fromYear) * 12 + toMonth - fromMonth;
-}
-
-function pressureArrowEnd(start: PlotPoint, target: PlotPoint): PlotPoint {
-  const dx = target.x - start.x;
-  const dy = target.y - start.y;
-  const distance = Math.hypot(dx, dy);
-  if (!distance) return start;
-  const length = Math.min(44, distance);
-  return { x: start.x + (dx / distance) * length, y: start.y + (dy / distance) * length };
-}
-
-function pointList(points: PlotPoint[]) {
-  return points.map((point) => `${point.x},${point.y}`).join(" ");
-}
-
-function cycleTooltipPosition(point: PlotPoint) {
-  return {
-    x: Math.min(210, Math.max(28, point.x - 58)),
-    y: point.y < 74 ? point.y + 14 : point.y - 46,
-  };
-}
-
-function cyclePointLabel(point: CyclePoint) {
-  return `${formatMonth(point.date)} · ${PHASE_LABEL[point.phase]} · 레벨 ${formatSignedScore(point.level)} · 모멘텀 ${formatSignedScore(point.momentum)}`;
-}
-
-function CyclePointTooltip({
-  point,
-  label,
-  title,
-  detail,
-}: {
-  point: PlotPoint;
-  label: string;
-  title: string;
-  detail: string;
-}) {
-  const position = cycleTooltipPosition(point);
-  return (
-    <g className="cycle-hover-target" role="img" tabIndex={0} aria-label={label}>
-      <circle className="cycle-hover-area" cx={point.x} cy={point.y} r="10" />
-      <g className="cycle-tooltip" transform={`translate(${position.x} ${position.y})`}>
-        <rect width="122" height="36" rx="7" />
-        <text className="cycle-tooltip-title" x="8" y="14">{title}</text>
-        <text className="cycle-tooltip-detail" x="8" y="27">{detail}</text>
-      </g>
-    </g>
-  );
-}
-
-function splitPointSegments(points: Array<PlotPoint | null>): PlotPoint[][] {
-  const segments: PlotPoint[][] = [];
-  let current: PlotPoint[] = [];
-  points.forEach((point) => {
-    if (point) {
-      current.push(point);
-      return;
-    }
-    if (current.length) segments.push(current);
-    current = [];
-  });
-  if (current.length) segments.push(current);
-  return segments;
 }
 
 const RECENT_ROLE: Record<number, string> = {
@@ -684,98 +607,83 @@ function IntramonthChangePanel({ intramonth }: { intramonth: IntramonthChange })
   );
 }
 
-function QuadrantChart({ payload }: { payload: CyclePayload }) {
-  const recent = selectCycleMapCheckpoints(payload.cycle_map.points);
-  const observedSegments = splitPointSegments(recent.map((item) => projectActualCoordinate(item)));
-  const current = recent.at(-1);
-  const currentPoint = current ? projectActualCoordinate(current) : null;
-  const directionPhase = resolveMapDirectionPhase(payload.transition_monitor, current?.phase);
-  const pressureTarget = directionPhase
-    ? projectActualCoordinate(PHASE_COORDINATE_CENTER[directionPhase])
-    : null;
-  const pressureEnd = currentPoint && pressureTarget
-    ? pressureArrowEnd(currentPoint, pressureTarget)
-    : null;
-  const pointLabels = recent.map((item, index) => {
-    if (!current || index === recent.length - 1) return { index, label: "현재" };
-    const distance = monthDistance(item.date, current.date);
-    return { index, label: distance == null ? formatMonth(item.date) : `${distance}개월 전` };
-  });
+function CycleRouteMap({ payload }: { payload: CyclePayload }) {
+  const currentPhase = payload.observed_state.phase;
+  const transition = resolveCycleRouteTransition(payload.transition_monitor, currentPhase);
+  const routePath = transition ? CYCLE_ROUTE_ARCS[`${transition.from}:${transition.to}`] : null;
+  const historySummary = summarizeCycleRouteHistory(payload.cycle_map.points);
+  const currentLabel = currentPhase ? PHASE_LABEL[currentPhase] : "판단 제한";
+  const statusCopy = transition && routePath
+    ? transition.status === "WATCH"
+      ? `${PHASE_LABEL[transition.from]} → ${PHASE_LABEL[transition.to]} 방향 관찰 · 예측 아님`
+      : `${PHASE_LABEL[transition.from]} → ${PHASE_LABEL[transition.to]} 국면 전환 확인`
+    : payload.transition_monitor?.status === "MAINTAIN"
+      ? "현재 국면 유지"
+      : transition
+        ? "인접하지 않은 전환 경로 · 상세 조건 확인"
+        : payload.transition_monitor
+          ? "전환 경로 관찰 전"
+          : "전환 자료 부족";
 
   return (
     <section className="cycle-map-panel" aria-labelledby="cycle-map-title">
       <div className="section-heading">
-        <div><span>Actual cycle map</span><h3 id="cycle-map-title">핵심 시점으로 본 실제 경로</h3></div>
-        <small>6개월 전 · 3개월 전 · 1개월 전 · 현재</small>
+        <div><span>Cycle route</span><h3 id="cycle-map-title">순환 경로로 본 현재 위치</h3></div>
+        <small>현재 국면과 구조적 다음 인접 국면</small>
       </div>
       <div className="cycle-map-body">
-        <svg className="cycle-quadrant" viewBox="0 0 360 320" role="group" aria-label="회복 확장 둔화 위축 2×2 실제 경제사이클 경로">
+        <svg
+          className="cycle-route-map"
+          viewBox="0 0 320 320"
+          role="group"
+          aria-label={`경제사이클 순환 경로 · 현재 관측 ${currentLabel} · ${statusCopy}`}
+        >
           <defs>
-            <marker id="transition-pressure-arrowhead" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <marker id="cycle-route-watch-arrowhead" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <path d="M0,0 L7,3.5 L0,7 Z" />
+            </marker>
+            <marker id="cycle-route-confirmed-arrowhead" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
               <path d="M0,0 L7,3.5 L0,7 Z" />
             </marker>
           </defs>
-          <rect className="quadrant recovery-zone" x="24" y="24" width="156" height="136" />
-          <rect className="quadrant expansion-zone" x="180" y="24" width="156" height="136" />
-          <rect className="quadrant contraction-zone" x="24" y="160" width="156" height="136" />
-          <rect className="quadrant slowdown-zone" x="180" y="160" width="156" height="136" />
-          <line className="quadrant-axis" x1="180" y1="24" x2="180" y2="296" />
-          <line className="quadrant-axis" x1="24" y1="160" x2="336" y2="160" />
-          <text className="quadrant-label" x="38" y="48">회복</text>
-          <text className="quadrant-label" x="292" y="48">확장</text>
-          <text className="quadrant-label" x="38" y="282">위축</text>
-          <text className="quadrant-label" x="292" y="282">둔화</text>
-          <text className="axis-label" x="180" y="314">성장 레벨 →</text>
-          <text className="axis-label vertical-label" x="9" y="160">모멘텀 →</text>
-          {observedSegments.map((segment, index) => (
-            segment.length > 1
-              ? <polyline className="observed-path" points={pointList(segment)} key={`observed-segment-${index}`} />
-              : null
+          {Object.entries(CYCLE_ROUTE_ARCS).map(([key, path]) => (
+            <path className="cycle-route-track" d={path} key={`route-track-${key}`} />
           ))}
-          {payload.transition_monitor?.status === "WATCH" && currentPoint && pressureEnd ? (
-            <line
-              className="transition-pressure-arrow"
-              x1={currentPoint.x}
-              y1={currentPoint.y}
-              x2={pressureEnd.x}
-              y2={pressureEnd.y}
-              markerEnd="url(#transition-pressure-arrowhead)"
+          {transition && routePath ? (
+            <path
+              className={`cycle-route-direction route-${transition.status.toLowerCase()}`}
+              d={routePath}
+              markerEnd={`url(#cycle-route-${transition.status.toLowerCase()}-arrowhead)`}
               role="img"
-              aria-label={`현재 관측 ${current?.phase ? PHASE_LABEL[current.phase] : "국면"} 기준 구조적 다음 인접 국면 ${directionPhase ? PHASE_LABEL[directionPhase] : "-"} · 예측 경로가 아님`}
+              aria-label={statusCopy}
             />
           ) : null}
-          {recent.map((item, index) => {
-            const point = projectActualCoordinate(item);
-            return <circle className="observed-dot" cx={point.x} cy={point.y} r={index === recent.length - 1 ? 3.5 : 2.5} key={`observed-${item.date}`} />;
-          })}
-          {currentPoint && current?.revision_sensitivity === "SENSITIVE" ? (
-            <circle className="revision-sensitive-halo" cx={currentPoint.x} cy={currentPoint.y} r="13" />
-          ) : null}
-          {currentPoint ? <circle className="current-cycle-dot" cx={currentPoint.x} cy={currentPoint.y} r="8" /> : null}
-          {pointLabels.map(({ index, label }) => {
-            const point = projectActualCoordinate(recent[index]);
-            return <text className="cycle-point-label" x={point.x} y={point.y - 13} key={`point-label-${label}`}>{label}</text>;
-          })}
-          {recent.map((item) => {
-            const point = projectActualCoordinate(item);
+          {PHASE_ORDER.map((phase) => {
+            const node = CYCLE_ROUTE_NODES[phase];
+            const isCurrent = currentPhase === phase;
+            const isNext = transition?.to === phase;
             return (
-              <CyclePointTooltip
-                key={`actual-tooltip-${item.date}`}
-                point={point}
-                label={cyclePointLabel(item)}
-                title={`${formatMonth(item.date)} · ${PHASE_LABEL[item.phase]}`}
-                detail={`레벨 ${formatSignedScore(item.level)} · 모멘텀 ${formatSignedScore(item.momentum)}`}
-              />
+              <g className="cycle-route-node" key={phase}>
+                <circle
+                  className={`cycle-route-node-core route-phase-${phase}${isCurrent ? " cycle-route-node-current" : ""}${isNext ? " cycle-route-node-next" : ""}`}
+                  cx={node.x}
+                  cy={node.y}
+                  r={isCurrent ? 17 : isNext ? 14 : 11}
+                />
+                <text className="cycle-route-node-label" x={node.labelX} y={node.labelY}>{PHASE_LABEL[phase]}</text>
+                {isCurrent ? <text className="cycle-route-node-note" x={node.x} y={node.y + 34}>현재</text> : null}
+                {!isCurrent && isNext ? <text className="cycle-route-node-note" x={node.x} y={node.y + 31}>다음 확인</text> : null}
+              </g>
             );
           })}
+          <g className="cycle-route-center">
+            <text x="160" y="151">현재 관측 {currentLabel}</text>
+            <text x="160" y="172">{payload.observed_state.duration_months ? `${payload.observed_state.duration_months}개월 지속` : "지속 기간 확인 중"}</text>
+          </g>
         </svg>
-        <div className="cycle-map-legend">
-          <span><i className="legend-observed" />실제 핵심 시점 경로</span>
-          <span><i className="legend-current" />현재 월말 좌표</span>
-          {directionPhase ? <span><i className="legend-direction" />구조적 다음 국면 {PHASE_LABEL[directionPhase]} · 예측 아님</span> : null}
-          {current?.revision_sensitivity === "SENSITIVE" ? <span><i className="legend-sensitive" />수정 민감</span> : null}
-        </div>
-        <p>오른쪽일수록 자기 과거보다 경기 수준이 높고, 위쪽일수록 최근 3개월 변화가 개선됐다는 뜻입니다.</p>
+        <strong className={`cycle-route-status route-status-${payload.transition_monitor?.status.toLowerCase() || "limited"}`}>{statusCopy}</strong>
+        <span className="cycle-route-history">{historySummary}</span>
+        <p>화살표는 현재 확인 중인 구조적 인접 국면을 나타내며, 특정 시점의 이동이나 발생 확률을 예측하지 않습니다.</p>
       </div>
     </section>
   );
@@ -1361,7 +1269,7 @@ export function EconomicCycleWorkbenchView({
       {payload.intramonth_change ? <IntramonthChangePanel intramonth={payload.intramonth_change} /> : null}
 
       <div className="cycle-layout">
-        <QuadrantChart payload={payload} />
+        <CycleRouteMap payload={payload} />
         <TransitionPanel monitor={payload.transition_monitor} state={observed} />
       </div>
 

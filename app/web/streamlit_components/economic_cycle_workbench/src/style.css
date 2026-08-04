@@ -145,39 +145,29 @@ button, input, summary { font: inherit; }
 .transition-panel,
 .evidence-panel { min-width: 0; }
 .cycle-map-body { display: grid; justify-items: center; margin-top: 10px; }
-.cycle-quadrant { display: block; width: min(100%, 440px); }
-.quadrant { stroke: none; }
-.recovery-zone { fill: rgba(114, 174, 230, .13); }
-.expansion-zone { fill: rgba(57, 164, 127, .12); }
-.slowdown-zone { fill: rgba(240, 173, 69, .13); }
-.contraction-zone { fill: rgba(214, 111, 98, .12); }
-.quadrant-axis { stroke: #cad5dc; stroke-width: 1.5; }
-.quadrant-label { fill: #617486; font-size: 12px; font-weight: 850; }
-.axis-label { fill: #8a98a3; font-size: 8px; text-anchor: middle; }
-.vertical-label { transform: rotate(-90deg); transform-origin: 9px 160px; }
-.observed-path { fill: none; stroke: #368bd9; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; opacity: .82; }
-.transition-pressure-arrow { stroke: #c88924; stroke-width: 2; stroke-linecap: round; stroke-dasharray: 5 4; opacity: .9; }
-#transition-pressure-arrowhead path { fill: #c88924; }
-.observed-dot { fill: #85b8e8; stroke: #fff; stroke-width: 1.5; }
-.current-cycle-dot { fill: #1c78ca; stroke: #fff; stroke-width: 4; filter: drop-shadow(0 2px 3px rgba(20, 72, 110, .24)); }
-.cycle-point-label { fill: #4f6575; font-size: 8px; font-weight: 850; text-anchor: middle; paint-order: stroke; stroke: rgba(255,255,255,.9); stroke-width: 3px; stroke-linejoin: round; }
-.revision-sensitive-halo { fill: rgba(214,111,98,.08); stroke: #d66f62; stroke-width: 1.5; stroke-dasharray: 3 3; }
-.cycle-hover-target { cursor: help; outline: none; }
-.cycle-hover-area { fill: transparent; stroke: transparent; pointer-events: all; }
-.cycle-tooltip { opacity: 0; pointer-events: none; transition: opacity .14s ease; }
-.cycle-hover-target:hover .cycle-tooltip,
-.cycle-hover-target:focus .cycle-tooltip { opacity: 1; }
-.cycle-tooltip rect { fill: rgba(24, 43, 57, .94); stroke: rgba(255, 255, 255, .7); stroke-width: .7; filter: drop-shadow(0 2px 4px rgba(16, 34, 47, .2)); }
-.cycle-tooltip text { fill: #fff; font-size: 7.5px; }
-.cycle-tooltip-title { font-weight: 850; }
-.cycle-tooltip-detail { opacity: .82; }
-.cycle-map-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 13px; color: #6e7f8d; font-size: 9px; }
-.cycle-map-legend span { display: inline-flex; align-items: center; gap: 5px; }
-.cycle-map-legend i { display: inline-block; width: 18px; height: 4px; border-radius: 999px; }
-.legend-observed { background: #368bd9; }
-.legend-current { width: 9px !important; height: 9px !important; border: 2px solid #fff; background: #1c78ca; box-shadow: 0 0 0 1px #1c78ca; }
-.legend-direction { height: 0 !important; border-top: 2px dashed #c88924; border-radius: 0 !important; }
-.legend-sensitive { height: 8px !important; border: 1px dashed #d66f62; background: rgba(214,111,98,.1); }
+.cycle-route-map { display: block; width: min(100%, 430px); }
+.cycle-route-track { fill: none; stroke: #d6e0e5; stroke-width: 2.5; stroke-linecap: round; }
+.cycle-route-direction { fill: none; stroke-width: 4; stroke-linecap: round; }
+.cycle-route-direction.route-watch { stroke: #c88924; stroke-dasharray: 8 7; }
+.cycle-route-direction.route-confirmed { stroke: #2f8b73; }
+#cycle-route-watch-arrowhead path { fill: #c88924; }
+#cycle-route-confirmed-arrowhead path { fill: #2f8b73; }
+.cycle-route-node-core { fill: #fff; stroke: #c8d4db; stroke-width: 2; transition: r .16s ease, stroke-width .16s ease; }
+.cycle-route-node-core.route-phase-recovery { fill: #eaf4fc; stroke: #72aee6; }
+.cycle-route-node-core.route-phase-expansion { fill: #e8f5f0; stroke: #39a47f; }
+.cycle-route-node-core.route-phase-slowdown { fill: #fff4df; stroke: #f0ad45; }
+.cycle-route-node-core.route-phase-contraction { fill: #fdece9; stroke: #d66f62; }
+.cycle-route-node-core.cycle-route-node-current { stroke-width: 5; filter: drop-shadow(0 3px 5px rgba(30, 69, 92, .24)); }
+.cycle-route-node-core.cycle-route-node-next { stroke-width: 3; stroke-dasharray: 4 3; }
+.cycle-route-node-label { fill: #38566a; font-size: 12px; font-weight: 900; text-anchor: middle; }
+.cycle-route-node-note { fill: #728592; font-size: 8px; font-weight: 850; text-anchor: middle; }
+.cycle-route-center text { fill: #294b61; font-size: 13px; font-weight: 900; text-anchor: middle; }
+.cycle-route-center text:last-child { fill: #7a8995; font-size: 9px; font-weight: 750; }
+.cycle-route-status { margin-top: -3px; padding: 8px 12px; border-radius: 999px; color: #956517; background: #fff1d2; font-size: 10px; text-align: center; }
+.cycle-route-status.route-status-confirmed { color: #1d6d5d; background: #e7f4ef; }
+.cycle-route-status.route-status-maintain,
+.cycle-route-status.route-status-limited { color: #617787; background: #edf3f6; }
+.cycle-route-history { margin-top: 9px; color: #4d6879; font-size: 10px; font-weight: 850; text-align: center; }
 .cycle-map-body > p { max-width: 500px; margin-top: 10px; color: #728291; font-size: 10px; line-height: 1.55; text-align: center; }
 
 .transition-panel { display: grid; align-content: start; gap: 14px; }
@@ -495,7 +485,7 @@ button, input, summary { font: inherit; }
   .intramonth-factor-deltas { grid-template-columns: 1fr 1fr; }
   .intramonth-source-line { display: grid; gap: 5px; }
   .cycle-layout { grid-template-columns: 1fr; gap: 12px; }
-  .cycle-quadrant { width: 100%; max-width: 340px; }
+  .cycle-route-map { width: 100%; max-width: 340px; }
   .implication-grid,
   .method-grid { grid-template-columns: 1fr; }
   .implication-card > header { display: grid; }

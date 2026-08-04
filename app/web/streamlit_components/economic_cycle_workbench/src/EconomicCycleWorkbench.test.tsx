@@ -4,10 +4,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   EconomicCycleWorkbenchView,
-  projectActualCoordinate,
   resolveCycleRouteTransition,
   resolveMapDirectionPhase,
-  selectCycleMapCheckpoints,
   summarizeCycleRouteHistory,
   type CyclePayload,
 } from "./EconomicCycleWorkbench";
@@ -163,8 +161,8 @@ describe("EconomicCycleWorkbenchView", () => {
   it("renders the decision flow and preserves the five asset checkpoint blocks", () => {
     const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={fixture()} />);
 
-    expect(html.indexOf("현재 관측 국면")).toBeLessThan(html.indexOf("핵심 시점으로 본 실제 경로"));
-    expect(html.indexOf("핵심 시점으로 본 실제 경로")).toBeLessThan(html.indexOf("현재 관측과 전환 기준"));
+    expect(html.indexOf("현재 관측 국면")).toBeLessThan(html.indexOf("순환 경로로 본 현재 위치"));
+    expect(html.indexOf("순환 경로로 본 현재 위치")).toBeLessThan(html.indexOf("현재 관측과 전환 기준"));
     expect(html.indexOf("현재 관측과 전환 기준")).toBeLessThan(html.indexOf("자산별 확인 포인트"));
     expect(html).not.toContain("현재와 앞으로 1·2개월");
     expect(html).not.toContain("전망 확률");
@@ -180,14 +178,7 @@ describe("EconomicCycleWorkbenchView", () => {
     expect(html).toContain("향후 1·2개월 확인 조건");
   });
 
-  it("uses the same fixed minus-two to two domain for level and momentum", () => {
-    expect(projectActualCoordinate({ level: 2, momentum: 2 })).toEqual({ x: 308, y: 48 });
-    expect(projectActualCoordinate({ level: -2, momentum: -2 })).toEqual({ x: 52, y: 272 });
-  });
-
-  it("selects and labels six-month, three-month, one-month and current checkpoints", () => {
-    const payload = fixture();
-    const checkpoints = selectCycleMapCheckpoints(payload.cycle_map.points);
+  it("renders four route nodes, current phase and watch direction without checkpoint clutter", () => {
     const watchHtml = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={fixture()} />);
     const maintain = fixture();
     maintain.transition_monitor = {
@@ -197,19 +188,16 @@ describe("EconomicCycleWorkbenchView", () => {
     };
     const maintainHtml = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={maintain} />);
 
-    expect(checkpoints.map((point) => point.date)).toEqual([
-      "2025-12-31",
-      "2026-03-31",
-      "2026-05-31",
-      "2026-06-30",
-    ]);
-    expect(watchHtml).toContain("6개월 전");
-    expect(watchHtml).toContain("3개월 전");
-    expect(watchHtml).toContain("1개월 전");
-    expect(watchHtml).toContain("현재</text>");
-    expect(watchHtml).toContain('class="transition-pressure-arrow"');
-    expect(watchHtml).toContain("예측 경로가 아님");
-    expect(maintainHtml).not.toContain('class="transition-pressure-arrow"');
+    expect(watchHtml).toContain("순환 경로로 본 현재 위치");
+    expect(watchHtml.match(/class="cycle-route-node"/g)).toHaveLength(4);
+    expect(watchHtml).toContain("현재 관측 위축");
+    expect(watchHtml).toContain("위축 → 회복 방향 관찰 · 예측 아님");
+    expect(watchHtml).toContain("최근 6개월 · 위축 유지");
+    expect(watchHtml).not.toContain('class="cycle-quadrant"');
+    expect(watchHtml).not.toContain("6개월 전");
+    expect(watchHtml).not.toContain("성장 레벨 →");
+    expect(maintainHtml).not.toContain("cycle-route-direction");
+    expect(maintainHtml).toContain("현재 국면 유지");
   });
 
   it("resolves a non-adjacent map arrow from the current observed phase", () => {

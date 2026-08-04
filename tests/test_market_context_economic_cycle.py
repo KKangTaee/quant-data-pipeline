@@ -325,16 +325,16 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         'contraction: "위축"',
         "현재 관측 국면",
         "최근 1·3·6개월 변화",
-        "핵심 시점으로 본 실제 경로",
+        "순환 경로로 본 현재 위치",
         "현재 관측과 전환 기준",
         "가능성이 높다는 예측이 아닙니다",
         "지속성",
         "확산도",
         "활동·고용 동반 확인",
-        'className="cycle-quadrant"',
-        'className="observed-path"',
-        'className="current-cycle-dot"',
-        "actualCoordinate",
+        'className="cycle-route-map"',
+        'className="cycle-route-node"',
+        "cycle-route-direction",
+        "summarizeCycleRouteHistory",
         'evidence.group === "real_economy"',
         'evidence.group === "forecast_context"',
         "현재 국면과 전환의 판단 근거",
@@ -547,18 +547,19 @@ def test_cycle_component_ready_and_limited_observed_state_semantics_are_safe() -
     assert "판단 불가" in source
 
 
-def test_cycle_component_uses_only_persisted_actual_cycle_coordinates() -> None:
+def test_cycle_component_uses_persisted_history_without_plotting_coordinates() -> None:
     source = Path(
         "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"
     ).read_text()
 
-    assert "splitPointSegments" in source
-    assert "selectCycleMapCheckpoints(payload.cycle_map.points)" in source
+    assert 'className="cycle-route-map"' in source
+    assert "summarizeCycleRouteHistory(payload.cycle_map.points)" in source
+    assert "cycle-route-direction" in source
     assert "points.length - 7" in source
     assert "points.length - 4" in source
     assert "points.length - 2" in source
-    assert "observedSegments.map" in source
-    assert "actualCoordinate" in source
+    assert 'className="cycle-quadrant"' not in source
+    assert "actualCoordinate" not in source
     assert "forecastSegments" not in source
     assert "forecastSlots" not in source
 
@@ -577,27 +578,18 @@ def test_cycle_component_ribbon_grid_uses_actual_history_month_count() -> None:
     assert "repeat(121" not in css
 
 
-def test_cycle_component_cycle_points_expose_hover_and_focus_tooltips() -> None:
+def test_cycle_component_route_map_exposes_accessible_current_and_direction_text() -> None:
     source = Path(
         "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"
     ).read_text()
-    css = Path(
-        "app/web/streamlit_components/economic_cycle_workbench/src/style.css"
-    ).read_text()
-
     for token in (
-        "cycle-hover-target",
-        "cycle-hover-area",
-        "cycle-tooltip",
-        "cycleTooltipPosition",
-        "cyclePointLabel",
-        "tabIndex={0}",
-        "aria-label={label}",
+        'className="cycle-route-map"',
+        'className="cycle-route-node"',
+        "현재 관측",
+        "방향 관찰 · 예측 아님",
+        "aria-label",
     ):
         assert token in source
-    assert ".cycle-tooltip { opacity: 0" in css
-    assert ".cycle-hover-target:hover .cycle-tooltip" in css
-    assert ".cycle-hover-target:focus .cycle-tooltip" in css
 
 
 def test_cycle_component_ribbon_preserves_empty_actual_history_without_forecast_slots() -> None:
