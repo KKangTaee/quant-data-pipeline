@@ -24,6 +24,9 @@ from app.jobs.ingestion_jobs import (
     run_collect_overview_earnings_calendar,
 )
 from app.jobs.economic_cycle_refresh import run_economic_cycle_intramonth_refresh
+from app.jobs.economic_cycle_asset_refresh import (
+    run_economic_cycle_asset_pathway_refresh,
+)
 from app.jobs.run_history import append_run_history, load_run_history
 from app.runtime_env import load_project_local_env
 from app.workspace_paths import RUN_ARTIFACT_DIR
@@ -103,6 +106,10 @@ def _run_market_sentiment(_: datetime) -> JobResult:
 
 def _run_economic_cycle_intramonth(value: datetime) -> JobResult:
     return run_economic_cycle_intramonth_refresh(as_of_date=value.date())
+
+
+def _run_economic_cycle_asset_pathways(_: datetime) -> JobResult:
+    return run_economic_cycle_asset_pathway_refresh()
 
 
 def _run_intraday_snapshot(
@@ -191,6 +198,20 @@ OVERVIEW_AUTOMATION_JOB_SPECS: tuple[ScheduledJobSpec, ...] = (
         description=(
             "Incrementally refresh official vintages and append the current-date "
             "economic-cycle nowcast without changing prior month-end rows."
+        ),
+        weekdays_only=True,
+    ),
+    ScheduledJobSpec(
+        job_id="economic_cycle_asset_pathways",
+        job_name="refresh_economic_cycle_asset_pathways",
+        label="Economic Cycle Asset Pathways",
+        cadence_minutes=24 * 60,
+        profiles=("safe", "standard", "broad"),
+        market_hours_only=False,
+        runner=_run_economic_cycle_asset_pathways,
+        description=(
+            "Refresh DB-backed rates, EIA, futures, and SPX/SPY inputs used "
+            "by Economic Cycle asset pathways."
         ),
         weekdays_only=True,
     ),

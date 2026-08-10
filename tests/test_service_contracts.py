@@ -11930,6 +11930,23 @@ class OverviewAutomationContractTests(unittest.TestCase):
             24 * 60,
         )
 
+    def test_overview_automation_registers_daily_economic_cycle_asset_refresh(
+        self,
+    ) -> None:
+        from app.jobs import overview_automation
+
+        spec = next(
+            item
+            for item in overview_automation.OVERVIEW_AUTOMATION_JOB_SPECS
+            if item.job_id == "economic_cycle_asset_pathways"
+        )
+
+        self.assertEqual(spec.job_name, "refresh_economic_cycle_asset_pathways")
+        self.assertEqual(spec.cadence_minutes, 24 * 60)
+        self.assertTrue(spec.weekdays_only)
+        self.assertFalse(spec.market_hours_only)
+        self.assertIn("safe", spec.profiles)
+
     def test_overview_action_facade_runs_market_context_refresh_bundle(self) -> None:
         from app.jobs import overview_actions
 
