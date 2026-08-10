@@ -13,6 +13,9 @@ import pandas as pd
 from app.services.overview.economic_cycle_freshness import (
     build_economic_cycle_freshness,
 )
+from app.services.overview.economic_cycle_asset_freshness import (
+    build_asset_pathway_freshness,
+)
 from finance.economic_cycle_interpretation import (
     build_market_implications,
     evidence_direction,
@@ -603,13 +606,13 @@ def build_economic_cycle_read_model(
         except Exception:
             intramonth_row = None
     intramonth = _intramonth_change(resolved_snapshot, intramonth_row)
-    data_freshness = build_economic_cycle_freshness(
+    cycle_freshness = build_economic_cycle_freshness(
         intramonth,
         today=freshness_date,
     )
 
     market_reference = pd.Timestamp(
-        price_reference_date or as_of_date or date.today()
+        price_reference_date or as_of_date or freshness_date or date.today()
     ).date()
     market_start = (
         pd.Timestamp(market_reference) - pd.DateOffset(years=5, months=4)
@@ -629,6 +632,52 @@ def build_economic_cycle_read_model(
         )
     except Exception:
         asset_price_rows = []
+    asset_freshness = build_asset_pathway_freshness(
+        market_rows,
+        asset_price_rows,
+        reference_date=market_reference,
+    )
+    required_scopes = []
+    if cycle_freshness.get("refresh_required"):
+        required_scopes.append("cycle_snapshot")
+    if asset_freshness.get("refresh_required"):
+        required_scopes.append("asset_pathways")
+    scope_statuses = {
+        str(cycle_freshness.get("status") or "ERROR"),
+        str(asset_freshness.get("status") or "ERROR"),
+    }
+    overall_status = (
+        "ERROR"
+        if "ERROR" in scope_statuses
+        else "MISSING"
+        if "MISSING" in scope_statuses
+        else "REFRESH_AVAILABLE"
+        if "REFRESH_AVAILABLE" in scope_statuses
+        else "READY"
+    )
+    if required_scopes:
+        combined_message = "필요한 경기·자산 자료만 최신 기준으로 확인할 수 있습니다."
+    else:
+        combined_message = "경기 국면과 자산별 확인 포인트가 최신 상태입니다."
+    data_freshness = {
+        **cycle_freshness,
+        "status": overall_status,
+        "overall_status": overall_status,
+        "cycle_snapshot": cycle_freshness,
+        "asset_pathways": asset_freshness,
+        "refresh_required_scopes": required_scopes,
+        "refresh_required": bool(required_scopes),
+        "message": combined_message,
+    }
+    if required_scopes:
+        data_freshness["action"] = dict(
+            cycle_freshness.get("action")
+            or {
+                "id": "refresh_economic_cycle_data",
+                "label": "최신 발표 확인·재계산",
+                "enabled": True,
+            }
+        )
     load_sp500_earnings = sp500_earnings_loader or load_sp500_actual_eps_history
     try:
         sp500_earnings = dict(load_sp500_earnings(end_date=market_reference))

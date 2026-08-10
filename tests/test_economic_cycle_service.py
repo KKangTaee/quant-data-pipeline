@@ -735,7 +735,15 @@ def test_service_attaches_intramonth_freshness() -> None:
 
     assert model["data_freshness"]["persisted_as_of_date"] == "2026-07-21"
     assert model["data_freshness"]["target_as_of_date"] == "2026-07-24"
-    assert model["data_freshness"]["status"] == "REFRESH_AVAILABLE"
+    assert model["data_freshness"]["status"] == "MISSING"
+    assert (
+        model["data_freshness"]["cycle_snapshot"]["status"]
+        == "REFRESH_AVAILABLE"
+    )
+    assert (
+        model["data_freshness"]["asset_pathways"]["reference_date"]
+        == "2026-07-25"
+    )
     assert (
         model["data_freshness"]["last_successful_collection_at"]
         == "2026-07-16 10:02:56"
@@ -744,6 +752,28 @@ def test_service_attaches_intramonth_freshness() -> None:
         model["data_freshness"]["latest_source_observation_date"]
         == "2026-06-01"
     )
+
+
+def test_service_combines_cycle_and_asset_freshness_without_provider_access() -> None:
+    service = _load_service()
+    intramonth = _intramonth_snapshot()
+    intramonth["as_of_date"] = "2026-08-10"
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: _ready_snapshot(),
+        intramonth_loader=lambda **_kwargs: intramonth,
+        history_loader=lambda **_kwargs: [],
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=lambda **_kwargs: {},
+        freshness_date=date(2026, 8, 10),
+    )
+
+    freshness = model["data_freshness"]
+    assert freshness["cycle_snapshot"]["status"] == "READY"
+    assert freshness["asset_pathways"]["status"] == "MISSING"
+    assert freshness["overall_status"] == "MISSING"
+    assert freshness["refresh_required_scopes"] == ["asset_pathways"]
+    assert freshness["action"]["id"] == "refresh_economic_cycle_data"
 
 
 def test_service_preserves_asset_specific_summary_without_common_state_copy() -> None:
