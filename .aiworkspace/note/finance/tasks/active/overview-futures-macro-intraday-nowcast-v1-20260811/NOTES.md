@@ -16,8 +16,8 @@ Last Updated: 2026-08-11
 ## Decisions
 
 - Current observation and completed forecast evidence become separate read models.
-- Intraday observation uses the latest closed 5m common cutoff and recalculates all 1D/5D/20D
-  windows, not only 1D.
+- Intraday observation uses the latest closed 5m common cutoff across the union of complete-family
+  members and recalculates all 1D/5D/20D windows, not only 1D.
 - The provisional row never enters completed snapshot/history or publication metrics.
 - The future 5D gate remains completed-session based.
 - Intraday freshness threshold is 30 minutes.

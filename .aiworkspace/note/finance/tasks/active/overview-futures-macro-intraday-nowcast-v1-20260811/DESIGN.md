@@ -116,9 +116,11 @@ Monday trade date도 유지한다.
 
 ### Common cutoff
 
-family 산식에 직접 들어가는 15 symbols 각각의 latest eligible bar를 확인한다. 그중 가장
-이른 latest timestamp를 common cutoff로 선택하고 모든 symbol aggregate를 해당 시각까지만
-계산한다. 이후 bar가 더 있는 symbol도 잘라서 같은 시각의 시장 상태를 비교한다.
+먼저 `SCORE_DEFINITIONS` member가 모두 latest eligible bar를 가진 family를 찾는다. 적격
+family member 합집합에서 가장 이른 latest timestamp를 common cutoff로 선택하고, 해당
+family의 모든 symbol aggregate를 그 시각까지만 계산한다. 이후 bar가 더 있는 symbol도
+잘라서 같은 시각의 시장 상태를 비교한다. 이 순서로 4~5개 family만 가능한 partial 상태도
+missing member를 0 또는 전일값으로 채우지 않고 같은 시각 기준을 유지한다.
 
 ### Coverage
 
@@ -284,7 +286,7 @@ generic `강화 / 약화`만 표시하지 않는다. family 의미에 맞춘 com
 ### Python service
 
 - 현재 형성 중인 5분봉 제외
-- 15 direct symbols의 common cutoff 선택
+- 적격 full-member family 합집합의 common cutoff 선택
 - DST 전후 exact session window
 - Sunday evening의 Monday trade date
 - completed daily history + synthetic current row의 1D/5D/20D 계산
