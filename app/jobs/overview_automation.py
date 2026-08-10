@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 from app.jobs.ingestion_jobs import (
     JobResult,
     run_collect_fomc_calendar,
+    run_collect_inflation_policy_raw_context,
     run_collect_macro_calendar,
     run_collect_market_structure_calendar,
     run_collect_market_sentiment,
@@ -110,6 +111,10 @@ def _run_economic_cycle_intramonth(value: datetime) -> JobResult:
 
 def _run_economic_cycle_asset_pathways(_: datetime) -> JobResult:
     return run_economic_cycle_asset_pathway_refresh()
+
+
+def _run_inflation_policy_raw(value: datetime) -> JobResult:
+    return run_collect_inflation_policy_raw_context(as_of_at=value.isoformat())
 
 
 def _run_intraday_snapshot(
@@ -212,6 +217,20 @@ OVERVIEW_AUTOMATION_JOB_SPECS: tuple[ScheduledJobSpec, ...] = (
         description=(
             "Refresh DB-backed rates, EIA, futures, and SPX/SPY inputs used "
             "by Economic Cycle asset pathways."
+        ),
+        weekdays_only=True,
+    ),
+    ScheduledJobSpec(
+        job_id="inflation_policy_raw",
+        job_name="collect_inflation_policy_raw_context",
+        label="Inflation / Policy Raw Context",
+        cadence_minutes=24 * 60,
+        profiles=("safe", "standard", "broad"),
+        market_hours_only=False,
+        runner=_run_inflation_policy_raw,
+        description=(
+            "Refresh point-in-time inflation, SEP, policy-decision, rates, and "
+            "term-premium inputs without materializing a forecast."
         ),
         weekdays_only=True,
     ),

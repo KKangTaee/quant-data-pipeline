@@ -95,7 +95,7 @@
 |---|---|
 | `app/services/backtest_single_payload.py` | Streamlit-free Single Strategy payload normalization helper. UI form payload를 execution service-facing payload로 복사 / JSON-ready 변환한다 |
 | `app/services/backtest_execution.py` | Streamlit-free Single Strategy execution service. runtime dispatch, elapsed timing, input/data/system error normalization, runtime runner catalog metadata update를 담당 |
-| `app/services/backtest_strategy_catalog.py` | Streamlit-free Level1 purpose group / maturity catalog. production 전략과 미완성 `Risk-On Momentum 5D` development 상태를 UI 밖에서 한 번만 분류한다 |
+| `app/services/backtest_strategy_catalog.py` | Streamlit-free Level1 purpose group / maturity catalog. `Risk-On Momentum 5D`를 포함한 production 전략 maturity를 UI 밖에서 한 번만 분류한다 |
 | `app/services/backtest_analysis_decision_workspace.py` | Streamlit-free Level1 truth / readiness / complete read model. Single / Mix 공통 configuration fingerprint, fresh / stale result, error projection, root reason dedup, handler-aware action, KPI / technical evidence 순서를 계산한다. Single current context에는 이전 실행 raw configuration을 투영하지 않고, Mix만 사용자용 구성 전략·목표 비중 요약을 제공한다 |
 | `app/services/backtest_analysis_result_workspace.py` | Streamlit-free Level1 result evidence read model. `run_result_id`, lifecycle, technical handoff gate, deduplicated Level2 questions, union timeline/normalized return/Benchmark identity, 현재 평가일·최신 신호·마지막 리밸런싱·cadence·다음 월말 window, evidence/user table와 calculation/data/result-trace projection을 계산한다. 설정 변경·가격 갱신·재실행 실패를 `reference_reason` / `reference_message`로 분류하며 cadence가 없으면 exact next date를 만들지 않는다 |
 | `app/services/backtest_single_settings_workspace.py` | Streamlit-free Single settings schema / validation / payload projector. 9개 user choice와 12개 primary concrete variant(legacy Quality Snapshot은 replay compatibility only)의 profile, 4개 section, field type/range/option/visibility, exact runner payload를 Python에서 한 번만 정의한다. 팩터 option은 계산용 raw `value`와 한국어 의미·표준 약어를 포함한 사용자 `label`을 분리한다 |
@@ -142,7 +142,7 @@
 | 스크립트 | 관리하는 기능 |
 |---|---|
 | `app/runtime/backtest/__init__.py` / `facade.py` | UI payload를 DB-backed backtest 실행으로 변환하는 public runtime compatibility facade와 price-only ETF family runtime wrappers. Result bundle, Risk-On Momentum, Real-Money helper, Strict quality / value family 구현은 전용 module로 위임하고 기존 `app.runtime.backtest` import path를 re-export한다 |
-| `app/runtime/backtest/runners/risk_on_momentum.py` | Risk-On Momentum 5D runtime slice. managed universe resolution, DB price / statement / futures macro load, swing execution, comparison / sensitivity / stability wiring, generated swing artifact writer를 담당하며 `app.runtime.backtest`가 compatibility export한다 |
+| `app/runtime/backtest/runners/risk_on_momentum.py` / `risk_on_momentum_evidence.py` | Risk-On Momentum 5D runtime slice. managed universe resolution, DB price / statement / futures macro load, Quick / Standard / Deep 분석 실행, generated swing artifact와 compact Daily Swing evidence 생성을 담당하며 `app.runtime.backtest`가 compatibility export한다 |
 | `app/runtime/backtest/real_money.py` | Backtest real-money / guardrail / benchmark / deployment readiness helper slice. constants, ticker normalization compatibility helper, cost / turnover postprocess, benchmark overlay, validation / promotion / shortlist / probation / monitoring / deployment readiness contracts, ETF operability policy, `_apply_real_money_hardening`을 담당하며 `app.runtime.backtest`가 compatibility export한다 |
 | `app/runtime/backtest/runners/strict_factor.py` | Strict quality / value / quality-value annual and quarterly runtime slice. strict price freshness, factor / statement snapshot preflight, dynamic universe handling, rejected slot handling, strict result metadata assembly를 담당하며 `app.runtime.backtest`가 compatibility export한다 |
 | `app/runtime/backtest/result_bundle.py` | Backtest runtime result bundle contract helper. `result_df`를 정렬하고 summary / chart / metadata bundle을 생성하며 `app.runtime.backtest` public export와 호환된다 |
@@ -177,7 +177,7 @@
 | `finance/performance.py` | 성과 요약, portfolio performance metric, weighted portfolio 계산 helper |
 | `finance/indicators.py` | Reusable indicator helper. Risk-On Momentum 5D V2 uses simple rolling True Range / ATR here instead of embedding ATR math in the strategy loop |
 | `finance/swing_macro.py` | Risk-On Momentum 5D macro evaluation helper. Hard filter and ranking penalty mode share this Streamlit-free logic |
-| `finance/swing_analysis.py` | Risk-On Momentum 5D V2 repeated-run analysis helper. Exit / macro / holding comparison, sensitivity, stability, trade-cause, and quality warning rows are built here |
+| `finance/swing_analysis.py` | Risk-On Momentum 5D repeated-run analysis helper. Prepared simulation을 variant 간 재사용하고 behaviorally identical config를 cache하며 분석 강도, comparison, sensitivity, stability, trade-cause, quality warning을 만든다 |
 | `finance/display.py` | CLI / notebook 성격의 display helper |
 | `finance/visualize.py` | 백테스트 결과 시각화 helper |
 | `finance/economic_cycle_catalog.py` / `economic_cycle_features.py` / `economic_cycle_labels.py` / `economic_cycle_observed_state.py` | 17-series 역할/변환 계약, leakage-safe 월별 factor, activity/labor+eligible USREC retrospective label, 실물 8개 기반 3M 수준·모멘텀 현재 국면과 최근 변화·전환 조건 authority |

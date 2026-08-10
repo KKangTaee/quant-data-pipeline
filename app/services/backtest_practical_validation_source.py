@@ -527,6 +527,7 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
     net_cost_curve = dict(draft.get("net_cost_curve_snapshot") or {})
     real_money = dict(draft.get("real_money_signal") or {})
     handoff_readiness = dict(draft.get("handoff_readiness_snapshot") or {})
+    daily_swing_evidence = dict(draft.get("daily_swing_evidence_snapshot") or {})
     entry_gate = _entry_gate_snapshot_from_handoff_readiness(handoff_readiness)
     selection_history = list(draft.get("selection_history_snapshot") or [])
     return {
@@ -562,6 +563,7 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
         "net_cost_curve_snapshot": net_cost_curve,
         "real_money_signal": real_money,
         "handoff_readiness_snapshot": handoff_readiness,
+        "daily_swing_evidence_snapshot": daily_swing_evidence,
         "entry_gate": entry_gate,
         "components": [
             {
@@ -590,6 +592,7 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
                     "turnover_evidence_snapshot": turnover_evidence,
                     "net_cost_curve_snapshot": net_cost_curve,
                     "handoff_readiness_snapshot": handoff_readiness,
+                    "daily_swing_evidence_snapshot": daily_swing_evidence,
                     "entry_gate": entry_gate,
                     "source_kind": source_kind,
                 },

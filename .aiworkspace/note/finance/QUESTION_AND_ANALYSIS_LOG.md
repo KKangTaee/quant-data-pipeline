@@ -10,6 +10,26 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-08-10 - 경제 사이클 v3와 물가·정책 5/5는 독립 계약으로 함께 유지한다
+
+- User request: `codex/main-dev`의 master 병합 충돌을 `finance-integration-review`로
+  해결해 달라고 요청함.
+- Interpreted goal: current branch의 경제 사이클 v3를 되돌리지 않고 master의
+  inflation-policy 5/5와 Risk-On productionization을 검증 가능한 단일 기준선으로 합친다.
+- Analysis result: 경제 사이클은 `economic_cycle_v3`, 물가·정책은 렌더 직전 합성되는
+  독립 `inflation_policy_v1`로 유지하고 공용 FRED 수집·automation만 명시적으로 합치는
+  것이 안전하다. Risk-On current truth는 production이다.
+- Follow-up: 12개 충돌을 수동 통합하고 독립 검토에서 찾은 FRED PIT 보존,
+  Risk-On Quick/replay 3건까지 회귀 테스트로 수정한 뒤 자동 검증과 actual Browser QA를
+  완료했다. 사용자 registry, run history, QA/run artifact는 merge commit에서 제외했다.
+
+### 2026-07-26 - Risk-On Momentum 5D는 Daily Swing 수동 검토 계약으로 production 전환한다
+
+- User request: 개발 중인 Risk-On Momentum 5D의 미완성 부분과 2년 실행 지연 원인을 진단하고 개발을 마무리하도록 요청함.
+- Interpreted goal: 성능만 개선하거나 label만 바꾸지 않고 core runtime, Daily Swing validation handoff, Final Review / Monitoring 경계를 모두 닫는다.
+- Analysis result: 병목은 날짜별 전체 universe `iterrows()` 변환과 기본 최대 57회 중복 simulation이었다. prepared index와 distinct-config cache로 Standard를 16회로 줄였고 actual 2년 실행은 `21.247s`다.
+- Follow-up: production maturity와 수동 daily review / 1 market day stale / no-auto-order 정책을 구현했다. Historical PIT membership / delisting 자료는 미검증이므로 계속 `REVIEW`다.
+
 ### 2026-07-26 - canonical 문서는 역할이 바뀔 때만 갱신한다
 
 - User request: 핵심 문서 개편 뒤, 해당 문서를 수정하는 지침과 상태 모델도 안전하고 깊게 진단해 개선하도록 요청함.
@@ -10718,6 +10738,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up: 전체 `4/4차` 완료. detailed history는 retained task / phase / root handoff에
   보존하고 verification debt와 future candidates는 Roadmap의 별도 상태로 관리한다.
 
+### 2026-08-02 - 물가·정책·10년물 분석은 기존 경기 사이클 확률과 분리한다
+
+- User request: 처음 제시한 Core PCE→FOMC→10년물 전고점 접근을 정형화하되 개발 중인 기존 경기 사이클 확률을 재사용하지 말고, 순방향과 10년물 목표 역산을 혼합형으로 만들도록 요청함.
+- Interpreted goal: 4.7%·3.5% 같은 값은 날짜가 붙은 시나리오로 두고, 독립 PIT 원천에서 5상태 물가·정책·금리·동적 저항 확률을 계산하는 workbench를 단계적으로 구현한다.
+- Analysis result: 공식 원천→PIT DB→strict loader→독립 artifact/snapshot 경계를 채택했고 실제 2026 source와 다음 날 PCE cutoff 제외로 1차 기반을 검증했다.
+- Follow-up: 전체 5차 중 3차 완료. 2026-07-29 replay를 읽는 순방향·목표 역산 workbench는 `LIMITED/NOT_AVAILABLE`을 승격하지 않고 AUTO/USER 기준을 분리한다. actual desktop/mobile QA까지 완료했으며 다음은 4차 독립 PIT S&P 500 stress다. 침체는 5차 독립 검증 전까지 `NOT_AVAILABLE`이다.
+
 ### 2026-08-03 - 경제 사이클은 미래 월별 확률보다 현재 관측과 전환 조건을 먼저 답한다
 
 - User request: 잘못되거나 과도하게 보수적인 현재/+1M/+2M 국면 확률과 미래 경로를
@@ -10728,3 +10755,36 @@ Detailed historical analysis was archived on `2026-04-13`.
   persistence·diffusion·corroboration 전환 monitor와 12M actual path를 채택했다.
 - Follow-up: 전체 `4/4차` 구현·replay·Browser QA·문서 정렬 완료. Shadow 확률 artifact는
   호환용으로 남지만 v3 제품 read model과 UI에는 공개하지 않는다.
+
+### 2026-08-03 - 주가 경로는 EPS와 multiple의 조건부 범위로 분해한다
+
+- User request: 승인한 혼합형 물가·정책·10년물 틀의 다음 단계로 조건부 주식 스트레스
+  개발을 진행하도록 요청함.
+- Interpreted goal: 6,400을 전역 목표로 쓰지 않고 `차년도 EPS × forward multiple`로
+  분해하며, 측정 EPS 수정과 사용자 AI 수익화 가정을 분리하고 침체/cycle과 독립시킨다.
+- Analysis result: PIT rolling-origin model, independent `equity_json`, bounded scenario와
+  fail-closed UI를 구현했다. 공동경로 artifact와 snapshot별 live context를 분리했으며,
+  actual official EPS vintage 0건은 Shiller로 대체하지 않았다.
+- Follow-up: 전체 4/5차 완료. 다음 5차는 기존 경제 사이클 확률을 재사용하지 않는 독립
+  episode/OOS 침체 위험 모델이며, equity actual probability는 input/validation gate 전까지 숨긴다.
+
+### 2026-08-03 - 미충족 S&P 스트레스는 검증 가능한 EPS 공개빈티지로 복구한다
+
+- User request: 안내나 새 버전으로 회피하지 말고 actual DB에서 비어 있던 기능의 근본
+  원인을 해결해 클릭 뒤 정상 작동하게 하도록 요청함.
+- Interpreted goal: 현재 estimate를 과거에 복제하거나 Shiller를 대신 쓰지 않고, 공개일이
+  검증된 EPS consensus vintage와 OOS validation으로 기존 equity surface를 실제 복구한다.
+- Analysis result: FactSet annual current/next-year bottom-up EPS 80 release/160행을 저장하고
+  77 origin에서 baseline 개선과 OOS interval coverage를 통과해 equity `READY`를 만들었다.
+- Follow-up: actual 6,400 command는 `2.57%`로 동작한다. 전체 4/5차 완료이며
+  다음은 기존 경제 사이클 결과를 전혀 재사용하지 않는 5차 독립 침체 모델이다.
+
+### 2026-08-04 - 빈 상태 안내가 아니라 독립 침체 결과까지 실제 복구한다
+
+- User request: 미충족/검증 제한 안내로 끝내지 말고 기존 V1 기능이 actual DB와 클릭
+  경로에서 정상 작동하도록 근본 원인을 해결해 달라고 요청함.
+- Interpreted goal: 기존 경기 사이클 확률을 배제한 별도 12개월 침체 확률을 마지막
+  component로 연결하고 전체 5단계 복구를 실제 Browser까지 끝낸다.
+- Analysis result: 잘못된 일별 금리 release clock을 수정하고 지연 label OOS gate를 통과한
+  침체 23.1484%·관찰 상태를 snapshot/service/UI에 저장·표시했다.
+- Follow-up: 5/5 완료. 이후는 같은 raw refresh/materialization 계약의 정기 갱신이다.

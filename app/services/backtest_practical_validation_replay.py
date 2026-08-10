@@ -48,6 +48,7 @@ from app.runtime.backtest import (
     run_equal_weight_backtest_from_db,
     run_global_relative_strength_backtest_from_db,
     run_gtaa_backtest_from_db,
+    run_risk_on_momentum_5d_backtest_from_db,
     run_risk_parity_trend_backtest_from_db,
 )
 from finance.loaders import load_latest_market_date, load_price_freshness_summary
@@ -71,6 +72,8 @@ DISPLAY_NAME_TO_STRATEGY_KEY = {
     "risk_parity_trend": "risk_parity_trend",
     "dual momentum": "dual_momentum",
     "dual_momentum": "dual_momentum",
+    "risk on momentum 5d": "risk_on_momentum_5d",
+    "risk_on_momentum_5d": "risk_on_momentum_5d",
 }
 RECHECK_MODE_EXTEND_TO_LATEST = "extend_to_latest"
 RECHECK_MODE_STORED_PERIOD = "stored_period"
@@ -517,6 +520,77 @@ def _period_coverage(
     }
 
 
+def build_risk_on_momentum_replay_kwargs(payload: dict[str, Any]) -> dict[str, Any]:
+    """Map saved Daily Swing settings to a lightweight current-runtime replay."""
+
+    row = dict(payload or {})
+    macro_mode = str(row.get("macro_filter_mode") or "hard_filter")
+    return {
+        "tickers": list(row.get("tickers") or []),
+        "start": row.get("start"),
+        "end": row.get("end"),
+        "timeframe": row.get("timeframe") or "1d",
+        "option": "close_based",
+        "universe_mode": row.get("universe_mode") or "top1000",
+        "preset_name": row.get("preset_name") or "Top1000",
+        "universe_limit": _int_value(row.get("universe_limit"), 1000),
+        "start_balance": _float_value(row.get("start_balance"), 10_000.0),
+        "execution_mode": row.get("execution_mode")
+        or row.get("strategy_execution_mode")
+        or "close_based",
+        "exit_mode": row.get("exit_mode") or "fixed_pct",
+        "max_holding_days": _int_value(row.get("max_holding_days"), 5),
+        "stop_loss_pct": _float_value(row.get("stop_loss_pct"), -2.5),
+        "take_profit_pct": _float_value(row.get("take_profit_pct"), 5.0),
+        "atr_period": _int_value(row.get("atr_period"), 14),
+        "stop_atr_multiple": _float_value(row.get("stop_atr_multiple"), 1.0),
+        "take_profit_atr_multiple": _float_value(
+            row.get("take_profit_atr_multiple"),
+            2.0,
+        ),
+        "max_new_positions_per_day": _int_value(
+            row.get("max_new_positions_per_day"),
+            3,
+        ),
+        "max_total_positions": _int_value(row.get("max_total_positions"), 3),
+        "transaction_cost_bps": _float_value(row.get("transaction_cost_bps"), 0.0),
+        "slippage_bps": _float_value(row.get("slippage_bps"), 0.0),
+        "macro_filter_enabled": _bool_value(
+            row.get("macro_filter_enabled"),
+            macro_mode != "off",
+        ),
+        "macro_filter_mode": macro_mode,
+        "risk_on_min": _float_value(row.get("risk_on_min"), 0.0),
+        "rate_pressure_max": _float_value(row.get("rate_pressure_max"), 1.0),
+        "dollar_pressure_max": _float_value(row.get("dollar_pressure_max"), 1.0),
+        "safe_haven_max": _float_value(row.get("safe_haven_max"), 1.0),
+        "rate_pressure_penalty_weight": _float_value(
+            row.get("rate_pressure_penalty_weight"),
+            10.0,
+        ),
+        "dollar_pressure_penalty_weight": _float_value(
+            row.get("dollar_pressure_penalty_weight"),
+            10.0,
+        ),
+        "safe_haven_penalty_weight": _float_value(
+            row.get("safe_haven_penalty_weight"),
+            10.0,
+        ),
+        "min_price": _float_value(row.get("min_price"), 5.0),
+        "min_avg_dollar_volume_20d": _float_value(
+            row.get("min_avg_dollar_volume_20d"),
+            20_000_000.0,
+        ),
+        "min_avg_volume_20d": _float_value(
+            row.get("min_avg_volume_20d"),
+            500_000.0,
+        ),
+        "random_seed": _int_value(row.get("random_seed"), 42),
+        "scanner_top_n_per_day": _int_value(row.get("scanner_top_n_per_day"), 50),
+        "analysis_intensity": "quick",
+    }
+
+
 def _run_payload(payload: dict[str, Any]) -> dict[str, Any]:
     key = str(payload.get("strategy_key") or "").strip()
     common = {
@@ -539,6 +613,10 @@ def _run_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "universe_mode": payload.get("universe_mode") or "manual_tickers",
         "preset_name": payload.get("preset_name"),
     }
+    if key == "risk_on_momentum_5d":
+        return run_risk_on_momentum_5d_backtest_from_db(
+            **build_risk_on_momentum_replay_kwargs(payload)
+        )
     if key == "equal_weight":
         return run_equal_weight_backtest_from_db(
             **common,
@@ -836,6 +914,11 @@ def run_practical_validation_actual_replay(
                     "actual_end": meta.get("actual_result_end") or summary.get("end_date"),
                     "summary": summary,
                     "period_contract": dict(meta.get("grs_period_contract") or {}),
+                    "daily_swing_evidence": dict(
+                        bundle.get("daily_swing_evidence")
+                        or meta.get("daily_swing_evidence")
+                        or {}
+                    ),
                     "payload_preview": {
                         key: value
                         for key, value in payload.items()
@@ -853,6 +936,11 @@ def run_practical_validation_actual_replay(
                             "benchmark_ticker",
                             "preset_name",
                             "universe_mode",
+                            "universe_limit",
+                            "analysis_intensity",
+                            "exit_mode",
+                            "max_holding_days",
+                            "macro_filter_mode",
                         }
                     },
                     "result_curve": curve_records_from_df(result_df),
@@ -963,6 +1051,14 @@ def run_practical_validation_actual_replay(
         "component_count": len(components),
         "successful_component_count": len(successful),
         "component_results": serializable_components,
+        "daily_swing_evidence": next(
+            (
+                dict(row.get("daily_swing_evidence") or {})
+                for row in serializable_components
+                if dict(row.get("daily_swing_evidence") or {})
+            ),
+            {},
+        ),
         "portfolio_curve": portfolio_curve_records,
         "benchmark_curve": benchmark_curve_records,
         "benchmark_ticker": benchmark_ticker,

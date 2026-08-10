@@ -1,7 +1,7 @@
 # Architecture Notes
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-08-02
 
 ## Current Architecture
 
@@ -60,4 +60,5 @@ Layer ownership과 storage / surface boundary를 먼저 판정해야 하면 [SYS
 | 어떤 script가 어떤 책임을 갖는지 빠르게 확인 | [SCRIPT_STRUCTURE_MAP.md](./SCRIPT_STRUCTURE_MAP.md) |
 | UI payload에서 strategy runtime과 result bundle까지의 흐름 확인 | [BACKTEST_RUNTIME_FLOW.md](./BACKTEST_RUNTIME_FLOW.md) |
 | data collection, DB persistence, loader read path 확인 | [DATA_DB_PIPELINE_FLOW.md](./DATA_DB_PIPELINE_FLOW.md) |
+| Core PCE·FOMC 정책·동적 국채 저항의 독립 계산과 공개 gate 확인 | [INFLATION_POLICY_ENGINE_FLOW.md](./INFLATION_POLICY_ENGINE_FLOW.md) |
 | 새 strategy family 추가 / 변경 절차 확인 | [STRATEGY_IMPLEMENTATION_FLOW.md](./STRATEGY_IMPLEMENTATION_FLOW.md) |

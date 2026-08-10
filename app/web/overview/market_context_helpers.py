@@ -40,6 +40,13 @@ MARKET_CONTEXT_REFRESH_REFLECTION_KEY = "overview_market_context_refresh_reflect
 ECONOMIC_CYCLE_RESULT_KEY = "overview_economic_cycle_refresh_result"
 ECONOMIC_CYCLE_EVENT_KEY = "overview_economic_cycle_refresh_last_event"
 ECONOMIC_CYCLE_ACTION_ID = "refresh_economic_cycle_data"
+INFLATION_POLICY_EVENT_KEY = "overview_inflation_policy_last_event"
+INFLATION_POLICY_COMMAND_RESULT_KEY = "overview_inflation_policy_command_result"
+INFLATION_POLICY_EVENT_IDS = {
+    "save_yield_criterion",
+    "run_reverse_scenario",
+    "run_equity_stress_scenario",
+}
 US_STOCK_SEARCH_QUERY_KEY = "overview_us_stock_valuation_search_query"
 US_STOCK_SELECTED_SYMBOL_KEY = "overview_us_stock_valuation_selected_symbol"
 US_STOCK_COLLECTION_RESULT_KEY = "overview_us_stock_valuation_collection_result"
@@ -69,6 +76,47 @@ def load_economic_cycle_model(as_of_date: str | None = None) -> dict[str, Any]:
 
     model = build_economic_cycle_read_model(as_of_date=as_of_date)
     return json.loads(json.dumps(model, default=str))
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_inflation_policy_model(as_of_at: str | None = None) -> dict[str, Any]:
+    """Load the independent persisted inflation-policy read model."""
+    from app.services.overview.inflation_policy import (
+        build_inflation_policy_read_model,
+    )
+
+    model = build_inflation_policy_read_model(as_of_at=as_of_at)
+    return json.loads(json.dumps(model, default=str))
+
+
+def load_market_context_cycle_transport(
+    *,
+    cycle_builder: Callable[[], dict[str, Any]] = load_economic_cycle_model,
+    inflation_policy_builder: Callable[[], dict[str, Any]] = (
+        load_inflation_policy_model
+    ),
+) -> dict[str, Any]:
+    """Compose two independent DB read models only at the UI transport edge."""
+
+    cycle = json.loads(json.dumps(cycle_builder(), default=str))
+    inflation_policy = json.loads(
+        json.dumps(inflation_policy_builder(), default=str)
+    )
+    cycle["inflation_policy"] = inflation_policy
+    return cycle
+
+
+def attach_inflation_policy_command_result(
+    payload: dict[str, Any],
+    command_result: dict[str, Any],
+) -> dict[str, Any]:
+    """Attach even legacy session results through the final JSON transport gate."""
+
+    combined = dict(payload)
+    inflation_policy = dict(combined.get("inflation_policy") or {})
+    inflation_policy["command_result"] = command_result
+    combined["inflation_policy"] = inflation_policy
+    return json.loads(json.dumps(combined, default=str))
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -143,6 +191,75 @@ def _render_economic_cycle_fallback(payload: dict[str, Any]) -> None:
         st.caption(f"{label} · {dominant} {confidence:.0f}%")
 
 
+def _render_inflation_policy_fallback(payload: dict[str, Any]) -> None:
+    """Render saved conclusions only; forms and probability math stay out of fallback."""
+
+    headline = dict(payload.get("headline") or {})
+    status = str(payload.get("publication_status") or "NOT_AVAILABLE")
+    st.markdown(f"#### {headline.get('title') or '물가·정책 경로'}")
+    if status != "READY":
+        st.warning(
+            str(
+                headline.get("summary")
+                or "검증된 물가·정책 경로를 아직 공개할 수 없습니다."
+            )
+        )
+    else:
+        st.caption(str(headline.get("summary") or "저장된 경로를 확인합니다."))
+        inflation = dict(payload.get("inflation") or {})
+        policy = dict(payload.get("policy") or {})
+        states = list(inflation.get("state_rows") or [])
+        dominant = max(
+            (dict(item) for item in states if isinstance(item, dict)),
+            key=lambda item: float(item.get("probability") or 0.0),
+            default={},
+        )
+        next_meeting = dict(policy.get("next_meeting_probabilities") or {})
+        if dominant:
+            st.caption(
+                f"연말 물가 상태 · {dominant.get('label') or '-'} "
+                f"{float(dominant.get('probability') or 0.0) * 100:.0f}%"
+            )
+        if next_meeting:
+            leading = max(next_meeting, key=next_meeting.get)
+            st.caption(
+                f"다음 회의 · {leading.upper()} "
+                f"{float(next_meeting[leading]) * 100:.0f}%"
+            )
+    rates = dict(payload.get("rates") or {})
+    zones = [
+        dict(item)
+        for item in list(rates.get("resistance_zones") or [])
+        if isinstance(item, dict)
+    ]
+    if zones:
+        zone = zones[0]
+        st.caption(
+            f"{zone.get('owner_label') or '-'} · {zone.get('instrument') or '-'} · "
+            f"{float(zone.get('zone_lower_pct') or 0.0):.2f}~"
+            f"{float(zone.get('zone_upper_pct') or 0.0):.2f}%"
+        )
+    reverse = dict(payload.get("reverse_scenario") or {})
+    if str(reverse.get("publication_status") or "") != "READY":
+        st.caption(str(reverse.get("reason") or "역산 경로를 공개할 수 없습니다."))
+
+
+def _render_cycle_transport_fallback(payload: dict[str, Any]) -> None:
+    selected = st.segmented_control(
+        "분석 보기",
+        options=("경기 국면", "물가·정책 경로"),
+        default="경기 국면",
+        key="economic_cycle_inner_fallback_mode",
+        label_visibility="collapsed",
+    )
+    if selected == "물가·정책 경로":
+        _render_inflation_policy_fallback(
+            dict(payload.get("inflation_policy") or {})
+        )
+        return
+    _render_economic_cycle_fallback(payload)
+
+
 def render_economic_cycle() -> None:
     """Render persisted cycle data and consume one explicit manual refresh event."""
     from app.web.overview.economic_cycle_react_component import (
@@ -151,7 +268,7 @@ def render_economic_cycle() -> None:
     )
 
     try:
-        payload = load_economic_cycle_model()
+        payload = load_market_context_cycle_transport()
     except Exception as exc:  # pragma: no cover - UI resilience only
         st.warning(f"경제사이클 자료를 불러오지 못했습니다: {exc}")
         return
@@ -159,11 +276,18 @@ def render_economic_cycle() -> None:
     result = st.session_state.pop(ECONOMIC_CYCLE_RESULT_KEY, None)
     if isinstance(result, dict):
         payload["refresh_result"] = _economic_cycle_collection_reflection(result)
+    command_result = st.session_state.pop(
+        INFLATION_POLICY_COMMAND_RESULT_KEY, None
+    )
+    if isinstance(command_result, dict):
+        payload = attach_inflation_policy_command_result(payload, command_result)
     if economic_cycle_component_available():
         event = render_economic_cycle_component(payload)
+        if handle_inflation_policy_event(event):
+            return
         _handle_economic_cycle_event(event)
         return
-    _render_economic_cycle_fallback(payload)
+    _render_cycle_transport_fallback(payload)
 
 
 def _economic_cycle_event_payload(
@@ -238,6 +362,63 @@ def _handle_economic_cycle_event(
         and bool(details.get("cache_scopes"))
     ):
         (clear_cache or load_economic_cycle_model.clear)()
+    (rerun or st.rerun)()
+    return True
+
+
+def handle_inflation_policy_event(
+    event: dict[str, Any] | None,
+    *,
+    state: Any = None,
+    command_runner: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+    provider_refresh: Callable[..., object] | None = None,
+    store_result: Callable[[dict[str, Any]], None] | None = None,
+    clear_cache: Callable[[], None] | None = None,
+    cycle_clear_cache: Callable[[], None] | None = None,
+    rerun: Callable[[], None] | None = None,
+) -> bool:
+    """Consume one explicit workbench command without starting data collection."""
+
+    del provider_refresh, cycle_clear_cache
+    resolved_state = state if state is not None else st.session_state
+    event_payload = _economic_cycle_event_payload(event)
+    event_id = str(event_payload.get("id") or "")
+    if event_id not in INFLATION_POLICY_EVENT_IDS:
+        return False
+    nonce = str(event_payload.get("nonce") or event_id)
+    token = f"{event_id}:{nonce}"
+    if resolved_state.get(INFLATION_POLICY_EVENT_KEY) == token:
+        return False
+    resolved_state[INFLATION_POLICY_EVENT_KEY] = token
+    command = event_payload.get("payload")
+    command_payload = dict(command) if isinstance(command, dict) else {}
+    if command_runner is None:
+        from app.services.overview.inflation_policy_commands import (
+            run_equity_stress_scenario_command,
+            run_reverse_scenario_command,
+            save_user_resistance_definition,
+        )
+
+        resolved_runner = {
+            "save_yield_criterion": save_user_resistance_definition,
+            "run_reverse_scenario": run_reverse_scenario_command,
+            "run_equity_stress_scenario": run_equity_stress_scenario_command,
+        }[event_id]
+    else:
+        resolved_runner = command_runner
+    try:
+        result = resolved_runner(command_payload)
+    except ValueError as exc:
+        result = {"publication_status": "FAILED", "reason": str(exc)}
+    result = json.loads(
+        json.dumps({**result, "command_id": event_id}, default=str)
+    )
+    if store_result is not None:
+        store_result(result)
+    else:
+        resolved_state[INFLATION_POLICY_COMMAND_RESULT_KEY] = result
+    if str(result.get("publication_status") or "") == "READY":
+        (clear_cache or load_inflation_policy_model.clear)()
     (rerun or st.rerun)()
     return True
 

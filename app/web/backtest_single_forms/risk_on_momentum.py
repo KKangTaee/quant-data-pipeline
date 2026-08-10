@@ -254,15 +254,16 @@ def _render_risk_on_momentum_5d_form() -> None:
                     key="rom_slippage_bps",
                 )
             with cost_cols[2]:
-                random_iterations = int(
-                    st.number_input(
-                        "무작위 검증 반복 횟수",
-                        min_value=0,
-                        max_value=100,
-                        value=50,
-                        step=5,
-                        key="rom_random_iterations",
-                    )
+                analysis_intensity = st.selectbox(
+                    "분석 강도",
+                    options=["quick", "standard", "deep"],
+                    index=1,
+                    format_func=lambda value: {
+                        "quick": "빠름 · 본 전략만",
+                        "standard": "표준 · 무작위 10회 + 비교",
+                        "deep": "정밀 · 무작위 50회 + 비교 + 민감도",
+                    }[value],
+                    key="rom_analysis_intensity",
                 )
             with cost_cols[3]:
                 scanner_top_n_per_day = int(
@@ -274,19 +275,6 @@ def _render_risk_on_momentum_5d_form() -> None:
                         step=5,
                         key="rom_scanner_top_n_per_day",
                     )
-                )
-            suite_cols = st.columns(2)
-            with suite_cols[0]:
-                run_comparison_suite = st.checkbox(
-                    "비교 진단 함께 실행",
-                    value=True,
-                    key="rom_run_comparison_suite",
-                )
-            with suite_cols[1]:
-                run_sensitivity_suite = st.checkbox(
-                    "민감도 진단 함께 실행",
-                    value=False,
-                    key="rom_run_sensitivity_suite",
                 )
             st.caption("추가 진단은 단기 스윙 전략의 과거 민감도를 확인하며 실전 승인이나 주문을 수행하지 않습니다.")
 
@@ -349,10 +337,8 @@ def _render_risk_on_momentum_5d_form() -> None:
         "min_price": float(min_price),
         "min_avg_dollar_volume_20d": float(min_adv20d_m) * 1_000_000.0,
         "min_avg_volume_20d": int(min_avg_volume_20d),
-        "random_iterations": int(random_iterations),
+        "analysis_intensity": analysis_intensity,
         "scanner_top_n_per_day": int(scanner_top_n_per_day),
-        "run_comparison_suite": bool(run_comparison_suite),
-        "run_sensitivity_suite": bool(run_sensitivity_suite),
     }
 
     _handle_backtest_run(payload, strategy_name="Risk-On Momentum 5D")

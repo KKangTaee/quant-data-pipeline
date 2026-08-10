@@ -6,6 +6,7 @@ from typing import Any, Mapping
 
 import pandas as pd
 
+from app.services import nyse_calendar
 from finance.data.us_stock_valuation import (
     build_monthly_pit_valuation,
     calculate_company_excess_growth,
@@ -71,6 +72,19 @@ def _latest_monthly(monthly_rows: list[dict[str, Any]]) -> dict[str, Any] | None
     if not monthly_rows:
         return None
     return sorted(monthly_rows, key=lambda row: str(row.get("month") or ""))[-1]
+
+
+def _latest_price_monthly(monthly_rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Return the latest monthly row with a usable stored market price."""
+    candidates = []
+    for row in monthly_rows:
+        price = pd.to_numeric(row.get("price"), errors="coerce")
+        if pd.isna(price) or float(price) <= 0 or not row.get("price_basis_date"):
+            continue
+        candidates.append(row)
+    if not candidates:
+        return None
+    return sorted(candidates, key=lambda row: str(row.get("month") or ""))[-1]
 
 
 def _collection_action(
@@ -189,7 +203,14 @@ def build_us_stock_valuation_read_model(
         }
         return model
     try:
-        inputs = dict(loaded_inputs or load_us_stock_valuation_inputs(symbol))
+        inputs = dict(
+            loaded_inputs
+            if loaded_inputs is not None
+            else load_us_stock_valuation_inputs(
+                symbol,
+                as_of_date=nyse_calendar.latest_completed_nyse_session().isoformat(),
+            )
+        )
         identity = inputs.get("identity")
         if not isinstance(identity, Mapping):
             return _empty_model("ERROR", "선택 기업 identity/schema를 확인하지 못했습니다.")
@@ -231,7 +252,7 @@ def build_us_stock_valuation_read_model(
             monthly_rows,
             growth,
         )
-        latest = _latest_monthly(monthly_rows)
+        latest = _latest_price_monthly(monthly_rows)
         current_eps = float((latest or {}).get("ttm_eps") or 0)
         scenarios = calculate_stock_scenarios(current_eps, multiple, growth)
         history_options = {

@@ -9,6 +9,9 @@ import numpy as np
 import pandas as pd
 
 from app.runtime.backtest.result_bundle import build_backtest_result_bundle
+from app.runtime.backtest.runners.risk_on_momentum_evidence import (
+    build_daily_swing_evidence_packet,
+)
 from app.workspace_paths import BACKTEST_ARTIFACT_DIR
 from finance.data.asset_profile import load_top_symbols_from_asset_profile
 from finance.data.market_intelligence import load_market_cap_universe_members
@@ -23,14 +26,15 @@ from finance.swing import (
     build_futures_macro_mean_z_scores,
     clone_config,
     prepare_swing_feature_frame,
-    run_risk_on_momentum_backtest,
 )
 from finance.swing_analysis import (
+    SwingSimulationExecutor,
     build_quality_warnings,
     build_swing_comparison_suite,
     build_swing_sensitivity_suite,
     build_swing_stability_tables,
     build_trade_cause_summary,
+    resolve_swing_analysis_controls,
 )
 
 
@@ -255,12 +259,19 @@ def run_risk_on_momentum_5d_backtest_from_db(
     scanner_top_n_per_day: int = 50,
     run_comparison_suite: bool = True,
     run_sensitivity_suite: bool = False,
+    analysis_intensity: str | None = None,
 ) -> dict[str, Any]:
     from app.runtime.backtest import inspect_strict_annual_price_freshness
     from app.runtime.backtest.common import BacktestDataError
     from app.runtime.backtest.common import validate_backtest_date_range as _validate_backtest_date_range
 
     _validate_backtest_date_range(start, end)
+    analysis_controls = resolve_swing_analysis_controls(
+        analysis_intensity,
+        random_iterations=random_iterations,
+        run_comparison_suite=run_comparison_suite,
+        run_sensitivity_suite=run_sensitivity_suite,
+    )
     resolved_tickers, resolved_mode, resolved_preset, resolved_limit, universe_source = _resolve_risk_on_momentum_universe(
         tickers=tickers,
         universe_mode=universe_mode,
@@ -367,40 +378,34 @@ def run_risk_on_momentum_5d_backtest_from_db(
         candidate_price_history,
         statement_history=statement_history,
     )
-    primary = run_risk_on_momentum_backtest(
-        candidate_price_history,
-        config=config,
+    simulation_executor = SwingSimulationExecutor(
+        price_history=candidate_price_history,
         macro_scores=macro_scores,
         statement_history=statement_history,
         prepared_features=prepared_features,
     )
+    primary = simulation_executor.run(config)
 
-    macro_off_result = run_risk_on_momentum_backtest(
-        candidate_price_history,
-        config=clone_config(
-            config,
-            macro_filter_enabled=False,
-            macro_filter_mode="off",
-            collect_scanner_rows=False,
-        ),
-        macro_scores=macro_scores,
-        statement_history=statement_history,
-        prepared_features=prepared_features,
-    )
+    macro_off_result = None
+    if analysis_controls.run_comparison_suite:
+        macro_off_result = simulation_executor.run(
+            clone_config(
+                config,
+                macro_filter_enabled=False,
+                macro_filter_mode="off",
+                collect_scanner_rows=False,
+            )
+        )
 
     random_rows: list[dict[str, Any]] = []
-    for iteration in range(max(0, int(random_iterations))):
-        random_result = run_risk_on_momentum_backtest(
-            candidate_price_history,
-            config=clone_config(
+    for iteration in range(analysis_controls.random_iterations):
+        random_result = simulation_executor.run(
+            clone_config(
                 config,
                 ranking_mode="random",
                 random_seed=int(random_seed) + iteration + 1,
                 collect_scanner_rows=False,
-            ),
-            macro_scores=macro_scores,
-            statement_history=statement_history,
-            prepared_features=prepared_features,
+            )
         )
         random_rows.append(
             {
@@ -415,13 +420,16 @@ def run_risk_on_momentum_5d_backtest_from_db(
             "label": RISK_ON_MOMENTUM_STRATEGY_NAME,
             "rows": int(len(primary.result_df)),
             **primary.metrics,
-        },
-        {
-            "label": f"{RISK_ON_MOMENTUM_STRATEGY_NAME} (Macro Off)",
-            "rows": int(len(macro_off_result.result_df)),
-            **macro_off_result.metrics,
-        },
+        }
     ]
+    if macro_off_result is not None:
+        comparison_rows.append(
+            {
+                "label": f"{RISK_ON_MOMENTUM_STRATEGY_NAME} (Macro Off)",
+                "rows": int(len(macro_off_result.result_df)),
+                **macro_off_result.metrics,
+            }
+        )
     for benchmark_ticker in RISK_ON_MOMENTUM_BENCHMARK_TICKERS:
         benchmark_df = build_buy_and_hold_result(
             price_history,
@@ -447,7 +455,7 @@ def run_risk_on_momentum_5d_backtest_from_db(
     benchmark_comparison_df = pd.DataFrame(comparison_rows)
 
     v2_analysis: dict[str, Any] = {}
-    if bool(run_comparison_suite):
+    if analysis_controls.run_comparison_suite:
         v2_analysis.update(
             build_swing_comparison_suite(
                 candidate_price_history,
@@ -456,16 +464,18 @@ def run_risk_on_momentum_5d_backtest_from_db(
                 macro_scores=macro_scores,
                 statement_history=statement_history,
                 prepared_features=prepared_features,
+                simulation_executor=simulation_executor,
             )
         )
     sensitivity_df = pd.DataFrame()
-    if bool(run_sensitivity_suite):
+    if analysis_controls.run_sensitivity_suite:
         sensitivity_df = build_swing_sensitivity_suite(
             candidate_price_history,
             config=config,
             macro_scores=macro_scores,
             statement_history=statement_history,
             prepared_features=prepared_features,
+            simulation_executor=simulation_executor,
         )
         v2_analysis["sensitivity_df"] = sensitivity_df
     v2_analysis.update(build_swing_stability_tables(primary))
@@ -510,7 +520,11 @@ def run_risk_on_momentum_5d_backtest_from_db(
     bundle["swing_ticker_contribution_df"] = primary.ticker_contribution_df
     bundle["swing_random_summary_df"] = random_summary_df
     bundle["swing_benchmark_comparison_df"] = benchmark_comparison_df
-    bundle["swing_macro_off_result_df"] = macro_off_result.result_df
+    bundle["swing_macro_off_result_df"] = (
+        macro_off_result.result_df
+        if macro_off_result is not None
+        else pd.DataFrame()
+    )
     for key, value in v2_analysis.items():
         bundle[f"swing_{key}"] = value
 
@@ -541,10 +555,14 @@ def run_risk_on_momentum_5d_backtest_from_db(
             "safe_haven_penalty_weight": float(safe_haven_penalty_weight),
             "min_avg_dollar_volume_20d": float(min_avg_dollar_volume_20d),
             "min_avg_volume_20d": float(min_avg_volume_20d),
-            "random_iterations": int(random_iterations),
+            "analysis_intensity": analysis_controls.intensity,
+            "random_iterations": analysis_controls.random_iterations,
             "scanner_top_n_per_day": int(scanner_top_n_per_day),
-            "run_comparison_suite": bool(run_comparison_suite),
-            "run_sensitivity_suite": bool(run_sensitivity_suite),
+            "run_comparison_suite": analysis_controls.run_comparison_suite,
+            "run_sensitivity_suite": analysis_controls.run_sensitivity_suite,
+            "simulation_request_count": simulation_executor.request_count,
+            "simulation_executed_count": simulation_executor.executed_count,
+            "simulation_cache_hit_count": simulation_executor.cache_hit_count,
             "v2_analysis_keys": sorted(v2_analysis),
             "universe_limit": resolved_limit,
             "universe_symbol_count": len(resolved_tickers),
@@ -568,4 +586,17 @@ def run_risk_on_momentum_5d_backtest_from_db(
     )
     bundle["swing_artifact"] = artifact
     bundle["meta"]["swing_artifact"] = artifact
+    daily_swing_evidence = build_daily_swing_evidence_packet(
+        config=config,
+        meta=bundle["meta"],
+        metrics=primary.metrics,
+        result_df=primary.result_df,
+        trade_log_df=primary.trade_log_df,
+        random_summary_df=random_summary_df,
+        benchmark_comparison_df=benchmark_comparison_df,
+        quality_warning_df=v2_analysis["quality_warning_df"],
+        artifact=artifact,
+    )
+    bundle["daily_swing_evidence"] = daily_swing_evidence
+    bundle["meta"]["daily_swing_evidence"] = daily_swing_evidence
     return bundle

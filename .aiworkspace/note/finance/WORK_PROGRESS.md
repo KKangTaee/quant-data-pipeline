@@ -10,6 +10,26 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-08-10 - main-dev master 병합 충돌 해결
+
+- 경제 사이클 v3 observed-state/transition/freshness/asset pathway와 master의 독립
+  inflation-policy 5/5, Risk-On Momentum production 계약을 함께 보존했다.
+- 공용 FRED vintage 수집, 두 Overview 평일 job, React 내부 탭과 finance canonical
+  문서의 코드·DB 소유 경계를 통합했다.
+- 독립 검토에서 찾은 FRED PIT 보존, Risk-On Quick 결과, replay routing 3건도 회귀
+  테스트와 함께 닫았다. 경제 사이클 220개, inflation-policy 202개, Risk-On 29개,
+  Analysis Workspace 33개, React 34개/typecheck/build와 actual Browser QA를 통과했다.
+- broad service contract 18개와 Streamlit test-order 9개 기존 baseline drift는 task risk에 분리했다.
+- registry/run history/기존 QA·run artifact는 제외했다. 상세는
+  [integration task](./tasks/active/master-merge-resolution-20260810/STATUS.md)를 본다.
+
+### 2026-07-26 - Risk-On Momentum 5D productionization 완료
+
+- full-universe daily row 변환과 중복 variant 실행을 제거해 Top1000 2년 Standard actual DB 실행을 `21.247s`로 줄였다.
+- Quick / Standard / Deep 분석 강도, compact Daily Swing evidence, Practical Validation module과 Final Review / manual monitoring policy를 연결했다.
+- 전략 maturity를 production / `운영 전략`으로 전환했으며 current-membership historical PIT / delisting 한계는 `REVIEW`로 유지한다.
+- 전체 roadmap `3/3차` 완료. 상세는 [task status](./tasks/active/risk-on-momentum-5d-productionization-20260726/STATUS.md)를 본다.
+
 ### 2026-07-26 - Finance 문서 지침·상태 모델 정렬
 
 - canonical 네 문서의 역할별 update trigger와 workflow 상태 우선순위를 AGENTS/finance skill/runbook에 통일했다.
@@ -7312,6 +7332,26 @@ Detailed historical logs were archived on `2026-04-13`.
 - 전체 roadmap `4/4차` 완료. code / DB / registry / saved / run history는 변경하지 않았다.
 - 상세 설계·실행·검증은 `tasks/active/finance-canonical-docs-alignment-v1-20260726/`를 본다.
 
+## 2026-08-02 - Inflation / Policy Yield Path 1/5 데이터 기반 완료
+
+- 독립 FRED/ALFRED 26-series, 익명 SEP·FOMC 의결, 선택 BEA/ACM 수집과 strict `released_at` loader를 구현했다.
+- 실제 2026 source에서 6월 점도표/Core PCE 분포, 7월 9-3 동결과 3명 인상 선호, 다음 날 PCE cutoff 제외를 확인했다.
+- 기존 경제 사이클 결과는 입력/fallback으로 사용하지 않으며 BEA는 `NOT_AVAILABLE`, ACM replay는 `LIMITED`로 보존한다.
+- 전체 5차 중 1차 완료; 다음 위치는 `tasks/active/inflation-policy-data-pipeline/`과 `phases/active/inflation-policy-yield-path/`다.
+
+## 2026-08-02 - Inflation / Policy Yield Path 2/5 핵심 엔진 완료
+
+- PIT 전체 vintage 기반 bridge·ridge·momentum Core PCE, 익명 SEP·실제 표결 policy marginal, 동적 국채 저항과 조건부 역산 계약을 구현했다.
+- 2026-07-29 replay의 1개월 artifact와 통합 snapshot은 `LIMITED`; 역산·침체는 `NOT_AVAILABLE`로 저장했다.
+- 당시 10년물은 active 4.58~4.65%, next overhead 4.67%였으며 4.7 고정 상수를 사용하지 않았다.
+- 전체 5차 중 2차 완료; 다음 위치는 `tasks/active/inflation-policy-core-engines/`와 phase 3 workbench다.
+
+## 2026-08-02 - Inflation / Policy Yield Path 3/5 workbench 완료
+
+- Market Research 경제 사이클 안에 DB-backed `물가·정책 경로` 순방향·역산 화면과 USER 금리 기준 저장을 연결했다.
+- `LIMITED` 확률은 비공개, reverse·주가·침체는 `NOT_AVAILABLE`로 유지하며 기존 경기 사이클 확률을 재사용하지 않는다.
+- Python 122·React 8, actual DB와 desktop/420px Browser QA를 통과했다. 다음 위치는 4차 `inflation-policy-equity-stress`다.
+
 ## 2026-08-03 - 경제 사이클 관측 국면·전환 조건 V1 완료
 
 - 현재/+1M/+2M 확률 화면을 실물 8개 기반 현재 관측 국면, 최근 1·3·6개월 변화와
@@ -7320,3 +7360,31 @@ Detailed historical logs were archived on `2026-04-13`.
   `-0.561`, momentum `-0.239`, READY / 신뢰도 보통으로 재현됐다.
 - 기존 `자산별 확인 포인트`의 계산·markup·CSS는 유지했다. 상세는
   `tasks/active/economic-cycle-observed-state-transition-v1-20260803/`를 본다.
+
+## 2026-08-03 - Inflation / Policy Yield Path 4/5 조건부 주식 스트레스 완료
+
+- official S&P 500 EPS vintage와 저장 가격·금리의 PIT year-end EPS×multiple model,
+  paired residual, bounded 사용자 AI EPS/임의 지수 수준 scenario를 구현했다.
+- 독립 `equity_json`·서비스·React panel을 연결했고 equity 실패는 물가·정책·금리
+  상태를 바꾸지 않는다. actual EPS 0건은 Shiller로 대체하지 않아 `NOT_AVAILABLE`이다.
+- 공동경로를 `joint_macro_paths`, live 지수·EPS·금리 context를 snapshot에 분리해 반복
+  실행과 historical replay 재현성을 고정했다.
+- Python 159·React 11, build와 actual desktop/390px Browser QA를 통과했다. 전체 4/5차
+  완료; 다음 위치는 기존 cycle 확률을 재사용하지 않는 5차 독립 침체 위험 모델이다.
+
+## 2026-08-03 - Inflation / Policy 4차 actual 기능 복구
+
+- FactSet Earnings Insight의 두 CY 라벨 검증 월별 공개시점 80개와 annual bottom-up EPS
+  160행을 DB에 적재하고, 검증 실패 report 23개는 추정하지 않고 제외했다.
+- 77 completed origin에서 equity MAE 6.9258%가 best baseline 7.6929%보다 낮고 OOS 80%
+  interval coverage 0.8125를 통과해 equity를 actual `READY`로 복구했다.
+- actual 6,400 scenario가 `2.57%`와 EPS×multiple 분해로 동작한다. 전체 복구
+  roadmap은 4/5차이며 다음 위치는 `inflation-policy-functional-recovery-20260803`의 독립 침체 단계다.
+
+## 2026-08-04 - Inflation / Policy 5/5 독립 침체와 기능 복구 완료
+
+- 기존 경제 사이클을 읽지 않는 12개월 침체 모델을 138 origin·86 OOS fold·2 episode로
+  검증해 Brier 0.146934 < base-rate 0.157162, calibration 0.024324로 `READY` 처리했다.
+- actual snapshot은 침체 23.1484%·`WATCH/관찰`이며 6개 component와 overall 모두 `READY`다.
+- DGS 등 일별 PIT clock의 데이터셋 등록일 오류를 관측일 EOD로 바로잡았고 equity도
+  nested chronological ridge로 MAE 6.0751·coverage 0.875를 재검증했다. 상세는 functional recovery task다.

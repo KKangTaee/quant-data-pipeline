@@ -650,6 +650,8 @@ def test_cycle_component_has_no_fetch_job_trading_or_refresh_loop() -> None:
         path.read_text()
         for path in (root / "src").glob("*")
         if path.suffix in {".tsx", ".ts", ".css"}
+        and ".test." not in path.name
+        and path.name != "testSetup.ts"
     ).lower()
 
     for forbidden in (

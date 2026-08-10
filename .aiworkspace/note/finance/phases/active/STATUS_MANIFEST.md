@@ -1,11 +1,14 @@
 # Active Phase State Manifest
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-08-04
 
 ## Current State
 
 Current active phase: none.
+
+- `inflation-policy-yield-path`는 actual DB/Browser 기준 5/5 기능 복구를 완료했다.
+- board folder는 closeout 기록과 링크 보존을 위해 당분간 `phases/active/`에 유지한다.
 
 New phase work should be opened only after a user-approved scope is selected from current roadmap, research, or carry-forward material.
 

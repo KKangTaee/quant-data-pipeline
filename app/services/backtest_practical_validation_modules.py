@@ -34,6 +34,7 @@ TACTICAL_STRATEGY_KEYS = {
     "dual_momentum",
     "risk_parity_trend",
 }
+DAILY_SWING_STRATEGY_KEYS = {"risk_on_momentum_5d"}
 FACTOR_KEYWORDS = ("quality", "value", "snapshot", "strict", "factor")
 LEVERAGED_OR_INVERSE_SYMBOLS = {
     "TQQQ",
@@ -127,7 +128,8 @@ def infer_validation_source_traits(source: dict[str, Any]) -> dict[str, Any]:
         or source_kind in {"weighted_portfolio_mix", "saved_portfolio_mix", "latest_backtest_run"}
     )
     tactical = any(key in TACTICAL_STRATEGY_KEYS for key in strategy_keys)
-    high_turnover = False
+    daily_swing = any(key in DAILY_SWING_STRATEGY_KEYS for key in strategy_keys)
+    high_turnover = daily_swing
     for component in active_components:
         settings = _component_settings(component)
         interval = _safe_float(settings.get("interval") or settings.get("rebalance_interval"), default=999.0)
@@ -151,6 +153,7 @@ def infer_validation_source_traits(source: dict[str, Any]) -> dict[str, Any]:
         "is_etf_like": etf_like,
         "is_factor_equity": factor_equity,
         "is_tactical": tactical,
+        "is_daily_swing": daily_swing,
         "is_high_turnover": high_turnover,
         "has_leveraged_or_inverse_symbols": leveraged_or_inverse,
     }
@@ -389,6 +392,7 @@ def build_validation_module_plan(
     risk_contribution_rows: list[dict[str, Any]],
     component_role_weight_rows: list[dict[str, Any]],
     backtest_realism_rows: list[dict[str, Any]],
+    daily_swing_validation: dict[str, Any] | None = None,
     selected_route_preflight: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the module-level Practical Validation plan and Final Review gate."""
@@ -454,6 +458,8 @@ def build_validation_module_plan(
         (_status(row.get("Status")) for row in backtest_realism_rows if row.get("Criteria") == "Tax / account scope"),
         "NOT_RUN",
     )
+    daily_swing_row = dict(daily_swing_validation or {})
+    daily_swing_status = _status(daily_swing_row.get("status"))
     module_evidence_states = {
         "source_integrity": _evidence_state(
             [
@@ -522,6 +528,9 @@ def build_validation_module_plan(
         ),
         "monitoring_baseline": _evidence_state([monitoring_status]),
         "tax_account_scope": _evidence_state([tax_scope_status]),
+        "daily_swing_practical_validation": str(
+            daily_swing_row.get("evidence_state") or "not_applicable"
+        ),
     }
 
     modules = [
@@ -655,6 +664,28 @@ def build_validation_module_plan(
             resolution_action="ETF 운용사 operability / holdings / exposure gap을 확인하고 수집 가능한 부족분을 보강합니다.",
         ),
         _module(
+            module_id="daily_swing_practical_validation",
+            label="Daily Swing Execution / Bias",
+            group="Conditional / Strategy-specific",
+            status=daily_swing_status,
+            requirement="REQUIRED",
+            stage_owner="practical_validation",
+            applies=bool(traits.get("is_daily_swing")),
+            reason="단기 주식 scanner의 거래 실행, 비용·회전율, 비교 강건성, current-universe survivorship/PIT 한계를 함께 확인합니다.",
+            next_action=(
+                "Daily Swing evidence가 없으면 Backtest Analysis에서 다시 실행하고, "
+                "REVIEW 한계는 Final Review와 Monitoring 조건에 명시합니다."
+            ),
+            profile_effect="daily swing stock scanner",
+            applicability_reason=(
+                "Daily Swing 전략이므로 compact execution/bias evidence를 필수 검증합니다."
+                if traits.get("is_daily_swing")
+                else "Daily Swing 전략이 아니므로 적용하지 않습니다."
+            ),
+            resolution_surface="Flow4 > 실전성 > Daily Swing 실행 / 편향",
+            resolution_action="거래·보유·비용·회전율·비교 근거와 universe survivorship/PIT 한계를 확인합니다.",
+        ),
+        _module(
             module_id="leverage_inverse",
             label="Leveraged / Inverse Suitability",
             group="Conditional / Strategy-specific",
@@ -720,13 +751,19 @@ def build_validation_module_plan(
             status=macro_status,
             requirement="CONDITIONAL",
             stage_owner="practical_validation",
-            applies=bool(traits.get("is_tactical") or profile_id == "hedged_tactical"),
+            applies=bool(
+                traits.get("is_tactical")
+                or traits.get("is_daily_swing")
+                or profile_id == "hedged_tactical"
+            ),
             reason="전술 / 헤지형 source에서 macro regime과 risk-on/off context를 확인합니다.",
             next_action="전술형이면 FRED macro snapshot과 historical regime split을 함께 확인합니다. Sentiment risk-on/off overlay는 gate가 아니라 context로만 둡니다.",
             profile_effect="tactical source" if traits.get("is_tactical") else profile_label,
             applicability_reason=(
                 "전술형 source 또는 전술 / 헤지 profile이므로 macro / regime fit을 확인합니다."
-                if traits.get("is_tactical") or profile_id == "hedged_tactical"
+                if traits.get("is_tactical")
+                or traits.get("is_daily_swing")
+                or profile_id == "hedged_tactical"
                 else "전술형 source가 아니므로 macro / regime 조건부 검증은 적용하지 않습니다."
             ),
             resolution_surface="Flow4 > Raw Evidence > Practical Diagnostics",

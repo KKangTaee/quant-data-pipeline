@@ -117,10 +117,10 @@ It does not fetch SEC or third-party pages during normal render, write workflow 
 Backtest Analysis creates candidate sources.
 
 It owns single strategy runs, Portfolio Mix Builder, saved mix replay, result bundle display, history display, and Practical Validation handoff.
-Risk-On Momentum 5D currently belongs here as a research lane: `finance/swing.py`, `finance/indicators.py`, `finance/swing_macro.py`, and `finance/swing_analysis.py` can produce swing detail, generated scanner / trade artifacts, comparison, sensitivity, stability, trade-cause, and quality-warning evidence.
+Risk-On Momentum 5D is a production Daily Swing strategy: `finance/swing.py`, `finance/indicators.py`, `finance/swing_macro.py`, and `finance/swing_analysis.py` produce swing detail, generated scanner / trade artifacts, comparison, sensitivity, stability, trade-cause, quality-warning and compact downstream evidence.
 
-Backtest Analysis does not own final approval, live readiness, monitoring policy, or daily signal governance.
-Risk-On Momentum 5D governance connection to Practical Validation / Final Review / Portfolio Monitoring remains a separate approved task.
+Backtest Analysis does not own final approval, live readiness, broker orders or automatic rebalancing.
+Daily Swing validation and selected-route policy are owned by `app/services/backtest_daily_swing_validation.py` and `backtest_daily_swing_policy.py`; current-universe PIT/survivorship limitations remain explicit review evidence.
 
 ### Backtest > Practical Validation
 

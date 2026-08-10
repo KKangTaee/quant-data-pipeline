@@ -1,13 +1,23 @@
 # Active Task State Manifest
 
 Document Status: Maintained
-Last Verified: 2026-07-26
+Last Verified: 2026-08-10
 
 ## Current State
 
-Current active product task:
+Current active product task: none.
 
-- none
+Latest completed integration task:
+
+- `master-merge-resolution-20260810` — 전체 `4/4`; 경제 사이클 v3와 master의
+  inflation-policy 5/5·Risk-On production 계약을 보존하고 focused Python/React와
+  actual Browser QA 뒤 merge commit을 완료했다.
+
+Latest completed inflation-policy task:
+
+- `inflation-policy-preparation-baseline-ux-20260804` — 전체 2/2; 준비표에 현재
+  재가속·연말 순인상 구성과 합계를 직접 표시하고 최신 current snapshot 선택 회귀를
+  수정해 actual DB READY 화면과 Browser QA를 완료했다.
 
 Paused task:
 
@@ -20,10 +30,11 @@ Verification-Only tasks:
 
 Latest completed product task:
 
-- `today-contributor-coverage-layout-v1-20260723` — 전체 roadmap `2/2`; Today의 계산 가능한 EOD/live 종목 기여를 절대 영향도 순으로 모두 표시하고 coverage copy와 compact top-aligned `우선 확인` 배치를 적용했다.
+- `risk-on-momentum-5d-productionization-20260726` — 전체 roadmap `3/3`; Top1000 2년 Standard `21.247s`, compact Daily Swing validation, Final Review / manual monitoring policy와 production maturity 전환을 완료했다.
 
 Previous completed task:
 
+- `today-contributor-coverage-layout-v1-20260723` — 전체 roadmap `2/2`; Today의 계산 가능한 EOD/live 종목 기여를 절대 영향도 순으로 모두 표시하고 coverage copy와 compact top-aligned `우선 확인` 배치를 적용했다.
 - `portfolio-monitoring-latest-decision-lifecycle-v1-20260723` — 전체 roadmap `4/4`; 후보별 최신 Final Review 판단을 current truth로 사용하고, 기존 항목은 삭제하지 않은 채 최신 non-select에서 item-local 실행 잠금과 재확인/종료 행동을 제공한다.
 - `backtest-level1-price-refresh-handoff-v1-20260722` — 전체 roadmap `3/3`; 가격 부족/provider gap/재실행 전 상태를 Level2 blocker로 만들고, 명시적 최신화와 재실행 뒤에만 인계를 다시 연다.
 - `final-review-liquidity-evidence-copy-v1-20260722` — 전체 roadmap `2/2`; stable liquidity proof status와 Gate는 유지하고 Level3 카드 제목·현황·설명·기준만 사용자 문구로 변환했다.

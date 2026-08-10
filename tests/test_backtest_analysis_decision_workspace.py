@@ -37,16 +37,26 @@ def test_level1_catalog_groups_each_strategy_once() -> None:
         "GTAA",
         "Global Relative Strength",
         "Dual Momentum",
+        "Risk-On Momentum 5D",
         "Risk Parity Trend",
         "Equal Weight",
-        "Risk-On Momentum 5D",
     ]
     assert len(options) == len(set(options))
 
 
-def test_risk_on_is_development_not_research() -> None:
-    assert level1_strategy_maturity("Risk-On Momentum 5D") == "development"
+def test_risk_on_is_production_daily_swing_strategy() -> None:
+    assert level1_strategy_maturity("Risk-On Momentum 5D") == "production"
     assert level1_strategy_maturity("GTAA") == "production"
+
+    summary = build_single_strategy_settings_summary(
+        "Risk-On Momentum 5D",
+        None,
+    )
+    assert summary["maturity"] == "production"
+    assert summary["maturity_label"] == "운영 전략"
+    assert summary["description"] == (
+        "단기 모멘텀과 시장 위험선호 조건을 결합한 Daily Swing 운영 전략입니다."
+    )
 
 
 def test_single_settings_summary_projects_purpose_variant_and_maturity() -> None:
@@ -165,8 +175,8 @@ def test_stale_result_is_preserved_and_handoff_blocked() -> None:
     assert projection["result_available"] is True
 
 
-def test_development_or_missing_handler_has_no_cta() -> None:
-    development = build_level1_readiness_projection(
+def test_incomplete_result_or_missing_handler_has_no_cta() -> None:
+    incomplete = build_level1_readiness_projection(
         workspace_kind="single_strategy",
         strategy_choice="Risk-On Momentum 5D",
         result_bundle={"meta": {"strategy_key": "risk_on_momentum_5d"}},
@@ -183,7 +193,7 @@ def test_development_or_missing_handler_has_no_cta() -> None:
         action_handlers={"save_and_move": None},
     )
 
-    assert "save_and_move" not in development["actions"]
+    assert "save_and_move" not in incomplete["actions"]
     assert "save_and_move" not in missing["actions"]
 
 

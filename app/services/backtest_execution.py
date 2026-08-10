@@ -291,6 +291,7 @@ def _dispatch_single_backtest(payload: Mapping[str, Any]) -> dict[str, Any]:
             scanner_top_n_per_day=payload.get("scanner_top_n_per_day", 50),
             run_comparison_suite=payload.get("run_comparison_suite", True),
             run_sensitivity_suite=payload.get("run_sensitivity_suite", False),
+            analysis_intensity=payload.get("analysis_intensity"),
         )
 
     if strategy_key == "equal_weight":

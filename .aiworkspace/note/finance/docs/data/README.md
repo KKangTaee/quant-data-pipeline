@@ -1,7 +1,7 @@
 # Finance Data Map
 
 Status: Active
-Last Verified: 2026-07-23
+Last Verified: 2026-08-04
 
 ## Purpose
 
@@ -54,7 +54,7 @@ Last Verified: 2026-07-23
 | `institutional_13f_refresh_status` | latest SEC 13F dataset ingestion status, freshness, stale reason, and row counts |
 | `sp500_monthly_valuation` | Shiller monthly price/EPS-derived trailing P/E and CAPE history. EPS가 아직 없는 최신 월도 `data_quality=missing` price-only row로 보존하며, 마지막 양수 EPS 기준일을 별도로 유지한다. Descriptive 60m/36m valuation과 reconstructed history용이며 strict PIT signal history가 아니다. |
 | `nasdaq100_monthly_valuation` | SEC QQQ holdings, constituent actual diluted EPS(동일값 basic/diluted 공시 포함), DB EOD로 재구성한 monthly QQQ proxy. 95% 미만 월도 `blocked` evidence로 보존하며 blocker action은 최근 60개월 부족 EPS/EOD만 repeat-safe하게 보강한다. 공식 Nasdaq aggregate가 아니다. |
-| `sp500_index_earnings` | 사용자가 Ingestion에서 등록한 S&P 공식 Index Earnings workbook의 `QUARTERLY DATA`를 period/basis/status/release vintage로 보존한다. Market Context S&P 가치평가는 완료 `quarterly + as_reported + actual` 4개로 current TTM을 만들고 없으면 별도 Shiller TTM proxy를 사용할 수 있다. Economic Cycle의 실제 EPS 경로는 proxy를 사용하지 않고 서로 다른 완료 분기 8개로 current/prior TTM과 YoY를 계산한다. |
+| `sp500_index_earnings` | S&P 공식 Index Earnings workbook의 actual quarterly release vintage와 FactSet Earnings Insight의 날짜 검증 annual current/next-year bottom-up estimate를 source/basis/status로 분리해 보존한다. Market Context는 완료 `quarterly + as_reported + actual`만 current TTM에 쓰고, Economic Cycle 실제 EPS도 proxy/estimate를 쓰지 않는다. Inflation / Policy equity stress만 `factset_earnings_insight + annual` release vintage를 사용한다. |
 | `fomc_sep_projection` | Federal Reserve SEP GDP/PCE values stored by release vintage, target year, and statistic. FOMC calendar에서 발견한 2021-03 이후 official history를 missing-release 방식으로 backfill하며, daily discovery가 이후 release를 append한다. 1/3/5년 reconstruction이 같은 append-only vintage를 읽고 prior release는 덮어쓰지 않는다. |
 | `futures_instrument` | Overview futures watchlist preset / display metadata for yfinance pilot futures symbols |
 | `futures_ohlcv` | Overview futures 1m / daily OHLCV candle ledger for selected futures symbols. 1m rows support stored-candle chart / diagnostics; daily rows feed Futures Macro current scores and point-in-time historical validation. Economic Cycle은 저장된 `GC=F` / `DX-Y.NYB` daily row만 읽어 금·달러의 5/21/63거래일 가격 확인을 표시한다 |
@@ -103,6 +103,9 @@ runtime-defined JSONL 파일은 첫 workflow write 전에는 로컬에 없을 �
 ## Data Integrity Rules
 
 - 백테스트와 validation에서는 point-in-time, look-ahead, survivorship risk를 항상 고려한다.
+- Inflation / Policy snapshot의 기본 current read는 가장 최근에 갱신된
+  `run_kind=current` materialization을 사용하고, 명시적 `as_of_at` read는 cutoff 이하
+  최신 origin을 사용해 현재 화면과 과거 PIT 조회의 의미를 분리한다.
 - 경제 사이클 historical origin은 `realtime_start <= origin <= realtime_end`인 vintage만 읽는다. 현재 revised observation을 과거 origin에 소급하지 않는다.
 - provider field는 안정적이거나 완전하다고 가정하지 않는다.
 - Market Movers Top1000 / Top2000은 `nyse_asset_profile.market_cap` 순위가 아니라 `nyse_price_history`의 최근 20거래일 평균 거래대금 기준이다. 따라서 "가장 큰 기업" 순위가 아니라 "최근 거래대금이 큰 종목" 순위이며, current listing source와 최신 EOD 가격 row가 모두 필요하다.

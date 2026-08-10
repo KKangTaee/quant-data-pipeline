@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 import EconomicCycleHero from "./EconomicCycleHero";
+import InflationPolicyWorkbench from "./InflationPolicyWorkbench";
+import type { InflationPolicyCommand, InflationPolicyPayload } from "./inflationPolicyTypes";
 import "./style.css";
 
 type Phase = "recovery" | "expansion" | "slowdown" | "contraction";
@@ -338,6 +340,7 @@ export type CyclePayload = {
   market_implications: MarketImplication[];
   sources?: { name: string; source_date: string; basis?: string }[];
   limitations: string[];
+  inflation_policy?: InflationPolicyPayload;
 };
 
 type Props = Omit<ComponentProps, "args"> & { args: { payload?: CyclePayload } };
@@ -1358,13 +1361,7 @@ function EconomicCycleFreshnessBar({
   );
 }
 
-export function EconomicCycleWorkbenchView({
-  payload,
-  rootRef,
-}: {
-  payload: CyclePayload;
-  rootRef?: React.Ref<HTMLElement>;
-}) {
+function EconomicCycleContent({ payload }: { payload: CyclePayload }) {
   const observed = payload.observed_state;
   const realEvidence = payload.evidence.filter((evidence) => evidence.group === "real_economy");
   const forecastEvidence = payload.evidence.filter((evidence) => evidence.group === "forecast_context");
@@ -1375,7 +1372,7 @@ export function EconomicCycleWorkbenchView({
         ? "caution"
         : "neutral";
   return (
-    <main className="cycle-workbench" data-status={payload.status} ref={rootRef}>
+    <main className="cycle-workbench" data-status={payload.status}>
       <EconomicCycleHero
         asOfDate={payload.as_of_date || "-"}
         estimateLabel={observed.confidence_label || "판단 제한"}
@@ -1433,6 +1430,46 @@ export function EconomicCycleWorkbenchView({
   );
 }
 
+export function EconomicCycleWorkbenchView({
+  payload,
+  onCommand = () => undefined,
+}: {
+  payload: CyclePayload;
+  onCommand?: (command: InflationPolicyCommand) => void;
+}) {
+  const [selectedView, setSelectedView] = useState<"cycle" | "inflation">("cycle");
+  const inflationPayload = payload.inflation_policy;
+  return (
+    <div className="cycle-workbench-shell">
+      {inflationPayload ? (
+        <nav className="cycle-inner-navigation" role="tablist" aria-label="경제 분석 보기">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={selectedView === "cycle"}
+            onClick={() => setSelectedView("cycle")}
+          >
+            경기 국면
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={selectedView === "inflation"}
+            onClick={() => setSelectedView("inflation")}
+          >
+            물가·정책 경로
+          </button>
+        </nav>
+      ) : null}
+      {selectedView === "inflation" && inflationPayload ? (
+        <InflationPolicyWorkbench payload={inflationPayload} onCommand={onCommand} />
+      ) : (
+        <EconomicCycleContent payload={payload} />
+      )}
+    </div>
+  );
+}
+
 function EconomicCycleWorkbench({ args }: Props) {
   const payload = args.payload;
   const rootRef = useRef<HTMLElement>(null);
@@ -1444,7 +1481,14 @@ function EconomicCycleWorkbench({ args }: Props) {
     return () => observer.disconnect();
   }, [payload]);
   if (!payload || payload.schema_version !== "economic_cycle_v3") return null;
-  return <EconomicCycleWorkbenchView payload={payload} rootRef={rootRef} />;
+  const handleCommand = (command: InflationPolicyCommand) => {
+    Streamlit.setComponentValue({ event: command });
+  };
+  return (
+    <section className="cycle-workbench-frame" ref={rootRef}>
+      <EconomicCycleWorkbenchView payload={payload} onCommand={handleCommand} />
+    </section>
+  );
 }
 
 export default withStreamlitConnection(EconomicCycleWorkbench);

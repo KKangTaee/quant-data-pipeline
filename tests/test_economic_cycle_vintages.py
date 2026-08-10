@@ -223,7 +223,7 @@ def test_realtime_windows_keep_explicit_incremental_lower_bound() -> None:
     assert windows == [("2026-07-03", "9999-12-31")]
 
 
-def test_fetch_fred_vintages_splits_more_than_2000_vintage_dates() -> None:
+def test_fetch_fred_vintages_splits_before_fred_inclusive_2000_limit() -> None:
     module = _load_vintage_module()
     first = date(2018, 1, 1)
     vintage_dates = [
@@ -255,9 +255,9 @@ def test_fetch_fred_vintages_splits_more_than_2000_vintage_dates() -> None:
     first_window, second_window = session.observation_params
     assert first_window["realtime_start"] == "1776-07-04"
     assert first_window["realtime_end"] == (
-        date.fromisoformat(vintage_dates[2000]) - timedelta(days=1)
+        date.fromisoformat(vintage_dates[1999]) - timedelta(days=1)
     ).isoformat()
-    assert second_window["realtime_start"] == vintage_dates[2000]
+    assert second_window["realtime_start"] == vintage_dates[1999]
     assert second_window["realtime_end"] == "9999-12-31"
     assert all(item["output_type"] == 1 for item in session.observation_params)
 
@@ -296,7 +296,10 @@ def test_urllib_failure_does_not_expose_provider_reason_or_api_key() -> None:
     secret = "sensitive-test-key"
     reason = f"https://provider.test/failure?api_key={secret}"
 
-    with patch.object(module, "urlopen", side_effect=URLError(reason)):
+    with patch(
+        "finance.data.fred_vintages.urlopen",
+        side_effect=URLError(reason),
+    ):
         try:
             module.fetch_fred_vintage_dates(
                 "PAYEMS",

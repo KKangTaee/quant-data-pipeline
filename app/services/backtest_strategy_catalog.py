@@ -91,7 +91,12 @@ LEVEL1_STRATEGY_PURPOSE_GROUPS = OrderedDict(
             "tactical_allocation",
             {
                 "label": "모멘텀·전술 자산배분",
-                "items": ["GTAA", "Global Relative Strength", "Dual Momentum"],
+                "items": [
+                    "GTAA",
+                    "Global Relative Strength",
+                    "Dual Momentum",
+                    "Risk-On Momentum 5D",
+                ],
             },
         ),
         (
@@ -101,14 +106,10 @@ LEVEL1_STRATEGY_PURPOSE_GROUPS = OrderedDict(
                 "items": ["Risk Parity Trend", "Equal Weight"],
             },
         ),
-        (
-            "development",
-            {"label": "개발 중 전략", "items": ["Risk-On Momentum 5D"]},
-        ),
     ]
 )
 LEVEL1_STRATEGY_MATURITY = {
-    strategy: ("development" if strategy == "Risk-On Momentum 5D" else "production")
+    strategy: "production"
     for strategy in SINGLE_STRATEGY_OPTIONS
 }
 PRIMARY_STATEMENT_STRATEGY_KEYS = frozenset(

@@ -1034,6 +1034,11 @@ def _candidate_review_draft_from_bundle(bundle: dict[str, Any]) -> dict[str, Any
         "cost_model_snapshot": _cost_model_snapshot_from_mapping(meta),
         "turnover_evidence_snapshot": _turnover_evidence_snapshot_from_mapping(meta),
         "net_cost_curve_snapshot": _net_cost_curve_snapshot_from_mapping(meta),
+        "daily_swing_evidence_snapshot": dict(
+            bundle.get("daily_swing_evidence")
+            or meta.get("daily_swing_evidence")
+            or {}
+        ),
         "settings_snapshot": {
             "tickers": meta.get("tickers") or [],
             "universe_mode": meta.get("universe_mode"),
@@ -1046,6 +1051,21 @@ def _candidate_review_draft_from_bundle(bundle: dict[str, Any]) -> dict[str, Any
             "transaction_cost_bps": meta.get("transaction_cost_bps"),
             "benchmark_contract": meta.get("benchmark_contract"),
             "benchmark_ticker": meta.get("benchmark_ticker"),
+            "analysis_intensity": meta.get("analysis_intensity"),
+            "start_balance": meta.get("start_balance"),
+            "strategy_execution_mode": meta.get("strategy_execution_mode"),
+            "exit_mode": meta.get("exit_mode"),
+            "max_holding_days": meta.get("max_holding_days"),
+            "stop_loss_pct": meta.get("stop_loss_pct"),
+            "take_profit_pct": meta.get("take_profit_pct"),
+            "atr_period": meta.get("atr_period"),
+            "stop_atr_multiple": meta.get("stop_atr_multiple"),
+            "take_profit_atr_multiple": meta.get("take_profit_atr_multiple"),
+            "max_new_positions_per_day": meta.get("max_new_positions_per_day"),
+            "max_total_positions": meta.get("max_total_positions"),
+            "slippage_bps": meta.get("slippage_bps"),
+            "macro_filter_mode": meta.get("macro_filter_mode"),
+            "scanner_top_n_per_day": meta.get("scanner_top_n_per_day"),
             **{key: meta.get(key) for key in _PROMOTION_POLICY_SETTING_KEYS},
         },
         "notes": (
@@ -1117,6 +1137,11 @@ def _candidate_review_draft_from_history_record(record: dict[str, Any]) -> dict[
         "cost_model_snapshot": _cost_model_snapshot_from_mapping(record),
         "turnover_evidence_snapshot": _turnover_evidence_snapshot_from_mapping(record),
         "net_cost_curve_snapshot": _net_cost_curve_snapshot_from_mapping(record),
+        "daily_swing_evidence_snapshot": dict(
+            record.get("daily_swing_evidence")
+            or gate_snapshot.get("daily_swing_evidence")
+            or {}
+        ),
         "settings_snapshot": {
             "tickers": record.get("tickers") or [],
             "universe_mode": record.get("universe_mode"),
@@ -1129,6 +1154,21 @@ def _candidate_review_draft_from_history_record(record: dict[str, Any]) -> dict[
             "transaction_cost_bps": record.get("transaction_cost_bps"),
             "benchmark_contract": record.get("benchmark_contract"),
             "benchmark_ticker": record.get("benchmark_ticker"),
+            "analysis_intensity": record.get("analysis_intensity"),
+            "start_balance": record.get("start_balance"),
+            "strategy_execution_mode": record.get("strategy_execution_mode"),
+            "exit_mode": record.get("exit_mode"),
+            "max_holding_days": record.get("max_holding_days"),
+            "stop_loss_pct": record.get("stop_loss_pct"),
+            "take_profit_pct": record.get("take_profit_pct"),
+            "atr_period": record.get("atr_period"),
+            "stop_atr_multiple": record.get("stop_atr_multiple"),
+            "take_profit_atr_multiple": record.get("take_profit_atr_multiple"),
+            "max_new_positions_per_day": record.get("max_new_positions_per_day"),
+            "max_total_positions": record.get("max_total_positions"),
+            "slippage_bps": record.get("slippage_bps"),
+            "macro_filter_mode": record.get("macro_filter_mode"),
+            "scanner_top_n_per_day": record.get("scanner_top_n_per_day"),
             **{key: record.get(key) for key in _PROMOTION_POLICY_SETTING_KEYS},
             "context_keys": sorted(context.keys()),
         },
@@ -1197,9 +1237,22 @@ def _build_candidate_intake_readiness_evaluation(
         _candidate_intake_value_present(settings.get(key))
         for key in ("tickers", "preset_name", "universe_mode", "universe_contract")
     )
+    is_daily_swing = str(draft.get("strategy_key") or "").strip() == "risk_on_momentum_5d"
+    contract_keys = (
+        (
+            "analysis_intensity",
+            "strategy_execution_mode",
+            "exit_mode",
+            "max_holding_days",
+            "max_total_positions",
+            "macro_filter_mode",
+        )
+        if is_daily_swing
+        else ("factor_freq", "rebalance_freq", "top", "benchmark_contract", "benchmark_ticker")
+    )
     settings_contract_ready = any(
         _candidate_intake_value_present(settings.get(key))
-        for key in ("factor_freq", "rebalance_freq", "top", "benchmark_contract", "benchmark_ticker")
+        for key in contract_keys
     )
     settings_ready = bool(settings) and settings_core_ready and settings_contract_ready
     operator_ready = _candidate_intake_value_present(operator_reason) and _candidate_intake_value_present(next_action)

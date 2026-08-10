@@ -984,6 +984,7 @@ PROVIDER_SCHEMAS = {
           observation_date DATE NOT NULL,
           realtime_start DATE NOT NULL,
           realtime_end DATE NOT NULL,
+          released_at DATETIME(6) NULL,
           source VARCHAR(64) NOT NULL DEFAULT 'fred',
           source_type ENUM('official','database_bridge','computed_proxy') NOT NULL DEFAULT 'official',
           source_mode VARCHAR(64) NOT NULL DEFAULT 'fred_output_type_1_realtime_intervals',
@@ -1006,10 +1007,211 @@ PROVIDER_SCHEMAS = {
 
           UNIQUE KEY uk_series_observation_realtime_source (series_id, observation_date, realtime_start, source),
           KEY ix_series_realtime_observation (series_id, realtime_start, observation_date),
+          KEY ix_vintage_released_series (released_at, series_id, observation_date),
           KEY ix_factor_observation (factor_group, observation_date),
           KEY ix_vintage_coverage_status (coverage_status)
         );
     """
+}
+
+
+INFLATION_POLICY_SCHEMAS = {
+    "fomc_sep_distribution": """
+        CREATE TABLE IF NOT EXISTS fomc_sep_distribution (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          meeting_date DATE NOT NULL,
+          released_at DATETIME(6) NOT NULL,
+          target_period VARCHAR(32) NOT NULL,
+          variable_name VARCHAR(64) NOT NULL,
+          distribution_kind ENUM('SUMMARY','HISTOGRAM','DOT') NOT NULL,
+          bin_label VARCHAR(64) NOT NULL,
+          bin_value_pct DECIMAL(10,4) NULL,
+          bin_lower_pct DECIMAL(10,4) NULL,
+          bin_upper_pct DECIMAL(10,4) NULL,
+          participant_count SMALLINT NOT NULL,
+          units VARCHAR(32) NOT NULL DEFAULT 'percent',
+
+          source VARCHAR(64) NOT NULL DEFAULT 'federal_reserve_sep',
+          source_ref VARCHAR(1024) NOT NULL,
+          parser_version VARCHAR(128) NOT NULL,
+          collected_at DATETIME(6) NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_fomc_sep_distribution
+            (released_at, target_period, variable_name, distribution_kind, bin_label),
+          KEY ix_fomc_sep_released (released_at, variable_name, target_period),
+          KEY ix_fomc_sep_meeting (meeting_date, variable_name)
+        );
+    """,
+    "fomc_policy_decision": """
+        CREATE TABLE IF NOT EXISTS fomc_policy_decision (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          meeting_date DATE NOT NULL,
+          released_at DATETIME(6) NOT NULL,
+          target_lower_before_pct DECIMAL(10,4) NULL,
+          target_upper_before_pct DECIMAL(10,4) NULL,
+          target_lower_after_pct DECIMAL(10,4) NOT NULL,
+          target_upper_after_pct DECIMAL(10,4) NOT NULL,
+          vote_total_count SMALLINT NOT NULL,
+          vote_for_count SMALLINT NOT NULL,
+          vote_against_count SMALLINT NOT NULL,
+          dissents_json LONGTEXT NOT NULL,
+
+          statement_hash CHAR(64) NOT NULL,
+          source VARCHAR(64) NOT NULL DEFAULT 'federal_reserve_fomc',
+          source_ref VARCHAR(1024) NOT NULL,
+          parser_version VARCHAR(128) NOT NULL,
+          coverage_status ENUM('READY','PARTIAL','FAILED') NOT NULL DEFAULT 'READY',
+          collected_at DATETIME(6) NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_fomc_policy_meeting (meeting_date),
+          KEY ix_fomc_policy_released (released_at, meeting_date)
+        );
+    """,
+    "spf_core_pce_probability": """
+        CREATE TABLE IF NOT EXISTS spf_core_pce_probability (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          survey_year SMALLINT NOT NULL,
+          survey_quarter TINYINT NOT NULL,
+          target_year SMALLINT NOT NULL,
+          horizon ENUM('CURRENT_YEAR','NEXT_YEAR') NOT NULL,
+          bin_number TINYINT NOT NULL,
+          bin_label VARCHAR(32) NOT NULL,
+          bin_lower_pct DECIMAL(10,4) NULL,
+          bin_upper_pct DECIMAL(10,4) NULL,
+          mean_probability_pct DECIMAL(10,6) NOT NULL,
+          release_date DATE NOT NULL,
+          released_at DATETIME(6) NOT NULL,
+          release_time_basis VARCHAR(64) NOT NULL,
+
+          source VARCHAR(64) NOT NULL DEFAULT 'philadelphia_fed_spf',
+          source_ref VARCHAR(1024) NOT NULL,
+          parser_version VARCHAR(128) NOT NULL,
+          collected_at DATETIME(6) NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_spf_core_pce_probability
+            (survey_year, survey_quarter, target_year, bin_number),
+          KEY ix_spf_core_pce_released
+            (released_at, target_year, survey_year, survey_quarter)
+        );
+    """,
+    "inflation_policy_model_artifact": """
+        CREATE TABLE IF NOT EXISTS inflation_policy_model_artifact (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          model_version VARCHAR(128) NOT NULL,
+          trained_cutoff_at DATETIME(6) NOT NULL,
+          component VARCHAR(64) NOT NULL,
+          feature_schema_version VARCHAR(128) NOT NULL,
+          transform_schema_version VARCHAR(128) NOT NULL,
+          state_schema_version VARCHAR(128) NOT NULL,
+          training_start_date DATE NOT NULL,
+          forecast_horizon VARCHAR(64) NOT NULL,
+          ensemble_weight DECIMAL(10,6) NULL,
+          parameters_json LONGTEXT NOT NULL,
+          validation_json LONGTEXT NOT NULL,
+          calibration_json LONGTEXT NOT NULL,
+          publication_status ENUM('READY','LIMITED','NOT_AVAILABLE','FAILED') NOT NULL,
+          publication_reasons_json LONGTEXT NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_inflation_policy_artifact
+            (model_version, trained_cutoff_at, component),
+          KEY ix_inflation_policy_artifact_cutoff
+            (trained_cutoff_at, publication_status)
+        );
+    """,
+    "inflation_policy_snapshot": """
+        CREATE TABLE IF NOT EXISTS inflation_policy_snapshot (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          as_of_at DATETIME(6) NOT NULL,
+          model_version VARCHAR(128) NOT NULL,
+          run_kind ENUM('current','historical_replay','scenario') NOT NULL,
+          publication_status ENUM('READY','LIMITED','NOT_AVAILABLE','FAILED') NOT NULL,
+          inflation_json LONGTEXT NOT NULL,
+          policy_json LONGTEXT NOT NULL,
+          rates_json LONGTEXT NOT NULL,
+          reverse_json LONGTEXT NOT NULL,
+          equity_json LONGTEXT NOT NULL,
+          recession_json LONGTEXT NOT NULL,
+          evidence_json LONGTEXT NOT NULL,
+          freshness_json LONGTEXT NOT NULL,
+          warnings_json LONGTEXT NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_inflation_policy_snapshot
+            (as_of_at, model_version, run_kind),
+          KEY ix_inflation_policy_snapshot_as_of
+            (as_of_at, publication_status)
+        );
+    """,
+    "yield_resistance_definition": """
+        CREATE TABLE IF NOT EXISTS yield_resistance_definition (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          definition_id CHAR(36) NOT NULL,
+          owner ENUM('AUTO','USER') NOT NULL,
+          definition_name VARCHAR(128) NULL,
+          instrument VARCHAR(32) NOT NULL,
+          short_lookback_days SMALLINT NOT NULL,
+          long_lookback_days SMALLINT NOT NULL,
+          zone_lower_pct DECIMAL(10,4) NOT NULL,
+          zone_upper_pct DECIMAL(10,4) NOT NULL,
+          buffer_pct DECIMAL(10,4) NOT NULL DEFAULT 0,
+          confirmation_profile_json LONGTEXT NOT NULL,
+          known_at DATETIME(6) NOT NULL,
+          algorithm_version VARCHAR(128) NOT NULL,
+          is_active TINYINT(1) NOT NULL DEFAULT 1,
+          saved_at DATETIME(6) NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_yield_resistance_definition (definition_id),
+          KEY ix_yield_resistance_definition_active
+            (owner, instrument, is_active, known_at)
+        );
+    """,
+    "yield_resistance_snapshot": """
+        CREATE TABLE IF NOT EXISTS yield_resistance_snapshot (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          definition_id CHAR(36) NOT NULL,
+          as_of_at DATETIME(6) NOT NULL,
+          current_value_pct DECIMAL(10,4) NOT NULL,
+          distance_to_zone_pct DECIMAL(10,4) NOT NULL,
+          state ENUM('APPROACH','ATTEMPT','CONFIRMED','HOLD','FAILED') NOT NULL,
+          zone_strength DECIMAL(10,6) NULL,
+          timeframe_confluence_json LONGTEXT NOT NULL,
+          breakout_probability DECIMAL(10,6) NULL,
+          hold_probability DECIMAL(10,6) NULL,
+          dominant_driver VARCHAR(64) NULL,
+          quality_json LONGTEXT NOT NULL,
+          evidence_json LONGTEXT NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_yield_resistance_snapshot (definition_id, as_of_at),
+          KEY ix_yield_resistance_snapshot_as_of (as_of_at, state)
+        );
+    """,
 }
 
 

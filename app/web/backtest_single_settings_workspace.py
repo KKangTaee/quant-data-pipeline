@@ -50,7 +50,7 @@ _STRATEGY_DESCRIPTIONS = {
     "Dual Momentum": "상대·절대 모멘텀을 함께 확인해 공격·방어 자산을 선택합니다.",
     "Risk Parity Trend": "변동성과 추세를 함께 사용해 자산별 위험 기여를 조정합니다.",
     "Equal Weight": "선택한 자산을 같은 비중으로 보유하고 정해진 주기로 조정합니다.",
-    "Risk-On Momentum 5D": "단기 위험선호 종목을 탐색하는 개발 중 전략입니다.",
+    "Risk-On Momentum 5D": "단기 모멘텀과 시장 위험선호 조건을 결합한 Daily Swing 운영 전략입니다.",
 }
 
 

@@ -182,6 +182,8 @@ def append_backtest_run_history(
         "scanner_top_n_per_day": meta.get("scanner_top_n_per_day"),
         "run_comparison_suite": meta.get("run_comparison_suite"),
         "run_sensitivity_suite": meta.get("run_sensitivity_suite"),
+        "analysis_intensity": meta.get("analysis_intensity"),
+        "daily_swing_evidence": meta.get("daily_swing_evidence"),
         "universe_limit": meta.get("universe_limit"),
         "universe_symbol_count": meta.get("universe_symbol_count"),
         "universe_source": meta.get("universe_source"),

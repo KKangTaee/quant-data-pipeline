@@ -100,11 +100,11 @@ _PROFILES: dict[str, dict[str, str]] = {
     "Risk-On Momentum 5D": {
         "display_name": "Risk-On Momentum 5D",
         "purpose_label": "단기 위험선호 모멘텀",
-        "maturity_label": "개발 중 전략",
-        "description": "단기 모멘텀과 시장 위험선호 조건을 결합한 개발 단계 전략입니다.",
+        "maturity_label": "운영 전략",
+        "description": "단기 모멘텀과 시장 위험선호 조건을 결합한 Daily Swing 전략입니다.",
         "selection_rule": "가격·유동성·거시 필터를 통과한 단기 모멘텀 후보를 선택합니다.",
         "holding_rule": "진입·청산·손절·익절 규칙으로 포지션을 관리합니다.",
-        "risk_note": "개발 중이므로 Level2 후보 승격 전에 실행 근거를 더 검토해야 합니다.",
+        "risk_note": "Daily Swing 검증에서 거래·비용·회전율과 universe survivorship/PIT 한계를 확인해야 합니다.",
     },
     "Quality": {
         "display_name": "Quality",
@@ -1018,10 +1018,20 @@ def _risk_on_sections(runtime_options: Mapping[str, object]) -> list[dict[str, o
     risk = [
         _field("transaction_cost_bps", "transaction_cost_bps", "거래비용(bps)", "number", 0.0, "매수·매도에 반영할 거래비용입니다.", min=0.0, max=100.0, step=1.0),
         _field("slippage_bps", "slippage_bps", "슬리피지(bps)", "number", 0.0, "주문 가격과 실제 체결 가격의 차이 가정입니다.", min=0.0, max=100.0, step=1.0),
-        _field("random_iterations", "random_iterations", "무작위 검증 반복 횟수", "number", 50, "후보 순위 민감도를 확인할 무작위 반복 횟수입니다.", min=0, max=100, step=5, integer=True, advanced=True),
+        _field(
+            "analysis_intensity",
+            "analysis_intensity",
+            "분석 강도",
+            "single_select",
+            "standard",
+            "빠름은 본 전략만, 표준은 무작위 10회와 비교 진단, 정밀은 무작위 50회와 민감도까지 실행합니다.",
+            options=[
+                _option("quick", "빠름 · 본 전략만"),
+                _option("standard", "표준 · 무작위 10회 + 비교"),
+                _option("deep", "정밀 · 무작위 50회 + 비교 + 민감도"),
+            ],
+        ),
         _field("scanner_top_n_per_day", "scanner_top_n_per_day", "일별 후보 저장 수", "number", 50, "근거 확인을 위해 날짜별로 보존할 상위 후보 수입니다.", min=1, max=200, step=5, integer=True, advanced=True),
-        _field("run_comparison_suite", "run_comparison_suite", "비교 진단 함께 실행", "toggle", True, "기본 결과와 비교 진단을 함께 계산합니다.", advanced=True),
-        _field("run_sensitivity_suite", "run_sensitivity_suite", "민감도 진단 함께 실행", "toggle", False, "주요 설정 변화에 대한 민감도 진단을 함께 계산합니다.", advanced=True),
     ]
     return [
         _section("execution", execution),
