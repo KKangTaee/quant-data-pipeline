@@ -17,3 +17,14 @@
 - 2026-08-10: React RED 2건은 delayed label/scope copy 미지원으로 예상대로 실패.
 - 2026-08-10: React 12 tests, TypeScript no-emit, Vite production build 통과.
 - 2026-08-10: 경제사이클 market-context UI source contract 29 tests passed; 기존 EDGAR deprecation warnings 3건.
+- 2026-08-10: 최종 focused 경제사이클 suite 141 tests passed, 기존 EDGAR deprecation warnings 3건.
+- 2026-08-10: 17-series 실제 빈티지 수집 5.957초, requested 17, stored 36,342, failed/missing 0, fetch_workers 4.
+- 2026-08-10: 자산 경로 15개 입력 실제 갱신 18.441초, failed symbols 0, freshness `READY`, stale/missing 0.
+- 2026-08-10: 갱신 전후 `historical_replay` fingerprint `121 rows / 2016-06-30~2026-06-30 / 73f2bcc9...20dc9`, `current` fingerprint `2 rows / 2026-06-30~2026-07-31 / c489d716...1263b`로 동일.
+- 2026-08-10: PIT invariant suite 51 tests passed, 기존 EDGAR deprecation warnings 3건.
+- 2026-08-10: Browser QA에서 Data Freshness `경제사이클 계산 최신 · 자산 경로 최신`, 자산 카드 순서 `채권·금리 / 주식 / 금 / 달러 / 원자재`, DGS2·DGS10·금리차·DFII10·BAA10Y·VIX 수치 표시, console error/warning 0건 확인.
+- 2026-08-10: 420px Browser QA에서 리본 마지막 6개월 tooltip overflow를 발견해 right-anchor로 수정. component `clientWidth=377`, `scrollWidth=377` 확인.
+- 2026-08-10: 모바일 overflow 수정 뒤 React 12 tests, TypeScript no-emit, Vite production build와 Python source contract test 통과.
+- 2026-08-10: 저장소 전체 2,424 tests 실행 결과 2,088 passed, 336 failed, warnings 4건. 실패는 Backtest/Monitoring/Reference/Today 등 광범위한 기존 영역에 분포했고 대표 traceback은 단일 pytest process의 Streamlit `DeltaGeneratorSingleton instance already exists`였다.
+- 2026-08-10: 위 전체-suite 대표 첫 실패를 새 pytest process에서 단독 재실행해 1 test passed. 순서 의존 test isolation 문제임을 확인했으며 이번 경제사이클 변경 범위에서는 수정하지 않았다.
+- 2026-08-10: 전체-suite 실행 뒤 새 process에서 경제사이클 141 tests를 다시 실행해 141 passed, 기존 EDGAR deprecation warnings 3건을 확인했다.

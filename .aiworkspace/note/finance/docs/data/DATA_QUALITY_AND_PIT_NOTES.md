@@ -75,6 +75,8 @@
   이 board는 1차 ETF holdings / exposure 기준이며, ETF-of-ETF 2차 look-through는 아직 보장하지 않는다.
 - `macro_series_observation`은 FRED observation date 기준 revised-latest market-context series다.
   FRED API key가 없으면 official CSV download를 사용하며, Practical Validation에서는 최신 관측값과 staleness를 함께 봐야 한다. 이 table 자체는 strict historical PIT evidence가 아니다.
+- 경제 사이클 자산 경로의 freshness는 경기 국면 snapshot과 별도다. DGS/VIX/BAA와 시장 가격 같은 일간 series는 최대 5 영업일, EIA 석유 series는 최대 14 달력일을 허용한다. 주간 series를 일간 거래일로 forward-fill해 최신처럼 보이게 만들지 않는다.
+- freshness 기준을 넘긴 last-good 자산 측정값은 `DELAYED`로 값·관측일·변화량을 표시할 수 있지만, 현재 국면 지지/반대 집계에는 포함하지 않는다. `supports_current_signal=false`는 표시 가능성과 현재 판단 적격성을 분리하는 fail-closed 계약이다.
 - 경제 사이클 전용 `macro_series_vintage_observation`은 FRED/ALFRED long-form `output_type=1`의 `realtime_start` / `realtime_end` revision interval을 보존한다. `series/vintagedates`로 요청 구간을 나눠 일별 series도 provider의 2,000-vintage-date 제한을 넘지 않는다.
   strict loader는 `realtime_start <= forecast origin <= realtime_end`인 row만 선택하므로 이후 발표·수정값을 과거 origin에 소급하지 않는다.
 - 경제 사이클 feature scaling은 expanding history, calibration/validation은 rolling-origin OOF만 사용한다.
