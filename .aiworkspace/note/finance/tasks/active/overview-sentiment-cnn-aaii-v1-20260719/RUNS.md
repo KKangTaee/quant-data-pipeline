@@ -36,3 +36,17 @@
 - actual 420px QA에서 CNN과 AAII가 한 열로 적층되고 모든 badge가 CNN row 안에 포함됨을 확인했다. page `420/420`, Streamlit main `409/409`, component `377/377`로 가로 overflow 0이며 console error는 0건이었다.
 - QA screenshot `overview-sentiment-cnn-status-badges-qa.png`는 generated artifact로 남기고 commit 대상에서 제외한다.
 - 최종 focused sentiment service/frontend regression은 `25 passed`이며 React production build와 `git diff --check`도 다시 통과했다.
+- 3차 시작 전 sentiment 관련 unittest 62개를 실행해 기존 branch baseline의 unrelated failure 2건과 error 1건을 재현했다. 기간 outlook, React 기간 card, PIT schema/as-known/capture summary 등 이번 대상 계약은 모두 통과했다.
+- 3차 설계와 구현 계획을 `docs/superpowers/specs/2026-08-11-overview-sentiment-period-change-v3-design.md`, `docs/superpowers/plans/2026-08-11-overview-sentiment-period-change-v3.md`에 고정했다.
+- 기간 변화 service, payload fail-closed fallback, React period section을 RED/GREEN으로 구현했다. 기존 outlook의 estimator/validation publication gate regression도 계속 통과한다.
+- 실제 DB snapshot에서 1W·1M 모두 `AVAILABLE`, legacy outlook은 `UNAVAILABLE`인 것을 확인했다. 상위 status 안의 축 구성 변화 누락을 실제 payload에서 발견해 추가 RED/GREEN regression으로 보완했다.
+- component worktree에 `node_modules`가 없어 `npm ci --ignore-scripts`로 lockfile 기준 local dependency를 복원하고 Vite production bundle을 생성했다. npm audit의 기존 2 high 알림은 dependency 범위 밖이라 자동 수정하지 않았다.
+- `tsc --noEmit`은 package에 React type declaration이 없고 sibling `market_research_header`가 component-local node_modules를 해석하지 못하는 기존 구성 때문에 독립 통과 기준으로 사용할 수 없었다. Vite build는 정상 통과했다.
+- actual 1280px Browser QA에서 1W/1M card 각각 width 526.5px, page `1280/1280`, component `1107/1107`로 2열과 overflow 0을 확인했다.
+- actual 420px Browser QA에서 두 period card와 네 metric이 한 열로 적층됐고 body `420/420`, main `409/409`, component `375/375`, metric `317/317`로 overflow 0, console error/warn 0을 확인했다.
+- 1차 closeout 당시 focused service/frontend/PIT 선택 집합은 기존 unrelated 3건을 제외한 `63 passed`였다. 3차 리뷰 보완 뒤에는 재현 가능한 test-name filter를 사용해 fresh 검증 수치를 다시 기록했다.
+- 독립 3차 리뷰에서 Critical 0, Important 2, Minor 2를 받았다. 같은 관측일 최신 version 선택, 최신 결측 fail-closed, payload 날짜 검증, rolling fallback source metric, flow 문서 검증일을 모두 보완했다.
+- 리뷰 회귀 3개를 RED로 재현한 뒤 GREEN으로 전환했다. 최신 `collected_at` 값 선택, 최신 version 결측 시 unavailable, 누락·invalid 날짜 payload 차단을 검증한다.
+- fresh sentiment-name regression은 baseline 3건을 제외한 `40 passed`다. 전체 43개를 실행하면 시작 전과 같은 AAII parser expectation error 1건, Practical Validation overlay expectation failure 2건만 남는다.
+- Vite production build, Python compile, `git diff --check`, actual DB snapshot을 다시 확인했다. post-review desktop 1280px Browser QA에서 period card `526.5px × 2`, page `1280/1280`, component `1109/1109`, console warning/error 0을 확인했고 기존 420px 적층 계약에는 시각 CSS 변경이 없다.
+- 보완 후 독립 재검토에서 새 Critical/Important 0건, 관련 회귀 7개와 `git diff --check` 통과를 확인했다.

@@ -5,7 +5,7 @@ import CurrentEvidenceSection from "./CurrentEvidenceSection";
 import SentimentEvidenceDisclosure from "./SentimentEvidenceDisclosure";
 import SentimentHero from "./SentimentHero";
 import SentimentHistorySection from "./SentimentHistorySection";
-import SentimentOutlookSection from "./SentimentOutlookSection";
+import SentimentPeriodChangeSection from "./SentimentPeriodChangeSection";
 import WatchConditionsSection from "./WatchConditionsSection";
 
 type NumericValue = number | string | null | undefined;
@@ -179,6 +179,53 @@ export type OutlookHorizon = {
   status_reason: string;
 };
 
+export type PeriodChangeStatus = "AVAILABLE" | "PARTIAL" | "UNAVAILABLE";
+
+export type PeriodChangeMetric = {
+  key: "cnn" | "aaii_spread";
+  label: string;
+  available: boolean;
+  status: "AVAILABLE" | "UNAVAILABLE";
+  status_label: string;
+  unit: "point" | "percentage_point";
+  unit_label: "pt" | "pp";
+  lag_observations: number;
+  required_observation_count: number;
+  observation_count: number;
+  start_value?: NumericValue;
+  end_value?: NumericValue;
+  change?: NumericValue;
+  change_direction: "up" | "down" | "flat" | "unavailable";
+  start_date: string;
+  end_date: string;
+  start_state: string;
+  end_state: string;
+  tone: string;
+  detail: string;
+};
+
+export type PeriodRelationship = {
+  available: boolean;
+  start_status: string;
+  end_status: string;
+  start_phase_label?: string;
+  end_phase_label?: string;
+  changed?: boolean | null;
+  tone: string;
+  summary: string;
+};
+
+export type PeriodChange = {
+  key: "1W" | "1M";
+  label: string;
+  period_label: string;
+  status: PeriodChangeStatus;
+  status_label: string;
+  basis: string;
+  metrics: PeriodChangeMetric[];
+  relationship: PeriodRelationship;
+};
+
 export type SentimentWorkbenchPayload = {
   schema_version: "sentiment_react_workbench_v2";
   component: "SentimentWorkbench";
@@ -219,6 +266,11 @@ export type SentimentWorkbenchPayload = {
     aaii_spread: ChartPanel;
   };
   history_coverage: HistoryCoverage;
+  period_changes: {
+    status: PeriodChangeStatus;
+    summary: string;
+    periods: PeriodChange[];
+  };
   outlook: {
     status: "AVAILABLE" | "UNAVAILABLE";
     summary: string;
@@ -235,35 +287,72 @@ export type SentimentWorkbenchPayload = {
   action_boundary: "python_dispatch_only";
 };
 
-const fallbackOutlook: SentimentWorkbenchPayload["outlook"] = {
+const fallbackPeriodMetric = (
+  key: PeriodChangeMetric["key"],
+  lagObservations: number,
+): PeriodChangeMetric => {
+  const isCnn = key === "cnn";
+  return {
+    key,
+    label: isCnn ? "CNN 시장 행동" : "AAII Bull-Bear Spread",
+    available: false,
+    status: "UNAVAILABLE",
+    status_label: "관측 부족",
+    unit: isCnn ? "point" : "percentage_point",
+    unit_label: isCnn ? "pt" : "pp",
+    lag_observations: lagObservations,
+    required_observation_count: lagObservations + 1,
+    observation_count: 0,
+    start_value: null,
+    end_value: null,
+    change: null,
+    change_direction: "unavailable",
+    start_date: "",
+    end_date: "",
+    start_state: "",
+    end_state: "",
+    tone: "neutral",
+    detail: `비교에는 ${lagObservations + 1}개 관측이 필요합니다.`,
+  };
+};
+
+const fallbackPeriodChanges: SentimentWorkbenchPayload["period_changes"] = {
   status: "UNAVAILABLE",
-  summary: "전망 계약이 아직 연결되지 않아 다음 관찰 조건을 확인합니다.",
-  horizons: [
+  summary: "저장된 관측이 충분히 연결되면 기간별 변화를 표시합니다.",
+  periods: [
     {
       key: "1W",
-      label: "1W",
-      period_label: "다음 5거래일",
-      trading_days: 5,
+      label: "1주",
+      period_label: "최근 5거래일",
       status: "UNAVAILABLE",
-      status_label: "통계적 판단 불가",
-      probabilities: [],
-      baseline: null,
-      episode_count: 0,
-      validation_evidence: [],
-      status_reason: "검증된 전망 payload가 없습니다.",
+      status_label: "관측 부족",
+      basis: "CNN 5개 관측 간격 · AAII 1개 주간 간격",
+      metrics: [fallbackPeriodMetric("cnn", 5), fallbackPeriodMetric("aaii_spread", 1)],
+      relationship: {
+        available: false,
+        start_status: "",
+        end_status: "",
+        changed: null,
+        tone: "neutral",
+        summary: "두 축의 시작값이 모두 있어야 관계 변화를 비교할 수 있습니다.",
+      },
     },
     {
       key: "1M",
-      label: "1M",
-      period_label: "다음 20거래일",
-      trading_days: 20,
+      label: "1개월",
+      period_label: "최근 20거래일",
       status: "UNAVAILABLE",
-      status_label: "통계적 판단 불가",
-      probabilities: [],
-      baseline: null,
-      episode_count: 0,
-      validation_evidence: [],
-      status_reason: "검증된 전망 payload가 없습니다.",
+      status_label: "관측 부족",
+      basis: "CNN 20개 관측 간격 · AAII 4개 주간 간격",
+      metrics: [fallbackPeriodMetric("cnn", 20), fallbackPeriodMetric("aaii_spread", 4)],
+      relationship: {
+        available: false,
+        start_status: "",
+        end_status: "",
+        changed: null,
+        tone: "neutral",
+        summary: "두 축의 시작값이 모두 있어야 관계 변화를 비교할 수 있습니다.",
+      },
     },
   ],
 };
@@ -356,7 +445,7 @@ function SentimentWorkbench({ args }: Props) {
         charts={payload.charts}
         coverage={payload.history_coverage || fallbackHistoryCoverage}
       />
-      <SentimentOutlookSection outlook={payload.outlook || fallbackOutlook} />
+      <SentimentPeriodChangeSection periodChanges={payload.period_changes || fallbackPeriodChanges} />
       <WatchConditionsSection watchConditions={payload.watch_conditions} />
       <SentimentEvidenceDisclosure onToggle={syncFrameHeightSoon} payload={payload} />
     </section>

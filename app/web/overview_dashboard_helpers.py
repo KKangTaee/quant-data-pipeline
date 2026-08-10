@@ -133,7 +133,7 @@ def load_overview_macro_week_lane(events_snapshot: dict[str, Any]) -> dict[str, 
 
 # Load the DB-backed CNN / AAII sentiment snapshot for the Overview Sentiment tab.
 @st.cache_data(ttl=120, show_spinner=False)
-def load_overview_market_sentiment_snapshot(cache_schema_version: str = "sentiment-learning-v3") -> dict[str, Any]:
+def load_overview_market_sentiment_snapshot(cache_schema_version: str = "sentiment-learning-v4-period-changes") -> dict[str, Any]:
     del cache_schema_version
     return build_market_sentiment_snapshot()
 

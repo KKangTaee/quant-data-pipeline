@@ -1,7 +1,7 @@
 # Finance Flows
 
 Status: Active
-Last Verified: 2026-08-02
+Last Verified: 2026-08-11
 
 ## Main User Flow
 
@@ -25,6 +25,7 @@ Today의 차트는 최신 최대 60개 실제 일별 관측을 주봉으로 변�
 Market Research 상단은 eyebrow·실제 `<h1>`·설명을 full-width editorial header로 두고, family는 divider 위 text tab과 active underline, 선택 family의 local view는 외곽 surface 없는 compact active pill로 렌더링한다. desktop에서는 module 본문과 같은 축을 쓰고 420px에서는 stacked header·family 3열·view 2열로 접히며, drawer와 sticky navigation은 사용하지 않는다.
 `Research > Institutional Holdings`도 Portfolio Lab의 필수 선행 단계가 아니라 delayed SEC 13F institutional holdings를 탐색하는 별도 research surface다.
 Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation gate, trade signal, monitoring signal을 만들지 않는다.
+Sentiment의 1W·1M 카드는 CNN 최근 5/20개 관측 간격과 AAII Bull-Bear Spread 최근 1/4개 주간 관측 간격의 시작값·현재값·변화량·두 축 관계 전환을 source별 실제 날짜와 함께 표시한다. 이 카드는 미래 전망이 아니며 검증된 estimator가 없는 기존 확률 publication gate는 계속 닫혀 있다.
 React는 allow-listed view event만 반환하고 Python이 canonical URL/session/legacy normalization과 lazy renderer를 소유한다. bundle이 없을 때는 기존 Streamlit header/navigation이 fallback이다. 상단은 summary cockpit, page-global market-session banner, contextual Reference, 운영 진단 패널을 반복하지 않으며 기준일·자료 상태·refresh action은 선택된 module이 소유한다.
 S&P 500 view는 최근 60개월 후행 PER 상대 구간과 FOMC SEP 기반 EPS/SPX 시나리오를 두 React 그래프로 읽는다. 36개월은 민감도이며, actual As-Reported TTM EPS가 없으면 예상 지수 숫자를 표시하지 않는다.
 Market Movers의 `개별 종목 분석`은 선택 symbol을 검증한 뒤 같은 page의 U.S. Stock Research로 넘기며 provider fetch나 write를 실행하지 않는다.

@@ -25,3 +25,12 @@
 - chart tooltip은 관측점 x좌표를 그대로 중앙 정렬하면 좌우 끝에서 card를 벗어난다. plot의 좌우 20% 구간에서는 각각 시작·끝 정렬로 전환하고 중앙 구간만 기존 중앙 정렬을 유지한다.
 - CNN 구성요소 평점은 기존 서비스 `tone`을 compact badge로 표시한다. React에서 score threshold를 재계산하지 않으며 숫자 점수는 중립 전경색, 상태 문구는 berry/amber/slate/teal 보조색과 함께 유지한다.
 - actual snapshot에는 `warning / danger / neutral`이 있어 공포·극단적 공포·중립을 실화면에서 구분했다. 현재 snapshot에 없는 `positive`까지 포함한 네 tone selector는 source-contract regression으로 고정한다.
+- 2026-08-11 실제 DB 점검에서 AAII canonical은 1987-07-24~2026-08-06, CNN canonical은 2025-06-04~2026-08-10까지 정상 적재되어 있었다. PIT capture는 2026-07-20부터 14 capture day라 미래 전망 검증에는 아직 짧다.
+- 반복 `검증 전 비공개`는 ingestion 장애가 아니라 `_build_sentiment_outlook()`의 의도된 fail-closed 계약이다. 데이터는 현재·이력 화면에 쓰이지만 estimator는 구현되지 않았다.
+- 사용자는 3차로 전망을 억지 공개하지 않고 실제 관측의 1W·1M 기간별 변화를 노출하는 안을 승인했다. source cadence가 다르므로 CNN과 AAII의 날짜 범위를 각각 표시한다.
+- 실제 2026-08-10 snapshot에서 1W는 CNN `50.74→66.26(+15.51pt)`, AAII Spread `-11.11→-0.93(+10.19pp)`, 1M은 CNN `40.86→66.26(+25.4pt)`, AAII Spread `-0.93→-0.93(0.0pp)`로 공개됐다.
+- 두 축의 상위 관계 status가 같아도 `행동 중립·설문 비관 → 행동 탐욕·설문 중립`처럼 축 구성이 바뀌면 `changed=True`로 설명한다. status 문자열만 비교해 관계 지속으로 축약하지 않는다.
+- `overview-sentiment-period-change-v3-qa.png`는 actual desktop QA screenshot이며 generated artifact로 commit하지 않는다.
+- canonical sync는 구현 baseline과 paused 상태가 바뀐 `docs/ROADMAP.md`, 사용자 흐름이 바뀐 `docs/flows/README.md`만 갱신했다. 제품 원칙, code/storage ownership, DB 의미는 바뀌지 않아 PRODUCT_DIRECTION / PROJECT_MAP / data docs 변경은 없다.
+- 독립 리뷰에서 같은 관측일 중복 version과 payload 날짜 누락의 fail-closed 공백을 확인했다. 기간 변화는 `collected_at` 최신 version을 먼저 고르고 최신 값이 결측이면 과거 값으로 후퇴하지 않으며, payload는 유효한 `YYYY-MM-DD` 시작·종료일과 `start < end`를 공개 조건에 포함한다.
+- 구버전 Python과 새 bundle이 잠시 섞이는 rolling reload에서도 1W·1M 카드 안에 CNN·AAII별 관측 부족 metric을 표시해 빈 card가 되지 않게 했다.
