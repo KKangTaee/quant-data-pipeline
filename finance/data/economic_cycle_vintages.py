@@ -7,6 +7,7 @@ import logging
 import math
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Iterable, Iterator
 from urllib.error import HTTPError, URLError
@@ -639,11 +640,12 @@ def collect_incremental_economic_cycle_vintages(
     page_size: int = DEFAULT_OBSERVATION_PAGE_SIZE,
     timeout: int = DEFAULT_TIMEOUT,
     retries: int = DEFAULT_RETRIES,
+    max_workers: int = 4,
     realtime_start_loader: Any = load_latest_vintage_realtime_starts,
     page_iter: Any = iter_fred_vintage_pages,
     writer: Any = upsert_economic_cycle_vintages,
 ) -> dict[str, object]:
-    """Collect each series from its latest stored vintage boundary, inclusively."""
+    """Fetch series concurrently, then persist them in catalog order."""
 
     resolved_key = str(api_key or os.environ.get("FRED_API_KEY") or "").strip()
     if not resolved_key:
@@ -670,6 +672,7 @@ def collect_incremental_economic_cycle_vintages(
     owns_connection = connection is None
     db = connection or MySQLClient("localhost", "root", "1234", 3306)
     overlap_starts: dict[str, str] = {}
+    worker_count = max(1, min(int(max_workers), 4, max(len(requested), 1)))
     try:
         if owns_connection:
             db.use_db(DB_META)
@@ -681,30 +684,66 @@ def collect_incremental_economic_cycle_vintages(
             series_id: latest_starts.get(series_id, EARLIEST_REALTIME_DATE)
             for series_id in requested
         }
-        for series_id in requested:
-            try:
-                for payload_rows in page_iter(
-                    series_id,
-                    api_key=resolved_key,
-                    session=session,
-                    realtime_start=overlap_starts[series_id],
-                    page_size=int(page_size),
-                    timeout=int(timeout),
-                    retries=int(retries),
-                ):
-                    normalized_rows = normalize_fred_vintage_rows(
+
+        def fetch_series(series_id: str) -> list[dict[str, object]]:
+            normalized_rows: list[dict[str, object]] = []
+            for payload_rows in page_iter(
+                series_id,
+                api_key=resolved_key,
+                session=session,
+                realtime_start=overlap_starts[series_id],
+                page_size=int(page_size),
+                timeout=int(timeout),
+                retries=int(retries),
+            ):
+                normalized_rows.extend(
+                    normalize_fred_vintage_rows(
                         catalog[series_id],
                         payload_rows,
                         collected_at=collected_at,
                     )
+                )
+            return normalized_rows
+
+        fetched_by_series: dict[str, list[dict[str, object]]] = {}
+        failed_by_series: dict[str, str] = {}
+        with ThreadPoolExecutor(max_workers=worker_count) as executor:
+            future_series = {
+                executor.submit(fetch_series, series_id): series_id
+                for series_id in requested
+            }
+            for future in as_completed(future_series):
+                series_id = future_series[future]
+                try:
+                    fetched_by_series[series_id] = future.result()
+                except Exception as exc:
+                    LOGGER.warning(
+                        "Incremental economic-cycle vintage fetch failed for %s: %s",
+                        series_id,
+                        exc,
+                    )
+                    failed_by_series[series_id] = str(exc)[:500]
+
+        for series_id in requested:
+            if series_id in failed_by_series:
+                failed.append(
+                    {
+                        "series_id": series_id,
+                        "reason": failed_by_series[series_id],
+                    }
+                )
+                continue
+            try:
+                normalized_rows = fetched_by_series.get(series_id, [])
+                if normalized_rows:
                     stored += writer(normalized_rows, connection=db)
-                    for row in normalized_rows:
-                        status = str(row["coverage_status"])
-                        coverage[status] = coverage.get(status, 0) + 1
-                        found.add(str(row["series_id"]))
+                for row in normalized_rows:
+                    status = str(row["coverage_status"])
+                    coverage[status] = coverage.get(status, 0) + 1
+                    found.add(str(row["series_id"]))
             except Exception as exc:
                 LOGGER.warning(
-                    "Incremental economic-cycle vintage fetch failed for %s: %s",
+                    "Incremental economic-cycle vintage write failed for %s: %s",
                     series_id,
                     exc,
                 )
@@ -723,4 +762,5 @@ def collect_incremental_economic_cycle_vintages(
         "source_mode": FRED_SOURCE_MODE,
         "collection_mode": "incremental_overlap",
         "overlap_starts": overlap_starts,
+        "fetch_workers": worker_count,
     }

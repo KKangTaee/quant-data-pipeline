@@ -5,6 +5,7 @@ import importlib.util
 import json
 import math
 import re
+import threading
 import traceback
 from datetime import date, datetime, timedelta, timezone
 from unittest.mock import patch
@@ -507,6 +508,87 @@ def test_incremental_collection_overlaps_each_series_latest_vintage() -> None:
     assert summary["stored"] == 1
     assert recorded[0]["realtime_start"] == "2026-07-03"
     assert stored[0]["series_id"] == "PAYEMS"
+
+
+def test_incremental_collection_fetches_in_parallel_and_writes_catalog_order() -> None:
+    module = _load_vintage_module()
+    barrier = threading.Barrier(2)
+    active = 0
+    max_active = 0
+    lock = threading.Lock()
+    written: list[str] = []
+
+    def page_iter(series_id: str, **_kwargs):
+        nonlocal active, max_active
+        with lock:
+            active += 1
+            max_active = max(max_active, active)
+        barrier.wait(timeout=2)
+        yield [
+            {
+                "date": "2026-06-01",
+                "realtime_start": "2026-07-03",
+                "realtime_end": "9999-12-31",
+                "value": "100",
+            }
+        ]
+        with lock:
+            active -= 1
+
+    def writer(rows, **_kwargs):
+        written.extend(str(row["series_id"]) for row in rows)
+        return len(rows)
+
+    result = module.collect_incremental_economic_cycle_vintages(
+        series_ids=["PAYEMS", "INDPRO"],
+        api_key="x" * 32,
+        connection=object(),
+        realtime_start_loader=lambda *_args, **_kwargs: {},
+        page_iter=page_iter,
+        writer=writer,
+        max_workers=2,
+    )
+
+    assert max_active == 2
+    assert written == ["PAYEMS", "INDPRO"]
+    assert result["stored"] == 2
+    assert result["failed"] == []
+
+
+def test_incremental_parallel_collection_keeps_other_series_when_one_fetch_fails() -> None:
+    module = _load_vintage_module()
+    written: list[str] = []
+
+    def page_iter(series_id: str, **_kwargs):
+        if series_id == "PAYEMS":
+            raise RuntimeError("provider gap")
+        yield [
+            {
+                "date": "2026-06-01",
+                "realtime_start": "2026-07-03",
+                "realtime_end": "9999-12-31",
+                "value": "100",
+            }
+        ]
+
+    def writer(rows, **_kwargs):
+        written.extend(str(row["series_id"]) for row in rows)
+        return len(rows)
+
+    result = module.collect_incremental_economic_cycle_vintages(
+        series_ids=["PAYEMS", "INDPRO"],
+        api_key="x" * 32,
+        connection=object(),
+        realtime_start_loader=lambda *_args, **_kwargs: {},
+        page_iter=page_iter,
+        writer=writer,
+        max_workers=2,
+    )
+
+    assert written == ["INDPRO"]
+    assert result["stored"] == 1
+    assert result["missing"] == ["PAYEMS"]
+    assert result["failed"][0]["series_id"] == "PAYEMS"
 
 
 def test_upsert_uses_larger_safe_statement_for_mysql_connection() -> None:
