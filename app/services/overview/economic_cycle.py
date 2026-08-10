@@ -428,20 +428,13 @@ def _current_transition_conditions(
 
 
 def _current_transition_guidance(
-    monitor: Mapping[str, object],
     *,
     observed_state: Mapping[str, object],
     history_rows: Sequence[Mapping[str, object]],
 ) -> dict[str, object] | None:
     observed_phase = str(observed_state.get("phase") or "")
-    anchor_phase = str(monitor.get("anchor_phase") or "")
-    non_adjacent = bool(monitor.get("non_adjacent_observation"))
-    from_phase = observed_phase if non_adjacent else anchor_phase or observed_phase
-    target_phase = (
-        _next_observed_phase(from_phase)
-        if non_adjacent
-        else str(monitor.get("target_phase") or "") or _next_observed_phase(from_phase)
-    )
+    from_phase = observed_phase
+    target_phase = _next_observed_phase(from_phase)
     if from_phase not in OBSERVED_PHASES or target_phase not in OBSERVED_PHASES:
         return None
     previous_state = _previous_observed_state(
@@ -566,7 +559,6 @@ def _transition_monitor(
     output["context"] = context
     normalized_observed_state = observed_state or _observed_state(snapshot)
     output["current_transition"] = _current_transition_guidance(
-        output,
         observed_state=normalized_observed_state,
         history_rows=history_rows,
     )

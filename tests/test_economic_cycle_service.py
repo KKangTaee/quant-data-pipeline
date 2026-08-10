@@ -451,6 +451,37 @@ def test_non_adjacent_transition_builds_current_observation_guidance() -> None:
     ]
 
 
+def test_current_transition_starts_from_official_phase_after_legacy_confirmation() -> None:
+    service = _load_service()
+    current = _ready_snapshot()
+    current["transition_monitor_json"] = json.dumps(
+        {
+            "observed_phase": "expansion",
+            "anchor_phase": "recovery",
+            "target_phase": "expansion",
+            "status": "CONFIRMED",
+            "conditions_met": 3,
+            "conditions_total": 3,
+            "non_adjacent_observation": False,
+            "conditions": [],
+            "context": [],
+        }
+    )
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: current,
+        history_loader=lambda **_kwargs: [],
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=lambda **_kwargs: {},
+    )
+
+    guidance = model["transition_monitor"]["current_transition"]
+    assert guidance["from_phase"] == "expansion"
+    assert guidance["target_phase"] == "slowdown"
+    assert guidance["status"] == "WATCH"
+
+
 @pytest.mark.parametrize("reverse_rows", [False, True])
 def test_cycle_map_selects_latest_replay_deterministically_for_duplicate_date(
     reverse_rows: bool,
