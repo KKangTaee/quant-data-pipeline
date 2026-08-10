@@ -510,6 +510,9 @@ button, input, summary { font: inherit; }
   .transition-current > b { max-width: none; justify-self: start; }
   .transition-route > i { transform: rotate(90deg); text-align: center; }
   .regime-ribbon { width: 100%; min-height: 74px; grid-template-columns: repeat(var(--history-month-count), minmax(1px, 1fr)); }
+  .ribbon-month:nth-last-child(-n+6) .ribbon-tooltip { right: 0; left: auto; transform: translate(0, 4px); }
+  .ribbon-month:nth-last-child(-n+6):hover .ribbon-tooltip,
+  .ribbon-month:nth-last-child(-n+6):focus .ribbon-tooltip { transform: translate(0, 0); }
   .ribbon-axis span:nth-child(2) { display: none; }
   .ribbon-axis { grid-template-columns: 1fr auto auto; }
 }

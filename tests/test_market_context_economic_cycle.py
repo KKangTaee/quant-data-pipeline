@@ -612,6 +612,7 @@ def test_cycle_component_ribbon_grid_uses_actual_history_month_count() -> None:
     assert "--history-month-count" in source
     assert "Math.max(points.length, 1)" in source
     assert "repeat(var(--history-month-count)" in css
+    assert ".ribbon-month:nth-last-child(-n+6) .ribbon-tooltip" in css
     assert "repeat(121" not in css
 
 
