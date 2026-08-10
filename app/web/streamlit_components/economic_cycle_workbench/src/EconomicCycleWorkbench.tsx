@@ -58,6 +58,20 @@ type TransitionCondition = {
   status: "MET" | "UNMET" | "UNAVAILABLE";
   value?: unknown;
   threshold?: string;
+  value_label?: string;
+  threshold_label?: string;
+};
+
+type CurrentTransition = {
+  from_phase: Phase;
+  from_phase_label: string;
+  target_phase: Phase;
+  target_phase_label: string;
+  status: "WATCH" | "CONFIRMED";
+  status_label: string;
+  conditions_met: number;
+  conditions_total: number;
+  conditions: TransitionCondition[];
 };
 
 type TransitionContext = {
@@ -85,6 +99,7 @@ type TransitionMonitor = {
   candidate_started_at?: string | null;
   confirmed_at?: string | null;
   non_adjacent_observation?: boolean;
+  current_transition?: CurrentTransition | null;
   conditions: TransitionCondition[];
   context: TransitionContext[];
 };
@@ -724,49 +739,92 @@ function CycleRouteMap({ payload }: { payload: CyclePayload }) {
   );
 }
 
-function TransitionPanel({ monitor, state }: { monitor?: TransitionMonitor | null; state: ObservedState }) {
+function TransitionPanel({
+  monitor,
+  state,
+  recent,
+  intramonth,
+}: {
+  monitor?: TransitionMonitor | null;
+  state: ObservedState;
+  recent: RecentChange[];
+  intramonth?: IntramonthChange | null;
+}) {
   if (!monitor) {
-    return <section className="transition-panel"><div className="section-heading"><div><span>Transition monitor</span><h3>현재 관측과 전환 기준</h3></div></div><p className="empty-copy">전환 조건을 계산할 자료가 아직 없습니다.</p></section>;
+    return <section className="transition-panel"><div className="section-heading"><div><span>Current transition</span><h3>현재 진단과 다음 확인</h3></div></div><p className="empty-copy">전환 조건을 계산할 자료가 아직 없습니다.</p></section>;
   }
   const observedPhase = monitor.observed_phase || state.phase;
+  const current = monitor.current_transition;
+  const fromPhase = current?.from_phase || observedPhase;
+  const fromLabel = current?.from_phase_label || (fromPhase ? PHASE_LABEL[fromPhase] : "판단 불가");
+  const targetPhase = current?.target_phase || nextPhase(fromPhase);
+  const targetLabel = current?.target_phase_label || (targetPhase ? PHASE_LABEL[targetPhase] : "확인 대상 없음");
+  const conditions = current?.conditions || monitor.conditions;
+  const conditionsMet = current?.conditions_met ?? monitor.conditions_met;
+  const conditionsTotal = current?.conditions_total ?? monitor.conditions_total;
+  const transitionStatus = current?.status || (monitor.status === "CONFIRMED" ? "CONFIRMED" : "WATCH");
+  const transitionStatusLabel = current?.status_label || monitor.status_label;
+  const oneMonth = recent.find((item) => item.horizon_months === 1);
+  const threeMonth = recent.find((item) => item.horizon_months === 3);
+  const recentLabel = [
+    oneMonth ? `1개월 ${oneMonth.status_label}` : null,
+    threeMonth ? `3개월 ${threeMonth.status_label}` : null,
+  ].filter(Boolean).join(" · ") || "방향 자료 부족";
   const anchorLabel = monitor.anchor_phase ? PHASE_LABEL[monitor.anchor_phase] : "-";
-  const targetLabel = monitor.target_phase ? PHASE_LABEL[monitor.target_phase] : "-";
+  const anchorHistoryLabel = monitor.anchor_source === "LEGACY_OBSERVED"
+    ? "미확정 이력"
+    : monitor.anchor_source === "CONFIRMED"
+      ? "확인된 이력"
+      : monitor.anchor_source_label || "기준 상태";
+  const showSecondaryAnchor = Boolean(
+    monitor.anchor_phase
+    && (monitor.anchor_phase !== fromPhase || monitor.target_phase !== targetPhase),
+  );
+  const intramonthPhase = intramonth?.observed_state?.phase;
   return (
-    <section className={`transition-panel transition-${monitor.status.toLowerCase()}`} aria-labelledby="transition-title">
+    <section className={`transition-panel transition-${transitionStatus.toLowerCase()}`} aria-labelledby="transition-title">
       <div className="section-heading">
-        <div><span>Transition monitor</span><h3 id="transition-title">현재 관측과 전환 기준</h3></div>
-        <b>{monitor.status_label} · {monitor.conditions_met}/{monitor.conditions_total}</b>
+        <div><span>Current transition</span><h3 id="transition-title">현재 진단과 다음 확인</h3></div>
+        <b>{transitionStatusLabel} · {conditionsMet}/{conditionsTotal}</b>
       </div>
-      <article className={`transition-current phase-${observedPhase || "missing"}`}>
-        <div>
-          <span>현재 좌표가 말하는 국면</span>
-          <strong>현재 관측 {observedPhase ? PHASE_LABEL[observedPhase] : "판단 불가"}</strong>
-          <p>{state.duration_months ? `${state.duration_months}개월 연속 관측 · ` : ""}다음 정식 발표에서 같은 국면이 지속되는지 확인합니다.</p>
+      <div className="transition-summary-grid">
+        <article><span>정식 월말 국면</span><strong>{fromLabel}{state.duration_months ? ` · ${state.duration_months}개월` : ""}</strong><small>{state.as_of_date || "기준일 확인 중"}</small></article>
+        <article><span>최근 방향</span><strong>{recentLabel}</strong><small>월말 관측값 기준</small></article>
+        <article><span>다음 확인 국면</span><strong>{targetLabel}</strong><small>현재 국면에 인접한 다음 상태</small></article>
+        <article><span>전환 근거</span><strong>{conditionsMet}/{conditionsTotal} 충족</strong><small>{transitionStatusLabel}</small></article>
+      </div>
+      <div className="transition-route" aria-label={`${fromLabel}에서 ${targetLabel} 전환 확인 경로`}>
+        <article className={`phase-${fromPhase || "missing"}`}><span>현재 공식 관측</span><strong>{fromLabel}</strong><small>조건이 확인될 때까지 유지</small></article>
+        <i aria-hidden="true">→</i>
+        <article className={`phase-${targetPhase || "missing"}`}><span>다음에 확인할 인접 국면</span><strong>{targetLabel}</strong><small>시점·확률 예측 아님</small></article>
+      </div>
+      {intramonth ? (
+        <div className="transition-provisional">
+          <span>월중 잠정 변화 · {intramonth.as_of_date}</span>
+          <strong>{intramonthPhase ? PHASE_LABEL[intramonthPhase] : "판단 제한"} 좌표 · {intramonth.raw_level_delta == null ? "-" : formatSignedScore(intramonth.raw_level_delta)}</strong>
+          <small>정식 월말 판정 유지</small>
         </div>
-        {monitor.non_adjacent_observation ? <b>모델 기준과 불일치 · 지속 여부 재확인</b> : <b>모델 기준과 인접</b>}
-      </article>
-      <div className="transition-reference-grid">
-        <article>
-          <span>전환 기준 앵커</span>
-          <strong>{anchorLabel}</strong>
-          <small>{monitor.anchor_source_label || "기준일 기록 없음"} · {formatKoreanMonth(monitor.anchor_started_at)}</small>
-        </article>
-        <article>
-          <span>앵커 기준 구조적 다음 국면</span>
-          <strong>{targetLabel}</strong>
-          <small>{monitor.candidate_started_at ? `조건 관찰 ${formatKoreanMonth(monitor.candidate_started_at)} 시작` : "활성 조건 관찰 없음"}</small>
-        </article>
-      </div>
-      <p className="transition-boundary">{targetLabel} 가능성이 높다는 예측이 아닙니다. {anchorLabel} 앵커에서 순서상 다음에 확인하는 인접 국면입니다.</p>
-      <div className="transition-condition-heading"><strong>{anchorLabel} → {targetLabel} 확인 조건</strong><span>{monitor.conditions_met}/{monitor.conditions_total} 충족</span></div>
+      ) : null}
+      <p className="transition-boundary"><strong>현재 {fromLabel} 유지</strong> · {targetLabel} 전환 여부를 먼저 확인합니다. 다음 국면은 발생 확률이 아니라 확인 순서를 뜻합니다.</p>
+      <div className="transition-condition-heading"><strong>{fromLabel} → {targetLabel} 확인 조건</strong><span>{conditionsMet}/{conditionsTotal} 충족</span></div>
       <div className="transition-condition-grid">
-        {monitor.conditions.map((condition) => (
+        {conditions.map((condition) => (
           <article className={`condition-${condition.status.toLowerCase()}`} key={condition.condition_id}>
-            <header><span>{condition.label || CONDITION_LABEL[condition.condition_id]}</span><b>{condition.status === "MET" ? "충족" : condition.status === "UNAVAILABLE" ? "자료 부족" : "관찰 중"}</b></header>
-            <p>{condition.threshold || "다음 정식 발표에서 재확인"}</p>
+            <header><span>{condition.label || CONDITION_LABEL[condition.condition_id]}</span><b>{condition.status === "MET" ? "충족" : condition.status === "UNAVAILABLE" ? "자료 부족" : "미충족"}</b></header>
+            <dl>
+              <div><dt>현재값</dt><dd>{condition.value_label || (condition.status === "UNAVAILABLE" ? "자료 부족" : "계산값 확인 중")}</dd></div>
+              <div><dt>충족 기준</dt><dd>{condition.threshold_label || condition.threshold || "다음 정식 발표에서 재확인"}</dd></div>
+            </dl>
           </article>
         ))}
       </div>
+      {showSecondaryAnchor ? (
+        <div className="transition-anchor-secondary">
+          <span>이전 모델 기준 · 보조 정보</span>
+          <strong>{anchorLabel} 앵커 · {formatKoreanMonth(monitor.anchor_started_at)} · {anchorHistoryLabel}</strong>
+          <small>현재 판단 경로에는 사용하지 않으며, 과거 상태 기록의 맥락으로만 표시합니다.</small>
+        </div>
+      ) : null}
       {monitor.context.length ? (
         <div className="transition-context"><strong>보조 맥락</strong>{monitor.context.map((item) => <span key={item.factor}>{FACTOR_LABEL[item.factor] || item.factor} · {item.relation_label}</span>)}</div>
       ) : null}
@@ -1328,7 +1386,12 @@ export function EconomicCycleWorkbenchView({
 
       <div className="cycle-layout">
         <CycleRouteMap payload={payload} />
-        <TransitionPanel monitor={payload.transition_monitor} state={observed} />
+        <TransitionPanel
+          monitor={payload.transition_monitor}
+          state={observed}
+          recent={payload.recent_changes}
+          intramonth={payload.intramonth_change}
+        />
       </div>
 
       <section className="evidence-panel" aria-labelledby="evidence-title">

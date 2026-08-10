@@ -102,6 +102,21 @@ function fixture(): CyclePayload {
       conditions_total: 3,
       candidate_started_at: "2026-05-31",
       non_adjacent_observation: true,
+      current_transition: {
+        from_phase: "contraction",
+        from_phase_label: "위축",
+        target_phase: "recovery",
+        target_phase_label: "회복",
+        status: "WATCH",
+        status_label: "회복 전환 미확인",
+        conditions_met: 0,
+        conditions_total: 3,
+        conditions: [
+          { condition_id: "persistence", label: "지속성", status: "UNMET", value_label: "현재 -0.30 / 이전 -0.24", threshold_label: "2회 연속 0 이상" },
+          { condition_id: "diffusion", label: "확산도", status: "UNMET", value_label: "4/8개 · 50%", threshold_label: "5/8개 이상 · 60% 이상" },
+          { condition_id: "corroboration", label: "활동·고용 동반 확인", status: "UNMET", value_label: "활동 -0.31 / 고용·소득 -0.17", threshold_label: "두 항목 모두 0 이상" },
+        ],
+      },
       conditions: [
         { condition_id: "persistence", label: "지속성", status: "UNMET", threshold: "두 번 연속 확인" },
         { condition_id: "diffusion", label: "확산도", status: "UNAVAILABLE", threshold: "6개 이상 비교 필요" },
@@ -213,8 +228,8 @@ describe("EconomicCycleWorkbenchView", () => {
     const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={fixture()} />);
 
     expect(html.indexOf("현재 관측 국면")).toBeLessThan(html.indexOf("순환 경로로 본 현재 위치"));
-    expect(html.indexOf("순환 경로로 본 현재 위치")).toBeLessThan(html.indexOf("현재 관측과 전환 기준"));
-    expect(html.indexOf("현재 관측과 전환 기준")).toBeLessThan(html.indexOf("자산별 확인 포인트"));
+    expect(html.indexOf("순환 경로로 본 현재 위치")).toBeLessThan(html.indexOf("현재 진단과 다음 확인"));
+    expect(html.indexOf("현재 진단과 다음 확인")).toBeLessThan(html.indexOf("자산별 확인 포인트"));
     expect(html).not.toContain("현재와 앞으로 1·2개월");
     expect(html).not.toContain("전망 확률");
 
@@ -274,21 +289,61 @@ describe("EconomicCycleWorkbenchView", () => {
     expect(resolveMapDirectionPhase(payload.transition_monitor, "contraction")).toBe("recovery");
   });
 
-  it("puts the current observation before the anchor and explains the structural target", () => {
-    const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={fixture()} />);
+  it("renders current observation guidance and demotes the legacy anchor", () => {
+    const payload = fixture();
+    payload.transition_monitor = {
+      ...payload.transition_monitor!,
+      anchor_source: "LEGACY_OBSERVED",
+      anchor_source_label: "조회 이력 내 최초 관측",
+      anchor_confirmed_at: null,
+    };
+    const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={payload} />);
 
-    expect(html.indexOf("현재 관측 위축")).toBeLessThan(html.indexOf("전환 기준 앵커"));
-    expect(html).toContain("모델 기준과 불일치");
-    expect(html).toContain("회복 → 확장 확인 조건");
-    expect(html).toContain("확장 가능성이 높다는 예측이 아닙니다");
-    expect(html).toContain("조건 확인 · 2025년 08월");
+    expect(html).toContain("현재 진단과 다음 확인");
+    expect(html).toContain("정식 월말 국면");
+    expect(html).toContain("위축 · 3개월");
+    expect(html).toContain("1개월 혼조 · 3개월 약화");
+    expect(html).toContain("다음 확인 국면");
+    expect(html).toContain("위축 → 회복 확인 조건");
+    expect(html).toContain("현재 -0.30 / 이전 -0.24");
+    expect(html).toContain("2회 연속 0 이상");
+    expect(html).toContain("미충족");
+    expect(html).toContain("이전 모델 기준 · 보조 정보");
+    expect(html).toContain("회복 앵커 · 2025년 08월 · 미확정 이력");
+    expect(html).not.toContain("회복 → 확장 확인 조건");
   });
 
   it("distinguishes unavailable transition evidence from an unmet condition", () => {
-    const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={fixture()} />);
+    const payload = fixture();
+    payload.transition_monitor!.current_transition!.conditions[1] = {
+      ...payload.transition_monitor!.current_transition!.conditions[1],
+      status: "UNAVAILABLE",
+      value_label: "자료 부족",
+    };
+    const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={payload} />);
 
     expect(html).toContain("condition-unavailable");
     expect(html).toContain("자료 부족");
+  });
+
+  it("shows the intramonth coordinate as provisional without replacing the official phase", () => {
+    const payload = fixture();
+    payload.intramonth_change = {
+      baseline_as_of_date: "2026-06-30",
+      as_of_date: "2026-07-10",
+      provisional: true,
+      label: "월말 이후 잠정 변화",
+      raw_level_delta: 0.06,
+      observed_state: { phase: "recovery" },
+      factor_deltas: [],
+      source_coverage: { requested_series: 17, available_series: 17, series: [] },
+    };
+
+    const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={payload} />);
+
+    expect(html).toContain("월중 잠정 변화 · 2026-07-10");
+    expect(html).toContain("회복 좌표 · +0.06");
+    expect(html).toContain("정식 월말 판정 유지");
   });
 
   it("separates freshness dates", () => {
