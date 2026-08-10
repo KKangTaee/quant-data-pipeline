@@ -9,10 +9,12 @@ Last Updated: 2026-08-10
 - 2차 완료: 현재 국면·최근 방향·다음 확인 국면·전환 근거와 조건별 실제값/기준을 한 카드에서 읽도록 React UI를 개편했다.
 - 3차 완료: 경제사이클 전체 집중 테스트, component test/typecheck/build, 실제 DB read model, Browser QA를 통과했다.
 - 자산별 확인 포인트의 카드 순서와 측정 데이터 표시는 유지했다.
+- 저장소 전체 pytest는 기존 order-dependent Streamlit singleton 문제로 green이 아니며, 이번 task의 집중 검증과 분리해 기록했다.
 
 ## Next Action
 
-- 추가 작업 없음. 향후 전환 확정 시에도 현재 공식 국면에서 다음 인접 국면으로 안내가 시작되는 회귀 테스트를 유지한다.
+- 기능 범위의 추가 작업 없음. 저장소 전체 suite의 Streamlit singleton 격리는 별도 공통 QA task로 다뤄야 한다.
+- 향후 전환 확정 시에도 현재 공식 국면에서 다음 인접 국면으로 안내가 시작되는 회귀 테스트를 유지한다.
 
 ## Documentation Closeout
 
