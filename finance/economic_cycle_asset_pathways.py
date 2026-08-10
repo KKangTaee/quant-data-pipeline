@@ -129,6 +129,7 @@ def _unavailable(
         "unit": None,
         "freshness": "UNAVAILABLE",
         "reason_code": reason_code,
+        "supports_current_signal": False,
         "changes": {"5d": None, "21d": None, "63d": None},
         "thresholds": {"21d": None, "63d": None},
         "directions": {"21d": "UNAVAILABLE", "63d": "UNAVAILABLE"},
@@ -163,8 +164,7 @@ def evaluate_series(
     business_age = len(
         pd.bdate_range(latest_date, reference, inclusive="right")
     )
-    if business_age > MAX_STALENESS_BUSINESS_DAYS:
-        return _unavailable(series_id, "STALE_SERIES", as_of_date=latest_date)
+    is_stale = business_age > MAX_STALENESS_BUSINESS_DAYS
     if len(ordered) - 63 < MIN_HISTORICAL_CHANGES:
         return _unavailable(
             series_id,
@@ -199,8 +199,9 @@ def evaluate_series(
         "as_of_date": latest_date.isoformat(),
         "current_value": values[-1],
         "unit": unit,
-        "freshness": "CURRENT",
-        "reason_code": None,
+        "freshness": "DELAYED" if is_stale else "CURRENT",
+        "reason_code": "STALE_SERIES" if is_stale else None,
+        "supports_current_signal": not is_stale,
         "changes": changes,
         "thresholds": thresholds,
         "directions": {
@@ -250,14 +251,17 @@ def evaluate_spread(
         reference_date=reference,
         change_mode="BASIS_POINT",
     )
-    if result.get("reason_code"):
+    current_value = result.get("current_value")
+    if current_value is None:
         result["current_level_bp"] = None
         result["structure_status"] = "UNAVAILABLE"
         return result
-    current_value = result.get("current_value")
     result["current_level_bp"] = (
         float(current_value) * 100.0 if current_value is not None else None
     )
+    if result.get("supports_current_signal") is False:
+        result["structure_status"] = "UNAVAILABLE"
+        return result
     directions = result.get("directions") or {}
     if directions.get("21d") == directions.get("63d") == "UP":
         result["structure_status"] = "STEEPENING"
@@ -296,6 +300,7 @@ def evaluate_weekly_series(
             "unit": None,
             "freshness": "UNAVAILABLE",
             "reason_code": reason_code,
+            "supports_current_signal": False,
             "changes": {"4w": None, "52w": None},
             "directions": {"4w": "UNAVAILABLE", "52w": "UNAVAILABLE"},
         }
@@ -303,8 +308,7 @@ def evaluate_weekly_series(
     if not ordered:
         return unavailable("MISSING_SERIES")
     latest_date = ordered[-1][0]
-    if (reference - latest_date).days > 14:
-        return unavailable("STALE_SERIES")
+    is_stale = (reference - latest_date).days > 14
     if len(ordered) < 53:
         return unavailable("INSUFFICIENT_HISTORY")
     values = [value for _, value in ordered]
@@ -317,8 +321,9 @@ def evaluate_weekly_series(
         "as_of_date": latest_date.isoformat(),
         "current_value": values[-1],
         "unit": "percent",
-        "freshness": "CURRENT",
-        "reason_code": None,
+        "freshness": "DELAYED" if is_stale else "CURRENT",
+        "reason_code": "STALE_SERIES" if is_stale else None,
+        "supports_current_signal": not is_stale,
         "changes": changes,
         "directions": {
             key: _direction(value, threshold=0.0)
@@ -335,12 +340,19 @@ def build_observed_pathway(
     interpretation: str,
 ) -> dict[str, object]:
     """Shape one measured series and its factual interpretation for the UI."""
+    freshness = str(series.get("freshness") or "UNAVAILABLE")
+    current_value = series.get("current_value")
+    status = (
+        "DELAYED"
+        if freshness == "DELAYED" and current_value is not None
+        else "UNAVAILABLE"
+        if freshness == "UNAVAILABLE" or current_value is None
+        else "OBSERVED"
+    )
     return {
         "pathway_id": pathway_id,
         "label": label,
-        "status": (
-            "UNAVAILABLE" if series.get("reason_code") else "OBSERVED"
-        ),
+        "status": status,
         "series": dict(series),
         "interpretation": interpretation,
     }
@@ -363,7 +375,10 @@ def _series_points(
 
 
 def _series_status(evaluation: Mapping[str, object], rise_when: str) -> str:
-    if evaluation.get("reason_code"):
+    if (
+        evaluation.get("supports_current_signal") is False
+        or evaluation.get("reason_code")
+    ):
         return "UNAVAILABLE"
     directions = evaluation.get("directions") or {}
     statuses: list[str] = []
@@ -532,6 +547,7 @@ def _price_context(
             "three_months": changes.get("63d"),
         },
         "freshness": evaluation.get("freshness"),
+        "supports_current_signal": evaluation.get("supports_current_signal"),
         "source_basis": source_basis,
     }
 
@@ -624,6 +640,14 @@ def _pathway_current_interpretation(
 
 
 def _daily_direction_text(evaluation: Mapping[str, object]) -> str:
+    if (
+        evaluation.get("freshness") == "DELAYED"
+        and evaluation.get("current_value") is not None
+    ):
+        return (
+            "갱신 지연 · 마지막 확인 "
+            f"{evaluation.get('as_of_date') or '확인 불가'}"
+        )
     if evaluation.get("reason_code"):
         return "자료가 부족합니다."
     directions = evaluation.get("directions") or {}
@@ -666,7 +690,19 @@ def _movement_metric(
         "directions": dict(evaluation.get("directions") or {}),
         "freshness": evaluation.get("freshness"),
         "reason_code": evaluation.get("reason_code"),
+        "supports_current_signal": evaluation.get("supports_current_signal"),
     }
+
+
+def _context_data_status(
+    evaluations: Sequence[Mapping[str, object]],
+) -> str:
+    freshness = {str(row.get("freshness") or "UNAVAILABLE") for row in evaluations}
+    if "DELAYED" in freshness:
+        return "DELAYED"
+    if "CURRENT" in freshness:
+        return "CURRENT"
+    return "INSUFFICIENT"
 
 
 def build_rates_context(
@@ -752,6 +788,9 @@ def build_rates_context(
     return {
         "asset_group": "rates",
         "coverage": coverage,
+        "data_status": _context_data_status(
+            (dgs2, dgs10, spread, real_yield, breakeven)
+        ),
         "economic_state": dict(economic_state),
         "current_movement": current_movement,
         "observed_pathways": observed_pathways,
@@ -846,6 +885,7 @@ def build_equities_context(
         "unit": "percent",
         "freshness": "UNAVAILABLE" if earnings_reason else "CURRENT",
         "reason_code": earnings_reason,
+        "supports_current_signal": not bool(earnings_reason),
         "changes": {"yoy_ttm": growth if not earnings_reason else None},
         "directions": {
             "yoy_ttm": (
@@ -891,6 +931,15 @@ def build_equities_context(
     return {
         "asset_group": "equities",
         "coverage": coverage,
+        "data_status": _context_data_status(
+            (
+                price_evaluation,
+                evaluations["DFII10"],
+                evaluations["BAA10Y"],
+                evaluations["VIXCLS"],
+                earnings_series,
+            )
+        ),
         "economic_state": dict(economic_state),
         "price_context": price_context,
         "current_movement": [
@@ -919,6 +968,14 @@ def build_equities_context(
 
 
 def _weekly_direction_text(evaluation: Mapping[str, object]) -> str:
+    if (
+        evaluation.get("freshness") == "DELAYED"
+        and evaluation.get("current_value") is not None
+    ):
+        return (
+            "갱신 지연 · 마지막 확인 "
+            f"{evaluation.get('as_of_date') or '확인 불가'}"
+        )
     if evaluation.get("reason_code"):
         return "주간 자료가 부족하거나 최신성이 제한됩니다."
     changes = evaluation.get("changes") or {}
@@ -975,6 +1032,15 @@ def build_commodities_context(
         "asset_id": "wti",
         "label": "WTI 원유",
         "coverage": wti_coverage,
+        "data_status": _context_data_status(
+            (
+                wti_price,
+                evaluations["WCESTUS1"],
+                evaluations["WCRFPUS2"],
+                evaluations["WRPUPUS2"],
+                evaluations["DX-Y.NYB"],
+            )
+        ),
         "price_context": wti_price_context,
         "current_movement": [
             _movement_metric("CL=F", "WTI 원유", wti_price, level_unit="USD")
@@ -1018,6 +1084,7 @@ def build_commodities_context(
         "unit": "score",
         "freshness": "CURRENT" if not activity_reason else "UNAVAILABLE",
         "reason_code": activity_reason,
+        "supports_current_signal": not bool(activity_reason),
         "changes": {},
         "directions": {"current": activity.get("direction")},
     }
@@ -1056,6 +1123,9 @@ def build_commodities_context(
         "asset_id": "copper",
         "label": "구리",
         "coverage": copper_coverage,
+        "data_status": _context_data_status(
+            (copper_price, evaluations["DX-Y.NYB"], activity_series)
+        ),
         "price_context": copper_price_context,
         "current_movement": [
             _movement_metric("HG=F", "구리", copper_price, level_unit="USD")
@@ -1089,6 +1159,7 @@ def build_commodities_context(
         "asset_id": "gold",
         "label": "금",
         "coverage": gold_context.get("coverage") or "INSUFFICIENT",
+        "data_status": gold_context.get("data_status") or "INSUFFICIENT",
         "price_context": dict(gold_context.get("price_context") or {}),
         "current_movement": [],
         "observed_pathways": [
@@ -1123,6 +1194,13 @@ def build_commodities_context(
     return {
         "asset_group": "commodities",
         "coverage": coverage,
+        "data_status": (
+            "DELAYED"
+            if any(row.get("data_status") == "DELAYED" for row in assets)
+            else "CURRENT"
+            if any(row.get("data_status") == "CURRENT" for row in assets)
+            else "INSUFFICIENT"
+        ),
         "economic_state": dict(economic_state),
         "assets": assets,
         "current_movement": [],
@@ -1289,6 +1367,16 @@ def build_asset_pathway_contexts(
         contexts[asset_group] = {
             "asset_group": asset_group,
             "coverage": coverage,
+            "data_status": _context_data_status(
+                (
+                    evaluations[price_symbol],
+                    *(
+                        evaluations[str(series_id)]
+                        for spec in specs
+                        for series_id, _rise_when in spec["members"]
+                    ),
+                )
+            ),
             "economic_state": economic_state,
             "pathways": pathways,
             "price_context": price_context,

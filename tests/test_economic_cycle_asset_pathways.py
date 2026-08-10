@@ -206,16 +206,9 @@ def test_evaluate_series_reports_neutral_and_missing_reason() -> None:
             pd.bdate_range(start="2025-01-01", periods=314)[-1].date(),
             "INSUFFICIENT_HISTORY",
         ),
-        (
-            _daily_points(
-                start="2024-12-18", count=400, start_value=3.0, step=0.001
-            ),
-            "2026-07-17",
-            "STALE_SERIES",
-        ),
     ],
 )
-def test_evaluate_series_rejects_short_or_stale_history(
+def test_evaluate_series_rejects_short_history(
     points: list[dict[str, object]],
     reference_date: object,
     expected_reason: str,
@@ -234,6 +227,31 @@ def test_evaluate_series_rejects_short_or_stale_history(
         "21d": "UNAVAILABLE",
         "63d": "UNAVAILABLE",
     }
+
+
+def test_evaluate_series_preserves_stale_measurement_but_blocks_current_signal() -> None:
+    pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
+    points = _daily_points(
+        start="2021-01-01",
+        count=1400,
+        start_value=3.0,
+        step=0.001,
+    )
+    reference = pd.Timestamp(points[-1]["date"]) + pd.offsets.BDay(8)
+
+    result = pathways.evaluate_series(
+        points,
+        series_id="DGS2",
+        reference_date=reference.date(),
+        change_mode="BASIS_POINT",
+    )
+
+    assert result["freshness"] == "DELAYED"
+    assert result["reason_code"] == "STALE_SERIES"
+    assert result["supports_current_signal"] is False
+    assert result["current_value"] is not None
+    assert result["changes"]["21d"] is not None
+    assert result["changes"]["63d"] is not None
 
 
 def test_evaluate_series_keeps_small_flat_changes_neutral() -> None:
@@ -312,6 +330,29 @@ def test_weekly_evaluator_separates_four_week_and_year_over_year() -> None:
     assert result["unit"] == "percent"
 
 
+def test_weekly_evaluator_preserves_delayed_measurement() -> None:
+    pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
+    points = [
+        {"date": timestamp.date(), "value": 400_000.0 + index * 100.0}
+        for index, timestamp in enumerate(
+            pd.date_range(end="2026-07-24", periods=260, freq="W-FRI")
+        )
+    ]
+
+    result = pathways.evaluate_weekly_series(
+        points,
+        series_id="WCESTUS1",
+        reference_date="2026-08-10",
+    )
+
+    assert result["freshness"] == "DELAYED"
+    assert result["reason_code"] == "STALE_SERIES"
+    assert result["supports_current_signal"] is False
+    assert result["current_value"] is not None
+    assert result["changes"]["4w"] is not None
+    assert result["changes"]["52w"] is not None
+
+
 def test_observed_pathway_preserves_measurement_and_interpretation() -> None:
     pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
     evaluation = {
@@ -367,6 +408,32 @@ def test_rates_context_explains_two_ten_spread_and_ten_year_components() -> None
     }
     assert rates["next_check_conditions"]
     assert "원인" not in rates["narrative"]
+
+
+def test_delayed_rates_measurements_are_visible_but_not_current_support() -> None:
+    pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
+    rows = _macro_history(
+        {
+            "DGS2": "UP",
+            "DGS10": "UP",
+            "DFII10": "UP",
+            "T10YIE": "DOWN",
+        }
+    )
+    latest = max(pd.Timestamp(row["observation_date"]) for row in rows)
+    reference = (latest + pd.offsets.BDay(8)).date()
+
+    rates = pathways.build_asset_pathway_contexts(
+        evidence=_economic_evidence(),
+        market_rows=rows,
+        price_rows=[],
+        reference_date=reference,
+    )["rates"]
+
+    assert rates["data_status"] == "DELAYED"
+    assert rates["coverage"] == "INSUFFICIENT"
+    assert all(row["current_value"] is not None for row in rates["current_movement"])
+    assert {row["status"] for row in rates["observed_pathways"]} == {"DELAYED"}
 
 
 def _ready_sp500_earnings() -> dict[str, object]:

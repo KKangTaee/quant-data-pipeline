@@ -12,5 +12,7 @@ Last Updated: 2026-08-10
 - 전체 최신성 payload가 경기 국면과 자산 경로의 갱신 필요 범위를 구분
 - 4차 완료: 경기 국면/자산 경로 중 stale 범위만 선택 실행
 - 갱신 후 DB 기준일 또는 stale/missing 감소를 확인한 범위만 cache 반영
-- 5차 준비: 지연 측정값은 표시하되 현재 신호에서는 제외
+- 5차 완료: 지연 측정값/변화량 보존과 현재 신호 eligibility 분리
+- 지연 값은 `DELAYED`, 현재 집계는 `supports_current_signal=false`로 보수성 유지
+- 6차 준비: 기존 자산 카드 디자인을 유지한 UI 상태/문구 정리
 - 설계 승인과 실제 지연/DB stale 진단 완료
