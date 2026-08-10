@@ -8275,7 +8275,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("데이터 작업", controls_body)
         self.assertIn("st.columns([1, 0.16, 0.16]", controls_body)
         self.assertNotIn("2.05, 0.62, 0.62, 1.25", controls_body)
-        self.assertIn('"일봉 갱신"', controls_body)
+        self.assertIn('"최신 갱신"', controls_body)
         self.assertIn('"다시 읽기"', controls_body)
         self.assertIn("최근 1년 일봉을 겹쳐 갱신", futures_helper_source)
         self.assertIn("이력이 부족한 종목만 장기 보강", futures_helper_source)
@@ -8314,6 +8314,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "session_date": None,
                 "symbols_required": len(DEFAULT_CORE_FUTURES_SYMBOLS),
                 "symbols_finalized": 0,
+                "missing_symbols": [],
+                "reason": "test_no_pending_session",
+            },
+            session_probe=lambda **kwargs: {
+                "status": "completed",
+                "session_date": "2026-07-22",
+                "symbols_required": len(DEFAULT_CORE_FUTURES_SYMBOLS),
                 "missing_symbols": [],
                 "reason": "test_no_pending_session",
             },
@@ -8546,6 +8553,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("build_futures_macro_react_workbench_payload", helper_source)
         for name in (
             "ShortHorizonDecisionSection",
+            "ForecastValidationGate",
             "FamilyDirectionSection",
             "CalculationScopeSection",
             "PatternRibbonSection",
@@ -8555,7 +8563,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
             self.assertTrue((source_root / f"{name}.tsx").exists())
             self.assertIn(name, source)
         self.assertLess(source.index("<MacroContextSection"), source.index("<ShortHorizonDecisionSection"))
-        self.assertLess(source.index("<ShortHorizonDecisionSection"), source.index("<FamilyDirectionSection"))
+        self.assertLess(source.index("<ShortHorizonDecisionSection"), source.index("<ForecastValidationGate"))
+        self.assertLess(source.index("<ForecastValidationGate"), source.index("<FamilyDirectionSection"))
         self.assertLess(source.index("<FamilyDirectionSection"), source.index("<CalculationScopeSection"))
         self.assertLess(source.index("<CalculationScopeSection"), source.index("<PatternRibbonSection"))
         self.assertLess(source.index("<PatternRibbonSection"), source.index("<MethodDisclosure"))
@@ -8588,8 +8597,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("sessionEvidence={payload.session_evidence}", root)
         self.assertIn("PENDING_SESSION_FINALIZATION", context)
-        self.assertIn("완료 전이라 현재 위치와 전망에서 제외", context)
-        self.assertIn("마지막 완료 세션", context)
+        self.assertIn("장중 잠정 관측", context)
+        self.assertIn("hero.completed_as_of_date", context)
 
     def test_futures_macro_ribbon_has_visible_regime_legend(self) -> None:
         root = Path("app/web/streamlit_components/futures_macro_workbench/src")
@@ -27955,7 +27964,7 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             pattern_outlook=self._pattern_outlook_payload_fixture(),
         )
 
-        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v4")
+        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v5")
         self.assertEqual([item["key"] for item in payload["horizons"]], ["current", "5D", "20D"])
         current, five_day, twenty_day = payload["horizons"]
         self.assertEqual(payload["hero"]["observation_status"], "OBSERVED")

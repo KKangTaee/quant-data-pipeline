@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from html import escape
 from math import isfinite
 from typing import Any
@@ -20,6 +20,9 @@ from app.services.futures_macro_thermometer import (
     SCORE_DEFINITIONS,
     SIGNAL_Z_THRESHOLD,
     clear_overview_futures_macro_snapshot_cache,
+)
+from app.services.futures_macro_intraday import (
+    load_overview_futures_macro_intraday_observation,
 )
 from app.services.futures_macro_pattern_validation import (
     clear_futures_macro_pattern_validation_cache,
@@ -755,15 +758,23 @@ PATTERN_ASSET_DEFINITIONS = (
     ("commodities", "원자재·물가", "inflation_pressure"),
 )
 PATTERN_CORE_FAMILY_DEFINITIONS = (
-    ("risk_on", "주가지수 위험선호"),
-    ("rate_pressure", "채권·금리 압력"),
+    ("risk_on", "위험선호"),
+    ("rate_pressure", "금리 부담"),
     ("dollar_pressure", "달러 압력"),
-    ("inflation_pressure", "원자재·물가 압력"),
+    ("inflation_pressure", "물가 압력"),
 )
 PATTERN_CONFIRMATION_FAMILY_DEFINITIONS = (
-    ("growth", "경기민감 성장"),
-    ("safe_haven", "안전자산 선호"),
+    ("growth", "성장 기대"),
+    ("safe_haven", "방어 수요"),
 )
+PATTERN_FAMILY_POLARITY_COPY = {
+    "risk_on": ("위험선호 강화", "위험선호 약화", "위험선호 중립"),
+    "growth": ("성장 기대 강화", "성장 기대 약화", "성장 기대 중립"),
+    "rate_pressure": ("금리 부담 확대", "금리 부담 완화", "금리 부담 중립"),
+    "dollar_pressure": ("달러 압력 확대", "달러 압력 완화", "달러 압력 중립"),
+    "safe_haven": ("방어 수요 강화", "방어 수요 약화", "방어 수요 중립"),
+    "inflation_pressure": ("물가 압력 확대", "물가 압력 완화", "물가 압력 중립"),
+}
 FUTURES_MACRO_SHARED_CONTEXT_SYMBOLS = ("DX-Y.NYB",)
 FUTURES_MACRO_RAW_OBSERVATION_SYMBOLS = ("SI=F",)
 FUTURES_MACRO_PUBLICATION_COPY = {
@@ -772,8 +783,8 @@ FUTURES_MACRO_PUBLICATION_COPY = {
         "평소 결과 빈도보다 시간순 검증 성능이 높음",
     ),
     "NO_EDGE": (
-        "방향 예측 근거 부족",
-        "유사 국면 모델이 평소 5거래일 결과 빈도보다 정확하지 않음",
+        "기본 빈도 대비 예측력 확인 안 됨",
+        "모델 오차가 평소 5거래일 결과 빈도 기준보다 낮지 않음",
     ),
     "PROVISIONAL": (
         "검증 중 · 방향 확정 보류",
@@ -797,20 +808,36 @@ def _pattern_observation_status(pattern: dict[str, Any]) -> str:
     return "UNAVAILABLE"
 
 
-def _pattern_direction_value(value: Any) -> dict[str, Any]:
+def _pattern_direction_value(value: Any, family_key: str) -> dict[str, Any]:
+    positive, negative, neutral = PATTERN_FAMILY_POLARITY_COPY[family_key]
     try:
         numeric = float(value)
     except (TypeError, ValueError):
-        return {"label": "자료 부족", "tone": "unavailable", "value": None}
+        return {
+            "label": "자료 부족",
+            "semantic_label": "자료 부족",
+            "tone": "unavailable",
+            "value": None,
+        }
     if not isfinite(numeric):
-        return {"label": "자료 부족", "tone": "unavailable", "value": None}
+        return {
+            "label": "자료 부족",
+            "semantic_label": "자료 부족",
+            "tone": "unavailable",
+            "value": None,
+        }
     if numeric >= SIGNAL_Z_THRESHOLD:
-        label, tone = "강화", "positive"
+        label, semantic_label, tone = "강화", positive, "positive"
     elif numeric <= -SIGNAL_Z_THRESHOLD:
-        label, tone = "약화", "negative"
+        label, semantic_label, tone = "약화", negative, "negative"
     else:
-        label, tone = "중립", "neutral"
-    return {"label": label, "tone": tone, "value": numeric}
+        label, semantic_label, tone = "중립", neutral, "neutral"
+    return {
+        "label": label,
+        "semantic_label": semantic_label,
+        "tone": tone,
+        "value": numeric,
+    }
 
 
 def _pattern_family_direction_row(
@@ -822,9 +849,9 @@ def _pattern_family_direction_row(
     return {
         "key": family_key,
         "label": label,
-        "one_day": _pattern_direction_value(family.get("one_day")),
-        "five_day": _pattern_direction_value(family.get("five_day")),
-        "twenty_day": _pattern_direction_value(family.get("twenty_day")),
+        "one_day": _pattern_direction_value(family.get("one_day"), family_key),
+        "five_day": _pattern_direction_value(family.get("five_day"), family_key),
+        "twenty_day": _pattern_direction_value(family.get("twenty_day"), family_key),
         "status": str(family.get("status") or "UNAVAILABLE"),
     }
 
@@ -835,7 +862,9 @@ def _material_family_phrases(rows: list[dict[str, Any]], window: str) -> list[st
         state = dict(row.get(window) or {})
         if state.get("tone") not in {"positive", "negative"}:
             continue
-        phrases.append(f"{row.get('label')} {state.get('label')}")
+        phrases.append(
+            str(state.get("semantic_label") or f"{row.get('label')} {state.get('label')}")
+        )
     return phrases
 
 
@@ -880,12 +909,66 @@ def _future_five_day_validation_payload(
         status,
         FUTURES_MACRO_PUBLICATION_COPY["UNAVAILABLE"],
     )
+    method = dict(pattern_outlook.get("method") or {})
+    raw_baselines = five_day.get("baseline_brier_scores")
+    if not isinstance(raw_baselines, dict):
+        raw_baselines = dict(method.get("baseline_brier") or {}).get("5")
+    if isinstance(raw_baselines, dict):
+        baseline_brier = raw_baselines.get("B0_UNCONDITIONAL")
+        if baseline_brier is None:
+            baseline_brier = next(iter(raw_baselines.values()), None)
+    else:
+        baseline_brier = raw_baselines
+    model_brier = five_day.get("brier_score")
+    if model_brier is None:
+        model_brier = dict(method.get("brier") or {}).get("5")
+    policy = (
+        "검증 범위 안에서 조건부 방향 근거로만 참고합니다."
+        if status == "VERIFIED"
+        else "현재 흐름을 미래 5거래일 방향으로 연장하지 않습니다."
+    )
     return {
         "status": status,
+        "question": "현재 흐름을 향후 5거래일로 연장할 수 있는가?",
         "title": title,
         "detail": detail,
+        "policy": policy,
         "episode_count": int(five_day.get("episode_count") or 0),
+        "evaluation_count": int(five_day.get("evaluation_count") or 0),
+        "model_brier": (
+            float(model_brier) if model_brier is not None else None
+        ),
+        "baseline_brier": (
+            float(baseline_brier) if baseline_brier is not None else None
+        ),
+        "reference_date": (
+            pattern_outlook.get("as_of_date")
+            or dict(pattern_outlook.get("current_pattern") or {}).get("as_of_date")
+        ),
     }
+
+
+def _pattern_background_relationship_summary(
+    rows: list[dict[str, Any]],
+) -> str:
+    aligned: list[str] = []
+    reversed_rows: list[str] = []
+    for row in rows:
+        five = dict(row.get("five_day") or {})
+        twenty = dict(row.get("twenty_day") or {})
+        five_value = five.get("value")
+        twenty_value = twenty.get("value")
+        if five_value is None or twenty_value is None:
+            continue
+        if abs(float(five_value)) < SIGNAL_Z_THRESHOLD or abs(float(twenty_value)) < SIGNAL_Z_THRESHOLD:
+            continue
+        target = aligned if float(five_value) * float(twenty_value) > 0 else reversed_rows
+        target.append(str(row.get("label") or ""))
+    if reversed_rows:
+        return f"5D가 20D 배경과 반대로 움직이는 항목: {' · '.join(reversed_rows)}"
+    if aligned:
+        return f"5D가 20D 배경을 이어가는 항목: {' · '.join(aligned)}"
+    return "5D와 20D 사이에 뚜렷한 지속 또는 반전 관계가 없습니다."
 
 
 def _futures_macro_calculation_scope(
@@ -937,11 +1020,36 @@ def _short_horizon_decision_payload(
         confirmation_rows,
     )
     one_day_phrases = _material_family_phrases(core_rows, "one_day")
+    twenty_day_summary = _pattern_background_relationship_summary(core_rows)
     return {
         "observation_windows": [
-            {"key": "1D", "label": "최근 1거래일", "role": "새 충격"},
-            {"key": "5D", "label": "최근 5거래일", "role": "단기 방향"},
-            {"key": "20D", "label": "최근 20거래일", "role": "배경 흐름"},
+            {"key": "1D", "label": "최근 1거래일", "role": "지금 새로 생긴 변화"},
+            {"key": "5D", "label": "최근 5거래일", "role": "현재 단기 방향"},
+            {"key": "20D", "label": "최근 20거래일", "role": "기존 배경과의 관계"},
+        ],
+        "observation_cards": [
+            {
+                "key": "1D",
+                "title": "1D · 지금 새로 생긴 변화",
+                "summary": (
+                    " · ".join(one_day_phrases)
+                    if one_day_phrases
+                    else "새로 발생한 핵심 변화는 중립 범위입니다."
+                ),
+                "detail": "마지막 관측 세션의 변화가 5D 방향을 바꾸는지 확인합니다.",
+            },
+            {
+                "key": "5D",
+                "title": "5D · 현재 단기 방향",
+                "summary": core_summary,
+                "detail": "현재 판단의 중심축이며 여러 family가 같은 방향인지 확인합니다.",
+            },
+            {
+                "key": "20D",
+                "title": "20D · 기존 배경과의 관계",
+                "summary": twenty_day_summary,
+                "detail": "현재 5D 방향이 20D 배경을 이어가는지 또는 반전하는지 확인합니다.",
+            },
         ],
         "current_summary": f"{core_summary} {confirmation_summary}",
         "one_day_shock": {
@@ -955,6 +1063,10 @@ def _short_horizon_decision_payload(
         "five_day_direction": {
             "title": "최근 5거래일 · 단기 방향",
             "summary": core_summary,
+        },
+        "twenty_day_background": {
+            "title": "최근 20거래일 · 기존 배경과의 관계",
+            "summary": twenty_day_summary,
         },
         "future_five_day_validation": _future_five_day_validation_payload(
             pattern_outlook
@@ -1070,24 +1182,55 @@ def _future_pattern_horizon(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _pattern_command_payload(macro: dict[str, Any], pattern_outlook: dict[str, Any]) -> dict[str, Any]:
+def _pattern_command_payload(
+    macro: dict[str, Any],
+    pattern_outlook: dict[str, Any],
+    current_observation: dict[str, Any],
+) -> dict[str, Any]:
     coverage = dict(macro.get("coverage") or {})
     standardized = int(coverage.get("standardized_count") or 0)
     symbol_count = int(coverage.get("symbol_count") or 0)
     latest_daily = _snapshot_value(coverage.get("latest_daily_date") or pattern_outlook.get("as_of_date"))
     return {
         "title": "선물 매크로 패턴",
-        "detail": f"일봉 {standardized}/{symbol_count}개 · 기준일 {latest_daily} · stored continuous futures",
+        "detail": (
+            f"일봉 {standardized}/{symbol_count}개 · 완료 기준일 {latest_daily} · "
+            f"현재 관측 {current_observation.get('session_date') or latest_daily}"
+        ),
         "actions": [
-            {"id": "daily_refresh", "label": "일봉 갱신", "kind": "primary", "detail": "주요 선물의 최근 1년 일봉을 겹쳐 갱신하고, 이력이 부족한 종목만 장기 보강합니다."},
+            {"id": "daily_refresh", "label": "최신 데이터 갱신", "kind": "primary", "detail": "주요 선물의 최근 1년 일봉을 겹쳐 갱신하고, 진행 중 세션은 저장된 5분봉으로 현재 관측을 최신화하며 이력이 부족한 종목만 장기 보강합니다."},
             {"id": "reload", "label": "다시 읽기", "kind": "secondary", "detail": "provider 수집이나 전망 계산 없이 저장된 snapshot을 다시 읽습니다."},
         ],
     }
 
 
-def _pattern_hero_payload(macro: dict[str, Any], pattern: dict[str, Any]) -> dict[str, Any]:
+def _pattern_hero_payload(
+    macro: dict[str, Any],
+    pattern: dict[str, Any],
+    current_observation: dict[str, Any],
+) -> dict[str, Any]:
     summary = dict(macro.get("summary") or {})
     evidence = dict(pattern.get("evidence") or {})
+    observation_mode = str(
+        current_observation.get("observation_mode") or "COMPLETED"
+    )
+    observation_status = str(current_observation.get("status") or "")
+    if observation_mode == "INTRADAY_PROVISIONAL":
+        observation_label = (
+            "장중 잠정 관측 · 일부 family"
+            if observation_status == "INTRADAY_PARTIAL"
+            else "장중 잠정 관측"
+        )
+        observation_detail = (
+            "저장된 완료 5분봉을 모든 사용 가능 family의 공통 시각까지 반영했습니다."
+        )
+    else:
+        observation_label = "마지막 완료 일봉"
+        observation_detail = (
+            "거래 중인 세션의 5분봉이 없거나 충분하지 않아 마지막 완료 일봉을 사용합니다."
+            if current_observation.get("fallback_reason") not in {None, "no_pending_session"}
+            else "현재 진행 중인 세션이 없어 마지막 완료 일봉을 사용합니다."
+        )
     return {
         "kicker": "단기 방향 진단",
         "title": _display_text(pattern.get("regime_label"), "현재 체제 자료 부족"),
@@ -1095,9 +1238,63 @@ def _pattern_hero_payload(macro: dict[str, Any], pattern: dict[str, Any]) -> dic
         "summary": _display_text(pattern.get("summary") or summary.get("summary"), "현재 패턴을 계산할 자료가 부족합니다."),
         "today_summary": _display_text(summary.get("summary"), "오늘의 재가격화 근거가 부족합니다."),
         "as_of_date": _display_text(pattern.get("as_of_date"), "-"),
+        "completed_as_of_date": _display_text(
+            current_observation.get("completed_as_of_date"),
+            _display_text(pattern.get("as_of_date"), "-"),
+        ),
+        "observation_mode": observation_mode,
+        "observation_label": observation_label,
+        "observation_detail": observation_detail,
+        "observed_at_utc": current_observation.get("observed_at_utc"),
+        "observed_at_et": current_observation.get("observed_at_et"),
+        "freshness_minutes": current_observation.get("freshness_minutes"),
         "observation_status": _pattern_observation_status(pattern),
         "coverage_label": "최근 1 · 5 · 20거래일",
         "evidence": [str(value) for value in list(evidence.get("current") or []) if str(value).strip()],
+    }
+
+
+def _resolved_current_observation(
+    pattern_outlook: dict[str, Any],
+    current_observation: dict[str, Any] | None,
+) -> dict[str, Any]:
+    completed_pattern = dict(pattern_outlook.get("current_pattern") or {})
+    session = dict(pattern_outlook.get("session") or {})
+    if isinstance(current_observation, dict):
+        candidate = dict(current_observation)
+        if isinstance(candidate.get("pattern"), dict):
+            return candidate
+    completed_as_of_date = (
+        session.get("latest_final_session")
+        or pattern_outlook.get("as_of_date")
+        or completed_pattern.get("as_of_date")
+    )
+    return {
+        "status": "COMPLETED_FALLBACK",
+        "observation_mode": "COMPLETED",
+        "pattern": completed_pattern,
+        "session_date": completed_as_of_date,
+        "completed_as_of_date": completed_as_of_date,
+        "observed_at_utc": None,
+        "observed_at_et": None,
+        "freshness_minutes": None,
+        "available_family_count": int(
+            dict(completed_pattern.get("coverage") or {}).get(
+                "available_family_count"
+            )
+            or 0
+        ),
+        "required_family_count": int(
+            dict(completed_pattern.get("coverage") or {}).get(
+                "required_family_count"
+            )
+            or 6
+        ),
+        "fallback_reason": (
+            "no_pending_session"
+            if session.get("pending_session") is None
+            else "intraday_observation_unavailable"
+        ),
     }
 
 
@@ -1287,14 +1484,43 @@ def build_futures_macro_react_workbench_payload(
     *,
     pattern_outlook: dict[str, Any],
     snapshot_metadata: dict[str, Any] | None = None,
+    current_observation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    pattern = dict(pattern_outlook.get("current_pattern") or macro.get("pattern") or {})
+    observation = _resolved_current_observation(
+        pattern_outlook,
+        current_observation,
+    )
+    pattern = dict(
+        observation.get("pattern")
+        or pattern_outlook.get("current_pattern")
+        or macro.get("pattern")
+        or {}
+    )
     session = dict(pattern_outlook.get("session") or {})
     return {
-        "schema_version": "futures_macro_react_workbench_v4",
+        "schema_version": "futures_macro_react_workbench_v5",
         "component": "FuturesMacroWorkbench",
-        "command": _pattern_command_payload(macro, pattern_outlook),
-        "hero": _pattern_hero_payload(macro, pattern),
+        "command": _pattern_command_payload(
+            macro,
+            pattern_outlook,
+            observation,
+        ),
+        "hero": _pattern_hero_payload(macro, pattern, observation),
+        "observation": {
+            key: observation.get(key)
+            for key in (
+                "status",
+                "observation_mode",
+                "session_date",
+                "completed_as_of_date",
+                "observed_at_utc",
+                "observed_at_et",
+                "freshness_minutes",
+                "available_family_count",
+                "required_family_count",
+                "fallback_reason",
+            )
+        },
         "short_horizon_decision": _short_horizon_decision_payload(
             macro,
             pattern,
@@ -1353,7 +1579,7 @@ def _handle_futures_macro_react_event(event: dict[str, Any] | None, macro: dict[
         return
     st.session_state[OVERVIEW_FUTURES_MACRO_REACT_EVENT_KEY] = event_key
     if action_id == "daily_refresh":
-        with st.spinner("선물 최근 1년 일봉을 갱신하고 부족한 이력을 보강하는 중입니다..."):
+        with st.spinner("선물 일봉과 진행 중 세션의 최신 5분봉을 갱신하는 중입니다..."):
             _refresh_futures_macro_daily_for_ui()
         st.rerun()
     if action_id == "reload":
@@ -2212,7 +2438,7 @@ def _render_futures_macro_refresh_controls(*, section_detail: str) -> None:
     refreshed_at = st.session_state.get("overview_futures_macro_daily_refreshed_at")
     reloaded_at = st.session_state.get("overview_futures_macro_reloaded_at")
     status_text = refreshed_at or reloaded_at
-    status_label = "최근 일봉 갱신" if refreshed_at else "최근 다시 읽기"
+    status_label = "최근 최신 데이터 갱신" if refreshed_at else "최근 다시 읽기"
     status_detail = ""
     if status_text:
         status_detail = f'<div class="ov-futures-macro-action-detail">{escape(status_label)}: {escape(str(status_text))}</div>'
@@ -2228,12 +2454,12 @@ def _render_futures_macro_refresh_controls(*, section_detail: str) -> None:
         unsafe_allow_html=True,
     )
     if cols[1].button(
-        "일봉 갱신",
+        "최신 갱신",
         key="overview_futures_macro_tab_daily_refresh",
         use_container_width=True,
-        help="주요 선물의 최근 1년 일봉을 겹쳐 갱신하고, 이력이 부족한 종목만 장기 보강합니다.",
+        help="최근 1년 일봉과 진행 중 세션의 5분봉 현재 관측을 갱신하고, 이력이 부족한 종목만 장기 보강합니다.",
     ):
-        with st.spinner("선물 최근 1년 일봉을 갱신하고 부족한 이력을 보강하는 중입니다..."):
+        with st.spinner("선물 일봉과 진행 중 세션의 최신 5분봉을 갱신하는 중입니다..."):
             _refresh_futures_macro_daily_for_ui()
         st.rerun()
     if cols[2].button(
@@ -2307,6 +2533,17 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
         macro = dict(materialized.get("macro") or {})
         pattern_outlook = dict(materialized.get("pattern_outlook") or {})
         snapshot_metadata = dict(materialized.get("metadata") or {})
+        try:
+            current_observation = (
+                load_overview_futures_macro_intraday_observation(
+                    completed_pattern=dict(
+                        pattern_outlook.get("current_pattern") or {}
+                    ),
+                    evaluation_time=datetime.now(timezone.utc),
+                )
+            )
+        except Exception:
+            current_observation = None
     else:
         reason = _display_text(
             materialized.get("reason"),
@@ -2325,6 +2562,7 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
             "limitations": [reason],
         }
         snapshot_metadata = {}
+        current_observation = None
     coverage = dict(macro.get("coverage") or {})
     react_available = futures_macro_react_component_available()
 
@@ -2333,6 +2571,7 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
             macro,
             pattern_outlook=pattern_outlook,
             snapshot_metadata=snapshot_metadata,
+            current_observation=current_observation,
         )
         react_event = render_futures_macro_react_workbench(payload, key="overview_futures_macro_workbench")
         _handle_futures_macro_react_event(react_event, macro)

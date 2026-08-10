@@ -3,6 +3,7 @@ import { Streamlit, withStreamlitConnection, ComponentProps } from "streamlit-co
 import CalculationScopeSection from "./CalculationScopeSection";
 import CalculationTraceDisclosure from "./CalculationTraceDisclosure";
 import FamilyDirectionSection from "./FamilyDirectionSection";
+import ForecastValidationGate from "./ForecastValidationGate";
 import MacroContextSection from "./MacroContextSection";
 import MethodDisclosure from "./MethodDisclosure";
 import PatternRibbonSection from "./PatternRibbonSection";
@@ -130,6 +131,7 @@ export type ObservationWindow = {
 
 export type DirectionState = {
   label: string;
+  semantic_label: string;
   tone: "positive" | "negative" | "neutral" | "unavailable";
   value: number | null;
 };
@@ -145,9 +147,22 @@ export type FamilyDirectionRow = {
 
 export type FutureFiveDayValidation = {
   status: PublicationStatus;
+  question: string;
   title: string;
   detail: string;
+  policy: string;
   episode_count: number;
+  evaluation_count: number;
+  model_brier: number | null;
+  baseline_brier: number | null;
+  reference_date: string | null;
+};
+
+export type ObservationCard = {
+  key: "1D" | "5D" | "20D";
+  title: string;
+  summary: string;
+  detail: string;
 };
 
 export type CalculationScope = {
@@ -161,9 +176,11 @@ export type CalculationScope = {
 
 export type ShortHorizonDecisionPayload = {
   observation_windows: ObservationWindow[];
+  observation_cards: ObservationCard[];
   current_summary: string;
   one_day_shock: { title: string; summary: string };
   five_day_direction: { title: string; summary: string };
+  twenty_day_background: { title: string; summary: string };
   future_five_day_validation: FutureFiveDayValidation;
   core_directions: FamilyDirectionRow[];
   confirmation_signals: FamilyDirectionRow[];
@@ -209,7 +226,7 @@ export type CalculationTracePayload = {
 };
 
 export type FuturesMacroWorkbenchPayload = {
-  schema_version: "futures_macro_react_workbench_v4";
+  schema_version: "futures_macro_react_workbench_v5";
   component: "FuturesMacroWorkbench";
   command: CommandPayload;
   hero: HeroPayload;
@@ -266,6 +283,9 @@ function FuturesMacroWorkbench({ args }: Props) {
         sessionEvidence={payload.session_evidence}
       />
       <ShortHorizonDecisionSection decision={payload.short_horizon_decision} />
+      <ForecastValidationGate
+        validation={payload.short_horizon_decision.future_five_day_validation}
+      />
       <FamilyDirectionSection
         coreDirections={payload.short_horizon_decision.core_directions}
         confirmationSignals={payload.short_horizon_decision.confirmation_signals}

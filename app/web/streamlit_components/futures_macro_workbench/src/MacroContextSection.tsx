@@ -26,7 +26,9 @@ function MacroContextSection({ command, hero, sessionEvidence, pendingActionId, 
     sessionEvidence.status === "PENDING_SESSION_FINALIZATION" &&
     Boolean(sessionEvidence.pending_session);
   const observationTone: ResearchHeaderTone =
-    hero.observation_status === "OBSERVED"
+    hero.observation_mode === "INTRADAY_PROVISIONAL" && hero.observation_status === "PARTIAL"
+      ? "caution"
+      : hero.observation_status === "OBSERVED"
       ? "info"
       : hero.observation_status === "PARTIAL"
         ? "caution"
@@ -34,15 +36,20 @@ function MacroContextSection({ command, hero, sessionEvidence, pendingActionId, 
   const facts: ResearchHeaderFact[] = [
     {
       id: "observation",
-      label: "관측 상태",
-      value: OBSERVATION_LABEL[hero.observation_status],
+      label: "현재 관측",
+      value: hero.observation_label || OBSERVATION_LABEL[hero.observation_status],
       tone: observationTone,
       showIndicator: true,
     },
     {
       id: "as-of",
-      label: "기준일",
+      label: "현재 기준일",
       value: hero.as_of_date || "-",
+    },
+    {
+      id: "completed-as-of",
+      label: "검증 기준일",
+      value: hero.completed_as_of_date || "-",
     },
     {
       id: "coverage",
@@ -65,17 +72,25 @@ function MacroContextSection({ command, hero, sessionEvidence, pendingActionId, 
       label,
     })),
   ];
-  const notice = hasPendingSession ? (
+  const notice = hero.observation_mode === "INTRADAY_PROVISIONAL" ? (
     <>
-      <strong>{sessionEvidence.pending_session} 데이터는 완료 전이라 현재 위치와 전망에서 제외했습니다.</strong>
-      <span>화면은 마지막 완료 세션 {sessionEvidence.latest_final_session || hero.as_of_date} 기준입니다.</span>
+      <strong>{hero.as_of_date} 세션을 장중 잠정 관측으로 반영했습니다.</strong>
+      <span>
+        {hero.observation_detail}
+        {hero.observed_at_et ? ` 관측 시각 ${hero.observed_at_et}` : ""}
+      </span>
+    </>
+  ) : hasPendingSession ? (
+    <>
+      <strong>{sessionEvidence.pending_session} 세션은 현재 관측에 사용하지 못했습니다.</strong>
+      <span>{hero.observation_detail} 완료 기준일 {hero.completed_as_of_date}</span>
     </>
   ) : undefined;
 
   return (
     <ResearchHeader
       actions={actions}
-      detail={hero.today_summary ? <>오늘의 재가격화 · {hero.today_summary}</> : undefined}
+      detail={hero.today_summary ? <>완료 일봉 배경 · {hero.today_summary}</> : undefined}
       eyebrow="FUTURES MACRO"
       facts={facts}
       kicker={hero.kicker}

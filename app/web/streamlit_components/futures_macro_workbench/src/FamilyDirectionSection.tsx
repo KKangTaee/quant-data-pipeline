@@ -2,14 +2,21 @@ import type { FamilyDirectionRow } from "./FuturesMacroWorkbench";
 
 function DirectionCell({ row, window }: { row: FamilyDirectionRow; window: "one_day" | "five_day" | "twenty_day" }) {
   const state = row[window];
-  return <span className={`fm-workbench__direction-cell tone-${state.tone}`}>{state.label}</span>;
+  return (
+    <span
+      className={`fm-workbench__direction-cell tone-${state.tone}`}
+      title={`${row.label} · ${state.label}`}
+    >
+      {state.semantic_label || state.label}
+    </span>
+  );
 }
 
 function DirectionHeaders({
   firstLabel = "방향축",
-  oneDayLabel = "1D",
-  fiveDayLabel = "5D",
-  twentyDayLabel = "20D",
+  oneDayLabel = "1D · 새 변화",
+  fiveDayLabel = "5D · 단기 방향",
+  twentyDayLabel = "20D · 배경",
 }: {
   firstLabel?: string;
   oneDayLabel?: string;
