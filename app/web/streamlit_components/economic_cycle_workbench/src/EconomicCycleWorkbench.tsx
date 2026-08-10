@@ -527,8 +527,7 @@ export function resolveMapDirectionPhase(
   monitor?: TransitionMonitor | null,
   observedPhase?: Phase | null,
 ): Phase | null {
-  if (monitor?.non_adjacent_observation) return nextPhase(observedPhase);
-  return monitor?.target_phase || nextPhase(observedPhase);
+  return monitor?.current_transition?.target_phase || nextPhase(observedPhase);
 }
 
 export type CycleRouteTransition = {
@@ -541,6 +540,14 @@ export function resolveCycleRouteTransition(
   monitor: TransitionMonitor | null | undefined,
   currentPhase: Phase | null | undefined,
 ): CycleRouteTransition | null {
+  const current = monitor?.current_transition;
+  if (current && current.from_phase !== current.target_phase) {
+    return {
+      from: current.from_phase,
+      to: current.target_phase,
+      status: current.status,
+    };
+  }
   if (!monitor || monitor.status === "MAINTAIN") return null;
   if (monitor.status === "CONFIRMED") {
     const from = monitor.anchor_phase;
@@ -711,7 +718,7 @@ function CycleRouteMap({ payload }: { payload: CyclePayload }) {
           {PHASE_ORDER.map((phase) => {
             const node = CYCLE_ROUTE_NODES[phase];
             const isCurrent = currentPhase === phase;
-            const isNext = transition?.status === "WATCH" && transition.to === phase;
+            const isNext = transition?.to === phase;
             return (
               <g className="cycle-route-node" key={phase}>
                 <circle
@@ -731,7 +738,7 @@ function CycleRouteMap({ payload }: { payload: CyclePayload }) {
             <text x="160" y="172">{payload.observed_state.duration_months ? `${payload.observed_state.duration_months}개월 지속` : "지속 기간 확인 중"}</text>
           </g>
         </svg>
-        <strong className={`cycle-route-status route-status-${payload.transition_monitor?.status.toLowerCase() || "limited"}`}>{statusCopy}</strong>
+        <strong className={`cycle-route-status route-status-${transition?.status.toLowerCase() || "limited"}`}>{statusCopy}</strong>
         <span className="cycle-route-history">{historySummary}</span>
         <p>화살표는 현재 확인 중인 구조적 인접 국면을 나타내며, 특정 시점의 이동이나 발생 확률을 예측하지 않습니다.</p>
       </div>
@@ -823,9 +830,12 @@ function TransitionPanel({
           <span>이전 모델 기준 · 보조 정보</span>
           <strong>{anchorLabel} 앵커 · {formatKoreanMonth(monitor.anchor_started_at)} · {anchorHistoryLabel}</strong>
           <small>현재 판단 경로에는 사용하지 않으며, 과거 상태 기록의 맥락으로만 표시합니다.</small>
+          {monitor.context.length ? (
+            <div className="transition-context"><strong>이전 모델 보조 맥락</strong>{monitor.context.map((item) => <span key={item.factor}>{FACTOR_LABEL[item.factor] || item.factor} · {item.relation_label}</span>)}</div>
+          ) : null}
         </div>
       ) : null}
-      {monitor.context.length ? (
+      {!showSecondaryAnchor && monitor.context.length ? (
         <div className="transition-context"><strong>보조 맥락</strong>{monitor.context.map((item) => <span key={item.factor}>{FACTOR_LABEL[item.factor] || item.factor} · {item.relation_label}</span>)}</div>
       ) : null}
     </section>

@@ -413,7 +413,7 @@ def _current_transition_conditions(
             ),
             "threshold_label": (
                 "비교 가능한 지표 6개 이상"
-                if required_count is None
+                if available_pairs < 6
                 else f"{required_count}/{available_pairs}개 이상 · 60% 이상"
             ),
         },

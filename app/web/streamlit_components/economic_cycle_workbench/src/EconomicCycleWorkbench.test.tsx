@@ -200,14 +200,22 @@ describe("EconomicCycleWorkbenchView", () => {
       to: "recovery",
       status: "WATCH",
     });
-    expect(resolveCycleRouteTransition({ ...monitor, status: "MAINTAIN" }, "contraction")).toBeNull();
-    expect(resolveCycleRouteTransition({ ...monitor, status: "CONFIRMED" }, "contraction")).toEqual({
-      from: "recovery",
-      to: "expansion",
+    expect(resolveCycleRouteTransition({ ...monitor, status: "MAINTAIN", current_transition: null }, "contraction")).toBeNull();
+    expect(resolveCycleRouteTransition({
+      ...monitor,
+      status: "CONFIRMED",
+      current_transition: {
+        ...monitor.current_transition!,
+        status: "CONFIRMED",
+        status_label: "회복 전환 조건 충족",
+      },
+    }, "contraction")).toEqual({
+      from: "contraction",
+      to: "recovery",
       status: "CONFIRMED",
     });
     expect(resolveCycleRouteTransition(
-      { ...monitor, status: "UNKNOWN" } as unknown as NonNullable<CyclePayload["transition_monitor"]>,
+      { ...monitor, status: "UNKNOWN", current_transition: null } as unknown as NonNullable<CyclePayload["transition_monitor"]>,
       "contraction",
     )).toBeNull();
   });
@@ -251,6 +259,7 @@ describe("EconomicCycleWorkbenchView", () => {
       ...maintain.transition_monitor!,
       status: "MAINTAIN",
       status_label: "현재 국면 유지",
+      current_transition: null,
     };
     const maintainHtml = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={maintain} />);
 
@@ -274,13 +283,49 @@ describe("EconomicCycleWorkbenchView", () => {
       observed_phase: "expansion",
       status: "CONFIRMED",
       status_label: "국면 전환 확인",
+      current_transition: {
+        ...confirmed.transition_monitor!.current_transition!,
+        from_phase: "expansion",
+        from_phase_label: "확장",
+        target_phase: "slowdown",
+        target_phase_label: "둔화",
+        status: "CONFIRMED",
+        status_label: "둔화 전환 조건 충족",
+      },
     };
     const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={confirmed} />);
 
     expect(html).toContain('class="cycle-route-direction route-confirmed"');
-    expect(html).toContain("회복 → 확장 국면 전환 확인");
+    expect(html).toContain("확장 → 둔화 국면 전환 확인");
     expect(html).toContain("route-phase-expansion cycle-route-node-current");
     expect(html).not.toContain("cycle-route-node-current cycle-route-node-next");
+  });
+
+  it("keeps the route map on the current path after a legacy transition confirms", () => {
+    const payload = fixture();
+    payload.observed_state.phase = "recovery";
+    payload.transition_monitor = {
+      ...payload.transition_monitor!,
+      observed_phase: "recovery",
+      anchor_phase: "contraction",
+      target_phase: "recovery",
+      status: "CONFIRMED",
+      current_transition: {
+        ...payload.transition_monitor!.current_transition!,
+        from_phase: "recovery",
+        from_phase_label: "회복",
+        target_phase: "expansion",
+        target_phase_label: "확장",
+        status: "WATCH",
+        status_label: "확장 전환 미확인",
+      },
+    };
+
+    const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={payload} />);
+
+    expect(html).toContain("회복 → 확장 방향 관찰 · 예측 아님");
+    expect(html).not.toContain("위축 → 회복 국면 전환 확인");
+    expect(html).toContain("route-phase-recovery cycle-route-node-current");
   });
 
   it("resolves a non-adjacent map arrow from the current observed phase", () => {
@@ -296,6 +341,12 @@ describe("EconomicCycleWorkbenchView", () => {
       anchor_source: "LEGACY_OBSERVED",
       anchor_source_label: "조회 이력 내 최초 관측",
       anchor_confirmed_at: null,
+      context: [{
+        factor: "financial_leading_score",
+        value: 0.2,
+        relation: "TOWARD_TARGET",
+        relation_label: "다음 국면 방향을 지지",
+      }],
     };
     const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={payload} />);
 
@@ -310,6 +361,7 @@ describe("EconomicCycleWorkbenchView", () => {
     expect(html).toContain("미충족");
     expect(html).toContain("이전 모델 기준 · 보조 정보");
     expect(html).toContain("회복 앵커 · 2025년 08월 · 미확정 이력");
+    expect(html).toContain("이전 모델 보조 맥락");
     expect(html).not.toContain("회복 → 확장 확인 조건");
   });
 

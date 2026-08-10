@@ -482,6 +482,30 @@ def test_current_transition_starts_from_official_phase_after_legacy_confirmation
     assert guidance["status"] == "WATCH"
 
 
+def test_current_transition_explains_minimum_coverage_when_pairs_are_insufficient() -> None:
+    service = _load_service()
+    current = _observed_snapshot()
+    observed = json.loads(str(current["observed_state_json"]))
+    observed.update({"available_series": 5, "momentum_breadth": 0.80})
+    current["observed_state_json"] = json.dumps(observed)
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: current,
+        history_loader=lambda **_kwargs: [],
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=lambda **_kwargs: {},
+    )
+
+    diffusion = next(
+        condition
+        for condition in model["transition_monitor"]["current_transition"]["conditions"]
+        if condition["condition_id"] == "diffusion"
+    )
+    assert diffusion["status"] == "UNAVAILABLE"
+    assert diffusion["threshold_label"] == "비교 가능한 지표 6개 이상"
+
+
 @pytest.mark.parametrize("reverse_rows", [False, True])
 def test_cycle_map_selects_latest_replay_deterministically_for_duplicate_date(
     reverse_rows: bool,
