@@ -52,6 +52,16 @@ def _finalization_not_required(**_kwargs: Any) -> dict[str, Any]:
     }
 
 
+def _session_not_pending(**_kwargs: Any) -> dict[str, Any]:
+    return {
+        "status": "completed",
+        "session_date": "2026-07-22",
+        "symbols_required": len(DEFAULT_CORE_FUTURES_SYMBOLS),
+        "missing_symbols": [],
+        "reason": "test_no_pending_session",
+    }
+
+
 def test_complete_core_symbols_use_one_year_overlap() -> None:
     from app.jobs.overview_actions import build_futures_macro_daily_refresh_plan
 
@@ -88,6 +98,7 @@ def test_split_collection_materializes_once_after_both_groups() -> None:
         collect_runner=collect_runner,
         materialize_fn=lambda: materialized.append(True) or {"status": "materialized"},
         finalization_runner=_finalization_not_required,
+        session_probe=_session_not_pending,
     )
 
     assert [item["period"] for item in requested] == ["1y", "10y"]
@@ -111,6 +122,7 @@ def test_failed_bootstrap_keeps_routine_rows_and_returns_partial_success() -> No
         collect_runner=collect_runner,
         materialize_fn=lambda: {"status": "reused"},
         finalization_runner=_finalization_not_required,
+        session_probe=_session_not_pending,
     )
 
     assert result["status"] == "partial_success"
@@ -148,6 +160,7 @@ def test_refresh_duration_includes_snapshot_materialization(monkeypatch) -> None
         collect_runner=lambda **kwargs: _collection_result(list(kwargs["symbols"])),
         materialize_fn=lambda: {"status": "materialized"},
         finalization_runner=_finalization_not_required,
+        session_probe=_session_not_pending,
     )
 
     assert result["duration_sec"] == 60.0
@@ -228,6 +241,62 @@ def test_after_reopen_finalizes_pending_session_from_stored_rows() -> None:
     assert result["session_date"] == "2026-07-23"
     assert result["status"] == "finalized"
     assert result["symbols_finalized"] == 17
+
+
+def test_precollected_intraday_result_is_reused_without_second_collection() -> None:
+    from app.jobs.futures_macro_daily_finalization import (
+        run_pending_futures_daily_finalization,
+    )
+
+    symbols = tuple(DEFAULT_CORE_FUTURES_SYMBOLS)
+    collection = _collection_result(list(symbols))
+    events: list[str] = []
+
+    result = run_pending_futures_daily_finalization(
+        symbols=symbols,
+        evaluation_time=datetime(
+            2026, 7, 23, 22, 2, tzinfo=timezone.utc
+        ),
+        collect_runner=lambda **_kwargs: (_ for _ in ()).throw(
+            AssertionError("pre-collected 5m rows must be reused")
+        ),
+        intraday_collection_result=collection,
+        daily_rows_loader=lambda _symbols: _pending_daily_rows(symbols),
+        intraday_rows_loader=lambda **_kwargs: events.append("load:5m")
+        or _stored_intraday_rows(symbols),
+        writer=lambda batch, **_kwargs: events.append("write")
+        or len(batch.rows),
+    )
+
+    assert events == ["load:5m", "write"]
+    assert result["status"] == "finalized"
+
+
+def test_pending_session_probe_uses_canonical_sunday_to_monday_mapping() -> None:
+    from app.jobs.futures_macro_daily_finalization import (
+        probe_pending_futures_daily_session,
+    )
+
+    symbols = tuple(DEFAULT_CORE_FUTURES_SYMBOLS)
+    sunday_rows = [
+        {
+            **row,
+            "candle_time_utc": "2026-08-09 00:00:00",
+            "collected_at": "2026-08-10 15:15:00",
+        }
+        for row in _pending_daily_rows(symbols)
+    ]
+
+    result = probe_pending_futures_daily_session(
+        symbols=symbols,
+        evaluation_time=datetime(
+            2026, 8, 10, 15, 17, tzinfo=timezone.utc
+        ),
+        daily_rows_loader=lambda _symbols: sunday_rows,
+    )
+
+    assert result["status"] == "pending"
+    assert result["session_date"] == "2026-08-10"
 
 
 def test_before_settlement_cutoff_does_not_collect_intraday() -> None:
@@ -427,6 +496,7 @@ def test_overview_runs_finalization_before_materialization() -> None:
         },
         materialize_fn=lambda: events.append("materialize")
         or {"status": "materialized"},
+        session_probe=_session_not_pending,
     )
 
     assert events == ["collect:1d", "finalize", "materialize"]
@@ -452,8 +522,87 @@ def test_overview_marks_finalization_failure_as_partial_but_materializes() -> No
         },
         materialize_fn=lambda: materialized.append(True)
         or {"status": "reused_pending"},
+        session_probe=_session_not_pending,
     )
 
     assert result["status"] == "partial_success"
     assert materialized == [True]
     assert result["details"]["futures_macro_snapshot"]["status"] == "reused_pending"
+
+
+def test_active_session_collects_five_minute_rows_once_before_materialization() -> None:
+    from app.jobs.overview_actions import run_overview_futures_daily_ohlcv
+
+    calls: list[tuple[str, str]] = []
+    materialized: list[bool] = []
+    five_minute_result: dict[str, Any] | None = None
+    finalization_input: dict[str, Any] | None = None
+
+    def collect_runner(**kwargs: Any) -> dict[str, Any]:
+        nonlocal five_minute_result
+        calls.append((str(kwargs["period"]), str(kwargs["interval"])))
+        result = _collection_result(list(kwargs["symbols"]))
+        if kwargs["interval"] == "5m":
+            five_minute_result = result
+        return result
+
+    def finalization_runner(**kwargs: Any) -> dict[str, Any]:
+        nonlocal finalization_input
+        finalization_input = kwargs.get("intraday_collection_result")
+        return {
+            "status": "not_due",
+            "session_date": "2026-08-10",
+            "symbols_required": 17,
+            "symbols_finalized": 0,
+            "missing_symbols": [],
+            "reason": "settlement_cutoff_not_reached",
+        }
+
+    result = run_overview_futures_daily_ohlcv(
+        coverage_loader=lambda symbols: _coverage(),
+        collect_runner=collect_runner,
+        evaluation_time=datetime(
+            2026, 8, 10, 15, 17, tzinfo=timezone.utc
+        ),
+        session_probe=lambda **_kwargs: {
+            "status": "pending",
+            "session_date": "2026-08-10",
+            "symbols_required": 17,
+            "missing_symbols": [],
+            "reason": "same_date_session_in_progress",
+        },
+        finalization_runner=finalization_runner,
+        materialize_fn=lambda: materialized.append(True)
+        or {"status": "reused_pending"},
+    )
+
+    assert calls == [("1y", "1d"), ("2d", "5m")]
+    assert finalization_input is five_minute_result
+    assert materialized == [True]
+    assert result["details"]["intraday_refresh"]["status"] == "success"
+
+
+def test_no_pending_session_skips_five_minute_collection() -> None:
+    from app.jobs.overview_actions import run_overview_futures_daily_ohlcv
+
+    calls: list[tuple[str, str]] = []
+    finalization_input: list[dict[str, Any] | None] = []
+
+    def collect_runner(**kwargs: Any) -> dict[str, Any]:
+        calls.append((str(kwargs["period"]), str(kwargs["interval"])))
+        return _collection_result(list(kwargs["symbols"]))
+
+    result = run_overview_futures_daily_ohlcv(
+        coverage_loader=lambda symbols: _coverage(),
+        collect_runner=collect_runner,
+        session_probe=_session_not_pending,
+        finalization_runner=lambda **kwargs: finalization_input.append(
+            kwargs.get("intraday_collection_result")
+        )
+        or _finalization_not_required(),
+        materialize_fn=lambda: {"status": "materialized"},
+    )
+
+    assert calls == [("1y", "1d")]
+    assert finalization_input == [None]
+    assert result["details"]["intraday_refresh"]["status"] == "not_required"
