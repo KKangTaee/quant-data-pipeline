@@ -128,6 +128,53 @@ function fixture(): CyclePayload {
   };
 }
 
+function delayedFixture(): CyclePayload {
+  const payload = fixture();
+  payload.data_freshness = {
+    ...payload.data_freshness!,
+    status: "REFRESH_AVAILABLE",
+    overall_status: "REFRESH_AVAILABLE",
+    refresh_required: true,
+    refresh_required_scopes: ["asset_pathways"],
+    cycle_snapshot: {
+      ...payload.data_freshness!,
+      status: "READY",
+      refresh_required: false,
+    },
+    asset_pathways: {
+      status: "REFRESH_AVAILABLE",
+      refresh_required: true,
+      latest_observation_date: "2026-07-27",
+      message: "자산 경로 갱신 필요",
+    },
+    action: {
+      id: "refresh_economic_cycle_data",
+      label: "최신 데이터 반영",
+      enabled: true,
+    },
+  };
+  payload.market_implications[0] = {
+    ...payload.market_implications[0],
+    coverage: "INSUFFICIENT",
+    data_status: "DELAYED",
+    current_movement: [{
+      metric_id: "DGS2",
+      label: "미국 2년 국채 수익률",
+      as_of_date: "2026-07-27",
+      current_value: 4.12,
+      level_unit: "percent",
+      change_unit: "bp",
+      freshness: "DELAYED",
+      reason_code: "STALE_SERIES",
+      changes: { "21d": -8.0, "63d": -17.0 },
+      directions: { "21d": "DOWN", "63d": "DOWN" },
+    }],
+    observed_pathways: [],
+    current_interpretation: ["갱신 지연 · 마지막 확인 2026-07-27"],
+  };
+  return payload;
+}
+
 describe("EconomicCycleWorkbenchView", () => {
   it("resolves watch, maintain and confirmed route transitions from explicit phases", () => {
     const payload = fixture();
@@ -244,14 +291,35 @@ describe("EconomicCycleWorkbenchView", () => {
     expect(html).toContain("자료 부족");
   });
 
-  it("separates freshness dates and shows expected refresh duration", () => {
+  it("separates freshness dates", () => {
     const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={fixture()} />);
 
     expect(html).toContain("마지막 성공 수집");
     expect(html).toContain("2026-07-21 09:31:12");
     expect(html).toContain("계산 기준일");
     expect(html).toContain("사용 원천 최신일");
-    expect(html).toContain("보통 1분 내외");
+  });
+
+  it("shows delayed last-good measurements without calling them missing", () => {
+    const html = renderToStaticMarkup(
+      <EconomicCycleWorkbenchView payload={delayedFixture()} />,
+    );
+
+    expect(html).toContain("갱신 지연");
+    expect(html).toContain("마지막 확인 2026-07-27");
+    expect(html).toContain("1개월(21거래일)");
+    expect(html).not.toContain("DGS2</strong><span>1개월(21거래일) -</span>");
+  });
+
+  it("describes only the stale freshness scopes", () => {
+    const html = renderToStaticMarkup(
+      <EconomicCycleWorkbenchView payload={delayedFixture()} />,
+    );
+
+    expect(html).toContain("경제사이클 계산 최신");
+    expect(html).toContain("자산 경로 갱신 필요");
+    expect(html).toContain("최신 데이터 반영");
+    expect(html).not.toContain("보통 1분 내외");
   });
 
   it("shows all phase colors and accessible month details in the regime ribbon", () => {

@@ -459,7 +459,10 @@ def test_cycle_component_has_compact_manual_freshness_action() -> None:
     for token in (
         "data_freshness?: EconomicCycleFreshness",
         "refresh_result?: RefreshResult",
-        "최신 데이터로 다시 계산",
+        "DELAYED",
+        "갱신 지연",
+        "최신 데이터 반영",
+        "필요한 자료만 확인하는 중",
         'id: "refresh_economic_cycle_data"',
         "Streamlit.setComponentValue",
         'className="cycle-freshness-bar"',
@@ -468,6 +471,7 @@ def test_cycle_component_has_compact_manual_freshness_action() -> None:
     assert ".cycle-freshness-bar" in css
     assert "rows_written" not in source
     assert "failed_symbols" not in source
+    assert "보통 1분 내외" not in source
     assert "@media (max-width: 760px)" in css
     assert "@media (max-width: 420px)" in css
 
@@ -712,7 +716,7 @@ def test_cycle_component_formats_rate_levels_and_explains_basis_points() -> None
     assert "formatMovementLevel" in source
     assert 'unit === "percent" ? `연 ${value.toFixed(2)}%`' in source
     assert 'row.level_unit === "percent" || row.level_unit === "bp"' in source
-    assert "현재 값은 최신 저장 관측치이며, 금리 변화는 bp 기준입니다." in source
+    assert "현재 값은 마지막 저장 관측치이며, 금리 변화는 bp 기준입니다." in source
     assert "row.current_value.toFixed(2)} {row.level_unit" not in source
 
 

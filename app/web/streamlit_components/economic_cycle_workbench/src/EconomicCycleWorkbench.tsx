@@ -141,6 +141,9 @@ type EvidencePresentation = {
 type PathwayStatus = "SUPPORTS_RISE" | "SUPPORTS_FALL" | "MIXED" | "NEUTRAL" | "UNAVAILABLE";
 type CoverageStatus = "SUFFICIENT" | "PARTIAL" | "INSUFFICIENT";
 type PriceStatus = "RISING" | "FALLING" | "MIXED" | "NEUTRAL" | "UNAVAILABLE";
+type SeriesFreshness = "CURRENT" | "DELAYED" | "UNAVAILABLE";
+type AssetDataStatus = "CURRENT" | "DELAYED" | "INSUFFICIENT";
+type FreshnessStatus = "READY" | "REFRESH_AVAILABLE" | "MISSING" | "ERROR";
 
 type SeriesEvaluation = {
   series_id: string;
@@ -148,8 +151,9 @@ type SeriesEvaluation = {
   release_date?: string | null;
   current_value?: number | null;
   unit?: string | null;
-  freshness: "CURRENT" | "UNAVAILABLE";
+  freshness: SeriesFreshness;
   reason_code?: string | null;
+  supports_current_signal?: boolean;
   changes: Record<string, number | null>;
   thresholds?: Record<string, number | null>;
   directions: Record<string, string>;
@@ -174,14 +178,15 @@ type MovementMetric = {
   change_unit?: string | null;
   changes: Record<string, number | null>;
   directions?: Record<string, string>;
-  freshness?: "CURRENT" | "UNAVAILABLE";
+  freshness?: SeriesFreshness;
   reason_code?: string | null;
+  supports_current_signal?: boolean;
 };
 
 type ObservedPathway = {
   pathway_id: string;
   label: string;
-  status: "OBSERVED" | "UNAVAILABLE" | PathwayStatus;
+  status: "OBSERVED" | "DELAYED" | "UNAVAILABLE" | PathwayStatus;
   status_label?: string;
   reason_code?: string | null;
   series: SeriesEvaluation | { series_id: string; status: PathwayStatus; evaluation: SeriesEvaluation }[];
@@ -209,7 +214,8 @@ type PriceContext = {
     one_month: number | null;
     three_months: number | null;
   };
-  freshness?: "CURRENT" | "UNAVAILABLE";
+  freshness?: SeriesFreshness;
+  supports_current_signal?: boolean;
   source_basis: string;
 };
 
@@ -225,6 +231,7 @@ type MarketImplication = {
   economic_as_of_date?: string | null;
   analysis_status: "READY" | "PARTIAL" | "LIMITED";
   coverage: CoverageStatus;
+  data_status?: AssetDataStatus;
   economic_state: EconomicState;
   pathways?: AssetPathway[];
   unmeasured_pathways?: UnmeasuredPathway[];
@@ -246,6 +253,7 @@ type CommodityAsset = {
   asset_id: "wti" | "copper" | "gold";
   label: string;
   coverage: CoverageStatus;
+  data_status?: AssetDataStatus;
   summary?: string;
   price_context?: PriceContext | null;
   current_movement?: MovementMetric[];
@@ -257,14 +265,28 @@ type CommodityAsset = {
   narrative: string;
 };
 
+type FreshnessScope = {
+  status: FreshnessStatus;
+  refresh_required: boolean;
+  message: string;
+  latest_observation_date?: string | null;
+};
+
 type EconomicCycleFreshness = {
-  status: "READY" | "REFRESH_AVAILABLE" | "MISSING" | "ERROR";
+  status: FreshnessStatus;
+  overall_status?: FreshnessStatus;
   persisted_as_of_date?: string | null;
   target_as_of_date?: string | null;
   last_successful_collection_at?: string | null;
   latest_source_observation_date?: string | null;
   refresh_required: boolean;
+  refresh_required_scopes?: ("cycle_snapshot" | "asset_pathways")[];
   message: string;
+  cycle_snapshot?: FreshnessScope & {
+    persisted_as_of_date?: string | null;
+    target_as_of_date?: string | null;
+  };
+  asset_pathways?: FreshnessScope;
   action?: {
     id: "refresh_economic_cycle_data";
     label: string;
@@ -450,6 +472,18 @@ const PRICE_STATUS_LABEL: Record<PriceStatus, string> = {
   MIXED: "기간별 혼재",
   NEUTRAL: "중립",
   UNAVAILABLE: "확인 불가",
+};
+
+const SERIES_FRESHNESS_LABEL: Record<SeriesFreshness, string> = {
+  CURRENT: "정상",
+  DELAYED: "갱신 지연",
+  UNAVAILABLE: "자료 부족",
+};
+
+const PATHWAY_STATUS_LABEL: Record<"OBSERVED" | "DELAYED" | "UNAVAILABLE", string> = {
+  OBSERVED: "관찰됨",
+  DELAYED: "갱신 지연",
+  UNAVAILABLE: "자료 부족",
 };
 
 const CHANGE_LABEL: Record<string, string> = {
@@ -788,15 +822,18 @@ function EconomicStateBlock({ state }: { state: EconomicState }) {
 function SeriesMetrics({ evaluation }: { evaluation: SeriesEvaluation }) {
   const changes = Object.entries(evaluation.changes || {});
   const primary = changes.filter(([key]) => key !== "5d").slice(0, 2);
+  const freshnessLabel = evaluation.freshness === "DELAYED"
+    ? `갱신 지연 · 마지막 확인 ${evaluation.as_of_date || evaluation.release_date || "-"}`
+    : SERIES_FRESHNESS_LABEL[evaluation.freshness];
   const details = <>
     {changes.map(([key, value]) => (
       <span key={key}>{CHANGE_LABEL[key] || key} {formatSeriesChange(value, evaluation.unit)}</span>
     ))}
     <span>기준일 {evaluation.as_of_date || evaluation.release_date || "-"}</span>
-    <span>최신성 {evaluation.freshness === "CURRENT" ? "정상" : "자료 부족"}</span>
+    <span>최신성 {freshnessLabel}</span>
   </>;
   return (
-    <div className="series-metrics" tabIndex={0}>
+    <div className="series-metrics" data-status={evaluation.freshness} tabIndex={0}>
       <div className="series-primary-metrics">
         <strong>{evaluation.series_id}</strong>
         {primary.length ? primary.map(([key, value]) => (
@@ -847,12 +884,15 @@ function PricePathway({ item }: { item: MarketImplication }) {
     ["1개월(21거래일)", price.returns.one_month],
     ["3개월(63거래일)", price.returns.three_months],
   ] as const;
+  const statusLabel = price.freshness === "DELAYED"
+    ? "갱신 지연"
+    : PRICE_STATUS_LABEL[price.status];
   return (
-    <section className="price-pathway">
+    <section className="price-pathway" data-status={price.freshness || "UNAVAILABLE"}>
       <header>
         <h5>현재 움직임</h5>
-        <b className={`price-status price-${price.status.toLowerCase()}`}>
-          {PRICE_STATUS_LABEL[price.status]}
+        <b className={`price-status ${price.freshness === "DELAYED" ? "price-delayed" : `price-${price.status.toLowerCase()}`}`}>
+          {statusLabel}
         </b>
       </header>
       <div className="price-return-grid" aria-label={`${item.label} 기간별 가격 변화율`}>
@@ -890,7 +930,7 @@ function CurrentMovementBlock({
   return (
     <section className="observation-block current-movement-block">
       <h5>현재 움직임</h5>
-      {hasRateUnit ? <p className="movement-unit-note">현재 값은 최신 저장 관측치이며, 금리 변화는 bp 기준입니다.</p> : null}
+      {hasRateUnit ? <p className="movement-unit-note">현재 값은 마지막 저장 관측치이며, 금리 변화는 bp 기준입니다.</p> : null}
       {priceItem ? <PricePathway item={priceItem} /> : (
         <div className="movement-grid">
           {rows.length ? rows.map((row) => (
@@ -903,6 +943,7 @@ function CurrentMovementBlock({
                 unit: row.change_unit,
                 freshness: row.freshness || "UNAVAILABLE",
                 reason_code: row.reason_code,
+                supports_current_signal: row.supports_current_signal,
                 changes: row.changes || {},
                 directions: row.directions || {},
               }} />
@@ -932,9 +973,14 @@ function ObservedPathwaysBlock({
           const seriesRows = Array.isArray(pathway.series)
             ? pathway.series.map((row) => row.evaluation)
             : [pathway.series];
+          const statusLabel = pathway.status === "DELAYED"
+            ? PATHWAY_STATUS_LABEL.DELAYED
+            : pathway.status === "UNAVAILABLE"
+              ? PATHWAY_STATUS_LABEL.UNAVAILABLE
+              : PATHWAY_STATUS_LABEL.OBSERVED;
           return (
             <article className={`pathway-item pathway-${String(pathway.status).toLowerCase()}`} key={pathway.pathway_id}>
-              <header><strong>{pathway.label}</strong><span>{pathway.status === "UNAVAILABLE" ? "자료 부족" : "관찰됨"}</span></header>
+              <header><strong>{pathway.label}</strong><span>{statusLabel}</span></header>
               {pathway.interpretation ? <p>{pathway.interpretation}</p> : null}
               {seriesRows.map((series) => <SeriesMetrics key={series.series_id} evaluation={series} />)}
             </article>
@@ -1010,7 +1056,7 @@ function MarketImplicationCard({ item }: { item: MarketImplication }) {
     ? item.next_check_conditions
     : ["다음 월의 가격과 관찰 경로가 같은 방향을 유지하는지 확인합니다."];
   return (
-    <article className="implication-card is-connected" tabIndex={0}>
+    <article className="implication-card is-connected" data-status={item.data_status} tabIndex={0}>
       <header>
         <div>
           <span>{item.label}</span>
@@ -1028,7 +1074,7 @@ function MarketImplicationCard({ item }: { item: MarketImplication }) {
       {item.assets?.length ? (
         <div className="commodity-asset-grid">
           {item.assets.map((asset) => (
-            <article className="commodity-asset-card" key={asset.asset_id}>
+            <article className="commodity-asset-card" data-status={asset.data_status} key={asset.asset_id}>
               <header><strong>{asset.label}</strong><span className={`coverage-status coverage-${asset.coverage.toLowerCase()}`}>{COVERAGE_LABEL[asset.coverage]}</span></header>
               <p>{asset.summary || asset.narrative}</p>
               <AssetObservationBody
@@ -1181,6 +1227,18 @@ function EconomicCycleFreshnessBar({
   if (!freshness && !result) return null;
 
   const action = freshness?.action;
+  const cycleScope = freshness?.cycle_snapshot;
+  const assetScope = freshness?.asset_pathways;
+  const scopeCopy = cycleScope || assetScope
+    ? [
+        cycleScope?.status === "READY"
+          ? "경제사이클 계산 최신"
+          : cycleScope?.message || "경제사이클 계산 갱신 필요",
+        assetScope?.status === "READY"
+          ? "자산 경로 최신"
+          : assetScope?.message || "자산 경로 갱신 필요",
+      ].filter(Boolean).join(" · ")
+    : null;
   const handleRefresh = () => {
     if (!action?.enabled || collecting) return;
     setCollecting(true);
@@ -1195,22 +1253,21 @@ function EconomicCycleFreshnessBar({
   return (
     <section
       className="cycle-freshness-bar"
-      data-status={freshness?.status || result?.status || "READY"}
+      data-status={freshness?.overall_status || freshness?.status || result?.status || "READY"}
       aria-live="polite"
     >
       <div className="cycle-freshness-copy">
         <span>DATA FRESHNESS</span>
         <strong>
-          {freshness?.status === "READY"
+          {scopeCopy || (freshness?.status === "READY"
             ? `최신 계산 기준 ${freshness.persisted_as_of_date || freshness.target_as_of_date || "-"}`
-            : freshness?.message || "경제사이클 최신 자료를 확인할 수 있습니다."}
+            : freshness?.message || "경제사이클 최신 자료를 확인할 수 있습니다.")}
         </strong>
         <div className="cycle-freshness-meta">
           <span>마지막 성공 수집 <b>{freshness?.last_successful_collection_at || "기록 없음"}</b></span>
           <span>계산 기준일 <b>{freshness?.persisted_as_of_date || "없음"}</b></span>
-          <span>사용 원천 최신일 <b>{freshness?.latest_source_observation_date || "확인 불가"}</b></span>
+          <span>사용 원천 최신일 <b>{assetScope?.latest_observation_date || freshness?.latest_source_observation_date || "확인 불가"}</b></span>
         </div>
-        {action?.enabled ? <small className="cycle-refresh-duration">최신 발표 여부 확인과 전체 재계산은 보통 1분 내외 걸립니다.</small> : null}
         {result ? (
           <small className={`cycle-refresh-result result-${result.status}`}>
             {result.message}
@@ -1225,8 +1282,8 @@ function EconomicCycleFreshnessBar({
           onClick={handleRefresh}
         >
           {collecting
-            ? "원천 확인과 재계산 중 · 보통 1분 내외"
-            : action.label || "최신 데이터로 다시 계산"}
+            ? "필요한 자료만 확인하는 중"
+            : "최신 데이터 반영"}
         </button>
       ) : null}
     </section>

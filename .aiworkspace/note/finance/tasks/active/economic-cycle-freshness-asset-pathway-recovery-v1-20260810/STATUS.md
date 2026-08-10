@@ -14,5 +14,7 @@ Last Updated: 2026-08-10
 - 갱신 후 DB 기준일 또는 stale/missing 감소를 확인한 범위만 cache 반영
 - 5차 완료: 지연 측정값/변화량 보존과 현재 신호 eligibility 분리
 - 지연 값은 `DELAYED`, 현재 집계는 `supports_current_signal=false`로 보수성 유지
-- 6차 준비: 기존 자산 카드 디자인을 유지한 UI 상태/문구 정리
+- 6차 완료: 기존 자산 카드 layout/order를 유지한 `갱신 지연` 표시와 scope-aware freshness 문구 반영
+- 1분 고정 안내 제거, 버튼은 필요한 범위만 갱신한다는 동작과 일치하도록 정리
+- 7차 진행: 실제 provider/DB 성능 검증, Browser QA, 문서 동기화
 - 설계 승인과 실제 지연/DB stale 진단 완료

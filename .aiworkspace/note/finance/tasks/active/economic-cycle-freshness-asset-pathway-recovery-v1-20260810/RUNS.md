@@ -14,3 +14,6 @@
 - 2026-08-10: 경제사이클 갱신 action/UI helper 39 tests passed; 기존 EDGAR deprecation warnings 3건.
 - 2026-08-10: 지연 측정값 RED 3건은 stale 조기 반환과 context 상태 부재로 예상대로 실패.
 - 2026-08-10: 자산 경로/가격/경제사이클 service 64 tests passed.
+- 2026-08-10: React RED 2건은 delayed label/scope copy 미지원으로 예상대로 실패.
+- 2026-08-10: React 12 tests, TypeScript no-emit, Vite production build 통과.
+- 2026-08-10: 경제사이클 market-context UI source contract 29 tests passed; 기존 EDGAR deprecation warnings 3건.

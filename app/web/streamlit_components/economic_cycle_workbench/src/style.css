@@ -323,12 +323,14 @@ button, input, summary { font: inherit; }
 .pathway-supports_rise > header span { color: #1d6d5d; background: #e7f4ef; }
 .pathway-supports_fall > header span { color: #a55749; background: #fbeeea; }
 .pathway-mixed > header span, .pathway-neutral > header span { color: #8b641f; background: #fff1d2; }
+.pathway-delayed > header span { color: #7b6a42; background: #f5f0e4; }
 .pathway-unavailable > header span { color: #687985; background: #edf1f3; }
 .pathway-empty { padding: 10px; border: 1px dashed #dfe7ec; border-radius: 10px; color: #7a8995; background: #fff; font-size: 9px; text-align: center; }
 .series-metrics { position: relative; outline: none; }
 .series-primary-metrics { display: grid; grid-template-columns: minmax(62px, .7fr) repeat(2, minmax(0, 1fr)); gap: 6px; }
 .series-primary-metrics > * { min-width: 0; padding: 7px; border-radius: 8px; color: #617585; background: #f4f7f8; font-size: 8px; line-height: 1.35; }
 .series-primary-metrics strong { color: #344f63; }
+.series-metrics[data-status="DELAYED"] .series-primary-metrics > * { color: #6f674f; background: #f7f3e9; }
 .pathway-hover-details { position: absolute; z-index: 3; right: 0; bottom: calc(100% + 5px); display: grid; min-width: 170px; gap: 4px; padding: 9px 10px; border-radius: 9px; color: #fff; background: #203847f2; box-shadow: 0 6px 18px rgba(27, 47, 61, .18); font-size: 8px; line-height: 1.4; opacity: 0; pointer-events: none; transform: translateY(3px); transition: opacity .14s ease, transform .14s ease; }
 .series-metrics:hover .pathway-hover-details,
 .series-metrics:focus .pathway-hover-details,
@@ -342,6 +344,9 @@ button, input, summary { font: inherit; }
 .price-falling { color: #a55749; background: #fbeeea; }
 .price-mixed { color: #8b641f; background: #fff1d2; }
 .price-neutral, .price-unavailable { color: #687985; background: #e9eef1; }
+.price-delayed { color: #7b6a42; background: #f5f0e4; }
+.implication-card[data-status="DELAYED"],
+.commodity-asset-card[data-status="DELAYED"] { border-color: #ddd5c0; }
 .price-return-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: hidden; border: 1px solid #e4eaee; border-radius: 9px; background: #e4eaee; gap: 1px; }
 .price-return-grid > div { display: grid; justify-items: center; gap: 3px; padding: 8px 5px; background: #fff; }
 .price-return-grid span { color: #7b8a96; font-size: 8px; font-weight: 800; }
