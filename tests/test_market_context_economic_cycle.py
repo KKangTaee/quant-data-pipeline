@@ -196,7 +196,11 @@ def test_cycle_event_runs_once_and_clears_cache_only_on_usable_success() -> None
     helpers = importlib.import_module("app.web.overview.market_context_helpers")
     state = {}
     run_action = Mock(
-        return_value={"status": "partial_success", "message": "refreshed"}
+        return_value={
+            "status": "partial_success",
+            "message": "refreshed",
+            "details": {"cache_scopes": ["asset_pathways"]},
+        }
     )
     store = Mock()
     clear = Mock()
@@ -255,6 +259,35 @@ def test_cycle_event_keeps_cache_on_incomplete_result() -> None:
     )
 
     clear.assert_not_called()
+
+
+def test_cycle_ui_refresh_uses_compact_progress_and_usable_cache_scopes() -> None:
+    helpers = importlib.import_module("app.web.overview.market_context_helpers")
+    writes: list[str] = []
+    status = Mock()
+    status.__enter__ = Mock(return_value=status)
+    status.__exit__ = Mock(return_value=None)
+
+    with (
+        patch.object(helpers.st, "status", return_value=status),
+        patch.object(status, "write", side_effect=writes.append),
+        patch.object(
+            helpers,
+            "run_overview_economic_cycle_refresh",
+            side_effect=lambda progress_callback: (
+                progress_callback("자산 경로 확인")
+                or {
+                    "status": "success",
+                    "message": "반영 완료",
+                    "details": {"cache_scopes": ["asset_pathways"]},
+                }
+            ),
+        ),
+    ):
+        result = helpers._run_economic_cycle_refresh_for_ui()
+
+    assert result["status"] == "success"
+    assert writes == ["자산 경로 확인"]
 
 
 def test_legacy_valuation_call_keeps_both_instruments_and_internal_selector() -> None:

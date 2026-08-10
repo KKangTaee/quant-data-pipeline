@@ -3,6 +3,10 @@ from __future__ import annotations
 from datetime import date
 
 
+def _ready_asset_freshness(**_kwargs):
+    return {"status": "READY", "refresh_required": False}
+
+
 def test_refresh_stops_before_rollover_when_one_series_fails() -> None:
     from app.jobs.economic_cycle_refresh import run_economic_cycle_intramonth_refresh
 
@@ -97,6 +101,7 @@ def test_overview_action_uses_previous_friday_and_requires_persisted_target() ->
         as_of_date=date(2026, 7, 25),
         refresh_runner=runner,
         snapshot_loader=lambda **_kwargs: next(rows),
+        asset_freshness_loader=_ready_asset_freshness,
     )
 
     assert calls == [date(2026, 7, 24)]
@@ -122,6 +127,7 @@ def test_overview_action_rejects_success_without_persisted_target() -> None:
             "as_of_date": "2026-07-21",
             "run_kind": "intramonth_nowcast",
         },
+        asset_freshness_loader=_ready_asset_freshness,
     )
 
     assert result["status"] == "incomplete"
@@ -149,6 +155,7 @@ def test_overview_action_preserves_failed_pipeline_result() -> None:
             "details": {},
         },
         snapshot_loader=lambda **_kwargs: next(rows),
+        asset_freshness_loader=_ready_asset_freshness,
     )
 
     assert result["status"] == "failed"
@@ -168,6 +175,7 @@ def test_overview_action_skips_pipeline_when_target_is_already_persisted() -> No
             "as_of_date": "2026-07-24",
             "run_kind": "intramonth_nowcast",
         },
+        asset_freshness_loader=_ready_asset_freshness,
     )
 
     assert result["status"] == "success"
@@ -188,9 +196,120 @@ def test_overview_action_reports_runner_exception_and_preserves_prior_date() -> 
             "as_of_date": "2026-07-21",
             "run_kind": "intramonth_nowcast",
         },
+        asset_freshness_loader=_ready_asset_freshness,
     )
 
     assert result["status"] == "failed"
     assert result["details"]["before_as_of_date"] == "2026-07-21"
     assert result["details"]["after_as_of_date"] == "2026-07-21"
     assert "기존 2026-07-21 결과를 유지" in result["message"]
+
+
+def test_overview_refresh_runs_only_stale_asset_scope() -> None:
+    from app.jobs.overview_actions import run_overview_economic_cycle_refresh
+
+    calls: list[str] = []
+    asset_rows = iter(
+        [
+            {"status": "REFRESH_AVAILABLE", "refresh_required": True},
+            {"status": "READY", "refresh_required": False},
+        ]
+    )
+
+    result = run_overview_economic_cycle_refresh(
+        as_of_date=date(2026, 8, 10),
+        refresh_runner=lambda **_kwargs: (_ for _ in ()).throw(
+            AssertionError("cycle refresh must not run")
+        ),
+        snapshot_loader=lambda **_kwargs: {"as_of_date": "2026-08-10"},
+        asset_freshness_loader=lambda **_kwargs: next(asset_rows),
+        asset_refresh_runner=lambda: calls.append("asset")
+        or {
+            "job_name": "refresh_economic_cycle_asset_pathways",
+            "status": "success",
+            "rows_written": 10,
+            "failed_symbols": [],
+        },
+    )
+
+    assert calls == ["asset"]
+    assert result["status"] == "success"
+    assert result["details"]["requested_scopes"] == ["asset_pathways"]
+    assert result["details"]["cache_scopes"] == ["asset_pathways"]
+
+
+def test_overview_refresh_runs_only_stale_cycle_scope() -> None:
+    from app.jobs.overview_actions import run_overview_economic_cycle_refresh
+
+    snapshots = iter(
+        [{"as_of_date": "2026-08-07"}, {"as_of_date": "2026-08-10"}]
+    )
+    cycle_calls: list[date] = []
+
+    result = run_overview_economic_cycle_refresh(
+        as_of_date=date(2026, 8, 10),
+        refresh_runner=lambda *, as_of_date: cycle_calls.append(as_of_date)
+        or {
+            "job_name": "refresh_economic_cycle_intramonth",
+            "status": "success",
+            "rows_written": 1,
+            "failed_symbols": [],
+        },
+        snapshot_loader=lambda **_kwargs: next(snapshots),
+        asset_freshness_loader=lambda **_kwargs: {
+            "status": "READY",
+            "refresh_required": False,
+        },
+        asset_refresh_runner=lambda: (_ for _ in ()).throw(
+            AssertionError("asset refresh must not run")
+        ),
+    )
+
+    assert cycle_calls == [date(2026, 8, 10)]
+    assert result["details"]["requested_scopes"] == ["cycle_snapshot"]
+    assert result["details"]["cache_scopes"] == ["cycle_snapshot"]
+
+
+def test_overview_refresh_keeps_successful_asset_scope_when_cycle_fails() -> None:
+    from app.jobs.overview_actions import run_overview_economic_cycle_refresh
+
+    snapshots = iter(
+        [{"as_of_date": "2026-08-07"}, {"as_of_date": "2026-08-07"}]
+    )
+    assets = iter(
+        [
+            {
+                "status": "REFRESH_AVAILABLE",
+                "refresh_required": True,
+                "stale_series": ["DGS2"],
+            },
+            {
+                "status": "READY",
+                "refresh_required": False,
+                "stale_series": [],
+            },
+        ]
+    )
+
+    result = run_overview_economic_cycle_refresh(
+        as_of_date=date(2026, 8, 10),
+        refresh_runner=lambda **_kwargs: {
+            "job_name": "refresh_economic_cycle_intramonth",
+            "status": "failed",
+            "rows_written": 0,
+            "failed_symbols": ["PAYEMS"],
+        },
+        snapshot_loader=lambda **_kwargs: next(snapshots),
+        asset_freshness_loader=lambda **_kwargs: next(assets),
+        asset_refresh_runner=lambda: {
+            "job_name": "refresh_economic_cycle_asset_pathways",
+            "status": "success",
+            "rows_written": 10,
+            "failed_symbols": [],
+        },
+    )
+
+    assert result["status"] == "partial_success"
+    assert result["details"]["cache_scopes"] == ["asset_pathways"]
+    assert result["details"]["failed_scopes"] == ["cycle_snapshot"]
+    assert result["details"]["after_as_of_date"] == "2026-08-07"

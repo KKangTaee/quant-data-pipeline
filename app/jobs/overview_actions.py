@@ -35,10 +35,16 @@ from app.services.overview.market_context_valuation import (
 from app.services.overview.economic_cycle_freshness import (
     latest_economic_cycle_refresh_date,
 )
+from app.services.overview.economic_cycle_asset_freshness import (
+    load_asset_pathway_freshness,
+)
 from app.services.nyse_calendar import latest_completed_nyse_session
 from app.services.futures_macro_pattern_validation import NESTED_OUTER_MINIMUM_TRAIN
 
 from app.jobs.economic_cycle_refresh import run_economic_cycle_intramonth_refresh
+from app.jobs.economic_cycle_asset_refresh import (
+    run_economic_cycle_asset_pathway_refresh,
+)
 from app.jobs.ingestion_jobs import (
     JobResult,
     attach_futures_macro_materialization,
@@ -112,20 +118,43 @@ def _economic_cycle_manual_refresh_result(
     target: date,
     before_date: date | None,
     after_date: date | None,
-    pipeline: dict[str, Any] | None,
+    pipelines: dict[str, dict[str, Any]] | None,
+    requested_scopes: Sequence[str] = (),
+    refreshed_scopes: Sequence[str] = (),
+    failed_scopes: Sequence[str] = (),
 ) -> JobResult:
     finished_at = datetime.now()
-    pipeline_result = dict(pipeline or {})
+    pipeline_results = dict(pipelines or {})
+    ordered_results = [
+        pipeline_results[scope]
+        for scope in requested_scopes
+        if scope in pipeline_results
+    ]
+    primary_result = next(
+        (pipeline_results[scope] for scope in requested_scopes if scope in pipeline_results),
+        {},
+    )
+    failed_symbols = sorted(
+        {
+            str(symbol)
+            for result in ordered_results
+            for symbol in result.get("failed_symbols") or []
+        }
+    )
     return {
         "job_name": "overview_economic_cycle_manual_refresh",
         "status": status,
         "started_at": started_at.strftime("%Y-%m-%d %H:%M:%S"),
         "finished_at": finished_at.strftime("%Y-%m-%d %H:%M:%S"),
         "duration_sec": round((finished_at - started_at).total_seconds(), 3),
-        "rows_written": int(pipeline_result.get("rows_written") or 0),
-        "symbols_requested": int(pipeline_result.get("symbols_requested") or 0),
-        "symbols_processed": int(pipeline_result.get("symbols_processed") or 0),
-        "failed_symbols": list(pipeline_result.get("failed_symbols") or []),
+        "rows_written": sum(int(result.get("rows_written") or 0) for result in ordered_results),
+        "symbols_requested": sum(
+            int(result.get("symbols_requested") or 0) for result in ordered_results
+        ),
+        "symbols_processed": sum(
+            int(result.get("symbols_processed") or 0) for result in ordered_results
+        ),
+        "failed_symbols": failed_symbols,
         "message": message,
         "details": {
             "target_as_of_date": target.isoformat(),
@@ -135,10 +164,24 @@ def _economic_cycle_manual_refresh_result(
             "after_as_of_date": (
                 after_date.isoformat() if after_date is not None else None
             ),
-            "pipeline_status": pipeline_result.get("status") or "not_run",
-            "pipeline_job_name": pipeline_result.get("job_name"),
+            "pipeline_status": primary_result.get("status") or "not_run",
+            "pipeline_job_name": primary_result.get("job_name"),
+            "requested_scopes": list(requested_scopes),
+            "refreshed_scopes": list(refreshed_scopes),
+            "failed_scopes": list(failed_scopes),
+            "cache_scopes": list(refreshed_scopes),
         },
     }
+
+
+def _asset_freshness_issue_count(row: dict[str, Any]) -> int | None:
+    if str(row.get("status") or "").upper() == "READY":
+        return 0
+    if "stale_series" not in row and "missing_series" not in row:
+        return None
+    return len(set(row.get("stale_series") or ())) + len(
+        set(row.get("missing_series") or ())
+    )
 
 
 def run_overview_economic_cycle_refresh(
@@ -146,8 +189,15 @@ def run_overview_economic_cycle_refresh(
     as_of_date: str | date | datetime | None = None,
     refresh_runner: Callable[..., JobResult] = run_economic_cycle_intramonth_refresh,
     snapshot_loader: Callable[..., dict[str, object] | None] = load_cycle_snapshot,
+    asset_freshness_loader: Callable[..., dict[str, object]] = (
+        load_asset_pathway_freshness
+    ),
+    asset_refresh_runner: Callable[[], JobResult] = (
+        run_economic_cycle_asset_pathway_refresh
+    ),
+    progress_callback: Callable[[str], None] | None = None,
 ) -> JobResult:
-    """Run the explicit combined refresh and verify its persisted target snapshot."""
+    """Refresh only stale scopes and accept results only after DB postconditions."""
     started_at = datetime.now()
     target = latest_economic_cycle_refresh_date(as_of_date)
     before_date: date | None = None
@@ -158,74 +208,110 @@ def run_overview_economic_cycle_refresh(
         )
         before_date = _economic_cycle_snapshot_date(before)
     except Exception:
-        return _economic_cycle_manual_refresh_result(
-            started_at=started_at,
-            status="failed",
-            message="저장된 경제사이클 계산일을 확인하지 못했습니다.",
-            target=target,
-            before_date=None,
-            after_date=None,
-            pipeline=None,
-        )
+        before_date = None
+    try:
+        before_asset = dict(asset_freshness_loader(reference_date=target))
+    except Exception:
+        before_asset = {"status": "ERROR", "refresh_required": True}
 
-    if before_date is not None and before_date >= target:
+    requested_scopes: list[str] = []
+    if before_date is None or before_date < target:
+        requested_scopes.append("cycle_snapshot")
+    if bool(before_asset.get("refresh_required")):
+        requested_scopes.append("asset_pathways")
+
+    if not requested_scopes:
         return _economic_cycle_manual_refresh_result(
             started_at=started_at,
             status="success",
-            message=f"경제사이클 계산이 이미 {target.isoformat()} 기준으로 최신입니다.",
+            message="경기 국면과 자산별 확인 포인트가 이미 최신 상태입니다.",
             target=target,
             before_date=before_date,
             after_date=before_date,
-            pipeline=None,
+            pipelines=None,
         )
 
-    pipeline: dict[str, Any] = {}
+    pipelines: dict[str, dict[str, Any]] = {}
+    if "cycle_snapshot" in requested_scopes:
+        if progress_callback is not None:
+            progress_callback("경기 지표 확인")
+        try:
+            pipelines["cycle_snapshot"] = dict(
+                refresh_runner(as_of_date=target)
+            )
+        except Exception as exc:
+            pipelines["cycle_snapshot"] = {
+                "job_name": "refresh_economic_cycle_intramonth",
+                "status": "failed",
+                "rows_written": 0,
+                "failed_symbols": [],
+                "message": f"{type(exc).__name__}: {exc}",
+            }
+    if "asset_pathways" in requested_scopes:
+        if progress_callback is not None:
+            progress_callback("자산 경로 확인")
+        try:
+            pipelines["asset_pathways"] = dict(asset_refresh_runner())
+        except Exception as exc:
+            pipelines["asset_pathways"] = {
+                "job_name": "refresh_economic_cycle_asset_pathways",
+                "status": "failed",
+                "rows_written": 0,
+                "failed_symbols": [],
+                "message": f"{type(exc).__name__}: {exc}",
+            }
+    if progress_callback is not None:
+        progress_callback("화면 다시 계산")
+
+    after_date = before_date
+    after_asset = before_asset
     try:
-        pipeline = dict(refresh_runner(as_of_date=target))
         after = snapshot_loader(
             as_of_date=target,
             run_kind="intramonth_nowcast",
         )
         after_date = _economic_cycle_snapshot_date(after)
     except Exception:
-        preserved = before_date.isoformat() if before_date is not None else "-"
-        return _economic_cycle_manual_refresh_result(
-            started_at=started_at,
-            status="failed",
-            message=(
-                "경제사이클을 최신화하지 못했습니다. "
-                f"기존 {preserved} 결과를 유지합니다."
-            ),
-            target=target,
-            before_date=before_date,
-            after_date=before_date,
-            pipeline=pipeline,
-        )
+        after_date = before_date
+    try:
+        after_asset = dict(asset_freshness_loader(reference_date=target))
+    except Exception:
+        after_asset = before_asset
 
-    pipeline_status = str(pipeline.get("status") or "failed").lower()
-    if pipeline_status in {"success", "partial_success"} and (
+    refreshed_scopes: list[str] = []
+    if "cycle_snapshot" in requested_scopes and (
         after_date is not None and after_date >= target
     ):
-        if pipeline_status == "success":
-            message = (
-                f"최신 경제사이클 계산 기준 {target.isoformat()}를 반영했습니다."
-            )
-        else:
-            message = f"{target.isoformat()} 기준 잠정 계산을 반영했습니다."
-        status = pipeline_status
-    elif pipeline_status in {"success", "partial_success"}:
-        preserved = (
-            after_date.isoformat()
-            if after_date is not None
-            else before_date.isoformat()
-            if before_date is not None
-            else "-"
+        refreshed_scopes.append("cycle_snapshot")
+    if "asset_pathways" in requested_scopes:
+        before_issues = _asset_freshness_issue_count(before_asset)
+        after_issues = _asset_freshness_issue_count(after_asset)
+        asset_ready = str(after_asset.get("status") or "").upper() == "READY"
+        asset_improved = (
+            before_issues is not None
+            and after_issues is not None
+            and after_issues < before_issues
         )
-        status = "incomplete"
-        message = (
-            "최신 계산일을 확인하지 못했습니다. "
-            f"기존 {preserved} 결과를 유지합니다."
+        if asset_ready or asset_improved:
+            refreshed_scopes.append("asset_pathways")
+    failed_scopes = [
+        scope for scope in requested_scopes if scope not in refreshed_scopes
+    ]
+
+    pipeline_statuses = {
+        str(pipelines.get(scope, {}).get("status") or "failed").lower()
+        for scope in requested_scopes
+    }
+    if not failed_scopes:
+        status = (
+            "partial_success"
+            if "partial_success" in pipeline_statuses
+            else "success"
         )
+        message = "필요한 경기·자산 자료를 최신 기준으로 반영했습니다."
+    elif refreshed_scopes:
+        status = "partial_success"
+        message = "반영 가능한 자료를 먼저 적용했고, 나머지는 기존 결과를 유지합니다."
     else:
         preserved = (
             after_date.isoformat()
@@ -234,7 +320,11 @@ def run_overview_economic_cycle_refresh(
             if before_date is not None
             else "-"
         )
-        status = "failed"
+        status = (
+            "incomplete"
+            if pipeline_statuses & {"success", "partial_success"}
+            else "failed"
+        )
         message = (
             "경제사이클을 최신화하지 못했습니다. "
             f"기존 {preserved} 결과를 유지합니다."
@@ -246,7 +336,10 @@ def run_overview_economic_cycle_refresh(
         target=target,
         before_date=before_date,
         after_date=after_date,
-        pipeline=pipeline,
+        pipelines=pipelines,
+        requested_scopes=requested_scopes,
+        refreshed_scopes=refreshed_scopes,
+        failed_scopes=failed_scopes,
     )
 
 

@@ -195,7 +195,9 @@ def _run_economic_cycle_refresh_for_ui() -> dict[str, Any]:
         "최신 자료를 수집하고 경제사이클을 다시 계산하는 중입니다.",
         expanded=True,
     ) as status:
-        result = run_overview_economic_cycle_refresh()
+        result = run_overview_economic_cycle_refresh(
+            progress_callback=status.write,
+        )
         result_status = str(result.get("status") or "failed").lower()
         state = (
             "complete"
@@ -230,10 +232,11 @@ def _handle_economic_cycle_event(
         store_result(result)
     else:
         _store_overview_job_result(ECONOMIC_CYCLE_RESULT_KEY, result)
-    if str(result.get("status") or "").lower() in {
-        "success",
-        "partial_success",
-    }:
+    details = dict(result.get("details") or {})
+    if (
+        str(result.get("status") or "").lower() != "failed"
+        and bool(details.get("cache_scopes"))
+    ):
         (clear_cache or load_economic_cycle_model.clear)()
     (rerun or st.rerun)()
     return True
