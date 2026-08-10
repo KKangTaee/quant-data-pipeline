@@ -386,6 +386,71 @@ def test_transition_monitor_labels_first_seen_legacy_anchor_without_claiming_con
     assert monitor["anchor_confirmed_at"] is None
 
 
+def test_non_adjacent_transition_builds_current_observation_guidance() -> None:
+    service = _load_service()
+    current = _observed_snapshot()
+    current_transition = json.loads(str(current["transition_monitor_json"]))
+    current_transition.update(
+        {
+            "anchor_phase": "recovery",
+            "target_phase": "expansion",
+            "conditions_met": 0,
+            "non_adjacent_observation": True,
+        }
+    )
+    current["transition_monitor_json"] = json.dumps(current_transition)
+    previous = _observed_history(11)[-1]
+    previous["observed_state_json"] = json.dumps(
+        {
+            "as_of_date": "2026-05-31",
+            "phase": "contraction",
+            "momentum": -0.20,
+            "data_status": "READY",
+        }
+    )
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: current,
+        history_loader=lambda **_kwargs: [previous],
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=lambda **_kwargs: {},
+    )
+
+    guidance = model["transition_monitor"]["current_transition"]
+    assert guidance["from_phase"] == "contraction"
+    assert guidance["from_phase_label"] == "위축"
+    assert guidance["target_phase"] == "recovery"
+    assert guidance["target_phase_label"] == "회복"
+    assert guidance["status"] == "WATCH"
+    assert guidance["status_label"] == "회복 전환 미확인"
+    assert guidance["conditions_met"] == 0
+    assert guidance["conditions_total"] == 3
+    assert guidance["conditions"] == [
+        {
+            "condition_id": "persistence",
+            "label": "지속성",
+            "status": "UNMET",
+            "value_label": "현재 -0.24 / 이전 -0.20",
+            "threshold_label": "2회 연속 0 이상",
+        },
+        {
+            "condition_id": "diffusion",
+            "label": "확산도",
+            "status": "UNMET",
+            "value_label": "4/8개 · 50%",
+            "threshold_label": "5/8개 이상 · 60% 이상",
+        },
+        {
+            "condition_id": "corroboration",
+            "label": "활동·고용 동반 확인",
+            "status": "UNMET",
+            "value_label": "활동 -0.31 / 고용·소득 -0.17",
+            "threshold_label": "두 항목 모두 0 이상",
+        },
+    ]
+
+
 @pytest.mark.parametrize("reverse_rows", [False, True])
 def test_cycle_map_selects_latest_replay_deterministically_for_duplicate_date(
     reverse_rows: bool,

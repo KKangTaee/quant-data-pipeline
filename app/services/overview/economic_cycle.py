@@ -297,9 +297,192 @@ def _recent_changes(snapshot: Mapping[str, object]) -> list[dict[str, object]]:
     return sorted(rows, key=lambda item: int(item["horizon_months"]))
 
 
+def _next_observed_phase(phase: object) -> str | None:
+    normalized = str(phase or "")
+    if normalized not in OBSERVED_PHASES:
+        return None
+    index = OBSERVED_PHASES.index(normalized)
+    return OBSERVED_PHASES[(index + 1) % len(OBSERVED_PHASES)]
+
+
+def _previous_observed_state(
+    history_rows: Sequence[Mapping[str, object]],
+    *,
+    current_date: object,
+) -> dict[str, object] | None:
+    cutoff = str(current_date or "")[:10]
+    candidates: list[tuple[str, Mapping[str, object]]] = []
+    for row in history_rows:
+        row_date = str(row.get("as_of_date") or "")[:10]
+        if row_date and (not cutoff or row_date < cutoff):
+            candidates.append((row_date, row))
+    if not candidates:
+        return None
+    return _observed_state(max(candidates, key=lambda item: item[0])[1])
+
+
+def _score_label(value: object) -> str:
+    parsed = _finite_number(value)
+    return "-" if parsed is None else f"{parsed:+.2f}"
+
+
+def _current_transition_conditions(
+    *,
+    observed_state: Mapping[str, object],
+    previous_state: Mapping[str, object] | None,
+    target_phase: str,
+) -> list[dict[str, object]]:
+    uses_momentum = target_phase in {"recovery", "slowdown"}
+    positive = target_phase in {"recovery", "expansion"}
+    axis = "momentum" if uses_momentum else "level"
+    activity_axis = "activity_momentum" if uses_momentum else "activity_level"
+    labor_axis = "labor_income_momentum" if uses_momentum else "labor_income_level"
+    breadth_axis = "momentum_breadth" if uses_momentum else "level_breadth"
+    breadth_available_axis = (
+        "momentum_breadth_available" if uses_momentum else "level_breadth_available"
+    )
+
+    current_axis = _finite_number(observed_state.get(axis))
+    previous_axis = (
+        _finite_number(previous_state.get(axis)) if previous_state is not None else None
+    )
+    persistence_available = current_axis is not None and previous_axis is not None
+    persistence_met = bool(
+        persistence_available
+        and ((current_axis >= 0 and previous_axis >= 0) if positive else (current_axis < 0 and previous_axis < 0))
+    )
+    persistence_status = (
+        "UNAVAILABLE" if not persistence_available else "MET" if persistence_met else "UNMET"
+    )
+
+    breadth = _finite_number(observed_state.get(breadth_axis))
+    available_pairs_value = observed_state.get(breadth_available_axis)
+    if available_pairs_value is None:
+        available_pairs_value = observed_state.get("available_series")
+    try:
+        available_pairs = int(available_pairs_value or 0)
+    except (TypeError, ValueError):
+        available_pairs = 0
+    diffusion_available = breadth is not None and available_pairs >= 6
+    diffusion_met = bool(
+        diffusion_available
+        and (breadth >= 0.60 if positive else breadth <= 0.40)
+    )
+    diffusion_status = (
+        "UNAVAILABLE" if not diffusion_available else "MET" if diffusion_met else "UNMET"
+    )
+    supportive_ratio = None if breadth is None else breadth if positive else 1.0 - breadth
+    supportive_count = (
+        None
+        if supportive_ratio is None or available_pairs <= 0
+        else int(round(supportive_ratio * available_pairs))
+    )
+    required_count = math.ceil(available_pairs * 0.60) if available_pairs > 0 else None
+
+    activity = _finite_number(observed_state.get(activity_axis))
+    labor = _finite_number(observed_state.get(labor_axis))
+    corroboration_available = activity is not None and labor is not None
+    corroboration_met = bool(
+        corroboration_available
+        and ((activity >= 0 and labor >= 0) if positive else (activity < 0 and labor < 0))
+    )
+    corroboration_status = (
+        "UNAVAILABLE"
+        if not corroboration_available
+        else "MET"
+        if corroboration_met
+        else "UNMET"
+    )
+
+    return [
+        {
+            "condition_id": "persistence",
+            "label": CONDITION_LABELS["persistence"],
+            "status": persistence_status,
+            "value_label": f"현재 {_score_label(current_axis)} / 이전 {_score_label(previous_axis)}",
+            "threshold_label": "2회 연속 0 이상" if positive else "2회 연속 0 미만",
+        },
+        {
+            "condition_id": "diffusion",
+            "label": CONDITION_LABELS["diffusion"],
+            "status": diffusion_status,
+            "value_label": (
+                "자료 부족"
+                if supportive_count is None or supportive_ratio is None
+                else f"{supportive_count}/{available_pairs}개 · {supportive_ratio:.0%}"
+            ),
+            "threshold_label": (
+                "비교 가능한 지표 6개 이상"
+                if required_count is None
+                else f"{required_count}/{available_pairs}개 이상 · 60% 이상"
+            ),
+        },
+        {
+            "condition_id": "corroboration",
+            "label": CONDITION_LABELS["corroboration"],
+            "status": corroboration_status,
+            "value_label": f"활동 {_score_label(activity)} / 고용·소득 {_score_label(labor)}",
+            "threshold_label": "두 항목 모두 0 이상" if positive else "두 항목 모두 0 미만",
+        },
+    ]
+
+
+def _current_transition_guidance(
+    monitor: Mapping[str, object],
+    *,
+    observed_state: Mapping[str, object],
+    history_rows: Sequence[Mapping[str, object]],
+) -> dict[str, object] | None:
+    observed_phase = str(observed_state.get("phase") or "")
+    anchor_phase = str(monitor.get("anchor_phase") or "")
+    non_adjacent = bool(monitor.get("non_adjacent_observation"))
+    from_phase = observed_phase if non_adjacent else anchor_phase or observed_phase
+    target_phase = (
+        _next_observed_phase(from_phase)
+        if non_adjacent
+        else str(monitor.get("target_phase") or "") or _next_observed_phase(from_phase)
+    )
+    if from_phase not in OBSERVED_PHASES or target_phase not in OBSERVED_PHASES:
+        return None
+    previous_state = _previous_observed_state(
+        history_rows,
+        current_date=observed_state.get("as_of_date"),
+    )
+    conditions = _current_transition_conditions(
+        observed_state=observed_state,
+        previous_state=previous_state,
+        target_phase=target_phase,
+    )
+    conditions_met = sum(item["status"] == "MET" for item in conditions)
+    conditions_available = sum(item["status"] != "UNAVAILABLE" for item in conditions)
+    if conditions_met == len(conditions):
+        status = "CONFIRMED"
+        status_label = f"{PHASE_LABELS[target_phase]} 전환 조건 충족"
+    else:
+        status = "WATCH"
+        status_label = (
+            f"{PHASE_LABELS[target_phase]} 전환 미확인"
+            if conditions_available
+            else f"{PHASE_LABELS[target_phase]} 전환 판단 제한"
+        )
+    return {
+        "from_phase": from_phase,
+        "from_phase_label": PHASE_LABELS[from_phase],
+        "target_phase": target_phase,
+        "target_phase_label": PHASE_LABELS[target_phase],
+        "status": status,
+        "status_label": status_label,
+        "conditions_met": conditions_met,
+        "conditions_total": len(conditions),
+        "conditions": conditions,
+    }
+
+
 def _transition_monitor(
     snapshot: Mapping[str, object],
     history_rows: Sequence[Mapping[str, object]] = (),
+    *,
+    observed_state: Mapping[str, object] | None = None,
 ) -> dict[str, object] | None:
     raw = _json_value(snapshot.get("transition_monitor_json"), {})
     if not isinstance(raw, Mapping) or not raw:
@@ -381,6 +564,12 @@ def _transition_monitor(
             record["relation_label"] = CONTEXT_LABELS.get(relation, "혼조")
             context.append(record)
     output["context"] = context
+    normalized_observed_state = observed_state or _observed_state(snapshot)
+    output["current_transition"] = _current_transition_guidance(
+        output,
+        observed_state=normalized_observed_state,
+        history_rows=history_rows,
+    )
     return output
 
 
@@ -586,7 +775,11 @@ def build_economic_cycle_read_model(
 
     observed_state = _observed_state(resolved_snapshot)
     recent_changes = _recent_changes(resolved_snapshot)
-    transition_monitor = _transition_monitor(resolved_snapshot, history_rows)
+    transition_monitor = _transition_monitor(
+        resolved_snapshot,
+        history_rows,
+        observed_state=observed_state,
+    )
     cycle_map = _cycle_map(history_rows, resolved_snapshot)
     evidence = _evidence(resolved_snapshot)
     load_intramonth = (
