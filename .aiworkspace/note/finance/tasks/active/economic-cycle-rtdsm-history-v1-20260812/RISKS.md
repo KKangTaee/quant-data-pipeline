@@ -7,4 +7,7 @@
 - full initial history contains many rows, so parser and writer must stream in bounded batches.
 - sample gate passage is not model publication approval; chronological baseline and calibration
   gates still remain.
-
+- actual parity failed. Lowering the threshold, inflating monthly rows as independent samples,
+  or selecting an indicator combination after seeing the score would create label/model bias.
+- the stored RTDSM ledger remains useful research data, but it must not be presented as a
+  production forecast or current-cycle replacement while `NO_GO_PARITY` remains.

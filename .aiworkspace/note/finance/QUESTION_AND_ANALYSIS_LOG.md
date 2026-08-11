@@ -10799,3 +10799,10 @@ Detailed historical analysis was archived on `2026-04-13`.
   holdout expansion/slowdown 0건으로 `NO_GO_DATA`; production forecast는 중단했다.
 - Follow-up: RTDSM/ADS 공식 realtime history expansion을 승인하면 data gate와 recent
   parity를 재검증하고, 통과한 경우에만 3~5차 모델·OOS·UI를 이어간다.
+
+### 2026-08-12 - 장기 표본이 충분해도 current-state 의미가 다르면 모델을 만들지 않는다
+
+- User request: 데이터 부족을 핑계로 끝내지 말고 과거 데이터 기반 향후 국면 전환 기능을 실제 개발하도록 요청함.
+- Interpreted goal: 공식 장기 realtime history로 독립 전환 표본을 확보하되 현행 현재 국면과 같은 의미인지 검증한 뒤에만 확률 모델로 진행한다.
+- Analysis result: RTDSM 1,334,818행으로 589 usable origins·117 transitions를 확보했지만 현행 8지표와 phase agreement 54.2%·kappa 0.368이라 `NO_GO_PARITY`로 확정했다.
+- Follow-up: 임계값을 완화하지 않는다. 외부 기준을 가진 하나의 장기 state target 재설계를 별도 승인하거나 forecast 개발을 중단한다.

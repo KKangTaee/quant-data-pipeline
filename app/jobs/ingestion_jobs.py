@@ -23,6 +23,7 @@ from finance.data.factors import upsert_factors, upsert_statement_factors_shadow
 from finance.data.financial_statements import upsert_financial_statements
 from finance.data.fundamentals import upsert_fundamentals, upsert_statement_fundamentals_shadow
 from finance.data.economic_cycle_vintages import collect_economic_cycle_vintages
+from finance.data.philadelphia_rtdsm import collect_rtdsm_history
 from finance.data.asset_profile import collect_and_store_asset_profiles
 from finance.data.computed_lifecycle import collect_and_store_computed_snapshot_lifecycle
 from finance.data.etf_provider import (
@@ -250,6 +251,80 @@ def run_collect_economic_cycle_vintages(
                 "source": "fred",
                 "source_mode": "fred_output_type_1_realtime_intervals",
                 "target_table": "finance_meta.macro_series_vintage_observation",
+            },
+        )
+
+
+def run_collect_economic_cycle_rtdsm_history(
+    *,
+    collector: Callable[..., dict[str, object]] = collect_rtdsm_history,
+) -> JobResult:
+    """Collect official long RTDSM vintages without materializing a forecast."""
+
+    job_name = "collect_economic_cycle_rtdsm_history"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        summary = collector()
+        rows_written = int(summary.get("stored") or 0)
+        failed = _failed_item_ids(
+            summary.get("failed") or [], id_keys=("series_id",)
+        )
+        missing = [str(item).upper() for item in summary.get("missing") or []]
+        failed_ids = list(dict.fromkeys([*failed, *missing]))
+        requested = int(summary.get("requested") or 0)
+        status = _status_from_provider_summary(
+            rows_written=rows_written,
+            failed_items=failed,
+            missing_items=missing,
+        )
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=requested,
+            symbols_processed=max(requested - len(failed_ids), 0),
+            failed_symbols=failed_ids,
+            message=(
+                "Economic-cycle RTDSM history collection completed."
+                if status == "success"
+                else "Economic-cycle RTDSM history collection completed with gaps."
+                if status == "partial_success"
+                else "Economic-cycle RTDSM history collection failed."
+            ),
+            details={
+                "source": summary.get("source")
+                or "philadelphia_fed_rtdsm",
+                "source_mode": summary.get("source_mode")
+                or "rtdsm_full_history",
+                "coverage": summary.get("coverage") or {},
+                "series_rows": summary.get("series_rows") or {},
+                "missing": missing,
+                "target_table": (
+                    "finance_meta.macro_series_vintage_observation"
+                ),
+                "materialization_allowed": False,
+            },
+        )
+    except Exception as exc:
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"Economic-cycle RTDSM history collection failed: {exc}",
+            details={
+                "source": "philadelphia_fed_rtdsm",
+                "source_mode": "rtdsm_full_history",
+                "target_table": (
+                    "finance_meta.macro_series_vintage_observation"
+                ),
+                "materialization_allowed": False,
             },
         )
 

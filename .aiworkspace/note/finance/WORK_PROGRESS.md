@@ -7397,3 +7397,11 @@ Detailed historical logs were archived on `2026-04-13`.
   `NO_GO_DATA`다. Model·확률 UI는 만들지 않았고 자산별 확인 포인트도 유지했다.
 - 다음 위치는 `economic-cycle-next-transition-feasibility-v1-20260812`이며, 3~5차 재개는
   Philadelphia Fed RTDSM/ADS realtime history expansion 승인과 gate 통과가 필요하다.
+
+## 2026-08-12 - 경제 사이클 RTDSM 장기 이력 3차 완료 / 모델 No-Go
+
+- Philadelphia Fed `IPT/H/EMPLOY/RUC` 1,334,818 unique vintage row와 strict PIT audit를 구현했다.
+- sample은 589 usable origins·117 transitions로 통과했지만 현행 8지표와 공통 142개월
+  agreement 54.2%·kappa 0.368로 사전 parity 기준을 실패했다.
+- destination/imminence model과 UI는 만들지 않았다. 다음 위치는
+  `tasks/active/economic-cycle-rtdsm-history-v1-20260812/`의 external-target 결정이다.

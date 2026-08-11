@@ -1,7 +1,7 @@
 # Finance Data Map
 
 Status: Active
-Last Verified: 2026-08-04
+Last Verified: 2026-08-12
 
 ## Purpose
 
@@ -67,7 +67,7 @@ Last Verified: 2026-08-04
 | `etf_exposure_snapshot` | holdings 또는 provider aggregate 기반 exposure summary |
 | `macro_series_observation` | FRED VIX / yield curve / credit spread와 Economic Cycle asset-path series (`DGS2`, `DGS10`, `DFII10`, `T10YIE`, `VIXCLS`, `BAA10Y`), EIA weekly petroleum (`WCESTUS1`, `WCRFPUS2`, `WRPUPUS2`), Overview CNN Fear & Greed / AAII sentiment context. AAII complete XLS capture는 incoming 최소~최대 날짜를 official workbook date set으로 canonical reconcile한 뒤 UPSERT해 과거 HTML 날짜와 같은 주차가 이중 관측으로 남지 않게 한다. 경제사이클 자산 경로는 기준일 이전 DB row만 loader로 읽으며 UI가 직접 수집하지 않는다 |
 | `market_sentiment_collection_batch` / `market_sentiment_observation_snapshot` | CNN / AAII source별 수집 batch와 immutable normalized view. UTC `known_at`은 앱 관측 시각이며 legacy canonical history는 소급 backfill하지 않는다 |
-| `macro_series_vintage_observation` | 미국 경제 사이클 17개 지표의 FRED/ALFRED real-time revision ledger. 발표 당시 값을 보존하며 revised CSV로 대체하지 않는다 |
+| `macro_series_vintage_observation` | 미국 경제 사이클 17개 지표의 FRED/ALFRED revision과 연구 전용 Philadelphia Fed RTDSM `IPT/H/EMPLOY/RUC` provider-native vintage를 함께 보존하는 real-time raw ledger. `source`로 두 경로를 분리하며 발표 당시 값을 revised CSV로 대체하지 않는다 |
 | `economic_cycle_model_artifact` | 학습 cutoff, horizon별 calibration/validation/publication 판정을 포함한 경제 사이클 model artifact |
 | `economic_cycle_snapshot` | 현재 및 historical replay의 관측 국면·최근 변화·전환 조건 compact snapshot. 확률/forecast column은 legacy·shadow 호환용이고 Overview v3는 observed JSON을 source-of-truth로 읽는다 |
 | `nyse_financial_statement_filings` | EDGAR filing-level metadata ledger |
@@ -106,7 +106,7 @@ runtime-defined JSONL 파일은 첫 workflow write 전에는 로컬에 없을 �
 - Inflation / Policy snapshot의 기본 current read는 가장 최근에 갱신된
   `run_kind=current` materialization을 사용하고, 명시적 `as_of_at` read는 cutoff 이하
   최신 origin을 사용해 현재 화면과 과거 PIT 조회의 의미를 분리한다.
-- 경제 사이클 historical origin은 `realtime_start <= origin <= realtime_end`인 vintage만 읽는다. 현재 revised observation을 과거 origin에 소급하지 않는다.
+- 경제 사이클 historical origin은 `realtime_start <= origin <= realtime_end`인 vintage만 읽는다. 현재 revised observation을 과거 origin에 소급하지 않는다. RTDSM 월별 vintage는 해당 월말, 분기 vintage는 분기 중간 월말을 보수적 known-at으로 사용하며 현행 8지표 제품 국면을 자동 대체하지 않는다.
 - provider field는 안정적이거나 완전하다고 가정하지 않는다.
 - Market Movers Top1000 / Top2000은 `nyse_asset_profile.market_cap` 순위가 아니라 `nyse_price_history`의 최근 20거래일 평균 거래대금 기준이다. 따라서 "가장 큰 기업" 순위가 아니라 "최근 거래대금이 큰 종목" 순위이며, current listing source와 최신 EOD 가격 row가 모두 필요하다.
 - Market Movers ticker-change repair는 `market_symbol_alias`에 candidate / active alias를 저장한다. Active alias는 quote lookup symbol만 바꾸며, universe membership symbol 자체를 자동 변경하지 않는다.

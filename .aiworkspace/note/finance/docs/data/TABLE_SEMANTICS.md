@@ -477,7 +477,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 역할:
 
-- `macro_series_vintage_observation`은 미국 경제 사이클 17개 지표의 발표 당시 값과 이후 revision interval을 raw ledger로 보존한다.
+- `macro_series_vintage_observation`은 미국 경제 사이클 17개 지표의 FRED/ALFRED 발표 당시 값과 연구 전용 Philadelphia Fed RTDSM `IPT/H/EMPLOY/RUC` provider-native vintage 및 이후 revision interval을 raw ledger로 보존한다.
 - `economic_cycle_model_artifact`는 model version, `trained_through`, horizon별 parameter·temperature calibration·rolling-origin metric·publication gate를 보존한다.
 - `economic_cycle_snapshot`은 `current`, `historical_replay`, `intramonth_nowcast`가 만든 current phase, observed state, recent 1/3/6M changes, transition monitor, evidence, source date와 제한 사유를 저장하며 Overview read model의 source-of-truth다.
 - 월말 `current/historical_replay` row는 canonical history다. 월중은 날짜별 별도 `run_kind=intramonth_nowcast` row로 저장하고 `baseline_as_of_date`, `source_coverage_json`, `source_collected_at`으로 비교 기준과 입수 범위를 명시한다. 이 nullable provenance column 추가는 기존 월말 row의 payload나 business key를 재작성하지 않는다.
@@ -486,6 +486,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 성격과 business key:
 
 - raw vintage key는 `(series_id, observation_date, realtime_start, source)`다. `realtime_end`와 수집 metadata는 같은 key 재수집 때 갱신되며 누락값 row도 `coverage_status=MISSING_VALUE`로 보존한다.
+- RTDSM row는 `source=philadelphia_fed_rtdsm`으로 FRED/ALFRED row와 분리한다. 월별 vintage의 `realtime_start`는 해당 월말, 분기 vintage는 분기 중간 월말이며, 최신 stored vintage를 한 번 겹쳐 다시 UPSERT해 직전 open interval의 `realtime_end`를 닫는다.
 - artifact key는 `(model_version, trained_through)`다. validation metadata가 완전하지 않으면 approved artifact로 승격하지 않으며 기존 latest-good row를 덮지 않는다.
 - snapshot key는 `(as_of_date, model_version, run_kind)`다. `run_kind`는 current materialization과 historical replay를 분리하고, 재실행은 같은 business key를 UPSERT한다.
 
@@ -496,11 +497,13 @@ PIT / publication 계약:
 - current observed phase는 activity/labor 8개 실물지표의 3개월 평균 level과 직전 3개월 대비 momentum quadrant가 소유한다. 최신 수정치와 NBER chronology는 confidence/역사 참고이며 current phase를 덮어쓰지 않는다.
 - persistence·diffusion·activity/labor corroboration 세 조건은 다음 인접 국면의 `MAINTAIN/WATCH/CONFIRMED`를 만들며 특정 미래 월이나 확률을 뜻하지 않는다.
 - h0/h1/h2 artifact·probability·forecast column은 shadow validation과 old-row compatibility로 보존할 수 있지만 Overview v3 read model과 기본 UI는 읽지 않는다.
+- RTDSM 장기 국면은 표본·정합성 연구용 shadow history다. 현행 8지표 국면과 사전 등록한 common-period parity를 통과하기 전에는 current snapshot, model artifact, service 또는 UI를 만들지 않는다. 2026-08-12 실제 감사는 표본 gate를 통과했지만 phase agreement 54.2%, Cohen's kappa 0.368로 `NO_GO_PARITY`였다.
 - raw full series, model parameter와 더 긴 replay snapshot은 DB에 남고 UI service는 최근 최대 12개월 actual coordinate history/evidence만 읽는다. UI render 중 provider fetch, fit, materialization, DB write를 실행하지 않는다.
 
 주의:
 
 - 이 경로는 FRED `series/vintagedates`와 observations API의 long-form `output_type=1`, `FRED_API_KEY`를 요구한다. provider의 요청당 2,000 vintage-date 제한은 실제 vintage date 경계로 분할하며, revised-latest CSV fallback은 historical vintage 증거가 아니므로 허용하지 않는다.
+- RTDSM 경로는 Philadelphia Fed 공식 wide XLSX를 streaming normalize한다. workbook sheet/header 순서가 바뀌거나 숫자 관측치가 없으면 fail-closed하며, malformed core timestamp만 in-memory로 제한 복구한다. UI render나 Data Freshness 요청에서 전체 workbook을 다시 수집하지 않는다.
 - 국면은 data-defined macro regime이며 NBER 공식 판정, 자산 수익률 예측, 매수·매도 지시가 아니다.
 
 ## `nyse_price_history`

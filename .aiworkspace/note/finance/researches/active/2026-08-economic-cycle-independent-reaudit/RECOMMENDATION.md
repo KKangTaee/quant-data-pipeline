@@ -1,6 +1,6 @@
 # Recommendation
 
-Status: feasibility data gate completed; data expansion decision required
+Status: RTDSM sample gate passed; current-state parity failed
 Last Updated: 2026-08-12
 
 ## Recommended Direction
@@ -67,18 +67,38 @@ strict PIT current-state가 대부분 unavailable이고, 최근 25% holdout에�
 - 단독 정답이 아니라 current-state robustness reference 또는 reduced model 후보로
   검증해야 한다.
 
+## Completed RTDSM Expansion
+
+공식 `IPT/H/EMPLOY/RUC` vintage를 source-isolated 공용 ledger에 저장하고 strict PIT 장기
+shadow state를 재구성했다.
+
+| Evidence | Actual | Gate | Result |
+| --- | ---: | ---: | --- |
+| Stored unique vintage rows | 1,334,818 | source complete | Pass |
+| Usable origins | 589 | 180 | Pass |
+| Independent transitions | 117 | 48 | Pass |
+| Holdout transitions | 30 | 12 | Pass |
+| Common-period months | 142 | 96 | Pass |
+| Exact phase agreement | 54.2% | 60% | Fail |
+| Cohen's kappa | 0.368 | 0.40 | Fail |
+| Level-side agreement | 83.1% | 75% | Pass |
+
+Combined decision: **`NO_GO_PARITY`**.
+
+표본 부족은 해결됐지만 장기 state와 현행 product state가 같은 label이라는 전제가
+성립하지 않았다. 따라서 이 결과로 destination/imminence 확률을 fit하거나 UI를 만드는
+것은 올바르지 않다.
+
 ## Required Next Decision
 
-다음 작업은 모델이나 UI가 아니라 **RTDSM/ADS data expansion feasibility**다. 승인 시:
+다음 선택지는 둘뿐이다.
 
-1. 공식 파일의 vintage/date/variable contract를 감사한다.
-2. 기존 `macro_series_vintage_observation`과 충돌하지 않는 provider schema를 정한다.
-3. 1960년대 이후 usable origin과 independent transition support가 gate를 통과하는지
-   먼저 dry-run한다.
-4. current observed-state와 신규 long-history state의 최근 공통기간 parity를 검증한다.
-5. gate 통과 후에만 destination/imminence model을 chronological OOS로 평가한다.
+1. 외부 경기 기준을 이용해 하나의 장기 current-state target을 새로 설계하고 sample,
+   parity, chronological OOS를 처음부터 다시 검증한다.
+2. 경제사이클 forecast 개발을 중단하고 현행 관측 국면·조건부 확인 기능만 유지한다.
 
-신규 provider를 넣어도 사건 gate 또는 parity가 실패하면 기능 개발을 최종 중단한다.
+임계값 완화, 월별 행을 독립 표본으로 부풀리기, 결과를 본 뒤 지표 조합을 선택하는
+방식은 사용하지 않는다. 자산별 확인 포인트는 어느 선택에서도 현행 그대로 유지한다.
 
 ## Event And Publication Boundary
 
@@ -93,4 +113,6 @@ sensitivity에서만 생성한다.
 - all focused economic-cycle tests: 226 passed
 - next-transition feasibility tests: 6 passed (included above)
 - actual sample report: `NO_GO_DATA`, 148 usable origins, 32 events
+- RTDSM actual sample report: `GO_EXPERIMENT`, 589 usable origins, 117 events
+- RTDSM actual parity report: `NO_GO_PARITY`, 142 overlap, agreement 54.2%, kappa 0.368
 - current code: fixed next-phase selection, historical destination comparison 없음
