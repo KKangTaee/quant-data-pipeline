@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Document Status: Maintained
-Last Verified: 2026-08-10
+Last Verified: 2026-08-12
 
 ## Current State
 
@@ -12,6 +12,13 @@ Latest completed integration task:
 - `master-merge-resolution-20260810` — 전체 `4/4`; 경제 사이클 v3와 master의
   inflation-policy 5/5·Risk-On production 계약을 보존하고 focused Python/React와
   actual Browser QA 뒤 merge commit을 완료했다.
+
+Latest completed economic-cycle research task:
+
+- `economic-cycle-next-transition-feasibility-v1-20260812` — 사용자가 승인한 next
+  destination / transition imminence target을 actual PIT 148 origins·32 events로
+  검증해 `NO_GO_DATA`로 닫았고 RTDSM/ADS realtime history expansion을 다음 결정으로
+  남겼다. Production model·DB·UI와 자산별 확인 포인트는 변경하지 않았다.
 
 Latest completed inflation-policy task:
 

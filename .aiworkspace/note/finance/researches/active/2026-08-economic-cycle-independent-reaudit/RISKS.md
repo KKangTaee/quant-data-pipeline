@@ -1,10 +1,11 @@
 # Risks And Open Questions
 
-Date: 2026-08-03
+Date: 2026-08-12
 
 ## Open Decision
 
-- 4분면을 상대 성장순환으로 정의하고 `침체` 대신 `위축`을 쓸지 사용자 승인이 필요하다.
+- RTDSM/ADS 공식 realtime history를 신규 provider로 추가하는 data expansion scope를
+  진행할지 사용자 결정이 필요하다.
 
 ## Method Risks
 
@@ -25,7 +26,15 @@ Date: 2026-08-03
 
 ## Verification Gaps Before Implementation
 
-- PIT current-state candidate의 historical replay와 revision matrix
-- transition condition 후보별 false alarm / missed turn / median lead / detection delay
-- current vs intramonth 기준일 선택과 stale fallback contract
-- 420px / desktop graph와 condition cards visual prototype
+- RTDSM variable별 첫 vintage, known-at date와 missing-vintage contract
+- existing PIT observed-state와 RTDSM-based long history의 common-period parity
+- data expansion 뒤 usable origin / destination / holdout event gate 재실행
+- sample gate 통과 뒤 destination와 imminence model의 episode-block OOS / calibration
+
+## Confirmed Stop Risk
+
+- 현재 DB만 사용하면 usable origin 148, independent event 32로 `NO_GO_DATA`다.
+- 최근 holdout의 expansion/slowdown destination support가 0이므로 4-class probability를
+  공개할 수 없다.
+- monthly origin을 독립 표본처럼 세거나 revised history를 predictor로 소급하는 방식은
+  허용하지 않는다.

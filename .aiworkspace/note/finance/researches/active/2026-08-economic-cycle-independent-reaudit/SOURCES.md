@@ -1,6 +1,6 @@
 # Sources
 
-Accessed: 2026-08-03
+Accessed: 2026-08-12
 
 ## Local Evidence
 
@@ -37,5 +37,11 @@ Accessed: 2026-08-03
   https://www.oecd.org/content/dam/oecd/en/data/methods/OECD-System-of-Composite-Leading-Indicators.pdf
 - Federal Reserve Bank of Philadelphia, ADS Business Conditions Index:
   https://www.philadelphiafed.org/surveys-and-data/real-time-data-research/ads
+- Federal Reserve Bank of Philadelphia, Real-Time Data Set for Macroeconomists:
+  https://www.philadelphiafed.org/surveys-and-data/real-time-data-research/real-time-data-set-for-macroeconomists
+- Federal Reserve Bank of Philadelphia, RTDSM Full-Time Series History:
+  https://www.philadelphiafed.org/surveys-and-data/real-time-data-research/real-time-data-set-full-time-series-history
+- Federal Reserve Bank of St. Louis, ALFRED Real-Time Periods:
+  https://fred.stlouisfed.org/docs/api/fred/realtime_period.html
 - Federal Reserve Bank of New York, Weekly Economic Index:
   https://www.newyorkfed.org/research/policy/weekly-economic-index

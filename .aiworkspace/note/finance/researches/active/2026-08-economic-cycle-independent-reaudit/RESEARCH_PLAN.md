@@ -31,10 +31,11 @@ Date: 2026-08-03
 1. 현행 데이터 흐름과 화면 의미를 재현한다. 완료.
 2. 현재 국면과 과거 replay를 계산식과 대조한다. 완료.
 3. 미래 지평 validation과 publication gate를 대조한다. 완료.
-4. 대안 계약을 사용자와 합의한다. 승인 대기.
-5. 승인 뒤 별도 task에서 설계, 구현, 회귀·Browser QA를 수행한다.
+4. 대안 계약을 사용자와 합의한다. 완료 — next destination + transition imminence.
+5. actual PIT sample gate를 구현·재현한다. 완료 — `NO_GO_DATA`.
+6. RTDSM/ADS data expansion 여부를 사용자 결정 뒤 별도 task로 수행한다.
 
 ## Stop Condition
 
-사용자가 현재 국면의 의미와 추천 전환 모델을 승인하기 전에는 코드, DB schema,
-React 화면이나 canonical product docs를 변경하지 않는다.
+sample gate가 실패하면 model, DB serving schema와 React probability UI를 변경하지
+않는다. 신규 provider ingestion은 별도 승인 전까지 시작하지 않는다.

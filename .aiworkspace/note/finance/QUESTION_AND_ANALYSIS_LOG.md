@@ -10788,3 +10788,14 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result: 잘못된 일별 금리 release clock을 수정하고 지연 label OOS gate를 통과한
   침체 23.1484%·관찰 상태를 snapshot/service/UI에 저장·표시했다.
 - Follow-up: 5/5 완료. 이후는 같은 raw refresh/materialization 계약의 정기 갱신이다.
+
+### 2026-08-12 - 경제 사이클 예측은 고정 horizon이 아니라 다음 전환 사건을 대상으로 한다
+
+- User request: 과거·현재 데이터로 정확한 몇 달 뒤 국면보다 다음 전환 목적지, 조건부
+  경로와 가장 합리적인 확률을 제시하도록 기존 잘못된 개발 방향을 바로잡아 달라고 요청함.
+- Interpreted goal: 현재 국면과 별도로 next confirmed destination probability와
+  transition imminence를 검증하고 fixed cycle order가 후보를 제한하지 않아야 함.
+- Analysis result: actual strict PIT는 148 usable origins·32 independent transitions,
+  holdout expansion/slowdown 0건으로 `NO_GO_DATA`; production forecast는 중단했다.
+- Follow-up: RTDSM/ADS 공식 realtime history expansion을 승인하면 data gate와 recent
+  parity를 재검증하고, 통과한 경우에만 3~5차 모델·OOS·UI를 이어간다.

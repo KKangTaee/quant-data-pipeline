@@ -281,3 +281,33 @@ snapshot은 2026-07-31이다. 서비스 headline과 current phase는 계속 6월
 현재 문제의 root cause는 임계값 하나가 지나치게 보수적인 것이 아니다. `관측된 현재
 상태`, `후행 공식 판정`, `미래 확률`, `그래프 좌표`가 한 모델과 한 phase vocabulary에
 섞인 것이 핵심이다. 다음 설계에서는 이 네 책임을 먼저 분리해야 한다.
+
+## 2026-08-12 Next-Transition Sample Gate
+
+사용자 정정에 따라 fixed 3·6개월 뒤 phase target을 폐기하고 다음 두 target으로
+재정의했다.
+
+- next confirmed destination phase
+- next three official monthly releases 안의 any confirmed transition event
+
+`finance.economic_cycle_transition_feasibility`의 두-release confirmation은 fixed cycle
+order를 사용하지 않으며 비인접 destination도 허용한다. actual DB/PIT panel 결과는
+다음과 같다.
+
+- total origins: 811 (1959-01~2026-07)
+- usable origins: 148 (2014-04~2026-07)
+- independent transitions: 32
+- destinations: recovery 7 / expansion 9 / slowdown 5 / contraction 11
+- latest 25% holdout: 8 events
+- holdout destinations: recovery 4 / expansion 0 / slowdown 0 / contraction 4
+- decision: `NO_GO_DATA`
+
+월별 148행을 그대로 분류 표본으로 쓰면 같은 32개 transition episode를 반복 학습한다.
+현재 데이터로는 destination probability와 imminence calibration을 production 수준으로
+검증할 수 없다. 따라서 model fitting, DB serving과 UI 작업은 중단한다.
+
+Philadelphia Fed RTDSM은 nonfarm payroll monthly vintages를 1964-12부터 제공하고
+unemployment, weekly hours와 industrial production full vintage history도 제공한다.
+ADS도 assessed-in-real-time vintage file을 제공한다. 이 공식 source를 이용한 history
+expansion은 해결 후보지만 신규 provider scope와 recent common-period parity 검증이
+필요하다.

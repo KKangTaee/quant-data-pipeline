@@ -1,107 +1,96 @@
 # Recommendation
 
-Status: user decision required
-Last Updated: 2026-08-11
+Status: feasibility data gate completed; data expansion decision required
+Last Updated: 2026-08-12
 
 ## Recommended Direction
 
-현재 observed-state는 유지하되, fixed adjacent transition monitor를 미래 예측 기능으로
-간주하지 않는다. 다음 작업은 UI 개편이 아니라 **bounded forecast feasibility gate**로
-제한한다. 이 gate가 통과할 때만 multi-path probability forecast를 별도 계층으로
-구현한다.
+현재 observed-state는 유지하고 fixed adjacent monitor를 미래 예측으로 간주하지 않는다.
+사용자가 승인한 forecast target은 다음 두 개다.
 
-## Decision Scope
+1. `P(next confirmed phase = destination | current information)`
+2. `P(any confirmed transition within next 3 official monthly releases | current information)`
 
-- Immediate next build: production build 없음. forecast target·horizon·PIT dataset의
-  feasibility 연구와 go/no-go report만 수행.
-- Needs human approval before execution: macro horizon, probability의 event 의미,
-  pre-registered publication gate.
-- Longer roadmap option: current state + calibrated multi-path forecast + resilient fallback.
-- Not approved / parking lot: 1·2개월 확률 복구, fixed adjacent path의 forecast 표현,
-  복잡한 Markov/dynamic-factor production deployment.
+첫 번째는 다음 전환 목적지, 두 번째는 `전환 임박도`를 위한 별도 event다. 정확한
+3·6개월 뒤 phase classification은 반려됐다.
 
-## Why This Direction
+## Completed Feasibility Gate
 
-- 현재 데이터 freshness는 READY이며 current-state layer는 작동한다.
-- 미래 기능 실패 원인은 단순 source 부족이 아니라 짧은 독립 표본, class imbalance,
-  baseline 열위와 calibration 실패다.
-- 과거에는 모델·schema·UI를 먼저 만든 뒤 마지막 gate에서 결과를 숨기는 순서가
-  반복됐다. 이번에는 순서를 반대로 해야 한다.
-- OECD CLI도 특정 point forecast보다 turning point의 early signal과 lead consistency를
-  강조한다. 현재 제품의 macro 목적에는 exact +1M/+2M보다 broader horizon이 맞다.
+현재 DB의 strict PIT data를 1959-01~2026-07 origin으로 다시 구성하고, unavailable
+월을 보존한 채 두 번 연속 관측으로 모든 destination 전환 사건을 추출했다.
 
-## What To Build First
+| Evidence | Actual | Minimum experiment gate | Result |
+| --- | ---: | ---: | --- |
+| Usable PIT monthly origins | 148 | 180 | Fail |
+| Independent transitions | 32 | 48 | Fail |
+| Recovery destination | 7 | 8 | Fail |
+| Expansion destination | 9 | 8 | Pass |
+| Slowdown destination | 5 | 8 | Fail |
+| Contraction destination | 11 | 8 | Pass |
+| Chronological holdout events | 8 | 12 | Fail |
+| Holdout destination support | recovery 4 / expansion 0 / slowdown 0 / contraction 4 | each 2 | Fail |
 
-`Forecast Feasibility Report V1` 한 개만 만든다.
+Decision: **`NO_GO_DATA`**.
 
-1. current phase target과 forecast outcome을 분리한다.
-2. 후보 horizon을 사전에 고정한다.
-3. 현재를 제외한 모든 destination phase와 `현재 유지`를 평가한다.
-4. stable long-history predictors와 strict PIT predictors의 두 dataset contract를 비교한다.
-5. simple baselines, regularized candidate와 historical analog를 동일 walk-forward에서
-   평가한다.
-6. probability calibration과 independent episode support를 함께 검사한다.
-7. 통과/실패를 숫자와 reason code로 결론 내린다.
+이는 threshold를 보수적으로 잡아서 화면을 비우는 문제가 아니다. 2014-04 이전의
+strict PIT current-state가 대부분 unavailable이고, 최근 25% holdout에는 확장과 둔화
+전환 사건이 한 건도 없다. 이 상태에서 4-class probability를 만들면 동일 episode의
+월별 행을 반복 학습하거나 recent shock에 과적합하게 된다.
 
-## Feasibility Stop Gate
+## Current Product Decision
 
-아래 중 하나라도 충족하지 못하면 product forecast 개발을 시작하지 않는다.
+- 현재 국면과 최근 변화: 유지
+- fixed adjacent monitor를 미래 예측처럼 표현: No-Go
+- 현재 데이터로 next-phase probability model fitting: No-Go
+- hardcoded 조건부 scenario 문구 또는 임의 확률 fallback: No-Go
+- production DB/service/React probability UI: 중단
+- 자산별 확인 포인트: 현행 계산·payload·디자인 유지
 
-- target과 horizon별 class/transition support가 사전 최소 기준을 충족
-- forecast-origin leakage와 revised-data leakage가 없음
-- repeated chronological OOS에서 persistence와 historical-transition baseline보다
-  Brier score와 log loss가 모두 개선
-- aggregate뿐 아니라 class별 calibration이 허용 범위 안에 있음
-- COVID 포함/제외, 최근 구간, revision stress에서 결론이 뒤집히지 않음
-- 실제 현재 input으로 매월 materialize 가능한 core feature coverage 확보
+## What Can Resolve The Data Gate
 
-실패 시 결론은 `자료 부족` UI가 아니라 다음과 같이 명시한다.
+표본 부족은 완전히 구조적인 한계로 확정되지는 않았다. 공식 realtime dataset을
+추가하면 usable history를 1960년대까지 확장할 가능성이 있다.
 
-> 현재 데이터와 정의로는 신뢰할 수 있는 미래 국면 확률을 만들 수 없으므로 예측
-> 기능 개발을 중단한다. 현재 국면 진단만 유지한다.
+### Primary candidate — Philadelphia Fed RTDSM
 
-## What To Defer
+- monthly vintages of nonfarm payroll employment, unemployment, weekly hours,
+  industrial production과 capacity utilization을 제공한다.
+- nonfarm payroll employment monthly vintages는 1964-12부터 존재한다.
+- 현재 FRED/ALFRED table에서 2009~2011 이후에만 재현되는 일부 core series를 장기
+  realtime indicator로 교체하거나 보강할 수 있다.
 
-- probability UI, 순환 화살표, forecast persistence schema
-- model ensemble과 dynamic factor
-- 자동 자산배분·매매 해석
-- 자산별 확인 포인트의 디자인과 계산 변경
+### Secondary candidate — Philadelphia Fed ADS vintages
 
-## Decision Checkpoint
+- payroll, industrial production, real income, real manufacturing/trade sales, claims와
+  GDP를 mixed-frequency business-conditions index로 결합한다.
+- assessed-in-real-time vintage file을 제공한다.
+- 단독 정답이 아니라 current-state robustness reference 또는 reduced model 후보로
+  검증해야 한다.
 
-feasibility gate가 통과하면 그때 아래 제품 계약을 별도 승인받는다.
+## Required Next Decision
 
-- 현재: 현재 국면과 confidence
-- 향후: 가장 가능성 높은 경로와 확률
-- 대안: 두 번째 경로와 확률
-- 위험: 현재 국면 유지 실패 또는 악화 확률
-- 근거: 과거 유사 결과, 주요 선행요인, 반증 조건
-- 모델 신뢰도: outcome probability와 분리된 calibration/coverage 등급
+다음 작업은 모델이나 UI가 아니라 **RTDSM/ADS data expansion feasibility**다. 승인 시:
 
-## Required Decision
+1. 공식 파일의 vintage/date/variable contract를 감사한다.
+2. 기존 `macro_series_vintage_observation`과 충돌하지 않는 provider schema를 정한다.
+3. 1960년대 이후 usable origin과 independent transition support가 gate를 통과하는지
+   먼저 dry-run한다.
+4. current observed-state와 신규 long-history state의 최근 공통기간 parity를 검증한다.
+5. gate 통과 후에만 destination/imminence model을 chronological OOS로 평가한다.
 
-첫 feasibility 연구의 예측 기간을 확정해야 한다. 권장안은 정확한 특정 월보다
-거시적 변화를 포착하는 `향후 3개월`과 `향후 6개월` 두 horizon이다.
+신규 provider를 넣어도 사건 gate 또는 parity가 실패하면 기능 개발을 최종 중단한다.
 
-## Proposed Next Handoff
+## Event And Publication Boundary
 
-사용자가 horizon과 gate-first 원칙을 승인하면 별도 research/design cycle을 연다.
-forecast 가능성이 확인되기 전에는 구현 task, roadmap 변경 또는 UI prototype을 열지
-않는다.
+data gate 통과는 probability 공개 승인이 아니다. 이후 모델은 strongest expanding
+baseline보다 destination log loss / Brier가 좋아야 하며, imminence calibration과
+episode-block holdout을 별도로 통과해야 한다. 조건부 scenario는 검증된 model
+sensitivity에서만 생성한다.
 
 ## Evidence Summary
 
 - actual current read model: 2026-07-31 READY, 위축, 8/8 series
-- focused economic-cycle tests: 106 passed
-- current +1M/+2M artifact: all LIMITED
-- separate forecast artifacts: both INSUFFICIENT_EVIDENCE
-- direction publication states: PUBLICATION_HOLD / REJECTED
+- all focused economic-cycle tests: 226 passed
+- next-transition feasibility tests: 6 passed (included above)
+- actual sample report: `NO_GO_DATA`, 148 usable origins, 32 events
 - current code: fixed next-phase selection, historical destination comparison 없음
-
-## Risks And Unknowns
-
-- strict PIT history가 짧아 4-class probability는 끝내 성립하지 않을 수 있다.
-- revised long history를 사용하면 표본은 늘지만 real-time 재현성 위험이 생긴다.
-- `3개월/6개월 후 국면`과 `3개월/6개월 안에 전환`은 다른 target이므로 하나를 명확히
-  선택해야 한다.
-- 여러 target을 시험한 뒤 가장 좋아 보이는 것만 고르면 publication bias가 생긴다.

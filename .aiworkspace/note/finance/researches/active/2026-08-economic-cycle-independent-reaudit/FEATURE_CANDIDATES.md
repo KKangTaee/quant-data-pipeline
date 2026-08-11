@@ -1,7 +1,7 @@
 # Feature Candidates
 
-Status: awaiting user decision
-Last Updated: 2026-08-11
+Status: feasibility gate completed; data expansion decision required
+Last Updated: 2026-08-12
 
 ## Summary
 
@@ -12,16 +12,17 @@ Last Updated: 2026-08-11
 
 | Candidate | Bucket | Impact | Effort | Risk | Confidence | Strategic Fit | Owner Area |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Forecast feasibility gate | Now | 5 | 3 | 2 | 5 | 5 | research + economic-cycle domain |
-| Current state + multi-path forecast | Next | 5 | 5 | 5 | 3 | 5 | economic-cycle data/model/service/UI |
-| Resilient forecast input contract | Next | 4 | 4 | 3 | 4 | 5 | ingestion + loaders + model runtime |
+| Forecast feasibility gate | Done | 5 | 3 | 2 | 5 | 5 | research + economic-cycle domain |
+| RTDSM / ADS realtime history expansion | Now | 5 | 4 | 3 | 4 | 5 | ingestion + loaders + research |
+| Current state + multi-path forecast | Blocked | 5 | 5 | 5 | 3 | 5 | economic-cycle data/model/service/UI |
+| Resilient forecast input contract | Blocked | 4 | 4 | 3 | 4 | 5 | ingestion + loaders + model runtime |
 | Dynamic-factor / regime ensemble | Later | 4 | 5 | 5 | 2 | 4 | shadow research |
 
 ## Candidates
 
 ### Forecast Feasibility Gate
 
-- Bucket: Now
+- Bucket: Done
 - Problem: 기존 1·2개월·4국면 모델과 이후 방향 모델이 반복해서 표본·baseline·calibration
   gate를 통과하지 못했는데 UI 또는 pipeline부터 개발했다.
 - User workflow change: 없음. 개발 전에 어떤 horizon과 target이 실제로 예측 가능한지
@@ -30,16 +31,37 @@ Last Updated: 2026-08-11
   REJECTED 또는 PUBLICATION_HOLD다.
 - Required areas: PIT dataset audit, target definition, chronological validation runner,
   candidate/baseline report. UI·schema production change 없음.
-- Dependencies: 사용자가 macro horizon과 probability 의미를 승인해야 한다.
+- Result: 사용자가 next confirmed phase와 transition imminence 의미를 승인했고, actual
+  PIT audit는 usable origin 148 / independent event 32로 `NO_GO_DATA`를 반환했다.
 - Risks: 좋은 결과가 나오는 target을 사후 선택하는 과최적화.
 - Validation: 사전에 고정한 target/horizon으로 repeated walk-forward, episode-block
   bootstrap, Brier/log loss/ECE와 baseline skill을 계산한다.
 - Owner skill: finance-product-audit + finance-feature-opportunity; 승인 후 별도 domain task.
 - Priority rationale: 통과하면 구현 근거가 되고 실패하면 비용 큰 잘못된 개발을 막는다.
 
+### RTDSM / ADS Realtime History Expansion
+
+- Bucket: Now
+- Problem: 현재 strict PIT observed-state는 2014-04 이후 148개월만 usable하며 확장·둔화
+  holdout 사건이 0건이다.
+- User workflow change: 없음. probability UI 전에 공식 장기 realtime data가 표본 gate를
+  실제로 해결하는지 판단한다.
+- Evidence: Philadelphia Fed RTDSM은 payroll monthly vintages를 1964-12부터 제공하고,
+  unemployment, hours와 industrial production도 full vintage history를 제공한다. ADS는
+  assessed-in-real-time vintages를 공개한다.
+- Required areas: provider/file contract, DB ingestion boundary, PIT loader mapping,
+  common-period parity와 sample gate replay.
+- Dependencies: 신규 provider와 storage contract 사용자 승인.
+- Risks: series 정의 차이로 current phase가 바뀌거나, usable history를 늘려도 transition
+  class support가 충분하지 않을 수 있다.
+- Validation: source checksum/schema, known-at date, common-period parity, missing-vintage
+  policy, event gate rerun.
+- Owner skill: finance-db-pipeline + economic-cycle research task.
+- Priority rationale: 현재 NO_GO_DATA를 정직하게 해결할 수 있는 유일한 다음 단계다.
+
 ### Current State + Multi-Path Forecast
 
-- Bucket: Next
+- Bucket: Blocked
 - Problem: 현행 시스템은 모든 후보를 비교하지 않고 배열상 다음 국면만 감시한다.
 - User workflow change: `현재 진단 → 향후 주경로 → 대안 경로 → 위험 요인 → 반증 조건`을
   한 흐름에서 읽는다.
@@ -47,7 +69,7 @@ Last Updated: 2026-08-11
   선택하며 역사적 outcome을 조회하지 않는다.
 - Required areas: forecast target/model, artifact/persistence, Overview service, cycle route UI,
   methodology copy. 자산별 확인 포인트는 frozen scope로 유지한다.
-- Dependencies: feasibility gate 통과와 확률 publication contract 승인.
+- Dependencies: realtime history 확장 뒤 sample gate 통과와 확률 publication contract 승인.
 - Risks: sample scarcity, probability miscalibration, current phase와 forecast target 혼동.
 - Validation: 모든 후보 국면 probability simplex, chronological OOS, baseline superiority,
   calibration, revision stress, Browser QA.

@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-08-10
+Last Verified: 2026-08-12
 
 ## Current Snapshot
 
@@ -78,6 +78,7 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 
 | Priority | Candidate | Why It Matters | Approval Needed Before |
 |---|---|---|---|
+| P0 | Economic-cycle RTDSM / ADS realtime history expansion | next-transition target은 승인됐지만 current PIT history가 148개월·32 events이고 holdout expansion/slowdown support가 0이라 probability model이 `NO_GO_DATA` 상태 | Philadelphia Fed provider/file contract, storage mapping, current-state common-period parity와 gate rerun 범위 승인 |
 | P0 | Historical universe / delisting Point-in-Time evidence | strict factor와 historical validation의 survivorship risk를 낮추는 핵심 correctness gap | source/provider, historical membership schema, delisting evidence와 fail-closed policy 결정 |
 | P1 | Existing Browser verification debt closeout | 구현 완료 task의 실제 interaction evidence와 status drift를 작은 범위로 닫을 수 있음 | 대상 task별 QA-only 범위 확인 |
 | P1 | Market Movers sector conditional outlook | 현재 broader roadmap의 다음 단계지만 확률·분포를 공개하려면 독립 episode와 OOS publication gate가 필요 | target, sample independence, chronological validation과 공개 기준 승인 |
@@ -90,13 +91,15 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 
 ## Recommended Order
 
-1. **Verification debt closeout** — 이미 구현된 interaction을 작은 QA-only 작업으로 닫아
-   active-state 신뢰도를 먼저 높인다.
-2. **Correctness decision** — historical universe / delisting PIT source와 storage policy를
+1. **Economic-cycle data decision** — RTDSM/ADS 공식 realtime history로 usable origin과
+   independent transition support를 확장할지 승인하거나 forecast 개발을 중단한다.
+2. **Verification debt closeout** — 이미 구현된 interaction을 작은 QA-only 작업으로 닫아
+   active-state 신뢰도를 높인다.
+3. **Correctness decision** — historical universe / delisting PIT source와 storage policy를
    승인하거나 명시적으로 defer한다.
-3. **One product research lane** — Market Movers outlook 또는 Sentiment validation 중
+4. **One product research lane** — Market Movers outlook 또는 Sentiment validation 중
    하나만 선택해 target과 publication gate를 먼저 설계한다.
-4. **Maintenance / platform work** — Data Operations hardening, refactor, scheduler,
+5. **Maintenance / platform work** — Data Operations hardening, refactor, scheduler,
    UI split과 archive migration은 제품 가치나 운영 병목이 확인된 범위로만 연다.
 
 동시에 여러 broad track을 열지 않는다. 각 후보는 source correctness, 사용자 완료
