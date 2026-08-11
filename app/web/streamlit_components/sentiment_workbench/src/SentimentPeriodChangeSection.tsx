@@ -47,8 +47,14 @@ function SentimentPeriodChangeSection({ periodChanges }: Props) {
                   </header>
                   {metric.available ? (
                     <div className="sentiment-workbench__period-value">
-                      <strong>{displayValue(metric.end_value, metric.unit_label)}</strong>
-                      <b>{signedValue(metric.change, metric.unit_label)}</b>
+                      <div className="sentiment-workbench__period-change-primary">
+                        <span>기간 변화</span>
+                        <strong>{signedValue(metric.change, metric.unit_label)}</strong>
+                      </div>
+                      <div className="sentiment-workbench__period-current">
+                        <span>현재</span>
+                        <b>{displayValue(metric.end_value, metric.unit_label)}</b>
+                      </div>
                     </div>
                   ) : (
                     <div className="sentiment-workbench__period-unavailable">

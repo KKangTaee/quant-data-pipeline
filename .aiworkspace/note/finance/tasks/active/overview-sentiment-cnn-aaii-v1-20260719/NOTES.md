@@ -34,3 +34,8 @@
 - canonical sync는 구현 baseline과 paused 상태가 바뀐 `docs/ROADMAP.md`, 사용자 흐름이 바뀐 `docs/flows/README.md`만 갱신했다. 제품 원칙, code/storage ownership, DB 의미는 바뀌지 않아 PRODUCT_DIRECTION / PROJECT_MAP / data docs 변경은 없다.
 - 독립 리뷰에서 같은 관측일 중복 version과 payload 날짜 누락의 fail-closed 공백을 확인했다. 기간 변화는 `collected_at` 최신 version을 먼저 고르고 최신 값이 결측이면 과거 값으로 후퇴하지 않으며, payload는 유효한 `YYYY-MM-DD` 시작·종료일과 `start < end`를 공개 조건에 포함한다.
 - 구버전 Python과 새 bundle이 잠시 섞이는 rolling reload에서도 1W·1M 카드 안에 CNN·AAII별 관측 부족 metric을 표시해 빈 card가 되지 않게 했다.
+- 1W·1M의 큰 값이 같아 보인 원인은 계산 중복이 아니라 두 기간 모두 같은 최신 관측을 `end_value`로 사용하고 기존 UI가 이를 주값으로 강조했기 때문이다. 기간마다 달라지는 `start_value`, `start_date`, `change`는 payload에 정상 분리돼 있었다.
+- 후속 UI는 `metric.change`를 `기간 변화` 주값으로 올리고 `metric.end_value`를 작은 `현재` 보조값으로 내렸다. 날짜 범위, state, 관계 설명과 unavailable 분기는 그대로 유지한다.
+- CNN·AAII metric box는 동일한 중립 1px border를 사용한다. source 색은 label 옆 7px 원형 marker에만 사용해 장식적인 colored top border를 제거했다.
+- 460px 이하에서는 `기간 변화`와 `현재` 값을 한 열로 쌓고 현재값을 왼쪽 정렬한다. 좁은 폭에서도 우선순위가 유지되며 두 숫자가 서로 압축되지 않는다.
+- 이번 polish는 payload, 계산, publication gate, source/DB/ingestion 경계를 바꾸지 않는 focused presentation change다. 따라서 canonical durable doc change는 없고 task closeout만 갱신한다.

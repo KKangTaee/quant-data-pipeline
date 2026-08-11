@@ -50,3 +50,12 @@
 - fresh sentiment-name regression은 baseline 3건을 제외한 `40 passed`다. 전체 43개를 실행하면 시작 전과 같은 AAII parser expectation error 1건, Practical Validation overlay expectation failure 2건만 남는다.
 - Vite production build, Python compile, `git diff --check`, actual DB snapshot을 다시 확인했다. post-review desktop 1280px Browser QA에서 period card `526.5px × 2`, page `1280/1280`, component `1109/1109`, console warning/error 0을 확인했고 기존 420px 적층 계약에는 시각 CSS 변경이 없다.
 - 보완 후 독립 재검토에서 새 Critical/Important 0건, 관련 회귀 7개와 `git diff --check` 통과를 확인했다.
+- 후속 UI polish의 source-contract를 RED/GREEN으로 추가했다. 기존 구현에서 change-primary/current markup 부재와 source별 2px top border를 실패로 확인한 뒤 React/CSS를 수정해 focused 2개 test를 통과시켰다.
+- `npm run build`가 178 modules를 정상 변환했고 review 보완 후 production bundle은 `index-lTI6jEc1.css`, `index-BQHEIkyG.js`로 갱신됐다.
+- fresh sentiment-name regression 43개 중 기존 baseline 3건을 제외한 `40 passed`를 재확인했다. 남은 것은 AAII parser date expectation error 1건과 Practical Validation overlay expectation failure 2건으로 이번 UI 범위와 무관하다.
+- `git diff --check`를 통과했으며 service, period payload, outlook publication gate에는 변경이 없다.
+- actual Streamlit 1280px Browser QA에서 1W CNN `+15.5pt`, 1M CNN `+25.4pt`, 1W AAII `+10.2pp`, 1M AAII `0.0pp`가 주값으로 노출되고 공통 최신값 `66.3pt` / `-0.9pp`는 `현재` 보조값으로 표시됨을 확인했다.
+- 네 metric box의 top/right border가 같은 중립색 1px이고 CNN marker `rgb(181, 138, 106)`, AAII marker `rgb(90, 169, 157)`가 7px 원형임을 computed style로 확인했다. period card는 2열, page 가로 overflow 0, console warning 0이었다.
+- 독립 polish 리뷰에서 Important 2건과 Minor 1건을 확인했다. 460px 이하 value row 적층 규칙을 RED/GREEN으로 추가하고, JSX 값 역할·순서, source별 marker 색, primary/current typography와 mobile selector를 직접 검증하도록 source-contract를 강화했다.
+- actual 420px Streamlit Browser QA에서 component viewport `420px`, body `388/388`, metric `328/328` client/scroll width로 overflow 0을 확인했다. 네 value row가 단일 `306px` column으로 쌓이고 `현재`가 왼쪽 정렬되며 console warning 0이었다.
+- QA screenshot `overview-sentiment-period-metric-ui-polish-qa.png`, `overview-sentiment-period-metric-ui-polish-420-qa.png`는 generated artifact로 남기고 commit 대상에서 제외한다.

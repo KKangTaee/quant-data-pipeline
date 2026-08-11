@@ -9066,6 +9066,40 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('data-period={period.key}', period_change_source)
         self.assertIn("period.metrics.map", period_change_source)
         self.assertIn("metric.available", period_change_source)
+        self.assertIn("sentiment-workbench__period-change-primary", period_change_source)
+        self.assertIn("기간 변화", period_change_source)
+        self.assertIn("signedValue(metric.change, metric.unit_label)", period_change_source)
+        self.assertIn("sentiment-workbench__period-current", period_change_source)
+        self.assertIn("현재", period_change_source)
+        self.assertIn("displayValue(metric.end_value, metric.unit_label)", period_change_source)
+        available_value_markup = period_change_source[
+            period_change_source.index('<div className="sentiment-workbench__period-value">') :
+            period_change_source.index('<div className="sentiment-workbench__period-unavailable">')
+        ]
+        change_primary_markup = available_value_markup[
+            available_value_markup.index('<div className="sentiment-workbench__period-change-primary">') :
+            available_value_markup.index('<div className="sentiment-workbench__period-current">')
+        ]
+        current_markup = available_value_markup[
+            available_value_markup.index('<div className="sentiment-workbench__period-current">') :
+        ]
+        self.assertIn(
+            "<strong>{signedValue(metric.change, metric.unit_label)}</strong>",
+            change_primary_markup,
+        )
+        self.assertIn("<span>기간 변화</span>", change_primary_markup)
+        self.assertNotIn("displayValue(metric.end_value", change_primary_markup)
+        self.assertIn(
+            "<b>{displayValue(metric.end_value, metric.unit_label)}</b>",
+            current_markup,
+        )
+        self.assertIn("<span>현재</span>", current_markup)
+        self.assertNotIn("signedValue(metric.change", current_markup)
+        self.assertLess(
+            available_value_markup.index("signedValue(metric.change, metric.unit_label)"),
+            available_value_markup.index("displayValue(metric.end_value, metric.unit_label)"),
+        )
+        self.assertNotIn("<strong>{displayValue(metric.end_value", available_value_markup)
         self.assertIn("period.relationship.summary", period_change_source)
         self.assertIn("실제 관측 변화", period_change_source)
         self.assertIn("data-watch-path={item.key}", watch_source)
@@ -9101,6 +9135,66 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("repeat(2", history_grid_rule)
         self.assertIn(".sentiment-workbench__period-change-grid", style)
         self.assertIn(".sentiment-workbench__period-metrics", style)
+        period_metric_styles = style[style.index(".sentiment-workbench__period-metric {") :]
+        period_metric_styles = period_metric_styles[
+            : period_metric_styles.index(".sentiment-workbench__period-metric > header {")
+        ]
+        self.assertNotIn("border-top", period_metric_styles)
+        self.assertNotRegex(
+            style,
+            r'\.sentiment-workbench__period-metric\[data-source="cnn"\]\s*\{[^}]*border-top',
+        )
+        self.assertNotRegex(
+            style,
+            r'\.sentiment-workbench__period-metric\[data-source="aaii_spread"\]\s*\{[^}]*border-top',
+        )
+        marker_selector = ".sentiment-workbench__period-metric > header span::before {"
+        marker_rule = style[style.index(marker_selector) :]
+        marker_rule = marker_rule[: marker_rule.index("}")]
+        self.assertIn("border-radius: 999px;", marker_rule)
+        self.assertIn("height: 7px;", marker_rule)
+        self.assertIn("width: 7px;", marker_rule)
+        cnn_marker_selector = '.sentiment-workbench__period-metric[data-source="cnn"] > header span::before {'
+        cnn_marker_rule = style[style.index(cnn_marker_selector) :]
+        cnn_marker_rule = cnn_marker_rule[: cnn_marker_rule.index("}")]
+        self.assertIn("background: #b58a6a;", cnn_marker_rule)
+        self.assertNotIn("#5aa99d", cnn_marker_rule)
+        aaii_marker_selector = (
+            '.sentiment-workbench__period-metric[data-source="aaii_spread"] > header span::before {'
+        )
+        aaii_marker_rule = style[style.index(aaii_marker_selector) :]
+        aaii_marker_rule = aaii_marker_rule[: aaii_marker_rule.index("}")]
+        self.assertIn("background: #5aa99d;", aaii_marker_rule)
+        self.assertNotIn("#b58a6a", aaii_marker_rule)
+        primary_rule = style[style.index(".sentiment-workbench__period-change-primary strong {") :]
+        primary_rule = primary_rule[: primary_rule.index("}")]
+        self.assertIn("font-size: 1.18rem;", primary_rule)
+        self.assertIn("font-weight: 900;", primary_rule)
+        current_rule = style[style.index(".sentiment-workbench__period-current b {") :]
+        current_rule = current_rule[: current_rule.index("}")]
+        self.assertIn("color: #526176;", current_rule)
+        self.assertIn("font-size: 0.76rem;", current_rule)
+        up_change_selector = (
+            '.sentiment-workbench__period-metric[data-change-direction="up"] '
+            ".sentiment-workbench__period-change-primary strong {"
+        )
+        up_change_rule = style[style.index(up_change_selector) :]
+        up_change_rule = up_change_rule[: up_change_rule.index("}")]
+        self.assertIn("color: #0f766e;", up_change_rule)
+        down_change_selector = (
+            '.sentiment-workbench__period-metric[data-change-direction="down"] '
+            ".sentiment-workbench__period-change-primary strong {"
+        )
+        down_change_rule = style[style.index(down_change_selector) :]
+        down_change_rule = down_change_rule[: down_change_rule.index("}")]
+        self.assertIn("color: #a14f61;", down_change_rule)
+        mobile_rule = style[style.index("@media (max-width: 460px)") :]
+        mobile_value_rule = mobile_rule[mobile_rule.index(".sentiment-workbench__period-value {") :]
+        mobile_value_rule = mobile_value_rule[: mobile_value_rule.index("}")]
+        self.assertIn("grid-template-columns: minmax(0, 1fr);", mobile_value_rule)
+        mobile_current_rule = mobile_rule[mobile_rule.index(".sentiment-workbench__period-current {") :]
+        mobile_current_rule = mobile_current_rule[: mobile_current_rule.index("}")]
+        self.assertIn("justify-items: start;", mobile_current_rule)
         self.assertIn(".sentiment-workbench__period-relationship", style)
         self.assertIn(".sentiment-workbench__watch-grid", style)
         self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", style)
