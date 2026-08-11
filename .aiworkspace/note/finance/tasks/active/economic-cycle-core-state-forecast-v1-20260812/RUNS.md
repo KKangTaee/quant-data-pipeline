@@ -9,3 +9,6 @@
 - Transition model red test: 6 failures because the module did not exist.
 - Transition model green test: 6 passed.
 - Combined core/dataset/model/realtime/feasibility regression: 29 passed.
+- Chronological validation red test: 12 failures because the module did not exist.
+- Chronological validation green test: 12 passed.
+- Combined core/dataset/model/validation/realtime/feasibility regression: 41 passed.

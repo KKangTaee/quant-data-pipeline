@@ -155,7 +155,7 @@ def _fit_binary_parameters(
     l2: float,
     initial_coefficients: np.ndarray | None = None,
     initial_intercept: float | None = None,
-    max_iterations: int = 2000,
+    max_iterations: int = 800,
 ) -> tuple[np.ndarray, float]:
     coefficients = (
         np.zeros(matrix.shape[1], dtype=float)
@@ -181,7 +181,7 @@ def _fit_binary_parameters(
         gradient_norm = math.sqrt(
             float(gradient @ gradient) + intercept_gradient**2
         )
-        if gradient_norm <= 1e-9:
+        if gradient_norm <= 1e-7:
             break
         step = 1.0
         accepted = False
@@ -313,7 +313,7 @@ def _fit_multiclass_parameters(
     *,
     class_count: int,
     l2: float,
-    max_iterations: int = 3000,
+    max_iterations: int = 1200,
 ) -> tuple[np.ndarray, np.ndarray]:
     coefficients = np.zeros((class_count, matrix.shape[1]), dtype=float)
     prevalence = np.asarray(
@@ -334,7 +334,7 @@ def _fit_multiclass_parameters(
             float(np.sum(coefficient_gradient**2))
             + float(np.sum(intercept_gradient**2))
         )
-        if gradient_norm <= 1e-9:
+        if gradient_norm <= 1e-7:
             break
         step = 1.0
         accepted = False

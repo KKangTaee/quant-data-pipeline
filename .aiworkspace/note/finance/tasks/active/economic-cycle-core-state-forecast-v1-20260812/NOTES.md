@@ -20,3 +20,11 @@
   produces a `LIMITED` artifact rather than a fabricated probability.
 - destination output compares all four phases and conditionally sets the
   current phase to zero before renormalizing the next-destination distribution.
+- validation scores complete future episode blocks only after 40 prior
+  confirmed events and requires every training target to be known strictly
+  before the scoring episode begins.
+- L2 selection uses only the trailing 20% of prior training episodes, while
+  calibration uses only prior OOF predictions. The current scoring episode is
+  never used by either procedure.
+- pressure baselines are expanding event rate and duration hazard; destination
+  baselines are current-phase frequency and the fixed-cycle route.

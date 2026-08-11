@@ -15,9 +15,9 @@ Last Updated: 2026-08-12
 
 - 1차 core-state gate: implementation complete; actual DB evaluation pending
 - 2차 model dataset/fit: implementation complete; actual fitting pending
-- 3차 chronological validation: pending
+- 3차 chronological validation: implementation complete; actual DB run pending
 - 4차 persistence/service/UI: gated
 
 ## Next Action
 
-Episode-blocked chronological OOS validation과 baseline gate를 TDD로 구현한다.
+Actual RTDSM DB experiment를 실행해 core/model publication gate를 판정한다.
