@@ -7,3 +7,10 @@
 - monthly origins receive episode-normalized weights; they are not counted as
   independent transition events.
 - exact calendar-month phase prediction remains out of scope.
+- a state change is confirmed only on the second consecutive release with the
+  same candidate phase; the first release remains in the prior confirmed state.
+- destination labels are unrestricted. For example, contraction to slowdown is
+  a valid observed route and is never forced through recovery.
+- pressure means confirmation within the next three usable publications. A
+  positive label is known at confirmation; a negative label is known only when
+  its full publication horizon closes.

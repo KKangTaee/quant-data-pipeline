@@ -7,15 +7,17 @@ Last Updated: 2026-08-12
 
 - user approved the long-history core-state direction
 - written implementation design is approved
-- production code and UI have not changed in this task
+- RTDSM core feature panel and semantic/revision/sample gate implemented
+- unrestricted two-release-confirmed transition dataset implemented
+- persistence, service, and UI remain unchanged behind the publication gate
 
 ## Whole Roadmap Position
 
-- 1차 core-state gate: implementation plan in progress
-- 2차 model dataset/fit: pending
+- 1차 core-state gate: implementation complete; actual DB evaluation pending
+- 2차 model dataset/fit: dataset complete; model fit pending
 - 3차 chronological validation: pending
 - 4차 persistence/service/UI: gated
 
 ## Next Action
 
-Detailed TDD implementation plan을 고정한 뒤 core-state failing tests부터 실행한다.
+NumPy weighted binary/multinomial logistic model을 TDD로 구현한다.
