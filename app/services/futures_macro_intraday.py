@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
 import math
 from typing import Any
 
@@ -44,6 +44,28 @@ INTRADAY_BAR_MINUTES = 5
 INTRADAY_FRESHNESS_LIMIT_MINUTES = 30
 INTRADAY_MIN_FAMILIES = 4
 INTRADAY_DAILY_LOOKBACK_DAYS = 420
+
+
+def active_futures_session_date(evaluation_time: datetime) -> str | None:
+    """Resolve the active CME-style trade date without trusting a daily label."""
+
+    evaluated_at = _utc_datetime(evaluation_time)
+    if evaluated_at is None:
+        return None
+    evaluated_et = evaluated_at.astimezone(NEW_YORK)
+    weekday = evaluated_et.weekday()
+    current_time = evaluated_et.time()
+    if weekday == 5:
+        return None
+    if weekday == 6:
+        if current_time < time(18, 0):
+            return None
+        return (evaluated_et.date() + timedelta(days=1)).isoformat()
+    if current_time < time(17, 0):
+        return evaluated_et.date().isoformat()
+    if current_time < time(18, 0) or weekday == 4:
+        return None
+    return (evaluated_et.date() + timedelta(days=1)).isoformat()
 
 
 def _utc_datetime(value: object) -> datetime | None:
@@ -257,16 +279,37 @@ def build_futures_macro_intraday_observation(
         completed_pattern,
         selected_symbols=selected,
     )
-    if completed.pending_session is None:
+    session_date = active_futures_session_date(evaluated_at)
+    if session_date is None:
         return _fallback(
             pattern=stable_pattern,
             session_date=None,
             completed_as_of_date=completed.latest_final_session,
-            reason="no_pending_session",
+            reason="no_active_session",
+        )
+    if (
+        completed.pending_session is not None
+        and completed.pending_session != session_date
+    ):
+        return _fallback(
+            pattern=stable_pattern,
+            session_date=session_date,
+            completed_as_of_date=completed.latest_final_session,
+            reason="prior_session_not_finalized",
+        )
+    if (
+        completed.latest_final_session is not None
+        and session_date <= completed.latest_final_session
+    ):
+        return _fallback(
+            pattern=stable_pattern,
+            session_date=session_date,
+            completed_as_of_date=completed.latest_final_session,
+            reason="no_new_active_session",
         )
 
     session_start, session_end = futures_session_window_utc(
-        completed.pending_session
+        session_date
     )
     closed_rows = _closed_session_rows(
         intraday_rows,
@@ -286,7 +329,7 @@ def build_futures_macro_intraday_observation(
     if available_family_count < INTRADAY_MIN_FAMILIES:
         return _fallback(
             pattern=stable_pattern,
-            session_date=completed.pending_session,
+            session_date=session_date,
             completed_as_of_date=completed.latest_final_session,
             reason="insufficient_complete_families",
             available_family_count=available_family_count,
@@ -306,7 +349,7 @@ def build_futures_macro_intraday_observation(
     if freshness_minutes > max(0, int(freshness_limit_minutes)):
         return _fallback(
             pattern=stable_pattern,
-            session_date=completed.pending_session,
+            session_date=session_date,
             completed_as_of_date=completed.latest_final_session,
             reason="stale_intraday_bars",
             available_family_count=available_family_count,
@@ -317,7 +360,7 @@ def build_futures_macro_intraday_observation(
         closed_rows,
         selected_symbols=selected,
         common_bar_start=common_bar_start,
-        session_date=completed.pending_session,
+        session_date=session_date,
         evaluation_time=evaluated_at,
     )
     candles = normalize_futures_macro_daily_candles(
@@ -330,7 +373,7 @@ def build_futures_macro_intraday_observation(
     if features.empty:
         return _fallback(
             pattern=stable_pattern,
-            session_date=completed.pending_session,
+            session_date=session_date,
             completed_as_of_date=completed.latest_final_session,
             reason="insufficient_daily_history",
             available_family_count=available_family_count,
@@ -346,7 +389,7 @@ def build_futures_macro_intraday_observation(
     if pattern.get("status") == "UNAVAILABLE":
         return _fallback(
             pattern=stable_pattern,
-            session_date=completed.pending_session,
+            session_date=session_date,
             completed_as_of_date=completed.latest_final_session,
             reason="insufficient_intraday_pattern",
             available_family_count=available_family_count,
@@ -362,7 +405,7 @@ def build_futures_macro_intraday_observation(
         "status": status,
         "observation_mode": "INTRADAY_PROVISIONAL",
         "pattern": pattern,
-        "session_date": completed.pending_session,
+        "session_date": session_date,
         "completed_as_of_date": completed.latest_final_session,
         "observed_at_utc": observed_at.isoformat(),
         "observed_at_et": observed_at.astimezone(NEW_YORK).isoformat(),
@@ -402,15 +445,36 @@ def load_overview_futures_macro_intraday_observation(
         completed_pattern,
         selected_symbols=selected,
     )
-    if completed.pending_session is None:
+    session_date = active_futures_session_date(evaluated_at)
+    if session_date is None:
         return _fallback(
             pattern=stable_pattern,
             session_date=None,
             completed_as_of_date=completed.latest_final_session,
-            reason="no_pending_session",
+            reason="no_active_session",
+        )
+    if (
+        completed.pending_session is not None
+        and completed.pending_session != session_date
+    ):
+        return _fallback(
+            pattern=stable_pattern,
+            session_date=session_date,
+            completed_as_of_date=completed.latest_final_session,
+            reason="prior_session_not_finalized",
+        )
+    if (
+        completed.latest_final_session is not None
+        and session_date <= completed.latest_final_session
+    ):
+        return _fallback(
+            pattern=stable_pattern,
+            session_date=session_date,
+            completed_as_of_date=completed.latest_final_session,
+            reason="no_new_active_session",
         )
     session_start, session_end = futures_session_window_utc(
-        completed.pending_session
+        session_date
     )
     intraday_rows = intraday_rows_loader(
         selected,

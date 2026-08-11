@@ -103,6 +103,49 @@ def _completed_pattern() -> dict[str, Any]:
     }
 
 
+def _finalized_monday_daily_rows() -> list[dict[str, Any]]:
+    from finance.data.futures_session_finalization import (
+        FUTURES_SESSION_FINALIZATION_BASIS,
+    )
+
+    rows = _daily_rows()
+    for row in rows:
+        if row["candle_time_utc"] != "2026-08-09 00:00:00":
+            continue
+        for field in ("open", "high", "low", "close", "adj_close", "volume"):
+            row[f"final_{field}"] = row[field]
+        row["finalization_basis"] = FUTURES_SESSION_FINALIZATION_BASIS
+        row["finalized_at"] = "2026-08-10 23:50:00"
+    return rows
+
+
+def _evening_reopen_rows() -> list[dict[str, Any]]:
+    starts = (
+        datetime(2026, 8, 10, 22, 0, tzinfo=UTC),
+        datetime(2026, 8, 10, 23, 35, tzinfo=UTC),
+        datetime(2026, 8, 10, 23, 40, tzinfo=UTC),
+        datetime(2026, 8, 10, 23, 50, tzinfo=UTC),
+    )
+    rows: list[dict[str, Any]] = []
+    for symbol_index, symbol in enumerate(DEFAULT_CORE_FUTURES_SYMBOLS):
+        base = 100.0 + symbol_index * 4.0
+        symbol_starts = starts if symbol != "ES=F" else (starts[0], starts[1], starts[3])
+        for index, started_at in enumerate(symbol_starts):
+            rows.append(
+                {
+                    "provider_symbol": symbol,
+                    "candle_time_utc": started_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "open": base,
+                    "high": base * (1.002 + index * 0.001),
+                    "low": base * 0.998,
+                    "close": base * (1.001 + index * 0.001),
+                    "volume": 10.0,
+                    "collected_at": "2026-08-10 23:52:00",
+                }
+            )
+    return rows
+
+
 def test_intraday_observation_uses_one_common_closed_bar_cutoff() -> None:
     from app.services.futures_macro_intraday import (
         build_futures_macro_intraday_observation,
@@ -196,6 +239,41 @@ def test_intraday_observation_falls_back_when_common_bar_is_stale() -> None:
     assert result["fallback_reason"] == "stale_intraday_bars"
 
 
+def test_evening_reopen_uses_next_trade_session_without_a_pending_daily_label() -> None:
+    from app.services.futures_macro_intraday import (
+        build_futures_macro_intraday_observation,
+    )
+
+    result = build_futures_macro_intraday_observation(
+        daily_rows=_finalized_monday_daily_rows(),
+        intraday_rows=_evening_reopen_rows(),
+        evaluation_time=datetime(2026, 8, 10, 23, 52, tzinfo=UTC),
+        completed_pattern=_completed_pattern(),
+    )
+
+    assert result["status"] == "INTRADAY_READY"
+    assert result["session_date"] == "2026-08-11"
+    assert result["completed_as_of_date"] == "2026-08-10"
+    assert result["observed_at_utc"] == "2026-08-10T23:40:00+00:00"
+    assert result["pattern"]["as_of_date"] == "2026-08-11"
+
+
+def test_evening_reopen_fails_closed_when_prior_pending_daily_is_unresolved() -> None:
+    from app.services.futures_macro_intraday import (
+        build_futures_macro_intraday_observation,
+    )
+
+    result = build_futures_macro_intraday_observation(
+        daily_rows=_daily_rows(),
+        intraday_rows=_evening_reopen_rows(),
+        evaluation_time=datetime(2026, 8, 10, 23, 52, tzinfo=UTC),
+        completed_pattern=_completed_pattern(),
+    )
+
+    assert result["status"] == "COMPLETED_FALLBACK"
+    assert result["fallback_reason"] == "prior_session_not_finalized"
+
+
 def test_loader_does_not_read_intraday_rows_without_a_pending_session() -> None:
     from app.services.futures_macro_intraday import (
         load_overview_futures_macro_intraday_observation,
@@ -214,7 +292,7 @@ def test_loader_does_not_read_intraday_rows_without_a_pending_session() -> None:
 
     result = load_overview_futures_macro_intraday_observation(
         completed_pattern=_completed_pattern(),
-        evaluation_time=EVALUATED_AT,
+        evaluation_time=datetime(2026, 8, 10, 21, 30, tzinfo=UTC),
         daily_rows_loader=daily_loader,
         intraday_rows_loader=intraday_loader,
         query_fn=lambda *_args, **_kwargs: [],
@@ -222,5 +300,5 @@ def test_loader_does_not_read_intraday_rows_without_a_pending_session() -> None:
 
     assert calls["intraday"] == 0
     assert result["status"] == "COMPLETED_FALLBACK"
-    assert result["fallback_reason"] == "no_pending_session"
+    assert result["fallback_reason"] == "no_active_session"
     assert result["pattern"] == _completed_pattern()
