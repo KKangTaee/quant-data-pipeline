@@ -182,6 +182,7 @@
 | `finance/visualize.py` | 백테스트 결과 시각화 helper |
 | `finance/economic_cycle_catalog.py` / `economic_cycle_features.py` / `economic_cycle_labels.py` / `economic_cycle_observed_state.py` | 17-series 역할/변환 계약, leakage-safe 월별 factor, activity/labor+eligible USREC retrospective label, 실물 8개 기반 3M 수준·모멘텀 현재 국면과 최근 변화·전환 조건 authority |
 | `finance/economic_cycle_model.py` / `economic_cycle_validation.py` / `economic_cycle_pipeline.py` / `economic_cycle_interpretation.py` | shadow horizon 확률 모델·rolling-origin publication gate, observed-state/artifact/snapshot orchestration과 시장 맥락 해석. Pipeline은 observed-state JSON을 current/replay row에 저장하고 exact artifact 기반 월중 provisional materialization과 closed-month append-only rollover를 제공한다. 월중 row는 usable observed state로만 발행하고 transition persistence를 저장하지 않으며, 확률 artifact/h0는 best-effort 호환용으로 남지만 발행 gate나 제품 read model에는 사용하지 않는다 |
+| `finance/economic_cycle_core_state.py` / `economic_cycle_transition_dataset.py` / `economic_cycle_transition_model.py` / `economic_cycle_transition_validation.py` / `economic_cycle_transition_experiment.py` | RTDSM 장기 공통 core 후보와 unrestricted next destination·3-release transition pressure의 연구 전용 feature/target/model/OOS gate. 실제 DB experiment는 writer가 없고 core gate 실패 시 model fit·persistence·UI보다 먼저 중단한다 |
 
 ## Finance Loaders
 

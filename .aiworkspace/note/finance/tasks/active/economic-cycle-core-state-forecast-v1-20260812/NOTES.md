@@ -28,3 +28,7 @@
   never used by either procedure.
 - pressure baselines are expanding event rate and duration hazard; destination
   baselines are current-phase frequency and the fixed-cycle route.
+- actual checkpoint stopped before model fitting, so no actual probability,
+  baseline-skill, or calibration claim is available.
+- canonical docs changed because research ownership and the Roadmap decision
+  changed; product purpose, snapshot/service/UI, DB schema, and asset pathways did not.

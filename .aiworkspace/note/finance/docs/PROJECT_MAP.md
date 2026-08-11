@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-08-10
+Last Verified: 2026-08-12
 
 ## System At A Glance
 
@@ -152,6 +152,11 @@ Data Operations
   `economic_cycle_snapshot -> app/services/overview/economic_cycle.py ->
   economic_cycle_workbench`가 저장·해석·표시한다. 미래 1/2개월 확률은 제품 read
   model에 포함하지 않으며 자산별 확인 포인트는 별도 기존 pathway 계약을 유지한다.
+- 장기 예측 연구는 `economic_cycle_core_state.py`부터
+  `economic_cycle_transition_{dataset,model,validation,experiment}.py`까지의 읽기 전용
+  경계가 RTDSM canonical state, 자유 목적지, 3-release 전환압력과 episode OOS gate를
+  소유한다. 2026-08-12 actual core 안정성 gate가 실패했으므로 writer를 받지 않으며
+  production snapshot/service/React는 이 연구 결과를 소비하지 않는다.
 - Institutional Holdings의 SEC dataset과 identifier resolution은
   `finance/data/institutional_13f.py`와
   `finance/data/institutional_13f_mapping.py`가 저장하고 loader/service가 읽는다.

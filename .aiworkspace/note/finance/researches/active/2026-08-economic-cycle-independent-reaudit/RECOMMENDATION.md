@@ -1,6 +1,6 @@
 # Recommendation
 
-Status: RTDSM sample gate passed; current-state parity failed
+Status: canonical RTDSM core implemented; actual stability gate failed
 Last Updated: 2026-08-12
 
 ## Recommended Direction
@@ -89,15 +89,37 @@ Combined decision: **`NO_GO_PARITY`**.
 성립하지 않았다. 따라서 이 결과로 destination/imminence 확률을 fit하거나 UI를 만드는
 것은 올바르지 않다.
 
+## Canonical Core-State Experiment
+
+현행 8지표와 parity를 맞추는 접근은 폐기하고, RTDSM 4지표를 과거와 현재에 동일하게
+적용하는 canonical core 후보를 구현했다. 다음 목적지는 고정 순환을 강제하지 않으며,
+전환압력은 다음 3번의 공식 발표 안에 two-release 전환이 확정되는 사건이다.
+
+| Evidence | Actual | Gate | Result |
+| --- | ---: | ---: | --- |
+| Usable origins / confirmed transitions | 589 / 117 | 180 / 48 | Pass |
+| Four-phase occupancy | 15.11%~36.84% | each 8%~50% | Pass |
+| Raw one-month episode share | 27.12% (48/177) | at most 25% | **Fail** |
+| Three-release exact / level-side revision | 62.41% / 85.88% | 60% / 80% | Pass |
+| NBER recession below-side | 100% | 65% | Pass |
+| NBER peak / trough capture | 85.71% / 85.71% | 70% / 70% | Pass |
+
+Combined decision: **`NO_GO_CORE_STATE`**, sole reason `ONE_MONTH_EPISODES`.
+
+Dataset, deterministic weighted binary/multinomial model, prior-OOF calibration,
+episode-block chronological validation과 strongest-baseline publication gate까지 구현·단위
+검증했지만, actual experiment는 core gate에서 멈췄다. 따라서 actual probability,
+baseline 비교나 calibration 성과는 존재하지 않으며 임의로 표시하지 않는다.
+
 ## Required Next Decision
 
 다음 선택지는 둘뿐이다.
 
-1. 외부 경기 기준을 이용해 하나의 장기 current-state target을 새로 설계하고 sample,
-   parity, chronological OOS를 처음부터 다시 검증한다.
+1. raw quadrant가 아니라 two-release confirmation까지 포함한 canonical core label과
+   새로운 episode 안정성 gate를 결과와 독립적으로 사전 설계한 뒤 처음부터 재검증한다.
 2. 경제사이클 forecast 개발을 중단하고 현행 관측 국면·조건부 확인 기능만 유지한다.
 
-임계값 완화, 월별 행을 독립 표본으로 부풀리기, 결과를 본 뒤 지표 조합을 선택하는
+25%를 27.2%로 사후 완화하기, 월별 행을 독립 표본으로 부풀리기, 결과를 본 뒤 지표 조합을 선택하는
 방식은 사용하지 않는다. 자산별 확인 포인트는 어느 선택에서도 현행 그대로 유지한다.
 
 ## Event And Publication Boundary
@@ -115,4 +137,8 @@ sensitivity에서만 생성한다.
 - actual sample report: `NO_GO_DATA`, 148 usable origins, 32 events
 - RTDSM actual sample report: `GO_EXPERIMENT`, 589 usable origins, 117 events
 - RTDSM actual parity report: `NO_GO_PARITY`, 142 overlap, agreement 54.2%, kappa 0.368
+- canonical core actual report: `NO_GO_CORE_STATE`, raw one-month episodes 27.12%;
+  revision/NBER/sample/occupancy checks passed
+- transition research implementation: core/dataset/model/OOS/experiment 29 focused tests passed;
+  actual model fit was correctly not run
 - current code: fixed next-phase selection, historical destination comparison 없음

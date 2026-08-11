@@ -22,7 +22,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 - Safety baseline: no live approval, broker order, auto rebalance
 - Active phase: none
 - Active product implementation: none
-- Economic-cycle forecast research: RTDSM 장기 표본 gate 통과, current-state parity `NO_GO_PARITY`; model/UI 미착수
+- Economic-cycle forecast research: RTDSM canonical core·unrestricted transition model·episode OOS gate 구현, actual core stability `NO_GO_CORE_STATE`; persistence/UI 미착수
 - Completed phase: `inflation-policy-yield-path` (5/5 actual DB/Browser verified)
 - Inflation / Policy baseline: Core PCE·policy·joint rate·reverse·equity·independent recession materialization READY
 - Paused work와 Verification-Only work는 별도 상태로 관리
@@ -43,7 +43,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 | Architecture | Python domain / service / runtime, Streamlit command boundary와 React presentation 분리 | React가 DB / provider / canonical decision을 소유하지 않음 |
 | Inflation / Policy Backend | 독립 27-series PIT 원장, Philadelphia Fed SPF 확률 bin, 공식 FOMC rate decision 86건·SEP 40 release, FactSet 두 CY 라벨 검증 annual EPS 80 release, strict as-of/vintage loader, 혼합형 Core PCE, 검증 정책 marginal·2,000개 joint rate path·equity stress·독립 침체, 동적 저항대 | 기존 경제 사이클 결과 재사용 없음; Core/Q4/policy/joint-rate/equity/recession actual chronological gate 통과 |
 | Inflation / Policy Workbench | 기존 경기 국면 기본 선택기 아래 DB-backed 물가·정책·금리·역산·equity·12개월 침체 surface와 USER 기준 저장 | actual Q4 5상태·다음 발표·다음 회의·연말 정책·동적 4.79% 역산·EPS×multiple 스트레스·침체 5단계 공개와 Browser QA 완료 |
-| Economic Cycle Research History | Philadelphia Fed RTDSM `IPT/H/EMPLOY/RUC` 1,334,818-row provider-native vintage ledger, strict PIT loader, 589 usable origins·117 independent transitions와 sample/parity audit | 연구 전용 shadow state. 현행 8지표와 phase agreement 54.2%·kappa 0.368로 `NO_GO_PARITY`; current snapshot·확률 model·UI 연결 금지 |
+| Economic Cycle Research History | Philadelphia Fed RTDSM `IPT/H/EMPLOY/RUC` 1,334,818-row provider-native vintage ledger, strict PIT loader, canonical 4-state audit, unrestricted destination/3-release pressure model과 episode-blocked OOS publication gate | 연구 전용. actual 589 usable origins·117 transitions에서 core raw one-month episode 27.12%가 사전 상한 25%를 넘어 `NO_GO_CORE_STATE`; actual model fit·current snapshot·확률 UI 연결 금지 |
 
 상세 구현과 과거 QA는 개별 task / phase 기록에 남아 있다. 현재 제품 의미는
 [Product Direction](./PRODUCT_DIRECTION.md), code ownership은
@@ -80,7 +80,7 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 
 | Priority | Candidate | Why It Matters | Approval Needed Before |
 |---|---|---|---|
-| P0 | Economic-cycle state target 재정의 또는 forecast 중단 | RTDSM으로 표본 부족은 해소했지만 현행 8지표와 장기 4지표 국면 정합성이 사전 기준을 통과하지 못했다. 두 국면을 억지로 같은 label로 학습하면 확률 의미가 무너진다 | 외부 경기 기준을 이용한 하나의 장기 target 재설계 범위와 별도 chronological validation 승인, 또는 forecast 개발 중단 결정 |
+| P0 | Economic-cycle core 안정화 재설계 또는 forecast 중단 | RTDSM 4지표를 과거·현재의 단일 target으로 채택해 parity 문제는 제거했지만, raw 1개월 episode 27.12%가 사전 25% 안정성 기준을 실패했다. 결과를 보고 기준만 낮추면 확률 target의 신뢰성이 무너진다 | raw 국면 smoothing/confirmation을 core label 자체에 포함하는 새 사전 설계·gate 승인, 또는 forecast 개발 중단 결정 |
 | P0 | Historical universe / delisting Point-in-Time evidence | strict factor와 historical validation의 survivorship risk를 낮추는 핵심 correctness gap | source/provider, historical membership schema, delisting evidence와 fail-closed policy 결정 |
 | P1 | Existing Browser verification debt closeout | 구현 완료 task의 실제 interaction evidence와 status drift를 작은 범위로 닫을 수 있음 | 대상 task별 QA-only 범위 확인 |
 | P1 | Market Movers sector conditional outlook | 현재 broader roadmap의 다음 단계지만 확률·분포를 공개하려면 독립 episode와 OOS publication gate가 필요 | target, sample independence, chronological validation과 공개 기준 승인 |
@@ -93,8 +93,9 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 
 ## Recommended Order
 
-1. **Economic-cycle target decision** — 임계값을 낮추거나 지표 조합을 사후 선택하지 않고,
-   외부 기준으로 하나의 장기 current-state target을 다시 정의할지 forecast를 중단할지 결정한다.
+1. **Economic-cycle stability decision** — 27.12% 결과에 맞춰 임계값을 낮추지 않고,
+   two-release confirmation을 core state 자체에 포함한 새 안정성 계약을 사전 승인할지
+   forecast를 중단할지 결정한다.
 2. **Verification debt closeout** — 이미 구현된 interaction을 작은 QA-only 작업으로 닫아
    active-state 신뢰도를 높인다.
 3. **Correctness decision** — historical universe / delisting PIT source와 storage policy를

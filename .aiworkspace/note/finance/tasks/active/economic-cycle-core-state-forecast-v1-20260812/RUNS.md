@@ -29,3 +29,10 @@
 - exact decision: `NO_GO_CORE_STATE` with sole reason `ONE_MONTH_EPISODES`
 - mandatory stop applied: no actual model fit/OOS score, persistence, snapshot, service,
   React, or asset-checkpoint change
+
+## Final Verification
+
+- all `tests/test_economic_cycle*.py` plus market-context economic-cycle regression:
+  264 passed, 3 existing third-party EDGAR deprecation warnings
+- all five new modules compiled with `py_compile`
+- `git diff --check`: passed

@@ -1,6 +1,6 @@
 # Status
 
-State: active
+State: complete
 Last Updated: 2026-08-12
 
 ## Current Position
@@ -22,4 +22,5 @@ Last Updated: 2026-08-12
 
 ## Next Action
 
-No-Go 결과를 durable docs와 regression evidence에 정렬하고 task를 close한다.
+사용자 선택 전 추가 구현 없음. 다음 결정은 confirmation-based core를 새 gate로
+재설계할지, forecast 개발을 중단할지다.

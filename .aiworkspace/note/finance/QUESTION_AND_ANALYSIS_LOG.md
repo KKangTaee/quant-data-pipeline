@@ -10806,3 +10806,14 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 공식 장기 realtime history로 독립 전환 표본을 확보하되 현행 현재 국면과 같은 의미인지 검증한 뒤에만 확률 모델로 진행한다.
 - Analysis result: RTDSM 1,334,818행으로 589 usable origins·117 transitions를 확보했지만 현행 8지표와 phase agreement 54.2%·kappa 0.368이라 `NO_GO_PARITY`로 확정했다.
 - Follow-up: 임계값을 완화하지 않는다. 외부 기준을 가진 하나의 장기 state target 재설계를 별도 승인하거나 forecast 개발을 중단한다.
+
+### 2026-08-12 - 단일 장기 core도 raw 국면 안정성을 통과해야 예측 확률을 만든다
+
+- User request: RTDSM 4지표와 현행 8지표의 역할을 이해한 뒤 과거 데이터 기반 향후
+  국면 전환 기능을 승인한 의도대로 개발하도록 요청함.
+- Interpreted goal: RTDSM core를 하나의 label authority로 쓰고 모든 목적지를 비교하되,
+  pressure·destination 확률은 episode OOS와 baseline gate를 통과한 경우에만 공개한다.
+- Analysis result: 관련 엔진은 구현했지만 actual raw one-month episode 27.12%가 사전
+  25% 상한을 실패해 `NO_GO_CORE_STATE`; 다른 core checks는 모두 통과했다.
+- Follow-up: 결과에 맞춰 threshold를 낮추지 않는다. 새 confirmation-based core 계약을
+  사전 승인해 재검증하거나 forecast를 중단하며 production UI와 자산 카드는 유지한다.

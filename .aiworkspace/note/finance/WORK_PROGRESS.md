@@ -7405,3 +7405,12 @@ Detailed historical logs were archived on `2026-04-13`.
   agreement 54.2%·kappa 0.368로 사전 parity 기준을 실패했다.
 - destination/imminence model과 UI는 만들지 않았다. 다음 위치는
   `tasks/active/economic-cycle-rtdsm-history-v1-20260812/`의 external-target 결정이다.
+
+## 2026-08-12 - 경제 사이클 canonical core / 전환 예측 checkpoint 완료
+
+- RTDSM 4지표를 과거·현재 공통 core 후보로 삼아 unrestricted destination, 3-release
+  pressure, episode-weighted NumPy model과 chronological OOS gate를 구현했다.
+- actual 589 usable origins·117 transitions에서 occupancy/revision/NBER/sample은 통과했지만
+  raw one-month episode 27.12%가 사전 상한 25%를 넘어 `NO_GO_CORE_STATE`로 중단했다.
+- actual model fit·persistence·service·React는 실행하지 않았고 자산별 확인 포인트도
+  변경하지 않았다. 상세는 `economic-cycle-core-state-forecast-v1-20260812` task다.
