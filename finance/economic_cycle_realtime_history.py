@@ -165,8 +165,13 @@ def build_rtdsm_monthly_panel(
     *,
     forecast_origins: Iterable[str | date | pd.Timestamp],
     minimum_history_months: int = 60,
+    vintage_lag_months: int = 0,
 ) -> pd.DataFrame:
     """Build the four-indicator origin panel from eligible RTDSM vintages."""
+
+    resolved_vintage_lag = int(vintage_lag_months)
+    if resolved_vintage_lag < 0:
+        raise ValueError("vintage_lag_months must be non-negative")
 
     specs = {item.series_id: item for item in get_rtdsm_catalog()}
     source = pd.DataFrame(list(vintage_rows))
@@ -213,12 +218,13 @@ def build_rtdsm_monthly_panel(
 
     records: list[dict[str, object]] = []
     for origin in _normalized_origins(forecast_origins):
+        selection_origin = origin + pd.offsets.MonthEnd(resolved_vintage_lag)
         record: dict[str, object] = {"forecast_origin": origin}
         for series_id, spec in specs.items():
             eligible = [
                 item
                 for item in versions.get(series_id, [])
-                if item[0] <= origin <= item[1]
+                if item[0] <= selection_origin <= item[1]
             ]
             if not eligible:
                 record[f"{series_id}_signal"] = None
@@ -256,6 +262,9 @@ def build_rtdsm_monthly_panel(
         panel[f"{series_id}_z"] = fit_expanding_robust_scale(
             panel.get(signal_column, pd.Series(dtype="float64")).tolist(),
             minimum_history=int(minimum_history_months),
+        )
+        panel[f"{series_id}_z"] = pd.to_numeric(
+            panel[f"{series_id}_z"], errors="coerce"
         )
     panel["activity_score"] = panel[["IPT_z", "H_z"]].mean(
         axis=1, skipna=False

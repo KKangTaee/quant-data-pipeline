@@ -144,6 +144,44 @@ def test_rtdsm_panel_uses_revision_eligible_at_each_origin() -> None:
     assert math.isfinite(float(panel.loc[1, "EMPLOY_z"]))
 
 
+def test_rtdsm_panel_vintage_lag_uses_later_revision_without_future_observations() -> None:
+    from finance.economic_cycle_realtime_history import (
+        build_rtdsm_monthly_panel,
+    )
+
+    realtime = build_rtdsm_monthly_panel(
+        _vintage_rows(),
+        forecast_origins=["2020-01-31", "2020-02-29"],
+        minimum_history_months=2,
+    )
+    revised = build_rtdsm_monthly_panel(
+        _vintage_rows(),
+        forecast_origins=["2020-01-31", "2020-02-29"],
+        minimum_history_months=2,
+        vintage_lag_months=1,
+    )
+
+    assert revised.loc[0, "EMPLOY_signal"] > realtime.loc[0, "EMPLOY_signal"]
+    assert revised.loc[0, "EMPLOY_latest_observation_date"] == "2020-01-01"
+    assert revised.loc[0, "EMPLOY_vintage_date"] == "2020-02-29"
+
+
+def test_rtdsm_panel_single_origin_preserves_unscaled_missing_scores() -> None:
+    from finance.economic_cycle_realtime_history import (
+        build_rtdsm_monthly_panel,
+    )
+
+    panel = build_rtdsm_monthly_panel(
+        _vintage_rows(),
+        forecast_origins=["2020-01-31"],
+        minimum_history_months=60,
+    )
+
+    assert len(panel) == 1
+    assert pd.isna(panel.loc[0, "activity_score"])
+    assert pd.isna(panel.loc[0, "labor_income_score"])
+
+
 def test_rtdsm_observed_history_waits_for_level_and_momentum() -> None:
     from finance.economic_cycle_realtime_history import (
         build_rtdsm_observed_history,
