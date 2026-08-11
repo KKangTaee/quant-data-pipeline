@@ -14,3 +14,9 @@
 - pressure means confirmation within the next three usable publications. A
   positive label is known at confirmation; a negative label is known only when
   its full publication horizon closes.
+- pressure and destination fitting use deterministic NumPy L2 logistic models;
+  no new machine-learning dependency or random seed is involved.
+- prediction rejects missing/non-finite features, and missing class support
+  produces a `LIMITED` artifact rather than a fabricated probability.
+- destination output compares all four phases and conditionally sets the
+  current phase to zero before renormalizing the next-destination distribution.
