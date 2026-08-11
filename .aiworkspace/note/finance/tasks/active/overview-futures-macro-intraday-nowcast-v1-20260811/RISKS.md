@@ -2,18 +2,30 @@
 
 Last Updated: 2026-08-11
 
-## Open Risks
+## Residual Risks
 
 - Yahoo continuous futures 5m data may be delayed, missing by symbol or revised; the common cutoff,
   full-family membership and 30-minute freshness gates must fail closed.
-- Futures session dates can differ from New York calendar dates around Sunday evening and holidays;
-  the existing DST-safe resolver/window contract must remain the authority.
+- The CME-style active-session resolver covers weekday/evening reopen semantics but is not an
+  exchange holiday calendar. Holiday sessions with no fresh data fail closed through the freshness
+  gate.
 - A synthetic current close can change regime/transition during the session. Every provisional value
   must remain visibly labeled and must not enter immutable forecast history.
-- Reusing one 5m collection for both nowcast and post-cutoff finalization requires a narrow handoff;
-  it must not weaken the existing 17/17 atomic finalization gate.
-- The active React component bundle is generated code that must be rebuilt and verified without
-  staging unrelated generated screenshots or run history.
+- The provider is not exchange-grade realtime; a delayed but still sub-30-minute bar can differ from
+  a broker feed. The UI therefore keeps the observation explicitly provisional.
+
+## Closed In This Task
+
+- Evening reopen trade-date ambiguity is covered by dedicated regression tests.
+- One 5m collection is reused without weakening the 17/17 atomic daily finalization gate.
+- The active React production bundle was rebuilt and Browser QA passed without staging generated
+  screenshots or unrelated run history.
+
+## Repository Verification Gap
+
+- The task-owned Futures Macro suites and changed contract nodes pass. A wider exploratory run of
+  `tests/test_service_contracts.py` still has 18 failures in pre-existing Backtest, Sentiment and
+  legacy thermometer contracts whose owning source files were unchanged by this task.
 
 ## Deferred
 

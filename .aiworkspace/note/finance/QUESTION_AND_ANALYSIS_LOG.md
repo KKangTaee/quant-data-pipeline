@@ -10788,3 +10788,14 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result: 잘못된 일별 금리 release clock을 수정하고 지연 label OOS gate를 통과한
   침체 23.1484%·관찰 상태를 snapshot/service/UI에 저장·표시했다.
 - Follow-up: 5/5 완료. 이후는 같은 raw refresh/materialization 계약의 정기 갱신이다.
+
+### 2026-08-11 - Futures Macro는 거래 중 최신 5m과 완료 일봉을 역할별로 분리한다
+
+- User request: 비거래일에는 최신 완료 일봉을 쓰되, futures 거래 중이면 현재
+  수집되는 최신 데이터로 판단하는 권장안 2를 진행하도록 요청함.
+- Interpreted goal: 현재 관측은 closed 5m으로 시의성을 확보하되, 예측 검증과 이력은
+  미완료 데이터로 오염시키지 않는다.
+- Analysis result: 활성 trade-date·common cutoff·full-family·30분 freshness gate를 구현하고,
+  현재 1D/5D/20D와 completed-session 5D forecast gate를 화면에서 분리했다.
+- Follow-up: 3/3 구현·actual refresh·Browser QA 완료. 5D `NO_EDGE`는 결측이 아니라
+  model Brier 0.5582가 baseline 0.5567보다 낫지 않은 검증 결론이다.

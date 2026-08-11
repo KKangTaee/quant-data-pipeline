@@ -1,7 +1,7 @@
 # Architecture Notes
 
 Status: Active
-Last Verified: 2026-08-02
+Last Verified: 2026-08-11
 
 ## Current Architecture
 
@@ -43,7 +43,7 @@ Layer ownership과 storage / surface boundary를 먼저 판정해야 하면 [SYS
 ## Current Surface Notes
 
 - `Workspace > Overview`의 current primary tabs는 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events`다. Market Context visible path는 Shiller/S&P index earnings/SEP/SPX-SPY DB evidence를 읽는 React S&P 500 valuation surface다. `Futures Monitor`와 `Sector / Industry` standalone tab은 current primary surface가 아니며, 선물/sector evidence는 Futures Macro와 Market Movers가 읽는다.
-- Futures Macro의 Streamlit-free 계산 경계는 `app/services/futures_macro_pattern.py`와 `app/services/futures_macro_pattern_validation.py`다. 전자는 stored ten-year daily candle의 point-in-time 1D / 5D / 20D feature와 현재 regime / transition을 만들고, 후자는 as-of volatility, 독립 episode spacing, chronological Brier / calibration publication gate와 stepwise 2D analog-path error / baseline / middle-50% coverage를 계산한다. 공개 경로는 현재 좌표에 유사 episode의 표준화된 중앙 이동을 더한 5D / 20D 조건부 경로이며, probability와 path status 중 더 보수적인 상태를 사용한다. Current observation은 `OBSERVED/PARTIAL/UNAVAILABLE`, future distribution은 `VERIFIED/PROVISIONAL/UNAVAILABLE`로 분리한다. Streamlit helper는 DB/provider 계산을 소유하지 않고 finite-number payload 연결, unavailable suppression, refresh dispatch, native fallback만 담당한다.
+- Futures Macro의 completed-session 계산 경계는 `app/services/futures_macro_pattern.py`와 `app/services/futures_macro_pattern_validation.py`다. 전자는 stored ten-year completed daily candle의 point-in-time 1D / 5D / 20D feature와 regime / transition을 만들고, 후자는 as-of volatility, 독립 episode spacing, chronological Brier / calibration publication gate와 stepwise 2D analog-path error / baseline / middle-50% coverage를 계산한다. `app/services/futures_macro_intraday.py`는 활성 futures trade date를 daily label과 독립적으로 판정하고, 저장된 latest closed 5m common cutoff으로 현재 1D / 5D / 20D를 임시 재계산한다. 장중 값은 `INTRADAY_READY/INTRADAY_PARTIAL/COMPLETED_FALLBACK`이며 snapshot/history에 저장하지 않는다. 향후 5D 검증과 immutable history는 completed daily만 사용하며, 화면은 현재 관측과 예측 gate를 분리해 표시한다. Streamlit helper는 provider 직접 조회 없이 finite-number payload 연결, unavailable suppression, refresh dispatch, native fallback만 담당한다.
 - Backtest strict Quality / Value family는 statement shadow factor path와 `PIT Monthly Snapshot Universe`를 visible contract로 사용한다. Static Managed Research / Historical Dynamic PIT는 saved payload와 old run replay compatibility path다.
 - Practical Validation은 5-flow 화면으로 읽고, Flow 3은 검증 결론, Flow 4는 카테고리별 검증 결과와 해결 guide를 소유한다. Flow 3 / Flow 4는 Final Review 전용 `REVIEW` metadata를 현재 보강해야 할 문제처럼 노출하지 않는다.
 

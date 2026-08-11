@@ -338,11 +338,12 @@ yfinance futures OHLCV
   -> finance_meta.futures_instrument
   -> finance_price.futures_ohlcv
   -> finance_meta.futures_market_monitor_run
-  -> manual 1d refresh가 same-date pending + 17:15 ET 이후이면
-       -> yfinance 2d/5m 수집
+  -> manual 최신 데이터 갱신이 active/pending session을 발견하면
+       -> yfinance 2d/5m을 한 번 수집
        -> finance_price.futures_ohlcv(interval=5m)
-       -> stored exact window D-1 18:00 ET <= bar < D 17:00 ET 집계
-       -> 17/17 atomic update of 1d final_* columns
+       -> pending same-date + 17:15 ET 이후이면 stored exact window
+          D-1 18:00 ET <= bar < D 17:00 ET 집계를 재사용
+       -> 완료 17/17일 때만 atomic update of 1d final_* columns
   -> app.services.futures_market_monitoring.build_futures_monitor_snapshot()
   -> app.services.futures_macro_sessions.select_completed_futures_daily_rows()
   -> app.services.futures_macro_thermometer.build_futures_macro_thermometer_snapshot()
@@ -350,6 +351,10 @@ yfinance futures OHLCV
   -> app.services.futures_macro_snapshot.materialize_overview_futures_macro_snapshot()
   -> finance_meta.futures_macro_forecast_history (immutable append)
   -> finance_meta.futures_macro_snapshot (latest-good current)
+  -> Overview render에서 app.services.futures_macro_intraday가 DB-only로
+       -> active CME-style trade date 판정
+       -> 완료 daily + latest closed 5m common cutoff 합성
+       -> 임시 1D / 5D / 20D current observation 생성
   -> Workspace > Overview > Futures Macro
   -> Market Context source / refresh evidence
   -> Workspace > Ingestion > 실행 기록 / 결과 for detailed diagnostics
@@ -364,12 +369,14 @@ finance_price.futures_ohlcv daily rows
 
 - 1차 source는 Yahoo/yfinance provider symbol 기반의 pilot feed다.
 - 기본 watchlist는 주가지수, 금리, 원자재, FX futures이며 optional micro / crypto futures는 별도 그룹으로 둔다. Current primary UI는 Futures Macro이고, 1m chart / run diagnostics는 보조 evidence다.
-- 정상 화면 render는 DB row를 읽고, 수집은 Overview refresh button이 `app/jobs/overview_actions.py` facade를 호출하거나 Ingestion job wrapper가 실행한다.
+- 정상 화면 render는 DB row만 읽고, 수집은 Overview `최신 데이터 갱신`이 `app/jobs/overview_actions.py` facade를 호출하거나 Ingestion job wrapper가 실행한다.
 - yfinance가 `period=1d`, `interval=1m`에서 일부 futures symbol을 빈 응답 또는 지나치게 희소한 응답으로 돌려주면 collector는 해당 symbol만 `period=2d`, `interval=1m`으로 한 번 보강 수집한다. 성공 / 실패, 초기 row 수, 회복 symbol은 `futures_market_monitor_run.diagnostics_json.fallback_retries`에 남긴다.
 - `futures_market_monitor_run`과 Overview local run history가 Data Health의 latest success / failed symbols / stale 판단에 사용된다.
 - Macro Thermometer historical validation은 `futures_ohlcv` 1d row를 point-in-time으로 재계산하고, target futures가 부족할 때만 `nyse_price_history` ETF proxy를 labeled fallback으로 읽는다.
-- daily resolver는 provider raw marker와 완료 세션 기준일을 분리한다. 미완료 session은 evidence로 남기되 current state/forecast input에서는 제외하고, 마지막 완료 세션의 동일 fingerprint 결과를 재사용한다.
+- daily resolver는 provider raw marker와 완료 세션 기준일을 분리한다. 미완료 session은 forecast validation/history에서는 제외하지만, current observation은 장중 5m coverage와 freshness gate를 통과하면 임시 세션으로 표시한다.
 - 수동 refresh가 저녁 재개 뒤 실행돼 mutable Yahoo 1d row가 pending이어도, 저장된 5m row의 exact ET 구간으로 17개 완료 세션을 재구성한다. 유효한 `yfinance_5m_session_aggregate_v1` final 값은 raw 1d보다 우선하며 이미 확정된 세션은 추가 provider 호출 없이 재사용한다.
+- 장중 합성은 family 구성 종목이 모두 있는 경우만 해당 family를 계산하고, 가용 family가 공통으로 보유한 가장 느린 closed 5m bar를 common cutoff으로 쓴다. 6개 family면 ready, 4~5개면 partial, 4개 미만이거나 30분 초과 stale이면 완료 세션으로 fail closed한다.
+- 활성 trade date는 daily provider label에 종속하지 않고 New York 18:00 저녁 재개를 반영한다. 즉 월요일 18:00 ET 이후는 화요일 거래 세션으로 표시한다. 휴장일·provider 지연은 freshness gate에서 fallback한다.
 - same-state V2는 30개 완료 세션의 실제 일별 trail과 5D/20D 미래 분포를 분리한다. UI는 고정 `[-2.5,+2.5]` 축에서 실제 trail을 표시하고, 독립 gate를 통과한 ellipse/vector만 추가한다.
 - Market Context 3차-B의 Macro 조건 포함 pilot은 저장된 `ZN=F` / `ZB=F` daily rows만 읽어 Rate Pressure futures proxy bucket을 계산한다. selected as-of 이후 row와 anchor 이후 futures 움직임은 조건 계산에 쓰지 않는다.
 

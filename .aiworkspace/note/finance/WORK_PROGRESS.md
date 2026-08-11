@@ -7388,3 +7388,12 @@ Detailed historical logs were archived on `2026-04-13`.
 - actual snapshot은 침체 23.1484%·`WATCH/관찰`이며 6개 component와 overall 모두 `READY`다.
 - DGS 등 일별 PIT clock의 데이터셋 등록일 오류를 관측일 EOD로 바로잡았고 equity도
   nested chronological ridge로 MAE 6.0751·coverage 0.875를 재검증했다. 상세는 functional recovery task다.
+
+## 2026-08-11 - Futures Macro 장중 현재 관측 완료
+
+- 활성 futures trade session은 저장된 latest closed 5m으로 임시 1D/5D/20D를 재계산하고,
+  향후 5D 검증과 immutable history는 completed daily만 사용하도록 분리했다.
+- actual refresh로 2026-08-10을 17/17 확정하고 저녁 재개 2026-08-11 session을
+  `INTRADAY_READY`, 6/6 family로 확인했다.
+- 5D `NO_EDGE`는 120 독립 표본·325 시간순 평가에서 model Brier가 baseline보다 낫지 않은
+  결과로 화면에 분리 표시했다. 상세는 `tasks/active/overview-futures-macro-intraday-nowcast-v1-20260811/`다.
