@@ -1,7 +1,7 @@
 # Economic Cycle Core State And Transition Forecast Design
 
 Date: 2026-08-12
-Status: approved in principle by the user's 2026-08-12 instruction; written-spec review pending
+Status: approved by the user on 2026-08-12
 
 ## Why this exists
 
@@ -173,8 +173,8 @@ Inputs:
 
 Algorithms:
 
-- transition pressure: L2-regularized binary logistic regression
-- destination: L2-regularized multinomial logistic regression
+- transition pressure: deterministic NumPy L2-regularized binary logistic regression
+- destination: deterministic NumPy L2-regularized multinomial logistic regression
 - missing required core inputs: fail closed; no imputation from current revised
   data
 - calibration: prior out-of-fold predictions only; binary Platt scaling and
@@ -183,6 +183,11 @@ Algorithms:
 Regularization strength is selected only inside each training window. The
 current eight-indicator corroboration fields are excluded from fitting because
 their strict real-time history is too short.
+
+No new machine-learning dependency is added. The repository environment does
+not include scikit-learn, so weighted fitting, prediction, and calibration use
+small deterministic NumPy implementations with convergence and finite-value
+checks.
 
 ## Chronological validation and publication gate
 
