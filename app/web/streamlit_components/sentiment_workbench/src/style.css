@@ -72,7 +72,6 @@ summary:focus-visible {
 .sentiment-workbench__chart-section,
 .sentiment-workbench__period-change-section,
 .sentiment-workbench__outlook-section,
-.sentiment-workbench__watch-section,
 .sentiment-workbench__raw-disclosure {
   margin-top: 22px;
 }
@@ -281,7 +280,6 @@ summary:focus-visible {
 .sentiment-workbench__line-chart,
 .sentiment-workbench__period-card,
 .sentiment-workbench__outlook-card,
-.sentiment-workbench__watch-grid article,
 .sentiment-workbench__raw-disclosure,
 .sentiment-workbench__cnn-evidence,
 .sentiment-workbench__aaii-evidence {
@@ -853,47 +851,6 @@ summary:focus-visible {
   margin: 9px 2px 0;
 }
 
-.sentiment-workbench__watch-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.sentiment-workbench__watch-grid article {
-  padding: 13px 14px;
-}
-
-.sentiment-workbench__watch-grid article[data-watch-path="confirm"] span {
-  color: #0f766e;
-}
-
-.sentiment-workbench__watch-grid article[data-watch-path="reverse"] span {
-  color: #a14f61;
-}
-
-.sentiment-workbench__watch-grid article[data-watch-path="persist"] span {
-  color: #8a5d3b;
-}
-
-.sentiment-workbench__watch-grid span {
-  font-size: 0.78rem;
-  font-weight: 850;
-}
-
-.sentiment-workbench__watch-grid p {
-  color: #3f4d61;
-  font-size: 0.77rem;
-  font-weight: 630;
-  line-height: 1.44;
-  margin: 7px 0;
-}
-
-.sentiment-workbench__watch-grid small {
-  color: #718096;
-  font-size: 0.67rem;
-  line-height: 1.4;
-}
-
 .sentiment-workbench__raw-disclosure {
   overflow: hidden;
 }
@@ -1125,7 +1082,6 @@ summary:focus-visible {
   .sentiment-workbench__history-grid,
   .sentiment-workbench__period-change-grid,
   .sentiment-workbench__outlook-grid,
-  .sentiment-workbench__watch-grid,
   .sentiment-workbench__evidence-columns {
     grid-template-columns: minmax(0, 1fr);
   }

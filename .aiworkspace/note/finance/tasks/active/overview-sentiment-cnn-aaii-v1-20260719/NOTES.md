@@ -6,7 +6,7 @@
 - 저장 이력은 현재 심리 설명에는 사용할 수 있지만 검증된 1주·1개월 예측을 제공하기에는 부족하다.
 - worktree에 있던 다른 미추적 research, `.superpowers/`, QA PNG는 사용자/기존 작업으로 보고 이번 task에서 수정하지 않는다.
 - 서비스의 두 축 판정과 설명을 `app/services/overview/sentiment.py`가 소유하고, `sentiment_react_workbench_v2`는 화면 계약만 구성한다.
-- React는 source card, 교차 판정, 상세 근거, 그래프 탭, 확인 조건을 표시하며 refresh / reload 요청은 기존 Python dispatch boundary를 유지한다.
+- React는 source card, 교차 판정, 상세 근거, 그래프 탭, 기간 변화를 표시하며 refresh / reload 요청은 기존 Python dispatch boundary를 유지한다.
 - 그래프 x축은 ordinal index가 아니라 관측일 timestamp 비율을 사용해 일간 CNN과 주간 AAII의 실제 시간 간격을 각각 보존한다.
 - UI 선택 checkpoint는 카드 밀도, 교차 판정 강조, 그래프 탭 위치를 조정 가능한 축으로 사용자에게 제시했다.
 - 독립 리뷰에서 발견한 해석 불일치를 수정했다. AAII 방향·세 응답 결측은 모두 confidence `Review`에 반영하고, CNN 차트 색대역은 서비스 판정의 `25 / 45 / 55 / 75` 경계와 맞춘다.
@@ -17,7 +17,7 @@
 - graph curve는 사용하지 않고 실제 관측일 간격의 raw point를 직선으로 연결한다. 중간 날짜 값을 새 관측으로 생성하지 않는다.
 - source box 상단의 colored rounded rail은 기능이 없는 장식으로 판단해 제거한다. 출처 구분은 label, graph 색, badge에 남긴다.
 - 1W·1M 확률 mockup은 layout 검토용이며 production 데이터가 아니다. 검증된 estimator가 없으면 card는 `UNAVAILABLE`이고 확률을 숨긴다.
-- 승인된 화면 순서는 Hero → 균형 current evidence → CNN 고정 + AAII 전환 graph → 1W·1M card → 3개 관찰 경로 → 상세 disclosure로 구현했다.
+- 현재 화면 순서는 Hero → 균형 current evidence → CNN 고정 + AAII 전환 graph → 1W·1M card → 상세 disclosure다. 실제 monitoring 기능이 아닌 3개 관찰 가이드는 사용자 결정으로 제거했다.
 - graph는 `polyline`과 실제 timestamp 좌표를 사용하며 CNN 최신 관측값·상태를 마지막 점에 직접 표시한다. AAII 응답은 teal 실선 / gray 파선 / berry 점선으로 구분한다.
 - 오래 실행된 Python 프로세스와 새 frontend bundle이 순간적으로 섞여도 `outlook` 누락으로 전체 component가 깨지지 않도록 1W·1M unavailable fallback을 둔다. 정상 source of truth는 계속 Python payload다.
 - Browser QA screenshot `overview-sentiment-visual-redesign-qa.png`는 generated artifact이며 commit 대상이 아니다.
@@ -39,3 +39,4 @@
 - CNN·AAII metric box는 동일한 중립 1px border를 사용한다. source 색은 label 옆 7px 원형 marker에만 사용해 장식적인 colored top border를 제거했다.
 - 460px 이하에서는 `기간 변화`와 `현재` 값을 한 열로 쌓고 현재값을 왼쪽 정렬한다. 좁은 폭에서도 우선순위가 유지되며 두 숫자가 서로 압축되지 않는다.
 - 이번 polish는 payload, 계산, publication gate, source/DB/ingestion 경계를 바꾸지 않는 focused presentation change다. 따라서 canonical durable doc change는 없고 task closeout만 갱신한다.
+- Watch UI 제거도 presentation-only 변경이다. Python의 `watch_conditions` 생성과 React payload type은 backward compatibility를 위해 남기며 화면에서만 소비하지 않는다. 제품 원칙, code/storage ownership, 데이터 의미가 바뀌지 않아 canonical doc change는 없다.

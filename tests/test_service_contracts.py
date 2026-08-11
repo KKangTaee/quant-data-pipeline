@@ -9019,26 +9019,25 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("axis.available", all_source)
         self.assertIn("관측값 없음 · 판정 보류", all_source)
 
-    def test_sentiment_react_period_cards_watch_paths_and_detail_disclosure(self) -> None:
+    def test_sentiment_react_period_cards_and_detail_disclosure_without_watch_guide(self) -> None:
         source_root = Path("app/web/streamlit_components/sentiment_workbench/src")
         root_source = (source_root / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        all_source = "\n".join(path.read_text(encoding="utf-8") for path in source_root.glob("*.tsx"))
         dashboard_helper_source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
         period_change_path = source_root / "SentimentPeriodChangeSection.tsx"
         watch_path = source_root / "WatchConditionsSection.tsx"
         disclosure_path = source_root / "SentimentEvidenceDisclosure.tsx"
         period_change_source = period_change_path.read_text(encoding="utf-8") if period_change_path.exists() else ""
-        watch_source = watch_path.read_text(encoding="utf-8") if watch_path.exists() else ""
         disclosure_source = disclosure_path.read_text(encoding="utf-8") if disclosure_path.exists() else ""
 
         self.assertTrue(period_change_path.exists())
-        self.assertTrue(watch_path.exists())
+        self.assertFalse(watch_path.exists())
         self.assertTrue(disclosure_path.exists())
         for component in (
             "<SentimentHero",
             "<CurrentEvidenceSection",
             "<SentimentHistorySection",
             "<SentimentPeriodChangeSection",
-            "<WatchConditionsSection",
             "<SentimentEvidenceDisclosure",
         ):
             self.assertIn(component, root_source)
@@ -9048,7 +9047,6 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "<CurrentEvidenceSection",
                 "<SentimentHistorySection",
                 "<SentimentPeriodChangeSection",
-                "<WatchConditionsSection",
                 "<SentimentEvidenceDisclosure",
             )),
             [root_source.index(component) for component in (
@@ -9056,11 +9054,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "<CurrentEvidenceSection",
                 "<SentimentHistorySection",
                 "<SentimentPeriodChangeSection",
-                "<WatchConditionsSection",
                 "<SentimentEvidenceDisclosure",
             )],
         )
         self.assertNotIn("<SentimentOutlookSection", root_source)
+        self.assertNotIn('from "./WatchConditionsSection"', root_source)
+        self.assertNotIn("<WatchConditionsSection", root_source)
+        self.assertNotIn("다음 확인 조건", all_source)
         self.assertIn("기간별 심리 변화", period_change_source)
         self.assertIn("periodChanges.periods.map", period_change_source)
         self.assertIn('data-period={period.key}', period_change_source)
@@ -9102,9 +9102,6 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("<strong>{displayValue(metric.end_value", available_value_markup)
         self.assertIn("period.relationship.summary", period_change_source)
         self.assertIn("실제 관측 변화", period_change_source)
-        self.assertIn("data-watch-path={item.key}", watch_source)
-        self.assertIn("watchConditions.map", watch_source)
-        self.assertIn("정렬·반전·지속", watch_source)
         self.assertIn("<details", disclosure_source)
         self.assertIn("payload.evidence.cnn_components.map", disclosure_source)
         self.assertIn("payload.evidence.aaii_comparison.map", disclosure_source)
@@ -9196,7 +9193,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         mobile_current_rule = mobile_current_rule[: mobile_current_rule.index("}")]
         self.assertIn("justify-items: start;", mobile_current_rule)
         self.assertIn(".sentiment-workbench__period-relationship", style)
-        self.assertIn(".sentiment-workbench__watch-grid", style)
+        self.assertNotIn(".sentiment-workbench__watch-grid", style)
         self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", style)
         self.assertIn(":focus-visible", style)
         self.assertIn("@media (max-width: 760px)", style)
@@ -9240,7 +9237,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("시장 행동", all_source)
         self.assertIn("AAII 투자자 설문", all_source)
         self.assertIn("두 축의 현재 근거", all_source)
-        self.assertIn("다음 확인 조건", all_source)
+        self.assertNotIn("다음 확인 조건", all_source)
         self.assertNotIn('className="sentiment-workbench__cross-read"', all_source)
         self.assertNotIn("metricByLabel(\"CNN Fear & Greed\")", react_source)
         self.assertNotIn("metricByLabel(\"AAII Bearish\")", react_source)
@@ -9251,7 +9248,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("payload.component_explanations.map", react_source)
         self.assertEqual(all_source.count("payload.evidence.cnn_components.map"), 1)
         self.assertIn("aaiiComparison.find", all_source)
-        self.assertIn("watchConditions.map", all_source)
+        self.assertNotIn("watchConditions.map", all_source)
         self.assertIn("SentimentEvidenceDisclosure", react_source)
         self.assertLess(
             react_source.index("<SentimentHistorySection"),
@@ -9261,7 +9258,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn(".sentiment-workbench__cross-metric", react_style)
         self.assertIn("box-sizing: border-box;", react_style)
         self.assertIn(".sentiment-workbench__raw-disclosure", react_style)
-        self.assertIn(".sentiment-workbench__watch-grid", react_style)
+        self.assertNotIn(".sentiment-workbench__watch-grid", react_style)
 
     def test_sentiment_react_context_surface_shows_recent_range_and_divergence(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")

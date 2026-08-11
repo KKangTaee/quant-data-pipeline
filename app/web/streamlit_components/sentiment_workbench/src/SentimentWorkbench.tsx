@@ -6,7 +6,6 @@ import SentimentEvidenceDisclosure from "./SentimentEvidenceDisclosure";
 import SentimentHero from "./SentimentHero";
 import SentimentHistorySection from "./SentimentHistorySection";
 import SentimentPeriodChangeSection from "./SentimentPeriodChangeSection";
-import WatchConditionsSection from "./WatchConditionsSection";
 
 type NumericValue = number | string | null | undefined;
 
@@ -446,7 +445,6 @@ function SentimentWorkbench({ args }: Props) {
         coverage={payload.history_coverage || fallbackHistoryCoverage}
       />
       <SentimentPeriodChangeSection periodChanges={payload.period_changes || fallbackPeriodChanges} />
-      <WatchConditionsSection watchConditions={payload.watch_conditions} />
       <SentimentEvidenceDisclosure onToggle={syncFrameHeightSoon} payload={payload} />
     </section>
   );

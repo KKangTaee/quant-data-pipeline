@@ -59,3 +59,10 @@
 - 독립 polish 리뷰에서 Important 2건과 Minor 1건을 확인했다. 460px 이하 value row 적층 규칙을 RED/GREEN으로 추가하고, JSX 값 역할·순서, source별 marker 색, primary/current typography와 mobile selector를 직접 검증하도록 source-contract를 강화했다.
 - actual 420px Streamlit Browser QA에서 component viewport `420px`, body `388/388`, metric `328/328` client/scroll width로 overflow 0을 확인했다. 네 value row가 단일 `306px` column으로 쌓이고 `현재`가 왼쪽 정렬되며 console warning 0이었다.
 - QA screenshot `overview-sentiment-period-metric-ui-polish-qa.png`, `overview-sentiment-period-metric-ui-polish-420-qa.png`는 generated artifact로 남기고 commit 대상에서 제외한다.
+- Watch guide 부재·section order source-contract 3개를 RED로 전환해 기존 component, root render와 CSS가 남아 있음을 확인한 뒤 UI 표현 코드만 제거하고 GREEN으로 전환했다.
+- `WatchConditionsSection.tsx`, root import/render, `.sentiment-workbench__watch-*` 전용 CSS를 삭제했다. backend `watch_conditions` service/payload 테스트와 type은 변경하지 않았다.
+- production build는 177 modules를 정상 변환했고 bundle은 `index-D5wfr3Wm.css`, `index-BQpaAbMA.js`로 갱신됐다.
+- fresh sentiment-name regression 43개 중 기존 baseline 3건을 제외한 `40 passed`이며 baseline test ID가 이전 실행과 정확히 일치했다. focused 3개, bundle-reference 검사와 `git diff --check`도 통과했다.
+- actual desktop Browser QA에서 root section order가 Hero → current → history → period change → disclosure이고 Watch selector/copy가 0건임을 확인했다. component width는 `1109/1109`, console warning/error는 0건이었다.
+- actual 420px Browser QA에서도 같은 section order와 Watch 부재, 1W/1M 값 유지를 확인했다. component body는 `388/388` client/scroll width, console warning/error 0건이었다.
+- QA screenshot `overview-sentiment-watch-guide-removal-qa.png`는 generated artifact로 남기고 commit 대상에서 제외한다.
