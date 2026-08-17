@@ -491,14 +491,26 @@ def _handle_workbench_event(event: dict[str, Any] | None) -> None:
         st.rerun()
     if event_name == "select_manager":
         cik = str(payload.get("cik") or "")
-        if cik and cik != st.session_state.get("institutional_portfolios_selected_cik"):
+        selected_cik = str(st.session_state.get("institutional_portfolios_selected_cik") or "")
+        active_search = str(st.session_state.get("institutional_portfolios_manager_search") or "")
+        if cik and (cik != selected_cik or active_search):
+            portfolio_result = load_institutional_portfolio_model(cik)
+            if portfolio_result.get("status") != "ok":
+                st.session_state["institutional_portfolios_manager_selection_error"] = (
+                    "선택한 기관 포트폴리오를 불러오지 못했습니다. 현재 기관 화면을 유지합니다."
+                )
+                st.rerun()
+                return
+            st.session_state["institutional_portfolios_manager_search"] = ""
             st.session_state["institutional_portfolios_selected_cik"] = cik
+            st.session_state["institutional_portfolios_manager_selection_error"] = ""
             st.session_state["institutional_interest_query"] = ""
             st.session_state["institutional_interest_query_needs_load"] = False
             st.session_state["institutional_interest_model_cache"] = {}
             st.session_state["institutional_popularity_needs_load"] = False
             st.session_state["institutional_price_refresh_result"] = {}
             st.rerun()
+            return
     if event_name == "drilldown":
         query = str(payload.get("query") or "").strip()
         if query and query != st.session_state.get("institutional_interest_query"):
@@ -706,6 +718,9 @@ def render_institutional_portfolios_page(
         refresh_status=refresh_status,
         preserve_manager_order=search_active,
         manager_search_query=search,
+    )
+    payload.setdefault("manager_picker", {})["selection_error"] = str(
+        st.session_state.get("institutional_portfolios_manager_selection_error") or ""
     )
     react_rendered = _render_workbench_or_fallback(payload, key="institutional_portfolios_workbench")
     if not react_rendered:

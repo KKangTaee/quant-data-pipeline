@@ -1807,6 +1807,77 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         )
         self.assertEqual(fake_streamlit.rerun_count, 1)
 
+    def test_select_manager_event_clears_search_and_keeps_requested_cik(self) -> None:
+        import app.web.institutional_portfolios as page
+
+        class FakeStreamlit:
+            def __init__(self) -> None:
+                self.session_state: dict[str, object] = {
+                    "institutional_portfolios_selected_cik": "0001336528",
+                    "institutional_portfolios_manager_search": "Bill Ackman",
+                    "institutional_portfolios_manager_selection_error": "old error",
+                }
+                self.rerun_count = 0
+
+            def rerun(self) -> None:
+                self.rerun_count += 1
+
+        original_streamlit = page.st
+        original_loader = page.load_institutional_portfolio_model
+        fake_streamlit = FakeStreamlit()
+        try:
+            page.st = fake_streamlit
+            page.load_institutional_portfolio_model = lambda cik: {
+                "status": "ok",
+                "model": {"manager": {"cik": cik}},
+            }
+            page._handle_workbench_event(
+                {"id": "select_manager", "cik": "0001656456", "nonce": "select-manager-1"}
+            )
+        finally:
+            page.st = original_streamlit
+            page.load_institutional_portfolio_model = original_loader
+
+        self.assertEqual(fake_streamlit.session_state["institutional_portfolios_selected_cik"], "0001656456")
+        self.assertEqual(fake_streamlit.session_state["institutional_portfolios_manager_search"], "")
+        self.assertEqual(fake_streamlit.session_state["institutional_portfolios_manager_selection_error"], "")
+        self.assertEqual(fake_streamlit.rerun_count, 1)
+
+    def test_select_manager_load_failure_preserves_current_manager_and_search(self) -> None:
+        import app.web.institutional_portfolios as page
+
+        class FakeStreamlit:
+            def __init__(self) -> None:
+                self.session_state: dict[str, object] = {
+                    "institutional_portfolios_selected_cik": "0001336528",
+                    "institutional_portfolios_manager_search": "Bill Ackman",
+                }
+                self.rerun_count = 0
+
+            def rerun(self) -> None:
+                self.rerun_count += 1
+
+        original_streamlit = page.st
+        original_loader = page.load_institutional_portfolio_model
+        fake_streamlit = FakeStreamlit()
+        try:
+            page.st = fake_streamlit
+            page.load_institutional_portfolio_model = lambda _cik: {
+                "status": "error",
+                "message": "DB unavailable",
+            }
+            page._handle_workbench_event(
+                {"id": "select_manager", "cik": "0001656456", "nonce": "select-manager-failed"}
+            )
+        finally:
+            page.st = original_streamlit
+            page.load_institutional_portfolio_model = original_loader
+
+        self.assertEqual(fake_streamlit.session_state["institutional_portfolios_selected_cik"], "0001336528")
+        self.assertEqual(fake_streamlit.session_state["institutional_portfolios_manager_search"], "Bill Ackman")
+        self.assertIn("현재 기관 화면을 유지", fake_streamlit.session_state["institutional_portfolios_manager_selection_error"])
+        self.assertEqual(fake_streamlit.rerun_count, 1)
+
     def test_dataset_refresh_event_preserves_url_zip_and_user_agent_inputs(self) -> None:
         import app.web.institutional_portfolios as page
 
