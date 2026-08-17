@@ -10,10 +10,17 @@
 - 인기 순위의 보고가액 label과 설명 문구를 명확히 한다.
 - workbench payload에 한국어 13F 주의사항 read model을 제공한다.
 
+## Roadmap
+
+1. 의미 계약 고정 — contribution sign, `%p`, reported-value and disclosure payload
+2. 화면 표현 개선 — contribution metrics, popularity labels, Korean disclosure
+3. 실제 화면 검증과 문서 정렬 — desktop/mobile QA, regressions, closeout
+
 ## Stop Condition
 
-지정된 service contract tests가 통과하고, UI/DB/schema/registry 의미를 바꾸지 않는다.
+지정된 service/React contract tests와 desktop/390px actual Browser QA가 통과하고,
+계산/DB/schema/registry/trading 경계를 바꾸지 않는다.
 
 ## References
 
-- Approved design and implementation source: `.superpowers/sdd/2026-08-17-institutional-holdings-metric-clarity/task-1-brief.md`
+- Approved design and implementation sources: `.superpowers/sdd/2026-08-17-institutional-holdings-metric-clarity/task-{1,2,3,4}-brief.md`

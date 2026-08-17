@@ -61,6 +61,8 @@ Holdings 정상 React 화면에는 노출하지 않는다.
 - holdings search / mapping filter / sector filter / sort / page는 React local state이며 Streamlit rerun을 요구하지 않는다.
 - manager selection, manager search, security drilldown / explicit search, popularity load, price collection과 13F hybrid refresh는 명시 event로 Streamlit에 전달한다. Hybrid refresh event는 target report period만 받고 source URL/ZIP/User-Agent는 받지 않는다.
 - `분기 리뷰`의 변화 분류, weight, adjusted-close common-equity price coverage, proxy return/contribution은 Python이 계산한다. 저장된 effective history가 3개 이상이면 모든 인접 분기 전환을 한 가격 window로 구성하고 React는 전환 선택/filter/표시만 담당하며 재무 계산을 다시 하지 않는다.
+- `분기 리뷰` contribution은 이전 보고 비중 × 종목 수익률의 포트폴리오 수익 기여(`%p`)이며, 종목 수익률(`%`)과 단위를 분리하고 양·음 기여 목록을 sign별로 표시한다.
+- `기관 보유 랭킹`은 보유 기관 수 기준이고, 금액은 해당 분기 13F 보고 보유가액 합계다. 이 금액은 시가총액, 거래량 또는 현재 보유액이 아니다.
 - 모바일은 manager/data control을 한 열로 쌓고 destination tablist를 수평 스크롤한다. manager search / selection과 dataset refresh 상태는 각 disclosure 내부에서 국소적으로 보여준다.
 - manager 검색 결과가 0건이면 watchlist 포함 여부와 관계없이 선택한 normalized CIK의 live manager context를 유지하고 검색어 / 0건 상태를 manager picker에 명시한다. sample preview나 임의 manager로 바꾸지 않는다.
 - explicit security search가 선택 manager의 보유 row에는 없더라도 Institutional Interest holder에서 안전한 mapped identity를 찾으면 해당 ticker의 저장 가격 chart와 holder list를 연다. 안전한 identity는 검색어가 normalized ticker / CUSIP과 정확히 일치하거나, 검색 결과 전체의 `(ticker, CUSIP)` identity가 하나뿐일 때만 확정한다. 서로 다른 identity가 여러 개면 `ambiguous` 안내를 표시하고 가격을 조회하지 않는다. 선택 manager가 해당 종목을 보유하지 않으면 position은 `available=false`와 unavailable reason으로 표시하며 0 비중을 만들지 않는다.
