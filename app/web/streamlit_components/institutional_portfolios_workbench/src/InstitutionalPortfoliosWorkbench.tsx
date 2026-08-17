@@ -186,7 +186,7 @@ type PopularityRow = {
   issuer_name: string;
   holder_count: number;
   holder_count_label: string;
-  value_label: string;
+  reported_value_label: string;
   sample_managers: string;
   drilldown_query: string;
 };
@@ -327,6 +327,8 @@ type WorkbenchPayload = {
   popularity?: PopularityPayload;
   source_caveats: {
     visible: boolean;
+    title: string;
+    summary: string;
     items: string[];
   };
   boundary: {
@@ -968,8 +970,8 @@ function PopularityRankingPanel({
                   <b>{row.symbol || row.cusip || "-"}</b>
                   <small>{row.issuer_name}</small>
                 </span>
-                <em>{row.holder_count_label}개 기관</em>
-                <small>{row.value_label}</small>
+                <span className="ip-popularity-metric"><small>보유 기관</small><em>{row.holder_count_label}개</em></span>
+                <span className="ip-popularity-metric"><small>13F 보고 보유가액 합계</small><em>{row.reported_value_label}</em></span>
               </button>
             ))
           ) : (
@@ -1759,11 +1761,10 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
       </div>
 
       {payload.source_caveats.visible ? (
-        <section className="ip-caveats">
-          {payload.source_caveats.items.slice(0, 5).map((item) => (
-            <span key={item}>{item}</span>
-          ))}
-        </section>
+        <details className="ip-source-disclosure">
+          <summary><span>{payload.source_caveats.title}</span><small>{payload.source_caveats.summary}</small></summary>
+          <ul>{payload.source_caveats.items.map((item) => <li key={item}>{item}</li>)}</ul>
+        </details>
       ) : null}
       </InstitutionalStudioShell>
     </main>

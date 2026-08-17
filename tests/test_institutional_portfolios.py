@@ -2058,6 +2058,15 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn(".ip-institutional-tab--active", style_source)
         self.assertIn(".ip-manager-picker", style_source)
         self.assertNotIn("setStudioDrawerOpen", component_source)
+        self.assertIn("13F 보고 보유가액 합계", component_source)
+        self.assertIn("보유 기관", component_source)
+        self.assertIn('className="ip-source-disclosure"', component_source)
+        self.assertIn("payload.source_caveats.title", component_source)
+        self.assertIn("payload.source_caveats.summary", component_source)
+        self.assertNotIn('className="ip-caveats"', component_source)
+        self.assertNotIn("items.slice(0, 5)", component_source)
+        self.assertIn(".ip-source-disclosure", style_source)
+        self.assertNotIn(".ip-caveats span", style_source)
 
     def test_selected_security_price_collection_button_routes_through_python_job_boundary(self) -> None:
         page_source = Path("app/web/institutional_portfolios.py").read_text(encoding="utf-8")

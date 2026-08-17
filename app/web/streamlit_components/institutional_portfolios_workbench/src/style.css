@@ -1869,7 +1869,7 @@ a {
 
 .ip-popularity-list button {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 100px 96px;
+  grid-template-columns: 42px minmax(0, 1fr) minmax(140px, auto) minmax(140px, auto);
   gap: 10px;
   align-items: center;
   min-height: 50px;
@@ -1891,21 +1891,51 @@ a {
   font-size: 13px;
 }
 
-.ip-caveats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+.ip-popularity-metric {
+  display: grid;
+  gap: 2px;
+  min-width: 140px;
 }
 
-.ip-caveats span {
-  display: inline-flex;
+.ip-popularity-metric small {
+  color: #7c8b9d;
+  font-size: 10px;
+}
+
+.ip-popularity-metric em {
+  color: #315674;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.ip-source-disclosure {
+  border: 1px solid #dce6ef;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.ip-source-disclosure summary {
+  display: flex;
   align-items: center;
-  min-height: 26px;
-  padding: 4px 8px;
-  border: 1px solid #e5e7eb;
-  border-radius: 999px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.ip-source-disclosure summary span {
+  color: #334155;
+  font-weight: 800;
+}
+
+.ip-source-disclosure summary small {
   color: #64748b;
-  background: #ffffff;
+}
+
+.ip-source-disclosure ul {
+  margin: 0;
+  padding: 0 32px 14px;
+  color: #64748b;
   font-size: 12px;
 }
 
@@ -2025,6 +2055,10 @@ a {
   .ip-performance-list button > small,
   .ip-popularity-list button > small {
     display: none;
+  }
+
+  .ip-source-disclosure summary {
+    flex-wrap: wrap;
   }
 
   .ip-holding-explorer-row {
