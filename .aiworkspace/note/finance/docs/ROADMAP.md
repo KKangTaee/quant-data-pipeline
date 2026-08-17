@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-08-11
+Last Verified: 2026-08-17
 
 ## Current Snapshot
 
@@ -31,7 +31,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 | Track | Current Baseline | Boundary |
 |---|---|---|
 | Today | 시장 세션, 저장된 시장 근거, 일정과 대표 포트폴리오 EOD/live overlay | summary / navigation surface, trading signal 아님 |
-| Market Research | 관측 기반 현재 국면·최근 변화·조건부 전환 감시 경제 사이클, 선물 매크로, 심리의 1W·1M 실제 관측 변화, 일정, S&P 500, Market Movers, 미국 개별 종목의 3-family / 7-view research | context-only, 미래 월별 국면·심리 확률 예측·validation / monitoring signal 아님 |
+| Market Research | 관측 기반 현재 국면·최근 변화·조건부 전환 감시 경제 사이클, 선물 매크로 재가격화·반대 근거·조건부 시나리오, 심리의 1W·1M 실제 관측 변화, 일정, S&P 500, Market Movers, 미국 개별 종목의 3-family / 7-view research | context-only, Futures Macro 5D 확률·가격 목표와 미래 월별 국면·심리 확률 예측·validation / monitoring signal 아님 |
 | Institutional Holdings | SEC Form 13F 기관 portfolio, holdings, sector, security detail와 identifier coverage | delayed long holdings research, recommendation 아님 |
 | Data Operations | 네 consumer 목적별 data preparation, 공식 파일, bounded recovery, compact history와 active 30-action 고급 도구 | explicit click만 실행, UI direct fetch와 자동 연속 실행 없음 |
 | Backtest Analysis | single strategy와 portfolio mix 실행·비교, result bundle, save / replay와 candidate source. Risk-On Momentum 5D는 Quick / Standard / Deep 분석 강도와 compact Daily Swing evidence를 제공 | 높은 수익률만으로 선정하지 않음 |

@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Document Status: Maintained
-Last Verified: 2026-08-10
+Last Verified: 2026-08-17
 
 ## Current State
 
@@ -9,9 +9,9 @@ Current active product task: none.
 
 Latest completed integration task:
 
-- `master-merge-resolution-20260810` — 전체 `4/4`; 경제 사이클 v3와 master의
-  inflation-policy 5/5·Risk-On production 계약을 보존하고 focused Python/React와
-  actual Browser QA 뒤 merge commit을 완료했다.
+- `master-merge-resolution-20260817` — 전체 `4/4`; Sentiment 3차 관측 변화와 master의
+  Futures Macro 장중 관측·재가격화 계약을 보존하고 stale service-contract assertion,
+  durable docs, focused Python/React와 actual Browser QA 뒤 merge commit을 완료했다.
 
 Latest completed inflation-policy task:
 
@@ -21,7 +21,7 @@ Latest completed inflation-policy task:
 
 Paused task:
 
-- `overview-sentiment-cnn-aaii-v1-20260719` — `State: paused`; 전체 잠정 roadmap `2/4차`. 현재 공개 범위는 유지하고 3차 독립 데이터 후보 검토는 명시적 재개 전까지 진행하지 않는다.
+- `overview-sentiment-cnn-aaii-v1-20260719` — `State: paused`; 전체 잠정 roadmap `3/4차`. 현재 1W·1M 실제 관측 변화까지 공개하고, 미래 확률은 target·독립 episode·chronological PIT validation과 공개 기준을 별도 승인하기 전까지 진행하지 않는다.
 
 Verification-Only tasks:
 

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Streamlit, withStreamlitConnection, ComponentProps } from "streamlit-component-lib";
-import CalculationScopeSection from "./CalculationScopeSection";
 import CalculationTraceDisclosure from "./CalculationTraceDisclosure";
 import FamilyDirectionSection from "./FamilyDirectionSection";
 import MacroContextSection from "./MacroContextSection";
+import MarketRepricingSection from "./MarketRepricingSection";
 import MethodDisclosure from "./MethodDisclosure";
 import PatternRibbonSection from "./PatternRibbonSection";
 import ShortHorizonDecisionSection from "./ShortHorizonDecisionSection";
@@ -122,14 +122,9 @@ export type RibbonItem = {
 
 export type RibbonPayload = { title: string; items: RibbonItem[] };
 
-export type ObservationWindow = {
-  key: "1D" | "5D" | "20D";
-  label: string;
-  role: string;
-};
-
 export type DirectionState = {
   label: string;
+  semantic_label: string;
   tone: "positive" | "negative" | "neutral" | "unavailable";
   value: number | null;
 };
@@ -143,11 +138,10 @@ export type FamilyDirectionRow = {
   status: string;
 };
 
-export type FutureFiveDayValidation = {
-  status: PublicationStatus;
+export type ObservationCard = {
+  key: "1D" | "5D" | "20D";
   title: string;
-  detail: string;
-  episode_count: number;
+  summary: string;
 };
 
 export type CalculationScope = {
@@ -159,12 +153,30 @@ export type CalculationScope = {
   raw_observation_symbols: string[];
 };
 
+export type MarketRepricingStatus = "ALIGNED" | "MIXED" | "SINGLE_AXIS" | "NEW_SHOCK" | "LOW_SIGNAL" | "UNAVAILABLE";
+
+export type MarketRepricingPayload = {
+  status: MarketRepricingStatus;
+  confidence_label: string;
+  headline: string;
+  interpretation: string;
+  supporting_evidence: string[];
+  counter_evidence: string[];
+  conditional_scenario: {
+    summary: string;
+    continuation_condition: string;
+    invalidation_condition: string;
+    sensitive_assets: string[];
+  };
+};
+
 export type ShortHorizonDecisionPayload = {
-  observation_windows: ObservationWindow[];
+  observation_cards: ObservationCard[];
   current_summary: string;
   one_day_shock: { title: string; summary: string };
   five_day_direction: { title: string; summary: string };
-  future_five_day_validation: FutureFiveDayValidation;
+  twenty_day_background: { title: string; summary: string };
+  market_repricing: MarketRepricingPayload;
   core_directions: FamilyDirectionRow[];
   confirmation_signals: FamilyDirectionRow[];
   confirmation_summary: string;
@@ -209,7 +221,7 @@ export type CalculationTracePayload = {
 };
 
 export type FuturesMacroWorkbenchPayload = {
-  schema_version: "futures_macro_react_workbench_v4";
+  schema_version: "futures_macro_react_workbench_v7";
   component: "FuturesMacroWorkbench";
   command: CommandPayload;
   hero: HeroPayload;
@@ -266,21 +278,18 @@ function FuturesMacroWorkbench({ args }: Props) {
         sessionEvidence={payload.session_evidence}
       />
       <ShortHorizonDecisionSection decision={payload.short_horizon_decision} />
+      <MarketRepricingSection radar={payload.short_horizon_decision.market_repricing} />
       <FamilyDirectionSection
         coreDirections={payload.short_horizon_decision.core_directions}
         confirmationSignals={payload.short_horizon_decision.confirmation_signals}
         confirmationSummary={payload.short_horizon_decision.confirmation_summary}
       />
-      <CalculationScopeSection
-        changeConditions={payload.short_horizon_decision.change_conditions}
-        scope={payload.short_horizon_decision.calculation_scope}
-      />
       <PatternRibbonSection ribbon={payload.ribbon} />
       <MethodDisclosure
         boundaryNote={payload.boundary_note}
-        horizons={payload.horizons}
         method={payload.method}
         onToggle={syncFrameHeightSoon}
+        scope={payload.short_horizon_decision.calculation_scope}
       />
       <CalculationTraceDisclosure
         trace={payload.calculation_trace}

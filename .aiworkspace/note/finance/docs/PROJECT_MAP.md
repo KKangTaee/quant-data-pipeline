@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-08-10
+Last Verified: 2026-08-17
 
 ## System At A Glance
 
@@ -73,6 +73,14 @@ Top-level navigation과 route registration은 `app/web/streamlit_app.py`가 소�
 `app/web/overview_dashboard.py`와 일부 facade / fallback module은 기존 caller와 bundle
 unavailable 상황을 위해 남아 있다. current 정상 화면의 owner는 위 표의 page,
 service와 React workbench다.
+
+Futures Macro의 현재 관측은 `app/services/futures_macro_intraday.py`가 저장된
+최신 closed 5m bar와 완료 일봉을 합성해 임시 1D / 5D / 20D로 만든다.
+기본 화면은 이 관측에서 가장 강한 5D 핵심축 또는 1D 새 충격을 골라 유력 해석,
+반대 근거와 지속·무효화 조건을 표시한다. 완료 세션 snapshot과 과거 5D 검증/history는
+기존 daily-only owner가 호환성·shadow research용으로 계속 담당하지만 primary UI에는 노출하지 않고,
+`app/jobs/overview_actions.py`의 `최신 데이터 갱신`이 아직 완료되지 않은 세션에서만
+2d/5m을 한 번 수집해 장중 관측과 일봉 확정에 같이 사용한다.
 
 ## Workflow Ownership
 
