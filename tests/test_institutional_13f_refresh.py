@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from datetime import date
+import importlib
+import io
+import urllib.error
 
 
 def test_2026_deadlines_roll_weekend_and_federal_holiday() -> None:
@@ -70,3 +73,101 @@ def test_workbench_payload_preserves_injected_local_refresh_action() -> None:
     )
 
     assert payload["refresh_action"] == refresh_action
+
+
+def test_bulk_listing_selects_dataset_whose_window_contains_due_date() -> None:
+    from finance.data.institutional_13f import (
+        parse_sec_13f_dataset_candidates,
+        select_sec_13f_dataset_candidate,
+    )
+
+    html = """
+    <table>
+      <tr><td><a href="/files/01mar2026-31may2026_form13f.zip">2026 March April May 13F</a></td></tr>
+      <tr><td><a href="/files/01jun2026-31aug2026_form13f.zip">2026 June July August 13F</a></td></tr>
+    </table>
+    """
+
+    candidates = parse_sec_13f_dataset_candidates(html, base_url="https://www.sec.gov/data")
+    selected = select_sec_13f_dataset_candidate(candidates, report_period="2026-06-30")
+
+    assert selected is not None
+    assert selected["dataset_url"] == "https://www.sec.gov/files/01jun2026-31aug2026_form13f.zip"
+    assert selected["window_start"] == "2026-06-01"
+    assert selected["window_end"] == "2026-08-31"
+
+
+def test_bulk_listing_rejects_non_dataset_anchors_and_out_of_window_dataset() -> None:
+    from finance.data.institutional_13f import (
+        parse_sec_13f_dataset_candidates,
+        select_sec_13f_dataset_candidate,
+    )
+
+    html = """
+    <a href="/files/not-a-range_form13f.zip">Malformed label</a>
+    <a href="/files/01jun2026-31aug2026_form13f.csv">Wrong format</a>
+    <a href="/files/01mar2026-31may2026_form13f.zip">Valid older window</a>
+    """
+
+    candidates = parse_sec_13f_dataset_candidates(html, base_url="https://www.sec.gov/data")
+
+    assert len(candidates) == 1
+    assert select_sec_13f_dataset_candidate(candidates, report_period="2026-06-30") is None
+
+
+def test_bulk_discovery_fetches_official_listing_with_declared_user_agent(monkeypatch) -> None:
+    collector = importlib.import_module("finance.data.institutional_13f")
+
+    captured: dict[str, object] = {}
+
+    class Response(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            self.close()
+
+    def fake_urlopen(request, *, timeout):
+        captured["request"] = request
+        captured["timeout"] = timeout
+        return Response(b'<a href="/files/01jun2026-31aug2026_form13f.zip">Q2 window</a>')
+
+    monkeypatch.setattr(collector.urllib.request, "urlopen", fake_urlopen)
+
+    selected = collector.discover_sec_13f_dataset_candidate(
+        "2026-06-30",
+        user_agent="Institutional research contact@example.com",
+        timeout=7.0,
+    )
+
+    assert selected is not None
+    assert selected["window_end"] == "2026-08-31"
+    assert captured["timeout"] == 7.0
+    request = captured["request"]
+    assert request.full_url == collector.SEC_13F_DATASETS_PAGE
+    assert request.get_header("User-agent") == "Institutional research contact@example.com"
+
+
+def test_bulk_discovery_preserves_sec_http_status_in_runtime_error(monkeypatch) -> None:
+    collector = importlib.import_module("finance.data.institutional_13f")
+
+    def reject(_request, *, timeout):
+        raise urllib.error.HTTPError(
+            collector.SEC_13F_DATASETS_PAGE,
+            429,
+            "Too Many Requests",
+            hdrs=None,
+            fp=None,
+        )
+
+    monkeypatch.setattr(collector.urllib.request, "urlopen", reject)
+
+    try:
+        collector.discover_sec_13f_dataset_candidate("2026-06-30")
+    except RuntimeError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("SEC HTTP failure must not be swallowed")
+
+    assert collector.SEC_13F_DATASETS_PAGE in message
+    assert "429" in message

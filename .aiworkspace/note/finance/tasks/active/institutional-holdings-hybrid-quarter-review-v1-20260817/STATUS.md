@@ -5,9 +5,9 @@ Started: 2026-08-17
 
 ## Current Step
 
-전체 roadmap `0/5차`. 사용자와 하이브리드 source, 두 performance window, 로컬 일정
-기반 button 노출과 explicit-click 갱신 방향을 합의했고 written design 승인을 받았다.
-TDD 기반 9-task 상세 구현 계획을 self-review했으며 1차 구현을 시작한다.
+전체 roadmap `1/5차`. 외부 요청 없는 local due/current/partial action과 explicit-click 뒤에만
+사용할 SEC 공식 bulk listing parser/discovery를 구현했다. 2차 EDGAR 개별 수집과
+amendment-aware loader를 진행한다.
 
 ## Progress
 
@@ -23,11 +23,13 @@ TDD 기반 9-task 상세 구현 계획을 self-review했으며 1차 구현을 �
 - 2026-08-17: placeholder, internal consistency, scope와 ambiguity self-review를 통과했다.
 - 2026-08-17: 승인된 spec을 local due, hybrid ingestion, amendment-aware history,
   quarter review, React, actual QA의 9개 TDD task로 구체화했다.
+- 2026-08-17: 1차 local due decision과 SEC bulk candidate discovery를 RED/GREEN으로
+  구현하고 focused regression을 통과했다.
 
 ## Next Action
 
-Task 1부터 inline execution으로 진행한다. 먼저 외부 요청 없는 local due action을
-RED/GREEN 테스트로 구현하고, Task 2 SEC bulk discovery까지 1차 완료 조건을 검증한다.
+Task 3에서 curated watchlist의 EDGAR submissions/index/XML을 정규화하고 manager별
+transaction으로 저장하는 2차 ingestion 경계를 구현한다.
 
 ## Current Scope Boundary
 

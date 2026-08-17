@@ -32,3 +32,14 @@
   passed (`4 passed`).
 - Regression: `tests/test_institutional_portfolios.py` passed (`58 passed`, three pre-existing
   edgar deprecation warnings and four subtests).
+
+## 2026-08-17 — Task 2 SEC bulk discovery
+
+- RED: listing parser/select imports failed; discovery tests then failed on the missing network
+  boundary after correcting the test module import.
+- GREEN: standard-library anchor parsing accepted only filename-encoded ZIP windows, selected the
+  filing-deadline window and preserved SEC HTTP 429 details (`8 passed`).
+- Reused the shared pure deadline function from `finance/data` so the data layer does not import
+  the app service. The app service continues to expose the approved public helper.
+- The no-auto-network boundary remains covered by the injected local action composition test; no
+  page render path imports or calls discovery at this stage.

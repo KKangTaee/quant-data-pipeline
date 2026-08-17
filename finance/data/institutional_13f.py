@@ -6,14 +6,18 @@ import os
 import re
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import zipfile
 from collections import defaultdict
 from datetime import date, datetime, timezone
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Iterable
 
 import pandas as pd
+from pandas.tseries.holiday import USFederalHolidayCalendar
+from pandas.tseries.offsets import CustomBusinessDay
 
 from .db.mysql import MySQLClient
 from .db.schema import INSTITUTIONAL_13F_SCHEMAS, sync_table_schema
@@ -40,6 +44,135 @@ DATASET_FILE_KEYS = {
     "summarypage": ("SUMMARYPAGE",),
     "infotable": ("INFOTABLE", "INFOTABLE_SK"),
 }
+_FORM_13F_BUSINESS_DAY = CustomBusinessDay(calendar=USFederalHolidayCalendar())
+_DATASET_FILENAME_RE = re.compile(
+    r"(?P<start>\d{2}[a-z]{3}\d{4})-(?P<end>\d{2}[a-z]{3}\d{4})_form13f\.zip$",
+    re.IGNORECASE,
+)
+
+
+class _Sec13FDatasetLinkParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.links: list[tuple[str, str]] = []
+        self._href: str | None = None
+        self._text: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.lower() != "a":
+            return
+        self._href = dict(attrs).get("href")
+        self._text = []
+
+    def handle_data(self, data: str) -> None:
+        if self._href is not None:
+            self._text.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag.lower() != "a" or self._href is None:
+            return
+        self.links.append((self._href, " ".join("".join(self._text).split())))
+        self._href = None
+        self._text = []
+
+
+def form_13f_due_date(report_period: str | date) -> date:
+    """Return the statutory 45-day deadline, rolled to the next US business day."""
+
+    parsed = pd.Timestamp(report_period).normalize()
+    quarter_end = parsed.to_period("Q").end_time.normalize()
+    if parsed != quarter_end:
+        raise ValueError(f"report period must be a calendar quarter end: {parsed.date().isoformat()}")
+    deadline = quarter_end + pd.Timedelta(days=45)
+    return _FORM_13F_BUSINESS_DAY.rollforward(deadline).date()
+
+
+def parse_sec_13f_dataset_candidates(html: str, *, base_url: str) -> list[dict[str, str]]:
+    """Parse official dataset links using the date range encoded in each ZIP filename."""
+
+    parser = _Sec13FDatasetLinkParser()
+    parser.feed(str(html or ""))
+    candidates: list[dict[str, str]] = []
+    for href, label in parser.links:
+        filename = Path(urllib.parse.urlparse(href).path).name
+        match = _DATASET_FILENAME_RE.fullmatch(filename)
+        if not match:
+            continue
+        try:
+            window_start = datetime.strptime(match.group("start").title(), "%d%b%Y").date()
+            window_end = datetime.strptime(match.group("end").title(), "%d%b%Y").date()
+        except ValueError:
+            continue
+        if window_end < window_start:
+            continue
+        candidates.append(
+            {
+                "dataset_label": label or filename.removesuffix(".zip"),
+                "dataset_url": urllib.parse.urljoin(base_url, href),
+                "window_start": window_start.isoformat(),
+                "window_end": window_end.isoformat(),
+            }
+        )
+    return sorted(candidates, key=lambda row: (row["window_end"], row["dataset_url"]))
+
+
+def select_sec_13f_dataset_candidate(
+    candidates: Iterable[dict[str, Any]],
+    *,
+    report_period: str,
+) -> dict[str, Any] | None:
+    """Select the narrowest published dataset window containing the target filing deadline."""
+
+    due_date = form_13f_due_date(report_period)
+    matches = [
+        dict(candidate)
+        for candidate in candidates
+        if date.fromisoformat(str(candidate["window_start"]))
+        <= due_date
+        <= date.fromisoformat(str(candidate["window_end"]))
+    ]
+    if not matches:
+        return None
+    return min(
+        matches,
+        key=lambda row: (
+            date.fromisoformat(str(row["window_end"])) - date.fromisoformat(str(row["window_start"])),
+            str(row["window_end"]),
+        ),
+    )
+
+
+def discover_sec_13f_dataset_candidate(
+    report_period: str,
+    *,
+    user_agent: str | None = None,
+    timeout: float = 15.0,
+) -> dict[str, Any] | None:
+    """Fetch the official listing and find a published window for one report period."""
+
+    request = urllib.request.Request(
+        SEC_13F_DATASETS_PAGE,
+        headers={
+            "User-Agent": _resolve_user_agent(user_agent),
+            "Accept": "text/html,application/xhtml+xml",
+            "Accept-Encoding": "identity",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=float(timeout)) as response:
+            html = response.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(
+            f"SEC 13F dataset listing request failed: {SEC_13F_DATASETS_PAGE} "
+            f"HTTP {exc.code} {exc.reason}"
+        ) from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(
+            f"SEC 13F dataset listing request failed: {SEC_13F_DATASETS_PAGE} {exc.reason}"
+        ) from exc
+
+    candidates = parse_sec_13f_dataset_candidates(html, base_url=SEC_13F_DATASETS_PAGE)
+    return select_sec_13f_dataset_candidate(candidates, report_period=report_period)
 
 
 def _now_utc_text() -> str:

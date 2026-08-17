@@ -4,11 +4,9 @@ from datetime import date
 from typing import Any, Mapping, Sequence
 
 import pandas as pd
-from pandas.tseries.holiday import USFederalHolidayCalendar
-from pandas.tseries.offsets import CustomBusinessDay
 
+from finance.data.institutional_13f import form_13f_due_date
 
-_FORM_13F_BUSINESS_DAY = CustomBusinessDay(calendar=USFederalHolidayCalendar())
 _FIRST_SUPPORTED_REPORT_PERIOD = pd.Timestamp("1975-03-31")
 
 
@@ -27,13 +25,6 @@ def _quarter_end(value: str | date) -> pd.Timestamp:
     if parsed != quarter_end:
         raise ValueError(f"report period must be a calendar quarter end: {parsed.date().isoformat()}")
     return quarter_end
-
-
-def form_13f_due_date(report_period: str | date) -> date:
-    """Return the statutory 45-day deadline, rolled to the next US business day."""
-
-    deadline = _quarter_end(report_period) + pd.Timedelta(days=45)
-    return _FORM_13F_BUSINESS_DAY.rollforward(deadline).date()
 
 
 def latest_due_report_period(as_of_date: str | date) -> str | None:

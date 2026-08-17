@@ -182,7 +182,7 @@ git commit -m "기능: 13F 로컬 제출일 갱신 판단 추가"
   timeout=15.0) -> dict | None`
 - Consumes: Task 5 hybrid job calls discovery only after the explicit event.
 
-- [ ] **Step 1: Add RED tests with an inline SEC listing fixture**
+- [x] **Step 1: Add RED tests with an inline SEC listing fixture**
 
 ```python
 def test_bulk_listing_selects_dataset_whose_window_contains_due_date() -> None:
@@ -201,13 +201,13 @@ def test_bulk_listing_selects_dataset_whose_window_contains_due_date() -> None:
 Also assert malformed labels, non-ZIP anchors and the March-May dataset for a June report period
 are rejected.
 
-- [ ] **Step 2: Run the candidate tests and confirm RED**
+- [x] **Step 2: Run the candidate tests and confirm RED**
 
 Run: `.venv/bin/python -m pytest tests/test_institutional_13f_refresh.py -q`
 
 Expected: missing parser/select functions.
 
-- [ ] **Step 3: Implement standard-library HTML parsing**
+- [x] **Step 3: Implement standard-library HTML parsing**
 
 Use a small `HTMLParser` subclass that captures anchor text and `href`. Parse the official
 filename range `DDmonYYYY-DDmonYYYY_form13f.zip`; do not infer from display text alone. Resolve
@@ -217,14 +217,14 @@ relative URLs with `urllib.parse.urljoin`.
 the narrow candidate whose inclusive filename window contains that date. If no such published
 candidate exists, return `None`.
 
-- [ ] **Step 4: Implement bounded network discovery**
+- [x] **Step 4: Implement bounded network discovery**
 
 `discover_sec_13f_dataset_candidate` downloads only `SEC_13F_DATASETS_PAGE` with the existing SEC
 User-Agent resolver, `Accept-Encoding`, and a 15-second default timeout. Convert HTTP/URL errors
 to `RuntimeError` messages containing the source page and status/reason, without swallowing 403 or
 429 semantics.
 
-- [ ] **Step 5: Prove discovery is not called from page render**
+- [x] **Step 5: Prove discovery is not called from page render**
 
 Add a source-boundary test:
 
@@ -234,7 +234,7 @@ render_source = page_source[page_source.index("def render_institutional_portfoli
 assert "discover_sec_13f_dataset_candidate" not in render_source
 ```
 
-- [ ] **Step 6: Run Task 2 tests and commit**
+- [x] **Step 6: Run Task 2 tests and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_institutional_13f_refresh.py -q
