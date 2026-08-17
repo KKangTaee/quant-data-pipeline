@@ -1,7 +1,7 @@
 # Recommendation
 
-Status: canonical RTDSM core implemented; actual stability gate failed
-Last Updated: 2026-08-12
+Status: 1~3차 complete; confirmed state READY; required extended forecast NO_GO
+Last Updated: 2026-08-17
 
 ## Recommended Direction
 
@@ -14,7 +14,55 @@ Last Updated: 2026-08-12
 첫 번째는 다음 전환 목적지, 두 번째는 `전환 임박도`를 위한 별도 event다. 정확한
 3·6개월 뒤 phase classification은 반려됐다.
 
-## Completed Feasibility Gate
+## 2026-08-17 Final 1~3 Phase Decision
+
+이전 raw quadrant의 one-month episode 문제는 임계값을 낮추지 않고 official phase의
+정의 자체를 바꿔 해결했다. 최초 국면과 모든 다음 국면은 동일 raw 후보가 2 usable
+release 연속 확인될 때 두 번째 release에서 확정되며, 전환을 과거로 소급하지 않는다.
+
+### Current-state result — `READY`
+
+| Evidence | Actual | Gate | Result |
+| --- | ---: | ---: | --- |
+| Usable confirmed origins | 587 | >= 180 | Pass |
+| Independent confirmed transitions | 116 | >= 48 | Pass |
+| Recovery / expansion / slowdown / contraction destinations | 25 / 32 / 20 / 39 | each >= 8 | Pass |
+| Final 25% destination support | 6 / 8 / 5 / 10 | each >= 2 | Pass |
+| Four-phase occupancy | 12.78%~39.35% | each 8%~50% | Pass |
+| Official one-month episode share | 0.85% | <= 25% | Pass |
+| Three-release exact / level-side revision | 68.60% / 86.18% | 60% / 80% | Pass |
+| NBER peak / trough capture | 85.71% / 85.71% | 70% / 70% | Pass |
+
+고정 순환 순서는 강제하지 않았다. actual route에는 `contraction -> expansion`,
+`recovery -> contraction`, `slowdown -> expansion` 같은 비인접 전환이 포함된다.
+
+### Required transition-driver result — `SHADOW_ONLY`
+
+| Evidence | Actual | Gate | Result |
+| --- | ---: | ---: | --- |
+| Complete required-driver origins | 27 | >= 180 | Fail |
+| Independent transitions in common period | 5 | >= 48 | Fail |
+| Destination support | recovery 3 / expansion 0 / slowdown 0 / contraction 2 | each >= 8 | Fail |
+| Final 25% destination support | recovery 1 / expansion 0 / slowdown 0 / contraction 1 | each >= 2 | Fail |
+
+ANFCI와 PERMIT는 stored ALFRED `realtime_start`를 conservative known-at fallback으로
+해석한 뒤 각각 2011-05, 1999-08부터 정상 평가됐다. 지배적 병목은
+`BAMLH0A0HYM2`가 현재 DB에서 2023-08 이후만 재현되고 3개월 변화는 2023-11부터만
+가능하다는 점이다. 따라서 model fit, baseline 비교와 calibration을 실행하지 않았다.
+
+최종 판정은 **`NO_GO`**다. 이것은 current-state 실패가 아니다. current-state는 4차의
+관측 국면 후보가 될 수 있지만, 사용자가 원한 전환압력·주경로·대안경로 확률은 아직
+제품화할 수 없다. production snapshot/service/React와 자산별 확인 포인트는 변경하지
+않았다. fiscal은 `NOT_TESTABLE`, market block은 optional `SHADOW_ONLY`다.
+
+### Resume condition
+
+4·5차 전에 `BAMLH0A0HYM2`의 2023년 이전 공식 PIT history를 보강하거나, actual 결과와
+독립적으로 사전 승인한 장기 credit spread 대체 source를 확정해야 한다. 그 뒤 같은
+target·confirmation·support·skill threshold로 2차 coverage부터 재실행한다. BAML을
+사후 제거하거나 48-event/목적지 support gate를 낮추는 방식은 허용하지 않는다.
+
+## Prior FRED-only Feasibility Gate (Superseded)
 
 현재 DB의 strict PIT data를 1959-01~2026-07 origin으로 다시 구성하고, unavailable
 월을 보존한 채 두 번 연속 관측으로 모든 destination 전환 사건을 추출했다.
@@ -67,7 +115,7 @@ strict PIT current-state가 대부분 unavailable이고, 최근 25% holdout에�
 - 단독 정답이 아니라 current-state robustness reference 또는 reduced model 후보로
   검증해야 한다.
 
-## Completed RTDSM Expansion
+## Prior RTDSM Expansion
 
 공식 `IPT/H/EMPLOY/RUC` vintage를 source-isolated 공용 ledger에 저장하고 strict PIT 장기
 shadow state를 재구성했다.
@@ -89,7 +137,7 @@ Combined decision: **`NO_GO_PARITY`**.
 성립하지 않았다. 따라서 이 결과로 destination/imminence 확률을 fit하거나 UI를 만드는
 것은 올바르지 않다.
 
-## Canonical Core-State Experiment
+## Prior Raw Canonical Core-State Experiment
 
 현행 8지표와 parity를 맞추는 접근은 폐기하고, RTDSM 4지표를 과거와 현재에 동일하게
 적용하는 canonical core 후보를 구현했다. 다음 목적지는 고정 순환을 강제하지 않으며,
@@ -111,7 +159,7 @@ episode-block chronological validation과 strongest-baseline publication gate까
 검증했지만, actual experiment는 core gate에서 멈췄다. 따라서 actual probability,
 baseline 비교나 calibration 성과는 존재하지 않으며 임의로 표시하지 않는다.
 
-## Required Next Decision
+## Superseded Prior Decision
 
 다음 선택지는 둘뿐이다.
 
@@ -129,7 +177,7 @@ baseline보다 destination log loss / Brier가 좋아야 하며, imminence calib
 episode-block holdout을 별도로 통과해야 한다. 조건부 scenario는 검증된 model
 sensitivity에서만 생성한다.
 
-## Evidence Summary
+## Prior Evidence Summary
 
 - actual current read model: 2026-07-31 READY, 위축, 8/8 series
 - all focused economic-cycle tests: 226 passed
