@@ -5,9 +5,9 @@ Started: 2026-08-17
 
 ## Current Step
 
-전체 roadmap `2/5차`. 외부 요청 없는 local action, bulk discovery, EDGAR 개별 수집,
-manager별 transaction, amendment-aware effective history와 explicit hybrid event까지
-구현했다. 3차 historical quarter review 계산을 진행한다.
+전체 roadmap `3/5차`. 외부 요청 없는 수동 hybrid refresh와 amendment-aware history에
+더해 share-based position change와 quarter-end/public-follow 두 성과 proxy를 구현했다.
+4차 Python v3 payload와 React 제품 화면을 진행한다.
 
 ## Progress
 
@@ -27,11 +27,13 @@ manager별 transaction, amendment-aware effective history와 explicit hybrid eve
   구현하고 focused regression을 통과했다.
 - 2026-08-17: 2차 EDGAR watchlist ingestion, effective-quarter resolver와 bulk-first hybrid
   manual event를 구현하고 stored-data-only render boundary를 유지했다.
+- 2026-08-17: 3차 `NEW/ADD/KEEP/REDUCE/DROP/NOT_COMPARABLE`, coverage-aware covered-sleeve
+  proxy와 두 승인 window를 구현했다.
 
 ## Next Action
 
-Task 6에서 이전/현재 effective holdings를 비교해 share-based change label과 두 가격
-성과 proxy를 계산하는 3차 service를 구현한다.
+Task 7/8에서 v3 payload와 `분기 리뷰` destination을 연결하고 수동 갱신 action을
+conditional React UX로 교체한다.
 
 ## Current Scope Boundary
 

@@ -75,3 +75,13 @@
 - Regression: Institutional Portfolios passed (`58 passed`). Normal page composition calls only
   the local calendar helper and stored manager rows; SEC discovery remains behind the explicit
   event.
+
+## 2026-08-17 — Task 6 historical quarter review
+
+- RED: change/proxy module, two-window composer and DB-backed review loader each failed before
+  implementation.
+- GREEN: share/principal labels ignore market-value-only movement; put/call and amount type stay
+  separate; missing price/identifier weight is excluded rather than zero-filled; READY/LIMITED/
+  NOT_AVAILABLE thresholds and first/last boundary closes are deterministic (`7 passed`).
+- Both quarter-end and filing-to-filing proxies use prior reported-value weights. Focused combined
+  regression passed (`80 passed`, existing edgar deprecation warnings only).

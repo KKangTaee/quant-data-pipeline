@@ -570,7 +570,7 @@ git commit -m "기능: 13F 하이브리드 수동 갱신 연결"
 - Produces: `load_institutional_quarter_review_model(cik) -> dict`
 - Consumes: Task 4 effective history and `load_price_history`.
 
-- [ ] **Step 1: Write failing change-label tests**
+- [x] **Step 1: Write failing change-label tests**
 
 Build previous/current frames with unchanged market value but changed shares and with changed market
 value but unchanged shares. Assert labels follow shares/principal only:
@@ -588,7 +588,7 @@ assert labels == {
 
 Include put/call and amount type in identity and assert missing amounts become `NOT_COMPARABLE`.
 
-- [ ] **Step 2: Write failing proxy tests**
+- [x] **Step 2: Write failing proxy tests**
 
 Use two holdings with 60/40 starting weights, only the first covered by prices. Assert:
 
@@ -602,17 +602,17 @@ assert proxy["missing_weight_pct"] == 40.0
 Add READY at 80%, NOT_AVAILABLE below 50%, first close on/after start, last close on/before end,
 and option exclusion. Missing positions must not appear as zero-return contributions.
 
-- [ ] **Step 3: Run review tests and confirm RED**
+- [x] **Step 3: Run review tests and confirm RED**
 
 Run: `.venv/bin/python -m pytest tests/test_institutional_quarter_review.py -q`
 
-- [ ] **Step 4: Implement deterministic position aggregation and labels**
+- [x] **Step 4: Implement deterministic position aggregation and labels**
 
 Aggregate raw filing rows by `(cusip, title_of_class, normalized put_call, amount_type)` and sum
 reported value/share amount only when evidence is numeric. Preserve issuer, symbol, sector, mapping
 status and prior/current weights. Sort output by previous weight then current weight descending.
 
-- [ ] **Step 5: Implement price proxy and contribution**
+- [x] **Step 5: Implement price proxy and contribution**
 
 Use previous-quarter reported values for weights. Include only mapped common-stock rows without a
 put/call marker. Return covered-sleeve return, coverage, missing reasons, symbol rows, contribution
@@ -620,7 +620,7 @@ leaders and detractors. The contribution for a covered symbol is
 `reported_weight_pct * symbol_return_pct / 100`; the aggregate covered-sleeve return divides the
 sum of contributions by covered weight, never by 100 when coverage is partial.
 
-- [ ] **Step 6: Compose both approved windows**
+- [x] **Step 6: Compose both approved windows**
 
 `build_institutional_quarter_review` uses:
 
@@ -630,13 +630,13 @@ sum of contributions by covered weight, never by 100 when coverage is partial.
 If fewer than two effective quarters exist, return `available=False` and
 `reason="비교할 이전 보고 분기가 저장되어 있지 않습니다."` with empty changes/proxies.
 
-- [ ] **Step 7: Add DB-backed loader service**
+- [x] **Step 7: Add DB-backed loader service**
 
 `load_institutional_quarter_review_model` loads the latest two effective quarters, collects previous
 holding mapped symbols, reads one combined daily price range from DB, and calls the pure builder.
 It does not fetch missing OHLCV automatically.
 
-- [ ] **Step 8: Run Task 6 verification and commit**
+- [x] **Step 8: Run Task 6 verification and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_institutional_quarter_review.py -q
