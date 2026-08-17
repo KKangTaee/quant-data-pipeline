@@ -155,24 +155,41 @@ def test_price_proxy_excludes_non_common_instruments_and_requires_adjusted_price
     assert proxy["price_basis"] == "adjusted_close_total_return_when_available"
 
 
-def test_price_proxy_separates_positive_and_negative_contributors_and_omits_zero() -> None:
+def test_price_proxy_orders_and_caps_sign_specific_contributors_and_omits_zero() -> None:
     from app.services.institutional_quarter_review import build_institutional_price_proxy
 
+    positions = [
+        ("POS1", "POS000001", 10, 110),
+        ("POS2", "POS000002", 10, 120),
+        ("POS3", "POS000003", 10, 130),
+        ("POS4", "POS000004", 10, 140),
+        ("POS5", "POS000005", 10, 150),
+        ("POS6", "POS000006", 10, 160),
+        ("NEG1", "NEG000001", 5, 90),
+        ("NEG2", "NEG000002", 5, 80),
+        ("NEG3", "NEG000003", 5, 70),
+        ("NEG4", "NEG000004", 5, 60),
+        ("NEG5", "NEG000005", 5, 50),
+        ("NEG6", "NEG000006", 5, 40),
+        ("ZERO", "ZERO00001", 10, 100),
+    ]
     holdings = pd.DataFrame(
         [
-            {"cusip": "POS000001", "holding_symbol": "POS", "title_of_class": "COM", "amount_type": "SH", "reported_value": 50},
-            {"cusip": "NEG000001", "holding_symbol": "NEG", "title_of_class": "COM", "amount_type": "SH", "reported_value": 30},
-            {"cusip": "ZERO00001", "holding_symbol": "ZERO", "title_of_class": "COM", "amount_type": "SH", "reported_value": 20},
+            {
+                "cusip": cusip,
+                "holding_symbol": symbol,
+                "title_of_class": "COM",
+                "amount_type": "SH",
+                "reported_value": reported_value,
+            }
+            for symbol, cusip, reported_value, _ in positions
         ]
     )
     prices = pd.DataFrame(
         [
-            {"symbol": "POS", "date": "2026-03-31", "adj_close": 100},
-            {"symbol": "POS", "date": "2026-06-30", "adj_close": 120},
-            {"symbol": "NEG", "date": "2026-03-31", "adj_close": 100},
-            {"symbol": "NEG", "date": "2026-06-30", "adj_close": 90},
-            {"symbol": "ZERO", "date": "2026-03-31", "adj_close": 100},
-            {"symbol": "ZERO", "date": "2026-06-30", "adj_close": 100},
+            {"symbol": symbol, "date": date, "adj_close": adj_close}
+            for symbol, _, _, end_price in positions
+            for date, adj_close in (("2026-03-31", 100), ("2026-06-30", end_price))
         ]
     )
 
@@ -184,9 +201,24 @@ def test_price_proxy_separates_positive_and_negative_contributors_and_omits_zero
         proxy_id="quarter_holdings_proxy",
     )
 
-    assert next(row for row in proxy["rows"] if row["holding_symbol"] == "POS")["contribution_pct"] == 10.0
-    assert [row["holding_symbol"] for row in proxy["top_contributors"]] == ["POS"]
-    assert [row["holding_symbol"] for row in proxy["top_detractors"]] == ["NEG"]
+    pos6 = next(row for row in proxy["rows"] if row["holding_symbol"] == "POS6")
+    assert (pos6["weight_pct"], pos6["return_pct"], pos6["contribution_pct"]) == (10.0, 60.0, 6.0)
+    assert [(row["holding_symbol"], row["contribution_pct"]) for row in proxy["top_contributors"]] == [
+        ("POS6", 6.0),
+        ("POS5", 5.0),
+        ("POS4", 4.0),
+        ("POS3", 3.0),
+        ("POS2", 2.0),
+    ]
+    assert [(row["holding_symbol"], row["contribution_pct"]) for row in proxy["top_detractors"]] == [
+        ("NEG6", -3.0),
+        ("NEG5", -2.5),
+        ("NEG4", -2.0),
+        ("NEG3", -1.5),
+        ("NEG2", -1.0),
+    ]
+    assert "ZERO" not in {row["holding_symbol"] for row in proxy["top_contributors"]}
+    assert "ZERO" not in {row["holding_symbol"] for row in proxy["top_detractors"]}
 
 
 def test_quarter_review_builds_both_approved_performance_windows() -> None:

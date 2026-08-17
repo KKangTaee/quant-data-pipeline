@@ -23,4 +23,5 @@
 
 ## References
 
-- Approved design and implementation sources: `.superpowers/sdd/2026-08-17-institutional-holdings-metric-clarity/task-{1,2,3,4}-brief.md`
+- Approved design: `docs/superpowers/specs/2026-08-17-institutional-holdings-metric-clarity-design.md`
+- Implementation plan: `docs/superpowers/plans/2026-08-17-institutional-holdings-metric-clarity.md`

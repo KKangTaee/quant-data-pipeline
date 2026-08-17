@@ -1,6 +1,7 @@
 # Notes
 
-- Source of truth for implementation and actual QA: `.superpowers/sdd/2026-08-17-institutional-holdings-metric-clarity/task-{1,2,3,4}-brief.md`.
+- Approved design source: `docs/superpowers/specs/2026-08-17-institutional-holdings-metric-clarity-design.md`.
+- Implementation plan source: `docs/superpowers/plans/2026-08-17-institutional-holdings-metric-clarity.md`; actual implementation and QA outcomes remain recorded in this task's `STATUS.md`, `NOTES.md`, and `RUNS.md`.
 - Canonical flow에는 최종 검증된 contribution과 ranking 의미만 추가했다. Product ownership과 system boundary는 unchanged다.
 - `top_contributors`와 `top_detractors`는 각각 strictly positive/negative `contribution_pct`만 포함한다. 0은 어느 목록에도 표시하지 않는다.
 - 기존 `SEC_13F_SOURCE_CAVEATS`는 변경하지 않고 Korean disclosure projection을 별도 read-model 상수로 제공한다.
