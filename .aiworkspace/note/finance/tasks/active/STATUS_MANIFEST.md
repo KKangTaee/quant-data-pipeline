@@ -5,7 +5,11 @@ Last Verified: 2026-08-17
 
 ## Current State
 
-Current active product task: 없음.
+Current active product task:
+
+- `institutional-holdings-content-first-ui-v1-20260817` — `State: active`;
+  전체 `1/3차`. 사용자가 승인한 `Market Research + Today` content-first A안과 manager
+  selection 상태 계약을 written spec으로 고정했고 사용자 문서 검토를 기다린다.
 
 Latest completed Institutional Holdings task:
 

@@ -26,7 +26,9 @@ tasks/active/<task-name>/
 
 ## Current Active Product Tasks
 
-현재 active product task는 없다.
+| Task | State | Current Step |
+|---|---|---|
+| `institutional-holdings-content-first-ui-v1-20260817` | `active` | 전체 `1/3차`; 승인된 content-first A안과 manager selection 상태 계약의 written spec 사용자 검토 대기 |
 
 ## Paused Tasks
 
