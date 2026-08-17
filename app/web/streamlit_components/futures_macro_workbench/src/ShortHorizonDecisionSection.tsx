@@ -14,7 +14,6 @@ function ShortHorizonDecisionSection({ decision }: { decision: ShortHorizonDecis
           <article className={`observation-card observation-${card.key.toLowerCase()}`} key={card.key}>
             <b>{index + 1}</b>
             <div>
-              <span>현재 관측 · {card.key}</span>
               <h4>{card.title}</h4>
               <p>{card.summary}</p>
             </div>

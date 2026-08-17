@@ -306,11 +306,69 @@ def test_observation_cards_report_changes_without_instruction_copy() -> None:
         "20D · 기존 배경과의 관계",
     ]
     assert all("detail" not in card for card in cards)
-    assert "기존 방향 지속" in cards[0]["summary"]
-    assert "금리 부담 완화" in cards[0]["summary"]
-    assert "핵심축이 엇갈립니다" in cards[1]["summary"]
-    assert "20D 배경을 이어가는 항목" in cards[2]["summary"]
+    assert cards[0]["summary"] == (
+        "금리 부담 완화와 달러 압력 확대가 하루 흐름에서도 이어지고 있습니다. "
+        "다른 핵심축의 변화는 크지 않아 새로운 방향 전환으로 보기는 어렵습니다."
+    )
+    assert cards[1]["summary"] == (
+        "최근 5거래일에는 위험선호 약화, 금리 부담 완화, "
+        "달러 압력 확대와 물가 압력 확대가 함께 나타났지만 서로 가리키는 "
+        "방향은 엇갈립니다. 핵심축이 한쪽으로 모이지 않아 전체 단기 방향에는 "
+        "뚜렷한 우위가 없습니다."
+    )
+    assert cards[2]["summary"] == (
+        "위험선호 약화와 물가 압력 확대는 최근 20거래일 배경과 "
+        "같은 방향으로 이어지고, 금리 부담 완화는 반대로 움직이고 있습니다. "
+        "지속과 반전이 함께 나타나 중기 배경과의 관계는 혼재합니다."
+    )
     assert "확인합니다" not in str(cards)
+
+
+def test_single_five_day_axis_explains_why_direction_is_not_aligned() -> None:
+    from app.web.overview.futures_macro_helpers import (
+        _pattern_core_alignment_summary,
+    )
+
+    rows = [
+        {
+            "key": "risk_on",
+            "five_day": {
+                "tone": "neutral",
+                "semantic_label": "주가지수 위험선호 중립",
+                "value": 0.1,
+            },
+        },
+        {
+            "key": "rate_pressure",
+            "five_day": {
+                "tone": "neutral",
+                "semantic_label": "금리 부담 중립",
+                "value": 0.2,
+            },
+        },
+        {
+            "key": "dollar_pressure",
+            "five_day": {
+                "tone": "negative",
+                "semantic_label": "달러 압력 완화",
+                "value": -0.8,
+            },
+        },
+        {
+            "key": "inflation_pressure",
+            "five_day": {
+                "tone": "neutral",
+                "semantic_label": "물가 압력 중립",
+                "value": -0.1,
+            },
+        },
+    ]
+
+    assert _pattern_core_alignment_summary(rows) == (
+        "최근 5거래일에는 달러 압력 완화만 뚜렷합니다. "
+        "다른 핵심축이 함께 움직이지 않아 전체 단기 방향이 한쪽으로 "
+        "정렬됐다고 보기는 어렵습니다."
+    )
 
 
 def test_background_relationship_reports_continuation_and_reversal_together() -> None:
@@ -329,11 +387,11 @@ def test_background_relationship_reports_continuation_and_reversal_together() ->
 
     summary = _pattern_background_relationship_summary(rows)
 
-    assert "20D 배경을 이어가는 항목" in summary
-    assert "위험선호" in summary
-    assert "20D 배경과 반대로 움직이는 항목" in summary
-    assert "금리 부담" in summary
-    assert "혼재" in summary
+    assert summary == (
+        "위험선호 약화와 물가 압력 확대는 최근 20거래일 배경과 "
+        "같은 방향으로 이어지고, 금리 부담 완화는 반대로 움직이고 있습니다. "
+        "지속과 반전이 함께 나타나 중기 배경과의 관계는 혼재합니다."
+    )
 
 
 def test_family_states_use_semantic_polarity_labels() -> None:

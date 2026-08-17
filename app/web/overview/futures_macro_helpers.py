@@ -874,12 +874,29 @@ def _material_family_phrases(rows: list[dict[str, Any]], window: str) -> list[st
     return phrases
 
 
+def _join_korean_phrases(phrases: list[str]) -> str:
+    cleaned = [phrase.strip() for phrase in phrases if phrase.strip()]
+    if len(cleaned) <= 1:
+        return cleaned[0] if cleaned else ""
+    if len(cleaned) == 2:
+        return f"{cleaned[0]}와 {cleaned[1]}"
+    return f"{', '.join(cleaned[:-1])}와 {cleaned[-1]}"
+
+
 def _pattern_core_alignment_summary(core_rows: list[dict[str, Any]]) -> str:
     phrases = _material_family_phrases(core_rows, "five_day")
     if not phrases:
-        return "최근 5거래일 핵심축에 뚜렷한 방향 우위가 없습니다."
+        return (
+            "최근 5거래일 동안 뚜렷하게 강화되거나 약화된 핵심축은 없습니다. "
+            "위험선호·금리·달러·물가가 같은 방향으로 모이지 않아 전체 단기 "
+            "방향은 중립에 가깝습니다."
+        )
     if len(phrases) == 1:
-        return f"{phrases[0]}만 뚜렷해 단기 방향 우위가 없습니다."
+        return (
+            f"최근 5거래일에는 {phrases[0]}만 뚜렷합니다. "
+            "다른 핵심축이 함께 움직이지 않아 전체 단기 방향이 한쪽으로 "
+            "정렬됐다고 보기는 어렵습니다."
+        )
 
     alignment = []
     for row in core_rows:
@@ -890,11 +907,24 @@ def _pattern_core_alignment_summary(core_rows: list[dict[str, Any]]) -> str:
         sign = PATTERN_RISK_ALIGNMENT_SIGN.get(str(row.get("key")))
         if sign is not None:
             alignment.append(float(value) * sign)
+    joined = _join_korean_phrases(phrases)
     if alignment and all(value > 0 for value in alignment):
-        return f"핵심축이 위험선호 방향으로 정렬됩니다: {' · '.join(phrases)}."
+        return (
+            f"최근 5거래일에는 {joined}가 함께 나타났습니다. "
+            "핵심축이 위험선호 방향으로 정렬돼 전체 단기 흐름도 같은 방향을 "
+            "가리킵니다."
+        )
     if alignment and all(value < 0 for value in alignment):
-        return f"핵심축이 방어·부담 방향으로 정렬됩니다: {' · '.join(phrases)}."
-    return f"핵심축이 엇갈립니다: {' · '.join(phrases)}."
+        return (
+            f"최근 5거래일에는 {joined}가 함께 나타났습니다. "
+            "핵심축이 방어·부담 방향으로 정렬돼 전체 단기 흐름도 같은 방향을 "
+            "가리킵니다."
+        )
+    return (
+        f"최근 5거래일에는 {joined}가 함께 나타났지만 서로 가리키는 방향은 "
+        "엇갈립니다. 핵심축이 한쪽으로 모이지 않아 전체 단기 방향에는 "
+        "뚜렷한 우위가 없습니다."
+    )
 
 
 def _pattern_one_day_change_summary(core_rows: list[dict[str, Any]]) -> str:
@@ -916,16 +946,60 @@ def _pattern_one_day_change_summary(core_rows: list[dict[str, Any]]) -> str:
         else:
             continuing.append(phrase)
 
-    parts = []
+    event_count = sum(bool(items) for items in (newly_material, reversed_rows, continuing))
+    if event_count == 0:
+        return (
+            "최근 1거래일에 새로 강화되거나 반전된 핵심축은 없습니다. "
+            "최근 5거래일 흐름을 바꿀 만한 새 신호도 나타나지 않았습니다."
+        )
+    if event_count == 1 and continuing:
+        return (
+            f"{_join_korean_phrases(continuing)}가 하루 흐름에서도 이어지고 있습니다. "
+            "다른 핵심축의 변화는 크지 않아 새로운 방향 전환으로 보기는 "
+            "어렵습니다."
+        )
+    if event_count == 1 and newly_material:
+        return (
+            f"{_join_korean_phrases(newly_material)}가 최근 1거래일에 새롭게 "
+            "두드러졌습니다. 아직 최근 5거래일 방향으로 이어지지 않아 새로운 "
+            "단기 방향으로 단정하기는 어렵습니다."
+        )
+    if event_count == 1 and reversed_rows:
+        return (
+            f"{_join_korean_phrases(reversed_rows)}가 최근 5거래일 흐름과 반대 "
+            "방향으로 움직였습니다. 하루 변화만으로 기존 단기 방향이 바뀌었다고 "
+            "보기는 어렵습니다."
+        )
+
+    events: list[tuple[str, str]] = []
     if newly_material:
-        parts.append(f"새로 나타남: {' · '.join(newly_material)}")
+        subject = _join_korean_phrases(newly_material)
+        events.append((f"{subject}가 새로 두드러졌고", f"{subject}가 새로 두드러졌습니다"))
     if reversed_rows:
-        parts.append(f"5D와 반전: {' · '.join(reversed_rows)}")
+        subject = _join_korean_phrases(reversed_rows)
+        events.append(
+            (
+                f"{subject}가 최근 5거래일과 반대로 움직였고",
+                f"{subject}가 최근 5거래일과 반대로 움직였습니다",
+            )
+        )
     if continuing:
-        parts.append(f"기존 방향 지속: {' · '.join(continuing)}")
-    if not parts:
-        return "새로 강화되거나 반전된 핵심 변화가 없습니다."
-    return ". ".join(parts) + "."
+        subject = _join_korean_phrases(continuing)
+        events.append(
+            (
+                f"{subject}가 기존 방향을 이어갔고",
+                f"{subject}가 기존 방향을 이어갔습니다",
+            )
+        )
+    observation = ", ".join(event[0] for event in events[:-1])
+    if observation:
+        observation += f", {events[-1][1]}."
+    else:
+        observation = f"{events[-1][1]}."
+    return (
+        f"{observation} 하루 신호가 한 방향으로 모이지 않아 단기 전환 여부는 "
+        "아직 불분명합니다."
+    )
 
 
 def _pattern_confirmation_summary(
@@ -1031,18 +1105,33 @@ def _pattern_background_relationship_summary(
         if abs(float(five_value)) < SIGNAL_Z_THRESHOLD or abs(float(twenty_value)) < SIGNAL_Z_THRESHOLD:
             continue
         target = aligned if float(five_value) * float(twenty_value) > 0 else reversed_rows
-        target.append(str(row.get("label") or ""))
+        target.append(
+            str(five.get("semantic_label") or row.get("label") or "")
+        )
     if reversed_rows and aligned:
         return (
-            f"5D가 20D 배경을 이어가는 항목: {' · '.join(aligned)}. "
-            f"5D가 20D 배경과 반대로 움직이는 항목: {' · '.join(reversed_rows)}. "
-            "배경 관계는 혼재합니다."
+            f"{_join_korean_phrases(aligned)}는 최근 20거래일 배경과 같은 방향으로 "
+            f"이어지고, {_join_korean_phrases(reversed_rows)}는 반대로 움직이고 "
+            "있습니다. 지속과 반전이 함께 나타나 중기 배경과의 관계는 "
+            "혼재합니다."
         )
     if reversed_rows:
-        return f"5D가 20D 배경과 반대로 움직이는 항목: {' · '.join(reversed_rows)}."
+        return (
+            f"{_join_korean_phrases(reversed_rows)}가 최근 20거래일 배경과 반대 "
+            "방향으로 움직이고 있습니다. 단기 흐름이 기존 배경에서 벗어나는 "
+            "변화지만, 이것만으로 중기 방향 전환을 확정하기는 어렵습니다."
+        )
     if aligned:
-        return f"5D가 20D 배경을 이어가는 항목: {' · '.join(aligned)}."
-    return "5D와 20D 사이에 뚜렷한 지속 또는 반전 관계가 없습니다."
+        return (
+            f"{_join_korean_phrases(aligned)}가 최근 20거래일 배경과 같은 방향으로 "
+            "이어지고 있습니다. 다른 핵심축의 지속이나 반전은 뚜렷하지 않아 "
+            "중기 흐름 전체가 한 방향으로 굳어진 상태는 아닙니다."
+        )
+    return (
+        "최근 5거래일과 20거래일 사이에 뚜렷하게 이어지거나 반전된 핵심축은 "
+        "없습니다. 현재 단기 흐름은 기존 중기 배경과 분명한 관계를 만들지 "
+        "못하고 있습니다."
+    )
 
 
 def _futures_macro_calculation_scope(

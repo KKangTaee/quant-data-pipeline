@@ -134,8 +134,7 @@ button { font: inherit; }
   justify-content: center;
   width: 24px;
 }
-.fm-workbench__decision-steps article span { color: var(--muted); font-size: 0.65rem; font-weight: 800; }
-.fm-workbench__decision-steps h4 { font-size: 0.9rem; line-height: 1.35; margin: 4px 0 7px; }
+.fm-workbench__decision-steps h4 { font-size: 0.9rem; line-height: 1.35; margin: 0 0 7px; }
 .fm-workbench__decision-steps p { color: #52687a; font-size: 0.73rem; line-height: 1.55; margin: 0; }
 
 .fm-workbench__forecast-gate {
