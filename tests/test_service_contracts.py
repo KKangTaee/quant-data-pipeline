@@ -8555,7 +8555,6 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "ShortHorizonDecisionSection",
             "ForecastValidationGate",
             "FamilyDirectionSection",
-            "CalculationScopeSection",
             "PatternRibbonSection",
             "MethodDisclosure",
             "CalculationTraceDisclosure",
@@ -8565,8 +8564,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertLess(source.index("<MacroContextSection"), source.index("<ShortHorizonDecisionSection"))
         self.assertLess(source.index("<ShortHorizonDecisionSection"), source.index("<ForecastValidationGate"))
         self.assertLess(source.index("<ForecastValidationGate"), source.index("<FamilyDirectionSection"))
-        self.assertLess(source.index("<FamilyDirectionSection"), source.index("<CalculationScopeSection"))
-        self.assertLess(source.index("<CalculationScopeSection"), source.index("<PatternRibbonSection"))
+        self.assertLess(source.index("<FamilyDirectionSection"), source.index("<PatternRibbonSection"))
         self.assertLess(source.index("<PatternRibbonSection"), source.index("<MethodDisclosure"))
         self.assertLess(source.index("<MethodDisclosure"), source.index("<CalculationTraceDisclosure"))
         self.assertNotIn("<PatternHorizonSection", source)
@@ -27964,7 +27962,7 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             pattern_outlook=self._pattern_outlook_payload_fixture(),
         )
 
-        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v5")
+        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v6")
         self.assertEqual([item["key"] for item in payload["horizons"]], ["current", "5D", "20D"])
         current, five_day, twenty_day = payload["horizons"]
         self.assertEqual(payload["hero"]["observation_status"], "OBSERVED")

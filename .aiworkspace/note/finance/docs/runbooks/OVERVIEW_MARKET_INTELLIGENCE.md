@@ -232,12 +232,12 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
 
 4. `Workspace > Overview > Futures Macro`
    - 이 tab은 completed daily compact snapshot과 저장된 latest closed 5m bar를 함께 읽는 current primary surface다. 화면 진입 중 provider fetch나 forecast replay를 실행하지 않는다.
-   - `최신 데이터 갱신`은 17개 주요 선물의 `1y / 1d` overlap을 수집하고, nested-validation 최소 이력보다 부족한 symbol만 `10y / 1d` bootstrap한다. active/pending session이면 `2d / 5m`을 한 번 추가 수집해 장중 관측과 eligible daily finalization에 같이 쓴다. 완료 일봉 입력이 바뀐 경우에만 `finance_meta.futures_macro_snapshot`의 `overview_current`와 forecast history를 materialize한다.
+   - `최신 데이터 갱신`은 17개 주요 선물의 `1y / 1d` overlap을 수집하고, nested-validation 최소 이력보다 부족한 symbol만 `10y / 1d` bootstrap한다. New York 18:00 재개 이후처럼 active trade date가 있으면 완료 일봉 확정 가능 여부와 독립적으로 `2d / 5m`을 한 번 수집한다. 5분봉이 충분하면 장중 잠정 관측으로 반영하고, 없거나 공통 관측 조건을 충족하지 못하면 마지막 완료 일봉을 유지한다. 완료 일봉 입력이 바뀐 경우에만 `finance_meta.futures_macro_snapshot`의 `overview_current`와 forecast history를 materialize한다.
    - `다시 읽기`는 provider 수집이나 forecast replay 없이 compatible snapshot과 저장된 5m row를 DB-only로 다시 읽어 장중 임시 1D/5D/20D를 재계산한다. snapshot이 없거나 schema/algorithm version이 맞지 않으면 `최신 갱신 필요` 상태를 표시한다.
    - 첫 화면은 `1D·지금 새로 생긴 변화 → 5D·현재 단기 방향 → 20D·기존 배경과의 관계 → 향후 5거래일 검증 gate`로 읽는다. 방향 정렬은 Risk On, Rate Pressure, Dollar Pressure, Inflation Pressure의 핵심 4개와 Growth, Safe Haven 확인 2개를 분리한다.
-   - 향후 5D 조건부 모델이 평소 결과 빈도 baseline보다 정확하지 않으면 `NO_EDGE`를 `방향 예측 근거 부족`으로 표시한다. 이는 현재 관측 데이터 부족이 아니라 유사 국면 모델의 추가 예측력이 검증되지 않았다는 뜻이다.
+   - 향후 5D 조건부 모델이 충분한 독립 표본과 시간순 평가를 마쳤지만 평소 결과 빈도 baseline보다 정확하지 않으면 `NO_EDGE`를 `검증 완료 · 향후 5거래일 예측 우위 없음`으로 표시한다. 이는 현재 관측 데이터 부족이 아니라 검증을 끝낸 음성 결론이다. 표본이나 계산 입력이 실제로 부족한 경우에는 `검증 데이터 부족`을 별도로 표시한다.
    - future 20D와 2D path는 기본 화면에 표시하지 않지만 backend evidence에는 남는다. 60D ribbon은 `최근 체제 이력`이라는 secondary history로 유지한다.
-   - 계산 범위는 `17개 수집 · 15개 family 산식 · family 6/6`처럼 수집과 산식 참여를 구분한다. DXY는 Economic Cycle 공유 입력이고 silver는 raw observation이며, 이 task에서는 family membership을 바꾸지 않는다.
+   - 계산 범위는 기본 화면의 별도 `Next Check` 카드가 아니라 `방법론과 품질` 안에서 `17개 수집 · family 직접 입력 15개 · family 6/6`처럼 수집과 산식 참여를 구분한다. DXY는 Economic Cycle 공유 입력이고 silver는 raw observation이며, 이 task에서는 family membership을 바꾸지 않는다.
    - Yahoo same-date 일봉은 미국 동부시간 저녁 재개 뒤에도 값이 움직일 수 있다. 현재 관측의 active trade date는 daily label과 독립적으로 New York 18:00 재개를 다음 거래일로 판정한다. 5m common cutoff이 30분 초과 stale이거나 complete family가 4개 미만이면 완료 세션으로 fallback하고, 이전 pending daily가 남아 있으면 다음 세션과 섞지 않는다.
    - `방법론과 품질`은 원천, 독립 표본, Brier, baseline, calibration, 제한을 보여준다. 펼침 높이는 React component가 Streamlit iframe과 동기화한다.
    - React `원본 데이터 / 계산 추적`은 snapshot 기준일/저장 시각/source marker와 compact `현재 점수 원본`, `점수 구성 기여`, `선물 일봉 변화`, 해석 주의점을 보여준다. 전체 10년 OHLCV 원본은 이 disclosure가 아니라 `finance_price.futures_ohlcv`에 남는다.

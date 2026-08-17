@@ -40,6 +40,7 @@ from app.services.overview.economic_cycle_asset_freshness import (
 )
 from app.services.nyse_calendar import latest_completed_nyse_session
 from app.services.futures_macro_pattern_validation import NESTED_OUTER_MINIMUM_TRAIN
+from app.services.futures_macro_intraday import active_futures_session_date
 
 from app.jobs.economic_cycle_refresh import run_economic_cycle_intramonth_refresh
 from app.jobs.economic_cycle_asset_refresh import (
@@ -545,7 +546,8 @@ def run_overview_futures_daily_ohlcv(
             "reason": "session_probe_failed",
         }
     intraday_collection_result: dict[str, Any] | None = None
-    if session_state.get("status") == "pending":
+    active_session_date = active_futures_session_date(evaluated_at)
+    if active_session_date is not None:
         try:
             intraday_collection_result = collect_runner(
                 symbols=selected,
@@ -569,22 +571,26 @@ def run_overview_futures_daily_ohlcv(
     if intraday_collection_result is None:
         intraday_refresh = {
             "status": "not_required",
-            "session_date": session_state.get("session_date"),
+            "session_date": active_session_date,
             "rows_written": 0,
             "failed_symbols": [],
-            "reason": session_state.get("reason"),
+            "reason": (
+                "no_active_session"
+                if active_session_date is None
+                else session_state.get("reason")
+            ),
         }
     else:
         intraday_refresh = {
             "status": intraday_collection_result.get("status"),
-            "session_date": session_state.get("session_date"),
+            "session_date": active_session_date,
             "rows_written": int(
                 intraday_collection_result.get("rows_written") or 0
             ),
             "failed_symbols": list(
                 intraday_collection_result.get("failed_symbols") or []
             ),
-            "reason": "pending_session_refresh",
+            "reason": "active_session_refresh",
         }
     combined: JobResult = {
         "job_name": "collect_futures_macro_daily",
@@ -624,8 +630,17 @@ def run_overview_futures_daily_ohlcv(
         intraday_collection_result=intraday_collection_result,
     )
     combined["details"]["daily_finalization"] = finalization
+    # A newly opened trade date can be valid for current 5m observation before
+    # it is eligible to become a completed daily bar. That is a successful
+    # current-data refresh, not a partial collection failure.
+    finalization_is_expectedly_deferred = (
+        str(finalization.get("reason") or "") == "future_session_not_eligible"
+        and str((intraday_collection_result or {}).get("status") or "")
+        == "success"
+    )
     if (
         str(finalization.get("status") or "") in {"incomplete", "error"}
+        and not finalization_is_expectedly_deferred
         and combined["status"] == "success"
     ):
         combined["status"] = "partial_success"

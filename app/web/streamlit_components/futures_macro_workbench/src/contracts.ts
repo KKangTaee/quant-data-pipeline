@@ -27,6 +27,7 @@ export type HeroPayload = {
   observed_at_utc?: string | null;
   observed_at_et?: string | null;
   freshness_minutes?: number | null;
+  fallback_reason?: string | null;
   observation_status: ObservationStatus;
   coverage_label: string;
   evidence: string[];

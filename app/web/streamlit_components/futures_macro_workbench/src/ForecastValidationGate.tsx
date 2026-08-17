@@ -1,7 +1,14 @@
 import type { FutureFiveDayValidation } from "./FuturesMacroWorkbench";
 
-function formatBrier(value: number | null) {
-  return value == null || !Number.isFinite(value) ? "-" : value.toFixed(4);
+function formatBrierDelta(model: number | null, baseline: number | null) {
+  if (model == null || baseline == null || !Number.isFinite(model) || !Number.isFinite(baseline)) {
+    return "-";
+  }
+  const delta = model - baseline;
+  const signed = `${delta > 0 ? "+" : ""}${delta.toFixed(4)}`;
+  if (delta > 0) return `${signed} · 기준보다 나쁨`;
+  if (delta < 0) return `${signed} · 기준보다 좋음`;
+  return `${signed} · 기준과 같음`;
 }
 
 function ForecastValidationGate({ validation }: { validation: FutureFiveDayValidation }) {
@@ -31,12 +38,8 @@ function ForecastValidationGate({ validation }: { validation: FutureFiveDayValid
           <dd>{validation.evaluation_count > 0 ? `${validation.evaluation_count}회` : "-"}</dd>
         </div>
         <div>
-          <dt>모델 Brier</dt>
-          <dd>{formatBrier(validation.model_brier)}</dd>
-        </div>
-        <div>
-          <dt>기본 빈도 Brier</dt>
-          <dd>{formatBrier(validation.baseline_brier)}</dd>
+          <dt>기본 대비 Brier</dt>
+          <dd>{formatBrierDelta(validation.model_brier, validation.baseline_brier)}</dd>
         </div>
       </dl>
     </section>

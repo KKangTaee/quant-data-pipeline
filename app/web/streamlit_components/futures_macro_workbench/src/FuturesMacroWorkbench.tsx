@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Streamlit, withStreamlitConnection, ComponentProps } from "streamlit-component-lib";
-import CalculationScopeSection from "./CalculationScopeSection";
 import CalculationTraceDisclosure from "./CalculationTraceDisclosure";
 import FamilyDirectionSection from "./FamilyDirectionSection";
 import ForecastValidationGate from "./ForecastValidationGate";
@@ -123,12 +122,6 @@ export type RibbonItem = {
 
 export type RibbonPayload = { title: string; items: RibbonItem[] };
 
-export type ObservationWindow = {
-  key: "1D" | "5D" | "20D";
-  label: string;
-  role: string;
-};
-
 export type DirectionState = {
   label: string;
   semantic_label: string;
@@ -162,7 +155,6 @@ export type ObservationCard = {
   key: "1D" | "5D" | "20D";
   title: string;
   summary: string;
-  detail: string;
 };
 
 export type CalculationScope = {
@@ -175,7 +167,6 @@ export type CalculationScope = {
 };
 
 export type ShortHorizonDecisionPayload = {
-  observation_windows: ObservationWindow[];
   observation_cards: ObservationCard[];
   current_summary: string;
   one_day_shock: { title: string; summary: string };
@@ -226,7 +217,7 @@ export type CalculationTracePayload = {
 };
 
 export type FuturesMacroWorkbenchPayload = {
-  schema_version: "futures_macro_react_workbench_v5";
+  schema_version: "futures_macro_react_workbench_v6";
   component: "FuturesMacroWorkbench";
   command: CommandPayload;
   hero: HeroPayload;
@@ -291,16 +282,13 @@ function FuturesMacroWorkbench({ args }: Props) {
         confirmationSignals={payload.short_horizon_decision.confirmation_signals}
         confirmationSummary={payload.short_horizon_decision.confirmation_summary}
       />
-      <CalculationScopeSection
-        changeConditions={payload.short_horizon_decision.change_conditions}
-        scope={payload.short_horizon_decision.calculation_scope}
-      />
       <PatternRibbonSection ribbon={payload.ribbon} />
       <MethodDisclosure
         boundaryNote={payload.boundary_note}
         horizons={payload.horizons}
         method={payload.method}
         onToggle={syncFrameHeightSoon}
+        scope={payload.short_horizon_decision.calculation_scope}
       />
       <CalculationTraceDisclosure
         trace={payload.calculation_trace}

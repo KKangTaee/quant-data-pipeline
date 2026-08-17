@@ -96,6 +96,7 @@ def test_split_collection_materializes_once_after_both_groups() -> None:
     result = run_overview_futures_daily_ohlcv(
         coverage_loader=lambda symbols: _coverage(deficient="SI=F"),
         collect_runner=collect_runner,
+        evaluation_time=datetime(2026, 8, 15, 16, 0, tzinfo=timezone.utc),
         materialize_fn=lambda: materialized.append(True) or {"status": "materialized"},
         finalization_runner=_finalization_not_required,
         session_probe=_session_not_pending,
@@ -499,7 +500,7 @@ def test_overview_runs_finalization_before_materialization() -> None:
         session_probe=_session_not_pending,
     )
 
-    assert events == ["collect:1d", "finalize", "materialize"]
+    assert events == ["collect:1d", "collect:5m", "finalize", "materialize"]
     assert result["details"]["daily_finalization"]["status"] == "finalized"
 
 
@@ -582,6 +583,55 @@ def test_active_session_collects_five_minute_rows_once_before_materialization() 
     assert result["details"]["intraday_refresh"]["status"] == "success"
 
 
+def test_evening_active_trade_date_collects_intraday_when_daily_probe_is_not_eligible() -> None:
+    from app.jobs.overview_actions import run_overview_futures_daily_ohlcv
+
+    calls: list[tuple[str, str]] = []
+    five_minute_result: dict[str, Any] | None = None
+    finalization_input: dict[str, Any] | None = None
+
+    def collect_runner(**kwargs: Any) -> dict[str, Any]:
+        nonlocal five_minute_result
+        calls.append((str(kwargs["period"]), str(kwargs["interval"])))
+        result = _collection_result(list(kwargs["symbols"]))
+        if kwargs["interval"] == "5m":
+            five_minute_result = result
+        return result
+
+    def finalization_runner(**kwargs: Any) -> dict[str, Any]:
+        nonlocal finalization_input
+        finalization_input = kwargs.get("intraday_collection_result")
+        return {
+            "status": "incomplete",
+            "session_date": "2026-08-17",
+            "symbols_required": 17,
+            "symbols_finalized": 0,
+            "missing_symbols": list(DEFAULT_CORE_FUTURES_SYMBOLS),
+            "reason": "future_session_not_eligible",
+        }
+
+    result = run_overview_futures_daily_ohlcv(
+        coverage_loader=lambda symbols: _coverage(),
+        collect_runner=collect_runner,
+        evaluation_time=datetime(2026, 8, 17, 1, 15, tzinfo=timezone.utc),
+        session_probe=lambda **_kwargs: {
+            "status": "incomplete",
+            "session_date": "2026-08-17",
+            "symbols_required": 17,
+            "missing_symbols": list(DEFAULT_CORE_FUTURES_SYMBOLS),
+            "reason": "future_session_not_eligible",
+        },
+        finalization_runner=finalization_runner,
+        materialize_fn=lambda: {"status": "materialized"},
+    )
+
+    assert calls == [("1y", "1d"), ("2d", "5m")]
+    assert finalization_input is five_minute_result
+    assert result["status"] == "success"
+    assert result["details"]["intraday_refresh"]["session_date"] == "2026-08-17"
+    assert result["details"]["intraday_refresh"]["status"] == "success"
+
+
 def test_no_pending_session_skips_five_minute_collection() -> None:
     from app.jobs.overview_actions import run_overview_futures_daily_ohlcv
 
@@ -595,6 +645,7 @@ def test_no_pending_session_skips_five_minute_collection() -> None:
     result = run_overview_futures_daily_ohlcv(
         coverage_loader=lambda symbols: _coverage(),
         collect_runner=collect_runner,
+        evaluation_time=datetime(2026, 8, 15, 16, 0, tzinfo=timezone.utc),
         session_probe=_session_not_pending,
         finalization_runner=lambda **kwargs: finalization_input.append(
             kwargs.get("intraday_collection_result")

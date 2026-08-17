@@ -767,6 +767,12 @@ PATTERN_CONFIRMATION_FAMILY_DEFINITIONS = (
     ("growth", "성장 기대"),
     ("safe_haven", "방어 수요"),
 )
+PATTERN_RISK_ALIGNMENT_SIGN = {
+    "risk_on": 1.0,
+    "rate_pressure": -1.0,
+    "dollar_pressure": -1.0,
+    "inflation_pressure": -1.0,
+}
 PATTERN_FAMILY_POLARITY_COPY = {
     "risk_on": ("위험선호 강화", "위험선호 약화", "위험선호 중립"),
     "growth": ("성장 기대 강화", "성장 기대 약화", "성장 기대 중립"),
@@ -779,20 +785,20 @@ FUTURES_MACRO_SHARED_CONTEXT_SYMBOLS = ("DX-Y.NYB",)
 FUTURES_MACRO_RAW_OBSERVATION_SYMBOLS = ("SI=F",)
 FUTURES_MACRO_PUBLICATION_COPY = {
     "VERIFIED": (
-        "검증된 5거래일 방향 우위",
-        "평소 결과 빈도보다 시간순 검증 성능이 높음",
+        "검증 완료 · 향후 5거래일 방향 우위 있음",
+        "모델 오차가 기본 빈도보다 낮았습니다.",
     ),
     "NO_EDGE": (
-        "기본 빈도 대비 예측력 확인 안 됨",
-        "모델 오차가 평소 5거래일 결과 빈도 기준보다 낮지 않음",
+        "검증 완료 · 향후 5거래일 예측 우위 없음",
+        "모델 오차가 기본 빈도보다 낮지 않았습니다.",
     ),
     "PROVISIONAL": (
-        "검증 중 · 방향 확정 보류",
-        "계산은 가능하지만 공개 검증 기준을 모두 충족하지 못함",
+        "검증 진행 중 · 방향 확정 보류",
+        "계산은 가능하지만 공개 검증 기준을 모두 충족하지 못했습니다.",
     ),
     "UNAVAILABLE": (
         "검증 자료 부족",
-        "독립 표본 또는 시간순 평가가 부족함",
+        "검증 판정에 필요한 독립 표본 또는 시간순 평가가 부족합니다.",
     ),
 }
 
@@ -871,8 +877,55 @@ def _material_family_phrases(rows: list[dict[str, Any]], window: str) -> list[st
 def _pattern_core_alignment_summary(core_rows: list[dict[str, Any]]) -> str:
     phrases = _material_family_phrases(core_rows, "five_day")
     if not phrases:
-        return "최근 5거래일 핵심 방향은 뚜렷하게 정렬되지 않았습니다."
-    return f"최근 5거래일 핵심 방향은 {' · '.join(phrases)}입니다."
+        return "최근 5거래일 핵심축에 뚜렷한 방향 우위가 없습니다."
+    if len(phrases) == 1:
+        return f"{phrases[0]}만 뚜렷해 단기 방향 우위가 없습니다."
+
+    alignment = []
+    for row in core_rows:
+        state = dict(row.get("five_day") or {})
+        value = state.get("value")
+        if value is None or abs(float(value)) < SIGNAL_Z_THRESHOLD:
+            continue
+        sign = PATTERN_RISK_ALIGNMENT_SIGN.get(str(row.get("key")))
+        if sign is not None:
+            alignment.append(float(value) * sign)
+    if alignment and all(value > 0 for value in alignment):
+        return f"핵심축이 위험선호 방향으로 정렬됩니다: {' · '.join(phrases)}."
+    if alignment and all(value < 0 for value in alignment):
+        return f"핵심축이 방어·부담 방향으로 정렬됩니다: {' · '.join(phrases)}."
+    return f"핵심축이 엇갈립니다: {' · '.join(phrases)}."
+
+
+def _pattern_one_day_change_summary(core_rows: list[dict[str, Any]]) -> str:
+    newly_material: list[str] = []
+    reversed_rows: list[str] = []
+    continuing: list[str] = []
+    for row in core_rows:
+        one_day = dict(row.get("one_day") or {})
+        five_day = dict(row.get("five_day") or {})
+        one_tone = str(one_day.get("tone") or "")
+        five_tone = str(five_day.get("tone") or "")
+        if one_tone not in {"positive", "negative"}:
+            continue
+        phrase = str(one_day.get("semantic_label") or row.get("label") or "")
+        if five_tone not in {"positive", "negative"}:
+            newly_material.append(phrase)
+        elif one_tone != five_tone:
+            reversed_rows.append(phrase)
+        else:
+            continuing.append(phrase)
+
+    parts = []
+    if newly_material:
+        parts.append(f"새로 나타남: {' · '.join(newly_material)}")
+    if reversed_rows:
+        parts.append(f"5D와 반전: {' · '.join(reversed_rows)}")
+    if continuing:
+        parts.append(f"기존 방향 지속: {' · '.join(continuing)}")
+    if not parts:
+        return "새로 강화되거나 반전된 핵심 변화가 없습니다."
+    return ". ".join(parts) + "."
 
 
 def _pattern_confirmation_summary(
@@ -884,12 +937,12 @@ def _pattern_confirmation_summary(
     risk_state = dict(core.get("risk_on", {}).get("five_day") or {})
     safe_state = dict(confirmations.get("safe_haven", {}).get("five_day") or {})
     if risk_state.get("tone") == "negative" and safe_state.get("tone") == "negative":
-        return "주가지수 약화와 안전자산 약화가 함께 나타나 전형적 방어 정렬은 아님을 확인합니다."
+        return "주가지수 약화와 안전자산 약화가 함께 나타나 전형적 방어 정렬은 아닙니다."
     if risk_state.get("tone") == "negative" and safe_state.get("tone") == "positive":
-        return "안전자산 강화가 주가지수 약화를 확인해 방어 정렬이 나타납니다."
+        return "주가지수 약화와 안전자산 강화가 함께 나타나 방어 정렬입니다."
     phrases = _material_family_phrases(confirmation_rows, "five_day")
     if not phrases:
-        return "확인 신호는 최근 5거래일 핵심 방향을 뚜렷하게 확인하지 않습니다."
+        return "확인 신호가 최근 5거래일 핵심 방향과 뚜렷하게 동조하지 않습니다."
     return f"확인 신호는 {' · '.join(phrases)}입니다."
 
 
@@ -909,6 +962,21 @@ def _future_five_day_validation_payload(
         status,
         FUTURES_MACRO_PUBLICATION_COPY["UNAVAILABLE"],
     )
+    episode_count = int(five_day.get("episode_count") or 0)
+    evaluation_count = int(five_day.get("evaluation_count") or 0)
+    sample_summary = (
+        f"독립 표본 {episode_count}개·시간순 평가 {evaluation_count}회"
+    )
+    if status == "VERIFIED":
+        detail = f"{sample_summary}에서 모델 오차가 기본 빈도보다 낮았습니다."
+    elif status == "NO_EDGE":
+        detail = (
+            f"{sample_summary}에서 모델 오차가 기본 빈도보다 낮지 않았습니다."
+        )
+    elif status == "PROVISIONAL":
+        detail = (
+            f"{sample_summary}가 있지만 공개 검증 기준을 모두 충족하지 못했습니다."
+        )
     method = dict(pattern_outlook.get("method") or {})
     raw_baselines = five_day.get("baseline_brier_scores")
     if not isinstance(raw_baselines, dict):
@@ -933,8 +1001,8 @@ def _future_five_day_validation_payload(
         "title": title,
         "detail": detail,
         "policy": policy,
-        "episode_count": int(five_day.get("episode_count") or 0),
-        "evaluation_count": int(five_day.get("evaluation_count") or 0),
+        "episode_count": episode_count,
+        "evaluation_count": evaluation_count,
         "model_brier": (
             float(model_brier) if model_brier is not None else None
         ),
@@ -964,10 +1032,16 @@ def _pattern_background_relationship_summary(
             continue
         target = aligned if float(five_value) * float(twenty_value) > 0 else reversed_rows
         target.append(str(row.get("label") or ""))
+    if reversed_rows and aligned:
+        return (
+            f"5D가 20D 배경을 이어가는 항목: {' · '.join(aligned)}. "
+            f"5D가 20D 배경과 반대로 움직이는 항목: {' · '.join(reversed_rows)}. "
+            "배경 관계는 혼재합니다."
+        )
     if reversed_rows:
-        return f"5D가 20D 배경과 반대로 움직이는 항목: {' · '.join(reversed_rows)}"
+        return f"5D가 20D 배경과 반대로 움직이는 항목: {' · '.join(reversed_rows)}."
     if aligned:
-        return f"5D가 20D 배경을 이어가는 항목: {' · '.join(aligned)}"
+        return f"5D가 20D 배경을 이어가는 항목: {' · '.join(aligned)}."
     return "5D와 20D 사이에 뚜렷한 지속 또는 반전 관계가 없습니다."
 
 
@@ -1019,46 +1093,30 @@ def _short_horizon_decision_payload(
         core_rows,
         confirmation_rows,
     )
-    one_day_phrases = _material_family_phrases(core_rows, "one_day")
+    one_day_summary = _pattern_one_day_change_summary(core_rows)
     twenty_day_summary = _pattern_background_relationship_summary(core_rows)
     return {
-        "observation_windows": [
-            {"key": "1D", "label": "최근 1거래일", "role": "지금 새로 생긴 변화"},
-            {"key": "5D", "label": "최근 5거래일", "role": "현재 단기 방향"},
-            {"key": "20D", "label": "최근 20거래일", "role": "기존 배경과의 관계"},
-        ],
         "observation_cards": [
             {
                 "key": "1D",
                 "title": "1D · 지금 새로 생긴 변화",
-                "summary": (
-                    " · ".join(one_day_phrases)
-                    if one_day_phrases
-                    else "새로 발생한 핵심 변화는 중립 범위입니다."
-                ),
-                "detail": "마지막 관측 세션의 변화가 5D 방향을 바꾸는지 확인합니다.",
+                "summary": one_day_summary,
             },
             {
                 "key": "5D",
                 "title": "5D · 현재 단기 방향",
                 "summary": core_summary,
-                "detail": "현재 판단의 중심축이며 여러 family가 같은 방향인지 확인합니다.",
             },
             {
                 "key": "20D",
                 "title": "20D · 기존 배경과의 관계",
                 "summary": twenty_day_summary,
-                "detail": "현재 5D 방향이 20D 배경을 이어가는지 또는 반전하는지 확인합니다.",
             },
         ],
         "current_summary": f"{core_summary} {confirmation_summary}",
         "one_day_shock": {
             "title": "최근 1거래일 · 새 충격",
-            "summary": (
-                " · ".join(one_day_phrases)
-                if one_day_phrases
-                else "새로 발생한 핵심 충격은 중립 범위입니다."
-            ),
+            "summary": one_day_summary,
         },
         "five_day_direction": {
             "title": "최근 5거래일 · 단기 방향",
@@ -1248,6 +1306,7 @@ def _pattern_hero_payload(
         "observed_at_utc": current_observation.get("observed_at_utc"),
         "observed_at_et": current_observation.get("observed_at_et"),
         "freshness_minutes": current_observation.get("freshness_minutes"),
+        "fallback_reason": current_observation.get("fallback_reason"),
         "observation_status": _pattern_observation_status(pattern),
         "coverage_label": "최근 1 · 5 · 20거래일",
         "evidence": [str(value) for value in list(evidence.get("current") or []) if str(value).strip()],
@@ -1498,7 +1557,7 @@ def build_futures_macro_react_workbench_payload(
     )
     session = dict(pattern_outlook.get("session") or {})
     return {
-        "schema_version": "futures_macro_react_workbench_v5",
+        "schema_version": "futures_macro_react_workbench_v6",
         "component": "FuturesMacroWorkbench",
         "command": _pattern_command_payload(
             macro,

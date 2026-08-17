@@ -170,11 +170,42 @@ def _intraday_payload(status: str = "NO_EDGE") -> dict[str, Any]:
         current_observation=_intraday_observation(),
     )
 
+
+def _completed_fallback_payload() -> dict[str, Any]:
+    from app.web.overview.futures_macro_helpers import (
+        build_futures_macro_react_workbench_payload,
+    )
+
+    return build_futures_macro_react_workbench_payload(
+        {
+            "coverage": {
+                "standardized_count": 17,
+                "symbol_count": 17,
+                "latest_daily_date": "2026-08-07",
+            },
+            "summary": {"summary": "완료 일봉 기준 배경입니다."},
+        },
+        pattern_outlook=_outlook(),
+        current_observation={
+            "status": "COMPLETED_FALLBACK",
+            "observation_mode": "COMPLETED",
+            "pattern": _pattern(),
+            "session_date": "2026-08-10",
+            "completed_as_of_date": "2026-08-07",
+            "observed_at_utc": None,
+            "observed_at_et": None,
+            "freshness_minutes": None,
+            "available_family_count": 0,
+            "required_family_count": 6,
+            "fallback_reason": "insufficient_complete_families",
+        },
+    )
+
 def test_short_horizon_payload_orders_core_four_and_confirmation_two() -> None:
     payload = _payload()
     decision = payload["short_horizon_decision"]
 
-    assert payload["schema_version"] == "futures_macro_react_workbench_v5"
+    assert payload["schema_version"] == "futures_macro_react_workbench_v6"
     assert [row["key"] for row in decision["core_directions"]] == [
         "risk_on",
         "rate_pressure",
@@ -185,11 +216,7 @@ def test_short_horizon_payload_orders_core_four_and_confirmation_two() -> None:
         "growth",
         "safe_haven",
     ]
-    assert decision["observation_windows"] == [
-        {"key": "1D", "label": "최근 1거래일", "role": "지금 새로 생긴 변화"},
-        {"key": "5D", "label": "최근 5거래일", "role": "현재 단기 방향"},
-        {"key": "20D", "label": "최근 20거래일", "role": "기존 배경과의 관계"},
-    ]
+    assert "observation_windows" not in decision
     risk_on = decision["core_directions"][0]
     assert risk_on["one_day"]["label"] == "중립"
     assert risk_on["five_day"]["label"] == "약화"
@@ -215,13 +242,17 @@ def test_refresh_action_describes_overlap_and_selective_bootstrap() -> None:
     assert "FUTURES_MACRO_HISTORY_YEARS}년 일봉을 yfinance에서 수집" not in helper_source
 
 
-def test_no_edge_copy_explains_baseline_without_exposing_internal_label() -> None:
+def test_no_edge_copy_is_a_completed_negative_validation_result() -> None:
     validation = _payload("NO_EDGE")["short_horizon_decision"][
         "future_five_day_validation"
     ]
 
     assert validation["status"] == "NO_EDGE"
-    assert validation["title"] == "기본 빈도 대비 예측력 확인 안 됨"
+    assert validation["title"] == "검증 완료 · 향후 5거래일 예측 우위 없음"
+    assert validation["detail"] == (
+        "독립 표본 120개·시간순 평가 325회에서 모델 오차가 "
+        "기본 빈도보다 낮지 않았습니다."
+    )
     assert validation["question"] == "현재 흐름을 향후 5거래일로 연장할 수 있는가?"
     assert validation["policy"] == "현재 흐름을 미래 5거래일 방향으로 연장하지 않습니다."
     assert validation["episode_count"] == 120
@@ -234,16 +265,16 @@ def test_no_edge_copy_explains_baseline_without_exposing_internal_label() -> Non
 def test_validation_copy_covers_all_publication_states() -> None:
     expected = {
         "VERIFIED": (
-            "검증된 5거래일 방향 우위",
-            "평소 결과 빈도보다 시간순 검증 성능이 높음",
+            "검증 완료 · 향후 5거래일 방향 우위 있음",
+            "독립 표본 120개·시간순 평가 325회에서 모델 오차가 기본 빈도보다 낮았습니다.",
         ),
         "PROVISIONAL": (
-            "검증 중 · 방향 확정 보류",
-            "계산은 가능하지만 공개 검증 기준을 모두 충족하지 못함",
+            "검증 진행 중 · 방향 확정 보류",
+            "독립 표본 120개·시간순 평가 325회가 있지만 공개 검증 기준을 모두 충족하지 못했습니다.",
         ),
         "UNAVAILABLE": (
             "검증 자료 부족",
-            "독립 표본 또는 시간순 평가가 부족함",
+            "검증 판정에 필요한 독립 표본 또는 시간순 평가가 부족합니다.",
         ),
     }
 
@@ -265,7 +296,7 @@ def test_intraday_payload_uses_current_pattern_but_completed_forecast() -> None:
     assert gate["reference_date"] == "2026-08-07"
 
 
-def test_current_observation_cards_explain_one_five_twenty_day_roles() -> None:
+def test_observation_cards_report_changes_without_instruction_copy() -> None:
     cards = _intraday_payload()["short_horizon_decision"]["observation_cards"]
 
     assert [card["key"] for card in cards] == ["1D", "5D", "20D"]
@@ -274,7 +305,35 @@ def test_current_observation_cards_explain_one_five_twenty_day_roles() -> None:
         "5D · 현재 단기 방향",
         "20D · 기존 배경과의 관계",
     ]
-    assert "20D" in cards[2]["detail"]
+    assert all("detail" not in card for card in cards)
+    assert "기존 방향 지속" in cards[0]["summary"]
+    assert "금리 부담 완화" in cards[0]["summary"]
+    assert "핵심축이 엇갈립니다" in cards[1]["summary"]
+    assert "20D 배경을 이어가는 항목" in cards[2]["summary"]
+    assert "확인합니다" not in str(cards)
+
+
+def test_background_relationship_reports_continuation_and_reversal_together() -> None:
+    from app.web.overview.futures_macro_helpers import (
+        _pattern_background_relationship_summary,
+    )
+
+    rows = deepcopy(_payload()["short_horizon_decision"]["core_directions"])
+    rates = next(row for row in rows if row["key"] == "rate_pressure")
+    rates["twenty_day"] = {
+        "label": "강화",
+        "semantic_label": "금리 부담 확대",
+        "tone": "positive",
+        "value": 0.8,
+    }
+
+    summary = _pattern_background_relationship_summary(rows)
+
+    assert "20D 배경을 이어가는 항목" in summary
+    assert "위험선호" in summary
+    assert "20D 배경과 반대로 움직이는 항목" in summary
+    assert "금리 부담" in summary
+    assert "혼재" in summary
 
 
 def test_family_states_use_semantic_polarity_labels() -> None:
@@ -294,6 +353,44 @@ def test_completed_fallback_is_explicit_in_hero_provenance() -> None:
     assert payload["hero"]["observation_label"] == "마지막 완료 일봉"
 
 
+def test_completed_fallback_exposes_latest_available_reason() -> None:
+    payload = _completed_fallback_payload()
+    hero = payload["hero"]
+
+    assert hero["fallback_reason"] == "insufficient_complete_families"
+    assert hero["completed_as_of_date"] == "2026-08-07"
+    assert "마지막 완료 일봉" in hero["observation_detail"]
+
+    source = Path(
+        "app/web/streamlit_components/futures_macro_workbench/src/"
+        "MacroContextSection.tsx"
+    ).read_text(encoding="utf-8")
+    assert "새 장중 관측이 없어" in source
+    assert "hero.evidence.slice(0, 2)" in source
+    assert "command.detail" not in source
+    assert '["no_active_session", "no_pending_session"]' not in source
+
+
+def test_futures_header_has_compact_futures_only_layout() -> None:
+    style = Path(
+        "app/web/streamlit_components/market_research_header/style.css"
+    ).read_text(encoding="utf-8")
+
+    assert ".research-header--futures .research-header__grid" in style
+    assert ".research-header--futures .research-header__facts" in style
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr))" in style
+
+
+def test_futures_workbench_mobile_layout_does_not_expand_the_page_width() -> None:
+    style = Path(
+        "app/web/streamlit_components/futures_macro_workbench/src/style.css"
+    ).read_text(encoding="utf-8")
+
+    assert ".fm-workbench > * { min-width: 0; }" in style
+    assert "@media (max-width: 480px)" in style
+    assert "repeat(3, minmax(58px, 1fr))" in style
+
+
 def test_calculation_scope_is_derived_from_collection_and_score_members() -> None:
     scope = _payload()["short_horizon_decision"]["calculation_scope"]
 
@@ -309,7 +406,7 @@ def test_confirmation_conflict_does_not_claim_confirmed_defensive_alignment() ->
     decision = _payload()["short_horizon_decision"]
 
     assert "전형적 방어 정렬" in decision["confirmation_summary"]
-    assert "아님" in decision["confirmation_summary"]
+    assert "아닙니다" in decision["confirmation_summary"]
     assert [item["key"] for item in _payload()["horizons"]] == [
         "current",
         "5D",
@@ -324,7 +421,8 @@ def test_react_default_render_uses_short_horizon_sections_in_order() -> None:
     assert 'from "./ShortHorizonDecisionSection"' in workbench
     assert 'from "./ForecastValidationGate"' in workbench
     assert 'from "./FamilyDirectionSection"' in workbench
-    assert 'from "./CalculationScopeSection"' in workbench
+    assert 'from "./CalculationScopeSection"' not in workbench
+    assert not (root / "CalculationScopeSection.tsx").exists()
     render = workbench[workbench.index("return (") :]
     assert "<PatternHorizonSection" not in render
     assert "<PatternMapSection" not in render
@@ -334,13 +432,27 @@ def test_react_default_render_uses_short_horizon_sections_in_order() -> None:
         "<ShortHorizonDecisionSection",
         "<ForecastValidationGate",
         "<FamilyDirectionSection",
-        "<CalculationScopeSection",
         "<PatternRibbonSection",
         "<MethodDisclosure",
         "<CalculationTraceDisclosure",
     ]
     offsets = [render.index(token) for token in expected]
     assert offsets == sorted(offsets)
+    assert "scope={payload.short_horizon_decision.calculation_scope}" in render
+
+
+def test_short_horizon_react_renders_results_without_reading_guide() -> None:
+    root = Path("app/web/streamlit_components/futures_macro_workbench/src")
+    decision = (root / "ShortHorizonDecisionSection.tsx").read_text(
+        encoding="utf-8"
+    )
+    method = (root / "MethodDisclosure.tsx").read_text(encoding="utf-8")
+
+    assert "decision.observation_windows" not in decision
+    assert "card.detail" not in decision
+    assert "순서로 읽습니다" not in decision
+    assert "계산 범위" in method
+    assert "scope.collected_count" in method
 
 
 def test_react_copy_keeps_recent_twenty_day_as_observation_only() -> None:
@@ -353,7 +465,7 @@ def test_react_copy_keeps_recent_twenty_day_as_observation_only() -> None:
         path.read_text(encoding="utf-8") for path in root.glob("*.tsx")
     )
 
-    assert "최근 20거래일" in decision
+    assert "decision.observation_cards" in decision
     assert "핵심 방향 정렬" in family
     assert "확인 신호" in family
     assert "20D는 미래 예측이 아닙니다" not in all_source
@@ -384,8 +496,10 @@ def test_react_separates_current_observation_from_future_validation_gate() -> No
     assert "decision.observation_cards" in decision
     assert "future_five_day_validation" not in decision
     assert "현재 흐름을 향후 5거래일로 연장할 수 있는가?" in forecast
-    assert "모델 Brier" in forecast
-    assert "기본 빈도 Brier" in forecast
+    assert "기본 대비 Brier" in forecast
+    assert "formatBrierDelta" in forecast
+    assert "모델 Brier" not in forecast
+    assert "기본 빈도 Brier" not in forecast
     assert "validation.policy" in forecast
 
 
