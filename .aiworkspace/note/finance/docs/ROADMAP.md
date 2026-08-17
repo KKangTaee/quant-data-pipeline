@@ -21,7 +21,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 - Data baseline: MySQL-backed ingestion / loader / service / UI 경계 구현
 - Safety baseline: no live approval, broker order, auto rebalance
 - Active phase: none
-- Active product implementation: none
+- Active product task: `institutional-holdings-content-first-ui-v1-20260817` (`1/3차` design/spec approved, implementation plan ready)
 - Institutional Holdings hybrid quarter review: 전체 `5/5` actual SEC/MySQL/Browser verified
 - Economic-cycle transition forecast: 2026-07 confirmed recovery, 다음 3 usable release 전환압력과 unrestricted next confirmed destination을 task-specific `GO` artifact/snapshot으로 저장하고 Overview 순환 경로에 연결. 자산별 확인 포인트 계산·디자인은 기존 계약 유지
 - Completed phase: `inflation-policy-yield-path` (5/5 actual DB/Browser verified)
@@ -54,9 +54,10 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 
 ### Active
 
-현재 user-approved product implementation 또는 active phase는 없다.
-새 제품 범위는 목적, 완료 조건과 data/safety boundary를 합의한 뒤 task 또는
-명시적으로 요청된 phase로 연다.
+현재 user-approved product task는 `institutional-holdings-content-first-ui-v1-20260817`다.
+`Market Research + Today` content-first A안과 manager-selection 상태 계약을 승인했고,
+전체 `1/3차` 설계·implementation plan까지 준비했다. 실행 방식을 확정한 뒤 검색 후
+기관 선택 회귀의 failing test부터 2차 구현을 시작한다.
 
 ### Paused
 

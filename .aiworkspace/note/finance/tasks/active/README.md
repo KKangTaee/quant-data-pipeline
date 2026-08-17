@@ -28,7 +28,7 @@ tasks/active/<task-name>/
 
 | Task | State | Current Step |
 |---|---|---|
-| `institutional-holdings-content-first-ui-v1-20260817` | `active` | 전체 `1/3차`; 승인된 content-first A안과 manager selection 상태 계약의 written spec 사용자 검토 대기 |
+| `institutional-holdings-content-first-ui-v1-20260817` | `active` | 전체 `1/3차`; written spec 승인·implementation plan 준비 완료, 실행 방식 확정 대기 |
 
 ## Paused Tasks
 

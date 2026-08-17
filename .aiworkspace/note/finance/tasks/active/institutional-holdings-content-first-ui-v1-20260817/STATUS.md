@@ -10,12 +10,14 @@ Last Updated: 2026-08-17
 - manager selection regression의 server-side search/selection normalization 충돌을 특정했다.
 - 사용자는 visual companion의 A안 `Content-first 하이브리드`와 상세 interaction contract를
   승인했다.
-- written design spec을 작성했고 사용자 문서 검토를 기다린다.
+- written design spec을 작성했고 사용자가 검토·승인했다.
+- TDD, semantic shell, visual/runtime bundle, actual Browser QA의 네 task로 나눈
+  implementation plan을 작성했다.
 
 ## Next Action
 
-사용자가 written spec을 검토·승인하면 implementation plan을 작성한다. 그 뒤 failing
-regression test부터 2차 구현을 시작한다.
+실행 방식을 확정한 뒤 Task 1의 failing manager-selection regression부터 2차 구현을
+시작한다.
 
 ## Current Scope Boundary
 
