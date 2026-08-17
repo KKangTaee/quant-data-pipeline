@@ -226,8 +226,16 @@ def _select_xml_documents(filing: Mapping[str, Any], index_payload: Mapping[str,
     items = index_payload.get("directory", {}).get("item", [])
     documents = [dict(item) for item in items if isinstance(item, Mapping)]
     primary_name = str(filing.get("primary_document") or "").strip()
+    primary_basename = primary_name.rsplit("/", 1)[-1].lower()
     xml_documents = [row for row in documents if str(row.get("name") or "").lower().endswith(".xml")]
-    primary = next((row for row in xml_documents if row.get("name") == primary_name), None)
+    primary = next(
+        (
+            row
+            for row in xml_documents
+            if str(row.get("name") or "").lower() in {primary_name.lower(), primary_basename}
+        ),
+        None,
+    )
     if primary is None:
         primary = next(
             (
@@ -258,6 +266,10 @@ def _select_xml_documents(filing: Mapping[str, Any], index_payload: Mapping[str,
             ),
             None,
         )
+    if information is None:
+        remaining_xml = [row for row in xml_documents if row is not primary]
+        if len(remaining_xml) == 1:
+            information = remaining_xml[0]
     return str(primary["name"]), str(information["name"]) if information else None
 
 

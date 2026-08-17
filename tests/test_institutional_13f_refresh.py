@@ -239,6 +239,26 @@ def test_find_sec_13f_submission_filters_exact_period_and_supported_forms() -> N
     assert filings[0]["cik"] == "0001067983"
 
 
+def test_edgar_index_selects_flattened_primary_path_and_single_remaining_xml() -> None:
+    from finance.data.institutional_13f_edgar import _select_xml_documents
+
+    filing = {
+        "primary_document": "xslForm13F_X02/primary_doc.xml",
+        "submission_type": "13F-HR",
+    }
+    index_payload = {
+        "directory": {
+            "item": [
+                {"name": "0001193125-26-352200.txt", "type": "text.gif"},
+                {"name": "56757.xml", "type": "text.gif"},
+                {"name": "primary_doc.xml", "type": "text.gif"},
+            ]
+        }
+    }
+
+    assert _select_xml_documents(filing, index_payload) == ("primary_doc.xml", "56757.xml")
+
+
 def test_normalize_sec_13f_xml_documents_preserves_namespace_fields_and_holdings() -> None:
     from finance.data.institutional_13f_edgar import normalize_sec_13f_xml_documents
 
