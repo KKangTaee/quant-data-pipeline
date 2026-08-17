@@ -31,6 +31,7 @@ from app.web.institutional_portfolios_react_component import (
 )
 from app.web.reference_contextual_help import render_reference_contextual_help
 from finance.data.institutional_13f import DEFAULT_SEC_13F_DATASET_LABEL, DEFAULT_SEC_13F_DATASET_URL
+from finance.loaders.institutional_13f import load_institutional_13f_latest_submission_periods_by_ciks
 
 
 def _cik_text(value: Any) -> str | None:
@@ -46,12 +47,16 @@ def _build_local_refresh_action(
     *,
     as_of_date: Any,
     last_result: dict[str, Any] | None = None,
+    filing_periods: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     manager_periods = {
         cik: row.get("latest_report_period")
         for row in managers
         if (cik := _cik_text(row.get("cik")))
     }
+    for raw_cik, period in (filing_periods or {}).items():
+        if cik := _cik_text(raw_cik):
+            manager_periods[cik] = period
     return build_institutional_refresh_action(
         as_of_date=as_of_date,
         manager_periods=manager_periods,
@@ -593,6 +598,12 @@ def render_institutional_portfolios_page(
         return
 
     managers = list(manager_result.get("managers") or [])
+    try:
+        filing_periods = load_institutional_13f_latest_submission_periods_by_ciks(
+            [str(row["cik"]) for row in INSTITUTIONAL_MANAGER_WATCHLIST]
+        )
+    except Exception:
+        filing_periods = {}
     search_active = bool(str(search or "").strip())
     selected_manager = _selected_manager(managers, search_active=search_active)
     if selected_manager is None:
@@ -682,6 +693,7 @@ def render_institutional_portfolios_page(
             managers,
             as_of_date=(loaded_at or datetime.now()).date(),
             last_result=dict(st.session_state.get("institutional_13f_refresh_result") or {}),
+            filing_periods=filing_periods,
         ),
         quarter_review=quarter_review,
         mode="live",

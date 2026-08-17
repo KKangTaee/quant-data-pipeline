@@ -698,6 +698,54 @@ def test_local_page_action_uses_watchlist_manager_periods_without_discovery(monk
     assert action["target_report_period"] == "2026-06-30"
 
 
+def test_local_page_action_counts_notice_only_submission_as_refresh_complete() -> None:
+    page = importlib.import_module("app.web.institutional_portfolios")
+
+    notice_cik = "0001336528"
+    action = page._build_local_refresh_action(
+        [
+            {
+                "cik": row["cik"],
+                "latest_report_period": "2026-03-31" if row["cik"] == notice_cik else "2026-06-30",
+            }
+            for row in page.INSTITUTIONAL_MANAGER_WATCHLIST
+        ],
+        as_of_date="2026-08-17",
+        filing_periods={notice_cik: "2026-06-30"},
+    )
+
+    assert action["status"] == "current"
+    assert action["visible"] is False
+
+
+def test_latest_submission_periods_include_holdings_and_notice_filings(monkeypatch) -> None:
+    loader = importlib.import_module("finance.loaders.institutional_13f")
+
+    class FakeDB:
+        def use_db(self, name: str) -> None:
+            assert name == "finance_meta"
+
+        def query(self, sql: str, params: tuple[str, ...]) -> list[dict]:
+            assert "MAX(period_of_report)" in sql
+            assert params == ("0001067983", "0001336528")
+            return [
+                {"cik": "0001067983", "latest_report_period": "2026-06-30"},
+                {"cik": "0001336528", "latest_report_period": "2026-06-30"},
+            ]
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(loader, "_connect", lambda *_args, **_kwargs: FakeDB())
+
+    assert loader.load_institutional_13f_latest_submission_periods_by_ciks(
+        ["0001067983", "0001336528"]
+    ) == {
+        "0001067983": "2026-06-30",
+        "0001336528": "2026-06-30",
+    }
+
+
 def test_manual_refresh_event_runs_hybrid_job_without_accepting_source_url(monkeypatch) -> None:
     page = importlib.import_module("app.web.institutional_portfolios")
     calls: list[dict] = []

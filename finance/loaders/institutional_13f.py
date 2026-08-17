@@ -463,6 +463,46 @@ def load_institutional_13f_managers_by_ciks(
     return _frame(rows)
 
 
+def load_institutional_13f_latest_submission_periods_by_ciks(
+    ciks: Iterable[str],
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, str]:
+    """Return latest submitted periods, including notice-only 13F filings."""
+
+    normalized: list[str] = []
+    for cik in ciks:
+        digits = "".join(ch for ch in str(cik or "") if ch.isdigit())
+        if digits:
+            normalized.append(digits.zfill(10)[-10:])
+    normalized = list(dict.fromkeys(normalized))
+    if not normalized:
+        return {}
+
+    placeholders = ", ".join(["%s"] * len(normalized))
+    db = _connect(host, user, password, port)
+    try:
+        rows = db.query(
+            f"""
+            SELECT cik, MAX(period_of_report) AS latest_report_period
+            FROM institutional_13f_filing
+            WHERE cik IN ({placeholders})
+            GROUP BY cik
+            """,
+            tuple(normalized),
+        )
+    finally:
+        db.close()
+    return {
+        str(row.get("cik") or "").zfill(10)[-10:]: str(row.get("latest_report_period"))
+        for row in rows
+        if row.get("cik") and row.get("latest_report_period")
+    }
+
+
 def load_institutional_13f_manager_watchlist(
     *,
     active_only: bool = True,
