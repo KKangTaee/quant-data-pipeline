@@ -54,3 +54,13 @@
   requested-CIK validation passed (`13 passed`).
 - Regression: the existing Institutional Portfolios suite passed (`58 passed`, existing edgar
   deprecation warnings only).
+
+## 2026-08-17 — Task 4 amendment-aware effective history
+
+- RED: the pure resolver, single-connection history loader and effective-bundle compatibility keys
+  each failed before implementation.
+- GREEN: restatement replacement, additive extension, additive-without-base rejection, unknown
+  amendment last-good preservation, two-quarter DB composition and legacy bundle keys passed
+  (`17 passed`).
+- Regression: Institutional Portfolios remained `58 passed`; the loader opens one connection per
+  history request and performs no external request or write.

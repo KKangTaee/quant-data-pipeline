@@ -100,6 +100,76 @@ def _frame(rows: list[dict[str, Any]]) -> pd.DataFrame:
     return pd.DataFrame(rows) if rows else pd.DataFrame()
 
 
+def resolve_effective_13f_quarter(
+    filings: Iterable[dict[str, Any]],
+    holdings_by_accession: dict[str, pd.DataFrame],
+) -> dict[str, Any]:
+    """Compose base, restatement, and additive amendments into one effective quarter."""
+
+    ordered = sorted(
+        (dict(row) for row in filings),
+        key=lambda row: (
+            str(row.get("filing_date") or ""),
+            str(row.get("accession_number") or ""),
+        ),
+    )
+    effective = pd.DataFrame()
+    source_accessions: list[str] = []
+    effective_filing: dict[str, Any] | None = None
+    warnings: list[str] = []
+
+    for filing in ordered:
+        accession = str(filing.get("accession_number") or "").strip()
+        if not accession:
+            continue
+        holdings = holdings_by_accession.get(accession)
+        holdings = holdings.copy() if isinstance(holdings, pd.DataFrame) else pd.DataFrame()
+        submission_type = str(filing.get("submission_type") or "").strip().upper()
+        is_amendment = bool(filing.get("is_amendment")) or submission_type.endswith("/A")
+        amendment_type = str(filing.get("amendment_type") or "").strip().upper()
+
+        if submission_type == "13F-NT":
+            warnings.append(f"Notice-only filing {accession} does not define owned holdings.")
+            continue
+        if not is_amendment:
+            if holdings.empty:
+                warnings.append(f"Base filing {accession} has no usable information table.")
+                continue
+            effective = holdings
+            source_accessions = [accession]
+            effective_filing = filing
+            continue
+        if "RESTATEMENT" in amendment_type:
+            if effective_filing is None or holdings.empty:
+                warnings.append(f"Restatement {accession} has no usable base or information table.")
+                continue
+            effective = holdings
+            source_accessions = [accession]
+            effective_filing = filing
+            continue
+        if "NEW HOLDINGS" in amendment_type:
+            if effective_filing is None:
+                warnings.append(f"Additive amendment {accession} has no accepted base filing.")
+                continue
+            if holdings.empty:
+                warnings.append(f"Additive amendment {accession} has no usable information table.")
+                continue
+            effective = pd.concat([effective, holdings], ignore_index=True, sort=False)
+            source_accessions.append(accession)
+            effective_filing = filing
+            continue
+
+        warnings.append(f"Unknown amendment type for {accession}; kept the last unambiguous filing.")
+
+    return {
+        "available": effective_filing is not None and not effective.empty,
+        "filing": effective_filing,
+        "holdings": effective.reset_index(drop=True),
+        "source_accessions": source_accessions,
+        "warning": " ".join(warnings),
+    }
+
+
 def _connect(host: str, user: str, password: str, port: int) -> MySQLClient:
     db = MySQLClient(host, user, password, port)
     db.use_db(DB_META)
@@ -551,6 +621,162 @@ def load_institutional_13f_holdings(
     return _frame(rows)
 
 
+def _load_effective_history_from_db(
+    db: MySQLClient,
+    cik: str,
+    *,
+    limit: int,
+    report_period: str | None = None,
+) -> list[dict[str, Any]]:
+    normalized_cik = str(cik).zfill(10)
+    manager_rows = db.query(
+        """
+        SELECT cik, manager_name
+        FROM institutional_13f_manager
+        WHERE cik = %s
+        LIMIT 1
+        """,
+        (normalized_cik,),
+    )
+    period_where = "AND period_of_report = %s" if report_period else ""
+    period_params: tuple[Any, ...] = (
+        (normalized_cik, report_period, int(limit))
+        if report_period
+        else (normalized_cik, int(limit))
+    )
+    period_rows = db.query(
+        f"""
+        SELECT DISTINCT period_of_report
+        FROM institutional_13f_filing
+        WHERE cik = %s
+          {period_where}
+        ORDER BY period_of_report DESC
+        LIMIT %s
+        """,
+        period_params,
+    )
+    periods = [str(row.get("period_of_report")) for row in period_rows if row.get("period_of_report")]
+    if not periods:
+        return []
+
+    period_placeholders = ", ".join(["%s"] * len(periods))
+    filings = db.query(
+        f"""
+        SELECT *
+        FROM institutional_13f_filing
+        WHERE cik = %s AND period_of_report IN ({period_placeholders})
+        ORDER BY period_of_report DESC, filing_date ASC, accession_number ASC
+        """,
+        tuple([normalized_cik, *periods]),
+    )
+    accessions = [str(row.get("accession_number")) for row in filings if row.get("accession_number")]
+    holdings_by_accession: dict[str, pd.DataFrame] = {accession: pd.DataFrame() for accession in accessions}
+    if accessions:
+        accession_placeholders = ", ".join(["%s"] * len(accessions))
+        holding_rows = db.query(
+            f"""
+            SELECT
+              h.accession_number,
+              h.infotable_sk,
+              h.cik,
+              h.manager_name,
+              h.report_period,
+              h.filing_date,
+              h.issuer_name,
+              h.title_of_class,
+              h.cusip,
+              {_IDENTITY_SELECT_SQL},
+              h.reported_value,
+              h.shares_or_principal_amount,
+              h.amount_type,
+              h.put_call,
+              h.investment_discretion,
+              h.source_dataset,
+              h.source_ref
+            FROM institutional_13f_holding h
+            {_IDENTITY_JOIN_SQL}
+            WHERE h.accession_number IN ({accession_placeholders})
+            ORDER BY h.accession_number, h.infotable_sk
+            """,
+            tuple(accessions),
+        )
+        holding_frame = _frame(holding_rows)
+        if not holding_frame.empty:
+            holdings_by_accession.update(
+                {
+                    str(accession): group.reset_index(drop=True)
+                    for accession, group in holding_frame.groupby("accession_number", dropna=False)
+                }
+            )
+
+    manager = dict(manager_rows[0]) if manager_rows else None
+    history: list[dict[str, Any]] = []
+    for period in periods:
+        period_filings = [row for row in filings if str(row.get("period_of_report")) == period]
+        resolved = resolve_effective_13f_quarter(period_filings, holdings_by_accession)
+        resolved["manager"] = manager or (
+            {
+                "cik": normalized_cik,
+                "manager_name": period_filings[0].get("manager_name"),
+            }
+            if period_filings
+            else None
+        )
+        history.append(resolved)
+    return history
+
+
+def load_institutional_13f_effective_quarter(
+    cik: str,
+    report_period: str | None = None,
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any]:
+    """Load one amendment-aware effective quarter without external fetches or writes."""
+
+    db = _connect(host, user, password, port)
+    try:
+        history = _load_effective_history_from_db(
+            db,
+            cik,
+            limit=1,
+            report_period=report_period,
+        )
+    finally:
+        db.close()
+    if history:
+        return history[0]
+    return {
+        "available": False,
+        "manager": None,
+        "filing": None,
+        "holdings": pd.DataFrame(),
+        "source_accessions": [],
+        "warning": "No stored 13F filing is available for the requested quarter.",
+    }
+
+
+def load_institutional_13f_effective_history(
+    cik: str,
+    *,
+    limit: int = 8,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> list[dict[str, Any]]:
+    """Load amendment-aware effective quarters through one DB connection."""
+
+    db = _connect(host, user, password, port)
+    try:
+        return _load_effective_history_from_db(db, cik, limit=max(1, int(limit)))
+    finally:
+        db.close()
+
+
 def load_institutional_13f_portfolio_bundle(
     cik: str,
     *,
@@ -559,47 +785,27 @@ def load_institutional_13f_portfolio_bundle(
     password: str = "1234",
     port: int = 3306,
 ) -> dict[str, Any]:
-    latest = load_institutional_13f_latest_filing(cik, host=host, user=user, password=password, port=port)
-    if not latest:
-        return {
-            "manager": None,
-            "latest_filing": None,
-            "latest_holdings": pd.DataFrame(),
-            "previous_filing": None,
-            "previous_holdings": pd.DataFrame(),
-        }
-    previous = load_institutional_13f_previous_filing(
+    history = load_institutional_13f_effective_history(
         cik,
-        str(latest["period_of_report"]),
+        limit=8,
         host=host,
         user=user,
         password=password,
         port=port,
     )
-    latest_holdings = load_institutional_13f_holdings(
-        str(latest["accession_number"]),
-        host=host,
-        user=user,
-        password=password,
-        port=port,
-    )
-    previous_holdings = (
-        load_institutional_13f_holdings(
-            str(previous["accession_number"]),
-            host=host,
-            user=user,
-            password=password,
-            port=port,
-        )
-        if previous
-        else pd.DataFrame()
-    )
+    available = [row for row in history if row.get("available")]
+    latest_effective = available[0] if available else None
+    previous_effective = available[1] if len(available) > 1 else None
     return {
-        "manager": {"cik": latest["cik"], "manager_name": latest["manager_name"]},
-        "latest_filing": latest,
-        "latest_holdings": latest_holdings,
-        "previous_filing": previous,
-        "previous_holdings": previous_holdings,
+        "manager": latest_effective.get("manager") if latest_effective else None,
+        "latest_filing": latest_effective.get("filing") if latest_effective else None,
+        "latest_holdings": latest_effective.get("holdings", pd.DataFrame()) if latest_effective else pd.DataFrame(),
+        "previous_filing": previous_effective.get("filing") if previous_effective else None,
+        "previous_holdings": (
+            previous_effective.get("holdings", pd.DataFrame()) if previous_effective else pd.DataFrame()
+        ),
+        "latest_effective": latest_effective,
+        "previous_effective": previous_effective,
     }
 
 

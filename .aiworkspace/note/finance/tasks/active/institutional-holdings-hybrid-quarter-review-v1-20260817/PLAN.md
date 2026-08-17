@@ -388,7 +388,7 @@ git commit -m "기능: 관심 기관 EDGAR 13F 개별 수집 추가"
 - Changes: `load_institutional_13f_portfolio_bundle` uses the latest two effective quarters.
 - Consumes: Task 6 quarter-review service.
 
-- [ ] **Step 1: Add RED resolver tests**
+- [x] **Step 1: Add RED resolver tests**
 
 ```python
 def test_effective_quarter_restatement_replaces_and_addition_extends() -> None:
@@ -408,11 +408,11 @@ def test_effective_quarter_restatement_replaces_and_addition_extends() -> None:
 Add cases for additive amendment without a base, unknown amendment type, and one-quarter history.
 Unknown chains must return `available=False` rather than choosing the newest accession.
 
-- [ ] **Step 2: Run focused loader tests and confirm RED**
+- [x] **Step 2: Run focused loader tests and confirm RED**
 
 Run: `.venv/bin/python -m pytest tests/test_institutional_13f_refresh.py -q`
 
-- [ ] **Step 3: Implement pure effective-quarter resolution**
+- [x] **Step 3: Implement pure effective-quarter resolution**
 
 Sort by filing date and accession. Use the latest accepted base as the starting table; a
 `RESTATEMENT` resets it; `NEW HOLDINGS` appends. Preserve `source_accessions`, latest filing date,
@@ -421,7 +421,7 @@ base report period, amendment warning and `available`.
 Do not deduplicate different discretion rows prematurely. The later service aggregates by the
 approved position identity.
 
-- [ ] **Step 4: Add DB history readers**
+- [x] **Step 4: Add DB history readers**
 
 Query distinct report periods for the CIK, load every filing and its holdings for each requested
 period, and pass the chain through the pure resolver. Avoid N+1 connections by using one DB
@@ -438,7 +438,7 @@ connection inside each history load. Keep the public result:
 }
 ```
 
-- [ ] **Step 5: Migrate the portfolio bundle safely**
+- [x] **Step 5: Migrate the portfolio bundle safely**
 
 Make `load_institutional_13f_portfolio_bundle` return its existing keys plus
 `latest_effective`/`previous_effective`. Populate legacy `latest_filing`, `latest_holdings`,
@@ -446,7 +446,7 @@ Make `load_institutional_13f_portfolio_bundle` return its existing keys plus
 
 Update tests that previously assumed the latest accession alone owns the full portfolio.
 
-- [ ] **Step 6: Run Task 4 verification and commit**
+- [x] **Step 6: Run Task 4 verification and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_institutional_13f_refresh.py -q

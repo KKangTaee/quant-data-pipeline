@@ -5,6 +5,8 @@ import importlib
 import io
 import urllib.error
 
+import pandas as pd
+
 
 PRIMARY_13F_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <edgarSubmission xmlns="http://www.sec.gov/edgar/thirteenffiler">
@@ -403,3 +405,190 @@ def test_watchlist_collection_commits_each_manager_and_replay_is_idempotent() ->
     assert db.rollback_count == 1
     assert second["already_current_managers"] == 1
     assert second["rows_written"] == 0
+
+
+def test_effective_quarter_restatement_replaces_and_addition_extends() -> None:
+    from finance.loaders.institutional_13f import resolve_effective_13f_quarter
+
+    base = {
+        "accession_number": "base",
+        "submission_type": "13F-HR",
+        "filing_date": "2026-08-14",
+        "period_of_report": "2026-06-30",
+        "is_amendment": 0,
+    }
+    restatement = {
+        "accession_number": "restatement",
+        "submission_type": "13F-HR/A",
+        "filing_date": "2026-08-18",
+        "period_of_report": "2026-06-30",
+        "is_amendment": 1,
+        "amendment_type": "RESTATEMENT",
+    }
+    addition = {
+        "accession_number": "addition",
+        "submission_type": "13F-HR/A",
+        "filing_date": "2026-08-20",
+        "period_of_report": "2026-06-30",
+        "is_amendment": 1,
+        "amendment_type": "NEW HOLDINGS",
+    }
+
+    resolved = resolve_effective_13f_quarter(
+        filings=[base, restatement, addition],
+        holdings_by_accession={
+            "base": pd.DataFrame([{"cusip": "037833100", "shares_or_principal_amount": 10}]),
+            "restatement": pd.DataFrame([{"cusip": "037833100", "shares_or_principal_amount": 12}]),
+            "addition": pd.DataFrame([{"cusip": "191216100", "shares_or_principal_amount": 5}]),
+        },
+    )
+
+    assert resolved["available"] is True
+    assert resolved["source_accessions"] == ["restatement", "addition"]
+    assert set(resolved["holdings"]["cusip"]) == {"037833100", "191216100"}
+    assert resolved["warning"] == ""
+    assert resolved["filing"]["filing_date"] == "2026-08-20"
+
+
+def test_effective_quarter_fails_closed_without_base_and_preserves_last_unambiguous_base() -> None:
+    from finance.loaders.institutional_13f import resolve_effective_13f_quarter
+
+    addition = {
+        "accession_number": "addition",
+        "submission_type": "13F-HR/A",
+        "filing_date": "2026-08-20",
+        "period_of_report": "2026-06-30",
+        "is_amendment": 1,
+        "amendment_type": "NEW HOLDINGS",
+    }
+    no_base = resolve_effective_13f_quarter(
+        filings=[addition],
+        holdings_by_accession={"addition": pd.DataFrame([{"cusip": "191216100"}])},
+    )
+    assert no_base["available"] is False
+
+    base = {
+        "accession_number": "base",
+        "submission_type": "13F-HR",
+        "filing_date": "2026-08-14",
+        "period_of_report": "2026-06-30",
+        "is_amendment": 0,
+    }
+    unknown = {**addition, "accession_number": "unknown", "amendment_type": "OTHER"}
+    preserved = resolve_effective_13f_quarter(
+        filings=[base, unknown],
+        holdings_by_accession={
+            "base": pd.DataFrame([{"cusip": "037833100"}]),
+            "unknown": pd.DataFrame([{"cusip": "999999999"}]),
+        },
+    )
+    assert preserved["available"] is True
+    assert preserved["source_accessions"] == ["base"]
+    assert "unknown amendment" in preserved["warning"].lower()
+
+
+def test_effective_history_loads_two_quarters_with_one_database_connection(monkeypatch) -> None:
+    loader = importlib.import_module("finance.loaders.institutional_13f")
+
+    class FakeDB:
+        def __init__(self) -> None:
+            self.close_count = 0
+
+        def query(self, sql: str, _params=None) -> list[dict]:
+            if "SELECT cik, manager_name" in sql:
+                return [{"cik": "0001067983", "manager_name": "BERKSHIRE HATHAWAY INC"}]
+            if "SELECT DISTINCT period_of_report" in sql:
+                return [{"period_of_report": "2026-06-30"}, {"period_of_report": "2026-03-31"}]
+            if "FROM institutional_13f_filing" in sql:
+                return [
+                    {
+                        "accession_number": "q2-base",
+                        "cik": "0001067983",
+                        "manager_name": "BERKSHIRE HATHAWAY INC",
+                        "submission_type": "13F-HR",
+                        "filing_date": "2026-08-14",
+                        "period_of_report": "2026-06-30",
+                        "is_amendment": 0,
+                        "amendment_type": None,
+                    },
+                    {
+                        "accession_number": "q2-restatement",
+                        "cik": "0001067983",
+                        "manager_name": "BERKSHIRE HATHAWAY INC",
+                        "submission_type": "13F-HR/A",
+                        "filing_date": "2026-08-18",
+                        "period_of_report": "2026-06-30",
+                        "is_amendment": 1,
+                        "amendment_type": "RESTATEMENT",
+                    },
+                    {
+                        "accession_number": "q1-base",
+                        "cik": "0001067983",
+                        "manager_name": "BERKSHIRE HATHAWAY INC",
+                        "submission_type": "13F-HR",
+                        "filing_date": "2026-05-15",
+                        "period_of_report": "2026-03-31",
+                        "is_amendment": 0,
+                        "amendment_type": None,
+                    },
+                ]
+            if "FROM institutional_13f_holding h" in sql:
+                return [
+                    {"accession_number": "q2-base", "cusip": "old-q2"},
+                    {"accession_number": "q2-restatement", "cusip": "new-q2"},
+                    {"accession_number": "q1-base", "cusip": "q1"},
+                ]
+            raise AssertionError(sql)
+
+        def close(self) -> None:
+            self.close_count += 1
+
+    fake_db = FakeDB()
+    connect_count = 0
+
+    def fake_connect(*_args, **_kwargs):
+        nonlocal connect_count
+        connect_count += 1
+        return fake_db
+
+    monkeypatch.setattr(loader, "_connect", fake_connect)
+
+    history = loader.load_institutional_13f_effective_history("0001067983", limit=2)
+
+    assert connect_count == 1
+    assert fake_db.close_count == 1
+    assert [row["filing"]["period_of_report"] for row in history] == ["2026-06-30", "2026-03-31"]
+    assert history[0]["source_accessions"] == ["q2-restatement"]
+    assert history[0]["holdings"].iloc[0]["cusip"] == "new-q2"
+
+
+def test_portfolio_bundle_populates_legacy_keys_from_effective_quarters(monkeypatch) -> None:
+    loader = importlib.import_module("finance.loaders.institutional_13f")
+    latest = {
+        "available": True,
+        "manager": {"cik": "0001067983", "manager_name": "BERKSHIRE HATHAWAY INC"},
+        "filing": {"accession_number": "q2-restatement", "period_of_report": "2026-06-30"},
+        "holdings": pd.DataFrame([{"cusip": "037833100"}]),
+        "source_accessions": ["q2-restatement"],
+        "warning": "",
+    }
+    previous = {
+        "available": True,
+        "manager": latest["manager"],
+        "filing": {"accession_number": "q1-base", "period_of_report": "2026-03-31"},
+        "holdings": pd.DataFrame([{"cusip": "191216100"}]),
+        "source_accessions": ["q1-base"],
+        "warning": "",
+    }
+    monkeypatch.setattr(
+        loader,
+        "load_institutional_13f_effective_history",
+        lambda *_args, **_kwargs: [latest, previous],
+    )
+
+    bundle = loader.load_institutional_13f_portfolio_bundle("0001067983")
+
+    assert bundle["latest_effective"] is latest
+    assert bundle["previous_effective"] is previous
+    assert bundle["latest_filing"]["accession_number"] == "q2-restatement"
+    assert bundle["previous_holdings"].iloc[0]["cusip"] == "191216100"
