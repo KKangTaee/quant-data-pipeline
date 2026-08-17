@@ -23,6 +23,15 @@ INSTITUTIONAL_PORTFOLIO_CAVEATS = [
     *SEC_13F_SOURCE_CAVEATS,
     "Change labels mean reported quarter-over-quarter differences, not current trading intent.",
 ]
+INSTITUTIONAL_PORTFOLIO_DISCLOSURE_KO = {
+    "title": "13F 자료 해석 시 주의",
+    "summary": "지연 공시 · 실시간 매매 신호 아님",
+    "items": [
+        "분기 종료 후 최대 45일 뒤 공개되는 지연 자료이며 실시간 매매 신호가 아닙니다.",
+        "공매도, 현금, 일부 파생상품, 헤지, 수수료와 분기 중 매매는 반영되지 않습니다.",
+        "수정 신고, 비공개 처리, 원천 추출과 CUSIP-symbol 연결 상태에 따라 표시 내용이 달라질 수 있습니다.",
+    ],
+}
 CHANGE_ORDER = {
     "increased": 0,
     "reported_new": 1,
@@ -318,6 +327,17 @@ def _money_label(value: Any) -> str:
     if abs(numeric) >= 1_000:
         return f"{numeric / 1_000:.1f}K"
     return f"{numeric:,.0f}"
+
+
+def _usd_reported_value_label(value: Any) -> str:
+    if value is None:
+        return "보고가액 확인 불가"
+    try:
+        if pd.isna(value):
+            return "보고가액 확인 불가"
+    except TypeError:
+        pass
+    return f"${_money_label(value)}"
 
 
 def _pct_label(value: Any) -> str:
@@ -1462,6 +1482,7 @@ def build_institutional_popularity_model(rows: pd.DataFrame | None, *, report_pe
                 "holding_rows": int(_num(row.get("holding_rows"))),
                 "total_reported_value": _num(row.get("total_reported_value")),
                 "value_label": _money_label(row.get("total_reported_value")),
+                "reported_value_label": _usd_reported_value_label(row.get("total_reported_value")),
                 "sample_managers": _text(row.get("sample_managers")) or "",
                 "drilldown_query": query,
             }
@@ -1469,11 +1490,11 @@ def build_institutional_popularity_model(rows: pd.DataFrame | None, *, report_pe
     return {
         "status": "ok" if ranked else "empty",
         "title": "기관 보유 랭킹",
-        "subtitle": "보고 기준 분기별로 같은 종목을 보유한 기관 수를 집계합니다.",
+        "subtitle": "보유 기관 수가 많은 종목 순이며, 기관 수가 같으면 13F 보고 보유가액 합계를 비교합니다.",
         "report_period": period,
         "rows": ranked,
         "empty_text": "랭킹을 불러오면 보고 기준 분기별 보유 기관 수를 보여줍니다.",
-        "caveat": "동일 CUSIP 기준 집계이며 CUSIP-symbol mapping 한계가 있을 수 있습니다.",
+        "caveat": "보고 보유가액 합계는 해당 분기의 지연된 13F 보고값이며 시가총액, 거래량 또는 현재 보유액이 아닙니다.",
     }
 
 
@@ -1678,10 +1699,7 @@ def build_institutional_workbench_payload(
                 "empty_text": "탭을 열면 보고 기준 분기의 보유 기관 수 랭킹을 불러옵니다.",
             }
         ),
-        "source_caveats": {
-            "visible": True,
-            "items": list(model.get("caveats") or INSTITUTIONAL_PORTFOLIO_CAVEATS),
-        },
+        "source_caveats": {"visible": True, **INSTITUTIONAL_PORTFOLIO_DISCLOSURE_KO},
         "boundary": dict(
             model.get("boundary")
             or {

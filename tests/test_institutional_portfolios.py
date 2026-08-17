@@ -1032,6 +1032,10 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertEqual(model["rows"][0]["symbol"], "AAPL")
         self.assertEqual(model["rows"][0]["holder_count"], 130)
         self.assertEqual(model["rows"][0]["drilldown_query"], "AAPL")
+        self.assertEqual(model["rows"][0]["reported_value_label"], "$8.0M")
+        self.assertIn("보유 기관 수", model["subtitle"])
+        self.assertIn("시가총액", model["caveat"])
+        self.assertIn("거래량", model["caveat"])
 
     def test_institutional_interest_model_accepts_symbol_or_cusip_lookup(self) -> None:
         from app.services.institutional_portfolios import build_institutional_interest_model
@@ -1266,6 +1270,10 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertEqual(payload["refresh_action"]["action_id"], "refresh_institutional_13f")
         self.assertFalse(payload["refresh_action"]["visible"])
         self.assertTrue(payload["source_caveats"]["visible"])
+        self.assertEqual(payload["source_caveats"]["title"], "13F 자료 해석 시 주의")
+        self.assertEqual(payload["source_caveats"]["summary"], "지연 공시 · 실시간 매매 신호 아님")
+        self.assertEqual(len(payload["source_caveats"]["items"]), 3)
+        self.assertTrue(all("13F holdings are not" not in item for item in payload["source_caveats"]["items"]))
         self.assertFalse(payload["boundary"]["trade_signal"])
 
     def test_visual_workbench_payload_explains_missing_previous_filing_comparison(self) -> None:

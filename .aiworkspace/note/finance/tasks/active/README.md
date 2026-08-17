@@ -47,6 +47,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `institutional-holdings-metric-clarity-v1-20260817` | Completed implementation task, 3/3 | 가격 proxy의 양·음 기여 목록을 sign-filter하고 0 기여를 제외했으며, popularity의 13F 보고가액 의미와 한국어 disclosure payload 계약을 service tests로 고정했다. |
 | `institutional-holdings-hybrid-quarter-review-v1-20260817` | Completed product task, 5/5 | 로컬 제출기한 기반 수동 bulk-first/EDGAR fallback, amendment-aware history, `NEW/ADD/KEEP/REDUCE/DROP`, 두 covered-sleeve proxy와 v3 React 분기 리뷰를 actual SEC/MySQL/Browser QA까지 완료했다. |
 | `economic-cycle-interpretability-refresh-v1-20260817` | Completed product task, 5/5 | official RTDSM current state·최근 변화·전환압력·조건부 목적지와 근거를 한 화면 계약으로 정리하고 공식 월말 수동 갱신, 자산 카드 보존과 actual Browser QA를 완료했다. |
 | `economic-cycle-transition-production-v1-20260817` | Completed product task, 5/5 | actual `GO` transition artifact/snapshot/service와 unrestricted destination UI를 연결하고 2026-07 confirmed recovery·전환압력·조건부 목적지를 fail-closed로 공개했다. |

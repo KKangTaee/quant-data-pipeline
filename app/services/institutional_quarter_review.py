@@ -227,6 +227,8 @@ def build_institutional_price_proxy(
     contribution_sum = sum(row["contribution_pct"] for row in rows)
     covered_return = contribution_sum * 100.0 / coverage_pct if coverage_pct else None
     rows.sort(key=lambda row: row["weight_pct"], reverse=True)
+    positive_rows = [row for row in rows if row["contribution_pct"] > 0]
+    negative_rows = [row for row in rows if row["contribution_pct"] < 0]
     return {
         "proxy_id": proxy_id,
         "status": _coverage_status(coverage_pct),
@@ -238,8 +240,8 @@ def build_institutional_price_proxy(
         "price_basis": "adjusted_close_total_return_when_available",
         "rows": rows,
         "missing_positions": sorted(missing, key=lambda row: row["weight_pct"], reverse=True),
-        "top_contributors": sorted(rows, key=lambda row: row["contribution_pct"], reverse=True)[:5],
-        "top_detractors": sorted(rows, key=lambda row: row["contribution_pct"])[:5],
+        "top_contributors": sorted(positive_rows, key=lambda row: row["contribution_pct"], reverse=True)[:5],
+        "top_detractors": sorted(negative_rows, key=lambda row: row["contribution_pct"])[:5],
         "caveat": "Adjusted-close common-equity proxy; dividends and splits follow the stored adjusted series. Missing or non-common holdings are excluded, never assigned a zero return.",
     }
 

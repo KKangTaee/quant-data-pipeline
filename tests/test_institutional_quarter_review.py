@@ -155,6 +155,40 @@ def test_price_proxy_excludes_non_common_instruments_and_requires_adjusted_price
     assert proxy["price_basis"] == "adjusted_close_total_return_when_available"
 
 
+def test_price_proxy_separates_positive_and_negative_contributors_and_omits_zero() -> None:
+    from app.services.institutional_quarter_review import build_institutional_price_proxy
+
+    holdings = pd.DataFrame(
+        [
+            {"cusip": "POS000001", "holding_symbol": "POS", "title_of_class": "COM", "amount_type": "SH", "reported_value": 50},
+            {"cusip": "NEG000001", "holding_symbol": "NEG", "title_of_class": "COM", "amount_type": "SH", "reported_value": 30},
+            {"cusip": "ZERO00001", "holding_symbol": "ZERO", "title_of_class": "COM", "amount_type": "SH", "reported_value": 20},
+        ]
+    )
+    prices = pd.DataFrame(
+        [
+            {"symbol": "POS", "date": "2026-03-31", "adj_close": 100},
+            {"symbol": "POS", "date": "2026-06-30", "adj_close": 120},
+            {"symbol": "NEG", "date": "2026-03-31", "adj_close": 100},
+            {"symbol": "NEG", "date": "2026-06-30", "adj_close": 90},
+            {"symbol": "ZERO", "date": "2026-03-31", "adj_close": 100},
+            {"symbol": "ZERO", "date": "2026-06-30", "adj_close": 100},
+        ]
+    )
+
+    proxy = build_institutional_price_proxy(
+        holdings,
+        prices,
+        start_date="2026-03-31",
+        end_date="2026-06-30",
+        proxy_id="quarter_holdings_proxy",
+    )
+
+    assert next(row for row in proxy["rows"] if row["holding_symbol"] == "POS")["contribution_pct"] == 10.0
+    assert [row["holding_symbol"] for row in proxy["top_contributors"]] == ["POS"]
+    assert [row["holding_symbol"] for row in proxy["top_detractors"]] == ["NEG"]
+
+
 def test_quarter_review_builds_both_approved_performance_windows() -> None:
     from app.services.institutional_quarter_review import build_institutional_quarter_review
 
