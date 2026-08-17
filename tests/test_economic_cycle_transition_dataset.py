@@ -185,3 +185,28 @@ def test_dataset_consumes_supplied_confirmed_frame_without_second_confirmation()
     transition = rows.loc[rows["confirmed_transition_to"] == "expansion"].iloc[0]
 
     assert transition["forecast_origin"] == pd.Timestamp("2000-04-30")
+
+
+def test_restrict_features_recalculates_eligibility_and_episode_weights() -> None:
+    from finance.economic_cycle_transition_dataset import (
+        COMPACT_CORE_FORECAST_FEATURES,
+        build_transition_dataset,
+        restrict_transition_dataset_features,
+    )
+
+    panel, history = _fixture(("recovery",) * 8)
+    panel.loc[3, "IPT_z"] = float("nan")
+    original = build_transition_dataset(panel, history)
+
+    restricted = restrict_transition_dataset_features(
+        original,
+        COMPACT_CORE_FORECAST_FEATURES,
+    )
+
+    assert restricted.feature_names == COMPACT_CORE_FORECAST_FEATURES
+    assert bool(restricted.rows.loc[3, "eligible"]) is True
+    eligible = restricted.rows.loc[restricted.rows["eligible"]]
+    assert all(
+        abs(value - 1.0) < 1e-12
+        for value in eligible.groupby("episode_id")["episode_weight"].sum()
+    )

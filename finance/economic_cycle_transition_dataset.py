@@ -32,6 +32,13 @@ CORE_FORECAST_FEATURES = (
     "phase_duration",
 )
 PHASE_FEATURES = tuple(f"phase_{phase}" for phase in PHASE_SEQUENCE)
+COMPACT_CORE_FORECAST_FEATURES = (
+    "level",
+    "momentum",
+    "phase_duration",
+    "positive_breadth",
+    *PHASE_FEATURES,
+)
 
 
 @dataclass(frozen=True)
@@ -40,6 +47,44 @@ class TransitionDataset:
 
     feature_names: tuple[str, ...]
     rows: pd.DataFrame
+
+
+def restrict_transition_dataset_features(
+    dataset: TransitionDataset,
+    feature_names: Sequence[str],
+) -> TransitionDataset:
+    """Rebuild model eligibility and episode weights for a locked feature set."""
+
+    selected = tuple(dict.fromkeys(str(item) for item in feature_names))
+    if not selected:
+        raise ValueError("feature_names cannot be empty")
+    missing = [feature for feature in selected if feature not in dataset.rows]
+    if missing:
+        raise ValueError("Missing transition features: " + ", ".join(missing))
+
+    rows = dataset.rows.copy()
+    finite_features = rows.loc[:, selected].apply(
+        pd.to_numeric,
+        errors="coerce",
+    ).map(_finite).all(axis=1)
+    phase_ready = rows.get(
+        "confirmed_phase",
+        pd.Series(index=rows.index, dtype=object),
+    ).isin(PHASE_SEQUENCE)
+    if "raw_phase" in rows:
+        phase_ready &= rows["raw_phase"].isin(PHASE_SEQUENCE)
+    rows["eligible"] = finite_features & phase_ready
+    rows["ineligible_reason"] = rows["eligible"].map(
+        {True: "", False: "MISSING_MODEL_FEATURE"}
+    )
+    rows["episode_weight"] = 0.0
+    eligible = rows.loc[rows["eligible"] & rows["episode_id"].notna()]
+    for episode_id, size in eligible.groupby("episode_id").size().items():
+        rows.loc[
+            rows["eligible"] & (rows["episode_id"] == episode_id),
+            "episode_weight",
+        ] = 1.0 / float(size)
+    return TransitionDataset(feature_names=selected, rows=rows)
 
 
 def _month_end(value: object) -> pd.Timestamp | None:

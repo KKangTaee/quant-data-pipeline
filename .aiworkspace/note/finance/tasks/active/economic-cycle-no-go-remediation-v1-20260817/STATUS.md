@@ -1,16 +1,17 @@
 # Status
 
-State: active
+State: complete
 Last Updated: 2026-08-17
 
-## Current Position
+## Final Position
 
-- 사용자 승인 완료
-- RTDSM source DB coverage와 RUC exact-lag 결측 원인 재현 완료
-- BAA10Y 대체 shadow audit에서 274 origins / 52 transitions coverage 통과 확인
-- task-specific shadow audit에서 pressure와 destination 개별 READY 가능성 확인
+- 1~3차 NO_GO remediation 구현·actual DB 재검증 완료
+- current state 2026-07 exact origin까지 `READY`, final feasibility `GO`
+- required driver 312 origins / 55 independent transitions, pressure와 destination
+  task-specific OOS gate 통과
+- production persistence/service/UI와 자산별 확인 포인트는 이 task에서 변경하지 않음
 
-## Next Action
+## Handoff
 
-TDD로 continuity, credit contract, task-specific gate를 구현하고 actual DB 1~3차를
-재실행한다.
+승인된 전체 roadmap의 4차 persistence/service와 5차 순환 경로 UI 연결을 별도
+implementation unit으로 진행한다. 자산별 확인 포인트는 기존 계약을 유지한다.

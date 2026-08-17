@@ -155,11 +155,11 @@ Data Operations
 - 장기 예측 연구는 `economic_cycle_confirmed_state.py`,
   `economic_cycle_transition_{dataset,drivers,model,validation,comparison}.py`와
   `economic_cycle_state_transition_experiment.py`의 읽기 전용 경계가 RTDSM two-release
-  official state, 자유 목적지, 3-release 전환압력, PIT driver coverage와 episode/paired
-  OOS gate를 소유한다. 2026-08-17 historical official state는 2026-01까지 `READY`지만
-  2026-07 exact current는 unavailable이고 required extended driver도 27 origins·5
-  transitions라 final `NO_GO`다. runner는 writer를 받지 않으며
-  production snapshot/service/React는 이 연구 결과를 소비하지 않는다.
+  official state, bounded missing-lag handling, 자유 목적지, 3-release 전환압력,
+  compact-core destination과 directional policy·inflation·rates·BAA credit·housing
+  pressure OOS gate를 소유한다. 2026-08-17 actual 2026-07 current와 312 driver origins·
+  55 transitions가 final `GO`를 통과했다. runner는 아직 writer를 받지 않으며
+  production snapshot/service/React는 4·5차 전까지 이 연구 결과를 소비하지 않는다.
 - Institutional Holdings의 SEC dataset과 identifier resolution은
   `finance/data/institutional_13f.py`와
   `finance/data/institutional_13f_mapping.py`가 저장하고 loader/service가 읽는다.

@@ -126,6 +126,7 @@ def _dependencies(
     *,
     state_status: str = "READY",
     driver_status: str = "DRIVER_READY",
+    core_decision: TransitionTaskDecision | None = None,
     extended_decision: TransitionTaskDecision | None = None,
     paired_skill: PairedSkillReport | None = None,
 ):
@@ -171,7 +172,7 @@ def _dependencies(
         nonlocal decision_calls
         decision_calls += 1
         if decision_calls == 1:
-            return _decision("READY", "READY")
+            return core_decision or _decision("READY", "READY")
         return decisions[id(report)]
 
     return {
@@ -236,7 +237,7 @@ def test_extended_ready_and_paired_ready_returns_go() -> None:
     json.dumps(report.to_dict(), allow_nan=False, default=str)
 
 
-def test_only_pressure_ready_with_positive_paired_skill_returns_limited_go() -> None:
+def test_pressure_and_core_destination_ready_ignore_extended_destination_failure() -> None:
     from finance.economic_cycle_state_transition_experiment import (
         run_state_transition_feasibility,
     )
@@ -248,6 +249,26 @@ def test_only_pressure_ready_with_positive_paired_skill_returns_limited_go() -> 
             calls,
             extended_decision=_decision("READY", "LIMITED"),
             paired_skill=_skill(0.03, -0.01),
+        ),
+    )
+
+    assert report.status == "GO"
+    assert "DESTINATION_LIMITED" not in report.reason_codes
+
+
+def test_core_destination_failure_blocks_extended_pressure_go() -> None:
+    from finance.economic_cycle_state_transition_experiment import (
+        run_state_transition_feasibility,
+    )
+
+    calls: list[str] = []
+    report = run_state_transition_feasibility(
+        "2026-07-31",
+        **_dependencies(
+            calls,
+            core_decision=_decision("LIMITED", "LIMITED"),
+            extended_decision=_decision("READY", "READY"),
+            paired_skill=_skill(0.03, 0.04),
         ),
     )
 
@@ -284,10 +305,10 @@ def test_driver_vintage_loader_falls_back_to_realtime_history() -> None:
         requested_fallback.extend(series_ids)
         return [
             {
-                "series_id": "ANFCI",
+                "series_id": "PERMIT",
                 "observation_date": "2000-01-31",
                 "realtime_start": "2000-02-01",
-                "value": -0.5,
+                "value": 1000.0,
             }
         ]
 
@@ -298,4 +319,31 @@ def test_driver_vintage_loader_falls_back_to_realtime_history() -> None:
     )
 
     assert "DGS2" not in requested_fallback
-    assert {str(row["series_id"]) for row in rows} == {"DGS2", "ANFCI"}
+    assert {str(row["series_id"]) for row in rows} == {"DGS2", "PERMIT"}
+
+
+def test_driver_market_loader_requests_baa10y_from_db_only_path() -> None:
+    from finance.economic_cycle_state_transition_experiment import (
+        _load_driver_market_rows,
+    )
+
+    requested: list[tuple[str, ...]] = []
+
+    def market_loader(*, series_ids, **_kwargs):
+        requested.append(tuple(series_ids))
+        return [
+            {
+                "series_id": "BAA10Y",
+                "observation_date": "2000-01-31",
+                "value": 2.0,
+            }
+        ]
+
+    rows = _load_driver_market_rows(
+        pd.Timestamp("2026-07-31"),
+        market_loader=market_loader,
+        asset_loader=lambda **_kwargs: [],
+    )
+
+    assert requested == [("BAA10Y", "VIXCLS")]
+    assert rows[0]["series_id"] == "BAA10Y"

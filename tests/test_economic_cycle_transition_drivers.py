@@ -136,6 +136,48 @@ def test_market_features_do_not_use_prices_after_the_origin() -> None:
     assert panel.loc[0, "SP500_return_1m_pct"] == 10.0
 
 
+def test_baa10y_is_required_long_credit_feature_and_uses_stored_dates() -> None:
+    from finance.economic_cycle_transition_drivers import (
+        REQUIRED_DRIVER_FEATURES,
+        REQUIRED_DRIVER_SERIES,
+        REQUIRED_OBSERVATION_DRIVER_SERIES,
+        build_transition_driver_panel,
+    )
+
+    credit = [
+        {
+            "series_id": "BAA10Y",
+            "observation_date": date.date().isoformat(),
+            "value": value,
+        }
+        for date, value in zip(
+            pd.date_range("2000-01-31", periods=4, freq="ME"),
+            (2.0, 2.1, 2.2, 2.5),
+            strict=True,
+        )
+    ]
+    credit.append(
+        {
+            "series_id": "BAA10Y",
+            "observation_date": "2000-05-31",
+            "value": 9.9,
+        }
+    )
+
+    panel = build_transition_driver_panel(
+        (),
+        pd.to_datetime(["2000-04-30"]),
+        market_rows=credit,
+    )
+
+    assert "BAMLH0A0HYM2" not in REQUIRED_DRIVER_SERIES
+    assert "ANFCI" not in REQUIRED_DRIVER_SERIES
+    assert REQUIRED_OBSERVATION_DRIVER_SERIES == ("BAA10Y",)
+    assert "BAA10Y_delta_3m" in REQUIRED_DRIVER_FEATURES
+    assert panel.loc[0, "BAA10Y_level"] == 2.5
+    assert panel.loc[0, "BAA10Y_delta_3m"] == 0.5
+
+
 def _base_dataset() -> TransitionDataset:
     dates = pd.date_range("2000-01-31", periods=8, freq="ME")
     phases = (

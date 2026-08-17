@@ -43,6 +43,67 @@ class PairedSkillReport:
         return asdict(self)
 
 
+@dataclass(frozen=True)
+class TaskSpecificForecastOutcome:
+    """Publication result with pressure and destination routed to their owners."""
+
+    status: str
+    reason_codes: tuple[str, ...]
+    pressure_ready: bool
+    destination_ready: bool
+
+    def to_dict(self) -> dict[str, object]:
+        return asdict(self)
+
+
+def evaluate_task_specific_outcome(
+    core_decision: TransitionTaskDecision,
+    pressure_decision: TransitionTaskDecision,
+    paired_skill: PairedSkillReport,
+) -> TaskSpecificForecastOutcome:
+    """Require extended pressure skill and compact-core destination readiness."""
+
+    pressure_ready = (
+        pressure_decision.pressure_status == "READY"
+        and paired_skill.pressure_common_origins > 0
+        and paired_skill.pressure_mean_relative_skill > 0.0
+    )
+    destination_ready = core_decision.destination_status == "READY"
+    reasons: list[str] = []
+    if not pressure_ready:
+        reasons.extend(pressure_decision.pressure_reason_codes)
+        reasons.extend(
+            reason
+            for reason in paired_skill.reason_codes
+            if "PRESSURE" in reason
+        )
+        if (
+            paired_skill.pressure_common_origins <= 0
+            and "NO_COMMON_PRESSURE_ORIGINS" not in reasons
+        ):
+            reasons.append("NO_COMMON_PRESSURE_ORIGINS")
+        elif (
+            paired_skill.pressure_mean_relative_skill <= 0.0
+            and "PRESSURE_NO_PAIRED_IMPROVEMENT" not in reasons
+        ):
+            reasons.append("PRESSURE_NO_PAIRED_IMPROVEMENT")
+    if not destination_ready:
+        reasons.extend(core_decision.destination_reason_codes)
+
+    if pressure_ready and destination_ready:
+        status = "GO"
+    elif pressure_ready or destination_ready:
+        status = "LIMITED_GO"
+    else:
+        status = "NO_GO"
+    return TaskSpecificForecastOutcome(
+        status=status,
+        reason_codes=tuple(dict.fromkeys(reasons)),
+        pressure_ready=pressure_ready,
+        destination_ready=destination_ready,
+    )
+
+
 def _best_metric(
     report: TransitionValidationReport,
     *,

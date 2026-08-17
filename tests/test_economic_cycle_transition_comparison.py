@@ -180,3 +180,81 @@ def test_paired_skill_fails_closed_without_common_origins() -> None:
         "NO_COMMON_PRESSURE_ORIGINS",
         "NO_COMMON_DESTINATION_ORIGINS",
     }
+
+
+def test_task_specific_outcome_routes_pressure_and_destination_to_owners() -> None:
+    from finance.economic_cycle_transition_comparison import (
+        PairedSkillReport,
+        TransitionTaskDecision,
+        evaluate_task_specific_outcome,
+    )
+
+    core = TransitionTaskDecision(
+        pressure_status="LIMITED",
+        pressure_reason_codes=("CORE_PRESSURE_UNUSED",),
+        destination_status="READY",
+        destination_reason_codes=(),
+        combined_status="LIMITED",
+    )
+    pressure = TransitionTaskDecision(
+        pressure_status="READY",
+        pressure_reason_codes=(),
+        destination_status="LIMITED",
+        destination_reason_codes=("EXTENDED_DESTINATION_UNUSED",),
+        combined_status="LIMITED",
+    )
+    skill = PairedSkillReport(
+        status="LIMITED",
+        reason_codes=("DESTINATION_NO_PAIRED_IMPROVEMENT",),
+        pressure_common_origins=40,
+        destination_common_origins=40,
+        pressure_mean_relative_skill=0.03,
+        destination_mean_relative_skill=-0.02,
+        pressure_metrics={},
+        destination_metrics={},
+    )
+
+    outcome = evaluate_task_specific_outcome(core, pressure, skill)
+
+    assert outcome.status == "GO"
+    assert outcome.reason_codes == ()
+    assert outcome.pressure_ready is True
+    assert outcome.destination_ready is True
+
+
+def test_task_specific_outcome_reports_only_required_task_failures() -> None:
+    from finance.economic_cycle_transition_comparison import (
+        PairedSkillReport,
+        TransitionTaskDecision,
+        evaluate_task_specific_outcome,
+    )
+
+    core = TransitionTaskDecision(
+        pressure_status="READY",
+        pressure_reason_codes=(),
+        destination_status="LIMITED",
+        destination_reason_codes=("DESTINATION_LIMITED",),
+        combined_status="LIMITED",
+    )
+    pressure = TransitionTaskDecision(
+        pressure_status="READY",
+        pressure_reason_codes=(),
+        destination_status="READY",
+        destination_reason_codes=(),
+        combined_status="READY",
+    )
+    skill = PairedSkillReport(
+        status="READY",
+        reason_codes=(),
+        pressure_common_origins=40,
+        destination_common_origins=40,
+        pressure_mean_relative_skill=0.03,
+        destination_mean_relative_skill=0.02,
+        pressure_metrics={},
+        destination_metrics={},
+    )
+
+    outcome = evaluate_task_specific_outcome(core, pressure, skill)
+
+    assert outcome.status == "LIMITED_GO"
+    assert outcome.reason_codes == ("DESTINATION_LIMITED",)

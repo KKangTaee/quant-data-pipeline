@@ -29,11 +29,14 @@ from finance.economic_cycle_transition_comparison import (
     PairedSkillReport,
     TransitionTaskDecision,
     compare_common_origin_skill,
+    evaluate_task_specific_outcome,
     evaluate_task_gates,
 )
 from finance.economic_cycle_transition_dataset import (
+    COMPACT_CORE_FORECAST_FEATURES,
     TransitionDataset,
     build_transition_dataset,
+    restrict_transition_dataset_features,
 )
 from finance.economic_cycle_transition_drivers import (
     MARKET_DRIVER_FEATURES,
@@ -267,36 +270,55 @@ def _load_driver_vintages(
     return [*released, *fallback]
 
 
+def _load_driver_market_rows(
+    cutoff: pd.Timestamp,
+    *,
+    market_loader: Callable[..., Sequence[Mapping[str, object]]] = load_economic_cycle_market_series,
+    asset_loader: Callable[..., Sequence[Mapping[str, object]]] = load_economic_cycle_asset_prices,
+) -> list[dict[str, object]]:
+    """Load required BAA credit plus optional market evidence from stored DB rows."""
+
+    cutoff_text = cutoff.date().isoformat()
+    start_text = RTDSM_HISTORY_START.date().isoformat()
+    rows = [
+        dict(row)
+        for row in market_loader(
+            series_ids=("BAA10Y", "VIXCLS"),
+            start_date=start_text,
+            end_date=cutoff_text,
+        )
+    ]
+    rows.extend(
+        dict(row)
+        for row in asset_loader(
+            symbols=("GC=F", "DX-Y.NYB"),
+            equity_symbols=("^GSPC", "SPY"),
+            lookback_rows=2000,
+            end_date=cutoff_text,
+        )
+    )
+    return rows
+
+
 def _build_driver_stage(
     cutoff: pd.Timestamp,
     state: StateStageResult,
 ) -> DriverStageResult:
-    core_dataset = build_transition_dataset(
+    full_core_dataset = build_transition_dataset(
         state.core_panel,
         state.raw_history,
         confirmed_state_frame=state.confirmed_state_frame,
     )
-    cutoff_text = cutoff.date().isoformat()
+    core_dataset = restrict_transition_dataset_features(
+        full_core_dataset,
+        COMPACT_CORE_FORECAST_FEATURES,
+    )
     vintage_rows = _load_driver_vintages(cutoff)
 
     market_rows: list[dict[str, object]] = []
     market_error: str | None = None
     try:
-        market_rows.extend(
-            load_economic_cycle_market_series(
-                series_ids=("VIXCLS",),
-                start_date=RTDSM_HISTORY_START.date().isoformat(),
-                end_date=cutoff_text,
-            )
-        )
-        market_rows.extend(
-            load_economic_cycle_asset_prices(
-                symbols=("GC=F", "DX-Y.NYB"),
-                equity_symbols=("^GSPC", "SPY"),
-                lookback_rows=2000,
-                end_date=cutoff_text,
-            )
-        )
+        market_rows.extend(_load_driver_market_rows(cutoff))
     except Exception as exc:  # Optional shadow data must not block required audit.
         market_error = type(exc).__name__
         market_rows = []
@@ -348,7 +370,14 @@ def _build_driver_stage(
         "market_rows": len(market_rows),
         **{
             f"market_{symbol}": int(market_counts.get(symbol, 0))
-            for symbol in ("^GSPC", "SPY", "VIXCLS", "GC=F", "DX-Y.NYB")
+            for symbol in (
+                "^GSPC",
+                "SPY",
+                "VIXCLS",
+                "BAA10Y",
+                "GC=F",
+                "DX-Y.NYB",
+            )
         },
     }
     if market_error:
@@ -361,10 +390,6 @@ def _build_driver_stage(
         shadow_report=shadow_report,
         source_counts=source_counts,
     )
-
-
-def _reason_union(*groups: Sequence[str]) -> tuple[str, ...]:
-    return tuple(dict.fromkeys(item for group in groups for item in group))
 
 
 def run_state_transition_feasibility(
@@ -435,37 +460,15 @@ def run_state_transition_feasibility(
     ):
         shadow_validation = validation_runner(driver.shadow_dataset)
 
-    pressure_qualified = (
-        extended_decision.pressure_status == "READY"
-        and paired_skill.pressure_common_origins > 0
-        and paired_skill.pressure_mean_relative_skill > 0.0
+    outcome = evaluate_task_specific_outcome(
+        core_decision,
+        extended_decision,
+        paired_skill,
     )
-    destination_qualified = (
-        extended_decision.destination_status == "READY"
-        and paired_skill.destination_common_origins > 0
-        and paired_skill.destination_mean_relative_skill > 0.0
-    )
-    if pressure_qualified and destination_qualified:
-        status = "GO"
-        reasons: tuple[str, ...] = ()
-    elif pressure_qualified ^ destination_qualified:
-        status = "LIMITED_GO"
-        reasons = _reason_union(
-            extended_decision.pressure_reason_codes,
-            extended_decision.destination_reason_codes,
-            paired_skill.reason_codes,
-        )
-    else:
-        status = "NO_GO"
-        reasons = _reason_union(
-            extended_decision.pressure_reason_codes,
-            extended_decision.destination_reason_codes,
-            paired_skill.reason_codes,
-        )
 
     return StateTransitionFeasibilityReport(
-        status=status,
-        reason_codes=reasons,
+        status=outcome.status,
+        reason_codes=outcome.reason_codes,
         source_counts=source_counts,
         driver_report=driver.driver_report,
         shadow_driver_report=driver.shadow_report,

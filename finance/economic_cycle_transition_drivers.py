@@ -21,30 +21,16 @@ REQUIRED_DRIVER_SERIES = (
     "PCEPILFE",
     "T10YIE",
     "DGS10",
-    "BAMLH0A0HYM2",
-    "ANFCI",
     "PERMIT",
 )
 
+REQUIRED_OBSERVATION_DRIVER_SERIES = ("BAA10Y",)
+
 REQUIRED_DRIVER_FEATURES = (
-    "FEDFUNDS_level",
     "FEDFUNDS_delta_3m",
-    "DGS2_level",
-    "DGS2_delta_3m",
-    "DFII10_level",
-    "DFII10_delta_3m",
-    "PCEPILFE_3m_ann",
     "PCEPILFE_gap_2pct",
-    "T10YIE_level",
-    "T10YIE_delta_3m",
-    "DGS10_level",
-    "DGS10_delta_3m",
-    "yield_curve_10y2y",
     "yield_curve_delta_3m",
-    "BAMLH0A0HYM2_level",
-    "BAMLH0A0HYM2_delta_3m",
-    "ANFCI_level",
-    "ANFCI_delta_3m",
+    "BAA10Y_delta_3m",
     "PERMIT_change_6m_pct",
 )
 
@@ -53,7 +39,10 @@ DRIVER_PANEL_FEATURES = tuple(
         (
             *(
                 feature
-                for series_id in REQUIRED_DRIVER_SERIES
+                for series_id in (
+                    *REQUIRED_DRIVER_SERIES,
+                    *REQUIRED_OBSERVATION_DRIVER_SERIES,
+                )
                 for feature in (
                     f"{series_id}_level",
                     f"{series_id}_delta_1m",
@@ -324,6 +313,7 @@ def _market_features(series: Mapping[str, pd.Series]) -> dict[str, float | None]
     gold = series.get("GC=F", pd.Series(dtype=float))
     dollar = series.get("DX-Y.NYB", pd.Series(dtype=float))
     vix = series.get("VIXCLS", pd.Series(dtype=float))
+    baa10y = series.get("BAA10Y", pd.Series(dtype=float))
     output = {
         **{
             f"SP500_return_{lag}m_pct": _percent_change(sp500, lag)
@@ -332,6 +322,10 @@ def _market_features(series: Mapping[str, pd.Series]) -> dict[str, float | None]
         "SP500_drawdown_6m_pct": None,
         "VIXCLS_level": _level(vix),
         "VIXCLS_delta_3m": _delta(vix, 3),
+        "BAA10Y_level": _level(baa10y),
+        "BAA10Y_delta_1m": _delta(baa10y, 1),
+        "BAA10Y_delta_3m": _delta(baa10y, 3),
+        "BAA10Y_delta_6m": _delta(baa10y, 6),
         **{
             f"GOLD_return_{lag}m_pct": _percent_change(gold, lag)
             for lag in (1, 3, 6)
@@ -384,7 +378,14 @@ def build_transition_driver_panel(
         eligible_markets = markets.loc[markets["observation_date"] <= origin]
         market_series = {
             symbol: _market_series(eligible_markets, symbol)
-            for symbol in ("^GSPC", "SPY", "VIXCLS", "GC=F", "DX-Y.NYB")
+            for symbol in (
+                "^GSPC",
+                "SPY",
+                "VIXCLS",
+                "GC=F",
+                "DX-Y.NYB",
+                *REQUIRED_OBSERVATION_DRIVER_SERIES,
+            )
         }
         output.append(
             {
