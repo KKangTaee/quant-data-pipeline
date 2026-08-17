@@ -6,8 +6,8 @@ Started: 2026-08-17
 ## Current Step
 
 전체 roadmap `0/5차`. 사용자와 하이브리드 source, 두 performance window, 로컬 일정
-기반 button 노출과 explicit-click 갱신 방향을 합의했다. Written design spec을 작성했고
-구현 계획 전 사용자 검토를 기다린다.
+기반 button 노출과 explicit-click 갱신 방향을 합의했고 written design 승인을 받았다.
+TDD 기반 9-task 상세 구현 계획을 self-review했으며 1차 구현을 시작한다.
 
 ## Progress
 
@@ -21,11 +21,13 @@ Started: 2026-08-17
   승인받았다.
 - 2026-08-17: active task plan/design/risks/notes/runs shell과 written spec을 작성했다.
 - 2026-08-17: placeholder, internal consistency, scope와 ambiguity self-review를 통과했다.
+- 2026-08-17: 승인된 spec을 local due, hybrid ingestion, amendment-aware history,
+  quarter review, React, actual QA의 9개 TDD task로 구체화했다.
 
 ## Next Action
 
-사용자가 written design을 검토·승인하면 `superpowers:writing-plans`로 TDD 기반 상세
-구현 계획을 작성한다. 그 전에는 implementation code를 변경하지 않는다.
+Task 1부터 inline execution으로 진행한다. 먼저 외부 요청 없는 local due action을
+RED/GREEN 테스트로 구현하고, Task 2 SEC bulk discovery까지 1차 완료 조건을 검증한다.
 
 ## Current Scope Boundary
 

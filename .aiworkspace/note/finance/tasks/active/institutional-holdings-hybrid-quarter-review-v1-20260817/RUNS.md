@@ -16,4 +16,11 @@
 - Inspected recent commits and completed Institutional Holdings task records before defining the
   new ownership boundary.
 
-Implementation and verification commands will be appended after written-spec approval.
+## 2026-08-17 — Implementation planning
+
+- Converted the approved written spec into nine TDD execution tasks covering all five roadmap
+  stages.
+- Self-reviewed function signatures, payload ownership, no-auto-network boundary, amendment and
+  missing-price fail-closed rules, React calculation boundary and actual QA closeout gate.
+- Selected inline execution because this session is not authorized to delegate implementation to
+  subagents.
