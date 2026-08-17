@@ -7,6 +7,7 @@ import pandas as pd
 from finance.economic_cycle_observed_state import ObservedStateResult
 from finance.economic_cycle_transition_feasibility import (
     TransitionSampleGate,
+    evaluate_confirmed_transition_sample_feasibility,
     evaluate_transition_sample_feasibility,
     extract_confirmed_transition_events,
 )
@@ -164,3 +165,38 @@ def test_sample_gate_rejects_holdout_missing_destination_classes() -> None:
         "INSUFFICIENT_HOLDOUT_DESTINATION_RECOVERY",
         "INSUFFICIENT_HOLDOUT_DESTINATION_EXPANSION",
     )
+
+
+def test_confirmed_state_sample_does_not_apply_confirmation_twice() -> None:
+    from finance.economic_cycle_confirmed_state import build_confirmed_state_frame
+
+    state_frame = build_confirmed_state_frame(
+        _dated_history(
+            [
+                "contraction",
+                "contraction",
+                "recovery",
+                "recovery",
+                "expansion",
+                "expansion",
+            ]
+        )
+    )
+    report = evaluate_confirmed_transition_sample_feasibility(
+        state_frame,
+        gate=TransitionSampleGate(
+            minimum_usable_origins=1,
+            minimum_events=1,
+            minimum_events_per_destination=0,
+            minimum_events_per_origin=0,
+            holdout_fraction=0.5,
+            minimum_holdout_events=0,
+            minimum_holdout_events_per_destination=0,
+        ),
+    )
+
+    assert [event.confirmed_at for event in report.events] == [
+        "1990-04-30",
+        "1990-06-30",
+    ]
+    assert report.events[0].candidate_started_at == "1990-03-31"
