@@ -10,7 +10,7 @@ export type HoldingStateRow = {
 
 export type MappingFilter = "all" | "mapped" | "unresolved";
 export type HoldingSort = "weight_desc" | "value_desc" | "issuer_asc";
-export type StudioView = "overview" | "holdings" | "security" | "popularity";
+export type StudioView = "overview" | "quarter_review" | "holdings" | "security" | "popularity";
 
 export const STUDIO_DESTINATIONS: ReadonlyArray<{
   id: StudioView;
@@ -23,6 +23,12 @@ export const STUDIO_DESTINATIONS: ReadonlyArray<{
     label: "포트폴리오 맥락",
     shortLabel: "맥락",
     description: "집중도, 분기 변화와 섹터 노출",
+  },
+  {
+    id: "quarter_review",
+    label: "분기 리뷰",
+    shortLabel: "분기 리뷰",
+    description: "이전 분기 결과와 보유 변화",
   },
   {
     id: "holdings",
@@ -125,4 +131,25 @@ export function filterSortAndPaginateHoldings<T extends HoldingStateRow>(options
     start: filteredRows.length ? offset + 1 : 0,
     end: Math.min(offset + pageSize, filteredRows.length),
   };
+}
+
+export type QuarterReviewFilterRow = {
+  change_type: string;
+  holding_symbol?: string | null;
+  issuer_name?: string | null;
+  cusip?: string | null;
+};
+
+export function filterQuarterReviewRows<T extends QuarterReviewFilterRow>(
+  rows: T[],
+  options: { changeType: string; query: string }
+) {
+  const query = normalizeQuery(options.query);
+  return rows.filter((row) => {
+    const matchesType = options.changeType === "all" || row.change_type === options.changeType;
+    const matchesQuery =
+      !query ||
+      [row.holding_symbol, row.issuer_name, row.cusip].some((value) => normalizeQuery(value).includes(query));
+    return matchesType && matchesQuery;
+  });
 }

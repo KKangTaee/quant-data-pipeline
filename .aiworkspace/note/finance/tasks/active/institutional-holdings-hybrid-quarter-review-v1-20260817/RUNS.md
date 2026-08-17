@@ -93,3 +93,16 @@
   and preview emits invisible `not_ready` plus a two-quarter unavailable explanation.
 - The page loads review once after the selected portfolio succeeds; a review-only failure preserves
   the latest portfolio and emits a bounded unavailable model. Institutional tests passed (`58 passed`).
+
+## 2026-08-17 — Task 8 React v3 product flow
+
+- RED: navigation tests failed until `quarter_review` became a first-class destination; legacy
+  Python source-contract tests also failed while they still required the v2 schema and editable
+  SEC ZIP/User-Agent form.
+- GREEN: React state/filter tests passed (`10 passed`), TypeScript typecheck passed, and Vite rebuilt
+  the tracked v3 bundle with the conditional `refresh_institutional_13f` action.
+- The `분기 리뷰` screen renders both server-owned proxy windows, coverage state, change filters,
+  contribution evidence and a responsive holdings-change table without recalculating finance
+  results in the browser.
+- Focused Python regression passed (`88 passed`, three pre-existing edgar deprecation warnings and
+  four subtests).

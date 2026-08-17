@@ -1414,9 +1414,9 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn("--ip-manager-card-width:calc((100%-16px)/3)", runtime_tablet_compact)
         self.assertIn("--ip-manager-card-width:100%", runtime_mobile_compact)
 
-    def test_workbench_v2_has_complete_holdings_explorer_and_explicit_security_search(self) -> None:
+    def test_workbench_v3_has_complete_holdings_explorer_and_explicit_security_search(self) -> None:
         component_source = _component_source()
-        self.assertIn('schema_version: "institutional_portfolios_workbench_v2"', component_source)
+        self.assertIn('schema_version: "institutional_portfolios_workbench_v3"', component_source)
         self.assertNotIn("rows.slice(0, 80)", component_source)
         self.assertIn("HOLDINGS_PAGE_SIZE = 50", component_source)
         self.assertIn('id: "security_search"', component_source)
@@ -1473,7 +1473,7 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn("setLocalSelectedQuery(\"\")", manager_submit)
         self.assertIn("setSecuritySearch(\"\")", manager_submit)
 
-    def test_tracked_workbench_bundle_serves_v2_runtime_contract(self) -> None:
+    def test_tracked_workbench_bundle_serves_v3_runtime_contract(self) -> None:
         build_dir = Path("app/web/streamlit_components/institutional_portfolios_workbench/component_static")
         index_source = (build_dir / "index.html").read_text(encoding="utf-8")
         asset_paths = re.findall(r'(?:src|href)="\./(assets/[^"]+)"', index_source)
@@ -1486,9 +1486,11 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
             for asset_path in asset_paths
             if asset_path.endswith(".js")
         )
-        self.assertIn("institutional_portfolios_workbench_v2", javascript)
+        self.assertIn("institutional_portfolios_workbench_v3", javascript)
         self.assertIn("INSTITUTIONAL PORTFOLIO CONTEXT", javascript)
         self.assertIn("manager_search", javascript)
+        self.assertIn("refresh_institutional_13f", javascript)
+        self.assertIn("분기 리뷰", javascript)
         self.assertNotIn("slice(0,80)", javascript)
 
     def test_selected_manager_resolver_keeps_watchlist_selection_outside_search_results(self) -> None:
@@ -1795,22 +1797,23 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertLess(source.index("render_institutional_portfolios_workbench"), source.index("st.dataframe"))
         self.assertLess(source.index("render_institutional_portfolios_workbench"), source.index("_render_refresh_status_panel"))
 
-    def test_react_studio_runs_sec_refresh_without_opening_streamlit_panel(self) -> None:
+    def test_react_studio_runs_manual_hybrid_refresh_without_opening_streamlit_panel(self) -> None:
         page_source = Path("app/web/institutional_portfolios.py").read_text(encoding="utf-8")
         component_source = Path(
             "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalPortfoliosWorkbench.tsx"
         ).read_text(encoding="utf-8")
 
         self.assertIn("Streamlit.setComponentValue({ event: {", component_source)
-        self.assertIn('id: "collect_sec_13f_dataset"', component_source)
-        self.assertIn('className="ip-studio-refresh-form"', component_source)
-        self.assertIn("refreshLocalZipPath", component_source)
-        self.assertIn("refreshUserAgent", component_source)
+        self.assertIn('id: "refresh_institutional_13f"', component_source)
+        self.assertIn("target_report_period", component_source)
+        self.assertNotIn('className="ip-studio-refresh-form"', component_source)
+        self.assertNotIn("refreshLocalZipPath", component_source)
+        self.assertNotIn("refreshUserAgent", component_source)
         self.assertNotIn('id: "open_refresh"', component_source)
         self.assertIn("_workbench_event_payload", page_source)
         self.assertIn('event_name = str(payload.get("id")', page_source)
-        self.assertIn('event_name == "collect_sec_13f_dataset"', page_source)
-        self.assertIn("run_collect_sec_13f_dataset", page_source)
+        self.assertIn('event_name == "refresh_institutional_13f"', page_source)
+        self.assertIn("run_refresh_institutional_13f_hybrid", page_source)
         self.assertIn("refresh_result=dict(st.session_state.get", page_source)
         self.assertIn("if not react_rendered:", page_source)
 
@@ -1843,15 +1846,19 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
             "app/web/streamlit_components/institutional_portfolios_workbench/src/workbenchState.ts"
         ).read_text(encoding="utf-8")
 
-        self.assertIn('export type StudioView = "overview" | "holdings" | "security" | "popularity";', state_source)
+        self.assertIn(
+            'export type StudioView = "overview" | "quarter_review" | "holdings" | "security" | "popularity";',
+            state_source,
+        )
         self.assertIn("STUDIO_DESTINATIONS", state_source)
-        for label in ("포트폴리오 맥락", "전체 보유", "종목 상세", "기관 보유 랭킹"):
+        for label in ("포트폴리오 맥락", "분기 리뷰", "전체 보유", "종목 상세", "기관 보유 랭킹"):
             self.assertIn(label, state_source)
         self.assertIn("STUDIO_DESTINATIONS.map", shell_source)
         self.assertIn('aria-label="리서치 목적지"', shell_source)
         self.assertIn("onViewChange", shell_source)
         self.assertIn('setActiveView("security")', component_source)
         self.assertIn('activeView === "security"', component_source)
+        self.assertIn('activeView === "quarter_review"', component_source)
         self.assertNotIn("보유 기관 조회", component_source)
         self.assertIn(".ip-studio-nav", style_source)
         self.assertIn(".ip-studio-nav__active", style_source)

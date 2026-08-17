@@ -10,6 +10,7 @@ import {
   type StudioView,
 } from "./workbenchState";
 import { InstitutionalStudioShell } from "./InstitutionalStudioShell";
+import { QuarterReviewPanel, type QuarterReviewPayload } from "./QuarterReviewPanel";
 import "./style.css";
 
 type ManagerItem = {
@@ -210,7 +211,7 @@ type PopularityPayload = {
 };
 
 type WorkbenchPayload = {
-  schema_version: "institutional_portfolios_workbench_v2";
+  schema_version: "institutional_portfolios_workbench_v3";
   component: "InstitutionalPortfoliosWorkbench";
   mode: "live" | "preview" | string;
   data_state: {
@@ -239,12 +240,17 @@ type WorkbenchPayload = {
   refresh_action?: {
     action_id: string;
     label: string;
-    primary: boolean;
     description: string;
-    default_dataset_label?: string;
-    default_dataset_url?: string;
+    visible: boolean;
+    status: "due" | "partial" | "current" | "not_ready" | string;
+    target_report_period?: string | null;
+    target_quarter_label?: string;
+    completed_managers?: number;
+    expected_managers?: number;
+    next_due_date?: string | null;
   };
   refresh_result?: DatasetRefreshResult;
+  quarter_review?: QuarterReviewPayload;
   hero: {
     manager_name: string;
     cik?: string | null;
@@ -345,7 +351,7 @@ type Props = Omit<ComponentProps, "args"> & {
 };
 
 const HOLDINGS_PAGE_SIZE = 50;
-const WORKBENCH_SCHEMA_VERSION = "institutional_portfolios_workbench_v2";
+const WORKBENCH_SCHEMA_VERSION = "institutional_portfolios_workbench_v3";
 
 type PendingAction =
   | { kind: "manager"; cik: string; label: string }
@@ -353,7 +359,7 @@ type PendingAction =
   | { kind: "interest"; query: string; label: string }
   | { kind: "popularity"; label: string }
   | { kind: "price"; symbol: string; label: string }
-  | { kind: "refresh"; label: string };
+  | { kind: "institutional_refresh"; label: string };
 
 function syncFrameHeightSoon() {
   Streamlit.setFrameHeight();
@@ -974,12 +980,6 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   const [holdingPage, setHoldingPage] = useState(1);
   const [managerSearch, setManagerSearch] = useState(payload?.manager_picker.search_query || "");
   const [securitySearch, setSecuritySearch] = useState(payload?.security_search.current_query || "");
-  const [refreshDatasetLabel, setRefreshDatasetLabel] = useState(
-    payload?.refresh_action?.default_dataset_label || "SEC Form 13F Data Sets"
-  );
-  const [refreshDatasetUrl, setRefreshDatasetUrl] = useState(payload?.refresh_action?.default_dataset_url || "");
-  const [refreshLocalZipPath, setRefreshLocalZipPath] = useState("");
-  const [refreshUserAgent, setRefreshUserAgent] = useState("");
   const [unresolvedHolding, setUnresolvedHolding] = useState<HoldingRow | null>(null);
   const managerRailRef = useRef<HTMLDivElement | null>(null);
   const managerRailScrollRef = useRef(0);
@@ -1060,7 +1060,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
       setPendingAction(null);
       setActionNotice(null);
     }
-    if (pendingAction.kind === "refresh" && payload.refresh_result?.status) {
+    if (pendingAction.kind === "institutional_refresh" && payload.refresh_result?.status) {
       setPendingAction(null);
       setActionNotice(null);
     }
@@ -1377,20 +1377,17 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     sendEvent({ id: "collect_price_history", symbol, start_date: action.start_date || payload.hero.latest_report_period });
   };
 
-  const submitDatasetRefresh = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!refreshDatasetUrl.trim() && !refreshLocalZipPath.trim()) {
+  const submitInstitutionalRefresh = () => {
+    const reportPeriod = String(payload.refresh_action?.target_report_period || "").trim();
+    if (!payload.refresh_action?.visible || !reportPeriod) {
       return;
     }
     setStudioDrawerOpen(false);
     setActionNotice(null);
-    setPendingAction({ kind: "refresh", label: "공식 SEC 13F 데이터 적재 중" });
+    setPendingAction({ kind: "institutional_refresh", label: `${payload.refresh_action.target_quarter_label || reportPeriod} 공개 자료 확인 중` });
     sendEvent({
-      id: "collect_sec_13f_dataset",
-      dataset_label: refreshDatasetLabel.trim(),
-      dataset_url: refreshDatasetUrl.trim(),
-      local_zip_path: refreshLocalZipPath.trim(),
-      user_agent: refreshUserAgent.trim(),
+      id: "refresh_institutional_13f",
+      report_period: reportPeriod,
     });
   };
 
@@ -1484,9 +1481,9 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
               </summary>
               <p>{payload.refresh_action?.description}</p>
               <dl>
-                <div><dt>상태</dt><dd>{payload.freshness?.status || "missing"}</dd></div>
-                <div><dt>수집</dt><dd>{payload.freshness?.last_collected_at || "미수집"}</dd></div>
-                <div><dt>rows</dt><dd>{Number(payload.freshness?.rows_written || 0).toLocaleString()}</dd></div>
+                <div><dt>반영 분기</dt><dd>{payload.freshness?.latest_report_period || "미수집"}</dd></div>
+                <div><dt>마지막 갱신</dt><dd>{payload.freshness?.last_collected_at || "미수집"}</dd></div>
+                <div><dt>다음 확인</dt><dd>{payload.refresh_action?.next_due_date || "-"}</dd></div>
               </dl>
               {payload.freshness?.stale_reason ? <small>{payload.freshness.stale_reason}</small> : null}
               {payload.refresh_result?.status ? (
@@ -1495,15 +1492,19 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
                   <span>{payload.refresh_result.message}</span>
                 </div>
               ) : null}
-              <form className="ip-studio-refresh-form" onSubmit={submitDatasetRefresh}>
-                <label>Dataset label<input value={refreshDatasetLabel} onChange={(event) => setRefreshDatasetLabel(event.target.value)} /></label>
-                <label>SEC dataset URL<input type="url" value={refreshDatasetUrl} onChange={(event) => setRefreshDatasetUrl(event.target.value)} /></label>
-                <label>Local ZIP path<input value={refreshLocalZipPath} onChange={(event) => setRefreshLocalZipPath(event.target.value)} placeholder="선택 사항" /></label>
-                <label>SEC User-Agent<input value={refreshUserAgent} onChange={(event) => setRefreshUserAgent(event.target.value)} placeholder="선택 사항" /></label>
-                <button type="submit" disabled={Boolean(pendingAction) || (!refreshDatasetUrl.trim() && !refreshLocalZipPath.trim())}>
-                  {payload.refresh_action?.label || "최신 13F 데이터 갱신"}
-                </button>
-              </form>
+              {payload.refresh_action?.status === "current" ? (
+                <div className="ip-studio-refresh-current"><strong>최신 보고 분기 반영 완료</strong><span>필요할 때만 다음 제출기한 이후 다시 확인합니다.</span></div>
+              ) : null}
+              {payload.refresh_action?.visible ? (
+                <div className="ip-studio-refresh-action">
+                  {payload.refresh_action.status === "partial" ? (
+                    <span>{Number(payload.refresh_action.completed_managers || 0)} / {Number(payload.refresh_action.expected_managers || 0)}개 기관 반영</span>
+                  ) : null}
+                  <button type="button" onClick={submitInstitutionalRefresh} disabled={Boolean(pendingAction)}>
+                    {payload.refresh_action.label}
+                  </button>
+                </div>
+              ) : null}
             </details>
           </>
         )}
@@ -1753,6 +1754,10 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
               <button type="button" disabled={safeHoldingPage >= totalHoldingPages} onClick={() => setHoldingPage((page) => Math.min(totalHoldingPages, page + 1))}>다음 50개</button>
             </div>
           </section>
+        ) : null}
+
+        {activeView === "quarter_review" ? (
+          <QuarterReviewPanel review={payload.quarter_review} />
         ) : null}
 
         {activeView === "security" ? (

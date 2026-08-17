@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   STUDIO_DESTINATIONS,
+  filterQuarterReviewRows,
   filterSortAndPaginateHoldings,
   managerDragExceededThreshold,
   managerDragScrollTop,
@@ -94,12 +95,14 @@ describe("institutional research studio navigation", () => {
   it("keeps one canonical destination list for desktop rail and mobile switcher", () => {
     expect(STUDIO_DESTINATIONS.map((item) => item.id)).toEqual([
       "overview",
+      "quarter_review",
       "holdings",
       "security",
       "popularity",
     ]);
     expect(STUDIO_DESTINATIONS.map((item) => item.label)).toEqual([
       "포트폴리오 맥락",
+      "분기 리뷰",
       "전체 보유",
       "종목 상세",
       "기관 보유 랭킹",
@@ -109,6 +112,19 @@ describe("institutional research studio navigation", () => {
   it("resolves the visible destination context", () => {
     expect(studioDestination("overview").shortLabel).toBe("맥락");
     expect(studioDestination("popularity").description).toContain("다기관");
+    expect(studioDestination("quarter_review").label).toBe("분기 리뷰");
+  });
+});
+
+describe("quarter review filters", () => {
+  const changes = [
+    { change_type: "ADD", holding_symbol: "AAPL", issuer_name: "Apple Inc", cusip: "037833100" },
+    { change_type: "DROP", holding_symbol: "IBM", issuer_name: "IBM Corp", cusip: "459200101" },
+  ];
+
+  it("combines change type with symbol, issuer, or CUSIP search", () => {
+    expect(filterQuarterReviewRows(changes, { changeType: "ADD", query: "apple" })).toEqual([changes[0]]);
+    expect(filterQuarterReviewRows(changes, { changeType: "all", query: "459200101" })).toEqual([changes[1]]);
   });
 });
 

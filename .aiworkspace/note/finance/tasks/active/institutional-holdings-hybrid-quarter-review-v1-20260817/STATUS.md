@@ -5,9 +5,9 @@ Started: 2026-08-17
 
 ## Current Step
 
-전체 roadmap `3/5차`. 외부 요청 없는 수동 hybrid refresh와 amendment-aware history에
-더해 share-based position change와 quarter-end/public-follow 두 성과 proxy를 구현했다.
-4차 Python v3 payload와 React 제품 화면을 진행한다.
+전체 roadmap `4/5차`. 외부 요청 없는 수동 hybrid refresh, amendment-aware history,
+share-based position change와 두 성과 proxy를 v3 React `분기 리뷰` 화면까지 연결했다.
+5차 actual SEC/DB/browser QA와 durable documentation을 진행한다.
 
 ## Progress
 
@@ -29,11 +29,13 @@ Started: 2026-08-17
   manual event를 구현하고 stored-data-only render boundary를 유지했다.
 - 2026-08-17: 3차 `NEW/ADD/KEEP/REDUCE/DROP/NOT_COMPARABLE`, coverage-aware covered-sleeve
   proxy와 두 승인 window를 구현했다.
+- 2026-08-17: 4차 v3 workbench에 조건부 수동 갱신 action과 `분기 리뷰` 목적지를 연결하고
+  React/Python 집중 회귀 검증을 통과했다.
 
 ## Next Action
 
-Task 7/8에서 v3 payload와 `분기 리뷰` destination을 연결하고 수동 갱신 action을
-conditional React UX로 교체한다.
+Task 9에서 live SEC discovery, actual MySQL replay, desktop/mobile Browser QA와 durable
+documentation closeout을 수행한다.
 
 ## Current Scope Boundary
 

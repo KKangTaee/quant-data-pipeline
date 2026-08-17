@@ -734,7 +734,7 @@ git commit -m "기능: Institutional Holdings v3 분기 리뷰 계약 연결"
 - Sends `{id: "refresh_institutional_13f", report_period: string}`
 - Renders Python-owned `quarter_review`; React performs filters/sorting only.
 
-- [ ] **Step 1: Write RED navigation/state tests**
+- [x] **Step 1: Write RED navigation/state tests**
 
 Update the canonical destination expectation to:
 
@@ -748,17 +748,17 @@ expect(studioDestination("quarter_review").label).toBe("분기 리뷰");
 Add a pure filter helper test for change type and symbol/issuer query if the review table needs
 client-side filtering.
 
-- [ ] **Step 2: Run React tests and confirm RED**
+- [x] **Step 2: Run React tests and confirm RED**
 
 Run: `npm test` in the component directory.
 
-- [ ] **Step 3: Update TypeScript v3 types and event state**
+- [x] **Step 3: Update TypeScript v3 types and event state**
 
 Change `WORKBENCH_SCHEMA_VERSION` to `institutional_portfolios_workbench_v3`. Remove local state for
 dataset label/URL/local path/User-Agent from the healthy React path. Add pending action kind
 `institutional_refresh` and submit exactly the target report period supplied by Python.
 
-- [ ] **Step 4: Replace the data panel form with conditional action**
+- [x] **Step 4: Replace the data panel form with conditional action**
 
 Render:
 
@@ -770,7 +770,7 @@ Render:
 Keep source freshness/caveats in the disclosure. Advanced URL/local ZIP inputs remain only in Data
 Operations.
 
-- [ ] **Step 5: Implement the quarter review surface**
+- [x] **Step 5: Implement the quarter review surface**
 
 Create the focused `QuarterReviewPanel.tsx` and render:
 
@@ -783,13 +783,13 @@ Create the focused `QuarterReviewPanel.tsx` and render:
 
 Do not calculate return or change labels in React.
 
-- [ ] **Step 6: Add responsive styling**
+- [x] **Step 6: Add responsive styling**
 
 At desktop use two proxy cards and a compact change summary row. At <=980px stack the cards and
 retain the studio drawer. At <=720px make the change table horizontally scroll inside its own
 container without causing page-level overflow. Buttons must remain at least 44px high.
 
-- [ ] **Step 7: Run React verification and regenerate tracked bundle**
+- [x] **Step 7: Run React verification and regenerate tracked bundle**
 
 ```bash
 npm test
@@ -799,7 +799,7 @@ npm run build
 
 Expected: Vitest pass, TypeScript pass, Vite rebuilds `component_static` with v3 contract.
 
-- [ ] **Step 8: Run Python bundle/source contract tests and commit**
+- [x] **Step 8: Run Python bundle/source contract tests and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_institutional_portfolios.py -q
