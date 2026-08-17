@@ -113,7 +113,6 @@ button { font: inherit; }
 .fm-workbench__decision-steps { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .fm-workbench__decision-steps article {
   border: 1px solid var(--line);
-  border-top: 4px solid #397da8;
   border-radius: 14px;
   display: grid;
   gap: 11px;
@@ -121,11 +120,9 @@ button { font: inherit; }
   min-height: 152px;
   padding: 15px;
 }
-.fm-workbench__decision-steps article:nth-child(2) { border-top-color: #2e718f; }
-.fm-workbench__decision-steps article:nth-child(3) { border-top-color: #7b8995; background: #f8fafb; }
-.fm-workbench__decision-steps article.estimate-verified { border-top-color: var(--positive); background: #f5fbf8; }
-.fm-workbench__decision-steps article.estimate-provisional { border-top-color: var(--warning); background: #fffaf1; }
-.fm-workbench__decision-steps article.estimate-unavailable { border-top-color: #a7b4bf; }
+.fm-workbench__decision-steps article:nth-child(3) { background: #f8fafb; }
+.fm-workbench__decision-steps article.estimate-verified { background: #f5fbf8; }
+.fm-workbench__decision-steps article.estimate-provisional { background: #fffaf1; }
 .fm-workbench__decision-steps article > b {
   align-items: center;
   background: #e8f2f8;
@@ -143,15 +140,11 @@ button { font: inherit; }
 
 .fm-workbench__forecast-gate {
   align-items: stretch;
-  border-left: 5px solid #7b8995;
   display: grid;
   gap: 18px;
   grid-template-columns: minmax(0, 1.15fr) minmax(440px, .85fr);
   padding: 19px 21px;
 }
-.fm-workbench__forecast-gate.estimate-verified { border-left-color: var(--positive); }
-.fm-workbench__forecast-gate.estimate-provisional { border-left-color: var(--warning); }
-.fm-workbench__forecast-gate.estimate-unavailable { border-left-color: #a7b4bf; }
 .fm-workbench__forecast-gate-copy { display: grid; gap: 6px; align-content: center; }
 .fm-workbench__forecast-gate-copy > span { color: #397da8; font-size: .64rem; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
 .fm-workbench__forecast-gate-copy h3 { font-size: 1rem; margin: 0; }
