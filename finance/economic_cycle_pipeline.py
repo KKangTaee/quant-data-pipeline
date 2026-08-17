@@ -874,6 +874,7 @@ def rollover_closed_economic_cycle_month(
     trainer: Callable[..., dict[str, object]] | None = None,
     materializer: Callable[..., object] | None = None,
     publisher: Callable[..., Mapping[str, object]] | None = None,
+    force_refresh: bool = False,
 ) -> dict[str, object]:
     """Append the latest closed month through the validated production contract."""
 
@@ -887,7 +888,8 @@ def rollover_closed_economic_cycle_month(
         run_kind="current",
     )
     if (
-        existing
+        not force_refresh
+        and existing
         and _as_date(existing.get("as_of_date"), field="as_of_date")
         == closed_month_end
         and (

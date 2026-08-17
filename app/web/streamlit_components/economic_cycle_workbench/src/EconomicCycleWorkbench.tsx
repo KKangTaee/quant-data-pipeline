@@ -22,6 +22,15 @@ type ObservedState = {
   level_breadth?: number | null;
   momentum_breadth?: number | null;
   available_series?: number | null;
+  total_series?: number | null;
+  series_quality?: {
+    series_id: string;
+    cadence?: string | null;
+    latest_observation_date?: string | null;
+    status: "AVAILABLE" | "STALE" | "LAG_FALLBACK" | "MISSING";
+    stale?: boolean;
+    lag_fallback?: boolean;
+  }[];
   stale_series?: number | null;
   duration_months?: number | null;
   confidence?: "HIGH" | "MEDIUM" | "LIMITED";
@@ -34,6 +43,8 @@ type ObservedState = {
 type RecentChange = {
   horizon_months: 1 | 3 | 6;
   label: string;
+  comparison_start_date?: string | null;
+  comparison_end_date?: string | null;
   status: "STRENGTHENING" | "WEAKENING" | "MIXED" | "UNAVAILABLE";
   status_label: string;
   composite_delta?: number | null;
@@ -358,6 +369,8 @@ type EconomicCycleFreshness = {
 type RefreshResult = {
   status: "success" | "partial_success" | "incomplete" | "failed";
   message: string;
+  finished_at?: string | null;
+  duration_sec?: number | null;
 };
 
 export type CyclePayload = {
@@ -423,6 +436,8 @@ const REVISION_SENSITIVITY_LABEL: Record<string, string> = {
 const FACTOR_LABEL: Record<string, string> = {
   activity_score: "생산·소비 활동",
   labor_income_score: "고용·소득",
+  level: "종합 경기 수준",
+  momentum: "최근 3개월 모멘텀",
   activity_momentum_3m: "실물 모멘텀",
   labor_income_momentum_3m: "고용 모멘텀",
   financial_leading_score: "금융·선행 여건",
@@ -447,6 +462,20 @@ function resolveEvidencePresentation(item: Evidence): EvidencePresentation {
       statusLabel: "기준 부근",
       tone: "neutral",
       description: `${subject}의 종합점수가 자기 과거 기준 부근으로 현재 경기 위치에 중립적인 근거입니다.`,
+    };
+  }
+  if (item.factor === "level" || item.factor === "momentum") {
+    const isLevel = item.factor === "level";
+    const subject = isLevel ? "종합 경기 수준" : "최근 3개월 변화 속도";
+    if (direction === "강화") return {
+      statusLabel: isLevel ? "기준 이상" : "개선",
+      tone: "positive-level",
+      description: `${subject}이 자기 과거 기준의 양(+) 영역에 있어 현재 국면 좌표를 구성합니다.`,
+    };
+    if (direction === "약화") return {
+      statusLabel: isLevel ? "기준 이하" : "약화",
+      tone: "weak-level",
+      description: `${subject}이 자기 과거 기준의 음(-) 영역에 있어 현재 국면 좌표를 구성합니다.`,
     };
   }
   if (item.factor === "financial_leading_score") {
@@ -481,13 +510,36 @@ function resolveEvidencePresentation(item: Evidence): EvidencePresentation {
 }
 
 const formatRatio = (value?: number | null) => value == null ? "-" : `${Math.round(value * 100)}%`;
-const formatSignedScore = (value: number) => `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
+const roundedDisplayValue = (value: number, digits: number) => Number(value.toFixed(digits));
+const formatSignedScore = (value: number) => {
+  const displayed = roundedDisplayValue(value, 2);
+  return `${displayed > 0 ? "+" : ""}${displayed.toFixed(2)}`;
+};
 const formatSignedPercent = (value: number | null) => value == null
   ? "-"
-  : `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+  : (() => {
+      const displayed = roundedDisplayValue(value, 1);
+      return `${displayed > 0 ? "+" : ""}${displayed.toFixed(1)}%`;
+    })();
 const formatSeriesChange = (value: number | null, unit?: string | null) => value == null
   ? "-"
-  : `${value > 0 ? "+" : ""}${value.toFixed(1)}${unit === "bp" ? "bp" : "%"}`;
+  : (() => {
+      const displayed = roundedDisplayValue(value, 1);
+      return `${displayed > 0 ? "+" : ""}${displayed.toFixed(1)}${unit === "bp" ? "bp" : "%"}`;
+    })();
+const trendClass = (value?: number | null, digits = 1) => value == null
+  ? "trend-empty"
+  : roundedDisplayValue(value, digits) > 0
+    ? "trend-positive"
+    : roundedDisplayValue(value, digits) < 0
+      ? "trend-negative"
+      : "trend-flat";
+const formatDirectionalChange = (value: number | null, unit?: string | null) => value == null
+  ? "-"
+  : `${roundedDisplayValue(value, 1) > 0 ? "▲" : roundedDisplayValue(value, 1) < 0 ? "▼" : "—"} ${formatSeriesChange(value, unit)}`;
+const formatDirectionalPercent = (value: number | null) => value == null
+  ? "-"
+  : `${roundedDisplayValue(value, 1) > 0 ? "▲" : roundedDisplayValue(value, 1) < 0 ? "▼" : "—"} ${formatSignedPercent(value)}`;
 const formatMovementLevel = (value?: number | null, unit?: string | null) => value == null
   ? "-"
   : unit === "percent" ? `연 ${value.toFixed(2)}%`
@@ -653,10 +705,10 @@ export function summarizeCycleRouteHistory(points: CyclePoint[]): string {
   return `${prefix} · ${PHASE_LABEL[first]}에서 ${PHASE_LABEL[current]}으로 변화`;
 }
 
-const RECENT_ROLE: Record<number, string> = {
-  1: "최신 변화 감지",
-  3: "방향 확인",
-  6: "현재 국면의 배경",
+const RECENT_COMPARISON: Record<number, string> = {
+  1: "직전 공식 월과 비교",
+  3: "3개월 전 공식 월과 비교",
+  6: "6개월 전 공식 월과 비교",
 };
 const CONDITION_LABEL: Record<TransitionCondition["condition_id"], string> = {
   persistence: "지속성",
@@ -666,6 +718,11 @@ const CONDITION_LABEL: Record<TransitionCondition["condition_id"], string> = {
 
 function CurrentObservedState({ state, recent }: { state: ObservedState; recent: RecentChange[] }) {
   const phase = state.phase;
+  const totalSeries = state.total_series || 4;
+  const availableSeries = state.available_series ?? null;
+  const delayedSeries = (state.series_quality || []).filter(
+    (item) => item.status === "STALE" || item.status === "LAG_FALLBACK",
+  ).length;
   return (
     <section className="observed-state-section" aria-labelledby="observed-state-title">
       <div className="section-heading">
@@ -683,10 +740,13 @@ function CurrentObservedState({ state, recent }: { state: ObservedState; recent:
             <div><dt>경기 수준</dt><dd>{state.level == null ? "-" : formatSignedScore(state.level)}</dd></div>
             <div><dt>3개월 모멘텀</dt><dd>{state.momentum == null ? "-" : formatSignedScore(state.momentum)}</dd></div>
             <div><dt>국면 지속</dt><dd>{state.duration_months == null ? "-" : `${state.duration_months}개월`}</dd></div>
-            <div><dt>판단 신뢰도</dt><dd>{state.confidence_label || "제한"}</dd></div>
-            <div><dt>수정 민감도</dt><dd>{state.revision_sensitivity_label || "비교 불가"}</dd></div>
-            <div><dt>실물 커버리지</dt><dd>{state.available_series == null ? "-" : `${state.available_series}/8`}</dd></div>
           </dl>
+          <div className="observed-quality-strip">
+            <span><small>입수 범위</small><strong>{availableSeries == null ? "확인 중" : `RTDSM ${availableSeries}/${totalSeries}개 사용 가능`}</strong></span>
+            <span><small>발표 시차</small><strong>{delayedSeries ? `${delayedSeries}개 시차 반영` : "정상 범위"}</strong></span>
+            <span><small>국면 확정</small><strong>동일 후보 2회 연속</strong></span>
+          </div>
+          <p className="observed-method-change">현재 국면은 원시 4분면 후보를 두 번 연속 확인한 뒤 확정하며 전환 시점을 과거로 소급하지 않습니다. 이전 화면과 달라 보인다면 RTDSM 4지표 기준으로 교체된 결과입니다.</p>
         </article>
         <div className="recent-change-block">
           <header><div><span>Recent changes</span><h4>최근 1·3·6개월 변화</h4></div><small>강화·약화의 속도와 확산을 분리</small></header>
@@ -694,9 +754,12 @@ function CurrentObservedState({ state, recent }: { state: ObservedState; recent:
             {recent.length ? recent.map((item) => (
               <article className={`recent-change-card change-${item.status.toLowerCase()}`} key={item.horizon_months}>
                 <header><span>{item.label}</span><b>{item.status_label}</b></header>
-                <strong>{RECENT_ROLE[item.horizon_months]}</strong>
-                <p>종합 변화 {item.composite_delta == null ? "-" : formatSignedScore(item.composite_delta)}</p>
-                <small>같은 방향 지표 {formatRatio(item.breadth)} · {item.available_pairs ?? 0}/8개 비교</small>
+                <strong>{RECENT_COMPARISON[item.horizon_months]}</strong>
+                <p className="recent-comparison-period">{formatMonth(item.comparison_start_date)} → {formatMonth(item.comparison_end_date || state.as_of_date)}</p>
+                <div className="recent-change-metrics">
+                  <span><small>종합점수 변화</small><b className={trendClass(item.composite_delta, 2)}>{item.composite_delta == null ? "-" : formatSignedScore(item.composite_delta)}</b></span>
+                  <span aria-label={`같은 방향 지표 ${item.breadth == null || !item.available_pairs ? "확인 불가" : `${Math.round(item.breadth * item.available_pairs)}/${item.available_pairs}`}`}><small>같은 방향 지표</small><b>{item.breadth == null || !item.available_pairs ? "-" : `${Math.round(item.breadth * item.available_pairs)}/${item.available_pairs}`}</b></span>
+                </div>
               </article>
             )) : <p className="empty-copy">최근 변화를 계산할 자료가 아직 없습니다.</p>}
           </div>
@@ -774,8 +837,9 @@ function CycleRouteMap({ payload }: { payload: CyclePayload }) {
         <div><span>Cycle route</span><h3 id="cycle-map-title">순환 경로로 본 현재 위치</h3></div>
         <small>{forecast ? "현재 국면과 모델이 비교한 다음 국면" : "현재 국면과 구조적 다음 인접 국면"}</small>
       </div>
-      <div className="cycle-map-body">
-        <svg
+      <div className="cycle-route-layout">
+        <div className="cycle-map-body">
+          <svg
           className="cycle-route-map"
           viewBox="0 0 320 320"
           role="group"
@@ -824,12 +888,26 @@ function CycleRouteMap({ payload }: { payload: CyclePayload }) {
             <text x="160" y="151">현재 관측 {currentLabel}</text>
             <text x="160" y="172">{payload.observed_state.duration_months ? `${payload.observed_state.duration_months}개월 지속` : "지속 기간 확인 중"}</text>
           </g>
-        </svg>
-        <strong className={`cycle-route-status route-status-${transition?.status.toLowerCase() || "limited"}`}>{statusCopy}</strong>
-        <span className="cycle-route-history">{historySummary}</span>
-        <p>{forecast
-          ? "화살표는 전환이 발생할 경우 가장 유력한 다음 국면입니다. 정확한 전환 월을 뜻하지 않으며 다른 국면도 함께 비교합니다."
-          : "화살표는 현재 확인 중인 구조적 인접 국면을 나타내며, 특정 시점의 이동이나 발생 확률을 예측하지 않습니다."}</p>
+          </svg>
+          <strong className={`cycle-route-status route-status-${transition?.status.toLowerCase() || "limited"}`}>{statusCopy}</strong>
+          <span className="cycle-route-history">{historySummary}</span>
+        </div>
+        <div className="cycle-route-context-grid">
+          <article className={`route-context-current phase-${currentPhase || "missing"}`}>
+            <span>현재 공식 관측</span>
+            <strong>{currentLabel}</strong>
+            <small>{payload.observed_state.duration_months ? `${payload.observed_state.duration_months}개월 지속` : "지속 기간 확인 중"} · {payload.observed_state.as_of_date || "기준일 확인 중"}</small>
+            <p>RTDSM 4지표의 원시 후보를 2회 연속 확인한 공식 월간 국면입니다.</p>
+          </article>
+          <article className={`route-context-next phase-${transition?.to || "missing"}`}>
+            <span>{forecast ? "전환이 발생할 때" : "다음 확인 대상"}</span>
+            <strong>{transition ? PHASE_LABEL[transition.to] : "아직 없음"}</strong>
+            <small>{forecast && transition ? `조건부 ${formatRatio(forecast.destination.probabilities[transition.to])}` : statusCopy}</small>
+            <p>{forecast
+              ? "정확한 전환 월이 아니라, 전환 조건이 성립할 때 가장 유력한 목적지입니다."
+              : "현재 후보가 반복되는지 다음 공식 발표에서 확인합니다."}</p>
+          </article>
+        </div>
       </div>
     </section>
   );
@@ -839,11 +917,29 @@ function TransitionForecastPanel({ forecast, state }: { forecast: TransitionFore
   const primary = forecast.destination.primary_phase;
   const alternatives = forecast.destination.alternatives;
   const pressurePercent = Math.round(forecast.pressure.probability * 100);
+  const drivers = forecast.drivers.slice(0, 8);
+  const driverGroups = [
+    {
+      effect: "RAISES_PRESSURE" as const,
+      title: "전환압력을 높이는 요소",
+      description: "현재 값이 공식 국면 변경 가능성을 끌어올리는 신호",
+    },
+    {
+      effect: "LOWERS_PRESSURE" as const,
+      title: "전환압력을 낮추는 요소",
+      description: "현재 국면 유지 쪽으로 작용하는 신호",
+    },
+  ];
   return (
     <section className={`transition-panel forecast-pressure-${forecast.pressure.level.toLowerCase()}`} aria-labelledby="transition-title">
       <div className="section-heading">
         <div><span>Transition outlook</span><h3 id="transition-title">현재 진단과 향후 방향</h3></div>
         <b>전환압력 {pressurePercent}% · {forecast.pressure.level_label}</b>
+      </div>
+      <div className="transition-judgment">
+        <span>종합 판단</span>
+        <strong>현재 {forecast.current_phase_label}을 유지하고 있지만 전환압력은 {forecast.pressure.level_label}입니다.</strong>
+        <p>전환이 실제로 확인될 경우에는 {forecast.destination.primary_phase_label}이 {Math.round(forecast.destination.probabilities[primary] * 100)}%로 가장 유력합니다. 정확한 전환 월을 뜻하지 않습니다.</p>
       </div>
       <div className="transition-summary-grid forecast-summary-grid">
         <article><span>현재 공식 국면</span><strong>{forecast.current_phase_label}{state.duration_months ? ` · ${state.duration_months}개월` : ""}</strong><small>{state.as_of_date || "기준일 확인 중"} · 2회 연속 확인 기준</small></article>
@@ -851,27 +947,32 @@ function TransitionForecastPanel({ forecast, state }: { forecast: TransitionFore
         <article><span>전환 시 다음 국면</span><strong>{forecast.destination.primary_phase_label} {Math.round(forecast.destination.probabilities[primary] * 100)}%</strong><small>현재 국면을 제외한 조건부 비교</small></article>
         <article><span>모든 대안 비교</span><strong>{alternatives.map((item) => `${item.phase_label} ${Math.round(item.probability * 100)}%`).join(" · ")}</strong><small>고정 순환 순서를 강제하지 않음</small></article>
       </div>
-      <div className="transition-route forecast-route" aria-label={`${forecast.current_phase_label}에서 ${forecast.destination.primary_phase_label} 예측 경로`}>
-        <article className={`phase-${forecast.current_phase}`}><span>현재 공식 관측</span><strong>{forecast.current_phase_label}</strong><small>confirmed RTDSM 국면</small></article>
-        <i aria-hidden="true">→</i>
-        <article className={`phase-${primary}`}><span>현재 데이터에서 가장 유력</span><strong>{forecast.destination.primary_phase_label}</strong><small>전환 발생 조건부 {Math.round(forecast.destination.probabilities[primary] * 100)}%</small></article>
-      </div>
       <p className="transition-boundary"><strong>{forecast.pressure.summary}</strong> {forecast.boundary}</p>
-      <div className="transition-condition-heading"><strong>무엇이 전환압력을 움직이고 있나</strong><span>현재값의 모델 기여도 상위 6개</span></div>
-      <div className="forecast-driver-grid">
-        {forecast.drivers.slice(0, 6).map((driver) => (
-          <article className={`driver-${driver.current_effect.toLowerCase()}`} key={driver.driver_id}>
-            <header><span>{driver.label}</span><b>{driver.current_effect_label}</b></header>
-            <strong>{driver.signal_group === "PHASE_CONTEXT" ? forecast.current_phase_label : `${driver.value > 0 ? "+" : ""}${driver.value.toFixed(2)}`}</strong>
-            <small>{driver.signal_group === "PHASE_CONTEXT"
-              ? "현재 국면에서 과거에 관측된 전환 빈도를 반영"
-              : driver.higher_value_effect === "RAISES_PRESSURE"
-              ? "이 값이 더 오르면 전환압력을 높이는 모델 방향"
-              : driver.higher_value_effect === "LOWERS_PRESSURE"
-                ? "이 값이 더 오르면 전환압력을 낮추는 모델 방향"
-                : "추가 변화가 전환압력에 미치는 영향은 중립"}</small>
-          </article>
-        ))}
+      <div className="transition-condition-heading"><strong>무엇이 전환압력을 움직이고 있나</strong><span>현재값의 모델 기여 방향</span></div>
+      <div className="forecast-driver-groups">
+        {driverGroups.map((group) => {
+          const rows = drivers.filter((driver) => driver.current_effect === group.effect);
+          return (
+            <section className={`forecast-driver-group driver-group-${group.effect.toLowerCase()}`} key={group.effect}>
+              <header><div><strong>{group.title}</strong><small>{group.description}</small></div><span>{rows.length}개</span></header>
+              <div className="forecast-driver-grid">
+                {rows.length ? rows.map((driver) => (
+                  <article className={`driver-${driver.current_effect.toLowerCase()}`} key={driver.driver_id}>
+                    <header><span>{driver.label}</span><b>{driver.current_effect_label}</b></header>
+                    <strong>{driver.signal_group === "PHASE_CONTEXT" ? forecast.current_phase_label : `${driver.value > 0 ? "+" : ""}${driver.value.toFixed(2)}`}</strong>
+                    <small>{driver.signal_group === "PHASE_CONTEXT"
+                      ? "현재 국면에서 과거에 관측된 전환 빈도를 반영"
+                      : driver.higher_value_effect === "RAISES_PRESSURE"
+                        ? "이 값이 더 오르면 전환압력을 높이는 모델 방향"
+                        : driver.higher_value_effect === "LOWERS_PRESSURE"
+                          ? "이 값이 더 오르면 전환압력을 낮추는 모델 방향"
+                          : "추가 변화가 전환압력에 미치는 영향은 중립"}</small>
+                  </article>
+                )) : <p className="driver-empty">현재 이 방향으로 분류된 상위 요인이 없습니다.</p>}
+              </div>
+            </section>
+          );
+        })}
       </div>
       <p className="forecast-method-note">정책·물가·금리·신용·주택 지표는 전환 가능성을 계산하고, 실물 수준·모멘텀·확산도는 전환 후 가장 그럴듯한 국면을 비교합니다.</p>
     </section>
@@ -1032,7 +1133,7 @@ function SeriesMetrics({ evaluation }: { evaluation: SeriesEvaluation }) {
     : SERIES_FRESHNESS_LABEL[evaluation.freshness];
   const details = <>
     {changes.map(([key, value]) => (
-      <span key={key}>{CHANGE_LABEL[key] || key} {formatSeriesChange(value, evaluation.unit)}</span>
+      <span key={key}>{CHANGE_LABEL[key] || key} {formatDirectionalChange(value, evaluation.unit)}</span>
     ))}
     <span>기준일 {evaluation.as_of_date || evaluation.release_date || "-"}</span>
     <span>최신성 {freshnessLabel}</span>
@@ -1042,7 +1143,10 @@ function SeriesMetrics({ evaluation }: { evaluation: SeriesEvaluation }) {
       <div className="series-primary-metrics">
         <strong>{evaluation.series_id}</strong>
         {primary.length ? primary.map(([key, value]) => (
-          <span key={key}>{CHANGE_LABEL[key] || key} {formatSeriesChange(value, evaluation.unit)}</span>
+          <span className={`series-period-cell ${trendClass(value)}`} key={key}>
+            <small>{CHANGE_LABEL[key] || key}</small>
+            <b>{formatDirectionalChange(value, evaluation.unit)}</b>
+          </span>
         )) : <span>측정값 {evaluation.current_value == null ? "-" : evaluation.current_value.toFixed(2)}</span>}
       </div>
       <div className="pathway-hover-details" role="tooltip">{details}</div>
@@ -1101,14 +1205,18 @@ function PricePathway({ item }: { item: MarketImplication }) {
         </b>
       </header>
       <div className="price-return-grid" aria-label={`${item.label} 기간별 가격 변화율`}>
-        {windows.map(([label, value]) => (
-          <div key={label}>
-            <span>{label}</span>
-            <strong className={value == null ? "return-empty" : value > 0 ? "return-positive" : value < 0 ? "return-negative" : "return-flat"}>
-              {formatSignedPercent(value)}
-            </strong>
-          </div>
-        ))}
+        {windows.map(([label, value]) => {
+          const directionClass = trendClass(value);
+          const returnClass = directionClass.replace("trend-", "return-");
+          return (
+            <div key={label}>
+              <span>{label}</span>
+              <strong className={`${returnClass} ${directionClass}`}>
+                {formatDirectionalPercent(value)}
+              </strong>
+            </div>
+          );
+        })}
       </div>
       <p className="implication-basis">경제 {formatMonth(item.economic_as_of_date)} · 가격 {formatMonth(price.as_of_date)} · {price.symbol}</p>
     </section>
@@ -1275,7 +1383,6 @@ function MarketImplicationCard({ item }: { item: MarketImplication }) {
         </div>
       </header>
       <p className="implication-summary">{summary}</p>
-      <EconomicStateBlock state={item.economic_state} />
       {item.assets?.length ? (
         <div className="commodity-asset-grid">
           {item.assets.map((asset) => (
@@ -1327,14 +1434,14 @@ function RegimeRibbon({ points }: { points: CyclePoint[] }) {
       </div>
       <div className="regime-ribbon" role="list" aria-label="최근 월별 관측 경제 국면" style={ribbonStyle}>
         {points.length ? points.map((item, index) => (
-          <div className={`ribbon-month phase-${item.phase}`} role="listitem" tabIndex={0} key={`${item.date}-${index}`} aria-label={`${formatKoreanMonth(item.date)} · ${PHASE_LABEL[item.phase]} · NBER ${item.nber_recession ? "침체" : "비침체"}`}>
+          <div className={`ribbon-month phase-${item.phase}${index > 0 && points[index - 1].phase !== item.phase ? " phase-transition" : ""}`} role="listitem" tabIndex={0} key={`${item.date}-${index}`} aria-label={`${formatKoreanMonth(item.date)} · ${PHASE_LABEL[item.phase]} · NBER ${item.nber_recession ? "침체" : "비침체"}`}>
             {item.nber_recession ? <i className="nber-recession" aria-label="NBER 침체" /> : null}
             {index === points.length - 1 ? <i className="current-marker" aria-label="현재" /> : null}
             <div className="ribbon-tooltip" role="tooltip">
               <strong>{formatKoreanMonth(item.date)} · {PHASE_LABEL[item.phase]}</strong>
               <span>NBER {item.nber_recession ? "침체" : "비침체"}</span>
-              <span>판단 신뢰도 {CONFIDENCE_LABEL[item.confidence || ""] || "확인 불가"}</span>
-              <span>수정 민감도 {REVISION_SENSITIVITY_LABEL[item.revision_sensitivity || ""] || "확인 불가"}</span>
+              <span>공식 월간 관측</span>
+              <span>{index > 0 && points[index - 1].phase !== item.phase ? `이번 달부터 ${PHASE_LABEL[item.phase]} 확인` : "2회 연속 후보 확인"}</span>
             </div>
           </div>
         )) : (
@@ -1429,6 +1536,11 @@ function EconomicCycleFreshnessBar({
   result?: RefreshResult;
 }) {
   const [collecting, setCollecting] = useState(false);
+  useEffect(() => {
+    if (result || freshness?.refresh_required === false) {
+      setCollecting(false);
+    }
+  }, [result, freshness?.refresh_required, freshness?.persisted_as_of_date]);
   if (!freshness && !result) return null;
 
   const action = freshness?.action;
@@ -1465,12 +1577,12 @@ function EconomicCycleFreshnessBar({
         <span>DATA FRESHNESS</span>
         <strong>
           {scopeCopy || (freshness?.status === "READY"
-            ? `최신 계산 기준 ${freshness.persisted_as_of_date || freshness.target_as_of_date || "-"}`
+            ? `최신 공식 관측 ${freshness.persisted_as_of_date || freshness.target_as_of_date || "-"}`
             : freshness?.message || "경제사이클 최신 자료를 확인할 수 있습니다.")}
         </strong>
         <div className="cycle-freshness-meta">
-          <span>마지막 성공 수집 <b>{freshness?.last_successful_collection_at || "기록 없음"}</b></span>
-          <span>계산 기준일 <b>{freshness?.persisted_as_of_date || "없음"}</b></span>
+          <span>마지막 성공 수집 <b>{freshness?.last_successful_collection_at || (result?.status === "success" ? result.finished_at : null) || "기록 없음"}</b></span>
+          <span>공식 관측 월 <b>{freshness?.persisted_as_of_date || "없음"}</b></span>
           <span>사용 원천 최신일 <b>{assetScope?.latest_observation_date || freshness?.latest_source_observation_date || "확인 불가"}</b></span>
         </div>
         {result ? (
@@ -1497,8 +1609,13 @@ function EconomicCycleFreshnessBar({
 
 function EconomicCycleContent({ payload }: { payload: CyclePayload }) {
   const observed = payload.observed_state;
-  const realEvidence = payload.evidence.filter((evidence) => evidence.group === "real_economy");
-  const forecastEvidence = payload.evidence.filter((evidence) => evidence.group === "forecast_context");
+  const stateEvidence = payload.evidence.filter((evidence) => evidence.group === "real_economy");
+  const inputEvidence = stateEvidence.filter((evidence) => evidence.factor === "activity_score" || evidence.factor === "labor_income_score");
+  const coordinateEvidence = stateEvidence.filter((evidence) => evidence.factor === "level" || evidence.factor === "momentum");
+  const sharedEconomicState = payload.market_implications.find(
+    (item) => item.economic_state?.summary,
+  )?.economic_state;
+  const totalSeries = observed.total_series || 4;
   const estimateTone =
     observed.data_status === "READY"
       ? "positive"
@@ -1509,7 +1626,7 @@ function EconomicCycleContent({ payload }: { payload: CyclePayload }) {
     <main className="cycle-workbench" data-status={payload.status}>
       <EconomicCycleHero
         asOfDate={payload.as_of_date || "-"}
-        estimateLabel={observed.confidence_label || "판단 제한"}
+        estimateLabel={observed.available_series == null ? "입수 범위 확인" : `RTDSM ${observed.available_series}/${totalSeries}`}
         estimateTone={estimateTone}
         hasIntramonth={Boolean(payload.intramonth_change)}
         summary={payload.headline?.summary || "저장된 경제사이클 결과를 확인합니다."}
@@ -1525,22 +1642,26 @@ function EconomicCycleContent({ payload }: { payload: CyclePayload }) {
 
       {payload.intramonth_change ? <IntramonthChangePanel intramonth={payload.intramonth_change} /> : null}
 
-      <div className="cycle-layout">
-        <CycleRouteMap payload={payload} />
-        <TransitionPanel
-          monitor={payload.transition_monitor}
-          forecast={payload.transition_forecast}
-          state={observed}
-          recent={payload.recent_changes}
-          intramonth={payload.intramonth_change}
-        />
-      </div>
+      <CycleRouteMap payload={payload} />
+
+      <TransitionPanel
+        monitor={payload.transition_monitor}
+        forecast={payload.transition_forecast}
+        state={observed}
+        recent={payload.recent_changes}
+        intramonth={payload.intramonth_change}
+      />
 
       <section className="evidence-panel" aria-labelledby="evidence-title">
-        <div className="section-heading"><div><span>Evidence</span><h3 id="evidence-title">현재 국면과 전환의 판단 근거</h3></div><small>현재 국면을 바꾸는 실물 근거와 보조 맥락을 구분</small></div>
+        <div className="section-heading"><div><span>Evidence</span><h3 id="evidence-title">현재 국면의 종합 판단과 근거</h3></div><small>입력 지표에서 최종 좌표까지 연결해 확인</small></div>
+        <div className={`evidence-judgment phase-${observed.phase || "missing"}`}>
+          <span>종합 판단</span>
+          <strong>{payload.headline?.phase_label || "판단 제한"} · 경기 수준 {observed.level == null ? "-" : formatSignedScore(observed.level)} · 3개월 모멘텀 {observed.momentum == null ? "-" : formatSignedScore(observed.momentum)}</strong>
+          <p>생산·주택 활동과 고용·소득을 결합한 경기 수준, 그리고 그 수준의 최근 3개월 변화 방향이 현재 공식 국면을 결정합니다.</p>
+        </div>
         <div className="evidence-overview-grid">
-          <EvidenceGroup title="현재 위치의 근거" subtitle="현재점에 반영되는 생산·소비와 고용·소득" rows={realEvidence} />
-          <EvidenceGroup title="전환을 해석할 참고 맥락" subtitle="현재 국면을 바꾸지 않고 전환 조건을 해석하는 금융·선행·물가·정책 정보" rows={forecastEvidence} />
+          <EvidenceGroup title="입력 실물지표" subtitle="생산·주택 활동과 고용·소득의 자기 과거 기준 위치" rows={inputEvidence} />
+          <EvidenceGroup title="최종 국면 좌표" subtitle="두 실물축을 결합한 경기 수준과 최근 3개월 모멘텀" rows={coordinateEvidence} />
         </div>
       </section>
 
@@ -1548,6 +1669,8 @@ function EconomicCycleContent({ payload }: { payload: CyclePayload }) {
 
       <section className="market-implications" aria-labelledby="implication-title">
         <div className="section-heading"><div><span>Measured market pathways</span><h3 id="implication-title">자산별 확인 포인트</h3></div><small>경제 상태·측정 경로·실제 가격을 분리해 확인</small></div>
+        {sharedEconomicState ? <EconomicStateBlock state={sharedEconomicState} /> : null}
+        <p className="market-direction-note">색상과 화살표는 수치의 상승·하락 방향만 나타내며, 투자상 유리·불리를 뜻하지 않습니다.</p>
         <div className="implication-grid">
           {payload.market_implications.map((item) => <MarketImplicationCard key={item.asset_group} item={item} />)}
         </div>
@@ -1555,13 +1678,15 @@ function EconomicCycleContent({ payload }: { payload: CyclePayload }) {
 
       <MonthlySignalGuide />
 
-      <details className="method-disclosure">
-        <summary>방법론과 품질</summary>
-        <div className="method-grid"><div><span>모델 버전</span><strong>{payload.model_version || "-"}</strong></div><div><span>기준일</span><strong>{payload.as_of_date || "-"}</strong></div><div><span>판단 신뢰도</span><strong>{observed.confidence_label || "판단 제한"}</strong></div></div>
-        <p>{payload.transition_forecast
-          ? "현재 국면은 confirmed RTDSM 실물지표로 확정합니다. 전환압력은 다음 3개 유효 발표 안의 전환 가능성이고, 다음 국면 분포는 전환 발생을 조건으로 모든 대안 국면을 비교합니다. 특정 전환 월이나 고정 순환 순서를 강제하지 않습니다."
-          : "현재 국면은 월말 point-in-time 실물지표의 수준과 3개월 모멘텀으로 계산합니다. 전환 카드는 특정 월을 예측하지 않고 다음 정식 발표에서 확인할 조건을 보여줍니다."} 금·달러 가격은 저장된 연속선물 일봉이라 계약 교체 효과가 포함될 수 있습니다. 이 결과는 NBER의 공식 경기판정이 아니고 수익률 예측이나 매매 지시가 아닙니다.</p>
-        <ul>{payload.limitations.map((item) => <li key={item}>{item}</li>)}</ul>
+      <details className="cycle-usage-guide method-disclosure">
+        <summary><div><span>Methodology</span><strong>방법론과 품질</strong></div><small>입력·확정 규칙·한계</small></summary>
+        <div className="cycle-guide-body">
+          <div className="method-grid"><div><span>모델 버전</span><strong>{payload.model_version || "-"}</strong></div><div><span>공식 관측 월</span><strong>{payload.as_of_date || "-"}</strong></div><div><span>입수 범위</span><strong>{observed.available_series == null ? "확인 중" : `RTDSM ${observed.available_series}/${totalSeries}`}</strong></div><div><span>확정 규칙</span><strong>동일 후보 2회 연속</strong></div></div>
+          <p>{payload.transition_forecast
+            ? "현재 국면은 confirmed RTDSM 실물지표로 확정합니다. 전환압력은 다음 3개 유효 발표 안의 전환 가능성이고, 다음 국면 분포는 전환 발생을 조건으로 모든 대안 국면을 비교합니다. 특정 전환 월이나 고정 순환 순서를 강제하지 않습니다."
+            : "현재 국면은 월말 point-in-time 실물지표의 수준과 3개월 모멘텀으로 계산합니다. 전환 카드는 특정 월을 예측하지 않고 다음 정식 발표에서 확인할 조건을 보여줍니다."} 금·달러 가격은 저장된 연속선물 일봉이라 계약 교체 효과가 포함될 수 있습니다. 이 결과는 NBER의 공식 경기판정이 아니고 수익률 예측이나 매매 지시가 아닙니다.</p>
+          <ul>{payload.limitations.map((item) => <li key={item}>{item}</li>)}</ul>
+        </div>
       </details>
     </main>
   );

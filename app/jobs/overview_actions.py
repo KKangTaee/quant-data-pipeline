@@ -33,6 +33,7 @@ from app.services.overview.market_context_valuation import (
     build_market_context_valuation_read_model,
 )
 from app.services.overview.economic_cycle_freshness import (
+    economic_cycle_quality_refresh_required,
     latest_economic_cycle_refresh_date,
 )
 from app.services.overview.economic_cycle_asset_freshness import (
@@ -41,7 +42,7 @@ from app.services.overview.economic_cycle_asset_freshness import (
 from app.services.nyse_calendar import latest_completed_nyse_session
 from app.services.futures_macro_pattern_validation import NESTED_OUTER_MINIMUM_TRAIN
 
-from app.jobs.economic_cycle_refresh import run_economic_cycle_intramonth_refresh
+from app.jobs.economic_cycle_refresh import run_economic_cycle_official_refresh
 from app.jobs.economic_cycle_asset_refresh import (
     run_economic_cycle_asset_pathway_refresh,
 )
@@ -187,7 +188,7 @@ def _asset_freshness_issue_count(row: dict[str, Any]) -> int | None:
 def run_overview_economic_cycle_refresh(
     *,
     as_of_date: str | date | datetime | None = None,
-    refresh_runner: Callable[..., JobResult] = run_economic_cycle_intramonth_refresh,
+    refresh_runner: Callable[..., JobResult] = run_economic_cycle_official_refresh,
     snapshot_loader: Callable[..., dict[str, object] | None] = load_cycle_snapshot,
     asset_freshness_loader: Callable[..., dict[str, object]] = (
         load_asset_pathway_freshness
@@ -200,12 +201,22 @@ def run_overview_economic_cycle_refresh(
     """Refresh only stale scopes and accept results only after DB postconditions."""
     started_at = datetime.now()
     target = latest_economic_cycle_refresh_date(as_of_date)
+    if isinstance(as_of_date, datetime):
+        refresh_reference = as_of_date.date()
+    elif isinstance(as_of_date, date):
+        refresh_reference = as_of_date
+    elif as_of_date:
+        refresh_reference = date.fromisoformat(str(as_of_date)[:10])
+    else:
+        refresh_reference = date.today()
     before_date: date | None = None
+    before_snapshot: dict[str, object] | None = None
     try:
         before = snapshot_loader(
             as_of_date=target,
-            run_kind="intramonth_nowcast",
+            run_kind="current",
         )
+        before_snapshot = dict(before) if isinstance(before, dict) else None
         before_date = _economic_cycle_snapshot_date(before)
     except Exception:
         before_date = None
@@ -215,7 +226,11 @@ def run_overview_economic_cycle_refresh(
         before_asset = {"status": "ERROR", "refresh_required": True}
 
     requested_scopes: list[str] = []
-    if before_date is None or before_date < target:
+    if (
+        before_date is None
+        or before_date < target
+        or economic_cycle_quality_refresh_required(before_snapshot)
+    ):
         requested_scopes.append("cycle_snapshot")
     if bool(before_asset.get("refresh_required")):
         requested_scopes.append("asset_pathways")
@@ -237,11 +252,11 @@ def run_overview_economic_cycle_refresh(
             progress_callback("경기 지표 확인")
         try:
             pipelines["cycle_snapshot"] = dict(
-                refresh_runner(as_of_date=target)
+                refresh_runner(as_of_date=refresh_reference)
             )
         except Exception as exc:
             pipelines["cycle_snapshot"] = {
-                "job_name": "refresh_economic_cycle_intramonth",
+                "job_name": "refresh_economic_cycle_official_month",
                 "status": "failed",
                 "rows_written": 0,
                 "failed_symbols": [],
@@ -264,12 +279,14 @@ def run_overview_economic_cycle_refresh(
         progress_callback("화면 다시 계산")
 
     after_date = before_date
+    after_snapshot = before_snapshot
     after_asset = before_asset
     try:
         after = snapshot_loader(
             as_of_date=target,
-            run_kind="intramonth_nowcast",
+            run_kind="current",
         )
+        after_snapshot = dict(after) if isinstance(after, dict) else None
         after_date = _economic_cycle_snapshot_date(after)
     except Exception:
         after_date = before_date
@@ -280,7 +297,9 @@ def run_overview_economic_cycle_refresh(
 
     refreshed_scopes: list[str] = []
     if "cycle_snapshot" in requested_scopes and (
-        after_date is not None and after_date >= target
+        after_date is not None
+        and after_date >= target
+        and not economic_cycle_quality_refresh_required(after_snapshot)
     ):
         refreshed_scopes.append("cycle_snapshot")
     if "asset_pathways" in requested_scopes:

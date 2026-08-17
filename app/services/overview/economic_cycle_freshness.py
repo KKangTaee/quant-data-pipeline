@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
 from datetime import date, datetime, timedelta
 from typing import Any
@@ -27,20 +28,35 @@ def _as_date(value: Any) -> date | None:
 def latest_economic_cycle_refresh_date(
     value: date | datetime | None = None,
 ) -> date:
-    """Return the latest weekday eligible for a manual economic-cycle cutoff."""
+    """Return the latest closed official monthly cycle date."""
+    return latest_closed_economic_cycle_month_end(value)
+
+
+def latest_closed_economic_cycle_month_end(
+    value: date | datetime | None = None,
+) -> date:
+    """Return the month-end immediately preceding the reference date's month."""
     resolved = _as_date(value) or date.today()
-    while resolved.weekday() >= 5:
-        resolved -= timedelta(days=1)
-    return resolved
+    return resolved.replace(day=1) - timedelta(days=1)
 
 
 def _latest_source_observation_date(
     intramonth: Mapping[str, Any],
 ) -> date | None:
     coverage = intramonth.get("source_coverage")
-    if not isinstance(coverage, Mapping):
-        return None
-    series = coverage.get("series")
+    series = coverage.get("series") if isinstance(coverage, Mapping) else None
+    if not isinstance(series, (list, tuple)):
+        observed = intramonth.get("observed_state_json")
+        if not isinstance(observed, Mapping):
+            try:
+                observed = json.loads(str(observed or "{}"))
+            except (TypeError, ValueError, json.JSONDecodeError):
+                observed = {}
+        series = (
+            observed.get("series_quality")
+            if isinstance(observed, Mapping)
+            else None
+        )
     if not isinstance(series, (list, tuple)):
         return None
     dates = [
@@ -52,20 +68,48 @@ def _latest_source_observation_date(
     return max(dates) if dates else None
 
 
+def economic_cycle_quality_refresh_required(
+    snapshot: Mapping[str, Any] | None,
+) -> bool:
+    """Identify persisted RTDSM rows written before the quality contract."""
+
+    row = dict(snapshot or {})
+    if "observed_state_json" not in row:
+        return False
+    observed = row.get("observed_state_json")
+    if not isinstance(observed, Mapping):
+        try:
+            observed = json.loads(str(observed or "{}"))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return True
+    if not isinstance(observed, Mapping):
+        return True
+    if str(observed.get("source") or "") != "philadelphia_fed_rtdsm":
+        return False
+    return not (
+        observed.get("available_series") is not None
+        and observed.get("total_series") == 4
+        and "series_quality" in observed
+    )
+
+
 def build_economic_cycle_freshness(
     intramonth: Mapping[str, Any] | None,
     *,
     today: date | datetime | None = None,
     read_error: bool = False,
 ) -> dict[str, Any]:
-    """Compare one persisted intramonth cutoff with the latest eligible weekday."""
-    target = latest_economic_cycle_refresh_date(today)
+    """Compare the persisted official snapshot with the latest closed month."""
+    target = latest_closed_economic_cycle_month_end(today)
     resolved_intramonth = dict(intramonth or {})
     persisted = _as_date(resolved_intramonth.get("as_of_date"))
     successful_collection_at = str(
         resolved_intramonth.get("source_collected_at") or ""
     ).strip()
     latest_source = _latest_source_observation_date(resolved_intramonth)
+    quality_refresh_required = economic_cycle_quality_refresh_required(
+        resolved_intramonth
+    )
     if read_error:
         status = "ERROR"
         message = (
@@ -75,18 +119,19 @@ def build_economic_cycle_freshness(
     elif persisted is None:
         status = "MISSING"
         message = (
-            f"월중 계산 결과가 없습니다. {target.isoformat()} 기준으로 "
-            "다시 계산할 수 있습니다."
+            f"공식 월간 관측 결과가 없습니다. {target.isoformat()} 기준으로 "
+            "발표 자료를 다시 확인할 수 있습니다."
         )
-    elif persisted < target:
+    elif persisted < target or quality_refresh_required:
         status = "REFRESH_AVAILABLE"
         message = (
-            f"현재 계산일 {persisted.isoformat()} · "
-            f"최신 계산 가능일 {target.isoformat()}"
+            "공식 관측 월은 최신이지만 RTDSM 품질 정보를 한 번 다시 반영해야 합니다."
+            if persisted >= target and quality_refresh_required
+            else f"현재 공식 관측 {persisted.isoformat()} · 최신 종료 월 {target.isoformat()}"
         )
     else:
         status = "READY"
-        message = f"최신 계산 기준 {persisted.isoformat()}"
+        message = f"최신 공식 관측 {persisted.isoformat()}"
     result: dict[str, Any] = {
         "status": status,
         "persisted_as_of_date": persisted.isoformat() if persisted else None,
@@ -95,6 +140,7 @@ def build_economic_cycle_freshness(
         "latest_source_observation_date": (
             latest_source.isoformat() if latest_source else None
         ),
+        "quality_refresh_required": quality_refresh_required,
         "refresh_required": status != "READY",
         "message": message,
     }

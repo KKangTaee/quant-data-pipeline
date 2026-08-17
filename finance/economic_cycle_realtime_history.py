@@ -276,7 +276,10 @@ def build_rtdsm_monthly_panel(
                 record[f"{series_id}_latest_observation_date"] = (
                     latest_date.isoformat()
                 )
-                threshold = 120 if spec.vintage_frequency == "quarterly" else 75
+                # Quarterly RTDSM releases can legitimately be just over four
+                # months old near the next publication. Keep that scheduled lag
+                # distinct from a genuinely stale/missing series.
+                threshold = 150 if spec.vintage_frequency == "quarterly" else 75
                 record[f"{series_id}_stale"] = (
                     origin.date() - latest_date
                 ).days > threshold
@@ -336,6 +339,7 @@ def build_rtdsm_observed_history(
     prepared["_raw_level"] = 0.5 * activity + 0.5 * labor
     prepared["_level"] = prepared["_raw_level"].rolling(3, min_periods=3).mean()
     prepared["_momentum"] = prepared["_level"].diff(3)
+    specs = {item.series_id: item for item in get_rtdsm_catalog()}
 
     results: list[ObservedStateResult] = []
     for index in prepared.index:
@@ -349,6 +353,54 @@ def build_rtdsm_observed_history(
         )
         phase = phase_from_coordinates(level, momentum) if ready else None
         status = base_status if ready else "UNAVAILABLE"
+        series_quality: list[dict[str, object]] = []
+        available_series = 0
+        for series_id in ("IPT", "H", "EMPLOY", "RUC"):
+            value = _finite(prepared.at[index, f"{series_id}_z"])
+            if value is not None:
+                available_series += 1
+            latest_column = f"{series_id}_latest_observation_date"
+            stale_column = f"{series_id}_stale"
+            lag_column = f"{series_id}_lag_fallback"
+            latest_value = (
+                prepared.at[index, latest_column]
+                if latest_column in prepared.columns
+                else None
+            )
+            stale = (
+                bool(prepared.at[index, stale_column])
+                if stale_column in prepared.columns
+                else False
+            )
+            lag_fallback = (
+                bool(prepared.at[index, lag_column])
+                if lag_column in prepared.columns
+                else False
+            )
+            if value is None:
+                quality_status = "MISSING"
+            elif stale:
+                quality_status = "STALE"
+            elif lag_fallback:
+                quality_status = "LAG_FALLBACK"
+            else:
+                quality_status = "AVAILABLE"
+            spec = specs.get(series_id)
+            series_quality.append(
+                {
+                    "series_id": series_id,
+                    "cadence": getattr(spec, "vintage_frequency", None),
+                    "latest_observation_date": (
+                        str(latest_value)[:10]
+                        if latest_value not in (None, "")
+                        and not pd.isna(latest_value)
+                        else None
+                    ),
+                    "status": quality_status,
+                    "stale": stale,
+                    "lag_fallback": lag_fallback,
+                }
+            )
         results.append(
             ObservedStateResult(
                 observed_state={
@@ -365,6 +417,9 @@ def build_rtdsm_observed_history(
                     "labor_income_score": _finite(
                         prepared.at[index, "labor_income_score"]
                     ),
+                    "available_series": available_series,
+                    "total_series": 4,
+                    "series_quality": series_quality,
                     "source": "philadelphia_fed_rtdsm",
                 },
                 recent_changes=(),

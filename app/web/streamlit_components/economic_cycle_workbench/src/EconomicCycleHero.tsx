@@ -30,7 +30,7 @@ function EconomicCycleHero({
     },
     {
       id: "estimate",
-      label: "판단 신뢰도",
+      label: "실물지표 입수",
       value: estimateLabel,
       tone: estimateTone,
       showIndicator: true,

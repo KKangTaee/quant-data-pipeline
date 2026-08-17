@@ -190,11 +190,16 @@ def test_gold_and_dollar_expose_measured_pathways_without_alignment_claims() -> 
     ]
     gold = implications[2]
     dollar = implications[3]
+    commodities = implications[4]
     assert gold["price_context"]["status"] == "FALLING"
     assert dollar["price_context"]["status"] == "RISING"
     assert dollar["price_context"]["as_of_date"] == "2026-07-16"
     assert gold["coverage"] == "SUFFICIENT"
     assert dollar["coverage"] == "PARTIAL"
+    assert [item["asset_id"] for item in commodities["assets"]] == [
+        "wti",
+        "copper",
+    ]
     for item in (gold, dollar):
         assert "assessment" not in item
         assert "alignment" not in item

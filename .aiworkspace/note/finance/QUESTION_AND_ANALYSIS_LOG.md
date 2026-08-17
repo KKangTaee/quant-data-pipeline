@@ -10841,3 +10841,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   전환압력 63.6%, 위축 69.7%·확장 23.9%·둔화 6.4%를 표시한다. confirmed recent history와
   자산 카드의 금리·실질금리·신용스프레드 노출도 Browser에서 확인했다.
 - Follow-up: 5/5 완료. 이후 월말 갱신은 같은 `transition_forecast_v1` publication gate를 유지한다.
+
+### 2026-08-17 - 경제 사이클 화면은 공식 상태·전환 해석·자산 근거를 분리해 읽는다
+
+- User request: Data Freshness 무한 로딩과 현재/최근 변화의 불명확성, 전환 driver·근거·ribbon,
+  자산 카드 중복을 정리하고 기간 수치의 부호를 색과 화살표로 구분해 달라고 요청함.
+- Interpreted goal: RTDSM confirmed state를 화면의 단일 현재 국면 기준으로 사용하되 자산별
+  기존 계산·카드 구조는 유지하고, 전환압력과 조건부 목적지를 혼동하지 않게 만든다.
+- Analysis result: 공식 월말 갱신·RTDSM 4/4 품질·비교 월·그룹화된 driver·공통 배경 1회·
+  WTI/구리 원자재·signed period cell을 구현하고 실제 Streamlit 수동 갱신과 Browser QA를 통과했다.
+- Follow-up: 전체 5/5 완료. 외부 RTDSM 응답 지연과 legacy intramonth 자동화 정리는 별도 운영 범위다.

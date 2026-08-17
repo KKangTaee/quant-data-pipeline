@@ -267,6 +267,31 @@ def _finite_number(value: object) -> float | None:
     return parsed if math.isfinite(parsed) else None
 
 
+def _current_state_evidence(
+    observed_state: Mapping[str, object],
+) -> list[dict[str, object]]:
+    """Expose the exact RTDSM coordinates used by the official state UI."""
+
+    source_date = str(observed_state.get("as_of_date") or "")[:10] or None
+    rows: list[dict[str, object]] = []
+    for factor in ("activity_score", "labor_income_score", "level", "momentum"):
+        value = _finite_number(observed_state.get(factor))
+        if value is None:
+            continue
+        rows.append(
+            {
+                "factor": factor,
+                "series_id": None,
+                "group": "real_economy",
+                "direction": evidence_direction(value),
+                "value": value,
+                "source_date": source_date,
+                "source_basis": "Philadelphia Fed RTDSM point-in-time",
+            }
+        )
+    return rows
+
+
 def _transition_forecast(
     snapshot: Mapping[str, object],
     *,
@@ -403,6 +428,15 @@ def _observed_state(snapshot: Mapping[str, object]) -> dict[str, object]:
         data_status = "UNAVAILABLE"
         confidence = "LIMITED"
     output = dict(raw)
+    is_rtdsm = str(raw.get("source") or "") == "philadelphia_fed_rtdsm"
+    if is_rtdsm:
+        output["total_series"] = 4
+        if output.get("available_series") is None and all(
+            _finite_number(raw.get(key)) is not None
+            for key in ("activity_score", "labor_income_score")
+        ):
+            output["available_series"] = 4
+        output.setdefault("series_quality", [])
     output.update(
         {
             "phase": phase,
@@ -981,7 +1015,8 @@ def build_economic_cycle_read_model(
         observed_state=observed_state,
     )
     cycle_map = _cycle_map(history_rows, resolved_snapshot)
-    evidence = _evidence(resolved_snapshot)
+    asset_evidence = _evidence(resolved_snapshot)
+    evidence = _current_state_evidence(observed_state)
     load_intramonth = (
         intramonth_loader
         if intramonth_loader is not None
@@ -1000,7 +1035,7 @@ def build_economic_cycle_read_model(
             intramonth_row = None
     intramonth = _intramonth_change(resolved_snapshot, intramonth_row)
     cycle_freshness = build_economic_cycle_freshness(
-        intramonth,
+        resolved_snapshot,
         today=freshness_date,
     )
 
@@ -1081,7 +1116,7 @@ def build_economic_cycle_read_model(
         }
     market_implications = build_market_implications(
         (),
-        evidence,
+        asset_evidence,
         asset_price_rows,
         market_rows=market_rows,
         sp500_earnings=sp500_earnings,

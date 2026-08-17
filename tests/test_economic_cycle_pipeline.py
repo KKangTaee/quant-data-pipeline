@@ -924,6 +924,34 @@ def test_closed_month_rollover_uses_validated_transition_publisher_by_default() 
     }
 
 
+def test_closed_month_rollover_can_republish_current_month_after_quality_change() -> None:
+    module = _load_module()
+    published: list[date] = []
+
+    result = module.rollover_closed_economic_cycle_month(
+        as_of_date="2026-08-17",
+        snapshot_loader=lambda **_kwargs: {
+            "as_of_date": "2026-07-31",
+            "run_kind": "current",
+            "model_version": "economic_cycle_transition_v1",
+        },
+        publisher=lambda as_of_date: published.append(as_of_date)
+        or {
+            "status": "READY",
+            "model_version": "economic_cycle_transition_v1",
+            "snapshot_written": True,
+        },
+        force_refresh=True,
+    )
+
+    assert published == [date(2026, 7, 31)]
+    assert result == {
+        "status": "created",
+        "as_of_date": "2026-07-31",
+        "rows_written": 1,
+    }
+
+
 def test_closed_month_rollover_preserves_last_good_when_transition_gate_fails() -> None:
     module = _load_module()
 

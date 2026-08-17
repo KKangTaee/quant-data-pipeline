@@ -429,6 +429,8 @@ def _economic_cycle_collection_reflection(
     return {
         "status": str(result.get("status") or "failed"),
         "message": str(result.get("message") or ""),
+        "finished_at": str(result.get("finished_at") or "") or None,
+        "duration_sec": result.get("duration_sec"),
     }
 
 

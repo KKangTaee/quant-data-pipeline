@@ -312,6 +312,8 @@ def _core_recent_changes(
     for horizon in (1, 3, 6):
         record: dict[str, object] = {
             "horizon_months": horizon,
+            "comparison_start_date": None,
+            "comparison_end_date": cutoff.date().isoformat(),
             "status": "UNAVAILABLE",
             "composite_delta": None,
             "breadth": None,
@@ -325,6 +327,8 @@ def _core_recent_changes(
             continue
         current = panel.iloc[current_position]
         prior = panel.iloc[prior_position]
+        prior_origin = pd.Timestamp(prior["forecast_origin"])
+        record["comparison_start_date"] = prior_origin.date().isoformat()
         try:
             delta = float(current["level"]) - float(prior["level"])
         except (KeyError, TypeError, ValueError):

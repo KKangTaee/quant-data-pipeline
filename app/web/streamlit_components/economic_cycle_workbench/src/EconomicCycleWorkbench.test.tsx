@@ -1,4 +1,6 @@
 import React from "react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
@@ -66,17 +68,24 @@ function fixture(): CyclePayload {
       confidence_label: "보통",
       revision_sensitivity: "STABLE",
       revision_sensitivity_label: "안정",
-      available_series: 8,
+      available_series: 4,
+      total_series: 4,
+      series_quality: [
+        { series_id: "IPT", cadence: "monthly", status: "AVAILABLE" },
+        { series_id: "H", cadence: "monthly", status: "AVAILABLE" },
+        { series_id: "EMPLOY", cadence: "monthly", status: "AVAILABLE" },
+        { series_id: "RUC", cadence: "quarterly", status: "AVAILABLE" },
+      ],
       data_status: "READY",
     },
     data_freshness: {
       status: "REFRESH_AVAILABLE",
-      persisted_as_of_date: "2026-07-21",
-      target_as_of_date: "2026-07-24",
+      persisted_as_of_date: "2026-06-30",
+      target_as_of_date: "2026-07-31",
       last_successful_collection_at: "2026-07-21 09:31:12",
       latest_source_observation_date: "2026-06-30",
       refresh_required: true,
-      message: "현재 계산일 2026-07-21 · 최신 계산 가능일 2026-07-24",
+      message: "현재 공식 관측 2026-06-30 · 최신 종료 월 2026-07-31",
       action: {
         id: "refresh_economic_cycle_data",
         label: "최신 발표 확인·재계산",
@@ -84,9 +93,9 @@ function fixture(): CyclePayload {
       },
     },
     recent_changes: [
-      { horizon_months: 1, label: "최근 1개월", status: "MIXED", status_label: "혼조", composite_delta: 0.02, breadth: 0.50, available_pairs: 8 },
-      { horizon_months: 3, label: "최근 3개월", status: "WEAKENING", status_label: "약화", composite_delta: -0.30, breadth: 0.25, available_pairs: 8 },
-      { horizon_months: 6, label: "최근 6개월", status: "WEAKENING", status_label: "약화", composite_delta: -0.45, breadth: 0.25, available_pairs: 8 },
+      { horizon_months: 1, label: "최근 1개월", comparison_start_date: "2026-05-31", comparison_end_date: "2026-06-30", status: "MIXED", status_label: "혼조", composite_delta: 0.02, breadth: 0.50, available_pairs: 4 },
+      { horizon_months: 3, label: "최근 3개월", comparison_start_date: "2026-03-31", comparison_end_date: "2026-06-30", status: "WEAKENING", status_label: "약화", composite_delta: -0.30, breadth: 0.25, available_pairs: 4 },
+      { horizon_months: 6, label: "최근 6개월", comparison_start_date: "2025-12-31", comparison_end_date: "2026-06-30", status: "WEAKENING", status_label: "약화", composite_delta: -0.45, breadth: 0.25, available_pairs: 4 },
     ],
     transition_monitor: {
       observed_phase: "contraction",
@@ -285,6 +294,8 @@ describe("EconomicCycleWorkbenchView", () => {
     expect(html).toContain("확장 20%");
     expect(html).toContain("정책금리 변화");
     expect(html).toContain("전환압력을 높이는 중");
+    expect(html).toContain("전환압력을 높이는 요소");
+    expect(html).toContain("전환압력을 낮추는 요소");
     expect(html).toContain("자산별 확인 포인트");
     expect(html).toContain("전형적 순환의 해석 예시이며 실제 예측 순서를 강제하지 않습니다.");
     expect(html).not.toContain("현재 국면에 인접한 다음 상태");
@@ -352,6 +363,51 @@ describe("EconomicCycleWorkbenchView", () => {
     expect(html).toContain("향후 1·2개월 확인 조건");
   });
 
+  it("shows RTDSM quality and exact 1·3·6 month comparison windows", () => {
+    const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={fixture()} />);
+
+    expect(html).toContain("RTDSM 4/4개 사용 가능");
+    expect(html).toContain("동일 후보 2회 연속");
+    expect(html).toContain("2026.05 → 2026.06");
+    expect(html).toContain("같은 방향 지표 2/4");
+    expect(html).not.toContain("판단 신뢰도");
+    expect(html).not.toContain("수정 민감도");
+  });
+
+  it("renders the common economic background once above unchanged asset cards", () => {
+    const payload = fixture();
+    payload.market_implications[0].economic_state = {
+      summary: "공통 경제 배경 설명",
+      observations: [],
+    };
+    const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={payload} />);
+
+    expect(html.match(/사이클 판단의 공통 경제 배경/g)).toHaveLength(1);
+    expect(html).toContain("공통 경제 배경 설명");
+    expect(html).toContain("채권·금리");
+    expect(html).toContain("원자재");
+  });
+
+  it("colors signed current and pathway changes by direction with arrows", () => {
+    const payload = delayedFixture();
+    payload.market_implications[1].price_context = {
+      symbol: "TEST",
+      as_of_date: "2026-07-31",
+      status: "MIXED",
+      returns: { one_week: 3.0, one_month: -2.0, three_months: -0.004 },
+      source_basis: "stored",
+    };
+    const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={payload} />);
+
+    expect(html).toContain("trend-positive");
+    expect(html).toContain("▲ +3.0%");
+    expect(html).toContain("trend-negative");
+    expect(html).toContain("▼ -8.0bp");
+    expect(html).toContain("trend-flat");
+    expect(html).toContain("— 0.0%");
+    expect(html).not.toContain("▼ -0.0%");
+  });
+
   it("renders four route nodes, current phase and watch direction without checkpoint clutter", () => {
     const watchHtml = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={fixture()} />);
     const maintain = fixture();
@@ -370,7 +426,6 @@ describe("EconomicCycleWorkbenchView", () => {
     expect(watchHtml).toContain("최근 6개월 · 위축 유지");
     expect(watchHtml).toContain('class="cycle-route-node-note" x="70" y="223">현재</text>');
     expect(watchHtml).not.toContain('class="cycle-quadrant"');
-    expect(watchHtml).not.toContain("6개월 전");
     expect(watchHtml).not.toContain("성장 레벨 →");
     expect(maintainHtml).not.toContain("cycle-route-direction");
     expect(maintainHtml).toContain("현재 국면 유지");
@@ -504,7 +559,7 @@ describe("EconomicCycleWorkbenchView", () => {
 
     expect(html).toContain("마지막 성공 수집");
     expect(html).toContain("2026-07-21 09:31:12");
-    expect(html).toContain("계산 기준일");
+    expect(html).toContain("공식 관측 월");
     expect(html).toContain("사용 원천 최신일");
   });
 
@@ -530,6 +585,32 @@ describe("EconomicCycleWorkbenchView", () => {
     expect(html).not.toContain("보통 1분 내외");
   });
 
+  it("ends the collecting state when a refresh result arrives", async () => {
+    const user = userEvent.setup();
+    const payload = fixture();
+    payload.data_freshness!.last_successful_collection_at = null;
+    const view = render(<EconomicCycleWorkbenchView payload={payload} />);
+
+    await user.click(screen.getByRole("button", { name: "최신 데이터 반영" }));
+    expect(screen.getByRole("button")).toHaveTextContent("필요한 자료만 확인하는 중");
+
+    view.rerender(
+      <EconomicCycleWorkbenchView
+        payload={{
+          ...payload,
+          refresh_result: {
+            status: "success",
+            message: "최신 공식 관측을 반영했습니다.",
+            finished_at: "2026-08-17 14:50:36",
+          },
+        }}
+      />,
+    );
+
+    expect(await screen.findByRole("button")).toHaveTextContent("최신 데이터 반영");
+    expect(screen.getByText("2026-08-17 14:50:36")).toBeInTheDocument();
+  });
+
   it("shows all phase colors and accessible month details in the regime ribbon", () => {
     const payload = fixture();
     payload.cycle_map.points = payload.cycle_map.points.map((point, index) => ({
@@ -544,8 +625,8 @@ describe("EconomicCycleWorkbenchView", () => {
     expect(html).toContain('class="legend-slowdown"');
     expect(html).toContain('class="legend-contraction"');
     expect(html).toContain('role="tooltip"');
-    expect(html).toContain("판단 신뢰도 보통");
-    expect(html).toContain("수정 민감도 안정");
+    expect(html).toContain("공식 월간 관측");
+    expect(html).toContain("2회 연속 후보 확인");
     expect(html).toContain("NBER 침체");
   });
 });

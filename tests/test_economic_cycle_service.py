@@ -783,6 +783,67 @@ def test_ready_read_model_maps_horizons_evidence_sources_and_separate_history() 
     json.dumps(model, allow_nan=False)
 
 
+def test_current_ui_evidence_comes_from_the_confirmed_rtdsm_state() -> None:
+    service = _load_service()
+    snapshot = _observed_snapshot()
+    observed = json.loads(str(snapshot["observed_state_json"]))
+    observed.update(
+        {
+            "activity_score": -0.42,
+            "labor_income_score": 0.18,
+            "level": -0.12,
+            "momentum": 0.09,
+            "source": "philadelphia_fed_rtdsm",
+        }
+    )
+    snapshot["observed_state_json"] = json.dumps(observed)
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: snapshot,
+        history_loader=lambda **_kwargs: [],
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=lambda **_kwargs: {},
+    )
+
+    assert [item["factor"] for item in model["evidence"]] == [
+        "activity_score",
+        "labor_income_score",
+        "level",
+        "momentum",
+    ]
+    assert all(
+        item["source_basis"] == "Philadelphia Fed RTDSM point-in-time"
+        for item in model["evidence"]
+    )
+
+
+def test_rtdsm_observed_state_never_renders_blank_or_legacy_eight_coverage() -> None:
+    service = _load_service()
+    snapshot = _observed_snapshot()
+    observed = json.loads(str(snapshot["observed_state_json"]))
+    observed.pop("available_series", None)
+    observed.update(
+        {
+            "activity_score": -0.4,
+            "labor_income_score": 0.1,
+            "source": "philadelphia_fed_rtdsm",
+        }
+    )
+    snapshot["observed_state_json"] = json.dumps(observed)
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: snapshot,
+        history_loader=lambda **_kwargs: [],
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=lambda **_kwargs: {},
+    )
+
+    assert model["observed_state"]["available_series"] == 4
+    assert model["observed_state"]["total_series"] == 4
+
+
 @pytest.mark.parametrize(
     ("phase", "expected"),
     [
@@ -923,7 +984,7 @@ def test_service_pairs_latest_intramonth_with_exact_monthly_baseline() -> None:
     assert [item["date"] for item in model["cycle_map"]["points"]] == ["2026-06-30"]
 
 
-def test_service_attaches_intramonth_freshness() -> None:
+def test_service_attaches_official_monthly_freshness() -> None:
     service = _load_service()
 
     model = service.build_economic_cycle_read_model(
@@ -936,33 +997,29 @@ def test_service_attaches_intramonth_freshness() -> None:
         freshness_date=date(2026, 7, 25),
     )
 
-    assert model["data_freshness"]["persisted_as_of_date"] == "2026-07-21"
-    assert model["data_freshness"]["target_as_of_date"] == "2026-07-24"
+    assert model["data_freshness"]["persisted_as_of_date"] == "2026-06-30"
+    assert model["data_freshness"]["target_as_of_date"] == "2026-06-30"
     assert model["data_freshness"]["status"] == "MISSING"
     assert (
         model["data_freshness"]["cycle_snapshot"]["status"]
-        == "REFRESH_AVAILABLE"
+        == "READY"
     )
     assert (
         model["data_freshness"]["asset_pathways"]["reference_date"]
         == "2026-07-25"
     )
-    assert (
-        model["data_freshness"]["last_successful_collection_at"]
-        == "2026-07-16 10:02:56"
-    )
-    assert (
-        model["data_freshness"]["latest_source_observation_date"]
-        == "2026-06-01"
-    )
+    assert model["data_freshness"]["last_successful_collection_at"] is None
+    assert model["data_freshness"]["latest_source_observation_date"] is None
 
 
 def test_service_combines_cycle_and_asset_freshness_without_provider_access() -> None:
     service = _load_service()
+    monthly = _ready_snapshot()
+    monthly["as_of_date"] = "2026-07-31"
     intramonth = _intramonth_snapshot()
     intramonth["as_of_date"] = "2026-08-10"
     model = service.build_economic_cycle_read_model(
-        snapshot_loader=lambda **_kwargs: _ready_snapshot(),
+        snapshot_loader=lambda **_kwargs: monthly,
         intramonth_loader=lambda **_kwargs: intramonth,
         history_loader=lambda **_kwargs: [],
         market_series_loader=lambda **_kwargs: [],
@@ -1089,7 +1146,7 @@ def test_service_truncates_evidence_and_cycle_map_without_recalculation() -> Non
         history_loader=lambda **_kwargs: _observed_history(20),
     )
 
-    assert len(model["evidence"]) == 10
+    assert len(model["evidence"]) == 2
     assert len(model["cycle_map"]["points"]) == 12
     assert model["cycle_map"]["points"][0]["date"] > "2020-01-01"
     assert all("probabilities" not in item for item in model["cycle_map"]["points"])

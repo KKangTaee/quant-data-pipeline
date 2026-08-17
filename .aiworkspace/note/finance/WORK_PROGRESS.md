@@ -7433,3 +7433,12 @@ Detailed historical logs were archived on `2026-04-13`.
   위축 69.7%·확장 23.9%·둔화 6.4%이며 고정 순환을 강제하지 않는다.
 - 자산별 확인 포인트 계산·디자인은 유지했고 Browser에서 금리·실질금리·신용스프레드
   노출과 confirmed 최근 이력을 재검증했다. 상세는 `economic-cycle-transition-production-v1-20260817` task다.
+
+## 2026-08-17 - 경제 사이클 해석성·공식 갱신 5/5 완료
+
+- Data Freshness를 직전 완결 월말 RTDSM current 기준으로 바꾸고 수동 액션을 RTDSM 4개
+  confirmed publication 경로로 정렬했다. 실제 Browser 갱신은 약 45초 안에 종료됐다.
+- 현재 국면·1/3/6개월·순환 경로·전환압력·조건부 목적지·근거·ribbon을 같은 RTDSM 계약으로
+  정리했고, 자산 카드는 보존한 채 공통 배경과 원자재 금 중복만 제거했다.
+- 양수/음수/0을 녹색 ▲·빨간 ▼·회색 —로 표시하고 `-0.0` 경계도 중립 처리했다. 상세는
+  `economic-cycle-interpretability-refresh-v1-20260817` task다.

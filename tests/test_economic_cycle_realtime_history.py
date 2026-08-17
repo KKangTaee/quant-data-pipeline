@@ -254,6 +254,12 @@ def test_rtdsm_observed_history_waits_for_level_and_momentum() -> None:
     )
     assert history[5].observed_state["phase"] == "recovery"
     assert history[-1].observed_state["phase"] == "expansion"
+    assert history[-1].observed_state["available_series"] == 4
+    assert history[-1].observed_state["total_series"] == 4
+    assert [
+        item["series_id"]
+        for item in history[-1].observed_state["series_quality"]
+    ] == ["IPT", "H", "EMPLOY", "RUC"]
 
 
 def test_rtdsm_parity_metrics_are_hand_checkable() -> None:

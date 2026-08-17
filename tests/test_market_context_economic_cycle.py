@@ -371,13 +371,15 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         "cycle-route-direction",
         "summarizeCycleRouteHistory",
         'evidence.group === "real_economy"',
-        'evidence.group === "forecast_context"',
-        "현재 국면과 전환의 판단 근거",
-        "현재 위치의 근거",
-        "현재점에 반영되는 생산·소비와 고용·소득",
-        "전환을 해석할 참고 맥락",
-        "현재 국면을 바꾸지 않고 전환 조건을 해석하는 금융·선행·물가·정책 정보",
-        'financial_leading_score: "금융·선행 여건"',
+        "현재 국면의 종합 판단과 근거",
+        "입력 실물지표",
+        "최종 국면 좌표",
+        "생산·주택 활동과 고용·소득",
+        'level: "종합 경기 수준"',
+        'momentum: "최근 3개월 모멘텀"',
+        "RTDSM 4지표 기준으로 교체된 결과입니다",
+        "동일 후보 2회 연속",
+        "직전 공식 월과 비교",
         'statusLabel: "기준 이상"',
         'statusLabel: "기준 이하"',
         'statusLabel: "기준 부근"',
@@ -410,7 +412,8 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         'className="regime-ribbon"',
         'className="nber-recession"',
         "방법론과 품질",
-        "관측 국면과 NBER 이력을 분리",
+        "공식 월간 관측",
+        "2회 연속 후보 확인",
         "수익률 예측이나 매매 지시가 아닙니다",
     ):
         assert token in source
@@ -582,7 +585,8 @@ def test_cycle_component_ready_and_limited_observed_state_semantics_are_safe() -
     assert "confidence_label" in source
     assert "revision_sensitivity_label" in source
     assert "data_status" in source
-    assert "probabilities" not in source
+    assert "current_phase_excluded: true" in source
+    assert "정확한 전환 월을 뜻하지 않습니다" in source
     assert "판단 불가" in source
 
 
@@ -677,7 +681,7 @@ def test_cycle_component_responsive_contract_avoids_mobile_horizontal_scroll() -
     assert "overflow-x: hidden" in css
     assert ".recent-change-grid" in css
     assert "grid-template-columns: 1fr" in css
-    assert ".cycle-layout" in css
+    assert ".cycle-route-layout" in css
     assert ".regime-ribbon" in css
 
 

@@ -188,6 +188,11 @@ def test_build_transition_production_forecast_separates_pressure_and_destination
     assert result.monitor["destination"]["primary_phase"] != "recovery"
     assert result.monitor["recent_phase_history"][-1]["phase"] == "recovery"
     assert [item["horizon_months"] for item in result.recent_changes] == [1, 3, 6]
+    assert all(item["comparison_start_date"] for item in result.recent_changes)
+    assert all(
+        item["comparison_end_date"] == "2026-07-31"
+        for item in result.recent_changes
+    )
     assert {item["driver_id"] for item in result.monitor["drivers"]} >= {
         "level",
         "momentum",

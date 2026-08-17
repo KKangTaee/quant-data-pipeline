@@ -992,7 +992,7 @@ def build_commodities_context(
     economic_state: Mapping[str, object],
     gold_context: Mapping[str, object],
 ) -> dict[str, object]:
-    """Build separate WTI, copper, and reused-gold observation contexts."""
+    """Build WTI and copper contexts; gold remains its standalone asset card."""
     wti_price = evaluations["CL=F"]
     wti_price_context = _price_context("CL=F", wti_price)
     wti_specs = (
@@ -1148,42 +1148,7 @@ def build_commodities_context(
         "narrative": " ".join(copper_interpretation),
     }
 
-    gold_summary = str(gold_context.get("summary") or "")
-    gold_narrative = str(gold_context.get("narrative") or gold_summary)
-    gold_interpretation = [
-        str(row)
-        for row in gold_context.get("current_interpretation") or []
-        if str(row).strip()
-    ]
-    gold = {
-        "asset_id": "gold",
-        "label": "금",
-        "coverage": gold_context.get("coverage") or "INSUFFICIENT",
-        "data_status": gold_context.get("data_status") or "INSUFFICIENT",
-        "price_context": dict(gold_context.get("price_context") or {}),
-        "current_movement": [],
-        "observed_pathways": [
-            dict(row) for row in gold_context.get("pathways") or []
-        ],
-        "current_interpretation": (
-            gold_interpretation
-            if gold_interpretation
-            else [gold_narrative]
-            if gold_narrative
-            else []
-        ),
-        "next_check_conditions": [
-            "금 가격과 실질금리·달러 경로의 다음 측정값을 각각 확인합니다."
-        ],
-        "provenance": ["기존 2차 금 관측 컨텍스트 재사용"],
-        "limitations": [
-            str(row.get("label") or row.get("reason_code") or "")
-            for row in gold_context.get("unmeasured_pathways") or []
-        ],
-        "summary": gold_summary or gold_narrative,
-        "narrative": gold_narrative,
-    }
-    assets = [wti, copper, gold]
+    assets = [wti, copper]
     coverage = (
         "INSUFFICIENT"
         if all(row["coverage"] == "INSUFFICIENT" for row in assets)
@@ -1207,9 +1172,9 @@ def build_commodities_context(
         "observed_pathways": [],
         "current_interpretation": [],
         "next_check_conditions": [],
-        "provenance": ["WTI·구리 신규 경로와 기존 금 컨텍스트의 결합"],
+        "provenance": ["WTI·구리 측정 경로"],
         "limitations": [],
-        "narrative": "WTI·구리·금은 서로 다른 측정 경로로 구분합니다.",
+        "narrative": "WTI와 구리를 서로 다른 측정 경로로 구분합니다.",
     }
 def build_asset_pathway_contexts(
     *,
