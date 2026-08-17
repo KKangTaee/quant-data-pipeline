@@ -10,6 +10,13 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-08-17 - backtest-dev master 병합 충돌 해결
+
+- Sentiment 3차 1W·1M 관측 변화와 master의 Futures Macro 장중 관측·재가격화 계약을 함께 보존했다.
+- ROADMAP 충돌과 stale task pointer/runbook/service-contract assertion을 integrated code 기준으로 정렬했다.
+- Futures Macro 157개+15 subtests, 변경 contract 5개, compile, React build와 current-worktree Browser QA를 통과했다.
+- registry/saved/run history/기존 QA artifact는 제외했다. 상세는 [integration task](./tasks/active/master-merge-resolution-20260817/STATUS.md)를 본다.
+
 ### 2026-08-10 - main-dev master 병합 충돌 해결
 
 - 경제 사이클 v3 observed-state/transition/freshness/asset pathway와 master의 독립
@@ -7389,6 +7396,15 @@ Detailed historical logs were archived on `2026-04-13`.
 - DGS 등 일별 PIT clock의 데이터셋 등록일 오류를 관측일 EOD로 바로잡았고 equity도
   nested chronological ridge로 MAE 6.0751·coverage 0.875를 재검증했다. 상세는 functional recovery task다.
 
+## 2026-08-11 - Futures Macro 장중 현재 관측 완료
+
+- 활성 futures trade session은 저장된 latest closed 5m으로 임시 1D/5D/20D를 재계산하고,
+  향후 5D 검증과 immutable history는 completed daily만 사용하도록 분리했다.
+- actual refresh로 2026-08-10을 17/17 확정하고 저녁 재개 2026-08-11 session을
+  `INTRADAY_READY`, 6/6 family로 확인했다.
+- 5D `NO_EDGE`는 120 독립 표본·325 시간순 평가에서 model Brier가 baseline보다 낫지 않은
+  결과로 화면에 분리 표시했다. 상세는 `tasks/active/overview-futures-macro-intraday-nowcast-v1-20260811/`다.
+
 ## 2026-08-12 - 경제 사이클 next-transition feasibility 2/5 완료
 
 - 고정 3·6개월 뒤 국면 대신 next confirmed destination과 transition imminence를
@@ -7442,3 +7458,12 @@ Detailed historical logs were archived on `2026-04-13`.
   정리했고, 자산 카드는 보존한 채 공통 배경과 원자재 금 중복만 제거했다.
 - 양수/음수/0을 녹색 ▲·빨간 ▼·회색 —로 표시하고 `-0.0` 경계도 중립 처리했다. 상세는
   `economic-cycle-interpretability-refresh-v1-20260817` task다.
+
+## 2026-08-17 - main-dev ← master 통합 4/4 완료
+
+- `codex/main-dev`의 Economic Cycle production·해석 기준과 `master`의 Futures Macro
+  장중 관측·재가격화, Sentiment 1W·1M 관측 변화 계약을 함께 보존했다.
+- shared Market Research CSS 영향 component 4개를 재빌드하고 focused Python/React 및
+  desktop·420px actual Browser QA를 통과했다.
+- stale Pattern Map assertion과 task state 4건을 정렬했다. 병합 기록과 잔여 baseline은
+  `tasks/active/main-dev-master-merge-resolution-20260817/`에서 확인한다.

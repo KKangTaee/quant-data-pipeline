@@ -1,6 +1,7 @@
 # Inflation Policy Core Engines Status
 
-State: active
+State: complete
+Last Updated: 2026-08-17
 
 ## Current
 
@@ -23,7 +24,10 @@ State: active
 - 연말 Q4/Q4·정책·저항 event probability: `LIMITED`
 - joint rate 역산·침체: `NOT_AVAILABLE`
 
-## Next
+## Handoff
 
-전체 phase 3/5차에서 저장 snapshot을 읽는 순방향·10년물 목표 역산 workbench를
-구현한다. UI는 `LIMITED/NOT_AVAILABLE`을 숨기거나 `READY`처럼 표시하지 않는다.
+- 이 task의 구현·actual chronological validation은 완료됐다.
+- 후속 workbench, equity stress, 독립 recession 작업도
+  `inflation-policy-yield-path` phase와
+  `inflation-policy-functional-recovery-20260803`에서 5/5 완료됐다.
+- 이후에는 동일 refresh/materialization 경로의 정기 갱신과 검증 지표 drift만 운영한다.

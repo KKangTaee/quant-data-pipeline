@@ -8275,7 +8275,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("데이터 작업", controls_body)
         self.assertIn("st.columns([1, 0.16, 0.16]", controls_body)
         self.assertNotIn("2.05, 0.62, 0.62, 1.25", controls_body)
-        self.assertIn('"일봉 갱신"', controls_body)
+        self.assertIn('"최신 갱신"', controls_body)
         self.assertIn('"다시 읽기"', controls_body)
         self.assertIn("최근 1년 일봉을 겹쳐 갱신", futures_helper_source)
         self.assertIn("이력이 부족한 종목만 장기 보강", futures_helper_source)
@@ -8317,9 +8317,20 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "missing_symbols": [],
                 "reason": "test_no_pending_session",
             },
+            session_probe=lambda **kwargs: {
+                "status": "completed",
+                "session_date": "2026-07-22",
+                "symbols_required": len(DEFAULT_CORE_FUTURES_SYMBOLS),
+                "missing_symbols": [],
+                "reason": "test_no_pending_session",
+            },
         )
 
-        kwargs = collector.call_args.kwargs
+        kwargs = next(
+            call.kwargs
+            for call in collector.call_args_list
+            if call.kwargs["interval"] == "1d"
+        )
         self.assertEqual(kwargs["period"], "1y")
         self.assertEqual(kwargs["interval"], "1d")
         self.assertEqual(tuple(kwargs["symbols"]), DEFAULT_CORE_FUTURES_SYMBOLS)
@@ -8546,18 +8557,20 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("build_futures_macro_react_workbench_payload", helper_source)
         for name in (
             "ShortHorizonDecisionSection",
+            "MarketRepricingSection",
             "FamilyDirectionSection",
-            "CalculationScopeSection",
             "PatternRibbonSection",
             "MethodDisclosure",
             "CalculationTraceDisclosure",
         ):
             self.assertTrue((source_root / f"{name}.tsx").exists())
             self.assertIn(name, source)
+        self.assertFalse((source_root / "ForecastValidationGate.tsx").exists())
+        self.assertNotIn("ForecastValidationGate", source)
         self.assertLess(source.index("<MacroContextSection"), source.index("<ShortHorizonDecisionSection"))
-        self.assertLess(source.index("<ShortHorizonDecisionSection"), source.index("<FamilyDirectionSection"))
-        self.assertLess(source.index("<FamilyDirectionSection"), source.index("<CalculationScopeSection"))
-        self.assertLess(source.index("<CalculationScopeSection"), source.index("<PatternRibbonSection"))
+        self.assertLess(source.index("<ShortHorizonDecisionSection"), source.index("<MarketRepricingSection"))
+        self.assertLess(source.index("<MarketRepricingSection"), source.index("<FamilyDirectionSection"))
+        self.assertLess(source.index("<FamilyDirectionSection"), source.index("<PatternRibbonSection"))
         self.assertLess(source.index("<PatternRibbonSection"), source.index("<MethodDisclosure"))
         self.assertLess(source.index("<MethodDisclosure"), source.index("<CalculationTraceDisclosure"))
         self.assertNotIn("<PatternHorizonSection", source)
@@ -8588,8 +8601,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("sessionEvidence={payload.session_evidence}", root)
         self.assertIn("PENDING_SESSION_FINALIZATION", context)
-        self.assertIn("완료 전이라 현재 위치와 전망에서 제외", context)
-        self.assertIn("마지막 완료 세션", context)
+        self.assertIn("장중 잠정 관측", context)
+        self.assertIn("hero.completed_as_of_date", context)
 
     def test_futures_macro_ribbon_has_visible_regime_legend(self) -> None:
         root = Path("app/web/streamlit_components/futures_macro_workbench/src")
@@ -8638,13 +8651,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("<b>{item.estimate_status}</b>", assets)
         self.assertNotIn("item.estimate_status.toLowerCase()", assets)
 
-    def test_futures_macro_pattern_map_uses_full_observed_trail_and_gated_regions(self) -> None:
+    def test_futures_macro_pattern_map_preserves_shadow_evidence_without_primary_render(self) -> None:
         source_root = Path("app/web/streamlit_components/futures_macro_workbench/src")
         root = (source_root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
         pattern_map = (source_root / "PatternMapSection.tsx").read_text(encoding="utf-8")
         style = (source_root / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("horizons={payload.horizons}", root)
+        self.assertNotIn("<PatternMapSection", root)
         self.assertIn('data-horizon="observed"', pattern_map)
         self.assertIn('data-horizon="5D"', pattern_map)
         self.assertIn('data-horizon="20D"', pattern_map)
@@ -9019,25 +9032,25 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("axis.available", all_source)
         self.assertIn("관측값 없음 · 판정 보류", all_source)
 
-    def test_sentiment_react_period_cards_watch_paths_and_detail_disclosure(self) -> None:
+    def test_sentiment_react_period_cards_and_detail_disclosure_without_watch_guide(self) -> None:
         source_root = Path("app/web/streamlit_components/sentiment_workbench/src")
         root_source = (source_root / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
-        outlook_path = source_root / "SentimentOutlookSection.tsx"
+        all_source = "\n".join(path.read_text(encoding="utf-8") for path in source_root.glob("*.tsx"))
+        dashboard_helper_source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
+        period_change_path = source_root / "SentimentPeriodChangeSection.tsx"
         watch_path = source_root / "WatchConditionsSection.tsx"
         disclosure_path = source_root / "SentimentEvidenceDisclosure.tsx"
-        outlook_source = outlook_path.read_text(encoding="utf-8") if outlook_path.exists() else ""
-        watch_source = watch_path.read_text(encoding="utf-8") if watch_path.exists() else ""
+        period_change_source = period_change_path.read_text(encoding="utf-8") if period_change_path.exists() else ""
         disclosure_source = disclosure_path.read_text(encoding="utf-8") if disclosure_path.exists() else ""
 
-        self.assertTrue(outlook_path.exists())
-        self.assertTrue(watch_path.exists())
+        self.assertTrue(period_change_path.exists())
+        self.assertFalse(watch_path.exists())
         self.assertTrue(disclosure_path.exists())
         for component in (
             "<SentimentHero",
             "<CurrentEvidenceSection",
             "<SentimentHistorySection",
-            "<SentimentOutlookSection",
-            "<WatchConditionsSection",
+            "<SentimentPeriodChangeSection",
             "<SentimentEvidenceDisclosure",
         ):
             self.assertIn(component, root_source)
@@ -9046,27 +9059,62 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "<SentimentHero",
                 "<CurrentEvidenceSection",
                 "<SentimentHistorySection",
-                "<SentimentOutlookSection",
-                "<WatchConditionsSection",
+                "<SentimentPeriodChangeSection",
                 "<SentimentEvidenceDisclosure",
             )),
             [root_source.index(component) for component in (
                 "<SentimentHero",
                 "<CurrentEvidenceSection",
                 "<SentimentHistorySection",
-                "<SentimentOutlookSection",
-                "<WatchConditionsSection",
+                "<SentimentPeriodChangeSection",
                 "<SentimentEvidenceDisclosure",
             )],
         )
-        self.assertIn("outlook.horizons.map", outlook_source)
-        self.assertIn('data-horizon={horizon.key}', outlook_source)
-        self.assertIn('horizon.status === "UNAVAILABLE"', outlook_source)
-        self.assertIn("검증 전 비공개", outlook_source)
-        self.assertIn("확률을 임의 생성하지 않습니다", outlook_source)
-        self.assertIn("data-watch-path={item.key}", watch_source)
-        self.assertIn("watchConditions.map", watch_source)
-        self.assertIn("정렬·반전·지속", watch_source)
+        self.assertNotIn("<SentimentOutlookSection", root_source)
+        self.assertNotIn('from "./WatchConditionsSection"', root_source)
+        self.assertNotIn("<WatchConditionsSection", root_source)
+        self.assertNotIn("다음 확인 조건", all_source)
+        self.assertIn("기간별 심리 변화", period_change_source)
+        self.assertIn("periodChanges.periods.map", period_change_source)
+        self.assertIn('data-period={period.key}', period_change_source)
+        self.assertIn("period.metrics.map", period_change_source)
+        self.assertIn("metric.available", period_change_source)
+        self.assertIn("sentiment-workbench__period-change-primary", period_change_source)
+        self.assertIn("기간 변화", period_change_source)
+        self.assertIn("signedValue(metric.change, metric.unit_label)", period_change_source)
+        self.assertIn("sentiment-workbench__period-current", period_change_source)
+        self.assertIn("현재", period_change_source)
+        self.assertIn("displayValue(metric.end_value, metric.unit_label)", period_change_source)
+        available_value_markup = period_change_source[
+            period_change_source.index('<div className="sentiment-workbench__period-value">') :
+            period_change_source.index('<div className="sentiment-workbench__period-unavailable">')
+        ]
+        change_primary_markup = available_value_markup[
+            available_value_markup.index('<div className="sentiment-workbench__period-change-primary">') :
+            available_value_markup.index('<div className="sentiment-workbench__period-current">')
+        ]
+        current_markup = available_value_markup[
+            available_value_markup.index('<div className="sentiment-workbench__period-current">') :
+        ]
+        self.assertIn(
+            "<strong>{signedValue(metric.change, metric.unit_label)}</strong>",
+            change_primary_markup,
+        )
+        self.assertIn("<span>기간 변화</span>", change_primary_markup)
+        self.assertNotIn("displayValue(metric.end_value", change_primary_markup)
+        self.assertIn(
+            "<b>{displayValue(metric.end_value, metric.unit_label)}</b>",
+            current_markup,
+        )
+        self.assertIn("<span>현재</span>", current_markup)
+        self.assertNotIn("signedValue(metric.change", current_markup)
+        self.assertLess(
+            available_value_markup.index("signedValue(metric.change, metric.unit_label)"),
+            available_value_markup.index("displayValue(metric.end_value, metric.unit_label)"),
+        )
+        self.assertNotIn("<strong>{displayValue(metric.end_value", available_value_markup)
+        self.assertIn("period.relationship.summary", period_change_source)
+        self.assertIn("실제 관측 변화", period_change_source)
         self.assertIn("<details", disclosure_source)
         self.assertIn("payload.evidence.cnn_components.map", disclosure_source)
         self.assertIn("payload.evidence.aaii_comparison.map", disclosure_source)
@@ -9076,8 +9124,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("payload.evidence.cnn_components.map", root_source)
         self.assertNotIn("payload.watch_conditions.map", root_source)
         self.assertNotIn("<details", root_source)
-        self.assertIn("fallbackOutlook", root_source)
-        self.assertIn("payload.outlook || fallbackOutlook", root_source)
+        self.assertIn("fallbackPeriodChanges", root_source)
+        self.assertIn("fallbackPeriodMetric", root_source)
+        self.assertIn("payload.period_changes || fallbackPeriodChanges", root_source)
+        self.assertIn("sentiment-learning-v4-period-changes", dashboard_helper_source)
 
     def test_sentiment_react_redesign_css_uses_balanced_surfaces_and_mobile_stack(self) -> None:
         style = Path("app/web/streamlit_components/sentiment_workbench/src/style.css").read_text(encoding="utf-8")
@@ -9093,8 +9143,70 @@ class OverviewAutomationContractTests(unittest.TestCase):
         history_grid_rule = history_grid_rule[: history_grid_rule.index("}")]
         self.assertIn("grid-template-columns: minmax(0, 1fr);", history_grid_rule)
         self.assertNotIn("repeat(2", history_grid_rule)
-        self.assertIn(".sentiment-workbench__outlook-grid", style)
-        self.assertIn(".sentiment-workbench__watch-grid", style)
+        self.assertIn(".sentiment-workbench__period-change-grid", style)
+        self.assertIn(".sentiment-workbench__period-metrics", style)
+        period_metric_styles = style[style.index(".sentiment-workbench__period-metric {") :]
+        period_metric_styles = period_metric_styles[
+            : period_metric_styles.index(".sentiment-workbench__period-metric > header {")
+        ]
+        self.assertNotIn("border-top", period_metric_styles)
+        self.assertNotRegex(
+            style,
+            r'\.sentiment-workbench__period-metric\[data-source="cnn"\]\s*\{[^}]*border-top',
+        )
+        self.assertNotRegex(
+            style,
+            r'\.sentiment-workbench__period-metric\[data-source="aaii_spread"\]\s*\{[^}]*border-top',
+        )
+        marker_selector = ".sentiment-workbench__period-metric > header span::before {"
+        marker_rule = style[style.index(marker_selector) :]
+        marker_rule = marker_rule[: marker_rule.index("}")]
+        self.assertIn("border-radius: 999px;", marker_rule)
+        self.assertIn("height: 7px;", marker_rule)
+        self.assertIn("width: 7px;", marker_rule)
+        cnn_marker_selector = '.sentiment-workbench__period-metric[data-source="cnn"] > header span::before {'
+        cnn_marker_rule = style[style.index(cnn_marker_selector) :]
+        cnn_marker_rule = cnn_marker_rule[: cnn_marker_rule.index("}")]
+        self.assertIn("background: #b58a6a;", cnn_marker_rule)
+        self.assertNotIn("#5aa99d", cnn_marker_rule)
+        aaii_marker_selector = (
+            '.sentiment-workbench__period-metric[data-source="aaii_spread"] > header span::before {'
+        )
+        aaii_marker_rule = style[style.index(aaii_marker_selector) :]
+        aaii_marker_rule = aaii_marker_rule[: aaii_marker_rule.index("}")]
+        self.assertIn("background: #5aa99d;", aaii_marker_rule)
+        self.assertNotIn("#b58a6a", aaii_marker_rule)
+        primary_rule = style[style.index(".sentiment-workbench__period-change-primary strong {") :]
+        primary_rule = primary_rule[: primary_rule.index("}")]
+        self.assertIn("font-size: 1.18rem;", primary_rule)
+        self.assertIn("font-weight: 900;", primary_rule)
+        current_rule = style[style.index(".sentiment-workbench__period-current b {") :]
+        current_rule = current_rule[: current_rule.index("}")]
+        self.assertIn("color: #526176;", current_rule)
+        self.assertIn("font-size: 0.76rem;", current_rule)
+        up_change_selector = (
+            '.sentiment-workbench__period-metric[data-change-direction="up"] '
+            ".sentiment-workbench__period-change-primary strong {"
+        )
+        up_change_rule = style[style.index(up_change_selector) :]
+        up_change_rule = up_change_rule[: up_change_rule.index("}")]
+        self.assertIn("color: #0f766e;", up_change_rule)
+        down_change_selector = (
+            '.sentiment-workbench__period-metric[data-change-direction="down"] '
+            ".sentiment-workbench__period-change-primary strong {"
+        )
+        down_change_rule = style[style.index(down_change_selector) :]
+        down_change_rule = down_change_rule[: down_change_rule.index("}")]
+        self.assertIn("color: #a14f61;", down_change_rule)
+        mobile_rule = style[style.index("@media (max-width: 460px)") :]
+        mobile_value_rule = mobile_rule[mobile_rule.index(".sentiment-workbench__period-value {") :]
+        mobile_value_rule = mobile_value_rule[: mobile_value_rule.index("}")]
+        self.assertIn("grid-template-columns: minmax(0, 1fr);", mobile_value_rule)
+        mobile_current_rule = mobile_rule[mobile_rule.index(".sentiment-workbench__period-current {") :]
+        mobile_current_rule = mobile_current_rule[: mobile_current_rule.index("}")]
+        self.assertIn("justify-items: start;", mobile_current_rule)
+        self.assertIn(".sentiment-workbench__period-relationship", style)
+        self.assertNotIn(".sentiment-workbench__watch-grid", style)
         self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", style)
         self.assertIn(":focus-visible", style)
         self.assertIn("@media (max-width: 760px)", style)
@@ -9138,7 +9250,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("시장 행동", all_source)
         self.assertIn("AAII 투자자 설문", all_source)
         self.assertIn("두 축의 현재 근거", all_source)
-        self.assertIn("다음 확인 조건", all_source)
+        self.assertNotIn("다음 확인 조건", all_source)
         self.assertNotIn('className="sentiment-workbench__cross-read"', all_source)
         self.assertNotIn("metricByLabel(\"CNN Fear & Greed\")", react_source)
         self.assertNotIn("metricByLabel(\"AAII Bearish\")", react_source)
@@ -9149,7 +9261,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("payload.component_explanations.map", react_source)
         self.assertEqual(all_source.count("payload.evidence.cnn_components.map"), 1)
         self.assertIn("aaiiComparison.find", all_source)
-        self.assertIn("watchConditions.map", all_source)
+        self.assertNotIn("watchConditions.map", all_source)
         self.assertIn("SentimentEvidenceDisclosure", react_source)
         self.assertLess(
             react_source.index("<SentimentHistorySection"),
@@ -9159,7 +9271,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn(".sentiment-workbench__cross-metric", react_style)
         self.assertIn("box-sizing: border-box;", react_style)
         self.assertIn(".sentiment-workbench__raw-disclosure", react_style)
-        self.assertIn(".sentiment-workbench__watch-grid", react_style)
+        self.assertNotIn(".sentiment-workbench__watch-grid", react_style)
 
     def test_sentiment_react_context_surface_shows_recent_range_and_divergence(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")
@@ -23026,6 +23138,232 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             self.assertIsNone(row["baseline"])
             self.assertIn("point-in-time", row["status_reason"])
 
+    def test_market_sentiment_period_changes_use_observation_lags_and_existing_cross_read(self) -> None:
+        from app.services.overview.sentiment import _build_market_sentiment_analysis
+
+        cnn_dates = pd.bdate_range("2026-07-13", periods=21)
+        aaii_dates = pd.date_range("2026-07-09", periods=5, freq="7D")
+        history_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": observation_date,
+                    "value": 40.0 + index,
+                    "source": "cnn_fear_greed",
+                }
+                for index, observation_date in enumerate(cnn_dates)
+            ]
+            + [
+                {
+                    "series_id": "AAII_BULL_BEAR_SPREAD",
+                    "observation_date": observation_date,
+                    "value": value,
+                    "source": "aaii_sentiment_survey",
+                }
+                for observation_date, value in zip(aaii_dates, (-12.0, -5.0, 0.0, 5.0, 12.0))
+            ]
+        )
+
+        analysis = _build_market_sentiment_analysis(
+            coverage={
+                "cnn_score": 60.0,
+                "aaii_bullish": 46.0,
+                "aaii_neutral": 20.0,
+                "aaii_bearish": 34.0,
+                "aaii_bull_bear_spread": 12.0,
+                "source_count": 2,
+                "missing_count": 0,
+                "stale_count": 0,
+            },
+            component_rows=[],
+            history_rows=history_rows,
+        )
+
+        period_changes = analysis["period_changes"]
+        self.assertEqual(period_changes["status"], "AVAILABLE")
+        self.assertEqual([period["key"] for period in period_changes["periods"]], ["1W", "1M"])
+
+        one_week = period_changes["periods"][0]
+        one_week_metrics = {metric["key"]: metric for metric in one_week["metrics"]}
+        self.assertEqual(one_week["status"], "AVAILABLE")
+        self.assertEqual(one_week_metrics["cnn"]["unit"], "point")
+        self.assertEqual(one_week_metrics["cnn"]["start_value"], 55.0)
+        self.assertEqual(one_week_metrics["cnn"]["end_value"], 60.0)
+        self.assertEqual(one_week_metrics["cnn"]["change"], 5.0)
+        self.assertEqual(one_week_metrics["cnn"]["start_date"], "2026-08-03")
+        self.assertEqual(one_week_metrics["cnn"]["end_date"], "2026-08-10")
+        self.assertEqual(one_week_metrics["aaii_spread"]["unit"], "percentage_point")
+        self.assertEqual(one_week_metrics["aaii_spread"]["start_value"], 5.0)
+        self.assertEqual(one_week_metrics["aaii_spread"]["end_value"], 12.0)
+        self.assertEqual(one_week_metrics["aaii_spread"]["change"], 7.0)
+        self.assertEqual(one_week["relationship"]["start_status"], "부분 엇갈림")
+        self.assertEqual(one_week["relationship"]["end_status"], "심리 일치 · 위험선호")
+        self.assertTrue(one_week["relationship"]["changed"])
+
+        one_month = period_changes["periods"][1]
+        one_month_metrics = {metric["key"]: metric for metric in one_month["metrics"]}
+        self.assertEqual(one_month_metrics["cnn"]["start_value"], 40.0)
+        self.assertEqual(one_month_metrics["cnn"]["change"], 20.0)
+        self.assertEqual(one_month_metrics["aaii_spread"]["start_value"], -12.0)
+        self.assertEqual(one_month_metrics["aaii_spread"]["change"], 24.0)
+        self.assertEqual(one_month["relationship"]["start_status"], "심리 일치 · 방어 우위")
+        self.assertEqual(one_month["relationship"]["end_status"], "심리 일치 · 위험선호")
+
+    def test_market_sentiment_period_changes_do_not_invent_changes_for_short_history(self) -> None:
+        from app.services.overview.sentiment import _build_market_sentiment_analysis
+
+        analysis = _build_market_sentiment_analysis(
+            coverage={
+                "cnn_score": 60.0,
+                "aaii_bullish": 46.0,
+                "aaii_neutral": 20.0,
+                "aaii_bearish": 34.0,
+                "aaii_bull_bear_spread": 12.0,
+                "source_count": 2,
+                "missing_count": 0,
+                "stale_count": 0,
+            },
+            component_rows=[],
+            history_rows=pd.DataFrame(
+                [
+                    {
+                        "series_id": "CNN_FEAR_GREED",
+                        "observation_date": "2026-08-10",
+                        "value": 60.0,
+                        "source": "cnn_fear_greed",
+                    },
+                    {
+                        "series_id": "AAII_BULL_BEAR_SPREAD",
+                        "observation_date": "2026-08-06",
+                        "value": 12.0,
+                        "source": "aaii_sentiment_survey",
+                    },
+                ]
+            ),
+        )
+
+        self.assertEqual(analysis["period_changes"]["status"], "UNAVAILABLE")
+        for period in analysis["period_changes"]["periods"]:
+            self.assertEqual(period["status"], "UNAVAILABLE")
+            self.assertFalse(period["relationship"]["available"])
+            for metric in period["metrics"]:
+                self.assertFalse(metric["available"])
+                self.assertIsNone(metric["start_value"])
+                self.assertIsNone(metric["change"])
+
+    def test_market_sentiment_period_change_uses_latest_collected_version_for_same_date(self) -> None:
+        from app.services.overview.sentiment import _period_change_metric
+
+        metric = _period_change_metric(
+            pd.DataFrame(
+                [
+                    {
+                        "series_id": "CNN_FEAR_GREED",
+                        "observation_date": "2026-08-03",
+                        "value": 40.0,
+                        "source": "cnn_fear_greed",
+                        "collected_at": "2026-08-04 01:00:00",
+                    },
+                    {
+                        "series_id": "CNN_FEAR_GREED",
+                        "observation_date": "2026-08-10",
+                        "value": 66.0,
+                        "source": "cnn_fear_greed",
+                        "collected_at": "2026-08-11 02:00:00",
+                    },
+                    {
+                        "series_id": "CNN_FEAR_GREED",
+                        "observation_date": "2026-08-10",
+                        "value": 10.0,
+                        "source": "legacy_cnn",
+                        "collected_at": "2026-08-10 23:00:00",
+                    },
+                ]
+            ),
+            key="cnn",
+            label="CNN 시장 행동",
+            series_id="CNN_FEAR_GREED",
+            lag_observations=1,
+            unit="point",
+            unit_label="pt",
+        )
+
+        self.assertTrue(metric["available"])
+        self.assertEqual(metric["observation_count"], 2)
+        self.assertEqual(metric["start_value"], 40.0)
+        self.assertEqual(metric["end_value"], 66.0)
+        self.assertEqual(metric["change"], 26.0)
+
+    def test_market_sentiment_period_change_fails_closed_when_latest_version_is_missing(self) -> None:
+        from app.services.overview.sentiment import _period_change_metric
+
+        metric = _period_change_metric(
+            pd.DataFrame(
+                [
+                    {
+                        "series_id": "CNN_FEAR_GREED",
+                        "observation_date": "2026-08-03",
+                        "value": 40.0,
+                        "source": "cnn_fear_greed",
+                        "collected_at": "2026-08-04 01:00:00",
+                    },
+                    {
+                        "series_id": "CNN_FEAR_GREED",
+                        "observation_date": "2026-08-10",
+                        "value": 66.0,
+                        "source": "legacy_cnn",
+                        "collected_at": "2026-08-10 23:00:00",
+                    },
+                    {
+                        "series_id": "CNN_FEAR_GREED",
+                        "observation_date": "2026-08-10",
+                        "value": None,
+                        "source": "cnn_fear_greed",
+                        "collected_at": "2026-08-11 02:00:00",
+                    },
+                ]
+            ),
+            key="cnn",
+            label="CNN 시장 행동",
+            series_id="CNN_FEAR_GREED",
+            lag_observations=1,
+            unit="point",
+            unit_label="pt",
+        )
+
+        self.assertFalse(metric["available"])
+        self.assertEqual(metric["status_label"], "최신 관측 결측")
+        self.assertIsNone(metric["end_value"])
+        self.assertIsNone(metric["change"])
+        self.assertEqual(metric["end_date"], "2026-08-10")
+
+    def test_market_sentiment_period_relationship_detects_axis_shift_inside_same_status(self) -> None:
+        from app.services.overview.sentiment import _period_relationship
+
+        relationship = _period_relationship(
+            [
+                {
+                    "key": "cnn",
+                    "available": True,
+                    "start_value": 50.0,
+                    "end_value": 60.0,
+                },
+                {
+                    "key": "aaii_spread",
+                    "available": True,
+                    "start_value": -12.0,
+                    "end_value": 0.0,
+                },
+            ]
+        )
+
+        self.assertEqual(relationship["start_status"], "부분 엇갈림")
+        self.assertEqual(relationship["end_status"], "부분 엇갈림")
+        self.assertEqual(relationship["start_phase_label"], "행동 중립 · 설문 비관")
+        self.assertEqual(relationship["end_phase_label"], "행동 탐욕 · 설문 중립")
+        self.assertTrue(relationship["changed"])
+        self.assertIn("축 구성이 바뀌었습니다", relationship["summary"])
+
     def test_market_sentiment_watch_conditions_publish_three_relationship_paths(self) -> None:
         from app.services.overview.sentiment import _build_market_sentiment_analysis
 
@@ -23866,6 +24204,91 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     {"key": "reverse", "label": "설문 반전", "condition": "AAII 방향 반전을 확인합니다.", "basis": "AAII 주간", "tone": "warning"},
                     {"key": "persist", "label": "관계 지속", "condition": "현재 엇갈림이 이어지는지 확인합니다.", "basis": "CNN 일간 × AAII 주간", "tone": "warning"},
                 ],
+                "period_changes": {
+                    "status": "PARTIAL",
+                    "summary": "미래 전망이 아니라 저장된 CNN·AAII 실제 관측의 기간별 변화입니다.",
+                    "periods": [
+                        {
+                            "key": "1W",
+                            "label": "1주",
+                            "period_label": "최근 5거래일",
+                            "status": "AVAILABLE",
+                            "status_label": "비교 가능",
+                            "basis": "CNN 5개 관측 간격 · AAII 1개 주간 간격",
+                            "metrics": [
+                                {
+                                    "key": "cnn",
+                                    "label": "CNN 시장 행동",
+                                    "available": True,
+                                    "status": "AVAILABLE",
+                                    "status_label": "비교 가능",
+                                    "unit": "point",
+                                    "unit_label": "pt",
+                                    "lag_observations": 5,
+                                    "required_observation_count": 6,
+                                    "observation_count": 40,
+                                    "start_value": 32.1,
+                                    "end_value": 37.1,
+                                    "change": 5.0,
+                                    "change_direction": "up",
+                                    "start_date": "2026-05-28",
+                                    "end_date": "2026-06-04",
+                                    "start_state": "공포",
+                                    "end_state": "공포",
+                                    "tone": "warning",
+                                    "detail": "CNN은 32.1에서 37.1로 +5pt 움직였습니다.",
+                                },
+                                {
+                                    "key": "aaii_spread",
+                                    "label": "AAII Bull-Bear Spread",
+                                    "available": True,
+                                    "status": "AVAILABLE",
+                                    "status_label": "비교 가능",
+                                    "unit": "percentage_point",
+                                    "unit_label": "pp",
+                                    "lag_observations": 1,
+                                    "required_observation_count": 2,
+                                    "observation_count": 28,
+                                    "start_value": 6.0,
+                                    "end_value": 12.0,
+                                    "change": 6.0,
+                                    "change_direction": "up",
+                                    "start_date": "2026-05-28",
+                                    "end_date": "2026-06-04",
+                                    "start_state": "중립",
+                                    "end_state": "낙관",
+                                    "tone": "positive",
+                                    "detail": "AAII Spread는 +6pp 움직였습니다.",
+                                },
+                            ],
+                            "relationship": {
+                                "available": True,
+                                "start_status": "부분 엇갈림",
+                                "end_status": "뚜렷한 엇갈림",
+                                "changed": True,
+                                "tone": "warning",
+                                "summary": "부분 엇갈림에서 뚜렷한 엇갈림으로 바뀌었습니다.",
+                            },
+                        },
+                        {
+                            "key": "1M",
+                            "label": "1개월",
+                            "period_label": "최근 20거래일",
+                            "status": "UNAVAILABLE",
+                            "status_label": "관측 부족",
+                            "basis": "CNN 20개 관측 간격 · AAII 4개 주간 간격",
+                            "metrics": [],
+                            "relationship": {
+                                "available": False,
+                                "start_status": None,
+                                "end_status": None,
+                                "changed": None,
+                                "tone": "neutral",
+                                "summary": "두 축의 시작값이 모두 있어야 관계 변화를 비교할 수 있습니다.",
+                            },
+                        },
+                    ],
+                },
                 "outlook": _build_sentiment_outlook(),
                 "data_confidence": {
                     "status": "High",
@@ -24061,6 +24484,18 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(payload["history_coverage"]["cnn"]["canonical_start"], "2025-06-04")
         self.assertEqual(payload["history_coverage"]["cnn"]["pit_start_at"], "2026-07-20 01:00:00")
         self.assertEqual(payload["charts"]["cnn"]["series"][0]["date"], "2025-06-04")
+        self.assertEqual(payload["period_changes"]["status"], "PARTIAL")
+        self.assertEqual([row["key"] for row in payload["period_changes"]["periods"]], ["1W", "1M"])
+        one_week_metrics = {
+            row["key"]: row for row in payload["period_changes"]["periods"][0]["metrics"]
+        }
+        self.assertEqual(one_week_metrics["cnn"]["start_value"], 32.1)
+        self.assertEqual(one_week_metrics["cnn"]["change"], 5.0)
+        self.assertEqual(one_week_metrics["aaii_spread"]["unit"], "percentage_point")
+        self.assertEqual(
+            payload["period_changes"]["periods"][0]["relationship"]["end_status"],
+            "뚜렷한 엇갈림",
+        )
         self.assertEqual(payload["outlook"]["status"], "UNAVAILABLE")
         self.assertEqual([row["key"] for row in payload["outlook"]["horizons"]], ["1W", "1M"])
         for row in payload["outlook"]["horizons"]:
@@ -24081,6 +24516,72 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(payload["charts"]["cnn"]["series"][-1]["status_label"], "공포")
         self.assertEqual(payload["charts"]["cnn"]["latest"]["label"], "공포")
         self.assertEqual(payload["raw_evidence"]["sentiment_rows"][0]["Series"], "CNN Fear & Greed")
+
+    def test_market_sentiment_period_change_payload_falls_back_without_service_result(self) -> None:
+        from app.web.overview.sentiment_helpers import _sentiment_period_changes_payload
+
+        payload = _sentiment_period_changes_payload(None)
+
+        self.assertEqual(payload["status"], "UNAVAILABLE")
+        self.assertEqual([period["key"] for period in payload["periods"]], ["1W", "1M"])
+        for period in payload["periods"]:
+            self.assertEqual(period["status"], "UNAVAILABLE")
+            self.assertEqual([metric["key"] for metric in period["metrics"]], ["cnn", "aaii_spread"])
+            self.assertTrue(all(not metric["available"] for metric in period["metrics"]))
+            self.assertFalse(period["relationship"]["available"])
+
+    def test_market_sentiment_period_change_payload_rejects_missing_or_invalid_dates(self) -> None:
+        from app.web.overview.sentiment_helpers import _sentiment_period_changes_payload
+
+        source_metric = {
+            "available": True,
+            "status_label": "비교 가능",
+            "start_value": 40.0,
+            "end_value": 60.0,
+            "change": 20.0,
+            "start_date": "",
+            "end_date": "not-a-date",
+            "observation_count": 21,
+        }
+        valid_metric = {
+            "available": True,
+            "start_value": -5.0,
+            "end_value": 5.0,
+            "change": 10.0,
+            "start_date": "2026-07-30",
+            "end_date": "2026-08-06",
+            "observation_count": 5,
+        }
+        payload = _sentiment_period_changes_payload(
+            {
+                "periods": [
+                    {
+                        "key": "1W",
+                        "metrics": [
+                            {"key": "cnn", **source_metric},
+                            {"key": "aaii_spread", **valid_metric},
+                        ],
+                        "relationship": {
+                            "available": True,
+                            "start_status": "부분 엇갈림",
+                            "end_status": "심리 일치 · 위험선호",
+                        },
+                    }
+                ]
+            }
+        )
+
+        one_week = payload["periods"][0]
+        metrics = {metric["key"]: metric for metric in one_week["metrics"]}
+        self.assertEqual(one_week["status"], "PARTIAL")
+        self.assertFalse(metrics["cnn"]["available"])
+        self.assertEqual(metrics["cnn"]["status_label"], "날짜 확인 필요")
+        self.assertEqual(metrics["cnn"]["start_date"], "")
+        self.assertEqual(metrics["cnn"]["end_date"], "")
+        self.assertTrue(metrics["aaii_spread"]["available"])
+        self.assertEqual(metrics["aaii_spread"]["start_date"], "2026-07-30")
+        self.assertEqual(metrics["aaii_spread"]["end_date"], "2026-08-06")
+        self.assertFalse(one_week["relationship"]["available"])
 
     def test_market_sentiment_payload_drops_unvalidated_demo_probabilities(self) -> None:
         from app.web.overview.sentiment_helpers import _sentiment_outlook_payload
@@ -27955,7 +28456,7 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             pattern_outlook=self._pattern_outlook_payload_fixture(),
         )
 
-        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v4")
+        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v7")
         self.assertEqual([item["key"] for item in payload["horizons"]], ["current", "5D", "20D"])
         current, five_day, twenty_day = payload["horizons"]
         self.assertEqual(payload["hero"]["observation_status"], "OBSERVED")

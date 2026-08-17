@@ -1,8 +1,8 @@
 # Inflation Policy Workbench Status
 
-State: active
+State: complete
 Roadmap: 4/4 implementation checkpoints complete
-Last Updated: 2026-08-02
+Last Updated: 2026-08-17
 
 ## Completed
 
@@ -30,7 +30,9 @@ Last Updated: 2026-08-02
 
 ## Handoff
 
-- 전체 phase는 3/5차 완료다.
-- 다음 단위는 4차 `inflation-policy-equity-stress`이며, 현재 workbench의
-  `equity_stress=NOT_AVAILABLE` 경계를 독립 PIT event study로 대체하는 범위다.
-- 5차 독립 침체 모델 전까지 기존 경제 사이클 확률을 recession fallback으로 사용하지 않는다.
+- 이 task의 구현과 actual Browser command QA는 완료됐다.
+- 후속 `inflation-policy-equity-stress`와 독립 침체 위험 모델도
+  `inflation-policy-yield-path` phase와
+  `inflation-policy-functional-recovery-20260803`에서 완료됐다.
+- 전체 phase는 5/5 완료 상태이며 기존 경제 사이클 확률은 recession fallback으로
+  사용하지 않는 독립성 경계를 유지한다.

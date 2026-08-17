@@ -38,6 +38,7 @@ summary:focus-visible {
 .sentiment-workbench__chart-title,
 .sentiment-workbench__chart-tabs,
 .sentiment-workbench__chart-legend,
+.sentiment-workbench__period-card > header,
 .sentiment-workbench__outlook-card > header,
 .sentiment-workbench__cnn-evidence > header,
 .sentiment-workbench__aaii-evidence > header,
@@ -51,6 +52,7 @@ summary:focus-visible {
 .sentiment-workbench__section-heading > div,
 .sentiment-workbench__chart-title > div,
 .sentiment-workbench__chart-latest,
+.sentiment-workbench__period-card > header > div,
 .sentiment-workbench__outlook-card > header > div,
 .sentiment-workbench__cnn-evidence header > div,
 .sentiment-workbench__aaii-evidence header > div {
@@ -68,8 +70,8 @@ summary:focus-visible {
 
 .sentiment-workbench__current-section,
 .sentiment-workbench__chart-section,
+.sentiment-workbench__period-change-section,
 .sentiment-workbench__outlook-section,
-.sentiment-workbench__watch-section,
 .sentiment-workbench__raw-disclosure {
   margin-top: 22px;
 }
@@ -276,8 +278,8 @@ summary:focus-visible {
 }
 
 .sentiment-workbench__line-chart,
+.sentiment-workbench__period-card,
 .sentiment-workbench__outlook-card,
-.sentiment-workbench__watch-grid article,
 .sentiment-workbench__raw-disclosure,
 .sentiment-workbench__cnn-evidence,
 .sentiment-workbench__aaii-evidence {
@@ -527,6 +529,229 @@ summary:focus-visible {
   margin: 20px 4px;
 }
 
+.sentiment-workbench__period-change-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sentiment-workbench__period-card {
+  padding: 15px 16px;
+}
+
+.sentiment-workbench__period-card > header {
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.sentiment-workbench__period-card > header span {
+  color: #172033;
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.sentiment-workbench__period-card > header strong,
+.sentiment-workbench__period-basis {
+  color: #718096;
+  font-size: 0.69rem;
+  font-weight: 680;
+}
+
+.sentiment-workbench__period-status {
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 850;
+  padding: 5px 8px;
+}
+
+.sentiment-workbench__period-status--available {
+  background: #e7f5f2;
+  color: #0f766e;
+}
+
+.sentiment-workbench__period-status--partial {
+  background: #fff5e8;
+  color: #9a611f;
+}
+
+.sentiment-workbench__period-status--unavailable {
+  background: #eef2f5;
+  color: #66768a;
+}
+
+.sentiment-workbench__period-basis {
+  display: block;
+  margin-top: 7px;
+}
+
+.sentiment-workbench__period-metrics {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.sentiment-workbench__period-metric {
+  background: #f7f9fa;
+  border: 1px solid #e1e7eb;
+  border-radius: 9px;
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 11px;
+}
+
+.sentiment-workbench__period-metric > header {
+  align-items: start;
+  display: grid;
+  gap: 3px;
+}
+
+.sentiment-workbench__period-metric > header span {
+  align-items: center;
+  color: #445268;
+  display: inline-flex;
+  font-size: 0.69rem;
+  font-weight: 810;
+  gap: 6px;
+  width: fit-content;
+}
+
+.sentiment-workbench__period-metric > header span::before {
+  border-radius: 999px;
+  content: "";
+  flex: 0 0 auto;
+  height: 7px;
+  width: 7px;
+}
+
+.sentiment-workbench__period-metric[data-source="cnn"] > header span::before {
+  background: #b58a6a;
+}
+
+.sentiment-workbench__period-metric[data-source="aaii_spread"] > header span::before {
+  background: #5aa99d;
+}
+
+.sentiment-workbench__period-metric > header small {
+  color: #718096;
+  font-size: 0.64rem;
+  font-weight: 760;
+}
+
+.sentiment-workbench__period-metric > header small[data-tone="positive"] {
+  color: #0f766e;
+}
+
+.sentiment-workbench__period-metric > header small[data-tone="warning"],
+.sentiment-workbench__period-metric > header small[data-tone="danger"] {
+  color: #9a5b2d;
+}
+
+.sentiment-workbench__period-value {
+  align-items: end;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.sentiment-workbench__period-unavailable {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 9px;
+}
+
+.sentiment-workbench__period-change-primary,
+.sentiment-workbench__period-current {
+  display: grid;
+  gap: 2px;
+}
+
+.sentiment-workbench__period-change-primary span,
+.sentiment-workbench__period-current span {
+  color: #8995a5;
+  font-size: 0.6rem;
+  font-weight: 720;
+}
+
+.sentiment-workbench__period-change-primary strong {
+  color: #172033;
+  font-size: 1.18rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.sentiment-workbench__period-current {
+  justify-items: end;
+}
+
+.sentiment-workbench__period-current b {
+  color: #526176;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.sentiment-workbench__period-metric[data-change-direction="up"] .sentiment-workbench__period-change-primary strong {
+  color: #0f766e;
+}
+
+.sentiment-workbench__period-metric[data-change-direction="down"] .sentiment-workbench__period-change-primary strong {
+  color: #a14f61;
+}
+
+.sentiment-workbench__period-unavailable strong,
+.sentiment-workbench__period-unavailable span {
+  color: #66768a;
+  font-size: 0.7rem;
+}
+
+.sentiment-workbench__period-metric p,
+.sentiment-workbench__period-change-summary {
+  color: #66768a;
+  font-size: 0.68rem;
+  line-height: 1.45;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.sentiment-workbench__period-relationship {
+  background: #f7f9fa;
+  border-left: 3px solid #cbd5df;
+  border-radius: 7px;
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 9px 10px;
+}
+
+.sentiment-workbench__period-relationship[data-tone="positive"] {
+  border-left-color: #5aa99d;
+}
+
+.sentiment-workbench__period-relationship[data-tone="warning"],
+.sentiment-workbench__period-relationship[data-tone="danger"] {
+  border-left-color: #c98a59;
+}
+
+.sentiment-workbench__period-relationship span {
+  color: #718096;
+  font-size: 0.62rem;
+  font-weight: 780;
+  text-transform: uppercase;
+}
+
+.sentiment-workbench__period-relationship strong {
+  color: #344157;
+  font-size: 0.72rem;
+  font-weight: 780;
+  line-height: 1.42;
+}
+
+.sentiment-workbench__period-change-summary {
+  margin: 9px 2px 0;
+}
+
 .sentiment-workbench__outlook-grid {
   display: grid;
   gap: 14px;
@@ -624,47 +849,6 @@ summary:focus-visible {
 
 .sentiment-workbench__outlook-summary {
   margin: 9px 2px 0;
-}
-
-.sentiment-workbench__watch-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.sentiment-workbench__watch-grid article {
-  padding: 13px 14px;
-}
-
-.sentiment-workbench__watch-grid article[data-watch-path="confirm"] span {
-  color: #0f766e;
-}
-
-.sentiment-workbench__watch-grid article[data-watch-path="reverse"] span {
-  color: #a14f61;
-}
-
-.sentiment-workbench__watch-grid article[data-watch-path="persist"] span {
-  color: #8a5d3b;
-}
-
-.sentiment-workbench__watch-grid span {
-  font-size: 0.78rem;
-  font-weight: 850;
-}
-
-.sentiment-workbench__watch-grid p {
-  color: #3f4d61;
-  font-size: 0.77rem;
-  font-weight: 630;
-  line-height: 1.44;
-  margin: 7px 0;
-}
-
-.sentiment-workbench__watch-grid small {
-  color: #718096;
-  font-size: 0.67rem;
-  line-height: 1.4;
 }
 
 .sentiment-workbench__raw-disclosure {
@@ -896,8 +1080,8 @@ summary:focus-visible {
 
   .sentiment-workbench__source-grid,
   .sentiment-workbench__history-grid,
+  .sentiment-workbench__period-change-grid,
   .sentiment-workbench__outlook-grid,
-  .sentiment-workbench__watch-grid,
   .sentiment-workbench__evidence-columns {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -955,6 +1139,19 @@ summary:focus-visible {
     align-items: flex-start;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .sentiment-workbench__period-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sentiment-workbench__period-value {
+    align-items: start;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sentiment-workbench__period-current {
+    justify-items: start;
   }
 
   .sentiment-workbench__aaii-row {

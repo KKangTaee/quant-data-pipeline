@@ -566,6 +566,171 @@ def _sentiment_outlook_payload(value: Any) -> dict[str, Any]:
     }
 
 
+def _sentiment_period_metric_payload(
+    value: Any,
+    *,
+    key: str,
+    label: str,
+    unit: str,
+    unit_label: str,
+    lag_observations: int,
+) -> dict[str, Any]:
+    source = dict(value) if isinstance(value, dict) else {}
+    start_value = _safe_float(source.get("start_value"))
+    end_value = _safe_float(source.get("end_value"))
+    change = _safe_float(source.get("change"))
+    start_date = _display_text(source.get("start_date"), "").strip()
+    end_date = _display_text(source.get("end_date"), "").strip()
+    try:
+        start_date = date.fromisoformat(start_date).isoformat() if len(start_date) == 10 else ""
+    except ValueError:
+        start_date = ""
+    try:
+        end_date = date.fromisoformat(end_date).isoformat() if len(end_date) == 10 else ""
+    except ValueError:
+        end_date = ""
+    date_range_valid = bool(start_date and end_date and start_date < end_date)
+    available = (
+        bool(source.get("available"))
+        and None not in (start_value, end_value, change)
+        and date_range_valid
+    )
+    if available:
+        status_label = "비교 가능"
+    elif bool(source.get("available")) and not date_range_valid:
+        status_label = "날짜 확인 필요"
+    else:
+        status_label = _display_text(source.get("status_label"), "관측 부족")
+    return {
+        "key": key,
+        "label": _display_text(source.get("label"), label),
+        "available": available,
+        "status": "AVAILABLE" if available else "UNAVAILABLE",
+        "status_label": status_label,
+        "unit": unit,
+        "unit_label": unit_label,
+        "lag_observations": lag_observations,
+        "required_observation_count": lag_observations + 1,
+        "observation_count": int(source.get("observation_count") or 0),
+        "start_value": start_value if available else None,
+        "end_value": end_value,
+        "change": change if available else None,
+        "change_direction": _display_text(
+            source.get("change_direction") if available else "unavailable",
+            "unavailable",
+        ),
+        "start_date": start_date if available else "",
+        "end_date": end_date,
+        "start_state": _display_text(source.get("start_state") if available else "", ""),
+        "end_state": _display_text(source.get("end_state"), ""),
+        "tone": _sentiment_tone(source.get("tone") or "neutral"),
+        "detail": _display_text(
+            source.get("detail"),
+            f"비교에는 {lag_observations + 1}개 관측이 필요합니다.",
+        ),
+    }
+
+
+def _sentiment_period_relationship_payload(value: Any, *, metrics_available: bool) -> dict[str, Any]:
+    source = dict(value) if isinstance(value, dict) else {}
+    start_status = _display_text(source.get("start_status"), "")
+    end_status = _display_text(source.get("end_status"), "")
+    available = bool(source.get("available")) and metrics_available and bool(start_status and end_status)
+    return {
+        "available": available,
+        "start_status": start_status if available else "",
+        "end_status": end_status if available else "",
+        "start_phase_label": _display_text(source.get("start_phase_label"), "") if available else "",
+        "end_phase_label": _display_text(source.get("end_phase_label"), "") if available else "",
+        "changed": bool(source.get("changed")) if available else None,
+        "tone": _sentiment_tone(source.get("tone") or "neutral"),
+        "summary": _display_text(
+            source.get("summary") if available else "",
+            "두 축의 시작값이 모두 있어야 관계 변화를 비교할 수 있습니다.",
+        ),
+    }
+
+
+def _sentiment_period_changes_payload(value: Any) -> dict[str, Any]:
+    """Serialize observed period changes and fail closed when service evidence is absent."""
+    source = dict(value) if isinstance(value, dict) else {}
+    source_by_key = {
+        str(item.get("key") or ""): dict(item)
+        for item in list(source.get("periods") or [])
+        if isinstance(item, dict)
+    }
+    periods: list[dict[str, Any]] = []
+    for key, label, period_label, cnn_lag, aaii_lag in (
+        ("1W", "1주", "최근 5거래일", 5, 1),
+        ("1M", "1개월", "최근 20거래일", 20, 4),
+    ):
+        item = source_by_key.get(key, {})
+        metric_by_key = {
+            str(metric.get("key") or ""): dict(metric)
+            for metric in list(item.get("metrics") or [])
+            if isinstance(metric, dict)
+        }
+        metrics = [
+            _sentiment_period_metric_payload(
+                metric_by_key.get("cnn"),
+                key="cnn",
+                label="CNN 시장 행동",
+                unit="point",
+                unit_label="pt",
+                lag_observations=cnn_lag,
+            ),
+            _sentiment_period_metric_payload(
+                metric_by_key.get("aaii_spread"),
+                key="aaii_spread",
+                label="AAII Bull-Bear Spread",
+                unit="percentage_point",
+                unit_label="pp",
+                lag_observations=aaii_lag,
+            ),
+        ]
+        available_count = sum(1 for metric in metrics if metric["available"])
+        status = "AVAILABLE" if available_count == len(metrics) else "PARTIAL" if available_count else "UNAVAILABLE"
+        periods.append(
+            {
+                "key": key,
+                "label": label,
+                "period_label": period_label,
+                "status": status,
+                "status_label": {
+                    "AVAILABLE": "비교 가능",
+                    "PARTIAL": "일부 비교 가능",
+                    "UNAVAILABLE": "관측 부족",
+                }[status],
+                "basis": _display_text(
+                    item.get("basis"),
+                    f"CNN {cnn_lag}개 관측 간격 · AAII {aaii_lag}개 주간 간격",
+                ),
+                "metrics": metrics,
+                "relationship": _sentiment_period_relationship_payload(
+                    item.get("relationship"),
+                    metrics_available=available_count == len(metrics),
+                ),
+            }
+        )
+    available_period_count = sum(1 for period in periods if period["status"] == "AVAILABLE")
+    partial_period_count = sum(1 for period in periods if period["status"] == "PARTIAL")
+    status = (
+        "AVAILABLE"
+        if available_period_count == len(periods)
+        else "PARTIAL"
+        if available_period_count or partial_period_count
+        else "UNAVAILABLE"
+    )
+    return {
+        "status": status,
+        "summary": _display_text(
+            source.get("summary"),
+            "미래 전망이 아니라 저장된 CNN·AAII 실제 관측의 기간별 변화입니다.",
+        ),
+        "periods": periods,
+    }
+
+
 def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[str, Any]:
     """Adapt the service-owned sentiment snapshot into a serializable React display payload."""
     coverage = dict(snapshot.get("coverage") or {})
@@ -682,6 +847,7 @@ def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[st
             "cnn_components": _sentiment_cnn_evidence_payload(component_rows, analysis),
             "aaii_comparison": _sentiment_aaii_comparison_payload(investor_survey),
         },
+        "period_changes": _sentiment_period_changes_payload(analysis.get("period_changes")),
         "outlook": _sentiment_outlook_payload(analysis.get("outlook")),
         "watch_conditions": [
             {

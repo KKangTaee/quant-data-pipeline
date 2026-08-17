@@ -177,6 +177,7 @@ def _empty_sentiment_analysis(*, status: str, message: str) -> dict[str, Any]:
             "items": [],
         },
         "component_history": [],
+        "period_changes": _build_sentiment_period_changes(None),
         "analysis_steps": [
             {
                 "title": "데이터 상태",
@@ -757,6 +758,244 @@ def _build_sentiment_cross_read(
     }
 
 
+def _period_change_metric(
+    history_frame: pd.DataFrame | None,
+    *,
+    key: str,
+    label: str,
+    series_id: str,
+    lag_observations: int,
+    unit: str,
+    unit_label: str,
+) -> dict[str, Any]:
+    """Compare stored observations at an explicit lag without interpolating dates."""
+    columns = ["series_id", "observation_date", "value", "source", "collected_at"]
+    if not isinstance(history_frame, pd.DataFrame) or history_frame.empty or "series_id" not in history_frame:
+        history = pd.DataFrame(columns=columns)
+    else:
+        history = history_frame.copy()
+        history["series_id"] = history["series_id"].astype(str).str.upper()
+        history = history[history["series_id"] == series_id].copy()
+        history["observation_date"] = pd.to_datetime(history.get("observation_date"), errors="coerce")
+        history["value"] = pd.to_numeric(history.get("value"), errors="coerce")
+        history["source"] = history.get("source", pd.Series("", index=history.index)).fillna("").astype(str)
+        history["collected_at"] = pd.to_datetime(
+            history.get("collected_at", pd.Series(pd.NaT, index=history.index)),
+            errors="coerce",
+            utc=True,
+        )
+        history["_input_order"] = range(len(history))
+        history = history.dropna(subset=["observation_date"]).sort_values(
+            ["observation_date", "collected_at", "_input_order"],
+            kind="stable",
+            na_position="first",
+        )
+        # A canonical observation can arrive through more than one source/version.
+        # The newest collected version owns the date, including an explicit missing value.
+        history = history.drop_duplicates(subset=["observation_date"], keep="last")
+
+    latest_row = history.iloc[-1] if len(history) else None
+    latest_value = _safe_float(latest_row.get("value")) if latest_row is not None else None
+    valid_history = history[history["value"].notna()].copy()
+    observation_count = len(valid_history)
+    required_observation_count = lag_observations + 1
+    end_row = latest_row
+    start_row = (
+        valid_history.iloc[-required_observation_count]
+        if latest_value is not None and observation_count >= required_observation_count
+        else None
+    )
+    end_value = latest_value
+    start_value = _safe_float(start_row.get("value")) if start_row is not None else None
+    available = start_value is not None and end_value is not None
+    change = round(end_value - start_value, 2) if available else None
+    if not available:
+        change_direction = "unavailable"
+    elif change > 0:
+        change_direction = "up"
+    elif change < 0:
+        change_direction = "down"
+    else:
+        change_direction = "flat"
+
+    start_state = _sentiment_history_state_label(series_id, start_value) if available else None
+    end_state = _sentiment_history_state_label(series_id, end_value) if end_value is not None else None
+    if series_id == "CNN_FEAR_GREED":
+        tone = _sentiment_score_bucket(end_value)["tone"]
+    else:
+        tone = _aaii_direction_tone(_aaii_direction(spread=end_value))
+    latest_value_missing = latest_row is not None and end_value is None
+    if available:
+        detail = (
+            f"{_iso_date(start_row.get('observation_date'))} {start_value:g}에서 "
+            f"{_iso_date(end_row.get('observation_date'))} {end_value:g}로 "
+            f"{change:+g}{unit_label} 움직였습니다."
+        )
+    elif latest_value_missing:
+        detail = (
+            f"{_iso_date(end_row.get('observation_date'))} 최신 저장 관측값이 결측이라 "
+            "기간 변화를 공개하지 않습니다."
+        )
+    else:
+        detail = (
+            f"비교에는 {required_observation_count}개 관측이 필요하지만 "
+            f"현재 {observation_count}개만 있습니다."
+        )
+    return {
+        "key": key,
+        "label": label,
+        "series_id": series_id,
+        "available": available,
+        "status": "AVAILABLE" if available else "UNAVAILABLE",
+        "status_label": (
+            "비교 가능" if available else "최신 관측 결측" if latest_value_missing else "관측 부족"
+        ),
+        "unit": unit,
+        "unit_label": unit_label,
+        "lag_observations": lag_observations,
+        "required_observation_count": required_observation_count,
+        "observation_count": observation_count,
+        "start_value": _round_metric(start_value) if available else None,
+        "end_value": _round_metric(end_value),
+        "change": change,
+        "change_direction": change_direction,
+        "start_date": _iso_date(start_row.get("observation_date")) if start_row is not None else None,
+        "end_date": _iso_date(end_row.get("observation_date")) if end_row is not None else None,
+        "start_state": start_state,
+        "end_state": end_state,
+        "tone": tone,
+        "detail": detail,
+    }
+
+
+def _period_cross_read(cnn_value: Any, aaii_spread: Any) -> dict[str, Any]:
+    cnn_numeric = _safe_float(cnn_value)
+    spread_numeric = _safe_float(aaii_spread)
+    cnn_bucket = _sentiment_score_bucket(cnn_numeric)
+    aaii_direction = _aaii_direction(spread=spread_numeric)
+    return _build_sentiment_cross_read(
+        market_behavior={
+            "available": cnn_numeric is not None,
+            "direction": cnn_bucket["direction"] if cnn_numeric is not None else "unavailable",
+            "direction_label": cnn_bucket["label_ko"] if cnn_numeric is not None else "판정 보류",
+            "components_support": "",
+        },
+        investor_survey={
+            "available": spread_numeric is not None,
+            "direction": aaii_direction,
+            "direction_label": _aaii_direction_label(aaii_direction),
+        },
+    )
+
+
+def _period_relationship(metrics: list[dict[str, Any]]) -> dict[str, Any]:
+    by_key = {str(metric.get("key")): metric for metric in metrics}
+    cnn = by_key.get("cnn") or {}
+    aaii = by_key.get("aaii_spread") or {}
+    if not cnn.get("available") or not aaii.get("available"):
+        return {
+            "available": False,
+            "start_status": None,
+            "end_status": None,
+            "start_phase_label": None,
+            "end_phase_label": None,
+            "changed": None,
+            "tone": "neutral",
+            "summary": "두 축의 시작값이 모두 있어야 관계 변화를 비교할 수 있습니다.",
+        }
+    start = _period_cross_read(cnn.get("start_value"), aaii.get("start_value"))
+    end = _period_cross_read(cnn.get("end_value"), aaii.get("end_value"))
+    status_changed = start["status"] != end["status"]
+    axes_changed = (
+        start["market_direction"],
+        start["survey_direction"],
+    ) != (
+        end["market_direction"],
+        end["survey_direction"],
+    )
+    changed = status_changed or axes_changed
+    if status_changed:
+        summary = f"{start['status']}에서 {end['status']}로 바뀌었습니다."
+    elif axes_changed:
+        summary = (
+            f"{end['status']} 안에서 축 구성이 바뀌었습니다: "
+            f"{start['phase_label']} → {end['phase_label']}."
+        )
+    else:
+        summary = f"{end['status']} 상태가 이어졌습니다."
+    return {
+        "available": True,
+        "start_status": start["status"],
+        "end_status": end["status"],
+        "start_phase_label": start["phase_label"],
+        "end_phase_label": end["phase_label"],
+        "changed": changed,
+        "tone": end["tone"],
+        "summary": summary,
+    }
+
+
+def _build_sentiment_period_changes(history_frame: pd.DataFrame | None) -> dict[str, Any]:
+    """Build observed 1W/1M changes while leaving forecast publication gated."""
+    period_specs = (
+        ("1W", "1주", "최근 5거래일", 5, 1),
+        ("1M", "1개월", "최근 20거래일", 20, 4),
+    )
+    periods: list[dict[str, Any]] = []
+    for key, label, period_label, cnn_lag, aaii_lag in period_specs:
+        metrics = [
+            _period_change_metric(
+                history_frame,
+                key="cnn",
+                label="CNN 시장 행동",
+                series_id="CNN_FEAR_GREED",
+                lag_observations=cnn_lag,
+                unit="point",
+                unit_label="pt",
+            ),
+            _period_change_metric(
+                history_frame,
+                key="aaii_spread",
+                label="AAII Bull-Bear Spread",
+                series_id="AAII_BULL_BEAR_SPREAD",
+                lag_observations=aaii_lag,
+                unit="percentage_point",
+                unit_label="pp",
+            ),
+        ]
+        available_count = sum(1 for metric in metrics if metric["available"])
+        status = "AVAILABLE" if available_count == len(metrics) else "PARTIAL" if available_count else "UNAVAILABLE"
+        periods.append(
+            {
+                "key": key,
+                "label": label,
+                "period_label": period_label,
+                "status": status,
+                "status_label": {
+                    "AVAILABLE": "비교 가능",
+                    "PARTIAL": "일부 비교 가능",
+                    "UNAVAILABLE": "관측 부족",
+                }[status],
+                "basis": f"CNN {cnn_lag}개 관측 간격 · AAII {aaii_lag}개 주간 간격",
+                "metrics": metrics,
+                "relationship": _period_relationship(metrics),
+            }
+        )
+    available_period_count = sum(1 for period in periods if period["status"] == "AVAILABLE")
+    partial_period_count = sum(1 for period in periods if period["status"] == "PARTIAL")
+    if available_period_count == len(periods):
+        status = "AVAILABLE"
+    elif available_period_count or partial_period_count:
+        status = "PARTIAL"
+    else:
+        status = "UNAVAILABLE"
+    return {
+        "status": status,
+        "summary": "미래 전망이 아니라 저장된 CNN·AAII 실제 관측의 기간별 변화입니다.",
+        "periods": periods,
+    }
+
+
 def _build_two_axis_divergence_context(
     *,
     axes: dict[str, dict[str, Any]],
@@ -1007,6 +1246,7 @@ def _build_market_sentiment_analysis(
         "axes": axes,
         "cross_read": cross_read,
         "watch_conditions": watch_conditions,
+        "period_changes": _build_sentiment_period_changes(history_rows),
         "outlook": _build_sentiment_outlook(),
         "data_confidence": data_confidence,
         "driver_summary": driver_summary,

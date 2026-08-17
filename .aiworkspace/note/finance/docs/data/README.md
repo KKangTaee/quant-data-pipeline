@@ -1,7 +1,7 @@
 # Finance Data Map
 
 Status: Active
-Last Verified: 2026-08-12
+Last Verified: 2026-08-17
 
 ## Purpose
 
@@ -57,7 +57,7 @@ Last Verified: 2026-08-12
 | `sp500_index_earnings` | S&P 공식 Index Earnings workbook의 actual quarterly release vintage와 FactSet Earnings Insight의 날짜 검증 annual current/next-year bottom-up estimate를 source/basis/status로 분리해 보존한다. Market Context는 완료 `quarterly + as_reported + actual`만 current TTM에 쓰고, Economic Cycle 실제 EPS도 proxy/estimate를 쓰지 않는다. Inflation / Policy equity stress만 `factset_earnings_insight + annual` release vintage를 사용한다. |
 | `fomc_sep_projection` | Federal Reserve SEP GDP/PCE values stored by release vintage, target year, and statistic. FOMC calendar에서 발견한 2021-03 이후 official history를 missing-release 방식으로 backfill하며, daily discovery가 이후 release를 append한다. 1/3/5년 reconstruction이 같은 append-only vintage를 읽고 prior release는 덮어쓰지 않는다. |
 | `futures_instrument` | Overview futures watchlist preset / display metadata for yfinance pilot futures symbols |
-| `futures_ohlcv` | Overview futures 1m / daily OHLCV candle ledger for selected futures symbols. 1m rows support stored-candle chart / diagnostics; daily rows feed Futures Macro current scores and point-in-time historical validation. Economic Cycle은 저장된 `GC=F` / `DX-Y.NYB` daily row만 읽어 금·달러의 5/21/63거래일 가격 확인을 표시한다 |
+| `futures_ohlcv` | Overview futures 1m / 5m / daily OHLCV candle ledger. 1m rows는 stored-candle diagnostics, 5m rows는 활성 세션의 임시 1D/5D/20D 관측과 완료 세션 재구성, daily rows는 completed snapshot과 point-in-time forecast validation에 쓴다. Economic Cycle은 저장된 `GC=F` / `DX-Y.NYB` daily row만 읽어 금·달러의 5/21/63거래일 가격 확인을 표시한다 |
 | `futures_market_monitor_run` | Futures OHLCV collection run diagnostics, latest candle, failed symbols, and provider status |
 | `futures_macro_snapshot` | completed-session input fingerprint와 algorithm/schema version으로 호환성을 판정하는 Overview Futures Macro latest-good current snapshot |
 | `futures_macro_forecast_history` | `as_of_date + input_fingerprint + schema/algorithm version` forecast identity별 immutable 5D/20D outlook ledger |

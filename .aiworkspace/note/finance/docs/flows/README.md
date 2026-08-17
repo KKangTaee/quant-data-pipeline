@@ -1,7 +1,7 @@
 # Finance Flows
 
 Status: Active
-Last Verified: 2026-08-02
+Last Verified: 2026-08-17
 
 ## Main User Flow
 
@@ -25,6 +25,7 @@ Today의 차트는 최신 최대 60개 실제 일별 관측을 주봉으로 변�
 Market Research 상단은 eyebrow·실제 `<h1>`·설명을 full-width editorial header로 두고, family는 divider 위 text tab과 active underline, 선택 family의 local view는 외곽 surface 없는 compact active pill로 렌더링한다. desktop에서는 module 본문과 같은 축을 쓰고 420px에서는 stacked header·family 3열·view 2열로 접히며, drawer와 sticky navigation은 사용하지 않는다.
 `Research > Institutional Holdings`도 Portfolio Lab의 필수 선행 단계가 아니라 delayed SEC 13F institutional holdings를 탐색하는 별도 research surface다.
 Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation gate, trade signal, monitoring signal을 만들지 않는다.
+Sentiment의 1W·1M 카드는 CNN 최근 5/20개 관측 간격과 AAII Bull-Bear Spread 최근 1/4개 주간 관측 간격의 시작값·현재값·변화량·두 축 관계 전환을 source별 실제 날짜와 함께 표시한다. 이 카드는 미래 전망이 아니며 검증된 estimator가 없는 기존 확률 publication gate는 계속 닫혀 있다.
 React는 allow-listed view event만 반환하고 Python이 canonical URL/session/legacy normalization과 lazy renderer를 소유한다. bundle이 없을 때는 기존 Streamlit header/navigation이 fallback이다. 상단은 summary cockpit, page-global market-session banner, contextual Reference, 운영 진단 패널을 반복하지 않으며 기준일·자료 상태·refresh action은 선택된 module이 소유한다.
 S&P 500 view는 최근 60개월 후행 PER 상대 구간과 FOMC SEP 기반 EPS/SPX 시나리오를 두 React 그래프로 읽는다. 36개월은 민감도이며, actual As-Reported TTM EPS가 없으면 예상 지수 숫자를 표시하지 않는다.
 Market Movers의 `개별 종목 분석`은 선택 symbol을 검증한 뒤 같은 page의 U.S. Stock Research로 넘기며 provider fetch나 write를 실행하지 않는다.
@@ -34,15 +35,16 @@ Market Movers의 `개별 종목 분석`은 선택 symbol을 검증한 뒤 같은
 
 ## Overview Futures Macro Flow
 
-`Research > Market Research > Futures Macro`는 저장된 futures daily OHLCV를 읽어 오늘의 재가격화, 다중 기간 현재 패턴, 다음 5D / 20D 조건부 위험 체제를 한 흐름에서 확인하는 단기 매크로 레이더다. 장기 경제사이클, provider run 진단, 확정 예측, trading signal 화면이 아니다.
+`Research > Market Research > Futures Macro`는 완료 futures daily OHLCV와 활성 세션의 저장된 latest closed 5m OHLCV를 읽어 현재 1D / 5D / 20D 변화, 교차자산 재가격화와 조건부 시나리오를 확인하는 단기 매크로 레이더다. 장기 경제사이클, provider run 진단, 확정 예측, trading signal 화면이 아니다.
 
 기본 화면의 정보 소유권은 다음처럼 유지한다.
 
-- Current regime: 오늘 shock과 trailing 1D / 5D / 20D family feature로 현재 체제와 지속·전환 상태를 먼저 읽는다. 현재 카드는 관측이며 미래 확률이 아니다.
-- Conditional outlook: 겹치는 날짜를 독립 episode 간격으로 줄인 유사 패턴의 다음 5D / 20D 결과 분포를 기본으로 계산한다. 30개 미만은 숫자를 숨기고, 30~59개는 최대 `PROVISIONAL`, 60개 이상도 시간순 Brier / calibration gate를 충족해야 `VERIFIED`다.
-- Pattern evidence: 최근 60개 일봉을 한 선으로 잇지 않고 `20D 전 → 5D 전 → 현재` 핵심 관측 시점만 실선으로 표시한다. `관측만 / 다음 5D / 다음 20D`를 전환하면 현재점에서 선택 horizon 말일의 과거 유사 episode 중앙 위치까지를 한 개의 `예상 순이동` 점선으로 직접 연결하고, 말일의 축별 q25~q75 도착 범위 하나만 옅은 음영 박스로 표시한다. 점선은 중간 일별 경로가 아니며 서비스의 stepwise median은 검증용으로 보존한다. 세 관측 anchor와 5D/20D 전망은 두 말일 terminal/range로 계산한 하나의 공통 visible-data 좌표계를 사용하므로 horizon 전환 때 관측 위치가 움직이지 않는다. 화면에서 제거한 중간 median과 q25~q75는 scale을 바꾸지 않는다. 좌표는 `현재 위치 + 표준화된 조건부 이동`이며 절대 경제상태·가격 목표·실제 미래 경로가 아니다. 우측 확률 카드가 체제 확률의 primary surface이고, 경로는 별도 시간순 오차·baseline·coverage 검증 상태를 더 보수적으로 적용한다.
+- Current regime: `1D·지금 새로 생긴 변화`, `5D·현재 단기 방향`, `20D·기존 배경과의 관계`로 읽는다. 거래 중이면 latest closed 5m로 임시 재계산하고, 비거래 구간이거나 freshness/coverage gate를 통과하지 못하면 마지막 완료 세션으로 fallback한다. 이 세 카드는 관측이며 미래 확률이 아니다.
+- Market repricing: 위험선호·금리 부담·달러 압력·물가 압력 네 핵심축 가운데 평소 변동 범위를 벗어난 가장 강한 5D 축을 중심 해석으로 선택한다. 다른 핵심축은 정규화된 위험 방향에 따라 뒷받침·반대 근거로 나누고, 성장 기대와 방어 수요는 구성 종목 중복 때문에 독립 신뢰도 개수가 아닌 맥락 근거로만 쓴다. 5D 핵심축이 중립이어도 1D 핵심축이 뚜렷하면 `1D 새 충격`으로 보존한다.
+- Conditional scenario: 중심 해석이 이어질 조건, 무효화될 조건과 민감 자산을 제공한다. 이는 확률, 5D 가격 목표, 매수·매도 신호가 아니다. 기존 completed-daily forecast validation과 immutable history는 호환성·shadow research용 backend artifact로 보존하지만 primary UI나 제품 약속으로 사용하지 않는다.
+- Pattern evidence: 선물군별 1D·5D·20D 방향 정렬과 최근 체제 이력을 현재 해석의 근거로 제공한다. 과거 유사 구면과 미래 terminal/range 계산은 backend 호환성·연구용으로 보존하며 기본 화면의 미래 경로 또는 확률로 노출하지 않는다.
 - Asset pathways: 주식 위험선호, 금리 부담, 달러 압력, 안전자산, 원자재·물가는 전체 시장 체제의 보조 근거이며 독립 추천으로 승격하지 않는다.
-- Disclosure: React 방법론에는 독립 표본, Brier / baseline Brier, calibration, continuous futures roll 한계를 둔다. 하단 `원본 데이터 / 계산 추적`은 원시 점수와 daily candle 검산용 appendix로 남긴다.
+- Disclosure: React 방법론에는 관측 원천, 1D·5D·20D 범위, family coverage와 continuous futures roll 한계를 둔다. 하단 `원본 데이터 / 계산 추적`은 원시 점수와 daily candle 검산용 appendix로 남긴다.
 
 ## Backtest Selection Flow
 

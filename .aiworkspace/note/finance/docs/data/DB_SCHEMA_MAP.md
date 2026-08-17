@@ -1,7 +1,7 @@
 # DB Schema Map
 
 Status: Active
-Last Verified: 2026-08-03
+Last Verified: 2026-08-11
 
 ## 목적
 
@@ -71,7 +71,7 @@ Last Verified: 2026-08-03
 |---|---|
 | `nyse_price_history` | stock / ETF 공용 OHLCV, dividend, split price ledger |
 | `market_intraday_snapshot` | Overview daily movers용 intraday latest price / previous close snapshot. S&P 500 / Top1000 / Top2000 coverage별 최신 refresh row를 저장 |
-| `futures_ohlcv` | Overview futures OHLCV candle ledger. raw 1m/5m/1d provider row를 저장하고, 1d row의 nullable `final_*` / `finalization_basis` / `final_source_ref` / `finalized_at`은 exact ET 구간으로 재구성한 완료 세션 값을 별도로 보존한다. Futures Macro current score와 historical validation은 유효한 explicit final이 있으면 이를 raw 1d보다 우선한다 |
+| `futures_ohlcv` | Overview futures OHLCV candle ledger. raw 1m/5m/1d provider row를 저장하고, 5m closed bar는 장중 임시 1D/5D/20D 관측과 exact-session 확정에 쓴다. 1d row의 nullable `final_*` / `finalization_basis` / `final_source_ref` / `finalized_at`은 exact ET 구간으로 재구성한 완료 세션 값을 별도로 보존한다. Forecast validation/history는 유효한 explicit final을 raw 1d보다 우선한다 |
 
 ### `finance_fundamental`
 

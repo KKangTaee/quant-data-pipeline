@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Document Status: Maintained
-Last Verified: 2026-08-10
+Last Verified: 2026-08-17
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -32,7 +32,7 @@ tasks/active/<task-name>/
 
 | Task | State | Resume Condition |
 |---|---|---|
-| `overview-sentiment-cnn-aaii-v1-20260719` | `paused`, 2/4 complete | 독립 데이터 후보와 저장 경계, 1W/1M 공개 전 chronological PIT validation 범위를 새로 승인 |
+| `overview-sentiment-cnn-aaii-v1-20260719` | `paused`, 3/4 complete | 미래 확률이 계속 필요하면 target·episode independence·chronological PIT validation과 공개 기준을 새로 승인 |
 
 ## Verification-Only Tasks
 
@@ -45,6 +45,10 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `economic-cycle-interpretability-refresh-v1-20260817` | Completed product task, 5/5 | official RTDSM current state·최근 변화·전환압력·조건부 목적지와 근거를 한 화면 계약으로 정리하고 공식 월말 수동 갱신, 자산 카드 보존과 actual Browser QA를 완료했다. |
+| `economic-cycle-transition-production-v1-20260817` | Completed product task, 5/5 | actual `GO` transition artifact/snapshot/service와 unrestricted destination UI를 연결하고 2026-07 confirmed recovery·전환압력·조건부 목적지를 fail-closed로 공개했다. |
+| `main-dev-master-merge-resolution-20260817` | Completed integration, 4/4 | 최신 Economic Cycle과 master의 Futures Macro·Sentiment를 보존하고 shared bundle 재생성, stale contract/state 정렬, focused 자동 검증과 actual Browser QA를 완료했다. |
+| `master-merge-resolution-20260817` | Completed integration, 4/4 | Sentiment 3차와 master의 Futures Macro 장중 관측·재가격화 계약을 보존하고 stale service-contract assertion, durable docs, focused 자동 검증과 actual Browser QA를 닫았다. |
 | `master-merge-resolution-20260810` | Completed integration, 4/4 | 경제 사이클 v3와 master의 inflation-policy 5/5·Risk-On production 계약을 보존하고 focused 자동 검증과 actual Browser QA 뒤 merge commit을 완료했다. |
 | `risk-on-momentum-5d-productionization-20260726` | Completed record, 3/3 | Prepared/cache runtime과 분석 강도로 Top1000 2년 Standard를 21.247초로 줄이고, compact Daily Swing validation / Final Review / manual monitoring policy를 연결해 production maturity로 전환했다. |
 | `today-contributor-coverage-layout-v1-20260723` | Latest completed record, 2/2 | Today의 계산 가능한 EOD/live 종목 기여를 절대 영향도 순으로 모두 표시하고 coverage copy와 compact top-aligned `우선 확인` 배치를 적용했다. |

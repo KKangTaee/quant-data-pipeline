@@ -1,8 +1,8 @@
 # Inflation Policy Equity Stress Status
 
-State: active
+State: complete
 Roadmap: 5/5 implementation checkpoints complete
-Last Updated: 2026-08-03
+Last Updated: 2026-08-17
 
 ## Current
 
@@ -38,5 +38,7 @@ Last Updated: 2026-08-03
 
 ## Handoff
 
-- 전체 phase는 4/5차 완료 상태로 유지한다.
-- 다음은 기존 경제 사이클 확률을 재사용하지 않는 5차 독립 침체 위험 모델이다.
+- 이 task의 구현·actual validation은 완료됐다.
+- 후속 독립 침체 위험 모델도 `inflation-policy-yield-path` phase와
+  `inflation-policy-functional-recovery-20260803`에서 완료됐다.
+- 전체 phase는 5/5 완료 상태이며 이후에는 정기 갱신과 검증 지표 drift만 운영한다.

@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Document Status: Maintained
-Last Verified: 2026-08-12
+Last Verified: 2026-08-17
 
 ## Current State
 
@@ -9,16 +9,16 @@ Current active product task: none.
 
 Latest completed integration task:
 
-- `master-merge-resolution-20260810` — 전체 `4/4`; 경제 사이클 v3와 master의
-  inflation-policy 5/5·Risk-On production 계약을 보존하고 focused Python/React와
-  actual Browser QA 뒤 merge commit을 완료했다.
+- `main-dev-master-merge-resolution-20260817` — 전체 `4/4`; `codex/main-dev`의 최신
+  Economic Cycle과 `master`의 Futures Macro·Sentiment 계약을 함께 보존하고, stale
+  service-contract assertion과 네 개의 stale task state를 정렬한 뒤 focused
+  Python/React·actual Browser QA와 독립 staged-diff review를 완료했다.
 
-Latest completed economic-cycle research task:
+Latest completed economic-cycle task:
 
-- `economic-cycle-next-transition-feasibility-v1-20260812` — 사용자가 승인한 next
-  destination / transition imminence target을 actual PIT 148 origins·32 events로
-  검증해 `NO_GO_DATA`로 닫았고 RTDSM/ADS realtime history expansion을 다음 결정으로
-  남겼다. Production model·DB·UI와 자산별 확인 포인트는 변경하지 않았다.
+- `economic-cycle-interpretability-refresh-v1-20260817` — 전체 `5/5`; official RTDSM
+  current state·최근 변화·전환압력·조건부 목적지와 근거를 한 계약으로 정리하고,
+  공식 월말 수동 갱신·자산 카드 보존·actual Browser QA까지 완료했다.
 
 Latest completed inflation-policy task:
 
@@ -28,7 +28,7 @@ Latest completed inflation-policy task:
 
 Paused task:
 
-- `overview-sentiment-cnn-aaii-v1-20260719` — `State: paused`; 전체 잠정 roadmap `2/4차`. 현재 공개 범위는 유지하고 3차 독립 데이터 후보 검토는 명시적 재개 전까지 진행하지 않는다.
+- `overview-sentiment-cnn-aaii-v1-20260719` — `State: paused`; 전체 잠정 roadmap `3/4차`. 현재 1W·1M 실제 관측 변화까지 공개하고, 미래 확률은 target·독립 episode·chronological PIT validation과 공개 기준을 별도 승인하기 전까지 진행하지 않는다.
 
 Verification-Only tasks:
 
