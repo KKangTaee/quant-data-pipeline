@@ -479,7 +479,7 @@ git commit -m "기능: 13F 수정공시 유효 분기 해석 추가"
 - Produces event: `{id: "refresh_institutional_13f", report_period: "YYYY-MM-DD"}`
 - Consumes: Task 1 action, Task 2 bulk discovery, Task 3 individual collector.
 
-- [ ] **Step 1: Write RED orchestration tests**
+- [x] **Step 1: Write RED orchestration tests**
 
 Test these exact branches with injected callables:
 
@@ -499,18 +499,18 @@ assert result["status"] == "success"
 assert result["details"]["refresh_mode"] == "individual_edgar"
 ```
 
-- [ ] **Step 2: Run orchestration tests and confirm RED**
+- [x] **Step 2: Run orchestration tests and confirm RED**
 
 Run: `.venv/bin/python -m pytest tests/test_institutional_13f_refresh.py -q`
 
-- [ ] **Step 3: Implement bulk-first job orchestration**
+- [x] **Step 3: Implement bulk-first job orchestration**
 
 Reuse `_build_result` and progress events. Validate the report period is a quarter end. Bulk mode
 passes the discovered URL/label into `collect_and_store_sec_13f_dataset`; fallback mode calls the
 watchlist collector with only curated CIKs. Map results to `success`, `partial`, `no_update`, or
 `failed` without calling both sources in one run.
 
-- [ ] **Step 4: Replace the normal React event boundary**
+- [x] **Step 4: Replace the normal React event boundary**
 
 Add handling in `_handle_workbench_event`:
 
@@ -530,13 +530,13 @@ Do not accept dataset URL/local path from the React event. Keep the old direct b
 Data Operations and the existing non-React fallback recovery path; do not render those inputs in
 the healthy React workflow.
 
-- [ ] **Step 5: Build the due action from local manager periods**
+- [x] **Step 5: Build the due action from local manager periods**
 
 During page composition, read the watchlist managers already loaded from DB, create the
 `manager_periods` mapping, call Task 1's pure action, and pass it to the payload. No network mock
 should be required by the page render test.
 
-- [ ] **Step 6: Run Task 5 tests and commit**
+- [x] **Step 6: Run Task 5 tests and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_institutional_13f_refresh.py -q

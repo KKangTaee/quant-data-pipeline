@@ -6,7 +6,12 @@ from typing import Any, Callable
 import pandas as pd
 import streamlit as st
 
-from app.jobs.ingestion_jobs import run_collect_ohlcv, run_collect_sec_13f_dataset
+from app.jobs.ingestion_jobs import (
+    run_collect_ohlcv,
+    run_collect_sec_13f_dataset,
+    run_refresh_institutional_13f_hybrid,
+)
+from app.services.institutional_13f_refresh import build_institutional_refresh_action
 from app.services.institutional_portfolios import (
     INSTITUTIONAL_MANAGER_WATCHLIST,
     INSTITUTIONAL_PORTFOLIO_CAVEATS,
@@ -33,6 +38,25 @@ def _cik_text(value: Any) -> str | None:
     if not digits:
         return None
     return digits.zfill(10)[-10:]
+
+
+def _build_local_refresh_action(
+    managers: list[dict[str, Any]],
+    *,
+    as_of_date: Any,
+    last_result: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    manager_periods = {
+        cik: row.get("latest_report_period")
+        for row in managers
+        if (cik := _cik_text(row.get("cik")))
+    }
+    return build_institutional_refresh_action(
+        as_of_date=as_of_date,
+        manager_periods=manager_periods,
+        expected_ciks=[str(row["cik"]) for row in INSTITUTIONAL_MANAGER_WATCHLIST],
+        last_result=last_result,
+    )
 
 
 def _as_frame(rows: list[dict[str, Any]], columns: list[str] | None = None) -> pd.DataFrame:
@@ -432,6 +456,18 @@ def _handle_workbench_event(event: dict[str, Any] | None) -> None:
             )
         st.rerun()
         return
+    if event_name == "refresh_institutional_13f":
+        report_period = str(payload.get("report_period") or "").strip()
+        with st.spinner(f"{report_period or '13F'} 공개 filing 확인 및 갱신 중..."):
+            st.session_state["institutional_13f_refresh_result"] = run_refresh_institutional_13f_hybrid(
+                report_period=report_period,
+                ciks=[str(row["cik"]) for row in INSTITUTIONAL_MANAGER_WATCHLIST],
+            )
+        st.session_state["institutional_interest_model_cache"] = {}
+        st.session_state["institutional_popularity_model_cache"] = {}
+        st.session_state["institutional_popularity_needs_load"] = False
+        st.rerun()
+        return
     if event_name == "manager_search":
         query = str(payload.get("query") or "").strip()
         st.session_state["institutional_portfolios_manager_search"] = query
@@ -629,6 +665,11 @@ def render_institutional_portfolios_page(
         popularity_model=popularity_model,
         price_refresh_result=dict(st.session_state.get("institutional_price_refresh_result") or {}),
         refresh_result=dict(st.session_state.get("institutional_13f_refresh_result") or {}),
+        refresh_action=_build_local_refresh_action(
+            managers,
+            as_of_date=(loaded_at or datetime.now()).date(),
+            last_result=dict(st.session_state.get("institutional_13f_refresh_result") or {}),
+        ),
         mode="live",
         refresh_status=refresh_status,
         preserve_manager_order=search_active,

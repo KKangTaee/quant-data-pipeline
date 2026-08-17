@@ -64,3 +64,14 @@
   (`17 passed`).
 - Regression: Institutional Portfolios remained `58 passed`; the loader opens one connection per
   history request and performs no external request or write.
+
+## 2026-08-17 — Task 5 hybrid manual refresh
+
+- RED: bulk/fallback/error orchestration, local page action and manual event tests failed on the
+  missing job and event boundary.
+- GREEN: official bulk wins when published; otherwise curated EDGAR runs once. Partial manager
+  counts remain in the JobResult, discovery failure runs neither collector, and the React event
+  ignores supplied source URLs (`22 passed`).
+- Regression: Institutional Portfolios passed (`58 passed`). Normal page composition calls only
+  the local calendar helper and stored manager rows; SEC discovery remains behind the explicit
+  event.

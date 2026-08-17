@@ -592,3 +592,138 @@ def test_portfolio_bundle_populates_legacy_keys_from_effective_quarters(monkeypa
     assert bundle["previous_effective"] is previous
     assert bundle["latest_filing"]["accession_number"] == "q2-restatement"
     assert bundle["previous_holdings"].iloc[0]["cusip"] == "191216100"
+
+
+def test_hybrid_refresh_uses_bulk_when_official_window_is_published() -> None:
+    from app.jobs.ingestion_jobs import run_refresh_institutional_13f_hybrid
+
+    calls: list[str] = []
+    result = run_refresh_institutional_13f_hybrid(
+        report_period="2026-06-30",
+        ciks=["0001067983"],
+        discovery=lambda *_args, **_kwargs: {
+            "dataset_url": "https://www.sec.gov/files/q2.zip",
+            "dataset_label": "Q2 official",
+        },
+        bulk_collector=lambda **_kwargs: calls.append("bulk") or {"rows_written": 100, "holdings_written": 90},
+        watchlist_collector=lambda **_kwargs: calls.append("watchlist") or {},
+    )
+
+    assert calls == ["bulk"]
+    assert result["status"] == "success"
+    assert result["details"]["refresh_mode"] == "official_bulk"
+
+
+def test_hybrid_refresh_falls_back_to_edgar_and_preserves_partial_counts() -> None:
+    from app.jobs.ingestion_jobs import run_refresh_institutional_13f_hybrid
+
+    result = run_refresh_institutional_13f_hybrid(
+        report_period="2026-06-30",
+        ciks=["0001067983", "0001350694"],
+        discovery=lambda *_args, **_kwargs: None,
+        watchlist_collector=lambda **_kwargs: {
+            "updated_managers": 1,
+            "already_current_managers": 0,
+            "not_filed_managers": 0,
+            "failed_managers": 1,
+            "rows_written": 29,
+        },
+    )
+
+    assert result["status"] == "partial"
+    assert result["rows_written"] == 29
+    assert result["details"]["refresh_mode"] == "individual_edgar"
+    assert result["details"]["failed_managers"] == 1
+
+
+def test_hybrid_refresh_discovery_failure_does_not_run_collectors() -> None:
+    from app.jobs.ingestion_jobs import run_refresh_institutional_13f_hybrid
+
+    calls: list[str] = []
+
+    def fail(*_args, **_kwargs):
+        raise RuntimeError("SEC HTTP 429")
+
+    result = run_refresh_institutional_13f_hybrid(
+        report_period="2026-06-30",
+        ciks=["0001067983"],
+        discovery=fail,
+        bulk_collector=lambda **_kwargs: calls.append("bulk") or {},
+        watchlist_collector=lambda **_kwargs: calls.append("watchlist") or {},
+    )
+
+    assert calls == []
+    assert result["status"] == "failed"
+    assert "429" in result["message"]
+
+
+def test_local_page_action_uses_watchlist_manager_periods_without_discovery(monkeypatch) -> None:
+    page = importlib.import_module("app.web.institutional_portfolios")
+    collector = importlib.import_module("finance.data.institutional_13f")
+    monkeypatch.setattr(
+        collector,
+        "discover_sec_13f_dataset_candidate",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("render must not discover SEC data")),
+    )
+
+    action = page._build_local_refresh_action(
+        [
+            {"cik": "0001067983", "latest_report_period": "2026-03-31"},
+            {"cik": "0001350694", "latest_report_period": "2026-06-30"},
+        ],
+        as_of_date="2026-08-17",
+    )
+
+    assert action["status"] == "partial"
+    assert action["target_report_period"] == "2026-06-30"
+
+
+def test_manual_refresh_event_runs_hybrid_job_without_accepting_source_url(monkeypatch) -> None:
+    page = importlib.import_module("app.web.institutional_portfolios")
+    calls: list[dict] = []
+
+    class Spinner:
+        def __enter__(self):
+            return None
+
+        def __exit__(self, *_args):
+            return None
+
+    class FakeStreamlit:
+        def __init__(self) -> None:
+            self.session_state: dict[str, object] = {}
+            self.rerun_count = 0
+
+        def spinner(self, _message: str) -> Spinner:
+            return Spinner()
+
+        def rerun(self) -> None:
+            self.rerun_count += 1
+
+    fake_st = FakeStreamlit()
+    monkeypatch.setattr(page, "st", fake_st)
+    monkeypatch.setattr(
+        page,
+        "run_refresh_institutional_13f_hybrid",
+        lambda **kwargs: calls.append(kwargs) or {"status": "success", "rows_written": 29},
+    )
+
+    page._handle_workbench_event(
+        {
+            "id": "refresh_institutional_13f",
+            "report_period": "2026-06-30",
+            "dataset_url": "https://untrusted.example/ignored.zip",
+            "nonce": "manual-q2",
+        }
+    )
+
+    assert calls == [
+        {
+            "report_period": "2026-06-30",
+            "ciks": [row["cik"] for row in page.INSTITUTIONAL_MANAGER_WATCHLIST],
+        }
+    ]
+    assert fake_st.session_state["institutional_13f_refresh_result"]["status"] == "success"
+    assert fake_st.session_state["institutional_interest_model_cache"] == {}
+    assert fake_st.session_state["institutional_popularity_model_cache"] == {}
+    assert fake_st.rerun_count == 1

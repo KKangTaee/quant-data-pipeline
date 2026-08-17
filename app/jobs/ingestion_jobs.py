@@ -41,7 +41,11 @@ from finance.data.eia_petroleum import (
     EIA_WEEKLY_PETROLEUM_SERIES,
     collect_and_store_eia_weekly_petroleum,
 )
-from finance.data.institutional_13f import collect_and_store_sec_13f_dataset
+from finance.data.institutional_13f import (
+    collect_and_store_sec_13f_dataset,
+    discover_sec_13f_dataset_candidate,
+)
+from finance.data.institutional_13f_edgar import collect_and_store_sec_13f_watchlist
 from finance.data.institutional_13f_mapping import collect_and_store_openfigi_13f_mappings
 from finance.data.macro import (
     DEFAULT_MACRO_SERIES,
@@ -2798,6 +2802,132 @@ def run_collect_sec_13f_dataset(
                     "finance_meta.institutional_13f_refresh_status",
                 ],
             },
+        )
+
+
+def run_refresh_institutional_13f_hybrid(
+    *,
+    report_period: str,
+    ciks: Iterable[str],
+    user_agent: str | None = None,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    discovery: Callable[..., dict[str, Any] | None] = discover_sec_13f_dataset_candidate,
+    bulk_collector: Callable[..., dict[str, Any]] = collect_and_store_sec_13f_dataset,
+    watchlist_collector: Callable[..., dict[str, Any]] = collect_and_store_sec_13f_watchlist,
+) -> JobResult:
+    """Refresh one due 13F quarter via official bulk data or curated EDGAR fallback."""
+
+    job_name = "refresh_institutional_13f_hybrid"
+    started_at = _now_str()
+    t0 = perf_counter()
+    normalized_period = str(report_period or "").strip()
+    requested_ciks = list(dict.fromkeys(str(cik or "").zfill(10) for cik in ciks if str(cik or "").strip()))
+    try:
+        parsed_period = datetime.strptime(normalized_period, "%Y-%m-%d")
+        if parsed_period.strftime("%m-%d") not in {"03-31", "06-30", "09-30", "12-31"}:
+            raise ValueError("report period must be a calendar quarter end")
+
+        _emit_stage_progress(
+            progress_callback,
+            event="stage_start",
+            stage="discover_sec_13f_source",
+            stage_index=1,
+            total_stages=2,
+        )
+        candidate = discovery(normalized_period, user_agent=user_agent)
+        _emit_stage_progress(
+            progress_callback,
+            event="stage_complete",
+            stage="discover_sec_13f_source",
+            stage_index=1,
+            total_stages=2,
+        )
+        _emit_stage_progress(
+            progress_callback,
+            event="stage_start",
+            stage="collect_sec_13f_source",
+            stage_index=2,
+            total_stages=2,
+        )
+        if candidate:
+            summary = bulk_collector(
+                dataset_url=str(candidate["dataset_url"]),
+                source_dataset=str(candidate.get("dataset_label") or "sec_form_13f_dataset"),
+                user_agent=user_agent,
+            )
+            refresh_mode = "official_bulk"
+            rows_written = int(summary.get("rows_written") or 0)
+            status = "success" if rows_written > 0 else "no_update"
+            processed = int(summary.get("managers_written") or summary.get("holdings_written") or 0)
+        else:
+            summary = watchlist_collector(
+                ciks=requested_ciks,
+                report_period=normalized_period,
+                user_agent=user_agent,
+            )
+            refresh_mode = "individual_edgar"
+            rows_written = int(summary.get("rows_written") or 0)
+            updated = int(summary.get("updated_managers") or 0)
+            already_current = int(summary.get("already_current_managers") or 0)
+            notice_only = int(summary.get("notice_only_managers") or 0)
+            failed = int(summary.get("failed_managers") or 0)
+            processed = updated + already_current + notice_only
+            if failed and processed:
+                status = "partial"
+            elif failed:
+                status = "failed"
+            elif updated:
+                status = "success"
+            else:
+                status = "no_update"
+        _emit_stage_progress(
+            progress_callback,
+            event="stage_complete",
+            stage="collect_sec_13f_source",
+            stage_index=2,
+            total_stages=2,
+        )
+        message = {
+            "success": f"{normalized_period} 13F 갱신을 완료했습니다.",
+            "partial": f"{normalized_period} 13F 일부 기관만 갱신했습니다. 미제출/실패 기관은 다시 확인할 수 있습니다.",
+            "no_update": f"{normalized_period}에 새로 반영할 13F filing이 없습니다.",
+            "failed": f"{normalized_period} 13F 갱신에 실패했습니다.",
+        }[status]
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=len(requested_ciks),
+            symbols_processed=processed,
+            failed_symbols=[
+                str(row.get("cik"))
+                for row in summary.get("manager_results", [])
+                if row.get("status") == "failed"
+            ],
+            message=message,
+            details={
+                **summary,
+                "refresh_mode": refresh_mode,
+                "report_period": normalized_period,
+                "bulk_candidate": candidate,
+            },
+        )
+    except Exception as exc:
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(requested_ciks),
+            symbols_processed=0,
+            failed_symbols=[],
+            message=f"{normalized_period or '13F'} source discovery or refresh failed: {exc}",
+            details={"report_period": normalized_period},
         )
 
 

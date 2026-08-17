@@ -5,9 +5,9 @@ Started: 2026-08-17
 
 ## Current Step
 
-전체 roadmap `1/5차`. 외부 요청 없는 local due/current/partial action과 explicit-click 뒤에만
-사용할 SEC 공식 bulk listing parser/discovery를 구현했다. 2차 EDGAR 개별 수집과
-amendment-aware loader를 진행한다.
+전체 roadmap `2/5차`. 외부 요청 없는 local action, bulk discovery, EDGAR 개별 수집,
+manager별 transaction, amendment-aware effective history와 explicit hybrid event까지
+구현했다. 3차 historical quarter review 계산을 진행한다.
 
 ## Progress
 
@@ -25,11 +25,13 @@ amendment-aware loader를 진행한다.
   quarter review, React, actual QA의 9개 TDD task로 구체화했다.
 - 2026-08-17: 1차 local due decision과 SEC bulk candidate discovery를 RED/GREEN으로
   구현하고 focused regression을 통과했다.
+- 2026-08-17: 2차 EDGAR watchlist ingestion, effective-quarter resolver와 bulk-first hybrid
+  manual event를 구현하고 stored-data-only render boundary를 유지했다.
 
 ## Next Action
 
-Task 3에서 curated watchlist의 EDGAR submissions/index/XML을 정규화하고 manager별
-transaction으로 저장하는 2차 ingestion 경계를 구현한다.
+Task 6에서 이전/현재 effective holdings를 비교해 share-based change label과 두 가격
+성과 proxy를 계산하는 3차 service를 구현한다.
 
 ## Current Scope Boundary
 
