@@ -166,3 +166,22 @@ def test_missing_feature_keeps_audit_row_but_excludes_it_from_model() -> None:
     assert row["ineligible_reason"] == "MISSING_MODEL_FEATURE"
     assert row["episode_weight"] == 0.0
     assert len(dataset.rows) == len(panel)
+
+
+def test_dataset_consumes_supplied_confirmed_frame_without_second_confirmation() -> None:
+    from finance.economic_cycle_confirmed_state import build_confirmed_state_frame
+    from finance.economic_cycle_transition_dataset import build_transition_dataset
+
+    panel, history = _fixture(
+        ("recovery", "recovery", "expansion", "expansion", "expansion")
+    )
+    confirmed = build_confirmed_state_frame(history)
+
+    rows = build_transition_dataset(
+        panel,
+        history,
+        confirmed_state_frame=confirmed,
+    ).rows
+    transition = rows.loc[rows["confirmed_transition_to"] == "expansion"].iloc[0]
+
+    assert transition["forecast_origin"] == pd.Timestamp("2000-04-30")

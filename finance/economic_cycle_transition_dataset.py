@@ -8,6 +8,7 @@ from typing import Sequence
 
 import pandas as pd
 
+from finance.economic_cycle_confirmed_state import build_confirmed_state_frame
 from finance.economic_cycle_observed_state import PHASE_SEQUENCE, ObservedStateResult
 
 
@@ -51,77 +52,6 @@ def _month_end(value: object) -> pd.Timestamp | None:
     return timestamp.to_period("M").to_timestamp("M").normalize()
 
 
-def _phase_by_month(
-    history: Sequence[ObservedStateResult],
-) -> dict[pd.Timestamp, str]:
-    phases: dict[pd.Timestamp, str] = {}
-    for item in history:
-        state = item.observed_state
-        phase = str(state.get("phase") or "")
-        month = _month_end(state.get("as_of_date"))
-        if (
-            month is not None
-            and phase in PHASE_SEQUENCE
-            and state.get("data_status") != "UNAVAILABLE"
-        ):
-            phases[month] = phase
-    return phases
-
-
-def _confirmed_state_rows(raw_phases: Sequence[str | None]) -> list[dict[str, object]]:
-    """Confirm a new state after two consecutive releases without route limits."""
-
-    output: list[dict[str, object]] = []
-    confirmed: str | None = None
-    candidate: str | None = None
-    candidate_streak = 0
-    episode_id = -1
-    episode_duration = 0
-
-    for raw_phase in raw_phases:
-        transition_from: str | None = None
-        transition_to: str | None = None
-        if raw_phase not in PHASE_SEQUENCE:
-            candidate = None
-            candidate_streak = 0
-        elif confirmed is None:
-            confirmed = raw_phase
-            episode_id = 0
-            episode_duration = 1
-        elif raw_phase == confirmed:
-            candidate = None
-            candidate_streak = 0
-            episode_duration += 1
-        else:
-            if raw_phase == candidate:
-                candidate_streak += 1
-            else:
-                candidate = raw_phase
-                candidate_streak = 1
-            if candidate_streak >= 2:
-                transition_from = confirmed
-                transition_to = candidate
-                confirmed = candidate
-                episode_id += 1
-                episode_duration = 1
-                candidate = None
-                candidate_streak = 0
-            else:
-                episode_duration += 1
-        output.append(
-            {
-                "confirmed_phase": confirmed,
-                "episode_id": episode_id if confirmed is not None else None,
-                "phase_duration": episode_duration if confirmed is not None else 0,
-                "candidate_phase": candidate,
-                "candidate_streak": candidate_streak,
-                "confirmed_transition_from": transition_from,
-                "confirmed_transition_to": transition_to,
-            }
-        )
-    return output
-
-
 def _finite(value: object) -> bool:
     try:
         return math.isfinite(float(value))
@@ -134,6 +64,7 @@ def build_transition_dataset(
     history: Sequence[ObservedStateResult],
     *,
     pressure_horizon_releases: int = 3,
+    confirmed_state_frame: pd.DataFrame | None = None,
 ) -> TransitionDataset:
     """Build pressure and unrestricted next-destination labels without look-ahead.
 
@@ -160,16 +91,37 @@ def build_transition_dataset(
             rows[feature] = math.nan
         rows[feature] = pd.to_numeric(rows[feature], errors="coerce")
 
-    phase_lookup = _phase_by_month(history)
     rows["forecast_origin"] = rows["forecast_origin"].map(_month_end)
-    rows["raw_phase"] = rows["forecast_origin"].map(phase_lookup)
-
-    confirmations = _confirmed_state_rows(rows["raw_phase"].tolist())
-    confirmation_frame = pd.DataFrame(confirmations, index=rows.index)
+    state = (
+        build_confirmed_state_frame(history)
+        if confirmed_state_frame is None
+        else confirmed_state_frame.copy()
+    )
+    if "forecast_origin" not in state:
+        raise ValueError("confirmed_state_frame requires forecast_origin")
+    state["forecast_origin"] = state["forecast_origin"].map(_month_end)
+    state = state.dropna(subset=["forecast_origin"]).drop_duplicates(
+        "forecast_origin", keep="last"
+    )
+    state_columns = (
+        "raw_phase",
+        "confirmed_phase",
+        "episode_id",
+        "phase_duration",
+        "candidate_phase",
+        "candidate_streak",
+        "confirmed_transition_from",
+        "confirmed_transition_to",
+    )
+    for column in state_columns:
+        if column not in state:
+            raise ValueError(f"confirmed_state_frame requires {column}")
+    confirmation_frame = state.set_index("forecast_origin")[list(state_columns)]
     # Confirmed episode duration, rather than a one-release candidate, is the
     # state-duration feature the model is allowed to see.
     rows = rows.drop(columns=["phase_duration"], errors="ignore").join(
-        confirmation_frame
+        confirmation_frame,
+        on="forecast_origin",
     )
     for phase in PHASE_SEQUENCE:
         rows[f"phase_{phase}"] = (rows["confirmed_phase"] == phase).astype(float)
