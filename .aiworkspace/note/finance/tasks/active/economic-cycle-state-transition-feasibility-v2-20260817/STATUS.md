@@ -13,9 +13,9 @@ Last Updated: 2026-08-17
 
 - 제품 목적과 현행/RTDSM-only drift 재감사 완료
 - 계층형 current-state/transition-driver 접근 승인
-- written design 작성 및 자체 검토 진행 중
+- written design 사용자 승인 완료
+- TDD implementation plan 작성 및 자체 검토 완료
 
 ## Next Action
 
-Written spec 확인 후 TDD implementation plan을 작성하고 2차 데이터 audit 구현으로
-진입한다.
+Canonical 2-release state 구현부터 TDD로 실행한다.
