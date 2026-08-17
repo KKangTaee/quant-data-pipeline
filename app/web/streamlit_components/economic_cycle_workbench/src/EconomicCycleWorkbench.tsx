@@ -401,7 +401,10 @@ export type CyclePayload = {
   inflation_policy?: InflationPolicyPayload;
 };
 
-type Props = Omit<ComponentProps, "args"> & { args: { payload?: CyclePayload } };
+type EconomicAnalysisView = "cycle" | "inflation";
+type Props = Omit<ComponentProps, "args"> & {
+  args: { payload?: CyclePayload; selected_view?: EconomicAnalysisView };
+};
 type RibbonStyle = React.CSSProperties & { "--history-month-count": number };
 
 const PHASE_ORDER: Phase[] = ["recovery", "expansion", "slowdown", "contraction"];
@@ -1694,37 +1697,27 @@ function EconomicCycleContent({ payload }: { payload: CyclePayload }) {
 
 export function EconomicCycleWorkbenchView({
   payload,
+  selectedView = "cycle",
   onCommand = () => undefined,
 }: {
   payload: CyclePayload;
+  selectedView?: EconomicAnalysisView;
   onCommand?: (command: InflationPolicyCommand) => void;
 }) {
-  const [selectedView, setSelectedView] = useState<"cycle" | "inflation">("cycle");
   const inflationPayload = payload.inflation_policy;
   return (
     <div className="cycle-workbench-shell">
-      {inflationPayload ? (
-        <nav className="cycle-inner-navigation" role="tablist" aria-label="경제 분석 보기">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={selectedView === "cycle"}
-            onClick={() => setSelectedView("cycle")}
-          >
-            경기 국면
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={selectedView === "inflation"}
-            onClick={() => setSelectedView("inflation")}
-          >
-            물가·정책 경로
-          </button>
-        </nav>
-      ) : null}
-      {selectedView === "inflation" && inflationPayload ? (
-        <InflationPolicyWorkbench payload={inflationPayload} onCommand={onCommand} />
+      {selectedView === "inflation" ? (
+        inflationPayload ? (
+          <InflationPolicyWorkbench payload={inflationPayload} onCommand={onCommand} />
+        ) : (
+          <main className="inflation-policy-workbench">
+            <section className="inflation-policy-unavailable" role="status">
+              <strong>물가·정책 자료를 불러오지 못했습니다.</strong>
+              <p>저장된 물가·정책 스냅샷을 확인한 뒤 다시 시도해 주세요.</p>
+            </section>
+          </main>
+        )
       ) : (
         <EconomicCycleContent payload={payload} />
       )}
@@ -1734,6 +1727,9 @@ export function EconomicCycleWorkbenchView({
 
 function EconomicCycleWorkbench({ args }: Props) {
   const payload = args.payload;
+  const selectedView: EconomicAnalysisView = args.selected_view === "inflation"
+    ? "inflation"
+    : "cycle";
   const rootRef = useRef<HTMLElement>(null);
   useEffect(() => {
     Streamlit.setFrameHeight();
@@ -1748,7 +1744,11 @@ function EconomicCycleWorkbench({ args }: Props) {
   };
   return (
     <section className="cycle-workbench-frame" ref={rootRef}>
-      <EconomicCycleWorkbenchView payload={payload} onCommand={handleCommand} />
+      <EconomicCycleWorkbenchView
+        payload={payload}
+        selectedView={selectedView}
+        onCommand={handleCommand}
+      />
     </section>
   );
 }

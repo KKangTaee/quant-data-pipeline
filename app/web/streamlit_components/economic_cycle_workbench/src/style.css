@@ -14,36 +14,6 @@ button, input, summary { font: inherit; }
 .cycle-workbench-frame {
   width: 100%;
 }
-.cycle-inner-navigation {
-  display: inline-grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
-  margin: 3px 2px 15px;
-  padding: 4px;
-  border: 1px solid #dbe4eb;
-  border-radius: 13px;
-  background: #f2f6f8;
-}
-.cycle-inner-navigation button {
-  min-height: 40px;
-  padding: 8px 15px;
-  border: 0;
-  border-radius: 9px;
-  color: #617486;
-  background: transparent;
-  font-size: 11px;
-  font-weight: 850;
-  cursor: pointer;
-}
-.cycle-inner-navigation button[aria-selected="true"] {
-  color: #244c63;
-  background: #fff;
-  box-shadow: 0 3px 12px rgba(33, 53, 72, .08);
-}
-.cycle-inner-navigation button:focus-visible {
-  outline: 3px solid rgba(55, 111, 139, .18);
-  outline-offset: 2px;
-}
 .inflation-policy-workbench {
   display: grid;
   gap: 18px;
@@ -961,8 +931,6 @@ button, input, summary { font: inherit; }
 }
 
 @media (max-width: 420px) {
-  .cycle-inner-navigation { display: grid; width: 100%; margin-inline: 0; }
-  .cycle-inner-navigation button { min-height: 44px; padding-inline: 9px; }
   .inflation-policy-workbench { gap: 14px; padding-inline: 0; }
   .inflation-policy-placeholder-hero,
   .inflation-policy-unavailable,

@@ -27,6 +27,7 @@ MARKET_RESEARCH_FAMILY_DESCRIPTIONS = {
 }
 MARKET_RESEARCH_VIEW_OPTIONS = (
     "economic-cycle",
+    "inflation-policy",
     "futures-macro",
     "sentiment",
     "events",
@@ -35,7 +36,8 @@ MARKET_RESEARCH_VIEW_OPTIONS = (
     "us-stock",
 )
 MARKET_RESEARCH_VIEW_LABELS = {
-    "economic-cycle": "경제 사이클",
+    "economic-cycle": "경기 국면",
+    "inflation-policy": "물가·정책",
     "futures-macro": "선물 매크로",
     "sentiment": "심리",
     "events": "일정",
@@ -45,6 +47,7 @@ MARKET_RESEARCH_VIEW_LABELS = {
 }
 MARKET_RESEARCH_VIEW_FAMILY = {
     "economic-cycle": "market-environment",
+    "inflation-policy": "market-environment",
     "futures-macro": "market-environment",
     "sentiment": "market-environment",
     "events": "market-environment",
@@ -424,30 +427,6 @@ def _market_research_navigation_css() -> str:
 @media (max-width: 760px) {
   .st-key-market_research_local_navigation [data-testid="stHorizontalBlock"] {
     flex-wrap: wrap;
-  }
-}
-@media (max-width: 480px) {
-  .st-key-market_research_family_widget div[data-baseweb="button-group"] {
-    display: grid;
-    width: 100%;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .st-key-market_research_family_widget button {
-    width: 100% !important;
-    padding-inline: 0.3rem !important;
-    white-space: normal;
-  }
-  .st-key-market_research_view_widget div[data-baseweb="button-group"] {
-    display: grid;
-    width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .st-key-market_research_view_widget [data-testid="stBaseButton-pills"],
-  .st-key-market_research_view_widget [data-testid="stBaseButton-pillsActive"] {
-    width: 100%;
-  }
-  .st-key-market_research_view_widget button:only-child {
-    grid-column: 1 / -1;
   }
 }
 </style>

@@ -10,7 +10,7 @@ Last Verified: 2026-08-02
 | [EDGAR_FINANCIAL_STATEMENT_REFRESH.md](./EDGAR_FINANCIAL_STATEMENT_REFRESH.md) | EDGAR annual statement refresh, statement coverage diagnosis, shadow rebuild, SEC fair-access / pacing 확인 |
 | [INSTITUTIONAL_13F_DATASET.md](./INSTITUTIONAL_13F_DATASET.md) | SEC Form 13F official quarterly dataset ingestion, user-agent, source caveat, QA 확인 |
 | [INFLATION_POLICY_DATA_REFRESH.md](./INFLATION_POLICY_DATA_REFRESH.md) | Core PCE·FOMC SEP/의결·국채금리·ACM 원천의 독립 Point-in-Time 갱신, 필수 coverage gate와 제한 상태 확인 |
-| [OVERVIEW_MARKET_INTELLIGENCE.md](./OVERVIEW_MARKET_INTELLIGENCE.md) | Overview 경제 사이클·S&P 500 명시적 수동 최신화, vintage/model refresh, Market Context / Market Movers / Futures Macro / Sentiment / Events 운영, optional scheduled refresh automation, FOMC / earnings estimate 수집, closeout QA |
+| [OVERVIEW_MARKET_INTELLIGENCE.md](./OVERVIEW_MARKET_INTELLIGENCE.md) | Market Research 경기 국면·S&P 500 명시적 수동 최신화, vintage/model refresh, Market Movers / Futures Macro / Sentiment / Events 운영, optional scheduled refresh automation, FOMC / earnings estimate 수집, closeout QA |
 | [PORTFOLIO_MONITORING_MIGRATION_AND_QA.md](./PORTFOLIO_MONITORING_MIGRATION_AND_QA.md) | Portfolio Monitoring schema/default group/position event optional-date migration/legacy dry-run/rollback/React responsive·최초 설정·거래 interaction QA |
 
 ## Local App

@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from app.web.overview.navigation import (
     MARKET_RESEARCH_FAMILY_OPTIONS,
+    MARKET_RESEARCH_VIEW_LABELS,
     MARKET_RESEARCH_VIEW_OPTIONS,
     _market_research_navigation_css,
     build_market_research_navigation_payload,
@@ -24,6 +25,7 @@ def test_market_research_views_cover_three_purpose_families():
     )
     assert MARKET_RESEARCH_VIEW_OPTIONS == (
         "economic-cycle",
+        "inflation-policy",
         "futures-macro",
         "sentiment",
         "events",
@@ -33,6 +35,7 @@ def test_market_research_views_cover_three_purpose_families():
     )
     assert market_research_views_for_family("market-environment") == (
         "economic-cycle",
+        "inflation-policy",
         "futures-macro",
         "sentiment",
         "events",
@@ -49,6 +52,7 @@ def test_market_research_legacy_slug_normalization():
     assert normalize_market_research_view("market-context", "us_stock") == "us-stock"
     assert normalize_market_research_view("market-context", None) == "economic-cycle"
     assert normalize_market_research_view("market-movers") == "market-movers"
+    assert normalize_market_research_view("inflation-policy") == "inflation-policy"
     assert normalize_market_research_view("does-not-exist") == "economic-cycle"
 
 
@@ -74,12 +78,20 @@ def test_market_research_defaults_are_stable():
     assert market_research_default_view_for_family("index-valuation") == "sp500"
     assert market_research_default_view_for_family("stock-research") == "market-movers"
     assert market_research_family_for_view("broken") == "market-environment"
+    assert MARKET_RESEARCH_VIEW_LABELS["economic-cycle"] == "경기 국면"
+    assert MARKET_RESEARCH_VIEW_LABELS["inflation-policy"] == "물가·정책"
 
 
 def test_market_research_local_navigation_context_covers_single_and_multi_view_families():
     assert market_research_local_navigation_context("market-environment") == (
         "시장 환경",
-        ("economic-cycle", "futures-macro", "sentiment", "events"),
+        (
+            "economic-cycle",
+            "inflation-policy",
+            "futures-macro",
+            "sentiment",
+            "events",
+        ),
     )
     assert market_research_local_navigation_context("index-valuation") == (
         "지수 가치평가",
@@ -107,6 +119,10 @@ def test_market_research_react_payload_covers_all_families_and_views():
 
 
 def test_market_research_react_event_accepts_only_canonical_view_selection():
+    assert resolve_market_research_navigation_event(
+        "economic-cycle",
+        {"event": {"id": "select_view", "view": "inflation-policy", "nonce": 0}},
+    ) == "inflation-policy"
     assert resolve_market_research_navigation_event(
         "economic-cycle",
         {"event": {"id": "select_view", "view": "us-stock", "nonce": 1}},
@@ -139,9 +155,10 @@ def test_market_research_navigation_css_uses_compact_and_responsive_contract():
     assert "width: fit-content" in css
     assert 'stBaseButton-segmented_controlActive' in css
     assert ".mr-market-research-local-label" in css
-    assert "repeat(3, minmax(0, 1fr))" in css
-    assert "repeat(2, minmax(0, 1fr))" in css
-    assert "button:only-child" in css
+    assert "flex-wrap: wrap" in css
+    assert "border-radius: 999px" in css
+    assert "@media (max-width: 480px)" not in css
+    assert "overflow-x: auto" not in css
     assert "key=MARKET_RESEARCH_LOCAL_NAV_KEY" in source
 
 
@@ -174,6 +191,27 @@ def test_market_research_page_removes_overview_global_blocks():
     assert "render_reference_contextual_help" not in body
     assert "render_market_session_banner" not in body
     assert "_render_market_research_selector()" in body
+
+
+def test_market_research_page_dispatches_flat_economic_analysis_views():
+    from app.web.overview.page import render_overview_dashboard
+
+    with (
+        patch(
+            "app.web.overview.page.market_research_navigation_react_component_available",
+            return_value=True,
+        ),
+        patch("app.web.overview.page._render_market_research_selector") as selector,
+        patch("app.web.overview.page.render_economic_cycle") as render_cycle,
+    ):
+        selector.return_value = "economic-cycle"
+        render_overview_dashboard(runtime_marker="test", loaded_at=None, git_sha=None)
+        render_cycle.assert_called_once_with(selected_view="cycle")
+
+        render_cycle.reset_mock()
+        selector.return_value = "inflation-policy"
+        render_overview_dashboard(runtime_marker="test", loaded_at=None, git_sha=None)
+        render_cycle.assert_called_once_with(selected_view="inflation")
 
 
 def test_market_research_page_uses_compact_keyed_header():
@@ -265,8 +303,12 @@ def test_market_research_react_css_uses_editorial_tabs_without_container_chrome(
     assert "border:" not in view_block
     assert "border-radius:" not in view_block
     assert "background:" not in view_block
-    assert "grid-template-columns: repeat(3, minmax(0, 1fr))" in css
-    assert "grid-template-columns: repeat(2, minmax(0, 1fr))" in css
+    mobile_block = css.split("@media (max-width: 480px)", 1)[1]
+    assert ".mr-navigation__families" not in mobile_block
+    assert ".mr-navigation__views" not in mobile_block
+    assert "overflow-x: auto" not in mobile_block
+    assert "border-radius: 999px" in css
+    assert "flex-wrap: wrap" in view_block
 
 
 def test_market_movers_page_dispatch_can_suppress_duplicate_header():

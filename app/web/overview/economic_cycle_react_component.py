@@ -36,10 +36,16 @@ def _declare_economic_cycle_component():
 def render_economic_cycle_component(
     payload: dict[str, Any],
     *,
+    selected_view: str = "cycle",
     key: str = "economic_cycle_workbench",
 ) -> dict[str, Any] | None:
     component = _declare_economic_cycle_component()
     if component is None:
         return None
-    result = component(payload=payload, key=key, default=None)
+    result = component(
+        payload=payload,
+        selected_view=selected_view,
+        key=key,
+        default=None,
+    )
     return dict(result) if isinstance(result, dict) else None

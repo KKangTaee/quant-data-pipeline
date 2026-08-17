@@ -66,7 +66,7 @@ uv run python -c "from app.jobs.ingestion_jobs import run_collect_economic_cycle
 
 ### 3. 화면 수동 intramonth refresh
 
-`Market Research > 시장 환경 > 경제 사이클`에 진입한다.
+`Market Research > 시장 환경 > 경기 국면`에 진입한다.
 
 - 저장된 최신 intramonth cutoff가 최신 계산 가능 평일보다 뒤처졌거나 결과가 없으면 `최신 데이터로 다시 계산` action이 표시된다.
 - 클릭하면 Python action façade가 기존 17-series overlap 수집과 combined nowcast refresh를 실행한다. React는 event만 보내며 provider/DB를 직접 호출하지 않는다.

@@ -330,13 +330,43 @@ function mixedComponentPayload(): InflationPolicyPayload {
   };
 }
 
-describe("inflation policy inner navigation", () => {
-  it("keeps 경기 국면 as default and opens 물가·정책 경로 explicitly", async () => {
-    render(<EconomicCycleWorkbenchView payload={cyclePayload} onCommand={vi.fn()} />);
-
+describe("controlled economic analysis view", () => {
+  it("opens 경기 국면 directly without a nested tablist", () => {
+    render(
+      <EconomicCycleWorkbenchView
+        payload={cyclePayload}
+        selectedView="cycle"
+        onCommand={vi.fn()}
+      />,
+    );
     expect(screen.getByRole("heading", { name: "현재 관측 국면" })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("tab", { name: "물가·정책 경로" }));
+    expect(screen.queryByRole("tablist", { name: "경제 분석 보기" })).not.toBeInTheDocument();
+  });
+
+  it("opens 물가·정책 directly without a nested tablist", () => {
+    render(
+      <EconomicCycleWorkbenchView
+        payload={cyclePayload}
+        selectedView="inflation"
+        onCommand={vi.fn()}
+      />,
+    );
     expect(screen.getByRole("heading", { name: /연말 Core PCE 경로/ })).toBeInTheDocument();
+    expect(screen.queryByRole("tablist", { name: "경제 분석 보기" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the 물가·정책 surface selected when its payload is unavailable", () => {
+    const { inflation_policy: _inflationPolicy, ...payloadWithoutInflation } = cyclePayload;
+    render(
+      <EconomicCycleWorkbenchView
+        payload={payloadWithoutInflation}
+        selectedView="inflation"
+        onCommand={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("물가·정책 자료를 불러오지 못했습니다.")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "현재 관측 국면" })).not.toBeInTheDocument();
   });
 });
 

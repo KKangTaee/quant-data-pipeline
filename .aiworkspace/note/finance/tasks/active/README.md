@@ -26,9 +26,7 @@ tasks/active/<task-name>/
 
 ## Current Active Product Tasks
 
-| Task | State | Current Step |
-|---|---|---|
-| `institutional-holdings-content-first-ui-v1-20260817` | `active` | 전체 `1/3차`; written spec 승인·implementation plan 준비 완료, 실행 방식 확정 대기 |
+현재 active user-approved product task는 없다.
 
 ## Paused Tasks
 
@@ -48,6 +46,7 @@ tasks/active/<task-name>/
 | Task | Status | Notes |
 |---|---|---|
 | `institutional-holdings-metric-clarity-v1-20260817` | Completed product task, 3/3 | 분기 리뷰 contribution `%/%p`와 sign-specific list, 기관 수 기준 랭킹과 13F 보고 보유가액 합계, 한국어 3-bullet disclosure를 fresh actual Browser QA까지 완료했다. |
+| `institutional-holdings-content-first-ui-v1-20260817` | Completed product task, 3/3 | content-first header, bounded manager picker, horizontal destination tabs와 연속 manager 전환 상태 보존을 actual desktop/390px Browser QA까지 완료했다. |
 | `institutional-holdings-hybrid-quarter-review-v1-20260817` | Completed product task, 5/5 | 로컬 제출기한 기반 수동 bulk-first/EDGAR fallback, amendment-aware history, `NEW/ADD/KEEP/REDUCE/DROP`, 두 covered-sleeve proxy와 v3 React 분기 리뷰를 actual SEC/MySQL/Browser QA까지 완료했다. |
 | `economic-cycle-interpretability-refresh-v1-20260817` | Completed product task, 5/5 | official RTDSM current state·최근 변화·전환압력·조건부 목적지와 근거를 한 화면 계약으로 정리하고 공식 월말 수동 갱신, 자산 카드 보존과 actual Browser QA를 완료했다. |
 | `economic-cycle-transition-production-v1-20260817` | Completed product task, 5/5 | actual `GO` transition artifact/snapshot/service와 unrestricted destination UI를 연결하고 2026-07 confirmed recovery·전환압력·조건부 목적지를 fail-closed로 공개했다. |

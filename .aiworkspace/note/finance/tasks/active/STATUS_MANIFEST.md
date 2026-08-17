@@ -7,12 +7,16 @@ Last Verified: 2026-08-17
 
 Current active product task:
 
-- `institutional-holdings-content-first-ui-v1-20260817` — `State: active`;
-  전체 `1/3차`. 사용자가 승인한 `Market Research + Today` content-first A안과 manager
-  selection 상태 계약을 written spec으로 고정했고 implementation plan을 준비했다.
+- none
 
 Latest completed Institutional Holdings task:
 
+- `institutional-holdings-metric-clarity-v1-20260817` — `State: complete`;
+  전체 `3/3차`. 분기 리뷰 contribution·기관 수 기준 랭킹·13F 보고 보유가액 의미를
+  명확히 하고 actual Browser QA까지 완료했다.
+- `institutional-holdings-content-first-ui-v1-20260817` — `State: complete`;
+  전체 `3/3차`. content-first header, bounded manager picker, horizontal destination tabs와
+  연속 manager 전환 상태 보존을 actual desktop/390px Browser QA까지 완료했다.
 - `institutional-holdings-hybrid-quarter-review-v1-20260817` — `State: complete`;
   전체 `5/5차`. local due 기반 explicit bulk-first/EDGAR fallback, amendment-aware effective
   quarter, 두 performance proxy와 v3 React `분기 리뷰`를 actual SEC/MySQL/Browser QA까지

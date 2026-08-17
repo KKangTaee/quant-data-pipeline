@@ -97,7 +97,10 @@ def render_overview_dashboard(
     _render_selected_market_research_view(
         active_view,
         renderers={
-            "economic-cycle": render_economic_cycle,
+            "economic-cycle": lambda: render_economic_cycle(selected_view="cycle"),
+            "inflation-policy": lambda: render_economic_cycle(
+                selected_view="inflation"
+            ),
             "futures-macro": lambda: render_futures_macro_tab(show_header=False),
             "sentiment": lambda: render_sentiment_tab(show_header=False),
             "events": lambda: render_events_tab(show_header=False),
