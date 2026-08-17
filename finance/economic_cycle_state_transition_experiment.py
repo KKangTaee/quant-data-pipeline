@@ -52,7 +52,10 @@ from finance.economic_cycle_transition_validation import (
     TransitionValidationReport,
     run_transition_validation,
 )
-from finance.loaders.economic_cycle import load_economic_cycle_vintages
+from finance.loaders.economic_cycle import (
+    load_economic_cycle_vintage_history,
+    load_economic_cycle_vintages,
+)
 from finance.loaders.economic_cycle_assets import (
     load_economic_cycle_asset_prices,
     load_economic_cycle_market_series,
@@ -224,6 +227,46 @@ def _build_state_stage(cutoff: pd.Timestamp) -> StateStageResult:
     )
 
 
+def _load_driver_vintages(
+    cutoff: pd.Timestamp,
+    *,
+    released_loader: Callable[..., Sequence[Mapping[str, object]]] = load_inflation_policy_training_vintages,
+    history_loader: Callable[..., Sequence[Mapping[str, object]]] = load_economic_cycle_vintage_history,
+) -> list[dict[str, object]]:
+    """Combine exact release timestamps with ALFRED realtime-date fallback rows."""
+
+    cutoff_text = cutoff.date().isoformat()
+    start_text = RTDSM_HISTORY_START.date().isoformat()
+    released = [
+        dict(row)
+        for row in released_loader(
+            as_of_at=f"{cutoff_text}T23:59:59.999999+00:00",
+            history_start=start_text,
+            series_ids=REQUIRED_DRIVER_SERIES,
+        )
+    ]
+    covered = {
+        str(row.get("series_id") or "").strip().upper() for row in released
+    }
+    fallback_series = tuple(
+        series_id for series_id in REQUIRED_DRIVER_SERIES if series_id not in covered
+    )
+    fallback = (
+        [
+            dict(row)
+            for row in history_loader(
+                fallback_series,
+                start_date=start_text,
+                end_date=cutoff_text,
+                as_of_date=cutoff_text,
+            )
+        ]
+        if fallback_series
+        else []
+    )
+    return [*released, *fallback]
+
+
 def _build_driver_stage(
     cutoff: pd.Timestamp,
     state: StateStageResult,
@@ -234,14 +277,7 @@ def _build_driver_stage(
         confirmed_state_frame=state.confirmed_state_frame,
     )
     cutoff_text = cutoff.date().isoformat()
-    as_of_at = f"{cutoff_text}T23:59:59.999999+00:00"
-    vintage_rows = list(
-        load_inflation_policy_training_vintages(
-            as_of_at=as_of_at,
-            history_start=RTDSM_HISTORY_START.date().isoformat(),
-            series_ids=REQUIRED_DRIVER_SERIES,
-        )
-    )
+    vintage_rows = _load_driver_vintages(cutoff)
 
     market_rows: list[dict[str, object]] = []
     market_error: str | None = None

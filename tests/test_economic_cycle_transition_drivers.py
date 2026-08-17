@@ -61,6 +61,25 @@ def test_driver_panel_uses_only_releases_known_at_each_origin() -> None:
     assert panel.loc[1, "DGS2_level"] == 4.0
 
 
+def test_driver_panel_uses_realtime_start_when_release_timestamp_is_absent() -> None:
+    from finance.economic_cycle_transition_drivers import build_transition_driver_panel
+
+    panel = build_transition_driver_panel(
+        [
+            {
+                "series_id": "DGS2",
+                "observation_date": "2000-01-31",
+                "realtime_start": "2000-02-29",
+                "value": 5.0,
+            }
+        ],
+        pd.to_datetime(["2000-01-31", "2000-02-29"]),
+    )
+
+    assert pd.isna(panel.loc[0, "DGS2_level"])
+    assert panel.loc[1, "DGS2_level"] == 5.0
+
+
 def test_core_pce_and_curve_features_are_contextual_not_single_sign_rules() -> None:
     from finance.economic_cycle_transition_drivers import (
         build_transition_driver_panel,

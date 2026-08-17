@@ -261,3 +261,41 @@ def test_experiment_has_no_writer_boundary() -> None:
     )
 
     assert "writer" not in inspect.signature(run_state_transition_feasibility).parameters
+
+
+def test_driver_vintage_loader_falls_back_to_realtime_history() -> None:
+    from finance.economic_cycle_state_transition_experiment import (
+        _load_driver_vintages,
+    )
+
+    requested_fallback: list[str] = []
+
+    def released_loader(**_kwargs):
+        return (
+            {
+                "series_id": "DGS2",
+                "observation_date": "2000-01-31",
+                "released_at": "2000-02-01T00:00:00Z",
+                "value": 5.0,
+            },
+        )
+
+    def history_loader(series_ids, **_kwargs):
+        requested_fallback.extend(series_ids)
+        return [
+            {
+                "series_id": "ANFCI",
+                "observation_date": "2000-01-31",
+                "realtime_start": "2000-02-01",
+                "value": -0.5,
+            }
+        ]
+
+    rows = _load_driver_vintages(
+        pd.Timestamp("2026-07-31"),
+        released_loader=released_loader,
+        history_loader=history_loader,
+    )
+
+    assert "DGS2" not in requested_fallback
+    assert {str(row["series_id"]) for row in rows} == {"DGS2", "ANFCI"}

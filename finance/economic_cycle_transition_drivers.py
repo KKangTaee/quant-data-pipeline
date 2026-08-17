@@ -128,20 +128,40 @@ def _origin_cutoff(value: pd.Timestamp) -> pd.Timestamp:
     )
 
 
+def _fallback_known_at(value: object) -> pd.Timestamp | None:
+    """Treat an ALFRED realtime date as known only after that U.S. day ends."""
+
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    timestamp = pd.Timestamp(parsed)
+    if timestamp.tzinfo is not None:
+        timestamp = timestamp.tz_convert(None)
+    return timestamp.normalize().tz_localize("UTC") + pd.Timedelta(
+        days=1
+    ) - pd.Timedelta(microseconds=1)
+
+
 def _normalized_vintages(
     rows: Sequence[Mapping[str, object]],
 ) -> pd.DataFrame:
     frame = pd.DataFrame([dict(row) for row in rows])
-    required = {"series_id", "observation_date", "released_at", "value"}
+    required = {"series_id", "observation_date", "value"}
     if frame.empty or not required.issubset(frame):
-        return pd.DataFrame(columns=sorted(required))
+        return pd.DataFrame(columns=sorted((*required, "released_at")))
     frame["series_id"] = frame["series_id"].astype(str).str.upper().str.strip()
     frame["observation_date"] = pd.to_datetime(
         frame["observation_date"], errors="coerce"
     ).dt.normalize()
-    frame["released_at"] = pd.to_datetime(
-        frame["released_at"], errors="coerce", utc=True
+    released = pd.to_datetime(
+        frame.get("released_at", pd.Series(index=frame.index, dtype=object)),
+        errors="coerce",
+        utc=True,
     )
+    fallback = frame.get(
+        "realtime_start", pd.Series(index=frame.index, dtype=object)
+    ).map(_fallback_known_at)
+    frame["released_at"] = released.where(released.notna(), fallback)
     frame["value"] = pd.to_numeric(frame["value"], errors="coerce")
     return (
         frame.replace([np.inf, -np.inf], np.nan)
