@@ -106,6 +106,50 @@ type TransitionMonitor = {
   context: TransitionContext[];
 };
 
+type TransitionForecastAlternative = {
+  phase: Phase;
+  phase_label: string;
+  probability: number;
+};
+
+type TransitionForecastDriver = {
+  driver_id: string;
+  label: string;
+  value: number;
+  contribution: number;
+  current_effect: "RAISES_PRESSURE" | "LOWERS_PRESSURE" | "NEUTRAL";
+  current_effect_label: string;
+  higher_value_effect: "RAISES_PRESSURE" | "LOWERS_PRESSURE" | "NEUTRAL";
+  higher_value_effect_label: string;
+  signal_group?: "CORE" | "DRIVER" | "PHASE_CONTEXT";
+};
+
+type TransitionForecast = {
+  contract_version: "transition_forecast_v1";
+  status: "READY";
+  current_phase: Phase;
+  current_phase_label: string;
+  pressure: {
+    probability: number;
+    historical_percentile: number;
+    level: "LOW" | "NORMAL" | "ELEVATED" | "HIGH";
+    level_label: string;
+    summary: string;
+    horizon_releases: number;
+    horizon_definition: "next_3_usable_releases";
+  };
+  destination: {
+    probabilities: Record<Phase, number>;
+    primary_phase: Phase;
+    primary_phase_label: string;
+    alternatives: TransitionForecastAlternative[];
+    current_phase_excluded: true;
+    horizon_definition: "next_confirmed_transition";
+  };
+  drivers: TransitionForecastDriver[];
+  boundary: string;
+};
+
 type IntramonthFactorDelta = {
   factor: string;
   baseline: number;
@@ -332,6 +376,7 @@ export type CyclePayload = {
   observed_state: ObservedState;
   recent_changes: RecentChange[];
   transition_monitor?: TransitionMonitor | null;
+  transition_forecast?: TransitionForecast | null;
   cycle_map: {
     phase_order: Phase[];
     points: CyclePoint[];
@@ -537,12 +582,27 @@ export type CycleRouteTransition = {
   from: Phase;
   to: Phase;
   status: "WATCH" | "CONFIRMED";
+  source?: "FORECAST";
 };
 
 export function resolveCycleRouteTransition(
   monitor: TransitionMonitor | null | undefined,
   currentPhase: Phase | null | undefined,
+  forecast?: TransitionForecast | null,
 ): CycleRouteTransition | null {
+  if (
+    forecast?.status === "READY"
+    && currentPhase
+    && forecast.current_phase === currentPhase
+    && forecast.destination.primary_phase !== currentPhase
+  ) {
+    return {
+      from: currentPhase,
+      to: forecast.destination.primary_phase,
+      status: "WATCH",
+      source: "FORECAST",
+    };
+  }
   const current = monitor?.current_transition;
   if (current && current.from_phase !== current.target_phase) {
     return {
@@ -562,6 +622,22 @@ export function resolveCycleRouteTransition(
   return currentPhase && to && currentPhase !== to
     ? { from: currentPhase, to, status: "WATCH" }
     : null;
+}
+
+function routePath(from: Phase, to: Phase): string {
+  const registered = CYCLE_ROUTE_ARCS[`${from}:${to}`];
+  if (registered) return registered;
+  const start = CYCLE_ROUTE_NODES[from];
+  const end = CYCLE_ROUTE_NODES[to];
+  const midpointX = (start.x + end.x) / 2;
+  const midpointY = (start.y + end.y) / 2;
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const length = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+  const offset = 28;
+  const controlX = midpointX - (dy / length) * offset;
+  const controlY = midpointY + (dx / length) * offset;
+  return `M${start.x} ${start.y} Q${controlX.toFixed(1)} ${controlY.toFixed(1)} ${end.x} ${end.y}`;
 }
 
 export function summarizeCycleRouteHistory(points: CyclePoint[]): string {
@@ -669,12 +745,19 @@ function IntramonthChangePanel({ intramonth }: { intramonth: IntramonthChange })
 
 function CycleRouteMap({ payload }: { payload: CyclePayload }) {
   const currentPhase = payload.observed_state.phase;
-  const transition = resolveCycleRouteTransition(payload.transition_monitor, currentPhase);
-  const routePath = transition ? CYCLE_ROUTE_ARCS[`${transition.from}:${transition.to}`] : null;
+  const transition = resolveCycleRouteTransition(
+    payload.transition_monitor,
+    currentPhase,
+    payload.transition_forecast,
+  );
+  const activeRoutePath = transition ? routePath(transition.from, transition.to) : null;
   const historySummary = summarizeCycleRouteHistory(payload.cycle_map.points);
   const currentLabel = currentPhase ? PHASE_LABEL[currentPhase] : "판단 제한";
-  const statusCopy = transition && routePath
-    ? transition.status === "WATCH"
+  const forecast = payload.transition_forecast;
+  const statusCopy = transition && activeRoutePath
+    ? transition.source === "FORECAST" && forecast
+      ? `${PHASE_LABEL[transition.from]} → ${PHASE_LABEL[transition.to]} 가장 유력 · 전환 시 ${formatRatio(forecast.destination.probabilities[transition.to])}`
+      : transition.status === "WATCH"
       ? `${PHASE_LABEL[transition.from]} → ${PHASE_LABEL[transition.to]} 방향 관찰 · 예측 아님`
       : `${PHASE_LABEL[transition.from]} → ${PHASE_LABEL[transition.to]} 국면 전환 확인`
     : payload.transition_monitor?.status === "MAINTAIN"
@@ -689,7 +772,7 @@ function CycleRouteMap({ payload }: { payload: CyclePayload }) {
     <section className="cycle-map-panel" aria-labelledby="cycle-map-title">
       <div className="section-heading">
         <div><span>Cycle route</span><h3 id="cycle-map-title">순환 경로로 본 현재 위치</h3></div>
-        <small>현재 국면과 구조적 다음 인접 국면</small>
+        <small>{forecast ? "현재 국면과 모델이 비교한 다음 국면" : "현재 국면과 구조적 다음 인접 국면"}</small>
       </div>
       <div className="cycle-map-body">
         <svg
@@ -709,10 +792,10 @@ function CycleRouteMap({ payload }: { payload: CyclePayload }) {
           {Object.entries(CYCLE_ROUTE_ARCS).map(([key, path]) => (
             <path className="cycle-route-track" d={path} key={`route-track-${key}`} />
           ))}
-          {transition && routePath ? (
+          {transition && activeRoutePath ? (
             <path
               className={`cycle-route-direction route-${transition.status.toLowerCase()}`}
-              d={routePath}
+              d={activeRoutePath}
               markerEnd={`url(#cycle-route-${transition.status.toLowerCase()}-arrowhead)`}
               role="img"
               aria-label={statusCopy}
@@ -722,6 +805,7 @@ function CycleRouteMap({ payload }: { payload: CyclePayload }) {
             const node = CYCLE_ROUTE_NODES[phase];
             const isCurrent = currentPhase === phase;
             const isNext = transition?.to === phase;
+            const noteY = node.labelY > node.y ? node.y - 27 : node.y + 34;
             return (
               <g className="cycle-route-node" key={phase}>
                 <circle
@@ -731,8 +815,8 @@ function CycleRouteMap({ payload }: { payload: CyclePayload }) {
                   r={isCurrent ? 17 : isNext ? 14 : 11}
                 />
                 <text className="cycle-route-node-label" x={node.labelX} y={node.labelY}>{PHASE_LABEL[phase]}</text>
-                {isCurrent ? <text className="cycle-route-node-note" x={node.x} y={node.y + 34}>현재</text> : null}
-                {!isCurrent && isNext ? <text className="cycle-route-node-note" x={node.x} y={node.y + 31}>다음 확인</text> : null}
+                {isCurrent ? <text className="cycle-route-node-note" x={node.x} y={noteY}>현재</text> : null}
+                {!isCurrent && isNext ? <text className="cycle-route-node-note" x={node.x} y={noteY}>{forecast ? "가장 유력" : "다음 확인"}</text> : null}
               </g>
             );
           })}
@@ -743,23 +827,73 @@ function CycleRouteMap({ payload }: { payload: CyclePayload }) {
         </svg>
         <strong className={`cycle-route-status route-status-${transition?.status.toLowerCase() || "limited"}`}>{statusCopy}</strong>
         <span className="cycle-route-history">{historySummary}</span>
-        <p>화살표는 현재 확인 중인 구조적 인접 국면을 나타내며, 특정 시점의 이동이나 발생 확률을 예측하지 않습니다.</p>
+        <p>{forecast
+          ? "화살표는 전환이 발생할 경우 가장 유력한 다음 국면입니다. 정확한 전환 월을 뜻하지 않으며 다른 국면도 함께 비교합니다."
+          : "화살표는 현재 확인 중인 구조적 인접 국면을 나타내며, 특정 시점의 이동이나 발생 확률을 예측하지 않습니다."}</p>
       </div>
+    </section>
+  );
+}
+
+function TransitionForecastPanel({ forecast, state }: { forecast: TransitionForecast; state: ObservedState }) {
+  const primary = forecast.destination.primary_phase;
+  const alternatives = forecast.destination.alternatives;
+  const pressurePercent = Math.round(forecast.pressure.probability * 100);
+  return (
+    <section className={`transition-panel forecast-pressure-${forecast.pressure.level.toLowerCase()}`} aria-labelledby="transition-title">
+      <div className="section-heading">
+        <div><span>Transition outlook</span><h3 id="transition-title">현재 진단과 향후 방향</h3></div>
+        <b>전환압력 {pressurePercent}% · {forecast.pressure.level_label}</b>
+      </div>
+      <div className="transition-summary-grid forecast-summary-grid">
+        <article><span>현재 공식 국면</span><strong>{forecast.current_phase_label}{state.duration_months ? ` · ${state.duration_months}개월` : ""}</strong><small>{state.as_of_date || "기준일 확인 중"} · 2회 연속 확인 기준</small></article>
+        <article><span>가까운 발표의 전환압력</span><strong>전환압력 {pressurePercent}%</strong><small>다음 {forecast.pressure.horizon_releases}개 유효 발표 안의 보정 확률</small></article>
+        <article><span>전환 시 다음 국면</span><strong>{forecast.destination.primary_phase_label} {Math.round(forecast.destination.probabilities[primary] * 100)}%</strong><small>현재 국면을 제외한 조건부 비교</small></article>
+        <article><span>모든 대안 비교</span><strong>{alternatives.map((item) => `${item.phase_label} ${Math.round(item.probability * 100)}%`).join(" · ")}</strong><small>고정 순환 순서를 강제하지 않음</small></article>
+      </div>
+      <div className="transition-route forecast-route" aria-label={`${forecast.current_phase_label}에서 ${forecast.destination.primary_phase_label} 예측 경로`}>
+        <article className={`phase-${forecast.current_phase}`}><span>현재 공식 관측</span><strong>{forecast.current_phase_label}</strong><small>confirmed RTDSM 국면</small></article>
+        <i aria-hidden="true">→</i>
+        <article className={`phase-${primary}`}><span>현재 데이터에서 가장 유력</span><strong>{forecast.destination.primary_phase_label}</strong><small>전환 발생 조건부 {Math.round(forecast.destination.probabilities[primary] * 100)}%</small></article>
+      </div>
+      <p className="transition-boundary"><strong>{forecast.pressure.summary}</strong> {forecast.boundary}</p>
+      <div className="transition-condition-heading"><strong>무엇이 전환압력을 움직이고 있나</strong><span>현재값의 모델 기여도 상위 6개</span></div>
+      <div className="forecast-driver-grid">
+        {forecast.drivers.slice(0, 6).map((driver) => (
+          <article className={`driver-${driver.current_effect.toLowerCase()}`} key={driver.driver_id}>
+            <header><span>{driver.label}</span><b>{driver.current_effect_label}</b></header>
+            <strong>{driver.signal_group === "PHASE_CONTEXT" ? forecast.current_phase_label : `${driver.value > 0 ? "+" : ""}${driver.value.toFixed(2)}`}</strong>
+            <small>{driver.signal_group === "PHASE_CONTEXT"
+              ? "현재 국면에서 과거에 관측된 전환 빈도를 반영"
+              : driver.higher_value_effect === "RAISES_PRESSURE"
+              ? "이 값이 더 오르면 전환압력을 높이는 모델 방향"
+              : driver.higher_value_effect === "LOWERS_PRESSURE"
+                ? "이 값이 더 오르면 전환압력을 낮추는 모델 방향"
+                : "추가 변화가 전환압력에 미치는 영향은 중립"}</small>
+          </article>
+        ))}
+      </div>
+      <p className="forecast-method-note">정책·물가·금리·신용·주택 지표는 전환 가능성을 계산하고, 실물 수준·모멘텀·확산도는 전환 후 가장 그럴듯한 국면을 비교합니다.</p>
     </section>
   );
 }
 
 function TransitionPanel({
   monitor,
+  forecast,
   state,
   recent,
   intramonth,
 }: {
   monitor?: TransitionMonitor | null;
+  forecast?: TransitionForecast | null;
   state: ObservedState;
   recent: RecentChange[];
   intramonth?: IntramonthChange | null;
 }) {
+  if (forecast?.status === "READY") {
+    return <TransitionForecastPanel forecast={forecast} state={state} />;
+  }
   if (!monitor) {
     return <section className="transition-panel"><div className="section-heading"><div><span>Current transition</span><h3>현재 진단과 다음 확인</h3></div></div><p className="empty-copy">전환 조건을 계산할 자료가 아직 없습니다.</p></section>;
   }
@@ -1280,7 +1414,7 @@ function MonthlySignalGuide() {
         </section>
 
         <p className="cycle-guide-boundary">
-          참고: 월별 조기경보를 해석하기 위한 안내이며 NBER의 공식 경기판정이나 개별 행동 지시가 아닙니다.
+          참고: 전형적 순환의 해석 예시이며 실제 예측 순서를 강제하지 않습니다. NBER의 공식 경기판정이나 개별 행동 지시도 아닙니다.
         </p>
       </div>
     </details>
@@ -1395,6 +1529,7 @@ function EconomicCycleContent({ payload }: { payload: CyclePayload }) {
         <CycleRouteMap payload={payload} />
         <TransitionPanel
           monitor={payload.transition_monitor}
+          forecast={payload.transition_forecast}
           state={observed}
           recent={payload.recent_changes}
           intramonth={payload.intramonth_change}
@@ -1423,7 +1558,9 @@ function EconomicCycleContent({ payload }: { payload: CyclePayload }) {
       <details className="method-disclosure">
         <summary>방법론과 품질</summary>
         <div className="method-grid"><div><span>모델 버전</span><strong>{payload.model_version || "-"}</strong></div><div><span>기준일</span><strong>{payload.as_of_date || "-"}</strong></div><div><span>판단 신뢰도</span><strong>{observed.confidence_label || "판단 제한"}</strong></div></div>
-        <p>현재 국면은 월말 point-in-time 실물지표의 수준과 3개월 모멘텀으로 계산합니다. 관측 국면과 NBER 이력을 분리해 표시하며, 전환 카드는 특정 월을 예측하지 않고 다음 정식 발표에서 확인할 조건만 보여줍니다. 금·달러 가격은 저장된 연속선물 일봉이라 계약 교체 효과가 포함될 수 있습니다. 이 결과는 NBER의 공식 경기판정이 아니고 수익률 예측이나 매매 지시가 아닙니다.</p>
+        <p>{payload.transition_forecast
+          ? "현재 국면은 confirmed RTDSM 실물지표로 확정합니다. 전환압력은 다음 3개 유효 발표 안의 전환 가능성이고, 다음 국면 분포는 전환 발생을 조건으로 모든 대안 국면을 비교합니다. 특정 전환 월이나 고정 순환 순서를 강제하지 않습니다."
+          : "현재 국면은 월말 point-in-time 실물지표의 수준과 3개월 모멘텀으로 계산합니다. 전환 카드는 특정 월을 예측하지 않고 다음 정식 발표에서 확인할 조건을 보여줍니다."} 금·달러 가격은 저장된 연속선물 일봉이라 계약 교체 효과가 포함될 수 있습니다. 이 결과는 NBER의 공식 경기판정이 아니고 수익률 예측이나 매매 지시가 아닙니다.</p>
         <ul>{payload.limitations.map((item) => <li key={item}>{item}</li>)}</ul>
       </details>
     </main>

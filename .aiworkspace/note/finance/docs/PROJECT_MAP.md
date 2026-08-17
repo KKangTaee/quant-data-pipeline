@@ -147,19 +147,22 @@ Data Operations
 - Market Research의 canonical 7-view normalization은
   `app/web/overview/navigation.py`가, 각 view 계산과 read model은 owning service가
   담당한다.
-- 경제 사이클의 현재 국면·최근 1/3/6개월 변화·전환 조건은
-  `finance/economic_cycle_observed_state.py`가 계산하고,
-  `economic_cycle_snapshot -> app/services/overview/economic_cycle.py ->
-  economic_cycle_workbench`가 저장·해석·표시한다. 미래 1/2개월 확률은 제품 read
-  model에 포함하지 않으며 자산별 확인 포인트는 별도 기존 pathway 계약을 유지한다.
+- 경제 사이클 현재 국면은 RTDSM raw 후보를 `economic_cycle_confirmed_state.py`가
+  2회 연속 확인해 확정한다. 최근 1/3/6개월 변화와 confirmed 12개월 이력도 같은
+  production snapshot 계약을 사용한다. 정확한 1/2개월 뒤 국면 확률은 제공하지 않는다.
 - 장기 예측 연구는 `economic_cycle_confirmed_state.py`,
   `economic_cycle_transition_{dataset,drivers,model,validation,comparison}.py`와
   `economic_cycle_state_transition_experiment.py`의 읽기 전용 경계가 RTDSM two-release
   official state, bounded missing-lag handling, 자유 목적지, 3-release 전환압력,
   compact-core destination과 directional policy·inflation·rates·BAA credit·housing
   pressure OOS gate를 소유한다. 2026-08-17 actual 2026-07 current와 312 driver origins·
-  55 transitions가 final `GO`를 통과했다. runner는 아직 writer를 받지 않으며
-  production snapshot/service/React는 4·5차 전까지 이 연구 결과를 소비하지 않는다.
+  55 transitions가 final `GO`를 통과했다. `economic_cycle_transition_production.py`가
+  `economic_cycle_transition_v1` artifact와 versioned snapshot을 fail-closed로 저장하고,
+  `economic_cycle_pipeline.py::rollover_closed_economic_cycle_month`가 다음 월말부터 이
+  publisher를 기본 호출한다. 검증 실패 시 새 current snapshot을 쓰지 않는다.
+  `app/services/overview/economic_cycle.py -> economic_cycle_workbench`가 다음 3 usable
+  release 전환압력과 전환 발생 조건부 모든 destination 분포를 표시한다. 자산별 확인
+  포인트는 별도 기존 pathway 계산·presentation 계약을 그대로 유지한다.
 - Institutional Holdings의 SEC dataset과 identifier resolution은
   `finance/data/institutional_13f.py`와
   `finance/data/institutional_13f_mapping.py`가 저장하고 loader/service가 읽는다.

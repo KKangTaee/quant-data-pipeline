@@ -22,7 +22,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 - Safety baseline: no live approval, broker order, auto rebalance
 - Active phase: none
 - Active product implementation: none
-- Economic-cycle forecast research: two-release official state와 unrestricted pressure/destination, PIT driver·paired OOS gate 구현. bounded RTDSM lag와 장기 BAA10Y credit, task-specific pressure/destination 계약으로 2026-07 current `READY`, 312 driver origins·55 transitions와 final `GO`; persistence/UI는 승인된 4·5차로 미착수
+- Economic-cycle transition forecast: 2026-07 confirmed recovery, 다음 3 usable release 전환압력과 unrestricted next confirmed destination을 task-specific `GO` artifact/snapshot으로 저장하고 Overview 순환 경로에 연결. 자산별 확인 포인트 계산·디자인은 기존 계약 유지
 - Completed phase: `inflation-policy-yield-path` (5/5 actual DB/Browser verified)
 - Inflation / Policy baseline: Core PCE·policy·joint rate·reverse·equity·independent recession materialization READY
 - Paused work와 Verification-Only work는 별도 상태로 관리
@@ -32,7 +32,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 | Track | Current Baseline | Boundary |
 |---|---|---|
 | Today | 시장 세션, 저장된 시장 근거, 일정과 대표 포트폴리오 EOD/live overlay | summary / navigation surface, trading signal 아님 |
-| Market Research | 관측 기반 현재 국면·최근 변화·조건부 전환 감시 경제 사이클, 선물 매크로, 심리, 일정, S&P 500, Market Movers, 미국 개별 종목의 3-family / 7-view research | context-only, 미래 월별 국면 예측·validation / monitoring signal 아님 |
+| Market Research | confirmed 현재 국면·최근 변화·전환압력·조건부 다음 국면 분포 경제 사이클, 선물 매크로, 심리, 일정, S&P 500, Market Movers, 미국 개별 종목의 3-family / 7-view research | 특정 전환 월·고정 순환·매매 신호 아님 |
 | Institutional Holdings | SEC Form 13F 기관 portfolio, holdings, sector, security detail와 identifier coverage | delayed long holdings research, recommendation 아님 |
 | Data Operations | 네 consumer 목적별 data preparation, 공식 파일, bounded recovery, compact history와 active 30-action 고급 도구 | explicit click만 실행, UI direct fetch와 자동 연속 실행 없음 |
 | Backtest Analysis | single strategy와 portfolio mix 실행·비교, result bundle, save / replay와 candidate source. Risk-On Momentum 5D는 Quick / Standard / Deep 분석 강도와 compact Daily Swing evidence를 제공 | 높은 수익률만으로 선정하지 않음 |
@@ -43,7 +43,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 | Architecture | Python domain / service / runtime, Streamlit command boundary와 React presentation 분리 | React가 DB / provider / canonical decision을 소유하지 않음 |
 | Inflation / Policy Backend | 독립 27-series PIT 원장, Philadelphia Fed SPF 확률 bin, 공식 FOMC rate decision 86건·SEP 40 release, FactSet 두 CY 라벨 검증 annual EPS 80 release, strict as-of/vintage loader, 혼합형 Core PCE, 검증 정책 marginal·2,000개 joint rate path·equity stress·독립 침체, 동적 저항대 | 기존 경제 사이클 결과 재사용 없음; Core/Q4/policy/joint-rate/equity/recession actual chronological gate 통과 |
 | Inflation / Policy Workbench | 기존 경기 국면 기본 선택기 아래 DB-backed 물가·정책·금리·역산·equity·12개월 침체 surface와 USER 기준 저장 | actual Q4 5상태·다음 발표·다음 회의·연말 정책·동적 4.79% 역산·EPS×multiple 스트레스·침체 5단계 공개와 Browser QA 완료 |
-| Economic Cycle Research History | Philadelphia Fed RTDSM `IPT/H/EMPLOY/RUC` provider-native vintage ledger, bounded backward-only missing-lag handling, two-release official state, unrestricted destination/3-release pressure target, compact-core destination과 directional policy·inflation·rates·BAA credit·housing pressure OOS gate | 2026-07 current recovery까지 593 origins·116 transitions state `READY`; required driver 312 origins·55 transitions, pressure 53 OOS·paired skill +2.175%, destination 76 OOS로 final `GO`. 연구 runner는 아직 writer 없이 production snapshot/UI와 분리 |
+| Economic Cycle Transition | Philadelphia Fed RTDSM `IPT/H/EMPLOY/RUC` provider-native vintage, bounded backward-only missing-lag, two-release official state, extended 3-release pressure와 compact-core unrestricted destination | 2026-07 confirmed recovery·7개월, state 593 origins/116 transitions, driver 312 origins/55 transitions, pressure 53 OOS·paired skill +2.175%, destination 76 OOS `GO`. `economic_cycle_transition_v1` artifact/snapshot과 Overview 조건부 경로로 production 연결 |
 
 상세 구현과 과거 QA는 개별 task / phase 기록에 남아 있다. 현재 제품 의미는
 [Product Direction](./PRODUCT_DIRECTION.md), code ownership은
@@ -80,7 +80,6 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 
 | Priority | Candidate | Why It Matters | Approval Needed Before |
 |---|---|---|---|
-| P0 | Economic-cycle GO 모델 production 연결 | current recovery와 pressure/destination task-specific OOS gate가 통과했지만 research runner는 writer/service/UI가 없다 | exact GO artifact/snapshot persistence, Overview read model과 순환 경로 conditional guidance 연결. 자산별 확인 포인트 계산·디자인 유지, 확률을 특정 월 예언으로 표현하지 않음 |
 | P0 | Historical universe / delisting Point-in-Time evidence | strict factor와 historical validation의 survivorship risk를 낮추는 핵심 correctness gap | source/provider, historical membership schema, delisting evidence와 fail-closed policy 결정 |
 | P1 | Existing Browser verification debt closeout | 구현 완료 task의 실제 interaction evidence와 status drift를 작은 범위로 닫을 수 있음 | 대상 task별 QA-only 범위 확인 |
 | P1 | Market Movers sector conditional outlook | 현재 broader roadmap의 다음 단계지만 확률·분포를 공개하려면 독립 episode와 OOS publication gate가 필요 | target, sample independence, chronological validation과 공개 기준 승인 |
@@ -93,16 +92,13 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 
 ## Recommended Order
 
-1. **Economic-cycle data prerequisite** — historical state 임계값을 다시 바꾸지 않는다.
-   먼저 RTDSM current freshness를 복구하고, high-yield OAS 장기 PIT history를 보강하거나
-   사전 승인한 대체 credit source로 같은 state/coverage/skill gate를 다시 실행한다.
-2. **Verification debt closeout** — 이미 구현된 interaction을 작은 QA-only 작업으로 닫아
+1. **Verification debt closeout** — 이미 구현된 interaction을 작은 QA-only 작업으로 닫아
    active-state 신뢰도를 높인다.
-3. **Correctness decision** — historical universe / delisting PIT source와 storage policy를
+2. **Correctness decision** — historical universe / delisting PIT source와 storage policy를
    승인하거나 명시적으로 defer한다.
-4. **One product research lane** — Market Movers outlook 또는 Sentiment validation 중
+3. **One product research lane** — Market Movers outlook 또는 Sentiment validation 중
    하나만 선택해 target과 publication gate를 먼저 설계한다.
-5. **Maintenance / platform work** — Data Operations hardening, refactor, scheduler,
+4. **Maintenance / platform work** — Data Operations hardening, refactor, scheduler,
    UI split과 archive migration은 제품 가치나 운영 병목이 확인된 범위로만 연다.
 
 동시에 여러 broad track을 열지 않는다. 각 후보는 source correctness, 사용자 완료

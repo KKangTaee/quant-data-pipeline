@@ -901,6 +901,44 @@ def test_closed_month_rollover_appends_once_and_never_rolls_open_month() -> None
     assert materialized[0]["as_of_date"] == date(2026, 7, 31)
 
 
+def test_closed_month_rollover_uses_validated_transition_publisher_by_default() -> None:
+    module = _load_module()
+    published: list[date] = []
+
+    result = module.rollover_closed_economic_cycle_month(
+        as_of_date="2026-08-03",
+        snapshot_loader=lambda **_kwargs: None,
+        publisher=lambda as_of_date: published.append(as_of_date)
+        or {
+            "status": "READY",
+            "model_version": "economic_cycle_transition_v1",
+            "snapshot_written": True,
+        },
+    )
+
+    assert published == [date(2026, 7, 31)]
+    assert result == {
+        "status": "created",
+        "as_of_date": "2026-07-31",
+        "rows_written": 1,
+    }
+
+
+def test_closed_month_rollover_preserves_last_good_when_transition_gate_fails() -> None:
+    module = _load_module()
+
+    with pytest.raises(LookupError, match="ONE_MONTH_EPISODES"):
+        module.rollover_closed_economic_cycle_month(
+            as_of_date="2026-08-03",
+            snapshot_loader=lambda **_kwargs: None,
+            publisher=lambda **_kwargs: {
+                "status": "NO_GO",
+                "reason_codes": ["ONE_MONTH_EPISODES"],
+                "snapshot_written": False,
+            },
+        )
+
+
 def test_economic_cycle_jobs_delegate_without_registering_a_schedule() -> None:
     jobs = importlib.import_module("app.jobs.ingestion_jobs")
     collected: list[dict[str, object]] = []

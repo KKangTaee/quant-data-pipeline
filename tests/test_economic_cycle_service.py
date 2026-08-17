@@ -307,6 +307,88 @@ def test_v3_exposes_observed_state_recent_changes_and_actual_cycle_map() -> None
     json.dumps(model, allow_nan=False)
 
 
+def test_v3_exposes_versioned_unrestricted_transition_forecast() -> None:
+    service = _load_service()
+    snapshot = _observed_snapshot()
+    snapshot["transition_monitor_json"] = json.dumps(
+        {
+            "contract_version": "transition_forecast_v1",
+            "status": "READY",
+            "current_phase": "contraction",
+            "pressure": {
+                "probability": 0.62,
+                "historical_percentile": 0.84,
+                "level": "HIGH",
+                "horizon_releases": 3,
+                "horizon_definition": "next_3_usable_releases",
+            },
+            "destination": {
+                "probabilities": {
+                    "recovery": 0.55,
+                    "expansion": 0.25,
+                    "slowdown": 0.20,
+                    "contraction": 0.0,
+                },
+                "primary_phase": "recovery",
+                "current_phase_excluded": True,
+                "horizon_definition": "next_confirmed_transition",
+            },
+            "drivers": [
+                {
+                    "driver_id": "FEDFUNDS_delta_3m",
+                    "value": 0.25,
+                    "contribution": 0.31,
+                    "current_effect": "RAISES_PRESSURE",
+                    "higher_value_effect": "RAISES_PRESSURE",
+                }
+            ],
+            "recent_phase_history": [
+                {
+                    "date": "2026-05-31",
+                    "level": -0.72,
+                    "momentum": 0.08,
+                    "phase": "contraction",
+                    "nber_recession": False,
+                },
+                {
+                    "date": "2026-06-30",
+                    "level": -0.60,
+                    "momentum": -0.30,
+                    "phase": "contraction",
+                    "nber_recession": False,
+                },
+            ],
+        }
+    )
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: snapshot,
+        history_loader=lambda **_kwargs: _observed_history(),
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=lambda **_kwargs: {},
+    )
+
+    forecast = model["transition_forecast"]
+    assert forecast["status"] == "READY"
+    assert forecast["pressure"]["probability"] == pytest.approx(0.62)
+    assert forecast["pressure"]["level_label"] == "높음"
+    assert forecast["destination"]["primary_phase"] == "recovery"
+    assert forecast["destination"]["primary_phase_label"] == "회복"
+    assert [item["phase"] for item in forecast["destination"]["alternatives"]] == [
+        "recovery",
+        "expansion",
+        "slowdown",
+    ]
+    assert forecast["drivers"][0]["label"] == "정책금리 변화"
+    assert forecast["drivers"][0]["current_effect_label"] == "전환압력을 높이는 중"
+    assert model["transition_monitor"]["current_transition"] is None
+    assert [item["date"] for item in model["cycle_map"]["points"]] == [
+        "2026-05-31",
+        "2026-06-30",
+    ]
+
+
 def test_transition_monitor_recovers_confirmed_anchor_date_from_legacy_history() -> None:
     service = _load_service()
     current = _observed_snapshot()
@@ -680,6 +762,7 @@ def test_ready_read_model_maps_horizons_evidence_sources_and_separate_history() 
         "observed_state",
         "recent_changes",
         "transition_monitor",
+        "transition_forecast",
         "cycle_map",
         "evidence",
         "market_implications",

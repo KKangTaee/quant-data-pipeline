@@ -175,3 +175,23 @@ def test_missing_class_support_returns_limited_artifact() -> None:
 
     assert artifact.publication_status == "LIMITED"
     assert artifact.reason_codes == ("MISSING_CLASS_SUPPORT",)
+
+
+def test_multiclass_temperature_accepts_conditional_zero_for_current_phase() -> None:
+    from finance.economic_cycle_transition_model import fit_multiclass_temperature
+
+    probabilities = np.asarray(
+        [
+            [0.0, 0.70, 0.20, 0.10],
+            [0.15, 0.0, 0.70, 0.15],
+            [0.10, 0.15, 0.0, 0.75],
+            [0.70, 0.15, 0.15, 0.0],
+        ]
+    )
+
+    calibration = fit_multiclass_temperature(
+        probabilities,
+        np.asarray([1, 2, 3, 0]),
+    )
+
+    assert calibration["temperature"] > 0.0

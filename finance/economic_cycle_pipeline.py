@@ -871,13 +871,17 @@ def rollover_closed_economic_cycle_month(
     loader: object | None = None,
     writer: object | None = None,
     snapshot_loader: Callable[..., Mapping[str, object] | None] = load_cycle_snapshot,
-    trainer: Callable[..., dict[str, object]] = train_validate_economic_cycle_model,
-    materializer: Callable[..., object] = materialize_economic_cycle_snapshot,
+    trainer: Callable[..., dict[str, object]] | None = None,
+    materializer: Callable[..., object] | None = None,
+    publisher: Callable[..., Mapping[str, object]] | None = None,
 ) -> dict[str, object]:
-    """Append the latest fully closed month when its canonical row is absent."""
+    """Append the latest closed month through the validated production contract."""
 
     origin = _as_date(as_of_date, field="as_of_date")
     closed_month_end = (pd.Timestamp(origin) - pd.offsets.MonthEnd(1)).date()
+    use_transition_publisher = publisher is not None or (
+        trainer is None and materializer is None
+    )
     existing = snapshot_loader(
         as_of_date=closed_month_end,
         run_kind="current",
@@ -886,11 +890,42 @@ def rollover_closed_economic_cycle_month(
         existing
         and _as_date(existing.get("as_of_date"), field="as_of_date")
         == closed_month_end
+        and (
+            not use_transition_publisher
+            or str(existing.get("model_version") or "")
+            == "economic_cycle_transition_v1"
+        )
     ):
         return {
             "status": "current",
             "as_of_date": closed_month_end.isoformat(),
             "rows_written": 0,
+        }
+
+    if use_transition_publisher:
+        if publisher is None:
+            # Local import avoids a module cycle: the production publisher reuses
+            # validated state/dataset helpers but persists through the same tables.
+            from finance.economic_cycle_transition_production import (
+                publish_transition_production_forecast,
+            )
+
+            publisher = publish_transition_production_forecast
+        publication = dict(publisher(as_of_date=closed_month_end))
+        if (
+            str(publication.get("status") or "") != "READY"
+            or not bool(publication.get("snapshot_written"))
+        ):
+            reasons = ",".join(
+                str(item) for item in publication.get("reason_codes") or ()
+            ) or str(publication.get("status") or "PUBLICATION_FAILED")
+            raise LookupError(
+                f"Transition publication failed closed for {closed_month_end}: {reasons}"
+            )
+        return {
+            "status": "created",
+            "as_of_date": closed_month_end.isoformat(),
+            "rows_written": 1,
         }
 
     resolved_loader = loader or EconomicCyclePipelineLoader()
@@ -900,12 +935,14 @@ def rollover_closed_economic_cycle_month(
     training_cutoff = (
         pd.Timestamp(closed_month_end) - pd.offsets.MonthEnd(1)
     ).date()
-    training = trainer(
+    resolved_trainer = trainer or train_validate_economic_cycle_model
+    resolved_materializer = materializer or materialize_economic_cycle_snapshot
+    training = resolved_trainer(
         trained_through=training_cutoff,
         loader=resolved_loader,
         writer=resolved_writer,
     )
-    materializer(
+    resolved_materializer(
         as_of_date=closed_month_end,
         model_version=str(training["model_version"]),
         run_kind="current",

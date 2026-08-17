@@ -190,7 +190,107 @@ function delayedFixture(): CyclePayload {
   return payload;
 }
 
+function forecastFixture(): CyclePayload {
+  const payload = fixture();
+  payload.transition_monitor = {
+    observed_phase: "contraction",
+    status: "MAINTAIN",
+    status_label: "현재 공식 국면 확인",
+    conditions_met: 0,
+    conditions_total: 0,
+    current_transition: null,
+    conditions: [],
+    context: [],
+  };
+  payload.transition_forecast = {
+    contract_version: "transition_forecast_v1",
+    status: "READY",
+    current_phase: "contraction",
+    current_phase_label: "위축",
+    pressure: {
+      probability: 0.62,
+      historical_percentile: 0.84,
+      level: "HIGH",
+      level_label: "높음",
+      summary: "전환 징후가 역사적으로 높은 구간입니다.",
+      horizon_releases: 3,
+      horizon_definition: "next_3_usable_releases",
+    },
+    destination: {
+      probabilities: {
+        recovery: 0.35,
+        expansion: 0.20,
+        slowdown: 0.45,
+        contraction: 0.0,
+      },
+      primary_phase: "slowdown",
+      primary_phase_label: "둔화",
+      alternatives: [
+        { phase: "slowdown", phase_label: "둔화", probability: 0.45 },
+        { phase: "recovery", phase_label: "회복", probability: 0.35 },
+        { phase: "expansion", phase_label: "확장", probability: 0.20 },
+      ],
+      current_phase_excluded: true,
+      horizon_definition: "next_confirmed_transition",
+    },
+    drivers: [
+      {
+        driver_id: "FEDFUNDS_delta_3m",
+        label: "정책금리 변화",
+        value: 0.25,
+        contribution: 0.31,
+        current_effect: "RAISES_PRESSURE",
+        current_effect_label: "전환압력을 높이는 중",
+        higher_value_effect: "RAISES_PRESSURE",
+        higher_value_effect_label: "전환압력을 높이는 중",
+      },
+      {
+        driver_id: "PERMIT_change_6m_pct",
+        label: "주택허가 6개월 변화",
+        value: -3.2,
+        contribution: -0.18,
+        current_effect: "LOWERS_PRESSURE",
+        current_effect_label: "전환압력을 낮추는 중",
+        higher_value_effect: "LOWERS_PRESSURE",
+        higher_value_effect_label: "전환압력을 낮추는 중",
+      },
+    ],
+    boundary: "전환압력과 조건부 다음 국면 확률을 분리합니다.",
+  };
+  return payload;
+}
+
 describe("EconomicCycleWorkbenchView", () => {
+  it("uses the unrestricted model destination instead of the fixed adjacent route", () => {
+    const payload = forecastFixture();
+
+    expect(resolveCycleRouteTransition(
+      payload.transition_monitor,
+      "contraction",
+      payload.transition_forecast,
+    )).toEqual({
+      from: "contraction",
+      to: "slowdown",
+      status: "WATCH",
+      source: "FORECAST",
+    });
+
+    const html = renderToStaticMarkup(<EconomicCycleWorkbenchView payload={payload} />);
+    expect(html).toContain("위축 → 둔화 가장 유력");
+    expect(html).toContain("전환압력 62%");
+    expect(html).toContain("다음 3개 유효 발표 안의 보정 확률");
+    expect(html).toContain("전환 시 다음 국면");
+    expect(html).toContain("둔화 45%");
+    expect(html).toContain("회복 35%");
+    expect(html).toContain("확장 20%");
+    expect(html).toContain("정책금리 변화");
+    expect(html).toContain("전환압력을 높이는 중");
+    expect(html).toContain("자산별 확인 포인트");
+    expect(html).toContain("전형적 순환의 해석 예시이며 실제 예측 순서를 강제하지 않습니다.");
+    expect(html).not.toContain("현재 국면에 인접한 다음 상태");
+    expect(html).toContain('class="cycle-route-node-note" x="250" y="223">가장 유력</text>');
+  });
+
   it("resolves watch, maintain and confirmed route transitions from explicit phases", () => {
     const payload = fixture();
     const monitor = payload.transition_monitor!;
@@ -268,6 +368,7 @@ describe("EconomicCycleWorkbenchView", () => {
     expect(watchHtml).toContain("현재 관측 위축");
     expect(watchHtml).toContain("위축 → 회복 방향 관찰 · 예측 아님");
     expect(watchHtml).toContain("최근 6개월 · 위축 유지");
+    expect(watchHtml).toContain('class="cycle-route-node-note" x="70" y="223">현재</text>');
     expect(watchHtml).not.toContain('class="cycle-quadrant"');
     expect(watchHtml).not.toContain("6개월 전");
     expect(watchHtml).not.toContain("성장 레벨 →");

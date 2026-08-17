@@ -253,6 +253,25 @@ def _select_l2(
     return best
 
 
+def select_transition_l2(
+    training: pd.DataFrame,
+    feature_names: Sequence[str],
+    *,
+    task: str,
+    candidates: Sequence[float] = (0.01, 0.1, 1.0, 10.0),
+) -> float:
+    """Select the production regularization with the validation contract."""
+
+    if task not in {"pressure", "destination"}:
+        raise ValueError(f"Unsupported transition task: {task}")
+    return _select_l2(
+        training,
+        tuple(feature_names),
+        task=task,
+        candidates=candidates,
+    )
+
+
 def _duration_bucket(value: object) -> str:
     duration = int(float(value))
     if duration <= 1:

@@ -10830,3 +10830,14 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up: 4·5차는 보류한다. RTDSM current freshness와 2023년 이전 official credit
   PIT history를 보강하거나 사전 승인 대체 source 뒤 동일 gate로 1차부터 재실행하며
   UI와 자산 카드는 유지한다.
+
+### 2026-08-17 - GO 모델은 고정 순환 대신 모든 다음 국면을 제품에서 비교한다
+
+- User request: NO_GO 원인을 실제로 보강·재검증한 뒤 승인한 4차 persistence/service와
+  5차 UI까지 진행하되 자산별 확인 포인트는 유지하도록 요청함.
+- Interpreted goal: 현재 국면, 가까운 발표의 전환압력, 전환 발생 조건부 다음 국면
+  분포를 분리하고 정확한 전환 월이나 인접 국면 고정을 예측처럼 표시하지 않는다.
+- Analysis result: actual `GO` artifact/snapshot을 저장했고 2026-07 confirmed 회복에서
+  전환압력 63.6%, 위축 69.7%·확장 23.9%·둔화 6.4%를 표시한다. confirmed recent history와
+  자산 카드의 금리·실질금리·신용스프레드 노출도 Browser에서 확인했다.
+- Follow-up: 5/5 완료. 이후 월말 갱신은 같은 `transition_forecast_v1` publication gate를 유지한다.

@@ -595,7 +595,8 @@ def fit_multiclass_temperature(
         not np.isfinite(raw).all()
         or not np.isfinite(sample_weights).all()
         or (sample_weights <= 0.0).any()
-        or (raw <= 0.0).any()
+        or (raw < 0.0).any()
+        or (raw.sum(axis=1) <= 0.0).any()
         or (target_indices < 0).any()
         or (target_indices >= raw.shape[1]).any()
     ):

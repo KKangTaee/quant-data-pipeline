@@ -88,6 +88,36 @@ ANCHOR_SOURCE_LABELS = {
     "LEGACY_OBSERVED": "조회 이력 내 최초 관측",
     "UNKNOWN": "기준일 기록 없음",
 }
+TRANSITION_FORECAST_CONTRACT_VERSION = "transition_forecast_v1"
+PRESSURE_LEVEL_LABELS = {
+    "LOW": "낮음",
+    "NORMAL": "보통",
+    "ELEVATED": "높아지는 중",
+    "HIGH": "높음",
+}
+PRESSURE_LEVEL_SUMMARIES = {
+    "LOW": "가까운 발표 안의 전환 가능성이 낮아 현재 국면 유지 가능성을 우선 봅니다.",
+    "NORMAL": "전환 징후가 평소 범위에 있어 현재 국면과 전환 가능성을 함께 봅니다.",
+    "ELEVATED": "가까운 발표 안의 전환 가능성이 높아지는 구간이라 조건 변화를 주의 깊게 봅니다.",
+    "HIGH": "가까운 발표 안의 전환 가능성이 높은 구간이지만 정확한 전환 시점을 뜻하지는 않습니다.",
+}
+TRANSITION_DRIVER_LABELS = {
+    "level": "실물경제 수준",
+    "momentum": "실물경제 모멘텀",
+    "phase_duration": "현재 국면 지속기간",
+    "positive_breadth": "개선 지표 확산도",
+    "phase_context": "현재 국면의 과거 전환 패턴",
+    "FEDFUNDS_delta_3m": "정책금리 변화",
+    "PCEPILFE_gap_2pct": "근원물가의 2% 괴리",
+    "yield_curve_delta_3m": "10년-2년 금리차 변화",
+    "BAA10Y_delta_3m": "회사채 신용스프레드 변화",
+    "PERMIT_change_6m_pct": "주택허가 6개월 변화",
+}
+PRESSURE_EFFECT_LABELS = {
+    "RAISES_PRESSURE": "전환압력을 높이는 중",
+    "LOWERS_PRESSURE": "전환압력을 낮추는 중",
+    "NEUTRAL": "전환압력 영향 중립",
+}
 
 
 def _json_value(value: object, fallback: object) -> object:
@@ -143,6 +173,7 @@ def _empty_model(
         },
         "recent_changes": [],
         "transition_monitor": None,
+        "transition_forecast": None,
         "cycle_map": {"phase_order": list(OBSERVED_PHASES), "points": []},
         "evidence": [],
         "market_implications": market_implications,
@@ -234,6 +265,127 @@ def _finite_number(value: object) -> float | None:
     except (TypeError, ValueError):
         return None
     return parsed if math.isfinite(parsed) else None
+
+
+def _transition_forecast(
+    snapshot: Mapping[str, object],
+    *,
+    observed_state: Mapping[str, object],
+) -> dict[str, object] | None:
+    """Decode only the explicit unrestricted production forecast contract."""
+
+    raw = _json_value(snapshot.get("transition_monitor_json"), {})
+    if (
+        not isinstance(raw, Mapping)
+        or raw.get("contract_version") != TRANSITION_FORECAST_CONTRACT_VERSION
+    ):
+        return None
+    current_phase = str(raw.get("current_phase") or "")
+    if current_phase not in OBSERVED_PHASES or current_phase != observed_state.get("phase"):
+        return None
+
+    pressure_raw = raw.get("pressure")
+    destination_raw = raw.get("destination")
+    if not isinstance(pressure_raw, Mapping) or not isinstance(destination_raw, Mapping):
+        return None
+    probability = _finite_number(pressure_raw.get("probability"))
+    percentile = _finite_number(pressure_raw.get("historical_percentile"))
+    if (
+        probability is None
+        or percentile is None
+        or not 0.0 <= probability <= 1.0
+        or not 0.0 <= percentile <= 1.0
+    ):
+        return None
+    pressure_level = str(pressure_raw.get("level") or "NORMAL").upper()
+    if pressure_level not in PRESSURE_LEVEL_LABELS:
+        pressure_level = "NORMAL"
+
+    raw_probabilities = destination_raw.get("probabilities")
+    if not isinstance(raw_probabilities, Mapping):
+        return None
+    probabilities = {
+        phase: _finite_number(raw_probabilities.get(phase))
+        for phase in OBSERVED_PHASES
+    }
+    if (
+        any(value is None or not 0.0 <= value <= 1.0 for value in probabilities.values())
+        or abs(sum(float(value) for value in probabilities.values()) - 1.0) > 1e-6
+        or float(probabilities[current_phase] or 0.0) > 1e-9
+    ):
+        return None
+    primary_phase = str(destination_raw.get("primary_phase") or "")
+    alternatives = sorted(
+        (
+            {
+                "phase": phase,
+                "phase_label": PHASE_LABELS[phase],
+                "probability": float(probabilities[phase] or 0.0),
+            }
+            for phase in OBSERVED_PHASES
+            if phase != current_phase
+        ),
+        key=lambda item: float(item["probability"]),
+        reverse=True,
+    )
+    if primary_phase != alternatives[0]["phase"]:
+        primary_phase = str(alternatives[0]["phase"])
+
+    drivers: list[dict[str, object]] = []
+    raw_drivers = raw.get("drivers")
+    if isinstance(raw_drivers, (list, tuple)):
+        for item in raw_drivers:
+            if not isinstance(item, Mapping):
+                continue
+            driver_id = str(item.get("driver_id") or "")
+            if driver_id not in TRANSITION_DRIVER_LABELS:
+                continue
+            current_effect = str(item.get("current_effect") or "NEUTRAL").upper()
+            higher_effect = str(item.get("higher_value_effect") or "NEUTRAL").upper()
+            drivers.append(
+                {
+                    **dict(item),
+                    "driver_id": driver_id,
+                    "label": TRANSITION_DRIVER_LABELS[driver_id],
+                    "current_effect": current_effect,
+                    "current_effect_label": PRESSURE_EFFECT_LABELS.get(
+                        current_effect, PRESSURE_EFFECT_LABELS["NEUTRAL"]
+                    ),
+                    "higher_value_effect": higher_effect,
+                    "higher_value_effect_label": PRESSURE_EFFECT_LABELS.get(
+                        higher_effect, PRESSURE_EFFECT_LABELS["NEUTRAL"]
+                    ),
+                }
+            )
+    drivers.sort(key=lambda item: abs(float(item.get("contribution") or 0.0)), reverse=True)
+    return {
+        "contract_version": TRANSITION_FORECAST_CONTRACT_VERSION,
+        "status": "READY",
+        "current_phase": current_phase,
+        "current_phase_label": PHASE_LABELS[current_phase],
+        "pressure": {
+            **dict(pressure_raw),
+            "probability": probability,
+            "historical_percentile": percentile,
+            "level": pressure_level,
+            "level_label": PRESSURE_LEVEL_LABELS[pressure_level],
+            "summary": PRESSURE_LEVEL_SUMMARIES[pressure_level],
+        },
+        "destination": {
+            **dict(destination_raw),
+            "probabilities": {
+                phase: float(value or 0.0) for phase, value in probabilities.items()
+            },
+            "primary_phase": primary_phase,
+            "primary_phase_label": PHASE_LABELS[primary_phase],
+            "alternatives": alternatives,
+        },
+        "drivers": drivers,
+        "boundary": (
+            "전환압력은 다음 3개 usable release 안에 공식 국면이 바뀔 가능성이고, "
+            "다음 국면 분포는 전환이 발생한다는 조건 아래의 비교입니다."
+        ),
+    }
 
 
 def _observed_state(snapshot: Mapping[str, object]) -> dict[str, object]:
@@ -480,6 +632,20 @@ def _transition_monitor(
     raw = _json_value(snapshot.get("transition_monitor_json"), {})
     if not isinstance(raw, Mapping) or not raw:
         return None
+    if raw.get("contract_version") == TRANSITION_FORECAST_CONTRACT_VERSION:
+        phase = str(raw.get("current_phase") or "")
+        return {
+            "contract_version": TRANSITION_FORECAST_CONTRACT_VERSION,
+            "observed_phase": phase if phase in OBSERVED_PHASES else None,
+            "observed_phase_label": PHASE_LABELS.get(phase),
+            "status": "MAINTAIN",
+            "status_label": "현재 공식 국면 확인",
+            "conditions_met": 0,
+            "conditions_total": 0,
+            "conditions": [],
+            "context": [],
+            "current_transition": None,
+        }
     output = dict(raw)
     status = str(raw.get("status") or "MAINTAIN").upper()
     output["status"] = status
@@ -570,6 +736,44 @@ def _cycle_map(
     current_snapshot: Mapping[str, object],
 ) -> dict[str, object]:
     """Build a short actual-coordinate trail; never infer points from probabilities."""
+
+    monitor = _json_value(current_snapshot.get("transition_monitor_json"), {})
+    if (
+        isinstance(monitor, Mapping)
+        and monitor.get("contract_version") == TRANSITION_FORECAST_CONTRACT_VERSION
+        and isinstance(monitor.get("recent_phase_history"), (list, tuple))
+    ):
+        confirmed_points: list[dict[str, object]] = []
+        for item in monitor["recent_phase_history"]:
+            if not isinstance(item, Mapping):
+                continue
+            phase = str(item.get("phase") or "")
+            level = _finite_number(item.get("level"))
+            momentum = _finite_number(item.get("momentum"))
+            point_date = str(item.get("date") or "")[:10]
+            if (
+                phase not in OBSERVED_PHASES
+                or level is None
+                or momentum is None
+                or not point_date
+            ):
+                continue
+            confirmed_points.append(
+                {
+                    **dict(item),
+                    "date": point_date,
+                    "level": level,
+                    "momentum": momentum,
+                    "phase": phase,
+                    "phase_label": PHASE_LABELS[phase],
+                    "nber_recession": bool(item.get("nber_recession")),
+                }
+            )
+        if confirmed_points:
+            return {
+                "phase_order": list(OBSERVED_PHASES),
+                "points": confirmed_points[-12:],
+            }
 
     def replay_rank(snapshot: Mapping[str, object]) -> tuple[str, int, str]:
         try:
@@ -772,6 +976,10 @@ def build_economic_cycle_read_model(
         history_rows,
         observed_state=observed_state,
     )
+    transition_forecast = _transition_forecast(
+        resolved_snapshot,
+        observed_state=observed_state,
+    )
     cycle_map = _cycle_map(history_rows, resolved_snapshot)
     evidence = _evidence(resolved_snapshot)
     load_intramonth = (
@@ -913,6 +1121,7 @@ def build_economic_cycle_read_model(
         "observed_state": observed_state,
         "recent_changes": recent_changes,
         "transition_monitor": transition_monitor,
+        "transition_forecast": transition_forecast,
         "cycle_map": cycle_map,
         "evidence": evidence,
         "market_implications": market_implications,
