@@ -186,10 +186,34 @@ def test_cycle_component_returns_explicit_action_event() -> None:
         return_value=component,
     ):
         result = module.render_economic_cycle_component(
-            {"schema_version": "economic_cycle_v2"}
+            {"schema_version": "economic_cycle_v2"},
+            selected_view="inflation",
         )
 
     assert result["event"]["id"] == "refresh_economic_cycle_data"
+    component.assert_called_once_with(
+        payload={"schema_version": "economic_cycle_v2"},
+        selected_view="inflation",
+        key="economic_cycle_workbench",
+        default=None,
+    )
+
+
+def test_cycle_renderer_selects_one_direct_fallback_surface() -> None:
+    helpers = importlib.import_module("app.web.overview.market_context_helpers")
+    payload = {"schema_version": "economic_cycle_v3", "inflation_policy": {}}
+
+    with (
+        patch.object(helpers, "load_market_context_cycle_transport", return_value=payload),
+        patch(
+            "app.web.overview.economic_cycle_react_component.economic_cycle_component_available",
+            return_value=False,
+        ),
+        patch.object(helpers, "_render_cycle_transport_fallback") as fallback,
+    ):
+        helpers.render_economic_cycle(selected_view="inflation")
+
+    fallback.assert_called_once_with(payload, selected_view="inflation")
 
 
 def test_cycle_event_runs_once_and_clears_cache_only_on_usable_success() -> None:

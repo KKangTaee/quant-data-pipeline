@@ -244,15 +244,17 @@ def _render_inflation_policy_fallback(payload: dict[str, Any]) -> None:
         st.caption(str(reverse.get("reason") or "역산 경로를 공개할 수 없습니다."))
 
 
-def _render_cycle_transport_fallback(payload: dict[str, Any]) -> None:
-    selected = st.segmented_control(
-        "분석 보기",
-        options=("경기 국면", "물가·정책 경로"),
-        default="경기 국면",
-        key="economic_cycle_inner_fallback_mode",
-        label_visibility="collapsed",
-    )
-    if selected == "물가·정책 경로":
+def _normalize_economic_analysis_view(value: object) -> str:
+    """Return the controlled economic analysis surface for direct routing."""
+    return "inflation" if str(value or "").strip().lower() == "inflation" else "cycle"
+
+
+def _render_cycle_transport_fallback(
+    payload: dict[str, Any],
+    *,
+    selected_view: str = "cycle",
+) -> None:
+    if _normalize_economic_analysis_view(selected_view) == "inflation":
         _render_inflation_policy_fallback(
             dict(payload.get("inflation_policy") or {})
         )
@@ -260,7 +262,7 @@ def _render_cycle_transport_fallback(payload: dict[str, Any]) -> None:
     _render_economic_cycle_fallback(payload)
 
 
-def render_economic_cycle() -> None:
+def render_economic_cycle(*, selected_view: str = "cycle") -> None:
     """Render persisted cycle data and consume one explicit manual refresh event."""
     from app.web.overview.economic_cycle_react_component import (
         economic_cycle_component_available,
@@ -281,13 +283,17 @@ def render_economic_cycle() -> None:
     )
     if isinstance(command_result, dict):
         payload = attach_inflation_policy_command_result(payload, command_result)
+    normalized_view = _normalize_economic_analysis_view(selected_view)
     if economic_cycle_component_available():
-        event = render_economic_cycle_component(payload)
+        event = render_economic_cycle_component(
+            payload,
+            selected_view=normalized_view,
+        )
         if handle_inflation_policy_event(event):
             return
         _handle_economic_cycle_event(event)
         return
-    _render_cycle_transport_fallback(payload)
+    _render_cycle_transport_fallback(payload, selected_view=normalized_view)
 
 
 def _economic_cycle_event_payload(

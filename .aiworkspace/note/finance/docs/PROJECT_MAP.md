@@ -95,7 +95,7 @@ FRED/ALFRED + NBER USREC label + BEA + Federal Reserve SEP/FOMC + NY Fed ACM
   -> independent Core PCE / policy / yield / equity-stress / recession-risk engines
   -> inflation_policy_model_artifact / inflation_policy_snapshot
   -> app/services/overview/inflation_policy*.py
-  -> Market Research > 경제 사이클 > 물가·정책 경로
+  -> Market Research > 시장 환경 > 물가·정책
 ```
 
 - `finance/inflation_policy_catalog.py`와 `finance/data/fred_vintages.py`가 독립 27-series
@@ -152,7 +152,7 @@ Data Operations
 
 - Today는 저장된 Research evidence와 대표 Portfolio Monitoring projection을
   compact하게 조합한다.
-- Market Research의 canonical 7-view normalization은
+- Market Research의 canonical 8-view normalization은
   `app/web/overview/navigation.py`가, 각 view 계산과 read model은 owning service가
   담당한다.
 - 경제 사이클 현재 국면은 RTDSM raw 후보를 `economic_cycle_confirmed_state.py`가

@@ -46,7 +46,8 @@ released_at PIT macro vintages + Philadelphia Fed SPF + anonymous SEP + actual F
        USER criterion save + exact-artifact bounded rate/equity scenarios
   -> app/web/overview/market_context_helpers.py
        render-edge transport + separate command nonce/cache
-  -> economic_cycle_workbench React `물가·정책 경로`
+  -> Market Research > 시장 환경 > 물가·정책
+  -> economic_cycle_workbench React controlled `inflation` view
 ```
 
 정상 UI는 4차 workbench에서 저장 snapshot을 읽는다. provider/FRED 조회와 canonical
@@ -74,7 +75,7 @@ payload는 서비스 입력·fallback·침체 확률로 사용하지 않는다.
 | `app/services/overview/inflation_policy.py` | snapshot JSON 검증, 상태 사유·AUTO/USER zone·equity/recession gate·근거/신선도를 포함한 `inflation_policy_v1` read model |
 | `app/services/overview/inflation_policy_commands.py` | USER-only criterion 저장과 선택 snapshot의 정확히 일치하는 READY artifact만 쓰는 bounded rate/equity scenario command |
 | `app/web/overview/market_context_helpers.py` | cycle과 독립 read model을 렌더 직전에만 합성하고 command nonce/cache/result를 cycle refresh와 분리 |
-| `app/web/streamlit_components/economic_cycle_workbench/` | 기존 경기 국면 기본값, 순방향 판단·동적 저항·목표 역산·S&P 500 조건부 stress·근거 disclosure를 제공하는 React presentation |
+| `app/web/streamlit_components/economic_cycle_workbench/` | Python이 선택한 경기 국면 또는 물가·정책 한 화면을 직접 열고, 순방향 판단·동적 저항·목표 역산·S&P 500 조건부 stress·근거 disclosure를 제공하는 React presentation |
 
 ## Point-in-Time Contract
 

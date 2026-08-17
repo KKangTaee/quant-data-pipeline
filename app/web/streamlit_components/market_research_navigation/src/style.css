@@ -130,9 +130,33 @@ button { font: inherit; }
     white-space: nowrap;
   }
   .mr-navigation__families strong { font-size: 12px; }
-  .mr-navigation__views { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-  .mr-navigation__views button { width: 100%; }
-  .mr-navigation__views button:only-child { grid-column: 1 / -1; }
+  .mr-navigation__views {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 2px;
+    padding: 7px 0 10px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mr-navigation__views::-webkit-scrollbar { display: none; }
+  .mr-navigation__views button {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 32px;
+    padding: 6px 9px;
+    border-radius: 7px;
+    white-space: nowrap;
+  }
+  .mr-navigation__views button[aria-current="page"] {
+    border-color: transparent;
+    border-bottom-color: var(--active);
+    border-radius: 7px 7px 2px 2px;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--active) 12%, transparent);
+  }
+  .mr-navigation__views button:only-child { min-width: 6.5rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

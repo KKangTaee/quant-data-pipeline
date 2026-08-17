@@ -32,7 +32,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 | Track | Current Baseline | Boundary |
 |---|---|---|
 | Today | 시장 세션, 저장된 시장 근거, 일정과 대표 포트폴리오 EOD/live overlay | summary / navigation surface, trading signal 아님 |
-| Market Research | confirmed 현재 국면·최근 변화·전환압력·조건부 다음 국면 분포 경제 사이클, 선물 매크로 장중 관측·재가격화·반대 근거·조건부 시나리오, 심리의 1W·1M 실제 관측 변화, 일정, S&P 500, Market Movers, 미국 개별 종목의 3-family / 7-view research | context-only, 특정 전환 월·고정 순환·매매 신호가 아니며 Futures Macro 5D 확률·가격 목표와 심리 미래 확률도 validation / monitoring signal로 공개하지 않음 |
+| Market Research | 경기 국면, 물가·정책, 선물 매크로 장중 관측·재가격화·반대 근거·조건부 시나리오, 심리의 1W·1M 실제 관측 변화, 일정, S&P 500, Market Movers, 미국 개별 종목의 3-family / 8-view research | context-only, 특정 전환 월·고정 순환·매매 신호가 아니며 Futures Macro 5D 확률·가격 목표와 심리 미래 확률도 validation / monitoring signal로 공개하지 않음 |
 | Institutional Holdings | SEC Form 13F 기관 portfolio, holdings, sector, security detail와 identifier coverage | delayed long holdings research, recommendation 아님 |
 | Data Operations | 네 consumer 목적별 data preparation, 공식 파일, bounded recovery, compact history와 active 30-action 고급 도구 | explicit click만 실행, UI direct fetch와 자동 연속 실행 없음 |
 | Backtest Analysis | single strategy와 portfolio mix 실행·비교, result bundle, save / replay와 candidate source. Risk-On Momentum 5D는 Quick / Standard / Deep 분석 강도와 compact Daily Swing evidence를 제공 | 높은 수익률만으로 선정하지 않음 |
@@ -42,7 +42,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 | Reference Center | 7개 current surface의 개념·journey·failure state·deep link 검색 | product help owner |
 | Architecture | Python domain / service / runtime, Streamlit command boundary와 React presentation 분리 | React가 DB / provider / canonical decision을 소유하지 않음 |
 | Inflation / Policy Backend | 독립 27-series PIT 원장, Philadelphia Fed SPF 확률 bin, 공식 FOMC rate decision 86건·SEP 40 release, FactSet 두 CY 라벨 검증 annual EPS 80 release, strict as-of/vintage loader, 혼합형 Core PCE, 검증 정책 marginal·2,000개 joint rate path·equity stress·독립 침체, 동적 저항대 | 기존 경제 사이클 결과 재사용 없음; Core/Q4/policy/joint-rate/equity/recession actual chronological gate 통과 |
-| Inflation / Policy Workbench | 기존 경기 국면 기본 선택기 아래 DB-backed 물가·정책·금리·역산·equity·12개월 침체 surface와 USER 기준 저장 | actual Q4 5상태·다음 발표·다음 회의·연말 정책·동적 4.79% 역산·EPS×multiple 스트레스·침체 5단계 공개와 Browser QA 완료 |
+| Inflation / Policy Workbench | Market Research의 독립 `물가·정책` view에서 DB-backed 물가·정책·금리·역산·equity·12개월 침체 surface와 USER 기준 저장 | actual Q4 5상태·다음 발표·다음 회의·연말 정책·동적 4.79% 역산·EPS×multiple 스트레스·침체 5단계 공개와 Browser QA 완료 |
 | Economic Cycle Transition | Philadelphia Fed RTDSM `IPT/H/EMPLOY/RUC` provider-native vintage, bounded backward-only missing-lag, two-release official state, extended 3-release pressure와 compact-core unrestricted destination | 2026-07 confirmed recovery·7개월, state 593 origins/116 transitions, driver 312 origins/55 transitions, pressure 53 OOS·paired skill +2.175%, destination 76 OOS `GO`. `economic_cycle_transition_v1` artifact/snapshot과 Overview 조건부 경로로 production 연결 |
 
 상세 구현과 과거 QA는 개별 task / phase 기록에 남아 있다. 현재 제품 의미는

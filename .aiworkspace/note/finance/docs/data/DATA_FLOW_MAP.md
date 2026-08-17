@@ -111,7 +111,7 @@ FRED/ALFRED vintage-dates API + observations API output_type=1 + FRED_API_KEY
   -> finance.economic_cycle_pipeline
   -> finance_meta.economic_cycle_snapshot
   -> app.services.overview.economic_cycle
-  -> Workspace > Overview > 시장 맥락 > 경제 사이클 React workbench
+  -> Market Research > 시장 환경 > 경기 국면 React workbench
 ```
 
 의미:

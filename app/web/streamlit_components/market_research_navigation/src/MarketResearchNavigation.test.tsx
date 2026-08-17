@@ -9,6 +9,7 @@ const streamlitMocks = vi.hoisted(() => ({
   setComponentValue: vi.fn(),
   setFrameHeight: vi.fn(),
 }));
+const scrollIntoViewMock = vi.fn();
 
 vi.mock("streamlit-component-lib", () => ({
   Streamlit: streamlitMocks,
@@ -27,7 +28,8 @@ const payload: MarketResearchNavigationPayload = {
   active_view: "economic-cycle",
   families: [
     { id: "market-environment", label: "시장 환경", description: "경제·매크로·심리·일정", views: [
-      { id: "economic-cycle", label: "경제 사이클" },
+      { id: "economic-cycle", label: "경기 국면" },
+      { id: "inflation-policy", label: "물가·정책" },
       { id: "futures-macro", label: "선물 매크로" },
       { id: "sentiment", label: "심리" },
       { id: "events", label: "일정" },
@@ -46,10 +48,19 @@ function props(value?: MarketResearchNavigationPayload): ComponentProps {
   return { args: value ? { payload: value } : {}, width: 1280 } as ComponentProps;
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe("MarketResearchNavigation", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoViewMock,
+    });
+  });
 
   it("renders an editorial heading and label-only family tabs with selected states", () => {
     const { container } = render(<MarketResearchNavigation {...props(payload)} />);
@@ -60,10 +71,13 @@ describe("MarketResearchNavigation", () => {
     expect(
       screen.getByRole("button", { name: "시장 환경: 경제·매크로·심리·일정" }),
     ).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "경제 사이클" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "경기 국면" })).toHaveAttribute(
       "aria-current",
       "page",
     );
+    expect(screen.getByRole("button", { name: "물가·정책" })).toBeInTheDocument();
+    expect(screen.getAllByRole("navigation", { name: "세부 리서치" })[0])
+      .toHaveTextContent("경기 국면물가·정책선물 매크로심리일정");
   });
 
   it("emits the target family default view once", async () => {
@@ -81,10 +95,31 @@ describe("MarketResearchNavigation", () => {
     render(<MarketResearchNavigation {...props(payload)} />);
     await user.click(screen.getByRole("button", { name: /시장 환경/ }));
     await user.click(screen.getByRole("button", { name: "선물 매크로" }));
-    await user.click(screen.getByRole("button", { name: "경제 사이클" }));
+    await user.click(screen.getByRole("button", { name: "경기 국면" }));
     expect(streamlitMocks.setComponentValue).toHaveBeenCalledTimes(1);
     expect(streamlitMocks.setComponentValue).toHaveBeenCalledWith({
       event: { id: "select_view", view: "futures-macro", nonce: expect.any(Number) },
+    });
+  });
+
+  it("brings a direct-route active view into the visible part of an overflowing rail", () => {
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(400);
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(300);
+
+    render(
+      <MarketResearchNavigation
+        {...props({ ...payload, active_view: "events" })}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "일정" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({
+      behavior: "auto",
+      block: "nearest",
+      inline: "nearest",
     });
   });
 

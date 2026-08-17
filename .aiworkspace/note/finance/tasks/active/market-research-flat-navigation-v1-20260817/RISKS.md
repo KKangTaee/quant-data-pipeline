@@ -1,6 +1,5 @@
 # Risks
 
-- React component args and Python route selection can drift unless both direct views are covered by tests.
-- Compact mobile labels may require bounded horizontal swipe below 360px.
-- Existing deep links and Today handoffs must continue to resolve `economic-cycle` and other legacy slugs.
-
+- No open implementation blocker.
+- Below 360px, the compact view rail intentionally uses bounded horizontal swipe rather than wrapping into large rows.
+- Existing deep links remain protected by the focused normalization and renderer tests; `economic-cycle` is retained as the 경기 국면 compatibility slug.

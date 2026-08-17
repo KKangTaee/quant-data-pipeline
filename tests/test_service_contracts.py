@@ -7282,7 +7282,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("app.web.overview.sentiment", imported_modules)
         self.assertIn("app.web.overview.events", imported_modules)
         render_body = source[source.index("def render_overview_dashboard"):]
-        self.assertIn('"economic-cycle": render_economic_cycle', render_body)
+        self.assertIn(
+            '"economic-cycle": lambda: render_economic_cycle(selected_view="cycle")',
+            render_body,
+        )
+        self.assertIn('"inflation-policy": lambda: render_economic_cycle(', render_body)
+        self.assertIn('selected_view="inflation"', render_body)
         self.assertIn('"market-movers": lambda: render_market_movers_tab(show_header=False)', render_body)
         self.assertIn('"futures-macro": lambda: render_futures_macro_tab(show_header=False)', render_body)
         self.assertIn('"sentiment": lambda: render_sentiment_tab(show_header=False)', render_body)
@@ -8004,7 +8009,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         from app.web.overview import navigation
 
         self.assertEqual(len(navigation.MARKET_RESEARCH_FAMILY_OPTIONS), 3)
-        self.assertEqual(len(navigation.MARKET_RESEARCH_VIEW_OPTIONS), 7)
+        self.assertEqual(len(navigation.MARKET_RESEARCH_VIEW_OPTIONS), 8)
         self.assertTrue(callable(navigation.normalize_market_research_view))
         self.assertTrue(callable(navigation.market_research_family_for_view))
         self.assertTrue(callable(navigation._render_overview_tab_selector))
@@ -8129,6 +8134,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
         cycle_index = render_body.index('"economic-cycle"')
+        inflation_index = render_body.index('"inflation-policy"')
         futures_macro_index = render_body.index('"futures-macro"')
         sentiment_index = render_body.index('"sentiment"')
         events_index = render_body.index('"events"')
@@ -8143,7 +8149,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn('"Data Health": _render_collection_ops_tab', render_body)
         self.assertNotIn('"Candidate Ops"', render_body)
         self.assertNotIn("load_overview_dashboard_snapshot", render_body)
-        self.assertLess(cycle_index, futures_macro_index)
+        self.assertLess(cycle_index, inflation_index)
+        self.assertLess(inflation_index, futures_macro_index)
         self.assertLess(futures_macro_index, sentiment_index)
         self.assertLess(sentiment_index, events_index)
         self.assertLess(events_index, market_index)
@@ -8187,7 +8194,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("href=", helper_body)
         self.assertNotIn("<a ", helper_body)
         self.assertIn("grid-template-columns: repeat(3", source)
-        self.assertIn("grid-template-columns: repeat(2", source)
+        self.assertIn("overflow-x: auto", source)
+        self.assertIn("flex-wrap: nowrap", source)
+        self.assertNotIn("grid-template-columns: repeat(2", source)
         self.assertIn("flex-wrap: wrap", source)
 
     def test_overview_dashboard_dispatches_only_selected_deep_tab(self) -> None:
