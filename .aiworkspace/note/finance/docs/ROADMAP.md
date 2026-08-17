@@ -22,7 +22,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 - Safety baseline: no live approval, broker order, auto rebalance
 - Active phase: none
 - Active product implementation: none
-- Economic-cycle forecast research: two-release official state와 unrestricted pressure/destination, PIT driver·paired OOS gate 구현. actual state `READY`, required extended driver 27 origins/5 transitions로 final `NO_GO`; persistence/UI 미착수
+- Economic-cycle forecast research: two-release official state와 unrestricted pressure/destination, PIT driver·paired OOS gate 구현. historical state는 2026-01까지 `READY`지만 2026-07 current freshness와 required extended driver 27 origins/5 transitions가 각각 실패해 final `NO_GO`; persistence/UI 미착수
 - Completed phase: `inflation-policy-yield-path` (5/5 actual DB/Browser verified)
 - Inflation / Policy baseline: Core PCE·policy·joint rate·reverse·equity·independent recession materialization READY
 - Paused work와 Verification-Only work는 별도 상태로 관리
@@ -43,7 +43,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 | Architecture | Python domain / service / runtime, Streamlit command boundary와 React presentation 분리 | React가 DB / provider / canonical decision을 소유하지 않음 |
 | Inflation / Policy Backend | 독립 27-series PIT 원장, Philadelphia Fed SPF 확률 bin, 공식 FOMC rate decision 86건·SEP 40 release, FactSet 두 CY 라벨 검증 annual EPS 80 release, strict as-of/vintage loader, 혼합형 Core PCE, 검증 정책 marginal·2,000개 joint rate path·equity stress·독립 침체, 동적 저항대 | 기존 경제 사이클 결과 재사용 없음; Core/Q4/policy/joint-rate/equity/recession actual chronological gate 통과 |
 | Inflation / Policy Workbench | 기존 경기 국면 기본 선택기 아래 DB-backed 물가·정책·금리·역산·equity·12개월 침체 surface와 USER 기준 저장 | actual Q4 5상태·다음 발표·다음 회의·연말 정책·동적 4.79% 역산·EPS×multiple 스트레스·침체 5단계 공개와 Browser QA 완료 |
-| Economic Cycle Research History | Philadelphia Fed RTDSM `IPT/H/EMPLOY/RUC` provider-native vintage ledger, two-release official state, unrestricted destination/3-release pressure target, policy·inflation·rates·credit PIT driver와 episode-blocked/paired OOS gate | 연구 전용. official state는 actual 587 origins·116 transitions로 `READY`; required driver 교집합은 high-yield OAS PIT history가 2023-08부터라 27 origins·5 transitions에 그쳐 final `NO_GO`. actual model fit·current snapshot·확률 UI 연결 금지 |
+| Economic Cycle Research History | Philadelphia Fed RTDSM `IPT/H/EMPLOY/RUC` provider-native vintage ledger, two-release official state, unrestricted destination/3-release pressure target, policy·inflation·rates·credit PIT driver와 episode-blocked/paired OOS gate | 연구 전용. historical official state는 latest usable 2026-01까지 587 origins·116 transitions로 `READY`; 2026-07 current는 `INCOMPLETE_SOURCE_COVERAGE`. required driver도 high-yield OAS PIT history가 2023-08부터라 27 origins·5 transitions에 그쳐 final `NO_GO`. actual model fit·current snapshot·확률 UI 연결 금지 |
 
 상세 구현과 과거 QA는 개별 task / phase 기록에 남아 있다. 현재 제품 의미는
 [Product Direction](./PRODUCT_DIRECTION.md), code ownership은
@@ -80,7 +80,7 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 
 | Priority | Candidate | Why It Matters | Approval Needed Before |
 |---|---|---|---|
-| P0 | Economic-cycle credit PIT history 보강 또는 대체 source 사전 승인 | two-release official state는 안정성·revision·NBER·표본 gate를 통과했다. forecast 병목은 `BAMLH0A0HYM2`의 현재 저장 PIT history가 2023-08부터라 required 교집합이 27 origins·5 transitions뿐인 점이다 | 2023년 이전 official PIT history 보강, 또는 결과와 독립적으로 장기 credit-spread 대체 source/known-at 계약 승인. 이후 동일 gate로 2차부터 재검증 |
+| P0 | Economic-cycle RTDSM freshness와 credit PIT history 보강 | historical two-release state는 안정성·revision·NBER·표본 gate를 통과했지만 current official phase는 2026-01 이후 unavailable이다. forecast는 `BAMLH0A0HYM2` history가 2023-08부터라 required 교집합이 27 origins·5 transitions뿐이다 | RTDSM를 current cutoff까지 갱신하고, 2023년 이전 official credit PIT history 보강 또는 결과와 독립적인 대체 source/known-at 계약 승인. 이후 동일 gate로 1·2차부터 재검증 |
 | P0 | Historical universe / delisting Point-in-Time evidence | strict factor와 historical validation의 survivorship risk를 낮추는 핵심 correctness gap | source/provider, historical membership schema, delisting evidence와 fail-closed policy 결정 |
 | P1 | Existing Browser verification debt closeout | 구현 완료 task의 실제 interaction evidence와 status drift를 작은 범위로 닫을 수 있음 | 대상 task별 QA-only 범위 확인 |
 | P1 | Market Movers sector conditional outlook | 현재 broader roadmap의 다음 단계지만 확률·분포를 공개하려면 독립 episode와 OOS publication gate가 필요 | target, sample independence, chronological validation과 공개 기준 승인 |
@@ -93,9 +93,9 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 
 ## Recommended Order
 
-1. **Economic-cycle data prerequisite** — official state는 `READY`이므로 안정성 임계값을
-   다시 바꾸지 않는다. 4·5차 전에 high-yield OAS 장기 PIT history를 보강하거나 사전
-   승인한 대체 credit source로 같은 coverage/skill gate를 다시 실행한다.
+1. **Economic-cycle data prerequisite** — historical state 임계값을 다시 바꾸지 않는다.
+   먼저 RTDSM current freshness를 복구하고, high-yield OAS 장기 PIT history를 보강하거나
+   사전 승인한 대체 credit source로 같은 state/coverage/skill gate를 다시 실행한다.
 2. **Verification debt closeout** — 이미 구현된 interaction을 작은 QA-only 작업으로 닫아
    active-state 신뢰도를 높인다.
 3. **Correctness decision** — historical universe / delisting PIT source와 storage policy를

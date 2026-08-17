@@ -13,6 +13,10 @@
   `released_at`-only loader가 stored ANFCI/PERMIT를 제외하는 문제 발견
 - ALFRED `realtime_start` fallback 보강 후 source read: 1,153,090 rows in 12.067s
 - actual read-only experiment 최종 실행: 131.074s, state `READY`, driver
-  `SHADOW_ONLY`, final `NO_GO`; DB writer/provider fetch 없음
+  `SHADOW_ONLY`, final `NO_GO`; 이 실행 후 latest-origin gate 결함을 리뷰에서 발견
+- latest confirmed-origin gate 보강 후 2026-07 재실행: 4.441s,
+  `INCOMPLETE_SOURCE_COVERAGE`, last usable 2026-01, driver/model 미실행
+- latest usable 2026-01 별도 historical feasibility 재실행: 123.729s, state `READY`,
+  driver `SHADOW_ONLY`, final `NO_GO`; DB writer/provider fetch 없음
 - 최종 actual support: 587 usable state origins / 116 state transitions /
   27 complete-driver origins / 5 driver transitions

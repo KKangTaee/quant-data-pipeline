@@ -1,6 +1,6 @@
 # Recommendation
 
-Status: 1~3차 complete; confirmed state READY; required extended forecast NO_GO
+Status: 1~3차 complete; current state freshness NO_GO; historical state READY; extended forecast NO_GO
 Last Updated: 2026-08-17
 
 ## Recommended Direction
@@ -20,7 +20,14 @@ Last Updated: 2026-08-17
 정의 자체를 바꿔 해결했다. 최초 국면과 모든 다음 국면은 동일 raw 후보가 2 usable
 release 연속 확인될 때 두 번째 release에서 확정되며, 전환을 과거로 소급하지 않는다.
 
-### Current-state result — `READY`
+### Current cutoff result — `NO_GO_CORE_STATE`
+
+2026-07-31 cutoff의 latest usable confirmed origin은 2026-01-31이다. 2026-02~07에는
+raw/official phase가 `UNAVAILABLE`이므로 `INCOMPLETE_SOURCE_COVERAGE`로 fail-closed한다.
+마지막 2026-01 회복 국면을 현재 값처럼 carry-forward하지 않으며 driver/model도
+실행하지 않는다.
+
+### Historical state through latest usable origin — `READY`
 
 | Evidence | Actual | Gate | Result |
 | --- | ---: | ---: | --- |
@@ -30,7 +37,7 @@ release 연속 확인될 때 두 번째 release에서 확정되며, 전환을 �
 | Final 25% destination support | 6 / 8 / 5 / 10 | each >= 2 | Pass |
 | Four-phase occupancy | 12.78%~39.35% | each 8%~50% | Pass |
 | Official one-month episode share | 0.85% | <= 25% | Pass |
-| Three-release exact / level-side revision | 68.60% / 86.18% | 60% / 80% | Pass |
+| Three-release exact / level-side revision | 68.49% / 86.13% | 60% / 80% | Pass |
 | NBER peak / trough capture | 85.71% / 85.71% | 70% / 70% | Pass |
 
 고정 순환 순서는 강제하지 않았다. actual route에는 `contraction -> expansion`,
@@ -45,22 +52,25 @@ release 연속 확인될 때 두 번째 release에서 확정되며, 전환을 �
 | Destination support | recovery 3 / expansion 0 / slowdown 0 / contraction 2 | each >= 8 | Fail |
 | Final 25% destination support | recovery 1 / expansion 0 / slowdown 0 / contraction 1 | each >= 2 | Fail |
 
+이 driver 표는 latest usable state origin인 2026-01-31에서 별도 실행한 결과다.
 ANFCI와 PERMIT는 stored ALFRED `realtime_start`를 conservative known-at fallback으로
 해석한 뒤 각각 2011-05, 1999-08부터 정상 평가됐다. 지배적 병목은
 `BAMLH0A0HYM2`가 현재 DB에서 2023-08 이후만 재현되고 3개월 변화는 2023-11부터만
 가능하다는 점이다. 따라서 model fit, baseline 비교와 calibration을 실행하지 않았다.
 
-최종 판정은 **`NO_GO`**다. 이것은 current-state 실패가 아니다. current-state는 4차의
-관측 국면 후보가 될 수 있지만, 사용자가 원한 전환압력·주경로·대안경로 확률은 아직
-제품화할 수 없다. production snapshot/service/React와 자산별 확인 포인트는 변경하지
-않았다. fiscal은 `NOT_TESTABLE`, market block은 optional `SHADOW_ONLY`다.
+최종 판정은 **`NO_GO`**다. 역사적 official state 정의는 검증됐지만 최신 current
+source와 미래 driver support가 각각 독립적으로 실패했다. 따라서 현재 국면과 사용자가
+원한 전환압력·주경로·대안경로 확률 모두 아직 제품화할 수 없다. production
+snapshot/service/React와 자산별 확인 포인트는 변경하지 않았다. fiscal은
+`NOT_TESTABLE`, market block은 optional `SHADOW_ONLY`다.
 
 ### Resume condition
 
-4·5차 전에 `BAMLH0A0HYM2`의 2023년 이전 공식 PIT history를 보강하거나, actual 결과와
-독립적으로 사전 승인한 장기 credit spread 대체 source를 확정해야 한다. 그 뒤 같은
-target·confirmation·support·skill threshold로 2차 coverage부터 재실행한다. BAML을
-사후 제거하거나 48-event/목적지 support gate를 낮추는 방식은 허용하지 않는다.
+4·5차 전에 먼저 RTDSM를 현재 cutoff까지 갱신해 exact latest confirmed state를 다시
+확보해야 한다. 이어 `BAMLH0A0HYM2`의 2023년 이전 공식 PIT history를 보강하거나,
+actual 결과와 독립적으로 사전 승인한 장기 credit spread 대체 source를 확정해야 한다.
+그 뒤 같은 target·confirmation·support·skill threshold로 1·2차 gate부터 재실행한다.
+BAML을 사후 제거하거나 48-event/목적지 support gate를 낮추는 방식은 허용하지 않는다.
 
 ## Prior FRED-only Feasibility Gate (Superseded)
 

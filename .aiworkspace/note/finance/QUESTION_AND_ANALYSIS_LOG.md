@@ -10824,7 +10824,9 @@ Detailed historical analysis was archived on `2026-04-13`.
   모든 다음 국면의 전환압력·주경로·대안경로를 확률로 검증하는 1~3차 개발을 승인함.
 - Interpreted goal: raw 사분면을 2회 확인한 official state로 쓰되 고정 순환을 강제하지
   않고 policy/inflation/rates/credit가 core보다 실제 OOS 예측력을 더하는지 판정한다.
-- Analysis result: official state는 actual `READY`; required driver common period는
-  BAML high-yield OAS PIT 시작점 때문에 27 origins·5 transitions로 forecast `NO_GO`다.
-- Follow-up: 4·5차는 보류한다. 2023년 이전 official credit PIT history 보강 또는 사전
-  승인 대체 source 뒤 동일 gate로 2차부터 재실행하며 UI와 자산 카드는 유지한다.
+- Analysis result: historical official state는 2026-01까지 `READY`지만 2026-07 exact
+  current는 unavailable이다. required driver도 BAML high-yield OAS PIT 시작점 때문에
+  27 origins·5 transitions로 forecast `NO_GO`다.
+- Follow-up: 4·5차는 보류한다. RTDSM current freshness와 2023년 이전 official credit
+  PIT history를 보강하거나 사전 승인 대체 source 뒤 동일 gate로 1차부터 재실행하며
+  UI와 자산 카드는 유지한다.
