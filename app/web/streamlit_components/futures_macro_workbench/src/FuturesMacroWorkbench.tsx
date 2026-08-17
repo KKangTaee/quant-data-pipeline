@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Streamlit, withStreamlitConnection, ComponentProps } from "streamlit-component-lib";
 import CalculationTraceDisclosure from "./CalculationTraceDisclosure";
 import FamilyDirectionSection from "./FamilyDirectionSection";
-import ForecastValidationGate from "./ForecastValidationGate";
 import MacroContextSection from "./MacroContextSection";
+import MarketRepricingSection from "./MarketRepricingSection";
 import MethodDisclosure from "./MethodDisclosure";
 import PatternRibbonSection from "./PatternRibbonSection";
 import ShortHorizonDecisionSection from "./ShortHorizonDecisionSection";
@@ -138,19 +138,6 @@ export type FamilyDirectionRow = {
   status: string;
 };
 
-export type FutureFiveDayValidation = {
-  status: PublicationStatus;
-  question: string;
-  title: string;
-  detail: string;
-  policy: string;
-  episode_count: number;
-  evaluation_count: number;
-  model_brier: number | null;
-  baseline_brier: number | null;
-  reference_date: string | null;
-};
-
 export type ObservationCard = {
   key: "1D" | "5D" | "20D";
   title: string;
@@ -166,13 +153,30 @@ export type CalculationScope = {
   raw_observation_symbols: string[];
 };
 
+export type MarketRepricingStatus = "ALIGNED" | "MIXED" | "SINGLE_AXIS" | "NEW_SHOCK" | "LOW_SIGNAL" | "UNAVAILABLE";
+
+export type MarketRepricingPayload = {
+  status: MarketRepricingStatus;
+  confidence_label: string;
+  headline: string;
+  interpretation: string;
+  supporting_evidence: string[];
+  counter_evidence: string[];
+  conditional_scenario: {
+    summary: string;
+    continuation_condition: string;
+    invalidation_condition: string;
+    sensitive_assets: string[];
+  };
+};
+
 export type ShortHorizonDecisionPayload = {
   observation_cards: ObservationCard[];
   current_summary: string;
   one_day_shock: { title: string; summary: string };
   five_day_direction: { title: string; summary: string };
   twenty_day_background: { title: string; summary: string };
-  future_five_day_validation: FutureFiveDayValidation;
+  market_repricing: MarketRepricingPayload;
   core_directions: FamilyDirectionRow[];
   confirmation_signals: FamilyDirectionRow[];
   confirmation_summary: string;
@@ -217,7 +221,7 @@ export type CalculationTracePayload = {
 };
 
 export type FuturesMacroWorkbenchPayload = {
-  schema_version: "futures_macro_react_workbench_v6";
+  schema_version: "futures_macro_react_workbench_v7";
   component: "FuturesMacroWorkbench";
   command: CommandPayload;
   hero: HeroPayload;
@@ -274,9 +278,7 @@ function FuturesMacroWorkbench({ args }: Props) {
         sessionEvidence={payload.session_evidence}
       />
       <ShortHorizonDecisionSection decision={payload.short_horizon_decision} />
-      <ForecastValidationGate
-        validation={payload.short_horizon_decision.future_five_day_validation}
-      />
+      <MarketRepricingSection radar={payload.short_horizon_decision.market_repricing} />
       <FamilyDirectionSection
         coreDirections={payload.short_horizon_decision.core_directions}
         confirmationSignals={payload.short_horizon_decision.confirmation_signals}
@@ -285,7 +287,6 @@ function FuturesMacroWorkbench({ args }: Props) {
       <PatternRibbonSection ribbon={payload.ribbon} />
       <MethodDisclosure
         boundaryNote={payload.boundary_note}
-        horizons={payload.horizons}
         method={payload.method}
         onToggle={syncFrameHeightSoon}
         scope={payload.short_horizon_decision.calculation_scope}

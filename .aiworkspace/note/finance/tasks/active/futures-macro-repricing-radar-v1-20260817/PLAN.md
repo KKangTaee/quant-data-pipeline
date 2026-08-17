@@ -34,21 +34,21 @@
 - Consumes: current pattern `families[*].one_day/five_day/twenty_day`, `SIGNAL_Z_THRESHOLD`
 - Produces: `short_horizon_decision.market_repricing` with `status`, `confidence_label`, `headline`, `interpretation`, `supporting_evidence`, `counter_evidence`, `conditional_scenario`
 
-- [ ] **Step 1: Write failing payload tests**
+- [x] **Step 1: Write failing payload tests**
 
   Add literal expectations that schema V7 omits `future_five_day_validation`, selects the strongest material core family, separates supporting and counter evidence, and returns continuation/invalidation/sensitive-asset fields. Add low-signal and unavailable cases.
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
   Run: `.venv/bin/python -m pytest tests/test_overview_futures_macro_short_horizon.py -q`
 
   Expected: failures for V7 and missing `market_repricing` contract.
 
-- [ ] **Step 3: Implement the minimal deterministic helper**
+- [x] **Step 3: Implement the minimal deterministic helper**
 
   Add family basis, risk-alignment and sensitive-asset mappings. Select the largest absolute material 5D core value; classify other core rows by normalized risk alignment; use confirmations only as supporting/counter context. Return `LOW_SIGNAL` when no core crosses the threshold and `UNAVAILABLE` when no finite core values exist.
 
-- [ ] **Step 4: Run payload tests and verify GREEN**
+- [x] **Step 4: Run payload tests and verify GREEN**
 
   Run: `.venv/bin/python -m pytest tests/test_overview_futures_macro_short_horizon.py tests/test_futures_macro_v2_integration.py -q`
 
@@ -70,21 +70,21 @@
 - Consumes: `ShortHorizonDecisionPayload.market_repricing`
 - Produces: visible order `hero -> observation flow -> market repricing -> family evidence -> regime history -> observational method -> trace`
 
-- [ ] **Step 1: Write failing React source-contract tests**
+- [x] **Step 1: Write failing React source-contract tests**
 
   Assert that `ForecastValidationGate` no longer exists or renders, `MarketRepricingSection` follows the observation flow, the title is `시장 재가격화 흐름`, and methodology does not display Brier or provisional forecast probability.
 
-- [ ] **Step 2: Run source-contract tests and verify RED**
+- [x] **Step 2: Run source-contract tests and verify RED**
 
   Run: `.venv/bin/python -m pytest tests/test_overview_futures_macro_short_horizon.py tests/test_service_contracts.py -q`
 
   Expected: failures identifying the old forecast import/render and missing radar component.
 
-- [ ] **Step 3: Implement the React surface and responsive CSS**
+- [x] **Step 3: Implement the React surface and responsive CSS**
 
   Render three cards for `유력한 해석`, `반대 근거`, `조건부 시나리오`; display `지속 조건`, `무효화 조건`, and sensitive-asset chips. Remove forecast gate CSS and turn method disclosure into observation/source/coverage evidence only.
 
-- [ ] **Step 4: Build and verify GREEN**
+- [x] **Step 4: Build and verify GREEN**
 
   Run: `npm run build` in `app/web/streamlit_components/futures_macro_workbench`
 
@@ -106,23 +106,23 @@
 - Consumes: production V7 payload and built component
 - Produces: current product contract and QA evidence
 
-- [ ] **Step 1: Verify an actual stored snapshot**
+- [x] **Step 1: Verify an actual stored snapshot**
 
   Build the workbench payload from `load_overview_futures_macro_materialized_snapshot()` and inspect the radar headline, evidence arrays and absence of the future gate field.
 
-- [ ] **Step 2: Run focused and integration verification**
+- [x] **Step 2: Run focused and integration verification**
 
   Run Python compilation, Futures Macro focused suites, React production build and `git diff --check`.
 
-- [ ] **Step 3: Run Browser QA**
+- [x] **Step 3: Run Browser QA**
 
   Open `/overview?overview_tab=futures-macro`, verify desktop and narrow layout, absence of forecast gate, current/fallback provenance, market interpretation cards, no overflow and no console errors. Save one generated screenshot without staging it.
 
-- [ ] **Step 4: Sync owning docs and task closeout**
+- [x] **Step 4: Sync owning docs and task closeout**
 
   Describe Futures Macro as an observational market-repricing radar. State that forecast artifacts remain backend-only and are not a primary product promise.
 
-- [ ] **Step 5: Commit the coherent implementation**
+- [x] **Step 5: Commit the coherent implementation**
 
   Stage only the task-owned source, tests, built bundle and durable docs. Exclude registry, run history, unrelated research and QA artifacts.
 

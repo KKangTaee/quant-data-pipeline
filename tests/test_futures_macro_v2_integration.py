@@ -161,7 +161,7 @@ class FuturesMacroV2IntegrationTests(unittest.TestCase):
             input_fingerprint=fingerprint,
         )
 
-        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v6")
+        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v7")
         self.assertEqual(len(payload["pattern_map"]["path"]), 30)
         self.assertEqual(
             [item["date"] for item in payload["pattern_map"]["path"]],

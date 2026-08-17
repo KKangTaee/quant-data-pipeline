@@ -26,7 +26,7 @@ Last Updated: 2026-08-17
 - 나머지 core는 위험선호 정규화 방향으로 supporting/counter evidence를 나눈다.
 - confirmation은 겹치는 구성 종목 때문에 독립 확인 개수로 세지 않고 맥락 근거로만 쓴다.
 - 1D가 중심 5D 방향과 반대이고 둘 다 material하면 반대 근거에 포함한다.
-- material core가 없으면 `LOW_SIGNAL`, finite core가 없으면 `UNAVAILABLE`다.
+- material 5D core가 없지만 1D core가 뚜렷하면 `NEW_SHOCK`, 1D도 중립이면 `LOW_SIGNAL`, finite core가 없으면 `UNAVAILABLE`다.
 
 ## 화면 구조
 

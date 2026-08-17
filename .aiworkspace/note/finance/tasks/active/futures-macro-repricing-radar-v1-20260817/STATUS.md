@@ -1,15 +1,17 @@
 # Futures Macro Repricing Radar V1 Status
 
-State: active
+State: complete
 Last Updated: 2026-08-17
 
 ## 현재 위치
 
-- 전체 3차 중 1차 제품 계약·실행 계획 정리 중
-- 사용자 승인: 시장 재가격화 레이더 개편, 향후 5거래일 연장 gate 제거
-- baseline focused test: 23 passed
+- 전체 3차 제품 계약, V7 payload·React 화면, 실제 DB·Browser QA 완료
+- 실제 저장 snapshot에서 `1D 새 충격` 해석과 forecast gate 부재 확인
+- Futures Macro 회귀: 145 passed, 15 subtests passed
+- focused payload/source contract: 28 passed
+- React production build: success
+- Browser QA: forecast gate 0건, 새 해석 영역·1D 새 충격 렌더링, 가로 overflow·console error 없음
 
 ## 다음 행동
 
-- V7 payload와 radar narrative의 실패 테스트 작성
-- forecast gate 미렌더링 React source contract 작성
+- 구현 commit 후 branch는 host-managed worktree에 보존

@@ -205,7 +205,7 @@ def test_short_horizon_payload_orders_core_four_and_confirmation_two() -> None:
     payload = _payload()
     decision = payload["short_horizon_decision"]
 
-    assert payload["schema_version"] == "futures_macro_react_workbench_v6"
+    assert payload["schema_version"] == "futures_macro_react_workbench_v7"
     assert [row["key"] for row in decision["core_directions"]] == [
         "risk_on",
         "rate_pressure",
@@ -226,7 +226,7 @@ def test_short_horizon_payload_orders_core_four_and_confirmation_two() -> None:
 def test_hero_names_short_horizon_scope_in_user_language() -> None:
     hero = _payload()["hero"]
 
-    assert hero["kicker"] == "단기 방향 진단"
+    assert hero["kicker"] == "시장 재가격화 레이더"
     assert hero["coverage_label"] == "최근 1 · 5 · 20거래일"
 
 
@@ -242,58 +242,146 @@ def test_refresh_action_describes_overlap_and_selective_bootstrap() -> None:
     assert "FUTURES_MACRO_HISTORY_YEARS}년 일봉을 yfinance에서 수집" not in helper_source
 
 
-def test_no_edge_copy_is_a_completed_negative_validation_result() -> None:
-    validation = _payload("NO_EDGE")["short_horizon_decision"][
-        "future_five_day_validation"
-    ]
+def test_repricing_radar_replaces_future_validation_with_current_market_reading() -> None:
+    decision = _payload("NO_EDGE")["short_horizon_decision"]
+    radar = decision["market_repricing"]
 
-    assert validation["status"] == "NO_EDGE"
-    assert validation["title"] == "검증 완료 · 향후 5거래일 예측 우위 없음"
-    assert validation["detail"] == (
-        "독립 표본 120개·시간순 평가 325회에서 모델 오차가 "
-        "기본 빈도보다 낮지 않았습니다."
-    )
-    assert validation["question"] == "현재 흐름을 향후 5거래일로 연장할 수 있는가?"
-    assert validation["policy"] == "현재 흐름을 미래 5거래일 방향으로 연장하지 않습니다."
-    assert validation["episode_count"] == 120
-    assert validation["evaluation_count"] == 325
-    assert validation["model_brier"] == 0.5582
-    assert validation["baseline_brier"] == 0.5567
-    assert validation["reference_date"] == "2026-08-07"
-
-
-def test_validation_copy_covers_all_publication_states() -> None:
-    expected = {
-        "VERIFIED": (
-            "검증 완료 · 향후 5거래일 방향 우위 있음",
-            "독립 표본 120개·시간순 평가 325회에서 모델 오차가 기본 빈도보다 낮았습니다.",
+    assert "future_five_day_validation" not in decision
+    assert radar == {
+        "status": "MIXED",
+        "confidence_label": "해석 충돌",
+        "headline": "주가지수 위험선호 약화가 재가격화의 중심입니다.",
+        "interpretation": (
+            "ES/NQ/YM/RTY 기반 위험선호 약화가 가장 강합니다. "
+            "달러 압력 확대와 물가 압력 확대가 같은 방어 방향을 지지하지만, "
+            "금리 부담 완화가 반대로 움직여 한 가지 거시 원인으로 확정할 수 없습니다."
         ),
-        "PROVISIONAL": (
-            "검증 진행 중 · 방향 확정 보류",
-            "독립 표본 120개·시간순 평가 325회가 있지만 공개 검증 기준을 모두 충족하지 못했습니다.",
-        ),
-        "UNAVAILABLE": (
-            "검증 자료 부족",
-            "검증 판정에 필요한 독립 표본 또는 시간순 평가가 부족합니다.",
-        ),
+        "supporting_evidence": [
+            "위험선호 약화 · ES/NQ/YM/RTY 기반",
+            "달러 압력 확대 · 주요 FX 기반",
+            "물가 압력 확대 · CL/HG/NG 기반",
+        ],
+        "counter_evidence": [
+            "금리 부담 완화 · ZN/ZB 기반",
+            "성장 기대 강화 · RTY/HG/CL/6A 기반",
+            "방어 수요 약화 · GC/ZN/ZB/6J 기반",
+        ],
+        "conditional_scenario": {
+            "summary": (
+                "위험선호 약화가 이어지면 주가지수와 경기민감 자산의 부담이 "
+                "유지될 수 있습니다."
+            ),
+            "continuation_condition": (
+                "1D와 5D에서 위험선호 약화가 함께 유지되고 달러·물가 압력이 "
+                "약해지지 않을 때"
+            ),
+            "invalidation_condition": (
+                "1D 위험선호가 강화로 반전하거나 5D 위험선호 약화가 "
+                "중립권으로 낮아질 때"
+            ),
+            "sensitive_assets": ["주가지수", "성장주", "경기민감 자산"],
+        },
     }
 
-    for status, copy in expected.items():
-        validation = _payload(status)["short_horizon_decision"][
-            "future_five_day_validation"
-        ]
-        assert (validation["title"], validation["detail"]) == copy
+
+def test_repricing_radar_reports_low_signal_without_forcing_a_macro_story() -> None:
+    payload = _payload()
+    pattern = _pattern()
+    for family in pattern["families"].values():
+        family["one_day"] = 0.1
+        family["five_day"] = 0.1
+        family["twenty_day"] = 0.1
+
+    from app.web.overview.futures_macro_helpers import (
+        _short_horizon_decision_payload,
+    )
+
+    decision = _short_horizon_decision_payload(
+        payload["calculation_trace"],
+        pattern,
+        _outlook(),
+    )
+    radar = decision["market_repricing"]
+
+    assert radar["status"] == "LOW_SIGNAL"
+    assert radar["confidence_label"] == "뚜렷한 중심축 없음"
+    assert radar["headline"] == "뚜렷한 거시 재가격화가 없습니다."
+    assert radar["supporting_evidence"] == []
+    assert radar["counter_evidence"] == []
+    assert radar["conditional_scenario"]["summary"] == (
+        "현재는 특정 시나리오보다 관망이 우선입니다."
+    )
 
 
-def test_intraday_payload_uses_current_pattern_but_completed_forecast() -> None:
+def test_repricing_radar_keeps_a_material_one_day_shock_when_five_day_is_neutral() -> None:
+    pattern = _pattern()
+    for family in pattern["families"].values():
+        family["one_day"] = 0.1
+        family["five_day"] = 0.1
+        family["twenty_day"] = 0.1
+    pattern["families"]["rate_pressure"]["one_day"] = 1.4
+    pattern["families"]["dollar_pressure"]["one_day"] = -1.0
+    pattern["families"]["safe_haven"]["one_day"] = -0.6
+
+    from app.web.overview.futures_macro_helpers import (
+        _short_horizon_decision_payload,
+    )
+
+    radar = _short_horizon_decision_payload({}, pattern, _outlook())[
+        "market_repricing"
+    ]
+
+    assert radar["status"] == "NEW_SHOCK"
+    assert radar["confidence_label"] == "1D 새 충격"
+    assert radar["headline"] == (
+        "1D 국채선물 기반 금리 부담 확대가 새로 두드러졌습니다."
+    )
+    assert radar["interpretation"] == (
+        "ZN/ZB 기반 금리 부담 확대가 1D에서 가장 강하지만 아직 5D 핵심 방향으로 "
+        "이어지지 않았습니다. 달러 압력 완화가 반대로 움직여 금리 충격 해석은 "
+        "초기 단계입니다."
+    )
+    assert radar["supporting_evidence"] == [
+        "금리 부담 확대 · ZN/ZB 기반",
+    ]
+    assert radar["counter_evidence"] == [
+        "달러 압력 완화 · 주요 FX 기반",
+        "방어 수요 약화 · GC/ZN/ZB/6J 기반",
+    ]
+
+
+def test_repricing_radar_reports_unavailable_when_core_values_are_missing() -> None:
+    pattern = _pattern()
+    for family in pattern["families"].values():
+        family["one_day"] = None
+        family["five_day"] = None
+        family["twenty_day"] = None
+
+    from app.web.overview.futures_macro_helpers import (
+        _short_horizon_decision_payload,
+    )
+
+    radar = _short_horizon_decision_payload({}, pattern, _outlook())[
+        "market_repricing"
+    ]
+
+    assert radar["status"] == "UNAVAILABLE"
+    assert radar["headline"] == "시장 재가격화를 해석할 관측값이 부족합니다."
+    assert radar["conditional_scenario"]["sensitive_assets"] == []
+
+
+def test_intraday_payload_uses_current_pattern_for_repricing_radar() -> None:
     payload = _intraday_payload()
 
     assert payload["hero"]["observation_mode"] == "INTRADAY_PROVISIONAL"
     assert payload["hero"]["as_of_date"] == "2026-08-10"
     assert payload["hero"]["completed_as_of_date"] == "2026-08-07"
     assert payload["hero"]["observed_at_et"] == "2026-08-10T11:10:00-04:00"
-    gate = payload["short_horizon_decision"]["future_five_day_validation"]
-    assert gate["reference_date"] == "2026-08-07"
+    decision = payload["short_horizon_decision"]
+    assert "future_five_day_validation" not in decision
+    assert decision["market_repricing"]["headline"] == (
+        "주가지수 위험선호 약화가 재가격화의 중심입니다."
+    )
 
 
 def test_observation_cards_report_changes_without_instruction_copy() -> None:
@@ -477,10 +565,12 @@ def test_react_default_render_uses_short_horizon_sections_in_order() -> None:
     workbench = (root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
 
     assert 'from "./ShortHorizonDecisionSection"' in workbench
-    assert 'from "./ForecastValidationGate"' in workbench
+    assert 'from "./MarketRepricingSection"' in workbench
+    assert 'from "./ForecastValidationGate"' not in workbench
     assert 'from "./FamilyDirectionSection"' in workbench
     assert 'from "./CalculationScopeSection"' not in workbench
     assert not (root / "CalculationScopeSection.tsx").exists()
+    assert not (root / "ForecastValidationGate.tsx").exists()
     render = workbench[workbench.index("return (") :]
     assert "<PatternHorizonSection" not in render
     assert "<PatternMapSection" not in render
@@ -488,7 +578,7 @@ def test_react_default_render_uses_short_horizon_sections_in_order() -> None:
     expected = [
         "<MacroContextSection",
         "<ShortHorizonDecisionSection",
-        "<ForecastValidationGate",
+        "<MarketRepricingSection",
         "<FamilyDirectionSection",
         "<PatternRibbonSection",
         "<MethodDisclosure",
@@ -505,12 +595,22 @@ def test_short_horizon_react_renders_results_without_reading_guide() -> None:
         encoding="utf-8"
     )
     method = (root / "MethodDisclosure.tsx").read_text(encoding="utf-8")
+    repricing = (root / "MarketRepricingSection.tsx").read_text(encoding="utf-8")
 
     assert "decision.observation_windows" not in decision
     assert "card.detail" not in decision
     assert "순서로 읽습니다" not in decision
+    assert "시장 재가격화 흐름" in decision
+    assert "유력한 해석" in repricing
+    assert "반대 근거" in repricing
+    assert "조건부 시나리오" in repricing
+    assert "지속 조건" in repricing
+    assert "무효화 조건" in repricing
     assert "계산 범위" in method
     assert "scope.collected_count" in method
+    assert "Brier" not in method
+    assert "probability_status" not in method
+    assert "horizons" not in method
 
 
 def test_react_copy_keeps_recent_twenty_day_as_observation_only() -> None:
@@ -542,23 +642,25 @@ def test_confirmation_signals_use_explicit_recent_window_headers() -> None:
     assert "최근 1D · 5D · 20D" not in family
 
 
-def test_react_separates_current_observation_from_future_validation_gate() -> None:
+def test_react_removes_future_validation_gate_from_the_product_surface() -> None:
     root = Path("app/web/streamlit_components/futures_macro_workbench/src")
+    python_source = Path("app/web/overview/futures_macro_helpers.py").read_text(
+        encoding="utf-8"
+    )
     decision = (root / "ShortHorizonDecisionSection.tsx").read_text(
         encoding="utf-8"
     )
-    forecast = (root / "ForecastValidationGate.tsx").read_text(
-        encoding="utf-8"
+    workbench = (root / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
+    all_source = "\n".join(
+        path.read_text(encoding="utf-8") for path in root.glob("*.tsx")
     )
 
     assert "decision.observation_cards" in decision
     assert "future_five_day_validation" not in decision
-    assert "현재 흐름을 향후 5거래일로 연장할 수 있는가?" in forecast
-    assert "기본 대비 Brier" in forecast
-    assert "formatBrierDelta" in forecast
-    assert "모델 Brier" not in forecast
-    assert "기본 빈도 Brier" not in forecast
-    assert "validation.policy" in forecast
+    assert "ForecastValidationGate" not in workbench
+    assert "현재 흐름을 향후 5거래일로 연장할 수 있는가?" not in all_source
+    assert "현재 흐름을 향후 5거래일로 연장할 수 있는가?" not in python_source
+    assert "기본 대비 Brier" not in all_source
 
 
 def test_react_header_no_longer_says_active_session_is_excluded() -> None:

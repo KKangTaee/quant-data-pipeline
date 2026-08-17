@@ -8553,7 +8553,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("build_futures_macro_react_workbench_payload", helper_source)
         for name in (
             "ShortHorizonDecisionSection",
-            "ForecastValidationGate",
+            "MarketRepricingSection",
             "FamilyDirectionSection",
             "PatternRibbonSection",
             "MethodDisclosure",
@@ -8561,9 +8561,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         ):
             self.assertTrue((source_root / f"{name}.tsx").exists())
             self.assertIn(name, source)
+        self.assertFalse((source_root / "ForecastValidationGate.tsx").exists())
+        self.assertNotIn("ForecastValidationGate", source)
         self.assertLess(source.index("<MacroContextSection"), source.index("<ShortHorizonDecisionSection"))
-        self.assertLess(source.index("<ShortHorizonDecisionSection"), source.index("<ForecastValidationGate"))
-        self.assertLess(source.index("<ForecastValidationGate"), source.index("<FamilyDirectionSection"))
+        self.assertLess(source.index("<ShortHorizonDecisionSection"), source.index("<MarketRepricingSection"))
+        self.assertLess(source.index("<MarketRepricingSection"), source.index("<FamilyDirectionSection"))
         self.assertLess(source.index("<FamilyDirectionSection"), source.index("<PatternRibbonSection"))
         self.assertLess(source.index("<PatternRibbonSection"), source.index("<MethodDisclosure"))
         self.assertLess(source.index("<MethodDisclosure"), source.index("<CalculationTraceDisclosure"))
@@ -27962,7 +27964,7 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             pattern_outlook=self._pattern_outlook_payload_fixture(),
         )
 
-        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v6")
+        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v7")
         self.assertEqual([item["key"] for item in payload["horizons"]], ["current", "5D", "20D"])
         current, five_day, twenty_day = payload["horizons"]
         self.assertEqual(payload["hero"]["observation_status"], "OBSERVED")

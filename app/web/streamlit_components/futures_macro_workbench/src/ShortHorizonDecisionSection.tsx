@@ -6,7 +6,7 @@ function ShortHorizonDecisionSection({ decision }: { decision: ShortHorizonDecis
       <div className="fm-workbench__section-heading">
         <div>
           <span>Short-horizon reading</span>
-          <h3 id="fm-decision-title">단기 방향 판단 흐름</h3>
+          <h3 id="fm-decision-title">시장 재가격화 흐름</h3>
         </div>
       </div>
       <div className="fm-workbench__decision-steps">

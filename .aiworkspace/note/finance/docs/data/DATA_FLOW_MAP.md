@@ -373,11 +373,11 @@ finance_price.futures_ohlcv daily rows
 - yfinance가 `period=1d`, `interval=1m`에서 일부 futures symbol을 빈 응답 또는 지나치게 희소한 응답으로 돌려주면 collector는 해당 symbol만 `period=2d`, `interval=1m`으로 한 번 보강 수집한다. 성공 / 실패, 초기 row 수, 회복 symbol은 `futures_market_monitor_run.diagnostics_json.fallback_retries`에 남긴다.
 - `futures_market_monitor_run`과 Overview local run history가 Data Health의 latest success / failed symbols / stale 판단에 사용된다.
 - Macro Thermometer historical validation은 `futures_ohlcv` 1d row를 point-in-time으로 재계산하고, target futures가 부족할 때만 `nyse_price_history` ETF proxy를 labeled fallback으로 읽는다.
-- daily resolver는 provider raw marker와 완료 세션 기준일을 분리한다. 미완료 session은 forecast validation/history에서는 제외하지만, current observation은 장중 5m coverage와 freshness gate를 통과하면 임시 세션으로 표시한다.
+- daily resolver는 provider raw marker와 완료 세션 기준일을 분리한다. 미완료 session은 backend forecast validation/history에서는 제외하지만, current observation은 장중 5m coverage와 freshness gate를 통과하면 임시 세션으로 표시한다.
 - 수동 refresh가 저녁 재개 뒤 실행돼 mutable Yahoo 1d row가 pending이어도, 저장된 5m row의 exact ET 구간으로 17개 완료 세션을 재구성한다. 유효한 `yfinance_5m_session_aggregate_v1` final 값은 raw 1d보다 우선하며 이미 확정된 세션은 추가 provider 호출 없이 재사용한다.
 - 장중 합성은 family 구성 종목이 모두 있는 경우만 해당 family를 계산하고, 가용 family가 공통으로 보유한 가장 느린 closed 5m bar를 common cutoff으로 쓴다. 6개 family면 ready, 4~5개면 partial, 4개 미만이거나 30분 초과 stale이면 완료 세션으로 fail closed한다.
 - 활성 trade date는 daily provider label에 종속하지 않고 New York 18:00 저녁 재개를 반영한다. 즉 월요일 18:00 ET 이후는 화요일 거래 세션으로 표시한다. 휴장일·provider 지연은 freshness gate에서 fallback한다.
-- same-state V2는 30개 완료 세션의 실제 일별 trail과 5D/20D 미래 분포를 분리한다. UI는 고정 `[-2.5,+2.5]` 축에서 실제 trail을 표시하고, 독립 gate를 통과한 ellipse/vector만 추가한다.
+- same-state V2와 forecast history는 과거 유사 상태·5D/20D 분포의 backend 호환성과 shadow research를 위해 보존한다. primary UI는 현재 1D·5D·20D 관측에서 핵심 5D 재가격화 또는 1D 새 충격을 골라 유력 해석, 반대 근거와 지속·무효화 조건을 표시하며 ellipse/vector·확률·가격 목표를 노출하지 않는다.
 - Market Context 3차-B의 Macro 조건 포함 pilot은 저장된 `ZN=F` / `ZB=F` daily rows만 읽어 Rate Pressure futures proxy bucket을 계산한다. selected as-of 이후 row와 anchor 이후 futures 움직임은 조건 계산에 쓰지 않는다.
 
 주의:

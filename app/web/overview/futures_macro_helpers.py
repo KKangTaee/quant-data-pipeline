@@ -781,26 +781,80 @@ PATTERN_FAMILY_POLARITY_COPY = {
     "safe_haven": ("방어 수요 강화", "방어 수요 약화", "방어 수요 중립"),
     "inflation_pressure": ("물가 압력 확대", "물가 압력 완화", "물가 압력 중립"),
 }
+PATTERN_CONFIRMATION_RISK_ALIGNMENT_SIGN = {
+    "growth": 1.0,
+    "safe_haven": -1.0,
+}
+PATTERN_FAMILY_BASIS_COPY = {
+    "risk_on": "ES/NQ/YM/RTY",
+    "growth": "RTY/HG/CL/6A",
+    "rate_pressure": "ZN/ZB",
+    "dollar_pressure": "주요 FX",
+    "safe_haven": "GC/ZN/ZB/6J",
+    "inflation_pressure": "CL/HG/NG",
+}
+PATTERN_FAMILY_HEADLINE_COPY = {
+    ("risk_on", 1): "주가지수 위험선호 강화",
+    ("risk_on", -1): "주가지수 위험선호 약화",
+    ("rate_pressure", 1): "국채선물 기반 금리 부담 확대",
+    ("rate_pressure", -1): "국채선물 기반 금리 부담 완화",
+    ("dollar_pressure", 1): "주요 통화선물 기반 달러 압력 확대",
+    ("dollar_pressure", -1): "주요 통화선물 기반 달러 압력 완화",
+    ("inflation_pressure", 1): "원자재선물 기반 물가 압력 확대",
+    ("inflation_pressure", -1): "원자재선물 기반 물가 압력 완화",
+}
+PATTERN_FAMILY_SCENARIO_COPY = {
+    ("risk_on", 1): {
+        "summary": "위험선호 강화가 이어지면 주가지수와 경기민감 자산의 우호적 환경이 유지될 수 있습니다.",
+        "continuation": "1D와 5D에서 위험선호 강화가 함께 유지되고 성장 기대가 약해지지 않을 때",
+        "invalidation": "1D 위험선호가 약화로 반전하거나 5D 위험선호 강화가 중립권으로 낮아질 때",
+        "sensitive_assets": ["주가지수", "성장주", "경기민감 자산"],
+    },
+    ("risk_on", -1): {
+        "summary": "위험선호 약화가 이어지면 주가지수와 경기민감 자산의 부담이 유지될 수 있습니다.",
+        "continuation": "1D와 5D에서 위험선호 약화가 함께 유지되고 달러·물가 압력이 약해지지 않을 때",
+        "invalidation": "1D 위험선호가 강화로 반전하거나 5D 위험선호 약화가 중립권으로 낮아질 때",
+        "sensitive_assets": ["주가지수", "성장주", "경기민감 자산"],
+    },
+    ("rate_pressure", 1): {
+        "summary": "금리 부담 확대가 이어지면 장기채와 성장주의 변동성 부담이 커질 수 있습니다.",
+        "continuation": "1D와 5D에서 금리 부담 확대가 함께 유지되고 달러 또는 물가 압력이 동반될 때",
+        "invalidation": "1D 금리 부담이 완화로 반전하거나 국채선물 약세가 5D 중립권으로 낮아질 때",
+        "sensitive_assets": ["미 국채", "성장주", "금"],
+    },
+    ("rate_pressure", -1): {
+        "summary": "금리 부담 완화가 이어지면 장기채와 금리 민감 자산의 압력이 낮아질 수 있습니다.",
+        "continuation": "1D와 5D에서 금리 부담 완화가 함께 유지되고 달러 압력이 확대되지 않을 때",
+        "invalidation": "1D 금리 부담이 확대로 반전하거나 국채선물 강세가 5D 중립권으로 낮아질 때",
+        "sensitive_assets": ["미 국채", "성장주", "금리 민감 자산"],
+    },
+    ("dollar_pressure", 1): {
+        "summary": "달러 압력 확대가 이어지면 원자재와 달러 민감 위험자산의 부담이 커질 수 있습니다.",
+        "continuation": "1D와 5D에서 달러 압력 확대가 함께 유지되고 금리 부담 또는 위험선호 약화가 동반될 때",
+        "invalidation": "1D 달러 압력이 완화로 반전하거나 주요 FX 약세가 5D 중립권으로 낮아질 때",
+        "sensitive_assets": ["달러 민감 자산", "원자재", "신흥국 위험자산"],
+    },
+    ("dollar_pressure", -1): {
+        "summary": "달러 압력 완화가 이어지면 원자재와 비달러 위험자산의 부담이 낮아질 수 있습니다.",
+        "continuation": "1D와 5D에서 달러 압력 완화가 함께 유지되고 위험선호가 약화되지 않을 때",
+        "invalidation": "1D 달러 압력이 확대로 반전하거나 주요 FX 강세가 5D 중립권으로 낮아질 때",
+        "sensitive_assets": ["비달러 자산", "원자재", "신흥국 위험자산"],
+    },
+    ("inflation_pressure", 1): {
+        "summary": "물가 압력 확대가 이어지면 원자재와 금리 민감 자산의 변동성이 커질 수 있습니다.",
+        "continuation": "1D와 5D에서 물가 압력 확대가 함께 유지되고 국채선물 약세가 동반될 때",
+        "invalidation": "1D 물가 압력이 완화로 반전하거나 원자재 강세가 5D 중립권으로 낮아질 때",
+        "sensitive_assets": ["원자재", "미 국채", "장기 성장주"],
+    },
+    ("inflation_pressure", -1): {
+        "summary": "물가 압력 완화가 이어지면 원자재발 금리 부담이 낮아질 수 있습니다.",
+        "continuation": "1D와 5D에서 물가 압력 완화가 함께 유지되고 금리 부담이 확대되지 않을 때",
+        "invalidation": "1D 물가 압력이 확대로 반전하거나 원자재 약세가 5D 중립권으로 낮아질 때",
+        "sensitive_assets": ["원자재", "미 국채", "물가 민감 자산"],
+    },
+}
 FUTURES_MACRO_SHARED_CONTEXT_SYMBOLS = ("DX-Y.NYB",)
 FUTURES_MACRO_RAW_OBSERVATION_SYMBOLS = ("SI=F",)
-FUTURES_MACRO_PUBLICATION_COPY = {
-    "VERIFIED": (
-        "검증 완료 · 향후 5거래일 방향 우위 있음",
-        "모델 오차가 기본 빈도보다 낮았습니다.",
-    ),
-    "NO_EDGE": (
-        "검증 완료 · 향후 5거래일 예측 우위 없음",
-        "모델 오차가 기본 빈도보다 낮지 않았습니다.",
-    ),
-    "PROVISIONAL": (
-        "검증 진행 중 · 방향 확정 보류",
-        "계산은 가능하지만 공개 검증 기준을 모두 충족하지 못했습니다.",
-    ),
-    "UNAVAILABLE": (
-        "검증 자료 부족",
-        "검증 판정에 필요한 독립 표본 또는 시간순 평가가 부족합니다.",
-    ),
-}
 
 
 def _pattern_observation_status(pattern: dict[str, Any]) -> str:
@@ -1020,76 +1074,6 @@ def _pattern_confirmation_summary(
     return f"확인 신호는 {' · '.join(phrases)}입니다."
 
 
-def _future_five_day_validation_payload(
-    pattern_outlook: dict[str, Any],
-) -> dict[str, Any]:
-    five_day = next(
-        (
-            dict(item)
-            for item in list(pattern_outlook.get("horizons") or [])
-            if int(dict(item).get("horizon") or 0) == 5
-        ),
-        {},
-    )
-    status = str(five_day.get("probability_status") or "UNAVAILABLE")
-    title, detail = FUTURES_MACRO_PUBLICATION_COPY.get(
-        status,
-        FUTURES_MACRO_PUBLICATION_COPY["UNAVAILABLE"],
-    )
-    episode_count = int(five_day.get("episode_count") or 0)
-    evaluation_count = int(five_day.get("evaluation_count") or 0)
-    sample_summary = (
-        f"독립 표본 {episode_count}개·시간순 평가 {evaluation_count}회"
-    )
-    if status == "VERIFIED":
-        detail = f"{sample_summary}에서 모델 오차가 기본 빈도보다 낮았습니다."
-    elif status == "NO_EDGE":
-        detail = (
-            f"{sample_summary}에서 모델 오차가 기본 빈도보다 낮지 않았습니다."
-        )
-    elif status == "PROVISIONAL":
-        detail = (
-            f"{sample_summary}가 있지만 공개 검증 기준을 모두 충족하지 못했습니다."
-        )
-    method = dict(pattern_outlook.get("method") or {})
-    raw_baselines = five_day.get("baseline_brier_scores")
-    if not isinstance(raw_baselines, dict):
-        raw_baselines = dict(method.get("baseline_brier") or {}).get("5")
-    if isinstance(raw_baselines, dict):
-        baseline_brier = raw_baselines.get("B0_UNCONDITIONAL")
-        if baseline_brier is None:
-            baseline_brier = next(iter(raw_baselines.values()), None)
-    else:
-        baseline_brier = raw_baselines
-    model_brier = five_day.get("brier_score")
-    if model_brier is None:
-        model_brier = dict(method.get("brier") or {}).get("5")
-    policy = (
-        "검증 범위 안에서 조건부 방향 근거로만 참고합니다."
-        if status == "VERIFIED"
-        else "현재 흐름을 미래 5거래일 방향으로 연장하지 않습니다."
-    )
-    return {
-        "status": status,
-        "question": "현재 흐름을 향후 5거래일로 연장할 수 있는가?",
-        "title": title,
-        "detail": detail,
-        "policy": policy,
-        "episode_count": episode_count,
-        "evaluation_count": evaluation_count,
-        "model_brier": (
-            float(model_brier) if model_brier is not None else None
-        ),
-        "baseline_brier": (
-            float(baseline_brier) if baseline_brier is not None else None
-        ),
-        "reference_date": (
-            pattern_outlook.get("as_of_date")
-            or dict(pattern_outlook.get("current_pattern") or {}).get("as_of_date")
-        ),
-    }
-
-
 def _pattern_background_relationship_summary(
     rows: list[dict[str, Any]],
 ) -> str:
@@ -1163,6 +1147,303 @@ def _futures_macro_calculation_scope(
     }
 
 
+def _material_state_sign(row: dict[str, Any], window: str) -> int | None:
+    state = dict(row.get(window) or {})
+    value = state.get("value")
+    if value is None:
+        return None
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not isfinite(numeric):
+        return None
+    if numeric >= SIGNAL_Z_THRESHOLD:
+        return 1
+    if numeric <= -SIGNAL_Z_THRESHOLD:
+        return -1
+    return 0
+
+
+def _repricing_evidence_label(row: dict[str, Any], window: str = "five_day") -> str:
+    state = dict(row.get(window) or {})
+    family_key = str(row.get("key") or "")
+    semantic = str(state.get("semantic_label") or row.get("label") or "자료 부족")
+    basis = PATTERN_FAMILY_BASIS_COPY.get(family_key, "선물군")
+    return f"{semantic} · {basis} 기반"
+
+
+def _empty_market_repricing_payload(*, unavailable: bool) -> dict[str, Any]:
+    if unavailable:
+        return {
+            "status": "UNAVAILABLE",
+            "confidence_label": "자료 부족",
+            "headline": "시장 재가격화를 해석할 관측값이 부족합니다.",
+            "interpretation": "네 개 핵심 선물군의 5D 관측이 준비되어야 유력 해석과 반대 근거를 나눌 수 있습니다.",
+            "supporting_evidence": [],
+            "counter_evidence": [],
+            "conditional_scenario": {
+                "summary": "현재 자료로는 조건부 시나리오를 만들지 않습니다.",
+                "continuation_condition": "핵심 선물군의 5D 관측이 준비될 때",
+                "invalidation_condition": "관측 자료가 다시 부족하거나 stale 상태가 될 때",
+                "sensitive_assets": [],
+            },
+        }
+    return {
+        "status": "LOW_SIGNAL",
+        "confidence_label": "뚜렷한 중심축 없음",
+        "headline": "뚜렷한 거시 재가격화가 없습니다.",
+        "interpretation": "위험선호·금리·달러·물가 가운데 5D 기준으로 평소 변동 범위를 뚜렷하게 벗어난 핵심축이 없습니다.",
+        "supporting_evidence": [],
+        "counter_evidence": [],
+        "conditional_scenario": {
+            "summary": "현재는 특정 시나리오보다 관망이 우선입니다.",
+            "continuation_condition": "핵심축이 중립권에 머무를 때",
+            "invalidation_condition": "한 개 이상의 핵심축이 5D 평소 변동 범위를 뚜렷하게 벗어날 때",
+            "sensitive_assets": [],
+        },
+    }
+
+
+def _one_day_repricing_shock_payload(
+    core_rows: list[dict[str, Any]],
+    confirmation_rows: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    material_core = [
+        row
+        for row in core_rows
+        if _material_state_sign(row, "one_day") in {-1, 1}
+    ]
+    if not material_core:
+        return None
+    leading = max(
+        material_core,
+        key=lambda row: abs(float(dict(row.get("one_day") or {}).get("value") or 0.0)),
+    )
+    leading_key = str(leading.get("key") or "")
+    leading_sign = int(_material_state_sign(leading, "one_day") or 0)
+    leading_risk_sign = leading_sign * PATTERN_RISK_ALIGNMENT_SIGN[leading_key]
+    supporting_core: list[dict[str, Any]] = []
+    counter_core: list[dict[str, Any]] = []
+    for row in material_core:
+        family_key = str(row.get("key") or "")
+        state_sign = int(_material_state_sign(row, "one_day") or 0)
+        normalized = state_sign * PATTERN_RISK_ALIGNMENT_SIGN[family_key]
+        target = supporting_core if normalized == leading_risk_sign else counter_core
+        target.append(row)
+
+    supporting_confirmation: list[dict[str, Any]] = []
+    counter_confirmation: list[dict[str, Any]] = []
+    for row in confirmation_rows:
+        state_sign = _material_state_sign(row, "one_day")
+        family_key = str(row.get("key") or "")
+        if state_sign not in {-1, 1}:
+            continue
+        normalized = int(state_sign) * PATTERN_CONFIRMATION_RISK_ALIGNMENT_SIGN[family_key]
+        target = (
+            supporting_confirmation
+            if normalized == leading_risk_sign
+            else counter_confirmation
+        )
+        target.append(row)
+
+    leading_semantic = str(dict(leading.get("one_day") or {}).get("semantic_label"))
+    leading_basis = PATTERN_FAMILY_BASIS_COPY[leading_key]
+    support_phrases = [
+        str(dict(row.get("one_day") or {}).get("semantic_label"))
+        for row in supporting_core
+        if row is not leading
+    ]
+    counter_phrases = [
+        str(dict(row.get("one_day") or {}).get("semantic_label"))
+        for row in counter_core
+    ]
+    interpretation = (
+        f"{leading_basis} 기반 {leading_semantic}가 1D에서 가장 강하지만 아직 "
+        "5D 핵심 방향으로 이어지지 않았습니다."
+    )
+    if support_phrases and counter_phrases:
+        interpretation += (
+            f" {_join_korean_phrases(support_phrases)}가 동반하지만 "
+            f"{_join_korean_phrases(counter_phrases)}가 반대로 움직여 현재 해석은 "
+            "초기 단계입니다."
+        )
+    elif counter_phrases:
+        shock_label = {
+            "risk_on": "위험선호 변화",
+            "rate_pressure": "금리 충격",
+            "dollar_pressure": "달러 충격",
+            "inflation_pressure": "물가 충격",
+        }[leading_key]
+        interpretation += (
+            f" {_join_korean_phrases(counter_phrases)}가 반대로 움직여 "
+            f"{shock_label} 해석은 초기 단계입니다."
+        )
+    elif support_phrases:
+        interpretation += (
+            f" {_join_korean_phrases(support_phrases)}가 같은 방향으로 동반하지만 "
+            "지속 여부는 아직 확인되지 않았습니다."
+        )
+    else:
+        interpretation += " 다른 핵심축이 동반하지 않아 단일 충격으로 봅니다."
+
+    scenario = PATTERN_FAMILY_SCENARIO_COPY[(leading_key, leading_sign)]
+    return {
+        "status": "NEW_SHOCK",
+        "confidence_label": "1D 새 충격",
+        "headline": f"1D {PATTERN_FAMILY_HEADLINE_COPY[(leading_key, leading_sign)]}가 새로 두드러졌습니다.",
+        "interpretation": interpretation,
+        "supporting_evidence": [
+            _repricing_evidence_label(row, "one_day")
+            for row in [*supporting_core, *supporting_confirmation]
+        ],
+        "counter_evidence": [
+            _repricing_evidence_label(row, "one_day")
+            for row in [*counter_core, *counter_confirmation]
+        ],
+        "conditional_scenario": {
+            "summary": scenario["summary"],
+            "continuation_condition": scenario["continuation"],
+            "invalidation_condition": scenario["invalidation"],
+            "sensitive_assets": list(scenario["sensitive_assets"]),
+        },
+    }
+
+
+def _market_repricing_payload(
+    core_rows: list[dict[str, Any]],
+    confirmation_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Turn current family observations into one cautious macro repricing hypothesis."""
+
+    finite_core = [
+        row
+        for row in core_rows
+        if _material_state_sign(row, "five_day") is not None
+    ]
+    if not finite_core:
+        return _empty_market_repricing_payload(unavailable=True)
+    material_core = [
+        row
+        for row in finite_core
+        if _material_state_sign(row, "five_day") in {-1, 1}
+    ]
+    if not material_core:
+        one_day_shock = _one_day_repricing_shock_payload(
+            core_rows,
+            confirmation_rows,
+        )
+        return one_day_shock or _empty_market_repricing_payload(unavailable=False)
+
+    leading = max(
+        material_core,
+        key=lambda row: abs(float(dict(row.get("five_day") or {}).get("value") or 0.0)),
+    )
+    leading_key = str(leading.get("key") or "")
+    leading_sign = int(_material_state_sign(leading, "five_day") or 0)
+    leading_risk_sign = leading_sign * PATTERN_RISK_ALIGNMENT_SIGN[leading_key]
+
+    supporting_core: list[dict[str, Any]] = []
+    counter_core: list[dict[str, Any]] = []
+    for row in material_core:
+        family_key = str(row.get("key") or "")
+        state_sign = int(_material_state_sign(row, "five_day") or 0)
+        normalized = state_sign * PATTERN_RISK_ALIGNMENT_SIGN[family_key]
+        target = supporting_core if normalized == leading_risk_sign else counter_core
+        target.append(row)
+
+    supporting_confirmation: list[dict[str, Any]] = []
+    counter_confirmation: list[dict[str, Any]] = []
+    for row in confirmation_rows:
+        state_sign = _material_state_sign(row, "five_day")
+        family_key = str(row.get("key") or "")
+        if state_sign not in {-1, 1}:
+            continue
+        normalized = int(state_sign) * PATTERN_CONFIRMATION_RISK_ALIGNMENT_SIGN[family_key]
+        target = (
+            supporting_confirmation
+            if normalized == leading_risk_sign
+            else counter_confirmation
+        )
+        target.append(row)
+
+    one_day_sign = _material_state_sign(leading, "one_day")
+    one_day_reversal = one_day_sign in {-1, 1} and one_day_sign != leading_sign
+    supporting_evidence = [
+        _repricing_evidence_label(row)
+        for row in [*supporting_core, *supporting_confirmation]
+    ]
+    counter_evidence = [
+        _repricing_evidence_label(row)
+        for row in [*counter_core, *counter_confirmation]
+    ]
+    if one_day_reversal:
+        one_day = dict(leading.get("one_day") or {})
+        counter_evidence.append(
+            f"1D {one_day.get('semantic_label')} · 5D 핵심 방향과 반대"
+        )
+
+    leading_semantic = str(dict(leading.get("five_day") or {}).get("semantic_label"))
+    leading_basis = PATTERN_FAMILY_BASIS_COPY[leading_key]
+    support_phrases = [
+        str(dict(row.get("five_day") or {}).get("semantic_label"))
+        for row in supporting_core
+        if row is not leading
+    ]
+    counter_phrases = [
+        str(dict(row.get("five_day") or {}).get("semantic_label"))
+        for row in counter_core
+    ]
+    leading_sentence = f"{leading_basis} 기반 {leading_semantic}가 가장 강합니다."
+    risk_direction = "위험선호" if leading_risk_sign > 0 else "방어"
+    if support_phrases and counter_phrases:
+        interpretation = (
+            f"{leading_sentence} {_join_korean_phrases(support_phrases)}가 같은 "
+            f"{risk_direction} 방향을 지지하지만, "
+            f"{_join_korean_phrases(counter_phrases)}가 반대로 움직여 한 가지 "
+            "거시 원인으로 확정할 수 없습니다."
+        )
+    elif support_phrases:
+        interpretation = (
+            f"{leading_sentence} {_join_korean_phrases(support_phrases)}가 같은 "
+            f"{risk_direction} 방향을 지지해 교차자산 정렬이 나타납니다."
+        )
+    elif counter_phrases:
+        interpretation = (
+            f"{leading_sentence} {_join_korean_phrases(counter_phrases)}가 반대로 "
+            "움직여 단일 거시 해석의 신뢰도는 낮습니다."
+        )
+    else:
+        interpretation = (
+            f"{leading_sentence} 다른 핵심 선물군이 같은 방향으로 동반하지 않아 "
+            "현재는 단일 축 재가격화로 봅니다."
+        )
+
+    has_counter = bool(counter_core or counter_confirmation or one_day_reversal)
+    if has_counter:
+        status, confidence_label = "MIXED", "해석 충돌"
+    elif len(supporting_core) >= 2:
+        status, confidence_label = "ALIGNED", "교차자산 정렬"
+    else:
+        status, confidence_label = "SINGLE_AXIS", "단일 축"
+
+    scenario = PATTERN_FAMILY_SCENARIO_COPY[(leading_key, leading_sign)]
+    return {
+        "status": status,
+        "confidence_label": confidence_label,
+        "headline": f"{PATTERN_FAMILY_HEADLINE_COPY[(leading_key, leading_sign)]}가 재가격화의 중심입니다.",
+        "interpretation": interpretation,
+        "supporting_evidence": supporting_evidence,
+        "counter_evidence": counter_evidence,
+        "conditional_scenario": {
+            "summary": scenario["summary"],
+            "continuation_condition": scenario["continuation"],
+            "invalidation_condition": scenario["invalidation"],
+            "sensitive_assets": list(scenario["sensitive_assets"]),
+        },
+    }
+
+
 def _short_horizon_decision_payload(
     macro: dict[str, Any],
     pattern: dict[str, Any],
@@ -1215,9 +1496,7 @@ def _short_horizon_decision_payload(
             "title": "최근 20거래일 · 기존 배경과의 관계",
             "summary": twenty_day_summary,
         },
-        "future_five_day_validation": _future_five_day_validation_payload(
-            pattern_outlook
-        ),
+        "market_repricing": _market_repricing_payload(core_rows, confirmation_rows),
         "core_directions": core_rows,
         "confirmation_signals": confirmation_rows,
         "confirmation_summary": confirmation_summary,
@@ -1379,7 +1658,7 @@ def _pattern_hero_payload(
             else "현재 진행 중인 세션이 없어 마지막 완료 일봉을 사용합니다."
         )
     return {
-        "kicker": "단기 방향 진단",
+        "kicker": "시장 재가격화 레이더",
         "title": _display_text(pattern.get("regime_label"), "현재 체제 자료 부족"),
         "transition_label": _display_text(pattern.get("transition_label"), "자료 부족"),
         "summary": _display_text(pattern.get("summary") or summary.get("summary"), "현재 패턴을 계산할 자료가 부족합니다."),
@@ -1646,7 +1925,7 @@ def build_futures_macro_react_workbench_payload(
     )
     session = dict(pattern_outlook.get("session") or {})
     return {
-        "schema_version": "futures_macro_react_workbench_v6",
+        "schema_version": "futures_macro_react_workbench_v7",
         "component": "FuturesMacroWorkbench",
         "command": _pattern_command_payload(
             macro,
