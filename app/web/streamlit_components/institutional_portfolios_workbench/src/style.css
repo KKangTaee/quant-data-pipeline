@@ -2101,6 +2101,519 @@ a {
   }
 }
 
+/* Content-first institutional holdings surface */
+.ip-workbench {
+  padding: 0 0 12px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.ip-institutional-shell {
+  position: relative;
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid #dfe5ec;
+  border-radius: 18px;
+  background: #f6f8fb;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.06);
+}
+
+.ip-institutional-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 2px 2px 20px;
+}
+
+.ip-institutional-page-header__eyebrow {
+  display: block;
+  color: #60758b;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+
+.ip-institutional-page-header h1 {
+  margin: 7px 0 0;
+  color: #122033;
+  font-size: clamp(25px, 3vw, 34px);
+  letter-spacing: -0.045em;
+}
+
+.ip-institutional-page-header p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 9px 0 0;
+  color: #67788c;
+  font-size: 12px;
+}
+
+.ip-institutional-page-header p strong {
+  color: #2c4056;
+}
+
+.ip-institutional-page-header p span,
+.ip-institutional-page-header p em {
+  padding-left: 8px;
+  border-left: 1px solid #cbd5df;
+  font-style: normal;
+}
+
+.ip-institutional-page-header__context {
+  display: grid;
+  gap: 3px;
+  min-width: 170px;
+  padding-left: 16px;
+  border-left: 2px solid #9fbad3;
+  text-align: right;
+}
+
+.ip-institutional-page-header__context span {
+  color: #7c8b9b;
+  font-size: 10px;
+}
+
+.ip-institutional-page-header__context strong {
+  color: #273b51;
+  font-size: 13px;
+}
+
+.ip-institutional-controls {
+  position: relative;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(260px, 0.8fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ip-manager-picker,
+.ip-data-context {
+  position: relative;
+  min-width: 0;
+}
+
+.ip-manager-picker > summary,
+.ip-data-context > summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 12px;
+  align-items: center;
+  min-height: 68px;
+  padding: 12px 15px;
+  border: 1px solid #d8e0e9;
+  border-radius: 12px;
+  background: #ffffff;
+  cursor: pointer;
+  list-style: none;
+}
+
+.ip-manager-picker > summary::-webkit-details-marker,
+.ip-data-context > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ip-manager-picker > summary::after,
+.ip-data-context > summary::after {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  color: #6d8298;
+  content: "⌄";
+  font-size: 17px;
+}
+
+.ip-manager-picker[open] > summary,
+.ip-data-context[open] > summary {
+  border-color: #9ebbd6;
+  box-shadow: 0 0 0 3px rgba(90, 132, 169, 0.1);
+}
+
+.ip-manager-picker summary span,
+.ip-data-context summary span {
+  color: #74869a;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.ip-manager-picker summary strong,
+.ip-data-context summary strong {
+  overflow: hidden;
+  color: #1d3045;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ip-manager-picker summary small,
+.ip-data-context summary small {
+  color: #8997a7;
+  font-size: 10px;
+}
+
+.ip-manager-picker__panel,
+.ip-data-context__panel {
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  left: 0;
+  z-index: 12;
+  padding: 14px;
+  border: 1px solid #d6dee7;
+  border-radius: 13px;
+  background: #ffffff;
+  box-shadow: 0 18px 45px rgba(25, 42, 61, 0.16);
+}
+
+.ip-manager-search > label {
+  color: #4a6077;
+}
+
+.ip-manager-search input {
+  height: 38px;
+  border-color: #cbd6e1;
+  background: #f9fbfd;
+}
+
+.ip-manager-search button {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #284b6d;
+  cursor: pointer;
+}
+
+.ip-manager-options {
+  display: grid;
+  gap: 4px;
+  max-height: 330px;
+  margin-top: 11px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ip-manager-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #334a61;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ip-manager-option:hover:not(:disabled) {
+  border-color: #d4e0eb;
+  background: #f7fafc;
+}
+
+.ip-manager-option--active {
+  border-color: #c9dbea;
+  background: #eef4fb;
+}
+
+.ip-manager-option--pending {
+  background: #f3f7fb;
+}
+
+.ip-manager-option > span,
+.ip-manager-option strong,
+.ip-manager-option small {
+  display: block;
+  min-width: 0;
+}
+
+.ip-manager-option strong {
+  color: #22384e;
+  font-size: 12px;
+}
+
+.ip-manager-option small {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #7d8c9d;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ip-manager-option__check {
+  flex: 0 0 auto;
+  color: #6888a7;
+  font-size: 13px;
+  font-style: normal;
+}
+
+.ip-manager-picker__pending,
+.ip-manager-picker__error {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 9px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 10px;
+}
+
+.ip-manager-picker__pending {
+  color: #37546f;
+  background: #eef4f8;
+}
+
+.ip-manager-picker__error {
+  color: #9b2c2c;
+  background: #fff1f1;
+}
+
+.ip-data-context.is-stale > summary {
+  border-color: #e5c38c;
+  background: #fffdf7;
+}
+
+.ip-data-context__panel p {
+  margin: 0 0 10px;
+  color: #617286;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.ip-data-context__panel dl {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+}
+
+.ip-data-context__panel dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: #566a80;
+  font-size: 10px;
+}
+
+.ip-data-context__panel dt,
+.ip-data-context__panel dd {
+  margin: 0;
+}
+
+.ip-data-context__panel dd {
+  color: #243a50;
+  font-weight: 750;
+  text-align: right;
+}
+
+.ip-institutional-tabs {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+  margin-bottom: 16px;
+  padding: 0 2px;
+  border-bottom: 1px solid #d9e1e9;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ip-institutional-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ip-institutional-tabs button {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 126px;
+  padding: 11px 13px 13px;
+  border: 0;
+  border-radius: 9px 9px 0 0;
+  color: #738398;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ip-institutional-tabs button:hover {
+  color: #334d66;
+  background: #edf2f7;
+}
+
+.ip-institutional-tabs button strong,
+.ip-institutional-tabs button small {
+  display: block;
+}
+
+.ip-institutional-tabs button strong {
+  font-size: 11px;
+}
+
+.ip-institutional-tabs button small {
+  margin-top: 3px;
+  font-size: 8px;
+  opacity: 0.8;
+}
+
+.ip-institutional-tabs .ip-institutional-tab--active {
+  color: #183550;
+  background: #eef3f8;
+}
+
+.ip-institutional-tabs .ip-institutional-tab--active::after {
+  position: absolute;
+  right: 13px;
+  bottom: -1px;
+  left: 13px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: #4f789d;
+  content: "";
+}
+
+.ip-institutional-canvas {
+  min-width: 0;
+}
+
+.ip-institutional-canvas .ip-hero,
+.ip-institutional-canvas .ip-panel {
+  border-color: #dde4eb;
+  border-radius: 13px;
+  box-shadow: 0 4px 14px rgba(24, 42, 61, 0.035);
+}
+
+.ip-institutional-canvas .ip-hero {
+  padding: 20px;
+}
+
+.ip-institutional-canvas .ip-context-hero__copy h2 {
+  color: #152a3f;
+  font-size: clamp(22px, 2.5vw, 31px);
+  letter-spacing: -0.045em;
+}
+
+.ip-institutional-canvas .ip-view-body {
+  margin-top: 14px;
+}
+
+.ip-institutional-next-check {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 15px;
+  border: 1px solid #d3dee8;
+  border-radius: 11px;
+  color: #28455f;
+  background: #edf3f8;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ip-institutional-next-check span,
+.ip-institutional-next-check small,
+.ip-institutional-next-check strong {
+  display: block;
+}
+
+.ip-institutional-next-check small {
+  color: #71869a;
+  font-size: 9px;
+}
+
+.ip-institutional-next-check strong {
+  margin-top: 3px;
+  font-size: 11px;
+}
+
+.ip-institutional-next-check em {
+  font-size: 17px;
+  font-style: normal;
+}
+
+@media (max-width: 980px) {
+  .ip-institutional-shell {
+    padding: 18px;
+  }
+
+  .ip-institutional-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ip-institutional-page-header__context {
+    min-width: 140px;
+  }
+}
+
+@media (max-width: 720px) {
+  .ip-institutional-shell {
+    padding: 13px;
+    border-radius: 14px;
+  }
+
+  .ip-institutional-page-header {
+    display: block;
+    padding-bottom: 16px;
+  }
+
+  .ip-institutional-page-header__context {
+    display: none;
+  }
+
+  .ip-institutional-page-header h1 {
+    font-size: 25px;
+  }
+
+  .ip-institutional-controls {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .ip-manager-picker__panel,
+  .ip-data-context__panel {
+    position: static;
+    margin-top: 6px;
+    box-shadow: 0 8px 22px rgba(25, 42, 61, 0.1);
+  }
+
+  .ip-institutional-tabs button {
+    min-width: 112px;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .ip-institutional-tabs button small {
+    display: none;
+  }
+
+  .ip-institutional-canvas .ip-hero {
+    padding: 15px;
+  }
+}
+
+@media (max-width: 420px) {
+  .ip-institutional-shell {
+    padding: 10px;
+  }
+
+  .ip-institutional-page-header__eyebrow {
+    font-size: 8px;
+  }
+
+  .ip-manager-picker > summary,
+  .ip-data-context > summary {
+    min-height: 62px;
+  }
+}
+
 /* Modular Research Studio shell */
 .ip-workbench {
   gap: 0;

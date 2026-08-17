@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { STUDIO_DESTINATIONS, studioDestination, type StudioView } from "./workbenchState";
 
 type Props = {
@@ -6,12 +6,9 @@ type Props = {
   managerName: string;
   periodLabel: string;
   isPreview: boolean;
-  drawerOpen: boolean;
-  onDrawerOpen: () => void;
-  onDrawerClose: () => void;
   onViewChange: (view: StudioView) => void;
-  railContent: React.ReactNode;
-  headerMeta: React.ReactNode;
+  managerControl: React.ReactNode;
+  freshnessControl: React.ReactNode;
   children: React.ReactNode;
 };
 
@@ -20,107 +17,53 @@ export function InstitutionalStudioShell({
   managerName,
   periodLabel,
   isPreview,
-  drawerOpen,
-  onDrawerOpen,
-  onDrawerClose,
   onViewChange,
-  railContent,
-  headerMeta,
+  managerControl,
+  freshnessControl,
   children,
 }: Props) {
-  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const activeDestination = studioDestination(activeView);
 
-  useEffect(() => {
-    if (!drawerOpen) {
-      return undefined;
-    }
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onDrawerClose();
-        window.setTimeout(() => menuButtonRef.current?.focus(), 0);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [drawerOpen, onDrawerClose]);
-
-  const selectView = (view: StudioView) => {
-    onViewChange(view);
-    onDrawerClose();
-  };
-
   return (
-    <div className={`ip-studio ${drawerOpen ? "ip-studio--drawer-open" : ""}`}>
-      <div className="ip-studio-mobile-bar">
-        <button
-          ref={menuButtonRef}
-          type="button"
-          className="ip-studio-mobile-bar__menu"
-          aria-expanded={drawerOpen}
-          aria-controls="ip-institutional-studio-rail"
-          onClick={onDrawerOpen}
-        >
-          <span aria-hidden="true">☰</span>
-          리서치 메뉴
-        </button>
-        <button type="button" className="ip-studio-mobile-bar__current" onClick={onDrawerOpen}>
-          <span>{activeDestination.shortLabel}</span>
-          <strong>{managerName}</strong>
-        </button>
-        <span className={`ip-studio-mobile-bar__state ${isPreview ? "is-preview" : ""}`}>
-          {isPreview ? "Preview" : periodLabel}
-        </span>
-      </div>
-
-      <button
-        type="button"
-        className="ip-studio-scrim"
-        aria-label="리서치 메뉴 닫기"
-        tabIndex={drawerOpen ? 0 : -1}
-        onClick={onDrawerClose}
-      />
-
-      <aside id="ip-institutional-studio-rail" className="ip-studio-rail" aria-label="Institutional research studio">
-        <div className="ip-studio-rail__brand">
-          <span>RESEARCH STUDIO</span>
-          <strong>Institutional Holdings</strong>
-          <p>저장된 SEC 13F를 맥락부터 종목까지 탐색합니다.</p>
+    <div className="ip-institutional-shell">
+      <header className="ip-institutional-page-header">
+        <div>
+          <span className="ip-institutional-page-header__eyebrow">MARKET RESEARCH / INSTITUTIONAL HOLDINGS</span>
+          <h1>기관 보유 분석</h1>
+          <p>
+            <strong>{managerName}</strong>
+            <span>{periodLabel || "보고 분기 미수집"}</span>
+            {isPreview ? <em>Preview</em> : null}
+          </p>
         </div>
-        <button type="button" className="ip-studio-rail__close" onClick={onDrawerClose}>
-          닫기 <span aria-hidden="true">×</span>
-        </button>
+        <div className="ip-institutional-page-header__context">
+          <span>현재 보기</span>
+          <strong>{activeDestination.label}</strong>
+        </div>
+      </header>
 
-        <nav className="ip-studio-nav" aria-label="리서치 목적지">
-          <span className="ip-studio-rail__label">탐색</span>
-          {STUDIO_DESTINATIONS.map((item, index) => (
-            <button
-              key={item.id}
-              type="button"
-              className={item.id === activeView ? "ip-studio-nav__active" : ""}
-              aria-current={item.id === activeView ? "page" : undefined}
-              onClick={() => selectView(item.id)}
-            >
-              <em>{String(index + 1).padStart(2, "0")}</em>
-              <span>
-                <strong>{item.label}</strong>
-                <small>{item.description}</small>
-              </span>
-            </button>
-          ))}
-        </nav>
+      <section className="ip-institutional-controls" aria-label="기관과 데이터 기준 선택">
+        {managerControl}
+        {freshnessControl}
+      </section>
 
-        {railContent}
-      </aside>
+      <nav className="ip-institutional-tabs" role="tablist" aria-label="기관 보유 분석 화면">
+        {STUDIO_DESTINATIONS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={item.id === activeView}
+            className={item.id === activeView ? "ip-institutional-tab--active" : ""}
+            onClick={() => onViewChange(item.id)}
+          >
+            <strong>{item.label}</strong>
+            <small>{item.description}</small>
+          </button>
+        ))}
+      </nav>
 
-      <section className="ip-studio-canvas">
-        <header className="ip-studio-header">
-          <div>
-            <span className="ip-studio-header__eyebrow">INSTITUTIONAL HOLDINGS / {activeDestination.shortLabel}</span>
-            <h1>{activeDestination.label}</h1>
-          </div>
-          <div className="ip-studio-header__meta">{headerMeta}</div>
-        </header>
+      <section className="ip-institutional-canvas" role="tabpanel" aria-label={activeDestination.label}>
         {children}
       </section>
     </div>

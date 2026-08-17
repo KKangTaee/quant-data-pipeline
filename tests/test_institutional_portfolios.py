@@ -1435,26 +1435,29 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
 
 
 class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
-    def test_modular_research_studio_owns_desktop_rail_and_mobile_drawer_contract(self) -> None:
+    def test_content_first_shell_owns_page_header_controls_and_horizontal_tabs(self) -> None:
         component_source = _component_source()
         style_source = _component_style_source()
         shell_source = Path(
             "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalStudioShell.tsx"
         ).read_text(encoding="utf-8")
-        studio_rule = _css_rule(style_source, ".ip-studio")
-        rail_rule = _css_rule(style_source, ".ip-studio-rail")
+        shell_rule = _css_rule(style_source, ".ip-institutional-shell")
+        tabs_rule = _css_rule(style_source, ".ip-institutional-tabs")
 
         self.assertIn("InstitutionalStudioShell", component_source)
-        self.assertIn('className="ip-studio-rail"', shell_source)
-        self.assertIn('className="ip-studio-mobile-bar"', shell_source)
-        self.assertIn('aria-controls="ip-institutional-studio-rail"', shell_source)
-        self.assertIn('event.key === "Escape"', shell_source)
+        self.assertIn('className="ip-institutional-shell"', shell_source)
+        self.assertIn('className="ip-institutional-page-header"', shell_source)
+        self.assertIn('className="ip-institutional-controls"', shell_source)
+        self.assertIn('className="ip-institutional-tabs"', shell_source)
+        self.assertIn('role="tablist"', shell_source)
+        self.assertIn('role="tab"', shell_source)
+        self.assertIn("aria-selected", shell_source)
         self.assertIn("STUDIO_DESTINATIONS.map", shell_source)
-        self.assertIn("grid-template-columns: minmax(218px, 238px) minmax(0, 1fr);", studio_rule)
-        self.assertIn("linear-gradient(180deg, #111c2d 0%, #0b1422 100%)", rail_rule)
+        self.assertNotIn("ip-studio-rail", shell_source)
+        self.assertNotIn("drawerOpen", shell_source)
+        self.assertIn("background: #f6f8fb;", shell_rule)
+        self.assertIn("overflow-x: auto;", tabs_rule)
         self.assertIn("@media (max-width: 980px)", style_source)
-        self.assertIn(".ip-studio--drawer-open .ip-studio-rail", style_source)
-        self.assertIn("transform: translateX(0);", style_source)
 
         build_dir = Path("app/web/streamlit_components/institutional_portfolios_workbench/component_static")
         index_source = (build_dir / "index.html").read_text(encoding="utf-8")
@@ -1465,98 +1468,43 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertEqual(len(javascript_paths), 1)
         runtime_css = (build_dir / css_paths[0]).read_text(encoding="utf-8")
         runtime_javascript = (build_dir / javascript_paths[0]).read_text(encoding="utf-8")
-        runtime_studio_rule = _css_rule(runtime_css, ".ip-studio")
-        runtime_rail_rule = _css_rule(runtime_css, ".ip-studio-rail")
-        self.assertIn("grid-template-columns:minmax(218px,238px) minmax(0,1fr)", runtime_studio_rule)
-        self.assertIn("#111c2d", runtime_rail_rule)
-        self.assertIn("ip-studio-mobile-bar", runtime_css)
-        self.assertIn("ip-studio-mobile-bar", runtime_javascript)
-        self.assertIn("Institutional Holdings", runtime_javascript)
+        self.assertIn("ip-institutional-page-header", runtime_css)
+        self.assertIn("ip-institutional-tabs", runtime_css)
+        self.assertIn("ip-institutional-page-header", runtime_javascript)
+        self.assertIn("ip-institutional-tabs", runtime_javascript)
+        self.assertIn("INSTITUTIONAL HOLDINGS", runtime_javascript)
         self.assertIn("데이터 기준", runtime_javascript)
         self.assertNotIn("slice(0,80)", runtime_javascript)
         self.assertNotIn("slice(0, 80)", runtime_javascript)
 
-    def test_manager_rail_shows_complete_cards_and_wraps_labels(self) -> None:
+    def test_manager_picker_is_bounded_searchable_and_has_local_pending_feedback(self) -> None:
+        component_source = _component_source()
         style_source = _component_style_source()
-        rail_rule = _css_rule(style_source, ".ip-manager-rail")
-        favorites_rule = _css_rule(style_source, ".ip-manager-favorites")
-        compact_card_rule = _css_rule(style_source, ".ip-manager-favorites .ip-manager-tab")
-        text_rule = _css_rule(style_source, ".ip-manager-tab strong", ".ip-manager-tab span")
-        tablet_style = style_source[
-            style_source.index("@media (max-width: 980px) {") : style_source.index("@media (max-width: 720px) {")
-        ]
-        mobile_style = style_source[
-            style_source.index("@media (max-width: 720px) {") : style_source.index("@media (max-width: 420px) {")
-        ]
-        for declaration in (
-            "display: grid;",
-            "grid-auto-flow: column;",
-            "grid-auto-columns: var(--ip-manager-card-width);",
-            "align-items: stretch;",
-            "--ip-manager-card-width: calc((100% - 24px) / 4);",
-            "scroll-snap-type: x mandatory;",
-        ):
-            self.assertIn(declaration, rail_rule)
-        self.assertIn("margin: 0 0 12px;", favorites_rule)
-        self.assertIn("padding-bottom: 10px;", favorites_rule)
-        self.assertIn("min-width: 0;", compact_card_rule)
-        self.assertIn("width: 100%;", compact_card_rule)
-        self.assertIn("height: auto;", compact_card_rule)
-        self.assertIn("scroll-snap-align: start;", compact_card_rule)
-        self.assertIn("scroll-snap-stop: always;", compact_card_rule)
-        for declaration in (
-            "overflow: visible;",
-            "text-overflow: clip;",
-            "white-space: normal;",
-            "overflow-wrap: anywhere;",
-        ):
-            self.assertIn(declaration, text_rule)
-        tablet_rail_rule = _css_rule(tablet_style, ".ip-manager-rail")
-        mobile_rail_rule = _css_rule(mobile_style, ".ip-manager-rail")
-        self.assertIn("--ip-manager-card-width: calc((100% - 16px) / 3);", tablet_rail_rule)
-        self.assertIn("--ip-manager-card-width: 100%;", mobile_rail_rule)
+        picker_panel_rule = _css_rule(style_source, ".ip-manager-picker__panel", ".ip-data-context__panel")
+        options_rule = _css_rule(style_source, ".ip-manager-options")
+        active_option_rule = _css_rule(style_source, ".ip-manager-option--active")
+
+        self.assertIn('<details ref={managerPickerRef} className="ip-manager-picker">', component_source)
+        self.assertIn('className="ip-manager-picker__panel"', component_source)
+        self.assertIn('className="ip-manager-options"', component_source)
+        self.assertIn("ip-manager-option__check", component_source)
+        self.assertIn("ip-manager-picker__pending", component_source)
+        self.assertIn("payload.manager_picker.selection_error", component_source)
+        self.assertIn('setManagerSearch("")', component_source)
+        self.assertNotIn("handleManagerRailPointerDown", component_source)
+        self.assertNotIn("managerDragScrollTop", component_source)
+        self.assertIn("position: absolute;", picker_panel_rule)
+        self.assertIn("max-height:", options_rule)
+        self.assertIn("background: #eef4fb;", active_option_rule)
 
         build_dir = Path("app/web/streamlit_components/institutional_portfolios_workbench/component_static")
         index_source = (build_dir / "index.html").read_text(encoding="utf-8")
         css_paths = re.findall(r'href="\./(assets/[^"]+\.css)"', index_source)
         self.assertEqual(len(css_paths), 1)
         runtime_css = (build_dir / css_paths[0]).read_text(encoding="utf-8")
-        runtime_rail_rule = _css_rule(runtime_css, ".ip-manager-rail")
-        runtime_favorites_rule = _css_rule(runtime_css, ".ip-manager-favorites")
-        runtime_card_rule = _css_rule(runtime_css, ".ip-manager-favorites .ip-manager-tab")
-        runtime_text_rule = _css_rule(runtime_css, ".ip-manager-tab strong", ".ip-manager-tab span")
-        runtime_tablet_marker = "@media(max-width:980px){"
-        runtime_mobile_marker = "@media(max-width:720px){"
-        runtime_tablet_style = runtime_css[
-            runtime_css.index(runtime_tablet_marker) + len(runtime_tablet_marker) : runtime_css.index(
-                runtime_mobile_marker
-            )
-        ]
-        runtime_mobile_style = runtime_css[
-            runtime_css.index(runtime_mobile_marker) + len(runtime_mobile_marker) : runtime_css.index(
-                "@media(max-width:420px){"
-            )
-        ]
-        runtime_tablet_rule = _css_rule(runtime_tablet_style, ".ip-manager-rail")
-        runtime_mobile_rule = _css_rule(runtime_mobile_style, ".ip-manager-rail")
-        runtime_rail_compact = re.sub(r"\s+", "", runtime_rail_rule)
-        runtime_tablet_compact = re.sub(r"\s+", "", runtime_tablet_rule)
-        runtime_mobile_compact = re.sub(r"\s+", "", runtime_mobile_rule)
-
-        self.assertIn("display:grid", runtime_rail_rule)
-        self.assertIn("grid-auto-flow:column", runtime_rail_rule)
-        self.assertIn("grid-auto-columns:var(--ip-manager-card-width)", runtime_rail_rule)
-        self.assertIn("align-items:stretch", runtime_rail_rule)
-        self.assertIn("--ip-manager-card-width:calc((100%-24px)/4)", runtime_rail_compact)
-        self.assertIn("scroll-snap-type:x mandatory", runtime_rail_rule)
-        self.assertIn("margin:0 0 12px", runtime_favorites_rule)
-        self.assertIn("padding-bottom:10px", runtime_favorites_rule)
-        self.assertIn("scroll-snap-align:start", runtime_card_rule)
-        self.assertIn("scroll-snap-stop:always", runtime_card_rule)
-        self.assertIn("white-space:normal", runtime_text_rule)
-        self.assertIn("overflow-wrap:anywhere", runtime_text_rule)
-        self.assertIn("--ip-manager-card-width:calc((100%-16px)/3)", runtime_tablet_compact)
-        self.assertIn("--ip-manager-card-width:100%", runtime_mobile_compact)
+        self.assertIn("ip-manager-picker__panel", runtime_css)
+        self.assertIn("ip-manager-options", runtime_css)
+        self.assertIn("ip-manager-option--active", runtime_css)
 
     def test_workbench_v3_has_complete_holdings_explorer_and_explicit_security_search(self) -> None:
         component_source = _component_source()
@@ -2041,7 +1989,7 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn('key="institutional_portfolios_workbench"', page_source)
         self.assertNotIn('key=f"institutional_portfolios_{', page_source)
         self.assertIn("restoreHostScroll", component_source)
-        self.assertIn("managerRailRef", component_source)
+        self.assertIn("managerPickerRef", component_source)
         self.assertIn('"popularity"', component_source)
         self.assertIn("기관 보유 랭킹", component_source)
         self.assertIn("ip-security-detail", component_source)
@@ -2069,7 +2017,8 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         for label in ("포트폴리오 맥락", "분기 리뷰", "전체 보유", "종목 상세", "기관 보유 랭킹"):
             self.assertIn(label, state_source)
         self.assertIn("STUDIO_DESTINATIONS.map", shell_source)
-        self.assertIn('aria-label="리서치 목적지"', shell_source)
+        self.assertIn('role="tablist"', shell_source)
+        self.assertIn('aria-label="기관 보유 분석 화면"', shell_source)
         self.assertIn("onViewChange", shell_source)
         self.assertIn('setActiveView("security")', component_source)
         self.assertIn('activeView === "security"', component_source)
@@ -2081,10 +2030,10 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn("분기 전환 선택", quarter_review_source)
         self.assertIn("setTransitionIndex(0)", quarter_review_source)
         self.assertNotIn("보유 기관 조회", component_source)
-        self.assertIn(".ip-studio-nav", style_source)
-        self.assertIn(".ip-studio-nav__active", style_source)
-        self.assertIn(".ip-studio-mobile-bar", style_source)
-        self.assertGreaterEqual(component_source.count("setStudioDrawerOpen(false);"), 3)
+        self.assertIn(".ip-institutional-tabs", style_source)
+        self.assertIn(".ip-institutional-tab--active", style_source)
+        self.assertIn(".ip-manager-picker", style_source)
+        self.assertNotIn("setStudioDrawerOpen", component_source)
 
     def test_selected_security_price_collection_button_routes_through_python_job_boundary(self) -> None:
         page_source = Path("app/web/institutional_portfolios.py").read_text(encoding="utf-8")

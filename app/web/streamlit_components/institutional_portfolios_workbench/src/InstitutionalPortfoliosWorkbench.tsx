@@ -2,8 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 import {
   filterSortAndPaginateHoldings,
-  managerDragExceededThreshold,
-  managerDragScrollTop,
   queriesMatch,
   type HoldingSort,
   type MappingFilter,
@@ -20,13 +18,6 @@ type ManagerItem = {
   watchlist_label?: string | null;
   external_links?: Array<{ label: string; url: string }>;
   selected: boolean;
-};
-
-type ManagerRailDrag = {
-  pointerId: number;
-  startClientY: number;
-  startScrollTop: number;
-  dragged: boolean;
 };
 
 type Segment = {
@@ -226,6 +217,7 @@ type WorkbenchPayload = {
     search_result_count?: number;
     search_state?: "idle" | "results" | "empty" | string;
     search_empty_message?: string;
+    selection_error?: string;
     items: ManagerItem[];
   };
   freshness?: {
@@ -969,7 +961,6 @@ function PopularityRankingPanel({
 function InstitutionalPortfoliosWorkbench({ args }: Props) {
   const payload = args.payload;
   const [activeView, setActiveView] = useState<StudioView>("overview");
-  const [studioDrawerOpen, setStudioDrawerOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [localSelectedQuery, setLocalSelectedQuery] = useState<string>("");
@@ -981,10 +972,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   const [managerSearch, setManagerSearch] = useState(payload?.manager_picker.search_query || "");
   const [securitySearch, setSecuritySearch] = useState(payload?.security_search.current_query || "");
   const [unresolvedHolding, setUnresolvedHolding] = useState<HoldingRow | null>(null);
-  const managerRailRef = useRef<HTMLDivElement | null>(null);
-  const managerRailScrollRef = useRef(0);
-  const managerRailDragRef = useRef<ManagerRailDrag | null>(null);
-  const suppressManagerClickRef = useRef(false);
+  const managerPickerRef = useRef<HTMLDetailsElement | null>(null);
 
   const resetHoldingsExplorer = () => {
     setHoldingSearch("");
@@ -1025,13 +1013,6 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   useEffect(() => {
     setHoldingPage(1);
   }, [holdingSearch, mappingFilter, sectorFilter, holdingSort]);
-
-  useEffect(() => {
-    const rail = managerRailRef.current;
-    if (rail) {
-      rail.scrollTop = managerRailScrollRef.current;
-    }
-  }, [payload?.manager_picker.selected_cik, payload?.manager_picker.items.length]);
 
   useEffect(() => {
     if (!pendingAction || !payload) {
@@ -1269,7 +1250,9 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   const submitManagerSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const query = managerSearch.trim();
-    setStudioDrawerOpen(false);
+    if (managerPickerRef.current) {
+      managerPickerRef.current.open = true;
+    }
     setActionNotice(null);
     setLocalSelectedQuery("");
     setSecuritySearch("");
@@ -1287,78 +1270,16 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     if (!item.cik || item.selected) {
       return;
     }
-    const rail = managerRailRef.current;
-    if (rail) {
-      managerRailScrollRef.current = rail.scrollTop;
+    if (managerPickerRef.current) {
+      managerPickerRef.current.open = false;
     }
-    setStudioDrawerOpen(false);
+    setManagerSearch("");
     setActionNotice(null);
     setLocalSelectedQuery("");
     setSecuritySearch("");
     setUnresolvedHolding(null);
     setPendingAction({ kind: "manager", cik: item.cik, label: `${item.manager_name} 포트폴리오 불러오는 중` });
     sendEvent({ id: "select_manager", cik: item.cik });
-  };
-
-  const handleManagerRailPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType === "touch" || (event.pointerType === "mouse" && event.button !== 0)) {
-      return;
-    }
-    const rail = managerRailRef.current;
-    if (!rail) {
-      return;
-    }
-    suppressManagerClickRef.current = false;
-    managerRailDragRef.current = {
-      pointerId: event.pointerId,
-      startClientY: event.clientY,
-      startScrollTop: rail.scrollTop,
-      dragged: false,
-    };
-    rail.setPointerCapture(event.pointerId);
-  };
-
-  const handleManagerRailPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    const rail = managerRailRef.current;
-    const drag = managerRailDragRef.current;
-    if (!rail || !drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
-    if (!drag.dragged && managerDragExceededThreshold(drag.startClientY, event.clientY)) {
-      drag.dragged = true;
-      rail.dataset.dragging = "true";
-    }
-    if (!drag.dragged) {
-      return;
-    }
-    event.preventDefault();
-    rail.scrollTop = managerDragScrollTop(drag.startScrollTop, drag.startClientY, event.clientY);
-  };
-
-  const handleManagerRailPointerEnd = (event: React.PointerEvent<HTMLDivElement>) => {
-    const rail = managerRailRef.current;
-    const drag = managerRailDragRef.current;
-    if (!rail || !drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
-    suppressManagerClickRef.current = drag.dragged && event.type === "pointerup";
-    if (rail.hasPointerCapture(event.pointerId)) {
-      rail.releasePointerCapture(event.pointerId);
-    }
-    delete rail.dataset.dragging;
-    managerRailDragRef.current = null;
-    window.setTimeout(() => {
-      suppressManagerClickRef.current = false;
-    }, 0);
-  };
-
-  const handleManagerRailClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!suppressManagerClickRef.current) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    suppressManagerClickRef.current = false;
   };
 
   const handlePopularityLoad = () => {
@@ -1382,7 +1303,6 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     if (!payload.refresh_action?.visible || !reportPeriod) {
       return;
     }
-    setStudioDrawerOpen(false);
     setActionNotice(null);
     setPendingAction({ kind: "institutional_refresh", label: `${payload.refresh_action.target_quarter_label || reportPeriod} 공개 자료 확인 중` });
     sendEvent({
@@ -1403,25 +1323,15 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
         managerName={payload.hero.manager_name}
         periodLabel={payload.hero.latest_report_period}
         isPreview={payload.data_state.is_preview}
-        drawerOpen={studioDrawerOpen}
-        onDrawerOpen={() => setStudioDrawerOpen(true)}
-        onDrawerClose={() => setStudioDrawerOpen(false)}
         onViewChange={switchView}
-        headerMeta={(
-          <>
-            <span className={`ip-state ${payload.data_state.is_preview ? "ip-state--preview" : ""}`}>{payload.data_state.label}</span>
-            <span>{payload.hero.latest_report_period}</span>
-          </>
-        )}
-        railContent={(
-          <>
-            <section className="ip-studio-manager-context">
-              <span className="ip-studio-rail__label">선택 기관</span>
+        managerControl={(
+          <details ref={managerPickerRef} className="ip-manager-picker">
+            <summary>
+              <span>기관 / 투자 대가</span>
               <strong>{payload.hero.manager_name}</strong>
-              <small>CIK {payload.hero.cik || "-"} · {payload.hero.latest_report_period}</small>
-            </section>
-
-            <div className="ip-manager-switcher">
+              <small>CIK {payload.hero.cik || "-"}</small>
+            </summary>
+            <div className="ip-manager-picker__panel">
               <form className="ip-manager-search" onSubmit={submitManagerSearch}>
                 <label htmlFor="ip-manager-search-input">기관 / 투자 대가 검색</label>
                 <div>
@@ -1435,30 +1345,34 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
                   <button type="submit" disabled={Boolean(pendingAction)} aria-label="기관 검색">→</button>
                 </div>
               </form>
-              <div
-                className="ip-manager-favorites ip-manager-rail"
-                aria-label="기관 및 투자 대가 목록. 마우스로 잡아 위아래로 이동할 수 있습니다."
-                tabIndex={0}
-                ref={managerRailRef}
-                onPointerDown={handleManagerRailPointerDown}
-                onPointerMove={handleManagerRailPointerMove}
-                onPointerUp={handleManagerRailPointerEnd}
-                onPointerCancel={handleManagerRailPointerEnd}
-                onClickCapture={handleManagerRailClickCapture}
-              >
+              {pendingAction?.kind === "manager" || pendingAction?.kind === "manager_search" ? (
+                <div className="ip-manager-picker__pending" role="status" aria-live="polite">
+                  <span className="ip-spinner" aria-hidden="true" />
+                  <strong>{pendingAction.label}</strong>
+                </div>
+              ) : null}
+              {payload.manager_picker.selection_error ? (
+                <div className="ip-manager-picker__error" role="alert">
+                  {payload.manager_picker.selection_error}
+                </div>
+              ) : null}
+              <div className="ip-manager-options" aria-label="기관 및 투자 대가 목록">
                 {payload.manager_picker.items.map((item) => (
                   <button
                     key={item.cik || item.manager_name}
                     type="button"
-                    className={`ip-manager-tab ${item.selected ? "ip-manager-tab--active" : ""} ${
-                      pendingAction?.kind === "manager" && pendingAction.cik === item.cik ? "ip-manager-tab--pending" : ""
+                    className={`ip-manager-option ${item.selected ? "ip-manager-option--active" : ""} ${
+                      pendingAction?.kind === "manager" && pendingAction.cik === item.cik ? "ip-manager-option--pending" : ""
                     }`}
                     data-cik={item.cik || ""}
-                    disabled={Boolean(pendingAction)}
+                    disabled={item.selected}
                     onClick={() => handleManagerSelect(item)}
                   >
-                    <strong>{item.watchlist_label || item.manager_name}</strong>
-                    <span>{item.manager_name} · {item.latest_report_period}</span>
+                    <span>
+                      <strong>{item.watchlist_label || item.manager_name}</strong>
+                      <small>{item.manager_name} · {item.latest_report_period}</small>
+                    </span>
+                    <em className="ip-manager-option__check" aria-hidden="true">{item.selected ? "✓" : "→"}</em>
                   </button>
                 ))}
               </div>
@@ -1473,12 +1387,16 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
                 </div>
               ) : null}
             </div>
-
-            <details className={`ip-studio-data-panel ${payload.freshness?.is_stale ? "is-stale" : ""}`}>
-              <summary>
-                <span>데이터 기준</span>
-                <strong>{payload.freshness?.latest_report_period || "수집 필요"}</strong>
-              </summary>
+          </details>
+        )}
+        freshnessControl={(
+          <details className={`ip-data-context ${payload.freshness?.is_stale ? "is-stale" : ""}`}>
+            <summary>
+              <span>데이터 기준</span>
+              <strong>{payload.freshness?.latest_report_period || "수집 필요"}</strong>
+              <small>{payload.refresh_action?.status === "current" ? "최신 반영" : "확인 필요"}</small>
+            </summary>
+            <div className="ip-data-context__panel">
               <p>{payload.refresh_action?.description}</p>
               <dl>
                 <div><dt>반영 분기</dt><dd>{payload.freshness?.latest_report_period || "미수집"}</dd></div>
@@ -1505,19 +1423,15 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
                   </button>
                 </div>
               ) : null}
-            </details>
-          </>
+            </div>
+          </details>
         )}
       >
-        {pendingAction ? (
+        {pendingAction && pendingAction.kind !== "manager" && pendingAction.kind !== "manager_search" ? (
           <div className="ip-loading-banner" role="status" aria-live="polite">
             <span className="ip-spinner" aria-hidden="true" />
             <strong>
-              {pendingAction.kind === "manager"
-                ? "포트폴리오 불러오는 중"
-                : pendingAction.kind === "manager_search"
-                  ? "기관 검색 중"
-                  : pendingAction.kind === "interest"
+              {pendingAction.kind === "interest"
                     ? "종목 상세 불러오는 중"
                     : pendingAction.kind === "popularity"
                       ? "기관 보유 랭킹 불러오는 중"
@@ -1557,6 +1471,20 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
             </aside>
           </div>
         </section>
+
+        {activeView === "overview" ? (
+          <button
+            type="button"
+            className="ip-institutional-next-check"
+            onClick={() => switchView(payload.quarter_review?.available ? "quarter_review" : "holdings")}
+          >
+            <span>
+              <small>다음 확인</small>
+              <strong>{payload.quarter_review?.available ? "이전 분기 결과와 매매 변화 보기" : "전체 보유 종목 확인하기"}</strong>
+            </span>
+            <em aria-hidden="true">→</em>
+          </button>
+        ) : null}
 
         <div className="ip-view-body">
         {activeView === "overview" ? (
