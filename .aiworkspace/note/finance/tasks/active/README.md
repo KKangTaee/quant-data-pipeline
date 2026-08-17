@@ -26,7 +26,9 @@ tasks/active/<task-name>/
 
 ## Current Active Product Tasks
 
-현재 user-approved active product task는 없다.
+| Task | State | Current Step |
+|---|---|---|
+| `institutional-holdings-hybrid-quarter-review-v1-20260817` | `active` | 전체 `0/5차`; local due 기반 explicit hybrid refresh와 두 performance window / position change review의 written design 검토 대기 |
 
 ## Paused Tasks
 

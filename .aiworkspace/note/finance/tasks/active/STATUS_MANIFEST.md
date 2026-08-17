@@ -5,7 +5,12 @@ Last Verified: 2026-08-17
 
 ## Current State
 
-Current active product task: none.
+Current active product task:
+
+- `institutional-holdings-hybrid-quarter-review-v1-20260817` — `State: active`;
+  전체 `0/5차`. Hybrid EDGAR/bulk 갱신, local due 기반 explicit action, 두 performance
+  window와 quarter change review의 written design을 완료하고 implementation plan 전
+  사용자 spec 검토를 기다린다.
 
 Latest completed integration task:
 
