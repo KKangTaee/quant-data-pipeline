@@ -278,11 +278,20 @@ def evaluate_core_state_gate(
     )
 
     reasons: list[str] = []
-    latest_ready = (
-        not core_panel.empty
-        and str(core_panel.iloc[-1].get("data_status") or "UNAVAILABLE")
-        != "UNAVAILABLE"
+    panel_origins = pd.to_datetime(
+        core_panel.get("forecast_origin", pd.Series(dtype=object)),
+        errors="coerce",
+    ).dropna()
+    latest_origin = panel_origins.max() if not panel_origins.empty else None
+    latest_key = (
+        pd.Timestamp(latest_origin).date().isoformat()
+        if latest_origin is not None
+        else None
     )
+    # A populated source row is not enough: the exact requested origin must
+    # also have a usable confirmed phase. This prevents stale official states
+    # from being promoted as a current READY diagnosis.
+    latest_ready = latest_key is not None and latest_key in core
     if not latest_ready:
         reasons.append("INCOMPLETE_SOURCE_COVERAGE")
     if any(

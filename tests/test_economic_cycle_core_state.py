@@ -268,3 +268,43 @@ def test_core_state_gate_rejects_excess_one_month_episodes() -> None:
     )
 
     assert "ONE_MONTH_EPISODES" in report.reason_codes
+
+
+def test_core_state_gate_rejects_unavailable_latest_confirmed_origin() -> None:
+    from finance.economic_cycle_core_state import evaluate_core_state_gate
+
+    dates = pd.date_range("2000-01-31", periods=8, freq="ME")
+    phases = (
+        "contraction",
+        "contraction",
+        "recovery",
+        "recovery",
+        "expansion",
+        "expansion",
+        "slowdown",
+        None,
+    )
+    history = tuple(
+        _observed(date.date().isoformat(), phase)
+        for date, phase in zip(dates, phases, strict=True)
+    )
+    nber = {
+        date.date().isoformat(): value
+        for date, value in zip(
+            dates,
+            (False, True, True, True, False, False, False, False),
+            strict=True,
+        )
+    }
+
+    report = evaluate_core_state_gate(
+        _core_panel().iloc[:8],
+        history,
+        history,
+        nber_months=nber,
+        sample_report=_sample_report(),
+        gate=_gate(),
+    )
+
+    assert report.status == "NO_GO_CORE_STATE"
+    assert "INCOMPLETE_SOURCE_COVERAGE" in report.reason_codes
