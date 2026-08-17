@@ -166,6 +166,50 @@ def test_rtdsm_panel_vintage_lag_uses_later_revision_without_future_observations
     assert revised.loc[0, "EMPLOY_vintage_date"] == "2020-02-29"
 
 
+def test_rtdsm_panel_uses_one_month_backward_lag_without_interpolation() -> None:
+    from finance.economic_cycle_realtime_history import (
+        build_rtdsm_monthly_panel,
+    )
+
+    observations = pd.date_range("2019-07-01", "2020-05-01", freq="MS")
+    rows: list[dict[str, object]] = []
+    for series_id in ("IPT", "H", "EMPLOY", "RUC"):
+        for index, observation in enumerate(observations):
+            if series_id == "RUC" and observation == pd.Timestamp("2020-01-01"):
+                continue
+            value = (
+                5.0 - index * 0.05 - index * index * 0.01
+                if series_id == "RUC"
+                else 100.0 + index
+            )
+            if observation == pd.Timestamp("2020-05-01"):
+                value = 999.0
+            rows.append(
+                {
+                    "series_id": series_id,
+                    "observation_date": observation.date().isoformat(),
+                    "realtime_start": "2019-07-31",
+                    "realtime_end": "9999-12-31",
+                    "source": "philadelphia_fed_rtdsm",
+                    "value": value,
+                }
+            )
+
+    panel = build_rtdsm_monthly_panel(
+        rows,
+        forecast_origins=pd.date_range("2020-01-31", "2020-04-30", freq="ME"),
+        minimum_history_months=2,
+    )
+    april = panel.iloc[-1]
+
+    # 2020-01 is absent, so use the actual 4M change from 2019-12 and
+    # normalize it to the locked 3M RUC signal. The future May value is ignored.
+    assert april["RUC_signal"] == pytest.approx(0.76 * 3.0 / 4.0)
+    assert bool(april["RUC_lag_fallback"]) is True
+    assert april["RUC_latest_observation_date"] == "2020-04-01"
+    assert april["data_status"] == "LIMITED"
+
+
 def test_rtdsm_panel_single_origin_preserves_unscaled_missing_scores() -> None:
     from finance.economic_cycle_realtime_history import (
         build_rtdsm_monthly_panel,

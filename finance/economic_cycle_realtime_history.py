@@ -114,38 +114,62 @@ def _transform_signal(
     transform: str,
     direction: int,
     series: pd.Series,
-) -> float | None:
+) -> tuple[float | None, bool]:
+    """Return a signal and whether a bounded backward lag was required.
+
+    RTDSM occasionally omits one monthly observation from an otherwise usable
+    vintage.  We never interpolate that value or look forward.  When the exact
+    lag is absent, only the immediately preceding observed month is eligible and
+    the change is normalized by the actual elapsed months.
+    """
+
     if series.empty:
-        return None
+        return None, False
     values = pd.to_numeric(series, errors="coerce").dropna().sort_index()
     if values.empty:
-        return None
+        return None, False
     current_period = values.index.max()
     current = _finite(values.loc[current_period])
     if current is None:
-        return None
+        return None, False
+
+    def previous_at(target_lag: int) -> tuple[float | None, int, bool]:
+        exact = _finite(values.get(current_period - target_lag))
+        if exact is not None:
+            return exact, target_lag, False
+        bounded = _finite(values.get(current_period - target_lag - 1))
+        return bounded, target_lag + 1, bounded is not None
+
     if transform == "annualized_log_change_6m":
         lag = 6
-        previous = _finite(values.get(current_period - lag))
+        previous, actual_lag, used_fallback = previous_at(lag)
         signal = (
-            _annualized_log_change(current, previous, months=lag)
+            _annualized_log_change(current, previous, months=actual_lag)
             if previous is not None
             else None
         )
     elif transform == "annualized_log_change_3m":
         lag = 3
-        previous = _finite(values.get(current_period - lag))
+        previous, actual_lag, used_fallback = previous_at(lag)
         signal = (
-            _annualized_log_change(current, previous, months=lag)
+            _annualized_log_change(current, previous, months=actual_lag)
             if previous is not None
             else None
         )
     elif transform == "level_change_3m":
-        previous = _finite(values.get(current_period - 3))
-        signal = current - previous if previous is not None else None
+        lag = 3
+        previous, actual_lag, used_fallback = previous_at(lag)
+        signal = (
+            (current - previous) * lag / actual_lag
+            if previous is not None
+            else None
+        )
     else:
         raise ValueError(f"Unsupported RTDSM transform: {transform}")
-    return signal * int(direction) if signal is not None else None
+    return (
+        signal * int(direction) if signal is not None else None,
+        used_fallback if signal is not None else False,
+    )
 
 
 def _normalized_origins(
@@ -230,16 +254,19 @@ def build_rtdsm_monthly_panel(
                 record[f"{series_id}_signal"] = None
                 record[f"{series_id}_latest_observation_date"] = None
                 record[f"{series_id}_stale"] = True
+                record[f"{series_id}_lag_fallback"] = False
                 continue
             realtime_start, _realtime_end, values = max(
                 eligible, key=lambda item: item[0]
             )
             allowed = values[values.index <= origin.to_period("M")]
-            record[f"{series_id}_signal"] = _transform_signal(
+            signal, lag_fallback = _transform_signal(
                 spec.transform,
                 spec.direction,
                 allowed,
             )
+            record[f"{series_id}_signal"] = signal
+            record[f"{series_id}_lag_fallback"] = lag_fallback
             if allowed.empty:
                 record[f"{series_id}_latest_observation_date"] = None
                 record[f"{series_id}_stale"] = True
@@ -276,9 +303,17 @@ def build_rtdsm_monthly_panel(
     any_stale = panel[
         ["IPT_stale", "H_stale", "EMPLOY_stale", "RUC_stale"]
     ].fillna(True).astype(bool).any(axis=1)
+    any_lag_fallback = panel[
+        [
+            "IPT_lag_fallback",
+            "H_lag_fallback",
+            "EMPLOY_lag_fallback",
+            "RUC_lag_fallback",
+        ]
+    ].fillna(False).astype(bool).any(axis=1)
     panel["data_status"] = "UNAVAILABLE"
     panel.loc[all_z, "data_status"] = "READY"
-    panel.loc[all_z & any_stale, "data_status"] = "LIMITED"
+    panel.loc[all_z & (any_stale | any_lag_fallback), "data_status"] = "LIMITED"
     return panel
 
 
