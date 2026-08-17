@@ -21,7 +21,7 @@ DB-backed evidence로 연결하는 **Evidence-first 퀀트 투자 리서치 워�
 - 시장 환경과 기관 보유 정보는 중요한 배경이지만, 그 자체가 매수·매도 신호나 투자 승인은 아닙니다.
 - 후보를 선정한 뒤에도 실제 성과, 종목별 기여, 보유 변화와 재검토 조건을 계속 확인해야 합니다.
 
-Quant Data Pipeline은 이 문제를 `Research → Portfolio Lab → Practical Validation → Final Review → Portfolio Monitoring`의 하나의 흐름으로 다룹니다. 각 단계는 다음 단계가 사용할 근거를 만들며, 실행 결과와 판단 기록은 DB와 명시적인 workflow record 경계를 통해 보존됩니다.
+Quant Data Pipeline은 이 문제를 `Data Operations → Research → Portfolio Lab → Practical Validation → Final Review → Portfolio Monitoring`의 하나의 흐름으로 다룹니다. 각 단계는 다음 단계가 사용할 근거를 만들며, 실행 결과와 판단 기록은 DB와 명시적인 workflow record 경계를 통해 보존됩니다.
 
 ## 현재 무엇을 할 수 있는가
 
@@ -30,18 +30,18 @@ Finance Console의 현재 상단 navigation은 `Research / Portfolio / Data / He
 | 영역 | 화면 | 사용자가 끝낼 수 있는 일 |
 |---|---|---|
 | `Research` | `Today` | 미국 시장 세션, 시장 상태, 대표 포트폴리오 변화와 우선 확인 항목을 첫 화면에서 파악합니다. |
-| `Research` | `Market Research` | 경제 사이클, 지수 가치평가, 개별 종목, 변동 종목, 거시·심리·일정을 source와 기준일이 보이는 상태로 조사합니다. |
+| `Research` | `Market Research` | 경기 국면, 물가·정책, 선물 매크로, 심리, 일정, S&P 500, 변동 종목, 개별 종목을 source와 기준일이 보이는 상태로 조사합니다. |
 | `Research` | `Institutional Holdings` | delayed SEC Form 13F로 기관별 자산 배분, 보유 변화, 섹터 노출과 종목별 보유 기관을 탐색합니다. |
 | `Portfolio` | `Portfolio Lab` | 전략을 실행·비교하고 portfolio mix를 구성한 뒤 Practical Validation과 Final Review까지 이어갑니다. |
 | `Portfolio` | `Portfolio Monitoring` | 선정 후보와 직접 등록한 미국 주식·ETF를 그룹으로 추적하고 성과, 기여도, 보유 변화와 재검토 조건을 확인합니다. |
-| `Data` | `Data Operations` | 가격, 재무제표, 거시, ETF provider, 기관 보유 데이터를 MySQL에 수집하고 데이터 준비 상태를 관리합니다. |
+| `Data` | `Data Operations` | Market Research, Portfolio Lab, Institutional Holdings, Practical Validation 목적별 evidence를 준비하고 공식 파일, 문제 복구, 실행 이력과 고급 도구를 관리합니다. |
 | `Help` | `Reference Center` | 제품 개념, 판단 기준, 데이터 제한, 문제 해결 방법과 관련 화면 이동 경로를 검색합니다. |
 
 ### Research
 
 `Today`는 매일의 출발점입니다. 미국 시장의 현재 세션과 주요 시장 맥락, 대표 포트폴리오의 최근 변화를 한 번에 읽고 더 깊게 확인할 Research 또는 Portfolio 화면으로 이동합니다.
 
-`Market Research`는 `시장 환경 / 지수 가치평가 / 종목 리서치`를 중심으로 경제 사이클, futures macro, sentiment, events, market movers와 미국 주식 분석을 제공합니다. 저장된 DB evidence와 freshness를 사용하며 자료가 없거나 오래된 상태를 숨기지 않습니다.
+`Market Research`는 `시장 환경 / 지수 가치평가 / 종목 리서치` 3개 family 안에서 `경기 국면`, `물가·정책`, `선물 매크로`, `심리`, `일정`, `S&P 500`, `변동 종목`, `개별 종목` 8개 view를 제공합니다. 저장된 DB evidence와 freshness를 사용하며 자료가 없거나 오래된 상태를 숨기지 않습니다.
 
 `Institutional Holdings`는 SEC Form 13F 공식 data set을 DB에 저장한 뒤 기관별 portfolio와 종목별 보유 기관을 탐색하는 read-only research studio입니다. 13F의 보고 지연, long holdings 중심 범위와 CUSIP-symbol mapping 한계를 항상 함께 봅니다.
 
@@ -51,13 +51,13 @@ Finance Console의 현재 상단 navigation은 `Research / Portfolio / Data / He
 
 1. **Backtest Analysis** — 단일 전략 또는 portfolio mix를 실행하고 비교해 후보 source를 만듭니다.
 2. **Practical Validation** — 데이터 신뢰도, 실전 운용성, provider·holdings·macro·stress·robustness 근거와 보강 필요 항목을 확인합니다.
-3. **Final Review** — 검증 근거를 종합해 계속 추적, 관찰 후 재검토, 추적 제외 또는 Level 2 재검토 판단을 기록합니다.
+3. **Final Review** — 검증 근거를 종합해 선정, 보류, 제외 또는 재검토 판단을 기록합니다.
 
 `Portfolio Monitoring`은 최종 선정 이후의 read-only 운영 화면입니다. 공통 기준 성과, 종목별 기여, 가격과 보유 변화, diagnosis와 재검토 조건을 확인하지만 주문을 만들거나 자동으로 리밸런싱하지 않습니다.
 
 ### Data와 Help
 
-`Data Operations`는 제품 전체를 받치는 evidence 준비 화면입니다. UI에서 provider를 직접 호출해 즉석 계산하지 않고, 수집한 원천 데이터를 MySQL에 저장한 뒤 loader와 service를 통해 Research와 Portfolio workflow에 전달합니다.
+`Data Operations`는 제품 전체를 받치는 evidence 준비 화면입니다. 사용자는 `데이터 준비 / 공식 파일 / 문제 복구 / 실행 이력 / 고급 도구` 순서로 필요한 action을 찾고, UI에서 provider를 직접 호출해 즉석 계산하지 않고, 수집한 원천 데이터를 MySQL에 저장한 뒤 loader와 service를 통해 Research와 Portfolio workflow에 전달합니다.
 
 `Reference Center`는 별도 매뉴얼을 찾아다니지 않고 현재 화면에서 사용하는 용어, 데이터 기준, 상태 의미와 다음 이동 위치를 검색하는 제품 내 도움말입니다.
 
@@ -65,7 +65,7 @@ Finance Console의 현재 상단 navigation은 `Research / Portfolio / Data / He
 
 ```mermaid
 flowchart LR
-    D["Data Operations<br/>DB-backed evidence"] --> R["Research<br/>Today · Market · 13F"]
+    D["Data Operations<br/>DB-backed evidence"] --> R["Research<br/>Today · Market Research · Institutional Holdings"]
     D --> L["Portfolio Lab"]
     R --> L
     L --> V["Practical Validation"]
@@ -127,7 +127,7 @@ uv run streamlit run app/web/streamlit_app.py
 uv run streamlit run app/web/streamlit_app.py --server.port 8510
 ```
 
-현재 `backtest-dev` worktree의 local QA port는 `8510`입니다.
+예를 들어 다른 worktree가 `8501`을 쓰고 있다면 `8510`처럼 비어 있는 포트를 지정합니다.
 
 ### 첫 실행 확인
 

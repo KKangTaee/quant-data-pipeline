@@ -18,10 +18,13 @@ REQUIRED_JOURNEY_IDS = {
 REQUIRED_REFERENCE_ITEM_IDS = {
     "feature.market_context",
     "feature.market_movers",
+    "feature.inflation_policy",
     "feature.futures_macro",
     "feature.sentiment",
     "feature.events",
+    "feature.sp500",
     "feature.economic_cycle",
+    "feature.us_stock",
     "status.not_run",
     "status.review",
     "status.blocked",
