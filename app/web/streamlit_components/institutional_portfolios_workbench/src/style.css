@@ -3273,6 +3273,7 @@ a {
 
 .ip-review-contribution-guide { grid-column: 1 / -1; padding: 12px 14px; border: 1px solid #dce6ef; border-radius: 10px; background: #f7fafc; }
 .ip-review-contribution-guide strong, .ip-review-contribution-guide span { display: block; }
+.ip-review-contribution-guide strong { color: #172337; }
 .ip-review-contribution-guide span { margin-top: 4px; color: #66788c; font-size: 12px; }
 .ip-review-contribution-list h4 { margin: 0 0 10px; color: #172337; }
 .ip-review-contribution-item { padding: 10px 0; border-bottom: 1px solid #e8eef4; }

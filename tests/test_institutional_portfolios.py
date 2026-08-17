@@ -2068,6 +2068,12 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn(".ip-source-disclosure", style_source)
         self.assertNotIn(".ip-caveats span", style_source)
 
+    def test_quarter_review_formula_uses_readable_explicit_text_color(self) -> None:
+        style_source = _component_style_source()
+        formula_strong_rule = _css_rule(style_source, ".ip-review-contribution-guide strong")
+
+        self.assertIn("color: #172337;", formula_strong_rule)
+
     def test_selected_security_price_collection_button_routes_through_python_job_boundary(self) -> None:
         page_source = Path("app/web/institutional_portfolios.py").read_text(encoding="utf-8")
         component_source = Path(
