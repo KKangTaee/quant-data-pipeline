@@ -8193,10 +8193,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("st.radio(", helper_body)
         self.assertNotIn("href=", helper_body)
         self.assertNotIn("<a ", helper_body)
-        self.assertIn("grid-template-columns: repeat(3", source)
-        self.assertIn("overflow-x: auto", source)
-        self.assertIn("flex-wrap: nowrap", source)
-        self.assertNotIn("grid-template-columns: repeat(2", source)
+        self.assertNotIn("@media (max-width: 480px)", source)
+        self.assertNotIn("overflow-x: auto", source)
+        self.assertIn("border-radius: 999px", source)
         self.assertIn("flex-wrap: wrap", source)
 
     def test_overview_dashboard_dispatches_only_selected_deep_tab(self) -> None:

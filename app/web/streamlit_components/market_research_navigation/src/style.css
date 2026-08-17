@@ -113,7 +113,6 @@ button { font: inherit; }
 @media (max-width: 760px) {
   .mr-navigation__header { gap: 20px; }
   .mr-navigation__header p { max-width: 300px; }
-  .mr-navigation__families { gap: 18px; }
 }
 
 @media (max-width: 480px) {
@@ -122,41 +121,6 @@ button { font: inherit; }
   .mr-navigation__heading { gap: 5px; }
   .mr-navigation__heading h1 { font-size: 26px; }
   .mr-navigation__header p { max-width: none; font-size: 12px; text-align: left; }
-  .mr-navigation__families { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
-  .mr-navigation__families button {
-    min-height: 44px;
-    padding: 10px 4px 9px;
-    text-align: center;
-    white-space: nowrap;
-  }
-  .mr-navigation__families strong { font-size: 12px; }
-  .mr-navigation__views {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 2px;
-    padding: 7px 0 10px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-  .mr-navigation__views::-webkit-scrollbar { display: none; }
-  .mr-navigation__views button {
-    flex: 0 0 auto;
-    width: auto;
-    min-height: 32px;
-    padding: 6px 9px;
-    border-radius: 7px;
-    white-space: nowrap;
-  }
-  .mr-navigation__views button[aria-current="page"] {
-    border-color: transparent;
-    border-bottom-color: var(--active);
-    border-radius: 7px 7px 2px 2px;
-    color: var(--ink);
-    background: color-mix(in srgb, var(--active) 12%, transparent);
-  }
-  .mr-navigation__views button:only-child { min-width: 6.5rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

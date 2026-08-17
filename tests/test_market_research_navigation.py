@@ -155,11 +155,10 @@ def test_market_research_navigation_css_uses_compact_and_responsive_contract():
     assert "width: fit-content" in css
     assert 'stBaseButton-segmented_controlActive' in css
     assert ".mr-market-research-local-label" in css
-    assert "repeat(3, minmax(0, 1fr))" in css
-    assert "overflow-x: auto" in css
-    assert "white-space: nowrap" in css
-    assert "scrollbar-width: none" in css
-    assert "button:only-child" in css
+    assert "flex-wrap: wrap" in css
+    assert "border-radius: 999px" in css
+    assert "@media (max-width: 480px)" not in css
+    assert "overflow-x: auto" not in css
     assert "key=MARKET_RESEARCH_LOCAL_NAV_KEY" in source
 
 
@@ -304,12 +303,12 @@ def test_market_research_react_css_uses_editorial_tabs_without_container_chrome(
     assert "border:" not in view_block
     assert "border-radius:" not in view_block
     assert "background:" not in view_block
-    assert "grid-template-columns: repeat(3, minmax(0, 1fr))" in css
     mobile_block = css.split("@media (max-width: 480px)", 1)[1]
-    assert "overflow-x: auto" in mobile_block
-    assert "white-space: nowrap" in mobile_block
-    assert "scrollbar-width: none" in mobile_block
-    assert "grid-template-columns: repeat(2, minmax(0, 1fr))" not in mobile_block
+    assert ".mr-navigation__families" not in mobile_block
+    assert ".mr-navigation__views" not in mobile_block
+    assert "overflow-x: auto" not in mobile_block
+    assert "border-radius: 999px" in css
+    assert "flex-wrap: wrap" in view_block
 
 
 def test_market_movers_page_dispatch_can_suppress_duplicate_header():

@@ -429,42 +429,6 @@ def _market_research_navigation_css() -> str:
     flex-wrap: wrap;
   }
 }
-@media (max-width: 480px) {
-  .st-key-market_research_family_widget div[data-baseweb="button-group"] {
-    display: grid;
-    width: 100%;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .st-key-market_research_family_widget button {
-    width: 100% !important;
-    padding-inline: 0.3rem !important;
-    white-space: normal;
-  }
-  .st-key-market_research_view_widget div[data-baseweb="button-group"] {
-    display: flex;
-    width: 100%;
-    flex-wrap: nowrap;
-    gap: 0.2rem;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-  .st-key-market_research_view_widget div[data-baseweb="button-group"]::-webkit-scrollbar {
-    display: none;
-  }
-  .st-key-market_research_view_widget [data-testid="stBaseButton-pills"],
-  .st-key-market_research_view_widget [data-testid="stBaseButton-pillsActive"] {
-    flex: 0 0 auto;
-    width: auto;
-    min-height: 2rem;
-    padding-inline: 0.6rem;
-    white-space: nowrap;
-  }
-  .st-key-market_research_view_widget button:only-child {
-    min-width: 6.5rem;
-  }
-}
 </style>
 """
 

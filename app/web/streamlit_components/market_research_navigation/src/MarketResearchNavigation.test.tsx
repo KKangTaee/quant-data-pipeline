@@ -102,7 +102,7 @@ describe("MarketResearchNavigation", () => {
     });
   });
 
-  it("brings a direct-route active view into the visible part of an overflowing rail", () => {
+  it("does not force-scroll a direct-route active view", () => {
     vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(400);
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(300);
 
@@ -116,11 +116,7 @@ describe("MarketResearchNavigation", () => {
       "aria-current",
       "page",
     );
-    expect(scrollIntoViewMock).toHaveBeenCalledWith({
-      behavior: "auto",
-      block: "nearest",
-      inline: "nearest",
-    });
+    expect(scrollIntoViewMock).not.toHaveBeenCalled();
   });
 
   it("shows a bounded empty state without a payload", () => {

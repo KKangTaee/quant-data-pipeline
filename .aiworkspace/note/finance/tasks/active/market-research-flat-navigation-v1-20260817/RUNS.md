@@ -12,3 +12,7 @@
 - Generated QA screenshot: `market-research-flat-navigation-mobile-qa.png` (unstaged artifact).
 - Finance refinement hygiene: passed; the pre-existing registry and generated run history remained unstaged.
 - Independent staged-diff review: fixed the mobile direct-route active-tab visibility gap with overflow-aware `scrollIntoView`, and corrected the remaining canonical 7-view documentation reference to 8-view.
+- Mobile desktop-parity follow-up RED: Streamlit/React CSS contracts and the no-force-scroll React test failed against the mobile-only swipe rail.
+- Mobile desktop-parity follow-up GREEN: mobile-only family/view overrides and overflow correction were removed; navigation Vitest, typecheck and production build passed.
+- 360px Browser QA: family grid retained desktop `max-content` columns and 26px gap; view rail retained desktop 999px pill, 7px gap and `flex-wrap: wrap`; page and rail scroll width matched client width; browser warnings/errors were empty.
+- Generated follow-up QA screenshot: `market-research-mobile-desktop-parity-qa.png` (unstaged artifact).

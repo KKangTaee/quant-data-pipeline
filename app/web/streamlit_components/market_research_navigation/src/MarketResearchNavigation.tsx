@@ -10,7 +10,6 @@ type Props = Omit<ComponentProps, "args"> & {
 export function MarketResearchNavigation({ args, width, theme }: Props) {
   const payload = args.payload;
   const rootRef = useRef<HTMLElement | null>(null);
-  const viewRailRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const resize = () => Streamlit.setFrameHeight();
@@ -27,16 +26,6 @@ export function MarketResearchNavigation({ args, width, theme }: Props) {
       window.clearTimeout(timer);
     };
   }, [payload, width]);
-
-  useEffect(() => {
-    const rail = viewRailRef.current;
-    if (!rail || rail.scrollWidth <= rail.clientWidth) return;
-    rail.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView({
-      behavior: "auto",
-      block: "nearest",
-      inline: "nearest",
-    });
-  }, [payload?.active_family, payload?.active_view]);
 
   if (!payload) {
     return <div className="mr-navigation-empty">Market Research 탐색을 불러오지 못했습니다.</div>;
@@ -76,7 +65,7 @@ export function MarketResearchNavigation({ args, width, theme }: Props) {
           </button>
         ))}
       </nav>
-      <nav ref={viewRailRef} className="mr-navigation__views" aria-label="세부 리서치">
+      <nav className="mr-navigation__views" aria-label="세부 리서치">
         {activeFamily.views.map((view) => (
           <button
             type="button"
