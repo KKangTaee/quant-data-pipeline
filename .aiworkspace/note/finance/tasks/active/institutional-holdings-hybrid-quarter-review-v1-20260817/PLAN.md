@@ -830,7 +830,7 @@ git commit -m "기능: 기관 13F 분기 리뷰 화면 추가"
 - Consumes every prior task.
 - Produces verified task state and durable source/data/user-flow ownership.
 
-- [ ] **Step 1: Run all focused automated tests**
+- [x] **Step 1: Run all focused automated tests**
 
 ```bash
 .venv/bin/python -m pytest tests/test_institutional_13f_refresh.py \
@@ -846,7 +846,7 @@ git commit -m "기능: 기관 13F 분기 리뷰 화면 추가"
 git diff --check
 ```
 
-- [ ] **Step 2: Run bounded live SEC discovery/parser smoke**
+- [x] **Step 2: Run bounded live SEC discovery/parser smoke**
 
 With a descriptive `SEC_USER_AGENT`, discover the target Q2 bulk candidate. If bulk remains
 unpublished, fetch one approved watchlist CIK submission/index/XML and normalize without writing.
@@ -854,7 +854,7 @@ Record URLs, accession, report period, row count, duration and any SEC access li
 
 Do not repeatedly download the full bulk ZIP.
 
-- [ ] **Step 3: Run actual MySQL replay**
+- [x] **Step 3: Run actual MySQL replay**
 
 Use the already public Q2 watchlist filings to run the explicit hybrid job against local MySQL.
 Verify:
@@ -869,7 +869,7 @@ Verify:
 If live SEC access or DB is unavailable, keep the task active and record the exact remaining gap;
 do not claim actual verification.
 
-- [ ] **Step 4: Run actual Browser QA**
+- [x] **Step 4: Run actual Browser QA**
 
 Start the current app and verify at 1280px, 760px and 420px:
 
@@ -883,7 +883,7 @@ Start the current app and verify at 1280px, 760px and 420px:
 
 Save one final desktop screenshot outside Git and attach it in the final response.
 
-- [ ] **Step 5: Apply `finance-doc-sync`**
+- [x] **Step 5: Apply `finance-doc-sync`**
 
 Update durable docs only for implemented facts:
 
@@ -896,7 +896,7 @@ Update durable docs only for implemented facts:
 Record `canonical doc change 없음` for any listed canonical document whose owned facts did not
 change.
 
-- [ ] **Step 6: Run documentation and Git checks**
+- [x] **Step 6: Run documentation and Git checks**
 
 ```bash
 git diff --check
@@ -907,12 +907,12 @@ rg -n "State:|전체.*차|Next Action" \
 
 Confirm registry JSONL, run history, local artifacts and unrelated dirty files are unstaged.
 
-- [ ] **Step 7: Request final code review**
+- [x] **Step 7: Request final code review**
 
 Apply `superpowers:requesting-code-review` to the complete diff. Resolve correctness, regression,
 data integrity, missing validation, scope and documentation findings before closeout.
 
-- [ ] **Step 8: Commit closeout**
+- [x] **Step 8: Commit closeout**
 
 ```bash
 git add app/jobs/ingestion_jobs.py app/services/institutional_13f_refresh.py \

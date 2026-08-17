@@ -28,7 +28,7 @@ external source
 | Backtest Analysis | `app/runtime/backtest/`, `finance/loaders/*`, `finance/*` runtime | 후보 source와 result bundle 생성. Final approval / monitoring policy는 소유하지 않는다 |
 | Practical Validation / Final Review | `app/services/backtest_*`, `finance/loaders/provider.py`, `finance/loaders/macro.py`, `finance/loaders/sentiment.py` | compact evidence와 gate / selected-route read model 생성. Full provider / macro / holdings row는 DB에 둔다 |
 | Workspace > Overview | `app/services/overview/*`, futures / sentiment services | market context / data health only. Inflation-policy는 저장 snapshot/definition/exact artifact만 읽고 `LIMITED/NOT_AVAILABLE`을 보존한다. Trade signal이나 validation PASS / BLOCKER가 아니다 |
-| Workspace > Institutional Portfolios | `app/services/institutional_portfolios.py`, `finance/loaders/institutional_13f.py` | delayed 13F portfolio research only. 추천 / 매수매도 신호 / monitoring signal이 아니다 |
+| Workspace > Institutional Portfolios | `app/services/institutional_{portfolios,13f_refresh,quarter_review}.py`, `finance/loaders/institutional_13f.py` | DB-only normal render, delayed 13F portfolio/change/two-window proxy research. 추천 / 매수매도 신호 / monitoring signal이 아니다 |
 | Operations > Portfolio Monitoring | `app/runtime/backtest/read_models/final_selected_portfolios.py`, `app/services/backtest_practical_validation.py` sentiment overlay | read-only monitoring / explicit scenario update. No broker order, live approval, auto rebalance |
 
 ## 주요 데이터 소스
@@ -38,7 +38,7 @@ external source
 | yfinance | price, profile, 일부 fundamentals |
 | NYSE official listings API / Nasdaq listing sources | NYSE stock·ETF current master, current listing lifecycle evidence, Market Movers Top liquidity universe candidate set. NYSE 두 종류는 Ingestion의 명시적 action에서 모두 fetch/validate한 뒤 원자적으로 교체한다 |
 | EDGAR | detailed financial statements |
-| SEC Form 13F official data sets | institutional investment manager holdings filings. Quarterly official ZIP data sets are stored as manager / filing / holding rows and shown with delay / coverage caveats |
+| SEC Form 13F official data sets / EDGAR submissions | 분기 official ZIP은 full reconciliation source이고, ZIP 공개 전 관심 기관은 exact report-period EDGAR filing을 fallback으로 적재한다. 둘 다 manager / filing / holding accession ledger와 delay / coverage caveat를 공유한다 |
 | SEC EDGAR submissions / Form 25 | symbol lifecycle delisting evidence |
 | local DB | backtest runtime read path |
 | local DB bridge | ETF operability snapshot의 1차 bridge / proxy source. `nyse_price_history`, `nyse_asset_profile`에서 계산 |
@@ -112,7 +112,7 @@ external source
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
 | `finance/data/pit_universe.py` | Quality / Value strict family용 monthly equity universe snapshot build / UPSERT helper. DB price, statement shadow shares evidence, asset profile filter를 읽어 `equity_universe_snapshot` / `equity_universe_member`에 idempotent하게 저장한다 |
 | `finance/data/financial_statements.py` | EDGAR detailed statement filing/value/label 적재 |
-| `finance/data/institutional_13f.py` | SEC Form 13F official quarterly data set ZIP 파서 / 수집 경계. manager / filing / holding / CUSIP-symbol map row를 `finance_meta.institutional_13f_*`에 idempotent UPSERT한다 |
+| `finance/data/institutional_13f.py`, `finance/data/institutional_13f_edgar.py` | SEC Form 13F official quarterly ZIP discovery/parser와 관심 기관 submissions/index/raw XML fallback 경계. 같은 normalization/UPSERT를 재사용하고 accession replay를 건너뛰며 EDGAR write는 manager별 transaction으로 격리한다 |
 | `finance/data/institutional_13f_mapping.py` | 저장된 selected-manager latest CUSIP/CINS를 OpenFIGI v3 US Equity로 batch 해석하고 current resolution을 조건부 UPSERT한다. normal UI render에서는 호출하지 않으며 anonymous 또는 optional `OPENFIGI_API_KEY`를 사용한다 |
 | `app/jobs/ingestion_jobs.py` / `app/jobs/ingestion/common.py` | Streamlit Ingestion 또는 approved action facade에서 실행되는 수집 job wrapper. `ingestion_jobs.py`는 provider / macro / lifecycle evidence / market intelligence collector 결과를 표준 `JobResult`로 변환하고, 주식·ETF listing을 모두 fetch한 뒤에만 atomic writer를 호출하는 `refresh_nyse_listing_universe`와 경제 사이클 explicit vintage collection, DB-only current materialization wrapper를 제공한다. listing refresh와 경제 사이클 vintage collection은 unattended schedule에 등록하지 않는다. selected-stock unified collector는 profile/완료-session inclusive price를 CIK 없이 실행한 뒤 SEC scope에만 identity equality를 요구한다. `common.py`는 symbol parsing, result normalization, progress event, execution profile, pipeline status helper를 소유한다 |
 | `app/jobs/economic_cycle_asset_refresh.py` | 경제 사이클 자산 경로에 필요한 FRED 6종, EIA 주간 3종, futures 4종, S&P 가격 2종만 bounded하게 수집하는 전용 job. raw provider 결과는 기존 canonical ingestion/writer를 통해 DB에 저장하며 UI render 경로에서 직접 fetch하지 않는다 |
@@ -151,7 +151,7 @@ external source
 - Quality / Value strict family의 `PIT Monthly Snapshot Universe` 계약은 `equity_universe_snapshot` / `equity_universe_member`를 loader로 읽고, 각 rebalance date를 가장 가까운 이전 월말 snapshot membership에 매핑한다. 이는 현재 Top-N 고정보다 낫지만 official historical index membership은 아니다.
 - 가격 기반 ETF 전략은 price loader와 `BacktestEngine` warmup / slice 경로가 중심이다.
 - factor / fundamental 전략은 rebalance date 기준 snapshot payload가 핵심 계약이다.
-- Institutional 13F는 `period_of_report`와 `filing_date` / SEC acceptance timing을 구분해야 한다. 화면의 신규 / 증가 / 감소 / 전량 매도 후보는 보고된 두 분기 filing 비교이며 실시간 매수 / 매도나 trading intent가 아니다. Ticker enrichment는 OpenFIGI current identity와 legacy exact-name fallback을 사용하지만 historical PIT security master는 아니다.
+- Institutional 13F는 `period_of_report`와 `filing_date` / SEC acceptance timing을 구분한다. 탭 진입은 로컬 due calendar와 DB 제출 ledger만 읽고, explicit action 뒤에만 bulk candidate를 발견한 뒤 없으면 관심 기관 EDGAR를 수집한다. `13F-HR/A`는 restatement replacement와 new-holdings addition을 구분해 유효 분기를 만들며, `13F-NT`는 제출 완료에는 포함하되 holdings portfolio를 승격하지 않는다. `NEW/ADD/KEEP/REDUCE/DROP`은 평가액이 아니라 shares/principal을 우선한다. 두 성과 proxy는 이전 보고가치 weight와 저장 `adj_close`가 있는 `SH` common-equity만 사용하고 missing/non-common weight를 0% return으로 만들지 않는다. Ticker enrichment는 current identity이며 historical PIT security master는 아니다.
 - Practical Validation provider connector는 UI에서 외부 provider를 직접 호출하지 않고,
   `finance/data/*` ingestion이 저장한 snapshot을 `finance/loaders/provider.py`로 읽는다.
   P2-5A부터 `Workspace > Ingestion > Practical Validation 검증 데이터 보강`에서

@@ -65,6 +65,12 @@ def _build_local_refresh_action(
     )
 
 
+def _refresh_as_of_date(*, now: Any = None):
+    """Use the live clock for filing-deadline decisions, not app startup time."""
+
+    return pd.Timestamp(now if now is not None else datetime.now()).date()
+
+
 def _as_frame(rows: list[dict[str, Any]], columns: list[str] | None = None) -> pd.DataFrame:
     frame = pd.DataFrame(rows or [])
     if columns:
@@ -691,7 +697,7 @@ def render_institutional_portfolios_page(
         refresh_result=dict(st.session_state.get("institutional_13f_refresh_result") or {}),
         refresh_action=_build_local_refresh_action(
             managers,
-            as_of_date=(loaded_at or datetime.now()).date(),
+            as_of_date=_refresh_as_of_date(),
             last_result=dict(st.session_state.get("institutional_13f_refresh_result") or {}),
             filing_periods=filing_periods,
         ),

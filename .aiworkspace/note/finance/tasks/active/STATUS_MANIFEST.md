@@ -5,12 +5,14 @@ Last Verified: 2026-08-17
 
 ## Current State
 
-Current active product task:
+Current active product task: 없음.
 
-- `institutional-holdings-hybrid-quarter-review-v1-20260817` — `State: active`;
-  전체 `0/5차`. Hybrid EDGAR/bulk 갱신, local due 기반 explicit action, 두 performance
-  window와 quarter change review의 written design을 완료하고 implementation plan 전
-  사용자 spec 검토를 기다린다.
+Latest completed Institutional Holdings task:
+
+- `institutional-holdings-hybrid-quarter-review-v1-20260817` — `State: complete`;
+  전체 `5/5차`. local due 기반 explicit bulk-first/EDGAR fallback, amendment-aware effective
+  quarter, 두 performance proxy와 v3 React `분기 리뷰`를 actual SEC/MySQL/Browser QA까지
+  완료했다.
 
 Latest completed integration task:
 

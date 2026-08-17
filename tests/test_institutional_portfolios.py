@@ -131,6 +131,84 @@ class Sec13FDataSetParserTests(unittest.TestCase):
         self.assertEqual(normalized["holdings"][0]["source_dataset"], "2026-march-april-may")
         self.assertTrue(any("45 days" in caveat for caveat in SEC_13F_SOURCE_CAVEATS))
 
+    def test_bulk_normalization_does_not_promote_notice_or_incomplete_filing(self) -> None:
+        from finance.data.institutional_13f import normalize_sec_13f_frames
+
+        frames = {
+            "submission": pd.DataFrame(
+                [
+                    {"ACCESSION_NUMBER": "base", "FILING_DATE": "15-MAY-2026", "SUBMISSIONTYPE": "13F-HR", "CIK": "0001067983", "PERIODOFREPORT": "31-MAR-2026"},
+                    {"ACCESSION_NUMBER": "notice", "FILING_DATE": "14-AUG-2026", "SUBMISSIONTYPE": "13F-NT", "CIK": "0001067983", "PERIODOFREPORT": "30-JUN-2026"},
+                    {"ACCESSION_NUMBER": "empty", "FILING_DATE": "14-AUG-2026", "SUBMISSIONTYPE": "13F-HR", "CIK": "0001350694", "PERIODOFREPORT": "30-JUN-2026"},
+                    {"ACCESSION_NUMBER": "unknown-amendment", "FILING_DATE": "15-AUG-2026", "SUBMISSIONTYPE": "13F-HR/A", "CIK": "0001067983", "PERIODOFREPORT": "31-MAR-2026"},
+                ]
+            ),
+            "coverpage": pd.DataFrame(
+                [
+                    {"ACCESSION_NUMBER": "base", "FILINGMANAGER_NAME": "Berkshire", "ISAMENDMENT": "N"},
+                    {"ACCESSION_NUMBER": "notice", "FILINGMANAGER_NAME": "Berkshire", "ISAMENDMENT": "N"},
+                    {"ACCESSION_NUMBER": "empty", "FILINGMANAGER_NAME": "Icahn", "ISAMENDMENT": "N"},
+                    {"ACCESSION_NUMBER": "unknown-amendment", "FILINGMANAGER_NAME": "Berkshire", "ISAMENDMENT": "Y", "AMENDMENTTYPE": "OTHER"},
+                ]
+            ),
+            "summarypage": pd.DataFrame(
+                [
+                    {"ACCESSION_NUMBER": "base", "TABLEENTRYTOTAL": "1"},
+                    {"ACCESSION_NUMBER": "empty", "TABLEENTRYTOTAL": "2"},
+                    {"ACCESSION_NUMBER": "unknown-amendment", "TABLEENTRYTOTAL": "1"},
+                ]
+            ),
+            "infotable": pd.DataFrame(
+                [
+                    {"ACCESSION_NUMBER": "base", "INFOTABLE_SK": "1", "NAMEOFISSUER": "APPLE INC", "TITLEOFCLASS": "COM", "CUSIP": "037833100", "VALUE": "1000", "SSHPRNAMT": "10", "SSHPRNAMTTYPE": "SH"},
+                    {"ACCESSION_NUMBER": "unknown-amendment", "INFOTABLE_SK": "1", "NAMEOFISSUER": "APPLE INC", "TITLEOFCLASS": "COM", "CUSIP": "037833100", "VALUE": "900", "SSHPRNAMT": "9", "SSHPRNAMTTYPE": "SH"},
+                ]
+            ),
+        }
+
+        normalized = normalize_sec_13f_frames(frames, source_dataset="2026-q2")
+
+        assert [(row["cik"], row["latest_accession_number"]) for row in normalized["managers"]] == [
+            ("0001067983", "base")
+        ]
+
+    def test_bulk_normalization_keeps_incomplete_filing_but_drops_partial_holdings(self) -> None:
+        from finance.data.institutional_13f import normalize_sec_13f_frames
+
+        normalized = normalize_sec_13f_frames(
+            {
+                "submission": pd.DataFrame([{"ACCESSION_NUMBER": "partial", "FILING_DATE": "14-AUG-2026", "SUBMISSIONTYPE": "13F-HR", "CIK": "0001067983", "PERIODOFREPORT": "30-JUN-2026"}]),
+                "coverpage": pd.DataFrame([{"ACCESSION_NUMBER": "partial", "FILINGMANAGER_NAME": "Berkshire", "ISAMENDMENT": "N"}]),
+                "summarypage": pd.DataFrame([{"ACCESSION_NUMBER": "partial", "TABLEENTRYTOTAL": "2"}]),
+                "infotable": pd.DataFrame([{"ACCESSION_NUMBER": "partial", "INFOTABLE_SK": "1", "NAMEOFISSUER": "APPLE INC", "TITLEOFCLASS": "COM", "CUSIP": "037833100", "VALUE": "1000", "SSHPRNAMT": "10", "SSHPRNAMTTYPE": "SH"}]),
+            },
+            source_dataset="2026-q2",
+        )
+
+        self.assertEqual(len(normalized["filings"]), 1)
+        self.assertEqual(normalized["managers"], [])
+        self.assertEqual(normalized["holdings"], [])
+
+    def test_manager_upsert_pointer_is_monotonic(self) -> None:
+        from finance.data.institutional_13f import _upsert_manager_rows
+
+        class FakeDB:
+            sql = ""
+
+            def executemany(self, sql: str, _rows: list[dict]) -> None:
+                self.sql = sql
+
+        db = FakeDB()
+        _upsert_manager_rows(db, [{"cik": "0001067983"}])
+
+        self.assertIn("CASE", db.sql)
+        self.assertIn("VALUES(latest_report_period) > latest_report_period", db.sql)
+        self.assertIn("VALUES(latest_filing_date) >= latest_filing_date", db.sql)
+        self.assertGreaterEqual(
+            db.sql.count("VALUES(latest_accession_number) >= latest_accession_number"),
+            4,
+        )
+
     def test_sec_13f_refresh_status_summarizes_latest_dataset_freshness(self) -> None:
         from finance.data.institutional_13f import build_sec_13f_refresh_status
 
@@ -205,6 +283,72 @@ class Sec13FDataSetParserTests(unittest.TestCase):
 
 
 class InstitutionalPortfolioReadModelTests(unittest.TestCase):
+    def test_workbench_freshness_prefers_current_submission_and_selected_portfolio(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_portfolio_model, build_institutional_workbench_payload
+
+        model = build_institutional_portfolio_model(
+            manager={"cik": "0001067983", "manager_name": "BERKSHIRE HATHAWAY INC"},
+            latest_filing={
+                "period_of_report": "2026-06-30",
+                "filing_date": "2026-08-14",
+                "collected_at": "2026-08-17 08:00:00",
+            },
+            latest_holdings=pd.DataFrame(),
+        )
+        payload = build_institutional_workbench_payload(
+            model=model,
+            managers=[],
+            selected_cik="0001067983",
+            interest_model=None,
+            refresh_status={
+                "status": "ok",
+                "last_collected_at": "2026-07-09 00:00:00",
+                "latest_report_period": "2026-03-31",
+                "latest_filing_date": "2026-05-15",
+                "is_stale": True,
+                "stale_reason": "old bulk snapshot",
+            },
+            refresh_action={
+                "action_id": "refresh_institutional_13f",
+                "visible": False,
+                "status": "current",
+                "target_report_period": "2026-06-30",
+            },
+        )
+
+        self.assertEqual(model["summary"]["collected_at"], "2026-08-17 08:00:00")
+        self.assertEqual(payload["freshness"]["latest_report_period"], "2026-06-30")
+        self.assertEqual(payload["freshness"]["latest_filing_date"], "2026-08-14")
+        self.assertEqual(payload["freshness"]["last_collected_at"], "2026-08-17 08:00:00")
+        self.assertFalse(payload["freshness"]["is_stale"])
+        self.assertEqual(payload["freshness"]["stale_reason"], "")
+
+    def test_due_freshness_keeps_actual_period_separate_from_target_period(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_portfolio_model, build_institutional_workbench_payload
+
+        model = build_institutional_portfolio_model(
+            manager={"cik": "0001067983", "manager_name": "Berkshire"},
+            latest_filing={"period_of_report": "2026-03-31", "filing_date": "2026-05-15"},
+            latest_holdings=pd.DataFrame(),
+        )
+        payload = build_institutional_workbench_payload(
+            model=model,
+            managers=[],
+            selected_cik="0001067983",
+            interest_model=None,
+            refresh_status={"latest_report_period": "2026-03-31", "latest_filing_date": "2026-05-15", "is_stale": False},
+            refresh_action={
+                "action_id": "refresh_institutional_13f",
+                "visible": True,
+                "status": "due",
+                "target_report_period": "2026-06-30",
+                "description": "2분기 확인 필요",
+            },
+        )
+
+        self.assertEqual(payload["freshness"]["latest_report_period"], "2026-03-31")
+        self.assertEqual(payload["refresh_action"]["target_report_period"], "2026-06-30")
+        self.assertTrue(payload["freshness"]["is_stale"])
     def test_workbench_v2_keeps_all_holdings_for_client_side_explorer(self) -> None:
         from app.services.institutional_portfolios import build_institutional_portfolio_model, build_institutional_workbench_payload
 
@@ -1859,6 +2003,12 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn('setActiveView("security")', component_source)
         self.assertIn('activeView === "security"', component_source)
         self.assertIn('activeView === "quarter_review"', component_source)
+        quarter_review_source = Path(
+            "app/web/streamlit_components/institutional_portfolios_workbench/src/QuarterReviewPanel.tsx"
+        ).read_text(encoding="utf-8")
+        self.assertIn("transitions?: QuarterReviewPayload[]", quarter_review_source)
+        self.assertIn("분기 전환 선택", quarter_review_source)
+        self.assertIn("setTransitionIndex(0)", quarter_review_source)
         self.assertNotIn("보유 기관 조회", component_source)
         self.assertIn(".ip-studio-nav", style_source)
         self.assertIn(".ip-studio-nav__active", style_source)

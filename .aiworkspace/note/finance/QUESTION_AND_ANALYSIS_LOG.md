@@ -10879,3 +10879,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   병합 신규 service-contract failure는 0건이며 stale task state 4건도 정규화했다.
 - Follow-up: 전체 4/4 완료. 기존 broad service-contract baseline 18 failures는 별도 owning
   task에서 다루며 registry·run history·QA artifact는 unstaged로 보존한다.
+
+### 2026-08-17 - Institutional Holdings는 local due와 수동 hybrid refresh로 갱신한다
+
+- User request: 탭 진입 자동 확인 대신 필요한 시점에만 수동 갱신하고, 새 분기 공개 뒤
+  이전 분기의 결과와 keep/add/drop 변화를 함께 보도록 요청함.
+- Interpreted goal: SEC bulk 공개 지연은 EDGAR watchlist로 메우되 normal render는 DB-only로
+  유지하고, quarter-end/public-follow 성과 의미와 missing coverage를 분리한다.
+- Analysis result: Q2 filing 12개를 반영하고 두 notice filing은 제출 완료만 인정했다.
+  독립 review 뒤 adjusted-close common-equity 기준을 적용한 Berkshire 두 proxy는
+  +8.42%/+6.48%, coverage 99.99%이며 저장 분기 선택과 responsive QA를 완료했다.
+- Follow-up: 전체 5/5 완료. 다음 due 이후 같은 버튼을 사용하고 bulk 공개 후 full
+  reconciliation이 필요하면 Data Operations advanced path를 사용한다.

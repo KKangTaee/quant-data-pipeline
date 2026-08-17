@@ -1535,6 +1535,23 @@ def build_institutional_workbench_payload(
     total_value = _num(summary.get("total_reported_value"))
     is_preview = mode == "preview"
     freshness = build_institutional_refresh_status_model(refresh_status)
+    action_payload = dict(refresh_action) if refresh_action is not None else _refresh_action_payload()
+    target_report_period = _text(action_payload.get("target_report_period"))
+    portfolio_collected_at = _text(summary.get("collected_at"))
+    if target_report_period and action_payload.get("status") == "current":
+        freshness["latest_report_period"] = target_report_period
+    elif report_period != "-":
+        freshness["latest_report_period"] = report_period
+    if filing_date != "-":
+        freshness["latest_filing_date"] = filing_date
+    if portfolio_collected_at:
+        freshness["last_collected_at"] = portfolio_collected_at
+    if action_payload.get("status") == "current":
+        freshness["is_stale"] = False
+        freshness["stale_reason"] = ""
+    elif action_payload.get("status") in {"due", "partial"}:
+        freshness["is_stale"] = True
+        freshness["stale_reason"] = _text(action_payload.get("description"))
     performance_model = dict(model.get("portfolio_performance") or {})
     holding_rows = _workbench_holdings_rows(holdings)
     coverage = _build_coverage(holding_rows, performance_model)
@@ -1575,7 +1592,7 @@ def build_institutional_workbench_payload(
             ),
         },
         "freshness": freshness,
-        "refresh_action": dict(refresh_action) if refresh_action is not None else _refresh_action_payload(),
+        "refresh_action": action_payload,
         "refresh_result": dict(refresh_result or {}),
         "quarter_review": dict(quarter_review or {
             "available": False,
@@ -1799,6 +1816,7 @@ def build_institutional_portfolio_model(
             "previous_filing_date": _date_label((previous_filing or {}).get("filing_date")),
             "accession_number": _text((latest_filing or {}).get("accession_number")),
             "source_ref": _text((latest_filing or {}).get("source_ref")),
+            "collected_at": _text((latest_filing or {}).get("collected_at")),
             "total_reported_value": round(total_value, 4),
             "holding_count": len(latest_rows),
         },

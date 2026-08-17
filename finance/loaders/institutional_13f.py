@@ -487,10 +487,19 @@ def load_institutional_13f_latest_submission_periods_by_ciks(
     try:
         rows = db.query(
             f"""
-            SELECT cik, MAX(period_of_report) AS latest_report_period
-            FROM institutional_13f_filing
-            WHERE cik IN ({placeholders})
-            GROUP BY cik
+            SELECT eligible.cik, MAX(eligible.period_of_report) AS latest_report_period
+            FROM (
+              SELECT f.cik, f.period_of_report
+              FROM institutional_13f_filing f
+              LEFT JOIN institutional_13f_holding h
+                ON h.accession_number = f.accession_number
+              WHERE f.cik IN ({placeholders})
+              GROUP BY f.accession_number, f.cik, f.period_of_report,
+                       f.submission_type, f.table_entry_total
+              HAVING UPPER(f.submission_type) = '13F-NT'
+                 OR (f.table_entry_total > 0 AND COUNT(h.infotable_sk) = f.table_entry_total)
+            ) eligible
+            GROUP BY eligible.cik
             """,
             tuple(normalized),
         )

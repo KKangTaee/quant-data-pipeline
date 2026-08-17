@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { filterQuarterReviewRows } from "./workbenchState";
 
 type ProxyRow = {
@@ -38,6 +38,7 @@ export type QuarterReviewChange = {
 
 export type QuarterReviewPayload = {
   available: boolean;
+  manager?: { cik?: string; manager_name?: string };
   reason?: string;
   transition?: {
     previous_report_period?: string;
@@ -52,6 +53,7 @@ export type QuarterReviewPayload = {
     public_follow_proxy?: PriceProxy;
   };
   caveat?: string;
+  transitions?: QuarterReviewPayload[];
 };
 
 const CHANGE_TYPES = ["NEW", "ADD", "KEEP", "REDUCE", "DROP", "NOT_COMPARABLE"];
@@ -108,7 +110,16 @@ function ContributionList({ title, rows }: { title: string; rows: ProxyRow[] }) 
   );
 }
 
-export function QuarterReviewPanel({ review }: { review?: QuarterReviewPayload }) {
+export function QuarterReviewPanel({ review: suppliedReview }: { review?: QuarterReviewPayload }) {
+  const transitionReviews = suppliedReview?.transitions?.length
+    ? suppliedReview.transitions
+    : suppliedReview ? [suppliedReview] : [];
+  const [transitionIndex, setTransitionIndex] = useState(0);
+  useEffect(() => {
+    setTransitionIndex(0);
+  }, [suppliedReview?.manager?.cik, suppliedReview?.transition?.current_report_period]);
+  const safeTransitionIndex = Math.min(transitionIndex, Math.max(0, transitionReviews.length - 1));
+  const review = transitionReviews[safeTransitionIndex] || suppliedReview;
   const [changeType, setChangeType] = useState("all");
   const [query, setQuery] = useState("");
   const changes = review?.changes || [];
@@ -134,6 +145,25 @@ export function QuarterReviewPanel({ review }: { review?: QuarterReviewPayload }
         <div>
           <span>보고 포트폴리오 전환</span>
           <h2>{review.transition?.previous_report_period} → {review.transition?.current_report_period}</h2>
+          {transitionReviews.length > 1 ? (
+            <label className="ip-review-transition-selector">
+              <span>분기 전환 선택</span>
+              <select
+                value={safeTransitionIndex}
+                onChange={(event) => {
+                  setTransitionIndex(Number(event.target.value));
+                  setChangeType("all");
+                  setQuery("");
+                }}
+              >
+                {transitionReviews.map((item, index) => (
+                  <option key={`${item.transition?.previous_report_period}-${item.transition?.current_report_period}`} value={index}>
+                    {item.transition?.previous_report_period} → {item.transition?.current_report_period}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
         </div>
         <dl>
           <div><dt>이전 제출</dt><dd>{review.transition?.previous_filing_date || "-"}</dd></div>

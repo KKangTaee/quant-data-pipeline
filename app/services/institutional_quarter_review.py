@@ -145,6 +145,13 @@ def _coverage_status(coverage_weight_pct: float) -> str:
     return "NOT_AVAILABLE"
 
 
+def _is_common_equity_position(position: dict[str, Any]) -> bool:
+    amount_type = _text(position.get("amount_type")).upper()
+    title = _text(position.get("title_of_class")).upper()
+    non_common_tokens = ("PRN", "NOTE", "BOND", "DEBT", "PFD", "PREF", "CONV")
+    return amount_type == "SH" and not any(token in title for token in non_common_tokens)
+
+
 def build_institutional_price_proxy(
     holdings: pd.DataFrame | None,
     price_history: pd.DataFrame | None,
@@ -161,8 +168,8 @@ def build_institutional_price_proxy(
     if not prices.empty:
         prices["symbol"] = prices["symbol"].astype(str).str.upper()
         prices["date"] = pd.to_datetime(prices["date"], errors="coerce")
-        prices["close"] = pd.to_numeric(prices["close"], errors="coerce")
-        prices = prices.dropna(subset=["symbol", "date", "close"])
+        prices["adj_close"] = pd.to_numeric(prices.get("adj_close"), errors="coerce")
+        prices = prices.dropna(subset=["symbol", "date"])
     start_ts = pd.Timestamp(start_date)
     end_ts = pd.Timestamp(end_date)
     rows: list[dict[str, Any]] = []
@@ -176,6 +183,9 @@ def build_institutional_price_proxy(
         if position.get("put_call"):
             missing.append({**position, "weight_pct": round(weight_pct, 4), "reason": "option_excluded"})
             continue
+        if not _is_common_equity_position(position):
+            missing.append({**position, "weight_pct": round(weight_pct, 4), "reason": "non_common_instrument"})
+            continue
         if not symbol:
             missing.append({**position, "weight_pct": round(weight_pct, 4), "reason": "unmapped_identifier"})
             continue
@@ -187,8 +197,11 @@ def build_institutional_price_proxy(
             continue
         start_row = start_rows.iloc[0]
         end_row = end_rows.iloc[-1]
-        start_price = float(start_row["close"])
-        end_price = float(end_row["close"])
+        if pd.isna(start_row.get("adj_close")) or pd.isna(end_row.get("adj_close")):
+            missing.append({**position, "weight_pct": round(weight_pct, 4), "reason": "adjusted_price_unavailable"})
+            continue
+        start_price = float(start_row["adj_close"])
+        end_price = float(end_row["adj_close"])
         if end_row["date"] < start_row["date"] or start_price <= 0:
             missing.append({**position, "weight_pct": round(weight_pct, 4), "reason": "price_boundary_unavailable"})
             continue
@@ -222,11 +235,12 @@ def build_institutional_price_proxy(
         "coverage_weight_pct": round(coverage_pct, 4),
         "missing_weight_pct": round(max(0.0, 100.0 - coverage_pct), 4),
         "covered_sleeve_return_pct": round(covered_return, 4) if covered_return is not None else None,
+        "price_basis": "adjusted_close_total_return_when_available",
         "rows": rows,
         "missing_positions": sorted(missing, key=lambda row: row["weight_pct"], reverse=True),
         "top_contributors": sorted(rows, key=lambda row: row["contribution_pct"], reverse=True)[:5],
         "top_detractors": sorted(rows, key=lambda row: row["contribution_pct"])[:5],
-        "caveat": "Reported long holdings price proxy; missing holdings are excluded, never assigned a zero return.",
+        "caveat": "Adjusted-close common-equity proxy; dividends and splits follow the stored adjusted series. Missing or non-common holdings are excluded, never assigned a zero return.",
     }
 
 
@@ -324,7 +338,7 @@ def build_institutional_quarter_review(
 
 
 def load_institutional_quarter_review_model(cik: str) -> dict[str, Any]:
-    """Load the latest effective transition and stored prices; never fetch a provider."""
+    """Load saved effective transitions and one combined stored-price window."""
 
     history = load_institutional_13f_effective_history(cik, limit=8)
     available = [row for row in history if row.get("available")]
@@ -335,22 +349,25 @@ def load_institutional_quarter_review_model(cik: str) -> dict[str, Any]:
             price_history=pd.DataFrame(),
         )
 
-    current, previous = available[0], available[1]
-    previous_filing = dict(previous.get("filing") or {})
-    current_filing = dict(current.get("filing") or {})
-    date_candidates = [
-        _text(previous_filing.get("period_of_report")),
-        _text(previous_filing.get("filing_date")),
-        _text(current_filing.get("period_of_report")),
-        _text(current_filing.get("filing_date")),
-    ]
+    date_candidates: list[str] = []
+    for effective in available:
+        filing = dict(effective.get("filing") or {})
+        date_candidates.extend(
+            [_text(filing.get("period_of_report")), _text(filing.get("filing_date"))]
+        )
     present_dates = [value for value in date_candidates if value]
-    positions = _aggregate_positions(previous.get("holdings"))
+    previous_positions = [
+        _aggregate_positions(effective.get("holdings"))
+        for effective in available[1:]
+    ]
     symbols = sorted(
         {
             _text(row.get("holding_symbol")).upper()
+            for positions in previous_positions
             for row in positions.values()
-            if _text(row.get("holding_symbol")) and not row.get("put_call")
+            if _text(row.get("holding_symbol"))
+            and not row.get("put_call")
+            and _is_common_equity_position(row)
         }
     )
     prices = pd.DataFrame()
@@ -361,8 +378,14 @@ def load_institutional_quarter_review_model(cik: str) -> dict[str, Any]:
             end=max(present_dates),
             timeframe="1d",
         )
-    return build_institutional_quarter_review(
-        previous_effective=previous,
-        current_effective=current,
-        price_history=prices,
-    )
+    transitions = [
+        build_institutional_quarter_review(
+            previous_effective=available[index + 1],
+            current_effective=available[index],
+            price_history=prices,
+        )
+        for index in range(len(available) - 1)
+    ]
+    latest = dict(transitions[0])
+    latest["transitions"] = transitions
+    return latest

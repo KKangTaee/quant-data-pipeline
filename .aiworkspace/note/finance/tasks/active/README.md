@@ -26,9 +26,7 @@ tasks/active/<task-name>/
 
 ## Current Active Product Tasks
 
-| Task | State | Current Step |
-|---|---|---|
-| `institutional-holdings-hybrid-quarter-review-v1-20260817` | `active` | 전체 `0/5차`; local due 기반 explicit hybrid refresh와 두 performance window / position change review의 written design 검토 대기 |
+현재 active product task는 없다.
 
 ## Paused Tasks
 
@@ -47,6 +45,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `institutional-holdings-hybrid-quarter-review-v1-20260817` | Completed product task, 5/5 | 로컬 제출기한 기반 수동 bulk-first/EDGAR fallback, amendment-aware history, `NEW/ADD/KEEP/REDUCE/DROP`, 두 covered-sleeve proxy와 v3 React 분기 리뷰를 actual SEC/MySQL/Browser QA까지 완료했다. |
 | `economic-cycle-interpretability-refresh-v1-20260817` | Completed product task, 5/5 | official RTDSM current state·최근 변화·전환압력·조건부 목적지와 근거를 한 화면 계약으로 정리하고 공식 월말 수동 갱신, 자산 카드 보존과 actual Browser QA를 완료했다. |
 | `economic-cycle-transition-production-v1-20260817` | Completed product task, 5/5 | actual `GO` transition artifact/snapshot/service와 unrestricted destination UI를 연결하고 2026-07 confirmed recovery·전환압력·조건부 목적지를 fail-closed로 공개했다. |
 | `main-dev-master-merge-resolution-20260817` | Completed integration, 4/4 | 최신 Economic Cycle과 master의 Futures Macro·Sentiment를 보존하고 shared bundle 재생성, stale contract/state 정렬, focused 자동 검증과 actual Browser QA를 완료했다. |

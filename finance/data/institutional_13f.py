@@ -357,6 +357,84 @@ def _build_manager_rows(filings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return manager_rows
 
 
+def _build_effective_manager_rows(
+    filings: list[dict[str, Any]],
+    holdings: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Point managers only at a complete, unambiguous owned-holdings filing."""
+
+    holding_accessions = {
+        str(row.get("accession_number") or "").strip()
+        for row in holdings
+        if str(row.get("accession_number") or "").strip()
+    }
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for filing in filings:
+        cik = str(filing.get("cik") or "").strip()
+        if cik:
+            grouped[cik].append(filing)
+
+    pointers: list[dict[str, Any]] = []
+    for cik, cik_filings in grouped.items():
+        accepted_by_period: dict[str, dict[str, Any]] = {}
+        period_groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for filing in cik_filings:
+            period_groups[str(filing.get("period_of_report") or "")].append(filing)
+        for period, period_filings in period_groups.items():
+            accepted: dict[str, Any] | None = None
+            for filing in sorted(
+                period_filings,
+                key=lambda row: (str(row.get("filing_date") or ""), str(row.get("accession_number") or "")),
+            ):
+                accession = str(filing.get("accession_number") or "")
+                submission_type = str(filing.get("submission_type") or "").upper()
+                is_amendment = bool(filing.get("is_amendment")) or submission_type.endswith("/A")
+                amendment_type = str(filing.get("amendment_type") or "").upper()
+                has_holdings = accession in holding_accessions
+                if submission_type == "13F-NT":
+                    continue
+                if not is_amendment:
+                    if has_holdings:
+                        accepted = filing
+                    continue
+                if "RESTATEMENT" in amendment_type and accepted is not None and has_holdings:
+                    accepted = filing
+                # NEW HOLDINGS amendments are additive and cannot be represented by
+                # the manager table's single-accession pointer. Keep the accepted base.
+            if accepted is not None:
+                accepted_by_period[period] = accepted
+
+        if not accepted_by_period:
+            continue
+        latest_period = max(accepted_by_period)
+        pointer = _build_manager_rows([accepted_by_period[latest_period]])[0]
+        pointer["filing_count"] = len(
+            {row.get("accession_number") for row in cik_filings if row.get("accession_number")}
+        )
+        pointers.append(pointer)
+    return pointers
+
+
+def _complete_holding_accessions(
+    filings: Iterable[dict[str, Any]],
+    holdings: Iterable[dict[str, Any]],
+) -> set[str]:
+    """Return accessions whose parsed row count exactly matches the filing summary."""
+
+    counts: dict[str, int] = defaultdict(int)
+    for holding in holdings:
+        accession = str(holding.get("accession_number") or "").strip()
+        if accession:
+            counts[accession] += 1
+    complete: set[str] = set()
+    for filing in filings:
+        accession = str(filing.get("accession_number") or "").strip()
+        expected = _int_value(filing.get("table_entry_total"))
+        if accession and expected is not None and expected > 0 and counts.get(accession, 0) == expected:
+            complete.add(accession)
+    return complete
+
+
 def normalize_sec_13f_frames(
     frames: dict[str, pd.DataFrame],
     *,
@@ -447,8 +525,12 @@ def normalize_sec_13f_frames(
             }
         )
 
+    complete_accessions = _complete_holding_accessions(filing_rows, holding_rows)
+    holding_rows = [
+        row for row in holding_rows if str(row.get("accession_number") or "") in complete_accessions
+    ]
     return {
-        "managers": _build_manager_rows(filing_rows),
+        "managers": _build_effective_manager_rows(filing_rows, holding_rows),
         "filings": filing_rows,
         "holdings": holding_rows,
     }
@@ -617,13 +699,36 @@ def _upsert_manager_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> int:
         )
         ON DUPLICATE KEY UPDATE
           manager_name = VALUES(manager_name),
-          latest_accession_number = VALUES(latest_accession_number),
-          latest_report_period = VALUES(latest_report_period),
-          latest_filing_date = VALUES(latest_filing_date),
+          latest_accession_number = CASE
+            WHEN VALUES(latest_report_period) > latest_report_period
+              OR (VALUES(latest_report_period) = latest_report_period AND VALUES(latest_filing_date) > latest_filing_date)
+              OR (VALUES(latest_report_period) = latest_report_period AND VALUES(latest_filing_date) = latest_filing_date
+                  AND VALUES(latest_accession_number) >= latest_accession_number)
+            THEN VALUES(latest_accession_number) ELSE latest_accession_number END,
+          latest_filing_date = CASE
+            WHEN VALUES(latest_report_period) > latest_report_period
+              OR (VALUES(latest_report_period) = latest_report_period AND VALUES(latest_filing_date) >= latest_filing_date)
+            THEN VALUES(latest_filing_date) ELSE latest_filing_date END,
           filing_count = GREATEST(filing_count, VALUES(filing_count)),
-          source = VALUES(source),
-          source_ref = VALUES(source_ref),
-          last_collected_at = VALUES(last_collected_at)
+          source = CASE
+            WHEN VALUES(latest_report_period) > latest_report_period
+              OR (VALUES(latest_report_period) = latest_report_period AND VALUES(latest_filing_date) > latest_filing_date)
+              OR (VALUES(latest_report_period) = latest_report_period AND VALUES(latest_filing_date) = latest_filing_date
+                  AND VALUES(latest_accession_number) >= latest_accession_number)
+            THEN VALUES(source) ELSE source END,
+          source_ref = CASE
+            WHEN VALUES(latest_report_period) > latest_report_period
+              OR (VALUES(latest_report_period) = latest_report_period AND VALUES(latest_filing_date) > latest_filing_date)
+              OR (VALUES(latest_report_period) = latest_report_period AND VALUES(latest_filing_date) = latest_filing_date
+                  AND VALUES(latest_accession_number) >= latest_accession_number)
+            THEN VALUES(source_ref) ELSE source_ref END,
+          last_collected_at = CASE
+            WHEN VALUES(latest_report_period) > latest_report_period
+              OR (VALUES(latest_report_period) = latest_report_period AND VALUES(latest_filing_date) > latest_filing_date)
+              OR (VALUES(latest_report_period) = latest_report_period AND VALUES(latest_filing_date) = latest_filing_date
+                  AND VALUES(latest_accession_number) >= latest_accession_number)
+            THEN VALUES(last_collected_at) ELSE last_collected_at END,
+          latest_report_period = GREATEST(latest_report_period, VALUES(latest_report_period))
     """
     db.executemany(sql, rows)
     return len(rows)

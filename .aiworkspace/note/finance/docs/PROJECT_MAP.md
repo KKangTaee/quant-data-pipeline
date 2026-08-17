@@ -64,7 +64,7 @@ Top-level navigation과 route registration은 `app/web/streamlit_app.py`가 소�
 |---|---|---|---|---|
 | Research / Today | `/` | `app/web/today_page.py` | `app/services/today.py`, `app/services/today_market_session.py`, `app/services/portfolio_monitoring/intraday_refresh.py` | `app/web/streamlit_components/today_workbench/` |
 | Research / Market Research | `/overview` | `app/web/overview/page.py`, `app/web/overview/navigation.py` | `app/services/overview/`, related finance loaders and interpretation modules | `app/web/streamlit_components/market_research_navigation/` and view-owned workbenches |
-| Research / Institutional Holdings | `/institutional-portfolios` | `app/web/institutional_portfolios.py` | `app/services/institutional_portfolios.py`, `finance/loaders/institutional_13f.py` | `app/web/streamlit_components/institutional_portfolios_workbench/` |
+| Research / Institutional Holdings | `/institutional-portfolios` | `app/web/institutional_portfolios.py` | `app/services/institutional_{portfolios,13f_refresh,quarter_review}.py`, `finance/loaders/institutional_13f.py` | `app/web/streamlit_components/institutional_portfolios_workbench/` |
 | Portfolio / Portfolio Lab | `/backtest` | `app/web/backtest_page.py`, `app/web/backtest_workflow_shell.py` | `app/services/backtest_workflow_shell.py`, `app/runtime/backtest/` and stage-owned services | `app/web/components/` under each Backtest stage |
 | Portfolio / Portfolio Monitoring | `/selected-portfolio-dashboard` | `app/web/final_selected_portfolio_dashboard.py` | `app/services/portfolio_monitoring/`, `app/runtime/backtest/read_models/final_selected_portfolios.py` | `app/web/streamlit_components/portfolio_monitoring_workbench/` |
 | Data / Data Operations | `/ingestion` | `app/web/ingestion_console.py`, `app/web/ingestion/` | `app/jobs/ingestion_jobs.py`, `app/services/ingestion_diagnostics.py`, `finance/data/` | Streamlit five-section task-oriented workbench; job results are Python-owned |
@@ -171,9 +171,12 @@ Data Operations
   `app/services/overview/economic_cycle.py -> economic_cycle_workbench`가 다음 3 usable
   release 전환압력과 전환 발생 조건부 모든 destination 분포를 표시한다. 자산별 확인
   포인트는 별도 기존 pathway 계산·presentation 계약을 그대로 유지한다.
-- Institutional Holdings의 SEC dataset과 identifier resolution은
-  `finance/data/institutional_13f.py`와
-  `finance/data/institutional_13f_mapping.py`가 저장하고 loader/service가 읽는다.
+- Institutional Holdings의 official bulk discovery/ingestion은
+  `finance/data/institutional_13f.py`, 관심 기관 개별 filing fallback은
+  `finance/data/institutional_13f_edgar.py`, identifier resolution은
+  `finance/data/institutional_13f_mapping.py`가 소유한다. Loader가 amendment-aware 유효
+  분기와 notice를 포함한 제출 최신성을 DB에서 읽고, service가 갱신 action과 두 성과
+  proxy를 만든다. 탭 진입은 SEC를 호출하지 않는다.
 - Research context는 validation gate, trading signal이나 monitoring decision을
   만들지 않는다.
 
@@ -266,7 +269,7 @@ compact evidence와 identity만 저장한다. 자세한 규칙은
 | Market Research | `app/web/overview/page.py`, `app/web/overview/navigation.py` | view owner under `app/services/overview/` |
 | economic cycle / valuation | owning module under `finance/`, `finance/loaders/`, `app/services/overview/` | [Data Quality And PIT](./data/DATA_QUALITY_AND_PIT_NOTES.md) |
 | inflation / policy / yield / equity stress | `app/jobs/inflation_policy_refresh.py`, `finance/loaders/inflation_policy.py`, `finance/inflation_policy_model.py`, `finance/inflation_policy_equity_stress.py`, `finance/inflation_policy_pipeline.py`, `app/services/overview/inflation_policy*.py` | [Inflation / Policy Engine Flow](./architecture/INFLATION_POLICY_ENGINE_FLOW.md), [Inflation / Policy Data Refresh](./runbooks/INFLATION_POLICY_DATA_REFRESH.md) |
-| Institutional Holdings / 13F | `app/web/institutional_portfolios.py`, `app/services/institutional_portfolios.py` | [Institutional Flow](./flows/INSTITUTIONAL_PORTFOLIOS_FLOW.md) |
+| Institutional Holdings / 13F | `app/web/institutional_portfolios.py`, `app/services/institutional_{portfolios,13f_refresh,quarter_review}.py`, `finance/data/institutional_13f{,_edgar}.py` | [Institutional Flow](./flows/INSTITUTIONAL_PORTFOLIOS_FLOW.md) |
 | Backtest Analysis / strategy | `app/web/backtest_analysis.py`, `app/runtime/backtest/` | [Backtest Runtime](./architecture/BACKTEST_RUNTIME_FLOW.md), [Strategy Flow](./architecture/STRATEGY_IMPLEMENTATION_FLOW.md) |
 | Practical Validation | `app/web/backtest_practical_validation/` | [Backtest UI Flow](./flows/BACKTEST_UI_FLOW.md) |
 | Final Review | `app/web/backtest_final_review/` | [Portfolio Selection Flow](./flows/PORTFOLIO_SELECTION_FLOW.md) |

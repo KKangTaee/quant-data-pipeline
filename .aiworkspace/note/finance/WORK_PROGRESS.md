@@ -7467,3 +7467,14 @@ Detailed historical logs were archived on `2026-04-13`.
   desktop·420px actual Browser QA를 통과했다.
 - stale Pattern Map assertion과 task state 4건을 정렬했다. 병합 기록과 잔여 baseline은
   `tasks/active/main-dev-master-merge-resolution-20260817/`에서 확인한다.
+
+## 2026-08-17 - Institutional Holdings hybrid quarter review 5/5 완료
+
+- 탭 진입 SEC 호출 없이 local due로 버튼을 판단하고, 클릭 후 bulk-first/EDGAR fallback으로
+  Q2 watchlist filing 12개를 실제 MySQL에 반영했다.
+- amendment-aware history, `NEW/ADD/KEEP/REDUCE/DROP`, quarter-end/public-follow proxy와
+  v3 `분기 리뷰`를 actual SEC·DB·1280/760/420 Browser QA까지 완료했다.
+- 독립 review 후 bulk fail-closed pointer, adjusted-close common-equity proxy, bulk replay skip,
+  live due clock과 저장 분기 전환 선택을 보강했다. Final Berkshire proxy는 +8.42%/+6.48%다.
+- 상세 운영/검증은 `tasks/active/institutional-holdings-hybrid-quarter-review-v1-20260817/`와
+  `docs/runbooks/INSTITUTIONAL_13F_DATASET.md`를 본다.

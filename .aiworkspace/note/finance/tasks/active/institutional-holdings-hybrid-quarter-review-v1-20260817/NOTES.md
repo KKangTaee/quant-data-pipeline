@@ -2,14 +2,15 @@
 
 ## Confirmed Facts
 
-- 2026-08-17 local DB dataset: `2026-march-april-may`; selected watchlist managers are
-  generally report period `2026-03-31` with filing date `2026-05-15`.
+- 2026-08-17 local DB bulk dataset status remains `2026-march-april-may`; explicit hybrid refresh
+  added twelve `2026-06-30` watchlist filing accessions through EDGAR fallback.
 - SEC official bulk page still lists `2026 March April May 13F` as its newest dataset.
 - Berkshire, Bridgewater and Duquesne already have `2026-06-30` 13F filings dated
   `2026-08-14` in SEC submissions data.
-- Existing raw filing/holding tables preserve accession/report period and can support historical
-  comparison, but the local DB currently lacks the prior watchlist quarter needed by the existing
-  comparison path.
+- Actual Q2 watchlist ledger contains 12 filings, including two notice-only `13F-NT`, and 1,640
+  holding rows. Notice filings count as submitted but do not promote a holdings portfolio.
+- Berkshire, Bridgewater and Duquesne now load both `2026-06-30` and `2026-03-31` effective
+  quarters from local MySQL.
 - Current `is_stale` means a collection succeeded and has usable rows; it does not compare the
   stored report period with a calendar/latest SEC period.
 
@@ -30,3 +31,6 @@
   available in August 2026.
 - “Performance” in this task always means a reported-long-holdings price proxy unless explicitly
   qualified otherwise.
+- Actual Berkshire final proxy evidence is +8.42% for quarter-end to quarter-end and +6.48% for
+  filing-to-filing, each with 99.99% prior reported-value coverage. Final review replaced raw close
+  with stored adjusted close and excludes non-common instruments.

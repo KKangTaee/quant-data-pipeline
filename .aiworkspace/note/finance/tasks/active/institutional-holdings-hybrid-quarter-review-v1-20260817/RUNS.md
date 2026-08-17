@@ -106,3 +106,59 @@
   results in the browser.
 - Focused Python regression passed (`88 passed`, three pre-existing edgar deprecation warnings and
   four subtests).
+
+## 2026-08-17 — Task 9 actual SEC / MySQL / Browser QA
+
+- Automated baseline: Python focused suites, py_compile, React Vitest/typecheck/build and
+  `git diff --check` passed before live execution.
+- Live SEC: Q2 official bulk candidate was `None` (0.241s). Berkshire accession
+  `0001193125-26-352200`, filed 2026-08-14 for 2026-06-30, normalized 89 holding rows from
+  `https://www.sec.gov/Archives/edgar/data/1067983/000119312526352200/` in 4.932s.
+- Live SEC exposed that submissions `primaryDocument` may include an XSL path while archive
+  `index.json` flattens filenames and reports XML types as `text.gif`. Added a failing actual-shape
+  regression, then basename/single-remaining-XML selection; focused live parsing passed.
+- Actual MySQL: watchlist Q2 ledger contains 12 unique accessions and 1,640 holdings. Berkshire 89,
+  Bridgewater 997 and Duquesne 95 holdings resolved to Q2; the same refresh replay kept 12 unique
+  accessions. Pershing Square and Icahn Q2 rows are notice-only `13F-NT` with no fabricated holdings.
+- Actual loader/review: Berkshire, Bridgewater and Duquesne each load Q2/Q1 effective quarters.
+  Berkshire changes are NEW 1 / ADD 7 / KEEP 15 / REDUCE 6 / DROP 1. 최초 raw-close proxy는
+  +8.01% / +6.13%였고 final review에서 corporate-action-safe 기준으로 교체했다.
+- Notice-only filings initially left the button at 10/12 because local due logic read the holdings
+  manager pointer. Added RED tests and a filing-ledger latest-period loader; actual local action is
+  now current 12/12 without promoting notice portfolios.
+- Browser QA: 1280/760/420 viewports showed v3 `분기 리뷰`, both proxy cards, coverage, filters,
+  table and mobile drawer. Host and component scroll widths equaled client widths at 760/420;
+  console error/warning count was zero. Final desktop screenshot remains untracked at
+  `institutional-holdings-hybrid-quarter-review-v1-qa.png`.
+
+## 2026-08-17 — Independent review fixes and final re-verification
+
+- Independent review reported no Critical findings and identified bulk portfolio promotion,
+  non-common/raw-close proxy coverage, startup-time due clock, bulk replay, transition selection,
+  raw error text and request pacing gaps.
+- Added fail-closed bulk pointer regressions for notice-only, empty holdings and unknown amendment;
+  the manager pointer now accepts only a complete base or unambiguous restatement. Hybrid refresh
+  checks the recorded source/report period before downloading the same bulk ZIP again.
+- Performance now requires `amount_type=SH`, rejects debt/preferred/convertible class tokens and
+  uses stored `adj_close`; raw-close-only positions are missing coverage. Actual Berkshire results
+  are quarter +8.4177% and public-follow +6.4840%, both READY with 99.9924% coverage.
+- The due decision uses the live clock, every SEC request is paced, technical exception text stays
+  in details, and all saved adjacent effective-quarter transitions are returned from one combined
+  DB price window for local React selection.
+- Final focused Python regression: `103 passed`, three dependency deprecation warnings and four
+  subtests. React: `10 passed`; TypeScript typecheck and Vite build passed.
+- Repository-wide `pytest -q --tb=short` is not green: `2465 passed, 362 failed, 4 warnings,
+  158 subtests` in 145.32s. Failures are broad pre-existing Streamlit singleton and unrelated
+  Overview/Backtest/Today contract drift; this task's focused suites are green.
+- Final Browser QA after restart showed freshness `2026-06-30`, adjusted proxy +8.42%/+6.48%,
+  no refresh action in current 12/12 state, zero console errors and 420px host/component overflow 0.
+  Final screenshot remains untracked at
+  `institutional-holdings-hybrid-quarter-review-v1-qa-final.png`.
+- Second review found three remaining boundaries. Manager UPSERT pointer/source metadata is now
+  monotonic by report period and filing date, bulk/EDGAR accepts a portfolio only when parsed rows
+  exactly equal `tableEntryTotal`, and incomplete EDGAR filings persist as filing-only evidence but
+  remain ineligible for submission freshness/replay completion. Due/partial freshness keeps the
+  actual reflected period while the action separately carries the target period; React resets a
+  historical transition selection when manager/latest payload identity changes.
+- Final independent re-review confirmed the full period/date/accession tie-break and rebuilt
+  `index-BFkGfQ8h.js`; no Critical/Important findings remain and the change is ready to integrate.

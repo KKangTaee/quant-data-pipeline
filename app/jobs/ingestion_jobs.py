@@ -2814,6 +2814,7 @@ def run_refresh_institutional_13f_hybrid(
     discovery: Callable[..., dict[str, Any] | None] = discover_sec_13f_dataset_candidate,
     bulk_collector: Callable[..., dict[str, Any]] = collect_and_store_sec_13f_dataset,
     watchlist_collector: Callable[..., dict[str, Any]] = collect_and_store_sec_13f_watchlist,
+    refresh_status_loader: Callable[[], dict[str, Any] | None] | None = None,
 ) -> JobResult:
     """Refresh one due 13F quarter via official bulk data or curated EDGAR fallback."""
 
@@ -2850,15 +2851,34 @@ def run_refresh_institutional_13f_hybrid(
             total_stages=2,
         )
         if candidate:
-            summary = bulk_collector(
-                dataset_url=str(candidate["dataset_url"]),
-                source_dataset=str(candidate.get("dataset_label") or "sec_form_13f_dataset"),
-                user_agent=user_agent,
-            )
             refresh_mode = "official_bulk"
-            rows_written = int(summary.get("rows_written") or 0)
-            status = "success" if rows_written > 0 else "no_update"
-            processed = int(summary.get("managers_written") or summary.get("holdings_written") or 0)
+            if refresh_status_loader is None:
+                from finance.loaders.institutional_13f import load_institutional_13f_refresh_status
+
+                refresh_status_loader = load_institutional_13f_refresh_status
+            recorded = refresh_status_loader() or {}
+            already_recorded = (
+                str(recorded.get("source_ref") or "") == str(candidate["dataset_url"])
+                and str(recorded.get("latest_report_period") or "") >= normalized_period
+            )
+            if already_recorded:
+                summary = {
+                    "rows_written": 0,
+                    "already_recorded": True,
+                    "source_ref": candidate["dataset_url"],
+                }
+                rows_written = 0
+                status = "no_update"
+                processed = 0
+            else:
+                summary = bulk_collector(
+                    dataset_url=str(candidate["dataset_url"]),
+                    source_dataset=str(candidate.get("dataset_label") or "sec_form_13f_dataset"),
+                    user_agent=user_agent,
+                )
+                rows_written = int(summary.get("rows_written") or 0)
+                status = "success" if rows_written > 0 else "no_update"
+                processed = int(summary.get("managers_written") or summary.get("holdings_written") or 0)
         else:
             summary = watchlist_collector(
                 ciks=requested_ciks,
@@ -2905,7 +2925,7 @@ def run_refresh_institutional_13f_hybrid(
             failed_symbols=[
                 str(row.get("cik"))
                 for row in summary.get("manager_results", [])
-                if row.get("status") == "failed"
+                if row.get("status") in {"failed", "incomplete"}
             ],
             message=message,
             details={
@@ -2926,8 +2946,8 @@ def run_refresh_institutional_13f_hybrid(
             symbols_requested=len(requested_ciks),
             symbols_processed=0,
             failed_symbols=[],
-            message=f"{normalized_period or '13F'} source discovery or refresh failed: {exc}",
-            details={"report_period": normalized_period},
+            message="13F 공개 자료 확인 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+            details={"report_period": normalized_period, "technical_error": str(exc)},
         )
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -13,6 +14,7 @@ from .institutional_13f import (
     _sync_schema,
     _build_manager_rows,
     _clean_text,
+    _complete_holding_accessions,
     _date_text,
     _float_value,
     _int_value,
@@ -25,6 +27,9 @@ from .db.mysql import MySQLClient
 
 SUPPORTED_13F_FORMS = {"13F-HR", "13F-HR/A", "13F-NT"}
 EDGAR_WATCHLIST_SOURCE = "sec_edgar_watchlist_13f"
+SEC_REQUEST_MIN_INTERVAL_SECONDS = 0.11
+_SEC_REQUEST_LOCK = threading.Lock()
+_LAST_SEC_REQUEST_AT = 0.0
 
 
 def _parallel_recent_rows(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -179,6 +184,9 @@ def normalize_sec_13f_xml_documents(
                 }
             )
 
+    complete_accessions = _complete_holding_accessions([filing], holdings)
+    if filing["accession_number"] not in complete_accessions:
+        holdings = []
     managers = _build_manager_rows([filing]) if holdings and submission_type != "13F-NT" else []
     for manager in managers:
         manager["source"] = EDGAR_WATCHLIST_SOURCE
@@ -186,6 +194,13 @@ def normalize_sec_13f_xml_documents(
 
 
 def _fetch_sec_bytes(url: str, *, user_agent: str | None, timeout: float) -> bytes:
+    global _LAST_SEC_REQUEST_AT
+    with _SEC_REQUEST_LOCK:
+        now = time.monotonic()
+        remaining = SEC_REQUEST_MIN_INTERVAL_SECONDS - (now - _LAST_SEC_REQUEST_AT)
+        if remaining > 0:
+            time.sleep(remaining)
+        _LAST_SEC_REQUEST_AT = time.monotonic()
     request = urllib.request.Request(
         url,
         headers={
@@ -306,7 +321,16 @@ def _existing_accessions(db: MySQLClient, accessions: Sequence[str]) -> set[str]
         return set()
     placeholders = ", ".join(["%s"] * len(accessions))
     rows = db.query(
-        f"SELECT accession_number FROM institutional_13f_filing WHERE accession_number IN ({placeholders})",
+        f"""
+        SELECT f.accession_number
+        FROM institutional_13f_filing f
+        LEFT JOIN institutional_13f_holding h
+          ON h.accession_number = f.accession_number
+        WHERE f.accession_number IN ({placeholders})
+        GROUP BY f.accession_number, f.submission_type, f.table_entry_total
+        HAVING UPPER(f.submission_type) = '13F-NT'
+           OR (f.table_entry_total > 0 AND COUNT(h.infotable_sk) = f.table_entry_total)
+        """,
         tuple(accessions),
     )
     return {str(row.get("accession_number") or "") for row in rows}
@@ -378,6 +402,7 @@ def collect_and_store_sec_13f_watchlist(
                     "filings": [],
                     "holdings": [],
                 }
+                incomplete_accessions: list[str] = []
                 for filing in pending_filings:
                     documents = filing_documents_fetcher(
                         filing,
@@ -396,6 +421,11 @@ def collect_and_store_sec_13f_watchlist(
                         raise ValueError(
                             "EDGAR filing identity does not match the requested CIK and report period"
                         )
+                    if (
+                        str(normalized_filing.get("submission_type") or "").upper() != "13F-NT"
+                        and not normalized["managers"]
+                    ):
+                        incomplete_accessions.append(str(normalized_filing["accession_number"]))
                     for key in combined:
                         combined[key].extend(normalized[key])
 
@@ -404,8 +434,6 @@ def collect_and_store_sec_13f_watchlist(
                     str(filing.get("submission_type") or "").upper() == "13F-NT"
                     for filing in pending_filings
                 )
-                if not has_holdings_filing and not notice_only:
-                    raise ValueError("published 13F filing has no complete owned information table")
 
                 db.begin()
                 counts = store_normalized_sec_13f_rows(
@@ -415,6 +443,21 @@ def collect_and_store_sec_13f_watchlist(
                 )
                 db.commit()
                 totals["rows_written"] += counts["rows_written"]
+                if incomplete_accessions:
+                    totals["failed_managers"] += 1
+                    manager_results.append(
+                        {
+                            "cik": cik,
+                            "status": "incomplete",
+                            "accessions": accessions,
+                            "incomplete_accessions": incomplete_accessions,
+                            "error": "published 13F filing row count does not match tableEntryTotal",
+                            **counts,
+                        }
+                    )
+                    continue
+                if not has_holdings_filing and not notice_only:
+                    raise ValueError("published 13F filing has no complete owned information table")
                 status = "notice_only" if notice_only else "updated"
                 totals[f"{status}_managers"] += 1
                 manager_results.append(

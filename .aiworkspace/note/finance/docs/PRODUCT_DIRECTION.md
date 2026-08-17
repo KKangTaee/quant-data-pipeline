@@ -52,7 +52,7 @@ Finance Console의 current top navigation은 `Research / Portfolio / Data / Help
 |---|---|---|
 | Research | Today | 미국 시장 세션, 저장된 시장 근거, 다음 일정과 대표 포트폴리오 상태를 첫 화면에서 파악한다. |
 | Research | Market Research | 현재 관측 국면·최근 변화·전환 확인 조건을 포함한 경제 사이클, 선물 매크로 재가격화·반대 근거·조건부 시나리오, 심리, 일정, S&P 500 가치평가, 변동 종목과 미국 개별 종목을 기준일·source와 함께 조사한다. |
-| Research | Institutional Holdings | delayed SEC Form 13F로 기관별 allocation·보유 변화·섹터 노출과 종목별 보유 기관을 탐색한다. |
+| Research | Institutional Holdings | delayed SEC Form 13F로 기관별 allocation·보유 변화·섹터 노출과 종목별 보유 기관을 탐색하고, 직전 보고 포트폴리오의 다음 분기·공개 후 추종 성과 proxy를 coverage와 함께 검토한다. |
 | Portfolio | Portfolio Lab | 전략을 실행·비교하고 후보를 만든 뒤 Practical Validation과 Final Review까지 이어간다. |
 | Portfolio | Portfolio Monitoring | 최종 선정 후보와 직접 등록한 미국 주식·ETF의 공통 기준 성과, 기여도, 보유 변화와 재검토 조건을 추적한다. |
 | Data | Data Operations | Market Research·Portfolio Lab·Institutional Holdings·Practical Validation 목적별로 evidence를 준비하고, 공식 파일 등록·문제 복구·실행 이력·고급 도구로 이어간다. |

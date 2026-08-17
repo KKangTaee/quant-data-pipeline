@@ -296,6 +296,22 @@ def test_normalize_sec_13f_notice_does_not_fabricate_holdings() -> None:
     assert normalized["managers"] == []
 
 
+def test_normalize_sec_13f_incomplete_information_table_preserves_only_filing() -> None:
+    from finance.data.institutional_13f_edgar import normalize_sec_13f_xml_documents
+
+    normalized = normalize_sec_13f_xml_documents(
+        primary_xml=PRIMARY_13F_XML.replace("<tableEntryTotal>1</tableEntryTotal>", "<tableEntryTotal>2</tableEntryTotal>"),
+        information_xml=INFORMATION_13F_XML,
+        accession_number="0001193125-26-352299",
+        filing_date="2026-08-14",
+        source_ref="https://www.sec.gov/Archives/edgar/data/1067983/000119312526352299/",
+    )
+
+    assert len(normalized["filings"]) == 1
+    assert normalized["managers"] == []
+    assert normalized["holdings"] == []
+
+
 def test_store_normalized_sec_13f_rows_returns_stable_upsert_counts() -> None:
     from finance.data.institutional_13f import store_normalized_sec_13f_rows
 
@@ -425,6 +441,55 @@ def test_watchlist_collection_commits_each_manager_and_replay_is_idempotent() ->
     assert db.rollback_count == 1
     assert second["already_current_managers"] == 1
     assert second["rows_written"] == 0
+
+
+def test_watchlist_collection_preserves_incomplete_filing_without_portfolio_rows() -> None:
+    from finance.data.institutional_13f_edgar import collect_and_store_sec_13f_watchlist
+
+    class FakeDB:
+        def __init__(self) -> None:
+            self.batches: list[tuple[str, list[dict]]] = []
+            self.commit_count = 0
+
+        def use_db(self, _name: str) -> None: return None
+        def begin(self) -> None: return None
+        def commit(self) -> None: self.commit_count += 1
+        def rollback(self) -> None: return None
+        def close(self) -> None: return None
+        def execute(self, _sql: str, _params=None) -> None: return None
+        def executemany(self, sql: str, rows: list[dict]) -> None: self.batches.append((sql, rows))
+        def query(self, _sql: str, _params=None) -> list[dict]: return []
+
+    db = FakeDB()
+    result = collect_and_store_sec_13f_watchlist(
+        ciks=["0001067983"],
+        report_period="2026-06-30",
+        db_factory=lambda *_args, **_kwargs: db,
+        sync_schema=False,
+        submissions_fetcher=lambda *_args, **_kwargs: {
+            "filings": {"recent": {
+                "accessionNumber": ["0001193125-26-352299"],
+                "filingDate": ["2026-08-14"],
+                "reportDate": ["2026-06-30"],
+                "form": ["13F-HR"],
+                "primaryDocument": ["primary.xml"],
+            }}
+        },
+        filing_documents_fetcher=lambda *_args, **_kwargs: {
+            "primary_xml": PRIMARY_13F_XML.replace("<tableEntryTotal>1</tableEntryTotal>", "<tableEntryTotal>2</tableEntryTotal>"),
+            "information_xml": INFORMATION_13F_XML,
+            "source_ref": "https://www.sec.gov/Archives/edgar/data/1067983/000119312526352299/",
+        },
+        request_sleep=0,
+    )
+
+    assert result["failed_managers"] == 1
+    assert result["rows_written"] == 1
+    assert result["manager_results"][0]["status"] == "incomplete"
+    assert db.commit_count == 1
+    assert any("INSERT INTO institutional_13f_filing" in sql for sql, _rows in db.batches)
+    assert not any("INSERT INTO institutional_13f_manager" in sql for sql, _rows in db.batches)
+    assert not any("INSERT INTO institutional_13f_holding" in sql for sql, _rows in db.batches)
 
 
 def test_effective_quarter_restatement_replaces_and_addition_extends() -> None:
@@ -634,6 +699,35 @@ def test_hybrid_refresh_uses_bulk_when_official_window_is_published() -> None:
     assert result["details"]["refresh_mode"] == "official_bulk"
 
 
+def test_hybrid_refresh_skips_already_recorded_bulk_dataset() -> None:
+    from app.jobs.ingestion_jobs import run_refresh_institutional_13f_hybrid
+
+    calls: list[str] = []
+    result = run_refresh_institutional_13f_hybrid(
+        report_period="2026-06-30",
+        ciks=["0001067983"],
+        discovery=lambda *_args, **_kwargs: {
+            "dataset_url": "https://www.sec.gov/files/q2.zip",
+            "dataset_label": "Q2 official",
+        },
+        refresh_status_loader=lambda: {
+            "source_ref": "https://www.sec.gov/files/q2.zip",
+            "latest_report_period": "2026-06-30",
+        },
+        bulk_collector=lambda **_kwargs: calls.append("bulk") or {"rows_written": 100},
+    )
+
+    assert calls == []
+    assert result["status"] == "no_update"
+    assert result["rows_written"] == 0
+
+
+def test_page_refresh_deadline_clock_is_not_runtime_loaded_at() -> None:
+    page = importlib.import_module("app.web.institutional_portfolios")
+
+    assert page._refresh_as_of_date(now="2026-08-17") == pd.Timestamp("2026-08-17").date()
+
+
 def test_hybrid_refresh_falls_back_to_edgar_and_preserves_partial_counts() -> None:
     from app.jobs.ingestion_jobs import run_refresh_institutional_13f_hybrid
 
@@ -674,7 +768,8 @@ def test_hybrid_refresh_discovery_failure_does_not_run_collectors() -> None:
 
     assert calls == []
     assert result["status"] == "failed"
-    assert "429" in result["message"]
+    assert "429" not in result["message"]
+    assert "429" in result["details"]["technical_error"]
 
 
 def test_local_page_action_uses_watchlist_manager_periods_without_discovery(monkeypatch) -> None:
@@ -726,7 +821,8 @@ def test_latest_submission_periods_include_holdings_and_notice_filings(monkeypat
             assert name == "finance_meta"
 
         def query(self, sql: str, params: tuple[str, ...]) -> list[dict]:
-            assert "MAX(period_of_report)" in sql
+            assert "MAX(eligible.period_of_report)" in sql
+            assert "COUNT(h.infotable_sk)" in sql
             assert params == ("0001067983", "0001336528")
             return [
                 {"cik": "0001067983", "latest_report_period": "2026-06-30"},
@@ -744,6 +840,33 @@ def test_latest_submission_periods_include_holdings_and_notice_filings(monkeypat
         "0001067983": "2026-06-30",
         "0001336528": "2026-06-30",
     }
+
+
+def test_sec_edgar_fetch_paces_every_request(monkeypatch) -> None:
+    module = importlib.import_module("finance.data.institutional_13f_edgar")
+    monotonic_values = iter([1.0, 1.0, 1.05, 1.11])
+    sleeps: list[float] = []
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self) -> bytes:
+            return b"{}"
+
+    monkeypatch.setattr(module, "_LAST_SEC_REQUEST_AT", 0.0)
+    monkeypatch.setattr(module.time, "monotonic", lambda: next(monotonic_values))
+    monkeypatch.setattr(module.time, "sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr(module.urllib.request, "urlopen", lambda *_args, **_kwargs: FakeResponse())
+
+    module._fetch_sec_bytes("https://data.sec.gov/one", user_agent="test test@example.com", timeout=1)
+    module._fetch_sec_bytes("https://data.sec.gov/two", user_agent="test test@example.com", timeout=1)
+
+    assert len(sleeps) == 1
+    assert round(sleeps[0], 2) == 0.06
 
 
 def test_manual_refresh_event_runs_hybrid_job_without_accepting_source_url(monkeypatch) -> None:
