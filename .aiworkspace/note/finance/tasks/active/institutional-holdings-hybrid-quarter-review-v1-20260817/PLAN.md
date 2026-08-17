@@ -264,7 +264,7 @@ git commit -m "기능: SEC 13F 통합 데이터셋 발견 추가"
   *, source_ref) -> dict[str, int]`
 - Consumes: Task 5 hybrid job.
 
-- [ ] **Step 1: Write submissions and XML parser tests**
+- [x] **Step 1: Write submissions and XML parser tests**
 
 Use namespace-bearing inline fixtures for one base `13F-HR`, one `13F-HR/A` restatement and one
 `13F-NT`. Assert:
@@ -290,13 +290,13 @@ assert normalized["holdings"][0]["infotable_sk"] == 1
 The NT fixture must return filing metadata with no holdings. The watchlist collector labels that
 manager `notice_only` from the submission type and must not fabricate an empty portfolio.
 
-- [ ] **Step 2: Run parser tests and confirm RED**
+- [x] **Step 2: Run parser tests and confirm RED**
 
 Run: `.venv/bin/python -m pytest tests/test_institutional_13f_refresh.py -q`
 
 Expected: missing EDGAR module/functions.
 
-- [ ] **Step 3: Implement EDGAR discovery and document selection**
+- [x] **Step 3: Implement EDGAR discovery and document selection**
 
 Fetch `https://data.sec.gov/submissions/CIK{cik10}.json`, filter recent rows by exact report date
 and `13F-HR`, `13F-HR/A`, or `13F-NT`, then fetch the accession directory `index.json` to identify
@@ -307,7 +307,7 @@ Use `ElementTree` local-name helpers so namespace prefixes do not matter. Preser
 flags/type, report type, totals, voting authority and the existing normalized row keys. Assign
 `infotable_sk` from 1-based document order, matching the SEC flattened-table row order contract.
 
-- [ ] **Step 4: Extract reusable persistence from the bulk collector**
+- [x] **Step 4: Extract reusable persistence from the bulk collector**
 
 Move the existing manager/filing/holding/mapping upserts behind:
 
@@ -324,7 +324,7 @@ def store_normalized_sec_13f_rows(
 Keep `collect_and_store_sec_13f_dataset` behavior and output backward-compatible. Add a regression
 test proving the bulk collector still reports managers/filings/holdings/mapping counts.
 
-- [ ] **Step 5: Implement one transaction per manager**
+- [x] **Step 5: Implement one transaction per manager**
 
 For every requested CIK:
 
@@ -352,14 +352,14 @@ Return:
 }
 ```
 
-- [ ] **Step 6: Test transaction isolation and replay**
+- [x] **Step 6: Test transaction isolation and replay**
 
 Use a fake DB with `begin/commit/rollback/execute/executemany/query`. Assert a second identical
 accession uses UPSERT and reports `already_current` or the same stable row counts without creating
 new logical holdings. Force the second manager parser to fail and assert the first manager commits
 while the second rolls back.
 
-- [ ] **Step 7: Run Task 3 verification and commit**
+- [x] **Step 7: Run Task 3 verification and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_institutional_13f_refresh.py -q

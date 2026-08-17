@@ -714,6 +714,32 @@ def _upsert_holding_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> int:
     return len(rows)
 
 
+def store_normalized_sec_13f_rows(
+    db: MySQLClient,
+    normalized: dict[str, list[dict[str, Any]]],
+    *,
+    source_ref: str | None,
+) -> dict[str, int]:
+    """UPSERT one normalized 13F row bundle and return deterministic attempted-row counts."""
+
+    manager_rows = _upsert_manager_rows(db, list(normalized.get("managers") or []))
+    filing_rows = _upsert_filing_rows(db, list(normalized.get("filings") or []))
+    holding_rows = _upsert_holding_rows(db, list(normalized.get("holdings") or []))
+    map_rows = build_cusip_symbol_map_rows(
+        holdings=normalized.get("holdings") or [],
+        asset_profiles=_load_asset_profile_rows_for_mapping(db),
+        source_ref=source_ref,
+    )
+    mapping_rows = _upsert_cusip_symbol_map_rows(db, map_rows)
+    return {
+        "managers_written": manager_rows,
+        "filings_written": filing_rows,
+        "holdings_written": holding_rows,
+        "cusip_symbol_maps_written": mapping_rows,
+        "rows_written": manager_rows + filing_rows + holding_rows,
+    }
+
+
 def _max_date_text(rows: Iterable[dict[str, Any]], key: str) -> str | None:
     dates = [_date_text(row.get(key)) for row in rows]
     present = [value for value in dates if value]
@@ -841,15 +867,11 @@ def collect_and_store_sec_13f_dataset(
     try:
         db.use_db(DB_META)
         _sync_schema(db)
-        manager_rows = _upsert_manager_rows(db, normalized["managers"])
-        filing_rows = _upsert_filing_rows(db, normalized["filings"])
-        holding_rows = _upsert_holding_rows(db, normalized["holdings"])
-        map_rows = build_cusip_symbol_map_rows(
-            holdings=normalized["holdings"],
-            asset_profiles=_load_asset_profile_rows_for_mapping(db),
-            source_ref=source_ref,
-        )
-        mapping_rows = _upsert_cusip_symbol_map_rows(db, map_rows)
+        write_counts = store_normalized_sec_13f_rows(db, normalized, source_ref=source_ref)
+        manager_rows = write_counts["managers_written"]
+        filing_rows = write_counts["filings_written"]
+        holding_rows = write_counts["holdings_written"]
+        mapping_rows = write_counts["cusip_symbol_maps_written"]
         refresh_status.update(
             {
                 "managers_written": manager_rows,

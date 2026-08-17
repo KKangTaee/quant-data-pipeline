@@ -43,3 +43,14 @@
   the app service. The app service continues to expose the approved public helper.
 - The no-auto-network boundary remains covered by the injected local action composition test; no
   page render path imports or calls discovery at this stage.
+
+## 2026-08-17 — Task 3 EDGAR watchlist ingestion
+
+- RED: missing EDGAR module, missing shared persistence helper and missing watchlist collector each
+  failed before implementation. A separate identity mutation exposed that a requested manager
+  could otherwise accept another CIK's XML.
+- GREEN: exact report-period submissions filtering, namespace-insensitive primary/information XML,
+  `13F-NT` no-holdings behavior, shared UPSERT counts, per-manager commit/rollback, replay skip and
+  requested-CIK validation passed (`13 passed`).
+- Regression: the existing Institutional Portfolios suite passed (`58 passed`, existing edgar
+  deprecation warnings only).
