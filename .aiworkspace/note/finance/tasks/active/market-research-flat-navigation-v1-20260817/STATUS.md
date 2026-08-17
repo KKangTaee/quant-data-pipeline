@@ -1,6 +1,6 @@
 # Status
 
-State: complete
+State: active
 
 - User approved A editorial rail on 2026-08-17.
 - User requested smaller mobile subtabs that do not cover or dominate the screen.
@@ -9,3 +9,5 @@ State: complete
 - Automated tests, typecheck, production builds and finance hygiene checks passed.
 - Real Browser QA passed for direct 경기 국면/물가·정책 routes and 1280/736/360px navigation.
 - Final diff review confirmed that unrelated registry, run history and generated QA artifacts remain unstaged.
+- Follow-up approved on 2026-08-17: mobile family and view navigation will use the same design and wrapping rules as desktop.
+- Follow-up design is awaiting written-spec confirmation before implementation planning.
