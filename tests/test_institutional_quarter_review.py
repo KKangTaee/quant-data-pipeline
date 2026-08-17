@@ -239,3 +239,37 @@ def test_quarter_review_loader_reads_one_combined_price_window_without_fetching(
             "timeframe": "1d",
         }
     ]
+
+
+def test_workbench_v3_payload_carries_python_owned_quarter_review() -> None:
+    from app.services.institutional_portfolios import build_institutional_workbench_payload
+
+    review = {
+        "available": True,
+        "change_summary": {"NEW": 0, "ADD": 0, "KEEP": 1, "REDUCE": 0, "DROP": 0},
+        "changes": [{"cusip": "037833100", "change_type": "KEEP"}],
+        "proxies": {
+            "quarter_holdings_proxy": {"status": "READY", "covered_sleeve_return_pct": 10.0},
+            "public_follow_proxy": {"status": "LIMITED", "covered_sleeve_return_pct": 8.0},
+        },
+    }
+    refresh_action = {
+        "action_id": "refresh_institutional_13f",
+        "visible": True,
+        "status": "due",
+        "target_report_period": "2026-06-30",
+    }
+
+    payload = build_institutional_workbench_payload(
+        model={"summary": {}, "holdings": [], "changes": [], "sector_exposure": []},
+        managers=[],
+        selected_cik="0001067983",
+        interest_model=None,
+        quarter_review=review,
+        refresh_action=refresh_action,
+    )
+
+    assert payload["schema_version"] == "institutional_portfolios_workbench_v3"
+    assert payload["refresh_action"] == refresh_action
+    assert payload["quarter_review"] == review
+    assert payload["quarter_review"]["change_summary"]["KEEP"] == 1

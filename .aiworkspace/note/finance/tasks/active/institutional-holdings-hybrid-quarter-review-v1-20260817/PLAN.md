@@ -665,7 +665,7 @@ git commit -m "기능: 13F 분기 변화와 두 성과 proxy 추가"
 - Adds refresh action states from Task 1 and result states from Task 5.
 - Consumes: Task 6 `load_institutional_quarter_review_model`.
 
-- [ ] **Step 1: Add RED payload contract tests**
+- [x] **Step 1: Add RED payload contract tests**
 
 Assert the payload contains:
 
@@ -679,30 +679,30 @@ assert payload["quarter_review"]["change_summary"]["KEEP"] == 1
 
 Also test one-quarter empty state, partial refresh result and current state with no primary action.
 
-- [ ] **Step 2: Run focused tests and confirm RED**
+- [x] **Step 2: Run focused tests and confirm RED**
 
 Run: `.venv/bin/python -m pytest tests/test_institutional_portfolios.py -q`
 
-- [ ] **Step 3: Extend payload builder without duplicating calculations**
+- [x] **Step 3: Extend payload builder without duplicating calculations**
 
 Add `quarter_review: dict | None` and `refresh_action: dict | None` parameters. The builder formats
 labels and presentation rows but does not recalculate returns or change types. Remove default bulk
 dataset label/URL from the healthy payload.
 
-- [ ] **Step 4: Load review once per selected manager render**
+- [x] **Step 4: Load review once per selected manager render**
 
 After the portfolio model succeeds, call `load_institutional_quarter_review_model(selected_cik)` and
 pass its model into the workbench payload. On review loader failure, keep the main portfolio live
 and provide `quarter_review.available=False` with a concise reason and technical detail outside the
 primary UI.
 
-- [ ] **Step 5: Update preview/fallback contracts**
+- [x] **Step 5: Update preview/fallback contracts**
 
 Preview returns v3 with invisible/not-ready refresh action and unavailable quarter review. Fallback
 Streamlit copy must not expose the old hardcoded URL as the normal action; link users to Data
 Operations for advanced URL/local ZIP recovery.
 
-- [ ] **Step 6: Run Task 7 verification and commit**
+- [x] **Step 6: Run Task 7 verification and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_institutional_portfolios.py -q

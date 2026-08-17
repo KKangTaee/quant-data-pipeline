@@ -6,7 +6,7 @@ from typing import Any
 
 import pandas as pd
 
-from finance.data.institutional_13f import DEFAULT_SEC_13F_DATASET_LABEL, DEFAULT_SEC_13F_DATASET_URL, SEC_13F_SOURCE_CAVEATS
+from finance.data.institutional_13f import SEC_13F_SOURCE_CAVEATS
 from finance.loaders.institutional_13f import (
     load_institutional_13f_interest,
     load_institutional_13f_manager_watchlist,
@@ -1021,12 +1021,17 @@ def build_institutional_refresh_status_model(row: dict[str, Any] | None = None, 
 
 def _refresh_action_payload() -> dict[str, Any]:
     return {
-        "action_id": "collect_sec_13f_dataset",
-        "label": "최신 13F 데이터 갱신",
-        "primary": False,
-        "description": "공식 SEC Form 13F dataset을 MySQL에 적재합니다. 이 화면은 저장된 row만 읽습니다.",
-        "default_dataset_label": DEFAULT_SEC_13F_DATASET_LABEL,
-        "default_dataset_url": DEFAULT_SEC_13F_DATASET_URL,
+        "action_id": "refresh_institutional_13f",
+        "visible": False,
+        "status": "not_ready",
+        "target_report_period": None,
+        "target_quarter_label": "",
+        "label": "",
+        "description": "저장된 보고 분기 기준으로 다음 갱신 시점을 판단합니다.",
+        "completed_managers": 0,
+        "expected_managers": len(INSTITUTIONAL_MANAGER_WATCHLIST),
+        "pending_ciks": [],
+        "next_due_date": None,
     }
 
 
@@ -1509,6 +1514,7 @@ def build_institutional_workbench_payload(
     price_refresh_result: dict[str, Any] | None = None,
     refresh_result: dict[str, Any] | None = None,
     refresh_action: dict[str, Any] | None = None,
+    quarter_review: dict[str, Any] | None = None,
     mode: str = "live",
     data_message: str = "",
     refresh_status: dict[str, Any] | None = None,
@@ -1543,7 +1549,7 @@ def build_institutional_workbench_payload(
     manager_search_result_count = len(list(managers or [])) if clean_manager_search else 0
 
     return {
-        "schema_version": "institutional_portfolios_workbench_v2",
+        "schema_version": "institutional_portfolios_workbench_v3",
         "component": "InstitutionalPortfoliosWorkbench",
         "mode": mode,
         "data_state": {
@@ -1571,6 +1577,14 @@ def build_institutional_workbench_payload(
         "freshness": freshness,
         "refresh_action": dict(refresh_action) if refresh_action is not None else _refresh_action_payload(),
         "refresh_result": dict(refresh_result or {}),
+        "quarter_review": dict(quarter_review or {
+            "available": False,
+            "reason": "비교할 이전 보고 분기가 저장되어 있지 않습니다.",
+            "transition": {},
+            "change_summary": {},
+            "changes": [],
+            "proxies": {},
+        }),
         "hero": {
             "manager_name": manager_name,
             "cik": _text(summary.get("cik")) or selected_cik,

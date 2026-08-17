@@ -231,7 +231,7 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
             interest_model=None,
         )
 
-        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v2")
+        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v3")
         self.assertEqual(payload["holdings_explorer"]["default_page_size"], 50)
         self.assertEqual(len(payload["holdings_explorer"]["rows"]), 993)
         self.assertEqual(payload["coverage"]["holding_count_total"], 993)
@@ -1106,7 +1106,7 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
             },
         )
 
-        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v2")
+        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v3")
         self.assertEqual(payload["component"], "InstitutionalPortfoliosWorkbench")
         self.assertEqual(payload["mode"], "live")
         self.assertEqual(payload["hero"]["manager_name"], "BERKSHIRE HATHAWAY INC")
@@ -1119,8 +1119,8 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertTrue(payload["change_board"]["comparison_available"])
         self.assertEqual(payload["sector_exposure"]["bars"][0]["sector"], "Technology")
         self.assertEqual(payload["freshness"]["latest_report_period"], "2026-03-31")
-        self.assertEqual(payload["refresh_action"]["action_id"], "collect_sec_13f_dataset")
-        self.assertFalse(payload["refresh_action"]["primary"])
+        self.assertEqual(payload["refresh_action"]["action_id"], "refresh_institutional_13f")
+        self.assertFalse(payload["refresh_action"]["visible"])
         self.assertTrue(payload["source_caveats"]["visible"])
         self.assertFalse(payload["boundary"]["trade_signal"])
 
@@ -1278,15 +1278,16 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
 
         payload = build_institutional_preview_workbench_payload(message="Local 13F DB is empty.")
 
-        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v2")
+        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v3")
         self.assertEqual(payload["mode"], "preview")
         self.assertTrue(payload["data_state"]["is_preview"])
         self.assertIn("preview", payload["data_state"]["label"].lower())
         self.assertTrue(payload["allocation"]["segments"])
         self.assertFalse(payload["boundary"]["trade_signal"])
         self.assertFalse(payload["boundary"]["live_trading"])
-        self.assertEqual(payload["refresh_action"]["action_id"], "collect_sec_13f_dataset")
-        self.assertIn("13F", payload["refresh_action"]["label"])
+        self.assertEqual(payload["refresh_action"]["action_id"], "refresh_institutional_13f")
+        self.assertFalse(payload["refresh_action"]["visible"])
+        self.assertFalse(payload["quarter_review"]["available"])
 
 
 class InstitutionalPortfoliosNavigationTests(unittest.TestCase):

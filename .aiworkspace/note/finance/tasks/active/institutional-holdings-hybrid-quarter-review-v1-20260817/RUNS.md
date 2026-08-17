@@ -85,3 +85,11 @@
   NOT_AVAILABLE thresholds and first/last boundary closes are deterministic (`7 passed`).
 - Both quarter-end and filing-to-filing proxies use prior reported-value weights. Focused combined
   regression passed (`80 passed`, existing edgar deprecation warnings only).
+
+## 2026-08-17 — Task 7 Python v3 contract
+
+- RED: workbench rejected the new `quarter_review` argument and still emitted v2.
+- GREEN: v3 carries the Python-owned review unchanged, uses the conditional local refresh action,
+  and preview emits invisible `not_ready` plus a two-quarter unavailable explanation.
+- The page loads review once after the selected portfolio succeeds; a review-only failure preserves
+  the latest portfolio and emits a bounded unavailable model. Institutional tests passed (`58 passed`).

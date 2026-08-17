@@ -12,6 +12,7 @@ from app.jobs.ingestion_jobs import (
     run_refresh_institutional_13f_hybrid,
 )
 from app.services.institutional_13f_refresh import build_institutional_refresh_action
+from app.services.institutional_quarter_review import load_institutional_quarter_review_model
 from app.services.institutional_portfolios import (
     INSTITUTIONAL_MANAGER_WATCHLIST,
     INSTITUTIONAL_PORTFOLIO_CAVEATS,
@@ -619,6 +620,18 @@ def render_institutional_portfolios_page(
         return
 
     model = dict(portfolio_result.get("model") or {})
+    try:
+        quarter_review = load_institutional_quarter_review_model(str(selected_manager.get("cik") or ""))
+    except Exception as exc:
+        quarter_review = {
+            "available": False,
+            "reason": "분기 리뷰를 불러오지 못했습니다. 저장된 최신 포트폴리오는 계속 볼 수 있습니다.",
+            "technical_detail": str(exc),
+            "transition": {},
+            "change_summary": {},
+            "changes": [],
+            "proxies": {},
+        }
     interest_query = str(st.session_state.get("institutional_interest_query") or "").strip()
     interest_model: dict[str, Any] | None = None
     if interest_query:
@@ -670,6 +683,7 @@ def render_institutional_portfolios_page(
             as_of_date=(loaded_at or datetime.now()).date(),
             last_result=dict(st.session_state.get("institutional_13f_refresh_result") or {}),
         ),
+        quarter_review=quarter_review,
         mode="live",
         refresh_status=refresh_status,
         preserve_manager_order=search_active,
