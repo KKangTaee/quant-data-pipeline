@@ -3237,12 +3237,17 @@ a {
   gap: 20px;
 }
 
+.ip-review-contribution-guide { grid-column: 1 / -1; padding: 12px 14px; border: 1px solid #dce6ef; border-radius: 10px; background: #f7fafc; }
+.ip-review-contribution-guide strong, .ip-review-contribution-guide span { display: block; }
+.ip-review-contribution-guide span { margin-top: 4px; color: #66788c; font-size: 12px; }
 .ip-review-contribution-list h4 { margin: 0 0 10px; color: #172337; }
-.ip-review-contribution-list > div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #e8eef4; }
+.ip-review-contribution-item { padding: 10px 0; border-bottom: 1px solid #e8eef4; }
 .ip-review-contribution-list span strong,
 .ip-review-contribution-list span small { display: block; }
 .ip-review-contribution-list span small { margin-top: 2px; color: #7c8b9d; }
-.ip-review-contribution-list em { color: #315674; font-style: normal; font-weight: 800; }
+.ip-review-contribution-item dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 8px 0 0; }
+.ip-review-contribution-item dt { color: #7c8b9d; font-size: 10px; }
+.ip-review-contribution-item dd { margin: 2px 0 0; color: #315674; font-size: 12px; font-weight: 800; }
 
 .ip-quarter-review-empty { padding: 32px !important; text-align: center; }
 .ip-quarter-review-empty span { color: #6f8094; font-size: 11px; font-weight: 800; }
@@ -3534,6 +3539,10 @@ a {
 
   .ip-review-transition,
   .ip-review-contributions {
+    grid-template-columns: 1fr;
+  }
+
+  .ip-review-contribution-item dl {
     grid-template-columns: 1fr;
   }
 

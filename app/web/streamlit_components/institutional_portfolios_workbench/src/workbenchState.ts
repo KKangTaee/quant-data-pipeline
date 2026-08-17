@@ -64,6 +64,12 @@ export function queriesMatch(left: string | null | undefined, right: string | nu
   return normalizedLeft === normalizedRight;
 }
 
+export function signedPercentagePointLabel(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return "-";
+  const numeric = Number(value);
+  return `${numeric > 0 ? "+" : ""}${numeric.toFixed(2)}%p`;
+}
+
 export function filterSortAndPaginateHoldings<T extends HoldingStateRow>(options: {
   rows: T[];
   search: string;

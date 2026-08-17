@@ -4,6 +4,7 @@ import {
   filterQuarterReviewRows,
   filterSortAndPaginateHoldings,
   queriesMatch,
+  signedPercentagePointLabel,
   studioDestination,
 } from "./workbenchState";
 
@@ -123,5 +124,14 @@ describe("quarter review filters", () => {
   it("combines change type with symbol, issuer, or CUSIP search", () => {
     expect(filterQuarterReviewRows(changes, { changeType: "ADD", query: "apple" })).toEqual([changes[0]]);
     expect(filterQuarterReviewRows(changes, { changeType: "all", query: "459200101" })).toEqual([changes[1]]);
+  });
+});
+
+describe("signedPercentagePointLabel", () => {
+  it("formats contribution as signed percentage points", () => {
+    expect(signedPercentagePointLabel(2)).toBe("+2.00%p");
+    expect(signedPercentagePointLabel(-1.25)).toBe("-1.25%p");
+    expect(signedPercentagePointLabel(0)).toBe("0.00%p");
+    expect(signedPercentagePointLabel(null)).toBe("-");
   });
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { filterQuarterReviewRows } from "./workbenchState";
+import { filterQuarterReviewRows, signedPercentagePointLabel } from "./workbenchState";
 
 type ProxyRow = {
   cusip: string;
@@ -96,16 +96,20 @@ function ProxyCard({ title, subtitle, proxy }: { title: string; subtitle: string
   );
 }
 
-function ContributionList({ title, rows }: { title: string; rows: ProxyRow[] }) {
+function ContributionList({ title, rows, emptyText }: { title: string; rows: ProxyRow[]; emptyText: string }) {
   return (
     <div className="ip-review-contribution-list">
       <h4>{title}</h4>
       {rows.length ? rows.map((row) => (
-        <div key={`${title}-${row.cusip}`}>
+        <div className="ip-review-contribution-item" key={`${title}-${row.cusip}`}>
           <span><strong>{row.holding_symbol || row.cusip}</strong><small>{row.issuer_name}</small></span>
-          <em>{percentLabel(row.contribution_pct)}</em>
+          <dl>
+            <div><dt>이전 보고 비중</dt><dd>{numberLabel(row.weight_pct)}%</dd></div>
+            <div><dt>종목 수익률</dt><dd>{percentLabel(row.return_pct)}</dd></div>
+            <div><dt>포트폴리오 기여</dt><dd>{signedPercentagePointLabel(row.contribution_pct)}</dd></div>
+          </dl>
         </div>
-      )) : <p>표시할 가격 기여 근거가 없습니다.</p>}
+      )) : <p>{emptyText}</p>}
     </div>
   );
 }
@@ -192,7 +196,7 @@ export function QuarterReviewPanel({ review: suppliedReview }: { review?: Quarte
         </div>
         <div className="ip-review-table-wrap">
           <table className="ip-review-table">
-            <thead><tr><th>변화</th><th>종목</th><th>이전 수량</th><th>현재 수량</th><th>이전 비중</th><th>현재 비중</th><th>분기 수익</th><th>기여도</th></tr></thead>
+            <thead><tr><th>변화</th><th>종목</th><th>이전 수량</th><th>현재 수량</th><th>이전 비중</th><th>현재 비중</th><th>분기 수익</th><th>수익 기여(%p)</th></tr></thead>
             <tbody>
               {filteredChanges.map((row) => (
                 <tr key={`${row.cusip}-${row.change_type}`}>
@@ -200,7 +204,7 @@ export function QuarterReviewPanel({ review: suppliedReview }: { review?: Quarte
                   <td><strong>{row.holding_symbol || row.cusip}</strong><small>{row.issuer_name}</small></td>
                   <td>{numberLabel(row.previous_amount)}</td><td>{numberLabel(row.current_amount)}</td>
                   <td>{numberLabel(row.previous_weight_pct)}%</td><td>{numberLabel(row.current_weight_pct)}%</td>
-                  <td>{percentLabel(row.symbol_return_pct)}</td><td>{percentLabel(row.contribution_pct)}</td>
+                  <td>{percentLabel(row.symbol_return_pct)}</td><td>{signedPercentagePointLabel(row.contribution_pct)}</td>
                 </tr>
               ))}
             </tbody>
@@ -210,10 +214,13 @@ export function QuarterReviewPanel({ review: suppliedReview }: { review?: Quarte
       </div>
 
       <div className="ip-panel ip-review-contributions">
-        <ContributionList title="기여 상위" rows={quarterProxy?.top_contributors || []} />
-        <ContributionList title="기여 하위" rows={quarterProxy?.top_detractors || []} />
+        <div className="ip-review-contribution-guide">
+          <strong>포트폴리오 수익 기여 = 이전 보고 비중 × 종목 수익률</strong>
+          <span>예: 비중 20% × 수익률 +10% = 포트폴리오 수익률 +2.0%p 기여</span>
+        </div>
+        <ContributionList title="수익 기여 상위" rows={quarterProxy?.top_contributors || []} emptyText="수익 기여 종목이 없습니다." />
+        <ContributionList title="손실 기여 상위" rows={quarterProxy?.top_detractors || []} emptyText="손실 기여 종목이 없습니다." />
       </div>
-      <p className="ip-note">{review.caveat}</p>
     </section>
   );
 }
