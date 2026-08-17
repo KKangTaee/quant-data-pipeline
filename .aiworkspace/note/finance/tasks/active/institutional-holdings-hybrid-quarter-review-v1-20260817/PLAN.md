@@ -74,7 +74,7 @@ dataset URL을 기본값으로 보여주므로 사용자가 같은 대형 ZIP을
   expected_ciks, last_result=None) -> dict[str, Any]`
 - Consumes later: Task 5 injects the returned action into the workbench payload.
 
-- [ ] **Step 1: Write failing calendar and action tests**
+- [x] **Step 1: Write failing calendar and action tests**
 
 ```python
 from app.services.institutional_13f_refresh import (
@@ -104,13 +104,13 @@ def test_refresh_action_is_local_only_and_targets_latest_due_quarter() -> None:
     assert action["action_id"] == "refresh_institutional_13f"
 ```
 
-- [ ] **Step 2: Run the focused tests and confirm RED**
+- [x] **Step 2: Run the focused tests and confirm RED**
 
 Run: `.venv/bin/python -m pytest tests/test_institutional_13f_refresh.py -q`
 
 Expected: import failure for `app.services.institutional_13f_refresh`.
 
-- [ ] **Step 3: Implement the pure calendar/action service**
+- [x] **Step 3: Implement the pure calendar/action service**
 
 Use `pandas.tseries.holiday.USFederalHolidayCalendar` and
 `CustomBusinessDay(calendar=USFederalHolidayCalendar())`. Normalize every report period to a real
@@ -138,14 +138,14 @@ Before the first due quarter, return `status="not_ready"`, `visible=False`, and 
 all expected managers are on or beyond the latest due period, return `status="current"` and
 `visible=False`.
 
-- [ ] **Step 4: Add service composition coverage without network mocks**
+- [x] **Step 4: Add service composition coverage without network mocks**
 
 Update `build_institutional_workbench_payload` to accept `refresh_action: dict | None` rather than
 always constructing a hardcoded bulk URL action. Add a test that passes the pure action and asserts
 the identical dict appears in the payload. The test must not patch `urllib`, proving payload build
 does not perform discovery.
 
-- [ ] **Step 5: Run Task 1 tests**
+- [x] **Step 5: Run Task 1 tests**
 
 Run:
 
@@ -157,7 +157,7 @@ Run:
 Expected: all tests pass; legacy payload assertions are updated from hardcoded URL fields to the
 new conditional action contract.
 
-- [ ] **Step 6: Commit Task 1**
+- [x] **Step 6: Commit Task 1**
 
 ```bash
 git add app/services/institutional_13f_refresh.py app/services/institutional_portfolios.py \

@@ -24,3 +24,11 @@
   missing-price fail-closed rules, React calculation boundary and actual QA closeout gate.
 - Selected inline execution because this session is not authorized to delegate implementation to
   subagents.
+
+## 2026-08-17 — Task 1 local due decision
+
+- RED: `tests/test_institutional_13f_refresh.py` failed with three missing-module failures.
+- GREEN: 2026 quarter deadlines, partial/current watchlist action and injected workbench action all
+  passed (`4 passed`).
+- Regression: `tests/test_institutional_portfolios.py` passed (`58 passed`, three pre-existing
+  edgar deprecation warnings and four subtests).
