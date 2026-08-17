@@ -359,18 +359,37 @@ function syncFrameHeightSoon() {
   window.setTimeout(() => Streamlit.setFrameHeight(), 180);
 }
 
+type HostScrollPosition = {
+  x: number;
+  y: number;
+  container?: HTMLElement | null;
+};
+
+function hostScrollContainer() {
+  return window.parent.document.querySelector<HTMLElement>('[data-testid="stMain"], .stMain');
+}
+
 function hostScrollPosition() {
   try {
-    return { x: window.parent.scrollX, y: window.parent.scrollY };
+    const container = hostScrollContainer();
+    if (container) {
+      return { x: container.scrollLeft, y: container.scrollTop, container };
+    }
+    return { x: window.parent.scrollX, y: window.parent.scrollY, container: null };
   } catch {
-    return { x: window.scrollX, y: window.scrollY };
+    return { x: window.scrollX, y: window.scrollY, container: null };
   }
 }
 
-function restoreHostScroll(position: { x: number; y: number }) {
+function restoreHostScroll(position: HostScrollPosition, options?: { settle?: boolean }) {
   const restore = () => {
     try {
-      window.parent.scrollTo(position.x, position.y);
+      const container = position.container?.isConnected ? position.container : hostScrollContainer();
+      if (container) {
+        container.scrollTo(position.x, position.y);
+      } else {
+        window.parent.scrollTo(position.x, position.y);
+      }
     } catch {
       window.scrollTo(position.x, position.y);
     }
@@ -378,6 +397,11 @@ function restoreHostScroll(position: { x: number; y: number }) {
   window.requestAnimationFrame(restore);
   window.setTimeout(restore, 80);
   window.setTimeout(restore, 220);
+  if (options?.settle) {
+    window.setTimeout(restore, 700);
+    window.setTimeout(restore, 1400);
+    window.setTimeout(restore, 2200);
+  }
 }
 
 function clampPercent(value: number | string | undefined) {
@@ -1270,6 +1294,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     if (!item.cik || item.selected) {
       return;
     }
+    const position = hostScrollPosition();
     if (managerPickerRef.current) {
       managerPickerRef.current.open = false;
     }
@@ -1280,6 +1305,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     setUnresolvedHolding(null);
     setPendingAction({ kind: "manager", cik: item.cik, label: `${item.manager_name} 포트폴리오 불러오는 중` });
     sendEvent({ id: "select_manager", cik: item.cik });
+    restoreHostScroll(position, { settle: true });
   };
 
   const handlePopularityLoad = () => {

@@ -17,3 +17,13 @@
   첫 query match를 다시 반환한다.
 - `.ip-studio-rail .ip-manager-tab--active`의 full-height inset shadow가 사용자가 지적한
   늘어나는 좌측 선택선이다.
+
+## Resolution
+
+- `select_manager`는 requested CIK load가 성공한 뒤 search query와 selection error를 비우고
+  selected CIK을 확정한다.
+- manager picker는 native `details`와 bounded option list를 사용하며 선택 상태는 check,
+  subtle tint로 표시한다.
+- browser QA 중 발견한 전환 후 scroll jump는 `window.parent.scrollY`가 아니라 Streamlit
+  `[data-testid="stMain"]` scroll container를 보존하도록 수정해 해결했다.
+- data semantics, refresh boundary와 다섯 destination은 그대로 유지했다.

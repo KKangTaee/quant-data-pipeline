@@ -21,7 +21,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 - Data baseline: MySQL-backed ingestion / loader / service / UI 경계 구현
 - Safety baseline: no live approval, broker order, auto rebalance
 - Active phase: none
-- Active product task: `institutional-holdings-content-first-ui-v1-20260817` (`1/3차` design/spec approved, implementation plan ready)
+- Active product task: none
 - Institutional Holdings hybrid quarter review: 전체 `5/5` actual SEC/MySQL/Browser verified
 - Economic-cycle transition forecast: 2026-07 confirmed recovery, 다음 3 usable release 전환압력과 unrestricted next confirmed destination을 task-specific `GO` artifact/snapshot으로 저장하고 Overview 순환 경로에 연결. 자산별 확인 포인트 계산·디자인은 기존 계약 유지
 - Completed phase: `inflation-policy-yield-path` (5/5 actual DB/Browser verified)
@@ -34,7 +34,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 |---|---|---|
 | Today | 시장 세션, 저장된 시장 근거, 일정과 대표 포트폴리오 EOD/live overlay | summary / navigation surface, trading signal 아님 |
 | Market Research | confirmed 현재 국면·최근 변화·전환압력·조건부 다음 국면 분포 경제 사이클, 선물 매크로 장중 관측·재가격화·반대 근거·조건부 시나리오, 심리의 1W·1M 실제 관측 변화, 일정, S&P 500, Market Movers, 미국 개별 종목의 3-family / 7-view research | context-only, 특정 전환 월·고정 순환·매매 신호가 아니며 Futures Macro 5D 확률·가격 목표와 심리 미래 확률도 validation / monitoring signal로 공개하지 않음 |
-| Institutional Holdings | 로컬 제출기한 기반 조건부 수동 갱신, bulk-first/EDGAR fallback, amendment-aware 기관 portfolio, 저장된 과거 분기 전환 선택과 adjusted-close common-equity quarter-end/public-follow covered-sleeve proxy | delayed reported-long-holdings research이며 actual fund NAV·추천이 아님; 탭 진입 시 SEC 호출 없음 |
+| Institutional Holdings | content-first header, bounded manager picker, horizontal destination tabs, 연속 manager 전환 상태 보존, 로컬 제출기한 기반 조건부 수동 갱신, amendment-aware 기관 portfolio, 과거 분기 전환과 두 covered-sleeve proxy | delayed reported-long-holdings research이며 actual fund NAV·추천이 아님; 탭 진입 시 SEC 호출 없음 |
 | Data Operations | 네 consumer 목적별 data preparation, 공식 파일, bounded recovery, compact history와 active 30-action 고급 도구 | explicit click만 실행, UI direct fetch와 자동 연속 실행 없음 |
 | Backtest Analysis | single strategy와 portfolio mix 실행·비교, result bundle, save / replay와 candidate source. Risk-On Momentum 5D는 Quick / Standard / Deep 분석 강도와 compact Daily Swing evidence를 제공 | 높은 수익률만으로 선정하지 않음 |
 | Practical Validation | data trust, realism, provider, holdings, macro, stress, robustness와 construction evidence. Daily Swing은 거래·비용·회전율·PIT/survivorship 전용 module로 fail-closed | `NOT_RUN`은 pass가 아니며 보강 뒤 재검증 필요 |
@@ -54,10 +54,8 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 
 ### Active
 
-현재 user-approved product task는 `institutional-holdings-content-first-ui-v1-20260817`다.
-`Market Research + Today` content-first A안과 manager-selection 상태 계약을 승인했고,
-전체 `1/3차` 설계·implementation plan까지 준비했다. 실행 방식을 확정한 뒤 검색 후
-기관 선택 회귀의 failing test부터 2차 구현을 시작한다.
+현재 active user-approved product task는 없다. `institutional-holdings-content-first-ui-v1-20260817`은
+전체 `3/3차` 구현·actual Browser QA까지 완료했으며, 다음 개선은 새 사용자 승인 뒤 연다.
 
 ### Paused
 

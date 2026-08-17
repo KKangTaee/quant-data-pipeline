@@ -1,9 +1,9 @@
 # Institutional Holdings Content-First UI V1 Risks
 
-State: active
+State: complete
 Last Updated: 2026-08-17
 
-## Open Risks
+## Resolved Risks
 
 - manager result list can be long; the picker must bound its own height without reintroducing a
   page-height rail.
@@ -12,6 +12,8 @@ Last Updated: 2026-08-17
 - pending selection must preserve the current body without making a stale manager label appear to
   belong to the incoming CIK.
 
+All four risks were covered by source/runtime tests and actual desktop/mobile Browser QA.
+
 ## Blockers
 
-- None. Implementation waits only for written spec review approval.
+- None.

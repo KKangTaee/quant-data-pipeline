@@ -1989,7 +1989,13 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn('key="institutional_portfolios_workbench"', page_source)
         self.assertNotIn('key=f"institutional_portfolios_{', page_source)
         self.assertIn("restoreHostScroll", component_source)
+        self.assertIn('[data-testid="stMain"], .stMain', component_source)
         self.assertIn("managerPickerRef", component_source)
+        manager_select = component_source[
+            component_source.index("const handleManagerSelect") : component_source.index("const handlePopularityLoad")
+        ]
+        self.assertIn("const position = hostScrollPosition();", manager_select)
+        self.assertIn("restoreHostScroll(position, { settle: true });", manager_select)
         self.assertIn('"popularity"', component_source)
         self.assertIn("기관 보유 랭킹", component_source)
         self.assertIn("ip-security-detail", component_source)

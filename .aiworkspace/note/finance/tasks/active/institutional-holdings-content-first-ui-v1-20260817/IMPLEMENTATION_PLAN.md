@@ -47,7 +47,7 @@
 - Consumes: `_handle_workbench_event(event: dict[str, Any] | None) -> None` and Streamlit session keys `institutional_portfolios_manager_search`, `institutional_portfolios_selected_cik`.
 - Produces: one atomic selection transition in which a valid `select_manager` event clears the search query, stores the requested CIK, resets dependent transient state and calls `st.rerun()` exactly once.
 
-- [ ] **Step 1: Write the failing state regression**
+- [x] **Step 1: Write the failing state regression**
 
 Add this test beside `test_manager_search_event_updates_existing_manager_query_state_on_submit`:
 
@@ -90,7 +90,7 @@ Add a second test with the same fake Streamlit but a loader returning
 `institutional_portfolios_manager_selection_error` contains the bounded user message, and rerun
 count is one.
 
-- [ ] **Step 2: Run the regression and confirm the root cause**
+- [x] **Step 2: Run the regression and confirm the root cause**
 
 ```bash
 .venv/bin/python -m pytest tests/test_institutional_portfolios.py -k "select_manager_event_clears_search" -q
@@ -98,7 +98,7 @@ count is one.
 
 Expected: FAIL because `institutional_portfolios_manager_search` remains `Bill Ackman`.
 
-- [ ] **Step 3: Implement the minimal event-state fix**
+- [x] **Step 3: Implement the minimal event-state fix**
 
 Replace the `select_manager` branch with this contract, preserving the existing dependent-state resets:
 
@@ -126,7 +126,7 @@ if event_name == "select_manager":
         st.rerun()
 ```
 
-- [ ] **Step 4: Run focused state and resolver tests**
+- [x] **Step 4: Run focused state and resolver tests**
 
 ```bash
 .venv/bin/python -m pytest tests/test_institutional_portfolios.py -k "select_manager_event_clears_search or select_manager_load_failure or manager_search_event_updates or selected_manager_resolver" -q
@@ -134,7 +134,7 @@ if event_name == "select_manager":
 
 Expected: all selected tests pass.
 
-- [ ] **Step 5: Commit the reliable selection transition**
+- [x] **Step 5: Commit the reliable selection transition**
 
 ```bash
 git add app/web/institutional_portfolios.py tests/test_institutional_portfolios.py
@@ -156,7 +156,7 @@ git commit -m "수정: 기관 검색 후 대가 선택 전환 복구"
 - Consumes: `STUDIO_DESTINATIONS`, `studioDestination(view)`, `StudioView`, workbench `payload`, `switchView(view)` and existing Streamlit events.
 - Produces: `InstitutionalStudioShell` props `activeView`, `managerName`, `periodLabel`, `isPreview`, `onViewChange`, `managerControl`, `freshnessControl`, `children`; no drawer props or rail slot.
 
-- [ ] **Step 1: Replace the old shell source-contract test with a failing content-first contract**
+- [x] **Step 1: Replace the old shell source-contract test with a failing content-first contract**
 
 Update the existing studio shell contract test so it asserts:
 
@@ -184,7 +184,7 @@ self.assertNotIn("handleManagerRailPointerDown", component_source)
 self.assertNotIn("suppressManagerClickRef", component_source)
 ```
 
-- [ ] **Step 2: Run the source-contract test and verify failure**
+- [x] **Step 2: Run the source-contract test and verify failure**
 
 ```bash
 .venv/bin/python -m pytest tests/test_institutional_portfolios.py -k "content_first_shell" -q
@@ -192,7 +192,7 @@ self.assertNotIn("suppressManagerClickRef", component_source)
 
 Expected: FAIL because the current shell still contains the dark rail, drawer and scrim.
 
-- [ ] **Step 3: Rewrite `InstitutionalStudioShell` around content slots**
+- [x] **Step 3: Rewrite `InstitutionalStudioShell` around content slots**
 
 Use this prop and DOM shape; keep destination labels sourced from `STUDIO_DESTINATIONS`:
 
@@ -259,7 +259,7 @@ export function InstitutionalStudioShell({
 }
 ```
 
-- [ ] **Step 4: Convert the workbench manager rail into a native disclosure picker**
+- [x] **Step 4: Convert the workbench manager rail into a native disclosure picker**
 
 Make these state changes:
 
@@ -365,7 +365,7 @@ banner:
 ) : null}
 ```
 
-- [ ] **Step 5: Move freshness and explicit refresh into the second control slot**
+- [x] **Step 5: Move freshness and explicit refresh into the second control slot**
 
 ```tsx
 <section className={`ip-data-context ${payload.freshness?.is_stale ? "is-stale" : ""}`}>
@@ -381,7 +381,7 @@ banner:
 
 Preserve current/partial/result copy without raw exception or job-row output. Do not add a network availability probe on page entry.
 
-- [ ] **Step 6: Add the overview-only next-check shortcut**
+- [x] **Step 6: Add the overview-only next-check shortcut**
 
 Immediately after the context hero, render:
 
@@ -399,11 +399,11 @@ Immediately after the context hero, render:
 ) : null}
 ```
 
-- [ ] **Step 7: Remove obsolete drag helpers and tests**
+- [x] **Step 7: Remove obsolete drag helpers and tests**
 
 Delete `managerDragScrollTop` and `managerDragExceededThreshold` from `workbenchState.ts`, remove their imports and the `manager rail drag scrolling` test block. Preserve destination and query tests unchanged.
 
-- [ ] **Step 8: Run React unit and type checks**
+- [x] **Step 8: Run React unit and type checks**
 
 ```bash
 npm test
@@ -412,7 +412,7 @@ npm run typecheck
 
 Run in `app/web/streamlit_components/institutional_portfolios_workbench`. Expected: all Vitest tests pass and TypeScript reports no errors.
 
-- [ ] **Step 9: Commit the semantic shell transition**
+- [x] **Step 9: Commit the semantic shell transition**
 
 ```bash
 git add app/web/streamlit_components/institutional_portfolios_workbench/src \
@@ -434,7 +434,7 @@ git commit -m "기능: 기관 보유 content-first shell 전환"
 - Consumes: Task 2 selectors `.ip-institutional-shell`, `.ip-institutional-page-header`, `.ip-institutional-controls`, `.ip-manager-picker`, `.ip-manager-options`, `.ip-institutional-tabs`, `.ip-institutional-canvas`, `.ip-institutional-next-check`.
 - Produces: light content-first desktop/tablet/mobile layout and tracked Vite bundle with the same selector contract.
 
-- [ ] **Step 1: Add failing CSS and runtime contract assertions**
+- [x] **Step 1: Add failing CSS and runtime contract assertions**
 
 Assert source CSS contains the new structural rules and excludes the old active line/drawer rules:
 
@@ -453,7 +453,7 @@ self.assertNotIn("box-shadow: inset 3px 0 0 #75b9ee;", style_source)
 
 After build, assert runtime CSS/JS contain `ip-institutional-page-header`, `ip-manager-picker`, `ip-institutional-tabs`, `다음 확인` and no `ip-studio-mobile-bar`.
 
-- [ ] **Step 2: Run the CSS contract and verify it fails**
+- [x] **Step 2: Run the CSS contract and verify it fails**
 
 ```bash
 .venv/bin/python -m pytest tests/test_institutional_portfolios.py -k "content_first or tracked_workbench_bundle" -q
@@ -461,7 +461,7 @@ After build, assert runtime CSS/JS contain `ip-institutional-page-header`, `ip-m
 
 Expected: FAIL until source CSS and production bundle are updated.
 
-- [ ] **Step 3: Implement the content-first visual contract**
+- [x] **Step 3: Implement the content-first visual contract**
 
 Use these base rules, extending them only for existing child panels:
 
@@ -547,7 +547,7 @@ Use these base rules, extending them only for existing child panels:
 
 At `max-width: 980px`, change both header/control grids to one column. At `max-width: 720px`, reduce shell padding to `12px`, preserve `44px` controls, and keep only `.ip-institutional-tabs` horizontally scrollable. Remove rules owned only by `.ip-studio-rail`, `.ip-studio-mobile-bar`, `.ip-studio-scrim`, `.ip-studio--drawer-open` and the full-height manager active shadow.
 
-- [ ] **Step 4: Run React tests and typecheck before build**
+- [x] **Step 4: Run React tests and typecheck before build**
 
 ```bash
 npm test
@@ -556,7 +556,7 @@ npm run typecheck
 
 Expected: PASS.
 
-- [ ] **Step 5: Build the tracked component bundle**
+- [x] **Step 5: Build the tracked component bundle**
 
 ```bash
 npm run build
@@ -564,7 +564,7 @@ npm run build
 
 Run all npm commands in `app/web/streamlit_components/institutional_portfolios_workbench`. Expected: Vite replaces `component_static` with one current CSS and one current JS asset referenced by `component_static/index.html`.
 
-- [ ] **Step 6: Run focused Python and runtime-contract tests**
+- [x] **Step 6: Run focused Python and runtime-contract tests**
 
 ```bash
 .venv/bin/python -m pytest tests/test_institutional_portfolios.py -q
@@ -573,7 +573,7 @@ git diff --check
 
 Expected: focused suite passes and `git diff --check` emits no output.
 
-- [ ] **Step 7: Commit styling and production bundle**
+- [x] **Step 7: Commit styling and production bundle**
 
 ```bash
 git add app/web/streamlit_components/institutional_portfolios_workbench/src/style.css \
@@ -600,7 +600,7 @@ git commit -m "디자인: 기관 보유 Research UI 정렬"
 - Consumes: built local Streamlit app, actual MySQL 13F data and completed Tasks 1-3.
 - Produces: evidence that sequential manager selection, five destinations, refresh semantics and responsive layout work in the actual app.
 
-- [ ] **Step 1: Start the local app on a dedicated QA port**
+- [x] **Step 1: Start the local app on a dedicated QA port**
 
 ```bash
 uv run streamlit run app/web/streamlit_app.py --server.port 8511 --server.headless true
@@ -608,7 +608,7 @@ uv run streamlit run app/web/streamlit_app.py --server.port 8511 --server.headle
 
 Expected: Streamlit reports `http://localhost:8511` and remains running for QA.
 
-- [ ] **Step 2: Verify desktop manager switching and state agreement**
+- [x] **Step 2: Verify desktop manager switching and state agreement**
 
 In Browser QA:
 
@@ -621,11 +621,11 @@ In Browser QA:
 
 Expected: all three transitions complete on the first selection and no state reverts to Bill Ackman.
 
-- [ ] **Step 3: Verify destinations and explicit refresh boundary**
+- [x] **Step 3: Verify destinations and explicit refresh boundary**
 
 Click all five horizontal tabs and confirm the correct existing body appears. Return to overview and use `다음 확인`; it must route to `분기 리뷰` when available. Confirm no SEC request occurs merely by opening the page, and a refresh button appears only when the existing local due/partial contract says it is visible.
 
-- [ ] **Step 4: Verify 900px and 420px layouts**
+- [x] **Step 4: Verify desktop and narrow-mobile layouts**
 
 At both widths confirm:
 
@@ -636,7 +636,7 @@ At both widths confirm:
 - interactive controls are at least 44px high;
 - page and component `scrollWidth <= clientWidth` outside the tabs scroller.
 
-- [ ] **Step 5: Capture one final QA screenshot**
+- [x] **Step 5: Capture one final QA screenshot**
 
 Save the approved desktop overview after a successful manager transition as:
 
@@ -646,11 +646,11 @@ Save the approved desktop overview after a successful manager transition as:
 
 Do not stage the screenshot.
 
-- [ ] **Step 6: Update durable flow and task records**
+- [x] **Step 6: Update durable flow and task records**
 
 Document that manager selection clears search, the page uses a content-first header/control/tab/canvas order, active tabs use a short bottom marker and mobile uses stacked controls plus horizontally scrollable tabs instead of a drawer. Record exact automated commands and Browser QA outcomes in `RUNS.md`; set `RISKS.md` to no open blocker only if all evidence passed.
 
-- [ ] **Step 7: Run final verification**
+- [x] **Step 7: Run final verification**
 
 ```bash
 .venv/bin/python -m pytest tests/test_institutional_portfolios.py -q
@@ -665,7 +665,7 @@ Run the npm commands in `app/web/streamlit_components/institutional_portfolios_w
 
 Expected: all focused tests/typecheck/build pass; status shows only intended code/docs/static assets plus pre-existing unrelated user artifacts.
 
-- [ ] **Step 8: Commit closeout documentation**
+- [x] **Step 8: Commit closeout documentation**
 
 ```bash
 git add .aiworkspace/note/finance/docs/flows/INSTITUTIONAL_PORTFOLIOS_FLOW.md \
