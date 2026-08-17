@@ -1508,7 +1508,7 @@ Backtest Analysis의 1차 후보 선별 화면에서는 주기를 확정하지 �
 
 ### 기본 설명
 probation 중인 전략을 어떤 강도로 모니터링해야 하는지 보여주는 상태다.
-현재 stage ownership 기준에서는 Selected Portfolio Dashboard가 모니터링 후보 선정 후 monitoring / recheck를 담당한다.
+현재 stage ownership 기준에서는 Portfolio Monitoring이 모니터링 후보 선정 후 monitoring / recheck를 담당한다.
 Backtest Analysis에서는 monitoring이라는 이름 대신 `Next Validation Focus`와 `Review Signals`로 낮춰 표시한다.
 
 ### 왜 사용되는지
@@ -2716,7 +2716,7 @@ paper tracking 결과, blocker 해소 여부, 최종 승인 / 보류 / 거절 �
 ## Final Review
 
 ### 기본 설명
-단일 current candidate 또는 saved Portfolio Proposal을 Operations > Portfolio Monitoring 후보로 선정할지 판단하는 전용 화면이다.
+단일 current candidate 또는 saved Portfolio Proposal을 Portfolio > Portfolio Monitoring 후보로 선정할지 판단하는 전용 화면이다.
 
 `Backtest > Portfolio Proposal`이 포트폴리오 초안 작성과 저장을 맡는다면,
 `Backtest > Final Review`는 validation, robustness / stress 질문, paper observation 기준, operator judgment를 하나로 묶어 최종 검토 결과를 기록한다.
@@ -2739,7 +2739,7 @@ Portfolio Proposal 탭 안에 `Save Paper Tracking Ledger`, `Save Final Selectio
 
 ### 기본 설명
 Phase 31~33의 portfolio risk, robustness / stress, paper observation 기준을 모아
-후보나 proposal을 Operations > Portfolio Monitoring 후보 `선정`, `보류`, `거절`, `재검토` 중 어디에 둘지 판단하는 근거 묶음이다.
+후보나 proposal을 Portfolio > Portfolio Monitoring 후보 `선정`, `보류`, `거절`, `재검토` 중 어디에 둘지 판단하는 근거 묶음이다.
 
 ### 왜 사용되는지
 paper observation 기준이 준비됐거나 legacy paper ledger가 `READY_FOR_FINAL_SELECTION_REVIEW`로 읽히더라도
@@ -2749,7 +2749,7 @@ operator reason을 함께 읽고 사람이 명시적으로 남겨야 한다.
 
 ### 예시 / 필요 상황
 - Final Review에서 단일 후보 또는 saved proposal이 모니터링 후보 선정 검토 가능 상태일 때
-- 후보나 portfolio proposal을 Operations > Portfolio Monitoring 후보로 선정할지, 더 관찰할지, 거절할지 기록해야 할 때
+- 후보나 portfolio proposal을 Portfolio > Portfolio Monitoring 후보로 선정할지, 더 관찰할지, 거절할지 기록해야 할 때
 - 저장 위치:
   - `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`
 
@@ -2889,10 +2889,10 @@ Final Review로 넘어갈 수 있는지는 저장 여부가 아니라 필수 mod
 
 ---
 
-## Selected Portfolio Dashboard
+## Portfolio Monitoring
 
 ### 기본 설명
-Final Review에서 selected 된 후보를 사용자가 만든 모니터링 포트폴리오에 담아 운영 관점에서 다시 보는 Operations 화면이다.
+Final Review에서 selected 된 후보를 사용자가 만든 모니터링 포트폴리오에 담아 운영 관점에서 다시 보는 Portfolio 화면이다.
 
 ### 왜 사용되는지
 선정 당시의 판단이 가상 시작일 / 종료일 / 초기자산 기준 이후 성과, benchmark 비교, drift / 리밸런싱 검토, monitoring signal, optional allocation check에서 계속 설명 가능한지 확인하기 위해 사용한다.
@@ -3084,7 +3084,7 @@ Main Worktree가 분리한 개별 task를 수행하는 작업 세션이다.
 작업의 방향, 범위, QA, closeout을 한 번에 관리해야 하는 큰 흐름을 분리하기 위해 사용한다.
 
 ### 예시 / 필요 상황
-- Selected Portfolio Dashboard 같은 기능 묶음을 phase로 관리할 때
+- Portfolio Monitoring 같은 기능 묶음을 phase로 관리할 때
 
 ---
 

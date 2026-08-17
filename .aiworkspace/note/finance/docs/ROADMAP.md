@@ -23,7 +23,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 - Active phase: none
 - Active product task: none
 - Institutional Holdings hybrid quarter review: 전체 `5/5` actual SEC/MySQL/Browser verified
-- Economic-cycle transition forecast: 2026-07 confirmed recovery, 다음 3 usable release 전환압력과 unrestricted next confirmed destination을 task-specific `GO` artifact/snapshot으로 저장하고 Overview 순환 경로에 연결. 자산별 확인 포인트 계산·디자인은 기존 계약 유지
+- Economic-cycle transition forecast: 2026-07 confirmed recovery, 다음 3 usable release 전환압력과 unrestricted next confirmed destination을 task-specific `GO` artifact/snapshot으로 저장하고 Market Research 경기 순환 경로에 연결. 자산별 확인 포인트 계산·디자인은 기존 계약 유지
 - Completed phase: `inflation-policy-yield-path` (5/5 actual DB/Browser verified)
 - Inflation / Policy baseline: Core PCE·policy·joint rate·reverse·equity·independent recession materialization READY
 - Paused work와 Verification-Only work는 별도 상태로 관리
@@ -44,7 +44,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 | Architecture | Python domain / service / runtime, Streamlit command boundary와 React presentation 분리 | React가 DB / provider / canonical decision을 소유하지 않음 |
 | Inflation / Policy Backend | 독립 27-series PIT 원장, Philadelphia Fed SPF 확률 bin, 공식 FOMC rate decision 86건·SEP 40 release, FactSet 두 CY 라벨 검증 annual EPS 80 release, strict as-of/vintage loader, 혼합형 Core PCE, 검증 정책 marginal·2,000개 joint rate path·equity stress·독립 침체, 동적 저항대 | 기존 경제 사이클 결과 재사용 없음; Core/Q4/policy/joint-rate/equity/recession actual chronological gate 통과 |
 | Inflation / Policy Workbench | Market Research의 독립 `물가·정책` view에서 DB-backed 물가·정책·금리·역산·equity·12개월 침체 surface와 USER 기준 저장 | actual Q4 5상태·다음 발표·다음 회의·연말 정책·동적 4.79% 역산·EPS×multiple 스트레스·침체 5단계 공개와 Browser QA 완료 |
-| Economic Cycle Transition | Philadelphia Fed RTDSM `IPT/H/EMPLOY/RUC` provider-native vintage, bounded backward-only missing-lag, two-release official state, extended 3-release pressure와 compact-core unrestricted destination | 2026-07 confirmed recovery·7개월, state 593 origins/116 transitions, driver 312 origins/55 transitions, pressure 53 OOS·paired skill +2.175%, destination 76 OOS `GO`. `economic_cycle_transition_v1` artifact/snapshot과 Overview 조건부 경로로 production 연결 |
+| Economic Cycle Transition | Philadelphia Fed RTDSM `IPT/H/EMPLOY/RUC` provider-native vintage, bounded backward-only missing-lag, two-release official state, extended 3-release pressure와 compact-core unrestricted destination | 2026-07 confirmed recovery·7개월, state 593 origins/116 transitions, driver 312 origins/55 transitions, pressure 53 OOS·paired skill +2.175%, destination 76 OOS `GO`. `economic_cycle_transition_v1` artifact/snapshot과 Market Research 조건부 경로로 production 연결 |
 
 상세 구현과 과거 QA는 개별 task / phase 기록에 남아 있다. 현재 제품 의미는
 [Product Direction](./PRODUCT_DIRECTION.md), code ownership은
@@ -84,7 +84,7 @@ layout evidence를 닫은 뒤 해당 task status를 complete로 정렬한다.
 | P1 | Existing Browser verification debt closeout | 구현 완료 task의 실제 interaction evidence와 status drift를 작은 범위로 닫을 수 있음 | 대상 task별 QA-only 범위 확인 |
 | P1 | Market Movers sector conditional outlook | 현재 broader roadmap의 다음 단계지만 확률·분포를 공개하려면 독립 episode와 OOS publication gate가 필요 | target, sample independence, chronological validation과 공개 기준 승인 |
 | P1 | Sentiment independent evidence / PIT validation | CNN·AAII의 현재 맥락을 장기 검증 가능한 evidence로 확장할 수 있음 | paused 해제, 신규 source와 chronological PIT validation scope 승인 |
-| P2 | Overview scheduler hardening | browser-session 수동 흐름을 넘어 unattended collection을 운영할 때 필요 | launchd / scheduler 운영권한, retry, alert와 runbook 승인 |
+| P2 | Market Research scheduler hardening | browser-session 수동 흐름을 넘어 unattended collection을 운영할 때 필요 | launchd / scheduler 운영권한, retry, alert와 runbook 승인 |
 | P3 | Data Operations durable execution / dependency hardening | 운영 근거가 생기면 queue·cancel·resume 또는 collapsed-body 초기 평가와 dynamic dependency 위험을 줄일 수 있음 | 실제 unattended / multi-user 필요, authorization, history scope와 한 번에 하나의 refactor boundary 승인 |
 | P3 | Focused code refactor follow-up | transitional Backtest helper와 일부 large surface의 ownership을 더 명확히 할 수 있음 | 한 번에 하나의 owner boundary와 public call-path 변경 승인 |
 | P3 | UI platform split research | Streamlit이 복잡한 UX의 장기 제약이 될 경우 API + standalone React를 검토 | migration target, API boundary, deployment / auth scope 승인 |

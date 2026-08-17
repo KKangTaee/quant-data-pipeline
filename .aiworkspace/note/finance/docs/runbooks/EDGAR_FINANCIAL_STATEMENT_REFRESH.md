@@ -25,7 +25,7 @@ This runbook keeps broad yfinance fundamentals / factors as a legacy compatibili
 
 ## UI Path
 
-1. Open `Workspace > Ingestion`.
+1. Open `Data > Data Operations`.
 2. In the operational refresh section, start with `EDGAR annual 재무제표 갱신`.
 3. Select the symbol source and period type.
 4. Keep `EDGAR Statement Periods = 0` when you need all available periods for coverage repair.
@@ -35,7 +35,7 @@ This runbook keeps broad yfinance fundamentals / factors as a legacy compatibili
 
 ## Universe Coverage QA
 
-Use `Workspace > Ingestion > 수동 복구 / 진단 > 재무제표 universe coverage QA` before broad refresh planning.
+Use `Data > Data Operations > 수동 복구 / 진단 > 재무제표 universe coverage QA` before broad refresh planning.
 
 1. Select `SP500`, `TOP1000`, `TOP2000`, or `NASDAQ`.
 2. Keep `QA Frequency = annual` for the current canonical path.
@@ -66,7 +66,7 @@ Use `Workspace > Ingestion > 수동 복구 / 진단 > 재무제표 universe cove
 
 ## Legacy Broad Path
 
-The legacy broad yfinance fundamentals / factors path is no longer exposed as an active Ingestion collection card.
+The legacy broad yfinance fundamentals / factors path is no longer exposed as an active Data Operations collection card.
 
 The underlying actions and tables remain for compatibility only. Use them only when an old saved run, history replay, or explicit manual broad factor comparison requires `nyse_fundamentals` / `nyse_factors`. New financial statement source preparation should start from `EDGAR annual 재무제표 갱신` and statement shadow rebuild.
 

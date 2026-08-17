@@ -27,12 +27,12 @@ Backtest 단계의 primary reading order는 `page workflow shell -> active Level
 | `app/web/streamlit_app.py` | top navigation과 page entry |
 | `app/services/reference_center.py` | 단일 Reference Center의 curated 사용자 흐름·상태/용어·기능 개념·문제 해결 catalog와 drift guard |
 | `app/web/reference_center.py` / `app/web/reference_center_react_component.py` / `app/web/streamlit_components/reference_center_workbench/` | 단일 `/reference` entry, stable item deep link, owner 화면 navigation intent, 검색 우선 React workbench |
-| `app/web/reference_contextual_help.py` / `app/services/reference_contextual_help.py` | Overview부터 Final Review까지 6개 주요 workflow 화면의 read-only Reference help, exact item deep link, referential-integrity drift guard |
-| `app/web/overview_dashboard.py` / `app/web/overview/*` | `Workspace > Overview`에서 Market Context, Market Movers, Futures Macro, Sentiment, Events primary tab render와 selected-tab lazy dispatch를 조정한다. Compatibility wrapper는 `overview_dashboard.py`, page shell은 `overview/page.py`, navigation은 `overview/navigation.py`, tab entrypoint는 `overview/{tab}.py`, tab-local Streamlit glue는 `overview/{tab}_helpers.py`가 소유한다. `Market Context`는 별도 load gate 없이 S&P 500 / 미국 개별주식 valuation React component를 즉시 렌더링하고 old cockpit/refresh surface를 호출하지 않는다. 개별주 검색·선택과 내부 `PER 상대가치 | 전환 분석` 전환은 DB read-only다. 새 종목은 positive Graph 1 READY PER이면 PER, 아니면 전환 분석을 추천하고 같은 종목의 사용자 선택은 local state로 보존한다. exact raw gap이 있는 selected symbol의 명시 수집 intent만 Python helper가 nonce dedup한 뒤 SEC identity를 확인해 동기 실행하고 stored payload를 다시 읽는다. 다른 primary tabs의 snapshot/refresh/evidence boundary는 각 tab helper가 소유한다. Futures Monitor와 Sector / Industry standalone tabs는 primary navigation에서 soft-removed 상태다 |
-| `app/web/overview_dashboard_helpers.py` | Overview dashboard용 cached market intelligence service wrapper. Candidate Ops overview snapshot helpers는 제거됐고 Candidate Ops는 Overview tab이 아니다 |
-| `app/web/overview/components/*` | Overview 전용 visual component implementation. Shared token/CSS는 `common.py`, session banner는 `layout.py`, Market Context cockpit / reading-flow / historical reference / source evidence / IA closeout은 `market_context.py`, Market Movers refresh / breadth / selected-symbol basic indicator chart components는 `market_movers.py`, Events components는 `events.py`, Data Health handoff renderer는 `data_health.py`가 소유한다 |
+| `app/web/reference_contextual_help.py` / `app/services/reference_contextual_help.py` | Market Research부터 Final Review까지 주요 workflow 화면의 read-only Reference help, exact item deep link, referential-integrity drift guard |
+| `app/web/overview_dashboard.py` / `app/web/overview/*` | `Research > Market Research`에서 3-family / 8-view navigation과 selected-view lazy dispatch를 조정한다. Compatibility wrapper는 `overview_dashboard.py`, page shell은 `overview/page.py`, navigation은 `overview/navigation.py`, retained view entrypoint는 `overview/{tab}.py`, view-local Streamlit glue는 `overview/{tab}_helpers.py`가 소유한다. `S&P 500`과 `개별 종목` view는 별도 load gate 없이 valuation React component를 즉시 렌더링하고 old cockpit/refresh surface를 호출하지 않는다. 개별주 검색·선택과 내부 `PER 상대가치 | 전환 분석` 전환은 DB read-only다. 새 종목은 positive Graph 1 READY PER이면 PER, 아니면 전환 분석을 추천하고 같은 종목의 사용자 선택은 local state로 보존한다. exact raw gap이 있는 selected symbol의 명시 수집 intent만 Python helper가 nonce dedup한 뒤 SEC identity를 확인해 동기 실행하고 stored payload를 다시 읽는다. 다른 views의 snapshot/refresh/evidence boundary는 각 view helper가 소유한다. Futures Monitor와 Sector / Industry standalone tabs는 primary navigation에서 soft-removed 상태다 |
+| `app/web/overview_dashboard_helpers.py` | Market Research compatibility helper용 cached market intelligence service wrapper. Candidate Ops overview snapshot helpers는 제거됐고 Candidate Ops는 current Market Research view가 아니다 |
+| `app/web/overview/components/*` | Market Research 전용 visual component implementation. Shared token/CSS는 `common.py`, session banner는 `layout.py`, retained Market Context cockpit / reading-flow / historical reference / source evidence / IA closeout은 `market_context.py`, Market Movers refresh / breadth / selected-symbol basic indicator chart components는 `market_movers.py`, Events components는 `events.py`, Data Operations handoff renderer는 `data_health.py`가 소유한다 |
 | `app/web/overview_ui_components.py` | 과거 component import path 호환용 thin facade. 신규 renderer body는 이 파일에 추가하지 않는다 |
-| `app/services/overview/*` | Streamlit-free Overview service modules. `sp500_valuation.py`는 complete-only 60m/36m log(PER) 분포, 대칭 2σ anchor, 최신 EPS 기준 provisional PER display series, FOMC EPS/current SPX scenario, 과거 SEP vintage 기반 1/3/5년 rolling reconstruction read model을 소유한다. `us_stock_valuation.py`는 selected-symbol PIT TTM EPS/PER, 60m/36m multiple regime, FOMC+기업 초과 EPS 성장 시나리오, 1/3/5년 history와 readiness를 소유한다. `us_stock_turnaround.py`는 discrete-quarter operating/cash evidence, milestone, risk, stage-appropriate valuation readiness를 소유하고 `market_context_valuation.py`가 S&P/PER/turnaround를 독립 composition한다. `nasdaq100_valuation.py`는 retained backend이지만 current Market Context selector에는 연결되지 않는다. React는 quality/source evidence, 기간 selector, 검색·수집 intent만 표시하고 provider fetch/재무 계산을 하지 않는다. `market_movers.py`, `why_it_moved.py`, `events.py`, `sentiment.py`가 다른 current tab read model을 소유하며 `market_context.py` legacy cockpit service는 retained compatibility code다 |
+| `app/services/overview/*` | Streamlit-free Market Research service modules. Internal Overview package name is retained. `sp500_valuation.py`는 complete-only 60m/36m log(PER) 분포, 대칭 2σ anchor, 최신 EPS 기준 provisional PER display series, FOMC EPS/current SPX scenario, 과거 SEP vintage 기반 1/3/5년 rolling reconstruction read model을 소유한다. `us_stock_valuation.py`는 selected-symbol PIT TTM EPS/PER, 60m/36m multiple regime, FOMC+기업 초과 EPS 성장 시나리오, 1/3/5년 history와 readiness를 소유한다. `us_stock_turnaround.py`는 discrete-quarter operating/cash evidence, milestone, risk, stage-appropriate valuation readiness를 소유하고 `market_context_valuation.py`가 S&P/PER/turnaround를 독립 composition한다. `nasdaq100_valuation.py`는 retained backend이지만 current Market Research selector에는 연결되지 않는다. React는 quality/source evidence, 기간 selector, 검색·수집 intent만 표시하고 provider fetch/재무 계산을 하지 않는다. `market_movers.py`, `why_it_moved.py`, `events.py`, `sentiment.py`가 다른 current view read model을 소유하며 `market_context.py` legacy cockpit service는 retained compatibility code다 |
 | `app/services/overview_market_context_analog.py` | Streamlit-free Market Context historical analog read model. Current sector leadership을 sector ETF proxy로 매핑하고, 충분한 DB price coverage가 있으면 5D / 20D / 60D historical reference rows를 만들며, coverage가 부족하면 부족 ticker / row 기준 / bounded repair action metadata를 반환한다 |
 | `app/web/backtest_common.py` | Backtest 공용 preset, universe / real-money / guardrail input, strict preset basis display model, Price Freshness Preflight model, strict factor readiness action model, ticker-change repair action glue, legacy compatibility helper. Page shell은 신규 `backtest_state.py` boundary를 우선 사용한다 |
 | `app/web/backtest_state.py` | Backtest workflow state boundary. page entry의 session state 초기화 / panel request / workflow selector callback을 감싼다 |
@@ -73,9 +73,9 @@ Backtest 단계의 primary reading order는 `page workflow shell -> active Level
 | `app/services/backtest_saved_portfolio_replay.py` | Streamlit-free saved portfolio replay service. 저장된 mix의 strategy rerun / weighted bundle / replay context 조립 담당 |
 | `app/web/backtest_compare/page.py` / `components.py` | legacy compare/replay compatibility surface. 기존 runner·saved replay helper는 재사용하지만 current Backtest Analysis의 primary Mix DOM은 이 Streamlit form/visual shell을 mount하지 않는다 |
 | `app/web/backtest_result_display.py` | Backtest 결과 공용 display. summary, chart, data trust, real-money detail, selection history, swing detail, compare result helper |
-| `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, selected record inspect, run again / load into form / candidate draft handoff |
+| `app/web/backtest_history.py` | `hidden Backtest Run History compatibility page` 화면 render, selected record inspect, run again / load into form / candidate draft handoff |
 | `app/web/backtest_history_helpers.py` | History table row, replay payload, replay parity, Real-Money / Guardrail scope helper |
-| `app/web/backtest_candidate_library.py` | `Operations > Candidate Library` 화면 render. 저장된 current / Pre-Live 후보 inspect와 저장 contract 기반 result curve rebuild |
+| `app/web/backtest_candidate_library.py` | `hidden Candidate Library compatibility page` 화면 render. 저장된 current / Pre-Live 후보 inspect와 저장 contract 기반 result curve rebuild |
 | `app/runtime/backtest/read_models/candidate_library.py` | Candidate Library registry join, table row, replay payload 생성, ETF / strict annual equity 후보 replay runtime dispatch helper |
 | `app/web/backtest_page.py` | Backtest page entry, React workflow shell과 기존 panel dispatcher 조합. 초기 Streamlit title/caption/native pills는 active route가 아니며 주요 panel 본문은 `app/web/backtest_*.py` module이 담당한다. native Streamlit `pages/` auto-discovery를 피하려고 `app/web/pages/` 밖에 둔다 |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness panel, legacy product card / stepper render helper |
@@ -110,7 +110,7 @@ Backtest 단계의 primary reading order는 `page workflow shell -> active Level
 | `app/web/backtest_final_review/page.py` | Final Review 화면 render. primary question, latest eligible candidate context, Python-owned Decision Brief와 candidate selector, React candidate / route / reason intent 소비, 자동 Decision ID / constraints / next action, authoritative save evaluation / append를 소유한다. current 화면은 one-shell Decision Workspace만 렌더하며 별도 Decision Desk / confirmed-report gate / Review Queue / Decision Cockpit / Evidence Appendix / Saved Decisions / 시장심리 패널을 렌더링하지 않는다 |
 | `app/web/backtest_final_review/components.py` | Final Review 전용 visual shell. Command center, flow rail, section header, lane grid, action panel CSS / HTML helper를 제공하며 service/gate/persistence 로직은 포함하지 않는다 |
 | `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, investability packet 연결, final evidence / save readiness / decision row helper |
-| `app/web/final_selected_portfolio_dashboard.py` | `Operations > Portfolio Monitoring` 화면 render. Legacy file name은 Selected Portfolio Dashboard를 유지한다. Final Review selected 후보 pool과 사용자-created monitoring portfolio setup을 읽고, CNN / AAII market sentiment context overlay와 Active Portfolio Monitoring Scenario hero를 먼저 보여준다. Hero는 no portfolio / no strategy / configured-not-run / executed 상태를 구분하고 portfolio-wide value / P&L / return / CAGR / MDD / value curve / strategy performance / rebalance target을 표시한다. 그 아래 fixed-height portfolio card shelf / 생성 / 선택 / collapsed management soft delete, portfolio name / description edit, compact selected strategy slot board / 설정 적용 / 제거, pending-stale scenario update, 선택한 1개 strategy의 lazy Monitoring Scenario / Monitoring Signals / evidence detail, 전환 비교, optional preflight, Actual Allocation / allocation evidence boundary, Decision Dossier / Audit을 보여준다 |
+| `app/web/final_selected_portfolio_dashboard.py` | `Portfolio > Portfolio Monitoring` 화면 render. Legacy file name은 Selected Portfolio Dashboard를 유지한다. Final Review selected 후보 pool과 사용자-created monitoring portfolio setup을 읽고, CNN / AAII market sentiment context overlay와 Active Portfolio Monitoring Scenario hero를 먼저 보여준다. Hero는 no portfolio / no strategy / configured-not-run / executed 상태를 구분하고 portfolio-wide value / P&L / return / CAGR / MDD / value curve / strategy performance / rebalance target을 표시한다. 그 아래 fixed-height portfolio card shelf / 생성 / 선택 / collapsed management soft delete, portfolio name / description edit, compact selected strategy slot board / 설정 적용 / 제거, pending-stale scenario update, 선택한 1개 strategy의 lazy Monitoring Scenario / Monitoring Signals / evidence detail, 전환 비교, optional preflight, Actual Allocation / allocation evidence boundary, Decision Dossier / Audit을 보여준다 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard의 dashboard portfolio / selected strategy pool / strategy slot / strategy comparison table, handoff table, component / continuity / source contract / recheck preflight / recheck readiness / symbol freshness / provider evidence / open issue follow-up / deployment readiness / recheck comparison / value / holding input / drift / alert preview / allocation boundary / filter helper. Evidence table은 service read model을 표시한다 |
 | `app/runtime/backtest/__init__.py` / `facade.py` | UI payload를 실행 가능한 runtime call로 변환하는 public compatibility facade. Risk-On Momentum 5D는 `app/runtime/backtest/runners/risk_on_momentum.py`에서 DB price / statement / futures macro rows를 모아 `finance/swing.py`를 실행하고 generated backtest artifact를 만든다 |
 | `app/runtime/backtest/runner_catalog.py` | Backtest strategy key / display name / runtime owner catalog. execution / compare service가 result bundle meta에 runner ownership을 붙일 때 사용한다 |
@@ -158,8 +158,8 @@ Backtest 주 흐름:
 - `Backtest Analysis`: Single Strategy 또는 Portfolio Mix를 실행해 fresh result를 만들고, 사용자가 명시적으로 Level2 등록 action을 선택했을 때만 `PORTFOLIO_SELECTION_SOURCES.jsonl`에 source를 저장한다. 새 Single Strategy 진입 기본값은 `Quality + Value / Strict Annual`이며 Single primary 설정은 strategy별 Streamlit form 대신 Python schema가 공급한 동일 React editor를 사용한다. React는 선택값 intent만 반환하고 Python이 current selection, family variant, visible field, type/range/option, callable runner를 확인한 뒤 기존 execution payload를 만든다. strict annual family는 `nyse_factors_statement` statement shadow factor path를 기본 재무제표 source로 읽으며, legacy broad `Quality Snapshot`은 새 사용자 선택지가 아니라 history replay / 명시적 compatibility 비교 경로로만 남긴다. Single Strategy에는 `Risk-On Momentum 5D`가 포함되며, 이 전략은 S&P 500 / Top1000 / Top2000 / manual stock universe, futures macro Mean-Z `hard_filter` / `ranking_penalty` / off, D+1 open execution, `fixed_pct` 또는 `atr_based` exit 결과를 Latest Backtest Run의 `Swing Detail` 탭과 generated backtest artifact로 보여준다. V2 Swing Detail은 comparison, sensitivity, stability, trade causes, quality warnings, trade log, scanner를 Backtest Analysis 연구 증거로 표시한다. Reference help, Strategy Evidence Inventory, Strict Annual + GTAA / Equal Weight Bridge, Risk-On Momentum 5D Governance, ETF Evidence Expansion, ETF Current Anchor Workbench, ETF Rerun Matrix Workbench는 현재 기본 Backtest Analysis 화면에서 렌더링하지 않는다. The removed Strategy Detail panel is not an active flow. 이 reference / evidence / anchor / matrix panel들은 monitoring signal, current candidate registry write, saved setup write, run history rewrite, validation result write, final decision write, monitoring log write를 만들지 않는다. Portfolio Mix는 기본 3전략 비교 form이 아니라 사용자가 2~4개 production component를 고르고 역할·비중을 정해 하나의 후보를 만드는 전용 four-step React workspace다. Step 3은 현재 weighted run의 KPI, 실제 날짜 base-100 누적 성과와 월별 수익률을 기본 표시하고, component 기여도·월별 표·계산/data trust는 상세 근거에 둔다. 월별 수익률 chart는 actual 최대 절댓값을 포함하는 동적 대칭 percent Y축을 사용하며 desktop은 5개, 760px은 3개 눈금으로 같은 scale을 읽는다. React는 Python이 만든 표시값의 차트와 hover/focus만 담당하고 benchmark나 holdings를 추론하지 않는다. reusable setup 저장과 Level2 source 등록은 서로 다른 action이다.
 - `Practical Validation`: 선택된 단일 전략 후보 / Portfolio Mix 후보 source를 Final Review로 넘기기 전 2단계 실전성 근거로 구조화한다. 화면은 `후보 Source 확인 -> 검증 기준 설정 / 실전 재검증 실행 -> 검증 결론 / 다음 행동 -> 검증 기준 상세`의 4개 user-facing flow로 읽는다. Flow 1은 Backtest Analysis가 넘긴 2차 review focus와 source summary / selection history를 확인하고, Flow 2는 validation profile과 5개 답변을 고른 뒤 latest runtime replay를 사용자가 실행했을 때만 현재 세션에 표시한다. Flow 2에서 현재 세션 replay 결과가 없으면 첫 진입 화면에는 Flow 1 / Flow 2만 보이고, Flow 3 / Flow 4와 Practical Validation Result JSON은 렌더링하지 않는다. Flow 3은 `workspace_panel.py`와 `practical_validation_fix_queue` React component가 Practical Validation outcome summary, 실패 category count, category-level `통과 / 실패 / 주의`, Final Review 이동 가능 여부, `검증 결과 저장(기록용)`, `저장하고 Final Review로 이동` CTA를 단일 first-read conclusion surface로 보여준다. PV-owned REVIEW caution이 남아도 이동 차단은 아니면 CTA 상태를 `주의 포함 이동 가능`으로 표시해 노란불 통과임을 구분한다. React는 CTA click intent만 전달하고, save-only audit append / Final Review handoff / session state / rerun은 Python page + service 경계가 처리한다. Flow 4는 `visible_criteria_detail_groups` 기반 `카테고리별 검증 결과` board에서 먼저 `통과`, `보강 후 재검증 필요`, `실전 사용 어려움` main outcome summary를 보여주고, 기준별 `상태 / 통과한 기준 / 남은 문제 / 판정`을 요약한다. `READY`는 사용자-facing 통과로 읽고, `REVIEW`는 하나의 Final Review 숙제가 아니라 `pv_data_caution`, `pv_practical_caution`, `final_decision_input`, `monitoring_followup`, `final_readiness_blocker` role로 읽는다. 적용된 Practical Validation category가 REVIEW-only라도 `데이터 주의` 또는 `2단계 실용성 주의`로 Flow 4에 표시하고, Final Review / Monitoring 전용 reference는 first-read action issue가 아니라 appendix / handoff 참고로 낮춘다. `NEEDS_INPUT` / `NOT_RUN`은 보강 후 재검증 대상이고, `BLOCKED`는 현재 상태로 실전 후보 사용이 어렵다는 차단 결론이다. 각 기준 상세는 `검증한 것 / 해결해야 할 항목 / 해결 방법 / 통과 기준 / 위치`로 보여준다. Flow 4 guide는 module-level 문구만 쓰지 않고 가능하면 audit row의 non-PASS `Criteria`와 `Next Action`을 끌어와 실제 부족 항목과 실행 방법을 표시한다. `통과 기준`은 보강 뒤 무엇이 되어야 해결된 것인지 판단하는 기준이며, 위치는 `Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세`, `Flow4 > 데이터 보강 / 수집 실행`처럼 사용자가 찾을 수 있는 화면 경로로 표시한다. Flow 4는 `카테고리별 검증 결과 -> 데이터 보강 / 수집 실행 -> 상세 근거 / 원자료` 순서로 읽으며, `데이터 보강 대상` board가 `immediate_collect`, `source_map_discovery`, `connector_needed`, `no_action`을 표시 전용으로 구분하고 같은 action center 아래 Python 수집 버튼이 실행 경계를 소유한다. 수집 실행은 ETF 운용성 / 비용, holdings / exposure, source map 탐색, FRED macro 같은 외부 데이터 근거만 처리하며 백테스트 재실행, 검증 판정 변경, Final Review 판단, registry / saved JSONL rewrite는 하지 않는다. 수집 후에는 Flow 2 재검증을 다시 실행해 보강된 DB 근거를 결과에 반영한다. 단계별 소유권 inventory는 내부 read model에는 남지만 visible expander로 렌더링하지 않는다. 핵심근거, 데이터품질, 구성리스크, 검증방법론, 강건성, Raw Evidence, Selection Source JSON, Practical Validation Result JSON과 `보강 작업 상세 / 수집 원자료`는 기본 접힌 `상세 근거 / 원자료`에서만 확인한다. legacy Final Review gate technical expander와 별도 visible Flow 5 container는 렌더링하지 않는다. 기본 진입 화면은 검증 상태와 보강 action을 먼저 보여주며, contextual Reference help와 context-only 시장 심리 overlay를 렌더링하지 않는다. `검증 결과 저장(기록용)`은 audit trail만 남기며 Gate 미통과 row를 Final Review 후보로 노출하지 않는다.
 - `Final Review`: primary question은 `이 포트폴리오를 실제 투자 검토 대상으로 계속 추적할 가치가 있는가?`다. source별 latest eligible Practical Validation result를 후보로 만들고 React one-shell 안에서 후보 선택 → 결론 → 관측 최신성 → 누적 성과/Benchmark·Underwater·실행 관측 → 실제 강점/약점 → 포트폴리오 실제 성격/관리 기준 대비 압력 → structured Monitoring 변화 조건 → canonical 최종 판단/사유 → evidence disclosure 순으로 읽는다. 관측 최신성은 현재 차트 종료일, 최신 완료 시장일, source별 DB 공통일, 제한 종목을 구분한다. 자동 갱신 가능 gap이 있으면 selected route만 잠그고, 사용자의 `최신 데이터로 다시 계산` intent를 Python이 기존 가격 수집 → 동일 source replay → 새 Practical Validation append 순서로 처리한다. 기존 validation row는 재작성하지 않으며 보류/거절/재검토 기록은 유지한다. 실제 성격은 criterion 유무와 무관하게 저장된 raw observation을 보여주고, 관리 압력은 explicit review criterion이 있을 때만 이내/초과를 판정한다. criterion이 없으면 `기준 미설정`, evidence가 없으면 `분석 근거 없음`으로 구분하며 radar/임의 0~100 normalization은 사용하지 않는다. overall investment score와 기존 headline score는 current 화면에서 제거하고 evidence confidence만 disclosure의 보조 metadata로 둔다. React는 candidate / observation refresh / route / reason intent와 표현만 맡고 Python이 날짜 판정, 가격 수집, replay, validation build/save, eligibility, exact-common 계산, observation/criterion projection, dedup, save evaluation, 자동 Decision ID, row append를 소유한다. live approval, broker order, auto rebalance는 수행하지 않는다.
-- `Final Review` first-read에서는 CNN / AAII 시장심리 패널을 렌더링하지 않는다. 자세한 심리 해석은 `Workspace > Overview > Sentiment`에서 확인하며, 시장심리는 후보 우선순위, selected-route gate, Final Decision save readiness, registry write, live approval / order / auto rebalance에 영향을 주지 않는다.
-- `Operations > Portfolio Monitoring`: v3 Final Review row는 `monitoring_candidate=True`일 때만 strategy pool로 읽고, legacy row는 `SELECT_FOR_PRACTICAL_PORTFOLIO` / selected flag 기준을 fallback으로 읽는다. Legacy implementation file / helper name은 Selected Portfolio Dashboard를 유지한다. 화면은 먼저 CNN / AAII `시장 심리 Context Overlay`와 Active Portfolio Monitoring Scenario를 보여주고, 그 아래 `나의 포트폴리오` fixed-height card shelf와 선택한 portfolio command band, selected decision strategy slot compact board로 start / latest-end mode / balance / memo를 관리한다. Scenario update는 slot 저장과 분리되며, portfolio-wide cockpit에서 실행 전 / 부분 집계 / 전체 집계 상태와 value / P&L / return / CAGR / MDD / benchmark spread / target snapshot을 먼저 보여준다. `포트폴리오 시나리오 업데이트`는 현재 slot signature 기준 pending / stale strategy만 기본 실행하고, `전체 재실행`을 켠 경우에만 기존 최신 결과까지 다시 replay한다. Target snapshot table의 `Target Snapshot Date`는 마지막 monitoring scenario가 산출한 목표 비중 기준일이고 `Next Review Date`는 다음 수동 재계산 예정일이다. 이 표는 주문 지시, broker/account 연결, 자동 리밸런싱이 아니다. Final Review의 `open_review_items`, review trigger, `deployment_readiness_policy_snapshot`, recheck / provider / continuity / review signal / allocation boundary evidence는 사용자가 선택한 1개 strategy 상세 / optional preflight에서 read-only로 확인한다. Portfolio Monitoring의 sentiment overlay도 Monitoring Scenario, Review Signals, saved dashboard setup, monitoring log, broker order, auto rebalance에 연결하지 않는다. 이 preflight도 실제 돈 투입 승인, 주문 지시, broker/account 연결, 자동 리밸런싱이 아니다. 통과 후보가 없으면 strategy pool은 비어 있고 Final Review 선정 안내를 보여준다.
+- `Final Review` first-read에서는 CNN / AAII 시장심리 패널을 렌더링하지 않는다. 자세한 심리 해석은 `Research > Market Research > 시장 환경 > 심리`에서 확인하며, 시장심리는 후보 우선순위, selected-route gate, Final Decision save readiness, registry write, live approval / order / auto rebalance에 영향을 주지 않는다.
+- `Portfolio > Portfolio Monitoring`: v3 Final Review row는 `monitoring_candidate=True`일 때만 strategy pool로 읽고, legacy row는 `SELECT_FOR_PRACTICAL_PORTFOLIO` / selected flag 기준을 fallback으로 읽는다. Legacy implementation file / helper name은 Selected Portfolio Dashboard를 유지한다. 화면은 먼저 CNN / AAII `시장 심리 Context Overlay`와 Active Portfolio Monitoring Scenario를 보여주고, 그 아래 `나의 포트폴리오` fixed-height card shelf와 선택한 portfolio command band, selected decision strategy slot compact board로 start / latest-end mode / balance / memo를 관리한다. Scenario update는 slot 저장과 분리되며, portfolio-wide cockpit에서 실행 전 / 부분 집계 / 전체 집계 상태와 value / P&L / return / CAGR / MDD / benchmark spread / target snapshot을 먼저 보여준다. `포트폴리오 시나리오 업데이트`는 현재 slot signature 기준 pending / stale strategy만 기본 실행하고, `전체 재실행`을 켠 경우에만 기존 최신 결과까지 다시 replay한다. Target snapshot table의 `Target Snapshot Date`는 마지막 monitoring scenario가 산출한 목표 비중 기준일이고 `Next Review Date`는 다음 수동 재계산 예정일이다. 이 표는 주문 지시, broker/account 연결, 자동 리밸런싱이 아니다. Final Review의 `open_review_items`, review trigger, `deployment_readiness_policy_snapshot`, recheck / provider / continuity / review signal / allocation boundary evidence는 사용자가 선택한 1개 strategy 상세 / optional preflight에서 read-only로 확인한다. Portfolio Monitoring의 sentiment overlay도 Monitoring Scenario, Review Signals, saved dashboard setup, monitoring log, broker order, auto rebalance에 연결하지 않는다. 이 preflight도 실제 돈 투입 승인, 주문 지시, broker/account 연결, 자동 리밸런싱이 아니다. 통과 후보가 없으면 strategy pool은 비어 있고 Final Review 선정 안내를 보여준다.
 
 Backtest Analysis 1단계 closeout 기준은 [BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md](./BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md)에 둔다. 이 문서는 이번 세션에서 정리한 Real-Money 1차 readiness, Practical Validation handoff gate, Portfolio Mix Builder 재정의, Mix 후보 판단 UI, 저장 경계를 요약한다.
 
@@ -218,9 +218,9 @@ Legacy / compatibility 흐름:
 - `Candidate Review`, `Portfolio Proposal`, 기존 Pre-Live registry, 기존 proposal registry는 바로 삭제하지 않는다. 다만 새 주 흐름의 필수 join 조건이 아니라 legacy inspector / archive compatibility로 낮춘다.
 - 기존 `Single Strategy`, `Compare & Portfolio Builder`, `Candidate Review`, `Portfolio Proposal` route request는 `backtest_workflow_routes.py`에서 3단계 stage로 매핑한다.
 
-Operations 화면:
+Portfolio / Data 화면:
 
-- `Operations > Portfolio Monitoring`: 기존 Selected Portfolio Dashboard route다. `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 selected strategy pool로 읽고, 사용자가 만든 dashboard portfolio에 strategy slot으로 추가해 모니터링한다. Dashboard는 daily-monitoring-first로 읽힌다. 상단 Active Portfolio Monitoring Scenario가 active portfolio, 실행 상태, 설정 투자금, 평가 금액, 손익, 총 수익률, CAGR / MDD, 기준일, session update timestamp, daily badges, value curve, 전략별 성과, target snapshot을 먼저 보여준다. Portfolio가 없거나 strategy가 없거나 scenario가 아직 실행되지 않은 상태는 각각 생성 / 전략 추가 / 업데이트 실행 안내로 구분한다. Portfolio card shelf는 hero 아래 active selector이고, portfolio name / description edit, compact strategy board, `포트폴리오 시나리오 업데이트`는 그 아래 관리 영역이다. 각 slot은 start / latest-end mode / balance / memo를 저장하고, update action은 pending / stale strategy만 기본 replay하며 `전체 재실행`을 켠 경우 full refresh한다. Target snapshot은 마지막 monitoring scenario 기준 산출 목표 비중이고 Next Review Date는 수동 재계산 예정일이다. Snapshot, Final Review -> dashboard continuity check, source contract, Monitoring Signals의 Timeline / Review Signals / Open Issues / Why Selected / optional Actual Allocation / allocation evidence boundary / Decision Dossier / Audit은 사용자가 선택한 1개 strategy 상세를 열 때만 보여준다. Recheck Operations Preflight / Recheck Readiness / Symbol Freshness / Provider Evidence도 하단 상세 점검으로 낮춘다. 같은 dashboard portfolio 안 전략이 2개 이상이면 최신 scenario 결과로 전환 비교를 표시한다. Preflight / Readiness / Symbol Freshness / Provider Evidence / Continuity / Timeline / Recheck Comparison / Allocation Boundary / Dossier는 read-only이며, live approval / broker order / account sync / auto rebalance는 disabled로 둔다.
+- `Portfolio > Portfolio Monitoring`: 기존 Selected Portfolio Dashboard route다. `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 selected strategy pool로 읽고, 사용자가 만든 dashboard portfolio에 strategy slot으로 추가해 모니터링한다. Dashboard는 daily-monitoring-first로 읽힌다. 상단 Active Portfolio Monitoring Scenario가 active portfolio, 실행 상태, 설정 투자금, 평가 금액, 손익, 총 수익률, CAGR / MDD, 기준일, session update timestamp, daily badges, value curve, 전략별 성과, target snapshot을 먼저 보여준다. Portfolio가 없거나 strategy가 없거나 scenario가 아직 실행되지 않은 상태는 각각 생성 / 전략 추가 / 업데이트 실행 안내로 구분한다. Portfolio card shelf는 hero 아래 active selector이고, portfolio name / description edit, compact strategy board, `포트폴리오 시나리오 업데이트`는 그 아래 관리 영역이다. 각 slot은 start / latest-end mode / balance / memo를 저장하고, update action은 pending / stale strategy만 기본 replay하며 `전체 재실행`을 켠 경우 full refresh한다. Target snapshot은 마지막 monitoring scenario 기준 산출 목표 비중이고 Next Review Date는 수동 재계산 예정일이다. Snapshot, Final Review -> dashboard continuity check, source contract, Monitoring Signals의 Timeline / Review Signals / Open Issues / Why Selected / optional Actual Allocation / allocation evidence boundary / Decision Dossier / Audit은 사용자가 선택한 1개 strategy 상세를 열 때만 보여준다. Recheck Operations Preflight / Recheck Readiness / Symbol Freshness / Provider Evidence도 하단 상세 점검으로 낮춘다. 같은 dashboard portfolio 안 전략이 2개 이상이면 최신 scenario 결과로 전환 비교를 표시한다. Preflight / Readiness / Symbol Freshness / Provider Evidence / Continuity / Timeline / Recheck Comparison / Allocation Boundary / Dossier는 read-only이며, live approval / broker order / account sync / auto rebalance는 disabled로 둔다.
 - `Data > Data Operations > 실행 이력`: active data action의 상태, 목적, 범위, compact 결과와 다음 행동을 확인한다. raw log, failure CSV, absolute artifact path와 full payload는 backend evidence로 남기고 Portfolio Monitoring에 별도 진단 패널로 반복하지 않는다.
 
 ## 현재 Reference Center 제품 흐름
@@ -254,8 +254,8 @@ owner 화면 이동은 `overview`, `institutional_portfolios`, `ingestion`, `bac
 
 | 화면 | helper key | 주요 연결 |
 |---|---|---|
-| `Workspace > Overview` | `overview` | 시장 이해 흐름, Market Context |
-| `Research > Institutional Portfolios` | `institutional_portfolios` | 기관 보유 해석 흐름, Provider Coverage |
+| `Research > Market Research` | `overview` | 시장 이해 흐름, Market Research |
+| `Research > Institutional Holdings` | `institutional_portfolios` | 기관 보유 해석 흐름, Provider Coverage |
 | `Data > Data Operations` | `ingestion` | 목적별 데이터 준비, 공식 파일, 문제 복구, compact 실행 이력 |
 | `Backtest > Backtest Analysis` | `backtest_analysis` | 후보 생성 흐름, Saved Portfolio |
 | `Backtest > Practical Validation` | `practical_validation` | NOT_RUN, REVIEW, BLOCKED, NOT_RUN playbook |
@@ -268,17 +268,17 @@ catalog drift guard는 required surface coverage, item id·관련 item 참조, d
 ## Portfolio Monitoring / Selected Portfolio Dashboard
 
 기존 구현 파일과 일부 legacy 문서는 `Selected Portfolio Dashboard` 이름을 사용한다.
-현재 사용자-facing navigation은 `Operations > Portfolio Monitoring`으로 읽는다.
+현재 사용자-facing navigation은 `Portfolio > Portfolio Monitoring`으로 읽는다.
 이 화면은 Final Review 이후 새 판단 저장 단계를 추가하지 않는다.
 Backtest workflow는 Final Review에서 끝나고,
-모니터링 후보 선정 후 확인은 Operations 화면에서 한다.
+모니터링 후보 선정 후 확인은 Portfolio Monitoring 화면에서 한다.
 
 direct 미국 주식의 fixed-shares 항목은 `개별 추적 결과 > 보유내역`에서 최초 요청 시작일과 수량을 `최초 설정 정정`으로 함께 바꿀 수 있다. 요청일 이후 첫 저장 시장일과 종가를 Python이 다시 결정하고, 변경 전/후 초기 계약을 확인한 뒤 append-only revision으로 저장한다. 새 초기 계약은 개별 lane과 그룹 성과에 함께 적용되며 ETF, fixed notional, selected strategy와 quant backtest에는 이 정정을 제공하지 않는다.
 
 ```text
 Backtest > Final Review
   -> FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl
-  -> Operations > Portfolio Monitoring
+  -> Portfolio > Portfolio Monitoring
 ```
 
 구현 책임:
@@ -287,9 +287,9 @@ Backtest > Final Review
 |---|---|
 | `app/runtime/backtest/read_models/final_selected_portfolios.py` | Final Review final decision row를 읽고 selected dashboard row / status summary / 사용자 monitoring portfolio saved state / strategy slot / continuity check / selected component performance recheck operations preflight / readiness / symbol freshness / selected provider evidence / performance recheck / recheck comparison / current weight 또는 value / holding input 기반 drift check / drift alert preview / allocation drift evidence boundary / monitoring timeline으로 변환 |
 | `app/services/backtest_evidence_read_model.py` | Final Review final decision row의 status / evidence checks / decision dossier를 Streamlit-free read model로 변환 |
-| `app/web/final_selected_portfolio_dashboard.py` | Operations dashboard 화면 render, CNN / AAII market sentiment context overlay, Active Portfolio Monitoring Scenario hero / state-specific empty 안내 / daily badges / value curve / strategy performance / rebalance target, 선택 그룹 direct stock·ETF 가격 최신성 및 명시적 refresh action, 나의 포트폴리오 fixed-height card shelf 생성 / 선택 / collapsed management soft delete, portfolio name / description edit, Final Review selected strategy pool에서 slot 추가 / compact strategy board / 설정 적용 / 제거, strategy-board 아래 pending-stale update, 선택한 1개 strategy의 Snapshot / Monitoring Scenario / 하단 readiness + symbol freshness + provider evidence detail, Continuity check, Monitoring Timeline / Review Signals / Open Issues / Why Selected / optional Actual Allocation / allocation evidence boundary / optional preflight / Decision Dossier / Audit / 전환 비교 표시 |
+| `app/web/final_selected_portfolio_dashboard.py` | Portfolio Monitoring 화면 render, CNN / AAII market sentiment context overlay, Active Portfolio Monitoring Scenario hero / state-specific empty 안내 / daily badges / value curve / strategy performance / rebalance target, 선택 그룹 direct stock·ETF 가격 최신성 및 명시적 refresh action, 나의 포트폴리오 fixed-height card shelf 생성 / 선택 / collapsed management soft delete, portfolio name / description edit, Final Review selected strategy pool에서 slot 추가 / compact strategy board / 설정 적용 / 제거, strategy-board 아래 pending-stale update, 선택한 1개 strategy의 Snapshot / Monitoring Scenario / 하단 readiness + symbol freshness + provider evidence detail, Continuity check, Monitoring Timeline / Review Signals / Open Issues / Why Selected / optional Actual Allocation / allocation evidence boundary / optional preflight / Decision Dossier / Audit / 전환 비교 표시 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | dashboard portfolio table, selected strategy pool table, selected strategy comparison table, component table, timeline table, recheck preflight table, recheck readiness table, symbol freshness table, provider evidence table, recheck comparison table, value / holding input table, drift table, alert preview table, allocation boundary table, filter helper |
-| `app/web/streamlit_app.py` | Operations navigation에 `Portfolio Monitoring`만 등록 |
+| `app/web/streamlit_app.py` | Portfolio navigation에 `Portfolio Lab`과 `Portfolio Monitoring` 등록 |
 
 데이터 기준:
 
@@ -341,7 +341,7 @@ first-pass status:
 
 경계:
 
-- `Operations > Portfolio Monitoring`은 live approval, broker order, auto rebalance가 아니다.
+- `Portfolio > Portfolio Monitoring`은 live approval, broker order, auto rebalance가 아니다.
 - Recheck Operations Preflight는 현재 decision row, Current Candidate Registry fallback, DB latest market date, price freshness metadata를 읽는 사전 점검이며 데이터 수집이나 저장을 실행하지 않는다.
 - Recheck Readiness는 현재 decision row, embedded replay contract, Current Candidate Registry fallback, DB latest market date를 읽는 사전 점검이며 데이터 수집이나 저장을 실행하지 않는다.
 - Symbol Freshness는 price DB metadata를 읽는 사전 점검이며 OHLCV 수집이나 저장을 실행하지 않는다.
@@ -398,7 +398,7 @@ Backtest workflow의 실제 body는 `app/web/backtest_*.py` module로 분리한�
 | 1 | Candidate Review module | Candidate Packaging flow, review note save, registry draft UI, Pre-Live 운영 기록, Portfolio Proposal 이동 판단 | 완료: render flow는 `app/web/backtest_candidate_review.py`, 판단 / 변환 / Pre-Live helper는 `app/web/backtest_candidate_review_helpers.py`로 분리. Streamlit auto page discovery를 피하려고 `pages/` 밖에 둔다 |
 | 2 | Pre-Live Review tab/module | 별도 Pre-Live tab | 제거: Pre-Live 운영 기록은 Candidate Review 3번 구간으로 통합했고, 별도 `backtest_pre_live_review*.py` 파일은 삭제했다 |
 | 3 | Registry runtime helpers | current candidate / review note / pre-live / proposal registry I/O, compare prefill conversion | Candidate Review / Compare / Pre-Live / Proposal이 공통 persistence pattern을 쓴다 |
-| 4 | History module | run history display, selected record, run again, load into form | 완료: render flow는 `app/web/backtest_history.py`, replay / parity helper는 `app/web/backtest_history_helpers.py`로 분리. `Operations > Backtest Run History`에서 사용한다 |
+| 4 | History module | run history display, selected record, run again, load into form | 완료: render flow는 `app/web/backtest_history.py`, replay / parity helper는 `app/web/backtest_history_helpers.py`로 분리. `hidden Backtest Run History compatibility page`에서 사용한다 |
 | 5 | Portfolio Proposal module | proposal 후보 선택, 목적 / 역할 / 비중 설계, Live Readiness 진입 평가, saved proposal feedback | 완료: render flow는 `app/web/backtest_portfolio_proposal.py`, proposal row / readiness / feedback helper는 `app/web/backtest_portfolio_proposal_helpers.py`로 분리 |
 | 6 | Single Strategy module split | strategy-specific forms, runtime dispatch, latest result 연결 | 완료: `backtest_single_strategy.py`, `backtest_single_forms/`, `backtest_single_runner.py`로 분리 |
 | 7 | Portfolio Mix Builder module split | component form / 실행 / weighted portfolio / saved portfolio replay | 완료: `backtest_compare/` package로 분리. execution / saved replay / weight builder / handoff / visual components는 package 내부 module이 담당한다 |
@@ -420,7 +420,7 @@ Phase 30 third work unit status:
 - `app/runtime/backtest/stores/portfolio_proposal.py`로 proposal draft registry read / append helper도 추가했다.
 - Candidate Review는 `app/web/backtest_candidate_review.py`와 `app/web/backtest_candidate_review_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper와 cross-panel handoff call만 남아 있다.
 - 긴 route/status 문자열은 공용 화면에서는 `app/web/backtest_ui_components.py`의 wrapping card / route panel을 사용하고, Practical Validation은 `app/web/backtest_practical_validation/components.py`의 전용 workbench shell을 사용해 `st.metric` 말줄임과 기본 container 의존을 피한다.
-- Backtest shell은 Python-owned read model과 React intent rail로 `Backtest Analysis -> Practical Validation -> Final Review`를 주 workflow navigation으로 보여준다. `현재 단계에서 끝낼 일`은 단계 책임만 설명하며 Level 내부 Gate/count를 복제하지 않는다. Backtest Analysis 안에서 `Single Strategy`와 `Portfolio Mix Builder`를 선택한다. `History`는 메인 흐름에서 제외하고 `Operations > Backtest Run History` page로 연다.
+- Backtest shell은 Python-owned read model과 React intent rail로 `Backtest Analysis -> Practical Validation -> Final Review`를 주 workflow navigation으로 보여준다. `현재 단계에서 끝낼 일`은 단계 책임만 설명하며 Level 내부 Gate/count를 복제하지 않는다. Backtest Analysis 안에서 `Single Strategy`와 `Portfolio Mix Builder`를 선택한다. `History`는 메인 흐름에서 제외하고 `hidden Backtest Run History compatibility page` page로 연다.
 - Backtest Run History는 `app/web/backtest_history.py`와 `app/web/backtest_history_helpers.py`로 분리되어, `backtest.py`에는 History 화면 render / replay helper 본문이 남아 있지 않다.
 - Portfolio Proposal은 `app/web/backtest_portfolio_proposal.py`와 `app/web/backtest_portfolio_proposal_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper만 남아 있다.
 - Final Review는 `app/web/backtest_final_review/page.py`와 `app/web/backtest_final_review_helpers.py`로 분리되어, `backtest.py`에는 panel dispatch만 남아 있다.
@@ -476,7 +476,7 @@ Stage:
 - `Backtest Analysis`: 후보 생성
 - `Practical Validation`: Final Review로 넘길 검증 근거 생성
 - `Final Review`: Final Review 판단 저장 / Portfolio Monitoring handoff 상태 안내
-- `Operations > Portfolio Monitoring`: 모니터링 이후 재확인
+- `Portfolio > Portfolio Monitoring`: 모니터링 이후 재확인
 
 검증 체크포인트:
 
@@ -638,7 +638,7 @@ Factor Readiness는 ticker-change 후보쌍 / 신뢰도 / 기간 경계 / 다음
 ```text
 CURRENT_CANDIDATE_REGISTRY.jsonl
   + PRE_LIVE_CANDIDATE_REGISTRY.jsonl
-  -> Operations > Candidate Library
+  -> hidden Candidate Library compatibility page
   -> 후보 선택
   -> Stored Snapshot / Replay Contract / Pre-Live Record 확인
   -> Rebuild Result Curve
@@ -688,7 +688,7 @@ Backtest > Portfolio Mix Builder
 
 저장된 weighted portfolio는 live trading 승인 기록이 아니다.
 후보 조합을 다시 재현하고 검증하기 위한 operator workflow artifact다.
-저장된 후보 자체의 그래프 재검토는 `Operations > Candidate Library`에서 처리한다.
+저장된 후보 자체의 그래프 재검토는 `hidden Candidate Library compatibility page`에서 처리한다.
 
 ## Candidate Review 흐름
 
@@ -700,10 +700,10 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
   -> 저장된 Pre-Live record가 PORTFOLIO_PROPOSAL_READY이면 Open Portfolio Proposal
 ```
 
-Latest / Operations history result handoff:
+Latest / hidden history result handoff:
 
 ```text
-Latest Backtest Run 또는 Operations > Backtest Run History selected record
+Latest Backtest Run 또는 hidden Backtest Run History compatibility page selected record
   -> Review As Candidate Draft
   -> Backtest > Candidate Review > 1. Draft 확인 / Review Note 저장
   -> result snapshot / Real-Money signal / data trust snapshot / handoff readiness snapshot / entry gate 확인
@@ -774,7 +774,7 @@ Phase 28 이후 compare와 weighted portfolio 결과도 component별 data trust�
 
 - `Portfolio Mix Builder > 구성 포트폴리오 실행 상세 > Data Trust`
 - `Weighted Portfolio Result > Component Data Trust`
-- `Operations > Backtest Run History > Selected History Run > Saved Input & Context`
+- `hidden Backtest Run History compatibility page > Selected History Run > Saved Input & Context`
 
 보는 값:
 
@@ -801,7 +801,7 @@ Phase 28 이후 compare, history, saved portfolio에는
 표시 위치:
 
 - `Portfolio Mix Builder > 구성 포트폴리오 실행 상세 > Promotion Policy / Guardrail`
-- `Operations > Backtest Run History > Selected History Run > History Promotion Policy / Guardrail Scope`
+- `hidden Backtest Run History compatibility page > Selected History Run > History Promotion Policy / Guardrail Scope`
 - `저장된 Mix > Saved Portfolio Promotion Policy / Guardrail Scope`
 
 현재 기준:
@@ -819,7 +819,7 @@ Phase 28 이후 compare, history, saved portfolio에는
 
 ## Backtest Run History 흐름
 
-`Operations > Backtest Run History`는 compact summary 중심이다.
+`hidden Backtest Run History compatibility page`는 compact summary 중심이다.
 모든 selection history row를 그대로 저장하지 않는다.
 
 대표 action:
@@ -932,17 +932,17 @@ Practical Validation Gate 통과 후보
      -> FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl append
      -> compact decision_brief_snapshot 저장
   -> 4. evidence disclosure 확인
-  -> 5. selected row 운영 확인은 Operations > Portfolio Monitoring에서 이어감
+  -> 5. selected row 운영 확인은 Portfolio > Portfolio Monitoring에서 이어감
 ```
 
 구분:
 
 - Final Review는 Portfolio Proposal 탭이 아니라 별도 workflow panel이다.
-- Final Review first-read에서는 CNN / AAII 시장심리 패널을 렌더링하지 않는다. 자세한 심리 해석은 `Workspace > Overview > Sentiment`에서 확인하며, 시장심리는 gate, score, 저장 가능 여부, Monitoring signal을 바꾸지 않는다.
+- Final Review first-read에서는 CNN / AAII 시장심리 패널을 렌더링하지 않는다. 자세한 심리 해석은 `Research > Market Research > 시장 환경 > 심리`에서 확인하며, 시장심리는 gate, score, 저장 가능 여부, Monitoring signal을 바꾸지 않는다.
 - 시장심리 timing / rebalance 활용은 별도 리서치와 look-ahead-safe 검증 전까지 Final Review gate나 Portfolio Monitoring signal로 쓰지 않는다.
 - Decision Workspace의 candidate selector는 validation / source stable key를 option identity로 사용한다. 후보 변경 intent는 Python이 allowed eligible source를 재검증하고 session state를 바꾼 뒤 rerun하며 registry를 쓰지 않는다.
 - `Final Review Decision Workspace`는 Python `backtest_final_review_decision_brief`가 만든 `decision_brief_v1`을 React가 그대로 표시하는 first-read surface다. current 화면은 점수표, 질문 목록, Level2 remediation card를 만들지 않는다. 같은 active brief가 최종 row의 compact `decision_brief_snapshot_v1`으로 저장되며 React는 persistence를 소유하지 않는다.
-- Decision Workspace의 visual contract는 `Workspace > Overview > 시장 맥락`을 projection뿐 아니라 시각 언어의 기준으로 사용한다. 질문/후보 header, 결론, chart, observation, finding, Monitoring, decision, disclosure는 blue-gray palette, rounded surface, soft shadow, compact type hierarchy를 공유하고 760px에서 가로 overflow 없이 접힌다. React가 이 presentation을 소유하되 Python payload와 intent 경계는 바뀌지 않는다.
+- Decision Workspace의 visual contract는 `Research > Market Research`을 projection뿐 아니라 시각 언어의 기준으로 사용한다. 질문/후보 header, 결론, chart, observation, finding, Monitoring, decision, disclosure는 blue-gray palette, rounded surface, soft shadow, compact type hierarchy를 공유하고 760px에서 가로 overflow 없이 접힌다. React가 이 presentation을 소유하되 Python payload와 intent 경계는 바뀌지 않는다.
 - Decision Workspace의 behavior chart는 실제 관측 날짜 X축, index/percent Y축과 hover date/value를 제공한다. 누적 성과는 시작일 100 기준이며 `고점 대비 낙폭 (Underwater)`은 running peak 대비 하락률로 0%가 이전 최고점 회복 상태다.
 - Decision Workspace의 `포트폴리오 실제 성격`은 집중, 손실, 회전, 비용, 국면 의존의 저장 관측값을 criterion 없이도 표시한다. `관리 기준 대비 압력`은 Python이 explicit criterion과 비교해 `기준 이내 / 기준 초과 / 기준 미설정 / 분석 근거 없음`을 전달한다. legacy `mdd_review_line`은 drawdown 관리선 alias이며 거래비용 가정 `one_way_cost_bps`는 review limit가 아니다.
 - Level2 remediation과 조건부 pattern guide는 current Decision Workspace에 렌더링하지 않는다. blocker가 남은 후보는 eligibility와 canonical `RE_REVIEW_REQUIRED` route로 처리한다.
@@ -971,7 +971,7 @@ Backtest > Final Review
      -> HOLD / REJECT / RE_REVIEW는 판단 record로 저장하되 Monitoring 후보 제외
   -> route별 활성화된 CTA로 Final Review 판단 저장
   -> evidence disclosure와 compact decision snapshot 보존
-  -> selected row의 운영 확인은 Operations > Portfolio Monitoring에서 이어감
+  -> selected row의 운영 확인은 Portfolio > Portfolio Monitoring에서 이어감
 ```
 
 근거 종결 계약:

@@ -14,7 +14,7 @@
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` | `app/services` / `app/runtime` Streamlit-free boundary, `app.web` import 금지, staged artifact guard 점검 |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py` | current candidate registry list / show / validate / append |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | pre-live candidate registry template / draft-from-current / list / show / validate / append |
-| `app/jobs/overview_automation.py` | 브라우저 없이 Overview Market Intelligence 수집 job을 cadence / market-hours / lock 기준으로 실행하는 run-once CLI |
+| `app/jobs/overview_automation.py` | 브라우저 없이 Market Research intelligence 수집 job을 cadence / market-hours / lock 기준으로 실행하는 run-once CLI. 내부 CLI 이름은 기존 `overview_automation`을 유지한다. |
 | `app/jobs/economic_cycle_refresh.py::run_economic_cycle_intramonth_refresh` | 평일 17-series overlap 증분 수집 → 누락 직전 월말 append-only rollover → 당일 intramonth materialization을 fail-closed로 실행. 일부 source 실패나 credential 부재 시 snapshot을 쓰지 않고 last-good 유지 |
 | `app/jobs/inflation_policy_refresh.py` | 독립 inflation-policy FRED/ALFRED 빈티지, SEP, FOMC 결정과 선택 BEA/ACM 원천을 수집하고 필수 source/series coverage로 향후 materialization 허용 여부를 판정하는 backend-only CLI |
 | `app/jobs/ingestion_jobs.py::run_collect_economic_cycle_vintages` | 승인된 17-series FRED/ALFRED vintage catalog를 명시적으로 수집하는 `JobResult` wrapper. `FRED_API_KEY` 필수 |
@@ -151,11 +151,11 @@ python3 .aiworkspace/plugins/quant-finance-workflow/scripts/manage_pre_live_cand
 - `draft-from-current`는 current candidate를 Pre-Live 기록 초안으로 바꾼다.
   기본값은 출력만 하며, `--append`를 붙일 때만 실제 registry에 저장한다.
 
-## Overview scheduled refresh helper
+## Market Research scheduled refresh helper
 
 사용 시점:
 
-- Streamlit 브라우저를 켜지 않고 Overview Market Movers / Events 데이터를 주기적으로 갱신할 때
+- Streamlit 브라우저를 켜지 않고 Market Research Market Movers / Events 데이터를 주기적으로 갱신할 때
 - cron, macOS launchd, Codex automation 같은 외부 scheduler가 5분 단위로 호출할 run-once entry point가 필요할 때
 - 실제 provider 호출 없이 어떤 job이 due인지 먼저 확인하고 싶을 때
 
@@ -174,13 +174,13 @@ uv run python -m app.jobs.overview_automation --profile browser_safe
 - `standard`는 S&P 500 / Top1000 / Top2000 intraday snapshot과 S&P 500 universe, FOMC, macro, earnings refresh를 평가한다.
 - `safe`는 Top1000 / Top2000 intraday snapshot을 제외해 무료 provider 압력을 낮춘다.
 - `events`는 FOMC / macro / earnings calendar만 평가한다.
-- `browser_safe`는 Overview가 열린 브라우저 세션에서 호출하는 1차 auto refresh profile이며 S&P 500 Daily intraday snapshot만 평가한다.
+- `browser_safe`는 Market Research가 열린 브라우저 세션에서 호출하는 1차 auto refresh profile이며 S&P 500 Daily intraday snapshot만 평가한다.
 - Intraday snapshot은 기본적으로 미국 정규장 시간에만 실행된다.
-- 실행 결과는 각 ingestion job result로 `.aiworkspace/note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl`에 남고, Data Health가 그 기록을 읽는다.
+- 실행 결과는 각 ingestion job result로 `.aiworkspace/note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl`에 남고, Data Operations 실행 이력과 관련 Market Research refresh evidence가 그 기록을 읽는다.
 
 경제 사이클의 full vintage collection/model validation/current·10년 replay는 scheduled
 profile에 포함하지 않는다. 별도의 weekday intramonth job만 등록돼 있으며 상세 기준은
-[Overview Market Intelligence Runbook](./OVERVIEW_MARKET_INTELLIGENCE.md)을 본다.
+[Market Research Intelligence Runbook](./OVERVIEW_MARKET_INTELLIGENCE.md)을 본다.
 
 Inflation / Policy raw context는 `safe`, `standard`, `broad`에 평일 24시간 cadence로
 등록된다. 이 job은 raw source와 coverage gate만 갱신하고 확률 snapshot을 만들지 않으며,

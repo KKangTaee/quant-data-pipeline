@@ -10,6 +10,12 @@ Keep here:
 
 Detailed historical logs were archived on `2026-04-13`.
 
+### 2026-08-17 - post-merge finance docs / flow refresh
+
+- master 병합 후 durable docs의 current user-facing route를 `Market Research / Institutional Holdings / Data Operations / Portfolio Monitoring` 기준으로 정리했다.
+- Reference Center service/test label contract도 current surface vocabulary로 맞췄고, 내부 route key·URL·module·saved JSONL compatibility name은 보존했다.
+- hard-stale scan, conflict marker scan, `git diff --check`, Reference Center compile/unittest를 통과했다. 상세는 [doc refresh task](./tasks/active/post-completion-doc-flow-diagnosis-20260817/STATUS.md)를 본다.
+
 ### 2026-08-17 - backtest-dev master 병합 충돌 해결
 
 - Sentiment 3차 1W·1M 관측 변화와 master의 Futures Macro 장중 관측·재가격화 계약을 함께 보존했다.

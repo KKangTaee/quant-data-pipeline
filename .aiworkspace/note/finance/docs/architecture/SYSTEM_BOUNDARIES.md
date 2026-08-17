@@ -55,9 +55,9 @@ New code should not recreate legacy `.note/finance` paths directly.
 
 ## Product Surface Boundaries
 
-### Workspace > Ingestion
+### Data > Data Operations
 
-Ingestion is the primary product surface for collector execution, data repair, and source diagnostics.
+Data Operations is the primary product surface for collector execution, data repair, and source diagnostics.
 It calls `app/jobs/ingestion_jobs.py`, which calls `finance/data/*` and writes MySQL rows.
 The Streamlit page owns scheduling, section state, running progress / elapsed-time display, result interpretation, and run-history inspection; it should not fetch providers directly during render.
 Read-only diagnostics use `app/services/ingestion_diagnostics.py` and are scheduled through the same UI job path so results stay attached to the current section and execution records.
@@ -65,25 +65,25 @@ Read-only diagnostics use `app/services/ingestion_diagnostics.py` and are schedu
 It does not produce PASS / BLOCKER validation decisions by itself.
 Partial lifecycle, provider, macro, futures, or sentiment evidence must remain visibly partial in downstream read models.
 
-### Workspace > Overview
+### Research > Market Research
 
-Overview is a market context and data health surface with approved bounded refresh actions.
+Market Research is a market context and research surface with approved bounded refresh actions.
 
-Current primary tabs are `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, and `Events`.
-`Futures Monitor` and `Sector / Industry` standalone tabs are not current primary surfaces; their data paths remain as futures OHLCV / sector evidence consumed by Futures Macro, Market Context, and Market Movers.
+Current views are grouped into `시장 환경 / 지수 가치평가 / 종목 리서치` and expose `경기 국면`, `물가·정책`, `선물 매크로`, `심리`, `일정`, `S&P 500`, `변동 종목`, and `개별 종목`.
+`Futures Monitor` and `Sector / Industry` standalone tabs are not current primary surfaces; their data paths remain as futures OHLCV / sector evidence consumed by `선물 매크로`, `S&P 500`, and `변동 종목`.
 
 It reads DB-backed service models for:
 
-- Market Movers, sector breadth evidence, Events
-- Futures Macro Thermometer
+- Economic Cycle, Inflation / Policy, S&P 500 valuation, U.S. stock valuation, Market Movers, sector breadth evidence, Events
+- Futures Macro observation and replay evidence
 - CNN Fear & Greed / AAII Sentiment
 - Why It Moved investigation metadata
 
-`Overview Macro Context Cockpit` is a summary-first read-only band over the existing deep tabs.
+`Overview Macro Context Cockpit` is a retained internal read-only band over older Market Research tab code.
 It synthesizes the same DB-backed movers, breadth, futures, sentiment, event, and data-health snapshots, keeps source / freshness visible, and does not add new collection, storage, validation, monitoring, or trading semantics.
 
 `Overview Data Health Ingestion Handoff` is a retained read-only helper for data-repair ownership.
-It priority-ranks existing DB/run-history freshness rows and points the user to the owning Ingestion or approved Overview bounded refresh surface.
+It priority-ranks existing DB/run-history freshness rows and points the user to the owning Data Operations action or approved Market Research bounded refresh surface.
 It does not execute collection jobs, persist an action queue, change schema, fetch providers during render, or write registry / saved setup rows.
 
 `Overview Source Confidence Catalog` is a read-only lane inside the Macro Context Cockpit.
@@ -91,20 +91,20 @@ It reuses the already loaded cockpit snapshots to expose source, owner, freshnes
 It does not add providers, replace provider policy, persist provider scores, fetch providers during render, or write registry / saved setup rows.
 
 `Overview IA Closeout` is a static guide between the cockpit and deep tabs.
-It groups the existing market-context tabs and external data-repair ownership so the user can drill down without treating Overview as a backtest or trading decision surface.
+It groups the existing market-context views and external data-repair ownership so the user can drill down without treating Market Research as a backtest or trading decision surface.
 It does not move Candidate Ops into Overview, change Backtest workflows, fetch providers, persist rows, or write registry / saved setup rows.
 
-Overview refresh buttons must route through `app/jobs/overview_actions.py`.
-The Overview UI must not import `app/jobs/ingestion_jobs.py`, `app/jobs/overview_automation.py`, `app/jobs/run_history.py`, or raw provider / FRED / crawler modules directly.
-The action facade is allowed to call ingestion job wrappers, browser-session automation, and run-history append helpers for approved Overview market-context targets only.
+Market Research refresh buttons must route through internal `app/jobs/overview_actions.py`.
+The Market Research UI must not import `app/jobs/ingestion_jobs.py`, `app/jobs/overview_automation.py`, `app/jobs/run_history.py`, or raw provider / FRED / crawler modules directly.
+The action facade is allowed to call ingestion job wrappers, browser-session automation, and run-history append helpers for approved Market Research market-context targets only.
 
-Overview context does not create trade signals, Practical Validation PASS / BLOCKER, Final Review selected-route decisions, monitoring signals, registry rows, saved setup rows, broker orders, or auto rebalance actions.
+Market Research context does not create trade signals, Practical Validation PASS / BLOCKER, Final Review selected-route decisions, monitoring signals, registry rows, saved setup rows, broker orders, or auto rebalance actions.
 
-### Workspace > Institutional Portfolios
+### Research > Institutional Holdings
 
-Institutional Portfolios is a read-only Workspace research surface for delayed SEC Form 13F filings.
+Institutional Holdings is a read-only Research surface for delayed SEC Form 13F filings.
 
-It reads official quarterly SEC Form 13F data sets only after an explicit Ingestion action stores manager, filing, holdings, and CUSIP-symbol mapping rows in MySQL.
+It reads official quarterly SEC Form 13F data sets only after an explicit Data Operations action stores manager, filing, holdings, and CUSIP-symbol mapping rows in MySQL.
 The normal path is `finance/data/institutional_13f.py -> finance_meta.institutional_13f_* -> finance/loaders/institutional_13f.py -> app/services/institutional_portfolios.py -> app/web/institutional_portfolios.py`.
 
 It owns manager search, latest reported portfolio summary, holdings table, quarter-over-quarter reported changes, sector exposure, symbol / CUSIP reverse lookup, and source links.
@@ -141,11 +141,11 @@ It reads Gate-passed Practical Validation rows, shows the Decision Desk / invest
 Hold, reject, and re-review are current UI state guidance and compatibility read paths, not new official save actions.
 Final Review does not create broker orders, live approval, account sync, auto rebalance, or automatic report files.
 
-### Operations > Portfolio Monitoring
+### Portfolio > Portfolio Monitoring
 
 Portfolio Monitoring is the current user-facing route for the legacy Selected Portfolio Dashboard implementation files.
 
-It is the only user-facing page in the Operations navigation. Collection run history, logs, and failure CSV remain under `Workspace > Ingestion > 실행 기록 / 결과`; internal diagnostics are not duplicated in Portfolio Monitoring.
+It is the user-facing monitoring page under the Portfolio navigation. Collection run history, logs, and failure CSV remain under `Data > Data Operations > 실행 이력`; internal diagnostics are not duplicated in Portfolio Monitoring.
 
 It owns user-created monitoring portfolio setup, explicit scenario update, portfolio-level performance recheck, target snapshot display, selected strategy detail, continuity, timeline, review signals, provider evidence, open issues, optional allocation check, and Decision Dossier read-only display.
 
@@ -176,8 +176,8 @@ The following are context or investigation evidence unless a later approved task
 
 - CNN Fear & Greed and AAII Sentiment
 - Futures Macro Thermometer and historical validation
-- Overview Market Movers / Why It Moved metadata
-- Workspace > Institutional Portfolios SEC Form 13F holdings and reported changes
+- Market Research Market Movers / Why It Moved metadata
+- Research > Institutional Holdings SEC Form 13F holdings and reported changes
 - Market event calendar
 - Current listing snapshots, SEC CIK cross-checks, computed lifecycle partial rows
 - Risk-On Momentum 5D Backtest Analysis swing detail and generated artifacts

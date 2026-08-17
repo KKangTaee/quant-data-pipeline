@@ -10,6 +10,13 @@ Use it for:
 
 Detailed historical analysis was archived on `2026-04-13`.
 
+### 2026-08-17 - post-merge 문서는 current route와 compatibility name을 분리한다
+
+- User request: sub-dev/backtest-dev 작업이 master에 병합된 뒤 공용 문서, 탭별 흐름, 코드 리뷰 관점의 오래된 내용을 2차에 이어 실제로 정리해 달라고 요청함.
+- Interpreted goal: durable docs는 현재 화면명과 flow를 말하게 하고, route key·URL·module·saved JSONL 같은 compatibility 이름은 무리하게 rename하지 않는다.
+- Analysis result: current user-facing surface는 `Market Research / Institutional Holdings / Data Operations / Portfolio Monitoring`이고, `/overview`, `overview_*`, `institutional_portfolios`, `ingestion`, `selected_dashboard` 계열은 내부 호환 계약으로 남기는 것이 안전하다.
+- Follow-up: architecture/data/flows/runbooks/Glossary/Roadmap과 Reference Center service/test를 정리했고, active task에 실행/검증 기록을 남겼다.
+
 ### 2026-08-17 - Sentiment와 Futures Macro의 독립 완료 계약을 함께 유지한다
 
 - User request: `codex/backtest-dev`의 master 병합 충돌을 `finance-integration-review`로 해결해 달라고 요청함.

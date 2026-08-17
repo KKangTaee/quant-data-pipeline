@@ -107,7 +107,7 @@ UI 변경이면 1280/760/420px에서 `분기 리뷰`, page-level overflow와 con
 
 ## Related Docs
 
-- [Institutional Portfolios Flow](../flows/INSTITUTIONAL_PORTFOLIOS_FLOW.md)
+- [Institutional Holdings Flow](../flows/INSTITUTIONAL_PORTFOLIOS_FLOW.md)
 - [Data / DB Pipeline Flow](../architecture/DATA_DB_PIPELINE_FLOW.md)
 - [Finance Data And Storage](../data/README.md)
 - [Institutional Holdings Hybrid Quarter Review task](../../tasks/active/institutional-holdings-hybrid-quarter-review-v1-20260817/STATUS.md)

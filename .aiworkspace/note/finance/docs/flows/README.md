@@ -10,7 +10,7 @@ Finance Console `/` 최초 진입
   -> Research > Today
      -> React `오늘의 시장 판단`과 텍스트 신호·위험 분류
      -> 대표 포트폴리오 확정 일봉 곡선과 정규장 중 장중 임시 평가 overlay
-     -> Market Context / Market Movers / Portfolio Monitoring 기존 화면으로 이동
+     -> Market Research / Portfolio Monitoring 현재 화면으로 이동
 
 Research: Today / Market Research / Institutional Holdings
 Portfolio: Portfolio Lab / Portfolio Monitoring
@@ -33,9 +33,9 @@ Market Movers의 `개별 종목 분석`은 선택 symbol을 검증한 뒤 같은
 
 화면 경계가 code layer / storage boundary와 섞일 때는 [System Boundaries](../architecture/SYSTEM_BOUNDARIES.md)를 먼저 확인한다.
 
-## Overview Futures Macro Flow
+## Market Research Futures Macro Flow
 
-`Research > Market Research > Futures Macro`는 완료 futures daily OHLCV와 활성 세션의 저장된 latest closed 5m OHLCV를 읽어 현재 1D / 5D / 20D 변화, 교차자산 재가격화와 조건부 시나리오를 확인하는 단기 매크로 레이더다. 장기 경제사이클, provider run 진단, 확정 예측, trading signal 화면이 아니다.
+`Research > Market Research > 시장 환경 > 선물 매크로`는 완료 futures daily OHLCV와 활성 세션의 저장된 latest closed 5m OHLCV를 읽어 현재 1D / 5D / 20D 변화, 교차자산 재가격화와 조건부 시나리오를 확인하는 단기 매크로 레이더다. 장기 경제사이클, provider run 진단, 확정 예측, trading signal 화면이 아니다.
 
 기본 화면의 정보 소유권은 다음처럼 유지한다.
 

@@ -1,4 +1,4 @@
-# Institutional Portfolios Flow
+# Institutional Holdings Flow
 
 Status: Active
 Last Verified: 2026-08-17
@@ -7,7 +7,7 @@ Last Verified: 2026-08-17
 
 `Research > Institutional Holdings`는 Market Movers와 분리된 기관 / 투자 대가 portfolio research surface다.
 
-Market Movers는 선택된 급등락 종목이 왜 관심받는지 보는 곳이고, Institutional Portfolios는 특정 manager의 delayed SEC Form 13F holdings와 분기별 reported change를 탐색하는 곳이다.
+Market Movers는 선택된 급등락 종목이 왜 관심받는지 보는 곳이고, Institutional Holdings는 특정 manager의 delayed SEC Form 13F holdings와 분기별 reported change를 탐색하는 곳이다.
 
 ## User Flow
 

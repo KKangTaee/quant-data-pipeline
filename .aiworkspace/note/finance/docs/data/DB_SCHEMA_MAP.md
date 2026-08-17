@@ -28,18 +28,18 @@ Last Verified: 2026-08-11
 | `nyse_asset_profile` | stock / ETF profile, universe filter, current ETF operability metadata |
 | `equity_universe_snapshot` | Quality / Value strict family용 prebuilt monthly PIT-like equity universe snapshot header. V1은 DB price와 latest-known statement shares 기반 근사 market-cap universe다 |
 | `equity_universe_member` | `equity_universe_snapshot`별 included / excluded member, rank, approximate market cap, liquidity / exclusion reason evidence |
-| `market_universe_member` | Overview market intelligence용 current universe membership. 초기 구현은 S&P 500 current constituents |
+| `market_universe_member` | Market Research market intelligence용 current universe membership. 초기 구현은 S&P 500 current constituents |
 | `market_liquidity_universe_member` | Market Movers Top1000 / Top2000용 current liquidity universe membership. listing source 후보 중 `nyse_price_history` 최신 거래일 row가 있는 종목을 최근 20거래일 평균 거래대금으로 ranking해 저장 |
 | `market_symbol_alias` | Market Movers ticker-change repair alias store. Quote-missing old ticker와 replacement ticker 후보 / 적용 상태를 저장해 future intraday quote lookup에서 사용 |
-| `market_event_calendar` | Overview Events calendar용 event snapshot. FOMC / macro / earnings 등 공통 event row와 earnings source validation / lifecycle status를 저장 |
+| `market_event_calendar` | Market Research Events calendar용 event snapshot. FOMC / macro / earnings 등 공통 event row와 earnings source validation / lifecycle status를 저장 |
 | `institutional_13f_manager` | SEC Form 13F manager / filer master와 latest filing pointer |
 | `institutional_13f_filing` | SEC Form 13F filing metadata. accession, report period, filing date, amendment, source link를 저장 |
 | `institutional_13f_holding` | SEC Form 13F information table holdings row ledger. reported value, shares / principal amount, put/call, discretion, voting authority, source link를 저장 |
 | `institutional_13f_cusip_symbol_map` | 13F row에서 얻은 best-effort CUSIP-symbol display mapping과 추후 enrichment source |
-| `institutional_13f_manager_watchlist` | Institutional Portfolios manager rail용 curated seed metadata. CIK, label, priority, external links를 저장할 수 있음 |
+| `institutional_13f_manager_watchlist` | Institutional Holdings manager rail용 curated seed metadata. CIK, label, priority, external links를 저장할 수 있음 |
 | `institutional_13f_refresh_status` | SEC 13F dataset 수집 freshness state. latest report period, filing date, row counts, stale reason을 저장 |
-| `market_data_issue` | Overview Market Movers quote gap과 full-window 뒤에도 짧은 가격 이력 같은 반복 데이터 이슈를 symbol / universe 단위로 누적 추적 |
-| `futures_instrument` | Overview futures용 watchlist preset / display metadata. 1차 source는 yfinance provider symbol이다 |
+| `market_data_issue` | Market Research Market Movers quote gap과 full-window 뒤에도 짧은 가격 이력 같은 반복 데이터 이슈를 symbol / universe 단위로 누적 추적 |
+| `futures_instrument` | Market Research Futures Macro용 watchlist preset / display metadata. 1차 source는 yfinance provider symbol이다 |
 | `futures_market_monitor_run` | Futures OHLCV 수집 run diagnostics. 최근 run status, failed symbols, latest candle time을 저장 |
 | `etf_provider_source_map` | ETF별 issuer 공식 endpoint / parser mapping cache. verified row를 provider snapshot collector가 사용 |
 | `etf_operability_snapshot` | ETF 비용 / 규모 / 유동성 / spread / NAV 관련 provider snapshot. DB bridge/proxy row와 일부 issuer official actual/partial row를 source별로 저장 |
@@ -62,7 +62,7 @@ Last Verified: 2026-08-11
 | `nasdaq100_monthly_valuation` | QQQ proxy 월별 price/reconstructed EPS/PER/earnings yield와 weighted coverage, holdings/price basis, blocked reason 저장. `(observation_month, proxy_symbol, source)` unique UPSERT |
 | `sp500_index_earnings` | S&P index EPS의 period type, As-Reported/Operating basis, actual/estimate/mixed status, source release vintage 저장 |
 | `fomc_sep_projection` | SEP release/year/variable/statistic unique vintage row. real GDP/PCE median 및 central-tendency endpoints와 1/3/5년 reconstruction용 calendar-discovered 과거 release 저장 |
-| `futures_macro_snapshot` | Overview Futures Macro latest-good current. completed input fingerprint, schema/algorithm version, final session status와 compact payload 저장 |
+| `futures_macro_snapshot` | Market Research Futures Macro latest-good current. completed input fingerprint, schema/algorithm version, final session status와 compact payload 저장 |
 | `futures_macro_forecast_history` | deterministic forecast identity별 immutable same-state 5D/20D 전망, selected candidate, publication status, known/materialized time 저장 |
 
 ### `finance_price`
@@ -70,8 +70,8 @@ Last Verified: 2026-08-11
 | Table | 역할 |
 |---|---|
 | `nyse_price_history` | stock / ETF 공용 OHLCV, dividend, split price ledger |
-| `market_intraday_snapshot` | Overview daily movers용 intraday latest price / previous close snapshot. S&P 500 / Top1000 / Top2000 coverage별 최신 refresh row를 저장 |
-| `futures_ohlcv` | Overview futures OHLCV candle ledger. raw 1m/5m/1d provider row를 저장하고, 5m closed bar는 장중 임시 1D/5D/20D 관측과 exact-session 확정에 쓴다. 1d row의 nullable `final_*` / `finalization_basis` / `final_source_ref` / `finalized_at`은 exact ET 구간으로 재구성한 완료 세션 값을 별도로 보존한다. Forecast validation/history는 유효한 explicit final을 raw 1d보다 우선한다 |
+| `market_intraday_snapshot` | Market Research daily movers용 intraday latest price / previous close snapshot. S&P 500 / Top1000 / Top2000 coverage별 최신 refresh row를 저장 |
+| `futures_ohlcv` | Market Research Futures Macro OHLCV candle ledger. raw 1m/5m/1d provider row를 저장하고, 5m closed bar는 장중 임시 1D/5D/20D 관측과 exact-session 확정에 쓴다. 1d row의 nullable `final_*` / `finalization_basis` / `final_source_ref` / `finalized_at`은 exact ET 구간으로 재구성한 완료 세션 값을 별도로 보존한다. Forecast validation/history는 유효한 explicit final을 raw daily보다 우선한다 |
 
 ### `finance_fundamental`
 

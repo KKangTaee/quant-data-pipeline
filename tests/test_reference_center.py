@@ -37,9 +37,9 @@ REQUIRED_REFERENCE_ITEM_IDS = {
 }
 
 REQUIRED_SURFACES = {
-    "Overview",
-    "Institutional Portfolios",
-    "Ingestion",
+    "Market Research",
+    "Institutional Holdings",
+    "Data Operations",
     "Backtest Analysis",
     "Practical Validation",
     "Final Review",

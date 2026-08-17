@@ -5,7 +5,7 @@ Last Verified: 2026-07-22
 
 ## 목적
 
-`Operations > Portfolio Monitoring`은 Backtest에서 선별된 전략과 미국 주식·ETF를 사용자가 만든 그룹 단위로 추적하고, 성과·노출·행동·매크로 근거를 한 화면에서 재확인하는 decision-support surface다. 실제 주문이나 계좌 운용 화면이 아니다.
+`Portfolio > Portfolio Monitoring`은 Backtest에서 선별된 전략과 미국 주식·ETF를 사용자가 만든 그룹 단위로 추적하고, 성과·노출·행동·매크로 근거를 한 화면에서 재확인하는 decision-support surface다. 실제 주문이나 계좌 운용 화면이 아니다.
 
 ## 화면과 소유권
 

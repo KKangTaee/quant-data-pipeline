@@ -97,7 +97,7 @@ yfinance
 - 제품 runtime은 점점 DB-backed path를 더 중요하게 본다.
 - ETF 전략에서는 moving average / trailing return warmup과 date alignment가 결과 기간을 줄일 수 있다.
 
-## Overview market intelligence 흐름
+## Market Research Market Intelligence Flow
 
 ### U.S. economic cycle observed state and transition monitor
 
@@ -120,7 +120,7 @@ FRED/ALFRED vintage-dates API + observations API output_type=1 + FRED_API_KEY
 - 현재 국면은 activity/labor 8개 실물지표의 3개월 평균 수준과 직전 3개월 대비 모멘텀으로 `회복/확장/둔화/위축`을 직접 판정한다. 최근 1/3/6개월 변화와 다음 인접 국면의 지속성·확산도·활동/고용 동반 확인 조건을 함께 저장한다.
 - 최신 수정치 track은 revision sensitivity와 confidence 진단에만 사용하며 PIT 현재 국면을 바꾸지 않는다. NBER 침체 이력도 별도 사후 참고선이다.
 - 기존 h0/h1/h2 artifact와 확률 column은 shadow validation 및 old-row compatibility로 보존하지만 product read model과 기본 UI는 미래 1/2개월 확률이나 미래 좌표를 읽지 않는다.
-- 수집, 학습/검증, current materialization, 10년 replay는 명시적인 backend 실행이다. Overview render는 compact snapshot/history DB row만 읽고 provider나 model job을 호출하지 않는다.
+- 수집, 학습/검증, current materialization, 10년 replay는 명시적인 backend 실행이다. Market Research render는 compact snapshot/history DB row만 읽고 provider나 model job을 호출하지 않는다.
 - 기존 revised `macro_series_observation`과 달리 이 경로에는 CSV fallback이 없다. `FRED_API_KEY`가 없으면 수집을 실패시키고 latest-good snapshot 또는 `NOT_MATERIALIZED` LIMITED 상태를 유지한다.
 
 ### S&P 500 Market Context valuation
@@ -130,7 +130,7 @@ Robert Shiller official page -> current ie_data.xls discovery
   -> finance.data.sp500_valuation.collect_and_store_shiller_monthly_valuation()
   -> finance_meta.sp500_monthly_valuation
 
-Workspace > Ingestion official S&P Index Earnings XLSX + source release date
+Data > Data Operations official S&P Index Earnings XLSX + source release date
   -> run_import_sp500_index_earnings_xlsx()
   -> official QUARTERLY DATA title + multi-row basis header validation
   -> import_and_store_sp500_index_earnings() transactional release-vintage UPSERT
@@ -246,7 +246,7 @@ Nasdaq public Symbol Directory nasdaqlisted.txt current file
   -> finance.data.symbol_directory.collect_and_store_symbol_directory_snapshots()
   -> finance_meta.nyse_symbol_lifecycle (source=nasdaq_symdir_nasdaqlisted)
   -> app.services.overview.market_movers.build_market_movers_snapshot(universe_code=NASDAQ)
-  -> Workspace > Overview > Market Movers
+  -> Research > Market Research > 종목 리서치 > 변동 종목
 
 yahoo quote batch via yfinance cookie / crumb session
   -> finance.data.market_intelligence.collect_and_store_market_intraday_snapshot()
@@ -256,18 +256,18 @@ yfinance 5m OHLCV fallback
   -> finance.data.market_intelligence.collect_and_store_market_intraday_snapshot()
   -> finance_price.market_intraday_snapshot
   -> app.services.overview.market_movers.build_market_movers_snapshot()
-  -> Workspace > Overview > Market Movers
+  -> Research > Market Research > 종목 리서치 > 변동 종목
 
 finance_price.market_intraday_snapshot or finance_price.nyse_price_history
   -> app.services.overview.market_movers.build_group_leadership_snapshot()
-  -> Workspace > Overview > Market Movers / Market Context sector evidence
+  -> Research > Market Research > 종목 리서치 > 변동 종목 / S&P 500 sector evidence
 
 missing quote rows
   -> finance.data.market_intelligence.diagnose_market_quote_gaps()
   -> app.jobs.overview_actions.run_overview_quote_gap_diagnostics()
   -> app.jobs.ingestion_jobs.run_diagnose_market_quote_gaps()
   -> finance_meta.market_data_issue
-  -> Workspace > Overview > Market Movers > Coverage Trust / Raw diagnostics
+  -> Research > Market Research > 종목 리서치 > 변동 종목 > Coverage Trust / Raw diagnostics
 ```
 
 의미:
@@ -281,30 +281,30 @@ missing quote rows
 - 진단 결과는 `market_data_issue`에 `issue_type=quote_gap`으로 누적 저장한다. 이는 반복 발생 횟수와 최신 evidence를 추적하기 위한 운영 table이며, 상장폐지 / 거래정지 확정 판정은 아니다.
 - Sector / group leadership은 저장된 intraday snapshot이 있으면 `Previous Close -> latest quote` 기준을 사용한다. Weekly / Monthly leadership은 EOD DB의 최신 usable date를 사용하며, 최신 raw row가 sparse하면 prior eligible date로 fallback한다. Current UI는 이를 Market Movers `Sector Pulse` / Market Context sector evidence로 읽는다.
 
-## Overview market event calendar 흐름
+## Market Research market event calendar 흐름
 
 ```text
 Federal Reserve official FOMC calendar HTML
   -> finance.data.market_intelligence.collect_and_store_fomc_calendar()
   -> finance_meta.market_event_calendar
   -> app.services.overview.events.build_market_events_snapshot()
-  -> Workspace > Overview > Events
+  -> Research > Market Research > 시장 환경 > 일정
 
 Yahoo / yfinance ticker calendar, bounded symbols
   -> finance.data.market_intelligence.collect_and_store_earnings_calendar()
   -> finance.data.market_intelligence.upsert_market_event_rows()
   -> finance_meta.market_event_calendar
-  -> Workspace > Overview > Events
+  -> Research > Market Research > 시장 환경 > 일정
 
 BLS / BEA / Census / ISM / Treasury official schedules or BLS .ics import
   -> finance.data.market_intelligence.collect_and_store_macro_calendar()
   -> finance_meta.market_event_calendar
-  -> Workspace > Overview > Events
+  -> Research > Market Research > 시장 환경 > 일정
 
 Nasdaq Trader / Cboe / FTSE Russell market-structure calendars
   -> finance.data.market_intelligence.collect_and_store_market_structure_calendar()
   -> finance_meta.market_event_calendar
-  -> Workspace > Overview > Events
+  -> Research > Market Research > 시장 환경 > 일정
 
 finance_meta.market_event_calendar
   -> app.services.overview.events.build_market_events_snapshot()
@@ -317,20 +317,20 @@ finance_meta.market_event_calendar
 - `market_event_calendar`는 event collector별 normalized output을 저장하는 공통 table이다.
 - 반복 수집은 `event_key` 기준 UPSERT로 같은 event row를 갱신한다.
 - `event_family`, `event_subtype`, `universe_scope`, `source_authority`는 FOMC / macro / earnings / market-structure / fixed-income / corporate-action 후보를 같은 UI/read-model contract로 읽기 위한 taxonomy 필드다.
-- 기존 row에 taxonomy 필드가 없으면 Overview read model은 `event_type`, `source_type`, `validation_status`, `source`에서 보수적으로 추론한다.
+- 기존 row에 taxonomy 필드가 없으면 Market Research Events read model은 `event_type`, `source_type`, `validation_status`, `source`에서 보수적으로 추론한다.
 - FOMC collector는 Fed 공식 `.gov` calendar page를 파싱한다. meeting range의 마지막 날을 `event_date`로 저장하고, 원본 month/date text와 link evidence는 `raw_payload_json`에 남긴다.
 - Earnings collector는 yfinance ticker `calendar` field에서 upcoming `Earnings Date`를 읽고 `event_type=EARNINGS`, `source=yfinance_calendar`, `source_type=provider_estimate`로 저장한다.
 - 선택적으로 Nasdaq earnings calendar web endpoint로 같은 symbol/date를 cross-check하고, 결과를 `validation_status`와 `raw_payload_json.source_validation`에 남긴다.
 - 날짜가 바뀐 같은 symbol/source의 이전 active estimate는 `event_status=superseded`로 남겨 audit trail을 유지한다.
 - Earnings 수집 대상은 manual symbol list, latest movers, S&P 500, large-cap batch 등 bounded universe로 제한한다. Portfolio / watchlist / Nasdaq-100 source는 injected loader boundary로 열려 있으며, 저장 시 `universe_scope`로 구분한다.
-- Overview Events 탭과 refresh 버튼은 UI에서 직접 외부 페이지를 파싱하지 않고, `app/jobs/overview_actions.py` facade를 거쳐 ingestion job wrapper로 DB에 저장한 뒤 service read model로 읽는다.
+- Market Research 일정 view와 refresh 버튼은 UI에서 직접 외부 페이지를 파싱하지 않고, internal `app/jobs/overview_actions.py` facade를 거쳐 ingestion job wrapper로 DB에 저장한 뒤 service read model로 읽는다.
 - Macro calendar collector는 official BLS / BEA / Census / ISM / Treasury schedules를 사용할 수 있다. BLS 자동 요청이 차단되면 사용자가 받은 공식 `.ics` 파일을 import해 같은 table에 저장한다.
 - Treasury auction rows are fixed-income calendar context and stay in the same Events table with `event_family=fixed_income`; they are not trade signals or monitoring triggers.
 - Market-structure rows use official source evidence for holidays, early closes, options expiration, and Russell reconstitution context. They are schedule-density background and are not validation gates, trading signals, monitoring signals, or automated actions.
 - `build_events_workbench_payload()` owns the React-ready Events brief, command boundary, filter labels, rail tabs, trust review, calendar day buckets, weekly density, and evidence rows. React filters, tabs, month-grid rendering, and hover interactions are display-only over that payload.
 - React-first Events hides the legacy Streamlit Type selector and refresh result expander when the component build is available. The helper still owns refresh side effects and attaches last refresh results to `command.last_results`; the old Streamlit toolbar remains fallback-only.
 
-## Overview futures macro / OHLCV 흐름
+## Market Research futures macro / OHLCV 흐름
 
 ```text
 yfinance futures OHLCV
@@ -351,27 +351,27 @@ yfinance futures OHLCV
   -> app.services.futures_macro_snapshot.materialize_overview_futures_macro_snapshot()
   -> finance_meta.futures_macro_forecast_history (immutable append)
   -> finance_meta.futures_macro_snapshot (latest-good current)
-  -> Overview render에서 app.services.futures_macro_intraday가 DB-only로
+  -> Market Research render에서 app.services.futures_macro_intraday가 DB-only로
        -> active CME-style trade date 판정
        -> 완료 daily + latest closed 5m common cutoff 합성
        -> 임시 1D / 5D / 20D current observation 생성
-  -> Workspace > Overview > Futures Macro
-  -> Market Context source / refresh evidence
-  -> Workspace > Ingestion > 실행 기록 / 결과 for detailed diagnostics
+  -> Research > Market Research > 시장 환경 > 선물 매크로
+  -> Market Research source / refresh evidence
+  -> Data > Data Operations > 실행 이력 for detailed diagnostics
 
 finance_price.futures_ohlcv daily rows
   -> finance.loaders.futures.load_futures_ohlcv(symbols=["ZN=F", "ZB=F"], interval_code="1d", end=selected_as_of)
   -> app.services.overview_market_context_analog.build_historical_analog_snapshot()
-  -> Workspace > Overview > Market Context > Macro 조건 포함 pilot
+  -> Research > Market Research > 지수 가치평가 > S&P 500 > Macro 조건 포함 pilot
 ```
 
 의미:
 
 - 1차 source는 Yahoo/yfinance provider symbol 기반의 pilot feed다.
 - 기본 watchlist는 주가지수, 금리, 원자재, FX futures이며 optional micro / crypto futures는 별도 그룹으로 둔다. Current primary UI는 Futures Macro이고, 1m chart / run diagnostics는 보조 evidence다.
-- 정상 화면 render는 DB row만 읽고, 수집은 Overview `최신 데이터 갱신`이 `app/jobs/overview_actions.py` facade를 호출하거나 Ingestion job wrapper가 실행한다.
+- 정상 화면 render는 DB row만 읽고, 수집은 Market Research `최신 데이터 갱신`이 `app/jobs/overview_actions.py` facade를 호출하거나 Data Operations job wrapper가 실행한다.
 - yfinance가 `period=1d`, `interval=1m`에서 일부 futures symbol을 빈 응답 또는 지나치게 희소한 응답으로 돌려주면 collector는 해당 symbol만 `period=2d`, `interval=1m`으로 한 번 보강 수집한다. 성공 / 실패, 초기 row 수, 회복 symbol은 `futures_market_monitor_run.diagnostics_json.fallback_retries`에 남긴다.
-- `futures_market_monitor_run`과 Overview local run history가 Data Health의 latest success / failed symbols / stale 판단에 사용된다.
+- `futures_market_monitor_run`과 Market Research local run history가 source evidence의 latest success / failed symbols / stale 판단에 사용된다.
 - Macro Thermometer historical validation은 `futures_ohlcv` 1d row를 point-in-time으로 재계산하고, target futures가 부족할 때만 `nyse_price_history` ETF proxy를 labeled fallback으로 읽는다.
 - daily resolver는 provider raw marker와 완료 세션 기준일을 분리한다. 미완료 session은 backend forecast validation/history에서는 제외하지만, current observation은 장중 5m coverage와 freshness gate를 통과하면 임시 세션으로 표시한다.
 - 수동 refresh가 저녁 재개 뒤 실행돼 mutable Yahoo 1d row가 pending이어도, 저장된 5m row의 exact ET 구간으로 17개 완료 세션을 재구성한다. 유효한 `yfinance_5m_session_aggregate_v1` final 값은 raw 1d보다 우선하며 이미 확정된 세션은 추가 provider 호출 없이 재사용한다.
@@ -420,7 +420,7 @@ finance.data.etf_provider.collect_and_store_etf_operability()
 - `etf_provider_source_map` verified row가 있으면 official 수집은 그 mapping을 static map보다 먼저 사용한다.
 - source map discovery는 iShares product list, SSGA holdings XLSX endpoint pattern, Invesco endpoint pattern, 금 현물 ETF `commodity_gold` rule을 사용한다.
 - QQQ는 현재 공식 QQQ page에서 expense ratio / inception만 확보되어 `partial`로 저장한다.
-- P2-5A부터 이 수집은 `Workspace > Ingestion > Practical Validation Provider Snapshots > ETF Operability`에서 실행할 수 있다.
+- P2-5A부터 이 수집은 `Data > Data Operations > Practical Validation Provider Snapshots > ETF Operability`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 9번 / 10번 진단은 이 snapshot을 우선 읽는다. 공식 provider row가 부족하고 bridge / proxy만 있으면 `PASS`가 아니라 `REVIEW` 출처로 남긴다.
 - `data-provenance-coverage-v1`부터 provider context는 operability snapshot의 source mix, coverage status weight, as-of range, collected range, freshness를 compact provenance로 함께 저장한다. coverage가 충분해도 snapshot이 오래됐으면 diagnostic status는 `REVIEW`로 낮춘다.
 
@@ -450,7 +450,7 @@ Invesco official holdings / weighted sector API
 - P2-5C부터 source map discovery가 verified endpoint를 DB에 저장한다. 현재 smoke 기준 `MTUM`, `QUAL`, `SOXX`, `USMV`, `XLE`, `XLU`도 자동 수집 가능한 mapping으로 검증됐다.
 - `GLD`, `IAU`는 금 현물 ETF 특성상 row-level stock holdings가 아니라 synthetic `commodity_gold` 100% gold exposure row로 저장한다.
 - `AOR`은 현재 1차 ETF holdings만 저장하고, iShares Aggregate Underlying 구간은 2차 look-through expansion 후속으로 둔다.
-- P2-5A부터 이 수집과 exposure 재집계는 `Workspace > Ingestion > Practical Validation Provider Snapshots > ETF Holdings / Exposure`에서 실행할 수 있다.
+- P2-5A부터 이 수집과 exposure 재집계는 `Data > Data Operations > Practical Validation Provider Snapshots > ETF Holdings / Exposure`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 2번 / 3번 진단은 이 holdings / exposure snapshot을 우선 읽고, JSONL에는 full row가 아니라 compact provider coverage와 top evidence만 저장한다.
 - `data-provenance-coverage-v1`부터 holdings / exposure context도 source mix, coverage status weight, freshness, stale symbols를 compact provenance로 제공한다. Full holdings / exposure row는 계속 DB에만 둔다.
 - `look-through-exposure-board-v1`부터 provider context는 holdings / exposure snapshot을 compact board로 요약한다. Board에는 asset bucket rows, top holding rows, ETF별 holdings / exposure coverage, exposure detail top rows만 남기며 full holdings row는 저장하지 않는다.
@@ -477,22 +477,22 @@ CNN Fear & Greed JSON / AAII official workbook (HTML fallback)
   -> finance.loaders.sentiment.load_market_sentiment_as_known()
   -> app.services.overview.sentiment.build_market_sentiment_snapshot()
   -> app.services.backtest_practical_validation.build_market_sentiment_context_overlay()
-  -> Workspace > Overview > Sentiment / Data Health
+  -> Research > Market Research > 시장 환경 > 심리 / source evidence
   -> Backtest > Practical Validation / Final Review context overlay
-  -> Operations > Portfolio Monitoring context overlay
+  -> Portfolio > Portfolio Monitoring context overlay
 ```
 
 의미:
 
 - P2-4 초기 series는 `VIXCLS`, `T10Y3M`, `BAA10Y`다.
 - API key가 있으면 FRED API를 쓰고, 없으면 official `fredgraph.csv` download를 사용한다.
-- Overview sentiment는 `CNN_FEAR_GREED`, CNN component score, `AAII_BULLISH`, `AAII_NEUTRAL`, `AAII_BEARISH`, `AAII_BULL_BEAR_SPREAD`를 latest canonical table과 immutable source snapshot에 함께 저장한다.
+- Market Research sentiment는 `CNN_FEAR_GREED`, CNN component score, `AAII_BULLISH`, `AAII_NEUTRAL`, `AAII_BEARISH`, `AAII_BULL_BEAR_SPREAD`를 latest canonical table과 immutable source snapshot에 함께 저장한다.
 - manual refresh와 24-hour automation은 같은 collector를 사용한다. `known_at`은 app-observed UTC이며 provider publication timestamp가 아니다. legacy canonical rows는 PIT snapshot으로 소급 복제하지 않는다.
 - 이 section의 `macro_series_observation`은 revised-latest context table이라 FRED official CSV fallback을 허용한다. 경제 사이클 학습/replay는 별도 `macro_series_vintage_observation`을 사용하며 key가 없는 CSV fallback을 금지한다.
 - AAII primary path는 official `sentiment.xls`를 읽고 일상 immutable capture에는 최신 26주만 넣는다. explicit full backfill은 네 canonical series를 공식 workbook 최신일 이하에서 한 transaction으로 교체하되 snapshot/PIT를 소급 생성하지 않는다. Workbook 실패 시 official HTML을 browser-like request / TLS impersonation으로 읽고, 둘 다 실패하면 값을 꾸미지 않는다.
 - `load_macro_snapshot()`은 기준일 이전 최신 관측값과 `staleness_days`를 함께 반환한다.
-- `load_market_sentiment_snapshot()`은 latest CNN / AAII context를, `load_market_sentiment_history()`는 전체 canonical chart history를, `load_market_sentiment_as_known()`은 UTC cutoff에 알려졌던 최신 immutable capture를 읽는다. Overview graph의 `6M / 1Y / 전체`는 두 source 중 늦은 canonical start에서 함께 시작하고 x-domain은 두 source 중 최신 canonical end까지 확장한다. 각 source 선은 자기 마지막 실제 관측에서 끝나며 forward-fill·보간하지 않는다. 현재 percentile / min-max 해석은 그래프 기간과 분리된 최근 180일을 유지한다. surface-specific overlay는 같은 latest context를 읽으며 trade signal, PASS / BLOCKER, selected-route gate, monitoring signal, live approval, order, auto rebalance가 아니다.
-- P2-5A부터 이 수집은 `Workspace > Ingestion > Practical Validation Provider Snapshots > Macro Context`에서 실행할 수 있다.
+- `load_market_sentiment_snapshot()`은 latest CNN / AAII context를, `load_market_sentiment_history()`는 전체 canonical chart history를, `load_market_sentiment_as_known()`은 UTC cutoff에 알려졌던 최신 immutable capture를 읽는다. Market Research graph의 `6M / 1Y / 전체`는 두 source 중 늦은 canonical start에서 함께 시작하고 x-domain은 두 source 중 최신 canonical end까지 확장한다. 각 source 선은 자기 마지막 실제 관측에서 끝나며 forward-fill·보간하지 않는다. 현재 percentile / min-max 해석은 그래프 기간과 분리된 최근 180일을 유지한다. surface-specific overlay는 같은 latest context를 읽으며 trade signal, PASS / BLOCKER, selected-route gate, monitoring signal, live approval, order, auto rebalance가 아니다.
+- P2-5A부터 이 수집은 `Data > Data Operations > Practical Validation Provider Snapshots > Macro Context`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 5번 / 6번 진단은 FRED snapshot을 우선 읽고, 없으면 기존 market proxy를 `REVIEW` fallback으로 표시한다.
 - `data-provenance-coverage-v1`부터 macro context는 FRED source mode, observation range, collected range, stale series를 compact provenance로 제공한다.
 - `regime-split-validation-v1`부터 Practical Validation은 stored FRED history를 read-only로 읽어 `neutral` / `caution` / `risk_off` bucket별 portfolio / benchmark 성과를 compact evidence로 계산한다.
@@ -556,8 +556,8 @@ EDGAR
 - detailed statement 계층은 filing-level metadata와 raw long-format values를 보존한다.
 - `values` table은 향후 PIT-friendly custom factor engine의 원재료다.
 - `labels`는 UI / 해석 보조용 convenience layer로 본다.
-- Phase 5 source migration부터 `Workspace > Ingestion`의 기본 재무제표 갱신 흐름은 `EDGAR annual 재무제표 갱신` card에서 시작한다. 같은 화면의 broad yfinance fundamentals / factors refresh는 legacy compatibility / explicit comparison path이며 canonical financial statement refresh가 아니다.
-- Phase 6 source migration부터 `Workspace > Ingestion > 수동 복구 / 진단`은 DB-backed `Statement Universe Coverage QA`를 제공한다. 이 QA는 `SP500` / `TOP1000` / `TOP2000` / `NASDAQ` universe를 raw statement / shadow / profile rows로 요약하고, live EDGAR source probe는 소수 symbol용 `Statement Coverage Diagnosis`에만 남긴다.
+- Phase 5 source migration부터 `Data > Data Operations`의 기본 재무제표 갱신 흐름은 `EDGAR annual 재무제표 갱신` card에서 시작한다. 같은 화면의 broad yfinance fundamentals / factors refresh는 legacy compatibility / explicit comparison path이며 canonical financial statement refresh가 아니다.
+- Phase 6 source migration부터 `Data > Data Operations > 문제 복구`는 DB-backed `Statement Universe Coverage QA`를 제공한다. 이 QA는 `SP500` / `TOP1000` / `TOP2000` / `NASDAQ` universe를 raw statement / shadow / profile rows로 요약하고, live EDGAR source probe는 소수 symbol용 `Statement Coverage Diagnosis`에만 남긴다.
 
 ## Runtime read path
 

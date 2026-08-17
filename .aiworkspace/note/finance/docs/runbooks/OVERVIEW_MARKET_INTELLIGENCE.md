@@ -1,11 +1,11 @@
-# Overview Market Intelligence Runbook
+# Market Research Intelligence Runbook
 
 Status: Active
 Last Verified: 2026-08-17
 
 ## Purpose
 
-이 runbook은 `Workspace > Overview`의 Market Context, Market Movers, Futures Macro, Sentiment, Events 데이터를 수동, browser-session auto refresh, 또는 scheduled refresh로 갱신하고 정상 여부를 확인하는 절차를 정리한다.
+이 runbook은 `Research > Market Research`의 Market Context, Market Movers, Futures Macro, Sentiment, Events 데이터를 수동, browser-session auto refresh, 또는 scheduled refresh로 갱신하고 정상 여부를 확인하는 절차를 정리한다. 내부 모듈과 CLI는 기존 `overview_*` 이름을 유지한다.
 
 ## When To Use
 
@@ -13,9 +13,9 @@ Last Verified: 2026-08-17
 - FOMC calendar row를 갱신해야 할 때
 - CPI / PPI / Employment Situation / GDP 같은 macro release calendar row를 갱신해야 할 때
 - latest S&P 500 movers 또는 수동 ticker의 upcoming earnings event를 갱신해야 할 때
-- 저장된 선물 OHLCV로 장중·완료 관측과 교차자산 재가격화 해석을 Overview Futures Macro에서 확인하고 싶을 때
+- 저장된 선물 OHLCV로 장중·완료 관측과 교차자산 재가격화 해석을 Market Research Futures Macro에서 확인하고 싶을 때
 - CNN Fear & Greed / AAII bearish sentiment context를 갱신하거나 freshness를 확인해야 할 때
-- Overview Events / Market Movers 화면이 비어 있거나 오래된 것으로 보일 때
+- Market Research Events / Market Movers 화면이 비어 있거나 오래된 것으로 보일 때
 - Market Context의 S&P/Nasdaq valuation source와 coverage gate를 갱신할 때
 - Market Context 경제 사이클가 최신 계산 가능일보다 뒤처졌을 때 화면에서 수동 최신화하거나, vintage를 수집하고 학습·검증·current/10년 replay snapshot을 명시적으로 materialize할 때
 - 브라우저를 켜지 않고 scheduled refresh runner를 cron / launchd / 외부 automation으로 호출하고 싶을 때
@@ -179,20 +179,20 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
 
 ## Refresh Order
 
-1. `Workspace > Ingestion > Overview Market Snapshot`
+1. `Data > Data Operations > Overview Market Snapshot`
    - `Collect S&P 500 Universe`를 먼저 실행해 current S&P 500 membership을 갱신한다.
-   - Nasdaq coverage가 필요하면 `Workspace > Ingestion > 상장 / 상폐 근거 > Nasdaq Symbol Directory current snapshot` 또는 Overview Market Movers의 `유니버스 기준 갱신`을 실행해 latest `nasdaq_symdir_nasdaqlisted` row를 `finance_meta.nyse_symbol_lifecycle`에 저장한다.
-   - Top1000 / Top2000 coverage가 필요하면 먼저 listing source를 최신화하고, EOD 1d price / volume row를 확보한 다음, Overview Market Movers의 `유니버스 기준 갱신`으로 `market_liquidity_universe_member`를 다시 materialize한다.
+   - Nasdaq coverage가 필요하면 `Data > Data Operations > 상장 / 상폐 근거 > Nasdaq Symbol Directory current snapshot` 또는 Market Research Market Movers의 `유니버스 기준 갱신`을 실행해 latest `nasdaq_symdir_nasdaqlisted` row를 `finance_meta.nyse_symbol_lifecycle`에 저장한다.
+   - Top1000 / Top2000 coverage가 필요하면 먼저 listing source를 최신화하고, EOD 1d price / volume row를 확보한 다음, Market Research Market Movers의 `유니버스 기준 갱신`으로 `market_liquidity_universe_member`를 다시 materialize한다.
    - `Collect Market Intraday Snapshot`으로 `SP500`, 필요하면 `TOP1000`, `TOP2000` snapshot을 갱신한다. Top coverage의 intraday snapshot은 저장된 liquidity universe membership을 읽는다.
    - Nasdaq-listed daily movers가 필요하면 `NASDAQ` intraday snapshot을 갱신한다. 이 coverage는 Nasdaq Symbol Directory current listing observation 기준이며 Nasdaq Composite / Nasdaq-100 membership proof가 아니다.
    - daily movers는 `finance_price.market_intraday_snapshot`의 latest snapshot을 읽는다.
 
-2. `Workspace > Overview > Market Movers`
+2. `Research > Market Research > 종목 리서치 > 변동 종목`
    - `Coverage`, `Period`, `Sector`, `Top N`을 선택한다.
    - daily period의 `데이터 갱신` 패널에서 `수동 갱신` 또는 `자동 갱신`을 선택한다.
    - `수동 갱신`에서는 `일중 스냅샷 갱신`을 눌러 새 snapshot을 저장하고, `화면 새로고침`으로 stored DB state를 다시 읽는다.
    - `유니버스 기준 갱신`은 선택 coverage의 membership 기준을 다시 저장한다. `SP500`은 S&P 500 구성 목록, `NASDAQ`은 Nasdaq Symbol Directory current snapshot, `TOP1000` / `TOP2000`은 최근 20거래일 평균 거래대금 ranking membership을 갱신한다.
-   - Coverage에서 `Nasdaq-listed current snapshot`을 선택했는데 universe가 비어 있으면 `유니버스 기준 갱신` 또는 Ingestion의 Nasdaq Symbol Directory 수집을 먼저 실행한다.
+   - Coverage에서 `Nasdaq-listed current snapshot`을 선택했는데 universe가 비어 있으면 `유니버스 기준 갱신` 또는 Data Operations의 Nasdaq Symbol Directory 수집을 먼저 실행한다.
    - Top1000 / Top2000에서 universe 수가 1000 / 2000보다 작으면 listing source 후보 수, 최신 EOD 가격 row coverage, provider price 누락을 순서대로 확인한다. 최신 거래일 price row가 없는 ticker는 ranking 가능한 후보에서 제외된다.
    - Weekly / Monthly / Yearly 결과는 저장된 EOD 가격 기준이다. 상단의 `최근 완료 시장일`은 가격 보강 목표일이고, `랭킹 데이터 기준`은 선택 universe의 coverage 임계치를 충족해 실제 순위 계산에 사용한 날짜다. 최신일 coverage가 부족하면 두 날짜가 다를 수 있다.
    - 비-Daily의 `가격 이력 수동 갱신`은 항상 노출한다. 보강 대상이 있으면 주 action, 이미 최신이면 보조 action으로 표시하며 최신 완료 NYSE 거래일까지의 누락/오래된 EOD 이력만 기존 OHLCV 경로로 보강한다.
@@ -223,14 +223,14 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
    - 복구 후에도 missing이 남으면 `Diagnose Missing Quotes`로 provider coverage, listing evidence, previous-close coverage를 다시 확인한다.
    - daily intraday missing row는 `Diagnose Missing Quotes`로 원인 후보를 확인한다. 결과는 `finance_meta.market_data_issue`에 반복 issue로 누적된다.
 
-3. `Workspace > Overview` sector evidence
+3. `Research > Market Research` sector evidence
    - `Sector / Industry`는 current primary tab이 아니다. Sector 흐름은 `Market Context`의 sector pressure / breadth evidence와 `Market Movers`의 `Sector Pulse` / group leadership에서 확인한다.
    - `Market Movers`에서는 `Coverage`, `Period`, `Sector`, `Top N`을 바꿔 선택 mover set 안의 평균 return, breadth, concentration, leading symbols를 확인한다.
    - daily period는 저장된 `market_intraday_snapshot`이 있으면 `Previous Close -> latest quote` 기준을 사용한다.
    - weekly / monthly / yearly period는 EOD DB 기준이다. 최신 raw EOD row가 sparse하면 effective date와 fallback reason을 먼저 확인한다.
    - Market Context의 sector pressure map은 provider sector alias를 canonical sector로 normalize해 동일 크기 tile로 보여준다. tile 크기가 아니라 색상 / 값 / breadth를 읽는다.
 
-4. `Workspace > Overview > Futures Macro`
+4. `Research > Market Research > 시장 환경 > 선물 매크로`
    - 이 tab은 completed daily compact snapshot과 저장된 latest closed 5m bar를 함께 읽는 current primary surface다. 화면 진입 중 provider fetch나 forecast replay를 실행하지 않는다.
    - `최신 데이터 갱신`은 17개 주요 선물의 `1y / 1d` overlap을 수집하고, nested-validation 최소 이력보다 부족한 symbol만 `10y / 1d` bootstrap한다. New York 18:00 재개 이후처럼 active trade date가 있으면 완료 일봉 확정 가능 여부와 독립적으로 `2d / 5m`을 한 번 수집한다. 5분봉이 충분하면 장중 잠정 관측으로 반영하고, 없거나 공통 관측 조건을 충족하지 못하면 마지막 완료 일봉을 유지한다. 완료 일봉 입력이 바뀐 경우에만 `finance_meta.futures_macro_snapshot`의 `overview_current`와 forecast history를 materialize한다.
    - `다시 읽기`는 provider 수집이나 forecast replay 없이 compatible snapshot과 저장된 5m row를 DB-only로 다시 읽어 장중 임시 1D/5D/20D를 재계산한다. snapshot이 없거나 schema/algorithm version이 맞지 않으면 `최신 갱신 필요` 상태를 표시한다.
@@ -244,9 +244,9 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
    - 일봉 수집 성공 뒤 materialization만 실패하면 job은 `partial_success`다. 이전 latest-good snapshot은 지우지 말고 attached materialization result를 확인한 뒤 `최신 데이터 갱신`을 재시도한다.
    - Futures Macro는 시장 컨텍스트 화면이며 live approval, order, broker/account sync, auto rebalance를 만들지 않는다.
 
-5. `Workspace > Overview > Sentiment`
+5. `Research > Market Research > 시장 환경 > 심리`
    - `시장 심리 갱신`을 누르면 `collect_market_sentiment` job이 CNN Fear & Greed와 AAII Sentiment Survey를 수집한다. 각 source는 독립 transaction으로 처리되며, 최신 조회용 `finance_meta.macro_series_observation`과 immutable 수집 당시 기록인 `market_sentiment_collection_batch` / `market_sentiment_observation_snapshot`을 함께 저장한다.
-   - 같은 수집은 `Workspace > Ingestion > 시장 심리 수집`에서도 실행할 수 있으며, CNN / AAII source를 개별 checkbox로 켜고 끌 수 있다.
+   - 같은 수집은 `Data > Data Operations > 시장 심리 수집`에서도 실행할 수 있으며, CNN / AAII source를 개별 checkbox로 켜고 끌 수 있다.
    - scheduled `market_sentiment` job과 수동 갱신은 같은 collector를 사용한다. 자동 cadence는 24시간이며 실제 수집 시각은 UTC `known_at`으로 판단한다. 일별 비교를 안정적으로 운영하려면 가능하면 미국장 종료 후 실행한다.
    - 한 source가 실패해도 다른 source의 transaction과 최신값/PIT snapshot은 보존한다. 실패한 source는 다음 실행에서 다시 수집하고, 성공 source를 되돌리거나 두 source 값을 한 transaction으로 묶지 않는다.
    - `known_at`은 provider 발표시각이 아니라 앱이 응답을 관측한 UTC 시각이다. 기존 canonical row를 과거 PIT row로 소급 복제하지 않으며, 화면의 `수집 당시 기록 YYYY-MM-DD부터`가 실제 prospective coverage 시작을 나타낸다.
@@ -258,12 +258,12 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
    - 이 화면은 시장 심리 context이며 trade signal, Practical Validation PASS, live approval, order, broker/account sync, auto rebalance로 해석하지 않는다.
    - CNN 또는 AAII official source가 automated request를 차단하면 해당 source batch만 failed로 기록하고 값을 임의 생성하지 않는다.
 
-6. `Workspace > Ingestion > Overview Market Event Calendar > FOMC`
+6. `Data > Data Operations > Overview Market Event Calendar > FOMC`
    - 기본은 current year와 next year를 수집한다.
    - 결과는 `finance_meta.market_event_calendar`에 `event_type=FOMC_MEETING`으로 저장된다.
    - parser source boundary에서 `event_family=central_bank`, `event_subtype=fomc_meeting`, `universe_scope=all_us`, `source_authority=federal_reserve`를 함께 저장한다. 기존 FOMC row도 같은 연도를 다시 수집하면 idempotent UPSERT로 분류값이 보정된다.
 
-7. `Workspace > Ingestion > Overview Market Event Calendar > Macro`
+7. `Data > Data Operations > Overview Market Event Calendar > Macro`
    - 기본은 current year와 next year를 수집한다.
    - BLS source는 CPI / PPI / Employment Situation / JOLTS / ECI release schedule을 읽어 official macro row로 저장한다.
    - BEA source는 national GDP와 Personal Income and Outlays / PCE release schedule을 official macro row로 저장한다.
@@ -273,10 +273,10 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
    - 결과는 모두 `source_type=official`, `validation_status=official`, `source_authority=official`로 저장된다.
    - BLS가 HTTP 403 등으로 차단되면 BEA가 성공하더라도 job은 `partial_success`가 될 수 있다.
    - BLS 자동 요청이 막히면 BLS 공식 release schedule `.ics` 파일을 브라우저로 내려받아 `BLS Calendar .ics File`에 업로드하고 `Import BLS .ics Calendar`를 실행한다.
-   - `.ics` import도 같은 `market_event_calendar` table에 저장되며, Data Health의 Macro Calendar coverage에 포함된다.
+   - `.ics` import도 같은 `market_event_calendar` table에 저장되며, calendar coverage evidence에 포함된다.
 
-8. `Workspace > Ingestion > Overview Market Event Calendar > Earnings`
-   - Overview 수동/예약 갱신의 기본 경로는 hybrid earnings collector다.
+8. `Data > Data Operations > Overview Market Event Calendar > Earnings`
+   - Market Research 수동 갱신과 내부 scheduled refresh의 기본 경로는 hybrid earnings collector다.
    - daily priority는 미국 시가총액 상위 100, 명시적인 portfolio/watchlist, 이미 알려진 45일 내 실적 symbol을 중복 제거해 먼저 확인한다.
    - S&P 500은 한 번에 약 100개씩 persisted shard로 확인하며, 정상 실행 약 5회에 한 cycle을 완료한다. 부분 완료는 미수집 상태로 숨기지 않고 coverage evidence로 남는다.
    - priority와 S&P 500 cycle checkpoint는 독립적이다. 한 universe의 실패가 다른 coverage를 오염시키지 않는다.
@@ -289,9 +289,9 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
    - SEC CIK를 우선하고, 없으면 exact listing name을 사용해 issuer identity를 보강한다. 같은 issuer의 복수 class는 Overview에서 한 일정으로 묶되 원래 symbol들은 근거로 유지한다.
    - 같은 symbol/source의 이전 active estimate는 새 수집 결과가 있으면 `event_status=superseded`로 정리된다.
    - 수집 결과에는 `symbol_diagnostics`가 포함되며 `no_provider_earnings_date`, `outside_window`, `provider_error` 같은 missing / failure reason을 확인할 수 있다.
-   - Ingestion 실행 결과와 Overview refresh 결과의 `Earnings Diagnostics` expander에서 issue count, reason count, symbol-level detail을 확인한다.
+   - Data Operations 실행 결과와 Market Research refresh 결과의 `Earnings Diagnostics` expander에서 issue count, reason count, symbol-level detail을 확인한다.
 
-9. `Workspace > Overview > Events`
+9. `Research > Market Research > 시장 환경 > 일정`
    - React `이번 주 시장 일정` workbench가 available이면 `가장 중요한 다음 일정`, `이번 주 핵심 일정`, `다음 FOMC` 세 brief와 월간 calendar를 먼저 확인한다.
    - 첫 화면의 `일정 갱신`은 Python `run_overview_event_calendars_refresh_official()` facade를 통해 FOMC / Macro / Market Structure만 갱신한다. provider 호출이 긴 hybrid Earnings는 `자료 신뢰와 수집 범위` 안의 `실적 예상 일정 갱신`으로 분리한다.
    - legacy `run_overview_event_calendars_refresh_all()`은 자동화/호환 경로를 위해 네 collector bundle로 유지한다. React 수동 실행은 결과마다 고유 completion token을 받아 빠른 연속 실행에서도 pending 표시를 해제하며, `화면 새로고침`은 provider job pending 상태를 만들지 않는다.
@@ -303,26 +303,26 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
    - 미국 휴장·조기폐장은 current/next year를 확인한다. 요청 연도에 현대 미국 주식시장 full-day holiday 10개가 모두 확인되지 않으면 NYSE official multi-year calendar로 해당 연도를 보완하고 중복 날짜를 조정한다.
    - React build가 없으면 기존 Streamlit summary/source lane과 `Agenda`, `Calendar`, `Quality`, `Raw` tabs가 fallback으로 남는다.
    - 하단 Streamlit detail filters인 `Window`, `Source Type`, `Validation`, `Importance`로 캘린더 범위와 source quality를 더 좁힐 수 있다.
-   - Overview Events는 UI render 중 직접 외부 source를 scraping하지 않는다. External source fetch는 ingestion job wrapper가 DB에 저장한 뒤 service read model이 읽는다.
+   - Market Research Events는 UI render 중 직접 외부 source를 scraping하지 않는다. External source fetch는 ingestion job wrapper가 DB에 저장한 뒤 service read model이 읽는다.
 
 10. Data Health ownership
-   - `Data Health`는 V22부터 `Workspace > Overview` top-level tab이 아니다.
-   - Market Context의 `근거: 자료 기준 / 출처 상태`와 `필요 자료 보강`이 현재 brief에 필요한 direct source / refresh 판단을 보여준다. 이 보강은 S&P 500 movers, sentiment, event calendars만 대상으로 하며 Top1000 / Top2000 / Futures refresh는 Market Movers, Futures Macro, 또는 Ingestion 전용 화면에서 실행한다.
-   - 상세 run history, 실패 artifact, log는 `Workspace > Ingestion > 실행 기록 / 결과`에서 확인한다.
-   - local run history와 DB freshness read model은 유지되지만, Overview 첫 화면의 시장 context 흐름을 대신하지 않는다.
+   - `Data Health`는 V22부터 `Research > Market Research` top-level tab이 아니다.
+   - Market Context의 `근거: 자료 기준 / 출처 상태`와 `필요 자료 보강`이 현재 brief에 필요한 direct source / refresh 판단을 보여준다. 이 보강은 S&P 500 movers, sentiment, event calendars만 대상으로 하며 Top1000 / Top2000 / Futures refresh는 Market Movers, Futures Macro, 또는 Data Operations 전용 화면에서 실행한다.
+   - 상세 run history, 실패 artifact, log는 `Data > Data Operations > 실행 이력`에서 확인한다.
+   - local run history와 DB freshness read model은 유지되지만, Market Research 첫 화면의 시장 context 흐름을 대신하지 않는다.
    - 이 탭은 DB와 local JSONL만 읽고 외부 provider를 fetch하지 않는다.
 
-11. `Workspace > Overview > Market Movers > 데이터 갱신 > 자동 갱신`
+11. `Research > Market Research > 종목 리서치 > 변동 종목 > 데이터 갱신 > 자동 갱신`
    - `Market Movers > 데이터 갱신`의 `자동 갱신` 모드는 브라우저 세션이 살아 있을 때만 현재 선택한 daily coverage의 due 여부를 확인한다.
    - S&P 500은 `browser_safe` profile을 사용하고, Top1000 / Top2000은 `intraday` profile에 선택 job_id를 넘겨 한 coverage만 실행한다.
-   - 브라우저를 닫거나 Overview 페이지 연결이 끊기면 이 자동 check도 멈춘다.
+   - 브라우저를 닫거나 Market Research 페이지 연결이 끊기면 이 자동 check도 멈춘다.
    - 실제 실행 여부는 `overview_automation`의 cadence, US market-hours guard, lock file이 판단한다.
    - 자동 check 중에는 전체 화면을 blocking하지 않고, 같은 `데이터 갱신` 영역에서 다음 갱신까지 남은 시간과 5분 cadence 진행 bar를 표시한다.
    - 남은 시간과 progress bar는 브라우저 JS가 초 단위로 갱신한다. provider collection은 매초 실행되지 않는다.
 
 ## CLI Smoke Checks
 
-Overview scheduled refresh dry-run:
+Market Research scheduled refresh dry-run:
 
 ```bash
 uv run python -m app.jobs.overview_automation --profile standard --dry-run
@@ -340,7 +340,7 @@ uv run python -m app.jobs.overview_automation --profile intraday --job nasdaq_in
 uv run python -m app.jobs.overview_automation --profile standard
 ```
 
-Overview를 열어둔 동안만 호출할 1차 browser-safe profile:
+Market Research를 열어둔 동안만 호출할 1차 browser-safe profile:
 
 ```bash
 uv run python -m app.jobs.overview_automation --profile browser_safe
@@ -358,7 +358,7 @@ uv run python -m app.jobs.overview_automation --profile safe
 uv run python -m app.jobs.overview_automation --profile events
 ```
 
-운영 scheduler에 연결할 때는 5분마다 위 명령을 호출하도록 두고, 실제 실행 여부는 CLI가 run history cadence와 US market-hours guard로 판단한다. 중복 실행은 `.aiworkspace/note/finance/run_artifacts/locks/overview_automation.lock`으로 막는다. `browser_safe` profile은 OS scheduler가 아니라 Overview 브라우저 세션이 열려 있을 때 호출하는 용도이며, 단독 CLI profile로는 S&P 500 daily snapshot만 선택한다. Overview UI에서 Top1000 / Top2000 자동 갱신을 켜면 `intraday` profile에 선택 coverage job_id를 넘겨 단일 job만 실행한다.
+운영 scheduler에 연결할 때는 5분마다 위 명령을 호출하도록 두고, 실제 실행 여부는 CLI가 run history cadence와 US market-hours guard로 판단한다. 중복 실행은 `.aiworkspace/note/finance/run_artifacts/locks/overview_automation.lock`으로 막는다. `browser_safe` profile은 OS scheduler가 아니라 Market Research 브라우저 세션이 열려 있을 때 호출하는 용도이며, 단독 CLI profile로는 S&P 500 daily snapshot만 선택한다. Market Research UI에서 Top1000 / Top2000 자동 갱신을 켜면 `intraday` profile에 선택 coverage job_id를 넘겨 단일 job만 실행한다.
 
 작은 수동 earnings smoke:
 
@@ -415,7 +415,7 @@ PY
 
 - Market Movers Coverage includes `S&P 500`, `Top 1000`, `Top 2000`, and `Nasdaq-listed current snapshot`.
 - Nasdaq-listed coverage shows `coverage_basis=Nasdaq-listed current snapshot`, `universe_source=nasdaq_symdir_nasdaqlisted`, current snapshot caveat, and Symbol Directory refresh guidance when no lifecycle rows exist.
-- Top1000 / Top2000 coverage shows a 20D average dollar volume basis, not market-cap basis. The materialized membership is stored in `finance_meta.market_liquidity_universe_member` and reused by Overview read model and intraday snapshot refresh.
+- Top1000 / Top2000 coverage shows a 20D average dollar volume basis, not market-cap basis. The materialized membership is stored in `finance_meta.market_liquidity_universe_member` and reused by the Market Research read model and intraday snapshot refresh.
 - New listing tickers appear in Top1000 / Top2000 only after the listing source contains the symbol and `finance_price.nyse_price_history` has latest EOD close / volume rows for ranking.
 - Market Movers daily snapshot shows `price_mode=Intraday Snapshot` and a recent `snapshot_time_utc`.
 - Market Movers daily refresh state shows `Fresh`, `Update due`, `Stale`, `Partial`, or `Failed`.
@@ -456,22 +456,22 @@ PY
 - Earnings rows collected more than 14 days ago show `Freshness=Stale estimate` and a warning.
 - Earnings job results show `Earnings Diagnostics` when requested symbols are missing, outside the selected lookahead window, or fail at the provider layer.
 - Earnings event rows include `Quality Action`; `Estimate only` rows recommend cross-check or closer refresh, stale rows recommend refresh, and cross-checked rows show no action.
-- Overview Events starts with the React workbench when the component build exists: brief, command boundary with last refresh results, local display filters, tabbed event rails, schedule-confirmation review, monthly calendar grid, weekly density, and collapsed raw evidence appendix.
-- Current Overview Events A layout uses three service-owned brief cards, one fast official-calendar refresh, family views, a calendar + selected-day desktop grid, consistent weekly density, and collapsed collection/support evidence. Slow hybrid earnings refresh is a separate support action.
+- Market Research Events starts with the React workbench when the component build exists: brief, command boundary with last refresh results, local display filters, tabbed event rails, schedule-confirmation review, monthly calendar grid, weekly density, and collapsed raw evidence appendix.
+- Current Market Research Events layout uses three service-owned brief cards, one fast official-calendar refresh, family views, a calendar + selected-day desktop grid, consistent weekly density, and collapsed collection/support evidence. Slow hybrid earnings refresh is a separate support action.
 - Earnings collection coverage uses daily priority plus a persisted S&P 500 shard cycle. Coverage checkpoints separate checked-no-event from not-checked and do not imply issuer-confirmed authority.
 - Issuer grouping preserves raw ticker evidence; exact CIK or exact listing-name matches can display GOOG / GOOGL as one Alphabet event.
 - FOMC and US holiday coverage is verified by requested year. NYSE official holidays backfill only years missing from the Nasdaq Trader response.
-- Overview Events read model includes `Days Until`, `Importance`, taxonomy, quality / validation fields, source status summaries, and workbench payload sections; FOMC / macro / fixed-income rows are high-context official rows, earnings rows remain estimates until confirmed, and rows with source / validation action show `Needs Review`.
-- Overview Events calendar/density visuals show schedule clustering and stale/review evidence only. Today and the current week can be highlighted in the month grid, but they do not create validation gates, trade signals, monitoring signals, or automated actions.
-- Overview Events keeps existing Streamlit `Agenda`, `Calendar`, `Quality`, `Raw` tabs with Window / Source Type / Validation / Importance filters as fallback and lower evidence sections.
-- Overview Events `Latest Collection` / freshness updates after a successful collector run.
-- Overview Sentiment starts with the React `시장 심리 컨텍스트` workbench when the component build exists: balanced CNN market-behavior / AAII survey evidence, source-aware state colors, shared 6M/1Y/full-history controls, one CNN graph plus an AAII response/spread switchable graph, hover-readable straight-line history, canonical coverage, and prospective collection-record start date.
-- Overview Sentiment keeps Python services as owner of DB reads, refresh actions, and interpretation text. React only displays and dispatches the existing refresh / reload events, and the fallback Streamlit detail sections remain available when the React build is missing.
+- Market Research Events read model includes `Days Until`, `Importance`, taxonomy, quality / validation fields, source status summaries, and workbench payload sections; FOMC / macro / fixed-income rows are high-context official rows, earnings rows remain estimates until confirmed, and rows with source / validation action show `Needs Review`.
+- Market Research Events calendar/density visuals show schedule clustering and stale/review evidence only. Today and the current week can be highlighted in the month grid, but they do not create validation gates, trade signals, monitoring signals, or automated actions.
+- Market Research Events keeps existing Streamlit `Agenda`, `Calendar`, `Quality`, `Raw` tabs with Window / Source Type / Validation / Importance filters as fallback and lower evidence sections.
+- Market Research Events `Latest Collection` / freshness updates after a successful collector run.
+- Market Research Sentiment starts with the React `시장 심리 컨텍스트` workbench when the component build exists: balanced CNN market-behavior / AAII survey evidence, source-aware state colors, shared 6M/1Y/full-history controls, one CNN graph plus an AAII response/spread switchable graph, hover-readable straight-line history, canonical coverage, and prospective collection-record start date.
+- Market Research Sentiment keeps Python services as owner of DB reads, refresh actions, and interpretation text. React only displays and dispatches the existing refresh / reload events, and the fallback Streamlit detail sections remain available when the React build is missing.
 - Market Sentiment refresh stores latest canonical rows and immutable observation snapshots atomically per source. Scheduled and manual execution share this path; a failure in CNN does not roll back AAII, or vice versa.
 - Sentiment `known_at` means app-observed UTC time rather than provider publication time. Legacy canonical rows are not fabricated into PIT history, and 1W/1M remain unavailable until prospective history supports chronological validation.
-- Overview no longer renders Data Health as a primary tab. Use Market Context source / refresh evidence for current brief issues and `Workspace > Ingestion > 실행 기록 / 결과` for detailed operational diagnostics.
-- Overview refresh buttons route through `app/jobs/overview_actions.py` and append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed. Market Context refresh is intentionally scoped to the current Market Context surface and does not run Top1000 / Top2000 / Futures refresh actions.
-- Overview scheduled refresh CLI can run without Streamlit and appends scheduled job results to the same local web app run history.
+- Market Research no longer renders Data Health as a primary tab. Use Market Context source / refresh evidence for current brief issues and `Data > Data Operations > 실행 이력` for detailed operational diagnostics.
+- Market Research refresh buttons route through `app/jobs/overview_actions.py` and append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed. Market Context refresh is intentionally scoped to the current Market Context surface and does not run Top1000 / Top2000 / Futures refresh actions.
+- Market Research scheduled refresh CLI can run without Streamlit and appends scheduled job results to the same local web app run history.
 
 ## Failure Handling
 
@@ -482,9 +482,9 @@ PY
 | S&P 500 earnings coverage is incomplete | The persisted shard cycle has not checked every current constituent yet | Continue normal earnings refreshes; do not interpret unchecked symbols as having no event |
 | Next-year US holidays are absent | Nasdaq Trader response did not contain the requested year or official page markup changed | Run Market Structure refresh; confirm the NYSE fallback and the year-specific coverage checkpoint |
 | Earnings row is not confirmed | Nasdaq cross-check did not find the same symbol on that event date | Treat as provider estimate only; refresh later or inspect company IR manually |
-| Old earnings date remains in DB | Estimate date changed | Overview hides superseded rows by default; inspect DB if an audit trail is needed |
+| Old earnings date remains in DB | Estimate date changed | Market Research hides superseded rows by default; inspect DB if an audit trail is needed |
 | Market Movers missing count is high | Provider quote rows missing or DB previous close missing | Open `Coverage Diagnostics`, then refresh OHLCV / snapshot source if needed |
-| Nasdaq coverage is empty | No latest `nasdaq_symdir_nasdaqlisted` lifecycle rows exist locally | Run `Nasdaq 목록 갱신` in Market Movers or the Ingestion Nasdaq Symbol Directory current snapshot collector |
+| Nasdaq coverage is empty | No latest `nasdaq_symdir_nasdaqlisted` lifecycle rows exist locally | Run `Nasdaq 목록 갱신` in Market Movers or the Data Operations Nasdaq Symbol Directory current snapshot collector |
 | Nasdaq coverage is confused with an index | Symbol Directory rows are listing observations, not index constituents | Treat the coverage as Nasdaq-listed current snapshot only; do not describe it as Nasdaq Composite or Nasdaq-100 |
 | Quote gap occurrence count keeps increasing | The same symbol repeatedly misses the quote endpoint or supporting evidence | Treat it as an operating issue; inspect `market_data_issue`, refresh profile / OHLCV, or keep the symbol under manual review |
 | Events tab is empty | Matching collector has not been run or filter is too narrow | Run FOMC / Earnings refresh and select `All` |
@@ -492,11 +492,11 @@ PY
 | Macro collection is partial | BLS schedule page rejected automated access, but BEA or another enabled source succeeded | Inspect failed source message, then use the BLS `.ics` import fallback if CPI / PPI / Jobs rows are needed |
 | Market Sentiment collection is partial | CNN or AAII official source changed, blocked the request, or returned an interstitial | Inspect `collect_market_sentiment` job details; refresh later or use Browser check to confirm whether the official public page still shows the table |
 | Sentiment PIT 시작일이 최근이다 | Immutable capture began prospectively and legacy canonical rows were intentionally not backfilled | Use canonical history only for descriptive charts; wait for new daily captures before chronological validation |
-| Sentiment tab still shows only raw cards after deployment | Streamlit served an old imported module or cache schema | Restart the Streamlit process and clear the Overview cache via normal app reload; confirm the top `시장 심리 컨텍스트` band and `분석 체크` section are visible |
+| Sentiment tab still shows only raw cards after deployment | Streamlit served an old imported module or cache schema | Restart the Streamlit process and clear the Market Research cache via normal app reload; confirm the top `시장 심리 컨텍스트` band and `분석 체크` section are visible |
 | Market Context source evidence shows stale S&P 500 daily snapshot | Stored 5m S&P 500 snapshot is older than the intraday freshness threshold | Run Market Context `현재 이슈만 보강` or Market Movers S&P 500 refresh |
-| Operations / Ingestion shows blank latest success / issue | No Overview refresh button has written local run history yet | Use the relevant Overview refresh button or inspect Ingestion output directly |
+| Data Operations shows blank latest success / issue | No Market Research refresh button has written local run history yet | Use the relevant Market Research refresh button or inspect Data Operations output directly |
 | Scheduled refresh exits as locked | A previous automation run is still active, or a stale lock file remains | Wait for the run to finish; if the process is gone and the lock is older than the stale threshold, rerun after the CLI clears it |
-| Overview app looks stale after code change | Old Streamlit process still running | Restart the Streamlit server and confirm Runtime / Build metadata in Ingestion |
+| Market Research app looks stale after code change | Old Streamlit process still running | Restart the Streamlit server and confirm Runtime / Build metadata in Data Operations |
 
 ## Verification Commands
 

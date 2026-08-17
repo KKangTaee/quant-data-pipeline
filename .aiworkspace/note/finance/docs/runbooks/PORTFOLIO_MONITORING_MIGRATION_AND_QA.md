@@ -48,7 +48,7 @@ git diff --check
 
 ## 6. Browser QA
 
-`Operations > Portfolio Monitoring`을 1440, 760, 420 px 너비에서 확인한다.
+`Portfolio > Portfolio Monitoring`을 1440, 760, 420 px 너비에서 확인한다.
 
 - default group 하나가 보이고 그룹 추가/이름 변경/선택 진입점이 명확하다.
 - Context Drawer에 direct stock/ETF와 selected strategy가 분리되고 수량 방식은 정수만 받는다.

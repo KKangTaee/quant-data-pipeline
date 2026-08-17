@@ -33,16 +33,16 @@ Layer ownership과 storage / surface boundary를 먼저 판정해야 하면 [SYS
 ## Architecture Rules
 
 - UI에서 provider / FRED를 직접 fetch하지 않는다.
-- 수집은 `finance/data/*`와 `app/jobs/ingestion_jobs.py`를 통해 수행한다. `Workspace > Overview`의 bounded refresh는 `app/jobs/overview_actions.py` facade를 통해서만 이 경계를 넘는다.
+- 수집은 `finance/data/*`와 `app/jobs/ingestion_jobs.py`를 통해 수행한다. `Research > Market Research`의 bounded refresh는 internal `app/jobs/overview_actions.py` facade를 통해서만 이 경계를 넘는다.
 - Practical Validation은 loader를 통해 provider context를 읽는다.
-- Overview Sentiment / Futures / Why It Moved도 context surface로 유지하고, validation gate나 trading signal로 승격하지 않는다.
+- Market Research의 Sentiment / Futures Macro / Why It Moved도 context surface로 유지하고, validation gate나 trading signal로 승격하지 않는다.
 - JSONL registry에는 full raw provider response를 저장하지 않는다.
 - full holdings, macro series, raw-ish provider row는 DB에 둔다.
 - live approval, broker order, auto rebalance는 현재 architecture 범위 밖이다.
 
 ## Current Surface Notes
 
-- `Workspace > Overview`의 current primary tabs는 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events`다. Market Context visible path는 Shiller/S&P index earnings/SEP/SPX-SPY DB evidence를 읽는 React S&P 500 valuation surface다. `Futures Monitor`와 `Sector / Industry` standalone tab은 current primary surface가 아니며, 선물/sector evidence는 Futures Macro와 Market Movers가 읽는다.
+- `Research > Market Research`의 current structure는 `시장 환경 / 지수 가치평가 / 종목 리서치` 3-family와 `경기 국면`, `물가·정책`, `선물 매크로`, `심리`, `일정`, `S&P 500`, `변동 종목`, `개별 종목` 8-view다. `/overview` URL과 `app/web/overview/*` module name은 compatibility로 유지한다. `Futures Monitor`와 `Sector / Industry` standalone tab은 current primary surface가 아니며, 선물/sector evidence는 `선물 매크로`, `S&P 500`, `변동 종목` view의 context evidence로 읽는다.
 - Futures Macro의 completed-session 계산 경계는 `app/services/futures_macro_pattern.py`와 `app/services/futures_macro_pattern_validation.py`다. 전자는 stored ten-year completed daily candle의 point-in-time 1D / 5D / 20D feature와 regime / transition을 만들고, 후자는 as-of volatility, 독립 episode spacing, chronological Brier / calibration publication gate와 stepwise 2D analog-path error / baseline / middle-50% coverage를 계산한다. `app/services/futures_macro_intraday.py`는 활성 futures trade date를 daily label과 독립적으로 판정하고, 저장된 latest closed 5m common cutoff으로 현재 1D / 5D / 20D를 임시 재계산한다. 장중 값은 `INTRADAY_READY/INTRADAY_PARTIAL/COMPLETED_FALLBACK`이며 snapshot/history에 저장하지 않는다. 향후 5D 검증과 immutable history는 completed daily만 사용하는 호환성·shadow research backend로 보존한다. primary UI는 예측 gate를 노출하지 않고 현재 관측의 재가격화, 반대 근거와 지속·무효화 조건을 표시한다. Streamlit helper는 provider 직접 조회 없이 finite-number payload 연결, unavailable suppression, refresh dispatch, native fallback만 담당한다.
 - Backtest strict Quality / Value family는 statement shadow factor path와 `PIT Monthly Snapshot Universe`를 visible contract로 사용한다. Static Managed Research / Historical Dynamic PIT는 saved payload와 old run replay compatibility path다.
 - Practical Validation은 5-flow 화면으로 읽고, Flow 3은 검증 결론, Flow 4는 카테고리별 검증 결과와 해결 guide를 소유한다. Flow 3 / Flow 4는 Final Review 전용 `REVIEW` metadata를 현재 보강해야 할 문제처럼 노출하지 않는다.

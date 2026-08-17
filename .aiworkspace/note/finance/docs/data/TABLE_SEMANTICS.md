@@ -16,7 +16,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - 현재 상장 상태를 나타내는 교체 가능한 master data
 - source는 NYSE listing 수집 경로
 - 완전한 historical listing membership table은 아니다
-- `Workspace > Ingestion > 일상 운영 / 검증 데이터 > 주식·ETF 종목 목록 최신화`가
+- `Data > Data Operations > 데이터 준비 > 주식·ETF 종목 목록 최신화`가
   NYSE 공식 listings API의 두 snapshot을 모두 받은 뒤 한 transaction에서 함께 교체한다.
 - 정상 refresh에서 새 snapshot에 없는 row는 current master에서 제거하지만
   `nyse_price_history`와 기존 `nyse_symbol_lifecycle` evidence는 삭제하지 않는다.
@@ -124,7 +124,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 역할:
 
-- Overview Market Movers에서 쓰는 관리형 universe membership을 저장한다.
+- Market Research Market Movers에서 쓰는 관리형 universe membership을 저장한다.
 - 초기 구현은 S&P 500 current constituents를 `universe_code=SP500`으로 저장한다.
 
 성격:
@@ -184,7 +184,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 역할:
 
-- Overview Market Movers의 daily view에서 전일 종가 대비 최신 intraday 가격 수익률을 coverage별로 저장한다.
+- Market Research Market Movers의 daily view에서 전일 종가 대비 최신 intraday 가격 수익률을 coverage별로 저장한다.
 - 현재 coverage는 `SP500`, `TOP1000`, `TOP2000`, `NASDAQ`이다.
 
 성격:
@@ -213,7 +213,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 역할:
 
-- Overview Market Movers에서 반복되는 quote gap / coverage issue를 symbol / universe 단위로 누적 추적한다.
+- Market Research Market Movers에서 반복되는 quote gap / coverage issue를 symbol / universe 단위로 누적 추적한다.
 - `issue_type=quote_gap`은 일중 quote 누락을, `issue_type=limited_price_history`는 full-window EOD 수집 뒤에도 provider 가용 이력이 period 최소 row보다 짧은 상태를 나타낸다.
 
 성격:
@@ -235,7 +235,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 역할:
 
-- Overview Events 탭에서 보여줄 시장 이벤트 calendar row를 저장한다.
+- Market Research Events 탭에서 보여줄 시장 이벤트 calendar row를 저장한다.
 - FOMC, earnings, 기타 macro / market schedule collector가 같은 table contract를 재사용한다.
 
 성격:
@@ -252,7 +252,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - FOMC meeting range는 정책 결정일 기준으로 마지막 날을 `event_date`로 저장한다. 예: `June 16-17*`는 `2026-06-17`로 저장한다.
 - Macro row는 공식 release schedule에서 온 event timing metadata다.
 - BLS source row는 `source=bureau_labor_statistics_release_schedule`이며 CPI / PPI / Employment Situation / JOLTS / ECI를 각각 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`, `MACRO_JOLTS`, `MACRO_ECI`로 저장한다.
-- BLS 자동 요청이 차단되면 사용자가 내려받은 공식 `.ics` 파일을 Ingestion에서 import할 수 있고, 이 row는 같은 source와 `raw_payload_json.import_method=official_ics_file`로 저장된다.
+- BLS 자동 요청이 차단되면 사용자가 내려받은 공식 `.ics` 파일을 Data Operations에서 import할 수 있고, 이 row는 같은 source와 `raw_payload_json.import_method=official_ics_file`로 저장된다.
 - BEA source row는 `source=bureau_economic_analysis_release_schedule`이며 national GDP / Personal Income and Outlays releases를 `MACRO_GDP`, `MACRO_PCE`로 저장한다.
 - Census source row는 `source=census_economic_indicators_calendar`이며 retail sales, durable goods, housing, construction, and trade indicator releases를 macro subtype으로 저장할 수 있다.
 - ISM source row는 `source=ism_report_calendar`이며 Manufacturing / Services PMI releases를 `MACRO_ISM_MANUFACTURING_PMI`, `MACRO_ISM_SERVICES_PMI`로 저장한다.
@@ -263,8 +263,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - Nasdaq earnings calendar는 같은 symbol/date를 확인하는 alternate free provider cross-check로만 사용한다. `validation_status=cross_checked`는 official row를 뜻하지 않는다.
 - 날짜가 변경된 같은 symbol/source의 이전 active earnings estimate는 `event_status=superseded`로 남긴다.
 - 요청 ticker 중 저장 row가 없는 symbol의 missing / failure reason은 `market_event_calendar`에 별도 row로 쓰지 않고 job result의 `symbol_diagnostics`와 generated failure CSV에 남긴다.
-- Overview read model은 `Validation`, `Freshness`, `Quality Action`을 계산해 estimate-only / not-confirmed / stale row의 다음 조치를 표시한다.
-- Overview read model은 legacy row에 taxonomy column이 비어 있어도 `event_type`, `source_type`, `validation_status`, `source`에서 `Event Family`, `Event Subtype`, `Universe Scope`, `Source Authority`를 보수적으로 추론한다.
+- Market Research read model은 `Validation`, `Freshness`, `Quality Action`을 계산해 estimate-only / not-confirmed / stale row의 다음 조치를 표시한다.
+- Market Research read model은 legacy row에 taxonomy column이 비어 있어도 `event_type`, `source_type`, `validation_status`, `source`에서 `Event Family`, `Event Subtype`, `Universe Scope`, `Source Authority`를 보수적으로 추론한다.
 
 주의:
 
@@ -281,7 +281,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 역할:
 
-- `Workspace > Institutional Portfolios`가 투자 대가 / 기관별 SEC Form 13F portfolio를 탐색할 때 쓰는 delayed regulatory holdings ledger다.
+- `Research > Institutional Holdings`가 투자 대가 / 기관별 SEC Form 13F portfolio를 탐색할 때 쓰는 delayed regulatory holdings ledger다.
 - `institutional_13f_manager`는 manager / filer identity와 latest filing pointer를 저장한다.
 - `institutional_13f_filing`은 accession, report period, filing date, amendment flag, source data set, source link를 저장한다.
 - `institutional_13f_holding`은 13F information table row를 저장한다.
@@ -315,7 +315,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 역할:
 
-- `Workspace > Overview > Futures Macro`의 완료 daily macro/forecast evidence와 활성 세션 5m current observation을 분리해 제공하고, 보조 stored-candle chart / diagnostics에서 1m OHLCV 상태를 read-only로 표시하기 위한 데이터 경계다.
+- `Research > Market Research > 시장 환경 > 선물 매크로`의 완료 daily macro/forecast evidence와 활성 세션 5m current observation을 분리해 제공하고, 보조 stored-candle chart / diagnostics에서 1m OHLCV 상태를 read-only로 표시하기 위한 데이터 경계다.
 - `futures_instrument`는 watchlist preset / display metadata를 저장한다.
 - `futures_ohlcv`는 provider symbol / interval / candle time 기준 raw OHLCV row를 저장한다. 1m row는 stored-candle chart / diagnostics에, 5m row는 활성 세션의 임시 1D/5D/20D current observation과 완료 세션 재구성 evidence에, 1d row는 completed snapshot과 point-in-time forecast validation에 사용된다.
 - Yahoo same-date 1d row가 저녁 재개 뒤 다시 변할 수 있으므로, 수동 `최신 데이터 갱신`은 active/pending session에서 `2d/5m`을 한 번 수집한다. 같은 뉴욕 날짜가 pending이고 `17:15 ET` 이후일 때는 이 row 중 `D-1 18:00 ET <= bar < D 17:00 ET`만 집계해 확정에 재사용한다. `ZoneInfo("America/New_York")`가 EDT/EST를 계산한다.
@@ -441,7 +441,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - provider snapshot table이다.
 - P2-4 초기 구현은 FRED `VIXCLS`, `T10Y3M`, `BAA10Y`를 수집한다.
-- Overview Market Sentiment V1 이후 CNN score / component score와 AAII bullish / neutral / bearish / bull-bear spread도 같은 long-form table에 저장한다.
+- Market Research Sentiment V1 이후 CNN score / component score와 AAII bullish / neutral / bearish / bull-bear spread도 같은 long-form table에 저장한다.
 - `series_id`, `observation_date`, `source`가 business key다.
 - Sentiment에서 이 table은 최신 canonical view다. 발표 당시 재현에는 `market_sentiment_collection_batch` / `market_sentiment_observation_snapshot`을 사용한다.
 - AAII official workbook full backfill은 이 canonical table만 보강한다. Workbook 최신일 이하의 네 AAII series를 같은 날짜 집합으로 교체하고 이후 prospective row는 보존하며, historical canonical row를 immutable snapshot으로 복제하지 않는다.
@@ -480,7 +480,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - `macro_series_vintage_observation`은 미국 경제 사이클 17개 지표의 FRED/ALFRED 발표 당시 값과 연구 전용 Philadelphia Fed RTDSM `IPT/H/EMPLOY/RUC` provider-native vintage 및 이후 revision interval을 raw ledger로 보존한다.
 - `economic_cycle_model_artifact`는 model version, `trained_through`, horizon별 parameter·temperature calibration·rolling-origin metric·publication gate를 보존한다.
-- `economic_cycle_snapshot`은 `current`, `historical_replay`, `intramonth_nowcast`가 만든 current phase, observed state, recent 1/3/6M changes, transition monitor, evidence, source date와 제한 사유를 저장하며 Overview read model의 source-of-truth다.
+- `economic_cycle_snapshot`은 `current`, `historical_replay`, `intramonth_nowcast`가 만든 current phase, observed state, recent 1/3/6M changes, transition monitor, evidence, source date와 제한 사유를 저장하며 Market Research read model의 source-of-truth다.
 - 월말 `current/historical_replay` row는 canonical history다. 월중은 날짜별 별도 `run_kind=intramonth_nowcast` row로 저장하고 `baseline_as_of_date`, `source_coverage_json`, `source_collected_at`으로 비교 기준과 입수 범위를 명시한다. 이 nullable provenance column 추가는 기존 월말 row의 payload나 business key를 재작성하지 않는다.
 - 같은 날짜·model version·run kind 재실행은 UPSERT로 1행을 유지하지만 과거 월말 row는 rollover 대상이 아니다. 새 달 첫 평일에는 누락된 직전 월말만 `current`로 append할 수 있다.
 
@@ -497,7 +497,7 @@ PIT / publication 계약:
 - feature scaling은 expanding history만, calibration/validation은 rolling-origin out-of-fold만 사용한다. retrospective label은 activity/labor와 해당 origin에 eligible한 `USREC`만 사용한다.
 - current observed phase는 activity/labor 8개 실물지표의 3개월 평균 level과 직전 3개월 대비 momentum quadrant가 소유한다. 최신 수정치와 NBER chronology는 confidence/역사 참고이며 current phase를 덮어쓰지 않는다.
 - persistence·diffusion·activity/labor corroboration 세 조건은 다음 인접 국면의 `MAINTAIN/WATCH/CONFIRMED`를 만들며 특정 미래 월이나 확률을 뜻하지 않는다.
-- h0/h1/h2 artifact·probability·forecast column은 shadow validation과 old-row compatibility로 보존할 수 있지만 Overview v3 read model과 기본 UI는 읽지 않는다.
+- h0/h1/h2 artifact·probability·forecast column은 shadow validation과 old-row compatibility로 보존할 수 있지만 현재 Market Research read model과 기본 UI는 읽지 않는다.
 - RTDSM 장기 국면은 표본·정합성 연구용 shadow history다. 현행 8지표 국면과 사전 등록한 common-period parity를 통과하기 전에는 current snapshot, model artifact, service 또는 UI를 만들지 않는다. 2026-08-12 실제 감사는 표본 gate를 통과했지만 phase agreement 54.2%, Cohen's kappa 0.368로 `NO_GO_PARITY`였다.
 - raw full series, model parameter와 더 긴 replay snapshot은 DB에 남고 UI service는 최근 최대 12개월 actual coordinate history/evidence만 읽는다. UI render 중 provider fetch, fit, materialization, DB write를 실행하지 않는다.
 

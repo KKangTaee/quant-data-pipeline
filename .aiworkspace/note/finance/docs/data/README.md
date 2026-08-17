@@ -39,37 +39,37 @@ Last Verified: 2026-08-17
 | `equity_universe_snapshot` | Quality / Value strict family가 읽는 prebuilt monthly PIT-like equity universe snapshot header. V1은 DB price와 latest-known statement shares 기반 근사 market-cap universe다 |
 | `equity_universe_member` | monthly equity universe snapshot별 included / excluded member, rank, approximate market cap, liquidity / exclusion evidence |
 | `nyse_price_history` | OHLCV price ledger |
-| `market_universe_member` | Overview market intelligence current universe membership |
+| `market_universe_member` | Market Research market intelligence current universe membership |
 | `market_liquidity_universe_member` | Market Movers Top1000 / Top2000 current membership materialized from recent average dollar volume |
 | `market_symbol_alias` | Market Movers ticker-change repair alias store. Quote-missing old tickers can be detected as candidates, then explicitly applied as active aliases for future intraday quote lookup |
-| `market_intraday_snapshot` | Overview daily market movers and sector/group leadership intraday previous-close snapshot for S&P 500 / Top1000 / Top2000 / Nasdaq-listed current snapshot coverage. Current UI reads this through Market Movers / Market Context, not a standalone Sector / Industry primary tab |
-| `market_data_issue` | Overview quote gap 같은 반복 market data issue를 symbol / universe 단위로 누적 추적 |
-| `market_event_calendar` | Overview Events calendar snapshot for FOMC, macro releases, earnings, market-structure events, fixed-income calendar events, and corporate-action candidates. Rows use normalized taxonomy fields such as `event_family`, `event_subtype`, `universe_scope`, and `source_authority`; macro/FOMC/Treasury rows are official schedule context, while earnings rows remain provider estimates unless issuer/official confirmation is stored. |
+| `market_intraday_snapshot` | Market Research daily market movers and sector/group leadership intraday previous-close snapshot for S&P 500 / Top1000 / Top2000 / Nasdaq-listed current snapshot coverage. Current UI reads this through Market Movers / Market Context, not a standalone Sector / Industry primary tab |
+| `market_data_issue` | Market Research quote gap 같은 반복 market data issue를 symbol / universe 단위로 누적 추적 |
+| `market_event_calendar` | Market Research Events calendar snapshot for FOMC, macro releases, earnings, market-structure events, fixed-income calendar events, and corporate-action candidates. Rows use normalized taxonomy fields such as `event_family`, `event_subtype`, `universe_scope`, and `source_authority`; macro/FOMC/Treasury rows are official schedule context, while earnings rows remain provider estimates unless issuer/official confirmation is stored. |
 | `institutional_13f_manager` | holdings가 있는 SEC Form 13F filer / manager master와 latest effective portfolio pointer. `13F-NT`만 제출한 분기와 incomplete table은 승격하지 않고, incoming bulk가 기존 report period/filing date보다 과거면 pointer/source metadata를 되돌리지 않는다 |
 | `institutional_13f_filing` | bulk와 individual EDGAR가 공유하는 accession-level 원장. report period, filing date, amendment/report type, notice filing과 source link를 보존하며 갱신 완료 판단은 이 ledger의 latest submitted period를 사용한다 |
 | `institutional_13f_holding` | accession에 종속된 13F information-table raw row 원장. Parsed row count가 filing `table_entry_total`과 정확히 일치한 accession만 저장하며, incomplete filing은 filing ledger evidence만 보존한다. Loader access includes `ix_report_period_cusip_cik`; amendment-aware loader가 base/restatement/addition을 합성한 뒤 UI read model이 security identity별로 집계한다 |
 | `institutional_13f_cusip_symbol_map` | best-effort CUSIP to display symbol mapping derived from 13F rows and later enrichment |
 | `institutional_13f_identifier_resolution` | OpenFIGI v3 current CUSIP/CINS resolution keyed by `(identifier_value, source)`. mapped / ambiguous / unmapped와 마지막 시도 상태를 분리하며 provider 오류는 이전 정상 판정을 보존한다 |
-| `institutional_13f_manager_watchlist` | curated manager rail seed metadata for Institutional Portfolios |
+| `institutional_13f_manager_watchlist` | curated manager rail seed metadata for Institutional Holdings |
 | `institutional_13f_refresh_status` | latest SEC 13F dataset ingestion status, freshness, stale reason, and row counts |
 | `sp500_monthly_valuation` | Shiller monthly price/EPS-derived trailing P/E and CAPE history. EPS가 아직 없는 최신 월도 `data_quality=missing` price-only row로 보존하며, 마지막 양수 EPS 기준일을 별도로 유지한다. Descriptive 60m/36m valuation과 reconstructed history용이며 strict PIT signal history가 아니다. |
 | `nasdaq100_monthly_valuation` | SEC QQQ holdings, constituent actual diluted EPS(동일값 basic/diluted 공시 포함), DB EOD로 재구성한 monthly QQQ proxy. 95% 미만 월도 `blocked` evidence로 보존하며 blocker action은 최근 60개월 부족 EPS/EOD만 repeat-safe하게 보강한다. 공식 Nasdaq aggregate가 아니다. |
 | `sp500_index_earnings` | S&P 공식 Index Earnings workbook의 actual quarterly release vintage와 FactSet Earnings Insight의 날짜 검증 annual current/next-year bottom-up estimate를 source/basis/status로 분리해 보존한다. Market Context는 완료 `quarterly + as_reported + actual`만 current TTM에 쓰고, Economic Cycle 실제 EPS도 proxy/estimate를 쓰지 않는다. Inflation / Policy equity stress만 `factset_earnings_insight + annual` release vintage를 사용한다. |
 | `fomc_sep_projection` | Federal Reserve SEP GDP/PCE values stored by release vintage, target year, and statistic. FOMC calendar에서 발견한 2021-03 이후 official history를 missing-release 방식으로 backfill하며, daily discovery가 이후 release를 append한다. 1/3/5년 reconstruction이 같은 append-only vintage를 읽고 prior release는 덮어쓰지 않는다. |
-| `futures_instrument` | Overview futures watchlist preset / display metadata for yfinance pilot futures symbols |
-| `futures_ohlcv` | Overview futures 1m / 5m / daily OHLCV candle ledger. 1m rows는 stored-candle diagnostics, 5m rows는 활성 세션의 임시 1D/5D/20D 관측과 완료 세션 재구성, daily rows는 completed snapshot과 point-in-time forecast validation에 쓴다. Economic Cycle은 저장된 `GC=F` / `DX-Y.NYB` daily row만 읽어 금·달러의 5/21/63거래일 가격 확인을 표시한다 |
+| `futures_instrument` | Market Research Futures Macro watchlist preset / display metadata for yfinance pilot futures symbols |
+| `futures_ohlcv` | Market Research Futures Macro 1m / 5m / daily OHLCV candle ledger. 1m rows는 stored-candle diagnostics, 5m rows는 활성 세션의 임시 1D/5D/20D 관측과 완료 세션 재구성, daily rows는 completed snapshot과 point-in-time forecast validation에 쓴다. Economic Cycle은 저장된 `GC=F` / `DX-Y.NYB` daily row만 읽어 금·달러의 5/21/63거래일 가격 확인을 표시한다 |
 | `futures_market_monitor_run` | Futures OHLCV collection run diagnostics, latest candle, failed symbols, and provider status |
-| `futures_macro_snapshot` | completed-session input fingerprint와 algorithm/schema version으로 호환성을 판정하는 Overview Futures Macro latest-good current snapshot |
+| `futures_macro_snapshot` | completed-session input fingerprint와 algorithm/schema version으로 호환성을 판정하는 Market Research Futures Macro latest-good current snapshot |
 | `futures_macro_forecast_history` | `as_of_date + input_fingerprint + schema/algorithm version` forecast identity별 immutable 5D/20D outlook ledger |
 | `etf_provider_source_map` | ETF별 issuer endpoint / parser mapping cache |
 | `etf_operability_snapshot` | ETF 비용, 규모, 유동성, spread, NAV 관련 snapshot |
 | `etf_holdings_snapshot` | ETF holdings row snapshot. QQQ SEC rows는 CUSIP/ISIN/LEI/CIK, filing/accession, anchor quality를 함께 보존한다. |
 | `etf_exposure_snapshot` | holdings 또는 provider aggregate 기반 exposure summary |
-| `macro_series_observation` | FRED VIX / yield curve / credit spread와 Economic Cycle asset-path series (`DGS2`, `DGS10`, `DFII10`, `T10YIE`, `VIXCLS`, `BAA10Y`), EIA weekly petroleum (`WCESTUS1`, `WCRFPUS2`, `WRPUPUS2`), Overview CNN Fear & Greed / AAII sentiment context. AAII complete XLS capture는 incoming 최소~최대 날짜를 official workbook date set으로 canonical reconcile한 뒤 UPSERT해 과거 HTML 날짜와 같은 주차가 이중 관측으로 남지 않게 한다. 경제사이클 자산 경로는 기준일 이전 DB row만 loader로 읽으며 UI가 직접 수집하지 않는다 |
+| `macro_series_observation` | FRED VIX / yield curve / credit spread와 Economic Cycle asset-path series (`DGS2`, `DGS10`, `DFII10`, `T10YIE`, `VIXCLS`, `BAA10Y`), EIA weekly petroleum (`WCESTUS1`, `WCRFPUS2`, `WRPUPUS2`), Market Research CNN Fear & Greed / AAII sentiment context. AAII complete XLS capture는 incoming 최소~최대 날짜를 official workbook date set으로 canonical reconcile한 뒤 UPSERT해 과거 HTML 날짜와 같은 주차가 이중 관측으로 남지 않게 한다. 경제사이클 자산 경로는 기준일 이전 DB row만 loader로 읽으며 UI가 직접 수집하지 않는다 |
 | `market_sentiment_collection_batch` / `market_sentiment_observation_snapshot` | CNN / AAII source별 수집 batch와 immutable normalized view. UTC `known_at`은 앱 관측 시각이며 legacy canonical history는 소급 backfill하지 않는다 |
 | `macro_series_vintage_observation` | 미국 경제 사이클 17개 지표의 FRED/ALFRED revision과 연구 전용 Philadelphia Fed RTDSM `IPT/H/EMPLOY/RUC` provider-native vintage를 함께 보존하는 real-time raw ledger. `source`로 두 경로를 분리하며 발표 당시 값을 revised CSV로 대체하지 않는다 |
 | `economic_cycle_model_artifact` | 학습 cutoff와 calibration/validation/publication 판정을 포함한 경제 사이클 artifact. `economic_cycle_transition_v1`은 extended pressure와 compact-core destination 파라미터를 역할별로 저장한다 |
-| `economic_cycle_snapshot` | 현재 및 historical replay의 관측 국면·최근 변화·전환 compact snapshot. `transition_forecast_v1` monitor는 confirmed current, 3-release pressure, unrestricted conditional destination과 recent confirmed history를 저장한다. legacy 확률/forecast column은 새 Overview 예측에 사용하지 않는다 |
+| `economic_cycle_snapshot` | 현재 및 historical replay의 관측 국면·최근 변화·전환 compact snapshot. `transition_forecast_v1` monitor는 confirmed current, 3-release pressure, unrestricted conditional destination과 recent confirmed history를 저장한다. legacy 확률/forecast column은 현재 Market Research 조건부 전환 경로에 사용하지 않는다 |
 | `nyse_financial_statement_filings` | EDGAR filing-level metadata ledger |
 | `nyse_financial_statement_values` | EDGAR filing / concept / period raw fact ledger |
 | `nyse_fundamentals_statement` | EDGAR statement ledger 기반 canonical financial statement shadow |
@@ -118,7 +118,7 @@ runtime-defined JSONL 파일은 첫 workflow write 전에는 로컬에 없을 �
 - Market Movers `시장 관심`은 selected-symbol investigation evidence only다. V2는 existing selected-symbol news / Korean news / SEC metadata fetchers를 사용자 버튼 클릭 시 세션 전용으로 호출하고, analyst / target-change pages와 SEC 13F references는 source disclosure 또는 delayed context로 다룬다. Article body, analyst report body, filing body, commercial source content, or 13F holdings rows를 저장하지 않는다.
 - 새 JSONL registry는 기본적으로 만들지 않고, stage handoff나 명시적 reusable setup이 아닌 저장은 피한다.
 - static stress window JSON은 투자 신호가 아니라 재현 가능한 검증 preset이다.
-- Operations > Portfolio Monitoring read model은 monitoring log 자동 저장, live approval, broker order, account sync, auto rebalance를 수행하지 않는다. legacy `Selected Portfolio Dashboard` file/helper 이름은 남아 있지만 사용자 portfolio setup은 saved state로만 관리한다.
+- Portfolio > Portfolio Monitoring read model은 monitoring log 자동 저장, live approval, broker order, account sync, auto rebalance를 수행하지 않는다. legacy `Selected Portfolio Dashboard` file/helper 이름은 남아 있지만 사용자 portfolio setup은 saved state로만 관리한다.
 
 ## Code Flow 문서와의 차이
 
