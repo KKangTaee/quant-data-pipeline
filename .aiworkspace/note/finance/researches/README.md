@@ -29,6 +29,7 @@ Last Verified: 2026-08-03
 
 | Research | Focus |
 | --- | --- |
+| `active/2026-09-futures-macro-performance-value-audit/` | 선물 매크로의 갱신 지연을 실제 실행·읽기 전용 재현으로 분석하고, 현재 관측의 해석·NO_EDGE 검증·체제 이력의 사용자 가치와 후속 개선 우선순위를 감사 |
 | `active/2026-08-economic-cycle-independent-reaudit/` | 과거 경제사이클 리서치 결론을 재사용하지 않고 현재 코드·DB·검증 결과에서 현재 국면 판정, 1·2개월 전망, 4분면 좌표와 전환 해석의 구조적 문제를 독립 재감사 |
 | `active/2026-07-data-operations-product-audit/` | Data > Data Operations의 활성 action 30개, 제품/내부 운영 경계, desktop/mobile 첫 행동 탐색 비용, 유지·통합·고급 경로 이동·기본 UI 제거 후보와 task-oriented 개선 방향을 감사 |
 | `active/2026-07-market-research-ia-redesign/` | Today가 기본 화면이 된 이후 기존 Overview를 Market Research deep-research workspace로 재정의하고, 상단 공통 정보·tab hierarchy·시장/종목 경계를 검토 |
