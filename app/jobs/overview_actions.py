@@ -223,7 +223,8 @@ def run_overview_economic_cycle_refresh(
     except Exception:
         before_date = None
     try:
-        before_asset = dict(asset_freshness_loader(reference_date=target))
+        # Daily/weekly assets age against the request date, not the official month.
+        before_asset = dict(asset_freshness_loader(reference_date=refresh_reference))
     except Exception:
         before_asset = {"status": "ERROR", "refresh_required": True}
 
@@ -293,7 +294,7 @@ def run_overview_economic_cycle_refresh(
     except Exception:
         after_date = before_date
     try:
-        after_asset = dict(asset_freshness_loader(reference_date=target))
+        after_asset = dict(asset_freshness_loader(reference_date=refresh_reference))
     except Exception:
         after_asset = before_asset
 

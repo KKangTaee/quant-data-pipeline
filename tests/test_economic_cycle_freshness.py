@@ -1,31 +1,33 @@
 from datetime import date, datetime
 
 
-def test_latest_refresh_date_uses_previous_friday_on_weekend() -> None:
+def test_latest_refresh_date_uses_closed_month_on_weekdays_and_weekends() -> None:
     from app.services.overview.economic_cycle_freshness import (
         latest_economic_cycle_refresh_date,
     )
 
-    assert latest_economic_cycle_refresh_date(date(2026, 7, 24)) == date(2026, 7, 24)
-    assert latest_economic_cycle_refresh_date(date(2026, 7, 25)) == date(2026, 7, 24)
+    assert latest_economic_cycle_refresh_date(date(2026, 7, 24)) == date(2026, 6, 30)
+    assert latest_economic_cycle_refresh_date(date(2026, 7, 25)) == date(2026, 6, 30)
     assert latest_economic_cycle_refresh_date(datetime(2026, 7, 26, 9, 0)) == date(
-        2026, 7, 24
+        2026, 6, 30
     )
+    assert latest_economic_cycle_refresh_date(date(2026, 1, 1)) == date(2025, 12, 31)
+    assert latest_economic_cycle_refresh_date(date(2024, 3, 1)) == date(2024, 2, 29)
 
 
-def test_stale_intramonth_exposes_manual_action() -> None:
+def test_stale_official_month_exposes_manual_action() -> None:
     from app.services.overview.economic_cycle_freshness import (
         build_economic_cycle_freshness,
     )
 
     result = build_economic_cycle_freshness(
-        {"as_of_date": "2026-07-21"},
+        {"as_of_date": "2026-05-31"},
         today=date(2026, 7, 25),
     )
 
     assert result["status"] == "REFRESH_AVAILABLE"
-    assert result["persisted_as_of_date"] == "2026-07-21"
-    assert result["target_as_of_date"] == "2026-07-24"
+    assert result["persisted_as_of_date"] == "2026-05-31"
+    assert result["target_as_of_date"] == "2026-06-30"
     assert result["refresh_required"] is True
     assert result["action"] == {
         "id": "refresh_economic_cycle_data",
@@ -34,13 +36,13 @@ def test_stale_intramonth_exposes_manual_action() -> None:
     }
 
 
-def test_current_intramonth_hides_manual_action() -> None:
+def test_current_official_month_hides_manual_action() -> None:
     from app.services.overview.economic_cycle_freshness import (
         build_economic_cycle_freshness,
     )
 
     result = build_economic_cycle_freshness(
-        {"as_of_date": "2026-07-24"},
+        {"as_of_date": "2026-06-30"},
         today=date(2026, 7, 25),
     )
 
@@ -74,7 +76,7 @@ def test_freshness_separates_successful_collection_cutoff_and_source_observation
 
     result = build_economic_cycle_freshness(
         {
-            "as_of_date": "2026-07-24",
+            "as_of_date": "2026-06-30",
             "source_collected_at": "2026-07-24 09:31:12",
             "source_coverage": {
                 "series": [
@@ -87,7 +89,7 @@ def test_freshness_separates_successful_collection_cutoff_and_source_observation
         today=date(2026, 7, 25),
     )
 
-    assert result["persisted_as_of_date"] == "2026-07-24"
+    assert result["persisted_as_of_date"] == "2026-06-30"
     assert result["last_successful_collection_at"] == "2026-07-24 09:31:12"
     assert "last_checked_at" not in result
     assert result["latest_source_observation_date"] == "2026-07-23"
