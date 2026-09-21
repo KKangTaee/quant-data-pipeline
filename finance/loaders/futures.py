@@ -13,6 +13,27 @@ from ._common import normalize_date_range, parse_symbol_list
 FuturesQueryFn = Callable[[str, str, list[Any]], list[dict[str, Any]]]
 
 
+def load_futures_intraday_rows(symbols, *, start_utc, end_utc, query_fn=None):
+    """Load a bounded UTC interval without truncating intraday timestamps to dates."""
+    from datetime import timezone
+    selected = list(dict.fromkeys(symbols))
+    if not selected:
+        return []
+    if start_utc.tzinfo is None or end_utc.tzinfo is None:
+        raise ValueError("Intraday bounds must be timezone-aware")
+    if not 0 <= (end_utc-start_utc).total_seconds() <= 32*86400:
+        raise ValueError("Intraday reads are limited to 32 days")
+    return (query_fn or _query_futures_rows)("finance_price", f"""
+        SELECT provider_symbol, candle_time_utc, close, source, collected_at
+        FROM futures_ohlcv WHERE interval_code = %s AND source = %s
+        AND provider_symbol IN ({','.join(['%s']*len(selected))})
+        AND candle_time_utc >= %s AND candle_time_utc <= %s
+        ORDER BY provider_symbol, candle_time_utc
+        """, ["5m", "yfinance", *selected,
+        start_utc.astimezone(timezone.utc).replace(tzinfo=None),
+        end_utc.astimezone(timezone.utc).replace(tzinfo=None)])
+
+
 def _query_futures_rows(
     db_name: str,
     sql: str,

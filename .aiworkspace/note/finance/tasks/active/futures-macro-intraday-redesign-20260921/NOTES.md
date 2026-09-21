@@ -25,3 +25,5 @@ Date: 2026-09-21
 ## 이전 자료의 적용 범위
 
 선행 pilot은 한 일봉 조건의 5D target 검증이며 장중 1시간·마감 이후 구간의 예측력을 검증한 것이 아니다. 시안이 좋다는 사용자 응답은 실제 데이터 결과 승인이나 구현 시작 요청이 아니다.
+
+- 2차: DB 입력 조합은 작은 futures_macro_inputs.py로 분리. calendar 연간 collection coverage를 사용하며 Today의 calendar 판단은 바꾸지 않음. 전용 loader는 32일 상한, 실제 read는 16일.

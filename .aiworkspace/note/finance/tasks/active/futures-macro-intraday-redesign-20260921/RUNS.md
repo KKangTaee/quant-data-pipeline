@@ -16,3 +16,8 @@ Date: 2026-09-21
 - 새 관측 테스트 RED 5 failures → 관련 GREEN 122 passed / 2 subtests. 외부 edgartools 경고 3개는 기존 baseline과 동일.
 - 실제 저장자료 observation 계산 0.493초, 2026-09-18 기준. write_fn capture로 운영 snapshot 미변경.
 - 실제 MySQL monotonic UPSERT: 과거 날짜·같은 날짜의 이전 계산 결과 덮어쓰기 방지 PASS. 고유 test key는 transaction rollback으로 제거. forecast history 변경 없음.
+
+## 2차
+- 신규 경계 테스트 RED 19개 → 구현 후 GREEN. calendar 누락 시 가격 backfill을 하지 않는 RED 추가 후 수정.
+- windows/refresh/intraday/session/finalization/shared refresh: 73 passed (기존 edgar 경고 3개).
+- 실제 DB read 0.046초, 공식 calendar CONFIRMED. 저장 관측 2026-09-21 00:00 UTC는 STALE로 판정.
