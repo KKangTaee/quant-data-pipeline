@@ -31,3 +31,7 @@ Date: 2026-09-21
 - 근거와 검증 공백: [SOURCES.md](./SOURCES.md), [RISKS.md](./RISKS.md)
 
 finance-doc-sync closeout: canonical doc change 없음. 승인된 제품 약속·구현 소유권·우선순위가 바뀌지 않았으므로 PRODUCT_DIRECTION / PROJECT_MAP / ROADMAP / INDEX는 유지한다.
+
+## 09-21 후속: compact 조건부 전망 가이드
+
+사용자의 ‘현재 강약 → 과거 n회 → 앞으로의 흐름’ 목적에 맞춰 1차 활용 범위, 2차 조건부 빈도/전망 방법, 3차 세 영역 화면 가이드 분석을 완료했다. 상세는 [COMPACT_OUTLOOK_GUIDE.md](./COMPACT_OUTLOOK_GUIDE.md)다. finance-product-audit와 brainstorming으로 현재 계산 계약을 확인하고 대안을 비교했다. 대표 ETF/선물 raw coverage는 SELECT-only로 확인했으며, 실제 새 통계·전망·제품 변경은 실행하지 않았다. 대상 범위는 자산군/대표 지수·ETF를 권고안의 가정으로 두었다.

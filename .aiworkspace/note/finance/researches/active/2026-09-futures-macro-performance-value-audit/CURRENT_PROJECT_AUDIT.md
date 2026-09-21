@@ -104,3 +104,9 @@ PROJECT_MAP은 현재 관측 중심 화면과 hidden shadow 검증 보존을 정
 - 현재 rolling feature는 해당 시점까지의 데이터로 계산하며, nested 모델은 과거-only train과 horizon separation을 둔다. 이번 감사가 데이터 vintage·계약 교체·전체 PIT 정확성을 전수 보증하지는 않는다.
 - 장중 잠정치는 완결 일봉과 비교 시간이 다르며 일중 변동성 계절성 보정을 확인하지 않았다. 동일한 ±0.5 판정의 체감은 시간대에 따라 달라질 수 있다.
 - 고정 17개 선물 universe로 주식 상장폐지 survivorship 문제가 주 대상은 아니지만, symbol별 역사·계약 구성·데이터 결측의 차이는 남는다.
+
+## 후속 확인: 사용자의 실제 자산 결과 질문과 현재 계산의 차이
+
+`build_forward_outcome_frame`은 candles/selected_symbols를 사용하지 않고 미래 자체 상태와 family 5D 점수 차이를 산출한다. `_asset_pathways` 역시 `forward_z`를 요약한다. 따라서 기존 출력은 ‘나스닥이 이후 5일 동안 하락한 n회’의 근거로 직접 사용할 수 없다. 실제 target asset return 정의와 별도 집계가 필요하다.
+
+대표 ETF/선물 raw DB coverage를 SELECT-only로 확인했다. SPY/QQQ/TLT는 09-18까지 긴 이력이 있지만 조정 가격 completeness 검증이 필요하고, GLD는 07-22, USO/UUP는 06-26 이후 공백이 있다. USO/UUP는 각 124행뿐이다. raw futures MAX 09-20을 완료 일봉 날짜로 해석하지 않는다. 상세 표와 사용자 목적에 맞춘 제안은 COMPACT_OUTLOOK_GUIDE에 둔다.

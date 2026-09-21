@@ -35,3 +35,13 @@ Access date: 2026-09-21
 | CME Group | https://www.cmegroup.com/market-data/cme-group-continuous-price-series.html | 연속 선물의 active/front contract 구성과 roll 정의 |
 
 코드와 측정값은 구현 사실, ‘분리하면 크게 줄일 수 있다’와 UI 우선순위는 근거에 기반한 권고다. 개선 후 실측처럼 표현하지 않는다.
+
+## Compact 조건부 전망 가이드의 추가 근거
+
+- `app/services/futures_macro_pattern_validation.py:382`, `:1515`: 실제 자산 수익률 대신 family 점수 변화를 만드는 기존 outcome/pathways 계약.
+- `app/services/futures_macro_outlook_model.py:200`: 과거-only train 및 결과 horizon 간격으로 중복을 줄이는 analog 선택.
+- `finance/loaders/price.py:17`, `finance/loaders/economic_cycle_assets.py:46`: DB 기반 주식/ETF·선물 reader의 재사용 범위.
+- SELECT-only / MySQL TRANSACTION READ ONLY로 `finance_price.nyse_price_history`의 SPY/QQQ/TLT/GLD/USO/UUP 및 `futures_ohlcv` 주요 7개 symbol의 count/min/max/adj_close non-null을 집계했다. provider fetch·DB write 없음. 실제 조건부 n/N 계산은 하지 않았다.
+- https://otexts.com/fpp3/tscv.html — 2026-09-21 접근. 저자 제공 교재, rolling-origin 시계열 검증과 미래 데이터 제외.
+- https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm — 2026-09-21 접근. NIST, 이항 비율의 Wilson/정확 구간.
+- https://www.cmegroup.com/insights/economic-research/2026/uncovering-the-hidden-drivers-of-commodities.html — 2026-09-21 접근. CME 공식 분석, 자산 관계의 환경별 변화; 현재 앱의 실제 관계나 예측 성과를 뒷받침하는 출처는 아님.
