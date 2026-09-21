@@ -22,6 +22,8 @@ Backtest 단계의 primary reading order는 `page workflow shell -> active Level
 
 가격이 30일 넘게 뒤처졌다는 `persistent_source_gap_or_symbol_issue` 추정만으로는 수집 대상을 제외하지 않는다. 이 종목도 기존 OHLCV 수집 경로로 최신화를 시도하며, 공급처 응답·종목 상태에 근거한 별도 제외와 수집 후 미해결 확인은 유지한다.
 
+Single Strategy의 핵심 실행 설정은 새 설정을 만들 때 서버의 오늘 날짜를 검증 종료일 기본값으로 계산한다. 저장 설정에서 불러온 날짜와 사용자가 편집한 날짜는 기본값보다 우선하며, 날짜가 바뀌어도 덮어쓰지 않는다.
+
 ## 핵심 파일
 
 | 파일 | 역할 |

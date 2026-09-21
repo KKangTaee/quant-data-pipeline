@@ -490,6 +490,50 @@ def test_schema_covers_every_concrete_variant_once() -> None:
     assert len(set(projected)) == 13
 
 
+def test_new_settings_end_date_uses_today_at_build_time(monkeypatch) -> None:
+    class SettingsDate(date):
+        current = date(2026, 9, 21)
+
+        @classmethod
+        def today(cls):
+            return cls.current
+
+    monkeypatch.setattr(settings_service, "date", SettingsDate)
+    for today, expected in [
+        (date(2026, 9, 21), "2026-09-21"),
+        (date(2026, 9, 22), "2026-09-22"),
+    ]:
+        SettingsDate.current = today
+        for strategy, variants in EXPECTED_CONCRETE_KEYS.items():
+            for variant in variants:
+                workspace = build_single_settings_workspace(strategy, variant, {}, {})
+                assert _field_values(workspace)["end"] == expected, (strategy, variant)
+
+
+@pytest.mark.parametrize(
+    ("draft", "expected"),
+    [({}, "2026-09-18"), ({"end": "2026-09-17"}, "2026-09-17")],
+)
+def test_current_settings_preserve_prefilled_and_edited_end_dates(
+    monkeypatch, draft, expected
+) -> None:
+    monkeypatch.setattr(
+        settings_web,
+        "st",
+        SimpleNamespace(session_state={
+            "backtest_strategy_choice": "GTAA",
+            "backtest_prefill_payload": {"strategy_key": "gtaa", "end": "2026-09-18"},
+            settings_web._DRAFTS_KEY: {"GTAA:default": draft},
+        }),
+    )
+
+    workspace = settings_web.build_current_single_settings_workspace(
+        runtime_options=RUNTIME_OPTIONS
+    )
+
+    assert _field_values(workspace)["end"] == expected
+
+
 def test_schema_fields_are_unique_supported_and_korean_first() -> None:
     for strategy_choice, variants in EXPECTED_CONCRETE_KEYS.items():
         for variant in variants:

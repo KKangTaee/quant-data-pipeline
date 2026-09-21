@@ -292,7 +292,7 @@ def _date_fields(*, start: str = "2016-01-01") -> list[dict[str, object]]:
             "end",
             "검증 종료일",
             "date",
-            "2026-07-18",
+            date.today().isoformat(),
             "전략 계산에 포함할 마지막 날짜입니다.",
         ),
     ]
