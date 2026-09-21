@@ -209,9 +209,9 @@ p {
   --tone-border: #d6dfe9;
   --tone-accent: #8196ad;
 }
+/* Keep rounded cards with an even outline; no decorative top accent. */
 .prices {
   border: 1px solid #d9e4ec;
-  border-top: 3px solid #5889af;
   border-radius: 13px;
   background: #fff;
   padding: 20px 22px;
@@ -319,7 +319,6 @@ p {
   display: flex;
   flex-direction: column;
   border: 1px solid #dbe5ed;
-  border-top: 3px solid var(--tone-accent);
   border-radius: 13px;
   background: #fff;
   padding: 20px;

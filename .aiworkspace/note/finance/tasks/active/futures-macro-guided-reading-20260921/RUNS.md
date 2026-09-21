@@ -23,3 +23,4 @@
 - 서버 최초 재시작 직후 deep link의 Streamlit Page not found 모달은 root 접속 후 같은 URL 재진입으로 해소. 최종 화면은 정상.
 - 최종 QA 캡처: main .playwright-mcp/futures-guided-final.png (1280×1454, 실제 앱 8501 화면, generated로 commit 제외). 전체 카드/하단 disclosure까지 시각 확인.
 - 미실행: 저장소 전체 테스트는 실행하지 않음. 변경 소유 영역인 futures 전 범위 테스트와 UI/DB 검산으로 검증. 알려진 provider 지연/roll/미래 예측 미검증 제한은 유지.
+- 스타일 후속 QA: production build/diff check 통과. 1440px에서 카드 radius 13px 유지, 상단/측면 모두 동일 1px 중립 테두리 확인. 420px에서도 동일하며 가로 넘침 없음. CSS만 수정하여 계산 테스트는 재실행하지 않음. canonical doc change 없음; 반복 오해 예방용 GOTCHAS와 task 기록만 갱신.

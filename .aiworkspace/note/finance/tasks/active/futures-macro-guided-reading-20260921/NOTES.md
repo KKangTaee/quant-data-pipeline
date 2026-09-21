@@ -8,3 +8,4 @@
 - 비교 범주가 같더라도 ES/NQ 방향이 뒤집히거나 보합인 지수가 바뀌면 CHANGED로 표시한다. 같은 조합은 범주와 자산별 부호가 모두 일치해야 한다.
 - 0.01% 부호는 영향 크기와 다르다는 문구를 확인 카드 아래에도 표시. 현재의 혼합 조합을 확정 방향으로 축약하지 않고 실제 두 축 설명으로 제공.
 - 문서 정렬: flows/README, PROJECT_MAP, PRODUCT_DIRECTION, ROADMAP의 next-check 약속을 실제 판정/관측 비교로 수정. 기존 runbook의 옛 1D/5D/20D primary UI·reload 설명도 현행으로 교정. INDEX/discovery와 DB 소유 경계 변경 없음.
+- 2026-09-21 스타일 후속 수정: 사용자 이미지로 의도 재확인. radius는 유지하고 가격 영역/확인 카드의 굵은 상단 색상 선만 제거한다. radius까지 없앤 중간 수정은 main에 반영하지 않았고 폐기했다. 이 기준을 agent/GOTCHAS.md에 기록. 제품 흐름·계산·색상 의미 변경 없음.

@@ -7,6 +7,8 @@ Last Verified: 2026-07-08
 
 ## Rules
 
+- 사용자 디자인 기준: 카드의 둥근 모서리(`border-radius`)는 허용한다. 카드 상단만 강조하는 굵은 색상 선/장식선은 넣지 않는다. `border-top: 3px solid ...` 또는 같은 모양의 가상요소를 추가하지 말고, 일반 얇은 균일 테두리와 면색·여백으로 구분한다. 상단 선 제거 요청을 radius 제거로 해석하지 않는다.
+
 - `registries/*.jsonl`, `run_history/*.jsonl`, runtime artifact, temp CSV는 사용자가 명시 요청하지 않으면 커밋하지 않는다.
 - `saved/*.jsonl`은 사용자가 저장한 reusable setup이므로 문서 정리 과정에서 삭제하지 않는다.
 - Practical Validation에서 `NOT_RUN`은 pass가 아니다. 데이터나 구현이 없어 실행하지 못했다는 뜻이다.
