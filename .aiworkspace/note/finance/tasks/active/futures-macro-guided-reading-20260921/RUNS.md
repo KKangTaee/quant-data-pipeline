@@ -18,3 +18,8 @@
 - Ruff 전체 정책에는 기존 broad-exception/timezone modernization 등의 경고가 있어 일괄 수정하지 않음. 변경 파일 import/F 오류 정리 및 `ruff check --select I,F` 통과.
 - 리뷰 재확인: 자산별 방향 반전 3사례 CHANGED와 설명 확인, 추가 문제 없음, 코드 병합 가능 판정.
 - 900px도 가로 overflow 없음(iframe 729=scrollWidth). 경기국면 이동이 economic-cycle URL을 설정함을 확인.
+- 로컬 통합: 9adb3ef4b를 main master에 ff-only 반영, 기존 8501 owned 프로세스만 종료/재기동. 관련 없는 8510 유지, QA 8502 종료.
+- 8501 최종 QA: production index-BDemjcPs.js 확인, 갱신 12.874초 후 관측 22:25 KST/조회 22:35, 성공 문구·버튼 복구 확인. 구간 변경 시 21:25→22:25 및 동반 하락/부담 판정 확인. reload 0개, 가로 overflow 없음.
+- 서버 최초 재시작 직후 deep link의 Streamlit Page not found 모달은 root 접속 후 같은 URL 재진입으로 해소. 최종 화면은 정상.
+- 최종 QA 캡처: main .playwright-mcp/futures-guided-final.png (1280×1454, 실제 앱 8501 화면, generated로 commit 제외). 전체 카드/하단 disclosure까지 시각 확인.
+- 미실행: 저장소 전체 테스트는 실행하지 않음. 변경 소유 영역인 futures 전 범위 테스트와 UI/DB 검산으로 검증. 알려진 provider 지연/roll/미래 예측 미검증 제한은 유지.
