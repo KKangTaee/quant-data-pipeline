@@ -130,6 +130,8 @@ export type ResultWorkspace = {
   holdings: {
     as_of: string
     target_as_of: string
+    current_label?: string
+    target_label?: string
     current_allocation: AllocationRow[]
     target_allocation: AllocationRow[]
     additions: string[]
@@ -187,6 +189,7 @@ export type ResultWorkspace = {
     turnover: string
     cost: string
   }>
+  holding_change_columns: Record<string, string>
   holding_change_rows: Array<{
     date: string
     state: string

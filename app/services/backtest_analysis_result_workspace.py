@@ -779,11 +779,65 @@ def _row_tickers(
     allow_static_equal_weight: bool,
 ) -> list[str]:
     tickers = _ticker_list(row.get(field))
-    if tickers or not allow_static_equal_weight or not fallback_field:
+    if isinstance(row.get(field), (list, tuple, pd.Series)) or not allow_static_equal_weight or not fallback_field:
         return tickers
     fallback = _ticker_list(row.get(fallback_field))
     balances = _numeric_list(row.get(balance_field))
     return fallback if fallback and len(fallback) == len(balances) else []
+
+
+def _holding_allocation(
+    row: Mapping[str, Any], *, after: bool, equal_weight: bool = False,
+) -> list[dict[str, Any]]:
+    """Keep pre/post-rebalance cash separate and use the holdings' gross basis."""
+
+    prefix = "Next" if after else "End"
+    tickers = _row_tickers(
+        row, field=f"{prefix} Ticker", fallback_field="Ticker",
+        balance_field=f"{prefix} Balance", allow_static_equal_weight=equal_weight,
+    )
+    explicit_tickers = isinstance(row.get(f"{prefix} Ticker"), (list, tuple, pd.Series))
+    if not tickers and not explicit_tickers:
+        return []
+    balances = _numeric_list(row.get(f"{prefix} Balance"))
+    weights = _numeric_list(row.get(f"{prefix} Weight"))
+    complete_balances = (
+        isinstance(row.get(f"{prefix} Balance"), (list, tuple, pd.Series))
+        and len(balances) == len(tickers)
+    )
+    cash = _optional_float(row.get("Cash"))
+    total = _optional_float(row.get("Gross Total Balance"))
+    next_tickers = _ticker_list(row.get("Next Ticker"))
+    next_balances = _numeric_list(row.get("Next Balance"))
+    if total is None and cash is not None and (
+        isinstance(row.get("Next Ticker"), (list, tuple, pd.Series))
+        and isinstance(row.get("Next Balance"), (list, tuple, pd.Series))
+        and len(next_balances) == len(next_tickers)
+    ):
+        total = sum(next_balances) + cash
+    if total is None:
+        total = _optional_float(row.get("Total Balance"))
+
+    if not after:
+        if complete_balances and total is not None:
+            cash = max(total - sum(balances), 0.0)
+        elif weights and len(weights) == len(tickers) and total is not None:
+            cash = max(1.0 - sum(weights), 0.0) * total
+        elif bool(row.get("Rebalancing")):
+            cash = None  # Post-trade Cash cannot establish pre-trade cash.
+    elif complete_balances and cash is not None:
+        # Rounding and transaction-cost postprocessing must not inflate weights.
+        total = sum(balances) + cash
+    return _allocation_rows(
+        tickers, weights=[] if complete_balances else weights,
+        balances=balances, total_balance=total, cash=cash,
+    )
+
+
+def _before_holdings_available(row: Mapping[str, Any], strategy_key: str) -> bool:
+    """Only pair pre-trade tickers/balances for contracts verified to share a phase."""
+
+    return not bool(row.get("Rebalancing")) or strategy_key in {"gtaa", "equal_weight"}
 
 
 def _cadence_months(meta: Mapping[str, Any]) -> int | None:
@@ -876,49 +930,23 @@ def _single_holdings_projection(bundle: Mapping[str, Any]) -> dict[str, Any]:
         }
 
     latest = dict(result_df.iloc[-1].to_dict())
-    total_balance = _optional_float(latest.get("Total Balance"))
     cash = _optional_float(latest.get("Cash")) or 0.0
-    current_tickers = _row_tickers(
-        latest,
-        field="End Ticker",
-        fallback_field="Ticker",
-        balance_field="End Balance",
-        allow_static_equal_weight=equal_weight,
-    )
-    current_balances = _numeric_list(latest.get("End Balance"))
-    current_weights = _numeric_list(latest.get("End Weight"))
-    current_allocation = _allocation_rows(
-        current_tickers,
-        weights=current_weights,
-        balances=current_balances,
-        total_balance=total_balance,
-        cash=cash,
+    before_available = _before_holdings_available(latest, str(meta.get("strategy_key") or ""))
+    current_allocation = (
+        _holding_allocation(latest, after=False, equal_weight=equal_weight)
+        if before_available else []
     )
 
     target_row: dict[str, Any] | None = None
     for _, candidate in result_df.iloc[::-1].iterrows():
         row = dict(candidate.to_dict())
-        candidate_tickers = _row_tickers(
-            row,
-            field="Next Ticker",
-            fallback_field="Ticker",
-            balance_field="Next Balance",
-            allow_static_equal_weight=equal_weight,
-        )
-        if candidate_tickers and bool(row.get("Rebalancing")):
+        if _holding_allocation(row, after=True, equal_weight=equal_weight) and bool(row.get("Rebalancing")):
             target_row = row
             break
     if target_row is None:
         for _, candidate in result_df.iloc[::-1].iterrows():
             row = dict(candidate.to_dict())
-            candidate_tickers = _row_tickers(
-                row,
-                field="Next Ticker",
-                fallback_field="Ticker",
-                balance_field="Next Balance",
-                allow_static_equal_weight=equal_weight,
-            )
-            if candidate_tickers:
+            if _holding_allocation(row, after=True, equal_weight=equal_weight):
                 target_row = row
                 break
 
@@ -927,26 +955,18 @@ def _single_holdings_projection(bundle: Mapping[str, Any]) -> dict[str, Any]:
     removals: list[str] = []
     target_as_of = ""
     if target_row is not None:
-        target_tickers = _row_tickers(
-            target_row,
-            field="Next Ticker",
-            fallback_field="Ticker",
-            balance_field="Next Balance",
-            allow_static_equal_weight=equal_weight,
-        )
-        target_allocation = _allocation_rows(
-            target_tickers,
-            weights=_numeric_list(target_row.get("Next Weight")),
-            balances=_numeric_list(target_row.get("Next Balance")),
-            total_balance=_optional_float(target_row.get("Total Balance")),
-        )
+        target_allocation = _holding_allocation(target_row, after=True, equal_weight=equal_weight)
         additions = _ticker_list(target_row.get("Added Ticker"))
         removals = _ticker_list(target_row.get("Removed Ticker"))
         target_as_of = _date_label(target_row.get("Date"))
 
     status = "available"
-    unavailable_reason = ""
-    if current_allocation and all(row["ticker"] == "현금" for row in current_allocation):
+    unavailable_reason = (
+        "" if before_available else "이 전략 결과에는 변경 전 종목과 평가액의 대응 근거가 없어 변경 후 구성만 표시합니다."
+    )
+    latest_after = _holding_allocation(latest, after=True, equal_weight=equal_weight)
+    effective_allocation = latest_after if bool(latest.get("Rebalancing")) else current_allocation
+    if effective_allocation and all(row["ticker"] == "현금" for row in effective_allocation):
         status = "cash_only"
     elif not current_allocation and not target_allocation:
         status = "unavailable"
@@ -957,14 +977,16 @@ def _single_holdings_projection(bundle: Mapping[str, Any]) -> dict[str, Any]:
         status = "hold_current_until_rebalance"
 
     explanations = {
-        "available": "마지막 평가 구성과 마지막 유효 신호의 목표 구성을 비교합니다.",
-        "cash_only": "마지막 평가 시점의 모의 포트폴리오는 현금으로만 구성됩니다.",
+        "available": "리밸런싱 전 보유와 이후 구성을 구분합니다. 각 구성은 현금을 포함한 비중입니다.",
+        "cash_only": "변경 후 모의 포트폴리오는 현금 100%입니다. 변경 전 종목은 매수 대상이 아닙니다.",
         "hold_current_until_rebalance": "최신 행은 리밸런싱 시점이 아니므로 다음 리밸런싱까지 현재 구성을 유지합니다.",
         "unavailable": "결과 계약에서 보유 비중을 안전하게 계산할 근거를 찾지 못했습니다.",
     }
     return {
         "as_of": _date_label(latest.get("Date")),
         "target_as_of": target_as_of,
+        "current_label": "변경 전 보유" if bool(latest.get("Rebalancing")) else "평가 시점 보유",
+        "target_label": "변경 후 구성" if target_as_of == _date_label(latest.get("Date")) else "최근 리밸런싱 후 구성",
         "current_allocation": current_allocation,
         "target_allocation": target_allocation,
         "additions": additions,
@@ -1111,22 +1133,36 @@ def _performance_rows(result_value: Any) -> list[dict[str, Any]]:
     return rows
 
 
-def _holding_change_rows(result_value: Any) -> list[dict[str, Any]]:
+def _holding_change_rows(result_value: Any, *, strategy_key: str = "") -> list[dict[str, Any]]:
+    """Display each row's before/after composition, including explicit cash exits."""
     frame = _latest_rows(_frame(result_value)).tail(420)
     rows: list[dict[str, Any]] = []
+    equal_weight = strategy_key == "equal_weight"
     for _, source in frame.iterrows():
         row = dict(source.to_dict())
-        current = _ticker_list(row.get("End Ticker")) or _ticker_list(row.get("Ticker"))
-        target = _ticker_list(row.get("Next Ticker")) or current
+        current = (
+            _holding_allocation(row, after=False, equal_weight=equal_weight)
+            if _before_holdings_available(row, strategy_key) else []
+        )
+        target = _holding_allocation(row, after=True, equal_weight=equal_weight)
+        before_tickers = [item["ticker"] for item in current if item["ticker"] != "현금"]
+        after_tickers = [item["ticker"] for item in target if item["ticker"] != "현금"]
+        additions = _ticker_list(row.get("Added Ticker"))
+        removals = _ticker_list(row.get("Removed Ticker"))
+        if current and target:
+            if not isinstance(row.get("Added Ticker"), (list, tuple, pd.Series)):
+                additions = [ticker for ticker in after_tickers if ticker not in before_tickers]
+            if not isinstance(row.get("Removed Ticker"), (list, tuple, pd.Series)):
+                removals = [ticker for ticker in before_tickers if ticker not in after_tickers]
         state = "리밸런싱" if bool(row.get("Rebalancing")) else "유지"
         rows.append(
             {
                 "date": _date_label(row.get("Date")),
                 "state": state,
-                "current": ", ".join(current) or "-",
-                "target": ", ".join(target) or "-",
-                "additions": ", ".join(_ticker_list(row.get("Added Ticker"))) or "-",
-                "removals": ", ".join(_ticker_list(row.get("Removed Ticker"))) or "-",
+                "current": ", ".join(f"{item['ticker']} {item['weight_label']}" for item in current) or "확인 불가",
+                "target": ", ".join(f"{item['ticker']} {item['weight_label']}" for item in target) or "확인 불가",
+                "additions": ", ".join(additions) or "-",
+                "removals": ", ".join(removals) or "-",
                 "cash": _format_number(row.get("Cash"), decimals=2),
             }
         )
@@ -1443,7 +1479,14 @@ def build_backtest_analysis_result_workspace(
         ),
         "evidence_groups": _evidence_groups(bundle),
         "performance_rows": _performance_rows(bundle.get("result_df")),
-        "holding_change_rows": _holding_change_rows(bundle.get("result_df")),
+        "holding_change_rows": _holding_change_rows(
+            bundle.get("result_df"), strategy_key=str(meta.get("strategy_key") or ""),
+        ),
+        "holding_change_columns": {
+            "date": "기준일", "state": "구분", "current": "변경 전 보유 (현금 포함)",
+            "target": "변경 후 구성 (현금 포함)", "additions": "추가 종목",
+            "removals": "제외 종목", "cash": "변경 후 현금액",
+        },
         "technical_appendix": _technical_appendix(
             bundle,
             lifecycle=lifecycle,

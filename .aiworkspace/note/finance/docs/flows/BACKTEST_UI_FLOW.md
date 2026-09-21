@@ -625,7 +625,8 @@ Factor Readiness는 ticker-change 후보쌍 / 신뢰도 / 기간 경계 / 다음
 - 실행 뒤 first-read 순서는 `KPI -> 전략/Benchmark chart -> 현재/목표 보유 -> Level1 기술 인계 -> Level2 검증 질문 -> 목적별 근거 -> 결과표 -> 기술 부록`이다.
 - chart는 달러 투자금 control 없이 첫 시점을 100으로 정규화하고 마지막 지수와 누적 수익률 관계를 설명한다. desktop은 최대 6개, 760px은 최대 3개의 실제 날짜 tick을 사용하며 pointer 안에서만 날짜·전략 지수/수익률·Benchmark 지수/수익률을 보여준다. Benchmark ticker와 비교 contract는 Python이 사용자 label로 제공한다.
 - Level1 technical gate는 성공한 실행, current configuration fingerprint, `run_result_id`, callable handoff handler만 판정한다. 성과값, Benchmark 우위, ETF 운용 가능성, 유동성, rolling/OOS, 비용 현실성은 Level2 질문이며 Level1에서 PASS로 대체하지 않는다.
-- current holdings는 마지막 valuation row의 backtest simulated allocation이고 target holdings는 마지막 유효 signal/rebalance row의 latest available target이다. broker 계좌 현황이나 주문 지시가 아니다.
+- 보유 카드는 마지막 평가 행과 최근 유효 리밸런싱 구성을 구분한다. GTAA·Equal Weight 리밸런싱 행에서는 `변경 전 보유 -> 변경 후 구성`, 유지 행에서는 `평가 시점 보유 / 최근 리밸런싱 후 구성`으로 표시한다. 전후 ticker/평가액 대응이 보장되지 않는 다른 전략의 리밸런싱 행은 변경 전을 추정하지 않고 이유와 함께 확인 불가로 둔다. broker 계좌 현황이나 주문 지시가 아니다.
+- 보유 카드와 사용자용 보유 변화 표는 현금을 구성 비중에 포함한다. 명시적 빈 Next 목록과 Cash는 유효한 현금 전환이며 이전 종목으로 대체하지 않는다. 필드 누락은 전액 현금으로 간주하지 않는다. 변경 전 현금은 동일 평가 기준의 총액에서 End Balance 합을 빼서 복원하고, 변경 후는 Next Balance와 Cash를 사용한다. 완전한 잔액 근거를 비중보다 우선하며 비용 차감 성과 Total Balance로 비용 전 종목 잔액을 나누지 않는다. 추가·제외 종목은 명시적 기록을 보존하고 근거가 없을 때만 안전한 전후 차집합으로 표시한다.
 - holdings 상단은 현재 평가일, 최신 신호일, 마지막 실제 리밸런싱, cadence와 다음 예상 window를 별개로 보여준다. 다음 window는 explicit cadence가 있을 때만 `YYYY-MM 월말 예상`으로 계산하며 exact trading date나 irregular signal date를 추측하지 않는다.
 - 성과가 좋아도 maturity, execution, result identity, configuration freshness, handler Gate가 충족되지 않으면 Level2 CTA를 만들지 않는다.
 - current configuration fingerprint와 결과 fingerprint가 다르면 KPI와 기술 근거는 참고용으로 유지하되 `이전 설정 결과`로 표시하고 인계를 차단한다.

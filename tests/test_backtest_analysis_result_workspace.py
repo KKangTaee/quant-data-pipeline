@@ -4,6 +4,7 @@ from inspect import signature
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import pytest
 
 from app.services.backtest_analysis_result_workspace import (
     build_backtest_analysis_result_workspace,
@@ -327,6 +328,108 @@ def test_cash_only_is_not_an_empty_holding_state() -> None:
         {"ticker": "현금", "weight": 1.0, "weight_label": "100.0%"}
     ]
     assert model["holdings"]["status"] == "cash_only"
+
+
+def cash_transition_bundle(next_tickers: list[str], next_balances: list[float], cash: float) -> dict:
+    bundle = result_bundle()
+    bundle["result_df"] = pd.DataFrame([
+        {"Date": "2026-05-29", "Rebalancing": True,
+         "End Ticker": ["SOXX", "MTUM"], "End Balance": [50.0, 50.0],
+         "Next Ticker": ["SOXX", "MTUM"], "Next Balance": [50.0, 50.0],
+         "Cash": 0.0, "Total Balance": 100.0},
+        {"Date": "2026-09-18", "Rebalancing": True,
+         "End Ticker": ["SOXX", "MTUM"], "End Balance": [60.0, 50.0],
+         "Next Ticker": next_tickers, "Next Balance": next_balances,
+         "Cash": cash, "Gross Total Balance": 110.0, "Total Balance": 105.0},
+    ])
+    return bundle
+
+
+@pytest.mark.parametrize("tickers,balances,cash,expected", [
+    ([], [], 110.0, {"현금": 1.0}),
+    (["SOXX"], [55.0], 55.0, {"SOXX": 0.5, "현금": 0.5}),
+    (["SOXX", "MTUM"], [55.0, 55.0], 0.0, {"SOXX": 0.5, "MTUM": 0.5}),
+])
+def test_rebalance_cards_keep_before_and_after_cash_separate(tickers, balances, cash, expected) -> None:
+    holdings = _build_workspace(cash_transition_bundle(tickers, balances, cash))["holdings"]
+
+    assert holdings["target_as_of"] == "2026-09-18"
+    assert {row["ticker"]: row["weight"] for row in holdings["target_allocation"]} == expected
+    assert [row["ticker"] for row in holdings["current_allocation"]] == ["SOXX", "MTUM"]
+    assert sum(row["weight"] for row in holdings["current_allocation"]) == pytest.approx(1.0)
+    assert holdings["current_label"] == "변경 전 보유"
+    assert holdings["target_label"] == "변경 후 구성"
+
+
+def test_all_cash_transition_table_does_not_reuse_old_targets() -> None:
+    row = _build_workspace(cash_transition_bundle([], [], 110.0))["holding_change_rows"][-1]
+
+    assert row["target"] == "현금 100.0%"
+    assert "현금" not in row["current"]
+    assert row["removals"] == "SOXX, MTUM"
+    assert row["additions"] == "-"
+
+
+def test_buying_from_cash_keeps_before_snapshot_in_cash() -> None:
+    bundle = cash_transition_bundle(["SOXX"], [55.0], 55.0)
+    bundle["result_df"].at[1, "End Ticker"] = []
+    bundle["result_df"].at[1, "End Balance"] = []
+    model = _build_workspace(bundle)
+
+    assert model["holdings"]["current_allocation"] == [
+        {"ticker": "현금", "weight": 1.0, "weight_label": "100.0%"}
+    ]
+    assert model["holdings"]["status"] != "cash_only"
+    assert model["holding_change_rows"][-1]["target"] == "SOXX 50.0%, 현금 50.0%"
+
+
+def test_missing_next_holdings_is_not_reported_as_a_cash_exit() -> None:
+    bundle = cash_transition_bundle([], [], 110.0)
+    bundle["result_df"].at[1, "Next Ticker"] = None
+    bundle["result_df"].at[1, "Next Balance"] = None
+
+    row = _build_workspace(bundle)["holding_change_rows"][-1]
+
+    assert row["target"] == "확인 불가"
+    assert row["removals"] == "-"
+
+
+def test_partial_cash_uses_balances_over_invested_sleeve_weights() -> None:
+    bundle = cash_transition_bundle(["SOXX"], [55.0], 55.0)
+    bundle["result_df"]["Next Weight"] = [None, [1.0]]
+    allocation = _build_workspace(bundle)["holdings"]["target_allocation"]
+    assert {item["ticker"]: item["weight"] for item in allocation} == {"SOXX": 0.5, "현금": 0.5}
+
+
+def test_explicit_trade_changes_are_preserved_for_legacy_end_ticker_contracts() -> None:
+    bundle = result_bundle()
+    bundle["result_df"] = pd.DataFrame([{
+        "Date": "2026-09-18", "End Ticker": ["TLT"], "Next Ticker": ["TLT"],
+        "End Balance": [100.0], "Next Balance": [100.0], "Cash": 0.0,
+        "Total Balance": 100.0, "Added Ticker": ["TLT"], "Removed Ticker": ["SPY"],
+        "Rebalancing": True,
+    }])
+    row = _build_workspace(bundle)["holding_change_rows"][0]
+    assert row["additions"] == "TLT"
+    assert row["removals"] == "SPY"
+
+
+@pytest.mark.parametrize("strategy_key", ["global_relative_strength", "quality_snapshot_strict_annual"])
+def test_legacy_rebalance_does_not_claim_after_tickers_are_before_holdings(strategy_key: str) -> None:
+    bundle = result_bundle()
+    bundle["meta"]["strategy_key"] = strategy_key
+    bundle["result_df"] = pd.DataFrame([
+        {"Date": "2026-05-29", "Next Ticker": ["SPY"], "Next Balance": [100.0],
+         "Cash": 0.0, "Total Balance": 100.0, "Rebalancing": True},
+        {"Date": "2026-09-18", "End Ticker": ["TLT"], "End Balance": [110.0],
+         "Next Ticker": ["TLT"], "Next Balance": [55.0], "Next Weight": [1.0],
+         "Cash": 55.0, "Total Balance": 110.0, "Rebalancing": True},
+    ])
+    model = _build_workspace(bundle)
+    assert model["holdings"]["current_allocation"] == []
+    assert "변경 전" in model["holdings"]["unavailable_reason"]
+    assert model["holding_change_rows"][-1]["current"] == "확인 불가"
+    assert model["holding_change_rows"][-1]["target"] == "TLT 50.0%, 현금 50.0%"
 
 
 def test_user_tables_and_chart_use_stable_labels_not_raw_columns() -> None:

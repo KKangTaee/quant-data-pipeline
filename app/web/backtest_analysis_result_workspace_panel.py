@@ -109,7 +109,7 @@ def render_backtest_analysis_result_workspace_fallback(
     if benchmark.get("missing_reason"):
         st.caption(str(benchmark["missing_reason"]))
 
-    st.markdown("### 3. 현재 보유와 최신 신호 기준 목표 구성")
+    st.markdown("### 3. 보유 구성과 리밸런싱 전후 비교")
     st.caption("백테스트 모의 구성으로 실제 계좌나 주문이 아닙니다.")
     holdings = dict(workspace.get("holdings") or {})
     schedule = dict(holdings.get("schedule") or {})
@@ -125,10 +125,10 @@ def render_backtest_analysis_result_workspace_fallback(
         column.markdown(f"**{label}**  \n{value or '-'}")
     current_column, target_column = st.columns(2)
     with current_column:
-        st.markdown(f"#### 현재 보유 · {holdings.get('as_of') or '기준일 없음'}")
+        st.markdown(f"#### {holdings.get('current_label') or '평가 시점 보유'} · {holdings.get('as_of') or '기준일 없음'}")
         _render_allocation(list(holdings.get("current_allocation") or []))
     with target_column:
-        st.markdown(f"#### 목표 구성 · {holdings.get('target_as_of') or '기준일 없음'}")
+        st.markdown(f"#### {holdings.get('target_label') or '최근 리밸런싱 후 구성'} · {holdings.get('target_as_of') or '기준일 없음'}")
         _render_allocation(list(holdings.get("target_allocation") or []))
     st.caption(str(holdings.get("explanation") or ""))
 
@@ -162,7 +162,8 @@ def render_backtest_analysis_result_workspace_fallback(
         st.dataframe(pd.DataFrame(performance_rows), use_container_width=True, hide_index=True)
     if holding_rows:
         st.markdown("#### 보유 변화")
-        st.dataframe(pd.DataFrame(holding_rows), use_container_width=True, hide_index=True)
+        st.caption("각 날짜의 변경 전 보유와 변경 후 구성을 비교합니다. 유지 행은 매매 없이 보유를 이어간 시점이며 현금도 구성 비중에 포함됩니다.")
+        st.dataframe(pd.DataFrame(holding_rows).rename(columns=workspace.get("holding_change_columns") or {}), use_container_width=True, hide_index=True)
 
     appendix = dict(workspace.get("technical_appendix") or {})
     with st.expander("계산 및 데이터 기준", expanded=False):

@@ -113,7 +113,7 @@ function HoldingsComparison({ workspace }: { workspace: ResultWorkspace }) {
   const schedule = holdings.schedule
   return (
     <section className="bt1r-section">
-      <SectionHeading step="3" title="현재 보유와 최신 신호 기준 목표 구성" detail="백테스트 모의 구성으로 실제 계좌나 주문이 아닙니다." />
+      <SectionHeading step="3" title="보유 구성과 리밸런싱 전후 비교" detail="종목과 현금을 함께 표시합니다. 백테스트 모의 구성으로 실제 계좌나 주문이 아닙니다." />
       <div className="bt1r-schedule-strip">
         <div><span>현재 평가일</span><strong>{schedule.valuation_as_of || "-"}</strong></div>
         <div><span>최신 신호일</span><strong>{schedule.latest_signal_as_of}</strong></div>
@@ -122,8 +122,8 @@ function HoldingsComparison({ workspace }: { workspace: ResultWorkspace }) {
         <div><span>다음 예상</span><strong>{schedule.next_window_label}</strong></div>
       </div>
       <div className="bt1r-holdings-grid">
-        <AllocationCard title="현재 보유" asOf={holdings.as_of} rows={holdings.current_allocation} />
-        <AllocationCard title="목표 구성" asOf={holdings.target_as_of} rows={holdings.target_allocation} />
+        <AllocationCard title={holdings.current_label || "평가 시점 보유"} asOf={holdings.as_of} rows={holdings.current_allocation} />
+        <AllocationCard title={holdings.target_label || "최근 리밸런싱 후 구성"} asOf={holdings.target_as_of} rows={holdings.target_allocation} />
       </div>
       <p className="bt1r-holdings-explanation">{holdings.explanation}</p>
       {holdings.unavailable_reason && <p className="bt1r-inline-note">{holdings.unavailable_reason}</p>}
@@ -191,8 +191,9 @@ function UserTables({ workspace }: { workspace: ResultWorkspace }) {
         <button type="button" role="tab" aria-selected={activeTable === "performance"} onClick={() => setActiveTable("performance")}>성과 시계열</button>
         <button type="button" role="tab" aria-selected={activeTable === "holdings"} onClick={() => setActiveTable("holdings")}>보유 변화</button>
       </div>
+      {activeTable === "holdings" && <p className="bt1r-holdings-explanation">각 날짜의 변경 전 보유와 변경 후 구성을 비교합니다. 유지 행은 매매 없이 보유를 이어간 시점입니다. 현금도 구성 비중에 포함됩니다.</p>}
       <div className="bt1r-table-shell" tabIndex={0}>
-        {rows.length ? <table><thead><tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={index}>{columns.map((column) => <td key={column}>{String((row as Record<string, unknown>)[column] ?? "-")}</td>)}</tr>)}</tbody></table> : <p className="bt1r-empty-copy">표시 가능한 결과 행이 없습니다.</p>}
+        {rows.length ? <table><thead><tr>{columns.map((column) => <th key={column}>{activeTable === "holdings" ? workspace.holding_change_columns?.[column] || column : column}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={index}>{columns.map((column) => <td key={column}>{String((row as Record<string, unknown>)[column] ?? "-")}</td>)}</tr>)}</tbody></table> : <p className="bt1r-empty-copy">표시 가능한 결과 행이 없습니다.</p>}
       </div>
     </section>
   )
