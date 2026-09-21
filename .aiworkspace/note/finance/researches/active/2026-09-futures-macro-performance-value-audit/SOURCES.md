@@ -1,0 +1,59 @@
+# 근거 목록
+
+Access date: 2026-09-21
+
+## 로컬 구현·관측
+
+| 근거 | 위치 | 확인 내용 |
+|---|---|---|
+| 구현 | app/jobs/overview_actions.py:478 | 일봉 routine/bootstrap, 장중 수집, materialization 호출 |
+| 구현 | app/services/futures_macro_snapshot.py:325 | fingerprint 재사용과 별도 macro/outlook builder |
+| 구현 | app/services/futures_macro_pattern_validation.py:1743 | forward outcomes와 nested 두 horizon 검증 |
+| 구현 | app/services/futures_macro_outlook_model.py:210 | momentum 거리 계산 뒤 macro 입력 결측으로 후보 제외 |
+| 구현 | app/services/futures_macro_pattern.py:99 | return/60D volatility, family/window 집계 |
+| 구현 | app/services/futures_macro_pattern.py:229 | transition과 regime 분류 |
+| 구현 | app/services/futures_macro_thermometer.py:189 | 선물군 구성·가중치·대리 지표 정의 |
+| 구현 | app/web/overview/futures_macro_helpers.py:760 | 핵심/확인축, 부호, 시나리오 문구 |
+| 구현 | app/web/overview/futures_macro_helpers.py:1316 | 가장 큰 5D 축을 고르는 재가격화 해석 |
+| 구현 | app/services/futures_macro_intraday.py | 공통 closed-bar cutoff, stale fallback, 잠정 일봉 |
+| 구현 | finance/data/futures_market.py:382 | yfinance, auto_adjust=False, threads=False |
+| 구현 | app/services/futures_macro_context.py | H0 contribution에서 macro context 추출 |
+| 구현 | finance/economic_cycle_pipeline.py:712 | H0 factor contribution과 top evidence 분리 저장 |
+| 구현 | finance/economic_cycle_model.py:13 | H0 4개, forecast 추가 2개 feature 계약 |
+| 로그 | .aiworkspace/note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl | 09-21 09:09:04 실행 70.567517초 및 단계별 timing; generated, 미커밋 |
+| DB 관측 | 저장된 futures macro snapshot, 09-18 as-of | 5D/20D NO_EDGE, Brier baseline, ribbon 분포 |
+| 계산 재현 | 독립 performance audit, SELECT-only | 동일 fingerprint 입력 준비·thermometer·outlook timing, 내부 호출 수, context 결측 |
+| 계측 스크립트 | /tmp/futures_macro_readonly_timings.py, /tmp/futures_macro_readonly_summary.py | 계측 및 SELECT-only snapshot 요약; 로컬 임시 artifact, 미커밋 |
+| 브라우저 | http://127.0.0.1:8501/overview?overview_tab=futures-macro | 현재 1D/5D/20D 상태, 재가격화 문구, 이력 DOM 60개 집계 |
+| 스크린샷 | .playwright-mcp/futures-macro-audit-20260921.png | 조사 시점 재가격화 영역; generated, 미커밋 |
+
+## 외부 1차 자료
+
+| 출처 | URL | 뒷받침하는 사실 |
+|---|---|---|
+| CME Group | https://www.cmegroup.com/trading/interest-rates/basics-of-us-treasury-futures.html | 국채 가격과 금리/수익률의 역관계 |
+| CME Group | https://www.cmegroup.com/market-data/cme-group-continuous-price-series.html | 연속 선물의 active/front contract 구성과 roll 정의 |
+
+코드와 측정값은 구현 사실, ‘분리하면 크게 줄일 수 있다’와 UI 우선순위는 근거에 기반한 권고다. 개선 후 실측처럼 표현하지 않는다.
+
+## Compact 조건부 전망 가이드의 추가 근거
+
+- `app/services/futures_macro_pattern_validation.py:382`, `:1515`: 실제 자산 수익률 대신 family 점수 변화를 만드는 기존 outcome/pathways 계약.
+- `app/services/futures_macro_outlook_model.py:200`: 과거-only train 및 결과 horizon 간격으로 중복을 줄이는 analog 선택.
+- `finance/loaders/price.py:17`, `finance/loaders/economic_cycle_assets.py:46`: DB 기반 주식/ETF·선물 reader의 재사용 범위.
+- SELECT-only / MySQL TRANSACTION READ ONLY로 `finance_price.nyse_price_history`의 SPY/QQQ/TLT/GLD/USO/UUP 및 `futures_ohlcv` 주요 7개 symbol의 count/min/max/adj_close non-null을 집계했다. provider fetch·DB write 없음. 실제 조건부 n/N 계산은 하지 않았다.
+- https://otexts.com/fpp3/tscv.html — 2026-09-21 접근. 저자 제공 교재, rolling-origin 시계열 검증과 미래 데이터 제외.
+- https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm — 2026-09-21 접근. NIST, 이항 비율의 Wilson/정확 구간.
+- https://www.cmegroup.com/insights/economic-research/2026/uncovering-the-hidden-drivers-of-commodities.html — 2026-09-21 접근. CME 공식 분석, 자산 관계의 환경별 변화; 현재 앱의 실제 관계나 예측 성과를 뒷받침하는 출처는 아님.
+
+## 실무 근거 신속 확인 — 모두 2026-09-21 접근
+
+| 제목·소유자·URL | 종류·근거 수준 | 뒷받침하는 사실·한계 |
+|---|---|---|
+| SentimenTrader 공개 제품 페이지 — https://sentimentrader.com/ | 공식 공개 화면 문구/표, 기능 존재 신뢰 높음 | 유사한 최근 5일 패턴의 이후 1주~1년 성과 표; 동적 최신값·유료 계산·예측력은 검증 안 함 |
+| SentimenTrader Backtest API — https://st-tools.sentimentrader.com/api-docs/backtest | 공식 기술 문서, Documented, 높음 | 조건·기간·benchmark·실행 가격 설정과 결과 양수/음수 수·개별 수익률·날짜; JSON 예시는 실적 검증 자료 아님 |
+| MSCI Building Predictive Stress Tests — https://www.msci.com/research-and-insights/blog-post/building-predictive-stress-tests-msci-best-practices | 공식 방법론, Documented, 높음 | 시나리오 정량화·전파·견고성 검토; 단기 방향 확률을 입증하지 않음 |
+| Vanguard Portfolio Stress Testing for Advisors — https://advisors.vanguard.com/strategies/portfolio-strategies/portfolio-analysis/stress-testing | 공식 제품 설명, Claimed, workflow 신뢰 중간~높음 | 역사·가상 시나리오의 portfolio/sleeve 비교; 실제 도구 실행 안 함 |
+| CFA Institute Backtesting & Simulation — https://www.cfainstitute.org/insights/professional-learning/refresher-readings/2026/backtesting-and-simulation | 공식 교육 요약, 방법론 근거 높음 | rolling-window의 업계 사용, bias·structural break·historical assumption 한계; 우리 모델 성능을 보증하지 않음 |
+
+Bloomberg는 robots 제한으로 직접 확인하지 못해 실무 사례의 근거로 사용하지 않았다. Macrobond 검색 결과는 이번 질문과 직접 대응하는 조건별 분석 문서를 확보하지 못해 근거로 채택하지 않았다.
