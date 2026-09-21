@@ -4,6 +4,8 @@ Date: 2026-09-21
 State: complete
 Decision: 분석·개선 가이드, 구현 설계 승인 전
 
+후속 확인: [PRACTICE_VALIDATION.md](./PRACTICE_VALIDATION.md)에서 상용 리서치·기관 위험관리의 실무 근거를 확인했다. 방법의 존재·타당성과 우리 선물 조건의 예측 성능은 구분한다. 실제 새 n/N/OOS 결과는 아직 없다.
+
 ## 사용자가 원하는 결과
 
 사용자는 내용을 줄이는 것과 함께 다음 연결을 원한다.

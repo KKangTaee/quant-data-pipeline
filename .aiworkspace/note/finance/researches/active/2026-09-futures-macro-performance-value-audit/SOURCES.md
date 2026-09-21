@@ -45,3 +45,15 @@ Access date: 2026-09-21
 - https://otexts.com/fpp3/tscv.html — 2026-09-21 접근. 저자 제공 교재, rolling-origin 시계열 검증과 미래 데이터 제외.
 - https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm — 2026-09-21 접근. NIST, 이항 비율의 Wilson/정확 구간.
 - https://www.cmegroup.com/insights/economic-research/2026/uncovering-the-hidden-drivers-of-commodities.html — 2026-09-21 접근. CME 공식 분석, 자산 관계의 환경별 변화; 현재 앱의 실제 관계나 예측 성과를 뒷받침하는 출처는 아님.
+
+## 실무 근거 신속 확인 — 모두 2026-09-21 접근
+
+| 제목·소유자·URL | 종류·근거 수준 | 뒷받침하는 사실·한계 |
+|---|---|---|
+| SentimenTrader 공개 제품 페이지 — https://sentimentrader.com/ | 공식 공개 화면 문구/표, 기능 존재 신뢰 높음 | 유사한 최근 5일 패턴의 이후 1주~1년 성과 표; 동적 최신값·유료 계산·예측력은 검증 안 함 |
+| SentimenTrader Backtest API — https://st-tools.sentimentrader.com/api-docs/backtest | 공식 기술 문서, Documented, 높음 | 조건·기간·benchmark·실행 가격 설정과 결과 양수/음수 수·개별 수익률·날짜; JSON 예시는 실적 검증 자료 아님 |
+| MSCI Building Predictive Stress Tests — https://www.msci.com/research-and-insights/blog-post/building-predictive-stress-tests-msci-best-practices | 공식 방법론, Documented, 높음 | 시나리오 정량화·전파·견고성 검토; 단기 방향 확률을 입증하지 않음 |
+| Vanguard Portfolio Stress Testing for Advisors — https://advisors.vanguard.com/strategies/portfolio-strategies/portfolio-analysis/stress-testing | 공식 제품 설명, Claimed, workflow 신뢰 중간~높음 | 역사·가상 시나리오의 portfolio/sleeve 비교; 실제 도구 실행 안 함 |
+| CFA Institute Backtesting & Simulation — https://www.cfainstitute.org/insights/professional-learning/refresher-readings/2026/backtesting-and-simulation | 공식 교육 요약, 방법론 근거 높음 | rolling-window의 업계 사용, bias·structural break·historical assumption 한계; 우리 모델 성능을 보증하지 않음 |
+
+Bloomberg는 robots 제한으로 직접 확인하지 못해 실무 사례의 근거로 사용하지 않았다. Macrobond 검색 결과는 이번 질문과 직접 대응하는 조건별 분석 문서를 확보하지 못해 근거로 채택하지 않았다.
