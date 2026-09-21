@@ -54,12 +54,45 @@ def test_public_payload_has_two_windows_without_old_forecast_geometry():
 def test_streamlit_fallback_uses_same_windows_and_navigation(monkeypatch):
     from streamlit.testing.v1 import AppTest
     import app.web.overview.futures_macro_helpers as ui
-    model=build_futures_macro_intraday_read_model(window_snapshot={'windows':{'since_close':window(),'last_hour':window(es=-.5)}},cycle_snapshot={})
-    monkeypatch.setattr(ui,'build_futures_macro_intraday_read_model',lambda:model)
-    monkeypatch.setattr(ui,'futures_macro_react_component_available',lambda:False)
-    app=AppTest.from_string('from app.web.overview.futures_macro_helpers import _render_futures_macro_panel\n_render_futures_macro_panel()').run()
+
+    model = build_futures_macro_intraday_read_model(
+        window_snapshot={
+            "windows": {"since_close": window(), "last_hour": window(es=-0.5)}
+        },
+        cycle_snapshot={},
+    )
+    monkeypatch.setattr(ui, "build_futures_macro_intraday_read_model", lambda: model)
+    monkeypatch.setattr(ui, "futures_macro_react_component_available", lambda: False)
+    app = AppTest.from_string(
+        "from app.web.overview.futures_macro_helpers import _render_futures_macro_panel\n_render_futures_macro_panel()"
+    ).run()
     assert not app.exception
-    assert len(app.metric)==6
-    app.radio[0].set_value('last_hour').run()
-    assert app.metric[0].value=='-0.50%'
+    assert len(app.metric) == 6
+    app.radio[0].set_value("last_hour").run()
+    assert app.metric[0].value == "-0.50%"
     assert not app.exception
+
+
+def test_read_failure_retains_last_observation_but_withholds_current_reading(
+    monkeypatch,
+):
+    from streamlit.testing.v1 import AppTest
+    import app.web.overview.futures_macro_helpers as ui
+
+    model = build_futures_macro_intraday_read_model(
+        window_snapshot={"windows": {"since_close": window(), "last_hour": window()}},
+        cycle_snapshot={},
+    )
+    monkeypatch.setattr(ui, "build_futures_macro_intraday_read_model", lambda: model)
+    monkeypatch.setattr(ui, "futures_macro_react_component_available", lambda: False)
+    app = AppTest.from_string(
+        "from app.web.overview.futures_macro_helpers import _render_futures_macro_panel\n_render_futures_macro_panel()"
+    ).run()
+
+    def fail():
+        raise RuntimeError("db read failed")
+
+    monkeypatch.setattr(ui, "build_futures_macro_intraday_read_model", fail)
+    app.run()
+    assert not app.exception and len(app.metric) == 6
+    assert "보류" in app.subheader[0].value

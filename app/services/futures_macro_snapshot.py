@@ -582,11 +582,19 @@ def load_overview_futures_macro_materialized_snapshot(
     try:
         payload = json.loads(str(row.get("snapshot_json") or ""))
     except (TypeError, ValueError, json.JSONDecodeError):
+        if load_fn is None and observation_row_compatible(row):
+            return load_overview_futures_macro_materialized_snapshot(
+                load_fn=lambda: load_latest_futures_macro_snapshot(snapshot_key=FUTURES_MACRO_SNAPSHOT_KEY)
+            )
         return {
             "status": "MISSING",
             "reason": "저장된 선물 매크로 snapshot을 읽을 수 없어 일봉 갱신이 필요합니다.",
         }
     if not isinstance(payload, dict):
+        if load_fn is None and observation_row_compatible(row):
+            return load_overview_futures_macro_materialized_snapshot(
+                load_fn=lambda: load_latest_futures_macro_snapshot(snapshot_key=FUTURES_MACRO_SNAPSHOT_KEY)
+            )
         return {
             "status": "MISSING",
             "reason": "저장된 선물 매크로 snapshot 형식이 올바르지 않아 일봉 갱신이 필요합니다.",

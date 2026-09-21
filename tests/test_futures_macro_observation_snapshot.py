@@ -7,10 +7,16 @@ import pytest
 
 def _daily_rows():
     return [
-        {"provider_symbol": symbol, "candle_time_utc": day, "close": 100 + i * step,
-         "open": 100 + i * step, "high": 101 + i * step, "low": 99 + i * step,
-         "collected_at": "2026-09-19 10:00:00"}
-        for symbol, step in (("ES=F", .1), ("ZN=F", -.02), ("6E=F", -.01))
+        {
+            "provider_symbol": symbol,
+            "candle_time_utc": day,
+            "close": 100 + i * step,
+            "open": 100 + i * step,
+            "high": 101 + i * step,
+            "low": 99 + i * step,
+            "collected_at": "2026-09-19 10:00:00",
+        }
+        for symbol, step in (("ES=F", 0.1), ("ZN=F", -0.02), ("6E=F", -0.01))
         for i, day in enumerate(pd.bdate_range("2026-02-02", "2026-09-18"))
     ]
 
@@ -25,9 +31,16 @@ def _query(_db, sql, _params=None):
 
 def test_observation_reuses_real_daily_math_without_outlook_or_history(monkeypatch):
     from app.services import futures_macro_pattern_validation as research
-    from app.services.futures_macro_observation_snapshot import materialize_futures_macro_observation_snapshot
-    from app.services.futures_macro_pattern import build_pattern_feature_frame, build_current_pattern_snapshot
-    from app.services.futures_macro_thermometer import normalize_futures_macro_daily_candles
+    from app.services.futures_macro_observation_snapshot import (
+        materialize_futures_macro_observation_snapshot,
+    )
+    from app.services.futures_macro_pattern import (
+        build_pattern_feature_frame,
+        build_current_pattern_snapshot,
+    )
+    from app.services.futures_macro_thermometer import (
+        normalize_futures_macro_daily_candles,
+    )
     from finance.data import futures_macro_snapshot as storage
 
     def forbidden(*_args, **_kwargs):
@@ -38,7 +51,8 @@ def test_observation_reuses_real_daily_math_without_outlook_or_history(monkeypat
     saved = []
     result = materialize_futures_macro_observation_snapshot(
         evaluation_time=datetime(2026, 9, 21, 7, tzinfo=timezone.utc),
-        query_fn=_query, load_fn=lambda: None,
+        query_fn=_query,
+        load_fn=lambda: None,
         write_fn=lambda row: saved.append(row) or 1,
     )
     assert result["status"] == "materialized"
@@ -46,8 +60,17 @@ def test_observation_reuses_real_daily_math_without_outlook_or_history(monkeypat
     row = saved[0]
     payload = json.loads(row["snapshot_json"])
     from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
-    expected = build_current_pattern_snapshot(build_pattern_feature_frame(normalize_futures_macro_daily_candles(_daily_rows()), selected_symbols=DEFAULT_CORE_FUTURES_SYMBOLS))
-    assert payload["pattern_outlook"]["current_pattern"]["families"] == expected["families"]
+
+    expected = build_current_pattern_snapshot(
+        build_pattern_feature_frame(
+            normalize_futures_macro_daily_candles(_daily_rows()),
+            selected_symbols=DEFAULT_CORE_FUTURES_SYMBOLS,
+        )
+    )
+    assert (
+        payload["pattern_outlook"]["current_pattern"]["families"]
+        == expected["families"]
+    )
     assert payload["pattern_outlook"]["horizons"] == []
     assert payload["pattern_outlook"]["research_status"] == "NOT_COMPUTED"
     assert row["as_of_date"] == "2026-09-18"
@@ -56,11 +79,16 @@ def test_observation_reuses_real_daily_math_without_outlook_or_history(monkeypat
 
 
 def test_repeated_inputs_reuse_but_corrected_price_rebuilds():
-    from app.services.futures_macro_observation_snapshot import materialize_futures_macro_observation_snapshot
+    from app.services.futures_macro_observation_snapshot import (
+        materialize_futures_macro_observation_snapshot,
+    )
+
     saved = []
-    kwargs = dict(evaluation_time=datetime(2026, 9, 21, 7, tzinfo=timezone.utc),
-                  load_fn=lambda: saved[-1] if saved else None,
-                  write_fn=lambda row: saved.append(row) or 1)
+    kwargs = dict(
+        evaluation_time=datetime(2026, 9, 21, 7, tzinfo=timezone.utc),
+        load_fn=lambda: saved[-1] if saved else None,
+        write_fn=lambda row: saved.append(row) or 1,
+    )
     materialize_futures_macro_observation_snapshot(query_fn=_query, **kwargs)
     result = materialize_futures_macro_observation_snapshot(query_fn=_query, **kwargs)
     assert result["status"] == "reused"
@@ -71,18 +99,29 @@ def test_repeated_inputs_reuse_but_corrected_price_rebuilds():
         if "futures_ohlcv" in sql:
             rows[-1]["close"] += 1
         return rows
-    result = materialize_futures_macro_observation_snapshot(query_fn=corrected, **kwargs)
+
+    result = materialize_futures_macro_observation_snapshot(
+        query_fn=corrected, **kwargs
+    )
     assert result["status"] == "materialized"
     assert len(saved) == 2
 
 
 def test_older_result_cannot_replace_newer_completed_observation():
-    from app.services.futures_macro_observation_snapshot import materialize_futures_macro_observation_snapshot
+    from app.services.futures_macro_observation_snapshot import (
+        materialize_futures_macro_observation_snapshot,
+    )
+
     written = []
     result = materialize_futures_macro_observation_snapshot(
-        query_fn=_query, evaluation_time=datetime(2026, 9, 21, 7, tzinfo=timezone.utc),
-        load_fn=lambda: {"as_of_date": "2026-09-22", "materialized_at": "2026-09-23 00:00:00"},
-        write_fn=lambda row: written.append(row), force=True,
+        query_fn=_query,
+        evaluation_time=datetime(2026, 9, 21, 7, tzinfo=timezone.utc),
+        load_fn=lambda: {
+            "as_of_date": "2026-09-22",
+            "materialized_at": "2026-09-23 00:00:00",
+        },
+        write_fn=lambda row: written.append(row),
+        force=True,
     )
     assert result["status"] == "kept_newer"
     assert written == []
@@ -90,26 +129,93 @@ def test_older_result_cannot_replace_newer_completed_observation():
 
 def test_reader_prefers_observation_and_preserves_its_dates(monkeypatch):
     from app.services import futures_macro_snapshot as service
-    from app.services.futures_macro_observation_snapshot import OBSERVATION_KEY, OBSERVATION_SCHEMA, OBSERVATION_ALGORITHM
+    from app.services.futures_macro_observation_snapshot import (
+        OBSERVATION_KEY,
+        OBSERVATION_SCHEMA,
+        OBSERVATION_ALGORITHM,
+    )
+
     calls = []
+
     def load(*, snapshot_key):
         calls.append(snapshot_key)
-        return {"snapshot_key": OBSERVATION_KEY, "schema_version": OBSERVATION_SCHEMA,
-                "algorithm_version": OBSERVATION_ALGORITHM, "as_of_date": "2026-09-18",
-                "status": "READY", "materialized_at": "2026-09-21 07:00:00",
-                "snapshot_json": json.dumps({"macro": {}, "pattern_outlook": {"current_pattern": {"families": {"rate_pressure": {"five_day": .8}}}, "horizons": [], "research_status": "NOT_COMPUTED"}})}
+        return {
+            "snapshot_key": OBSERVATION_KEY,
+            "schema_version": OBSERVATION_SCHEMA,
+            "algorithm_version": OBSERVATION_ALGORITHM,
+            "as_of_date": "2026-09-18",
+            "status": "READY",
+            "materialized_at": "2026-09-21 07:00:00",
+            "snapshot_json": json.dumps(
+                {
+                    "macro": {},
+                    "pattern_outlook": {
+                        "current_pattern": {
+                            "families": {"rate_pressure": {"five_day": 0.8}}
+                        },
+                        "horizons": [],
+                        "research_status": "NOT_COMPUTED",
+                    },
+                }
+            ),
+        }
+
     monkeypatch.setattr(service, "load_latest_futures_macro_snapshot", load)
     result = service.load_overview_futures_macro_materialized_snapshot()
     assert calls == [OBSERVATION_KEY]
     assert result["metadata"]["as_of_date"] == "2026-09-18"
-    assert result["pattern_outlook"]["current_pattern"]["families"]["rate_pressure"]["five_day"] == .8
+    assert (
+        result["pattern_outlook"]["current_pattern"]["families"]["rate_pressure"][
+            "five_day"
+        ]
+        == 0.8
+    )
 
 
 def test_default_ingestion_attach_does_not_run_research(monkeypatch):
     from app.jobs.ingestion_jobs import attach_futures_macro_materialization
     from app.services import futures_macro_observation_snapshot as observation
     from app.services import futures_macro_snapshot as research
-    monkeypatch.setattr(observation, "materialize_futures_macro_observation_snapshot", lambda: {"status": "materialized", "kind": "observation"})
-    monkeypatch.setattr(research, "materialize_overview_futures_macro_snapshot", lambda: pytest.fail("research invoked"))
-    result = attach_futures_macro_materialization({"status": "success"}, interval="1d", rows_written=1)
+
+    monkeypatch.setattr(
+        observation,
+        "materialize_futures_macro_observation_snapshot",
+        lambda: {"status": "materialized", "kind": "observation"},
+    )
+    monkeypatch.setattr(
+        research,
+        "materialize_overview_futures_macro_snapshot",
+        lambda: pytest.fail("research invoked"),
+    )
+    result = attach_futures_macro_materialization(
+        {"status": "success"}, interval="1d", rows_written=1
+    )
     assert result["details"]["futures_macro_snapshot"]["kind"] == "observation"
+
+
+def test_corrupt_new_payload_falls_back_to_legacy_with_its_original_date(monkeypatch):
+    from app.services import futures_macro_snapshot as service
+    from app.services.futures_macro_observation_snapshot import (
+        OBSERVATION_KEY,
+        OBSERVATION_SCHEMA,
+        OBSERVATION_ALGORITHM,
+    )
+
+    bad = {
+        "schema_version": OBSERVATION_SCHEMA,
+        "algorithm_version": OBSERVATION_ALGORITHM,
+        "snapshot_json": "broken",
+    }
+    old = {
+        "schema_version": service.FUTURES_MACRO_SNAPSHOT_SCHEMA_VERSION,
+        "algorithm_version": service.PATTERN_ALGORITHM_VERSION,
+        "snapshot_json": '{"macro":{},"pattern_outlook":{}}',
+        "as_of_date": "2026-09-17",
+    }
+    monkeypatch.setattr(
+        service,
+        "load_latest_futures_macro_snapshot",
+        lambda *, snapshot_key: bad if snapshot_key == OBSERVATION_KEY else old,
+    )
+    r = service.load_overview_futures_macro_materialized_snapshot()
+    assert r["status"] == "READY" and r["metadata"]["as_of_date"] == "2026-09-17"

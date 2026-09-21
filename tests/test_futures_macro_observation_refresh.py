@@ -84,3 +84,17 @@ def test_provider_failure_is_bounded_and_does_not_report_success():
     assert len(calls) == 3
     assert result["status"] != "success"
     assert result["details"]["windows"]["last_hour"]["status"] == "PARTIAL"
+
+
+def test_materialization_failure_does_not_report_total_refresh_success():
+    from app.jobs.futures_macro_refresh import run_futures_macro_observation_refresh
+
+    r = run_futures_macro_observation_refresh(
+        evaluation_time=datetime(2026, 9, 21, 7, tzinfo=timezone.utc),
+        window_loader=lambda **kw: snapshot(),
+        collect_runner=lambda **kw: {"status": "success", "rows_written": 1},
+        daily_refresh_needed=lambda **kw: False,
+        finalization_runner=lambda **kw: {"status": "not_required"},
+        materialize_fn=lambda **kw: {"status": "unavailable"},
+    )
+    assert r["status"] == "partial_success"

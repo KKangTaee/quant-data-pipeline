@@ -1,6 +1,7 @@
 """Futures-only UI: two stored-price windows and a bounded refresh command."""
 
 from datetime import datetime, timezone
+from copy import deepcopy
 from zoneinfo import ZoneInfo
 
 import streamlit as st
@@ -141,9 +142,18 @@ def _render_futures_macro_panel(*, detail_expanded=False):
         st.session_state["futures_macro_last_good_payload"] = payload
     except Exception:
         st.error("저장 자료를 읽지 못했습니다. 잠시 후 다시 읽어 주세요.")
-        if st.button("저장 자료 다시 읽기", key="futures_macro_retry"):
-            st.rerun()
-        return
+        payload = deepcopy(st.session_state.get("futures_macro_last_good_payload"))
+        if not payload:
+            if st.button("저장 자료 다시 읽기", key="futures_macro_retry"):
+                st.rerun()
+            return
+        from app.services.futures_macro_reading import (
+            build_futures_macro_change_reading,
+        )
+
+        for window in payload["windows"].values():
+            window["status"] = "STALE"
+            window["reading"] = build_futures_macro_change_reading(window)
     payload["command"] = {
         "ack_nonce": st.session_state.get("futures_macro_ack"),
         "pending": bool(st.session_state.get("futures_macro_pending")),

@@ -96,6 +96,13 @@ def run_futures_macro_observation_refresh(
         materialized = (
             materialize_fn or materialize_futures_macro_observation_snapshot
         )(evaluation_time=now)
+        if materialized.get("status") not in {"materialized", "reused", "kept_newer"}:
+            errors.append("공유 일별 관측을 저장하지 못했습니다.")
+        if (
+            finalized.get("status") in {"incomplete", "error"}
+            and finalized.get("reason") != "future_session_not_eligible"
+        ):
+            errors.append("완료 일봉 확정에 필요한 자료가 부족합니다.")
     except Exception as exc:
         errors.append(str(exc))
     usable = any(
