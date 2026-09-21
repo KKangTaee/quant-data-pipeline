@@ -30,7 +30,6 @@ def _normalize_symbols(symbols: Iterable[Any] | None) -> list[str]:
 
 
 _PROVIDER_GAP_REASON_MARKERS = (
-    "persistent_source_gap",
     "provider_source_gap",
     "provider_no_data",
     "likely_delisted",
@@ -41,6 +40,7 @@ _PROVIDER_GAP_REASON_MARKERS = (
 
 
 def _provider_gap_symbols_from_price_freshness(freshness_details: Mapping[str, Any]) -> list[str]:
+    """Keep age-only persistent-gap heuristics eligible for a recovery collection."""
     rows = freshness_details.get("classification_rows") or []
     provider_gap_symbols: list[Any] = []
     for row in rows:

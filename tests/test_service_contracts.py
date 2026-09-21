@@ -15650,7 +15650,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                         "classification_rows": [
                             {
                                 "symbol": "BK",
-                                "reason": "persistent_source_gap_or_symbol_issue",
+                                "reason": "provider_no_data",
                             },
                             {
                                 "symbol": "ALLY",
@@ -15692,7 +15692,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                         "classification_rows": [
                             {
                                 "symbol": "BK",
-                                "reason": "persistent_source_gap_or_symbol_issue",
+                                "reason": "provider_no_data",
                             },
                         ],
                     },

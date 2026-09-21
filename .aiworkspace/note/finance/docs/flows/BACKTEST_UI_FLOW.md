@@ -20,6 +20,8 @@ Backtest 단계의 primary reading order는 `page workflow shell -> active Level
 
 가격 기반 Single 또는 Portfolio Mix 결과의 공통 최신일이 요청 종료일 이하의 마지막 완료 NYSE 거래일보다 이르면 Result Workspace가 `요청 종료일 / 목표 거래일 / 현재 공통 기준일 / 최신화 대상` 행동 카드를 먼저 보여준다. 이 상태에서는 저장·Level2 인계를 차단하고, 사용자가 `종목 데이터 최신화`를 명시적으로 눌렀을 때만 기존 OHLCV ingestion을 실행한다. 수집 직후에는 기존 결과를 `가격 갱신 전 결과 · 참고용`으로 유지하고 자동 백테스트를 실행하지 않으며, `같은 설정으로 다시 백테스트`를 통해 새 결과를 만든 뒤에만 인계 Gate를 다시 연다. Portfolio Mix는 weighted 결과와 component bundle의 Universe·cash·benchmark·guardrail 종목 합집합을 중복 제거해 같은 계약을 적용한다. provider/source gap만 남으면 반복 refresh 대신 원인 안내 상태로 차단한다.
 
+가격이 30일 넘게 뒤처졌다는 `persistent_source_gap_or_symbol_issue` 추정만으로는 수집 대상을 제외하지 않는다. 이 종목도 기존 OHLCV 수집 경로로 최신화를 시도하며, 공급처 응답·종목 상태에 근거한 별도 제외와 수집 후 미해결 확인은 유지한다.
+
 ## 핵심 파일
 
 | 파일 | 역할 |
