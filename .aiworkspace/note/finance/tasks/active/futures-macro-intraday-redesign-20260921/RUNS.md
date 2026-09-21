@@ -25,3 +25,11 @@ Date: 2026-09-21
 ## 3차
 - 해석/read model RED 8개 → GREEN. windows 포함 26 passed.
 - 부담/완화와 주가 엇갈림, 중립 표시, stale/partial 보류, 같은 cutoff 상승분 반납, 수정값/누락/rule 변경 identity 확인.
+
+## 4차
+- UI action RED 2개 → GREEN. 재전송 nonce 억제, 오류 후 unlock, reload는 수집 미실행, fallback AppTest 기간 전환 포함 신규 32 passed.
+- 유지되는 service futures 계약 35 passed. 원본 master에서도 실패하는 기존 thermometer 테스트 3개는 동일 재현하여 범위 밖 baseline으로 분류. 구 v3/v7 화면 전용 계약 29개/구 short-horizon 화면 테스트는 새 관측 계약으로 교체. 공유 일별 session 통합 테스트는 보존.
+- React 18 type 의존성을 devDependencies에 추가, tsc --noEmit 및 Vite production build 통과. 제품 component_static 산출물 갱신.
+- Browser: 두 기간 전환 시 시각·가격 함께 변경. 실제 refresh 동안 두 버튼 disabled, 실제 ack 후 unlock. 420px frame 377px = scroll 377px, 900/1400px 추가 확인.
+- 실제 refresh JobResult: success 6.846초, 2d/5m 수집 6.592초 1회, observation 재사용 0.123초. baseline 70.567초는 무거운 계산 포함 이전 관측이며 동일 네트워크/입력의 엄밀한 benchmark는 아님.
+- 콘솔의 overview/_stcore 경로 404 두 건은 Streamlit 초기 경로 탐색이며 앱 정상 연결됨. 새 컴포넌트 JS 오류 없음.

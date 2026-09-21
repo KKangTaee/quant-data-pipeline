@@ -29,3 +29,5 @@ Date: 2026-09-21
 - 2차: DB 입력 조합은 작은 futures_macro_inputs.py로 분리. calendar 연간 collection coverage를 사용하며 Today의 calendar 판단은 바꾸지 않음. 전용 loader는 32일 상한, 실제 read는 16일.
 
 - 3차: 장중 입력 read가 0.05초여서 새 persistent cache 없이 DB 관측을 매 진입 읽음. identity에 두 window/endpoint/source marker/calendar/rule/schema 포함. 경기 배경은 load_cycle_snapshot 1건만 읽고 계산/수집하지 않음.
+
+- 4차: 외부 생산 import는 render_futures_macro_header/fragment 두 개뿐임을 확인하여 3천 줄의 구 탭 전용 helper를 새 경계로 교체. 연구/DB history/Today/Monitoring 계산은 보존. 제거한 UI-only 테스트 목록은 실행 ledger에 보존.
