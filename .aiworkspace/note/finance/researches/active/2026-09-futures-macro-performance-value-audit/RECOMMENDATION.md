@@ -3,6 +3,12 @@
 Date: 2026-09-21
 State: complete
 
+## 최신 사용자 결정과 구현 전 가이드
+
+2026-09-21 사용자는 장중 변화 시안을 선호한다고 확인하고, 기존 기능 정리부터 시작하는 구체적인 단계별 개발 가이드를 요청했다. 최신 실행 후보는 [선물 매크로 장중 변화 개편 PLAN](../../../tasks/active/futures-macro-intraday-redesign-20260921/PLAN.md)과 [DESIGN](../../../tasks/active/futures-macro-intraday-redesign-20260921/DESIGN.md)이다. **전체 5차, 개발 0/5이며 가이드 확인 후 별도 작업 요청 대기**다.
+
+아래의 초기 3차안과 COMPACT_OUTLOOK_GUIDE의 일봉 과거 사례 중심 순서는 조사 이력이다. 현재 우선순위는 현재 관측/연구 실행 분리 → 마감 이후·최근 1시간 비교 → 해석 → compact 화면 → 통합 검증이다. 장중 과거 확률 연구와 M2 연구 모델 수리는 이번 5차의 필수 범위가 아니다.
+
 ## 사용자 목적 구체화에 따른 후속 가이드
 
 사용자는 현재 강약 → 과거 같은 상황에서 다른 자산의 실제 움직임 → 조건부 큰 흐름을 간결하게 읽는 장치를 원한다고 명확히 했다. 이에 따른 최신 제안은 [COMPACT_OUTLOOK_GUIDE.md](./COMPACT_OUTLOOK_GUIDE.md)다. 아래는 최초 성능·가치 감사의 결론이며, 새 가이드는 실제 자산 forward return과 n/N·baseline을 연결하는 확장 범위를 다룬다. 두 문서 모두 구현 승인을 대신하지 않는다.

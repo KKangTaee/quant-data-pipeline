@@ -32,6 +32,7 @@ tasks/active/<task-name>/
 
 | Task | State | Resume Condition |
 |---|---|---|
+| [futures-macro-intraday-redesign-20260921](./futures-macro-intraday-redesign-20260921/PLAN.md) | `paused`, 가이드 완료 / 개발 0/5 | 장중 변화 시안에 기반한 5단계 개발 가이드 검토 후 사용자 작업 요청 |
 | `overview-sentiment-cnn-aaii-v1-20260719` | `paused`, 3/4 complete | 미래 확률이 계속 필요하면 target·episode independence·chronological PIT validation과 공개 기준을 새로 승인 |
 
 ## Verification-Only Tasks
