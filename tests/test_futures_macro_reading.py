@@ -1,4 +1,5 @@
 import copy
+
 import pytest
 
 
@@ -19,7 +20,7 @@ def test_pressure_and_rising_equities_keep_counter_evidence():
     assert "부담" in r["headline"] and "상승" in r["headline"]
     assert "국채" in " ".join(r["observation_facts"])
     assert "상승" in " ".join(r["counter_evidence"])
-    assert len(r["next_checks"]) == 2
+    assert len(r["condition_results"]) == 2
     assert "확률" not in r["headline"]
 
 
@@ -95,7 +96,7 @@ def test_read_model_identity_changes_for_corrections_missing_and_rule_version():
         )
         == 4
     )
-    assert a["schema_version"] == "futures_macro_intraday_workbench_v1"
+    assert a["schema_version"] == "futures_macro_intraday_workbench_v2"
     assert a["research"]["status"] == "NOT_VALIDATED"
     assert len(a["windows"]["since_close"]["prices"]) == 6
     assert a["cycle_background"]["as_of_date"] == "2026-08-31"

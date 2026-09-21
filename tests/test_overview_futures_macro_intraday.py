@@ -20,7 +20,7 @@ def test_refresh_nonce_is_consumed_once_and_failure_unlocks():
     assert state["futures_macro_result"]["status"] == "failed"
 
 
-def test_reload_does_not_collect_and_busy_event_is_ignored():
+def test_retired_reload_and_busy_event_are_ignored():
     from app.web.overview.futures_macro_helpers import dispatch_futures_macro_action
 
     state = {}
@@ -31,12 +31,12 @@ def test_reload_does_not_collect_and_busy_event_is_ignored():
     dispatch_futures_macro_action(
         {"id": "reload", "nonce": "b"}, state=state, run_action=forbidden
     )
-    assert state["futures_macro_ack"] == "b"
+    assert not state
     state["futures_macro_pending"] = True
     dispatch_futures_macro_action(
         {"id": "daily_refresh", "nonce": "c"}, state=state, run_action=forbidden
     )
-    assert state["futures_macro_ack"] == "b"
+    assert "futures_macro_ack" not in state
 
 
 def test_public_payload_has_two_windows_without_old_forecast_geometry():
@@ -53,6 +53,7 @@ def test_public_payload_has_two_windows_without_old_forecast_geometry():
 
 def test_streamlit_fallback_uses_same_windows_and_navigation(monkeypatch):
     from streamlit.testing.v1 import AppTest
+
     import app.web.overview.futures_macro_helpers as ui
 
     model = build_futures_macro_intraday_read_model(
@@ -68,6 +69,12 @@ def test_streamlit_fallback_uses_same_windows_and_navigation(monkeypatch):
     ).run()
     assert not app.exception
     assert len(app.metric) == 6
+    assert not any("저장 자료 다시 읽기" in b.label for b in app.button)
+    visible = " ".join(m.value for m in app.markdown)
+    assert "두 지수 동반 상승" in visible
+    assert "금리·달러 부담 동반" in visible
+    assert "0.42%" in visible
+    assert "다음 확인 조건" not in visible
     app.radio[0].set_value("last_hour").run()
     assert app.metric[0].value == "-0.50%"
     assert not app.exception
@@ -77,6 +84,7 @@ def test_read_failure_retains_last_observation_but_withholds_current_reading(
     monkeypatch,
 ):
     from streamlit.testing.v1 import AppTest
+
     import app.web.overview.futures_macro_helpers as ui
 
     model = build_futures_macro_intraday_read_model(

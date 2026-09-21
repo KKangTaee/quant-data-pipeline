@@ -174,6 +174,29 @@ def build_futures_macro_window_snapshot(*, rows, evaluation_time, calendar):
             status = "UNAVAILABLE"
         elif missing and status != "STALE":
             status = "PARTIAL"
+        # Historical comparisons use exact completed prices, never a future or substituted anchor.
+        prior_end = end - timedelta(hours=1) if end else None
+        prior_start = (
+            (start if name == "since_close" else prior_end - timedelta(hours=1))
+            if prior_end
+            else None
+        )
+        prior = build_window_returns(
+            bars, symbols=CORE, start_utc=prior_start, end_utc=prior_end
+        )
+        prior_currencies = [prior["returns_pct"][s] for s in CURRENCIES]
+        prior_valid = bool(prior_start and prior_end and prior_start < prior_end)
+        previous_window = {
+            **prior,
+            "status": ("PARTIAL" if prior["missing_symbols"] else "AVAILABLE")
+            if prior_valid
+            else "UNAVAILABLE",
+            "start_utc": prior_start.isoformat() if prior_start else None,
+            "end_utc": prior_end.isoformat() if prior_end else None,
+            "dollar_proxy_pct": -sum(prior_currencies) / len(CURRENCIES)
+            if prior_valid and all(v is not None for v in prior_currencies)
+            else None,
+        }
         windows[name] = {
             **data,
             "missing_symbols": missing,
@@ -182,6 +205,7 @@ def build_futures_macro_window_snapshot(*, rows, evaluation_time, calendar):
             "start_utc": start.isoformat() if start else None,
             "end_utc": end.isoformat() if end else None,
             "dollar_proxy_pct": dollar,
+            "previous_window": previous_window,
         }
     return {
         "schema_version": "futures_macro_windows_v1",

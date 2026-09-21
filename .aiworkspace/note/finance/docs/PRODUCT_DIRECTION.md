@@ -51,7 +51,7 @@ Finance Console의 current top navigation은 `Research / Portfolio / Data / Help
 | Group | Surface | 사용자가 끝낼 수 있는 일 |
 |---|---|---|
 | Research | Today | 미국 시장 세션, 저장된 시장 근거, 다음 일정과 대표 포트폴리오 상태를 첫 화면에서 파악한다. |
-| Research | Market Research | 현재 관측 국면·최근 변화·전환 확인 조건을 포함한 경기 국면과 독립 물가·정책 경로, 선물 매크로의 미국장 마감 이후·최근 1시간 가격 변화, 동반 반응·반대 근거·다음 확인 조건, 심리, 일정, S&P 500 가치평가, 변동 종목과 미국 개별 종목을 기준일·source와 함께 조사한다. |
+| Research | Market Research | 현재 관측 국면·최근 변화·전환 확인 조건을 포함한 경기 국면과 독립 물가·정책 경로, 선물 매크로의 미국장 마감 이후·최근 1시간 가격 변화, 주가지수 동행·국채/달러 조합의 실제 판정과 이전 관측 비교, 심리, 일정, S&P 500 가치평가, 변동 종목과 미국 개별 종목을 기준일·source와 함께 조사한다. |
 | Research | Institutional Holdings | delayed SEC Form 13F로 기관별 allocation·보유 변화·섹터 노출과 종목별 보유 기관을 탐색하고, 직전 보고 포트폴리오의 다음 분기·공개 후 추종 성과 proxy를 coverage와 함께 검토한다. |
 | Portfolio | Portfolio Lab | 전략을 실행·비교하고 후보를 만든 뒤 Practical Validation과 Final Review까지 이어간다. |
 | Portfolio | Portfolio Monitoring | 최종 선정 후보와 직접 등록한 미국 주식·ETF의 공통 기준 성과, 기여도, 보유 변화와 재검토 조건을 추적한다. |
@@ -110,8 +110,8 @@ Final Review decision과 Portfolio Monitoring의 재검토 표시는 투자 자�
 - survivorship bias와 look-ahead bias는 현재 구현이 완전히 제거했다고 주장하지 않는다.
 - SEC 13F는 보고 지연, long holdings 중심 범위와 identifier mapping 한계가 있다.
 - 경제 사이클은 현재 관측 국면과 조건부 전환 감시를 제공하며 NBER 공식 판정이나
-  특정 월의 미래 국면 예측이 아니다. Futures Macro도 교차자산 재가격화의 유력 해석,
-  반대 근거와 지속·무효화 조건을 제공할 뿐 5D 확률·가격 목표나 확정 전망을 공개하지
+  특정 월의 미래 국면 예측이 아니다. Futures Macro도 선택 구간의 주가지수·국채·달러 반응에 대한 해석과
+  이전 관측 비교를 제공할 뿐 이후 확률·가격 목표나 확정 전망을 공개하지
   않는다. 다른 macro·sentiment·conditional outlook도 독립 시계열 검증 gate를 통과하지
   못하면 확률이나 확정 전망으로 공개하지 않는다.
 - local MySQL 준비와 source별 수집 상태에 따라 화면 evidence가 partial 또는

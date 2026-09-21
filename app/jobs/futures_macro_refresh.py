@@ -130,7 +130,7 @@ def run_futures_macro_observation_refresh(
         "status": status,
         "duration_sec": round(perf_counter() - clock, 3),
         "rows_written": sum(int(r.get("rows_written") or 0) for r in attempts),
-        "message": "저장 자료를 다시 확인했습니다."
+        "message": "자료 확인을 마쳤습니다. 아래 관측 시각을 확인해 주세요."
         if status == "success"
         else "일부 비교 자료가 부족합니다. 관측 시각과 누락 항목을 확인해 주세요.",
         "details": {

@@ -76,8 +76,9 @@ service와 React workbench다.
 
 Futures Macro의 현재 화면은 `app/services/futures_macro_inputs.py`와
 `futures_macro_windows.py`가 DB의 완료 5분봉으로 미국장 마감 이후 / 최근 1시간의
-정확한 공통 시각 수익률을 만든다. `futures_macro_reading.py`가 관측 사실·가능한 의미·
-반대 근거·다음 확인 조건을 만들며 `app/services/overview/futures_macro.py`가 두 구간과
+정확한 공통 시각 수익률과 1시간 전의 동일 기준 비교 구간을 만든다. `futures_macro_reading.py`가
+실제 주가지수 동행·국채/달러 조합별 판정, 이전 판정과의 비교·근거를 만들며
+`app/services/overview/futures_macro.py`가 조회/관측 시각, 선물/자체지표 의미, 두 구간과
 기존 경기국면의 상태·기준일 한 건을 조합한다. React와 Streamlit fallback은 같은 read model을 쓴다.
 
 `app/jobs/futures_macro_refresh.py`는 수동 수집을 소유한다. 기본 17종목의 최근 2d/5m을

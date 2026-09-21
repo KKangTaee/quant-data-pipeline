@@ -231,18 +231,14 @@ Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../da
    - Market Context의 sector pressure map은 provider sector alias를 canonical sector로 normalize해 동일 크기 tile로 보여준다. tile 크기가 아니라 색상 / 값 / breadth를 읽는다.
 
 4. `Research > Market Research > 시장 환경 > 선물 매크로`
-   - 이 tab은 completed daily compact snapshot과 저장된 latest closed 5m bar를 함께 읽는 current primary surface다. 화면 진입 중 provider fetch나 forecast replay를 실행하지 않는다.
-   - `최신 데이터 갱신`은 17개 주요 선물의 `1y / 1d` overlap을 수집하고, nested-validation 최소 이력보다 부족한 symbol만 `10y / 1d` bootstrap한다. New York 18:00 재개 이후처럼 active trade date가 있으면 완료 일봉 확정 가능 여부와 독립적으로 `2d / 5m`을 한 번 수집한다. 5분봉이 충분하면 장중 잠정 관측으로 반영하고, 없거나 공통 관측 조건을 충족하지 못하면 마지막 완료 일봉을 유지한다. 완료 일봉 입력이 바뀐 경우에만 `finance_meta.futures_macro_snapshot`의 `overview_current`와 forecast history를 materialize한다.
-   - `다시 읽기`는 provider 수집이나 forecast replay 없이 compatible snapshot과 저장된 5m row를 DB-only로 다시 읽어 장중 임시 1D/5D/20D를 재계산한다. snapshot이 없거나 schema/algorithm version이 맞지 않으면 `최신 갱신 필요` 상태를 표시한다.
-   - 첫 화면은 `1D·지금 새로 생긴 변화 → 5D·현재 단기 방향 → 20D·기존 배경과의 관계 → 시장 재가격화 해석`으로 읽는다. 방향 정렬은 Risk On, Rate Pressure, Dollar Pressure, Inflation Pressure의 핵심 4개와 Growth, Safe Haven 확인 2개를 분리하고, 가장 강한 5D 핵심축 또는 1D 새 충격에서 유력 해석·반대 근거·지속·무효화 조건을 만든다.
-   - 향후 5D 조건부 모델과 `NO_EDGE` 결과는 completed daily 기반 호환성·shadow research backend로 보존한다. primary UI에는 예측 gate, 5D 확률, 가격 목표를 노출하지 않으며 임계값을 낮춰 예측처럼 보이게 만들지 않는다.
-   - future 20D와 2D path는 기본 화면에 표시하지 않지만 backend evidence에는 남는다. 60D ribbon은 `최근 체제 이력`이라는 secondary history로 유지한다.
-   - 계산 범위는 기본 화면의 별도 `Next Check` 카드가 아니라 `방법론과 품질` 안에서 `17개 수집 · family 직접 입력 15개 · family 6/6`처럼 수집과 산식 참여를 구분한다. DXY는 Economic Cycle 공유 입력이고 silver는 raw observation이며, 이 task에서는 family membership을 바꾸지 않는다.
-   - Yahoo same-date 일봉은 미국 동부시간 저녁 재개 뒤에도 값이 움직일 수 있다. 현재 관측의 active trade date는 daily label과 독립적으로 New York 18:00 재개를 다음 거래일로 판정한다. 5m common cutoff이 30분 초과 stale이거나 complete family가 4개 미만이면 완료 세션으로 fallback하고, 이전 pending daily가 남아 있으면 다음 세션과 섞지 않는다.
-   - `방법론과 품질`은 원천, 1D·5D·20D 관측창, family coverage, 직접 입력 수와 제한을 보여준다. 펼침 높이는 React component가 Streamlit iframe과 동기화한다.
-   - React `원본 데이터 / 계산 추적`은 snapshot 기준일/저장 시각/source marker와 compact `현재 점수 원본`, `점수 구성 기여`, `선물 일봉 변화`, 해석 주의점을 보여준다. 전체 10년 OHLCV 원본은 이 disclosure가 아니라 `finance_price.futures_ohlcv`에 남는다.
-   - 일봉 수집 성공 뒤 materialization만 실패하면 job은 `partial_success`다. 이전 latest-good snapshot은 지우지 말고 attached materialization result를 확인한 뒤 `최신 데이터 갱신`을 재시도한다.
-   - Futures Macro는 시장 컨텍스트 화면이며 live approval, order, broker/account sync, auto rebalance를 만들지 않는다.
+   - `최신 데이터 반영` 후 `비교 시작 → 마지막 관측`과 조회 시각을 먼저 확인한다. 화면 진입과 구간 선택은 DB-only이며 별도 저장자료 다시 읽기 버튼은 없다.
+   - 활성 선물 세션에는 기본 17종목의 `2d / 5m`을 한 번 수집한다. 현재 비교 기준점이 없는 symbol만 `5d → 1mo / 5m`으로 제한 보강한다. 거래 중단 구간에도 저장 관측이 오래됐거나 없으면 최근봉을 확인한다. 현재 관측 입력과 필요한 완료 일봉만 처리하며 nested forecast replay나 10년 연구 bootstrap을 실행하지 않는다.
+   - `미국장 마감 이후`와 `최근 1시간`을 전환하면 같은 종료 시점에 대해 시작점·수익률·판정이 함께 바뀌어야 한다. `최근 1시간`은 조회 현재시각이 아니라 화면의 마지막 공통 관측을 끝점으로 삼는다.
+   - 두 확인 결과의 실제 가격값, 주가지수 동행 판정과 국채·달러 조합 설명을 함께 읽는다. `1시간 전 판정에 사용한 값`은 마감 기준이 같은 누적 비교 또는 바로 앞의 비중첩 60분 비교를 보여준다. 이전 자료가 없으면 변화 비교 불가가 정상이며 현재 유효한 판정까지 숨기지 않는다.
+   - `관측 지연`이면 표시된 값은 마지막 저장 관측이고 현재 판정은 보류한다. 갱신 후에도 시각이 오래되면 source 수집 상태를 확인한다. 공식 현물 휴장/조기마감 coverage가 없으면 마감 이후만 계산할 수 없고 최근 1시간은 독립적으로 사용할 수 있다. 빠진 통화는 다른 통화로 대체하거나 재가중하지 않는다.
+   - `지표 구성과 계산 기준`에서 국채선물 가격과 금리의 차이, 자체 5통화 달러 지표와 DXY의 차이, roll 및 부호 해석 한계를 확인한다. 현재 관측 해석은 미래 수익률 검증 결과가 아니다.
+   - 공유 daily observation은 기존 daily family/date 의미로 별도 observation key에 저장한다. 기존 full snapshot·forecast history는 연구 경로에 남기고 탭 갱신으로 재작성하지 않는다. 일부 수집/저장이 실패하면 현재 가용 관측과 제한을 확인한 뒤 같은 갱신 버튼으로 재시도한다.
+   - 기대 결과: 버튼 복구, 정확한 구간 표시, 값과 판정의 일치, 누락/지연의 정직한 표기. 상세 의미는 [Futures Macro Flow](../flows/README.md#market-research-futures-macro-flow)를 따른다.
 
 5. `Research > Market Research > 시장 환경 > 심리`
    - `시장 심리 갱신`을 누르면 `collect_market_sentiment` job이 CNN Fear & Greed와 AAII Sentiment Survey를 수집한다. 각 source는 독립 transaction으로 처리되며, 최신 조회용 `finance_meta.macro_series_observation`과 immutable 수집 당시 기록인 `market_sentiment_collection_batch` / `market_sentiment_observation_snapshot`을 함께 저장한다.
@@ -433,7 +429,7 @@ PY
 - Market Movers `Why It Moved` renders a ticker selector sourced from Return Rank and Volume Rank rows, then shows a movement summary header with selected ticker identity, rank / coverage / period context, return / previous return / momentum delta, volume, and dollar volume. The visible labels are Korean except the main `Why It Moved` title and source/product names.
 - Market Movers `Why It Moved` shows a metadata status strip before the fetch button: `조회 상태`, 뉴스 rows / failure, 한국어 뉴스 rows / failure, SEC rows / failure, `조회 시각`, and `세션 전용` storage boundary. `PARTIAL` / `부분 완료` is warning-level evidence, not a complete lookup.
 - Market Movers `Why It Moved` uses `조사 단서` sections for `뉴스 메타데이터`, `한국어 뉴스`, `SEC 공시`, and collapsed `외부 검색`. The `한국어 뉴스` lane is powered by keyless Google News KR RSS and displays metadata/snippet only; no Naver API key, article scraping, or article body storage is required. Yahoo Finance, Google News, SEC company search, IR / earnings, Google News KR, and Naver News stay as collapsed external rows with clickable `열기` URLs instead of primary action buttons.
-- Futures Macro lower chart / diagnostics show the latest stored candle window for each selected symbol even when provider freshness is stale; stale latest candles should appear as `Stale`, not as missing chart data.
+- Futures Macro keeps the last stored price window visible when stale, labels its exact timestamps, and withholds the current interpretation. Missing endpoints appear as unavailable rather than a filled price.
 - Market Movers `Why It Moved > SEC 공시` preserves the compact SEC table as `양식 / 공시일 / 제목 / 열기`. V1.7 / V1.8 selected-filing preview and `공시 Digest` were rolled back after user review, so this lane currently does not fetch, parse, preview, or store filing bodies; users open official SEC documents through the clickable `열기` links.
 - `Why It Moved` remains a manual investigation panel. It does not summarize, crawl, collect article bodies, collect filing bodies, run sentiment analysis, auto-classify catalysts, mutate DB schema, or write workflow JSONL / saved setup rows.
 - `간단 메타데이터 조회` is button-only and selected-ticker-only. The not-yet-run state is visible before lookup; `OK`, `PARTIAL`, no metadata, and failed lookup states are separate. Metadata URL columns render as clickable `열기` links. SEC filings are displayed as 양식 / 공시일 / 제목 / 열기 and sorted by date with form-priority tie-breaks.
@@ -447,7 +443,7 @@ PY
 - Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
 - Coverage Diagnostics keeps `Reason` / `Recommended Action` and adds compact `Likely Cause`, `Evidence Summary`, `Next Check`, `Listing Evidence`, `Profile Freshness`, and `Market Data Issue` evidence. These are DB-backed hints, not legal status, trading signal, validation gate, or monitoring signal.
 - Quote gap diagnostics persist repeated issue history to `finance_meta.market_data_issue` and display occurrence count / latest evidence in Coverage Diagnostics.
-- Futures Macro routine refresh requests a one-year daily overlap for covered symbols and ten years only for deficient-symbol bootstrap. It stores current 1D/5D/20D state, 5D/20D independent-episode validation, metrics, and bounded calculation trace in one compatible compact snapshot. The default React decision surface uses 1D/5D observations and the 5D validation conclusion; 20D future/path evidence remains backend-only. Same-date provider bars that can still move are pending, and an unchanged completed-input fingerprint reuses the stored model without nested replay.
+- Futures Macro tab refresh uses the bounded intraday observation path described above. The older full daily snapshot/forecast pipeline remains an explicit research path; its 1D/5D/20D models are not the current tab contract.
 - FOMC rows have `source=federal_reserve_fomc_calendar`, `confidence=1.0`, and `Source Type=Official`.
 - Macro rows have `Type=MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`, or `MACRO_GDP`, `Source Type=Official`, and `Validation=Official`.
 - BLS `.ics` import rows keep `source=bureau_labor_statistics_release_schedule` and `raw_payload_json.import_method=official_ics_file`.
@@ -470,7 +466,7 @@ PY
 - Market Sentiment refresh stores latest canonical rows and immutable observation snapshots atomically per source. Scheduled and manual execution share this path; a failure in CNN does not roll back AAII, or vice versa.
 - Sentiment `known_at` means app-observed UTC time rather than provider publication time. Legacy canonical rows are not fabricated into PIT history, and 1W/1M remain unavailable until prospective history supports chronological validation.
 - Market Research no longer renders Data Health as a primary tab. Use Market Context source / refresh evidence for current brief issues and `Data > Data Operations > 실행 이력` for detailed operational diagnostics.
-- Market Research refresh buttons route through `app/jobs/overview_actions.py` and append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed. Market Context refresh is intentionally scoped to the current Market Context surface and does not run Top1000 / Top2000 / Futures refresh actions.
+- Legacy Market Research refresh actions route through `app/jobs/overview_actions.py`; the Futures Macro tab uses its dedicated `futures_macro_refresh.py` command. Actions that record local web app run history append their results; the JSONL file itself remains a generated local artifact and is not committed. Market Context refresh is intentionally scoped to the current Market Context surface and does not run Top1000 / Top2000 / Futures refresh actions.
 - Market Research scheduled refresh CLI can run without Streamlit and appends scheduled job results to the same local web app run history.
 
 ## Failure Handling

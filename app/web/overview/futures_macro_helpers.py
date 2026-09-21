@@ -1,7 +1,7 @@
 """Futures-only UI: two stored-price windows and a bounded refresh command."""
 
-from datetime import datetime, timezone
 from copy import deepcopy
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 import streamlit as st
@@ -25,7 +25,7 @@ STATUS_LABELS = {
 def render_futures_macro_header():
     st.markdown("### 선물 매크로")
     st.caption(
-        "미국장 마감 이후와 최근 1시간의 변화, 함께 움직인 자산과 다음 확인 조건을 봅니다."
+        "미국장 마감 이후와 최근 1시간의 가격 변화, 주가지수 동행과 국채·달러 조합의 실제 판정을 봅니다."
     )
 
 
@@ -39,7 +39,7 @@ def dispatch_futures_macro_action(event, *, state, run_action=None):
     """Acknowledge the actual result and suppress replayed or concurrent session commands."""
     event = _futures_macro_react_event_payload(event)
     action, nonce = event.get("id"), event.get("nonce")
-    if action not in {"daily_refresh", "reload", "economic_cycle"} or not nonce:
+    if action not in {"daily_refresh", "economic_cycle"} or not nonce:
         return False
     if state.get("futures_macro_ack") == nonce or state.get("futures_macro_pending"):
         return False
@@ -49,11 +49,6 @@ def dispatch_futures_macro_action(event, *, state, run_action=None):
             state["futures_macro_result"] = (
                 run_action or run_futures_macro_observation_refresh
             )()
-        elif action == "reload":
-            state["futures_macro_result"] = {
-                "status": "success",
-                "message": "저장 자료를 다시 읽었습니다.",
-            }
         else:
             state["futures_macro_destination"] = "economic-cycle"
     except Exception:
@@ -80,11 +75,8 @@ def _kst(value):
 def _render_intraday_fallback(payload):
     """Fallback consumes the same prices and interpretation as the React surface."""
     event = None
-    left, right = st.columns(2)
-    if left.button("최신 데이터 반영", key="futures_macro_refresh"):
+    if st.button("최신 데이터 반영", key="futures_macro_refresh"):
         event = {"id": "daily_refresh", "nonce": datetime.now(timezone.utc).isoformat()}
-    if right.button("저장 자료 다시 읽기", key="futures_macro_reload"):
-        event = {"id": "reload", "nonce": datetime.now(timezone.utc).isoformat()}
     period = st.radio(
         "비교 구간",
         ["since_close", "last_hour"],
@@ -96,9 +88,20 @@ def _render_intraday_fallback(payload):
     w = payload["windows"][period]
     reading = w["reading"]
     st.subheader(reading["headline"])
+    st.write(reading["interpretation"])
     st.caption(
         f"{STATUS_LABELS[w['status']]} · {_kst(w.get('start_utc'))} → {_kst(w.get('end_utc'))} KST"
     )
+    context = w["time_context"]
+    st.markdown(f"**선물 가격 변화 · {context['label']}**")
+    st.caption(
+        f"비교 시작 {_kst(w.get('start_utc'))} → 마지막 관측 {_kst(w.get('end_utc'))} KST · "
+        f"화면 조회 {_kst(context['evaluated_at_utc'])} KST 기준 · "
+        f"마지막 관측은 조회 시점보다 {context['observation_age_minutes']}분 전"
+        if context["observation_age_minutes"] is not None
+        else "비교 시각 확인 불가"
+    )
+    st.caption(context["explanation"])
     cycle = payload["cycle_background"]
     st.caption(
         f"경기 배경: {cycle['state']} · {cycle.get('as_of_date') or '기준일 없음'}"
@@ -111,28 +114,48 @@ def _render_intraday_fallback(payload):
     for col, price in zip(st.columns(3), payload["windows"][period]["prices"][:3]):
         value = price["return_pct"]
         col.metric(price["label"], "—" if value is None else f"{value:+.2f}%")
+        col.caption(price["description"])
     for col, price in zip(st.columns(3), payload["windows"][period]["prices"][3:]):
         value = price["return_pct"]
         col.metric(price["label"], "—" if value is None else f"{value:+.2f}%")
-    st.markdown("**관측 사실**")
-    for fact in reading["observation_facts"]:
-        st.write(f"• {fact}")
-    st.markdown("**가능한 의미**")
-    st.write(reading["interpretation"])
+        col.caption(price["description"])
+    st.markdown("**두 가지 확인 결과**")
+    for col, check in zip(st.columns(2), reading["condition_results"]):
+        with col:
+            st.markdown(f"**{check['title']}**")
+            for evidence in check["evidence"]:
+                value = evidence["return_pct"]
+                formatted = "—" if value is None else f"{value:+.2f}%"
+                st.write(f"{evidence['label']} {formatted} · {evidence['direction']}")
+            st.markdown(f"**확인 결과: {check['verdict']}**")
+            st.write(check["explanation"])
+            comparison = check["comparison"]
+            st.caption(comparison["summary"])
+            if comparison.get("previous_evidence"):
+                with st.expander("1시간 전 판정에 사용한 값"):
+                    st.caption(
+                        f"{_kst(comparison['previous_start_utc'])} → {_kst(comparison['previous_end_utc'])} KST"
+                    )
+                    for evidence in comparison["previous_evidence"]:
+                        st.write(
+                            f"{evidence['label']} {evidence['return_pct']:+.2f}% · {evidence['direction']}"
+                        )
     for fact in reading["counter_evidence"]:
         st.info(fact)
-    st.markdown("**다음 확인 조건**")
-    for check in reading["next_checks"]:
-        st.write(f"• {check}")
-    with st.expander("계산 기준과 자료 공백"):
+    st.caption(
+        "상승·하락은 0.01% 표시 단위의 방향이며 영향의 크기를 뜻하지 않습니다. 현재와 1시간 전의 관측 비교이며 다음 시간의 방향 예측이 아닙니다."
+    )
+    with st.expander("지표 구성과 계산 기준"):
         st.write(w["evidence"]["source"])
         st.write("누락: " + (", ".join(w["missing_symbols"]) or "핵심 비교 자료 확보"))
         for line in w["evidence"]["caveats"]:
             st.caption(line)
-    with st.expander("과거 사례 검증"):
-        st.write(
+        st.caption(
             "장중 조건 검증 전입니다. 현재 구간의 이후 상승·하락 확률은 제공하지 않습니다."
         )
+    with st.expander("추가 관측 근거"):
+        for fact in reading["observation_facts"]:
+            st.write(f"• {fact}")
     return event
 
 
@@ -144,7 +167,7 @@ def _render_futures_macro_panel(*, detail_expanded=False):
         st.error("저장 자료를 읽지 못했습니다. 잠시 후 다시 읽어 주세요.")
         payload = deepcopy(st.session_state.get("futures_macro_last_good_payload"))
         if not payload:
-            if st.button("저장 자료 다시 읽기", key="futures_macro_retry"):
+            if st.button("다시 시도", key="futures_macro_retry"):
                 st.rerun()
             return
         from app.services.futures_macro_reading import (

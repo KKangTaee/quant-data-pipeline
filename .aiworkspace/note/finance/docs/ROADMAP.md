@@ -33,7 +33,7 @@ Finance Console은 `Research / Portfolio / Data / Help` 아래 7개 top-level su
 | Track | Current Baseline | Boundary |
 |---|---|---|
 | Today | 시장 세션, 저장된 시장 근거, 일정과 대표 포트폴리오 EOD/live overlay | summary / navigation surface, trading signal 아님 |
-| Market Research | confirmed 현재 국면·최근 변화·전환압력·조건부 다음 국면 분포를 포함한 경기 국면, 독립 물가·정책 경로, 선물 매크로의 마감 이후·최근 1시간 관측과 규칙 기반 해석·다음 확인 조건, 심리의 1W·1M 실제 관측 변화, 일정, S&P 500, Market Movers, 미국 개별 종목의 3-family / 8-view research | context-only, 특정 전환 월·고정 순환·매매 신호가 아니며 Futures Macro 5D 확률·가격 목표와 심리 미래 확률도 validation / monitoring signal로 공개하지 않음 |
+| Market Research | confirmed 현재 국면·최근 변화·전환압력·조건부 다음 국면 분포를 포함한 경기 국면, 독립 물가·정책 경로, 선물 매크로의 마감 이후·최근 1시간 관측, 실제 주가지수 동행·국채/달러 판정과 1시간 전 비교, 심리의 1W·1M 실제 관측 변화, 일정, S&P 500, Market Movers, 미국 개별 종목의 3-family / 8-view research | context-only, 특정 전환 월·고정 순환·매매 신호가 아니며 Futures Macro 5D 확률·가격 목표와 심리 미래 확률도 validation / monitoring signal로 공개하지 않음 |
 | Institutional Holdings | content-first header, bounded manager picker, horizontal destination tabs, 연속 manager 전환 상태 보존, 로컬 제출기한 기반 조건부 수동 갱신, amendment-aware 기관 portfolio·holdings·sector·security detail·identifier coverage, 과거 분기 전환과 두 covered-sleeve proxy | delayed reported-long-holdings research이며 actual fund NAV·추천이 아님; 탭 진입 시 SEC 호출 없음 |
 | Data Operations | 네 consumer 목적별 data preparation, 공식 파일, bounded recovery, compact history와 active 30-action 고급 도구 | explicit click만 실행, UI direct fetch와 자동 연속 실행 없음 |
 | Backtest Analysis | single strategy와 portfolio mix 실행·비교, result bundle, save / replay와 candidate source. Risk-On Momentum 5D는 Quick / Standard / Deep 분석 강도와 compact Daily Swing evidence를 제공 | 높은 수익률만으로 선정하지 않음 |
