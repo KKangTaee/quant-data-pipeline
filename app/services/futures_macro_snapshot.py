@@ -566,13 +566,15 @@ def load_overview_futures_macro_materialized_snapshot(
 ) -> dict[str, Any]:
     """Read one compatible persisted snapshot without invoking calculation builders."""
 
-    read = load_fn or (
-        lambda: load_latest_futures_macro_snapshot(
-            snapshot_key=FUTURES_MACRO_SNAPSHOT_KEY
-        )
-    )
-    row = read()
-    if not _compatible_row(row):
+    from app.services.futures_macro_observation_snapshot import OBSERVATION_KEY, observation_row_compatible
+
+    if load_fn is not None:
+        row = load_fn()
+    else:
+        row = load_latest_futures_macro_snapshot(snapshot_key=OBSERVATION_KEY)
+        if not observation_row_compatible(row):
+            row = load_latest_futures_macro_snapshot(snapshot_key=FUTURES_MACRO_SNAPSHOT_KEY)
+    if not (_compatible_row(row) or observation_row_compatible(row)):
         return {
             "status": "MISSING",
             "reason": "저장된 선물 매크로 snapshot이 없거나 계산 버전이 달라 일봉 갱신이 필요합니다.",

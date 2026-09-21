@@ -1444,11 +1444,11 @@ def attach_futures_macro_materialization(
     if str(interval).strip().lower() != "1d" or int(rows_written or 0) <= 0:
         return output
     if materialize_fn is None:
-        from app.services.futures_macro_snapshot import (
-            materialize_overview_futures_macro_snapshot,
+        from app.services.futures_macro_observation_snapshot import (
+            materialize_futures_macro_observation_snapshot,
         )
 
-        materialize_fn = materialize_overview_futures_macro_snapshot
+        materialize_fn = materialize_futures_macro_observation_snapshot
     try:
         details["futures_macro_snapshot"] = dict(materialize_fn())
     except Exception as exc:

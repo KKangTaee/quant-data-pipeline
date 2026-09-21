@@ -17,6 +17,7 @@ def upsert_futures_macro_snapshot(
     row: dict[str, object],
     *,
     connection: Any = None,
+    monotonic: bool = False,
 ) -> int:
     """UPSERT one versioned current snapshot without replacing a good row first."""
 
@@ -49,6 +50,15 @@ def upsert_futures_macro_snapshot(
           snapshot_json = VALUES(snapshot_json),
           materialized_at = VALUES(materialized_at)
         """
+        if monotonic:
+            # One atomic UPSERT also guards racing writers. Update date/time last
+            # so every preceding assignment evaluates the same original cutoff.
+            guard = "(as_of_date IS NULL OR VALUES(as_of_date) > as_of_date OR (VALUES(as_of_date) = as_of_date AND VALUES(materialized_at) >= materialized_at))"
+            fields = ("source_marker", "input_fingerprint", "schema_version", "algorithm_version",
+                      "session_status", "status", "snapshot_json", "materialized_at", "as_of_date")
+            sql = sql.split("ON DUPLICATE KEY UPDATE")[0] + "ON DUPLICATE KEY UPDATE " + ", ".join(
+                f"{field} = IF({guard}, VALUES({field}), {field})" for field in fields
+            )
         db.executemany(sql, [row])
         return 1
     finally:

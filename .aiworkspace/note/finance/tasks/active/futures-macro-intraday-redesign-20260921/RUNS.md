@@ -10,3 +10,9 @@ Date: 2026-09-21
 - 문서 확인: task 6개와 recommendation의 local link, 미완성 placeholder, normalized status, 정확히 5개 개발 단계 검사 PASS. 인터페이스와 UI/연구 schema 경계를 자기 검토했다.
 - `git diff --check` PASS. staging 이후 신규 문서를 포함한 `git diff --cached --check`도 커밋 전에 확인한다.
 - 앱 테스트/빌드/실제 수집/DB 변경/Browser QA는 실행하지 않음. 변경은 계획 문서뿐이다.
+
+## 1차 구현
+
+- 새 관측 테스트 RED 5 failures → 관련 GREEN 122 passed / 2 subtests. 외부 edgartools 경고 3개는 기존 baseline과 동일.
+- 실제 저장자료 observation 계산 0.493초, 2026-09-18 기준. write_fn capture로 운영 snapshot 미변경.
+- 실제 MySQL monotonic UPSERT: 과거 날짜·같은 날짜의 이전 계산 결과 덮어쓰기 방지 PASS. 고유 test key는 transaction rollback으로 제거. forecast history 변경 없음.

@@ -1,7 +1,7 @@
 # 선물 매크로 장중 변화 화면 설계
 
 Date: 2026-09-21
-Decision: 사용자 시안 선호 확인, 개발 가이드 검토 전 / 구현 미승인
+Decision: 2026-09-21 사용자 1~5차 실행 승인
 
 ## 이걸 하는 이유?
 
@@ -12,7 +12,7 @@ Decision: 사용자 시안 선호 확인, 개발 가이드 검토 전 / 구현 �
 ## 승인 근거와 범위
 
 - 사용자는 2026-09-21 인터랙티브 시안의 방향에 동의하고, 기존 기능 정리부터 시작하는 구체적 개발 가이드를 요청했다.
-- 명시적 실행 경계: **“그 내용을 확인한 후 작업 요청할께”**. 이번 산출물은 계획이며 구현·수집·DB 변경은 하지 않는다.
+- 후속 사용자 요청 **“1차부터 5차까지 단계별로 작업 진행해줘.”**에 따라 선물 매크로 범위의 전체 구현을 시작한다.
 - 시안: `/Users/taeho/.codex/visualizations/2026/09/20/01a0c136-bc3c-73a0-8da0-8a18eda4f205/futures-market-change-preview.html`. 시안 수치와 상태는 전부 가상이다. 이 파일은 generated artifact이며 커밋하지 않는다.
 - 기존 근거: [성능 감사](../../../researches/active/2026-09-futures-macro-performance-value-audit/CURRENT_PROJECT_AUDIT.md), [실제 일봉 예비 검증](../../../researches/active/2026-09-futures-macro-performance-value-audit/EMPIRICAL_PILOT_RESULT.md).
 
