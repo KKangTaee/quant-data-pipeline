@@ -159,8 +159,10 @@ def build_futures_macro_window_snapshot(*, rows, evaluation_time, calendar):
         )
         data = build_window_returns(bars, symbols=SYMBOLS, start_utc=start, end_utc=end)
         missing = [s for s in CORE if s in data["missing_symbols"]]
+        backfill = list(data["missing_symbols"])
         if name == "since_close" and end and start is None:
             missing = []  # Calendar uncertainty cannot be repaired by fetching prices.
+            backfill = []
         currency_values = [data["returns_pct"][s] for s in CURRENCIES]
         dollar = (
             -sum(currency_values) / len(CURRENCIES)
@@ -175,6 +177,7 @@ def build_futures_macro_window_snapshot(*, rows, evaluation_time, calendar):
         windows[name] = {
             **data,
             "missing_symbols": missing,
+            "backfill_symbols": backfill,
             "status": status,
             "start_utc": start.isoformat() if start else None,
             "end_utc": end.isoformat() if end else None,

@@ -9,6 +9,10 @@ Current active product task:
 
 - none
 
+Latest completed Futures Macro task:
+
+- `futures-macro-intraday-redesign-20260921` — `State: complete`; 전체 5/5. 마감 이후/최근 1시간 관측과 현재 전용 경량 갱신, actual QA 및 독립 리뷰 완료.
+
 Latest completed Institutional Holdings task:
 
 - `institutional-holdings-metric-clarity-v1-20260817` — `State: complete`;

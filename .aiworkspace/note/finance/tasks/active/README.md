@@ -32,7 +32,6 @@ tasks/active/<task-name>/
 
 | Task | State | Resume Condition |
 |---|---|---|
-| [futures-macro-intraday-redesign-20260921](./futures-macro-intraday-redesign-20260921/PLAN.md) | `paused`, 가이드 완료 / 개발 0/5 | 장중 변화 시안에 기반한 5단계 개발 가이드 검토 후 사용자 작업 요청 |
 | `overview-sentiment-cnn-aaii-v1-20260719` | `paused`, 3/4 complete | 미래 확률이 계속 필요하면 target·episode independence·chronological PIT validation과 공개 기준을 새로 승인 |
 
 ## Verification-Only Tasks
@@ -46,6 +45,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| [futures-macro-intraday-redesign-20260921](./futures-macro-intraday-redesign-20260921/STATUS.md) | Complete, 5/5 | 마감 이후/최근 1시간 exact 5분봉 관측, bounded 갱신, compact UI 및 actual DB/provider/Browser QA 완료. |
 | `institutional-holdings-metric-clarity-v1-20260817` | Completed product task, 3/3 | 분기 리뷰 contribution `%/%p`와 sign-specific list, 기관 수 기준 랭킹과 13F 보고 보유가액 합계, 한국어 3-bullet disclosure를 fresh actual Browser QA까지 완료했다. |
 | `institutional-holdings-content-first-ui-v1-20260817` | Completed product task, 3/3 | content-first header, bounded manager picker, horizontal destination tabs와 연속 manager 전환 상태 보존을 actual desktop/390px Browser QA까지 완료했다. |
 | `institutional-holdings-hybrid-quarter-review-v1-20260817` | Completed product task, 5/5 | 로컬 제출기한 기반 수동 bulk-first/EDGAR fallback, amendment-aware history, `NEW/ADD/KEEP/REDUCE/DROP`, 두 covered-sleeve proxy와 v3 React 분기 리뷰를 actual SEC/MySQL/Browser QA까지 완료했다. |

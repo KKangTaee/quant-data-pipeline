@@ -31,3 +31,6 @@ Date: 2026-09-21
 - 3차: 장중 입력 read가 0.05초여서 새 persistent cache 없이 DB 관측을 매 진입 읽음. identity에 두 window/endpoint/source marker/calendar/rule/schema 포함. 경기 배경은 load_cycle_snapshot 1건만 읽고 계산/수집하지 않음.
 
 - 4차: 외부 생산 import는 render_futures_macro_header/fragment 두 개뿐임을 확인하여 3천 줄의 구 탭 전용 helper를 새 경계로 교체. 연구/DB history/Today/Monitoring 계산은 보존. 제거한 UI-only 테스트 목록은 실행 ledger에 보존.
+
+- 최종 독립 리뷰는 fresh-context agent 1회로 수행. 결과 두 P2를 직접 재현해 수정했고 추가 재리뷰 agent를 만들지 않았다.
+- 사용자 1~5차 구현 승인이 로컬 앱 반영을 포함하므로 기존 master가 기준 SHA이고 tracked 변경이 없음을 확인한 후 fast-forward로 통합한다. 원격 push/배포는 하지 않는다. 생성한 worktree는 추적 가능한 실행 증거와 함께 보존한다.

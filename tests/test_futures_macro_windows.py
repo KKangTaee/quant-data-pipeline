@@ -231,3 +231,15 @@ def test_missing_calendar_does_not_request_price_backfill():
         rows=market_rows(end), evaluation_time=end, calendar={}
     )
     assert r["windows"]["since_close"]["missing_symbols"] == []
+
+
+def test_optional_asset_gaps_remain_available_to_refresh():
+    from app.services.futures_macro_windows import build_futures_macro_window_snapshot
+
+    end = datetime(2026, 9, 21, 7, tzinfo=UTC)
+    r = build_futures_macro_window_snapshot(
+        rows=market_rows(end), evaluation_time=end, calendar=calendar()
+    )
+    w = r["windows"]["since_close"]
+    assert w["status"] == "AVAILABLE" and w["missing_symbols"] == []
+    assert "GC=F" in w["backfill_symbols"] and w["returns_pct"]["GC=F"] is None

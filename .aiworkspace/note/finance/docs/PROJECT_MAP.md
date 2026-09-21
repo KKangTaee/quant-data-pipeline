@@ -74,13 +74,17 @@ Top-level navigation과 route registration은 `app/web/streamlit_app.py`가 소�
 unavailable 상황을 위해 남아 있다. current 정상 화면의 owner는 위 표의 page,
 service와 React workbench다.
 
-Futures Macro의 현재 관측은 `app/services/futures_macro_intraday.py`가 저장된
-최신 closed 5m bar와 완료 일봉을 합성해 임시 1D / 5D / 20D로 만든다.
-기본 화면은 이 관측에서 가장 강한 5D 핵심축 또는 1D 새 충격을 골라 유력 해석,
-반대 근거와 지속·무효화 조건을 표시한다. 완료 세션 snapshot과 과거 5D 검증/history는
-기존 daily-only owner가 호환성·shadow research용으로 계속 담당하지만 primary UI에는 노출하지 않고,
-`app/jobs/overview_actions.py`의 `최신 데이터 갱신`이 아직 완료되지 않은 세션에서만
-2d/5m을 한 번 수집해 장중 관측과 일봉 확정에 같이 사용한다.
+Futures Macro의 현재 화면은 `app/services/futures_macro_inputs.py`와
+`futures_macro_windows.py`가 DB의 완료 5분봉으로 미국장 마감 이후 / 최근 1시간의
+정확한 공통 시각 수익률을 만든다. `futures_macro_reading.py`가 관측 사실·가능한 의미·
+반대 근거·다음 확인 조건을 만들며 `app/services/overview/futures_macro.py`가 두 구간과
+기존 경기국면의 상태·기준일 한 건을 조합한다. React와 Streamlit fallback은 같은 read model을 쓴다.
+
+`app/jobs/futures_macro_refresh.py`는 수동 수집을 소유한다. 기본 17종목의 최근 2d/5m을
+한 번 수집하고 누락 기준점만 5d→1mo로 제한 보강한다. 필요한 일봉·확정 처리 후
+`futures_macro_observation_snapshot.py`가 기존 daily current 계산만 별도 observation key에 저장한다.
+Today/Portfolio Monitoring의 daily family/date 의미는 유지한다. 기존 full snapshot/forecast history는
+명시적 연구 호출용으로 보존하며 탭 갱신에서는 nested 전망·검증을 실행하지 않는다.
 
 ## Workflow Ownership
 

@@ -7484,3 +7484,9 @@ Detailed historical logs were archived on `2026-04-13`.
   live due clock과 저장 분기 전환 선택을 보강했다. Final Berkshire proxy는 +8.42%/+6.48%다.
 - 상세 운영/검증은 `tasks/active/institutional-holdings-hybrid-quarter-review-v1-20260817/`와
   `docs/runbooks/INSTITUTIONAL_13F_DATASET.md`를 본다.
+
+## 2026-09-21 - 선물 매크로 장중 변화 5/5 완료
+
+- 두 exact 장중 구간, 가격·해석·확인 조건 화면과 현재 전용 갱신 경로 구현. 기존 연구/공유 일별 관측은 보존.
+- 실제 갱신 6.846초, 로컬 current 계산·저장 약 0.44초, 194 회귀 + 독립 리뷰 경계 보완 완료.
+- 다음 진입: `tasks/active/futures-macro-intraday-redesign-20260921/STATUS.md`, `RUNS.md`; 미래 장중 확률은 별도 연구 범위.

@@ -65,7 +65,12 @@ def run_futures_macro_observation_refresh(
         return result
 
     latest_intraday = {"status": "success", "rows_written": 0}
-    if active_futures_session_date(now) is not None:
+    needs_recent = any(
+        w.get("status") == "STALE"
+        or (w.get("status") == "UNAVAILABLE" and not w.get("end_utc"))
+        for w in snapshot["windows"].values()
+    )
+    if active_futures_session_date(now) is not None or needs_recent:
         latest_intraday = attempt(symbols, "2d", "5m")
         snapshot = load(evaluation_time=now)
     for period in ("5d", "1mo"):
@@ -73,7 +78,7 @@ def run_futures_macro_observation_refresh(
             {
                 s
                 for w in snapshot["windows"].values()
-                for s in w.get("missing_symbols", [])
+                for s in w.get("backfill_symbols", w.get("missing_symbols", []))
             }
         )
         if not missing:

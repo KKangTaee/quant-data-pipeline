@@ -1,6 +1,6 @@
 # 선물 매크로 장중 변화 개편 개발 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task after the user requests execution. Steps use checkbox (`- [ ]`) syntax for tracking. 이 문서 작성 요청은 구현 승인이 아니다.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task after the user requests execution. Steps use checkbox (`- [x]`) syntax for tracking. 이 문서 작성 요청은 구현 승인이 아니다.
 
 **Goal:** 선물 매크로를 ‘미국장 마감 이후 / 최근 1시간의 변화 → 교차자산 반응 → 다음 확인 조건’으로 개편하고 현재 관측 갱신에서 무거운 전망 검증을 제거한다.
 
@@ -85,9 +85,9 @@ Execution: **2026-09-21 사용자 1~5차 실행 승인. 1차 진행 중.**
 - Produces: DESIGN의 observation materializer와 새 snapshot key; 기존 공용 load 함수의 반환 `macro`, `pattern_outlook.current_pattern`, `metadata` 유지.
 - Production attach는 경량 materializer를 호출한다. 기존 full materializer는 명시 호출 연구 API로 남긴다.
 
-- [ ] 공유 참조와 현재 마지막 유효 payload를 고정 fixture로 남긴다. Today/Monitoring이 읽는 family 값·기준일을 비교한다.
-- [ ] current 계산만 실행하는 테스트를 먼저 추가한다. full outlook builder를 호출하면 실패하는 sentinel을 세워 단순 '화면에서 안 보임'과 실제 '계산 안 함'을 구별한다.
-- [ ] observation payload와 저장 함수를 구현한다. 아래 반환 의미를 고정한다.
+- [x] 공유 참조와 현재 마지막 유효 payload를 고정 fixture로 남긴다. Today/Monitoring이 읽는 family 값·기준일을 비교한다.
+- [x] current 계산만 실행하는 테스트를 먼저 추가한다. full outlook builder를 호출하면 실패하는 sentinel을 세워 단순 '화면에서 안 보임'과 실제 '계산 안 함'을 구별한다.
+- [x] observation payload와 저장 함수를 구현한다. 아래 반환 의미를 고정한다.
 
 ```python
 def build_observation_payload(*, macro, current_pattern, as_of_date, materialized_at):
@@ -104,9 +104,9 @@ def build_observation_payload(*, macro, current_pattern, as_of_date, materialize
     }
 ```
 
-- [ ] 새 key에 현재 관측만 저장하고 forecast history를 쓰지 않는다. 동시/늦은 결과에서 완료 기준일이 후퇴하지 않는 transactional writer 테스트를 추가한다. read는 새 key 우선, 기존 key fallback이며 각각의 날짜를 보존한다.
-- [ ] Overview refresh와 `attach_futures_macro_materialization` 기본 호출을 경량 경로로 바꾼다. 코드의 `include_validation=False` 하나만 바꾸는 수정으로 끝내지 않는다.
-- [ ] 회귀 및 snapshot 계산 시간을 확인하고 `선물 매크로 현재 관측과 전망 연구 실행 분리` 단위로 커밋한다.
+- [x] 새 key에 현재 관측만 저장하고 forecast history를 쓰지 않는다. 동시/늦은 결과에서 완료 기준일이 후퇴하지 않는 transactional writer 테스트를 추가한다. read는 새 key 우선, 기존 key fallback이며 각각의 날짜를 보존한다.
+- [x] Overview refresh와 `attach_futures_macro_materialization` 기본 호출을 경량 경로로 바꾼다. 코드의 `include_validation=False` 하나만 바꾸는 수정으로 끝내지 않는다.
+- [x] 회귀 및 snapshot 계산 시간을 확인하고 `선물 매크로 현재 관측과 전망 연구 실행 분리` 단위로 커밋한다.
 
 현재 관측 보존 계약의 최소 테스트 예시:
 
@@ -148,9 +148,9 @@ assert payload["as_of_date"] == current_fixture["as_of_date"]
 - Consumes: DB의 raw `provider_symbol/candle_time_utc/close/collected_at`, 저장 calendar, evaluation time.
 - Produces: DESIGN에 정의한 normalized bars, two-window snapshot, bounded refresh `JobResult`.
 
-- [ ] 정확한 endpoint·미완료 봉 배제·공통 timestamp·missing 통화·0/음수/NaN을 재현하는 테스트를 작성하고 실패를 확인한다.
-- [ ] DB loader를 시간 범위와 필요한 columns로 제한한다. 기존 문자열 날짜 범위 loader를 쓸 때 하루 단위 truncation으로 장중 endpoint가 사라지지 않도록 전용 aware-UTC 범위를 제공한다.
-- [ ] 완료 봉 정규화, calendar 기준점, 같은 endpoint의 수익률과 달러 대용지표를 구현한다. 핵심 수식은 다음과 같고 표시 반올림 전에 계산한다.
+- [x] 정확한 endpoint·미완료 봉 배제·공통 timestamp·missing 통화·0/음수/NaN을 재현하는 테스트를 작성하고 실패를 확인한다.
+- [x] DB loader를 시간 범위와 필요한 columns로 제한한다. 기존 문자열 날짜 범위 loader를 쓸 때 하루 단위 truncation으로 장중 endpoint가 사라지지 않도록 전용 aware-UTC 범위를 제공한다.
+- [x] 완료 봉 정규화, calendar 기준점, 같은 endpoint의 수익률과 달러 대용지표를 구현한다. 핵심 수식은 다음과 같고 표시 반올림 전에 계산한다.
 
 ```python
 from math import isfinite
@@ -192,9 +192,9 @@ def test_return_uses_the_two_exact_endpoints():
     assert result["returns_pct"]["ES=F"] == pytest.approx(0.25)
 ```
 
-- [ ] 전용 refresh를 기존 일별 처리와 분리하고, DB coverage→필요한 5분봉 추가→필요한 일봉 확정→경량 관측 저장으로 연결한다. 기존 17종목 공용 설정은 축소하지 않는다.
-- [ ] 주말에 2일 자료가 부족한 경우를 재현하고 5d→누락 종목만 1mo의 제한된 보충을 검증한다. 최근 1시간 비교는 가능하지만 마감 window만 불가하면 두 구간을 일괄 실패 처리하지 않는다.
-- [ ] DST/휴일/13:00 조기폐장 및 16:00 정상 마감 fixture, 정상 휴장과 stale 구분을 검증하고 `선물 장중 비교 구간과 현재 데이터 갱신 구현` 단위로 커밋한다.
+- [x] 전용 refresh를 기존 일별 처리와 분리하고, DB coverage→필요한 5분봉 추가→필요한 일봉 확정→경량 관측 저장으로 연결한다. 기존 17종목 공용 설정은 축소하지 않는다.
+- [x] 주말에 2일 자료가 부족한 경우를 재현하고 5d→누락 종목만 1mo의 제한된 보충을 검증한다. 최근 1시간 비교는 가능하지만 마감 window만 불가하면 두 구간을 일괄 실패 처리하지 않는다.
+- [x] DST/휴일/13:00 조기폐장 및 16:00 정상 마감 fixture, 정상 휴장과 stale 구분을 검증하고 `선물 장중 비교 구간과 현재 데이터 갱신 구현` 단위로 커밋한다.
 
 **완료:** 두 구간 모두 실제 가격·시작·종료를 설명할 수 있음. 공급사 데이터 공백은 값을 발명하지 않고 제한 상태로 표시 가능. 주말/휴장 처리 완료 전 평일 happy path만으로 완료하지 않는다.
 
@@ -211,12 +211,12 @@ def test_return_uses_the_two_exact_endpoints():
 - Consumes: 2차 두 window의 값·coverage·status, 실제 경기 배경.
 - Produces: `build_futures_macro_change_reading`과 `build_futures_macro_intraday_read_model`, DESIGN의 UI schema.
 
-- [ ] 부담 조합/완화 조합/엇갈림/상승분 반납/일부 지수만 하락/자료 공백을 고정 input으로 만든다.
-- [ ] 표의 rule마다 관측 fact와 문구의 일치를 테스트한 뒤 Python에서 rules와 Korean copy를 구현한다. 값의 표시 방향과 문장 방향이 엇갈리지 않게 한다.
-- [ ] window마다 `headline`, `observation_facts`, `interpretation`, `counter_evidence`, `next_checks`를 만든다. 부재한 YM/RTY를 포함해 '주식시장 전체'라고 쓰지 않는다.
-- [ ] `cycle_background`는 현재 경기국면의 state/date만 읽는다. 월간 판단을 장중 가격으로 수정하지 않는다. 다른 탭의 전체 모델을 재계산하지 않는다.
-- [ ] 두 window와 실제 calendar/source marker를 포함한 cache identity를 적용하고 수정 봉·버전 변경·누락 변경에 invalidation을 검증한다.
-- [ ] `선물 장중 관측의 해석과 확인 조건 연결` 단위로 커밋한다.
+- [x] 부담 조합/완화 조합/엇갈림/상승분 반납/일부 지수만 하락/자료 공백을 고정 input으로 만든다.
+- [x] 표의 rule마다 관측 fact와 문구의 일치를 테스트한 뒤 Python에서 rules와 Korean copy를 구현한다. 값의 표시 방향과 문장 방향이 엇갈리지 않게 한다.
+- [x] window마다 `headline`, `observation_facts`, `interpretation`, `counter_evidence`, `next_checks`를 만든다. 부재한 YM/RTY를 포함해 '주식시장 전체'라고 쓰지 않는다.
+- [x] `cycle_background`는 현재 경기국면의 state/date만 읽는다. 월간 판단을 장중 가격으로 수정하지 않는다. 다른 탭의 전체 모델을 재계산하지 않는다.
+- [x] 두 window와 실제 calendar/source marker를 포함한 cache identity를 적용하고 수정 봉·버전 변경·누락 변경에 invalidation을 검증한다.
+- [x] `선물 장중 관측의 해석과 확인 조건 연결` 단위로 커밋한다.
 
 대표 rule fixture의 완전한 의도:
 
@@ -256,9 +256,9 @@ assert len(reading["next_checks"]) == 2
 - Consumes: 3차 `futures_macro_intraday_workbench_v1`. 기간 변경은 전달받은 두 window 사이의 local selection.
 - Produces: 원래 route/key를 유지한 실제 선물 탭, Python dispatch refresh action, 같은 의미의 Streamlit fallback.
 
-- [ ] schema 계약과 결과 기준일 테스트를 먼저 추가하고 구 v7의 제거된 UI 요소를 요구하는 assertion은 의미 단위로 교체한다.
-- [ ] 세 영역, 두 기간 선택, 경기 배경/기존 탭 링크를 구현한다. 시안에서 비교용으로 만든 경기국면 화면을 제품에 복사하지 않는다.
-- [ ] 새 selector의 한 동작으로 제목·가격·근거·시각·next_checks 전체가 같은 window를 참조하도록 한다.
+- [x] schema 계약과 결과 기준일 테스트를 먼저 추가하고 구 v7의 제거된 UI 요소를 요구하는 assertion은 의미 단위로 교체한다.
+- [x] 세 영역, 두 기간 선택, 경기 배경/기존 탭 링크를 구현한다. 시안에서 비교용으로 만든 경기국면 화면을 제품에 복사하지 않는다.
+- [x] 새 selector의 한 동작으로 제목·가격·근거·시각·next_checks 전체가 같은 window를 참조하도록 한다.
 
 ```tsx
 const [period, setPeriod] = useState<"since_close" | "last_hour">("since_close");
@@ -266,10 +266,10 @@ const window = payload.windows[period];
 // Summary, price strip, reading and timestamp all consume this same window.
 ```
 
-- [ ] 진행 중 refresh action은 실제 결과 nonce까지 잠근다. 기존 900ms timer만으로 pending을 해제하지 않는다. 오류 시 이전 유효 관측의 기준일을 보존하고 오류 메시지와 갱신 가능 동작을 제공한다.
-- [ ] 정상·partial·stale·휴장·무자료·React unavailable fallback을 모두 연결한다. 과거 항목은 검증 전으로 접어 두며 fictitious n/N을 넣지 않는다.
-- [ ] 생산 코드의 import/type/CSS 참조를 검색한 뒤 탭 전용 구파일만 삭제한다. 공용 family 계산·DB history·연구 모델은 삭제하지 않는다.
-- [ ] TypeScript 확인·production build 후 desktop/900px/420px Browser QA, 스크린샷을 남기고 `선물 매크로를 장중 변화 중심 화면으로 개편` 단위로 커밋한다.
+- [x] 진행 중 refresh action은 실제 결과 nonce까지 잠근다. 기존 900ms timer만으로 pending을 해제하지 않는다. 오류 시 이전 유효 관측의 기준일을 보존하고 오류 메시지와 갱신 가능 동작을 제공한다.
+- [x] 정상·partial·stale·휴장·무자료·React unavailable fallback을 모두 연결한다. 과거 항목은 검증 전으로 접어 두며 fictitious n/N을 넣지 않는다.
+- [x] 생산 코드의 import/type/CSS 참조를 검색한 뒤 탭 전용 구파일만 삭제한다. 공용 family 계산·DB history·연구 모델은 삭제하지 않는다.
+- [x] TypeScript 확인·production build 후 desktop/900px/420px Browser QA, 스크린샷을 남기고 `선물 매크로를 장중 변화 중심 화면으로 개편` 단위로 커밋한다.
 
 **완료:** 사용자가 마감 이후 전체 변화와 최근 1시간 반응을 구별하고, 근거와 다음 확인을 한 화면에서 읽음. 진단 표만 예쁘게 바꾸거나 카드만 줄이는 작업으로 완료 처리하지 않는다.
 
@@ -285,12 +285,12 @@ const window = payload.windows[period];
 - Consumes: 1~4차 통합 제품, DB-backed current source, 고정 시간 fixture, 실제 refresh 결과.
 - Produces: 단계별 시간 측정, 오류/holiday/browser evidence, 최종 잔여 한계와 완료 기록.
 
-- [ ] 수집 없이 진입·기간 전환·저장 자료 다시 읽기가 동작하는지 확인한다. refresh에서만 provider를 호출하고 연구 builder는 호출되지 않아야 한다.
-- [ ] actual DB/실제 갱신 1회와 동일 저장 데이터 기반 반복 3회로 provider·DB·현재 계산·render 시간을 구분해 기록한다. 옛 70.6초 단일 측정과 환경이 다르면 직접 속도비로 과장하지 않는다.
-- [ ] **성능 목표:** 저장 자료 재표시·기간 전환은 불필요한 네트워크 대기 없음, 로컬 DB 읽기+현재 계산+저장 목표 5초 이내. 실제 수집 포함 총시간은 별도 측정하며 외부 응답 시간을 숨기지 않는다. 목표 미달이면 가장 큰 내부 구간을 개선하고 다시 확인한다.
-- [ ] 정상/부분성공/공급사실패/마감 기준점 부족/휴장/중복클릭을 actual 또는 deterministic fixture로 검증한다. 실제 휴일을 기다려야 하는 항목은 calendar fixture와 실제 DB coverage를 구별해 기록한다.
-- [ ] Today·Portfolio Monitoring의 current family와 날짜가 보존됐는지 확인한다. standalone full research는 명시 호출에서만 접근 가능하며 새 화면이 의존하지 않아야 한다.
-- [ ] 최종 Browser QA 스크린샷 1장 이상, 변경 파일별 필요한 문서, commit, STATUS 5/5를 정렬한다. 검증 실패와 관측 제한을 pass로 기록하지 않는다.
+- [x] 수집 없이 진입·기간 전환·저장 자료 다시 읽기가 동작하는지 확인한다. refresh에서만 provider를 호출하고 연구 builder는 호출되지 않아야 한다.
+- [x] actual DB/실제 갱신 1회와 동일 저장 데이터 기반 반복 3회로 provider·DB·현재 계산·render 시간을 구분해 기록한다. 옛 70.6초 단일 측정과 환경이 다르면 직접 속도비로 과장하지 않는다.
+- [x] **성능 목표:** 저장 자료 재표시·기간 전환은 불필요한 네트워크 대기 없음, 로컬 DB 읽기+현재 계산+저장 목표 5초 이내. 실제 수집 포함 총시간은 별도 측정하며 외부 응답 시간을 숨기지 않는다. 목표 미달이면 가장 큰 내부 구간을 개선하고 다시 확인한다.
+- [x] 정상/부분성공/공급사실패/마감 기준점 부족/휴장/중복클릭을 actual 또는 deterministic fixture로 검증한다. 실제 휴일을 기다려야 하는 항목은 calendar fixture와 실제 DB coverage를 구별해 기록한다.
+- [x] Today·Portfolio Monitoring의 current family와 날짜가 보존됐는지 확인한다. standalone full research는 명시 호출에서만 접근 가능하며 새 화면이 의존하지 않아야 한다.
+- [x] 최종 Browser QA 스크린샷 1장 이상, 변경 파일별 필요한 문서, commit, STATUS 5/5를 정렬한다. 검증 실패와 관측 제한을 pass로 기록하지 않는다.
 
 관련 검증 명령(새 테스트는 생성한 뒤 실행):
 
@@ -310,8 +310,8 @@ git diff --check
 
 ## 실행 handoff
 
-- 현재 완료: 개발 가이드와 설계 작성·참조 확인.
-- 개발 진행: **0/5단계**. 다음은 사용자 검토 후 1차 시작.
+- 현재 완료: 사용자 승인 1~5차 구현·실제 갱신·통합 검증 완료. 상세 근거는 RUNS.md.
+- 개발 진행: **5/5단계**. 잔여 차수 없음. 장중 과거 사례/확률 연구는 별도 요청 범위.
 - 실행 시 원본 workspace 상태와 branch를 다시 확인한다. 계획 작성 시 실제 branch는 `master`였고 user PNG 4개가 untracked였다. 임의 정리하지 않는다. 구현용 격리가 필요하면 `codex/` branch의 worktree를 사용한다.
 - 기본 실행은 단계별 순차 진행이며, 사용자 요청 없이 별도 task 생성·병렬 agent 위임을 가정하지 않는다.
 - 불확실한 source 특성 때문에 목표가 바뀌면 변경점과 영향을 먼저 설명한다. 결측을 임의 보정하거나 범위를 몰래 확장하지 않는다.

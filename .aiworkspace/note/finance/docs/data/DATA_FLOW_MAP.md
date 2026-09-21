@@ -333,60 +333,28 @@ finance_meta.market_event_calendar
 ## Market Research futures macro / OHLCV 흐름
 
 ```text
-yfinance futures OHLCV
-  -> finance.data.futures_market.collect_and_store_futures_ohlcv()
-  -> finance_meta.futures_instrument
-  -> finance_price.futures_ohlcv
-  -> finance_meta.futures_market_monitor_run
-  -> manual 최신 데이터 갱신이 active/pending session을 발견하면
-       -> yfinance 2d/5m을 한 번 수집
-       -> finance_price.futures_ohlcv(interval=5m)
-       -> pending same-date + 17:15 ET 이후이면 stored exact window
-          D-1 18:00 ET <= bar < D 17:00 ET 집계를 재사용
-       -> 완료 17/17일 때만 atomic update of 1d final_* columns
-  -> app.services.futures_market_monitoring.build_futures_monitor_snapshot()
-  -> app.services.futures_macro_sessions.select_completed_futures_daily_rows()
-  -> app.services.futures_macro_thermometer.build_futures_macro_thermometer_snapshot()
-  -> app.services.futures_macro_pattern_validation.load_overview_futures_macro_pattern_outlook()
-  -> app.services.futures_macro_snapshot.materialize_overview_futures_macro_snapshot()
-  -> finance_meta.futures_macro_forecast_history (immutable append)
-  -> finance_meta.futures_macro_snapshot (latest-good current)
-  -> Market Research render에서 app.services.futures_macro_intraday가 DB-only로
-       -> active CME-style trade date 판정
-       -> 완료 daily + latest closed 5m common cutoff 합성
-       -> 임시 1D / 5D / 20D current observation 생성
-  -> Research > Market Research > 시장 환경 > 선물 매크로
-  -> Market Research source / refresh evidence
-  -> Data > Data Operations > 실행 이력 for detailed diagnostics
+최신 데이터 반영 → app.jobs.futures_macro_refresh
+  → run_collect_futures_ohlcv(materialize_snapshot=False)
+  → yfinance → finance_price.futures_ohlcv / finance_meta.futures_market_monitor_run
+  → 필요한 completed daily finalization → 경량 observation materializer
+  → futures_macro_snapshot(snapshot_key=overview_futures_macro_observation_v1)
 
-finance_price.futures_ohlcv daily rows
-  -> finance.loaders.futures.load_futures_ohlcv(symbols=["ZN=F", "ZB=F"], interval_code="1d", end=selected_as_of)
-  -> app.services.overview_market_context_analog.build_historical_analog_snapshot()
-  -> Research > Market Research > 지수 가치평가 > S&P 500 > Macro 조건 포함 pilot
+DB 완료 5m rows + 저장된 연간 공식 휴장/조기폐장 coverage
+  → futures_macro_inputs / futures_macro_windows
+  → 직전 US cash close 이후 / 마지막 완료 공통 봉 기준 60분 비교
+  → futures_macro_reading → overview.futures_macro read model
+  → React / Streamlit fallback (동일 관측과 해석)
 ```
 
-의미:
-
-- 1차 source는 Yahoo/yfinance provider symbol 기반의 pilot feed다.
-- 기본 watchlist는 주가지수, 금리, 원자재, FX futures이며 optional micro / crypto futures는 별도 그룹으로 둔다. Current primary UI는 Futures Macro이고, 1m chart / run diagnostics는 보조 evidence다.
-- 정상 화면 render는 DB row만 읽고, 수집은 Market Research `최신 데이터 갱신`이 `app/jobs/overview_actions.py` facade를 호출하거나 Data Operations job wrapper가 실행한다.
-- yfinance가 `period=1d`, `interval=1m`에서 일부 futures symbol을 빈 응답 또는 지나치게 희소한 응답으로 돌려주면 collector는 해당 symbol만 `period=2d`, `interval=1m`으로 한 번 보강 수집한다. 성공 / 실패, 초기 row 수, 회복 symbol은 `futures_market_monitor_run.diagnostics_json.fallback_retries`에 남긴다.
-- `futures_market_monitor_run`과 Market Research local run history가 source evidence의 latest success / failed symbols / stale 판단에 사용된다.
-- Macro Thermometer historical validation은 `futures_ohlcv` 1d row를 point-in-time으로 재계산하고, target futures가 부족할 때만 `nyse_price_history` ETF proxy를 labeled fallback으로 읽는다.
-- daily resolver는 provider raw marker와 완료 세션 기준일을 분리한다. 미완료 session은 backend forecast validation/history에서는 제외하지만, current observation은 장중 5m coverage와 freshness gate를 통과하면 임시 세션으로 표시한다.
-- 수동 refresh가 저녁 재개 뒤 실행돼 mutable Yahoo 1d row가 pending이어도, 저장된 5m row의 exact ET 구간으로 17개 완료 세션을 재구성한다. 유효한 `yfinance_5m_session_aggregate_v1` final 값은 raw 1d보다 우선하며 이미 확정된 세션은 추가 provider 호출 없이 재사용한다.
-- 장중 합성은 family 구성 종목이 모두 있는 경우만 해당 family를 계산하고, 가용 family가 공통으로 보유한 가장 느린 closed 5m bar를 common cutoff으로 쓴다. 6개 family면 ready, 4~5개면 partial, 4개 미만이거나 30분 초과 stale이면 완료 세션으로 fail closed한다.
-- 활성 trade date는 daily provider label에 종속하지 않고 New York 18:00 저녁 재개를 반영한다. 즉 월요일 18:00 ET 이후는 화요일 거래 세션으로 표시한다. 휴장일·provider 지연은 freshness gate에서 fallback한다.
-- same-state V2와 forecast history는 과거 유사 상태·5D/20D 분포의 backend 호환성과 shadow research를 위해 보존한다. primary UI는 현재 1D·5D·20D 관측에서 핵심 5D 재가격화 또는 1D 새 충격을 골라 유력 해석, 반대 근거와 지속·무효화 조건을 표시하며 ellipse/vector·확률·가격 목표를 노출하지 않는다.
-- Market Context 3차-B의 Macro 조건 포함 pilot은 저장된 `ZN=F` / `ZB=F` daily rows만 읽어 Rate Pressure futures proxy bucket을 계산한다. selected as-of 이후 row와 anchor 이후 futures 움직임은 조건 계산에 쓰지 않는다.
-
-주의:
-
-- 무료 provider source이므로 exchange-grade realtime feed로 설명하지 않는다.
-- yfinance continuous futures는 실제 roll / 만기 구조와 다를 수 있다.
-- historical validation은 과거 일관성 평가이며 예측 보장이 아니다.
-- 매초 provider fetch는 하지 않는다. MVP는 60초 기본 refresh와 제한된 fast mode를 기준으로 한다.
-- futures shock state는 시장 컨텍스트이며 투자 추천이나 자동 매매 신호가 아니다.
+- 정상 진입·구간 전환·저장 자료 다시 읽기는 provider와 전망 연구를 실행하지 않는다.
+- 수동 갱신은 17종목 공용 universe를 유지하고 최근 2d/5m 수집 후 누락 기준점만 5d→1mo로 제한 보강한다. 일봉이 이미 최신이면 중복 수집하지 않는다. 수집 결과는 finalization에 재사용한다.
+- raw 5m timestamp는 시작 시각이다. 5분 후 종료 시각이 evaluation time 이하인 봉만 사용한다. 공통 cutoff은 ES/NQ/ZN 및 EUR/JPY/GBP/AUD/CAD의 실제 timestamp 교집합이다. 상충 중복과 비양수·비유한 가격, 다른 provider의 endpoint는 계산에서 제외한다.
+- 수익률은 같은 두 endpoint의 `100*(end/start-1)`이다. forward-fill이나 일봉 대체를 하지 않는다. 달러 대용지표는 5개 통화 선물의 역방향 동일 가중 평균이며 구성원 결측 시 재가중하지 않는다.
+- cash close는 공식 annual coverage와 America/New_York DST·휴일·조기폐장 일정으로 판정한다. 일정 불확실 시 마감 window만 보류한다. 30분 초과 지연은 STALE이며 통상 주말/17~18 ET 중단은 최근 정상 종료 관측이 있을 때만 MARKET_CLOSED로 구분한다. 개별 선물의 특별 휴장까지 현물 일정으로 추측하지 않는다.
+- Today/Portfolio Monitoring용 daily current family는 기존 completed daily 계산을 유지한다. 새 observation key는 기준일·계산 시각이 후퇴하지 않는 atomic UPSERT를 사용하고 호환 reader는 새 key 우선, 이전 key fallback으로 실제 날짜를 보존한다.
+- 기존 `materialize_overview_futures_macro_snapshot()`와 immutable forecast history는 명시적 연구 API다. 일반 ingestion attach의 기본값도 경량 관측으로 바뀌었으며 탭 갱신에서 nested 5D/20D 연구/history를 만들지 않는다.
+- S&P 500 역사적 유사 국면과 경기국면 자산 확인 등 기존 daily consumer의 loader/의미는 유지한다.
+- 무료 yfinance continuous futures는 거래소 실시간 보장이나 계약별 roll 보정 자료가 아니다. 연속계약 교체가 가격 차이에 포함될 수 있다. 화면은 관측·가능한 의미·확인 조건을 구분하며 장중 전망 확률은 NOT_VALIDATED로 보류한다.
 
 ## ETF operability provider snapshot 흐름
 

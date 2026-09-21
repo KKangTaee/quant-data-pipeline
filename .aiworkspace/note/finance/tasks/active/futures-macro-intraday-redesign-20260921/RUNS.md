@@ -33,3 +33,16 @@ Date: 2026-09-21
 - Browser: 두 기간 전환 시 시각·가격 함께 변경. 실제 refresh 동안 두 버튼 disabled, 실제 ack 후 unlock. 420px frame 377px = scroll 377px, 900/1400px 추가 확인.
 - 실제 refresh JobResult: success 6.846초, 2d/5m 수집 6.592초 1회, observation 재사용 0.123초. baseline 70.567초는 무거운 계산 포함 이전 관측이며 동일 네트워크/입력의 엄밀한 benchmark는 아님.
 - 콘솔의 overview/_stcore 경로 404 두 건은 Streamlit 초기 경로 탐색이며 앱 정상 연결됨. 새 컴포넌트 JS 오류 없음.
+
+## 5차 최종 검증
+
+- 신규 오류 경계 RED 3개 → GREEN: 손상된 observation JSON은 구 key의 실제 날짜로 fallback; materializer unavailable은 전체 성공 표시 금지; DB 읽기 실패 시 마지막 관측/시각 유지·결합 해석 보류.
+- 독립 전체 branch 리뷰: P2 두 건. 토요일의 오래된 complete endpoint는 missing=[]여서 수집이 전혀 실행되지 않는 경우, 보조 자산 GC의 마감 endpoint 누락이 CORE-only missing에서 사라지는 경우를 순수 fixture로 재현했다. RED 2개 후 recent needs_recent guard와 별도 backfill_symbols로 수정. 가격 자료 전체의 보강 목록과 결합 해석의 핵심 누락을 분리했다.
+- 최종 focused regression: **194 passed, 2 subtests passed**, 기존 edgar deprecation warning 3개. 유지 service-contract futures subset **35 passed**.
+- 원본 master 재현: 기존 `test_macro_thermometer_detects_rate_pressure_scenario`, `test_macro_thermometer_inverts_rates_and_fx_pressure`, `test_macro_thermometer_snapshot_exposes_current_evidence_counts` 3개가 동일 실패. 새 장중 경로의 회귀와 분리하며 전체 저장소 테스트 전부 통과로 주장하지 않는다.
+- 동일 DB 자료 current 강제 read/compute/write 3회: **0.4470 / 0.4388 / 0.4365초**. 표시 read model 3회 **0.1319 / 0.0466 / 0.0521초**. forecast_history count **23→23**으로 증가 없음.
+- 수집 포함 actual JobResult: **6.846초**, recent 2d/5m 요청 1회 **6.592초**, current 재사용 **0.123초**. 두 구간 AVAILABLE, 완료 일별 기준일 2026-09-18, 진행 중 2026-09-21은 settlement cutoff 전이라 finalization not_due. 옛 70.567초와 네트워크·입력 상태가 다르므로 엄밀한 배율 개선으로 표현하지 않는다.
+- Browser QA: 실제 버튼→disabled→결과 ack→unlock; period 변경으로 시각/가격 변경; 저장 자료 다시 읽기; 경기국면 원래 route 이동; stale/available 실제 자료. PARTIAL/UNAVAILABLE/휴장/실패/중복은 deterministic 테스트. fallback AppTest 동일 구간/실패시 마지막 관측 확인.
+- viewport 420/900/1400 검산, frame 377/729/1229에서 각각 scrollWidth와 일치. 최종 screenshot: `/Users/taeho/Project/quant-data-pipeline/.playwright-mcp/futures-macro-final-qa.png` (generated, 미커밋).
+- `tsc --noEmit`, Vite production build, `git diff --check` 통과. 제거된 component import는 production에서 없음. 제품 배포에 필요한 tracked component_static만 갱신했고 registry/saved/run history/user PNG는 변경하지 않음.
+- canonical docs: PRODUCT_DIRECTION/PROJECT_MAP/ROADMAP/data 흐름·schema 의미 갱신. INDEX 탐색 구조와 별도 runbook 절차는 변하지 않아 변경 없음. 로컬 master는 시작 SHA 그대로이며 충돌 없는 fast-forward 가능 확인.

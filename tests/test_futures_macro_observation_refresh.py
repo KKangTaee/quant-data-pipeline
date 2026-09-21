@@ -98,3 +98,59 @@ def test_materialization_failure_does_not_report_total_refresh_success():
         materialize_fn=lambda **kw: {"status": "unavailable"},
     )
     assert r["status"] == "partial_success"
+
+
+def test_closed_market_stale_observations_still_fetch_recent_prices():
+    from app.jobs.futures_macro_refresh import run_futures_macro_observation_refresh
+
+    stale = {
+        "windows": {
+            k: {"status": "STALE", "missing_symbols": []}
+            for k in ("since_close", "last_hour")
+        }
+    }
+    calls = []
+    states = iter([stale, snapshot()])
+
+    def collect(**kw):
+        calls.append(kw)
+        return {"status": "success", "rows_written": 1}
+
+    r = run_futures_macro_observation_refresh(
+        evaluation_time=datetime(2026, 9, 19, 12, tzinfo=timezone.utc),
+        window_loader=lambda **kw: next(states),
+        collect_runner=collect,
+        daily_refresh_needed=lambda **kw: False,
+        finalization_runner=lambda **kw: {"status": "not_required"},
+        materialize_fn=lambda **kw: {"status": "reused"},
+    )
+    assert [c["period"] for c in calls] == ["2d"]
+    assert r["status"] == "success"
+
+
+def test_optional_missing_anchor_is_backfilled_without_blocking_core_reading():
+    from app.jobs.futures_macro_refresh import run_futures_macro_observation_refresh
+
+    partial = snapshot()
+    partial["windows"]["since_close"]["backfill_symbols"] = ["GC=F"]
+    calls = []
+    states = iter([partial, partial, snapshot()])
+
+    def collect(**kw):
+        calls.append(kw)
+        return {"status": "success", "rows_written": 1}
+
+    r = run_futures_macro_observation_refresh(
+        evaluation_time=datetime(2026, 9, 21, 7, tzinfo=timezone.utc),
+        window_loader=lambda **kw: next(states),
+        collect_runner=collect,
+        daily_refresh_needed=lambda **kw: False,
+        finalization_runner=lambda **kw: {"status": "not_required"},
+        materialize_fn=lambda **kw: {"status": "reused"},
+    )
+    assert (
+        len(calls) == 2
+        and calls[1]["symbols"] == ["GC=F"]
+        and calls[1]["period"] == "5d"
+    )
+    assert r["status"] == "success"

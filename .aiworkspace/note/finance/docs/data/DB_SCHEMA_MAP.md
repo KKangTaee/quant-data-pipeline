@@ -62,7 +62,7 @@ Last Verified: 2026-08-11
 | `nasdaq100_monthly_valuation` | QQQ proxy 월별 price/reconstructed EPS/PER/earnings yield와 weighted coverage, holdings/price basis, blocked reason 저장. `(observation_month, proxy_symbol, source)` unique UPSERT |
 | `sp500_index_earnings` | S&P index EPS의 period type, As-Reported/Operating basis, actual/estimate/mixed status, source release vintage 저장 |
 | `fomc_sep_projection` | SEP release/year/variable/statistic unique vintage row. real GDP/PCE median 및 central-tendency endpoints와 1/3/5년 reconstruction용 calendar-discovered 과거 release 저장 |
-| `futures_macro_snapshot` | Market Research Futures Macro latest-good current. completed input fingerprint, schema/algorithm version, final session status와 compact payload 저장 |
+| `futures_macro_snapshot` | overview_futures_macro_observation_v1 current 전용 key와 기존 overview_current 연구 key. completed input fingerprint·schema/algorithm·실제 기준일 저장, current UPSERT는 기준일/계산 시각 후퇴 방지 |
 | `futures_macro_forecast_history` | deterministic forecast identity별 immutable same-state 5D/20D 전망, selected candidate, publication status, known/materialized time 저장 |
 
 ### `finance_price`
