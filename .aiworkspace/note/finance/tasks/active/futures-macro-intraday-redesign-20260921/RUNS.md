@@ -21,3 +21,7 @@ Date: 2026-09-21
 - 신규 경계 테스트 RED 19개 → 구현 후 GREEN. calendar 누락 시 가격 backfill을 하지 않는 RED 추가 후 수정.
 - windows/refresh/intraday/session/finalization/shared refresh: 73 passed (기존 edgar 경고 3개).
 - 실제 DB read 0.046초, 공식 calendar CONFIRMED. 저장 관측 2026-09-21 00:00 UTC는 STALE로 판정.
+
+## 3차
+- 해석/read model RED 8개 → GREEN. windows 포함 26 passed.
+- 부담/완화와 주가 엇갈림, 중립 표시, stale/partial 보류, 같은 cutoff 상승분 반납, 수정값/누락/rule 변경 identity 확인.
